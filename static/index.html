@@ -80,14 +80,12 @@
         <button id="choiceBtn">Resolve Choice</button>
       </div>
 
+      <h3>Targets</h3>
       <div class="row">
-        <label>Target Player</label>
-        <select id="targetPlayer"></select>
-        <label>Target Slot</label>
-        <input id="targetSlot" type="number" min="0" max="3" value="0" />
-        <label>Self Slot</label>
-        <input id="selfSlot" type="number" min="0" max="3" value="0" />
+        <div>Selected Target: <span id="targetSelection">-</span></div>
+        <button id="clearTarget">Clear Target</button>
       </div>
+      <div id="targetList" class="target-list"></div>
 
       <h3>Players</h3>
       <div id="gamePlayers"></div>

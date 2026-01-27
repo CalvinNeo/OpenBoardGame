@@ -68,6 +68,40 @@ input, select {
   margin-bottom: 8px;
 }
 
+.target-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.target-player {
+  border: 1px solid #e3e3e3;
+  padding: 6px;
+  border-radius: 4px;
+  background: #fafafa;
+}
+
+.target-slots {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.target-slot {
+  border: 1px solid #bbb;
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.target-slot.selected {
+  border-color: #1f6feb;
+  background: #eaf2ff;
+}
+
 .slot {
   border: 1px solid #ccc;
   background: #fff;

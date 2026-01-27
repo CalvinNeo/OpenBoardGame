@@ -5,6 +5,7 @@ let roomId = null;
 let currentView = null;
 let selectedSlots = [];
 let currentRoomState = null;
+let selectedTarget = null;
 
 const connectionInfo = document.getElementById("connectionInfo");
 const roomIdLabel = document.getElementById("roomIdLabel");
@@ -23,9 +24,9 @@ const pendingChoice = document.getElementById("pendingChoice");
 
 const handSlots = document.getElementById("handSlots");
 const selectedSlotsLabel = document.getElementById("selectedSlots");
-const targetPlayer = document.getElementById("targetPlayer");
-const targetSlot = document.getElementById("targetSlot");
-const selfSlot = document.getElementById("selfSlot");
+const targetSelection = document.getElementById("targetSelection");
+const targetList = document.getElementById("targetList");
+const clearTargetBtn = document.getElementById("clearTarget");
 const gamePlayers = document.getElementById("gamePlayers");
 const logEl = document.getElementById("log");
 
@@ -55,6 +56,28 @@ function updateSelectedSlots() {
   selectedSlotsLabel.textContent = selectedSlots.length ? selectedSlots.join(", ") : "-";
 }
 
+function updateTargetSelection() {
+  if (!selectedTarget || !currentView) {
+    targetSelection.textContent = "-";
+    return;
+  }
+  const player = currentView.players.find((p) => p.player_id === selectedTarget.playerId);
+  if (!player) {
+    targetSelection.textContent = "-";
+    return;
+  }
+  targetSelection.textContent = `${player.name} #${selectedTarget.slot}`;
+}
+
+function clearTargetSelection() {
+  selectedTarget = null;
+  updateTargetSelection();
+  updateActionButtons();
+  if (currentView) {
+    renderTargets(currentView);
+  }
+}
+
 function isActionAvailable(actionType) {
   if (!currentView || !Array.isArray(currentView.legal_actions)) {
     return false;
@@ -70,6 +93,21 @@ function isActionAvailable(actionType) {
   }
   if (actionType === "attempt_match") {
     return selectedSlots.length >= 2;
+  }
+  if (actionType === "use_choice_action") {
+    if (!currentView.pending_choice) {
+      return false;
+    }
+    const choiceType = currentView.pending_choice.type;
+    if (choiceType === "peek") {
+      return selectedSlots.length >= 1;
+    }
+    if (choiceType === "spy") {
+      return !!selectedTarget;
+    }
+    if (choiceType === "swap") {
+      return !!selectedTarget && selectedSlots.length >= 1;
+    }
   }
   return true;
 }
@@ -176,20 +214,57 @@ function renderGamePlayers(view) {
 }
 
 function renderTargets(view) {
-  targetPlayer.innerHTML = "";
+  targetList.innerHTML = "";
   view.players
     .filter((p) => p.player_id !== view.you)
     .forEach((p) => {
-      const opt = document.createElement("option");
-      opt.value = p.player_id;
-      opt.textContent = p.name;
-      targetPlayer.appendChild(opt);
+      const wrapper = document.createElement("div");
+      wrapper.className = "target-player";
+      const title = document.createElement("div");
+      title.textContent = p.name;
+      wrapper.appendChild(title);
+
+      const slotsRow = document.createElement("div");
+      slotsRow.className = "target-slots";
+      p.hand.forEach((slot, idx) => {
+        const slotEl = document.createElement("div");
+        slotEl.className = "target-slot";
+        const label = slot.empty ? "Empty" : slot.known ? slot.value : "?";
+        slotEl.textContent = `#${idx} ${label}`;
+        if (
+          selectedTarget &&
+          selectedTarget.playerId === p.player_id &&
+          selectedTarget.slot === idx
+        ) {
+          slotEl.classList.add("selected");
+        }
+        slotEl.addEventListener("click", () => {
+          if (slot.empty) {
+            log("Target slot is empty");
+            return;
+          }
+          selectedTarget = { playerId: p.player_id, slot: idx };
+          updateTargetSelection();
+          updateActionButtons();
+          renderTargets(view);
+        });
+        slotsRow.appendChild(slotEl);
+      });
+      wrapper.appendChild(slotsRow);
+      targetList.appendChild(wrapper);
     });
+  updateTargetSelection();
 }
 
 function renderGameState(data) {
   const view = data.view;
   currentView = view;
+  if (
+    selectedTarget &&
+    !view.players.find((p) => p.player_id === selectedTarget.playerId)
+  ) {
+    selectedTarget = null;
+  }
 
   phaseLabel.textContent = view.phase;
   roundLabel.textContent = view.round;
@@ -287,6 +362,10 @@ document.getElementById("clearSelection").addEventListener("click", () => {
   clearSelection();
 });
 
+clearTargetBtn.addEventListener("click", () => {
+  clearTargetSelection();
+});
+
 document.getElementById("peekBtn").addEventListener("click", () => {
   if (selectedSlots.length !== 2) {
     log("Select two slots for initial peek");
@@ -342,29 +421,42 @@ document.getElementById("choiceBtn").addEventListener("click", () => {
   }
   const choiceType = currentView.pending_choice.type;
   if (choiceType === "peek") {
-    const slot = selectedSlots.length ? selectedSlots[0] : Number(selfSlot.value);
+    if (!selectedSlots.length) {
+      log("Select one of your slots to peek");
+      return;
+    }
+    const slot = selectedSlots[0];
     sendAction({
       type: "use_choice_action",
       choice_type: "peek",
       target: { slot },
     });
   } else if (choiceType === "spy") {
-    const targetId = targetPlayer.value;
-    const slot = Number(targetSlot.value);
+    if (!selectedTarget) {
+      log("Select a target slot to spy");
+      return;
+    }
     sendAction({
       type: "use_choice_action",
       choice_type: "spy",
-      target: { player_id: targetId, slot },
+      target: { player_id: selectedTarget.playerId, slot: selectedTarget.slot },
     });
   } else if (choiceType === "swap") {
-    const targetId = targetPlayer.value;
-    const slot = Number(targetSlot.value);
-    const self = selectedSlots.length ? selectedSlots[0] : Number(selfSlot.value);
+    if (!selectedTarget || !selectedSlots.length) {
+      log("Select one of your slots and a target slot to swap");
+      return;
+    }
+    const self = selectedSlots[0];
     sendAction({
       type: "use_choice_action",
       choice_type: "swap",
-      target: { player_id: targetId, slot, self_slot: self },
+      target: {
+        player_id: selectedTarget.playerId,
+        slot: selectedTarget.slot,
+        self_slot: self,
+      },
     });
   }
   clearSelection();
+  clearTargetSelection();
 });
