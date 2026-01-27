@@ -39,6 +39,7 @@ const actionButtons = {
   attempt_match: document.getElementById("matchBtn"),
   call_cabo: document.getElementById("callCaboBtn"),
   use_choice_action: document.getElementById("choiceBtn"),
+  next_round: document.getElementById("nextRoundBtn"),
 };
 
 function log(message) {
@@ -418,6 +419,10 @@ document.getElementById("matchBtn").addEventListener("click", () => {
 
 document.getElementById("callCaboBtn").addEventListener("click", () => {
   sendAction({ type: "call_cabo" });
+});
+
+document.getElementById("nextRoundBtn").addEventListener("click", () => {
+  sendAction({ type: "next_round" });
 });
 
 document.getElementById("choiceBtn").addEventListener("click", () => {

@@ -191,6 +191,7 @@ class CaboGame:
             "round": 1,
             "player_meta": player_meta,
             "last_round_summary": None,
+            "game_over": False,
         }
 
     @staticmethod
@@ -217,6 +218,7 @@ class CaboGame:
         state["cabo_turns_left"] = 0
         state["round"] += 1
         state["current_turn"] = state["turn_order"][0]
+        state["game_over"] = False
 
     @staticmethod
     def get_legal_actions(state: Dict, player_id: str) -> List[str]:
@@ -227,6 +229,11 @@ class CaboGame:
             if not state["players"][player_id]["initial_peek_done"]:
                 return ["initial_peek"]
             return []
+
+        if state["phase"] == "round_end":
+            if state.get("game_over"):
+                return []
+            return ["next_round"]
 
         if player_id != state["current_turn"]:
             return []
@@ -271,6 +278,15 @@ class CaboGame:
             if all(p["initial_peek_done"] for p in state["players"].values()):
                 state["phase"] = "turn"
             events.append({"type": "game:initial_peek", "payload": {"player_id": player_id}})
+            return events, None
+
+        if state["phase"] == "round_end":
+            if state.get("game_over"):
+                return [], "game over"
+            if action_type != "next_round":
+                return [], "only next_round allowed"
+            CaboGame.start_new_round(state)
+            events.append({"type": "game:next_round", "payload": {"round": state["round"]}})
             return events, None
 
         if player_id != state["current_turn"]:
@@ -501,6 +517,7 @@ class CaboGame:
             "pending_choice": state["pending_choice"],
             "legal_actions": CaboGame.get_legal_actions(state, viewer_id),
             "last_round_summary": state.get("last_round_summary"),
+            "game_over": state.get("game_over", False),
             "config": {
                 "target_score": state["config"]["target_score"],
                 "shooting_moon": state["config"]["shooting_moon"],
@@ -591,9 +608,6 @@ class CaboGame:
         state["last_round_summary"] = summary
 
         target = state["config"]["target_score"]
-        if any(pdata["score"] >= target for pdata in state["players"].values()):
-            state["phase"] = "round_end"
-            return summary
-
-        CaboGame.start_new_round(state)
+        state["game_over"] = any(pdata["score"] >= target for pdata in state["players"].values())
+        state["phase"] = "round_end"
         return summary

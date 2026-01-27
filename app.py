@@ -117,6 +117,8 @@ async def _maybe_run_bots(room: Room) -> None:
         try:
             while room.status == "in_game":
                 state = room.game_state
+                if state.get("game_over") or state["phase"] == "round_end":
+                    break
                 if state["phase"] == "initial_peek":
                     bot = next(
                         (
@@ -144,7 +146,7 @@ async def _maybe_run_bots(room: Room) -> None:
                     }
                     events = [bot_event] + events
                     room.state_version += 1
-                    if state["phase"] == "round_end":
+                    if state.get("game_over"):
                         room.status = "game_over"
                     await _emit_game_state(room, events)
                     await asyncio.sleep(0.2)
@@ -170,7 +172,7 @@ async def _maybe_run_bots(room: Room) -> None:
                 }
                 events = [bot_event] + events
                 room.state_version += 1
-                if state["phase"] == "round_end":
+                if state.get("game_over"):
                     room.status = "game_over"
                 await _emit_game_state(room, events)
                 await asyncio.sleep(0.3)
@@ -390,7 +392,7 @@ async def on_game_action(sid, data):
         await _send_error(sid, error)
         return
     room.state_version += 1
-    if room.game_state["phase"] == "round_end":
+    if room.game_state.get("game_over"):
         room.status = "game_over"
     await _emit_game_state(room, events)
     await _maybe_run_bots(room)
