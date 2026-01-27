@@ -531,3 +531,15 @@ document.getElementById("choiceBtn").addEventListener("click", () => {
   clearSelection();
   clearTargetSelection();
 });
+
+document.querySelectorAll(".collapse-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const panel = btn.closest(".panel");
+    if (!panel) {
+      return;
+    }
+    const collapsed = panel.classList.toggle("collapsed");
+    btn.textContent = collapsed ? "Show" : "Hide";
+    btn.setAttribute("aria-expanded", (!collapsed).toString());
+  });
+});
