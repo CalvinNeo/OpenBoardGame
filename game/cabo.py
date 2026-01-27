@@ -299,6 +299,7 @@ class CaboGame:
                 state["discard"].append(replaced)
                 state["players"][player_id]["hand"][slot] = drawn
                 _clear_slot_knowledge(state, player_id, slot)
+                state["players"][player_id]["public_known"][slot] = True
                 state["knowledge"][player_id][player_id][slot] = True
                 summary = _advance_turn(state, player_id)
                 if summary:
