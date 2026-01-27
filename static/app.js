@@ -29,6 +29,17 @@ const selfSlot = document.getElementById("selfSlot");
 const gamePlayers = document.getElementById("gamePlayers");
 const logEl = document.getElementById("log");
 
+const actionButtons = {
+  initial_peek: document.getElementById("peekBtn"),
+  draw_deck: document.getElementById("drawDeckBtn"),
+  draw_discard: document.getElementById("drawDiscardBtn"),
+  replace_card: document.getElementById("replaceBtn"),
+  discard_drawn: document.getElementById("discardDrawnBtn"),
+  attempt_match: document.getElementById("matchBtn"),
+  call_cabo: document.getElementById("callCaboBtn"),
+  use_choice_action: document.getElementById("choiceBtn"),
+};
+
 function log(message) {
   const entry = document.createElement("div");
   entry.className = "log-entry";
@@ -44,12 +55,44 @@ function updateSelectedSlots() {
   selectedSlotsLabel.textContent = selectedSlots.length ? selectedSlots.join(", ") : "-";
 }
 
+function isActionAvailable(actionType) {
+  if (!currentView || !Array.isArray(currentView.legal_actions)) {
+    return false;
+  }
+  if (!currentView.legal_actions.includes(actionType)) {
+    return false;
+  }
+  if (actionType === "initial_peek") {
+    return selectedSlots.length === 2;
+  }
+  if (actionType === "draw_discard" || actionType === "replace_card") {
+    return selectedSlots.length >= 1;
+  }
+  if (actionType === "attempt_match") {
+    return selectedSlots.length >= 2;
+  }
+  return true;
+}
+
+function updateActionButtons() {
+  Object.entries(actionButtons).forEach(([actionType, button]) => {
+    const allowed = isActionAvailable(actionType);
+    if (allowed) {
+      button.classList.add("action-allowed");
+    } else {
+      button.classList.remove("action-allowed");
+    }
+    button.disabled = !allowed;
+  });
+}
+
 function clearSelection() {
   selectedSlots = [];
   updateSelectedSlots();
   document.querySelectorAll(".slot").forEach((el) => {
     el.classList.remove("selected");
   });
+  updateActionButtons();
 }
 
 function sendAction(action) {
@@ -107,6 +150,7 @@ function renderHand(view) {
         div.classList.add("selected");
       }
       updateSelectedSlots();
+      updateActionButtons();
     });
     handSlots.appendChild(div);
   });
@@ -173,6 +217,8 @@ function renderGameState(data) {
     const summary = view.last_round_summary;
     log(`Round summary: scores ${JSON.stringify(summary.round_scores)}`);
   }
+
+  updateActionButtons();
 }
 
 socket.on("system:info", (data) => {

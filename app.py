@@ -116,18 +116,43 @@ async def _maybe_run_bots(room: Room) -> None:
         room.bot_running = True
         try:
             while room.status == "in_game":
-                current = room.game_state["current_turn"]
+                state = room.game_state
+                if state["phase"] == "initial_peek":
+                    bot = next(
+                        (
+                            p
+                            for p in room.players
+                            if p.is_bot and not state["players"][p.player_id]["initial_peek_done"]
+                        ),
+                        None,
+                    )
+                    if not bot:
+                        break
+                    action = CaboGame.bot_move(state, bot.player_id)
+                    if not action:
+                        break
+                    events, error = CaboGame.apply_action(state, bot.player_id, action)
+                    if error:
+                        break
+                    room.state_version += 1
+                    if state["phase"] == "round_end":
+                        room.status = "game_over"
+                    await _emit_game_state(room, events)
+                    await asyncio.sleep(0.2)
+                    continue
+
+                current = state["current_turn"]
                 player = _find_player(room, current)
                 if not player or not player.is_bot:
                     break
-                action = CaboGame.bot_move(room.game_state, current)
+                action = CaboGame.bot_move(state, current)
                 if not action:
                     break
-                events, error = CaboGame.apply_action(room.game_state, current, action)
+                events, error = CaboGame.apply_action(state, current, action)
                 if error:
                     break
                 room.state_version += 1
-                if room.game_state["phase"] == "round_end":
+                if state["phase"] == "round_end":
                     room.status = "game_over"
                 await _emit_game_state(room, events)
                 await asyncio.sleep(0.3)

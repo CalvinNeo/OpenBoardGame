@@ -36,6 +36,17 @@ h1 {
   margin-right: 6px;
 }
 
+button.action-allowed {
+  background: #1f6feb;
+  border-color: #1f6feb;
+  color: #fff;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 label {
   font-weight: 600;
 }
