@@ -127,6 +127,13 @@ input, select {
   background: #fafafa;
 }
 
+#log {
+  max-height: 240px;
+  overflow-y: auto;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
 .hand {
   display: flex;
   gap: 8px;
