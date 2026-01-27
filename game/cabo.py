@@ -334,7 +334,6 @@ class CaboGame:
                 state["players"][player_id]["hand"][slot] = drawn
                 state["last_drawn"] = None
                 _clear_slot_knowledge(state, player_id, slot)
-                state["knowledge"][player_id][player_id][slot] = True
                 summary = _advance_turn(state, player_id)
                 if summary:
                     events.append({"type": "game:round_end", "payload": summary})
@@ -380,7 +379,6 @@ class CaboGame:
                     first_slot = slots[0]
                     hand[first_slot] = drawn
                     _clear_slot_knowledge(state, player_id, first_slot)
-                    state["knowledge"][player_id][player_id][first_slot] = True
                     events.append({"type": "game:match_success", "payload": {"player_id": player_id}})
                 else:
                     for s in slots:

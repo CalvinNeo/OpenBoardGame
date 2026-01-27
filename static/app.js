@@ -284,7 +284,13 @@ function renderGameState(data) {
 
   if (data.events && data.events.length) {
     data.events.forEach((evt) => {
-      log(`${evt.type}`);
+      if (evt.type === "bot:action") {
+        const payload = evt.payload || {};
+        const name = payload.name || "Bot";
+        log(`Bot ${name}: ${JSON.stringify(payload.action)}`);
+      } else {
+        log(`${evt.type}`);
+      }
     });
   }
 

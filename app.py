@@ -134,6 +134,15 @@ async def _maybe_run_bots(room: Room) -> None:
                     events, error = CaboGame.apply_action(state, bot.player_id, action)
                     if error:
                         break
+                    bot_event = {
+                        "type": "bot:action",
+                        "payload": {
+                            "player_id": bot.player_id,
+                            "name": bot.name,
+                            "action": action,
+                        },
+                    }
+                    events = [bot_event] + events
                     room.state_version += 1
                     if state["phase"] == "round_end":
                         room.status = "game_over"
@@ -151,6 +160,15 @@ async def _maybe_run_bots(room: Room) -> None:
                 events, error = CaboGame.apply_action(state, current, action)
                 if error:
                     break
+                bot_event = {
+                    "type": "bot:action",
+                    "payload": {
+                        "player_id": player.player_id,
+                        "name": player.name,
+                        "action": action,
+                    },
+                }
+                events = [bot_event] + events
                 room.state_version += 1
                 if state["phase"] == "round_end":
                     room.status = "game_over"
