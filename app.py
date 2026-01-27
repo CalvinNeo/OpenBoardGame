@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from game import CaboGame
+from game import GameDefinition, get_game, list_games
 
 sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
 fastapi_app = FastAPI()
@@ -60,6 +60,10 @@ def _get_room(room_id: str) -> Optional[Room]:
     return ROOMS.get(room_id)
 
 
+def _get_game_definition(game_type: str) -> Optional[GameDefinition]:
+    return get_game(game_type)
+
+
 def _find_player(room: Room, player_id: str) -> Optional[Player]:
     for player in room.players:
         if player.player_id == player_id:
@@ -90,14 +94,19 @@ async def _emit_room_state(room: Room) -> None:
 async def _emit_game_state(room: Room, events: Optional[List[Dict]] = None) -> None:
     if not room.game_state:
         return
+    game_def = _get_game_definition(room.game_type)
+    if not game_def:
+        return
+    game_module = game_def.module
     for player in room.players:
         if player.socket_id is None:
             continue
-        view = CaboGame.get_public_view(room.game_state, player.player_id)
+        view = game_module.get_public_view(room.game_state, player.player_id)
         payload = {
             "room_id": room.room_id,
             "state_version": room.state_version,
             "room_status": room.status,
+            "game_type": room.game_type,
             "view": view,
             "events": events or [],
         }
@@ -111,63 +120,39 @@ async def _send_error(sid: str, message: str) -> None:
 async def _maybe_run_bots(room: Room) -> None:
     if room.bot_running or room.status != "in_game" or not room.game_state:
         return
+    game_def = _get_game_definition(room.game_type)
+    if not game_def:
+        return
+    game_module = game_def.module
 
     async def _runner():
         room.bot_running = True
         try:
             while room.status == "in_game":
                 state = room.game_state
-                if state.get("game_over") or state["phase"] == "round_end":
+                if state.get("game_over"):
                     break
-                if state["phase"] == "initial_peek":
-                    bot = next(
-                        (
-                            p
-                            for p in room.players
-                            if p.is_bot and not state["players"][p.player_id]["initial_peek_done"]
-                        ),
-                        None,
-                    )
-                    if not bot:
+                bot_action = None
+                bot_player = None
+                for candidate in room.players:
+                    if not candidate.is_bot:
+                        continue
+                    action = game_module.bot_move(state, candidate.player_id)
+                    if action:
+                        bot_action = action
+                        bot_player = candidate
                         break
-                    action = CaboGame.bot_move(state, bot.player_id)
-                    if not action:
-                        break
-                    events, error = CaboGame.apply_action(state, bot.player_id, action)
-                    if error:
-                        break
-                    bot_event = {
-                        "type": "bot:action",
-                        "payload": {
-                            "player_id": bot.player_id,
-                            "name": bot.name,
-                            "action": action,
-                        },
-                    }
-                    events = [bot_event] + events
-                    room.state_version += 1
-                    if state.get("game_over"):
-                        room.status = "game_over"
-                    await _emit_game_state(room, events)
-                    await asyncio.sleep(0.2)
-                    continue
-
-                current = state["current_turn"]
-                player = _find_player(room, current)
-                if not player or not player.is_bot:
+                if not bot_action or not bot_player:
                     break
-                action = CaboGame.bot_move(state, current)
-                if not action:
-                    break
-                events, error = CaboGame.apply_action(state, current, action)
+                events, error = game_module.apply_action(state, bot_player.player_id, bot_action)
                 if error:
                     break
                 bot_event = {
                     "type": "bot:action",
                     "payload": {
-                        "player_id": player.player_id,
-                        "name": player.name,
-                        "action": action,
+                        "player_id": bot_player.player_id,
+                        "name": bot_player.name,
+                        "action": bot_action,
                     },
                 }
                 events = [bot_event] + events
@@ -175,7 +160,7 @@ async def _maybe_run_bots(room: Room) -> None:
                 if state.get("game_over"):
                     room.status = "game_over"
                 await _emit_game_state(room, events)
-                await asyncio.sleep(0.3)
+                await asyncio.sleep(0.25)
         finally:
             room.bot_running = False
 
@@ -211,13 +196,15 @@ async def on_room_create(sid, data):
     if not name:
         await _send_error(sid, "name required")
         return
-    if game_type != "cabo":
-        await _send_error(sid, "only cabo supported")
+    game_def = _get_game_definition(game_type)
+    if not game_def:
+        available = ", ".join(g.game_id for g in list_games())
+        await _send_error(sid, f"unknown game_type (available: {available})")
         return
     room_id = _generate_room_id()
     player_id = uuid.uuid4().hex
     player = Player(player_id=player_id, name=name, seat=0, socket_id=sid)
-    room = Room(room_id=room_id, game_type=game_type, players=[player])
+    room = Room(room_id=room_id, game_type=game_def.game_id, players=[player])
     ROOMS[room_id] = room
     SESSIONS[sid] = {"room_id": room_id, "player_id": player_id}
     await sio.enter_room(sid, room_id)
@@ -240,10 +227,14 @@ async def on_room_join(sid, data):
     if not room:
         await _send_error(sid, "room not found")
         return
+    game_def = _get_game_definition(room.game_type)
+    if not game_def:
+        await _send_error(sid, "room game not found")
+        return
     if room.status != "lobby":
         await _send_error(sid, "room already started")
         return
-    if len(room.players) >= CaboGame.max_players:
+    if len(room.players) >= game_def.max_players:
         await _send_error(sid, "room full")
         return
     player_id = uuid.uuid4().hex
@@ -316,10 +307,14 @@ async def on_room_add_bot(sid, data):
     if not room:
         await _send_error(sid, "room not found")
         return
+    game_def = _get_game_definition(room.game_type)
+    if not game_def:
+        await _send_error(sid, "room game not found")
+        return
     if room.status != "lobby":
         await _send_error(sid, "game already started")
         return
-    if len(room.players) >= CaboGame.max_players:
+    if len(room.players) >= game_def.max_players:
         await _send_error(sid, "room full")
         return
     name = (data or {}).get("name") or f"Bot {len(room.players) + 1}"
@@ -340,10 +335,14 @@ async def on_room_start(sid, data):
     if not room:
         await _send_error(sid, "room not found")
         return
+    game_def = _get_game_definition(room.game_type)
+    if not game_def:
+        await _send_error(sid, "room game not found")
+        return
     if room.status != "lobby":
         await _send_error(sid, "game already started")
         return
-    if len(room.players) < CaboGame.min_players:
+    if len(room.players) < game_def.min_players:
         await _send_error(sid, "not enough players")
         return
     if not all(p.ready or p.is_bot for p in room.players):
@@ -359,7 +358,7 @@ async def on_room_start(sid, data):
         for p in room.players
     ]
     try:
-        room.game_state = CaboGame.init_game({}, players_meta)
+        room.game_state = game_def.module.init_game({}, players_meta)
     except ValueError as exc:
         await _send_error(sid, str(exc))
         return
@@ -379,6 +378,10 @@ async def on_game_action(sid, data):
     if not room or not room.game_state:
         await _send_error(sid, "game not found")
         return
+    game_def = _get_game_definition(room.game_type)
+    if not game_def:
+        await _send_error(sid, "room game not found")
+        return
     if room.status != "in_game":
         await _send_error(sid, "game not active")
         return
@@ -387,7 +390,7 @@ async def on_game_action(sid, data):
         await _send_error(sid, "invalid action")
         return
     player_id = session.get("player_id")
-    events, error = CaboGame.apply_action(room.game_state, player_id, action)
+    events, error = game_def.module.apply_action(room.game_state, player_id, action)
     if error:
         await _send_error(sid, error)
         return

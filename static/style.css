@@ -116,6 +116,10 @@ input, select {
   padding: 4px 8px;
 }
 
+.hidden {
+  display: none;
+}
+
 #playersList, #gamePlayers, #log {
   border: 1px solid #eee;
   padding: 8px;
@@ -141,6 +145,20 @@ input, select {
   padding: 6px;
   border-radius: 4px;
   background: #fafafa;
+}
+
+.target-player.selectable {
+  cursor: pointer;
+}
+
+.target-player.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.target-player.selected {
+  border-color: #1f6feb;
+  background: #eaf2ff;
 }
 
 .target-slots {
@@ -193,6 +211,10 @@ input, select {
 .player-card.current {
   border-color: #1f6feb;
   box-shadow: 0 0 0 2px rgba(31, 111, 235, 0.15);
+}
+
+.player-card.disabled {
+  opacity: 0.65;
 }
 
 .player-header {

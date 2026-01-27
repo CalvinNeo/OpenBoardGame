@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>OpenBoardGame - CABO</title>
+  <title>OpenBoardGame</title>
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
   <div class="container">
-    <h1>OpenBoardGame - CABO</h1>
+    <h1>OpenBoardGame</h1>
 
     <div class="layout">
       <aside class="sidebar">
@@ -21,6 +21,13 @@
             <div class="row">
               <label>Name</label>
               <input id="nameInput" type="text" placeholder="Your name" />
+            </div>
+            <div class="row">
+              <label>Game</label>
+              <select id="gameSelect">
+                <option value="cabo">Cabo</option>
+                <option value="skull">Skull</option>
+              </select>
             </div>
             <div class="row">
               <button id="createBtn">Create Room</button>
@@ -43,11 +50,13 @@
             <div class="row">
               <div>Room ID: <span id="roomIdLabel">-</span></div>
               <div>Status: <span id="roomStatus">-</span></div>
+              <div>Game: <span id="gameTypeLabel">-</span></div>
             </div>
             <div class="row actions">
               <button id="readyBtn">Toggle Ready</button>
               <button id="startBtn">Start Game</button>
               <button id="addBotBtn">Add Bot</button>
+              <button id="leaveBtn">Leave Room</button>
             </div>
             <div id="playersList"></div>
           </div>
@@ -60,53 +69,99 @@
             <h2>Game</h2>
           </div>
           <div class="panel-body">
-            <div class="row">
-              <div>Phase: <span id="phaseLabel">-</span></div>
-              <div>Round: <span id="roundLabel">-</span></div>
-              <div>Current Turn: <span id="turnLabel">-</span></div>
-            </div>
-            <div class="row">
-              <div>Deck: <span id="deckCount">-</span></div>
-              <div>Discard Top: <span id="discardTop">-</span></div>
-              <div>Last Drawn: <span id="lastDrawn">-</span></div>
-            </div>
-            <div class="row">
-              <div>Cabo Called By: <span id="caboBy">-</span></div>
-              <div>Cabo Turns Left: <span id="caboLeft">-</span></div>
-            </div>
-            <div class="row">
-              <div>Pending Choice: <span id="pendingChoice">-</span></div>
+            <div id="caboPanel">
+              <div class="row">
+                <div>Phase: <span id="phaseLabel">-</span></div>
+                <div>Round: <span id="roundLabel">-</span></div>
+                <div>Current Turn: <span id="turnLabel">-</span></div>
+              </div>
+              <div class="row">
+                <div>Deck: <span id="deckCount">-</span></div>
+                <div>Discard Top: <span id="discardTop">-</span></div>
+                <div>Last Drawn: <span id="lastDrawn">-</span></div>
+              </div>
+              <div class="row">
+                <div>Cabo Called By: <span id="caboBy">-</span></div>
+                <div>Cabo Turns Left: <span id="caboLeft">-</span></div>
+              </div>
+              <div class="row">
+                <div>Pending Choice: <span id="pendingChoice">-</span></div>
+              </div>
+
+              <h3>Your Hand</h3>
+              <div id="handSlots" class="hand"></div>
+              <div class="row">
+                <div>Selected Slots: <span id="selectedSlots">-</span></div>
+                <button id="clearSelection">Clear</button>
+              </div>
+
+              <h3>Actions</h3>
+              <div class="row actions">
+                <button id="peekBtn">Initial Peek</button>
+                <button id="drawDeckBtn">Draw Deck</button>
+                <button id="drawDiscardBtn">Draw Discard</button>
+                <button id="replaceBtn">Replace Card</button>
+                <button id="discardDrawnBtn">Discard Drawn</button>
+                <button id="matchBtn">Attempt Match</button>
+                <button id="callCaboBtn">Call Cabo</button>
+                <button id="choiceBtn">Resolve Choice</button>
+                <button id="nextRoundBtn">Next Round</button>
+              </div>
+
+              <h3>Targets</h3>
+              <div class="row">
+                <div>Selected Target: <span id="targetSelection">-</span></div>
+                <button id="clearTarget">Clear Target</button>
+              </div>
+              <div id="targetList" class="target-list"></div>
+
+              <h3>Players</h3>
+              <div id="gamePlayers"></div>
             </div>
 
-            <h3>Your Hand</h3>
-            <div id="handSlots" class="hand"></div>
-            <div class="row">
-              <div>Selected Slots: <span id="selectedSlots">-</span></div>
-              <button id="clearSelection">Clear</button>
-            </div>
+            <div id="skullPanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="skullPhase">-</span></div>
+                <div>Round: <span id="skullRound">-</span></div>
+                <div>Current Turn: <span id="skullTurn">-</span></div>
+              </div>
+              <div class="row">
+                <div>Current Bid: <span id="skullBid">-</span></div>
+                <div>Bidder: <span id="skullBidder">-</span></div>
+                <div>Passed: <span id="skullPassed">-</span></div>
+              </div>
+              <div class="row">
+                <div>Roses Revealed: <span id="skullRoses">-</span></div>
+                <div>Last Reveal: <span id="skullLastReveal">-</span></div>
+                <div>Winner: <span id="skullWinner">-</span></div>
+              </div>
 
-            <h3>Actions</h3>
-            <div class="row actions">
-              <button id="peekBtn">Initial Peek</button>
-              <button id="drawDeckBtn">Draw Deck</button>
-              <button id="drawDiscardBtn">Draw Discard</button>
-              <button id="replaceBtn">Replace Card</button>
-              <button id="discardDrawnBtn">Discard Drawn</button>
-              <button id="matchBtn">Attempt Match</button>
-              <button id="callCaboBtn">Call Cabo</button>
-              <button id="choiceBtn">Resolve Choice</button>
-              <button id="nextRoundBtn">Next Round</button>
-            </div>
+              <h3>Your Hand</h3>
+              <div id="skullHand" class="hand"></div>
+              <div class="row">
+                <div>Selected Card: <span id="skullSelectedCard">-</span></div>
+                <button id="skullClearSelection">Clear</button>
+              </div>
 
-            <h3>Targets</h3>
-            <div class="row">
-              <div>Selected Target: <span id="targetSelection">-</span></div>
-              <button id="clearTarget">Clear Target</button>
-            </div>
-            <div id="targetList" class="target-list"></div>
+              <h3>Actions</h3>
+              <div class="row actions">
+                <input id="skullBidInput" type="number" min="1" placeholder="Bid" />
+                <button id="skullPlayBtn">Play Card</button>
+                <button id="skullStartBidBtn">Start Bid</button>
+                <button id="skullRaiseBidBtn">Raise Bid</button>
+                <button id="skullPassBidBtn">Pass</button>
+                <button id="skullRevealBtn">Reveal</button>
+              </div>
 
-            <h3>Players</h3>
-            <div id="gamePlayers"></div>
+              <h3>Targets</h3>
+              <div class="row">
+                <div>Selected Target: <span id="skullTargetSelection">-</span></div>
+              </div>
+              <div id="skullTargets" class="target-list"></div>
+
+              <h3>Players</h3>
+              <div id="skullPlayers"></div>
+            </div>
 
             <h3>Log</h3>
             <div id="log"></div>

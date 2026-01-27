@@ -2,15 +2,25 @@ const socket = io();
 
 let playerId = null;
 let roomId = null;
-let currentView = null;
+let currentCaboView = null;
+let currentSkullView = null;
+let currentGameType = null;
 let selectedSlots = [];
 let currentRoomState = null;
 let selectedTarget = null;
+let skullSelectedCardIndex = null;
+let skullSelectedCardType = null;
+let skullSelectedTarget = null;
 
 const connectionInfo = document.getElementById("connectionInfo");
 const roomIdLabel = document.getElementById("roomIdLabel");
 const roomStatus = document.getElementById("roomStatus");
+const gameTypeLabel = document.getElementById("gameTypeLabel");
 const playersList = document.getElementById("playersList");
+const gameSelect = document.getElementById("gameSelect");
+const leaveBtn = document.getElementById("leaveBtn");
+const caboPanel = document.getElementById("caboPanel");
+const skullPanel = document.getElementById("skullPanel");
 
 const phaseLabel = document.getElementById("phaseLabel");
 const roundLabel = document.getElementById("roundLabel");
@@ -30,6 +40,28 @@ const clearTargetBtn = document.getElementById("clearTarget");
 const gamePlayers = document.getElementById("gamePlayers");
 const logEl = document.getElementById("log");
 
+const skullPhaseLabel = document.getElementById("skullPhase");
+const skullRoundLabel = document.getElementById("skullRound");
+const skullTurnLabel = document.getElementById("skullTurn");
+const skullBidLabel = document.getElementById("skullBid");
+const skullBidderLabel = document.getElementById("skullBidder");
+const skullPassedLabel = document.getElementById("skullPassed");
+const skullRosesLabel = document.getElementById("skullRoses");
+const skullLastRevealLabel = document.getElementById("skullLastReveal");
+const skullWinnerLabel = document.getElementById("skullWinner");
+const skullHand = document.getElementById("skullHand");
+const skullSelectedCardLabel = document.getElementById("skullSelectedCard");
+const skullTargetSelection = document.getElementById("skullTargetSelection");
+const skullTargets = document.getElementById("skullTargets");
+const skullPlayers = document.getElementById("skullPlayers");
+const skullBidInput = document.getElementById("skullBidInput");
+const skullPlayBtn = document.getElementById("skullPlayBtn");
+const skullStartBidBtn = document.getElementById("skullStartBidBtn");
+const skullRaiseBidBtn = document.getElementById("skullRaiseBidBtn");
+const skullPassBidBtn = document.getElementById("skullPassBidBtn");
+const skullRevealBtn = document.getElementById("skullRevealBtn");
+const skullClearSelectionBtn = document.getElementById("skullClearSelection");
+
 const actionButtons = {
   initial_peek: document.getElementById("peekBtn"),
   draw_deck: document.getElementById("drawDeckBtn"),
@@ -40,6 +72,14 @@ const actionButtons = {
   call_cabo: document.getElementById("callCaboBtn"),
   use_choice_action: document.getElementById("choiceBtn"),
   next_round: document.getElementById("nextRoundBtn"),
+};
+
+const skullActionButtons = {
+  play_card: skullPlayBtn,
+  start_bid: skullStartBidBtn,
+  raise_bid: skullRaiseBidBtn,
+  pass_bid: skullPassBidBtn,
+  reveal_card: skullRevealBtn,
 };
 
 function log(message) {
@@ -53,16 +93,105 @@ function setConnectionInfo(message) {
   connectionInfo.textContent = message;
 }
 
+function setGamePanelVisibility(gameType) {
+  const showCabo = gameType === "cabo";
+  const showSkull = gameType === "skull";
+  caboPanel.classList.toggle("hidden", !showCabo);
+  skullPanel.classList.toggle("hidden", !showSkull);
+}
+
+function resetRoomState() {
+  roomId = null;
+  currentRoomState = null;
+  currentGameType = null;
+  roomIdLabel.textContent = "-";
+  roomStatus.textContent = "-";
+  gameTypeLabel.textContent = "-";
+  playersList.innerHTML = "";
+  clearCaboState();
+  clearSkullState();
+  setGamePanelVisibility(null);
+}
+
+function clearCaboState() {
+  currentCaboView = null;
+  selectedSlots = [];
+  selectedTarget = null;
+  phaseLabel.textContent = "-";
+  roundLabel.textContent = "-";
+  turnLabel.textContent = "-";
+  deckCount.textContent = "-";
+  discardTop.textContent = "-";
+  lastDrawn.textContent = "-";
+  caboBy.textContent = "-";
+  caboLeft.textContent = "-";
+  pendingChoice.textContent = "-";
+  handSlots.innerHTML = "";
+  selectedSlotsLabel.textContent = "-";
+  targetSelection.textContent = "-";
+  targetList.innerHTML = "";
+  gamePlayers.innerHTML = "";
+  updateActionButtons();
+}
+
+function clearSkullState() {
+  currentSkullView = null;
+  skullSelectedCardIndex = null;
+  skullSelectedCardType = null;
+  skullSelectedTarget = null;
+  skullPhaseLabel.textContent = "-";
+  skullRoundLabel.textContent = "-";
+  skullTurnLabel.textContent = "-";
+  skullBidLabel.textContent = "-";
+  skullBidderLabel.textContent = "-";
+  skullPassedLabel.textContent = "-";
+  skullRosesLabel.textContent = "-";
+  skullLastRevealLabel.textContent = "-";
+  skullWinnerLabel.textContent = "-";
+  skullHand.innerHTML = "";
+  skullSelectedCardLabel.textContent = "-";
+  skullTargetSelection.textContent = "-";
+  skullTargets.innerHTML = "";
+  skullPlayers.innerHTML = "";
+  updateSkullActionButtons();
+}
+
+function updateSkullSelectedCard() {
+  skullSelectedCardLabel.textContent = skullSelectedCardType || "-";
+}
+
+function updateSkullTargetSelection() {
+  if (!skullSelectedTarget || !currentSkullView) {
+    skullTargetSelection.textContent = "-";
+    return;
+  }
+  const player = currentSkullView.players.find((p) => p.player_id === skullSelectedTarget);
+  skullTargetSelection.textContent = player ? player.name : skullSelectedTarget;
+}
+
+function clearSkullSelection() {
+  skullSelectedCardIndex = null;
+  skullSelectedCardType = null;
+  skullSelectedTarget = null;
+  updateSkullSelectedCard();
+  updateSkullTargetSelection();
+  updateSkullActionButtons();
+  if (currentSkullView) {
+    renderSkullHand(currentSkullView);
+    renderSkullTargets(currentSkullView);
+  }
+}
+
 function updateSelectedSlots() {
   selectedSlotsLabel.textContent = selectedSlots.length ? selectedSlots.join(", ") : "-";
 }
 
 function updateTargetSelection() {
-  if (!selectedTarget || !currentView) {
+  if (!selectedTarget || !currentCaboView) {
     targetSelection.textContent = "-";
     return;
   }
-  const player = currentView.players.find((p) => p.player_id === selectedTarget.playerId);
+  const player = currentCaboView.players.find((p) => p.player_id === selectedTarget.playerId);
   if (!player) {
     targetSelection.textContent = "-";
     return;
@@ -74,16 +203,16 @@ function clearTargetSelection() {
   selectedTarget = null;
   updateTargetSelection();
   updateActionButtons();
-  if (currentView) {
-    renderTargets(currentView);
+  if (currentCaboView) {
+    renderTargets(currentCaboView);
   }
 }
 
 function isActionAvailable(actionType) {
-  if (!currentView || !Array.isArray(currentView.legal_actions)) {
+  if (!currentCaboView || !Array.isArray(currentCaboView.legal_actions)) {
     return false;
   }
-  if (!currentView.legal_actions.includes(actionType)) {
+  if (!currentCaboView.legal_actions.includes(actionType)) {
     return false;
   }
   if (actionType === "initial_peek") {
@@ -96,10 +225,10 @@ function isActionAvailable(actionType) {
     return selectedSlots.length >= 2;
   }
   if (actionType === "use_choice_action") {
-    if (!currentView.pending_choice) {
+    if (!currentCaboView.pending_choice) {
       return false;
     }
-    const choiceType = currentView.pending_choice.type;
+    const choiceType = currentCaboView.pending_choice.type;
     if (choiceType === "peek") {
       return selectedSlots.length >= 1;
     }
@@ -114,6 +243,13 @@ function isActionAvailable(actionType) {
 }
 
 function updateActionButtons() {
+  if (currentGameType !== "cabo") {
+    Object.values(actionButtons).forEach((button) => {
+      button.classList.remove("action-allowed");
+      button.disabled = true;
+    });
+    return;
+  }
   Object.entries(actionButtons).forEach(([actionType, button]) => {
     const allowed = isActionAvailable(actionType);
     if (allowed) {
@@ -145,8 +281,19 @@ function sendAction(action) {
 function renderRoomState(state) {
   currentRoomState = state;
   roomId = state.room_id;
+  const previousGame = currentGameType;
+  currentGameType = state.game_type || null;
   roomIdLabel.textContent = state.room_id;
   roomStatus.textContent = state.status;
+  gameTypeLabel.textContent = state.game_type || "-";
+  if (previousGame !== currentGameType) {
+    clearSelection();
+    clearTargetSelection();
+    clearSkullSelection();
+    setGamePanelVisibility(currentGameType);
+    clearCaboState();
+    clearSkullState();
+  }
   playersList.innerHTML = "";
   state.players.forEach((p) => {
     const line = document.createElement("div");
@@ -304,9 +451,167 @@ function renderTargets(view) {
   updateTargetSelection();
 }
 
-function renderGameState(data) {
+function findPlayerName(view, playerId) {
+  const player = view.players.find((p) => p.player_id === playerId);
+  return player ? player.name : playerId;
+}
+
+function renderSkullHand(view) {
+  skullHand.innerHTML = "";
+  if (!Array.isArray(view.hand) || !view.hand.length) {
+    skullHand.textContent = "-";
+    updateSkullSelectedCard();
+    return;
+  }
+  view.hand.forEach((card, idx) => {
+    const div = document.createElement("div");
+    div.className = "slot";
+    div.textContent = card;
+    if (idx === skullSelectedCardIndex) {
+      div.classList.add("selected");
+    }
+    div.addEventListener("click", () => {
+      skullSelectedCardIndex = idx;
+      skullSelectedCardType = card;
+      updateSkullSelectedCard();
+      updateSkullActionButtons();
+      renderSkullHand(view);
+    });
+    skullHand.appendChild(div);
+  });
+}
+
+function getSkullRevealTargets(view) {
+  if (view.phase !== "reveal" || view.you !== view.bidder) {
+    return [];
+  }
+  const you = view.players.find((p) => p.player_id === view.you);
+  if (you && you.pile_count > 0) {
+    return [view.you];
+  }
+  return view.players
+    .filter((p) => !p.eliminated && p.pile_count > 0)
+    .map((p) => p.player_id);
+}
+
+function renderSkullTargets(view) {
+  skullTargets.innerHTML = "";
+  const allowedTargets = getSkullRevealTargets(view);
+  view.players.forEach((p) => {
+    if (p.eliminated) {
+      return;
+    }
+    const wrapper = document.createElement("div");
+    wrapper.className = "target-player";
+    if (allowedTargets.includes(p.player_id)) {
+      wrapper.classList.add("selectable");
+    } else {
+      wrapper.classList.add("disabled");
+    }
+    if (skullSelectedTarget === p.player_id) {
+      wrapper.classList.add("selected");
+    }
+    wrapper.textContent = `${p.name} (pile ${p.pile_count})`;
+    wrapper.addEventListener("click", () => {
+      if (!allowedTargets.includes(p.player_id)) {
+        return;
+      }
+      skullSelectedTarget = p.player_id;
+      updateSkullTargetSelection();
+      updateSkullActionButtons();
+      renderSkullTargets(view);
+    });
+    skullTargets.appendChild(wrapper);
+  });
+  updateSkullTargetSelection();
+}
+
+function renderSkullPlayers(view) {
+  skullPlayers.innerHTML = "";
+  view.players.forEach((p) => {
+    const card = document.createElement("div");
+    card.className = "player-card";
+    if (p.player_id === view.current_turn) {
+      card.classList.add("current");
+    }
+    if (p.eliminated) {
+      card.classList.add("disabled");
+    }
+    const name = document.createElement("div");
+    name.className = "player-name";
+    name.textContent = p.name;
+    const meta = document.createElement("div");
+    meta.className = "player-meta";
+    const status = p.eliminated ? "out" : "in";
+    meta.textContent = `hand ${p.hand_count} | pile ${p.pile_count} | wins ${p.rounds_won} | ${status}`;
+    card.appendChild(name);
+    card.appendChild(meta);
+    skullPlayers.appendChild(card);
+  });
+}
+
+function isSkullActionAvailable(actionType) {
+  if (!currentSkullView || !Array.isArray(currentSkullView.legal_actions)) {
+    return false;
+  }
+  if (!currentSkullView.legal_actions.includes(actionType)) {
+    return false;
+  }
+  if (actionType === "play_card") {
+    return !!skullSelectedCardType;
+  }
+  if (actionType === "start_bid" || actionType === "raise_bid") {
+    const bid = Number.parseInt(skullBidInput.value, 10);
+    return Number.isInteger(bid) && bid > 0;
+  }
+  if (actionType === "reveal_card") {
+    const allowedTargets = getSkullRevealTargets(currentSkullView);
+    return !!skullSelectedTarget && allowedTargets.includes(skullSelectedTarget);
+  }
+  return true;
+}
+
+function updateSkullActionButtons() {
+  if (currentGameType !== "skull") {
+    Object.values(skullActionButtons).forEach((button) => {
+      button.classList.remove("action-allowed");
+      button.disabled = true;
+    });
+    return;
+  }
+  Object.entries(skullActionButtons).forEach(([actionType, button]) => {
+    const allowed = isSkullActionAvailable(actionType);
+    if (allowed) {
+      button.classList.add("action-allowed");
+    } else {
+      button.classList.remove("action-allowed");
+    }
+    button.disabled = !allowed;
+  });
+}
+
+function logGameEvents(data) {
+  if (!data.events || !data.events.length) {
+    return;
+  }
+  data.events.forEach((evt) => {
+    if (evt.type === "bot:action") {
+      const payload = evt.payload || {};
+      const name = payload.name || "Bot";
+      log(`Bot ${name}: ${JSON.stringify(payload.action)}`);
+    } else {
+      log(`${evt.type}`);
+    }
+  });
+}
+
+function renderCaboGameState(data) {
   const view = data.view;
-  currentView = view;
+  currentCaboView = view;
+  if (currentGameType !== "cabo") {
+    currentGameType = "cabo";
+    setGamePanelVisibility("cabo");
+  }
   if (
     selectedTarget &&
     !view.players.find((p) => p.player_id === selectedTarget.playerId)
@@ -343,17 +648,7 @@ function renderGameState(data) {
   renderGamePlayers(view);
   renderTargets(view);
 
-  if (data.events && data.events.length) {
-    data.events.forEach((evt) => {
-      if (evt.type === "bot:action") {
-        const payload = evt.payload || {};
-        const name = payload.name || "Bot";
-        log(`Bot ${name}: ${JSON.stringify(payload.action)}`);
-      } else {
-        log(`${evt.type}`);
-      }
-    });
-  }
+  logGameEvents(data);
 
   if (view.last_round_summary) {
     const summary = view.last_round_summary;
@@ -361,6 +656,71 @@ function renderGameState(data) {
   }
 
   updateActionButtons();
+}
+
+function renderSkullGameState(data) {
+  const view = data.view;
+  currentSkullView = view;
+  if (currentGameType !== "skull") {
+    currentGameType = "skull";
+    setGamePanelVisibility("skull");
+  }
+  if (skullSelectedTarget && !view.players.find((p) => p.player_id === skullSelectedTarget)) {
+    skullSelectedTarget = null;
+  }
+  if (skullSelectedCardIndex !== null && (!view.hand || skullSelectedCardIndex >= view.hand.length)) {
+    skullSelectedCardIndex = null;
+    skullSelectedCardType = null;
+  }
+
+  skullPhaseLabel.textContent = view.phase;
+  skullRoundLabel.textContent = view.round;
+  const currentPlayer = view.players.find((p) => p.player_id === view.current_turn);
+  skullTurnLabel.textContent = currentPlayer ? currentPlayer.name : view.current_turn || "-";
+  skullBidLabel.textContent = view.current_bid ?? "-";
+  skullBidderLabel.textContent = view.bidder ? findPlayerName(view, view.bidder) : "-";
+  if (Array.isArray(view.passed) && view.passed.length) {
+    skullPassedLabel.textContent = view.passed.map((pid) => findPlayerName(view, pid)).join(", ");
+  } else {
+    skullPassedLabel.textContent = "-";
+  }
+  skullRosesLabel.textContent = view.roses_revealed ?? "-";
+  if (view.last_reveal) {
+    skullLastRevealLabel.textContent = `${findPlayerName(view, view.last_reveal.player_id)} -> ${view.last_reveal.card}`;
+  } else {
+    skullLastRevealLabel.textContent = "-";
+  }
+  skullWinnerLabel.textContent = view.winner ? findPlayerName(view, view.winner) : "-";
+
+  renderSkullHand(view);
+  renderSkullTargets(view);
+  renderSkullPlayers(view);
+
+  logGameEvents(data);
+
+  if (view.last_round_summary) {
+    const summary = view.last_round_summary;
+    if (summary.result === "success") {
+      log(`Round success: bidder ${findPlayerName(view, summary.bidder)} bid ${summary.bid}`);
+    } else {
+      log(`Round fail: bidder ${findPlayerName(view, summary.bidder)} hit ${findPlayerName(view, summary.skull_owner)}`);
+    }
+  }
+
+  updateSkullSelectedCard();
+  updateSkullTargetSelection();
+  updateSkullActionButtons();
+}
+
+function renderGameState(data) {
+  const gameType = data.game_type || (currentRoomState && currentRoomState.game_type);
+  if (gameType === "cabo") {
+    renderCaboGameState(data);
+    return;
+  }
+  if (gameType === "skull") {
+    renderSkullGameState(data);
+  }
 }
 
 socket.on("system:info", (data) => {
@@ -393,7 +753,8 @@ document.getElementById("createBtn").addEventListener("click", () => {
     log("Name required");
     return;
   }
-  socket.emit("room:create", { name, game_type: "cabo" });
+  const gameType = gameSelect ? gameSelect.value : "cabo";
+  socket.emit("room:create", { name, game_type: gameType });
 });
 
 document.getElementById("joinBtn").addEventListener("click", () => {
@@ -425,12 +786,32 @@ document.getElementById("addBotBtn").addEventListener("click", () => {
   socket.emit("room:add_bot", { room_id: roomId });
 });
 
+if (leaveBtn) {
+  leaveBtn.addEventListener("click", () => {
+    if (!roomId) {
+      log("Not in a room");
+      return;
+    }
+    socket.emit("room:leave", { room_id: roomId });
+    resetRoomState();
+    log("Left room");
+  });
+}
+
 document.getElementById("clearSelection").addEventListener("click", () => {
   clearSelection();
 });
 
 clearTargetBtn.addEventListener("click", () => {
   clearTargetSelection();
+});
+
+skullClearSelectionBtn.addEventListener("click", () => {
+  clearSkullSelection();
+});
+
+skullBidInput.addEventListener("input", () => {
+  updateSkullActionButtons();
 });
 
 document.getElementById("peekBtn").addEventListener("click", () => {
@@ -486,11 +867,11 @@ document.getElementById("nextRoundBtn").addEventListener("click", () => {
 });
 
 document.getElementById("choiceBtn").addEventListener("click", () => {
-  if (!currentView || !currentView.pending_choice) {
+  if (!currentCaboView || !currentCaboView.pending_choice) {
     log("No pending choice");
     return;
   }
-  const choiceType = currentView.pending_choice.type;
+  const choiceType = currentCaboView.pending_choice.type;
   if (choiceType === "peek") {
     if (!selectedSlots.length) {
       log("Select one of your slots to peek");
@@ -530,6 +911,48 @@ document.getElementById("choiceBtn").addEventListener("click", () => {
   }
   clearSelection();
   clearTargetSelection();
+});
+
+skullPlayBtn.addEventListener("click", () => {
+  if (!skullSelectedCardType) {
+    log("Select a card to play");
+    return;
+  }
+  sendAction({ type: "play_card", card_type: skullSelectedCardType });
+  clearSkullSelection();
+});
+
+skullStartBidBtn.addEventListener("click", () => {
+  const bid = Number.parseInt(skullBidInput.value, 10);
+  if (!Number.isInteger(bid)) {
+    log("Enter a bid number");
+    return;
+  }
+  sendAction({ type: "start_bid", bid });
+});
+
+skullRaiseBidBtn.addEventListener("click", () => {
+  const bid = Number.parseInt(skullBidInput.value, 10);
+  if (!Number.isInteger(bid)) {
+    log("Enter a bid number");
+    return;
+  }
+  sendAction({ type: "raise_bid", bid });
+});
+
+skullPassBidBtn.addEventListener("click", () => {
+  sendAction({ type: "pass_bid" });
+});
+
+skullRevealBtn.addEventListener("click", () => {
+  if (!skullSelectedTarget) {
+    log("Select a reveal target");
+    return;
+  }
+  sendAction({ type: "reveal_card", target_player_id: skullSelectedTarget });
+  skullSelectedTarget = null;
+  updateSkullTargetSelection();
+  updateSkullActionButtons();
 });
 
 document.querySelectorAll(".collapse-btn").forEach((btn) => {

@@ -602,6 +602,14 @@ class CaboGame:
         return None
 
     @staticmethod
+    def serialize(state: Dict) -> Dict:
+        return state
+
+    @staticmethod
+    def deserialize(payload: Dict) -> Dict:
+        return payload
+
+    @staticmethod
     def _end_round(state: Dict) -> Dict:
         summary = _score_round(state)
         summary["total_scores"] = {pid: pdata["score"] for pid, pdata in state["players"].items()}

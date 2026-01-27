@@ -63,14 +63,16 @@ def _next_bidding_player(state: Dict, current_pid: str) -> Optional[str]:
     return None
 
 
-def _next_active_player(state: Dict, current_pid: str) -> Optional[str]:
-    order = _active_player_ids(state)
+def _next_active_after(state: Dict, current_pid: str) -> Optional[str]:
+    order = state["turn_order"]
     if not order:
         return None
-    if current_pid not in order:
-        return order[0]
-    idx = order.index(current_pid)
-    return order[(idx + 1) % len(order)]
+    start_idx = order.index(current_pid) if current_pid in order else -1
+    for offset in range(1, len(order) + 1):
+        pid = order[(start_idx + offset) % len(order)]
+        if not state["players"][pid]["eliminated"]:
+            return pid
+    return None
 
 
 def _remove_random_card(state: Dict, player_id: str) -> Optional[str]:
@@ -327,6 +329,7 @@ class SkullGame:
             if card == CARD_SKULL:
                 lost_card = _remove_random_card(state, player_id)
                 eliminated = _check_elimination(state, player_id)
+                next_player = _next_active_after(state, player_id)
                 summary = {
                     "result": "fail",
                     "bidder": player_id,
@@ -340,10 +343,6 @@ class SkullGame:
                 _prune_eliminated(state)
                 if _check_game_over(state):
                     return events, None
-                next_player = _next_bidding_player({
-                    **state,
-                    "passed": [],
-                }, player_id)
                 _start_next_round(state, next_player)
                 return events, None
 
@@ -369,7 +368,10 @@ class SkullGame:
 
     @staticmethod
     def get_public_view(state: Dict, viewer_id: str) -> Dict:
-        player_ids = _active_player_ids(state)
+        player_ids = sorted(
+            state["player_meta"].keys(),
+            key=lambda pid: state["player_meta"][pid].get("seat", 0),
+        )
         players_view = []
         for pid in player_ids:
             pdata = state["players"][pid]
