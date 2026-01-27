@@ -122,8 +122,72 @@ input, select {
 }
 
 .player-card {
-  border-bottom: 1px solid #e3e3e3;
-  padding: 6px 0;
+  border: 1px solid #e3e3e3;
+  padding: 8px;
+  border-radius: 6px;
+  background: #fff;
+  margin-bottom: 8px;
+}
+
+.player-card.current {
+  border-color: #1f6feb;
+  box-shadow: 0 0 0 2px rgba(31, 111, 235, 0.15);
+}
+
+.player-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.player-name {
+  font-weight: 600;
+}
+
+.player-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  background: #eef2ff;
+  color: #1f3a8a;
+  border-radius: 10px;
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
+.badge.highlight {
+  background: #1f6feb;
+  color: #fff;
+}
+
+.player-hand {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.player-slot {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 12px;
+  min-width: 48px;
+  text-align: center;
+  background: #fafafa;
+}
+
+.player-slot.empty {
+  opacity: 0.6;
+}
+
+.player-meta {
+  font-size: 12px;
+  color: #555;
 }
 
 .log-entry {

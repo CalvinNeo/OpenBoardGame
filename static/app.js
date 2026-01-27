@@ -198,19 +198,66 @@ function renderHand(view) {
 function renderGamePlayers(view) {
   gamePlayers.innerHTML = "";
   view.players.forEach((p) => {
-    const line = document.createElement("div");
-    line.className = "player-card";
-    const hand = p.hand
-      .map((slot, idx) => {
-        if (slot.empty) return `#${idx}: empty`;
-        return `#${idx}: ${slot.known ? slot.value : "?"}`;
-      })
-      .join(" | ");
-    const tags = [];
-    if (p.player_id === view.current_turn) tags.push("turn");
-    if (p.player_id === view.you) tags.push("you");
-    line.textContent = `${p.name} (score ${p.score}) [${tags.join(", ")}] :: ${hand}`;
-    gamePlayers.appendChild(line);
+    const card = document.createElement("div");
+    card.className = "player-card";
+    if (p.player_id === view.current_turn) {
+      card.classList.add("current");
+    }
+
+    const header = document.createElement("div");
+    header.className = "player-header";
+    const name = document.createElement("div");
+    name.className = "player-name";
+    name.textContent = p.name;
+    header.appendChild(name);
+
+    const badges = document.createElement("div");
+    badges.className = "player-badges";
+    const score = document.createElement("span");
+    score.className = "badge";
+    score.textContent = `score ${p.score}`;
+    badges.appendChild(score);
+    if (p.player_id === view.you) {
+      const you = document.createElement("span");
+      you.className = "badge";
+      you.textContent = "you";
+      badges.appendChild(you);
+    }
+    if (p.is_bot) {
+      const bot = document.createElement("span");
+      bot.className = "badge";
+      bot.textContent = "bot";
+      badges.appendChild(bot);
+    }
+    if (p.player_id === view.current_turn) {
+      const turn = document.createElement("span");
+      turn.className = "badge highlight";
+      turn.textContent = "turn";
+      badges.appendChild(turn);
+    }
+    header.appendChild(badges);
+
+    const handRow = document.createElement("div");
+    handRow.className = "player-hand";
+    p.hand.forEach((slot, idx) => {
+      const slotEl = document.createElement("div");
+      slotEl.className = "player-slot";
+      if (slot.empty) {
+        slotEl.classList.add("empty");
+      }
+      const label = slot.empty ? "Empty" : slot.known ? slot.value : "?";
+      slotEl.textContent = `#${idx} ${label}`;
+      handRow.appendChild(slotEl);
+    });
+
+    const meta = document.createElement("div");
+    meta.className = "player-meta";
+    meta.textContent = `cards ${p.hand_count}`;
+
+    card.appendChild(header);
+    card.appendChild(handRow);
+    card.appendChild(meta);
+    gamePlayers.appendChild(card);
   });
 }
 
@@ -273,7 +320,20 @@ function renderGameState(data) {
   turnLabel.textContent = currentPlayer ? currentPlayer.name : view.current_turn;
   deckCount.textContent = view.deck_count;
   discardTop.textContent = view.discard_top === null ? "-" : view.discard_top;
-  lastDrawn.textContent = view.last_drawn === null ? "-" : view.last_drawn;
+  if (view.last_drawn === null || view.last_drawn === undefined) {
+    lastDrawn.textContent = "-";
+  } else {
+    const choiceMap = {
+      7: "peek",
+      8: "peek",
+      9: "spy",
+      10: "spy",
+      11: "swap",
+      12: "swap",
+    };
+    const choice = choiceMap[view.last_drawn];
+    lastDrawn.textContent = choice ? `${view.last_drawn} (${choice})` : String(view.last_drawn);
+  }
   const caboCaller = view.players.find((p) => p.player_id === view.cabo_called_by);
   caboBy.textContent = caboCaller ? caboCaller.name : view.cabo_called_by || "-";
   caboLeft.textContent = view.cabo_turns_left || "-";
