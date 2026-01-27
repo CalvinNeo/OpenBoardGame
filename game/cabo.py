@@ -456,6 +456,7 @@ class CaboGame:
     @staticmethod
     def get_public_view(state: Dict, viewer_id: str) -> Dict:
         player_ids = state["turn_order"]
+        reveal_all = state["phase"] == "round_end"
         players_view = []
         for pid in player_ids:
             pdata = state["players"][pid]
@@ -465,6 +466,8 @@ class CaboGame:
                 known = pdata["public_known"][idx]
                 if viewer_id in state["knowledge"]:
                     known = known or state["knowledge"][viewer_id][pid][idx]
+                if reveal_all and card is not None:
+                    known = True
                 value = card["value"] if (card is not None and known) else None
                 hand_view.append({"known": known, "value": value, "empty": card is None})
             players_view.append(
