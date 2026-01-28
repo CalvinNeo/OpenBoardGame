@@ -2,3 +2,4 @@ fastapi==0.110.0
 uvicorn==0.27.1
 python-socketio==5.11.1
 quickdraw==1.0.0
+argostranslate==1.9.6

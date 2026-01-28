@@ -30,6 +30,11 @@ except Exception:  # pragma: no cover - optional dependency
     QuickDrawDataGroup = None
     Image = None
 
+try:
+    import argostranslate.translate as argos_translate
+except Exception:  # pragma: no cover - optional dependency
+    argos_translate = None
+
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
 QUICKDRAW_CACHE_DIR = (
     os.environ.get("OPENBOARDGAME_QUICKDRAW_CACHE_DIR")
@@ -136,6 +141,40 @@ def _looks_like_english(value: str) -> bool:
     return all(ord(ch) < 128 for ch in value)
 
 
+def _translate_to_english(text: str) -> Optional[str]:
+    if not isinstance(text, str):
+        return None
+    stripped = text.strip()
+    if not stripped or argos_translate is None:
+        return None
+    try:
+        languages = argos_translate.get_installed_languages()
+    except Exception:
+        return None
+    if not languages:
+        return None
+
+    def _find_lang(prefix: str) -> Optional[object]:
+        for lang in languages:
+            code = getattr(lang, "code", "")
+            if isinstance(code, str) and code.lower().startswith(prefix):
+                return lang
+        return None
+
+    source_lang = _find_lang("zh")
+    target_lang = _find_lang("en")
+    if not source_lang or not target_lang:
+        return None
+    try:
+        translation = source_lang.get_translation(target_lang).translate(stripped)
+    except Exception:
+        return None
+    if not isinstance(translation, str):
+        return None
+    translation = translation.strip()
+    return translation or None
+
+
 def _merge_config(config: Optional[Dict]) -> Dict:
     cfg = {**DEFAULT_CONFIG}
     if config:
@@ -232,6 +271,10 @@ def _quickdraw_alias_for_text(text: str, language: str) -> Optional[str]:
     alias = CHINESE_TO_QUICKDRAW.get(stripped)
     if alias:
         return alias
+    if not _looks_like_english(stripped):
+        translated = _translate_to_english(stripped)
+        if translated:
+            return translated
     normalized = _normalize_name(stripped)
     override = ENGLISH_ALIAS_OVERRIDES.get(normalized)
     if override:
