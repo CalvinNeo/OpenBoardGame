@@ -4,7 +4,6 @@ import io
 import math
 import os
 import random
-import tempfile
 import urllib.parse
 from typing import Dict, List, Optional, Tuple
 
@@ -61,9 +60,11 @@ STROKE_WIDTH = 4
 
 QUICKDRAW_AVAILABLE = QuickDrawData is not None and QuickDrawDataGroup is not None and Image is not None
 QUICKDRAW_MAX_DRAWINGS = 400
-QUICKDRAW_CACHE_DIR = os.path.join(tempfile.gettempdir(), "openboardgame_quickdraw")
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+QUICKDRAW_CACHE_DIR = os.path.join(PROJECT_ROOT, ".quickdraw_cache")
 _QUICKDRAW_NAME_MAP: Optional[Dict[str, str]] = None
 _QUICKDRAW_GROUPS: Dict[str, QuickDrawDataGroup] = {}
+_QUICKDRAW_CACHE_READY = False
 
 BOT_SALT_ADJECTIVES = [
     "sleepy",
@@ -184,6 +185,7 @@ def _get_quickdraw_name_map() -> Dict[str, str]:
     if not QUICKDRAW_AVAILABLE:
         _QUICKDRAW_NAME_MAP = {}
         return _QUICKDRAW_NAME_MAP
+    _ensure_quickdraw_cache_dir()
     try:
         data = QuickDrawData(
             recognized=True,
@@ -241,6 +243,7 @@ def _get_quickdraw_group(category: str) -> Optional[QuickDrawDataGroup]:
     group = _QUICKDRAW_GROUPS.get(category)
     if group is not None:
         return group
+    _ensure_quickdraw_cache_dir()
     try:
         group = QuickDrawDataGroup(
             category,
@@ -298,6 +301,17 @@ def _salt_prompt(prompt: str) -> str:
     parts.extend(adjectives)
     parts.append(base)
     return " ".join(parts)
+
+
+def _ensure_quickdraw_cache_dir() -> None:
+    global _QUICKDRAW_CACHE_READY
+    if _QUICKDRAW_CACHE_READY:
+        return
+    try:
+        os.makedirs(QUICKDRAW_CACHE_DIR, exist_ok=True)
+        _QUICKDRAW_CACHE_READY = True
+    except Exception:
+        return
 
 
 def _select_template(prompt: str, rng: random.Random) -> str:
