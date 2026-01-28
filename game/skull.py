@@ -77,25 +77,50 @@ def _next_active_after(state: Dict, current_pid: str) -> Optional[str]:
 
 def _remove_random_card(state: Dict, player_id: str) -> Optional[str]:
     pdata = state["players"][player_id]
-    combined = pdata["hand"] + pdata["pile"]
-    if not combined:
+    choices = []
+    for idx in range(len(pdata["hand"])):
+        choices.append(("hand", idx))
+    for idx in range(len(pdata["pile"])):
+        choices.append(("pile", idx))
+    for idx, entry in enumerate(state.get("revealed_cards", [])):
+        if entry["player_id"] == player_id:
+            choices.append(("revealed", idx))
+    if not choices:
         return None
-    idx = random.randrange(len(combined))
-    if idx < len(pdata["hand"]):
+    location, idx = random.choice(choices)
+    if location == "hand":
         return pdata["hand"].pop(idx)
-    idx -= len(pdata["hand"])
-    return pdata["pile"].pop(idx)
+    if location == "pile":
+        return pdata["pile"].pop(idx)
+    return state["revealed_cards"].pop(idx)["card"]
+
+
+def _count_owned_cards(state: Dict, player_id: str) -> int:
+    pdata = state["players"][player_id]
+    total = len(pdata["hand"]) + len(pdata["pile"])
+    for entry in state.get("revealed_cards", []):
+        if entry["player_id"] == player_id:
+            total += 1
+    return total
 
 
 def _check_elimination(state: Dict, player_id: str) -> bool:
     pdata = state["players"][player_id]
-    if len(pdata["hand"]) + len(pdata["pile"]) == 0:
+    if _count_owned_cards(state, player_id) == 0:
         pdata["eliminated"] = True
         return True
     return False
 
 
 def _collect_piles(state: Dict) -> None:
+    revealed = state.get("revealed_cards", [])
+    if revealed:
+        for entry in revealed:
+            pid = entry["player_id"]
+            pdata = state["players"].get(pid)
+            if pdata and not pdata["eliminated"]:
+                pdata["hand"].append(entry["card"])
+        state["revealed_cards"] = []
     for pdata in state["players"].values():
         if not pdata["pile"]:
             continue
@@ -173,6 +198,7 @@ class SkullGame:
             "bidder": None,
             "passed": [],
             "reveal": None,
+            "revealed_cards": [],
             "round": 1,
             "config": cfg,
             "player_meta": player_meta,
@@ -196,7 +222,8 @@ class SkullGame:
             actions = []
             if pdata["hand"]:
                 actions.append("play_card")
-            if _all_have_played(state) and _total_pile_count(state) > 0:
+            can_bid = _total_pile_count(state) > 0 and (_all_have_played(state) or not pdata["hand"])
+            if can_bid:
                 actions.append("start_bid")
             return actions
 
@@ -245,7 +272,7 @@ class SkullGame:
                 return events, None
 
             if action_type == "start_bid":
-                if not _all_have_played(state):
+                if not _all_have_played(state) and pdata["hand"]:
                     return [], "all players must play before bidding"
                 bid = action.get("bid")
                 if not isinstance(bid, int):
@@ -317,6 +344,7 @@ class SkullGame:
                 return [], "must reveal own pile first"
 
             card = state["players"][target_id]["pile"].pop()
+            state.setdefault("revealed_cards", []).append({"player_id": target_id, "card": card})
             reveal = state.get("reveal") or {"roses_revealed": 0, "last_card": None}
             reveal["last_card"] = {"player_id": target_id, "card": card}
             if card == CARD_ROSE:
@@ -423,7 +451,13 @@ class SkullGame:
         if phase == "playing":
             if bot_id != state["current_turn"]:
                 return None
-            can_bid = _all_have_played(state) and _total_pile_count(state) > 0
+            can_bid = _total_pile_count(state) > 0 and (
+                _all_have_played(state) or not pdata["hand"]
+            )
+            if can_bid and not pdata["hand"]:
+                total = _total_pile_count(state)
+                bid = random.randint(1, total)
+                return {"type": "start_bid", "bid": bid}
             if can_bid and random.random() < 0.2:
                 total = _total_pile_count(state)
                 bid = random.randint(1, total)
