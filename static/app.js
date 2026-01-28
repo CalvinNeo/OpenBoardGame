@@ -1028,9 +1028,11 @@ function clearDrawGuessCanvas() {
 function getDrawGuessPosition(event) {
   const rect = drawGuessCanvas.getBoundingClientRect();
   const point = event.touches ? event.touches[0] : event;
+  const scaleX = rect.width ? drawGuessCanvas.width / rect.width : 1;
+  const scaleY = rect.height ? drawGuessCanvas.height / rect.height : 1;
   return {
-    x: point.clientX - rect.left,
-    y: point.clientY - rect.top,
+    x: (point.clientX - rect.left) * scaleX,
+    y: (point.clientY - rect.top) * scaleY,
   };
 }
 

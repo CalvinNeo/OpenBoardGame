@@ -1,3 +1,9 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 body {
   font-family: Arial, sans-serif;
   background: #f7f7f7;
@@ -403,6 +409,9 @@ body.log-open {
   background: #fff;
   border-radius: 4px;
   cursor: crosshair;
+  max-width: 100%;
+  height: auto;
+  touch-action: none;
 }
 
 .draw-guess-image {
@@ -574,4 +583,86 @@ body.log-open {
   background: #fff7d6;
   color: #7c5b00;
   border-color: #f5d674;
+}
+
+@media (max-width: 900px) {
+  .container {
+    padding: 12px;
+  }
+
+  .layout {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+  }
+
+  .panel {
+    padding: 12px;
+  }
+
+  .game-panel {
+    padding: 12px;
+  }
+
+  .panel-header {
+    flex-wrap: wrap;
+  }
+
+  .row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .row.actions button {
+    margin-right: 0;
+    width: 100%;
+  }
+
+  .row input,
+  .row select,
+  .row textarea,
+  .row button {
+    width: 100%;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    font-size: 16px;
+  }
+
+  input,
+  select,
+  textarea {
+    padding: 8px 10px;
+  }
+
+  button {
+    padding: 8px 10px;
+  }
+
+  .hand {
+    flex-wrap: wrap;
+  }
+
+  .target-slots {
+    flex-wrap: wrap;
+  }
+
+  .room-item-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .room-item-actions button {
+    width: 100%;
+  }
+
+  .log-panel {
+    padding: 12px;
+    gap: 8px;
+  }
 }
