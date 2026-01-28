@@ -4,6 +4,7 @@ import io
 import os
 import random
 import shutil
+import time
 import urllib.parse
 import urllib.request
 from typing import Dict, List, Optional, Tuple
@@ -104,6 +105,16 @@ DEFAULT_CONFIG = {
 }
 
 DEFAULT_QUICKDRAW_BINARY_URL = "https://storage.googleapis.com/quickdraw_dataset/full/binary/"
+
+
+def _log_quickdraw_request_start(label: str) -> float:
+    print(f"[quickdraw] request start: {label}", flush=True)
+    return time.monotonic()
+
+
+def _log_quickdraw_request_end(label: str, start: float) -> None:
+    duration = time.monotonic() - start
+    print(f"[quickdraw] request done: {label} in {duration:.2f}s", flush=True)
 
 
 def _normalize_language(value: Optional[str]) -> str:
@@ -375,6 +386,8 @@ def _get_quickdraw_name_map() -> Dict[str, str]:
     if not _QUICKDRAW_ALLOW_NETWORK:
         _QUICKDRAW_NAME_MAP = _quickdraw_cache_name_map()
         return _QUICKDRAW_NAME_MAP
+    label = "QuickDrawData names"
+    start_time = _log_quickdraw_request_start(label)
     try:
         data = QuickDrawData(
             recognized=True,
@@ -387,6 +400,8 @@ def _get_quickdraw_name_map() -> Dict[str, str]:
     except Exception:
         _set_quickdraw_offline()
         return _QUICKDRAW_NAME_MAP or {}
+    finally:
+        _log_quickdraw_request_end(label, start_time)
     _QUICKDRAW_NAME_MAP = {_normalize_name(name): name for name in data.drawing_names}
     return _QUICKDRAW_NAME_MAP
 
@@ -436,6 +451,8 @@ def _get_quickdraw_group(category: str) -> Optional[QuickDrawDataGroup]:
     cache_path = _quickdraw_cache_path(category)
     if not _QUICKDRAW_ALLOW_NETWORK and not os.path.isfile(cache_path):
         return None
+    label = f"QuickDrawDataGroup {category}"
+    start_time = _log_quickdraw_request_start(label)
     try:
         group = QuickDrawDataGroup(
             category,
@@ -448,6 +465,8 @@ def _get_quickdraw_group(category: str) -> Optional[QuickDrawDataGroup]:
     except Exception:
         _set_quickdraw_offline()
         return None
+    finally:
+        _log_quickdraw_request_end(label, start_time)
     _QUICKDRAW_GROUPS[category] = group
     return group
 
