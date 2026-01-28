@@ -35,6 +35,33 @@ QUICKDRAW_CACHE_DIR = (
 QUICKDRAW_BINARY_URL = (
     os.environ.get("OPENBOARDGAME_QUICKDRAW_BINARY_URL") or os.environ.get("QUICKDRAW_BINARY_URL")
 )
+QUICKDRAW_TIMEOUT = os.environ.get("OPENBOARDGAME_QUICKDRAW_TIMEOUT") or os.environ.get("QUICKDRAW_TIMEOUT")
+DEFAULT_QUICKDRAW_TIMEOUT = (5.0, 30.0)
+QUICKDRAW_REQUEST_TIMEOUT = DEFAULT_QUICKDRAW_TIMEOUT
+if QUICKDRAW_TIMEOUT:
+    raw_timeout = QUICKDRAW_TIMEOUT.strip().lower()
+    if raw_timeout in ("0", "off", "false", "no"):
+        QUICKDRAW_REQUEST_TIMEOUT = None
+    elif "," in raw_timeout:
+        part1, part2 = raw_timeout.split(",", 1)
+        try:
+            connect_timeout = float(part1.strip())
+            read_timeout = float(part2.strip())
+        except ValueError:
+            pass
+        else:
+            if connect_timeout > 0 and read_timeout > 0:
+                QUICKDRAW_REQUEST_TIMEOUT = (connect_timeout, read_timeout)
+    else:
+        try:
+            value_timeout = float(raw_timeout)
+        except ValueError:
+            pass
+        else:
+            if value_timeout > 0:
+                QUICKDRAW_REQUEST_TIMEOUT = value_timeout
+            else:
+                QUICKDRAW_REQUEST_TIMEOUT = None
 QUICKDRAW_OFFLINE = (
     (os.environ.get("OPENBOARDGAME_QUICKDRAW_OFFLINE") or os.environ.get("QUICKDRAW_OFFLINE") or "")
     .strip()
@@ -42,11 +69,21 @@ QUICKDRAW_OFFLINE = (
     in ("1", "true", "yes", "on")
 )
 
-if QuickDrawDataGroup is not None and QUICKDRAW_BINARY_URL:
+if QuickDrawDataGroup is not None and (QUICKDRAW_BINARY_URL or QUICKDRAW_REQUEST_TIMEOUT):
     try:
         import quickdraw.data as quickdraw_data
 
-        quickdraw_data.BINARY_URL = QUICKDRAW_BINARY_URL.rstrip("/") + "/"
+        if QUICKDRAW_BINARY_URL:
+            quickdraw_data.BINARY_URL = QUICKDRAW_BINARY_URL.rstrip("/") + "/"
+        if QUICKDRAW_REQUEST_TIMEOUT is not None:
+            import requests
+
+            def _quickdraw_get(url, **kwargs):
+                if "timeout" not in kwargs:
+                    kwargs["timeout"] = QUICKDRAW_REQUEST_TIMEOUT
+                return requests.get(url, **kwargs)
+
+            quickdraw_data.get = _quickdraw_get
     except Exception:
         pass
 
