@@ -1,7 +1,20 @@
+import base64
+import difflib
+import io
 import math
+import os
 import random
+import tempfile
 import urllib.parse
 from typing import Dict, List, Optional, Tuple
+
+try:
+    from quickdraw import QuickDrawData, QuickDrawDataGroup
+    from PIL import Image
+except Exception:  # pragma: no cover - optional dependency
+    QuickDrawData = None
+    QuickDrawDataGroup = None
+    Image = None
 
 DEFAULT_PROMPTS = [
     "airplane",
@@ -45,6 +58,12 @@ DEFAULT_PROMPTS = [
 CANVAS_WIDTH = 480
 CANVAS_HEIGHT = 360
 STROKE_WIDTH = 4
+
+QUICKDRAW_AVAILABLE = QuickDrawData is not None and QuickDrawDataGroup is not None and Image is not None
+QUICKDRAW_MAX_DRAWINGS = 400
+QUICKDRAW_CACHE_DIR = os.path.join(tempfile.gettempdir(), "openboardgame_quickdraw")
+_QUICKDRAW_NAME_MAP: Optional[Dict[str, str]] = None
+_QUICKDRAW_GROUPS: Dict[str, QuickDrawDataGroup] = {}
 
 BOT_SALT_ADJECTIVES = [
     "sleepy",
@@ -152,6 +171,120 @@ def _normalize_text(value: Optional[str]) -> str:
     if not value:
         return ""
     return " ".join(value.strip().casefold().split())
+
+
+def _normalize_name(value: str) -> str:
+    return " ".join(value.replace("-", " ").strip().casefold().split())
+
+
+def _get_quickdraw_name_map() -> Dict[str, str]:
+    global _QUICKDRAW_NAME_MAP
+    if _QUICKDRAW_NAME_MAP is not None:
+        return _QUICKDRAW_NAME_MAP
+    if not QUICKDRAW_AVAILABLE:
+        _QUICKDRAW_NAME_MAP = {}
+        return _QUICKDRAW_NAME_MAP
+    try:
+        data = QuickDrawData(
+            recognized=True,
+            max_drawings=QUICKDRAW_MAX_DRAWINGS,
+            refresh_data=False,
+            jit_loading=True,
+            print_messages=False,
+            cache_dir=QUICKDRAW_CACHE_DIR,
+        )
+    except Exception:
+        _QUICKDRAW_NAME_MAP = {}
+        return _QUICKDRAW_NAME_MAP
+    _QUICKDRAW_NAME_MAP = {_normalize_name(name): name for name in data.drawing_names}
+    return _QUICKDRAW_NAME_MAP
+
+
+def _match_quickdraw_category(prompt: str) -> Optional[str]:
+    if not QUICKDRAW_AVAILABLE:
+        return None
+    normalized = _normalize_name(prompt or "")
+    if not normalized:
+        return None
+    name_map = _get_quickdraw_name_map()
+    if normalized in name_map:
+        return name_map[normalized]
+    if normalized.endswith("s") and normalized[:-1] in name_map:
+        return name_map[normalized[:-1]]
+
+    tokens = set(normalized.split())
+    best_name = None
+    best_score = 0
+    for key, original in name_map.items():
+        if normalized in key or key in normalized:
+            score = 2 + len(key)
+        else:
+            overlap = len(tokens.intersection(key.split()))
+            score = overlap
+        if score > best_score:
+            best_score = score
+            best_name = original
+    if best_name:
+        return best_name
+
+    matches = difflib.get_close_matches(normalized, list(name_map.keys()), n=1, cutoff=0.8)
+    if matches:
+        return name_map[matches[0]]
+    return None
+
+
+def _get_quickdraw_group(category: str) -> Optional[QuickDrawDataGroup]:
+    if not QUICKDRAW_AVAILABLE:
+        return None
+    if not category:
+        return None
+    group = _QUICKDRAW_GROUPS.get(category)
+    if group is not None:
+        return group
+    try:
+        group = QuickDrawDataGroup(
+            category,
+            recognized=True,
+            max_drawings=QUICKDRAW_MAX_DRAWINGS,
+            refresh_data=False,
+            print_messages=False,
+            cache_dir=QUICKDRAW_CACHE_DIR,
+        )
+    except Exception:
+        return None
+    _QUICKDRAW_GROUPS[category] = group
+    return group
+
+
+def _quickdraw_to_data_url(category: str, rng: random.Random) -> Optional[str]:
+    group = _get_quickdraw_group(category)
+    if not group or group.drawing_count == 0:
+        return None
+    try:
+        index = rng.randrange(group.drawing_count)
+        drawing = group.get_drawing(index)
+        stroke_width = max(2, rng.randint(2, 4))
+        image = drawing.get_image(stroke_width=stroke_width)
+        image = image.convert("RGB")
+    except Exception:
+        return None
+
+    angle = rng.uniform(-10.0, 10.0)
+    image = image.rotate(angle, expand=True, fillcolor=(255, 255, 255))
+    scale = rng.uniform(0.85, 1.15)
+    width = max(1, int(image.width * scale))
+    height = max(1, int(image.height * scale))
+    image = image.resize((width, height))
+
+    canvas = Image.new("RGB", (CANVAS_WIDTH, CANVAS_HEIGHT), color=(255, 255, 255))
+    offset_x = (CANVAS_WIDTH - width) // 2 + rng.randint(-30, 30)
+    offset_y = (CANVAS_HEIGHT - height) // 2 + rng.randint(-30, 30)
+    canvas.paste(image, (offset_x, offset_y))
+
+    buffer = io.BytesIO()
+    canvas.save(buffer, format="PNG")
+    encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+    return f"data:image/png;base64,{encoded}"
 
 
 def _salt_prompt(prompt: str) -> str:
@@ -493,6 +626,19 @@ def _bot_svg_for_prompt(prompt: str, rng: random.Random) -> str:
     return _svg_data_url(_wrap_svg(elements))
 
 
+def _bot_image_for_prompt(prompt: str, salted_prompt: str, rng: random.Random) -> str:
+    category = _match_quickdraw_category(prompt)
+    if not category and QUICKDRAW_AVAILABLE:
+        name_map = _get_quickdraw_name_map()
+        if name_map:
+            category = rng.choice(list(name_map.values()))
+    if category:
+        image_data = _quickdraw_to_data_url(category, rng)
+        if image_data:
+            return image_data
+    return _bot_svg_for_prompt(salted_prompt, rng)
+
+
 def _bot_guess_from_hint(hint: Optional[str], prompt_pool: List[str]) -> str:
     cleaned = hint.strip() if isinstance(hint, str) else ""
     if not cleaned:
@@ -740,7 +886,7 @@ class DrawGuessGame:
             prompt = _current_text_for_player(state, bot_id)
             salted_prompt = _salt_prompt(prompt or "")
             rng = random.Random(salted_prompt)
-            image_data = _bot_svg_for_prompt(salted_prompt, rng)
+            image_data = _bot_image_for_prompt(prompt or "", salted_prompt, rng)
             return {"type": "submit_drawing", "image_data": image_data}
         if state["phase"] == "guess":
             book = _current_book(state, bot_id)
