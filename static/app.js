@@ -32,6 +32,7 @@ const gameTypeLabel = document.getElementById("gameTypeLabel");
 const playersList = document.getElementById("playersList");
 const gameSelect = document.getElementById("gameSelect");
 const leaveBtn = document.getElementById("leaveBtn");
+const removeBotBtn = document.getElementById("removeBotBtn");
 const drawGuessLanguageRow = document.getElementById("drawGuessLanguageRow");
 const drawGuessLanguageSelect = document.getElementById("drawGuessLanguageSelect");
 const caboPanel = document.getElementById("caboPanel");
@@ -221,6 +222,59 @@ function log(message) {
   logEl.prepend(entry);
 }
 
+function describeBlockingPlayers(players) {
+  if (!Array.isArray(players) || players.length === 0) {
+    return "";
+  }
+  return players
+    .map((player) => {
+      if (typeof player === "string") {
+        const trimmed = player.trim();
+        return trimmed || "?";
+      }
+      if (!player || typeof player !== "object") {
+        return "?";
+      }
+      const name = player.name ? String(player.name).trim() : "?";
+      if (player.connected === false) {
+        return `${name} (offline)`;
+      }
+      return name;
+    })
+    .filter(Boolean)
+    .join(", ");
+}
+
+function findRoomListItem(roomId) {
+  if (!roomListEl || !roomId) {
+    return null;
+  }
+  return roomListEl.querySelector(`.room-item[data-room-id="${roomId}"]`);
+}
+
+function showRoomListBubble(wrapper, message) {
+  if (!wrapper || !message) {
+    return;
+  }
+  const existing = wrapper.querySelector(".room-bubble");
+  if (existing) {
+    existing.remove();
+  }
+  const bubble = document.createElement("div");
+  bubble.className = "room-bubble";
+  bubble.textContent = message;
+  wrapper.appendChild(bubble);
+  requestAnimationFrame(() => {
+    bubble.classList.add("show");
+  });
+  window.setTimeout(() => {
+    bubble.classList.remove("show");
+    window.setTimeout(() => {
+      bubble.remove();
+    }, 200);
+  }, 2200);
+}
+
 function isTypingTarget(target) {
   if (!target) {
     return false;
@@ -274,7 +328,7 @@ function updateDrawGuessLanguageRow() {
 }
 
 function requestRoomList() {
-  socket.emit("room:list");
+  socket.emit("room:list", {});
 }
 
 function attemptJoinRoom(rid) {
@@ -310,6 +364,7 @@ function renderRoomList(rooms) {
   rooms.forEach((room) => {
     const wrapper = document.createElement("div");
     wrapper.className = "room-item";
+    wrapper.dataset.roomId = room.room_id || "";
 
     const header = document.createElement("div");
     header.className = "room-item-header";
@@ -363,6 +418,27 @@ function renderRoomList(rooms) {
       });
       actions.appendChild(reconnectBtn);
     }
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.className = "room-delete-btn";
+    deleteBtn.innerHTML = "&#128465;";
+    deleteBtn.setAttribute("aria-label", "Delete room");
+    deleteBtn.title = "Delete room";
+    deleteBtn.addEventListener("click", () => {
+      if (!room.room_id) {
+        return;
+      }
+      const blockingPlayers = (room.players || []).filter((player) => !player.is_bot);
+      if (blockingPlayers.length) {
+        const names = describeBlockingPlayers(blockingPlayers);
+        const message = names ? `Still in room: ${names}` : "Room has human players";
+        showRoomListBubble(wrapper, message);
+        return;
+      }
+      socket.emit("room:delete", { room_id: room.room_id });
+    });
+    actions.appendChild(deleteBtn);
 
     wrapper.appendChild(header);
     wrapper.appendChild(meta);
@@ -1824,6 +1900,10 @@ function renderGameState(data) {
   }
 }
 
+socket.on("connect", () => {
+  requestRoomList();
+});
+
 socket.on("system:info", (data) => {
   if (data.player_id) {
     playerId = data.player_id;
@@ -1856,6 +1936,23 @@ socket.on("room:list", (data) => {
 
 socket.on("room:list_update", (data) => {
   renderRoomList((data || {}).rooms || []);
+});
+
+socket.on("room:delete_result", (data) => {
+  if (!data || data.ok) {
+    return;
+  }
+  const messageFromServer = data.message ? String(data.message).trim() : "";
+  const blocking = describeBlockingPlayers(data.blocking_players || []);
+  const message = blocking
+    ? `Still in room: ${blocking}`
+    : messageFromServer || "Room could not be deleted";
+  const wrapper = findRoomListItem(data.room_id);
+  if (wrapper) {
+    showRoomListBubble(wrapper, message);
+  } else if (message) {
+    log(message);
+  }
 });
 
 socket.on("game:state", (data) => {
@@ -1907,6 +2004,16 @@ document.getElementById("startBtn").addEventListener("click", () => {
 document.getElementById("addBotBtn").addEventListener("click", () => {
   socket.emit("room:add_bot", { room_id: roomId });
 });
+
+if (removeBotBtn) {
+  removeBotBtn.addEventListener("click", () => {
+    if (!roomId) {
+      log("Not in a room");
+      return;
+    }
+    socket.emit("room:remove_bot", { room_id: roomId });
+  });
+}
 
 if (leaveBtn) {
   leaveBtn.addEventListener("click", () => {

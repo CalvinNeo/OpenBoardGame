@@ -119,6 +119,10 @@ def _room_list_payload() -> List[Dict]:
     return rooms
 
 
+def _room_blocking_players(room: Room) -> List[Dict]:
+    return [{"name": p.name, "connected": p.connected} for p in room.players if not p.is_bot]
+
+
 async def _emit_room_list_update() -> None:
     await sio.emit("room:list_update", {"rooms": _room_list_payload()})
 
@@ -453,6 +457,34 @@ async def on_room_add_bot(sid, data):
     await _emit_room_list_update()
 
 
+@sio.on("room:remove_bot")
+async def on_room_remove_bot(sid, data):
+    session = SESSIONS.get(sid)
+    if not session:
+        await _send_error(sid, "not in room")
+        return
+    room = _get_room(session.get("room_id"))
+    if not room:
+        await _send_error(sid, "room not found")
+        return
+    if room.status != "lobby":
+        await _send_error(sid, "game already started")
+        return
+    bot_index = None
+    for idx in range(len(room.players) - 1, -1, -1):
+        if room.players[idx].is_bot:
+            bot_index = idx
+            break
+    if bot_index is None:
+        await _send_error(sid, "no bots to remove")
+        return
+    room.players.pop(bot_index)
+    for idx, player in enumerate(room.players):
+        player.seat = idx
+    await _emit_room_state(room)
+    await _emit_room_list_update()
+
+
 @sio.on("room:start")
 async def on_room_start(sid, data):
     session = SESSIONS.get(sid)
@@ -501,8 +533,31 @@ async def on_room_start(sid, data):
 
 
 @sio.on("room:list")
-async def on_room_list(sid, data):
+async def on_room_list(sid, data=None):
     await sio.emit("room:list", {"rooms": _room_list_payload()}, to=sid)
+
+
+@sio.on("room:delete")
+async def on_room_delete(sid, data):
+    room_id = (data or {}).get("room_id")
+    if not room_id:
+        await _send_error(sid, "room_id required")
+        return
+    room = _get_room(room_id)
+    if not room:
+        await sio.emit("room:delete_result", {"room_id": room_id, "ok": False, "message": "room not found"}, to=sid)
+        return
+    blocking_players = _room_blocking_players(room)
+    if blocking_players:
+        await sio.emit(
+            "room:delete_result",
+            {"room_id": room_id, "ok": False, "blocking_players": blocking_players},
+            to=sid,
+        )
+        return
+    ROOMS.pop(room_id, None)
+    await sio.emit("room:delete_result", {"room_id": room_id, "ok": True}, to=sid)
+    await _emit_room_list_update()
 
 
 @sio.on("game:action")
