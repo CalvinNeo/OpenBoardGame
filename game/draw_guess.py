@@ -3,6 +3,9 @@ import difflib
 import io
 import os
 import random
+import shutil
+import urllib.parse
+import urllib.request
 from typing import Dict, List, Optional, Tuple
 
 from game.draw_guess_prompts import (
@@ -99,6 +102,8 @@ DEFAULT_CONFIG = {
     "language": "en",
     "prompt_pool": None,
 }
+
+DEFAULT_QUICKDRAW_BINARY_URL = "https://storage.googleapis.com/quickdraw_dataset/full/binary/"
 
 
 def _normalize_language(value: Optional[str]) -> str:
@@ -275,6 +280,88 @@ def _prompt_pool_texts(prompt_pool: Optional[List]) -> List[str]:
         if isinstance(text, str) and text.strip():
             texts.append(text.strip())
     return texts
+
+
+def _quickdraw_binary_base_url() -> str:
+    if QUICKDRAW_BINARY_URL:
+        return QUICKDRAW_BINARY_URL.rstrip("/") + "/"
+    return DEFAULT_QUICKDRAW_BINARY_URL
+
+
+def _quickdraw_timeout_value() -> Optional[float]:
+    if QUICKDRAW_REQUEST_TIMEOUT is None:
+        return None
+    if isinstance(QUICKDRAW_REQUEST_TIMEOUT, tuple):
+        return max(QUICKDRAW_REQUEST_TIMEOUT)
+    try:
+        return float(QUICKDRAW_REQUEST_TIMEOUT)
+    except (TypeError, ValueError):
+        return None
+
+
+def _download_quickdraw_bin(category: str) -> bool:
+    if QUICKDRAW_OFFLINE:
+        return False
+    _ensure_quickdraw_cache_dir()
+    base_url = _quickdraw_binary_base_url()
+    encoded = urllib.parse.quote(category)
+    url = f"{base_url}{encoded}.bin"
+    cache_path = _quickdraw_cache_path(category)
+    temp_path = f"{cache_path}.tmp"
+    request = urllib.request.Request(url, headers={"User-Agent": "OpenBoardGame/quickdraw-prefetch"})
+    timeout = _quickdraw_timeout_value()
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response, open(temp_path, "wb") as handle:
+            shutil.copyfileobj(response, handle)
+        os.replace(temp_path, cache_path)
+        return os.path.isfile(cache_path)
+    except Exception:
+        try:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+        except Exception:
+            pass
+        return False
+
+
+def quickdraw_categories_for_prompts(prompt_pool: Optional[List], language: str) -> List[str]:
+    language = _normalize_language(language)
+    entries = _normalize_prompt_pool(prompt_pool, language)
+    categories: List[str] = []
+    seen = set()
+    for entry in entries:
+        quickdraw = entry.get("quickdraw")
+        if not isinstance(quickdraw, str):
+            continue
+        quickdraw = quickdraw.strip()
+        if not quickdraw:
+            continue
+        normalized = _normalize_name(quickdraw)
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        categories.append(quickdraw)
+    return categories
+
+
+def prefetch_quickdraw_bins(categories: List[str]) -> Dict[str, str]:
+    results: Dict[str, str] = {}
+    for category in categories:
+        if not isinstance(category, str):
+            continue
+        category = category.strip()
+        if not category:
+            continue
+        cache_path = _quickdraw_cache_path(category)
+        if os.path.isfile(cache_path):
+            results[category] = "cached"
+            continue
+        if QUICKDRAW_OFFLINE:
+            results[category] = "offline"
+            continue
+        downloaded = _download_quickdraw_bin(category)
+        results[category] = "downloaded" if downloaded else "failed"
+    return results
 
 
 def _get_quickdraw_name_map() -> Dict[str, str]:
