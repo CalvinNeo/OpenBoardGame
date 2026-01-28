@@ -7,6 +7,16 @@
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
+  <section id="logPanel" class="log-panel hidden" aria-hidden="true">
+    <div class="panel-header">
+      <h2>Log</h2>
+      <button id="logCloseBtn" class="log-close-btn" type="button">Close</button>
+    </div>
+    <div class="panel-body">
+      <div id="log"></div>
+    </div>
+  </section>
+
   <div class="container">
     <h1>OpenBoardGame</h1>
 
@@ -70,15 +80,6 @@
           </div>
         </section>
 
-        <section class="panel collapsible">
-          <div class="panel-header">
-            <h2>Log</h2>
-            <button class="collapse-btn" type="button" aria-expanded="true">Hide</button>
-          </div>
-          <div class="panel-body">
-            <div id="log"></div>
-          </div>
-        </section>
       </aside>
 
       <main class="main">
@@ -225,6 +226,7 @@
         </section>
       </main>
     </div>
+
   </div>
 
   <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>

@@ -134,6 +134,62 @@ input, select {
   overflow-wrap: anywhere;
 }
 
+body.log-open {
+  overflow: hidden;
+}
+
+.log-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  padding: 16px;
+  background: rgba(20, 20, 20, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  backdrop-filter: blur(2px);
+}
+
+.log-panel.hidden {
+  display: none;
+}
+
+.log-panel .panel-header {
+  margin-bottom: 0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.log-panel .panel-body {
+  flex: 1;
+  padding: 0;
+  overflow: hidden;
+}
+
+.log-panel #log {
+  height: 100%;
+  max-height: none;
+  background: rgba(255, 255, 255, 0.75);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.log-panel .log-entry {
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
+.log-close-btn {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #ddd;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
 .hand {
   display: flex;
   gap: 8px;

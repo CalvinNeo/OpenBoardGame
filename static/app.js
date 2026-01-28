@@ -47,6 +47,8 @@ const targetList = document.getElementById("targetList");
 const clearTargetBtn = document.getElementById("clearTarget");
 const gamePlayers = document.getElementById("gamePlayers");
 const logEl = document.getElementById("log");
+const logPanel = document.getElementById("logPanel");
+const logCloseBtn = document.getElementById("logCloseBtn");
 
 const skullPhaseLabel = document.getElementById("skullPhase");
 const skullRoundLabel = document.getElementById("skullRound");
@@ -119,6 +121,33 @@ function log(message) {
   entry.className = "log-entry";
   entry.textContent = message;
   logEl.prepend(entry);
+}
+
+function isTypingTarget(target) {
+  if (!target) {
+    return false;
+  }
+  if (target.isContentEditable) {
+    return true;
+  }
+  const tag = target.tagName;
+  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+}
+
+function setLogPanelVisible(visible) {
+  if (!logPanel) {
+    return;
+  }
+  logPanel.classList.toggle("hidden", !visible);
+  logPanel.setAttribute("aria-hidden", (!visible).toString());
+  document.body.classList.toggle("log-open", visible);
+}
+
+function toggleLogPanel() {
+  if (!logPanel) {
+    return;
+  }
+  setLogPanelVisible(logPanel.classList.contains("hidden"));
 }
 
 function setConnectionInfo(message) {
@@ -1308,4 +1337,33 @@ document.querySelectorAll(".collapse-btn").forEach((btn) => {
     btn.textContent = collapsed ? "Show" : "Hide";
     btn.setAttribute("aria-expanded", (!collapsed).toString());
   });
+});
+
+if (logCloseBtn) {
+  logCloseBtn.addEventListener("click", () => {
+    setLogPanelVisible(false);
+  });
+}
+
+document.addEventListener("keydown", (event) => {
+  if (!logPanel) {
+    return;
+  }
+  if (event.key === "Escape") {
+    if (!logPanel.classList.contains("hidden")) {
+      event.preventDefault();
+      setLogPanelVisible(false);
+    }
+    return;
+  }
+  if (event.key.toLowerCase() !== "l") {
+    return;
+  }
+  if (!event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) {
+    return;
+  }
+  if (event.repeat || isTypingTarget(event.target)) {
+    return;
+  }
+  toggleLogPanel();
 });
