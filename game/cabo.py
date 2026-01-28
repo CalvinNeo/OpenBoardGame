@@ -61,6 +61,22 @@ def _clear_slot_knowledge(state: Dict, player_id: str, slot: int) -> None:
         state["knowledge"][viewer_id][player_id][slot] = False
 
 
+def _add_card_to_hand(state: Dict, player_id: str, card: Dict) -> int:
+    hand = state["players"][player_id]["hand"]
+    try:
+        slot = hand.index(None)
+    except ValueError:
+        slot = len(hand)
+        hand.append(card)
+        state["players"][player_id]["public_known"].append(False)
+        for viewer_id in state["knowledge"].keys():
+            state["knowledge"][viewer_id][player_id].append(False)
+        return slot
+    hand[slot] = card
+    _clear_slot_knowledge(state, player_id, slot)
+    return slot
+
+
 def _deck_reshuffle_if_needed(state: Dict) -> bool:
     if state["deck"]:
         return True
@@ -268,7 +284,9 @@ class CaboGame:
                 return [], "initial_peek requires two slots"
             if len(set(slots)) != 2 or any(not isinstance(s, int) for s in slots):
                 return [], "invalid slots"
-            if any(s < 0 or s > 3 for s in slots):
+            hand = state["players"][player_id]["hand"]
+            max_slot = len(hand) - 1
+            if any(s < 0 or s > max_slot for s in slots):
                 return [], "slots out of range"
             if state["players"][player_id]["initial_peek_done"]:
                 return [], "initial_peek already done"
@@ -304,16 +322,17 @@ class CaboGame:
 
             if action_type == "draw_discard":
                 slot = action.get("slot")
-                if not isinstance(slot, int) or slot < 0 or slot > 3:
+                hand = state["players"][player_id]["hand"]
+                if not isinstance(slot, int) or slot < 0 or slot >= len(hand):
                     return [], "invalid slot"
                 if not state["discard"]:
                     return [], "discard empty"
-                if state["players"][player_id]["hand"][slot] is None:
+                if hand[slot] is None:
                     return [], "slot empty"
                 drawn = state["discard"].pop()
-                replaced = state["players"][player_id]["hand"][slot]
+                replaced = hand[slot]
                 state["discard"].append(replaced)
-                state["players"][player_id]["hand"][slot] = drawn
+                hand[slot] = drawn
                 _clear_slot_knowledge(state, player_id, slot)
                 state["players"][player_id]["public_known"][slot] = True
                 state["knowledge"][player_id][player_id][slot] = True
@@ -338,16 +357,17 @@ class CaboGame:
         if phase == "drawn":
             if action_type == "replace_card":
                 slot = action.get("slot")
-                if not isinstance(slot, int) or slot < 0 or slot > 3:
+                hand = state["players"][player_id]["hand"]
+                if not isinstance(slot, int) or slot < 0 or slot >= len(hand):
                     return [], "invalid slot"
-                if state["players"][player_id]["hand"][slot] is None:
+                if hand[slot] is None:
                     return [], "slot empty"
                 drawn = state["last_drawn"]
                 if drawn is None:
                     return [], "no drawn card"
-                replaced = state["players"][player_id]["hand"][slot]
+                replaced = hand[slot]
                 state["discard"].append(replaced)
-                state["players"][player_id]["hand"][slot] = drawn
+                hand[slot] = drawn
                 state["last_drawn"] = None
                 _clear_slot_knowledge(state, player_id, slot)
                 summary = _advance_turn(state, player_id)
@@ -377,30 +397,27 @@ class CaboGame:
                     return [], "invalid slots"
                 if len(set(slots)) != len(slots):
                     return [], "slots must be unique"
-                if any(not isinstance(s, int) or s < 0 or s > 3 for s in slots):
-                    return [], "invalid slot"
                 drawn = state["last_drawn"]
                 if drawn is None:
                     return [], "no drawn card"
                 hand = state["players"][player_id]["hand"]
+                if any(not isinstance(s, int) or s < 0 or s >= len(hand) for s in slots):
+                    return [], "invalid slot"
                 if any(hand[s] is None for s in slots):
                     return [], "slot empty"
-                drawn_value = drawn["value"]
                 values = [hand[s]["value"] for s in slots]
-                if all(val == drawn_value for val in values):
+                if len(set(values)) == 1:
                     for s in slots:
                         state["discard"].append(hand[s])
                         hand[s] = None
                         _clear_slot_knowledge(state, player_id, s)
-                    first_slot = slots[0]
-                    hand[first_slot] = drawn
-                    _clear_slot_knowledge(state, player_id, first_slot)
+                    state["discard"].append(drawn)
                     events.append({"type": "game:match_success", "payload": {"player_id": player_id}})
                 else:
                     for s in slots:
                         state["players"][player_id]["public_known"][s] = True
                         state["knowledge"][player_id][player_id][s] = True
-                    state["discard"].append(drawn)
+                    _add_card_to_hand(state, player_id, drawn)
                     events.append({"type": "game:match_fail", "payload": {"player_id": player_id}})
                 state["last_drawn"] = None
                 summary = _advance_turn(state, player_id)
@@ -422,7 +439,8 @@ class CaboGame:
             target = action.get("target", {})
             if choice_type == "peek":
                 slot = target.get("slot")
-                if not isinstance(slot, int) or slot < 0 or slot > 3:
+                hand = state["players"][player_id]["hand"]
+                if not isinstance(slot, int) or slot < 0 or slot >= len(hand):
                     return [], "invalid slot"
                 state["knowledge"][player_id][player_id][slot] = True
             elif choice_type == "spy":
@@ -430,9 +448,10 @@ class CaboGame:
                 slot = target.get("slot")
                 if target_id not in state["players"]:
                     return [], "invalid target player"
-                if not isinstance(slot, int) or slot < 0 or slot > 3:
+                target_hand = state["players"][target_id]["hand"]
+                if not isinstance(slot, int) or slot < 0 or slot >= len(target_hand):
                     return [], "invalid slot"
-                if state["players"][target_id]["hand"][slot] is None:
+                if target_hand[slot] is None:
                     return [], "slot empty"
                 state["knowledge"][player_id][target_id][slot] = True
             elif choice_type == "swap":
@@ -441,17 +460,19 @@ class CaboGame:
                 self_slot = target.get("self_slot")
                 if target_id not in state["players"]:
                     return [], "invalid target player"
-                if not isinstance(slot, int) or slot < 0 or slot > 3:
+                target_hand = state["players"][target_id]["hand"]
+                if not isinstance(slot, int) or slot < 0 or slot >= len(target_hand):
                     return [], "invalid slot"
-                if not isinstance(self_slot, int) or self_slot < 0 or self_slot > 3:
+                self_hand = state["players"][player_id]["hand"]
+                if not isinstance(self_slot, int) or self_slot < 0 or self_slot >= len(self_hand):
                     return [], "invalid self_slot"
-                if state["players"][target_id]["hand"][slot] is None:
+                if target_hand[slot] is None:
                     return [], "slot empty"
-                if state["players"][player_id]["hand"][self_slot] is None:
+                if self_hand[self_slot] is None:
                     return [], "self slot empty"
-                state["players"][player_id]["hand"][self_slot], state["players"][target_id]["hand"][slot] = (
-                    state["players"][target_id]["hand"][slot],
-                    state["players"][player_id]["hand"][self_slot],
+                self_hand[self_slot], target_hand[slot] = (
+                    target_hand[slot],
+                    self_hand[self_slot],
                 )
                 _clear_slot_knowledge(state, player_id, self_slot)
                 _clear_slot_knowledge(state, target_id, slot)
@@ -554,11 +575,16 @@ class CaboGame:
             drawn = state["last_drawn"]
             if not drawn:
                 return {"type": "discard_drawn"}
-            value = drawn["value"]
             hand = state["players"][bot_id]["hand"]
-            slots_by_value = [i for i, c in enumerate(hand) if c is not None and c["value"] == value]
-            if len(slots_by_value) >= 2:
-                slots = slots_by_value[: min(4, len(slots_by_value))]
+            matches = {}
+            for i, card in enumerate(hand):
+                if card is None:
+                    continue
+                matches.setdefault(card["value"], []).append(i)
+            match_candidates = [slots for slots in matches.values() if len(slots) >= 2]
+            if match_candidates:
+                slots = random.choice(match_candidates)
+                slots = slots[: min(4, len(slots))]
                 return {"type": "attempt_match", "slots": slots}
             slots = [i for i, c in enumerate(hand) if c is not None]
             if not slots:
