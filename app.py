@@ -120,7 +120,7 @@ def _room_list_payload() -> List[Dict]:
 
 
 def _room_blocking_players(room: Room) -> List[Dict]:
-    return [{"name": p.name, "connected": p.connected} for p in room.players if not p.is_bot]
+    return [{"name": p.name, "connected": p.connected} for p in room.players if not p.is_bot and p.connected]
 
 
 async def _emit_room_list_update() -> None:

@@ -33,6 +33,7 @@ const playersList = document.getElementById("playersList");
 const gameSelect = document.getElementById("gameSelect");
 const leaveBtn = document.getElementById("leaveBtn");
 const removeBotBtn = document.getElementById("removeBotBtn");
+const logoutBtn = document.getElementById("logoutBtn");
 const drawGuessLanguageRow = document.getElementById("drawGuessLanguageRow");
 const drawGuessLanguageSelect = document.getElementById("drawGuessLanguageSelect");
 const caboPanel = document.getElementById("caboPanel");
@@ -175,6 +176,38 @@ const splendorColorLabels = {
 };
 
 const ROOM_AUTH_KEY = "openboardgame:room_auth";
+const NAME_STORAGE_KEY = "openboardgame:name";
+
+function loadStoredName() {
+  try {
+    return localStorage.getItem(NAME_STORAGE_KEY) || "";
+  } catch {
+    return "";
+  }
+}
+
+function saveStoredName(name) {
+  const nextName = typeof name === "string" ? name.trim() : "";
+  if (!nextName) {
+    clearStoredName();
+    return;
+  }
+  localStorage.setItem(NAME_STORAGE_KEY, nextName);
+}
+
+function clearStoredName() {
+  localStorage.removeItem(NAME_STORAGE_KEY);
+}
+
+function hydrateNameInput() {
+  if (!nameInput) {
+    return;
+  }
+  const storedName = loadStoredName();
+  if (storedName && !nameInput.value.trim()) {
+    nameInput.value = storedName;
+  }
+}
 
 function loadRoomAuthMap() {
   try {
@@ -200,6 +233,9 @@ function setRoomAuth(roomId, auth) {
   const map = loadRoomAuthMap();
   map[roomId] = auth;
   saveRoomAuthMap(map);
+  if (auth.name) {
+    saveStoredName(auth.name);
+  }
 }
 
 function getRoomAuth(roomId) {
@@ -213,6 +249,10 @@ function clearRoomAuth(roomId) {
     delete map[roomId];
     saveRoomAuthMap(map);
   }
+}
+
+function clearAllRoomAuth() {
+  localStorage.removeItem(ROOM_AUTH_KEY);
 }
 
 function log(message) {
@@ -273,6 +313,22 @@ function showRoomListBubble(wrapper, message) {
       bubble.remove();
     }, 200);
   }, 2200);
+}
+
+function performLogout() {
+  if (roomId) {
+    socket.emit("room:leave", { room_id: roomId });
+  }
+  clearAllRoomAuth();
+  clearStoredName();
+  playerId = null;
+  resetRoomState();
+  if (nameInput) {
+    nameInput.value = "";
+  }
+  setConnectionInfo("logged out");
+  requestRoomList();
+  log("Logged out");
 }
 
 function isTypingTarget(target) {
@@ -429,7 +485,7 @@ function renderRoomList(rooms) {
       if (!room.room_id) {
         return;
       }
-      const blockingPlayers = (room.players || []).filter((player) => !player.is_bot);
+      const blockingPlayers = (room.players || []).filter((player) => !player.is_bot && player.connected);
       if (blockingPlayers.length) {
         const names = describeBlockingPlayers(blockingPlayers);
         const message = names ? `Still in room: ${names}` : "Room has human players";
@@ -1960,6 +2016,19 @@ socket.on("game:state", (data) => {
 });
 
 // UI actions
+
+hydrateNameInput();
+if (nameInput) {
+  nameInput.addEventListener("input", () => {
+    saveStoredName(nameInput.value);
+  });
+}
+
+if (logoutBtn) {
+  logoutBtn.addEventListener("click", () => {
+    performLogout();
+  });
+}
 
 document.getElementById("createBtn").addEventListener("click", () => {
   const name = (nameInput ? nameInput.value : "").trim();
