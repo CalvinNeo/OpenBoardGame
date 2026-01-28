@@ -24,6 +24,8 @@ const gameTypeLabel = document.getElementById("gameTypeLabel");
 const playersList = document.getElementById("playersList");
 const gameSelect = document.getElementById("gameSelect");
 const leaveBtn = document.getElementById("leaveBtn");
+const drawGuessLanguageRow = document.getElementById("drawGuessLanguageRow");
+const drawGuessLanguageSelect = document.getElementById("drawGuessLanguageSelect");
 const caboPanel = document.getElementById("caboPanel");
 const skullPanel = document.getElementById("skullPanel");
 const drawGuessPanel = document.getElementById("drawGuessPanel");
@@ -132,6 +134,14 @@ function setGamePanelVisibility(gameType) {
   drawGuessPanel.classList.toggle("hidden", !showDrawGuess);
 }
 
+function updateDrawGuessLanguageRow() {
+  if (!drawGuessLanguageRow) {
+    return;
+  }
+  const showRow = currentRoomState && currentGameType === "draw_guess" && currentRoomState.status === "lobby";
+  drawGuessLanguageRow.classList.toggle("hidden", !showRow);
+}
+
 function resetRoomState() {
   roomId = null;
   currentRoomState = null;
@@ -144,6 +154,10 @@ function resetRoomState() {
   clearSkullState();
   clearDrawGuessState();
   setGamePanelVisibility(null);
+  updateDrawGuessLanguageRow();
+  if (drawGuessLanguageSelect) {
+    drawGuessLanguageSelect.value = "en";
+  }
 }
 
 function clearCaboState() {
@@ -355,6 +369,7 @@ function renderRoomState(state) {
     clearDrawGuessState();
   }
   setGamePanelVisibility(currentGameType);
+  updateDrawGuessLanguageRow();
   playersList.innerHTML = "";
   state.players.forEach((p) => {
     const line = document.createElement("div");
@@ -1077,7 +1092,11 @@ document.getElementById("readyBtn").addEventListener("click", () => {
 });
 
 document.getElementById("startBtn").addEventListener("click", () => {
-  socket.emit("room:start", { room_id: roomId });
+  const payload = { room_id: roomId };
+  if (currentGameType === "draw_guess" && drawGuessLanguageSelect) {
+    payload.config = { language: drawGuessLanguageSelect.value || "en" };
+  }
+  socket.emit("room:start", payload);
 });
 
 document.getElementById("addBotBtn").addEventListener("click", () => {

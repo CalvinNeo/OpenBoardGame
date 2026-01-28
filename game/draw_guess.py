@@ -15,44 +15,100 @@ except Exception:  # pragma: no cover - optional dependency
     QuickDrawDataGroup = None
     Image = None
 
-DEFAULT_PROMPTS = [
-    "airplane",
-    "apple",
-    "backpack",
-    "balloon",
-    "beach",
-    "bicycle",
-    "bridge",
-    "camera",
-    "castle",
-    "cat",
-    "coffee",
-    "cookie",
-    "dinosaur",
-    "dragon",
-    "guitar",
-    "hamburger",
-    "island",
-    "key",
-    "kite",
-    "lamp",
-    "mountain",
-    "octopus",
-    "piano",
-    "pizza",
-    "rainbow",
-    "robot",
-    "rocket",
-    "sailboat",
-    "snowman",
-    "spaceship",
-    "sunflower",
-    "telescope",
-    "train",
-    "treehouse",
-    "umbrella",
-    "whale",
+DEFAULT_PROMPTS_EN = [
+    {"text": "airplane", "quickdraw": "airplane"},
+    {"text": "apple", "quickdraw": "apple"},
+    {"text": "backpack", "quickdraw": "backpack"},
+    {"text": "balloon", "quickdraw": "balloon"},
+    {"text": "beach", "quickdraw": "beach"},
+    {"text": "bicycle", "quickdraw": "bicycle"},
+    {"text": "bridge", "quickdraw": "bridge"},
+    {"text": "camera", "quickdraw": "camera"},
+    {"text": "castle", "quickdraw": "castle"},
+    {"text": "cat", "quickdraw": "cat"},
+    {"text": "coffee", "quickdraw": "coffee cup"},
+    {"text": "cookie", "quickdraw": "cookie"},
+    {"text": "dinosaur", "quickdraw": "dinosaur"},
+    {"text": "dragon", "quickdraw": "dragon"},
+    {"text": "guitar", "quickdraw": "guitar"},
+    {"text": "hamburger", "quickdraw": "hamburger"},
+    {"text": "island", "quickdraw": "beach"},
+    {"text": "key", "quickdraw": "key"},
+    {"text": "kite", "quickdraw": "kite"},
+    {"text": "lamp", "quickdraw": "lamp"},
+    {"text": "mountain", "quickdraw": "mountain"},
+    {"text": "octopus", "quickdraw": "octopus"},
+    {"text": "piano", "quickdraw": "piano"},
+    {"text": "pizza", "quickdraw": "pizza"},
+    {"text": "rainbow", "quickdraw": "rainbow"},
+    {"text": "robot", "quickdraw": "robot"},
+    {"text": "rocket", "quickdraw": "rocket"},
+    {"text": "sailboat", "quickdraw": "sailboat"},
+    {"text": "snowman", "quickdraw": "snowman"},
+    {"text": "spaceship", "quickdraw": "space ship"},
+    {"text": "sunflower", "quickdraw": "sunflower"},
+    {"text": "telescope", "quickdraw": "telescope"},
+    {"text": "train", "quickdraw": "train"},
+    {"text": "treehouse", "quickdraw": "house"},
+    {"text": "umbrella", "quickdraw": "umbrella"},
+    {"text": "whale", "quickdraw": "whale"},
 ]
+
+DEFAULT_PROMPTS_ZH = [
+    {"text": "飞机", "quickdraw": "airplane"},
+    {"text": "苹果", "quickdraw": "apple"},
+    {"text": "背包", "quickdraw": "backpack"},
+    {"text": "气球", "quickdraw": "balloon"},
+    {"text": "海滩", "quickdraw": "beach"},
+    {"text": "自行车", "quickdraw": "bicycle"},
+    {"text": "桥", "quickdraw": "bridge"},
+    {"text": "相机", "quickdraw": "camera"},
+    {"text": "城堡", "quickdraw": "castle"},
+    {"text": "猫", "quickdraw": "cat"},
+    {"text": "咖啡", "quickdraw": "coffee cup"},
+    {"text": "饼干", "quickdraw": "cookie"},
+    {"text": "恐龙", "quickdraw": "dinosaur"},
+    {"text": "龙", "quickdraw": "dragon"},
+    {"text": "吉他", "quickdraw": "guitar"},
+    {"text": "汉堡", "quickdraw": "hamburger"},
+    {"text": "岛屿", "quickdraw": "beach"},
+    {"text": "钥匙", "quickdraw": "key"},
+    {"text": "风筝", "quickdraw": "kite"},
+    {"text": "灯", "quickdraw": "lamp"},
+    {"text": "山", "quickdraw": "mountain"},
+    {"text": "章鱼", "quickdraw": "octopus"},
+    {"text": "钢琴", "quickdraw": "piano"},
+    {"text": "披萨", "quickdraw": "pizza"},
+    {"text": "彩虹", "quickdraw": "rainbow"},
+    {"text": "机器人", "quickdraw": "robot"},
+    {"text": "火箭", "quickdraw": "rocket"},
+    {"text": "帆船", "quickdraw": "sailboat"},
+    {"text": "雪人", "quickdraw": "snowman"},
+    {"text": "宇宙飞船", "quickdraw": "space ship"},
+    {"text": "向日葵", "quickdraw": "sunflower"},
+    {"text": "望远镜", "quickdraw": "telescope"},
+    {"text": "火车", "quickdraw": "train"},
+    {"text": "树屋", "quickdraw": "house"},
+    {"text": "雨伞", "quickdraw": "umbrella"},
+    {"text": "鲸鱼", "quickdraw": "whale"},
+]
+
+DEFAULT_PROMPTS_BY_LANGUAGE = {
+    "en": DEFAULT_PROMPTS_EN,
+    "zh": DEFAULT_PROMPTS_ZH,
+}
+
+ENGLISH_ALIAS_OVERRIDES = {
+    entry["text"]: entry["quickdraw"]
+    for entry in DEFAULT_PROMPTS_EN
+    if entry.get("quickdraw") and entry["quickdraw"] != entry["text"]
+}
+
+CHINESE_TO_QUICKDRAW = {
+    entry["text"]: entry["quickdraw"]
+    for entry in DEFAULT_PROMPTS_ZH
+    if entry.get("quickdraw")
+}
 
 CANVAS_WIDTH = 480
 CANVAS_HEIGHT = 360
@@ -128,13 +184,36 @@ KEYWORD_TEMPLATES = [
 ]
 
 DEFAULT_CONFIG = {
-    "prompt_pool": DEFAULT_PROMPTS,
+    "language": "en",
+    "prompt_pool": None,
 }
+
+
+def _normalize_language(value: Optional[str]) -> str:
+    if value in ("en", "zh"):
+        return value
+    return "en"
+
+
+def _clone_prompt_entry(entry: Dict) -> Dict:
+    return {
+        "text": entry.get("text"),
+        "quickdraw": entry.get("quickdraw"),
+    }
+
+
+def _looks_like_english(value: str) -> bool:
+    if not value:
+        return False
+    return all(ord(ch) < 128 for ch in value)
 
 
 def _merge_config(config: Optional[Dict]) -> Dict:
     cfg = {**DEFAULT_CONFIG}
     if config:
+        language = config.get("language")
+        if isinstance(language, str):
+            cfg["language"] = language
         prompt_pool = config.get("prompt_pool")
         if isinstance(prompt_pool, list) and prompt_pool:
             cfg["prompt_pool"] = prompt_pool
@@ -145,15 +224,15 @@ def _turn_order(players: List[Dict]) -> List[str]:
     return [p["player_id"] for p in sorted(players, key=lambda p: p.get("seat", 0))]
 
 
-def _assign_prompts(prompt_pool: List[str], player_ids: List[str]) -> Dict[str, str]:
-    prompts = list(prompt_pool) if prompt_pool else list(DEFAULT_PROMPTS)
+def _assign_prompts(prompt_pool: Optional[List[Dict]], player_ids: List[str], language: str) -> Dict[str, Dict]:
+    prompts = list(prompt_pool) if prompt_pool else _normalize_prompt_pool(None, language)
     if not prompts:
-        prompts = ["mystery"]
+        prompts = [{"text": "mystery", "quickdraw": None}]
     if len(prompts) >= len(player_ids):
         choices = random.sample(prompts, len(player_ids))
     else:
         choices = [random.choice(prompts) for _ in range(len(player_ids))]
-    return {pid: choices[idx] for idx, pid in enumerate(player_ids)}
+    return {pid: _clone_prompt_entry(choices[idx]) for idx, pid in enumerate(player_ids)}
 
 
 def _book_owner_for_player(state: Dict, player_id: str) -> Optional[str]:
@@ -176,6 +255,76 @@ def _normalize_text(value: Optional[str]) -> str:
 
 def _normalize_name(value: str) -> str:
     return " ".join(value.replace("-", " ").strip().casefold().split())
+
+
+def _quickdraw_alias_for_text(text: str, language: str) -> Optional[str]:
+    if not isinstance(text, str):
+        return None
+    stripped = text.strip()
+    if not stripped:
+        return None
+    alias = CHINESE_TO_QUICKDRAW.get(stripped)
+    if alias:
+        return alias
+    normalized = _normalize_name(stripped)
+    override = ENGLISH_ALIAS_OVERRIDES.get(normalized)
+    if override:
+        return override
+    if language == "en" or _looks_like_english(normalized):
+        return normalized
+    return None
+
+
+def _coerce_prompt_entry(value: object, language: str) -> Optional[Dict]:
+    if isinstance(value, dict):
+        text = value.get("text")
+        if not isinstance(text, str):
+            return None
+        text = text.strip()
+        if not text:
+            return None
+        quickdraw = value.get("quickdraw")
+        if isinstance(quickdraw, str):
+            quickdraw = quickdraw.strip() or None
+        else:
+            quickdraw = None
+        if not quickdraw:
+            quickdraw = _quickdraw_alias_for_text(text, language)
+        return {"text": text, "quickdraw": quickdraw}
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return None
+        return {"text": text, "quickdraw": _quickdraw_alias_for_text(text, language)}
+    return None
+
+
+def _normalize_prompt_pool(prompt_pool: Optional[List], language: str) -> List[Dict]:
+    entries = []
+    if isinstance(prompt_pool, list):
+        for item in prompt_pool:
+            entry = _coerce_prompt_entry(item, language)
+            if entry:
+                entries.append(entry)
+    if entries:
+        return entries
+    defaults = DEFAULT_PROMPTS_BY_LANGUAGE.get(language, DEFAULT_PROMPTS_EN)
+    return [_clone_prompt_entry(entry) for entry in defaults]
+
+
+def _prompt_pool_texts(prompt_pool: Optional[List]) -> List[str]:
+    texts: List[str] = []
+    if not prompt_pool:
+        return texts
+    for item in prompt_pool:
+        text = None
+        if isinstance(item, dict):
+            text = item.get("text")
+        elif isinstance(item, str):
+            text = item
+        if isinstance(text, str) and text.strip():
+            texts.append(text.strip())
+    return texts
 
 
 def _get_quickdraw_name_map() -> Dict[str, str]:
@@ -333,14 +482,14 @@ def _current_book(state: Dict, player_id: str) -> Optional[Dict]:
     return state["books"].get(owner_id)
 
 
-def _current_text_for_player(state: Dict, player_id: str) -> Optional[str]:
+def _current_entry_for_player(state: Dict, player_id: str) -> Optional[Dict]:
     book = _current_book(state, player_id)
     if not book:
         return None
     entries = book.get("entries", [])
     if not entries:
         return None
-    return entries[-1].get("text")
+    return entries[-1]
 
 
 def _last_text_entry(entries: List[Dict]) -> Optional[str]:
@@ -640,8 +789,17 @@ def _bot_svg_for_prompt(prompt: str, rng: random.Random) -> str:
     return _svg_data_url(_wrap_svg(elements))
 
 
-def _bot_image_for_prompt(prompt: str, salted_prompt: str, rng: random.Random) -> str:
-    category = _match_quickdraw_category(prompt)
+def _bot_image_for_prompt(
+    prompt_text: str,
+    prompt_quickdraw: Optional[str],
+    salted_prompt: str,
+    rng: random.Random,
+) -> str:
+    category = None
+    if prompt_quickdraw:
+        category = _match_quickdraw_category(prompt_quickdraw)
+    if not category and prompt_text:
+        category = _match_quickdraw_category(prompt_text)
     if not category and QUICKDRAW_AVAILABLE:
         name_map = _get_quickdraw_name_map()
         if name_map:
@@ -653,12 +811,15 @@ def _bot_image_for_prompt(prompt: str, salted_prompt: str, rng: random.Random) -
     return _bot_svg_for_prompt(salted_prompt, rng)
 
 
-def _bot_guess_from_hint(hint: Optional[str], prompt_pool: List[str]) -> str:
+def _bot_guess_from_hint(hint: Optional[str], prompt_pool: Optional[List], language: str) -> str:
     cleaned = hint.strip() if isinstance(hint, str) else ""
+    prompt_texts = _prompt_pool_texts(prompt_pool)
+    if not prompt_texts:
+        prompt_texts = _prompt_pool_texts(_normalize_prompt_pool(None, language))
     if not cleaned:
-        return random.choice(prompt_pool) if prompt_pool else "unknown"
-    if random.random() < 0.15:
-        return random.choice(prompt_pool) if prompt_pool else cleaned
+        return random.choice(prompt_texts) if prompt_texts else "unknown"
+    if random.random() < 0.15 and prompt_texts:
+        return random.choice(prompt_texts)
     return cleaned
 
 
@@ -711,13 +872,18 @@ class DrawGuessGame:
     @staticmethod
     def init_game(config: Optional[Dict], players: List[Dict]) -> Dict:
         cfg = _merge_config(config)
+        language = _normalize_language(cfg.get("language"))
+        prompt_pool = _normalize_prompt_pool(cfg.get("prompt_pool"), language)
+        cfg["language"] = language
+        cfg["prompt_pool"] = prompt_pool
         order = _turn_order(players)
         player_meta = {p["player_id"]: p for p in players}
         total_rounds = len(order) if len(order) % 2 == 0 else max(len(order) - 1, 2)
 
-        prompts = _assign_prompts(cfg.get("prompt_pool", []), order)
+        prompts = _assign_prompts(prompt_pool, order, language)
         books = {}
         for owner_id in order:
+            prompt_entry = prompts.get(owner_id, {"text": "mystery", "quickdraw": None})
             books[owner_id] = {
                 "owner_id": owner_id,
                 "entries": [
@@ -725,8 +891,9 @@ class DrawGuessGame:
                         "round": 0,
                         "type": "prompt",
                         "author_id": owner_id,
-                        "text": prompts.get(owner_id, "mystery"),
+                        "text": prompt_entry.get("text") if prompt_entry else "mystery",
                         "image_data": None,
+                        "quickdraw": prompt_entry.get("quickdraw") if prompt_entry else None,
                     }
                 ],
             }
@@ -743,7 +910,8 @@ class DrawGuessGame:
             "books": books,
             "config": cfg,
             "player_meta": player_meta,
-            "prompt_pool": cfg.get("prompt_pool", []),
+            "prompt_pool": prompt_pool,
+            "language": language,
             "game_over": False,
         }
 
@@ -897,10 +1065,17 @@ class DrawGuessGame:
             return None
 
         if state["phase"] == "draw":
-            prompt = _current_text_for_player(state, bot_id)
-            salted_prompt = _salt_prompt(prompt or "")
+            prompt_entry = _current_entry_for_player(state, bot_id)
+            prompt_text = prompt_entry.get("text") if prompt_entry else ""
+            prompt_quickdraw = None
+            if prompt_entry:
+                prompt_quickdraw = prompt_entry.get("quickdraw")
+            if not prompt_quickdraw:
+                prompt_quickdraw = _quickdraw_alias_for_text(prompt_text, state.get("language", "en"))
+            salted_base = prompt_text or prompt_quickdraw or ""
+            salted_prompt = _salt_prompt(salted_base)
             rng = random.Random(salted_prompt)
-            image_data = _bot_image_for_prompt(prompt or "", salted_prompt, rng)
+            image_data = _bot_image_for_prompt(prompt_text, prompt_quickdraw, salted_prompt, rng)
             return {"type": "submit_drawing", "image_data": image_data}
         if state["phase"] == "guess":
             book = _current_book(state, bot_id)
@@ -910,8 +1085,8 @@ class DrawGuessGame:
                 hint = drawing_entry.get("hint")
             if not hint:
                 hint = _drawing_hint_from_book(book)
-            prompt_pool = state.get("prompt_pool") or DEFAULT_PROMPTS
-            guess = _bot_guess_from_hint(hint, prompt_pool)
+            prompt_pool = state.get("prompt_pool")
+            guess = _bot_guess_from_hint(hint, prompt_pool, state.get("language", "en"))
             return {"type": "submit_guess", "text": guess}
         return None
 

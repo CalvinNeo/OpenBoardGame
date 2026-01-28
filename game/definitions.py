@@ -138,7 +138,21 @@ DRAW_GUESS_ACTION_SCHEMA = {
 DRAW_GUESS_CONFIG_SCHEMA = {
     "type": "object",
     "properties": {
-        "prompt_pool": {"type": "array", "items": {"type": "string"}},
+        "language": {"type": "string", "enum": ["en", "zh"]},
+        "prompt_pool": {
+            "type": "array",
+            "items": {
+                "oneOf": [
+                    {"type": "string"},
+                    {
+                        "type": "object",
+                        "properties": {"text": {"type": "string"}, "quickdraw": {"type": "string"}},
+                        "required": ["text"],
+                        "additionalProperties": False,
+                    },
+                ]
+            },
+        },
     },
     "additionalProperties": False,
 }

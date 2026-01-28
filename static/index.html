@@ -53,6 +53,13 @@
               <div>Status: <span id="roomStatus">-</span></div>
               <div>Game: <span id="gameTypeLabel">-</span></div>
             </div>
+            <div class="row hidden" id="drawGuessLanguageRow">
+              <label for="drawGuessLanguageSelect">Draw &amp; Guess Language</label>
+              <select id="drawGuessLanguageSelect">
+                <option value="en">English</option>
+                <option value="zh">中文</option>
+              </select>
+            </div>
             <div class="row actions">
               <button id="readyBtn">Toggle Ready</button>
               <button id="startBtn">Start Game</button>
@@ -221,6 +228,6 @@
   </div>
 
   <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
-  <script src="/static/app.js?v=draw_guess_v1"></script>
+  <script src="/static/app.js?v=draw_guess_v2"></script>
 </body>
 </html>

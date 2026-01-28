@@ -357,8 +357,10 @@ async def on_room_start(sid, data):
         }
         for p in room.players
     ]
+    raw_config = (data or {}).get("config")
+    config = raw_config if isinstance(raw_config, dict) else {}
     try:
-        room.game_state = game_def.module.init_game({}, players_meta)
+        room.game_state = game_def.module.init_game(config, players_meta)
     except ValueError as exc:
         await _send_error(sid, str(exc))
         return
