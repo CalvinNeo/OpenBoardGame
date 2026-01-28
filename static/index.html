@@ -38,6 +38,7 @@
                 <option value="cabo">Cabo</option>
                 <option value="skull">Skull</option>
                 <option value="draw_guess">Draw & Guess</option>
+                <option value="splendor">Splendor</option>
               </select>
             </div>
             <div class="row">
@@ -222,6 +223,77 @@
               </div>
             </div>
 
+            <div id="splendorPanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="splendorPhase">-</span></div>
+                <div>Current Turn: <span id="splendorTurn">-</span></div>
+                <div>Final Round: <span id="splendorFinalRound">-</span></div>
+              </div>
+              <div class="row">
+                <div>Winner: <span id="splendorWinner">-</span></div>
+              </div>
+
+              <h3>Token Supply</h3>
+              <div id="splendorSupply" class="splendor-token-row"></div>
+
+              <h3>Market</h3>
+              <div class="splendor-market">
+                <div class="splendor-tier">
+                  <div class="tier-label">Tier 3</div>
+                  <div id="splendorMarketTier3" class="splendor-cards"></div>
+                </div>
+                <div class="splendor-tier">
+                  <div class="tier-label">Tier 2</div>
+                  <div id="splendorMarketTier2" class="splendor-cards"></div>
+                </div>
+                <div class="splendor-tier">
+                  <div class="tier-label">Tier 1</div>
+                  <div id="splendorMarketTier1" class="splendor-cards"></div>
+                </div>
+              </div>
+
+              <h3>Nobles</h3>
+              <div id="splendorNobles" class="splendor-cards"></div>
+
+              <h3>Your Selection</h3>
+              <div class="row">
+                <div>Market: <span id="splendorSelectedMarket">-</span></div>
+                <div>Reserved: <span id="splendorSelectedReserved">-</span></div>
+                <div>Noble: <span id="splendorSelectedNoble">-</span></div>
+                <button id="splendorClearSelection">Clear</button>
+              </div>
+              <div class="row">
+                <label for="splendorReserveTier">Reserve Deck Tier</label>
+                <select id="splendorReserveTier">
+                  <option value="tier1">Tier 1</option>
+                  <option value="tier2">Tier 2</option>
+                  <option value="tier3">Tier 3</option>
+                </select>
+              </div>
+              <div class="row">
+                <div>Token Selection</div>
+                <div id="splendorTokenSelection" class="splendor-token-selection"></div>
+              </div>
+
+              <h3>Actions</h3>
+              <div class="row actions">
+                <button id="splendorTakeThreeBtn">Take 3 Different</button>
+                <button id="splendorTakeTwoBtn">Take 2 Same</button>
+                <button id="splendorReserveMarketBtn">Reserve Market</button>
+                <button id="splendorReserveDeckBtn">Reserve Deck</button>
+                <button id="splendorBuyMarketBtn">Buy Market</button>
+                <button id="splendorBuyReservedBtn">Buy Reserved</button>
+                <button id="splendorDiscardBtn">Discard Tokens</button>
+                <button id="splendorChooseNobleBtn">Choose Noble</button>
+              </div>
+
+              <h3>Your Reserved</h3>
+              <div id="splendorReserved" class="splendor-cards"></div>
+
+              <h3>Players</h3>
+              <div id="splendorPlayers"></div>
+            </div>
+
           </div>
         </section>
       </main>
@@ -230,6 +302,6 @@
   </div>
 
   <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
-  <script src="/static/app.js?v=draw_guess_v2"></script>
+  <script src="/static/app.js?v=splendor_v1"></script>
 </body>
 </html>

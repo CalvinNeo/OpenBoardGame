@@ -1,6 +1,7 @@
 from game.cabo import CaboGame
 from game.draw_guess import DrawGuessGame
 from game.registry import GameDefinition, register_game
+from game.splendor import SplendorGame
 from game.skull import SkullGame
 
 CABO_ACTION_SCHEMA = {
@@ -157,6 +158,115 @@ DRAW_GUESS_CONFIG_SCHEMA = {
     "additionalProperties": False,
 }
 
+SPLENDOR_TOKEN_COUNTS_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "white": {"type": "integer", "minimum": 0},
+        "blue": {"type": "integer", "minimum": 0},
+        "green": {"type": "integer", "minimum": 0},
+        "red": {"type": "integer", "minimum": 0},
+        "black": {"type": "integer", "minimum": 0},
+        "gold": {"type": "integer", "minimum": 0},
+    },
+    "additionalProperties": False,
+}
+
+SPLENDOR_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "take_tokens"},
+                "colors": {
+                    "type": "array",
+                    "items": {"enum": ["white", "blue", "green", "red", "black"]},
+                    "minItems": 3,
+                    "maxItems": 3,
+                    "uniqueItems": True,
+                },
+            },
+            "required": ["type", "colors"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "take_tokens_same"},
+                "color": {"enum": ["white", "blue", "green", "red", "black"]},
+            },
+            "required": ["type", "color"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "reserve_market"},
+                "tier": {"enum": ["tier1", "tier2", "tier3"]},
+                "index": {"type": "integer", "minimum": 0},
+            },
+            "required": ["type", "tier", "index"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "reserve_deck"},
+                "tier": {"enum": ["tier1", "tier2", "tier3"]},
+            },
+            "required": ["type", "tier"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "buy_market"},
+                "tier": {"enum": ["tier1", "tier2", "tier3"]},
+                "index": {"type": "integer", "minimum": 0},
+                "payment": SPLENDOR_TOKEN_COUNTS_SCHEMA,
+            },
+            "required": ["type", "tier", "index"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "buy_reserved"},
+                "reserved_index": {"type": "integer", "minimum": 0},
+                "payment": SPLENDOR_TOKEN_COUNTS_SCHEMA,
+            },
+            "required": ["type", "reserved_index"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "discard_tokens"},
+                "tokens": SPLENDOR_TOKEN_COUNTS_SCHEMA,
+            },
+            "required": ["type", "tokens"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "choose_noble"},
+                "noble_id": {"type": "string"},
+            },
+            "required": ["type", "noble_id"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+SPLENDOR_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "target_score": {"type": "integer", "minimum": 1},
+    },
+    "additionalProperties": False,
+}
+
 register_game(
     GameDefinition(
         game_id=CaboGame.game_id,
@@ -169,6 +279,21 @@ register_game(
         module=CaboGame,
         serialize=CaboGame.serialize,
         deserialize=CaboGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=SplendorGame.game_id,
+        name="Splendor",
+        min_players=SplendorGame.min_players,
+        max_players=SplendorGame.max_players,
+        turn_mode="turn",
+        action_schema=SPLENDOR_ACTION_SCHEMA,
+        config_schema=SPLENDOR_CONFIG_SCHEMA,
+        module=SplendorGame,
+        serialize=SplendorGame.serialize,
+        deserialize=SplendorGame.deserialize,
     )
 )
 
