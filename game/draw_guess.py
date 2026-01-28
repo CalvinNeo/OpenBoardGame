@@ -122,6 +122,30 @@ def _log_quickdraw_request_end(label: str, start: float) -> None:
     print(f"[quickdraw] request done: {label} in {duration:.2f}s", flush=True)
 
 
+def _quickdraw_request_label(
+    label: str,
+    prompt: Optional[str],
+    translation: Optional[str] = None,
+) -> str:
+    if not isinstance(prompt, str):
+        return label
+    prompt_label = " ".join(prompt.strip().split())
+    if not prompt_label:
+        return label
+    if _looks_like_english(prompt_label):
+        return f"{label} (prompt: {prompt_label})"
+    translation_label = None
+    if isinstance(translation, str):
+        translation_label = " ".join(translation.strip().split()) or None
+    if not translation_label:
+        translated = _translate_to_english(prompt_label)
+        if isinstance(translated, str):
+            translation_label = " ".join(translated.strip().split()) or None
+    if translation_label:
+        return f"{label} (prompt: {prompt_label}, translation: {translation_label})"
+    return f"{label} (prompt: {prompt_label}, translation: unavailable)"
+
+
 def _normalize_language(value: Optional[str]) -> str:
     if value in ("en", "zh"):
         return value
@@ -418,7 +442,10 @@ def prefetch_quickdraw_bins(categories: List[str]) -> Dict[str, str]:
     return results
 
 
-def _get_quickdraw_name_map() -> Dict[str, str]:
+def _get_quickdraw_name_map(
+    prompt: Optional[str] = None,
+    translation: Optional[str] = None,
+) -> Dict[str, str]:
     global _QUICKDRAW_NAME_MAP
     if _QUICKDRAW_NAME_MAP is not None:
         return _QUICKDRAW_NAME_MAP
@@ -429,7 +456,7 @@ def _get_quickdraw_name_map() -> Dict[str, str]:
     if not _QUICKDRAW_ALLOW_NETWORK:
         _QUICKDRAW_NAME_MAP = _quickdraw_cache_name_map()
         return _QUICKDRAW_NAME_MAP
-    label = "QuickDrawData names"
+    label = _quickdraw_request_label("QuickDrawData names", prompt, translation)
     start_time = _log_quickdraw_request_start(label)
     try:
         data = QuickDrawData(
@@ -449,13 +476,17 @@ def _get_quickdraw_name_map() -> Dict[str, str]:
     return _QUICKDRAW_NAME_MAP
 
 
-def _match_quickdraw_category(prompt: str) -> Optional[str]:
+def _match_quickdraw_category(
+    prompt: str,
+    log_prompt: Optional[str] = None,
+    log_translation: Optional[str] = None,
+) -> Optional[str]:
     if not QUICKDRAW_AVAILABLE:
         return None
     normalized = _normalize_name(prompt or "")
     if not normalized:
         return None
-    name_map = _get_quickdraw_name_map()
+    name_map = _get_quickdraw_name_map(log_prompt or prompt, log_translation)
     if normalized in name_map:
         return name_map[normalized]
     if normalized.endswith("s") and normalized[:-1] in name_map:
@@ -482,7 +513,11 @@ def _match_quickdraw_category(prompt: str) -> Optional[str]:
     return None
 
 
-def _get_quickdraw_group(category: str) -> Optional[QuickDrawDataGroup]:
+def _get_quickdraw_group(
+    category: str,
+    prompt: Optional[str] = None,
+    translation: Optional[str] = None,
+) -> Optional[QuickDrawDataGroup]:
     if not QUICKDRAW_AVAILABLE:
         return None
     if not category:
@@ -494,7 +529,7 @@ def _get_quickdraw_group(category: str) -> Optional[QuickDrawDataGroup]:
     cache_path = _quickdraw_cache_path(category)
     if not _QUICKDRAW_ALLOW_NETWORK and not os.path.isfile(cache_path):
         return None
-    label = f"QuickDrawDataGroup {category}"
+    label = _quickdraw_request_label(f"QuickDrawDataGroup {category}", prompt, translation)
     start_time = _log_quickdraw_request_start(label)
     try:
         group = QuickDrawDataGroup(
@@ -514,8 +549,13 @@ def _get_quickdraw_group(category: str) -> Optional[QuickDrawDataGroup]:
     return group
 
 
-def _quickdraw_to_data_url(category: str, rng: random.Random) -> Optional[str]:
-    group = _get_quickdraw_group(category)
+def _quickdraw_to_data_url(
+    category: str,
+    rng: random.Random,
+    prompt: Optional[str] = None,
+    translation: Optional[str] = None,
+) -> Optional[str]:
+    group = _get_quickdraw_group(category, prompt, translation)
     if not group or group.drawing_count == 0:
         return None
     try:
@@ -615,17 +655,38 @@ def _bot_image_for_prompt(
     salted_prompt: str,
     rng: random.Random,
 ) -> str:
+    log_prompt = None
+    if isinstance(prompt_text, str) and prompt_text.strip():
+        log_prompt = prompt_text
+    elif isinstance(prompt_quickdraw, str) and prompt_quickdraw.strip():
+        log_prompt = prompt_quickdraw
+    log_translation = None
+    if isinstance(log_prompt, str) and log_prompt and not _looks_like_english(log_prompt):
+        if isinstance(prompt_quickdraw, str) and prompt_quickdraw.strip():
+            log_translation = prompt_quickdraw.strip()
+        else:
+            translated = _translate_to_english(log_prompt)
+            if translated:
+                log_translation = translated
     category = None
     if prompt_quickdraw:
-        category = _match_quickdraw_category(prompt_quickdraw)
+        category = _match_quickdraw_category(
+            prompt_quickdraw,
+            log_prompt=log_prompt,
+            log_translation=log_translation,
+        )
     if not category and prompt_text:
-        category = _match_quickdraw_category(prompt_text)
+        category = _match_quickdraw_category(
+            prompt_text,
+            log_prompt=log_prompt,
+            log_translation=log_translation,
+        )
     if not category and QUICKDRAW_AVAILABLE:
-        name_map = _get_quickdraw_name_map()
+        name_map = _get_quickdraw_name_map(log_prompt, log_translation)
         if name_map:
             category = rng.choice(list(name_map.values()))
     if category:
-        image_data = _quickdraw_to_data_url(category, rng)
+        image_data = _quickdraw_to_data_url(category, rng, log_prompt, log_translation)
         if image_data:
             return image_data
     return _bot_svg_for_prompt(salted_prompt, rng)
