@@ -22,7 +22,10 @@ let splendorSelectedReserved = null;
 let splendorSelectedNoble = null;
 let splendorTokenSelection = {};
 
+const nameInput = document.getElementById("nameInput");
 const connectionInfo = document.getElementById("connectionInfo");
+const roomListEl = document.getElementById("roomList");
+const refreshRoomsBtn = document.getElementById("refreshRoomsBtn");
 const roomIdLabel = document.getElementById("roomIdLabel");
 const roomStatus = document.getElementById("roomStatus");
 const gameTypeLabel = document.getElementById("gameTypeLabel");
@@ -170,6 +173,47 @@ const splendorColorLabels = {
   gold: "Gold",
 };
 
+const ROOM_AUTH_KEY = "openboardgame:room_auth";
+
+function loadRoomAuthMap() {
+  try {
+    const raw = localStorage.getItem(ROOM_AUTH_KEY);
+    if (!raw) {
+      return {};
+    }
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveRoomAuthMap(map) {
+  localStorage.setItem(ROOM_AUTH_KEY, JSON.stringify(map));
+}
+
+function setRoomAuth(roomId, auth) {
+  if (!roomId || !auth) {
+    return;
+  }
+  const map = loadRoomAuthMap();
+  map[roomId] = auth;
+  saveRoomAuthMap(map);
+}
+
+function getRoomAuth(roomId) {
+  const map = loadRoomAuthMap();
+  return map[roomId] || null;
+}
+
+function clearRoomAuth(roomId) {
+  const map = loadRoomAuthMap();
+  if (map[roomId]) {
+    delete map[roomId];
+    saveRoomAuthMap(map);
+  }
+}
+
 function log(message) {
   const entry = document.createElement("div");
   entry.className = "log-entry";
@@ -227,6 +271,107 @@ function updateDrawGuessLanguageRow() {
   }
   const showRow = currentRoomState && currentGameType === "draw_guess" && currentRoomState.status === "lobby";
   drawGuessLanguageRow.classList.toggle("hidden", !showRow);
+}
+
+function requestRoomList() {
+  socket.emit("room:list");
+}
+
+function attemptJoinRoom(rid) {
+  const name = (nameInput && nameInput.value ? nameInput.value : "").trim();
+  if (!name || !rid) {
+    log("Name and room ID required");
+    return;
+  }
+  socket.emit("room:join", { name, room_id: rid });
+}
+
+function attemptReconnect(rid, auth) {
+  if (!rid || !auth) {
+    log("Reconnect info missing");
+    return;
+  }
+  socket.emit("room:reconnect", {
+    room_id: rid,
+    player_id: auth.player_id,
+    reconnect_token: auth.reconnect_token,
+  });
+}
+
+function renderRoomList(rooms) {
+  if (!roomListEl) {
+    return;
+  }
+  roomListEl.innerHTML = "";
+  if (!rooms || !rooms.length) {
+    roomListEl.textContent = "No rooms";
+    return;
+  }
+  rooms.forEach((room) => {
+    const wrapper = document.createElement("div");
+    wrapper.className = "room-item";
+
+    const header = document.createElement("div");
+    header.className = "room-item-header";
+    const title = document.createElement("div");
+    title.textContent = room.room_id || "-";
+    const status = document.createElement("div");
+    status.className = "room-pill";
+    status.textContent = room.status || "-";
+    header.appendChild(title);
+    header.appendChild(status);
+
+    const meta = document.createElement("div");
+    meta.className = "room-item-meta";
+    const maxPlayers = Number.isFinite(room.max_players) ? room.max_players : null;
+    const count = `${room.player_count || 0}/${maxPlayers !== null ? maxPlayers : "-"}`;
+    meta.textContent = `${room.game_type || "-"} · ${count}`;
+
+    const players = document.createElement("div");
+    players.className = "room-item-players";
+    (room.players || []).forEach((player) => {
+      const pill = document.createElement("span");
+      pill.className = "room-pill";
+      if (!player.connected) {
+        pill.classList.add("offline");
+      }
+      const suffix = player.is_bot ? " (bot)" : "";
+      pill.textContent = `${player.name || "?"}${suffix}`;
+      players.appendChild(pill);
+    });
+
+    const actions = document.createElement("div");
+    actions.className = "room-item-actions";
+    const auth = getRoomAuth(room.room_id);
+    const canReconnect = auth && auth.player_id && auth.reconnect_token;
+    const joinBtn = document.createElement("button");
+    joinBtn.type = "button";
+    joinBtn.textContent = "Join";
+    joinBtn.disabled =
+      room.status !== "lobby" || (maxPlayers !== null && (room.player_count || 0) >= maxPlayers);
+    joinBtn.addEventListener("click", () => {
+      attemptJoinRoom(room.room_id);
+    });
+    actions.appendChild(joinBtn);
+
+    if (canReconnect) {
+      const reconnectBtn = document.createElement("button");
+      reconnectBtn.type = "button";
+      reconnectBtn.textContent = "Reconnect";
+      reconnectBtn.addEventListener("click", () => {
+        attemptReconnect(room.room_id, auth);
+      });
+      actions.appendChild(reconnectBtn);
+    }
+
+    wrapper.appendChild(header);
+    wrapper.appendChild(meta);
+    if (players.childNodes.length) {
+      wrapper.appendChild(players);
+    }
+    wrapper.appendChild(actions);
+    roomListEl.appendChild(wrapper);
+  });
 }
 
 function resetRoomState() {
@@ -1681,6 +1826,14 @@ socket.on("system:info", (data) => {
   if (data.player_id) {
     playerId = data.player_id;
   }
+  if (data.reconnect_token && data.room_id && data.player_id) {
+    const nameValue = data.name || (nameInput ? nameInput.value.trim() : "");
+    setRoomAuth(data.room_id, {
+      player_id: data.player_id,
+      reconnect_token: data.reconnect_token,
+      name: nameValue,
+    });
+  }
   if (data.message) {
     setConnectionInfo(data.message);
     log(data.message);
@@ -1695,6 +1848,14 @@ socket.on("room:state", (state) => {
   renderRoomState(state);
 });
 
+socket.on("room:list", (data) => {
+  renderRoomList((data || {}).rooms || []);
+});
+
+socket.on("room:list_update", (data) => {
+  renderRoomList((data || {}).rooms || []);
+});
+
 socket.on("game:state", (data) => {
   renderGameState(data);
 });
@@ -1702,7 +1863,7 @@ socket.on("game:state", (data) => {
 // UI actions
 
 document.getElementById("createBtn").addEventListener("click", () => {
-  const name = document.getElementById("nameInput").value.trim();
+  const name = (nameInput ? nameInput.value : "").trim();
   if (!name) {
     log("Name required");
     return;
@@ -1712,14 +1873,15 @@ document.getElementById("createBtn").addEventListener("click", () => {
 });
 
 document.getElementById("joinBtn").addEventListener("click", () => {
-  const name = document.getElementById("nameInput").value.trim();
   const rid = document.getElementById("roomIdInput").value.trim();
-  if (!name || !rid) {
-    log("Name and room ID required");
-    return;
-  }
-  socket.emit("room:join", { name, room_id: rid });
+  attemptJoinRoom(rid);
 });
+
+if (refreshRoomsBtn) {
+  refreshRoomsBtn.addEventListener("click", () => {
+    requestRoomList();
+  });
+}
 
 document.getElementById("readyBtn").addEventListener("click", () => {
   let nextReady = true;

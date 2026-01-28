@@ -1,4 +1,5 @@
 import asyncio
+import time
 import uuid
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
@@ -32,6 +33,8 @@ class Player:
     ready: bool = False
     connected: bool = True
     is_bot: bool = False
+    reconnect_token: str = ""
+    last_seen: float = 0.0
 
 
 @dataclass
@@ -54,6 +57,10 @@ def _generate_room_id() -> str:
         rid = uuid.uuid4().hex[:6]
         if rid not in ROOMS:
             return rid
+
+
+def _generate_reconnect_token() -> str:
+    return uuid.uuid4().hex
 
 
 def _get_room(room_id: str) -> Optional[Room]:
@@ -89,6 +96,31 @@ async def _emit_room_state(room: Room) -> None:
         ],
     }
     await sio.emit("room:state", payload, to=room.room_id)
+
+
+def _room_list_payload() -> List[Dict]:
+    rooms = []
+    for room in ROOMS.values():
+        game_def = _get_game_definition(room.game_type)
+        max_players = game_def.max_players if game_def else len(room.players)
+        rooms.append(
+            {
+                "room_id": room.room_id,
+                "game_type": room.game_type,
+                "status": room.status,
+                "player_count": len(room.players),
+                "max_players": max_players,
+                "players": [
+                    {"name": p.name, "connected": p.connected, "is_bot": p.is_bot} for p in room.players
+                ],
+            }
+        )
+    rooms.sort(key=lambda r: r["room_id"])
+    return rooms
+
+
+async def _emit_room_list_update() -> None:
+    await sio.emit("room:list_update", {"rooms": _room_list_payload()})
 
 
 async def _emit_game_state(room: Room, events: Optional[List[Dict]] = None) -> None:
@@ -170,6 +202,7 @@ async def _maybe_run_bots(room: Room) -> None:
 @sio.event
 async def connect(sid, environ):
     await sio.emit("system:info", {"message": "connected"}, to=sid)
+    await sio.emit("room:list", {"rooms": _room_list_payload()}, to=sid)
 
 
 @sio.event
@@ -185,8 +218,10 @@ async def disconnect(sid):
         return
     player.connected = False
     player.socket_id = None
+    player.last_seen = time.time()
     await _emit_room_state(room)
     await _emit_game_state(room)
+    await _emit_room_list_update()
 
 
 @sio.on("room:create")
@@ -203,7 +238,15 @@ async def on_room_create(sid, data):
         return
     room_id = _generate_room_id()
     player_id = uuid.uuid4().hex
-    player = Player(player_id=player_id, name=name, seat=0, socket_id=sid)
+    reconnect_token = _generate_reconnect_token()
+    player = Player(
+        player_id=player_id,
+        name=name,
+        seat=0,
+        socket_id=sid,
+        reconnect_token=reconnect_token,
+        last_seen=time.time(),
+    )
     room = Room(room_id=room_id, game_type=game_def.game_id, players=[player])
     ROOMS[room_id] = room
     SESSIONS[sid] = {"room_id": room_id, "player_id": player_id}
@@ -211,9 +254,16 @@ async def on_room_create(sid, data):
     await _emit_room_state(room)
     await sio.emit(
         "system:info",
-        {"message": f"room created: {room_id}", "player_id": player_id},
+        {
+            "message": f"room created: {room_id}",
+            "room_id": room_id,
+            "player_id": player_id,
+            "reconnect_token": reconnect_token,
+            "name": name,
+        },
         to=sid,
     )
+    await _emit_room_list_update()
 
 
 @sio.on("room:join")
@@ -232,23 +282,88 @@ async def on_room_join(sid, data):
         await _send_error(sid, "room game not found")
         return
     if room.status != "lobby":
-        await _send_error(sid, "room already started")
+        await _send_error(sid, "room already started (use reconnect)")
         return
+    for existing in room.players:
+        if existing.name == name:
+            if existing.connected:
+                await _send_error(sid, "name already in use")
+            else:
+                await _send_error(sid, "player offline (use reconnect)")
+            return
     if len(room.players) >= game_def.max_players:
         await _send_error(sid, "room full")
         return
     player_id = uuid.uuid4().hex
     seat = len(room.players)
-    player = Player(player_id=player_id, name=name, seat=seat, socket_id=sid)
+    reconnect_token = _generate_reconnect_token()
+    player = Player(
+        player_id=player_id,
+        name=name,
+        seat=seat,
+        socket_id=sid,
+        reconnect_token=reconnect_token,
+        last_seen=time.time(),
+    )
     room.players.append(player)
     SESSIONS[sid] = {"room_id": room_id, "player_id": player_id}
     await sio.enter_room(sid, room_id)
     await _emit_room_state(room)
     await sio.emit(
         "system:info",
-        {"message": f"joined room: {room_id}", "player_id": player_id},
+        {
+            "message": f"joined room: {room_id}",
+            "room_id": room_id,
+            "player_id": player_id,
+            "reconnect_token": reconnect_token,
+            "name": name,
+        },
         to=sid,
     )
+    await _emit_room_list_update()
+
+
+@sio.on("room:reconnect")
+async def on_room_reconnect(sid, data):
+    room_id = (data or {}).get("room_id")
+    player_id = (data or {}).get("player_id")
+    reconnect_token = (data or {}).get("reconnect_token")
+    if not room_id or not player_id or not reconnect_token:
+        await _send_error(sid, "room_id, player_id, reconnect_token required")
+        return
+    room = _get_room(room_id)
+    if not room:
+        await _send_error(sid, "room not found")
+        return
+    player = _find_player(room, player_id)
+    if not player or player.is_bot:
+        await _send_error(sid, "player not found")
+        return
+    if player.reconnect_token != reconnect_token:
+        await _send_error(sid, "invalid reconnect token")
+        return
+    if player.connected:
+        await _send_error(sid, "player already connected")
+        return
+    player.connected = True
+    player.socket_id = sid
+    player.last_seen = time.time()
+    SESSIONS[sid] = {"room_id": room_id, "player_id": player_id}
+    await sio.enter_room(sid, room_id)
+    await _emit_room_state(room)
+    await _emit_game_state(room)
+    await sio.emit(
+        "system:info",
+        {
+            "message": f"reconnected to room: {room_id}",
+            "room_id": room_id,
+            "player_id": player_id,
+            "reconnect_token": reconnect_token,
+            "name": player.name,
+        },
+        to=sid,
+    )
+    await _emit_room_list_update()
 
 
 @sio.on("room:leave")
@@ -267,12 +382,15 @@ async def on_room_leave(sid, data):
         room.players = [p for p in room.players if p.player_id != player.player_id]
         if not room.players:
             ROOMS.pop(room.room_id, None)
+            await _emit_room_list_update()
             return
     else:
         player.connected = False
         player.socket_id = None
+        player.last_seen = time.time()
     await _emit_room_state(room)
     await _emit_game_state(room)
+    await _emit_room_list_update()
 
 
 @sio.on("room:ready")
@@ -320,9 +438,19 @@ async def on_room_add_bot(sid, data):
     name = (data or {}).get("name") or f"Bot {len(room.players) + 1}"
     player_id = uuid.uuid4().hex
     seat = len(room.players)
-    bot = Player(player_id=player_id, name=name, seat=seat, socket_id=None, ready=True, is_bot=True)
+    bot = Player(
+        player_id=player_id,
+        name=name,
+        seat=seat,
+        socket_id=None,
+        ready=True,
+        is_bot=True,
+        reconnect_token=_generate_reconnect_token(),
+        last_seen=time.time(),
+    )
     room.players.append(bot)
     await _emit_room_state(room)
+    await _emit_room_list_update()
 
 
 @sio.on("room:start")
@@ -368,7 +496,13 @@ async def on_room_start(sid, data):
     room.state_version = 1
     await _emit_room_state(room)
     await _emit_game_state(room, [])
+    await _emit_room_list_update()
     await _maybe_run_bots(room)
+
+
+@sio.on("room:list")
+async def on_room_list(sid, data):
+    await sio.emit("room:list", {"rooms": _room_list_payload()}, to=sid)
 
 
 @sio.on("game:action")
@@ -401,5 +535,6 @@ async def on_game_action(sid, data):
     if room.game_state.get("game_over"):
         room.status = "game_over"
         await _emit_room_state(room)
+        await _emit_room_list_update()
     await _emit_game_state(room, events)
     await _maybe_run_bots(room)

@@ -196,6 +196,62 @@ body.log-open {
   margin-bottom: 8px;
 }
 
+.room-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.room-item {
+  border: 1px solid #e3e3e3;
+  border-radius: 6px;
+  padding: 6px;
+  background: #fafafa;
+}
+
+.room-item-header {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.room-item-meta {
+  font-size: 12px;
+  color: #555;
+  margin-bottom: 4px;
+}
+
+.room-item-players {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12px;
+  color: #555;
+}
+
+.room-item-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.room-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: #eef2ff;
+  color: #1f3a8a;
+}
+
+.room-pill.offline {
+  background: #f3f4f6;
+  color: #666;
+}
+
 .target-list {
   display: flex;
   flex-direction: column;
