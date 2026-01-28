@@ -27,6 +27,7 @@
               <select id="gameSelect">
                 <option value="cabo">Cabo</option>
                 <option value="skull">Skull</option>
+                <option value="draw_guess">Draw & Guess</option>
               </select>
             </div>
             <div class="row">
@@ -173,6 +174,46 @@
               <div id="skullPlayers"></div>
             </div>
 
+            <div id="drawGuessPanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="drawGuessPhase">-</span></div>
+                <div>Round: <span id="drawGuessRound">-</span>/<span id="drawGuessTotalRounds">-</span></div>
+                <div>Submitted: <span id="drawGuessSubmitted">-</span></div>
+              </div>
+
+              <div class="row" id="drawGuessPromptRow">
+                <div>Prompt: <span id="drawGuessPrompt">-</span></div>
+              </div>
+
+              <div id="drawGuessDrawArea">
+                <div class="row">
+                  <canvas id="drawGuessCanvas" width="480" height="360"></canvas>
+                </div>
+                <div class="row actions">
+                  <button id="drawGuessClearBtn">Clear</button>
+                  <button id="drawGuessSubmitDrawBtn">Submit Drawing</button>
+                </div>
+              </div>
+
+              <div id="drawGuessGuessArea">
+                <div class="row">
+                  <img id="drawGuessImage" class="draw-guess-image" alt="Drawing to guess" />
+                </div>
+                <div class="row actions">
+                  <input id="drawGuessInput" type="text" placeholder="Your guess" />
+                  <button id="drawGuessSubmitGuessBtn">Submit Guess</button>
+                </div>
+              </div>
+
+              <h3>Players</h3>
+              <div id="drawGuessPlayers"></div>
+
+              <div id="drawGuessReview" class="hidden">
+                <h3>Review</h3>
+                <div id="drawGuessBooks"></div>
+              </div>
+            </div>
+
           </div>
         </section>
       </main>
@@ -180,6 +221,6 @@
   </div>
 
   <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
-  <script src="/static/app.js"></script>
+  <script src="/static/app.js?v=draw_guess_v1"></script>
 </body>
 </html>

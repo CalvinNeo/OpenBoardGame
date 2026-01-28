@@ -4,6 +4,7 @@ let playerId = null;
 let roomId = null;
 let currentCaboView = null;
 let currentSkullView = null;
+let currentDrawGuessView = null;
 let currentGameType = null;
 let selectedSlots = [];
 let currentRoomState = null;
@@ -11,6 +12,10 @@ let selectedTarget = null;
 let skullSelectedCardIndex = null;
 let skullSelectedCardType = null;
 let skullSelectedTarget = null;
+let drawGuessLastRound = null;
+let drawGuessLastPhase = null;
+let drawGuessIsDrawing = false;
+let drawGuessHasDrawn = false;
 
 const connectionInfo = document.getElementById("connectionInfo");
 const roomIdLabel = document.getElementById("roomIdLabel");
@@ -21,6 +26,7 @@ const gameSelect = document.getElementById("gameSelect");
 const leaveBtn = document.getElementById("leaveBtn");
 const caboPanel = document.getElementById("caboPanel");
 const skullPanel = document.getElementById("skullPanel");
+const drawGuessPanel = document.getElementById("drawGuessPanel");
 
 const phaseLabel = document.getElementById("phaseLabel");
 const roundLabel = document.getElementById("roundLabel");
@@ -62,6 +68,25 @@ const skullPassBidBtn = document.getElementById("skullPassBidBtn");
 const skullRevealBtn = document.getElementById("skullRevealBtn");
 const skullClearSelectionBtn = document.getElementById("skullClearSelection");
 
+const drawGuessPhaseLabel = document.getElementById("drawGuessPhase");
+const drawGuessRoundLabel = document.getElementById("drawGuessRound");
+const drawGuessTotalRoundsLabel = document.getElementById("drawGuessTotalRounds");
+const drawGuessSubmittedLabel = document.getElementById("drawGuessSubmitted");
+const drawGuessPromptRow = document.getElementById("drawGuessPromptRow");
+const drawGuessPromptLabel = document.getElementById("drawGuessPrompt");
+const drawGuessDrawArea = document.getElementById("drawGuessDrawArea");
+const drawGuessGuessArea = document.getElementById("drawGuessGuessArea");
+const drawGuessCanvas = document.getElementById("drawGuessCanvas");
+const drawGuessClearBtn = document.getElementById("drawGuessClearBtn");
+const drawGuessSubmitDrawBtn = document.getElementById("drawGuessSubmitDrawBtn");
+const drawGuessImage = document.getElementById("drawGuessImage");
+const drawGuessInput = document.getElementById("drawGuessInput");
+const drawGuessSubmitGuessBtn = document.getElementById("drawGuessSubmitGuessBtn");
+const drawGuessPlayers = document.getElementById("drawGuessPlayers");
+const drawGuessReview = document.getElementById("drawGuessReview");
+const drawGuessBooks = document.getElementById("drawGuessBooks");
+const drawGuessCtx = drawGuessCanvas ? drawGuessCanvas.getContext("2d") : null;
+
 const actionButtons = {
   initial_peek: document.getElementById("peekBtn"),
   draw_deck: document.getElementById("drawDeckBtn"),
@@ -82,6 +107,11 @@ const skullActionButtons = {
   reveal_card: skullRevealBtn,
 };
 
+const drawGuessActionButtons = {
+  submit_drawing: drawGuessSubmitDrawBtn,
+  submit_guess: drawGuessSubmitGuessBtn,
+};
+
 function log(message) {
   const entry = document.createElement("div");
   entry.className = "log-entry";
@@ -96,8 +126,10 @@ function setConnectionInfo(message) {
 function setGamePanelVisibility(gameType) {
   const showCabo = gameType === "cabo";
   const showSkull = gameType === "skull";
+  const showDrawGuess = gameType === "draw_guess";
   caboPanel.classList.toggle("hidden", !showCabo);
   skullPanel.classList.toggle("hidden", !showSkull);
+  drawGuessPanel.classList.toggle("hidden", !showDrawGuess);
 }
 
 function resetRoomState() {
@@ -110,6 +142,7 @@ function resetRoomState() {
   playersList.innerHTML = "";
   clearCaboState();
   clearSkullState();
+  clearDrawGuessState();
   setGamePanelVisibility(null);
 }
 
@@ -154,6 +187,33 @@ function clearSkullState() {
   skullTargets.innerHTML = "";
   skullPlayers.innerHTML = "";
   updateSkullActionButtons();
+}
+
+function clearDrawGuessState() {
+  currentDrawGuessView = null;
+  drawGuessLastRound = null;
+  drawGuessLastPhase = null;
+  drawGuessIsDrawing = false;
+  drawGuessHasDrawn = false;
+  drawGuessPhaseLabel.textContent = "-";
+  drawGuessRoundLabel.textContent = "-";
+  drawGuessTotalRoundsLabel.textContent = "-";
+  drawGuessSubmittedLabel.textContent = "-";
+  drawGuessPromptLabel.textContent = "-";
+  drawGuessPlayers.innerHTML = "";
+  drawGuessBooks.innerHTML = "";
+  drawGuessReview.classList.add("hidden");
+  drawGuessDrawArea.classList.add("hidden");
+  drawGuessGuessArea.classList.add("hidden");
+  drawGuessPromptRow.classList.remove("hidden");
+  if (drawGuessInput) {
+    drawGuessInput.value = "";
+  }
+  if (drawGuessImage) {
+    drawGuessImage.removeAttribute("src");
+  }
+  clearDrawGuessCanvas();
+  updateDrawGuessButtons();
 }
 
 function updateSkullSelectedCard() {
@@ -290,10 +350,11 @@ function renderRoomState(state) {
     clearSelection();
     clearTargetSelection();
     clearSkullSelection();
-    setGamePanelVisibility(currentGameType);
     clearCaboState();
     clearSkullState();
+    clearDrawGuessState();
   }
+  setGamePanelVisibility(currentGameType);
   playersList.innerHTML = "";
   state.players.forEach((p) => {
     const line = document.createElement("div");
@@ -590,6 +651,178 @@ function updateSkullActionButtons() {
   });
 }
 
+function clearDrawGuessCanvas() {
+  if (!drawGuessCtx || !drawGuessCanvas) {
+    return;
+  }
+  drawGuessCtx.fillStyle = "#fff";
+  drawGuessCtx.fillRect(0, 0, drawGuessCanvas.width, drawGuessCanvas.height);
+  drawGuessHasDrawn = false;
+}
+
+function getDrawGuessPosition(event) {
+  const rect = drawGuessCanvas.getBoundingClientRect();
+  const point = event.touches ? event.touches[0] : event;
+  return {
+    x: point.clientX - rect.left,
+    y: point.clientY - rect.top,
+  };
+}
+
+function startDrawGuess(event) {
+  if (!drawGuessCtx || !drawGuessCanvas) {
+    return;
+  }
+  event.preventDefault();
+  drawGuessIsDrawing = true;
+  const pos = getDrawGuessPosition(event);
+  drawGuessCtx.beginPath();
+  drawGuessCtx.moveTo(pos.x, pos.y);
+  drawGuessHasDrawn = true;
+}
+
+function moveDrawGuess(event) {
+  if (!drawGuessIsDrawing || !drawGuessCtx) {
+    return;
+  }
+  event.preventDefault();
+  const pos = getDrawGuessPosition(event);
+  drawGuessCtx.lineTo(pos.x, pos.y);
+  drawGuessCtx.stroke();
+}
+
+function endDrawGuess(event) {
+  if (!drawGuessIsDrawing || !drawGuessCtx) {
+    return;
+  }
+  event.preventDefault();
+  drawGuessIsDrawing = false;
+  drawGuessCtx.beginPath();
+}
+
+function setupDrawGuessCanvas() {
+  if (!drawGuessCanvas || !drawGuessCtx) {
+    return;
+  }
+  drawGuessCtx.lineWidth = 3;
+  drawGuessCtx.lineCap = "round";
+  drawGuessCtx.strokeStyle = "#000";
+  clearDrawGuessCanvas();
+
+  drawGuessCanvas.addEventListener("mousedown", startDrawGuess);
+  drawGuessCanvas.addEventListener("mousemove", moveDrawGuess);
+  drawGuessCanvas.addEventListener("mouseup", endDrawGuess);
+  drawGuessCanvas.addEventListener("mouseleave", endDrawGuess);
+
+  drawGuessCanvas.addEventListener("touchstart", startDrawGuess, { passive: false });
+  drawGuessCanvas.addEventListener("touchmove", moveDrawGuess, { passive: false });
+  drawGuessCanvas.addEventListener("touchend", endDrawGuess, { passive: false });
+  drawGuessCanvas.addEventListener("touchcancel", endDrawGuess, { passive: false });
+}
+
+function isDrawGuessActionAvailable(actionType) {
+  if (currentGameType !== "draw_guess" || !currentDrawGuessView) {
+    return false;
+  }
+  if (!Array.isArray(currentDrawGuessView.legal_actions)) {
+    return false;
+  }
+  if (!currentDrawGuessView.legal_actions.includes(actionType)) {
+    return false;
+  }
+  if (actionType === "submit_guess") {
+    return !!drawGuessInput.value.trim();
+  }
+  return true;
+}
+
+function updateDrawGuessButtons() {
+  if (currentGameType !== "draw_guess") {
+    Object.values(drawGuessActionButtons).forEach((button) => {
+      button.classList.remove("action-allowed");
+      button.disabled = true;
+    });
+    drawGuessClearBtn.disabled = true;
+    return;
+  }
+  Object.entries(drawGuessActionButtons).forEach(([actionType, button]) => {
+    const allowed = isDrawGuessActionAvailable(actionType);
+    if (allowed) {
+      button.classList.add("action-allowed");
+    } else {
+      button.classList.remove("action-allowed");
+    }
+    button.disabled = !allowed;
+  });
+  drawGuessClearBtn.disabled = !isDrawGuessActionAvailable("submit_drawing");
+}
+
+function renderDrawGuessPlayers(view) {
+  drawGuessPlayers.innerHTML = "";
+  view.players.forEach((p) => {
+    const line = document.createElement("div");
+    const tags = [];
+    if (p.player_id === view.you) {
+      tags.push("you");
+    }
+    if (p.submitted) {
+      tags.push("submitted");
+    }
+    if (p.is_bot) {
+      tags.push("bot");
+    }
+    line.textContent = `${p.seat + 1}. ${p.name} (${tags.join(", ") || "waiting"})`;
+    drawGuessPlayers.appendChild(line);
+  });
+}
+
+function renderDrawGuessReview(view) {
+  if (!view.review || !view.review.books) {
+    drawGuessReview.classList.add("hidden");
+    return;
+  }
+  drawGuessReview.classList.remove("hidden");
+  drawGuessBooks.innerHTML = "";
+  view.review.books.forEach((book) => {
+    const wrapper = document.createElement("div");
+    wrapper.className = "review-book";
+    if (book.final_match) {
+      wrapper.classList.add("match");
+    }
+    const title = document.createElement("div");
+    title.textContent = `${book.owner_name || book.owner_id}`;
+    const promptLine = document.createElement("div");
+    promptLine.textContent = `Prompt: ${book.prompt || "-"}`;
+    const finalLine = document.createElement("div");
+    finalLine.textContent = `Final guess: ${book.final_guess || "-"}`;
+    wrapper.appendChild(title);
+    wrapper.appendChild(promptLine);
+    wrapper.appendChild(finalLine);
+
+    book.entries.forEach((entry) => {
+      const entryEl = document.createElement("div");
+      entryEl.className = "review-entry";
+      const label = document.createElement("div");
+      const authorName = entry.author_name || entry.author_id || "unknown";
+      label.textContent = `Round ${entry.round} ${entry.type} by ${authorName}`;
+      entryEl.appendChild(label);
+      if (entry.type === "drawing") {
+        const img = document.createElement("img");
+        img.src = entry.image_data || "";
+        img.alt = "drawing";
+        entryEl.appendChild(img);
+      } else {
+        const text = document.createElement("div");
+        text.textContent = entry.text || "-";
+        entryEl.appendChild(text);
+      }
+      wrapper.appendChild(entryEl);
+    });
+
+    drawGuessBooks.appendChild(wrapper);
+  });
+}
+
 function logGameEvents(data) {
   if (!data.events || !data.events.length) {
     return;
@@ -712,6 +945,67 @@ function renderSkullGameState(data) {
   updateSkullActionButtons();
 }
 
+function renderDrawGuessGameState(data) {
+  const view = data.view;
+  currentDrawGuessView = view;
+  if (currentGameType !== "draw_guess") {
+    currentGameType = "draw_guess";
+    setGamePanelVisibility("draw_guess");
+  }
+
+  drawGuessPhaseLabel.textContent = view.phase || "-";
+  drawGuessRoundLabel.textContent = view.round ?? "-";
+  drawGuessTotalRoundsLabel.textContent = view.total_rounds ?? "-";
+  drawGuessSubmittedLabel.textContent = view.submitted ? "yes" : "no";
+
+  renderDrawGuessPlayers(view);
+  logGameEvents(data);
+
+  if (view.phase === "draw") {
+    drawGuessPromptRow.classList.remove("hidden");
+    drawGuessPromptLabel.textContent = view.current_prompt || "-";
+    drawGuessDrawArea.classList.remove("hidden");
+    drawGuessGuessArea.classList.add("hidden");
+    drawGuessReview.classList.add("hidden");
+    drawGuessInput.disabled = true;
+    if (drawGuessLastRound !== view.round) {
+      clearDrawGuessCanvas();
+    }
+    drawGuessCanvas.style.pointerEvents = view.submitted ? "none" : "auto";
+  } else if (view.phase === "guess") {
+    drawGuessPromptRow.classList.add("hidden");
+    drawGuessDrawArea.classList.add("hidden");
+    drawGuessGuessArea.classList.remove("hidden");
+    drawGuessReview.classList.add("hidden");
+    if (drawGuessLastPhase !== view.phase) {
+      drawGuessInput.value = "";
+    }
+    if (view.current_drawing) {
+      drawGuessImage.src = view.current_drawing;
+    } else {
+      drawGuessImage.removeAttribute("src");
+    }
+    drawGuessInput.disabled = view.submitted;
+    drawGuessCanvas.style.pointerEvents = "none";
+  } else if (view.phase === "review") {
+    drawGuessPromptRow.classList.add("hidden");
+    drawGuessDrawArea.classList.add("hidden");
+    drawGuessGuessArea.classList.add("hidden");
+    drawGuessInput.disabled = true;
+    drawGuessCanvas.style.pointerEvents = "none";
+    renderDrawGuessReview(view);
+  } else {
+    drawGuessDrawArea.classList.add("hidden");
+    drawGuessGuessArea.classList.add("hidden");
+    drawGuessReview.classList.add("hidden");
+    drawGuessCanvas.style.pointerEvents = "none";
+  }
+
+  drawGuessLastRound = view.round;
+  drawGuessLastPhase = view.phase;
+  updateDrawGuessButtons();
+}
+
 function renderGameState(data) {
   const gameType = data.game_type || (currentRoomState && currentRoomState.game_type);
   if (gameType === "cabo") {
@@ -720,6 +1014,10 @@ function renderGameState(data) {
   }
   if (gameType === "skull") {
     renderSkullGameState(data);
+    return;
+  }
+  if (gameType === "draw_guess") {
+    renderDrawGuessGameState(data);
   }
 }
 
@@ -954,6 +1252,32 @@ skullRevealBtn.addEventListener("click", () => {
   updateSkullTargetSelection();
   updateSkullActionButtons();
 });
+
+drawGuessClearBtn.addEventListener("click", () => {
+  clearDrawGuessCanvas();
+});
+
+drawGuessSubmitDrawBtn.addEventListener("click", () => {
+  if (!drawGuessCanvas) {
+    return;
+  }
+  sendAction({ type: "submit_drawing", image_data: drawGuessCanvas.toDataURL("image/png") });
+});
+
+drawGuessSubmitGuessBtn.addEventListener("click", () => {
+  const guess = drawGuessInput.value.trim();
+  if (!guess) {
+    log("Enter a guess");
+    return;
+  }
+  sendAction({ type: "submit_guess", text: guess });
+});
+
+drawGuessInput.addEventListener("input", () => {
+  updateDrawGuessButtons();
+});
+
+setupDrawGuessCanvas();
 
 document.querySelectorAll(".collapse-btn").forEach((btn) => {
   btn.addEventListener("click", () => {

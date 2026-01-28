@@ -1,4 +1,5 @@
 from game.cabo import CaboGame
+from game.draw_guess import DrawGuessGame
 from game.registry import GameDefinition, register_game
 from game.skull import SkullGame
 
@@ -116,6 +117,32 @@ SKULL_CONFIG_SCHEMA = {
     "additionalProperties": False,
 }
 
+DRAW_GUESS_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {"type": {"const": "submit_drawing"}, "image_data": {"type": "string", "minLength": 1}},
+            "required": ["type", "image_data"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "submit_guess"}, "text": {"type": "string", "minLength": 1}},
+            "required": ["type", "text"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+DRAW_GUESS_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "prompt_pool": {"type": "array", "items": {"type": "string"}},
+    },
+    "additionalProperties": False,
+}
+
 register_game(
     GameDefinition(
         game_id=CaboGame.game_id,
@@ -143,5 +170,20 @@ register_game(
         module=SkullGame,
         serialize=SkullGame.serialize,
         deserialize=SkullGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=DrawGuessGame.game_id,
+        name="Draw & Guess",
+        min_players=DrawGuessGame.min_players,
+        max_players=DrawGuessGame.max_players,
+        turn_mode="simultaneous",
+        action_schema=DRAW_GUESS_ACTION_SCHEMA,
+        config_schema=DRAW_GUESS_CONFIG_SCHEMA,
+        module=DrawGuessGame,
+        serialize=DrawGuessGame.serialize,
+        deserialize=DrawGuessGame.deserialize,
     )
 )

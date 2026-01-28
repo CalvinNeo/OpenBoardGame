@@ -364,6 +364,7 @@ async def on_room_start(sid, data):
         return
     room.status = "in_game"
     room.state_version = 1
+    await _emit_room_state(room)
     await _emit_game_state(room, [])
     await _maybe_run_bots(room)
 
@@ -397,5 +398,6 @@ async def on_game_action(sid, data):
     room.state_version += 1
     if room.game_state.get("game_over"):
         room.status = "game_over"
+        await _emit_room_state(room)
     await _emit_game_state(room, events)
     await _maybe_run_bots(room)
