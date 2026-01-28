@@ -26,13 +26,37 @@ except Exception:  # pragma: no cover - optional dependency
     QuickDrawDataGroup = None
     Image = None
 
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+QUICKDRAW_CACHE_DIR = (
+    os.environ.get("OPENBOARDGAME_QUICKDRAW_CACHE_DIR")
+    or os.environ.get("QUICKDRAW_CACHE_DIR")
+    or os.path.join(PROJECT_ROOT, ".quickdraw_cache")
+)
+QUICKDRAW_BINARY_URL = (
+    os.environ.get("OPENBOARDGAME_QUICKDRAW_BINARY_URL") or os.environ.get("QUICKDRAW_BINARY_URL")
+)
+QUICKDRAW_OFFLINE = (
+    (os.environ.get("OPENBOARDGAME_QUICKDRAW_OFFLINE") or os.environ.get("QUICKDRAW_OFFLINE") or "")
+    .strip()
+    .lower()
+    in ("1", "true", "yes", "on")
+)
+
+if QuickDrawDataGroup is not None and QUICKDRAW_BINARY_URL:
+    try:
+        import quickdraw.data as quickdraw_data
+
+        quickdraw_data.BINARY_URL = QUICKDRAW_BINARY_URL.rstrip("/") + "/"
+    except Exception:
+        pass
+
 QUICKDRAW_AVAILABLE = QuickDrawData is not None and QuickDrawDataGroup is not None and Image is not None
 QUICKDRAW_MAX_DRAWINGS = 400
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
-QUICKDRAW_CACHE_DIR = os.path.join(PROJECT_ROOT, ".quickdraw_cache")
 _QUICKDRAW_NAME_MAP: Optional[Dict[str, str]] = None
 _QUICKDRAW_GROUPS: Dict[str, QuickDrawDataGroup] = {}
 _QUICKDRAW_CACHE_READY = False
+_QUICKDRAW_CACHE_NAMES: Optional[List[str]] = None
+_QUICKDRAW_ALLOW_NETWORK = not QUICKDRAW_OFFLINE
 
 DEFAULT_CONFIG = {
     "language": "en",
@@ -106,6 +130,44 @@ def _normalize_text(value: Optional[str]) -> str:
 
 def _normalize_name(value: str) -> str:
     return " ".join(value.replace("-", " ").strip().casefold().split())
+
+
+def _quickdraw_cache_path(category: str) -> str:
+    return os.path.join(QUICKDRAW_CACHE_DIR, f"{category}.bin")
+
+
+def _quickdraw_cache_names() -> List[str]:
+    global _QUICKDRAW_CACHE_NAMES
+    if _QUICKDRAW_CACHE_NAMES is not None:
+        return _QUICKDRAW_CACHE_NAMES
+    _ensure_quickdraw_cache_dir()
+    try:
+        entries = os.listdir(QUICKDRAW_CACHE_DIR)
+    except Exception:
+        _QUICKDRAW_CACHE_NAMES = []
+        return _QUICKDRAW_CACHE_NAMES
+    names = []
+    for entry in entries:
+        if not entry.endswith(".bin"):
+            continue
+        name, _ = os.path.splitext(entry)
+        if name:
+            names.append(name)
+    _QUICKDRAW_CACHE_NAMES = names
+    return _QUICKDRAW_CACHE_NAMES
+
+
+def _quickdraw_cache_name_map() -> Dict[str, str]:
+    return {_normalize_name(name): name for name in _quickdraw_cache_names()}
+
+
+def _set_quickdraw_offline() -> None:
+    global _QUICKDRAW_ALLOW_NETWORK, _QUICKDRAW_NAME_MAP, _QUICKDRAW_CACHE_NAMES
+    if not _QUICKDRAW_ALLOW_NETWORK:
+        return
+    _QUICKDRAW_ALLOW_NETWORK = False
+    _QUICKDRAW_CACHE_NAMES = None
+    _QUICKDRAW_NAME_MAP = _quickdraw_cache_name_map()
 
 
 def _quickdraw_alias_for_text(text: str, language: str) -> Optional[str]:
@@ -186,6 +248,9 @@ def _get_quickdraw_name_map() -> Dict[str, str]:
         _QUICKDRAW_NAME_MAP = {}
         return _QUICKDRAW_NAME_MAP
     _ensure_quickdraw_cache_dir()
+    if not _QUICKDRAW_ALLOW_NETWORK:
+        _QUICKDRAW_NAME_MAP = _quickdraw_cache_name_map()
+        return _QUICKDRAW_NAME_MAP
     try:
         data = QuickDrawData(
             recognized=True,
@@ -196,8 +261,8 @@ def _get_quickdraw_name_map() -> Dict[str, str]:
             cache_dir=QUICKDRAW_CACHE_DIR,
         )
     except Exception:
-        _QUICKDRAW_NAME_MAP = {}
-        return _QUICKDRAW_NAME_MAP
+        _set_quickdraw_offline()
+        return _QUICKDRAW_NAME_MAP or {}
     _QUICKDRAW_NAME_MAP = {_normalize_name(name): name for name in data.drawing_names}
     return _QUICKDRAW_NAME_MAP
 
@@ -244,6 +309,9 @@ def _get_quickdraw_group(category: str) -> Optional[QuickDrawDataGroup]:
     if group is not None:
         return group
     _ensure_quickdraw_cache_dir()
+    cache_path = _quickdraw_cache_path(category)
+    if not _QUICKDRAW_ALLOW_NETWORK and not os.path.isfile(cache_path):
+        return None
     try:
         group = QuickDrawDataGroup(
             category,
@@ -254,6 +322,7 @@ def _get_quickdraw_group(category: str) -> Optional[QuickDrawDataGroup]:
             cache_dir=QUICKDRAW_CACHE_DIR,
         )
     except Exception:
+        _set_quickdraw_offline()
         return None
     _QUICKDRAW_GROUPS[category] = group
     return group
