@@ -92,6 +92,25 @@ def _auto_payment(required: Dict[str, int], tokens: Dict[str, int]) -> Optional[
     return payment
 
 
+def _auto_discard_for_gain(tokens: Dict[str, int], gain: Dict[str, int]) -> Optional[Dict[str, int]]:
+    total = _total_tokens(tokens) + sum(int(gain.get(color, 0)) for color in TOKEN_COLORS)
+    excess = total - 10
+    if excess <= 0:
+        return None
+    available = {color: int(tokens.get(color, 0)) + int(gain.get(color, 0)) for color in TOKEN_COLORS}
+    discard = {color: 0 for color in TOKEN_COLORS}
+    remaining = excess
+    ordered = sorted(TOKEN_COLORS, key=lambda c: available.get(c, 0), reverse=True)
+    for color in ordered:
+        if remaining <= 0:
+            break
+        amount = min(available.get(color, 0), remaining)
+        if amount > 0:
+            discard[color] = amount
+            remaining -= amount
+    return discard
+
+
 def _normalize_payment(payment: Optional[Dict]) -> Dict[str, int]:
     normalized = {color: 0 for color in TOKEN_COLORS}
     if not isinstance(payment, dict):
@@ -101,6 +120,20 @@ def _normalize_payment(payment: Optional[Dict]) -> Dict[str, int]:
         if isinstance(value, int) and value > 0:
             normalized[color] = value
     return normalized
+
+
+def _validate_discard_for_gain(tokens: Dict[str, int], gain: Dict[str, int], discard: Optional[Dict]) -> Tuple[Optional[Dict], Optional[str]]:
+    required = _total_tokens(tokens) + sum(int(gain.get(color, 0)) for color in TOKEN_COLORS) - 10
+    if required <= 0:
+        return {color: 0 for color in TOKEN_COLORS}, None
+    normalized = _normalize_payment(discard)
+    if sum(normalized.values()) != required:
+        return None, f"must discard {required} tokens"
+    for color in TOKEN_COLORS:
+        available = int(tokens.get(color, 0)) + int(gain.get(color, 0))
+        if normalized[color] > available:
+            return None, "cannot discard more than you have"
+    return normalized, None
 
 
 def _validate_payment(required: Dict[str, int], tokens: Dict[str, int], payment: Optional[Dict]) -> Tuple[Optional[Dict], Optional[str]]:
@@ -253,6 +286,9 @@ class SplendorGame:
         phase = state.get("phase")
         player = state["players"][player_id]
 
+        if _total_tokens(player["tokens"]) > 10:
+            return ["discard_tokens"]
+
         if phase == "discard_tokens":
             return ["discard_tokens"] if _total_tokens(player["tokens"]) > 10 else []
 
@@ -298,6 +334,10 @@ class SplendorGame:
         events: List[Dict] = []
 
         phase = state.get("phase")
+        if _total_tokens(player["tokens"]) > 10 and phase != "discard_tokens":
+            state["phase"] = "discard_tokens"
+            phase = "discard_tokens"
+
         if phase == "discard_tokens":
             if action_type != "discard_tokens":
                 return [], "must discard tokens"
@@ -347,14 +387,23 @@ class SplendorGame:
                 return [], "invalid colors"
             if len(colors) != 3 or len(set(colors)) != 3:
                 return [], "must take 3 different colors"
+            gain = {color: 0 for color in TOKEN_COLORS}
             for color in colors:
                 if color not in COLORS:
                     return [], "invalid color"
                 if state["tokens_supply"].get(color, 0) <= 0:
                     return [], "token not available"
+                gain[color] += 1
+            discard, error = _validate_discard_for_gain(player["tokens"], gain, action.get("discard"))
+            if error or discard is None:
+                return [], error or "invalid discard"
             for color in colors:
                 state["tokens_supply"][color] -= 1
                 player["tokens"][color] += 1
+            if sum(discard.values()) > 0:
+                for color in TOKEN_COLORS:
+                    player["tokens"][color] -= discard[color]
+                    state["tokens_supply"][color] += discard[color]
 
         elif action_type == "take_tokens_same":
             color = action.get("color")
@@ -362,8 +411,17 @@ class SplendorGame:
                 return [], "invalid color"
             if state["tokens_supply"].get(color, 0) < 4:
                 return [], "not enough tokens in supply"
+            gain = {token: 0 for token in TOKEN_COLORS}
+            gain[color] = 2
+            discard, error = _validate_discard_for_gain(player["tokens"], gain, action.get("discard"))
+            if error or discard is None:
+                return [], error or "invalid discard"
             state["tokens_supply"][color] -= 2
             player["tokens"][color] += 2
+            if sum(discard.values()) > 0:
+                for token in TOKEN_COLORS:
+                    player["tokens"][token] -= discard[token]
+                    state["tokens_supply"][token] += discard[token]
 
         elif action_type == "reserve_market":
             tier = action.get("tier")
@@ -374,14 +432,24 @@ class SplendorGame:
                 return [], "invalid card index"
             if len(player["reserved"]) >= 3:
                 return [], "reserve limit reached"
+            gold_gain = 1 if state["tokens_supply"].get("gold", 0) > 0 else 0
+            gain = {color: 0 for color in TOKEN_COLORS}
+            gain["gold"] = gold_gain
+            discard, error = _validate_discard_for_gain(player["tokens"], gain, action.get("discard"))
+            if error or discard is None:
+                return [], error or "invalid discard"
             card = state["market"][tier].pop(index)
             player["reserved"].append(card)
             refill = _draw_card(state["decks"][tier])
             if refill:
                 state["market"][tier].append(refill)
-            if state["tokens_supply"].get("gold", 0) > 0:
+            if gold_gain > 0:
                 state["tokens_supply"]["gold"] -= 1
                 player["tokens"]["gold"] += 1
+            if sum(discard.values()) > 0:
+                for color in TOKEN_COLORS:
+                    player["tokens"][color] -= discard[color]
+                    state["tokens_supply"][color] += discard[color]
 
         elif action_type == "reserve_deck":
             tier = action.get("tier")
@@ -389,13 +457,23 @@ class SplendorGame:
                 return [], "invalid tier"
             if len(player["reserved"]) >= 3:
                 return [], "reserve limit reached"
+            gold_gain = 1 if state["tokens_supply"].get("gold", 0) > 0 else 0
+            gain = {color: 0 for color in TOKEN_COLORS}
+            gain["gold"] = gold_gain
+            discard, error = _validate_discard_for_gain(player["tokens"], gain, action.get("discard"))
+            if error or discard is None:
+                return [], error or "invalid discard"
             card = _draw_card(state["decks"][tier])
             if not card:
                 return [], "deck empty"
             player["reserved"].append(card)
-            if state["tokens_supply"].get("gold", 0) > 0:
+            if gold_gain > 0:
                 state["tokens_supply"]["gold"] -= 1
                 player["tokens"]["gold"] += 1
+            if sum(discard.values()) > 0:
+                for color in TOKEN_COLORS:
+                    player["tokens"][color] -= discard[color]
+                    state["tokens_supply"][color] += discard[color]
 
         elif action_type == "buy_market":
             tier = action.get("tier")
@@ -443,10 +521,6 @@ class SplendorGame:
 
         else:
             return [], "unknown action"
-
-        if _total_tokens(player["tokens"]) > 10:
-            state["phase"] = "discard_tokens"
-            return events, None
 
         eligible = _eligible_nobles(state, player_id)
         if len(eligible) == 1:
@@ -609,18 +683,45 @@ class SplendorGame:
         if len(player["reserved"]) < 3:
             for tier in ["tier3", "tier2", "tier1"]:
                 if state["market"][tier]:
-                    return {"type": "reserve_market", "tier": tier, "index": 0}
+                    gain = {color: 0 for color in TOKEN_COLORS}
+                    if state["tokens_supply"].get("gold", 0) > 0:
+                        gain["gold"] = 1
+                    discard = _auto_discard_for_gain(player["tokens"], gain)
+                    action = {"type": "reserve_market", "tier": tier, "index": 0}
+                    if discard:
+                        action["discard"] = discard
+                    return action
             for tier in ["tier3", "tier2", "tier1"]:
                 if state["decks"][tier]:
-                    return {"type": "reserve_deck", "tier": tier}
+                    gain = {color: 0 for color in TOKEN_COLORS}
+                    if state["tokens_supply"].get("gold", 0) > 0:
+                        gain["gold"] = 1
+                    discard = _auto_discard_for_gain(player["tokens"], gain)
+                    action = {"type": "reserve_deck", "tier": tier}
+                    if discard:
+                        action["discard"] = discard
+                    return action
 
         available = [color for color in COLORS if state["tokens_supply"].get(color, 0) > 0]
         if len(available) >= 3:
             pick = sorted(available, key=lambda c: state["tokens_supply"].get(c, 0), reverse=True)[:3]
-            return {"type": "take_tokens", "colors": pick}
+            gain = {color: 0 for color in TOKEN_COLORS}
+            for color in pick:
+                gain[color] += 1
+            discard = _auto_discard_for_gain(player["tokens"], gain)
+            action = {"type": "take_tokens", "colors": pick}
+            if discard:
+                action["discard"] = discard
+            return action
         for color in COLORS:
             if state["tokens_supply"].get(color, 0) >= 4:
-                return {"type": "take_tokens_same", "color": color}
+                gain = {token: 0 for token in TOKEN_COLORS}
+                gain[color] = 2
+                discard = _auto_discard_for_gain(player["tokens"], gain)
+                action = {"type": "take_tokens_same", "color": color}
+                if discard:
+                    action["discard"] = discard
+                return action
         return None
 
     @staticmethod

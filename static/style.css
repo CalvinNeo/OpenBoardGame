@@ -504,6 +504,16 @@ body.log-open {
   margin-bottom: 8px;
 }
 
+.splendor-discard-hint {
+  border: 1px solid #fcd34d;
+  background: #fffbeb;
+  color: #92400e;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
 .splendor-token {
   border: 1px solid #ddd;
   border-radius: 999px;
@@ -656,9 +666,9 @@ body.log-open {
 }
 
 .gem-black {
-  background: #f1f1f1;
-  color: #111;
-  border-color: #999;
+  background: #111;
+  color: #fff;
+  border-color: #444;
 }
 
 .gem-gold {

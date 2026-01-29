@@ -599,6 +599,14 @@ async def on_game_action(sid, data):
     if error:
         await _send_error(sid, error)
         return
+    if room.game_type == "splendor":
+        player = _find_player(room, player_id)
+        payload = {
+            "player_id": player_id,
+            "name": player.name if player else None,
+            "action": action,
+        }
+        events = [{"type": "player:action", "payload": payload}] + (events or [])
     room.state_version += 1
     if room.game_state.get("game_over"):
         room.status = "game_over"

@@ -22,6 +22,7 @@ let splendorSelectedMarket = null;
 let splendorSelectedReserved = null;
 let splendorSelectedNoble = null;
 let splendorTokenSelection = {};
+let splendorDiscardSelection = {};
 
 const nameInput = document.getElementById("nameInput");
 const connectionInfo = document.getElementById("connectionInfo");
@@ -120,6 +121,9 @@ const splendorSelectedNobleLabel = document.getElementById("splendorSelectedNobl
 const splendorClearSelectionBtn = document.getElementById("splendorClearSelection");
 const splendorReserveTierSelect = document.getElementById("splendorReserveTier");
 const splendorTokenSelectionEl = document.getElementById("splendorTokenSelection");
+const splendorDiscardSelectionRow = document.getElementById("splendorDiscardSelectionRow");
+const splendorDiscardSelectionEl = document.getElementById("splendorDiscardSelection");
+const splendorDiscardHint = document.getElementById("splendorDiscardHint");
 const splendorTakeThreeBtn = document.getElementById("splendorTakeThreeBtn");
 const splendorTakeTwoBtn = document.getElementById("splendorTakeTwoBtn");
 const splendorReserveMarketBtn = document.getElementById("splendorReserveMarketBtn");
@@ -606,12 +610,27 @@ function resetSplendorTokenSelection() {
   });
 }
 
+function resetSplendorDiscardSelection() {
+  splendorDiscardSelection = {};
+  splendorColors.forEach((color) => {
+    splendorDiscardSelection[color] = 0;
+  });
+}
+
 function clearSplendorState() {
   currentSplendorView = null;
   splendorSelectedMarket = null;
   splendorSelectedReserved = null;
   splendorSelectedNoble = null;
   resetSplendorTokenSelection();
+  resetSplendorDiscardSelection();
+  if (splendorDiscardSelectionRow) {
+    splendorDiscardSelectionRow.classList.add("hidden");
+  }
+  if (splendorDiscardHint) {
+    splendorDiscardHint.textContent = "";
+    splendorDiscardHint.classList.add("hidden");
+  }
   if (splendorPhaseLabel) {
     splendorPhaseLabel.textContent = "-";
   }
@@ -665,13 +684,39 @@ function updateSplendorSelectionLabels() {
   }
 }
 
+function updateSplendorDiscardHint(view) {
+  if (!splendorDiscardHint) {
+    return;
+  }
+  const requirement = getSplendorPendingDiscardRequirement(view);
+  const excess = requirement ? requirement.excess : 0;
+  if (excess > 0) {
+    splendorDiscardHint.textContent = `Discard ${excess} token${excess === 1 ? "" : "s"} to stay at 10.`;
+    splendorDiscardHint.classList.remove("hidden");
+    if (splendorDiscardSelectionRow) {
+      splendorDiscardSelectionRow.classList.remove("hidden");
+    }
+  } else {
+    splendorDiscardHint.textContent = "";
+    splendorDiscardHint.classList.add("hidden");
+    if (splendorDiscardSelectionRow) {
+      splendorDiscardSelectionRow.classList.add("hidden");
+    }
+    resetSplendorDiscardSelection();
+    renderSplendorDiscardSelection();
+  }
+}
+
 function clearSplendorSelection() {
   splendorSelectedMarket = null;
   splendorSelectedReserved = null;
   splendorSelectedNoble = null;
   resetSplendorTokenSelection();
+  resetSplendorDiscardSelection();
   updateSplendorSelectionLabels();
   renderSplendorTokenSelection();
+  renderSplendorDiscardSelection();
+  updateSplendorDiscardHint(currentSplendorView);
   updateSplendorActionButtons();
 }
 
@@ -731,6 +776,133 @@ function splendorTokenSelectionTotal() {
   return splendorColors.reduce((sum, color) => sum + (splendorTokenSelection[color] || 0), 0);
 }
 
+function splendorDiscardSelectionTotal() {
+  return splendorColors.reduce((sum, color) => sum + (splendorDiscardSelection[color] || 0), 0);
+}
+
+function splendorTotalTokens(tokens) {
+  return splendorColors.reduce((sum, color) => sum + ((tokens && tokens[color]) || 0), 0);
+}
+
+function splendorTokenGainForAction(view, actionType) {
+  const gain = {};
+  splendorColors.forEach((color) => {
+    gain[color] = 0;
+  });
+  if (actionType === "take_tokens") {
+    const selected = splendorBaseColors.filter((color) => splendorTokenSelection[color] === 1);
+    const hasGold = (splendorTokenSelection.gold || 0) > 0;
+    if (selected.length !== 3 || splendorTokenSelectionTotal() !== 3 || hasGold) {
+      return null;
+    }
+    selected.forEach((color) => {
+      gain[color] = 1;
+    });
+    return gain;
+  }
+  if (actionType === "take_tokens_same") {
+    const selected = splendorBaseColors.filter((color) => splendorTokenSelection[color] === 2);
+    const hasOther = splendorBaseColors.some((color) => {
+      const val = splendorTokenSelection[color] || 0;
+      return val !== 0 && val !== 2;
+    });
+    const hasGold = (splendorTokenSelection.gold || 0) > 0;
+    if (selected.length !== 1 || splendorTokenSelectionTotal() !== 2 || hasGold || hasOther) {
+      return null;
+    }
+    gain[selected[0]] = 2;
+    return gain;
+  }
+  if (actionType === "reserve_market" || actionType === "reserve_deck") {
+    if (view && view.tokens_supply && view.tokens_supply.gold > 0) {
+      gain.gold = 1;
+    }
+    return gain;
+  }
+  return null;
+}
+
+function splendorDiscardRequirement(view, gain) {
+  if (!view || !gain) {
+    return null;
+  }
+  const you = getSplendorYou(view);
+  if (!you) {
+    return null;
+  }
+  const currentTotal = splendorTotalTokens(you.tokens);
+  const gainTotal = splendorColors.reduce((sum, color) => sum + (gain[color] || 0), 0);
+  const excess = currentTotal + gainTotal - 10;
+  if (excess <= 0) {
+    return { excess: 0, available: null };
+  }
+  const available = {};
+  splendorColors.forEach((color) => {
+    available[color] = ((you.tokens && you.tokens[color]) || 0) + (gain[color] || 0);
+  });
+  return { excess, available };
+}
+
+function splendorIsDiscardSelectionValid(requirement) {
+  if (!requirement || requirement.excess <= 0) {
+    return true;
+  }
+  if (splendorDiscardSelectionTotal() !== requirement.excess) {
+    return false;
+  }
+  return splendorColors.every(
+    (color) => (splendorDiscardSelection[color] || 0) <= ((requirement.available && requirement.available[color]) || 0)
+  );
+}
+
+function splendorDiscardSelectionPayload(requirement) {
+  if (!requirement || requirement.excess <= 0) {
+    return null;
+  }
+  const payload = {};
+  splendorColors.forEach((color) => {
+    const value = splendorDiscardSelection[color] || 0;
+    if (value > 0) {
+      payload[color] = value;
+    }
+  });
+  return Object.keys(payload).length ? payload : null;
+}
+
+function splendorDiscardPayloadForAction(view, actionType) {
+  const gain = splendorTokenGainForAction(view, actionType);
+  const requirement = splendorDiscardRequirement(view, gain);
+  if (!splendorIsDiscardSelectionValid(requirement)) {
+    return null;
+  }
+  return splendorDiscardSelectionPayload(requirement);
+}
+
+function getSplendorPendingDiscardRequirement(view) {
+  if (!view) {
+    return null;
+  }
+  if (splendorTokenSelectionTotal() > 0) {
+    if (view.legal_actions && view.legal_actions.includes("take_tokens")) {
+      const gain = splendorTokenGainForAction(view, "take_tokens");
+      if (gain) {
+        return splendorDiscardRequirement(view, gain);
+      }
+    }
+    if (view.legal_actions && view.legal_actions.includes("take_tokens_same")) {
+      const gain = splendorTokenGainForAction(view, "take_tokens_same");
+      if (gain) {
+        return splendorDiscardRequirement(view, gain);
+      }
+    }
+  }
+  if (splendorSelectedMarket && view.legal_actions && view.legal_actions.includes("reserve_market")) {
+    const gain = splendorTokenGainForAction(view, "reserve_market");
+    return splendorDiscardRequirement(view, gain);
+  }
+  return null;
+}
+
 function renderSplendorTokenSelection() {
   if (!splendorTokenSelectionEl) {
     return;
@@ -759,11 +931,49 @@ function renderSplendorTokenSelection() {
   });
 }
 
+function renderSplendorDiscardSelection() {
+  if (!splendorDiscardSelectionEl) {
+    return;
+  }
+  splendorDiscardSelectionEl.innerHTML = "";
+  splendorColors.forEach((color) => {
+    const wrapper = document.createElement("div");
+    wrapper.className = `token-picker gem-${color}`;
+    const label = document.createElement("span");
+    label.textContent = splendorColorLabels[color] || color;
+    const minus = document.createElement("button");
+    minus.type = "button";
+    minus.textContent = "-";
+    const count = document.createElement("span");
+    count.textContent = String(splendorDiscardSelection[color] || 0);
+    const plus = document.createElement("button");
+    plus.type = "button";
+    plus.textContent = "+";
+    minus.addEventListener("click", () => adjustSplendorDiscardSelection(color, -1));
+    plus.addEventListener("click", () => adjustSplendorDiscardSelection(color, 1));
+    wrapper.appendChild(label);
+    wrapper.appendChild(minus);
+    wrapper.appendChild(count);
+    wrapper.appendChild(plus);
+    splendorDiscardSelectionEl.appendChild(wrapper);
+  });
+}
+
 function adjustSplendorTokenSelection(color, delta) {
   const current = splendorTokenSelection[color] || 0;
   const next = Math.max(0, Math.min(20, current + delta));
   splendorTokenSelection[color] = next;
   renderSplendorTokenSelection();
+  updateSplendorDiscardHint(currentSplendorView);
+  updateSplendorActionButtons();
+}
+
+function adjustSplendorDiscardSelection(color, delta) {
+  const current = splendorDiscardSelection[color] || 0;
+  const next = Math.max(0, Math.min(20, current + delta));
+  splendorDiscardSelection[color] = next;
+  renderSplendorDiscardSelection();
+  updateSplendorDiscardHint(currentSplendorView);
   updateSplendorActionButtons();
 }
 
@@ -1383,20 +1593,21 @@ function isSplendorActionAvailable(actionType) {
   if (!currentSplendorView.legal_actions.includes(actionType)) {
     return false;
   }
-  const selectionTotal = splendorTokenSelectionTotal();
   if (actionType === "take_tokens") {
-    const selected = splendorBaseColors.filter((color) => splendorTokenSelection[color] === 1);
-    const hasGold = (splendorTokenSelection.gold || 0) > 0;
-    return selected.length === 3 && selectionTotal === 3 && !hasGold;
+    const gain = splendorTokenGainForAction(currentSplendorView, "take_tokens");
+    if (!gain) {
+      return false;
+    }
+    const requirement = splendorDiscardRequirement(currentSplendorView, gain);
+    return splendorIsDiscardSelectionValid(requirement);
   }
   if (actionType === "take_tokens_same") {
-    const selected = splendorBaseColors.filter((color) => splendorTokenSelection[color] === 2);
-    const hasOther = splendorBaseColors.some((color) => {
-      const val = splendorTokenSelection[color] || 0;
-      return val !== 0 && val !== 2;
-    });
-    const hasGold = (splendorTokenSelection.gold || 0) > 0;
-    return selected.length === 1 && selectionTotal === 2 && !hasGold && !hasOther;
+    const gain = splendorTokenGainForAction(currentSplendorView, "take_tokens_same");
+    if (!gain) {
+      return false;
+    }
+    const requirement = splendorDiscardRequirement(currentSplendorView, gain);
+    return splendorIsDiscardSelectionValid(requirement);
   }
   if (actionType === "reserve_market" || actionType === "buy_market") {
     if (!splendorSelectedMarket) {
@@ -1406,7 +1617,14 @@ function isSplendorActionAvailable(actionType) {
       const card = getSelectedMarketCard(currentSplendorView);
       return !!(card && card.affordable);
     }
-    return true;
+    const gain = splendorTokenGainForAction(currentSplendorView, "reserve_market");
+    const requirement = splendorDiscardRequirement(currentSplendorView, gain);
+    return splendorIsDiscardSelectionValid(requirement);
+  }
+  if (actionType === "reserve_deck") {
+    const gain = splendorTokenGainForAction(currentSplendorView, "reserve_deck");
+    const requirement = splendorDiscardRequirement(currentSplendorView, gain);
+    return splendorIsDiscardSelectionValid(requirement);
   }
   if (actionType === "buy_reserved") {
     const card = getSelectedReservedCard(currentSplendorView);
@@ -1421,7 +1639,7 @@ function isSplendorActionAvailable(actionType) {
       return false;
     }
     return (
-      selectionTotal > 0 &&
+      splendorTokenSelectionTotal() > 0 &&
       splendorColors.every((color) => (splendorTokenSelection[color] || 0) <= ((you.tokens && you.tokens[color]) || 0))
     );
   }
@@ -1636,6 +1854,8 @@ function renderSplendorMarket(view) {
         updateSplendorSelectionLabels();
         renderSplendorMarket(view);
         renderSplendorReserved(view);
+        renderSplendorDiscardSelection();
+        updateSplendorDiscardHint(view);
         updateSplendorActionButtons();
       });
       container.appendChild(cardEl);
@@ -1689,6 +1909,8 @@ function renderSplendorReserved(view) {
       updateSplendorSelectionLabels();
       renderSplendorMarket(view);
       renderSplendorReserved(view);
+      renderSplendorDiscardSelection();
+      updateSplendorDiscardHint(view);
       updateSplendorActionButtons();
     });
     splendorReserved.appendChild(cardEl);
@@ -1822,6 +2044,8 @@ function renderSplendorGameState(data) {
   renderSplendorReserved(view);
   renderSplendorPlayers(view);
   renderSplendorTokenSelection();
+  renderSplendorDiscardSelection();
+  updateSplendorDiscardHint(view);
 
   logGameEvents(data);
   updateSplendorActionButtons();
@@ -1832,10 +2056,12 @@ function logGameEvents(data) {
     return;
   }
   data.events.forEach((evt) => {
-    if (evt.type === "bot:action") {
+    if (evt.type === "bot:action" || evt.type === "player:action") {
       const payload = evt.payload || {};
-      const name = payload.name || "Bot";
-      log(`Bot ${name}: ${JSON.stringify(payload.action)}`);
+      const isBot = evt.type === "bot:action";
+      const label = isBot ? "Bot" : "Player";
+      const name = payload.name || label;
+      log(`${label} ${name}: ${JSON.stringify(payload.action)}`);
     } else {
       log(`${evt.type}`);
     }
@@ -2372,9 +2598,17 @@ if (splendorTakeThreeBtn) {
       log("Select exactly 3 different gem colors");
       return;
     }
-    sendAction({ type: "take_tokens", colors });
+    const action = { type: "take_tokens", colors };
+    const discard = splendorDiscardPayloadForAction(currentSplendorView, "take_tokens");
+    if (discard) {
+      action.discard = discard;
+    }
+    sendAction(action);
     resetSplendorTokenSelection();
+    resetSplendorDiscardSelection();
     renderSplendorTokenSelection();
+    renderSplendorDiscardSelection();
+    updateSplendorDiscardHint(currentSplendorView);
     updateSplendorActionButtons();
   });
 }
@@ -2386,9 +2620,17 @@ if (splendorTakeTwoBtn) {
       log("Select exactly 2 of the same gem color");
       return;
     }
-    sendAction({ type: "take_tokens_same", color: colors[0] });
+    const action = { type: "take_tokens_same", color: colors[0] };
+    const discard = splendorDiscardPayloadForAction(currentSplendorView, "take_tokens_same");
+    if (discard) {
+      action.discard = discard;
+    }
+    sendAction(action);
     resetSplendorTokenSelection();
+    resetSplendorDiscardSelection();
     renderSplendorTokenSelection();
+    renderSplendorDiscardSelection();
+    updateSplendorDiscardHint(currentSplendorView);
     updateSplendorActionButtons();
   });
 }
@@ -2399,12 +2641,20 @@ if (splendorReserveMarketBtn) {
       log("Select a market card to reserve");
       return;
     }
-    sendAction({
+    const action = {
       type: "reserve_market",
       tier: splendorSelectedMarket.tier,
       index: splendorSelectedMarket.index,
-    });
+    };
+    const discard = splendorDiscardPayloadForAction(currentSplendorView, "reserve_market");
+    if (discard) {
+      action.discard = discard;
+    }
+    sendAction(action);
     splendorSelectedMarket = null;
+    resetSplendorDiscardSelection();
+    renderSplendorDiscardSelection();
+    updateSplendorDiscardHint(currentSplendorView);
     updateSplendorSelectionLabels();
     updateSplendorActionButtons();
   });
@@ -2413,7 +2663,15 @@ if (splendorReserveMarketBtn) {
 if (splendorReserveDeckBtn) {
   splendorReserveDeckBtn.addEventListener("click", () => {
     const tier = splendorReserveTierSelect ? splendorReserveTierSelect.value : "tier1";
-    sendAction({ type: "reserve_deck", tier });
+    const action = { type: "reserve_deck", tier };
+    const discard = splendorDiscardPayloadForAction(currentSplendorView, "reserve_deck");
+    if (discard) {
+      action.discard = discard;
+    }
+    sendAction(action);
+    resetSplendorDiscardSelection();
+    renderSplendorDiscardSelection();
+    updateSplendorDiscardHint(currentSplendorView);
     updateSplendorActionButtons();
   });
 }
@@ -2475,7 +2733,10 @@ if (splendorDiscardBtn) {
     }
     sendAction({ type: "discard_tokens", tokens: { ...splendorTokenSelection } });
     resetSplendorTokenSelection();
+    resetSplendorDiscardSelection();
     renderSplendorTokenSelection();
+    renderSplendorDiscardSelection();
+    updateSplendorDiscardHint(currentSplendorView);
     updateSplendorActionButtons();
   });
 }
