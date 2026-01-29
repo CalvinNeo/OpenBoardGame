@@ -106,8 +106,10 @@ _QUICKDRAW_CACHE_NAMES: Optional[List[str]] = None
 _QUICKDRAW_ALLOW_NETWORK = not QUICKDRAW_OFFLINE
 _QUICKDRAW_OFFLINE_LOGGED = False
 
+DEFAULT_LANGUAGE = "zh"
+
 DEFAULT_CONFIG = {
-    "language": "en",
+    "language": DEFAULT_LANGUAGE,
     "prompt_pool": None,
 }
 
@@ -182,7 +184,7 @@ def _quickdraw_request_label(
 def _normalize_language(value: Optional[str]) -> str:
     if value in ("en", "zh"):
         return value
-    return "en"
+    return DEFAULT_LANGUAGE
 
 
 def _clone_prompt_entry(entry: Dict) -> Dict:
@@ -1028,7 +1030,7 @@ class DrawGuessGame:
             if prompt_entry:
                 prompt_quickdraw = prompt_entry.get("quickdraw")
             if not prompt_quickdraw:
-                prompt_quickdraw = _quickdraw_alias_for_text(prompt_text, state.get("language", "en"))
+                prompt_quickdraw = _quickdraw_alias_for_text(prompt_text, state.get("language", DEFAULT_LANGUAGE))
             salted_base = prompt_text or prompt_quickdraw or ""
             salted_prompt = _salt_prompt(salted_base)
             rng = random.Random(salted_prompt)
@@ -1043,7 +1045,7 @@ class DrawGuessGame:
             if not hint:
                 hint = _drawing_hint_from_book(book)
             prompt_pool = state.get("prompt_pool")
-            guess = _bot_guess_from_hint(hint, prompt_pool, state.get("language", "en"))
+            guess = _bot_guess_from_hint(hint, prompt_pool, state.get("language", DEFAULT_LANGUAGE))
             return {"type": "submit_guess", "text": guess}
         return None
 

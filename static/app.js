@@ -528,7 +528,7 @@ function resetRoomState() {
   setGamePanelVisibility(null);
   updateDrawGuessLanguageRow();
   if (drawGuessLanguageSelect) {
-    drawGuessLanguageSelect.value = "en";
+    drawGuessLanguageSelect.value = "zh";
   }
 }
 
@@ -1100,7 +1100,7 @@ function emitRoomStart() {
   }
   const payload = { room_id: roomId };
   if (currentGameType === "draw_guess" && drawGuessLanguageSelect) {
-    payload.config = { language: drawGuessLanguageSelect.value || "en" };
+    payload.config = { language: drawGuessLanguageSelect.value || "zh" };
   }
   socket.emit("room:start", payload);
 }
