@@ -33,16 +33,17 @@
               <input id="nameInput" type="text" placeholder="Your name" />
             </div>
             <div class="row">
-              <label>Game</label>
-              <select id="gameSelect">
+              <button id="createBtn" type="button">Create Room</button>
+            </div>
+            <div class="row hidden" id="createGameRow" aria-hidden="true">
+              <label for="gameSelect">Game</label>
+              <select id="gameSelect" aria-label="Select game">
+                <option value="" selected disabled>Select a game</option>
                 <option value="cabo">Cabo</option>
                 <option value="skull">Skull</option>
                 <option value="draw_guess">Draw & Guess</option>
                 <option value="splendor">Splendor</option>
               </select>
-            </div>
-            <div class="row">
-              <button id="createBtn">Create Room</button>
             </div>
             <div class="row">
               <label>Room ID</label>

@@ -23,6 +23,7 @@ let splendorSelectedReserved = null;
 let splendorSelectedNoble = null;
 let splendorTokenSelection = {};
 let splendorDiscardSelection = {};
+let createRoomPending = false;
 
 const nameInput = document.getElementById("nameInput");
 const connectionInfo = document.getElementById("connectionInfo");
@@ -33,6 +34,8 @@ const roomStatus = document.getElementById("roomStatus");
 const gameTypeLabel = document.getElementById("gameTypeLabel");
 const playersList = document.getElementById("playersList");
 const gameSelect = document.getElementById("gameSelect");
+const createBtn = document.getElementById("createBtn");
+const createGameRow = document.getElementById("createGameRow");
 const leaveBtn = document.getElementById("leaveBtn");
 const removeBotBtn = document.getElementById("removeBotBtn");
 const logoutBtn = document.getElementById("logoutBtn");
@@ -369,6 +372,33 @@ function setConnectionInfo(message) {
   connectionInfo.textContent = message;
 }
 
+function getPlayerName() {
+  return (nameInput ? nameInput.value : "").trim();
+}
+
+function setCreateGameRowVisible(visible) {
+  if (!createGameRow) {
+    return;
+  }
+  createGameRow.classList.toggle("hidden", !visible);
+  createGameRow.setAttribute("aria-hidden", (!visible).toString());
+}
+
+function showCreateGamePicker() {
+  if (!gameSelect || !createGameRow) {
+    return;
+  }
+  setCreateGameRowVisible(true);
+  gameSelect.value = "";
+  requestAnimationFrame(() => {
+    if (typeof gameSelect.showPicker === "function") {
+      gameSelect.showPicker();
+    } else {
+      gameSelect.focus();
+    }
+  });
+}
+
 function setGamePanelVisibility(gameType) {
   const showCabo = gameType === "cabo";
   const showSkull = gameType === "skull";
@@ -395,7 +425,7 @@ function requestRoomList() {
 }
 
 function attemptJoinRoom(rid) {
-  const name = (nameInput && nameInput.value ? nameInput.value : "").trim();
+  const name = getPlayerName();
   if (!name || !rid) {
     log("Name and room ID required");
     return;
@@ -413,6 +443,23 @@ function attemptReconnect(rid, auth) {
     player_id: auth.player_id,
     reconnect_token: auth.reconnect_token,
   });
+}
+
+function startCreateRoomFlow() {
+  const name = getPlayerName();
+  if (!name) {
+    log("Name required");
+    if (nameInput) {
+      nameInput.focus();
+    }
+    return;
+  }
+  if (!gameSelect || !createGameRow) {
+    socket.emit("room:create", { name, game_type: "cabo" });
+    return;
+  }
+  createRoomPending = true;
+  showCreateGamePicker();
 }
 
 function renderRoomList(rooms) {
@@ -530,6 +577,8 @@ function resetRoomState() {
   if (drawGuessLanguageSelect) {
     drawGuessLanguageSelect.value = "zh";
   }
+  createRoomPending = false;
+  setCreateGameRowVisible(false);
 }
 
 function clearCaboState() {
@@ -1107,6 +1156,8 @@ function emitRoomStart() {
 
 function renderRoomState(state) {
   currentRoomState = state;
+  createRoomPending = false;
+  setCreateGameRowVisible(false);
   roomId = state.room_id;
   const previousGame = currentGameType;
   currentGameType = state.game_type || null;
@@ -2376,15 +2427,33 @@ if (logoutBtn) {
   });
 }
 
-document.getElementById("createBtn").addEventListener("click", () => {
-  const name = (nameInput ? nameInput.value : "").trim();
-  if (!name) {
-    log("Name required");
-    return;
-  }
-  const gameType = gameSelect ? gameSelect.value : "cabo";
-  socket.emit("room:create", { name, game_type: gameType });
-});
+if (createBtn) {
+  createBtn.addEventListener("click", () => {
+    startCreateRoomFlow();
+  });
+}
+
+if (gameSelect) {
+  gameSelect.addEventListener("change", () => {
+    if (!createRoomPending) {
+      return;
+    }
+    const gameType = gameSelect.value;
+    if (!gameType) {
+      return;
+    }
+    const name = getPlayerName();
+    if (!name) {
+      log("Name required");
+      createRoomPending = false;
+      setCreateGameRowVisible(false);
+      return;
+    }
+    createRoomPending = false;
+    setCreateGameRowVisible(false);
+    socket.emit("room:create", { name, game_type: gameType });
+  });
+}
 
 document.getElementById("joinBtn").addEventListener("click", () => {
   const rid = document.getElementById("roomIdInput").value.trim();
