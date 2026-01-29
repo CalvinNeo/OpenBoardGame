@@ -508,7 +508,7 @@ async def on_room_start(sid, data):
     if not game_def:
         await _send_error(sid, "room game not found")
         return
-    if room.status != "lobby":
+    if room.status not in ("lobby", "game_over"):
         await _send_error(sid, "game already started")
         return
     if len(room.players) < game_def.min_players:
@@ -528,6 +528,10 @@ async def on_room_start(sid, data):
     ]
     raw_config = (data or {}).get("config")
     config = raw_config if isinstance(raw_config, dict) else {}
+    if room.status == "game_over" and not config and isinstance(room.game_state, dict):
+        previous_config = room.game_state.get("config")
+        if isinstance(previous_config, dict):
+            config = previous_config
     try:
         room.game_state = game_def.module.init_game(config, players_meta)
     except ValueError as exc:

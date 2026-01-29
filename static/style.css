@@ -562,6 +562,13 @@ body.log-open {
   cursor: pointer;
 }
 
+.splendor-card.compact {
+  min-width: 96px;
+  padding: 4px 6px;
+  font-size: 11px;
+  cursor: default;
+}
+
 .splendor-card.selected {
   border-color: #1f6feb;
   background: #eaf2ff;
@@ -581,6 +588,40 @@ body.log-open {
   flex-wrap: wrap;
   gap: 4px;
   margin-top: 4px;
+}
+
+.splendor-card.compact .card-cost {
+  gap: 3px;
+  margin-top: 2px;
+}
+
+.splendor-card.compact .cost-chip {
+  padding: 1px 4px;
+  font-size: 10px;
+}
+
+.splendor-player-purchased {
+  margin-top: 6px;
+}
+
+.splendor-player-purchased-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #444;
+  margin-bottom: 4px;
+}
+
+.splendor-player-purchased-list {
+  gap: 6px;
+}
+
+.splendor-player-empty {
+  border: 1px dashed #ddd;
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 11px;
+  color: #666;
+  background: #fafafa;
 }
 
 .cost-chip {

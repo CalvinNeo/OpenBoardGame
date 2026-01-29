@@ -101,6 +101,7 @@ const drawGuessSubmitGuessBtn = document.getElementById("drawGuessSubmitGuessBtn
 const drawGuessPlayers = document.getElementById("drawGuessPlayers");
 const drawGuessReview = document.getElementById("drawGuessReview");
 const drawGuessBooks = document.getElementById("drawGuessBooks");
+const drawGuessRestartBtn = document.getElementById("drawGuessRestartBtn");
 const drawGuessCtx = drawGuessCanvas ? drawGuessCanvas.getContext("2d") : null;
 
 const splendorPanel = document.getElementById("splendorPanel");
@@ -836,6 +837,18 @@ function sendAction(action) {
   socket.emit("game:action", { room_id: roomId, action });
 }
 
+function emitRoomStart() {
+  if (!roomId) {
+    log("Not in a room");
+    return;
+  }
+  const payload = { room_id: roomId };
+  if (currentGameType === "draw_guess" && drawGuessLanguageSelect) {
+    payload.config = { language: drawGuessLanguageSelect.value || "en" };
+  }
+  socket.emit("room:start", payload);
+}
+
 function renderRoomState(state) {
   currentRoomState = state;
   roomId = state.room_id;
@@ -1521,9 +1534,12 @@ function formatSplendorCost(cost) {
     }));
 }
 
-function createSplendorCard(card, selected) {
+function createSplendorCard(card, selected, options = {}) {
   const wrapper = document.createElement("div");
   wrapper.className = "splendor-card";
+  if (options.compact) {
+    wrapper.classList.add("compact");
+  }
   if (selected) {
     wrapper.classList.add("selected");
   }
@@ -1719,8 +1735,40 @@ function renderSplendorPlayers(view) {
 
     const meta = document.createElement("div");
     meta.className = "player-meta";
-    meta.textContent = `Tokens: ${tokens} | Bonuses: ${bonuses} | Reserved: ${player.reserved_count} | Purchased: ${player.purchased_count} | Nobles: ${nobles}`;
+    const tokensLine = document.createElement("div");
+    tokensLine.textContent = `Tokens: ${tokens}`;
+    const bonusesLine = document.createElement("div");
+    bonusesLine.textContent = `Bonuses: ${bonuses}`;
+    const purchasedCards = Array.isArray(player.purchased) ? player.purchased : [];
+    const purchasedCount = typeof player.purchased_count === "number" ? player.purchased_count : purchasedCards.length;
+    const countsLine = document.createElement("div");
+    countsLine.textContent = `Reserved: ${player.reserved_count} | Purchased: ${purchasedCount} | Nobles: ${nobles}`;
+    meta.appendChild(tokensLine);
+    meta.appendChild(bonusesLine);
+    meta.appendChild(countsLine);
     card.appendChild(meta);
+
+    const purchasedSection = document.createElement("div");
+    purchasedSection.className = "splendor-player-purchased";
+    const purchasedTitle = document.createElement("div");
+    purchasedTitle.className = "splendor-player-purchased-title";
+    purchasedTitle.textContent = "Purchased Cards";
+    purchasedSection.appendChild(purchasedTitle);
+    const purchasedList = document.createElement("div");
+    purchasedList.className = "splendor-cards splendor-player-purchased-list";
+    if (purchasedCards.length) {
+      purchasedCards.forEach((cardData) => {
+        const cardEl = createSplendorCard(cardData, false, { compact: true });
+        purchasedList.appendChild(cardEl);
+      });
+    } else {
+      const empty = document.createElement("div");
+      empty.className = "splendor-player-empty";
+      empty.textContent = "-";
+      purchasedList.appendChild(empty);
+    }
+    purchasedSection.appendChild(purchasedList);
+    card.appendChild(purchasedSection);
     splendorPlayers.appendChild(card);
   });
 }
@@ -2089,11 +2137,7 @@ document.getElementById("readyBtn").addEventListener("click", () => {
 });
 
 document.getElementById("startBtn").addEventListener("click", () => {
-  const payload = { room_id: roomId };
-  if (currentGameType === "draw_guess" && drawGuessLanguageSelect) {
-    payload.config = { language: drawGuessLanguageSelect.value || "en" };
-  }
-  socket.emit("room:start", payload);
+  emitRoomStart();
 });
 
 document.getElementById("addBotBtn").addEventListener("click", () => {
@@ -2308,6 +2352,12 @@ drawGuessSubmitGuessBtn.addEventListener("click", () => {
 drawGuessInput.addEventListener("input", () => {
   updateDrawGuessButtons();
 });
+
+if (drawGuessRestartBtn) {
+  drawGuessRestartBtn.addEventListener("click", () => {
+    emitRoomStart();
+  });
+}
 
 if (splendorClearSelectionBtn) {
   splendorClearSelectionBtn.addEventListener("click", () => {

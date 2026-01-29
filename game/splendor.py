@@ -492,6 +492,7 @@ class SplendorGame:
                     "bonuses": dict(pdata["bonuses"]),
                     "reserved_count": len(pdata["reserved"]),
                     "purchased_count": len(pdata["purchased"]),
+                    "purchased": [card_view(card) for card in pdata["purchased"]],
                     "nobles": [noble["id"] for noble in pdata["nobles"]],
                 }
             )
