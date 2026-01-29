@@ -17,6 +17,7 @@ let drawGuessLastRound = null;
 let drawGuessLastPhase = null;
 let drawGuessIsDrawing = false;
 let drawGuessHasDrawn = false;
+let drawGuessIsErasing = false;
 let splendorSelectedMarket = null;
 let splendorSelectedReserved = null;
 let splendorSelectedNoble = null;
@@ -92,6 +93,7 @@ const drawGuessDrawArea = document.getElementById("drawGuessDrawArea");
 const drawGuessGuessArea = document.getElementById("drawGuessGuessArea");
 const drawGuessCanvas = document.getElementById("drawGuessCanvas");
 const drawGuessClearBtn = document.getElementById("drawGuessClearBtn");
+const drawGuessEraserBtn = document.getElementById("drawGuessEraserBtn");
 const drawGuessSubmitDrawBtn = document.getElementById("drawGuessSubmitDrawBtn");
 const drawGuessImage = document.getElementById("drawGuessImage");
 const drawGuessInput = document.getElementById("drawGuessInput");
@@ -574,6 +576,7 @@ function clearDrawGuessState() {
   drawGuessLastPhase = null;
   drawGuessIsDrawing = false;
   drawGuessHasDrawn = false;
+  setDrawGuessTool(false);
   drawGuessPhaseLabel.textContent = "-";
   drawGuessRoundLabel.textContent = "-";
   drawGuessTotalRoundsLabel.textContent = "-";
@@ -1148,12 +1151,29 @@ function updateSkullActionButtons() {
   });
 }
 
+function setDrawGuessTool(isErasing) {
+  drawGuessIsErasing = !!isErasing;
+  if (drawGuessCtx) {
+    drawGuessCtx.globalCompositeOperation = drawGuessIsErasing ? "destination-out" : "source-over";
+    drawGuessCtx.strokeStyle = drawGuessIsErasing ? "rgba(0, 0, 0, 1)" : "#000";
+    drawGuessCtx.lineWidth = drawGuessIsErasing ? 12 : 3;
+    drawGuessCtx.beginPath();
+  }
+  if (drawGuessEraserBtn) {
+    drawGuessEraserBtn.classList.toggle("tool-active", drawGuessIsErasing);
+  }
+}
+
 function clearDrawGuessCanvas() {
   if (!drawGuessCtx || !drawGuessCanvas) {
     return;
   }
+  const previousComposite = drawGuessCtx.globalCompositeOperation;
+  drawGuessCtx.globalCompositeOperation = "source-over";
   drawGuessCtx.fillStyle = "#fff";
   drawGuessCtx.fillRect(0, 0, drawGuessCanvas.width, drawGuessCanvas.height);
+  drawGuessCtx.globalCompositeOperation = previousComposite;
+  drawGuessCtx.beginPath();
   drawGuessHasDrawn = false;
 }
 
@@ -1203,9 +1223,8 @@ function setupDrawGuessCanvas() {
   if (!drawGuessCanvas || !drawGuessCtx) {
     return;
   }
-  drawGuessCtx.lineWidth = 3;
   drawGuessCtx.lineCap = "round";
-  drawGuessCtx.strokeStyle = "#000";
+  setDrawGuessTool(false);
   clearDrawGuessCanvas();
 
   drawGuessCanvas.addEventListener("mousedown", startDrawGuess);
@@ -1242,6 +1261,9 @@ function updateDrawGuessButtons() {
       button.disabled = true;
     });
     drawGuessClearBtn.disabled = true;
+    if (drawGuessEraserBtn) {
+      drawGuessEraserBtn.disabled = true;
+    }
     return;
   }
   Object.entries(drawGuessActionButtons).forEach(([actionType, button]) => {
@@ -1254,6 +1276,9 @@ function updateDrawGuessButtons() {
     button.disabled = !allowed;
   });
   drawGuessClearBtn.disabled = !isDrawGuessActionAvailable("submit_drawing");
+  if (drawGuessEraserBtn) {
+    drawGuessEraserBtn.disabled = !isDrawGuessActionAvailable("submit_drawing");
+  }
 }
 
 function getSplendorPlayer(view, pid) {
@@ -1901,6 +1926,7 @@ function renderDrawGuessGameState(data) {
     drawGuessInput.disabled = true;
     if (drawGuessLastRound !== view.round) {
       clearDrawGuessCanvas();
+      setDrawGuessTool(false);
     }
     drawGuessCanvas.style.pointerEvents = view.submitted ? "none" : "auto";
   } else if (view.phase === "guess") {
@@ -2256,6 +2282,12 @@ skullRevealBtn.addEventListener("click", () => {
 drawGuessClearBtn.addEventListener("click", () => {
   clearDrawGuessCanvas();
 });
+
+if (drawGuessEraserBtn) {
+  drawGuessEraserBtn.addEventListener("click", () => {
+    setDrawGuessTool(!drawGuessIsErasing);
+  });
+}
 
 drawGuessSubmitDrawBtn.addEventListener("click", () => {
   if (!drawGuessCanvas) {

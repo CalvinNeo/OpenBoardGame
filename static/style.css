@@ -109,6 +109,12 @@ button.action-allowed {
   color: #fff;
 }
 
+button.tool-active {
+  background: #f59e0b;
+  border-color: #f59e0b;
+  color: #fff;
+}
+
 button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
