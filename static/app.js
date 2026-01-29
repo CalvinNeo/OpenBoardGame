@@ -221,6 +221,7 @@ const abracaSpellData = [
     id: 0,
     number: 1,
     name: "Ancient Dragon",
+    short: "Dragon",
     desc: "Roll 1-3. Others lose that many HP. Miscast: you lose that many HP.",
     total: 1,
   },
@@ -228,6 +229,7 @@ const abracaSpellData = [
     id: 1,
     number: 2,
     name: "Dark Ghost",
+    short: "Ghost",
     desc: "Others -1 HP. You +1 HP (max 6).",
     total: 2,
   },
@@ -235,6 +237,7 @@ const abracaSpellData = [
     id: 2,
     number: 3,
     name: "Sweet Dreams",
+    short: "Dream",
     desc: "Roll 1-3. You heal that many HP (max 6).",
     total: 3,
   },
@@ -242,6 +245,7 @@ const abracaSpellData = [
     id: 3,
     number: 4,
     name: "Owl",
+    short: "Owl",
     desc: "Draw a secret card. Survive to score +1 per secret.",
     total: 4,
   },
@@ -249,12 +253,13 @@ const abracaSpellData = [
     id: 4,
     number: 5,
     name: "Lightning Storm",
+    short: "Lightning",
     desc: "Left and right neighbors -1 HP (2 players: opponent -1 HP).",
     total: 5,
   },
-  { id: 5, number: 6, name: "Blizzard", desc: "Left neighbor -1 HP.", total: 6 },
-  { id: 6, number: 7, name: "Fireball", desc: "Right neighbor -1 HP.", total: 7 },
-  { id: 7, number: 8, name: "Magic Potion", desc: "You +1 HP (max 6).", total: 8 },
+  { id: 5, number: 6, name: "Blizzard", short: "Blizzard", desc: "Left neighbor -1 HP.", total: 6 },
+  { id: 6, number: 7, name: "Fireball", short: "Fireball", desc: "Right neighbor -1 HP.", total: 7 },
+  { id: 7, number: 8, name: "Magic Potion", short: "Potion", desc: "You +1 HP (max 6).", total: 8 },
 ];
 
 const ROOM_AUTH_KEY = "openboardgame:room_auth";
@@ -2480,6 +2485,44 @@ function renderAbracaPlayers(view) {
     return;
   }
   abracaPlayers.innerHTML = "";
+  const buildAbracaCardSlot = (cardInfo, { compact = false } = {}) => {
+    const slot = document.createElement("div");
+    slot.className = "player-slot abraca-card";
+    if (compact) {
+      slot.classList.add("abraca-card-compact");
+    }
+    if (!cardInfo || cardInfo.hidden) {
+      slot.classList.add("abraca-card-hidden");
+      slot.textContent = "?";
+      slot.title = "Hidden card";
+      return slot;
+    }
+
+    const rawSpell = Number.isInteger(cardInfo.spell)
+      ? cardInfo.spell
+      : Number.isInteger(cardInfo.number)
+      ? cardInfo.number - 1
+      : null;
+    const spellType = Number.isInteger(rawSpell) ? rawSpell : null;
+    if (spellType !== null) {
+      slot.dataset.spell = String(spellType);
+    }
+    const spell = spellType !== null ? abracaSpellData.find((item) => item.id === spellType) : null;
+    const number = Number.isInteger(cardInfo.number) ? cardInfo.number : (spellType ?? 0) + 1;
+    const shortName = spell ? spell.short || spell.name : cardInfo.name || "Spell";
+    const fullName = spell ? spell.name : cardInfo.name || shortName;
+
+    const numberEl = document.createElement("div");
+    numberEl.className = "abraca-card-number";
+    numberEl.textContent = String(number);
+    const nameEl = document.createElement("div");
+    nameEl.className = "abraca-card-name";
+    nameEl.textContent = shortName;
+    slot.appendChild(numberEl);
+    slot.appendChild(nameEl);
+    slot.title = `${number}. ${fullName}`;
+    return slot;
+  };
   view.players.forEach((player) => {
     const card = document.createElement("div");
     card.className = "player-card";
@@ -2533,15 +2576,7 @@ function renderAbracaPlayers(view) {
     handRow.className = "player-hand";
     if (Array.isArray(player.hand) && player.hand.length) {
       player.hand.forEach((cardInfo) => {
-        const slot = document.createElement("div");
-        slot.className = "player-slot";
-        if (cardInfo.hidden) {
-          slot.textContent = "?";
-        } else {
-          const number = cardInfo.number ?? (cardInfo.spell ?? 0) + 1;
-          const label = cardInfo.name ? `${number}. ${cardInfo.name}` : `Spell ${number}`;
-          slot.textContent = label;
-        }
+        const slot = buildAbracaCardSlot(cardInfo);
         handRow.appendChild(slot);
       });
     } else {
@@ -2554,14 +2589,17 @@ function renderAbracaPlayers(view) {
 
     if (player.player_id === view.you && Array.isArray(player.secret_cards) && player.secret_cards.length) {
       const meta = document.createElement("div");
-      meta.className = "player-meta";
-      const secretsLabel = player.secret_cards
-        .map((cardInfo) => {
-          const number = cardInfo.number ?? (cardInfo.spell ?? 0) + 1;
-          return cardInfo.name ? `${number}. ${cardInfo.name}` : `Spell ${number}`;
-        })
-        .join(", ");
-      meta.textContent = `Secret cards: ${secretsLabel}`;
+      meta.className = "player-meta abraca-secret-meta";
+      const label = document.createElement("div");
+      label.className = "abraca-secret-label";
+      label.textContent = "Secret cards";
+      const list = document.createElement("div");
+      list.className = "abraca-secret-list";
+      player.secret_cards.forEach((cardInfo) => {
+        list.appendChild(buildAbracaCardSlot(cardInfo, { compact: true }));
+      });
+      meta.appendChild(label);
+      meta.appendChild(list);
       card.appendChild(meta);
     }
 
