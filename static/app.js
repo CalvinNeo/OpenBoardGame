@@ -6,6 +6,7 @@ let currentCaboView = null;
 let currentSkullView = null;
 let currentDrawGuessView = null;
 let currentSplendorView = null;
+let currentAbracaView = null;
 let currentGameType = null;
 let selectedSlots = [];
 let currentRoomState = null;
@@ -143,6 +144,27 @@ const splendorChooseNobleBtn = document.getElementById("splendorChooseNobleBtn")
 const splendorReserved = document.getElementById("splendorReserved");
 const splendorPlayers = document.getElementById("splendorPlayers");
 
+const abracaPanel = document.getElementById("abracaPanel");
+const abracaPhaseLabel = document.getElementById("abracaPhase");
+const abracaRoundLabel = document.getElementById("abracaRound");
+const abracaTurnLabel = document.getElementById("abracaTurn");
+const abracaDeckLabel = document.getElementById("abracaDeck");
+const abracaSecretPoolLabel = document.getElementById("abracaSecretPool");
+const abracaDiscardLabel = document.getElementById("abracaDiscard");
+const abracaChainMinLabel = document.getElementById("abracaChainMin");
+const abracaLastActionLabel = document.getElementById("abracaLastAction");
+const abracaRoundResultLabel = document.getElementById("abracaRoundResult");
+const abracaSpells = document.getElementById("abracaSpells");
+const abracaPlayers = document.getElementById("abracaPlayers");
+const abracaRollBtn = document.getElementById("abracaRollBtn");
+const abracaSecretBtn = document.getElementById("abracaSecretBtn");
+const abracaEndTurnBtn = document.getElementById("abracaEndTurnBtn");
+const abracaNextRoundBtn = document.getElementById("abracaNextRoundBtn");
+const abracaSpellButtonsContainer = document.getElementById("abracaSpellButtons");
+const abracaSpellButtons = abracaSpellButtonsContainer
+  ? Array.from(abracaSpellButtonsContainer.querySelectorAll("button[data-spell]"))
+  : [];
+
 const actionButtons = {
   initial_peek: document.getElementById("peekBtn"),
   draw_deck: document.getElementById("drawDeckBtn"),
@@ -189,6 +211,47 @@ const splendorColorLabels = {
   black: "K",
   gold: "Gold",
 };
+
+const abracaSpellData = [
+  {
+    id: 0,
+    number: 1,
+    name: "Ancient Dragon",
+    desc: "Roll 1-3. Others lose that many HP. Miscast: you lose that many HP.",
+    total: 1,
+  },
+  {
+    id: 1,
+    number: 2,
+    name: "Dark Ghost",
+    desc: "Others -1 HP. You +1 HP (max 6).",
+    total: 2,
+  },
+  {
+    id: 2,
+    number: 3,
+    name: "Sweet Dreams",
+    desc: "Roll 1-3. You heal that many HP (max 6).",
+    total: 3,
+  },
+  {
+    id: 3,
+    number: 4,
+    name: "Owl",
+    desc: "Draw a secret card. Survive to score +1 per secret.",
+    total: 4,
+  },
+  {
+    id: 4,
+    number: 5,
+    name: "Lightning Storm",
+    desc: "Left and right neighbors -1 HP (2 players: opponent -1 HP).",
+    total: 5,
+  },
+  { id: 5, number: 6, name: "Blizzard", desc: "Left neighbor -1 HP.", total: 6 },
+  { id: 6, number: 7, name: "Fireball", desc: "Right neighbor -1 HP.", total: 7 },
+  { id: 7, number: 8, name: "Magic Potion", desc: "You +1 HP (max 6).", total: 8 },
+];
 
 const ROOM_AUTH_KEY = "openboardgame:room_auth";
 const NAME_STORAGE_KEY = "openboardgame:name";
@@ -409,11 +472,15 @@ function setGamePanelVisibility(gameType) {
   const showSkull = gameType === "skull";
   const showDrawGuess = gameType === "draw_guess";
   const showSplendor = gameType === "splendor";
+  const showAbraca = gameType === "abraca_what";
   caboPanel.classList.toggle("hidden", !showCabo);
   skullPanel.classList.toggle("hidden", !showSkull);
   drawGuessPanel.classList.toggle("hidden", !showDrawGuess);
   if (splendorPanel) {
     splendorPanel.classList.toggle("hidden", !showSplendor);
+  }
+  if (abracaPanel) {
+    abracaPanel.classList.toggle("hidden", !showAbraca);
   }
 }
 
@@ -577,6 +644,7 @@ function resetRoomState() {
   clearSkullState();
   clearDrawGuessState();
   clearSplendorState();
+  clearAbracaState();
   setGamePanelVisibility(null);
   updateDrawGuessLanguageRow();
   if (drawGuessLanguageSelect) {
@@ -722,6 +790,44 @@ function clearSplendorState() {
   }
   updateSplendorSelectionLabels();
   updateSplendorActionButtons();
+}
+
+function clearAbracaState() {
+  currentAbracaView = null;
+  if (abracaPhaseLabel) {
+    abracaPhaseLabel.textContent = "-";
+  }
+  if (abracaRoundLabel) {
+    abracaRoundLabel.textContent = "-";
+  }
+  if (abracaTurnLabel) {
+    abracaTurnLabel.textContent = "-";
+  }
+  if (abracaDeckLabel) {
+    abracaDeckLabel.textContent = "-";
+  }
+  if (abracaSecretPoolLabel) {
+    abracaSecretPoolLabel.textContent = "-";
+  }
+  if (abracaDiscardLabel) {
+    abracaDiscardLabel.textContent = "-";
+  }
+  if (abracaChainMinLabel) {
+    abracaChainMinLabel.textContent = "-";
+  }
+  if (abracaLastActionLabel) {
+    abracaLastActionLabel.textContent = "-";
+  }
+  if (abracaRoundResultLabel) {
+    abracaRoundResultLabel.textContent = "-";
+  }
+  if (abracaSpells) {
+    abracaSpells.innerHTML = "";
+  }
+  if (abracaPlayers) {
+    abracaPlayers.innerHTML = "";
+  }
+  updateAbracaActionButtons();
 }
 
 function updateSplendorSelectionLabels() {
@@ -1179,6 +1285,7 @@ function renderRoomState(state) {
     clearSkullState();
     clearDrawGuessState();
     clearSplendorState();
+    clearAbracaState();
   }
   setGamePanelVisibility(currentGameType);
   updateDrawGuessLanguageRow();
@@ -2205,6 +2312,261 @@ function logGameEvents(data) {
   });
 }
 
+function formatAbracaLastAction(view) {
+  const last = view.last_action;
+  if (!last || typeof last.spell_type !== "number") {
+    return "-";
+  }
+  const actor = last.player_id ? findPlayerName(view, last.player_id) : "Unknown";
+  const spell = abracaSpellData.find((item) => item.id === last.spell_type);
+  const label = spell ? `${spell.number}. ${spell.name}` : `Spell ${last.spell_type + 1}`;
+  const result = last.success ? "success" : "fail";
+  const dice = Number.isInteger(last.dice) ? ` (dice ${last.dice})` : "";
+  return `${actor}: ${label} ${result}${dice}`;
+}
+
+function formatAbracaRoundResult(view) {
+  const result = view.round_result;
+  if (!result) {
+    return "-";
+  }
+  const typeMap = {
+    kill: "Kill",
+    self_death: "Self Death",
+    empty_hand: "Empty Hand",
+  };
+  const actor = result.actor_id ? findPlayerName(view, result.actor_id) : null;
+  let text = typeMap[result.type] || result.type;
+  if (actor) {
+    text += ` by ${actor}`;
+  }
+  const addScores = result.add_scores || {};
+  const gains = Object.keys(addScores).map((pid) => {
+    const gain = addScores[pid];
+    return `${findPlayerName(view, pid)} +${gain}`;
+  });
+  if (gains.length) {
+    text += ` | ${gains.join(", ")}`;
+  }
+  if (Array.isArray(view.winner) && view.winner.length) {
+    const winners = view.winner.map((pid) => findPlayerName(view, pid)).join(", ");
+    text += ` | Winner: ${winners}`;
+  }
+  return text;
+}
+
+function renderAbracaSpells(view) {
+  if (!abracaSpells) {
+    return;
+  }
+  abracaSpells.innerHTML = "";
+  const discardCounts = Array.isArray(view.discard_counts) ? view.discard_counts : [];
+  abracaSpellData.forEach((spell) => {
+    const row = document.createElement("div");
+    row.className = "spell-row";
+
+    const title = document.createElement("div");
+    title.className = "spell-title";
+    title.textContent = `${spell.number}. ${spell.name}`;
+
+    const count = document.createElement("div");
+    count.className = "spell-count";
+    const used = discardCounts[spell.id] ?? 0;
+    count.textContent = `Used ${used}/${spell.total}`;
+
+    const desc = document.createElement("div");
+    desc.className = "spell-desc";
+    desc.textContent = spell.desc;
+
+    row.appendChild(title);
+    row.appendChild(count);
+    row.appendChild(desc);
+    abracaSpells.appendChild(row);
+  });
+}
+
+function renderAbracaPlayers(view) {
+  if (!abracaPlayers) {
+    return;
+  }
+  abracaPlayers.innerHTML = "";
+  view.players.forEach((player) => {
+    const card = document.createElement("div");
+    card.className = "player-card";
+    if (player.player_id === view.current_turn) {
+      card.classList.add("current");
+    }
+
+    const header = document.createElement("div");
+    header.className = "player-header";
+    const name = document.createElement("div");
+    name.className = "player-name";
+    name.textContent = player.name || player.player_id;
+    header.appendChild(name);
+
+    const badges = document.createElement("div");
+    badges.className = "player-badges";
+    const score = document.createElement("span");
+    score.className = "badge";
+    score.textContent = `score ${player.score}`;
+    badges.appendChild(score);
+    const hp = document.createElement("span");
+    hp.className = "badge";
+    hp.textContent = `hp ${player.hp}/6`;
+    badges.appendChild(hp);
+    const secrets = document.createElement("span");
+    secrets.className = "badge";
+    secrets.textContent = `secret ${player.secret_count}`;
+    badges.appendChild(secrets);
+    if (player.player_id === view.you) {
+      const you = document.createElement("span");
+      you.className = "badge";
+      you.textContent = "you";
+      badges.appendChild(you);
+    }
+    if (player.is_bot) {
+      const bot = document.createElement("span");
+      bot.className = "badge";
+      bot.textContent = "bot";
+      badges.appendChild(bot);
+    }
+    if (player.player_id === view.current_turn) {
+      const turn = document.createElement("span");
+      turn.className = "badge highlight";
+      turn.textContent = "turn";
+      badges.appendChild(turn);
+    }
+    header.appendChild(badges);
+    card.appendChild(header);
+
+    const handRow = document.createElement("div");
+    handRow.className = "player-hand";
+    if (Array.isArray(player.hand) && player.hand.length) {
+      player.hand.forEach((cardInfo) => {
+        const slot = document.createElement("div");
+        slot.className = "player-slot";
+        if (cardInfo.hidden) {
+          slot.textContent = "?";
+        } else {
+          const number = cardInfo.number ?? (cardInfo.spell ?? 0) + 1;
+          const label = cardInfo.name ? `${number}. ${cardInfo.name}` : `Spell ${number}`;
+          slot.textContent = label;
+        }
+        handRow.appendChild(slot);
+      });
+    } else {
+      const empty = document.createElement("div");
+      empty.className = "player-slot empty";
+      empty.textContent = "-";
+      handRow.appendChild(empty);
+    }
+    card.appendChild(handRow);
+
+    if (player.player_id === view.you && Array.isArray(player.secret_cards) && player.secret_cards.length) {
+      const meta = document.createElement("div");
+      meta.className = "player-meta";
+      const secretsLabel = player.secret_cards
+        .map((cardInfo) => {
+          const number = cardInfo.number ?? (cardInfo.spell ?? 0) + 1;
+          return cardInfo.name ? `${number}. ${cardInfo.name}` : `Spell ${number}`;
+        })
+        .join(", ");
+      meta.textContent = `Secret cards: ${secretsLabel}`;
+      card.appendChild(meta);
+    }
+
+    abracaPlayers.appendChild(card);
+  });
+}
+
+function isAbracaActionAvailable(actionType, spellType) {
+  if (!currentAbracaView || !Array.isArray(currentAbracaView.legal_actions)) {
+    return false;
+  }
+  if (!currentAbracaView.legal_actions.includes(actionType)) {
+    return false;
+  }
+  if (actionType === "cast_spell") {
+    if (!Array.isArray(currentAbracaView.allowed_spells)) {
+      return false;
+    }
+    return currentAbracaView.allowed_spells.includes(spellType);
+  }
+  return true;
+}
+
+function updateAbracaActionButtons() {
+  if (abracaSpellButtons.length) {
+    abracaSpellButtons.forEach((button) => {
+      const spellType = Number.parseInt(button.dataset.spell, 10);
+      const allowed = isAbracaActionAvailable("cast_spell", spellType);
+      button.disabled = !allowed;
+      button.classList.toggle("action-allowed", allowed);
+    });
+  }
+  const buttonMap = [
+    { type: "roll_dice", el: abracaRollBtn },
+    { type: "take_secret", el: abracaSecretBtn },
+    { type: "end_turn", el: abracaEndTurnBtn },
+    { type: "start_next_round", el: abracaNextRoundBtn },
+  ];
+  buttonMap.forEach(({ type, el }) => {
+    if (!el) {
+      return;
+    }
+    const allowed = isAbracaActionAvailable(type);
+    el.disabled = !allowed;
+    el.classList.toggle("action-allowed", allowed);
+  });
+}
+
+function renderAbracaGameState(data) {
+  const view = data.view;
+  currentAbracaView = view;
+  if (currentGameType !== "abraca_what") {
+    currentGameType = "abraca_what";
+    setGamePanelVisibility("abraca_what");
+  }
+
+  if (abracaPhaseLabel) {
+    abracaPhaseLabel.textContent = view.phase || "-";
+  }
+  if (abracaRoundLabel) {
+    abracaRoundLabel.textContent = view.round ?? "-";
+  }
+  if (abracaTurnLabel) {
+    const currentPlayer = view.players.find((p) => p.player_id === view.current_turn);
+    abracaTurnLabel.textContent = currentPlayer ? currentPlayer.name : view.current_turn || "-";
+  }
+  if (abracaDeckLabel) {
+    abracaDeckLabel.textContent = view.deck_count ?? "-";
+  }
+  if (abracaSecretPoolLabel) {
+    abracaSecretPoolLabel.textContent = view.secret_pool_count ?? "-";
+  }
+  if (abracaDiscardLabel) {
+    abracaDiscardLabel.textContent = view.discard_total ?? "-";
+  }
+  if (abracaChainMinLabel) {
+    if (Number.isInteger(view.min_spell)) {
+      abracaChainMinLabel.textContent = String(view.min_spell + 1);
+    } else {
+      abracaChainMinLabel.textContent = "-";
+    }
+  }
+  if (abracaLastActionLabel) {
+    abracaLastActionLabel.textContent = formatAbracaLastAction(view);
+  }
+  if (abracaRoundResultLabel) {
+    abracaRoundResultLabel.textContent = formatAbracaRoundResult(view);
+  }
+
+  renderAbracaSpells(view);
+  renderAbracaPlayers(view);
+  logGameEvents(data);
+  updateAbracaActionButtons();
+}
+
 function renderCaboGameState(data) {
   const view = data.view;
   currentCaboView = view;
@@ -2386,6 +2748,10 @@ function renderGameState(data) {
   }
   if (gameType === "draw_guess") {
     renderDrawGuessGameState(data);
+    return;
+  }
+  if (gameType === "abraca_what") {
+    renderAbracaGameState(data);
     return;
   }
   if (gameType === "splendor") {
@@ -2748,6 +3114,42 @@ drawGuessInput.addEventListener("input", () => {
 if (drawGuessRestartBtn) {
   drawGuessRestartBtn.addEventListener("click", () => {
     emitRoomStart();
+  });
+}
+
+if (abracaSpellButtons.length) {
+  abracaSpellButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const spellType = Number.parseInt(button.dataset.spell, 10);
+      if (!Number.isInteger(spellType)) {
+        return;
+      }
+      sendAction({ type: "cast_spell", spell_type: spellType });
+    });
+  });
+}
+
+if (abracaRollBtn) {
+  abracaRollBtn.addEventListener("click", () => {
+    sendAction({ type: "roll_dice" });
+  });
+}
+
+if (abracaSecretBtn) {
+  abracaSecretBtn.addEventListener("click", () => {
+    sendAction({ type: "take_secret" });
+  });
+}
+
+if (abracaEndTurnBtn) {
+  abracaEndTurnBtn.addEventListener("click", () => {
+    sendAction({ type: "end_turn" });
+  });
+}
+
+if (abracaNextRoundBtn) {
+  abracaNextRoundBtn.addEventListener("click", () => {
+    sendAction({ type: "start_next_round" });
   });
 }
 

@@ -1,3 +1,4 @@
+from game.abraca_what import AbracaWhatGame
 from game.cabo import CaboGame
 from game.draw_guess import DrawGuessGame
 from game.registry import GameDefinition, register_game
@@ -158,6 +159,38 @@ DRAW_GUESS_CONFIG_SCHEMA = {
     "additionalProperties": False,
 }
 
+ABRACA_WHAT_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "cast_spell"},
+                "spell_type": {"type": "integer", "minimum": 0, "maximum": 7},
+            },
+            "required": ["type", "spell_type"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "roll_dice"}}, "required": ["type"], "additionalProperties": False},
+        {"type": "object", "properties": {"type": {"const": "take_secret"}}, "required": ["type"], "additionalProperties": False},
+        {"type": "object", "properties": {"type": {"const": "end_turn"}}, "required": ["type"], "additionalProperties": False},
+        {
+            "type": "object",
+            "properties": {"type": {"const": "start_next_round"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+ABRACA_WHAT_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "target_score": {"type": "integer", "minimum": 1},
+    },
+    "additionalProperties": False,
+}
+
 SPLENDOR_TOKEN_COUNTS_SCHEMA = {
     "type": "object",
     "properties": {
@@ -294,6 +327,21 @@ register_game(
         module=SplendorGame,
         serialize=SplendorGame.serialize,
         deserialize=SplendorGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=AbracaWhatGame.game_id,
+        name="Abraca What",
+        min_players=AbracaWhatGame.min_players,
+        max_players=AbracaWhatGame.max_players,
+        turn_mode="turn",
+        action_schema=ABRACA_WHAT_ACTION_SCHEMA,
+        config_schema=ABRACA_WHAT_CONFIG_SCHEMA,
+        module=AbracaWhatGame,
+        serialize=AbracaWhatGame.serialize,
+        deserialize=AbracaWhatGame.deserialize,
     )
 )
 

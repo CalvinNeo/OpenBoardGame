@@ -439,6 +439,39 @@ body.log-open {
   color: #555;
 }
 
+.spell-list {
+  border: 1px solid #eee;
+  padding: 8px;
+  border-radius: 4px;
+  background: #fafafa;
+}
+
+.spell-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: baseline;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.spell-row:last-child {
+  margin-bottom: 0;
+}
+
+.spell-title {
+  font-weight: 600;
+}
+
+.spell-count {
+  color: #1f3a8a;
+  white-space: nowrap;
+}
+
+.spell-desc {
+  color: #555;
+}
+
 .log-entry {
   font-size: 12px;
   border-bottom: 1px dashed #ddd;
