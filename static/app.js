@@ -18,6 +18,7 @@ let drawGuessLastPhase = null;
 let drawGuessIsDrawing = false;
 let drawGuessHasDrawn = false;
 let drawGuessIsErasing = false;
+let drawGuessBrushColor = "#000000";
 let splendorSelectedMarket = null;
 let splendorSelectedReserved = null;
 let splendorSelectedNoble = null;
@@ -106,6 +107,10 @@ const drawGuessPlayers = document.getElementById("drawGuessPlayers");
 const drawGuessReview = document.getElementById("drawGuessReview");
 const drawGuessBooks = document.getElementById("drawGuessBooks");
 const drawGuessRestartBtn = document.getElementById("drawGuessRestartBtn");
+const drawGuessColorPalette = document.getElementById("drawGuessColorPalette");
+const drawGuessColorButtons = drawGuessColorPalette
+  ? Array.from(drawGuessColorPalette.querySelectorAll("button[data-color]"))
+  : [];
 const drawGuessCtx = drawGuessCanvas ? drawGuessCanvas.getContext("2d") : null;
 
 const splendorPanel = document.getElementById("splendorPanel");
@@ -630,7 +635,9 @@ function clearDrawGuessState() {
   drawGuessLastPhase = null;
   drawGuessIsDrawing = false;
   drawGuessHasDrawn = false;
+  drawGuessBrushColor = "#000000";
   setDrawGuessTool(false);
+  updateDrawGuessColorButtons();
   drawGuessPhaseLabel.textContent = "-";
   drawGuessRoundLabel.textContent = "-";
   drawGuessTotalRoundsLabel.textContent = "-";
@@ -1471,11 +1478,36 @@ function updateSkullActionButtons() {
   });
 }
 
+function updateDrawGuessColorButtons() {
+  if (!drawGuessColorButtons.length) {
+    return;
+  }
+  drawGuessColorButtons.forEach((button) => {
+    const color = button.dataset.color;
+    const isActive = color === drawGuessBrushColor;
+    button.classList.toggle("color-active", isActive);
+    button.setAttribute("aria-pressed", isActive ? "true" : "false");
+  });
+}
+
+function setDrawGuessColor(color) {
+  if (typeof color !== "string" || !color.trim()) {
+    return;
+  }
+  drawGuessBrushColor = color;
+  if (drawGuessIsErasing) {
+    setDrawGuessTool(false);
+  } else if (drawGuessCtx) {
+    drawGuessCtx.strokeStyle = drawGuessBrushColor;
+  }
+  updateDrawGuessColorButtons();
+}
+
 function setDrawGuessTool(isErasing) {
   drawGuessIsErasing = !!isErasing;
   if (drawGuessCtx) {
     drawGuessCtx.globalCompositeOperation = drawGuessIsErasing ? "destination-out" : "source-over";
-    drawGuessCtx.strokeStyle = drawGuessIsErasing ? "rgba(0, 0, 0, 1)" : "#000";
+    drawGuessCtx.strokeStyle = drawGuessIsErasing ? "rgba(0, 0, 0, 1)" : drawGuessBrushColor;
     drawGuessCtx.lineWidth = drawGuessIsErasing ? 12 : 3;
     drawGuessCtx.beginPath();
   }
@@ -1546,6 +1578,7 @@ function setupDrawGuessCanvas() {
   drawGuessCtx.lineCap = "round";
   setDrawGuessTool(false);
   clearDrawGuessCanvas();
+  updateDrawGuessColorButtons();
 
   drawGuessCanvas.addEventListener("mousedown", startDrawGuess);
   drawGuessCanvas.addEventListener("mousemove", moveDrawGuess);
@@ -1584,6 +1617,9 @@ function updateDrawGuessButtons() {
     if (drawGuessEraserBtn) {
       drawGuessEraserBtn.disabled = true;
     }
+    drawGuessColorButtons.forEach((button) => {
+      button.disabled = true;
+    });
     return;
   }
   Object.entries(drawGuessActionButtons).forEach(([actionType, button]) => {
@@ -1595,10 +1631,14 @@ function updateDrawGuessButtons() {
     }
     button.disabled = !allowed;
   });
-  drawGuessClearBtn.disabled = !isDrawGuessActionAvailable("submit_drawing");
+  const canDraw = isDrawGuessActionAvailable("submit_drawing");
+  drawGuessClearBtn.disabled = !canDraw;
   if (drawGuessEraserBtn) {
-    drawGuessEraserBtn.disabled = !isDrawGuessActionAvailable("submit_drawing");
+    drawGuessEraserBtn.disabled = !canDraw;
   }
+  drawGuessColorButtons.forEach((button) => {
+    button.disabled = !canDraw;
+  });
 }
 
 function getSplendorPlayer(view, pid) {
@@ -2671,6 +2711,17 @@ drawGuessClearBtn.addEventListener("click", () => {
 if (drawGuessEraserBtn) {
   drawGuessEraserBtn.addEventListener("click", () => {
     setDrawGuessTool(!drawGuessIsErasing);
+  });
+}
+
+if (drawGuessColorButtons.length) {
+  drawGuessColorButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const color = button.dataset.color;
+      if (color) {
+        setDrawGuessColor(color);
+      }
+    });
   });
 }
 

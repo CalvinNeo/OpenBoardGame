@@ -455,6 +455,29 @@ body.log-open {
   touch-action: none;
 }
 
+.draw-guess-colors {
+  gap: 6px;
+}
+
+.draw-guess-color-label {
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.draw-guess-color {
+  width: 40px;
+  height: 40px;
+  border: 2px solid #cbd5e1;
+  border-radius: 999px;
+  padding: 0;
+  cursor: pointer;
+}
+
+.draw-guess-color.color-active {
+  border-color: #111827;
+  box-shadow: 0 0 0 2px rgba(17, 24, 39, 0.15);
+}
+
 .draw-guess-image {
   max-width: 100%;
   border: 1px solid #ddd;
