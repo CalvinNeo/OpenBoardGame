@@ -113,6 +113,8 @@ DEFAULT_CONFIG = {
     "prompt_pool": None,
 }
 
+_PROMPT_BAGS: Dict[Tuple[str, Tuple[Tuple[str, Optional[str]], ...]], List[Dict]] = {}
+
 DEFAULT_QUICKDRAW_BINARY_URL = "https://storage.googleapis.com/quickdraw_dataset/full/binary/"
 _QUICKDRAW_STOP_WORDS = {
     "a",
@@ -263,14 +265,52 @@ def _turn_order(players: List[Dict]) -> List[str]:
     return [p["player_id"] for p in sorted(players, key=lambda p: p.get("seat", 0))]
 
 
+def _prompt_pool_signature(prompt_pool: List[Dict]) -> Tuple[Tuple[str, Optional[str]], ...]:
+    signature: List[Tuple[str, Optional[str]]] = []
+    for entry in prompt_pool:
+        if not isinstance(entry, dict):
+            continue
+        text = entry.get("text")
+        if not isinstance(text, str):
+            continue
+        text = text.strip()
+        if not text:
+            continue
+        quickdraw = entry.get("quickdraw")
+        if isinstance(quickdraw, str):
+            quickdraw = quickdraw.strip() or None
+        else:
+            quickdraw = None
+        signature.append((text, quickdraw))
+    return tuple(signature)
+
+
+def _draw_prompt_choices(prompt_pool: List[Dict], count: int, language: str) -> List[Dict]:
+    if count <= 0:
+        return []
+    key = (language, _prompt_pool_signature(prompt_pool))
+    bag = _PROMPT_BAGS.get(key)
+    if not bag:
+        bag = list(prompt_pool)
+        random.shuffle(bag)
+    choices: List[Dict] = []
+    while len(choices) < count:
+        if not bag:
+            bag = list(prompt_pool)
+            random.shuffle(bag)
+        take = min(count - len(choices), len(bag))
+        start = len(bag) - take
+        choices.extend(bag[start:])
+        del bag[start:]
+    _PROMPT_BAGS[key] = bag
+    return choices
+
+
 def _assign_prompts(prompt_pool: Optional[List[Dict]], player_ids: List[str], language: str) -> Dict[str, Dict]:
     prompts = list(prompt_pool) if prompt_pool else _normalize_prompt_pool(None, language)
     if not prompts:
         prompts = [{"text": "mystery", "quickdraw": None}]
-    if len(prompts) >= len(player_ids):
-        choices = random.sample(prompts, len(player_ids))
-    else:
-        choices = [random.choice(prompts) for _ in range(len(player_ids))]
+    choices = _draw_prompt_choices(prompts, len(player_ids), language)
     return {pid: _clone_prompt_entry(choices[idx]) for idx, pid in enumerate(player_ids)}
 
 
