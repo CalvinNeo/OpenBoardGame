@@ -164,6 +164,8 @@ const abracaRollBtn = document.getElementById("abracaRollBtn");
 const abracaSecretBtn = document.getElementById("abracaSecretBtn");
 const abracaEndTurnBtn = document.getElementById("abracaEndTurnBtn");
 const abracaNextRoundBtn = document.getElementById("abracaNextRoundBtn");
+const abracaNewGameRow = document.getElementById("abracaNewGameRow");
+const abracaNewGameBtn = document.getElementById("abracaNewGameBtn");
 const abracaSpellButtonsContainer = document.getElementById("abracaSpellButtons");
 const abracaSpellButtons = abracaSpellButtonsContainer
   ? Array.from(abracaSpellButtonsContainer.querySelectorAll("button[data-spell]"))
@@ -846,6 +848,9 @@ function clearAbracaState() {
   }
   if (abracaPlayers) {
     abracaPlayers.innerHTML = "";
+  }
+  if (abracaNewGameRow) {
+    abracaNewGameRow.classList.add("hidden");
   }
   updateAbracaActionButtons();
 }
@@ -2648,6 +2653,13 @@ function updateAbracaActionButtons() {
   });
 }
 
+function updateAbracaNewGameRow(view) {
+  if (!abracaNewGameRow) {
+    return;
+  }
+  abracaNewGameRow.classList.toggle("hidden", !(view && view.game_over));
+}
+
 function renderAbracaGameState(data) {
   const view = data.view;
   currentAbracaView = view;
@@ -2689,6 +2701,7 @@ function renderAbracaGameState(data) {
     abracaRoundResultLabel.textContent = formatAbracaRoundResult(view);
   }
   updateAbracaRoundNotice(view);
+  updateAbracaNewGameRow(view);
 
   renderAbracaSpells(view);
   renderAbracaPlayers(view);
@@ -3279,6 +3292,12 @@ if (abracaEndTurnBtn) {
 if (abracaNextRoundBtn) {
   abracaNextRoundBtn.addEventListener("click", () => {
     sendAction({ type: "start_next_round" });
+  });
+}
+
+if (abracaNewGameBtn) {
+  abracaNewGameBtn.addEventListener("click", () => {
+    emitRoomStart();
   });
 }
 
