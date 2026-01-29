@@ -2,7 +2,7 @@ import argparse
 import sys
 from typing import List
 
-from game import draw_guess
+from game import draw_guess_quickdraw as quickdraw
 from game.draw_guess_prompts import DEFAULT_PROMPTS_BY_LANGUAGE
 
 LANGUAGES = ("en", "zh")
@@ -29,7 +29,7 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    if not draw_guess.QUICKDRAW_AVAILABLE:
+    if not quickdraw.QUICKDRAW_AVAILABLE:
         print("QuickDraw is unavailable (missing quickdraw/Pillow).", file=sys.stderr)
         print("Bins can still be downloaded, but bots will need the library at runtime.", file=sys.stderr)
 
@@ -39,12 +39,12 @@ def main() -> int:
         return 1
 
     language = args.language if args.language in LANGUAGES else "en"
-    categories = draw_guess.quickdraw_categories_for_prompts(prompt_pool, language)
+    categories = quickdraw.quickdraw_categories_for_prompts(prompt_pool, language)
     if not categories:
         print("No QuickDraw categories resolved from prompts.", file=sys.stderr)
         return 1
 
-    results = draw_guess.prefetch_quickdraw_bins(categories)
+    results = quickdraw.prefetch_quickdraw_bins(categories)
     if not results:
         print("No bins were downloaded (offline or cache-only).", file=sys.stderr)
         return 1
@@ -54,7 +54,7 @@ def main() -> int:
     failed = [name for name, status in results.items() if status == "failed"]
     offline = [name for name, status in results.items() if status == "offline"]
 
-    print(f"QuickDraw cache dir: {draw_guess.QUICKDRAW_CACHE_DIR}")
+    print(f"QuickDraw cache dir: {quickdraw.QUICKDRAW_CACHE_DIR}")
     print(f"Categories: {len(results)} (downloaded={len(downloaded)}, cached={len(cached)})")
     if offline:
         print("Offline categories:", ", ".join(sorted(offline)))
