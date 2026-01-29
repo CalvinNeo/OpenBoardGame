@@ -103,6 +103,33 @@ h1 {
   margin-right: 6px;
 }
 
+.round-notice {
+  border: 2px solid #f59e0b;
+  background: #fffbeb;
+  padding: 10px 12px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.round-notice.muted {
+  opacity: 0.8;
+}
+
+.round-notice-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #92400e;
+  margin-bottom: 4px;
+}
+
+.round-notice-body {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
 button.action-allowed {
   background: #1f6feb;
   border-color: #1f6feb;

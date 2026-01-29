@@ -8,6 +8,7 @@ let currentDrawGuessView = null;
 let currentSplendorView = null;
 let currentAbracaView = null;
 let currentGameType = null;
+let abracaLastRoundNotice = null;
 let selectedSlots = [];
 let currentRoomState = null;
 let selectedTarget = null;
@@ -154,6 +155,9 @@ const abracaDiscardLabel = document.getElementById("abracaDiscard");
 const abracaChainMinLabel = document.getElementById("abracaChainMin");
 const abracaLastActionLabel = document.getElementById("abracaLastAction");
 const abracaRoundResultLabel = document.getElementById("abracaRoundResult");
+const abracaRoundNotice = document.getElementById("abracaRoundNotice");
+const abracaRoundNoticeTitle = document.getElementById("abracaRoundNoticeTitle");
+const abracaRoundNoticeBody = document.getElementById("abracaRoundNoticeBody");
 const abracaSpells = document.getElementById("abracaSpells");
 const abracaPlayers = document.getElementById("abracaPlayers");
 const abracaRollBtn = document.getElementById("abracaRollBtn");
@@ -794,6 +798,7 @@ function clearSplendorState() {
 
 function clearAbracaState() {
   currentAbracaView = null;
+  abracaLastRoundNotice = null;
   if (abracaPhaseLabel) {
     abracaPhaseLabel.textContent = "-";
   }
@@ -820,6 +825,16 @@ function clearAbracaState() {
   }
   if (abracaRoundResultLabel) {
     abracaRoundResultLabel.textContent = "-";
+  }
+  if (abracaRoundNoticeTitle) {
+    abracaRoundNoticeTitle.textContent = "Round Result";
+  }
+  if (abracaRoundNoticeBody) {
+    abracaRoundNoticeBody.textContent = "-";
+  }
+  if (abracaRoundNotice) {
+    abracaRoundNotice.classList.remove("muted");
+    abracaRoundNotice.classList.add("hidden");
   }
   if (abracaSpells) {
     abracaSpells.innerHTML = "";
@@ -2355,6 +2370,81 @@ function formatAbracaRoundResult(view) {
   return text;
 }
 
+function getAbracaRoundWinners(view, result) {
+  const addScores = result && result.add_scores ? result.add_scores : {};
+  let maxGain = null;
+  const winners = [];
+  Object.keys(addScores).forEach((pid) => {
+    const gain = Number(addScores[pid]) || 0;
+    if (maxGain === null || gain > maxGain) {
+      maxGain = gain;
+      winners.length = 0;
+      winners.push({ pid, gain });
+    } else if (gain === maxGain) {
+      winners.push({ pid, gain });
+    }
+  });
+  return winners;
+}
+
+function formatAbracaRoundNotice(view, result) {
+  if (!result) {
+    return null;
+  }
+  const winners = getAbracaRoundWinners(view, result);
+  let winnersText = "-";
+  if (winners.length) {
+    winnersText = winners
+      .map((entry) => `${findPlayerName(view, entry.pid)} +${entry.gain}`)
+      .join(", ");
+  } else if (result.actor_id) {
+    winnersText = findPlayerName(view, result.actor_id);
+  }
+  const label = winners.length === 1 ? "Winner" : "Winners";
+  const roundNumber = Number.isInteger(view.round) ? view.round : null;
+  const text = roundNumber ? `Round ${roundNumber} ${label}: ${winnersText}` : `${label}: ${winnersText}`;
+  return { round: roundNumber, text };
+}
+
+function updateAbracaRoundNotice(view) {
+  if (!abracaRoundNotice || !abracaRoundNoticeBody) {
+    return;
+  }
+  let notice = null;
+  let title = "Round Result";
+  let isFresh = false;
+  if (view.round_result) {
+    notice = formatAbracaRoundNotice(view, view.round_result);
+    if (notice) {
+      abracaLastRoundNotice = notice;
+    }
+    if (view.game_over) {
+      title = "Game Over";
+    } else if (view.phase === "round_end") {
+      title = "Round Over";
+    }
+    isFresh = true;
+  } else if (abracaLastRoundNotice) {
+    if (Number.isInteger(view.round) && Number.isInteger(abracaLastRoundNotice.round)) {
+      if (view.round === abracaLastRoundNotice.round + 1) {
+        notice = abracaLastRoundNotice;
+        title = "Last Round Result";
+      }
+    }
+  }
+
+  if (notice && notice.text) {
+    abracaRoundNoticeBody.textContent = notice.text;
+    if (abracaRoundNoticeTitle) {
+      abracaRoundNoticeTitle.textContent = title;
+    }
+    abracaRoundNotice.classList.toggle("muted", !isFresh);
+    abracaRoundNotice.classList.remove("hidden");
+  } else {
+    abracaRoundNotice.classList.add("hidden");
+  }
+}
+
 function renderAbracaSpells(view) {
   if (!abracaSpells) {
     return;
@@ -2560,6 +2650,7 @@ function renderAbracaGameState(data) {
   if (abracaRoundResultLabel) {
     abracaRoundResultLabel.textContent = formatAbracaRoundResult(view);
   }
+  updateAbracaRoundNotice(view);
 
   renderAbracaSpells(view);
   renderAbracaPlayers(view);
