@@ -911,6 +911,23 @@ function renderSplendorTokenSelection() {
   splendorColors.forEach((color) => {
     const wrapper = document.createElement("div");
     wrapper.className = `token-picker gem-${color}`;
+    wrapper.addEventListener("click", (event) => {
+      if (event.shiftKey || event.altKey) {
+        adjustSplendorTokenSelection(color, -1);
+        return;
+      }
+      const rect = wrapper.getBoundingClientRect();
+      const midpoint = rect.left + rect.width / 2;
+      if (event.clientX < midpoint) {
+        adjustSplendorTokenSelection(color, -1);
+      } else {
+        adjustSplendorTokenSelection(color, 1);
+      }
+    });
+    wrapper.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+      adjustSplendorTokenSelection(color, -1);
+    });
     const label = document.createElement("span");
     label.textContent = splendorColorLabels[color] || color;
     const minus = document.createElement("button");
@@ -921,8 +938,14 @@ function renderSplendorTokenSelection() {
     const plus = document.createElement("button");
     plus.type = "button";
     plus.textContent = "+";
-    minus.addEventListener("click", () => adjustSplendorTokenSelection(color, -1));
-    plus.addEventListener("click", () => adjustSplendorTokenSelection(color, 1));
+    minus.addEventListener("click", (event) => {
+      event.stopPropagation();
+      adjustSplendorTokenSelection(color, -1);
+    });
+    plus.addEventListener("click", (event) => {
+      event.stopPropagation();
+      adjustSplendorTokenSelection(color, 1);
+    });
     wrapper.appendChild(label);
     wrapper.appendChild(minus);
     wrapper.appendChild(count);
@@ -939,6 +962,23 @@ function renderSplendorDiscardSelection() {
   splendorColors.forEach((color) => {
     const wrapper = document.createElement("div");
     wrapper.className = `token-picker gem-${color}`;
+    wrapper.addEventListener("click", (event) => {
+      if (event.shiftKey || event.altKey) {
+        adjustSplendorDiscardSelection(color, -1);
+        return;
+      }
+      const rect = wrapper.getBoundingClientRect();
+      const midpoint = rect.left + rect.width / 2;
+      if (event.clientX < midpoint) {
+        adjustSplendorDiscardSelection(color, -1);
+      } else {
+        adjustSplendorDiscardSelection(color, 1);
+      }
+    });
+    wrapper.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+      adjustSplendorDiscardSelection(color, -1);
+    });
     const label = document.createElement("span");
     label.textContent = splendorColorLabels[color] || color;
     const minus = document.createElement("button");
@@ -949,8 +989,14 @@ function renderSplendorDiscardSelection() {
     const plus = document.createElement("button");
     plus.type = "button";
     plus.textContent = "+";
-    minus.addEventListener("click", () => adjustSplendorDiscardSelection(color, -1));
-    plus.addEventListener("click", () => adjustSplendorDiscardSelection(color, 1));
+    minus.addEventListener("click", (event) => {
+      event.stopPropagation();
+      adjustSplendorDiscardSelection(color, -1);
+    });
+    plus.addEventListener("click", (event) => {
+      event.stopPropagation();
+      adjustSplendorDiscardSelection(color, 1);
+    });
     wrapper.appendChild(label);
     wrapper.appendChild(minus);
     wrapper.appendChild(count);

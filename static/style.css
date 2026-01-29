@@ -534,13 +534,21 @@ body.log-open {
   padding: 4px 8px;
   font-size: 12px;
   background: #fff;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.token-picker:hover {
+  border-color: #bdbdbd;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.04);
 }
 
 .token-picker button {
   border: 1px solid #ddd;
   background: #f8f8f8;
   border-radius: 4px;
-  padding: 0 6px;
+  padding: 2px 8px;
   cursor: pointer;
 }
 
