@@ -2461,28 +2461,51 @@ function renderAbracaSpells(view) {
   }
   abracaSpells.innerHTML = "";
   const discardCounts = Array.isArray(view.discard_counts) ? view.discard_counts : [];
+  const table = document.createElement("table");
+  table.className = "abraca-spell-table";
+
+  const thead = document.createElement("thead");
+  const headerRow = document.createElement("tr");
+  const headers = ["Spell", "Used", "Total", "Effect"];
+  headers.forEach((label) => {
+    const th = document.createElement("th");
+    th.textContent = label;
+    headerRow.appendChild(th);
+  });
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
   abracaSpellData.forEach((spell) => {
-    const row = document.createElement("div");
-    row.className = "spell-row";
+    const row = document.createElement("tr");
+    row.className = "abraca-spell-row";
+    row.dataset.spell = String(spell.id);
 
-    const title = document.createElement("div");
-    title.className = "spell-title";
-    title.textContent = `${spell.number}. ${spell.name}`;
+    const name = document.createElement("td");
+    name.className = "abraca-spell-name";
+    name.textContent = `${spell.number}. ${spell.name}`;
 
-    const count = document.createElement("div");
-    count.className = "spell-count";
     const used = discardCounts[spell.id] ?? 0;
-    count.textContent = `Used ${used}/${spell.total}`;
+    const usedCell = document.createElement("td");
+    usedCell.className = "abraca-spell-count";
+    usedCell.textContent = String(used);
 
-    const desc = document.createElement("div");
-    desc.className = "spell-desc";
+    const totalCell = document.createElement("td");
+    totalCell.className = "abraca-spell-total";
+    totalCell.textContent = String(spell.total);
+
+    const desc = document.createElement("td");
+    desc.className = "abraca-spell-desc";
     desc.textContent = spell.desc;
 
-    row.appendChild(title);
-    row.appendChild(count);
+    row.appendChild(name);
+    row.appendChild(usedCell);
+    row.appendChild(totalCell);
     row.appendChild(desc);
-    abracaSpells.appendChild(row);
+    tbody.appendChild(row);
   });
+  table.appendChild(tbody);
+  abracaSpells.appendChild(table);
 }
 
 function renderAbracaPlayers(view) {

@@ -529,6 +529,60 @@ body.log-open {
   color: #166534;
 }
 
+#abracaSpellButtons button[data-spell] {
+  background: #f8fafc;
+  border-color: #d1d5db;
+  color: #111827;
+}
+
+#abracaSpellButtons button[data-spell="0"] {
+  background: #fee2e2;
+  border-color: #fecaca;
+  color: #7f1d1d;
+}
+
+#abracaSpellButtons button[data-spell="1"] {
+  background: #e0e7ff;
+  border-color: #c7d2fe;
+  color: #3730a3;
+}
+
+#abracaSpellButtons button[data-spell="2"] {
+  background: #fce7f3;
+  border-color: #fbcfe8;
+  color: #9d174d;
+}
+
+#abracaSpellButtons button[data-spell="3"] {
+  background: #fef3c7;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+#abracaSpellButtons button[data-spell="4"] {
+  background: #fef9c3;
+  border-color: #fef08a;
+  color: #854d0e;
+}
+
+#abracaSpellButtons button[data-spell="5"] {
+  background: #cffafe;
+  border-color: #a5f3fc;
+  color: #0e7490;
+}
+
+#abracaSpellButtons button[data-spell="6"] {
+  background: #ffedd5;
+  border-color: #fed7aa;
+  color: #9a3412;
+}
+
+#abracaSpellButtons button[data-spell="7"] {
+  background: #dcfce7;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
 .abraca-card-number {
   font-size: 11px;
   font-weight: 600;
@@ -580,6 +634,87 @@ body.log-open {
   padding: 8px;
   border-radius: 4px;
   background: #fafafa;
+}
+
+.abraca-spell-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.abraca-spell-table th,
+.abraca-spell-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  text-align: left;
+  vertical-align: top;
+}
+
+.abraca-spell-table th {
+  background: #f8fafc;
+  color: #374151;
+  font-weight: 600;
+}
+
+.abraca-spell-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.abraca-spell-name {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.abraca-spell-count,
+.abraca-spell-total {
+  text-align: center;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.abraca-spell-desc {
+  color: inherit;
+  opacity: 0.85;
+}
+
+.abraca-spell-table tbody tr[data-spell="0"] td {
+  background: #fee2e2;
+  color: #7f1d1d;
+}
+
+.abraca-spell-table tbody tr[data-spell="1"] td {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.abraca-spell-table tbody tr[data-spell="2"] td {
+  background: #fce7f3;
+  color: #9d174d;
+}
+
+.abraca-spell-table tbody tr[data-spell="3"] td {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.abraca-spell-table tbody tr[data-spell="4"] td {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.abraca-spell-table tbody tr[data-spell="5"] td {
+  background: #cffafe;
+  color: #0e7490;
+}
+
+.abraca-spell-table tbody tr[data-spell="6"] td {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.abraca-spell-table tbody tr[data-spell="7"] td {
+  background: #dcfce7;
+  color: #166534;
 }
 
 .spell-row {
