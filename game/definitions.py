@@ -1,5 +1,6 @@
 from game.abraca_what import AbracaWhatGame
 from game.cabo import CaboGame
+from game.coyote import CoyoteGame
 from game.draw_guess import DrawGuessGame
 from game.registry import GameDefinition, register_game
 from game.splendor import SplendorGame
@@ -76,6 +77,27 @@ CABO_CONFIG_SCHEMA = {
             "type": "object",
             "additionalProperties": {"type": "integer", "minimum": 0},
         },
+    },
+    "additionalProperties": False,
+}
+
+COYOTE_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {"type": {"const": "bid"}, "bid": {"type": "integer", "minimum": 1}},
+            "required": ["type", "bid"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "challenge"}}, "required": ["type"], "additionalProperties": False},
+    ],
+}
+
+COYOTE_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "max_penalties": {"type": "integer", "minimum": 1},
     },
     "additionalProperties": False,
 }
@@ -313,6 +335,21 @@ register_game(
         module=CaboGame,
         serialize=CaboGame.serialize,
         deserialize=CaboGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=CoyoteGame.game_id,
+        name="Coyote",
+        min_players=CoyoteGame.min_players,
+        max_players=CoyoteGame.max_players,
+        turn_mode="turn",
+        action_schema=COYOTE_ACTION_SCHEMA,
+        config_schema=COYOTE_CONFIG_SCHEMA,
+        module=CoyoteGame,
+        serialize=CoyoteGame.serialize,
+        deserialize=CoyoteGame.deserialize,
     )
 )
 

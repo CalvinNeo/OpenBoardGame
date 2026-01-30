@@ -4,6 +4,7 @@ let playerId = null;
 let roomId = null;
 let currentCaboView = null;
 let currentSkullView = null;
+let currentCoyoteView = null;
 let currentDrawGuessView = null;
 let currentSplendorView = null;
 let currentAbracaView = null;
@@ -50,6 +51,7 @@ const drawGuessGuessMethodRow = document.getElementById("drawGuessGuessMethodRow
 const drawGuessGuessMethodSelect = document.getElementById("drawGuessGuessMethodSelect");
 const caboPanel = document.getElementById("caboPanel");
 const skullPanel = document.getElementById("skullPanel");
+const coyotePanel = document.getElementById("coyotePanel");
 const drawGuessPanel = document.getElementById("drawGuessPanel");
 
 const phaseLabel = document.getElementById("phaseLabel");
@@ -93,6 +95,20 @@ const skullRaiseBidBtn = document.getElementById("skullRaiseBidBtn");
 const skullPassBidBtn = document.getElementById("skullPassBidBtn");
 const skullRevealBtn = document.getElementById("skullRevealBtn");
 const skullClearSelectionBtn = document.getElementById("skullClearSelection");
+
+const coyotePhaseLabel = document.getElementById("coyotePhase");
+const coyoteRoundLabel = document.getElementById("coyoteRound");
+const coyoteTurnLabel = document.getElementById("coyoteTurn");
+const coyoteBidLabel = document.getElementById("coyoteBid");
+const coyoteBidderLabel = document.getElementById("coyoteBidder");
+const coyoteWinnerLabel = document.getElementById("coyoteWinner");
+const coyoteLastTotalLabel = document.getElementById("coyoteLastTotal");
+const coyoteLastLoserLabel = document.getElementById("coyoteLastLoser");
+const coyoteSummaryLabel = document.getElementById("coyoteSummary");
+const coyoteBidInput = document.getElementById("coyoteBidInput");
+const coyoteBidBtn = document.getElementById("coyoteBidBtn");
+const coyoteChallengeBtn = document.getElementById("coyoteChallengeBtn");
+const coyotePlayers = document.getElementById("coyotePlayers");
 
 const drawGuessPhaseLabel = document.getElementById("drawGuessPhase");
 const drawGuessRoundLabel = document.getElementById("drawGuessRound");
@@ -197,6 +213,11 @@ const skullActionButtons = {
   raise_bid: skullRaiseBidBtn,
   pass_bid: skullPassBidBtn,
   reveal_card: skullRevealBtn,
+};
+
+const coyoteActionButtons = {
+  bid: coyoteBidBtn,
+  challenge: coyoteChallengeBtn,
 };
 
 const drawGuessActionButtons = {
@@ -489,11 +510,15 @@ function showCreateGamePicker() {
 function setGamePanelVisibility(gameType) {
   const showCabo = gameType === "cabo";
   const showSkull = gameType === "skull";
+  const showCoyote = gameType === "coyote";
   const showDrawGuess = gameType === "draw_guess";
   const showSplendor = gameType === "splendor";
   const showAbraca = gameType === "abraca_what";
   caboPanel.classList.toggle("hidden", !showCabo);
   skullPanel.classList.toggle("hidden", !showSkull);
+  if (coyotePanel) {
+    coyotePanel.classList.toggle("hidden", !showCoyote);
+  }
   drawGuessPanel.classList.toggle("hidden", !showDrawGuess);
   if (splendorPanel) {
     splendorPanel.classList.toggle("hidden", !showSplendor);
@@ -663,6 +688,7 @@ function resetRoomState() {
   playersList.innerHTML = "";
   clearCaboState();
   clearSkullState();
+  clearCoyoteState();
   clearDrawGuessState();
   clearSplendorState();
   clearAbracaState();
@@ -719,6 +745,21 @@ function clearSkullState() {
   skullTargets.innerHTML = "";
   skullPlayers.innerHTML = "";
   updateSkullActionButtons();
+}
+
+function clearCoyoteState() {
+  currentCoyoteView = null;
+  coyotePhaseLabel.textContent = "-";
+  coyoteRoundLabel.textContent = "-";
+  coyoteTurnLabel.textContent = "-";
+  coyoteBidLabel.textContent = "-";
+  coyoteBidderLabel.textContent = "-";
+  coyoteWinnerLabel.textContent = "-";
+  coyoteLastTotalLabel.textContent = "-";
+  coyoteLastLoserLabel.textContent = "-";
+  coyoteSummaryLabel.textContent = "-";
+  coyotePlayers.innerHTML = "";
+  updateCoyoteActionButtons();
 }
 
 function clearDrawGuessState() {
@@ -1588,6 +1629,60 @@ function renderSkullPlayers(view) {
   });
 }
 
+function formatCoyoteSummary(view) {
+  const summary = view.last_round_summary;
+  if (!summary) {
+    return "-";
+  }
+  const bidder = findPlayerName(view, summary.bidder);
+  const challenger = findPlayerName(view, summary.challenger);
+  const loser = findPlayerName(view, summary.loser);
+  const result = summary.success ? "challenge success" : "challenge fail";
+  let text = `${result}: bid ${summary.bid}, total ${summary.actual_total}, loser ${loser}`;
+  if (Array.isArray(summary.mystery_draws) && summary.mystery_draws.length) {
+    text += ` | ? draws ${summary.mystery_draws.join(", ")}`;
+  }
+  if (Array.isArray(summary.max_zero_applied) && summary.max_zero_applied.length) {
+    text += ` | max->0 ${summary.max_zero_applied.join(", ")}`;
+  }
+  if (summary.x2_count) {
+    text += ` | x${2 ** summary.x2_count}`;
+  }
+  text += ` | bidder ${bidder}, challenger ${challenger}`;
+  return text;
+}
+
+function renderCoyotePlayers(view) {
+  coyotePlayers.innerHTML = "";
+  view.players.forEach((p) => {
+    const card = document.createElement("div");
+    card.className = "player-card";
+    if (p.player_id === view.current_turn) {
+      card.classList.add("current");
+    }
+    if (p.eliminated) {
+      card.classList.add("disabled");
+    }
+    const name = document.createElement("div");
+    name.className = "player-name";
+    name.textContent = p.name;
+    const meta = document.createElement("div");
+    meta.className = "player-meta";
+    let cardLabel = p.card;
+    if (!cardLabel && p.card_hidden) {
+      cardLabel = "Hidden";
+    } else if (!cardLabel) {
+      cardLabel = "-";
+    }
+    const maxPenalties = view.config ? view.config.max_penalties : "-";
+    const status = p.eliminated ? "out" : "in";
+    meta.textContent = `card ${cardLabel} | penalties ${p.penalties}/${maxPenalties} | ${status}`;
+    card.appendChild(name);
+    card.appendChild(meta);
+    coyotePlayers.appendChild(card);
+  });
+}
+
 function isSkullActionAvailable(actionType) {
   if (!currentSkullView || !Array.isArray(currentSkullView.legal_actions)) {
     return false;
@@ -1619,6 +1714,45 @@ function updateSkullActionButtons() {
   }
   Object.entries(skullActionButtons).forEach(([actionType, button]) => {
     const allowed = isSkullActionAvailable(actionType);
+    if (allowed) {
+      button.classList.add("action-allowed");
+    } else {
+      button.classList.remove("action-allowed");
+    }
+    button.disabled = !allowed;
+  });
+}
+
+function isCoyoteActionAvailable(actionType) {
+  if (!currentCoyoteView || !Array.isArray(currentCoyoteView.legal_actions)) {
+    return false;
+  }
+  if (!currentCoyoteView.legal_actions.includes(actionType)) {
+    return false;
+  }
+  if (actionType === "bid") {
+    const bid = Number.parseInt(coyoteBidInput.value, 10);
+    if (!Number.isInteger(bid) || bid < 1) {
+      return false;
+    }
+    const lastBid = currentCoyoteView.last_bid;
+    if (lastBid !== null && lastBid !== undefined && bid <= lastBid) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function updateCoyoteActionButtons() {
+  if (currentGameType !== "coyote") {
+    Object.values(coyoteActionButtons).forEach((button) => {
+      button.classList.remove("action-allowed");
+      button.disabled = true;
+    });
+    return;
+  }
+  Object.entries(coyoteActionButtons).forEach(([actionType, button]) => {
+    const allowed = isCoyoteActionAvailable(actionType);
     if (allowed) {
       button.classList.add("action-allowed");
     } else {
@@ -2934,6 +3068,39 @@ function renderSkullGameState(data) {
   updateSkullActionButtons();
 }
 
+function renderCoyoteGameState(data) {
+  const view = data.view;
+  currentCoyoteView = view;
+  if (currentGameType !== "coyote") {
+    currentGameType = "coyote";
+    setGamePanelVisibility("coyote");
+  }
+
+  coyotePhaseLabel.textContent = view.phase || "-";
+  coyoteRoundLabel.textContent = view.round ?? "-";
+  const currentPlayer = view.players.find((p) => p.player_id === view.current_turn);
+  coyoteTurnLabel.textContent = currentPlayer ? currentPlayer.name : view.current_turn || "-";
+  coyoteBidLabel.textContent = view.last_bid ?? "-";
+  coyoteBidderLabel.textContent = view.last_bidder ? findPlayerName(view, view.last_bidder) : "-";
+  coyoteWinnerLabel.textContent = view.winner ? findPlayerName(view, view.winner) : "-";
+
+  if (view.last_round_summary) {
+    coyoteLastTotalLabel.textContent = view.last_round_summary.actual_total ?? "-";
+    coyoteLastLoserLabel.textContent = view.last_round_summary.loser
+      ? findPlayerName(view, view.last_round_summary.loser)
+      : "-";
+    coyoteSummaryLabel.textContent = formatCoyoteSummary(view);
+  } else {
+    coyoteLastTotalLabel.textContent = "-";
+    coyoteLastLoserLabel.textContent = "-";
+    coyoteSummaryLabel.textContent = "-";
+  }
+
+  renderCoyotePlayers(view);
+  logGameEvents(data);
+  updateCoyoteActionButtons();
+}
+
 function renderDrawGuessGameState(data) {
   const view = data.view;
   currentDrawGuessView = view;
@@ -3004,6 +3171,10 @@ function renderGameState(data) {
   }
   if (gameType === "skull") {
     renderSkullGameState(data);
+    return;
+  }
+  if (gameType === "coyote") {
+    renderCoyoteGameState(data);
     return;
   }
   if (gameType === "draw_guess") {
@@ -3189,6 +3360,10 @@ skullBidInput.addEventListener("input", () => {
   updateSkullActionButtons();
 });
 
+coyoteBidInput.addEventListener("input", () => {
+  updateCoyoteActionButtons();
+});
+
 document.getElementById("peekBtn").addEventListener("click", () => {
   if (selectedSlots.length !== 2) {
     log("Select two slots for initial peek");
@@ -3328,6 +3503,19 @@ skullRevealBtn.addEventListener("click", () => {
   skullSelectedTarget = null;
   updateSkullTargetSelection();
   updateSkullActionButtons();
+});
+
+coyoteBidBtn.addEventListener("click", () => {
+  const bid = Number.parseInt(coyoteBidInput.value, 10);
+  if (!Number.isInteger(bid)) {
+    log("Enter a bid number");
+    return;
+  }
+  sendAction({ type: "bid", bid });
+});
+
+coyoteChallengeBtn.addEventListener("click", () => {
+  sendAction({ type: "challenge" });
 });
 
 drawGuessClearBtn.addEventListener("click", () => {
