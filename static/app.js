@@ -1885,14 +1885,15 @@ function getCoyoteMinBid(view) {
   return Number(view.last_bid) + 1;
 }
 
-function updateCoyoteBidInput(view) {
+function updateCoyoteBidInput(view, previousView) {
   if (!coyoteBidInput) {
     return;
   }
   const minBid = getCoyoteMinBid(view);
   coyoteBidInput.min = String(minBid);
   const current = Number.parseInt(coyoteBidInput.value, 10);
-  const shouldUpdate = !Number.isInteger(current) || current < minBid;
+  const newRound = !previousView || previousView.round !== view.round;
+  const shouldUpdate = !Number.isInteger(current) || current < minBid || (newRound && current !== minBid);
   if (shouldUpdate && document.activeElement !== coyoteBidInput) {
     coyoteBidInput.value = minBid;
   }
@@ -3682,6 +3683,7 @@ function renderSkullGameState(data) {
 
 function renderCoyoteGameState(data) {
   const view = data.view;
+  const previousView = currentCoyoteView;
   currentCoyoteView = view;
   if (currentGameType !== "coyote") {
     currentGameType = "coyote";
@@ -3700,7 +3702,7 @@ function renderCoyoteGameState(data) {
     coyoteRoundNoticeTitle.textContent = "Last Round";
   }
   renderCoyoteRoundNotice(view);
-  updateCoyoteBidInput(view);
+  updateCoyoteBidInput(view, previousView);
   updateCoyoteBidControls(view);
 
   renderCoyotePlayers(view);
