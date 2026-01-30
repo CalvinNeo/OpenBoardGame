@@ -523,9 +523,18 @@ class DecryptoGame:
         phase = state.get("phase")
         actions: List[str] = []
         if phase == "encryption":
-            if player_id == _current_encryptor(state, team_id):
-                if not state["round_data"][team_id].get("clues"):
+            encryptor = _current_encryptor(state, team_id)
+            team_data = state["round_data"][team_id]
+            if player_id == encryptor:
+                if not team_data.get("clues"):
                     actions.append("submit_clues")
+            if team_data.get("clues") and player_id != encryptor and team_data.get("decrypt_guess") is None:
+                actions.append("submit_decrypt")
+            if state["round"] > 1:
+                opponent = _opponent(team_id)
+                opponent_data = state["round_data"][opponent]
+                if opponent_data.get("clues") and opponent_data.get("intercept_guess") is None:
+                    actions.append("submit_intercept")
             return actions
 
         if phase == "guessing":
@@ -560,28 +569,59 @@ class DecryptoGame:
         phase = state.get("phase")
 
         if phase == "encryption":
-            if action_type != "submit_clues":
-                return [], "invalid action"
-            if player_id != _current_encryptor(state, team_id):
-                return [], "only encryptor can submit clues"
-            if state["round_data"][team_id].get("clues"):
-                return [], "clues already submitted"
-            clues = _validate_clues(
-                state["teams"][team_id]["keywords"],
-                state["teams"][team_id]["used_clues"],
-                action.get("clues"),
-            )
-            if clues is None:
-                return [], "invalid clues"
-            normalized = [_normalize_text(clue) for clue in clues]
-            state["teams"][team_id]["used_clues"].extend(normalized)
-            state["round_data"][team_id]["clues"] = clues
-            state["round_data"][team_id]["clues_by"] = player_id
-            events.append({"type": "decrypto:clues_submitted", "payload": {"team": team_id}})
+            if action_type == "submit_clues":
+                if player_id != _current_encryptor(state, team_id):
+                    return [], "only encryptor can submit clues"
+                if state["round_data"][team_id].get("clues"):
+                    return [], "clues already submitted"
+                clues = _validate_clues(
+                    state["teams"][team_id]["keywords"],
+                    state["teams"][team_id]["used_clues"],
+                    action.get("clues"),
+                )
+                if clues is None:
+                    return [], "invalid clues"
+                normalized = [_normalize_text(clue) for clue in clues]
+                state["teams"][team_id]["used_clues"].extend(normalized)
+                state["round_data"][team_id]["clues"] = clues
+                state["round_data"][team_id]["clues_by"] = player_id
+                events.append({"type": "decrypto:clues_submitted", "payload": {"team": team_id}})
 
-            if all(state["round_data"][tid].get("clues") for tid in TEAM_IDS):
-                state["phase"] = "guessing"
-            return events, None
+                if all(state["round_data"][tid].get("clues") for tid in TEAM_IDS):
+                    state["phase"] = "guessing"
+                return events, None
+            if action_type == "submit_decrypt":
+                if not state["round_data"][team_id].get("clues"):
+                    return [], "submit clues first"
+                if player_id == _current_encryptor(state, team_id):
+                    return [], "encryptor cannot submit decrypt"
+                if state["round_data"][team_id].get("decrypt_guess") is not None:
+                    return [], "decrypt already submitted"
+                guess = _normalize_guess(action.get("guess"))
+                if guess is None:
+                    return [], "invalid guess"
+                state["round_data"][team_id]["decrypt_guess"] = guess
+                state["round_data"][team_id]["decrypt_by"] = player_id
+                events.append({"type": "decrypto:decrypt_submitted", "payload": {"team": team_id}})
+                return events, None
+            if action_type == "submit_intercept":
+                if state["round"] <= 1:
+                    return [], "intercept not available in round 1"
+                opponent = _opponent(team_id)
+                if not state["round_data"][opponent].get("clues"):
+                    return [], "intercept not available yet"
+                if state["round_data"][opponent].get("intercept_guess") is not None:
+                    return [], "intercept already submitted"
+                guess = _normalize_guess(action.get("guess"))
+                if guess is None:
+                    return [], "invalid guess"
+                state["round_data"][opponent]["intercept_guess"] = guess
+                state["round_data"][opponent]["intercept_by"] = player_id
+                events.append(
+                    {"type": "decrypto:intercept_submitted", "payload": {"team": team_id}}
+                )
+                return events, None
+            return [], "invalid action"
 
         if phase == "guessing":
             if action_type == "submit_decrypt":
@@ -684,9 +724,7 @@ class DecryptoGame:
             if state.get("game_over") or viewer_team == team_id:
                 keywords = list(team["keywords"])
             data = state["round_data"].get(team_id, {})
-            clues_public = None
-            if state["phase"] != "encryption":
-                clues_public = list(data["clues"]) if data.get("clues") else None
+            clues_public = list(data["clues"]) if data.get("clues") else None
             decrypt_guess = None
             intercept_guess = None
             if viewer_team == team_id:

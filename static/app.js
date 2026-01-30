@@ -2390,11 +2390,15 @@ function renderDecryptoGameState(data) {
     decryptoCurrentCodeLabel.textContent = view.current_code ? formatDecryptoCode(view.current_code) : "-";
   }
 
+  const decryptoLegalActions = Array.isArray(view.legal_actions) ? view.legal_actions : [];
+  const canGuessEarly =
+    decryptoLegalActions.includes("submit_decrypt") || decryptoLegalActions.includes("submit_intercept");
   if (decryptoEncryptionArea) {
     decryptoEncryptionArea.classList.toggle("hidden", view.phase !== "encryption");
   }
   if (decryptoGuessArea) {
-    decryptoGuessArea.classList.toggle("hidden", view.phase !== "guessing");
+    const showGuessArea = view.phase === "guessing" || canGuessEarly;
+    decryptoGuessArea.classList.toggle("hidden", !showGuessArea);
   }
   if (decryptoSuddenDeathArea) {
     decryptoSuddenDeathArea.classList.toggle("hidden", view.phase !== "sudden_death");
