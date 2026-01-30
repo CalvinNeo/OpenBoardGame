@@ -5,15 +5,19 @@ from game.draw_guess_quickdraw import (
     clone_prompt_entry as _clone_prompt_entry,
     normalize_prompt_pool as _normalize_prompt_pool,
     quickdraw_alias_for_text as _quickdraw_alias_for_text,
+    quickdraw_guess_from_image as _quickdraw_guess_from_image,
     quickdraw_image_for_prompt as _quickdraw_image_for_prompt,
 )
 from game.draw_guess_templates import _bot_svg_for_prompt, _salt_prompt
 
 DEFAULT_LANGUAGE = "zh"
+GUESS_METHOD_NORMAL = "normal"
+GUESS_METHOD_CV = "cv"
 
 DEFAULT_CONFIG = {
     "language": DEFAULT_LANGUAGE,
     "prompt_pool": None,
+    "guess_method": GUESS_METHOD_NORMAL,
 }
 
 _PROMPT_BAGS: Dict[Tuple[str, Tuple[Tuple[str, Optional[str]], ...]], List[Dict]] = {}
@@ -25,12 +29,23 @@ def _normalize_language(value: Optional[str]) -> str:
     return DEFAULT_LANGUAGE
 
 
+def _normalize_guess_method(value: Optional[str]) -> str:
+    if isinstance(value, str):
+        normalized = value.strip().casefold()
+        if normalized in (GUESS_METHOD_NORMAL, GUESS_METHOD_CV):
+            return normalized
+    return GUESS_METHOD_NORMAL
+
+
 def _merge_config(config: Optional[Dict]) -> Dict:
     cfg = {**DEFAULT_CONFIG}
     if config:
         language = config.get("language")
         if isinstance(language, str):
             cfg["language"] = language
+        guess_method = config.get("guess_method")
+        if isinstance(guess_method, str):
+            cfg["guess_method"] = guess_method
         prompt_pool = config.get("prompt_pool")
         if isinstance(prompt_pool, list) and prompt_pool:
             cfg["prompt_pool"] = prompt_pool
@@ -188,7 +203,7 @@ def _bot_image_for_prompt(
     return _bot_svg_for_prompt(salted_prompt, rng)
 
 
-def _bot_guess_from_hint(hint: Optional[str], prompt_pool: Optional[List], language: str) -> str:
+def _bot_guess_normal(hint: Optional[str], prompt_pool: Optional[List], language: str) -> str:
     cleaned = hint.strip() if isinstance(hint, str) else ""
     prompt_texts = _prompt_pool_texts(prompt_pool)
     if not prompt_texts:
@@ -198,6 +213,18 @@ def _bot_guess_from_hint(hint: Optional[str], prompt_pool: Optional[List], langu
     if random.random() < 0.15 and prompt_texts:
         return random.choice(prompt_texts)
     return cleaned
+
+
+def _bot_guess_cv(image_data: Optional[str], prompt_pool: Optional[List], language: str) -> Optional[str]:
+    if not isinstance(image_data, str) or not image_data.strip():
+        return None
+    try:
+        guess = _quickdraw_guess_from_image(image_data, prompt_pool, language)
+    except Exception:
+        return None
+    if isinstance(guess, str) and guess.strip():
+        return guess.strip()
+    return None
 
 
 def _submission_complete(state: Dict) -> bool:
@@ -250,8 +277,10 @@ class DrawGuessGame:
     def init_game(config: Optional[Dict], players: List[Dict]) -> Dict:
         cfg = _merge_config(config)
         language = _normalize_language(cfg.get("language"))
+        guess_method = _normalize_guess_method(cfg.get("guess_method"))
         prompt_pool = _normalize_prompt_pool(cfg.get("prompt_pool"), language)
         cfg["language"] = language
+        cfg["guess_method"] = guess_method
         cfg["prompt_pool"] = prompt_pool
         order = _turn_order(players)
         player_meta = {p["player_id"]: p for p in players}
@@ -463,7 +492,14 @@ class DrawGuessGame:
             if not hint:
                 hint = _drawing_hint_from_book(book)
             prompt_pool = state.get("prompt_pool")
-            guess = _bot_guess_from_hint(hint, prompt_pool, state.get("language", DEFAULT_LANGUAGE))
+            language = state.get("language", DEFAULT_LANGUAGE)
+            guess_method = _normalize_guess_method(state.get("config", {}).get("guess_method"))
+            if guess_method == GUESS_METHOD_CV:
+                image_data = drawing_entry.get("image_data") if drawing_entry else None
+                guess = _bot_guess_cv(image_data, prompt_pool, language)
+                if guess:
+                    return {"type": "submit_guess", "text": guess}
+            guess = _bot_guess_normal(hint, prompt_pool, language)
             return {"type": "submit_guess", "text": guess}
         return None
 

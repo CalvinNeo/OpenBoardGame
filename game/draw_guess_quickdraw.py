@@ -20,11 +20,12 @@ from game.draw_guess_templates import CANVAS_HEIGHT, CANVAS_WIDTH
 
 try:
     from quickdraw import QuickDrawData, QuickDrawDataGroup
-    from PIL import Image
+    from PIL import Image, ImageOps
 except Exception:  # pragma: no cover - optional dependency
     QuickDrawData = None
     QuickDrawDataGroup = None
     Image = None
+    ImageOps = None
 
 try:
     import argostranslate.translate as argos_translate
@@ -100,6 +101,11 @@ _QUICKDRAW_CACHE_READY = False
 _QUICKDRAW_CACHE_NAMES: Optional[List[str]] = None
 _QUICKDRAW_ALLOW_NETWORK = not QUICKDRAW_OFFLINE
 _QUICKDRAW_OFFLINE_LOGGED = False
+CV_IMAGE_SIZE = 32
+CV_SAMPLES_PER_CATEGORY = 6
+CV_MAX_CANDIDATES = 80
+CV_PIXEL_THRESHOLD = 220
+_CV_SAMPLE_CACHE: Dict[str, List[List[int]]] = {}
 
 _DEFAULT_LANGUAGE = "zh"
 
@@ -644,3 +650,185 @@ def quickdraw_image_for_prompt(
     if category:
         return _quickdraw_to_data_url(category, rng, log_prompt, log_translation, log_query)
     return None
+
+
+def _cv_image_from_data_url(image_data: str) -> Optional["Image.Image"]:
+    if Image is None or not isinstance(image_data, str):
+        return None
+    if not image_data.startswith("data:image/"):
+        return None
+    header, _, encoded = image_data.partition(",")
+    if not encoded or "base64" not in header:
+        return None
+    try:
+        raw = base64.b64decode(encoded)
+    except Exception:
+        return None
+    try:
+        image = Image.open(io.BytesIO(raw))
+    except Exception:
+        return None
+    try:
+        if image.mode in ("RGBA", "LA") or (image.mode == "P" and "transparency" in image.info):
+            background = Image.new("RGBA", image.size, (255, 255, 255, 255))
+            image = Image.alpha_composite(background, image.convert("RGBA")).convert("RGB")
+        else:
+            image = image.convert("RGB")
+    except Exception:
+        return None
+    return image
+
+
+def _cv_image_signature(image: "Image.Image") -> Optional[List[int]]:
+    if Image is None or ImageOps is None:
+        return None
+    try:
+        gray = image.convert("L")
+        inverted = ImageOps.invert(gray)
+        bbox = inverted.getbbox()
+        if not bbox:
+            return None
+        cropped = gray.crop(bbox)
+        side = max(cropped.width, cropped.height)
+        if side <= 0:
+            return None
+        square = Image.new("L", (side, side), color=255)
+        square.paste(cropped, ((side - cropped.width) // 2, (side - cropped.height) // 2))
+        resized = square.resize((CV_IMAGE_SIZE, CV_IMAGE_SIZE))
+    except Exception:
+        return None
+    pixels = list(resized.getdata())
+    return [1 if value < CV_PIXEL_THRESHOLD else 0 for value in pixels]
+
+
+def _cv_signature_distance(left: List[int], right: List[int]) -> int:
+    return sum(abs(a - b) for a, b in zip(left, right))
+
+
+def _cv_prompt_candidates(prompt_pool: Optional[List], language: str) -> Dict[str, Dict[str, List[str]]]:
+    candidates: Dict[str, Dict[str, List[str]]] = {}
+    for entry in normalize_prompt_pool(prompt_pool, language):
+        text = entry.get("text")
+        if not isinstance(text, str) or not text.strip():
+            continue
+        quickdraw = entry.get("quickdraw")
+        if isinstance(quickdraw, str):
+            quickdraw = quickdraw.strip() or None
+        else:
+            quickdraw = None
+        if not quickdraw:
+            quickdraw = quickdraw_alias_for_text(text, language)
+        if not quickdraw:
+            continue
+        normalized = _normalize_name(quickdraw)
+        bucket = candidates.get(normalized)
+        if not bucket:
+            bucket = {"category": quickdraw, "texts": []}
+            candidates[normalized] = bucket
+        cleaned_text = text.strip()
+        if cleaned_text not in bucket["texts"]:
+            bucket["texts"].append(cleaned_text)
+    return candidates
+
+
+def _cv_candidate_list(
+    candidates: Dict[str, Dict[str, List[str]]],
+    rng: random.Random,
+) -> List[Dict[str, List[str]]]:
+    if not candidates:
+        return []
+    cached_names = _quickdraw_cache_names()
+    if cached_names:
+        cached_map = {_normalize_name(name): name for name in cached_names}
+        cached_candidates = []
+        for key, value in candidates.items():
+            cached_name = cached_map.get(key)
+            if cached_name:
+                cached_candidates.append({"category": cached_name, "texts": value["texts"]})
+        if cached_candidates:
+            candidates_list = cached_candidates
+        else:
+            candidates_list = [{"category": item["category"], "texts": item["texts"]} for item in candidates.values()]
+    else:
+        candidates_list = [{"category": item["category"], "texts": item["texts"]} for item in candidates.values()]
+    if len(candidates_list) > CV_MAX_CANDIDATES:
+        rng.shuffle(candidates_list)
+        return candidates_list[:CV_MAX_CANDIDATES]
+    return candidates_list
+
+
+def _cv_sample_signatures(category: str, rng: random.Random) -> Optional[List[List[int]]]:
+    cached = _CV_SAMPLE_CACHE.get(category)
+    if cached and len(cached) >= CV_SAMPLES_PER_CATEGORY:
+        return cached
+    group = _get_quickdraw_group(category)
+    if not group or group.drawing_count == 0:
+        return cached if cached else None
+    try:
+        sample_count = min(CV_SAMPLES_PER_CATEGORY, group.drawing_count)
+        if group.drawing_count <= sample_count:
+            indices = list(range(group.drawing_count))
+        else:
+            indices = rng.sample(range(group.drawing_count), k=sample_count)
+    except Exception:
+        return None
+    signatures = list(cached) if cached else []
+    for idx in indices:
+        if len(signatures) >= sample_count:
+            break
+        try:
+            drawing = group.get_drawing(idx)
+            image = drawing.get_image(stroke_width=3)
+            image = image.convert("RGB")
+        except Exception:
+            continue
+        signature = _cv_image_signature(image)
+        if signature:
+            signatures.append(signature)
+    if not signatures:
+        return None
+    _CV_SAMPLE_CACHE[category] = signatures[:sample_count]
+    return _CV_SAMPLE_CACHE[category]
+
+
+def quickdraw_guess_from_image(
+    image_data: str,
+    prompt_pool: Optional[List],
+    language: str,
+) -> Optional[str]:
+    if not QUICKDRAW_AVAILABLE:
+        return None
+    try:
+        image = _cv_image_from_data_url(image_data)
+        if not image:
+            return None
+        signature = _cv_image_signature(image)
+        if not signature:
+            return None
+        rng = random.Random()
+        candidates = _cv_prompt_candidates(prompt_pool, _normalize_language(language))
+        candidate_list = _cv_candidate_list(candidates, rng)
+        if not candidate_list:
+            return None
+        best_distance = None
+        best_texts = None
+        for candidate in candidate_list:
+            category = candidate["category"]
+            samples = _cv_sample_signatures(category, rng)
+            if not samples:
+                continue
+            min_distance = None
+            for sample in samples:
+                distance = _cv_signature_distance(signature, sample)
+                if min_distance is None or distance < min_distance:
+                    min_distance = distance
+            if min_distance is None:
+                continue
+            if best_distance is None or min_distance < best_distance:
+                best_distance = min_distance
+                best_texts = candidate["texts"]
+        if not best_texts:
+            return None
+        return rng.choice(best_texts)
+    except Exception:
+        return None

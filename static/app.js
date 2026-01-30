@@ -44,6 +44,8 @@ const removeBotBtn = document.getElementById("removeBotBtn");
 const logoutBtn = document.getElementById("logoutBtn");
 const drawGuessLanguageRow = document.getElementById("drawGuessLanguageRow");
 const drawGuessLanguageSelect = document.getElementById("drawGuessLanguageSelect");
+const drawGuessGuessMethodRow = document.getElementById("drawGuessGuessMethodRow");
+const drawGuessGuessMethodSelect = document.getElementById("drawGuessGuessMethodSelect");
 const caboPanel = document.getElementById("caboPanel");
 const skullPanel = document.getElementById("skullPanel");
 const drawGuessPanel = document.getElementById("drawGuessPanel");
@@ -496,11 +498,13 @@ function setGamePanelVisibility(gameType) {
 }
 
 function updateDrawGuessLanguageRow() {
-  if (!drawGuessLanguageRow) {
-    return;
-  }
   const showRow = currentRoomState && currentGameType === "draw_guess" && currentRoomState.status === "lobby";
-  drawGuessLanguageRow.classList.toggle("hidden", !showRow);
+  if (drawGuessLanguageRow) {
+    drawGuessLanguageRow.classList.toggle("hidden", !showRow);
+  }
+  if (drawGuessGuessMethodRow) {
+    drawGuessGuessMethodRow.classList.toggle("hidden", !showRow);
+  }
 }
 
 function requestRoomList() {
@@ -660,6 +664,9 @@ function resetRoomState() {
   updateDrawGuessLanguageRow();
   if (drawGuessLanguageSelect) {
     drawGuessLanguageSelect.value = "zh";
+  }
+  if (drawGuessGuessMethodSelect) {
+    drawGuessGuessMethodSelect.value = "normal";
   }
   createRoomPending = false;
   setCreateGameRowVisible(false);
@@ -1286,8 +1293,10 @@ function emitRoomStart() {
     return;
   }
   const payload = { room_id: roomId };
-  if (currentGameType === "draw_guess" && drawGuessLanguageSelect) {
-    payload.config = { language: drawGuessLanguageSelect.value || "zh" };
+  if (currentGameType === "draw_guess") {
+    const language = drawGuessLanguageSelect ? drawGuessLanguageSelect.value || "zh" : "zh";
+    const guessMethod = drawGuessGuessMethodSelect ? drawGuessGuessMethodSelect.value || "normal" : "normal";
+    payload.config = { language, guess_method: guessMethod };
   }
   socket.emit("room:start", payload);
 }
