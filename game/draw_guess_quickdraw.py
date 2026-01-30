@@ -102,9 +102,11 @@ _QUICKDRAW_CACHE_NAMES: Optional[List[str]] = None
 _QUICKDRAW_ALLOW_NETWORK = not QUICKDRAW_OFFLINE
 _QUICKDRAW_OFFLINE_LOGGED = False
 CV_IMAGE_SIZE = 32
-CV_SAMPLES_PER_CATEGORY = 6
+CV_SAMPLES_PER_CATEGORY = 10
 CV_MAX_CANDIDATES = 80
-CV_PIXEL_THRESHOLD = 220
+CV_PIXEL_THRESHOLD = 245
+CV_SIGNATURE_PAD_RATIO = 0.08
+CV_TOP_K = 3
 _CV_SAMPLE_CACHE: Dict[str, List[List[int]]] = {}
 
 _DEFAULT_LANGUAGE = "zh"
@@ -679,6 +681,22 @@ def _cv_image_from_data_url(image_data: str) -> Optional["Image.Image"]:
     return image
 
 
+def _cv_normalized_ink(pixels: List[int]) -> Optional[List[int]]:
+    if not pixels:
+        return None
+    ink: List[int] = []
+    for value in pixels:
+        if value >= CV_PIXEL_THRESHOLD:
+            ink.append(0)
+        else:
+            ink.append(255 - value)
+    max_ink = max(ink)
+    if max_ink <= 0:
+        return None
+    scale = 255 / max_ink
+    return [int(value * scale) for value in ink]
+
+
 def _cv_image_signature(image: "Image.Image") -> Optional[List[int]]:
     if Image is None or ImageOps is None:
         return None
@@ -688,17 +706,26 @@ def _cv_image_signature(image: "Image.Image") -> Optional[List[int]]:
         bbox = inverted.getbbox()
         if not bbox:
             return None
-        cropped = gray.crop(bbox)
+        left, top, right, bottom = bbox
+        pad = int(max(right - left, bottom - top) * CV_SIGNATURE_PAD_RATIO)
+        if pad:
+            left = max(0, left - pad)
+            top = max(0, top - pad)
+            right = min(gray.width, right + pad)
+            bottom = min(gray.height, bottom + pad)
+        cropped = gray.crop((left, top, right, bottom))
         side = max(cropped.width, cropped.height)
         if side <= 0:
             return None
         square = Image.new("L", (side, side), color=255)
         square.paste(cropped, ((side - cropped.width) // 2, (side - cropped.height) // 2))
-        resized = square.resize((CV_IMAGE_SIZE, CV_IMAGE_SIZE))
+        square = ImageOps.autocontrast(square)
+        resample = getattr(Image, "Resampling", Image).BICUBIC
+        resized = square.resize((CV_IMAGE_SIZE, CV_IMAGE_SIZE), resample=resample)
     except Exception:
         return None
     pixels = list(resized.getdata())
-    return [1 if value < CV_PIXEL_THRESHOLD else 0 for value in pixels]
+    return _cv_normalized_ink(pixels)
 
 
 def _cv_signature_distance(left: List[int], right: List[int]) -> int:
@@ -737,6 +764,7 @@ def _cv_candidate_list(
 ) -> List[Dict[str, List[str]]]:
     if not candidates:
         return []
+    max_candidates: Optional[int] = CV_MAX_CANDIDATES
     cached_names = _quickdraw_cache_names()
     if cached_names:
         cached_map = {_normalize_name(name): name for name in cached_names}
@@ -747,13 +775,14 @@ def _cv_candidate_list(
                 cached_candidates.append({"category": cached_name, "texts": value["texts"]})
         if cached_candidates:
             candidates_list = cached_candidates
+            max_candidates = None
         else:
             candidates_list = [{"category": item["category"], "texts": item["texts"]} for item in candidates.values()]
     else:
         candidates_list = [{"category": item["category"], "texts": item["texts"]} for item in candidates.values()]
-    if len(candidates_list) > CV_MAX_CANDIDATES:
+    if max_candidates is not None and len(candidates_list) > max_candidates:
         rng.shuffle(candidates_list)
-        return candidates_list[:CV_MAX_CANDIDATES]
+        return candidates_list[:max_candidates]
     return candidates_list
 
 
@@ -817,15 +846,17 @@ def quickdraw_guess_from_image(
             samples = _cv_sample_signatures(category, rng)
             if not samples:
                 continue
-            min_distance = None
+            distances: List[int] = []
             for sample in samples:
                 distance = _cv_signature_distance(signature, sample)
-                if min_distance is None or distance < min_distance:
-                    min_distance = distance
-            if min_distance is None:
+                distances.append(distance)
+            if not distances:
                 continue
-            if best_distance is None or min_distance < best_distance:
-                best_distance = min_distance
+            distances.sort()
+            top_k = min(CV_TOP_K, len(distances))
+            score = sum(distances[:top_k]) / top_k
+            if best_distance is None or score < best_distance:
+                best_distance = score
                 best_texts = candidate["texts"]
         if not best_texts:
             return None
