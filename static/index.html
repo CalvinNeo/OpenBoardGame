@@ -22,20 +22,20 @@
 
     <div class="layout">
       <aside class="sidebar">
-        <section class="panel collapsible">
+        <section class="panel collapsible" id="connectionPanel">
           <div class="panel-header">
             <h2>Connection</h2>
             <button class="collapse-btn" type="button" aria-expanded="true">Hide</button>
           </div>
           <div class="panel-body">
-            <div class="row">
+            <div class="row compact-row">
               <label>Name</label>
               <input id="nameInput" type="text" placeholder="Your name" />
             </div>
             <div class="row">
               <button id="createBtn" type="button">Create Room</button>
             </div>
-            <div class="row hidden" id="createGameRow" aria-hidden="true">
+            <div class="row compact-row hidden" id="createGameRow" aria-hidden="true">
               <label for="gameSelect">Game</label>
               <select id="gameSelect" aria-label="Select game">
                 <option value="" selected disabled>Select a game</option>
@@ -48,7 +48,7 @@
                 <option value="abraca_what">Abraca What</option>
               </select>
             </div>
-            <div class="row">
+            <div class="row compact-row">
               <label>Room ID</label>
               <input id="roomIdInput" type="text" placeholder="e.g. a1b2c3" />
               <button id="joinBtn">Join Room</button>

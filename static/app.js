@@ -769,6 +769,8 @@ function renderRoomList(rooms) {
 
     const actions = document.createElement("div");
     actions.className = "room-item-actions";
+    const joinActions = document.createElement("div");
+    joinActions.className = "room-item-join-actions";
     const auth = getRoomAuth(room.room_id);
     const canReconnect = auth && auth.player_id && auth.reconnect_token;
     const joinDisabled =
@@ -780,7 +782,7 @@ function renderRoomList(rooms) {
     joinBtn.addEventListener("click", () => {
       attemptJoinRoom(room.room_id);
     });
-    actions.appendChild(joinBtn);
+    joinActions.appendChild(joinBtn);
 
     const joinReadyBtn = document.createElement("button");
     joinReadyBtn.type = "button";
@@ -789,7 +791,7 @@ function renderRoomList(rooms) {
     joinReadyBtn.addEventListener("click", () => {
       attemptJoinRoom(room.room_id, { readyAfterJoin: true });
     });
-    actions.appendChild(joinReadyBtn);
+    joinActions.appendChild(joinReadyBtn);
 
     if (canReconnect) {
       const reconnectBtn = document.createElement("button");
@@ -798,8 +800,10 @@ function renderRoomList(rooms) {
       reconnectBtn.addEventListener("click", () => {
         attemptReconnect(room.room_id, auth);
       });
-      actions.appendChild(reconnectBtn);
+      joinActions.appendChild(reconnectBtn);
     }
+
+    actions.appendChild(joinActions);
 
     const deleteBtn = document.createElement("button");
     deleteBtn.type = "button";

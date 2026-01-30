@@ -373,6 +373,12 @@ body.log-open {
   flex-wrap: wrap;
 }
 
+.room-item-join-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
 .room-delete-btn {
   margin-left: auto;
   padding: 2px 6px;
@@ -1153,6 +1159,42 @@ body.log-open {
     width: 100%;
   }
 
+  #connectionPanel .row {
+    margin-bottom: 6px;
+    gap: 8px;
+  }
+
+  #connectionPanel input,
+  #connectionPanel select,
+  #connectionPanel button {
+    padding: 6px 8px;
+  }
+
+  #connectionPanel .compact-row {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  #connectionPanel .compact-row label {
+    min-width: 64px;
+  }
+
+  #connectionPanel .compact-row input,
+  #connectionPanel .compact-row select {
+    width: auto;
+    flex: 1 1 140px;
+  }
+
+  #connectionPanel .compact-row button {
+    width: auto;
+    flex: 0 0 auto;
+  }
+
+  #connectionPanel .row.actions {
+    margin-bottom: 0;
+  }
+
   .row input,
   .row select,
   .row textarea,
@@ -1246,6 +1288,17 @@ body.log-open {
 
   .room-item-actions button {
     width: 100%;
+  }
+
+  .room-item-join-actions {
+    width: 100%;
+    flex-wrap: nowrap;
+  }
+
+  .room-item-join-actions button {
+    width: auto;
+    flex: 1 1 0;
+    min-width: 0;
   }
 
   .room-actions {
