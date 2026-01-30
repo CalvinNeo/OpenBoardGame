@@ -185,6 +185,81 @@ input, select {
   overflow-wrap: anywhere;
 }
 
+.decrypto-pack-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.decrypto-pack-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+#decryptoTeams,
+#decryptoCurrentClues,
+#decryptoHistory {
+  border: 1px solid #eee;
+  padding: 8px;
+  border-radius: 4px;
+  background: #fafafa;
+}
+
+.decrypto-team {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 8px;
+  background: #fff;
+}
+
+.decrypto-team-header {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.decrypto-team-meta {
+  font-size: 13px;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
+.decrypto-keywords {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.decrypto-keyword {
+  background: #f3f4f6;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.decrypto-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.decrypto-history-table th,
+.decrypto-history-table td {
+  border: 1px solid #e5e7eb;
+  padding: 4px 6px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.decrypto-clues {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 body.log-open {
   overflow: hidden;
 }

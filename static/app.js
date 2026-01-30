@@ -5,6 +5,7 @@ let roomId = null;
 let currentCaboView = null;
 let currentSkullView = null;
 let currentCoyoteView = null;
+let currentDecryptoView = null;
 let currentDrawGuessView = null;
 let currentSplendorView = null;
 let currentAbracaView = null;
@@ -30,6 +31,9 @@ let splendorTokenSelection = {};
 let splendorDiscardSelection = {};
 let splendorNobleCatalog = {};
 let createRoomPending = false;
+let decryptoWordPacks = [];
+let decryptoPackSelections = new Set(["basic"]);
+let decryptoPacksLoaded = false;
 
 const nameInput = document.getElementById("nameInput");
 const connectionInfo = document.getElementById("connectionInfo");
@@ -49,9 +53,12 @@ const drawGuessLanguageRow = document.getElementById("drawGuessLanguageRow");
 const drawGuessLanguageSelect = document.getElementById("drawGuessLanguageSelect");
 const drawGuessGuessMethodRow = document.getElementById("drawGuessGuessMethodRow");
 const drawGuessGuessMethodSelect = document.getElementById("drawGuessGuessMethodSelect");
+const decryptoPackRow = document.getElementById("decryptoPackRow");
+const decryptoPackOptions = document.getElementById("decryptoPackOptions");
 const caboPanel = document.getElementById("caboPanel");
 const skullPanel = document.getElementById("skullPanel");
 const coyotePanel = document.getElementById("coyotePanel");
+const decryptoPanel = document.getElementById("decryptoPanel");
 const drawGuessPanel = document.getElementById("drawGuessPanel");
 
 const phaseLabel = document.getElementById("phaseLabel");
@@ -112,6 +119,35 @@ const coyoteBidBtn = document.getElementById("coyoteBidBtn");
 const coyoteChallengeBtn = document.getElementById("coyoteChallengeBtn");
 const coyoteResetBtn = document.getElementById("coyoteResetBtn");
 const coyotePlayers = document.getElementById("coyotePlayers");
+
+const decryptoPhaseLabel = document.getElementById("decryptoPhase");
+const decryptoRoundLabel = document.getElementById("decryptoRound");
+const decryptoMaxRoundsLabel = document.getElementById("decryptoMaxRounds");
+const decryptoWinnerLabel = document.getElementById("decryptoWinner");
+const decryptoYourTeamLabel = document.getElementById("decryptoYourTeam");
+const decryptoYourRoleLabel = document.getElementById("decryptoYourRole");
+const decryptoCurrentCodeLabel = document.getElementById("decryptoCurrentCode");
+const decryptoTeams = document.getElementById("decryptoTeams");
+const decryptoCurrentClues = document.getElementById("decryptoCurrentClues");
+const decryptoHistory = document.getElementById("decryptoHistory");
+const decryptoSummary = document.getElementById("decryptoSummary");
+const decryptoSummaryBody = document.getElementById("decryptoSummaryBody");
+const decryptoEncryptionArea = document.getElementById("decryptoEncryptionArea");
+const decryptoGuessArea = document.getElementById("decryptoGuessArea");
+const decryptoSuddenDeathArea = document.getElementById("decryptoSuddenDeathArea");
+const decryptoClue1 = document.getElementById("decryptoClue1");
+const decryptoClue2 = document.getElementById("decryptoClue2");
+const decryptoClue3 = document.getElementById("decryptoClue3");
+const decryptoSubmitCluesBtn = document.getElementById("decryptoSubmitCluesBtn");
+const decryptoDecryptInput = document.getElementById("decryptoDecryptInput");
+const decryptoSubmitDecryptBtn = document.getElementById("decryptoSubmitDecryptBtn");
+const decryptoInterceptInput = document.getElementById("decryptoInterceptInput");
+const decryptoSubmitInterceptBtn = document.getElementById("decryptoSubmitInterceptBtn");
+const decryptoSudden1 = document.getElementById("decryptoSudden1");
+const decryptoSudden2 = document.getElementById("decryptoSudden2");
+const decryptoSudden3 = document.getElementById("decryptoSudden3");
+const decryptoSudden4 = document.getElementById("decryptoSudden4");
+const decryptoSubmitSuddenBtn = document.getElementById("decryptoSubmitSuddenBtn");
 
 const drawGuessPhaseLabel = document.getElementById("drawGuessPhase");
 const drawGuessRoundLabel = document.getElementById("drawGuessRound");
@@ -221,6 +257,13 @@ const skullActionButtons = {
 const coyoteActionButtons = {
   bid: coyoteBidBtn,
   challenge: coyoteChallengeBtn,
+};
+
+const decryptoActionButtons = {
+  submit_clues: decryptoSubmitCluesBtn,
+  submit_decrypt: decryptoSubmitDecryptBtn,
+  submit_intercept: decryptoSubmitInterceptBtn,
+  submit_sudden_death: decryptoSubmitSuddenBtn,
 };
 
 const drawGuessActionButtons = {
@@ -514,6 +557,7 @@ function setGamePanelVisibility(gameType) {
   const showCabo = gameType === "cabo";
   const showSkull = gameType === "skull";
   const showCoyote = gameType === "coyote";
+  const showDecrypto = gameType === "decrypto";
   const showDrawGuess = gameType === "draw_guess";
   const showSplendor = gameType === "splendor";
   const showAbraca = gameType === "abraca_what";
@@ -521,6 +565,9 @@ function setGamePanelVisibility(gameType) {
   skullPanel.classList.toggle("hidden", !showSkull);
   if (coyotePanel) {
     coyotePanel.classList.toggle("hidden", !showCoyote);
+  }
+  if (decryptoPanel) {
+    decryptoPanel.classList.toggle("hidden", !showDecrypto);
   }
   drawGuessPanel.classList.toggle("hidden", !showDrawGuess);
   if (splendorPanel) {
@@ -539,6 +586,91 @@ function updateDrawGuessLanguageRow() {
   if (drawGuessGuessMethodRow) {
     drawGuessGuessMethodRow.classList.toggle("hidden", !showRow);
   }
+}
+
+function updateDecryptoPackRow() {
+  const showRow = currentRoomState && currentGameType === "decrypto" && currentRoomState.status === "lobby";
+  if (decryptoPackRow) {
+    decryptoPackRow.classList.toggle("hidden", !showRow);
+    decryptoPackRow.setAttribute("aria-hidden", (!showRow).toString());
+  }
+  if (showRow && !decryptoPacksLoaded) {
+    fetchDecryptoPacks();
+  }
+}
+
+function fetchDecryptoPacks() {
+  if (!decryptoPackOptions) {
+    return;
+  }
+  decryptoPackOptions.textContent = "Loading word packs...";
+  fetch("/api/decrypto/word_packs")
+    .then((response) => response.json())
+    .then((data) => {
+      decryptoWordPacks = Array.isArray(data.packs) ? data.packs : [];
+      decryptoPacksLoaded = true;
+      renderDecryptoPackOptions();
+    })
+    .catch(() => {
+      decryptoPackOptions.textContent = "Failed to load word packs.";
+      decryptoPacksLoaded = false;
+    });
+}
+
+function renderDecryptoPackOptions() {
+  if (!decryptoPackOptions) {
+    return;
+  }
+  decryptoPackOptions.innerHTML = "";
+  if (!decryptoWordPacks.length) {
+    decryptoPackOptions.textContent = "No word packs available.";
+    return;
+  }
+  const availablePackIds = new Set();
+  decryptoWordPacks.forEach((pack) => {
+    if (pack.pack_id) {
+      availablePackIds.add(pack.pack_id);
+    }
+  });
+  decryptoPackSelections = new Set(
+    Array.from(decryptoPackSelections).filter((packId) => availablePackIds.has(packId))
+  );
+  if (decryptoPackSelections.size === 0) {
+    availablePackIds.forEach((packId) => {
+      decryptoPackSelections.add(packId);
+    });
+  }
+  decryptoWordPacks.forEach((pack) => {
+    const packId = pack.pack_id;
+    if (!packId) {
+      return;
+    }
+    const label = document.createElement("label");
+    label.className = "decrypto-pack-option";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.value = packId;
+    checkbox.checked = decryptoPackSelections.has(packId);
+    checkbox.addEventListener("change", () => {
+      if (checkbox.checked) {
+        decryptoPackSelections.add(packId);
+      } else {
+        decryptoPackSelections.delete(packId);
+      }
+    });
+    const text = document.createElement("span");
+    const name = pack.pack_name || packId;
+    const language = pack.language ? ` · ${pack.language}` : "";
+    const count = Number.isFinite(pack.total_count) ? ` (${pack.total_count})` : "";
+    text.textContent = `${name}${language}${count}`;
+    label.appendChild(checkbox);
+    label.appendChild(text);
+    decryptoPackOptions.appendChild(label);
+  });
+}
+
+function getSelectedDecryptoPacks() {
+  return Array.from(decryptoPackSelections);
 }
 
 function requestRoomList() {
@@ -692,11 +824,13 @@ function resetRoomState() {
   clearCaboState();
   clearSkullState();
   clearCoyoteState();
+  clearDecryptoState();
   clearDrawGuessState();
   clearSplendorState();
   clearAbracaState();
   setGamePanelVisibility(null);
   updateDrawGuessLanguageRow();
+  updateDecryptoPackRow();
   if (drawGuessLanguageSelect) {
     drawGuessLanguageSelect.value = "zh";
   }
@@ -772,6 +906,74 @@ function clearCoyoteState() {
   }
   coyotePlayers.innerHTML = "";
   updateCoyoteActionButtons();
+}
+
+function clearDecryptoState() {
+  currentDecryptoView = null;
+  if (decryptoPhaseLabel) {
+    decryptoPhaseLabel.textContent = "-";
+  }
+  if (decryptoRoundLabel) {
+    decryptoRoundLabel.textContent = "-";
+  }
+  if (decryptoMaxRoundsLabel) {
+    decryptoMaxRoundsLabel.textContent = "-";
+  }
+  if (decryptoWinnerLabel) {
+    decryptoWinnerLabel.textContent = "-";
+  }
+  if (decryptoYourTeamLabel) {
+    decryptoYourTeamLabel.textContent = "-";
+  }
+  if (decryptoYourRoleLabel) {
+    decryptoYourRoleLabel.textContent = "-";
+  }
+  if (decryptoCurrentCodeLabel) {
+    decryptoCurrentCodeLabel.textContent = "-";
+  }
+  if (decryptoTeams) {
+    decryptoTeams.innerHTML = "";
+  }
+  if (decryptoCurrentClues) {
+    decryptoCurrentClues.innerHTML = "";
+  }
+  if (decryptoHistory) {
+    decryptoHistory.innerHTML = "";
+  }
+  if (decryptoSummary) {
+    decryptoSummary.classList.add("hidden");
+  }
+  if (decryptoSummaryBody) {
+    decryptoSummaryBody.textContent = "-";
+  }
+  if (decryptoClue1) {
+    decryptoClue1.value = "";
+  }
+  if (decryptoClue2) {
+    decryptoClue2.value = "";
+  }
+  if (decryptoClue3) {
+    decryptoClue3.value = "";
+  }
+  if (decryptoDecryptInput) {
+    decryptoDecryptInput.value = "";
+  }
+  if (decryptoInterceptInput) {
+    decryptoInterceptInput.value = "";
+  }
+  if (decryptoSudden1) {
+    decryptoSudden1.value = "";
+  }
+  if (decryptoSudden2) {
+    decryptoSudden2.value = "";
+  }
+  if (decryptoSudden3) {
+    decryptoSudden3.value = "";
+  }
+  if (decryptoSudden4) {
+    decryptoSudden4.value = "";
+  }
+  updateDecryptoActionButtons();
 }
 
 function clearDrawGuessState() {
@@ -1359,6 +1561,13 @@ function emitRoomStart() {
     const language = drawGuessLanguageSelect ? drawGuessLanguageSelect.value || "zh" : "zh";
     const guessMethod = drawGuessGuessMethodSelect ? drawGuessGuessMethodSelect.value || "normal" : "normal";
     payload.config = { language, guess_method: guessMethod };
+  } else if (currentGameType === "decrypto") {
+    const packs = getSelectedDecryptoPacks();
+    if (!packs.length) {
+      log("Select at least one word pack");
+      return;
+    }
+    payload.config = { word_packs: packs };
   }
   socket.emit("room:start", payload);
 }
@@ -1379,12 +1588,14 @@ function renderRoomState(state) {
     clearSkullSelection();
     clearCaboState();
     clearSkullState();
+    clearDecryptoState();
     clearDrawGuessState();
     clearSplendorState();
     clearAbracaState();
   }
   setGamePanelVisibility(currentGameType);
   updateDrawGuessLanguageRow();
+  updateDecryptoPackRow();
   playersList.innerHTML = "";
   state.players.forEach((p) => {
     const line = document.createElement("div");
@@ -1849,6 +2060,318 @@ function updateCoyoteActionButtons() {
     button.disabled = !allowed;
   });
   updateCoyoteBidControls(currentCoyoteView);
+}
+
+function formatDecryptoTeamLabel(teamId) {
+  if (teamId === "white") {
+    return "White";
+  }
+  if (teamId === "black") {
+    return "Black";
+  }
+  return teamId || "-";
+}
+
+function formatDecryptoCode(code) {
+  if (!Array.isArray(code) || code.length !== 3) {
+    return "-";
+  }
+  return code.join(".");
+}
+
+function parseDecryptoCodeInput(value) {
+  if (!value) {
+    return null;
+  }
+  const digits = value.match(/[1-4]/g);
+  if (!digits || digits.length !== 3) {
+    return null;
+  }
+  const code = digits.map((digit) => Number.parseInt(digit, 10));
+  if (new Set(code).size !== 3) {
+    return null;
+  }
+  return code;
+}
+
+function isDecryptoActionAvailable(actionType) {
+  if (!currentDecryptoView || !Array.isArray(currentDecryptoView.legal_actions)) {
+    return false;
+  }
+  if (!currentDecryptoView.legal_actions.includes(actionType)) {
+    return false;
+  }
+  if (actionType === "submit_clues") {
+    const clues = [decryptoClue1, decryptoClue2, decryptoClue3]
+      .map((input) => (input ? input.value.trim() : ""))
+      .filter((text) => text);
+    return clues.length === 3;
+  }
+  if (actionType === "submit_decrypt") {
+    return !!parseDecryptoCodeInput(decryptoDecryptInput ? decryptoDecryptInput.value : "");
+  }
+  if (actionType === "submit_intercept") {
+    return !!parseDecryptoCodeInput(decryptoInterceptInput ? decryptoInterceptInput.value : "");
+  }
+  if (actionType === "submit_sudden_death") {
+    const guesses = [decryptoSudden1, decryptoSudden2, decryptoSudden3, decryptoSudden4]
+      .map((input) => (input ? input.value.trim() : ""))
+      .filter((text) => text);
+    return guesses.length === 4;
+  }
+  return true;
+}
+
+function updateDecryptoActionButtons() {
+  if (currentGameType !== "decrypto") {
+    Object.values(decryptoActionButtons).forEach((button) => {
+      if (!button) {
+        return;
+      }
+      button.classList.remove("action-allowed");
+      button.disabled = true;
+    });
+    return;
+  }
+  Object.entries(decryptoActionButtons).forEach(([actionType, button]) => {
+    if (!button) {
+      return;
+    }
+    const allowed = isDecryptoActionAvailable(actionType);
+    if (allowed) {
+      button.classList.add("action-allowed");
+    } else {
+      button.classList.remove("action-allowed");
+    }
+    button.disabled = !allowed;
+  });
+}
+
+function renderDecryptoTeams(view) {
+  if (!decryptoTeams) {
+    return;
+  }
+  decryptoTeams.innerHTML = "";
+  ["white", "black"].forEach((teamId) => {
+    const team = view.teams ? view.teams[teamId] : null;
+    if (!team) {
+      return;
+    }
+    const wrapper = document.createElement("div");
+    wrapper.className = "decrypto-team";
+
+    const header = document.createElement("div");
+    header.className = "decrypto-team-header";
+    header.textContent = `${formatDecryptoTeamLabel(teamId)} Team`;
+    wrapper.appendChild(header);
+
+    const meta = document.createElement("div");
+    meta.className = "decrypto-team-meta";
+    meta.textContent = `Intercepts ${team.intercepts} | Miscommunications ${team.miscommunications}`;
+    wrapper.appendChild(meta);
+
+    const encryptorName = team.encryptor_id ? findPlayerName(view, team.encryptor_id) : "-";
+    const encryptorLine = document.createElement("div");
+    encryptorLine.textContent = `Encryptor: ${encryptorName}`;
+    wrapper.appendChild(encryptorLine);
+
+    const playerNames = (team.players || []).map((p) => p.name || p.player_id).join(", ");
+    const playersLine = document.createElement("div");
+    playersLine.textContent = `Players: ${playerNames || "-"}`;
+    wrapper.appendChild(playersLine);
+
+    const interceptStatus = view.round > 1 ? (team.intercept_submitted ? "submitted" : "pending") : "n/a";
+    const statusLine = document.createElement("div");
+    statusLine.textContent = `Clues: ${team.clues_submitted ? "submitted" : "pending"} | Decrypt: ${
+      team.decrypt_submitted ? "submitted" : "pending"
+    } | Intercept: ${interceptStatus}`;
+    wrapper.appendChild(statusLine);
+
+    const keywordsLabel = document.createElement("div");
+    keywordsLabel.textContent = "Keywords:";
+    wrapper.appendChild(keywordsLabel);
+
+    if (team.keywords && team.keywords.length) {
+      const keywordRow = document.createElement("div");
+      keywordRow.className = "decrypto-keywords";
+      team.keywords.forEach((word, idx) => {
+        const item = document.createElement("div");
+        item.className = "decrypto-keyword";
+        item.textContent = `${idx + 1}. ${word}`;
+        keywordRow.appendChild(item);
+      });
+      wrapper.appendChild(keywordRow);
+    } else {
+      const hidden = document.createElement("div");
+      hidden.textContent = "Hidden";
+      wrapper.appendChild(hidden);
+    }
+
+    decryptoTeams.appendChild(wrapper);
+  });
+}
+
+function renderDecryptoCurrentClues(view) {
+  if (!decryptoCurrentClues) {
+    return;
+  }
+  decryptoCurrentClues.innerHTML = "";
+  ["white", "black"].forEach((teamId) => {
+    const team = view.teams ? view.teams[teamId] : null;
+    if (!team) {
+      return;
+    }
+    const row = document.createElement("div");
+    const label = document.createElement("strong");
+    label.textContent = `${formatDecryptoTeamLabel(teamId)}: `;
+    row.appendChild(label);
+
+    const clues = team.current_clues;
+    const clueText = Array.isArray(clues) && clues.length ? clues.join(" | ") : "-";
+    const textNode = document.createElement("span");
+    textNode.textContent = clueText;
+    row.appendChild(textNode);
+    decryptoCurrentClues.appendChild(row);
+  });
+}
+
+function renderDecryptoHistory(view) {
+  if (!decryptoHistory) {
+    return;
+  }
+  decryptoHistory.innerHTML = "";
+  ["white", "black"].forEach((teamId) => {
+    const team = view.teams ? view.teams[teamId] : null;
+    if (!team) {
+      return;
+    }
+    const section = document.createElement("div");
+    section.className = "decrypto-team";
+
+    const header = document.createElement("div");
+    header.className = "decrypto-team-header";
+    header.textContent = `${formatDecryptoTeamLabel(teamId)} History`;
+    section.appendChild(header);
+
+    const table = document.createElement("table");
+    table.className = "decrypto-history-table";
+    const headRow = document.createElement("tr");
+    for (let idx = 1; idx <= 4; idx += 1) {
+      const th = document.createElement("th");
+      th.textContent = `Keyword ${idx}`;
+      headRow.appendChild(th);
+    }
+    table.appendChild(headRow);
+
+    const dataRow = document.createElement("tr");
+    for (let idx = 1; idx <= 4; idx += 1) {
+      const td = document.createElement("td");
+      const items = team.history_by_keyword ? team.history_by_keyword[String(idx)] : null;
+      if (Array.isArray(items) && items.length) {
+        td.textContent = items.join(", ");
+      } else {
+        td.textContent = "-";
+      }
+      dataRow.appendChild(td);
+    }
+    table.appendChild(dataRow);
+    section.appendChild(table);
+    decryptoHistory.appendChild(section);
+  });
+}
+
+function renderDecryptoSummary(view) {
+  if (!decryptoSummary || !decryptoSummaryBody) {
+    return;
+  }
+  const summary = view.last_round_summary;
+  if (!summary || !summary.teams) {
+    decryptoSummary.classList.add("hidden");
+    decryptoSummaryBody.textContent = "-";
+    return;
+  }
+  decryptoSummary.classList.remove("hidden");
+  while (decryptoSummaryBody.firstChild) {
+    decryptoSummaryBody.removeChild(decryptoSummaryBody.firstChild);
+  }
+  ["white", "black"].forEach((teamId) => {
+    const info = summary.teams[teamId];
+    if (!info) {
+      return;
+    }
+    const line = document.createElement("div");
+    const decryptGuess = formatDecryptoCode(info.decrypt_guess);
+    const decryptResult = info.decrypt_correct ? "correct" : "wrong";
+    let interceptPart = "-";
+    if (summary.round > 1) {
+      const interceptGuess = formatDecryptoCode(info.intercept_guess);
+      const interceptResult = info.intercept_correct ? "correct" : "wrong";
+      interceptPart = `${interceptGuess} (${interceptResult})`;
+    }
+    const codeText = formatDecryptoCode(info.code);
+    const clues = Array.isArray(info.clues) && info.clues.length ? info.clues.join(" | ") : "-";
+    line.textContent = `${formatDecryptoTeamLabel(teamId)} code ${codeText} | clues ${clues} | decrypt ${decryptGuess} (${decryptResult}) | intercept ${interceptPart}`;
+    decryptoSummaryBody.appendChild(line);
+  });
+}
+
+function renderDecryptoGameState(data) {
+  const view = data.view;
+  currentDecryptoView = view;
+  if (currentGameType !== "decrypto") {
+    currentGameType = "decrypto";
+    setGamePanelVisibility("decrypto");
+  }
+
+  if (decryptoPhaseLabel) {
+    decryptoPhaseLabel.textContent = view.phase || "-";
+  }
+  if (decryptoRoundLabel) {
+    decryptoRoundLabel.textContent = view.round ?? "-";
+  }
+  if (decryptoMaxRoundsLabel) {
+    decryptoMaxRoundsLabel.textContent = view.max_rounds ?? "-";
+  }
+  if (decryptoWinnerLabel) {
+    if (view.winner === "draw") {
+      decryptoWinnerLabel.textContent = "Draw";
+    } else if (view.winner) {
+      decryptoWinnerLabel.textContent = formatDecryptoTeamLabel(view.winner);
+    } else {
+      decryptoWinnerLabel.textContent = "-";
+    }
+  }
+  if (decryptoYourTeamLabel) {
+    decryptoYourTeamLabel.textContent = view.team_id ? formatDecryptoTeamLabel(view.team_id) : "-";
+  }
+  if (decryptoYourRoleLabel) {
+    if (!view.team_id) {
+      decryptoYourRoleLabel.textContent = "-";
+    } else {
+      decryptoYourRoleLabel.textContent = view.is_encryptor ? "Encryptor" : "Teammate";
+    }
+  }
+  if (decryptoCurrentCodeLabel) {
+    decryptoCurrentCodeLabel.textContent = view.current_code ? formatDecryptoCode(view.current_code) : "-";
+  }
+
+  if (decryptoEncryptionArea) {
+    decryptoEncryptionArea.classList.toggle("hidden", view.phase !== "encryption");
+  }
+  if (decryptoGuessArea) {
+    decryptoGuessArea.classList.toggle("hidden", view.phase !== "guessing");
+  }
+  if (decryptoSuddenDeathArea) {
+    decryptoSuddenDeathArea.classList.toggle("hidden", view.phase !== "sudden_death");
+  }
+
+  renderDecryptoTeams(view);
+  renderDecryptoCurrentClues(view);
+  renderDecryptoHistory(view);
+  renderDecryptoSummary(view);
+
+  logGameEvents(data);
+  updateDecryptoActionButtons();
 }
 
 function updateDrawGuessColorButtons() {
@@ -3264,6 +3787,10 @@ function renderGameState(data) {
     renderCoyoteGameState(data);
     return;
   }
+  if (gameType === "decrypto") {
+    renderDecryptoGameState(data);
+    return;
+  }
   if (gameType === "draw_guess") {
     renderDrawGuessGameState(data);
     return;
@@ -3621,6 +4148,82 @@ if (coyoteResetBtn) {
   coyoteResetBtn.addEventListener("click", () => {
     emitRoomStart();
   });
+}
+
+if (decryptoSubmitCluesBtn) {
+  decryptoSubmitCluesBtn.addEventListener("click", () => {
+    const clues = [decryptoClue1, decryptoClue2, decryptoClue3].map((input) =>
+      input ? input.value.trim() : ""
+    );
+    if (clues.some((clue) => !clue)) {
+      log("Enter three clues");
+      return;
+    }
+    sendAction({ type: "submit_clues", clues });
+  });
+}
+
+if (decryptoSubmitDecryptBtn) {
+  decryptoSubmitDecryptBtn.addEventListener("click", () => {
+    const code = parseDecryptoCodeInput(decryptoDecryptInput ? decryptoDecryptInput.value : "");
+    if (!code) {
+      log("Enter a decrypt code like 1.2.3");
+      return;
+    }
+    sendAction({ type: "submit_decrypt", guess: code });
+  });
+}
+
+if (decryptoSubmitInterceptBtn) {
+  decryptoSubmitInterceptBtn.addEventListener("click", () => {
+    const code = parseDecryptoCodeInput(decryptoInterceptInput ? decryptoInterceptInput.value : "");
+    if (!code) {
+      log("Enter an intercept code like 1.2.3");
+      return;
+    }
+    sendAction({ type: "submit_intercept", guess: code });
+  });
+}
+
+if (decryptoSubmitSuddenBtn) {
+  decryptoSubmitSuddenBtn.addEventListener("click", () => {
+    const guesses = [decryptoSudden1, decryptoSudden2, decryptoSudden3, decryptoSudden4].map(
+      (input) => (input ? input.value.trim() : "")
+    );
+    if (guesses.some((guess) => !guess)) {
+      log("Enter four keyword guesses");
+      return;
+    }
+    sendAction({ type: "submit_sudden_death", guesses });
+  });
+}
+
+if (decryptoClue1) {
+  decryptoClue1.addEventListener("input", () => updateDecryptoActionButtons());
+}
+if (decryptoClue2) {
+  decryptoClue2.addEventListener("input", () => updateDecryptoActionButtons());
+}
+if (decryptoClue3) {
+  decryptoClue3.addEventListener("input", () => updateDecryptoActionButtons());
+}
+if (decryptoDecryptInput) {
+  decryptoDecryptInput.addEventListener("input", () => updateDecryptoActionButtons());
+}
+if (decryptoInterceptInput) {
+  decryptoInterceptInput.addEventListener("input", () => updateDecryptoActionButtons());
+}
+if (decryptoSudden1) {
+  decryptoSudden1.addEventListener("input", () => updateDecryptoActionButtons());
+}
+if (decryptoSudden2) {
+  decryptoSudden2.addEventListener("input", () => updateDecryptoActionButtons());
+}
+if (decryptoSudden3) {
+  decryptoSudden3.addEventListener("input", () => updateDecryptoActionButtons());
+}
+if (decryptoSudden4) {
+  decryptoSudden4.addEventListener("input", () => updateDecryptoActionButtons());
 }
 
 drawGuessClearBtn.addEventListener("click", () => {

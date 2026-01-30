@@ -1,6 +1,7 @@
 from game.abraca_what import AbracaWhatGame
 from game.cabo import CaboGame
 from game.coyote import CoyoteGame
+from game.decrypto import DecryptoGame
 from game.draw_guess import DrawGuessGame
 from game.registry import GameDefinition, register_game
 from game.splendor import SplendorGame
@@ -178,6 +179,77 @@ DRAW_GUESS_CONFIG_SCHEMA = {
                 ]
             },
         },
+    },
+    "additionalProperties": False,
+}
+
+DECRYPTO_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "submit_clues"},
+                "clues": {
+                    "type": "array",
+                    "items": {"type": "string", "minLength": 1},
+                    "minItems": 3,
+                    "maxItems": 3,
+                },
+            },
+            "required": ["type", "clues"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "submit_decrypt"},
+                "guess": {
+                    "type": "array",
+                    "items": {"type": "integer", "minimum": 1, "maximum": 4},
+                    "minItems": 3,
+                    "maxItems": 3,
+                },
+            },
+            "required": ["type", "guess"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "submit_intercept"},
+                "guess": {
+                    "type": "array",
+                    "items": {"type": "integer", "minimum": 1, "maximum": 4},
+                    "minItems": 3,
+                    "maxItems": 3,
+                },
+            },
+            "required": ["type", "guess"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "submit_sudden_death"},
+                "guesses": {
+                    "type": "array",
+                    "items": {"type": "string", "minLength": 1},
+                    "minItems": 4,
+                    "maxItems": 4,
+                },
+            },
+            "required": ["type", "guesses"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+DECRYPTO_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "word_packs": {"type": "array", "items": {"type": "string"}},
+        "max_rounds": {"type": "integer", "minimum": 1},
     },
     "additionalProperties": False,
 }
@@ -410,5 +482,20 @@ register_game(
         module=DrawGuessGame,
         serialize=DrawGuessGame.serialize,
         deserialize=DrawGuessGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=DecryptoGame.game_id,
+        name="Decrypto",
+        min_players=DecryptoGame.min_players,
+        max_players=DecryptoGame.max_players,
+        turn_mode="simultaneous",
+        action_schema=DECRYPTO_ACTION_SCHEMA,
+        config_schema=DECRYPTO_CONFIG_SCHEMA,
+        module=DecryptoGame,
+        serialize=DecryptoGame.serialize,
+        deserialize=DecryptoGame.deserialize,
     )
 )

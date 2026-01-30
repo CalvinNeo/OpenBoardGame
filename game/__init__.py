@@ -1,6 +1,7 @@
 from game.abraca_what import AbracaWhatGame
 from game.cabo import CaboGame
 from game.coyote import CoyoteGame
+from game.decrypto import DecryptoGame
 from game.draw_guess import DrawGuessGame
 from game.registry import GameDefinition, get_game, list_games
 from game.splendor import SplendorGame
@@ -12,6 +13,7 @@ __all__ = [
     "CaboGame",
     "DrawGuessGame",
     "CoyoteGame",
+    "DecryptoGame",
     "SplendorGame",
     "SkullGame",
     "GameDefinition",

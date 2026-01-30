@@ -10,6 +10,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from game import GameDefinition, get_game, list_games
+from game.decrypto import get_decrypto_word_packs
 
 sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
 fastapi_app = FastAPI()
@@ -19,6 +20,11 @@ fastapi_app.mount("/static", StaticFiles(directory="static"), name="static")
 @fastapi_app.get("/")
 async def index():
     return FileResponse("static/index.html")
+
+
+@fastapi_app.get("/api/decrypto/word_packs")
+async def decrypto_word_packs():
+    return {"packs": get_decrypto_word_packs()}
 
 
 app = socketio.ASGIApp(sio, fastapi_app)

@@ -41,6 +41,7 @@
                 <option value="" selected disabled>Select a game</option>
                 <option value="cabo">Cabo</option>
                 <option value="coyote">Coyote</option>
+                <option value="decrypto">Decrypto</option>
                 <option value="skull">Skull</option>
                 <option value="draw_guess">Draw & Guess</option>
                 <option value="splendor">Splendor</option>
@@ -96,6 +97,10 @@
                 <option value="normal" selected>Normal</option>
                 <option value="cv">CV</option>
               </select>
+            </div>
+            <div class="row hidden" id="decryptoPackRow">
+              <label>Decrypto Word Packs</label>
+              <div id="decryptoPackOptions" class="decrypto-pack-options"></div>
             </div>
             <div class="row actions">
               <button id="readyBtn">Toggle Ready</button>
@@ -240,6 +245,67 @@
 
               <h3>Players</h3>
               <div id="coyotePlayers"></div>
+            </div>
+
+            <div id="decryptoPanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="decryptoPhase">-</span></div>
+                <div>Round: <span id="decryptoRound">-</span>/<span id="decryptoMaxRounds">-</span></div>
+                <div>Winner: <span id="decryptoWinner">-</span></div>
+              </div>
+              <div class="row">
+                <div>Your Team: <span id="decryptoYourTeam">-</span></div>
+                <div>Your Role: <span id="decryptoYourRole">-</span></div>
+                <div>Current Code: <span id="decryptoCurrentCode">-</span></div>
+              </div>
+
+              <h3>Teams</h3>
+              <div id="decryptoTeams"></div>
+
+              <h3>Current Clues</h3>
+              <div id="decryptoCurrentClues"></div>
+
+              <h3>History</h3>
+              <div id="decryptoHistory"></div>
+
+              <div id="decryptoSummary" class="round-notice hidden">
+                <div class="round-notice-title">Last Round</div>
+                <div id="decryptoSummaryBody" class="round-notice-body">-</div>
+              </div>
+
+              <div id="decryptoEncryptionArea">
+                <h3>Submit Clues</h3>
+                <div class="row actions">
+                  <input id="decryptoClue1" type="text" placeholder="Clue 1" />
+                  <input id="decryptoClue2" type="text" placeholder="Clue 2" />
+                  <input id="decryptoClue3" type="text" placeholder="Clue 3" />
+                  <button id="decryptoSubmitCluesBtn">Submit Clues</button>
+                </div>
+              </div>
+
+              <div id="decryptoGuessArea">
+                <h3>Submit Decrypt Guess</h3>
+                <div class="row actions">
+                  <input id="decryptoDecryptInput" type="text" placeholder="1.2.3" />
+                  <button id="decryptoSubmitDecryptBtn">Submit Decrypt</button>
+                </div>
+                <h3>Submit Intercept Guess</h3>
+                <div class="row actions">
+                  <input id="decryptoInterceptInput" type="text" placeholder="1.2.3" />
+                  <button id="decryptoSubmitInterceptBtn">Submit Intercept</button>
+                </div>
+              </div>
+
+              <div id="decryptoSuddenDeathArea" class="hidden">
+                <h3>Sudden Death</h3>
+                <div class="row actions">
+                  <input id="decryptoSudden1" type="text" placeholder="Keyword 1" />
+                  <input id="decryptoSudden2" type="text" placeholder="Keyword 2" />
+                  <input id="decryptoSudden3" type="text" placeholder="Keyword 3" />
+                  <input id="decryptoSudden4" type="text" placeholder="Keyword 4" />
+                  <button id="decryptoSubmitSuddenBtn">Submit Sudden Death</button>
+                </div>
+              </div>
             </div>
 
             <div id="drawGuessPanel" class="hidden">
