@@ -131,3 +131,5 @@
 
 ## AI bots
 
+阅读 10.ai.md 来了解如何实现 AI bots。
+
