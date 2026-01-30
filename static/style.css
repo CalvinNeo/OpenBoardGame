@@ -1071,6 +1071,19 @@ body.log-open {
     padding: 8px 10px;
   }
 
+  #abracaPanel .row.actions {
+    gap: 6px;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  #abracaPanel .row.actions button {
+    font-size: 12px;
+    padding: 6px 6px;
+    width: calc(25% - 6px);
+    flex: 0 0 calc(25% - 6px);
+  }
+
   .hand {
     flex-wrap: wrap;
   }
