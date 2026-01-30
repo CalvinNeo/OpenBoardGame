@@ -777,6 +777,18 @@ body.log-open {
   cursor: pointer;
 }
 
+.draw-guess-brush {
+  gap: 6px;
+}
+
+.draw-guess-size {
+  width: 40px;
+  height: 32px;
+  padding: 0;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
 .draw-guess-color.color-active {
   border-color: #111827;
   box-shadow: 0 0 0 2px rgba(17, 24, 39, 0.15);
@@ -1092,6 +1104,24 @@ body.log-open {
   .draw-guess-colors button:not(.draw-guess-color) {
     grid-column: 1 / -1;
     width: 100%;
+  }
+
+  .draw-guess-brush {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    align-items: center;
+  }
+
+  .draw-guess-brush .draw-guess-color-label {
+    grid-column: 1 / -1;
+    margin-right: 0;
+  }
+
+  .draw-guess-brush .draw-guess-size {
+    width: 32px;
+    height: 32px;
+    justify-self: center;
   }
 
   #abracaPanel .row.actions {

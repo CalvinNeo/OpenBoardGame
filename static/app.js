@@ -21,6 +21,7 @@ let drawGuessIsDrawing = false;
 let drawGuessHasDrawn = false;
 let drawGuessIsErasing = false;
 let drawGuessBrushColor = "#000000";
+let drawGuessBrushSize = 3;
 let splendorSelectedMarket = null;
 let splendorSelectedReserved = null;
 let splendorSelectedNoble = null;
@@ -115,6 +116,10 @@ const drawGuessRestartBtn = document.getElementById("drawGuessRestartBtn");
 const drawGuessColorPalette = document.getElementById("drawGuessColorPalette");
 const drawGuessColorButtons = drawGuessColorPalette
   ? Array.from(drawGuessColorPalette.querySelectorAll("button[data-color]"))
+  : [];
+const drawGuessBrushSizes = document.getElementById("drawGuessBrushSizes");
+const drawGuessBrushButtons = drawGuessBrushSizes
+  ? Array.from(drawGuessBrushSizes.querySelectorAll("button[data-size]"))
   : [];
 const drawGuessCtx = drawGuessCanvas ? drawGuessCanvas.getContext("2d") : null;
 
@@ -723,8 +728,10 @@ function clearDrawGuessState() {
   drawGuessIsDrawing = false;
   drawGuessHasDrawn = false;
   drawGuessBrushColor = "#000000";
+  drawGuessBrushSize = 3;
   setDrawGuessTool(false);
   updateDrawGuessColorButtons();
+  updateDrawGuessBrushButtons();
   drawGuessPhaseLabel.textContent = "-";
   drawGuessRoundLabel.textContent = "-";
   drawGuessTotalRoundsLabel.textContent = "-";
@@ -1633,6 +1640,35 @@ function updateDrawGuessColorButtons() {
   });
 }
 
+function updateDrawGuessBrushButtons() {
+  if (!drawGuessBrushButtons.length) {
+    return;
+  }
+  drawGuessBrushButtons.forEach((button) => {
+    const size = Number.parseFloat(button.dataset.size);
+    const isActive = Number.isFinite(size) && size === drawGuessBrushSize;
+    button.classList.toggle("tool-active", isActive);
+    button.setAttribute("aria-pressed", isActive ? "true" : "false");
+  });
+}
+
+function getDrawGuessLineWidth() {
+  const baseSize = Number.isFinite(drawGuessBrushSize) ? drawGuessBrushSize : 3;
+  return drawGuessIsErasing ? baseSize * 4 : baseSize;
+}
+
+function setDrawGuessBrushSize(size) {
+  const nextSize = Number.parseFloat(size);
+  if (!Number.isFinite(nextSize) || nextSize <= 0) {
+    return;
+  }
+  drawGuessBrushSize = nextSize;
+  if (drawGuessCtx) {
+    drawGuessCtx.lineWidth = getDrawGuessLineWidth();
+  }
+  updateDrawGuessBrushButtons();
+}
+
 function setDrawGuessColor(color) {
   if (typeof color !== "string" || !color.trim()) {
     return;
@@ -1651,7 +1687,7 @@ function setDrawGuessTool(isErasing) {
   if (drawGuessCtx) {
     drawGuessCtx.globalCompositeOperation = drawGuessIsErasing ? "destination-out" : "source-over";
     drawGuessCtx.strokeStyle = drawGuessIsErasing ? "rgba(0, 0, 0, 1)" : drawGuessBrushColor;
-    drawGuessCtx.lineWidth = drawGuessIsErasing ? 12 : 3;
+    drawGuessCtx.lineWidth = getDrawGuessLineWidth();
     drawGuessCtx.beginPath();
   }
   if (drawGuessEraserBtn) {
@@ -1722,6 +1758,7 @@ function setupDrawGuessCanvas() {
   setDrawGuessTool(false);
   clearDrawGuessCanvas();
   updateDrawGuessColorButtons();
+  updateDrawGuessBrushButtons();
 
   drawGuessCanvas.addEventListener("mousedown", startDrawGuess);
   drawGuessCanvas.addEventListener("mousemove", moveDrawGuess);
@@ -1763,6 +1800,9 @@ function updateDrawGuessButtons() {
     drawGuessColorButtons.forEach((button) => {
       button.disabled = true;
     });
+    drawGuessBrushButtons.forEach((button) => {
+      button.disabled = true;
+    });
     return;
   }
   Object.entries(drawGuessActionButtons).forEach(([actionType, button]) => {
@@ -1780,6 +1820,9 @@ function updateDrawGuessButtons() {
     drawGuessEraserBtn.disabled = !canDraw;
   }
   drawGuessColorButtons.forEach((button) => {
+    button.disabled = !canDraw;
+  });
+  drawGuessBrushButtons.forEach((button) => {
     button.disabled = !canDraw;
   });
 }
@@ -3303,6 +3346,17 @@ if (drawGuessColorButtons.length) {
       const color = button.dataset.color;
       if (color) {
         setDrawGuessColor(color);
+      }
+    });
+  });
+}
+
+if (drawGuessBrushButtons.length) {
+  drawGuessBrushButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const size = Number.parseFloat(button.dataset.size);
+      if (Number.isFinite(size)) {
+        setDrawGuessBrushSize(size);
       }
     });
   });
