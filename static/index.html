@@ -217,23 +217,25 @@
                 <div>Current Turn: <span id="coyoteTurn">-</span></div>
               </div>
               <div class="row">
-                <div>Last Bid: <span id="coyoteBid">-</span></div>
-                <div>Bidder: <span id="coyoteBidder">-</span></div>
+                <div>Last Bid: <span id="coyoteBid" class="coyote-bid-highlight">-</span></div>
+                <div>Bidder: <span id="coyoteBidder" class="coyote-bid-highlight">-</span></div>
                 <div>Winner: <span id="coyoteWinner">-</span></div>
               </div>
-              <div class="row">
-                <div>Last Total: <span id="coyoteLastTotal">-</span></div>
-                <div>Last Loser: <span id="coyoteLastLoser">-</span></div>
-              </div>
-              <div class="row">
-                <div>Last Summary: <span id="coyoteSummary">-</span></div>
+              <div id="coyoteRoundNotice" class="round-notice hidden">
+                <div id="coyoteRoundNoticeTitle" class="round-notice-title">Last Round</div>
+                <div id="coyoteRoundNoticeBody" class="round-notice-body">-</div>
               </div>
 
               <h3>Actions</h3>
               <div class="row actions">
-                <input id="coyoteBidInput" type="number" min="1" placeholder="Bid" />
+                <button id="coyoteBidMinusBtn">-</button>
+                <input id="coyoteBidInput" type="number" min="1" step="1" placeholder="Bid" />
+                <button id="coyoteBidPlusBtn">+</button>
                 <button id="coyoteBidBtn">Bid</button>
                 <button id="coyoteChallengeBtn">Challenge</button>
+              </div>
+              <div class="row actions">
+                <button id="coyoteResetBtn">Reset Game</button>
               </div>
 
               <h3>Players</h3>

@@ -130,6 +130,18 @@ h1 {
   color: #1f2937;
 }
 
+#coyoteRoundNoticeBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.coyote-bid-highlight {
+  color: #dc2626;
+  font-weight: 700;
+  font-size: 18px;
+}
+
 button.action-allowed {
   background: #1f6feb;
   border-color: #1f6feb;

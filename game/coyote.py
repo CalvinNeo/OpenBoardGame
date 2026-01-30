@@ -374,6 +374,7 @@ class CoyoteGame:
             "current_turn": state["current_turn"],
             "last_bid": state.get("last_bid"),
             "last_bidder": state.get("last_bidder"),
+            "your_card": _card_label(state["players"].get(viewer_id, {}).get("card")),
             "players": players_view,
             "legal_actions": CoyoteGame.get_legal_actions(state, viewer_id),
             "last_round_summary": state.get("last_round_summary"),

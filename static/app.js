@@ -102,12 +102,15 @@ const coyoteTurnLabel = document.getElementById("coyoteTurn");
 const coyoteBidLabel = document.getElementById("coyoteBid");
 const coyoteBidderLabel = document.getElementById("coyoteBidder");
 const coyoteWinnerLabel = document.getElementById("coyoteWinner");
-const coyoteLastTotalLabel = document.getElementById("coyoteLastTotal");
-const coyoteLastLoserLabel = document.getElementById("coyoteLastLoser");
-const coyoteSummaryLabel = document.getElementById("coyoteSummary");
+const coyoteRoundNotice = document.getElementById("coyoteRoundNotice");
+const coyoteRoundNoticeTitle = document.getElementById("coyoteRoundNoticeTitle");
+const coyoteRoundNoticeBody = document.getElementById("coyoteRoundNoticeBody");
 const coyoteBidInput = document.getElementById("coyoteBidInput");
+const coyoteBidMinusBtn = document.getElementById("coyoteBidMinusBtn");
+const coyoteBidPlusBtn = document.getElementById("coyoteBidPlusBtn");
 const coyoteBidBtn = document.getElementById("coyoteBidBtn");
 const coyoteChallengeBtn = document.getElementById("coyoteChallengeBtn");
+const coyoteResetBtn = document.getElementById("coyoteResetBtn");
 const coyotePlayers = document.getElementById("coyotePlayers");
 
 const drawGuessPhaseLabel = document.getElementById("drawGuessPhase");
@@ -755,9 +758,18 @@ function clearCoyoteState() {
   coyoteBidLabel.textContent = "-";
   coyoteBidderLabel.textContent = "-";
   coyoteWinnerLabel.textContent = "-";
-  coyoteLastTotalLabel.textContent = "-";
-  coyoteLastLoserLabel.textContent = "-";
-  coyoteSummaryLabel.textContent = "-";
+  if (coyoteRoundNotice) {
+    coyoteRoundNotice.classList.add("hidden");
+  }
+  if (coyoteRoundNoticeBody) {
+    coyoteRoundNoticeBody.textContent = "-";
+  }
+  if (coyoteBidInput) {
+    coyoteBidInput.value = "";
+  }
+  if (coyoteResetBtn) {
+    coyoteResetBtn.disabled = true;
+  }
   coyotePlayers.innerHTML = "";
   updateCoyoteActionButtons();
 }
@@ -1639,8 +1651,11 @@ function formatCoyoteSummary(view) {
   const loser = findPlayerName(view, summary.loser);
   const result = summary.success ? "challenge success" : "challenge fail";
   let text = `${result}: bid ${summary.bid}, total ${summary.actual_total}, loser ${loser}`;
-  if (Array.isArray(summary.mystery_draws) && summary.mystery_draws.length) {
-    text += ` | ? draws ${summary.mystery_draws.join(", ")}`;
+  if (Array.isArray(summary.mystery_draws)) {
+    const draws = summary.mystery_draws.filter((item) => item);
+    if (draws.length) {
+      text += ` | ? draws ${draws.join(", ")}`;
+    }
   }
   if (Array.isArray(summary.max_zero_applied) && summary.max_zero_applied.length) {
     text += ` | max->0 ${summary.max_zero_applied.join(", ")}`;
@@ -1650,6 +1665,78 @@ function formatCoyoteSummary(view) {
   }
   text += ` | bidder ${bidder}, challenger ${challenger}`;
   return text;
+}
+
+function getCoyoteMinBid(view) {
+  if (!view || view.last_bid === null || view.last_bid === undefined) {
+    return 1;
+  }
+  return Number(view.last_bid) + 1;
+}
+
+function updateCoyoteBidInput(view) {
+  if (!coyoteBidInput) {
+    return;
+  }
+  const minBid = getCoyoteMinBid(view);
+  coyoteBidInput.min = String(minBid);
+  const current = Number.parseInt(coyoteBidInput.value, 10);
+  const shouldUpdate = !Number.isInteger(current) || current < minBid;
+  if (shouldUpdate && document.activeElement !== coyoteBidInput) {
+    coyoteBidInput.value = minBid;
+  }
+}
+
+function updateCoyoteBidControls(view) {
+  if (!coyoteBidInput || !coyoteBidMinusBtn || !coyoteBidPlusBtn) {
+    return;
+  }
+  const canEdit =
+    view &&
+    Array.isArray(view.legal_actions) &&
+    view.legal_actions.includes("bid") &&
+    view.phase !== "game_over";
+  coyoteBidInput.disabled = !canEdit;
+  coyoteBidMinusBtn.disabled = !canEdit;
+  coyoteBidPlusBtn.disabled = !canEdit;
+  if (canEdit) {
+    const minBid = getCoyoteMinBid(view);
+    const current = Number.parseInt(coyoteBidInput.value, 10);
+    coyoteBidMinusBtn.disabled = !Number.isInteger(current) || current <= minBid;
+  }
+}
+
+function adjustCoyoteBid(delta) {
+  if (!coyoteBidInput) {
+    return;
+  }
+  const minBid = getCoyoteMinBid(currentCoyoteView);
+  let current = Number.parseInt(coyoteBidInput.value, 10);
+  if (!Number.isInteger(current)) {
+    current = minBid;
+  }
+  const next = Math.max(minBid, current + delta);
+  coyoteBidInput.value = next;
+  updateCoyoteActionButtons();
+}
+
+function renderCoyoteRoundNotice(view) {
+  if (!coyoteRoundNotice || !coyoteRoundNoticeBody) {
+    return;
+  }
+  coyoteRoundNotice.classList.remove("hidden");
+  while (coyoteRoundNoticeBody.firstChild) {
+    coyoteRoundNoticeBody.removeChild(coyoteRoundNoticeBody.firstChild);
+  }
+  const summaryText = view.last_round_summary ? formatCoyoteSummary(view) : "No previous round yet.";
+  const summaryLine = document.createElement("div");
+  summaryLine.textContent = summaryText;
+  coyoteRoundNoticeBody.appendChild(summaryLine);
+
+  const yourCard = view.your_card || "-";
+  const cardLine = document.createElement("div");
+  cardLine.textContent = `Your hidden card: ${yourCard}`;
+  coyoteRoundNoticeBody.appendChild(cardLine);
 }
 
 function renderCoyotePlayers(view) {
@@ -1749,6 +1836,7 @@ function updateCoyoteActionButtons() {
       button.classList.remove("action-allowed");
       button.disabled = true;
     });
+    updateCoyoteBidControls(null);
     return;
   }
   Object.entries(coyoteActionButtons).forEach(([actionType, button]) => {
@@ -1760,6 +1848,7 @@ function updateCoyoteActionButtons() {
     }
     button.disabled = !allowed;
   });
+  updateCoyoteBidControls(currentCoyoteView);
 }
 
 function updateDrawGuessColorButtons() {
@@ -3084,21 +3173,19 @@ function renderCoyoteGameState(data) {
   coyoteBidderLabel.textContent = view.last_bidder ? findPlayerName(view, view.last_bidder) : "-";
   coyoteWinnerLabel.textContent = view.winner ? findPlayerName(view, view.winner) : "-";
 
-  if (view.last_round_summary) {
-    coyoteLastTotalLabel.textContent = view.last_round_summary.actual_total ?? "-";
-    coyoteLastLoserLabel.textContent = view.last_round_summary.loser
-      ? findPlayerName(view, view.last_round_summary.loser)
-      : "-";
-    coyoteSummaryLabel.textContent = formatCoyoteSummary(view);
-  } else {
-    coyoteLastTotalLabel.textContent = "-";
-    coyoteLastLoserLabel.textContent = "-";
-    coyoteSummaryLabel.textContent = "-";
+  if (coyoteRoundNoticeTitle) {
+    coyoteRoundNoticeTitle.textContent = "Last Round";
   }
+  renderCoyoteRoundNotice(view);
+  updateCoyoteBidInput(view);
+  updateCoyoteBidControls(view);
 
   renderCoyotePlayers(view);
   logGameEvents(data);
   updateCoyoteActionButtons();
+  if (coyoteResetBtn) {
+    coyoteResetBtn.disabled = !(view && view.game_over);
+  }
 }
 
 function renderDrawGuessGameState(data) {
@@ -3364,6 +3451,18 @@ coyoteBidInput.addEventListener("input", () => {
   updateCoyoteActionButtons();
 });
 
+if (coyoteBidMinusBtn) {
+  coyoteBidMinusBtn.addEventListener("click", () => {
+    adjustCoyoteBid(-1);
+  });
+}
+
+if (coyoteBidPlusBtn) {
+  coyoteBidPlusBtn.addEventListener("click", () => {
+    adjustCoyoteBid(1);
+  });
+}
+
 document.getElementById("peekBtn").addEventListener("click", () => {
   if (selectedSlots.length !== 2) {
     log("Select two slots for initial peek");
@@ -3517,6 +3616,12 @@ coyoteBidBtn.addEventListener("click", () => {
 coyoteChallengeBtn.addEventListener("click", () => {
   sendAction({ type: "challenge" });
 });
+
+if (coyoteResetBtn) {
+  coyoteResetBtn.addEventListener("click", () => {
+    emitRoomStart();
+  });
+}
 
 drawGuessClearBtn.addEventListener("click", () => {
   clearDrawGuessCanvas();
