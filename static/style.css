@@ -1071,6 +1071,29 @@ body.log-open {
     padding: 8px 10px;
   }
 
+  .draw-guess-colors {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    align-items: center;
+  }
+
+  .draw-guess-colors .draw-guess-color-label {
+    grid-column: 1 / -1;
+    margin-right: 0;
+  }
+
+  .draw-guess-colors .draw-guess-color {
+    width: 32px;
+    height: 32px;
+    justify-self: center;
+  }
+
+  .draw-guess-colors button:not(.draw-guess-color) {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
   #abracaPanel .row.actions {
     gap: 6px;
     flex-direction: row;
