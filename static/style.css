@@ -1173,7 +1173,7 @@ body.log-open {
   #connectionPanel .compact-row {
     flex-direction: row;
     align-items: center;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
   }
 
   #connectionPanel .compact-row label {
@@ -1184,11 +1184,13 @@ body.log-open {
   #connectionPanel .compact-row select {
     width: auto;
     flex: 1 1 140px;
+    min-width: 0;
   }
 
   #connectionPanel .compact-row button {
     width: auto;
     flex: 0 0 auto;
+    white-space: nowrap;
   }
 
   #connectionPanel .row.actions {
