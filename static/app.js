@@ -26,6 +26,7 @@ let splendorSelectedReserved = null;
 let splendorSelectedNoble = null;
 let splendorTokenSelection = {};
 let splendorDiscardSelection = {};
+let splendorNobleCatalog = {};
 let createRoomPending = false;
 
 const nameInput = document.getElementById("nameInput");
@@ -764,6 +765,7 @@ function clearSplendorState() {
   splendorSelectedMarket = null;
   splendorSelectedReserved = null;
   splendorSelectedNoble = null;
+  splendorNobleCatalog = {};
   resetSplendorTokenSelection();
   resetSplendorDiscardSelection();
   if (splendorDiscardSelectionRow) {
@@ -2071,9 +2073,12 @@ function createSplendorCard(card, selected, options = {}) {
   return wrapper;
 }
 
-function createSplendorNobleCard(noble, selected) {
+function createSplendorNobleCard(noble, selected, options = {}) {
   const wrapper = document.createElement("div");
   wrapper.className = "splendor-card";
+  if (options.compact) {
+    wrapper.classList.add("compact");
+  }
   if (selected) {
     wrapper.classList.add("selected");
   }
@@ -2082,7 +2087,8 @@ function createSplendorNobleCard(noble, selected) {
   }
   const title = document.createElement("div");
   title.className = "card-title";
-  title.textContent = `${noble.id} (${noble.points})`;
+  const hasPoints = typeof noble.points === "number";
+  title.textContent = hasPoints ? `${noble.id} (${noble.points})` : `${noble.id}`;
   wrapper.appendChild(title);
 
   const costRow = document.createElement("div");
@@ -2093,6 +2099,12 @@ function createSplendorNobleCard(noble, selected) {
     chip.textContent = `${splendorColorLabels[entry.color] || entry.color}${entry.count}`;
     costRow.appendChild(chip);
   });
+  if (!costRow.childNodes.length) {
+    const chip = document.createElement("div");
+    chip.className = "cost-chip";
+    chip.textContent = "-";
+    costRow.appendChild(chip);
+  }
   wrapper.appendChild(costRow);
   return wrapper;
 }
@@ -2154,6 +2166,9 @@ function renderSplendorNobles(view) {
   splendorNobles.innerHTML = "";
   const nobles = view.nobles || [];
   nobles.forEach((noble) => {
+    if (noble && noble.id) {
+      splendorNobleCatalog[noble.id] = noble;
+    }
     const selected = splendorSelectedNoble === noble.id;
     const nobleEl = createSplendorNobleCard(noble, selected);
     nobleEl.addEventListener("click", () => {
@@ -2225,24 +2240,29 @@ function renderSplendorPlayers(view) {
     header.appendChild(score);
     card.appendChild(header);
 
-    const tokens = splendorColors
-      .map((color) => `${splendorColorLabels[color] || color}${(player.tokens && player.tokens[color]) || 0}`)
-      .join(" ");
     const bonuses = splendorBaseColors
       .map((color) => `${splendorColorLabels[color] || color}${(player.bonuses && player.bonuses[color]) || 0}`)
       .join(" ");
-    const nobles = player.nobles && player.nobles.length ? player.nobles.join(", ") : "-";
+    const playerNobles = Array.isArray(player.nobles) ? player.nobles : [];
+    const noblesCount = playerNobles.length;
 
     const meta = document.createElement("div");
     meta.className = "player-meta";
     const tokensLine = document.createElement("div");
-    tokensLine.textContent = `Tokens: ${tokens}`;
+    tokensLine.className = "splendor-token-row";
+    splendorColors.forEach((color) => {
+      const token = document.createElement("div");
+      token.className = `splendor-token gem-${color}`;
+      const count = (player.tokens && player.tokens[color]) || 0;
+      token.textContent = `${splendorColorLabels[color] || color}${count}`;
+      tokensLine.appendChild(token);
+    });
     const bonusesLine = document.createElement("div");
     bonusesLine.textContent = `Bonuses: ${bonuses}`;
     const purchasedCards = Array.isArray(player.purchased) ? player.purchased : [];
     const purchasedCount = typeof player.purchased_count === "number" ? player.purchased_count : purchasedCards.length;
     const countsLine = document.createElement("div");
-    countsLine.textContent = `Reserved: ${player.reserved_count} | Purchased: ${purchasedCount} | Nobles: ${nobles}`;
+    countsLine.textContent = `Reserved: ${player.reserved_count} | Purchased: ${purchasedCount} | Nobles: ${noblesCount}`;
     meta.appendChild(tokensLine);
     meta.appendChild(bonusesLine);
     meta.appendChild(countsLine);
@@ -2269,6 +2289,29 @@ function renderSplendorPlayers(view) {
     }
     purchasedSection.appendChild(purchasedList);
     card.appendChild(purchasedSection);
+
+    const noblesSection = document.createElement("div");
+    noblesSection.className = "splendor-player-purchased";
+    const noblesTitle = document.createElement("div");
+    noblesTitle.className = "splendor-player-purchased-title";
+    noblesTitle.textContent = "Nobles";
+    noblesSection.appendChild(noblesTitle);
+    const noblesList = document.createElement("div");
+    noblesList.className = "splendor-cards splendor-player-purchased-list";
+    if (playerNobles.length) {
+      playerNobles.forEach((nobleId) => {
+        const nobleData = splendorNobleCatalog[nobleId] || { id: nobleId };
+        const nobleEl = createSplendorNobleCard(nobleData, false, { compact: true });
+        noblesList.appendChild(nobleEl);
+      });
+    } else {
+      const empty = document.createElement("div");
+      empty.className = "splendor-player-empty";
+      empty.textContent = "-";
+      noblesList.appendChild(empty);
+    }
+    noblesSection.appendChild(noblesList);
+    card.appendChild(noblesSection);
     splendorPlayers.appendChild(card);
   });
 }
