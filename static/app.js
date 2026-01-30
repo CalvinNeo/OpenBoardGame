@@ -31,6 +31,8 @@ let splendorTokenSelection = {};
 let splendorDiscardSelection = {};
 let splendorNobleCatalog = {};
 let createRoomPending = false;
+let pendingReadyAfterJoin = false;
+let pendingReadyRoomId = null;
 let decryptoWordPacks = [];
 let decryptoPackSelections = new Set(["basic"]);
 let decryptoPacksLoaded = false;
@@ -677,11 +679,18 @@ function requestRoomList() {
   socket.emit("room:list", {});
 }
 
-function attemptJoinRoom(rid) {
+function attemptJoinRoom(rid, options = {}) {
   const name = getPlayerName();
   if (!name || !rid) {
     log("Name and room ID required");
     return;
+  }
+  if (options.readyAfterJoin) {
+    pendingReadyAfterJoin = true;
+    pendingReadyRoomId = rid;
+  } else {
+    pendingReadyAfterJoin = false;
+    pendingReadyRoomId = null;
   }
   socket.emit("room:join", { name, room_id: rid });
 }
@@ -762,15 +771,25 @@ function renderRoomList(rooms) {
     actions.className = "room-item-actions";
     const auth = getRoomAuth(room.room_id);
     const canReconnect = auth && auth.player_id && auth.reconnect_token;
+    const joinDisabled =
+      room.status !== "lobby" || (maxPlayers !== null && (room.player_count || 0) >= maxPlayers);
     const joinBtn = document.createElement("button");
     joinBtn.type = "button";
     joinBtn.textContent = "Join";
-    joinBtn.disabled =
-      room.status !== "lobby" || (maxPlayers !== null && (room.player_count || 0) >= maxPlayers);
+    joinBtn.disabled = joinDisabled;
     joinBtn.addEventListener("click", () => {
       attemptJoinRoom(room.room_id);
     });
     actions.appendChild(joinBtn);
+
+    const joinReadyBtn = document.createElement("button");
+    joinReadyBtn.type = "button";
+    joinReadyBtn.textContent = "Join Ready";
+    joinReadyBtn.disabled = joinDisabled;
+    joinReadyBtn.addEventListener("click", () => {
+      attemptJoinRoom(room.room_id, { readyAfterJoin: true });
+    });
+    actions.appendChild(joinReadyBtn);
 
     if (canReconnect) {
       const reconnectBtn = document.createElement("button");
@@ -1607,6 +1626,17 @@ function renderRoomState(state) {
     line.textContent = `${p.seat + 1}. ${p.name} (${tags.join(", ") || "human"})`;
     playersList.appendChild(line);
   });
+
+  if (pendingReadyAfterJoin && pendingReadyRoomId === state.room_id) {
+    pendingReadyAfterJoin = false;
+    pendingReadyRoomId = null;
+    if (state.status === "lobby") {
+      const me = playerId ? state.players.find((p) => p.player_id === playerId) : null;
+      if (!me || !me.ready) {
+        socket.emit("room:ready", { room_id: state.room_id, ready: true });
+      }
+    }
+  }
 }
 
 function renderHand(view) {

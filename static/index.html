@@ -63,12 +63,12 @@
         <section class="panel collapsible" id="roomListPanel">
           <div class="panel-header">
             <h2>Rooms</h2>
-            <button class="collapse-btn" type="button" aria-expanded="true">Hide</button>
+            <div class="panel-header-actions">
+              <button id="refreshRoomsBtn" type="button">Refresh</button>
+              <button class="collapse-btn" type="button" aria-expanded="true">Hide</button>
+            </div>
           </div>
           <div class="panel-body">
-            <div class="row actions">
-              <button id="refreshRoomsBtn">Refresh</button>
-            </div>
             <div id="roomList" class="room-list"></div>
           </div>
         </section>
@@ -102,7 +102,7 @@
               <label>Decrypto Word Packs</label>
               <div id="decryptoPackOptions" class="decrypto-pack-options"></div>
             </div>
-            <div class="row actions">
+            <div class="row actions room-actions">
               <button id="readyBtn">Toggle Ready</button>
               <button id="startBtn">Start Game</button>
               <button id="addBotBtn">Add Bot</button>
