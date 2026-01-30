@@ -498,8 +498,20 @@ class DrawGuessGame:
                 image_data = drawing_entry.get("image_data") if drawing_entry else None
                 guess = _bot_guess_cv(image_data, prompt_pool, language)
                 if guess:
+                    print(
+                        f"[draw_guess] bot_guess method=cv bot_id={bot_id} guess={guess}",
+                        flush=True,
+                    )
                     return {"type": "submit_guess", "text": guess}
+                print(
+                    f"[draw_guess] bot_guess method=cv fallback=normal bot_id={bot_id}",
+                    flush=True,
+                )
             guess = _bot_guess_normal(hint, prompt_pool, language)
+            print(
+                f"[draw_guess] bot_guess method=normal bot_id={bot_id} guess={guess} hint={hint or ''}",
+                flush=True,
+            )
             return {"type": "submit_guess", "text": guess}
         return None
 
