@@ -8,7 +8,6 @@ from game.decrypto_ai import (
     pick_decrypt_guess,
     pick_encryptor_clues,
     pick_intercept_guess,
-    pick_sudden_death_guess,
 )
 
 TEAM_IDS = ("white", "black")
@@ -256,28 +255,17 @@ def _normalize_guess(value: object) -> Optional[List[int]]:
     return numbers
 
 
-def _validate_clues(team_keywords: List[str], used_clues: List[str], clues: object) -> Optional[List[str]]:
+def _validate_clues(clues: object) -> Optional[List[str]]:
     if not isinstance(clues, list) or len(clues) != 3:
         return None
     cleaned: List[str] = []
-    normalized: List[str] = []
-    keyword_norms = [_normalize_text(word) for word in team_keywords]
     for clue in clues:
         if not isinstance(clue, str):
             return None
         cleaned_clue = " ".join(clue.strip().split())
         if not cleaned_clue:
             return None
-        normalized_clue = _normalize_text(cleaned_clue)
-        if normalized_clue in normalized:
-            return None
-        if normalized_clue in used_clues:
-            return None
-        for keyword in keyword_norms:
-            if keyword and keyword in normalized_clue:
-                return None
         cleaned.append(cleaned_clue)
-        normalized.append(normalized_clue)
     return cleaned
 
 
@@ -355,23 +343,10 @@ def _apply_round_results(state: Dict) -> None:
     state["last_round_summary"] = summary
 
 
-def _score(team: Dict) -> int:
-    return int(team.get("intercepts", 0)) - int(team.get("miscommunications", 0))
-
-
 def _set_winner(state: Dict, winner: str) -> None:
     state["winner"] = winner
     state["game_over"] = True
     state["phase"] = "game_over"
-
-
-def _start_sudden_death(state: Dict) -> None:
-    state["phase"] = "sudden_death"
-    state["sudden_death"] = {
-        "guesses": {"white": None, "black": None},
-        "submitted_by": {},
-        "result": None,
-    }
 
 
 def _check_end_conditions(state: Dict) -> None:
@@ -385,15 +360,7 @@ def _check_end_conditions(state: Dict) -> None:
     both_intercepts = white_intercepts >= 2 and black_intercepts >= 2
     both_mis = white_mis >= 2 and black_mis >= 2
     if both_intercepts or both_mis:
-        white_score = _score(white)
-        black_score = _score(black)
-        if white_score > black_score:
-            _set_winner(state, "white")
-            return
-        if black_score > white_score:
-            _set_winner(state, "black")
-            return
-        _start_sudden_death(state)
+        _set_winner(state, "draw")
         return
 
     if white_intercepts >= 2:
@@ -411,41 +378,16 @@ def _check_end_conditions(state: Dict) -> None:
         return
 
     if state["round"] >= int(state["config"]["max_rounds"]):
-        _start_sudden_death(state)
+        _set_winner(state, "draw")
 
 
 def _resolve_round(state: Dict) -> None:
     _apply_round_results(state)
     _check_end_conditions(state)
-    if state.get("game_over") or state["phase"] == "sudden_death":
+    if state.get("game_over"):
         return
     _rotate_encryptors(state)
     _start_round(state, increment_round=True)
-
-
-def _normalize_sudden_guess(value: object) -> Optional[List[str]]:
-    if not isinstance(value, list) or len(value) != 4:
-        return None
-    cleaned: List[str] = []
-    for item in value:
-        if not isinstance(item, str):
-            return None
-        text = " ".join(item.strip().split())
-        if not text:
-            return None
-        cleaned.append(text)
-    return cleaned
-
-
-def _count_keyword_matches(guesses: List[str], keywords: List[str]) -> int:
-    remaining = [_normalize_text(word) for word in keywords]
-    count = 0
-    for guess in guesses:
-        key = _normalize_text(guess)
-        if key in remaining:
-            remaining.remove(key)
-            count += 1
-    return count
 
 
 class DecryptoGame:
@@ -507,7 +449,6 @@ class DecryptoGame:
             "last_round_summary": None,
             "winner": None,
             "game_over": False,
-            "sudden_death": None,
         }
         _start_round(state, increment_round=False)
         return state
@@ -528,13 +469,6 @@ class DecryptoGame:
             if player_id == encryptor:
                 if not team_data.get("clues"):
                     actions.append("submit_clues")
-            if team_data.get("clues") and player_id != encryptor and team_data.get("decrypt_guess") is None:
-                actions.append("submit_decrypt")
-            if state["round"] > 1:
-                opponent = _opponent(team_id)
-                opponent_data = state["round_data"][opponent]
-                if opponent_data.get("clues") and opponent_data.get("intercept_guess") is None:
-                    actions.append("submit_intercept")
             return actions
 
         if phase == "guessing":
@@ -545,13 +479,6 @@ class DecryptoGame:
                 opponent = _opponent(team_id)
                 if state["round_data"][opponent].get("intercept_guess") is None:
                     actions.append("submit_intercept")
-            return actions
-
-        if phase == "sudden_death":
-            sudden = state.get("sudden_death") or {}
-            guesses = sudden.get("guesses") or {}
-            if guesses.get(team_id) is None:
-                actions.append("submit_sudden_death")
             return actions
 
         return []
@@ -574,11 +501,7 @@ class DecryptoGame:
                     return [], "only encryptor can submit clues"
                 if state["round_data"][team_id].get("clues"):
                     return [], "clues already submitted"
-                clues = _validate_clues(
-                    state["teams"][team_id]["keywords"],
-                    state["teams"][team_id]["used_clues"],
-                    action.get("clues"),
-                )
+                clues = _validate_clues(action.get("clues"))
                 if clues is None:
                     return [], "invalid clues"
                 normalized = [_normalize_text(clue) for clue in clues]
@@ -589,37 +512,6 @@ class DecryptoGame:
 
                 if all(state["round_data"][tid].get("clues") for tid in TEAM_IDS):
                     state["phase"] = "guessing"
-                return events, None
-            if action_type == "submit_decrypt":
-                if not state["round_data"][team_id].get("clues"):
-                    return [], "submit clues first"
-                if player_id == _current_encryptor(state, team_id):
-                    return [], "encryptor cannot submit decrypt"
-                if state["round_data"][team_id].get("decrypt_guess") is not None:
-                    return [], "decrypt already submitted"
-                guess = _normalize_guess(action.get("guess"))
-                if guess is None:
-                    return [], "invalid guess"
-                state["round_data"][team_id]["decrypt_guess"] = guess
-                state["round_data"][team_id]["decrypt_by"] = player_id
-                events.append({"type": "decrypto:decrypt_submitted", "payload": {"team": team_id}})
-                return events, None
-            if action_type == "submit_intercept":
-                if state["round"] <= 1:
-                    return [], "intercept not available in round 1"
-                opponent = _opponent(team_id)
-                if not state["round_data"][opponent].get("clues"):
-                    return [], "intercept not available yet"
-                if state["round_data"][opponent].get("intercept_guess") is not None:
-                    return [], "intercept already submitted"
-                guess = _normalize_guess(action.get("guess"))
-                if guess is None:
-                    return [], "invalid guess"
-                state["round_data"][opponent]["intercept_guess"] = guess
-                state["round_data"][opponent]["intercept_by"] = player_id
-                events.append(
-                    {"type": "decrypto:intercept_submitted", "payload": {"team": team_id}}
-                )
                 return events, None
             return [], "invalid action"
 
@@ -660,42 +552,6 @@ class DecryptoGame:
                 )
             return events, None
 
-        if phase == "sudden_death":
-            if action_type != "submit_sudden_death":
-                return [], "invalid action"
-            sudden = state.get("sudden_death")
-            if not sudden:
-                return [], "sudden death not initialized"
-            guesses = sudden.get("guesses") or {}
-            if guesses.get(team_id) is not None:
-                return [], "sudden death already submitted"
-            guess_list = _normalize_sudden_guess(action.get("guesses"))
-            if guess_list is None:
-                return [], "invalid guesses"
-            guesses[team_id] = guess_list
-            sudden["guesses"] = guesses
-            sudden.setdefault("submitted_by", {})[team_id] = player_id
-            events.append({"type": "decrypto:sudden_death_submitted", "payload": {"team": team_id}})
-
-            if all(guesses.get(tid) for tid in TEAM_IDS):
-                white_count = _count_keyword_matches(
-                    guesses["white"], state["teams"]["black"]["keywords"]
-                )
-                black_count = _count_keyword_matches(
-                    guesses["black"], state["teams"]["white"]["keywords"]
-                )
-                sudden["result"] = {
-                    "white": white_count,
-                    "black": black_count,
-                }
-                if white_count > black_count:
-                    _set_winner(state, "white")
-                elif black_count > white_count:
-                    _set_winner(state, "black")
-                else:
-                    _set_winner(state, "draw")
-            return events, None
-
         return [], "invalid phase"
 
     @staticmethod
@@ -724,7 +580,8 @@ class DecryptoGame:
             if state.get("game_over") or viewer_team == team_id:
                 keywords = list(team["keywords"])
             data = state["round_data"].get(team_id, {})
-            clues_public = list(data["clues"]) if data.get("clues") else None
+            show_clues = state.get("phase") != "encryption"
+            clues_public = list(data["clues"]) if data.get("clues") and show_clues else None
             decrypt_guess = None
             intercept_guess = None
             if viewer_team == team_id:
@@ -761,21 +618,6 @@ class DecryptoGame:
             data = state["round_data"].get(viewer_team, {})
             current_code = list(data["code"]) if data.get("code") else None
 
-        sudden = state.get("sudden_death")
-        sudden_view = None
-        if sudden:
-            guesses = sudden.get("guesses") or {}
-            your_guess = guesses.get(viewer_team) if viewer_team else None
-            opponent_guess = None
-            if state.get("game_over") and viewer_team:
-                opponent_guess = guesses.get(_opponent(viewer_team))
-            sudden_view = {
-                "submitted": {tid: guesses.get(tid) is not None for tid in TEAM_IDS},
-                "your_guess": your_guess,
-                "opponent_guess": opponent_guess,
-                "result": sudden.get("result"),
-            }
-
         return {
             "game_id": DecryptoGame.game_id,
             "you": viewer_id,
@@ -788,7 +630,6 @@ class DecryptoGame:
             "teams": teams_view,
             "players": players_view,
             "last_round_summary": state.get("last_round_summary"),
-            "sudden_death": sudden_view,
             "winner": state.get("winner"),
             "game_over": state.get("game_over", False),
             "legal_actions": DecryptoGame.get_legal_actions(state, viewer_id),
@@ -829,13 +670,6 @@ class DecryptoGame:
                         return {"type": "submit_intercept", "guess": guess}
             return None
 
-        if phase == "sudden_death":
-            sudden = state.get("sudden_death")
-            guesses = sudden.get("guesses") if sudden else None
-            if guesses and guesses.get(team_id) is None:
-                guess = pick_sudden_death_guess(4)
-                if guess:
-                    return {"type": "submit_sudden_death", "guesses": guess}
         return None
 
     @staticmethod

@@ -26,8 +26,3 @@ def pick_intercept_guess(
 ) -> Optional[List[int]]:
     """Placeholder for opponent interception AI."""
     return None
-
-
-def pick_sudden_death_guess(keyword_count: int) -> Optional[List[str]]:
-    """Placeholder for sudden death keyword guessing AI."""
-    return None

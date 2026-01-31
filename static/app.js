@@ -136,7 +136,6 @@ const decryptoSummary = document.getElementById("decryptoSummary");
 const decryptoSummaryBody = document.getElementById("decryptoSummaryBody");
 const decryptoEncryptionArea = document.getElementById("decryptoEncryptionArea");
 const decryptoGuessArea = document.getElementById("decryptoGuessArea");
-const decryptoSuddenDeathArea = document.getElementById("decryptoSuddenDeathArea");
 const decryptoClue1 = document.getElementById("decryptoClue1");
 const decryptoClue2 = document.getElementById("decryptoClue2");
 const decryptoClue3 = document.getElementById("decryptoClue3");
@@ -145,11 +144,6 @@ const decryptoDecryptInput = document.getElementById("decryptoDecryptInput");
 const decryptoSubmitDecryptBtn = document.getElementById("decryptoSubmitDecryptBtn");
 const decryptoInterceptInput = document.getElementById("decryptoInterceptInput");
 const decryptoSubmitInterceptBtn = document.getElementById("decryptoSubmitInterceptBtn");
-const decryptoSudden1 = document.getElementById("decryptoSudden1");
-const decryptoSudden2 = document.getElementById("decryptoSudden2");
-const decryptoSudden3 = document.getElementById("decryptoSudden3");
-const decryptoSudden4 = document.getElementById("decryptoSudden4");
-const decryptoSubmitSuddenBtn = document.getElementById("decryptoSubmitSuddenBtn");
 
 const drawGuessPhaseLabel = document.getElementById("drawGuessPhase");
 const drawGuessRoundLabel = document.getElementById("drawGuessRound");
@@ -265,7 +259,6 @@ const decryptoActionButtons = {
   submit_clues: decryptoSubmitCluesBtn,
   submit_decrypt: decryptoSubmitDecryptBtn,
   submit_intercept: decryptoSubmitInterceptBtn,
-  submit_sudden_death: decryptoSubmitSuddenBtn,
 };
 
 const drawGuessActionButtons = {
@@ -983,18 +976,6 @@ function clearDecryptoState() {
   }
   if (decryptoInterceptInput) {
     decryptoInterceptInput.value = "";
-  }
-  if (decryptoSudden1) {
-    decryptoSudden1.value = "";
-  }
-  if (decryptoSudden2) {
-    decryptoSudden2.value = "";
-  }
-  if (decryptoSudden3) {
-    decryptoSudden3.value = "";
-  }
-  if (decryptoSudden4) {
-    decryptoSudden4.value = "";
   }
   updateDecryptoActionButtons();
 }
@@ -2148,12 +2129,6 @@ function isDecryptoActionAvailable(actionType) {
   if (actionType === "submit_intercept") {
     return !!parseDecryptoCodeInput(decryptoInterceptInput ? decryptoInterceptInput.value : "");
   }
-  if (actionType === "submit_sudden_death") {
-    const guesses = [decryptoSudden1, decryptoSudden2, decryptoSudden3, decryptoSudden4]
-      .map((input) => (input ? input.value.trim() : ""))
-      .filter((text) => text);
-    return guesses.length === 4;
-  }
   return true;
 }
 
@@ -2390,18 +2365,11 @@ function renderDecryptoGameState(data) {
     decryptoCurrentCodeLabel.textContent = view.current_code ? formatDecryptoCode(view.current_code) : "-";
   }
 
-  const decryptoLegalActions = Array.isArray(view.legal_actions) ? view.legal_actions : [];
-  const canGuessEarly =
-    decryptoLegalActions.includes("submit_decrypt") || decryptoLegalActions.includes("submit_intercept");
   if (decryptoEncryptionArea) {
     decryptoEncryptionArea.classList.toggle("hidden", view.phase !== "encryption");
   }
   if (decryptoGuessArea) {
-    const showGuessArea = view.phase === "guessing" || canGuessEarly;
-    decryptoGuessArea.classList.toggle("hidden", !showGuessArea);
-  }
-  if (decryptoSuddenDeathArea) {
-    decryptoSuddenDeathArea.classList.toggle("hidden", view.phase !== "sudden_death");
+    decryptoGuessArea.classList.toggle("hidden", view.phase !== "guessing");
   }
 
   renderDecryptoTeams(view);
@@ -4225,19 +4193,6 @@ if (decryptoSubmitInterceptBtn) {
   });
 }
 
-if (decryptoSubmitSuddenBtn) {
-  decryptoSubmitSuddenBtn.addEventListener("click", () => {
-    const guesses = [decryptoSudden1, decryptoSudden2, decryptoSudden3, decryptoSudden4].map(
-      (input) => (input ? input.value.trim() : "")
-    );
-    if (guesses.some((guess) => !guess)) {
-      log("Enter four keyword guesses");
-      return;
-    }
-    sendAction({ type: "submit_sudden_death", guesses });
-  });
-}
-
 if (decryptoClue1) {
   decryptoClue1.addEventListener("input", () => updateDecryptoActionButtons());
 }
@@ -4252,18 +4207,6 @@ if (decryptoDecryptInput) {
 }
 if (decryptoInterceptInput) {
   decryptoInterceptInput.addEventListener("input", () => updateDecryptoActionButtons());
-}
-if (decryptoSudden1) {
-  decryptoSudden1.addEventListener("input", () => updateDecryptoActionButtons());
-}
-if (decryptoSudden2) {
-  decryptoSudden2.addEventListener("input", () => updateDecryptoActionButtons());
-}
-if (decryptoSudden3) {
-  decryptoSudden3.addEventListener("input", () => updateDecryptoActionButtons());
-}
-if (decryptoSudden4) {
-  decryptoSudden4.addEventListener("input", () => updateDecryptoActionButtons());
 }
 
 drawGuessClearBtn.addEventListener("click", () => {

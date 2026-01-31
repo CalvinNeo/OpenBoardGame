@@ -228,20 +228,6 @@ DECRYPTO_ACTION_SCHEMA = {
             "required": ["type", "guess"],
             "additionalProperties": False,
         },
-        {
-            "type": "object",
-            "properties": {
-                "type": {"const": "submit_sudden_death"},
-                "guesses": {
-                    "type": "array",
-                    "items": {"type": "string", "minLength": 1},
-                    "minItems": 4,
-                    "maxItems": 4,
-                },
-            },
-            "required": ["type", "guesses"],
-            "additionalProperties": False,
-        },
     ],
 }
 
