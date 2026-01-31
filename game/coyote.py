@@ -345,6 +345,15 @@ class CoyoteGame:
             state["player_meta"].keys(),
             key=lambda pid: state["player_meta"][pid].get("seat", 0),
         )
+        last_summary = state.get("last_round_summary")
+        your_card = None
+        if isinstance(last_summary, dict):
+            summary_cards = last_summary.get("cards")
+            if isinstance(summary_cards, list):
+                for entry in summary_cards:
+                    if isinstance(entry, dict) and entry.get("player_id") == viewer_id:
+                        your_card = entry.get("card")
+                        break
         players_view = []
         for pid in player_ids:
             pdata = state["players"][pid]
@@ -374,10 +383,10 @@ class CoyoteGame:
             "current_turn": state["current_turn"],
             "last_bid": state.get("last_bid"),
             "last_bidder": state.get("last_bidder"),
-            "your_card": _card_label(state["players"].get(viewer_id, {}).get("card")),
+            "your_card": your_card,
             "players": players_view,
             "legal_actions": CoyoteGame.get_legal_actions(state, viewer_id),
-            "last_round_summary": state.get("last_round_summary"),
+            "last_round_summary": last_summary,
             "winner": state.get("winner"),
             "game_over": state.get("game_over", False),
             "config": {"max_penalties": state["config"]["max_penalties"]},
