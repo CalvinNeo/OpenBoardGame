@@ -1,0 +1,5 @@
+{
+  "path": "decrypto_vectors.vec",
+  "max_words": 80000,
+  "cjk_only": false
+}

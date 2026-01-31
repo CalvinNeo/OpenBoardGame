@@ -17,3 +17,5 @@ dist/
 
 .venv/
 venv/
+
+game/assets/decrypto_vectors.vec
