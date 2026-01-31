@@ -336,7 +336,7 @@ def _apply_round_results(state: Dict) -> None:
                     print(
                         f"[decrypto bot] 猜错了 (模式={mode_label}) "
                         f"类型=解密 目标队伍={team_id} 机器人={decrypt_by} "
-                        f"关键词={keywords} 密码={code} 猜测={decrypt_guess}",
+                        f"关键词={keywords} 线索={clues} 密码={code} 猜测={decrypt_guess}",
                         flush=True,
                     )
 
@@ -347,7 +347,7 @@ def _apply_round_results(state: Dict) -> None:
                     print(
                         f"[decrypto bot] 猜错了 (模式={mode_label}) "
                         f"类型=拦截 目标队伍={team_id} 机器人={intercept_by} "
-                        f"关键词={keywords} 密码={code} 猜测={intercept_guess}",
+                        f"关键词={keywords} 线索={clues} 密码={code} 猜测={intercept_guess}",
                         flush=True,
                     )
 
