@@ -184,6 +184,23 @@ input, select {
   background: #fafafa;
 }
 
+#playersList .player-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+#playersList .player-controls {
+  display: flex;
+  gap: 4px;
+}
+
+#playersList .player-controls button {
+  padding: 2px 6px;
+}
+
 #log {
   max-height: 240px;
   overflow-y: auto;

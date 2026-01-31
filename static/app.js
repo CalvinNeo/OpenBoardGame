@@ -1675,6 +1675,14 @@ function sendAction(action) {
   socket.emit("game:action", { room_id: roomId, action });
 }
 
+function emitSeatMove(direction) {
+  if (!roomId) {
+    log("Not in a room");
+    return;
+  }
+  socket.emit("room:move_seat", { room_id: roomId, direction });
+}
+
 function emitRoomStart() {
   if (!roomId) {
     log("Not in a room");
@@ -1728,7 +1736,12 @@ function renderRoomState(state) {
   updateDecryptoPackRow();
   updateDecryptoBotRow();
   playersList.innerHTML = "";
-  state.players.forEach((p) => {
+  const orderedPlayers = Array.isArray(state.players)
+    ? [...state.players].sort((a, b) => (a.seat ?? 0) - (b.seat ?? 0))
+    : [];
+  orderedPlayers.forEach((p, idx) => {
+    const row = document.createElement("div");
+    row.className = "player-row";
     const line = document.createElement("div");
     const tags = [];
     if (p.is_bot) tags.push("bot");
@@ -1736,7 +1749,27 @@ function renderRoomState(state) {
     if (!p.connected) tags.push("offline");
     if (p.player_id === playerId) tags.push("you");
     line.textContent = `${p.seat + 1}. ${p.name} (${tags.join(", ") || "human"})`;
-    playersList.appendChild(line);
+    row.appendChild(line);
+    if (state.status === "lobby" && p.player_id === playerId) {
+      const controls = document.createElement("div");
+      controls.className = "player-controls";
+      const upBtn = document.createElement("button");
+      upBtn.type = "button";
+      upBtn.textContent = "^";
+      upBtn.title = "Move up";
+      upBtn.disabled = idx === 0;
+      upBtn.addEventListener("click", () => emitSeatMove("up"));
+      const downBtn = document.createElement("button");
+      downBtn.type = "button";
+      downBtn.textContent = "v";
+      downBtn.title = "Move down";
+      downBtn.disabled = idx === orderedPlayers.length - 1;
+      downBtn.addEventListener("click", () => emitSeatMove("down"));
+      controls.appendChild(upBtn);
+      controls.appendChild(downBtn);
+      row.appendChild(controls);
+    }
+    playersList.appendChild(row);
   });
 
   if (pendingReadyAfterJoin && pendingReadyRoomId === state.room_id) {

@@ -118,3 +118,19 @@ class RoomSessionTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(old_player.connected)
         self.assertIsNone(old_player.socket_id)
         self.assertEqual(app.SESSIONS[sid_old]["room_id"], room_id_new)
+
+    async def test_move_seat_swaps_order(self):
+        sid_owner = "sid-owner"
+        room_id = await self._create_room(sid_owner, "Alice")
+        sid_bob = "sid-bob"
+        await app.on_room_join(sid_bob, {"room_id": room_id, "name": "Bob"})
+
+        await app.on_room_move_seat(sid_bob, {"direction": "up"})
+
+        room = app.ROOMS[room_id]
+        alice = next(player for player in room.players if player.name == "Alice")
+        bob = next(player for player in room.players if player.name == "Bob")
+        self.assertEqual(bob.seat, 0)
+        self.assertEqual(alice.seat, 1)
+        self.assertEqual(room.players[0].player_id, bob.player_id)
+        self.assertEqual(room.players[1].player_id, alice.player_id)

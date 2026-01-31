@@ -506,6 +506,53 @@ async def on_room_remove_bot(sid, data):
     await _emit_room_list_update()
 
 
+@sio.on("room:move_seat")
+async def on_room_move_seat(sid, data):
+    session = SESSIONS.get(sid)
+    if not session:
+        await _send_error(sid, "not in room")
+        return
+    room = _get_room(session.get("room_id"))
+    if not room:
+        await _send_error(sid, "room not found")
+        return
+    if room.status != "lobby":
+        await _send_error(sid, "game already started")
+        return
+    player = _find_player(room, session.get("player_id"))
+    if not player:
+        await _send_error(sid, "player not found")
+        return
+
+    direction = (data or {}).get("direction")
+    if direction not in ("up", "down"):
+        await _send_error(sid, "invalid direction")
+        return
+
+    ordered_players = sorted(room.players, key=lambda p: p.seat)
+    current_index = next(
+        (idx for idx, candidate in enumerate(ordered_players) if candidate.player_id == player.player_id),
+        None,
+    )
+    if current_index is None:
+        await _send_error(sid, "player not found")
+        return
+
+    target_index = current_index - 1 if direction == "up" else current_index + 1
+    if target_index < 0 or target_index >= len(ordered_players):
+        return
+
+    ordered_players[current_index], ordered_players[target_index] = (
+        ordered_players[target_index],
+        ordered_players[current_index],
+    )
+    for idx, candidate in enumerate(ordered_players):
+        candidate.seat = idx
+    room.players = ordered_players
+    await _emit_room_state(room)
+    await _emit_room_list_update()
+
+
 @sio.on("room:start")
 async def on_room_start(sid, data):
     session = SESSIONS.get(sid)
