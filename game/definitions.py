@@ -236,6 +236,7 @@ DECRYPTO_CONFIG_SCHEMA = {
     "properties": {
         "word_packs": {"type": "array", "items": {"type": "string"}},
         "max_rounds": {"type": "integer", "minimum": 1},
+        "bot_strategy": {"type": "string"},
     },
     "additionalProperties": False,
 }

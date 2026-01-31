@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 
 from game import GameDefinition, get_game, list_games
 from game.decrypto import get_decrypto_word_packs
+from game.decrypto_ai import get_bot_strategies
 
 sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
 fastapi_app = FastAPI()
@@ -25,6 +26,11 @@ async def index():
 @fastapi_app.get("/api/decrypto/word_packs")
 async def decrypto_word_packs():
     return {"packs": get_decrypto_word_packs()}
+
+
+@fastapi_app.get("/api/decrypto/bot_strategies")
+async def decrypto_bot_strategies():
+    return {"strategies": get_bot_strategies()}
 
 
 app = socketio.ASGIApp(sio, fastapi_app)

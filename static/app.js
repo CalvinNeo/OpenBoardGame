@@ -36,6 +36,9 @@ let pendingReadyRoomId = null;
 let decryptoWordPacks = [];
 let decryptoPackSelections = new Set(["basic"]);
 let decryptoPacksLoaded = false;
+let decryptoBotStrategies = [];
+let decryptoBotStrategiesLoaded = false;
+let decryptoBotStrategyId = "native";
 
 const nameInput = document.getElementById("nameInput");
 const connectionInfo = document.getElementById("connectionInfo");
@@ -57,6 +60,8 @@ const drawGuessGuessMethodRow = document.getElementById("drawGuessGuessMethodRow
 const drawGuessGuessMethodSelect = document.getElementById("drawGuessGuessMethodSelect");
 const decryptoPackRow = document.getElementById("decryptoPackRow");
 const decryptoPackOptions = document.getElementById("decryptoPackOptions");
+const decryptoBotRow = document.getElementById("decryptoBotRow");
+const decryptoBotSelect = document.getElementById("decryptoBotSelect");
 const caboPanel = document.getElementById("caboPanel");
 const skullPanel = document.getElementById("skullPanel");
 const coyotePanel = document.getElementById("coyotePanel");
@@ -596,6 +601,17 @@ function updateDecryptoPackRow() {
   }
 }
 
+function updateDecryptoBotRow() {
+  const showRow = currentRoomState && currentGameType === "decrypto" && currentRoomState.status === "lobby";
+  if (decryptoBotRow) {
+    decryptoBotRow.classList.toggle("hidden", !showRow);
+    decryptoBotRow.setAttribute("aria-hidden", (!showRow).toString());
+  }
+  if (showRow && !decryptoBotStrategiesLoaded) {
+    fetchDecryptoBotStrategies();
+  }
+}
+
 function fetchDecryptoPacks() {
   if (!decryptoPackOptions) {
     return;
@@ -611,6 +627,29 @@ function fetchDecryptoPacks() {
     .catch(() => {
       decryptoPackOptions.textContent = "Failed to load word packs.";
       decryptoPacksLoaded = false;
+    });
+}
+
+function fetchDecryptoBotStrategies() {
+  if (!decryptoBotSelect) {
+    return;
+  }
+  decryptoBotSelect.innerHTML = "";
+  const option = document.createElement("option");
+  option.value = "native";
+  option.textContent = "native";
+  decryptoBotSelect.appendChild(option);
+  decryptoBotSelect.disabled = true;
+  fetch("/api/decrypto/bot_strategies")
+    .then((response) => response.json())
+    .then((data) => {
+      decryptoBotStrategies = Array.isArray(data.strategies) ? data.strategies : [];
+      decryptoBotStrategiesLoaded = true;
+      renderDecryptoBotStrategies();
+    })
+    .catch(() => {
+      decryptoBotStrategiesLoaded = false;
+      decryptoBotSelect.disabled = false;
     });
 }
 
@@ -666,8 +705,58 @@ function renderDecryptoPackOptions() {
   });
 }
 
+function renderDecryptoBotStrategies() {
+  if (!decryptoBotSelect) {
+    return;
+  }
+  decryptoBotSelect.innerHTML = "";
+  if (!decryptoBotStrategies.length) {
+    const fallback = document.createElement("option");
+    fallback.value = "native";
+    fallback.textContent = "native";
+    decryptoBotSelect.appendChild(fallback);
+    decryptoBotSelect.value = "native";
+    decryptoBotStrategyId = "native";
+    decryptoBotSelect.disabled = false;
+    return;
+  }
+  const availableIds = new Set();
+  decryptoBotStrategies.forEach((strategy) => {
+    if (strategy.strategy_id) {
+      availableIds.add(strategy.strategy_id);
+    }
+  });
+  if (!availableIds.has(decryptoBotStrategyId)) {
+    decryptoBotStrategyId = availableIds.has("native")
+      ? "native"
+      : Array.from(availableIds)[0] || "native";
+  }
+  decryptoBotStrategies.forEach((strategy) => {
+    const strategyId = strategy.strategy_id;
+    if (!strategyId) {
+      return;
+    }
+    const option = document.createElement("option");
+    option.value = strategyId;
+    option.textContent = strategy.label || strategyId;
+    if (strategy.description) {
+      option.title = strategy.description;
+    }
+    decryptoBotSelect.appendChild(option);
+  });
+  decryptoBotSelect.value = decryptoBotStrategyId;
+  decryptoBotSelect.disabled = false;
+}
+
 function getSelectedDecryptoPacks() {
   return Array.from(decryptoPackSelections);
+}
+
+function getSelectedDecryptoBotStrategy() {
+  if (decryptoBotSelect && decryptoBotSelect.value) {
+    decryptoBotStrategyId = decryptoBotSelect.value;
+  }
+  return decryptoBotStrategyId || "native";
 }
 
 function requestRoomList() {
@@ -849,12 +938,17 @@ function resetRoomState() {
   setGamePanelVisibility(null);
   updateDrawGuessLanguageRow();
   updateDecryptoPackRow();
+  updateDecryptoBotRow();
   if (drawGuessLanguageSelect) {
     drawGuessLanguageSelect.value = "zh";
   }
   if (drawGuessGuessMethodSelect) {
     drawGuessGuessMethodSelect.value = "normal";
   }
+  if (decryptoBotSelect) {
+    decryptoBotSelect.value = "native";
+  }
+  decryptoBotStrategyId = "native";
   createRoomPending = false;
   setCreateGameRowVisible(false);
 }
@@ -1573,7 +1667,8 @@ function emitRoomStart() {
       log("Select at least one word pack");
       return;
     }
-    payload.config = { word_packs: packs };
+    const botStrategy = getSelectedDecryptoBotStrategy();
+    payload.config = { word_packs: packs, bot_strategy: botStrategy };
   }
   socket.emit("room:start", payload);
 }
@@ -1602,6 +1697,7 @@ function renderRoomState(state) {
   setGamePanelVisibility(currentGameType);
   updateDrawGuessLanguageRow();
   updateDecryptoPackRow();
+  updateDecryptoBotRow();
   playersList.innerHTML = "";
   state.players.forEach((p) => {
     const line = document.createElement("div");
@@ -4341,6 +4437,11 @@ if (decryptoDecryptInput) {
 }
 if (decryptoInterceptInput) {
   decryptoInterceptInput.addEventListener("input", () => updateDecryptoActionButtons());
+}
+if (decryptoBotSelect) {
+  decryptoBotSelect.addEventListener("change", () => {
+    decryptoBotStrategyId = decryptoBotSelect.value || "native";
+  });
 }
 
 drawGuessClearBtn.addEventListener("click", () => {

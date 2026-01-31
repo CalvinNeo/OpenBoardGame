@@ -5,6 +5,8 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from game.decrypto_ai import (
+    DEFAULT_BOT_STRATEGY_ID,
+    normalize_bot_strategy_id,
     pick_decrypt_guess,
     pick_encryptor_clues,
     pick_intercept_guess,
@@ -16,6 +18,7 @@ TEAM_LABELS = {"white": "White", "black": "Black"}
 DEFAULT_CONFIG = {
     "max_rounds": 8,
     "word_packs": ["basic"],
+    "bot_strategy": DEFAULT_BOT_STRATEGY_ID,
 }
 
 _PACK_INDEX_CACHE: Optional[List[Dict]] = None
@@ -144,6 +147,7 @@ def _merge_config(config: Optional[Dict]) -> Dict:
     cfg = {**DEFAULT_CONFIG}
     if config:
         cfg["word_packs"] = _normalize_pack_ids(config.get("word_packs"))
+        cfg["bot_strategy"] = normalize_bot_strategy_id(config.get("bot_strategy"))
         max_rounds = config.get("max_rounds")
         try:
             max_rounds = int(max_rounds)
@@ -640,6 +644,10 @@ class DecryptoGame:
         team_id = state.get("player_teams", {}).get(bot_id)
         if not team_id or state.get("game_over"):
             return None
+        strategy_id = None
+        config = state.get("config")
+        if isinstance(config, dict):
+            strategy_id = config.get("bot_strategy")
 
         phase = state.get("phase")
         data = state["round_data"].get(team_id, {})
@@ -650,6 +658,7 @@ class DecryptoGame:
                     data.get("code") or [],
                     state["teams"][team_id]["used_clues"],
                     state["teams"][team_id]["history"],
+                    strategy_id,
                 )
                 if clues:
                     return {"type": "submit_clues", "clues": clues}
@@ -658,14 +667,23 @@ class DecryptoGame:
         if phase == "guessing":
             if bot_id != _current_encryptor(state, team_id) and data.get("decrypt_guess") is None:
                 clues = data.get("clues") or []
-                guess = pick_decrypt_guess(clues, state["teams"][team_id]["keywords"], state["teams"][team_id]["history"])
+                guess = pick_decrypt_guess(
+                    clues,
+                    state["teams"][team_id]["keywords"],
+                    state["teams"][team_id]["history"],
+                    strategy_id,
+                )
                 if guess:
                     return {"type": "submit_decrypt", "guess": guess}
             if state["round"] > 1:
                 opponent = _opponent(team_id)
                 if state["round_data"][opponent].get("intercept_guess") is None:
                     opponent_clues = state["round_data"][opponent].get("clues") or []
-                    guess = pick_intercept_guess(opponent_clues, state["teams"][opponent]["history"])
+                    guess = pick_intercept_guess(
+                        opponent_clues,
+                        state["teams"][opponent]["history"],
+                        strategy_id,
+                    )
                     if guess:
                         return {"type": "submit_intercept", "guess": guess}
             return None

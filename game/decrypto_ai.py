@@ -1,9 +1,10 @@
 import json
 import math
 import re
+from dataclasses import dataclass
 from itertools import permutations
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Callable, Dict, Iterable, List, Optional, Tuple
 
 
 _CJK_RE = re.compile(r"[\u4e00-\u9fff]")
@@ -16,6 +17,18 @@ _TOP_N = 50
 _CONFIDENCE_THRESHOLD = 0.1
 
 _WORD_MODEL: Optional["WordVectorModel"] = None
+
+DEFAULT_BOT_STRATEGY_ID = "native"
+
+
+@dataclass(frozen=True)
+class BotStrategy:
+    strategy_id: str
+    label: str
+    description: str
+    pick_encryptor_clues: Callable[[List[str], List[int], List[str], List[Dict]], Optional[List[str]]]
+    pick_decrypt_guess: Callable[[List[str], List[str], List[Dict]], Optional[List[int]]]
+    pick_intercept_guess: Callable[[List[str], List[Dict]], Optional[List[int]]]
 
 
 def _normalize_text(value: Optional[str]) -> str:
@@ -237,13 +250,13 @@ def _score_candidate(
     return (sim_target * _ALPHA) - (sim_other * _BETA) - (sim_history * _GAMMA)
 
 
-def pick_encryptor_clues(
+def _native_pick_encryptor_clues(
     keywords: List[str],
     code: List[int],
     used_clues: List[str],
     history: List[Dict],
 ) -> Optional[List[str]]:
-    """Select clues for encryptor role using a simple vector-space heuristic."""
+    """Select clues for encryptor role using the native vector-space heuristic."""
     if not isinstance(keywords, list) or len(keywords) != 4:
         return None
     if not isinstance(code, list) or len(code) != 3:
@@ -302,12 +315,12 @@ def pick_encryptor_clues(
     return chosen
 
 
-def pick_decrypt_guess(
+def _native_pick_decrypt_guess(
     clues: List[str],
     keywords: List[str],
     history: List[Dict],
 ) -> Optional[List[int]]:
-    """Select decrypt guess for teammate role."""
+    """Select decrypt guess for teammate role (native)."""
     if not isinstance(clues, list) or len(clues) != 3:
         return None
     if not isinstance(keywords, list) or len(keywords) != 4:
@@ -333,11 +346,11 @@ def pick_decrypt_guess(
     return guess
 
 
-def pick_intercept_guess(
+def _native_pick_intercept_guess(
     clues: List[str],
     opponent_history: List[Dict],
 ) -> Optional[List[int]]:
-    """Select intercept guess for opponent role using centroid clustering."""
+    """Select intercept guess for opponent role using centroid clustering (native)."""
     if not isinstance(clues, list) or len(clues) != 3:
         return None
     model = _get_model()
@@ -373,3 +386,75 @@ def pick_intercept_guess(
     if not guess:
         return None
     return guess
+
+
+_BOT_STRATEGIES: Dict[str, BotStrategy] = {
+    "native": BotStrategy(
+        strategy_id="native",
+        label="native",
+        description="Offline heuristic using character n-grams and cosine similarity.",
+        pick_encryptor_clues=_native_pick_encryptor_clues,
+        pick_decrypt_guess=_native_pick_decrypt_guess,
+        pick_intercept_guess=_native_pick_intercept_guess,
+    )
+}
+
+
+def get_bot_strategies() -> List[Dict]:
+    strategies = []
+    for strategy in _BOT_STRATEGIES.values():
+        strategies.append(
+            {
+                "strategy_id": strategy.strategy_id,
+                "label": strategy.label,
+                "description": strategy.description,
+            }
+        )
+    strategies.sort(key=lambda item: item["strategy_id"])
+    return strategies
+
+
+def normalize_bot_strategy_id(strategy_id: Optional[str]) -> str:
+    if isinstance(strategy_id, str):
+        normalized = strategy_id.strip()
+        if normalized in _BOT_STRATEGIES:
+            return normalized
+    return DEFAULT_BOT_STRATEGY_ID
+
+
+def _resolve_strategy(strategy_id: Optional[str]) -> BotStrategy:
+    resolved = normalize_bot_strategy_id(strategy_id)
+    return _BOT_STRATEGIES[resolved]
+
+
+def pick_encryptor_clues(
+    keywords: List[str],
+    code: List[int],
+    used_clues: List[str],
+    history: List[Dict],
+    strategy_id: Optional[str] = None,
+) -> Optional[List[str]]:
+    """Select clues for encryptor role using a chosen bot strategy."""
+    strategy = _resolve_strategy(strategy_id)
+    return strategy.pick_encryptor_clues(keywords, code, used_clues, history)
+
+
+def pick_decrypt_guess(
+    clues: List[str],
+    keywords: List[str],
+    history: List[Dict],
+    strategy_id: Optional[str] = None,
+) -> Optional[List[int]]:
+    """Select decrypt guess for teammate role using a chosen bot strategy."""
+    strategy = _resolve_strategy(strategy_id)
+    return strategy.pick_decrypt_guess(clues, keywords, history)
+
+
+def pick_intercept_guess(
+    clues: List[str],
+    opponent_history: List[Dict],
+    strategy_id: Optional[str] = None,
+) -> Optional[List[int]]:
+    """Select intercept guess for opponent role using a chosen bot strategy."""
+    strategy = _resolve_strategy(strategy_id)
+    return strategy.pick_intercept_guess(clues, opponent_history)
