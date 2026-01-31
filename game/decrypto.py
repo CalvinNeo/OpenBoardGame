@@ -6,6 +6,7 @@ from typing import Dict, List, Optional, Tuple
 
 from game.decrypto_ai import (
     DEFAULT_BOT_STRATEGY_ID,
+    get_model_mode,
     normalize_bot_strategy_id,
     pick_decrypt_guess,
     pick_encryptor_clues,
@@ -303,6 +304,8 @@ def _history_by_keyword(history: List[Dict]) -> Dict[str, List[str]]:
 
 def _apply_round_results(state: Dict) -> None:
     summary = {"round": state["round"], "teams": {}}
+    model_mode = get_model_mode()
+    mode_label = "离线词向量" if model_mode == "embeddings" else "fallback"
     for team_id in TEAM_IDS:
         data = state["round_data"][team_id]
         code = list(data["code"]) if data.get("code") else None
@@ -323,6 +326,30 @@ def _apply_round_results(state: Dict) -> None:
             "decrypt_by": data.get("decrypt_by"),
             "intercept_by": data.get("intercept_by"),
         }
+
+        if code and clues:
+            keywords = list(state["teams"][team_id]["keywords"])
+            decrypt_by = data.get("decrypt_by")
+            if decrypt_by and not decrypt_correct:
+                meta = state.get("player_meta", {}).get(decrypt_by, {})
+                if meta.get("is_bot"):
+                    print(
+                        f"[decrypto bot] 猜错了 (模式={mode_label}) "
+                        f"类型=解密 目标队伍={team_id} 机器人={decrypt_by} "
+                        f"关键词={keywords} 密码={code} 猜测={decrypt_guess}",
+                        flush=True,
+                    )
+
+            intercept_by = data.get("intercept_by")
+            if state["round"] > 1 and intercept_by and intercept_correct is False:
+                meta = state.get("player_meta", {}).get(intercept_by, {})
+                if meta.get("is_bot"):
+                    print(
+                        f"[decrypto bot] 猜错了 (模式={mode_label}) "
+                        f"类型=拦截 目标队伍={team_id} 机器人={intercept_by} "
+                        f"关键词={keywords} 密码={code} 猜测={intercept_guess}",
+                        flush=True,
+                    )
 
         state["teams"][team_id]["history"].append(
             {

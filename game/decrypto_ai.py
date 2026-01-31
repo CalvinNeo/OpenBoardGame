@@ -40,6 +40,7 @@ _TOP_N = 50
 _CONFIDENCE_THRESHOLD = 0.1
 
 _WORD_MODEL: Optional["BaseVectorModel"] = None
+_MODEL_MODE: Optional[str] = None
 
 DEFAULT_BOT_STRATEGY_ID = "native"
 
@@ -596,13 +597,22 @@ def _load_vocabulary() -> List[str]:
 
 def _get_model() -> BaseVectorModel:
     global _WORD_MODEL
+    global _MODEL_MODE
     if _WORD_MODEL is None:
         embeddings = _load_embeddings()
         if embeddings:
             _WORD_MODEL = WordVectorModel(embeddings, fallback_vocabulary=_load_vocabulary())
+            _MODEL_MODE = "embeddings"
         else:
             _WORD_MODEL = NgramVectorModel(_load_vocabulary())
+            _MODEL_MODE = "fallback"
     return _WORD_MODEL
+
+
+def get_model_mode() -> str:
+    if _WORD_MODEL is None:
+        _get_model()
+    return _MODEL_MODE or "fallback"
 
 
 def _history_by_slot(history: List[Dict]) -> Dict[int, List[str]]:
