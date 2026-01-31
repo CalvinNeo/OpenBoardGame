@@ -6,7 +6,12 @@ import re
 import sys
 import time
 from pathlib import Path
-from typing import Iterable, Iterator, Optional, Tuple
+from typing import Callable, Dict, Iterable, Iterator, Optional, Tuple
+
+try:
+    from opencc import OpenCC
+except Exception:  # pragma: no cover - optional dependency
+    OpenCC = None
 
 
 _CJK_RE = re.compile(r"[\u4e00-\u9fff]")
@@ -14,6 +19,33 @@ _CJK_RE = re.compile(r"[\u4e00-\u9fff]")
 
 def _contains_cjk(text: str) -> bool:
     return bool(_CJK_RE.search(text or ""))
+
+
+def _build_traditional_filter(enabled: bool) -> Optional[Callable[[str], bool]]:
+    if not enabled:
+        return None
+    if OpenCC is None:
+        raise RuntimeError(
+            "Traditional filtering requires OpenCC. "
+            "Install with: python -m pip install opencc-python-reimplemented"
+        )
+    converter = OpenCC("t2s")
+    cache: Dict[str, bool] = {}
+
+    def _is_traditional(text: str) -> bool:
+        if not text:
+            return False
+        if text in cache:
+            return cache[text]
+        if not _contains_cjk(text):
+            cache[text] = False
+            return False
+        simplified = converter.convert(text)
+        result = simplified != text
+        cache[text] = result
+        return result
+
+    return _is_traditional
 
 
 def _open_text(path: Path) -> Iterator[str]:
@@ -36,14 +68,25 @@ def _parse_header(line: str) -> Optional[Tuple[int, int]]:
     return int(parts[0]), int(parts[1])
 
 
-def _write_config(config_path: Path, output_path: Path, max_words: int, cjk_only: bool) -> None:
+def _write_config(
+    config_path: Path,
+    output_path: Path,
+    max_words: int,
+    cjk_only: bool,
+    filter_traditional: bool,
+) -> None:
     assets_dir = Path(__file__).resolve().parents[1] / "game" / "assets"
     try:
         relative_path = output_path.resolve().relative_to(assets_dir.resolve())
         config_value = str(relative_path).replace(os.sep, "/")
     except ValueError:
         config_value = str(output_path)
-    payload = {"path": config_value, "max_words": max_words, "cjk_only": cjk_only}
+    payload = {
+        "path": config_value,
+        "max_words": max_words,
+        "cjk_only": cjk_only,
+        "filter_traditional": filter_traditional,
+    }
     config_path.parent.mkdir(parents=True, exist_ok=True)
     config_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -71,12 +114,14 @@ def _trim_embeddings(
     output_path: Path,
     max_words: int,
     cjk_only: bool,
+    filter_traditional: bool,
 ) -> Tuple[int, int]:
     header, lines = _iter_embedding_lines(_open_text(input_path))
     dim: Optional[int] = header[1] if header else None
     kept = 0
     total = 0
     seen = set()
+    is_traditional = _build_traditional_filter(filter_traditional)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", encoding="utf-8") as out_handle:
@@ -87,9 +132,11 @@ def _trim_embeddings(
             if len(parts) < 3:
                 continue
             word = parts[0].lstrip("\ufeff")
+            if word in seen:
+                continue
             if cjk_only and not _contains_cjk(word):
                 continue
-            if word in seen:
+            if is_traditional and is_traditional(word):
                 continue
             vector = parts[1:]
             if dim is None:
@@ -137,6 +184,19 @@ def main() -> int:
         help="Disable CJK-only filtering.",
     )
     parser.add_argument(
+        "--filter-traditional",
+        dest="filter_traditional",
+        action="store_true",
+        default=True,
+        help="Filter out traditional Chinese words using OpenCC (default).",
+    )
+    parser.add_argument(
+        "--no-filter-traditional",
+        dest="filter_traditional",
+        action="store_false",
+        help="Disable traditional Chinese filtering.",
+    )
+    parser.add_argument(
         "--config",
         default=str(Path("game") / "assets" / "decrypto_embeddings_config.json"),
         help="Config output path.",
@@ -155,8 +215,18 @@ def main() -> int:
         return 2
 
     start = time.time()
-    total, kept = _trim_embeddings(input_path, output_path, args.max_words, args.cjk_only)
-    _write_config(config_path, output_path, kept, args.cjk_only)
+    try:
+        total, kept = _trim_embeddings(
+            input_path,
+            output_path,
+            args.max_words,
+            args.cjk_only,
+            args.filter_traditional,
+        )
+    except RuntimeError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    _write_config(config_path, output_path, kept, args.cjk_only, args.filter_traditional)
     elapsed = time.time() - start
 
     print(
