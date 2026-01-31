@@ -7,6 +7,7 @@ from typing import Dict, List, Optional, Tuple
 from game.decrypto_ai import (
     DEFAULT_BOT_STRATEGY_ID,
     get_model_mode,
+    is_all_zero_similarity,
     normalize_bot_strategy_id,
     pick_decrypt_guess,
     pick_encryptor_clues,
@@ -333,10 +334,13 @@ def _apply_round_results(state: Dict) -> None:
             if decrypt_by and not decrypt_correct:
                 meta = state.get("player_meta", {}).get(decrypt_by, {})
                 if meta.get("is_bot"):
+                    all_zero_note = ""
+                    if is_all_zero_similarity(clues, keywords):
+                        all_zero_note = " 提示=相似度全0"
                     print(
                         f"[decrypto bot] 猜错了 (模式={mode_label}) "
                         f"类型=解密 目标队伍={team_id} 机器人={decrypt_by} "
-                        f"关键词={keywords} 线索={clues} 密码={code} 猜测={decrypt_guess}",
+                        f"关键词={keywords} 线索={clues} 密码={code} 猜测={decrypt_guess}{all_zero_note}",
                         flush=True,
                     )
 

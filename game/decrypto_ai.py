@@ -791,6 +791,24 @@ def _native_pick_decrypt_guess(
     return guess
 
 
+def is_all_zero_similarity(clues: List[str], keywords: List[str]) -> Optional[bool]:
+    """Return True when every clue-keyword similarity score is exactly zero."""
+    if not isinstance(clues, list) or len(clues) != 3:
+        return None
+    if not isinstance(keywords, list) or len(keywords) != 4:
+        return None
+    model = _get_model()
+    for clue in clues:
+        if not isinstance(clue, str):
+            return None
+        for keyword in keywords:
+            if not isinstance(keyword, str):
+                return None
+            if model.similarity(clue, keyword) != 0.0:
+                return False
+    return True
+
+
 def _native_pick_intercept_guess(
     clues: List[str],
     opponent_history: List[Dict],
