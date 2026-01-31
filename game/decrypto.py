@@ -5,9 +5,11 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from game.decrypto_ai import (
+    DEFAULT_BOT_CLUE_DIRECTNESS,
     DEFAULT_BOT_STRATEGY_ID,
     get_model_mode,
     is_all_zero_similarity,
+    normalize_clue_directness,
     normalize_bot_strategy_id,
     pick_decrypt_guess,
     pick_encryptor_clues,
@@ -21,6 +23,7 @@ DEFAULT_CONFIG = {
     "max_rounds": 8,
     "word_packs": ["basic"],
     "bot_strategy": DEFAULT_BOT_STRATEGY_ID,
+    "bot_clue_directness": DEFAULT_BOT_CLUE_DIRECTNESS,
 }
 
 _PACK_INDEX_CACHE: Optional[List[Dict]] = None
@@ -150,6 +153,9 @@ def _merge_config(config: Optional[Dict]) -> Dict:
     if config:
         cfg["word_packs"] = _normalize_pack_ids(config.get("word_packs"))
         cfg["bot_strategy"] = normalize_bot_strategy_id(config.get("bot_strategy"))
+        cfg["bot_clue_directness"] = normalize_clue_directness(
+            config.get("bot_clue_directness")
+        )
         max_rounds = config.get("max_rounds")
         try:
             max_rounds = int(max_rounds)
@@ -676,9 +682,11 @@ class DecryptoGame:
         if not team_id or state.get("game_over"):
             return None
         strategy_id = None
+        clue_directness = None
         config = state.get("config")
         if isinstance(config, dict):
             strategy_id = config.get("bot_strategy")
+            clue_directness = config.get("bot_clue_directness")
 
         phase = state.get("phase")
         data = state["round_data"].get(team_id, {})
@@ -690,6 +698,7 @@ class DecryptoGame:
                     state["teams"][team_id]["used_clues"],
                     state["teams"][team_id]["history"],
                     strategy_id,
+                    clue_directness,
                 )
                 if clues:
                     return {"type": "submit_clues", "clues": clues}

@@ -38,6 +38,10 @@ _BETA = 1.5
 _GAMMA = 0.5
 _TOP_N = 50
 _CONFIDENCE_THRESHOLD = 0.1
+DEFAULT_BOT_CLUE_DIRECTNESS = 0.6
+_DIRECTNESS_WEIGHT = 1.2
+_DIRECTNESS_PERCENTILE_MIN = 0.3
+_DIRECTNESS_PERCENTILE_MAX = 0.9
 
 _WORD_MODEL: Optional["BaseVectorModel"] = None
 _MODEL_MODE: Optional[str] = None
@@ -50,7 +54,9 @@ class BotStrategy:
     strategy_id: str
     label: str
     description: str
-    pick_encryptor_clues: Callable[[List[str], List[int], List[str], List[Dict]], Optional[List[str]]]
+    pick_encryptor_clues: Callable[
+        [List[str], List[int], List[str], List[Dict], Optional[float]], Optional[List[str]]
+    ]
     pick_decrypt_guess: Callable[[List[str], List[str], List[Dict]], Optional[List[int]]]
     pick_intercept_guess: Callable[[List[str], List[Dict]], Optional[List[int]]]
 
@@ -87,6 +93,18 @@ def _parse_int(value: Optional[object]) -> Optional[int]:
     return parsed
 
 
+def _parse_float(value: Optional[object]) -> Optional[float]:
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    if math.isnan(parsed) or math.isinf(parsed):
+        return None
+    return parsed
+
+
 def _parse_bool(value: Optional[object], default: bool = False) -> bool:
     if isinstance(value, bool):
         return value
@@ -98,6 +116,17 @@ def _parse_bool(value: Optional[object], default: bool = False) -> bool:
     if normalized in ("0", "false", "no", "off"):
         return False
     return default
+
+
+def normalize_clue_directness(value: Optional[object]) -> float:
+    parsed = _parse_float(value)
+    if parsed is None:
+        return DEFAULT_BOT_CLUE_DIRECTNESS
+    if parsed < 0.0:
+        return 0.0
+    if parsed > 1.0:
+        return 1.0
+    return parsed
 
 
 def _tokenize(text: str) -> List[str]:
@@ -645,6 +674,18 @@ def _average_vectors(vectors: List[Dict[str, float]]) -> Optional[Dict[str, floa
     return avg
 
 
+def _pick_similarity_anchor(sim_values: List[float], directness: float) -> Optional[float]:
+    if not sim_values:
+        return None
+    sims = sorted(sim_values)
+    percentile = _DIRECTNESS_PERCENTILE_MIN + (
+        (_DIRECTNESS_PERCENTILE_MAX - _DIRECTNESS_PERCENTILE_MIN) * directness
+    )
+    idx = int(round(percentile * (len(sims) - 1)))
+    idx = max(0, min(idx, len(sims) - 1))
+    return sims[idx]
+
+
 def _best_unique_assignment(scores: List[List[float]]) -> Optional[List[int]]:
     if len(scores) != 3 or any(len(row) != 4 for row in scores):
         return None
@@ -680,8 +721,13 @@ def _score_candidate(
     target: str,
     other_keywords: List[str],
     history_clues: List[str],
+    *,
+    sim_target: Optional[float] = None,
+    desired_sim: Optional[float] = None,
+    directness: float = DEFAULT_BOT_CLUE_DIRECTNESS,
 ) -> float:
-    sim_target = model.similarity(candidate, target)
+    if sim_target is None:
+        sim_target = model.similarity(candidate, target)
     sim_other = 0.0
     if other_keywords:
         sim_other = max(model.similarity(candidate, other) for other in other_keywords)
@@ -689,7 +735,12 @@ def _score_candidate(
     if history_clues:
         sims = [model.similarity(candidate, clue) for clue in history_clues]
         sim_history = sum(sims) / float(len(sims)) if sims else 0.0
-    return (sim_target * _ALPHA) - (sim_other * _BETA) - (sim_history * _GAMMA)
+    score = (sim_target * _ALPHA) - (sim_other * _BETA) - (sim_history * _GAMMA)
+    if desired_sim is not None:
+        penalty_weight = _DIRECTNESS_WEIGHT * (1.0 - directness)
+        if penalty_weight > 0.0:
+            score -= abs(sim_target - desired_sim) * penalty_weight
+    return score
 
 
 def _native_pick_encryptor_clues(
@@ -697,12 +748,14 @@ def _native_pick_encryptor_clues(
     code: List[int],
     used_clues: List[str],
     history: List[Dict],
+    clue_directness: Optional[float] = None,
 ) -> Optional[List[str]]:
     """Select clues for encryptor role using the native vector-space heuristic."""
     if not isinstance(keywords, list) or len(keywords) != 4:
         return None
     if not isinstance(code, list) or len(code) != 3:
         return None
+    directness = normalize_clue_directness(clue_directness)
     model = _get_model()
     used = {_normalize_text(item) for item in used_clues or [] if isinstance(item, str)}
     history_by_slot = _history_by_slot(history or [])
@@ -717,10 +770,11 @@ def _native_pick_encryptor_clues(
         target_is_cjk = _contains_cjk(target)
         other_keywords = [kw for idx, kw in enumerate(keywords) if idx != number - 1]
         candidates = model.top_similar(target, _TOP_N) if model.vocabulary else []
+        filtered: List[Tuple[str, float]] = []
         best_word = None
         best_score = None
 
-        for _, word in candidates:
+        for sim_target, word in candidates:
             if not isinstance(word, str) or not word.strip():
                 continue
             if target_is_cjk and not _contains_cjk(word):
@@ -729,8 +783,24 @@ def _native_pick_encryptor_clues(
                 continue
             if word in chosen:
                 continue
+            if not isinstance(sim_target, (int, float)):
+                sim_target = model.similarity(word, target)
+            filtered.append((word, sim_target))
+
+        desired_sim = _pick_similarity_anchor(
+            [sim for _, sim in filtered], directness
+        )
+
+        for word, sim_target in filtered:
             score = _score_candidate(
-                model, word, target, other_keywords, history_by_slot.get(number, [])
+                model,
+                word,
+                target,
+                other_keywords,
+                history_by_slot.get(number, []),
+                sim_target=sim_target,
+                desired_sim=desired_sim,
+                directness=directness,
             )
             if best_score is None or score > best_score:
                 best_score = score
@@ -859,7 +929,10 @@ _BOT_STRATEGIES: Dict[str, BotStrategy] = {
     "native": BotStrategy(
         strategy_id="native",
         label="native",
-        description="Vector-space model with offline embeddings (fallbacks to n-gram similarity when missing).",
+        description=(
+            "Vector-space model with offline embeddings (fallbacks to n-gram similarity when missing). "
+            "Supports bot_clue_directness (0-1)."
+        ),
         pick_encryptor_clues=_native_pick_encryptor_clues,
         pick_decrypt_guess=_native_pick_decrypt_guess,
         pick_intercept_guess=_native_pick_intercept_guess,
@@ -900,10 +973,11 @@ def pick_encryptor_clues(
     used_clues: List[str],
     history: List[Dict],
     strategy_id: Optional[str] = None,
+    clue_directness: Optional[float] = None,
 ) -> Optional[List[str]]:
     """Select clues for encryptor role using a chosen bot strategy."""
     strategy = _resolve_strategy(strategy_id)
-    return strategy.pick_encryptor_clues(keywords, code, used_clues, history)
+    return strategy.pick_encryptor_clues(keywords, code, used_clues, history, clue_directness)
 
 
 def pick_decrypt_guess(

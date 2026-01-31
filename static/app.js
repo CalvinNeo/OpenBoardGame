@@ -39,6 +39,7 @@ let decryptoPacksLoaded = false;
 let decryptoBotStrategies = [];
 let decryptoBotStrategiesLoaded = false;
 let decryptoBotStrategyId = "native";
+let decryptoBotClueDirectness = 0.6;
 
 const nameInput = document.getElementById("nameInput");
 const connectionInfo = document.getElementById("connectionInfo");
@@ -62,6 +63,8 @@ const decryptoPackRow = document.getElementById("decryptoPackRow");
 const decryptoPackOptions = document.getElementById("decryptoPackOptions");
 const decryptoBotRow = document.getElementById("decryptoBotRow");
 const decryptoBotSelect = document.getElementById("decryptoBotSelect");
+const decryptoBotClueRow = document.getElementById("decryptoBotClueRow");
+const decryptoBotClueSelect = document.getElementById("decryptoBotClueSelect");
 const caboPanel = document.getElementById("caboPanel");
 const skullPanel = document.getElementById("skullPanel");
 const coyotePanel = document.getElementById("coyotePanel");
@@ -607,6 +610,10 @@ function updateDecryptoBotRow() {
     decryptoBotRow.classList.toggle("hidden", !showRow);
     decryptoBotRow.setAttribute("aria-hidden", (!showRow).toString());
   }
+  if (decryptoBotClueRow) {
+    decryptoBotClueRow.classList.toggle("hidden", !showRow);
+    decryptoBotClueRow.setAttribute("aria-hidden", (!showRow).toString());
+  }
   if (showRow && !decryptoBotStrategiesLoaded) {
     fetchDecryptoBotStrategies();
   }
@@ -757,6 +764,19 @@ function getSelectedDecryptoBotStrategy() {
     decryptoBotStrategyId = decryptoBotSelect.value;
   }
   return decryptoBotStrategyId || "native";
+}
+
+function getSelectedDecryptoBotClueDirectness() {
+  if (decryptoBotClueSelect && decryptoBotClueSelect.value) {
+    const parsed = Number.parseFloat(decryptoBotClueSelect.value);
+    if (Number.isFinite(parsed)) {
+      decryptoBotClueDirectness = parsed;
+    }
+  }
+  if (!Number.isFinite(decryptoBotClueDirectness)) {
+    decryptoBotClueDirectness = 0.6;
+  }
+  return decryptoBotClueDirectness;
 }
 
 function requestRoomList() {
@@ -949,6 +969,10 @@ function resetRoomState() {
     decryptoBotSelect.value = "native";
   }
   decryptoBotStrategyId = "native";
+  if (decryptoBotClueSelect) {
+    decryptoBotClueSelect.value = "0.6";
+  }
+  decryptoBotClueDirectness = 0.6;
   createRoomPending = false;
   setCreateGameRowVisible(false);
 }
@@ -1668,7 +1692,12 @@ function emitRoomStart() {
       return;
     }
     const botStrategy = getSelectedDecryptoBotStrategy();
-    payload.config = { word_packs: packs, bot_strategy: botStrategy };
+    const botClueDirectness = getSelectedDecryptoBotClueDirectness();
+    payload.config = {
+      word_packs: packs,
+      bot_strategy: botStrategy,
+      bot_clue_directness: botClueDirectness,
+    };
   }
   socket.emit("room:start", payload);
 }
@@ -4468,6 +4497,12 @@ if (decryptoInterceptInput) {
 if (decryptoBotSelect) {
   decryptoBotSelect.addEventListener("change", () => {
     decryptoBotStrategyId = decryptoBotSelect.value || "native";
+  });
+}
+if (decryptoBotClueSelect) {
+  decryptoBotClueSelect.addEventListener("change", () => {
+    const parsed = Number.parseFloat(decryptoBotClueSelect.value);
+    decryptoBotClueDirectness = Number.isFinite(parsed) ? parsed : 0.6;
   });
 }
 

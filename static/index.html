@@ -104,6 +104,14 @@
               <label for="decryptoBotSelect">Decrypto Bot Strategy</label>
               <select id="decryptoBotSelect"></select>
             </div>
+            <div class="row hidden" id="decryptoBotClueRow">
+              <label for="decryptoBotClueSelect">Decrypto Bot Clue Directness</label>
+              <select id="decryptoBotClueSelect">
+                <option value="0.3">Subtle</option>
+                <option value="0.6" selected>Balanced</option>
+                <option value="0.9">Obvious</option>
+              </select>
+            </div>
             <div class="row actions room-actions">
               <button id="readyBtn">Toggle Ready</button>
               <button id="startBtn">Start Game</button>
