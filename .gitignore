@@ -1,5 +1,6 @@
 .DS_Store
 .quickdraw_cache/
+.decrypto/
 
 __pycache__/
 *.py[cod]
@@ -17,5 +18,3 @@ dist/
 
 .venv/
 venv/
-
-game/assets/decrypto_vectors.vec
