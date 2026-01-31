@@ -4563,6 +4563,9 @@ if (decryptoBotClueSelect) {
 }
 
 drawGuessClearBtn.addEventListener("click", () => {
+  if (!confirm("确定删除吗？")) {
+    return;
+  }
   clearDrawGuessCanvas();
 });
 
