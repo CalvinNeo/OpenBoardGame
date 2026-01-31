@@ -376,7 +376,8 @@ def _history_by_keyword(history: List[Dict]) -> Dict[str, List[str]]:
 
 def _apply_round_results(state: Dict) -> None:
     summary = {"round": state["round"], "teams": {}}
-    model_mode = get_model_mode()
+    has_bots = any(meta.get("is_bot") for meta in state.get("player_meta", {}).values())
+    model_mode = get_model_mode() if has_bots else None
     mode_label = "离线词向量" if model_mode == "embeddings" else "fallback"
     for team_id in TEAM_IDS:
         data = state["round_data"][team_id]

@@ -593,6 +593,14 @@ function updateDrawGuessLanguageRow() {
   }
 }
 
+function roomHasBots() {
+  return (
+    currentRoomState &&
+    Array.isArray(currentRoomState.players) &&
+    currentRoomState.players.some((player) => player && player.is_bot)
+  );
+}
+
 function updateDecryptoPackRow() {
   const showRow = currentRoomState && currentGameType === "decrypto" && currentRoomState.status === "lobby";
   if (decryptoPackRow) {
@@ -605,7 +613,8 @@ function updateDecryptoPackRow() {
 }
 
 function updateDecryptoBotRow() {
-  const showRow = currentRoomState && currentGameType === "decrypto" && currentRoomState.status === "lobby";
+  const showRow =
+    currentRoomState && currentGameType === "decrypto" && currentRoomState.status === "lobby" && roomHasBots();
   if (decryptoBotRow) {
     decryptoBotRow.classList.toggle("hidden", !showRow);
     decryptoBotRow.setAttribute("aria-hidden", (!showRow).toString());
@@ -1699,13 +1708,14 @@ function emitRoomStart() {
       log("Select at least one word pack");
       return;
     }
-    const botStrategy = getSelectedDecryptoBotStrategy();
-    const botClueDirectness = getSelectedDecryptoBotClueDirectness();
-    payload.config = {
-      word_packs: packs,
-      bot_strategy: botStrategy,
-      bot_clue_directness: botClueDirectness,
-    };
+    const config = { word_packs: packs };
+    if (roomHasBots()) {
+      const botStrategy = getSelectedDecryptoBotStrategy();
+      const botClueDirectness = getSelectedDecryptoBotClueDirectness();
+      config.bot_strategy = botStrategy;
+      config.bot_clue_directness = botClueDirectness;
+    }
+    payload.config = config;
   }
   socket.emit("room:start", payload);
 }
