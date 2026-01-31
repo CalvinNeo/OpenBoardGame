@@ -1,7 +1,9 @@
 import json
+import logging
 import math
 import os
 import re
+import time
 from dataclasses import dataclass
 from itertools import chain, permutations
 from pathlib import Path
@@ -47,6 +49,11 @@ _WORD_MODEL: Optional["BaseVectorModel"] = None
 _MODEL_MODE: Optional[str] = None
 
 DEFAULT_BOT_STRATEGY_ID = "native"
+
+_SLOW_OPERATION_SECONDS = 0.5
+_SLOW_LOAD_SECONDS = 1.0
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -414,7 +421,9 @@ def _load_embedding_config() -> Dict[str, object]:
                 config["max_words"] = _parse_int(data.get("max_words"))
                 config["cjk_only"] = _parse_bool(data.get("cjk_only"), default=True)
         except Exception:
-            pass
+            logger.warning(
+                "Failed to read decrypto embedding config at %s", config_path, exc_info=True
+            )
 
     env_path = _get_env_value(_EMBEDDING_PATH_KEYS)
     if env_path:
@@ -452,6 +461,7 @@ def _load_embeddings_text(
 ) -> Dict[str, List[float]]:
     vectors: Dict[str, List[float]] = {}
     dim: Optional[int] = None
+    start = time.perf_counter()
     try:
         with path.open("r", encoding="utf-8", errors="ignore") as handle:
             first = handle.readline()
@@ -483,7 +493,25 @@ def _load_embeddings_text(
                 if max_words and len(vectors) >= max_words:
                     break
     except Exception:
+        logger.exception("Failed to load decrypto embeddings (text) from %s", path)
         return {}
+    duration = time.perf_counter() - start
+    if duration >= _SLOW_LOAD_SECONDS:
+        logger.warning(
+            "Loaded decrypto embeddings (text) in %.3fs (words=%d, dim=%d, path=%s)",
+            duration,
+            len(vectors),
+            dim or 0,
+            path,
+        )
+    else:
+        logger.info(
+            "Loaded decrypto embeddings (text) in %.3fs (words=%d, dim=%d, path=%s)",
+            duration,
+            len(vectors),
+            dim or 0,
+            path,
+        )
     return vectors
 
 
@@ -494,6 +522,7 @@ def _load_embeddings_json(
 ) -> Dict[str, List[float]]:
     vectors: Dict[str, List[float]] = {}
     dim: Optional[int] = None
+    start = time.perf_counter()
 
     def _add_vector(word: str, vec: object) -> None:
         nonlocal dim
@@ -547,7 +576,25 @@ def _load_embeddings_json(
                     elif isinstance(entry, list) and len(entry) == 2:
                         _add_vector(entry[0], entry[1])
     except Exception:
+        logger.exception("Failed to load decrypto embeddings (json) from %s", path)
         return {}
+    duration = time.perf_counter() - start
+    if duration >= _SLOW_LOAD_SECONDS:
+        logger.warning(
+            "Loaded decrypto embeddings (json) in %.3fs (words=%d, dim=%d, path=%s)",
+            duration,
+            len(vectors),
+            dim or 0,
+            path,
+        )
+    else:
+        logger.info(
+            "Loaded decrypto embeddings (json) in %.3fs (words=%d, dim=%d, path=%s)",
+            duration,
+            len(vectors),
+            dim or 0,
+            path,
+        )
     return vectors
 
 
@@ -555,14 +602,22 @@ def _load_embeddings() -> Optional[Dict[str, List[float]]]:
     config = _load_embedding_config()
     path = config.get("path")
     if not isinstance(path, Path) or not path.exists():
+        logger.info("Decrypto embeddings not found (path=%s)", path)
         return None
     max_words = _parse_int(config.get("max_words"))
     cjk_only = _parse_bool(config.get("cjk_only"), default=True)
+    logger.info(
+        "Loading decrypto embeddings (path=%s, max_words=%s, cjk_only=%s)",
+        path,
+        max_words,
+        cjk_only,
+    )
     if path.suffix.lower() in (".json", ".jsonl"):
         vectors = _load_embeddings_json(path, max_words, cjk_only)
     else:
         vectors = _load_embeddings_text(path, max_words, cjk_only)
     if not vectors:
+        logger.warning("Decrypto embeddings empty or failed to load (path=%s)", path)
         return None
     return vectors
 
@@ -570,16 +625,19 @@ def _load_embeddings() -> Optional[Dict[str, List[float]]]:
 def _load_word_pack_index() -> List[Dict]:
     path = _assets_dir() / "decrypto_word_packs.json"
     if not path.exists():
+        logger.warning("Decrypto word pack index missing for vocab load: %s", path)
         return []
     with path.open("r", encoding="utf-8") as handle:
         data = json.load(handle)
     if not isinstance(data, list):
+        logger.warning("Decrypto word pack index invalid for vocab load: %s", path)
         return []
     return [entry for entry in data if isinstance(entry, dict)]
 
 
 def _load_words_from_pack(path: Path) -> List[str]:
     if not path.exists():
+        logger.warning("Decrypto word pack file missing for vocab load: %s", path)
         return []
     with path.open("r", encoding="utf-8") as handle:
         data = json.load(handle)
@@ -588,6 +646,7 @@ def _load_words_from_pack(path: Path) -> List[str]:
     else:
         words = data
     if not isinstance(words, list):
+        logger.warning("Decrypto word pack data invalid for vocab load: %s", path)
         return []
     result: List[str] = []
     for word in words:
@@ -600,6 +659,7 @@ def _load_words_from_pack(path: Path) -> List[str]:
 
 
 def _load_vocabulary() -> List[str]:
+    start = time.perf_counter()
     packs = _load_word_pack_index()
     if not packs:
         return []
@@ -621,6 +681,21 @@ def _load_vocabulary() -> List[str]:
             continue
         seen.add(key)
         deduped.append(word)
+    duration = time.perf_counter() - start
+    if duration >= _SLOW_LOAD_SECONDS:
+        logger.warning(
+            "Loaded decrypto vocabulary in %.3fs (words=%d, deduped=%d)",
+            duration,
+            len(vocab),
+            len(deduped),
+        )
+    else:
+        logger.info(
+            "Loaded decrypto vocabulary in %.3fs (words=%d, deduped=%d)",
+            duration,
+            len(vocab),
+            len(deduped),
+        )
     return deduped
 
 
@@ -628,13 +703,44 @@ def _get_model() -> BaseVectorModel:
     global _WORD_MODEL
     global _MODEL_MODE
     if _WORD_MODEL is None:
+        start = time.perf_counter()
         embeddings = _load_embeddings()
         if embeddings:
-            _WORD_MODEL = WordVectorModel(embeddings, fallback_vocabulary=_load_vocabulary())
+            fallback_vocab = _load_vocabulary()
+            _WORD_MODEL = WordVectorModel(embeddings, fallback_vocabulary=fallback_vocab)
             _MODEL_MODE = "embeddings"
+            duration = time.perf_counter() - start
+            if duration >= _SLOW_LOAD_SECONDS:
+                logger.warning(
+                    "Initialized decrypto model (mode=embeddings, vectors=%d, fallback_vocab=%d, %.3fs)",
+                    len(embeddings),
+                    len(fallback_vocab),
+                    duration,
+                )
+            else:
+                logger.info(
+                    "Initialized decrypto model (mode=embeddings, vectors=%d, fallback_vocab=%d, %.3fs)",
+                    len(embeddings),
+                    len(fallback_vocab),
+                    duration,
+                )
         else:
-            _WORD_MODEL = NgramVectorModel(_load_vocabulary())
+            vocab = _load_vocabulary()
+            _WORD_MODEL = NgramVectorModel(vocab)
             _MODEL_MODE = "fallback"
+            duration = time.perf_counter() - start
+            if duration >= _SLOW_LOAD_SECONDS:
+                logger.warning(
+                    "Initialized decrypto model (mode=fallback, vocab=%d, %.3fs)",
+                    len(vocab),
+                    duration,
+                )
+            else:
+                logger.info(
+                    "Initialized decrypto model (mode=fallback, vocab=%d, %.3fs)",
+                    len(vocab),
+                    duration,
+                )
     return _WORD_MODEL
 
 
@@ -760,6 +866,7 @@ def _native_pick_encryptor_clues(
     clue_directness: Optional[float] = None,
 ) -> Optional[List[str]]:
     """Select clues for encryptor role using the native vector-space heuristic."""
+    start = time.perf_counter()
     if not isinstance(keywords, list) or len(keywords) != 4:
         return None
     if not isinstance(code, list) or len(code) != 3:
@@ -830,12 +937,20 @@ def _native_pick_encryptor_clues(
             ]
             fallback_pool.sort()
             if not fallback_pool:
+                logger.error("Decrypto bot failed to find fallback clue (slot=%s)", number)
                 return None
+            logger.warning("Decrypto bot using fallback clue pool (slot=%s)", number)
             best_word = fallback_pool[0]
 
         chosen.append(best_word)
         used.add(_normalize_text(best_word))
 
+    duration = time.perf_counter() - start
+    if duration >= _SLOW_OPERATION_SECONDS:
+        logger.warning(
+            "Decrypto bot clue selection slow (slots=3, %.3fs)",
+            duration,
+        )
     return chosen
 
 
@@ -845,6 +960,7 @@ def _native_pick_decrypt_guess(
     history: List[Dict],
 ) -> Optional[List[int]]:
     """Select decrypt guess for teammate role (native)."""
+    start = time.perf_counter()
     if not isinstance(clues, list) or len(clues) != 3:
         return None
     if not isinstance(keywords, list) or len(keywords) != 4:
@@ -867,6 +983,13 @@ def _native_pick_decrypt_guess(
         if len(ordered) >= 2 and (ordered[0] - ordered[1]) < _CONFIDENCE_THRESHOLD:
             break
 
+    duration = time.perf_counter() - start
+    if duration >= _SLOW_OPERATION_SECONDS:
+        logger.warning(
+            "Decrypto bot decrypt guess slow (clues=%d, %.3fs)",
+            len(clues),
+            duration,
+        )
     return guess
 
 
@@ -893,6 +1016,7 @@ def _native_pick_intercept_guess(
     opponent_history: List[Dict],
 ) -> Optional[List[int]]:
     """Select intercept guess for opponent role using centroid clustering (native)."""
+    start = time.perf_counter()
     if not isinstance(clues, list) or len(clues) != 3:
         return None
     model = _get_model()
@@ -931,6 +1055,13 @@ def _native_pick_intercept_guess(
     guess = _best_unique_assignment(scores)
     if not guess:
         return None
+    duration = time.perf_counter() - start
+    if duration >= _SLOW_OPERATION_SECONDS:
+        logger.warning(
+            "Decrypto bot intercept guess slow (clues=%d, %.3fs)",
+            len(clues),
+            duration,
+        )
     return guess
 
 

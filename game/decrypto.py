@@ -1,5 +1,7 @@
 import json
+import logging
 import random
+import time
 from itertools import permutations
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -28,6 +30,10 @@ DEFAULT_CONFIG = {
 
 _PACK_INDEX_CACHE: Optional[List[Dict]] = None
 
+_SLOW_OPERATION_SECONDS = 0.5
+
+logger = logging.getLogger(__name__)
+
 
 def _pack_index_path() -> Path:
     return Path(__file__).resolve().parent / "assets" / "decrypto_word_packs.json"
@@ -46,11 +52,18 @@ def _load_pack_index() -> List[Dict]:
 
     path = _pack_index_path()
     if not path.exists():
+        logger.error("Decrypto pack index missing at %s", path)
         raise ValueError("decrypto word pack config not found")
-    with path.open("r", encoding="utf-8") as handle:
-        data = json.load(handle)
+    start = time.perf_counter()
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            data = json.load(handle)
+    except Exception:
+        logger.exception("Failed to load decrypto pack index from %s", path)
+        raise
 
     if not isinstance(data, list):
+        logger.error("Decrypto pack index must be a list (got %s)", type(data).__name__)
         raise ValueError("decrypto word pack config must be a list")
 
     packs: List[Dict] = []
@@ -90,9 +103,19 @@ def _load_pack_index() -> List[Dict]:
         )
 
     if not packs:
+        logger.error("No decrypto word packs configured from %s", path)
         raise ValueError("no decrypto word packs configured")
 
     _PACK_INDEX_CACHE = packs
+    duration = time.perf_counter() - start
+    if duration >= _SLOW_OPERATION_SECONDS:
+        logger.warning(
+            "Loaded decrypto pack index in %.3fs (packs=%d)",
+            duration,
+            len(packs),
+        )
+    else:
+        logger.info("Loaded decrypto pack index in %.3fs (packs=%d)", duration, len(packs))
     return list(_PACK_INDEX_CACHE)
 
 
@@ -114,14 +137,21 @@ def get_decrypto_word_packs() -> List[Dict]:
 def _load_pack_words(pack: Dict) -> List[str]:
     path = Path(pack["path"])
     if not path.exists():
+        logger.error("Decrypto word pack file missing: %s", path)
         raise ValueError(f"word pack file missing: {path}")
-    with path.open("r", encoding="utf-8") as handle:
-        data = json.load(handle)
+    start = time.perf_counter()
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            data = json.load(handle)
+    except Exception:
+        logger.exception("Failed to load decrypto word pack: %s", path)
+        raise
     if isinstance(data, dict):
         words = data.get("words", [])
     else:
         words = data
     if not isinstance(words, list):
+        logger.error("Invalid word pack data in %s (expected list)", path)
         raise ValueError(f"invalid word pack data: {path}")
     result: List[str] = []
     for word in words:
@@ -131,7 +161,23 @@ def _load_pack_words(pack: Dict) -> List[str]:
         if cleaned:
             result.append(cleaned)
     if not result:
+        logger.error("Empty word pack after normalization: %s", path)
         raise ValueError(f"empty word pack: {path}")
+    duration = time.perf_counter() - start
+    if duration >= _SLOW_OPERATION_SECONDS:
+        logger.warning(
+            "Loaded decrypto word pack in %.3fs (words=%d, path=%s)",
+            duration,
+            len(result),
+            path,
+        )
+    else:
+        logger.info(
+            "Loaded decrypto word pack in %.3fs (words=%d, path=%s)",
+            duration,
+            len(result),
+            path,
+        )
     return result
 
 
@@ -167,12 +213,14 @@ def _merge_config(config: Optional[Dict]) -> Dict:
 
 
 def _build_word_pool(pack_ids: List[str]) -> List[str]:
+    start = time.perf_counter()
     packs = _load_pack_index()
     pack_map = {pack["pack_id"]: pack for pack in packs}
     words: List[str] = []
     for pack_id in pack_ids:
         pack = pack_map.get(pack_id)
         if not pack:
+            logger.error("Unknown decrypto word pack requested: %s", pack_id)
             raise ValueError(f"unknown word pack: {pack_id}")
         words.extend(_load_pack_words(pack))
     deduped: List[str] = []
@@ -183,6 +231,23 @@ def _build_word_pool(pack_ids: List[str]) -> List[str]:
             continue
         seen.add(key)
         deduped.append(word)
+    duration = time.perf_counter() - start
+    if duration >= _SLOW_OPERATION_SECONDS:
+        logger.warning(
+            "Built decrypto word pool in %.3fs (packs=%d, words=%d, deduped=%d)",
+            duration,
+            len(pack_ids),
+            len(words),
+            len(deduped),
+        )
+    else:
+        logger.info(
+            "Built decrypto word pool in %.3fs (packs=%d, words=%d, deduped=%d)",
+            duration,
+            len(pack_ids),
+            len(words),
+            len(deduped),
+        )
     return deduped
 
 
@@ -442,10 +507,19 @@ class DecryptoGame:
         ordered_players = sorted(players, key=lambda p: p.get("seat", 0))
         player_ids = [p["player_id"] for p in ordered_players]
         if len(player_ids) % 2 != 0:
+            logger.error("Decrypto init failed: odd player count (%d)", len(player_ids))
             raise ValueError("decrypto requires an even number of players")
         mid = len(player_ids) // 2
         if mid < 2:
+            logger.error("Decrypto init failed: insufficient players (%d)", len(player_ids))
             raise ValueError("decrypto requires at least 2 players per team")
+        logger.info(
+            "Initializing decrypto game (players=%d, packs=%s, max_rounds=%s, bot_strategy=%s)",
+            len(player_ids),
+            cfg.get("word_packs"),
+            cfg.get("max_rounds"),
+            cfg.get("bot_strategy"),
+        )
 
         teams = {
             "white": {
@@ -472,6 +546,11 @@ class DecryptoGame:
         white_keywords, black_keywords = _assign_keywords(word_pool)
         teams["white"]["keywords"] = white_keywords
         teams["black"]["keywords"] = black_keywords
+        logger.info(
+            "Decrypto keywords assigned (pool_size=%d, teams=%d)",
+            len(word_pool),
+            len(teams),
+        )
 
         player_meta = {p["player_id"]: p for p in ordered_players}
         player_teams = {pid: "white" for pid in teams["white"]["player_ids"]}
@@ -692,14 +771,31 @@ class DecryptoGame:
         data = state["round_data"].get(team_id, {})
         if phase == "encryption" and bot_id == _current_encryptor(state, team_id):
             if not data.get("clues"):
-                clues = pick_encryptor_clues(
-                    state["teams"][team_id]["keywords"],
-                    data.get("code") or [],
-                    state["teams"][team_id]["used_clues"],
-                    state["teams"][team_id]["history"],
-                    strategy_id,
-                    clue_directness,
-                )
+                start = time.perf_counter()
+                try:
+                    clues = pick_encryptor_clues(
+                        state["teams"][team_id]["keywords"],
+                        data.get("code") or [],
+                        state["teams"][team_id]["used_clues"],
+                        state["teams"][team_id]["history"],
+                        strategy_id,
+                        clue_directness,
+                    )
+                except Exception:
+                    logger.exception(
+                        "Decrypto bot clue selection failed (team=%s, bot=%s)",
+                        team_id,
+                        bot_id,
+                    )
+                    raise
+                duration = time.perf_counter() - start
+                if duration >= _SLOW_OPERATION_SECONDS:
+                    logger.warning(
+                        "Decrypto bot clue selection slow (team=%s, bot=%s, %.3fs)",
+                        team_id,
+                        bot_id,
+                        duration,
+                    )
                 if clues:
                     return {"type": "submit_clues", "clues": clues}
             return None
@@ -707,23 +803,57 @@ class DecryptoGame:
         if phase == "guessing":
             if bot_id != _current_encryptor(state, team_id) and data.get("decrypt_guess") is None:
                 clues = data.get("clues") or []
-                guess = pick_decrypt_guess(
-                    clues,
-                    state["teams"][team_id]["keywords"],
-                    state["teams"][team_id]["history"],
-                    strategy_id,
-                )
+                start = time.perf_counter()
+                try:
+                    guess = pick_decrypt_guess(
+                        clues,
+                        state["teams"][team_id]["keywords"],
+                        state["teams"][team_id]["history"],
+                        strategy_id,
+                    )
+                except Exception:
+                    logger.exception(
+                        "Decrypto bot decrypt guess failed (team=%s, bot=%s)",
+                        team_id,
+                        bot_id,
+                    )
+                    raise
+                duration = time.perf_counter() - start
+                if duration >= _SLOW_OPERATION_SECONDS:
+                    logger.warning(
+                        "Decrypto bot decrypt guess slow (team=%s, bot=%s, %.3fs)",
+                        team_id,
+                        bot_id,
+                        duration,
+                    )
                 if guess:
                     return {"type": "submit_decrypt", "guess": guess}
             if state["round"] > 1:
                 opponent = _opponent(team_id)
                 if state["round_data"][opponent].get("intercept_guess") is None:
                     opponent_clues = state["round_data"][opponent].get("clues") or []
-                    guess = pick_intercept_guess(
-                        opponent_clues,
-                        state["teams"][opponent]["history"],
-                        strategy_id,
-                    )
+                    start = time.perf_counter()
+                    try:
+                        guess = pick_intercept_guess(
+                            opponent_clues,
+                            state["teams"][opponent]["history"],
+                            strategy_id,
+                        )
+                    except Exception:
+                        logger.exception(
+                            "Decrypto bot intercept guess failed (team=%s, bot=%s)",
+                            team_id,
+                            bot_id,
+                        )
+                        raise
+                    duration = time.perf_counter() - start
+                    if duration >= _SLOW_OPERATION_SECONDS:
+                        logger.warning(
+                            "Decrypto bot intercept guess slow (team=%s, bot=%s, %.3fs)",
+                            team_id,
+                            bot_id,
+                            duration,
+                        )
                     if guess:
                         return {"type": "submit_intercept", "guess": guess}
             return None
