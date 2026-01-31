@@ -129,6 +129,8 @@ const decryptoWinnerLabel = document.getElementById("decryptoWinner");
 const decryptoYourTeamLabel = document.getElementById("decryptoYourTeam");
 const decryptoYourRoleLabel = document.getElementById("decryptoYourRole");
 const decryptoCurrentCodeLabel = document.getElementById("decryptoCurrentCode");
+const decryptoStatus = document.getElementById("decryptoStatus");
+const decryptoStatusBody = document.getElementById("decryptoStatusBody");
 const decryptoTeams = document.getElementById("decryptoTeams");
 const decryptoCurrentClues = document.getElementById("decryptoCurrentClues");
 const decryptoHistory = document.getElementById("decryptoHistory");
@@ -2110,6 +2112,136 @@ function parseDecryptoCodeInput(value) {
   return code;
 }
 
+function setDecryptoStatusLines(lines) {
+  if (!decryptoStatusBody) {
+    return;
+  }
+  decryptoStatusBody.innerHTML = "";
+  if (!Array.isArray(lines) || !lines.length) {
+    decryptoStatusBody.textContent = "-";
+    return;
+  }
+  lines.forEach((line) => {
+    const row = document.createElement("div");
+    row.className = "decrypto-status-line";
+    row.textContent = line;
+    decryptoStatusBody.appendChild(row);
+  });
+}
+
+function getDecryptoPendingEvents(view) {
+  const pending = [];
+  if (!view || !view.teams) {
+    return pending;
+  }
+  const viewerTeam = view.team_id;
+  const labelForTeam = (teamId) => {
+    if (viewerTeam && teamId === viewerTeam) {
+      return "your team";
+    }
+    if (viewerTeam && teamId !== viewerTeam) {
+      return "opponent team";
+    }
+    return `${formatDecryptoTeamLabel(teamId)} team`;
+  };
+  if (view.phase === "encryption") {
+    ["white", "black"].forEach((teamId) => {
+      const team = view.teams[teamId];
+      if (team && !team.clues_submitted) {
+        pending.push(`${labelForTeam(teamId)} clues`);
+      }
+    });
+  } else if (view.phase === "guessing") {
+    ["white", "black"].forEach((teamId) => {
+      const team = view.teams[teamId];
+      if (!team) {
+        return;
+      }
+      if (!team.decrypt_submitted) {
+        pending.push(`${labelForTeam(teamId)} decrypt guess`);
+      }
+      if (view.round > 1 && !team.intercept_submitted) {
+        pending.push(`${labelForTeam(teamId)} intercept guess`);
+      }
+    });
+  }
+  return pending;
+}
+
+function getDecryptoActionLines(view) {
+  const actions = Array.isArray(view.legal_actions) ? view.legal_actions : [];
+  const lines = [];
+  if (actions.includes("submit_clues")) {
+    const clues = [decryptoClue1, decryptoClue2, decryptoClue3]
+      .map((input) => (input ? input.value.trim() : ""))
+      .filter((text) => text);
+    const codeText = view.current_code ? formatDecryptoCode(view.current_code) : "-";
+    if (clues.length === 3) {
+      lines.push(`Submit your clues for code ${codeText}.`);
+    } else {
+      lines.push(`Enter 3 clues for code ${codeText}, then submit.`);
+    }
+  }
+  if (actions.includes("submit_decrypt")) {
+    const guess = parseDecryptoCodeInput(decryptoDecryptInput ? decryptoDecryptInput.value : "");
+    if (guess) {
+      lines.push("Submit your team's decrypt guess.");
+    } else {
+      lines.push("Enter your team's decrypt guess (e.g., 1.2.3).");
+    }
+  }
+  if (actions.includes("submit_intercept")) {
+    const guess = parseDecryptoCodeInput(decryptoInterceptInput ? decryptoInterceptInput.value : "");
+    if (guess) {
+      lines.push("Submit an intercept guess for the opponent.");
+    } else {
+      lines.push("Enter an intercept guess for the opponent (e.g., 1.2.3).");
+    }
+  }
+  return lines;
+}
+
+function updateDecryptoStatus() {
+  if (!decryptoStatus || !decryptoStatusBody) {
+    return;
+  }
+  if (currentGameType !== "decrypto" || !currentDecryptoView) {
+    setDecryptoStatusLines(["-"]);
+    decryptoStatus.classList.add("waiting");
+    return;
+  }
+  const view = currentDecryptoView;
+  if (view.game_over || view.phase === "game_over") {
+    const winnerLabel =
+      view.winner === "draw"
+        ? "Draw"
+        : view.winner
+          ? formatDecryptoTeamLabel(view.winner)
+          : "Unknown";
+    setDecryptoStatusLines([
+      `Game over. Winner: ${winnerLabel}.`,
+      "Waiting for the host to start a new game.",
+    ]);
+    decryptoStatus.classList.add("waiting");
+    return;
+  }
+
+  const actionLines = getDecryptoActionLines(view);
+  if (actionLines.length) {
+    setDecryptoStatusLines(actionLines);
+    decryptoStatus.classList.remove("waiting");
+    return;
+  }
+
+  const pending = getDecryptoPendingEvents(view);
+  if (pending.length) {
+    setDecryptoStatusLines([`Waiting for: ${pending.join(", ")}.`]);
+  } else {
+    setDecryptoStatusLines(["Waiting for next phase."]);
+  }
+  decryptoStatus.classList.add("waiting");
+}
+
 function isDecryptoActionAvailable(actionType) {
   if (!currentDecryptoView || !Array.isArray(currentDecryptoView.legal_actions)) {
     return false;
@@ -2141,6 +2273,7 @@ function updateDecryptoActionButtons() {
       button.classList.remove("action-allowed");
       button.disabled = true;
     });
+    updateDecryptoStatus();
     return;
   }
   Object.entries(decryptoActionButtons).forEach(([actionType, button]) => {
@@ -2155,6 +2288,7 @@ function updateDecryptoActionButtons() {
     }
     button.disabled = !allowed;
   });
+  updateDecryptoStatus();
 }
 
 function renderDecryptoTeams(view) {
