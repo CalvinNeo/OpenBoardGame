@@ -710,6 +710,15 @@ def _is_disallowed_clue(word: str, target: str, keywords: List[str], used: set) 
     for kw in keywords:
         if normalized == _normalize_text(kw):
             return True
+    clue_cjk = {ch for ch in word if _CJK_RE.match(ch)}
+    if clue_cjk:
+        keyword_cjk = set()
+        for kw in keywords:
+            if not isinstance(kw, str):
+                continue
+            keyword_cjk.update(ch for ch in kw if _CJK_RE.match(ch))
+        if keyword_cjk and clue_cjk.intersection(keyword_cjk):
+            return True
     if target and (target in word or word in target):
         return True
     return False
