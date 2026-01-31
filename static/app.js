@@ -1053,6 +1053,24 @@ function clearCoyoteState() {
   updateCoyoteActionButtons();
 }
 
+function resetDecryptoInputs() {
+  if (decryptoClue1) {
+    decryptoClue1.value = "";
+  }
+  if (decryptoClue2) {
+    decryptoClue2.value = "";
+  }
+  if (decryptoClue3) {
+    decryptoClue3.value = "";
+  }
+  if (decryptoDecryptInput) {
+    decryptoDecryptInput.value = "";
+  }
+  if (decryptoInterceptInput) {
+    decryptoInterceptInput.value = "";
+  }
+}
+
 function clearDecryptoState() {
   currentDecryptoView = null;
   if (decryptoPhaseLabel) {
@@ -1091,21 +1109,7 @@ function clearDecryptoState() {
   if (decryptoSummaryBody) {
     decryptoSummaryBody.textContent = "-";
   }
-  if (decryptoClue1) {
-    decryptoClue1.value = "";
-  }
-  if (decryptoClue2) {
-    decryptoClue2.value = "";
-  }
-  if (decryptoClue3) {
-    decryptoClue3.value = "";
-  }
-  if (decryptoDecryptInput) {
-    decryptoDecryptInput.value = "";
-  }
-  if (decryptoInterceptInput) {
-    decryptoInterceptInput.value = "";
-  }
+  resetDecryptoInputs();
   updateDecryptoActionButtons();
 }
 
@@ -2656,7 +2660,16 @@ function renderDecryptoSummary(view) {
 
 function renderDecryptoGameState(data) {
   const view = data.view;
+  const previousView = currentDecryptoView;
+  const previousGameOver = previousView
+    ? previousView.game_over || previousView.phase === "game_over"
+    : false;
   currentDecryptoView = view;
+  const roundChanged = previousView && previousView.round !== view.round;
+  const newGameStarted = previousView && previousGameOver && !view.game_over && view.phase !== "game_over";
+  if (roundChanged || newGameStarted) {
+    resetDecryptoInputs();
+  }
   if (currentGameType !== "decrypto") {
     currentGameType = "decrypto";
     setGamePanelVisibility("decrypto");
