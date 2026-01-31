@@ -2193,6 +2193,27 @@ function formatDecryptoCode(code) {
   return code.join(".");
 }
 
+function formatDecryptoCodeWithKeywords(code, keywords) {
+  if (!Array.isArray(code) || code.length !== 3) {
+    return formatDecryptoCode(code);
+  }
+  if (!Array.isArray(keywords) || keywords.length < 4) {
+    return formatDecryptoCode(code);
+  }
+  const words = code.map((index) => {
+    const word = keywords[index - 1];
+    if (typeof word !== "string") {
+      return null;
+    }
+    const cleaned = word.trim();
+    return cleaned ? cleaned : null;
+  });
+  if (words.some((word) => !word)) {
+    return formatDecryptoCode(code);
+  }
+  return words.join(" / ");
+}
+
 function parseDecryptoCodeInput(value) {
   if (!value) {
     return null;
@@ -2271,7 +2292,13 @@ function getDecryptoActionLines(view) {
     const clues = [decryptoClue1, decryptoClue2, decryptoClue3]
       .map((input) => (input ? input.value.trim() : ""))
       .filter((text) => text);
-    const codeText = view.current_code ? formatDecryptoCode(view.current_code) : "-";
+    const teamKeywords =
+      view.team_id && view.teams && view.teams[view.team_id]
+        ? view.teams[view.team_id].keywords
+        : null;
+    const codeText = view.current_code
+      ? formatDecryptoCodeWithKeywords(view.current_code, teamKeywords)
+      : "-";
     if (clues.length === 3) {
       lines.push(`Submit your clues for code ${codeText}.`);
     } else {

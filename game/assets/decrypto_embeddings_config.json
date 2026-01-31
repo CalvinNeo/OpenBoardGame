@@ -1,5 +1,6 @@
 {
   "path": "../../.decrypto/decrypto_vectors.vec",
   "max_words": 240000,
-  "cjk_only": true
+  "cjk_only": true,
+  "filter_traditional": true
 }
