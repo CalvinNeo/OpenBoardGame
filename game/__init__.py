@@ -4,6 +4,7 @@ from game.cabo import CaboGame
 from game.coyote import CoyoteGame
 from game.decrypto import DecryptoGame
 from game.draw_guess import DrawGuessGame
+from game.impression_flower import ImpressionFlowerGame
 from game.registry import GameDefinition, get_game, list_games
 from game.splendor import SplendorGame
 from game.skull import SkullGame
@@ -16,6 +17,7 @@ __all__ = [
     "DrawGuessGame",
     "CoyoteGame",
     "DecryptoGame",
+    "ImpressionFlowerGame",
     "SplendorGame",
     "SkullGame",
     "GameDefinition",

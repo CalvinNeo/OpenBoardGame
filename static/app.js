@@ -7,6 +7,7 @@ let currentSkullView = null;
 let currentCoyoteView = null;
 let currentDecryptoView = null;
 let currentDrawGuessView = null;
+let currentImpressionView = null;
 let currentSplendorView = null;
 let currentAbracaView = null;
 let currentBlokusView = null;
@@ -25,6 +26,23 @@ let drawGuessHasDrawn = false;
 let drawGuessIsErasing = false;
 let drawGuessBrushColor = "#000000";
 let drawGuessBrushSize = 3;
+let impressionConfig = null;
+let impressionConfigSignature = null;
+let impressionStampHistory = [];
+let impressionStampsLeft = 0;
+let impressionStampsMax = 0;
+let impressionCurrentShape = null;
+let impressionCurrentColor = null;
+let impressionRotation = 0;
+let impressionPressStart = null;
+let impressionMaskActive = false;
+let impressionMaskState = null;
+let impressionMaskDrag = null;
+let impressionMatches = {};
+let impressionLastRound = null;
+let impressionLastPhase = null;
+let impressionShapeButtonEls = [];
+let impressionColorButtonEls = [];
 let splendorSelectedMarket = null;
 let splendorSelectedReserved = null;
 let splendorSelectedNoble = null;
@@ -205,6 +223,39 @@ const drawGuessBrushButtons = drawGuessBrushSizes
   : [];
 const drawGuessCtx = drawGuessCanvas ? drawGuessCanvas.getContext("2d") : null;
 
+const impressionFlowerPanel = document.getElementById("impressionFlowerPanel");
+const impressionPhaseLabel = document.getElementById("impressionPhase");
+const impressionRoundLabel = document.getElementById("impressionRound");
+const impressionRoundsPerGuesserLabel = document.getElementById("impressionRoundsPerGuesser");
+const impressionGuesserLabel = document.getElementById("impressionGuesser");
+const impressionRoleLabel = document.getElementById("impressionRole");
+const impressionStampsLeftLabel = document.getElementById("impressionStampsLeft");
+const impressionScoreLabel = document.getElementById("impressionScore");
+const impressionPromptRow = document.getElementById("impressionPromptRow");
+const impressionPromptLabel = document.getElementById("impressionPrompt");
+const impressionDrawArea = document.getElementById("impressionDrawArea");
+const impressionGuessArea = document.getElementById("impressionGuessArea");
+const impressionRoundEnd = document.getElementById("impressionRoundEnd");
+const impressionRoundResult = document.getElementById("impressionRoundResult");
+const impressionPlayers = document.getElementById("impressionPlayers");
+const impressionCanvas = document.getElementById("impressionCanvas");
+const impressionCtx = impressionCanvas ? impressionCanvas.getContext("2d") : null;
+const impressionShapeButtons = document.getElementById("impressionShapeButtons");
+const impressionColorButtons = document.getElementById("impressionColorButtons");
+const impressionRotationInput = document.getElementById("impressionRotation");
+const impressionUndoBtn = document.getElementById("impressionUndoBtn");
+const impressionMaskBtn = document.getElementById("impressionMaskBtn");
+const impressionMask = document.getElementById("impressionMask");
+const impressionMaskControls = document.getElementById("impressionMaskControls");
+const impressionMaskRotationInput = document.getElementById("impressionMaskRotation");
+const impressionMaskScaleInput = document.getElementById("impressionMaskScale");
+const impressionSubmitDrawBtn = document.getElementById("impressionSubmitDrawBtn");
+const impressionWordBank = document.getElementById("impressionWordBank");
+const impressionDrawings = document.getElementById("impressionDrawings");
+const impressionSubmitMatchesBtn = document.getElementById("impressionSubmitMatchesBtn");
+const impressionContinueBtn = document.getElementById("impressionContinueBtn");
+const impressionEndBtn = document.getElementById("impressionEndBtn");
+
 const splendorPanel = document.getElementById("splendorPanel");
 const splendorPhaseLabel = document.getElementById("splendorPhase");
 const splendorTurnLabel = document.getElementById("splendorTurn");
@@ -310,6 +361,12 @@ const decryptoActionButtons = {
 const drawGuessActionButtons = {
   submit_drawing: drawGuessSubmitDrawBtn,
   submit_guess: drawGuessSubmitGuessBtn,
+};
+const impressionActionButtons = {
+  submit_drawing: impressionSubmitDrawBtn,
+  submit_matches: impressionSubmitMatchesBtn,
+  continue_game: impressionContinueBtn,
+  end_game: impressionEndBtn,
 };
 
 const splendorActionButtons = {
@@ -825,6 +882,7 @@ function setGamePanelVisibility(gameType) {
   const showCoyote = gameType === "coyote";
   const showDecrypto = gameType === "decrypto";
   const showDrawGuess = gameType === "draw_guess";
+  const showImpression = gameType === "impression_flower";
   const showSplendor = gameType === "splendor";
   const showAbraca = gameType === "abraca_what";
   const showBlokus = gameType === "blokus";
@@ -837,6 +895,9 @@ function setGamePanelVisibility(gameType) {
     decryptoPanel.classList.toggle("hidden", !showDecrypto);
   }
   drawGuessPanel.classList.toggle("hidden", !showDrawGuess);
+  if (impressionFlowerPanel) {
+    impressionFlowerPanel.classList.toggle("hidden", !showImpression);
+  }
   if (splendorPanel) {
     splendorPanel.classList.toggle("hidden", !showSplendor);
   }
@@ -1285,6 +1346,7 @@ function resetRoomState() {
   clearCoyoteState();
   clearDecryptoState();
   clearDrawGuessState();
+  clearImpressionFlowerState();
   clearSplendorState();
   clearAbracaState();
   clearBlokusState();
@@ -1468,6 +1530,83 @@ function clearDrawGuessState() {
   }
   clearDrawGuessCanvas();
   updateDrawGuessButtons();
+}
+
+function clearImpressionFlowerState() {
+  currentImpressionView = null;
+  impressionConfig = null;
+  impressionConfigSignature = null;
+  impressionStampHistory = [];
+  impressionStampsLeft = 0;
+  impressionStampsMax = 0;
+  impressionCurrentShape = null;
+  impressionCurrentColor = null;
+  impressionRotation = 0;
+  impressionPressStart = null;
+  impressionMaskActive = false;
+  impressionMaskState = null;
+  impressionMaskDrag = null;
+  impressionMatches = {};
+  impressionLastRound = null;
+  impressionLastPhase = null;
+  impressionShapeButtonEls = [];
+  impressionColorButtonEls = [];
+  if (impressionPhaseLabel) {
+    impressionPhaseLabel.textContent = "-";
+  }
+  if (impressionRoundLabel) {
+    impressionRoundLabel.textContent = "-";
+  }
+  if (impressionRoundsPerGuesserLabel) {
+    impressionRoundsPerGuesserLabel.textContent = "-";
+  }
+  if (impressionGuesserLabel) {
+    impressionGuesserLabel.textContent = "-";
+  }
+  if (impressionRoleLabel) {
+    impressionRoleLabel.textContent = "-";
+  }
+  if (impressionStampsLeftLabel) {
+    impressionStampsLeftLabel.textContent = "-";
+  }
+  if (impressionScoreLabel) {
+    impressionScoreLabel.textContent = "-";
+  }
+  if (impressionPromptLabel) {
+    impressionPromptLabel.textContent = "-";
+  }
+  if (impressionRoundResult) {
+    impressionRoundResult.textContent = "-";
+  }
+  if (impressionPromptRow) {
+    impressionPromptRow.classList.add("hidden");
+  }
+  if (impressionDrawArea) {
+    impressionDrawArea.classList.add("hidden");
+  }
+  if (impressionGuessArea) {
+    impressionGuessArea.classList.add("hidden");
+  }
+  if (impressionRoundEnd) {
+    impressionRoundEnd.classList.add("hidden");
+  }
+  if (impressionWordBank) {
+    impressionWordBank.innerHTML = "";
+  }
+  if (impressionDrawings) {
+    impressionDrawings.innerHTML = "";
+  }
+  if (impressionPlayers) {
+    impressionPlayers.innerHTML = "";
+  }
+  if (impressionMask) {
+    impressionMask.classList.add("hidden");
+  }
+  if (impressionMaskControls) {
+    impressionMaskControls.classList.add("hidden");
+  }
+  clearImpressionCanvas();
+  updateImpressionButtons();
 }
 
 function resetSplendorTokenSelection() {
@@ -2423,6 +2562,7 @@ function renderRoomState(state) {
     clearSkullState();
     clearDecryptoState();
     clearDrawGuessState();
+    clearImpressionFlowerState();
     clearSplendorState();
     clearAbracaState();
     clearBlokusState();
@@ -3602,6 +3742,610 @@ function updateDrawGuessButtons() {
   });
   drawGuessBrushButtons.forEach((button) => {
     button.disabled = !canDraw;
+  });
+}
+
+function impressionConfigKey(config) {
+  if (!config) {
+    return "";
+  }
+  return JSON.stringify(config);
+}
+
+function applyImpressionConfig(config) {
+  if (!config || !impressionCanvas || !impressionCtx) {
+    return;
+  }
+  const key = impressionConfigKey(config);
+  if (key && key === impressionConfigSignature) {
+    return;
+  }
+  impressionConfigSignature = key;
+  impressionConfig = config;
+  const canvasSize = Number.parseInt(config.canvas_size, 10) || 600;
+  impressionCanvas.width = canvasSize;
+  impressionCanvas.height = canvasSize;
+  impressionRotation = 0;
+  if (impressionRotationInput) {
+    impressionRotationInput.value = "0";
+  }
+
+  if (impressionShapeButtons) {
+    impressionShapeButtons.innerHTML = "";
+    impressionShapeButtonEls = [];
+    const shapes = Array.isArray(config.stamp_shapes) && config.stamp_shapes.length
+      ? config.stamp_shapes
+      : ["circle", "triangle", "square", "bar"];
+    shapes.forEach((shape) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "impression-shape-btn";
+      button.dataset.shape = shape;
+      const label = shape === "circle"
+        ? "Circle"
+        : shape === "square"
+          ? "Square"
+          : shape === "triangle"
+            ? "Triangle"
+            : "Bar";
+      button.textContent = label;
+      button.addEventListener("click", () => setImpressionShape(shape));
+      impressionShapeButtons.appendChild(button);
+      impressionShapeButtonEls.push(button);
+    });
+    if (!impressionCurrentShape || !shapes.includes(impressionCurrentShape)) {
+      impressionCurrentShape = shapes[0];
+    }
+  }
+
+  if (impressionColorButtons) {
+    impressionColorButtons.innerHTML = "";
+    impressionColorButtonEls = [];
+    const colors = Array.isArray(config.stamp_colors) && config.stamp_colors.length
+      ? config.stamp_colors
+      : ["#ef4444", "#22c55e", "#3b82f6", "#eab308"];
+    colors.forEach((color) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "impression-color-btn";
+      button.dataset.color = color;
+      button.style.background = color;
+      button.title = color;
+      button.addEventListener("click", () => setImpressionColor(color));
+      impressionColorButtons.appendChild(button);
+      impressionColorButtonEls.push(button);
+    });
+    if (!impressionCurrentColor || !colors.includes(impressionCurrentColor)) {
+      impressionCurrentColor = colors[0];
+    }
+  }
+
+  impressionStampHistory = [];
+  impressionStampsLeft = 0;
+  impressionStampsMax = 0;
+  clearImpressionCanvas();
+  renderImpressionCanvas();
+  resetImpressionMaskState();
+  updateImpressionShapeButtons();
+  updateImpressionColorButtons();
+}
+
+function updateImpressionShapeButtons() {
+  impressionShapeButtonEls.forEach((button) => {
+    const isActive = button.dataset.shape === impressionCurrentShape;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-pressed", isActive ? "true" : "false");
+  });
+}
+
+function updateImpressionColorButtons() {
+  impressionColorButtonEls.forEach((button) => {
+    const isActive = button.dataset.color === impressionCurrentColor;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-pressed", isActive ? "true" : "false");
+  });
+}
+
+function setImpressionShape(shape) {
+  if (!shape) {
+    return;
+  }
+  impressionCurrentShape = shape;
+  updateImpressionShapeButtons();
+}
+
+function setImpressionColor(color) {
+  if (!color) {
+    return;
+  }
+  impressionCurrentColor = color;
+  updateImpressionColorButtons();
+}
+
+function clearImpressionCanvas() {
+  if (!impressionCtx || !impressionCanvas) {
+    return;
+  }
+  impressionCtx.save();
+  impressionCtx.globalCompositeOperation = "source-over";
+  impressionCtx.fillStyle = "#fff";
+  impressionCtx.fillRect(0, 0, impressionCanvas.width, impressionCanvas.height);
+  impressionCtx.restore();
+}
+
+function renderImpressionCanvas() {
+  if (!impressionCtx || !impressionCanvas) {
+    return;
+  }
+  clearImpressionCanvas();
+  impressionStampHistory.forEach((stamp) => {
+    drawImpressionStamp(stamp);
+  });
+}
+
+function drawImpressionStamp(stamp) {
+  if (!impressionCtx || !impressionCanvas || !stamp) {
+    return;
+  }
+  impressionCtx.save();
+  if (stamp.mask) {
+    impressionCtx.beginPath();
+    impressionCtx.rect(0, 0, impressionCanvas.width, impressionCanvas.height);
+    impressionCtx.save();
+    impressionCtx.translate(stamp.mask.x, stamp.mask.y);
+    impressionCtx.rotate(stamp.mask.rotation);
+    impressionCtx.rect(-stamp.mask.size / 2, -stamp.mask.size / 2, stamp.mask.size, stamp.mask.size);
+    impressionCtx.restore();
+    impressionCtx.clip("evenodd");
+  }
+  impressionCtx.translate(stamp.x, stamp.y);
+  impressionCtx.rotate(stamp.rotation);
+  impressionCtx.globalAlpha = stamp.alpha;
+  impressionCtx.fillStyle = stamp.color;
+  const size = stamp.size;
+  if (stamp.shape === "circle") {
+    impressionCtx.beginPath();
+    impressionCtx.arc(0, 0, size / 2, 0, Math.PI * 2);
+    impressionCtx.fill();
+  } else if (stamp.shape === "square") {
+    impressionCtx.fillRect(-size / 2, -size / 2, size, size);
+  } else if (stamp.shape === "triangle") {
+    const height = size * 0.866;
+    impressionCtx.beginPath();
+    impressionCtx.moveTo(0, -height * 2 / 3);
+    impressionCtx.lineTo(-size / 2, height / 3);
+    impressionCtx.lineTo(size / 2, height / 3);
+    impressionCtx.closePath();
+    impressionCtx.fill();
+  } else if (stamp.shape === "bar") {
+    const barRatio = Number.parseFloat(impressionConfig && impressionConfig.bar_ratio) || 0.25;
+    const height = size * barRatio;
+    impressionCtx.fillRect(-size / 2, -height / 2, size, height);
+  }
+  impressionCtx.restore();
+}
+
+function impressionAlphaForDuration(durationMs) {
+  const clamped = Math.min(Math.max(durationMs, 0), 500);
+  return 0.2 + (clamped / 500) * 0.8;
+}
+
+function getImpressionPosition(event) {
+  if (!impressionCanvas) {
+    return null;
+  }
+  const rect = impressionCanvas.getBoundingClientRect();
+  const point = event.touches ? event.touches[0] : event;
+  const scaleX = rect.width ? impressionCanvas.width / rect.width : 1;
+  const scaleY = rect.height ? impressionCanvas.height / rect.height : 1;
+  return {
+    x: (point.clientX - rect.left) * scaleX,
+    y: (point.clientY - rect.top) * scaleY,
+  };
+}
+
+function startImpressionPress(event) {
+  if (!impressionCanvas || !impressionCtx) {
+    return;
+  }
+  if (!isImpressionActionAvailable("submit_drawing")) {
+    return;
+  }
+  event.preventDefault();
+  impressionPressStart = Date.now();
+}
+
+function endImpressionPress(event) {
+  if (!impressionCanvas || !impressionCtx) {
+    return;
+  }
+  if (impressionPressStart === null) {
+    return;
+  }
+  event.preventDefault();
+  if (impressionStampsLeft <= 0) {
+    impressionPressStart = null;
+    return;
+  }
+  if (!impressionCurrentShape || !impressionCurrentColor || !impressionConfig) {
+    impressionPressStart = null;
+    return;
+  }
+  const position = getImpressionPosition(event);
+  if (!position) {
+    impressionPressStart = null;
+    return;
+  }
+  const duration = Date.now() - impressionPressStart;
+  const alpha = impressionAlphaForDuration(duration);
+  const size = Number.parseInt(impressionConfig && impressionConfig.stamp_size, 10) || 64;
+  const rotation = (Math.PI / 180) * (Number.parseFloat(impressionRotation) || 0);
+  let mask = null;
+  if (impressionMaskActive && impressionMaskState && impressionConfig) {
+    const maskSize = (Number.parseInt(impressionConfig.mask_size, 10) || 180) * impressionMaskState.scale;
+    mask = {
+      x: impressionMaskState.x,
+      y: impressionMaskState.y,
+      size: maskSize,
+      rotation: (Math.PI / 180) * impressionMaskState.rotation,
+    };
+  }
+  impressionStampHistory.push({
+    shape: impressionCurrentShape,
+    color: impressionCurrentColor,
+    alpha,
+    x: position.x,
+    y: position.y,
+    size,
+    rotation,
+    mask,
+  });
+  impressionStampsLeft = Math.max(0, impressionStampsLeft - 1);
+  if (impressionStampsLeftLabel) {
+    impressionStampsLeftLabel.textContent = `${impressionStampsLeft}`;
+  }
+  renderImpressionCanvas();
+  if (impressionMaskActive) {
+    setImpressionMaskActive(false);
+  }
+  impressionPressStart = null;
+  updateImpressionButtons();
+}
+
+function cancelImpressionPress() {
+  impressionPressStart = null;
+}
+
+function resetImpressionMaskState() {
+  if (!impressionCanvas) {
+    return;
+  }
+  impressionMaskState = {
+    x: impressionCanvas.width / 2,
+    y: impressionCanvas.height / 2,
+    rotation: 0,
+    scale: 1,
+  };
+  if (impressionMaskRotationInput) {
+    impressionMaskRotationInput.value = "0";
+  }
+  if (impressionMaskScaleInput) {
+    impressionMaskScaleInput.value = "1";
+  }
+  updateImpressionMaskElement();
+}
+
+function updateImpressionMaskElement() {
+  if (!impressionMask || !impressionCanvas || !impressionMaskState || !impressionConfig) {
+    return;
+  }
+  const rect = impressionCanvas.getBoundingClientRect();
+  const scaleX = rect.width ? rect.width / impressionCanvas.width : 1;
+  const scaleY = rect.height ? rect.height / impressionCanvas.height : 1;
+  const baseSize = Number.parseInt(impressionConfig.mask_size, 10) || 180;
+  const size = baseSize * impressionMaskState.scale;
+  impressionMask.style.width = `${size * scaleX}px`;
+  impressionMask.style.height = `${size * scaleY}px`;
+  impressionMask.style.left = `${impressionMaskState.x * scaleX}px`;
+  impressionMask.style.top = `${impressionMaskState.y * scaleY}px`;
+  impressionMask.style.transform = `translate(-50%, -50%) rotate(${impressionMaskState.rotation}deg)`;
+}
+
+function setImpressionMaskActive(active) {
+  impressionMaskActive = active;
+  if (impressionMask) {
+    impressionMask.classList.toggle("hidden", !active);
+  }
+  if (impressionMaskControls) {
+    impressionMaskControls.classList.toggle("hidden", !active);
+  }
+  if (impressionMaskBtn) {
+    impressionMaskBtn.classList.toggle("tool-active", active);
+  }
+  if (active && !impressionMaskState) {
+    resetImpressionMaskState();
+  }
+  updateImpressionMaskElement();
+}
+
+function startImpressionMaskDrag(event) {
+  if (!impressionMaskActive || !impressionMaskState || !impressionCanvas) {
+    return;
+  }
+  event.preventDefault();
+  const point = event.touches ? event.touches[0] : event;
+  const rect = impressionCanvas.getBoundingClientRect();
+  impressionMaskDrag = {
+    startX: point.clientX,
+    startY: point.clientY,
+    originX: impressionMaskState.x,
+    originY: impressionMaskState.y,
+    rect,
+  };
+  document.addEventListener("mousemove", onImpressionMaskDrag);
+  document.addEventListener("mouseup", endImpressionMaskDrag);
+  document.addEventListener("touchmove", onImpressionMaskDrag, { passive: false });
+  document.addEventListener("touchend", endImpressionMaskDrag, { passive: false });
+}
+
+function onImpressionMaskDrag(event) {
+  if (!impressionMaskDrag || !impressionCanvas || !impressionMaskState) {
+    return;
+  }
+  event.preventDefault();
+  const point = event.touches ? event.touches[0] : event;
+  const scaleX = impressionMaskDrag.rect.width ? impressionCanvas.width / impressionMaskDrag.rect.width : 1;
+  const scaleY = impressionMaskDrag.rect.height ? impressionCanvas.height / impressionMaskDrag.rect.height : 1;
+  const dx = (point.clientX - impressionMaskDrag.startX) * scaleX;
+  const dy = (point.clientY - impressionMaskDrag.startY) * scaleY;
+  impressionMaskState.x = Math.max(0, Math.min(impressionCanvas.width, impressionMaskDrag.originX + dx));
+  impressionMaskState.y = Math.max(0, Math.min(impressionCanvas.height, impressionMaskDrag.originY + dy));
+  updateImpressionMaskElement();
+}
+
+function endImpressionMaskDrag() {
+  impressionMaskDrag = null;
+  document.removeEventListener("mousemove", onImpressionMaskDrag);
+  document.removeEventListener("mouseup", endImpressionMaskDrag);
+  document.removeEventListener("touchmove", onImpressionMaskDrag);
+  document.removeEventListener("touchend", endImpressionMaskDrag);
+}
+
+function impressionMatchesComplete(view) {
+  const drawings = Array.isArray(view && view.drawings) ? view.drawings : [];
+  if (!drawings.length) {
+    return false;
+  }
+  return drawings.every((drawing) => impressionMatches[drawing.drawing_id]);
+}
+
+function isImpressionActionAvailable(actionType) {
+  if (currentGameType !== "impression_flower" || !currentImpressionView) {
+    return false;
+  }
+  if (!Array.isArray(currentImpressionView.legal_actions)) {
+    return false;
+  }
+  if (!currentImpressionView.legal_actions.includes(actionType)) {
+    return false;
+  }
+  if (actionType === "submit_matches") {
+    return impressionMatchesComplete(currentImpressionView);
+  }
+  return true;
+}
+
+function updateImpressionButtons() {
+  if (currentGameType !== "impression_flower") {
+    Object.values(impressionActionButtons).forEach((button) => {
+      if (!button) {
+        return;
+      }
+      button.classList.remove("action-allowed");
+      button.disabled = true;
+    });
+    impressionShapeButtonEls.forEach((button) => {
+      button.disabled = true;
+    });
+    impressionColorButtonEls.forEach((button) => {
+      button.disabled = true;
+    });
+    if (impressionUndoBtn) {
+      impressionUndoBtn.disabled = true;
+    }
+    if (impressionMaskBtn) {
+      impressionMaskBtn.disabled = true;
+    }
+    if (impressionRotationInput) {
+      impressionRotationInput.disabled = true;
+    }
+    return;
+  }
+  Object.entries(impressionActionButtons).forEach(([actionType, button]) => {
+    if (!button) {
+      return;
+    }
+    const allowed = isImpressionActionAvailable(actionType);
+    if (allowed) {
+      button.classList.add("action-allowed");
+    } else {
+      button.classList.remove("action-allowed");
+    }
+    button.disabled = !allowed;
+  });
+  const canDraw = isImpressionActionAvailable("submit_drawing");
+  impressionShapeButtonEls.forEach((button) => {
+    button.disabled = !canDraw;
+  });
+  impressionColorButtonEls.forEach((button) => {
+    button.disabled = !canDraw;
+  });
+  if (impressionUndoBtn) {
+    impressionUndoBtn.disabled = !canDraw || impressionStampHistory.length === 0;
+  }
+  if (impressionMaskBtn) {
+    impressionMaskBtn.disabled = !canDraw;
+  }
+  if (impressionRotationInput) {
+    impressionRotationInput.disabled = !canDraw;
+  }
+}
+
+function renderImpressionWordBank(view) {
+  if (!impressionWordBank) {
+    return;
+  }
+  impressionWordBank.innerHTML = "";
+  const words = Array.isArray(view.word_bank) ? view.word_bank : [];
+  if (!words.length) {
+    impressionWordBank.textContent = "Waiting for guesser...";
+    return;
+  }
+  const assignedWords = new Set(Object.values(impressionMatches));
+  words.forEach((word) => {
+    const chip = document.createElement("div");
+    chip.className = "impression-word";
+    chip.textContent = word;
+    const isAssigned = assignedWords.has(word);
+    if (isAssigned) {
+      chip.classList.add("assigned");
+      chip.draggable = false;
+    } else {
+      chip.draggable = true;
+      chip.addEventListener("dragstart", (event) => {
+        event.dataTransfer.setData("text/plain", word);
+        event.dataTransfer.effectAllowed = "move";
+      });
+    }
+    impressionWordBank.appendChild(chip);
+  });
+}
+
+function renderImpressionDrawings(view) {
+  if (!impressionDrawings) {
+    return;
+  }
+  impressionDrawings.innerHTML = "";
+  const drawings = Array.isArray(view.drawings) ? view.drawings : [];
+  if (!drawings.length) {
+    impressionDrawings.textContent = "Waiting for guesser...";
+    return;
+  }
+  drawings.forEach((drawing) => {
+    const card = document.createElement("div");
+    card.className = "impression-drawing";
+    const author = document.createElement("div");
+    author.textContent = drawing.author_name ? `By ${drawing.author_name}` : "By ?";
+    const image = document.createElement("img");
+    image.src = drawing.image_data;
+    image.alt = "drawing";
+    const dropzone = document.createElement("div");
+    dropzone.className = "impression-dropzone";
+    const assignedWord = impressionMatches[drawing.drawing_id];
+    if (assignedWord) {
+      const assigned = document.createElement("span");
+      assigned.className = "impression-assigned-word";
+      assigned.textContent = assignedWord;
+      assigned.title = "Click to clear";
+      assigned.addEventListener("click", () => {
+        delete impressionMatches[drawing.drawing_id];
+        renderImpressionWordBank(view);
+        renderImpressionDrawings(view);
+        updateImpressionButtons();
+      });
+      dropzone.innerHTML = "";
+      dropzone.appendChild(assigned);
+    } else {
+      dropzone.textContent = "Drop word here";
+    }
+    dropzone.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      dropzone.classList.add("active");
+    });
+    dropzone.addEventListener("dragleave", () => {
+      dropzone.classList.remove("active");
+    });
+    dropzone.addEventListener("drop", (event) => {
+      event.preventDefault();
+      dropzone.classList.remove("active");
+      const word = event.dataTransfer.getData("text/plain");
+      if (!word) {
+        return;
+      }
+      Object.keys(impressionMatches).forEach((key) => {
+        if (impressionMatches[key] === word) {
+          delete impressionMatches[key];
+        }
+      });
+      impressionMatches[drawing.drawing_id] = word;
+      renderImpressionWordBank(view);
+      renderImpressionDrawings(view);
+      updateImpressionButtons();
+    });
+    card.appendChild(author);
+    card.appendChild(image);
+    card.appendChild(dropzone);
+    impressionDrawings.appendChild(card);
+  });
+}
+
+function renderImpressionPlayers(view) {
+  if (!impressionPlayers) {
+    return;
+  }
+  impressionPlayers.innerHTML = "";
+  const players = Array.isArray(view.players) ? view.players : [];
+  players.forEach((player) => {
+    const line = document.createElement("div");
+    const tags = [];
+    if (player.is_guesser) tags.push("guesser");
+    if (player.submitted) tags.push("submitted");
+    if (player.player_id === view.you) tags.push("you");
+    const score = player.score ?? 0;
+    line.textContent = `${(player.seat ?? 0) + 1}. ${player.name} (${tags.join(", ") || "player"}) - ${score}`;
+    impressionPlayers.appendChild(line);
+  });
+}
+
+function renderImpressionRoundResult(view) {
+  if (!impressionRoundResult) {
+    return;
+  }
+  const result = view.last_result;
+  if (!result) {
+    impressionRoundResult.textContent = "-";
+    return;
+  }
+  const total = result.matches ? Object.keys(result.matches).length : 0;
+  const correct = Array.isArray(result.correct) ? result.correct.length : 0;
+  const scoreParts = [];
+  const players = Array.isArray(view.players) ? view.players : [];
+  if (result.scores_delta) {
+    Object.entries(result.scores_delta).forEach(([pid, delta]) => {
+      const player = players.find((p) => p.player_id === pid);
+      scoreParts.push(`${player ? player.name : pid} +${delta}`);
+    });
+  }
+  const scoresText = scoreParts.length ? ` | ${scoreParts.join(", ")}` : "";
+  impressionRoundResult.textContent = `Matched ${correct}/${total}${scoresText}`;
+}
+
+function setupImpressionCanvas() {
+  if (!impressionCanvas || !impressionCtx) {
+    return;
+  }
+  impressionCanvas.addEventListener("mousedown", startImpressionPress);
+  impressionCanvas.addEventListener("mouseup", endImpressionPress);
+  impressionCanvas.addEventListener("mouseleave", cancelImpressionPress);
+  impressionCanvas.addEventListener("touchstart", startImpressionPress, { passive: false });
+  impressionCanvas.addEventListener("touchend", endImpressionPress, { passive: false });
+  impressionCanvas.addEventListener("touchcancel", cancelImpressionPress, { passive: false });
+  if (impressionMask) {
+    impressionMask.addEventListener("mousedown", startImpressionMaskDrag);
+    impressionMask.addEventListener("touchstart", startImpressionMaskDrag, { passive: false });
+  }
+  window.addEventListener("resize", () => {
+    updateImpressionMaskElement();
   });
 }
 
@@ -4839,6 +5583,148 @@ function renderDrawGuessGameState(data) {
   updateDrawGuessButtons();
 }
 
+function renderImpressionGameState(data) {
+  const view = data.view;
+  currentImpressionView = view;
+  if (currentGameType !== "impression_flower") {
+    currentGameType = "impression_flower";
+    setGamePanelVisibility("impression_flower");
+  }
+
+  if (view && view.config) {
+    applyImpressionConfig(view.config);
+  }
+
+  if (impressionPhaseLabel) {
+    impressionPhaseLabel.textContent = view.phase || "-";
+  }
+  if (impressionRoundLabel) {
+    impressionRoundLabel.textContent = view.round ?? "-";
+  }
+  if (impressionRoundsPerGuesserLabel) {
+    impressionRoundsPerGuesserLabel.textContent = view.rounds_per_guesser ?? "-";
+  }
+  if (impressionGuesserLabel) {
+    impressionGuesserLabel.textContent = view.guesser_name || "-";
+  }
+
+  const isGuesser = view.guesser_id && view.you === view.guesser_id;
+  if (impressionRoleLabel) {
+    impressionRoleLabel.textContent = isGuesser ? "Guesser" : "Setter";
+  }
+
+  let yourScore = "-";
+  if (view.scores && view.you && view.scores[view.you] !== undefined) {
+    yourScore = view.scores[view.you];
+  } else if (Array.isArray(view.players)) {
+    const you = view.players.find((p) => p.player_id === view.you);
+    if (you && you.score !== undefined) {
+      yourScore = you.score;
+    }
+  }
+  if (impressionScoreLabel) {
+    impressionScoreLabel.textContent = yourScore;
+  }
+
+  if (impressionPromptRow) {
+    impressionPromptRow.classList.toggle("hidden", !view.prompt_word);
+  }
+  if (impressionPromptLabel) {
+    impressionPromptLabel.textContent = view.prompt_word || "-";
+  }
+
+  const newRound = impressionLastRound !== view.round;
+  const phaseChanged = impressionLastPhase !== view.phase;
+
+  if (view.phase === "draw") {
+    if (impressionDrawArea) {
+      impressionDrawArea.classList.remove("hidden");
+    }
+    if (impressionGuessArea) {
+      impressionGuessArea.classList.add("hidden");
+    }
+    if (impressionRoundEnd) {
+      impressionRoundEnd.classList.add("hidden");
+    }
+    if (newRound || impressionLastPhase !== "draw") {
+      impressionStampHistory = [];
+      impressionStampsMax = Number.parseInt(view.stamps_this_round, 10) || 0;
+      impressionStampsLeft = impressionStampsMax;
+      clearImpressionCanvas();
+      renderImpressionCanvas();
+      setImpressionMaskActive(false);
+    }
+    if (impressionStampsLeftLabel) {
+      impressionStampsLeftLabel.textContent = isGuesser ? "-" : `${impressionStampsLeft}`;
+    }
+    if (impressionCanvas) {
+      impressionCanvas.style.pointerEvents = isImpressionActionAvailable("submit_drawing") ? "auto" : "none";
+    }
+  } else if (view.phase === "guess") {
+    if (impressionDrawArea) {
+      impressionDrawArea.classList.add("hidden");
+    }
+    if (impressionGuessArea) {
+      impressionGuessArea.classList.remove("hidden");
+    }
+    if (impressionRoundEnd) {
+      impressionRoundEnd.classList.add("hidden");
+    }
+    if (phaseChanged) {
+      impressionMatches = {};
+    }
+    renderImpressionWordBank(view);
+    renderImpressionDrawings(view);
+    if (impressionStampsLeftLabel) {
+      impressionStampsLeftLabel.textContent = "-";
+    }
+  } else if (view.phase === "round_end") {
+    if (impressionDrawArea) {
+      impressionDrawArea.classList.add("hidden");
+    }
+    if (impressionGuessArea) {
+      impressionGuessArea.classList.add("hidden");
+    }
+    if (impressionRoundEnd) {
+      impressionRoundEnd.classList.remove("hidden");
+    }
+    renderImpressionRoundResult(view);
+    if (impressionStampsLeftLabel) {
+      impressionStampsLeftLabel.textContent = "-";
+    }
+  } else if (view.phase === "game_over") {
+    if (impressionDrawArea) {
+      impressionDrawArea.classList.add("hidden");
+    }
+    if (impressionGuessArea) {
+      impressionGuessArea.classList.add("hidden");
+    }
+    if (impressionRoundEnd) {
+      impressionRoundEnd.classList.remove("hidden");
+    }
+    renderImpressionRoundResult(view);
+    if (impressionStampsLeftLabel) {
+      impressionStampsLeftLabel.textContent = "-";
+    }
+  } else {
+    if (impressionDrawArea) {
+      impressionDrawArea.classList.add("hidden");
+    }
+    if (impressionGuessArea) {
+      impressionGuessArea.classList.add("hidden");
+    }
+    if (impressionRoundEnd) {
+      impressionRoundEnd.classList.add("hidden");
+    }
+  }
+
+  renderImpressionPlayers(view);
+  logGameEvents(data);
+  impressionLastRound = view.round;
+  impressionLastPhase = view.phase;
+  updateImpressionButtons();
+}
+
 function renderGameState(data) {
   const gameType = data.game_type || (currentRoomState && currentRoomState.game_type);
   if (gameType === "cabo") {
@@ -4859,6 +5745,10 @@ function renderGameState(data) {
   }
   if (gameType === "draw_guess") {
     renderDrawGuessGameState(data);
+    return;
+  }
+  if (gameType === "impression_flower") {
+    renderImpressionGameState(data);
     return;
   }
   if (gameType === "abraca_what") {
@@ -5424,6 +6314,100 @@ if (drawGuessRestartBtn) {
   });
 }
 
+if (impressionRotationInput) {
+  impressionRotationInput.addEventListener("input", () => {
+    impressionRotation = Number.parseFloat(impressionRotationInput.value) || 0;
+  });
+}
+
+if (impressionMaskBtn) {
+  impressionMaskBtn.addEventListener("click", () => {
+    if (!isImpressionActionAvailable("submit_drawing")) {
+      return;
+    }
+    setImpressionMaskActive(!impressionMaskActive);
+  });
+}
+
+if (impressionMaskRotationInput) {
+  impressionMaskRotationInput.addEventListener("input", () => {
+    if (!impressionMaskState) {
+      return;
+    }
+    impressionMaskState.rotation = Number.parseFloat(impressionMaskRotationInput.value) || 0;
+    updateImpressionMaskElement();
+  });
+}
+
+if (impressionMaskScaleInput) {
+  impressionMaskScaleInput.addEventListener("input", () => {
+    if (!impressionMaskState) {
+      return;
+    }
+    const scale = Number.parseFloat(impressionMaskScaleInput.value);
+    impressionMaskState.scale = Number.isFinite(scale) ? scale : 1;
+    updateImpressionMaskElement();
+  });
+}
+
+if (impressionUndoBtn) {
+  impressionUndoBtn.addEventListener("click", () => {
+    if (!impressionStampHistory.length) {
+      return;
+    }
+    impressionStampHistory.pop();
+    impressionStampsLeft = Math.min(impressionStampsLeft + 1, impressionStampsMax);
+    if (impressionStampsLeftLabel) {
+      impressionStampsLeftLabel.textContent = `${impressionStampsLeft}`;
+    }
+    renderImpressionCanvas();
+    updateImpressionButtons();
+  });
+}
+
+if (impressionSubmitDrawBtn) {
+  impressionSubmitDrawBtn.addEventListener("click", () => {
+    if (!impressionCanvas) {
+      return;
+    }
+    sendAction({ type: "submit_drawing", image_data: impressionCanvas.toDataURL("image/png") });
+  });
+}
+
+if (impressionSubmitMatchesBtn) {
+  impressionSubmitMatchesBtn.addEventListener("click", () => {
+    if (!currentImpressionView) {
+      return;
+    }
+    const drawings = Array.isArray(currentImpressionView.drawings) ? currentImpressionView.drawings : [];
+    if (!drawings.length) {
+      log("No drawings to match");
+      return;
+    }
+    if (!impressionMatchesComplete(currentImpressionView)) {
+      log("Match all drawings before submitting");
+      return;
+    }
+    const matches = drawings.map((drawing) => ({
+      drawing_id: drawing.drawing_id,
+      word: impressionMatches[drawing.drawing_id],
+    }));
+    sendAction({ type: "submit_matches", matches });
+  });
+}
+
+if (impressionContinueBtn) {
+  impressionContinueBtn.addEventListener("click", () => {
+    sendAction({ type: "continue_game" });
+  });
+}
+
+if (impressionEndBtn) {
+  impressionEndBtn.addEventListener("click", () => {
+    sendAction({ type: "end_game" });
+  });
+}
+
 if (abracaSpellButtons.length) {
   abracaSpellButtons.forEach((button) => {
     button.addEventListener("click", () => {
@@ -5702,6 +6686,7 @@ if (blokusPlaceBtn) {
 }
 
 setupDrawGuessCanvas();
+setupImpressionCanvas();
 
 document.querySelectorAll(".collapse-btn").forEach((btn) => {
   btn.addEventListener("click", () => {

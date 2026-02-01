@@ -3,6 +3,7 @@ from game.cabo import CaboGame
 from game.coyote import CoyoteGame
 from game.decrypto import DecryptoGame
 from game.draw_guess import DrawGuessGame
+from game.impression_flower import ImpressionFlowerGame
 from game.registry import GameDefinition, register_game
 from game.splendor import SplendorGame
 from game.blokus import BlokusGame
@@ -180,6 +181,59 @@ DRAW_GUESS_CONFIG_SCHEMA = {
                 ]
             },
         },
+    },
+    "additionalProperties": False,
+}
+
+IMPRESSION_FLOWER_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {"type": {"const": "submit_drawing"}, "image_data": {"type": "string", "minLength": 1}},
+            "required": ["type", "image_data"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "submit_matches"},
+                "matches": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {"drawing_id": {"type": "string"}, "word": {"type": "string"}},
+                        "required": ["drawing_id", "word"],
+                        "additionalProperties": False,
+                    },
+                    "minItems": 1,
+                },
+            },
+            "required": ["type", "matches"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "continue_game"}}, "required": ["type"], "additionalProperties": False},
+        {"type": "object", "properties": {"type": {"const": "end_game"}}, "required": ["type"], "additionalProperties": False},
+    ],
+}
+
+IMPRESSION_FLOWER_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "word_pool": {"type": "array", "items": {"type": "string"}},
+        "rounds_per_guesser": {"type": "integer", "minimum": 1},
+        "base_stamps": {"type": "integer", "minimum": 1},
+        "score_mode": {"type": "string", "enum": ["round", "fixed"]},
+        "score_per_correct": {"type": "integer", "minimum": 1},
+        "stamp_shapes": {
+            "type": "array",
+            "items": {"type": "string", "enum": ["circle", "triangle", "square", "bar"]},
+        },
+        "stamp_colors": {"type": "array", "items": {"type": "string"}},
+        "stamp_size": {"type": "integer", "minimum": 1},
+        "bar_ratio": {"type": "number", "minimum": 0.01},
+        "canvas_size": {"type": "integer", "minimum": 1},
+        "mask_size": {"type": "integer", "minimum": 1},
     },
     "additionalProperties": False,
 }
@@ -506,6 +560,21 @@ register_game(
         module=DecryptoGame,
         serialize=DecryptoGame.serialize,
         deserialize=DecryptoGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=ImpressionFlowerGame.game_id,
+        name="Impression Flower",
+        min_players=ImpressionFlowerGame.min_players,
+        max_players=ImpressionFlowerGame.max_players,
+        turn_mode="simultaneous",
+        action_schema=IMPRESSION_FLOWER_ACTION_SCHEMA,
+        config_schema=IMPRESSION_FLOWER_CONFIG_SCHEMA,
+        module=ImpressionFlowerGame,
+        serialize=ImpressionFlowerGame.serialize,
+        deserialize=ImpressionFlowerGame.deserialize,
     )
 )
 

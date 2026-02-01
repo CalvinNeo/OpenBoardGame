@@ -73,6 +73,7 @@
                 <option value="decrypto">Decrypto</option>
                 <option value="skull">Skull</option>
                 <option value="draw_guess">Draw & Guess</option>
+                <option value="impression_flower">Impression Flower</option>
                 <option value="splendor">Splendor</option>
                 <option value="abraca_what">Abraca What</option>
                 <option value="blokus">Blokus</option>
@@ -408,6 +409,67 @@
                   <button id="drawGuessRestartBtn">Play Again</button>
                 </div>
               </div>
+            </div>
+
+            <div id="impressionFlowerPanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="impressionPhase">-</span></div>
+                <div>Round: <span id="impressionRound">-</span>/<span id="impressionRoundsPerGuesser">-</span></div>
+                <div>Guesser: <span id="impressionGuesser">-</span></div>
+              </div>
+              <div class="row">
+                <div>Your Role: <span id="impressionRole">-</span></div>
+                <div>Stamps Left: <span id="impressionStampsLeft">-</span></div>
+                <div>Your Score: <span id="impressionScore">-</span></div>
+              </div>
+
+              <div class="row hidden" id="impressionPromptRow">
+                <div>Prompt: <span id="impressionPrompt">-</span></div>
+              </div>
+
+              <div id="impressionDrawArea" class="hidden">
+                <div class="impression-canvas-wrapper">
+                  <canvas id="impressionCanvas" width="600" height="600"></canvas>
+                  <div id="impressionMask" class="impression-mask hidden"></div>
+                </div>
+                <div class="row impression-controls">
+                  <div id="impressionShapeButtons" class="impression-shapes"></div>
+                  <div id="impressionColorButtons" class="impression-colors"></div>
+                  <label for="impressionRotation">Rotation</label>
+                  <input id="impressionRotation" type="range" min="0" max="360" value="0" />
+                  <button id="impressionUndoBtn">Undo</button>
+                  <button id="impressionMaskBtn">Mask</button>
+                  <button id="impressionSubmitDrawBtn">Submit Drawing</button>
+                </div>
+                <div id="impressionMaskControls" class="row impression-mask-controls hidden">
+                  <label for="impressionMaskRotation">Mask Rotation</label>
+                  <input id="impressionMaskRotation" type="range" min="0" max="360" value="0" />
+                  <label for="impressionMaskScale">Mask Scale</label>
+                  <input id="impressionMaskScale" type="range" min="0.5" max="2" step="0.1" value="1" />
+                </div>
+              </div>
+
+              <div id="impressionGuessArea" class="hidden">
+                <h3>Word Bank</h3>
+                <div id="impressionWordBank" class="impression-word-bank"></div>
+                <h3>Drawings</h3>
+                <div id="impressionDrawings" class="impression-drawings"></div>
+                <div class="row actions">
+                  <button id="impressionSubmitMatchesBtn">Submit Matches</button>
+                </div>
+              </div>
+
+              <div id="impressionRoundEnd" class="round-notice hidden">
+                <div class="round-notice-title">Last Round</div>
+                <div id="impressionRoundResult" class="round-notice-body">-</div>
+                <div class="row actions">
+                  <button id="impressionContinueBtn">Continue</button>
+                  <button id="impressionEndBtn">End Game</button>
+                </div>
+              </div>
+
+              <h3>Players</h3>
+              <div id="impressionPlayers"></div>
             </div>
 
             <div id="splendorPanel" class="hidden">
