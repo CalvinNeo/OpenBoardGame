@@ -46,6 +46,7 @@ class Player:
     socket_id: Optional[str]
     ready: bool = False
     connected: bool = True
+    seat_claimed: bool = False
     is_bot: bool = False
     reconnect_token: str = ""
     last_seen: float = 0.0
@@ -207,6 +208,7 @@ def _seat_list_payload(room: Room) -> List[Dict]:
             "name": p.name,
             "is_bot": p.is_bot,
             "connected": p.connected,
+            "seat_claimed": p.seat_claimed,
         }
         for p in ordered_players
     ]
@@ -226,6 +228,7 @@ async def _emit_room_state(room: Room) -> None:
                 "seat": p.seat,
                 "ready": p.ready,
                 "connected": p.connected,
+                "seat_claimed": p.seat_claimed,
                 "is_bot": p.is_bot,
             }
             for p in room.players
@@ -248,7 +251,13 @@ def _room_list_payload() -> List[Dict]:
                 "player_count": len(room.players),
                 "max_players": max_players,
                 "players": [
-                    {"name": p.name, "connected": p.connected, "is_bot": p.is_bot} for p in room.players
+                    {
+                        "name": p.name,
+                        "connected": p.connected,
+                        "seat_claimed": p.seat_claimed,
+                        "is_bot": p.is_bot,
+                    }
+                    for p in room.players
                 ],
             }
         )
@@ -413,6 +422,7 @@ async def on_room_create(sid, data):
         name=name,
         seat=0,
         socket_id=sid,
+        seat_claimed=True,
         reconnect_token=reconnect_token,
         last_seen=time.time(),
     )
@@ -480,6 +490,7 @@ async def on_room_join(sid, data):
         name=name,
         seat=seat,
         socket_id=sid,
+        seat_claimed=True,
         reconnect_token=reconnect_token,
         last_seen=time.time(),
     )
@@ -526,6 +537,7 @@ async def on_room_reconnect(sid, data):
     existing = SESSIONS.get(sid)
     if existing and (existing.get("room_id") != room_id or existing.get("player_id") != player_id):
         await _leave_session(sid)
+    player.seat_claimed = True
     player.connected = True
     player.socket_id = sid
     player.last_seen = time.time()
@@ -622,6 +634,7 @@ async def on_room_add_bot(sid, data):
         socket_id=None,
         ready=True,
         is_bot=True,
+        seat_claimed=True,
         reconnect_token=_generate_reconnect_token(),
         last_seen=time.time(),
     )
@@ -807,6 +820,7 @@ async def on_room_load(sid, data):
                 socket_id=None,
                 ready=bool(raw.get("ready")),
                 connected=is_bot,
+                seat_claimed=is_bot,
                 is_bot=is_bot,
                 reconnect_token=reconnect_token,
                 last_seen=time.time(),
@@ -893,11 +907,12 @@ async def on_room_claim_seat(sid, data):
     if target.is_bot:
         await sio.emit("room:claim_result", {"ok": False, "message": "seat is bot"}, to=sid)
         return
-    if target.connected:
+    if target.seat_claimed or target.connected:
         await sio.emit("room:claim_result", {"ok": False, "message": "seat already claimed"}, to=sid)
         return
     await _leave_session(sid)
     target.name = name
+    target.seat_claimed = True
     target.connected = True
     target.socket_id = sid
     target.last_seen = time.time()

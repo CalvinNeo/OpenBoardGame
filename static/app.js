@@ -680,8 +680,9 @@ function renderSeatList(payload) {
     const meta = document.createElement("div");
     meta.className = "seat-item-meta";
     const tags = [];
+    const claimed = Boolean(seat.seat_claimed) || seat.connected;
     if (seat.is_bot) tags.push("bot");
-    if (seat.connected) tags.push("claimed");
+    if (!seat.is_bot && claimed) tags.push("claimed");
     meta.textContent = tags.join(" · ") || "available";
     row.appendChild(label);
     row.appendChild(meta);
@@ -691,7 +692,7 @@ function renderSeatList(payload) {
     const claimButton = document.createElement("button");
     claimButton.type = "button";
     claimButton.textContent = "Claim";
-    const disabled = seat.is_bot || seat.connected;
+    const disabled = seat.is_bot || claimed;
     if (!disabled) {
       available += 1;
     }
@@ -1171,7 +1172,9 @@ function renderRoomList(rooms) {
     const auth = getRoomAuth(room.room_id);
     const isLoaded = Boolean(room.source_room_id);
     const canReconnect = auth && auth.player_id && auth.reconnect_token;
-    const claimableSeats = (room.players || []).filter((player) => !player.is_bot && !player.connected);
+    const claimableSeats = (room.players || []).filter(
+      (player) => !player.is_bot && !(player.seat_claimed || player.connected),
+    );
     const joinDisabled = isLoaded
       ? claimableSeats.length === 0
       : room.status !== "lobby" || (maxPlayers !== null && (room.player_count || 0) >= maxPlayers);

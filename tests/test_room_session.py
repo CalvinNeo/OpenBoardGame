@@ -143,6 +143,40 @@ class RoomSessionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(player.socket_id, sid_new)
         self.assertEqual(app.SESSIONS[sid_new]["room_id"], room_id)
 
+    async def test_claim_seat_rejects_second_claim(self):
+        sid_owner = "sid-owner"
+        room_id = await self._create_room(sid_owner, "Alice")
+        room = app.ROOMS[room_id]
+        room.source_room_id = "source-room"
+        player = room.players[0]
+        player.connected = False
+        player.socket_id = None
+        player.seat_claimed = False
+        app.SESSIONS.pop(sid_owner, None)
+
+        sid_claim = "sid-claim"
+        await app.on_room_claim_seat(
+            sid_claim,
+            {"room_id": room_id, "seat": 0, "name": "Alice"},
+        )
+
+        first_result = next(
+            event for event in reversed(app.sio.emits) if event["event"] == "room:claim_result"
+        )
+        self.assertTrue(first_result["payload"]["ok"])
+
+        sid_again = "sid-again"
+        await app.on_room_claim_seat(
+            sid_again,
+            {"room_id": room_id, "seat": 0, "name": "Bob"},
+        )
+
+        second_result = next(
+            event for event in reversed(app.sio.emits) if event["event"] == "room:claim_result"
+        )
+        self.assertFalse(second_result["payload"]["ok"])
+        self.assertEqual(second_result["payload"]["message"], "seat already claimed")
+
     async def test_move_seat_swaps_order(self):
         sid_owner = "sid-owner"
         room_id = await self._create_room(sid_owner, "Alice")
