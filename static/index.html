@@ -514,15 +514,6 @@
                 <div>Origin (top-left): <span id="blokusOrigin">-</span></div>
               </div>
               <div class="row">
-                <label for="blokusRotation">Rotation</label>
-                <select id="blokusRotation">
-                  <option value="0">0</option>
-                  <option value="90">90</option>
-                  <option value="180">180</option>
-                  <option value="270">270</option>
-                </select>
-                <label for="blokusFlip">Flip</label>
-                <input id="blokusFlip" type="checkbox" />
                 <button id="blokusPlaceBtn">Place Piece</button>
               </div>
               <div class="row">
@@ -532,7 +523,20 @@
               <div class="blokus-layout">
                 <div>
                   <h3>Board</h3>
-                  <div id="blokusBoard" class="blokus-board"></div>
+                  <div class="blokus-board-wrapper">
+                    <div id="blokusBoard" class="blokus-board"></div>
+                    <div id="blokusBoardControls" class="blokus-board-controls hidden">
+                      <button id="blokusRotateLeftBtn" type="button" class="blokus-control-btn" title="Rotate left" aria-label="Rotate left">
+                        &larr;
+                      </button>
+                      <button id="blokusRotateRightBtn" type="button" class="blokus-control-btn" title="Rotate right" aria-label="Rotate right">
+                        &rarr;
+                      </button>
+                      <button id="blokusFlipBtn" type="button" class="blokus-control-btn" title="Flip piece" aria-label="Flip piece">
+                        Flip
+                      </button>
+                    </div>
+                  </div>
                 </div>
                 <div>
                   <h3>Pieces</h3>

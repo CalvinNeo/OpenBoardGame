@@ -251,9 +251,11 @@ const blokusTurnLabel = document.getElementById("blokusTurn");
 const blokusWinnerLabel = document.getElementById("blokusWinner");
 const blokusSelectedPieceLabel = document.getElementById("blokusSelectedPiece");
 const blokusOriginLabel = document.getElementById("blokusOrigin");
-const blokusRotationSelect = document.getElementById("blokusRotation");
-const blokusFlipInput = document.getElementById("blokusFlip");
 const blokusPlaceBtn = document.getElementById("blokusPlaceBtn");
+const blokusBoardControls = document.getElementById("blokusBoardControls");
+const blokusRotateLeftBtn = document.getElementById("blokusRotateLeftBtn");
+const blokusRotateRightBtn = document.getElementById("blokusRotateRightBtn");
+const blokusFlipBtn = document.getElementById("blokusFlipBtn");
 const blokusBoard = document.getElementById("blokusBoard");
 const blokusPieces = document.getElementById("blokusPieces");
 const blokusPlayers = document.getElementById("blokusPlayers");
@@ -1307,11 +1309,10 @@ function clearBlokusState() {
   if (blokusOriginLabel) {
     blokusOriginLabel.textContent = "-";
   }
-  if (blokusRotationSelect) {
-    blokusRotationSelect.value = "0";
-  }
-  if (blokusFlipInput) {
-    blokusFlipInput.checked = false;
+  if (blokusBoardControls) {
+    blokusBoardControls.classList.add("hidden");
+    blokusBoardControls.style.left = "";
+    blokusBoardControls.style.top = "";
   }
   if (blokusBoard) {
     blokusBoard.innerHTML = "";
@@ -1358,6 +1359,61 @@ function transformBlokusCells(cells, rotation, flip) {
     coords = rotateBlokusCells(coords);
   }
   return normalizeBlokusCells(coords);
+}
+
+function getBlokusBoardMetrics() {
+  if (!blokusBoard) {
+    return { cell: 18, gap: 1, pad: 6 };
+  }
+  const style = window.getComputedStyle(blokusBoard);
+  const readPx = (value, fallback) => {
+    const parsed = Number.parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  };
+  return {
+    cell: readPx(style.getPropertyValue("--blokus-cell"), 18),
+    gap: readPx(style.getPropertyValue("--blokus-gap"), 1),
+    pad: readPx(style.getPropertyValue("--blokus-pad"), 6),
+  };
+}
+
+function positionBlokusControls(bounds, boardSize) {
+  if (!blokusBoardControls || !blokusBoard) {
+    return;
+  }
+  if (!bounds) {
+    blokusBoardControls.classList.add("hidden");
+    blokusBoardControls.style.left = "";
+    blokusBoardControls.style.top = "";
+    return;
+  }
+  const { cell, gap, pad } = getBlokusBoardMetrics();
+  const span = cell + gap;
+  const pieceLeft = pad + bounds.minX * span;
+  const pieceTop = pad + bounds.minY * span;
+  const pieceRight = pad + (bounds.maxX + 1) * span - gap;
+  const boardWidth = pad * 2 + boardSize * span - gap;
+  const boardHeight = pad * 2 + boardSize * span - gap;
+
+  blokusBoardControls.classList.remove("hidden");
+  const controlsWidth = blokusBoardControls.offsetWidth || 90;
+  const controlsHeight = blokusBoardControls.offsetHeight || 28;
+
+  let left = pieceRight + 6;
+  if (left + controlsWidth > boardWidth) {
+    left = pieceLeft - controlsWidth - 6;
+  }
+  if (left < 0) {
+    left = 0;
+  }
+
+  let top = pieceTop;
+  if (top + controlsHeight > boardHeight) {
+    top = Math.max(0, boardHeight - controlsHeight);
+  }
+
+  blokusBoardControls.style.left = `${left}px`;
+  blokusBoardControls.style.top = `${top}px`;
 }
 
 function updateBlokusActionButton() {
@@ -1463,12 +1519,21 @@ function renderBlokusBoard(view) {
   const board = Array.isArray(view.board) ? view.board : [];
   let ghostCells = null;
   let ghostColor = null;
+  let ghostBounds = null;
   if (blokusSelectedPieceId && blokusSelectedOrigin && view.piece_defs) {
     const def = view.piece_defs[blokusSelectedPieceId];
     if (def && Array.isArray(def.cells)) {
       const coords = transformBlokusCells(def.cells, blokusRotation, blokusFlip);
       if (coords.length) {
         ghostCells = new Set();
+        const maxDx = Math.max(...coords.map(([x]) => x));
+        const maxDy = Math.max(...coords.map(([, y]) => y));
+        ghostBounds = {
+          minX: blokusSelectedOrigin.x,
+          minY: blokusSelectedOrigin.y,
+          maxX: blokusSelectedOrigin.x + maxDx,
+          maxY: blokusSelectedOrigin.y + maxDy,
+        };
         coords.forEach(([dx, dy]) => {
           const x = blokusSelectedOrigin.x + dx;
           const y = blokusSelectedOrigin.y + dy;
@@ -1511,6 +1576,7 @@ function renderBlokusBoard(view) {
     }
   }
   blokusBoard.appendChild(fragment);
+  positionBlokusControls(ghostBounds, size);
 }
 
 function renderBlokusPlayers(view) {
@@ -4259,12 +4325,6 @@ function renderBlokusGameState(data) {
       blokusWinnerLabel.textContent = "-";
     }
   }
-  if (blokusRotationSelect) {
-    blokusRotationSelect.value = String(blokusRotation);
-  }
-  if (blokusFlipInput) {
-    blokusFlipInput.checked = blokusFlip;
-  }
   if (!blokusSelectedOrigin && blokusOriginLabel) {
     blokusOriginLabel.textContent = "-";
   }
@@ -5192,10 +5252,9 @@ if (splendorChooseNobleBtn) {
   });
 }
 
-if (blokusRotationSelect) {
-  blokusRotationSelect.addEventListener("change", () => {
-    const value = Number.parseInt(blokusRotationSelect.value, 10);
-    blokusRotation = Number.isInteger(value) ? value : 0;
+if (blokusRotateLeftBtn) {
+  blokusRotateLeftBtn.addEventListener("click", () => {
+    blokusRotation = (blokusRotation + 270) % 360;
     if (currentBlokusView) {
       renderBlokusBoard(currentBlokusView);
     }
@@ -5203,9 +5262,19 @@ if (blokusRotationSelect) {
   });
 }
 
-if (blokusFlipInput) {
-  blokusFlipInput.addEventListener("change", () => {
-    blokusFlip = !!blokusFlipInput.checked;
+if (blokusRotateRightBtn) {
+  blokusRotateRightBtn.addEventListener("click", () => {
+    blokusRotation = (blokusRotation + 90) % 360;
+    if (currentBlokusView) {
+      renderBlokusBoard(currentBlokusView);
+    }
+    updateBlokusActionButton();
+  });
+}
+
+if (blokusFlipBtn) {
+  blokusFlipBtn.addEventListener("click", () => {
+    blokusFlip = !blokusFlip;
     if (currentBlokusView) {
       renderBlokusBoard(currentBlokusView);
     }
