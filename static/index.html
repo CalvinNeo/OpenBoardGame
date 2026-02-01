@@ -17,6 +17,37 @@
     </div>
   </section>
 
+  <section id="loadModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Load Saved Game</h2>
+        <button id="loadModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="loadList" class="modal-list"></div>
+        <div id="loadEmpty" class="hint hidden">No saves found.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="seatClaimModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Select Seat</h2>
+        <button id="seatClaimCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div class="row compact-row">
+          <label for="seatClaimNameInput">Name</label>
+          <input id="seatClaimNameInput" type="text" placeholder="Your name" />
+        </div>
+        <div id="seatClaimRoomLabel" class="hint"></div>
+        <div id="seatClaimList" class="seat-list"></div>
+        <div id="seatClaimEmpty" class="hint hidden">No seats available.</div>
+      </div>
+    </div>
+  </section>
+
   <div class="container">
     <h1>OpenBoardGame</h1>
 
@@ -63,6 +94,7 @@
           <div class="panel-header">
             <h2>Rooms</h2>
             <div class="panel-header-actions">
+              <button id="loadBtn" type="button">Load</button>
               <button id="refreshRoomsBtn" type="button">Refresh</button>
               <button class="collapse-btn" type="button" aria-expanded="true">Hide</button>
             </div>
@@ -112,6 +144,11 @@
                 <option value="0.5" selected>Balanced</option>
                 <option value="0.8">Obvious</option>
               </select>
+            </div>
+            <div class="row hidden" id="autoSaveRow">
+              <label for="autoSaveToggle">Auto Save</label>
+              <input id="autoSaveToggle" type="checkbox" />
+              <span class="hint">Save after each game state change.</span>
             </div>
             <div class="row actions room-actions">
               <button id="readyBtn">Toggle Ready</button>

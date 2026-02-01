@@ -1,4 +1,6 @@
 import asyncio
+import json
+import os
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -58,10 +60,13 @@ class Room:
     state_version: int = 0
     game_state: Optional[Dict] = None
     bot_running: bool = False
+    auto_save: bool = False
+    source_room_id: Optional[str] = None
 
 
 ROOMS: Dict[str, Room] = {}
 SESSIONS: Dict[str, Dict] = {}
+DATA_DIR = ".data"
 
 
 def _generate_room_id() -> str:
@@ -90,11 +95,130 @@ def _find_player(room: Room, player_id: str) -> Optional[Player]:
     return None
 
 
+def _get_save_dir(room_id: str) -> str:
+    return os.path.join(DATA_DIR, room_id)
+
+
+def _save_room_state(room: Room) -> None:
+    if not room.auto_save or not room.game_state:
+        return
+    room_dir = _get_save_dir(room.room_id)
+    try:
+        os.makedirs(room_dir, exist_ok=True)
+        payload = {
+            "room_id": room.room_id,
+            "game_type": room.game_type,
+            "room_status": room.status,
+            "state_version": room.state_version,
+            "saved_at": int(time.time()),
+            "players": [
+                {
+                    "player_id": p.player_id,
+                    "name": p.name,
+                    "seat": p.seat,
+                    "is_bot": p.is_bot,
+                    "ready": p.ready,
+                    "reconnect_token": p.reconnect_token,
+                }
+                for p in room.players
+            ],
+            "game_state": room.game_state,
+        }
+        tmp_path = os.path.join(room_dir, f".{room.state_version}.tmp")
+        final_path = os.path.join(room_dir, f"{room.state_version}.save")
+        with open(tmp_path, "w", encoding="utf-8") as handle:
+            json.dump(payload, handle, ensure_ascii=True)
+        os.replace(tmp_path, final_path)
+    except (OSError, TypeError, ValueError) as exc:
+        print(f"auto-save failed for room {room.room_id}: {exc}")
+
+
+def _get_latest_save_path(room_id: str) -> Optional[str]:
+    room_dir = _get_save_dir(room_id)
+    if not os.path.isdir(room_dir):
+        return None
+    latest_version = None
+    latest_path = None
+    for entry in os.scandir(room_dir):
+        if not entry.is_file():
+            continue
+        if not entry.name.endswith(".save"):
+            continue
+        stem = entry.name[:-5]
+        if not stem.isdigit():
+            continue
+        version = int(stem)
+        if latest_version is None or version > latest_version:
+            latest_version = version
+            latest_path = entry.path
+    return latest_path
+
+
+def _load_latest_save(room_id: str) -> Optional[Dict]:
+    latest_path = _get_latest_save_path(room_id)
+    if not latest_path:
+        return None
+    try:
+        with open(latest_path, "r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    return payload
+
+
+def _list_load_summaries() -> List[Dict]:
+    if not os.path.isdir(DATA_DIR):
+        return []
+    summaries = []
+    for entry in os.scandir(DATA_DIR):
+        if not entry.is_dir():
+            continue
+        payload = _load_latest_save(entry.name)
+        if not payload:
+            continue
+        players = payload.get("players")
+        summary_players = []
+        if isinstance(players, list):
+            for player in players:
+                if not isinstance(player, dict):
+                    continue
+                summary_players.append(
+                    {"name": player.get("name", "?"), "is_bot": bool(player.get("is_bot"))}
+                )
+        summaries.append(
+            {
+                "source_room_id": payload.get("room_id", entry.name),
+                "game_type": payload.get("game_type"),
+                "players": summary_players,
+                "saved_at": payload.get("saved_at"),
+                "state_version": payload.get("state_version"),
+            }
+        )
+    return summaries
+
+
+def _seat_list_payload(room: Room) -> List[Dict]:
+    ordered_players = sorted(room.players, key=lambda p: p.seat)
+    return [
+        {
+            "seat": p.seat,
+            "name": p.name,
+            "is_bot": p.is_bot,
+            "connected": p.connected,
+        }
+        for p in ordered_players
+    ]
+
+
 async def _emit_room_state(room: Room) -> None:
     payload = {
         "room_id": room.room_id,
         "status": room.status,
         "game_type": room.game_type,
+        "auto_save": room.auto_save,
+        "source_room_id": room.source_room_id,
         "players": [
             {
                 "player_id": p.player_id,
@@ -120,6 +244,7 @@ def _room_list_payload() -> List[Dict]:
                 "room_id": room.room_id,
                 "game_type": room.game_type,
                 "status": room.status,
+                "source_room_id": room.source_room_id,
                 "player_count": len(room.players),
                 "max_players": max_players,
                 "players": [
@@ -233,6 +358,7 @@ async def _maybe_run_bots(room: Room) -> None:
                 room.state_version += 1
                 if state.get("game_over"):
                     room.status = "game_over"
+                _save_room_state(room)
                 await _emit_game_state(room, events)
                 await asyncio.sleep(0.25)
         finally:
@@ -320,6 +446,14 @@ async def on_room_join(sid, data):
     if not room:
         await _send_error(sid, "room not found")
         return
+    if room.source_room_id:
+        await sio.emit(
+            "room:seat_list",
+            {"room_id": room.room_id, "source_room_id": room.source_room_id, "seats": _seat_list_payload(room)},
+            to=sid,
+        )
+        await _send_error(sid, "room loaded (claim a seat)")
+        return
     game_def = _get_game_definition(room.game_type)
     if not game_def:
         await _send_error(sid, "room game not found")
@@ -379,6 +513,9 @@ async def on_room_reconnect(sid, data):
     if not room:
         await _send_error(sid, "room not found")
         return
+    if room.source_room_id:
+        await _send_error(sid, "loaded rooms require seat claim")
+        return
     player = _find_player(room, player_id)
     if not player or player.is_bot:
         await _send_error(sid, "player not found")
@@ -437,6 +574,24 @@ async def on_room_ready(sid, data):
         await _send_error(sid, "game already started")
         return
     player.ready = bool(ready)
+    await _emit_room_state(room)
+
+
+@sio.on("room:auto_save")
+async def on_room_auto_save(sid, data):
+    auto_save = (data or {}).get("auto_save")
+    session = SESSIONS.get(sid)
+    if not session:
+        await _send_error(sid, "not in room")
+        return
+    room = _get_room(session.get("room_id"))
+    if not room:
+        await _send_error(sid, "room not found")
+        return
+    if room.status not in ("lobby", "game_over"):
+        await _send_error(sid, "game already started")
+        return
+    room.auto_save = bool(auto_save)
     await _emit_room_state(room)
 
 
@@ -598,6 +753,7 @@ async def on_room_start(sid, data):
         return
     room.status = "in_game"
     room.state_version = 1
+    _save_room_state(room)
     await _emit_room_state(room)
     await _emit_game_state(room, [])
     await _emit_room_list_update()
@@ -607,6 +763,174 @@ async def on_room_start(sid, data):
 @sio.on("room:list")
 async def on_room_list(sid, data=None):
     await sio.emit("room:list", {"rooms": _room_list_payload()}, to=sid)
+
+
+@sio.on("room:load_list")
+async def on_room_load_list(sid, data=None):
+    await sio.emit("room:load_list", {"saves": _list_load_summaries()}, to=sid)
+
+
+@sio.on("room:load")
+async def on_room_load(sid, data):
+    source_room_id = (data or {}).get("source_room_id")
+    if not source_room_id:
+        await sio.emit("room:load_result", {"ok": False, "message": "source_room_id required"}, to=sid)
+        return
+    payload = _load_latest_save(source_room_id)
+    if not payload:
+        await sio.emit("room:load_result", {"ok": False, "message": "save not found"}, to=sid)
+        return
+    game_type = payload.get("game_type")
+    if not game_type or not _get_game_definition(game_type):
+        await sio.emit("room:load_result", {"ok": False, "message": "unknown game_type"}, to=sid)
+        return
+    game_state = payload.get("game_state")
+    if not isinstance(game_state, dict):
+        await sio.emit("room:load_result", {"ok": False, "message": "invalid game_state"}, to=sid)
+        return
+    saved_players = payload.get("players")
+    if not isinstance(saved_players, list):
+        await sio.emit("room:load_result", {"ok": False, "message": "invalid players list"}, to=sid)
+        return
+    room_id = _generate_room_id()
+    players: List[Player] = []
+    for idx, raw in enumerate(saved_players):
+        if not isinstance(raw, dict):
+            continue
+        seat = raw.get("seat")
+        if not isinstance(seat, int):
+            seat = idx
+        is_bot = bool(raw.get("is_bot"))
+        reconnect_token = raw.get("reconnect_token") or _generate_reconnect_token()
+        players.append(
+            Player(
+                player_id=raw.get("player_id") or uuid.uuid4().hex,
+                name=raw.get("name", f"Player {seat + 1}"),
+                seat=seat,
+                socket_id=None,
+                ready=bool(raw.get("ready")),
+                connected=is_bot,
+                is_bot=is_bot,
+                reconnect_token=reconnect_token,
+                last_seen=time.time(),
+            )
+        )
+    raw_status = payload.get("room_status")
+    status = raw_status if isinstance(raw_status, str) and raw_status else "in_game"
+    try:
+        state_version = int(payload.get("state_version") or 0)
+    except (TypeError, ValueError):
+        state_version = 0
+    room = Room(
+        room_id=room_id,
+        game_type=game_type,
+        status=status,
+        players=players,
+        state_version=state_version,
+        game_state=game_state,
+        source_room_id=payload.get("room_id", source_room_id),
+    )
+    ROOMS[room_id] = room
+    await sio.emit(
+        "room:load_result",
+        {
+            "ok": True,
+            "room_id": room_id,
+            "source_room_id": room.source_room_id,
+        },
+        to=sid,
+    )
+    await _emit_room_list_update()
+    await _maybe_run_bots(room)
+
+
+@sio.on("room:seat_list")
+async def on_room_seat_list(sid, data):
+    room_id = (data or {}).get("room_id")
+    if not room_id:
+        await _send_error(sid, "room_id required")
+        return
+    room = _get_room(room_id)
+    if not room:
+        await _send_error(sid, "room not found")
+        return
+    if not room.source_room_id:
+        await _send_error(sid, "room not loadable")
+        return
+    await sio.emit(
+        "room:seat_list",
+        {"room_id": room.room_id, "source_room_id": room.source_room_id, "seats": _seat_list_payload(room)},
+        to=sid,
+    )
+
+
+@sio.on("room:claim_seat")
+async def on_room_claim_seat(sid, data):
+    room_id = (data or {}).get("room_id")
+    seat = (data or {}).get("seat")
+    raw_name = (data or {}).get("name")
+    name = str(raw_name).strip() if raw_name is not None else ""
+    if not room_id or not name:
+        await sio.emit(
+            "room:claim_result",
+            {"ok": False, "message": "room_id and name required"},
+            to=sid,
+        )
+        return
+    room = _get_room(room_id)
+    if not room:
+        await sio.emit("room:claim_result", {"ok": False, "message": "room not found"}, to=sid)
+        return
+    if not room.source_room_id:
+        await sio.emit("room:claim_result", {"ok": False, "message": "room not loadable"}, to=sid)
+        return
+    try:
+        seat = int(seat)
+    except (TypeError, ValueError):
+        await sio.emit("room:claim_result", {"ok": False, "message": "invalid seat"}, to=sid)
+        return
+    target = next((p for p in room.players if p.seat == seat), None)
+    if not target:
+        await sio.emit("room:claim_result", {"ok": False, "message": "seat not found"}, to=sid)
+        return
+    if target.is_bot:
+        await sio.emit("room:claim_result", {"ok": False, "message": "seat is bot"}, to=sid)
+        return
+    if target.connected:
+        await sio.emit("room:claim_result", {"ok": False, "message": "seat already claimed"}, to=sid)
+        return
+    await _leave_session(sid)
+    target.name = name
+    target.connected = True
+    target.socket_id = sid
+    target.last_seen = time.time()
+    SESSIONS[sid] = {"room_id": room.room_id, "player_id": target.player_id}
+    await sio.enter_room(sid, room.room_id)
+    await sio.emit(
+        "room:claim_result",
+        {
+            "ok": True,
+            "room_id": room.room_id,
+            "player_id": target.player_id,
+            "reconnect_token": target.reconnect_token,
+            "name": target.name,
+        },
+        to=sid,
+    )
+    await sio.emit(
+        "system:info",
+        {
+            "message": f"claimed seat in room: {room.room_id}",
+            "room_id": room.room_id,
+            "player_id": target.player_id,
+            "reconnect_token": target.reconnect_token,
+            "name": target.name,
+        },
+        to=sid,
+    )
+    await _emit_room_state(room)
+    await _emit_game_state(room)
+    await _emit_room_list_update()
 
 
 @sio.on("room:delete")
@@ -671,5 +995,6 @@ async def on_game_action(sid, data):
         room.status = "game_over"
         await _emit_room_state(room)
         await _emit_room_list_update()
+    _save_room_state(room)
     await _emit_game_state(room, events)
     await _maybe_run_bots(room)

@@ -1,6 +1,7 @@
 .DS_Store
 .quickdraw_cache/
 .decrypto/
+.data/
 
 __pycache__/
 *.py[cod]

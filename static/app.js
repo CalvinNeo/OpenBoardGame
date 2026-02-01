@@ -45,11 +45,15 @@ let decryptoBotStrategies = [];
 let decryptoBotStrategiesLoaded = false;
 let decryptoBotStrategyId = "native";
 let decryptoBotClueDirectness = 0.5;
+let currentRoomList = [];
+let pendingSeatClaimRoomId = null;
+let pendingSeatClaimSourceId = null;
 
 const nameInput = document.getElementById("nameInput");
 const connectionInfo = document.getElementById("connectionInfo");
 const roomListEl = document.getElementById("roomList");
 const refreshRoomsBtn = document.getElementById("refreshRoomsBtn");
+const loadBtn = document.getElementById("loadBtn");
 const roomIdLabel = document.getElementById("roomIdLabel");
 const roomStatus = document.getElementById("roomStatus");
 const gameTypeLabel = document.getElementById("gameTypeLabel");
@@ -70,6 +74,8 @@ const decryptoBotRow = document.getElementById("decryptoBotRow");
 const decryptoBotSelect = document.getElementById("decryptoBotSelect");
 const decryptoBotClueRow = document.getElementById("decryptoBotClueRow");
 const decryptoBotClueSelect = document.getElementById("decryptoBotClueSelect");
+const autoSaveRow = document.getElementById("autoSaveRow");
+const autoSaveToggle = document.getElementById("autoSaveToggle");
 const caboPanel = document.getElementById("caboPanel");
 const skullPanel = document.getElementById("skullPanel");
 const coyotePanel = document.getElementById("coyotePanel");
@@ -95,6 +101,16 @@ const gamePlayers = document.getElementById("gamePlayers");
 const logEl = document.getElementById("log");
 const logPanel = document.getElementById("logPanel");
 const logCloseBtn = document.getElementById("logCloseBtn");
+const loadModal = document.getElementById("loadModal");
+const loadModalCloseBtn = document.getElementById("loadModalCloseBtn");
+const loadList = document.getElementById("loadList");
+const loadEmpty = document.getElementById("loadEmpty");
+const seatClaimModal = document.getElementById("seatClaimModal");
+const seatClaimCloseBtn = document.getElementById("seatClaimCloseBtn");
+const seatClaimNameInput = document.getElementById("seatClaimNameInput");
+const seatClaimRoomLabel = document.getElementById("seatClaimRoomLabel");
+const seatClaimList = document.getElementById("seatClaimList");
+const seatClaimEmpty = document.getElementById("seatClaimEmpty");
 
 const skullPhaseLabel = document.getElementById("skullPhase");
 const skullRoundLabel = document.getElementById("skullRound");
@@ -504,10 +520,212 @@ function showRoomListBubble(wrapper, message) {
   }, 2200);
 }
 
+function setModalVisible(modalEl, visible) {
+  if (!modalEl) {
+    return;
+  }
+  modalEl.classList.toggle("hidden", !visible);
+  modalEl.setAttribute("aria-hidden", (!visible).toString());
+}
+
+function markPendingSeatClaim(roomId, sourceRoomId) {
+  pendingSeatClaimRoomId = roomId || null;
+  pendingSeatClaimSourceId = sourceRoomId || null;
+}
+
+function clearPendingSeatClaim(roomId) {
+  if (!pendingSeatClaimRoomId) {
+    return;
+  }
+  if (roomId && pendingSeatClaimRoomId !== roomId) {
+    return;
+  }
+  pendingSeatClaimRoomId = null;
+  pendingSeatClaimSourceId = null;
+}
+
+function requestSeatClaim(roomId, sourceRoomId, openImmediately = true) {
+  if (!roomId) {
+    return;
+  }
+  markPendingSeatClaim(roomId, sourceRoomId);
+  if (openImmediately) {
+    if (seatClaimNameInput) {
+      seatClaimNameInput.value = getPlayerName();
+    }
+    if (seatClaimRoomLabel) {
+      const sourceLabel = sourceRoomId ? `Loaded from ${sourceRoomId}` : "Loaded room";
+      seatClaimRoomLabel.textContent = `Room ${roomId} · ${sourceLabel}`;
+    }
+    if (seatClaimList) {
+      seatClaimList.innerHTML = "";
+    }
+    if (seatClaimEmpty) {
+      seatClaimEmpty.textContent = "Loading seats...";
+      seatClaimEmpty.classList.remove("hidden");
+    }
+    setModalVisible(seatClaimModal, true);
+  }
+  socket.emit("room:seat_list", { room_id: roomId });
+}
+
+function openLoadModal() {
+  setModalVisible(loadModal, true);
+}
+
+function closeLoadModal() {
+  setModalVisible(loadModal, false);
+}
+
+function openSeatClaimModal(roomId, sourceRoomId) {
+  requestSeatClaim(roomId, sourceRoomId, true);
+}
+
+function closeSeatClaimModal() {
+  clearPendingSeatClaim();
+  setModalVisible(seatClaimModal, false);
+}
+
+function renderLoadList(saves) {
+  if (!loadList || !loadEmpty) {
+    return;
+  }
+  loadList.innerHTML = "";
+  if (!Array.isArray(saves) || saves.length === 0) {
+    loadEmpty.textContent = "No saves found.";
+    loadEmpty.classList.remove("hidden");
+    return;
+  }
+  loadEmpty.classList.add("hidden");
+  const ordered = [...saves].sort((a, b) => {
+    const aTime = Number(a.saved_at) || 0;
+    const bTime = Number(b.saved_at) || 0;
+    return bTime - aTime;
+  });
+  ordered.forEach((save) => {
+    const wrapper = document.createElement("div");
+    wrapper.className = "load-item";
+
+    const header = document.createElement("div");
+    header.className = "load-item-header";
+    const title = document.createElement("div");
+    title.textContent = save.source_room_id || "-";
+    const game = document.createElement("div");
+    game.textContent = save.game_type || "-";
+    header.appendChild(title);
+    header.appendChild(game);
+
+    const meta = document.createElement("div");
+    meta.className = "load-item-meta";
+    const savedAt = Number(save.saved_at);
+    const timeValue = Number.isFinite(savedAt) ? new Date(savedAt * 1000).toLocaleString() : "-";
+    const versionValue = Number(save.state_version);
+    const version = Number.isFinite(versionValue) ? `v${versionValue}` : "v-";
+    meta.textContent = `${timeValue} · ${version}`;
+
+    const players = document.createElement("div");
+    players.className = "load-item-meta";
+    const names = (save.players || [])
+      .map((player) => {
+        if (!player) {
+          return "?";
+        }
+        const name = player.name || "?";
+        return player.is_bot ? `${name} (bot)` : name;
+      })
+      .join(", ");
+    players.textContent = names ? `Players: ${names}` : "Players: -";
+
+    const actions = document.createElement("div");
+    actions.className = "load-item-actions";
+    const loadButton = document.createElement("button");
+    loadButton.type = "button";
+    loadButton.textContent = "Load";
+    loadButton.addEventListener("click", () => {
+      if (!save.source_room_id) {
+        log("Missing source room id");
+        return;
+      }
+      socket.emit("room:load", { source_room_id: save.source_room_id });
+    });
+    actions.appendChild(loadButton);
+
+    wrapper.appendChild(header);
+    wrapper.appendChild(meta);
+    wrapper.appendChild(players);
+    wrapper.appendChild(actions);
+    loadList.appendChild(wrapper);
+  });
+}
+
+function renderSeatList(payload) {
+  if (!seatClaimList || !seatClaimEmpty) {
+    return;
+  }
+  seatClaimList.innerHTML = "";
+  const seats = Array.isArray(payload.seats) ? payload.seats : [];
+  const ordered = [...seats].sort((a, b) => (a.seat ?? 0) - (b.seat ?? 0));
+  let available = 0;
+  ordered.forEach((seat) => {
+    const wrapper = document.createElement("div");
+    wrapper.className = "seat-item";
+
+    const row = document.createElement("div");
+    row.className = "seat-item-row";
+    const label = document.createElement("div");
+    const seatNumber = Number.isFinite(seat.seat) ? seat.seat + 1 : "-";
+    const name = seat.name || "?";
+    label.textContent = `${seatNumber}. ${name}`;
+    const meta = document.createElement("div");
+    meta.className = "seat-item-meta";
+    const tags = [];
+    if (seat.is_bot) tags.push("bot");
+    if (seat.connected) tags.push("claimed");
+    meta.textContent = tags.join(" · ") || "available";
+    row.appendChild(label);
+    row.appendChild(meta);
+
+    const actions = document.createElement("div");
+    actions.className = "seat-item-actions";
+    const claimButton = document.createElement("button");
+    claimButton.type = "button";
+    claimButton.textContent = "Claim";
+    const disabled = seat.is_bot || seat.connected;
+    if (!disabled) {
+      available += 1;
+    }
+    claimButton.disabled = disabled;
+    claimButton.addEventListener("click", () => {
+      const name = seatClaimNameInput ? seatClaimNameInput.value.trim() : "";
+      if (!name) {
+        log("Name required");
+        if (seatClaimNameInput) {
+          seatClaimNameInput.focus();
+        }
+        return;
+      }
+      socket.emit("room:claim_seat", { room_id: payload.room_id, seat: seat.seat, name });
+    });
+    actions.appendChild(claimButton);
+
+    wrapper.appendChild(row);
+    wrapper.appendChild(actions);
+    seatClaimList.appendChild(wrapper);
+  });
+  if (available === 0) {
+    seatClaimEmpty.textContent = "No seats available.";
+    seatClaimEmpty.classList.remove("hidden");
+  } else {
+    seatClaimEmpty.classList.add("hidden");
+  }
+}
+
 function performLogout() {
   if (roomId) {
     socket.emit("room:leave", { room_id: roomId });
   }
+  closeLoadModal();
+  closeSeatClaimModal();
   clearAllRoomAuth();
   clearStoredName();
   playerId = null;
@@ -649,6 +867,19 @@ function updateDecryptoBotRow() {
   }
   if (showRow && !decryptoBotStrategiesLoaded) {
     fetchDecryptoBotStrategies();
+  }
+}
+
+function updateAutoSaveRow() {
+  const showRow =
+    currentRoomState && (currentRoomState.status === "lobby" || currentRoomState.status === "game_over");
+  if (autoSaveRow) {
+    autoSaveRow.classList.toggle("hidden", !showRow);
+    autoSaveRow.setAttribute("aria-hidden", (!showRow).toString());
+  }
+  if (autoSaveToggle) {
+    autoSaveToggle.checked = Boolean(currentRoomState && currentRoomState.auto_save);
+    autoSaveToggle.disabled = !showRow;
   }
 }
 
@@ -816,10 +1047,36 @@ function requestRoomList() {
   socket.emit("room:list", {});
 }
 
+function requestLoadList() {
+  if (loadList) {
+    loadList.innerHTML = "";
+  }
+  if (loadEmpty) {
+    loadEmpty.textContent = "Loading saves...";
+    loadEmpty.classList.remove("hidden");
+  }
+  openLoadModal();
+  socket.emit("room:load_list", {});
+}
+
+function getRoomSummary(roomId) {
+  if (!roomId || !Array.isArray(currentRoomList)) {
+    return null;
+  }
+  return currentRoomList.find((room) => room.room_id === roomId) || null;
+}
+
 function attemptJoinRoom(rid, options = {}) {
   const name = getPlayerName();
   if (!name || !rid) {
     log("Name and room ID required");
+    return;
+  }
+  const summary = getRoomSummary(rid);
+  const sourceRoomId =
+    summary && typeof summary.source_room_id === "string" ? summary.source_room_id.trim() : "";
+  if (summary && sourceRoomId) {
+    requestSeatClaim(summary.room_id, sourceRoomId, true);
     return;
   }
   if (options.readyAfterJoin) {
@@ -829,6 +1086,7 @@ function attemptJoinRoom(rid, options = {}) {
     pendingReadyAfterJoin = false;
     pendingReadyRoomId = null;
   }
+  markPendingSeatClaim(rid, null);
   socket.emit("room:join", { name, room_id: rid });
 }
 
@@ -865,6 +1123,7 @@ function renderRoomList(rooms) {
   if (!roomListEl) {
     return;
   }
+  currentRoomList = Array.isArray(rooms) ? rooms : [];
   roomListEl.innerHTML = "";
   if (!rooms || !rooms.length) {
     roomListEl.textContent = "No rooms";
@@ -909,26 +1168,35 @@ function renderRoomList(rooms) {
     const joinActions = document.createElement("div");
     joinActions.className = "room-item-join-actions";
     const auth = getRoomAuth(room.room_id);
-    const canReconnect = auth && auth.player_id && auth.reconnect_token;
-    const joinDisabled =
-      room.status !== "lobby" || (maxPlayers !== null && (room.player_count || 0) >= maxPlayers);
+    const isLoaded = Boolean(room.source_room_id);
+    const canReconnect = !isLoaded && auth && auth.player_id && auth.reconnect_token;
+    const claimableSeats = (room.players || []).filter((player) => !player.is_bot && !player.connected);
+    const joinDisabled = isLoaded
+      ? claimableSeats.length === 0
+      : room.status !== "lobby" || (maxPlayers !== null && (room.player_count || 0) >= maxPlayers);
     const joinBtn = document.createElement("button");
     joinBtn.type = "button";
-    joinBtn.textContent = "Join";
+    joinBtn.textContent = isLoaded ? "Claim Seat" : "Join";
     joinBtn.disabled = joinDisabled;
     joinBtn.addEventListener("click", () => {
-      attemptJoinRoom(room.room_id);
+      if (isLoaded) {
+        requestSeatClaim(room.room_id, room.source_room_id, true);
+      } else {
+        attemptJoinRoom(room.room_id);
+      }
     });
     joinActions.appendChild(joinBtn);
 
-    const joinReadyBtn = document.createElement("button");
-    joinReadyBtn.type = "button";
-    joinReadyBtn.textContent = "Join Ready";
-    joinReadyBtn.disabled = joinDisabled;
-    joinReadyBtn.addEventListener("click", () => {
-      attemptJoinRoom(room.room_id, { readyAfterJoin: true });
-    });
-    joinActions.appendChild(joinReadyBtn);
+    if (!isLoaded) {
+      const joinReadyBtn = document.createElement("button");
+      joinReadyBtn.type = "button";
+      joinReadyBtn.textContent = "Join Ready";
+      joinReadyBtn.disabled = joinDisabled;
+      joinReadyBtn.addEventListener("click", () => {
+        attemptJoinRoom(room.room_id, { readyAfterJoin: true });
+      });
+      joinActions.appendChild(joinReadyBtn);
+    }
 
     if (canReconnect) {
       const reconnectBtn = document.createElement("button");
@@ -965,6 +1233,12 @@ function renderRoomList(rooms) {
 
     wrapper.appendChild(header);
     wrapper.appendChild(meta);
+    if (isLoaded) {
+      const source = document.createElement("div");
+      source.className = "room-item-meta";
+      source.textContent = `Loaded from ${room.source_room_id}`;
+      wrapper.appendChild(source);
+    }
     if (players.childNodes.length) {
       wrapper.appendChild(players);
     }
@@ -993,6 +1267,7 @@ function resetRoomState() {
   updateDrawGuessLanguageRow();
   updateDecryptoPackRow();
   updateDecryptoBotRow();
+  updateAutoSaveRow();
   if (drawGuessLanguageSelect) {
     drawGuessLanguageSelect.value = "zh";
   }
@@ -2109,6 +2384,7 @@ function renderRoomState(state) {
   createRoomPending = false;
   setCreateGameRowVisible(false);
   roomId = state.room_id;
+  clearPendingSeatClaim(state.room_id);
   const previousGame = currentGameType;
   currentGameType = state.game_type || null;
   roomIdLabel.textContent = state.room_id;
@@ -2130,6 +2406,7 @@ function renderRoomState(state) {
   updateDrawGuessLanguageRow();
   updateDecryptoPackRow();
   updateDecryptoBotRow();
+  updateAutoSaveRow();
   playersList.innerHTML = "";
   const orderedPlayers = Array.isArray(state.players)
     ? [...state.players].sort((a, b) => (a.seat ?? 0) - (b.seat ?? 0))
@@ -4610,6 +4887,56 @@ socket.on("room:list_update", (data) => {
   renderRoomList((data || {}).rooms || []);
 });
 
+socket.on("room:load_list", (data) => {
+  renderLoadList((data || {}).saves || []);
+  openLoadModal();
+});
+
+socket.on("room:load_result", (data) => {
+  if (!data || !data.ok) {
+    const message = data && data.message ? String(data.message) : "Load failed";
+    log(message);
+    return;
+  }
+  closeLoadModal();
+  log(`Loaded save into room: ${data.room_id}`);
+});
+
+socket.on("room:seat_list", (data) => {
+  if (!data || !data.room_id) {
+    return;
+  }
+  if (pendingSeatClaimRoomId && pendingSeatClaimRoomId !== data.room_id) {
+    return;
+  }
+  if (!pendingSeatClaimRoomId) {
+    return;
+  }
+  pendingSeatClaimRoomId = data.room_id;
+  pendingSeatClaimSourceId = data.source_room_id || null;
+  if (seatClaimNameInput && !seatClaimNameInput.value) {
+    seatClaimNameInput.value = getPlayerName();
+  }
+  if (seatClaimRoomLabel) {
+    const sourceLabel = data.source_room_id ? `Loaded from ${data.source_room_id}` : "Loaded room";
+    seatClaimRoomLabel.textContent = `Room ${data.room_id} · ${sourceLabel}`;
+  }
+  setModalVisible(seatClaimModal, true);
+  renderSeatList(data);
+});
+
+socket.on("room:claim_result", (data) => {
+  if (!data || !data.ok) {
+    const message = data && data.message ? String(data.message) : "Seat claim failed";
+    log(message);
+    return;
+  }
+  if (data.player_id) {
+    playerId = data.player_id;
+  }
+  closeSeatClaimModal();
+});
+
 socket.on("room:delete_result", (data) => {
   if (!data || data.ok) {
     return;
@@ -4685,6 +5012,24 @@ if (refreshRoomsBtn) {
   });
 }
 
+if (loadBtn) {
+  loadBtn.addEventListener("click", () => {
+    requestLoadList();
+  });
+}
+
+if (loadModalCloseBtn) {
+  loadModalCloseBtn.addEventListener("click", () => {
+    closeLoadModal();
+  });
+}
+
+if (seatClaimCloseBtn) {
+  seatClaimCloseBtn.addEventListener("click", () => {
+    closeSeatClaimModal();
+  });
+}
+
 document.getElementById("readyBtn").addEventListener("click", () => {
   let nextReady = true;
   if (currentRoomState && playerId) {
@@ -4704,6 +5049,17 @@ document.getElementById("addBotBtn").addEventListener("click", () => {
   socket.emit("room:add_bot", { room_id: roomId });
 });
 
+if (autoSaveToggle) {
+  autoSaveToggle.addEventListener("change", () => {
+    if (!roomId) {
+      log("Not in a room");
+      autoSaveToggle.checked = false;
+      return;
+    }
+    socket.emit("room:auto_save", { room_id: roomId, auto_save: autoSaveToggle.checked });
+  });
+}
+
 if (removeBotBtn) {
   removeBotBtn.addEventListener("click", () => {
     if (!roomId) {
@@ -4722,6 +5078,7 @@ if (leaveBtn) {
     }
     socket.emit("room:leave", { room_id: roomId });
     resetRoomState();
+    closeSeatClaimModal();
     log("Left room");
   });
 }
