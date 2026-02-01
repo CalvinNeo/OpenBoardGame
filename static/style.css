@@ -1213,6 +1213,15 @@ body.log-open {
   pointer-events: auto;
 }
 
+.impression-rotate-controls.dragging {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.impression-rotate-controls.dragging .impression-rotate-btn {
+  pointer-events: none;
+}
+
 .impression-controls {
   gap: 10px;
   flex-wrap: wrap;

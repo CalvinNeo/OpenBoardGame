@@ -4008,12 +4008,14 @@ function updateImpressionRotateControls() {
     return;
   }
   const stamp = getImpressionActiveStamp();
-  if (!stamp || impressionPressStart !== null || impressionDraggingStamp) {
+  if (!stamp || impressionPressStart !== null) {
     impressionRotateControls.classList.add("hidden");
+    impressionRotateControls.classList.remove("dragging");
     return;
   }
   if (!isImpressionActionAvailable("submit_drawing")) {
     impressionRotateControls.classList.add("hidden");
+    impressionRotateControls.classList.remove("dragging");
     return;
   }
   const rect = impressionCanvas.getBoundingClientRect();
@@ -4021,13 +4023,15 @@ function updateImpressionRotateControls() {
   const scaleY = rect.height ? rect.height / impressionCanvas.height : 1;
   const half = (stamp.size || 0) / 2 + IMPRESSION_SELECTION_PADDING;
   impressionRotateControls.classList.remove("hidden");
+  impressionRotateControls.classList.toggle("dragging", !!impressionDraggingStamp);
   const controlsWidth = impressionRotateControls.offsetWidth;
   const controlsHeight = impressionRotateControls.offsetHeight;
   const centerX = stamp.x * scaleX;
+  const aboveY = (stamp.y - half) * scaleY - IMPRESSION_ROTATE_BUTTON_OFFSET - controlsHeight;
   const belowY = (stamp.y + half) * scaleY + IMPRESSION_ROTATE_BUTTON_OFFSET;
-  let top = belowY;
+  let top = aboveY < 0 ? belowY : aboveY;
   if (top + controlsHeight > rect.height) {
-    top = (stamp.y - half) * scaleY - IMPRESSION_ROTATE_BUTTON_OFFSET - controlsHeight;
+    top = Math.max(0, rect.height - controlsHeight);
   }
   let left = centerX - controlsWidth / 2;
   left = Math.max(0, Math.min(left, rect.width - controlsWidth));
