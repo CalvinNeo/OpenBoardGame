@@ -31,10 +31,14 @@ let impressionConfigSignature = null;
 let impressionStampHistory = [];
 let impressionStampsLeft = 0;
 let impressionStampsMax = 0;
+let impressionShapeColorMap = {};
 let impressionCurrentShape = null;
 let impressionCurrentColor = null;
 let impressionRotation = 0;
 let impressionPressStart = null;
+let impressionPreviewPosition = null;
+let impressionPreviewStamp = null;
+let impressionPreviewRaf = null;
 let impressionMaskActive = false;
 let impressionMaskState = null;
 let impressionMaskDrag = null;
@@ -42,7 +46,6 @@ let impressionMatches = {};
 let impressionLastRound = null;
 let impressionLastPhase = null;
 let impressionShapeButtonEls = [];
-let impressionColorButtonEls = [];
 let splendorSelectedMarket = null;
 let splendorSelectedReserved = null;
 let splendorSelectedNoble = null;
@@ -241,7 +244,6 @@ const impressionPlayers = document.getElementById("impressionPlayers");
 const impressionCanvas = document.getElementById("impressionCanvas");
 const impressionCtx = impressionCanvas ? impressionCanvas.getContext("2d") : null;
 const impressionShapeButtons = document.getElementById("impressionShapeButtons");
-const impressionColorButtons = document.getElementById("impressionColorButtons");
 const impressionRotationInput = document.getElementById("impressionRotation");
 const impressionUndoBtn = document.getElementById("impressionUndoBtn");
 const impressionMaskBtn = document.getElementById("impressionMaskBtn");
@@ -1539,6 +1541,7 @@ function clearImpressionFlowerState() {
   impressionStampHistory = [];
   impressionStampsLeft = 0;
   impressionStampsMax = 0;
+  impressionShapeColorMap = {};
   impressionCurrentShape = null;
   impressionCurrentColor = null;
   impressionRotation = 0;
@@ -1550,7 +1553,6 @@ function clearImpressionFlowerState() {
   impressionLastRound = null;
   impressionLastPhase = null;
   impressionShapeButtonEls = [];
-  impressionColorButtonEls = [];
   if (impressionPhaseLabel) {
     impressionPhaseLabel.textContent = "-";
   }
@@ -1605,6 +1607,7 @@ function clearImpressionFlowerState() {
   if (impressionMaskControls) {
     impressionMaskControls.classList.add("hidden");
   }
+  stopImpressionPreviewLoop();
   clearImpressionCanvas();
   updateImpressionButtons();
 }
@@ -3770,17 +3773,28 @@ function applyImpressionConfig(config) {
     impressionRotationInput.value = "0";
   }
 
+  const shapes = Array.isArray(config.stamp_shapes) && config.stamp_shapes.length
+    ? config.stamp_shapes
+    : ["circle", "triangle", "square", "bar"];
+  const colors = Array.isArray(config.stamp_colors) && config.stamp_colors.length
+    ? config.stamp_colors
+    : ["#ef4444", "#22c55e", "#3b82f6", "#eab308"];
+  impressionShapeColorMap = {};
+  shapes.forEach((shape, index) => {
+    impressionShapeColorMap[shape] = colors[index] || colors[0] || "#111827";
+  });
+
   if (impressionShapeButtons) {
     impressionShapeButtons.innerHTML = "";
     impressionShapeButtonEls = [];
-    const shapes = Array.isArray(config.stamp_shapes) && config.stamp_shapes.length
-      ? config.stamp_shapes
-      : ["circle", "triangle", "square", "bar"];
     shapes.forEach((shape) => {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "impression-shape-btn";
       button.dataset.shape = shape;
+      const swatch = document.createElement("span");
+      swatch.className = "impression-shape-swatch";
+      swatch.style.background = impressionShapeColorMap[shape] || "#111827";
       const label = shape === "circle"
         ? "Circle"
         : shape === "square"
@@ -3788,37 +3802,18 @@ function applyImpressionConfig(config) {
           : shape === "triangle"
             ? "Triangle"
             : "Bar";
-      button.textContent = label;
+      button.appendChild(swatch);
+      button.appendChild(document.createTextNode(label));
       button.addEventListener("click", () => setImpressionShape(shape));
       impressionShapeButtons.appendChild(button);
       impressionShapeButtonEls.push(button);
     });
-    if (!impressionCurrentShape || !shapes.includes(impressionCurrentShape)) {
-      impressionCurrentShape = shapes[0];
-    }
   }
 
-  if (impressionColorButtons) {
-    impressionColorButtons.innerHTML = "";
-    impressionColorButtonEls = [];
-    const colors = Array.isArray(config.stamp_colors) && config.stamp_colors.length
-      ? config.stamp_colors
-      : ["#ef4444", "#22c55e", "#3b82f6", "#eab308"];
-    colors.forEach((color) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "impression-color-btn";
-      button.dataset.color = color;
-      button.style.background = color;
-      button.title = color;
-      button.addEventListener("click", () => setImpressionColor(color));
-      impressionColorButtons.appendChild(button);
-      impressionColorButtonEls.push(button);
-    });
-    if (!impressionCurrentColor || !colors.includes(impressionCurrentColor)) {
-      impressionCurrentColor = colors[0];
-    }
+  if (!impressionCurrentShape || !shapes.includes(impressionCurrentShape)) {
+    impressionCurrentShape = shapes[0];
   }
+  impressionCurrentColor = impressionShapeColorMap[impressionCurrentShape] || colors[0] || "#111827";
 
   impressionStampHistory = [];
   impressionStampsLeft = 0;
@@ -3827,7 +3822,6 @@ function applyImpressionConfig(config) {
   renderImpressionCanvas();
   resetImpressionMaskState();
   updateImpressionShapeButtons();
-  updateImpressionColorButtons();
 }
 
 function updateImpressionShapeButtons() {
@@ -3838,28 +3832,13 @@ function updateImpressionShapeButtons() {
   });
 }
 
-function updateImpressionColorButtons() {
-  impressionColorButtonEls.forEach((button) => {
-    const isActive = button.dataset.color === impressionCurrentColor;
-    button.classList.toggle("active", isActive);
-    button.setAttribute("aria-pressed", isActive ? "true" : "false");
-  });
-}
-
 function setImpressionShape(shape) {
   if (!shape) {
     return;
   }
   impressionCurrentShape = shape;
+  impressionCurrentColor = impressionShapeColorMap[shape] || impressionCurrentColor;
   updateImpressionShapeButtons();
-}
-
-function setImpressionColor(color) {
-  if (!color) {
-    return;
-  }
-  impressionCurrentColor = color;
-  updateImpressionColorButtons();
 }
 
 function clearImpressionCanvas() {
@@ -3881,6 +3860,9 @@ function renderImpressionCanvas() {
   impressionStampHistory.forEach((stamp) => {
     drawImpressionStamp(stamp);
   });
+  if (impressionPreviewStamp) {
+    drawImpressionStamp(impressionPreviewStamp);
+  }
 }
 
 function drawImpressionStamp(stamp) {
@@ -3944,40 +3926,14 @@ function getImpressionPosition(event) {
   };
 }
 
-function startImpressionPress(event) {
-  if (!impressionCanvas || !impressionCtx) {
-    return;
+function buildImpressionStamp(position, alpha) {
+  if (!position || !impressionConfig || !impressionCurrentShape) {
+    return null;
   }
-  if (!isImpressionActionAvailable("submit_drawing")) {
-    return;
+  const color = impressionShapeColorMap[impressionCurrentShape] || impressionCurrentColor;
+  if (!color) {
+    return null;
   }
-  event.preventDefault();
-  impressionPressStart = Date.now();
-}
-
-function endImpressionPress(event) {
-  if (!impressionCanvas || !impressionCtx) {
-    return;
-  }
-  if (impressionPressStart === null) {
-    return;
-  }
-  event.preventDefault();
-  if (impressionStampsLeft <= 0) {
-    impressionPressStart = null;
-    return;
-  }
-  if (!impressionCurrentShape || !impressionCurrentColor || !impressionConfig) {
-    impressionPressStart = null;
-    return;
-  }
-  const position = getImpressionPosition(event);
-  if (!position) {
-    impressionPressStart = null;
-    return;
-  }
-  const duration = Date.now() - impressionPressStart;
-  const alpha = impressionAlphaForDuration(duration);
   const size = Number.parseInt(impressionConfig && impressionConfig.stamp_size, 10) || 64;
   const rotation = (Math.PI / 180) * (Number.parseFloat(impressionRotation) || 0);
   let mask = null;
@@ -3990,20 +3946,129 @@ function endImpressionPress(event) {
       rotation: (Math.PI / 180) * impressionMaskState.rotation,
     };
   }
-  impressionStampHistory.push({
+  return {
     shape: impressionCurrentShape,
-    color: impressionCurrentColor,
+    color,
     alpha,
     x: position.x,
     y: position.y,
     size,
     rotation,
     mask,
-  });
+  };
+}
+
+function startImpressionPreviewLoop() {
+  if (impressionPreviewRaf) {
+    return;
+  }
+  const tick = () => {
+    if (impressionPressStart === null || !impressionPreviewPosition) {
+      impressionPreviewRaf = null;
+      return;
+    }
+    const alpha = impressionAlphaForDuration(Date.now() - impressionPressStart);
+    impressionPreviewStamp = buildImpressionStamp(impressionPreviewPosition, alpha);
+    renderImpressionCanvas();
+    impressionPreviewRaf = requestAnimationFrame(tick);
+  };
+  impressionPreviewRaf = requestAnimationFrame(tick);
+}
+
+function stopImpressionPreviewLoop() {
+  if (impressionPreviewRaf) {
+    cancelAnimationFrame(impressionPreviewRaf);
+    impressionPreviewRaf = null;
+  }
+  impressionPreviewStamp = null;
+  impressionPreviewPosition = null;
+}
+
+function startImpressionPress(event) {
+  if (!impressionCanvas || !impressionCtx) {
+    return;
+  }
+  if (!isImpressionActionAvailable("submit_drawing")) {
+    return;
+  }
+  if (impressionStampsLeft <= 0) {
+    return;
+  }
+  if (event.cancelable) {
+    event.preventDefault();
+  }
+  const position = getImpressionPosition(event);
+  if (!position) {
+    return;
+  }
+  impressionPressStart = Date.now();
+  impressionPreviewPosition = position;
+  const preview = buildImpressionStamp(position, impressionAlphaForDuration(0));
+  if (!preview) {
+    impressionPressStart = null;
+    impressionPreviewPosition = null;
+    return;
+  }
+  impressionPreviewStamp = preview;
+  renderImpressionCanvas();
+  startImpressionPreviewLoop();
+}
+
+function updateImpressionPreviewPosition(event) {
+  if (impressionPressStart === null) {
+    return;
+  }
+  const position = getImpressionPosition(event);
+  if (!position) {
+    return;
+  }
+  if (event.cancelable) {
+    event.preventDefault();
+  }
+  impressionPreviewPosition = position;
+  if (!impressionPreviewRaf) {
+    startImpressionPreviewLoop();
+  }
+}
+
+function endImpressionPress(event) {
+  if (!impressionCanvas || !impressionCtx) {
+    return;
+  }
+  if (impressionPressStart === null) {
+    return;
+  }
+  if (event.cancelable) {
+    event.preventDefault();
+  }
+  if (impressionStampsLeft <= 0) {
+    impressionPressStart = null;
+    return;
+  }
+  if (!impressionCurrentShape || !impressionConfig) {
+    impressionPressStart = null;
+    return;
+  }
+  const position = impressionPreviewPosition || getImpressionPosition(event);
+  if (!position) {
+    impressionPressStart = null;
+    return;
+  }
+  const duration = Date.now() - impressionPressStart;
+  const alpha = impressionAlphaForDuration(duration);
+  const stamp = buildImpressionStamp(position, alpha);
+  if (!stamp) {
+    impressionPressStart = null;
+    stopImpressionPreviewLoop();
+    renderImpressionCanvas();
+    return;
+  }
+  impressionStampHistory.push(stamp);
   impressionStampsLeft = Math.max(0, impressionStampsLeft - 1);
   if (impressionStampsLeftLabel) {
     impressionStampsLeftLabel.textContent = `${impressionStampsLeft}`;
   }
+  stopImpressionPreviewLoop();
   renderImpressionCanvas();
   if (impressionMaskActive) {
     setImpressionMaskActive(false);
@@ -4014,6 +4079,8 @@ function endImpressionPress(event) {
 
 function cancelImpressionPress() {
   impressionPressStart = null;
+  stopImpressionPreviewLoop();
+  renderImpressionCanvas();
 }
 
 function resetImpressionMaskState() {
@@ -4147,9 +4214,6 @@ function updateImpressionButtons() {
     impressionShapeButtonEls.forEach((button) => {
       button.disabled = true;
     });
-    impressionColorButtonEls.forEach((button) => {
-      button.disabled = true;
-    });
     if (impressionUndoBtn) {
       impressionUndoBtn.disabled = true;
     }
@@ -4175,9 +4239,6 @@ function updateImpressionButtons() {
   });
   const canDraw = isImpressionActionAvailable("submit_drawing");
   impressionShapeButtonEls.forEach((button) => {
-    button.disabled = !canDraw;
-  });
-  impressionColorButtonEls.forEach((button) => {
     button.disabled = !canDraw;
   });
   if (impressionUndoBtn) {
@@ -4335,9 +4396,11 @@ function setupImpressionCanvas() {
     return;
   }
   impressionCanvas.addEventListener("mousedown", startImpressionPress);
+  impressionCanvas.addEventListener("mousemove", updateImpressionPreviewPosition);
   impressionCanvas.addEventListener("mouseup", endImpressionPress);
   impressionCanvas.addEventListener("mouseleave", cancelImpressionPress);
   impressionCanvas.addEventListener("touchstart", startImpressionPress, { passive: false });
+  impressionCanvas.addEventListener("touchmove", updateImpressionPreviewPosition, { passive: false });
   impressionCanvas.addEventListener("touchend", endImpressionPress, { passive: false });
   impressionCanvas.addEventListener("touchcancel", cancelImpressionPress, { passive: false });
   if (impressionMask) {
@@ -5661,6 +5724,7 @@ function renderImpressionGameState(data) {
       impressionCanvas.style.pointerEvents = isImpressionActionAvailable("submit_drawing") ? "auto" : "none";
     }
   } else if (view.phase === "guess") {
+    stopImpressionPreviewLoop();
     if (impressionDrawArea) {
       impressionDrawArea.classList.add("hidden");
     }
@@ -5679,6 +5743,7 @@ function renderImpressionGameState(data) {
       impressionStampsLeftLabel.textContent = "-";
     }
   } else if (view.phase === "round_end") {
+    stopImpressionPreviewLoop();
     if (impressionDrawArea) {
       impressionDrawArea.classList.add("hidden");
     }
@@ -5693,6 +5758,7 @@ function renderImpressionGameState(data) {
       impressionStampsLeftLabel.textContent = "-";
     }
   } else if (view.phase === "game_over") {
+    stopImpressionPreviewLoop();
     if (impressionDrawArea) {
       impressionDrawArea.classList.add("hidden");
     }
@@ -5707,6 +5773,7 @@ function renderImpressionGameState(data) {
       impressionStampsLeftLabel.textContent = "-";
     }
   } else {
+    stopImpressionPreviewLoop();
     if (impressionDrawArea) {
       impressionDrawArea.classList.add("hidden");
     }

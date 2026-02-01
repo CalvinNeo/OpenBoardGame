@@ -1214,12 +1214,22 @@ body.log-open {
 }
 
 .impression-shape-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 4px 8px;
   border: 1px solid #cbd5e1;
   border-radius: 4px;
   background: #fff;
   cursor: pointer;
   font-size: 12px;
+}
+
+.impression-shape-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 23, 42, 0.2);
 }
 
 .impression-shape-btn.active {

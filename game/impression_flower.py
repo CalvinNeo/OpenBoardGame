@@ -141,6 +141,16 @@ def _normalize_config(raw: Optional[Dict], base: Optional[Dict] = None) -> Dict:
     if not cfg.get("stamp_colors"):
         cfg["stamp_colors"] = ["#ef4444", "#22c55e", "#3b82f6", "#eab308"]
 
+    shape_list = list(cfg.get("stamp_shapes") or [])
+    color_list = list(cfg.get("stamp_colors") or [])
+    if shape_list and color_list:
+        if len(color_list) < len(shape_list):
+            color_list = color_list + [color_list[-1]] * (len(shape_list) - len(color_list))
+        elif len(color_list) > len(shape_list):
+            color_list = color_list[: len(shape_list)]
+    cfg["stamp_shapes"] = shape_list
+    cfg["stamp_colors"] = color_list
+
     return cfg
 
 
