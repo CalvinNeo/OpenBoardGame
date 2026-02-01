@@ -119,6 +119,30 @@ class RoomSessionTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(old_player.socket_id)
         self.assertEqual(app.SESSIONS[sid_old]["room_id"], room_id_new)
 
+    async def test_reconnect_allows_loaded_room(self):
+        sid_owner = "sid-owner"
+        room_id = await self._create_room(sid_owner, "Alice")
+        room = app.ROOMS[room_id]
+        room.source_room_id = "source-room"
+        player = room.players[0]
+        player.connected = False
+        player.socket_id = None
+        app.SESSIONS.pop(sid_owner, None)
+
+        sid_new = "sid-new"
+        await app.on_room_reconnect(
+            sid_new,
+            {
+                "room_id": room_id,
+                "player_id": player.player_id,
+                "reconnect_token": player.reconnect_token,
+            },
+        )
+
+        self.assertTrue(player.connected)
+        self.assertEqual(player.socket_id, sid_new)
+        self.assertEqual(app.SESSIONS[sid_new]["room_id"], room_id)
+
     async def test_move_seat_swaps_order(self):
         sid_owner = "sid-owner"
         room_id = await self._create_room(sid_owner, "Alice")

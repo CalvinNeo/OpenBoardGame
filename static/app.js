@@ -1170,7 +1170,7 @@ function renderRoomList(rooms) {
     joinActions.className = "room-item-join-actions";
     const auth = getRoomAuth(room.room_id);
     const isLoaded = Boolean(room.source_room_id);
-    const canReconnect = !isLoaded && auth && auth.player_id && auth.reconnect_token;
+    const canReconnect = auth && auth.player_id && auth.reconnect_token;
     const claimableSeats = (room.players || []).filter((player) => !player.is_bot && !player.connected);
     const joinDisabled = isLoaded
       ? claimableSeats.length === 0

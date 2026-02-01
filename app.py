@@ -513,9 +513,6 @@ async def on_room_reconnect(sid, data):
     if not room:
         await _send_error(sid, "room not found")
         return
-    if room.source_room_id:
-        await _send_error(sid, "loaded rooms require seat claim")
-        return
     player = _find_player(room, player_id)
     if not player or player.is_bot:
         await _send_error(sid, "player not found")
