@@ -75,12 +75,14 @@ def _write_config(
     cjk_only: bool,
     filter_traditional: bool,
 ) -> None:
-    assets_dir = Path(__file__).resolve().parents[1] / "game" / "assets"
-    try:
-        relative_path = output_path.resolve().relative_to(assets_dir.resolve())
-        config_value = str(relative_path).replace(os.sep, "/")
-    except ValueError:
-        config_value = str(output_path)
+    repo_root = Path(__file__).resolve().parents[1]
+    assets_dir = repo_root / "game" / "assets"
+    if output_path.is_absolute():
+        output_abs = output_path
+    else:
+        output_abs = repo_root / output_path
+    config_value = os.path.relpath(output_abs, assets_dir)
+    config_value = config_value.replace(os.sep, "/")
     payload = {
         "path": config_value,
         "max_words": max_words,
@@ -162,7 +164,7 @@ def main() -> int:
     parser.add_argument("--input", required=True, help="Path to source embeddings (.vec/.txt/.gz).")
     parser.add_argument(
         "--output",
-        default=str(Path("game") / "assets" / "decrypto_vectors.vec"),
+        default=str(Path("game") / "../../.decrypto" / "decrypto_vectors.vec"),
         help="Output embeddings path.",
     )
     parser.add_argument(
