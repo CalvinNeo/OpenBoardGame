@@ -1200,6 +1200,19 @@ body.log-open {
   cursor: move;
 }
 
+.impression-rotate-controls {
+  position: absolute;
+  display: flex;
+  gap: 6px;
+  padding: 2px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.impression-rotate-controls .impression-rotate-btn {
+  pointer-events: auto;
+}
+
 .impression-controls {
   gap: 10px;
   flex-wrap: wrap;

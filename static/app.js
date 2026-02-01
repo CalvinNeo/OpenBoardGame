@@ -49,6 +49,8 @@ let impressionMatches = {};
 let impressionLastRound = null;
 let impressionLastPhase = null;
 let impressionShapeButtonEls = [];
+const IMPRESSION_SELECTION_PADDING = 6;
+const IMPRESSION_ROTATE_BUTTON_OFFSET = 8;
 let splendorSelectedMarket = null;
 let splendorSelectedReserved = null;
 let splendorSelectedNoble = null;
@@ -248,6 +250,7 @@ const impressionCanvas = document.getElementById("impressionCanvas");
 const impressionCtx = impressionCanvas ? impressionCanvas.getContext("2d") : null;
 const impressionShapeButtons = document.getElementById("impressionShapeButtons");
 const impressionRotationInput = document.getElementById("impressionRotation");
+const impressionRotateControls = document.getElementById("impressionRotateControls");
 const impressionRotateLeftBtn = document.getElementById("impressionRotateLeftBtn");
 const impressionRotateRightBtn = document.getElementById("impressionRotateRightBtn");
 const impressionUndoBtn = document.getElementById("impressionUndoBtn");
@@ -1617,6 +1620,7 @@ function clearImpressionFlowerState() {
   }
   stopImpressionPreviewLoop();
   clearImpressionCanvas();
+  updateImpressionRotateControls();
   updateImpressionButtons();
 }
 
@@ -3935,6 +3939,8 @@ function renderImpressionCanvas() {
   if (impressionPreviewStamp) {
     drawImpressionStamp(impressionPreviewStamp);
   }
+  drawImpressionSelection(getImpressionActiveStamp());
+  updateImpressionRotateControls();
 }
 
 function drawImpressionStamp(stamp) {
@@ -3977,6 +3983,57 @@ function drawImpressionStamp(stamp) {
     impressionCtx.fillRect(-size / 2, -height / 2, size, height);
   }
   impressionCtx.restore();
+}
+
+function drawImpressionSelection(stamp) {
+  if (!impressionCtx || !impressionCanvas || !stamp) {
+    return;
+  }
+  if (impressionPressStart !== null) {
+    return;
+  }
+  const size = (stamp.size || 0) + IMPRESSION_SELECTION_PADDING * 2;
+  impressionCtx.save();
+  impressionCtx.translate(stamp.x, stamp.y);
+  impressionCtx.rotate(stamp.rotation);
+  impressionCtx.strokeStyle = "rgba(15, 23, 42, 0.6)";
+  impressionCtx.lineWidth = 1;
+  impressionCtx.setLineDash([4, 4]);
+  impressionCtx.strokeRect(-size / 2, -size / 2, size, size);
+  impressionCtx.restore();
+}
+
+function updateImpressionRotateControls() {
+  if (!impressionRotateControls || !impressionCanvas) {
+    return;
+  }
+  const stamp = getImpressionActiveStamp();
+  if (!stamp || impressionPressStart !== null || impressionDraggingStamp) {
+    impressionRotateControls.classList.add("hidden");
+    return;
+  }
+  if (!isImpressionActionAvailable("submit_drawing")) {
+    impressionRotateControls.classList.add("hidden");
+    return;
+  }
+  const rect = impressionCanvas.getBoundingClientRect();
+  const scaleX = rect.width ? rect.width / impressionCanvas.width : 1;
+  const scaleY = rect.height ? rect.height / impressionCanvas.height : 1;
+  const half = (stamp.size || 0) / 2 + IMPRESSION_SELECTION_PADDING;
+  impressionRotateControls.classList.remove("hidden");
+  const controlsWidth = impressionRotateControls.offsetWidth;
+  const controlsHeight = impressionRotateControls.offsetHeight;
+  const centerX = stamp.x * scaleX;
+  const belowY = (stamp.y + half) * scaleY + IMPRESSION_ROTATE_BUTTON_OFFSET;
+  let top = belowY;
+  if (top + controlsHeight > rect.height) {
+    top = (stamp.y - half) * scaleY - IMPRESSION_ROTATE_BUTTON_OFFSET - controlsHeight;
+  }
+  let left = centerX - controlsWidth / 2;
+  left = Math.max(0, Math.min(left, rect.width - controlsWidth));
+  top = Math.max(0, Math.min(top, rect.height - controlsHeight));
+  impressionRotateControls.style.left = `${left}px`;
+  impressionRotateControls.style.top = `${top}px`;
 }
 
 function impressionAlphaForDuration(durationMs) {
@@ -4082,6 +4139,7 @@ function startImpressionDrag(event) {
     offsetX: position.x - stamp.x,
     offsetY: position.y - stamp.y,
   };
+  renderImpressionCanvas();
   return true;
 }
 
@@ -4110,6 +4168,7 @@ function updateImpressionDrag(event) {
 
 function endImpressionDrag() {
   impressionDraggingStamp = null;
+  renderImpressionCanvas();
 }
 
 function startImpressionPreviewLoop() {
@@ -4645,6 +4704,7 @@ function setupImpressionCanvas() {
   }
   window.addEventListener("resize", () => {
     updateImpressionMaskElement();
+    updateImpressionRotateControls();
   });
 }
 
