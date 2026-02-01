@@ -107,7 +107,7 @@ const loadList = document.getElementById("loadList");
 const loadEmpty = document.getElementById("loadEmpty");
 const seatClaimModal = document.getElementById("seatClaimModal");
 const seatClaimCloseBtn = document.getElementById("seatClaimCloseBtn");
-const seatClaimNameInput = document.getElementById("seatClaimNameInput");
+const seatClaimNameHint = document.getElementById("seatClaimNameHint");
 const seatClaimRoomLabel = document.getElementById("seatClaimRoomLabel");
 const seatClaimList = document.getElementById("seatClaimList");
 const seatClaimEmpty = document.getElementById("seatClaimEmpty");
@@ -550,8 +550,9 @@ function requestSeatClaim(roomId, sourceRoomId, openImmediately = true) {
   }
   markPendingSeatClaim(roomId, sourceRoomId);
   if (openImmediately) {
-    if (seatClaimNameInput) {
-      seatClaimNameInput.value = getPlayerName();
+    if (seatClaimNameHint) {
+      const name = getPlayerName();
+      seatClaimNameHint.textContent = name ? `Using name: ${name}` : "Set your name to claim a seat.";
     }
     if (seatClaimRoomLabel) {
       const sourceLabel = sourceRoomId ? `Loaded from ${sourceRoomId}` : "Loaded room";
@@ -696,11 +697,11 @@ function renderSeatList(payload) {
     }
     claimButton.disabled = disabled;
     claimButton.addEventListener("click", () => {
-      const name = seatClaimNameInput ? seatClaimNameInput.value.trim() : "";
+      const name = getPlayerName();
       if (!name) {
         log("Name required");
-        if (seatClaimNameInput) {
-          seatClaimNameInput.focus();
+        if (nameInput) {
+          nameInput.focus();
         }
         return;
       }
@@ -4914,8 +4915,9 @@ socket.on("room:seat_list", (data) => {
   }
   pendingSeatClaimRoomId = data.room_id;
   pendingSeatClaimSourceId = data.source_room_id || null;
-  if (seatClaimNameInput && !seatClaimNameInput.value) {
-    seatClaimNameInput.value = getPlayerName();
+  if (seatClaimNameHint) {
+    const name = getPlayerName();
+    seatClaimNameHint.textContent = name ? `Using name: ${name}` : "Set your name to claim a seat.";
   }
   if (seatClaimRoomLabel) {
     const sourceLabel = data.source_room_id ? `Loaded from ${data.source_room_id}` : "Loaded room";
