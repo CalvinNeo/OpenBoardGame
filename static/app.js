@@ -256,7 +256,6 @@ const blokusFlipInput = document.getElementById("blokusFlip");
 const blokusPlaceBtn = document.getElementById("blokusPlaceBtn");
 const blokusBoard = document.getElementById("blokusBoard");
 const blokusPieces = document.getElementById("blokusPieces");
-const blokusPreview = document.getElementById("blokusPreview");
 const blokusPlayers = document.getElementById("blokusPlayers");
 
 const actionButtons = {
@@ -1320,9 +1319,6 @@ function clearBlokusState() {
   if (blokusPieces) {
     blokusPieces.innerHTML = "";
   }
-  if (blokusPreview) {
-    blokusPreview.innerHTML = "";
-  }
   if (blokusPlayers) {
     blokusPlayers.innerHTML = "";
   }
@@ -1387,49 +1383,16 @@ function setBlokusOrigin(x, y) {
   }
 }
 
-function renderBlokusPreview(view) {
-  if (!blokusPreview) {
-    return;
-  }
-  blokusPreview.innerHTML = "";
-  if (!blokusSelectedPieceId || !view.piece_defs) {
-    blokusPreview.textContent = "-";
-    return;
-  }
-  const def = view.piece_defs[blokusSelectedPieceId];
-  if (!def || !Array.isArray(def.cells)) {
-    blokusPreview.textContent = "-";
-    return;
-  }
-  const coords = transformBlokusCells(def.cells, blokusRotation, blokusFlip);
-  if (!coords.length) {
-    blokusPreview.textContent = "-";
-    return;
-  }
-  const width = Math.max(...coords.map(([x]) => x)) + 1;
-  const height = Math.max(...coords.map(([, y]) => y)) + 1;
-  const grid = document.createElement("div");
-  grid.className = "blokus-preview-grid";
-  grid.style.gridTemplateColumns = `repeat(${width}, 16px)`;
-  grid.style.gridTemplateRows = `repeat(${height}, 16px)`;
-  coords.forEach(([x, y]) => {
-    const cell = document.createElement("div");
-    cell.className = "blokus-preview-cell";
-    cell.style.gridColumn = `${x + 1}`;
-    cell.style.gridRow = `${y + 1}`;
-    grid.appendChild(cell);
-  });
-  blokusPreview.appendChild(grid);
-}
-
 function renderBlokusPieces(view) {
   if (!blokusPieces) {
     return;
   }
   blokusPieces.innerHTML = "";
   const remaining = Array.isArray(view.remaining_pieces) ? view.remaining_pieces : [];
+  let selectionChanged = false;
   if (blokusSelectedPieceId && !remaining.includes(blokusSelectedPieceId)) {
     blokusSelectedPieceId = null;
+    selectionChanged = true;
   }
   if (blokusSelectedPieceLabel) {
     blokusSelectedPieceLabel.textContent = blokusSelectedPieceId || "-";
@@ -1438,8 +1401,10 @@ function renderBlokusPieces(view) {
     const empty = document.createElement("div");
     empty.textContent = "No pieces remaining.";
     blokusPieces.appendChild(empty);
-    renderBlokusPreview(view);
     updateBlokusActionButton();
+    if (selectionChanged) {
+      renderBlokusBoard(view);
+    }
     return;
   }
   remaining.forEach((pieceId) => {
@@ -1457,7 +1422,7 @@ function renderBlokusPieces(view) {
         blokusSelectedPieceLabel.textContent = pieceId;
       }
       renderBlokusPieces(view);
-      renderBlokusPreview(view);
+      renderBlokusBoard(view);
       updateBlokusActionButton();
     });
 
@@ -1484,8 +1449,10 @@ function renderBlokusPieces(view) {
     piece.appendChild(label);
     blokusPieces.appendChild(piece);
   });
-  renderBlokusPreview(view);
   updateBlokusActionButton();
+  if (selectionChanged) {
+    renderBlokusBoard(view);
+  }
 }
 
 function renderBlokusBoard(view) {
@@ -1494,6 +1461,26 @@ function renderBlokusBoard(view) {
   }
   const size = view.board_size || 20;
   const board = Array.isArray(view.board) ? view.board : [];
+  let ghostCells = null;
+  let ghostColor = null;
+  if (blokusSelectedPieceId && blokusSelectedOrigin && view.piece_defs) {
+    const def = view.piece_defs[blokusSelectedPieceId];
+    if (def && Array.isArray(def.cells)) {
+      const coords = transformBlokusCells(def.cells, blokusRotation, blokusFlip);
+      if (coords.length) {
+        ghostCells = new Set();
+        coords.forEach(([dx, dy]) => {
+          const x = blokusSelectedOrigin.x + dx;
+          const y = blokusSelectedOrigin.y + dy;
+          if (x >= 0 && x < size && y >= 0 && y < size) {
+            ghostCells.add(`${x},${y}`);
+          }
+        });
+        const you = (view.players || []).find((player) => player.player_id === view.you);
+        ghostColor = you && you.color ? you.color : null;
+      }
+    }
+  }
   blokusBoard.innerHTML = "";
   const fragment = document.createDocumentFragment();
   for (let y = 0; y < size; y += 1) {
@@ -1504,6 +1491,12 @@ function renderBlokusBoard(view) {
       const color = row[x];
       if (color) {
         cell.classList.add(color);
+      }
+      if (!color && ghostCells && ghostCells.has(`${x},${y}`)) {
+        cell.classList.add("ghost");
+        if (ghostColor) {
+          cell.classList.add(ghostColor);
+        }
       }
       if (blokusSelectedOrigin && blokusSelectedOrigin.x === x && blokusSelectedOrigin.y === y) {
         cell.classList.add("selected");
@@ -4279,7 +4272,6 @@ function renderBlokusGameState(data) {
   renderBlokusBoard(view);
   renderBlokusPieces(view);
   renderBlokusPlayers(view);
-  renderBlokusPreview(view);
   logGameEvents(data);
   updateBlokusActionButton();
 }
@@ -5205,7 +5197,7 @@ if (blokusRotationSelect) {
     const value = Number.parseInt(blokusRotationSelect.value, 10);
     blokusRotation = Number.isInteger(value) ? value : 0;
     if (currentBlokusView) {
-      renderBlokusPreview(currentBlokusView);
+      renderBlokusBoard(currentBlokusView);
     }
     updateBlokusActionButton();
   });
@@ -5215,7 +5207,7 @@ if (blokusFlipInput) {
   blokusFlipInput.addEventListener("change", () => {
     blokusFlip = !!blokusFlipInput.checked;
     if (currentBlokusView) {
-      renderBlokusPreview(currentBlokusView);
+      renderBlokusBoard(currentBlokusView);
     }
     updateBlokusActionButton();
   });
@@ -5249,6 +5241,9 @@ if (blokusPlaceBtn) {
     blokusSelectedOrigin = null;
     if (blokusOriginLabel) {
       blokusOriginLabel.textContent = "-";
+    }
+    if (currentBlokusView) {
+      renderBlokusBoard(currentBlokusView);
     }
     updateBlokusActionButton();
   });
