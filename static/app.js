@@ -587,6 +587,20 @@ function closeSeatClaimModal() {
   setModalVisible(seatClaimModal, false);
 }
 
+function downloadSaveFile(sourceRoomId) {
+  if (!sourceRoomId) {
+    log("Missing source room id");
+    return;
+  }
+  const url = `/api/room/save?source_room_id=${encodeURIComponent(sourceRoomId)}`;
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
 function renderLoadList(saves) {
   if (!loadList || !loadEmpty) {
     return;
@@ -650,6 +664,13 @@ function renderLoadList(saves) {
       socket.emit("room:load", { source_room_id: save.source_room_id });
     });
     actions.appendChild(loadButton);
+    const downloadButton = document.createElement("button");
+    downloadButton.type = "button";
+    downloadButton.textContent = "Download";
+    downloadButton.addEventListener("click", () => {
+      downloadSaveFile(save.source_room_id);
+    });
+    actions.appendChild(downloadButton);
 
     wrapper.appendChild(header);
     wrapper.appendChild(meta);

@@ -1,13 +1,14 @@
 import asyncio
 import json
 import os
+import re
 import time
 import uuid
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 import socketio
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -33,6 +34,17 @@ async def decrypto_word_packs():
 @fastapi_app.get("/api/decrypto/bot_strategies")
 async def decrypto_bot_strategies():
     return {"strategies": get_bot_strategies()}
+
+
+@fastapi_app.get("/api/room/save")
+async def download_room_save(source_room_id: str):
+    if not _is_safe_room_id(source_room_id):
+        raise HTTPException(status_code=400, detail="invalid source_room_id")
+    latest_path = _get_latest_save_path(source_room_id)
+    if not latest_path:
+        raise HTTPException(status_code=404, detail="save not found")
+    filename = f"{source_room_id}_{os.path.basename(latest_path)}"
+    return FileResponse(latest_path, filename=filename, media_type="application/json")
 
 
 app = socketio.ASGIApp(sio, fastapi_app)
@@ -68,6 +80,11 @@ class Room:
 ROOMS: Dict[str, Room] = {}
 SESSIONS: Dict[str, Dict] = {}
 DATA_DIR = ".data"
+ROOM_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+
+
+def _is_safe_room_id(room_id: str) -> bool:
+    return bool(ROOM_ID_RE.match(room_id))
 
 
 def _generate_room_id() -> str:
