@@ -9,6 +9,7 @@ let currentDecryptoView = null;
 let currentDrawGuessView = null;
 let currentSplendorView = null;
 let currentAbracaView = null;
+let currentBlokusView = null;
 let currentGameType = null;
 let abracaLastRoundNotice = null;
 let selectedSlots = [];
@@ -30,6 +31,10 @@ let splendorSelectedNoble = null;
 let splendorTokenSelection = {};
 let splendorDiscardSelection = {};
 let splendorNobleCatalog = {};
+let blokusSelectedPieceId = null;
+let blokusSelectedOrigin = null;
+let blokusRotation = 0;
+let blokusFlip = false;
 let createRoomPending = false;
 let pendingReadyAfterJoin = false;
 let pendingReadyRoomId = null;
@@ -239,6 +244,20 @@ const abracaSpellButtonsContainer = document.getElementById("abracaSpellButtons"
 const abracaSpellButtons = abracaSpellButtonsContainer
   ? Array.from(abracaSpellButtonsContainer.querySelectorAll("button[data-spell]"))
   : [];
+
+const blokusPanel = document.getElementById("blokusPanel");
+const blokusStatusLabel = document.getElementById("blokusStatus");
+const blokusTurnLabel = document.getElementById("blokusTurn");
+const blokusWinnerLabel = document.getElementById("blokusWinner");
+const blokusSelectedPieceLabel = document.getElementById("blokusSelectedPiece");
+const blokusOriginLabel = document.getElementById("blokusOrigin");
+const blokusRotationSelect = document.getElementById("blokusRotation");
+const blokusFlipInput = document.getElementById("blokusFlip");
+const blokusPlaceBtn = document.getElementById("blokusPlaceBtn");
+const blokusBoard = document.getElementById("blokusBoard");
+const blokusPieces = document.getElementById("blokusPieces");
+const blokusPreview = document.getElementById("blokusPreview");
+const blokusPlayers = document.getElementById("blokusPlayers");
 
 const actionButtons = {
   initial_peek: document.getElementById("peekBtn"),
@@ -566,6 +585,7 @@ function setGamePanelVisibility(gameType) {
   const showDrawGuess = gameType === "draw_guess";
   const showSplendor = gameType === "splendor";
   const showAbraca = gameType === "abraca_what";
+  const showBlokus = gameType === "blokus";
   caboPanel.classList.toggle("hidden", !showCabo);
   skullPanel.classList.toggle("hidden", !showSkull);
   if (coyotePanel) {
@@ -580,6 +600,9 @@ function setGamePanelVisibility(gameType) {
   }
   if (abracaPanel) {
     abracaPanel.classList.toggle("hidden", !showAbraca);
+  }
+  if (blokusPanel) {
+    blokusPanel.classList.toggle("hidden", !showBlokus);
   }
 }
 
@@ -964,6 +987,7 @@ function resetRoomState() {
   clearDrawGuessState();
   clearSplendorState();
   clearAbracaState();
+  clearBlokusState();
   setGamePanelVisibility(null);
   updateDrawGuessLanguageRow();
   updateDecryptoPackRow();
@@ -1261,6 +1285,303 @@ function clearAbracaState() {
     abracaNewGameRow.classList.add("hidden");
   }
   updateAbracaActionButtons();
+}
+
+function clearBlokusState() {
+  currentBlokusView = null;
+  blokusSelectedPieceId = null;
+  blokusSelectedOrigin = null;
+  blokusRotation = 0;
+  blokusFlip = false;
+  if (blokusStatusLabel) {
+    blokusStatusLabel.textContent = "-";
+  }
+  if (blokusTurnLabel) {
+    blokusTurnLabel.textContent = "-";
+  }
+  if (blokusWinnerLabel) {
+    blokusWinnerLabel.textContent = "-";
+  }
+  if (blokusSelectedPieceLabel) {
+    blokusSelectedPieceLabel.textContent = "-";
+  }
+  if (blokusOriginLabel) {
+    blokusOriginLabel.textContent = "-";
+  }
+  if (blokusRotationSelect) {
+    blokusRotationSelect.value = "0";
+  }
+  if (blokusFlipInput) {
+    blokusFlipInput.checked = false;
+  }
+  if (blokusBoard) {
+    blokusBoard.innerHTML = "";
+  }
+  if (blokusPieces) {
+    blokusPieces.innerHTML = "";
+  }
+  if (blokusPreview) {
+    blokusPreview.innerHTML = "";
+  }
+  if (blokusPlayers) {
+    blokusPlayers.innerHTML = "";
+  }
+  updateBlokusActionButton();
+}
+
+function normalizeBlokusCells(cells) {
+  if (!cells.length) {
+    return [];
+  }
+  let minX = cells[0][0];
+  let minY = cells[0][1];
+  cells.forEach(([x, y]) => {
+    if (x < minX) minX = x;
+    if (y < minY) minY = y;
+  });
+  return cells
+    .map(([x, y]) => [x - minX, y - minY])
+    .sort((a, b) => (a[0] - b[0]) || (a[1] - b[1]));
+}
+
+function rotateBlokusCells(cells) {
+  return cells.map(([x, y]) => [y, -x]);
+}
+
+function flipBlokusCells(cells) {
+  return cells.map(([x, y]) => [-x, y]);
+}
+
+function transformBlokusCells(cells, rotation, flip) {
+  let coords = cells.map(([x, y]) => [x, y]);
+  if (flip) {
+    coords = flipBlokusCells(coords);
+  }
+  const turns = Math.floor(((rotation % 360) + 360) / 90) % 4;
+  for (let i = 0; i < turns; i += 1) {
+    coords = rotateBlokusCells(coords);
+  }
+  return normalizeBlokusCells(coords);
+}
+
+function updateBlokusActionButton() {
+  if (!blokusPlaceBtn) {
+    return;
+  }
+  const legal = currentBlokusView && Array.isArray(currentBlokusView.legal_actions)
+    ? currentBlokusView.legal_actions.includes("place_piece")
+    : false;
+  const enabled = legal && !!blokusSelectedPieceId && !!blokusSelectedOrigin;
+  blokusPlaceBtn.disabled = !enabled;
+  blokusPlaceBtn.classList.toggle("action-allowed", enabled);
+}
+
+function setBlokusOrigin(x, y) {
+  blokusSelectedOrigin = { x, y };
+  if (blokusOriginLabel) {
+    blokusOriginLabel.textContent = `${x}, ${y}`;
+  }
+  updateBlokusActionButton();
+  if (currentBlokusView) {
+    renderBlokusBoard(currentBlokusView);
+  }
+}
+
+function renderBlokusPreview(view) {
+  if (!blokusPreview) {
+    return;
+  }
+  blokusPreview.innerHTML = "";
+  if (!blokusSelectedPieceId || !view.piece_defs) {
+    blokusPreview.textContent = "-";
+    return;
+  }
+  const def = view.piece_defs[blokusSelectedPieceId];
+  if (!def || !Array.isArray(def.cells)) {
+    blokusPreview.textContent = "-";
+    return;
+  }
+  const coords = transformBlokusCells(def.cells, blokusRotation, blokusFlip);
+  if (!coords.length) {
+    blokusPreview.textContent = "-";
+    return;
+  }
+  const width = Math.max(...coords.map(([x]) => x)) + 1;
+  const height = Math.max(...coords.map(([, y]) => y)) + 1;
+  const grid = document.createElement("div");
+  grid.className = "blokus-preview-grid";
+  grid.style.gridTemplateColumns = `repeat(${width}, 16px)`;
+  grid.style.gridTemplateRows = `repeat(${height}, 16px)`;
+  coords.forEach(([x, y]) => {
+    const cell = document.createElement("div");
+    cell.className = "blokus-preview-cell";
+    cell.style.gridColumn = `${x + 1}`;
+    cell.style.gridRow = `${y + 1}`;
+    grid.appendChild(cell);
+  });
+  blokusPreview.appendChild(grid);
+}
+
+function renderBlokusPieces(view) {
+  if (!blokusPieces) {
+    return;
+  }
+  blokusPieces.innerHTML = "";
+  const remaining = Array.isArray(view.remaining_pieces) ? view.remaining_pieces : [];
+  if (blokusSelectedPieceId && !remaining.includes(blokusSelectedPieceId)) {
+    blokusSelectedPieceId = null;
+  }
+  if (blokusSelectedPieceLabel) {
+    blokusSelectedPieceLabel.textContent = blokusSelectedPieceId || "-";
+  }
+  if (!remaining.length) {
+    const empty = document.createElement("div");
+    empty.textContent = "No pieces remaining.";
+    blokusPieces.appendChild(empty);
+    renderBlokusPreview(view);
+    updateBlokusActionButton();
+    return;
+  }
+  remaining.forEach((pieceId) => {
+    const def = view.piece_defs ? view.piece_defs[pieceId] : null;
+    const cells = def && Array.isArray(def.cells) ? def.cells : [];
+    const piece = document.createElement("button");
+    piece.type = "button";
+    piece.className = "blokus-piece";
+    if (pieceId === blokusSelectedPieceId) {
+      piece.classList.add("selected");
+    }
+    piece.addEventListener("click", () => {
+      blokusSelectedPieceId = pieceId;
+      if (blokusSelectedPieceLabel) {
+        blokusSelectedPieceLabel.textContent = pieceId;
+      }
+      renderBlokusPieces(view);
+      renderBlokusPreview(view);
+      updateBlokusActionButton();
+    });
+
+    if (cells.length) {
+      const width = Math.max(...cells.map(([x]) => x)) + 1;
+      const height = Math.max(...cells.map(([, y]) => y)) + 1;
+      const grid = document.createElement("div");
+      grid.className = "blokus-piece-grid";
+      grid.style.gridTemplateColumns = `repeat(${width}, 10px)`;
+      grid.style.gridTemplateRows = `repeat(${height}, 10px)`;
+      cells.forEach(([x, y]) => {
+        const cell = document.createElement("div");
+        cell.className = "blokus-piece-cell";
+        cell.style.gridColumn = `${x + 1}`;
+        cell.style.gridRow = `${y + 1}`;
+        grid.appendChild(cell);
+      });
+      piece.appendChild(grid);
+    }
+
+    const label = document.createElement("div");
+    label.className = "blokus-piece-label";
+    label.textContent = pieceId;
+    piece.appendChild(label);
+    blokusPieces.appendChild(piece);
+  });
+  renderBlokusPreview(view);
+  updateBlokusActionButton();
+}
+
+function renderBlokusBoard(view) {
+  if (!blokusBoard) {
+    return;
+  }
+  const size = view.board_size || 20;
+  const board = Array.isArray(view.board) ? view.board : [];
+  blokusBoard.innerHTML = "";
+  const fragment = document.createDocumentFragment();
+  for (let y = 0; y < size; y += 1) {
+    const row = Array.isArray(board[y]) ? board[y] : [];
+    for (let x = 0; x < size; x += 1) {
+      const cell = document.createElement("div");
+      cell.className = "blokus-cell";
+      const color = row[x];
+      if (color) {
+        cell.classList.add(color);
+      }
+      if (blokusSelectedOrigin && blokusSelectedOrigin.x === x && blokusSelectedOrigin.y === y) {
+        cell.classList.add("selected");
+      }
+      cell.addEventListener("click", () => {
+        if (!currentBlokusView || currentBlokusView.game_over) {
+          return;
+        }
+        setBlokusOrigin(x, y);
+      });
+      fragment.appendChild(cell);
+    }
+  }
+  blokusBoard.appendChild(fragment);
+}
+
+function renderBlokusPlayers(view) {
+  if (!blokusPlayers) {
+    return;
+  }
+  blokusPlayers.innerHTML = "";
+  (view.players || []).forEach((player) => {
+    const card = document.createElement("div");
+    card.className = "player-card";
+    if (player.player_id === view.current_turn) {
+      card.classList.add("current");
+    }
+    if (player.passed) {
+      card.classList.add("disabled");
+    }
+
+    const header = document.createElement("div");
+    header.className = "player-header";
+    const name = document.createElement("div");
+    name.className = "player-name";
+    const colorLabel = player.color ? ` (${player.color})` : "";
+    name.textContent = `${player.name || player.player_id}${colorLabel}`;
+    header.appendChild(name);
+
+    const badges = document.createElement("div");
+    badges.className = "player-badges";
+    const pieces = document.createElement("span");
+    pieces.className = "badge";
+    pieces.textContent = `pieces ${player.remaining_pieces}`;
+    badges.appendChild(pieces);
+    const cells = document.createElement("span");
+    cells.className = "badge";
+    cells.textContent = `cells ${player.remaining_cells}`;
+    badges.appendChild(cells);
+    if (Number.isInteger(player.score)) {
+      const score = document.createElement("span");
+      score.className = "badge";
+      score.textContent = `score ${player.score}`;
+      badges.appendChild(score);
+    }
+    if (player.passed) {
+      const passed = document.createElement("span");
+      passed.className = "badge";
+      passed.textContent = "passed";
+      badges.appendChild(passed);
+    }
+    if (player.player_id === view.you) {
+      const you = document.createElement("span");
+      you.className = "badge highlight";
+      you.textContent = "you";
+      badges.appendChild(you);
+    }
+    if (player.is_bot) {
+      const bot = document.createElement("span");
+      bot.className = "badge";
+      bot.textContent = "bot";
+      badges.appendChild(bot);
+    }
+    header.appendChild(badges);
+    card.appendChild(header);
+
+    blokusPlayers.appendChild(card);
+  });
 }
 
 function updateSplendorSelectionLabels() {
@@ -1744,6 +2065,7 @@ function renderRoomState(state) {
     clearDrawGuessState();
     clearSplendorState();
     clearAbracaState();
+    clearBlokusState();
   }
   setGamePanelVisibility(currentGameType);
   updateDrawGuessLanguageRow();
@@ -3922,6 +4244,46 @@ function renderAbracaGameState(data) {
   updateAbracaActionButtons();
 }
 
+function renderBlokusGameState(data) {
+  const view = data.view;
+  currentBlokusView = view;
+  if (currentGameType !== "blokus") {
+    currentGameType = "blokus";
+    setGamePanelVisibility("blokus");
+  }
+  if (blokusStatusLabel) {
+    blokusStatusLabel.textContent = view.game_over ? "game over" : "in progress";
+  }
+  if (blokusTurnLabel) {
+    const currentPlayer = (view.players || []).find((p) => p.player_id === view.current_turn);
+    blokusTurnLabel.textContent = currentPlayer ? currentPlayer.name : view.current_turn || "-";
+  }
+  if (blokusWinnerLabel) {
+    if (view.winner && view.winner.length) {
+      const names = view.winner.map((pid) => findPlayerName(view, pid));
+      blokusWinnerLabel.textContent = names.join(", ");
+    } else {
+      blokusWinnerLabel.textContent = "-";
+    }
+  }
+  if (blokusRotationSelect) {
+    blokusRotationSelect.value = String(blokusRotation);
+  }
+  if (blokusFlipInput) {
+    blokusFlipInput.checked = blokusFlip;
+  }
+  if (!blokusSelectedOrigin && blokusOriginLabel) {
+    blokusOriginLabel.textContent = "-";
+  }
+
+  renderBlokusBoard(view);
+  renderBlokusPieces(view);
+  renderBlokusPlayers(view);
+  renderBlokusPreview(view);
+  logGameEvents(data);
+  updateBlokusActionButton();
+}
+
 function renderCaboGameState(data) {
   const view = data.view;
   currentCaboView = view;
@@ -4147,6 +4509,10 @@ function renderGameState(data) {
   }
   if (gameType === "abraca_what") {
     renderAbracaGameState(data);
+    return;
+  }
+  if (gameType === "blokus") {
+    renderBlokusGameState(data);
     return;
   }
   if (gameType === "splendor") {
@@ -4831,6 +5197,60 @@ if (splendorChooseNobleBtn) {
     splendorSelectedNoble = null;
     updateSplendorSelectionLabels();
     updateSplendorActionButtons();
+  });
+}
+
+if (blokusRotationSelect) {
+  blokusRotationSelect.addEventListener("change", () => {
+    const value = Number.parseInt(blokusRotationSelect.value, 10);
+    blokusRotation = Number.isInteger(value) ? value : 0;
+    if (currentBlokusView) {
+      renderBlokusPreview(currentBlokusView);
+    }
+    updateBlokusActionButton();
+  });
+}
+
+if (blokusFlipInput) {
+  blokusFlipInput.addEventListener("change", () => {
+    blokusFlip = !!blokusFlipInput.checked;
+    if (currentBlokusView) {
+      renderBlokusPreview(currentBlokusView);
+    }
+    updateBlokusActionButton();
+  });
+}
+
+if (blokusPlaceBtn) {
+  blokusPlaceBtn.addEventListener("click", () => {
+    if (!currentBlokusView || !Array.isArray(currentBlokusView.legal_actions)) {
+      return;
+    }
+    if (!currentBlokusView.legal_actions.includes("place_piece")) {
+      log("Not your turn");
+      return;
+    }
+    if (!blokusSelectedPieceId) {
+      log("Select a piece");
+      return;
+    }
+    if (!blokusSelectedOrigin) {
+      log("Select an origin cell");
+      return;
+    }
+    sendAction({
+      type: "place_piece",
+      piece_id: blokusSelectedPieceId,
+      rotation: blokusRotation,
+      flip: blokusFlip,
+      x: blokusSelectedOrigin.x,
+      y: blokusSelectedOrigin.y,
+    });
+    blokusSelectedOrigin = null;
+    if (blokusOriginLabel) {
+      blokusOriginLabel.textContent = "-";
+    }
+    updateBlokusActionButton();
   });
 }
 

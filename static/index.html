@@ -47,6 +47,7 @@
                 <option value="draw_guess">Draw & Guess</option>
                 <option value="splendor">Splendor</option>
                 <option value="abraca_what">Abraca What</option>
+                <option value="blokus">Blokus</option>
               </select>
             </div>
             <div class="row compact-row">
@@ -502,6 +503,50 @@
               <div id="abracaPlayers"></div>
             </div>
 
+            <div id="blokusPanel" class="hidden">
+              <div class="row">
+                <div>Status: <span id="blokusStatus">-</span></div>
+                <div>Current Turn: <span id="blokusTurn">-</span></div>
+                <div>Winner: <span id="blokusWinner">-</span></div>
+              </div>
+              <div class="row">
+                <div>Selected Piece: <span id="blokusSelectedPiece">-</span></div>
+                <div>Origin (top-left): <span id="blokusOrigin">-</span></div>
+              </div>
+              <div class="row">
+                <label for="blokusRotation">Rotation</label>
+                <select id="blokusRotation">
+                  <option value="0">0</option>
+                  <option value="90">90</option>
+                  <option value="180">180</option>
+                  <option value="270">270</option>
+                </select>
+                <label for="blokusFlip">Flip</label>
+                <input id="blokusFlip" type="checkbox" />
+                <button id="blokusPlaceBtn">Place Piece</button>
+              </div>
+              <div class="row">
+                <div class="hint">Click the board to choose the origin cell.</div>
+              </div>
+
+              <div class="blokus-layout">
+                <div>
+                  <h3>Board</h3>
+                  <div id="blokusBoard" class="blokus-board"></div>
+                </div>
+                <div>
+                  <h3>Pieces</h3>
+                  <div id="blokusPieces" class="blokus-pieces"></div>
+                  <h3>Preview</h3>
+                  <div id="blokusPreview" class="blokus-preview"></div>
+                </div>
+                <div>
+                  <h3>Players</h3>
+                  <div id="blokusPlayers"></div>
+                </div>
+              </div>
+            </div>
+
           </div>
         </section>
       </main>
@@ -510,6 +555,6 @@
   </div>
 
   <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
-  <script src="/static/app.js?v=splendor_v1"></script>
+  <script src="/static/app.js?v=blokus_v1"></script>
 </body>
 </html>

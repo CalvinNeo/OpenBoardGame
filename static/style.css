@@ -177,6 +177,11 @@ input, select {
   display: none;
 }
 
+.hint {
+  font-size: 12px;
+  color: #6b7280;
+}
+
 #playersList, #gamePlayers, #log {
   border: 1px solid #eee;
   padding: 8px;
@@ -206,6 +211,116 @@ input, select {
   overflow-y: auto;
   word-break: break-word;
   overflow-wrap: anywhere;
+}
+
+.blokus-layout {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.blokus-board {
+  display: grid;
+  grid-template-columns: repeat(20, 18px);
+  grid-auto-rows: 18px;
+  gap: 1px;
+  background: #d1d5db;
+  padding: 6px;
+  border-radius: 6px;
+}
+
+.blokus-cell {
+  width: 18px;
+  height: 18px;
+  background: #f9fafb;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.blokus-cell.selected {
+  outline: 2px solid #111827;
+  outline-offset: -1px;
+}
+
+.blokus-cell.blue {
+  background: #2563eb;
+}
+
+.blokus-cell.yellow {
+  background: #fbbf24;
+}
+
+.blokus-cell.red {
+  background: #dc2626;
+}
+
+.blokus-cell.green {
+  background: #16a34a;
+}
+
+.blokus-pieces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 320px;
+}
+
+.blokus-piece {
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  padding: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.blokus-piece.selected {
+  border-color: #1f6feb;
+  box-shadow: 0 0 0 2px rgba(31, 111, 235, 0.2);
+}
+
+.blokus-piece-label {
+  font-size: 11px;
+  color: #374151;
+}
+
+.blokus-piece-grid {
+  display: grid;
+  gap: 1px;
+}
+
+.blokus-piece-cell {
+  width: 10px;
+  height: 10px;
+  background: #6b7280;
+  border-radius: 2px;
+}
+
+.blokus-preview {
+  min-height: 96px;
+  min-width: 96px;
+  border: 1px dashed #e5e7eb;
+  border-radius: 6px;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.blokus-preview-grid {
+  display: grid;
+  gap: 2px;
+}
+
+.blokus-preview-cell {
+  width: 16px;
+  height: 16px;
+  background: #374151;
+  border-radius: 3px;
 }
 
 .decrypto-pack-options {

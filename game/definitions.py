@@ -5,6 +5,7 @@ from game.decrypto import DecryptoGame
 from game.draw_guess import DrawGuessGame
 from game.registry import GameDefinition, register_game
 from game.splendor import SplendorGame
+from game.blokus import BlokusGame
 from game.skull import SkullGame
 
 CABO_ACTION_SCHEMA = {
@@ -383,6 +384,26 @@ SPLENDOR_CONFIG_SCHEMA = {
     "additionalProperties": False,
 }
 
+BLOKUS_ACTION_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "type": {"const": "place_piece"},
+        "piece_id": {"type": "string"},
+        "rotation": {"type": "integer", "enum": [0, 90, 180, 270]},
+        "flip": {"type": "boolean"},
+        "x": {"type": "integer", "minimum": 0, "maximum": 19},
+        "y": {"type": "integer", "minimum": 0, "maximum": 19},
+    },
+    "required": ["type", "piece_id", "rotation", "flip", "x", "y"],
+    "additionalProperties": False,
+}
+
+BLOKUS_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {},
+    "additionalProperties": False,
+}
+
 register_game(
     GameDefinition(
         game_id=CaboGame.game_id,
@@ -485,5 +506,20 @@ register_game(
         module=DecryptoGame,
         serialize=DecryptoGame.serialize,
         deserialize=DecryptoGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=BlokusGame.game_id,
+        name="Blokus",
+        min_players=BlokusGame.min_players,
+        max_players=BlokusGame.max_players,
+        turn_mode="turn",
+        action_schema=BLOKUS_ACTION_SCHEMA,
+        config_schema=BLOKUS_CONFIG_SCHEMA,
+        module=BlokusGame,
+        serialize=BlokusGame.serialize,
+        deserialize=BlokusGame.deserialize,
     )
 )
