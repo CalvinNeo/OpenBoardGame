@@ -39,6 +39,9 @@ let impressionPressStart = null;
 let impressionPreviewPosition = null;
 let impressionPreviewStamp = null;
 let impressionPreviewRaf = null;
+let impressionActiveStampIndex = null;
+let impressionDraggingStamp = null;
+let impressionMaskTarget = null;
 let impressionMaskActive = false;
 let impressionMaskState = null;
 let impressionMaskDrag = null;
@@ -245,6 +248,8 @@ const impressionCanvas = document.getElementById("impressionCanvas");
 const impressionCtx = impressionCanvas ? impressionCanvas.getContext("2d") : null;
 const impressionShapeButtons = document.getElementById("impressionShapeButtons");
 const impressionRotationInput = document.getElementById("impressionRotation");
+const impressionRotateLeftBtn = document.getElementById("impressionRotateLeftBtn");
+const impressionRotateRightBtn = document.getElementById("impressionRotateRightBtn");
 const impressionUndoBtn = document.getElementById("impressionUndoBtn");
 const impressionMaskBtn = document.getElementById("impressionMaskBtn");
 const impressionMask = document.getElementById("impressionMask");
@@ -1546,6 +1551,9 @@ function clearImpressionFlowerState() {
   impressionCurrentColor = null;
   impressionRotation = 0;
   impressionPressStart = null;
+  impressionActiveStampIndex = null;
+  impressionDraggingStamp = null;
+  impressionMaskTarget = null;
   impressionMaskActive = false;
   impressionMaskState = null;
   impressionMaskDrag = null;
@@ -3818,6 +3826,8 @@ function applyImpressionConfig(config) {
   impressionStampHistory = [];
   impressionStampsLeft = 0;
   impressionStampsMax = 0;
+  impressionActiveStampIndex = null;
+  impressionMaskTarget = null;
   clearImpressionCanvas();
   renderImpressionCanvas();
   resetImpressionMaskState();
@@ -3830,6 +3840,68 @@ function updateImpressionShapeButtons() {
     button.classList.toggle("active", isActive);
     button.setAttribute("aria-pressed", isActive ? "true" : "false");
   });
+}
+
+function getImpressionActiveStamp() {
+  if (impressionActiveStampIndex === null) {
+    return null;
+  }
+  if (impressionActiveStampIndex < 0 || impressionActiveStampIndex >= impressionStampHistory.length) {
+    return null;
+  }
+  return impressionStampHistory[impressionActiveStampIndex] || null;
+}
+
+function normalizeImpressionDegrees(value) {
+  let normalized = Number.parseFloat(value);
+  if (!Number.isFinite(normalized)) {
+    normalized = 0;
+  }
+  normalized %= 360;
+  if (normalized < 0) {
+    normalized += 360;
+  }
+  return normalized;
+}
+
+function setImpressionRotationValue(value, applyToActive) {
+  const normalized = normalizeImpressionDegrees(value);
+  impressionRotation = normalized;
+  if (impressionRotationInput) {
+    impressionRotationInput.value = `${Math.round(normalized)}`;
+  }
+  if (applyToActive) {
+    const stamp = getImpressionActiveStamp();
+    if (stamp) {
+      stamp.rotation = (normalized * Math.PI) / 180;
+      renderImpressionCanvas();
+    }
+  } else if (impressionPressStart !== null && impressionPreviewStamp) {
+    renderImpressionCanvas();
+  }
+}
+
+function setImpressionActiveStampIndex(index) {
+  if (index === null || index < 0 || index >= impressionStampHistory.length) {
+    impressionActiveStampIndex = null;
+    return;
+  }
+  impressionActiveStampIndex = index;
+  const stamp = getImpressionActiveStamp();
+  if (stamp) {
+    const deg = (stamp.rotation * 180) / Math.PI;
+    setImpressionRotationValue(deg, false);
+  }
+}
+
+function rotateImpressionActiveStamp(deltaDeg) {
+  const stamp = getImpressionActiveStamp();
+  if (stamp && impressionPressStart === null && !impressionDraggingStamp) {
+    const currentDeg = (stamp.rotation * 180) / Math.PI;
+    setImpressionRotationValue(currentDeg + deltaDeg, true);
+    return;
+  }
+  setImpressionRotationValue(impressionRotation + deltaDeg, false);
 }
 
 function setImpressionShape(shape) {
@@ -3926,7 +3998,7 @@ function getImpressionPosition(event) {
   };
 }
 
-function buildImpressionStamp(position, alpha) {
+function buildImpressionStamp(position, alpha, useMask) {
   if (!position || !impressionConfig || !impressionCurrentShape) {
     return null;
   }
@@ -3936,8 +4008,9 @@ function buildImpressionStamp(position, alpha) {
   }
   const size = Number.parseInt(impressionConfig && impressionConfig.stamp_size, 10) || 64;
   const rotation = (Math.PI / 180) * (Number.parseFloat(impressionRotation) || 0);
+  const shouldMask = useMask === undefined ? impressionMaskActive : useMask;
   let mask = null;
-  if (impressionMaskActive && impressionMaskState && impressionConfig) {
+  if (shouldMask && impressionMaskState && impressionConfig) {
     const maskSize = (Number.parseInt(impressionConfig.mask_size, 10) || 180) * impressionMaskState.scale;
     mask = {
       x: impressionMaskState.x,
@@ -3958,6 +4031,87 @@ function buildImpressionStamp(position, alpha) {
   };
 }
 
+function isImpressionPointOnStamp(position, stamp) {
+  if (!position || !stamp) {
+    return false;
+  }
+  const half = (stamp.size || 0) / 2;
+  const dx = position.x - stamp.x;
+  const dy = position.y - stamp.y;
+  return Math.abs(dx) <= half && Math.abs(dy) <= half;
+}
+
+function findImpressionStampIndex(position) {
+  if (!position) {
+    return null;
+  }
+  for (let i = impressionStampHistory.length - 1; i >= 0; i -= 1) {
+    if (isImpressionPointOnStamp(position, impressionStampHistory[i])) {
+      return i;
+    }
+  }
+  return null;
+}
+
+function startImpressionDrag(event) {
+  if (!impressionCanvas || !impressionCtx) {
+    return false;
+  }
+  if (impressionPressStart !== null) {
+    return false;
+  }
+  const position = getImpressionPosition(event);
+  if (!position) {
+    return false;
+  }
+  const stampIndex = findImpressionStampIndex(position);
+  if (stampIndex === null) {
+    return false;
+  }
+  const stamp = impressionStampHistory[stampIndex];
+  if (!stamp) {
+    return false;
+  }
+  if (event.cancelable) {
+    event.preventDefault();
+  }
+  stopImpressionPreviewLoop();
+  setImpressionActiveStampIndex(stampIndex);
+  impressionDraggingStamp = {
+    index: stampIndex,
+    offsetX: position.x - stamp.x,
+    offsetY: position.y - stamp.y,
+  };
+  return true;
+}
+
+function updateImpressionDrag(event) {
+  if (!impressionDraggingStamp || !impressionCanvas) {
+    return;
+  }
+  const stamp = impressionStampHistory[impressionDraggingStamp.index];
+  if (!stamp) {
+    return;
+  }
+  const position = getImpressionPosition(event);
+  if (!position) {
+    return;
+  }
+  if (event.cancelable) {
+    event.preventDefault();
+  }
+  const half = (stamp.size || 0) / 2;
+  const nextX = position.x - impressionDraggingStamp.offsetX;
+  const nextY = position.y - impressionDraggingStamp.offsetY;
+  stamp.x = Math.max(half, Math.min(impressionCanvas.width - half, nextX));
+  stamp.y = Math.max(half, Math.min(impressionCanvas.height - half, nextY));
+  renderImpressionCanvas();
+}
+
+function endImpressionDrag() {
+  impressionDraggingStamp = null;
+}
+
 function startImpressionPreviewLoop() {
   if (impressionPreviewRaf) {
     return;
@@ -3968,7 +4122,11 @@ function startImpressionPreviewLoop() {
       return;
     }
     const alpha = impressionAlphaForDuration(Date.now() - impressionPressStart);
-    impressionPreviewStamp = buildImpressionStamp(impressionPreviewPosition, alpha);
+    impressionPreviewStamp = buildImpressionStamp(
+      impressionPreviewPosition,
+      alpha,
+      impressionMaskActive && impressionMaskTarget !== "active"
+    );
     renderImpressionCanvas();
     impressionPreviewRaf = requestAnimationFrame(tick);
   };
@@ -3994,6 +4152,9 @@ function startImpressionPress(event) {
   if (impressionStampsLeft <= 0) {
     return;
   }
+  if (impressionMaskActive && impressionMaskTarget === "active") {
+    impressionMaskTarget = "next";
+  }
   if (event.cancelable) {
     event.preventDefault();
   }
@@ -4003,7 +4164,11 @@ function startImpressionPress(event) {
   }
   impressionPressStart = Date.now();
   impressionPreviewPosition = position;
-  const preview = buildImpressionStamp(position, impressionAlphaForDuration(0));
+  const preview = buildImpressionStamp(
+    position,
+    impressionAlphaForDuration(0),
+    impressionMaskActive && impressionMaskTarget !== "active"
+  );
   if (!preview) {
     impressionPressStart = null;
     impressionPreviewPosition = null;
@@ -4031,6 +4196,40 @@ function updateImpressionPreviewPosition(event) {
   }
 }
 
+function handleImpressionPointerDown(event) {
+  if (startImpressionDrag(event)) {
+    return;
+  }
+  startImpressionPress(event);
+}
+
+function handleImpressionPointerMove(event) {
+  if (impressionDraggingStamp) {
+    updateImpressionDrag(event);
+    return;
+  }
+  updateImpressionPreviewPosition(event);
+}
+
+function handleImpressionPointerUp(event) {
+  if (impressionDraggingStamp) {
+    if (event.cancelable) {
+      event.preventDefault();
+    }
+    endImpressionDrag();
+    return;
+  }
+  endImpressionPress(event);
+}
+
+function handleImpressionPointerCancel(event) {
+  if (impressionDraggingStamp) {
+    endImpressionDrag();
+    return;
+  }
+  cancelImpressionPress(event);
+}
+
 function endImpressionPress(event) {
   if (!impressionCanvas || !impressionCtx) {
     return;
@@ -4056,14 +4255,16 @@ function endImpressionPress(event) {
   }
   const duration = Date.now() - impressionPressStart;
   const alpha = impressionAlphaForDuration(duration);
-  const stamp = buildImpressionStamp(position, alpha);
+  const stamp = buildImpressionStamp(position, alpha, impressionMaskActive && impressionMaskTarget !== "active");
   if (!stamp) {
     impressionPressStart = null;
     stopImpressionPreviewLoop();
     renderImpressionCanvas();
     return;
   }
+  stamp.mask_used = !!stamp.mask;
   impressionStampHistory.push(stamp);
+  setImpressionActiveStampIndex(impressionStampHistory.length - 1);
   impressionStampsLeft = Math.max(0, impressionStampsLeft - 1);
   if (impressionStampsLeftLabel) {
     impressionStampsLeftLabel.textContent = `${impressionStampsLeft}`;
@@ -4072,12 +4273,16 @@ function endImpressionPress(event) {
   renderImpressionCanvas();
   if (impressionMaskActive) {
     setImpressionMaskActive(false);
+    impressionMaskTarget = null;
   }
   impressionPressStart = null;
   updateImpressionButtons();
 }
 
-function cancelImpressionPress() {
+function cancelImpressionPress(event) {
+  if (event && event.cancelable) {
+    event.preventDefault();
+  }
   impressionPressStart = null;
   stopImpressionPreviewLoop();
   renderImpressionCanvas();
@@ -4116,6 +4321,25 @@ function updateImpressionMaskElement() {
   impressionMask.style.left = `${impressionMaskState.x * scaleX}px`;
   impressionMask.style.top = `${impressionMaskState.y * scaleY}px`;
   impressionMask.style.transform = `translate(-50%, -50%) rotate(${impressionMaskState.rotation}deg)`;
+}
+
+function applyImpressionMaskToActiveStamp() {
+  const stamp = getImpressionActiveStamp();
+  if (!stamp || stamp.mask_used) {
+    return;
+  }
+  if (!impressionMaskState || !impressionConfig) {
+    return;
+  }
+  const maskSize = (Number.parseInt(impressionConfig.mask_size, 10) || 180) * impressionMaskState.scale;
+  stamp.mask = {
+    x: impressionMaskState.x,
+    y: impressionMaskState.y,
+    size: maskSize,
+    rotation: (Math.PI / 180) * impressionMaskState.rotation,
+  };
+  stamp.mask_used = true;
+  renderImpressionCanvas();
 }
 
 function setImpressionMaskActive(active) {
@@ -4223,6 +4447,12 @@ function updateImpressionButtons() {
     if (impressionRotationInput) {
       impressionRotationInput.disabled = true;
     }
+    if (impressionRotateLeftBtn) {
+      impressionRotateLeftBtn.disabled = true;
+    }
+    if (impressionRotateRightBtn) {
+      impressionRotateRightBtn.disabled = true;
+    }
     return;
   }
   Object.entries(impressionActionButtons).forEach(([actionType, button]) => {
@@ -4249,6 +4479,12 @@ function updateImpressionButtons() {
   }
   if (impressionRotationInput) {
     impressionRotationInput.disabled = !canDraw;
+  }
+  if (impressionRotateLeftBtn) {
+    impressionRotateLeftBtn.disabled = !canDraw;
+  }
+  if (impressionRotateRightBtn) {
+    impressionRotateRightBtn.disabled = !canDraw;
   }
 }
 
@@ -4395,14 +4631,14 @@ function setupImpressionCanvas() {
   if (!impressionCanvas || !impressionCtx) {
     return;
   }
-  impressionCanvas.addEventListener("mousedown", startImpressionPress);
-  impressionCanvas.addEventListener("mousemove", updateImpressionPreviewPosition);
-  impressionCanvas.addEventListener("mouseup", endImpressionPress);
-  impressionCanvas.addEventListener("mouseleave", cancelImpressionPress);
-  impressionCanvas.addEventListener("touchstart", startImpressionPress, { passive: false });
-  impressionCanvas.addEventListener("touchmove", updateImpressionPreviewPosition, { passive: false });
-  impressionCanvas.addEventListener("touchend", endImpressionPress, { passive: false });
-  impressionCanvas.addEventListener("touchcancel", cancelImpressionPress, { passive: false });
+  impressionCanvas.addEventListener("mousedown", handleImpressionPointerDown);
+  impressionCanvas.addEventListener("mousemove", handleImpressionPointerMove);
+  impressionCanvas.addEventListener("mouseup", handleImpressionPointerUp);
+  impressionCanvas.addEventListener("mouseleave", handleImpressionPointerCancel);
+  impressionCanvas.addEventListener("touchstart", handleImpressionPointerDown, { passive: false });
+  impressionCanvas.addEventListener("touchmove", handleImpressionPointerMove, { passive: false });
+  impressionCanvas.addEventListener("touchend", handleImpressionPointerUp, { passive: false });
+  impressionCanvas.addEventListener("touchcancel", handleImpressionPointerCancel, { passive: false });
   if (impressionMask) {
     impressionMask.addEventListener("mousedown", startImpressionMaskDrag);
     impressionMask.addEventListener("touchstart", startImpressionMaskDrag, { passive: false });
@@ -5716,6 +5952,8 @@ function renderImpressionGameState(data) {
       clearImpressionCanvas();
       renderImpressionCanvas();
       setImpressionMaskActive(false);
+      impressionMaskTarget = null;
+      setImpressionActiveStampIndex(null);
     }
     if (impressionStampsLeftLabel) {
       impressionStampsLeftLabel.textContent = isGuesser ? "-" : `${impressionStampsLeft}`;
@@ -6383,7 +6621,22 @@ if (drawGuessRestartBtn) {
 
 if (impressionRotationInput) {
   impressionRotationInput.addEventListener("input", () => {
-    impressionRotation = Number.parseFloat(impressionRotationInput.value) || 0;
+    const value = Number.parseFloat(impressionRotationInput.value);
+    const stamp = getImpressionActiveStamp();
+    const applyToActive = !!stamp && impressionPressStart === null && !impressionDraggingStamp;
+    setImpressionRotationValue(value, applyToActive);
+  });
+}
+
+if (impressionRotateLeftBtn) {
+  impressionRotateLeftBtn.addEventListener("click", () => {
+    rotateImpressionActiveStamp(-5);
+  });
+}
+
+if (impressionRotateRightBtn) {
+  impressionRotateRightBtn.addEventListener("click", () => {
+    rotateImpressionActiveStamp(5);
   });
 }
 
@@ -6392,7 +6645,24 @@ if (impressionMaskBtn) {
     if (!isImpressionActionAvailable("submit_drawing")) {
       return;
     }
-    setImpressionMaskActive(!impressionMaskActive);
+    const activeStamp = getImpressionActiveStamp();
+    const canApplyToActive =
+      !!activeStamp && !activeStamp.mask_used && impressionPressStart === null && !impressionDraggingStamp;
+    if (impressionMaskActive) {
+      if (impressionMaskTarget === "active" && canApplyToActive) {
+        applyImpressionMaskToActiveStamp();
+      }
+      setImpressionMaskActive(false);
+      impressionMaskTarget = null;
+      updateImpressionButtons();
+      return;
+    }
+    if (canApplyToActive) {
+      impressionMaskTarget = "active";
+    } else {
+      impressionMaskTarget = "next";
+    }
+    setImpressionMaskActive(true);
   });
 }
 
@@ -6423,6 +6693,7 @@ if (impressionUndoBtn) {
       return;
     }
     impressionStampHistory.pop();
+    setImpressionActiveStampIndex(impressionStampHistory.length - 1);
     impressionStampsLeft = Math.min(impressionStampsLeft + 1, impressionStampsMax);
     if (impressionStampsLeftLabel) {
       impressionStampsLeftLabel.textContent = `${impressionStampsLeft}`;
