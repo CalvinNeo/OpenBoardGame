@@ -24,6 +24,11 @@
         <button id="loadModalCloseBtn" type="button">Close</button>
       </div>
       <div class="modal-body">
+        <div class="row load-options">
+          <label for="loadAutoSaveToggle">Auto Save New Room</label>
+          <input id="loadAutoSaveToggle" type="checkbox" />
+          <span class="hint">Save after each game state change.</span>
+        </div>
         <div id="loadList" class="modal-list"></div>
         <div id="loadEmpty" class="hint hidden">No saves found.</div>
       </div>

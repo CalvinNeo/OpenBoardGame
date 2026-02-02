@@ -131,6 +131,7 @@ const loadModal = document.getElementById("loadModal");
 const loadModalCloseBtn = document.getElementById("loadModalCloseBtn");
 const loadList = document.getElementById("loadList");
 const loadEmpty = document.getElementById("loadEmpty");
+const loadAutoSaveToggle = document.getElementById("loadAutoSaveToggle");
 const seatClaimModal = document.getElementById("seatClaimModal");
 const seatClaimCloseBtn = document.getElementById("seatClaimCloseBtn");
 const seatClaimNameHint = document.getElementById("seatClaimNameHint");
@@ -728,7 +729,8 @@ function renderLoadList(saves) {
         log("Missing source room id");
         return;
       }
-      socket.emit("room:load", { source_room_id: save.source_room_id });
+      const autoSave = loadAutoSaveToggle ? loadAutoSaveToggle.checked : false;
+      socket.emit("room:load", { source_room_id: save.source_room_id, auto_save: autoSave });
     });
     actions.appendChild(loadButton);
     const downloadButton = document.createElement("button");
@@ -1148,6 +1150,9 @@ function requestLoadList() {
   if (loadEmpty) {
     loadEmpty.textContent = "Loading saves...";
     loadEmpty.classList.remove("hidden");
+  }
+  if (loadAutoSaveToggle) {
+    loadAutoSaveToggle.checked = false;
   }
   openLoadModal();
   socket.emit("room:load_list", {});

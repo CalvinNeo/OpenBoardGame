@@ -803,6 +803,7 @@ async def on_room_load(sid, data):
     if not source_room_id:
         await sio.emit("room:load_result", {"ok": False, "message": "source_room_id required"}, to=sid)
         return
+    auto_save = bool((data or {}).get("auto_save"))
     payload = _load_latest_save(source_room_id)
     if not payload:
         await sio.emit("room:load_result", {"ok": False, "message": "save not found"}, to=sid)
@@ -856,6 +857,7 @@ async def on_room_load(sid, data):
         players=players,
         state_version=state_version,
         game_state=game_state,
+        auto_save=auto_save,
         source_room_id=payload.get("room_id", source_room_id),
     )
     ROOMS[room_id] = room
