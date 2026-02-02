@@ -246,3 +246,44 @@ def main():
     logger.info("=========================================\n")
     
     total_start = time.time()
+    
+    try:
+        for i in range(NUM_CARDS):
+            filename = f"card_{i+1:02d}.jpg"
+            file_path = os.path.join(OUTPUT_DIR, filename)
+            
+            # 断点续传检查
+            if os.path.exists(file_path):
+                logger.info(f"⏭️  [{i+1}/{NUM_CARDS}] 跳过: {filename} 已存在")
+                continue
+            
+            # 1. 构思
+            prompt = construct_concept(i)
+            
+            # 2. 绘图
+            success = generate_image(prompt, filename)
+            
+            # 3. 冷却
+            if success:
+                if i < NUM_CARDS - 1:
+                    wait = DELAY_SECONDS + random.randint(2, 6)
+                    logger.info(f"   ⏳ 冷却中... ({wait}s)\n")
+                    time.sleep(wait)
+            else:
+                logger.warning(f"   ⚠️ 本次生成失败，休息 5s 后继续\n")
+                time.sleep(5)
+                
+    except KeyboardInterrupt:
+        logger.warning("\n🛑 用户手动停止脚本")
+    except Exception as e:
+        logger.critical(f"\n☠️ 发生未捕获的异常: {e}")
+    finally:
+        total_time = (time.time() - total_start) / 60
+        logger.info("=========================================")
+        logger.info(f"🎉 任务结束！总耗时: {total_time:.1f} 分钟")
+        logger.info(f"📂 查看图片: {os.path.abspath(OUTPUT_DIR)}")
+        logger.info(f"📝 查看详细日志: {os.path.abspath(LOG_FILE)}")
+        logger.info("=========================================")
+
+if __name__ == "__main__":
+    main()

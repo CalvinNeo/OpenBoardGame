@@ -1303,7 +1303,14 @@ body.log-open {
   background: #e0f2fe;
   border: 1px solid #bae6fd;
   cursor: grab;
+  touch-action: manipulation;
   user-select: none;
+}
+
+.impression-word.selected {
+  background: #bfdbfe;
+  border-color: #60a5fa;
+  color: #1e3a8a;
 }
 
 .impression-word.assigned {
@@ -1317,6 +1324,12 @@ body.log-open {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
+}
+
+@media (max-width: 600px) {
+  .impression-drawings {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .impression-drawing {

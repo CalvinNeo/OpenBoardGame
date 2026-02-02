@@ -46,12 +46,16 @@ let impressionMaskTarget = null;
 let impressionMaskActive = false;
 let impressionMaskState = null;
 let impressionMaskDrag = null;
+let impressionRotateHold = null;
+let impressionSelectedWord = null;
 let impressionMatches = {};
 let impressionLastRound = null;
 let impressionLastPhase = null;
 let impressionShapeButtonEls = [];
 const IMPRESSION_SELECTION_PADDING = 6;
 const IMPRESSION_ROTATE_BUTTON_OFFSET = 8;
+const IMPRESSION_ROTATE_STEP_DEG = 5;
+const IMPRESSION_ROTATE_HOLD_SPEED = 120;
 let splendorSelectedMarket = null;
 let splendorSelectedReserved = null;
 let splendorSelectedNoble = null;
@@ -1744,6 +1748,7 @@ function clearImpressionFlowerState() {
   impressionMaskActive = false;
   impressionMaskState = null;
   impressionMaskDrag = null;
+  impressionSelectedWord = null;
   impressionMatches = {};
   impressionLastRound = null;
   impressionLastPhase = null;
@@ -1802,6 +1807,7 @@ function clearImpressionFlowerState() {
   if (impressionMaskControls) {
     impressionMaskControls.classList.add("hidden");
   }
+  stopImpressionRotateHold();
   stopImpressionPreviewLoop();
   clearImpressionCanvas();
   updateImpressionRotateControls();
@@ -4101,6 +4107,88 @@ function rotateImpressionActiveStamp(deltaDeg) {
   setImpressionRotationValue(impressionRotation + deltaDeg, false);
 }
 
+function startImpressionRotateHold(direction) {
+  if (!direction || !isImpressionActionAvailable("submit_drawing")) {
+    return;
+  }
+  stopImpressionRotateHold();
+  const state = {
+    direction: direction < 0 ? -1 : 1,
+    lastTime: null,
+    rafId: null,
+  };
+  impressionRotateHold = state;
+  rotateImpressionActiveStamp(state.direction * IMPRESSION_ROTATE_STEP_DEG);
+  const tick = (time) => {
+    if (!impressionRotateHold || impressionRotateHold !== state) {
+      return;
+    }
+    if (!isImpressionActionAvailable("submit_drawing")) {
+      stopImpressionRotateHold();
+      return;
+    }
+    if (state.lastTime !== null) {
+      const deltaSeconds = (time - state.lastTime) / 1000;
+      rotateImpressionActiveStamp(deltaSeconds * IMPRESSION_ROTATE_HOLD_SPEED * state.direction);
+    }
+    state.lastTime = time;
+    state.rafId = requestAnimationFrame(tick);
+  };
+  state.rafId = requestAnimationFrame(tick);
+}
+
+function stopImpressionRotateHold() {
+  if (!impressionRotateHold) {
+    return;
+  }
+  if (impressionRotateHold.rafId) {
+    cancelAnimationFrame(impressionRotateHold.rafId);
+  }
+  impressionRotateHold = null;
+}
+
+function bindImpressionRotateButton(button, direction) {
+  if (!button) {
+    return;
+  }
+  const start = (event) => {
+    if (event && typeof event.button === "number" && event.button !== 0) {
+      return;
+    }
+    if (event && event.cancelable) {
+      event.preventDefault();
+    }
+    if (event && event.pointerId !== undefined && button.setPointerCapture) {
+      button.setPointerCapture(event.pointerId);
+    }
+    startImpressionRotateHold(direction);
+  };
+  const stop = () => {
+    stopImpressionRotateHold();
+  };
+  if (window.PointerEvent) {
+    button.addEventListener("pointerdown", start);
+    button.addEventListener("pointerup", stop);
+    button.addEventListener("pointercancel", stop);
+    button.addEventListener("pointerleave", stop);
+    button.addEventListener("lostpointercapture", stop);
+  } else {
+    button.addEventListener("mousedown", start);
+    button.addEventListener("mouseup", stop);
+    button.addEventListener("mouseleave", stop);
+    button.addEventListener("touchstart", start, { passive: false });
+    button.addEventListener("touchend", stop);
+    button.addEventListener("touchcancel", stop);
+  }
+  button.addEventListener("keydown", (event) => {
+    if (event.key !== " " && event.key !== "Enter") {
+      return;
+    }
+    event.preventDefault();
+    rotateImpressionActiveStamp((direction < 0 ? -1 : 1) * IMPRESSION_ROTATE_STEP_DEG);
+  });
+}
+
 function setImpressionShape(shape) {
   if (!shape) {
     return;
@@ -4197,6 +4285,7 @@ function drawImpressionSelection(stamp) {
 }
 
 function hideImpressionRotateControls() {
+  stopImpressionRotateHold();
   if (!impressionRotateControls) {
     return;
   }
@@ -4696,6 +4785,7 @@ function isImpressionActionAvailable(actionType) {
 
 function updateImpressionButtons() {
   if (currentGameType !== "impression_flower") {
+    stopImpressionRotateHold();
     Object.values(impressionActionButtons).forEach((button) => {
       if (!button) {
         return;
@@ -4736,6 +4826,9 @@ function updateImpressionButtons() {
     button.disabled = !allowed;
   });
   const canDraw = isImpressionActionAvailable("submit_drawing");
+  if (!canDraw) {
+    stopImpressionRotateHold();
+  }
   impressionShapeButtonEls.forEach((button) => {
     button.disabled = !canDraw;
   });
@@ -4756,6 +4849,22 @@ function updateImpressionButtons() {
   }
 }
 
+function assignImpressionWordToDrawing(view, drawingId, word) {
+  if (!word || drawingId === undefined || drawingId === null) {
+    return;
+  }
+  Object.keys(impressionMatches).forEach((key) => {
+    if (impressionMatches[key] === word) {
+      delete impressionMatches[key];
+    }
+  });
+  impressionMatches[drawingId] = word;
+  impressionSelectedWord = null;
+  renderImpressionWordBank(view);
+  renderImpressionDrawings(view);
+  updateImpressionButtons();
+}
+
 function renderImpressionWordBank(view) {
   if (!impressionWordBank) {
     return;
@@ -4763,10 +4872,14 @@ function renderImpressionWordBank(view) {
   impressionWordBank.innerHTML = "";
   const words = Array.isArray(view.word_bank) ? view.word_bank : [];
   if (!words.length) {
+    impressionSelectedWord = null;
     impressionWordBank.textContent = "Waiting for guesser...";
     return;
   }
   const assignedWords = new Set(Object.values(impressionMatches));
+  if (impressionSelectedWord && assignedWords.has(impressionSelectedWord)) {
+    impressionSelectedWord = null;
+  }
   words.forEach((word) => {
     const chip = document.createElement("div");
     chip.className = "impression-word";
@@ -4781,6 +4894,14 @@ function renderImpressionWordBank(view) {
         event.dataTransfer.setData("text/plain", word);
         event.dataTransfer.effectAllowed = "move";
       });
+      chip.addEventListener("click", () => {
+        impressionSelectedWord = impressionSelectedWord === word ? null : word;
+        renderImpressionWordBank(view);
+        renderImpressionDrawings(view);
+      });
+    }
+    if (impressionSelectedWord === word) {
+      chip.classList.add("selected");
     }
     impressionWordBank.appendChild(chip);
   });
@@ -4822,6 +4943,12 @@ function renderImpressionDrawings(view) {
       dropzone.appendChild(assigned);
     } else {
       dropzone.textContent = "Drop word here";
+      dropzone.addEventListener("click", () => {
+        if (!impressionSelectedWord) {
+          return;
+        }
+        assignImpressionWordToDrawing(view, drawing.drawing_id, impressionSelectedWord);
+      });
     }
     dropzone.addEventListener("dragover", (event) => {
       event.preventDefault();
@@ -4837,15 +4964,7 @@ function renderImpressionDrawings(view) {
       if (!word) {
         return;
       }
-      Object.keys(impressionMatches).forEach((key) => {
-        if (impressionMatches[key] === word) {
-          delete impressionMatches[key];
-        }
-      });
-      impressionMatches[drawing.drawing_id] = word;
-      renderImpressionWordBank(view);
-      renderImpressionDrawings(view);
-      updateImpressionButtons();
+      assignImpressionWordToDrawing(view, drawing.drawing_id, word);
     });
     card.appendChild(author);
     card.appendChild(image);
@@ -6592,6 +6711,7 @@ function renderImpressionGameState(data) {
     }
     if (phaseChanged) {
       impressionMatches = {};
+      impressionSelectedWord = null;
     }
     renderImpressionWordBank(view);
     renderImpressionDrawings(view);
@@ -7318,17 +7438,8 @@ if (impressionRotationInput) {
   });
 }
 
-if (impressionRotateLeftBtn) {
-  impressionRotateLeftBtn.addEventListener("click", () => {
-    rotateImpressionActiveStamp(-5);
-  });
-}
-
-if (impressionRotateRightBtn) {
-  impressionRotateRightBtn.addEventListener("click", () => {
-    rotateImpressionActiveStamp(5);
-  });
-}
+bindImpressionRotateButton(impressionRotateLeftBtn, -1);
+bindImpressionRotateButton(impressionRotateRightBtn, 1);
 
 if (impressionMaskBtn) {
   impressionMaskBtn.addEventListener("click", () => {
