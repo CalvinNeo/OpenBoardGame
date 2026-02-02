@@ -1210,6 +1210,10 @@ body.log-open {
   pointer-events: none;
 }
 
+.impression-rotate-controls.hidden {
+  display: none;
+}
+
 .impression-rotate-controls .impression-rotate-btn {
   pointer-events: auto;
 }
