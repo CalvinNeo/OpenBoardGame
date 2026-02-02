@@ -667,7 +667,7 @@
                 <button id="blokusPlaceBtn">Place Piece</button>
               </div>
               <div class="row">
-                <div class="hint">Click the board to choose the origin cell.</div>
+                <div class="hint">Tap the board to set the origin cell, or drag to position the piece.</div>
               </div>
 
               <div class="blokus-layout">
@@ -677,13 +677,26 @@
                     <div id="blokusBoard" class="blokus-board"></div>
                     <div id="blokusBoardControls" class="blokus-board-controls hidden">
                       <button id="blokusRotateLeftBtn" type="button" class="blokus-control-btn" title="Rotate left" aria-label="Rotate left">
-                        &larr;
+                        ↺
                       </button>
                       <button id="blokusRotateRightBtn" type="button" class="blokus-control-btn" title="Rotate right" aria-label="Rotate right">
-                        &rarr;
+                        ↻
                       </button>
                       <button id="blokusFlipBtn" type="button" class="blokus-control-btn" title="Flip piece" aria-label="Flip piece">
                         Flip
+                      </button>
+                      <span class="blokus-control-break" aria-hidden="true"></span>
+                      <button id="blokusNudgeUpBtn" type="button" class="blokus-control-btn blokus-nudge-btn" title="Nudge up" aria-label="Nudge up">
+                        &uarr;
+                      </button>
+                      <button id="blokusNudgeLeftBtn" type="button" class="blokus-control-btn blokus-nudge-btn" title="Nudge left" aria-label="Nudge left">
+                        &larr;
+                      </button>
+                      <button id="blokusNudgeDownBtn" type="button" class="blokus-control-btn blokus-nudge-btn" title="Nudge down" aria-label="Nudge down">
+                        &darr;
+                      </button>
+                      <button id="blokusNudgeRightBtn" type="button" class="blokus-control-btn blokus-nudge-btn" title="Nudge right" aria-label="Nudge right">
+                        &rarr;
                       </button>
                     </div>
                   </div>

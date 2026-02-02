@@ -66,6 +66,8 @@ let blokusSelectedPieceId = null;
 let blokusSelectedOrigin = null;
 let blokusRotation = 0;
 let blokusFlip = false;
+let blokusDragState = null;
+const BLOKUS_DRAG_THRESHOLD = 6;
 let createRoomPending = false;
 let pendingReadyAfterJoin = false;
 let pendingReadyRoomId = null;
@@ -368,6 +370,10 @@ const blokusBoardControls = document.getElementById("blokusBoardControls");
 const blokusRotateLeftBtn = document.getElementById("blokusRotateLeftBtn");
 const blokusRotateRightBtn = document.getElementById("blokusRotateRightBtn");
 const blokusFlipBtn = document.getElementById("blokusFlipBtn");
+const blokusNudgeUpBtn = document.getElementById("blokusNudgeUpBtn");
+const blokusNudgeLeftBtn = document.getElementById("blokusNudgeLeftBtn");
+const blokusNudgeDownBtn = document.getElementById("blokusNudgeDownBtn");
+const blokusNudgeRightBtn = document.getElementById("blokusNudgeRightBtn");
 const blokusBoard = document.getElementById("blokusBoard");
 const blokusPieces = document.getElementById("blokusPieces");
 const blokusPlayers = document.getElementById("blokusPlayers");
@@ -1938,6 +1944,7 @@ function clearBlokusState() {
   blokusSelectedOrigin = null;
   blokusRotation = 0;
   blokusFlip = false;
+  blokusDragState = null;
   if (blokusStatusLabel) {
     blokusStatusLabel.textContent = "-";
   }
@@ -1959,6 +1966,7 @@ function clearBlokusState() {
     blokusBoardControls.style.top = "";
   }
   if (blokusBoard) {
+    blokusBoard.classList.remove("dragging");
     blokusBoard.innerHTML = "";
   }
   if (blokusPieces) {
@@ -2021,6 +2029,93 @@ function getBlokusBoardMetrics() {
   };
 }
 
+function getBlokusPointerPoint(event) {
+  if (!blokusBoard || !event) {
+    return null;
+  }
+  const rect = blokusBoard.getBoundingClientRect();
+  const clientX = event.clientX ?? (event.touches && event.touches[0] && event.touches[0].clientX);
+  const clientY = event.clientY ?? (event.touches && event.touches[0] && event.touches[0].clientY);
+  if (!Number.isFinite(clientX) || !Number.isFinite(clientY)) {
+    return null;
+  }
+  return {
+    x: clientX - rect.left,
+    y: clientY - rect.top,
+  };
+}
+
+function getBlokusGridPoint(point, metrics) {
+  if (!point || !metrics) {
+    return null;
+  }
+  const span = metrics.cell + metrics.gap;
+  if (!span) {
+    return null;
+  }
+  return {
+    x: (point.x - metrics.pad - metrics.cell / 2) / span,
+    y: (point.y - metrics.pad - metrics.cell / 2) / span,
+  };
+}
+
+function getBlokusSelectedPiecePlacement(view) {
+  if (!view || !blokusSelectedPieceId || !view.piece_defs) {
+    return null;
+  }
+  const def = view.piece_defs[blokusSelectedPieceId];
+  if (!def || !Array.isArray(def.cells) || !def.cells.length) {
+    return null;
+  }
+  const coords = transformBlokusCells(def.cells, blokusRotation, blokusFlip);
+  if (!coords.length) {
+    return null;
+  }
+  let sumX = 0;
+  let sumY = 0;
+  coords.forEach(([x, y]) => {
+    sumX += x;
+    sumY += y;
+  });
+  const maxX = Math.max(...coords.map(([x]) => x));
+  const maxY = Math.max(...coords.map(([, y]) => y));
+  return {
+    width: maxX + 1,
+    height: maxY + 1,
+    anchorX: sumX / coords.length,
+    anchorY: sumY / coords.length,
+  };
+}
+
+function clampBlokusValue(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function getBlokusOriginFromPoint(point, alignToCenter) {
+  if (!currentBlokusView || !point) {
+    return null;
+  }
+  const metrics = getBlokusBoardMetrics();
+  const gridPoint = getBlokusGridPoint(point, metrics);
+  if (!gridPoint || !Number.isFinite(gridPoint.x) || !Number.isFinite(gridPoint.y)) {
+    return null;
+  }
+  const placement = getBlokusSelectedPiecePlacement(currentBlokusView);
+  const anchorX = alignToCenter && placement ? placement.anchorX : 0;
+  const anchorY = alignToCenter && placement ? placement.anchorY : 0;
+  const rawX = Math.round(gridPoint.x - anchorX);
+  const rawY = Math.round(gridPoint.y - anchorY);
+  const size = currentBlokusView.board_size || 20;
+  const width = placement ? placement.width : 1;
+  const height = placement ? placement.height : 1;
+  const maxX = Math.max(0, size - width);
+  const maxY = Math.max(0, size - height);
+  return {
+    x: clampBlokusValue(rawX, 0, maxX),
+    y: clampBlokusValue(rawY, 0, maxY),
+  };
+}
+
 function positionBlokusControls(bounds, boardSize) {
   if (!blokusBoardControls || !blokusBoard) {
     return;
@@ -2072,7 +2167,107 @@ function updateBlokusActionButton() {
   blokusPlaceBtn.classList.toggle("action-allowed", enabled);
 }
 
+function nudgeBlokusOrigin(dx, dy) {
+  if (!currentBlokusView || currentBlokusView.game_over || !blokusSelectedOrigin) {
+    return;
+  }
+  const placement = getBlokusSelectedPiecePlacement(currentBlokusView);
+  const size = currentBlokusView.board_size || 20;
+  const width = placement ? placement.width : 1;
+  const height = placement ? placement.height : 1;
+  const maxX = Math.max(0, size - width);
+  const maxY = Math.max(0, size - height);
+  const nextX = clampBlokusValue(blokusSelectedOrigin.x + dx, 0, maxX);
+  const nextY = clampBlokusValue(blokusSelectedOrigin.y + dy, 0, maxY);
+  setBlokusOrigin(nextX, nextY);
+}
+
+function handleBlokusPointerDown(event) {
+  if (!currentBlokusView || currentBlokusView.game_over || !blokusBoard) {
+    return;
+  }
+  if (event.button !== undefined && event.button !== 0) {
+    return;
+  }
+  if (event.isPrimary === false) {
+    return;
+  }
+  const point = getBlokusPointerPoint(event);
+  if (!point) {
+    return;
+  }
+  blokusDragState = {
+    pointerId: event.pointerId,
+    startX: point.x,
+    startY: point.y,
+    dragged: false,
+  };
+  if (event.pointerId !== undefined && blokusBoard.setPointerCapture) {
+    try {
+      blokusBoard.setPointerCapture(event.pointerId);
+    } catch (err) {
+      // Ignore capture errors for unsupported browsers.
+    }
+  }
+}
+
+function handleBlokusPointerMove(event) {
+  if (!blokusDragState || !blokusBoard) {
+    return;
+  }
+  if (event.pointerId !== undefined && blokusDragState.pointerId !== event.pointerId) {
+    return;
+  }
+  const point = getBlokusPointerPoint(event);
+  if (!point) {
+    return;
+  }
+  const dx = point.x - blokusDragState.startX;
+  const dy = point.y - blokusDragState.startY;
+  if (!blokusDragState.dragged) {
+    if ((dx * dx + dy * dy) < (BLOKUS_DRAG_THRESHOLD * BLOKUS_DRAG_THRESHOLD)) {
+      return;
+    }
+    blokusDragState.dragged = true;
+    blokusBoard.classList.add("dragging");
+  }
+  const origin = getBlokusOriginFromPoint(point, true);
+  if (origin) {
+    setBlokusOrigin(origin.x, origin.y);
+  }
+  event.preventDefault();
+}
+
+function handleBlokusPointerUp(event) {
+  if (!blokusDragState || !blokusBoard) {
+    return;
+  }
+  if (event.pointerId !== undefined && blokusDragState.pointerId !== event.pointerId) {
+    return;
+  }
+  const point = getBlokusPointerPoint(event);
+  const wasDragged = blokusDragState.dragged;
+  if (!wasDragged && point) {
+    const origin = getBlokusOriginFromPoint(point, false);
+    if (origin) {
+      setBlokusOrigin(origin.x, origin.y);
+    }
+  }
+  if (event.pointerId !== undefined && blokusBoard.releasePointerCapture) {
+    try {
+      blokusBoard.releasePointerCapture(event.pointerId);
+    } catch (err) {
+      // Ignore capture errors for unsupported browsers.
+    }
+  }
+  blokusDragState = null;
+  blokusBoard.classList.remove("dragging");
+}
+
 function setBlokusOrigin(x, y) {
+  if (blokusSelectedOrigin && blokusSelectedOrigin.x === x && blokusSelectedOrigin.y === y) {
+    return;
+  }
   blokusSelectedOrigin = { x, y };
   if (blokusOriginLabel) {
     blokusOriginLabel.textContent = `${x}, ${y}`;
@@ -2210,12 +2405,6 @@ function renderBlokusBoard(view) {
       if (blokusSelectedOrigin && blokusSelectedOrigin.x === x && blokusSelectedOrigin.y === y) {
         cell.classList.add("selected");
       }
-      cell.addEventListener("click", () => {
-        if (!currentBlokusView || currentBlokusView.game_over) {
-          return;
-        }
-        setBlokusOrigin(x, y);
-      });
       fragment.appendChild(cell);
     }
   }
@@ -7787,6 +7976,40 @@ if (blokusFlipBtn) {
     updateBlokusActionButton();
   });
 }
+
+if (blokusNudgeUpBtn) {
+  blokusNudgeUpBtn.addEventListener("click", () => {
+    nudgeBlokusOrigin(0, -1);
+  });
+}
+
+if (blokusNudgeLeftBtn) {
+  blokusNudgeLeftBtn.addEventListener("click", () => {
+    nudgeBlokusOrigin(-1, 0);
+  });
+}
+
+if (blokusNudgeDownBtn) {
+  blokusNudgeDownBtn.addEventListener("click", () => {
+    nudgeBlokusOrigin(0, 1);
+  });
+}
+
+if (blokusNudgeRightBtn) {
+  blokusNudgeRightBtn.addEventListener("click", () => {
+    nudgeBlokusOrigin(1, 0);
+  });
+}
+
+if (blokusBoard) {
+  blokusBoard.addEventListener("pointerdown", handleBlokusPointerDown);
+  blokusBoard.addEventListener("pointermove", handleBlokusPointerMove);
+  blokusBoard.addEventListener("pointerup", handleBlokusPointerUp);
+  blokusBoard.addEventListener("pointercancel", handleBlokusPointerUp);
+}
+
+document.addEventListener("pointerup", handleBlokusPointerUp);
+document.addEventListener("pointercancel", handleBlokusPointerUp);
 
 if (blokusPlaceBtn) {
   blokusPlaceBtn.addEventListener("click", () => {

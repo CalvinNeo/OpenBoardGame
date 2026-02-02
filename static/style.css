@@ -236,11 +236,15 @@ input, select {
   background: #d1d5db;
   padding: var(--blokus-pad);
   border-radius: 6px;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .blokus-board-controls {
   position: absolute;
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   padding: 4px;
   background: rgba(255, 255, 255, 0.95);
@@ -255,12 +259,26 @@ input, select {
   font-size: 12px;
 }
 
+.blokus-control-break {
+  flex-basis: 100%;
+  height: 0;
+}
+
+.blokus-nudge-btn {
+  width: 24px;
+  padding: 2px 0;
+}
+
 .blokus-cell {
   width: 18px;
   height: 18px;
   background: #f9fafb;
   border-radius: 2px;
   cursor: pointer;
+}
+
+.blokus-board.dragging .blokus-cell {
+  cursor: grabbing;
 }
 
 .blokus-cell.ghost {
