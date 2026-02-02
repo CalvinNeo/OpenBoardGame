@@ -4008,6 +4008,11 @@ function updateImpressionRotateControls() {
     return;
   }
   const stamp = getImpressionActiveStamp();
+  if (!impressionStampHistory.length) {
+    impressionRotateControls.classList.add("hidden");
+    impressionRotateControls.classList.remove("dragging");
+    return;
+  }
   if (!stamp || impressionPressStart !== null) {
     impressionRotateControls.classList.add("hidden");
     impressionRotateControls.classList.remove("dragging");
@@ -6091,6 +6096,7 @@ function renderImpressionGameState(data) {
   logGameEvents(data);
   impressionLastRound = view.round;
   impressionLastPhase = view.phase;
+  updateImpressionRotateControls();
   updateImpressionButtons();
 }
 
