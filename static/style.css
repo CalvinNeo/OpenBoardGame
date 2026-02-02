@@ -236,7 +236,7 @@ input, select {
   background: #d1d5db;
   padding: var(--blokus-pad);
   border-radius: 6px;
-  touch-action: none;
+  touch-action: pan-y;
   user-select: none;
   -webkit-user-select: none;
 }
@@ -282,6 +282,7 @@ input, select {
 }
 
 .blokus-cell.ghost {
+  touch-action: none;
   opacity: 0.35;
   outline: 1px dashed #6b7280;
   outline-offset: -2px;

@@ -2196,13 +2196,15 @@ function handleBlokusPointerDown(event) {
   if (!point) {
     return;
   }
+  const allowDrag = !!(event.target && event.target.classList && event.target.classList.contains("ghost"));
   blokusDragState = {
     pointerId: event.pointerId,
     startX: point.x,
     startY: point.y,
     dragged: false,
+    allowDrag,
   };
-  if (event.pointerId !== undefined && blokusBoard.setPointerCapture) {
+  if (allowDrag && event.pointerId !== undefined && blokusBoard.setPointerCapture) {
     try {
       blokusBoard.setPointerCapture(event.pointerId);
     } catch (err) {
@@ -2216,6 +2218,9 @@ function handleBlokusPointerMove(event) {
     return;
   }
   if (event.pointerId !== undefined && blokusDragState.pointerId !== event.pointerId) {
+    return;
+  }
+  if (!blokusDragState.allowDrag) {
     return;
   }
   const point = getBlokusPointerPoint(event);
@@ -2245,15 +2250,16 @@ function handleBlokusPointerUp(event) {
   if (event.pointerId !== undefined && blokusDragState.pointerId !== event.pointerId) {
     return;
   }
+  const isCancel = event.type === "pointercancel";
   const point = getBlokusPointerPoint(event);
   const wasDragged = blokusDragState.dragged;
-  if (!wasDragged && point) {
+  if (!isCancel && !wasDragged && point) {
     const origin = getBlokusOriginFromPoint(point, false);
     if (origin) {
       setBlokusOrigin(origin.x, origin.y);
     }
   }
-  if (event.pointerId !== undefined && blokusBoard.releasePointerCapture) {
+  if (blokusDragState.allowDrag && event.pointerId !== undefined && blokusBoard.releasePointerCapture) {
     try {
       blokusBoard.releasePointerCapture(event.pointerId);
     } catch (err) {
