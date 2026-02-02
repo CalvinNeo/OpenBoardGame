@@ -4003,24 +4003,29 @@ function drawImpressionSelection(stamp) {
   impressionCtx.restore();
 }
 
+function hideImpressionRotateControls() {
+  if (!impressionRotateControls) {
+    return;
+  }
+  impressionRotateControls.classList.add("hidden");
+  impressionRotateControls.classList.remove("dragging");
+}
+
 function updateImpressionRotateControls() {
   if (!impressionRotateControls || !impressionCanvas) {
     return;
   }
   const stamp = getImpressionActiveStamp();
   if (!impressionStampHistory.length) {
-    impressionRotateControls.classList.add("hidden");
-    impressionRotateControls.classList.remove("dragging");
+    hideImpressionRotateControls();
     return;
   }
   if (!stamp || impressionPressStart !== null) {
-    impressionRotateControls.classList.add("hidden");
-    impressionRotateControls.classList.remove("dragging");
+    hideImpressionRotateControls();
     return;
   }
   if (!isImpressionActionAvailable("submit_drawing")) {
-    impressionRotateControls.classList.add("hidden");
-    impressionRotateControls.classList.remove("dragging");
+    hideImpressionRotateControls();
     return;
   }
   const rect = impressionCanvas.getBoundingClientRect();
@@ -4111,10 +4116,12 @@ function findImpressionStampIndex(position) {
   if (!position) {
     return null;
   }
-  for (let i = impressionStampHistory.length - 1; i >= 0; i -= 1) {
-    if (isImpressionPointOnStamp(position, impressionStampHistory[i])) {
-      return i;
-    }
+  const lastIndex = impressionStampHistory.length - 1;
+  if (lastIndex < 0) {
+    return null;
+  }
+  if (isImpressionPointOnStamp(position, impressionStampHistory[lastIndex])) {
+    return lastIndex;
   }
   return null;
 }
@@ -4338,12 +4345,12 @@ function endImpressionPress(event) {
     impressionStampsLeftLabel.textContent = `${impressionStampsLeft}`;
   }
   stopImpressionPreviewLoop();
+  impressionPressStart = null;
   renderImpressionCanvas();
   if (impressionMaskActive) {
     setImpressionMaskActive(false);
     impressionMaskTarget = null;
   }
-  impressionPressStart = null;
   updateImpressionButtons();
 }
 
@@ -5958,6 +5965,7 @@ function renderImpressionGameState(data) {
     currentGameType = "impression_flower";
     setGamePanelVisibility("impression_flower");
   }
+  hideImpressionRotateControls();
 
   if (view && view.config) {
     applyImpressionConfig(view.config);
