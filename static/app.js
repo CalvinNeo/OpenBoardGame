@@ -88,6 +88,7 @@ let aidixitDecks = [];
 let aidixitDeckSelections = new Set();
 let aidixitSelectedHandCardId = null;
 let aidixitSelectedVoteCardId = null;
+const roomControlsDockQuery = window.matchMedia("(max-width: 900px)");
 
 const nameInput = document.getElementById("nameInput");
 const connectionInfo = document.getElementById("connectionInfo");
@@ -1043,7 +1044,9 @@ function updateRoomControlsDock() {
     return;
   }
   const shouldDock =
-    roomControlsPanel.classList.contains("compact") && roomControlsPanel.classList.contains("collapsed");
+    roomControlsDockQuery.matches &&
+    roomControlsPanel.classList.contains("compact") &&
+    roomControlsPanel.classList.contains("collapsed");
   document.body.classList.toggle("room-controls-docked", shouldDock);
   if (shouldDock) {
     const height = roomControlsPanel.getBoundingClientRect().height;
@@ -1074,7 +1077,7 @@ function updateRoomControlsForStatus(status) {
   }
   const isInGame = status === "in_game";
   roomControlsPanel.classList.toggle("compact", isInGame);
-  if (isInGame && !roomControlsGameActive) {
+  if (isInGame && roomControlsDockQuery.matches && !roomControlsGameActive) {
     const wasCollapsed = roomControlsPanel.classList.contains("collapsed");
     if (!wasCollapsed) {
       setRoomControlsCollapsed(true, { auto: true });
@@ -8131,9 +8134,7 @@ document.querySelectorAll(".collapse-btn").forEach((btn) => {
 });
 
 window.addEventListener("resize", () => {
-  if (document.body.classList.contains("room-controls-docked")) {
-    updateRoomControlsDock();
-  }
+  updateRoomControlsDock();
 });
 
 if (logCloseBtn) {
