@@ -1,4 +1,5 @@
 from game.abraca_what import AbracaWhatGame
+from game.ai_dixit import AiDixitGame
 from game.cabo import CaboGame
 from game.coyote import CoyoteGame
 from game.decrypto import DecryptoGame
@@ -181,6 +182,47 @@ DRAW_GUESS_CONFIG_SCHEMA = {
                 ]
             },
         },
+    },
+    "additionalProperties": False,
+}
+
+AI_DIXIT_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "submit_story"},
+                "card_id": {"type": "string", "minLength": 1},
+                "clue": {"type": "string", "minLength": 1},
+            },
+            "required": ["type", "card_id", "clue"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "submit_card"}, "card_id": {"type": "string", "minLength": 1}},
+            "required": ["type", "card_id"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "submit_vote"}, "card_id": {"type": "string", "minLength": 1}},
+            "required": ["type", "card_id"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+AI_DIXIT_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "deck_root": {"type": "string"},
+        "selected_decks": {"type": "array", "items": {"type": "string"}},
+        "hand_size": {"type": "integer", "minimum": 1},
+        "target_score": {"type": "integer", "minimum": 1},
+        "reshuffle_discard": {"type": "boolean"},
+        "player_colors": {"type": "array", "items": {"type": "string"}},
     },
     "additionalProperties": False,
 }
@@ -590,5 +632,20 @@ register_game(
         module=BlokusGame,
         serialize=BlokusGame.serialize,
         deserialize=BlokusGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=AiDixitGame.game_id,
+        name="AI Dixit",
+        min_players=AiDixitGame.min_players,
+        max_players=AiDixitGame.max_players,
+        turn_mode="simultaneous",
+        action_schema=AI_DIXIT_ACTION_SCHEMA,
+        config_schema=AI_DIXIT_CONFIG_SCHEMA,
+        module=AiDixitGame,
+        serialize=AiDixitGame.serialize,
+        deserialize=AiDixitGame.deserialize,
     )
 )

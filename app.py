@@ -13,6 +13,8 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from game import GameDefinition, get_game, list_games
+from game.ai_dixit import list_decks as list_aidixit_decks
+from game.ai_dixit import resolve_card_path as resolve_aidixit_card_path
 from game.decrypto import get_decrypto_word_packs
 from game.decrypto_ai import get_bot_strategies
 
@@ -34,6 +36,19 @@ async def decrypto_word_packs():
 @fastapi_app.get("/api/decrypto/bot_strategies")
 async def decrypto_bot_strategies():
     return {"strategies": get_bot_strategies()}
+
+
+@fastapi_app.get("/api/aidixit/decks")
+async def aidixit_decks():
+    return {"decks": list_aidixit_decks()}
+
+
+@fastapi_app.get("/api/aidixit/card")
+async def aidixit_card(deck: str, file: str):
+    card_path = resolve_aidixit_card_path(deck, file)
+    if not card_path:
+        raise HTTPException(status_code=404, detail="card not found")
+    return FileResponse(card_path)
 
 
 @fastapi_app.get("/api/room/save")

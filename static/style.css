@@ -1777,3 +1777,97 @@ body.log-open {
     gap: 8px;
   }
 }
+
+.aidixit-hand,
+.aidixit-pool,
+.aidixit-round-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.aidixit-card {
+  position: relative;
+  width: 120px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  padding: 4px;
+  cursor: pointer;
+}
+
+.aidixit-card img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  display: block;
+  border-radius: 4px;
+  background: #f3f4f6;
+}
+
+.aidixit-card.selected {
+  border-color: #1f6feb;
+  box-shadow: 0 0 0 2px rgba(31, 111, 235, 0.15);
+}
+
+.aidixit-card.story {
+  border-color: #f59e0b;
+}
+
+.aidixit-card.disabled {
+  opacity: 0.6;
+  cursor: default;
+  pointer-events: none;
+}
+
+.aidixit-card-count {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: #111827;
+  color: #fff;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 999px;
+}
+
+.aidixit-card-story {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  background: #f59e0b;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.aidixit-votes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.aidixit-vote-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid #e5e7eb;
+  background: #9ca3af;
+}
+
+.aidixit-round-cards {
+  margin-top: 8px;
+}
+
+.aidixit-color-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}

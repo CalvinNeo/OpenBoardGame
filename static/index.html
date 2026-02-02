@@ -78,6 +78,7 @@
                 <option value="decrypto">Decrypto</option>
                 <option value="skull">Skull</option>
                 <option value="draw_guess">Draw & Guess</option>
+                <option value="aidixit">AI Dixit</option>
                 <option value="impression_flower">Impression Flower</option>
                 <option value="splendor">Splendor</option>
                 <option value="abraca_what">Abraca What</option>
@@ -147,6 +148,10 @@
                 <option value="0.5" selected>Balanced</option>
                 <option value="0.8">Obvious</option>
               </select>
+            </div>
+            <div class="row hidden" id="aidixitDeckRow">
+              <label>AI Dixit Decks</label>
+              <div id="aidixitDeckOptions" class="decrypto-pack-options"></div>
             </div>
             <div class="row hidden" id="autoSaveRow">
               <label for="autoSaveToggle">Auto Save</label>
@@ -414,6 +419,48 @@
                   <button id="drawGuessRestartBtn">Play Again</button>
                 </div>
               </div>
+            </div>
+
+            <div id="aidixitPanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="aidixitPhase">-</span></div>
+                <div>Round: <span id="aidixitRound">-</span></div>
+                <div>Storyteller: <span id="aidixitStoryteller">-</span></div>
+              </div>
+              <div class="row">
+                <div>Clue: <span id="aidixitClue">-</span></div>
+                <div>Target: <span id="aidixitTargetScore">-</span></div>
+                <div>Deck: <span id="aidixitDeckCount">-</span></div>
+                <div>Discard: <span id="aidixitDiscardCount">-</span></div>
+              </div>
+              <div class="row">
+                <div>Submitted: <span id="aidixitSubmitted">-</span></div>
+                <div>Voted: <span id="aidixitVoted">-</span></div>
+                <div>Winner: <span id="aidixitWinner">-</span></div>
+              </div>
+
+              <div class="row actions">
+                <label for="aidixitClueInput">Your Clue</label>
+                <input id="aidixitClueInput" type="text" placeholder="Enter clue" />
+                <button id="aidixitSubmitStoryBtn">Submit Story</button>
+                <button id="aidixitSubmitCardBtn">Submit Card</button>
+                <button id="aidixitSubmitVoteBtn">Vote</button>
+              </div>
+
+              <h3>Your Hand</h3>
+              <div id="aidixitHand" class="aidixit-hand"></div>
+
+              <h3>Pool</h3>
+              <div id="aidixitPool" class="aidixit-pool"></div>
+
+              <div id="aidixitRoundNotice" class="round-notice hidden">
+                <div class="round-notice-title">Last Round</div>
+                <div id="aidixitRoundNoticeBody" class="round-notice-body">-</div>
+                <div id="aidixitRoundNoticeCards" class="aidixit-round-cards"></div>
+              </div>
+
+              <h3>Players</h3>
+              <div id="aidixitPlayers"></div>
             </div>
 
             <div id="impressionFlowerPanel" class="hidden">

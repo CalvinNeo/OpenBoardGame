@@ -1,4 +1,5 @@
 from game.abraca_what import AbracaWhatGame
+from game.ai_dixit import AiDixitGame
 from game.blokus import BlokusGame
 from game.cabo import CaboGame
 from game.coyote import CoyoteGame
@@ -12,6 +13,7 @@ from game import definitions as _definitions
 
 __all__ = [
     "AbracaWhatGame",
+    "AiDixitGame",
     "BlokusGame",
     "CaboGame",
     "DrawGuessGame",
