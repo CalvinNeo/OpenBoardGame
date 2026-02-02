@@ -1788,7 +1788,7 @@ body.log-open {
 
 .aidixit-card {
   position: relative;
-  width: 120px;
+  width: 200px;
   border: 2px solid #e5e7eb;
   border-radius: 8px;
   background: #fff;
@@ -1870,4 +1870,17 @@ body.log-open {
   border-radius: 50%;
   margin-right: 6px;
   border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 900px) {
+  .aidixit-hand,
+  .aidixit-pool,
+  .aidixit-round-cards {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .aidixit-card {
+    width: 100%;
+  }
 }
