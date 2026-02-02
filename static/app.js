@@ -16,6 +16,8 @@ let currentGameType = null;
 let abracaLastRoundNotice = null;
 let selectedSlots = [];
 let currentRoomState = null;
+let roomControlsGameActive = false;
+let roomControlsAutoCollapsed = false;
 let selectedTarget = null;
 let skullSelectedCardIndex = null;
 let skullSelectedCardType = null;
@@ -153,6 +155,8 @@ const seatClaimNameHint = document.getElementById("seatClaimNameHint");
 const seatClaimRoomLabel = document.getElementById("seatClaimRoomLabel");
 const seatClaimList = document.getElementById("seatClaimList");
 const seatClaimEmpty = document.getElementById("seatClaimEmpty");
+const roomControlsPanel = document.getElementById("roomControlsPanel");
+const roomControlsToggleBtn = document.getElementById("roomControlsToggleBtn");
 
 const skullPhaseLabel = document.getElementById("skullPhase");
 const skullRoundLabel = document.getElementById("skullRound");
@@ -1034,6 +1038,58 @@ function updateAutoSaveRow() {
   }
 }
 
+function updateRoomControlsDock() {
+  if (!roomControlsPanel) {
+    return;
+  }
+  const shouldDock =
+    roomControlsPanel.classList.contains("compact") && roomControlsPanel.classList.contains("collapsed");
+  document.body.classList.toggle("room-controls-docked", shouldDock);
+  if (shouldDock) {
+    const height = roomControlsPanel.getBoundingClientRect().height;
+    document.documentElement.style.setProperty("--room-controls-bar-height", `${height}px`);
+  } else {
+    document.documentElement.style.removeProperty("--room-controls-bar-height");
+  }
+}
+
+function setRoomControlsCollapsed(collapsed, { auto = false } = {}) {
+  if (!roomControlsPanel) {
+    return;
+  }
+  roomControlsPanel.classList.toggle("collapsed", collapsed);
+  if (roomControlsToggleBtn) {
+    roomControlsToggleBtn.textContent = collapsed ? "Show" : "Hide";
+    roomControlsToggleBtn.setAttribute("aria-expanded", (!collapsed).toString());
+  }
+  if (auto) {
+    roomControlsAutoCollapsed = collapsed;
+  }
+  updateRoomControlsDock();
+}
+
+function updateRoomControlsForStatus(status) {
+  if (!roomControlsPanel) {
+    return;
+  }
+  const isInGame = status === "in_game";
+  roomControlsPanel.classList.toggle("compact", isInGame);
+  if (isInGame && !roomControlsGameActive) {
+    const wasCollapsed = roomControlsPanel.classList.contains("collapsed");
+    if (!wasCollapsed) {
+      setRoomControlsCollapsed(true, { auto: true });
+    }
+  }
+  if (!isInGame && roomControlsGameActive) {
+    if (roomControlsAutoCollapsed) {
+      setRoomControlsCollapsed(false, { auto: true });
+    }
+    roomControlsAutoCollapsed = false;
+  }
+  roomControlsGameActive = isInGame;
+  updateRoomControlsDock();
+}
+
 function fetchDecryptoPacks() {
   if (!decryptoPackOptions) {
     return;
@@ -1516,6 +1572,7 @@ function resetRoomState() {
   decryptoBotClueDirectness = 0.5;
   createRoomPending = false;
   setCreateGameRowVisible(false);
+  updateRoomControlsForStatus(null);
 }
 
 function clearCaboState() {
@@ -2961,6 +3018,7 @@ function renderRoomState(state) {
   roomIdLabel.textContent = state.room_id;
   roomStatus.textContent = state.status;
   gameTypeLabel.textContent = state.game_type || "-";
+  updateRoomControlsForStatus(state.status);
   if (previousGame !== currentGameType) {
     clearSelection();
     clearTargetSelection();
@@ -8065,7 +8123,17 @@ document.querySelectorAll(".collapse-btn").forEach((btn) => {
     const collapsed = panel.classList.toggle("collapsed");
     btn.textContent = collapsed ? "Show" : "Hide";
     btn.setAttribute("aria-expanded", (!collapsed).toString());
+    if (panel.id === "roomControlsPanel") {
+      roomControlsAutoCollapsed = false;
+      updateRoomControlsDock();
+    }
   });
+});
+
+window.addEventListener("resize", () => {
+  if (document.body.classList.contains("room-controls-docked")) {
+    updateRoomControlsDock();
+  }
 });
 
 if (logCloseBtn) {

@@ -55,117 +55,124 @@
 
     <div class="layout">
       <aside class="sidebar">
-        <section class="panel collapsible" id="connectionPanel">
+        <section class="panel collapsible room-controls" id="roomControlsPanel">
           <div class="panel-header">
-            <h2>Connection</h2>
+            <h2>Room Controls</h2>
             <div class="panel-header-actions">
-              <button id="logoutBtn" type="button">Logout</button>
-              <button class="collapse-btn" type="button" aria-expanded="true">Hide</button>
+              <button class="collapse-btn" id="roomControlsToggleBtn" type="button" aria-expanded="true">Hide</button>
             </div>
           </div>
-          <div class="panel-body">
-            <div class="row compact-row">
-              <label>Name</label>
-              <input id="nameInput" type="text" placeholder="Your name" />
-              <button id="createBtn" type="button">Create Room</button>
-            </div>
-            <div class="row compact-row hidden" id="createGameRow" aria-hidden="true">
-              <label for="gameSelect">Game</label>
-              <select id="gameSelect" aria-label="Select game">
-                <option value="" selected disabled>Select a game</option>
-                <option value="cabo">Cabo</option>
-                <option value="coyote">Coyote</option>
-                <option value="decrypto">Decrypto</option>
-                <option value="skull">Skull</option>
-                <option value="draw_guess">Draw & Guess</option>
-                <option value="aidixit">AI Dixit</option>
-                <option value="impression_flower">Impression Flower</option>
-                <option value="splendor">Splendor</option>
-                <option value="abraca_what">Abraca What</option>
-                <option value="blokus">Blokus</option>
-              </select>
-            </div>
-            <div class="row compact-row">
-              <label>Room ID</label>
-              <input id="roomIdInput" type="text" placeholder="e.g. a1b2c3" />
-              <button id="joinBtn">Join Room</button>
-            </div>
-            <div class="row" id="connectionInfo"></div>
-          </div>
-        </section>
+          <div class="panel-body room-controls-body">
+            <section class="room-controls-section" id="connectionPanel">
+              <div class="panel-header">
+                <h3>Connection</h3>
+                <div class="panel-header-actions">
+                  <button id="logoutBtn" type="button">Logout</button>
+                </div>
+              </div>
+              <div class="panel-body">
+                <div class="row compact-row">
+                  <label>Name</label>
+                  <input id="nameInput" type="text" placeholder="Your name" />
+                  <button id="createBtn" type="button">Create Room</button>
+                </div>
+                <div class="row compact-row hidden" id="createGameRow" aria-hidden="true">
+                  <label for="gameSelect">Game</label>
+                  <select id="gameSelect" aria-label="Select game">
+                    <option value="" selected disabled>Select a game</option>
+                    <option value="cabo">Cabo</option>
+                    <option value="coyote">Coyote</option>
+                    <option value="decrypto">Decrypto</option>
+                    <option value="skull">Skull</option>
+                    <option value="draw_guess">Draw & Guess</option>
+                    <option value="aidixit">AI Dixit</option>
+                    <option value="impression_flower">Impression Flower</option>
+                    <option value="splendor">Splendor</option>
+                    <option value="abraca_what">Abraca What</option>
+                    <option value="blokus">Blokus</option>
+                  </select>
+                </div>
+                <div class="row compact-row">
+                  <label>Room ID</label>
+                  <input id="roomIdInput" type="text" placeholder="e.g. a1b2c3" />
+                  <button id="joinBtn">Join Room</button>
+                </div>
+                <div class="row" id="connectionInfo"></div>
+              </div>
+            </section>
 
-        <section class="panel collapsible" id="roomListPanel">
-          <div class="panel-header">
-            <h2>Rooms</h2>
-            <div class="panel-header-actions">
-              <button id="loadBtn" type="button">Load</button>
-              <button id="refreshRoomsBtn" type="button">Refresh</button>
-              <button class="collapse-btn" type="button" aria-expanded="true">Hide</button>
-            </div>
-          </div>
-          <div class="panel-body">
-            <div id="roomList" class="room-list"></div>
-          </div>
-        </section>
+            <section class="room-controls-section" id="roomListPanel">
+              <div class="panel-header">
+                <h3>Rooms</h3>
+                <div class="panel-header-actions">
+                  <button id="loadBtn" type="button">Load</button>
+                  <button id="refreshRoomsBtn" type="button">Refresh</button>
+                </div>
+              </div>
+              <div class="panel-body">
+                <div id="roomList" class="room-list"></div>
+              </div>
+            </section>
 
-        <section class="panel collapsible">
-          <div class="panel-header">
-            <h2>Room</h2>
-            <button class="collapse-btn" type="button" aria-expanded="true">Hide</button>
-          </div>
-          <div class="panel-body">
-            <div class="row">
-              <div>Room ID: <span id="roomIdLabel">-</span></div>
-              <div>Status: <span id="roomStatus">-</span></div>
-              <div>Game: <span id="gameTypeLabel">-</span></div>
-            </div>
-            <div class="row hidden" id="drawGuessLanguageRow">
-              <label for="drawGuessLanguageSelect">Draw &amp; Guess Language</label>
-              <select id="drawGuessLanguageSelect">
-                <option value="en">English</option>
-                <option value="zh" selected>中文</option>
-              </select>
-            </div>
-            <div class="row hidden" id="drawGuessGuessMethodRow">
-              <label for="drawGuessGuessMethodSelect">Draw &amp; Guess Bot Guess</label>
-              <select id="drawGuessGuessMethodSelect">
-                <option value="normal" selected>Normal</option>
-                <option value="cv">CV</option>
-              </select>
-            </div>
-            <div class="row hidden" id="decryptoPackRow">
-              <label>Decrypto Word Packs</label>
-              <div id="decryptoPackOptions" class="decrypto-pack-options"></div>
-            </div>
-            <div class="row hidden" id="decryptoBotRow">
-              <label for="decryptoBotSelect">Decrypto Bot Strategy</label>
-              <select id="decryptoBotSelect"></select>
-            </div>
-            <div class="row hidden" id="decryptoBotClueRow">
-              <label for="decryptoBotClueSelect">Decrypto Bot Clue Directness</label>
-              <select id="decryptoBotClueSelect">
-                <option value="0.2">Subtle</option>
-                <option value="0.5" selected>Balanced</option>
-                <option value="0.8">Obvious</option>
-              </select>
-            </div>
-            <div class="row hidden" id="aidixitDeckRow">
-              <label>AI Dixit Decks</label>
-              <div id="aidixitDeckOptions" class="decrypto-pack-options"></div>
-            </div>
-            <div class="row hidden" id="autoSaveRow">
-              <label for="autoSaveToggle">Auto Save</label>
-              <input id="autoSaveToggle" type="checkbox" />
-              <span class="hint">Save after each game state change.</span>
-            </div>
-            <div class="row actions room-actions">
-              <button id="readyBtn">Toggle Ready</button>
-              <button id="startBtn">Start Game</button>
-              <button id="addBotBtn">Add Bot</button>
-              <button id="removeBotBtn">Remove Bot</button>
-              <button id="leaveBtn">Leave Room</button>
-            </div>
-            <div id="playersList"></div>
+            <section class="room-controls-section" id="roomPanel">
+              <div class="panel-header">
+                <h3>Room</h3>
+              </div>
+              <div class="panel-body">
+                <div class="row">
+                  <div>Room ID: <span id="roomIdLabel">-</span></div>
+                  <div>Status: <span id="roomStatus">-</span></div>
+                  <div>Game: <span id="gameTypeLabel">-</span></div>
+                </div>
+                <div class="row hidden" id="drawGuessLanguageRow">
+                  <label for="drawGuessLanguageSelect">Draw &amp; Guess Language</label>
+                  <select id="drawGuessLanguageSelect">
+                    <option value="en">English</option>
+                    <option value="zh" selected>中文</option>
+                  </select>
+                </div>
+                <div class="row hidden" id="drawGuessGuessMethodRow">
+                  <label for="drawGuessGuessMethodSelect">Draw &amp; Guess Bot Guess</label>
+                  <select id="drawGuessGuessMethodSelect">
+                    <option value="normal" selected>Normal</option>
+                    <option value="cv">CV</option>
+                  </select>
+                </div>
+                <div class="row hidden" id="decryptoPackRow">
+                  <label>Decrypto Word Packs</label>
+                  <div id="decryptoPackOptions" class="decrypto-pack-options"></div>
+                </div>
+                <div class="row hidden" id="decryptoBotRow">
+                  <label for="decryptoBotSelect">Decrypto Bot Strategy</label>
+                  <select id="decryptoBotSelect"></select>
+                </div>
+                <div class="row hidden" id="decryptoBotClueRow">
+                  <label for="decryptoBotClueSelect">Decrypto Bot Clue Directness</label>
+                  <select id="decryptoBotClueSelect">
+                    <option value="0.2">Subtle</option>
+                    <option value="0.5" selected>Balanced</option>
+                    <option value="0.8">Obvious</option>
+                  </select>
+                </div>
+                <div class="row hidden" id="aidixitDeckRow">
+                  <label>AI Dixit Decks</label>
+                  <div id="aidixitDeckOptions" class="decrypto-pack-options"></div>
+                </div>
+                <div class="row hidden" id="autoSaveRow">
+                  <label for="autoSaveToggle">Auto Save</label>
+                  <input id="autoSaveToggle" type="checkbox" />
+                  <span class="hint">Save after each game state change.</span>
+                </div>
+                <div class="row actions room-actions">
+                  <button id="readyBtn">Toggle Ready</button>
+                  <button id="startBtn">Start Game</button>
+                  <button id="addBotBtn">Add Bot</button>
+                  <button id="removeBotBtn">Remove Bot</button>
+                  <button id="leaveBtn">Leave Room</button>
+                </div>
+                <div id="playersList"></div>
+              </div>
+            </section>
           </div>
         </section>
 

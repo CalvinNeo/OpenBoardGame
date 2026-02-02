@@ -68,7 +68,8 @@ h1 {
   gap: 8px;
 }
 
-.panel-header h2 {
+.panel-header h2,
+.panel-header h3 {
   margin: 0;
 }
 
@@ -91,6 +92,25 @@ h1 {
 
 .panel.collapsed .collapse-btn {
   background: #f3f3f3;
+}
+
+.room-controls-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.room-controls-section + .room-controls-section {
+  border-top: 1px solid #eee;
+  padding-top: 12px;
+}
+
+.room-controls.compact.collapsed {
+  padding: 8px 12px;
+}
+
+.room-controls.compact.collapsed .panel-header {
+  margin-bottom: 0;
 }
 
 .game-panel {
@@ -1624,12 +1644,30 @@ body.log-open {
     flex-direction: column;
   }
 
+  body.room-controls-docked .layout {
+    gap: 0;
+  }
+
   .sidebar {
     width: 100%;
   }
 
   .panel {
     padding: 12px;
+  }
+
+  body.room-controls-docked #roomControlsPanel {
+    position: fixed;
+    top: 0;
+    left: 12px;
+    right: 12px;
+    z-index: 200;
+    margin: 0;
+    border-radius: 0 0 8px 8px;
+  }
+
+  body.room-controls-docked .container {
+    padding-top: calc(12px + var(--room-controls-bar-height, 0px));
   }
 
   .game-panel {
