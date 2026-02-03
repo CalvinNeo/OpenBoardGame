@@ -6271,23 +6271,6 @@ function renderAidixitPool(view) {
         renderAidixitPool(view);
       });
     }
-    const votes = (view.votes_by_card && view.votes_by_card[card.card_id]) || [];
-    if (votes.length) {
-      const voteRow = document.createElement("div");
-      voteRow.className = "aidixit-votes";
-      votes.forEach((vote) => {
-        const dot = document.createElement("span");
-        dot.className = "aidixit-vote-dot";
-        if (vote.color) {
-          dot.style.backgroundColor = vote.color;
-        }
-        if (vote.name) {
-          dot.title = vote.name;
-        }
-        voteRow.appendChild(dot);
-      });
-      cardEl.appendChild(voteRow);
-    }
     aidixitPool.appendChild(cardEl);
   });
 }
@@ -6387,13 +6370,40 @@ function renderAidixitRoundNotice(view) {
   if (aidixitRoundNoticeCards) {
     aidixitRoundNoticeCards.innerHTML = "";
     const voteCounts = result.vote_counts || {};
-    Object.entries(voteCounts).forEach(([cardId, count]) => {
+    const votesByCard = result.votes_by_card || {};
+    let cardIds = Array.isArray(result.pool_cards) ? result.pool_cards : [];
+    if (!cardIds.length) {
+      cardIds = Object.keys(voteCounts);
+    }
+    if (result.story_card && !cardIds.includes(result.story_card)) {
+      cardIds = [...cardIds, result.story_card];
+    }
+    cardIds.forEach((cardId) => {
+      const count = voteCounts[cardId];
       const card = { card_id: cardId, image_url: aidixitCardUrl(cardId) };
       const cardEl = createAidixitCardElement(card, {
-        count,
+        count: typeof count === "number" ? count : undefined,
         story: cardId === result.story_card,
         disabled: true,
+        zoomable: true,
       });
+      const votes = (votesByCard && votesByCard[cardId]) || [];
+      if (votes.length) {
+        const voteRow = document.createElement("div");
+        voteRow.className = "aidixit-votes";
+        votes.forEach((vote) => {
+          const dot = document.createElement("span");
+          dot.className = "aidixit-vote-dot";
+          if (vote.color) {
+            dot.style.backgroundColor = vote.color;
+          }
+          if (vote.name) {
+            dot.title = vote.name;
+          }
+          voteRow.appendChild(dot);
+        });
+        cardEl.appendChild(voteRow);
+      }
       aidixitRoundNoticeCards.appendChild(cardEl);
     });
   }

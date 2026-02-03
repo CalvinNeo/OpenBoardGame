@@ -254,6 +254,23 @@ def _vote_counts(votes: Dict[str, str]) -> Dict[str, int]:
     return counts
 
 
+def _build_votes_by_card(state: Dict) -> Dict[str, List[Dict]]:
+    meta = state.get("player_meta", {})
+    votes_by_card: Dict[str, List[Dict]] = {}
+    for voter_id, card_id in state.get("votes", {}).items():
+        voter = state["players"].get(voter_id)
+        voter_meta = meta.get(voter_id, {})
+        entry = {
+            "player_id": voter_id,
+            "name": voter_meta.get("name"),
+            "color": voter.get("color") if voter else None,
+        }
+        votes_by_card.setdefault(card_id, []).append(entry)
+    for card_votes in votes_by_card.values():
+        card_votes.sort(key=lambda item: meta.get(item["player_id"], {}).get("seat", 0))
+    return votes_by_card
+
+
 def _score_round(state: Dict) -> Dict:
     storyteller_id = _storyteller_id(state)
     story_card = state.get("story_card")
@@ -310,6 +327,8 @@ def _score_round(state: Dict) -> Dict:
 
 def _end_round(state: Dict) -> None:
     last_result = _score_round(state)
+    last_result["pool_cards"] = list(state.get("pool_cards", []))
+    last_result["votes_by_card"] = _build_votes_by_card(state)
     state["last_result"] = last_result
     state["discard"].extend(state.get("pool_cards", []))
     state["pool_cards"] = []
@@ -489,21 +508,11 @@ class AiDixitGame:
         ]
 
         pool_cards: List[Dict] = []
-        votes_by_card: Dict[str, List[Dict]] = {}
         if state.get("phase") == "vote":
             pool_cards = [_card_ref(card_id) for card_id in state.get("pool_cards", [])]
+            votes_by_card = _build_votes_by_card(state)
+        else:
             votes_by_card = {}
-            for voter_id, card_id in state.get("votes", {}).items():
-                voter = state["players"].get(voter_id)
-                voter_meta = meta.get(voter_id, {})
-                entry = {
-                    "player_id": voter_id,
-                    "name": voter_meta.get("name"),
-                    "color": voter.get("color") if voter else None,
-                }
-                votes_by_card.setdefault(card_id, []).append(entry)
-            for card_votes in votes_by_card.values():
-                card_votes.sort(key=lambda item: meta.get(item["player_id"], {}).get("seat", 0))
 
         return {
             "game_id": AiDixitGame.game_id,
