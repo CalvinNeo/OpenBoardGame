@@ -168,6 +168,7 @@ DRAW_GUESS_CONFIG_SCHEMA = {
     "properties": {
         "language": {"type": "string", "enum": ["en", "zh"]},
         "guess_method": {"type": "string", "enum": ["normal", "cv"]},
+        "show_answer_length": {"type": "boolean"},
         "prompt_pool": {
             "type": "array",
             "items": {

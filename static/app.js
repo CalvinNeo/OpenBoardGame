@@ -109,6 +109,8 @@ const drawGuessLanguageRow = document.getElementById("drawGuessLanguageRow");
 const drawGuessLanguageSelect = document.getElementById("drawGuessLanguageSelect");
 const drawGuessGuessMethodRow = document.getElementById("drawGuessGuessMethodRow");
 const drawGuessGuessMethodSelect = document.getElementById("drawGuessGuessMethodSelect");
+const drawGuessAnswerLengthOptionRow = document.getElementById("drawGuessAnswerLengthOptionRow");
+const drawGuessAnswerLengthToggle = document.getElementById("drawGuessAnswerLengthToggle");
 const decryptoPackRow = document.getElementById("decryptoPackRow");
 const decryptoPackOptions = document.getElementById("decryptoPackOptions");
 const decryptoBotRow = document.getElementById("decryptoBotRow");
@@ -239,6 +241,8 @@ const drawGuessClearBtn = document.getElementById("drawGuessClearBtn");
 const drawGuessEraserBtn = document.getElementById("drawGuessEraserBtn");
 const drawGuessSubmitDrawBtn = document.getElementById("drawGuessSubmitDrawBtn");
 const drawGuessImage = document.getElementById("drawGuessImage");
+const drawGuessAnswerLengthHintRow = document.getElementById("drawGuessAnswerLengthHintRow");
+const drawGuessAnswerLengthLabel = document.getElementById("drawGuessAnswerLength");
 const drawGuessInput = document.getElementById("drawGuessInput");
 const drawGuessSubmitGuessBtn = document.getElementById("drawGuessSubmitGuessBtn");
 const drawGuessPlayers = document.getElementById("drawGuessPlayers");
@@ -998,6 +1002,9 @@ function updateDrawGuessLanguageRow() {
   if (drawGuessGuessMethodRow) {
     drawGuessGuessMethodRow.classList.toggle("hidden", !showRow);
   }
+  if (drawGuessAnswerLengthOptionRow) {
+    drawGuessAnswerLengthOptionRow.classList.toggle("hidden", !showRow);
+  }
 }
 
 function roomHasBots() {
@@ -1585,6 +1592,9 @@ function resetRoomState() {
   if (drawGuessGuessMethodSelect) {
     drawGuessGuessMethodSelect.value = "normal";
   }
+  if (drawGuessAnswerLengthToggle) {
+    drawGuessAnswerLengthToggle.checked = false;
+  }
   if (decryptoBotSelect) {
     decryptoBotSelect.value = "native";
   }
@@ -1741,6 +1751,12 @@ function clearDrawGuessState() {
   drawGuessTotalRoundsLabel.textContent = "-";
   drawGuessSubmittedLabel.textContent = "-";
   drawGuessPromptLabel.textContent = "-";
+  if (drawGuessAnswerLengthLabel) {
+    drawGuessAnswerLengthLabel.textContent = "-";
+  }
+  if (drawGuessAnswerLengthHintRow) {
+    drawGuessAnswerLengthHintRow.classList.add("hidden");
+  }
   drawGuessPlayers.innerHTML = "";
   drawGuessBooks.innerHTML = "";
   drawGuessReview.classList.add("hidden");
@@ -3004,7 +3020,8 @@ function emitRoomStart() {
   if (currentGameType === "draw_guess") {
     const language = drawGuessLanguageSelect ? drawGuessLanguageSelect.value || "zh" : "zh";
     const guessMethod = drawGuessGuessMethodSelect ? drawGuessGuessMethodSelect.value || "normal" : "normal";
-    payload.config = { language, guess_method: guessMethod };
+    const showAnswerLength = drawGuessAnswerLengthToggle ? drawGuessAnswerLengthToggle.checked : false;
+    payload.config = { language, guess_method: guessMethod, show_answer_length: showAnswerLength };
   } else if (currentGameType === "aidixit") {
     const decks = getSelectedAidixitDecks();
     if (!decks.length) {
@@ -6867,6 +6884,9 @@ function renderDrawGuessGameState(data) {
     drawGuessDrawArea.classList.remove("hidden");
     drawGuessGuessArea.classList.add("hidden");
     drawGuessReview.classList.add("hidden");
+    if (drawGuessAnswerLengthHintRow) {
+      drawGuessAnswerLengthHintRow.classList.add("hidden");
+    }
     drawGuessInput.disabled = true;
     if (drawGuessLastRound !== view.round) {
       clearDrawGuessCanvas();
@@ -6886,12 +6906,22 @@ function renderDrawGuessGameState(data) {
     } else {
       drawGuessImage.removeAttribute("src");
     }
+    const hasAnswerLength = Number.isFinite(view.answer_length);
+    if (drawGuessAnswerLengthLabel) {
+      drawGuessAnswerLengthLabel.textContent = hasAnswerLength ? `${view.answer_length}` : "-";
+    }
+    if (drawGuessAnswerLengthHintRow) {
+      drawGuessAnswerLengthHintRow.classList.toggle("hidden", !hasAnswerLength);
+    }
     drawGuessInput.disabled = view.submitted;
     drawGuessCanvas.style.pointerEvents = "none";
   } else if (view.phase === "review") {
     drawGuessPromptRow.classList.add("hidden");
     drawGuessDrawArea.classList.add("hidden");
     drawGuessGuessArea.classList.add("hidden");
+    if (drawGuessAnswerLengthHintRow) {
+      drawGuessAnswerLengthHintRow.classList.add("hidden");
+    }
     drawGuessInput.disabled = true;
     drawGuessCanvas.style.pointerEvents = "none";
     renderDrawGuessReview(view);
@@ -6899,6 +6929,9 @@ function renderDrawGuessGameState(data) {
     drawGuessDrawArea.classList.add("hidden");
     drawGuessGuessArea.classList.add("hidden");
     drawGuessReview.classList.add("hidden");
+    if (drawGuessAnswerLengthHintRow) {
+      drawGuessAnswerLengthHintRow.classList.add("hidden");
+    }
     drawGuessCanvas.style.pointerEvents = "none";
   }
 

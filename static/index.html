@@ -150,6 +150,11 @@
                     <option value="cv">CV</option>
                   </select>
                 </div>
+                <div class="row hidden" id="drawGuessAnswerLengthOptionRow">
+                  <label for="drawGuessAnswerLengthToggle">Draw &amp; Guess Answer Length</label>
+                  <input id="drawGuessAnswerLengthToggle" type="checkbox" />
+                  <span class="hint">Show the number of characters while guessing.</span>
+                </div>
                 <div class="row hidden" id="decryptoPackRow">
                   <label>Decrypto Word Packs</label>
                   <div id="decryptoPackOptions" class="decrypto-pack-options"></div>
@@ -421,6 +426,9 @@
               <div id="drawGuessGuessArea">
                 <div class="row">
                   <img id="drawGuessImage" class="draw-guess-image" alt="Drawing to guess" />
+                </div>
+                <div class="row hidden" id="drawGuessAnswerLengthHintRow">
+                  <div class="hint">Display length: <span id="drawGuessAnswerLength">-</span></div>
                 </div>
                 <div class="row actions">
                   <input id="drawGuessInput" type="text" placeholder="Your guess" />

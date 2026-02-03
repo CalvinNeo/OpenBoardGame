@@ -18,6 +18,7 @@ DEFAULT_CONFIG = {
     "language": DEFAULT_LANGUAGE,
     "prompt_pool": None,
     "guess_method": GUESS_METHOD_NORMAL,
+    "show_answer_length": False,
 }
 
 _PROMPT_BAGS: Dict[Tuple[str, Tuple[Tuple[str, Optional[str]], ...]], List[Dict]] = {}
@@ -46,6 +47,9 @@ def _merge_config(config: Optional[Dict]) -> Dict:
         guess_method = config.get("guess_method")
         if isinstance(guess_method, str):
             cfg["guess_method"] = guess_method
+        show_answer_length = config.get("show_answer_length")
+        if isinstance(show_answer_length, bool):
+            cfg["show_answer_length"] = show_answer_length
         prompt_pool = config.get("prompt_pool")
         if isinstance(prompt_pool, list) and prompt_pool:
             cfg["prompt_pool"] = prompt_pool
@@ -189,6 +193,15 @@ def _drawing_hint_from_book(book: Optional[Dict]) -> Optional[str]:
     if len(entries) > 1:
         return _last_text_entry(entries[:-1])
     return None
+
+
+def _answer_length_hint(text: Optional[str]) -> Optional[int]:
+    if not isinstance(text, str):
+        return None
+    cleaned = "".join(text.split())
+    if not cleaned:
+        return None
+    return len(cleaned)
 
 
 def _bot_image_for_prompt(
@@ -395,6 +408,8 @@ class DrawGuessGame:
 
         current_prompt = None
         current_drawing = None
+        answer_length = None
+        show_answer_length = state.get("config", {}).get("show_answer_length") is True
         if viewer_id in state.get("players", {}):
             owner_id = _book_owner_for_player(state, viewer_id)
             if owner_id is not None:
@@ -405,6 +420,8 @@ class DrawGuessGame:
                         current_prompt = last_entry.get("text")
                     elif state["phase"] == "guess":
                         current_drawing = last_entry.get("image_data")
+                        if show_answer_length:
+                            answer_length = _answer_length_hint(_drawing_hint_from_book(book))
 
         review = None
         if state["phase"] == "review":
@@ -457,6 +474,7 @@ class DrawGuessGame:
             "players": players_view,
             "current_prompt": current_prompt,
             "current_drawing": current_drawing,
+            "answer_length": answer_length,
             "review": review,
             "legal_actions": DrawGuessGame.get_legal_actions(state, viewer_id),
         }
