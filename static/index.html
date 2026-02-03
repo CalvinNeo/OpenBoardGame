@@ -94,6 +94,7 @@
                     <option value="" selected disabled>Select a game</option>
                     <option value="cabo">Cabo</option>
                     <option value="flip7">Flip 7</option>
+                    <option value="halli_galli">Halli Galli</option>
                     <option value="coyote">Coyote</option>
                     <option value="decrypto">Decrypto</option>
                     <option value="skull">Skull</option>
@@ -375,6 +376,27 @@
 
               <h3>Players</h3>
               <div id="coyotePlayers"></div>
+            </div>
+
+            <div id="halliPanel" class="hidden">
+              <div class="row">
+                <div>Current Turn: <span id="halliTurn">-</span></div>
+                <div>Bell Ready: <span id="halliBell">-</span></div>
+                <div>Winner: <span id="halliWinner">-</span></div>
+              </div>
+              <div class="row">
+                <div>Fruit Totals: <span id="halliTotals">-</span></div>
+                <div>Last Action: <span id="halliLastAction">-</span></div>
+              </div>
+
+              <h3>Actions</h3>
+              <div class="row actions">
+                <button id="halliFlipBtn">Flip</button>
+                <button id="halliRingBtn">Ring Bell</button>
+              </div>
+
+              <h3>Players</h3>
+              <div id="halliPlayers"></div>
             </div>
 
             <div id="decryptoPanel" class="hidden">

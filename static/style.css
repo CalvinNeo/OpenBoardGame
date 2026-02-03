@@ -868,6 +868,11 @@ body.log-open {
   font-size: 12px;
 }
 
+.halli-bell-ready {
+  color: #1a7f37;
+  font-weight: 600;
+}
+
 .badge.highlight {
   background: #1f6feb;
   color: #fff;

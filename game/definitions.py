@@ -5,6 +5,7 @@ from game.coyote import CoyoteGame
 from game.decrypto import DecryptoGame
 from game.draw_guess import DrawGuessGame
 from game.flip7 import Flip7Game
+from game.halli_galli import HalliGalliGame
 from game.impression_flower import ImpressionFlowerGame
 from game.registry import GameDefinition, register_game
 from game.splendor import SplendorGame
@@ -208,6 +209,20 @@ FLIP7_CONFIG_SCHEMA = {
     "properties": {
         "target_score": {"type": "integer", "minimum": 1},
     },
+    "additionalProperties": False,
+}
+
+HALLI_GALLI_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {"type": "object", "properties": {"type": {"const": "flip"}}, "required": ["type"], "additionalProperties": False},
+        {"type": "object", "properties": {"type": {"const": "ring"}}, "required": ["type"], "additionalProperties": False},
+    ],
+}
+
+HALLI_GALLI_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {},
     "additionalProperties": False,
 }
 
@@ -687,5 +702,20 @@ register_game(
         module=Flip7Game,
         serialize=Flip7Game.serialize,
         deserialize=Flip7Game.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=HalliGalliGame.game_id,
+        name="Halli Galli",
+        min_players=HalliGalliGame.min_players,
+        max_players=HalliGalliGame.max_players,
+        turn_mode="turn",
+        action_schema=HALLI_GALLI_ACTION_SCHEMA,
+        config_schema=HALLI_GALLI_CONFIG_SCHEMA,
+        module=HalliGalliGame,
+        serialize=HalliGalliGame.serialize,
+        deserialize=HalliGalliGame.deserialize,
     )
 )

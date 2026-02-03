@@ -8,6 +8,7 @@ let currentCoyoteView = null;
 let currentDecryptoView = null;
 let currentDrawGuessView = null;
 let currentFlip7View = null;
+let currentHalliView = null;
 let currentImpressionView = null;
 let currentSplendorView = null;
 let currentAbracaView = null;
@@ -130,6 +131,7 @@ const caboPanel = document.getElementById("caboPanel");
 const flip7Panel = document.getElementById("flip7Panel");
 const skullPanel = document.getElementById("skullPanel");
 const coyotePanel = document.getElementById("coyotePanel");
+const halliPanel = document.getElementById("halliPanel");
 const decryptoPanel = document.getElementById("decryptoPanel");
 const drawGuessPanel = document.getElementById("drawGuessPanel");
 const aidixitPanel = document.getElementById("aidixitPanel");
@@ -226,6 +228,15 @@ const coyoteBidBtn = document.getElementById("coyoteBidBtn");
 const coyoteChallengeBtn = document.getElementById("coyoteChallengeBtn");
 const coyoteResetBtn = document.getElementById("coyoteResetBtn");
 const coyotePlayers = document.getElementById("coyotePlayers");
+
+const halliTurnLabel = document.getElementById("halliTurn");
+const halliBellLabel = document.getElementById("halliBell");
+const halliWinnerLabel = document.getElementById("halliWinner");
+const halliTotalsLabel = document.getElementById("halliTotals");
+const halliLastActionLabel = document.getElementById("halliLastAction");
+const halliFlipBtn = document.getElementById("halliFlipBtn");
+const halliRingBtn = document.getElementById("halliRingBtn");
+const halliPlayers = document.getElementById("halliPlayers");
 
 const decryptoPhaseLabel = document.getElementById("decryptoPhase");
 const decryptoRoundLabel = document.getElementById("decryptoRound");
@@ -437,6 +448,11 @@ const skullActionButtons = {
 const coyoteActionButtons = {
   bid: coyoteBidBtn,
   challenge: coyoteChallengeBtn,
+};
+
+const halliActionButtons = {
+  flip: halliFlipBtn,
+  ring: halliRingBtn,
 };
 
 const flip7ActionButtons = {
@@ -993,6 +1009,7 @@ function setGamePanelVisibility(gameType) {
   const showFlip7 = gameType === "flip7";
   const showSkull = gameType === "skull";
   const showCoyote = gameType === "coyote";
+  const showHalli = gameType === "halli_galli";
   const showDecrypto = gameType === "decrypto";
   const showDrawGuess = gameType === "draw_guess";
   const showAidixit = gameType === "aidixit";
@@ -1007,6 +1024,9 @@ function setGamePanelVisibility(gameType) {
   skullPanel.classList.toggle("hidden", !showSkull);
   if (coyotePanel) {
     coyotePanel.classList.toggle("hidden", !showCoyote);
+  }
+  if (halliPanel) {
+    halliPanel.classList.toggle("hidden", !showHalli);
   }
   if (decryptoPanel) {
     decryptoPanel.classList.toggle("hidden", !showDecrypto);
@@ -1624,6 +1644,7 @@ function resetRoomState() {
   clearFlip7State();
   clearSkullState();
   clearCoyoteState();
+  clearHalliState();
   clearDecryptoState();
   clearDrawGuessState();
   clearAidixitState();
@@ -1766,6 +1787,29 @@ function clearCoyoteState() {
   }
   coyotePlayers.innerHTML = "";
   updateCoyoteActionButtons();
+}
+
+function clearHalliState() {
+  currentHalliView = null;
+  if (halliTurnLabel) {
+    halliTurnLabel.textContent = "-";
+  }
+  if (halliBellLabel) {
+    halliBellLabel.textContent = "-";
+  }
+  if (halliWinnerLabel) {
+    halliWinnerLabel.textContent = "-";
+  }
+  if (halliTotalsLabel) {
+    halliTotalsLabel.textContent = "-";
+  }
+  if (halliLastActionLabel) {
+    halliLastActionLabel.textContent = "-";
+  }
+  if (halliPlayers) {
+    halliPlayers.innerHTML = "";
+  }
+  updateHalliActionButtons();
 }
 
 function resetDecryptoInputs() {
@@ -3177,6 +3221,7 @@ function renderRoomState(state) {
     clearSplendorState();
     clearAbracaState();
     clearBlokusState();
+    clearHalliState();
   }
   setGamePanelVisibility(currentGameType);
   updateDrawGuessLanguageRow();
@@ -3769,6 +3814,105 @@ function renderCoyotePlayers(view) {
   });
 }
 
+function formatHalliTotals(view) {
+  if (!view || !view.fruit_totals) {
+    return "-";
+  }
+  const bellFruits = new Set(view.bell_fruits || []);
+  const entries = Object.entries(view.fruit_totals);
+  if (!entries.length) {
+    return "-";
+  }
+  return entries
+    .map(([fruit, total]) => `${fruit} ${total}${bellFruits.has(fruit) ? "!" : ""}`)
+    .join(" | ");
+}
+
+function formatHalliLastAction(view) {
+  const last = view ? view.last_action : null;
+  if (!last) {
+    return "-";
+  }
+  const actor = last.player_id ? findPlayerName(view, last.player_id) : "Unknown";
+  if (last.type === "flip") {
+    const card = last.card;
+    const cardLabel = card ? `${card.count} ${card.fruit}` : "card";
+    return `${actor} flipped ${cardLabel}`;
+  }
+  if (last.type === "ring") {
+    if (last.result === "success") {
+      const fruits = Array.isArray(last.bell_fruits) && last.bell_fruits.length
+        ? last.bell_fruits.join(", ")
+        : "match";
+      return `${actor} rang (success: ${fruits}, +${last.collected || 0} cards)`;
+    }
+    return `${actor} rang (false, penalty ${last.penalty_given || 0})`;
+  }
+  return "-";
+}
+
+function renderHalliPlayers(view) {
+  if (!halliPlayers) {
+    return;
+  }
+  halliPlayers.innerHTML = "";
+  view.players.forEach((p) => {
+    const card = document.createElement("div");
+    card.className = "player-card";
+    if (p.player_id === view.current_turn) {
+      card.classList.add("current");
+    }
+    if (p.eliminated) {
+      card.classList.add("disabled");
+    }
+    const header = document.createElement("div");
+    header.className = "player-header";
+    const name = document.createElement("div");
+    name.className = "player-name";
+    name.textContent = p.name;
+    header.appendChild(name);
+
+    const badges = document.createElement("div");
+    badges.className = "player-badges";
+    const handBadge = document.createElement("span");
+    handBadge.className = "badge";
+    handBadge.textContent = `hand ${p.hand_count}`;
+    badges.appendChild(handBadge);
+    const pileBadge = document.createElement("span");
+    pileBadge.className = "badge";
+    pileBadge.textContent = `pile ${p.pile_count}`;
+    badges.appendChild(pileBadge);
+    if (p.player_id === view.you) {
+      const youBadge = document.createElement("span");
+      youBadge.className = "badge";
+      youBadge.textContent = "you";
+      badges.appendChild(youBadge);
+    }
+    if (p.is_bot) {
+      const botBadge = document.createElement("span");
+      botBadge.className = "badge";
+      botBadge.textContent = "bot";
+      badges.appendChild(botBadge);
+    }
+    if (p.eliminated) {
+      const outBadge = document.createElement("span");
+      outBadge.className = "badge";
+      outBadge.textContent = "out";
+      badges.appendChild(outBadge);
+    }
+
+    header.appendChild(badges);
+    card.appendChild(header);
+
+    const meta = document.createElement("div");
+    meta.className = "player-meta";
+    const topCard = p.top_card ? p.top_card.label || `${p.top_card.count} ${p.top_card.fruit}` : "-";
+    meta.textContent = `top ${topCard}`;
+    card.appendChild(meta);
+    halliPlayers.appendChild(card);
+  });
+}
+
 function isSkullActionAvailable(actionType) {
   if (!currentSkullView || !Array.isArray(currentSkullView.legal_actions)) {
     return false;
@@ -3848,6 +3992,32 @@ function updateCoyoteActionButtons() {
     button.disabled = !allowed;
   });
   updateCoyoteBidControls(currentCoyoteView);
+}
+
+function isHalliActionAvailable(actionType) {
+  if (!currentHalliView || !Array.isArray(currentHalliView.legal_actions)) {
+    return false;
+  }
+  return currentHalliView.legal_actions.includes(actionType);
+}
+
+function updateHalliActionButtons() {
+  if (currentGameType !== "halli_galli") {
+    Object.values(halliActionButtons).forEach((button) => {
+      button.classList.remove("action-allowed");
+      button.disabled = true;
+    });
+    return;
+  }
+  Object.entries(halliActionButtons).forEach(([actionType, button]) => {
+    const allowed = isHalliActionAvailable(actionType);
+    if (allowed) {
+      button.classList.add("action-allowed");
+    } else {
+      button.classList.remove("action-allowed");
+    }
+    button.disabled = !allowed;
+  });
 }
 
 function isFlip7ActionAvailable(actionType) {
@@ -7134,6 +7304,43 @@ function renderCoyoteGameState(data) {
   }
 }
 
+function renderHalliGameState(data) {
+  const view = data.view;
+  currentHalliView = view;
+  if (currentGameType !== "halli_galli") {
+    currentGameType = "halli_galli";
+    setGamePanelVisibility("halli_galli");
+  }
+  if (halliTurnLabel) {
+    const currentPlayer = view.players.find((p) => p.player_id === view.current_turn);
+    halliTurnLabel.textContent = currentPlayer ? currentPlayer.name : view.current_turn || "-";
+  }
+  if (halliBellLabel) {
+    if (view.bell_ready) {
+      const fruits = Array.isArray(view.bell_fruits) && view.bell_fruits.length
+        ? view.bell_fruits.join(", ")
+        : "ready";
+      halliBellLabel.textContent = `Yes (${fruits})`;
+    } else {
+      halliBellLabel.textContent = "No";
+    }
+    halliBellLabel.classList.toggle("halli-bell-ready", !!view.bell_ready);
+  }
+  if (halliWinnerLabel) {
+    halliWinnerLabel.textContent = view.winner ? findPlayerName(view, view.winner) : "-";
+  }
+  if (halliTotalsLabel) {
+    halliTotalsLabel.textContent = formatHalliTotals(view);
+  }
+  if (halliLastActionLabel) {
+    halliLastActionLabel.textContent = formatHalliLastAction(view);
+  }
+
+  renderHalliPlayers(view);
+  logGameEvents(data);
+  updateHalliActionButtons();
+}
+
 function renderAidixitGameState(data) {
   const view = data.view;
   currentAidixitView = view;
@@ -7457,6 +7664,10 @@ function renderGameState(data) {
   }
   if (gameType === "coyote") {
     renderCoyoteGameState(data);
+    return;
+  }
+  if (gameType === "halli_galli") {
+    renderHalliGameState(data);
     return;
   }
   if (gameType === "aidixit") {
@@ -7961,6 +8172,18 @@ coyoteChallengeBtn.addEventListener("click", () => {
 if (coyoteResetBtn) {
   coyoteResetBtn.addEventListener("click", () => {
     emitRoomStart();
+  });
+}
+
+if (halliFlipBtn) {
+  halliFlipBtn.addEventListener("click", () => {
+    sendAction({ type: "flip" });
+  });
+}
+
+if (halliRingBtn) {
+  halliRingBtn.addEventListener("click", () => {
+    sendAction({ type: "ring" });
   });
 }
 
