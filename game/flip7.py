@@ -242,6 +242,7 @@ def _end_round(state: Dict, reason: str) -> None:
     summary_totals = {}
     summary_status = {}
     summary_breakdowns = {}
+    summary_flips = {}
     for pid, pdata in state["players"].items():
         summary_scores[pid] = pdata.get("round_score", 0)
         summary_totals[pid] = pdata.get("score", 0)
@@ -249,6 +250,11 @@ def _end_round(state: Dict, reason: str) -> None:
         breakdown = pdata.get("round_breakdown")
         if isinstance(breakdown, dict):
             summary_breakdowns[pid] = breakdown
+        flips = pdata.get("round_flips")
+        if isinstance(flips, list):
+            summary_flips[pid] = list(flips)
+        else:
+            summary_flips[pid] = []
 
     state["last_round_summary"] = {
         "round": state["round"],
@@ -258,6 +264,7 @@ def _end_round(state: Dict, reason: str) -> None:
         "total_scores": summary_totals,
         "status": summary_status,
         "breakdowns": summary_breakdowns,
+        "flips": summary_flips,
     }
 
     for pdata in state["players"].values():
@@ -291,8 +298,10 @@ def _draw_card(state: Dict, player_id: str, deferred_actions: Optional[List[Dict
     if not _ensure_deck(state):
         return [], False, False, "deck empty"
     card = state["deck"].pop()
-    events = [{"type": "flip7:draw", "payload": {"player_id": player_id, "card": _card_label(card)}}]
     pdata = state["players"][player_id]
+    pdata.setdefault("round_flips", []).append(_card_view(card))
+    card_label = _card_label(card)
+    events = [{"type": "flip7:draw", "payload": {"player_id": player_id, "card": card_label}}]
     card_type = card.get("type")
 
     if card_type == CARD_NUMBER:
@@ -372,6 +381,7 @@ def _start_round(state: Dict) -> None:
         pdata["banked"] = False
         pdata["round_score"] = None
         pdata["round_breakdown"] = None
+        pdata["round_flips"] = []
         pdata["flip7"] = False
 
     for pid in state["turn_order"]:
@@ -408,6 +418,7 @@ class Flip7Game:
                 "score": 0,
                 "round_score": None,
                 "round_breakdown": None,
+                "round_flips": [],
                 "banked": False,
                 "flip7": False,
             }

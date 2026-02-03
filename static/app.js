@@ -158,6 +158,7 @@ const flip7Tableau = document.getElementById("flip7Tableau");
 const flip7TargetSelection = document.getElementById("flip7TargetSelection");
 const flip7ClearTargetBtn = document.getElementById("flip7ClearTarget");
 const flip7Targets = document.getElementById("flip7Targets");
+const flip7LastRound = document.getElementById("flip7LastRound");
 const flip7Players = document.getElementById("flip7Players");
 const flip7FlipBtn = document.getElementById("flip7FlipBtn");
 const flip7StayBtn = document.getElementById("flip7StayBtn");
@@ -1736,6 +1737,9 @@ function clearFlip7State() {
   }
   if (flip7Targets) {
     flip7Targets.innerHTML = "";
+  }
+  if (flip7LastRound) {
+    flip7LastRound.innerHTML = "";
   }
   if (flip7Players) {
     flip7Players.innerHTML = "";
@@ -3582,6 +3586,84 @@ function renderFlip7Players(view) {
     card.appendChild(tableauRow);
     card.appendChild(meta);
     flip7Players.appendChild(card);
+  });
+}
+
+function renderFlip7LastRound(view) {
+  if (!flip7LastRound) {
+    return;
+  }
+  flip7LastRound.innerHTML = "";
+  const summary = view.last_round_summary;
+  if (!summary) {
+    const empty = document.createElement("div");
+    empty.className = "hint";
+    empty.textContent = "No previous round yet.";
+    flip7LastRound.appendChild(empty);
+    return;
+  }
+
+  const meta = document.createElement("div");
+  meta.className = "hint";
+  const roundText = Number.isInteger(summary.round) ? `Round ${summary.round}` : "Last round";
+  const reasonText = summary.reason ? ` (${summary.reason})` : "";
+  meta.textContent = `${roundText}${reasonText}`;
+  flip7LastRound.appendChild(meta);
+
+  const flipsByPlayer = summary.flips || {};
+  const statusByPlayer = summary.status || {};
+  view.players.forEach((player) => {
+    const card = document.createElement("div");
+    card.className = "player-card";
+
+    const header = document.createElement("div");
+    header.className = "player-header";
+    const name = document.createElement("div");
+    name.className = "player-name";
+    name.textContent = player.name || player.player_id;
+    header.appendChild(name);
+
+    const badges = document.createElement("div");
+    badges.className = "player-badges";
+    const status = statusByPlayer[player.player_id] || "-";
+    const statusBadge = document.createElement("span");
+    statusBadge.className = "badge";
+    statusBadge.textContent = status;
+    if (status === "busted") {
+      statusBadge.classList.add("danger");
+    }
+    badges.appendChild(statusBadge);
+    if (summary.flip7_winner === player.player_id) {
+      const flip7 = document.createElement("span");
+      flip7.className = "badge highlight";
+      flip7.textContent = "flip7";
+      badges.appendChild(flip7);
+    }
+    header.appendChild(badges);
+    card.appendChild(header);
+
+    const flipsRow = document.createElement("div");
+    flipsRow.className = "player-hand";
+    const flips = Array.isArray(flipsByPlayer[player.player_id])
+      ? flipsByPlayer[player.player_id]
+      : [];
+    if (flips.length) {
+      flips.forEach((flip) => {
+        const slot = document.createElement("div");
+        slot.className = "player-slot";
+        const label = typeof flip === "string" ? flip : flip.label;
+        slot.textContent = label || "?";
+        flipsRow.appendChild(slot);
+      });
+    } else {
+      const slot = document.createElement("div");
+      slot.className = "player-slot empty";
+      slot.textContent = "-";
+      flipsRow.appendChild(slot);
+    }
+
+    card.appendChild(flipsRow);
+    flip7LastRound.appendChild(card);
   });
 }
 
@@ -7213,6 +7295,7 @@ function renderFlip7GameState(data) {
 
   renderFlip7Tableau(view);
   renderFlip7Targets(view);
+  renderFlip7LastRound(view);
   renderFlip7Players(view);
   logGameEvents(data);
   updateFlip7ActionButtons();

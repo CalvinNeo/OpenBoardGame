@@ -878,6 +878,11 @@ body.log-open {
   color: #fff;
 }
 
+.badge.danger {
+  background: #fee2e2;
+  color: #7f1d1d;
+}
+
 .player-hand {
   display: flex;
   gap: 6px;
