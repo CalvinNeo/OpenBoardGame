@@ -6,8 +6,8 @@ from typing import Dict, List, Optional, Tuple
 
 DEFAULT_CONFIG = {
     "word_pool": ["mystery"],
-    "rounds_per_guesser": 3,
-    "base_stamps": 6,
+    "rounds_per_guesser": 2,
+    "base_stamps": 5,
     "score_mode": "round",
     "score_per_correct": 2,
     "stamp_shapes": ["circle", "triangle", "square", "bar"],
@@ -523,7 +523,9 @@ class ImpressionFlowerGame:
         show_drawings = phase == "guess" or (
             viewer_id == guesser_id and phase in ("round_end", "game_over")
         )
-        show_word_bank = viewer_id == guesser_id and phase in ("guess", "round_end", "game_over")
+        show_word_bank = phase == "guess" or (
+            viewer_id == guesser_id and phase in ("round_end", "game_over")
+        )
         drawings = None
         word_bank = None
         if show_drawings:

@@ -5114,7 +5114,9 @@ function drawImpressionStamp(stamp) {
     impressionCtx.beginPath();
     impressionCtx.rect(0, 0, impressionCanvas.width, impressionCanvas.height);
     impressionCtx.save();
-    impressionCtx.translate(stamp.mask.x, stamp.mask.y);
+    impressionCtx.translate(stamp.x, stamp.y);
+    impressionCtx.rotate(stamp.rotation);
+    impressionCtx.translate(stamp.mask.offset_x, stamp.mask.offset_y);
     impressionCtx.rotate(stamp.mask.rotation);
     impressionCtx.rect(-stamp.mask.size / 2, -stamp.mask.size / 2, stamp.mask.size, stamp.mask.size);
     impressionCtx.restore();
@@ -5232,6 +5234,24 @@ function getImpressionPosition(event) {
   };
 }
 
+function buildImpressionMask(position, stampRotation) {
+  if (!position || !impressionMaskState || !impressionConfig) {
+    return null;
+  }
+  const maskSize = (Number.parseInt(impressionConfig.mask_size, 10) || 180) * impressionMaskState.scale;
+  const maskRotation = (Math.PI / 180) * impressionMaskState.rotation;
+  const dx = impressionMaskState.x - position.x;
+  const dy = impressionMaskState.y - position.y;
+  const cos = Math.cos(-stampRotation);
+  const sin = Math.sin(-stampRotation);
+  return {
+    offset_x: dx * cos - dy * sin,
+    offset_y: dx * sin + dy * cos,
+    size: maskSize,
+    rotation: maskRotation - stampRotation,
+  };
+}
+
 function buildImpressionStamp(position, alpha, useMask) {
   if (!position || !impressionConfig || !impressionCurrentShape) {
     return null;
@@ -5244,14 +5264,8 @@ function buildImpressionStamp(position, alpha, useMask) {
   const rotation = (Math.PI / 180) * (Number.parseFloat(impressionRotation) || 0);
   const shouldMask = useMask === undefined ? impressionMaskActive : useMask;
   let mask = null;
-  if (shouldMask && impressionMaskState && impressionConfig) {
-    const maskSize = (Number.parseInt(impressionConfig.mask_size, 10) || 180) * impressionMaskState.scale;
-    mask = {
-      x: impressionMaskState.x,
-      y: impressionMaskState.y,
-      size: maskSize,
-      rotation: (Math.PI / 180) * impressionMaskState.rotation,
-    };
+  if (shouldMask) {
+    mask = buildImpressionMask(position, rotation);
   }
   return {
     shape: impressionCurrentShape,
@@ -5566,16 +5580,11 @@ function applyImpressionMaskToActiveStamp() {
   if (!stamp || stamp.mask_used) {
     return;
   }
-  if (!impressionMaskState || !impressionConfig) {
+  const mask = buildImpressionMask({ x: stamp.x, y: stamp.y }, stamp.rotation || 0);
+  if (!mask) {
     return;
   }
-  const maskSize = (Number.parseInt(impressionConfig.mask_size, 10) || 180) * impressionMaskState.scale;
-  stamp.mask = {
-    x: impressionMaskState.x,
-    y: impressionMaskState.y,
-    size: maskSize,
-    rotation: (Math.PI / 180) * impressionMaskState.rotation,
-  };
+  stamp.mask = mask;
   stamp.mask_used = true;
   renderImpressionCanvas();
 }

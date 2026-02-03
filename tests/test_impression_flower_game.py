@@ -62,6 +62,14 @@ class ImpressionFlowerGameTests(unittest.TestCase):
         self.assertEqual(state["players"]["p1"]["score"], 1)
         self.assertEqual(state["players"]["p2"]["score"], 1)
 
+    def test_word_bank_visible_to_setters_during_guess(self):
+        state = ImpressionFlowerGame.init_game({}, _players(3))
+        _submit_drawings(state)
+        setter_id = next(iter(state["assignments"].keys()))
+        view = ImpressionFlowerGame.get_public_view(state, setter_id)
+        self.assertEqual(view["phase"], "guess")
+        self.assertEqual(view["word_bank"], state["word_bank"])
+
     def test_continue_advances_guesser(self):
         config = {"rounds_per_guesser": 1}
         state = ImpressionFlowerGame.init_game(config, _players(3))
