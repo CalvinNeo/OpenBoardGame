@@ -335,6 +335,34 @@ def _draw_card(state: Dict, player_id: str, deferred_actions: Optional[List[Dict
 
     if card_type == CARD_ACTION:
         action_type = card.get("action")
+        if action_type == ACTION_FLIP_THREE:
+            eligible = _eligible_targets(state, action_type)
+            if not eligible:
+                state["discard"].append(card)
+                events.append({"type": "flip7:action_discard", "payload": {"player_id": player_id}})
+                return events, False, False, None
+            events.append(
+                {"type": "flip7:action_drawn", "payload": {"player_id": player_id, "action": action_type}}
+            )
+            state["discard"].append(card)
+            draw_events, error, queued_actions = _resolve_flip_three(state, player_id)
+            events.extend(draw_events)
+            if error:
+                return events, False, False, error
+            if deferred_actions is not None:
+                deferred_actions.extend(queued_actions)
+            else:
+                for entry in queued_actions:
+                    _queue_action(state, entry)
+            events.append(
+                {
+                    "type": "flip7:flip_three",
+                    "payload": {"player_id": player_id, "target_id": player_id},
+                }
+            )
+            busted = state["players"][player_id]["status"] == "busted"
+            flip7_hit = state.get("flip7_winner") == player_id
+            return events, busted, flip7_hit, None
         eligible = _eligible_targets(state, action_type)
         if not eligible:
             state["discard"].append(card)
@@ -495,14 +523,17 @@ class Flip7Game:
                 return [], "not your action"
             if action_type != "choose_target":
                 return [], "choose_target required"
-            target_id = action.get("target_player_id")
-            if target_id not in state["players"]:
-                return [], "invalid target"
             card = pending.get("card") or {}
             pending_action = card.get("action")
-            eligible = _eligible_targets(state, pending_action)
-            if target_id not in eligible:
-                return [], "target not eligible"
+            if pending_action == ACTION_FLIP_THREE:
+                target_id = player_id
+            else:
+                target_id = action.get("target_player_id")
+                if target_id not in state["players"]:
+                    return [], "invalid target"
+                eligible = _eligible_targets(state, pending_action)
+                if target_id not in eligible:
+                    return [], "target not eligible"
 
             if pending_action == ACTION_SECOND_CHANCE:
                 state["players"][target_id]["tableau"].append(card)
@@ -613,11 +644,16 @@ class Flip7Game:
         if pending and isinstance(pending, dict):
             card = pending.get("card") or {}
             action_type = card.get("action")
+            eligible_targets = _eligible_targets(state, action_type)
+            if action_type == ACTION_FLIP_THREE:
+                actor_id = pending.get("actor_id")
+                if actor_id in state["players"]:
+                    eligible_targets = [actor_id]
             pending_view = {
                 "actor_id": pending.get("actor_id"),
                 "action": action_type,
                 "label": ACTION_LABELS.get(action_type, "Action"),
-                "eligible_targets": _eligible_targets(state, action_type),
+                "eligible_targets": eligible_targets,
             }
 
         return {
@@ -650,6 +686,8 @@ class Flip7Game:
             pending = state.get("pending_action")
             if pending and pending.get("actor_id") == bot_id:
                 action_type = (pending.get("card") or {}).get("action")
+                if action_type == ACTION_FLIP_THREE:
+                    return {"type": "choose_target", "target_player_id": bot_id}
                 eligible = _eligible_targets(state, action_type)
                 if not eligible:
                     return None
