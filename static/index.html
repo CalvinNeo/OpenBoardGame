@@ -136,44 +136,55 @@
                   <div>Status: <span id="roomStatus">-</span></div>
                   <div>Game: <span id="gameTypeLabel">-</span></div>
                 </div>
-                <div class="row hidden" id="drawGuessLanguageRow">
-                  <label for="drawGuessLanguageSelect">Draw &amp; Guess Language</label>
-                  <select id="drawGuessLanguageSelect">
-                    <option value="en">English</option>
-                    <option value="zh" selected>中文</option>
-                  </select>
-                </div>
-                <div class="row hidden" id="drawGuessGuessMethodRow">
-                  <label for="drawGuessGuessMethodSelect">Draw &amp; Guess Bot Guess</label>
-                  <select id="drawGuessGuessMethodSelect">
-                    <option value="normal" selected>Normal</option>
-                    <option value="cv">CV</option>
-                  </select>
-                </div>
-                <div class="row hidden" id="drawGuessAnswerLengthOptionRow">
-                  <label for="drawGuessAnswerLengthToggle">Draw &amp; Guess Answer Length</label>
-                  <input id="drawGuessAnswerLengthToggle" type="checkbox" />
-                  <span class="hint">Show the number of characters while guessing.</span>
-                </div>
-                <div class="row hidden" id="decryptoPackRow">
-                  <label>Decrypto Word Packs</label>
-                  <div id="decryptoPackOptions" class="decrypto-pack-options"></div>
-                </div>
-                <div class="row hidden" id="decryptoBotRow">
-                  <label for="decryptoBotSelect">Decrypto Bot Strategy</label>
-                  <select id="decryptoBotSelect"></select>
-                </div>
-                <div class="row hidden" id="decryptoBotClueRow">
-                  <label for="decryptoBotClueSelect">Decrypto Bot Clue Directness</label>
-                  <select id="decryptoBotClueSelect">
-                    <option value="0.2">Subtle</option>
-                    <option value="0.5" selected>Balanced</option>
-                    <option value="0.8">Obvious</option>
-                  </select>
-                </div>
-                <div class="row hidden" id="aidixitDeckRow">
-                  <label>AI Dixit Decks</label>
-                  <div id="aidixitDeckOptions" class="decrypto-pack-options"></div>
+                <div class="game-configs" id="gameConfigSection">
+                  <div class="game-config-card hidden" id="drawGuessConfigBox" aria-hidden="true">
+                    <div class="game-config-title">Draw &amp; Guess</div>
+                    <div class="row hidden" id="drawGuessLanguageRow">
+                      <label for="drawGuessLanguageSelect">Language</label>
+                      <select id="drawGuessLanguageSelect">
+                        <option value="en">English</option>
+                        <option value="zh" selected>中文</option>
+                      </select>
+                    </div>
+                    <div class="row hidden" id="drawGuessGuessMethodRow">
+                      <label for="drawGuessGuessMethodSelect">Bot Guess</label>
+                      <select id="drawGuessGuessMethodSelect">
+                        <option value="normal" selected>Normal</option>
+                        <option value="cv">CV</option>
+                      </select>
+                    </div>
+                    <div class="row hidden" id="drawGuessAnswerLengthOptionRow">
+                      <label for="drawGuessAnswerLengthToggle">Answer Length</label>
+                      <input id="drawGuessAnswerLengthToggle" type="checkbox" />
+                      <span class="hint">Show the number of characters while guessing.</span>
+                    </div>
+                  </div>
+                  <div class="game-config-card hidden" id="decryptoConfigBox" aria-hidden="true">
+                    <div class="game-config-title">Decrypto</div>
+                    <div class="row hidden" id="decryptoPackRow">
+                      <label>Word Packs</label>
+                      <div id="decryptoPackOptions" class="decrypto-pack-options"></div>
+                    </div>
+                    <div class="row hidden" id="decryptoBotRow">
+                      <label for="decryptoBotSelect">Bot Strategy</label>
+                      <select id="decryptoBotSelect"></select>
+                    </div>
+                    <div class="row hidden" id="decryptoBotClueRow">
+                      <label for="decryptoBotClueSelect">Clue Directness</label>
+                      <select id="decryptoBotClueSelect">
+                        <option value="0.2">Subtle</option>
+                        <option value="0.5" selected>Balanced</option>
+                        <option value="0.8">Obvious</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="game-config-card hidden" id="aidixitConfigBox" aria-hidden="true">
+                    <div class="game-config-title">AI Dixit</div>
+                    <div class="row hidden" id="aidixitDeckRow">
+                      <label>Decks</label>
+                      <div id="aidixitDeckOptions" class="decrypto-pack-options"></div>
+                    </div>
+                  </div>
                 </div>
                 <div class="row hidden" id="autoSaveRow">
                   <label for="autoSaveToggle">Auto Save</label>

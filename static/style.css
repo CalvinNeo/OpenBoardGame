@@ -125,6 +125,33 @@ h1 {
   flex-wrap: wrap;
 }
 
+.game-configs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.game-config-card {
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+  border-radius: 6px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.game-config-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #4b5563;
+}
+
+.game-config-card .row {
+  margin-bottom: 0;
+}
+
 .row.actions button {
   margin-right: 6px;
 }

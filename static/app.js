@@ -105,18 +105,21 @@ const createGameRow = document.getElementById("createGameRow");
 const leaveBtn = document.getElementById("leaveBtn");
 const removeBotBtn = document.getElementById("removeBotBtn");
 const logoutBtn = document.getElementById("logoutBtn");
+const drawGuessConfigBox = document.getElementById("drawGuessConfigBox");
 const drawGuessLanguageRow = document.getElementById("drawGuessLanguageRow");
 const drawGuessLanguageSelect = document.getElementById("drawGuessLanguageSelect");
 const drawGuessGuessMethodRow = document.getElementById("drawGuessGuessMethodRow");
 const drawGuessGuessMethodSelect = document.getElementById("drawGuessGuessMethodSelect");
 const drawGuessAnswerLengthOptionRow = document.getElementById("drawGuessAnswerLengthOptionRow");
 const drawGuessAnswerLengthToggle = document.getElementById("drawGuessAnswerLengthToggle");
+const decryptoConfigBox = document.getElementById("decryptoConfigBox");
 const decryptoPackRow = document.getElementById("decryptoPackRow");
 const decryptoPackOptions = document.getElementById("decryptoPackOptions");
 const decryptoBotRow = document.getElementById("decryptoBotRow");
 const decryptoBotSelect = document.getElementById("decryptoBotSelect");
 const decryptoBotClueRow = document.getElementById("decryptoBotClueRow");
 const decryptoBotClueSelect = document.getElementById("decryptoBotClueSelect");
+const aidixitConfigBox = document.getElementById("aidixitConfigBox");
 const aidixitDeckRow = document.getElementById("aidixitDeckRow");
 const aidixitDeckOptions = document.getElementById("aidixitDeckOptions");
 const autoSaveRow = document.getElementById("autoSaveRow");
@@ -996,14 +999,21 @@ function setGamePanelVisibility(gameType) {
 
 function updateDrawGuessLanguageRow() {
   const showRow = currentRoomState && currentGameType === "draw_guess" && currentRoomState.status === "lobby";
+  if (drawGuessConfigBox) {
+    drawGuessConfigBox.classList.toggle("hidden", !showRow);
+    drawGuessConfigBox.setAttribute("aria-hidden", (!showRow).toString());
+  }
   if (drawGuessLanguageRow) {
     drawGuessLanguageRow.classList.toggle("hidden", !showRow);
+    drawGuessLanguageRow.setAttribute("aria-hidden", (!showRow).toString());
   }
   if (drawGuessGuessMethodRow) {
     drawGuessGuessMethodRow.classList.toggle("hidden", !showRow);
+    drawGuessGuessMethodRow.setAttribute("aria-hidden", (!showRow).toString());
   }
   if (drawGuessAnswerLengthOptionRow) {
     drawGuessAnswerLengthOptionRow.classList.toggle("hidden", !showRow);
+    drawGuessAnswerLengthOptionRow.setAttribute("aria-hidden", (!showRow).toString());
   }
 }
 
@@ -1017,6 +1027,10 @@ function roomHasBots() {
 
 function updateDecryptoPackRow() {
   const showRow = currentRoomState && currentGameType === "decrypto" && currentRoomState.status === "lobby";
+  if (decryptoConfigBox) {
+    decryptoConfigBox.classList.toggle("hidden", !showRow);
+    decryptoConfigBox.setAttribute("aria-hidden", (!showRow).toString());
+  }
   if (decryptoPackRow) {
     decryptoPackRow.classList.toggle("hidden", !showRow);
     decryptoPackRow.setAttribute("aria-hidden", (!showRow).toString());
@@ -1044,6 +1058,10 @@ function updateDecryptoBotRow() {
 
 function updateAidixitDeckRow() {
   const showRow = currentRoomState && currentGameType === "aidixit" && currentRoomState.status === "lobby";
+  if (aidixitConfigBox) {
+    aidixitConfigBox.classList.toggle("hidden", !showRow);
+    aidixitConfigBox.setAttribute("aria-hidden", (!showRow).toString());
+  }
   if (aidixitDeckRow) {
     aidixitDeckRow.classList.toggle("hidden", !showRow);
     aidixitDeckRow.setAttribute("aria-hidden", (!showRow).toString());
