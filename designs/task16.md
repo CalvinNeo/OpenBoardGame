@@ -130,3 +130,8 @@
 
 ---
 
+## 4. 前端展示与回合记录 (UI / State Notes)
+
+* 在 Flip 7 面板新增 **Last Round** 区块（放在 Players 面板下方）。
+* Last Round 需要展示每位玩家上一轮的翻牌列表（包含数字牌、功能牌、修正牌），并标注是否爆牌（如状态 `busted`），可同时标出 Flip 7 达成者。
+* 后端应在每次翻牌时记录本轮翻牌序列，并在回合结束时写入 `last_round_summary.flips`，供前端渲染。
