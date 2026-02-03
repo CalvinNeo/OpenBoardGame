@@ -156,6 +156,9 @@ const seatClaimNameHint = document.getElementById("seatClaimNameHint");
 const seatClaimRoomLabel = document.getElementById("seatClaimRoomLabel");
 const seatClaimList = document.getElementById("seatClaimList");
 const seatClaimEmpty = document.getElementById("seatClaimEmpty");
+const aidixitZoomModal = document.getElementById("aidixitZoomModal");
+const aidixitZoomCloseBtn = document.getElementById("aidixitZoomCloseBtn");
+const aidixitZoomImage = document.getElementById("aidixitZoomImage");
 const roomControlsPanel = document.getElementById("roomControlsPanel");
 const roomControlsToggleBtn = document.getElementById("roomControlsToggleBtn");
 
@@ -698,6 +701,23 @@ function openSeatClaimModal(roomId, sourceRoomId) {
 function closeSeatClaimModal() {
   clearPendingSeatClaim();
   setModalVisible(seatClaimModal, false);
+}
+
+function openAidixitZoom(imageUrl, altText) {
+  if (!aidixitZoomModal || !aidixitZoomImage || !imageUrl) {
+    return;
+  }
+  aidixitZoomImage.src = imageUrl;
+  aidixitZoomImage.alt = altText || "Card detail";
+  setModalVisible(aidixitZoomModal, true);
+}
+
+function closeAidixitZoom() {
+  if (!aidixitZoomModal || !aidixitZoomImage) {
+    return;
+  }
+  setModalVisible(aidixitZoomModal, false);
+  aidixitZoomImage.src = "";
 }
 
 function downloadSaveFile(sourceRoomId) {
@@ -5561,6 +5581,19 @@ function createAidixitCardElement(card, options = {}) {
   img.src = card.image_url || aidixitCardUrl(cardId);
   img.alt = cardId || "card";
   wrapper.appendChild(img);
+  if (options.zoomable) {
+    const zoomBtn = document.createElement("button");
+    zoomBtn.type = "button";
+    zoomBtn.className = "aidixit-zoom-btn";
+    zoomBtn.setAttribute("aria-label", "Zoom card");
+    zoomBtn.title = "Zoom";
+    zoomBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      openAidixitZoom(img.src, img.alt);
+    });
+    wrapper.appendChild(zoomBtn);
+  }
   if (options.count !== undefined) {
     const badge = document.createElement("div");
     badge.className = "aidixit-card-count";
@@ -5590,7 +5623,7 @@ function renderAidixitHand(view) {
   const locked = view.game_over || !canSelect || view.submitted;
   view.hand.forEach((card) => {
     const selected = aidixitSelectedHandCardId === card.card_id;
-    const cardEl = createAidixitCardElement(card, { selected, disabled: locked });
+    const cardEl = createAidixitCardElement(card, { selected, disabled: locked, zoomable: true });
     if (!locked) {
       cardEl.addEventListener("click", () => {
         aidixitSelectedHandCardId = card.card_id;
@@ -7247,6 +7280,20 @@ if (loadModalCloseBtn) {
 if (seatClaimCloseBtn) {
   seatClaimCloseBtn.addEventListener("click", () => {
     closeSeatClaimModal();
+  });
+}
+
+if (aidixitZoomCloseBtn) {
+  aidixitZoomCloseBtn.addEventListener("click", () => {
+    closeAidixitZoom();
+  });
+}
+
+if (aidixitZoomModal) {
+  aidixitZoomModal.addEventListener("click", (event) => {
+    if (event.target === aidixitZoomModal) {
+      closeAidixitZoom();
+    }
   });
 }
 

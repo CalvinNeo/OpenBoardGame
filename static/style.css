@@ -1866,6 +1866,10 @@ body.log-open {
   cursor: pointer;
 }
 
+.aidixit-hand .aidixit-card {
+  width: 240px;
+}
+
 .aidixit-card img {
   width: 100%;
   height: auto;
@@ -1874,6 +1878,50 @@ body.log-open {
   display: block;
   border-radius: 4px;
   background: #f3f4f6;
+}
+
+.aidixit-zoom-btn {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  background: rgba(15, 23, 42, 0.7);
+  cursor: zoom-in;
+  display: inline-block;
+  padding: 0;
+  z-index: 2;
+}
+
+.aidixit-zoom-btn::before {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  top: 6px;
+  left: 6px;
+  box-sizing: border-box;
+}
+
+.aidixit-zoom-btn::after {
+  content: "";
+  position: absolute;
+  width: 8px;
+  height: 2px;
+  background: #fff;
+  border-radius: 2px;
+  bottom: 6px;
+  right: 6px;
+  transform: rotate(45deg);
+  transform-origin: left center;
+}
+
+.aidixit-zoom-btn:hover {
+  background: rgba(15, 23, 42, 0.85);
 }
 
 .aidixit-card.selected {
@@ -1888,7 +1936,6 @@ body.log-open {
 .aidixit-card.disabled {
   opacity: 0.6;
   cursor: default;
-  pointer-events: none;
 }
 
 .aidixit-card-count {
@@ -1940,6 +1987,25 @@ body.log-open {
   border-radius: 50%;
   margin-right: 6px;
   border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.aidixit-zoom-modal {
+  max-width: 960px;
+}
+
+.aidixit-zoom-modal .modal-body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.aidixit-zoom-modal img {
+  max-width: 100%;
+  max-height: 72vh;
+  height: auto;
+  border-radius: 8px;
+  background: #f3f4f6;
+  object-fit: contain;
 }
 
 @media (max-width: 900px) {
