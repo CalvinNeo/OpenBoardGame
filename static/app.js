@@ -5112,6 +5112,7 @@ function drawImpressionStamp(stamp) {
   impressionCtx.save();
   if (stamp.mask) {
     impressionCtx.beginPath();
+    impressionCtx.rect(0, 0, impressionCanvas.width, impressionCanvas.height);
     impressionCtx.save();
     impressionCtx.translate(stamp.x, stamp.y);
     impressionCtx.rotate(stamp.rotation);
@@ -5119,7 +5120,7 @@ function drawImpressionStamp(stamp) {
     impressionCtx.rotate(stamp.mask.rotation);
     impressionCtx.rect(-stamp.mask.size / 2, -stamp.mask.size / 2, stamp.mask.size, stamp.mask.size);
     impressionCtx.restore();
-    impressionCtx.clip();
+    impressionCtx.clip("evenodd");
   }
   impressionCtx.translate(stamp.x, stamp.y);
   impressionCtx.rotate(stamp.rotation);
