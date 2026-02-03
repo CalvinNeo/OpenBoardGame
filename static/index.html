@@ -24,7 +24,7 @@
         <button id="loadModalCloseBtn" type="button">Close</button>
       </div>
       <div class="modal-body">
-        <div class="row load-options">
+        <div class="row load-options toggle-row">
           <label for="loadAutoSaveToggle">Auto Save New Room</label>
           <input id="loadAutoSaveToggle" type="checkbox" />
           <span class="hint">Save after each game state change.</span>
@@ -153,7 +153,7 @@
                         <option value="cv">CV</option>
                       </select>
                     </div>
-                    <div class="row hidden" id="drawGuessAnswerLengthOptionRow">
+                    <div class="row hidden toggle-row" id="drawGuessAnswerLengthOptionRow">
                       <label for="drawGuessAnswerLengthToggle">Answer Length</label>
                       <input id="drawGuessAnswerLengthToggle" type="checkbox" />
                       <span class="hint">Show the number of characters while guessing.</span>
@@ -186,7 +186,7 @@
                     </div>
                   </div>
                 </div>
-                <div class="row hidden" id="autoSaveRow">
+                <div class="row hidden toggle-row" id="autoSaveRow">
                   <label for="autoSaveToggle">Auto Save</label>
                   <input id="autoSaveToggle" type="checkbox" />
                   <span class="hint">Save after each game state change.</span>

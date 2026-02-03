@@ -1760,6 +1760,26 @@ body.log-open {
     width: 100%;
   }
 
+  .row.toggle-row {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .row.toggle-row label {
+    width: auto;
+  }
+
+  .row.toggle-row input[type="checkbox"] {
+    width: auto;
+    flex: 0 0 auto;
+  }
+
+  .row.toggle-row .hint {
+    flex: 1 1 160px;
+    min-width: 0;
+  }
+
   input,
   select,
   textarea,
