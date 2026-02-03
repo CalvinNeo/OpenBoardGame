@@ -1,6 +1,11 @@
 import argparse
 import sys
+from pathlib import Path
 from typing import List
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 from game import draw_guess_quickdraw as quickdraw
 from game.draw_guess_prompts import DEFAULT_PROMPTS_BY_LANGUAGE

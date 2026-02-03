@@ -2,6 +2,9 @@
 .quickdraw_cache/
 .decrypto/
 .data/
+.aidixit/
+.ai/
+backup
 
 __pycache__/
 *.py[cod]
