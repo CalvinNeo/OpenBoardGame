@@ -327,6 +327,46 @@ async def _emit_game_state(room: Room, events: Optional[List[Dict]] = None) -> N
         await sio.emit("game:state", payload, to=player.socket_id)
 
 
+def _schedule_halli_flip_reveal(room: Room) -> None:
+    if room.game_type != "halli_galli" or room.status != "in_game" or not room.game_state:
+        return
+    pending = room.game_state.get("pending_flip")
+    if not pending:
+        return
+    reveal_at_ms = pending.get("reveal_at_ms")
+    if reveal_at_ms is None:
+        return
+    try:
+        reveal_at_ms = int(reveal_at_ms)
+    except (TypeError, ValueError):
+        return
+    delay_s = max(0.0, (reveal_at_ms - int(time.time() * 1000)) / 1000.0)
+
+    async def _reveal(expected_reveal_at: int) -> None:
+        await asyncio.sleep(delay_s)
+        if room.game_type != "halli_galli" or room.status != "in_game" or not room.game_state:
+            return
+        state = room.game_state
+        pending_now = state.get("pending_flip")
+        if not pending_now or pending_now.get("reveal_at_ms") != expected_reveal_at:
+            return
+        from game.halli_galli import HalliGalliGame
+
+        changed = HalliGalliGame.resolve_pending_flip(state, int(time.time() * 1000))
+        if not changed:
+            return
+        room.state_version += 1
+        if state.get("game_over"):
+            room.status = "game_over"
+            await _emit_room_state(room)
+            await _emit_room_list_update()
+        _save_room_state(room)
+        await _emit_game_state(room)
+        await _maybe_run_bots(room)
+
+    asyncio.create_task(_reveal(reveal_at_ms))
+
+
 async def _send_error(sid: str, message: str) -> None:
     await sio.emit("system:error", {"message": message}, to=sid)
 
@@ -399,6 +439,7 @@ async def _maybe_run_bots(room: Room) -> None:
                 room.state_version += 1
                 if state.get("game_over"):
                     room.status = "game_over"
+                _schedule_halli_flip_reveal(room)
                 _save_room_state(room)
                 await _emit_game_state(room, events)
                 await asyncio.sleep(0.25)
@@ -1041,6 +1082,7 @@ async def on_game_action(sid, data):
         room.status = "game_over"
         await _emit_room_state(room)
         await _emit_room_list_update()
+    _schedule_halli_flip_reveal(room)
     _save_room_state(room)
     await _emit_game_state(room, events)
     await _maybe_run_bots(room)

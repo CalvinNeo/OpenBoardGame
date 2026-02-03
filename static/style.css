@@ -843,6 +843,39 @@ body.log-open {
   opacity: 0.65;
 }
 
+.halli-player-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  margin-bottom: 6px;
+}
+
+.halli-player-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.halli-player-badges {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.halli-player-card .badge {
+  font-size: 11px;
+  padding: 1px 6px;
+}
+
+.halli-player-topcard {
+  font-size: 20px;
+  font-weight: 600;
+  min-width: 64px;
+  text-align: right;
+}
+
 .player-header {
   display: flex;
   justify-content: space-between;

@@ -222,7 +222,9 @@ HALLI_GALLI_ACTION_SCHEMA = {
 
 HALLI_GALLI_CONFIG_SCHEMA = {
     "type": "object",
-    "properties": {},
+    "properties": {
+        "flip_reveal_delay_ms": {"type": "integer", "minimum": 0},
+    },
     "additionalProperties": False,
 }
 

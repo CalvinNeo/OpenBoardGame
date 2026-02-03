@@ -233,11 +233,17 @@ const coyotePlayers = document.getElementById("coyotePlayers");
 const halliTurnLabel = document.getElementById("halliTurn");
 const halliBellLabel = document.getElementById("halliBell");
 const halliWinnerLabel = document.getElementById("halliWinner");
-const halliTotalsLabel = document.getElementById("halliTotals");
 const halliLastActionLabel = document.getElementById("halliLastAction");
+const halliLastRingLabel = document.getElementById("halliLastRing");
 const halliFlipBtn = document.getElementById("halliFlipBtn");
 const halliRingBtn = document.getElementById("halliRingBtn");
 const halliPlayers = document.getElementById("halliPlayers");
+const halliFruitEmoji = {
+  banana: "🍌",
+  strawberry: "🍓",
+  cherry: "🍒",
+  lemon: "🍋",
+};
 
 const decryptoPhaseLabel = document.getElementById("decryptoPhase");
 const decryptoRoundLabel = document.getElementById("decryptoRound");
@@ -1804,11 +1810,11 @@ function clearHalliState() {
   if (halliWinnerLabel) {
     halliWinnerLabel.textContent = "-";
   }
-  if (halliTotalsLabel) {
-    halliTotalsLabel.textContent = "-";
-  }
   if (halliLastActionLabel) {
     halliLastActionLabel.textContent = "-";
+  }
+  if (halliLastRingLabel) {
+    halliLastRingLabel.textContent = "-";
   }
   if (halliPlayers) {
     halliPlayers.innerHTML = "";
@@ -3896,18 +3902,38 @@ function renderCoyotePlayers(view) {
   });
 }
 
-function formatHalliTotals(view) {
-  if (!view || !view.fruit_totals) {
+function formatHalliFruit(fruit) {
+  if (!fruit) {
+    return "?";
+  }
+  return halliFruitEmoji[fruit] || fruit;
+}
+
+function formatHalliFruitList(fruits, totals = null) {
+  if (!Array.isArray(fruits) || !fruits.length) {
     return "-";
   }
-  const bellFruits = new Set(view.bell_fruits || []);
-  const entries = Object.entries(view.fruit_totals);
-  if (!entries.length) {
+  return fruits
+    .map((fruit) => {
+      const emoji = formatHalliFruit(fruit);
+      if (totals && Object.prototype.hasOwnProperty.call(totals, fruit)) {
+        return `${emoji} ${totals[fruit]}`;
+      }
+      return emoji;
+    })
+    .join(", ");
+}
+
+function formatHalliCard(card) {
+  if (!card) {
     return "-";
   }
-  return entries
-    .map(([fruit, total]) => `${fruit} ${total}${bellFruits.has(fruit) ? "!" : ""}`)
-    .join(" | ");
+  const emoji = formatHalliFruit(card.fruit);
+  const count = Number.isFinite(card.count) ? card.count : null;
+  if (count !== null) {
+    return `${emoji} ${count}`;
+  }
+  return emoji;
 }
 
 function formatHalliLastAction(view) {
@@ -3918,19 +3944,30 @@ function formatHalliLastAction(view) {
   const actor = last.player_id ? findPlayerName(view, last.player_id) : "Unknown";
   if (last.type === "flip") {
     const card = last.card;
-    const cardLabel = card ? `${card.count} ${card.fruit}` : "card";
+    const cardLabel = card ? formatHalliCard(card) : "card";
     return `${actor} flipped ${cardLabel}`;
   }
   if (last.type === "ring") {
     if (last.result === "success") {
-      const fruits = Array.isArray(last.bell_fruits) && last.bell_fruits.length
-        ? last.bell_fruits.join(", ")
-        : "match";
+      const fruits = formatHalliFruitList(last.bell_fruits);
       return `${actor} rang (success: ${fruits}, +${last.collected || 0} cards)`;
     }
     return `${actor} rang (false, penalty ${last.penalty_given || 0})`;
   }
   return "-";
+}
+
+function formatHalliLastRingResult(view) {
+  const last = view ? view.last_ring_result : null;
+  if (!last) {
+    return "-";
+  }
+  const actor = last.player_id ? findPlayerName(view, last.player_id) : "Unknown";
+  const fruits = formatHalliFruitList(last.fruits);
+  if (last.result === "success") {
+    return `${actor} success: ${fruits}`;
+  }
+  return `${actor} fail: ${fruits}`;
 }
 
 function renderHalliPlayers(view) {
@@ -3940,22 +3977,22 @@ function renderHalliPlayers(view) {
   halliPlayers.innerHTML = "";
   view.players.forEach((p) => {
     const card = document.createElement("div");
-    card.className = "player-card";
+    card.className = "player-card halli-player-card";
     if (p.player_id === view.current_turn) {
       card.classList.add("current");
     }
     if (p.eliminated) {
       card.classList.add("disabled");
     }
-    const header = document.createElement("div");
-    header.className = "player-header";
+    const info = document.createElement("div");
+    info.className = "halli-player-info";
     const name = document.createElement("div");
     name.className = "player-name";
     name.textContent = p.name;
-    header.appendChild(name);
+    info.appendChild(name);
 
     const badges = document.createElement("div");
-    badges.className = "player-badges";
+    badges.className = "player-badges halli-player-badges";
     const handBadge = document.createElement("span");
     handBadge.className = "badge";
     handBadge.textContent = `hand ${p.hand_count}`;
@@ -3983,14 +4020,13 @@ function renderHalliPlayers(view) {
       badges.appendChild(outBadge);
     }
 
-    header.appendChild(badges);
-    card.appendChild(header);
+    info.appendChild(badges);
+    card.appendChild(info);
 
-    const meta = document.createElement("div");
-    meta.className = "player-meta";
-    const topCard = p.top_card ? p.top_card.label || `${p.top_card.count} ${p.top_card.fruit}` : "-";
-    meta.textContent = `top ${topCard}`;
-    card.appendChild(meta);
+    const topCard = document.createElement("div");
+    topCard.className = "halli-player-topcard";
+    topCard.textContent = formatHalliCard(p.top_card);
+    card.appendChild(topCard);
     halliPlayers.appendChild(card);
   });
 }
@@ -7399,24 +7435,25 @@ function renderHalliGameState(data) {
     halliTurnLabel.textContent = currentPlayer ? currentPlayer.name : view.current_turn || "-";
   }
   if (halliBellLabel) {
-    if (view.bell_ready) {
-      const fruits = Array.isArray(view.bell_fruits) && view.bell_fruits.length
-        ? view.bell_fruits.join(", ")
-        : "ready";
-      halliBellLabel.textContent = `Yes (${fruits})`;
+    const waiting = !!view.pending_flip;
+    if (waiting) {
+      halliBellLabel.textContent = "Wait";
+    } else if (view.bell_ready) {
+      const fruits = formatHalliFruitList(view.bell_fruits);
+      halliBellLabel.textContent = fruits === "-" ? "Yes" : `Yes (${fruits})`;
     } else {
       halliBellLabel.textContent = "No";
     }
-    halliBellLabel.classList.toggle("halli-bell-ready", !!view.bell_ready);
+    halliBellLabel.classList.toggle("halli-bell-ready", !waiting && !!view.bell_ready);
   }
   if (halliWinnerLabel) {
     halliWinnerLabel.textContent = view.winner ? findPlayerName(view, view.winner) : "-";
   }
-  if (halliTotalsLabel) {
-    halliTotalsLabel.textContent = formatHalliTotals(view);
-  }
   if (halliLastActionLabel) {
     halliLastActionLabel.textContent = formatHalliLastAction(view);
+  }
+  if (halliLastRingLabel) {
+    halliLastRingLabel.textContent = formatHalliLastRingResult(view);
   }
 
   renderHalliPlayers(view);
