@@ -469,7 +469,25 @@ async def _maybe_run_bots(room: Room) -> None:
                         break
                 if not bot_action or not bot_player:
                     break
-                events, error = game_module.apply_action(state, bot_player.player_id, bot_action)
+                action_payload = bot_action
+                delay_ms = 0
+                if isinstance(bot_action, dict) and "delay_ms" in bot_action:
+                    action_payload = dict(bot_action)
+                    raw_delay = action_payload.pop("delay_ms", 0)
+                    try:
+                        delay_ms = int(raw_delay)
+                    except (TypeError, ValueError):
+                        delay_ms = 0
+                    if delay_ms < 0:
+                        delay_ms = 0
+                if delay_ms:
+                    await asyncio.sleep(delay_ms / 1000.0)
+                    if room.status != "in_game" or not room.game_state:
+                        break
+                    state = room.game_state
+                    if state.get("game_over"):
+                        break
+                events, error = game_module.apply_action(state, bot_player.player_id, action_payload)
                 if error:
                     break
                 bot_event = {
@@ -477,7 +495,7 @@ async def _maybe_run_bots(room: Room) -> None:
                     "payload": {
                         "player_id": bot_player.player_id,
                         "name": bot_player.name,
-                        "action": bot_action,
+                        "action": action_payload,
                     },
                 }
                 events = [bot_event] + events

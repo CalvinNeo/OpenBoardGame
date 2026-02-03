@@ -3,6 +3,8 @@ import time
 from typing import Dict, List, Optional, Tuple
 
 DEFAULT_CONFIG: Dict = {"flip_reveal_delay_ms": 1000, "flip_wait_ms": 3000}
+BOT_RING_REACTION_MIN_MS = 600
+BOT_RING_REACTION_MAX_MS = 1200
 
 FRUITS = ["banana", "strawberry", "cherry", "lemon"]
 FRUIT_CARD_DISTRIBUTION = {
@@ -460,7 +462,8 @@ class HalliGalliGame:
             return None
         if _bell_fruits(state):
             if random.random() < 0.7:
-                return {"type": "ring"}
+                delay_ms = random.randint(BOT_RING_REACTION_MIN_MS, BOT_RING_REACTION_MAX_MS)
+                return {"type": "ring", "delay_ms": delay_ms}
         if bot_id == state.get("current_turn") and pdata["hand"]:
             if now_ms < _flip_ready_at_ms(state):
                 return None
