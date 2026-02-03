@@ -224,6 +224,7 @@ HALLI_GALLI_CONFIG_SCHEMA = {
     "type": "object",
     "properties": {
         "flip_reveal_delay_ms": {"type": "integer", "minimum": 0},
+        "flip_wait_ms": {"type": "integer", "minimum": 0},
     },
     "additionalProperties": False,
 }

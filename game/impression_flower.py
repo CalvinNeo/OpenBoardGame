@@ -519,10 +519,14 @@ class ImpressionFlowerGame:
         if viewer_id in state.get("assignments", {}):
             prompt_word = state["assignments"].get(viewer_id)
 
-        show_guess_data = viewer_id == guesser_id and state.get("phase") in ("guess", "round_end", "game_over")
+        phase = state.get("phase")
+        show_drawings = phase == "guess" or (
+            viewer_id == guesser_id and phase in ("round_end", "game_over")
+        )
+        show_word_bank = viewer_id == guesser_id and phase in ("guess", "round_end", "game_over")
         drawings = None
         word_bank = None
-        if show_guess_data:
+        if show_drawings:
             drawings = []
             order = state.get("drawing_order") or list(state.get("assignments", {}).keys())
             for setter_id in order:
@@ -538,6 +542,7 @@ class ImpressionFlowerGame:
                         "author_name": setter_meta.get("name"),
                     }
                 )
+        if show_word_bank:
             word_bank = list(state.get("word_bank", []))
 
         cfg = state.get("config", {})

@@ -2,7 +2,7 @@ import random
 import time
 from typing import Dict, List, Optional, Tuple
 
-DEFAULT_CONFIG: Dict = {"flip_reveal_delay_ms": 1000}
+DEFAULT_CONFIG: Dict = {"flip_reveal_delay_ms": 1000, "flip_wait_ms": 3000}
 
 FRUITS = ["banana", "strawberry", "cherry", "lemon"]
 FRUIT_CARD_DISTRIBUTION = {
@@ -107,6 +107,29 @@ def _flip_delay_ms(state: Dict) -> int:
     return max(delay, 0)
 
 
+def _flip_wait_ms(state: Dict) -> int:
+    raw = (state.get("config") or {}).get("flip_wait_ms", 0)
+    try:
+        delay = int(raw)
+    except (TypeError, ValueError):
+        delay = 0
+    return max(delay, 0)
+
+
+def _flip_ready_at_ms(state: Dict) -> int:
+    raw = state.get("flip_ready_at_ms")
+    try:
+        ready_at = int(raw)
+    except (TypeError, ValueError):
+        ready_at = 0
+    return max(ready_at, 0)
+
+
+def _set_flip_ready_at(state: Dict, now_ms: int) -> None:
+    wait_ms = _flip_wait_ms(state)
+    state["flip_ready_at_ms"] = now_ms + wait_ms if wait_ms > 0 else 0
+
+
 def _closest_fruits(totals: Dict[str, int]) -> List[str]:
     if not totals:
         return []
@@ -137,6 +160,7 @@ def _resolve_pending_flip(state: Dict, now_ms: int) -> bool:
         "card": _card_view(card),
     }
     state["current_turn"] = _next_turn(state, player_id)
+    _set_flip_ready_at(state, now_ms)
     _update_eliminations(state)
     _check_game_over(state)
     return True
@@ -236,15 +260,16 @@ class HalliGalliGame:
             "last_action": None,
             "last_ring_result": None,
             "pending_flip": None,
+            "flip_ready_at_ms": 0,
             "winner": None,
             "game_over": False,
         }
 
     @staticmethod
     def get_legal_actions(state: Dict, player_id: str) -> List[str]:
+        now_ms = _now_ms()
         pending = state.get("pending_flip")
         if pending:
-            now_ms = _now_ms()
             reveal_at = int(pending.get("reveal_at_ms") or 0)
             if now_ms < reveal_at:
                 return []
@@ -255,7 +280,9 @@ class HalliGalliGame:
             return []
         actions = ["ring"]
         if player_id == state.get("current_turn") and pdata["hand"]:
-            actions.append("flip")
+            flip_ready_at = _flip_ready_at_ms(state)
+            if now_ms >= flip_ready_at:
+                actions.append("flip")
         return actions
 
     @staticmethod
@@ -280,6 +307,8 @@ class HalliGalliGame:
                 return [], "not your turn"
             if not pdata["hand"]:
                 return [], "no cards to flip"
+            if now_ms < _flip_ready_at_ms(state):
+                return [], "wait to flip"
             card = pdata["hand"].pop()
             delay_ms = _flip_delay_ms(state)
             if delay_ms <= 0:
@@ -291,6 +320,7 @@ class HalliGalliGame:
                 }
                 events.append({"type": "halli_galli:flip", "payload": {"player_id": player_id}})
                 state["current_turn"] = _next_turn(state, player_id)
+                _set_flip_ready_at(state, now_ms)
                 _update_eliminations(state)
                 _check_game_over(state)
                 return events, None
@@ -417,9 +447,9 @@ class HalliGalliGame:
     def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
         if state.get("game_over"):
             return None
+        now_ms = _now_ms()
         pending = state.get("pending_flip")
         if pending:
-            now_ms = _now_ms()
             reveal_at = int(pending.get("reveal_at_ms") or 0)
             if now_ms < reveal_at:
                 return None
@@ -430,6 +460,8 @@ class HalliGalliGame:
             if random.random() < 0.7:
                 return {"type": "ring"}
         if bot_id == state.get("current_turn") and pdata["hand"]:
+            if now_ms < _flip_ready_at_ms(state):
+                return None
             return {"type": "flip"}
         return None
 
