@@ -9,6 +9,14 @@ let currentDecryptoView = null;
 let currentDrawGuessView = null;
 let currentFlip7View = null;
 let currentHalliView = null;
+let halliCountdownTimer = null;
+let halliCountdownState = {
+  flipReadyAtMs: 0,
+  ringReadyAtMs: 0,
+  ringPending: false,
+  flipWaitMs: 0,
+};
+let halliServerTimeOffsetMs = 0;
 let currentImpressionView = null;
 let currentSplendorView = null;
 let currentAbracaView = null;
@@ -233,6 +241,8 @@ const coyotePlayers = document.getElementById("coyotePlayers");
 const halliTurnLabel = document.getElementById("halliTurn");
 const halliBellLabel = document.getElementById("halliBell");
 const halliWinnerLabel = document.getElementById("halliWinner");
+const halliFlipCountdownLabel = document.getElementById("halliFlipCountdown");
+const halliRingCountdownLabel = document.getElementById("halliRingCountdown");
 const halliLastActionLabel = document.getElementById("halliLastAction");
 const halliLastRingLabel = document.getElementById("halliLastRing");
 const halliFlipBtn = document.getElementById("halliFlipBtn");
@@ -1819,6 +1829,7 @@ function clearHalliState() {
   if (halliPlayers) {
     halliPlayers.innerHTML = "";
   }
+  updateHalliCountdownState(null);
   updateHalliActionButtons();
 }
 
@@ -3968,6 +3979,119 @@ function formatHalliLastRingResult(view) {
     return `${actor} success: ${fruits}`;
   }
   return `${actor} fail: ${fruits}`;
+}
+
+function halliNowMs() {
+  return Date.now() + halliServerTimeOffsetMs;
+}
+
+function formatCountdownMs(ms) {
+  if (!Number.isFinite(ms) || ms <= 0) {
+    return "Ready";
+  }
+  if (ms < 1000) {
+    return `${(ms / 1000).toFixed(1)}s`;
+  }
+  return `${Math.ceil(ms / 1000)}s`;
+}
+
+function resetHalliCountdownLabels() {
+  if (halliFlipCountdownLabel) {
+    halliFlipCountdownLabel.textContent = "-";
+    halliFlipCountdownLabel.classList.remove("halli-countdown-active");
+  }
+  if (halliRingCountdownLabel) {
+    halliRingCountdownLabel.textContent = "-";
+    halliRingCountdownLabel.classList.remove("halli-countdown-active");
+  }
+}
+
+function startHalliCountdownTimer() {
+  if (halliCountdownTimer || (!halliFlipCountdownLabel && !halliRingCountdownLabel)) {
+    return;
+  }
+  halliCountdownTimer = window.setInterval(() => {
+    if (currentGameType !== "halli_galli") {
+      stopHalliCountdownTimer();
+      return;
+    }
+    updateHalliCountdownLabels();
+  }, 200);
+}
+
+function stopHalliCountdownTimer() {
+  if (!halliCountdownTimer) {
+    return;
+  }
+  window.clearInterval(halliCountdownTimer);
+  halliCountdownTimer = null;
+}
+
+function updateHalliCountdownState(view) {
+  if (!view) {
+    halliCountdownState = {
+      flipReadyAtMs: 0,
+      ringReadyAtMs: 0,
+      ringPending: false,
+      flipWaitMs: 0,
+    };
+    halliServerTimeOffsetMs = 0;
+    stopHalliCountdownTimer();
+    resetHalliCountdownLabels();
+    return;
+  }
+  const serverNow = Number(view.server_now_ms);
+  if (Number.isFinite(serverNow)) {
+    halliServerTimeOffsetMs = serverNow - Date.now();
+  }
+  const flipReadyAtMs = Number(view.flip_ready_at_ms);
+  const flipWaitMs = view.config ? Number(view.config.flip_wait_ms) : 0;
+  const pending = view.pending_flip;
+  const ringReadyAtMs = pending ? Number(pending.reveal_at_ms) : 0;
+  halliCountdownState = {
+    flipReadyAtMs: Number.isFinite(flipReadyAtMs) ? flipReadyAtMs : 0,
+    ringReadyAtMs: Number.isFinite(ringReadyAtMs) ? ringReadyAtMs : 0,
+    ringPending: !!pending,
+    flipWaitMs: Number.isFinite(flipWaitMs) ? Math.max(flipWaitMs, 0) : 0,
+  };
+  startHalliCountdownTimer();
+  updateHalliCountdownLabels();
+}
+
+function updateHalliCountdownLabels() {
+  if (!currentHalliView || currentGameType !== "halli_galli") {
+    resetHalliCountdownLabels();
+    return;
+  }
+  const now = halliNowMs();
+  const flipRemaining =
+    halliCountdownState.flipReadyAtMs > 0 ? halliCountdownState.flipReadyAtMs - now : 0;
+  const ringRemaining =
+    halliCountdownState.ringReadyAtMs > 0 ? halliCountdownState.ringReadyAtMs - now : 0;
+
+  if (halliFlipCountdownLabel) {
+    let label = "Ready";
+    let active = false;
+    if (halliCountdownState.ringPending) {
+      label = "Waiting reveal";
+    } else if (halliCountdownState.flipWaitMs > 0 && flipRemaining > 0) {
+      label = formatCountdownMs(flipRemaining);
+      active = true;
+    }
+    halliFlipCountdownLabel.textContent = label;
+    halliFlipCountdownLabel.classList.toggle("halli-countdown-active", active);
+  }
+
+  if (halliRingCountdownLabel) {
+    let label = "Ready";
+    let active = false;
+    if (halliCountdownState.ringPending && ringRemaining > 0) {
+      label = formatCountdownMs(ringRemaining);
+      active = true;
+    }
+    halliRingCountdownLabel.textContent = label;
+    halliRingCountdownLabel.classList.toggle("halli-countdown-active", active);
+  }
 }
 
 function renderHalliPlayers(view) {
@@ -7474,6 +7598,7 @@ function renderHalliGameState(data) {
   if (halliLastRingLabel) {
     halliLastRingLabel.textContent = formatHalliLastRingResult(view);
   }
+  updateHalliCountdownState(view);
 
   renderHalliPlayers(view);
   logGameEvents(data);

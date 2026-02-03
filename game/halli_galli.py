@@ -435,6 +435,8 @@ class HalliGalliGame:
             "winner": state.get("winner"),
             "game_over": state.get("game_over", False),
             "config": dict(state.get("config") or {}),
+            "flip_ready_at_ms": _flip_ready_at_ms(state),
+            "server_now_ms": _now_ms(),
             "pending_flip": {
                 "player_id": pending.get("player_id"),
                 "reveal_at_ms": pending.get("reveal_at_ms"),

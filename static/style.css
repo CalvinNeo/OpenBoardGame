@@ -906,6 +906,11 @@ body.log-open {
   font-weight: 600;
 }
 
+.halli-countdown-active {
+  color: #b45309;
+  font-weight: 600;
+}
+
 .badge.highlight {
   background: #1f6feb;
   color: #fff;
