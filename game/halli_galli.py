@@ -2,7 +2,7 @@ import random
 import time
 from typing import Dict, List, Optional, Tuple
 
-DEFAULT_CONFIG: Dict = {"flip_reveal_delay_ms": 0}
+DEFAULT_CONFIG: Dict = {"flip_reveal_delay_ms": 1000}
 
 FRUITS = ["banana", "strawberry", "cherry", "lemon"]
 FRUIT_CARD_DISTRIBUTION = {
