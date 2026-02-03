@@ -7,6 +7,7 @@ let currentSkullView = null;
 let currentCoyoteView = null;
 let currentDecryptoView = null;
 let currentDrawGuessView = null;
+let currentFlip7View = null;
 let currentImpressionView = null;
 let currentSplendorView = null;
 let currentAbracaView = null;
@@ -19,6 +20,7 @@ let currentRoomState = null;
 let roomControlsGameActive = false;
 let roomControlsAutoCollapsed = false;
 let selectedTarget = null;
+let flip7SelectedTarget = null;
 let skullSelectedCardIndex = null;
 let skullSelectedCardType = null;
 let skullSelectedTarget = null;
@@ -125,6 +127,7 @@ const aidixitDeckOptions = document.getElementById("aidixitDeckOptions");
 const autoSaveRow = document.getElementById("autoSaveRow");
 const autoSaveToggle = document.getElementById("autoSaveToggle");
 const caboPanel = document.getElementById("caboPanel");
+const flip7Panel = document.getElementById("flip7Panel");
 const skullPanel = document.getElementById("skullPanel");
 const coyotePanel = document.getElementById("coyotePanel");
 const decryptoPanel = document.getElementById("decryptoPanel");
@@ -140,6 +143,24 @@ const lastDrawn = document.getElementById("lastDrawn");
 const caboBy = document.getElementById("caboBy");
 const caboLeft = document.getElementById("caboLeft");
 const pendingChoice = document.getElementById("pendingChoice");
+
+const flip7PhaseLabel = document.getElementById("flip7Phase");
+const flip7RoundLabel = document.getElementById("flip7Round");
+const flip7TurnLabel = document.getElementById("flip7Turn");
+const flip7DeckLabel = document.getElementById("flip7Deck");
+const flip7DiscardLabel = document.getElementById("flip7Discard");
+const flip7TargetScoreLabel = document.getElementById("flip7TargetScore");
+const flip7PendingLabel = document.getElementById("flip7Pending");
+const flip7FlipWinnerLabel = document.getElementById("flip7FlipWinner");
+const flip7Tableau = document.getElementById("flip7Tableau");
+const flip7TargetSelection = document.getElementById("flip7TargetSelection");
+const flip7ClearTargetBtn = document.getElementById("flip7ClearTarget");
+const flip7Targets = document.getElementById("flip7Targets");
+const flip7Players = document.getElementById("flip7Players");
+const flip7FlipBtn = document.getElementById("flip7FlipBtn");
+const flip7StayBtn = document.getElementById("flip7StayBtn");
+const flip7ChooseTargetBtn = document.getElementById("flip7ChooseTargetBtn");
+const flip7NextRoundBtn = document.getElementById("flip7NextRoundBtn");
 
 const handSlots = document.getElementById("handSlots");
 const selectedSlotsLabel = document.getElementById("selectedSlots");
@@ -416,6 +437,13 @@ const skullActionButtons = {
 const coyoteActionButtons = {
   bid: coyoteBidBtn,
   challenge: coyoteChallengeBtn,
+};
+
+const flip7ActionButtons = {
+  flip: flip7FlipBtn,
+  stay: flip7StayBtn,
+  choose_target: flip7ChooseTargetBtn,
+  next_round: flip7NextRoundBtn,
 };
 
 const decryptoActionButtons = {
@@ -962,6 +990,7 @@ function showCreateGamePicker() {
 
 function setGamePanelVisibility(gameType) {
   const showCabo = gameType === "cabo";
+  const showFlip7 = gameType === "flip7";
   const showSkull = gameType === "skull";
   const showCoyote = gameType === "coyote";
   const showDecrypto = gameType === "decrypto";
@@ -972,6 +1001,9 @@ function setGamePanelVisibility(gameType) {
   const showAbraca = gameType === "abraca_what";
   const showBlokus = gameType === "blokus";
   caboPanel.classList.toggle("hidden", !showCabo);
+  if (flip7Panel) {
+    flip7Panel.classList.toggle("hidden", !showFlip7);
+  }
   skullPanel.classList.toggle("hidden", !showSkull);
   if (coyotePanel) {
     coyotePanel.classList.toggle("hidden", !showCoyote);
@@ -1589,6 +1621,7 @@ function resetRoomState() {
   gameTypeLabel.textContent = "-";
   playersList.innerHTML = "";
   clearCaboState();
+  clearFlip7State();
   clearSkullState();
   clearCoyoteState();
   clearDecryptoState();
@@ -1645,6 +1678,48 @@ function clearCaboState() {
   targetList.innerHTML = "";
   gamePlayers.innerHTML = "";
   updateActionButtons();
+}
+
+function clearFlip7State() {
+  currentFlip7View = null;
+  flip7SelectedTarget = null;
+  if (flip7PhaseLabel) {
+    flip7PhaseLabel.textContent = "-";
+  }
+  if (flip7RoundLabel) {
+    flip7RoundLabel.textContent = "-";
+  }
+  if (flip7TurnLabel) {
+    flip7TurnLabel.textContent = "-";
+  }
+  if (flip7DeckLabel) {
+    flip7DeckLabel.textContent = "-";
+  }
+  if (flip7DiscardLabel) {
+    flip7DiscardLabel.textContent = "-";
+  }
+  if (flip7TargetScoreLabel) {
+    flip7TargetScoreLabel.textContent = "-";
+  }
+  if (flip7PendingLabel) {
+    flip7PendingLabel.textContent = "-";
+  }
+  if (flip7FlipWinnerLabel) {
+    flip7FlipWinnerLabel.textContent = "-";
+  }
+  if (flip7Tableau) {
+    flip7Tableau.innerHTML = "";
+  }
+  if (flip7TargetSelection) {
+    flip7TargetSelection.textContent = "-";
+  }
+  if (flip7Targets) {
+    flip7Targets.innerHTML = "";
+  }
+  if (flip7Players) {
+    flip7Players.innerHTML = "";
+  }
+  updateFlip7ActionButtons();
 }
 
 function clearSkullState() {
@@ -2700,6 +2775,17 @@ function clearTargetSelection() {
   }
 }
 
+function clearFlip7TargetSelection() {
+  flip7SelectedTarget = null;
+  if (currentFlip7View) {
+    updateFlip7TargetSelection(currentFlip7View);
+    renderFlip7Targets(currentFlip7View);
+  } else {
+    updateFlip7TargetSelection(null);
+  }
+  updateFlip7ActionButtons();
+}
+
 function splendorTokenSelectionTotal() {
   return splendorColors.reduce((sum, color) => sum + (splendorTokenSelection[color] || 0), 0);
 }
@@ -3082,6 +3168,7 @@ function renderRoomState(state) {
     clearTargetSelection();
     clearSkullSelection();
     clearCaboState();
+    clearFlip7State();
     clearSkullState();
     clearDecryptoState();
     clearDrawGuessState();
@@ -3288,6 +3375,169 @@ function renderTargets(view) {
       targetList.appendChild(wrapper);
     });
   updateTargetSelection();
+}
+
+function updateFlip7TargetSelection(view) {
+  if (!flip7TargetSelection) {
+    return;
+  }
+  if (!flip7SelectedTarget || !view) {
+    flip7TargetSelection.textContent = "-";
+    return;
+  }
+  const target = view.players.find((p) => p.player_id === flip7SelectedTarget);
+  flip7TargetSelection.textContent = target ? target.name : "-";
+}
+
+function renderFlip7Tableau(view) {
+  if (!flip7Tableau) {
+    return;
+  }
+  flip7Tableau.innerHTML = "";
+  const you = view.players.find((p) => p.player_id === view.you);
+  if (!you || !Array.isArray(you.tableau) || !you.tableau.length) {
+    flip7Tableau.textContent = "-";
+    return;
+  }
+  you.tableau.forEach((card) => {
+    const slot = document.createElement("div");
+    slot.className = "slot";
+    slot.textContent = card.label || "?";
+    flip7Tableau.appendChild(slot);
+  });
+}
+
+function renderFlip7Targets(view) {
+  if (!flip7Targets) {
+    return;
+  }
+  const pending = view.pending_action;
+  const eligible = new Set((pending && pending.eligible_targets) || []);
+  if (flip7SelectedTarget && !eligible.has(flip7SelectedTarget)) {
+    flip7SelectedTarget = null;
+  }
+  flip7Targets.innerHTML = "";
+  if (!pending) {
+    flip7SelectedTarget = null;
+    updateFlip7TargetSelection(view);
+    updateFlip7ActionButtons();
+    return;
+  }
+  view.players.forEach((player) => {
+    const wrapper = document.createElement("div");
+    wrapper.className = "target-player";
+    const isEligible = eligible.has(player.player_id);
+    if (isEligible) {
+      wrapper.classList.add("selectable");
+    } else {
+      wrapper.classList.add("disabled");
+    }
+    if (flip7SelectedTarget === player.player_id) {
+      wrapper.classList.add("selected");
+    }
+    wrapper.textContent = player.name || player.player_id;
+    if (isEligible) {
+      wrapper.addEventListener("click", () => {
+        flip7SelectedTarget = player.player_id;
+        updateFlip7TargetSelection(view);
+        updateFlip7ActionButtons();
+        renderFlip7Targets(view);
+      });
+    }
+    flip7Targets.appendChild(wrapper);
+  });
+  updateFlip7TargetSelection(view);
+}
+
+function renderFlip7Players(view) {
+  if (!flip7Players) {
+    return;
+  }
+  flip7Players.innerHTML = "";
+  view.players.forEach((player) => {
+    const card = document.createElement("div");
+    card.className = "player-card";
+    if (player.player_id === view.current_turn) {
+      card.classList.add("current");
+    }
+    if (player.status !== "active") {
+      card.classList.add("disabled");
+    }
+
+    const header = document.createElement("div");
+    header.className = "player-header";
+    const name = document.createElement("div");
+    name.className = "player-name";
+    name.textContent = player.name || player.player_id;
+    header.appendChild(name);
+
+    const badges = document.createElement("div");
+    badges.className = "player-badges";
+    const score = document.createElement("span");
+    score.className = "badge";
+    score.textContent = `score ${player.score ?? 0}`;
+    badges.appendChild(score);
+    const status = document.createElement("span");
+    status.className = "badge";
+    status.textContent = player.status || "-";
+    badges.appendChild(status);
+    if (player.round_score !== null && player.round_score !== undefined) {
+      const roundScore = document.createElement("span");
+      roundScore.className = "badge";
+      roundScore.textContent = `round ${player.round_score}`;
+      badges.appendChild(roundScore);
+    }
+    if (player.flip7) {
+      const flip7 = document.createElement("span");
+      flip7.className = "badge highlight";
+      flip7.textContent = "flip7";
+      badges.appendChild(flip7);
+    }
+    if (player.has_second_chance) {
+      const chance = document.createElement("span");
+      chance.className = "badge";
+      chance.textContent = "second chance";
+      badges.appendChild(chance);
+    }
+    if (player.player_id === view.you) {
+      const you = document.createElement("span");
+      you.className = "badge";
+      you.textContent = "you";
+      badges.appendChild(you);
+    }
+    if (player.is_bot) {
+      const bot = document.createElement("span");
+      bot.className = "badge";
+      bot.textContent = "bot";
+      badges.appendChild(bot);
+    }
+    header.appendChild(badges);
+
+    const tableauRow = document.createElement("div");
+    tableauRow.className = "player-hand";
+    if (Array.isArray(player.tableau) && player.tableau.length) {
+      player.tableau.forEach((cardData) => {
+        const slot = document.createElement("div");
+        slot.className = "player-slot";
+        slot.textContent = cardData.label || "?";
+        tableauRow.appendChild(slot);
+      });
+    } else {
+      const slot = document.createElement("div");
+      slot.className = "player-slot empty";
+      slot.textContent = "-";
+      tableauRow.appendChild(slot);
+    }
+
+    const meta = document.createElement("div");
+    meta.className = "player-meta";
+    meta.textContent = `numbers ${player.numbers_count ?? 0}`;
+
+    card.appendChild(header);
+    card.appendChild(tableauRow);
+    card.appendChild(meta);
+    flip7Players.appendChild(card);
+  });
 }
 
 function findPlayerName(view, playerId) {
@@ -3598,6 +3848,38 @@ function updateCoyoteActionButtons() {
     button.disabled = !allowed;
   });
   updateCoyoteBidControls(currentCoyoteView);
+}
+
+function isFlip7ActionAvailable(actionType) {
+  if (!currentFlip7View || !Array.isArray(currentFlip7View.legal_actions)) {
+    return false;
+  }
+  if (!currentFlip7View.legal_actions.includes(actionType)) {
+    return false;
+  }
+  if (actionType === "choose_target") {
+    return !!flip7SelectedTarget;
+  }
+  return true;
+}
+
+function updateFlip7ActionButtons() {
+  if (currentGameType !== "flip7") {
+    Object.values(flip7ActionButtons).forEach((button) => {
+      button.classList.remove("action-allowed");
+      button.disabled = true;
+    });
+    return;
+  }
+  Object.entries(flip7ActionButtons).forEach(([actionType, button]) => {
+    const allowed = isFlip7ActionAvailable(actionType);
+    if (allowed) {
+      button.classList.add("action-allowed");
+    } else {
+      button.classList.remove("action-allowed");
+    }
+    button.disabled = !allowed;
+  });
 }
 
 function formatDecryptoTeamLabel(teamId) {
@@ -6716,6 +6998,56 @@ function renderCaboGameState(data) {
   updateActionButtons();
 }
 
+function renderFlip7GameState(data) {
+  const view = data.view;
+  currentFlip7View = view;
+  if (currentGameType !== "flip7") {
+    currentGameType = "flip7";
+    setGamePanelVisibility("flip7");
+  }
+
+  if (flip7PhaseLabel) {
+    flip7PhaseLabel.textContent = view.phase || "-";
+  }
+  if (flip7RoundLabel) {
+    flip7RoundLabel.textContent = view.round ?? "-";
+  }
+  if (flip7TurnLabel) {
+    const currentPlayer = view.players.find((p) => p.player_id === view.current_turn);
+    flip7TurnLabel.textContent = currentPlayer ? currentPlayer.name : view.current_turn || "-";
+  }
+  if (flip7DeckLabel) {
+    flip7DeckLabel.textContent = view.deck_count ?? "-";
+  }
+  if (flip7DiscardLabel) {
+    flip7DiscardLabel.textContent = view.discard_count ?? "-";
+  }
+  if (flip7TargetScoreLabel) {
+    flip7TargetScoreLabel.textContent = view.config ? view.config.target_score ?? "-" : "-";
+  }
+  if (flip7FlipWinnerLabel) {
+    flip7FlipWinnerLabel.textContent = view.flip7_winner
+      ? findPlayerName(view, view.flip7_winner)
+      : "-";
+  }
+  if (flip7PendingLabel) {
+    if (view.pending_action) {
+      const actorName = view.pending_action.actor_id
+        ? findPlayerName(view, view.pending_action.actor_id)
+        : "-";
+      flip7PendingLabel.textContent = `${view.pending_action.label} (${actorName})`;
+    } else {
+      flip7PendingLabel.textContent = "-";
+    }
+  }
+
+  renderFlip7Tableau(view);
+  renderFlip7Targets(view);
+  renderFlip7Players(view);
+  logGameEvents(data);
+  updateFlip7ActionButtons();
+}
+
 function renderSkullGameState(data) {
   const view = data.view;
   currentSkullView = view;
@@ -7115,6 +7447,10 @@ function renderGameState(data) {
     renderCaboGameState(data);
     return;
   }
+  if (gameType === "flip7") {
+    renderFlip7GameState(data);
+    return;
+  }
   if (gameType === "skull") {
     renderSkullGameState(data);
     return;
@@ -7409,6 +7745,12 @@ clearTargetBtn.addEventListener("click", () => {
   clearTargetSelection();
 });
 
+if (flip7ClearTargetBtn) {
+  flip7ClearTargetBtn.addEventListener("click", () => {
+    clearFlip7TargetSelection();
+  });
+}
+
 skullClearSelectionBtn.addEventListener("click", () => {
   clearSkullSelection();
 });
@@ -7531,6 +7873,35 @@ document.getElementById("choiceBtn").addEventListener("click", () => {
   clearSelection();
   clearTargetSelection();
 });
+
+if (flip7FlipBtn) {
+  flip7FlipBtn.addEventListener("click", () => {
+    sendAction({ type: "flip" });
+  });
+}
+
+if (flip7StayBtn) {
+  flip7StayBtn.addEventListener("click", () => {
+    sendAction({ type: "stay" });
+  });
+}
+
+if (flip7ChooseTargetBtn) {
+  flip7ChooseTargetBtn.addEventListener("click", () => {
+    if (!flip7SelectedTarget) {
+      log("Select a target");
+      return;
+    }
+    sendAction({ type: "choose_target", target_player_id: flip7SelectedTarget });
+    clearFlip7TargetSelection();
+  });
+}
+
+if (flip7NextRoundBtn) {
+  flip7NextRoundBtn.addEventListener("click", () => {
+    sendAction({ type: "next_round" });
+  });
+}
 
 skullPlayBtn.addEventListener("click", () => {
   if (!skullSelectedCardType) {

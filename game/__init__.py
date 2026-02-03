@@ -5,6 +5,7 @@ from game.cabo import CaboGame
 from game.coyote import CoyoteGame
 from game.decrypto import DecryptoGame
 from game.draw_guess import DrawGuessGame
+from game.flip7 import Flip7Game
 from game.impression_flower import ImpressionFlowerGame
 from game.registry import GameDefinition, get_game, list_games
 from game.splendor import SplendorGame
@@ -17,6 +18,7 @@ __all__ = [
     "BlokusGame",
     "CaboGame",
     "DrawGuessGame",
+    "Flip7Game",
     "CoyoteGame",
     "DecryptoGame",
     "ImpressionFlowerGame",

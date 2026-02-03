@@ -93,6 +93,7 @@
                   <select id="gameSelect" aria-label="Select game">
                     <option value="" selected disabled>Select a game</option>
                     <option value="cabo">Cabo</option>
+                    <option value="flip7">Flip 7</option>
                     <option value="coyote">Coyote</option>
                     <option value="decrypto">Decrypto</option>
                     <option value="skull">Skull</option>
@@ -260,6 +261,44 @@
 
               <h3>Players</h3>
               <div id="gamePlayers"></div>
+            </div>
+
+            <div id="flip7Panel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="flip7Phase">-</span></div>
+                <div>Round: <span id="flip7Round">-</span></div>
+                <div>Current Turn: <span id="flip7Turn">-</span></div>
+              </div>
+              <div class="row">
+                <div>Deck: <span id="flip7Deck">-</span></div>
+                <div>Discard: <span id="flip7Discard">-</span></div>
+                <div>Target Score: <span id="flip7TargetScore">-</span></div>
+              </div>
+              <div class="row">
+                <div>Pending Action: <span id="flip7Pending">-</span></div>
+                <div>Flip7 Winner: <span id="flip7FlipWinner">-</span></div>
+              </div>
+
+              <h3>Your Tableau</h3>
+              <div id="flip7Tableau" class="hand"></div>
+
+              <h3>Actions</h3>
+              <div class="row actions">
+                <button id="flip7FlipBtn">Flip</button>
+                <button id="flip7StayBtn">Stay</button>
+                <button id="flip7ChooseTargetBtn">Choose Target</button>
+                <button id="flip7NextRoundBtn">Next Round</button>
+              </div>
+
+              <h3>Targets</h3>
+              <div class="row">
+                <div>Selected Target: <span id="flip7TargetSelection">-</span></div>
+                <button id="flip7ClearTarget">Clear</button>
+              </div>
+              <div id="flip7Targets" class="target-list"></div>
+
+              <h3>Players</h3>
+              <div id="flip7Players"></div>
             </div>
 
             <div id="skullPanel" class="hidden">

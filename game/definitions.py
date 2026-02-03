@@ -4,6 +4,7 @@ from game.cabo import CaboGame
 from game.coyote import CoyoteGame
 from game.decrypto import DecryptoGame
 from game.draw_guess import DrawGuessGame
+from game.flip7 import Flip7Game
 from game.impression_flower import ImpressionFlowerGame
 from game.registry import GameDefinition, register_game
 from game.splendor import SplendorGame
@@ -183,6 +184,29 @@ DRAW_GUESS_CONFIG_SCHEMA = {
                 ]
             },
         },
+    },
+    "additionalProperties": False,
+}
+
+FLIP7_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {"type": "object", "properties": {"type": {"const": "flip"}}, "required": ["type"], "additionalProperties": False},
+        {"type": "object", "properties": {"type": {"const": "stay"}}, "required": ["type"], "additionalProperties": False},
+        {
+            "type": "object",
+            "properties": {"type": {"const": "choose_target"}, "target_player_id": {"type": "string"}},
+            "required": ["type", "target_player_id"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "next_round"}}, "required": ["type"], "additionalProperties": False},
+    ],
+}
+
+FLIP7_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "target_score": {"type": "integer", "minimum": 1},
     },
     "additionalProperties": False,
 }
@@ -648,5 +672,20 @@ register_game(
         module=AiDixitGame,
         serialize=AiDixitGame.serialize,
         deserialize=AiDixitGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=Flip7Game.game_id,
+        name="Flip 7",
+        min_players=Flip7Game.min_players,
+        max_players=Flip7Game.max_players,
+        turn_mode="turn",
+        action_schema=FLIP7_ACTION_SCHEMA,
+        config_schema=FLIP7_CONFIG_SCHEMA,
+        module=Flip7Game,
+        serialize=Flip7Game.serialize,
+        deserialize=Flip7Game.deserialize,
     )
 )
