@@ -251,6 +251,7 @@ const halliLastRingLabel = document.getElementById("halliLastRing");
 const halliFlipBtn = document.getElementById("halliFlipBtn");
 const halliRingBtn = document.getElementById("halliRingBtn");
 const halliPlayers = document.getElementById("halliPlayers");
+const halliBellCenter = document.getElementById("halliBellCenter");
 const halliFruitEmoji = {
   banana: "🍌",
   strawberry: "🍓",
@@ -1873,6 +1874,11 @@ function clearHalliState() {
   }
   if (halliPlayers) {
     halliPlayers.innerHTML = "";
+  }
+  if (halliBellCenter) {
+    halliBellCenter.classList.remove("halli-bell-center-ready", "halli-bell-center-waiting");
+    halliBellCenter.classList.remove("halli-bell-center-actionable", "halli-bell-center-disabled");
+    halliBellCenter.setAttribute("aria-disabled", "true");
   }
   updateHalliCountdownState(null);
   updateHalliActionButtons();
@@ -4159,14 +4165,39 @@ function renderHalliPlayers(view) {
     return;
   }
   halliPlayers.innerHTML = "";
-  view.players.forEach((p) => {
+  view.players.forEach((p, index) => {
     const card = document.createElement("div");
     card.className = "player-card halli-player-card";
+    const seatIndex = (index % 8) + 1;
+    card.classList.add(`halli-seat-${seatIndex}`);
     if (p.player_id === view.current_turn) {
       card.classList.add("current");
     }
     if (p.eliminated) {
       card.classList.add("disabled");
+    }
+    if (p.player_id === view.you) {
+      const flipAllowed = currentGameType === "halli_galli" && isHalliActionAvailable("flip");
+      card.classList.add("halli-self-seat");
+      card.classList.toggle("halli-self-actionable", flipAllowed);
+      card.classList.toggle("halli-self-disabled", !flipAllowed);
+      card.setAttribute("role", "button");
+      card.setAttribute("tabindex", "0");
+      card.setAttribute("aria-label", "Flip");
+      card.setAttribute("aria-disabled", (!flipAllowed).toString());
+      const triggerFlip = () => {
+        if (!flipAllowed) {
+          return;
+        }
+        sendAction({ type: "flip" });
+      };
+      card.addEventListener("click", triggerFlip);
+      card.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          triggerFlip();
+        }
+      });
     }
     const info = document.createElement("div");
     info.className = "halli-player-info";
@@ -4309,6 +4340,11 @@ function updateHalliActionButtons() {
       button.classList.remove("action-allowed");
       button.disabled = true;
     });
+    if (halliBellCenter) {
+      halliBellCenter.classList.remove("halli-bell-center-actionable");
+      halliBellCenter.classList.add("halli-bell-center-disabled");
+      halliBellCenter.setAttribute("aria-disabled", "true");
+    }
     return;
   }
   Object.entries(halliActionButtons).forEach(([actionType, button]) => {
@@ -4320,6 +4356,12 @@ function updateHalliActionButtons() {
     }
     button.disabled = !allowed;
   });
+  if (halliBellCenter) {
+    const ringAllowed = isHalliActionAvailable("ring");
+    halliBellCenter.classList.toggle("halli-bell-center-actionable", ringAllowed);
+    halliBellCenter.classList.toggle("halli-bell-center-disabled", !ringAllowed);
+    halliBellCenter.setAttribute("aria-disabled", (!ringAllowed).toString());
+  }
 }
 
 function isFlip7ActionAvailable(actionType) {
@@ -7656,6 +7698,11 @@ function renderHalliGameState(data) {
     }
     halliBellLabel.classList.toggle("halli-bell-ready", !waiting && !!view.bell_ready);
   }
+  if (halliBellCenter) {
+    const waiting = !!view.pending_flip;
+    halliBellCenter.classList.toggle("halli-bell-center-ready", !waiting && !!view.bell_ready);
+    halliBellCenter.classList.toggle("halli-bell-center-waiting", waiting);
+  }
   if (halliWinnerLabel) {
     halliWinnerLabel.textContent = view.winner ? findPlayerName(view, view.winner) : "-";
   }
@@ -8515,6 +8562,25 @@ if (halliFlipBtn) {
 if (halliRingBtn) {
   halliRingBtn.addEventListener("click", () => {
     sendAction({ type: "ring" });
+  });
+}
+
+if (halliBellCenter) {
+  const ringBell = () => {
+    if (currentGameType !== "halli_galli") {
+      return;
+    }
+    if (!isHalliActionAvailable("ring")) {
+      return;
+    }
+    sendAction({ type: "ring" });
+  };
+  halliBellCenter.addEventListener("click", ringBell);
+  halliBellCenter.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      ringBell();
+    }
   });
 }
 

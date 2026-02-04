@@ -406,14 +406,19 @@
                 <div>Last Action: <span id="halliLastAction">-</span></div>
               </div>
 
-              <h3>Actions</h3>
-              <div class="row actions">
-                <button id="halliFlipBtn">Flip</button>
-                <button id="halliRingBtn">Ring Bell</button>
+              <div class="hidden" aria-hidden="true">
+                <h3>Actions</h3>
+                <div class="row actions">
+                  <button id="halliFlipBtn">Flip</button>
+                  <button id="halliRingBtn">Ring Bell</button>
+                </div>
               </div>
 
-              <h3>Players</h3>
-              <div id="halliPlayers"></div>
+              <h3>Table</h3>
+              <div id="halliTable" class="halli-table">
+                <div id="halliPlayers" class="halli-players"></div>
+                <div id="halliBellCenter" class="halli-bell-center" role="button" tabindex="0" aria-label="Ring Bell">🔔</div>
+              </div>
             </div>
 
             <div id="decryptoPanel" class="hidden">

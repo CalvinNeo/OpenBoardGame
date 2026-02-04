@@ -845,11 +845,28 @@ body.log-open {
 
 .halli-player-card {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 6px 8px;
-  margin-bottom: 6px;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  margin-bottom: 0;
+  min-height: 86px;
+  text-align: center;
+}
+
+.halli-self-actionable {
+  cursor: pointer;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25);
+}
+
+.halli-self-actionable:active {
+  transform: scale(0.98);
+}
+
+.halli-self-disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .halli-player-info {
@@ -872,8 +889,184 @@ body.log-open {
 .halli-player-topcard {
   font-size: 20px;
   font-weight: 600;
-  min-width: 64px;
-  text-align: right;
+  min-width: 0;
+  text-align: center;
+}
+
+.halli-table {
+  position: relative;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.halli-players {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(140px, 1fr));
+  grid-template-rows: repeat(3, minmax(90px, 1fr));
+  gap: 10px;
+  align-items: stretch;
+}
+
+.halli-seat-1 {
+  grid-area: 1 / 1;
+}
+
+.halli-seat-2 {
+  grid-area: 1 / 2;
+}
+
+.halli-seat-3 {
+  grid-area: 1 / 3;
+}
+
+.halli-seat-4 {
+  grid-area: 2 / 3;
+}
+
+.halli-seat-5 {
+  grid-area: 3 / 3;
+}
+
+.halli-seat-6 {
+  grid-area: 3 / 2;
+}
+
+.halli-seat-7 {
+  grid-area: 3 / 1;
+}
+
+.halli-seat-8 {
+  grid-area: 2 / 1;
+}
+
+.halli-bell-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 72px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 44px;
+  background: #fff;
+  border-radius: 999px;
+  border: 2px solid #e5e7eb;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.halli-bell-center-actionable {
+  cursor: pointer;
+}
+
+.halli-bell-center-actionable:active {
+  transform: translate(-50%, -50%) scale(0.96);
+}
+
+.halli-bell-center-disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.halli-bell-center-ready {
+  border-color: #16a34a;
+  box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.18), 0 6px 16px rgba(15, 23, 42, 0.12);
+}
+
+.halli-bell-center-waiting {
+  opacity: 0.6;
+}
+
+@media (max-width: 900px) {
+  .halli-table {
+    max-width: 100%;
+    padding: 10px;
+  }
+
+  .halli-players {
+    grid-template-columns: repeat(3, minmax(120px, 1fr));
+    grid-template-rows: repeat(3, minmax(80px, 1fr));
+    gap: 8px;
+  }
+
+  .halli-bell-center {
+    width: 64px;
+    height: 64px;
+    font-size: 38px;
+  }
+
+  .halli-player-card {
+    min-height: 78px;
+    padding: 6px;
+  }
+
+  .halli-player-topcard {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 640px) {
+  .halli-table {
+    padding: 8px;
+  }
+
+  .halli-players {
+    grid-template-columns: repeat(3, minmax(96px, 1fr));
+    grid-template-rows: repeat(3, minmax(68px, 1fr));
+    gap: 6px;
+  }
+
+  .halli-player-card {
+    min-height: 64px;
+    padding: 5px;
+    gap: 4px;
+  }
+
+  .halli-player-card .badge {
+    font-size: 10px;
+    padding: 1px 5px;
+  }
+
+  .halli-player-topcard {
+    font-size: 16px;
+  }
+
+  .halli-bell-center {
+    width: 56px;
+    height: 56px;
+    font-size: 34px;
+  }
+}
+
+@media (max-width: 420px) {
+  .halli-players {
+    grid-template-columns: repeat(3, minmax(82px, 1fr));
+    grid-template-rows: repeat(3, minmax(60px, 1fr));
+    gap: 4px;
+  }
+
+  .halli-player-card {
+    min-height: 58px;
+    padding: 4px;
+  }
+
+  .halli-player-card .badge {
+    font-size: 9px;
+    padding: 1px 4px;
+  }
+
+  .halli-bell-center {
+    width: 50px;
+    height: 50px;
+    font-size: 30px;
+  }
 }
 
 .player-header {
