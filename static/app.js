@@ -2904,7 +2904,7 @@ function clearFlip7TargetSelection() {
   flip7SelectedTarget = null;
   if (currentFlip7View) {
     updateFlip7TargetSelection(currentFlip7View);
-    renderFlip7Targets(currentFlip7View);
+    renderFlip7Players(currentFlip7View);
   } else {
     updateFlip7TargetSelection(null);
   }
@@ -3537,58 +3537,41 @@ function renderFlip7Tableau(view) {
   });
 }
 
-function renderFlip7Targets(view) {
-  if (!flip7Targets) {
-    return;
-  }
-  const pending = view.pending_action;
-  const eligible = new Set((pending && pending.eligible_targets) || []);
-  if (flip7SelectedTarget && !eligible.has(flip7SelectedTarget)) {
-    flip7SelectedTarget = null;
-  }
-  flip7Targets.innerHTML = "";
-  if (!pending) {
-    flip7SelectedTarget = null;
-    updateFlip7TargetSelection(view);
-    updateFlip7ActionButtons();
-    return;
-  }
-  view.players.forEach((player) => {
-    const wrapper = document.createElement("div");
-    wrapper.className = "target-player";
-    const isEligible = eligible.has(player.player_id);
-    if (isEligible) {
-      wrapper.classList.add("selectable");
-    } else {
-      wrapper.classList.add("disabled");
-    }
-    if (flip7SelectedTarget === player.player_id) {
-      wrapper.classList.add("selected");
-    }
-    wrapper.textContent = player.name || player.player_id;
-    if (isEligible) {
-      wrapper.addEventListener("click", () => {
-        flip7SelectedTarget = player.player_id;
-        updateFlip7TargetSelection(view);
-        updateFlip7ActionButtons();
-        renderFlip7Targets(view);
-      });
-    }
-    flip7Targets.appendChild(wrapper);
-  });
-  updateFlip7TargetSelection(view);
-}
-
 function renderFlip7Players(view) {
   if (!flip7Players) {
     return;
   }
   flip7Players.innerHTML = "";
+  const pending = view.pending_action;
+  const eligible = new Set((pending && pending.eligible_targets) || []);
+  const isCurrentUserTurn = view.you && view.current_turn && view.you === view.current_turn;
+  if (flip7SelectedTarget && !eligible.has(flip7SelectedTarget)) {
+    flip7SelectedTarget = null;
+  }
   view.players.forEach((player) => {
     const card = document.createElement("div");
     card.className = "player-card";
     if (player.player_id === view.current_turn) {
       card.classList.add("current");
+    }
+    if (player.player_id === view.you) {
+      card.classList.add("self");
+    }
+    const isEligible = eligible.has(player.player_id);
+    if (pending && isEligible) {
+      card.classList.add("flip7-target-eligible");
+    }
+    if (pending && isEligible && isCurrentUserTurn) {
+      card.classList.add("flip7-target-selectable");
+      card.addEventListener("click", () => {
+        flip7SelectedTarget = player.player_id;
+        updateFlip7TargetSelection(view);
+        updateFlip7ActionButtons();
+        renderFlip7Players(view);
+      });
+    }
+    if (flip7SelectedTarget === player.player_id) {
+      card.classList.add("flip7-target-selected");
     }
     if (player.status !== "active") {
       card.classList.add("disabled");
@@ -7611,8 +7594,6 @@ function renderFlip7GameState(data) {
     }
   }
 
-  renderFlip7Tableau(view);
-  renderFlip7Targets(view);
   renderFlip7LastRound(view);
   renderFlip7Players(view);
   logGameEvents(data);

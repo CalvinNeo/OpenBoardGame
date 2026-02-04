@@ -844,6 +844,19 @@ body.log-open {
   box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
 }
 
+.player-card.flip7-target-eligible {
+  background: #fff6cc;
+}
+
+.player-card.flip7-target-selectable {
+  cursor: pointer;
+}
+
+.player-card.flip7-target-selected {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25);
+}
+
 .player-card.disabled {
   opacity: 0.65;
 }
