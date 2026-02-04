@@ -4147,18 +4147,9 @@ function updateHalliCountdownLabels() {
     halliCountdownState.turnSwitchAtMs > 0 ? halliCountdownState.turnSwitchAtMs - now : 0;
 
   if (halliFlipCountdownLabel) {
-    let label = "Ready";
-    let active = false;
-    if (halliCountdownState.ringPending) {
-      label = "Waiting reveal";
-    } else if (halliCountdownState.flipWaitMs > 0 && flipRemaining > 0) {
-      label = formatCountdownMs(flipRemaining);
-      active = true;
-    }
-    halliFlipCountdownLabel.textContent = label;
-    halliFlipCountdownLabel.classList.toggle("halli-countdown-active", active);
+    halliFlipCountdownLabel.textContent = "-";
+    halliFlipCountdownLabel.classList.remove("halli-countdown-active");
   }
-  updateHalliPlayerFlipCountdown(flipRemaining);
 
   if (halliRingCountdownLabel) {
     let label = "Ready";
@@ -4180,30 +4171,6 @@ function updateHalliCountdownLabels() {
       halliBellCountdown.classList.add("hidden");
     }
   }
-}
-
-function updateHalliPlayerFlipCountdown(flipRemaining) {
-  if (!halliPlayers || !currentHalliView) {
-    return;
-  }
-  const show =
-    !halliCountdownState.ringPending && halliCountdownState.flipWaitMs > 0 && flipRemaining > 0;
-  const label = show ? formatCountdownMs(flipRemaining) : "-";
-  const currentId = String(currentHalliView.current_turn ?? "");
-  halliPlayers.querySelectorAll(".halli-player-card").forEach((card) => {
-    const badge = card.querySelector(".halli-player-flip-countdown");
-    if (!badge) {
-      return;
-    }
-    const isCurrent = card.dataset.playerId === currentId;
-    if (show && isCurrent) {
-      badge.textContent = label;
-      badge.classList.remove("hidden");
-    } else {
-      badge.textContent = "-";
-      badge.classList.add("hidden");
-    }
-  });
 }
 
 function renderHalliPlayers(view) {
@@ -4250,14 +4217,7 @@ function renderHalliPlayers(view) {
     info.className = "halli-player-info";
     const name = document.createElement("div");
     name.className = "player-name";
-    const nameText = document.createElement("span");
-    nameText.className = "player-name-text";
-    nameText.textContent = p.name;
-    name.appendChild(nameText);
-    const flipCountdown = document.createElement("span");
-    flipCountdown.className = "halli-player-flip-countdown hidden";
-    flipCountdown.textContent = "-";
-    name.appendChild(flipCountdown);
+    name.textContent = p.name;
     info.appendChild(name);
 
     const badges = document.createElement("div");
