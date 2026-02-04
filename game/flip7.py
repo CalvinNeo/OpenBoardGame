@@ -426,6 +426,20 @@ def _start_round(state: Dict) -> None:
     state["current_turn"] = state["turn_order"][0] if state["turn_order"] else None
 
 
+def _reset_game_state(state: Dict) -> None:
+    config = state.get("config") or {}
+    player_meta = state.get("player_meta") or {}
+    players = []
+    for pid, meta in player_meta.items():
+        entry = dict(meta) if isinstance(meta, dict) else {}
+        entry["player_id"] = pid
+        players.append(entry)
+    players.sort(key=lambda p: p.get("seat", 0))
+    fresh_state = Flip7Game.init_game(config, players)
+    state.clear()
+    state.update(fresh_state)
+
+
 class Flip7Game:
     game_id = "flip7"
     min_players = 2
@@ -478,8 +492,11 @@ class Flip7Game:
 
     @staticmethod
     def get_legal_actions(state: Dict, player_id: str) -> List[str]:
-        if player_id not in state["players"]:
+        pdata = state["players"].get(player_id)
+        if not pdata:
             return []
+        if pdata.get("status") == "busted":
+            return ["play_again"]
         if state.get("game_over"):
             return []
         phase = state.get("phase")
@@ -502,11 +519,21 @@ class Flip7Game:
     def apply_action(state: Dict, player_id: str, action: Dict) -> Tuple[List[Dict], Optional[str]]:
         if player_id not in state["players"]:
             return [], "unknown player"
-        if state.get("game_over"):
-            return [], "game over"
 
         action_type = action.get("type")
         events: List[Dict] = []
+
+        if action_type == "play_again":
+            if state["players"][player_id].get("status") != "busted":
+                return [], "only busted players can play again"
+            _reset_game_state(state)
+            events.append(
+                {"type": "flip7:play_again", "payload": {"player_id": player_id, "round": state.get("round")}}
+            )
+            return events, None
+
+        if state.get("game_over"):
+            return [], "game over"
 
         if state.get("phase") == "round_end":
             if action_type != "next_round":

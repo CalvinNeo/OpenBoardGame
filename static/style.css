@@ -870,6 +870,10 @@ body.log-open {
   margin-top: 6px;
 }
 
+#flip7Panel .flip7-bottom-actions {
+  margin-top: 12px;
+}
+
 .halli-player-card {
   display: flex;
   flex-direction: column;

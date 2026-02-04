@@ -174,7 +174,7 @@ const flip7LastRound = document.getElementById("flip7LastRound");
 const flip7Players = document.getElementById("flip7Players");
 const flip7FlipBtn = document.getElementById("flip7FlipBtn");
 const flip7StayBtn = document.getElementById("flip7StayBtn");
-const flip7NextRoundBtn = document.getElementById("flip7NextRoundBtn");
+const flip7PlayAgainBtn = document.getElementById("flip7PlayAgainBtn");
 
 const handSlots = document.getElementById("handSlots");
 const selectedSlotsLabel = document.getElementById("selectedSlots");
@@ -480,7 +480,7 @@ const halliActionButtons = {
 const flip7ActionButtons = {
   flip: flip7FlipBtn,
   stay: flip7StayBtn,
-  next_round: flip7NextRoundBtn,
+  play_again: flip7PlayAgainBtn,
 };
 
 const decryptoActionButtons = {
@@ -8485,9 +8485,9 @@ if (flip7StayBtn) {
   });
 }
 
-if (flip7NextRoundBtn) {
-  flip7NextRoundBtn.addEventListener("click", () => {
-    sendAction({ type: "next_round" });
+if (flip7PlayAgainBtn) {
+  flip7PlayAgainBtn.addEventListener("click", () => {
+    sendAction({ type: "play_again" });
   });
 }
 
