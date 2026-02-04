@@ -255,6 +255,20 @@ def _maybe_finish_game(state: Dict) -> None:
     state["phase"] = "game_over"
 
 
+def _reset_game_state(state: Dict) -> None:
+    config = state.get("config") or {}
+    player_meta = state.get("player_meta") or {}
+    players = []
+    for pid, meta in player_meta.items():
+        entry = dict(meta) if isinstance(meta, dict) else {}
+        entry["player_id"] = pid
+        players.append(entry)
+    players.sort(key=lambda p: p.get("seat", 0))
+    fresh_state = PerfectMismatchGame.init_game(config, players)
+    state.clear()
+    state.update(fresh_state)
+
+
 class PerfectMismatchGame:
     game_id = "perfect_mismatch"
     min_players = 2
@@ -291,10 +305,10 @@ class PerfectMismatchGame:
 
     @staticmethod
     def get_legal_actions(state: Dict, player_id: str) -> List[str]:
-        if state.get("game_over"):
-            return []
         if player_id not in state.get("players", {}):
             return []
+        if state.get("game_over"):
+            return ["play_again"]
         leader_id = state.get("leader_id")
         actions = []
         phase = state.get("phase")
@@ -317,8 +331,6 @@ class PerfectMismatchGame:
 
     @staticmethod
     def apply_action(state: Dict, player_id: str, action: Dict) -> Tuple[List[Dict], Optional[str]]:
-        if state.get("game_over"):
-            return [], "game over"
         if player_id not in state.get("players", {}):
             return [], "unknown player"
 
@@ -326,6 +338,16 @@ class PerfectMismatchGame:
         events: List[Dict] = []
         phase = state.get("phase")
         leader_id = state.get("leader_id")
+
+        if action_type == "play_again":
+            if not state.get("game_over"):
+                return [], "game not over"
+            _reset_game_state(state)
+            events.append({"type": "mismatch:play_again", "payload": {"player_id": player_id}})
+            return events, None
+
+        if state.get("game_over"):
+            return [], "game over"
 
         if action_type == "set_slider":
             if player_id != leader_id:

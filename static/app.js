@@ -239,6 +239,7 @@ const mismatchYourGuessLabel = document.getElementById("mismatchYourGuess");
 const mismatchSliders = document.getElementById("mismatchSliders");
 const mismatchRevealBtn = document.getElementById("mismatchRevealBtn");
 const mismatchNextRoundBtn = document.getElementById("mismatchNextRoundBtn");
+const mismatchPlayAgainBtn = document.getElementById("mismatchPlayAgainBtn");
 const mismatchRoundSummary = document.getElementById("mismatchRoundSummary");
 const mismatchRoundSummaryBody = document.getElementById("mismatchRoundSummaryBody");
 const mismatchRoundSummaryGuesses = document.getElementById("mismatchRoundSummaryGuesses");
@@ -1916,6 +1917,10 @@ function clearMismatchState() {
   if (mismatchNextRoundBtn) {
     mismatchNextRoundBtn.disabled = true;
     mismatchNextRoundBtn.classList.remove("action-allowed");
+  }
+  if (mismatchPlayAgainBtn) {
+    mismatchPlayAgainBtn.disabled = true;
+    mismatchPlayAgainBtn.classList.remove("action-allowed");
   }
 }
 
@@ -3937,7 +3942,7 @@ function renderSkullPlayers(view) {
 }
 
 function updateMismatchButtons(view) {
-  if (!mismatchRevealBtn || !mismatchNextRoundBtn) {
+  if (!mismatchRevealBtn || !mismatchNextRoundBtn || !mismatchPlayAgainBtn) {
     return;
   }
   const actions = view && Array.isArray(view.legal_actions) ? view.legal_actions : [];
@@ -3947,6 +3952,9 @@ function updateMismatchButtons(view) {
   const nextAllowed = actions.includes("next_round");
   mismatchNextRoundBtn.disabled = !nextAllowed;
   mismatchNextRoundBtn.classList.toggle("action-allowed", nextAllowed);
+  const playAllowed = actions.includes("play_again");
+  mismatchPlayAgainBtn.disabled = !playAllowed;
+  mismatchPlayAgainBtn.classList.toggle("action-allowed", playAllowed);
 }
 
 function renderMismatchWords(view) {
@@ -8872,6 +8880,12 @@ if (mismatchRevealBtn) {
 if (mismatchNextRoundBtn) {
   mismatchNextRoundBtn.addEventListener("click", () => {
     sendAction({ type: "next_round" });
+  });
+}
+
+if (mismatchPlayAgainBtn) {
+  mismatchPlayAgainBtn.addEventListener("click", () => {
+    sendAction({ type: "play_again" });
   });
 }
 

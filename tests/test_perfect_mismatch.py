@@ -68,3 +68,20 @@ class PerfectMismatchTests(unittest.TestCase):
 
         self.assertEqual(state["players"][leader_id]["score"], -1)
 
+    def test_play_again_resets_scores(self):
+        state, players = self._prepare_state(target_index=0)
+        leader_id = state["leader_id"]
+        guesser_1 = players[1]["player_id"]
+        guesser_2 = players[2]["player_id"]
+
+        PerfectMismatchGame.apply_action(state, guesser_1, {"type": "submit_guess", "choice_index": 0})
+        PerfectMismatchGame.apply_action(state, guesser_2, {"type": "submit_guess", "choice_index": 1})
+        PerfectMismatchGame.apply_action(state, leader_id, {"type": "reveal"})
+        self.assertTrue(state.get("game_over") or state.get("phase") == "reveal")
+
+        state["game_over"] = True
+        events, error = PerfectMismatchGame.apply_action(state, leader_id, {"type": "play_again"})
+        self.assertIsNone(error)
+        self.assertTrue(events)
+        for pid in [leader_id, guesser_1, guesser_2]:
+            self.assertEqual(state["players"][pid]["score"], 0)
