@@ -1121,13 +1121,15 @@ async def on_game_action(sid, data):
     if not game_def:
         await _send_error(sid, "room game not found")
         return
-    if room.status != "in_game":
-        await _send_error(sid, "game not active")
-        return
     action = (data or {}).get("action")
     if not isinstance(action, dict):
         await _send_error(sid, "invalid action")
         return
+    action_type = action.get("type")
+    if room.status != "in_game":
+        if not (room.status == "game_over" and action_type == "play_again"):
+            await _send_error(sid, "game not active")
+            return
     player_id = session.get("player_id")
     events, error = game_def.module.apply_action(room.game_state, player_id, action)
     if error:
@@ -1143,7 +1145,12 @@ async def on_game_action(sid, data):
         events = [{"type": "player:action", "payload": payload}] + (events or [])
     room.state_version += 1
     if room.game_state.get("game_over"):
-        room.status = "game_over"
+        if room.status != "game_over":
+            room.status = "game_over"
+            await _emit_room_state(room)
+            await _emit_room_list_update()
+    elif room.status == "game_over":
+        room.status = "in_game"
         await _emit_room_state(room)
         await _emit_room_list_update()
     _schedule_halli_flip_reveal(room)
