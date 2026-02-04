@@ -252,6 +252,7 @@ const halliFlipBtn = document.getElementById("halliFlipBtn");
 const halliRingBtn = document.getElementById("halliRingBtn");
 const halliPlayers = document.getElementById("halliPlayers");
 const halliBellCenter = document.getElementById("halliBellCenter");
+const halliBellCountdown = document.getElementById("halliBellCountdown");
 const halliFruitEmoji = {
   banana: "🍌",
   strawberry: "🍓",
@@ -1879,6 +1880,10 @@ function clearHalliState() {
     halliBellCenter.classList.remove("halli-bell-center-ready", "halli-bell-center-waiting");
     halliBellCenter.classList.remove("halli-bell-center-actionable", "halli-bell-center-disabled");
     halliBellCenter.setAttribute("aria-disabled", "true");
+  }
+  if (halliBellCountdown) {
+    halliBellCountdown.textContent = "-";
+    halliBellCountdown.classList.add("hidden");
   }
   updateHalliCountdownState(null);
   updateHalliActionButtons();
@@ -4157,6 +4162,15 @@ function updateHalliCountdownLabels() {
     }
     halliRingCountdownLabel.textContent = label;
     halliRingCountdownLabel.classList.toggle("halli-countdown-active", active);
+  }
+  if (halliBellCountdown) {
+    if (halliCountdownState.ringPending && ringRemaining > 0) {
+      halliBellCountdown.textContent = formatCountdownMs(ringRemaining);
+      halliBellCountdown.classList.remove("hidden");
+    } else {
+      halliBellCountdown.textContent = "-";
+      halliBellCountdown.classList.add("hidden");
+    }
   }
 }
 

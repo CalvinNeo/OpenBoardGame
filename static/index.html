@@ -399,7 +399,7 @@
               </div>
               <div class="row">
                 <div>Flip Countdown: <span id="halliFlipCountdown">-</span></div>
-                <div>Ring Countdown: <span id="halliRingCountdown">-</span></div>
+                <div class="hidden" aria-hidden="true">Ring Countdown: <span id="halliRingCountdown">-</span></div>
               </div>
               <div class="row">
                 <div>Last Ring Result: <span id="halliLastRing">-</span></div>
@@ -417,7 +417,10 @@
               <h3>Table</h3>
               <div id="halliTable" class="halli-table">
                 <div id="halliPlayers" class="halli-players"></div>
-                <div id="halliBellCenter" class="halli-bell-center" role="button" tabindex="0" aria-label="Ring Bell">🔔</div>
+                <div id="halliBellCenter" class="halli-bell-center" role="button" tabindex="0" aria-label="Ring Bell">
+                  <div class="halli-bell-emoji" aria-hidden="true">🔔</div>
+                  <div id="halliBellCountdown" class="halli-bell-countdown hidden" aria-hidden="true">-</div>
+                </div>
               </div>
             </div>
 
