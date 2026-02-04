@@ -187,9 +187,51 @@ def _flip_ready_at_ms(state: Dict) -> int:
     return max(ready_at, 0)
 
 
-def _set_flip_ready_at(state: Dict, now_ms: int) -> None:
+def _turn_switch_at_ms(state: Dict) -> int:
+    raw = state.get("turn_switch_at_ms")
+    try:
+        switch_at = int(raw)
+    except (TypeError, ValueError):
+        switch_at = 0
+    return max(switch_at, 0)
+
+
+def _set_turn_switch(state: Dict, now_ms: int, current_pid: str) -> None:
     wait_ms = _flip_wait_ms(state)
-    state["flip_ready_at_ms"] = now_ms + wait_ms if wait_ms > 0 else 0
+    next_pid = _next_turn(state, current_pid)
+    switch_at = now_ms + wait_ms if wait_ms > 0 else now_ms
+    state["pending_turn"] = next_pid
+    state["turn_switch_at_ms"] = switch_at
+    state["flip_ready_at_ms"] = switch_at
+
+
+def _clear_turn_switch(state: Dict) -> None:
+    state["pending_turn"] = None
+    state["turn_switch_at_ms"] = 0
+    state["flip_ready_at_ms"] = 0
+
+
+def _resolve_pending_turn(state: Dict, now_ms: int) -> bool:
+    pending_turn = state.get("pending_turn")
+    if not pending_turn:
+        return False
+    switch_at = _turn_switch_at_ms(state)
+    if switch_at and now_ms < switch_at:
+        return False
+    state["current_turn"] = pending_turn
+    _clear_turn_switch(state)
+    _ensure_current_turn(state)
+    return True
+
+
+def _ring_window_active(state: Dict, now_ms: int) -> bool:
+    pending = state.get("pending_flip")
+    if pending:
+        return False
+    switch_at = _turn_switch_at_ms(state)
+    if not switch_at:
+        return False
+    return now_ms < switch_at
 
 
 def _closest_fruits(totals: Dict[str, int]) -> List[str]:
@@ -221,8 +263,8 @@ def _resolve_pending_flip(state: Dict, now_ms: int) -> bool:
         "player_id": player_id,
         "card": _card_view(card),
     }
-    state["current_turn"] = _next_turn(state, player_id)
-    _set_flip_ready_at(state, now_ms)
+    _set_turn_switch(state, now_ms, player_id)
+    _resolve_pending_turn(state, now_ms)
     _update_eliminations(state)
     _check_game_over(state)
     return True
@@ -328,7 +370,9 @@ class HalliGalliGame:
             "last_action": None,
             "last_ring_result": None,
             "pending_flip": None,
+            "pending_turn": None,
             "flip_ready_at_ms": 0,
+            "turn_switch_at_ms": 0,
             "winner": None,
             "game_over": False,
         }
@@ -336,6 +380,7 @@ class HalliGalliGame:
     @staticmethod
     def get_legal_actions(state: Dict, player_id: str) -> List[str]:
         now_ms = _now_ms()
+        _resolve_pending_turn(state, now_ms)
         pending = state.get("pending_flip")
         if pending:
             reveal_at = int(pending.get("reveal_at_ms") or 0)
@@ -346,16 +391,18 @@ class HalliGalliGame:
         pdata = state["players"].get(player_id)
         if not pdata or pdata.get("eliminated"):
             return []
-        actions = ["ring"]
+        actions: List[str] = []
+        if _ring_window_active(state, now_ms):
+            actions.append("ring")
         if player_id == state.get("current_turn") and pdata["hand"]:
-            flip_ready_at = _flip_ready_at_ms(state)
-            if now_ms >= flip_ready_at:
+            if not state.get("pending_turn") and now_ms >= _flip_ready_at_ms(state):
                 actions.append("flip")
         return actions
 
     @staticmethod
     def apply_action(state: Dict, player_id: str, action: Dict) -> Tuple[List[Dict], Optional[str]]:
         now_ms = _now_ms()
+        _resolve_pending_turn(state, now_ms)
         _resolve_pending_flip(state, now_ms)
         if state.get("game_over"):
             return [], "game over"
@@ -375,6 +422,8 @@ class HalliGalliGame:
                 return [], "not your turn"
             if not pdata["hand"]:
                 return [], "no cards to flip"
+            if state.get("pending_turn"):
+                return [], "waiting for next turn"
             if now_ms < _flip_ready_at_ms(state):
                 return [], "wait to flip"
             card = pdata["hand"].pop()
@@ -387,8 +436,8 @@ class HalliGalliGame:
                     "card": _card_view(card),
                 }
                 events.append({"type": "halli_galli:flip", "payload": {"player_id": player_id}})
-                state["current_turn"] = _next_turn(state, player_id)
-                _set_flip_ready_at(state, now_ms)
+                _set_turn_switch(state, now_ms, player_id)
+                _resolve_pending_turn(state, now_ms)
                 _update_eliminations(state)
                 _check_game_over(state)
                 return events, None
@@ -401,9 +450,12 @@ class HalliGalliGame:
             return events, None
 
         if action_type == "ring":
+            if not _ring_window_active(state, now_ms):
+                return [], "ring not allowed"
             bell_fruits = _bell_fruits(state)
             if bell_fruits:
                 collected = _collect_piles(state, player_id)
+                _clear_turn_switch(state)
                 state["last_ring_result"] = {
                     "player_id": player_id,
                     "result": "success",
@@ -431,6 +483,7 @@ class HalliGalliGame:
                     _ensure_current_turn(state)
                 return events, None
 
+            _clear_turn_switch(state)
             given = _apply_false_bell_penalty(state, player_id)
             totals = _fruit_totals(state)
             closest = _closest_fruits(totals)
@@ -461,6 +514,8 @@ class HalliGalliGame:
 
     @staticmethod
     def get_public_view(state: Dict, viewer_id: str) -> Dict:
+        now_ms = _now_ms()
+        _resolve_pending_turn(state, now_ms)
         player_ids = sorted(
             state["player_meta"].keys(),
             key=lambda pid: state["player_meta"][pid].get("seat", 0),
@@ -486,7 +541,7 @@ class HalliGalliGame:
         pending = state.get("pending_flip")
         totals = _fruit_totals(state)
         bell_fruits = [fruit for fruit, total in totals.items() if total == 5]
-        if pending:
+        if pending or not _ring_window_active(state, now_ms):
             bell_fruits = []
 
         return {
@@ -504,6 +559,7 @@ class HalliGalliGame:
             "game_over": state.get("game_over", False),
             "config": dict(state.get("config") or {}),
             "flip_ready_at_ms": _flip_ready_at_ms(state),
+            "turn_switch_at_ms": _turn_switch_at_ms(state),
             "server_now_ms": _now_ms(),
             "pending_flip": {
                 "player_id": pending.get("player_id"),
@@ -518,6 +574,7 @@ class HalliGalliGame:
         if state.get("game_over"):
             return None
         now_ms = _now_ms()
+        _resolve_pending_turn(state, now_ms)
         pending = state.get("pending_flip")
         if pending:
             reveal_at = int(pending.get("reveal_at_ms") or 0)
@@ -526,12 +583,12 @@ class HalliGalliGame:
         pdata = state["players"].get(bot_id)
         if not pdata or pdata.get("eliminated"):
             return None
-        if _bell_fruits(state):
+        if _ring_window_active(state, now_ms) and _bell_fruits(state):
             if random.random() < 0.7:
                 delay_ms = random.randint(BOT_RING_REACTION_MIN_MS, BOT_RING_REACTION_MAX_MS)
                 return {"type": "ring", "delay_ms": delay_ms}
         if bot_id == state.get("current_turn") and pdata["hand"]:
-            if now_ms < _flip_ready_at_ms(state):
+            if state.get("pending_turn") or now_ms < _flip_ready_at_ms(state):
                 return None
             return {"type": "flip"}
         return None

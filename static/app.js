@@ -14,6 +14,7 @@ let halliCountdownState = {
   flipReadyAtMs: 0,
   ringReadyAtMs: 0,
   ringPending: false,
+  turnSwitchAtMs: 0,
   flipWaitMs: 0,
 };
 let halliServerTimeOffsetMs = 0;
@@ -4104,6 +4105,7 @@ function updateHalliCountdownState(view) {
       flipReadyAtMs: 0,
       ringReadyAtMs: 0,
       ringPending: false,
+      turnSwitchAtMs: 0,
       flipWaitMs: 0,
     };
     halliServerTimeOffsetMs = 0;
@@ -4119,10 +4121,12 @@ function updateHalliCountdownState(view) {
   const flipWaitMs = view.config ? Number(view.config.flip_wait_ms) : 0;
   const pending = view.pending_flip;
   const ringReadyAtMs = pending ? Number(pending.reveal_at_ms) : 0;
+  const turnSwitchAtMs = Number(view.turn_switch_at_ms);
   halliCountdownState = {
     flipReadyAtMs: Number.isFinite(flipReadyAtMs) ? flipReadyAtMs : 0,
     ringReadyAtMs: Number.isFinite(ringReadyAtMs) ? ringReadyAtMs : 0,
     ringPending: !!pending,
+    turnSwitchAtMs: Number.isFinite(turnSwitchAtMs) ? turnSwitchAtMs : 0,
     flipWaitMs: Number.isFinite(flipWaitMs) ? Math.max(flipWaitMs, 0) : 0,
   };
   startHalliCountdownTimer();
@@ -4139,6 +4143,8 @@ function updateHalliCountdownLabels() {
     halliCountdownState.flipReadyAtMs > 0 ? halliCountdownState.flipReadyAtMs - now : 0;
   const ringRemaining =
     halliCountdownState.ringReadyAtMs > 0 ? halliCountdownState.ringReadyAtMs - now : 0;
+  const ringWindowRemaining =
+    halliCountdownState.turnSwitchAtMs > 0 ? halliCountdownState.turnSwitchAtMs - now : 0;
 
   if (halliFlipCountdownLabel) {
     let label = "Ready";
@@ -4165,8 +4171,9 @@ function updateHalliCountdownLabels() {
     halliRingCountdownLabel.classList.toggle("halli-countdown-active", active);
   }
   if (halliBellCountdown) {
-    if (halliCountdownState.ringPending && ringRemaining > 0) {
-      halliBellCountdown.textContent = formatCountdownMs(ringRemaining);
+    const show = !halliCountdownState.ringPending && ringWindowRemaining > 0 && isHalliActionAvailable("ring");
+    if (show) {
+      halliBellCountdown.textContent = formatCountdownMs(ringWindowRemaining);
       halliBellCountdown.classList.remove("hidden");
     } else {
       halliBellCountdown.textContent = "-";
