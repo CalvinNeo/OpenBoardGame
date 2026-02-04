@@ -707,6 +707,32 @@ function showRoomListBubble(wrapper, message) {
   }, 2200);
 }
 
+function toggleAbracaSpellBubble(anchor, message) {
+  if (!anchor || !message) {
+    return;
+  }
+  const existing = anchor.querySelector(".abraca-spell-bubble");
+  if (existing) {
+    existing.remove();
+    return;
+  }
+  const table = anchor.closest(".abraca-spell-table");
+  if (table) {
+    table.querySelectorAll(".abraca-spell-bubble").forEach((bubble) => bubble.remove());
+  }
+  const bubble = document.createElement("div");
+  bubble.className = "abraca-spell-bubble";
+  bubble.textContent = message;
+  bubble.addEventListener("click", (event) => {
+    event.stopPropagation();
+    bubble.remove();
+  });
+  anchor.appendChild(bubble);
+  requestAnimationFrame(() => {
+    bubble.classList.add("show");
+  });
+}
+
 function setModalVisible(modalEl, visible) {
   if (!modalEl) {
     return;
@@ -7111,7 +7137,7 @@ function renderAbracaSpells(view) {
 
   const thead = document.createElement("thead");
   const headerRow = document.createElement("tr");
-  const headers = ["Spell", "Used", "Total", "Effect"];
+  const headers = ["Spell", "Used", "Total"];
   headers.forEach((label) => {
     const th = document.createElement("th");
     th.textContent = label;
@@ -7129,6 +7155,18 @@ function renderAbracaSpells(view) {
     const name = document.createElement("td");
     name.className = "abraca-spell-name";
     name.textContent = `${spell.number}. ${spell.name}`;
+    name.tabIndex = 0;
+    name.setAttribute("role", "button");
+    name.setAttribute("aria-label", `${spell.number}. ${spell.name} details`);
+    name.addEventListener("click", () => {
+      toggleAbracaSpellBubble(name, spell.desc);
+    });
+    name.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        toggleAbracaSpellBubble(name, spell.desc);
+      }
+    });
 
     const used = discardCounts[spell.id] ?? 0;
     const usedCell = document.createElement("td");
@@ -7139,14 +7177,9 @@ function renderAbracaSpells(view) {
     totalCell.className = "abraca-spell-total";
     totalCell.textContent = String(spell.total);
 
-    const desc = document.createElement("td");
-    desc.className = "abraca-spell-desc";
-    desc.textContent = spell.desc;
-
     row.appendChild(name);
     row.appendChild(usedCell);
     row.appendChild(totalCell);
-    row.appendChild(desc);
     tbody.appendChild(row);
   });
   table.appendChild(tbody);
