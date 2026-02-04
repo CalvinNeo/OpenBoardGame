@@ -2,7 +2,7 @@ import random
 import time
 from typing import Dict, List, Optional, Tuple
 
-DEFAULT_CONFIG: Dict = {"flip_reveal_delay_ms": 1000, "flip_wait_ms": 3000}
+DEFAULT_CONFIG: Dict = {"flip_reveal_delay_ms": 1000, "flip_wait_ms": 3000, "deck_mode": "base"}
 BOT_RING_REACTION_MIN_MS = 600
 BOT_RING_REACTION_MAX_MS = 1200
 
@@ -14,6 +14,16 @@ FRUIT_CARD_DISTRIBUTION = {
     4: 2,
     5: 1,
 }
+EXTENDED_SINGLE_FRUIT_DISTRIBUTION = {
+    1: 3,
+    2: 2,
+    3: 2,
+    4: 1,
+    5: 1,
+}
+EXTENDED_MIXED_COUNTS = [(1, 2), (2, 2), (1, 3), (1, 4), (2, 3), (3, 2)]
+DECK_MODE_BASE = "base"
+DECK_MODE_EXTENDED = "extended"
 
 
 def _merge_config(config: Optional[Dict]) -> Dict:
@@ -28,14 +38,42 @@ def _now_ms() -> int:
     return int(time.time() * 1000)
 
 
-def _build_deck() -> List[Dict]:
+def _single_card(fruit: str, count: int) -> Dict:
+    return {"fruit": fruit, "count": count}
+
+
+def _mixed_card(entries: List[Tuple[str, int]]) -> Dict:
+    return {"fruits": [{"fruit": fruit, "count": count} for fruit, count in entries]}
+
+
+def _build_base_deck() -> List[Dict]:
     deck: List[Dict] = []
     for fruit in FRUITS:
         for count, copies in FRUIT_CARD_DISTRIBUTION.items():
             for _ in range(copies):
-                deck.append({"fruit": fruit, "count": count})
+                deck.append(_single_card(fruit, count))
     random.shuffle(deck)
     return deck
+
+
+def _build_extended_deck() -> List[Dict]:
+    deck: List[Dict] = []
+    for fruit in FRUITS:
+        for count, copies in EXTENDED_SINGLE_FRUIT_DISTRIBUTION.items():
+            for _ in range(copies):
+                deck.append(_single_card(fruit, count))
+    for idx, fruit_a in enumerate(FRUITS):
+        for fruit_b in FRUITS[idx + 1 :]:
+            for count_a, count_b in EXTENDED_MIXED_COUNTS:
+                deck.append(_mixed_card([(fruit_a, count_a), (fruit_b, count_b)]))
+    random.shuffle(deck)
+    return deck
+
+
+def _build_deck(deck_mode: str) -> List[Dict]:
+    if deck_mode == DECK_MODE_EXTENDED:
+        return _build_extended_deck()
+    return _build_base_deck()
 
 
 def _deal_cards(deck: List[Dict], player_ids: List[str]) -> Dict[str, List[Dict]]:
@@ -83,15 +121,37 @@ def _top_card(state: Dict, player_id: str) -> Optional[Dict]:
     return pile[-1]
 
 
+def _card_entries(card: Optional[Dict]) -> List[Tuple[str, int]]:
+    if not card:
+        return []
+    entries: List[Tuple[str, int]] = []
+    fruits = card.get("fruits")
+    if isinstance(fruits, list):
+        for item in fruits:
+            if not isinstance(item, dict):
+                continue
+            fruit = item.get("fruit")
+            if fruit not in FRUITS:
+                continue
+            count = int(item.get("count", 0))
+            if count <= 0:
+                continue
+            entries.append((fruit, count))
+        return entries
+    fruit = card.get("fruit")
+    if fruit in FRUITS:
+        count = int(card.get("count", 0))
+        if count > 0:
+            entries.append((fruit, count))
+    return entries
+
+
 def _fruit_totals(state: Dict) -> Dict[str, int]:
     totals = {fruit: 0 for fruit in FRUITS}
     for pid in _active_player_ids(state):
         card = _top_card(state, pid)
-        if not card:
-            continue
-        fruit = card.get("fruit")
-        if fruit in totals:
-            totals[fruit] += int(card.get("count", 0))
+        for fruit, count in _card_entries(card):
+            totals[fruit] += count
     return totals
 
 
@@ -220,15 +280,17 @@ def _check_game_over(state: Dict) -> bool:
 
 
 def _card_view(card: Optional[Dict]) -> Optional[Dict]:
-    if not card:
+    entries = _card_entries(card)
+    if not entries:
         return None
-    fruit = card.get("fruit")
-    count = int(card.get("count", 0))
-    return {
-        "fruit": fruit,
-        "count": count,
-        "label": f"{count} {fruit}",
-    }
+    fruits_view = [{"fruit": fruit, "count": count} for fruit, count in entries]
+    label = " + ".join([f"{count} {fruit}" for fruit, count in entries])
+    view: Dict = {"fruits": fruits_view, "label": label}
+    if len(entries) == 1:
+        fruit, count = entries[0]
+        view["fruit"] = fruit
+        view["count"] = count
+    return view
 
 
 class HalliGalliGame:
@@ -242,7 +304,11 @@ class HalliGalliGame:
         player_ids = [p["player_id"] for p in players]
         player_meta = {p["player_id"]: p for p in players}
 
-        deck = _build_deck()
+        deck_mode = str(cfg.get("deck_mode") or DECK_MODE_BASE).strip().lower()
+        if deck_mode not in (DECK_MODE_BASE, DECK_MODE_EXTENDED):
+            raise ValueError("invalid deck_mode")
+        cfg["deck_mode"] = deck_mode
+        deck = _build_deck(deck_mode)
         dealt = _deal_cards(deck, player_ids)
         state_players = {}
         for pid in player_ids:

@@ -223,6 +223,7 @@ HALLI_GALLI_ACTION_SCHEMA = {
 HALLI_GALLI_CONFIG_SCHEMA = {
     "type": "object",
     "properties": {
+        "deck_mode": {"type": "string", "enum": ["base", "extended"]},
         "flip_reveal_delay_ms": {"type": "integer", "minimum": 0},
         "flip_wait_ms": {"type": "integer", "minimum": 0},
     },

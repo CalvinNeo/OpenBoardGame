@@ -114,3 +114,20 @@ class HalliGalliRingTests(unittest.TestCase):
         self.assertEqual(len(state["players"]["p1"]["hand"]), starting_hand - 2)
         self.assertEqual(len(state["players"]["p2"]["hand"]), starting_p2 + 1)
         self.assertEqual(len(state["players"]["p3"]["hand"]), starting_p3 + 1)
+
+
+class HalliGalliDeckTests(unittest.TestCase):
+    def test_extended_deck_has_72_cards(self):
+        players = [
+            {"player_id": "p1", "name": "Alice", "seat": 0, "is_bot": False},
+            {"player_id": "p2", "name": "Bob", "seat": 1, "is_bot": False},
+            {"player_id": "p3", "name": "Cara", "seat": 2, "is_bot": False},
+            {"player_id": "p4", "name": "Drew", "seat": 3, "is_bot": False},
+        ]
+        state = HalliGalliGame.init_game({"deck_mode": "extended"}, players)
+        total_cards = sum(len(pdata["hand"]) for pdata in state["players"].values())
+        self.assertEqual(total_cards, 72)
+        mixed_cards = [
+            card for pdata in state["players"].values() for card in pdata["hand"] if "fruits" in card
+        ]
+        self.assertTrue(mixed_cards)

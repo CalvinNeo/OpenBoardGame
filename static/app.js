@@ -133,6 +133,9 @@ const decryptoBotClueSelect = document.getElementById("decryptoBotClueSelect");
 const aidixitConfigBox = document.getElementById("aidixitConfigBox");
 const aidixitDeckRow = document.getElementById("aidixitDeckRow");
 const aidixitDeckOptions = document.getElementById("aidixitDeckOptions");
+const halliConfigBox = document.getElementById("halliConfigBox");
+const halliDeckRow = document.getElementById("halliDeckRow");
+const halliDeckSelect = document.getElementById("halliDeckSelect");
 const autoSaveRow = document.getElementById("autoSaveRow");
 const autoSaveToggle = document.getElementById("autoSaveToggle");
 const caboPanel = document.getElementById("caboPanel");
@@ -1140,6 +1143,18 @@ function updateAidixitDeckRow() {
   }
 }
 
+function updateHalliConfigRow() {
+  const showRow = currentRoomState && currentGameType === "halli_galli" && currentRoomState.status === "lobby";
+  if (halliConfigBox) {
+    halliConfigBox.classList.toggle("hidden", !showRow);
+    halliConfigBox.setAttribute("aria-hidden", (!showRow).toString());
+  }
+  if (halliDeckRow) {
+    halliDeckRow.classList.toggle("hidden", !showRow);
+    halliDeckRow.setAttribute("aria-hidden", (!showRow).toString());
+  }
+}
+
 function updateAutoSaveRow() {
   const showRow =
     currentRoomState && (currentRoomState.status === "lobby" || currentRoomState.status === "game_over");
@@ -1674,6 +1689,7 @@ function resetRoomState() {
   updateDecryptoPackRow();
   updateDecryptoBotRow();
   updateAidixitDeckRow();
+  updateHalliConfigRow();
   updateAutoSaveRow();
   if (drawGuessLanguageSelect) {
     drawGuessLanguageSelect.value = "zh";
@@ -1692,6 +1708,9 @@ function resetRoomState() {
     decryptoBotClueSelect.value = "0.5";
   }
   decryptoBotClueDirectness = 0.5;
+  if (halliDeckSelect) {
+    halliDeckSelect.value = "base";
+  }
   createRoomPending = false;
   setCreateGameRowVisible(false);
   updateRoomControlsForStatus(null);
@@ -3212,6 +3231,9 @@ function emitRoomStart() {
       config.bot_clue_directness = botClueDirectness;
     }
     payload.config = config;
+  } else if (currentGameType === "halli_galli") {
+    const deckMode = halliDeckSelect ? halliDeckSelect.value || "base" : "base";
+    payload.config = { deck_mode: deckMode };
   }
   socket.emit("room:start", payload);
 }
@@ -3249,6 +3271,7 @@ function renderRoomState(state) {
   updateDecryptoPackRow();
   updateDecryptoBotRow();
   updateAidixitDeckRow();
+  updateHalliConfigRow();
   updateAutoSaveRow();
   playersList.innerHTML = "";
   const orderedPlayers = Array.isArray(state.players)
@@ -3938,6 +3961,17 @@ function formatHalliFruitList(fruits, totals = null) {
 function formatHalliCard(card) {
   if (!card) {
     return "-";
+  }
+  if (Array.isArray(card.fruits) && card.fruits.length) {
+    const parts = card.fruits.map((entry) => {
+      if (!entry) {
+        return "?";
+      }
+      const emoji = formatHalliFruit(entry.fruit);
+      const count = Number.isFinite(entry.count) ? entry.count : null;
+      return count !== null ? `${emoji} ${count}` : emoji;
+    });
+    return parts.join(" + ");
   }
   const emoji = formatHalliFruit(card.fruit);
   const count = Number.isFinite(card.count) ? card.count : null;
