@@ -7,6 +7,7 @@ from game.draw_guess import DrawGuessGame
 from game.flip7 import Flip7Game
 from game.halli_galli import HalliGalliGame
 from game.impression_flower import ImpressionFlowerGame
+from game.perfect_mismatch import PerfectMismatchGame
 from game.registry import GameDefinition, register_game
 from game.splendor import SplendorGame
 from game.blokus import BlokusGame
@@ -545,6 +546,46 @@ BLOKUS_CONFIG_SCHEMA = {
     "additionalProperties": False,
 }
 
+PERFECT_MISMATCH_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "set_slider"},
+                "slider_index": {"type": "integer", "minimum": 0},
+                "value": {"type": "integer", "minimum": 0, "maximum": 10},
+            },
+            "required": ["type", "slider_index", "value"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "submit_guess"},
+                "choice_index": {"type": "integer", "minimum": 0, "maximum": 4},
+            },
+            "required": ["type", "choice_index"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "reveal"}}, "required": ["type"], "additionalProperties": False},
+        {
+            "type": "object",
+            "properties": {"type": {"const": "next_round"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+PERFECT_MISMATCH_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "slider_count": {"type": "integer", "minimum": 1, "maximum": 5},
+    },
+    "additionalProperties": False,
+}
+
 register_game(
     GameDefinition(
         game_id=CaboGame.game_id,
@@ -722,5 +763,20 @@ register_game(
         module=HalliGalliGame,
         serialize=HalliGalliGame.serialize,
         deserialize=HalliGalliGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=PerfectMismatchGame.game_id,
+        name="Perfect Mismatch",
+        min_players=PerfectMismatchGame.min_players,
+        max_players=PerfectMismatchGame.max_players,
+        turn_mode="simultaneous",
+        action_schema=PERFECT_MISMATCH_ACTION_SCHEMA,
+        config_schema=PERFECT_MISMATCH_CONFIG_SCHEMA,
+        module=PerfectMismatchGame,
+        serialize=PerfectMismatchGame.serialize,
+        deserialize=PerfectMismatchGame.deserialize,
     )
 )

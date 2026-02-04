@@ -99,6 +99,7 @@
                     <option value="decrypto">Decrypto</option>
                     <option value="skull">Skull</option>
                     <option value="draw_guess">Draw & Guess</option>
+                    <option value="perfect_mismatch">Perfect Mismatch</option>
                     <option value="aidixit">AI Dixit</option>
                     <option value="impression_flower">Impression Flower</option>
                     <option value="splendor">Splendor</option>
@@ -194,6 +195,18 @@
                       <select id="halliDeckSelect">
                         <option value="base" selected>Base (56 cards)</option>
                         <option value="extended">Extended (72 cards)</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="game-config-card hidden" id="mismatchConfigBox" aria-hidden="true">
+                    <div class="game-config-title">Perfect Mismatch</div>
+                    <div class="row" id="mismatchSliderRow">
+                      <label for="mismatchSliderCount">Slider Count</label>
+                      <select id="mismatchSliderCount">
+                        <option value="2">2</option>
+                        <option value="3" selected>3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
                       </select>
                     </div>
                   </div>
@@ -349,6 +362,42 @@
 
               <h3>Players</h3>
               <div id="skullPlayers"></div>
+            </div>
+
+            <div id="mismatchPanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="mismatchPhase">-</span></div>
+                <div>Round: <span id="mismatchRound">-</span></div>
+                <div>Leader: <span id="mismatchLeader">-</span></div>
+                <div>Target: <span id="mismatchTarget">-</span></div>
+              </div>
+              <div class="row">
+                <div>Guessing: <span id="mismatchGuessing">-</span></div>
+                <div>Winner: <span id="mismatchWinner">-</span></div>
+              </div>
+
+              <h3>Words</h3>
+              <div id="mismatchWords" class="mismatch-words"></div>
+              <div class="row">
+                <div>Your Guess: <span id="mismatchYourGuess">-</span></div>
+              </div>
+
+              <h3>Sliders</h3>
+              <div id="mismatchSliders" class="mismatch-sliders"></div>
+
+              <div class="row actions">
+                <button id="mismatchRevealBtn">Reveal</button>
+                <button id="mismatchNextRoundBtn">Next Round</button>
+              </div>
+
+              <div id="mismatchRoundSummary" class="round-notice hidden">
+                <div class="round-notice-title">Round Summary</div>
+                <div id="mismatchRoundSummaryBody" class="round-notice-body">-</div>
+                <div id="mismatchRoundSummaryGuesses" class="mismatch-summary-list"></div>
+              </div>
+
+              <h3>Players</h3>
+              <div id="mismatchPlayers"></div>
             </div>
 
             <div id="coyotePanel" class="hidden">

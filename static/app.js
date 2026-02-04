@@ -4,6 +4,7 @@ let playerId = null;
 let roomId = null;
 let currentCaboView = null;
 let currentSkullView = null;
+let currentMismatchView = null;
 let currentCoyoteView = null;
 let currentDecryptoView = null;
 let currentDrawGuessView = null;
@@ -137,11 +138,14 @@ const aidixitDeckOptions = document.getElementById("aidixitDeckOptions");
 const halliConfigBox = document.getElementById("halliConfigBox");
 const halliDeckRow = document.getElementById("halliDeckRow");
 const halliDeckSelect = document.getElementById("halliDeckSelect");
+const mismatchConfigBox = document.getElementById("mismatchConfigBox");
+const mismatchSliderCount = document.getElementById("mismatchSliderCount");
 const autoSaveRow = document.getElementById("autoSaveRow");
 const autoSaveToggle = document.getElementById("autoSaveToggle");
 const caboPanel = document.getElementById("caboPanel");
 const flip7Panel = document.getElementById("flip7Panel");
 const skullPanel = document.getElementById("skullPanel");
+const mismatchPanel = document.getElementById("mismatchPanel");
 const coyotePanel = document.getElementById("coyotePanel");
 const halliPanel = document.getElementById("halliPanel");
 const decryptoPanel = document.getElementById("decryptoPanel");
@@ -223,6 +227,22 @@ const skullRaiseBidBtn = document.getElementById("skullRaiseBidBtn");
 const skullPassBidBtn = document.getElementById("skullPassBidBtn");
 const skullRevealBtn = document.getElementById("skullRevealBtn");
 const skullClearSelectionBtn = document.getElementById("skullClearSelection");
+
+const mismatchPhaseLabel = document.getElementById("mismatchPhase");
+const mismatchRoundLabel = document.getElementById("mismatchRound");
+const mismatchLeaderLabel = document.getElementById("mismatchLeader");
+const mismatchTargetLabel = document.getElementById("mismatchTarget");
+const mismatchGuessingLabel = document.getElementById("mismatchGuessing");
+const mismatchWinnerLabel = document.getElementById("mismatchWinner");
+const mismatchWords = document.getElementById("mismatchWords");
+const mismatchYourGuessLabel = document.getElementById("mismatchYourGuess");
+const mismatchSliders = document.getElementById("mismatchSliders");
+const mismatchRevealBtn = document.getElementById("mismatchRevealBtn");
+const mismatchNextRoundBtn = document.getElementById("mismatchNextRoundBtn");
+const mismatchRoundSummary = document.getElementById("mismatchRoundSummary");
+const mismatchRoundSummaryBody = document.getElementById("mismatchRoundSummaryBody");
+const mismatchRoundSummaryGuesses = document.getElementById("mismatchRoundSummaryGuesses");
+const mismatchPlayers = document.getElementById("mismatchPlayers");
 
 const coyotePhaseLabel = document.getElementById("coyotePhase");
 const coyoteRoundLabel = document.getElementById("coyoteRound");
@@ -1055,6 +1075,7 @@ function setGamePanelVisibility(gameType) {
   const showCabo = gameType === "cabo";
   const showFlip7 = gameType === "flip7";
   const showSkull = gameType === "skull";
+  const showMismatch = gameType === "perfect_mismatch";
   const showCoyote = gameType === "coyote";
   const showHalli = gameType === "halli_galli";
   const showDecrypto = gameType === "decrypto";
@@ -1069,6 +1090,9 @@ function setGamePanelVisibility(gameType) {
     flip7Panel.classList.toggle("hidden", !showFlip7);
   }
   skullPanel.classList.toggle("hidden", !showSkull);
+  if (mismatchPanel) {
+    mismatchPanel.classList.toggle("hidden", !showMismatch);
+  }
   if (coyotePanel) {
     coyotePanel.classList.toggle("hidden", !showCoyote);
   }
@@ -1179,6 +1203,14 @@ function updateHalliConfigRow() {
   if (halliDeckRow) {
     halliDeckRow.classList.toggle("hidden", !showRow);
     halliDeckRow.setAttribute("aria-hidden", (!showRow).toString());
+  }
+}
+
+function updateMismatchConfigRow() {
+  const showRow = currentRoomState && currentGameType === "perfect_mismatch" && currentRoomState.status === "lobby";
+  if (mismatchConfigBox) {
+    mismatchConfigBox.classList.toggle("hidden", !showRow);
+    mismatchConfigBox.setAttribute("aria-hidden", (!showRow).toString());
   }
 }
 
@@ -1702,6 +1734,7 @@ function resetRoomState() {
   clearCaboState();
   clearFlip7State();
   clearSkullState();
+  clearMismatchState();
   clearCoyoteState();
   clearHalliState();
   clearDecryptoState();
@@ -1717,6 +1750,7 @@ function resetRoomState() {
   updateDecryptoBotRow();
   updateAidixitDeckRow();
   updateHalliConfigRow();
+  updateMismatchConfigRow();
   updateAutoSaveRow();
   if (drawGuessLanguageSelect) {
     drawGuessLanguageSelect.value = "zh";
@@ -1737,6 +1771,9 @@ function resetRoomState() {
   decryptoBotClueDirectness = 0.5;
   if (halliDeckSelect) {
     halliDeckSelect.value = "base";
+  }
+  if (mismatchSliderCount) {
+    mismatchSliderCount.value = "3";
   }
   createRoomPending = false;
   setCreateGameRowVisible(false);
@@ -1829,6 +1866,57 @@ function clearSkullState() {
   skullTargets.innerHTML = "";
   skullPlayers.innerHTML = "";
   updateSkullActionButtons();
+}
+
+function clearMismatchState() {
+  currentMismatchView = null;
+  if (mismatchPhaseLabel) {
+    mismatchPhaseLabel.textContent = "-";
+  }
+  if (mismatchRoundLabel) {
+    mismatchRoundLabel.textContent = "-";
+  }
+  if (mismatchLeaderLabel) {
+    mismatchLeaderLabel.textContent = "-";
+  }
+  if (mismatchTargetLabel) {
+    mismatchTargetLabel.textContent = "-";
+  }
+  if (mismatchGuessingLabel) {
+    mismatchGuessingLabel.textContent = "-";
+  }
+  if (mismatchWinnerLabel) {
+    mismatchWinnerLabel.textContent = "-";
+  }
+  if (mismatchYourGuessLabel) {
+    mismatchYourGuessLabel.textContent = "-";
+  }
+  if (mismatchWords) {
+    mismatchWords.innerHTML = "";
+  }
+  if (mismatchSliders) {
+    mismatchSliders.innerHTML = "";
+  }
+  if (mismatchPlayers) {
+    mismatchPlayers.innerHTML = "";
+  }
+  if (mismatchRoundSummary) {
+    mismatchRoundSummary.classList.add("hidden");
+  }
+  if (mismatchRoundSummaryBody) {
+    mismatchRoundSummaryBody.textContent = "-";
+  }
+  if (mismatchRoundSummaryGuesses) {
+    mismatchRoundSummaryGuesses.innerHTML = "";
+  }
+  if (mismatchRevealBtn) {
+    mismatchRevealBtn.disabled = true;
+    mismatchRevealBtn.classList.remove("action-allowed");
+  }
+  if (mismatchNextRoundBtn) {
+    mismatchNextRoundBtn.disabled = true;
+    mismatchNextRoundBtn.classList.remove("action-allowed");
+  }
 }
 
 function clearCoyoteState() {
@@ -3273,6 +3361,10 @@ function emitRoomStart() {
   } else if (currentGameType === "halli_galli") {
     const deckMode = halliDeckSelect ? halliDeckSelect.value || "base" : "base";
     payload.config = { deck_mode: deckMode };
+  } else if (currentGameType === "perfect_mismatch") {
+    const rawCount = mismatchSliderCount ? Number.parseInt(mismatchSliderCount.value, 10) : NaN;
+    const sliderCount = Number.isInteger(rawCount) ? rawCount : 3;
+    payload.config = { slider_count: sliderCount };
   }
   socket.emit("room:start", payload);
 }
@@ -3296,6 +3388,7 @@ function renderRoomState(state) {
     clearCaboState();
     clearFlip7State();
     clearSkullState();
+    clearMismatchState();
     clearDecryptoState();
     clearDrawGuessState();
     clearAidixitState();
@@ -3311,6 +3404,7 @@ function renderRoomState(state) {
   updateDecryptoBotRow();
   updateAidixitDeckRow();
   updateHalliConfigRow();
+  updateMismatchConfigRow();
   updateAutoSaveRow();
   playersList.innerHTML = "";
   const orderedPlayers = Array.isArray(state.players)
@@ -3840,6 +3934,186 @@ function renderSkullPlayers(view) {
     card.appendChild(meta);
     skullPlayers.appendChild(card);
   });
+}
+
+function updateMismatchButtons(view) {
+  if (!mismatchRevealBtn || !mismatchNextRoundBtn) {
+    return;
+  }
+  const actions = view && Array.isArray(view.legal_actions) ? view.legal_actions : [];
+  const revealAllowed = actions.includes("reveal");
+  mismatchRevealBtn.disabled = !revealAllowed;
+  mismatchRevealBtn.classList.toggle("action-allowed", revealAllowed);
+  const nextAllowed = actions.includes("next_round");
+  mismatchNextRoundBtn.disabled = !nextAllowed;
+  mismatchNextRoundBtn.classList.toggle("action-allowed", nextAllowed);
+}
+
+function renderMismatchWords(view) {
+  if (!mismatchWords) {
+    return;
+  }
+  mismatchWords.innerHTML = "";
+  const words = Array.isArray(view.words) ? view.words : [];
+  const canGuess = Array.isArray(view.legal_actions) && view.legal_actions.includes("submit_guess");
+  const yourGuess = view.your_guess;
+  words.forEach((word, index) => {
+    const card = document.createElement("div");
+    card.className = "mismatch-word-card";
+    if (yourGuess && yourGuess.choice === index) {
+      card.classList.add("guessed");
+    }
+    if (view.target_index === index) {
+      card.classList.add("target");
+    }
+
+    const title = document.createElement("div");
+    title.className = "mismatch-word-title";
+    title.textContent = `${index + 1}. ${word}`;
+    card.appendChild(title);
+
+    const actions = document.createElement("div");
+    actions.className = "mismatch-word-actions";
+    const guessBtn = document.createElement("button");
+    guessBtn.type = "button";
+    guessBtn.textContent = "Guess";
+    guessBtn.disabled = !canGuess || !!yourGuess;
+    guessBtn.addEventListener("click", () => {
+      sendAction({ type: "submit_guess", choice_index: index });
+    });
+    actions.appendChild(guessBtn);
+
+    if (yourGuess && yourGuess.choice === index) {
+      const locked = document.createElement("span");
+      const order = Number.isInteger(yourGuess.order) ? `#${yourGuess.order}` : "#-";
+      locked.textContent = `Locked ${order}`;
+      actions.appendChild(locked);
+    }
+
+    card.appendChild(actions);
+    mismatchWords.appendChild(card);
+  });
+}
+
+function renderMismatchSliders(view) {
+  if (!mismatchSliders) {
+    return;
+  }
+  mismatchSliders.innerHTML = "";
+  const sliders = Array.isArray(view.sliders) ? view.sliders : [];
+  const isLeader = view.leader_id === view.you;
+  const canSet = Array.isArray(view.legal_actions) && view.legal_actions.includes("set_slider");
+  const activeIndex = Number.isInteger(view.active_slider_index) ? view.active_slider_index : 0;
+
+  sliders.forEach((slider, index) => {
+    const row = document.createElement("div");
+    row.className = "mismatch-slider-row";
+
+    const left = document.createElement("div");
+    left.className = "mismatch-slider-label left";
+    left.textContent = slider.left_attr || "-";
+
+    const right = document.createElement("div");
+    right.className = "mismatch-slider-label right";
+    right.textContent = slider.right_attr || "-";
+
+    const valueLabel = document.createElement("div");
+    valueLabel.className = "mismatch-slider-value";
+    const value = Number.isInteger(slider.value) ? slider.value : null;
+    valueLabel.textContent = value === null ? "?" : String(value);
+
+    const input = document.createElement("input");
+    input.type = "range";
+    input.min = "0";
+    input.max = "10";
+    input.step = "1";
+    input.value = value === null ? "5" : String(value);
+    input.className = "mismatch-slider";
+    if (value === null) {
+      input.classList.add("pending");
+    }
+    const isActive = isLeader && canSet && index === activeIndex;
+    input.disabled = !isActive;
+
+    const setBtn = document.createElement("button");
+    setBtn.type = "button";
+    setBtn.textContent = "Set";
+    setBtn.disabled = !isActive;
+    setBtn.addEventListener("click", () => {
+      const rawValue = Number.parseInt(input.value, 10);
+      const sliderValue = Number.isInteger(rawValue) ? rawValue : 5;
+      sendAction({ type: "set_slider", slider_index: index, value: sliderValue });
+    });
+
+    row.appendChild(left);
+    row.appendChild(input);
+    row.appendChild(right);
+    row.appendChild(valueLabel);
+    row.appendChild(setBtn);
+    mismatchSliders.appendChild(row);
+  });
+}
+
+function renderMismatchPlayers(view) {
+  if (!mismatchPlayers) {
+    return;
+  }
+  mismatchPlayers.innerHTML = "";
+  view.players.forEach((player) => {
+    const row = document.createElement("div");
+    row.className = "player-row";
+    const tags = [];
+    if (player.player_id === view.leader_id) {
+      tags.push("leader");
+    }
+    if (player.is_bot) {
+      tags.push("bot");
+    }
+    if (player.guessed) {
+      const order = Number.isInteger(player.guess_order) ? `#${player.guess_order}` : "#-";
+      tags.push(`guessed ${order}`);
+    }
+    const suffix = tags.length ? ` (${tags.join(", ")})` : "";
+    row.textContent = `${player.name} - ${player.score} pts${suffix}`;
+    mismatchPlayers.appendChild(row);
+  });
+}
+
+function renderMismatchSummary(view) {
+  if (!mismatchRoundSummary || !mismatchRoundSummaryBody || !mismatchRoundSummaryGuesses) {
+    return;
+  }
+  const summary = view.last_round_summary;
+  if (!summary) {
+    mismatchRoundSummary.classList.add("hidden");
+    mismatchRoundSummaryBody.textContent = "-";
+    mismatchRoundSummaryGuesses.innerHTML = "";
+    return;
+  }
+
+  const leaderName = findPlayerName(view, summary.leader_id);
+  const leaderDelta = summary.leader_delta;
+  const deltaLabel = leaderDelta >= 0 ? `+${leaderDelta}` : String(leaderDelta);
+  const correctLabel = `${summary.correct_count}/${summary.guess_count}`;
+  mismatchRoundSummaryBody.textContent = `${leaderName} target: ${summary.target_word} | correct ${correctLabel} | leader ${deltaLabel}`;
+
+  mismatchRoundSummaryGuesses.innerHTML = "";
+  const words = Array.isArray(summary.words) ? summary.words : [];
+  const guesses = Array.isArray(summary.guesses) ? summary.guesses : [];
+  guesses.forEach((entry) => {
+    const line = document.createElement("div");
+    const choiceLabel =
+      Number.isInteger(entry.choice_index) && words[entry.choice_index]
+        ? `${entry.choice_index + 1}. ${words[entry.choice_index]}`
+        : "-";
+    const orderLabel = Number.isInteger(entry.order) ? `#${entry.order}` : "-";
+    const resultLabel = entry.correct ? "correct" : "wrong";
+    const pointsLabel = entry.points ? `+${entry.points}` : "0";
+    line.textContent = `${entry.name}: ${choiceLabel} (${orderLabel}, ${resultLabel}, ${pointsLabel})`;
+    mismatchRoundSummaryGuesses.appendChild(line);
+  });
+
+  mismatchRoundSummary.classList.remove("hidden");
 }
 
 function formatCoyoteSummary(view) {
@@ -7653,6 +7927,58 @@ function renderSkullGameState(data) {
   updateSkullActionButtons();
 }
 
+function renderMismatchGameState(data) {
+  const view = data.view;
+  currentMismatchView = view;
+  if (currentGameType !== "perfect_mismatch") {
+    currentGameType = "perfect_mismatch";
+    setGamePanelVisibility("perfect_mismatch");
+  }
+
+  if (mismatchPhaseLabel) {
+    mismatchPhaseLabel.textContent = view.phase || "-";
+  }
+  if (mismatchRoundLabel) {
+    mismatchRoundLabel.textContent = view.round ?? "-";
+  }
+  if (mismatchLeaderLabel) {
+    mismatchLeaderLabel.textContent = view.leader_id ? findPlayerName(view, view.leader_id) : "-";
+  }
+  if (mismatchGuessingLabel) {
+    mismatchGuessingLabel.textContent = view.phase === "guessing" ? "open" : "closed";
+  }
+  if (mismatchWinnerLabel) {
+    if (view.game_over && Array.isArray(view.winner) && view.winner.length) {
+      const names = view.winner.map((pid) => findPlayerName(view, pid));
+      mismatchWinnerLabel.textContent = names.join(", ");
+    } else {
+      mismatchWinnerLabel.textContent = "-";
+    }
+  }
+  if (mismatchTargetLabel) {
+    if (Number.isInteger(view.target_index) && Array.isArray(view.words) && view.words[view.target_index]) {
+      mismatchTargetLabel.textContent = `${view.target_index + 1}. ${view.words[view.target_index]}`;
+    } else {
+      mismatchTargetLabel.textContent = "-";
+    }
+  }
+  if (mismatchYourGuessLabel) {
+    if (view.your_guess && Number.isInteger(view.your_guess.choice)) {
+      const order = Number.isInteger(view.your_guess.order) ? `#${view.your_guess.order}` : "#-";
+      mismatchYourGuessLabel.textContent = `${view.your_guess.choice + 1}. ${order}`;
+    } else {
+      mismatchYourGuessLabel.textContent = "-";
+    }
+  }
+
+  renderMismatchWords(view);
+  renderMismatchSliders(view);
+  renderMismatchPlayers(view);
+  renderMismatchSummary(view);
+  updateMismatchButtons(view);
+  logGameEvents(data);
+}
+
 function renderCoyoteGameState(data) {
   const view = data.view;
   const previousView = currentCoyoteView;
@@ -8048,6 +8374,10 @@ function renderGameState(data) {
   }
   if (gameType === "skull") {
     renderSkullGameState(data);
+    return;
+  }
+  if (gameType === "perfect_mismatch") {
+    renderMismatchGameState(data);
     return;
   }
   if (gameType === "coyote") {
@@ -8532,6 +8862,18 @@ skullRevealBtn.addEventListener("click", () => {
   updateSkullTargetSelection();
   updateSkullActionButtons();
 });
+
+if (mismatchRevealBtn) {
+  mismatchRevealBtn.addEventListener("click", () => {
+    sendAction({ type: "reveal" });
+  });
+}
+
+if (mismatchNextRoundBtn) {
+  mismatchNextRoundBtn.addEventListener("click", () => {
+    sendAction({ type: "next_round" });
+  });
+}
 
 coyoteBidBtn.addEventListener("click", () => {
   const bid = Number.parseInt(coyoteBidInput.value, 10);

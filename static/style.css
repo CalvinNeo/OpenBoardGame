@@ -183,6 +183,98 @@ h1 {
   color: #1f2937;
 }
 
+.mismatch-words {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.mismatch-word-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: #f9fafb;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mismatch-word-card.guessed {
+  border-color: #38bdf8;
+  background: #ecfeff;
+}
+
+.mismatch-word-card.target {
+  border-color: #22c55e;
+  background: #f0fdf4;
+}
+
+.mismatch-word-title {
+  font-weight: 600;
+  color: #111827;
+}
+
+.mismatch-word-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.mismatch-sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.mismatch-slider-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(160px, 2fr) minmax(120px, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.mismatch-slider-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mismatch-slider-label.left {
+  color: #dc2626;
+}
+
+.mismatch-slider-label.right {
+  color: #2563eb;
+  text-align: right;
+}
+
+.mismatch-slider {
+  width: 100%;
+  accent-color: #6366f1;
+  background: linear-gradient(90deg, #f87171 0%, #93c5fd 100%);
+}
+
+.mismatch-slider.pending {
+  opacity: 0.5;
+}
+
+.mismatch-slider-value {
+  font-size: 12px;
+  color: #374151;
+  min-width: 28px;
+  text-align: center;
+}
+
+.mismatch-summary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 13px;
+  color: #374151;
+}
+
 #coyoteRoundNoticeBody {
   display: flex;
   flex-direction: column;
