@@ -174,7 +174,6 @@ const flip7LastRound = document.getElementById("flip7LastRound");
 const flip7Players = document.getElementById("flip7Players");
 const flip7FlipBtn = document.getElementById("flip7FlipBtn");
 const flip7StayBtn = document.getElementById("flip7StayBtn");
-const flip7ChooseTargetBtn = document.getElementById("flip7ChooseTargetBtn");
 const flip7NextRoundBtn = document.getElementById("flip7NextRoundBtn");
 
 const handSlots = document.getElementById("handSlots");
@@ -481,7 +480,6 @@ const halliActionButtons = {
 const flip7ActionButtons = {
   flip: flip7FlipBtn,
   stay: flip7StayBtn,
-  choose_target: flip7ChooseTargetBtn,
   next_round: flip7NextRoundBtn,
 };
 
@@ -3568,6 +3566,7 @@ function renderFlip7Players(view) {
         updateFlip7TargetSelection(view);
         updateFlip7ActionButtons();
         renderFlip7Players(view);
+        sendAction({ type: "choose_target", target_player_id: player.player_id });
       });
     }
     if (flip7SelectedTarget === player.player_id) {
@@ -8483,17 +8482,6 @@ if (flip7FlipBtn) {
 if (flip7StayBtn) {
   flip7StayBtn.addEventListener("click", () => {
     sendAction({ type: "stay" });
-  });
-}
-
-if (flip7ChooseTargetBtn) {
-  flip7ChooseTargetBtn.addEventListener("click", () => {
-    if (!flip7SelectedTarget) {
-      log("Select a target");
-      return;
-    }
-    sendAction({ type: "choose_target", target_player_id: flip7SelectedTarget });
-    clearFlip7TargetSelection();
   });
 }
 
