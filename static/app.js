@@ -2740,6 +2740,9 @@ function renderBlokusPlayers(view) {
     if (player.player_id === view.current_turn) {
       card.classList.add("current");
     }
+    if (player.player_id === view.you) {
+      card.classList.add("self");
+    }
     if (player.passed) {
       card.classList.add("disabled");
     }
@@ -3663,6 +3666,19 @@ function renderFlip7Players(view) {
     card.appendChild(header);
     card.appendChild(tableauRow);
     card.appendChild(meta);
+    if (player.player_id === view.you) {
+      const actionsRow = document.createElement("div");
+      actionsRow.className = "flip7-player-actions row actions";
+      if (flip7FlipBtn) {
+        actionsRow.appendChild(flip7FlipBtn);
+      }
+      if (flip7StayBtn) {
+        actionsRow.appendChild(flip7StayBtn);
+      }
+      if (actionsRow.children.length) {
+        card.appendChild(actionsRow);
+      }
+    }
     flip7Players.appendChild(card);
   });
 }
