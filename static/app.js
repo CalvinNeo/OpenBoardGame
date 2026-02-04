@@ -4152,6 +4152,7 @@ function updateHalliCountdownLabels() {
     halliFlipCountdownLabel.textContent = label;
     halliFlipCountdownLabel.classList.toggle("halli-countdown-active", active);
   }
+  updateHalliPlayerFlipCountdown(flipRemaining);
 
   if (halliRingCountdownLabel) {
     let label = "Ready";
@@ -4174,6 +4175,30 @@ function updateHalliCountdownLabels() {
   }
 }
 
+function updateHalliPlayerFlipCountdown(flipRemaining) {
+  if (!halliPlayers || !currentHalliView) {
+    return;
+  }
+  const show =
+    !halliCountdownState.ringPending && halliCountdownState.flipWaitMs > 0 && flipRemaining > 0;
+  const label = show ? formatCountdownMs(flipRemaining) : "-";
+  const currentId = String(currentHalliView.current_turn ?? "");
+  halliPlayers.querySelectorAll(".halli-player-card").forEach((card) => {
+    const badge = card.querySelector(".halli-player-flip-countdown");
+    if (!badge) {
+      return;
+    }
+    const isCurrent = card.dataset.playerId === currentId;
+    if (show && isCurrent) {
+      badge.textContent = label;
+      badge.classList.remove("hidden");
+    } else {
+      badge.textContent = "-";
+      badge.classList.add("hidden");
+    }
+  });
+}
+
 function renderHalliPlayers(view) {
   if (!halliPlayers) {
     return;
@@ -4182,6 +4207,7 @@ function renderHalliPlayers(view) {
   view.players.forEach((p, index) => {
     const card = document.createElement("div");
     card.className = "player-card halli-player-card";
+    card.dataset.playerId = String(p.player_id ?? "");
     const seatIndex = (index % 8) + 1;
     card.classList.add(`halli-seat-${seatIndex}`);
     if (p.player_id === view.current_turn) {
@@ -4217,7 +4243,14 @@ function renderHalliPlayers(view) {
     info.className = "halli-player-info";
     const name = document.createElement("div");
     name.className = "player-name";
-    name.textContent = p.name;
+    const nameText = document.createElement("span");
+    nameText.className = "player-name-text";
+    nameText.textContent = p.name;
+    name.appendChild(nameText);
+    const flipCountdown = document.createElement("span");
+    flipCountdown.className = "halli-player-flip-countdown hidden";
+    flipCountdown.textContent = "-";
+    name.appendChild(flipCountdown);
     info.appendChild(name);
 
     const badges = document.createElement("div");

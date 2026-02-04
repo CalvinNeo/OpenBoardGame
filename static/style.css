@@ -986,6 +986,7 @@ body.log-open {
   z-index: 2;
 }
 
+
 .halli-bell-center-actionable {
   cursor: pointer;
 }
@@ -1099,6 +1100,35 @@ body.log-open {
   }
   .halli-bell-countdown {
     font-size: 18px;
+  }
+}
+
+.halli-player-flip-countdown {
+  margin-left: 6px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.16);
+  color: #92400e;
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 1.1;
+}
+
+@media (max-width: 900px) {
+  .halli-player-flip-countdown {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 640px) {
+  .halli-player-flip-countdown {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 420px) {
+  .halli-player-flip-countdown {
+    font-size: 9px;
   }
 }
 
