@@ -571,6 +571,8 @@ body.log-open {
   display: flex;
   gap: 8px;
   margin-bottom: 8px;
+  flex-wrap: wrap;
+  width: 100%;
 }
 
 .room-list {
@@ -2003,6 +2005,10 @@ body.log-open {
     width: 100%;
   }
 
+  .main {
+    width: 100%;
+  }
+
   .panel {
     padding: 12px;
   }
@@ -2023,6 +2029,7 @@ body.log-open {
 
   .game-panel {
     padding: 12px;
+    width: 100%;
   }
 
   .panel-header {
