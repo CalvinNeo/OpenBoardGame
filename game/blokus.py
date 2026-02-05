@@ -290,9 +290,10 @@ class BlokusGame:
         pdata = state["players"].get(player_id)
         if not pdata or pdata.get("passed"):
             return []
-        if not _has_any_move(state, player_id):
-            return []
-        return ["place_piece"]
+        actions = ["give_up"]
+        if _has_any_move(state, player_id):
+            actions.insert(0, "place_piece")
+        return actions
 
     @staticmethod
     def apply_action(state: Dict, player_id: str, action: Dict) -> Tuple[List[Dict], Optional[str]]:
@@ -304,7 +305,13 @@ class BlokusGame:
         if not pdata or pdata.get("passed"):
             return [], "player not active"
 
-        if action.get("type") != "place_piece":
+        action_type = action.get("type")
+        if action_type == "give_up":
+            pdata["passed"] = True
+            events = [{"type": "blokus:give_up", "payload": {"player_id": player_id}}]
+            _advance_turn(state, events)
+            return events, None
+        if action_type != "place_piece":
             return [], "invalid action"
         piece_id = action.get("piece_id")
         if piece_id not in pdata["pieces"]:

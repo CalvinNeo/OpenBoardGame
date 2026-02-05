@@ -528,16 +528,27 @@ SPLENDOR_CONFIG_SCHEMA = {
 
 BLOKUS_ACTION_SCHEMA = {
     "type": "object",
-    "properties": {
-        "type": {"const": "place_piece"},
-        "piece_id": {"type": "string"},
-        "rotation": {"type": "integer", "enum": [0, 90, 180, 270]},
-        "flip": {"type": "boolean"},
-        "x": {"type": "integer", "minimum": 0, "maximum": 19},
-        "y": {"type": "integer", "minimum": 0, "maximum": 19},
-    },
-    "required": ["type", "piece_id", "rotation", "flip", "x", "y"],
-    "additionalProperties": False,
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "place_piece"},
+                "piece_id": {"type": "string"},
+                "rotation": {"type": "integer", "enum": [0, 90, 180, 270]},
+                "flip": {"type": "boolean"},
+                "x": {"type": "integer", "minimum": 0, "maximum": 19},
+                "y": {"type": "integer", "minimum": 0, "maximum": 19},
+            },
+            "required": ["type", "piece_id", "rotation", "flip", "x", "y"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "give_up"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+    ],
 }
 
 BLOKUS_CONFIG_SCHEMA = {

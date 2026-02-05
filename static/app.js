@@ -456,6 +456,7 @@ const blokusWinnerLabel = document.getElementById("blokusWinner");
 const blokusSelectedPieceLabel = document.getElementById("blokusSelectedPiece");
 const blokusOriginLabel = document.getElementById("blokusOrigin");
 const blokusPlaceBtn = document.getElementById("blokusPlaceBtn");
+const blokusGiveUpBtn = document.getElementById("blokusGiveUpBtn");
 const blokusBoardControls = document.getElementById("blokusBoardControls");
 const blokusRotateLeftBtn = document.getElementById("blokusRotateLeftBtn");
 const blokusRotateRightBtn = document.getElementById("blokusRotateRightBtn");
@@ -2558,15 +2559,20 @@ function positionBlokusControls(bounds, boardSize) {
 }
 
 function updateBlokusActionButton() {
-  if (!blokusPlaceBtn) {
-    return;
+  const legalActions = currentBlokusView && Array.isArray(currentBlokusView.legal_actions)
+    ? currentBlokusView.legal_actions
+    : [];
+  if (blokusPlaceBtn) {
+    const placeAllowed = legalActions.includes("place_piece");
+    const placeEnabled = placeAllowed && !!blokusSelectedPieceId && !!blokusSelectedOrigin;
+    blokusPlaceBtn.disabled = !placeEnabled;
+    blokusPlaceBtn.classList.toggle("action-allowed", placeEnabled);
   }
-  const legal = currentBlokusView && Array.isArray(currentBlokusView.legal_actions)
-    ? currentBlokusView.legal_actions.includes("place_piece")
-    : false;
-  const enabled = legal && !!blokusSelectedPieceId && !!blokusSelectedOrigin;
-  blokusPlaceBtn.disabled = !enabled;
-  blokusPlaceBtn.classList.toggle("action-allowed", enabled);
+  if (blokusGiveUpBtn) {
+    const giveUpAllowed = legalActions.includes("give_up");
+    blokusGiveUpBtn.disabled = !giveUpAllowed;
+    blokusGiveUpBtn.classList.toggle("action-allowed", giveUpAllowed);
+  }
 }
 
 function nudgeBlokusOrigin(dx, dy) {
@@ -9554,6 +9560,20 @@ if (blokusPlaceBtn) {
     if (currentBlokusView) {
       renderBlokusBoard(currentBlokusView);
     }
+    updateBlokusActionButton();
+  });
+}
+
+if (blokusGiveUpBtn) {
+  blokusGiveUpBtn.addEventListener("click", () => {
+    if (!currentBlokusView || !Array.isArray(currentBlokusView.legal_actions)) {
+      return;
+    }
+    if (!currentBlokusView.legal_actions.includes("give_up")) {
+      log("Not your turn");
+      return;
+    }
+    sendAction({ type: "give_up" });
     updateBlokusActionButton();
   });
 }
