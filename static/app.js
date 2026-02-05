@@ -2556,20 +2556,54 @@ function getBlokusLegalPlacements(view, pieceId, rotation, flip) {
   return placements;
 }
 
+function getBlokusOrientationVariants(baseRotation, baseFlip) {
+  const rotations = [0, 90, 180, 270];
+  const flips = [false, true];
+  const variants = [];
+  const seen = new Set();
+  const normalizeRotation = (rotation) => ((rotation % 360) + 360) % 360;
+  const addVariant = (rotation, flip) => {
+    const key = `${rotation}:${flip}`;
+    if (seen.has(key)) {
+      return;
+    }
+    variants.push({ rotation, flip });
+    seen.add(key);
+  };
+  const normalizedBase = normalizeRotation(baseRotation);
+  const base = rotations.includes(normalizedBase) ? normalizedBase : 0;
+  addVariant(base, !!baseFlip);
+  flips.forEach((flip) => {
+    rotations.forEach((rotation) => {
+      addVariant(rotation, flip);
+    });
+  });
+  return variants;
+}
+
 function getNextBlokusAutoPlacement(view) {
-  const placements = getBlokusLegalPlacements(
-    view,
-    blokusSelectedPieceId,
-    blokusRotation,
-    blokusFlip,
-  );
+  if (!view || !blokusSelectedPieceId) {
+    return null;
+  }
+  const variants = getBlokusOrientationVariants(blokusRotation, blokusFlip);
+  const placements = [];
+  variants.forEach(({ rotation, flip }) => {
+    const options = getBlokusLegalPlacements(view, blokusSelectedPieceId, rotation, flip);
+    options.forEach(({ x, y }) => {
+      placements.push({ x, y, rotation, flip });
+    });
+  });
   if (!placements.length) {
     return null;
   }
   if (blokusSelectedOrigin) {
+    const currentRotation = ((blokusRotation % 360) + 360) % 360;
+    const currentFlip = !!blokusFlip;
     const index = placements.findIndex(
       (placement) => placement.x === blokusSelectedOrigin.x
-        && placement.y === blokusSelectedOrigin.y,
+        && placement.y === blokusSelectedOrigin.y
+        && placement.rotation === currentRotation
+        && placement.flip === currentFlip,
     );
     if (index >= 0) {
       return placements[(index + 1) % placements.length];
@@ -2870,8 +2904,8 @@ function handleBlokusPointerUp(event) {
   blokusBoard.classList.remove("dragging");
 }
 
-function setBlokusOrigin(x, y) {
-  if (blokusSelectedOrigin && blokusSelectedOrigin.x === x && blokusSelectedOrigin.y === y) {
+function setBlokusOrigin(x, y, forceUpdate = false) {
+  if (!forceUpdate && blokusSelectedOrigin && blokusSelectedOrigin.x === x && blokusSelectedOrigin.y === y) {
     return;
   }
   blokusSelectedOrigin = { x, y };
@@ -2926,12 +2960,17 @@ function renderBlokusPieces(view) {
       if (blokusSelectedPieceLabel) {
         blokusSelectedPieceLabel.textContent = pieceId;
       }
-      let placement = getNextBlokusAutoPlacement(view);
-      if (!placement) {
-        placement = getBlokusFallbackOrigin(view, pieceId, blokusRotation, blokusFlip);
-      }
+      const placement = getNextBlokusAutoPlacement(view);
       if (placement) {
-        setBlokusOrigin(placement.x, placement.y);
+        const rotationChanged = blokusRotation !== placement.rotation || blokusFlip !== placement.flip;
+        blokusRotation = placement.rotation;
+        blokusFlip = placement.flip;
+        setBlokusOrigin(placement.x, placement.y, rotationChanged);
+      } else {
+        const fallback = getBlokusFallbackOrigin(view, pieceId, blokusRotation, blokusFlip);
+        if (fallback) {
+          setBlokusOrigin(fallback.x, fallback.y);
+        }
       }
       renderBlokusPieces(view);
     });
