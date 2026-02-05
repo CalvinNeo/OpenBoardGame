@@ -359,6 +359,28 @@ input, select {
   align-items: flex-start;
 }
 
+.blokus-layout > div {
+  flex: 0 0 auto;
+}
+
+.blokus-pieces-column {
+  margin-top: 48px;
+  position: relative;
+  z-index: 1;
+}
+
+.blokus-pieces-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.blokus-pieces-header h3 {
+  margin: 0;
+}
+
 .blokus-board-wrapper {
   position: relative;
   display: inline-block;
