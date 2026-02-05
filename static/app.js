@@ -83,6 +83,18 @@ let blokusRotation = 0;
 let blokusFlip = false;
 let blokusDragState = null;
 const BLOKUS_DRAG_THRESHOLD = 6;
+const BLOKUS_ADJACENT_OFFSETS = [
+  [1, 0],
+  [-1, 0],
+  [0, 1],
+  [0, -1],
+];
+const BLOKUS_DIAGONAL_OFFSETS = [
+  [1, 1],
+  [1, -1],
+  [-1, 1],
+  [-1, -1],
+];
 let createRoomPending = false;
 let pendingReadyAfterJoin = false;
 let pendingReadyRoomId = null;
@@ -456,6 +468,7 @@ const blokusWinnerLabel = document.getElementById("blokusWinner");
 const blokusSelectedPieceLabel = document.getElementById("blokusSelectedPiece");
 const blokusOriginLabel = document.getElementById("blokusOrigin");
 const blokusPlaceBtn = document.getElementById("blokusPlaceBtn");
+const blokusHintBtn = document.getElementById("blokusHintBtn");
 const blokusGiveUpBtn = document.getElementById("blokusGiveUpBtn");
 const blokusBoardControls = document.getElementById("blokusBoardControls");
 const blokusRotateLeftBtn = document.getElementById("blokusRotateLeftBtn");
@@ -2414,6 +2427,156 @@ function transformBlokusCells(cells, rotation, flip) {
     coords = rotateBlokusCells(coords);
   }
   return normalizeBlokusCells(coords);
+}
+
+function getBlokusYou(view) {
+  if (!view || !Array.isArray(view.players)) {
+    return null;
+  }
+  return view.players.find((player) => player.player_id === view.you) || null;
+}
+
+function isBlokusFirstMove(view, you) {
+  if (!view || !you) {
+    return false;
+  }
+  const totalPieces = view.piece_defs ? Object.keys(view.piece_defs).length : 0;
+  const remaining = Array.isArray(view.remaining_pieces) ? view.remaining_pieces.length : null;
+  if (totalPieces && remaining !== null && remaining === totalPieces) {
+    return true;
+  }
+  const color = you.color;
+  const board = Array.isArray(view.board) ? view.board : [];
+  if (!color || !board.length) {
+    return false;
+  }
+  for (let y = 0; y < board.length; y += 1) {
+    const row = board[y];
+    if (!Array.isArray(row)) {
+      continue;
+    }
+    for (let x = 0; x < row.length; x += 1) {
+      if (row[x] === color) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+function getBlokusLegalPlacements(view, pieceId, rotation, flip) {
+  if (!view || !pieceId || !view.piece_defs) {
+    return [];
+  }
+  const def = view.piece_defs[pieceId];
+  if (!def || !Array.isArray(def.cells) || !def.cells.length) {
+    return [];
+  }
+  const you = getBlokusYou(view);
+  if (!you || !you.color || you.passed) {
+    return [];
+  }
+  const coords = transformBlokusCells(def.cells, rotation, flip);
+  if (!coords.length) {
+    return [];
+  }
+  const size = view.board_size || 20;
+  const board = Array.isArray(view.board) ? view.board : [];
+  const width = Math.max(...coords.map(([x]) => x)) + 1;
+  const height = Math.max(...coords.map(([, y]) => y)) + 1;
+  const maxX = size - width;
+  const maxY = size - height;
+  if (maxX < 0 || maxY < 0) {
+    return [];
+  }
+  const firstMove = isBlokusFirstMove(view, you);
+  const startCorner = Array.isArray(you.start_corner) ? you.start_corner : null;
+  const color = you.color;
+  const placements = [];
+
+  for (let y = 0; y <= maxY; y += 1) {
+    for (let x = 0; x <= maxX; x += 1) {
+      let hasDiagonal = false;
+      let coversCorner = false;
+      let blocked = false;
+      for (let i = 0; i < coords.length; i += 1) {
+        const [dx, dy] = coords[i];
+        const cx = x + dx;
+        const cy = y + dy;
+        const row = board[cy];
+        if (row && row[cx] != null) {
+          blocked = true;
+          break;
+        }
+        if (firstMove) {
+          if (startCorner && cx === startCorner[0] && cy === startCorner[1]) {
+            coversCorner = true;
+          }
+        } else {
+          for (let j = 0; j < BLOKUS_ADJACENT_OFFSETS.length; j += 1) {
+            const [ax, ay] = BLOKUS_ADJACENT_OFFSETS[j];
+            const nx = cx + ax;
+            const ny = cy + ay;
+            if (nx >= 0 && nx < size && ny >= 0 && ny < size) {
+              const adjRow = board[ny];
+              if (adjRow && adjRow[nx] === color) {
+                blocked = true;
+                break;
+              }
+            }
+          }
+          if (blocked) {
+            break;
+          }
+          for (let j = 0; j < BLOKUS_DIAGONAL_OFFSETS.length; j += 1) {
+            const [dx2, dy2] = BLOKUS_DIAGONAL_OFFSETS[j];
+            const nx = cx + dx2;
+            const ny = cy + dy2;
+            if (nx >= 0 && nx < size && ny >= 0 && ny < size) {
+              const diagRow = board[ny];
+              if (diagRow && diagRow[nx] === color) {
+                hasDiagonal = true;
+              }
+            }
+          }
+        }
+      }
+      if (blocked) {
+        continue;
+      }
+      if (firstMove) {
+        if (!coversCorner) {
+          continue;
+        }
+      } else if (!hasDiagonal) {
+        continue;
+      }
+      placements.push({ x, y });
+    }
+  }
+  return placements;
+}
+
+function getNextBlokusHintPlacement(view) {
+  const placements = getBlokusLegalPlacements(
+    view,
+    blokusSelectedPieceId,
+    blokusRotation,
+    blokusFlip,
+  );
+  if (!placements.length) {
+    return null;
+  }
+  if (blokusSelectedOrigin) {
+    const index = placements.findIndex(
+      (placement) => placement.x === blokusSelectedOrigin.x
+        && placement.y === blokusSelectedOrigin.y,
+    );
+    if (index >= 0) {
+      return placements[(index + 1) % placements.length];
+    }
+  }
+  return placements[0];
 }
 
 function getBlokusBoardMetrics() {
@@ -9526,6 +9689,22 @@ if (blokusNudgeDownBtn) {
 if (blokusNudgeRightBtn) {
   blokusNudgeRightBtn.addEventListener("click", () => {
     nudgeBlokusOrigin(1, 0);
+  });
+}
+
+if (blokusHintBtn) {
+  blokusHintBtn.addEventListener("click", () => {
+    if (!currentBlokusView || currentBlokusView.game_over) {
+      return;
+    }
+    if (!blokusSelectedPieceId) {
+      return;
+    }
+    const placement = getNextBlokusHintPlacement(currentBlokusView);
+    if (!placement) {
+      return;
+    }
+    setBlokusOrigin(placement.x, placement.y);
   });
 }
 
