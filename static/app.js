@@ -2782,7 +2782,9 @@ function renderBlokusBoard(view) {
   let ghostCells = null;
   let ghostColor = null;
   let ghostBounds = null;
-  if (blokusSelectedPieceId && blokusSelectedOrigin && view.piece_defs) {
+  const canPlace = Array.isArray(view.legal_actions)
+    && view.legal_actions.includes("place_piece");
+  if (canPlace && blokusSelectedPieceId && blokusSelectedOrigin && view.piece_defs) {
     const def = view.piece_defs[blokusSelectedPieceId];
     if (def && Array.isArray(def.cells)) {
       const coords = transformBlokusCells(def.cells, blokusRotation, blokusFlip);
@@ -2825,7 +2827,7 @@ function renderBlokusBoard(view) {
           cell.classList.add(ghostColor);
         }
       }
-      if (blokusSelectedOrigin && blokusSelectedOrigin.x === x && blokusSelectedOrigin.y === y) {
+      if (canPlace && blokusSelectedOrigin && blokusSelectedOrigin.x === x && blokusSelectedOrigin.y === y) {
         cell.classList.add("selected");
       }
       fragment.appendChild(cell);

@@ -393,6 +393,10 @@ input, select {
   z-index: 2;
 }
 
+.blokus-board-controls.hidden {
+  display: none;
+}
+
 .blokus-control-btn {
   padding: 2px 6px;
   font-size: 12px;
