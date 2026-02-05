@@ -468,7 +468,6 @@ const blokusWinnerLabel = document.getElementById("blokusWinner");
 const blokusSelectedPieceLabel = document.getElementById("blokusSelectedPiece");
 const blokusOriginLabel = document.getElementById("blokusOrigin");
 const blokusPlaceBtn = document.getElementById("blokusPlaceBtn");
-const blokusHintBtn = document.getElementById("blokusHintBtn");
 const blokusGiveUpBtn = document.getElementById("blokusGiveUpBtn");
 const blokusBoardControls = document.getElementById("blokusBoardControls");
 const blokusRotateLeftBtn = document.getElementById("blokusRotateLeftBtn");
@@ -2557,7 +2556,7 @@ function getBlokusLegalPlacements(view, pieceId, rotation, flip) {
   return placements;
 }
 
-function getNextBlokusHintPlacement(view) {
+function getNextBlokusAutoPlacement(view) {
   const placements = getBlokusLegalPlacements(
     view,
     blokusSelectedPieceId,
@@ -2577,6 +2576,27 @@ function getNextBlokusHintPlacement(view) {
     }
   }
   return placements[0];
+}
+
+function getBlokusFallbackOrigin(view, pieceId, rotation, flip) {
+  if (!view || !pieceId || !view.piece_defs) {
+    return null;
+  }
+  const def = view.piece_defs[pieceId];
+  if (!def || !Array.isArray(def.cells) || !def.cells.length) {
+    return null;
+  }
+  const coords = transformBlokusCells(def.cells, rotation, flip);
+  if (!coords.length) {
+    return null;
+  }
+  const size = view.board_size || 20;
+  const width = Math.max(...coords.map(([x]) => x)) + 1;
+  const height = Math.max(...coords.map(([, y]) => y)) + 1;
+  if (size < width || size < height) {
+    return null;
+  }
+  return { x: 0, y: 0 };
 }
 
 function getBlokusBoardMetrics() {
@@ -2898,13 +2918,22 @@ function renderBlokusPieces(view) {
       piece.classList.add("selected");
     }
     piece.addEventListener("click", () => {
+      const wasSelected = blokusSelectedPieceId === pieceId;
       blokusSelectedPieceId = pieceId;
+      if (!wasSelected) {
+        blokusSelectedOrigin = null;
+      }
       if (blokusSelectedPieceLabel) {
         blokusSelectedPieceLabel.textContent = pieceId;
       }
+      let placement = getNextBlokusAutoPlacement(view);
+      if (!placement) {
+        placement = getBlokusFallbackOrigin(view, pieceId, blokusRotation, blokusFlip);
+      }
+      if (placement) {
+        setBlokusOrigin(placement.x, placement.y);
+      }
       renderBlokusPieces(view);
-      renderBlokusBoard(view);
-      updateBlokusActionButton();
     });
 
     if (cells.length) {
@@ -9689,22 +9718,6 @@ if (blokusNudgeDownBtn) {
 if (blokusNudgeRightBtn) {
   blokusNudgeRightBtn.addEventListener("click", () => {
     nudgeBlokusOrigin(1, 0);
-  });
-}
-
-if (blokusHintBtn) {
-  blokusHintBtn.addEventListener("click", () => {
-    if (!currentBlokusView || currentBlokusView.game_over) {
-      return;
-    }
-    if (!blokusSelectedPieceId) {
-      return;
-    }
-    const placement = getNextBlokusHintPlacement(currentBlokusView);
-    if (!placement) {
-      return;
-    }
-    setBlokusOrigin(placement.x, placement.y);
   });
 }
 
