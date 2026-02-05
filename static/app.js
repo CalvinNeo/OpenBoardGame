@@ -2425,10 +2425,19 @@ function getBlokusBoardMetrics() {
     const parsed = Number.parseFloat(value);
     return Number.isFinite(parsed) ? parsed : fallback;
   };
+  const gap = readPx(style.getPropertyValue("--blokus-gap"), 1);
+  const pad = readPx(style.getPropertyValue("--blokus-pad"), 6);
+  let cell = readPx(style.getPropertyValue("--blokus-cell"), NaN);
+  if (!Number.isFinite(cell)) {
+    const rect = blokusBoard.getBoundingClientRect();
+    if (Number.isFinite(rect.width) && rect.width > 0) {
+      cell = (rect.width - (2 * pad) - (19 * gap)) / 20;
+    }
+  }
   return {
-    cell: readPx(style.getPropertyValue("--blokus-cell"), 18),
-    gap: readPx(style.getPropertyValue("--blokus-gap"), 1),
-    pad: readPx(style.getPropertyValue("--blokus-pad"), 6),
+    cell: Number.isFinite(cell) ? cell : 18,
+    gap,
+    pad,
   };
 }
 
