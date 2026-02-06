@@ -2124,6 +2124,8 @@ function resetDecryptoInputs() {
       select.value = "";
     }
   });
+  updateDecryptoGuessSelectLabels(decryptoDecryptSelects, null);
+  updateDecryptoGuessSelectLabels(decryptoInterceptSelects, null);
   updateDecryptoGuessSelectOptions(decryptoDecryptSelects);
   updateDecryptoGuessSelectOptions(decryptoInterceptSelects);
   updateDecryptoGuessClueLabels(decryptoDecryptClueLabels, null);
@@ -5176,6 +5178,40 @@ function getDecryptoGuessFromSelects(selects) {
   return parseDecryptoCodeInput(values.join("."));
 }
 
+function updateDecryptoGuessSelectLabels(selects, keywords) {
+  if (!Array.isArray(selects) || selects.length !== 3) {
+    return;
+  }
+  const hasKeywords = Array.isArray(keywords) && keywords.length >= 4;
+  selects.forEach((select) => {
+    if (!select) {
+      return;
+    }
+    Array.from(select.options).forEach((option) => {
+      if (!option.value) {
+        option.textContent = "-";
+        option.title = "";
+        return;
+      }
+      const index = Number.parseInt(option.value, 10);
+      if (!Number.isInteger(index) || index < 1 || index > 4) {
+        option.textContent = option.value;
+        option.title = "";
+        return;
+      }
+      const word =
+        hasKeywords && typeof keywords[index - 1] === "string" ? keywords[index - 1].trim() : "";
+      if (word) {
+        option.textContent = `${index}. ${word}`;
+        option.title = word;
+      } else {
+        option.textContent = option.value;
+        option.title = "";
+      }
+    });
+  });
+}
+
 function updateDecryptoGuessSelectOptions(selects) {
   if (!Array.isArray(selects) || selects.length !== 3) {
     return;
@@ -5702,8 +5738,15 @@ function renderDecryptoGameState(data) {
     view.team_id && view.teams && view.teams[view.team_id]
       ? view.teams[view.team_id].keywords
       : null;
+  const opponentId = getDecryptoOpponentTeam(view.team_id);
+  const opponentKeywords =
+    opponentId && view.teams && view.teams[opponentId]
+      ? view.teams[opponentId].keywords
+      : null;
   updateDecryptoClueCodeLabels(view.current_code, teamKeywords);
   updateDecryptoGuessClues(view);
+  updateDecryptoGuessSelectLabels(decryptoDecryptSelects, teamKeywords);
+  updateDecryptoGuessSelectLabels(decryptoInterceptSelects, opponentKeywords);
   updateDecryptoGuessSelectOptions(decryptoDecryptSelects);
   updateDecryptoGuessSelectOptions(decryptoInterceptSelects);
 
