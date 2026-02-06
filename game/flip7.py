@@ -286,12 +286,20 @@ def _end_round(state: Dict, reason: str) -> None:
         max_score = 0
     target = int(state["config"]["target_score"])
     winners = [pid for pid, pdata in state["players"].items() if pdata.get("score", 0) == max_score]
-    if max_score >= target and len(winners) == 1:
+    if max_score >= target:
         state["game_over"] = True
-        state["winner"] = winners[0]
+        state["winner"] = winners
         state["phase"] = "game_over"
         return
     state["phase"] = "round_end"
+
+
+def _finalize_round(state: Dict, events: List[Dict], reason: str) -> None:
+    _end_round(state, reason)
+    events.append({"type": "flip7:round_end", "payload": {"reason": reason}})
+    if not state.get("game_over"):
+        Flip7Game.start_new_round(state)
+        events.append({"type": "flip7:next_round", "payload": {"round": state["round"]}})
 
 
 def _draw_card(state: Dict, player_id: str, deferred_actions: Optional[List[Dict]] = None) -> Tuple[List[Dict], bool, bool, Optional[str]]:
@@ -426,20 +434,6 @@ def _start_round(state: Dict) -> None:
     state["current_turn"] = state["turn_order"][0] if state["turn_order"] else None
 
 
-def _reset_game_state(state: Dict) -> None:
-    config = state.get("config") or {}
-    player_meta = state.get("player_meta") or {}
-    players = []
-    for pid, meta in player_meta.items():
-        entry = dict(meta) if isinstance(meta, dict) else {}
-        entry["player_id"] = pid
-        players.append(entry)
-    players.sort(key=lambda p: p.get("seat", 0))
-    fresh_state = Flip7Game.init_game(config, players)
-    state.clear()
-    state.update(fresh_state)
-
-
 class Flip7Game:
     game_id = "flip7"
     min_players = 2
@@ -495,8 +489,6 @@ class Flip7Game:
         pdata = state["players"].get(player_id)
         if not pdata:
             return []
-        if pdata.get("status") == "busted":
-            return ["play_again"]
         if state.get("game_over"):
             return []
         phase = state.get("phase")
@@ -522,15 +514,6 @@ class Flip7Game:
 
         action_type = action.get("type")
         events: List[Dict] = []
-
-        if action_type == "play_again":
-            if state["players"][player_id].get("status") != "busted":
-                return [], "only busted players can play again"
-            _reset_game_state(state)
-            events.append(
-                {"type": "flip7:play_again", "payload": {"player_id": player_id, "round": state.get("round")}}
-            )
-            return events, None
 
         if state.get("game_over"):
             return [], "game over"
@@ -600,8 +583,7 @@ class Flip7Game:
             state["pending_action"] = None
             if _round_should_end(state):
                 reason = "flip7" if state.get("flip7_winner") else "all_done"
-                _end_round(state, reason)
-                events.append({"type": "flip7:round_end", "payload": {"reason": reason}})
+                _finalize_round(state, events, reason)
                 return events, None
 
             _ensure_current_turn(state)
@@ -621,8 +603,7 @@ class Flip7Game:
             _ensure_current_turn(state)
             if _round_should_end(state):
                 reason = "flip7" if state.get("flip7_winner") else "all_done"
-                _end_round(state, reason)
-                events.append({"type": "flip7:round_end", "payload": {"reason": reason}})
+                _finalize_round(state, events, reason)
             return events, None
 
         if action_type == "flip":
@@ -634,8 +615,7 @@ class Flip7Game:
                 _ensure_current_turn(state)
             if _round_should_end(state):
                 reason = "flip7" if state.get("flip7_winner") else "all_done"
-                _end_round(state, reason)
-                events.append({"type": "flip7:round_end", "payload": {"reason": reason}})
+                _finalize_round(state, events, reason)
             return events, None
 
         return [], "invalid action"

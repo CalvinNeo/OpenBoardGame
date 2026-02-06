@@ -196,7 +196,6 @@ const flip7LastRound = document.getElementById("flip7LastRound");
 const flip7Players = document.getElementById("flip7Players");
 const flip7FlipBtn = document.getElementById("flip7FlipBtn");
 const flip7StayBtn = document.getElementById("flip7StayBtn");
-const flip7PlayAgainBtn = document.getElementById("flip7PlayAgainBtn");
 
 const goldRushPhaseLabel = document.getElementById("goldRushPhase");
 const goldRushModeLabel = document.getElementById("goldRushMode");
@@ -567,7 +566,6 @@ const halliActionButtons = {
 const flip7ActionButtons = {
   flip: flip7FlipBtn,
   stay: flip7StayBtn,
-  play_again: flip7PlayAgainBtn,
 };
 
 const decryptoActionButtons = {
@@ -4015,7 +4013,7 @@ function renderFlip7Players(view) {
   flip7Players.innerHTML = "";
   const pending = view.pending_action;
   const eligible = new Set((pending && pending.eligible_targets) || []);
-  const isCurrentUserTurn = view.you && view.current_turn && view.you === view.current_turn;
+  const isPendingActor = pending && view.you && pending.actor_id === view.you;
   if (flip7SelectedTarget && !eligible.has(flip7SelectedTarget)) {
     flip7SelectedTarget = null;
   }
@@ -4032,7 +4030,7 @@ function renderFlip7Players(view) {
     if (pending && isEligible) {
       card.classList.add("flip7-target-eligible");
     }
-    if (pending && isEligible && isCurrentUserTurn) {
+    if (pending && isEligible && isPendingActor) {
       card.classList.add("flip7-target-selectable");
       card.addEventListener("click", () => {
         flip7SelectedTarget = player.player_id;
@@ -9722,12 +9720,6 @@ if (flip7FlipBtn) {
 if (flip7StayBtn) {
   flip7StayBtn.addEventListener("click", () => {
     sendAction({ type: "stay" });
-  });
-}
-
-if (flip7PlayAgainBtn) {
-  flip7PlayAgainBtn.addEventListener("click", () => {
-    sendAction({ type: "play_again" });
   });
 }
 
