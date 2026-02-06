@@ -4743,10 +4743,15 @@ function renderCoyoteRoundNotice(view) {
 }
 
 function renderCoyotePlayers(view) {
+  if (!coyotePlayers) {
+    return;
+  }
   coyotePlayers.innerHTML = "";
-  view.players.forEach((p) => {
+  view.players.forEach((p, index) => {
     const card = document.createElement("div");
-    card.className = "player-card";
+    card.className = "player-card coyote-player-card";
+    const seatIndex = (index % 10) + 1;
+    card.classList.add(`coyote-seat-${seatIndex}`);
     if (p.player_id === view.current_turn) {
       card.classList.add("current");
     }
@@ -4757,7 +4762,7 @@ function renderCoyotePlayers(view) {
     name.className = "player-name";
     name.textContent = p.name;
     const meta = document.createElement("div");
-    meta.className = "player-meta";
+    meta.className = "player-meta coyote-player-meta";
     let cardLabel = p.card;
     if (!cardLabel && p.card_hidden) {
       cardLabel = "Hidden";
