@@ -5188,7 +5188,25 @@ function renderCoyotePlayers(view) {
     }
     const maxPenalties = view.config ? view.config.max_penalties : "-";
     const status = p.eliminated ? "out" : "in";
-    meta.textContent = `card ${cardLabel} | penalties ${p.penalties}/${maxPenalties} | ${status}`;
+    const cardLine = document.createElement("div");
+    cardLine.className = "coyote-player-meta-line";
+    cardLine.append("card ");
+    const cardValue = document.createElement("span");
+    cardValue.textContent = cardLabel;
+    if (cardLabel !== "-") {
+      cardValue.className = "coyote-card-value";
+    }
+    cardLine.appendChild(cardValue);
+
+    const penaltiesLine = document.createElement("div");
+    penaltiesLine.className = "coyote-player-meta-line";
+    penaltiesLine.textContent = `penalties ${p.penalties}/${maxPenalties}`;
+
+    const statusLine = document.createElement("div");
+    statusLine.className = "coyote-player-meta-line";
+    statusLine.textContent = status;
+
+    meta.append(cardLine, penaltiesLine, statusLine);
     card.appendChild(name);
     card.appendChild(meta);
     coyotePlayers.appendChild(card);
