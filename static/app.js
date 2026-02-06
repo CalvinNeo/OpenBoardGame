@@ -119,6 +119,16 @@ const HANABI_COLOR_SHORT = {
   blue: "B",
   white: "W",
 };
+const GOLD_RUSH_COLOR_PALETTE = {
+  red: "#d14343",
+  brown: "#8b5e34",
+  blue: "#2563eb",
+  gray: "#6b7280",
+  green: "#2f9e44",
+  gold: "#d4a017",
+};
+const GOLD_RUSH_LIGHT_TEXT = "#f9fafb";
+const GOLD_RUSH_DARK_TEXT = "#111827";
 let createRoomPending = false;
 let pendingReadyAfterJoin = false;
 let pendingReadyRoomId = null;
@@ -9226,6 +9236,124 @@ function getGoldRushHand(view) {
   return you && Array.isArray(you.hand) ? you.hand : [];
 }
 
+function resolveGoldRushColor(color) {
+  if (!color) {
+    return null;
+  }
+  const key = String(color).trim().toLowerCase();
+  return GOLD_RUSH_COLOR_PALETTE[key] || color;
+}
+
+function parseGoldRushHexColor(color) {
+  if (typeof color !== "string") {
+    return null;
+  }
+  let hex = color.trim();
+  if (!hex.startsWith("#")) {
+    return null;
+  }
+  hex = hex.slice(1);
+  if (hex.length === 3) {
+    hex = hex
+      .split("")
+      .map((char) => `${char}${char}`)
+      .join("");
+  }
+  if (hex.length !== 6) {
+    return null;
+  }
+  const value = Number.parseInt(hex, 16);
+  if (Number.isNaN(value)) {
+    return null;
+  }
+  return {
+    r: (value >> 16) & 255,
+    g: (value >> 8) & 255,
+    b: value & 255,
+  };
+}
+
+function goldRushIsDarkColor(color) {
+  const rgb = parseGoldRushHexColor(color);
+  if (!rgb) {
+    return false;
+  }
+  const luminance = 0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b;
+  return luminance < 140;
+}
+
+function goldRushSoftColor(color) {
+  const rgb = parseGoldRushHexColor(color);
+  if (!rgb) {
+    return null;
+  }
+  return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.16)`;
+}
+
+function applyGoldRushColorStyles(element, color) {
+  if (!element) {
+    return;
+  }
+  const resolved = resolveGoldRushColor(color);
+  if (!resolved) {
+    element.style.removeProperty("--gold-rush-color");
+    element.style.removeProperty("--gold-rush-color-contrast");
+    element.style.removeProperty("--gold-rush-color-soft");
+    return;
+  }
+  element.style.setProperty("--gold-rush-color", resolved);
+  const contrast = goldRushIsDarkColor(resolved) ? GOLD_RUSH_LIGHT_TEXT : GOLD_RUSH_DARK_TEXT;
+  element.style.setProperty("--gold-rush-color-contrast", contrast);
+  const soft = goldRushSoftColor(resolved);
+  if (soft) {
+    element.style.setProperty("--gold-rush-color-soft", soft);
+  } else {
+    element.style.removeProperty("--gold-rush-color-soft");
+  }
+}
+
+function getGoldRushMineColors(view) {
+  const colors = {};
+  if (!view || !Array.isArray(view.mines)) {
+    return colors;
+  }
+  view.mines.forEach((mine) => {
+    const resolved = resolveGoldRushColor(mine.color);
+    if (resolved) {
+      colors[mine.id] = resolved;
+    }
+  });
+  return colors;
+}
+
+function getGoldRushSelectedMineId(view) {
+  const hand = getGoldRushHand(view);
+  if (Number.isInteger(goldRushSelectedHandIndex)) {
+    const selected = hand[goldRushSelectedHandIndex];
+    if (selected && selected.type === "miner" && Number.isInteger(selected.mine_id)) {
+      return selected.mine_id;
+    }
+  }
+  const pending = view && view.pending_card;
+  if (pending && pending.type === "miner" && Number.isInteger(pending.mine_id)) {
+    return pending.mine_id;
+  }
+  return null;
+}
+
+function getGoldRushCardColor(card, mineColors) {
+  if (!card) {
+    return null;
+  }
+  if (card.type === "miner" && Number.isInteger(card.mine_id)) {
+    return mineColors[card.mine_id] || null;
+  }
+  if (card.type === "gold") {
+    return GOLD_RUSH_COLOR_PALETTE.gold;
+  }
+  return null;
+}
+
 function goldRushCardLabel(card, mineNames) {
   if (!card) {
     return "-";
@@ -9273,6 +9401,7 @@ function renderGoldRushHand(view, mineNames) {
   }
   goldRushHand.innerHTML = "";
   const hand = getGoldRushHand(view);
+  const mineColors = getGoldRushMineColors(view);
   if (!hand.length) {
     const empty = document.createElement("div");
     empty.className = "gold-rush-empty";
@@ -9288,10 +9417,12 @@ function renderGoldRushHand(view, mineNames) {
       button.classList.add("selected");
     }
     button.textContent = goldRushCardLabel(card, mineNames);
+    applyGoldRushColorStyles(button, getGoldRushCardColor(card, mineColors));
     button.addEventListener("click", () => {
       goldRushSelectedHandIndex = index;
       renderGoldRushHand(view, mineNames);
       updateGoldRushSelectionLabel(view, mineNames);
+      renderGoldRushMines(view);
       updateGoldRushActionButtons();
     });
     goldRushHand.appendChild(button);
@@ -9332,6 +9463,7 @@ function renderGoldRushMines(view) {
   }
   const players = Array.isArray(view.players) ? view.players : [];
   const mineNames = {};
+  const selectedMineId = getGoldRushSelectedMineId(view);
   view.mines.forEach((mine) => {
     mineNames[mine.id] = mine.name;
   });
@@ -9345,6 +9477,10 @@ function renderGoldRushMines(view) {
     wrapper.type = "button";
     wrapper.className = "gold-rush-mine";
     wrapper.disabled = !canPlace;
+    applyGoldRushColorStyles(wrapper, mine.color);
+    if (Number.isInteger(selectedMineId) && mine.id === selectedMineId) {
+      wrapper.classList.add("selected");
+    }
 
     const highlight = goldRushMineHighlight(view, mine);
     if (highlight) {
@@ -10535,6 +10671,7 @@ if (goldRushClearSelectionBtn) {
   goldRushClearSelectionBtn.addEventListener("click", () => {
     goldRushSelectedHandIndex = null;
     updateGoldRushSelectionLabel(currentGoldRushView || {});
+    renderGoldRushMines(currentGoldRushView || {});
     updateGoldRushActionButtons();
   });
 }
@@ -10549,6 +10686,7 @@ if (goldRushPlayCardBtn) {
     sendAction({ type: "play_card", hand_index: goldRushSelectedHandIndex });
     goldRushSelectedHandIndex = null;
     updateGoldRushSelectionLabel(currentGoldRushView || {});
+    renderGoldRushMines(currentGoldRushView || {});
     updateGoldRushActionButtons();
   });
 }

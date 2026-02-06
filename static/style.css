@@ -3180,17 +3180,36 @@ body.log-open {
 }
 
 .gold-rush-mine {
-  border: 1px solid #d1d5db;
+  border: 3px solid var(--gold-rush-color, #d1d5db);
   border-radius: 8px;
   padding: 8px 10px;
   min-width: 160px;
   background: #f9fafb;
   text-align: left;
   position: relative;
+  box-shadow: var(--gold-rush-highlight-shadow, none);
+  color: #111827;
 }
 
 .gold-rush-mine:disabled {
   background: #f3f4f6;
+}
+
+.gold-rush-mine.action-allowed {
+  background: #f9fafb;
+  border-color: var(--gold-rush-color, #d1d5db);
+  color: #111827;
+}
+
+.gold-rush-mine.selected {
+  background: var(--gold-rush-color, #f9fafb);
+  color: var(--gold-rush-color-contrast, #111827);
+}
+
+.gold-rush-mine.selected .gold-rush-mine-title,
+.gold-rush-mine.selected .gold-rush-mine-row,
+.gold-rush-mine.selected .gold-rush-highlight-icon {
+  color: var(--gold-rush-color-contrast, #111827);
 }
 
 .gold-rush-mine-title {
@@ -3213,35 +3232,31 @@ body.log-open {
 }
 
 .gold-rush-highlight-safe {
-  border-color: #2e7d32;
-  background: #e8f5e9;
+  --gold-rush-highlight-shadow: 0 0 0 2px #2e7d32;
 }
 
 .gold-rush-highlight-danger {
-  border-color: #c62828;
-  background: #ffebee;
+  --gold-rush-highlight-shadow: 0 0 0 2px #c62828;
 }
 
 .gold-rush-highlight-contested {
-  border-color: #f9a825;
-  background: #fff8e1;
+  --gold-rush-highlight-shadow: 0 0 0 2px #f9a825;
 }
 
 .gold-rush-highlight-neutral {
-  border-color: #90a4ae;
-  background: #eceff1;
+  --gold-rush-highlight-shadow: 0 0 0 2px #90a4ae;
 }
 
 .gold-rush-card {
-  border: 1px solid #d1d5db;
+  border: 2px solid var(--gold-rush-color, #d1d5db);
   border-radius: 6px;
   padding: 6px 10px;
-  background: #fff;
+  background: var(--gold-rush-color-soft, #fff);
   cursor: pointer;
+  color: #111827;
 }
 
 .gold-rush-card.selected {
-  border-color: #2563eb;
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
 }
 
