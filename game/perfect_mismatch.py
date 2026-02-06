@@ -5,6 +5,9 @@ DEFAULT_CONFIG = {
     "slider_count": 3,
 }
 
+TASK_RECENT_LIMIT = 4
+ATTRIBUTE_RECENT_ROUNDS = 2
+
 ATTRIBUTE_DECK = [
     "危险的",
     "令人尴尬的",
@@ -133,29 +136,52 @@ def _build_task_deck() -> List[int]:
     return indices
 
 
-def _draw_task_card(state: Dict) -> None:
-    deck = state.get("task_deck")
+def _build_attribute_deck() -> List[str]:
+    deck = list(ATTRIBUTE_DECK)
+    random.shuffle(deck)
+    return deck
+
+
+def _draw_from_deck(state: Dict, key: str, build_fn, avoid: Optional[set] = None):
+    deck = state.get(key)
     if not deck:
-        deck = _build_task_deck()
-        state["task_deck"] = deck
-    card_index = deck.pop()
+        deck = build_fn()
+        state[key] = deck
+    if avoid:
+        for idx in range(len(deck) - 1, -1, -1):
+            if deck[idx] not in avoid:
+                return deck.pop(idx)
+    return deck.pop()
+
+
+def _draw_task_card(state: Dict) -> None:
+    recent = list(state.get("recent_task_cards", []))
+    card_index = _draw_from_deck(state, "task_deck", _build_task_deck, avoid=set(recent))
+    recent.append(card_index)
+    if len(recent) > TASK_RECENT_LIMIT:
+        recent = recent[-TASK_RECENT_LIMIT:]
+    state["recent_task_cards"] = recent
     words = list(TASK_CARDS[card_index])
+    random.shuffle(words)
     target_index = random.randrange(len(words))
     state["current_card"] = {"words": words, "target_index": target_index}
 
 
-def _draw_attributes(count: int) -> List[Dict]:
+def _draw_attributes(state: Dict, count: int) -> List[Dict]:
     if count <= 0:
         return []
-    pool = list(ATTRIBUTE_DECK)
-    if len(pool) >= count:
-        picks = random.sample(pool, count)
-    else:
-        picks = []
-        while len(picks) < count:
-            random.shuffle(pool)
-            picks.extend(pool)
-        picks = picks[:count]
+    recent = list(state.get("recent_attributes", []))
+    avoid = set(recent)
+    picks = []
+    for _ in range(count):
+        pick = _draw_from_deck(state, "attribute_deck", _build_attribute_deck, avoid=avoid)
+        picks.append(pick)
+        avoid.add(pick)
+    recent.extend(picks)
+    recent_limit = count * ATTRIBUTE_RECENT_ROUNDS
+    if recent_limit > 0 and len(recent) > recent_limit:
+        recent = recent[-recent_limit:]
+    state["recent_attributes"] = recent
     random.shuffle(picks)
     pairs = []
     for idx in range(0, count, 2):
@@ -180,7 +206,7 @@ def _leader_id(state: Dict) -> Optional[str]:
 def _setup_round(state: Dict) -> None:
     _draw_task_card(state)
     slider_count = state["config"]["slider_count"]
-    state["sliders"] = _draw_attributes(slider_count * 2)
+    state["sliders"] = _draw_attributes(state, slider_count * 2)
     state["active_slider_index"] = 0
     state["guesses"] = {}
     state["guess_order"] = 0
@@ -297,6 +323,9 @@ class PerfectMismatchGame:
             "round": 1,
             "config": cfg,
             "task_deck": _build_task_deck(),
+            "attribute_deck": _build_attribute_deck(),
+            "recent_task_cards": [],
+            "recent_attributes": [],
             "current_card": {"words": [], "target_index": 0},
             "sliders": [],
             "active_slider_index": 0,
