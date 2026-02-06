@@ -312,6 +312,16 @@ const decryptoGuessArea = document.getElementById("decryptoGuessArea");
 const decryptoClue1 = document.getElementById("decryptoClue1");
 const decryptoClue2 = document.getElementById("decryptoClue2");
 const decryptoClue3 = document.getElementById("decryptoClue3");
+const decryptoClueDigitLabels = [
+  document.getElementById("decryptoClueDigit1"),
+  document.getElementById("decryptoClueDigit2"),
+  document.getElementById("decryptoClueDigit3"),
+];
+const decryptoClueWordLabels = [
+  document.getElementById("decryptoClueWord1"),
+  document.getElementById("decryptoClueWord2"),
+  document.getElementById("decryptoClueWord3"),
+];
 const decryptoSubmitCluesBtn = document.getElementById("decryptoSubmitCluesBtn");
 const decryptoDecryptSelects = [
   document.getElementById("decryptoDecryptSelect1"),
@@ -2061,6 +2071,7 @@ function clearDecryptoState() {
   if (decryptoCurrentCodeLabel) {
     decryptoCurrentCodeLabel.textContent = "-";
   }
+  updateDecryptoClueCodeLabels(null, null);
   if (decryptoTeams) {
     decryptoTeams.innerHTML = "";
   }
@@ -5064,6 +5075,41 @@ function updateDecryptoGuessClueLabels(labels, clues) {
   });
 }
 
+function updateDecryptoClueCodeLabels(code, keywords) {
+  if (!Array.isArray(decryptoClueDigitLabels) || decryptoClueDigitLabels.length !== 3) {
+    return;
+  }
+  const values = Array.isArray(code) && code.length === 3 ? code : [];
+  decryptoClueDigitLabels.forEach((label, index) => {
+    if (!label) {
+      return;
+    }
+    const value = values[index];
+    label.textContent = Number.isInteger(value) ? value.toString() : "-";
+  });
+  if (!Array.isArray(decryptoClueWordLabels) || decryptoClueWordLabels.length !== 3) {
+    return;
+  }
+  const hasKeywords = Array.isArray(keywords) && keywords.length >= 4;
+  decryptoClueWordLabels.forEach((label, index) => {
+    if (!label) {
+      return;
+    }
+    const value = values[index];
+    const hasCode = Number.isInteger(value);
+    const keyword =
+      hasCode && hasKeywords ? keywords[value - 1] : null;
+    const keywordText = typeof keyword === "string" && keyword.trim() ? keyword.trim() : "";
+    if (hasCode) {
+      label.textContent = keywordText || "-";
+      label.classList.toggle("hidden", false);
+    } else {
+      label.textContent = "-";
+      label.classList.toggle("hidden", true);
+    }
+  });
+}
+
 function getDecryptoOpponentTeam(teamId) {
   if (teamId === "white") {
     return "black";
@@ -5491,6 +5537,11 @@ function renderDecryptoGameState(data) {
   if (decryptoCurrentCodeLabel) {
     decryptoCurrentCodeLabel.textContent = view.current_code ? formatDecryptoCode(view.current_code) : "-";
   }
+  const teamKeywords =
+    view.team_id && view.teams && view.teams[view.team_id]
+      ? view.teams[view.team_id].keywords
+      : null;
+  updateDecryptoClueCodeLabels(view.current_code, teamKeywords);
   updateDecryptoGuessClues(view);
   updateDecryptoGuessSelectOptions(decryptoDecryptSelects);
   updateDecryptoGuessSelectOptions(decryptoInterceptSelects);

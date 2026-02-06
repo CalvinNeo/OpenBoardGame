@@ -696,6 +696,50 @@ input, select {
   gap: 6px;
 }
 
+.decrypto-clue-row {
+  align-items: center;
+}
+
+.decrypto-clue-entry {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 160px;
+  min-width: 160px;
+}
+
+.decrypto-clue-entry input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+}
+
+.decrypto-clue-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.decrypto-clue-digit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: #e5e7eb;
+  color: #111827;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.decrypto-clue-word {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+}
+
 .decrypto-guess-grid {
   display: flex;
   flex-direction: column;
