@@ -14,7 +14,7 @@
     "西瓜", "葡萄", "樱桃", "橙子", "胡萝卜", "土豆", "豆腐", "熊", "大象", "青蛙"
   ],
   "rounds_per_guesser": 3,
-  "base_stamps": 6,
+  "base_stamps": 5,
   "score_mode": "round",
   "score_per_correct": 2,
   "stamp_shapes": ["circle", "triangle", "square", "bar"],
