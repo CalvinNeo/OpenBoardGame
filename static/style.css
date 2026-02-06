@@ -2655,6 +2655,108 @@ body.log-open {
   object-fit: contain;
 }
 
+.gold-rush-mines {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.gold-rush-mine {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 8px 10px;
+  min-width: 160px;
+  background: #f9fafb;
+  text-align: left;
+  position: relative;
+}
+
+.gold-rush-mine:disabled {
+  background: #f3f4f6;
+}
+
+.gold-rush-mine-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.gold-rush-mine-row {
+  font-size: 12px;
+  color: #374151;
+  margin-bottom: 2px;
+}
+
+.gold-rush-highlight-icon {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.gold-rush-highlight-safe {
+  border-color: #2e7d32;
+  background: #e8f5e9;
+}
+
+.gold-rush-highlight-danger {
+  border-color: #c62828;
+  background: #ffebee;
+}
+
+.gold-rush-highlight-contested {
+  border-color: #f9a825;
+  background: #fff8e1;
+}
+
+.gold-rush-highlight-neutral {
+  border-color: #90a4ae;
+  background: #eceff1;
+}
+
+.gold-rush-card {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 6px 10px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.gold-rush-card.selected {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.gold-rush-empty {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.gold-rush-player-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: #fafafa;
+  margin-bottom: 6px;
+}
+
+.gold-rush-player-name {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.gold-rush-player-meta {
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.gold-rush-score-line {
+  font-size: 12px;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
 @media (max-width: 900px) {
   .aidixit-hand,
   .aidixit-pool,

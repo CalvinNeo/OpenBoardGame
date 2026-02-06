@@ -6,6 +6,7 @@ from game.coyote import CoyoteGame
 from game.decrypto import DecryptoGame
 from game.draw_guess import DrawGuessGame
 from game.flip7 import Flip7Game
+from game.gold_rush import GoldRushGame
 from game.halli_galli import HalliGalliGame
 from game.impression_flower import ImpressionFlowerGame
 from game.perfect_mismatch import PerfectMismatchGame
@@ -21,6 +22,7 @@ __all__ = [
     "CaboGame",
     "DrawGuessGame",
     "Flip7Game",
+    "GoldRushGame",
     "HalliGalliGame",
     "CoyoteGame",
     "DecryptoGame",

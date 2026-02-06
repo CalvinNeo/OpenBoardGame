@@ -5,6 +5,7 @@ from game.coyote import CoyoteGame
 from game.decrypto import DecryptoGame
 from game.draw_guess import DrawGuessGame
 from game.flip7 import Flip7Game
+from game.gold_rush import GoldRushGame
 from game.halli_galli import HalliGalliGame
 from game.impression_flower import ImpressionFlowerGame
 from game.perfect_mismatch import PerfectMismatchGame
@@ -228,6 +229,40 @@ HALLI_GALLI_CONFIG_SCHEMA = {
         "deck_mode": {"type": "string", "enum": ["base", "extended"]},
         "flip_reveal_delay_ms": {"type": "integer", "minimum": 0},
         "flip_wait_ms": {"type": "integer", "minimum": 0},
+    },
+    "additionalProperties": False,
+}
+
+GOLD_RUSH_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {"type": {"const": "play_card"}, "hand_index": {"type": "integer", "minimum": 0}},
+            "required": ["type", "hand_index"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "draw_card"}}, "required": ["type"], "additionalProperties": False},
+        {
+            "type": "object",
+            "properties": {"type": {"const": "invest"}, "invest": {"type": "boolean"}},
+            "required": ["type", "invest"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "place_gold"}, "mine_id": {"type": "integer", "minimum": 0, "maximum": 4}},
+            "required": ["type", "mine_id"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "play_again"}}, "required": ["type"], "additionalProperties": False},
+    ],
+}
+
+GOLD_RUSH_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "mode": {"type": "string", "enum": ["hand", "classic"]},
     },
     "additionalProperties": False,
 }
@@ -765,6 +800,21 @@ register_game(
         module=Flip7Game,
         serialize=Flip7Game.serialize,
         deserialize=Flip7Game.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=GoldRushGame.game_id,
+        name="Gold Rush",
+        min_players=GoldRushGame.min_players,
+        max_players=GoldRushGame.max_players,
+        turn_mode="turn",
+        action_schema=GOLD_RUSH_ACTION_SCHEMA,
+        config_schema=GOLD_RUSH_CONFIG_SCHEMA,
+        module=GoldRushGame,
+        serialize=GoldRushGame.serialize,
+        deserialize=GoldRushGame.deserialize,
     )
 )
 

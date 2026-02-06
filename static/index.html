@@ -94,6 +94,7 @@
                     <option value="" selected disabled>Select a game</option>
                     <option value="cabo">Cabo</option>
                     <option value="flip7">Flip 7</option>
+                    <option value="gold_rush">Gold Rush</option>
                     <option value="halli_galli">Halli Galli</option>
                     <option value="coyote">Coyote</option>
                     <option value="decrypto">Decrypto</option>
@@ -195,6 +196,16 @@
                       <select id="halliDeckSelect">
                         <option value="base" selected>Base (56 cards)</option>
                         <option value="extended">Extended (72 cards)</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="game-config-card hidden" id="goldRushConfigBox" aria-hidden="true">
+                    <div class="game-config-title">Gold Rush</div>
+                    <div class="row" id="goldRushModeRow">
+                      <label for="goldRushModeSelect">Mode</label>
+                      <select id="goldRushModeSelect">
+                        <option value="hand" selected>Hand</option>
+                        <option value="classic">Classic</option>
                       </select>
                     </div>
                   </div>
@@ -318,6 +329,43 @@
               <div class="row actions flip7-bottom-actions">
                 <button id="flip7PlayAgainBtn">Play Again</button>
               </div>
+            </div>
+
+            <div id="goldRushPanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="goldRushPhase">-</span></div>
+                <div>Mode: <span id="goldRushMode">-</span></div>
+                <div>Current Turn: <span id="goldRushTurn">-</span></div>
+              </div>
+              <div class="row">
+                <div>Deck: <span id="goldRushDeck">-</span></div>
+                <div>Winner: <span id="goldRushWinner">-</span></div>
+              </div>
+
+              <h3>Your Hand</h3>
+              <div id="goldRushHand" class="hand"></div>
+              <div class="row">
+                <div>Selected Card: <span id="goldRushSelectedCard">-</span></div>
+                <button id="goldRushClearSelection">Clear</button>
+              </div>
+
+              <h3>Actions</h3>
+              <div class="row actions">
+                <button id="goldRushPlayCardBtn">Play Card</button>
+                <button id="goldRushDrawCardBtn">Draw Card</button>
+                <button id="goldRushInvestYesBtn">Invest</button>
+                <button id="goldRushInvestNoBtn">Skip</button>
+                <button id="goldRushPlayAgainBtn">Play Again</button>
+              </div>
+
+              <h3>Mines</h3>
+              <div id="goldRushMines" class="gold-rush-mines"></div>
+
+              <h3>Players</h3>
+              <div id="goldRushPlayers"></div>
+
+              <h3>Score Breakdown</h3>
+              <div id="goldRushScoreBreakdown"></div>
             </div>
 
             <div id="skullPanel" class="hidden">

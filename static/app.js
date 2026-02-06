@@ -9,6 +9,7 @@ let currentCoyoteView = null;
 let currentDecryptoView = null;
 let currentDrawGuessView = null;
 let currentFlip7View = null;
+let currentGoldRushView = null;
 let currentHalliView = null;
 let halliCountdownTimer = null;
 let halliCountdownState = {
@@ -32,6 +33,7 @@ let roomControlsGameActive = false;
 let roomControlsAutoCollapsed = false;
 let selectedTarget = null;
 let flip7SelectedTarget = null;
+let goldRushSelectedHandIndex = null;
 let skullSelectedCardIndex = null;
 let skullSelectedCardType = null;
 let skullSelectedTarget = null;
@@ -150,12 +152,16 @@ const aidixitDeckOptions = document.getElementById("aidixitDeckOptions");
 const halliConfigBox = document.getElementById("halliConfigBox");
 const halliDeckRow = document.getElementById("halliDeckRow");
 const halliDeckSelect = document.getElementById("halliDeckSelect");
+const goldRushConfigBox = document.getElementById("goldRushConfigBox");
+const goldRushModeRow = document.getElementById("goldRushModeRow");
+const goldRushModeSelect = document.getElementById("goldRushModeSelect");
 const mismatchConfigBox = document.getElementById("mismatchConfigBox");
 const mismatchSliderCount = document.getElementById("mismatchSliderCount");
 const autoSaveRow = document.getElementById("autoSaveRow");
 const autoSaveToggle = document.getElementById("autoSaveToggle");
 const caboPanel = document.getElementById("caboPanel");
 const flip7Panel = document.getElementById("flip7Panel");
+const goldRushPanel = document.getElementById("goldRushPanel");
 const skullPanel = document.getElementById("skullPanel");
 const mismatchPanel = document.getElementById("mismatchPanel");
 const coyotePanel = document.getElementById("coyotePanel");
@@ -191,6 +197,23 @@ const flip7Players = document.getElementById("flip7Players");
 const flip7FlipBtn = document.getElementById("flip7FlipBtn");
 const flip7StayBtn = document.getElementById("flip7StayBtn");
 const flip7PlayAgainBtn = document.getElementById("flip7PlayAgainBtn");
+
+const goldRushPhaseLabel = document.getElementById("goldRushPhase");
+const goldRushModeLabel = document.getElementById("goldRushMode");
+const goldRushTurnLabel = document.getElementById("goldRushTurn");
+const goldRushDeckLabel = document.getElementById("goldRushDeck");
+const goldRushWinnerLabel = document.getElementById("goldRushWinner");
+const goldRushHand = document.getElementById("goldRushHand");
+const goldRushSelectedCardLabel = document.getElementById("goldRushSelectedCard");
+const goldRushClearSelectionBtn = document.getElementById("goldRushClearSelection");
+const goldRushPlayCardBtn = document.getElementById("goldRushPlayCardBtn");
+const goldRushDrawCardBtn = document.getElementById("goldRushDrawCardBtn");
+const goldRushInvestYesBtn = document.getElementById("goldRushInvestYesBtn");
+const goldRushInvestNoBtn = document.getElementById("goldRushInvestNoBtn");
+const goldRushPlayAgainBtn = document.getElementById("goldRushPlayAgainBtn");
+const goldRushMines = document.getElementById("goldRushMines");
+const goldRushPlayers = document.getElementById("goldRushPlayers");
+const goldRushScoreBreakdown = document.getElementById("goldRushScoreBreakdown");
 
 const handSlots = document.getElementById("handSlots");
 const selectedSlotsLabel = document.getElementById("selectedSlots");
@@ -1118,6 +1141,7 @@ function showCreateGamePicker() {
 function setGamePanelVisibility(gameType) {
   const showCabo = gameType === "cabo";
   const showFlip7 = gameType === "flip7";
+  const showGoldRush = gameType === "gold_rush";
   const showSkull = gameType === "skull";
   const showMismatch = gameType === "perfect_mismatch";
   const showCoyote = gameType === "coyote";
@@ -1132,6 +1156,9 @@ function setGamePanelVisibility(gameType) {
   caboPanel.classList.toggle("hidden", !showCabo);
   if (flip7Panel) {
     flip7Panel.classList.toggle("hidden", !showFlip7);
+  }
+  if (goldRushPanel) {
+    goldRushPanel.classList.toggle("hidden", !showGoldRush);
   }
   skullPanel.classList.toggle("hidden", !showSkull);
   if (mismatchPanel) {
@@ -1247,6 +1274,18 @@ function updateHalliConfigRow() {
   if (halliDeckRow) {
     halliDeckRow.classList.toggle("hidden", !showRow);
     halliDeckRow.setAttribute("aria-hidden", (!showRow).toString());
+  }
+}
+
+function updateGoldRushConfigRow() {
+  const showRow = currentRoomState && currentGameType === "gold_rush" && currentRoomState.status === "lobby";
+  if (goldRushConfigBox) {
+    goldRushConfigBox.classList.toggle("hidden", !showRow);
+    goldRushConfigBox.setAttribute("aria-hidden", (!showRow).toString());
+  }
+  if (goldRushModeRow) {
+    goldRushModeRow.classList.toggle("hidden", !showRow);
+    goldRushModeRow.setAttribute("aria-hidden", (!showRow).toString());
   }
 }
 
@@ -1777,6 +1816,7 @@ function resetRoomState() {
   playersList.innerHTML = "";
   clearCaboState();
   clearFlip7State();
+  clearGoldRushState();
   clearSkullState();
   clearMismatchState();
   clearCoyoteState();
@@ -1794,6 +1834,7 @@ function resetRoomState() {
   updateDecryptoBotRow();
   updateAidixitDeckRow();
   updateHalliConfigRow();
+  updateGoldRushConfigRow();
   updateMismatchConfigRow();
   updateAutoSaveRow();
   if (drawGuessLanguageSelect) {
@@ -1815,6 +1856,9 @@ function resetRoomState() {
   decryptoBotClueDirectness = 0.5;
   if (halliDeckSelect) {
     halliDeckSelect.value = "base";
+  }
+  if (goldRushModeSelect) {
+    goldRushModeSelect.value = "hand";
   }
   if (mismatchSliderCount) {
     mismatchSliderCount.value = "3";
@@ -1888,6 +1932,42 @@ function clearFlip7State() {
     flip7Players.innerHTML = "";
   }
   updateFlip7ActionButtons();
+}
+
+function clearGoldRushState() {
+  currentGoldRushView = null;
+  goldRushSelectedHandIndex = null;
+  if (goldRushPhaseLabel) {
+    goldRushPhaseLabel.textContent = "-";
+  }
+  if (goldRushModeLabel) {
+    goldRushModeLabel.textContent = "-";
+  }
+  if (goldRushTurnLabel) {
+    goldRushTurnLabel.textContent = "-";
+  }
+  if (goldRushDeckLabel) {
+    goldRushDeckLabel.textContent = "-";
+  }
+  if (goldRushWinnerLabel) {
+    goldRushWinnerLabel.textContent = "-";
+  }
+  if (goldRushHand) {
+    goldRushHand.innerHTML = "";
+  }
+  if (goldRushSelectedCardLabel) {
+    goldRushSelectedCardLabel.textContent = "-";
+  }
+  if (goldRushMines) {
+    goldRushMines.innerHTML = "";
+  }
+  if (goldRushPlayers) {
+    goldRushPlayers.innerHTML = "";
+  }
+  if (goldRushScoreBreakdown) {
+    goldRushScoreBreakdown.innerHTML = "";
+  }
+  updateGoldRushActionButtons();
 }
 
 function clearSkullState() {
@@ -3653,6 +3733,9 @@ function emitRoomStart() {
   } else if (currentGameType === "halli_galli") {
     const deckMode = halliDeckSelect ? halliDeckSelect.value || "base" : "base";
     payload.config = { deck_mode: deckMode };
+  } else if (currentGameType === "gold_rush") {
+    const mode = goldRushModeSelect ? goldRushModeSelect.value || "hand" : "hand";
+    payload.config = { mode };
   } else if (currentGameType === "perfect_mismatch") {
     const rawCount = mismatchSliderCount ? Number.parseInt(mismatchSliderCount.value, 10) : NaN;
     const sliderCount = Number.isInteger(rawCount) ? rawCount : 3;
@@ -3689,6 +3772,7 @@ function renderRoomState(state) {
     clearAbracaState();
     clearBlokusState();
     clearHalliState();
+    clearGoldRushState();
   }
   setGamePanelVisibility(currentGameType);
   updateDrawGuessLanguageRow();
@@ -3696,6 +3780,7 @@ function renderRoomState(state) {
   updateDecryptoBotRow();
   updateAidixitDeckRow();
   updateHalliConfigRow();
+  updateGoldRushConfigRow();
   updateMismatchConfigRow();
   updateAutoSaveRow();
   playersList.innerHTML = "";
@@ -4974,6 +5059,56 @@ function updateFlip7ActionButtons() {
       button.classList.remove("action-allowed");
     }
     button.disabled = !allowed;
+  });
+}
+
+function isGoldRushActionAvailable(actionType) {
+  if (!currentGoldRushView || !Array.isArray(currentGoldRushView.legal_actions)) {
+    return false;
+  }
+  if (!currentGoldRushView.legal_actions.includes(actionType)) {
+    return false;
+  }
+  if (actionType === "play_card") {
+    const hand = getGoldRushHand(currentGoldRushView);
+    return (
+      Number.isInteger(goldRushSelectedHandIndex) &&
+      goldRushSelectedHandIndex >= 0 &&
+      goldRushSelectedHandIndex < hand.length
+    );
+  }
+  return true;
+}
+
+function updateGoldRushActionButtons() {
+  const buttons = [
+    { type: "play_card", el: goldRushPlayCardBtn },
+    { type: "draw_card", el: goldRushDrawCardBtn },
+    { type: "invest", el: goldRushInvestYesBtn },
+    { type: "invest", el: goldRushInvestNoBtn },
+    { type: "play_again", el: goldRushPlayAgainBtn },
+  ];
+  if (currentGameType !== "gold_rush") {
+    buttons.forEach(({ el }) => {
+      if (!el) {
+        return;
+      }
+      el.classList.remove("action-allowed");
+      el.disabled = true;
+    });
+    return;
+  }
+  buttons.forEach(({ type, el }) => {
+    if (!el) {
+      return;
+    }
+    const allowed = isGoldRushActionAvailable(type);
+    if (allowed) {
+      el.classList.add("action-allowed");
+    } else {
+      el.classList.remove("action-allowed");
+    }
+    el.disabled = !allowed;
   });
 }
 
@@ -8308,6 +8443,298 @@ function renderFlip7GameState(data) {
   updateFlip7ActionButtons();
 }
 
+function getGoldRushHand(view) {
+  if (!view || !Array.isArray(view.players)) {
+    return [];
+  }
+  const you = view.players.find((player) => player.player_id === view.you);
+  return you && Array.isArray(you.hand) ? you.hand : [];
+}
+
+function goldRushCardLabel(card, mineNames) {
+  if (!card) {
+    return "-";
+  }
+  if (card.type === "gold") {
+    return `$${card.value ?? 0}`;
+  }
+  if (card.type === "miner") {
+    const mineName = mineNames && Number.isInteger(card.mine_id) ? mineNames[card.mine_id] : null;
+    return mineName ? `${mineName} Miner` : `Miner ${card.mine_id ?? "-"}`;
+  }
+  return "Unknown";
+}
+
+function goldRushMineHighlight(view, mine) {
+  if (!view || view.phase !== "awaiting_gold_placement") {
+    return null;
+  }
+  if (view.current_turn !== view.you) {
+    return null;
+  }
+  if (mine.gold_count >= (view.max_gold_cards ?? 6)) {
+    return null;
+  }
+  const tokens = mine.tokens_by_player || {};
+  const entries = Object.entries(tokens).map(([pid, count]) => [pid, Number(count) || 0]);
+  const total = entries.reduce((sum, [, count]) => sum + count, 0);
+  if (total === 0) {
+    return { className: "gold-rush-highlight-neutral", icon: "-" };
+  }
+  const maxTokens = Math.max(...entries.map(([, count]) => count));
+  const leaders = entries.filter(([, count]) => count === maxTokens && count > 0).map(([pid]) => pid);
+  if (leaders.length > 1) {
+    return { className: "gold-rush-highlight-contested", icon: "=" };
+  }
+  if (leaders[0] === view.you) {
+    return { className: "gold-rush-highlight-safe", icon: "OK" };
+  }
+  return { className: "gold-rush-highlight-danger", icon: "X" };
+}
+
+function renderGoldRushHand(view, mineNames) {
+  if (!goldRushHand) {
+    return;
+  }
+  goldRushHand.innerHTML = "";
+  const hand = getGoldRushHand(view);
+  if (!hand.length) {
+    const empty = document.createElement("div");
+    empty.className = "gold-rush-empty";
+    empty.textContent = view.mode === "classic" ? "Classic mode (no hand)" : "No cards";
+    goldRushHand.appendChild(empty);
+    return;
+  }
+  hand.forEach((card, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "gold-rush-card";
+    if (index === goldRushSelectedHandIndex) {
+      button.classList.add("selected");
+    }
+    button.textContent = goldRushCardLabel(card, mineNames);
+    button.addEventListener("click", () => {
+      goldRushSelectedHandIndex = index;
+      renderGoldRushHand(view, mineNames);
+      updateGoldRushSelectionLabel(view, mineNames);
+      updateGoldRushActionButtons();
+    });
+    goldRushHand.appendChild(button);
+  });
+}
+
+function updateGoldRushSelectionLabel(view, mineNames) {
+  if (!goldRushSelectedCardLabel) {
+    return;
+  }
+  let resolvedMineNames = mineNames;
+  if (!resolvedMineNames && view && Array.isArray(view.mines)) {
+    resolvedMineNames = {};
+    view.mines.forEach((mine) => {
+      resolvedMineNames[mine.id] = mine.name;
+    });
+  }
+  const hand = getGoldRushHand(view);
+  if (
+    !Number.isInteger(goldRushSelectedHandIndex) ||
+    goldRushSelectedHandIndex < 0 ||
+    goldRushSelectedHandIndex >= hand.length
+  ) {
+    goldRushSelectedHandIndex = null;
+    goldRushSelectedCardLabel.textContent = "-";
+    return;
+  }
+  goldRushSelectedCardLabel.textContent = goldRushCardLabel(hand[goldRushSelectedHandIndex], resolvedMineNames);
+}
+
+function renderGoldRushMines(view) {
+  if (!goldRushMines) {
+    return;
+  }
+  goldRushMines.innerHTML = "";
+  if (!view || !Array.isArray(view.mines)) {
+    return;
+  }
+  const players = Array.isArray(view.players) ? view.players : [];
+  const mineNames = {};
+  view.mines.forEach((mine) => {
+    mineNames[mine.id] = mine.name;
+  });
+  view.mines.forEach((mine) => {
+    const canPlace =
+      view.legal_actions &&
+      view.legal_actions.includes("place_gold") &&
+      view.current_turn === view.you &&
+      mine.gold_count < (view.max_gold_cards ?? 6);
+    const wrapper = document.createElement("button");
+    wrapper.type = "button";
+    wrapper.className = "gold-rush-mine";
+    wrapper.disabled = !canPlace;
+
+    const highlight = goldRushMineHighlight(view, mine);
+    if (highlight) {
+      wrapper.classList.add(highlight.className);
+      const icon = document.createElement("div");
+      icon.className = "gold-rush-highlight-icon";
+      icon.textContent = highlight.icon;
+      wrapper.appendChild(icon);
+    }
+
+    const title = document.createElement("div");
+    title.className = "gold-rush-mine-title";
+    title.textContent = mine.name || `Mine ${mine.id}`;
+    wrapper.appendChild(title);
+
+    const miners = document.createElement("div");
+    miners.className = "gold-rush-mine-row";
+    miners.textContent = `Miners: ${mine.miners_count ?? 0}`;
+    wrapper.appendChild(miners);
+
+    const gold = document.createElement("div");
+    gold.className = "gold-rush-mine-row";
+    const maxGold = view.max_gold_cards ?? 6;
+    gold.textContent = `Gold: ${mine.gold_count ?? 0}/${maxGold} (Total ${mine.gold_total ?? 0})`;
+    wrapper.appendChild(gold);
+
+    const tokensRow = document.createElement("div");
+    tokensRow.className = "gold-rush-mine-row";
+    const tokens = mine.tokens_by_player || {};
+    const tokenEntries = players
+      .map((player) => {
+        const count = tokens[player.player_id] || 0;
+        if (!count) {
+          return null;
+        }
+        return `${player.name || player.player_id}: ${count}`;
+      })
+      .filter(Boolean);
+    tokensRow.textContent = tokenEntries.length ? `Tokens: ${tokenEntries.join(", ")}` : "Tokens: -";
+    wrapper.appendChild(tokensRow);
+
+    if (canPlace) {
+      wrapper.classList.add("action-allowed");
+      wrapper.addEventListener("click", () => {
+        sendAction({ type: "place_gold", mine_id: mine.id });
+      });
+    }
+
+    goldRushMines.appendChild(wrapper);
+  });
+}
+
+function renderGoldRushPlayers(view) {
+  if (!goldRushPlayers) {
+    return;
+  }
+  goldRushPlayers.innerHTML = "";
+  if (!view || !Array.isArray(view.players)) {
+    return;
+  }
+  view.players.forEach((player) => {
+    const card = document.createElement("div");
+    card.className = "gold-rush-player-card";
+    const name = document.createElement("div");
+    name.className = "gold-rush-player-name";
+    name.textContent = player.name || player.player_id;
+    card.appendChild(name);
+
+    const meta = document.createElement("div");
+    meta.className = "gold-rush-player-meta";
+    const tags = [
+      `score ${player.score ?? 0}`,
+      `tokens ${player.tokens_available ?? 0}`,
+      `hand ${player.hand_count ?? 0}`,
+    ];
+    if (player.player_id === view.current_turn) {
+      tags.push("turn");
+    }
+    if (player.player_id === view.you) {
+      tags.push("you");
+    }
+    if (player.is_bot) {
+      tags.push("bot");
+    }
+    meta.textContent = tags.join(" · ");
+    card.appendChild(meta);
+    goldRushPlayers.appendChild(card);
+  });
+}
+
+function renderGoldRushScoreBreakdown(view) {
+  if (!goldRushScoreBreakdown) {
+    return;
+  }
+  goldRushScoreBreakdown.innerHTML = "";
+  if (!view || !view.game_over || !Array.isArray(view.score_breakdown)) {
+    goldRushScoreBreakdown.textContent = "-";
+    return;
+  }
+  const players = Array.isArray(view.players) ? view.players : [];
+  view.score_breakdown.forEach((entry) => {
+    const line = document.createElement("div");
+    line.className = "gold-rush-score-line";
+    const gains = entry.gains_by_player || {};
+    const gainsText = players
+      .map((player) => `${player.name || player.player_id}: ${gains[player.player_id] || 0}`)
+      .join(", ");
+    line.textContent = `${entry.mine_name || `Mine ${entry.mine_id}`}: pot ${entry.total_gold ?? 0}, tokens ${
+      entry.total_tokens ?? 0
+    }, share ${entry.share ?? 0}, remainder ${entry.remainder ?? 0}, gains ${gainsText}`;
+    goldRushScoreBreakdown.appendChild(line);
+  });
+}
+
+function renderGoldRushGameState(data) {
+  const view = data.view;
+  currentGoldRushView = view;
+  if (currentGameType !== "gold_rush") {
+    currentGameType = "gold_rush";
+    setGamePanelVisibility("gold_rush");
+  }
+
+  if (goldRushPhaseLabel) {
+    goldRushPhaseLabel.textContent = view.phase || "-";
+  }
+  if (goldRushModeLabel) {
+    goldRushModeLabel.textContent = view.mode || "-";
+  }
+  if (goldRushTurnLabel) {
+    const currentPlayer = view.players.find((p) => p.player_id === view.current_turn);
+    goldRushTurnLabel.textContent = currentPlayer ? currentPlayer.name : view.current_turn || "-";
+  }
+  if (goldRushDeckLabel) {
+    goldRushDeckLabel.textContent = view.deck_count ?? "-";
+  }
+  if (goldRushWinnerLabel) {
+    if (Array.isArray(view.winner) && view.winner.length) {
+      const names = view.winner.map((pid) => findPlayerName(view, pid));
+      goldRushWinnerLabel.textContent = names.join(", ");
+    } else {
+      goldRushWinnerLabel.textContent = "-";
+    }
+  }
+
+  const mineNames = {};
+  if (Array.isArray(view.mines)) {
+    view.mines.forEach((mine) => {
+      mineNames[mine.id] = mine.name;
+    });
+  }
+
+  const hand = getGoldRushHand(view);
+  if (goldRushSelectedHandIndex !== null && goldRushSelectedHandIndex >= hand.length) {
+    goldRushSelectedHandIndex = null;
+  }
+
+  renderGoldRushHand(view, mineNames);
+  updateGoldRushSelectionLabel(view, mineNames);
+  renderGoldRushMines(view);
+  renderGoldRushPlayers(view);
+  renderGoldRushScoreBreakdown(view);
+  logGameEvents(data);
+  updateGoldRushActionButtons();
+}
+
 function renderSkullGameState(data) {
   const view = data.view;
   currentSkullView = view;
@@ -8807,6 +9234,10 @@ function renderGameState(data) {
     renderFlip7GameState(data);
     return;
   }
+  if (gameType === "gold_rush") {
+    renderGoldRushGameState(data);
+    return;
+  }
   if (gameType === "skull") {
     renderSkullGameState(data);
     return;
@@ -9252,6 +9683,52 @@ if (flip7StayBtn) {
 
 if (flip7PlayAgainBtn) {
   flip7PlayAgainBtn.addEventListener("click", () => {
+    sendAction({ type: "play_again" });
+  });
+}
+
+if (goldRushClearSelectionBtn) {
+  goldRushClearSelectionBtn.addEventListener("click", () => {
+    goldRushSelectedHandIndex = null;
+    updateGoldRushSelectionLabel(currentGoldRushView || {});
+    updateGoldRushActionButtons();
+  });
+}
+
+if (goldRushPlayCardBtn) {
+  goldRushPlayCardBtn.addEventListener("click", () => {
+    const hand = getGoldRushHand(currentGoldRushView);
+    if (!Number.isInteger(goldRushSelectedHandIndex) || goldRushSelectedHandIndex < 0 || goldRushSelectedHandIndex >= hand.length) {
+      log("Select a card to play");
+      return;
+    }
+    sendAction({ type: "play_card", hand_index: goldRushSelectedHandIndex });
+    goldRushSelectedHandIndex = null;
+    updateGoldRushSelectionLabel(currentGoldRushView || {});
+    updateGoldRushActionButtons();
+  });
+}
+
+if (goldRushDrawCardBtn) {
+  goldRushDrawCardBtn.addEventListener("click", () => {
+    sendAction({ type: "draw_card" });
+  });
+}
+
+if (goldRushInvestYesBtn) {
+  goldRushInvestYesBtn.addEventListener("click", () => {
+    sendAction({ type: "invest", invest: true });
+  });
+}
+
+if (goldRushInvestNoBtn) {
+  goldRushInvestNoBtn.addEventListener("click", () => {
+    sendAction({ type: "invest", invest: false });
+  });
+}
+
+if (goldRushPlayAgainBtn) {
+  goldRushPlayAgainBtn.addEventListener("click", () => {
     sendAction({ type: "play_again" });
   });
 }
