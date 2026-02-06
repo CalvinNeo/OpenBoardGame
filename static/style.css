@@ -252,7 +252,45 @@ h1 {
 .mismatch-slider {
   width: 100%;
   accent-color: #6366f1;
-  background: linear-gradient(90deg, #f87171 0%, #93c5fd 100%);
+  background: linear-gradient(90deg, #dc2626 0%, #2563eb 100%);
+  border-radius: 999px;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.mismatch-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  background: linear-gradient(90deg, #dc2626 0%, #2563eb 100%);
+  border-radius: 999px;
+}
+
+.mismatch-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #111827;
+  border: 2px solid #f9fafb;
+  margin-top: -5px;
+}
+
+.mismatch-slider::-moz-range-track {
+  height: 6px;
+  background: linear-gradient(90deg, #dc2626 0%, #2563eb 100%);
+  border-radius: 999px;
+}
+
+.mismatch-slider::-moz-range-progress {
+  background: transparent;
+}
+
+.mismatch-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #111827;
+  border: 2px solid #f9fafb;
 }
 
 .mismatch-slider.pending {
