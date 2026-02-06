@@ -863,7 +863,7 @@ async function copyGameStateSnapshot() {
     return;
   }
   const snapshot = buildGameStateSnapshot();
-  const text = JSON.stringify(snapshot, null, 2);
+  const text = JSON.stringify(snapshot);
   const ok = await copyTextToClipboard(text);
   if (ok) {
     log("Game state copied to clipboard.");
