@@ -556,10 +556,28 @@ h1 {
 
   .coyote-center-actions {
     gap: 4px;
+    width: 100%;
+  }
+
+  .coyote-center-actions #coyoteBidMinusBtn,
+  .coyote-center-actions #coyoteBidPlusBtn {
+    order: 1;
   }
 
   .coyote-center-actions #coyoteBidInput {
-    width: 58px;
+    order: 2;
+    flex: 0 0 100%;
+    width: 100%;
+  }
+
+  .coyote-center-actions #coyoteBidBtn,
+  .coyote-center-actions #coyoteChallengeBtn {
+    order: 3;
+  }
+
+  .coyote-center-actions button {
+    padding: 4px 6px;
+    font-size: 12px;
   }
 }
 
@@ -596,8 +614,9 @@ h1 {
     gap: 3px;
   }
 
-  .coyote-center-actions #coyoteBidInput {
-    width: 52px;
+  .coyote-center-actions button {
+    padding: 3px 5px;
+    font-size: 11px;
   }
 }
 
