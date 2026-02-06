@@ -7397,6 +7397,7 @@ function renderAidixitPool(view) {
     const cardEl = createAidixitCardElement(card, {
       selected,
       disabled: disableAll || isOwn,
+      zoomable: true,
     });
     if (!disableAll && !isOwn) {
       cardEl.addEventListener("click", () => {
