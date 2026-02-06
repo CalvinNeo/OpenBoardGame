@@ -4522,6 +4522,42 @@ function renderMismatchWords(view) {
   });
 }
 
+const MISMATCH_SLIDER_LEFT_COLOR = [220, 38, 38];
+const MISMATCH_SLIDER_RIGHT_COLOR = [37, 99, 235];
+
+function getMismatchSliderColor(ratio) {
+  const clamped = Math.min(Math.max(ratio, 0), 1);
+  const r = Math.round(
+    MISMATCH_SLIDER_LEFT_COLOR[0] +
+      (MISMATCH_SLIDER_RIGHT_COLOR[0] - MISMATCH_SLIDER_LEFT_COLOR[0]) * clamped
+  );
+  const g = Math.round(
+    MISMATCH_SLIDER_LEFT_COLOR[1] +
+      (MISMATCH_SLIDER_RIGHT_COLOR[1] - MISMATCH_SLIDER_LEFT_COLOR[1]) * clamped
+  );
+  const b = Math.round(
+    MISMATCH_SLIDER_LEFT_COLOR[2] +
+      (MISMATCH_SLIDER_RIGHT_COLOR[2] - MISMATCH_SLIDER_LEFT_COLOR[2]) * clamped
+  );
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+function updateMismatchSliderColor(input) {
+  if (!input) {
+    return;
+  }
+  const rawValue = Number.parseInt(input.value, 10);
+  const rawMin = Number.parseInt(input.min, 10);
+  const rawMax = Number.parseInt(input.max, 10);
+  const minValue = Number.isInteger(rawMin) ? rawMin : 0;
+  const maxValue = Number.isInteger(rawMax) ? rawMax : 10;
+  const fallback = minValue + (maxValue - minValue) / 2;
+  const value = Number.isInteger(rawValue) ? rawValue : fallback;
+  const clampedValue = Math.min(Math.max(value, minValue), maxValue);
+  const ratio = maxValue > minValue ? (clampedValue - minValue) / (maxValue - minValue) : 0.5;
+  input.style.setProperty("--mismatch-slider-color", getMismatchSliderColor(ratio));
+}
+
 function renderMismatchSliders(view) {
   if (!mismatchSliders) {
     return;
@@ -4561,6 +4597,10 @@ function renderMismatchSliders(view) {
     }
     const isActive = isLeader && canSet && index === activeIndex;
     input.disabled = !isActive;
+    updateMismatchSliderColor(input);
+    input.addEventListener("input", () => {
+      updateMismatchSliderColor(input);
+    });
 
     const setBtn = document.createElement("button");
     setBtn.type = "button";

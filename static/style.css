@@ -261,8 +261,8 @@ h1 {
 
 .mismatch-slider {
   width: 100%;
-  accent-color: #6366f1;
-  background: linear-gradient(90deg, #dc2626 0%, #2563eb 100%);
+  accent-color: var(--mismatch-slider-color, #6366f1);
+  background: var(--mismatch-slider-color, #6366f1);
   border-radius: 999px;
   height: 6px;
   -webkit-appearance: none;
@@ -271,7 +271,7 @@ h1 {
 
 .mismatch-slider::-webkit-slider-runnable-track {
   height: 6px;
-  background: linear-gradient(90deg, #dc2626 0%, #2563eb 100%);
+  background: var(--mismatch-slider-color, #6366f1);
   border-radius: 999px;
 }
 
@@ -287,12 +287,12 @@ h1 {
 
 .mismatch-slider::-moz-range-track {
   height: 6px;
-  background: linear-gradient(90deg, #dc2626 0%, #2563eb 100%);
+  background: var(--mismatch-slider-color, #6366f1);
   border-radius: 999px;
 }
 
 .mismatch-slider::-moz-range-progress {
-  background: transparent;
+  background: var(--mismatch-slider-color, #6366f1);
 }
 
 .mismatch-slider::-moz-range-thumb {
