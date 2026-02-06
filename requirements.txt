@@ -1,6 +1,7 @@
 fastapi==0.110.0
 uvicorn==0.27.1
 python-socketio==5.11.1
+jsonschema==4.22.0
 quickdraw==1.0.0
 argostranslate==1.9.6
 opencc-python-reimplemented==0.1.7

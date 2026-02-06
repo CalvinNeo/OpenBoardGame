@@ -11,6 +11,7 @@ import socketio
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from jsonschema import Draft7Validator, ValidationError
 
 from game import GameDefinition, get_game, list_games
 from game.ai_dixit import list_decks as list_aidixit_decks
@@ -414,6 +415,36 @@ def _schedule_halli_flip_wait(room: Room) -> None:
 
 async def _send_error(sid: str, message: str) -> None:
     await sio.emit("system:error", {"message": message}, to=sid)
+
+
+def _pick_schema_error(errors: List[ValidationError]) -> ValidationError:
+    best = errors[0]
+    best_depth = len(best.absolute_path)
+    for error in errors:
+        candidates = error.context or [error]
+        for candidate in candidates:
+            depth = len(candidate.absolute_path)
+            if depth > best_depth:
+                best = candidate
+                best_depth = depth
+    return best
+
+
+def _schema_location(error: ValidationError, label: str) -> str:
+    path = ".".join(str(part) for part in error.absolute_path)
+    return f"{label}.{path}" if path else label
+
+
+def _validate_schema_payload(payload: Dict, schema: Dict, label: str) -> Optional[str]:
+    if not schema:
+        return None
+    validator = Draft7Validator(schema)
+    errors = list(validator.iter_errors(payload))
+    if not errors:
+        return None
+    error = _pick_schema_error(errors)
+    location = _schema_location(error, label)
+    return f"{location} invalid: {error.message}"
 
 
 async def _leave_session(sid: str) -> None:
@@ -893,6 +924,10 @@ async def on_room_start(sid, data):
         previous_config = room.game_state.get("config")
         if isinstance(previous_config, dict):
             config = previous_config
+    config_error = _validate_schema_payload(config, game_def.config_schema, "config")
+    if config_error:
+        await _send_error(sid, config_error)
+        return
     try:
         room.game_state = game_def.module.init_game(config, players_meta)
     except ValueError as exc:
@@ -1130,6 +1165,10 @@ async def on_game_action(sid, data):
         if not (room.status == "game_over" and action_type == "play_again"):
             await _send_error(sid, "game not active")
             return
+    action_error = _validate_schema_payload(action, game_def.action_schema, "action")
+    if action_error:
+        await _send_error(sid, action_error)
+        return
     player_id = session.get("player_id")
     events, error = game_def.module.apply_action(room.game_state, player_id, action)
     if error:
