@@ -224,6 +224,7 @@ const gamePlayers = document.getElementById("gamePlayers");
 const logEl = document.getElementById("log");
 const logPanel = document.getElementById("logPanel");
 const logCloseBtn = document.getElementById("logCloseBtn");
+const logOpenBtn = document.getElementById("logOpenBtn");
 const skipValidationToggle = document.getElementById("skipValidationToggle");
 const copyStateBtn = document.getElementById("copyStateBtn");
 const loadModal = document.getElementById("loadModal");
@@ -10697,6 +10698,12 @@ window.addEventListener("resize", () => {
 if (logCloseBtn) {
   logCloseBtn.addEventListener("click", () => {
     setLogPanelVisible(false);
+  });
+}
+
+if (logOpenBtn) {
+  logOpenBtn.addEventListener("click", () => {
+    setLogPanelVisible(true);
   });
 }
 

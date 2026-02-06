@@ -90,6 +90,16 @@ h1 {
   font-size: 12px;
 }
 
+.log-open-btn {
+  display: none;
+  background: transparent;
+  border: 1px solid #ddd;
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
 .panel.collapsed .collapse-btn {
   background: #f3f3f3;
 }
@@ -1377,6 +1387,11 @@ body.log-open {
 }
 
 @media (max-width: 640px) {
+  .log-open-btn {
+    display: inline-flex;
+    align-items: center;
+  }
+
   .halli-table {
     padding: 8px;
   }
