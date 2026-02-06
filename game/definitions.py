@@ -7,6 +7,7 @@ from game.draw_guess import DrawGuessGame
 from game.flip7 import Flip7Game
 from game.gold_rush import GoldRushGame
 from game.halli_galli import HalliGalliGame
+from game.hanabi import HanabiGame
 from game.impression_flower import ImpressionFlowerGame
 from game.perfect_mismatch import PerfectMismatchGame
 from game.registry import GameDefinition, register_game
@@ -638,6 +639,46 @@ PERFECT_MISMATCH_CONFIG_SCHEMA = {
     "additionalProperties": False,
 }
 
+HANABI_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "give_clue"},
+                "target_player_id": {"type": "string"},
+                "clue_type": {"type": "string", "enum": ["color", "rank"]},
+                "value": {"oneOf": [{"type": "string"}, {"type": "integer"}]},
+            },
+            "required": ["type", "target_player_id", "clue_type", "value"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "discard"},
+                "card_index": {"type": "integer", "minimum": 0},
+            },
+            "required": ["type", "card_index"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "play"},
+                "card_index": {"type": "integer", "minimum": 0},
+            },
+            "required": ["type", "card_index"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+HANABI_CONFIG_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+}
+
 register_game(
     GameDefinition(
         game_id=CaboGame.game_id,
@@ -845,5 +886,20 @@ register_game(
         module=PerfectMismatchGame,
         serialize=PerfectMismatchGame.serialize,
         deserialize=PerfectMismatchGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=HanabiGame.game_id,
+        name="Hanabi",
+        min_players=HanabiGame.min_players,
+        max_players=HanabiGame.max_players,
+        turn_mode="turn",
+        action_schema=HANABI_ACTION_SCHEMA,
+        config_schema=HANABI_CONFIG_SCHEMA,
+        module=HanabiGame,
+        serialize=HanabiGame.serialize,
+        deserialize=HanabiGame.deserialize,
     )
 )

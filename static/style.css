@@ -1222,6 +1222,136 @@ body.log-open {
   width: 100%;
 }
 
+.hanabi-tableau {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.hanabi-stack {
+  border-radius: 6px;
+  padding: 6px 10px;
+  min-width: 70px;
+  text-align: center;
+  font-weight: 600;
+  color: #222;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.hanabi-stack[data-color="red"] {
+  background: #ffd7d7;
+}
+
+.hanabi-stack[data-color="yellow"] {
+  background: #fff2b3;
+}
+
+.hanabi-stack[data-color="green"] {
+  background: #d8f2d8;
+}
+
+.hanabi-stack[data-color="blue"] {
+  background: #d7e9ff;
+}
+
+.hanabi-stack[data-color="white"] {
+  background: #f2f2f2;
+}
+
+.hanabi-card {
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 6px;
+  width: 120px;
+  background: #fafafa;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hanabi-card.selected {
+  border-color: #2f6fed;
+  box-shadow: 0 0 0 2px rgba(47, 111, 237, 0.15);
+}
+
+.hanabi-card.unknown {
+  background: #f0f0f0;
+}
+
+.hanabi-card[data-color="red"] {
+  border-color: #e17070;
+}
+
+.hanabi-card[data-color="yellow"] {
+  border-color: #d6b94f;
+}
+
+.hanabi-card[data-color="green"] {
+  border-color: #6aaa64;
+}
+
+.hanabi-card[data-color="blue"] {
+  border-color: #5b8ad0;
+}
+
+.hanabi-card[data-color="white"] {
+  border-color: #b6b6b6;
+}
+
+.hanabi-card-title {
+  font-weight: 600;
+}
+
+.hanabi-card-known,
+.hanabi-card-notes {
+  font-size: 11px;
+  color: #444;
+}
+
+.hanabi-card-notes {
+  color: #666;
+}
+
+.hanabi-discard-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.hanabi-discard-table th,
+.hanabi-discard-table td {
+  border: 1px solid #e0e0e0;
+  padding: 4px 6px;
+  text-align: center;
+}
+
+.hanabi-discard-table th {
+  background: #f4f4f4;
+  font-weight: 600;
+}
+
+.hanabi-log {
+  border: 1px solid #e3e3e3;
+  background: #fafafa;
+  border-radius: 6px;
+  padding: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+  font-size: 12px;
+}
+
+.hanabi-log-entry {
+  padding: 2px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.hanabi-log-entry:last-child {
+  border-bottom: none;
+}
+
 .room-list {
   display: flex;
   flex-direction: column;

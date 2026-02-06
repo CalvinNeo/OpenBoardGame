@@ -107,6 +107,7 @@
                     <option value="coyote">Coyote</option>
                     <option value="decrypto">Decrypto</option>
                     <option value="skull">Skull</option>
+                    <option value="hanabi">Hanabi</option>
                     <option value="draw_guess">Draw & Guess</option>
                     <option value="perfect_mismatch">Perfect Mismatch</option>
                     <option value="aidixit">AI Dixit</option>
@@ -415,6 +416,57 @@
 
               <h3>Players</h3>
               <div id="skullPlayers"></div>
+            </div>
+
+            <div id="hanabiPanel" class="hidden">
+              <div class="row">
+                <div>Current Turn: <span id="hanabiTurn">-</span></div>
+                <div>Clues: <span id="hanabiClues">-</span></div>
+                <div>Fuses: <span id="hanabiFuses">-</span></div>
+                <div>Deck: <span id="hanabiDeck">-</span></div>
+              </div>
+              <div class="row">
+                <div>Score: <span id="hanabiScore">-</span></div>
+                <div>Final Turns: <span id="hanabiFinalTurns">-</span></div>
+                <div>End: <span id="hanabiEndReason">-</span></div>
+              </div>
+
+              <h3>Tableau</h3>
+              <div id="hanabiTableau" class="hanabi-tableau"></div>
+
+              <h3>Discard Stats</h3>
+              <div id="hanabiDiscardStats" class="hanabi-discard-stats"></div>
+
+              <h3>Your Hand</h3>
+              <div id="hanabiHand" class="hand"></div>
+              <div class="row">
+                <div>Selected Card: <span id="hanabiSelectedCard">-</span></div>
+                <button id="hanabiClearSelection">Clear</button>
+              </div>
+
+              <h3>Actions</h3>
+              <div class="row actions">
+                <button id="hanabiPlayBtn">Play</button>
+                <button id="hanabiDiscardBtn">Discard</button>
+              </div>
+              <div class="row actions">
+                <label for="hanabiTargetSelect">Clue Target</label>
+                <select id="hanabiTargetSelect"></select>
+                <label for="hanabiClueTypeSelect">Clue Type</label>
+                <select id="hanabiClueTypeSelect">
+                  <option value="color" selected>Color</option>
+                  <option value="rank">Number</option>
+                </select>
+                <label for="hanabiClueValueSelect">Value</label>
+                <select id="hanabiClueValueSelect"></select>
+                <button id="hanabiClueBtn">Give Clue</button>
+              </div>
+
+              <h3>Players</h3>
+              <div id="hanabiPlayers"></div>
+
+              <h3>Game Log</h3>
+              <div id="hanabiLog" class="hanabi-log"></div>
             </div>
 
             <div id="mismatchPanel" class="hidden">

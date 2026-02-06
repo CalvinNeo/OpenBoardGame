@@ -8,6 +8,7 @@ from game.draw_guess import DrawGuessGame
 from game.flip7 import Flip7Game
 from game.gold_rush import GoldRushGame
 from game.halli_galli import HalliGalliGame
+from game.hanabi import HanabiGame
 from game.impression_flower import ImpressionFlowerGame
 from game.perfect_mismatch import PerfectMismatchGame
 from game.registry import GameDefinition, get_game, list_games
@@ -24,6 +25,7 @@ __all__ = [
     "Flip7Game",
     "GoldRushGame",
     "HalliGalliGame",
+    "HanabiGame",
     "CoyoteGame",
     "DecryptoGame",
     "ImpressionFlowerGame",
