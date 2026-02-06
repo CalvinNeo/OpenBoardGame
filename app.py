@@ -947,6 +947,104 @@ async def on_room_start(sid, data):
     await _maybe_run_bots(room)
 
 
+@sio.on("room:reopen")
+async def on_room_reopen(sid, data=None):
+    session = SESSIONS.get(sid)
+    if not session:
+        await _send_error(sid, "not in room")
+        return
+    room = _get_room(session.get("room_id"))
+    if not room:
+        await _send_error(sid, "room not found")
+        return
+    if room.status not in ("in_game", "game_over") or not room.game_state:
+        await _send_error(sid, "game not active")
+        return
+    game_def = _get_game_definition(room.game_type)
+    if not game_def:
+        await _send_error(sid, "room game not found")
+        return
+    raw_config = room.game_state.get("config") if isinstance(room.game_state, dict) else None
+    config = dict(raw_config) if isinstance(raw_config, dict) else {}
+    ordered_players = sorted(room.players, key=lambda p: p.seat)
+    players_meta = [
+        {
+            "player_id": p.player_id,
+            "name": p.name,
+            "seat": p.seat,
+            "is_bot": p.is_bot,
+        }
+        for p in ordered_players
+    ]
+    try:
+        game_state = game_def.module.init_game(config, players_meta)
+    except ValueError as exc:
+        await _send_error(sid, str(exc))
+        return
+
+    old_room_id = room.room_id
+    if room.status != "game_over":
+        room.status = "game_over"
+    if isinstance(room.game_state, dict):
+        room.game_state["game_over"] = True
+
+    room_id = _generate_room_id()
+    now = time.time()
+    players: List[Player] = []
+    for player in ordered_players:
+        reconnect_token = player.reconnect_token or _generate_reconnect_token()
+        players.append(
+            Player(
+                player_id=player.player_id,
+                name=player.name,
+                seat=player.seat,
+                socket_id=player.socket_id if player.connected else None,
+                ready=player.ready,
+                connected=player.connected,
+                seat_claimed=player.seat_claimed,
+                is_bot=player.is_bot,
+                reconnect_token=reconnect_token,
+                last_seen=now,
+            )
+        )
+    new_room = Room(
+        room_id=room_id,
+        game_type=room.game_type,
+        status="in_game",
+        players=players,
+        state_version=1,
+        game_state=game_state,
+        auto_save=room.auto_save,
+        schema_validation_enabled=room.schema_validation_enabled,
+    )
+    ROOMS[room_id] = new_room
+    ROOMS.pop(old_room_id, None)
+
+    for player in players:
+        if not player.socket_id:
+            continue
+        SESSIONS[player.socket_id] = {"room_id": room_id, "player_id": player.player_id}
+        await sio.leave_room(player.socket_id, old_room_id)
+        await sio.enter_room(player.socket_id, room_id)
+        await sio.emit(
+            "system:info",
+            {
+                "message": f"room reopened: {room_id}",
+                "room_id": room_id,
+                "player_id": player.player_id,
+                "reconnect_token": player.reconnect_token,
+                "name": player.name,
+            },
+            to=player.socket_id,
+        )
+
+    _save_room_state(new_room)
+    await _emit_room_state(new_room)
+    await _emit_game_state(new_room, [])
+    await _emit_room_list_update()
+    await _maybe_run_bots(new_room)
+
+
 @sio.on("room:list")
 async def on_room_list(sid, data=None):
     await sio.emit("room:list", {"rooms": _room_list_payload()}, to=sid)

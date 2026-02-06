@@ -192,3 +192,36 @@ class RoomSessionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(alice.seat, 1)
         self.assertEqual(room.players[0].player_id, bob.player_id)
         self.assertEqual(room.players[1].player_id, alice.player_id)
+
+    async def test_reopen_moves_players_to_new_room(self):
+        sid_owner = "sid-owner"
+        room_id = await self._create_room(sid_owner, "Alice", game_type="gold_rush")
+        sid_bob = "sid-bob"
+        await app.on_room_join(sid_bob, {"room_id": room_id, "name": "Bob"})
+        room = app.ROOMS[room_id]
+        room.status = "in_game"
+        room.game_state = {"config": {"mode": "classic"}}
+        old_players = {p.name: (p.player_id, p.reconnect_token) for p in room.players}
+
+        await app.on_room_reopen(sid_owner, {})
+
+        new_room_id = app.SESSIONS[sid_owner]["room_id"]
+        self.assertNotEqual(new_room_id, room_id)
+        self.assertNotIn(room_id, app.ROOMS)
+        self.assertIn(new_room_id, app.ROOMS)
+        new_room = app.ROOMS[new_room_id]
+        self.assertEqual(new_room.status, "in_game")
+        self.assertEqual(new_room.game_type, "gold_rush")
+        self.assertEqual(new_room.game_state["config"]["mode"], "classic")
+        ordered = sorted(new_room.players, key=lambda p: p.seat)
+        self.assertEqual([p.name for p in ordered], ["Alice", "Bob"])
+        for player in new_room.players:
+            old_player_id, old_token = old_players[player.name]
+            self.assertEqual(player.player_id, old_player_id)
+            self.assertEqual(player.reconnect_token, old_token)
+
+        self.assertEqual(app.SESSIONS[sid_bob]["room_id"], new_room_id)
+        self.assertIn((sid_owner, room_id), app.sio.left)
+        self.assertIn((sid_bob, room_id), app.sio.left)
+        self.assertIn((sid_owner, new_room_id), app.sio.entered)
+        self.assertIn((sid_bob, new_room_id), app.sio.entered)

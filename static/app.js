@@ -152,6 +152,7 @@ const gameSelect = document.getElementById("gameSelect");
 const createBtn = document.getElementById("createBtn");
 const createGameRow = document.getElementById("createGameRow");
 const leaveBtn = document.getElementById("leaveBtn");
+const reopenBtn = document.getElementById("reopenBtn");
 const removeBotBtn = document.getElementById("removeBotBtn");
 const logoutBtn = document.getElementById("logoutBtn");
 const drawGuessConfigBox = document.getElementById("drawGuessConfigBox");
@@ -1488,6 +1489,17 @@ function updateAutoSaveRow() {
   }
 }
 
+function updateReopenButton() {
+  if (!reopenBtn) {
+    return;
+  }
+  const showButton =
+    currentRoomState && (currentRoomState.status === "in_game" || currentRoomState.status === "game_over");
+  reopenBtn.classList.toggle("hidden", !showButton);
+  reopenBtn.setAttribute("aria-hidden", (!showButton).toString());
+  reopenBtn.disabled = !showButton;
+}
+
 function updateRoomControlsDock() {
   if (!roomControlsPanel) {
     return;
@@ -2016,6 +2028,7 @@ function resetRoomState() {
   updateGoldRushConfigRow();
   updateMismatchConfigRow();
   updateAutoSaveRow();
+  updateReopenButton();
   if (drawGuessLanguageSelect) {
     drawGuessLanguageSelect.value = "zh";
   }
@@ -4035,6 +4048,7 @@ function renderRoomState(state) {
   updateGoldRushConfigRow();
   updateMismatchConfigRow();
   updateAutoSaveRow();
+  updateReopenButton();
   playersList.innerHTML = "";
   const orderedPlayers = Array.isArray(state.players)
     ? [...state.players].sort((a, b) => (a.seat ?? 0) - (b.seat ?? 0))
@@ -10313,6 +10327,22 @@ document.getElementById("readyBtn").addEventListener("click", () => {
 document.getElementById("startBtn").addEventListener("click", () => {
   emitRoomStart();
 });
+
+if (reopenBtn) {
+  reopenBtn.addEventListener("click", () => {
+    if (!roomId || !currentRoomState) {
+      log("Not in a room");
+      return;
+    }
+    if (currentRoomState.status !== "game_over") {
+      const proceed = window.confirm("当前游戏未结束，Reopen 会结束游戏并创建新房间。继续吗？");
+      if (!proceed) {
+        return;
+      }
+    }
+    socket.emit("room:reopen", { room_id: roomId });
+  });
+}
 
 document.getElementById("addBotBtn").addEventListener("click", () => {
   socket.emit("room:add_bot", { room_id: roomId });
