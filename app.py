@@ -91,6 +91,7 @@ class Room:
     halli_flip_wait_at_ms: Optional[int] = None
     bot_running: bool = False
     auto_save: bool = False
+    schema_validation_enabled: bool = True
     source_room_id: Optional[str] = None
 
 
@@ -924,10 +925,14 @@ async def on_room_start(sid, data):
         previous_config = room.game_state.get("config")
         if isinstance(previous_config, dict):
             config = previous_config
-    config_error = _validate_schema_payload(config, game_def.config_schema, "config")
-    if config_error:
-        await _send_error(sid, config_error)
-        return
+    raw_skip_validation = (data or {}).get("skip_validation")
+    skip_validation = raw_skip_validation if isinstance(raw_skip_validation, bool) else False
+    room.schema_validation_enabled = not skip_validation
+    if room.schema_validation_enabled:
+        config_error = _validate_schema_payload(config, game_def.config_schema, "config")
+        if config_error:
+            await _send_error(sid, config_error)
+            return
     try:
         room.game_state = game_def.module.init_game(config, players_meta)
     except ValueError as exc:
@@ -1165,10 +1170,15 @@ async def on_game_action(sid, data):
         if not (room.status == "game_over" and action_type == "play_again"):
             await _send_error(sid, "game not active")
             return
-    action_error = _validate_schema_payload(action, game_def.action_schema, "action")
-    if action_error:
-        await _send_error(sid, action_error)
-        return
+    raw_skip_validation = (data or {}).get("skip_validation")
+    skip_validation = not room.schema_validation_enabled
+    if isinstance(raw_skip_validation, bool):
+        skip_validation = raw_skip_validation
+    if not skip_validation:
+        action_error = _validate_schema_payload(action, game_def.action_schema, "action")
+        if action_error:
+            await _send_error(sid, action_error)
+            return
     player_id = session.get("player_id")
     events, error = game_def.module.apply_action(room.game_state, player_id, action)
     if error:

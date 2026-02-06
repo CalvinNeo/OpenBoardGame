@@ -223,6 +223,7 @@ const gamePlayers = document.getElementById("gamePlayers");
 const logEl = document.getElementById("log");
 const logPanel = document.getElementById("logPanel");
 const logCloseBtn = document.getElementById("logCloseBtn");
+const skipValidationToggle = document.getElementById("skipValidationToggle");
 const loadModal = document.getElementById("loadModal");
 const loadModalCloseBtn = document.getElementById("loadModalCloseBtn");
 const loadList = document.getElementById("loadList");
@@ -3682,12 +3683,24 @@ function clearSelection() {
   updateActionButtons();
 }
 
+function shouldSkipValidation() {
+  return !!(skipValidationToggle && skipValidationToggle.checked);
+}
+
+function attachSkipValidation(payload) {
+  if (skipValidationToggle) {
+    payload.skip_validation = shouldSkipValidation();
+  }
+}
+
 function sendAction(action) {
   if (!roomId) {
     log("Not in a room");
     return;
   }
-  socket.emit("game:action", { room_id: roomId, action });
+  const payload = { room_id: roomId, action };
+  attachSkipValidation(payload);
+  socket.emit("game:action", payload);
 }
 
 function emitSeatMove(direction) {
@@ -3704,6 +3717,7 @@ function emitRoomStart() {
     return;
   }
   const payload = { room_id: roomId };
+  attachSkipValidation(payload);
   if (currentGameType === "draw_guess") {
     const language = drawGuessLanguageSelect ? drawGuessLanguageSelect.value || "zh" : "zh";
     const guessMethod = drawGuessGuessMethodSelect ? drawGuessGuessMethodSelect.value || "normal" : "normal";

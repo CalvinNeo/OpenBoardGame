@@ -850,6 +850,19 @@ body.log-open {
   overflow: hidden;
 }
 
+.log-panel .log-validation-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #333;
+  cursor: pointer;
+}
+
+.log-panel .log-validation-toggle input {
+  margin: 0;
+}
+
 .log-panel #log {
   height: 100%;
   max-height: none;

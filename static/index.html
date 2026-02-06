@@ -10,7 +10,13 @@
   <section id="logPanel" class="log-panel hidden" aria-hidden="true">
     <div class="panel-header">
       <h2>Log</h2>
-      <button id="logCloseBtn" class="log-close-btn" type="button">Close</button>
+      <div class="panel-header-actions">
+        <label class="log-validation-toggle" for="skipValidationToggle" title="Skip schema validation for room start and actions">
+          <input id="skipValidationToggle" type="checkbox" />
+          <span>Skip Validation</span>
+        </label>
+        <button id="logCloseBtn" class="log-close-btn" type="button">Close</button>
+      </div>
     </div>
     <div class="panel-body">
       <div id="log"></div>
