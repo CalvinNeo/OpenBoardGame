@@ -564,6 +564,10 @@ h1 {
     order: 1;
   }
 
+  .coyote-center-actions #coyoteBidMinusBtn {
+    margin-right: 12px;
+  }
+
   .coyote-center-actions #coyoteBidInput {
     order: 2;
     flex: 0 0 100%;
@@ -612,6 +616,10 @@ h1 {
 
   .coyote-center-actions {
     gap: 3px;
+  }
+
+  .coyote-center-actions #coyoteBidMinusBtn {
+    margin-right: 10px;
   }
 
   .coyote-center-actions button {
