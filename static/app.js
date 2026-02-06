@@ -313,9 +313,27 @@ const decryptoClue1 = document.getElementById("decryptoClue1");
 const decryptoClue2 = document.getElementById("decryptoClue2");
 const decryptoClue3 = document.getElementById("decryptoClue3");
 const decryptoSubmitCluesBtn = document.getElementById("decryptoSubmitCluesBtn");
-const decryptoDecryptInput = document.getElementById("decryptoDecryptInput");
+const decryptoDecryptSelects = [
+  document.getElementById("decryptoDecryptSelect1"),
+  document.getElementById("decryptoDecryptSelect2"),
+  document.getElementById("decryptoDecryptSelect3"),
+];
+const decryptoDecryptClueLabels = [
+  document.getElementById("decryptoDecryptClueLabel1"),
+  document.getElementById("decryptoDecryptClueLabel2"),
+  document.getElementById("decryptoDecryptClueLabel3"),
+];
 const decryptoSubmitDecryptBtn = document.getElementById("decryptoSubmitDecryptBtn");
-const decryptoInterceptInput = document.getElementById("decryptoInterceptInput");
+const decryptoInterceptSelects = [
+  document.getElementById("decryptoInterceptSelect1"),
+  document.getElementById("decryptoInterceptSelect2"),
+  document.getElementById("decryptoInterceptSelect3"),
+];
+const decryptoInterceptClueLabels = [
+  document.getElementById("decryptoInterceptClueLabel1"),
+  document.getElementById("decryptoInterceptClueLabel2"),
+  document.getElementById("decryptoInterceptClueLabel3"),
+];
 const decryptoSubmitInterceptBtn = document.getElementById("decryptoSubmitInterceptBtn");
 
 const drawGuessPhaseLabel = document.getElementById("drawGuessPhase");
@@ -2004,12 +2022,20 @@ function resetDecryptoInputs() {
   if (decryptoClue3) {
     decryptoClue3.value = "";
   }
-  if (decryptoDecryptInput) {
-    decryptoDecryptInput.value = "";
-  }
-  if (decryptoInterceptInput) {
-    decryptoInterceptInput.value = "";
-  }
+  decryptoDecryptSelects.forEach((select) => {
+    if (select) {
+      select.value = "";
+    }
+  });
+  decryptoInterceptSelects.forEach((select) => {
+    if (select) {
+      select.value = "";
+    }
+  });
+  updateDecryptoGuessSelectOptions(decryptoDecryptSelects);
+  updateDecryptoGuessSelectOptions(decryptoInterceptSelects);
+  updateDecryptoGuessClueLabels(decryptoDecryptClueLabels, null);
+  updateDecryptoGuessClueLabels(decryptoInterceptClueLabels, null);
 }
 
 function clearDecryptoState() {
@@ -4991,6 +5017,79 @@ function parseDecryptoCodeInput(value) {
   return code;
 }
 
+function getDecryptoGuessFromSelects(selects) {
+  if (!Array.isArray(selects) || selects.length !== 3) {
+    return null;
+  }
+  const values = selects.map((select) => (select ? select.value : ""));
+  if (values.some((value) => !value)) {
+    return null;
+  }
+  return parseDecryptoCodeInput(values.join("."));
+}
+
+function updateDecryptoGuessSelectOptions(selects) {
+  if (!Array.isArray(selects) || selects.length !== 3) {
+    return;
+  }
+  const selected = new Set(
+    selects.map((select) => (select ? select.value : "")).filter((value) => value)
+  );
+  selects.forEach((select) => {
+    if (!select) {
+      return;
+    }
+    const currentValue = select.value;
+    Array.from(select.options).forEach((option) => {
+      if (!option.value) {
+        option.disabled = false;
+        return;
+      }
+      option.disabled = option.value !== currentValue && selected.has(option.value);
+    });
+  });
+}
+
+function updateDecryptoGuessClueLabels(labels, clues) {
+  if (!Array.isArray(labels) || labels.length !== 3) {
+    return;
+  }
+  labels.forEach((label, index) => {
+    if (!label) {
+      return;
+    }
+    const clue = Array.isArray(clues) ? clues[index] : null;
+    const clueText = typeof clue === "string" && clue.trim() ? clue.trim() : "-";
+    label.textContent = `Clue ${index + 1}: ${clueText}`;
+  });
+}
+
+function getDecryptoOpponentTeam(teamId) {
+  if (teamId === "white") {
+    return "black";
+  }
+  if (teamId === "black") {
+    return "white";
+  }
+  return null;
+}
+
+function updateDecryptoGuessClues(view) {
+  if (!view || !view.teams) {
+    updateDecryptoGuessClueLabels(decryptoDecryptClueLabels, null);
+    updateDecryptoGuessClueLabels(decryptoInterceptClueLabels, null);
+    return;
+  }
+  const teamId = view.team_id;
+  const teamClues =
+    teamId && view.teams[teamId] ? view.teams[teamId].current_clues : null;
+  const opponentId = getDecryptoOpponentTeam(teamId);
+  const opponentClues =
+    opponentId && view.teams[opponentId] ? view.teams[opponentId].current_clues : null;
+  updateDecryptoGuessClueLabels(decryptoDecryptClueLabels, teamClues);
+  updateDecryptoGuessClueLabels(decryptoInterceptClueLabels, opponentClues);
+}
+
 function setDecryptoStatusLines(lines) {
   if (!decryptoStatusBody) {
     return;
@@ -5068,19 +5167,19 @@ function getDecryptoActionLines(view) {
     }
   }
   if (actions.includes("submit_decrypt")) {
-    const guess = parseDecryptoCodeInput(decryptoDecryptInput ? decryptoDecryptInput.value : "");
+    const guess = getDecryptoGuessFromSelects(decryptoDecryptSelects);
     if (guess) {
       lines.push("Submit your team's decrypt guess.");
     } else {
-      lines.push("Enter your team's decrypt guess (e.g., 1.2.3).");
+      lines.push("Select three numbers for your team's clues.");
     }
   }
   if (actions.includes("submit_intercept")) {
-    const guess = parseDecryptoCodeInput(decryptoInterceptInput ? decryptoInterceptInput.value : "");
+    const guess = getDecryptoGuessFromSelects(decryptoInterceptSelects);
     if (guess) {
       lines.push("Submit an intercept guess for the opponent.");
     } else {
-      lines.push("Enter an intercept guess for the opponent (e.g., 1.2.3).");
+      lines.push("Select three numbers for the opponent's clues.");
     }
   }
   return lines;
@@ -5141,10 +5240,10 @@ function isDecryptoActionAvailable(actionType) {
     return clues.length === 3;
   }
   if (actionType === "submit_decrypt") {
-    return !!parseDecryptoCodeInput(decryptoDecryptInput ? decryptoDecryptInput.value : "");
+    return !!getDecryptoGuessFromSelects(decryptoDecryptSelects);
   }
   if (actionType === "submit_intercept") {
-    return !!parseDecryptoCodeInput(decryptoInterceptInput ? decryptoInterceptInput.value : "");
+    return !!getDecryptoGuessFromSelects(decryptoInterceptSelects);
   }
   return true;
 }
@@ -5392,6 +5491,9 @@ function renderDecryptoGameState(data) {
   if (decryptoCurrentCodeLabel) {
     decryptoCurrentCodeLabel.textContent = view.current_code ? formatDecryptoCode(view.current_code) : "-";
   }
+  updateDecryptoGuessClues(view);
+  updateDecryptoGuessSelectOptions(decryptoDecryptSelects);
+  updateDecryptoGuessSelectOptions(decryptoInterceptSelects);
 
   if (decryptoEncryptionArea) {
     decryptoEncryptionArea.classList.toggle("hidden", view.phase !== "encryption");
@@ -9202,9 +9304,9 @@ if (decryptoSubmitCluesBtn) {
 
 if (decryptoSubmitDecryptBtn) {
   decryptoSubmitDecryptBtn.addEventListener("click", () => {
-    const code = parseDecryptoCodeInput(decryptoDecryptInput ? decryptoDecryptInput.value : "");
+    const code = getDecryptoGuessFromSelects(decryptoDecryptSelects);
     if (!code) {
-      log("Enter a decrypt code like 1.2.3");
+      log("Select three distinct numbers for the decrypt guess");
       return;
     }
     sendAction({ type: "submit_decrypt", guess: code });
@@ -9213,9 +9315,9 @@ if (decryptoSubmitDecryptBtn) {
 
 if (decryptoSubmitInterceptBtn) {
   decryptoSubmitInterceptBtn.addEventListener("click", () => {
-    const code = parseDecryptoCodeInput(decryptoInterceptInput ? decryptoInterceptInput.value : "");
+    const code = getDecryptoGuessFromSelects(decryptoInterceptSelects);
     if (!code) {
-      log("Enter an intercept code like 1.2.3");
+      log("Select three distinct numbers for the intercept guess");
       return;
     }
     sendAction({ type: "submit_intercept", guess: code });
@@ -9231,12 +9333,24 @@ if (decryptoClue2) {
 if (decryptoClue3) {
   decryptoClue3.addEventListener("input", () => updateDecryptoActionButtons());
 }
-if (decryptoDecryptInput) {
-  decryptoDecryptInput.addEventListener("input", () => updateDecryptoActionButtons());
-}
-if (decryptoInterceptInput) {
-  decryptoInterceptInput.addEventListener("input", () => updateDecryptoActionButtons());
-}
+decryptoDecryptSelects.forEach((select) => {
+  if (!select) {
+    return;
+  }
+  select.addEventListener("change", () => {
+    updateDecryptoGuessSelectOptions(decryptoDecryptSelects);
+    updateDecryptoActionButtons();
+  });
+});
+decryptoInterceptSelects.forEach((select) => {
+  if (!select) {
+    return;
+  }
+  select.addEventListener("change", () => {
+    updateDecryptoGuessSelectOptions(decryptoInterceptSelects);
+    updateDecryptoActionButtons();
+  });
+});
 if (decryptoBotSelect) {
   decryptoBotSelect.addEventListener("change", () => {
     decryptoBotStrategyId = decryptoBotSelect.value || "native";

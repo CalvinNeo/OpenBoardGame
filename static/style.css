@@ -696,6 +696,30 @@ input, select {
   gap: 6px;
 }
 
+.decrypto-guess-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.decrypto-guess-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.decrypto-guess-clue {
+  flex: 1 1 220px;
+  font-weight: 600;
+}
+
+.decrypto-guess-select {
+  width: 72px;
+  flex: 0 0 auto;
+}
+
 body.log-open {
   overflow: hidden;
 }
