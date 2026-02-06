@@ -29,6 +29,7 @@ let currentGameType = null;
 let abracaLastRoundNotice = null;
 let selectedSlots = [];
 let currentRoomState = null;
+let lastGameStatePayload = null;
 let roomControlsGameActive = false;
 let roomControlsAutoCollapsed = false;
 let selectedTarget = null;
@@ -224,6 +225,7 @@ const logEl = document.getElementById("log");
 const logPanel = document.getElementById("logPanel");
 const logCloseBtn = document.getElementById("logCloseBtn");
 const skipValidationToggle = document.getElementById("skipValidationToggle");
+const copyStateBtn = document.getElementById("copyStateBtn");
 const loadModal = document.getElementById("loadModal");
 const loadModalCloseBtn = document.getElementById("loadModalCloseBtn");
 const loadList = document.getElementById("loadList");
@@ -739,6 +741,135 @@ function log(message) {
   entry.className = "log-entry";
   entry.textContent = message;
   logEl.prepend(entry);
+}
+
+function shouldRedactResource(value) {
+  if (typeof value !== "string") {
+    return false;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return false;
+  }
+  const lowered = trimmed.slice(0, 64).toLowerCase();
+  if (lowered.startsWith("data:image/")) {
+    return true;
+  }
+  if (lowered.startsWith("data:") && lowered.includes(";base64,")) {
+    return true;
+  }
+  return false;
+}
+
+function redactResources(value) {
+  const seen = new WeakMap();
+  let picIndex = 0;
+
+  function walk(node) {
+    if (typeof node === "string") {
+      if (shouldRedactResource(node)) {
+        const placeholder = `<pic_${picIndex}>`;
+        picIndex += 1;
+        return placeholder;
+      }
+      return node;
+    }
+    if (!node || typeof node !== "object") {
+      return node;
+    }
+    if (seen.has(node)) {
+      return seen.get(node);
+    }
+    if (Array.isArray(node)) {
+      const arr = [];
+      seen.set(node, arr);
+      node.forEach((item, index) => {
+        arr[index] = walk(item);
+      });
+      return arr;
+    }
+    const obj = {};
+    seen.set(node, obj);
+    Object.entries(node).forEach(([key, val]) => {
+      obj[key] = walk(val);
+    });
+    return obj;
+  }
+
+  return walk(value);
+}
+
+function buildGameStateSnapshot() {
+  const meta = {
+    generated_at: new Date().toISOString(),
+    room_id:
+      roomId ||
+      (currentRoomState && currentRoomState.room_id) ||
+      (lastGameStatePayload && lastGameStatePayload.room_id) ||
+      null,
+    player_id: playerId || null,
+    game_type:
+      currentGameType ||
+      (currentRoomState && currentRoomState.game_type) ||
+      (lastGameStatePayload && lastGameStatePayload.game_type) ||
+      null,
+    room_status:
+      (currentRoomState && currentRoomState.status) ||
+      (lastGameStatePayload && lastGameStatePayload.room_status) ||
+      null,
+    state_version: lastGameStatePayload ? lastGameStatePayload.state_version : null,
+    skip_validation: shouldSkipValidation(),
+  };
+
+  const snapshot = {
+    meta,
+    room_state: currentRoomState,
+    game_state: lastGameStatePayload,
+  };
+
+  return redactResources(snapshot);
+}
+
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (error) {
+      // Fall back to execCommand below.
+    }
+  }
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.top = "-9999px";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+  let success = false;
+  try {
+    success = document.execCommand("copy");
+  } catch (error) {
+    success = false;
+  }
+  document.body.removeChild(textarea);
+  return success;
+}
+
+async function copyGameStateSnapshot() {
+  if (!currentRoomState && !lastGameStatePayload) {
+    log("No game state available to copy.");
+    return;
+  }
+  const snapshot = buildGameStateSnapshot();
+  const text = JSON.stringify(snapshot, null, 2);
+  const ok = await copyTextToClipboard(text);
+  if (ok) {
+    log("Game state copied to clipboard.");
+  } else {
+    log("Failed to copy game state.");
+  }
 }
 
 function describeBlockingPlayers(players) {
@@ -1809,6 +1940,7 @@ function resetRoomState() {
   roomId = null;
   currentRoomState = null;
   currentGameType = null;
+  lastGameStatePayload = null;
   roomIdLabel.textContent = "-";
   roomStatus.textContent = "-";
   gameTypeLabel.textContent = "-";
@@ -9446,6 +9578,7 @@ socket.on("room:delete_result", (data) => {
 });
 
 socket.on("game:state", (data) => {
+  lastGameStatePayload = data;
   renderGameState(data);
 });
 
@@ -10564,6 +10697,12 @@ window.addEventListener("resize", () => {
 if (logCloseBtn) {
   logCloseBtn.addEventListener("click", () => {
     setLogPanelVisible(false);
+  });
+}
+
+if (copyStateBtn) {
+  copyStateBtn.addEventListener("click", () => {
+    copyGameStateSnapshot();
   });
 }
 

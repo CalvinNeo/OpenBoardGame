@@ -863,6 +863,15 @@ body.log-open {
   margin: 0;
 }
 
+.log-panel .log-action-btn {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #ddd;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
 .log-panel #log {
   height: 100%;
   max-height: none;
@@ -872,15 +881,6 @@ body.log-open {
 
 .log-panel .log-entry {
   border-bottom-color: rgba(0, 0, 0, 0.08);
-}
-
-.log-close-btn {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid #ddd;
-  padding: 2px 8px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
 }
 
 .hand {
