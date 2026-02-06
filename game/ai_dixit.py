@@ -139,7 +139,7 @@ def _scan_decks(deck_root: Path) -> Dict[str, List[str]]:
         if not entry.is_dir():
             continue
         deck_id = entry.name
-        if not deck_id or deck_id.startswith("."):
+        if not deck_id or deck_id.startswith(".") or deck_id.startswith("_"):
             continue
         files = [
             item.name
