@@ -239,10 +239,9 @@ h1 {
 }
 
 .mismatch-slider-row {
-  display: grid;
-  grid-template-columns: minmax(120px, 1fr) minmax(160px, 2fr) minmax(120px, 1fr) auto auto;
-  gap: 8px;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .mismatch-slider-label {
@@ -257,6 +256,35 @@ h1 {
 .mismatch-slider-label.right {
   color: #2563eb;
   text-align: right;
+}
+
+.mismatch-slider-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mismatch-slider-line .mismatch-slider {
+  flex: 1;
+}
+
+.mismatch-slider-labels {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 8px;
+  align-items: center;
+}
+
+.mismatch-slider-labels .mismatch-slider-label.left {
+  justify-self: start;
+}
+
+.mismatch-slider-labels .mismatch-slider-label.right {
+  justify-self: end;
+}
+
+.mismatch-slider-set {
+  justify-self: center;
 }
 
 .mismatch-slider {

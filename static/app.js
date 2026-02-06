@@ -4605,6 +4605,7 @@ function renderMismatchSliders(view) {
     const setBtn = document.createElement("button");
     setBtn.type = "button";
     setBtn.textContent = "Set";
+    setBtn.className = "mismatch-slider-set";
     setBtn.disabled = !isActive;
     setBtn.addEventListener("click", () => {
       const rawValue = Number.parseInt(input.value, 10);
@@ -4612,11 +4613,19 @@ function renderMismatchSliders(view) {
       sendAction({ type: "set_slider", slider_index: index, value: sliderValue });
     });
 
-    row.appendChild(left);
-    row.appendChild(input);
-    row.appendChild(right);
-    row.appendChild(valueLabel);
-    row.appendChild(setBtn);
+    const sliderLine = document.createElement("div");
+    sliderLine.className = "mismatch-slider-line";
+    sliderLine.appendChild(input);
+    sliderLine.appendChild(valueLabel);
+
+    const labelsLine = document.createElement("div");
+    labelsLine.className = "mismatch-slider-labels";
+    labelsLine.appendChild(left);
+    labelsLine.appendChild(setBtn);
+    labelsLine.appendChild(right);
+
+    row.appendChild(sliderLine);
+    row.appendChild(labelsLine);
     mismatchSliders.appendChild(row);
   });
 }
