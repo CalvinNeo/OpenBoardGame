@@ -322,6 +322,8 @@ const decryptoClueWordLabels = [
   document.getElementById("decryptoClueWord2"),
   document.getElementById("decryptoClueWord3"),
 ];
+const decryptoClueMissingRow = document.getElementById("decryptoClueMissingRow");
+const decryptoClueMissingWord = document.getElementById("decryptoClueMissingWord");
 const decryptoSubmitCluesBtn = document.getElementById("decryptoSubmitCluesBtn");
 const decryptoDecryptSelects = [
   document.getElementById("decryptoDecryptSelect1"),
@@ -5076,38 +5078,62 @@ function updateDecryptoGuessClueLabels(labels, clues) {
 }
 
 function updateDecryptoClueCodeLabels(code, keywords) {
-  if (!Array.isArray(decryptoClueDigitLabels) || decryptoClueDigitLabels.length !== 3) {
-    return;
-  }
   const values = Array.isArray(code) && code.length === 3 ? code : [];
-  decryptoClueDigitLabels.forEach((label, index) => {
-    if (!label) {
-      return;
-    }
-    const value = values[index];
-    label.textContent = Number.isInteger(value) ? value.toString() : "-";
-  });
-  if (!Array.isArray(decryptoClueWordLabels) || decryptoClueWordLabels.length !== 3) {
-    return;
+  if (Array.isArray(decryptoClueDigitLabels) && decryptoClueDigitLabels.length === 3) {
+    decryptoClueDigitLabels.forEach((label, index) => {
+      if (!label) {
+        return;
+      }
+      const value = values[index];
+      label.textContent = Number.isInteger(value) ? value.toString() : "-";
+    });
   }
   const hasKeywords = Array.isArray(keywords) && keywords.length >= 4;
-  decryptoClueWordLabels.forEach((label, index) => {
-    if (!label) {
-      return;
+  if (Array.isArray(decryptoClueWordLabels) && decryptoClueWordLabels.length === 3) {
+    decryptoClueWordLabels.forEach((label, index) => {
+      if (!label) {
+        return;
+      }
+      const value = values[index];
+      const hasCode = Number.isInteger(value);
+      const keyword =
+        hasCode && hasKeywords ? keywords[value - 1] : null;
+      const keywordText = typeof keyword === "string" && keyword.trim() ? keyword.trim() : "";
+      if (hasCode) {
+        label.textContent = keywordText || "-";
+        label.classList.toggle("hidden", false);
+      } else {
+        label.textContent = "-";
+        label.classList.toggle("hidden", true);
+      }
+    });
+  }
+
+  if (decryptoClueMissingRow && decryptoClueMissingWord) {
+    let missingKeyword = null;
+    if (values.length === 3 && hasKeywords) {
+      const validValues = values.filter(
+        (value) => Number.isInteger(value) && value >= 1 && value <= 4,
+      );
+      const used = new Set(validValues);
+      if (validValues.length === 3 && used.size === 3) {
+        const missingIndex = [1, 2, 3, 4].find((value) => !used.has(value));
+        if (missingIndex) {
+          const candidate = keywords[missingIndex - 1];
+          if (typeof candidate === "string" && candidate.trim()) {
+            missingKeyword = candidate.trim();
+          }
+        }
+      }
     }
-    const value = values[index];
-    const hasCode = Number.isInteger(value);
-    const keyword =
-      hasCode && hasKeywords ? keywords[value - 1] : null;
-    const keywordText = typeof keyword === "string" && keyword.trim() ? keyword.trim() : "";
-    if (hasCode) {
-      label.textContent = keywordText || "-";
-      label.classList.toggle("hidden", false);
+    if (missingKeyword) {
+      decryptoClueMissingWord.textContent = missingKeyword;
+      decryptoClueMissingRow.classList.remove("hidden");
     } else {
-      label.textContent = "-";
-      label.classList.toggle("hidden", true);
+      decryptoClueMissingWord.textContent = "-";
+      decryptoClueMissingRow.classList.add("hidden");
     }
-  });
+  }
 }
 
 function getDecryptoOpponentTeam(teamId) {

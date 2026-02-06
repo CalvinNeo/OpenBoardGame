@@ -740,6 +740,18 @@ input, select {
   color: #374151;
 }
 
+.decrypto-clue-missing {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.decrypto-clue-missing-word {
+  text-decoration: line-through;
+  font-weight: 600;
+  color: #9ca3af;
+}
+
 .decrypto-guess-grid {
   display: flex;
   flex-direction: column;
