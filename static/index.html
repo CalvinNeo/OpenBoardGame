@@ -275,7 +275,6 @@
               <div class="row">
                 <div>Deck: <span id="deckCount">-</span></div>
                 <div>Discard Top: <span id="discardTop">-</span></div>
-                <div>Last Drawn: <span id="lastDrawn">-</span></div>
               </div>
               <div class="row">
                 <div>Cabo Called By: <span id="caboBy">-</span></div>
@@ -287,6 +286,10 @@
 
               <h3>Your Hand</h3>
               <div id="handSlots" class="hand"></div>
+              <div class="row cabo-drawn-row">
+                <div class="cabo-drawn-label">Just Drawn:</div>
+                <div id="lastDrawn" class="slot cabo-drawn-slot">-</div>
+              </div>
               <div class="row">
                 <div>Selected Slots: <span id="selectedSlots">-</span></div>
                 <button id="clearSelection">Clear</button>

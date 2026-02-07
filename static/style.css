@@ -1608,6 +1608,18 @@ body.log-open {
   border-radius: 4px;
 }
 
+.cabo-drawn-label {
+  font-weight: 600;
+  color: #444;
+}
+
+.cabo-drawn-slot {
+  border-color: #d4af37;
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.15);
+  background: #fffdf2;
+  cursor: default;
+}
+
 .slot.selected {
   border-color: #1f6feb;
   background: #eaf2ff;
