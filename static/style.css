@@ -1979,6 +1979,15 @@ body.log-open {
   background: #fafafa;
 }
 
+.player-slot.target-selectable {
+  cursor: pointer;
+}
+
+.player-slot.target-selected {
+  border-color: #1f6feb;
+  background: #eaf2ff;
+}
+
 .player-slot.abraca-card {
   display: flex;
   flex-direction: column;
@@ -3041,6 +3050,17 @@ body.log-open {
     padding: 6px 6px;
     width: calc(25% - 6px);
     flex: 0 0 calc(25% - 6px);
+  }
+
+  #caboPanel .row.actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  #caboPanel .row.actions button {
+    width: 100%;
+    margin-right: 0;
   }
 
   .hand {

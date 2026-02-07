@@ -2106,8 +2106,12 @@ function clearCaboState() {
   pendingChoice.textContent = "-";
   handSlots.innerHTML = "";
   selectedSlotsLabel.textContent = "-";
-  targetSelection.textContent = "-";
-  targetList.innerHTML = "";
+  if (targetSelection) {
+    targetSelection.textContent = "-";
+  }
+  if (targetList) {
+    targetList.innerHTML = "";
+  }
   gamePlayers.innerHTML = "";
   updateActionButtons();
 }
@@ -3625,6 +3629,9 @@ function updateSelectedSlots() {
 }
 
 function updateTargetSelection() {
+  if (!targetSelection) {
+    return;
+  }
   if (!selectedTarget || !currentCaboView) {
     targetSelection.textContent = "-";
     return;
@@ -3642,7 +3649,7 @@ function clearTargetSelection() {
   updateTargetSelection();
   updateActionButtons();
   if (currentCaboView) {
-    renderTargets(currentCaboView);
+    renderGamePlayers(currentCaboView);
   }
 }
 
@@ -4176,6 +4183,9 @@ function renderHand(view) {
 
 function renderGamePlayers(view) {
   gamePlayers.innerHTML = "";
+  const canSelectTarget =
+    view.pending_choice &&
+    (view.pending_choice.type === "spy" || view.pending_choice.type === "swap");
   view.players.forEach((p) => {
     const card = document.createElement("div");
     card.className = "player-card";
@@ -4221,11 +4231,32 @@ function renderGamePlayers(view) {
     p.hand.forEach((slot, idx) => {
       const slotEl = document.createElement("div");
       slotEl.className = "player-slot";
+      const isTargetPlayer = p.player_id !== view.you;
+      const isSelectableTarget = canSelectTarget && isTargetPlayer && !slot.empty;
       if (slot.empty) {
         slotEl.classList.add("empty");
       }
       const label = slot.empty ? "Empty" : slot.known ? slot.value : "?";
       slotEl.textContent = `#${idx} ${label}`;
+      if (
+        selectedTarget &&
+        selectedTarget.playerId === p.player_id &&
+        selectedTarget.slot === idx
+      ) {
+        slotEl.classList.add("target-selected");
+      }
+      if (isSelectableTarget) {
+        slotEl.classList.add("target-selectable");
+        slotEl.addEventListener("click", () => {
+          const isSameTarget =
+            selectedTarget &&
+            selectedTarget.playerId === p.player_id &&
+            selectedTarget.slot === idx;
+          selectedTarget = isSameTarget ? null : { playerId: p.player_id, slot: idx };
+          updateActionButtons();
+          renderGamePlayers(view);
+        });
+      }
       handRow.appendChild(slotEl);
     });
 
@@ -4241,6 +4272,10 @@ function renderGamePlayers(view) {
 }
 
 function renderTargets(view) {
+  if (!targetList) {
+    updateTargetSelection();
+    return;
+  }
   targetList.innerHTML = "";
   view.players
     .filter((p) => p.player_id !== view.you)
@@ -9284,11 +9319,20 @@ function renderCaboGameState(data) {
     currentGameType = "cabo";
     setGamePanelVisibility("cabo");
   }
-  if (
-    selectedTarget &&
-    !view.players.find((p) => p.player_id === selectedTarget.playerId)
-  ) {
+  const needsTarget =
+    view.pending_choice &&
+    (view.pending_choice.type === "spy" || view.pending_choice.type === "swap");
+  if (!needsTarget) {
     selectedTarget = null;
+  } else if (selectedTarget) {
+    const targetPlayer = view.players.find((p) => p.player_id === selectedTarget.playerId);
+    const targetSlot =
+      targetPlayer && Array.isArray(targetPlayer.hand)
+        ? targetPlayer.hand[selectedTarget.slot]
+        : null;
+    if (!targetPlayer || !targetSlot || targetSlot.empty) {
+      selectedTarget = null;
+    }
   }
 
   phaseLabel.textContent = view.phase;
@@ -9318,7 +9362,6 @@ function renderCaboGameState(data) {
 
   renderHand(view);
   renderGamePlayers(view);
-  renderTargets(view);
 
   logGameEvents(data);
 
@@ -10699,9 +10742,11 @@ document.getElementById("clearSelection").addEventListener("click", () => {
   clearSelection();
 });
 
-clearTargetBtn.addEventListener("click", () => {
-  clearTargetSelection();
-});
+if (clearTargetBtn) {
+  clearTargetBtn.addEventListener("click", () => {
+    clearTargetSelection();
+  });
+}
 
 if (flip7ClearTargetBtn) {
   flip7ClearTargetBtn.addEventListener("click", () => {
