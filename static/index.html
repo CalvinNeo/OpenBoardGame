@@ -230,6 +230,14 @@
                       </select>
                     </div>
                   </div>
+                  <div class="game-config-card hidden" id="impressionConfigBox" aria-hidden="true">
+                    <div class="game-config-title">Impression Flower</div>
+                    <div class="row hidden toggle-row" id="impressionVoteRow">
+                      <label for="impressionVoteToggle">Allow Up/Down Votes</label>
+                      <input id="impressionVoteToggle" type="checkbox" />
+                      <span class="hint">Enable review votes during round recap.</span>
+                    </div>
+                  </div>
                 </div>
                 <div class="row hidden toggle-row" id="autoSaveRow">
                   <label for="autoSaveToggle">Auto Save</label>
@@ -888,6 +896,11 @@
                   <button id="impressionContinueBtn">Continue</button>
                   <button id="impressionEndBtn">End Game</button>
                 </div>
+              </div>
+
+              <div id="impressionReview" class="hidden">
+                <h3>Review</h3>
+                <div id="impressionReviewList" class="impression-drawings"></div>
               </div>
 
               <h3>Players</h3>

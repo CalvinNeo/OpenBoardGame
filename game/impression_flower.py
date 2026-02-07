@@ -10,6 +10,7 @@ DEFAULT_CONFIG = {
     "base_stamps": 5,
     "score_mode": "round",
     "score_per_correct": 2,
+    "allow_review_votes": False,
     "stamp_shapes": ["circle", "triangle", "square", "bar"],
     "stamp_colors": ["#ef4444", "#22c55e", "#3b82f6", "#eab308"],
     "stamp_size": 64,
@@ -44,6 +45,12 @@ def _normalize_float(value: object, minimum: float) -> Optional[float]:
     if parsed < minimum:
         return None
     return parsed
+
+
+def _normalize_bool(value: object) -> Optional[bool]:
+    if isinstance(value, bool):
+        return value
+    return None
 
 
 def _normalize_word_pool(value: object) -> List[str]:
@@ -107,6 +114,10 @@ def _normalize_config(raw: Optional[Dict], base: Optional[Dict] = None) -> Dict:
     score_per_correct = _normalize_int(raw.get("score_per_correct"), 1)
     if score_per_correct is not None:
         cfg["score_per_correct"] = score_per_correct
+
+    allow_review_votes = _normalize_bool(raw.get("allow_review_votes"))
+    if allow_review_votes is not None:
+        cfg["allow_review_votes"] = allow_review_votes
 
     shapes = _normalize_shapes(raw.get("stamp_shapes"))
     if shapes:
@@ -229,6 +240,7 @@ def _start_round(state: Dict) -> None:
     state["drawing_order"] = []
     state["word_bank"] = []
     state["round_end_by"] = None
+    state["review_votes"] = {}
 
     if not guesser_id:
         state["phase"] = "game_over"
@@ -253,6 +265,51 @@ def _enter_guess_phase(state: Dict) -> None:
     random.shuffle(bank)
     state["word_bank"] = bank
     state["phase"] = "guess"
+
+
+def _review_vote_counts(votes: Dict[str, int]) -> Tuple[int, int, int]:
+    up = sum(1 for vote in votes.values() if vote > 0)
+    down = sum(1 for vote in votes.values() if vote < 0)
+    total = sum(votes.values()) if votes else 0
+    return up, down, total
+
+
+def _build_review_drawings(state: Dict, viewer_id: str) -> List[Dict]:
+    drawings = []
+    assignments = state.get("assignments", {})
+    drawings_map = state.get("drawings", {})
+    order = state.get("drawing_order") or list(assignments.keys())
+    meta = state.get("player_meta", {})
+    matches: Dict[str, str] = {}
+    last_result = state.get("last_result")
+    if isinstance(last_result, dict):
+        matches = last_result.get("matches", {}) or {}
+    vote_state = state.get("review_votes", {}) or {}
+
+    for setter_id in order:
+        image_data = drawings_map.get(setter_id)
+        if not image_data:
+            continue
+        votes_for_drawing = vote_state.get(setter_id, {}) or {}
+        votes_up, votes_down, vote_total = _review_vote_counts(votes_for_drawing)
+        actual_word = assignments.get(setter_id)
+        guessed_word = matches.get(setter_id)
+        drawings.append(
+            {
+                "drawing_id": setter_id,
+                "image_data": image_data,
+                "author_id": setter_id,
+                "author_name": meta.get(setter_id, {}).get("name"),
+                "actual_word": actual_word,
+                "guessed_word": guessed_word,
+                "is_correct": guessed_word == actual_word if guessed_word is not None else None,
+                "votes_up": votes_up,
+                "votes_down": votes_down,
+                "vote_total": vote_total,
+                "your_vote": votes_for_drawing.get(viewer_id, 0),
+            }
+        )
+    return drawings
 
 
 def _all_drawings_submitted(state: Dict) -> bool:
@@ -358,6 +415,7 @@ class ImpressionFlowerGame:
             "last_result": None,
             "word_bag": [],
             "round_end_by": None,
+            "review_votes": {},
             "config": cfg,
             "game_over": False,
         }
@@ -384,7 +442,10 @@ class ImpressionFlowerGame:
                 return ["submit_matches"]
             return []
         if phase == "round_end" and not state.get("round_end_by"):
-            return ["continue_game", "end_game"]
+            actions = ["continue_game", "end_game"]
+            if state.get("config", {}).get("allow_review_votes"):
+                actions.append("review_vote")
+            return actions
         return []
 
     @staticmethod
@@ -476,6 +537,31 @@ class ImpressionFlowerGame:
             return [], None
 
         if phase == "round_end":
+            if action_type == "review_vote":
+                if not state.get("config", {}).get("allow_review_votes"):
+                    return [], "review votes disabled"
+                if state.get("round_end_by"):
+                    return [], "round already decided"
+                drawing_id = action.get("drawing_id")
+                vote = action.get("vote")
+                if drawing_id not in state.get("assignments", {}):
+                    return [], "invalid drawing_id"
+                if vote not in (-1, 0, 1):
+                    return [], "invalid vote"
+                if drawing_id == player_id:
+                    return [], "cannot vote for yourself"
+                votes_state = state.setdefault("review_votes", {})
+                votes_for_drawing = votes_state.setdefault(drawing_id, {})
+                previous = votes_for_drawing.get(player_id, 0)
+                next_vote = 0 if vote == previous else vote
+                if next_vote == 0:
+                    votes_for_drawing.pop(player_id, None)
+                else:
+                    votes_for_drawing[player_id] = next_vote
+                delta = next_vote - previous
+                if delta and drawing_id in state.get("players", {}):
+                    state["players"][drawing_id]["score"] += delta
+                return [], None
             if action_type not in ("continue_game", "end_game"):
                 return [], "invalid action"
             if state.get("round_end_by"):
@@ -528,6 +614,7 @@ class ImpressionFlowerGame:
         )
         drawings = None
         word_bank = None
+        review_drawings = None
         if show_drawings:
             drawings = []
             order = state.get("drawing_order") or list(state.get("assignments", {}).keys())
@@ -546,6 +633,8 @@ class ImpressionFlowerGame:
                 )
         if show_word_bank:
             word_bank = list(state.get("word_bank", []))
+        if phase in ("round_end", "game_over"):
+            review_drawings = _build_review_drawings(state, viewer_id)
 
         cfg = state.get("config", {})
         config_view = {
@@ -553,6 +642,7 @@ class ImpressionFlowerGame:
             "base_stamps": cfg.get("base_stamps"),
             "score_mode": cfg.get("score_mode"),
             "score_per_correct": cfg.get("score_per_correct"),
+            "allow_review_votes": cfg.get("allow_review_votes"),
             "stamp_shapes": cfg.get("stamp_shapes"),
             "stamp_colors": cfg.get("stamp_colors"),
             "stamp_size": cfg.get("stamp_size"),
@@ -574,6 +664,7 @@ class ImpressionFlowerGame:
             "prompt_word": prompt_word,
             "drawings": drawings,
             "word_bank": word_bank,
+            "review_drawings": review_drawings,
             "last_result": state.get("last_result"),
             "round_end_by": state.get("round_end_by"),
             "stamps_this_round": _stamps_this_round(state),
@@ -623,6 +714,11 @@ class ImpressionFlowerGame:
             return {"type": "submit_matches", "matches": matches}
 
         if phase == "round_end":
+            meta = state.get("player_meta", {})
+            order = state.get("turn_order", [])
+            has_human = any(not meta.get(pid, {}).get("is_bot") for pid in order)
+            if has_human:
+                return None
             return {"type": "continue_game"}
 
         return None

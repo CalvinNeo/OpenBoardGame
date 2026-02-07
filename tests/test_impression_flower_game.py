@@ -62,6 +62,60 @@ class ImpressionFlowerGameTests(unittest.TestCase):
         self.assertEqual(state["players"]["p1"]["score"], 1)
         self.assertEqual(state["players"]["p2"]["score"], 1)
 
+    def test_review_view_contains_words(self):
+        state = ImpressionFlowerGame.init_game({}, _players(3))
+        _submit_drawings(state)
+        matches = [
+            {"drawing_id": setter_id, "word": word}
+            for setter_id, word in state["assignments"].items()
+        ]
+        ImpressionFlowerGame.apply_action(
+            state,
+            state["guesser_id"],
+            {"type": "submit_matches", "matches": matches},
+        )
+        setter_id = next(iter(state["assignments"].keys()))
+        view = ImpressionFlowerGame.get_public_view(state, setter_id)
+        review = view.get("review_drawings") or []
+        entry = next(item for item in review if item["drawing_id"] == setter_id)
+        self.assertEqual(entry["actual_word"], state["assignments"][setter_id])
+        self.assertEqual(entry["guessed_word"], state["last_result"]["matches"][setter_id])
+
+    def test_review_vote_scoring(self):
+        state = ImpressionFlowerGame.init_game({"allow_review_votes": True}, _players(3))
+        _submit_drawings(state)
+        matches = [
+            {"drawing_id": setter_id, "word": word}
+            for setter_id, word in state["assignments"].items()
+        ]
+        ImpressionFlowerGame.apply_action(
+            state,
+            state["guesser_id"],
+            {"type": "submit_matches", "matches": matches},
+        )
+        setter_id = next(iter(state["assignments"].keys()))
+        voter_id = state["guesser_id"]
+        base_score = state["players"][setter_id]["score"]
+        events, error = ImpressionFlowerGame.apply_action(
+            state,
+            voter_id,
+            {"type": "review_vote", "drawing_id": setter_id, "vote": 1},
+        )
+        self.assertIsNone(error)
+        self.assertEqual(state["players"][setter_id]["score"], base_score + 1)
+        ImpressionFlowerGame.apply_action(
+            state,
+            voter_id,
+            {"type": "review_vote", "drawing_id": setter_id, "vote": 1},
+        )
+        self.assertEqual(state["players"][setter_id]["score"], base_score)
+        ImpressionFlowerGame.apply_action(
+            state,
+            voter_id,
+            {"type": "review_vote", "drawing_id": setter_id, "vote": -1},
+        )
+        self.assertEqual(state["players"][setter_id]["score"], base_score - 1)
+
     def test_word_bank_visible_to_setters_during_guess(self):
         state = ImpressionFlowerGame.init_game({}, _players(3))
         _submit_drawings(state)

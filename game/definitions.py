@@ -336,6 +336,16 @@ IMPRESSION_FLOWER_ACTION_SCHEMA = {
             "required": ["type", "matches"],
             "additionalProperties": False,
         },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "review_vote"},
+                "drawing_id": {"type": "string"},
+                "vote": {"type": "integer", "enum": [-1, 0, 1]},
+            },
+            "required": ["type", "drawing_id", "vote"],
+            "additionalProperties": False,
+        },
         {"type": "object", "properties": {"type": {"const": "continue_game"}}, "required": ["type"], "additionalProperties": False},
         {"type": "object", "properties": {"type": {"const": "end_game"}}, "required": ["type"], "additionalProperties": False},
     ],
@@ -349,6 +359,7 @@ IMPRESSION_FLOWER_CONFIG_SCHEMA = {
         "base_stamps": {"type": "integer", "minimum": 1},
         "score_mode": {"type": "string", "enum": ["round", "fixed"]},
         "score_per_correct": {"type": "integer", "minimum": 1},
+        "allow_review_votes": {"type": "boolean"},
         "stamp_shapes": {
             "type": "array",
             "items": {"type": "string", "enum": ["circle", "triangle", "square", "bar"]},

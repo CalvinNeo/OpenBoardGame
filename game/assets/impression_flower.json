@@ -17,6 +17,7 @@
   "base_stamps": 5,
   "score_mode": "round",
   "score_per_correct": 2,
+  "allow_review_votes": false,
   "stamp_shapes": ["circle", "triangle", "square", "bar"],
   "stamp_colors": ["#ef4444", "#22c55e", "#3b82f6", "#eab308"],
   "stamp_size": 64,

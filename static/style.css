@@ -2564,6 +2564,60 @@ body.log-open {
   cursor: pointer;
 }
 
+#impressionReview {
+  margin-top: 12px;
+}
+
+#impressionReview h3 {
+  margin-top: 0;
+}
+
+.impression-review-card.correct {
+  border-color: #22c55e;
+  background: #f0fdf4;
+}
+
+.impression-review-card.incorrect {
+  border-color: #ef4444;
+  background: #fef2f2;
+}
+
+.impression-review-words {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  color: #374151;
+}
+
+.impression-review-words strong {
+  color: #111827;
+}
+
+.impression-review-votes {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.impression-review-vote-btn {
+  padding: 2px 6px;
+  font-size: 12px;
+}
+
+.impression-review-vote-btn.active {
+  background: #1f6feb;
+  border-color: #1f6feb;
+  color: #fff;
+}
+
+.impression-review-vote-count {
+  font-size: 12px;
+  color: #4b5563;
+}
+
 #impressionPlayers {
   border: 1px solid #eee;
   padding: 8px;

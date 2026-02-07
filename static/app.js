@@ -190,6 +190,9 @@ const goldRushModeRow = document.getElementById("goldRushModeRow");
 const goldRushModeSelect = document.getElementById("goldRushModeSelect");
 const mismatchConfigBox = document.getElementById("mismatchConfigBox");
 const mismatchSliderCount = document.getElementById("mismatchSliderCount");
+const impressionConfigBox = document.getElementById("impressionConfigBox");
+const impressionVoteRow = document.getElementById("impressionVoteRow");
+const impressionVoteToggle = document.getElementById("impressionVoteToggle");
 const autoSaveRow = document.getElementById("autoSaveRow");
 const autoSaveToggle = document.getElementById("autoSaveToggle");
 const caboPanel = document.getElementById("caboPanel");
@@ -494,6 +497,8 @@ const impressionDrawArea = document.getElementById("impressionDrawArea");
 const impressionGuessArea = document.getElementById("impressionGuessArea");
 const impressionRoundEnd = document.getElementById("impressionRoundEnd");
 const impressionRoundResult = document.getElementById("impressionRoundResult");
+const impressionReview = document.getElementById("impressionReview");
+const impressionReviewList = document.getElementById("impressionReviewList");
 const impressionPlayers = document.getElementById("impressionPlayers");
 const impressionCanvas = document.getElementById("impressionCanvas");
 const impressionCtx = impressionCanvas ? impressionCanvas.getContext("2d") : null;
@@ -1486,6 +1491,18 @@ function updateMismatchConfigRow() {
   }
 }
 
+function updateImpressionConfigRow() {
+  const showRow = currentRoomState && currentGameType === "impression_flower" && currentRoomState.status === "lobby";
+  if (impressionConfigBox) {
+    impressionConfigBox.classList.toggle("hidden", !showRow);
+    impressionConfigBox.setAttribute("aria-hidden", (!showRow).toString());
+  }
+  if (impressionVoteRow) {
+    impressionVoteRow.classList.toggle("hidden", !showRow);
+    impressionVoteRow.setAttribute("aria-hidden", (!showRow).toString());
+  }
+}
+
 function updateAutoSaveRow() {
   const showRow =
     currentRoomState && (currentRoomState.status === "lobby" || currentRoomState.status === "game_over");
@@ -2037,6 +2054,7 @@ function resetRoomState() {
   updateHalliConfigRow();
   updateGoldRushConfigRow();
   updateMismatchConfigRow();
+  updateImpressionConfigRow();
   updateAutoSaveRow();
   updateReopenButton();
   if (drawGuessLanguageSelect) {
@@ -2064,6 +2082,9 @@ function resetRoomState() {
   }
   if (mismatchSliderCount) {
     mismatchSliderCount.value = "3";
+  }
+  if (impressionVoteToggle) {
+    impressionVoteToggle.checked = false;
   }
   createRoomPending = false;
   setCreateGameRowVisible(false);
@@ -2598,6 +2619,12 @@ function clearImpressionFlowerState() {
   }
   if (impressionDrawings) {
     impressionDrawings.innerHTML = "";
+  }
+  if (impressionReview) {
+    impressionReview.classList.add("hidden");
+  }
+  if (impressionReviewList) {
+    impressionReviewList.innerHTML = "";
   }
   if (impressionPlayers) {
     impressionPlayers.innerHTML = "";
@@ -4014,6 +4041,9 @@ function emitRoomStart() {
     const rawCount = mismatchSliderCount ? Number.parseInt(mismatchSliderCount.value, 10) : NaN;
     const sliderCount = Number.isInteger(rawCount) ? rawCount : 3;
     payload.config = { slider_count: sliderCount };
+  } else if (currentGameType === "impression_flower") {
+    const allowReviewVotes = impressionVoteToggle ? impressionVoteToggle.checked : false;
+    payload.config = { allow_review_votes: allowReviewVotes };
   }
   socket.emit("room:start", payload);
 }
@@ -4057,6 +4087,7 @@ function renderRoomState(state) {
   updateHalliConfigRow();
   updateGoldRushConfigRow();
   updateMismatchConfigRow();
+  updateImpressionConfigRow();
   updateAutoSaveRow();
   updateReopenButton();
   playersList.innerHTML = "";
@@ -7788,6 +7819,105 @@ function renderImpressionRoundResult(view) {
   impressionRoundResult.textContent = `Matched ${correct}/${total}${scoresText}`;
 }
 
+function sendImpressionReviewVote(drawingId, vote) {
+  if (!drawingId) {
+    return;
+  }
+  sendAction({ type: "review_vote", drawing_id: drawingId, vote });
+}
+
+function renderImpressionReview(view) {
+  if (!impressionReviewList) {
+    return;
+  }
+  impressionReviewList.innerHTML = "";
+  const reviewDrawings = Array.isArray(view.review_drawings) ? view.review_drawings : [];
+  if (!reviewDrawings.length) {
+    impressionReviewList.textContent = "No review data.";
+    return;
+  }
+  const votesEnabled = !!(view.config && view.config.allow_review_votes);
+  reviewDrawings.forEach((drawing) => {
+    const card = document.createElement("div");
+    card.className = "impression-drawing impression-review-card";
+    if (drawing.is_correct === true) {
+      card.classList.add("correct");
+    } else if (drawing.is_correct === false) {
+      card.classList.add("incorrect");
+    }
+
+    const author = document.createElement("div");
+    author.textContent = drawing.author_name ? `By ${drawing.author_name}` : "By ?";
+
+    const image = document.createElement("img");
+    image.src = drawing.image_data;
+    image.alt = "drawing";
+
+    const words = document.createElement("div");
+    words.className = "impression-review-words";
+    const actual = document.createElement("div");
+    actual.textContent = `Actual: ${drawing.actual_word ?? "-"}`;
+    const guessed = document.createElement("div");
+    guessed.textContent = `Guessed: ${drawing.guessed_word ?? "-"}`;
+    words.appendChild(actual);
+    words.appendChild(guessed);
+
+    card.appendChild(author);
+    card.appendChild(image);
+    card.appendChild(words);
+
+    if (votesEnabled) {
+      const votesRow = document.createElement("div");
+      votesRow.className = "impression-review-votes";
+      const yourVote = Number(drawing.your_vote) || 0;
+      const upCount = Number(drawing.votes_up) || 0;
+      const downCount = Number(drawing.votes_down) || 0;
+      const total = Number(drawing.vote_total) || 0;
+
+      const canVote =
+        view.phase === "round_end" && !view.game_over && drawing.author_id && drawing.author_id !== view.you;
+
+      const upBtn = document.createElement("button");
+      upBtn.type = "button";
+      upBtn.className = "impression-review-vote-btn";
+      upBtn.textContent = "Up";
+      upBtn.disabled = !canVote;
+      if (yourVote === 1) {
+        upBtn.classList.add("active");
+      }
+      upBtn.addEventListener("click", () => {
+        const nextVote = yourVote === 1 ? 0 : 1;
+        sendImpressionReviewVote(drawing.drawing_id, nextVote);
+      });
+
+      const downBtn = document.createElement("button");
+      downBtn.type = "button";
+      downBtn.className = "impression-review-vote-btn";
+      downBtn.textContent = "Down";
+      downBtn.disabled = !canVote;
+      if (yourVote === -1) {
+        downBtn.classList.add("active");
+      }
+      downBtn.addEventListener("click", () => {
+        const nextVote = yourVote === -1 ? 0 : -1;
+        sendImpressionReviewVote(drawing.drawing_id, nextVote);
+      });
+
+      const counts = document.createElement("span");
+      counts.className = "impression-review-vote-count";
+      const totalLabel = `${total >= 0 ? "+" : ""}${total}`;
+      counts.textContent = `Up ${upCount} / Down ${downCount} (Total ${totalLabel})`;
+
+      votesRow.appendChild(upBtn);
+      votesRow.appendChild(downBtn);
+      votesRow.appendChild(counts);
+      card.appendChild(votesRow);
+    }
+
+    impressionReviewList.appendChild(card);
+  });
+}
+
 function setupImpressionCanvas() {
   if (!impressionCanvas || !impressionCtx) {
     return;
@@ -10120,6 +10250,12 @@ function renderImpressionGameState(data) {
     if (impressionRoundEnd) {
       impressionRoundEnd.classList.add("hidden");
     }
+    if (impressionReview) {
+      impressionReview.classList.add("hidden");
+    }
+    if (impressionReviewList) {
+      impressionReviewList.innerHTML = "";
+    }
     if (newRound || impressionLastPhase !== "draw") {
       impressionStampHistory = [];
       impressionStampsMax = Number.parseInt(view.stamps_this_round, 10) || 0;
@@ -10147,6 +10283,12 @@ function renderImpressionGameState(data) {
     if (impressionRoundEnd) {
       impressionRoundEnd.classList.add("hidden");
     }
+    if (impressionReview) {
+      impressionReview.classList.add("hidden");
+    }
+    if (impressionReviewList) {
+      impressionReviewList.innerHTML = "";
+    }
     if (phaseChanged) {
       impressionMatches = {};
       impressionSelectedWord = null;
@@ -10167,7 +10309,11 @@ function renderImpressionGameState(data) {
     if (impressionRoundEnd) {
       impressionRoundEnd.classList.remove("hidden");
     }
+    if (impressionReview) {
+      impressionReview.classList.remove("hidden");
+    }
     renderImpressionRoundResult(view);
+    renderImpressionReview(view);
     if (impressionStampsLeftLabel) {
       impressionStampsLeftLabel.textContent = "-";
     }
@@ -10182,7 +10328,11 @@ function renderImpressionGameState(data) {
     if (impressionRoundEnd) {
       impressionRoundEnd.classList.remove("hidden");
     }
+    if (impressionReview) {
+      impressionReview.classList.remove("hidden");
+    }
     renderImpressionRoundResult(view);
+    renderImpressionReview(view);
     if (impressionStampsLeftLabel) {
       impressionStampsLeftLabel.textContent = "-";
     }
@@ -10196,6 +10346,12 @@ function renderImpressionGameState(data) {
     }
     if (impressionRoundEnd) {
       impressionRoundEnd.classList.add("hidden");
+    }
+    if (impressionReview) {
+      impressionReview.classList.add("hidden");
+    }
+    if (impressionReviewList) {
+      impressionReviewList.innerHTML = "";
     }
   }
 
