@@ -1610,6 +1610,7 @@ body.log-open {
 
 .cabo-hand-header {
   align-items: center;
+  gap: 6px;
   flex-wrap: nowrap;
 }
 
@@ -1618,7 +1619,7 @@ body.log-open {
 }
 
 .cabo-hand-header #clearSelection {
-  margin-left: auto;
+  margin-left: 0;
 }
 
 .cabo-discard {
