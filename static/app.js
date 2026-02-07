@@ -600,9 +600,8 @@ const actionButtons = {
   initial_peek: document.getElementById("peekBtn"),
   draw_deck: document.getElementById("drawDeckBtn"),
   draw_discard: discardTop,
-  replace_card: document.getElementById("replaceBtn"),
+  replace_or_match: document.getElementById("replaceBtn"),
   discard_drawn: document.getElementById("discardDrawnBtn"),
-  attempt_match: document.getElementById("matchBtn"),
   call_cabo: document.getElementById("callCaboBtn"),
   use_choice_action: document.getElementById("choiceBtn"),
   next_round: document.getElementById("nextRoundBtn"),
@@ -3923,17 +3922,22 @@ function isActionAvailable(actionType) {
   if (!currentCaboView || !Array.isArray(currentCaboView.legal_actions)) {
     return false;
   }
+  if (actionType === "replace_or_match") {
+    const canReplace = currentCaboView.legal_actions.includes("replace_card");
+    const canMatch = currentCaboView.legal_actions.includes("attempt_match");
+    if (selectedSlots.length >= 2) {
+      return canMatch;
+    }
+    return selectedSlots.length >= 1 && canReplace;
+  }
   if (!currentCaboView.legal_actions.includes(actionType)) {
     return false;
   }
   if (actionType === "initial_peek") {
     return selectedSlots.length === 2;
   }
-  if (actionType === "draw_discard" || actionType === "replace_card") {
+  if (actionType === "draw_discard") {
     return selectedSlots.length >= 1;
-  }
-  if (actionType === "attempt_match") {
-    return selectedSlots.length >= 2;
   }
   if (actionType === "use_choice_action") {
     if (!currentCaboView.pending_choice) {
@@ -10808,24 +10812,19 @@ if (discardTop) {
 
 document.getElementById("replaceBtn").addEventListener("click", () => {
   if (!selectedSlots.length) {
-    log("Select a slot to replace");
+    log("Select 1 slot to replace or 2-4 slots to match");
     return;
   }
-  sendAction({ type: "replace_card", slot: selectedSlots[0] });
+  if (selectedSlots.length >= 2) {
+    sendAction({ type: "attempt_match", slots: selectedSlots.slice(0, 4) });
+  } else {
+    sendAction({ type: "replace_card", slot: selectedSlots[0] });
+  }
   clearSelection();
 });
 
 document.getElementById("discardDrawnBtn").addEventListener("click", () => {
   sendAction({ type: "discard_drawn" });
-});
-
-document.getElementById("matchBtn").addEventListener("click", () => {
-  if (selectedSlots.length < 2) {
-    log("Select 2-4 slots for match");
-    return;
-  }
-  sendAction({ type: "attempt_match", slots: selectedSlots.slice(0, 4) });
-  clearSelection();
 });
 
 document.getElementById("callCaboBtn").addEventListener("click", () => {
