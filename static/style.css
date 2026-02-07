@@ -2532,8 +2532,16 @@ body.log-open {
   gap: 6px;
 }
 
+.impression-drawing-media {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .impression-drawing img {
   max-width: 100%;
+  width: 100%;
+  display: block;
   border: 1px solid #ddd;
   border-radius: 4px;
   background: #fff;
@@ -2557,6 +2565,7 @@ body.log-open {
   color: #1f6feb;
   background: #eff6ff;
 }
+
 
 .impression-assigned-word {
   font-weight: 600;

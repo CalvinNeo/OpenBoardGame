@@ -7727,6 +7727,8 @@ function renderImpressionDrawings(view) {
     card.className = "impression-drawing";
     const author = document.createElement("div");
     author.textContent = drawing.author_name ? `By ${drawing.author_name}` : "By ?";
+    const media = document.createElement("div");
+    media.className = "impression-drawing-media";
     const image = document.createElement("img");
     image.src = drawing.image_data;
     image.alt = "drawing";
@@ -7771,9 +7773,10 @@ function renderImpressionDrawings(view) {
       }
       assignImpressionWordToDrawing(view, drawing.drawing_id, word);
     });
+    media.appendChild(dropzone);
+    media.appendChild(image);
     card.appendChild(author);
-    card.appendChild(image);
-    card.appendChild(dropzone);
+    card.appendChild(media);
     impressionDrawings.appendChild(card);
   });
 }
