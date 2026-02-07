@@ -448,6 +448,54 @@ def _validate_schema_payload(payload: Dict, schema: Dict, label: str) -> Optiona
     return f"{location} invalid: {error.message}"
 
 
+def _get_header_value(environ: Optional[Dict], header_name: str) -> Optional[str]:
+    if not environ:
+        return None
+    scope = environ.get("asgi.scope")
+    if isinstance(scope, dict):
+        headers = scope.get("headers") or []
+        for key, value in headers:
+            if not isinstance(key, (bytes, bytearray)):
+                continue
+            if key.decode("latin-1").lower() == header_name:
+                try:
+                    return value.decode("latin-1")
+                except (AttributeError, UnicodeDecodeError):
+                    return None
+    wsgi_key = "HTTP_" + header_name.upper().replace("-", "_")
+    value = environ.get(wsgi_key)
+    return value if isinstance(value, str) else None
+
+
+def _get_client_address(environ: Optional[Dict]) -> Optional[str]:
+    if not environ:
+        return None
+    forwarded = _get_header_value(environ, "x-forwarded-for")
+    if forwarded:
+        ip = forwarded.split(",")[0].strip()
+        if ip:
+            return ip
+    real_ip = _get_header_value(environ, "x-real-ip")
+    if real_ip:
+        ip = real_ip.strip()
+        if ip:
+            return ip
+    scope = environ.get("asgi.scope")
+    if isinstance(scope, dict):
+        client = scope.get("client")
+        if isinstance(client, (list, tuple)) and client:
+            ip = str(client[0]) if client[0] else ""
+            port = client[1] if len(client) > 1 else None
+            if ip and port is not None:
+                return f"{ip}:{port}"
+            if ip:
+                return ip
+    remote = environ.get("REMOTE_ADDR")
+    if isinstance(remote, str) and remote.strip():
+        return remote.strip()
+    return None
+
+
 async def _leave_session(sid: str) -> None:
     session = SESSIONS.pop(sid, None)
     if not session:
@@ -553,7 +601,18 @@ async def connect(sid, environ):
 
 @sio.event
 async def disconnect(sid):
+    client_addr = _get_client_address(sio.get_environ(sid))
     session = SESSIONS.pop(sid, None)
+    if client_addr:
+        details = f"socket disconnect: {client_addr} sid={sid}"
+    else:
+        details = f"socket disconnect: sid={sid}"
+    if session:
+        room_id = session.get("room_id")
+        player_id = session.get("player_id")
+        if room_id or player_id:
+            details += f" room={room_id or '-'} player={player_id or '-'}"
+    print(details)
     if not session:
         return
     room = _get_room(session.get("room_id"))
