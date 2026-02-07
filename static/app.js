@@ -31,6 +31,9 @@ let abracaLastRoundNotice = null;
 let selectedSlots = [];
 let currentRoomState = null;
 let lastGameStatePayload = null;
+let actionLog = [];
+const ACTION_LOG_MAX = 500;
+const ACTION_LOG_TRUNCATE_AT = 500;
 let roomControlsGameActive = false;
 let roomControlsAutoCollapsed = false;
 let selectedTarget = null;
@@ -284,6 +287,7 @@ const logCloseBtn = document.getElementById("logCloseBtn");
 const logOpenBtn = document.getElementById("logOpenBtn");
 const skipValidationToggle = document.getElementById("skipValidationToggle");
 const copyStateBtn = document.getElementById("copyStateBtn");
+const copyActLogBtn = document.getElementById("copyActLogBtn");
 const loadModal = document.getElementById("loadModal");
 const loadModalCloseBtn = document.getElementById("loadModalCloseBtn");
 const loadList = document.getElementById("loadList");
@@ -928,6 +932,61 @@ async function copyGameStateSnapshot() {
     log("Game state copied to clipboard.");
   } else {
     log("Failed to copy game state.");
+  }
+}
+
+function sanitizeActionLogValue(value) {
+  if (value === null || value === undefined) {
+    return value;
+  }
+  if (typeof value === "string") {
+    if (value.length > ACTION_LOG_TRUNCATE_AT) {
+      return `${value.slice(0, ACTION_LOG_TRUNCATE_AT)}...(truncated ${value.length} chars)`;
+    }
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value.map((entry) => sanitizeActionLogValue(entry));
+  }
+  if (typeof value === "object") {
+    const sanitized = {};
+    Object.keys(value).forEach((key) => {
+      sanitized[key] = sanitizeActionLogValue(value[key]);
+    });
+    return sanitized;
+  }
+  return value;
+}
+
+function recordActionLog(payload) {
+  const timestamp = new Date().toISOString();
+  const logPayload = {
+    timestamp,
+    room_id: payload ? payload.room_id : roomId,
+    player_id: playerId || null,
+    game_type: currentGameType || null,
+    skip_validation: payload ? payload.skip_validation === true : shouldSkipValidation(),
+    action: payload ? payload.action : null,
+  };
+  const sanitizedPayload = sanitizeActionLogValue(logPayload);
+  const line = JSON.stringify(sanitizedPayload);
+  actionLog.push(line);
+  if (actionLog.length > ACTION_LOG_MAX) {
+    actionLog.splice(0, actionLog.length - ACTION_LOG_MAX);
+  }
+}
+
+async function copyActionLogSnapshot() {
+  if (!actionLog.length) {
+    log("No action log entries to copy.");
+    return;
+  }
+  const text = actionLog.join("\n");
+  const ok = await copyTextToClipboard(text);
+  if (ok) {
+    log(`Action log copied to clipboard (${actionLog.length} entries).`);
+  } else {
+    log("Failed to copy action log.");
   }
 }
 
@@ -4002,6 +4061,7 @@ function sendAction(action) {
   }
   const payload = { room_id: roomId, action };
   attachSkipValidation(payload);
+  recordActionLog(payload);
   socket.emit("game:action", payload);
 }
 
@@ -11860,6 +11920,12 @@ if (logOpenBtn) {
 if (copyStateBtn) {
   copyStateBtn.addEventListener("click", () => {
     copyGameStateSnapshot();
+  });
+}
+
+if (copyActLogBtn) {
+  copyActLogBtn.addEventListener("click", () => {
+    copyActionLogSnapshot();
   });
 }
 
