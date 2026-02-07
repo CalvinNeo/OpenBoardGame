@@ -476,12 +476,28 @@ def _install_runtime_hooks() -> None:
     if loop:
         loop.set_exception_handler(_asyncio_exception_handler)
 
-    def _signal_handler(signum, frame):
-        logger.warning("Received signal %s; shutting down.", signum)
+    def _chain_signal_handler(prev_handler):
+        def _signal_handler(signum, frame):
+            logger.warning("Received signal %s; shutting down.", signum)
+            if callable(prev_handler):
+                prev_handler(signum, frame)
+                return
+            if prev_handler == signal.SIG_DFL:
+                # Restore default handler and re-signal to keep default/uvicorn behavior.
+                try:
+                    signal.signal(signum, signal.SIG_DFL)
+                    os.kill(os.getpid(), signum)
+                except Exception:
+                    raise SystemExit(0)
+
+        return _signal_handler
 
     for sig in (signal.SIGTERM, signal.SIGINT):
         try:
-            signal.signal(sig, _signal_handler)
+            previous = signal.getsignal(sig)
+            if previous == signal.SIG_IGN:
+                continue
+            signal.signal(sig, _chain_signal_handler(previous))
         except (ValueError, OSError):
             continue
 
