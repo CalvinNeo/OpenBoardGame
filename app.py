@@ -1,7 +1,10 @@
 import asyncio
 import json
+import logging
 import os
 import re
+import signal
+import sys
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -19,6 +22,7 @@ from game.ai_dixit import resolve_card_path as resolve_aidixit_card_path
 from game.decrypto import get_decrypto_word_packs
 from game.decrypto_ai import get_bot_strategies
 
+logger = logging.getLogger("openboardgame")
 sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
 fastapi_app = FastAPI()
 fastapi_app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -448,6 +452,45 @@ def _validate_schema_payload(payload: Dict, schema: Dict, label: str) -> Optiona
     return f"{location} invalid: {error.message}"
 
 
+_RUNTIME_HOOKS_INSTALLED = False
+
+
+def _install_runtime_hooks() -> None:
+    global _RUNTIME_HOOKS_INSTALLED
+    if _RUNTIME_HOOKS_INSTALLED:
+        return
+    _RUNTIME_HOOKS_INSTALLED = True
+
+    def _asyncio_exception_handler(loop, context):
+        message = context.get("message", "asyncio exception")
+        exc = context.get("exception")
+        if exc:
+            logger.exception("Asyncio exception: %s", message, exc_info=exc)
+        else:
+            logger.error("Asyncio exception: %s context=%s", message, context)
+
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+    if loop:
+        loop.set_exception_handler(_asyncio_exception_handler)
+
+    def _signal_handler(signum, frame):
+        logger.warning("Received signal %s; shutting down.", signum)
+
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        try:
+            signal.signal(sig, _signal_handler)
+        except (ValueError, OSError):
+            continue
+
+    def _excepthook(exc_type, exc, tb):
+        logger.error("Uncaught exception", exc_info=(exc_type, exc, tb))
+
+    sys.excepthook = _excepthook
+
+
 def _get_header_value(environ: Optional[Dict], header_name: str) -> Optional[str]:
     if not environ:
         return None
@@ -494,6 +537,17 @@ def _get_client_address(environ: Optional[Dict]) -> Optional[str]:
     if isinstance(remote, str) and remote.strip():
         return remote.strip()
     return None
+
+
+@fastapi_app.on_event("startup")
+async def _on_startup() -> None:
+    _install_runtime_hooks()
+    logger.info("Server startup complete.")
+
+
+@fastapi_app.on_event("shutdown")
+async def _on_shutdown() -> None:
+    logger.info("Server shutdown complete.")
 
 
 async def _leave_session(sid: str) -> None:
@@ -595,6 +649,11 @@ async def _maybe_run_bots(room: Room) -> None:
 
 @sio.event
 async def connect(sid, environ):
+    client_addr = _get_client_address(environ)
+    if client_addr:
+        logger.info("socket connect: %s sid=%s", client_addr, sid)
+    else:
+        logger.info("socket connect: sid=%s", sid)
     await sio.emit("system:info", {"message": "connected"}, to=sid)
     await sio.emit("room:list", {"rooms": _room_list_payload()}, to=sid)
 
@@ -604,15 +663,15 @@ async def disconnect(sid):
     client_addr = _get_client_address(sio.get_environ(sid))
     session = SESSIONS.pop(sid, None)
     if client_addr:
-        details = f"socket disconnect: {client_addr} sid={sid}"
+        details = f"{client_addr} sid={sid}"
     else:
-        details = f"socket disconnect: sid={sid}"
+        details = f"sid={sid}"
     if session:
         room_id = session.get("room_id")
         player_id = session.get("player_id")
         if room_id or player_id:
             details += f" room={room_id or '-'} player={player_id or '-'}"
-    print(details)
+    logger.info("socket disconnect: %s", details)
     if not session:
         return
     room = _get_room(session.get("room_id"))
