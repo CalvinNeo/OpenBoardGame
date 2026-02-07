@@ -599,7 +599,7 @@ const blokusPlayers = document.getElementById("blokusPlayers");
 const actionButtons = {
   initial_peek: document.getElementById("peekBtn"),
   draw_deck: document.getElementById("drawDeckBtn"),
-  draw_discard: document.getElementById("drawDiscardBtn"),
+  draw_discard: discardTop,
   replace_card: document.getElementById("replaceBtn"),
   discard_drawn: document.getElementById("discardDrawnBtn"),
   attempt_match: document.getElementById("matchBtn"),
@@ -2105,7 +2105,9 @@ function clearCaboState() {
   caboLeft.textContent = "-";
   pendingChoice.textContent = "-";
   handSlots.innerHTML = "";
-  selectedSlotsLabel.textContent = "-";
+  if (selectedSlotsLabel) {
+    selectedSlotsLabel.textContent = "-";
+  }
   if (targetSelection) {
     targetSelection.textContent = "-";
   }
@@ -3625,7 +3627,9 @@ function clearSkullSelection() {
 }
 
 function updateSelectedSlots() {
-  selectedSlotsLabel.textContent = selectedSlots.length ? selectedSlots.join(", ") : "-";
+  if (selectedSlotsLabel) {
+    selectedSlotsLabel.textContent = selectedSlots.length ? selectedSlots.join(", ") : "-";
+  }
 }
 
 function updateTargetSelection() {
@@ -10791,14 +10795,16 @@ document.getElementById("drawDeckBtn").addEventListener("click", () => {
   sendAction({ type: "draw_deck" });
 });
 
-document.getElementById("drawDiscardBtn").addEventListener("click", () => {
-  if (!selectedSlots.length) {
-    log("Select a slot to replace from discard");
-    return;
-  }
-  sendAction({ type: "draw_discard", slot: selectedSlots[0] });
-  clearSelection();
-});
+if (discardTop) {
+  discardTop.addEventListener("click", () => {
+    if (!selectedSlots.length) {
+      log("Select a slot to replace from discard");
+      return;
+    }
+    sendAction({ type: "draw_discard", slot: selectedSlots[0] });
+    clearSelection();
+  });
+}
 
 document.getElementById("replaceBtn").addEventListener("click", () => {
   if (!selectedSlots.length) {

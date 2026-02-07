@@ -1608,6 +1608,46 @@ body.log-open {
   border-radius: 4px;
 }
 
+.cabo-hand-header {
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.cabo-hand-header h3 {
+  margin: 0;
+}
+
+.cabo-hand-header #clearSelection {
+  margin-left: auto;
+}
+
+.cabo-discard {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cabo-discard-label {
+  font-weight: 600;
+  color: #444;
+}
+
+.cabo-discard-slot {
+  border-color: #1e3a8a;
+  box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.18);
+  background: #f8fafc;
+  color: #1e3a8a;
+  font: inherit;
+  appearance: none;
+}
+
+.cabo-discard-slot.action-allowed {
+  background: #e0e7ff;
+  border-color: #1e3a8a;
+  color: #1e3a8a;
+  box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.28);
+}
+
 .cabo-drawn-label {
   font-weight: 600;
   color: #444;
