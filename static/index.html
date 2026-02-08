@@ -909,17 +909,22 @@
                     <button id="cyberIconRemoveBtn">Remove Last</button>
                     <button id="cyberIconClearBtn">Clear</button>
                   </div>
-                  <div class="hint">Use 2-5 icons.</div>
+                  <div class="hint">Use 2-5 icons. Tap to rotate 90°.</div>
                 </div>
                 <div id="cyberToolLetters" class="cyber-tool hidden">
                   <div class="row cyber-letter-palette" id="cyberLetterPalette"></div>
                   <div id="cyberLetterCanvas" class="cyber-stage"></div>
+                  <div class="row">
+                    <label for="cyberLetterRotate">Rotation</label>
+                    <input id="cyberLetterRotate" type="range" min="0" max="360" value="0" />
+                    <span id="cyberLetterRotateValue">0°</span>
+                  </div>
                   <div class="row actions">
                     <button id="cyberLetterRotateBtn">Rotate Selected</button>
                     <button id="cyberLetterRemoveBtn">Remove Selected</button>
                     <button id="cyberLetterClearBtn">Clear</button>
                   </div>
-                  <div class="hint">Tap a letter to rotate; up to 10 letters.</div>
+                  <div class="hint">Rotate with the slider or tap to spin 90°; up to 10 letters.</div>
                 </div>
                 <div id="cyberToolShapes" class="cyber-tool hidden">
                   <div class="row cyber-shape-palette" id="cyberShapePalette"></div>

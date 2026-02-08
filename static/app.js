@@ -575,6 +575,8 @@ const cyberToolLetters = document.getElementById("cyberToolLetters");
 const cyberLetterPalette = document.getElementById("cyberLetterPalette");
 const cyberLetterCanvas = document.getElementById("cyberLetterCanvas");
 const cyberLetterRotateBtn = document.getElementById("cyberLetterRotateBtn");
+const cyberLetterRotate = document.getElementById("cyberLetterRotate");
+const cyberLetterRotateValue = document.getElementById("cyberLetterRotateValue");
 const cyberLetterRemoveBtn = document.getElementById("cyberLetterRemoveBtn");
 const cyberLetterClearBtn = document.getElementById("cyberLetterClearBtn");
 const cyberToolShapes = document.getElementById("cyberToolShapes");
@@ -13224,7 +13226,9 @@ function addCyberIcon(emoji) {
     emoji,
     x: width / 2 + offset,
     y: height / 2 + offset,
+    rotation: 0,
   });
+  cyberIconSelectedId = id;
   renderCyberIconCanvas();
   updateCyberSubmitButton(currentCyberView);
 }
@@ -13237,10 +13241,14 @@ function renderCyberIconCanvas() {
   cyberIconItems.forEach((item) => {
     const el = document.createElement("div");
     el.className = "cyber-stage-item";
+    if (item.id === cyberIconSelectedId) {
+      el.classList.add("selected");
+    }
     el.textContent = item.emoji;
     el.style.left = `${item.x}px`;
     el.style.top = `${item.y}px`;
     el.style.fontSize = "32px";
+    el.style.transform = `translate(-50%, -50%) rotate(${item.rotation || 0}deg)`;
     el.dataset.id = item.id;
     el.addEventListener("pointerdown", startCyberIconDrag);
     cyberIconCanvas.appendChild(el);
@@ -13263,7 +13271,11 @@ function startCyberIconDrag(event) {
     offsetX: item.x - pos.x,
     offsetY: item.y - pos.y,
     element: event.currentTarget,
+    startX: pos.x,
+    startY: pos.y,
+    moved: false,
   };
+  cyberIconSelectedId = id;
   window.addEventListener("pointermove", onCyberIconDragMove);
   window.addEventListener("pointerup", onCyberIconDragEnd, { once: true });
 }
@@ -13281,6 +13293,9 @@ function onCyberIconDragMove(event) {
   const y = clampValue(pos.y + cyberIconDragging.offsetY, 0, pos.height);
   item.x = x;
   item.y = y;
+  if (Math.hypot(pos.x - cyberIconDragging.startX, pos.y - cyberIconDragging.startY) > 4) {
+    cyberIconDragging.moved = true;
+  }
   if (cyberIconDragging.element) {
     cyberIconDragging.element.style.left = `${x}px`;
     cyberIconDragging.element.style.top = `${y}px`;
@@ -13289,17 +13304,31 @@ function onCyberIconDragMove(event) {
 
 function onCyberIconDragEnd() {
   window.removeEventListener("pointermove", onCyberIconDragMove);
+  const dragState = cyberIconDragging;
+  if (dragState && !dragState.moved) {
+    const item = cyberIconItems.find((entry) => entry.id === dragState.id);
+    if (item) {
+      item.rotation = (item.rotation + 90) % 360;
+    }
+  }
   cyberIconDragging = null;
+  renderCyberIconCanvas();
+  updateCyberSubmitButton(currentCyberView);
 }
 
 function removeCyberIcon() {
+  const removed = cyberIconItems[cyberIconItems.length - 1];
   cyberIconItems = cyberIconItems.slice(0, -1);
+  if (removed && removed.id === cyberIconSelectedId) {
+    cyberIconSelectedId = null;
+  }
   renderCyberIconCanvas();
   updateCyberSubmitButton(currentCyberView);
 }
 
 function clearCyberIcons() {
   cyberIconItems = [];
+  cyberIconSelectedId = null;
   renderCyberIconCanvas();
   updateCyberSubmitButton(currentCyberView);
 }
@@ -13335,6 +13364,7 @@ function addCyberLetter(char) {
     rotation: 0,
   });
   cyberLetterSelectedId = id;
+  updateCyberLetterRotationControl();
   renderCyberLetterCanvas();
   updateCyberSubmitButton(currentCyberView);
 }
@@ -13362,6 +13392,28 @@ function renderCyberLetterCanvas() {
   });
 }
 
+function updateCyberLetterRotationControl() {
+  if (!cyberLetterRotate || !cyberLetterRotateValue) {
+    return;
+  }
+  const item = cyberLetterItems.find((entry) => entry.id === cyberLetterSelectedId);
+  const rotation = item ? item.rotation || 0 : 0;
+  cyberLetterRotate.value = `${rotation}`;
+  cyberLetterRotateValue.textContent = `${rotation}°`;
+}
+
+function setCyberLetterRotation(value) {
+  const item = cyberLetterItems.find((entry) => entry.id === cyberLetterSelectedId);
+  if (!item) {
+    return;
+  }
+  const rotation = Number.isFinite(value) ? value : 0;
+  item.rotation = rotation;
+  updateCyberLetterRotationControl();
+  renderCyberLetterCanvas();
+  updateCyberSubmitButton(currentCyberView);
+}
+
 function startCyberLetterDrag(event) {
   if (!cyberLetterCanvas) {
     return;
@@ -13383,6 +13435,7 @@ function startCyberLetterDrag(event) {
     moved: false,
   };
   cyberLetterSelectedId = id;
+  updateCyberLetterRotationControl();
   window.addEventListener("pointermove", onCyberLetterDragMove);
   window.addEventListener("pointerup", onCyberLetterDragEnd, { once: true });
 }
@@ -13411,13 +13464,15 @@ function onCyberLetterDragMove(event) {
 
 function onCyberLetterDragEnd() {
   window.removeEventListener("pointermove", onCyberLetterDragMove);
-  if (cyberLetterDragging && !cyberLetterDragging.moved) {
-    const item = cyberLetterItems.find((entry) => entry.id === cyberLetterDragging.id);
+  const dragState = cyberLetterDragging;
+  if (dragState && !dragState.moved) {
+    const item = cyberLetterItems.find((entry) => entry.id === dragState.id);
     if (item) {
       item.rotation = (item.rotation + 90) % 360;
     }
   }
   cyberLetterDragging = null;
+  updateCyberLetterRotationControl();
   renderCyberLetterCanvas();
   updateCyberSubmitButton(currentCyberView);
 }
@@ -13431,6 +13486,7 @@ function rotateSelectedCyberLetter() {
     return;
   }
   item.rotation = (item.rotation + 90) % 360;
+  updateCyberLetterRotationControl();
   renderCyberLetterCanvas();
   updateCyberSubmitButton(currentCyberView);
 }
@@ -13441,6 +13497,7 @@ function removeSelectedCyberLetter() {
   }
   cyberLetterItems = cyberLetterItems.filter((entry) => entry.id !== cyberLetterSelectedId);
   cyberLetterSelectedId = null;
+  updateCyberLetterRotationControl();
   renderCyberLetterCanvas();
   updateCyberSubmitButton(currentCyberView);
 }
@@ -13448,6 +13505,7 @@ function removeSelectedCyberLetter() {
 function clearCyberLetters() {
   cyberLetterItems = [];
   cyberLetterSelectedId = null;
+  updateCyberLetterRotationControl();
   renderCyberLetterCanvas();
   updateCyberSubmitButton(currentCyberView);
 }
@@ -13708,7 +13766,11 @@ function renderCyberSubmission(canvas, submission) {
       if (!icon) {
         return;
       }
-      ctx.fillText(icon.emoji || "", icon.x, icon.y);
+      ctx.save();
+      ctx.translate(icon.x, icon.y);
+      ctx.rotate(((icon.rotation || 0) * Math.PI) / 180);
+      ctx.fillText(icon.emoji || "", 0, 0);
+      ctx.restore();
     });
   } else if (tool === "aeiou") {
     const letters = submission.letters || [];
@@ -13769,10 +13831,12 @@ function resetCyberToolState(toolKey) {
     renderCyberPixelGrid();
   } else if (toolKey === "icon_set") {
     cyberIconItems = [];
+    cyberIconSelectedId = null;
     renderCyberIconCanvas();
   } else if (toolKey === "aeiou") {
     cyberLetterItems = [];
     cyberLetterSelectedId = null;
+    updateCyberLetterRotationControl();
     renderCyberLetterCanvas();
   } else if (toolKey === "shape_stacker") {
     cyberShapeItems = [];
@@ -13811,7 +13875,12 @@ function buildCyberSubmission(toolIndex) {
       tool: toolKey,
       width,
       height,
-      icons: cyberIconItems.map((item) => ({ emoji: item.emoji, x: item.x, y: item.y })),
+      icons: cyberIconItems.map((item) => ({
+        emoji: item.emoji,
+        x: item.x,
+        y: item.y,
+        rotation: item.rotation || 0,
+      })),
     };
   }
   if (toolKey === "aeiou") {
@@ -14094,6 +14163,7 @@ function clearCyberState() {
   if (cyberGuessArea) cyberGuessArea.classList.add("hidden");
   if (cyberScoreArea) cyberScoreArea.classList.add("hidden");
   if (cyberGameOverNotice) cyberGameOverNotice.classList.add("hidden");
+  updateCyberLetterRotationControl();
   renderCyberShoelaceCanvas();
   renderCyberPixelGrid();
   renderCyberIconCanvas();
@@ -14206,6 +14276,13 @@ if (cyberIconClearBtn) {
 
 if (cyberLetterRotateBtn) {
   cyberLetterRotateBtn.addEventListener("click", () => rotateSelectedCyberLetter());
+}
+
+if (cyberLetterRotate) {
+  cyberLetterRotate.addEventListener("input", (event) => {
+    const value = Number.parseInt(event.target.value, 10);
+    setCyberLetterRotation(Number.isFinite(value) ? value : 0);
+  });
 }
 
 if (cyberLetterRemoveBtn) {

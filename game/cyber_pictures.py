@@ -513,6 +513,7 @@ def _bot_submission(tool_key: str) -> Dict:
                     "emoji": random.choice(icons),
                     "x": random.randint(40, width - 40),
                     "y": random.randint(40, height - 40),
+                    "rotation": random.choice([0, 90, 180, 270]),
                 }
             )
         return {"tool": "icon_set", "width": width, "height": height, "icons": items}
@@ -524,7 +525,7 @@ def _bot_submission(tool_key: str) -> Dict:
                     "char": random.choice(["A", "E", "I", "O", "U"]),
                     "x": random.randint(40, width - 40),
                     "y": random.randint(40, height - 40),
-                    "rotation": random.choice([0, 90, 180, 270]),
+                    "rotation": random.randint(0, 359),
                 }
             )
         return {"tool": "aeiou", "width": width, "height": height, "letters": letters}
