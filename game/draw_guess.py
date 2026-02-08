@@ -553,6 +553,10 @@ class DrawGuessGame:
     def deserialize(payload: Dict) -> Dict:
         return payload
 
+    @staticmethod
+    def download_memories(state: Dict, room_id: Optional[str] = None) -> str:
+        return build_memories_html(state, room_id)
+
 
 def build_memories_html(state: Dict, room_id: Optional[str] = None) -> str:
     game_id = DrawGuessGame.game_id
@@ -586,32 +590,12 @@ def build_memories_html(state: Dict, room_id: Optional[str] = None) -> str:
     )
 
     cfg = state.get("config", {})
-    prompt_pool = state.get("prompt_pool") or cfg.get("prompt_pool") or []
     config_rows = [
         ("Language", esc(cfg.get("language") or state.get("language"), "-")),
         ("Guess Method", esc(cfg.get("guess_method"), "-")),
         ("Show Answer Length", esc(format_bool(cfg.get("show_answer_length")))),
     ]
     config_section = section("Config", render_kv_table(config_rows))
-
-    pool_items = []
-    if isinstance(prompt_pool, list):
-        for entry in prompt_pool:
-            text = None
-            quickdraw = None
-            if isinstance(entry, dict):
-                text = entry.get("text")
-                quickdraw = entry.get("quickdraw")
-            elif isinstance(entry, str):
-                text = entry
-            label = esc(text, "-")
-            if quickdraw:
-                label = f"{label} <span class=\"small\">(quickdraw: {esc(quickdraw)})</span>"
-            pool_items.append(f"<li>{label}</li>")
-    prompt_section = section(
-        "Prompt Pool",
-        "<ul>" + "".join(pool_items) + "</ul>" if pool_items else '<div class="muted">No prompts</div>',
-    )
 
     books_html: List[str] = []
     books = state.get("books", {})
@@ -692,7 +676,7 @@ def build_memories_html(state: Dict, room_id: Optional[str] = None) -> str:
             ),
         )
 
-    body = "\n".join(header) + players_section + config_section + prompt_section + pending_section + books_section
+    body = "\n".join(header) + players_section + config_section + pending_section + books_section
     return build_html_document(f"{game_id} Memories", body)
 
 

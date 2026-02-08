@@ -897,6 +897,10 @@ class DecryptoGame:
     def deserialize(payload: Dict) -> Dict:
         return payload
 
+    @staticmethod
+    def download_memories(state: Dict, room_id: Optional[str] = None) -> str:
+        return build_memories_html(state, room_id)
+
 
 def _format_list(value: Optional[List]) -> str:
     if not value:

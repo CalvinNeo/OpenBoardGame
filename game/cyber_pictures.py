@@ -541,6 +541,10 @@ class CyberPicturesGame:
     def deserialize(payload: Dict) -> Dict:
         return payload
 
+    @staticmethod
+    def download_memories(state: Dict, room_id: Optional[str] = None) -> str:
+        return build_memories_html(state, room_id)
+
 
 def _bot_submission(tool_key: str) -> Dict:
     width = 360
