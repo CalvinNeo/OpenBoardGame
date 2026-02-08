@@ -803,48 +803,29 @@ def _render_impression_round(entry: Dict, player_meta: Dict, label: str) -> str:
     scores_after = entry.get("scores_after", {}) or {}
     review_votes = entry.get("review_votes", {}) or {}
 
-    assignment_rows: List[List[str]] = []
-    for setter_id, word in assignments.items():
-        setter_meta = player_meta.get(setter_id, {})
-        assignment_rows.append([esc(setter_id, "-"), esc(setter_meta.get("name"), "-"), esc(word, "-")])
-    assignments_table = render_table(
-        ["Setter ID", "Setter Name", "Prompt Word"],
-        assignment_rows,
-        empty_message="No assignments",
-    )
-
+    ordered_setters = sorted(assignments.keys(), key=lambda pid: player_meta.get(pid, {}).get("seat", 0))
     drawing_rows: List[List[str]] = []
-    for setter_id, image_data in drawings.items():
+    has_matches = bool(matches)
+    for setter_id in ordered_setters:
+        image_data = drawings.get(setter_id)
         setter_meta = player_meta.get(setter_id, {})
+        prompt_word = assignments.get(setter_id)
+        chosen = matches.get(setter_id) if has_matches else None
+        correct_label = "Yes" if setter_id in correct else "No" if has_matches else "-"
         drawing_rows.append(
             [
                 esc(setter_id, "-"),
                 esc(setter_meta.get("name"), "-"),
+                esc(prompt_word, "-"),
                 render_image(image_data, alt="Drawing"),
+                esc(chosen, "-"),
+                esc(correct_label, "-"),
             ]
         )
     drawings_table = render_table(
-        ["Setter ID", "Setter Name", "Drawing"],
+        ["Setter ID", "Setter Name", "Prompt Word", "Drawing", "Chosen Word", "Correct"],
         drawing_rows,
         empty_message="No drawings",
-    )
-
-    match_rows: List[List[str]] = []
-    for setter_id, word in assignments.items():
-        chosen = matches.get(setter_id)
-        is_correct = "Yes" if setter_id in correct else "No"
-        match_rows.append(
-            [
-                esc(setter_id, "-"),
-                esc(player_meta.get(setter_id, {}).get("name"), "-"),
-                esc(chosen, "-"),
-                esc(is_correct, "-"),
-            ]
-        )
-    matches_table = render_table(
-        ["Drawing ID", "Setter Name", "Chosen Word", "Correct"],
-        match_rows,
-        empty_message="No matches",
     )
 
     word_list = "<ul>" + "".join(f"<li>{esc(word, '-')}</li>" for word in word_bank) + "</ul>"
@@ -898,14 +879,10 @@ def _render_impression_round(entry: Dict, player_meta: Dict, label: str) -> str:
     return (
         "<div class=\"card\">"
         + "".join(header_lines)
-        + "<div class=\"small\">Assignments</div>"
-        + assignments_table
         + "<div class=\"small\">Drawings</div>"
         + drawings_table
         + "<div class=\"small\">Word Bank</div>"
         + word_list
-        + "<div class=\"small\">Matches</div>"
-        + matches_table
         + "<div class=\"small\">Review Votes</div>"
         + votes_table
         + "<div class=\"small\">Scores</div>"
