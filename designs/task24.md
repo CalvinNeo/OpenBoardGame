@@ -16,7 +16,13 @@
 * **坐标体系**：
     * 行：A, B, C, D
     * 列：1, 2, 3, 4
-* **内容生成**：每局游戏开始时，系统从图库（如 Unsplash API）随机抽取 **16 张** 高清、内容差异化明显的照片填入网格。
+* **内容生成 (Content Generation)**：
+    * **本地资源库**：系统依赖于服务器本地目录 `.cyber_pictures`（由 Python 脚本预先下载填充）。
+    * **加载逻辑**：
+        1.  游戏服务启动时，扫描 `.cyber_pictures` 文件夹下的所有图片文件（.jpg/.png）。
+        2.  从文件列表中**随机不重复**地抽取 **16 张** 图片。
+        3.  将文件名映射为 Web 可访问的静态资源路径（例如 `/static/cards/photo-xxx.jpg`）。
+        4.  将这 16 张图填入矩阵。
 
 ### 2.2 工具池 (Tool Pool)
 游戏包含 **5 种** 固定的数字工具。无论有多少玩家，这 5 种工具始终存在于系统中，并在玩家之间（或闲置区）轮转。
@@ -85,7 +91,7 @@
 ## 4. 游戏流程逻辑 (Game Loop Logic)
 
 ### 阶段 0：初始化 (Setup)
-1.  加载 16 张图片资源。
+1.  Server 读取本地 `.cyber_pictures` 目录，洗牌并选取 16 个文件。
 2.  建立玩家列表 `Players`。
 3.  初始化工具分配状态 `Tool_Assignment = [0, 1, 2, 3, 4]`。
 
@@ -133,11 +139,22 @@
 {
   "round": 1, // 当前轮数 (1-5)
   "phase": "guessing", // setup, crafting, guessing, scoring, ended
+  
+  // 图片矩阵数据 (从本地加载)
   "matrix": [
-    { "id": "A1", "url": "/assets/img1.jpg" },
-    { "id": "A2", "url": "/assets/img2.jpg" }
+    { 
+      "id": "A1", 
+      "filename": "photo-1556910103.jpg", 
+      "url": "/static/cards/photo-1556910103.jpg" // 映射后的静态路径
+    },
+    { 
+      "id": "A2", 
+      "filename": "photo-1484101403.jpg",
+      "url": "/static/cards/photo-1484101403.jpg" 
+    }
     // ... 共16个
   ],
+
   "players": [
     {
       "id": "p1",
@@ -153,13 +170,8 @@
             { "char": "O", "x": 50, "y": 50, "rotation": 0 }
          ]
       }
-    },
-    {
-      "id": "p2",
-      "name": "Bob",
-      "currentToolIndex": 4, // 本轮使用工具索引 (对应 Shape Stacker)
-      // ...
     }
+    // ... 其他玩家
   ]
 }
 ```

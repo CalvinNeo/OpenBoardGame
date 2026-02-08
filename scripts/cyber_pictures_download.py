@@ -4,7 +4,7 @@ import time
 
 # ================= 配置区域 =================
 # 图片保存路径
-OUTPUT_PATH = "game_assets/cards"
+OUTPUT_PATH = ".cyber_pictures/"
 
 # 🎯 复杂场景与高难度图片源 (Hard Mode)
 IMAGE_SOURCES = [
