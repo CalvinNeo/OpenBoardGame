@@ -903,10 +903,16 @@ async def on_room_auto_save(sid, data):
     if not room:
         await _send_error(sid, "room not found")
         return
-    if room.status not in ("lobby", "game_over"):
-        await _send_error(sid, "game already started")
+    if room.status not in ("lobby", "in_game", "game_over"):
+        await _send_error(sid, "invalid room status")
         return
-    room.auto_save = bool(auto_save)
+    requested = bool(auto_save)
+    if room.auto_save and not requested:
+        await _send_error(sid, "auto-save already enabled")
+        await _emit_room_state(room)
+        return
+    if room.auto_save != requested:
+        room.auto_save = requested
     await _emit_room_state(room)
 
 

@@ -225,3 +225,30 @@ class RoomSessionTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn((sid_bob, room_id), app.sio.left)
         self.assertIn((sid_owner, new_room_id), app.sio.entered)
         self.assertIn((sid_bob, new_room_id), app.sio.entered)
+
+    async def test_auto_save_allows_in_game_enable(self):
+        sid = "sid-owner"
+        room_id = await self._create_room(sid, "Alice")
+        room = app.ROOMS[room_id]
+        room.status = "in_game"
+        room.game_state = {"started": True}
+        app.sio.emits.clear()
+
+        await app.on_room_auto_save(sid, {"auto_save": True})
+
+        self.assertTrue(room.auto_save)
+        self.assertFalse(any(event["event"] == "system:error" for event in app.sio.emits))
+
+    async def test_auto_save_cannot_disable_after_enabled(self):
+        sid = "sid-owner"
+        room_id = await self._create_room(sid, "Alice")
+        room = app.ROOMS[room_id]
+        room.auto_save = True
+        app.sio.emits.clear()
+
+        await app.on_room_auto_save(sid, {"auto_save": False})
+
+        self.assertTrue(room.auto_save)
+        errors = [event for event in app.sio.emits if event["event"] == "system:error"]
+        self.assertTrue(errors)
+        self.assertEqual(errors[-1]["payload"]["message"], "auto-save already enabled")

@@ -1741,14 +1741,18 @@ function updateImpressionConfigRow() {
 
 function updateAutoSaveRow() {
   const showRow =
-    currentRoomState && (currentRoomState.status === "lobby" || currentRoomState.status === "game_over");
+    currentRoomState &&
+    (currentRoomState.status === "lobby" ||
+      currentRoomState.status === "in_game" ||
+      currentRoomState.status === "game_over");
   if (autoSaveRow) {
     autoSaveRow.classList.toggle("hidden", !showRow);
     autoSaveRow.setAttribute("aria-hidden", (!showRow).toString());
   }
   if (autoSaveToggle) {
-    autoSaveToggle.checked = Boolean(currentRoomState && currentRoomState.auto_save);
-    autoSaveToggle.disabled = !showRow;
+    const autoSaveEnabled = Boolean(currentRoomState && currentRoomState.auto_save);
+    autoSaveToggle.checked = autoSaveEnabled;
+    autoSaveToggle.disabled = !showRow || autoSaveEnabled;
   }
 }
 
