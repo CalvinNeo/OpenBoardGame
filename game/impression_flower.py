@@ -1,9 +1,22 @@
 import base64
+import copy
 import json
 import random
+import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+from game.memories import (
+    build_html_document,
+    esc,
+    format_bool,
+    format_timestamp,
+    render_image,
+    render_json,
+    render_kv_table,
+    render_table,
+    section,
+)
 DEFAULT_CONFIG = {
     "word_pool": ["mystery"],
     "rounds_per_guesser": 2,
@@ -312,6 +325,41 @@ def _build_review_drawings(state: Dict, viewer_id: str) -> List[Dict]:
     return drawings
 
 
+def _build_round_history_entry(state: Dict, last_result: Optional[Dict] = None) -> Optional[Dict]:
+    if not isinstance(last_result, dict):
+        last_result = state.get("last_result")
+    if not isinstance(last_result, dict):
+        return None
+    round_num = last_result.get("round", state.get("round"))
+    return {
+        "round": round_num,
+        "guesser_id": last_result.get("guesser_id"),
+        "assignments": dict(state.get("assignments", {})),
+        "drawings": dict(state.get("drawings", {})),
+        "word_bank": list(state.get("word_bank", [])),
+        "matches": dict(last_result.get("matches", {}) or {}),
+        "correct": list(last_result.get("correct", []) or []),
+        "scores_delta": dict(last_result.get("scores_delta", {}) or {}),
+        "review_votes": copy.deepcopy(state.get("review_votes", {}) or {}),
+        "scores_after": {pid: pdata.get("score", 0) for pid, pdata in state.get("players", {}).items()},
+    }
+
+
+def _refresh_round_history_scores(state: Dict) -> None:
+    history = state.get("round_history")
+    if not isinstance(history, list) or not history:
+        return
+    current_round = state.get("round")
+    for entry in reversed(history):
+        if entry.get("round") != current_round:
+            continue
+        entry["review_votes"] = copy.deepcopy(state.get("review_votes", {}) or {})
+        entry["scores_after"] = {
+            pid: pdata.get("score", 0) for pid, pdata in state.get("players", {}).items()
+        }
+        break
+
+
 def _all_drawings_submitted(state: Dict) -> bool:
     return len(state.get("drawings", {})) >= len(state.get("assignments", {}))
 
@@ -416,8 +464,10 @@ class ImpressionFlowerGame:
             "word_bag": [],
             "round_end_by": None,
             "review_votes": {},
+            "round_history": [],
             "config": cfg,
             "game_over": False,
+            "game_start_time": time.time(),
         }
         _refill_word_bag(state)
         _start_round(state)
@@ -532,6 +582,9 @@ class ImpressionFlowerGame:
                 "correct": correct,
                 "scores_delta": scores_delta,
             }
+            history_entry = _build_round_history_entry(state, state["last_result"])
+            if history_entry:
+                state.setdefault("round_history", []).append(history_entry)
             state["phase"] = "round_end"
             state["round_end_by"] = None
             return [], None
@@ -561,12 +614,14 @@ class ImpressionFlowerGame:
                 delta = next_vote - previous
                 if delta and drawing_id in state.get("players", {}):
                     state["players"][drawing_id]["score"] += delta
+                _refresh_round_history_scores(state)
                 return [], None
             if action_type not in ("continue_game", "end_game"):
                 return [], "invalid action"
             if state.get("round_end_by"):
                 return [], "round already decided"
             state["round_end_by"] = player_id
+            _refresh_round_history_scores(state)
             if action_type == "end_game":
                 state["phase"] = "game_over"
                 state["game_over"] = True
@@ -730,3 +785,212 @@ class ImpressionFlowerGame:
     @staticmethod
     def deserialize(payload: Dict) -> Dict:
         return payload
+
+
+def _render_impression_round(entry: Dict, player_meta: Dict, label: str) -> str:
+    guesser_id = entry.get("guesser_id")
+    guesser_name = player_meta.get(guesser_id, {}).get("name") if guesser_id else None
+    assignments = entry.get("assignments", {}) or {}
+    drawings = entry.get("drawings", {}) or {}
+    word_bank = entry.get("word_bank", []) or []
+    matches = entry.get("matches", {}) or {}
+    correct = set(entry.get("correct", []) or [])
+    scores_delta = entry.get("scores_delta", {}) or {}
+    scores_after = entry.get("scores_after", {}) or {}
+    review_votes = entry.get("review_votes", {}) or {}
+
+    assignment_rows: List[List[str]] = []
+    for setter_id, word in assignments.items():
+        setter_meta = player_meta.get(setter_id, {})
+        assignment_rows.append([esc(setter_id, "-"), esc(setter_meta.get("name"), "-"), esc(word, "-")])
+    assignments_table = render_table(
+        ["Setter ID", "Setter Name", "Prompt Word"],
+        assignment_rows,
+        empty_message="No assignments",
+    )
+
+    drawing_rows: List[List[str]] = []
+    for setter_id, image_data in drawings.items():
+        setter_meta = player_meta.get(setter_id, {})
+        drawing_rows.append(
+            [
+                esc(setter_id, "-"),
+                esc(setter_meta.get("name"), "-"),
+                render_image(image_data, alt="Drawing"),
+            ]
+        )
+    drawings_table = render_table(
+        ["Setter ID", "Setter Name", "Drawing"],
+        drawing_rows,
+        empty_message="No drawings",
+    )
+
+    match_rows: List[List[str]] = []
+    for setter_id, word in assignments.items():
+        chosen = matches.get(setter_id)
+        is_correct = "Yes" if setter_id in correct else "No"
+        match_rows.append(
+            [
+                esc(setter_id, "-"),
+                esc(player_meta.get(setter_id, {}).get("name"), "-"),
+                esc(chosen, "-"),
+                esc(is_correct, "-"),
+            ]
+        )
+    matches_table = render_table(
+        ["Drawing ID", "Setter Name", "Chosen Word", "Correct"],
+        match_rows,
+        empty_message="No matches",
+    )
+
+    word_list = "<ul>" + "".join(f"<li>{esc(word, '-')}</li>" for word in word_bank) + "</ul>"
+    if not word_bank:
+        word_list = '<div class="muted">No word bank</div>'
+
+    vote_rows: List[List[str]] = []
+    for drawing_id, votes in review_votes.items():
+        voter_chunks = []
+        if isinstance(votes, dict):
+            for voter_id, vote_value in votes.items():
+                voter_name = player_meta.get(voter_id, {}).get("name") or voter_id
+                label = f"{esc(voter_name, voter_name)}: {esc(vote_value, vote_value)}"
+                voter_chunks.append(label)
+        vote_rows.append(
+            [
+                esc(drawing_id, "-"),
+                esc(player_meta.get(drawing_id, {}).get("name"), "-"),
+                "<br/>".join(voter_chunks) if voter_chunks else "<span class=\"muted\">No votes</span>",
+            ]
+        )
+    votes_table = render_table(
+        ["Drawing ID", "Setter Name", "Votes"],
+        vote_rows,
+        empty_message="No review votes",
+    )
+
+    score_rows: List[List[str]] = []
+    ordered_players = sorted(player_meta.items(), key=lambda item: item[1].get("seat", 0))
+    for pid, meta in ordered_players:
+        delta = scores_delta.get(pid, 0)
+        total = scores_after.get(pid)
+        score_rows.append(
+            [
+                esc(pid, "-"),
+                esc(meta.get("name"), "-"),
+                esc(delta, "0"),
+                esc(total if total is not None else "-", "-"),
+            ]
+        )
+    scores_table = render_table(
+        ["Player ID", "Name", "Score Δ", "Total Score"],
+        score_rows,
+        empty_message="No scores",
+    )
+
+    header_lines = [
+        f"<h3>{esc(label, label)}</h3>",
+        f"<div class=\"small\">Guesser: {esc(guesser_name or guesser_id, '-')}</div>",
+    ]
+    return (
+        "<div class=\"card\">"
+        + "".join(header_lines)
+        + "<div class=\"small\">Assignments</div>"
+        + assignments_table
+        + "<div class=\"small\">Drawings</div>"
+        + drawings_table
+        + "<div class=\"small\">Word Bank</div>"
+        + word_list
+        + "<div class=\"small\">Matches</div>"
+        + matches_table
+        + "<div class=\"small\">Review Votes</div>"
+        + votes_table
+        + "<div class=\"small\">Scores</div>"
+        + scores_table
+        + "</div>"
+    )
+
+
+def build_memories_html(state: Dict, room_id: Optional[str] = None) -> str:
+    game_id = ImpressionFlowerGame.game_id
+    status_label = "Game Over" if state.get("game_over") else "In Progress"
+    header = [
+        "<h1>Download Memories</h1>",
+        f"<div class=\"meta\">Game: {esc(game_id, '-')} · Room: {esc(room_id, '-')}</div>",
+        f"<div class=\"meta\">Status: {esc(status_label, status_label)}</div>",
+    ]
+    start_time = format_timestamp(state.get("game_start_time"))
+    if start_time != "-":
+        header.append(f"<div class=\"meta\">Game Start: {esc(start_time, start_time)}</div>")
+    header.append(f"<div class=\"meta\">Generated: {esc(format_timestamp(time.time()), '-')}</div>")
+
+    player_meta = state.get("player_meta", {})
+    order = state.get("turn_order", [])
+    player_rows = []
+    for pid in order:
+        meta = player_meta.get(pid, {})
+        player_rows.append(
+            [
+                esc(pid, "-"),
+                esc(meta.get("name"), "-"),
+                esc(meta.get("seat"), "-"),
+                format_bool(meta.get("is_bot")),
+                esc(state.get("players", {}).get(pid, {}).get("score", 0)),
+            ]
+        )
+    players_section = section(
+        "Players",
+        render_table(["Player ID", "Name", "Seat", "Bot", "Score"], player_rows, empty_message="No players"),
+    )
+
+    cfg = state.get("config", {})
+    config_rows = [
+        ("Rounds Per Guesser", esc(cfg.get("rounds_per_guesser"), "-")),
+        ("Base Stamps", esc(cfg.get("base_stamps"), "-")),
+        ("Score Mode", esc(cfg.get("score_mode"), "-")),
+        ("Score Per Correct", esc(cfg.get("score_per_correct"), "-")),
+        ("Allow Review Votes", esc(format_bool(cfg.get("allow_review_votes")))),
+        ("Stamp Shapes", esc(cfg.get("stamp_shapes"), "-")),
+        ("Stamp Colors", esc(cfg.get("stamp_colors"), "-")),
+        ("Stamp Size", esc(cfg.get("stamp_size"), "-")),
+        ("Bar Ratio", esc(cfg.get("bar_ratio"), "-")),
+        ("Canvas Size", esc(cfg.get("canvas_size"), "-")),
+        ("Mask Size", esc(cfg.get("mask_size"), "-")),
+    ]
+    config_section = section("Config", render_kv_table(config_rows))
+
+    round_blocks: List[str] = []
+    history = state.get("round_history", [])
+    if isinstance(history, list):
+        for entry in history:
+            if not isinstance(entry, dict):
+                continue
+            round_num = entry.get("round", "-")
+            round_blocks.append(_render_impression_round(entry, player_meta, f"Round {round_num}"))
+
+    phase = state.get("phase")
+    if phase in ("draw", "guess"):
+        current_entry = {
+            "round": state.get("round"),
+            "guesser_id": state.get("guesser_id"),
+            "assignments": dict(state.get("assignments", {})),
+            "drawings": dict(state.get("drawings", {})),
+            "word_bank": list(state.get("word_bank", [])),
+            "matches": {},
+            "correct": [],
+            "scores_delta": {},
+            "review_votes": state.get("review_votes", {}),
+            "scores_after": {pid: pdata.get("score", 0) for pid, pdata in state.get("players", {}).items()},
+        }
+        label = f"Round {state.get('round')} (In Progress · {esc(phase, phase)})"
+        round_blocks.append(_render_impression_round(current_entry, player_meta, label))
+
+    rounds_section = section(
+        "Rounds",
+        "".join(round_blocks) if round_blocks else '<div class="muted">No rounds recorded</div>',
+    )
+
+    body = "\n".join(header) + players_section + config_section + rounds_section
+    return build_html_document(f"{game_id} Memories", body)
+
+
+download_memories = build_memories_html

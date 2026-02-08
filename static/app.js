@@ -178,6 +178,7 @@ const CYBER_SHAPE_SPECS = {
   ellipse: { w: 90, h: 60 },
   hexagon: { w: 90, h: 70 },
 };
+const MEMORIES_SUPPORTED_GAMES = new Set(["draw_guess", "impression_flower", "cyber_pictures", "decrypto"]);
 let createRoomPending = false;
 let pendingReadyAfterJoin = false;
 let pendingReadyRoomId = null;
@@ -218,6 +219,7 @@ const createBtn = document.getElementById("createBtn");
 const createGameRow = document.getElementById("createGameRow");
 const leaveBtn = document.getElementById("leaveBtn");
 const reopenBtn = document.getElementById("reopenBtn");
+const downloadMemoriesBtn = document.getElementById("downloadMemoriesBtn");
 const removeBotBtn = document.getElementById("removeBotBtn");
 const logoutBtn = document.getElementById("logoutBtn");
 const drawGuessConfigBox = document.getElementById("drawGuessConfigBox");
@@ -1311,6 +1313,67 @@ function downloadSaveFile(sourceRoomId) {
   document.body.appendChild(link);
   link.click();
   link.remove();
+}
+
+function parseDownloadFilename(headerValue) {
+  if (!headerValue) {
+    return null;
+  }
+  const utf8Match = headerValue.match(/filename\\*=UTF-8''([^;]+)/i);
+  if (utf8Match) {
+    try {
+      return decodeURIComponent(utf8Match[1]).replace(/^\"|\"$/g, "");
+    } catch {
+      return utf8Match[1].replace(/^\"|\"$/g, "");
+    }
+  }
+  const match = headerValue.match(/filename=([^;]+)/i);
+  if (!match) {
+    return null;
+  }
+  return match[1].trim().replace(/^\"|\"$/g, "");
+}
+
+async function downloadMemoriesFile(activeRoomId) {
+  if (!activeRoomId) {
+    log("Not in a room");
+    return;
+  }
+  if (!currentGameType || !MEMORIES_SUPPORTED_GAMES.has(currentGameType)) {
+    log("not supported");
+    return;
+  }
+  const url = `/api/room/memories?room_id=${encodeURIComponent(activeRoomId)}`;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      let message = "Download failed.";
+      try {
+        const data = await response.json();
+        message = data.detail || data.message || message;
+      } catch {
+        try {
+          const text = await response.text();
+          if (text) message = text;
+        } catch {}
+      }
+      log(message);
+      return;
+    }
+    const blob = await response.blob();
+    const filename =
+      parseDownloadFilename(response.headers.get("Content-Disposition")) || "memories.html";
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(objectUrl);
+  } catch {
+    log("Download failed.");
+  }
 }
 
 function renderLoadList(saves) {
@@ -11741,6 +11804,13 @@ if (reopenBtn) {
       }
     }
     socket.emit("room:reopen", { room_id: roomId });
+  });
+}
+
+if (downloadMemoriesBtn) {
+  downloadMemoriesBtn.addEventListener("click", () => {
+    const activeRoomId = roomId || (currentRoomState && currentRoomState.room_id);
+    downloadMemoriesFile(activeRoomId);
   });
 }
 

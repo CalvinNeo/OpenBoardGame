@@ -17,6 +17,14 @@ from game.decrypto_ai import (
     pick_encryptor_clues,
     pick_intercept_guess,
 )
+from game.memories import (
+    build_html_document,
+    esc,
+    format_timestamp,
+    render_kv_table,
+    render_table,
+    section,
+)
 
 TEAM_IDS = ("white", "black")
 TEAM_LABELS = {"white": "White", "black": "Black"}
@@ -376,6 +384,13 @@ def _history_by_keyword(history: List[Dict]) -> Dict[str, List[str]]:
 
 def _apply_round_results(state: Dict) -> None:
     summary = {"round": state["round"], "teams": {}}
+    tokens_before = {
+        team_id: {
+            "intercepts": int(state["teams"][team_id]["intercepts"]),
+            "miscommunications": int(state["teams"][team_id]["miscommunications"]),
+        }
+        for team_id in TEAM_IDS
+    }
     has_bots = any(meta.get("is_bot") for meta in state.get("player_meta", {}).values())
     model_mode = get_model_mode() if has_bots else None
     mode_label = "离线词向量" if model_mode == "embeddings" else "fallback"
@@ -396,6 +411,8 @@ def _apply_round_results(state: Dict) -> None:
             "intercept_guess": intercept_guess,
             "decrypt_correct": decrypt_correct,
             "intercept_correct": intercept_correct,
+            "encryptor_id": _current_encryptor(state, team_id),
+            "clues_by": data.get("clues_by"),
             "decrypt_by": data.get("decrypt_by"),
             "intercept_by": data.get("intercept_by"),
         }
@@ -447,6 +464,15 @@ def _apply_round_results(state: Dict) -> None:
         if not team_summary["decrypt_correct"]:
             state["teams"][team_id]["miscommunications"] += 1
 
+    summary["tokens_before"] = tokens_before
+    summary["tokens_after"] = {
+        team_id: {
+            "intercepts": int(state["teams"][team_id]["intercepts"]),
+            "miscommunications": int(state["teams"][team_id]["miscommunications"]),
+        }
+        for team_id in TEAM_IDS
+    }
+    state.setdefault("round_history", []).append(summary)
     state["last_round_summary"] = summary
 
 
@@ -568,8 +594,10 @@ class DecryptoGame:
             "player_teams": player_teams,
             "config": cfg,
             "last_round_summary": None,
+            "round_history": [],
             "winner": None,
             "game_over": False,
+            "game_start_time": time.time(),
         }
         _start_round(state, increment_round=False)
         return state
@@ -868,3 +896,189 @@ class DecryptoGame:
     @staticmethod
     def deserialize(payload: Dict) -> Dict:
         return payload
+
+
+def _format_list(value: Optional[List]) -> str:
+    if not value:
+        return "-"
+    return " ".join(str(item) for item in value)
+
+
+def build_memories_html(state: Dict, room_id: Optional[str] = None) -> str:
+    game_id = DecryptoGame.game_id
+    status_label = "Game Over" if state.get("game_over") else "In Progress"
+    header = [
+        "<h1>Download Memories</h1>",
+        f"<div class=\"meta\">Game: {esc(game_id, '-')} · Room: {esc(room_id, '-')}</div>",
+        f"<div class=\"meta\">Status: {esc(status_label, status_label)}</div>",
+    ]
+    start_time = format_timestamp(state.get("game_start_time"))
+    if start_time != "-":
+        header.append(f"<div class=\"meta\">Game Start: {esc(start_time, start_time)}</div>")
+    header.append(f"<div class=\"meta\">Generated: {esc(format_timestamp(time.time()), '-')}</div>")
+
+    player_meta = state.get("player_meta", {})
+    player_teams = state.get("player_teams", {})
+    players_rows: List[List[str]] = []
+    for pid, meta in sorted(player_meta.items(), key=lambda item: item[1].get("seat", 0)):
+        players_rows.append(
+            [
+                esc(pid, "-"),
+                esc(meta.get("name"), "-"),
+                esc(meta.get("seat"), "-"),
+                esc(player_teams.get(pid), "-"),
+                esc("Yes" if meta.get("is_bot") else "No"),
+            ]
+        )
+    players_section = section(
+        "Players",
+        render_table(["Player ID", "Name", "Seat", "Team", "Bot"], players_rows, empty_message="No players"),
+    )
+
+    team_sections: List[str] = []
+    for team_id in TEAM_IDS:
+        team = state.get("teams", {}).get(team_id, {})
+        keywords = team.get("keywords", [])
+        kv = [
+            ("Team", esc(TEAM_LABELS.get(team_id, team_id), team_id)),
+            ("Keywords", esc(", ".join(keywords) if keywords else "-")),
+            ("Intercepts", esc(team.get("intercepts", 0))),
+            ("Miscommunications", esc(team.get("miscommunications", 0))),
+        ]
+        team_sections.append("<div class=\"card\">" + render_kv_table(kv) + "</div>")
+    teams_section = section("Teams", "".join(team_sections) if team_sections else '<div class="muted">No teams</div>')
+
+    history = state.get("round_history", [])
+    round_blocks: List[str] = []
+    if isinstance(history, list):
+        for entry in history:
+            if not isinstance(entry, dict):
+                continue
+            round_num = entry.get("round", "-")
+            tokens_before = entry.get("tokens_before", {})
+            tokens_after = entry.get("tokens_after", {})
+            team_rows: List[List[str]] = []
+            for team_id in TEAM_IDS:
+                team_entry = entry.get("teams", {}).get(team_id, {})
+                team_label = TEAM_LABELS.get(team_id, team_id)
+                code = _format_list(team_entry.get("code"))
+                clues = _format_list(team_entry.get("clues"))
+                encryptor_id = team_entry.get("clues_by") or team_entry.get("encryptor_id")
+                decrypt_guess = _format_list(team_entry.get("decrypt_guess"))
+                decrypt_by = team_entry.get("decrypt_by")
+                intercept_guess = _format_list(team_entry.get("intercept_guess"))
+                intercept_by = team_entry.get("intercept_by")
+                decrypt_correct = team_entry.get("decrypt_correct")
+                intercept_correct = team_entry.get("intercept_correct")
+                before = tokens_before.get(team_id, {})
+                after = tokens_after.get(team_id, {})
+                token_summary = (
+                    f"I: {before.get('intercepts', 0)}→{after.get('intercepts', 0)} "
+                    f"· M: {before.get('miscommunications', 0)}→{after.get('miscommunications', 0)}"
+                )
+                team_rows.append(
+                    [
+                        esc(team_label, team_label),
+                        esc(code, "-"),
+                        esc(clues, "-"),
+                        esc(encryptor_id, "-"),
+                        esc(decrypt_guess, "-"),
+                        esc(decrypt_by, "-"),
+                        esc(intercept_guess, "-"),
+                        esc(intercept_by, "-"),
+                        esc("Yes" if decrypt_correct else "No"),
+                        esc("Yes" if intercept_correct else "No") if intercept_correct is not None else "-",
+                        esc(token_summary, "-"),
+                    ]
+                )
+            round_blocks.append(
+                "<div class=\"card\">"
+                f"<h3>Round {esc(round_num, round_num)}</h3>"
+                + render_table(
+                    [
+                        "Team",
+                        "Code",
+                        "Clues",
+                        "Encryptor",
+                        "Decrypt Guess",
+                        "Decrypt By",
+                        "Intercept Guess",
+                        "Intercept By",
+                        "Decrypt OK",
+                        "Intercept OK",
+                        "Tokens (I/M)",
+                    ],
+                    team_rows,
+                    empty_message="No round data",
+                )
+                + "</div>"
+            )
+
+    phase = state.get("phase")
+    if phase and phase != "game_over":
+        current = state.get("round_data", {})
+        team_rows: List[List[str]] = []
+        for team_id in TEAM_IDS:
+            data = current.get(team_id, {})
+            team_label = TEAM_LABELS.get(team_id, team_id)
+            encryptor_id = _current_encryptor(state, team_id)
+            team_rows.append(
+                [
+                    esc(team_label, team_label),
+                    esc(_format_list(data.get("code")), "-"),
+                    esc(_format_list(data.get("clues")), "-"),
+                    esc(data.get("clues_by") or encryptor_id, "-"),
+                    esc(_format_list(data.get("decrypt_guess")), "-"),
+                    esc(data.get("decrypt_by"), "-"),
+                    esc(_format_list(data.get("intercept_guess")), "-"),
+                    esc(data.get("intercept_by"), "-"),
+                    "-",
+                    "-",
+                    "-",
+                ]
+            )
+        if team_rows:
+            round_blocks.append(
+                "<div class=\"card\">"
+                f"<h3>Round {esc(state.get('round'), '-')} (In Progress · {esc(phase, phase)})</h3>"
+                + render_table(
+                    [
+                        "Team",
+                        "Code",
+                        "Clues",
+                        "Encryptor",
+                        "Decrypt Guess",
+                        "Decrypt By",
+                        "Intercept Guess",
+                        "Intercept By",
+                        "Decrypt OK",
+                        "Intercept OK",
+                        "Tokens (I/M)",
+                    ],
+                    team_rows,
+                    empty_message="No round data",
+                )
+                + "</div>"
+            )
+
+    rounds_section = section(
+        "Rounds",
+        "".join(round_blocks) if round_blocks else '<div class="muted">No rounds recorded</div>',
+    )
+
+    winner = state.get("winner") or "-"
+    footer = section(
+        "Final Result",
+        render_kv_table(
+            [
+                ("Winner", esc(winner, "-")),
+                ("Round", esc(state.get("round"), "-")),
+            ]
+        ),
+    )
+
+    body = "\n".join(header) + players_section + teams_section + rounds_section + footer
+    return build_html_document(f"{game_id} Memories", body)
+
+
+download_memories = build_memories_html

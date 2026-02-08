@@ -12,7 +12,7 @@ from typing import Dict, List, Optional
 
 import socketio
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from jsonschema import Draft7Validator, ValidationError
 
@@ -68,6 +68,27 @@ async def download_room_save(source_room_id: str):
         raise HTTPException(status_code=404, detail="save not found")
     filename = f"{source_room_id}_{os.path.basename(latest_path)}"
     return FileResponse(latest_path, filename=filename, media_type="application/json")
+
+
+@fastapi_app.get("/api/room/memories")
+async def download_room_memories(room_id: str):
+    if not _is_safe_room_id(room_id):
+        raise HTTPException(status_code=400, detail="invalid room_id")
+    room = _get_room(room_id)
+    if not room or not room.game_state:
+        raise HTTPException(status_code=404, detail="room not found")
+    game_def = _get_game_definition(room.game_type)
+    if not game_def:
+        raise HTTPException(status_code=404, detail="unknown game_type")
+    builder = getattr(game_def.module, "download_memories", None)
+    if not callable(builder):
+        builder = getattr(game_def.module, "build_memories_html", None)
+    if not callable(builder):
+        raise HTTPException(status_code=400, detail="not supported")
+    html = builder(room.game_state, room.room_id)
+    filename = _format_memories_filename(game_def.game_id, room.room_id, room.game_state.get("game_start_time"))
+    headers = {"Content-Disposition": f"attachment; filename={filename}"}
+    return Response(content=html, media_type="text/html; charset=utf-8", headers=headers)
 
 
 app = socketio.ASGIApp(sio, fastapi_app)
@@ -195,6 +216,17 @@ def _get_latest_save_path(room_id: str) -> Optional[str]:
             latest_version = version
             latest_path = entry.path
     return latest_path
+
+
+def _format_memories_filename(game_id: str, room_id: str, start_time: Optional[object]) -> str:
+    try:
+        ts = float(start_time)
+    except (TypeError, ValueError):
+        ts = time.time()
+    timestamp = time.strftime("%Y%m%d-%H%M%S", time.localtime(ts))
+    safe_game = game_id or "game"
+    safe_room = room_id or "room"
+    return f"{safe_game}-{timestamp}-{safe_room}.html"
 
 
 def _load_latest_save(room_id: str) -> Optional[Dict]:

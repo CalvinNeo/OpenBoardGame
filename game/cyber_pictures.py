@@ -1,8 +1,23 @@
+import base64
+import copy
+import json
 import random
+import time
 import uuid
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+from game.memories import (
+    build_html_document,
+    esc,
+    format_bool,
+    format_timestamp,
+    render_image,
+    render_json,
+    render_kv_table,
+    render_table,
+    section,
+)
 TOTAL_ROUNDS = 5
 TOOL_KEYS = ["shoelaces", "pixel_grid", "icon_set", "aeiou", "shape_stacker"]
 TOOL_LABELS = {
@@ -19,6 +34,12 @@ DEFAULT_CONFIG = {
 
 _ALLOWED_EXTS = {".jpg", ".jpeg", ".png", ".webp"}
 _IMAGE_DIR = Path(__file__).resolve().parent.parent / ".cyber_pictures"
+_IMAGE_MIME = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".webp": "image/webp",
+}
 
 
 def _merge_config(config: Optional[Dict]) -> Dict:
@@ -46,6 +67,21 @@ def _load_image_files() -> List[str]:
         images.append(entry.name)
     images.sort()
     return images
+
+
+def _image_data_url(filename: Optional[str]) -> Optional[str]:
+    if not filename:
+        return None
+    path = _IMAGE_DIR / filename
+    if not path.exists() or not path.is_file():
+        return None
+    mime = _IMAGE_MIME.get(path.suffix.lower(), "application/octet-stream")
+    try:
+        raw = path.read_bytes()
+    except OSError:
+        return None
+    encoded = base64.b64encode(raw).decode("ascii")
+    return f"data:{mime};base64,{encoded}"
 
 
 def _build_pool(all_images: List[str]) -> List[str]:
@@ -227,12 +263,45 @@ def _score_round(state: Dict) -> None:
 
     state["reveal"] = reveal_entries
     state["round_scores"] = round_scores
+    _record_round_history(state)
 
     if state.get("round", 1) >= TOTAL_ROUNDS:
         state["phase"] = "ended"
         state["game_over"] = True
     else:
         state["phase"] = "scoring"
+
+
+def _record_round_history(state: Dict) -> None:
+    history = state.setdefault("round_history", [])
+    player_meta = state.get("player_meta", {})
+    players_snapshot = []
+    for pid in state.get("turn_order", []):
+        pdata = state.get("players", {}).get(pid, {})
+        meta = player_meta.get(pid, {})
+        players_snapshot.append(
+            {
+                "player_id": pid,
+                "name": meta.get("name"),
+                "seat": meta.get("seat"),
+                "is_bot": meta.get("is_bot"),
+                "tool_index": pdata.get("tool_index"),
+                "target": pdata.get("target"),
+                "score": pdata.get("score", 0),
+            }
+        )
+    history.append(
+        {
+            "round": state.get("round"),
+            "matrix": copy.deepcopy(state.get("matrix", [])),
+            "players": players_snapshot,
+            "submissions": copy.deepcopy(state.get("submissions", {})),
+            "guesses": copy.deepcopy(state.get("guesses", {})),
+            "reveal": copy.deepcopy(state.get("reveal", [])),
+            "round_scores": copy.deepcopy(state.get("round_scores", [])),
+            "scores_after": {pid: state.get("players", {}).get(pid, {}).get("score", 0) for pid in state.get("turn_order", [])},
+        }
+    )
 
 
 class CyberPicturesGame:
@@ -278,7 +347,9 @@ class CyberPicturesGame:
             "owner_work": {},
             "reveal": [],
             "round_scores": [],
+            "round_history": [],
             "game_over": False,
+            "game_start_time": time.time(),
         }
         _deal_round(state)
         return state
@@ -541,3 +612,390 @@ def _bot_submission(tool_key: str) -> Dict:
             }
         )
     return {"tool": "shape_stacker", "width": width, "height": height, "shapes": items}
+
+
+def build_memories_html(state: Dict, room_id: Optional[str] = None) -> str:
+    game_id = CyberPicturesGame.game_id
+    status_label = "Game Over" if state.get("game_over") else "In Progress"
+    header = [
+        '<h1>Download Memories</h1>',
+        f'<div class="meta">Game: {esc(game_id, "-")} · Room: {esc(room_id, "-")}</div>',
+        f'<div class="meta">Status: {esc(status_label, status_label)}</div>',
+    ]
+    start_time = format_timestamp(state.get("game_start_time"))
+    if start_time != "-":
+        header.append(f'<div class="meta">Game Start: {esc(start_time, start_time)}</div>')
+    header.append(f'<div class="meta">Generated: {esc(format_timestamp(time.time()), "-")}</div>')
+
+    player_meta = state.get("player_meta", {})
+    order = state.get("turn_order", [])
+    player_rows: List[List[str]] = []
+    for pid in order:
+        meta = player_meta.get(pid, {})
+        pdata = state.get("players", {}).get(pid, {})
+        tool_index = pdata.get("tool_index")
+        tool_key = TOOL_KEYS[tool_index] if tool_index is not None and tool_index < len(TOOL_KEYS) else None
+        player_rows.append(
+            [
+                esc(pid, "-"),
+                esc(meta.get("name"), "-"),
+                esc(meta.get("seat"), "-"),
+                format_bool(meta.get("is_bot")),
+                esc(tool_key, "-"),
+                esc(pdata.get("target"), "-"),
+                esc(pdata.get("score", 0)),
+            ]
+        )
+    players_section = section(
+        "Players",
+        render_table(
+            ["Player ID", "Name", "Seat", "Bot", "Tool", "Target", "Score"],
+            player_rows,
+            empty_message="No players",
+        ),
+    )
+
+    config_rows = [
+        ("Allow Duplicate Targets", esc(format_bool(state.get("config", {}).get("allow_duplicate_targets")))),
+        ("Total Rounds", esc(state.get("total_rounds"), "-")),
+    ]
+    config_section = section("Config", render_kv_table(config_rows))
+
+    render_jobs: List[Dict] = []
+
+    def add_submission_canvas(submission: Optional[Dict]) -> str:
+        canvas_id = f"cyber-canvas-{len(render_jobs)}"
+        render_jobs.append({"id": canvas_id, "submission": submission})
+        return f'<canvas id="{canvas_id}" width="180" height="180" class="mem-image"></canvas>'
+
+    def render_matrix(matrix: List[Dict]) -> str:
+        cells = []
+        for cell in matrix:
+            filename = cell.get("filename")
+            image_src = _image_data_url(filename)
+            coord = cell.get("id") or "-"
+            url = cell.get("url") or "-"
+            cell_html = (
+                '<div class="matrix-cell">'
+                f'<div class="small">{esc(coord, coord)}</div>'
+                f'<div class="small">{esc(filename, "-")}</div>'
+                f'<div class="small">{esc(url, "-")}</div>'
+                f'{render_image(image_src, alt=coord)}'
+                '</div>'
+            )
+            cells.append(cell_html)
+        return '<div class="grid">' + ''.join(cells) + '</div>' if cells else '<div class="muted">No matrix</div>'
+
+    def render_round(entry: Dict, label: str) -> str:
+        matrix_html = render_matrix(entry.get("matrix", []) or [])
+
+        players_snapshot = entry.get("players", []) or []
+        player_rows_round: List[List[str]] = []
+        for player in players_snapshot:
+            tool_index = player.get("tool_index")
+            tool_key = TOOL_KEYS[tool_index] if tool_index is not None and tool_index < len(TOOL_KEYS) else None
+            player_rows_round.append(
+                [
+                    esc(player.get("player_id"), "-"),
+                    esc(player.get("name"), "-"),
+                    esc(player.get("seat"), "-"),
+                    format_bool(player.get("is_bot")),
+                    esc(tool_key, "-"),
+                    esc(player.get("target"), "-"),
+                ]
+            )
+        player_table = render_table(
+            ["Player ID", "Name", "Seat", "Bot", "Tool", "Target"],
+            player_rows_round,
+            empty_message="No players",
+        )
+
+        submissions = entry.get("submissions", {}) or {}
+        submission_cards = []
+        for pid, submission in submissions.items():
+            meta = player_meta.get(pid, {})
+            card = (
+                '<div class="card">'
+                f'<div class="small">Submission · {esc(meta.get("name") or pid, pid)}</div>'
+                f'{add_submission_canvas(submission)}'
+                '<details><summary class="small">Raw Submission JSON</summary>'
+                f'{render_json(submission)}'
+                '</details>'
+                '</div>'
+            )
+            submission_cards.append(card)
+        submissions_html = (
+            ''.join(submission_cards) if submission_cards else '<div class="muted">No submissions</div>'
+        )
+
+        guesses = entry.get("guesses", {}) or {}
+        guess_rows: List[List[str]] = []
+        for guesser_id, guess_map in guesses.items():
+            meta = player_meta.get(guesser_id, {})
+            guess_rows.append(
+                [
+                    esc(guesser_id, "-"),
+                    esc(meta.get("name"), "-"),
+                    render_json(guess_map),
+                ]
+            )
+        guesses_table = render_table(
+            ["Guesser ID", "Name", "Guesses (work_id → coord)"],
+            guess_rows,
+            empty_message="No guesses",
+        )
+
+        reveal_cards = []
+        for idx, item in enumerate(entry.get("reveal", []) or []):
+            owner_name = item.get("owner_name") or item.get("owner_id") or "-"
+            header = f'#{idx + 1} {esc(owner_name, owner_name)} · Target {esc(item.get("target"), "-")}'
+            card = (
+                '<div class="card">'
+                f'<div class="small">{header}</div>'
+                f'{add_submission_canvas(item.get("submission"))}'
+            )
+            guesses_list = item.get("guesses", []) or []
+            if guesses_list:
+                guess_lines = []
+                for guess in guesses_list:
+                    label = f'{esc(guess.get("name") or guess.get("player_id"), "-")} → {esc(guess.get("guess"), "-")}'
+                    if guess.get("correct") is True:
+                        label += " (correct)"
+                    elif guess.get("correct") is False:
+                        label += " (wrong)"
+                    guess_lines.append(f'<div class="small">{label}</div>')
+                card += ''.join(guess_lines)
+            card += '</div>'
+            reveal_cards.append(card)
+        reveal_html = ''.join(reveal_cards) if reveal_cards else '<div class="muted">No reveal data</div>'
+
+        score_rows: List[List[str]] = []
+        for score in entry.get("round_scores", []) or []:
+            score_rows.append(
+                [
+                    esc(score.get("player_id"), "-"),
+                    esc(score.get("name"), "-"),
+                    esc(score.get("guess_points"), "0"),
+                    esc(score.get("artist_points"), "0"),
+                    esc(score.get("delta"), "0"),
+                    esc(score.get("total_score"), "0"),
+                ]
+            )
+        scores_table = render_table(
+            ["Player ID", "Name", "Guess Points", "Artist Points", "Round Δ", "Total"],
+            score_rows,
+            empty_message="No scores",
+        )
+
+        return (
+            '<div class="card">'
+            f'<h3>{esc(label, label)}</h3>'
+            '<div class="small">Matrix</div>'
+            f'{matrix_html}'
+            '<div class="small">Player Tools & Targets</div>'
+            f'{player_table}'
+            '<div class="small">Submissions</div>'
+            f'{submissions_html}'
+            '<div class="small">Guesses</div>'
+            f'{guesses_table}'
+            '<div class="small">Reveal</div>'
+            f'{reveal_html}'
+            '<div class="small">Scores</div>'
+            f'{scores_table}'
+            '</div>'
+        )
+
+    round_blocks: List[str] = []
+    history = state.get("round_history", [])
+    if isinstance(history, list):
+        for entry in history:
+            if not isinstance(entry, dict):
+                continue
+            round_num = entry.get("round", "-")
+            round_blocks.append(render_round(entry, f"Round {round_num}"))
+
+    phase = state.get("phase")
+    if phase in ("crafting", "guessing"):
+        current_entry = {
+            "round": state.get("round"),
+            "matrix": copy.deepcopy(state.get("matrix", [])),
+            "players": [
+                {
+                    "player_id": pid,
+                    "name": player_meta.get(pid, {}).get("name"),
+                    "seat": player_meta.get(pid, {}).get("seat"),
+                    "is_bot": player_meta.get(pid, {}).get("is_bot"),
+                    "tool_index": state.get("players", {}).get(pid, {}).get("tool_index"),
+                    "target": state.get("players", {}).get(pid, {}).get("target"),
+                }
+                for pid in order
+            ],
+            "submissions": copy.deepcopy(state.get("submissions", {})),
+            "guesses": copy.deepcopy(state.get("guesses", {})),
+            "reveal": [],
+            "round_scores": [],
+        }
+        round_blocks.append(render_round(current_entry, f"Round {state.get('round')} (In Progress · {phase})"))
+
+    rounds_section = section(
+        "Rounds",
+        "".join(round_blocks) if round_blocks else '<div class="muted">No rounds recorded</div>',
+    )
+
+    jobs_json = json.dumps(render_jobs, ensure_ascii=False).replace("</", "<\/")
+    script = """
+const CYBER_JOBS = %s;
+const CYBER_CANVAS_SIZE = 360;
+const CYBER_TEXT_SIZE = 36;
+const CYBER_SHAPE_SPECS = {
+  square: { w: 70, h: 70 },
+  rectangle: { w: 90, h: 60 },
+  triangle: { w: 90, h: 70 },
+  circle: { w: 70, h: 70 },
+  arch: { w: 90, h: 60 },
+  ellipse: { w: 90, h: 60 },
+  hexagon: { w: 90, h: 70 },
+};
+
+function drawCyberShape(ctx, shapeKey, x, y, rotation) {
+  const spec = CYBER_SHAPE_SPECS[shapeKey];
+  if (!spec) return;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(((rotation || 0) * Math.PI) / 180);
+  ctx.strokeStyle = "#111111";
+  ctx.lineWidth = 4;
+  if (shapeKey === "square" || shapeKey === "rectangle") {
+    ctx.strokeRect(-spec.w / 2, -spec.h / 2, spec.w, spec.h);
+  } else if (shapeKey === "circle") {
+    ctx.beginPath();
+    ctx.arc(0, 0, Math.min(spec.w, spec.h) / 2, 0, Math.PI * 2);
+    ctx.stroke();
+  } else if (shapeKey === "ellipse") {
+    ctx.beginPath();
+    ctx.ellipse(0, 0, spec.w / 2, spec.h / 2, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  } else if (shapeKey === "triangle") {
+    ctx.beginPath();
+    ctx.moveTo(0, -spec.h / 2);
+    ctx.lineTo(spec.w / 2, spec.h / 2);
+    ctx.lineTo(-spec.w / 2, spec.h / 2);
+    ctx.closePath();
+    ctx.stroke();
+  } else if (shapeKey === "arch") {
+    const radius = spec.w / 2;
+    const arcY = -spec.h / 2 + radius;
+    ctx.beginPath();
+    ctx.moveTo(-spec.w / 2, spec.h / 2);
+    ctx.lineTo(-spec.w / 2, arcY);
+    ctx.arc(0, arcY, radius, Math.PI, 0, true);
+    ctx.lineTo(spec.w / 2, spec.h / 2);
+    ctx.closePath();
+    ctx.stroke();
+  } else if (shapeKey === "hexagon") {
+    const dx = spec.w * 0.25;
+    ctx.beginPath();
+    ctx.moveTo(-spec.w / 2 + dx, -spec.h / 2);
+    ctx.lineTo(spec.w / 2 - dx, -spec.h / 2);
+    ctx.lineTo(spec.w / 2, 0);
+    ctx.lineTo(spec.w / 2 - dx, spec.h / 2);
+    ctx.lineTo(-spec.w / 2 + dx, spec.h / 2);
+    ctx.lineTo(-spec.w / 2, 0);
+    ctx.closePath();
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function renderSubmission(canvas, submission) {
+  if (!canvas || !submission) return;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const sourceW = submission.width || CYBER_CANVAS_SIZE;
+  const sourceH = submission.height || CYBER_CANVAS_SIZE;
+  const scale = Math.min(canvas.width / sourceW, canvas.height / sourceH);
+  const offsetX = (canvas.width - sourceW * scale) / 2;
+  const offsetY = (canvas.height - sourceH * scale) / 2;
+  ctx.save();
+  ctx.translate(offsetX, offsetY);
+  ctx.scale(scale, scale);
+  const tool = submission.tool;
+  if (tool === "shoelaces") {
+    const paths = submission.paths || [];
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    paths.forEach((path) => {
+      const points = path.points || [];
+      if (points.length < 2) return;
+      ctx.strokeStyle = path.color || "#111111";
+      ctx.lineWidth = path.width || 4;
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      points.slice(1).forEach((pt) => ctx.lineTo(pt.x, pt.y));
+      ctx.stroke();
+    });
+  } else if (tool === "pixel_grid") {
+    const cells = submission.cells || [];
+    const cellW = sourceW / 3;
+    const cellH = sourceH / 3;
+    for (let idx = 0; idx < 9; idx += 1) {
+      const color = cells[idx] || "#ffffff";
+      const row = Math.floor(idx / 3);
+      const col = idx % 3;
+      ctx.fillStyle = color;
+      ctx.fillRect(col * cellW, row * cellH, cellW, cellH);
+      ctx.strokeStyle = "#e5e7eb";
+      ctx.strokeRect(col * cellW, row * cellH, cellW, cellH);
+    }
+  } else if (tool === "icon_set") {
+    const icons = submission.icons || [];
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = CYBER_TEXT_SIZE + "px serif";
+    icons.forEach((icon) => {
+      if (!icon) return;
+      ctx.save();
+      ctx.translate(icon.x, icon.y);
+      ctx.rotate(((icon.rotation || 0) * Math.PI) / 180);
+      ctx.fillText(icon.emoji || "", 0, 0);
+      ctx.restore();
+    });
+  } else if (tool === "aeiou") {
+    const letters = submission.letters || [];
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "bold " + CYBER_TEXT_SIZE + "px sans-serif";
+    letters.forEach((letter) => {
+      if (!letter) return;
+      ctx.save();
+      ctx.translate(letter.x, letter.y);
+      ctx.rotate(((letter.rotation || 0) * Math.PI) / 180);
+      ctx.fillStyle = "#111827";
+      ctx.fillText(letter.char || "", 0, 0);
+      ctx.restore();
+    });
+  } else if (tool === "shape_stacker") {
+    const shapes = submission.shapes || [];
+    shapes.forEach((shape) => {
+      if (!shape) return;
+      drawCyberShape(ctx, shape.shape, shape.x, shape.y, shape.rotation || 0);
+    });
+  }
+  ctx.restore();
+}
+
+CYBER_JOBS.forEach((job) => {
+  const canvas = document.getElementById(job.id);
+  if (!canvas) return;
+  renderSubmission(canvas, job.submission);
+});
+""" % jobs_json
+
+    body = "\n".join(header) + players_section + config_section + rounds_section
+    return build_html_document(f"{game_id} Memories", body, extra_script=script)
+
+
+download_memories = build_memories_html

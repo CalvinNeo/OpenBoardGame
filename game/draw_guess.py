@@ -1,4 +1,5 @@
 import random
+import time
 from typing import Dict, List, Optional, Tuple
 
 from game.draw_guess_quickdraw import (
@@ -9,6 +10,16 @@ from game.draw_guess_quickdraw import (
     quickdraw_image_for_prompt as _quickdraw_image_for_prompt,
 )
 from game.draw_guess_templates import _bot_svg_for_prompt, _salt_prompt
+from game.memories import (
+    build_html_document,
+    esc,
+    format_bool,
+    format_timestamp,
+    render_image,
+    render_kv_table,
+    render_table,
+    section,
+)
 
 DEFAULT_LANGUAGE = "zh"
 GUESS_METHOD_NORMAL = "normal"
@@ -332,6 +343,7 @@ class DrawGuessGame:
             "prompt_pool": prompt_pool,
             "language": language,
             "game_over": False,
+            "game_start_time": time.time(),
         }
 
     @staticmethod
@@ -540,3 +552,148 @@ class DrawGuessGame:
     @staticmethod
     def deserialize(payload: Dict) -> Dict:
         return payload
+
+
+def build_memories_html(state: Dict, room_id: Optional[str] = None) -> str:
+    game_id = DrawGuessGame.game_id
+    status_label = "Game Over" if state.get("game_over") else "In Progress"
+    header = [
+        "<h1>Download Memories</h1>",
+        f"<div class=\"meta\">Game: {esc(game_id, '-')} · Room: {esc(room_id, '-')}</div>",
+        f"<div class=\"meta\">Status: {esc(status_label, status_label)}</div>",
+    ]
+    start_time = format_timestamp(state.get("game_start_time"))
+    if start_time != "-":
+        header.append(f"<div class=\"meta\">Game Start: {esc(start_time, start_time)}</div>")
+    header.append(f"<div class=\"meta\">Generated: {esc(format_timestamp(time.time()), '-')}</div>")
+
+    player_meta = state.get("player_meta", {})
+    order = state.get("turn_order", [])
+    player_rows: List[List[str]] = []
+    for pid in order:
+        meta = player_meta.get(pid, {})
+        player_rows.append(
+            [
+                esc(pid, "-"),
+                esc(meta.get("name"), "-"),
+                esc(meta.get("seat"), "-"),
+                format_bool(meta.get("is_bot")),
+            ]
+        )
+    players_section = section(
+        "Players",
+        render_table(["Player ID", "Name", "Seat", "Bot"], player_rows, empty_message="No players"),
+    )
+
+    cfg = state.get("config", {})
+    prompt_pool = state.get("prompt_pool") or cfg.get("prompt_pool") or []
+    config_rows = [
+        ("Language", esc(cfg.get("language") or state.get("language"), "-")),
+        ("Guess Method", esc(cfg.get("guess_method"), "-")),
+        ("Show Answer Length", esc(format_bool(cfg.get("show_answer_length")))),
+    ]
+    config_section = section("Config", render_kv_table(config_rows))
+
+    pool_items = []
+    if isinstance(prompt_pool, list):
+        for entry in prompt_pool:
+            text = None
+            quickdraw = None
+            if isinstance(entry, dict):
+                text = entry.get("text")
+                quickdraw = entry.get("quickdraw")
+            elif isinstance(entry, str):
+                text = entry
+            label = esc(text, "-")
+            if quickdraw:
+                label = f"{label} <span class=\"small\">(quickdraw: {esc(quickdraw)})</span>"
+            pool_items.append(f"<li>{label}</li>")
+    prompt_section = section(
+        "Prompt Pool",
+        "<ul>" + "".join(pool_items) + "</ul>" if pool_items else '<div class="muted">No prompts</div>',
+    )
+
+    books_html: List[str] = []
+    books = state.get("books", {})
+    for owner_id in order:
+        meta = player_meta.get(owner_id, {})
+        owner_name = meta.get("name") or owner_id or "Unknown"
+        book = books.get(owner_id, {})
+        entries = book.get("entries", []) or []
+        entry_rows: List[List[str]] = []
+        for entry in entries:
+            entry_type = entry.get("type")
+            author_id = entry.get("author_id")
+            author_meta = player_meta.get(author_id, {})
+            author_name = author_meta.get("name") or author_id or "-"
+            content = esc(entry.get("text"), "-")
+            if entry_type == "drawing":
+                content = render_image(entry.get("image_data"), alt="Drawing")
+            entry_rows.append(
+                [
+                    esc(entry.get("round"), "-"),
+                    esc(entry_type, "-"),
+                    esc(author_name, "-"),
+                    content,
+                ]
+            )
+        prompt = entries[0].get("text") if entries else None
+        final_guess = None
+        for entry in reversed(entries):
+            if entry.get("type") == "guess":
+                final_guess = entry.get("text")
+                break
+        final_match = False
+        if prompt and final_guess:
+            final_match = _normalize_text(prompt) == _normalize_text(final_guess)
+        summary_lines = [
+            f"<div class=\"small\">Original Prompt: {esc(prompt, '-')}</div>",
+            f"<div class=\"small\">Final Guess: {esc(final_guess, '-')}</div>",
+            f"<div class=\"small\">Match: {esc('Yes' if final_match else 'No')}</div>",
+        ]
+        if not state.get("game_over"):
+            summary_lines.append('<div class="small">Book Status: In Progress</div>')
+        books_html.append(
+            "<div class=\"card\">"
+            f"<h3>Book · {esc(owner_name, owner_name)}</h3>"
+            + "".join(summary_lines)
+            + render_table(["Round", "Type", "Author", "Content"], entry_rows, empty_message="No entries")
+            + "</div>"
+        )
+    books_section = section(
+        "Books",
+        "".join(books_html) if books_html else '<div class="muted">No books</div>',
+    )
+
+    pending_section = ""
+    submissions = state.get("submissions", {})
+    if submissions:
+        pending_rows: List[List[str]] = []
+        for pid, submission in submissions.items():
+            meta = player_meta.get(pid, {})
+            entry_type = submission.get("type")
+            content = esc(submission.get("text"), "-")
+            if entry_type == "drawing":
+                content = render_image(submission.get("image_data"), alt="Drawing")
+            pending_rows.append(
+                [
+                    esc(pid, "-"),
+                    esc(meta.get("name"), "-"),
+                    esc(entry_type, "-"),
+                    content,
+                ]
+            )
+        pending_section = section(
+            "Pending Submissions",
+            render_table(
+                ["Player ID", "Name", "Type", "Content"],
+                pending_rows,
+                empty_message="No pending submissions",
+            ),
+        )
+
+    body = "\n".join(header) + players_section + config_section + prompt_section + pending_section + books_section
+    return build_html_document(f"{game_id} Memories", body)
+
+
+download_memories = build_memories_html

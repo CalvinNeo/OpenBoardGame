@@ -1,0 +1,1 @@
+在 Draw & Guess、Impression Flower、Cyber Pictures、Decrypto 这几个游戏中，在游戏结束后，增加一个 Download Memories 按钮。点击它，可以下载一个文件，文件中记录了比如各个玩家画的图，猜测的词等。这个文件的格式由你来定，你觉得怎么简单就怎么做。文件名为“游戏名-游戏开始时间YYYYMMDD-hhmmss-roomId”。
