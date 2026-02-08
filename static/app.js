@@ -175,7 +175,8 @@ const CYBER_SHAPE_SPECS = {
   triangle: { w: 90, h: 70 },
   circle: { w: 70, h: 70 },
   arch: { w: 90, h: 60 },
-  cylinder: { w: 90, h: 60 },
+  ellipse: { w: 90, h: 60 },
+  hexagon: { w: 90, h: 70 },
 };
 let createRoomPending = false;
 let pendingReadyAfterJoin = false;
@@ -13515,12 +13516,13 @@ function renderCyberShapePalette() {
     return;
   }
   const shapes = [
-    { id: "square", label: "■" },
+    { id: "square", label: "□" },
     { id: "rectangle", label: "▭" },
-    { id: "triangle", label: "▲" },
-    { id: "circle", label: "●" },
+    { id: "triangle", label: "△" },
+    { id: "circle", label: "○" },
     { id: "arch", label: "◠" },
-    { id: "cylinder", label: "⬭" },
+    { id: "ellipse", label: "⬭" },
+    { id: "hexagon", label: "⬡" },
   ];
   shapes.forEach((shape) => {
     const button = document.createElement("button");
@@ -13554,12 +13556,114 @@ function addCyberShape(shape) {
   updateCyberSubmitButton(currentCyberView);
 }
 
+function buildCyberShapeSvg(shape, spec) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", `0 0 ${spec.w} ${spec.h}`);
+  svg.setAttribute("width", "100%");
+  svg.setAttribute("height", "100%");
+  svg.setAttribute("class", "cyber-shape");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("focusable", "false");
+  const strokeWidth = 3;
+  const stroke = "#111827";
+  const applyStroke = (el) => {
+    el.setAttribute("fill", "none");
+    el.setAttribute("stroke", stroke);
+    el.setAttribute("stroke-width", `${strokeWidth}`);
+    el.setAttribute("stroke-linecap", "round");
+    el.setAttribute("stroke-linejoin", "round");
+  };
+  if (shape === "square" || shape === "rectangle") {
+    const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    rect.setAttribute("x", `${strokeWidth / 2}`);
+    rect.setAttribute("y", `${strokeWidth / 2}`);
+    rect.setAttribute("width", `${spec.w - strokeWidth}`);
+    rect.setAttribute("height", `${spec.h - strokeWidth}`);
+    applyStroke(rect);
+    svg.appendChild(rect);
+    return svg;
+  }
+  if (shape === "circle") {
+    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    const radius = Math.min(spec.w, spec.h) / 2 - strokeWidth / 2;
+    circle.setAttribute("cx", `${spec.w / 2}`);
+    circle.setAttribute("cy", `${spec.h / 2}`);
+    circle.setAttribute("r", `${radius}`);
+    applyStroke(circle);
+    svg.appendChild(circle);
+    return svg;
+  }
+  if (shape === "ellipse") {
+    const ellipse = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
+    ellipse.setAttribute("cx", `${spec.w / 2}`);
+    ellipse.setAttribute("cy", `${spec.h / 2}`);
+    ellipse.setAttribute("rx", `${spec.w / 2 - strokeWidth / 2}`);
+    ellipse.setAttribute("ry", `${spec.h / 2 - strokeWidth / 2}`);
+    applyStroke(ellipse);
+    svg.appendChild(ellipse);
+    return svg;
+  }
+  if (shape === "triangle") {
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    const topY = strokeWidth / 2;
+    const bottomY = spec.h - strokeWidth / 2;
+    const leftX = strokeWidth / 2;
+    const rightX = spec.w - strokeWidth / 2;
+    path.setAttribute("d", `M ${spec.w / 2} ${topY} L ${rightX} ${bottomY} L ${leftX} ${bottomY} Z`);
+    applyStroke(path);
+    svg.appendChild(path);
+    return svg;
+  }
+  if (shape === "arch") {
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    const radius = spec.w / 2 - strokeWidth / 2;
+    const bottomY = spec.h - strokeWidth / 2;
+    let arcY = spec.h - radius - strokeWidth / 2;
+    if (arcY < strokeWidth / 2) {
+      arcY = strokeWidth / 2;
+    }
+    const leftX = strokeWidth / 2;
+    const rightX = spec.w - strokeWidth / 2;
+    path.setAttribute(
+      "d",
+      `M ${leftX} ${bottomY} L ${leftX} ${arcY} A ${radius} ${radius} 0 0 0 ${rightX} ${arcY} L ${rightX} ${bottomY} Z`
+    );
+    applyStroke(path);
+    svg.appendChild(path);
+    return svg;
+  }
+  if (shape === "hexagon") {
+    const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+    const w = spec.w - strokeWidth;
+    const h = spec.h - strokeWidth;
+    const offset = strokeWidth / 2;
+    const dx = w * 0.25;
+    const points = [
+      [offset + dx, offset],
+      [offset + w - dx, offset],
+      [offset + w, offset + h / 2],
+      [offset + w - dx, offset + h],
+      [offset + dx, offset + h],
+      [offset, offset + h / 2],
+    ]
+      .map((pair) => pair.join(","))
+      .join(" ");
+    polygon.setAttribute("points", points);
+    applyStroke(polygon);
+    svg.appendChild(polygon);
+    return svg;
+  }
+  return svg;
+}
+
 function renderCyberShapeCanvas() {
   if (!cyberShapeCanvas) {
     return;
   }
   cyberShapeCanvas.innerHTML = "";
   cyberShapeItems.forEach((item) => {
+    const shapeKey = item.shape === "cylinder" ? "ellipse" : item.shape;
+    const spec = CYBER_SHAPE_SPECS[shapeKey] || { w: 80, h: 60 };
     const wrapper = document.createElement("div");
     wrapper.className = "cyber-stage-item cyber-shape-item";
     if (item.id === cyberShapeSelectedId) {
@@ -13567,12 +13671,13 @@ function renderCyberShapeCanvas() {
     }
     wrapper.style.left = `${item.x}px`;
     wrapper.style.top = `${item.y}px`;
+    wrapper.style.width = `${spec.w}px`;
+    wrapper.style.height = `${spec.h}px`;
     wrapper.style.transform = `translate(-50%, -50%) rotate(${item.rotation}deg)`;
     wrapper.dataset.id = item.id;
     wrapper.addEventListener("pointerdown", startCyberShapeDrag);
 
-    const shapeEl = document.createElement("div");
-    shapeEl.className = `cyber-shape ${item.shape}`;
+    const shapeEl = buildCyberShapeSvg(shapeKey, spec);
     wrapper.appendChild(shapeEl);
     cyberShapeCanvas.appendChild(wrapper);
   });
@@ -13669,40 +13774,52 @@ function clearCyberShapes() {
 }
 
 function drawCyberShape(ctx, shape, x, y, rotation) {
-  const spec = CYBER_SHAPE_SPECS[shape] || { w: 80, h: 60 };
+  const shapeKey = shape === "cylinder" ? "ellipse" : shape;
+  const spec = CYBER_SHAPE_SPECS[shapeKey] || { w: 80, h: 60 };
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(((rotation || 0) * Math.PI) / 180);
-  ctx.fillStyle = "#111827";
   ctx.strokeStyle = "#111827";
   ctx.lineWidth = 3;
-  if (shape === "square" || shape === "rectangle") {
-    ctx.fillRect(-spec.w / 2, -spec.h / 2, spec.w, spec.h);
-  } else if (shape === "circle") {
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  if (shapeKey === "square" || shapeKey === "rectangle") {
+    ctx.strokeRect(-spec.w / 2, -spec.h / 2, spec.w, spec.h);
+  } else if (shapeKey === "circle") {
     ctx.beginPath();
-    ctx.arc(0, 0, spec.w / 2, 0, Math.PI * 2);
-    ctx.fill();
-  } else if (shape === "triangle") {
+    ctx.arc(0, 0, Math.min(spec.w, spec.h) / 2, 0, Math.PI * 2);
+    ctx.stroke();
+  } else if (shapeKey === "ellipse") {
+    ctx.beginPath();
+    ctx.ellipse(0, 0, spec.w / 2, spec.h / 2, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  } else if (shapeKey === "triangle") {
     ctx.beginPath();
     ctx.moveTo(0, -spec.h / 2);
     ctx.lineTo(spec.w / 2, spec.h / 2);
     ctx.lineTo(-spec.w / 2, spec.h / 2);
     ctx.closePath();
-    ctx.fill();
-  } else if (shape === "arch") {
+    ctx.stroke();
+  } else if (shapeKey === "arch") {
+    const radius = spec.w / 2;
+    const arcY = -spec.h / 2 + radius;
     ctx.beginPath();
     ctx.moveTo(-spec.w / 2, spec.h / 2);
-    ctx.lineTo(-spec.w / 2, 0);
-    ctx.arc(0, 0, spec.w / 2, Math.PI, 0);
+    ctx.lineTo(-spec.w / 2, arcY);
+    ctx.arc(0, arcY, radius, Math.PI, 0, true);
     ctx.lineTo(spec.w / 2, spec.h / 2);
     ctx.closePath();
-    ctx.fill();
-  } else if (shape === "cylinder") {
-    ctx.beginPath();
-    ctx.ellipse(0, 0, spec.w / 2, spec.h / 3, 0, 0, Math.PI * 2);
     ctx.stroke();
+  } else if (shapeKey === "hexagon") {
+    const dx = spec.w * 0.25;
     ctx.beginPath();
-    ctx.ellipse(0, 0, spec.w / 2 - 6, spec.h / 3 - 3, 0, 0, Math.PI * 2);
+    ctx.moveTo(-spec.w / 2 + dx, -spec.h / 2);
+    ctx.lineTo(spec.w / 2 - dx, -spec.h / 2);
+    ctx.lineTo(spec.w / 2, 0);
+    ctx.lineTo(spec.w / 2 - dx, spec.h / 2);
+    ctx.lineTo(-spec.w / 2 + dx, spec.h / 2);
+    ctx.lineTo(-spec.w / 2, 0);
+    ctx.closePath();
     ctx.stroke();
   }
   ctx.restore();

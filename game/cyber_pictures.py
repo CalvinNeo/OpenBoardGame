@@ -529,7 +529,7 @@ def _bot_submission(tool_key: str) -> Dict:
                 }
             )
         return {"tool": "aeiou", "width": width, "height": height, "letters": letters}
-    shapes = ["square", "rectangle", "triangle", "circle", "arch", "cylinder"]
+    shapes = ["square", "rectangle", "triangle", "circle", "arch", "ellipse", "hexagon"]
     items = []
     for _ in range(random.randint(2, 5)):
         items.append(
