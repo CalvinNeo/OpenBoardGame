@@ -114,6 +114,7 @@
                     <option value="aidixit">AI Dixit</option>
                     <option value="impression_flower">Impression Flower</option>
                     <option value="splendor">Splendor</option>
+                    <option value="point_salad">Point Salad</option>
                     <option value="abraca_what">Abraca What</option>
                     <option value="blokus">Blokus</option>
                   </select>
@@ -980,6 +981,39 @@
 
               <h3>Players</h3>
               <div id="splendorPlayers"></div>
+            </div>
+
+            <div id="pointSaladPanel" class="hidden">
+              <div class="row">
+                <div>Current Turn: <span id="pointSaladTurn">-</span></div>
+                <div>Winner: <span id="pointSaladWinner">-</span></div>
+              </div>
+
+              <h3>Piles</h3>
+              <div id="pointSaladPiles" class="point-salad-piles"></div>
+
+              <h3>Market</h3>
+              <div id="pointSaladMarket" class="point-salad-market"></div>
+
+              <h3>Selection</h3>
+              <div class="row">
+                <div>Pile: <span id="pointSaladSelectedPile">-</span></div>
+                <div>Veggies: <span id="pointSaladSelectedVeggies">-</span></div>
+                <div>Flips: <span id="pointSaladSelectedFlips">-</span></div>
+              </div>
+              <div class="row actions">
+                <button id="pointSaladClearSelectionBtn">Clear Selection</button>
+                <button id="pointSaladClearFlipsBtn">Clear Flips</button>
+              </div>
+
+              <h3>Actions</h3>
+              <div class="row actions">
+                <button id="pointSaladTakePointBtn">Take Point Card</button>
+                <button id="pointSaladTakeVeggiesBtn">Take Veggies</button>
+              </div>
+
+              <h3>Players</h3>
+              <div id="pointSaladPlayers"></div>
             </div>
 
             <div id="abracaPanel" class="hidden">

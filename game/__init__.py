@@ -11,6 +11,7 @@ from game.halli_galli import HalliGalliGame
 from game.hanabi import HanabiGame
 from game.impression_flower import ImpressionFlowerGame
 from game.perfect_mismatch import PerfectMismatchGame
+from game.point_salad import PointSaladGame
 from game.registry import GameDefinition, get_game, list_games
 from game.splendor import SplendorGame
 from game.skull import SkullGame
@@ -30,6 +31,7 @@ __all__ = [
     "DecryptoGame",
     "ImpressionFlowerGame",
     "PerfectMismatchGame",
+    "PointSaladGame",
     "SplendorGame",
     "SkullGame",
     "GameDefinition",

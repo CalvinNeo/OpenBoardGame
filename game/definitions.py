@@ -10,6 +10,7 @@ from game.halli_galli import HalliGalliGame
 from game.hanabi import HanabiGame
 from game.impression_flower import ImpressionFlowerGame
 from game.perfect_mismatch import PerfectMismatchGame
+from game.point_salad import PointSaladGame
 from game.registry import GameDefinition, register_game
 from game.splendor import SplendorGame
 from game.blokus import BlokusGame
@@ -573,6 +574,43 @@ SPLENDOR_CONFIG_SCHEMA = {
     "additionalProperties": False,
 }
 
+POINT_SALAD_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "take_point"},
+                "pile_index": {"type": "integer", "minimum": 0, "maximum": 2},
+                "flip_ids": {"type": "array", "items": {"type": "integer", "minimum": 1}},
+            },
+            "required": ["type", "pile_index"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "take_veggies"},
+                "positions": {
+                    "type": "array",
+                    "items": {"type": "integer", "minimum": 0, "maximum": 5},
+                    "minItems": 1,
+                    "maxItems": 2,
+                },
+                "flip_ids": {"type": "array", "items": {"type": "integer", "minimum": 1}},
+            },
+            "required": ["type", "positions"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+POINT_SALAD_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {},
+    "additionalProperties": False,
+}
+
 BLOKUS_ACTION_SCHEMA = {
     "type": "object",
     "oneOf": [
@@ -732,6 +770,21 @@ register_game(
         module=SplendorGame,
         serialize=SplendorGame.serialize,
         deserialize=SplendorGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=PointSaladGame.game_id,
+        name="Point Salad",
+        min_players=PointSaladGame.min_players,
+        max_players=PointSaladGame.max_players,
+        turn_mode="turn",
+        action_schema=POINT_SALAD_ACTION_SCHEMA,
+        config_schema=POINT_SALAD_CONFIG_SCHEMA,
+        module=PointSaladGame,
+        serialize=PointSaladGame.serialize,
+        deserialize=PointSaladGame.deserialize,
     )
 )
 
