@@ -10648,8 +10648,17 @@ function formatGangCard(card) {
   }
   const rank = card.rank;
   const rankLabel = rank === 14 ? "A" : rank === 13 ? "K" : rank === 12 ? "Q" : rank === 11 ? "J" : String(rank);
-  const suit = card.suit || "?";
-  return `${rankLabel}${suit}`;
+  const suitMap = {
+    S: "♠️",
+    H: "♥️",
+    D: "♦️",
+    C: "♣️",
+  };
+  const rawSuit = typeof card.suit === "string" ? card.suit.trim() : "";
+  const suitKey = rawSuit.toUpperCase();
+  const suitEmoji = suitMap[suitKey];
+  const suitLabel = suitEmoji || (rawSuit && !/^[SHDC]$/i.test(rawSuit) ? rawSuit : "?");
+  return `${rankLabel}${suitLabel}`;
 }
 
 function createGangCardElement(card) {

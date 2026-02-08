@@ -1,17 +1,8 @@
 # Frontend Requirements
 
-## Mobile UI
-- Connection panel:
-  - Keep Name input and Create Room button on the same row.
-  - Keep Room ID input and Join Room button on the same row.
-  - Logout button sits to the left of the panel Hide toggle.
-  - Use a compact layout (tighter spacing/padding) on small screens.
-- Rooms panel:
-  - Place Refresh to the left of the panel Hide toggle.
-  - In the room list, show Join, Join Ready, and Reconnect in a single row on mobile.
-- Room panel:
-  - On mobile, put Toggle Ready and Start Game on one row.
-  - On mobile, put Add Bot and Remove Bot on one row.
-  - Leave Room can stay on its own row.
-- Rooms list actions:
-  - Add a Join Ready option that joins a room and immediately sets the player to Ready.
+你需要按照如下方式兼容移动端布局：
+- 按钮排布需要紧凑。例如，如果可能，在一行中排放两个按钮，或者一个 inputbox 和一个按钮。
+- 元素需要进行合理缩放，以适配手机的宽度。尽量避免超出手机的宽度。要避免界面缩放太小，导致对手机屏幕的利用率低下。
+- 应该尽量使用 Emoji 和颜色来方便阅读，例如：
+  + 如果涉及到扑克牌花色，要用 Emoji 来显示，而不要用 H、C 这样的字母。
+  + 如果

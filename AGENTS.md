@@ -33,3 +33,7 @@
 ## Configuration Tips
 - QuickDraw assets cache under `.quickdraw_cache/` (ignored in git).
 - If translation features are touched, note any required model setup in the PR.
+
+# Code Style
+
+For frontend requirements, read ./FRONTEND.md.
