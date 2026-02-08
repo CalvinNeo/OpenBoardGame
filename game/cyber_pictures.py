@@ -848,7 +848,7 @@ def build_memories_html(state: Dict, room_id: Optional[str] = None) -> str:
 
     jobs_json = json.dumps(render_jobs, ensure_ascii=False).replace("</", "<\/")
     script = """
-const CYBER_JOBS = %s;
+const CYBER_JOBS = __CYBER_JOBS__;
 const CYBER_CANVAS_SIZE = 360;
 const CYBER_TEXT_SIZE = 36;
 const CYBER_SHAPE_SPECS = {
@@ -996,7 +996,7 @@ CYBER_JOBS.forEach((job) => {
   if (!canvas) return;
   renderSubmission(canvas, job.submission);
 });
-""" % jobs_json
+""".replace("__CYBER_JOBS__", jobs_json)
 
     body = "\n".join(header) + players_section + config_section + rounds_section
     return build_html_document(f"{game_id} Memories", body, extra_script=script)
