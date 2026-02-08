@@ -8,6 +8,7 @@ let currentMismatchView = null;
 let currentCoyoteView = null;
 let currentDecryptoView = null;
 let currentDrawGuessView = null;
+let currentCyberView = null;
 let currentFlip7View = null;
 let currentGoldRushView = null;
 let currentHalliView = null;
@@ -55,6 +56,24 @@ let drawGuessHasDrawn = false;
 let drawGuessIsErasing = false;
 let drawGuessBrushColor = "#000000";
 let drawGuessBrushSize = 3;
+let cyberLastRound = null;
+let cyberLastPhase = null;
+let cyberLastToolIndex = null;
+let cyberShoelacePaths = [];
+let cyberShoelaceCurrentPath = null;
+let cyberShoelaceDrawing = false;
+let cyberPixelCells = [];
+let cyberPixelSelectedColor = null;
+let cyberIconItems = [];
+let cyberIconDragging = null;
+let cyberIconSelectedId = null;
+let cyberLetterItems = [];
+let cyberLetterDragging = null;
+let cyberLetterSelectedId = null;
+let cyberShapeItems = [];
+let cyberShapeDragging = null;
+let cyberShapeSelectedId = null;
+let cyberGuessSelections = {};
 let impressionConfig = null;
 let impressionConfigSignature = null;
 let impressionStampHistory = [];
@@ -137,6 +156,27 @@ const GOLD_RUSH_COLOR_PALETTE = {
 };
 const GOLD_RUSH_LIGHT_TEXT = "#f9fafb";
 const GOLD_RUSH_DARK_TEXT = "#111827";
+const CYBER_TOOL_KEYS = ["shoelaces", "pixel_grid", "icon_set", "aeiou", "shape_stacker"];
+const CYBER_TOOL_LABELS = {
+  shoelaces: "Shoelaces",
+  pixel_grid: "Pixel Grid",
+  icon_set: "Icon Set",
+  aeiou: "AEIOU Collage",
+  shape_stacker: "Shape Stacker",
+};
+const CYBER_COORDS = ["A1", "A2", "A3", "A4", "B1", "B2", "B3", "B4", "C1", "C2", "C3", "C4", "D1", "D2", "D3", "D4"];
+const CYBER_PIXEL_COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#3b82f6", "#8b5cf6", "#000000", "#ffffff", "#8b5e34"];
+const CYBER_ICON_SET = ["😀", "😺", "🌳", "🌞", "🏠", "🚗", "✈️", "⭐", "⚽", "🎧", "📚", "🍎", "🧩", "🎈", "🎮", "🎹", "🎲", "🧠", "🧸", "🕯️", "💡", "🔧", "🪜", "🔑", "📷", "🖌️", "📌", "🧭", "🌙", "☁️", "🔥", "💧", "🐶", "🐱", "🐦", "🐟", "🦋", "🐢", "🌻", "🌵", "🍕", "🍞", "🍩", "🍓", "☕", "🫖", "🚀", "🛸"];
+const CYBER_CANVAS_SIZE = 360;
+const CYBER_TEXT_SIZE = 36;
+const CYBER_SHAPE_SPECS = {
+  square: { w: 70, h: 70 },
+  rectangle: { w: 90, h: 60 },
+  triangle: { w: 90, h: 70 },
+  circle: { w: 70, h: 70 },
+  arch: { w: 90, h: 60 },
+  cylinder: { w: 90, h: 60 },
+};
 let createRoomPending = false;
 let pendingReadyAfterJoin = false;
 let pendingReadyRoomId = null;
@@ -186,6 +226,9 @@ const drawGuessGuessMethodRow = document.getElementById("drawGuessGuessMethodRow
 const drawGuessGuessMethodSelect = document.getElementById("drawGuessGuessMethodSelect");
 const drawGuessAnswerLengthOptionRow = document.getElementById("drawGuessAnswerLengthOptionRow");
 const drawGuessAnswerLengthToggle = document.getElementById("drawGuessAnswerLengthToggle");
+const cyberPicturesConfigBox = document.getElementById("cyberPicturesConfigBox");
+const cyberPicturesDuplicateRow = document.getElementById("cyberPicturesDuplicateRow");
+const cyberPicturesDuplicateToggle = document.getElementById("cyberPicturesDuplicateToggle");
 const decryptoConfigBox = document.getElementById("decryptoConfigBox");
 const decryptoPackRow = document.getElementById("decryptoPackRow");
 const decryptoPackOptions = document.getElementById("decryptoPackOptions");
@@ -223,6 +266,7 @@ const coyotePanel = document.getElementById("coyotePanel");
 const halliPanel = document.getElementById("halliPanel");
 const decryptoPanel = document.getElementById("decryptoPanel");
 const drawGuessPanel = document.getElementById("drawGuessPanel");
+const cyberPicturesPanel = document.getElementById("cyberPicturesPanel");
 const aidixitPanel = document.getElementById("aidixitPanel");
 
 const phaseLabel = document.getElementById("phaseLabel");
@@ -503,6 +547,53 @@ const drawGuessBrushButtons = drawGuessBrushSizes
   ? Array.from(drawGuessBrushSizes.querySelectorAll("button[data-size]"))
   : [];
 const drawGuessCtx = drawGuessCanvas ? drawGuessCanvas.getContext("2d") : null;
+
+const cyberPhaseLabel = document.getElementById("cyberPhase");
+const cyberRoundLabel = document.getElementById("cyberRound");
+const cyberTotalRoundsLabel = document.getElementById("cyberTotalRounds");
+const cyberToolLabel = document.getElementById("cyberToolLabel");
+const cyberTargetLabel = document.getElementById("cyberTargetLabel");
+const cyberSubmittedLabel = document.getElementById("cyberSubmitted");
+const cyberGuessedLabel = document.getElementById("cyberGuessed");
+const cyberMatrixEl = document.getElementById("cyberMatrix");
+const cyberCraftArea = document.getElementById("cyberCraftArea");
+const cyberGuessArea = document.getElementById("cyberGuessArea");
+const cyberScoreArea = document.getElementById("cyberScoreArea");
+const cyberToolShoelaces = document.getElementById("cyberToolShoelaces");
+const cyberShoelaceCanvas = document.getElementById("cyberShoelaceCanvas");
+const cyberShoelaceUndoBtn = document.getElementById("cyberShoelaceUndoBtn");
+const cyberShoelaceClearBtn = document.getElementById("cyberShoelaceClearBtn");
+const cyberToolPixel = document.getElementById("cyberToolPixel");
+const cyberPixelGrid = document.getElementById("cyberPixelGrid");
+const cyberPixelPalette = document.getElementById("cyberPixelPalette");
+const cyberToolIconSet = document.getElementById("cyberToolIconSet");
+const cyberIconPalette = document.getElementById("cyberIconPalette");
+const cyberIconCanvas = document.getElementById("cyberIconCanvas");
+const cyberIconRemoveBtn = document.getElementById("cyberIconRemoveBtn");
+const cyberIconClearBtn = document.getElementById("cyberIconClearBtn");
+const cyberToolLetters = document.getElementById("cyberToolLetters");
+const cyberLetterPalette = document.getElementById("cyberLetterPalette");
+const cyberLetterCanvas = document.getElementById("cyberLetterCanvas");
+const cyberLetterRotateBtn = document.getElementById("cyberLetterRotateBtn");
+const cyberLetterRemoveBtn = document.getElementById("cyberLetterRemoveBtn");
+const cyberLetterClearBtn = document.getElementById("cyberLetterClearBtn");
+const cyberToolShapes = document.getElementById("cyberToolShapes");
+const cyberShapePalette = document.getElementById("cyberShapePalette");
+const cyberShapeCanvas = document.getElementById("cyberShapeCanvas");
+const cyberShapeRotate = document.getElementById("cyberShapeRotate");
+const cyberShapeRotateValue = document.getElementById("cyberShapeRotateValue");
+const cyberShapeRemoveBtn = document.getElementById("cyberShapeRemoveBtn");
+const cyberShapeClearBtn = document.getElementById("cyberShapeClearBtn");
+const cyberSubmitBtn = document.getElementById("cyberSubmitBtn");
+const cyberSubmissionHint = document.getElementById("cyberSubmissionHint");
+const cyberWorks = document.getElementById("cyberWorks");
+const cyberSubmitGuessBtn = document.getElementById("cyberSubmitGuessBtn");
+const cyberRoundScores = document.getElementById("cyberRoundScores");
+const cyberReveal = document.getElementById("cyberReveal");
+const cyberNextRoundBtn = document.getElementById("cyberNextRoundBtn");
+const cyberGameOverNotice = document.getElementById("cyberGameOverNotice");
+const cyberPlayers = document.getElementById("cyberPlayers");
+const cyberShoelaceCtx = cyberShoelaceCanvas ? cyberShoelaceCanvas.getContext("2d") : null;
 
 const aidixitPhaseLabel = document.getElementById("aidixitPhase");
 const aidixitRoundLabel = document.getElementById("aidixitRound");
@@ -1450,6 +1541,7 @@ function setGamePanelVisibility(gameType) {
   const showHalli = gameType === "halli_galli";
   const showDecrypto = gameType === "decrypto";
   const showDrawGuess = gameType === "draw_guess";
+  const showCyber = gameType === "cyber_pictures";
   const showAidixit = gameType === "aidixit";
   const showImpression = gameType === "impression_flower";
   const showSplendor = gameType === "splendor";
@@ -1483,6 +1575,9 @@ function setGamePanelVisibility(gameType) {
     decryptoPanel.classList.toggle("hidden", !showDecrypto);
   }
   drawGuessPanel.classList.toggle("hidden", !showDrawGuess);
+  if (cyberPicturesPanel) {
+    cyberPicturesPanel.classList.toggle("hidden", !showCyber);
+  }
   if (aidixitPanel) {
     aidixitPanel.classList.toggle("hidden", !showAidixit);
   }
@@ -1520,6 +1615,18 @@ function updateDrawGuessLanguageRow() {
   if (drawGuessAnswerLengthOptionRow) {
     drawGuessAnswerLengthOptionRow.classList.toggle("hidden", !showRow);
     drawGuessAnswerLengthOptionRow.setAttribute("aria-hidden", (!showRow).toString());
+  }
+}
+
+function updateCyberPicturesConfigRow() {
+  const showRow = currentRoomState && currentGameType === "cyber_pictures" && currentRoomState.status === "lobby";
+  if (cyberPicturesConfigBox) {
+    cyberPicturesConfigBox.classList.toggle("hidden", !showRow);
+    cyberPicturesConfigBox.setAttribute("aria-hidden", (!showRow).toString());
+  }
+  if (cyberPicturesDuplicateRow) {
+    cyberPicturesDuplicateRow.classList.toggle("hidden", !showRow);
+    cyberPicturesDuplicateRow.setAttribute("aria-hidden", (!showRow).toString());
   }
 }
 
@@ -2168,6 +2275,7 @@ function resetRoomState() {
   clearHalliState();
   clearDecryptoState();
   clearDrawGuessState();
+  clearCyberState();
   clearAidixitState();
   clearImpressionFlowerState();
   clearSplendorState();
@@ -2176,6 +2284,7 @@ function resetRoomState() {
   clearBlokusState();
   setGamePanelVisibility(null);
   updateDrawGuessLanguageRow();
+  updateCyberPicturesConfigRow();
   updateDecryptoPackRow();
   updateDecryptoBotRow();
   updateAidixitDeckRow();
@@ -2194,6 +2303,9 @@ function resetRoomState() {
   }
   if (drawGuessAnswerLengthToggle) {
     drawGuessAnswerLengthToggle.checked = false;
+  }
+  if (cyberPicturesDuplicateToggle) {
+    cyberPicturesDuplicateToggle.checked = false;
   }
   if (decryptoBotSelect) {
     decryptoBotSelect.value = "native";
@@ -4513,6 +4625,9 @@ function emitRoomStart() {
     const guessMethod = drawGuessGuessMethodSelect ? drawGuessGuessMethodSelect.value || "normal" : "normal";
     const showAnswerLength = drawGuessAnswerLengthToggle ? drawGuessAnswerLengthToggle.checked : false;
     payload.config = { language, guess_method: guessMethod, show_answer_length: showAnswerLength };
+  } else if (currentGameType === "cyber_pictures") {
+    const allowDuplicates = cyberPicturesDuplicateToggle ? cyberPicturesDuplicateToggle.checked : false;
+    payload.config = { allow_duplicate_targets: allowDuplicates };
   } else if (currentGameType === "aidixit") {
     const decks = getSelectedAidixitDecks();
     if (!decks.length) {
@@ -4590,6 +4705,7 @@ function renderRoomState(state) {
   }
   setGamePanelVisibility(currentGameType);
   updateDrawGuessLanguageRow();
+  updateCyberPicturesConfigRow();
   updateDecryptoPackRow();
   updateDecryptoBotRow();
   updateAidixitDeckRow();
@@ -11359,6 +11475,10 @@ function renderGameState(data) {
     renderDrawGuessGameState(data);
     return;
   }
+  if (gameType === "cyber_pictures") {
+    renderCyberPicturesGameState(data);
+    return;
+  }
   if (gameType === "impression_flower") {
     renderImpressionGameState(data);
     return;
@@ -12902,3 +13022,1245 @@ document.addEventListener("keydown", (event) => {
   }
   toggleLogPanel();
 });
+
+function clampValue(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function getCyberCanvasPos(event, canvas) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = rect.width ? canvas.width / rect.width : 1;
+  const scaleY = rect.height ? canvas.height / rect.height : 1;
+  return {
+    x: (event.clientX - rect.left) * scaleX,
+    y: (event.clientY - rect.top) * scaleY,
+  };
+}
+
+function getCyberRelativePos(event, container) {
+  const rect = container.getBoundingClientRect();
+  return {
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top,
+    width: rect.width || CYBER_CANVAS_SIZE,
+    height: rect.height || CYBER_CANVAS_SIZE,
+  };
+}
+
+function getCyberStageSize(container) {
+  if (!container) {
+    return { width: CYBER_CANVAS_SIZE, height: CYBER_CANVAS_SIZE };
+  }
+  const rect = container.getBoundingClientRect();
+  const width = rect.width && rect.width > 0 ? rect.width : CYBER_CANVAS_SIZE;
+  const height = rect.height && rect.height > 0 ? rect.height : CYBER_CANVAS_SIZE;
+  return { width, height };
+}
+
+function renderCyberShoelaceCanvas() {
+  if (!cyberShoelaceCtx || !cyberShoelaceCanvas) {
+    return;
+  }
+  const width = cyberShoelaceCanvas.width;
+  const height = cyberShoelaceCanvas.height;
+  cyberShoelaceCtx.clearRect(0, 0, width, height);
+  cyberShoelaceCtx.fillStyle = "#ffffff";
+  cyberShoelaceCtx.fillRect(0, 0, width, height);
+  cyberShoelaceCtx.lineCap = "round";
+  cyberShoelaceCtx.lineJoin = "round";
+  cyberShoelacePaths.forEach((path) => {
+    const points = path.points || [];
+    if (points.length < 2) {
+      return;
+    }
+    cyberShoelaceCtx.strokeStyle = path.color || "#111111";
+    cyberShoelaceCtx.lineWidth = path.width || 4;
+    cyberShoelaceCtx.beginPath();
+    cyberShoelaceCtx.moveTo(points[0].x, points[0].y);
+    points.slice(1).forEach((pt) => cyberShoelaceCtx.lineTo(pt.x, pt.y));
+    cyberShoelaceCtx.stroke();
+  });
+}
+
+function startCyberShoelaceDraw(event) {
+  if (!cyberShoelaceCanvas || !cyberShoelaceCtx) {
+    return;
+  }
+  if (cyberShoelacePaths.length >= 2) {
+    return;
+  }
+  event.preventDefault();
+  const pos = getCyberCanvasPos(event, cyberShoelaceCanvas);
+  cyberShoelaceCurrentPath = { points: [pos], color: "#111111", width: 4 };
+  cyberShoelacePaths.push(cyberShoelaceCurrentPath);
+  cyberShoelaceDrawing = true;
+  renderCyberShoelaceCanvas();
+}
+
+function moveCyberShoelaceDraw(event) {
+  if (!cyberShoelaceDrawing || !cyberShoelaceCurrentPath || !cyberShoelaceCanvas) {
+    return;
+  }
+  const pos = getCyberCanvasPos(event, cyberShoelaceCanvas);
+  cyberShoelaceCurrentPath.points.push(pos);
+  renderCyberShoelaceCanvas();
+  updateCyberSubmitButton(currentCyberView);
+}
+
+function endCyberShoelaceDraw() {
+  cyberShoelaceDrawing = false;
+  cyberShoelaceCurrentPath = null;
+}
+
+function clearCyberShoelace() {
+  cyberShoelacePaths = [];
+  cyberShoelaceCurrentPath = null;
+  cyberShoelaceDrawing = false;
+  renderCyberShoelaceCanvas();
+  updateCyberSubmitButton(currentCyberView);
+}
+
+function undoCyberShoelace() {
+  cyberShoelacePaths = cyberShoelacePaths.slice(0, -1);
+  renderCyberShoelaceCanvas();
+  updateCyberSubmitButton(currentCyberView);
+}
+
+function ensureCyberPixelCells() {
+  if (!Array.isArray(cyberPixelCells) || cyberPixelCells.length !== 9) {
+    cyberPixelCells = Array(9).fill(null);
+  }
+  if (!cyberPixelSelectedColor) {
+    cyberPixelSelectedColor = CYBER_PIXEL_COLORS[0];
+  }
+}
+
+function renderCyberPixelPalette() {
+  if (!cyberPixelPalette || cyberPixelPalette.childNodes.length) {
+    return;
+  }
+  CYBER_PIXEL_COLORS.forEach((color) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "cyber-pixel-color";
+    button.style.background = color;
+    button.title = color;
+    button.addEventListener("click", () => {
+      cyberPixelSelectedColor = color;
+      updateCyberPixelPaletteHighlight();
+    });
+    cyberPixelPalette.appendChild(button);
+  });
+  updateCyberPixelPaletteHighlight();
+}
+
+function updateCyberPixelPaletteHighlight() {
+  if (!cyberPixelPalette) {
+    return;
+  }
+  const buttons = Array.from(cyberPixelPalette.querySelectorAll(".cyber-pixel-color"));
+  buttons.forEach((button) => {
+    const active = button.style.background === cyberPixelSelectedColor;
+    button.classList.toggle("active", active);
+  });
+}
+
+function initCyberPixelGrid() {
+  if (!cyberPixelGrid || cyberPixelGrid.childNodes.length) {
+    return;
+  }
+  ensureCyberPixelCells();
+  for (let idx = 0; idx < 9; idx += 1) {
+    const cell = document.createElement("div");
+    cell.className = "cyber-pixel-cell";
+    cell.dataset.index = `${idx}`;
+    cell.addEventListener("click", () => {
+      ensureCyberPixelCells();
+      cyberPixelCells[idx] = cyberPixelSelectedColor;
+      renderCyberPixelGrid();
+      updateCyberSubmitButton(currentCyberView);
+    });
+    cyberPixelGrid.appendChild(cell);
+  }
+  renderCyberPixelGrid();
+}
+
+function renderCyberPixelGrid() {
+  if (!cyberPixelGrid) {
+    return;
+  }
+  ensureCyberPixelCells();
+  Array.from(cyberPixelGrid.children).forEach((cell, idx) => {
+    const color = cyberPixelCells[idx];
+    cell.style.background = color || "#ffffff";
+  });
+}
+
+function renderCyberIconPalette() {
+  if (!cyberIconPalette || cyberIconPalette.childNodes.length) {
+    return;
+  }
+  CYBER_ICON_SET.forEach((emoji) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = emoji;
+    button.addEventListener("click", () => addCyberIcon(emoji));
+    cyberIconPalette.appendChild(button);
+  });
+}
+
+function addCyberIcon(emoji) {
+  if (!cyberIconCanvas) {
+    return;
+  }
+  if (cyberIconItems.length >= 5) {
+    return;
+  }
+  const { width, height } = getCyberStageSize(cyberIconCanvas);
+  const offset = (cyberIconItems.length % 3) * 12;
+  const id = `icon-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  cyberIconItems.push({
+    id,
+    emoji,
+    x: width / 2 + offset,
+    y: height / 2 + offset,
+  });
+  renderCyberIconCanvas();
+  updateCyberSubmitButton(currentCyberView);
+}
+
+function renderCyberIconCanvas() {
+  if (!cyberIconCanvas) {
+    return;
+  }
+  cyberIconCanvas.innerHTML = "";
+  cyberIconItems.forEach((item) => {
+    const el = document.createElement("div");
+    el.className = "cyber-stage-item";
+    el.textContent = item.emoji;
+    el.style.left = `${item.x}px`;
+    el.style.top = `${item.y}px`;
+    el.style.fontSize = "32px";
+    el.dataset.id = item.id;
+    el.addEventListener("pointerdown", startCyberIconDrag);
+    cyberIconCanvas.appendChild(el);
+  });
+}
+
+function startCyberIconDrag(event) {
+  if (!cyberIconCanvas) {
+    return;
+  }
+  const id = event.currentTarget.dataset.id;
+  const item = cyberIconItems.find((entry) => entry.id === id);
+  if (!item) {
+    return;
+  }
+  event.preventDefault();
+  const pos = getCyberRelativePos(event, cyberIconCanvas);
+  cyberIconDragging = {
+    id,
+    offsetX: item.x - pos.x,
+    offsetY: item.y - pos.y,
+    element: event.currentTarget,
+  };
+  window.addEventListener("pointermove", onCyberIconDragMove);
+  window.addEventListener("pointerup", onCyberIconDragEnd, { once: true });
+}
+
+function onCyberIconDragMove(event) {
+  if (!cyberIconDragging || !cyberIconCanvas) {
+    return;
+  }
+  const item = cyberIconItems.find((entry) => entry.id === cyberIconDragging.id);
+  if (!item) {
+    return;
+  }
+  const pos = getCyberRelativePos(event, cyberIconCanvas);
+  const x = clampValue(pos.x + cyberIconDragging.offsetX, 0, pos.width);
+  const y = clampValue(pos.y + cyberIconDragging.offsetY, 0, pos.height);
+  item.x = x;
+  item.y = y;
+  if (cyberIconDragging.element) {
+    cyberIconDragging.element.style.left = `${x}px`;
+    cyberIconDragging.element.style.top = `${y}px`;
+  }
+}
+
+function onCyberIconDragEnd() {
+  window.removeEventListener("pointermove", onCyberIconDragMove);
+  cyberIconDragging = null;
+}
+
+function removeCyberIcon() {
+  cyberIconItems = cyberIconItems.slice(0, -1);
+  renderCyberIconCanvas();
+  updateCyberSubmitButton(currentCyberView);
+}
+
+function clearCyberIcons() {
+  cyberIconItems = [];
+  renderCyberIconCanvas();
+  updateCyberSubmitButton(currentCyberView);
+}
+
+function renderCyberLetterPalette() {
+  if (!cyberLetterPalette || cyberLetterPalette.childNodes.length) {
+    return;
+  }
+  ["A", "E", "I", "O", "U"].forEach((char) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = char;
+    button.addEventListener("click", () => addCyberLetter(char));
+    cyberLetterPalette.appendChild(button);
+  });
+}
+
+function addCyberLetter(char) {
+  if (!cyberLetterCanvas) {
+    return;
+  }
+  if (cyberLetterItems.length >= 10) {
+    return;
+  }
+  const { width, height } = getCyberStageSize(cyberLetterCanvas);
+  const offset = (cyberLetterItems.length % 4) * 10;
+  const id = `letter-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  cyberLetterItems.push({
+    id,
+    char,
+    x: width / 2 + offset,
+    y: height / 2 + offset,
+    rotation: 0,
+  });
+  cyberLetterSelectedId = id;
+  renderCyberLetterCanvas();
+  updateCyberSubmitButton(currentCyberView);
+}
+
+function renderCyberLetterCanvas() {
+  if (!cyberLetterCanvas) {
+    return;
+  }
+  cyberLetterCanvas.innerHTML = "";
+  cyberLetterItems.forEach((item) => {
+    const el = document.createElement("div");
+    el.className = "cyber-stage-item";
+    if (item.id === cyberLetterSelectedId) {
+      el.classList.add("selected");
+    }
+    el.textContent = item.char;
+    el.style.left = `${item.x}px`;
+    el.style.top = `${item.y}px`;
+    el.style.fontSize = "42px";
+    el.style.fontWeight = "700";
+    el.style.transform = `translate(-50%, -50%) rotate(${item.rotation}deg)`;
+    el.dataset.id = item.id;
+    el.addEventListener("pointerdown", startCyberLetterDrag);
+    cyberLetterCanvas.appendChild(el);
+  });
+}
+
+function startCyberLetterDrag(event) {
+  if (!cyberLetterCanvas) {
+    return;
+  }
+  const id = event.currentTarget.dataset.id;
+  const item = cyberLetterItems.find((entry) => entry.id === id);
+  if (!item) {
+    return;
+  }
+  event.preventDefault();
+  const pos = getCyberRelativePos(event, cyberLetterCanvas);
+  cyberLetterDragging = {
+    id,
+    offsetX: item.x - pos.x,
+    offsetY: item.y - pos.y,
+    element: event.currentTarget,
+    startX: pos.x,
+    startY: pos.y,
+    moved: false,
+  };
+  cyberLetterSelectedId = id;
+  window.addEventListener("pointermove", onCyberLetterDragMove);
+  window.addEventListener("pointerup", onCyberLetterDragEnd, { once: true });
+}
+
+function onCyberLetterDragMove(event) {
+  if (!cyberLetterDragging || !cyberLetterCanvas) {
+    return;
+  }
+  const item = cyberLetterItems.find((entry) => entry.id === cyberLetterDragging.id);
+  if (!item) {
+    return;
+  }
+  const pos = getCyberRelativePos(event, cyberLetterCanvas);
+  const x = clampValue(pos.x + cyberLetterDragging.offsetX, 0, pos.width);
+  const y = clampValue(pos.y + cyberLetterDragging.offsetY, 0, pos.height);
+  item.x = x;
+  item.y = y;
+  if (Math.hypot(pos.x - cyberLetterDragging.startX, pos.y - cyberLetterDragging.startY) > 4) {
+    cyberLetterDragging.moved = true;
+  }
+  if (cyberLetterDragging.element) {
+    cyberLetterDragging.element.style.left = `${x}px`;
+    cyberLetterDragging.element.style.top = `${y}px`;
+  }
+}
+
+function onCyberLetterDragEnd() {
+  window.removeEventListener("pointermove", onCyberLetterDragMove);
+  if (cyberLetterDragging && !cyberLetterDragging.moved) {
+    const item = cyberLetterItems.find((entry) => entry.id === cyberLetterDragging.id);
+    if (item) {
+      item.rotation = (item.rotation + 90) % 360;
+    }
+  }
+  cyberLetterDragging = null;
+  renderCyberLetterCanvas();
+  updateCyberSubmitButton(currentCyberView);
+}
+
+function rotateSelectedCyberLetter() {
+  if (!cyberLetterSelectedId) {
+    return;
+  }
+  const item = cyberLetterItems.find((entry) => entry.id === cyberLetterSelectedId);
+  if (!item) {
+    return;
+  }
+  item.rotation = (item.rotation + 90) % 360;
+  renderCyberLetterCanvas();
+  updateCyberSubmitButton(currentCyberView);
+}
+
+function removeSelectedCyberLetter() {
+  if (!cyberLetterSelectedId) {
+    return;
+  }
+  cyberLetterItems = cyberLetterItems.filter((entry) => entry.id !== cyberLetterSelectedId);
+  cyberLetterSelectedId = null;
+  renderCyberLetterCanvas();
+  updateCyberSubmitButton(currentCyberView);
+}
+
+function clearCyberLetters() {
+  cyberLetterItems = [];
+  cyberLetterSelectedId = null;
+  renderCyberLetterCanvas();
+  updateCyberSubmitButton(currentCyberView);
+}
+
+function renderCyberShapePalette() {
+  if (!cyberShapePalette || cyberShapePalette.childNodes.length) {
+    return;
+  }
+  const shapes = [
+    { id: "square", label: "■" },
+    { id: "rectangle", label: "▭" },
+    { id: "triangle", label: "▲" },
+    { id: "circle", label: "●" },
+    { id: "arch", label: "◠" },
+    { id: "cylinder", label: "⬭" },
+  ];
+  shapes.forEach((shape) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = shape.label;
+    button.addEventListener("click", () => addCyberShape(shape.id));
+    cyberShapePalette.appendChild(button);
+  });
+}
+
+function addCyberShape(shape) {
+  if (!cyberShapeCanvas) {
+    return;
+  }
+  if (cyberShapeItems.length >= 12) {
+    return;
+  }
+  const { width, height } = getCyberStageSize(cyberShapeCanvas);
+  const offset = (cyberShapeItems.length % 4) * 10;
+  const id = `shape-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  cyberShapeItems.push({
+    id,
+    shape,
+    x: width / 2 + offset,
+    y: height / 2 + offset,
+    rotation: 0,
+  });
+  cyberShapeSelectedId = id;
+  updateCyberShapeRotationControl();
+  renderCyberShapeCanvas();
+  updateCyberSubmitButton(currentCyberView);
+}
+
+function renderCyberShapeCanvas() {
+  if (!cyberShapeCanvas) {
+    return;
+  }
+  cyberShapeCanvas.innerHTML = "";
+  cyberShapeItems.forEach((item) => {
+    const wrapper = document.createElement("div");
+    wrapper.className = "cyber-stage-item cyber-shape-item";
+    if (item.id === cyberShapeSelectedId) {
+      wrapper.classList.add("selected");
+    }
+    wrapper.style.left = `${item.x}px`;
+    wrapper.style.top = `${item.y}px`;
+    wrapper.style.transform = `translate(-50%, -50%) rotate(${item.rotation}deg)`;
+    wrapper.dataset.id = item.id;
+    wrapper.addEventListener("pointerdown", startCyberShapeDrag);
+
+    const shapeEl = document.createElement("div");
+    shapeEl.className = `cyber-shape ${item.shape}`;
+    wrapper.appendChild(shapeEl);
+    cyberShapeCanvas.appendChild(wrapper);
+  });
+}
+
+function startCyberShapeDrag(event) {
+  if (!cyberShapeCanvas) {
+    return;
+  }
+  const id = event.currentTarget.dataset.id;
+  const item = cyberShapeItems.find((entry) => entry.id === id);
+  if (!item) {
+    return;
+  }
+  event.preventDefault();
+  const pos = getCyberRelativePos(event, cyberShapeCanvas);
+  cyberShapeDragging = {
+    id,
+    offsetX: item.x - pos.x,
+    offsetY: item.y - pos.y,
+    element: event.currentTarget,
+  };
+  cyberShapeSelectedId = id;
+  updateCyberShapeRotationControl();
+  window.addEventListener("pointermove", onCyberShapeDragMove);
+  window.addEventListener("pointerup", onCyberShapeDragEnd, { once: true });
+}
+
+function onCyberShapeDragMove(event) {
+  if (!cyberShapeDragging || !cyberShapeCanvas) {
+    return;
+  }
+  const item = cyberShapeItems.find((entry) => entry.id === cyberShapeDragging.id);
+  if (!item) {
+    return;
+  }
+  const pos = getCyberRelativePos(event, cyberShapeCanvas);
+  const x = clampValue(pos.x + cyberShapeDragging.offsetX, 0, pos.width);
+  const y = clampValue(pos.y + cyberShapeDragging.offsetY, 0, pos.height);
+  item.x = x;
+  item.y = y;
+  if (cyberShapeDragging.element) {
+    cyberShapeDragging.element.style.left = `${x}px`;
+    cyberShapeDragging.element.style.top = `${y}px`;
+  }
+}
+
+function onCyberShapeDragEnd() {
+  window.removeEventListener("pointermove", onCyberShapeDragMove);
+  cyberShapeDragging = null;
+  renderCyberShapeCanvas();
+  updateCyberSubmitButton(currentCyberView);
+}
+
+function updateCyberShapeRotationControl() {
+  if (!cyberShapeRotate || !cyberShapeRotateValue) {
+    return;
+  }
+  const item = cyberShapeItems.find((entry) => entry.id === cyberShapeSelectedId);
+  const rotation = item ? item.rotation : 0;
+  cyberShapeRotate.value = `${rotation}`;
+  cyberShapeRotateValue.textContent = `${rotation}°`;
+}
+
+function setCyberShapeRotation(value) {
+  const item = cyberShapeItems.find((entry) => entry.id === cyberShapeSelectedId);
+  if (!item) {
+    return;
+  }
+  const rotation = Number.isFinite(value) ? value : 0;
+  item.rotation = rotation;
+  updateCyberShapeRotationControl();
+  renderCyberShapeCanvas();
+  updateCyberSubmitButton(currentCyberView);
+}
+
+function removeSelectedCyberShape() {
+  if (!cyberShapeSelectedId) {
+    return;
+  }
+  cyberShapeItems = cyberShapeItems.filter((entry) => entry.id !== cyberShapeSelectedId);
+  cyberShapeSelectedId = null;
+  updateCyberShapeRotationControl();
+  renderCyberShapeCanvas();
+  updateCyberSubmitButton(currentCyberView);
+}
+
+function clearCyberShapes() {
+  cyberShapeItems = [];
+  cyberShapeSelectedId = null;
+  updateCyberShapeRotationControl();
+  renderCyberShapeCanvas();
+  updateCyberSubmitButton(currentCyberView);
+}
+
+function drawCyberShape(ctx, shape, x, y, rotation) {
+  const spec = CYBER_SHAPE_SPECS[shape] || { w: 80, h: 60 };
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(((rotation || 0) * Math.PI) / 180);
+  ctx.fillStyle = "#111827";
+  ctx.strokeStyle = "#111827";
+  ctx.lineWidth = 3;
+  if (shape === "square" || shape === "rectangle") {
+    ctx.fillRect(-spec.w / 2, -spec.h / 2, spec.w, spec.h);
+  } else if (shape === "circle") {
+    ctx.beginPath();
+    ctx.arc(0, 0, spec.w / 2, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (shape === "triangle") {
+    ctx.beginPath();
+    ctx.moveTo(0, -spec.h / 2);
+    ctx.lineTo(spec.w / 2, spec.h / 2);
+    ctx.lineTo(-spec.w / 2, spec.h / 2);
+    ctx.closePath();
+    ctx.fill();
+  } else if (shape === "arch") {
+    ctx.beginPath();
+    ctx.moveTo(-spec.w / 2, spec.h / 2);
+    ctx.lineTo(-spec.w / 2, 0);
+    ctx.arc(0, 0, spec.w / 2, Math.PI, 0);
+    ctx.lineTo(spec.w / 2, spec.h / 2);
+    ctx.closePath();
+    ctx.fill();
+  } else if (shape === "cylinder") {
+    ctx.beginPath();
+    ctx.ellipse(0, 0, spec.w / 2, spec.h / 3, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(0, 0, spec.w / 2 - 6, spec.h / 3 - 3, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function renderCyberSubmission(canvas, submission) {
+  if (!canvas || !submission) {
+    return;
+  }
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    return;
+  }
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const sourceW = submission.width || CYBER_CANVAS_SIZE;
+  const sourceH = submission.height || CYBER_CANVAS_SIZE;
+  const scale = Math.min(canvas.width / sourceW, canvas.height / sourceH);
+  const offsetX = (canvas.width - sourceW * scale) / 2;
+  const offsetY = (canvas.height - sourceH * scale) / 2;
+  ctx.save();
+  ctx.translate(offsetX, offsetY);
+  ctx.scale(scale, scale);
+  const tool = submission.tool;
+  if (tool === "shoelaces") {
+    const paths = submission.paths || [];
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    paths.forEach((path) => {
+      const points = path.points || [];
+      if (points.length < 2) {
+        return;
+      }
+      ctx.strokeStyle = path.color || "#111111";
+      ctx.lineWidth = path.width || 4;
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      points.slice(1).forEach((pt) => ctx.lineTo(pt.x, pt.y));
+      ctx.stroke();
+    });
+  } else if (tool === "pixel_grid") {
+    const cells = submission.cells || [];
+    const cellW = sourceW / 3;
+    const cellH = sourceH / 3;
+    for (let idx = 0; idx < 9; idx += 1) {
+      const color = cells[idx] || "#ffffff";
+      const row = Math.floor(idx / 3);
+      const col = idx % 3;
+      ctx.fillStyle = color;
+      ctx.fillRect(col * cellW, row * cellH, cellW, cellH);
+      ctx.strokeStyle = "#e5e7eb";
+      ctx.strokeRect(col * cellW, row * cellH, cellW, cellH);
+    }
+  } else if (tool === "icon_set") {
+    const icons = submission.icons || [];
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = `${CYBER_TEXT_SIZE}px serif`;
+    icons.forEach((icon) => {
+      if (!icon) {
+        return;
+      }
+      ctx.fillText(icon.emoji || "", icon.x, icon.y);
+    });
+  } else if (tool === "aeiou") {
+    const letters = submission.letters || [];
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = `bold ${CYBER_TEXT_SIZE}px sans-serif`;
+    letters.forEach((letter) => {
+      if (!letter) {
+        return;
+      }
+      ctx.save();
+      ctx.translate(letter.x, letter.y);
+      ctx.rotate(((letter.rotation || 0) * Math.PI) / 180);
+      ctx.fillStyle = "#111827";
+      ctx.fillText(letter.char || "", 0, 0);
+      ctx.restore();
+    });
+  } else if (tool === "shape_stacker") {
+    const shapes = submission.shapes || [];
+    shapes.forEach((shape) => {
+      if (!shape) {
+        return;
+      }
+      drawCyberShape(ctx, shape.shape, shape.x, shape.y, shape.rotation || 0);
+    });
+  }
+  ctx.restore();
+}
+
+function setCyberActiveTool(toolIndex) {
+  const toolKey = Number.isFinite(toolIndex) ? CYBER_TOOL_KEYS[toolIndex] : null;
+  const toolMap = {
+    shoelaces: cyberToolShoelaces,
+    pixel_grid: cyberToolPixel,
+    icon_set: cyberToolIconSet,
+    aeiou: cyberToolLetters,
+    shape_stacker: cyberToolShapes,
+  };
+  Object.values(toolMap).forEach((el) => {
+    if (el) {
+      el.classList.add("hidden");
+    }
+  });
+  if (toolKey && toolMap[toolKey]) {
+    toolMap[toolKey].classList.remove("hidden");
+  }
+  return toolKey;
+}
+
+function resetCyberToolState(toolKey) {
+  if (toolKey === "shoelaces") {
+    cyberShoelacePaths = [];
+    cyberShoelaceCurrentPath = null;
+    cyberShoelaceDrawing = false;
+    renderCyberShoelaceCanvas();
+  } else if (toolKey === "pixel_grid") {
+    cyberPixelCells = Array(9).fill(null);
+    renderCyberPixelGrid();
+  } else if (toolKey === "icon_set") {
+    cyberIconItems = [];
+    renderCyberIconCanvas();
+  } else if (toolKey === "aeiou") {
+    cyberLetterItems = [];
+    cyberLetterSelectedId = null;
+    renderCyberLetterCanvas();
+  } else if (toolKey === "shape_stacker") {
+    cyberShapeItems = [];
+    cyberShapeSelectedId = null;
+    updateCyberShapeRotationControl();
+    renderCyberShapeCanvas();
+  }
+}
+
+function buildCyberSubmission(toolIndex) {
+  const toolKey = CYBER_TOOL_KEYS[toolIndex] || "shoelaces";
+  if (toolKey === "shoelaces") {
+    return {
+      tool: toolKey,
+      width: cyberShoelaceCanvas ? cyberShoelaceCanvas.width : CYBER_CANVAS_SIZE,
+      height: cyberShoelaceCanvas ? cyberShoelaceCanvas.height : CYBER_CANVAS_SIZE,
+      paths: cyberShoelacePaths.map((path) => ({
+        points: path.points.map((pt) => ({ x: pt.x, y: pt.y })),
+        color: path.color,
+        width: path.width,
+      })),
+    };
+  }
+  if (toolKey === "pixel_grid") {
+    ensureCyberPixelCells();
+    return {
+      tool: toolKey,
+      width: CYBER_CANVAS_SIZE,
+      height: CYBER_CANVAS_SIZE,
+      cells: cyberPixelCells.slice(),
+    };
+  }
+  if (toolKey === "icon_set") {
+    const { width, height } = getCyberStageSize(cyberIconCanvas);
+    return {
+      tool: toolKey,
+      width,
+      height,
+      icons: cyberIconItems.map((item) => ({ emoji: item.emoji, x: item.x, y: item.y })),
+    };
+  }
+  if (toolKey === "aeiou") {
+    const { width, height } = getCyberStageSize(cyberLetterCanvas);
+    return {
+      tool: toolKey,
+      width,
+      height,
+      letters: cyberLetterItems.map((item) => ({
+        char: item.char,
+        x: item.x,
+        y: item.y,
+        rotation: item.rotation || 0,
+      })),
+    };
+  }
+  const { width, height } = getCyberStageSize(cyberShapeCanvas);
+  return {
+    tool: toolKey,
+    width,
+    height,
+    shapes: cyberShapeItems.map((item) => ({
+      shape: item.shape,
+      x: item.x,
+      y: item.y,
+      rotation: item.rotation || 0,
+    })),
+  };
+}
+
+function canSubmitCyber(toolKey) {
+  if (toolKey === "shoelaces") {
+    return cyberShoelacePaths.length > 0;
+  }
+  if (toolKey === "pixel_grid") {
+    ensureCyberPixelCells();
+    return cyberPixelCells.every((cell) => Boolean(cell));
+  }
+  if (toolKey === "icon_set") {
+    return cyberIconItems.length >= 2 && cyberIconItems.length <= 5;
+  }
+  if (toolKey === "aeiou") {
+    return cyberLetterItems.length >= 1 && cyberLetterItems.length <= 10;
+  }
+  if (toolKey === "shape_stacker") {
+    return cyberShapeItems.length >= 1;
+  }
+  return false;
+}
+
+function updateCyberSubmitButton(view) {
+  if (!cyberSubmitBtn) {
+    return;
+  }
+  if (!view || view.phase !== "crafting" || !Number.isFinite(view.your_tool)) {
+    cyberSubmitBtn.disabled = true;
+    return;
+  }
+  if (view.submitted) {
+    cyberSubmitBtn.disabled = true;
+    if (cyberSubmissionHint) {
+      cyberSubmissionHint.textContent = "Submitted.";
+    }
+    return;
+  }
+  const toolKey = CYBER_TOOL_KEYS[view.your_tool];
+  const ready = canSubmitCyber(toolKey);
+  cyberSubmitBtn.disabled = !ready;
+  if (cyberSubmissionHint) {
+    cyberSubmissionHint.textContent = ready ? "" : "Complete your tool before submitting.";
+  }
+}
+
+function renderCyberMatrix(matrix, target) {
+  if (!cyberMatrixEl) {
+    return;
+  }
+  cyberMatrixEl.innerHTML = "";
+  (matrix || []).forEach((cell) => {
+    const wrapper = document.createElement("div");
+    wrapper.className = "cyber-cell";
+    if (target && cell.id === target) {
+      wrapper.classList.add("target");
+    }
+    const img = document.createElement("img");
+    img.src = cell.url;
+    img.alt = cell.id || "card";
+    const label = document.createElement("div");
+    label.className = "cyber-coord";
+    label.textContent = cell.id || "-";
+    wrapper.appendChild(img);
+    wrapper.appendChild(label);
+    cyberMatrixEl.appendChild(wrapper);
+  });
+}
+
+function renderCyberPlayers(view) {
+  if (!cyberPlayers) {
+    return;
+  }
+  cyberPlayers.innerHTML = "";
+  (view.players || []).forEach((player) => {
+    const row = document.createElement("div");
+    row.className = "player-row";
+    const toolKey = Number.isFinite(player.tool_index) ? CYBER_TOOL_KEYS[player.tool_index] : null;
+    const toolLabel = toolKey ? CYBER_TOOL_LABELS[toolKey] : "-";
+    row.textContent = `${player.name || "?"} · ${player.score ?? 0} pts · ${toolLabel}`;
+    if (player.player_id === view.you) {
+      row.classList.add("player-you");
+    }
+    cyberPlayers.appendChild(row);
+  });
+}
+
+function renderCyberGuessArea(view) {
+  if (!cyberWorks) {
+    return;
+  }
+  if (view && view.your_guesses) {
+    cyberGuessSelections = { ...view.your_guesses };
+  }
+  const works = Array.isArray(view.works) ? view.works : [];
+  cyberWorks.innerHTML = "";
+  works.forEach((work, index) => {
+    const card = document.createElement("div");
+    card.className = "cyber-work-card";
+    const header = document.createElement("div");
+    header.className = "cyber-work-header";
+    header.textContent = work.is_self ? "Your Work" : `Work #${index + 1}`;
+    card.appendChild(header);
+
+    const body = document.createElement("div");
+    body.className = "cyber-work-body";
+    const canvas = document.createElement("canvas");
+    canvas.className = "cyber-preview";
+    canvas.width = 180;
+    canvas.height = 180;
+    renderCyberSubmission(canvas, work.submission);
+    body.appendChild(canvas);
+
+    if (!work.is_self) {
+      const select = document.createElement("select");
+      select.className = "cyber-guess-select";
+      const empty = document.createElement("option");
+      empty.value = "";
+      empty.textContent = "-";
+      select.appendChild(empty);
+      CYBER_COORDS.forEach((coord) => {
+        const option = document.createElement("option");
+        option.value = coord;
+        option.textContent = coord;
+        select.appendChild(option);
+      });
+      if (cyberGuessSelections[work.work_id]) {
+        select.value = cyberGuessSelections[work.work_id];
+      }
+      select.disabled = view.guessed;
+      select.addEventListener("change", () => {
+        cyberGuessSelections[work.work_id] = select.value;
+        updateCyberGuessButton(view);
+      });
+      body.appendChild(select);
+    } else {
+      const note = document.createElement("div");
+      note.className = "hint";
+      note.textContent = "You do not guess your own work.";
+      body.appendChild(note);
+    }
+
+    card.appendChild(body);
+    cyberWorks.appendChild(card);
+  });
+  updateCyberGuessButton(view);
+}
+
+function updateCyberGuessButton(view) {
+  if (!cyberSubmitGuessBtn) {
+    return;
+  }
+  if (!view || view.phase !== "guessing") {
+    cyberSubmitGuessBtn.disabled = true;
+    return;
+  }
+  if (view.guessed) {
+    cyberSubmitGuessBtn.disabled = true;
+    return;
+  }
+  const works = Array.isArray(view.works) ? view.works : [];
+  const ready = works.every((work) => {
+    if (work.is_self) {
+      return true;
+    }
+    return Boolean(cyberGuessSelections[work.work_id]);
+  });
+  cyberSubmitGuessBtn.disabled = !ready;
+}
+
+function renderCyberScoreArea(view) {
+  if (cyberRoundScores) {
+    cyberRoundScores.innerHTML = "";
+    (view.round_scores || []).forEach((score) => {
+      const card = document.createElement("div");
+      card.className = "cyber-score-card";
+      const name = document.createElement("div");
+      name.className = "score-name";
+      name.textContent = score.name || "?";
+      const detail = document.createElement("div");
+      detail.textContent = `Guess +${score.guess_points} · Artist +${score.artist_points} · Total ${score.total_score}`;
+      card.appendChild(name);
+      card.appendChild(detail);
+      cyberRoundScores.appendChild(card);
+    });
+  }
+  if (cyberReveal) {
+    cyberReveal.innerHTML = "";
+    (view.reveal || []).forEach((entry, idx) => {
+      const card = document.createElement("div");
+      card.className = "cyber-reveal-card";
+      const header = document.createElement("div");
+      header.className = "cyber-reveal-header";
+      header.textContent = `#${idx + 1} ${entry.owner_name || "?"} · Target ${entry.target || "-"}`;
+      card.appendChild(header);
+      const canvas = document.createElement("canvas");
+      canvas.className = "cyber-preview";
+      canvas.width = 180;
+      canvas.height = 180;
+      renderCyberSubmission(canvas, entry.submission);
+      card.appendChild(canvas);
+      const guesses = entry.guesses || [];
+      guesses.forEach((guess) => {
+        const line = document.createElement("div");
+        line.className = "cyber-guess-row";
+        const name = document.createElement("span");
+        name.textContent = guess.name || "?";
+        const coord = document.createElement("span");
+        coord.textContent = guess.guess || "-";
+        coord.className = guess.correct ? "cyber-guess-correct" : "cyber-guess-wrong";
+        line.appendChild(name);
+        line.appendChild(coord);
+        card.appendChild(line);
+      });
+      cyberReveal.appendChild(card);
+    });
+  }
+}
+
+function clearCyberState() {
+  currentCyberView = null;
+  cyberLastRound = null;
+  cyberLastPhase = null;
+  cyberLastToolIndex = null;
+  cyberShoelacePaths = [];
+  cyberShoelaceCurrentPath = null;
+  cyberShoelaceDrawing = false;
+  cyberPixelCells = Array(9).fill(null);
+  cyberPixelSelectedColor = CYBER_PIXEL_COLORS[0];
+  cyberIconItems = [];
+  cyberIconDragging = null;
+  cyberIconSelectedId = null;
+  cyberLetterItems = [];
+  cyberLetterDragging = null;
+  cyberLetterSelectedId = null;
+  cyberShapeItems = [];
+  cyberShapeDragging = null;
+  cyberShapeSelectedId = null;
+  cyberGuessSelections = {};
+  if (cyberPhaseLabel) cyberPhaseLabel.textContent = "-";
+  if (cyberRoundLabel) cyberRoundLabel.textContent = "-";
+  if (cyberTotalRoundsLabel) cyberTotalRoundsLabel.textContent = "-";
+  if (cyberToolLabel) cyberToolLabel.textContent = "-";
+  if (cyberTargetLabel) cyberTargetLabel.textContent = "-";
+  if (cyberSubmittedLabel) cyberSubmittedLabel.textContent = "-";
+  if (cyberGuessedLabel) cyberGuessedLabel.textContent = "-";
+  if (cyberMatrixEl) cyberMatrixEl.innerHTML = "";
+  if (cyberWorks) cyberWorks.innerHTML = "";
+  if (cyberRoundScores) cyberRoundScores.innerHTML = "";
+  if (cyberReveal) cyberReveal.innerHTML = "";
+  if (cyberPlayers) cyberPlayers.innerHTML = "";
+  if (cyberCraftArea) cyberCraftArea.classList.add("hidden");
+  if (cyberGuessArea) cyberGuessArea.classList.add("hidden");
+  if (cyberScoreArea) cyberScoreArea.classList.add("hidden");
+  if (cyberGameOverNotice) cyberGameOverNotice.classList.add("hidden");
+  renderCyberShoelaceCanvas();
+  renderCyberPixelGrid();
+  renderCyberIconCanvas();
+  renderCyberLetterCanvas();
+  renderCyberShapeCanvas();
+}
+
+function renderCyberPicturesGameState(data) {
+  const view = data.view;
+  currentCyberView = view;
+  if (currentGameType !== "cyber_pictures") {
+    currentGameType = "cyber_pictures";
+    setGamePanelVisibility("cyber_pictures");
+  }
+  if (cyberPhaseLabel) {
+    cyberPhaseLabel.textContent = view.phase || "-";
+  }
+  if (cyberRoundLabel) {
+    cyberRoundLabel.textContent = view.round ?? "-";
+  }
+  if (cyberTotalRoundsLabel) {
+    cyberTotalRoundsLabel.textContent = view.total_rounds ?? "-";
+  }
+  const toolKey = Number.isFinite(view.your_tool) ? CYBER_TOOL_KEYS[view.your_tool] : null;
+  if (cyberToolLabel) {
+    cyberToolLabel.textContent = toolKey ? CYBER_TOOL_LABELS[toolKey] : "-";
+  }
+  if (cyberTargetLabel) {
+    cyberTargetLabel.textContent = view.your_target || "-";
+  }
+  if (cyberSubmittedLabel) {
+    cyberSubmittedLabel.textContent = view.submitted ? "yes" : "no";
+  }
+  if (cyberGuessedLabel) {
+    cyberGuessedLabel.textContent = view.guessed ? "yes" : "no";
+  }
+
+  renderCyberMatrix(view.matrix || [], view.your_target);
+  renderCyberPlayers(view);
+
+  if (view.phase === "crafting") {
+    if (cyberCraftArea) cyberCraftArea.classList.remove("hidden");
+    if (cyberGuessArea) cyberGuessArea.classList.add("hidden");
+    if (cyberScoreArea) cyberScoreArea.classList.add("hidden");
+    if (cyberGameOverNotice) cyberGameOverNotice.classList.add("hidden");
+    const activeTool = setCyberActiveTool(view.your_tool);
+    if (cyberLastRound !== view.round || cyberLastToolIndex !== view.your_tool || cyberLastPhase !== view.phase) {
+      resetCyberToolState(activeTool);
+    }
+    updateCyberSubmitButton(view);
+  } else if (view.phase === "guessing") {
+    if (cyberCraftArea) cyberCraftArea.classList.add("hidden");
+    if (cyberGuessArea) cyberGuessArea.classList.remove("hidden");
+    if (cyberScoreArea) cyberScoreArea.classList.add("hidden");
+    if (cyberGameOverNotice) cyberGameOverNotice.classList.add("hidden");
+    if (cyberLastPhase !== view.phase || cyberLastRound !== view.round) {
+      cyberGuessSelections = {};
+    }
+    renderCyberGuessArea(view);
+  } else if (view.phase === "scoring" || view.phase === "ended") {
+    if (cyberCraftArea) cyberCraftArea.classList.add("hidden");
+    if (cyberGuessArea) cyberGuessArea.classList.add("hidden");
+    if (cyberScoreArea) cyberScoreArea.classList.remove("hidden");
+    if (cyberGameOverNotice) {
+      cyberGameOverNotice.classList.toggle("hidden", view.phase !== "ended");
+    }
+    renderCyberScoreArea(view);
+    if (cyberNextRoundBtn) {
+      cyberNextRoundBtn.disabled = !view.allow_next_round;
+    }
+  }
+
+  cyberLastRound = view.round;
+  cyberLastPhase = view.phase;
+  cyberLastToolIndex = view.your_tool;
+}
+
+renderCyberPixelPalette();
+renderCyberIconPalette();
+renderCyberLetterPalette();
+renderCyberShapePalette();
+initCyberPixelGrid();
+renderCyberIconCanvas();
+renderCyberLetterCanvas();
+renderCyberShapeCanvas();
+renderCyberShoelaceCanvas();
+
+if (cyberShoelaceCanvas) {
+  cyberShoelaceCanvas.addEventListener("pointerdown", startCyberShoelaceDraw);
+  cyberShoelaceCanvas.addEventListener("pointermove", moveCyberShoelaceDraw);
+  cyberShoelaceCanvas.addEventListener("pointerup", endCyberShoelaceDraw);
+  cyberShoelaceCanvas.addEventListener("pointerleave", endCyberShoelaceDraw);
+}
+
+if (cyberShoelaceClearBtn) {
+  cyberShoelaceClearBtn.addEventListener("click", () => clearCyberShoelace());
+}
+
+if (cyberShoelaceUndoBtn) {
+  cyberShoelaceUndoBtn.addEventListener("click", () => undoCyberShoelace());
+}
+
+if (cyberIconRemoveBtn) {
+  cyberIconRemoveBtn.addEventListener("click", () => removeCyberIcon());
+}
+
+if (cyberIconClearBtn) {
+  cyberIconClearBtn.addEventListener("click", () => clearCyberIcons());
+}
+
+if (cyberLetterRotateBtn) {
+  cyberLetterRotateBtn.addEventListener("click", () => rotateSelectedCyberLetter());
+}
+
+if (cyberLetterRemoveBtn) {
+  cyberLetterRemoveBtn.addEventListener("click", () => removeSelectedCyberLetter());
+}
+
+if (cyberLetterClearBtn) {
+  cyberLetterClearBtn.addEventListener("click", () => clearCyberLetters());
+}
+
+if (cyberShapeRotate) {
+  cyberShapeRotate.addEventListener("input", (event) => {
+    const value = Number.parseInt(event.target.value, 10);
+    setCyberShapeRotation(Number.isFinite(value) ? value : 0);
+  });
+}
+
+if (cyberShapeRemoveBtn) {
+  cyberShapeRemoveBtn.addEventListener("click", () => removeSelectedCyberShape());
+}
+
+if (cyberShapeClearBtn) {
+  cyberShapeClearBtn.addEventListener("click", () => clearCyberShapes());
+}
+
+if (cyberSubmitBtn) {
+  cyberSubmitBtn.addEventListener("click", () => {
+    if (!currentCyberView || !Number.isFinite(currentCyberView.your_tool)) {
+      return;
+    }
+    const toolKey = CYBER_TOOL_KEYS[currentCyberView.your_tool];
+    if (!canSubmitCyber(toolKey)) {
+      return;
+    }
+    const submission = buildCyberSubmission(currentCyberView.your_tool);
+    sendAction({ type: "submit_crafting", submission });
+  });
+}
+
+if (cyberSubmitGuessBtn) {
+  cyberSubmitGuessBtn.addEventListener("click", () => {
+    if (!currentCyberView) {
+      return;
+    }
+    const works = Array.isArray(currentCyberView.works) ? currentCyberView.works : [];
+    const ready = works.every((work) => work.is_self || Boolean(cyberGuessSelections[work.work_id]));
+    if (!ready) {
+      return;
+    }
+    sendAction({ type: "submit_guesses", guesses: cyberGuessSelections });
+  });
+}
+
+if (cyberNextRoundBtn) {
+  cyberNextRoundBtn.addEventListener("click", () => {
+    sendAction({ type: "next_round" });
+  });
+}

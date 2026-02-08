@@ -25,6 +25,9 @@ from game.decrypto_ai import get_bot_strategies
 logger = logging.getLogger("openboardgame")
 sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
 fastapi_app = FastAPI()
+CYBER_PICTURES_DIR = ".cyber_pictures"
+os.makedirs(CYBER_PICTURES_DIR, exist_ok=True)
+fastapi_app.mount("/static/cards", StaticFiles(directory=CYBER_PICTURES_DIR), name="cyber_pictures")
 fastapi_app.mount("/static", StaticFiles(directory="static"), name="static")
 
 

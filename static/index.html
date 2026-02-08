@@ -111,6 +111,7 @@
                     <option value="hanabi">Hanabi</option>
                     <option value="the_gang">The Gang</option>
                     <option value="draw_guess">Draw & Guess</option>
+                    <option value="cyber_pictures">Cyber Pictures</option>
                     <option value="perfect_mismatch">Perfect Mismatch</option>
                     <option value="aidixit">AI Dixit</option>
                     <option value="impression_flower">Impression Flower</option>
@@ -173,6 +174,14 @@
                       <label for="drawGuessAnswerLengthToggle">Answer Length</label>
                       <input id="drawGuessAnswerLengthToggle" type="checkbox" />
                       <span class="hint">Show the number of characters while guessing.</span>
+                    </div>
+                  </div>
+                  <div class="game-config-card hidden" id="cyberPicturesConfigBox" aria-hidden="true">
+                    <div class="game-config-title">Cyber Pictures</div>
+                    <div class="row hidden toggle-row" id="cyberPicturesDuplicateRow">
+                      <label for="cyberPicturesDuplicateToggle">Allow Duplicate Targets</label>
+                      <input id="cyberPicturesDuplicateToggle" type="checkbox" />
+                      <span class="hint">Allow multiple players to receive the same coordinate.</span>
                     </div>
                   </div>
                   <div class="game-config-card hidden" id="decryptoConfigBox" aria-hidden="true">
@@ -860,6 +869,98 @@
                   <button id="drawGuessRestartBtn">Play Again</button>
                 </div>
               </div>
+            </div>
+
+            <div id="cyberPicturesPanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="cyberPhase">-</span></div>
+                <div>Round: <span id="cyberRound">-</span>/<span id="cyberTotalRounds">-</span></div>
+                <div>Tool: <span id="cyberToolLabel">-</span></div>
+                <div>Target: <span id="cyberTargetLabel">-</span></div>
+              </div>
+              <div class="row">
+                <div>Submitted: <span id="cyberSubmitted">-</span></div>
+                <div>Guessed: <span id="cyberGuessed">-</span></div>
+              </div>
+
+              <h3>Matrix</h3>
+              <div id="cyberMatrix" class="cyber-matrix"></div>
+
+              <div id="cyberCraftArea">
+                <h3>Craft</h3>
+                <div id="cyberToolShoelaces" class="cyber-tool hidden">
+                  <div class="row">
+                    <canvas id="cyberShoelaceCanvas" width="360" height="360"></canvas>
+                  </div>
+                  <div class="row actions">
+                    <button id="cyberShoelaceUndoBtn">Undo Path</button>
+                    <button id="cyberShoelaceClearBtn">Clear</button>
+                  </div>
+                  <div class="hint">Draw up to 2 paths.</div>
+                </div>
+                <div id="cyberToolPixel" class="cyber-tool hidden">
+                  <div id="cyberPixelGrid" class="cyber-pixel-grid"></div>
+                  <div class="row cyber-pixel-palette" id="cyberPixelPalette"></div>
+                </div>
+                <div id="cyberToolIconSet" class="cyber-tool hidden">
+                  <div class="row cyber-icon-palette" id="cyberIconPalette"></div>
+                  <div id="cyberIconCanvas" class="cyber-stage"></div>
+                  <div class="row actions">
+                    <button id="cyberIconRemoveBtn">Remove Last</button>
+                    <button id="cyberIconClearBtn">Clear</button>
+                  </div>
+                  <div class="hint">Use 2-5 icons.</div>
+                </div>
+                <div id="cyberToolLetters" class="cyber-tool hidden">
+                  <div class="row cyber-letter-palette" id="cyberLetterPalette"></div>
+                  <div id="cyberLetterCanvas" class="cyber-stage"></div>
+                  <div class="row actions">
+                    <button id="cyberLetterRotateBtn">Rotate Selected</button>
+                    <button id="cyberLetterRemoveBtn">Remove Selected</button>
+                    <button id="cyberLetterClearBtn">Clear</button>
+                  </div>
+                  <div class="hint">Tap a letter to rotate; up to 10 letters.</div>
+                </div>
+                <div id="cyberToolShapes" class="cyber-tool hidden">
+                  <div class="row cyber-shape-palette" id="cyberShapePalette"></div>
+                  <div id="cyberShapeCanvas" class="cyber-stage"></div>
+                  <div class="row">
+                    <label for="cyberShapeRotate">Rotation</label>
+                    <input id="cyberShapeRotate" type="range" min="0" max="360" value="0" />
+                    <span id="cyberShapeRotateValue">0°</span>
+                  </div>
+                  <div class="row actions">
+                    <button id="cyberShapeRemoveBtn">Remove Selected</button>
+                    <button id="cyberShapeClearBtn">Clear</button>
+                  </div>
+                  <div class="hint">Drag shapes; rotate freely.</div>
+                </div>
+                <div class="row actions">
+                  <button id="cyberSubmitBtn">Submit Creation</button>
+                </div>
+                <div id="cyberSubmissionHint" class="hint"></div>
+              </div>
+
+              <div id="cyberGuessArea" class="hidden">
+                <h3>Guess</h3>
+                <div id="cyberWorks"></div>
+                <div class="row actions">
+                  <button id="cyberSubmitGuessBtn">Submit Guesses</button>
+                </div>
+              </div>
+
+              <div id="cyberScoreArea" class="hidden">
+                <h3>Round Results</h3>
+                <div id="cyberRoundScores" class="cyber-score-grid"></div>
+                <div id="cyberReveal" class="cyber-reveal-list"></div>
+                <div class="row actions">
+                  <button id="cyberNextRoundBtn">Next Round</button>
+                </div>
+                <div id="cyberGameOverNotice" class="hint hidden">Game over.</div>
+              </div>
+
+              <h3>Players</h3>
+              <div id="cyberPlayers"></div>
             </div>
 
             <div id="aidixitPanel" class="hidden">

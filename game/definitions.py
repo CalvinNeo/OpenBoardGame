@@ -2,6 +2,7 @@ from game.abraca_what import AbracaWhatGame
 from game.ai_dixit import AiDixitGame
 from game.cabo import CaboGame
 from game.coyote import CoyoteGame
+from game.cyber_pictures import CyberPicturesGame
 from game.decrypto import DecryptoGame
 from game.draw_guess import DrawGuessGame
 from game.flip7 import Flip7Game
@@ -190,6 +191,36 @@ DRAW_GUESS_CONFIG_SCHEMA = {
                 ]
             },
         },
+    },
+    "additionalProperties": False,
+}
+
+CYBER_PICTURES_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {"type": {"const": "submit_crafting"}, "submission": {"type": "object"}},
+            "required": ["type", "submission"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "submit_guesses"},
+                "guesses": {"type": "object", "additionalProperties": {"type": "string"}},
+            },
+            "required": ["type", "guesses"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "next_round"}}, "required": ["type"], "additionalProperties": False},
+    ],
+}
+
+CYBER_PICTURES_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "allow_duplicate_targets": {"type": "boolean"},
     },
     "additionalProperties": False,
 }
@@ -874,6 +905,21 @@ register_game(
         module=DrawGuessGame,
         serialize=DrawGuessGame.serialize,
         deserialize=DrawGuessGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=CyberPicturesGame.game_id,
+        name="Cyber Pictures",
+        min_players=CyberPicturesGame.min_players,
+        max_players=CyberPicturesGame.max_players,
+        turn_mode="simultaneous",
+        action_schema=CYBER_PICTURES_ACTION_SCHEMA,
+        config_schema=CYBER_PICTURES_CONFIG_SCHEMA,
+        module=CyberPicturesGame,
+        serialize=CyberPicturesGame.serialize,
+        deserialize=CyberPicturesGame.deserialize,
     )
 )
 

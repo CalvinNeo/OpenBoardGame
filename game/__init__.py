@@ -3,6 +3,7 @@ from game.ai_dixit import AiDixitGame
 from game.blokus import BlokusGame
 from game.cabo import CaboGame
 from game.coyote import CoyoteGame
+from game.cyber_pictures import CyberPicturesGame
 from game.decrypto import DecryptoGame
 from game.draw_guess import DrawGuessGame
 from game.flip7 import Flip7Game
@@ -29,6 +30,7 @@ __all__ = [
     "HalliGalliGame",
     "HanabiGame",
     "CoyoteGame",
+    "CyberPicturesGame",
     "DecryptoGame",
     "ImpressionFlowerGame",
     "PerfectMismatchGame",
