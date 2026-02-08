@@ -1,0 +1,19 @@
+[
+  {
+    "id": "M001",
+    "desc": "赢家必须拥有顺子或更强牌力",
+    "type": "winner_min_strength",
+    "min_strength": "STRAIGHT"
+  },
+  {
+    "id": "M002",
+    "desc": "最后一名必须是高牌 (没有任何对子)",
+    "type": "last_hand_type",
+    "hand_type": "HIGH_CARD"
+  },
+  {
+    "id": "M003",
+    "desc": "第1名和第2名的底牌至少有一张同花色",
+    "type": "top_two_share_suit"
+  }
+]

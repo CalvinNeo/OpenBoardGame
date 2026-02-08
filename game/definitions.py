@@ -11,6 +11,7 @@ from game.hanabi import HanabiGame
 from game.impression_flower import ImpressionFlowerGame
 from game.perfect_mismatch import PerfectMismatchGame
 from game.point_salad import PointSaladGame
+from game.the_gang import TheGangGame
 from game.registry import GameDefinition, register_game
 from game.splendor import SplendorGame
 from game.blokus import BlokusGame
@@ -728,6 +729,49 @@ HANABI_CONFIG_SCHEMA = {
     "additionalProperties": False,
 }
 
+THE_GANG_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "move_rank"},
+                "player_id": {"type": "string"},
+                "to_index": {"type": "integer", "minimum": 0},
+            },
+            "required": ["type", "player_id", "to_index"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "toggle_ready"}}, "required": ["type"], "additionalProperties": False},
+        {"type": "object", "properties": {"type": {"const": "reveal_next"}}, "required": ["type"], "additionalProperties": False},
+        {"type": "object", "properties": {"type": {"const": "mulligan"}}, "required": ["type"], "additionalProperties": False},
+        {
+            "type": "object",
+            "properties": {"type": {"const": "spy"}, "target_player_id": {"type": "string"}},
+            "required": ["type", "target_player_id"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "lock_in"}}, "required": ["type"], "additionalProperties": False},
+        {"type": "object", "properties": {"type": {"const": "next_round"}}, "required": ["type"], "additionalProperties": False},
+        {"type": "object", "properties": {"type": {"const": "play_again"}}, "required": ["type"], "additionalProperties": False},
+    ],
+}
+
+THE_GANG_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "mode": {"type": "string", "enum": ["novice", "normal", "expert"]},
+        "starting_lives": {"type": "integer", "minimum": 1},
+        "max_lives": {"type": "integer", "minimum": 1},
+        "starting_tokens": {"type": "integer", "minimum": 0},
+        "token_drop_rate": {"type": "number", "minimum": 0, "maximum": 1},
+        "round_time_limit_sec": {"type": "integer", "minimum": 0},
+        "ready_countdown_ms": {"type": "integer", "minimum": 0},
+        "odds_samples": {"type": "integer", "minimum": 10},
+    },
+    "additionalProperties": False,
+}
+
 register_game(
     GameDefinition(
         game_id=CaboGame.game_id,
@@ -965,5 +1009,20 @@ register_game(
         module=HanabiGame,
         serialize=HanabiGame.serialize,
         deserialize=HanabiGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=TheGangGame.game_id,
+        name="The Gang",
+        min_players=TheGangGame.min_players,
+        max_players=TheGangGame.max_players,
+        turn_mode="simultaneous",
+        action_schema=THE_GANG_ACTION_SCHEMA,
+        config_schema=THE_GANG_CONFIG_SCHEMA,
+        module=TheGangGame,
+        serialize=TheGangGame.serialize,
+        deserialize=TheGangGame.deserialize,
     )
 )

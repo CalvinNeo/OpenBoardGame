@@ -3524,3 +3524,92 @@ body.log-open {
     width: 100%;
   }
 }
+
+.gang-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gang-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 6px 8px;
+  min-width: 44px;
+  text-align: center;
+  background: #fff;
+  font-weight: 600;
+}
+
+.gang-card.hidden {
+  background: #e5e7eb;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.gang-ranking {
+  display: grid;
+  gap: 6px;
+}
+
+.gang-slot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gang-slot-label {
+  min-width: 64px;
+  font-weight: 600;
+}
+
+.gang-players {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.gang-player-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 10px;
+  min-width: 200px;
+  background: #fff;
+}
+
+.gang-player-card.ready {
+  border-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15);
+}
+
+.gang-player-card.you {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.gang-player-hand {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.gang-badge {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.gang-summary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+#theGangPanel .row.actions {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gang-card.highlight {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+}

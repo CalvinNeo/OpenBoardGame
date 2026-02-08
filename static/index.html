@@ -109,6 +109,7 @@
                     <option value="decrypto">Decrypto</option>
                     <option value="skull">Skull</option>
                     <option value="hanabi">Hanabi</option>
+                    <option value="the_gang">The Gang</option>
                     <option value="draw_guess">Draw & Guess</option>
                     <option value="perfect_mismatch">Perfect Mismatch</option>
                     <option value="aidixit">AI Dixit</option>
@@ -229,6 +230,26 @@
                         <option value="3" selected>3</option>
                         <option value="4">4</option>
                         <option value="5">5</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="game-config-card hidden" id="gangConfigBox" aria-hidden="true">
+                    <div class="game-config-title">The Gang</div>
+                    <div class="row" id="gangModeRow">
+                      <label for="gangModeSelect">Mode</label>
+                      <select id="gangModeSelect">
+                        <option value="normal" selected>Normal</option>
+                        <option value="novice">Novice</option>
+                        <option value="expert">Expert</option>
+                      </select>
+                    </div>
+                    <div class="row" id="gangTimeRow">
+                      <label for="gangTimeSelect">Round Timer</label>
+                      <select id="gangTimeSelect">
+                        <option value="0" selected>Off</option>
+                        <option value="60">60s</option>
+                        <option value="90">90s</option>
+                        <option value="120">120s</option>
                       </select>
                     </div>
                   </div>
@@ -476,6 +497,50 @@
 
               <h3>Game Log</h3>
               <div id="hanabiLog" class="hanabi-log"></div>
+            </div>
+
+            <div id="theGangPanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="gangPhase">-</span></div>
+                <div>Level: <span id="gangLevel">-</span></div>
+                <div>Lives: <span id="gangLives">-</span></div>
+                <div>Tokens: <span id="gangTokens">-</span></div>
+              </div>
+              <div class="row">
+                <div>Mode: <span id="gangMode">-</span></div>
+                <div>Mission: <span id="gangMission">-</span></div>
+                <div>Timer: <span id="gangTimer">-</span></div>
+                <div>Lock: <span id="gangLockTimer">-</span></div>
+              </div>
+
+              <h3>Community Cards</h3>
+              <div id="gangCommunity" class="gang-cards"></div>
+
+              <h3>Ranking Track</h3>
+              <div id="gangRanking" class="gang-ranking"></div>
+
+              <div class="row actions">
+                <button id="gangRevealBtn">Reveal Next</button>
+                <button id="gangReadyBtn">Ready</button>
+                <button id="gangLockBtn">Lock In</button>
+                <button id="gangMulliganBtn">Mulligan (-1 token)</button>
+              </div>
+              <div class="row actions">
+                <label for="gangSpyTargetSelect">Spy Target</label>
+                <select id="gangSpyTargetSelect"></select>
+                <button id="gangSpyBtn">Spy (-1 token)</button>
+                <button id="gangNextRoundBtn">Next Round</button>
+                <button id="gangPlayAgainBtn">Play Again</button>
+              </div>
+
+              <div id="gangRoundSummary" class="round-notice hidden">
+                <div id="gangRoundSummaryTitle" class="round-notice-title">Round Summary</div>
+                <div id="gangRoundSummaryBody" class="round-notice-body">-</div>
+                <div id="gangRoundSummaryList" class="gang-summary-list"></div>
+              </div>
+
+              <h3>Players</h3>
+              <div id="gangPlayers" class="gang-players"></div>
             </div>
 
             <div id="mismatchPanel" class="hidden">

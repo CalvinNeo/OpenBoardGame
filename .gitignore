@@ -4,10 +4,14 @@
 .data/
 .aidixit/
 .ai/
+.cyber_pictures/
 backup
+package-lock.json
+package.json
 
 __pycache__/
 *.py[cod]
+*.log
 
 .pytest_cache/
 .mypy_cache/

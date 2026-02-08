@@ -15,6 +15,7 @@ from game.point_salad import PointSaladGame
 from game.registry import GameDefinition, get_game, list_games
 from game.splendor import SplendorGame
 from game.skull import SkullGame
+from game.the_gang import TheGangGame
 from game import definitions as _definitions
 
 __all__ = [
@@ -34,6 +35,7 @@ __all__ = [
     "PointSaladGame",
     "SplendorGame",
     "SkullGame",
+    "TheGangGame",
     "GameDefinition",
     "get_game",
     "list_games",
