@@ -108,6 +108,7 @@
                     <option value="coyote">Coyote</option>
                     <option value="decrypto">Decrypto</option>
                     <option value="skull">Skull</option>
+                    <option value="cat_in_box">Cat in the Box</option>
                     <option value="hanabi">Hanabi</option>
                     <option value="the_gang">The Gang</option>
                     <option value="draw_guess">Draw & Guess</option>
@@ -456,6 +457,60 @@
 
               <h3>Players</h3>
               <div id="skullPlayers"></div>
+            </div>
+
+            <div id="catInBoxPanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="catInBoxPhase">-</span></div>
+                <div>Round: <span id="catInBoxRound">-</span>/<span id="catInBoxRoundsTotal">-</span></div>
+                <div>Current Turn: <span id="catInBoxTurn">-</span></div>
+              </div>
+              <div class="row">
+                <div>Lead: <span id="catInBoxLead">-</span></div>
+                <div>Trump: <span id="catInBoxTrump">-</span></div>
+                <div>Tricks Played: <span id="catInBoxTricksPlayed">-</span></div>
+              </div>
+              <div class="row">
+                <div>Paradox: <span id="catInBoxParadox">-</span></div>
+                <div>Winners: <span id="catInBoxWinners">-</span></div>
+              </div>
+
+              <h3>Research Board</h3>
+              <div id="catInBoxBoard" class="cat-box-board"></div>
+
+              <h3>Current Trick</h3>
+              <div id="catInBoxTrick" class="cat-box-trick"></div>
+
+              <h3>Your Hand</h3>
+              <div id="catInBoxHand" class="hand"></div>
+              <div class="row">
+                <div>Selected Card: <span id="catInBoxSelectedCard">-</span></div>
+                <div>Selected Color: <span id="catInBoxSelectedColor">-</span></div>
+                <button id="catInBoxClearSelection">Clear</button>
+              </div>
+              <div class="row actions cat-box-color-row" id="catInBoxColorButtons">
+                <button type="button" data-color="red">🟥 Red</button>
+                <button type="button" data-color="blue">🟦 Blue</button>
+                <button type="button" data-color="yellow">🟨 Yellow</button>
+                <button type="button" data-color="green">🟩 Green</button>
+              </div>
+
+              <h3>Actions</h3>
+              <div class="row actions">
+                <button id="catInBoxDiscardBtn">Discard</button>
+                <button id="catInBoxBid1Btn">Bid 1</button>
+                <button id="catInBoxBid2Btn">Bid 2</button>
+                <button id="catInBoxBid3Btn">Bid 3</button>
+                <button id="catInBoxPlayBtn">Play Card</button>
+              </div>
+
+              <h3>Players</h3>
+              <div id="catInBoxPlayers"></div>
+
+              <h3>Round Summary</h3>
+              <div id="catInBoxSummary" class="round-notice hidden">
+                <div class="round-notice-body" id="catInBoxSummaryBody">-</div>
+              </div>
             </div>
 
             <div id="hanabiPanel" class="hidden">

@@ -2,6 +2,7 @@ from game.abraca_what import AbracaWhatGame
 from game.ai_dixit import AiDixitGame
 from game.blokus import BlokusGame
 from game.cabo import CaboGame
+from game.cat_in_box import CatInBoxGame
 from game.coyote import CoyoteGame
 from game.cyber_pictures import CyberPicturesGame
 from game.decrypto import DecryptoGame
@@ -24,6 +25,7 @@ __all__ = [
     "AiDixitGame",
     "BlokusGame",
     "CaboGame",
+    "CatInBoxGame",
     "DrawGuessGame",
     "Flip7Game",
     "GoldRushGame",

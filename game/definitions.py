@@ -1,6 +1,7 @@
 from game.abraca_what import AbracaWhatGame
 from game.ai_dixit import AiDixitGame
 from game.cabo import CaboGame
+from game.cat_in_box import CatInBoxGame
 from game.coyote import CoyoteGame
 from game.cyber_pictures import CyberPicturesGame
 from game.decrypto import DecryptoGame
@@ -150,6 +151,45 @@ SKULL_CONFIG_SCHEMA = {
     "properties": {
         "target_wins": {"type": "integer", "minimum": 1},
     },
+    "additionalProperties": False,
+}
+
+CAT_IN_BOX_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "discard"},
+                "card_value": {"type": "integer", "minimum": 1, "maximum": 9},
+            },
+            "required": ["type", "card_value"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "bid"},
+                "bid": {"type": "integer", "enum": [1, 2, 3]},
+            },
+            "required": ["type", "bid"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "play_card"},
+                "card_value": {"type": "integer", "minimum": 1, "maximum": 9},
+                "color": {"type": "string", "enum": ["red", "blue", "yellow", "green"]},
+            },
+            "required": ["type", "card_value", "color"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+CAT_IN_BOX_CONFIG_SCHEMA = {
+    "type": "object",
     "additionalProperties": False,
 }
 
@@ -890,6 +930,21 @@ register_game(
         module=SkullGame,
         serialize=SkullGame.serialize,
         deserialize=SkullGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=CatInBoxGame.game_id,
+        name="Cat in the Box",
+        min_players=CatInBoxGame.min_players,
+        max_players=CatInBoxGame.max_players,
+        turn_mode="turn",
+        action_schema=CAT_IN_BOX_ACTION_SCHEMA,
+        config_schema=CAT_IN_BOX_CONFIG_SCHEMA,
+        module=CatInBoxGame,
+        serialize=CatInBoxGame.serialize,
+        deserialize=CatInBoxGame.deserialize,
     )
 )
 
