@@ -223,6 +223,7 @@ let decryptoBotStrategies = [];
 let decryptoBotStrategiesLoaded = false;
 let decryptoBotStrategyId = "native";
 let decryptoBotClueDirectness = 0.5;
+let cyberPicturesDisabledTools = new Set();
 let currentRoomList = [];
 let pendingSeatClaimRoomId = null;
 let pendingSeatClaimSourceId = null;
@@ -266,6 +267,8 @@ const drawGuessAnswerLengthToggle = document.getElementById("drawGuessAnswerLeng
 const cyberPicturesConfigBox = document.getElementById("cyberPicturesConfigBox");
 const cyberPicturesDuplicateRow = document.getElementById("cyberPicturesDuplicateRow");
 const cyberPicturesDuplicateToggle = document.getElementById("cyberPicturesDuplicateToggle");
+const cyberPicturesToolRow = document.getElementById("cyberPicturesToolRow");
+const cyberPicturesToolOptions = document.getElementById("cyberPicturesToolOptions");
 const decryptoConfigBox = document.getElementById("decryptoConfigBox");
 const decryptoPackRow = document.getElementById("decryptoPackRow");
 const decryptoPackOptions = document.getElementById("decryptoPackOptions");
@@ -1765,6 +1768,40 @@ function updateCyberPicturesConfigRow() {
     cyberPicturesDuplicateRow.classList.toggle("hidden", !showRow);
     cyberPicturesDuplicateRow.setAttribute("aria-hidden", (!showRow).toString());
   }
+  if (cyberPicturesToolRow) {
+    cyberPicturesToolRow.classList.toggle("hidden", !showRow);
+    cyberPicturesToolRow.setAttribute("aria-hidden", (!showRow).toString());
+  }
+  if (showRow) {
+    renderCyberPicturesToolOptions();
+  }
+}
+
+function renderCyberPicturesToolOptions() {
+  if (!cyberPicturesToolOptions) {
+    return;
+  }
+  cyberPicturesToolOptions.innerHTML = "";
+  CYBER_TOOL_KEYS.forEach((toolKey) => {
+    const label = document.createElement("label");
+    label.className = "cyber-tool-option";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.value = toolKey;
+    checkbox.checked = cyberPicturesDisabledTools.has(toolKey);
+    checkbox.addEventListener("change", () => {
+      if (checkbox.checked) {
+        cyberPicturesDisabledTools.add(toolKey);
+      } else {
+        cyberPicturesDisabledTools.delete(toolKey);
+      }
+    });
+    const text = document.createElement("span");
+    text.textContent = CYBER_TOOL_LABELS[toolKey] || toolKey;
+    label.appendChild(checkbox);
+    label.appendChild(text);
+    cyberPicturesToolOptions.appendChild(label);
+  });
 }
 
 function roomHasBots() {
@@ -2449,6 +2486,7 @@ function resetRoomState() {
   if (cyberPicturesDuplicateToggle) {
     cyberPicturesDuplicateToggle.checked = false;
   }
+  cyberPicturesDisabledTools = new Set();
   if (decryptoBotSelect) {
     decryptoBotSelect.value = "native";
   }
@@ -4827,7 +4865,15 @@ function emitRoomStart() {
     payload.config = { language, guess_method: guessMethod, show_answer_length: showAnswerLength };
   } else if (currentGameType === "cyber_pictures") {
     const allowDuplicates = cyberPicturesDuplicateToggle ? cyberPicturesDuplicateToggle.checked : false;
-    payload.config = { allow_duplicate_targets: allowDuplicates };
+    const disabledTools = Array.from(cyberPicturesDisabledTools);
+    if (disabledTools.length >= CYBER_TOOL_KEYS.length) {
+      log("Select at least one tool");
+      return;
+    }
+    payload.config = {
+      allow_duplicate_targets: allowDuplicates,
+      disabled_tools: disabledTools,
+    };
   } else if (currentGameType === "aidixit") {
     const decks = getSelectedAidixitDecks();
     if (!decks.length) {

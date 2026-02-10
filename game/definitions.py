@@ -261,6 +261,7 @@ CYBER_PICTURES_CONFIG_SCHEMA = {
     "type": "object",
     "properties": {
         "allow_duplicate_targets": {"type": "boolean"},
+        "disabled_tools": {"type": "array", "items": {"type": "string"}},
     },
     "additionalProperties": False,
 }

@@ -40,6 +40,7 @@ TOOL_LABELS = {
 
 DEFAULT_CONFIG = {
     "allow_duplicate_targets": False,
+    "disabled_tools": [],
 }
 
 _ALLOWED_EXTS = {".jpg", ".jpeg", ".png", ".webp"}
@@ -52,12 +53,23 @@ _IMAGE_MIME = {
 }
 
 
+def _normalize_disabled_tools(value: object) -> List[str]:
+    if not isinstance(value, list):
+        return []
+    cleaned: List[str] = []
+    for entry in value:
+        if isinstance(entry, str) and entry in TOOL_KEYS and entry not in cleaned:
+            cleaned.append(entry)
+    return cleaned
+
+
 def _merge_config(config: Optional[Dict]) -> Dict:
     cfg = {**DEFAULT_CONFIG}
     if isinstance(config, dict):
         allow_dupes = config.get("allow_duplicate_targets")
         if isinstance(allow_dupes, bool):
             cfg["allow_duplicate_targets"] = allow_dupes
+        cfg["disabled_tools"] = _normalize_disabled_tools(config.get("disabled_tools"))
     return cfg
 
 
@@ -106,12 +118,18 @@ def _coords() -> List[str]:
     return [f"{row}{col}" for row in rows for col in cols]
 
 
-def _build_tool_queue(order: List[str]) -> List[int]:
-    if not order:
+def _active_tool_indices(config: Optional[Dict]) -> List[int]:
+    if not isinstance(config, dict):
+        return list(range(len(TOOL_KEYS)))
+    disabled = set(config.get("disabled_tools") or [])
+    return [idx for idx, key in enumerate(TOOL_KEYS) if key not in disabled]
+
+
+def _build_tool_queue(order: List[str], tool_indices: List[int]) -> List[int]:
+    if not order or not tool_indices:
         return []
-    pool = list(range(len(TOOL_KEYS)))
-    count = min(len(order), len(pool))
-    return random.sample(pool, count)
+    count = min(len(order), len(tool_indices))
+    return random.sample(tool_indices, count)
 
 
 def _matrix_from_files(files: List[str]) -> List[Dict]:
@@ -134,13 +152,16 @@ def _matrix_from_files(files: List[str]) -> List[Dict]:
 
 def _assign_tools(state: Dict) -> None:
     order = state.get("turn_order", [])
+    active_indices = _active_tool_indices(state.get("config"))
+    if not active_indices:
+        raise ValueError("at least one tool must be enabled")
     tool_queue = state.get("tool_queue", [])
     if tool_queue:
         for idx, pid in enumerate(order):
             state["players"][pid]["tool_index"] = tool_queue[idx % len(tool_queue)]
         return
     for idx, pid in enumerate(order):
-        state["players"][pid]["tool_index"] = idx % len(TOOL_KEYS)
+        state["players"][pid]["tool_index"] = active_indices[idx % len(active_indices)]
 
 
 def _assign_targets(state: Dict) -> None:
@@ -338,6 +359,9 @@ class CyberPicturesGame:
         all_images = _load_image_files()
         if len(all_images) < 16:
             raise ValueError("not enough images in .cyber_pictures (need at least 16)")
+        active_indices = _active_tool_indices(cfg)
+        if not active_indices:
+            raise ValueError("at least one tool must be enabled")
 
         state_players = {
             pid: {
@@ -348,7 +372,7 @@ class CyberPicturesGame:
             for pid in order
         }
 
-        tool_queue = _build_tool_queue(order)
+        tool_queue = _build_tool_queue(order, active_indices)
         state = {
             "config": cfg,
             "round": 1,
