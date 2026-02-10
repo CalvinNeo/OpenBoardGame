@@ -76,6 +76,19 @@ let cyberLetterSelectedId = null;
 let cyberShapeItems = [];
 let cyberShapeDragging = null;
 let cyberShapeSelectedId = null;
+let cyberThrusterPaths = [];
+let cyberThrusterCurrentPath = null;
+let cyberThrusterActive = false;
+let cyberThrusterThrusting = false;
+let cyberThrusterAttemptsLeft = 0;
+let cyberThrusterFrame = null;
+let cyberThrusterLastTs = null;
+let cyberThrusterX = 0;
+let cyberThrusterY = 0;
+let cyberThrusterVelocity = 0;
+let cyberSynthValues = [];
+let cyberSynthBarEls = [];
+let cyberSynthSliderEls = [];
 let cyberGuessSelections = {};
 let impressionConfig = null;
 let impressionConfigSignature = null;
@@ -159,13 +172,23 @@ const GOLD_RUSH_COLOR_PALETTE = {
 };
 const GOLD_RUSH_LIGHT_TEXT = "#f9fafb";
 const GOLD_RUSH_DARK_TEXT = "#111827";
-const CYBER_TOOL_KEYS = ["shoelaces", "pixel_grid", "icon_set", "aeiou", "shape_stacker"];
+const CYBER_TOOL_KEYS = [
+  "shoelaces",
+  "pixel_grid",
+  "icon_set",
+  "aeiou",
+  "shape_stacker",
+  "thruster",
+  "synthesizer",
+];
 const CYBER_TOOL_LABELS = {
   shoelaces: "Shoelaces",
   pixel_grid: "Pixel Grid",
   icon_set: "Icon Set",
   aeiou: "AEIOU Collage",
   shape_stacker: "Shape Stacker",
+  thruster: "Thruster",
+  synthesizer: "Synthesizer",
 };
 const CYBER_COORDS = ["A1", "A2", "A3", "A4", "B1", "B2", "B3", "B4", "C1", "C2", "C3", "C4", "D1", "D2", "D3", "D4"];
 const CYBER_PIXEL_COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#3b82f6", "#8b5cf6", "#000000", "#ffffff", "#8b5e34"];
@@ -181,6 +204,14 @@ const CYBER_SHAPE_SPECS = {
   ellipse: { w: 90, h: 60 },
   hexagon: { w: 90, h: 70 },
 };
+const CYBER_THRUSTER_MAX_ATTEMPTS = 3;
+const CYBER_THRUSTER_COLOR = "#111111";
+const CYBER_THRUSTER_STROKE = 4;
+const CYBER_THRUSTER_CROSS_SEC = 6.5;
+const CYBER_THRUSTER_GRAVITY_RATIO = 1.2;
+const CYBER_THRUSTER_THRUST_RATIO = 2.2;
+const CYBER_THRUSTER_RADIUS = 5;
+const CYBER_SYNTH_BARS = 10;
 const MEMORIES_SUPPORTED_GAMES = new Set(["draw_guess", "impression_flower", "cyber_pictures", "decrypto"]);
 let createRoomPending = false;
 let pendingReadyAfterJoin = false;
@@ -618,6 +649,12 @@ const cyberShapeRotate = document.getElementById("cyberShapeRotate");
 const cyberShapeRotateValue = document.getElementById("cyberShapeRotateValue");
 const cyberShapeRemoveBtn = document.getElementById("cyberShapeRemoveBtn");
 const cyberShapeClearBtn = document.getElementById("cyberShapeClearBtn");
+const cyberToolThruster = document.getElementById("cyberToolThruster");
+const cyberThrusterCanvas = document.getElementById("cyberThrusterCanvas");
+const cyberThrusterAttempts = document.getElementById("cyberThrusterAttempts");
+const cyberThrusterLaunchBtn = document.getElementById("cyberThrusterLaunchBtn");
+const cyberToolSynth = document.getElementById("cyberToolSynth");
+const cyberSynthGrid = document.getElementById("cyberSynthGrid");
 const cyberSubmitBtn = document.getElementById("cyberSubmitBtn");
 const cyberSubmissionHint = document.getElementById("cyberSubmissionHint");
 const cyberWorks = document.getElementById("cyberWorks");
@@ -628,6 +665,7 @@ const cyberNextRoundBtn = document.getElementById("cyberNextRoundBtn");
 const cyberGameOverNotice = document.getElementById("cyberGameOverNotice");
 const cyberPlayers = document.getElementById("cyberPlayers");
 const cyberShoelaceCtx = cyberShoelaceCanvas ? cyberShoelaceCanvas.getContext("2d") : null;
+const cyberThrusterCtx = cyberThrusterCanvas ? cyberThrusterCanvas.getContext("2d") : null;
 
 const aidixitPhaseLabel = document.getElementById("aidixitPhase");
 const aidixitRoundLabel = document.getElementById("aidixitRound");
@@ -13882,7 +13920,13 @@ function renderCyberPixelGrid() {
   ensureCyberPixelCells();
   Array.from(cyberPixelGrid.children).forEach((cell, idx) => {
     const color = cyberPixelCells[idx];
-    cell.style.background = color || "#ffffff";
+    if (color) {
+      cell.style.background = color;
+      cell.classList.remove("empty");
+    } else {
+      cell.style.background = "";
+      cell.classList.add("empty");
+    }
   });
 }
 
@@ -14460,6 +14504,283 @@ function clearCyberShapes() {
   updateCyberSubmitButton(currentCyberView);
 }
 
+function drawCyberSmoothPath(ctx, points) {
+  if (!points || points.length < 2) {
+    return;
+  }
+  ctx.beginPath();
+  ctx.moveTo(points[0].x, points[0].y);
+  for (let i = 1; i < points.length - 1; i += 1) {
+    const midX = (points[i].x + points[i + 1].x) / 2;
+    const midY = (points[i].y + points[i + 1].y) / 2;
+    ctx.quadraticCurveTo(points[i].x, points[i].y, midX, midY);
+  }
+  const last = points[points.length - 1];
+  ctx.lineTo(last.x, last.y);
+  ctx.stroke();
+}
+
+function getCyberThrusterParams(width, height) {
+  const speed = width / CYBER_THRUSTER_CROSS_SEC;
+  return {
+    speed,
+    gravity: height * CYBER_THRUSTER_GRAVITY_RATIO,
+    thrust: height * CYBER_THRUSTER_THRUST_RATIO,
+    radius: CYBER_THRUSTER_RADIUS,
+  };
+}
+
+function setCyberThrusterStartPosition() {
+  if (!cyberThrusterCanvas) {
+    return;
+  }
+  const width = cyberThrusterCanvas.width;
+  const height = cyberThrusterCanvas.height;
+  cyberThrusterX = width * 0.1;
+  cyberThrusterY = height * 0.5;
+  cyberThrusterVelocity = 0;
+}
+
+function updateCyberThrusterAttempts() {
+  if (cyberThrusterAttempts) {
+    cyberThrusterAttempts.textContent = `Attempts left: ${cyberThrusterAttemptsLeft}`;
+  }
+  if (cyberThrusterLaunchBtn) {
+    cyberThrusterLaunchBtn.disabled = cyberThrusterAttemptsLeft <= 0 || cyberThrusterActive;
+  }
+}
+
+function renderCyberThrusterCanvas() {
+  if (!cyberThrusterCanvas || !cyberThrusterCtx) {
+    return;
+  }
+  const width = cyberThrusterCanvas.width;
+  const height = cyberThrusterCanvas.height;
+  cyberThrusterCtx.clearRect(0, 0, width, height);
+  cyberThrusterCtx.fillStyle = "#ffffff";
+  cyberThrusterCtx.fillRect(0, 0, width, height);
+  cyberThrusterCtx.lineCap = "round";
+  cyberThrusterCtx.lineJoin = "round";
+  cyberThrusterPaths.forEach((path) => {
+    const points = path.points || [];
+    if (points.length < 2) {
+      return;
+    }
+    cyberThrusterCtx.strokeStyle = path.color || CYBER_THRUSTER_COLOR;
+    cyberThrusterCtx.lineWidth = path.width || CYBER_THRUSTER_STROKE;
+    drawCyberSmoothPath(cyberThrusterCtx, points);
+  });
+  const rocketX = cyberThrusterActive ? cyberThrusterX : width * 0.1;
+  const rocketY = cyberThrusterActive ? cyberThrusterY : height * 0.5;
+  cyberThrusterCtx.fillStyle = "#f97316";
+  cyberThrusterCtx.beginPath();
+  cyberThrusterCtx.arc(rocketX, rocketY, CYBER_THRUSTER_RADIUS, 0, Math.PI * 2);
+  cyberThrusterCtx.fill();
+}
+
+function startCyberThrusterLaunch() {
+  if (!cyberThrusterCanvas || !cyberThrusterCtx) {
+    return;
+  }
+  if (cyberThrusterActive || cyberThrusterAttemptsLeft <= 0) {
+    return;
+  }
+  if (!currentCyberView || currentCyberView.phase !== "crafting") {
+    return;
+  }
+  const toolKey = Number.isFinite(currentCyberView.your_tool)
+    ? CYBER_TOOL_KEYS[currentCyberView.your_tool]
+    : null;
+  if (toolKey !== "thruster") {
+    return;
+  }
+  cyberThrusterAttemptsLeft -= 1;
+  setCyberThrusterStartPosition();
+  cyberThrusterCurrentPath = {
+    points: [{ x: cyberThrusterX, y: cyberThrusterY }],
+    color: CYBER_THRUSTER_COLOR,
+    width: CYBER_THRUSTER_STROKE,
+  };
+  cyberThrusterPaths.push(cyberThrusterCurrentPath);
+  cyberThrusterActive = true;
+  cyberThrusterThrusting = false;
+  cyberThrusterLastTs = null;
+  updateCyberThrusterAttempts();
+  renderCyberThrusterCanvas();
+  cyberThrusterFrame = window.requestAnimationFrame(stepCyberThruster);
+}
+
+function stepCyberThruster(timestamp) {
+  if (!cyberThrusterActive || !cyberThrusterCanvas) {
+    cyberThrusterFrame = null;
+    return;
+  }
+  const width = cyberThrusterCanvas.width;
+  const height = cyberThrusterCanvas.height;
+  if (!cyberThrusterLastTs) {
+    cyberThrusterLastTs = timestamp;
+  }
+  const dt = Math.min(0.05, (timestamp - cyberThrusterLastTs) / 1000);
+  cyberThrusterLastTs = timestamp;
+  const params = getCyberThrusterParams(width, height);
+  const thrust = cyberThrusterThrusting ? params.thrust : 0;
+  cyberThrusterVelocity += (params.gravity - thrust) * dt;
+  cyberThrusterY += cyberThrusterVelocity * dt;
+  cyberThrusterX += params.speed * dt;
+  if (cyberThrusterCurrentPath) {
+    cyberThrusterCurrentPath.points.push({ x: cyberThrusterX, y: cyberThrusterY });
+  }
+  renderCyberThrusterCanvas();
+  updateCyberSubmitButton(currentCyberView);
+  if (
+    cyberThrusterX > width - params.radius ||
+    cyberThrusterY < params.radius ||
+    cyberThrusterY > height - params.radius
+  ) {
+    endCyberThrusterRun();
+    return;
+  }
+  cyberThrusterFrame = window.requestAnimationFrame(stepCyberThruster);
+}
+
+function endCyberThrusterRun() {
+  cyberThrusterActive = false;
+  cyberThrusterThrusting = false;
+  cyberThrusterCurrentPath = null;
+  cyberThrusterLastTs = null;
+  if (cyberThrusterFrame) {
+    window.cancelAnimationFrame(cyberThrusterFrame);
+    cyberThrusterFrame = null;
+  }
+  setCyberThrusterStartPosition();
+  updateCyberThrusterAttempts();
+  renderCyberThrusterCanvas();
+  updateCyberSubmitButton(currentCyberView);
+}
+
+function setCyberThrusterThrusting(active) {
+  if (!cyberThrusterActive) {
+    return;
+  }
+  cyberThrusterThrusting = active;
+}
+
+function isCyberThrusterToolActive() {
+  if (!currentCyberView || currentGameType !== "cyber_pictures") {
+    return false;
+  }
+  if (currentCyberView.phase !== "crafting") {
+    return false;
+  }
+  const toolKey = Number.isFinite(currentCyberView.your_tool)
+    ? CYBER_TOOL_KEYS[currentCyberView.your_tool]
+    : null;
+  return toolKey === "thruster";
+}
+
+function onCyberThrusterKeyDown(event) {
+  if (event.code !== "Space") {
+    return;
+  }
+  if (isTypingTarget(event.target) || !isCyberThrusterToolActive()) {
+    return;
+  }
+  event.preventDefault();
+  if (!cyberThrusterActive) {
+    startCyberThrusterLaunch();
+  }
+  setCyberThrusterThrusting(true);
+}
+
+function onCyberThrusterKeyUp(event) {
+  if (event.code !== "Space") {
+    return;
+  }
+  if (isTypingTarget(event.target) || !isCyberThrusterToolActive()) {
+    return;
+  }
+  event.preventDefault();
+  setCyberThrusterThrusting(false);
+}
+
+function resetCyberThrusterState() {
+  if (cyberThrusterFrame) {
+    window.cancelAnimationFrame(cyberThrusterFrame);
+  }
+  cyberThrusterFrame = null;
+  cyberThrusterActive = false;
+  cyberThrusterThrusting = false;
+  cyberThrusterCurrentPath = null;
+  cyberThrusterPaths = [];
+  cyberThrusterAttemptsLeft = CYBER_THRUSTER_MAX_ATTEMPTS;
+  cyberThrusterLastTs = null;
+  setCyberThrusterStartPosition();
+  updateCyberThrusterAttempts();
+  renderCyberThrusterCanvas();
+}
+
+function ensureCyberSynthValues() {
+  if (!Array.isArray(cyberSynthValues) || cyberSynthValues.length !== CYBER_SYNTH_BARS) {
+    cyberSynthValues = Array(CYBER_SYNTH_BARS).fill(0);
+  }
+}
+
+function initCyberSynthGrid() {
+  if (!cyberSynthGrid || cyberSynthGrid.childNodes.length) {
+    return;
+  }
+  ensureCyberSynthValues();
+  cyberSynthBarEls = [];
+  cyberSynthSliderEls = [];
+  for (let i = 0; i < CYBER_SYNTH_BARS; i += 1) {
+    const column = document.createElement("div");
+    column.className = "cyber-synth-column";
+    const bar = document.createElement("div");
+    bar.className = "cyber-synth-bar";
+    const fill = document.createElement("div");
+    fill.className = "cyber-synth-fill";
+    bar.appendChild(fill);
+    const slider = document.createElement("input");
+    slider.type = "range";
+    slider.min = "0";
+    slider.max = "100";
+    slider.step = "1";
+    slider.value = `${cyberSynthValues[i]}`;
+    slider.className = "cyber-synth-slider";
+    slider.addEventListener("input", () => {
+      cyberSynthValues[i] = Number(slider.value);
+      renderCyberSynthGrid();
+      updateCyberSubmitButton(currentCyberView);
+    });
+    column.appendChild(bar);
+    column.appendChild(slider);
+    cyberSynthGrid.appendChild(column);
+    cyberSynthBarEls.push(fill);
+    cyberSynthSliderEls.push(slider);
+  }
+  renderCyberSynthGrid();
+}
+
+function renderCyberSynthGrid() {
+  if (!cyberSynthGrid) {
+    return;
+  }
+  ensureCyberSynthValues();
+  cyberSynthBarEls.forEach((fill, idx) => {
+    const value = clampValue(Number(cyberSynthValues[idx] || 0), 0, 100);
+    fill.style.height = `${value}%`;
+  });
+  cyberSynthSliderEls.forEach((slider, idx) => {
+    const value = clampValue(Number(cyberSynthValues[idx] || 0), 0, 100);
+    slider.value = `${value}`;
+  });
+}
+
+function resetCyberSynthState() {
+  cyberSynthValues = Array(CYBER_SYNTH_BARS).fill(0);
+  renderCyberSynthGrid();
+}
+
 function drawCyberShape(ctx, shape, x, y, rotation) {
   const shapeKey = shape === "cylinder" ? "ellipse" : shape;
   const spec = CYBER_SHAPE_SPECS[shapeKey] || { w: 80, h: 60 };
@@ -14548,6 +14869,19 @@ function renderCyberSubmission(canvas, submission) {
       points.slice(1).forEach((pt) => ctx.lineTo(pt.x, pt.y));
       ctx.stroke();
     });
+  } else if (tool === "thruster") {
+    const paths = submission.paths || [];
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    paths.forEach((path) => {
+      const points = path.points || [];
+      if (points.length < 2) {
+        return;
+      }
+      ctx.strokeStyle = path.color || CYBER_THRUSTER_COLOR;
+      ctx.lineWidth = path.width || CYBER_THRUSTER_STROKE;
+      drawCyberSmoothPath(ctx, points);
+    });
   } else if (tool === "pixel_grid") {
     const cells = submission.cells || [];
     const cellW = sourceW / 3;
@@ -14592,6 +14926,20 @@ function renderCyberSubmission(canvas, submission) {
       ctx.fillText(letter.char || "", 0, 0);
       ctx.restore();
     });
+  } else if (tool === "synthesizer") {
+    const values = submission.values || [];
+    ctx.fillStyle = "#0b0f1a";
+    ctx.fillRect(0, 0, sourceW, sourceH);
+    const gap = Math.max(2, Math.round(sourceW * 0.01));
+    const barW = (sourceW - gap * (CYBER_SYNTH_BARS - 1)) / CYBER_SYNTH_BARS;
+    for (let i = 0; i < CYBER_SYNTH_BARS; i += 1) {
+      const value = clampValue(Number(values[i] || 0), 0, 100);
+      const barH = (sourceH * value) / 100;
+      const x = i * (barW + gap);
+      const y = sourceH - barH;
+      ctx.fillStyle = "#39ff14";
+      ctx.fillRect(x, y, barW, barH);
+    }
   } else if (tool === "shape_stacker") {
     const shapes = submission.shapes || [];
     shapes.forEach((shape) => {
@@ -14612,6 +14960,8 @@ function setCyberActiveTool(toolIndex) {
     icon_set: cyberToolIconSet,
     aeiou: cyberToolLetters,
     shape_stacker: cyberToolShapes,
+    thruster: cyberToolThruster,
+    synthesizer: cyberToolSynth,
   };
   Object.values(toolMap).forEach((el) => {
     if (el) {
@@ -14647,6 +14997,10 @@ function resetCyberToolState(toolKey) {
     cyberShapeSelectedId = null;
     updateCyberShapeRotationControl();
     renderCyberShapeCanvas();
+  } else if (toolKey === "thruster") {
+    resetCyberThrusterState();
+  } else if (toolKey === "synthesizer") {
+    resetCyberSynthState();
   }
 }
 
@@ -14701,6 +15055,27 @@ function buildCyberSubmission(toolIndex) {
       })),
     };
   }
+  if (toolKey === "thruster") {
+    return {
+      tool: toolKey,
+      width: cyberThrusterCanvas ? cyberThrusterCanvas.width : CYBER_CANVAS_SIZE,
+      height: cyberThrusterCanvas ? cyberThrusterCanvas.height : CYBER_CANVAS_SIZE,
+      paths: cyberThrusterPaths.map((path) => ({
+        points: path.points.map((pt) => ({ x: pt.x, y: pt.y })),
+        color: path.color,
+        width: path.width,
+      })),
+    };
+  }
+  if (toolKey === "synthesizer") {
+    ensureCyberSynthValues();
+    return {
+      tool: toolKey,
+      width: CYBER_CANVAS_SIZE,
+      height: CYBER_CANVAS_SIZE,
+      values: cyberSynthValues.map((value) => Math.round(value)),
+    };
+  }
   const { width, height } = getCyberStageSize(cyberShapeCanvas);
   return {
     tool: toolKey,
@@ -14728,6 +15103,13 @@ function canSubmitCyber(toolKey) {
   }
   if (toolKey === "aeiou") {
     return cyberLetterItems.length >= 1 && cyberLetterItems.length <= 10;
+  }
+  if (toolKey === "thruster") {
+    return cyberThrusterPaths.some((path) => (path.points || []).length > 1);
+  }
+  if (toolKey === "synthesizer") {
+    ensureCyberSynthValues();
+    return cyberSynthValues.length === CYBER_SYNTH_BARS;
   }
   if (toolKey === "shape_stacker") {
     return cyberShapeItems.length >= 1;
@@ -14950,6 +15332,20 @@ function clearCyberState() {
   cyberShapeItems = [];
   cyberShapeDragging = null;
   cyberShapeSelectedId = null;
+  cyberThrusterPaths = [];
+  cyberThrusterCurrentPath = null;
+  cyberThrusterActive = false;
+  cyberThrusterThrusting = false;
+  cyberThrusterAttemptsLeft = CYBER_THRUSTER_MAX_ATTEMPTS;
+  if (cyberThrusterFrame) {
+    window.cancelAnimationFrame(cyberThrusterFrame);
+  }
+  cyberThrusterFrame = null;
+  cyberThrusterLastTs = null;
+  cyberThrusterX = 0;
+  cyberThrusterY = 0;
+  cyberThrusterVelocity = 0;
+  cyberSynthValues = Array(CYBER_SYNTH_BARS).fill(0);
   cyberGuessSelections = {};
   if (cyberPhaseLabel) cyberPhaseLabel.textContent = "-";
   if (cyberRoundLabel) cyberRoundLabel.textContent = "-";
@@ -14968,11 +15364,15 @@ function clearCyberState() {
   if (cyberScoreArea) cyberScoreArea.classList.add("hidden");
   if (cyberGameOverNotice) cyberGameOverNotice.classList.add("hidden");
   updateCyberLetterRotationControl();
+  updateCyberThrusterAttempts();
   renderCyberShoelaceCanvas();
   renderCyberPixelGrid();
   renderCyberIconCanvas();
   renderCyberLetterCanvas();
   renderCyberShapeCanvas();
+  renderCyberThrusterCanvas();
+  initCyberSynthGrid();
+  renderCyberSynthGrid();
 }
 
 function renderCyberPicturesGameState(data) {
@@ -15007,6 +15407,10 @@ function renderCyberPicturesGameState(data) {
 
   renderCyberMatrix(view.matrix || [], view.your_target);
   renderCyberPlayers(view);
+
+  if (view.phase !== "crafting" && cyberThrusterActive) {
+    endCyberThrusterRun();
+  }
 
   if (view.phase === "crafting") {
     if (cyberCraftArea) cyberCraftArea.classList.remove("hidden");
@@ -15054,6 +15458,9 @@ renderCyberIconCanvas();
 renderCyberLetterCanvas();
 renderCyberShapeCanvas();
 renderCyberShoelaceCanvas();
+initCyberSynthGrid();
+renderCyberSynthGrid();
+resetCyberThrusterState();
 
 if (cyberShoelaceCanvas) {
   cyberShoelaceCanvas.addEventListener("pointerdown", startCyberShoelaceDraw);
@@ -15068,6 +15475,42 @@ if (cyberShoelaceClearBtn) {
 
 if (cyberShoelaceUndoBtn) {
   cyberShoelaceUndoBtn.addEventListener("click", () => undoCyberShoelace());
+}
+
+if (cyberThrusterCanvas) {
+  cyberThrusterCanvas.addEventListener("pointerdown", (event) => {
+    if (!isCyberThrusterToolActive()) {
+      return;
+    }
+    event.preventDefault();
+    setCyberThrusterThrusting(true);
+  });
+  cyberThrusterCanvas.addEventListener("pointerup", () => setCyberThrusterThrusting(false));
+  cyberThrusterCanvas.addEventListener("pointerleave", () => setCyberThrusterThrusting(false));
+  cyberThrusterCanvas.addEventListener("pointercancel", () => setCyberThrusterThrusting(false));
+}
+
+if (cyberThrusterLaunchBtn) {
+  cyberThrusterLaunchBtn.addEventListener("pointerdown", (event) => {
+    if (!isCyberThrusterToolActive()) {
+      return;
+    }
+    event.preventDefault();
+    if (!cyberThrusterActive) {
+      startCyberThrusterLaunch();
+    }
+    setCyberThrusterThrusting(true);
+  });
+  cyberThrusterLaunchBtn.addEventListener("pointerup", () => setCyberThrusterThrusting(false));
+  cyberThrusterLaunchBtn.addEventListener("pointerleave", () => setCyberThrusterThrusting(false));
+  cyberThrusterLaunchBtn.addEventListener("pointercancel", () => setCyberThrusterThrusting(false));
+  cyberThrusterLaunchBtn.addEventListener("click", (event) => {
+    if (!isCyberThrusterToolActive()) {
+      return;
+    }
+    event.preventDefault();
+    startCyberThrusterLaunch();
+  });
 }
 
 if (cyberIconRemoveBtn) {
@@ -15111,6 +15554,9 @@ if (cyberShapeRemoveBtn) {
 if (cyberShapeClearBtn) {
   cyberShapeClearBtn.addEventListener("click", () => clearCyberShapes());
 }
+
+window.addEventListener("keydown", onCyberThrusterKeyDown);
+window.addEventListener("keyup", onCyberThrusterKeyUp);
 
 if (cyberSubmitBtn) {
   cyberSubmitBtn.addEventListener("click", () => {

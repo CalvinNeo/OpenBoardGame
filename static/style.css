@@ -3778,6 +3778,13 @@ body.log-open {
   touch-action: none;
 }
 
+#cyberThrusterCanvas {
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  touch-action: none;
+}
+
 .cyber-stage-item {
   position: absolute;
   cursor: grab;
@@ -3806,6 +3813,17 @@ body.log-open {
   border-radius: 6px;
   background: #fff;
   cursor: pointer;
+}
+
+.cyber-pixel-cell.empty {
+  background-color: #f3f4f6;
+  background-image:
+    linear-gradient(45deg, #e5e7eb 25%, transparent 25%),
+    linear-gradient(-45deg, #e5e7eb 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #e5e7eb 75%),
+    linear-gradient(-45deg, transparent 75%, #e5e7eb 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
 }
 
 .cyber-pixel-palette {
@@ -3911,4 +3929,64 @@ body.log-open {
 
 .cyber-score-card .score-name {
   font-weight: 600;
+}
+
+.cyber-thruster-controls {
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.cyber-thruster-launch {
+  flex: 1;
+  min-height: 44px;
+  font-size: 16px;
+}
+
+.cyber-synth-grid {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 4px;
+  align-items: end;
+  margin-bottom: 8px;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 4px;
+  border-radius: 6px;
+  background: #000;
+}
+
+.cyber-synth-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.cyber-synth-bar {
+  width: 100%;
+  height: 160px;
+  background: #0b0f1a;
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.cyber-synth-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 0;
+  background: #39ff14;
+  box-shadow: 0 0 8px rgba(57, 255, 20, 0.7);
+}
+
+.cyber-synth-slider {
+  width: 24px;
+  height: 110px;
+  writing-mode: bt-lr;
+  appearance: slider-vertical;
+  -webkit-appearance: slider-vertical;
+  touch-action: none;
 }

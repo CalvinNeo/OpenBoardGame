@@ -19,13 +19,23 @@ from game.memories import (
     section,
 )
 TOTAL_ROUNDS = 5
-TOOL_KEYS = ["shoelaces", "pixel_grid", "icon_set", "aeiou", "shape_stacker"]
+TOOL_KEYS = [
+    "shoelaces",
+    "pixel_grid",
+    "icon_set",
+    "aeiou",
+    "shape_stacker",
+    "thruster",
+    "synthesizer",
+]
 TOOL_LABELS = {
     "shoelaces": "Shoelaces",
     "pixel_grid": "Pixel Grid",
     "icon_set": "Icon Set",
     "aeiou": "AEIOU Collage",
     "shape_stacker": "Shape Stacker",
+    "thruster": "Thruster",
+    "synthesizer": "Synthesizer",
 }
 
 DEFAULT_CONFIG = {
@@ -96,6 +106,14 @@ def _coords() -> List[str]:
     return [f"{row}{col}" for row in rows for col in cols]
 
 
+def _build_tool_queue(order: List[str]) -> List[int]:
+    if not order:
+        return []
+    pool = list(range(len(TOOL_KEYS)))
+    count = min(len(order), len(pool))
+    return random.sample(pool, count)
+
+
 def _matrix_from_files(files: List[str]) -> List[Dict]:
     rows = ["A", "B", "C", "D"]
     cols = ["1", "2", "3", "4"]
@@ -117,9 +135,12 @@ def _matrix_from_files(files: List[str]) -> List[Dict]:
 def _assign_tools(state: Dict) -> None:
     order = state.get("turn_order", [])
     tool_queue = state.get("tool_queue", [])
+    if tool_queue:
+        for idx, pid in enumerate(order):
+            state["players"][pid]["tool_index"] = tool_queue[idx % len(tool_queue)]
+        return
     for idx, pid in enumerate(order):
-        tool_index = tool_queue[idx] if idx < len(tool_queue) else idx % len(TOOL_KEYS)
-        state["players"][pid]["tool_index"] = tool_index
+        state["players"][pid]["tool_index"] = idx % len(TOOL_KEYS)
 
 
 def _assign_targets(state: Dict) -> None:
@@ -327,6 +348,7 @@ class CyberPicturesGame:
             for pid in order
         }
 
+        tool_queue = _build_tool_queue(order)
         state = {
             "config": cfg,
             "round": 1,
@@ -335,7 +357,7 @@ class CyberPicturesGame:
             "turn_order": order,
             "players": state_players,
             "player_meta": player_meta,
-            "tool_queue": list(range(len(TOOL_KEYS))),
+            "tool_queue": tool_queue,
             "all_images": all_images,
             "image_pool": _build_pool(all_images),
             "image_pool_index": 0,
@@ -601,9 +623,27 @@ def _bot_submission(tool_key: str) -> Dict:
                     "x": random.randint(40, width - 40),
                     "y": random.randint(40, height - 40),
                     "rotation": random.randint(0, 359),
-                }
-            )
+            }
+        )
         return {"tool": "aeiou", "width": width, "height": height, "letters": letters}
+    if tool_key == "thruster":
+        paths = []
+        attempts = random.randint(1, 3)
+        for _ in range(attempts):
+            points = []
+            x = width * 0.1
+            y = height * 0.5
+            points.append({"x": x, "y": y})
+            for _ in range(random.randint(12, 18)):
+                x += width / 14
+                y += random.randint(-40, 40)
+                y = max(10, min(height - 10, y))
+                points.append({"x": x, "y": y})
+            paths.append({"points": points, "color": "#111111", "width": 4})
+        return {"tool": "thruster", "width": width, "height": height, "paths": paths}
+    if tool_key == "synthesizer":
+        values = [random.randint(0, 100) for _ in range(10)]
+        return {"tool": "synthesizer", "width": width, "height": height, "values": values}
     shapes = ["square", "rectangle", "triangle", "circle", "arch", "ellipse", "hexagon"]
     items = []
     for _ in range(random.randint(2, 5)):
@@ -851,6 +891,7 @@ def build_memories_html(state: Dict, room_id: Optional[str] = None) -> str:
 const CYBER_JOBS = __CYBER_JOBS__;
 const CYBER_CANVAS_SIZE = 360;
 const CYBER_TEXT_SIZE = 36;
+const CYBER_SYNTH_BARS = 10;
 const CYBER_SHAPE_SPECS = {
   square: { w: 70, h: 70 },
   rectangle: { w: 90, h: 60 },
@@ -860,6 +901,20 @@ const CYBER_SHAPE_SPECS = {
   ellipse: { w: 90, h: 60 },
   hexagon: { w: 90, h: 70 },
 };
+
+function drawSmoothPath(ctx, points) {
+  if (!points || points.length < 2) return;
+  ctx.beginPath();
+  ctx.moveTo(points[0].x, points[0].y);
+  for (let i = 1; i < points.length - 1; i += 1) {
+    const midX = (points[i].x + points[i + 1].x) / 2;
+    const midY = (points[i].y + points[i + 1].y) / 2;
+    ctx.quadraticCurveTo(points[i].x, points[i].y, midX, midY);
+  }
+  const last = points[points.length - 1];
+  ctx.lineTo(last.x, last.y);
+  ctx.stroke();
+}
 
 function drawCyberShape(ctx, shapeKey, x, y, rotation) {
   const spec = CYBER_SHAPE_SPECS[shapeKey];
@@ -941,6 +996,17 @@ function renderSubmission(canvas, submission) {
       points.slice(1).forEach((pt) => ctx.lineTo(pt.x, pt.y));
       ctx.stroke();
     });
+  } else if (tool === "thruster") {
+    const paths = submission.paths || [];
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    paths.forEach((path) => {
+      const points = path.points || [];
+      if (points.length < 2) return;
+      ctx.strokeStyle = path.color || "#111111";
+      ctx.lineWidth = path.width || 4;
+      drawSmoothPath(ctx, points);
+    });
   } else if (tool === "pixel_grid") {
     const cells = submission.cells || [];
     const cellW = sourceW / 3;
@@ -981,6 +1047,20 @@ function renderSubmission(canvas, submission) {
       ctx.fillText(letter.char || "", 0, 0);
       ctx.restore();
     });
+  } else if (tool === "synthesizer") {
+    const values = submission.values || [];
+    ctx.fillStyle = "#0b0f1a";
+    ctx.fillRect(0, 0, sourceW, sourceH);
+    const gap = Math.max(2, Math.round(sourceW * 0.01));
+    const barW = (sourceW - gap * (CYBER_SYNTH_BARS - 1)) / CYBER_SYNTH_BARS;
+    for (let i = 0; i < CYBER_SYNTH_BARS; i += 1) {
+      const value = Math.max(0, Math.min(100, Number(values[i] || 0)));
+      const barH = (sourceH * value) / 100;
+      const x = i * (barW + gap);
+      const y = sourceH - barH;
+      ctx.fillStyle = "#39ff14";
+      ctx.fillRect(x, y, barW, barH);
+    }
   } else if (tool === "shape_stacker") {
     const shapes = submission.shapes || [];
     shapes.forEach((shape) => {
