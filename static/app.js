@@ -12145,10 +12145,10 @@ function buildSixNimmtCard(card, { asButton = false, selected = false } = {}) {
     if (count === 7) {
       const topLine = document.createElement("div");
       topLine.className = "six-nimmt-card-bulls-line";
-      topLine.textContent = "🐮".repeat(3);
+      topLine.textContent = "🐮".repeat(4);
       const bottomLine = document.createElement("div");
       bottomLine.className = "six-nimmt-card-bulls-line";
-      bottomLine.textContent = "🐮".repeat(4);
+      bottomLine.textContent = "🐮".repeat(3);
       bullsEl.append(topLine, bottomLine);
     } else if (count === 6) {
       const topLine = document.createElement("div");
@@ -12157,6 +12157,14 @@ function buildSixNimmtCard(card, { asButton = false, selected = false } = {}) {
       const bottomLine = document.createElement("div");
       bottomLine.className = "six-nimmt-card-bulls-line";
       bottomLine.textContent = "🐮".repeat(3);
+      bullsEl.append(topLine, bottomLine);
+    } else if (count === 5) {
+      const topLine = document.createElement("div");
+      topLine.className = "six-nimmt-card-bulls-line";
+      topLine.textContent = "🐮".repeat(3);
+      const bottomLine = document.createElement("div");
+      bottomLine.className = "six-nimmt-card-bulls-line";
+      bottomLine.textContent = "🐮".repeat(2);
       bullsEl.append(topLine, bottomLine);
     } else if (count > 5) {
       const firstLine = document.createElement("div");
@@ -12229,17 +12237,22 @@ function renderSixNimmtRows(view) {
     const cards = document.createElement("div");
     cards.className = "six-nimmt-row-cards";
     const rowCards = Array.isArray(row.cards) ? row.cards : [];
-    if (!rowCards.length) {
-      const empty = document.createElement("div");
-      empty.className = "hint";
-      empty.textContent = "-";
-      cards.appendChild(empty);
-    } else {
-      rowCards.forEach((card) => {
-        const cardEl = buildSixNimmtCard(card);
-        cards.appendChild(cardEl);
-      });
+    rowCards.forEach((card) => {
+      const cardEl = buildSixNimmtCard(card);
+      cards.appendChild(cardEl);
+    });
+    const slotsLeft = Math.max(0, 5 - rowCards.length);
+    for (let i = 0; i < slotsLeft; i += 1) {
+      const slot = document.createElement("div");
+      slot.className = "six-nimmt-card six-nimmt-card-slot";
+      slot.setAttribute("aria-hidden", "true");
+      cards.appendChild(slot);
     }
+    const limit = document.createElement("div");
+    limit.className = "six-nimmt-card six-nimmt-card-danger";
+    limit.textContent = "6!";
+    limit.setAttribute("aria-hidden", "true");
+    cards.appendChild(limit);
     rowEl.appendChild(header);
     rowEl.appendChild(cards);
     if (canChooseRow) {

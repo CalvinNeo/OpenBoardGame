@@ -453,15 +453,16 @@ h1 {
 }
 
 .six-nimmt-card {
-  width: 72px;
-  min-width: 72px;
-  flex: 0 0 72px;
+  width: 84px;
+  min-width: 84px;
+  flex: 0 0 84px;
   padding: 6px;
   border: 1px solid #e2e8f0;
   border-radius: 6px;
   background: #f8fafc;
   text-align: center;
   font-weight: 600;
+  min-height: 52px;
 }
 
 .six-nimmt-card[data-bulls="1"] {
@@ -491,6 +492,22 @@ h1 {
   background: #eaf2ff;
 }
 
+.six-nimmt-card-danger {
+  background: #fee2e2;
+  border-color: #fecaca;
+  color: #b91c1c;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.six-nimmt-card-slot {
+  background: #f8fafc;
+  border-style: dashed;
+  color: #cbd5f5;
+}
+
 .six-nimmt-card-value {
   font-size: 16px;
 }
@@ -505,6 +522,7 @@ h1 {
 
 .six-nimmt-card-bulls-line {
   display: block;
+  white-space: nowrap;
 }
 
 .six-nimmt-hand .six-nimmt-card {
@@ -3424,9 +3442,9 @@ body.log-open {
   }
 
   .six-nimmt-card {
-    width: 64px;
-    min-width: 64px;
-    flex: 0 0 64px;
+    width: 72px;
+    min-width: 72px;
+    flex: 0 0 72px;
   }
 
   .target-slots {
