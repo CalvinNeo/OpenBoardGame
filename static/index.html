@@ -104,6 +104,7 @@
                     <option value="cabo">Cabo</option>
                     <option value="flip7">Flip 7</option>
                     <option value="gold_rush">Gold Rush</option>
+                    <option value="incan_gold">Incan Gold</option>
                     <option value="halli_galli">Halli Galli</option>
                     <option value="coyote">Coyote</option>
                     <option value="decrypto">Decrypto</option>
@@ -417,6 +418,43 @@
 
               <h3>Score Breakdown</h3>
               <div id="goldRushScoreBreakdown"></div>
+            </div>
+
+            <div id="incanGoldPanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="incanGoldPhase">-</span></div>
+                <div>Round: <span id="incanGoldRound">-</span>/<span id="incanGoldMaxRounds">-</span></div>
+                <div>Deck: <span id="incanGoldDeck">-</span></div>
+              </div>
+              <div class="row">
+                <div>In Cave: <span id="incanGoldInCave">-</span></div>
+                <div>Decided: <span id="incanGoldDecided">-</span></div>
+                <div>Your Choice: <span id="incanGoldChoice">-</span></div>
+              </div>
+              <div class="row">
+                <div>Winner: <span id="incanGoldWinner">-</span></div>
+              </div>
+              <div id="incanGoldRoundNotice" class="round-notice hidden">
+                <div id="incanGoldRoundNoticeTitle" class="round-notice-title">Round End</div>
+                <div id="incanGoldRoundNoticeBody" class="round-notice-body">-</div>
+              </div>
+
+              <h3>Path</h3>
+              <div id="incanGoldPath" class="incan-gold-path"></div>
+
+              <h3>Actions</h3>
+              <div class="row actions incan-gold-actions">
+                <button id="incanGoldContinueBtn">Continue</button>
+                <button id="incanGoldLeaveBtn">Leave</button>
+                <button id="incanGoldNextRoundBtn">Next Round</button>
+                <button id="incanGoldPlayAgainBtn">Play Again</button>
+              </div>
+
+              <h3>Players</h3>
+              <div id="incanGoldPlayers"></div>
+
+              <h3>Hazards Removed</h3>
+              <div id="incanGoldRemovedHazards" class="incan-gold-hazards"></div>
             </div>
 
             <div id="skullPanel" class="hidden">

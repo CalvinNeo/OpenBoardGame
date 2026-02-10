@@ -11,6 +11,7 @@ from game.gold_rush import GoldRushGame
 from game.halli_galli import HalliGalliGame
 from game.hanabi import HanabiGame
 from game.impression_flower import ImpressionFlowerGame
+from game.incan_gold import IncanGoldGame
 from game.perfect_mismatch import PerfectMismatchGame
 from game.point_salad import PointSaladGame
 from game.the_gang import TheGangGame
@@ -339,6 +340,25 @@ GOLD_RUSH_CONFIG_SCHEMA = {
     "properties": {
         "mode": {"type": "string", "enum": ["hand", "classic"]},
     },
+    "additionalProperties": False,
+}
+
+INCAN_GOLD_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {"type": {"const": "decide"}, "choice": {"type": "string", "enum": ["continue", "leave"]}},
+            "required": ["type", "choice"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "next_round"}}, "required": ["type"], "additionalProperties": False},
+        {"type": "object", "properties": {"type": {"const": "play_again"}}, "required": ["type"], "additionalProperties": False},
+    ],
+}
+
+INCAN_GOLD_CONFIG_SCHEMA = {
+    "type": "object",
     "additionalProperties": False,
 }
 
@@ -1066,6 +1086,21 @@ register_game(
         module=GoldRushGame,
         serialize=GoldRushGame.serialize,
         deserialize=GoldRushGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=IncanGoldGame.game_id,
+        name="Incan Gold",
+        min_players=IncanGoldGame.min_players,
+        max_players=IncanGoldGame.max_players,
+        turn_mode="simultaneous",
+        action_schema=INCAN_GOLD_ACTION_SCHEMA,
+        config_schema=INCAN_GOLD_CONFIG_SCHEMA,
+        module=IncanGoldGame,
+        serialize=IncanGoldGame.serialize,
+        deserialize=IncanGoldGame.deserialize,
     )
 )
 
