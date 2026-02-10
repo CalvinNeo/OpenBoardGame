@@ -14,6 +14,7 @@ from game.impression_flower import ImpressionFlowerGame
 from game.incan_gold import IncanGoldGame
 from game.perfect_mismatch import PerfectMismatchGame
 from game.point_salad import PointSaladGame
+from game.six_nimmt import SixNimmtGame
 from game.the_gang import TheGangGame
 from game.registry import GameDefinition, register_game
 from game.splendor import SplendorGame
@@ -191,6 +192,33 @@ CAT_IN_BOX_ACTION_SCHEMA = {
 
 CAT_IN_BOX_CONFIG_SCHEMA = {
     "type": "object",
+    "additionalProperties": False,
+}
+
+SIX_NIMMT_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {"type": {"const": "select_card"}, "value": {"type": "integer", "minimum": 1, "maximum": 104}},
+            "required": ["type", "value"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "choose_row"}, "row_index": {"type": "integer", "minimum": 0, "maximum": 3}},
+            "required": ["type", "row_index"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+SIX_NIMMT_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "selection_timeout_sec": {"type": "number", "minimum": 0},
+        "row_choice_timeout_sec": {"type": "number", "minimum": 0},
+    },
     "additionalProperties": False,
 }
 
@@ -891,6 +919,21 @@ register_game(
         module=CoyoteGame,
         serialize=CoyoteGame.serialize,
         deserialize=CoyoteGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=SixNimmtGame.game_id,
+        name="6 nimmt!",
+        min_players=SixNimmtGame.min_players,
+        max_players=SixNimmtGame.max_players,
+        turn_mode="simultaneous",
+        action_schema=SIX_NIMMT_ACTION_SCHEMA,
+        config_schema=SIX_NIMMT_CONFIG_SCHEMA,
+        module=SixNimmtGame,
+        serialize=SixNimmtGame.serialize,
+        deserialize=SixNimmtGame.deserialize,
     )
 )
 

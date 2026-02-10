@@ -107,6 +107,7 @@
                     <option value="incan_gold">Incan Gold</option>
                     <option value="halli_galli">Halli Galli</option>
                     <option value="coyote">Coyote</option>
+                    <option value="six_nimmt">6 nimmt!</option>
                     <option value="decrypto">Decrypto</option>
                     <option value="skull">Skull</option>
                     <option value="cat_in_box">Cat in the Box</option>
@@ -729,6 +730,39 @@
               <div class="row actions coyote-actions">
                 <button id="coyoteResetBtn">Reset Game</button>
               </div>
+            </div>
+
+            <div id="sixNimmtPanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="sixNimmtPhase">-</span></div>
+                <div>Round: <span id="sixNimmtRound">-</span></div>
+                <div>Turn: <span id="sixNimmtTurn">-</span></div>
+              </div>
+              <div class="row">
+                <div>Timer: <span id="sixNimmtTimer">-</span></div>
+                <div>Waiting: <span id="sixNimmtWaiting">-</span></div>
+              </div>
+              <div class="row">
+                <div>Selected: <span id="sixNimmtSelected">-</span></div>
+                <div>Winners: <span id="sixNimmtWinners">-</span></div>
+              </div>
+
+              <div id="sixNimmtNotice" class="round-notice hidden">
+                <div class="round-notice-title">Action</div>
+                <div id="sixNimmtNoticeBody" class="round-notice-body">-</div>
+              </div>
+
+              <h3>Reveal Order</h3>
+              <div id="sixNimmtReveal" class="six-nimmt-reveal"></div>
+
+              <h3>Rows</h3>
+              <div id="sixNimmtRows" class="six-nimmt-rows"></div>
+
+              <h3>Your Hand</h3>
+              <div id="sixNimmtHand" class="hand six-nimmt-hand"></div>
+
+              <h3>Players</h3>
+              <div id="sixNimmtPlayers"></div>
             </div>
 
             <div id="halliPanel" class="hidden">
