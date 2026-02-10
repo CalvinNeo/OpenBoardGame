@@ -453,13 +453,32 @@ h1 {
 }
 
 .six-nimmt-card {
-  min-width: 54px;
+  width: 72px;
+  min-width: 72px;
+  flex: 0 0 72px;
   padding: 6px;
   border: 1px solid #e2e8f0;
   border-radius: 6px;
   background: #f8fafc;
   text-align: center;
   font-weight: 600;
+}
+
+.six-nimmt-card[data-bulls="1"] {
+  background: #e0f2fe;
+}
+
+.six-nimmt-card[data-bulls="2"] {
+  background: #dcfce7;
+}
+
+.six-nimmt-card[data-bulls="3"] {
+  background: #ffedd5;
+}
+
+.six-nimmt-card[data-bulls="5"],
+.six-nimmt-card[data-bulls="7"] {
+  background: #ede9fe;
 }
 
 .six-nimmt-card:disabled {
@@ -478,6 +497,14 @@ h1 {
 
 .six-nimmt-card-bulls {
   font-size: 13px;
+  line-height: 1.1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.six-nimmt-card-bulls-line {
+  display: block;
 }
 
 .six-nimmt-hand .six-nimmt-card {
@@ -3397,7 +3424,9 @@ body.log-open {
   }
 
   .six-nimmt-card {
-    min-width: 46px;
+    width: 64px;
+    min-width: 64px;
+    flex: 0 0 64px;
   }
 
   .target-slots {

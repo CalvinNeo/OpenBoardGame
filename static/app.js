@@ -12132,12 +12132,49 @@ function buildSixNimmtCard(card, { asButton = false, selected = false } = {}) {
   if (selected) {
     el.classList.add("selected");
   }
+  if (card && Number.isInteger(card.bulls)) {
+    el.dataset.bulls = String(card.bulls);
+  }
   const valueEl = document.createElement("div");
   valueEl.className = "six-nimmt-card-value";
   valueEl.textContent = card && typeof card.value === "number" ? String(card.value) : "-";
   const bullsEl = document.createElement("div");
   bullsEl.className = "six-nimmt-card-bulls";
-  bullsEl.textContent = card ? formatSixNimmtBulls(card.bulls) : "-";
+  if (card && Number.isInteger(card.bulls)) {
+    const count = card.bulls;
+    if (count === 7) {
+      const topLine = document.createElement("div");
+      topLine.className = "six-nimmt-card-bulls-line";
+      topLine.textContent = "🐮".repeat(3);
+      const bottomLine = document.createElement("div");
+      bottomLine.className = "six-nimmt-card-bulls-line";
+      bottomLine.textContent = "🐮".repeat(4);
+      bullsEl.append(topLine, bottomLine);
+    } else if (count === 6) {
+      const topLine = document.createElement("div");
+      topLine.className = "six-nimmt-card-bulls-line";
+      topLine.textContent = "🐮".repeat(3);
+      const bottomLine = document.createElement("div");
+      bottomLine.className = "six-nimmt-card-bulls-line";
+      bottomLine.textContent = "🐮".repeat(3);
+      bullsEl.append(topLine, bottomLine);
+    } else if (count > 5) {
+      const firstLine = document.createElement("div");
+      firstLine.className = "six-nimmt-card-bulls-line";
+      firstLine.textContent = "🐮".repeat(5);
+      const secondLine = document.createElement("div");
+      secondLine.className = "six-nimmt-card-bulls-line";
+      secondLine.textContent = "🐮".repeat(count - 5);
+      bullsEl.append(firstLine, secondLine);
+    } else {
+      const line = document.createElement("div");
+      line.className = "six-nimmt-card-bulls-line";
+      line.textContent = "🐮".repeat(count);
+      bullsEl.appendChild(line);
+    }
+  } else {
+    bullsEl.textContent = "-";
+  }
   el.appendChild(valueEl);
   el.appendChild(bullsEl);
   return el;
@@ -12186,7 +12223,7 @@ function renderSixNimmtRows(view) {
     title.textContent = `Row ${index + 1}`;
     const total = document.createElement("div");
     total.className = "six-nimmt-row-total";
-    total.textContent = `Total: ${formatSixNimmtBulls(row.bulls_total)}`;
+    total.textContent = `Total: ${Number.isInteger(row.bulls_total) ? row.bulls_total : "-"}`;
     header.appendChild(title);
     header.appendChild(total);
     const cards = document.createElement("div");
