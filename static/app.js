@@ -230,7 +230,13 @@ const CYBER_THRUSTER_GRAVITY_RATIO = 1.2;
 const CYBER_THRUSTER_THRUST_RATIO = 2.2;
 const CYBER_THRUSTER_RADIUS = 5;
 const CYBER_SYNTH_BARS = 10;
-const MEMORIES_SUPPORTED_GAMES = new Set(["draw_guess", "impression_flower", "cyber_pictures", "decrypto"]);
+const MEMORIES_SUPPORTED_GAMES = new Set([
+  "draw_guess",
+  "impression_flower",
+  "cyber_pictures",
+  "decrypto",
+  "blitz_sketch",
+]);
 let createRoomPending = false;
 let pendingReadyAfterJoin = false;
 let pendingReadyRoomId = null;
@@ -314,6 +320,9 @@ const gangTimeSelect = document.getElementById("gangTimeSelect");
 const impressionConfigBox = document.getElementById("impressionConfigBox");
 const impressionVoteRow = document.getElementById("impressionVoteRow");
 const impressionVoteToggle = document.getElementById("impressionVoteToggle");
+const blitzSketchConfigBox = document.getElementById("blitzSketchConfigBox");
+const blitzSketchDrawTimeRow = document.getElementById("blitzSketchDrawTimeRow");
+const blitzSketchDrawTimeSelect = document.getElementById("blitzSketchDrawTimeSelect");
 const autoSaveRow = document.getElementById("autoSaveRow");
 const autoSaveToggle = document.getElementById("autoSaveToggle");
 const caboPanel = document.getElementById("caboPanel");
@@ -2007,6 +2016,18 @@ function updateImpressionConfigRow() {
   }
 }
 
+function updateBlitzSketchConfigRow() {
+  const showRow = currentRoomState && currentGameType === "blitz_sketch" && currentRoomState.status === "lobby";
+  if (blitzSketchConfigBox) {
+    blitzSketchConfigBox.classList.toggle("hidden", !showRow);
+    blitzSketchConfigBox.setAttribute("aria-hidden", (!showRow).toString());
+  }
+  if (blitzSketchDrawTimeRow) {
+    blitzSketchDrawTimeRow.classList.toggle("hidden", !showRow);
+    blitzSketchDrawTimeRow.setAttribute("aria-hidden", (!showRow).toString());
+  }
+}
+
 function updateAutoSaveRow() {
   const showRow =
     currentRoomState &&
@@ -2572,6 +2593,7 @@ function resetRoomState() {
   updateMismatchConfigRow();
   updateGangConfigRow();
   updateImpressionConfigRow();
+  updateBlitzSketchConfigRow();
   updateAutoSaveRow();
   updateReopenButton();
   if (drawGuessLanguageSelect) {
@@ -2579,6 +2601,9 @@ function resetRoomState() {
   }
   if (drawGuessGuessMethodSelect) {
     drawGuessGuessMethodSelect.value = "normal";
+  }
+  if (blitzSketchDrawTimeSelect) {
+    blitzSketchDrawTimeSelect.value = "3";
   }
   if (drawGuessAnswerLengthToggle) {
     drawGuessAnswerLengthToggle.checked = false;
@@ -5162,6 +5187,10 @@ function emitRoomStart() {
   } else if (currentGameType === "impression_flower") {
     const allowReviewVotes = impressionVoteToggle ? impressionVoteToggle.checked : false;
     payload.config = { allow_review_votes: allowReviewVotes };
+  } else if (currentGameType === "blitz_sketch") {
+    const rawTime = blitzSketchDrawTimeSelect ? Number.parseInt(blitzSketchDrawTimeSelect.value, 10) : NaN;
+    const drawTime = Number.isInteger(rawTime) && rawTime > 0 ? rawTime : 3;
+    payload.config = { draw_time_sec: drawTime };
   }
   socket.emit("room:start", payload);
 }
@@ -5213,6 +5242,7 @@ function renderRoomState(state) {
   updateMismatchConfigRow();
   updateGangConfigRow();
   updateImpressionConfigRow();
+  updateBlitzSketchConfigRow();
   updateAutoSaveRow();
   updateReopenButton();
   playersList.innerHTML = "";
