@@ -910,7 +910,7 @@ def build_memories_html(state: Dict, room_id: Optional[str] = None) -> str:
         "".join(round_blocks) if round_blocks else '<div class="muted">No rounds recorded</div>',
     )
 
-    jobs_json = json.dumps(render_jobs, ensure_ascii=False).replace("</", "<\/")
+    jobs_json = json.dumps(render_jobs, ensure_ascii=False).replace("</", "<\\/")
     script = """
 const CYBER_JOBS = __CYBER_JOBS__;
 const CYBER_CANVAS_SIZE = 360;

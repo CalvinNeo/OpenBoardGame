@@ -1,4 +1,4 @@
-# 《方鸟》游戏规则与开发指南
+# 《Square Bird》游戏规则与开发指南
 
 ## 1. 游戏概述 (Game Overview)
 

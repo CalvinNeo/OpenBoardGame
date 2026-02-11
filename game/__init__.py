@@ -8,6 +8,7 @@ from game.coyote import CoyoteGame
 from game.cyber_pictures import CyberPicturesGame
 from game.decrypto import DecryptoGame
 from game.draw_guess import DrawGuessGame
+from game.fang_niao import FangNiaoGame
 from game.flip7 import Flip7Game
 from game.gold_rush import GoldRushGame
 from game.halli_galli import HalliGalliGame
@@ -31,6 +32,7 @@ __all__ = [
     "CaboGame",
     "CatInBoxGame",
     "DrawGuessGame",
+    "FangNiaoGame",
     "Flip7Game",
     "GoldRushGame",
     "HalliGalliGame",

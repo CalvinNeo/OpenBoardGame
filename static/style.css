@@ -4302,3 +4302,151 @@ body.log-open {
   -webkit-appearance: slider-vertical;
   touch-action: none;
 }
+
+.fang-niao-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.fang-niao-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 6px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.fang-niao-row.selected {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.3);
+}
+
+.fang-niao-row-label {
+  font-weight: 600;
+  min-width: 48px;
+}
+
+.fang-niao-row-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex: 1 1 160px;
+}
+
+.fang-niao-side-btn {
+  border: 1px solid #d1d5db;
+  background: #f8fafc;
+  border-radius: 6px;
+  padding: 2px 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.fang-niao-side-btn.selected {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.fang-niao-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.fang-niao-hand {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.fang-niao-hand-btn {
+  border: 1px solid #d1d5db;
+  background: #fff;
+  border-radius: 8px;
+  padding: 4px 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+}
+
+.fang-niao-hand-btn.selected {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.fang-niao-hand-btn.bankable {
+  border-color: #16a34a;
+  box-shadow: 0 0 0 1px rgba(22, 163, 74, 0.2);
+}
+
+.fang-niao-player {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin-bottom: 6px;
+  background: #fff;
+}
+
+.fang-niao-player.current {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.fang-niao-player-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-weight: 600;
+}
+
+.fang-niao-collection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.fang-niao-collection-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #f3f4f6;
+}
+
+.fang-niao-actions button {
+  padding: 4px 8px;
+}
+
+@media (max-width: 640px) {
+  .fang-niao-row {
+    padding: 6px;
+  }
+
+  .fang-niao-row-label {
+    min-width: auto;
+  }
+
+  .fang-niao-side-btn {
+    padding: 2px 4px;
+  }
+}

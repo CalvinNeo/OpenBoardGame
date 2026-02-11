@@ -122,7 +122,8 @@
                     <option value="splendor">Splendor</option>
                     <option value="point_salad">Point Salad</option>
                     <option value="abraca_what">Abraca What</option>
-                    <option value="blokus">Blokus</option>
+                    
+                    <option value="fang_niao">Square Bird</option>
                   </select>
                 </div>
                 <div class="row compact-row">
@@ -1504,6 +1505,41 @@
                   <div id="blokusPlayers"></div>
                 </div>
               </div>
+            </div>
+
+            <div id="fangNiaoPanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="fangNiaoPhase">-</span></div>
+                <div>Current Turn: <span id="fangNiaoTurn">-</span></div>
+                <div>Deck: <span id="fangNiaoDeck">-</span></div>
+                <div>Discard: <span id="fangNiaoDiscard">-</span></div>
+                <div>Winner: <span id="fangNiaoWinner">-</span></div>
+              </div>
+              <div class="row">
+                <div>Last Action: <span id="fangNiaoLastAction">-</span></div>
+              </div>
+
+              <h3>Fence</h3>
+              <div id="fangNiaoRows" class="fang-niao-rows"></div>
+
+              <h3>Your Hand</h3>
+              <div id="fangNiaoHand" class="fang-niao-hand"></div>
+              <div class="row">
+                <div>Selected Bird: <span id="fangNiaoSelectedBird">-</span></div>
+                <div>Selected Row: <span id="fangNiaoSelectedRow">-</span></div>
+                <div>Selected Side: <span id="fangNiaoSelectedSide">-</span></div>
+                <button id="fangNiaoClearSelection" type="button">Clear</button>
+              </div>
+
+              <h3>Actions</h3>
+              <div class="row actions fang-niao-actions">
+                <button id="fangNiaoPlayBtn" type="button">Play Birds</button>
+                <button id="fangNiaoBankBtn" type="button">Bank</button>
+                <button id="fangNiaoEndBtn" type="button">End Turn</button>
+              </div>
+
+              <h3>Players</h3>
+              <div id="fangNiaoPlayers"></div>
             </div>
 
           </div>

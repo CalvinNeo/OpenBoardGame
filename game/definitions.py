@@ -6,6 +6,7 @@ from game.coyote import CoyoteGame
 from game.cyber_pictures import CyberPicturesGame
 from game.decrypto import DecryptoGame
 from game.draw_guess import DrawGuessGame
+from game.fang_niao import FangNiaoGame
 from game.flip7 import Flip7Game
 from game.gold_rush import GoldRushGame
 from game.halli_galli import HalliGalliGame
@@ -927,6 +928,62 @@ THE_GANG_CONFIG_SCHEMA = {
     "additionalProperties": False,
 }
 
+FANG_NIAO_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "play_birds"},
+                "bird_type": {
+                    "type": "string",
+                    "enum": [
+                        "flamingo",
+                        "owl",
+                        "toucan",
+                        "duck",
+                        "pelican",
+                        "parrot",
+                        "sparrow",
+                        "magpie",
+                    ],
+                },
+                "row_index": {"type": "integer", "minimum": 0, "maximum": 3},
+                "side": {"type": "string", "enum": ["left", "right"]},
+            },
+            "required": ["type", "bird_type", "row_index", "side"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "bank_birds"},
+                "bird_type": {
+                    "type": "string",
+                    "enum": [
+                        "flamingo",
+                        "owl",
+                        "toucan",
+                        "duck",
+                        "pelican",
+                        "parrot",
+                        "sparrow",
+                        "magpie",
+                    ],
+                },
+            },
+            "required": ["type", "bird_type"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "end_turn"}}, "required": ["type"], "additionalProperties": False},
+    ],
+}
+
+FANG_NIAO_CONFIG_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+}
+
 register_game(
     GameDefinition(
         game_id=CaboGame.game_id,
@@ -1254,5 +1311,19 @@ register_game(
         module=TheGangGame,
         serialize=TheGangGame.serialize,
         deserialize=TheGangGame.deserialize,
+    )
+)
+register_game(
+    GameDefinition(
+        game_id=FangNiaoGame.game_id,
+        name="Square Bird",
+        min_players=FangNiaoGame.min_players,
+        max_players=FangNiaoGame.max_players,
+        turn_mode="turn",
+        action_schema=FANG_NIAO_ACTION_SCHEMA,
+        config_schema=FANG_NIAO_CONFIG_SCHEMA,
+        module=FangNiaoGame,
+        serialize=FangNiaoGame.serialize,
+        deserialize=FangNiaoGame.deserialize,
     )
 )
