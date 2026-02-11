@@ -19,6 +19,7 @@ from game.the_gang import TheGangGame
 from game.registry import GameDefinition, register_game
 from game.splendor import SplendorGame
 from game.blokus import BlokusGame
+from game.blitz_sketch import BlitzSketchGame
 from game.skull import SkullGame
 
 CABO_ACTION_SCHEMA = {
@@ -260,6 +261,40 @@ DRAW_GUESS_CONFIG_SCHEMA = {
                 ]
             },
         },
+    },
+    "additionalProperties": False,
+}
+
+BLITZ_SKETCH_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "submit_drawing"},
+                "image_data": {"type": "string", "minLength": 1},
+                "index": {"type": "integer", "minimum": 0},
+            },
+            "required": ["type", "image_data"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "submit_guess"}, "text": {"type": "string", "minLength": 1}},
+            "required": ["type", "text"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "skip_guess"}}, "required": ["type"], "additionalProperties": False},
+    ],
+}
+
+BLITZ_SKETCH_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "draw_total": {"type": "integer", "minimum": 1},
+        "guess_total": {"type": "integer", "minimum": 1},
+        "draw_time_sec": {"type": "integer", "minimum": 1},
+        "skip_reveal_sec": {"type": "integer", "minimum": 0},
     },
     "additionalProperties": False,
 }
@@ -1024,6 +1059,21 @@ register_game(
         module=DrawGuessGame,
         serialize=DrawGuessGame.serialize,
         deserialize=DrawGuessGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=BlitzSketchGame.game_id,
+        name="Blitz Sketch",
+        min_players=BlitzSketchGame.min_players,
+        max_players=BlitzSketchGame.max_players,
+        turn_mode="simultaneous",
+        action_schema=BLITZ_SKETCH_ACTION_SCHEMA,
+        config_schema=BLITZ_SKETCH_CONFIG_SCHEMA,
+        module=BlitzSketchGame,
+        serialize=BlitzSketchGame.serialize,
+        deserialize=BlitzSketchGame.deserialize,
     )
 )
 

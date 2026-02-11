@@ -114,6 +114,7 @@
                     <option value="hanabi">Hanabi</option>
                     <option value="the_gang">The Gang</option>
                     <option value="draw_guess">Draw & Guess</option>
+                    <option value="blitz_sketch">Blitz Sketch</option>
                     <option value="cyber_pictures">Cyber Pictures</option>
                     <option value="perfect_mismatch">Perfect Mismatch</option>
                     <option value="aidixit">AI Dixit</option>
@@ -1000,6 +1001,50 @@
                 <div class="row actions">
                   <button id="drawGuessRestartBtn">Play Again</button>
                 </div>
+              </div>
+            </div>
+
+            <div id="blitzSketchPanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="blitzSketchPhase">-</span></div>
+                <div>Draw: <span id="blitzSketchDrawProgress">-</span></div>
+                <div>Guess: <span id="blitzSketchGuessProgress">-</span></div>
+                <div>Score: <span id="blitzSketchScore">-</span></div>
+              </div>
+
+              <div id="blitzSketchDrawArea">
+                <div class="row">
+                  <div>Prompt: <span id="blitzSketchPrompt">-</span></div>
+                  <div>Time: <span id="blitzSketchTimer">-</span></div>
+                </div>
+                <div class="row">
+                  <canvas id="blitzSketchCanvas" width="480" height="360"></canvas>
+                </div>
+              </div>
+
+              <div id="blitzSketchGuessArea">
+                <div class="row">
+                  <img id="blitzSketchImage" class="draw-guess-image" alt="Drawing to guess" />
+                </div>
+                <div class="row actions">
+                  <input id="blitzSketchInput" type="text" placeholder="你的答案" />
+                  <button id="blitzSketchSubmitGuessBtn">提交</button>
+                  <button id="blitzSketchSkipBtn">我跳过</button>
+                </div>
+                <div class="row">
+                  <div id="blitzSketchFeedback" class="hint"></div>
+                </div>
+                <div class="row hidden" id="blitzSketchRevealRow">
+                  <div class="hint">正确答案：<span id="blitzSketchRevealAnswer">-</span></div>
+                </div>
+              </div>
+
+              <h3>Players</h3>
+              <div id="blitzSketchPlayers"></div>
+
+              <div id="blitzSketchReview" class="hidden">
+                <h3>回顾</h3>
+                <div id="blitzSketchReviewGrid"></div>
               </div>
             </div>
 
