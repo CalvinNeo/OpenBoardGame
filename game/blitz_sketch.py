@@ -341,7 +341,7 @@ class BlitzSketchGame:
                     "image_data": image_data,
                     "until_ms": until_ms,
                 }
-                pdata["feedback"] = {"type": "skip", "message": "已跳过", "at": time.time()}
+                pdata["feedback"] = None
                 if all(_player_guess_done(p, guess_total) for p in state["players"].values()):
                     state["phase"] = "review"
                     state["game_over"] = True

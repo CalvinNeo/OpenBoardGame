@@ -8547,6 +8547,26 @@ function isBlitzSketchActionAvailable(actionType) {
   return true;
 }
 
+function isBlitzSketchGuessAllowed() {
+  if (currentGameType !== "blitz_sketch" || !currentBlitzSketchView) {
+    return false;
+  }
+  if (currentBlitzSketchView.phase !== "guess") {
+    return false;
+  }
+  const legal = Array.isArray(currentBlitzSketchView.legal_actions)
+    ? currentBlitzSketchView.legal_actions
+    : [];
+  if (legal.includes("submit_guess") || legal.includes("skip_guess")) {
+    return true;
+  }
+  const reveal = currentBlitzSketchView.reveal;
+  if (reveal && Number.isFinite(reveal.until_ms)) {
+    return reveal.until_ms <= Date.now();
+  }
+  return false;
+}
+
 function updateBlitzSketchButtons() {
   if (!blitzSketchSubmitGuessBtn || !blitzSketchSkipBtn) {
     return;
@@ -13127,7 +13147,7 @@ function renderBlitzSketchGameState(data) {
       }
     }
     if (blitzSketchInput) {
-      blitzSketchInput.disabled = !isBlitzSketchActionAvailable("submit_guess");
+      blitzSketchInput.disabled = !isBlitzSketchGuessAllowed();
     }
     if (blitzSketchFeedback) {
       blitzSketchFeedback.textContent = view.feedback ? view.feedback.message || "" : "";
