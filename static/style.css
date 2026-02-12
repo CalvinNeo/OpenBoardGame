@@ -4437,6 +4437,65 @@ body.log-open {
   padding: 4px 8px;
 }
 
+.kobayakawa-hand {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.kobayakawa-discard {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.kobayakawa-card-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.kobayakawa-card-chip.bonus {
+  background: #fff7ed;
+  border-color: #fdba74;
+}
+
+.kobayakawa-summary-list {
+  display: grid;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.kobayakawa-summary-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.kobayakawa-summary-item.winner {
+  font-weight: 600;
+  color: #1f6feb;
+}
+
+.kobayakawa-player-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 13px;
+  color: #555;
+}
+
+.kobayakawa-actions button {
+  padding: 4px 8px;
+}
+
 @media (max-width: 640px) {
   .fang-niao-row {
     padding: 6px;

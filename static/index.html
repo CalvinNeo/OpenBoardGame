@@ -105,6 +105,7 @@
                     <option value="flip7">Flip 7</option>
                     <option value="gold_rush">Gold Rush</option>
                     <option value="incan_gold">Incan Gold</option>
+                    <option value="kobayakawa">Kobayakawa</option>
                     <option value="halli_galli">Halli Galli</option>
                     <option value="coyote">Coyote</option>
                     <option value="six_nimmt">6 nimmt!</option>
@@ -471,6 +472,50 @@
 
               <h3>Hazards Removed</h3>
               <div id="incanGoldRemovedHazards" class="incan-gold-hazards"></div>
+            </div>
+
+            <div id="kobayakawaPanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="kobayakawaPhase">-</span></div>
+                <div>Round: <span id="kobayakawaRound">-</span></div>
+                <div>Current Turn: <span id="kobayakawaTurn">-</span></div>
+              </div>
+              <div class="row">
+                <div>Start Player: <span id="kobayakawaStartPlayer">-</span></div>
+                <div>Kobayakawa: <span id="kobayakawaCard">-</span></div>
+                <div>Pot: <span id="kobayakawaPot">-</span></div>
+                <div>Deck: <span id="kobayakawaDeck">-</span></div>
+              </div>
+              <div class="row">
+                <div>Winner: <span id="kobayakawaWinner">-</span></div>
+              </div>
+              <div id="kobayakawaRoundNotice" class="round-notice hidden">
+                <div id="kobayakawaRoundNoticeTitle" class="round-notice-title">Last Round</div>
+                <div id="kobayakawaRoundNoticeBody" class="round-notice-body">-</div>
+                <div id="kobayakawaRoundNoticeList" class="kobayakawa-summary-list"></div>
+              </div>
+
+              <h3>Your Hand</h3>
+              <div class="row kobayakawa-hand">
+                <div>Hand: <span id="kobayakawaHand">-</span></div>
+                <div>Drawn: <span id="kobayakawaDrawn">-</span></div>
+              </div>
+
+              <h3>Actions</h3>
+              <div class="row actions kobayakawa-actions">
+                <button id="kobayakawaDrawBtn">Draw</button>
+                <button id="kobayakawaReplaceBtn">Replace Kobayakawa</button>
+                <button id="kobayakawaKeepDrawnBtn">Keep Drawn</button>
+                <button id="kobayakawaDiscardDrawnBtn">Discard Drawn</button>
+                <button id="kobayakawaFightBtn">Fight (-1)</button>
+                <button id="kobayakawaPassBtn">Pass</button>
+              </div>
+
+              <h3>Discard Pile</h3>
+              <div id="kobayakawaDiscard" class="kobayakawa-discard"></div>
+
+              <h3>Players</h3>
+              <div id="kobayakawaPlayers"></div>
             </div>
 
             <div id="skullPanel" class="hidden">

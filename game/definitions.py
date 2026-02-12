@@ -13,6 +13,7 @@ from game.halli_galli import HalliGalliGame
 from game.hanabi import HanabiGame
 from game.impression_flower import ImpressionFlowerGame
 from game.incan_gold import IncanGoldGame
+from game.kobayakawa import KobayakawaGame
 from game.perfect_mismatch import PerfectMismatchGame
 from game.point_salad import PointSaladGame
 from game.six_nimmt import SixNimmtGame
@@ -194,6 +195,43 @@ CAT_IN_BOX_ACTION_SCHEMA = {
 
 CAT_IN_BOX_CONFIG_SCHEMA = {
     "type": "object",
+    "additionalProperties": False,
+}
+
+KOBAYAKAWA_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {"type": "object", "properties": {"type": {"const": "draw_card"}}, "required": ["type"], "additionalProperties": False},
+        {
+            "type": "object",
+            "properties": {"type": {"const": "keep_drawn"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "discard_drawn"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "replace_kobayakawa"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "fight"}}, "required": ["type"], "additionalProperties": False},
+        {"type": "object", "properties": {"type": {"const": "pass"}}, "required": ["type"], "additionalProperties": False},
+    ],
+}
+
+KOBAYAKAWA_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "starting_tokens": {"type": "integer", "minimum": 0},
+        "end_mode": {"type": "string", "enum": ["bankrupt", "rounds"]},
+        "round_limit": {"type": "integer", "minimum": 1},
+    },
     "additionalProperties": False,
 }
 
@@ -1251,6 +1289,21 @@ register_game(
         module=IncanGoldGame,
         serialize=IncanGoldGame.serialize,
         deserialize=IncanGoldGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=KobayakawaGame.game_id,
+        name="Kobayakawa",
+        min_players=KobayakawaGame.min_players,
+        max_players=KobayakawaGame.max_players,
+        turn_mode="turn",
+        action_schema=KOBAYAKAWA_ACTION_SCHEMA,
+        config_schema=KOBAYAKAWA_CONFIG_SCHEMA,
+        module=KobayakawaGame,
+        serialize=KobayakawaGame.serialize,
+        deserialize=KobayakawaGame.deserialize,
     )
 )
 
