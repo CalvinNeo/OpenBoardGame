@@ -381,7 +381,6 @@ FLIP7_ACTION_SCHEMA = {
             "additionalProperties": False,
         },
         {"type": "object", "properties": {"type": {"const": "next_round"}}, "required": ["type"], "additionalProperties": False},
-        {"type": "object", "properties": {"type": {"const": "play_again"}}, "required": ["type"], "additionalProperties": False},
     ],
 }
 

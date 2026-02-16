@@ -36,7 +36,7 @@ class Flip7GameTests(unittest.TestCase):
 
         self.assertIsNone(error)
         self.assertTrue(any(evt["type"] == "flip7:bust" for evt in events))
-        self.assertEqual(state["players"]["p1"]["status"], "busted")
+        self.assertEqual(state["players"]["p1"]["status"], "out")
         self.assertEqual(state["players"]["p1"]["round_score"], 0)
         self.assertTrue(state["players"]["p1"]["banked"])
         self.assertEqual(state["current_turn"], "p2")
@@ -47,7 +47,7 @@ class Flip7GameTests(unittest.TestCase):
         state = self._make_state()
         state["config"]["target_score"] = 10
         for pdata in state["players"].values():
-            pdata["status"] = "stayed"
+            pdata["status"] = "out"
             pdata["banked"] = True
         state["players"]["p1"]["score"] = 10
         state["players"]["p2"]["score"] = 10

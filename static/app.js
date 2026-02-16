@@ -5719,7 +5719,13 @@ function renderFlip7Players(view) {
     badges.appendChild(score);
     const status = document.createElement("span");
     status.className = "badge";
-    status.textContent = player.status || "-";
+    const isBusted = player.status === "out" && player.round_score === 0;
+    const displayStatus =
+      isBusted ? "busted" : (player.status === "out" ? "out" : (player.status || "-"));
+    status.textContent = displayStatus;
+    if (isBusted) {
+      status.classList.add("danger");
+    }
     badges.appendChild(status);
     if (player.round_score !== null && player.round_score !== undefined) {
       const roundScore = document.createElement("span");
@@ -5816,6 +5822,7 @@ function renderFlip7LastRound(view) {
 
   const flipsByPlayer = summary.flips || {};
   const statusByPlayer = summary.status || {};
+  const roundScoresByPlayer = summary.round_scores || {};
   view.players.forEach((player) => {
     const card = document.createElement("div");
     card.className = "player-card";
@@ -5830,10 +5837,13 @@ function renderFlip7LastRound(view) {
     const badges = document.createElement("div");
     badges.className = "player-badges";
     const status = statusByPlayer[player.player_id] || "-";
+    const roundScore = roundScoresByPlayer[player.player_id];
+    const isBusted = status === "out" && roundScore === 0;
+    const displayStatus = isBusted ? "busted" : status;
     const statusBadge = document.createElement("span");
     statusBadge.className = "badge";
-    statusBadge.textContent = status;
-    if (status === "busted") {
+    statusBadge.textContent = displayStatus;
+    if (isBusted) {
       statusBadge.classList.add("danger");
     }
     badges.appendChild(statusBadge);

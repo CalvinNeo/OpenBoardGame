@@ -165,7 +165,7 @@ def _bank_player(state: Dict, player_id: str, flip7_bonus: bool = False) -> None
     pdata["score"] += breakdown["total"]
     pdata["banked"] = True
     if pdata["status"] == "active":
-        pdata["status"] = "stayed"
+        pdata["status"] = "out"
 
 
 def _handle_bust(state: Dict, player_id: str, drawn_card: Dict, extra_discards: Optional[List[Dict]] = None) -> None:
@@ -175,7 +175,7 @@ def _handle_bust(state: Dict, player_id: str, drawn_card: Dict, extra_discards: 
     state["discard"].append(drawn_card)
     if extra_discards:
         state["discard"].extend(extra_discards)
-    pdata["status"] = "busted"
+    pdata["status"] = "out"
     pdata["banked"] = True
     pdata["round_score"] = 0
     pdata["round_breakdown"] = {
@@ -235,7 +235,7 @@ def _end_round(state: Dict, reason: str) -> None:
     for pid, pdata in state["players"].items():
         if pdata["status"] == "active":
             _bank_player(state, pid, flip7_bonus=(pid == flip7_winner))
-        elif pdata["status"] == "busted" and not pdata["banked"]:
+        elif pdata["status"] == "out" and not pdata["banked"]:
             pdata["banked"] = True
             pdata["round_score"] = 0
     summary_scores = {}
@@ -368,7 +368,7 @@ def _draw_card(state: Dict, player_id: str, deferred_actions: Optional[List[Dict
                     "payload": {"player_id": player_id, "target_id": player_id},
                 }
             )
-            busted = state["players"][player_id]["status"] == "busted"
+            busted = state["players"][player_id]["status"] == "out"
             flip7_hit = state.get("flip7_winner") == player_id
             return events, busted, flip7_hit, None
         eligible = _eligible_targets(state, action_type)
@@ -555,7 +555,7 @@ class Flip7Game:
                 )
             elif pending_action == ACTION_FREEZE:
                 _bank_player(state, target_id)
-                state["players"][target_id]["status"] = "stayed"
+                state["players"][target_id]["status"] = "out"
                 state["discard"].append(card)
                 events.append(
                     {
