@@ -18,6 +18,7 @@ from game.perfect_mismatch import PerfectMismatchGame
 from game.point_salad import PointSaladGame
 from game.six_nimmt import SixNimmtGame
 from game.the_gang import TheGangGame
+from game.yahtzee import YahtzeeGame
 from game.registry import GameDefinition, register_game
 from game.splendor import SplendorGame
 from game.blokus import BlokusGame
@@ -389,6 +390,50 @@ FLIP7_CONFIG_SCHEMA = {
     "properties": {
         "target_score": {"type": "integer", "minimum": 1},
     },
+    "additionalProperties": False,
+}
+
+YAHTZEE_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {"type": "object", "properties": {"type": {"const": "roll"}}, "required": ["type"], "additionalProperties": False},
+        {
+            "type": "object",
+            "properties": {"type": {"const": "toggle_lock"}, "index": {"type": "integer", "minimum": 0, "maximum": 4}},
+            "required": ["type", "index"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "score"},
+                "category": {
+                    "type": "string",
+                    "enum": [
+                        "ones",
+                        "twos",
+                        "threes",
+                        "fours",
+                        "fives",
+                        "sixes",
+                        "three_kind",
+                        "four_kind",
+                        "full_house",
+                        "small_straight",
+                        "large_straight",
+                        "yahtzee",
+                        "chance",
+                    ],
+                },
+            },
+            "required": ["type", "category"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+YAHTZEE_CONFIG_SCHEMA = {
+    "type": "object",
     "additionalProperties": False,
 }
 
@@ -1258,6 +1303,21 @@ register_game(
         module=Flip7Game,
         serialize=Flip7Game.serialize,
         deserialize=Flip7Game.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=YahtzeeGame.game_id,
+        name="Yahtzee",
+        min_players=YahtzeeGame.min_players,
+        max_players=YahtzeeGame.max_players,
+        turn_mode="turn",
+        action_schema=YAHTZEE_ACTION_SCHEMA,
+        config_schema=YAHTZEE_CONFIG_SCHEMA,
+        module=YahtzeeGame,
+        serialize=YahtzeeGame.serialize,
+        deserialize=YahtzeeGame.deserialize,
     )
 )
 

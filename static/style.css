@@ -1967,6 +1967,103 @@ body.log-open {
   margin-top: 12px;
 }
 
+.yahtzee-dice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.yahtzee-die {
+  width: 44px;
+  height: 44px;
+  border: 2px solid #d1d5db;
+  border-radius: 8px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.yahtzee-die.locked {
+  border-color: #6366f1;
+  background: #eef2ff;
+}
+
+.yahtzee-die.disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.yahtzee-scorecard {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #fafafa;
+  margin-bottom: 8px;
+}
+
+.yahtzee-scorecard-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.yahtzee-score-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.yahtzee-score-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 4px 8px;
+  background: #ffffff;
+  font-size: 12px;
+}
+
+.yahtzee-score-row.upper {
+  border-left: 4px solid #60a5fa;
+}
+
+.yahtzee-score-row.lower {
+  border-left: 4px solid #f59e0b;
+}
+
+.yahtzee-score-row.possible {
+  background: #ecfdf5;
+  border-color: #10b981;
+  cursor: pointer;
+}
+
+.yahtzee-score-row.possible:hover {
+  background: #d1fae5;
+}
+
+.yahtzee-score-row.filled {
+  background: #f3f4f6;
+}
+
+.yahtzee-score-value {
+  font-weight: 600;
+  min-width: 24px;
+  text-align: right;
+}
+
+.yahtzee-score-note {
+  font-size: 11px;
+  color: #6b7280;
+  margin-left: 6px;
+}
+
 .halli-player-card {
   display: flex;
   flex-direction: column;

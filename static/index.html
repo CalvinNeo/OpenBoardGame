@@ -103,6 +103,7 @@
                     <option value="" selected disabled>Select a game</option>
                     <option value="cabo">Cabo</option>
                     <option value="flip7">flip7flash</option>
+                    <option value="yahtzee">Yahtzee</option>
                     <option value="gold_rush">Gold Rush</option>
                     <option value="incan_gold">Incan Gold</option>
                     <option value="kobayakawa">Kobayakawa</option>
@@ -399,6 +400,32 @@
               <h3>Last Round</h3>
               <div id="flip7LastRound"></div>
 
+            </div>
+
+            <div id="yahtzeePanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="yahtzeePhase">-</span></div>
+                <div>Round: <span id="yahtzeeRound">-</span></div>
+                <div>Current Turn: <span id="yahtzeeTurn">-</span></div>
+              </div>
+              <div class="row">
+                <div>Rolls: <span id="yahtzeeRolls">-</span></div>
+                <div>Winner: <span id="yahtzeeWinner">-</span></div>
+              </div>
+
+              <div id="yahtzeeJokerNotice" class="round-notice hidden">
+                <div class="round-notice-title">Joker</div>
+                <div id="yahtzeeJokerBody" class="round-notice-body">-</div>
+              </div>
+
+              <h3>Dice</h3>
+              <div id="yahtzeeDice" class="yahtzee-dice"></div>
+              <div class="row actions">
+                <button id="yahtzeeRollBtn">Roll</button>
+              </div>
+
+              <h3>Scorecards</h3>
+              <div id="yahtzeeScorecards"></div>
             </div>
 
             <div id="goldRushPanel" class="hidden">

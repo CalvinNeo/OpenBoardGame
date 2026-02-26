@@ -30,6 +30,7 @@ let currentDrawGuessView = null;
 let currentBlitzSketchView = null;
 let currentCyberView = null;
 let currentFlip7View = null;
+let currentYahtzeeView = null;
 let currentGoldRushView = null;
 let currentIncanGoldView = null;
 let currentKobayakawaView = null;
@@ -360,6 +361,7 @@ const autoSaveRow = document.getElementById("autoSaveRow");
 const autoSaveToggle = document.getElementById("autoSaveToggle");
 const caboPanel = document.getElementById("caboPanel");
 const flip7Panel = document.getElementById("flip7Panel");
+const yahtzeePanel = document.getElementById("yahtzeePanel");
 const goldRushPanel = document.getElementById("goldRushPanel");
 const incanGoldPanel = document.getElementById("incanGoldPanel");
 const kobayakawaPanel = document.getElementById("kobayakawaPanel");
@@ -403,6 +405,17 @@ const flip7LastRound = document.getElementById("flip7LastRound");
 const flip7Players = document.getElementById("flip7Players");
 const flip7FlipBtn = document.getElementById("flip7FlipBtn");
 const flip7StayBtn = document.getElementById("flip7StayBtn");
+
+const yahtzeePhaseLabel = document.getElementById("yahtzeePhase");
+const yahtzeeRoundLabel = document.getElementById("yahtzeeRound");
+const yahtzeeTurnLabel = document.getElementById("yahtzeeTurn");
+const yahtzeeRollsLabel = document.getElementById("yahtzeeRolls");
+const yahtzeeWinnerLabel = document.getElementById("yahtzeeWinner");
+const yahtzeeJokerNotice = document.getElementById("yahtzeeJokerNotice");
+const yahtzeeJokerBody = document.getElementById("yahtzeeJokerBody");
+const yahtzeeDice = document.getElementById("yahtzeeDice");
+const yahtzeeRollBtn = document.getElementById("yahtzeeRollBtn");
+const yahtzeeScorecards = document.getElementById("yahtzeeScorecards");
 
 const goldRushPhaseLabel = document.getElementById("goldRushPhase");
 const goldRushModeLabel = document.getElementById("goldRushMode");
@@ -1828,6 +1841,7 @@ function showCreateGamePicker() {
 function setGamePanelVisibility(gameType) {
   const showCabo = gameType === "cabo";
   const showFlip7 = gameType === "flip7";
+  const showYahtzee = gameType === "yahtzee";
   const showGoldRush = gameType === "gold_rush";
   const showIncanGold = gameType === "incan_gold";
   const showKobayakawa = gameType === "kobayakawa";
@@ -1853,6 +1867,9 @@ function setGamePanelVisibility(gameType) {
   caboPanel.classList.toggle("hidden", !showCabo);
   if (flip7Panel) {
     flip7Panel.classList.toggle("hidden", !showFlip7);
+  }
+  if (yahtzeePanel) {
+    yahtzeePanel.classList.toggle("hidden", !showYahtzee);
   }
   if (goldRushPanel) {
     goldRushPanel.classList.toggle("hidden", !showGoldRush);
@@ -2637,6 +2654,7 @@ function resetRoomState() {
   playersList.innerHTML = "";
   clearCaboState();
   clearFlip7State();
+  clearYahtzeeState();
   clearGoldRushState();
   clearIncanGoldState();
   clearKobayakawaState();
@@ -2789,6 +2807,38 @@ function clearFlip7State() {
     flip7Players.innerHTML = "";
   }
   updateFlip7ActionButtons();
+}
+
+function clearYahtzeeState() {
+  currentYahtzeeView = null;
+  if (yahtzeePhaseLabel) {
+    yahtzeePhaseLabel.textContent = "-";
+  }
+  if (yahtzeeRoundLabel) {
+    yahtzeeRoundLabel.textContent = "-";
+  }
+  if (yahtzeeTurnLabel) {
+    yahtzeeTurnLabel.textContent = "-";
+  }
+  if (yahtzeeRollsLabel) {
+    yahtzeeRollsLabel.textContent = "-";
+  }
+  if (yahtzeeWinnerLabel) {
+    yahtzeeWinnerLabel.textContent = "-";
+  }
+  if (yahtzeeDice) {
+    yahtzeeDice.innerHTML = "";
+  }
+  if (yahtzeeScorecards) {
+    yahtzeeScorecards.innerHTML = "";
+  }
+  if (yahtzeeJokerBody) {
+    yahtzeeJokerBody.textContent = "-";
+  }
+  if (yahtzeeJokerNotice) {
+    yahtzeeJokerNotice.classList.add("hidden");
+  }
+  updateYahtzeeActionButtons();
 }
 
 function clearGoldRushState() {
@@ -5380,6 +5430,7 @@ function renderRoomState(state) {
     clearSkullSelection();
     clearCaboState();
     clearFlip7State();
+    clearYahtzeeState();
     clearSkullState();
     clearCatInBoxState();
     clearGangState();
@@ -7421,6 +7472,31 @@ function updateFlip7ActionButtons() {
     }
     button.disabled = !allowed;
   });
+}
+
+function isYahtzeeActionAvailable(actionType) {
+  if (!currentYahtzeeView || !Array.isArray(currentYahtzeeView.legal_actions)) {
+    return false;
+  }
+  return currentYahtzeeView.legal_actions.includes(actionType);
+}
+
+function updateYahtzeeActionButtons() {
+  if (!yahtzeeRollBtn) {
+    return;
+  }
+  if (currentGameType !== "yahtzee") {
+    yahtzeeRollBtn.classList.remove("action-allowed");
+    yahtzeeRollBtn.disabled = true;
+    return;
+  }
+  const allowed = isYahtzeeActionAvailable("roll");
+  if (allowed) {
+    yahtzeeRollBtn.classList.add("action-allowed");
+  } else {
+    yahtzeeRollBtn.classList.remove("action-allowed");
+  }
+  yahtzeeRollBtn.disabled = !allowed;
 }
 
 function isGoldRushActionAvailable(actionType) {
@@ -11913,6 +11989,188 @@ function renderFlip7GameState(data) {
   updateFlip7ActionButtons();
 }
 
+function formatYahtzeeCategoryLabel(view, category) {
+  if (view && view.category_labels && view.category_labels[category]) {
+    return view.category_labels[category];
+  }
+  return category || "-";
+}
+
+function renderYahtzeeDice(view) {
+  if (!yahtzeeDice) {
+    return;
+  }
+  yahtzeeDice.innerHTML = "";
+  const dice = Array.isArray(view.dice) ? view.dice : [];
+  const locked = Array.isArray(view.locked) ? view.locked : [];
+  const canToggle = isYahtzeeActionAvailable("toggle_lock");
+  for (let idx = 0; idx < 5; idx += 1) {
+    const value = Number.isInteger(dice[idx]) ? dice[idx] : 0;
+    const die = document.createElement("button");
+    die.type = "button";
+    die.className = "yahtzee-die";
+    if (locked[idx]) {
+      die.classList.add("locked");
+    }
+    die.textContent = value > 0 ? String(value) : "-";
+    if (!canToggle) {
+      die.classList.add("disabled");
+      die.disabled = true;
+    } else {
+      die.addEventListener("click", () => {
+        sendAction({ type: "toggle_lock", index: idx });
+      });
+    }
+    yahtzeeDice.appendChild(die);
+  }
+}
+
+function renderYahtzeeScorecards(view) {
+  if (!yahtzeeScorecards) {
+    return;
+  }
+  yahtzeeScorecards.innerHTML = "";
+  const categories = Array.isArray(view.category_order) ? view.category_order : [];
+  const possibleScores = view.possible_scores || {};
+  const allowed = new Set(view.allowed_categories || []);
+  const canScore = isYahtzeeActionAvailable("score");
+  const isViewerTurn = view.you && view.you === view.current_player;
+
+  (view.players || []).forEach((player) => {
+    const card = document.createElement("div");
+    card.className = "yahtzee-scorecard player-card";
+    if (player.player_id === view.current_player) {
+      card.classList.add("current");
+    }
+    if (player.player_id === view.you) {
+      card.classList.add("self");
+    }
+
+    const header = document.createElement("div");
+    header.className = "yahtzee-scorecard-header";
+    const nameEl = document.createElement("div");
+    const nameLabel = player.name || player.player_id || "-";
+    nameEl.textContent = player.player_id === view.you ? `${nameLabel} (You)` : nameLabel;
+    const totalEl = document.createElement("div");
+    const totalValue = Number.isInteger(player.total) ? player.total : 0;
+    const upperTotal = Number.isInteger(player.upper_total) ? player.upper_total : 0;
+    const lowerTotal = Number.isInteger(player.lower_total) ? player.lower_total : 0;
+    const upperBonus = Number.isInteger(player.upper_bonus) ? player.upper_bonus : 0;
+    const yahtzeeBonus = Number.isInteger(player.yahtzee_bonus) ? player.yahtzee_bonus : 0;
+    totalEl.textContent = `Total: ${totalValue}`;
+    const note = document.createElement("span");
+    note.className = "yahtzee-score-note";
+    note.textContent = `U ${upperTotal} + B ${upperBonus} + L ${lowerTotal} + Y ${yahtzeeBonus}`;
+    totalEl.appendChild(note);
+    header.appendChild(nameEl);
+    header.appendChild(totalEl);
+    card.appendChild(header);
+
+    const rows = document.createElement("div");
+    rows.className = "yahtzee-score-rows";
+    categories.forEach((category, idx) => {
+      const row = document.createElement("div");
+      row.className = "yahtzee-score-row";
+      if (idx < 6) {
+        row.classList.add("upper");
+      } else {
+        row.classList.add("lower");
+      }
+      const label = document.createElement("div");
+      label.textContent = formatYahtzeeCategoryLabel(view, category);
+      const valueEl = document.createElement("div");
+      valueEl.className = "yahtzee-score-value";
+
+      const scoreSheet = player.score_sheet || {};
+      const actual = scoreSheet[category];
+      if (actual !== null && actual !== undefined) {
+        row.classList.add("filled");
+        valueEl.textContent = String(actual);
+      } else {
+        const isActivePlayer = player.player_id === view.current_player;
+        const possible = isActivePlayer && allowed.has(category) ? possibleScores[category] : null;
+        if (possible !== null && possible !== undefined) {
+          valueEl.textContent = String(possible);
+        } else {
+          valueEl.textContent = "-";
+        }
+        const canSelect = isActivePlayer && isViewerTurn && canScore && allowed.has(category);
+        if (canSelect) {
+          row.classList.add("possible");
+          row.addEventListener("click", () => {
+            sendAction({ type: "score", category });
+          });
+        }
+      }
+
+      row.appendChild(label);
+      row.appendChild(valueEl);
+      rows.appendChild(row);
+    });
+
+    card.appendChild(rows);
+    yahtzeeScorecards.appendChild(card);
+  });
+}
+
+function renderYahtzeeGameState(data) {
+  const view = data.view;
+  currentYahtzeeView = view;
+  if (currentGameType !== "yahtzee") {
+    currentGameType = "yahtzee";
+    setGamePanelVisibility("yahtzee");
+  }
+  if (yahtzeePhaseLabel) {
+    yahtzeePhaseLabel.textContent = view.phase || "-";
+  }
+  if (yahtzeeRoundLabel) {
+    yahtzeeRoundLabel.textContent = view.current_round ?? "-";
+  }
+  if (yahtzeeTurnLabel) {
+    yahtzeeTurnLabel.textContent = view.current_player
+      ? findPlayerName(view, view.current_player)
+      : "-";
+  }
+  if (yahtzeeRollsLabel) {
+    const rolls = Number.isInteger(view.roll_count) ? view.roll_count : 0;
+    yahtzeeRollsLabel.textContent = `${rolls}/3`;
+  }
+  if (yahtzeeWinnerLabel) {
+    if (Array.isArray(view.winner) && view.winner.length) {
+      yahtzeeWinnerLabel.textContent = view.winner.map((pid) => findPlayerName(view, pid)).join(", ");
+    } else {
+      yahtzeeWinnerLabel.textContent = "-";
+    }
+  }
+
+  if (yahtzeeJokerNotice && yahtzeeJokerBody) {
+    let jokerMessage = null;
+    if (view.joker && view.current_player) {
+      const mode = view.joker.mode;
+      if (mode === "forced_upper") {
+        const label = formatYahtzeeCategoryLabel(view, view.joker.forced_category);
+        jokerMessage = `Must score ${label}.`;
+      } else if (mode === "lower_choice") {
+        jokerMessage = "Joker active: choose any lower category.";
+      } else if (mode === "forced_zero") {
+        jokerMessage = "Joker active: lower filled, must take 0 in upper.";
+      }
+    }
+    if (jokerMessage) {
+      yahtzeeJokerBody.textContent = jokerMessage;
+      yahtzeeJokerNotice.classList.remove("hidden");
+    } else {
+      yahtzeeJokerBody.textContent = "-";
+      yahtzeeJokerNotice.classList.add("hidden");
+    }
+  }
+
+  renderYahtzeeDice(view);
+  renderYahtzeeScorecards(view);
+  logGameEvents(data);
+  updateYahtzeeActionButtons();
+}
+
 function getGoldRushHand(view) {
   if (!view || !Array.isArray(view.players)) {
     return [];
@@ -14144,6 +14402,10 @@ function renderGameState(data) {
     renderFlip7GameState(data);
     return;
   }
+  if (gameType === "yahtzee") {
+    renderYahtzeeGameState(data);
+    return;
+  }
   if (gameType === "gold_rush") {
     renderGoldRushGameState(data);
     return;
@@ -14651,6 +14913,12 @@ if (flip7FlipBtn) {
 if (flip7StayBtn) {
   flip7StayBtn.addEventListener("click", () => {
     sendAction({ type: "stay" });
+  });
+}
+
+if (yahtzeeRollBtn) {
+  yahtzeeRollBtn.addEventListener("click", () => {
+    sendAction({ type: "roll" });
   });
 }
 
