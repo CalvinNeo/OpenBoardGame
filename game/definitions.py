@@ -332,7 +332,7 @@ BLITZ_SKETCH_CONFIG_SCHEMA = {
     "properties": {
         "draw_total": {"type": "integer", "minimum": 1},
         "guess_total": {"type": "integer", "minimum": 1},
-        "draw_time_sec": {"type": "integer", "minimum": 1},
+        "draw_time_sec": {"type": "number", "enum": [1, 1.5, 2, 2.5, 3, 4]},
         "skip_reveal_sec": {"type": "integer", "minimum": 0},
     },
     "additionalProperties": False,

@@ -5355,8 +5355,8 @@ function emitRoomStart() {
     const allowReviewVotes = impressionVoteToggle ? impressionVoteToggle.checked : false;
     payload.config = { allow_review_votes: allowReviewVotes };
   } else if (currentGameType === "blitz_sketch") {
-    const rawTime = blitzSketchDrawTimeSelect ? Number.parseInt(blitzSketchDrawTimeSelect.value, 10) : NaN;
-    const drawTime = Number.isInteger(rawTime) && rawTime > 0 ? rawTime : 3;
+    const rawTime = blitzSketchDrawTimeSelect ? Number.parseFloat(blitzSketchDrawTimeSelect.value) : NaN;
+    const drawTime = Number.isFinite(rawTime) && rawTime > 0 ? rawTime : 3;
     payload.config = { draw_time_sec: drawTime };
   }
   socket.emit("room:start", payload);

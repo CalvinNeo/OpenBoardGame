@@ -1,4 +1,5 @@
 import json
+import math
 import random
 import time
 from pathlib import Path
@@ -23,6 +24,8 @@ DEFAULT_CONFIG = {
     "skip_reveal_sec": 2,
 }
 
+DRAW_TIME_OPTIONS = (1, 1.5, 2, 2.5, 3, 4)
+
 _PROMPT_POOL_CACHE: Optional[List[str]] = None
 _PROMPT_BAG: List[str] = []
 
@@ -41,6 +44,19 @@ def _normalize_int(value: object, minimum: int) -> Optional[int]:
     return parsed
 
 
+def _normalize_draw_time(value: object) -> Optional[float]:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(parsed):
+        return None
+    for allowed in DRAW_TIME_OPTIONS:
+        if abs(parsed - allowed) < 1e-6:
+            return allowed
+    return None
+
+
 def _merge_config(config: Optional[Dict]) -> Dict:
     cfg = dict(DEFAULT_CONFIG)
     if not isinstance(config, dict):
@@ -51,7 +67,7 @@ def _merge_config(config: Optional[Dict]) -> Dict:
     guess_total = _normalize_int(config.get("guess_total"), 1)
     if guess_total is not None:
         cfg["guess_total"] = guess_total
-    draw_time_sec = _normalize_int(config.get("draw_time_sec"), 1)
+    draw_time_sec = _normalize_draw_time(config.get("draw_time_sec"))
     if draw_time_sec is not None:
         cfg["draw_time_sec"] = draw_time_sec
     skip_reveal_sec = _normalize_int(config.get("skip_reveal_sec"), 0)
