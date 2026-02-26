@@ -11713,7 +11713,17 @@ function renderFangNiaoHand(view) {
     if (Number.isFinite(small) && count >= small) {
       btn.classList.add("bankable");
     }
-    btn.textContent = `${labelEmoji} ${labelName} ×${count}`;
+    const titleSpan = document.createElement("span");
+    titleSpan.className = "fang-niao-hand-title";
+    titleSpan.textContent = `${labelEmoji} ${labelName} ×${count}`;
+    btn.appendChild(titleSpan);
+    const big = Number(cfg.big);
+    if (Number.isFinite(small)) {
+      const thresholdSpan = document.createElement("span");
+      thresholdSpan.className = "fang-niao-hand-threshold";
+      thresholdSpan.textContent = `小${cfg.small} / 大${Number.isFinite(big) ? cfg.big : "-"}`;
+      btn.appendChild(thresholdSpan);
+    }
     btn.title = Number.isFinite(small) ? `S${cfg.small} / B${cfg.big || "-"}` : "";
     if (meta.color) {
       btn.style.borderColor = meta.color;

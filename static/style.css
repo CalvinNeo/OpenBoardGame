@@ -4475,9 +4475,22 @@ body.log-open {
   padding: 4px 8px;
   cursor: pointer;
   display: flex;
-  align-items: center;
-  gap: 4px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
   font-weight: 600;
+  text-align: left;
+}
+
+.fang-niao-hand-title {
+  line-height: 1.2;
+}
+
+.fang-niao-hand-threshold {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  line-height: 1.2;
 }
 
 .fang-niao-hand-btn.selected {
