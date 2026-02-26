@@ -260,8 +260,8 @@ const CYBER_THRUSTER_MAX_ATTEMPTS = 3;
 const CYBER_THRUSTER_COLOR = "#111111";
 const CYBER_THRUSTER_STROKE = 4;
 const CYBER_THRUSTER_CROSS_SEC = 6.5;
-const CYBER_THRUSTER_GRAVITY_RATIO = 1.2;
-const CYBER_THRUSTER_THRUST_RATIO = 2.2;
+const CYBER_THRUSTER_GRAVITY_RATIO = 1.0;
+const CYBER_THRUSTER_THRUST_RATIO = 2.0;
 const CYBER_THRUSTER_RADIUS = 5;
 const CYBER_SYNTH_BARS = 10;
 const MEMORIES_SUPPORTED_GAMES = new Set([
@@ -812,7 +812,9 @@ const cyberShapeClearBtn = document.getElementById("cyberShapeClearBtn");
 const cyberToolThruster = document.getElementById("cyberToolThruster");
 const cyberThrusterCanvas = document.getElementById("cyberThrusterCanvas");
 const cyberThrusterAttempts = document.getElementById("cyberThrusterAttempts");
-const cyberThrusterLaunchBtn = document.getElementById("cyberThrusterLaunchBtn");
+const cyberThrusterAccel = document.getElementById("cyberThrusterAccel");
+const cyberThrusterVelocityLabel = document.getElementById("cyberThrusterVelocityLabel");
+const cyberThrusterUndoBtn = document.getElementById("cyberThrusterUndoBtn");
 const cyberToolSynth = document.getElementById("cyberToolSynth");
 const cyberSynthGrid = document.getElementById("cyberSynthGrid");
 const cyberSubmitBtn = document.getElementById("cyberSubmitBtn");
@@ -17095,14 +17097,50 @@ function getCyberThrusterParams(width, height) {
   };
 }
 
+function getCyberThrusterStartPoint(width, height) {
+  const params = getCyberThrusterParams(width, height);
+  return {
+    x: params.radius,
+    y: height * 0.5,
+  };
+}
+
+function formatSignedMetric(value) {
+  const rounded = Math.round(value * 10) / 10;
+  const display = Math.abs(rounded) < 0.05 ? 0 : rounded;
+  const sign = display >= 0 ? "+" : "";
+  return `${sign}${display.toFixed(1)}`;
+}
+
+function updateCyberThrusterMetrics(width, height) {
+  if (!cyberThrusterAccel && !cyberThrusterVelocityLabel) {
+    return;
+  }
+  let accel = 0;
+  let velocity = 0;
+  if (cyberThrusterActive && Number.isFinite(width) && Number.isFinite(height)) {
+    const params = getCyberThrusterParams(width, height);
+    const thrust = cyberThrusterThrusting ? params.thrust : 0;
+    accel = thrust - params.gravity;
+    velocity = -cyberThrusterVelocity;
+  }
+  if (cyberThrusterAccel) {
+    cyberThrusterAccel.textContent = `Acceleration (up +): ${formatSignedMetric(accel)} px/s^2`;
+  }
+  if (cyberThrusterVelocityLabel) {
+    cyberThrusterVelocityLabel.textContent = `Velocity (up +): ${formatSignedMetric(velocity)} px/s`;
+  }
+}
+
 function setCyberThrusterStartPosition() {
   if (!cyberThrusterCanvas) {
     return;
   }
   const width = cyberThrusterCanvas.width;
   const height = cyberThrusterCanvas.height;
-  cyberThrusterX = width * 0.1;
-  cyberThrusterY = height * 0.5;
+  const start = getCyberThrusterStartPoint(width, height);
+  cyberThrusterX = start.x;
+  cyberThrusterY = start.y;
   cyberThrusterVelocity = 0;
 }
 
@@ -17110,8 +17148,8 @@ function updateCyberThrusterAttempts() {
   if (cyberThrusterAttempts) {
     cyberThrusterAttempts.textContent = `Attempts left: ${cyberThrusterAttemptsLeft}`;
   }
-  if (cyberThrusterLaunchBtn) {
-    cyberThrusterLaunchBtn.disabled = cyberThrusterAttemptsLeft <= 0 || cyberThrusterActive;
+  if (cyberThrusterUndoBtn) {
+    cyberThrusterUndoBtn.disabled = cyberThrusterPaths.length === 0;
   }
 }
 
@@ -17135,12 +17173,14 @@ function renderCyberThrusterCanvas() {
     cyberThrusterCtx.lineWidth = path.width || CYBER_THRUSTER_STROKE;
     drawCyberSmoothPath(cyberThrusterCtx, points);
   });
-  const rocketX = cyberThrusterActive ? cyberThrusterX : width * 0.1;
-  const rocketY = cyberThrusterActive ? cyberThrusterY : height * 0.5;
+  const start = getCyberThrusterStartPoint(width, height);
+  const rocketX = cyberThrusterActive ? cyberThrusterX : start.x;
+  const rocketY = cyberThrusterActive ? cyberThrusterY : start.y;
   cyberThrusterCtx.fillStyle = "#f97316";
   cyberThrusterCtx.beginPath();
   cyberThrusterCtx.arc(rocketX, rocketY, CYBER_THRUSTER_RADIUS, 0, Math.PI * 2);
   cyberThrusterCtx.fill();
+  updateCyberThrusterMetrics(width, height);
 }
 
 function startCyberThrusterLaunch() {
@@ -17217,6 +17257,26 @@ function endCyberThrusterRun() {
     window.cancelAnimationFrame(cyberThrusterFrame);
     cyberThrusterFrame = null;
   }
+  setCyberThrusterStartPosition();
+  updateCyberThrusterAttempts();
+  renderCyberThrusterCanvas();
+  updateCyberSubmitButton(currentCyberView);
+}
+
+function undoCyberThrusterRun() {
+  if (cyberThrusterPaths.length === 0) {
+    return;
+  }
+  if (cyberThrusterFrame) {
+    window.cancelAnimationFrame(cyberThrusterFrame);
+  }
+  cyberThrusterFrame = null;
+  cyberThrusterActive = false;
+  cyberThrusterThrusting = false;
+  cyberThrusterCurrentPath = null;
+  cyberThrusterLastTs = null;
+  cyberThrusterPaths = cyberThrusterPaths.slice(0, -1);
+  cyberThrusterAttemptsLeft = Math.min(CYBER_THRUSTER_MAX_ATTEMPTS, cyberThrusterAttemptsLeft + 1);
   setCyberThrusterStartPosition();
   updateCyberThrusterAttempts();
   renderCyberThrusterCanvas();
@@ -18048,6 +18108,9 @@ if (cyberThrusterCanvas) {
       return;
     }
     event.preventDefault();
+    if (!cyberThrusterActive) {
+      startCyberThrusterLaunch();
+    }
     setCyberThrusterThrusting(true);
   });
   cyberThrusterCanvas.addEventListener("pointerup", () => setCyberThrusterThrusting(false));
@@ -18055,27 +18118,8 @@ if (cyberThrusterCanvas) {
   cyberThrusterCanvas.addEventListener("pointercancel", () => setCyberThrusterThrusting(false));
 }
 
-if (cyberThrusterLaunchBtn) {
-  cyberThrusterLaunchBtn.addEventListener("pointerdown", (event) => {
-    if (!isCyberThrusterToolActive()) {
-      return;
-    }
-    event.preventDefault();
-    if (!cyberThrusterActive) {
-      startCyberThrusterLaunch();
-    }
-    setCyberThrusterThrusting(true);
-  });
-  cyberThrusterLaunchBtn.addEventListener("pointerup", () => setCyberThrusterThrusting(false));
-  cyberThrusterLaunchBtn.addEventListener("pointerleave", () => setCyberThrusterThrusting(false));
-  cyberThrusterLaunchBtn.addEventListener("pointercancel", () => setCyberThrusterThrusting(false));
-  cyberThrusterLaunchBtn.addEventListener("click", (event) => {
-    if (!isCyberThrusterToolActive()) {
-      return;
-    }
-    event.preventDefault();
-    startCyberThrusterLaunch();
-  });
+if (cyberThrusterUndoBtn) {
+  cyberThrusterUndoBtn.addEventListener("click", () => undoCyberThrusterRun());
 }
 
 if (cyberIconRemoveBtn) {

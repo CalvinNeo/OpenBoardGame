@@ -4346,10 +4346,8 @@ body.log-open {
   justify-content: space-between;
 }
 
-.cyber-thruster-launch {
-  flex: 1;
+.cyber-thruster-undo {
   min-height: 44px;
-  font-size: 16px;
 }
 
 .cyber-synth-grid {
