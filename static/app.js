@@ -5736,7 +5736,7 @@ function renderFlip7Players(view) {
     if (player.flip7) {
       const flip7 = document.createElement("span");
       flip7.className = "badge highlight";
-      flip7.textContent = "flip7";
+      flip7.textContent = "flip7flash";
       badges.appendChild(flip7);
     }
     if (player.has_second_chance) {
@@ -5850,7 +5850,7 @@ function renderFlip7LastRound(view) {
     if (summary.flip7_winner === player.player_id) {
       const flip7 = document.createElement("span");
       flip7.className = "badge highlight";
-      flip7.textContent = "flip7";
+      flip7.textContent = "flip7flash";
       badges.appendChild(flip7);
     }
     header.appendChild(badges);
