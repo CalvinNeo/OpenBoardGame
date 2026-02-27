@@ -121,6 +121,7 @@ let cyberThrusterLastTs = null;
 let cyberThrusterX = 0;
 let cyberThrusterY = 0;
 let cyberThrusterVelocity = 0;
+let cyberThrusterWasOutside = false;
 let cyberSynthValues = [];
 let cyberSynthBarEls = [];
 let cyberSynthSliderEls = [];
@@ -263,6 +264,7 @@ const CYBER_THRUSTER_CROSS_SEC = 6.5;
 const CYBER_THRUSTER_GRAVITY_RATIO = 1.0;
 const CYBER_THRUSTER_THRUST_RATIO = 2.0;
 const CYBER_THRUSTER_RADIUS = 5;
+const CYBER_THRUSTER_TOLERANCE = 20;
 const CYBER_SYNTH_BARS = 10;
 const MEMORIES_SUPPORTED_GAMES = new Set([
   "draw_guess",
@@ -11623,9 +11625,24 @@ function renderFangNiaoRows(view) {
     return;
   }
   rows.forEach((row, idx) => {
+    const isSelectedRow = idx === fangNiaoSelectedRow;
+    const hasPreview =
+      isSelectedRow && !!fangNiaoSelectedBird && (fangNiaoSelectedSide === "left" || fangNiaoSelectedSide === "right");
+    const captureIndices = [];
+    if (hasPreview && Array.isArray(row) && row.length) {
+      const otherEnd = fangNiaoSelectedSide === "left" ? row[row.length - 1] : row[0];
+      if (otherEnd === fangNiaoSelectedBird) {
+        row.forEach((birdType, cardIndex) => {
+          if (birdType !== fangNiaoSelectedBird) {
+            captureIndices.push(cardIndex);
+          }
+        });
+      }
+    }
+
     const rowEl = document.createElement("div");
     rowEl.className = "fang-niao-row";
-    if (idx === fangNiaoSelectedRow) {
+    if (isSelectedRow) {
       rowEl.classList.add("selected");
     }
 
@@ -11659,7 +11676,7 @@ function renderFangNiaoRows(view) {
       empty.textContent = "-";
       cardsEl.appendChild(empty);
     } else {
-      row.forEach((birdType) => {
+      row.forEach((birdType, cardIndex) => {
         const meta = FANG_NIAO_BIRD_META[birdType] || {};
         const name = meta.name || birdType;
         const emoji = meta.emoji || "🐦";
@@ -11667,11 +11684,30 @@ function renderFangNiaoRows(view) {
         chip.className = "fang-niao-card";
         chip.textContent = `${emoji} ${name}`;
         chip.title = name;
+        if (cardIndex === 0 || cardIndex === row.length - 1) {
+          chip.classList.add("fang-niao-card-end");
+        }
+        if (hasPreview && captureIndices.includes(cardIndex)) {
+          chip.classList.add("fang-niao-card-capture");
+        }
         if (meta.color) {
           chip.style.backgroundColor = meta.color;
         }
         cardsEl.appendChild(chip);
       });
+    }
+
+    if (hasPreview) {
+      const previewTag = document.createElement("span");
+      previewTag.className = "fang-niao-capture-preview";
+      if (captureIndices.length) {
+        previewTag.classList.add("ok");
+        previewTag.textContent = `可吃 ${captureIndices.length} 张`;
+      } else {
+        previewTag.classList.add("none");
+        previewTag.textContent = "无可吃";
+      }
+      cardsEl.appendChild(previewTag);
     }
 
     rowEl.appendChild(labelEl);
@@ -11734,6 +11770,7 @@ function renderFangNiaoHand(view) {
       fangNiaoSelectedBird = birdType;
       updateFangNiaoSelectionLabels();
       updateFangNiaoActionButtons();
+      renderFangNiaoRows(view);
       renderFangNiaoHand(view);
     });
     fangNiaoHand.appendChild(btn);
@@ -17075,16 +17112,32 @@ function drawCyberSmoothPath(ctx, points) {
   if (!points || points.length < 2) {
     return;
   }
-  ctx.beginPath();
-  ctx.moveTo(points[0].x, points[0].y);
-  for (let i = 1; i < points.length - 1; i += 1) {
-    const midX = (points[i].x + points[i + 1].x) / 2;
-    const midY = (points[i].y + points[i + 1].y) / 2;
-    ctx.quadraticCurveTo(points[i].x, points[i].y, midX, midY);
-  }
-  const last = points[points.length - 1];
-  ctx.lineTo(last.x, last.y);
-  ctx.stroke();
+  let segment = [];
+  const flush = () => {
+    if (segment.length < 2) {
+      segment = [];
+      return;
+    }
+    ctx.beginPath();
+    ctx.moveTo(segment[0].x, segment[0].y);
+    for (let i = 1; i < segment.length - 1; i += 1) {
+      const midX = (segment[i].x + segment[i + 1].x) / 2;
+      const midY = (segment[i].y + segment[i + 1].y) / 2;
+      ctx.quadraticCurveTo(segment[i].x, segment[i].y, midX, midY);
+    }
+    const last = segment[segment.length - 1];
+    ctx.lineTo(last.x, last.y);
+    ctx.stroke();
+    segment = [];
+  };
+  points.forEach((pt) => {
+    if (!pt || !Number.isFinite(pt.x) || !Number.isFinite(pt.y)) {
+      flush();
+      return;
+    }
+    segment.push(pt);
+  });
+  flush();
 }
 
 function getCyberThrusterParams(width, height) {
@@ -17103,6 +17156,29 @@ function getCyberThrusterStartPoint(width, height) {
     x: params.radius,
     y: height * 0.5,
   };
+}
+
+function getCyberThrusterBounds(width, height) {
+  const params = getCyberThrusterParams(width, height);
+  const margin = CYBER_THRUSTER_TOLERANCE;
+  return {
+    inner: {
+      left: margin + params.radius,
+      right: width - margin - params.radius,
+      top: margin + params.radius,
+      bottom: height - margin - params.radius,
+    },
+    outer: {
+      left: params.radius,
+      right: width - params.radius,
+      top: params.radius,
+      bottom: height - params.radius,
+    },
+  };
+}
+
+function isCyberThrusterInBounds(bounds, x, y) {
+  return x >= bounds.left && x <= bounds.right && y >= bounds.top && y <= bounds.bottom;
 }
 
 function formatSignedMetric(value) {
@@ -17129,6 +17205,23 @@ function updateCyberThrusterMetrics(width, height) {
   }
   if (cyberThrusterVelocityLabel) {
     cyberThrusterVelocityLabel.textContent = `Velocity (up +): ${formatSignedMetric(velocity)} px/s`;
+  }
+}
+
+function recordCyberThrusterPoint(x, y, bounds) {
+  if (!cyberThrusterCurrentPath) {
+    return;
+  }
+  const inInner = isCyberThrusterInBounds(bounds.inner, x, y);
+  if (inInner) {
+    const points = cyberThrusterCurrentPath.points;
+    if (cyberThrusterWasOutside && points.length > 0 && points[points.length - 1] !== null) {
+      points.push(null);
+    }
+    points.push({ x, y });
+    cyberThrusterWasOutside = false;
+  } else {
+    cyberThrusterWasOutside = true;
   }
 }
 
@@ -17199,10 +17292,12 @@ function startCyberThrusterLaunch() {
   if (toolKey !== "thruster") {
     return;
   }
+  const width = cyberThrusterCanvas.width;
+  const height = cyberThrusterCanvas.height;
   cyberThrusterAttemptsLeft -= 1;
   setCyberThrusterStartPosition();
   cyberThrusterCurrentPath = {
-    points: [{ x: cyberThrusterX, y: cyberThrusterY }],
+    points: [],
     color: CYBER_THRUSTER_COLOR,
     width: CYBER_THRUSTER_STROKE,
   };
@@ -17210,6 +17305,8 @@ function startCyberThrusterLaunch() {
   cyberThrusterActive = true;
   cyberThrusterThrusting = false;
   cyberThrusterLastTs = null;
+  cyberThrusterWasOutside = false;
+  recordCyberThrusterPoint(cyberThrusterX, cyberThrusterY, getCyberThrusterBounds(width, height));
   updateCyberThrusterAttempts();
   renderCyberThrusterCanvas();
   cyberThrusterFrame = window.requestAnimationFrame(stepCyberThruster);
@@ -17232,16 +17329,11 @@ function stepCyberThruster(timestamp) {
   cyberThrusterVelocity += (params.gravity - thrust) * dt;
   cyberThrusterY += cyberThrusterVelocity * dt;
   cyberThrusterX += params.speed * dt;
-  if (cyberThrusterCurrentPath) {
-    cyberThrusterCurrentPath.points.push({ x: cyberThrusterX, y: cyberThrusterY });
-  }
+  const bounds = getCyberThrusterBounds(width, height);
+  recordCyberThrusterPoint(cyberThrusterX, cyberThrusterY, bounds);
   renderCyberThrusterCanvas();
   updateCyberSubmitButton(currentCyberView);
-  if (
-    cyberThrusterX > width - params.radius ||
-    cyberThrusterY < params.radius ||
-    cyberThrusterY > height - params.radius
-  ) {
+  if (!isCyberThrusterInBounds(bounds.outer, cyberThrusterX, cyberThrusterY)) {
     endCyberThrusterRun();
     return;
   }
@@ -17253,6 +17345,7 @@ function endCyberThrusterRun() {
   cyberThrusterThrusting = false;
   cyberThrusterCurrentPath = null;
   cyberThrusterLastTs = null;
+  cyberThrusterWasOutside = false;
   if (cyberThrusterFrame) {
     window.cancelAnimationFrame(cyberThrusterFrame);
     cyberThrusterFrame = null;
@@ -17275,6 +17368,7 @@ function undoCyberThrusterRun() {
   cyberThrusterThrusting = false;
   cyberThrusterCurrentPath = null;
   cyberThrusterLastTs = null;
+  cyberThrusterWasOutside = false;
   cyberThrusterPaths = cyberThrusterPaths.slice(0, -1);
   cyberThrusterAttemptsLeft = Math.min(CYBER_THRUSTER_MAX_ATTEMPTS, cyberThrusterAttemptsLeft + 1);
   setCyberThrusterStartPosition();
@@ -17339,6 +17433,7 @@ function resetCyberThrusterState() {
   cyberThrusterPaths = [];
   cyberThrusterAttemptsLeft = CYBER_THRUSTER_MAX_ATTEMPTS;
   cyberThrusterLastTs = null;
+  cyberThrusterWasOutside = false;
   setCyberThrusterStartPosition();
   updateCyberThrusterAttempts();
   renderCyberThrusterCanvas();
@@ -17686,7 +17781,9 @@ function buildCyberSubmission(toolIndex) {
       width: cyberThrusterCanvas ? cyberThrusterCanvas.width : CYBER_CANVAS_SIZE,
       height: cyberThrusterCanvas ? cyberThrusterCanvas.height : CYBER_CANVAS_SIZE,
       paths: cyberThrusterPaths.map((path) => ({
-        points: path.points.map((pt) => ({ x: pt.x, y: pt.y })),
+        points: (path.points || []).map((pt) =>
+          pt && Number.isFinite(pt.x) && Number.isFinite(pt.y) ? { x: pt.x, y: pt.y } : null
+        ),
         color: path.color,
         width: path.width,
       })),
@@ -17970,6 +18067,7 @@ function clearCyberState() {
   cyberThrusterX = 0;
   cyberThrusterY = 0;
   cyberThrusterVelocity = 0;
+  cyberThrusterWasOutside = false;
   cyberSynthValues = Array(CYBER_SYNTH_BARS).fill(0);
   cyberGuessSelections = {};
   if (cyberPhaseLabel) cyberPhaseLabel.textContent = "-";

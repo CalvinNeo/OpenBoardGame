@@ -928,16 +928,32 @@ const CYBER_SHAPE_SPECS = {
 
 function drawSmoothPath(ctx, points) {
   if (!points || points.length < 2) return;
-  ctx.beginPath();
-  ctx.moveTo(points[0].x, points[0].y);
-  for (let i = 1; i < points.length - 1; i += 1) {
-    const midX = (points[i].x + points[i + 1].x) / 2;
-    const midY = (points[i].y + points[i + 1].y) / 2;
-    ctx.quadraticCurveTo(points[i].x, points[i].y, midX, midY);
-  }
-  const last = points[points.length - 1];
-  ctx.lineTo(last.x, last.y);
-  ctx.stroke();
+  let segment = [];
+  const flush = () => {
+    if (segment.length < 2) {
+      segment = [];
+      return;
+    }
+    ctx.beginPath();
+    ctx.moveTo(segment[0].x, segment[0].y);
+    for (let i = 1; i < segment.length - 1; i += 1) {
+      const midX = (segment[i].x + segment[i + 1].x) / 2;
+      const midY = (segment[i].y + segment[i + 1].y) / 2;
+      ctx.quadraticCurveTo(segment[i].x, segment[i].y, midX, midY);
+    }
+    const last = segment[segment.length - 1];
+    ctx.lineTo(last.x, last.y);
+    ctx.stroke();
+    segment = [];
+  };
+  points.forEach((pt) => {
+    if (!pt || !Number.isFinite(pt.x) || !Number.isFinite(pt.y)) {
+      flush();
+      return;
+    }
+    segment.push(pt);
+  });
+  flush();
 }
 
 function drawCyberShape(ctx, shapeKey, x, y, rotation) {
