@@ -81,6 +81,17 @@ def _clear_selections(state: Dict) -> None:
         pdata["selected_card"] = None
 
 
+def _mark_row_taken(state: Dict, player_id: str, cards: List[Dict], penalty: int) -> None:
+    taken = state.get("row_taken_this_turn")
+    if not isinstance(taken, dict):
+        taken = {}
+    taken[player_id] = {
+        "cards": [dict(card) for card in cards],
+        "penalty": int(penalty),
+    }
+    state["row_taken_this_turn"] = taken
+
+
 def _timeout_ms(state: Dict, timeout_type: str) -> int:
     cfg = state.get("config", {})
     key = "selection_timeout_sec" if timeout_type == "selection" else "row_choice_timeout_sec"
@@ -122,6 +133,7 @@ def _deal_round(state: Dict) -> None:
     state["pending_index"] = 0
     state["waiting_for"] = None
     state["last_reveal_order"] = None
+    state["row_taken_this_turn"] = {}
     _schedule_timeout(state, "selection")
 
 
@@ -180,9 +192,11 @@ def _place_card(state: Dict, player_id: str, card: Dict, events: List[Dict]) -> 
 
     row = state["rows"][target_index]
     if len(row) >= ROW_LIMIT:
+        taken_cards = [dict(card) for card in row]
         penalty = _row_bullheads(row)
         state["players"][player_id]["score"] += penalty
         row[:] = [card]
+        _mark_row_taken(state, player_id, taken_cards, penalty)
         events.append(
             {
                 "type": "six_nimmt:take_row",
@@ -219,6 +233,20 @@ def _continue_placement(state: Dict, events: List[Dict]) -> None:
 
 
 def _finish_turn(state: Dict, events: List[Dict]) -> None:
+    last_taken = state.get("row_taken_this_turn")
+    if isinstance(last_taken, dict):
+        state["row_taken_last_turn"] = {
+            pid: {
+                "cards": [dict(card) for card in entry.get("cards", [])]
+                if isinstance(entry, dict)
+                else [],
+                "penalty": int(entry.get("penalty", 0)) if isinstance(entry, dict) else 0,
+            }
+            for pid, entry in last_taken.items()
+        }
+    else:
+        state["row_taken_last_turn"] = {}
+    state["row_taken_this_turn"] = {}
     state["phase"] = "selection"
     state["pending_index"] = 0
     state["pending_plays"] = []
@@ -252,9 +280,11 @@ def _assign_winners(state: Dict) -> None:
 
 def _apply_row_choice(state: Dict, player_id: str, row_index: int, card: Dict, events: List[Dict]) -> None:
     row = state["rows"][row_index]
+    taken_cards = [dict(card) for card in row]
     penalty = _row_bullheads(row)
     state["players"][player_id]["score"] += penalty
     row[:] = [card]
+    _mark_row_taken(state, player_id, taken_cards, penalty)
     events.append(
         {
             "type": "six_nimmt:take_row",
@@ -326,6 +356,8 @@ class SixNimmtGame:
             "last_reveal_order": None,
             "config": cfg,
             "pending_timeout": None,
+            "row_taken_last_turn": {},
+            "row_taken_this_turn": {},
             "winners": [],
             "game_over": False,
         }
@@ -454,9 +486,19 @@ class SixNimmtGame:
     def get_public_view(state: Dict, viewer_id: str) -> Dict:
         players_view = []
         meta = state.get("player_meta", {})
+        last_taken = state.get("row_taken_last_turn")
+        if not isinstance(last_taken, dict):
+            last_taken = {}
         for pid in _player_order(state):
             pdata = state["players"][pid]
             info = meta.get(pid, {})
+            taken_entry = last_taken.get(pid)
+            took_last_row = isinstance(taken_entry, dict)
+            taken_cards = []
+            if took_last_row:
+                taken_cards = [
+                    dict(card) for card in taken_entry.get("cards", []) if isinstance(card, dict)
+                ]
             players_view.append(
                 {
                     "player_id": pid,
@@ -466,6 +508,8 @@ class SixNimmtGame:
                     "score": pdata.get("score", 0),
                     "hand_count": len(pdata.get("hand", [])),
                     "selected": pdata.get("selected_card") is not None,
+                    "took_last_row": took_last_row,
+                    "took_last_row_cards": taken_cards,
                 }
             )
 

@@ -13817,6 +13817,20 @@ function renderSixNimmtPlayers(view) {
     const selected = document.createElement("div");
     selected.textContent = player.selected ? "selected ✅" : "selected -";
     meta.append(score, handCount, selected);
+    if (player.took_last_row) {
+      const tookRow = document.createElement("div");
+      tookRow.className = "badge danger six-nimmt-took-row";
+      tookRow.textContent = "上一轮吃牌";
+      meta.appendChild(tookRow);
+      const takenCards = Array.isArray(player.took_last_row_cards) ? player.took_last_row_cards : [];
+      if (takenCards.length > 0) {
+        const takenText = takenCards.map((card) => formatSixNimmtCardText(card)).join("、");
+        const tookRowCards = document.createElement("div");
+        tookRowCards.className = "six-nimmt-took-row-cards";
+        tookRowCards.textContent = `吃牌: ${takenText}`;
+        meta.appendChild(tookRowCards);
+      }
+    }
     card.append(name, meta);
     sixNimmtPlayers.appendChild(card);
   });
