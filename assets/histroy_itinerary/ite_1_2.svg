@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1944" viewBox="0 0 1600 1944">
+  <rect width="1600" height="1944" fill="#f3e6d4"/>
+  <circle cx="180" cy="110" r="30" fill="#b0473f"/>
+  <circle cx="492" cy="110" r="30" fill="#2f5578"/>
+  <circle cx="809" cy="110" r="30" fill="#b1874d"/>
+  <circle cx="1127" cy="110" r="30" fill="#3c6a3f"/>
+  <rect x="60" y="240" width="240" height="1580" rx="120" fill="#b0473f"/>
+  <rect x="372" y="240" width="240" height="1580" rx="120" fill="#2f5578"/>
+  <rect x="689" y="240" width="240" height="1580" rx="120" fill="#b1874d"/>
+  <rect x="1007" y="240" width="240" height="1580" rx="120" fill="#3c6a3f"/>
+  <line x1="180" y1="942" x2="1127" y2="942" stroke="#9b7b54" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="1470" cy="942" r="34" fill="#4aa7b2"/>
+  <text x="1470" y="942" font-size="22" text-anchor="middle" dominant-baseline="middle" fill="#fff">7</text>
+  <circle cx="1127" cy="368" r="28" fill="#1b0f0a" stroke="#c2a980" stroke-width="6"/>
+  <circle cx="180" cy="657" r="28" fill="#1b0f0a" stroke="#c2a980" stroke-width="6"/>
+  <circle cx="492" cy="657" r="28" fill="#1b0f0a" stroke="#c2a980" stroke-width="6"/>
+  <circle cx="809" cy="657" r="28" fill="#1b0f0a" stroke="#c2a980" stroke-width="6"/>
+  <circle cx="1127" cy="657" r="28" fill="#1b0f0a" stroke="#c2a980" stroke-width="6"/>
+  <circle cx="1127" cy="657" r="18" fill="#4aa7b2"/>
+  <path d="M 1117 660 A 10 10 0 1 1 1134 647" fill="none" stroke="#bfe7ea" stroke-width="2"/>
+  <text x="1127" y="657" font-size="20" text-anchor="middle" dominant-baseline="middle" fill="#fff">3</text>
+  <circle cx="180" cy="942" r="28" fill="#1b0f0a" stroke="#c2a980" stroke-width="6"/>
+  <circle cx="492" cy="942" r="28" fill="#1b0f0a" stroke="#c2a980" stroke-width="6"/>
+  <circle cx="809" cy="942" r="28" fill="#1b0f0a" stroke="#c2a980" stroke-width="6"/>
+  <circle cx="180" cy="1219" r="28" fill="#1b0f0a" stroke="#c2a980" stroke-width="6"/>
+  <circle cx="180" cy="1219" r="18" fill="#8a3d8f"/>
+  <polygon points="180,1207 192,1219 180,1231 168,1219" fill="#d98bd0"/>
+  <circle cx="492" cy="1219" r="28" fill="#1b0f0a" stroke="#c2a980" stroke-width="6"/>
+  <circle cx="492" cy="1219" r="18" fill="#4aa7b2"/>
+  <path d="M 482 1222 A 10 10 0 1 1 499 1209" fill="none" stroke="#bfe7ea" stroke-width="2"/>
+  <text x="492" y="1219" font-size="20" text-anchor="middle" dominant-baseline="middle" fill="#fff">3</text>
+  <circle cx="1127" cy="1219" r="28" fill="#1b0f0a" stroke="#c2a980" stroke-width="6"/>
+  <circle cx="1127" cy="1219" r="18" fill="#4aa7b2"/>
+  <path d="M 1117 1222 A 10 10 0 1 1 1134 1209" fill="none" stroke="#bfe7ea" stroke-width="2"/>
+  <text x="1127" y="1219" font-size="20" text-anchor="middle" dominant-baseline="middle" fill="#fff">4</text>
+  <circle cx="180" cy="1499" r="28" fill="#1b0f0a" stroke="#c2a980" stroke-width="6"/>
+  <circle cx="180" cy="1499" r="18" fill="#4aa7b2"/>
+  <path d="M 170 1502 A 10 10 0 1 1 187 1489" fill="none" stroke="#bfe7ea" stroke-width="2"/>
+  <text x="180" y="1499" font-size="20" text-anchor="middle" dominant-baseline="middle" fill="#fff">3</text>
+  <circle cx="492" cy="1499" r="28" fill="#1b0f0a" stroke="#c2a980" stroke-width="6"/>
+  <circle cx="492" cy="1781" r="28" fill="#1b0f0a" stroke="#c2a980" stroke-width="6"/>
+  <circle cx="492" cy="1781" r="18" fill="#4aa7b2"/>
+  <path d="M 482 1784 A 10 10 0 1 1 499 1771" fill="none" stroke="#bfe7ea" stroke-width="2"/>
+  <text x="492" y="1781" font-size="20" text-anchor="middle" dominant-baseline="middle" fill="#fff">4</text>
+</svg>

@@ -1,0 +1,73 @@
+  <svg xmlns="http://www.w3.org/2000/svg" width="170" height="220" viewBox="0 0 170 220">
+    <rect width="170" height="220" fill="#f3e6d4"/>
+
+    <!-- top icons (placeholders) -->
+    <circle cx="25" cy="12" r="7" fill="#b0473f"/>
+    <circle cx="60" cy="12" r="7" fill="#2f5578"/>
+    <circle cx="95" cy="12" r="7" fill="#b1874d"/>
+    <circle cx="130" cy="12" r="7" fill="#3c6a3f"/>
+
+    <!-- column bands -->
+    <rect x="13"  y="25" width="24" height="185" rx="10" fill="#b0473f"/>
+    <rect x="48"  y="25" width="24" height="185" rx="10" fill="#2f5578"/>
+    <rect x="83"  y="25" width="24" height="185" rx="10" fill="#b1874d"/>
+    <rect x="118" y="25" width="24" height="185" rx="10" fill="#3c6a3f"/>
+
+    <!-- row line (row 3) -->
+    <line x1="25" y1="92" x2="95" y2="92" stroke="#9b7b54" stroke-width="3" stroke-linecap="round"/>
+    <line x1="95" y1="92" x2="150" y2="92" stroke="#9b7b54" stroke-width="3" stroke-linecap="round"/>
+
+    <!-- reward circle -->
+    <circle cx="150" cy="92" r="9" fill="#4aa7b2"/>
+    <text x="150" y="92" font-size="7" text-anchor="middle" dominant-baseline="middle" fill="#fff">9</text>
+
+    <!-- Row 1 -->
+    <g transform="translate(25 40)"><circle r="9" fill="#1b0f0a" stroke="#c2a980" stroke-width="3"/></g>
+    <g transform="translate(60 40)"><circle r="9" fill="#1b0f0a" stroke="#c2a980" stroke-width="3"/></g>
+
+    <!-- Row 2 -->
+    <g transform="translate(25 66)"><circle r="9" fill="#1b0f0a" stroke="#c2a980" stroke-width="3"/></g>
+    <g transform="translate(60 66)"><circle r="9" fill="#1b0f0a" stroke="#c2a980" stroke-width="3"/></g>
+
+    <!-- Row 3 -->
+    <g transform="translate(25 92)"><circle r="9" fill="#1b0f0a" stroke="#c2a980" stroke-width="3"/></g>
+    <g transform="translate(60 92)"><circle r="9" fill="#1b0f0a" stroke="#c2a980" stroke-width="3"/></g>
+    <g transform="translate(95 92)"><circle r="9" fill="#1b0f0a" stroke="#c2a980" stroke-width="3"/></g>
+
+    <!-- Row 4 -->
+    <g transform="translate(60 118)">
+      <circle r="9" fill="#1b0f0a" stroke="#c2a980" stroke-width="3"/>
+      <circle r="6" fill="#4aa7b2"/>
+      <path d="M -3 1 A 3 3 0 1 1 2 -2" fill="none" stroke="#bfe7ea" stroke-width="1.2"/>
+      <text x="0" y="0.5" font-size="6" text-anchor="middle" dominant-baseline="middle" fill="#fff">3</text>
+    </g>
+    <g transform="translate(95 118)">
+      <circle r="9" fill="#1b0f0a" stroke="#c2a980" stroke-width="3"/>
+      <circle r="6" fill="#8a3d8f"/>
+      <polygon points="0,-4 4,0 0,4 -4,0" fill="#d98bd0"/>
+    </g>
+    <g transform="translate(130 118)"><circle r="9" fill="#1b0f0a" stroke="#c2a980" stroke-width="3"/></g>
+
+    <!-- Row 5 -->
+    <g transform="translate(60 144)"><circle r="9" fill="#1b0f0a" stroke="#c2a980" stroke-width="3"/></g>
+    <g transform="translate(130 144)">
+      <circle r="9" fill="#1b0f0a" stroke="#c2a980" stroke-width="3"/>
+      <circle r="6" fill="#4aa7b2"/>
+      <path d="M -3 1 A 3 3 0 1 1 2 -2" fill="none" stroke="#bfe7ea" stroke-width="1.2"/>
+      <text x="0" y="0.5" font-size="6" text-anchor="middle" dominant-baseline="middle" fill="#fff">2</text>
+    </g>
+
+    <!-- Row 6 -->
+    <g transform="translate(60 170)">
+      <circle r="9" fill="#1b0f0a" stroke="#c2a980" stroke-width="3"/>
+      <circle r="6" fill="#4aa7b2"/>
+      <path d="M -3 1 A 3 3 0 1 1 2 -2" fill="none" stroke="#bfe7ea" stroke-width="1.2"/>
+      <text x="0" y="0.5" font-size="6" text-anchor="middle" dominant-baseline="middle" fill="#fff">5</text>
+    </g>
+    <g transform="translate(130 170)">
+      <circle r="9" fill="#1b0f0a" stroke="#c2a980" stroke-width="3"/>
+      <circle r="6" fill="#4aa7b2"/>
+      <path d="M -3 1 A 3 3 0 1 1 2 -2" fill="none" stroke="#bfe7ea" stroke-width="1.2"/>
+      <text x="0" y="0.5" font-size="6" text-anchor="middle" dominant-baseline="middle" fill="#fff">6</text>
+    </g>
+  </svg>
