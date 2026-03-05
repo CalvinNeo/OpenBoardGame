@@ -724,6 +724,7 @@ class TrekkingHistoryGame:
                     "seat": meta.get("seat"),
                     "is_bot": meta.get("is_bot"),
                     "time": pdata.get("time", 0),
+                    "time_order": pdata.get("time_order", 0),
                     "crystals": pdata.get("crystals", 0),
                     "score": pdata.get("score", 0),
                     "trek_lengths": trek_lengths,

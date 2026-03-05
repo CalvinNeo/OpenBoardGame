@@ -3408,6 +3408,68 @@ body.log-open {
   gap: 8px;
 }
 
+.trekking-clock {
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.trekking-clock-grid {
+  display: grid;
+  grid-template-columns: repeat(13, minmax(0, 1fr));
+  gap: 6px;
+  min-width: 520px;
+}
+
+.trekking-clock-slot {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 68px;
+}
+
+.trekking-clock-slot-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #374151;
+  background: #f3f4f6;
+  padding: 2px 4px;
+  text-align: center;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.trekking-clock-cell {
+  min-height: 46px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: stretch;
+  padding: 4px;
+}
+
+.trekking-clock-name {
+  padding: 2px 4px;
+  border-radius: 6px;
+  background: #fff3c4;
+  color: #7c4a0b;
+  font-weight: 600;
+  font-size: 11px;
+  text-align: center;
+  border: 1px solid rgba(124, 74, 11, 0.2);
+}
+
+.trekking-clock-name.current {
+  background: #bfdbfe;
+  color: #1e3a8a;
+  border-color: rgba(30, 58, 138, 0.3);
+}
+
+.trekking-clock-name.self {
+  box-shadow: 0 0 0 1px rgba(14, 116, 144, 0.35) inset;
+}
+
 .trekking-card {
   border: 1px solid #d1d5db;
   border-radius: 10px;
@@ -3723,6 +3785,11 @@ body.log-open {
     width: auto;
     flex: 1 1 0;
     white-space: nowrap;
+  }
+
+  .trekking-clock-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    min-width: 0;
   }
 
   #connectionPanel .row {

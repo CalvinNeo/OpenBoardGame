@@ -962,6 +962,7 @@ const trekkingTurnLabel = document.getElementById("trekkingTurn");
 const trekkingWinnerLabel = document.getElementById("trekkingWinner");
 const trekkingDeckCountLabel = document.getElementById("trekkingDeckCount");
 const trekkingDeckTopLabel = document.getElementById("trekkingDeckTop");
+const trekkingClock = document.getElementById("trekkingClock");
 const trekkingMarket = document.getElementById("trekkingMarket");
 const trekkingSelectedCardLabel = document.getElementById("trekkingSelectedCard");
 const trekkingSelectedCostLabel = document.getElementById("trekkingSelectedCost");
@@ -3845,6 +3846,9 @@ function clearTrekkingState() {
   if (trekkingMarket) {
     trekkingMarket.innerHTML = "";
   }
+  if (trekkingClock) {
+    trekkingClock.innerHTML = "";
+  }
   if (trekkingPlayers) {
     trekkingPlayers.innerHTML = "";
   }
@@ -5293,6 +5297,67 @@ function renderTrekkingMarket(view) {
     }
     trekkingMarket.appendChild(button);
   });
+}
+
+function renderTrekkingClock(view) {
+  if (!trekkingClock) {
+    return;
+  }
+  trekkingClock.innerHTML = "";
+  const maxTime = 12;
+  const grid = document.createElement("div");
+  grid.className = "trekking-clock-grid";
+
+  const buckets = Array.from({ length: maxTime + 1 }, () => []);
+  (view.players || []).forEach((player) => {
+    const time = Number(player.time) || 0;
+    const index = Math.min(Math.max(time, 0), maxTime);
+    buckets[index].push(player);
+  });
+
+  buckets.forEach((bucket) => {
+    bucket.sort((a, b) => {
+      const aOrder = Number(a.time_order) || 0;
+      const bOrder = Number(b.time_order) || 0;
+      if (aOrder !== bOrder) {
+        return bOrder - aOrder;
+      }
+      const aSeat = Number(a.seat) || 0;
+      const bSeat = Number(b.seat) || 0;
+      if (aSeat !== bSeat) {
+        return aSeat - bSeat;
+      }
+      const aName = a.name || a.player_id || "";
+      const bName = b.name || b.player_id || "";
+      return String(aName).localeCompare(String(bName));
+    });
+  });
+
+  for (let i = 0; i <= maxTime; i += 1) {
+    const slot = document.createElement("div");
+    slot.className = "trekking-clock-slot";
+    const label = document.createElement("div");
+    label.className = "trekking-clock-slot-label";
+    label.textContent = i === maxTime ? "12+" : String(i);
+    slot.appendChild(label);
+    const cell = document.createElement("div");
+    cell.className = "trekking-clock-cell";
+    buckets[i].forEach((player) => {
+      const name = document.createElement("div");
+      name.className = "trekking-clock-name";
+      if (player.player_id === view.current_turn) {
+        name.classList.add("current");
+      }
+      if (player.player_id === view.you) {
+        name.classList.add("self");
+      }
+      name.textContent = player.name || player.player_id;
+      cell.appendChild(name);
+    });
+    slot.appendChild(cell);
+    grid.appendChild(slot);
+  }
+  trekkingClock.appendChild(grid);
 }
 
 function renderTrekkingPlayers(view) {
@@ -11617,6 +11682,7 @@ function renderTrekkingGameState(data) {
     }
   }
 
+  renderTrekkingClock(view);
   renderTrekkingMarket(view);
   renderTrekkingPlayers(view);
 
