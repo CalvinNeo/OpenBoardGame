@@ -54,6 +54,7 @@ let currentAbracaView = null;
 let currentBlokusView = null;
 let currentFangNiaoView = null;
 let currentAidixitView = null;
+let currentTrekkingView = null;
 let currentGameType = null;
 let abracaLastRoundNotice = null;
 let selectedSlots = [];
@@ -169,6 +170,9 @@ let blokusSelectedOrigin = null;
 let blokusRotation = 0;
 let blokusFlip = false;
 let blokusDragState = null;
+let trekkingSelectedSlot = null;
+let trekkingSelectedWildChoices = [];
+let trekkingLastDay = null;
 const BLOKUS_DRAG_THRESHOLD = 6;
 const BLOKUS_ADJACENT_OFFSETS = [
   [1, 0],
@@ -225,6 +229,24 @@ const INCAN_GOLD_HAZARD_ICONS = {
   rockfall: "🪨",
   mummy: "🧟",
 };
+const TREKKING_TOKEN_LABELS = {
+  person: "🧑",
+  event: "📜",
+  innovation: "⚙️",
+  progress: "🌱",
+  wild: "✨",
+  crystal: "💎",
+};
+const TREKKING_TOKEN_NAMES = {
+  person: "Person",
+  event: "Event",
+  innovation: "Innovation",
+  progress: "Progress",
+  wild: "Wild",
+  crystal: "Crystal",
+};
+const TREKKING_COLUMN_LABELS = ["Person", "Event", "Innovation", "Progress"];
+const TREKKING_SLOT_REWARDS = ["-", "person", "event", "innovation", "progress", "crystal"];
 const CYBER_TOOL_KEYS = [
   "shoelaces",
   "pixel_grid",
@@ -932,6 +954,26 @@ const pointSaladClearFlipsBtn = document.getElementById("pointSaladClearFlipsBtn
 const pointSaladTakePointBtn = document.getElementById("pointSaladTakePointBtn");
 const pointSaladTakeVeggiesBtn = document.getElementById("pointSaladTakeVeggiesBtn");
 const pointSaladPlayers = document.getElementById("pointSaladPlayers");
+
+const trekkingPanel = document.getElementById("trekkingPanel");
+const trekkingDayLabel = document.getElementById("trekkingDay");
+const trekkingTurnLabel = document.getElementById("trekkingTurn");
+const trekkingWinnerLabel = document.getElementById("trekkingWinner");
+const trekkingDeckCountLabel = document.getElementById("trekkingDeckCount");
+const trekkingDeckTopLabel = document.getElementById("trekkingDeckTop");
+const trekkingMarket = document.getElementById("trekkingMarket");
+const trekkingSelectedCardLabel = document.getElementById("trekkingSelectedCard");
+const trekkingSelectedCostLabel = document.getElementById("trekkingSelectedCost");
+const trekkingSelectedTokensLabel = document.getElementById("trekkingSelectedTokens");
+const trekkingSpendCrystalsInput = document.getElementById("trekkingSpendCrystals");
+const trekkingWildNeededLabel = document.getElementById("trekkingWildNeeded");
+const trekkingWildSelectedLabel = document.getElementById("trekkingWildSelected");
+const trekkingClearWildBtn = document.getElementById("trekkingClearWild");
+const trekkingWildButtons = document.getElementById("trekkingWildButtons");
+const trekkingTakeCardBtn = document.getElementById("trekkingTakeCardBtn");
+const trekkingTakeAncestorBtn = document.getElementById("trekkingTakeAncestorBtn");
+const trekkingClearSelectionBtn = document.getElementById("trekkingClearSelectionBtn");
+const trekkingPlayers = document.getElementById("trekkingPlayers");
 
 const abracaPanel = document.getElementById("abracaPanel");
 const abracaPhaseLabel = document.getElementById("abracaPhase");
@@ -1866,6 +1908,7 @@ function setGamePanelVisibility(gameType) {
   const showSplendor = gameType === "splendor";
   const showPointSalad = gameType === "point_salad";
   const showAbraca = gameType === "abraca_what";
+  const showTrekking = gameType === "trekking_history";
   const showBlokus = gameType === "blokus";
   const showFangNiao = gameType === "fang_niao";
   caboPanel.classList.toggle("hidden", !showCabo);
@@ -1927,6 +1970,9 @@ function setGamePanelVisibility(gameType) {
   }
   if (pointSaladPanel) {
     pointSaladPanel.classList.toggle("hidden", !showPointSalad);
+  }
+  if (trekkingPanel) {
+    trekkingPanel.classList.toggle("hidden", !showTrekking);
   }
   if (abracaPanel) {
     abracaPanel.classList.toggle("hidden", !showAbraca);
@@ -2677,6 +2723,7 @@ function resetRoomState() {
   clearImpressionFlowerState();
   clearSplendorState();
   clearPointSaladState();
+  clearTrekkingState();
   clearAbracaState();
   clearBlokusState();
   clearFangNiaoState();
@@ -3753,6 +3800,57 @@ function clearPointSaladState() {
     pointSaladPlayers.innerHTML = "";
   }
   updatePointSaladActionButtons();
+}
+
+function clearTrekkingSelections() {
+  trekkingSelectedSlot = null;
+  trekkingSelectedWildChoices = [];
+  if (trekkingSpendCrystalsInput) {
+    trekkingSpendCrystalsInput.value = "0";
+  }
+}
+
+function clearTrekkingState() {
+  currentTrekkingView = null;
+  trekkingLastDay = null;
+  clearTrekkingSelections();
+  if (trekkingDayLabel) {
+    trekkingDayLabel.textContent = "-";
+  }
+  if (trekkingTurnLabel) {
+    trekkingTurnLabel.textContent = "-";
+  }
+  if (trekkingWinnerLabel) {
+    trekkingWinnerLabel.textContent = "-";
+  }
+  if (trekkingDeckCountLabel) {
+    trekkingDeckCountLabel.textContent = "-";
+  }
+  if (trekkingDeckTopLabel) {
+    trekkingDeckTopLabel.textContent = "-";
+  }
+  if (trekkingSelectedCardLabel) {
+    trekkingSelectedCardLabel.textContent = "-";
+  }
+  if (trekkingSelectedCostLabel) {
+    trekkingSelectedCostLabel.textContent = "-";
+  }
+  if (trekkingSelectedTokensLabel) {
+    trekkingSelectedTokensLabel.textContent = "-";
+  }
+  if (trekkingWildNeededLabel) {
+    trekkingWildNeededLabel.textContent = "0";
+  }
+  if (trekkingWildSelectedLabel) {
+    trekkingWildSelectedLabel.textContent = "-";
+  }
+  if (trekkingMarket) {
+    trekkingMarket.innerHTML = "";
+  }
+  if (trekkingPlayers) {
+    trekkingPlayers.innerHTML = "";
+  }
+  updateTrekkingActionButtons();
 }
 
 function clearAbracaState() {
@@ -4928,6 +5026,335 @@ function renderPointSaladPlayers(view) {
     });
     card.appendChild(cards);
     pointSaladPlayers.appendChild(card);
+  });
+}
+
+function getTrekkingYou(view) {
+  if (!view) {
+    return null;
+  }
+  return (view.players || []).find((player) => player.player_id === view.you) || null;
+}
+
+function trekkingTokenIcon(token) {
+  return TREKKING_TOKEN_LABELS[token] || token;
+}
+
+function trekkingTokenName(token) {
+  return TREKKING_TOKEN_NAMES[token] || token;
+}
+
+function trekkingTokensText(tokens) {
+  return (tokens || []).map((token) => trekkingTokenIcon(token)).join(" ");
+}
+
+function formatTrekkingYear(year) {
+  if (year === null || year === undefined) {
+    return "-";
+  }
+  if (Math.abs(year) > 1000000) {
+    return "-";
+  }
+  if (year < 0) {
+    return `${Math.abs(year)} BCE`;
+  }
+  return `${year} CE`;
+}
+
+function trekkingWildNeeded(tokens) {
+  return (tokens || []).filter((token) => token === "wild").length;
+}
+
+function trekkingSlotReward(view, index) {
+  const rewards = view && Array.isArray(view.slot_rewards) ? view.slot_rewards : TREKKING_SLOT_REWARDS;
+  return rewards[index] || null;
+}
+
+function syncTrekkingSelection(view) {
+  if (!view) {
+    clearTrekkingSelections();
+    return;
+  }
+  if (trekkingLastDay !== view.day) {
+    clearTrekkingSelections();
+    trekkingLastDay = view.day;
+  }
+  if (trekkingSelectedSlot !== null) {
+    const card = (view.market || [])[trekkingSelectedSlot];
+    if (!card) {
+      trekkingSelectedSlot = null;
+      trekkingSelectedWildChoices = [];
+    }
+  }
+}
+
+function updateTrekkingSelectionLabels(view) {
+  if (!view) {
+    return;
+  }
+  const card = trekkingSelectedSlot !== null ? (view.market || [])[trekkingSelectedSlot] : null;
+  if (trekkingSelectedCardLabel) {
+    trekkingSelectedCardLabel.textContent = card ? `${card.year_label || card.year} ${card.title}` : "-";
+  }
+  if (trekkingSelectedCostLabel) {
+    trekkingSelectedCostLabel.textContent = card ? `${card.cost}` : "-";
+  }
+  if (trekkingSelectedTokensLabel) {
+    trekkingSelectedTokensLabel.textContent = card ? trekkingTokensText(card.tokens) : "-";
+  }
+
+  const cardWildNeeded = card ? trekkingWildNeeded(card.tokens) : 0;
+  if (trekkingWildNeededLabel) {
+    if (!card) {
+      trekkingWildNeededLabel.textContent = "1 (Ancestor)";
+    } else if (cardWildNeeded === 0) {
+      trekkingWildNeededLabel.textContent = "0 (Card) / 1 (Ancestor)";
+    } else {
+      trekkingWildNeededLabel.textContent = `${cardWildNeeded}`;
+    }
+  }
+  if (trekkingWildSelectedLabel) {
+    const labels = trekkingSelectedWildChoices.map((idx) => TREKKING_COLUMN_LABELS[idx]);
+    trekkingWildSelectedLabel.textContent = labels.length ? labels.join(", ") : "-";
+  }
+
+  const you = getTrekkingYou(view);
+  const crystals = you ? Number(you.crystals) || 0 : 0;
+  const baseCost = card ? Number(card.cost) || 0 : 3;
+  const maxSpend = Math.max(0, Math.min(crystals, baseCost - 1));
+  if (trekkingSpendCrystalsInput) {
+    trekkingSpendCrystalsInput.min = "0";
+    trekkingSpendCrystalsInput.max = `${maxSpend}`;
+    const current = Number(trekkingSpendCrystalsInput.value) || 0;
+    if (current > maxSpend) {
+      trekkingSpendCrystalsInput.value = `${maxSpend}`;
+    }
+    if (current < 0) {
+      trekkingSpendCrystalsInput.value = "0";
+    }
+  }
+}
+
+function updateTrekkingActionButtons() {
+  if (!trekkingTakeCardBtn || !trekkingTakeAncestorBtn) {
+    return;
+  }
+  if (currentGameType !== "trekking_history" || !currentTrekkingView) {
+    trekkingTakeCardBtn.disabled = true;
+    trekkingTakeAncestorBtn.disabled = true;
+    return;
+  }
+  const view = currentTrekkingView;
+  const legal = view.legal_actions || [];
+  const card = trekkingSelectedSlot !== null ? (view.market || [])[trekkingSelectedSlot] : null;
+  const you = getTrekkingYou(view);
+  const crystals = you ? Number(you.crystals) || 0 : 0;
+  const spend = Number(trekkingSpendCrystalsInput ? trekkingSpendCrystalsInput.value : 0) || 0;
+
+  const cardMaxSpend = card ? Math.max(0, Math.min(crystals, (Number(card.cost) || 0) - 1)) : 0;
+  const ancestorMaxSpend = Math.max(0, Math.min(crystals, 2));
+
+  const wildNeededCard = card ? trekkingWildNeeded(card.tokens) : 0;
+  const wildNeededAncestor = 1;
+  const wildOkCard = trekkingSelectedWildChoices.length === wildNeededCard;
+  const wildOkAncestor = trekkingSelectedWildChoices.length === wildNeededAncestor;
+
+  const canTakeCard = legal.includes("take_card") && card && spend <= cardMaxSpend && wildOkCard;
+  const canTakeAncestor = legal.includes("take_ancestor") && spend <= ancestorMaxSpend && wildOkAncestor;
+
+  trekkingTakeCardBtn.disabled = !canTakeCard;
+  trekkingTakeAncestorBtn.disabled = !canTakeAncestor;
+}
+
+function renderTrekkingMarket(view) {
+  if (!trekkingMarket) {
+    return;
+  }
+  trekkingMarket.innerHTML = "";
+  (view.market || []).forEach((card, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "trekking-card";
+    if (trekkingSelectedSlot === index) {
+      button.classList.add("selected");
+    }
+    if (!card) {
+      button.classList.add("empty");
+      button.disabled = true;
+    }
+
+    const year = document.createElement("div");
+    year.className = "trekking-card-year";
+    year.textContent = card ? (card.year_label || card.year) : "Empty";
+    button.appendChild(year);
+
+    const title = document.createElement("div");
+    title.className = "trekking-card-title";
+    title.textContent = card ? card.title : "-";
+    button.appendChild(title);
+
+    const meta = document.createElement("div");
+    meta.className = "trekking-card-meta";
+    if (card) {
+      meta.textContent = `⏳ ${card.cost} | ${trekkingTokensText(card.tokens)}`;
+    } else {
+      meta.textContent = "-";
+    }
+    button.appendChild(meta);
+
+    const reward = trekkingSlotReward(view, index);
+    const rewardLabel = reward ? trekkingTokenIcon(reward) : "-";
+    const slot = document.createElement("div");
+    slot.className = "trekking-card-slot";
+    slot.textContent = `Slot ${index + 1} Reward: ${rewardLabel}`;
+    button.appendChild(slot);
+
+    if (card) {
+      button.addEventListener("click", () => {
+        trekkingSelectedSlot = index;
+        trekkingSelectedWildChoices = [];
+        if (trekkingSpendCrystalsInput) {
+          trekkingSpendCrystalsInput.value = "0";
+        }
+        updateTrekkingSelectionLabels(view);
+        renderTrekkingMarket(view);
+        updateTrekkingActionButtons();
+      });
+    }
+    trekkingMarket.appendChild(button);
+  });
+}
+
+function renderTrekkingPlayers(view) {
+  if (!trekkingPlayers) {
+    return;
+  }
+  trekkingPlayers.innerHTML = "";
+  const templates = new Map((view.itinerary_templates || []).map((tpl) => [tpl.id, tpl]));
+  const dayIndex = Number(view.day) ? Number(view.day) - 1 : 0;
+  (view.players || []).forEach((player) => {
+    const card = document.createElement("div");
+    card.className = "trekking-player";
+    if (player.player_id === view.current_turn) {
+      card.classList.add("current");
+    }
+    if (player.player_id === view.you) {
+      card.classList.add("self");
+    }
+
+    const header = document.createElement("div");
+    header.className = "player-header";
+    const name = document.createElement("div");
+    name.className = "player-name";
+    name.textContent = player.name || player.player_id;
+    header.appendChild(name);
+
+    const badges = document.createElement("div");
+    badges.className = "player-badges";
+    const score = document.createElement("span");
+    score.className = "badge";
+    score.textContent = `score ${player.score ?? 0}`;
+    badges.appendChild(score);
+    const time = document.createElement("span");
+    time.className = "badge";
+    time.textContent = `time ${player.time ?? 0}`;
+    badges.appendChild(time);
+    const crystals = document.createElement("span");
+    crystals.className = "badge";
+    crystals.textContent = `💎 ${player.crystals ?? 0}`;
+    badges.appendChild(crystals);
+    if (player.player_id === view.you) {
+      const you = document.createElement("span");
+      you.className = "badge highlight";
+      you.textContent = "you";
+      badges.appendChild(you);
+    }
+    if (player.is_bot) {
+      const bot = document.createElement("span");
+      bot.className = "badge";
+      bot.textContent = "bot";
+      badges.appendChild(bot);
+    }
+    header.appendChild(badges);
+    card.appendChild(header);
+
+    const trekInfo = document.createElement("div");
+    trekInfo.className = "trekking-player-meta";
+    const lengths = player.trek_lengths && player.trek_lengths.length ? player.trek_lengths.join(", ") : "-";
+    const lastYear = formatTrekkingYear(player.current_trek_last_year);
+    trekInfo.textContent = `Treks: ${lengths} | Last Year: ${lastYear}`;
+    card.appendChild(trekInfo);
+
+    const itinerary = (player.itineraries || [])[dayIndex];
+    if (itinerary) {
+      const template = templates.get(itinerary.template_id);
+      if (template && Array.isArray(template.grid)) {
+        const grid = template.grid;
+        const filled = itinerary.filled || [];
+        const rowRewards = template.row_rewards || {};
+        const rewardClaimed = itinerary.row_rewards_claimed || [];
+        const header = document.createElement("div");
+        header.className = "trekking-itinerary-header";
+        TREKKING_COLUMN_LABELS.forEach((label, colIdx) => {
+          const cell = document.createElement("div");
+          cell.className = "trekking-itinerary-header-cell";
+          cell.dataset.col = `${colIdx}`;
+          const icon = document.createElement("div");
+          icon.className = "trekking-itinerary-header-icon";
+          icon.textContent = trekkingTokenIcon(TREKKING_SLOT_REWARDS[colIdx + 1] || "");
+          const text = document.createElement("div");
+          text.className = "trekking-itinerary-header-text";
+          text.textContent = label;
+          cell.appendChild(icon);
+          cell.appendChild(text);
+          header.appendChild(cell);
+        });
+        const spacer = document.createElement("div");
+        spacer.className = "trekking-itinerary-header-spacer";
+        header.appendChild(spacer);
+        card.appendChild(header);
+        const gridEl = document.createElement("div");
+        gridEl.className = "trekking-itinerary-grid";
+        for (let row = 0; row < grid.length; row += 1) {
+          const rowData = grid[row] || [];
+          for (let col = 0; col < rowData.length; col += 1) {
+            const cellData = rowData[col];
+            const cell = document.createElement("div");
+            if (!cellData) {
+              cell.className = "trekking-cell none";
+            } else {
+              cell.className = "trekking-cell";
+              cell.dataset.col = `${col}`;
+              const isFilled = filled[row] && filled[row][col] === true;
+              if (isFilled) {
+                cell.classList.add("filled");
+              } else if (cellData.type === "swirl") {
+                cell.textContent = `+${cellData.value || 0}`;
+              } else if (cellData.type === "gem") {
+                cell.textContent = "💎";
+              }
+            }
+            gridEl.appendChild(cell);
+          }
+          const rewardValue = rowRewards[String(row)];
+          const rewardCell = document.createElement("div");
+          rewardCell.className = "trekking-row-reward";
+          if (rewardValue !== undefined) {
+            rewardCell.textContent = `+${rewardValue}`;
+            if (rewardClaimed[row]) {
+              rewardCell.classList.add("claimed");
+            }
+          } else {
+            rewardCell.classList.add("empty");
+            rewardCell.textContent = "";
+          }
+          gridEl.appendChild(rewardCell);
+        }
+        card.appendChild(gridEl);
+      }
+    }
+
+    trekkingPlayers.appendChild(card);
   });
 }
 
@@ -11080,6 +11507,49 @@ function renderPointSaladGameState(data) {
   updatePointSaladActionButtons();
 }
 
+function renderTrekkingGameState(data) {
+  const view = data.view;
+  currentTrekkingView = view;
+  if (currentGameType !== "trekking_history") {
+    currentGameType = "trekking_history";
+    setGamePanelVisibility("trekking_history");
+  }
+
+  syncTrekkingSelection(view);
+  updateTrekkingSelectionLabels(view);
+
+  if (trekkingDayLabel) {
+    trekkingDayLabel.textContent = view.day || "-";
+  }
+  const currentPlayer = (view.players || []).find((player) => player.player_id === view.current_turn);
+  if (trekkingTurnLabel) {
+    trekkingTurnLabel.textContent = currentPlayer ? currentPlayer.name : view.current_turn || "-";
+  }
+  if (trekkingWinnerLabel) {
+    if (view.winner && view.winner.length) {
+      trekkingWinnerLabel.textContent = view.winner.map((pid) => findPlayerName(view, pid)).join(", ");
+    } else {
+      trekkingWinnerLabel.textContent = "-";
+    }
+  }
+  if (trekkingDeckCountLabel) {
+    trekkingDeckCountLabel.textContent = `${view.deck_count ?? 0}`;
+  }
+  if (trekkingDeckTopLabel) {
+    if (view.deck_top) {
+      trekkingDeckTopLabel.textContent = `${view.deck_top.year_label || view.deck_top.year} ${view.deck_top.title}`;
+    } else {
+      trekkingDeckTopLabel.textContent = "-";
+    }
+  }
+
+  renderTrekkingMarket(view);
+  renderTrekkingPlayers(view);
+
+  logGameEvents(data);
+  updateTrekkingActionButtons();
+}
+
 function logGameEvents(data) {
   if (!data.events || !data.events.length) {
     return;
@@ -14553,6 +15023,10 @@ function renderGameState(data) {
     renderPointSaladGameState(data);
     return;
   }
+  if (gameType === "trekking_history") {
+    renderTrekkingGameState(data);
+    return;
+  }
   if (gameType === "splendor") {
     renderSplendorGameState(data);
   }
@@ -16103,6 +16577,109 @@ if (pointSaladTakeVeggiesBtn) {
     clearPointSaladFlips();
     updatePointSaladSelectionLabels();
     updatePointSaladActionButtons();
+  });
+}
+
+if (trekkingClearSelectionBtn) {
+  trekkingClearSelectionBtn.addEventListener("click", () => {
+    clearTrekkingSelections();
+    if (currentTrekkingView) {
+      updateTrekkingSelectionLabels(currentTrekkingView);
+      renderTrekkingMarket(currentTrekkingView);
+    }
+    updateTrekkingActionButtons();
+  });
+}
+
+if (trekkingClearWildBtn) {
+  trekkingClearWildBtn.addEventListener("click", () => {
+    trekkingSelectedWildChoices = [];
+    if (currentTrekkingView) {
+      updateTrekkingSelectionLabels(currentTrekkingView);
+    }
+    updateTrekkingActionButtons();
+  });
+}
+
+if (trekkingWildButtons) {
+  trekkingWildButtons.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!target || !target.dataset) {
+      return;
+    }
+    const col = Number(target.dataset.col);
+    if (!Number.isInteger(col)) {
+      return;
+    }
+    if (!currentTrekkingView) {
+      return;
+    }
+    let needed = 1;
+    const card = trekkingSelectedSlot !== null ? (currentTrekkingView.market || [])[trekkingSelectedSlot] : null;
+    if (card) {
+      needed = Math.max(trekkingWildNeeded(card.tokens), 1);
+    }
+    if (trekkingSelectedWildChoices.length >= needed) {
+      return;
+    }
+    trekkingSelectedWildChoices.push(col);
+    updateTrekkingSelectionLabels(currentTrekkingView);
+    updateTrekkingActionButtons();
+  });
+}
+
+if (trekkingSpendCrystalsInput) {
+  trekkingSpendCrystalsInput.addEventListener("input", () => {
+    if (currentTrekkingView) {
+      updateTrekkingSelectionLabels(currentTrekkingView);
+      updateTrekkingActionButtons();
+    }
+  });
+}
+
+if (trekkingTakeCardBtn) {
+  trekkingTakeCardBtn.addEventListener("click", () => {
+    if (!currentTrekkingView) {
+      return;
+    }
+    if (trekkingSelectedSlot === null) {
+      log("Select a card to take");
+      return;
+    }
+    const card = (currentTrekkingView.market || [])[trekkingSelectedSlot];
+    if (!card) {
+      log("Selected card is not available");
+      return;
+    }
+    const spend = Number(trekkingSpendCrystalsInput ? trekkingSpendCrystalsInput.value : 0) || 0;
+    const action = {
+      type: "take_card",
+      slot_index: trekkingSelectedSlot,
+      spend_crystals: spend,
+      wild_choices: [...trekkingSelectedWildChoices],
+    };
+    sendAction(action);
+    clearTrekkingSelections();
+    updateTrekkingSelectionLabels(currentTrekkingView);
+    updateTrekkingActionButtons();
+  });
+}
+
+if (trekkingTakeAncestorBtn) {
+  trekkingTakeAncestorBtn.addEventListener("click", () => {
+    if (!currentTrekkingView) {
+      return;
+    }
+    const spend = Number(trekkingSpendCrystalsInput ? trekkingSpendCrystalsInput.value : 0) || 0;
+    const action = {
+      type: "take_ancestor",
+      spend_crystals: spend,
+      wild_choices: [...trekkingSelectedWildChoices],
+    };
+    sendAction(action);
+    clearTrekkingSelections();
+    updateTrekkingSelectionLabels(currentTrekkingView);
+    updateTrekkingActionButtons();
   });
 }
 

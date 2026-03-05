@@ -24,6 +24,7 @@ from game.splendor import SplendorGame
 from game.blokus import BlokusGame
 from game.blitz_sketch import BlitzSketchGame
 from game.skull import SkullGame
+from game.trekking_history import TrekkingHistoryGame
 
 CABO_ACTION_SCHEMA = {
     "type": "object",
@@ -195,6 +196,44 @@ CAT_IN_BOX_ACTION_SCHEMA = {
 }
 
 CAT_IN_BOX_CONFIG_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+}
+
+TREKKING_HISTORY_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "take_card"},
+                "slot_index": {"type": "integer", "minimum": 0, "maximum": 5},
+                "spend_crystals": {"type": "integer", "minimum": 0},
+                "wild_choices": {
+                    "type": "array",
+                    "items": {"type": "integer", "minimum": 0, "maximum": 3},
+                },
+            },
+            "required": ["type", "slot_index"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "take_ancestor"},
+                "spend_crystals": {"type": "integer", "minimum": 0},
+                "wild_choices": {
+                    "type": "array",
+                    "items": {"type": "integer", "minimum": 0, "maximum": 3},
+                },
+            },
+            "required": ["type", "wild_choices"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+TREKKING_HISTORY_CONFIG_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
 }
@@ -1437,5 +1476,20 @@ register_game(
         module=FangNiaoGame,
         serialize=FangNiaoGame.serialize,
         deserialize=FangNiaoGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=TrekkingHistoryGame.game_id,
+        name="Trekking through History",
+        min_players=TrekkingHistoryGame.min_players,
+        max_players=TrekkingHistoryGame.max_players,
+        turn_mode="turn",
+        action_schema=TREKKING_HISTORY_ACTION_SCHEMA,
+        config_schema=TREKKING_HISTORY_CONFIG_SCHEMA,
+        module=TrekkingHistoryGame,
+        serialize=TrekkingHistoryGame.serialize,
+        deserialize=TrekkingHistoryGame.deserialize,
     )
 )
