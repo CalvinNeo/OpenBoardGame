@@ -3408,6 +3408,17 @@ body.log-open {
   gap: 8px;
 }
 
+@media (min-width: 901px) {
+  body.trekking-active .sidebar {
+    width: 260px;
+  }
+
+  body.trekking-active .trekking-market {
+    grid-template-columns: repeat(6, minmax(150px, 1fr));
+    gap: 6px;
+  }
+}
+
 .trekking-clock {
   overflow-x: auto;
   padding-bottom: 4px;

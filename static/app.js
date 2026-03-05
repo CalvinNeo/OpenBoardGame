@@ -1990,6 +1990,7 @@ function setGamePanelVisibility(gameType) {
   if (fangNiaoPanel) {
     fangNiaoPanel.classList.toggle("hidden", !showFangNiao);
   }
+  document.body.classList.toggle("trekking-active", showTrekking);
 }
 
 function updateDrawGuessLanguageRow() {
