@@ -380,6 +380,155 @@ def _finish_game(state: Dict) -> None:
     state["phase"] = "game_over"
 
 
+def _bot_itinerary_context(state: Dict, bot_id: str) -> Tuple[Optional[Dict], Optional[Dict]]:
+    player = state.get("players", {}).get(bot_id)
+    if not player:
+        return None, None
+    day_index = int(state.get("day", 1)) - 1
+    itineraries = player.get("itineraries", [])
+    if day_index < 0 or day_index >= len(itineraries):
+        return None, None
+    itinerary = itineraries[day_index]
+    template_id = itinerary.get("template_id")
+    template = ITINERARY_TEMPLATE_MAP.get(template_id)
+    if not template:
+        return None, None
+    return itinerary, template
+
+
+def _bot_next_open_row(grid: List[List[Optional[Dict]]], filled: List[List[Optional[bool]]], col: int) -> Optional[int]:
+    for row_idx in range(len(grid)):
+        if grid[row_idx][col] is None:
+            continue
+        if filled[row_idx][col] is False:
+            return row_idx
+    return None
+
+
+def _bot_peek_column_value(
+    template: Dict, filled: List[List[Optional[bool]]], row_rewards_claimed: List[bool], col: int
+) -> Optional[float]:
+    grid = template.get("grid") or []
+    if not grid or col < 0 or col >= len(grid[0]):
+        return None
+    target_row = _bot_next_open_row(grid, filled, col)
+    if target_row is None:
+        return None
+
+    value = 0.0
+    cell = grid[target_row][col]
+    if cell and cell.get("type") == "swirl":
+        value += float(cell.get("value", 0))
+    elif cell and cell.get("type") == "gem":
+        value += 1.0
+
+    if target_row < len(row_rewards_claimed) and not row_rewards_claimed[target_row]:
+        row_complete = True
+        for col_idx in range(len(grid[target_row])):
+            if grid[target_row][col_idx] is None:
+                continue
+            if col_idx == col:
+                continue
+            if not filled[target_row][col_idx]:
+                row_complete = False
+                break
+        if row_complete:
+            reward = template.get("row_rewards", {}).get(str(target_row))
+            if reward is not None:
+                value += float(reward)
+    return value
+
+
+def _bot_apply_column(
+    template: Dict, filled: List[List[Optional[bool]]], row_rewards_claimed: List[bool], col: int
+) -> Tuple[int, int, bool]:
+    grid = template.get("grid") or []
+    if not grid or col < 0 or col >= len(grid[0]):
+        return 0, 0, False
+    target_row = _bot_next_open_row(grid, filled, col)
+    if target_row is None:
+        return 0, 0, False
+
+    filled[target_row][col] = True
+    cell = grid[target_row][col]
+    score_gain = 0
+    crystal_gain = 0
+    if cell and cell.get("type") == "swirl":
+        score_gain += int(cell.get("value", 0))
+    elif cell and cell.get("type") == "gem":
+        crystal_gain += 1
+
+    if target_row < len(row_rewards_claimed) and not row_rewards_claimed[target_row]:
+        row_complete = True
+        for col_idx in range(len(grid[target_row])):
+            if grid[target_row][col_idx] is None:
+                continue
+            if not filled[target_row][col_idx]:
+                row_complete = False
+                break
+        if row_complete:
+            reward = template.get("row_rewards", {}).get(str(target_row))
+            if reward is not None:
+                score_gain += int(reward)
+            row_rewards_claimed[target_row] = True
+
+    return score_gain, crystal_gain, True
+
+
+def _bot_choose_wild_column(
+    template: Dict, filled: List[List[Optional[bool]]], row_rewards_claimed: List[bool]
+) -> Optional[int]:
+    best_value = None
+    best_cols: List[int] = []
+    for col in range(len(TOKEN_COLUMNS)):
+        value = _bot_peek_column_value(template, filled, row_rewards_claimed, col)
+        if value is None:
+            continue
+        if best_value is None or value > best_value:
+            best_value = value
+            best_cols = [col]
+        elif value == best_value:
+            best_cols.append(col)
+    if not best_cols:
+        return None
+    return random.choice(best_cols)
+
+
+def _bot_simulate_tokens(
+    template: Dict, filled: List[List[Optional[bool]]], row_rewards_claimed: List[bool], tokens: List[str]
+) -> Tuple[float, List[int]]:
+    score_gain = 0
+    crystal_gain = 0
+    progress_gain = 0
+    wild_choices: List[int] = []
+    for token in tokens:
+        if token == "crystal":
+            crystal_gain += 1
+            continue
+        if token == "wild":
+            col = _bot_choose_wild_column(template, filled, row_rewards_claimed)
+            if col is None:
+                col = random.randrange(len(TOKEN_COLUMNS))
+            wild_choices.append(col)
+            score, crystals, placed = _bot_apply_column(template, filled, row_rewards_claimed, col)
+            score_gain += score
+            crystal_gain += crystals
+            if placed:
+                progress_gain += 1
+            continue
+        col = TOKEN_COLUMN_INDEX.get(token)
+        if col is None:
+            continue
+        score, crystals, placed = _bot_apply_column(template, filled, row_rewards_claimed, col)
+        score_gain += score
+        crystal_gain += crystals
+        if placed:
+            progress_gain += 1
+
+    value = score_gain + crystal_gain * 1.0 + progress_gain * 0.2
+    return value, wild_choices
+
+
 class TrekkingHistoryGame:
     game_id = "trekking_history"
     min_players = 2
@@ -631,6 +780,78 @@ class TrekkingHistoryGame:
 
     @staticmethod
     def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
+        if state.get("game_over"):
+            return None
+        if bot_id != state.get("current_turn"):
+            return None
+        if bot_id not in state.get("players", {}):
+            return None
+
+        legal = TrekkingHistoryGame.get_legal_actions(state, bot_id)
+        if not legal:
+            return None
+
+        market = state.get("market", [])
+        available_slots = [idx for idx, card in enumerate(market) if card is not None]
+
+        itinerary, template = _bot_itinerary_context(state, bot_id)
+
+        def build_tokens(slot_index: int, card: Dict) -> List[str]:
+            tokens = list(card.get("tokens", []))
+            slot_reward = state.get("slot_rewards", SLOT_REWARDS)[slot_index]
+            if slot_reward == "crystal":
+                tokens.append("crystal")
+            elif slot_reward:
+                tokens.append(slot_reward)
+            return tokens
+
+        if "take_card" in legal and available_slots:
+            best_slots: List[int] = []
+            best_value: Optional[float] = None
+            best_wild_by_slot: Dict[int, List[int]] = {}
+
+            for slot_index in available_slots:
+                card = market[slot_index]
+                if not card:
+                    continue
+                tokens = build_tokens(slot_index, card)
+                if template and itinerary:
+                    filled = [list(row) for row in itinerary.get("filled", [])]
+                    row_claimed = list(itinerary.get("row_rewards_claimed", []))
+                    value, wild_choices = _bot_simulate_tokens(template, filled, row_claimed, tokens)
+                else:
+                    wild_needed = sum(1 for t in tokens if t == "wild")
+                    wild_choices = [random.randrange(len(TOKEN_COLUMNS)) for _ in range(wild_needed)]
+                    value = float(len(tokens)) * 0.2
+                cost = max(1, int(card.get("cost", 1)))
+                value = value / cost
+                best_wild_by_slot[slot_index] = wild_choices
+                if best_value is None or value > best_value:
+                    best_value = value
+                    best_slots = [slot_index]
+                elif value == best_value:
+                    best_slots.append(slot_index)
+
+            if best_slots:
+                chosen_slot = random.choice(best_slots)
+                wild_choices = best_wild_by_slot.get(chosen_slot, [])
+                return {
+                    "type": "take_card",
+                    "slot_index": chosen_slot,
+                    "spend_crystals": 0,
+                    "wild_choices": wild_choices,
+                }
+
+        if "take_ancestor" in legal:
+            wild_choices: List[int] = []
+            if template and itinerary:
+                filled = [list(row) for row in itinerary.get("filled", [])]
+                row_claimed = list(itinerary.get("row_rewards_claimed", []))
+                _, wild_choices = _bot_simulate_tokens(template, filled, row_claimed, ["wild"])
+            if not wild_choices:
+                wild_choices = [random.randrange(len(TOKEN_COLUMNS))]
+            return {"type": "take_ancestor", "spend_crystals": 0, "wild_choices": wild_choices}
+
         return None
 
     @staticmethod
