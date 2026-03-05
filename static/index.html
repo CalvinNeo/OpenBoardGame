@@ -1485,18 +1485,14 @@
               <div id="trekkingMarket" class="trekking-market"></div>
 
               <h3>Selection</h3>
-              <div class="row">
-                <label for="trekkingSpendCrystals">Spend Crystals</label>
-                <input id="trekkingSpendCrystals" type="number" min="0" value="0" />
-                <div>Wild Needed: <span id="trekkingWildNeeded">0</span></div>
-                <div>Wild Selected: <span id="trekkingWildSelected">-</span></div>
-                <button id="trekkingClearWild">Clear Wild</button>
-              </div>
 
               <div class="row actions trekking-actions-row">
                 <button id="trekkingTakeCardBtn">Take Selected Card</button>
                 <button id="trekkingTakeAncestorBtn">Take Ancestor</button>
-                <button id="trekkingClearSelectionBtn">Clear Selection</button>
+              </div>
+              <div class="row actions trekking-actions-row trekking-actions-row-secondary">
+                <button id="trekkingTakeCardWithCrystalBtn">Take Selected Card With 💎</button>
+                <button id="trekkingTakeAncestorWithCrystalBtn">Take Ancestor With 💎</button>
               </div>
 
               <h3>Players</h3>
@@ -1515,6 +1511,19 @@
                 </div>
                 <div class="row actions">
                   <button id="trekkingWildCancel" type="button">Cancel</button>
+                </div>
+              </div>
+            </div>
+
+            <div id="trekkingCrystalModal" class="trekking-modal hidden" role="dialog" aria-modal="true">
+              <div class="trekking-modal-card">
+                <div class="trekking-modal-title">Spend Crystals</div>
+                <div id="trekkingCrystalPrompt" class="trekking-modal-subtitle">-</div>
+                <label for="trekkingCrystalSelect">Crystals to spend</label>
+                <select id="trekkingCrystalSelect"></select>
+                <div class="row actions">
+                  <button id="trekkingCrystalConfirm" type="button">Confirm</button>
+                  <button id="trekkingCrystalCancel" type="button">Cancel</button>
                 </div>
               </div>
             </div>
