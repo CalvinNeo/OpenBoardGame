@@ -1486,26 +1486,14 @@
 
               <h3>Selection</h3>
               <div class="row">
-                <div>Card: <span id="trekkingSelectedCard">-</span></div>
-                <div>Time Cost: <span id="trekkingSelectedCost">-</span></div>
-                <div>Tokens: <span id="trekkingSelectedTokens">-</span></div>
-              </div>
-              <div class="row">
                 <label for="trekkingSpendCrystals">Spend Crystals</label>
                 <input id="trekkingSpendCrystals" type="number" min="0" value="0" />
                 <div>Wild Needed: <span id="trekkingWildNeeded">0</span></div>
                 <div>Wild Selected: <span id="trekkingWildSelected">-</span></div>
                 <button id="trekkingClearWild">Clear Wild</button>
               </div>
-              <div id="trekkingWildButtons" class="row actions">
-                <button type="button" data-col="0">🧑 Person</button>
-                <button type="button" data-col="1">📜 Event</button>
-                <button type="button" data-col="2">⚙️ Innovation</button>
-                <button type="button" data-col="3">🌱 Progress</button>
-              </div>
 
-              <h3>Actions</h3>
-              <div class="row actions">
+              <div class="row actions trekking-actions-row">
                 <button id="trekkingTakeCardBtn">Take Selected Card</button>
                 <button id="trekkingTakeAncestorBtn">Take Ancestor</button>
                 <button id="trekkingClearSelectionBtn">Clear Selection</button>
@@ -1513,6 +1501,22 @@
 
               <h3>Players</h3>
               <div id="trekkingPlayers"></div>
+            </div>
+
+            <div id="trekkingWildModal" class="trekking-modal hidden" role="dialog" aria-modal="true">
+              <div class="trekking-modal-card">
+                <div class="trekking-modal-title">Choose Wild Slot</div>
+                <div id="trekkingWildPrompt" class="trekking-modal-subtitle">-</div>
+                <div id="trekkingWildModalButtons" class="trekking-modal-actions">
+                  <button type="button" data-col="0">🧑 Person</button>
+                  <button type="button" data-col="1">📜 Event</button>
+                  <button type="button" data-col="2">⚙️ Innovation</button>
+                  <button type="button" data-col="3">🌱 Progress</button>
+                </div>
+                <div class="row actions">
+                  <button id="trekkingWildCancel" type="button">Cancel</button>
+                </div>
+              </div>
             </div>
 
             <div id="abracaPanel" class="hidden">

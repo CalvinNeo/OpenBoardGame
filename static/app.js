@@ -173,6 +173,7 @@ let blokusDragState = null;
 let trekkingSelectedSlot = null;
 let trekkingSelectedWildChoices = [];
 let trekkingLastDay = null;
+let trekkingWildModalState = null;
 const BLOKUS_DRAG_THRESHOLD = 6;
 const BLOKUS_ADJACENT_OFFSETS = [
   [1, 0],
@@ -970,6 +971,10 @@ const trekkingWildNeededLabel = document.getElementById("trekkingWildNeeded");
 const trekkingWildSelectedLabel = document.getElementById("trekkingWildSelected");
 const trekkingClearWildBtn = document.getElementById("trekkingClearWild");
 const trekkingWildButtons = document.getElementById("trekkingWildButtons");
+const trekkingWildModal = document.getElementById("trekkingWildModal");
+const trekkingWildPrompt = document.getElementById("trekkingWildPrompt");
+const trekkingWildModalButtons = document.getElementById("trekkingWildModalButtons");
+const trekkingWildCancelBtn = document.getElementById("trekkingWildCancel");
 const trekkingTakeCardBtn = document.getElementById("trekkingTakeCardBtn");
 const trekkingTakeAncestorBtn = document.getElementById("trekkingTakeAncestorBtn");
 const trekkingClearSelectionBtn = document.getElementById("trekkingClearSelectionBtn");
@@ -5065,6 +5070,53 @@ function trekkingWildNeeded(tokens) {
   return (tokens || []).filter((token) => token === "wild").length;
 }
 
+function openTrekkingWildModal(needed) {
+  if (!trekkingWildModal || !trekkingWildPrompt || !trekkingWildModalButtons) {
+    return Promise.resolve([]);
+  }
+  if (trekkingWildModalState) {
+    return Promise.reject(new Error("wild modal already open"));
+  }
+  trekkingWildModal.classList.remove("hidden");
+  const state = {
+    needed,
+    choices: [],
+    resolve: null,
+    reject: null,
+  };
+  const promise = new Promise((resolve, reject) => {
+    state.resolve = resolve;
+    state.reject = reject;
+  });
+  trekkingWildModalState = state;
+  updateTrekkingWildPrompt();
+  return promise;
+}
+
+function closeTrekkingWildModal() {
+  if (!trekkingWildModal) {
+    trekkingWildModalState = null;
+    return;
+  }
+  trekkingWildModal.classList.add("hidden");
+  trekkingWildModalState = null;
+}
+
+function updateTrekkingWildPrompt() {
+  if (!trekkingWildModalState || !trekkingWildPrompt) {
+    return;
+  }
+  const remaining = trekkingWildModalState.needed - trekkingWildModalState.choices.length;
+  const total = trekkingWildModalState.needed;
+  if (remaining <= 0) {
+    trekkingWildPrompt.textContent = "Ready";
+  } else if (total === 1) {
+    trekkingWildPrompt.textContent = "Select 1 slot";
+  } else {
+    trekkingWildPrompt.textContent = `Select ${remaining} more (${trekkingWildModalState.choices.length + 1}/${total})`;
+  }
+}
+
 function trekkingSlotReward(view, index) {
   const rewards = view && Array.isArray(view.slot_rewards) ? view.slot_rewards : TREKKING_SLOT_REWARDS;
   return rewards[index] || null;
@@ -5154,13 +5206,8 @@ function updateTrekkingActionButtons() {
   const cardMaxSpend = card ? Math.max(0, Math.min(crystals, (Number(card.cost) || 0) - 1)) : 0;
   const ancestorMaxSpend = Math.max(0, Math.min(crystals, 2));
 
-  const wildNeededCard = card ? trekkingWildNeeded(card.tokens) : 0;
-  const wildNeededAncestor = 1;
-  const wildOkCard = trekkingSelectedWildChoices.length === wildNeededCard;
-  const wildOkAncestor = trekkingSelectedWildChoices.length === wildNeededAncestor;
-
-  const canTakeCard = legal.includes("take_card") && card && spend <= cardMaxSpend && wildOkCard;
-  const canTakeAncestor = legal.includes("take_ancestor") && spend <= ancestorMaxSpend && wildOkAncestor;
+  const canTakeCard = legal.includes("take_card") && card && spend <= cardMaxSpend;
+  const canTakeAncestor = legal.includes("take_ancestor") && spend <= ancestorMaxSpend;
 
   trekkingTakeCardBtn.disabled = !canTakeCard;
   trekkingTakeAncestorBtn.disabled = !canTakeAncestor;
@@ -5288,6 +5335,10 @@ function renderTrekkingPlayers(view) {
     const itinerary = (player.itineraries || [])[dayIndex];
     if (itinerary) {
       const template = templates.get(itinerary.template_id);
+      const nameRow = document.createElement("div");
+      nameRow.className = "trekking-itinerary-name";
+      nameRow.textContent = `Itinerary: ${itinerary.template_id || "-"}`;
+      card.appendChild(nameRow);
       if (template && Array.isArray(template.grid)) {
         const grid = template.grid;
         const filled = itinerary.filled || [];
@@ -16628,6 +16679,46 @@ if (trekkingWildButtons) {
   });
 }
 
+if (trekkingWildModalButtons) {
+  trekkingWildModalButtons.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!trekkingWildModalState || !target || !target.dataset) {
+      return;
+    }
+    const col = Number(target.dataset.col);
+    if (!Number.isInteger(col)) {
+      return;
+    }
+    if (trekkingWildModalState.choices.length >= trekkingWildModalState.needed) {
+      return;
+    }
+    trekkingWildModalState.choices.push(col);
+    if (trekkingWildModalState.choices.length >= trekkingWildModalState.needed) {
+      const choices = [...trekkingWildModalState.choices];
+      const resolve = trekkingWildModalState.resolve;
+      closeTrekkingWildModal();
+      if (resolve) {
+        resolve(choices);
+      }
+      return;
+    }
+    updateTrekkingWildPrompt();
+  });
+}
+
+if (trekkingWildCancelBtn) {
+  trekkingWildCancelBtn.addEventListener("click", () => {
+    if (!trekkingWildModalState) {
+      return;
+    }
+    const reject = trekkingWildModalState.reject;
+    closeTrekkingWildModal();
+    if (reject) {
+      reject(new Error("cancel"));
+    }
+  });
+}
+
 if (trekkingSpendCrystalsInput) {
   trekkingSpendCrystalsInput.addEventListener("input", () => {
     if (currentTrekkingView) {
@@ -16652,16 +16743,33 @@ if (trekkingTakeCardBtn) {
       return;
     }
     const spend = Number(trekkingSpendCrystalsInput ? trekkingSpendCrystalsInput.value : 0) || 0;
-    const action = {
-      type: "take_card",
-      slot_index: trekkingSelectedSlot,
-      spend_crystals: spend,
-      wild_choices: [...trekkingSelectedWildChoices],
+    const wildNeeded = trekkingWildNeeded(card.tokens);
+    const sendWithChoices = (choices) => {
+      const action = {
+        type: "take_card",
+        slot_index: trekkingSelectedSlot,
+        spend_crystals: spend,
+        wild_choices: choices,
+      };
+      sendAction(action);
+      clearTrekkingSelections();
+      updateTrekkingSelectionLabels(currentTrekkingView);
+      updateTrekkingActionButtons();
     };
-    sendAction(action);
-    clearTrekkingSelections();
-    updateTrekkingSelectionLabels(currentTrekkingView);
-    updateTrekkingActionButtons();
+    if (wildNeeded > 0) {
+      trekkingSelectedWildChoices = [];
+      openTrekkingWildModal(wildNeeded)
+        .then((choices) => {
+          trekkingSelectedWildChoices = choices;
+          sendWithChoices(choices);
+        })
+        .catch(() => {
+          updateTrekkingSelectionLabels(currentTrekkingView);
+          updateTrekkingActionButtons();
+        });
+      return;
+    }
+    sendWithChoices([]);
   });
 }
 
@@ -16671,15 +16779,27 @@ if (trekkingTakeAncestorBtn) {
       return;
     }
     const spend = Number(trekkingSpendCrystalsInput ? trekkingSpendCrystalsInput.value : 0) || 0;
-    const action = {
-      type: "take_ancestor",
-      spend_crystals: spend,
-      wild_choices: [...trekkingSelectedWildChoices],
+    const sendWithChoices = (choices) => {
+      const action = {
+        type: "take_ancestor",
+        spend_crystals: spend,
+        wild_choices: choices,
+      };
+      sendAction(action);
+      clearTrekkingSelections();
+      updateTrekkingSelectionLabels(currentTrekkingView);
+      updateTrekkingActionButtons();
     };
-    sendAction(action);
-    clearTrekkingSelections();
-    updateTrekkingSelectionLabels(currentTrekkingView);
-    updateTrekkingActionButtons();
+    trekkingSelectedWildChoices = [];
+    openTrekkingWildModal(1)
+      .then((choices) => {
+        trekkingSelectedWildChoices = choices;
+        sendWithChoices(choices);
+      })
+      .catch(() => {
+        updateTrekkingSelectionLabels(currentTrekkingView);
+        updateTrekkingActionButtons();
+      });
   });
 }
 
