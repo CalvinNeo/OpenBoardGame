@@ -3486,8 +3486,14 @@ body.log-open {
 }
 
 @media (min-width: 901px) {
+  body.trekking-active .container {
+    max-width: 1680px;
+    margin-left: 0;
+    margin-right: auto;
+  }
+
   body.trekking-active .sidebar {
-    width: 260px;
+    width: 320px;
   }
 
   body.trekking-active .trekking-market {
