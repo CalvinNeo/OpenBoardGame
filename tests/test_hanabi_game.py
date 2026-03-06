@@ -52,7 +52,7 @@ class HanabiGameTests(unittest.TestCase):
         self.assertEqual(error, "clue tokens already full")
 
     def test_final_round_ends_after_other_players_act(self):
-        state = HanabiGame.init_game({}, self._make_players())
+        state = HanabiGame.init_game({"final_round_countdown": True}, self._make_players())
         state["current_turn"] = "p1"
         state["clue_tokens"] = MAX_CLUES - 1
         state["deck"] = [{"color": "yellow", "rank": 1}]
@@ -71,6 +71,26 @@ class HanabiGameTests(unittest.TestCase):
         self.assertIsNone(error)
         self.assertTrue(state["game_over"])
         self.assertEqual(state["end_reason"], "deck_exhausted")
+
+    def test_no_final_round_when_countdown_disabled(self):
+        state = HanabiGame.init_game({"final_round_countdown": False}, self._make_players())
+        state["current_turn"] = "p1"
+        state["clue_tokens"] = MAX_CLUES - 1
+        state["deck"] = [{"color": "yellow", "rank": 1}]
+
+        events, error = HanabiGame.apply_action(state, "p1", {"type": "discard", "card_index": 0})
+
+        self.assertIsNone(error)
+        self.assertIsNone(state["final_rounds_remaining"])
+        self.assertFalse(state["game_over"])
+
+        state["players"]["p2"]["hand"][0] = {"color": "red", "rank": 1}
+        state["tableau"]["red"] = 0
+        events, error = HanabiGame.apply_action(state, "p2", {"type": "play", "card_index": 0})
+
+        self.assertIsNone(error)
+        self.assertFalse(state["game_over"])
+        self.assertIsNone(state["end_reason"])
 
 
 if __name__ == "__main__":

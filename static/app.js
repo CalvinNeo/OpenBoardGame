@@ -371,6 +371,9 @@ const halliDeckSelect = document.getElementById("halliDeckSelect");
 const goldRushConfigBox = document.getElementById("goldRushConfigBox");
 const goldRushModeRow = document.getElementById("goldRushModeRow");
 const goldRushModeSelect = document.getElementById("goldRushModeSelect");
+const hanabiConfigBox = document.getElementById("hanabiConfigBox");
+const hanabiFinalRoundRow = document.getElementById("hanabiFinalRoundRow");
+const hanabiFinalRoundToggle = document.getElementById("hanabiFinalRoundToggle");
 const mismatchConfigBox = document.getElementById("mismatchConfigBox");
 const mismatchSliderCount = document.getElementById("mismatchSliderCount");
 const gangConfigBox = document.getElementById("gangConfigBox");
@@ -2137,6 +2140,18 @@ function updateGoldRushConfigRow() {
   }
 }
 
+function updateHanabiConfigRow() {
+  const showRow = currentRoomState && currentGameType === "hanabi" && currentRoomState.status === "lobby";
+  if (hanabiConfigBox) {
+    hanabiConfigBox.classList.toggle("hidden", !showRow);
+    hanabiConfigBox.setAttribute("aria-hidden", (!showRow).toString());
+  }
+  if (hanabiFinalRoundRow) {
+    hanabiFinalRoundRow.classList.toggle("hidden", !showRow);
+    hanabiFinalRoundRow.setAttribute("aria-hidden", (!showRow).toString());
+  }
+}
+
 function updateMismatchConfigRow() {
   const showRow = currentRoomState && currentGameType === "perfect_mismatch" && currentRoomState.status === "lobby";
   if (mismatchConfigBox) {
@@ -2743,6 +2758,7 @@ function resetRoomState() {
   updateAidixitDeckRow();
   updateHalliConfigRow();
   updateGoldRushConfigRow();
+  updateHanabiConfigRow();
   updateMismatchConfigRow();
   updateGangConfigRow();
   updateImpressionConfigRow();
@@ -2778,6 +2794,9 @@ function resetRoomState() {
   }
   if (goldRushModeSelect) {
     goldRushModeSelect.value = "hand";
+  }
+  if (hanabiFinalRoundToggle) {
+    hanabiFinalRoundToggle.checked = false;
   }
   if (mismatchSliderCount) {
     mismatchSliderCount.value = "3";
@@ -5973,6 +5992,9 @@ function emitRoomStart() {
   } else if (currentGameType === "gold_rush") {
     const mode = goldRushModeSelect ? goldRushModeSelect.value || "hand" : "hand";
     payload.config = { mode };
+  } else if (currentGameType === "hanabi") {
+    const finalRoundCountdown = hanabiFinalRoundToggle ? hanabiFinalRoundToggle.checked : false;
+    payload.config = { final_round_countdown: finalRoundCountdown };
   } else if (currentGameType === "perfect_mismatch") {
     const rawCount = mismatchSliderCount ? Number.parseInt(mismatchSliderCount.value, 10) : NaN;
     const sliderCount = Number.isInteger(rawCount) ? rawCount : 3;
@@ -6038,6 +6060,7 @@ function renderRoomState(state) {
   updateAidixitDeckRow();
   updateHalliConfigRow();
   updateGoldRushConfigRow();
+  updateHanabiConfigRow();
   updateMismatchConfigRow();
   updateGangConfigRow();
   updateImpressionConfigRow();

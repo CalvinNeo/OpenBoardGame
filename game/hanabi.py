@@ -23,7 +23,9 @@ COLOR_LABELS = {
     "white": "White",
 }
 
-DEFAULT_CONFIG: Dict = {}
+DEFAULT_CONFIG: Dict = {
+    "final_round_countdown": False,
+}
 
 
 def _merge_config(config: Optional[Dict]) -> Dict:
@@ -32,6 +34,11 @@ def _merge_config(config: Optional[Dict]) -> Dict:
         for key, value in config.items():
             cfg[key] = value
     return cfg
+
+
+def _final_round_countdown_enabled(state: Dict) -> bool:
+    config = state.get("config") or {}
+    return bool(config.get("final_round_countdown"))
 
 
 def _build_deck() -> List[Dict]:
@@ -326,7 +333,11 @@ class HanabiGame:
                 drawn = state["deck"].pop()
                 hand.append(drawn)
                 knowledge.append(_init_knowledge())
-                if not state["deck"] and state.get("final_rounds_remaining") is None:
+                if (
+                    not state["deck"]
+                    and state.get("final_rounds_remaining") is None
+                    and _final_round_countdown_enabled(state)
+                ):
                     state["final_rounds_remaining"] = len(state["turn_order"]) - 1
                     triggered_last_round = True
                     _append_log(
@@ -387,7 +398,11 @@ class HanabiGame:
                 drawn = state["deck"].pop()
                 hand.append(drawn)
                 knowledge.append(_init_knowledge())
-                if not state["deck"] and state.get("final_rounds_remaining") is None:
+                if (
+                    not state["deck"]
+                    and state.get("final_rounds_remaining") is None
+                    and _final_round_countdown_enabled(state)
+                ):
                     state["final_rounds_remaining"] = len(state["turn_order"]) - 1
                     triggered_last_round = True
                     _append_log(

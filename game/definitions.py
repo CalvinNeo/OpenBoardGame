@@ -1003,6 +1003,9 @@ HANABI_ACTION_SCHEMA = {
 
 HANABI_CONFIG_SCHEMA = {
     "type": "object",
+    "properties": {
+        "final_round_countdown": {"type": "boolean"},
+    },
     "additionalProperties": False,
 }
 
