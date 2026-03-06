@@ -4665,7 +4665,17 @@ function renderBlokusPlayers(view) {
     return;
   }
   blokusPlayers.innerHTML = "";
-  (view.players || []).forEach((player) => {
+  const players = Array.isArray(view.players) ? view.players : [];
+  const youId = view.you;
+  let orderedPlayers = players;
+  if (youId) {
+    const youPlayer = players.find((player) => player.player_id === youId);
+    if (youPlayer) {
+      orderedPlayers = [youPlayer, ...players.filter((player) => player.player_id !== youId)];
+    }
+  }
+
+  orderedPlayers.forEach((player) => {
     const card = document.createElement("div");
     card.className = "player-card";
     if (player.player_id === view.current_turn) {
