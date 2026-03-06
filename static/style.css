@@ -548,6 +548,49 @@ h1 {
   margin-bottom: 12px;
 }
 
+.six-nimmt-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.six-nimmt-summary-modal {
+  max-width: 600px;
+}
+
+.six-nimmt-summary-status {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.six-nimmt-summary-meta {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.six-nimmt-summary-item {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.six-nimmt-summary-header {
+  font-weight: 600;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.six-nimmt-summary-take {
+  font-size: 13px;
+  color: #b91c1c;
+}
+
 .coyote-seat-1 {
   grid-area: 1 / 1;
 }

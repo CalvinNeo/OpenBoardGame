@@ -81,15 +81,92 @@ def _clear_selections(state: Dict) -> None:
         pdata["selected_card"] = None
 
 
-def _mark_row_taken(state: Dict, player_id: str, cards: List[Dict], penalty: int) -> None:
+def _mark_row_taken(state: Dict, player_id: str, row_index: int, cards: List[Dict], penalty: int) -> None:
     taken = state.get("row_taken_this_turn")
     if not isinstance(taken, dict):
         taken = {}
     taken[player_id] = {
+        "row_index": int(row_index),
         "cards": [dict(card) for card in cards],
         "penalty": int(penalty),
     }
     state["row_taken_this_turn"] = taken
+
+
+def _record_placement(
+    state: Dict,
+    player_id: str,
+    card: Dict,
+    row_index: int,
+    took_row: bool = False,
+    penalty: int = 0,
+    taken_cards: Optional[List[Dict]] = None,
+) -> None:
+    placements = state.get("turn_placements")
+    if not isinstance(placements, list):
+        placements = []
+    entry = {
+        "player_id": player_id,
+        "card": dict(card) if isinstance(card, dict) else {},
+        "row_index": int(row_index),
+        "took_row": bool(took_row),
+    }
+    if took_row:
+        entry["penalty"] = int(penalty)
+        entry["taken_cards"] = [
+            dict(tcard) for tcard in (taken_cards or []) if isinstance(tcard, dict)
+        ]
+    placements.append(entry)
+    state["turn_placements"] = placements
+
+
+def _summary_ack_map(state: Dict) -> Dict[str, bool]:
+    ack = state.get("summary_ack")
+    if not isinstance(ack, dict):
+        ack = {}
+    return ack
+
+
+def _all_summary_acknowledged(state: Dict) -> bool:
+    ack = _summary_ack_map(state)
+    for pid in state.get("players", {}).keys():
+        if not ack.get(pid):
+            return False
+    return True
+
+
+def _resume_after_summary(state: Dict) -> None:
+    pending = state.get("summary_pending")
+    pending_type = pending.get("type") if isinstance(pending, dict) else "next_turn"
+    state["summary_pending"] = None
+    state["summary_ack"] = {}
+
+    if pending_type == "game_over":
+        state["game_over"] = True
+        state["phase"] = "game_over"
+        _assign_winners(state)
+        return
+
+    if pending_type == "new_round":
+        _start_new_round(state)
+        return
+
+    state["phase"] = "selection"
+    state["pending_index"] = 0
+    state["pending_plays"] = []
+    state["waiting_for"] = None
+    state["pending_timeout"] = None
+    if _active_players(state):
+        state["turn"] = int(state.get("turn", 1)) + 1
+        _schedule_timeout(state, "selection")
+        return
+
+    if any(int(pdata.get("score", 0)) >= TARGET_SCORE for pdata in state.get("players", {}).values()):
+        state["game_over"] = True
+        state["phase"] = "game_over"
+        _assign_winners(state)
+    else:
+        _start_new_round(state)
 
 
 def _timeout_ms(state: Dict, timeout_type: str) -> int:
@@ -134,6 +211,9 @@ def _deal_round(state: Dict) -> None:
     state["waiting_for"] = None
     state["last_reveal_order"] = None
     state["row_taken_this_turn"] = {}
+    state["turn_placements"] = []
+    state["summary_ack"] = {}
+    state["summary_pending"] = None
     _schedule_timeout(state, "selection")
 
 
@@ -147,6 +227,8 @@ def _start_selection_phase(state: Dict) -> None:
     state["pending_plays"] = []
     state["pending_index"] = 0
     state["waiting_for"] = None
+    state["summary_ack"] = {}
+    state["summary_pending"] = None
     _clear_selections(state)
     _schedule_timeout(state, "selection")
 
@@ -196,7 +278,10 @@ def _place_card(state: Dict, player_id: str, card: Dict, events: List[Dict]) -> 
         penalty = _row_bullheads(row)
         state["players"][player_id]["score"] += penalty
         row[:] = [card]
-        _mark_row_taken(state, player_id, taken_cards, penalty)
+        _mark_row_taken(state, player_id, target_index, taken_cards, penalty)
+        _record_placement(
+            state, player_id, card, target_index, took_row=True, penalty=penalty, taken_cards=taken_cards
+        )
         events.append(
             {
                 "type": "six_nimmt:take_row",
@@ -206,6 +291,7 @@ def _place_card(state: Dict, player_id: str, card: Dict, events: List[Dict]) -> 
         return True
 
     row.append(card)
+    _record_placement(state, player_id, card, target_index)
     events.append(
         {
             "type": "six_nimmt:place",
@@ -233,10 +319,40 @@ def _continue_placement(state: Dict, events: List[Dict]) -> None:
 
 
 def _finish_turn(state: Dict, events: List[Dict]) -> None:
+    round_number = int(state.get("round", 1))
+    turn_number = int(state.get("turn", 1))
+    placements = state.get("turn_placements")
+    summary_placements = []
+    if isinstance(placements, list):
+        for entry in placements:
+            if not isinstance(entry, dict):
+                continue
+            summary_entry = {
+                "player_id": entry.get("player_id"),
+                "card": dict(entry.get("card", {})) if isinstance(entry.get("card"), dict) else {},
+                "row_index": entry.get("row_index"),
+                "took_row": bool(entry.get("took_row")),
+            }
+            if entry.get("took_row"):
+                summary_entry["penalty"] = int(entry.get("penalty", 0))
+                taken_cards = entry.get("taken_cards", [])
+                summary_entry["taken_cards"] = [
+                    dict(card) for card in taken_cards if isinstance(card, dict)
+                ]
+            summary_placements.append(summary_entry)
+    state["last_turn_summary"] = {
+        "round": round_number,
+        "turn": turn_number,
+        "placements": summary_placements,
+    }
+    state["turn_placements"] = []
     last_taken = state.get("row_taken_this_turn")
     if isinstance(last_taken, dict):
         state["row_taken_last_turn"] = {
             pid: {
+                "row_index": entry.get("row_index")
+                if isinstance(entry, dict) and entry.get("row_index") is not None
+                else None,
                 "cards": [dict(card) for card in entry.get("cards", [])]
                 if isinstance(entry, dict)
                 else [],
@@ -247,24 +363,20 @@ def _finish_turn(state: Dict, events: List[Dict]) -> None:
     else:
         state["row_taken_last_turn"] = {}
     state["row_taken_this_turn"] = {}
-    state["phase"] = "selection"
+    state["phase"] = "turn_summary"
     state["pending_index"] = 0
     state["pending_plays"] = []
     state["waiting_for"] = None
     state["pending_timeout"] = None
+    state["summary_ack"] = {}
 
     if _active_players(state):
-        state["turn"] = int(state.get("turn", 1)) + 1
-        _schedule_timeout(state, "selection")
-        return
-
-    if any(int(pdata.get("score", 0)) >= TARGET_SCORE for pdata in state.get("players", {}).values()):
-        state["game_over"] = True
-        state["phase"] = "game_over"
-        _assign_winners(state)
-        return
-
-    _start_new_round(state)
+        pending_type = "next_turn"
+    elif any(int(pdata.get("score", 0)) >= TARGET_SCORE for pdata in state.get("players", {}).values()):
+        pending_type = "game_over"
+    else:
+        pending_type = "new_round"
+    state["summary_pending"] = {"type": pending_type}
 
 
 def _assign_winners(state: Dict) -> None:
@@ -284,7 +396,10 @@ def _apply_row_choice(state: Dict, player_id: str, row_index: int, card: Dict, e
     penalty = _row_bullheads(row)
     state["players"][player_id]["score"] += penalty
     row[:] = [card]
-    _mark_row_taken(state, player_id, taken_cards, penalty)
+    _mark_row_taken(state, player_id, row_index, taken_cards, penalty)
+    _record_placement(
+        state, player_id, card, row_index, took_row=True, penalty=penalty, taken_cards=taken_cards
+    )
     events.append(
         {
             "type": "six_nimmt:take_row",
@@ -358,6 +473,10 @@ class SixNimmtGame:
             "pending_timeout": None,
             "row_taken_last_turn": {},
             "row_taken_this_turn": {},
+            "turn_placements": [],
+            "last_turn_summary": None,
+            "summary_ack": {},
+            "summary_pending": None,
             "winners": [],
             "game_over": False,
         }
@@ -380,6 +499,8 @@ class SixNimmtGame:
             waiting = state.get("waiting_for")
             if isinstance(waiting, dict) and waiting.get("player_id") == player_id:
                 return ["choose_row"]
+        if phase == "turn_summary":
+            return ["ack_turn_summary"]
         return []
 
     @staticmethod
@@ -437,6 +558,17 @@ class SixNimmtGame:
             state["pending_timeout"] = None
             state["phase"] = "placement"
             _continue_placement(state, events)
+            return events, None
+
+        if action_type == "ack_turn_summary":
+            if state.get("phase") != "turn_summary":
+                return [], "not in summary phase"
+            ack = _summary_ack_map(state)
+            if not ack.get(player_id):
+                ack[player_id] = True
+                state["summary_ack"] = ack
+            if _all_summary_acknowledged(state):
+                _resume_after_summary(state)
             return events, None
 
         return [], "invalid action"
@@ -551,6 +683,39 @@ class SixNimmtGame:
 
         winners = state.get("winners") or []
         winner_names = [meta.get(pid, {}).get("name") for pid in winners if pid in meta]
+        summary_ack = list(_summary_ack_map(state).keys())
+
+        summary_view = None
+        summary = state.get("last_turn_summary")
+        if isinstance(summary, dict):
+            placements = summary.get("placements")
+            view_placements = []
+            if isinstance(placements, list):
+                for entry in placements:
+                    if not isinstance(entry, dict):
+                        continue
+                    pid = entry.get("player_id")
+                    card = entry.get("card")
+                    row_index = entry.get("row_index")
+                    placement_view = {
+                        "player_id": pid,
+                        "name": meta.get(pid, {}).get("name") if pid in meta else None,
+                        "card": dict(card) if isinstance(card, dict) else None,
+                        "row_index": int(row_index) if row_index is not None else None,
+                        "took_row": bool(entry.get("took_row")),
+                    }
+                    if entry.get("took_row"):
+                        placement_view["penalty"] = int(entry.get("penalty", 0))
+                        taken_cards = entry.get("taken_cards")
+                        placement_view["taken_cards"] = [
+                            dict(card) for card in taken_cards if isinstance(card, dict)
+                        ] if isinstance(taken_cards, list) else []
+                    view_placements.append(placement_view)
+            summary_view = {
+                "round": summary.get("round"),
+                "turn": summary.get("turn"),
+                "placements": view_placements,
+            }
 
         return {
             "game_id": SixNimmtGame.game_id,
@@ -568,6 +733,8 @@ class SixNimmtGame:
             "legal_actions": SixNimmtGame.get_legal_actions(state, viewer_id),
             "winners": winners,
             "winner_names": winner_names,
+            "last_turn_summary": summary_view,
+            "summary_ack": summary_ack,
             "game_over": state.get("game_over", False),
             "server_time_ms": _now_ms(),
             "config": {
@@ -604,6 +771,11 @@ class SixNimmtGame:
                         best_index = idx
                 if best_index is not None:
                     return {"type": "choose_row", "row_index": best_index}
+        if phase == "turn_summary":
+            ack = state.get("summary_ack")
+            if isinstance(ack, dict) and ack.get(bot_id):
+                return None
+            return {"type": "ack_turn_summary"}
         return None
 
     @staticmethod

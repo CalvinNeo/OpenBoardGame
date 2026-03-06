@@ -290,6 +290,12 @@ SIX_NIMMT_ACTION_SCHEMA = {
             "required": ["type", "row_index"],
             "additionalProperties": False,
         },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "ack_turn_summary"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
     ],
 }
 

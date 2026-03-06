@@ -319,6 +319,7 @@ let gangCountdownTimer = null;
 let sixNimmtCountdownTimer = null;
 let sixNimmtServerOffsetMs = 0;
 let sixNimmtLastTimeoutAt = null;
+let sixNimmtSummaryAckSent = false;
 let gangServerOffsetMs = 0;
 let gangAutoLockSent = false;
 let gangSelectedSpyTarget = null;
@@ -672,6 +673,11 @@ const sixNimmtReveal = document.getElementById("sixNimmtReveal");
 const sixNimmtRows = document.getElementById("sixNimmtRows");
 const sixNimmtHand = document.getElementById("sixNimmtHand");
 const sixNimmtPlayers = document.getElementById("sixNimmtPlayers");
+const sixNimmtSummaryModal = document.getElementById("sixNimmtSummaryModal");
+const sixNimmtSummaryStatus = document.getElementById("sixNimmtSummaryStatus");
+const sixNimmtSummaryMeta = document.getElementById("sixNimmtSummaryMeta");
+const sixNimmtSummaryList = document.getElementById("sixNimmtSummaryList");
+const sixNimmtSummaryCloseBtn = document.getElementById("sixNimmtSummaryCloseBtn");
 
 const halliTurnLabel = document.getElementById("halliTurn");
 const halliBellLabel = document.getElementById("halliBell");
@@ -3363,6 +3369,24 @@ function clearSixNimmtState() {
   if (sixNimmtReveal) {
     sixNimmtReveal.innerHTML = "";
   }
+  if (sixNimmtSummaryList) {
+    sixNimmtSummaryList.innerHTML = "";
+  }
+  if (sixNimmtSummaryMeta) {
+    sixNimmtSummaryMeta.textContent = "-";
+  }
+  if (sixNimmtSummaryStatus) {
+    sixNimmtSummaryStatus.textContent = "-";
+  }
+  if (sixNimmtSummaryCloseBtn) {
+    sixNimmtSummaryCloseBtn.disabled = false;
+    sixNimmtSummaryCloseBtn.textContent = "Continue";
+  }
+  if (sixNimmtSummaryModal) {
+    sixNimmtSummaryModal.classList.add("hidden");
+    sixNimmtSummaryModal.setAttribute("aria-hidden", "true");
+  }
+  sixNimmtSummaryAckSent = false;
   if (sixNimmtRows) {
     sixNimmtRows.innerHTML = "";
   }
@@ -14364,6 +14388,95 @@ function renderSixNimmtReveal(view) {
   });
 }
 
+function updateSixNimmtSummaryModal(view) {
+  if (!sixNimmtSummaryModal || !sixNimmtSummaryList) {
+    return;
+  }
+  const show = !!view && view.phase === "turn_summary";
+  sixNimmtSummaryModal.classList.toggle("hidden", !show);
+  sixNimmtSummaryModal.setAttribute("aria-hidden", (!show).toString());
+  if (!show) {
+    sixNimmtSummaryList.innerHTML = "";
+    if (sixNimmtSummaryMeta) {
+      sixNimmtSummaryMeta.textContent = "-";
+    }
+    if (sixNimmtSummaryStatus) {
+      sixNimmtSummaryStatus.textContent = "-";
+    }
+    if (sixNimmtSummaryCloseBtn) {
+      sixNimmtSummaryCloseBtn.disabled = false;
+      sixNimmtSummaryCloseBtn.textContent = "Continue";
+    }
+    sixNimmtSummaryAckSent = false;
+    return;
+  }
+
+  const summary = view.last_turn_summary;
+  const placements = summary && Array.isArray(summary.placements) ? summary.placements : [];
+  sixNimmtSummaryList.innerHTML = "";
+  if (!placements.length) {
+    const empty = document.createElement("div");
+    empty.className = "hint";
+    empty.textContent = "No summary available.";
+    sixNimmtSummaryList.appendChild(empty);
+  } else {
+    placements.forEach((entry) => {
+      const line = document.createElement("div");
+      line.className = "six-nimmt-summary-item";
+      const header = document.createElement("div");
+      header.className = "six-nimmt-summary-header";
+      const name = entry && entry.name ? entry.name : findPlayerName(view, entry.player_id);
+      const rowLabel = Number.isInteger(entry.row_index) ? `Row ${entry.row_index + 1}` : "Row -";
+      header.textContent = `${name || "-"}: ${formatSixNimmtCardText(entry.card)} -> ${rowLabel}`;
+      line.appendChild(header);
+
+      if (entry && entry.took_row) {
+        const take = document.createElement("div");
+        take.className = "six-nimmt-summary-take";
+        const takenCards = Array.isArray(entry.taken_cards) ? entry.taken_cards : [];
+        const takenText = takenCards.length
+          ? takenCards.map((card) => formatSixNimmtCardText(card)).join("、")
+          : "-";
+        const penalty = Number.isInteger(entry.penalty) ? entry.penalty : 0;
+        take.textContent = `吃牌: ${takenText} (罚分 ${penalty})`;
+        line.appendChild(take);
+      }
+      sixNimmtSummaryList.appendChild(line);
+    });
+  }
+
+  if (sixNimmtSummaryMeta) {
+    const roundText = summary && Number.isInteger(summary.round) ? `Round ${summary.round}` : "Round -";
+    const turnText = summary && Number.isInteger(summary.turn) ? `Turn ${summary.turn}` : "Turn -";
+    sixNimmtSummaryMeta.textContent = `${roundText} · ${turnText}`;
+  }
+
+  const acked = Array.isArray(view.summary_ack) ? view.summary_ack : [];
+  const players = Array.isArray(view.players) ? view.players : [];
+  const waitingPlayers = players.filter((player) => !acked.includes(player.player_id));
+  if (sixNimmtSummaryStatus) {
+    if (!players.length) {
+      sixNimmtSummaryStatus.textContent = "-";
+    } else if (!waitingPlayers.length) {
+      sixNimmtSummaryStatus.textContent = "All players ready.";
+    } else if (waitingPlayers.length <= 3) {
+      const names = waitingPlayers.map((player) =>
+        player.player_id === view.you ? "You" : player.name || "-"
+      );
+      sixNimmtSummaryStatus.textContent = `Waiting: ${names.join(", ")}`;
+    } else {
+      sixNimmtSummaryStatus.textContent = `Waiting: ${waitingPlayers.length} players`;
+    }
+  }
+
+  const youAcked = view.you && acked.includes(view.you);
+  sixNimmtSummaryAckSent = !!youAcked;
+  if (sixNimmtSummaryCloseBtn) {
+    sixNimmtSummaryCloseBtn.disabled = !!youAcked;
+    sixNimmtSummaryCloseBtn.textContent = youAcked ? "Waiting..." : "Continue";
+  }
+}
+
 function renderSixNimmtRows(view) {
   if (!sixNimmtRows) {
     return;
@@ -14592,6 +14705,7 @@ function renderSixNimmtGameState(data) {
 
   renderSixNimmtNotice(view);
   renderSixNimmtReveal(view);
+  updateSixNimmtSummaryModal(view);
   renderSixNimmtRows(view);
   renderSixNimmtHand(view);
   renderSixNimmtPlayers(view);
@@ -15416,6 +15530,55 @@ if (aidixitZoomModal) {
   aidixitZoomModal.addEventListener("click", (event) => {
     if (event.target === aidixitZoomModal) {
       closeAidixitZoom();
+    }
+  });
+}
+
+if (sixNimmtSummaryModal) {
+  sixNimmtSummaryModal.addEventListener("click", (event) => {
+    if (event.target !== sixNimmtSummaryModal) {
+      return;
+    }
+    if (!currentSixNimmtView || currentSixNimmtView.phase !== "turn_summary") {
+      return;
+    }
+    const actions = Array.isArray(currentSixNimmtView.legal_actions) ? currentSixNimmtView.legal_actions : [];
+    if (!actions.includes("ack_turn_summary")) {
+      return;
+    }
+    if (sixNimmtSummaryAckSent) {
+      return;
+    }
+    sendAction({ type: "ack_turn_summary" });
+    sixNimmtSummaryAckSent = true;
+    if (sixNimmtSummaryCloseBtn) {
+      sixNimmtSummaryCloseBtn.disabled = true;
+      sixNimmtSummaryCloseBtn.textContent = "Waiting...";
+    }
+    if (sixNimmtSummaryStatus) {
+      sixNimmtSummaryStatus.textContent = "Waiting for others...";
+    }
+  });
+}
+
+if (sixNimmtSummaryCloseBtn) {
+  sixNimmtSummaryCloseBtn.addEventListener("click", () => {
+    if (!currentSixNimmtView || currentSixNimmtView.phase !== "turn_summary") {
+      return;
+    }
+    const actions = Array.isArray(currentSixNimmtView.legal_actions) ? currentSixNimmtView.legal_actions : [];
+    if (!actions.includes("ack_turn_summary")) {
+      return;
+    }
+    if (sixNimmtSummaryAckSent) {
+      return;
+    }
+    sendAction({ type: "ack_turn_summary" });
+    sixNimmtSummaryAckSent = true;
+    sixNimmtSummaryCloseBtn.disabled = true;
+    sixNimmtSummaryCloseBtn.textContent = "Waiting...";
+    if (sixNimmtSummaryStatus) {
+      sixNimmtSummaryStatus.textContent = "Waiting for others...";
     }
   });
 }
