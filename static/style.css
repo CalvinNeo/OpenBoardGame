@@ -3488,7 +3488,7 @@ body.log-open {
 @media (min-width: 901px) {
   body.trekking-active .container {
     max-width: 1680px;
-    margin-left: 0;
+    margin-left: 96px;
     margin-right: auto;
   }
 
