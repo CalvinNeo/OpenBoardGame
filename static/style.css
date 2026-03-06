@@ -1973,6 +1973,13 @@ body.log-open {
   gap: 8px;
 }
 
+.yahtzee-dice-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
 .yahtzee-die {
   width: 44px;
   height: 44px;
@@ -3784,6 +3791,16 @@ body.log-open {
   .row.actions button {
     margin-right: 0;
     width: 100%;
+  }
+
+  .yahtzee-dice-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .yahtzee-dice-container #yahtzeeRollBtn {
+    width: 100%;
+    margin-top: 4px;
   }
 
   #trekkingPanel .trekking-actions-row {
