@@ -1555,6 +1555,32 @@
               </div>
             </div>
 
+            <div id="trekkingScoreModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true">
+              <div class="modal-content trekking-score-modal">
+                <div class="modal-header">
+                  <h2>得分规则</h2>
+                </div>
+                <div class="modal-body">
+                  <div class="trekking-score-note">当前 trek 得分按该 trek 的长度计算；所有 treks 的总得分为各 trek 得分相加。</div>
+                  <ul class="trekking-score-rules">
+                    <li>1 张: -3 分</li>
+                    <li>2 张: 0 分</li>
+                    <li>3 张: 2 分</li>
+                    <li>4 张: 4 分</li>
+                    <li>5 张: 7 分</li>
+                    <li>6 张: 10 分</li>
+                    <li>7 张: 14 分</li>
+                    <li>8 张: 18 分</li>
+                    <li>9 张: 24 分</li>
+                    <li>10+ 张: 30 分</li>
+                  </ul>
+                  <div class="row actions">
+                    <button id="trekkingScoreCloseBtn" type="button">Close</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div id="abracaPanel" class="hidden">
               <div class="row">
                 <div>Phase: <span id="abracaPhase">-</span></div>

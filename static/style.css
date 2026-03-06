@@ -3623,6 +3623,23 @@ body.log-open {
   margin-top: 4px;
 }
 
+.trekking-player-scores {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.trekking-score-link {
+  font-size: 12px;
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.trekking-score-link:hover {
+  color: #1d4ed8;
+}
+
 .trekking-itinerary-name {
   font-size: 12px;
   color: #111827;
@@ -3785,6 +3802,18 @@ body.log-open {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+}
+
+.trekking-score-note {
+  font-size: 13px;
+  color: #111827;
+}
+
+.trekking-score-rules {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: #111827;
+  font-size: 13px;
 }
 
 .trekking-actions-row {

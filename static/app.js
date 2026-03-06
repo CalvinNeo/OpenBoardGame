@@ -987,6 +987,8 @@ const trekkingCrystalPrompt = document.getElementById("trekkingCrystalPrompt");
 const trekkingCrystalSelect = document.getElementById("trekkingCrystalSelect");
 const trekkingCrystalConfirmBtn = document.getElementById("trekkingCrystalConfirm");
 const trekkingCrystalCancelBtn = document.getElementById("trekkingCrystalCancel");
+const trekkingScoreModal = document.getElementById("trekkingScoreModal");
+const trekkingScoreCloseBtn = document.getElementById("trekkingScoreCloseBtn");
 const trekkingTakeCardBtn = document.getElementById("trekkingTakeCardBtn");
 const trekkingTakeAncestorBtn = document.getElementById("trekkingTakeAncestorBtn");
 const trekkingPlayers = document.getElementById("trekkingPlayers");
@@ -3863,6 +3865,7 @@ function clearTrekkingState() {
   clearTrekkingSelections();
   closeTrekkingWildModal();
   closeTrekkingCrystalModal();
+  closeTrekkingScoreRules();
   if (trekkingDayLabel) {
     trekkingDayLabel.textContent = "-";
   }
@@ -5209,6 +5212,20 @@ function closeTrekkingCrystalModal() {
   trekkingCrystalModalState = null;
 }
 
+function openTrekkingScoreRules() {
+  if (!trekkingScoreModal) {
+    return;
+  }
+  setModalVisible(trekkingScoreModal, true);
+}
+
+function closeTrekkingScoreRules() {
+  if (!trekkingScoreModal) {
+    return;
+  }
+  setModalVisible(trekkingScoreModal, false);
+}
+
 function trekkingSlotReward(view, index) {
   const rewards = view && Array.isArray(view.slot_rewards) ? view.slot_rewards : TREKKING_SLOT_REWARDS;
   return rewards[index] || null;
@@ -5473,6 +5490,20 @@ function renderTrekkingPlayers(view) {
     const lastYear = formatTrekkingYear(player.current_trek_last_year);
     trekInfo.textContent = `Treks: ${lengths} | Last Year: ${lastYear}`;
     card.appendChild(trekInfo);
+
+    const trekScores = document.createElement("div");
+    trekScores.className = "trekking-player-meta trekking-player-scores";
+    const currentScore = Number.isFinite(player.current_trek_score) ? player.current_trek_score : 0;
+    const totalScore = Number.isFinite(player.treks_total_score) ? player.treks_total_score : 0;
+    const scoreText = document.createElement("span");
+    scoreText.textContent = `Trek Score: ${currentScore} | Treks Total: ${totalScore}`;
+    trekScores.appendChild(scoreText);
+    const scoreLink = document.createElement("a");
+    scoreLink.href = "#";
+    scoreLink.className = "trekking-score-link";
+    scoreLink.textContent = "得分规则";
+    trekScores.appendChild(scoreLink);
+    card.appendChild(trekScores);
 
     const itinerary = (player.itineraries || [])[dayIndex];
     if (itinerary) {
@@ -15534,6 +15565,20 @@ if (aidixitZoomModal) {
   });
 }
 
+if (trekkingScoreCloseBtn) {
+  trekkingScoreCloseBtn.addEventListener("click", () => {
+    closeTrekkingScoreRules();
+  });
+}
+
+if (trekkingScoreModal) {
+  trekkingScoreModal.addEventListener("click", (event) => {
+    if (event.target === trekkingScoreModal) {
+      closeTrekkingScoreRules();
+    }
+  });
+}
+
 if (sixNimmtSummaryModal) {
   sixNimmtSummaryModal.addEventListener("click", (event) => {
     if (event.target !== sixNimmtSummaryModal) {
@@ -16950,6 +16995,12 @@ if (trekkingPanel) {
       return;
     }
     if (target.closest(".trekking-modal")) {
+      return;
+    }
+    const scoreLink = target.closest(".trekking-score-link");
+    if (scoreLink) {
+      event.preventDefault();
+      openTrekkingScoreRules();
       return;
     }
     if (target.closest("button") || target.closest("select") || target.closest("input") || target.closest("label") || target.closest("a")) {

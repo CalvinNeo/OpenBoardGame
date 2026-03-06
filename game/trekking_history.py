@@ -717,6 +717,8 @@ class TrekkingHistoryGame:
             trek_lengths = [len(trek) for trek in pdata.get("treks", [])]
             current_trek = pdata.get("treks", [])[-1] if pdata.get("treks") else []
             last_year = current_trek[-1]["year"] if current_trek else None
+            current_trek_score = _trek_score(len(current_trek))
+            treks_total_score = sum(_trek_score(len(trek)) for trek in pdata.get("treks", []))
             players_view.append(
                 {
                     "player_id": pid,
@@ -727,6 +729,8 @@ class TrekkingHistoryGame:
                     "time_order": pdata.get("time_order", 0),
                     "crystals": pdata.get("crystals", 0),
                     "score": pdata.get("score", 0),
+                    "current_trek_score": current_trek_score,
+                    "treks_total_score": treks_total_score,
                     "trek_lengths": trek_lengths,
                     "current_trek_last_year": last_year,
                     "itineraries": pdata.get("itineraries", []),
