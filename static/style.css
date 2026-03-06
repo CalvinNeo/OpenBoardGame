@@ -1981,26 +1981,49 @@ body.log-open {
 }
 
 .yahtzee-die {
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  height: 52px;
   border: 2px solid #d1d5db;
   border-radius: 8px;
   background: #ffffff;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 2px;
   font-weight: 600;
   cursor: pointer;
 }
 
 .yahtzee-die.locked {
-  border-color: #6366f1;
-  background: #eef2ff;
+  border-color: #0f172a;
+  background: #f1f5f9;
+  box-shadow: inset 0 0 0 1px #0f172a;
 }
 
 .yahtzee-die.disabled {
   cursor: not-allowed;
   opacity: 0.6;
+}
+
+.yahtzee-die-value {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.yahtzee-die-lock {
+  display: none;
+  font-size: 9px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 999px;
+  background: #111827;
+  color: #ffffff;
+  letter-spacing: 0.08em;
+}
+
+.yahtzee-die.locked .yahtzee-die-lock {
+  display: inline-flex;
 }
 
 .yahtzee-scorecard {

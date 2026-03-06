@@ -12672,7 +12672,24 @@ function renderYahtzeeDice(view) {
     if (locked[idx]) {
       die.classList.add("locked");
     }
-    die.textContent = value > 0 ? String(value) : "-";
+    const valueEl = document.createElement("span");
+    valueEl.className = "yahtzee-die-value";
+    valueEl.textContent = value > 0 ? String(value) : "-";
+    const lockEl = document.createElement("span");
+    lockEl.className = "yahtzee-die-lock";
+    lockEl.textContent = "LOCKED";
+    die.appendChild(valueEl);
+    die.appendChild(lockEl);
+    const dieIndex = idx + 1;
+    if (locked[idx]) {
+      die.setAttribute("aria-pressed", "true");
+      die.setAttribute("aria-label", `Die ${dieIndex} locked; will not roll.`);
+      die.title = "Locked: will not roll.";
+    } else {
+      die.setAttribute("aria-pressed", "false");
+      die.setAttribute("aria-label", `Die ${dieIndex} unlocked; click to lock.`);
+      die.title = "Click to lock (will not roll).";
+    }
     if (!canToggle) {
       die.classList.add("disabled");
       die.disabled = true;
