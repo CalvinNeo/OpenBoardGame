@@ -1,0 +1,1468 @@
+import csv
+import math
+import os
+import random
+import re
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Dict, List, Optional, Set, Tuple
+
+SIDES = ["N", "E", "S", "W"]
+SIDE_DELTAS = {
+    "N": (0, -1),
+    "E": (1, 0),
+    "S": (0, 1),
+    "W": (-1, 0),
+}
+OPPOSITE_SIDE = {"N": "S", "S": "N", "E": "W", "W": "E"}
+
+SLOT_NAMES = ["N0", "N1", "E0", "E1", "S0", "S1", "W0", "W1"]
+SLOT_POS = {
+    "N0": (0.25, 0.0),
+    "N1": (0.75, 0.0),
+    "E0": (1.0, 0.25),
+    "E1": (1.0, 0.75),
+    "S0": (0.25, 1.0),
+    "S1": (0.75, 1.0),
+    "W0": (0.0, 0.25),
+    "W1": (0.0, 0.75),
+}
+SLOT_BY_POS = {pos: name for name, pos in SLOT_POS.items()}
+OPPOSITE_SLOT = {
+    "N0": "S0",
+    "N1": "S1",
+    "S0": "N0",
+    "S1": "N1",
+    "E0": "W0",
+    "E1": "W1",
+    "W0": "E0",
+    "W1": "E1",
+}
+
+FIELD_COLOR = "#7fbf7f"
+ROAD_COLOR = "#c9b07a"
+CITY_COLOR = "#8a8a8a"
+MONASTERY_COLOR = "#d9c49a"
+SHIELD_COLOR = "#c43c3c"
+
+GRID_SIZE = 100
+GRID_MID = GRID_SIZE // 2
+
+PATH_TOKEN_RE = re.compile(r"[MLQZmlqz]|-?\d+(?:\.\d+)?")
+
+
+@dataclass
+class TileSegment:
+    edges: Set[str]
+    has_shield: bool = False
+
+
+@dataclass
+class FieldSegment:
+    slots: Set[str]
+    adjacent_cities: Set[int]
+
+
+@dataclass
+class TileTemplate:
+    edges: Dict[str, str]
+    road_segments: List[TileSegment]
+    city_segments: List[TileSegment]
+    field_segments: List[FieldSegment]
+    edge_to_road: Dict[str, int]
+    edge_to_city: Dict[str, int]
+    slot_to_field: Dict[str, int]
+    has_monastery: bool
+    road_centers: List[Tuple[float, float]]
+    city_centers: List[Tuple[float, float]]
+    field_centers: List[Tuple[float, float]]
+    monastery_center: Optional[Tuple[float, float]]
+
+
+def _strip_ns(tag: str) -> str:
+    return tag.split("}")[-1]
+
+
+def _normalize_color(value: str) -> str:
+    return value.strip().lower()
+
+
+def _rotate_point(x: float, y: float, turns: int) -> Tuple[float, float]:
+    for _ in range(turns % 4):
+        x, y = (1 - y, x)
+    return (round(x, 4), round(y, 4))
+
+
+def _rotate_slot(slot: str, turns: int) -> str:
+    x, y = SLOT_POS[slot]
+    rx, ry = _rotate_point(x, y, turns)
+    mapped = SLOT_BY_POS.get((rx, ry))
+    if not mapped:
+        raise ValueError(f"no slot mapping for {slot} -> {(rx, ry)}")
+    return mapped
+
+
+def _rotate_side(side: str, turns: int) -> str:
+    idx = SIDES.index(side)
+    return SIDES[(idx + turns) % 4]
+
+
+def _parse_path_points(d: str) -> List[Tuple[float, float]]:
+    tokens = PATH_TOKEN_RE.findall(d)
+    points: List[Tuple[float, float]] = []
+    cursor = (0.0, 0.0)
+    start = None
+    idx = 0
+    cmd = None
+
+    def add_point(pt: Tuple[float, float]) -> None:
+        points.append(pt)
+
+    while idx < len(tokens):
+        token = tokens[idx]
+        if re.fullmatch(r"[MLQZmlqz]", token):
+            cmd = token
+            idx += 1
+            if cmd in ("Z", "z"):
+                if start and (not points or points[-1] != start):
+                    add_point(start)
+                cmd = None
+            continue
+        if cmd is None:
+            idx += 1
+            continue
+        if cmd in ("M", "m"):
+            x = float(tokens[idx])
+            y = float(tokens[idx + 1])
+            idx += 2
+            if cmd == "m":
+                x += cursor[0]
+                y += cursor[1]
+            cursor = (x, y)
+            start = cursor
+            add_point(cursor)
+            cmd = "L" if cmd == "M" else "l"
+            continue
+        if cmd in ("L", "l"):
+            x = float(tokens[idx])
+            y = float(tokens[idx + 1])
+            idx += 2
+            if cmd == "l":
+                x += cursor[0]
+                y += cursor[1]
+            cursor = (x, y)
+            add_point(cursor)
+            continue
+        if cmd in ("Q", "q"):
+            cx = float(tokens[idx])
+            cy = float(tokens[idx + 1])
+            x = float(tokens[idx + 2])
+            y = float(tokens[idx + 3])
+            idx += 4
+            if cmd == "q":
+                cx += cursor[0]
+                cy += cursor[1]
+                x += cursor[0]
+                y += cursor[1]
+            segments = 20
+            for step in range(1, segments + 1):
+                t = step / segments
+                mt = 1 - t
+                px = mt * mt * cursor[0] + 2 * mt * t * cx + t * t * x
+                py = mt * mt * cursor[1] + 2 * mt * t * cy + t * t * y
+                add_point((px, py))
+            cursor = (x, y)
+            continue
+        idx += 1
+    if start and points and points[-1] != start:
+        points.append(start)
+    return points
+
+
+def _point_in_polygon(x: float, y: float, poly: List[Tuple[float, float]]) -> bool:
+    inside = False
+    n = len(poly)
+    if n < 3:
+        return False
+    j = n - 1
+    for i in range(n):
+        xi, yi = poly[i]
+        xj, yj = poly[j]
+        intersects = ((yi > y) != (yj > y)) and (
+            x < (xj - xi) * (y - yi) / (yj - yi + 1e-9) + xi
+        )
+        if intersects:
+            inside = not inside
+        j = i
+    return inside
+
+
+def _fill_rect(grid: List[List[str]], fill: str, x: float, y: float, w: float, h: float) -> None:
+    x0 = max(0, int(math.floor(x)))
+    y0 = max(0, int(math.floor(y)))
+    x1 = min(GRID_SIZE, int(math.ceil(x + w)))
+    y1 = min(GRID_SIZE, int(math.ceil(y + h)))
+    for py in range(y0, y1):
+        for px in range(x0, x1):
+            cx = px + 0.5
+            cy = py + 0.5
+            if x <= cx <= x + w and y <= cy <= y + h:
+                grid[py][px] = fill
+
+
+def _fill_circle(grid: List[List[str]], fill: str, cx: float, cy: float, r: float) -> None:
+    x0 = max(0, int(math.floor(cx - r)))
+    y0 = max(0, int(math.floor(cy - r)))
+    x1 = min(GRID_SIZE, int(math.ceil(cx + r)))
+    y1 = min(GRID_SIZE, int(math.ceil(cy + r)))
+    r2 = r * r
+    for py in range(y0, y1):
+        for px in range(x0, x1):
+            dx = (px + 0.5) - cx
+            dy = (py + 0.5) - cy
+            if dx * dx + dy * dy <= r2 + 1e-6:
+                grid[py][px] = fill
+
+
+def _fill_polygon(grid: List[List[str]], fill: str, points: List[Tuple[float, float]]) -> None:
+    if not points:
+        return
+    xs = [p[0] for p in points]
+    ys = [p[1] for p in points]
+    x0 = max(0, int(math.floor(min(xs))))
+    y0 = max(0, int(math.floor(min(ys))))
+    x1 = min(GRID_SIZE, int(math.ceil(max(xs))))
+    y1 = min(GRID_SIZE, int(math.ceil(max(ys))))
+    for py in range(y0, y1):
+        for px in range(x0, x1):
+            cx = px + 0.5
+            cy = py + 0.5
+            if _point_in_polygon(cx, cy, points):
+                grid[py][px] = fill
+
+
+def _render_svg(svg_path: Path) -> Tuple[List[List[str]], List[List[bool]], List[List[bool]], bool, List[Tuple[float, float]]]:
+    import xml.etree.ElementTree as ET
+
+    grid = [["field" for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
+    shield_mask = [[False for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
+    monastery_mask = [[False for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
+    monastery_present = False
+    junction_markers: List[Tuple[float, float]] = []
+
+    tree = ET.parse(svg_path)
+    root = tree.getroot()
+
+    for elem in root.iter():
+        tag = _strip_ns(elem.tag)
+        if tag not in ("rect", "polygon", "path", "circle"):
+            continue
+        if tag == "circle" and elem.attrib.get("data-node") == "junction":
+            try:
+                junction_markers.append((float(elem.attrib.get("cx", 0)), float(elem.attrib.get("cy", 0))))
+            except ValueError:
+                pass
+        fill = elem.attrib.get("fill")
+        if not fill or fill == "none":
+            continue
+        fill_color = _normalize_color(fill)
+        if fill_color not in (FIELD_COLOR, ROAD_COLOR, CITY_COLOR, MONASTERY_COLOR, SHIELD_COLOR):
+            continue
+        if fill_color == MONASTERY_COLOR:
+            monastery_present = True
+            target_grid = None
+        elif fill_color == SHIELD_COLOR:
+            target_grid = None
+        else:
+            target_grid = grid
+
+        if tag == "rect":
+            x = float(elem.attrib.get("x", 0))
+            y = float(elem.attrib.get("y", 0))
+            w = float(elem.attrib.get("width", 0))
+            h = float(elem.attrib.get("height", 0))
+            if target_grid:
+                if fill_color == ROAD_COLOR:
+                    fill_type = "road"
+                elif fill_color == CITY_COLOR:
+                    fill_type = "city"
+                else:
+                    fill_type = "field"
+                _fill_rect(target_grid, fill_type, x, y, w, h)
+            elif fill_color == SHIELD_COLOR:
+                _fill_rect(shield_mask, True, x, y, w, h)
+            else:
+                _fill_rect(monastery_mask, True, x, y, w, h)
+            continue
+        if tag == "circle":
+            cx = float(elem.attrib.get("cx", 0))
+            cy = float(elem.attrib.get("cy", 0))
+            r = float(elem.attrib.get("r", 0))
+            if target_grid:
+                if fill_color == ROAD_COLOR:
+                    fill_type = "road"
+                elif fill_color == CITY_COLOR:
+                    fill_type = "city"
+                else:
+                    fill_type = "field"
+                _fill_circle(target_grid, fill_type, cx, cy, r)
+            elif fill_color == SHIELD_COLOR:
+                _fill_circle(shield_mask, True, cx, cy, r)
+            else:
+                _fill_circle(monastery_mask, True, cx, cy, r)
+            continue
+        if tag == "polygon":
+            points_raw = elem.attrib.get("points", "").strip()
+            points: List[Tuple[float, float]] = []
+            for pair in points_raw.split():
+                if not pair:
+                    continue
+                if "," in pair:
+                    sx, sy = pair.split(",")
+                else:
+                    sx, sy = pair.split()
+                points.append((float(sx), float(sy)))
+            if target_grid:
+                if fill_color == ROAD_COLOR:
+                    fill_type = "road"
+                elif fill_color == CITY_COLOR:
+                    fill_type = "city"
+                else:
+                    fill_type = "field"
+                _fill_polygon(target_grid, fill_type, points)
+            elif fill_color == SHIELD_COLOR:
+                _fill_polygon(shield_mask, True, points)
+            else:
+                _fill_polygon(monastery_mask, True, points)
+            continue
+        if tag == "path":
+            d = elem.attrib.get("d", "")
+            points = _parse_path_points(d)
+            if target_grid:
+                if fill_color == ROAD_COLOR:
+                    fill_type = "road"
+                elif fill_color == CITY_COLOR:
+                    fill_type = "city"
+                else:
+                    fill_type = "field"
+                _fill_polygon(target_grid, fill_type, points)
+            elif fill_color == SHIELD_COLOR:
+                _fill_polygon(shield_mask, True, points)
+            else:
+                _fill_polygon(monastery_mask, True, points)
+            continue
+
+    return grid, shield_mask, monastery_mask, monastery_present, junction_markers
+
+
+def _label_components(grid: List[List[str]], target: str, shield_mask: Optional[List[List[bool]]] = None) -> Tuple[List[List[int]], int]:
+    height = len(grid)
+    width = len(grid[0]) if height else 0
+    comp = [[-1 for _ in range(width)] for _ in range(height)]
+    count = 0
+    for y in range(height):
+        for x in range(width):
+            if comp[y][x] != -1:
+                continue
+            if target == "city":
+                if grid[y][x] != "city" and not (shield_mask and shield_mask[y][x]):
+                    continue
+            else:
+                if grid[y][x] != target:
+                    continue
+            queue = [(x, y)]
+            comp[y][x] = count
+            while queue:
+                cx, cy = queue.pop()
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    nx, ny = cx + dx, cy + dy
+                    if nx < 0 or nx >= width or ny < 0 or ny >= height:
+                        continue
+                    if comp[ny][nx] != -1:
+                        continue
+                    if target == "city":
+                        if grid[ny][nx] != "city" and not (shield_mask and shield_mask[ny][nx]):
+                            continue
+                    else:
+                        if grid[ny][nx] != target:
+                            continue
+                    comp[ny][nx] = count
+                    queue.append((nx, ny))
+            count += 1
+    return comp, count
+
+
+
+
+def _compute_centroids(
+    comp_grid: List[List[int]],
+    count: int,
+    allowed_mask: Optional[List[List[bool]]] = None,
+) -> List[Tuple[float, float]]:
+    totals: List[List[float]] = [[0.0, 0.0, 0.0] for _ in range(count)]
+    for y in range(GRID_SIZE):
+        for x in range(GRID_SIZE):
+            cid = comp_grid[y][x]
+            if cid < 0:
+                continue
+            if allowed_mask is not None and not allowed_mask[y][x]:
+                continue
+            totals[cid][0] += (x + 0.5) / GRID_SIZE
+            totals[cid][1] += (y + 0.5) / GRID_SIZE
+            totals[cid][2] += 1.0
+    centers: List[Tuple[float, float]] = []
+    for sx, sy, count_cells in totals:
+        if count_cells <= 0:
+            centers.append((0.5, 0.5))
+        else:
+            centers.append((round(sx / count_cells, 4), round(sy / count_cells, 4)))
+    return centers
+
+
+def _compute_mask_centroid(mask: List[List[bool]]) -> Optional[Tuple[float, float]]:
+    sx = 0.0
+    sy = 0.0
+    count = 0.0
+    for y in range(GRID_SIZE):
+        for x in range(GRID_SIZE):
+            if mask[y][x]:
+                sx += (x + 0.5) / GRID_SIZE
+                sy += (y + 0.5) / GRID_SIZE
+                count += 1.0
+    if count <= 0:
+        return None
+    return (round(sx / count, 4), round(sy / count, 4))
+
+
+def _apply_junction_mask(grid: List[List[str]], junction_markers: List[Tuple[float, float]]) -> None:
+    if not junction_markers:
+        return
+    cut_size = 18
+    half = cut_size // 2
+    for cx, cy in junction_markers:
+        center_x = int(round(cx))
+        center_y = int(round(cy))
+        x0 = max(0, center_x - half)
+        y0 = max(0, center_y - half)
+        x1 = min(GRID_SIZE, x0 + cut_size)
+        y1 = min(GRID_SIZE, y0 + cut_size)
+        for py in range(y0, y1):
+            row = grid[py]
+            for px in range(x0, x1):
+                if row[px] == "road":
+                    row[px] = "blocked"
+
+
+def _build_tile_template(svg_path: Path) -> TileTemplate:
+    grid, shield_mask, monastery_mask, monastery_present, junction_markers = _render_svg(svg_path)
+    city_comp, city_count = _label_components(grid, "city", shield_mask)
+    road_grid = [row[:] for row in grid]
+    if junction_markers:
+        _apply_junction_mask(road_grid, junction_markers)
+    road_comp, road_count = _label_components(road_grid, "road")
+
+    # field = everything else
+    field_grid = [["field" if grid[y][x] not in ("road", "city") else "blocked" for x in range(GRID_SIZE)] for y in range(GRID_SIZE)]
+    field_comp, field_count = _label_components(field_grid, "field")
+
+    city_info = [TileSegment(edges=set(), has_shield=False) for _ in range(city_count)]
+    road_info = [TileSegment(edges=set(), has_shield=False) for _ in range(road_count)]
+    field_info = [FieldSegment(slots=set(), adjacent_cities=set()) for _ in range(field_count)]
+
+    road_centers = _compute_centroids(road_comp, road_count)
+    city_centers = _compute_centroids(city_comp, city_count)
+    field_allowed = None
+    if monastery_present:
+        field_allowed = [[not monastery_mask[y][x] for x in range(GRID_SIZE)] for y in range(GRID_SIZE)]
+    field_centers = _compute_centroids(field_comp, field_count, allowed_mask=field_allowed)
+    monastery_center = _compute_mask_centroid(monastery_mask) if monastery_present else None
+    for y in range(GRID_SIZE):
+        for x in range(GRID_SIZE):
+            cid = city_comp[y][x]
+            if cid >= 0:
+                if y == 0:
+                    city_info[cid].edges.add("N")
+                if y == GRID_SIZE - 1:
+                    city_info[cid].edges.add("S")
+                if x == 0:
+                    city_info[cid].edges.add("W")
+                if x == GRID_SIZE - 1:
+                    city_info[cid].edges.add("E")
+                if shield_mask[y][x]:
+                    city_info[cid].has_shield = True
+            rid = road_comp[y][x]
+            if rid >= 0:
+                if y == 0:
+                    road_info[rid].edges.add("N")
+                if y == GRID_SIZE - 1:
+                    road_info[rid].edges.add("S")
+                if x == 0:
+                    road_info[rid].edges.add("W")
+                if x == GRID_SIZE - 1:
+                    road_info[rid].edges.add("E")
+            fid = field_comp[y][x]
+            if fid >= 0:
+                if y == 0:
+                    field_info[fid].slots.add("N0" if x < GRID_MID else "N1")
+                if y == GRID_SIZE - 1:
+                    field_info[fid].slots.add("S0" if x < GRID_MID else "S1")
+                if x == 0:
+                    field_info[fid].slots.add("W0" if y < GRID_MID else "W1")
+                if x == GRID_SIZE - 1:
+                    field_info[fid].slots.add("E0" if y < GRID_MID else "E1")
+
+    # field adjacency to city segments
+    for y in range(GRID_SIZE):
+        for x in range(GRID_SIZE):
+            fid = field_comp[y][x]
+            if fid < 0:
+                continue
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                nx, ny = x + dx, y + dy
+                if nx < 0 or nx >= GRID_SIZE or ny < 0 or ny >= GRID_SIZE:
+                    continue
+                cid = city_comp[ny][nx]
+                if cid >= 0:
+                    field_info[fid].adjacent_cities.add(cid)
+
+    edge_types: Dict[str, str] = {}
+    sample_min = max(0, GRID_MID - 10)
+    sample_max = min(GRID_SIZE, GRID_MID + 10)
+    for side in SIDES:
+        if side in ("N", "S"):
+            y = 0 if side == "N" else GRID_SIZE - 1
+            has_road = any(grid[y][x] == "road" for x in range(sample_min, sample_max))
+            has_city = any(grid[y][x] == "city" for x in range(sample_min, sample_max))
+        else:
+            x = 0 if side == "W" else GRID_SIZE - 1
+            has_road = any(grid[y][x] == "road" for y in range(sample_min, sample_max))
+            has_city = any(grid[y][x] == "city" for y in range(sample_min, sample_max))
+        if has_road:
+            edge_types[side] = "road"
+        elif has_city:
+            edge_types[side] = "city"
+        else:
+            edge_types[side] = "field"
+
+    # Filter segment edges/slots by detected edge types to avoid corner artifacts.
+    for seg in road_info:
+        seg.edges = {side for side in seg.edges if edge_types.get(side) == "road"}
+    for seg in city_info:
+        seg.edges = {side for side in seg.edges if edge_types.get(side) == "city"}
+    filtered_fields: List[FieldSegment] = []
+    filtered_field_centers: List[Tuple[float, float]] = []
+    for idx, seg in enumerate(field_info):
+        seg.slots = {slot for slot in seg.slots if edge_types.get(slot[0]) != "city"}
+        if seg.slots:
+            filtered_fields.append(seg)
+            filtered_field_centers.append(field_centers[idx])
+    field_info = filtered_fields
+    field_centers = filtered_field_centers
+
+    edge_to_road: Dict[str, int] = {}
+    for idx, seg in enumerate(road_info):
+        for side in seg.edges:
+            edge_to_road[side] = idx
+
+    edge_to_city: Dict[str, int] = {}
+    for idx, seg in enumerate(city_info):
+        for side in seg.edges:
+            edge_to_city[side] = idx
+
+    slot_to_field: Dict[str, int] = {}
+    for idx, seg in enumerate(field_info):
+        for slot in seg.slots:
+            slot_to_field[slot] = idx
+
+    return TileTemplate(
+        edges=edge_types,
+        road_segments=road_info,
+        city_segments=city_info,
+        field_segments=field_info,
+        edge_to_road=edge_to_road,
+        edge_to_city=edge_to_city,
+        slot_to_field=slot_to_field,
+        has_monastery=monastery_present,
+        road_centers=road_centers,
+        city_centers=city_centers,
+        field_centers=field_centers,
+        monastery_center=monastery_center,
+    )
+
+
+def _rotate_template(template: TileTemplate, turns: int) -> TileTemplate:
+    if turns % 4 == 0:
+        return template
+    edges = { _rotate_side(side, turns): feature for side, feature in template.edges.items() }
+    road_segments: List[TileSegment] = []
+    for seg in template.road_segments:
+        road_segments.append(TileSegment(edges={_rotate_side(side, turns) for side in seg.edges}))
+    city_segments: List[TileSegment] = []
+    for seg in template.city_segments:
+        city_segments.append(TileSegment(edges={_rotate_side(side, turns) for side in seg.edges}, has_shield=seg.has_shield))
+    field_segments: List[FieldSegment] = []
+    for seg in template.field_segments:
+        field_segments.append(FieldSegment(
+            slots={_rotate_slot(slot, turns) for slot in seg.slots},
+            adjacent_cities=set(seg.adjacent_cities),
+        ))
+
+    edge_to_road: Dict[str, int] = {}
+    for idx, seg in enumerate(road_segments):
+        for side in seg.edges:
+            edge_to_road[side] = idx
+
+    edge_to_city: Dict[str, int] = {}
+    for idx, seg in enumerate(city_segments):
+        for side in seg.edges:
+            edge_to_city[side] = idx
+
+    slot_to_field: Dict[str, int] = {}
+    for idx, seg in enumerate(field_segments):
+        for slot in seg.slots:
+            slot_to_field[slot] = idx
+
+    return TileTemplate(
+        edges=edges,
+        road_segments=road_segments,
+        city_segments=city_segments,
+        field_segments=field_segments,
+        edge_to_road=edge_to_road,
+        edge_to_city=edge_to_city,
+        slot_to_field=slot_to_field,
+        has_monastery=template.has_monastery,
+        road_centers=[_rotate_point(x, y, turns) for x, y in template.road_centers],
+        city_centers=[_rotate_point(x, y, turns) for x, y in template.city_centers],
+        field_centers=[_rotate_point(x, y, turns) for x, y in template.field_centers],
+        monastery_center=_rotate_point(*template.monastery_center, turns) if template.monastery_center else None,
+    )
+
+
+def _root_dir() -> Path:
+    return Path(__file__).resolve().parents[1]
+
+
+def _load_manifest() -> List[Dict[str, str]]:
+    manifest_path = _root_dir() / "designs" / "task36_tiles_72" / "manifest.csv"
+    tiles: List[Dict[str, str]] = []
+    with manifest_path.open("r", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        for row in reader:
+            tile_id = os.path.splitext(row["file"])[0]
+            tile_type = os.path.splitext(row["source_type"])[0]
+            tiles.append({"id": tile_id, "type": tile_type})
+    return tiles
+
+
+def _load_templates() -> Dict[str, TileTemplate]:
+    svg_dir = _root_dir() / "designs" / "task36_tiles_svg"
+    templates: Dict[str, TileTemplate] = {}
+    for svg_path in svg_dir.glob("*.svg"):
+        tile_type = svg_path.stem
+        templates[tile_type] = _build_tile_template(svg_path)
+    return templates
+
+
+TILE_DECK = _load_manifest()
+TILE_TEMPLATES = _load_templates()
+ROTATED_TEMPLATES: Dict[Tuple[str, int], TileTemplate] = {}
+for tile_type, tmpl in TILE_TEMPLATES.items():
+    for rotation in (0, 90, 180, 270):
+        ROTATED_TEMPLATES[(tile_type, rotation)] = _rotate_template(tmpl, rotation // 90)
+
+
+def _coord_key(x: int, y: int) -> str:
+    return f"{x},{y}"
+
+
+def _parse_coord(key: str) -> Tuple[int, int]:
+    x_str, y_str = key.split(",")
+    return int(x_str), int(y_str)
+
+
+def _get_template(tile_type: str, rotation: int) -> TileTemplate:
+    return ROTATED_TEMPLATES[(tile_type, rotation)]
+
+
+def _meeple_position(tile: Dict) -> Optional[Tuple[float, float]]:
+    meeple = tile.get("meeple")
+    if not meeple:
+        return None
+    feature = meeple.get("feature")
+    segment = meeple.get("segment")
+    tmpl = _get_template(tile["type"], tile["rotation"])
+    if feature == "road" and isinstance(segment, int) and 0 <= segment < len(tmpl.road_centers):
+        return tmpl.road_centers[segment]
+    if feature == "city" and isinstance(segment, int) and 0 <= segment < len(tmpl.city_centers):
+        return tmpl.city_centers[segment]
+    if feature == "field" and isinstance(segment, int) and 0 <= segment < len(tmpl.field_centers):
+        return tmpl.field_centers[segment]
+    if feature == "monastery":
+        return tmpl.monastery_center or (0.5, 0.5)
+    return None
+
+
+def _list_candidate_positions(board: Dict[str, Dict]) -> Set[Tuple[int, int]]:
+    candidates: Set[Tuple[int, int]] = set()
+    for key in board.keys():
+        x, y = _parse_coord(key)
+        for dx, dy in SIDE_DELTAS.values():
+            nx, ny = x + dx, y + dy
+            if _coord_key(nx, ny) not in board:
+                candidates.add((nx, ny))
+    return candidates
+
+
+def _is_valid_placement(board: Dict[str, Dict], tile_type: str, rotation: int, x: int, y: int) -> bool:
+    if _coord_key(x, y) in board:
+        return False
+    tmpl = _get_template(tile_type, rotation)
+    has_neighbor = False
+    for side, (dx, dy) in SIDE_DELTAS.items():
+        nx, ny = x + dx, y + dy
+        neighbor_key = _coord_key(nx, ny)
+        if neighbor_key not in board:
+            continue
+        has_neighbor = True
+        neighbor = board[neighbor_key]
+        neighbor_tmpl = _get_template(neighbor["type"], neighbor["rotation"])
+        if tmpl.edges[side] != neighbor_tmpl.edges[OPPOSITE_SIDE[side]]:
+            return False
+    return has_neighbor
+
+
+def _find_legal_positions(board: Dict[str, Dict], tile_type: str) -> Dict[int, List[Tuple[int, int]]]:
+    positions: Dict[int, List[Tuple[int, int]]] = {0: [], 90: [], 180: [], 270: []}
+    candidates = _list_candidate_positions(board)
+    for x, y in candidates:
+        for rotation in (0, 90, 180, 270):
+            if _is_valid_placement(board, tile_type, rotation, x, y):
+                positions[rotation].append((x, y))
+    return positions
+
+
+def _draw_playable_tile(state: Dict) -> Optional[Dict]:
+    while state["tile_bag"]:
+        tile = state["tile_bag"].pop()
+        legal = _find_legal_positions(state["board"], tile["type"])
+        if any(legal[rot] for rot in legal):
+            state["pending_tile"] = tile
+            return tile
+        state["discarded_tiles"].append(tile)
+    state["pending_tile"] = None
+    return None
+
+
+def _feature_has_meeple(state: Dict, coord: Tuple[int, int], feature: str, segment_id: Optional[int]) -> bool:
+    if feature == "monastery":
+        key = _coord_key(*coord)
+        tile = state["board"].get(key)
+        if not tile:
+            return False
+        meeple = tile.get("meeple")
+        return bool(meeple and meeple.get("feature") == "monastery")
+
+    visited = set()
+    queue = [(coord, segment_id)]
+    board = state["board"]
+    while queue:
+        (x, y), seg = queue.pop()
+        node = (x, y, seg)
+        if node in visited:
+            continue
+        visited.add(node)
+        tile = board.get(_coord_key(x, y))
+        if not tile:
+            continue
+        meeple = tile.get("meeple")
+        if meeple and meeple.get("feature") == feature and meeple.get("segment") == seg:
+            return True
+        tmpl = _get_template(tile["type"], tile["rotation"])
+        if feature == "road":
+            seg_info = tmpl.road_segments[seg]
+            for side in seg_info.edges:
+                dx, dy = SIDE_DELTAS[side]
+                nx, ny = x + dx, y + dy
+                neighbor = board.get(_coord_key(nx, ny))
+                if not neighbor:
+                    continue
+                neighbor_tmpl = _get_template(neighbor["type"], neighbor["rotation"])
+                if neighbor_tmpl.edges[OPPOSITE_SIDE[side]] != "road":
+                    continue
+                nseg = neighbor_tmpl.edge_to_road.get(OPPOSITE_SIDE[side])
+                if nseg is not None:
+                    queue.append(((nx, ny), nseg))
+        elif feature == "city":
+            seg_info = tmpl.city_segments[seg]
+            for side in seg_info.edges:
+                dx, dy = SIDE_DELTAS[side]
+                nx, ny = x + dx, y + dy
+                neighbor = board.get(_coord_key(nx, ny))
+                if not neighbor:
+                    continue
+                neighbor_tmpl = _get_template(neighbor["type"], neighbor["rotation"])
+                if neighbor_tmpl.edges[OPPOSITE_SIDE[side]] != "city":
+                    continue
+                nseg = neighbor_tmpl.edge_to_city.get(OPPOSITE_SIDE[side])
+                if nseg is not None:
+                    queue.append(((nx, ny), nseg))
+        elif feature == "field":
+            seg_info = tmpl.field_segments[seg]
+            for slot in seg_info.slots:
+                side = slot[0]
+                dx, dy = SIDE_DELTAS[side]
+                nx, ny = x + dx, y + dy
+                neighbor = board.get(_coord_key(nx, ny))
+                if not neighbor:
+                    continue
+                neighbor_tmpl = _get_template(neighbor["type"], neighbor["rotation"])
+                opposite_slot = OPPOSITE_SLOT[slot]
+                nseg = neighbor_tmpl.slot_to_field.get(opposite_slot)
+                if nseg is not None:
+                    queue.append(((nx, ny), nseg))
+    return False
+
+
+def _collect_feature(state: Dict, coord: Tuple[int, int], feature: str, segment_id: int) -> Dict:
+    board = state["board"]
+    visited: Set[Tuple[int, int, int]] = set()
+    queue = [(coord, segment_id)]
+    tiles: Set[Tuple[int, int]] = set()
+    meeples: List[Dict] = []
+    open_edges = 0
+    shields = 0
+    while queue:
+        (x, y), seg = queue.pop()
+        node = (x, y, seg)
+        if node in visited:
+            continue
+        visited.add(node)
+        tile = board.get(_coord_key(x, y))
+        if not tile:
+            continue
+        tiles.add((x, y))
+        meeple = tile.get("meeple")
+        if meeple and meeple.get("feature") == feature and meeple.get("segment") == seg:
+            meeples.append(meeple)
+        tmpl = _get_template(tile["type"], tile["rotation"])
+        if feature == "road":
+            seg_info = tmpl.road_segments[seg]
+            for side in seg_info.edges:
+                dx, dy = SIDE_DELTAS[side]
+                nx, ny = x + dx, y + dy
+                neighbor = board.get(_coord_key(nx, ny))
+                if not neighbor:
+                    open_edges += 1
+                    continue
+                neighbor_tmpl = _get_template(neighbor["type"], neighbor["rotation"])
+                if neighbor_tmpl.edges[OPPOSITE_SIDE[side]] != "road":
+                    open_edges += 1
+                    continue
+                nseg = neighbor_tmpl.edge_to_road.get(OPPOSITE_SIDE[side])
+                if nseg is not None:
+                    queue.append(((nx, ny), nseg))
+        elif feature == "city":
+            seg_info = tmpl.city_segments[seg]
+            if seg_info.has_shield:
+                shields += 1
+            for side in seg_info.edges:
+                dx, dy = SIDE_DELTAS[side]
+                nx, ny = x + dx, y + dy
+                neighbor = board.get(_coord_key(nx, ny))
+                if not neighbor:
+                    open_edges += 1
+                    continue
+                neighbor_tmpl = _get_template(neighbor["type"], neighbor["rotation"])
+                if neighbor_tmpl.edges[OPPOSITE_SIDE[side]] != "city":
+                    open_edges += 1
+                    continue
+                nseg = neighbor_tmpl.edge_to_city.get(OPPOSITE_SIDE[side])
+                if nseg is not None:
+                    queue.append(((nx, ny), nseg))
+    return {
+        "tiles": tiles,
+        "meeples": meeples,
+        "open_edges": open_edges,
+        "shields": shields,
+        "nodes": visited,
+    }
+
+
+def _collect_field(state: Dict, coord: Tuple[int, int], segment_id: int, city_components: Dict[Tuple[int, int, int], Dict]) -> Dict:
+    board = state["board"]
+    visited: Set[Tuple[int, int, int]] = set()
+    queue = [(coord, segment_id)]
+    tiles: Set[Tuple[int, int]] = set()
+    meeples: List[Dict] = []
+    adjacent_completed_cities: Set[int] = set()
+
+    while queue:
+        (x, y), seg = queue.pop()
+        node = (x, y, seg)
+        if node in visited:
+            continue
+        visited.add(node)
+        tile = board.get(_coord_key(x, y))
+        if not tile:
+            continue
+        tiles.add((x, y))
+        meeple = tile.get("meeple")
+        if meeple and meeple.get("feature") == "field" and meeple.get("segment") == seg:
+            meeples.append(meeple)
+        tmpl = _get_template(tile["type"], tile["rotation"])
+        seg_info = tmpl.field_segments[seg]
+        for local_city_id in seg_info.adjacent_cities:
+            global_city = city_components.get((x, y, local_city_id))
+            if global_city and global_city["completed"]:
+                adjacent_completed_cities.add(global_city["id"])
+        for slot in seg_info.slots:
+            side = slot[0]
+            dx, dy = SIDE_DELTAS[side]
+            nx, ny = x + dx, y + dy
+            neighbor = board.get(_coord_key(nx, ny))
+            if not neighbor:
+                continue
+            neighbor_tmpl = _get_template(neighbor["type"], neighbor["rotation"])
+            opposite_slot = OPPOSITE_SLOT[slot]
+            nseg = neighbor_tmpl.slot_to_field.get(opposite_slot)
+            if nseg is not None:
+                queue.append(((nx, ny), nseg))
+
+    return {
+        "tiles": tiles,
+        "meeples": meeples,
+        "adjacent_completed_cities": adjacent_completed_cities,
+        "nodes": visited,
+    }
+
+
+def _score_feature(state: Dict, feature: str, component: Dict, completed: bool) -> List[Dict]:
+    events: List[Dict] = []
+    if not component["meeples"]:
+        return events
+    counts: Dict[str, int] = {}
+    for meeple in component["meeples"]:
+        counts[meeple["player_id"]] = counts.get(meeple["player_id"], 0) + 1
+    if not counts:
+        return events
+    max_count = max(counts.values())
+    winners = [pid for pid, count in counts.items() if count == max_count]
+
+    if feature == "road":
+        points = len(component["tiles"])
+    elif feature == "city":
+        if completed:
+            points = len(component["tiles"]) * 2 + component["shields"] * 2
+        else:
+            points = len(component["tiles"]) + component["shields"]
+    else:
+        points = 0
+
+    for pid in winners:
+        state["players"][pid]["score"] += points
+    events.append({
+        "type": "carcassonne:score",
+        "payload": {
+            "feature": feature,
+            "completed": completed,
+            "points": points,
+            "players": winners,
+        },
+    })
+    # return meeples
+    for x, y, seg in component["nodes"]:
+        tile = state["board"].get(_coord_key(x, y))
+        if not tile:
+            continue
+        meeple = tile.get("meeple")
+        if meeple and meeple.get("feature") == feature and meeple.get("segment") == seg:
+            tile["meeple"] = None
+            state["players"][meeple["player_id"]]["meeples"] += 1
+    return events
+
+
+def _score_monastery(state: Dict, coord: Tuple[int, int], end_game: bool) -> List[Dict]:
+    key = _coord_key(*coord)
+    tile = state["board"].get(key)
+    if not tile:
+        return []
+    meeple = tile.get("meeple")
+    if not meeple or meeple.get("feature") != "monastery":
+        return []
+    # count surrounding tiles
+    count = 0
+    for dx in (-1, 0, 1):
+        for dy in (-1, 0, 1):
+            nx, ny = coord[0] + dx, coord[1] + dy
+            if _coord_key(nx, ny) in state["board"]:
+                count += 1
+    if not end_game and count < 9:
+        return []
+    points = count
+    state["players"][meeple["player_id"]]["score"] += points
+    tile["meeple"] = None
+    state["players"][meeple["player_id"]]["meeples"] += 1
+    return [{
+        "type": "carcassonne:score",
+        "payload": {
+            "feature": "monastery",
+            "completed": count == 9,
+            "points": points,
+            "players": [meeple["player_id"]],
+        },
+    }]
+
+
+def _resolve_completed_features(state: Dict, placed_coord: Tuple[int, int]) -> List[Dict]:
+    events: List[Dict] = []
+    board = state["board"]
+    tile = board.get(_coord_key(*placed_coord))
+    if not tile:
+        return events
+    tmpl = _get_template(tile["type"], tile["rotation"])
+    visited_roads: Set[Tuple[int, int, int]] = set()
+    visited_cities: Set[Tuple[int, int, int]] = set()
+
+    for idx in range(len(tmpl.road_segments)):
+        node = (placed_coord[0], placed_coord[1], idx)
+        if node in visited_roads:
+            continue
+        comp = _collect_feature(state, placed_coord, "road", idx)
+        visited_roads.update(comp["nodes"])
+        if comp["open_edges"] == 0:
+            events.extend(_score_feature(state, "road", comp, True))
+
+    for idx in range(len(tmpl.city_segments)):
+        node = (placed_coord[0], placed_coord[1], idx)
+        if node in visited_cities:
+            continue
+        comp = _collect_feature(state, placed_coord, "city", idx)
+        visited_cities.update(comp["nodes"])
+        if comp["open_edges"] == 0:
+            events.extend(_score_feature(state, "city", comp, True))
+
+    # monasteries around placed tile (including itself)
+    for dx in (-1, 0, 1):
+        for dy in (-1, 0, 1):
+            coord = (placed_coord[0] + dx, placed_coord[1] + dy)
+            t = board.get(_coord_key(*coord))
+            if not t:
+                continue
+            tmpl_neighbor = _get_template(t["type"], t["rotation"])
+            if tmpl_neighbor.has_monastery:
+                events.extend(_score_monastery(state, coord, False))
+    return events
+
+
+def _final_scoring(state: Dict) -> List[Dict]:
+    events: List[Dict] = []
+    board = state["board"]
+    visited_roads: Set[Tuple[int, int, int]] = set()
+    visited_cities: Set[Tuple[int, int, int]] = set()
+
+    city_component_map: Dict[Tuple[int, int, int], Dict] = {}
+    city_components: List[Dict] = []
+
+    # score roads and cities (incomplete)
+    for key, tile in board.items():
+        x, y = _parse_coord(key)
+        tmpl = _get_template(tile["type"], tile["rotation"])
+        for idx in range(len(tmpl.road_segments)):
+            node = (x, y, idx)
+            if node in visited_roads:
+                continue
+            comp = _collect_feature(state, (x, y), "road", idx)
+            visited_roads.update(comp["nodes"])
+            events.extend(_score_feature(state, "road", comp, False))
+
+        for idx in range(len(tmpl.city_segments)):
+            node = (x, y, idx)
+            if node in visited_cities:
+                continue
+            comp = _collect_feature(state, (x, y), "city", idx)
+            city_id = len(city_components)
+            city_components.append({
+                "id": city_id,
+                "completed": comp["open_edges"] == 0,
+                "tiles": comp["tiles"],
+            })
+            for tx, ty, cidx in comp["nodes"]:
+                visited_cities.add((tx, ty, cidx))
+                city_component_map[(tx, ty, cidx)] = {
+                    "id": city_id,
+                    "completed": comp["open_edges"] == 0,
+                }
+            events.extend(_score_feature(state, "city", comp, comp["open_edges"] == 0))
+
+    # monasteries
+    for key, tile in board.items():
+        x, y = _parse_coord(key)
+        tmpl = _get_template(tile["type"], tile["rotation"])
+        if tmpl.has_monastery:
+            events.extend(_score_monastery(state, (x, y), True))
+
+    # fields
+    visited_fields: Set[Tuple[int, int, int]] = set()
+    for key, tile in board.items():
+        x, y = _parse_coord(key)
+        tmpl = _get_template(tile["type"], tile["rotation"])
+        for idx in range(len(tmpl.field_segments)):
+            node = (x, y, idx)
+            if node in visited_fields:
+                continue
+            comp = _collect_field(state, (x, y), idx, city_component_map)
+            visited_fields.update(comp["nodes"])
+            if not comp["meeples"]:
+                continue
+            counts: Dict[str, int] = {}
+            for meeple in comp["meeples"]:
+                counts[meeple["player_id"]] = counts.get(meeple["player_id"], 0) + 1
+            max_count = max(counts.values()) if counts else 0
+            winners = [pid for pid, count in counts.items() if count == max_count]
+            points = len(comp["adjacent_completed_cities"]) * 3
+            for pid in winners:
+                state["players"][pid]["score"] += points
+            events.append({
+                "type": "carcassonne:score",
+                "payload": {
+                    "feature": "field",
+                    "completed": True,
+                    "points": points,
+                    "players": winners,
+                },
+            })
+    return events
+
+
+def _advance_turn(state: Dict) -> None:
+    order = state["turn_order"]
+    if not order:
+        state["current_turn"] = None
+        return
+    current = state["current_turn"]
+    if current not in order:
+        idx = 0
+    else:
+        idx = order.index(current)
+    next_idx = (idx + 1) % len(order)
+    state["current_turn"] = order[next_idx]
+
+
+def _build_meeple_options(state: Dict, coord: Tuple[int, int], player_id: str) -> List[Dict]:
+    options: List[Dict] = []
+    player = state["players"].get(player_id)
+    if not player or player["meeples"] <= 0:
+        return options
+    tile = state["board"].get(_coord_key(*coord))
+    if not tile:
+        return options
+    tmpl = _get_template(tile["type"], tile["rotation"])
+    for idx in range(len(tmpl.city_segments)):
+        if _feature_has_meeple(state, coord, "city", idx):
+            continue
+        options.append({"feature": "city", "segment": idx, "label": f"City (segment {idx + 1})"})
+    for idx in range(len(tmpl.road_segments)):
+        if _feature_has_meeple(state, coord, "road", idx):
+            continue
+        options.append({"feature": "road", "segment": idx, "label": f"Road (segment {idx + 1})"})
+    for idx in range(len(tmpl.field_segments)):
+        if _feature_has_meeple(state, coord, "field", idx):
+            continue
+        options.append({"feature": "field", "segment": idx, "label": f"Field (segment {idx + 1})"})
+    if tmpl.has_monastery:
+        if not _feature_has_meeple(state, coord, "monastery", None):
+            options.append({"feature": "monastery", "segment": None, "label": "Monastery"})
+    return options
+
+
+def _apply_scores_and_advance(state: Dict, placed_coord: Tuple[int, int]) -> List[Dict]:
+    events = _resolve_completed_features(state, placed_coord)
+    if not state.get("game_over"):
+        _advance_turn(state)
+        next_tile = _draw_playable_tile(state)
+        if not next_tile:
+            events.extend(_final_scoring(state))
+            _finalize_game(state)
+        else:
+            state["phase"] = "place_tile"
+    return events
+
+
+def _finalize_game(state: Dict) -> None:
+    scores = {pid: pdata["score"] for pid, pdata in state["players"].items()}
+    max_score = max(scores.values()) if scores else 0
+    winners = [pid for pid, score in scores.items() if score == max_score]
+    state["scores"] = scores
+    state["winner"] = winners
+    state["game_over"] = True
+    state["phase"] = "game_over"
+    state["current_turn"] = None
+
+
+class CarcassonneGame:
+    game_id = "carcassonne"
+    min_players = 2
+    max_players = 5
+
+    @staticmethod
+    def init_game(config: Optional[Dict], players: List[Dict]) -> Dict:
+        ordered_players = sorted(players, key=lambda p: p.get("seat", 0))
+        player_ids = [p["player_id"] for p in ordered_players]
+        player_meta = {p["player_id"]: p for p in ordered_players}
+        colors = ["red", "blue", "green", "yellow", "black"]
+        state_players: Dict[str, Dict] = {}
+        for idx, pid in enumerate(player_ids):
+            state_players[pid] = {
+                "color": colors[idx % len(colors)],
+                "score": 0,
+                "meeples": 7,
+            }
+        tile_bag = list(TILE_DECK)
+        random.shuffle(tile_bag)
+
+        board: Dict[str, Dict] = {}
+        discarded: List[Dict] = []
+        # place random start tile
+        start_tile = tile_bag.pop()
+        start_rotation = random.choice([0, 90, 180, 270])
+        board[_coord_key(0, 0)] = {
+            "id": start_tile["id"],
+            "type": start_tile["type"],
+            "rotation": start_rotation,
+            "meeple": None,
+        }
+
+        start_player = random.choice(player_ids) if player_ids else None
+        state = {
+            "board": board,
+            "players": state_players,
+            "player_meta": player_meta,
+            "turn_order": player_ids,
+            "current_turn": start_player,
+            "tile_bag": tile_bag,
+            "discarded_tiles": discarded,
+            "pending_tile": None,
+            "phase": "place_tile",
+            "game_over": False,
+            "winner": [],
+            "scores": {},
+            "last_placed": None,
+            "config": config or {},
+        }
+        if start_player:
+            tile = _draw_playable_tile(state)
+            if not tile:
+                _final_scoring(state)
+                _finalize_game(state)
+        return state
+
+    @staticmethod
+    def get_legal_actions(state: Dict, player_id: str) -> List[str]:
+        if state.get("game_over"):
+            return []
+        if player_id != state.get("current_turn"):
+            return []
+        phase = state.get("phase")
+        if phase == "place_tile":
+            return ["place_tile"] if state.get("pending_tile") else []
+        if phase == "place_meeple":
+            last = state.get("last_placed")
+            if not last:
+                return []
+            options = _build_meeple_options(state, (last["x"], last["y"]), player_id)
+            if options:
+                return ["place_meeple", "skip_meeple"]
+            return ["skip_meeple"]
+        return []
+
+    @staticmethod
+    def apply_action(state: Dict, player_id: str, action: Dict) -> Tuple[List[Dict], Optional[str]]:
+        if state.get("game_over"):
+            return [], "game over"
+        if player_id != state.get("current_turn"):
+            return [], "not your turn"
+        phase = state.get("phase")
+        action_type = action.get("type")
+        if phase == "place_tile":
+            if action_type != "place_tile":
+                return [], "invalid action"
+            tile = state.get("pending_tile")
+            if not tile:
+                return [], "no pending tile"
+            x = action.get("x")
+            y = action.get("y")
+            rotation = action.get("rotation")
+            if not isinstance(x, int) or not isinstance(y, int):
+                return [], "invalid position"
+            if rotation not in (0, 90, 180, 270):
+                return [], "invalid rotation"
+            if not _is_valid_placement(state["board"], tile["type"], rotation, x, y):
+                return [], "invalid placement"
+            state["board"][_coord_key(x, y)] = {
+                "id": tile["id"],
+                "type": tile["type"],
+                "rotation": rotation,
+                "meeple": None,
+            }
+            state["pending_tile"] = None
+            state["phase"] = "place_meeple"
+            state["last_placed"] = {"x": x, "y": y}
+            events = [{
+                "type": "carcassonne:place_tile",
+                "payload": {"player_id": player_id, "tile": tile["type"], "x": x, "y": y, "rotation": rotation},
+            }]
+            return events, None
+
+        if phase == "place_meeple":
+            last = state.get("last_placed")
+            if not last:
+                return [], "missing placement"
+            coord = (last["x"], last["y"])
+            if action_type == "place_meeple":
+                feature = action.get("feature")
+                segment = action.get("segment")
+                if feature not in ("road", "city", "field", "monastery"):
+                    return [], "invalid feature"
+                options = _build_meeple_options(state, coord, player_id)
+                valid = any(opt["feature"] == feature and opt.get("segment") == segment for opt in options)
+                if not valid:
+                    return [], "invalid meeple placement"
+                tile = state["board"].get(_coord_key(*coord))
+                if not tile:
+                    return [], "missing tile"
+                tile["meeple"] = {"player_id": player_id, "feature": feature, "segment": segment}
+                state["players"][player_id]["meeples"] -= 1
+                events = [{
+                    "type": "carcassonne:place_meeple",
+                    "payload": {"player_id": player_id, "feature": feature, "segment": segment, "x": coord[0], "y": coord[1]},
+                }]
+                events.extend(_apply_scores_and_advance(state, coord))
+                return events, None
+            if action_type == "skip_meeple":
+                events = [{
+                    "type": "carcassonne:skip_meeple",
+                    "payload": {"player_id": player_id, "x": coord[0], "y": coord[1]},
+                }]
+                events.extend(_apply_scores_and_advance(state, coord))
+                return events, None
+            return [], "invalid action"
+
+        return [], "invalid phase"
+
+    @staticmethod
+    def get_public_view(state: Dict, viewer_id: str) -> Dict:
+        board = state["board"]
+        coords = [_parse_coord(key) for key in board.keys()]
+        if coords:
+            min_x = min(x for x, _ in coords) - 1
+            max_x = max(x for x, _ in coords) + 1
+            min_y = min(y for _, y in coords) - 1
+            max_y = max(y for _, y in coords) + 1
+        else:
+            min_x = max_x = min_y = max_y = 0
+        width = max_x - min_x + 1
+        height = max_y - min_y + 1
+        grid: List[List[Optional[Dict]]] = []
+        for y in range(min_y, max_y + 1):
+            row: List[Optional[Dict]] = []
+            for x in range(min_x, max_x + 1):
+                tile = board.get(_coord_key(x, y))
+                if tile:
+                    cell = {
+                        "type": tile["type"],
+                        "rotation": tile["rotation"],
+                        "meeple": None,
+                    }
+                    if tile.get("meeple"):
+                        meeple = tile["meeple"]
+                        meeple_view = {
+                            "player_id": meeple["player_id"],
+                            "feature": meeple["feature"],
+                            "color": state["players"].get(meeple["player_id"], {}).get("color"),
+                        }
+                        pos = _meeple_position(tile)
+                        if pos:
+                            meeple_view["pos"] = {"x": pos[0], "y": pos[1]}
+                        if meeple.get("segment") is not None:
+                            meeple_view["segment"] = meeple.get("segment")
+                        cell["meeple"] = meeple_view
+                    row.append(cell)
+                else:
+                    row.append(None)
+            grid.append(row)
+
+        players_view = []
+        for pid, meta in sorted(state["player_meta"].items(), key=lambda item: item[1].get("seat", 0)):
+            pdata = state["players"][pid]
+            players_view.append({
+                "player_id": pid,
+                "name": meta.get("name"),
+                "seat": meta.get("seat"),
+                "is_bot": meta.get("is_bot"),
+                "color": pdata["color"],
+                "score": pdata["score"],
+                "meeples": pdata["meeples"],
+            })
+
+        pending_tile = state.get("pending_tile")
+        legal_positions = None
+        if pending_tile:
+            legal_positions = _find_legal_positions(board, pending_tile["type"])
+
+        meeple_options = []
+        if state.get("phase") == "place_meeple" and viewer_id == state.get("current_turn"):
+            last = state.get("last_placed")
+            if last:
+                meeple_options = _build_meeple_options(state, (last["x"], last["y"]), viewer_id)
+
+        return {
+            "game_id": CarcassonneGame.game_id,
+            "you": viewer_id,
+            "phase": state.get("phase"),
+            "current_turn": state.get("current_turn"),
+            "players": players_view,
+            "board": grid,
+            "board_origin": {"x": min_x, "y": min_y},
+            "board_width": width,
+            "board_height": height,
+            "pending_tile": pending_tile,
+            "legal_positions": legal_positions,
+            "meeple_options": meeple_options,
+            "remaining_tiles": len(state.get("tile_bag", [])),
+            "discarded_tiles": len(state.get("discarded_tiles", [])),
+            "last_placed": state.get("last_placed"),
+            "legal_actions": CarcassonneGame.get_legal_actions(state, viewer_id),
+            "game_over": state.get("game_over", False),
+            "winner": list(state.get("winner", [])),
+            "scores": state.get("scores", {}),
+        }
+
+    @staticmethod
+    def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
+        if state.get("game_over"):
+            return None
+        if bot_id != state.get("current_turn"):
+            return None
+        phase = state.get("phase")
+        if phase == "place_tile":
+            tile = state.get("pending_tile")
+            if not tile:
+                return None
+            legal = _find_legal_positions(state["board"], tile["type"])
+            for rotation in (0, 90, 180, 270):
+                positions = legal.get(rotation) or []
+                if positions:
+                    x, y = positions[0]
+                    return {"type": "place_tile", "x": x, "y": y, "rotation": rotation}
+            return None
+        if phase == "place_meeple":
+            return {"type": "skip_meeple"}
+        return None
+
+    @staticmethod
+    def serialize(state: Dict) -> Dict:
+        return state
+
+    @staticmethod
+    def deserialize(payload: Dict) -> Dict:
+        return payload
