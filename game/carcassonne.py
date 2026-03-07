@@ -1,5 +1,6 @@
 import base64
 import csv
+import json
 import math
 import os
 import random
@@ -706,8 +707,12 @@ def _root_dir() -> Path:
     return Path(__file__).resolve().parents[1]
 
 
+def _tile_svg_path(tile_type: str) -> Path:
+    return _root_dir() / "designs" / "task36_tiles_svg" / f"{tile_type}.svg"
+
+
 def _load_manifest() -> List[Dict[str, str]]:
-    manifest_path = _root_dir() / "designs" / "task36_tiles_72" / "manifest.csv"
+    manifest_path = _root_dir() / "assets" / "task36_tiles_72" / "manifest.csv"
     tiles: List[Dict[str, str]] = []
     with manifest_path.open("r", encoding="utf-8") as handle:
         reader = csv.DictReader(handle)
@@ -1321,6 +1326,15 @@ class CarcassonneGame:
             "rotation": start_rotation,
             "meeple": None,
         }
+        tile_history = [
+            {
+                "x": 0,
+                "y": 0,
+                "type": start_tile["type"],
+                "rotation": start_rotation,
+                "player_id": None,
+            }
+        ]
 
         start_player = random.choice(player_ids) if player_ids else None
         state = {
@@ -1339,6 +1353,7 @@ class CarcassonneGame:
             "last_placed": None,
             "config": config or {},
             "game_start_time": time.time(),
+            "tile_history": tile_history,
         }
         if start_player:
             tile = _draw_playable_tile(state)
@@ -1395,6 +1410,15 @@ class CarcassonneGame:
                 "rotation": rotation,
                 "meeple": None,
             }
+            history = state.get("tile_history")
+            if isinstance(history, list):
+                history.append({
+                    "x": x,
+                    "y": y,
+                    "type": tile["type"],
+                    "rotation": rotation,
+                    "player_id": player_id,
+                })
             state["pending_tile"] = None
             state["phase"] = "place_meeple"
             state["last_placed"] = {"x": x, "y": y}
@@ -1625,10 +1649,13 @@ def build_memories_html(state: Dict, room_id: Optional[str] = None) -> str:
     for pid in order:
         meta = player_meta.get(pid, {})
         pdata = state.get("players", {}).get(pid, {})
+        color = pdata.get("color") or "#111827"
+        name = esc(meta.get("name"), "-")
+        name_html = f'<span style="color: {esc(color, "#111827")}">{name}</span>'
         players_rows.append(
             [
                 esc(pid, "-"),
-                esc(meta.get("name"), "-"),
+                name_html,
                 esc(meta.get("seat"), "-"),
                 esc(pdata.get("color"), "-"),
                 esc(pdata.get("score"), "0"),
@@ -1658,7 +1685,10 @@ def build_memories_html(state: Dict, room_id: Optional[str] = None) -> str:
     winner_names = []
     for pid in winners:
         meta = player_meta.get(pid, {})
-        winner_names.append(meta.get("name") or pid)
+        pdata = state.get("players", {}).get(pid, {})
+        color = pdata.get("color") or "#111827"
+        name = meta.get("name") or pid or "-"
+        winner_names.append(f'<span style="color: {esc(color, "#111827")}">{esc(name, "-")}</span>')
     winner_section = section(
         "Winners",
         f'<div class="card">{esc(", ".join(winner_names) if winner_names else "-", "-")}</div>',
@@ -1692,6 +1722,91 @@ def build_memories_html(state: Dict, room_id: Optional[str] = None) -> str:
         ),
     )
 
+    tile_history = state.get("tile_history") if isinstance(state.get("tile_history"), list) else None
+    replay_section = ""
+    extra_script = ""
+    if tile_history:
+        tile_types = {entry.get("type") for entry in tile_history if isinstance(entry, dict) and entry.get("type")}
+        tile_images: Dict[str, str] = {}
+        for tile_type in tile_types:
+            svg_path = _tile_svg_path(tile_type)
+            try:
+                svg_data = svg_path.read_text(encoding="utf-8")
+            except OSError:
+                continue
+            encoded = base64.b64encode(svg_data.encode("utf-8")).decode("ascii")
+            tile_images[tile_type] = f"data:image/svg+xml;base64,{encoded}"
+        coords = [(entry.get("x"), entry.get("y")) for entry in tile_history if isinstance(entry, dict)]
+        coords = [(x, y) for x, y in coords if isinstance(x, int) and isinstance(y, int)]
+        if coords:
+            min_x = min(x for x, _ in coords)
+            max_x = max(x for x, _ in coords)
+            min_y = min(y for _, y in coords)
+            max_y = max(y for _, y in coords)
+        else:
+            min_x = max_x = min_y = max_y = 0
+        replay_section = section(
+            "Replay",
+            (
+                "<div class=\"carc-replay-controls\">"
+                "<button type=\"button\" id=\"carcReplayPrev\">&#8592;</button>"
+                "<div id=\"carcReplayStep\" class=\"carc-replay-step\">Step 1</div>"
+                "<button type=\"button\" id=\"carcReplayNext\">&#8594;</button>"
+                "</div>"
+                "<div id=\"carcReplayBoard\" class=\"carc-replay-board\"></div>"
+            ),
+        )
+        extra_script = (
+            f"const carcReplayHistory = {esc(json.dumps(tile_history), '[]')};\n"
+            f"const carcReplayImages = {esc(json.dumps(tile_images), '{}')};\n"
+            f"const carcReplayBounds = {{minX: {min_x}, maxX: {max_x}, minY: {min_y}, maxY: {max_y}}};\n"
+            "const carcReplayBoard = document.getElementById('carcReplayBoard');\n"
+            "const carcReplayPrev = document.getElementById('carcReplayPrev');\n"
+            "const carcReplayNext = document.getElementById('carcReplayNext');\n"
+            "const carcReplayStepLabel = document.getElementById('carcReplayStep');\n"
+            "let carcReplayStep = 1;\n"
+            "const carcReplayMax = carcReplayHistory.length;\n"
+            "function renderCarcReplay(){\n"
+            "  if(!carcReplayBoard){return;}\n"
+            "  const cols = carcReplayBounds.maxX - carcReplayBounds.minX + 1;\n"
+            "  const rows = carcReplayBounds.maxY - carcReplayBounds.minY + 1;\n"
+            "  carcReplayBoard.style.gridTemplateColumns = `repeat(${cols}, var(--carc-cell))`;\n"
+            "  carcReplayBoard.innerHTML = '';\n"
+            "  const active = new Map();\n"
+            "  for(let i=0;i<carcReplayStep && i<carcReplayHistory.length;i+=1){\n"
+            "    const t=carcReplayHistory[i];\n"
+            "    if(t && Number.isInteger(t.x) && Number.isInteger(t.y)){\n"
+            "      active.set(`${t.x},${t.y}`, t);\n"
+            "    }\n"
+            "  }\n"
+            "  for(let y=carcReplayBounds.minY;y<=carcReplayBounds.maxY;y+=1){\n"
+            "    for(let x=carcReplayBounds.minX;x<=carcReplayBounds.maxX;x+=1){\n"
+            "      const cell=document.createElement('div');\n"
+            "      cell.className='carc-replay-cell';\n"
+            "      const tile=active.get(`${x},${y}`);\n"
+            "      if(tile){\n"
+            "        const img=carcReplayImages[tile.type];\n"
+            "        if(img){\n"
+            "          cell.style.backgroundImage=`url(${img})`;\n"
+            "        }\n"
+            "        cell.style.transform=`rotate(${tile.rotation||0}deg)`;\n"
+            "      } else {\n"
+            "        cell.classList.add('empty');\n"
+            "      }\n"
+            "      carcReplayBoard.appendChild(cell);\n"
+            "    }\n"
+            "  }\n"
+            "  if(carcReplayStepLabel){carcReplayStepLabel.textContent=`Step ${carcReplayStep} / ${carcReplayMax}`;}\n"
+            "  if(carcReplayPrev){carcReplayPrev.disabled = carcReplayStep <= 1;}\n"
+            "  if(carcReplayNext){carcReplayNext.disabled = carcReplayStep >= carcReplayMax;}\n"
+            "}\n"
+            "if(carcReplayPrev){carcReplayPrev.addEventListener('click',()=>{if(carcReplayStep>1){carcReplayStep-=1;renderCarcReplay();}});}\n"
+            "if(carcReplayNext){carcReplayNext.addEventListener('click',()=>{if(carcReplayStep<carcReplayMax){carcReplayStep+=1;renderCarcReplay();}});}\n"
+            "renderCarcReplay();\n"
+        )
+    else:
+        replay_section = section("Replay", '<div class="muted">Replay data not available for this game.</div>')
+
     extra_style = """
 .carc-board-grid {
   --cols: 1;
@@ -1720,10 +1835,42 @@ details summary {
   font-weight: 600;
   margin-bottom: 6px;
 }
+.carc-replay-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.carc-replay-controls button {
+  padding: 4px 10px;
+}
+.carc-replay-step {
+  font-weight: 600;
+}
+.carc-replay-board {
+  --carc-cell: 56px;
+  display: grid;
+  gap: 4px;
+  background: #e2e8f0;
+  padding: 6px;
+  border-radius: 8px;
+}
+.carc-replay-cell {
+  width: var(--carc-cell);
+  height: var(--carc-cell);
+  background-size: cover;
+  background-position: center;
+  border-radius: 4px;
+  background-color: #f8fafc;
+}
+.carc-replay-cell.empty {
+  background-color: #f8fafc;
+  border: 1px dashed #cbd5e1;
+}
 """
 
-    body = "\n".join(header) + players_section + summary_section + winner_section + board_section + tiles_section
-    return build_html_document(f"{game_id} Memories", body, extra_style=extra_style)
+    body = "\n".join(header) + players_section + summary_section + winner_section + replay_section + board_section + tiles_section
+    return build_html_document(f"{game_id} Memories", body, extra_style=extra_style, extra_script=extra_script)
 
 
 download_memories = build_memories_html
