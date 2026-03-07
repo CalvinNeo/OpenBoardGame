@@ -1984,17 +1984,24 @@ def build_memories_html(state: Dict, room_id: Optional[str] = None) -> str:
                 "<div id=\"carcReplayStep\" class=\"carc-replay-step\">Step 1</div>"
                 "<button type=\"button\" id=\"carcReplayNext\">&#8594;</button>"
                 "</div>"
+                "<div id=\"carcReplayHover\" class=\"carc-replay-hover\">Hover a tile to see who placed it.</div>"
                 "<div id=\"carcReplayBoard\" class=\"carc-replay-board\"></div>"
             ),
         )
+        player_names = {
+            pid: (player_meta.get(pid, {}).get("name") or pid)
+            for pid in state.get("players", {}).keys()
+        }
         extra_script = (
             f"const carcReplayHistory = {_js_dump(tile_history)};\n"
             f"const carcReplayImages = {_js_dump(tile_images)};\n"
             f"const carcReplayBounds = {{minX: {min_x}, maxX: {max_x}, minY: {min_y}, maxY: {max_y}}};\n"
+            f"const carcReplayPlayers = {_js_dump(player_names)};\n"
             "const carcReplayBoard = document.getElementById('carcReplayBoard');\n"
             "const carcReplayPrev = document.getElementById('carcReplayPrev');\n"
             "const carcReplayNext = document.getElementById('carcReplayNext');\n"
             "const carcReplayStepLabel = document.getElementById('carcReplayStep');\n"
+            "const carcReplayHover = document.getElementById('carcReplayHover');\n"
             "let carcReplayStep = 1;\n"
             "const carcReplayMax = carcReplayHistory.length;\n"
             "let carcMemCellMap = new Map();\n"
@@ -2009,6 +2016,7 @@ def build_memories_html(state: Dict, room_id: Optional[str] = None) -> str:
             "  for(let i=0;i<carcReplayStep && i<carcReplayHistory.length;i+=1){\n"
             "    const t=carcReplayHistory[i];\n"
             "    if(t && Number.isInteger(t.x) && Number.isInteger(t.y)){\n"
+            "      t.step = i + 1;\n"
             "      active.set(`${t.x},${t.y}`, t);\n"
             "    }\n"
             "  }\n"
@@ -2023,6 +2031,8 @@ def build_memories_html(state: Dict, room_id: Optional[str] = None) -> str:
             "        cell.dataset.worldY = `${y}`;\n"
             "        cell.dataset.tileType = tile.type || '';\n"
             "        cell.dataset.rotation = `${tile.rotation||0}`;\n"
+            "        cell.dataset.step = `${tile.step||''}`;\n"
+            "        cell.dataset.playerId = tile.player_id || '';\n"
             "        const tileEl=document.createElement('div');\n"
             "        tileEl.className='carc-replay-tile';\n"
             "        const img=carcReplayImages[tile.type];\n"
@@ -2031,6 +2041,8 @@ def build_memories_html(state: Dict, room_id: Optional[str] = None) -> str:
             "        }\n"
             "        tileEl.style.transform=`rotate(${tile.rotation||0}deg)`;\n"
             "        cell.appendChild(tileEl);\n"
+            "        const playerName = tile.player_id ? (carcReplayPlayers[tile.player_id] || tile.player_id) : 'Start tile';\n"
+            "        cell.title = tile.step ? `Step ${tile.step} · ${playerName}` : playerName;\n"
             "        carcMemCellMap.set(`${x},${y}`, cell);\n"
             "      } else {\n"
             "        cell.classList.add('empty');\n"
@@ -2041,6 +2053,27 @@ def build_memories_html(state: Dict, room_id: Optional[str] = None) -> str:
             "  if(carcReplayStepLabel){carcReplayStepLabel.textContent=`Step ${carcReplayStep} / ${carcReplayMax}`;}\n"
             "  if(carcReplayPrev){carcReplayPrev.disabled = carcReplayStep <= 1;}\n"
             "  if(carcReplayNext){carcReplayNext.disabled = carcReplayStep >= carcReplayMax;}\n"
+            "}\n"
+            "function formatCarcReplayHover(step, playerId){\n"
+            "  if(!step){return '-';}\n"
+            "  if(!playerId){return `Step ${step} · Start tile`;}\n"
+            "  const name = carcReplayPlayers[playerId] || playerId;\n"
+            "  return `Step ${step} · ${name}`;\n"
+            "}\n"
+            "function updateCarcReplayHover(cell){\n"
+            "  if(!carcReplayHover){return;}\n"
+            "  if(!cell){carcReplayHover.textContent='-'; return;}\n"
+            "  const step = Number(cell.dataset.step || 0);\n"
+            "  const playerId = cell.dataset.playerId || '';\n"
+            "  carcReplayHover.textContent = formatCarcReplayHover(step, playerId);\n"
+            "}\n"
+            "if(carcReplayBoard){\n"
+            "  carcReplayBoard.addEventListener('mousemove', (event)=>{\n"
+            "    const cell = event.target.closest('.carc-replay-cell.occupied');\n"
+            "    if(!cell || !carcReplayBoard.contains(cell)){updateCarcReplayHover(null); return;}\n"
+            "    updateCarcReplayHover(cell);\n"
+            "  });\n"
+            "  carcReplayBoard.addEventListener('mouseleave', ()=>updateCarcReplayHover(null));\n"
             "}\n"
             "if(carcReplayPrev){carcReplayPrev.addEventListener('click',()=>{if(carcReplayStep>1){carcReplayStep-=1;renderCarcReplay();}});}\n"
             "if(carcReplayNext){carcReplayNext.addEventListener('click',()=>{if(carcReplayStep<carcReplayMax){carcReplayStep+=1;renderCarcReplay();}});}\n"
@@ -2256,6 +2289,11 @@ details summary {
 }
 .carc-replay-step {
   font-weight: 600;
+}
+.carc-replay-hover {
+  font-size: 0.9em;
+  color: #475569;
+  margin-bottom: 6px;
 }
 .carc-replay-board {
   --carc-cell: 56px;
