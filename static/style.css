@@ -5168,10 +5168,6 @@ body.log-open {
   background: #e2e8f0;
 }
 
-.carc-cell.carc-highlight {
-  z-index: 2;
-}
-
 .carc-highlight-shape {
   position: absolute;
   inset: 0;
@@ -5180,6 +5176,32 @@ body.log-open {
   pointer-events: none;
   mix-blend-mode: multiply;
   filter: drop-shadow(0 0 4px rgba(15, 23, 42, 0.35));
+}
+
+.carc-highlight-shape.carc-hover-shape {
+  opacity: 0.55;
+}
+
+.carc-highlight-shape.carc-selected-shape {
+  opacity: 0.95;
+  filter: drop-shadow(0 0 6px rgba(15, 23, 42, 0.45));
+}
+
+.carc-meeple-hint {
+  font-size: 12px;
+  color: #475569;
+  margin-bottom: 6px;
+}
+
+.carc-meeple-selection {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.carc-meeple-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
 .carc-tile {

@@ -29,6 +29,10 @@ const carcSkipMeepleBtn = document.getElementById("carcSkipMeepleBtn");
 const carcBoard = document.getElementById("carcBoard");
 const carcPendingTile = document.getElementById("carcPendingTile");
 const carcMeepleOptions = document.getElementById("carcMeepleOptions");
+const carcMeepleHint = document.getElementById("carcMeepleHint");
+const carcMeepleSelection = document.getElementById("carcMeepleSelection");
+const carcConfirmMeepleBtn = document.getElementById("carcConfirmMeepleBtn");
+const carcClearMeepleBtn = document.getElementById("carcClearMeepleBtn");
 const carcPlayers = document.getElementById("carcPlayers");
 const socket = io();
 
@@ -75,9 +79,12 @@ let carcTemplateData = null;
 let carcTemplatePromise = null;
 let carcTemplateCache = {};
 let carcCellMap = new Map();
-let carcHighlightTiles = new Set();
+let carcHoverTiles = new Set();
 let carcHoverKey = null;
+let carcSelectedTiles = new Set();
+let carcSelectedMeeple = null;
 let carcSegmentImageCache = new Map();
+let carcMeepleOptionSet = new Set();
 let abracaLastRoundNotice = null;
 let selectedSlots = [];
 let currentRoomState = null;
@@ -4058,9 +4065,17 @@ function clearCarcassonneState() {
   if (carcMeepleOptions) {
     carcMeepleOptions.innerHTML = "";
   }
+  if (carcMeepleHint) {
+    carcMeepleHint.textContent = "-";
+  }
+  if (carcMeepleSelection) {
+    carcMeepleSelection.textContent = "Selected: -";
+  }
   if (carcPlayers) {
     carcPlayers.innerHTML = "";
   }
+  carcMeepleOptionSet.clear();
+  clearCarcassonneSelection();
 }
 
 function clearFangNiaoState() {
@@ -12372,6 +12387,7 @@ function prepareCarcassonneTemplates(data) {
     tile._roadMap = decodeCarcassonneMap(tile.road_map);
     tile._cityMap = decodeCarcassonneMap(tile.city_map);
     tile._fieldMap = decodeCarcassonneMap(tile.field_map);
+    tile._monasteryMap = decodeCarcassonneMap(tile.monastery_map);
     tile._roadSegments = Array.isArray(tile.road_segments) ? tile.road_segments : [];
     tile._citySegments = Array.isArray(tile.city_segments) ? tile.city_segments : [];
     tile._fieldSegments = Array.isArray(tile.field_segments) ? tile.field_segments : [];
@@ -12445,6 +12461,9 @@ function buildCarcassonneSegmentMask(tileType, rotation, feature, segment) {
     sourceMap = tile._cityMap;
   } else if (feature === "field") {
     sourceMap = tile._fieldMap;
+  } else if (feature === "monastery") {
+    sourceMap = tile._monasteryMap;
+    segment = 0;
   }
   if (!sourceMap) {
     return null;
@@ -12630,6 +12649,12 @@ function getCarcassonneHoverFeature(tileType, rotation, x, y) {
   if (citySeg !== noneValue) {
     return { feature: "city", segment: citySeg };
   }
+  if (tile._monasteryMap) {
+    const monSeg = tile._monasteryMap[idx];
+    if (monSeg !== noneValue) {
+      return { feature: "monastery", segment: null };
+    }
+  }
   const fieldSeg = tile._fieldMap[idx];
   if (fieldSeg !== noneValue) {
     return { feature: "field", segment: fieldSeg };
@@ -12639,6 +12664,10 @@ function getCarcassonneHoverFeature(tileType, rotation, x, y) {
 
 function collectCarcassonneConnectedNodes(view, startX, startY, feature, segment) {
   const nodesByTile = new Map();
+  if (feature === "monastery") {
+    nodesByTile.set(`${startX},${startY}`, new Set([0]));
+    return nodesByTile;
+  }
   const visited = new Set();
   const queue = [{ x: startX, y: startY, seg: segment }];
   while (queue.length) {
@@ -12734,32 +12763,38 @@ function collectCarcassonneConnectedNodes(view, startX, startY, feature, segment
   return nodesByTile;
 }
 
-function clearCarcassonneHighlight() {
-  if (!carcHighlightTiles.size) {
-    carcHoverKey = null;
+function clearCarcassonneHighlight(kind) {
+  const targetSet = kind === "selected" ? carcSelectedTiles : carcHoverTiles;
+  if (!targetSet.size) {
+    if (kind === "hover") {
+      carcHoverKey = null;
+    }
     return;
   }
-  carcHighlightTiles.forEach((key) => {
+  targetSet.forEach((key) => {
     const cell = carcCellMap.get(key);
     if (!cell) {
       return;
     }
-    cell.classList.remove("carc-highlight");
-    cell.querySelectorAll(".carc-highlight-shape").forEach((el) => el.remove());
+    cell.classList.remove(kind === "selected" ? "carc-selected" : "carc-hover");
+    const selector = kind === "selected" ? ".carc-selected-shape" : ".carc-hover-shape";
+    cell.querySelectorAll(selector).forEach((el) => el.remove());
   });
-  carcHighlightTiles.clear();
-  carcHoverKey = null;
+  targetSet.clear();
+  if (kind === "hover") {
+    carcHoverKey = null;
+  }
 }
 
-function applyCarcassonneHighlight(feature, nodesByTile) {
-  clearCarcassonneHighlight();
+function applyCarcassonneHighlight(feature, nodesByTile, kind) {
+  clearCarcassonneHighlight(kind);
   const newSet = new Set();
   nodesByTile.forEach((segments, key) => {
     const cell = carcCellMap.get(key);
     if (!cell) {
       return;
     }
-    cell.classList.add("carc-highlight");
+    cell.classList.add(kind === "selected" ? "carc-selected" : "carc-hover");
     const tileType = cell.dataset.tileType;
     const rotation = Number(cell.dataset.rotation || 0);
     segments.forEach((seg) => {
@@ -12768,13 +12803,17 @@ function applyCarcassonneHighlight(feature, nodesByTile) {
         return;
       }
       const overlay = document.createElement("div");
-      overlay.className = "carc-highlight-shape";
+      overlay.className = `carc-highlight-shape ${kind === "selected" ? "carc-selected-shape" : "carc-hover-shape"}`;
       overlay.style.backgroundImage = `url(${image})`;
       cell.appendChild(overlay);
     });
     newSet.add(key);
   });
-  carcHighlightTiles = newSet;
+  if (kind === "selected") {
+    carcSelectedTiles = newSet;
+  } else {
+    carcHoverTiles = newSet;
+  }
 }
 
 function handleCarcassonneHover(event) {
@@ -12783,7 +12822,7 @@ function handleCarcassonneHover(event) {
   }
   const cell = event.target.closest(".carc-cell.occupied");
   if (!cell || !carcBoard || !carcBoard.contains(cell)) {
-    clearCarcassonneHighlight();
+    clearCarcassonneHighlight("hover");
     return;
   }
   const rect = cell.getBoundingClientRect();
@@ -12806,7 +12845,7 @@ function handleCarcassonneHover(event) {
   }
   const featureInfo = getCarcassonneHoverFeature(tileType, rotation, localX, localY);
   if (!featureInfo) {
-    clearCarcassonneHighlight();
+    clearCarcassonneHighlight("hover");
     return;
   }
   const key = `${worldX},${worldY}:${featureInfo.feature}:${featureInfo.segment}`;
@@ -12820,8 +12859,127 @@ function handleCarcassonneHover(event) {
     featureInfo.feature,
     featureInfo.segment,
   );
-  applyCarcassonneHighlight(featureInfo.feature, nodes);
+  applyCarcassonneHighlight(featureInfo.feature, nodes, "hover");
   carcHoverKey = key;
+}
+
+function getMeepleOptionKey(feature, segment) {
+  return `${feature}:${segment === null || segment === undefined ? "null" : segment}`;
+}
+
+function isMeepleOptionAvailable(feature, segment) {
+  return carcMeepleOptionSet.has(getMeepleOptionKey(feature, segment));
+}
+
+function describeCarcassonneSelection(view, feature, segment) {
+  if (feature === "monastery") {
+    return "Monastery";
+  }
+  if (!view || !view.last_placed) {
+    return `${feature} ${segment + 1}`;
+  }
+  const tile = getCarcassonneTileAt(view, view.last_placed.x, view.last_placed.y);
+  if (!tile) {
+    return `${feature} ${segment + 1}`;
+  }
+  const meta = getCarcassonneRotatedMeta(tile.type, tile.rotation || 0);
+  if (!meta) {
+    return `${feature} ${segment + 1}`;
+  }
+  if (feature === "road") {
+    const edges = meta.roadSegments[segment] || [];
+    return `Road · ${edges.join("+") || segment + 1}`;
+  }
+  if (feature === "city") {
+    const edges = meta.citySegments[segment] || [];
+    return `City · ${edges.join("+") || segment + 1}`;
+  }
+  if (feature === "field") {
+    const slots = meta.fieldSegments[segment] || [];
+    return `Field · ${slots.join("+") || segment + 1}`;
+  }
+  return `${feature} ${segment + 1}`;
+}
+
+function updateCarcassonneMeepleSelectionLabel(view) {
+  if (!carcMeepleSelection) {
+    return;
+  }
+  if (!carcSelectedMeeple) {
+    carcMeepleSelection.textContent = "Selected: -";
+    return;
+  }
+  const label = describeCarcassonneSelection(view, carcSelectedMeeple.feature, carcSelectedMeeple.segment);
+  carcMeepleSelection.textContent = `Selected: ${label}`;
+}
+
+function clearCarcassonneSelection() {
+  carcSelectedMeeple = null;
+  clearCarcassonneHighlight("selected");
+  if (currentCarcassonneView) {
+    updateCarcassonneMeepleSelectionLabel(currentCarcassonneView);
+    updateCarcassonneControls(currentCarcassonneView);
+  } else if (carcMeepleSelection) {
+    carcMeepleSelection.textContent = "Selected: -";
+  }
+}
+
+function selectCarcassonneMeeple(view, feature, segment, worldX, worldY) {
+  if (!view || !view.last_placed) {
+    return;
+  }
+  if (!isMeepleOptionAvailable(feature, segment)) {
+    log("That feature is not available for meeple placement.");
+    return;
+  }
+  const nodes = collectCarcassonneConnectedNodes(view, worldX, worldY, feature, segment);
+  applyCarcassonneHighlight(feature, nodes, "selected");
+  carcSelectedMeeple = { feature, segment, x: worldX, y: worldY };
+  updateCarcassonneMeepleSelectionLabel(view);
+  updateCarcassonneControls(view);
+}
+
+function handleCarcassonneMeepleSelect(event) {
+  if (!currentCarcassonneView || !carcTemplateData) {
+    return;
+  }
+  const actions = Array.isArray(currentCarcassonneView.legal_actions)
+    ? currentCarcassonneView.legal_actions
+    : [];
+  if (!actions.includes("place_meeple")) {
+    return;
+  }
+  const last = currentCarcassonneView.last_placed;
+  if (!last) {
+    return;
+  }
+  const cell = event.target.closest(".carc-cell.occupied");
+  if (!cell || !carcBoard || !carcBoard.contains(cell)) {
+    return;
+  }
+  const worldX = Number(cell.dataset.worldX);
+  const worldY = Number(cell.dataset.worldY);
+  if (worldX !== last.x || worldY !== last.y) {
+    log("Meeple must be placed on the last placed tile.");
+    return;
+  }
+  const rect = cell.getBoundingClientRect();
+  if (!rect.width || !rect.height) {
+    return;
+  }
+  const localX = (event.clientX - rect.left) / rect.width;
+  const localY = (event.clientY - rect.top) / rect.height;
+  if (localX < 0 || localX > 1 || localY < 0 || localY > 1) {
+    return;
+  }
+  const tileType = cell.dataset.tileType;
+  const rotation = Number(cell.dataset.rotation || 0);
+  const featureInfo = getCarcassonneHoverFeature(tileType, rotation, localX, localY);
+  if (!featureInfo) {
+    log("No feature found at that point.");
+    return;
+  }
+  selectCarcassonneMeeple(currentCarcassonneView, featureInfo.feature, featureInfo.segment, worldX, worldY);
 }
 
 function getCarcassonneLegalSet(view, rotation) {
@@ -12855,7 +13013,7 @@ function renderCarcassonneBoard(view) {
   }
   carcBoard.innerHTML = "";
   carcCellMap.clear();
-  carcHighlightTiles.clear();
+  carcHoverTiles.clear();
   carcHoverKey = null;
   if (!rows || !cols) {
     return;
@@ -12907,6 +13065,21 @@ function renderCarcassonneBoard(view) {
       carcBoard.appendChild(cell);
     }
   }
+  if (carcSelectedMeeple && carcTemplateData) {
+    const last = view.last_placed;
+    if (last && carcSelectedMeeple.x === last.x && carcSelectedMeeple.y === last.y) {
+      const nodes = collectCarcassonneConnectedNodes(
+        view,
+        carcSelectedMeeple.x,
+        carcSelectedMeeple.y,
+        carcSelectedMeeple.feature,
+        carcSelectedMeeple.segment,
+      );
+      applyCarcassonneHighlight(carcSelectedMeeple.feature, nodes, "selected");
+    } else {
+      clearCarcassonneSelection();
+    }
+  }
 }
 
 function renderCarcassonnePendingTile(view) {
@@ -12931,16 +13104,22 @@ function renderCarcassonneMeepleOptions(view) {
   }
   carcMeepleOptions.innerHTML = "";
   const options = Array.isArray(view.meeple_options) ? view.meeple_options : [];
+  carcMeepleOptionSet = new Set();
   if (!options.length) {
     carcMeepleOptions.textContent = "-";
     return;
   }
   options.forEach((option) => {
+    carcMeepleOptionSet.add(getMeepleOptionKey(option.feature, option.segment));
     const btn = document.createElement("button");
     btn.type = "button";
     btn.textContent = option.label || option.feature || "-";
     btn.addEventListener("click", () => {
-      sendAction({ type: "place_meeple", feature: option.feature, segment: option.segment ?? null });
+      const last = view.last_placed;
+      if (!last) {
+        return;
+      }
+      selectCarcassonneMeeple(view, option.feature, option.segment ?? null, last.x, last.y);
     });
     carcMeepleOptions.appendChild(btn);
   });
@@ -12973,6 +13152,7 @@ function updateCarcassonneControls(view) {
   const actions = Array.isArray(view.legal_actions) ? view.legal_actions : [];
   const canPlace = actions.includes("place_tile");
   const canSkip = actions.includes("skip_meeple");
+  const canPlaceMeeple = actions.includes("place_meeple");
   if (carcRotateLeftBtn) {
     carcRotateLeftBtn.disabled = !canPlace;
   }
@@ -12982,12 +13162,29 @@ function updateCarcassonneControls(view) {
   if (carcSkipMeepleBtn) {
     carcSkipMeepleBtn.disabled = !canSkip;
   }
+  if (carcConfirmMeepleBtn) {
+    carcConfirmMeepleBtn.disabled = !canPlaceMeeple || !carcSelectedMeeple;
+  }
+  if (carcClearMeepleBtn) {
+    carcClearMeepleBtn.disabled = !carcSelectedMeeple;
+  }
+  if (carcMeepleHint) {
+    carcMeepleHint.textContent = canPlaceMeeple ? "Click a feature on the last placed tile." : "-";
+  }
 }
 
 function renderCarcassonneGameState(data) {
   const view = data.view;
   currentCarcassonneView = view;
   loadCarcassonneTemplates();
+  const last = view.last_placed;
+  if (!last || view.phase !== "place_meeple") {
+    clearCarcassonneSelection();
+  } else if (carcSelectedMeeple) {
+    if (carcSelectedMeeple.x !== last.x || carcSelectedMeeple.y !== last.y) {
+      clearCarcassonneSelection();
+    }
+  }
   if (currentGameType !== "carcassonne") {
     currentGameType = "carcassonne";
     setGamePanelVisibility("carcassonne");
@@ -13022,6 +13219,7 @@ function renderCarcassonneGameState(data) {
   renderCarcassonneBoard(view);
   renderCarcassonnePendingTile(view);
   renderCarcassonneMeepleOptions(view);
+  updateCarcassonneMeepleSelectionLabel(view);
   renderCarcassonnePlayers(view);
   updateCarcassonneControls(view);
   logGameEvents(data);
@@ -18087,13 +18285,41 @@ if (carcSkipMeepleBtn) {
     if (!actions.includes("skip_meeple")) {
       return;
     }
+    clearCarcassonneSelection();
     sendAction({ type: "skip_meeple" });
   });
 }
 
 if (carcBoard) {
   carcBoard.addEventListener("mousemove", handleCarcassonneHover);
-  carcBoard.addEventListener("mouseleave", clearCarcassonneHighlight);
+  carcBoard.addEventListener("mouseleave", () => clearCarcassonneHighlight("hover"));
+  carcBoard.addEventListener("click", handleCarcassonneMeepleSelect);
+}
+
+if (carcConfirmMeepleBtn) {
+  carcConfirmMeepleBtn.addEventListener("click", () => {
+    if (!currentCarcassonneView || !carcSelectedMeeple) {
+      return;
+    }
+    const actions = Array.isArray(currentCarcassonneView.legal_actions)
+      ? currentCarcassonneView.legal_actions
+      : [];
+    if (!actions.includes("place_meeple")) {
+      return;
+    }
+    sendAction({
+      type: "place_meeple",
+      feature: carcSelectedMeeple.feature,
+      segment: carcSelectedMeeple.segment ?? null,
+    });
+    clearCarcassonneSelection();
+  });
+}
+
+if (carcClearMeepleBtn) {
+  carcClearMeepleBtn.addEventListener("click", () => {
+    clearCarcassonneSelection();
+  });
 }
 
 if (blokusNudgeUpBtn) {

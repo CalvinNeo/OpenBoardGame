@@ -464,6 +464,20 @@ def _build_segment_map(
     return bytes(data)
 
 
+def _build_monastery_map(mask: List[List[bool]]) -> bytes:
+    data = bytearray(GRID_SIZE * GRID_SIZE)
+    idx = 0
+    for y in range(GRID_SIZE):
+        row = mask[y]
+        for x in range(GRID_SIZE):
+            if row[x]:
+                data[idx] = 0
+            else:
+                data[idx] = NONE_BYTE
+            idx += 1
+    return bytes(data)
+
+
 def _apply_junction_mask(grid: List[List[str]], junction_markers: List[Tuple[float, float]]) -> None:
     if not junction_markers:
         return
@@ -611,6 +625,7 @@ def _build_tile_template(svg_path: Path) -> TileTemplate:
         "road": _build_segment_map(road_comp),
         "city": _build_segment_map(city_comp),
         "field": _build_segment_map(field_comp, field_id_map),
+        "monastery": _build_monastery_map(monastery_mask),
     }
 
     return TileTemplate(
@@ -1251,6 +1266,7 @@ def get_carcassonne_template_payload() -> Dict:
             "road_map": base64.b64encode(maps["road"]).decode("ascii"),
             "city_map": base64.b64encode(maps["city"]).decode("ascii"),
             "field_map": base64.b64encode(maps["field"]).decode("ascii"),
+            "monastery_map": base64.b64encode(maps["monastery"]).decode("ascii"),
             "road_segments": [sorted(seg.edges) for seg in tmpl.road_segments],
             "city_segments": [sorted(seg.edges) for seg in tmpl.city_segments],
             "field_segments": [sorted(seg.slots) for seg in tmpl.field_segments],
