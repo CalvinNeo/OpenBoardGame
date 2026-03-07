@@ -4,9 +4,19 @@ import math
 import os
 import random
 import re
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
+
+from game.memories import (
+    build_html_document,
+    esc,
+    format_timestamp,
+    render_kv_table,
+    render_table,
+    section,
+)
 
 SIDES = ["N", "E", "S", "W"]
 SIDE_DELTAS = {
@@ -1328,6 +1338,7 @@ class CarcassonneGame:
             "scores": {},
             "last_placed": None,
             "config": config or {},
+            "game_start_time": time.time(),
         }
         if start_player:
             tile = _draw_playable_tile(state)
@@ -1546,3 +1557,173 @@ class CarcassonneGame:
     @staticmethod
     def deserialize(payload: Dict) -> Dict:
         return payload
+
+    @staticmethod
+    def download_memories(state: Dict, room_id: Optional[str] = None) -> str:
+        return build_memories_html(state, room_id)
+
+
+def _meeple_label(meeple: Optional[Dict], player_meta: Dict[str, Dict]) -> str:
+    if not meeple:
+        return "-"
+    pid = meeple.get("player_id")
+    meta = player_meta.get(pid, {})
+    name = meta.get("name") or pid or "-"
+    feature = meeple.get("feature") or "-"
+    segment = meeple.get("segment")
+    seg_label = "-" if segment is None else str(segment + 1)
+    return f"{esc(name, '-')}\u00a0\u00b7\u00a0{esc(feature, '-')}\u00a0{esc(seg_label, '-')}"
+
+
+def _render_board_grid(state: Dict, player_meta: Dict[str, Dict]) -> str:
+    board = state.get("board", {})
+    if not board:
+        return '<div class="muted">No tiles placed</div>'
+    coords = [_parse_coord(key) for key in board.keys()]
+    min_x = min(x for x, _ in coords)
+    max_x = max(x for x, _ in coords)
+    min_y = min(y for _, y in coords)
+    max_y = max(y for _, y in coords)
+    width = max_x - min_x + 1
+    cells: List[str] = [f'<div class="carc-board-grid" style="--cols: {width};">']
+    for y in range(min_y, max_y + 1):
+        for x in range(min_x, max_x + 1):
+            tile = board.get(_coord_key(x, y))
+            if not tile:
+                cells.append('<div class="carc-board-cell empty"></div>')
+                continue
+            meeple_html = ""
+            if tile.get("meeple"):
+                meeple_html = f'<div class="small">Meeple: {_meeple_label(tile.get("meeple"), player_meta)}</div>'
+            cells.append(
+                "<div class=\"carc-board-cell\">"
+                f"<div class=\"carc-board-title\">{esc(tile.get('type'), '-')}</div>"
+                f"<div class=\"small\">({x}, {y}) \u00b7 {esc(tile.get('rotation', 0), '0')}\u00b0</div>"
+                f"{meeple_html}"
+                "</div>"
+            )
+    cells.append("</div>")
+    return "".join(cells)
+
+
+def build_memories_html(state: Dict, room_id: Optional[str] = None) -> str:
+    game_id = CarcassonneGame.game_id
+    status_label = "Game Over" if state.get("game_over") else "In Progress"
+    header = [
+        "<h1>Download Memories</h1>",
+        f"<div class=\"meta\">Game: {esc(game_id, '-')} · Room: {esc(room_id, '-')}</div>",
+        f"<div class=\"meta\">Status: {esc(status_label, status_label)}</div>",
+    ]
+    start_time = format_timestamp(state.get("game_start_time"))
+    if start_time != "-":
+        header.append(f"<div class=\"meta\">Game Start: {esc(start_time, start_time)}</div>")
+    header.append(f"<div class=\"meta\">Generated: {esc(format_timestamp(time.time()), '-')}</div>")
+
+    player_meta = state.get("player_meta", {})
+    order = state.get("turn_order", [])
+    players_rows: List[List[str]] = []
+    for pid in order:
+        meta = player_meta.get(pid, {})
+        pdata = state.get("players", {}).get(pid, {})
+        players_rows.append(
+            [
+                esc(pid, "-"),
+                esc(meta.get("name"), "-"),
+                esc(meta.get("seat"), "-"),
+                esc(pdata.get("color"), "-"),
+                esc(pdata.get("score"), "0"),
+                esc(pdata.get("meeples"), "0"),
+                esc("Yes" if meta.get("is_bot") else "No"),
+            ]
+        )
+    players_section = section(
+        "Players",
+        render_table(
+            ["Player ID", "Name", "Seat", "Color", "Score", "Meeples", "Bot"],
+            players_rows,
+            empty_message="No players",
+        ),
+    )
+
+    summary_pairs = [
+        ("Current Turn", esc(state.get("current_turn"), "-")),
+        ("Phase", esc(state.get("phase"), "-")),
+        ("Remaining Tiles", esc(len(state.get("tile_bag", [])), "0")),
+        ("Discarded Tiles", esc(len(state.get("discarded_tiles", [])), "0")),
+        ("Tiles Placed", esc(len(state.get("board", {})), "0")),
+    ]
+    summary_section = section("Summary", render_kv_table(summary_pairs))
+
+    winners = state.get("winner") or []
+    winner_names = []
+    for pid in winners:
+        meta = player_meta.get(pid, {})
+        winner_names.append(meta.get("name") or pid)
+    winner_section = section(
+        "Winners",
+        f'<div class="card">{esc(", ".join(winner_names) if winner_names else "-", "-")}</div>',
+    )
+
+    board_section = section(
+        "Board",
+        "<details open><summary>Board Grid</summary>"
+        + _render_board_grid(state, player_meta)
+        + "</details>",
+    )
+
+    tile_rows: List[List[str]] = []
+    for key, tile in sorted(state.get("board", {}).items()):
+        x, y = _parse_coord(key)
+        tile_rows.append(
+            [
+                esc(x, "0"),
+                esc(y, "0"),
+                esc(tile.get("type"), "-"),
+                esc(tile.get("rotation", 0), "0"),
+                _meeple_label(tile.get("meeple"), player_meta),
+            ]
+        )
+    tiles_section = section(
+        "Tiles",
+        render_table(
+            ["X", "Y", "Tile", "Rotation", "Meeple"],
+            tile_rows,
+            empty_message="No tiles",
+        ),
+    )
+
+    extra_style = """
+.carc-board-grid {
+  --cols: 1;
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(110px, 1fr));
+  gap: 6px;
+  margin-top: 10px;
+}
+.carc-board-cell {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 6px;
+  min-height: 64px;
+  background: #ffffff;
+}
+.carc-board-cell.empty {
+  background: #f8fafc;
+  border-style: dashed;
+}
+.carc-board-title {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+details summary {
+  cursor: pointer;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+"""
+
+    body = "\n".join(header) + players_section + summary_section + winner_section + board_section + tiles_section
+    return build_html_document(f"{game_id} Memories", body, extra_style=extra_style)
+
+
+download_memories = build_memories_html
