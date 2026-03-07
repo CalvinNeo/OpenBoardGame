@@ -77,6 +77,7 @@ let carcTemplateCache = {};
 let carcCellMap = new Map();
 let carcHighlightTiles = new Set();
 let carcHoverKey = null;
+let carcSegmentImageCache = new Map();
 let abracaLastRoundNotice = null;
 let selectedSlots = [];
 let currentRoomState = null;
@@ -12376,6 +12377,7 @@ function prepareCarcassonneTemplates(data) {
     tile._fieldSegments = Array.isArray(tile.field_segments) ? tile.field_segments : [];
   });
   carcTemplateCache = {};
+  carcSegmentImageCache = new Map();
   return data;
 }
 
@@ -12426,6 +12428,127 @@ function rotateCarcassonnePointToBase(x, y, rotation) {
     py = ny;
   }
   return { x: px, y: py };
+}
+
+function buildCarcassonneSegmentMask(tileType, rotation, feature, segment) {
+  if (!carcTemplateData || !carcTemplateData.tiles) {
+    return null;
+  }
+  const tile = carcTemplateData.tiles[tileType];
+  if (!tile) {
+    return null;
+  }
+  let sourceMap = null;
+  if (feature === "road") {
+    sourceMap = tile._roadMap;
+  } else if (feature === "city") {
+    sourceMap = tile._cityMap;
+  } else if (feature === "field") {
+    sourceMap = tile._fieldMap;
+  }
+  if (!sourceMap) {
+    return null;
+  }
+  const size = carcTemplateData.grid_size || 100;
+  const mask = new Uint8Array(size * size);
+  const turns = ((rotation % 360) + 360) % 360;
+  if (turns === 0) {
+    for (let idx = 0; idx < sourceMap.length; idx += 1) {
+      if (sourceMap[idx] === segment) {
+        mask[idx] = 1;
+      }
+    }
+    return mask;
+  }
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const nx = (x + 0.5) / size;
+      const ny = (y + 0.5) / size;
+      const base = rotateCarcassonnePointToBase(nx, ny, rotation);
+      const bx = Math.max(0, Math.min(size - 1, Math.floor(base.x * size)));
+      const by = Math.max(0, Math.min(size - 1, Math.floor(base.y * size)));
+      const bidx = by * size + bx;
+      if (sourceMap[bidx] === segment) {
+        mask[y * size + x] = 1;
+      }
+    }
+  }
+  return mask;
+}
+
+function getCarcassonneSegmentImage(tileType, rotation, feature, segment) {
+  const key = `${tileType}:${rotation}:${feature}:${segment}`;
+  if (carcSegmentImageCache.has(key)) {
+    return carcSegmentImageCache.get(key);
+  }
+  const mask = buildCarcassonneSegmentMask(tileType, rotation, feature, segment);
+  if (!mask || !carcTemplateData) {
+    return null;
+  }
+  const size = carcTemplateData.grid_size || 100;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    return null;
+  }
+  ctx.imageSmoothingEnabled = false;
+  let fill = "rgba(14, 116, 144, 0.18)";
+  let stroke = "rgba(14, 116, 144, 0.9)";
+  if (feature === "road") {
+    fill = "rgba(217, 119, 6, 0.22)";
+    stroke = "rgba(217, 119, 6, 0.95)";
+  } else if (feature === "city") {
+    fill = "rgba(71, 85, 105, 0.25)";
+    stroke = "rgba(71, 85, 105, 0.95)";
+  } else if (feature === "field") {
+    fill = "rgba(34, 197, 94, 0.2)";
+    stroke = "rgba(34, 197, 94, 0.95)";
+  }
+  ctx.fillStyle = fill;
+  for (let y = 0; y < size; y += 1) {
+    let rowStart = y * size;
+    for (let x = 0; x < size; x += 1) {
+      if (mask[rowStart + x]) {
+        ctx.fillRect(x, y, 1, 1);
+      }
+    }
+  }
+  ctx.fillStyle = stroke;
+  const thickness = 4;
+  const radius = Math.floor(thickness / 2);
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const idx = y * size + x;
+      if (!mask[idx]) {
+        continue;
+      }
+      const north = y === 0 ? 0 : mask[idx - size];
+      const south = y === size - 1 ? 0 : mask[idx + size];
+      const west = x === 0 ? 0 : mask[idx - 1];
+      const east = x === size - 1 ? 0 : mask[idx + 1];
+      if (north && south && west && east) {
+        continue;
+      }
+      for (let dy = -radius; dy <= radius; dy += 1) {
+        const ny = y + dy;
+        if (ny < 0 || ny >= size) {
+          continue;
+        }
+        for (let dx = -radius; dx <= radius; dx += 1) {
+          const nx = x + dx;
+          if (nx < 0 || nx >= size) {
+            continue;
+          }
+          ctx.fillRect(nx, ny, 1, 1);
+        }
+      }
+    }
+  }
+  const url = canvas.toDataURL("image/png");
+  carcSegmentImageCache.set(key, url);
+  return url;
 }
 
 function getCarcassonneTileAt(view, worldX, worldY) {
@@ -12514,8 +12637,8 @@ function getCarcassonneHoverFeature(tileType, rotation, x, y) {
   return null;
 }
 
-function collectCarcassonneConnectedTiles(view, startX, startY, feature, segment) {
-  const tiles = new Set();
+function collectCarcassonneConnectedNodes(view, startX, startY, feature, segment) {
+  const nodesByTile = new Map();
   const visited = new Set();
   const queue = [{ x: startX, y: startY, seg: segment }];
   while (queue.length) {
@@ -12529,7 +12652,11 @@ function collectCarcassonneConnectedTiles(view, startX, startY, feature, segment
     if (!tile) {
       continue;
     }
-    tiles.add(`${current.x},${current.y}`);
+    const tileKey = `${current.x},${current.y}`;
+    if (!nodesByTile.has(tileKey)) {
+      nodesByTile.set(tileKey, new Set());
+    }
+    nodesByTile.get(tileKey).add(current.seg);
     const meta = getCarcassonneRotatedMeta(tile.type, tile.rotation || 0);
     if (!meta) {
       continue;
@@ -12604,7 +12731,7 @@ function collectCarcassonneConnectedTiles(view, startX, startY, feature, segment
       });
     }
   }
-  return tiles;
+  return nodesByTile;
 }
 
 function clearCarcassonneHighlight() {
@@ -12617,22 +12744,37 @@ function clearCarcassonneHighlight() {
     if (!cell) {
       return;
     }
-    cell.classList.remove("carc-highlight", "carc-highlight-road", "carc-highlight-city", "carc-highlight-field");
+    cell.classList.remove("carc-highlight");
+    cell.querySelectorAll(".carc-highlight-shape").forEach((el) => el.remove());
   });
   carcHighlightTiles.clear();
   carcHoverKey = null;
 }
 
-function applyCarcassonneHighlight(feature, tiles) {
+function applyCarcassonneHighlight(feature, nodesByTile) {
   clearCarcassonneHighlight();
-  tiles.forEach((key) => {
+  const newSet = new Set();
+  nodesByTile.forEach((segments, key) => {
     const cell = carcCellMap.get(key);
     if (!cell) {
       return;
     }
-    cell.classList.add("carc-highlight", `carc-highlight-${feature}`);
+    cell.classList.add("carc-highlight");
+    const tileType = cell.dataset.tileType;
+    const rotation = Number(cell.dataset.rotation || 0);
+    segments.forEach((seg) => {
+      const image = getCarcassonneSegmentImage(tileType, rotation, feature, seg);
+      if (!image) {
+        return;
+      }
+      const overlay = document.createElement("div");
+      overlay.className = "carc-highlight-shape";
+      overlay.style.backgroundImage = `url(${image})`;
+      cell.appendChild(overlay);
+    });
+    newSet.add(key);
   });
-  carcHighlightTiles = tiles;
+  carcHighlightTiles = newSet;
 }
 
 function handleCarcassonneHover(event) {
@@ -12671,14 +12813,14 @@ function handleCarcassonneHover(event) {
   if (key === carcHoverKey) {
     return;
   }
-  const tiles = collectCarcassonneConnectedTiles(
+  const nodes = collectCarcassonneConnectedNodes(
     currentCarcassonneView,
     worldX,
     worldY,
     featureInfo.feature,
     featureInfo.segment,
   );
-  applyCarcassonneHighlight(featureInfo.feature, tiles);
+  applyCarcassonneHighlight(featureInfo.feature, nodes);
   carcHoverKey = key;
 }
 
