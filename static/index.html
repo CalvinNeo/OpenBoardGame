@@ -125,6 +125,7 @@
                     <option value="point_salad">Point Salad</option>
                     <option value="trekking_history">Trekking through History</option>
                     <option value="abraca_what">Abraca What</option>
+                    <option value="carcassonne">Carcassonne</option>
                     
                     <option value="fang_niao">Square Bird</option>
                   </select>
@@ -1692,6 +1693,42 @@
                 <div>
                   <h3>Players</h3>
                   <div id="blokusPlayers"></div>
+                </div>
+              </div>
+            </div>
+
+            <div id="carcassonnePanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="carcPhase">-</span></div>
+                <div>Current Turn: <span id="carcTurn">-</span></div>
+                <div>Remaining Tiles: <span id="carcRemaining">-</span></div>
+                <div>Winner: <span id="carcWinner">-</span></div>
+              </div>
+              <div class="row">
+                <div>Pending Tile: <span id="carcPendingLabel">-</span></div>
+                <div>Rotation: <span id="carcRotationLabel">0°</span></div>
+              </div>
+              <div class="row actions">
+                <button id="carcRotateLeftBtn" type="button">Rotate Left</button>
+                <button id="carcRotateRightBtn" type="button">Rotate Right</button>
+                <button id="carcSkipMeepleBtn" type="button">Skip Meeple</button>
+              </div>
+
+              <div class="carc-layout">
+                <div>
+                  <h3>Board</h3>
+                  <div id="carcBoard" class="carc-board"></div>
+                  <div class="hint">Click a highlighted cell to place the tile.</div>
+                </div>
+                <div class="carc-side">
+                  <h3>Pending Tile</h3>
+                  <div id="carcPendingTile" class="carc-tile-preview"></div>
+                  <h3>Meeple Options</h3>
+                  <div id="carcMeepleOptions" class="carc-meeple-options"></div>
+                </div>
+                <div>
+                  <h3>Players</h3>
+                  <div id="carcPlayers"></div>
                 </div>
               </div>
             </div>

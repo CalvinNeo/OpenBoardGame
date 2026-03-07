@@ -16,6 +16,20 @@ const fangNiaoPlayBtn = document.getElementById("fangNiaoPlayBtn");
 const fangNiaoBankBtn = document.getElementById("fangNiaoBankBtn");
 const fangNiaoEndBtn = document.getElementById("fangNiaoEndBtn");
 const fangNiaoPlayers = document.getElementById("fangNiaoPlayers");
+const carcassonnePanel = document.getElementById("carcassonnePanel");
+const carcPhaseLabel = document.getElementById("carcPhase");
+const carcTurnLabel = document.getElementById("carcTurn");
+const carcRemainingLabel = document.getElementById("carcRemaining");
+const carcWinnerLabel = document.getElementById("carcWinner");
+const carcPendingLabel = document.getElementById("carcPendingLabel");
+const carcRotationLabel = document.getElementById("carcRotationLabel");
+const carcRotateLeftBtn = document.getElementById("carcRotateLeftBtn");
+const carcRotateRightBtn = document.getElementById("carcRotateRightBtn");
+const carcSkipMeepleBtn = document.getElementById("carcSkipMeepleBtn");
+const carcBoard = document.getElementById("carcBoard");
+const carcPendingTile = document.getElementById("carcPendingTile");
+const carcMeepleOptions = document.getElementById("carcMeepleOptions");
+const carcPlayers = document.getElementById("carcPlayers");
 const socket = io();
 
 let playerId = null;
@@ -52,6 +66,7 @@ let currentSplendorView = null;
 let currentPointSaladView = null;
 let currentAbracaView = null;
 let currentBlokusView = null;
+let currentCarcassonneView = null;
 let currentFangNiaoView = null;
 let currentAidixitView = null;
 let currentTrekkingView = null;
@@ -174,6 +189,8 @@ let trekkingSelectedSlot = null;
 let trekkingLastDay = null;
 let trekkingWildModalState = null;
 let trekkingCrystalModalState = null;
+let carcRotation = 0;
+let carcPendingType = null;
 const BLOKUS_DRAG_THRESHOLD = 6;
 const BLOKUS_ADJACENT_OFFSETS = [
   [1, 0],
@@ -1928,6 +1945,7 @@ function setGamePanelVisibility(gameType) {
   const showAbraca = gameType === "abraca_what";
   const showTrekking = gameType === "trekking_history";
   const showBlokus = gameType === "blokus";
+  const showCarcassonne = gameType === "carcassonne";
   const showFangNiao = gameType === "fang_niao";
   caboPanel.classList.toggle("hidden", !showCabo);
   if (flip7Panel) {
@@ -1997,6 +2015,9 @@ function setGamePanelVisibility(gameType) {
   }
   if (blokusPanel) {
     blokusPanel.classList.toggle("hidden", !showBlokus);
+  }
+  if (carcassonnePanel) {
+    carcassonnePanel.classList.toggle("hidden", !showCarcassonne);
   }
   if (fangNiaoPanel) {
     fangNiaoPanel.classList.toggle("hidden", !showFangNiao);
@@ -2757,6 +2778,7 @@ function resetRoomState() {
   clearTrekkingState();
   clearAbracaState();
   clearBlokusState();
+  clearCarcassonneState();
   clearFangNiaoState();
   setGamePanelVisibility(null);
   updateDrawGuessLanguageRow();
@@ -3993,6 +4015,42 @@ function clearBlokusState() {
     blokusPlayers.innerHTML = "";
   }
   updateBlokusActionButton();
+}
+
+function clearCarcassonneState() {
+  currentCarcassonneView = null;
+  carcRotation = 0;
+  carcPendingType = null;
+  if (carcPhaseLabel) {
+    carcPhaseLabel.textContent = "-";
+  }
+  if (carcTurnLabel) {
+    carcTurnLabel.textContent = "-";
+  }
+  if (carcRemainingLabel) {
+    carcRemainingLabel.textContent = "-";
+  }
+  if (carcWinnerLabel) {
+    carcWinnerLabel.textContent = "-";
+  }
+  if (carcPendingLabel) {
+    carcPendingLabel.textContent = "-";
+  }
+  if (carcRotationLabel) {
+    carcRotationLabel.textContent = "0°";
+  }
+  if (carcBoard) {
+    carcBoard.innerHTML = "";
+  }
+  if (carcPendingTile) {
+    carcPendingTile.innerHTML = "";
+  }
+  if (carcMeepleOptions) {
+    carcMeepleOptions.innerHTML = "";
+  }
+  if (carcPlayers) {
+    carcPlayers.innerHTML = "";
+  }
 }
 
 function clearFangNiaoState() {
@@ -6101,6 +6159,7 @@ function renderRoomState(state) {
     clearSplendorState();
     clearAbracaState();
     clearBlokusState();
+    clearCarcassonneState();
     clearHalliState();
     clearGoldRushState();
     clearIncanGoldState();
@@ -12231,6 +12290,221 @@ function renderBlokusGameState(data) {
   updateBlokusActionButton();
 }
 
+function updateCarcassonneRotationLabel() {
+  if (carcRotationLabel) {
+    carcRotationLabel.textContent = `${carcRotation}°`;
+  }
+}
+
+function normalizeCarcassonnePositions(raw) {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  return raw.map((item) => {
+    if (Array.isArray(item)) {
+      return { x: item[0], y: item[1] };
+    }
+    if (item && typeof item === "object") {
+      return { x: item.x, y: item.y };
+    }
+    return null;
+  }).filter(Boolean);
+}
+
+function getCarcassonneLegalSet(view, rotation) {
+  const positions = view && view.legal_positions ? (view.legal_positions[rotation] || view.legal_positions[String(rotation)]) : [];
+  const normalized = normalizeCarcassonnePositions(positions);
+  const set = new Set();
+  normalized.forEach((pos) => {
+    if (Number.isInteger(pos.x) && Number.isInteger(pos.y)) {
+      set.add(`${pos.x},${pos.y}`);
+    }
+  });
+  return set;
+}
+
+function renderCarcassonneBoard(view) {
+  if (!carcBoard) {
+    return;
+  }
+  const board = Array.isArray(view.board) ? view.board : [];
+  const rows = board.length;
+  const cols = rows ? board[0].length : 0;
+  carcBoard.style.gridTemplateColumns = cols ? `repeat(${cols}, var(--carc-cell))` : "none";
+  if (cols) {
+    const maxWidth = Math.max(240, window.innerWidth - 80);
+    const gap = 2;
+    const pad = 12;
+    const span = Math.max(rows, cols);
+    const rawSize = Math.floor((maxWidth - (span - 1) * gap - pad) / span);
+    const cellSize = Math.max(28, Math.min(64, rawSize));
+    carcBoard.style.setProperty("--carc-cell", `${cellSize}px`);
+  }
+  carcBoard.innerHTML = "";
+  if (!rows || !cols) {
+    return;
+  }
+  const origin = view.board_origin || { x: 0, y: 0 };
+  const actions = Array.isArray(view.legal_actions) ? view.legal_actions : [];
+  const canPlace = actions.includes("place_tile") && view.pending_tile;
+  const legalSet = canPlace ? getCarcassonneLegalSet(view, carcRotation) : new Set();
+
+  for (let y = 0; y < rows; y += 1) {
+    for (let x = 0; x < cols; x += 1) {
+      const cell = document.createElement("div");
+      cell.className = "carc-cell";
+      const worldX = origin.x + x;
+      const worldY = origin.y + y;
+      const tile = board[y][x];
+      if (tile) {
+        cell.classList.add("occupied");
+        const tileEl = document.createElement("div");
+        tileEl.className = "carc-tile";
+        tileEl.style.backgroundImage = `url(/static/carcassonne/${tile.type}.svg)`;
+        tileEl.style.transform = `rotate(${tile.rotation || 0}deg)`;
+        cell.appendChild(tileEl);
+        if (tile.meeple) {
+          const meeple = document.createElement("div");
+          meeple.className = `carc-meeple ${tile.meeple.color || ""}`;
+          const label = (tile.meeple.feature || "").slice(0, 1);
+          meeple.textContent = label ? label.toUpperCase() : "";
+          if (tile.meeple.pos && typeof tile.meeple.pos.x === "number" && typeof tile.meeple.pos.y === "number") {
+            meeple.style.left = `${tile.meeple.pos.x * 100}%`;
+            meeple.style.top = `${tile.meeple.pos.y * 100}%`;
+          }
+          cell.appendChild(meeple);
+        }
+      } else if (legalSet.has(`${worldX},${worldY}`)) {
+        cell.classList.add("legal");
+        cell.addEventListener("click", () => {
+          if (!canPlace) {
+            return;
+          }
+          sendAction({ type: "place_tile", x: worldX, y: worldY, rotation: carcRotation });
+        });
+      }
+      carcBoard.appendChild(cell);
+    }
+  }
+}
+
+function renderCarcassonnePendingTile(view) {
+  if (!carcPendingTile) {
+    return;
+  }
+  carcPendingTile.innerHTML = "";
+  if (!view.pending_tile) {
+    carcPendingTile.textContent = "-";
+    return;
+  }
+  const tile = document.createElement("div");
+  tile.className = "carc-tile";
+  tile.style.backgroundImage = `url(/static/carcassonne/${view.pending_tile.type}.svg)`;
+  tile.style.transform = `rotate(${carcRotation}deg)`;
+  carcPendingTile.appendChild(tile);
+}
+
+function renderCarcassonneMeepleOptions(view) {
+  if (!carcMeepleOptions) {
+    return;
+  }
+  carcMeepleOptions.innerHTML = "";
+  const options = Array.isArray(view.meeple_options) ? view.meeple_options : [];
+  if (!options.length) {
+    carcMeepleOptions.textContent = "-";
+    return;
+  }
+  options.forEach((option) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = option.label || option.feature || "-";
+    btn.addEventListener("click", () => {
+      sendAction({ type: "place_meeple", feature: option.feature, segment: option.segment ?? null });
+    });
+    carcMeepleOptions.appendChild(btn);
+  });
+}
+
+function renderCarcassonnePlayers(view) {
+  if (!carcPlayers) {
+    return;
+  }
+  carcPlayers.innerHTML = "";
+  const players = Array.isArray(view.players) ? view.players : [];
+  players.forEach((player) => {
+    const row = document.createElement("div");
+    row.className = "carc-player-row";
+    if (player.player_id === view.you) {
+      row.classList.add("player-you");
+    }
+    const left = document.createElement("div");
+    const marker = player.player_id === view.current_turn ? "▶ " : "";
+    left.textContent = `${marker}${player.name || player.player_id} (${player.color || "-"})`;
+    const right = document.createElement("div");
+    right.textContent = `${player.score ?? 0} pts · ${player.meeples ?? 0} meeples`;
+    row.appendChild(left);
+    row.appendChild(right);
+    carcPlayers.appendChild(row);
+  });
+}
+
+function updateCarcassonneControls(view) {
+  const actions = Array.isArray(view.legal_actions) ? view.legal_actions : [];
+  const canPlace = actions.includes("place_tile");
+  const canSkip = actions.includes("skip_meeple");
+  if (carcRotateLeftBtn) {
+    carcRotateLeftBtn.disabled = !canPlace;
+  }
+  if (carcRotateRightBtn) {
+    carcRotateRightBtn.disabled = !canPlace;
+  }
+  if (carcSkipMeepleBtn) {
+    carcSkipMeepleBtn.disabled = !canSkip;
+  }
+}
+
+function renderCarcassonneGameState(data) {
+  const view = data.view;
+  currentCarcassonneView = view;
+  if (currentGameType !== "carcassonne") {
+    currentGameType = "carcassonne";
+    setGamePanelVisibility("carcassonne");
+  }
+  if (carcPhaseLabel) {
+    carcPhaseLabel.textContent = view.phase || "-";
+  }
+  if (carcTurnLabel) {
+    const currentPlayer = (view.players || []).find((p) => p.player_id === view.current_turn);
+    carcTurnLabel.textContent = currentPlayer ? currentPlayer.name : view.current_turn || "-";
+  }
+  if (carcRemainingLabel) {
+    carcRemainingLabel.textContent = Number.isInteger(view.remaining_tiles) ? String(view.remaining_tiles) : "-";
+  }
+  if (carcWinnerLabel) {
+    if (view.winner && view.winner.length) {
+      const names = view.winner.map((pid) => findPlayerName(view, pid));
+      carcWinnerLabel.textContent = names.join(", ");
+    } else {
+      carcWinnerLabel.textContent = "-";
+    }
+  }
+  const pendingType = view.pending_tile ? view.pending_tile.type : null;
+  if (pendingType !== carcPendingType) {
+    carcPendingType = pendingType;
+    carcRotation = 0;
+  }
+  if (carcPendingLabel) {
+    carcPendingLabel.textContent = pendingType || "-";
+  }
+  updateCarcassonneRotationLabel();
+  renderCarcassonneBoard(view);
+  renderCarcassonnePendingTile(view);
+  renderCarcassonneMeepleOptions(view);
+  renderCarcassonnePlayers(view);
+  updateCarcassonneControls(view);
+  logGameEvents(data);
+}
+
 function getFangNiaoConfig(view) {
   return view && Array.isArray(view.bird_config) ? view.bird_config : [];
 }
@@ -15351,6 +15625,10 @@ function renderGameState(data) {
     renderBlokusGameState(data);
     return;
   }
+  if (gameType === "carcassonne") {
+    renderCarcassonneGameState(data);
+    return;
+  }
   if (gameType === "fang_niao") {
     renderFangNiaoGameState(data);
     return;
@@ -17251,6 +17529,43 @@ if (blokusFlipBtn) {
       renderBlokusBoard(currentBlokusView);
     }
     updateBlokusActionButton();
+  });
+}
+
+if (carcRotateLeftBtn) {
+  carcRotateLeftBtn.addEventListener("click", () => {
+    carcRotation = (carcRotation + 270) % 360;
+    updateCarcassonneRotationLabel();
+    if (currentCarcassonneView) {
+      renderCarcassonneBoard(currentCarcassonneView);
+      renderCarcassonnePendingTile(currentCarcassonneView);
+    }
+  });
+}
+
+if (carcRotateRightBtn) {
+  carcRotateRightBtn.addEventListener("click", () => {
+    carcRotation = (carcRotation + 90) % 360;
+    updateCarcassonneRotationLabel();
+    if (currentCarcassonneView) {
+      renderCarcassonneBoard(currentCarcassonneView);
+      renderCarcassonnePendingTile(currentCarcassonneView);
+    }
+  });
+}
+
+if (carcSkipMeepleBtn) {
+  carcSkipMeepleBtn.addEventListener("click", () => {
+    if (!currentCarcassonneView) {
+      return;
+    }
+    const actions = Array.isArray(currentCarcassonneView.legal_actions)
+      ? currentCarcassonneView.legal_actions
+      : [];
+    if (!actions.includes("skip_meeple")) {
+      return;
+    }
+    sendAction({ type: "skip_meeple" });
   });
 }
 

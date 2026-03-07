@@ -5124,3 +5124,119 @@ body.log-open {
     padding: 2px 4px;
   }
 }
+
+.carc-layout {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.carc-layout > div {
+  flex: 0 0 auto;
+}
+
+.carc-board {
+  --carc-cell: 64px;
+  --carc-gap: 2px;
+  display: grid;
+  gap: var(--carc-gap);
+  grid-auto-rows: var(--carc-cell);
+  padding: 6px;
+  background: #cbd5e1;
+  border-radius: 6px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.carc-cell {
+  width: var(--carc-cell);
+  height: var(--carc-cell);
+  background: #f8fafc;
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.carc-cell.legal {
+  outline: 2px solid #38bdf8;
+  outline-offset: -2px;
+  cursor: pointer;
+}
+
+.carc-cell.occupied {
+  background: #e2e8f0;
+}
+
+.carc-tile {
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  transform-origin: center;
+}
+
+.carc-tile-preview {
+  width: 96px;
+  height: 96px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.carc-meeple {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: #ffffff;
+  text-transform: uppercase;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.2);
+}
+
+.carc-meeple.red { background: #ef4444; }
+.carc-meeple.blue { background: #3b82f6; }
+.carc-meeple.green { background: #22c55e; }
+.carc-meeple.yellow { background: #f59e0b; }
+.carc-meeple.black { background: #111827; }
+
+.carc-meeple-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.carc-player-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.carc-player-row.player-you {
+  font-weight: 600;
+}
+
+@media (max-width: 720px) {
+  .carc-board {
+    --carc-cell: 42px;
+  }
+
+  .carc-tile-preview {
+    width: 72px;
+    height: 72px;
+  }
+}

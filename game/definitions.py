@@ -23,6 +23,7 @@ from game.registry import GameDefinition, register_game
 from game.splendor import SplendorGame
 from game.blokus import BlokusGame
 from game.blitz_sketch import BlitzSketchGame
+from game.carcassonne import CarcassonneGame
 from game.skull import SkullGame
 from game.trekking_history import TrekkingHistoryGame
 
@@ -1114,6 +1115,39 @@ FANG_NIAO_CONFIG_SCHEMA = {
     "additionalProperties": False,
 }
 
+CARCASSONNE_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "place_tile"},
+                "x": {"type": "integer"},
+                "y": {"type": "integer"},
+                "rotation": {"type": "integer", "enum": [0, 90, 180, 270]},
+            },
+            "required": ["type", "x", "y", "rotation"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "place_meeple"},
+                "feature": {"type": "string", "enum": ["road", "city", "field", "monastery"]},
+                "segment": {"type": ["integer", "null"], "minimum": 0},
+            },
+            "required": ["type", "feature", "segment"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "skip_meeple"}}, "required": ["type"], "additionalProperties": False},
+    ],
+}
+
+CARCASSONNE_CONFIG_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+}
+
 register_game(
     GameDefinition(
         game_id=CaboGame.game_id,
@@ -1485,6 +1519,21 @@ register_game(
         module=FangNiaoGame,
         serialize=FangNiaoGame.serialize,
         deserialize=FangNiaoGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=CarcassonneGame.game_id,
+        name="Carcassonne",
+        min_players=CarcassonneGame.min_players,
+        max_players=CarcassonneGame.max_players,
+        turn_mode="turn",
+        action_schema=CARCASSONNE_ACTION_SCHEMA,
+        config_schema=CARCASSONNE_CONFIG_SCHEMA,
+        module=CarcassonneGame,
+        serialize=CarcassonneGame.serialize,
+        deserialize=CarcassonneGame.deserialize,
     )
 )
 
