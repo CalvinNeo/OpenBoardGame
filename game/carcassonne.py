@@ -1,3 +1,4 @@
+import base64
 import csv
 import math
 import os
@@ -39,6 +40,9 @@ OPPOSITE_SLOT = {
     "W1": "E1",
 }
 
+TILE_SEGMENT_MAPS: Dict[str, Dict[str, bytes]] = {}
+TEMPLATE_PUBLIC_CACHE: Optional[Dict] = None
+
 FIELD_COLOR = "#7fbf7f"
 ROAD_COLOR = "#c9b07a"
 CITY_COLOR = "#8a8a8a"
@@ -47,6 +51,7 @@ SHIELD_COLOR = "#c43c3c"
 
 GRID_SIZE = 100
 GRID_MID = GRID_SIZE // 2
+NONE_BYTE = 255
 
 PATH_TOKEN_RE = re.compile(r"[MLQZmlqz]|-?\d+(?:\.\d+)?")
 
@@ -434,6 +439,31 @@ def _compute_mask_centroid(mask: List[List[bool]]) -> Optional[Tuple[float, floa
     return (round(sx / count, 4), round(sy / count, 4))
 
 
+def _build_segment_map(
+    comp_grid: List[List[int]],
+    mapping: Optional[List[int]] = None,
+) -> bytes:
+    data = bytearray(GRID_SIZE * GRID_SIZE)
+    idx = 0
+    for y in range(GRID_SIZE):
+        row = comp_grid[y]
+        for x in range(GRID_SIZE):
+            cid = row[x]
+            if cid < 0:
+                data[idx] = NONE_BYTE
+            else:
+                if mapping is not None:
+                    if cid >= len(mapping):
+                        data[idx] = NONE_BYTE
+                    else:
+                        mapped = mapping[cid]
+                        data[idx] = mapped if mapped >= 0 else NONE_BYTE
+                else:
+                    data[idx] = cid if cid < NONE_BYTE else NONE_BYTE
+            idx += 1
+    return bytes(data)
+
+
 def _apply_junction_mask(grid: List[List[str]], junction_markers: List[Tuple[float, float]]) -> None:
     if not junction_markers:
         return
@@ -454,6 +484,7 @@ def _apply_junction_mask(grid: List[List[str]], junction_markers: List[Tuple[flo
 
 
 def _build_tile_template(svg_path: Path) -> TileTemplate:
+    tile_type = svg_path.stem
     grid, shield_mask, monastery_mask, monastery_present, junction_markers = _render_svg(svg_path)
     city_comp, city_count = _label_components(grid, "city", shield_mask)
     road_grid = [row[:] for row in grid]
@@ -551,9 +582,11 @@ def _build_tile_template(svg_path: Path) -> TileTemplate:
         seg.edges = {side for side in seg.edges if edge_types.get(side) == "city"}
     filtered_fields: List[FieldSegment] = []
     filtered_field_centers: List[Tuple[float, float]] = []
+    field_id_map = [-1 for _ in range(len(field_info))]
     for idx, seg in enumerate(field_info):
         seg.slots = {slot for slot in seg.slots if edge_types.get(slot[0]) != "city"}
         if seg.slots:
+            field_id_map[idx] = len(filtered_fields)
             filtered_fields.append(seg)
             filtered_field_centers.append(field_centers[idx])
     field_info = filtered_fields
@@ -573,6 +606,12 @@ def _build_tile_template(svg_path: Path) -> TileTemplate:
     for idx, seg in enumerate(field_info):
         for slot in seg.slots:
             slot_to_field[slot] = idx
+
+    TILE_SEGMENT_MAPS[tile_type] = {
+        "road": _build_segment_map(road_comp),
+        "city": _build_segment_map(city_comp),
+        "field": _build_segment_map(field_comp, field_id_map),
+    }
 
     return TileTemplate(
         edges=edge_types,
@@ -1197,6 +1236,31 @@ def _finalize_game(state: Dict) -> None:
     state["game_over"] = True
     state["phase"] = "game_over"
     state["current_turn"] = None
+
+
+def get_carcassonne_template_payload() -> Dict:
+    global TEMPLATE_PUBLIC_CACHE
+    if TEMPLATE_PUBLIC_CACHE is not None:
+        return TEMPLATE_PUBLIC_CACHE
+    tiles: Dict[str, Dict] = {}
+    for tile_type, tmpl in TILE_TEMPLATES.items():
+        maps = TILE_SEGMENT_MAPS.get(tile_type)
+        if not maps:
+            continue
+        tiles[tile_type] = {
+            "road_map": base64.b64encode(maps["road"]).decode("ascii"),
+            "city_map": base64.b64encode(maps["city"]).decode("ascii"),
+            "field_map": base64.b64encode(maps["field"]).decode("ascii"),
+            "road_segments": [sorted(seg.edges) for seg in tmpl.road_segments],
+            "city_segments": [sorted(seg.edges) for seg in tmpl.city_segments],
+            "field_segments": [sorted(seg.slots) for seg in tmpl.field_segments],
+        }
+    TEMPLATE_PUBLIC_CACHE = {
+        "grid_size": GRID_SIZE,
+        "none_value": NONE_BYTE,
+        "tiles": tiles,
+    }
+    return TEMPLATE_PUBLIC_CACHE
 
 
 class CarcassonneGame:

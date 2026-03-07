@@ -19,6 +19,7 @@ from jsonschema import Draft7Validator, ValidationError
 from game import GameDefinition, get_game, list_games
 from game.ai_dixit import list_decks as list_aidixit_decks
 from game.ai_dixit import resolve_card_path as resolve_aidixit_card_path
+from game.carcassonne import get_carcassonne_template_payload
 from game.decrypto import get_decrypto_word_packs
 from game.decrypto_ai import get_bot_strategies
 
@@ -39,6 +40,11 @@ fastapi_app.mount("/static", StaticFiles(directory="static"), name="static")
 @fastapi_app.get("/")
 async def index():
     return FileResponse("static/index.html")
+
+
+@fastapi_app.get("/api/carcassonne/templates")
+async def carcassonne_templates():
+    return get_carcassonne_template_payload()
 
 
 @fastapi_app.get("/api/decrypto/word_packs")

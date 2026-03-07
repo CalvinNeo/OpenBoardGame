@@ -5168,6 +5168,32 @@ body.log-open {
   background: #e2e8f0;
 }
 
+.carc-cell.carc-highlight::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border: 3px solid rgba(14, 116, 144, 0.85);
+  border-radius: 4px;
+  background: rgba(14, 116, 144, 0.12);
+  pointer-events: none;
+  box-shadow: inset 0 0 10px rgba(15, 23, 42, 0.15);
+}
+
+.carc-cell.carc-highlight-road::after {
+  border-color: rgba(217, 119, 6, 0.9);
+  background: rgba(217, 119, 6, 0.18);
+}
+
+.carc-cell.carc-highlight-city::after {
+  border-color: rgba(71, 85, 105, 0.9);
+  background: rgba(71, 85, 105, 0.2);
+}
+
+.carc-cell.carc-highlight-field::after {
+  border-color: rgba(34, 197, 94, 0.9);
+  background: rgba(34, 197, 94, 0.18);
+}
+
 .carc-tile {
   width: 100%;
   height: 100%;
