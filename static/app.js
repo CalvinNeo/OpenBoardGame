@@ -4036,7 +4036,7 @@ function clearCarcassonneState() {
   carcRotation = 0;
   carcPendingType = null;
   carcCellMap.clear();
-  carcHighlightTiles.clear();
+  carcHoverTiles.clear();
   carcHoverKey = null;
   if (carcPhaseLabel) {
     carcPhaseLabel.textContent = "-";
