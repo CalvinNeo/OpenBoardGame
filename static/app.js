@@ -326,6 +326,7 @@ const MEMORIES_SUPPORTED_GAMES = new Set([
   "cyber_pictures",
   "decrypto",
   "blitz_sketch",
+  "carcassonne",
 ]);
 let createRoomPending = false;
 let pendingReadyAfterJoin = false;

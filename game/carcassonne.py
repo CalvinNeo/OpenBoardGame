@@ -1599,6 +1599,231 @@ def _meeple_label(meeple: Optional[Dict], player_meta: Dict[str, Dict]) -> str:
     return f"{esc(name, '-')}\u00a0\u00b7\u00a0{esc(feature, '-')}\u00a0{esc(seg_label, '-')}"
 
 
+def _player_name_html(player_id: str, player_meta: Dict[str, Dict], players: Dict[str, Dict]) -> str:
+    meta = player_meta.get(player_id, {})
+    pdata = players.get(player_id, {})
+    color = pdata.get("color") or "#111827"
+    name = meta.get("name") or player_id or "-"
+    return f'<span style="color: {esc(color, "#111827")}">{esc(name, "-")}</span>'
+
+
+def _nodes_to_tile_segments(nodes: Set[Tuple[int, int, int]]) -> List[Dict]:
+    tiles: Dict[Tuple[int, int], Set[int]] = {}
+    for x, y, seg in nodes:
+        tiles.setdefault((x, y), set()).add(seg)
+    return [
+        {"x": x, "y": y, "segments": sorted(list(segs))}
+        for (x, y), segs in sorted(tiles.items())
+    ]
+
+
+def _monastery_tile_count(state: Dict, coord: Tuple[int, int]) -> int:
+    count = 0
+    for dx in (-1, 0, 1):
+        for dy in (-1, 0, 1):
+            nx, ny = coord[0] + dx, coord[1] + dy
+            if _coord_key(nx, ny) in state.get("board", {}):
+                count += 1
+    return count
+
+
+def _js_dump(data: object) -> str:
+    payload = json.dumps(data, ensure_ascii=False)
+    return payload.replace("</", "<\\/")
+
+
+def _collect_component_winners(meeples: List[Dict]) -> List[str]:
+    counts: Dict[str, int] = {}
+    for meeple in meeples:
+        pid = meeple.get("player_id")
+        if not pid:
+            continue
+        counts[pid] = counts.get(pid, 0) + 1
+    if not counts:
+        return []
+    max_count = max(counts.values())
+    return [pid for pid, count in counts.items() if count == max_count]
+
+
+def _build_score_summary_section(state: Dict, player_meta: Dict, highlight_hint: bool = True) -> Tuple[str, bool]:
+    players = state.get("players", {})
+    if not players:
+        return section("Score Summary", '<div class="muted">No players</div>'), False
+
+    order = state.get("turn_order", [])
+    if not isinstance(order, list):
+        order = []
+    order = [pid for pid in order if pid in players]
+    for pid in players.keys():
+        if pid not in order:
+            order.append(pid)
+
+    summary: Dict[str, Dict] = {}
+    for pid in order:
+        pdata = players.get(pid, {})
+        try:
+            base_score = int(pdata.get("score", 0))
+        except (TypeError, ValueError):
+            base_score = 0
+        summary[pid] = {"base": base_score, "potential": 0, "entries": []}
+
+    feature_titles = {
+        "road": "Road",
+        "city": "City",
+        "field": "Field",
+        "monastery": "Monastery",
+    }
+
+    entry_counter = 1
+    highlightable = False
+
+    def add_entry(feature: str, points: int, winners: List[str], nodes: Set[Tuple[int, int, int]], detail: str) -> None:
+        nonlocal entry_counter, highlightable
+        if not winners:
+            return
+        title = feature_titles.get(feature, feature.title())
+        label = f"{title} +{points}"
+        if detail:
+            label = f"{label} ({detail})"
+        entry = {
+            "id": entry_counter,
+            "feature": feature,
+            "points": points,
+            "label": label,
+            "nodes": _nodes_to_tile_segments(nodes),
+        }
+        entry_counter += 1
+        highlightable = True
+        for pid in winners:
+            if pid not in summary:
+                continue
+            summary[pid]["potential"] += points
+            summary[pid]["entries"].append(entry)
+
+    board = state.get("board", {})
+    visited_cities: Set[Tuple[int, int, int]] = set()
+    visited_roads: Set[Tuple[int, int, int]] = set()
+    visited_fields: Set[Tuple[int, int, int]] = set()
+    city_component_map: Dict[Tuple[int, int, int], Dict] = {}
+    city_id = 0
+
+    # Cities (for adjacency and incomplete scoring)
+    for key, tile in board.items():
+        x, y = _parse_coord(key)
+        tmpl = _get_template(tile["type"], tile["rotation"])
+        for idx in range(len(tmpl.city_segments)):
+            node = (x, y, idx)
+            if node in visited_cities:
+                continue
+            comp = _collect_feature(state, (x, y), "city", idx)
+            completed = comp["open_edges"] == 0
+            for tx, ty, cidx in comp["nodes"]:
+                visited_cities.add((tx, ty, cidx))
+                city_component_map[(tx, ty, cidx)] = {
+                    "id": city_id,
+                    "completed": completed,
+                }
+            if comp["meeples"] and not completed:
+                winners = _collect_component_winners(comp["meeples"])
+                points = len(comp["tiles"]) + comp["shields"]
+                detail_parts = [f"tiles {len(comp['tiles'])}"]
+                if comp["shields"]:
+                    detail_parts.append(f"shields {comp['shields']}")
+                add_entry("city", points, winners, comp["nodes"], ", ".join(detail_parts))
+            city_id += 1
+
+    # Roads (incomplete only)
+    for key, tile in board.items():
+        x, y = _parse_coord(key)
+        tmpl = _get_template(tile["type"], tile["rotation"])
+        for idx in range(len(tmpl.road_segments)):
+            node = (x, y, idx)
+            if node in visited_roads:
+                continue
+            comp = _collect_feature(state, (x, y), "road", idx)
+            visited_roads.update(comp["nodes"])
+            if not comp["meeples"] or comp["open_edges"] == 0:
+                continue
+            winners = _collect_component_winners(comp["meeples"])
+            points = len(comp["tiles"])
+            detail = f"tiles {len(comp['tiles'])}, open {comp['open_edges']}"
+            add_entry("road", points, winners, comp["nodes"], detail)
+
+    # Monasteries (incomplete only)
+    for key, tile in board.items():
+        x, y = _parse_coord(key)
+        tmpl = _get_template(tile["type"], tile["rotation"])
+        if not tmpl.has_monastery:
+            continue
+        meeple = tile.get("meeple")
+        if not meeple or meeple.get("feature") != "monastery":
+            continue
+        count = _monastery_tile_count(state, (x, y))
+        if count >= 9:
+            continue
+        pid = meeple.get("player_id")
+        winners = [pid] if pid else []
+        detail = f"tiles {count}/9"
+        add_entry("monastery", count, winners, {(x, y, 0)}, detail)
+
+    # Fields (end-game scoring on current board)
+    for key, tile in board.items():
+        x, y = _parse_coord(key)
+        tmpl = _get_template(tile["type"], tile["rotation"])
+        for idx in range(len(tmpl.field_segments)):
+            node = (x, y, idx)
+            if node in visited_fields:
+                continue
+            comp = _collect_field(state, (x, y), idx, city_component_map)
+            visited_fields.update(comp["nodes"])
+            if not comp["meeples"]:
+                continue
+            winners = _collect_component_winners(comp["meeples"])
+            points = len(comp["adjacent_completed_cities"]) * 3
+            detail = f"cities {len(comp['adjacent_completed_cities'])}"
+            add_entry("field", points, winners, comp["nodes"], detail)
+
+    rows: List[List[str]] = []
+    for pid in order:
+        pdata = summary.get(pid, {})
+        base = pdata.get("base", 0)
+        potential = pdata.get("potential", 0)
+        total = base + potential
+        entries = pdata.get("entries", [])
+        if entries:
+            entries_html = "<div class=\"carc-summary-list\">" + "".join(
+                (
+                    "<div class=\"carc-summary-entry\">"
+                    f"<a href=\"#\" class=\"carc-summary-link\" data-hl-id=\"{esc(entry['id'], entry['id'])}\" "
+                    f"data-feature=\"{esc(entry['feature'], entry['feature'])}\" "
+                    f"data-nodes=\"{esc(_js_dump(entry['nodes']), '[]')}\">"
+                    f"{esc(entry['label'], entry['label'])}</a></div>"
+                )
+                for entry in entries
+            ) + "</div>"
+        else:
+            entries_html = '<span class="muted">-</span>'
+        rows.append(
+            [
+                _player_name_html(pid, player_meta, players),
+                esc(base, "0"),
+                esc(potential, "0"),
+                esc(total, "0"),
+                entries_html,
+            ]
+        )
+
+    note_html = "<div class=\"small\">Potential points assume end-game scoring for incomplete features.</div>"
+    if highlightable and highlight_hint:
+        note_html += "<div class=\"small muted\">Click a feature to highlight it on the replay board.</div>"
+    summary_html = note_html + render_table(
+        ["Player", "Score", "Incomplete Points", "Total", "Incomplete Features"],
+        rows,
+        empty_message="No scores",
+    )
+    return section("Score Summary", summary_html), highlightable
+
+
 def _render_board_grid(state: Dict, player_meta: Dict[str, Dict]) -> str:
     board = state.get("board", {})
     if not board:
@@ -1694,6 +1919,13 @@ def build_memories_html(state: Dict, room_id: Optional[str] = None) -> str:
         f'<div class="card">{esc(", ".join(winner_names) if winner_names else "-", "-")}</div>',
     )
 
+    tile_history = state.get("tile_history") if isinstance(state.get("tile_history"), list) else None
+    score_summary_section, score_summary_highlightable = _build_score_summary_section(
+        state,
+        player_meta,
+        bool(tile_history),
+    )
+
     board_section = section(
         "Board",
         "<details open><summary>Board Grid</summary>"
@@ -1722,7 +1954,6 @@ def build_memories_html(state: Dict, room_id: Optional[str] = None) -> str:
         ),
     )
 
-    tile_history = state.get("tile_history") if isinstance(state.get("tile_history"), list) else None
     replay_section = ""
     extra_script = ""
     if tile_history:
@@ -1757,8 +1988,8 @@ def build_memories_html(state: Dict, room_id: Optional[str] = None) -> str:
             ),
         )
         extra_script = (
-            f"const carcReplayHistory = {esc(json.dumps(tile_history), '[]')};\n"
-            f"const carcReplayImages = {esc(json.dumps(tile_images), '{}')};\n"
+            f"const carcReplayHistory = {_js_dump(tile_history)};\n"
+            f"const carcReplayImages = {_js_dump(tile_images)};\n"
             f"const carcReplayBounds = {{minX: {min_x}, maxX: {max_x}, minY: {min_y}, maxY: {max_y}}};\n"
             "const carcReplayBoard = document.getElementById('carcReplayBoard');\n"
             "const carcReplayPrev = document.getElementById('carcReplayPrev');\n"
@@ -1766,12 +1997,14 @@ def build_memories_html(state: Dict, room_id: Optional[str] = None) -> str:
             "const carcReplayStepLabel = document.getElementById('carcReplayStep');\n"
             "let carcReplayStep = 1;\n"
             "const carcReplayMax = carcReplayHistory.length;\n"
+            "let carcMemCellMap = new Map();\n"
             "function renderCarcReplay(){\n"
             "  if(!carcReplayBoard){return;}\n"
             "  const cols = carcReplayBounds.maxX - carcReplayBounds.minX + 1;\n"
             "  const rows = carcReplayBounds.maxY - carcReplayBounds.minY + 1;\n"
             "  carcReplayBoard.style.gridTemplateColumns = `repeat(${cols}, var(--carc-cell))`;\n"
             "  carcReplayBoard.innerHTML = '';\n"
+            "  carcMemCellMap = new Map();\n"
             "  const active = new Map();\n"
             "  for(let i=0;i<carcReplayStep && i<carcReplayHistory.length;i+=1){\n"
             "    const t=carcReplayHistory[i];\n"
@@ -1785,11 +2018,20 @@ def build_memories_html(state: Dict, room_id: Optional[str] = None) -> str:
             "      cell.className='carc-replay-cell';\n"
             "      const tile=active.get(`${x},${y}`);\n"
             "      if(tile){\n"
+            "        cell.classList.add('occupied');\n"
+            "        cell.dataset.worldX = `${x}`;\n"
+            "        cell.dataset.worldY = `${y}`;\n"
+            "        cell.dataset.tileType = tile.type || '';\n"
+            "        cell.dataset.rotation = `${tile.rotation||0}`;\n"
+            "        const tileEl=document.createElement('div');\n"
+            "        tileEl.className='carc-replay-tile';\n"
             "        const img=carcReplayImages[tile.type];\n"
             "        if(img){\n"
-            "          cell.style.backgroundImage=`url(${img})`;\n"
+            "          tileEl.style.backgroundImage=`url(${img})`;\n"
             "        }\n"
-            "        cell.style.transform=`rotate(${tile.rotation||0}deg)`;\n"
+            "        tileEl.style.transform=`rotate(${tile.rotation||0}deg)`;\n"
+            "        cell.appendChild(tileEl);\n"
+            "        carcMemCellMap.set(`${x},${y}`, cell);\n"
             "      } else {\n"
             "        cell.classList.add('empty');\n"
             "      }\n"
@@ -1806,6 +2048,174 @@ def build_memories_html(state: Dict, room_id: Optional[str] = None) -> str:
         )
     else:
         replay_section = section("Replay", '<div class="muted">Replay data not available for this game.</div>')
+
+    if score_summary_highlightable and tile_history:
+        template_payload = _js_dump(get_carcassonne_template_payload())
+        extra_script += (
+            "\n"
+            f"const carcMemTemplatePayload = {template_payload};\n"
+            "function carcMemDecodeMap(payload){\n"
+            "  if(!payload||typeof payload!=='string'){return null;}\n"
+            "  const binary=atob(payload);\n"
+            "  const bytes=new Uint8Array(binary.length);\n"
+            "  for(let i=0;i<binary.length;i+=1){bytes[i]=binary.charCodeAt(i);}\n"
+            "  return bytes;\n"
+            "}\n"
+            "function carcMemPrepareTemplates(data){\n"
+            "  if(!data||!data.tiles){return null;}\n"
+            "  const tiles=data.tiles;\n"
+            "  Object.keys(tiles).forEach((tileType)=>{\n"
+            "    const tile=tiles[tileType];\n"
+            "    tile._roadMap=carcMemDecodeMap(tile.road_map);\n"
+            "    tile._cityMap=carcMemDecodeMap(tile.city_map);\n"
+            "    tile._fieldMap=carcMemDecodeMap(tile.field_map);\n"
+            "    tile._monasteryMap=carcMemDecodeMap(tile.monastery_map);\n"
+            "  });\n"
+            "  return data;\n"
+            "}\n"
+            "const carcMemTemplateData = carcMemPrepareTemplates(carcMemTemplatePayload);\n"
+            "const carcMemSegmentCache = new Map();\n"
+            "function carcMemRotatePointToBase(x,y,rotation){\n"
+            "  let px=x; let py=y;\n"
+            "  const turns=((rotation%360)+360)%360/90;\n"
+            "  for(let i=0;i<turns;i+=1){const nx=py; const ny=1-px; px=nx; py=ny;}\n"
+            "  return {x:px, y:py};\n"
+            "}\n"
+            "function carcMemBuildSegmentMask(tileType, rotation, feature, segment){\n"
+            "  if(!carcMemTemplateData||!carcMemTemplateData.tiles){return null;}\n"
+            "  const tile=carcMemTemplateData.tiles[tileType];\n"
+            "  if(!tile){return null;}\n"
+            "  let sourceMap=null;\n"
+            "  if(feature==='road'){sourceMap=tile._roadMap;}\n"
+            "  else if(feature==='city'){sourceMap=tile._cityMap;}\n"
+            "  else if(feature==='field'){sourceMap=tile._fieldMap;}\n"
+            "  else if(feature==='monastery'){sourceMap=tile._monasteryMap; segment=0;}\n"
+            "  if(!sourceMap){return null;}\n"
+            "  const size=carcMemTemplateData.grid_size||100;\n"
+            "  const mask=new Uint8Array(size*size);\n"
+            "  const turns=((rotation%360)+360)%360;\n"
+            "  if(turns===0){\n"
+            "    for(let idx=0;idx<sourceMap.length;idx+=1){if(sourceMap[idx]===segment){mask[idx]=1;}}\n"
+            "    return mask;\n"
+            "  }\n"
+            "  for(let y=0;y<size;y+=1){\n"
+            "    for(let x=0;x<size;x+=1){\n"
+            "      const nx=(x+0.5)/size; const ny=(y+0.5)/size;\n"
+            "      const base=carcMemRotatePointToBase(nx, ny, rotation);\n"
+            "      const bx=Math.max(0, Math.min(size-1, Math.floor(base.x*size)));\n"
+            "      const by=Math.max(0, Math.min(size-1, Math.floor(base.y*size)));\n"
+            "      const bidx=by*size+bx;\n"
+            "      if(sourceMap[bidx]===segment){mask[y*size+x]=1;}\n"
+            "    }\n"
+            "  }\n"
+            "  return mask;\n"
+            "}\n"
+            "function carcMemGetSegmentImage(tileType, rotation, feature, segment){\n"
+            "  const key=`${tileType}:${rotation}:${feature}:${segment}`;\n"
+            "  if(carcMemSegmentCache.has(key)){return carcMemSegmentCache.get(key);}\n"
+            "  const mask=carcMemBuildSegmentMask(tileType, rotation, feature, segment);\n"
+            "  if(!mask||!carcMemTemplateData){return null;}\n"
+            "  const size=carcMemTemplateData.grid_size||100;\n"
+            "  const canvas=document.createElement('canvas');\n"
+            "  canvas.width=size; canvas.height=size;\n"
+            "  const ctx=canvas.getContext('2d');\n"
+            "  if(!ctx){return null;}\n"
+            "  ctx.imageSmoothingEnabled=false;\n"
+            "  let fill='rgba(14, 116, 144, 0.18)';\n"
+            "  let stroke='rgba(14, 116, 144, 0.9)';\n"
+            "  if(feature==='road'){fill='rgba(217, 119, 6, 0.22)'; stroke='rgba(217, 119, 6, 0.95)';}\n"
+            "  else if(feature==='city'){fill='rgba(71, 85, 105, 0.25)'; stroke='rgba(71, 85, 105, 0.95)';}\n"
+            "  else if(feature==='field'){fill='rgba(34, 197, 94, 0.2)'; stroke='rgba(34, 197, 94, 0.95)';}\n"
+            "  ctx.fillStyle=fill;\n"
+            "  for(let y=0;y<size;y+=1){\n"
+            "    const rowStart=y*size;\n"
+            "    for(let x=0;x<size;x+=1){if(mask[rowStart+x]){ctx.fillRect(x,y,1,1);}}\n"
+            "  }\n"
+            "  ctx.fillStyle=stroke;\n"
+            "  const thickness=4;\n"
+            "  const radius=Math.floor(thickness/2);\n"
+            "  for(let y=0;y<size;y+=1){\n"
+            "    for(let x=0;x<size;x+=1){\n"
+            "      const idx=y*size+x;\n"
+            "      if(!mask[idx]){continue;}\n"
+            "      const north=y===0?0:mask[idx-size];\n"
+            "      const south=y===size-1?0:mask[idx+size];\n"
+            "      const west=x===0?0:mask[idx-1];\n"
+            "      const east=x===size-1?0:mask[idx+1];\n"
+            "      if(north&&south&&west&&east){continue;}\n"
+            "      for(let dy=-radius;dy<=radius;dy+=1){\n"
+            "        const ny=y+dy; if(ny<0||ny>=size){continue;}\n"
+            "        for(let dx=-radius;dx<=radius;dx+=1){\n"
+            "          const nx=x+dx; if(nx<0||nx>=size){continue;}\n"
+            "          ctx.fillRect(nx, ny, 1, 1);\n"
+            "        }\n"
+            "      }\n"
+            "    }\n"
+            "  }\n"
+            "  const url=canvas.toDataURL('image/png');\n"
+            "  carcMemSegmentCache.set(key, url);\n"
+            "  return url;\n"
+            "}\n"
+            "(function(){\n"
+            "  const board=document.getElementById('carcReplayBoard');\n"
+            "  if(!board||!carcMemTemplateData){return;}\n"
+            "  let activeLink=null;\n"
+            "  let activeId=null;\n"
+            "  let highlighted=new Set();\n"
+            "  function clearHighlight(){\n"
+            "    highlighted.forEach((key)=>{\n"
+            "      const cell=carcMemCellMap.get(key);\n"
+            "      if(!cell){return;}\n"
+            "      cell.classList.remove('carc-mem-highlighted');\n"
+            "      cell.querySelectorAll('.carc-highlight-shape').forEach((el)=>el.remove());\n"
+            "    });\n"
+            "    highlighted.clear();\n"
+            "    if(activeLink){activeLink.classList.remove('active');}\n"
+            "    activeLink=null; activeId=null;\n"
+            "  }\n"
+            "  function applyHighlight(feature, nodes){\n"
+            "    if(!nodes||!Array.isArray(nodes)){return;}\n"
+            "    const next=new Set();\n"
+            "    nodes.forEach((entry)=>{\n"
+            "      if(!entry||!Number.isInteger(entry.x)||!Number.isInteger(entry.y)){return;}\n"
+            "      const key=`${entry.x},${entry.y}`;\n"
+            "      const cell=carcMemCellMap.get(key);\n"
+            "      if(!cell){return;}\n"
+            "      const tileType=cell.dataset.tileType;\n"
+            "      const rotation=Number(cell.dataset.rotation||0);\n"
+            "      const segments=Array.isArray(entry.segments)?entry.segments:[];\n"
+            "      segments.forEach((seg)=>{\n"
+            "        const image=carcMemGetSegmentImage(tileType, rotation, feature, seg);\n"
+            "        if(!image){return;}\n"
+            "        const overlay=document.createElement('div');\n"
+            "        overlay.className='carc-highlight-shape carc-selected-shape';\n"
+            "        overlay.style.backgroundImage=`url(${image})`;\n"
+            "        cell.appendChild(overlay);\n"
+            "      });\n"
+            "      cell.classList.add('carc-mem-highlighted');\n"
+            "      next.add(key);\n"
+            "    });\n"
+            "    highlighted = next;\n"
+            "  }\n"
+            "  document.querySelectorAll('.carc-summary-link').forEach((link)=>{\n"
+            "    link.addEventListener('click', (event)=>{\n"
+            "      event.preventDefault();\n"
+            "      const linkId=link.dataset.hlId||'';\n"
+            "      if(activeId===linkId){clearHighlight(); return;}\n"
+            "      const feature=link.dataset.feature||'';\n"
+            "      let nodes=[];\n"
+            "      try{nodes=JSON.parse(link.dataset.nodes||'[]');}catch(err){nodes=[];}\n"
+            "      if(typeof carcReplayMax==='number'){\n"
+            "        carcReplayStep = carcReplayMax;\n"
+            "        renderCarcReplay();\n"
+            "      }\n"
+            "      clearHighlight();\n"
+            "      applyHighlight(feature, nodes);\n"
+            "      activeId=linkId; activeLink=link; link.classList.add('active');\n"
+            "    });\n"
+            "  });\n"
+            "})();\n"
+        )
 
     extra_style = """
 .carc-board-grid {
@@ -1858,18 +2268,80 @@ details summary {
 .carc-replay-cell {
   width: var(--carc-cell);
   height: var(--carc-cell);
+  border-radius: 4px;
+  background: #f8fafc;
+  position: relative;
+  overflow: hidden;
+}
+.carc-replay-cell.occupied {
+  background: #e2e8f0;
+}
+.carc-replay-tile {
+  width: 100%;
+  height: 100%;
   background-size: cover;
   background-position: center;
-  border-radius: 4px;
-  background-color: #f8fafc;
+  transform-origin: center;
 }
 .carc-replay-cell.empty {
   background-color: #f8fafc;
   border: 1px dashed #cbd5e1;
 }
+.carc-highlight-shape {
+  position: absolute;
+  inset: 0;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  filter: drop-shadow(0 0 4px rgba(15, 23, 42, 0.35));
+}
+.carc-highlight-shape.carc-selected-shape {
+  opacity: 0.95;
+  filter: drop-shadow(0 0 6px rgba(15, 23, 42, 0.45));
+}
+.carc-mem-highlighted {
+  outline: 2px solid rgba(29, 78, 216, 0.6);
+  outline-offset: -2px;
+}
+.carc-summary-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.carc-summary-entry {
+  margin: 0;
+}
+.carc-summary-link {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  color: #1e3a8a;
+  text-decoration: none;
+  font-size: 0.85em;
+}
+.carc-summary-link:hover {
+  background: #e0e7ff;
+}
+.carc-summary-link.active {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #ffffff;
+}
 """
 
-    body = "\n".join(header) + players_section + summary_section + winner_section + replay_section + board_section + tiles_section
+    body = (
+        "\n".join(header)
+        + players_section
+        + summary_section
+        + winner_section
+        + replay_section
+        + board_section
+        + tiles_section
+        + score_summary_section
+    )
     return build_html_document(f"{game_id} Memories", body, extra_style=extra_style, extra_script=extra_script)
 
 
