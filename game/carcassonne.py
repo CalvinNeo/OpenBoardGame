@@ -708,7 +708,7 @@ def _root_dir() -> Path:
 
 
 def _tile_svg_path(tile_type: str) -> Path:
-    return _root_dir() / "designs" / "task36_tiles_svg" / f"{tile_type}.svg"
+    return _root_dir() / "assets" / "task36_tiles_svg" / f"{tile_type}.svg"
 
 
 def _load_manifest() -> List[Dict[str, str]]:
@@ -724,7 +724,7 @@ def _load_manifest() -> List[Dict[str, str]]:
 
 
 def _load_templates() -> Dict[str, TileTemplate]:
-    svg_dir = _root_dir() / "designs" / "task36_tiles_svg"
+    svg_dir = _root_dir() / "assets" / "task36_tiles_svg"
     templates: Dict[str, TileTemplate] = {}
     for svg_path in svg_dir.glob("*.svg"):
         tile_type = svg_path.stem

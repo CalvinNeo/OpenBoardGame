@@ -31,7 +31,7 @@ os.makedirs(CYBER_PICTURES_DIR, exist_ok=True)
 fastapi_app.mount("/static/cards", StaticFiles(directory=CYBER_PICTURES_DIR), name="cyber_pictures")
 fastapi_app.mount(
     "/static/carcassonne",
-    StaticFiles(directory="designs/task36_tiles_svg"),
+    StaticFiles(directory="assets/task36_tiles_svg"),
     name="carcassonne_tiles",
 )
 fastapi_app.mount("/static", StaticFiles(directory="static"), name="static")
