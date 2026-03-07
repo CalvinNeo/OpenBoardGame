@@ -235,21 +235,40 @@ class FangNiaoGame:
             state["players"][player_id]["hand"] = [card for card in hand if card != bird_type]
 
             row = state["rows"][row_index]
-            other_end = None
+            match_index = -1
             if row:
-                other_end = row[-1] if side == "left" else row[0]
+                if side == "left":
+                    for idx, card in enumerate(row):
+                        if card == bird_type:
+                            match_index = idx
+                            break
+                else:
+                    for idx in range(len(row) - 1, -1, -1):
+                        if row[idx] == bird_type:
+                            match_index = idx
+                            break
 
             captured_cards: List[str] = []
-            if other_end == bird_type and row:
-                captured_cards = [card for card in row if card != bird_type]
+            if match_index >= 0:
+                if side == "left":
+                    captured_cards = row[:match_index]
+                    if captured_cards:
+                        row = cards_to_play + row[match_index:]
+                    else:
+                        row = cards_to_play + row
+                else:
+                    captured_cards = row[match_index + 1 :]
+                    if captured_cards:
+                        row = row[: match_index + 1] + cards_to_play
+                    else:
+                        row = row + cards_to_play
+            else:
+                row = cards_to_play + row if side == "left" else row + cards_to_play
 
             drew = 0
             if captured_cards:
                 state["players"][player_id]["hand"].extend(captured_cards)
-                remaining = [card for card in row if card == bird_type]
-                row = remaining + cards_to_play
             else:
-                row = cards_to_play + row if side == "left" else row + cards_to_play
                 drew = _deal_cards(state, player_id, 2)
 
             state["rows"][row_index] = row

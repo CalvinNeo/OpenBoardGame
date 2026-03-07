@@ -63,13 +63,13 @@
 
 1.  **选择位置**：玩家选择场地中的 **某一行**，并将牌放在该行的 **左侧** 或 **右侧**。
 2.  **判定夹击 (Surround & Capture)**：
-    * 检查放置位置的 **另一端** 的鸟类种类。
+    * 从放置的一端**向内扫描**，找到该行内**第一张**与刚打出的鸟类**相同**的牌（若存在）。这个“第一张同类鸟”就是夹击的匹配点，**不是整行的最边缘**。
     * **情况 1：触发夹击 (Match Found)**
-        * 如果刚打出的鸟类与该行另一端的鸟类 **相同**。
-        * **执行捕获**：玩家拿走这两组同类鸟之间 **所有** 的卡牌（即被夹在中间的牌），放入自己的 **手牌**。
-        * **并入**：将刚才打出的牌与另一端同类的牌合并，留在该行中（如果行空了，可能触发补牌，但在CuBirds中，留下的牌通常就构成了新的一行）。
+        * 若找到第一张同类鸟，则**执行捕获**：玩家拿走“新打出的牌”与“该同类鸟”之间 **所有** 的卡牌（即**最小区间**，不包含该同类鸟本身），放入自己的 **手牌**。
+        * 若两者之间**没有牌**（相邻或紧贴），则视为**未触发夹击**（进入情况 2 的流程）。
+        * **并入**：将刚才打出的牌与该同类鸟相邻并合并为同一块；该同类鸟**内侧及其之后的牌**保持原顺序留在该行中。
     * **情况 2：未触发夹击 (No Match)**
-        * 如果刚打出的鸟类与另一端的鸟类 **不同**。
+        * 如果从放置侧向内**找不到同类鸟**，或“相邻导致中间无牌可拿”。
         * 玩家将这些牌留在那一端。
         * **强制抽牌**：玩家必须选择从牌库顶摸 **2 张** 卡牌加入手牌（若牌库不足，有多少摸多少）。
 
@@ -162,50 +162,55 @@ function playCards(player, birdType, rowIndex, side) {
     const row = rows[rowIndex];
     
     // 3. Check Surround Logic
-    let captured = false;
-    let targetBirdType = null;
-    
-    // 获取该行另一端的鸟
+    let matchIndex = -1;
+
+    // 从放置侧向内找到第一张同类鸟
     if (row.cards.length > 0) {
         if (side === 'LEFT') {
-            targetBirdType = row.cards[row.cards.length - 1].type; // Right end
+            matchIndex = row.cards.findIndex(c => c.type === birdType);
         } else {
-            targetBirdType = row.cards[0].type; // Left end
+            for (let i = row.cards.length - 1; i >= 0; i -= 1) {
+                if (row.cards[i].type === birdType) {
+                    matchIndex = i;
+                    break;
+                }
+            }
         }
     }
 
-    // Determine Capture
-    if (targetBirdType === birdType) {
-        captured = true;
-        // Logic: Take all cards *between* the new cards and the matching end
-        // Since we are sandwiching, we take everything currently in the row
-        // And place the newly played cards + the matching end card(s) back?
-        // NO, the rule is: Take cards strictly BETWEEN the matching species.
-        
-        // Correct Algorithm:
-        // 1. Identify the block of matching birds at the far end.
-        // 2. Player takes all cards that are NOT that matching species.
-        // 3. The newly played cards join the matching species at the far end.
-        
-        const collectedCards = row.cards.filter(c => c.type !== birdType);
-        player.hand.push(...collectedCards);
-        
-        // Row now consists of: Only the matching birds (original + new)
-        // Note: In CuBirds, usually the enclosed cards are taken, 
-        // and the surrounding birds merge.
-        // Simplified: Clear row, put back (Old Matching + New Playing).
-        const oldMatching = row.cards.filter(c => c.type === birdType);
-        row.cards = [...oldMatching, ...cardsToPlay]; 
-        
+    // Determine Capture (smallest interval)
+    if (matchIndex >= 0) {
+        let capturedCards = [];
+        if (side === 'LEFT') {
+            capturedCards = row.cards.slice(0, matchIndex);
+            if (capturedCards.length > 0) {
+                player.hand.push(...capturedCards);
+                row.cards = [...cardsToPlay, ...row.cards.slice(matchIndex)];
+            }
+        } else {
+            capturedCards = row.cards.slice(matchIndex + 1);
+            if (capturedCards.length > 0) {
+                player.hand.push(...capturedCards);
+                row.cards = [...row.cards.slice(0, matchIndex + 1), ...cardsToPlay];
+            }
+        }
+
+        if (capturedCards.length === 0) {
+            // No Capture (adjacent or no cards in between)
+            if (side === 'LEFT') {
+                row.cards.unshift(...cardsToPlay);
+            } else {
+                row.cards.push(...cardsToPlay);
+            }
+            drawCardsFromDeck(player, 2);
+        }
     } else {
-        // No Capture
+        // No Capture (no matching bird found)
         if (side === 'LEFT') {
             row.cards.unshift(...cardsToPlay);
         } else {
             row.cards.push(...cardsToPlay);
         }
-        
-        // Penalty Draw
         drawCardsFromDeck(player, 2);
     }
     

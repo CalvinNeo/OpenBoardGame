@@ -13324,13 +13324,26 @@ function renderFangNiaoRows(view) {
       isSelectedRow && !!fangNiaoSelectedBird && (fangNiaoSelectedSide === "left" || fangNiaoSelectedSide === "right");
     const captureIndices = [];
     if (hasPreview && Array.isArray(row) && row.length) {
-      const otherEnd = fangNiaoSelectedSide === "left" ? row[row.length - 1] : row[0];
-      if (otherEnd === fangNiaoSelectedBird) {
-        row.forEach((birdType, cardIndex) => {
-          if (birdType !== fangNiaoSelectedBird) {
-            captureIndices.push(cardIndex);
+      let matchIndex = -1;
+      if (fangNiaoSelectedSide === "left") {
+        matchIndex = row.findIndex((birdType) => birdType === fangNiaoSelectedBird);
+        if (matchIndex > 0) {
+          for (let i = 0; i < matchIndex; i += 1) {
+            captureIndices.push(i);
           }
-        });
+        }
+      } else if (fangNiaoSelectedSide === "right") {
+        for (let i = row.length - 1; i >= 0; i -= 1) {
+          if (row[i] === fangNiaoSelectedBird) {
+            matchIndex = i;
+            break;
+          }
+        }
+        if (matchIndex >= 0 && matchIndex < row.length - 1) {
+          for (let i = matchIndex + 1; i < row.length; i += 1) {
+            captureIndices.push(i);
+          }
+        }
       }
     }
 
