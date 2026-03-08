@@ -105,6 +105,24 @@ def _refill_row_until_different(state: Dict, row_index: int) -> None:
     state["rows"][row_index] = row
 
 
+def _refill_row_if_single_type(state: Dict, row_index: int) -> None:
+    row = list(state["rows"][row_index])
+    if not row:
+        _refill_row_until_different(state, row_index)
+        return
+    first_type = row[0]
+    if any(card != first_type for card in row):
+        return
+    while True:
+        card = _draw_card(state)
+        if card is None:
+            break
+        row.append(card)
+        if card != first_type:
+            break
+    state["rows"][row_index] = row
+
+
 def _next_player(state: Dict, current_id: Optional[str]) -> Optional[str]:
     order = state["turn_order"]
     if not order:
@@ -274,6 +292,8 @@ class FangNiaoGame:
             state["rows"][row_index] = row
             if not row:
                 _refill_row_until_different(state, row_index)
+            elif captured_cards:
+                _refill_row_if_single_type(state, row_index)
 
             state["phase"] = "bank"
             state["last_action"] = _format_last_action(
