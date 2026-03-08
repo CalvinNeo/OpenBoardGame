@@ -1250,11 +1250,15 @@ input, select {
   background: var(--piece-color, #111827);
 }
 
+.project-l-card-image-wrap {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
 .project-l-card-image {
-  width: 60px;
-  height: 60px;
   image-rendering: pixelated;
-  align-self: flex-start;
+  display: block;
 }
 
 .project-l-mini-grid {

@@ -12919,12 +12919,18 @@ function buildProjectLCard(cardDef) {
   reward.textContent = `Reward: ${cardDef.reward_piece_id}`;
   card.appendChild(reward);
 
+  const imageWrap = document.createElement("div");
+  imageWrap.className = "project-l-card-image-wrap";
   const image = document.createElement("img");
   image.className = "project-l-card-image";
   const cardId = String(cardDef.id).padStart(2, "0");
   image.src = `/static/project_l/project_l_puzzles_svg/card_${cardId}.svg`;
   image.alt = `Puzzle ${cardDef.id}`;
-  card.appendChild(image);
+  const cellSize = 12;
+  image.style.width = `${cardDef.width * cellSize}px`;
+  image.style.height = `${cardDef.height * cellSize}px`;
+  imageWrap.appendChild(image);
+  card.appendChild(imageWrap);
   return card;
 }
 
