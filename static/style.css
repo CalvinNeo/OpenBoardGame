@@ -1437,7 +1437,7 @@ input, select {
 
 .project-l-queue-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 6px;
   border: 1px dashed #d1d5db;
@@ -1445,6 +1445,13 @@ input, select {
   padding: 4px 6px;
   font-size: 12px;
   color: #374151;
+}
+
+.project-l-queue-item > div {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .project-l-queue-remove {
@@ -1462,6 +1469,60 @@ input, select {
 
   .project-l-puzzle-grid {
     --project-l-cell: 20px;
+  }
+
+  #projectLPanel .row {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+
+  #projectLPanel .row > div {
+    flex: 1 1 calc(50% - 6px);
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 4px 6px;
+    font-size: 12px;
+  }
+
+  #projectLPanel .row > div span {
+    font-weight: 600;
+    color: #111827;
+  }
+
+  #projectLPanel .row.actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  #projectLPanel .row.actions button {
+    width: 100%;
+    margin-right: 0;
+  }
+
+  #projectLPanel .project-l-market-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #projectLPanel .project-l-card {
+    min-height: 0;
+    padding: 6px;
+  }
+
+  #projectLPanel .project-l-inventory {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #projectLPanel .project-l-piece {
+    min-width: 0;
+  }
+
+  #projectLPanel .project-l-upgrade-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

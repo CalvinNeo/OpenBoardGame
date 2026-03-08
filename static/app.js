@@ -1110,7 +1110,6 @@ const projectLActivePuzzles = document.getElementById("projectLActivePuzzles");
 const projectLCompletedPuzzles = document.getElementById("projectLCompletedPuzzles");
 const projectLInventory = document.getElementById("projectLInventory");
 const projectLUpgradeFromSelect = document.getElementById("projectLUpgradeFrom");
-const projectLUpgradeToSelect = document.getElementById("projectLUpgradeTo");
 const projectLUpgradeBtn = document.getElementById("projectLUpgradeBtn");
 const projectLPlaceBtn = document.getElementById("projectLPlaceBtn");
 const projectLQueueMasterBtn = document.getElementById("projectLQueueMasterBtn");
@@ -4233,9 +4232,6 @@ function clearProjectLState() {
   }
   if (projectLUpgradeFromSelect) {
     projectLUpgradeFromSelect.innerHTML = "";
-  }
-  if (projectLUpgradeToSelect) {
-    projectLUpgradeToSelect.innerHTML = "";
   }
   if (projectLMasterQueue) {
     projectLMasterQueue.innerHTML = "";
