@@ -125,6 +125,7 @@
                     <option value="point_salad">Point Salad</option>
                     <option value="trekking_history">Trekking through History</option>
                     <option value="abraca_what">Abraca What</option>
+                    <option value="project_l">Project L</option>
                     <option value="carcassonne">Carcassonne</option>
                     
                     <option value="fang_niao">Square Bird</option>
@@ -1693,6 +1694,88 @@
                 <div>
                   <h3>Players</h3>
                   <div id="blokusPlayers"></div>
+                </div>
+              </div>
+            </div>
+
+            <div id="projectLPanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="projectLPhase">-</span></div>
+                <div>AP: <span id="projectLAp">-</span></div>
+                <div>Current Turn: <span id="projectLTurn">-</span></div>
+                <div>Master Used: <span id="projectLMasterUsed">-</span></div>
+              </div>
+              <div class="row">
+                <div>White Deck: <span id="projectLWhiteRemaining">-</span></div>
+                <div>Black Deck: <span id="projectLBlackRemaining">-</span></div>
+                <div>End Triggered: <span id="projectLEndTriggered">-</span></div>
+                <div>Winner: <span id="projectLWinner">-</span></div>
+              </div>
+              <div class="row">
+                <div>Selected Market: <span id="projectLSelectedMarket">-</span></div>
+                <div>Selected Puzzle: <span id="projectLSelectedPuzzle">-</span></div>
+                <div>Selected Piece: <span id="projectLSelectedPiece">-</span></div>
+                <div>Origin: <span id="projectLSelectedOrigin">-</span></div>
+                <div>Rotation: <span id="projectLSelectedRotation">0</span></div>
+                <div>Flip: <span id="projectLSelectedFlip">No</span></div>
+              </div>
+              <div class="row actions">
+                <button id="projectLRotateLeftBtn">Rotate Left</button>
+                <button id="projectLRotateRightBtn">Rotate Right</button>
+                <button id="projectLFlipBtn">Flip</button>
+                <button id="projectLClearSelectionBtn">Clear Selection</button>
+              </div>
+
+              <div class="project-l-layout">
+                <div>
+                  <h3>Market</h3>
+                  <div class="project-l-market-section">
+                    <div class="project-l-market-title">White Market</div>
+                    <div id="projectLMarketWhite" class="project-l-market-grid"></div>
+                  </div>
+                  <div class="project-l-market-section">
+                    <div class="project-l-market-title">Black Market</div>
+                    <div id="projectLMarketBlack" class="project-l-market-grid"></div>
+                  </div>
+                  <div class="row actions">
+                    <button id="projectLTakeMarketBtn">Take Selected Market</button>
+                    <button id="projectLDrawWhiteBtn">Draw White Deck</button>
+                    <button id="projectLDrawBlackBtn">Draw Black Deck</button>
+                    <button id="projectLTakeLevel1Btn">Take Level 1</button>
+                  </div>
+                </div>
+                <div>
+                  <h3>Active Puzzles</h3>
+                  <div id="projectLActivePuzzles" class="project-l-puzzle-list"></div>
+                  <h3>Completed</h3>
+                  <div id="projectLCompletedPuzzles" class="project-l-completed"></div>
+                </div>
+                <div>
+                  <h3>Inventory</h3>
+                  <div id="projectLInventory" class="project-l-inventory"></div>
+                  <h3>Upgrade</h3>
+                  <div class="row">
+                    <label for="projectLUpgradeFrom">From</label>
+                    <select id="projectLUpgradeFrom"></select>
+                    <label for="projectLUpgradeTo">To</label>
+                    <select id="projectLUpgradeTo"></select>
+                    <button id="projectLUpgradeBtn">Upgrade</button>
+                  </div>
+                  <h3>Placement</h3>
+                  <div class="row actions">
+                    <button id="projectLPlaceBtn">Place Piece</button>
+                    <button id="projectLQueueMasterBtn">Queue Master</button>
+                    <button id="projectLClearMasterBtn">Clear Queue</button>
+                    <button id="projectLUseMasterBtn">Use Master</button>
+                  </div>
+                  <div id="projectLMasterQueue" class="project-l-master-queue"></div>
+                  <h3>Finishing</h3>
+                  <div class="row actions">
+                    <button id="projectLFinishingPlaceBtn">Finishing Place</button>
+                    <button id="projectLFinishingDoneBtn">Finish</button>
+                  </div>
+                  <h3>Players</h3>
+                  <div id="projectLPlayers"></div>
                 </div>
               </div>
             </div>

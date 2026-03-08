@@ -21,7 +21,8 @@
       ]
     ],
     "reward_piece_id": "L2_I",
-    "points": 2
+    "points": 2,
+    "deck_type": "white"
   },
   {
     "id": 2,
@@ -50,7 +51,8 @@
       ]
     ],
     "reward_piece_id": "L3_V",
-    "points": 2
+    "points": 2,
+    "deck_type": "white"
   },
   {
     "id": 3,
@@ -74,7 +76,8 @@
       ]
     ],
     "reward_piece_id": "L3_I",
-    "points": 2
+    "points": 2,
+    "deck_type": "white"
   },
   {
     "id": 4,
@@ -103,7 +106,8 @@
       ]
     ],
     "reward_piece_id": "L4_Z",
-    "points": 2
+    "points": 2,
+    "deck_type": "white"
   },
   {
     "id": 5,
@@ -132,7 +136,8 @@
       ]
     ],
     "reward_piece_id": "L4_I",
-    "points": 2
+    "points": 2,
+    "deck_type": "white"
   },
   {
     "id": 6,
@@ -161,7 +166,8 @@
       ]
     ],
     "reward_piece_id": "L4_L",
-    "points": 2
+    "points": 2,
+    "deck_type": "white"
   },
   {
     "id": 7,
@@ -184,7 +190,8 @@
       ]
     ],
     "reward_piece_id": "L4_O",
-    "points": 2
+    "points": 2,
+    "deck_type": "white"
   },
   {
     "id": 8,
@@ -211,7 +218,8 @@
       ]
     ],
     "reward_piece_id": "L4_T",
-    "points": 2
+    "points": 2,
+    "deck_type": "white"
   },
   {
     "id": 9,
@@ -226,7 +234,8 @@
       ]
     ],
     "reward_piece_id": "L1_I",
-    "points": 1
+    "points": 1,
+    "deck_type": "white"
   },
   {
     "id": 10,
@@ -244,7 +253,8 @@
       ]
     ],
     "reward_piece_id": "L2_I",
-    "points": 1
+    "points": 1,
+    "deck_type": "white"
   },
   {
     "id": 11,
@@ -261,7 +271,8 @@
       ]
     ],
     "reward_piece_id": "L2_I",
-    "points": 1
+    "points": 1,
+    "deck_type": "white"
   },
   {
     "id": 12,
@@ -280,7 +291,8 @@
       ]
     ],
     "reward_piece_id": "L2_I",
-    "points": 1
+    "points": 1,
+    "deck_type": "white"
   },
   {
     "id": 13,
@@ -304,7 +316,8 @@
       ]
     ],
     "reward_piece_id": "L3_V",
-    "points": 1
+    "points": 1,
+    "deck_type": "white"
   },
   {
     "id": 14,
@@ -323,7 +336,8 @@
       ]
     ],
     "reward_piece_id": "L3_V",
-    "points": 1
+    "points": 1,
+    "deck_type": "white"
   },
   {
     "id": 15,
@@ -339,7 +353,8 @@
       ]
     ],
     "reward_piece_id": "L3_I",
-    "points": 1
+    "points": 1,
+    "deck_type": "white"
   },
   {
     "id": 16,
@@ -358,7 +373,8 @@
       ]
     ],
     "reward_piece_id": "L3_I",
-    "points": 1
+    "points": 1,
+    "deck_type": "white"
   },
   {
     "id": 17,
@@ -379,7 +395,8 @@
       ]
     ],
     "reward_piece_id": "L4_Z",
-    "points": 1
+    "points": 1,
+    "deck_type": "white"
   },
   {
     "id": 18,
@@ -403,7 +420,8 @@
       ]
     ],
     "reward_piece_id": "L4_I",
-    "points": 1
+    "points": 1,
+    "deck_type": "white"
   },
   {
     "id": 19,
@@ -427,7 +445,8 @@
       ]
     ],
     "reward_piece_id": "L4_L",
-    "points": 1
+    "points": 1,
+    "deck_type": "white"
   },
   {
     "id": 20,
@@ -456,7 +475,8 @@
       ]
     ],
     "reward_piece_id": "L4_O",
-    "points": 1
+    "points": 1,
+    "deck_type": "white"
   },
   {
     "id": 21,
@@ -480,7 +500,8 @@
       ]
     ],
     "reward_piece_id": "L4_T",
-    "points": 1
+    "points": 1,
+    "deck_type": "white"
   },
   {
     "id": 22,
@@ -495,7 +516,8 @@
       ]
     ],
     "reward_piece_id": "L2_I",
-    "points": 0
+    "points": 0,
+    "deck_type": "white"
   },
   {
     "id": 23,
@@ -510,7 +532,8 @@
       ]
     ],
     "reward_piece_id": "L2_I",
-    "points": 0
+    "points": 0,
+    "deck_type": "white"
   },
   {
     "id": 24,
@@ -527,7 +550,8 @@
       ]
     ],
     "reward_piece_id": "L3_V",
-    "points": 0
+    "points": 0,
+    "deck_type": "white"
   },
   {
     "id": 25,
@@ -545,7 +569,8 @@
       ]
     ],
     "reward_piece_id": "L3_V",
-    "points": 1
+    "points": 1,
+    "deck_type": "white"
   },
   {
     "id": 26,
@@ -562,7 +587,8 @@
       ]
     ],
     "reward_piece_id": "L3_I",
-    "points": 0
+    "points": 0,
+    "deck_type": "white"
   },
   {
     "id": 27,
@@ -576,7 +602,8 @@
       ]
     ],
     "reward_piece_id": "L3_I",
-    "points": 1
+    "points": 1,
+    "deck_type": "white"
   },
   {
     "id": 28,
@@ -595,7 +622,8 @@
       ]
     ],
     "reward_piece_id": "L4_Z",
-    "points": 1
+    "points": 1,
+    "deck_type": "white"
   },
   {
     "id": 29,
@@ -616,7 +644,8 @@
       ]
     ],
     "reward_piece_id": "L2_I",
-    "points": 0
+    "points": 0,
+    "deck_type": "white"
   },
   {
     "id": 30,
@@ -637,7 +666,8 @@
       ]
     ],
     "reward_piece_id": "L1_I",
-    "points": 0
+    "points": 0,
+    "deck_type": "white"
   },
   {
     "id": 31,
@@ -654,7 +684,8 @@
       ]
     ],
     "reward_piece_id": "L2_I",
-    "points": 0
+    "points": 0,
+    "deck_type": "white"
   },
   {
     "id": 32,
@@ -673,7 +704,8 @@
       ]
     ],
     "reward_piece_id": "L1_I",
-    "points": 0
+    "points": 0,
+    "deck_type": "white"
   },
   {
     "id": 33,
@@ -717,7 +749,8 @@
       ]
     ],
     "reward_piece_id": "L1_I",
-    "points": 5
+    "points": 5,
+    "deck_type": "black"
   },
   {
     "id": 34,
@@ -754,7 +787,8 @@
       ]
     ],
     "reward_piece_id": "L1_I",
-    "points": 5
+    "points": 5,
+    "deck_type": "black"
   },
   {
     "id": 35,
@@ -791,7 +825,8 @@
       ]
     ],
     "reward_piece_id": "L1_I",
-    "points": 5
+    "points": 5,
+    "deck_type": "black"
   },
   {
     "id": 36,
@@ -828,7 +863,8 @@
       ]
     ],
     "reward_piece_id": "L1_I",
-    "points": 5
+    "points": 5,
+    "deck_type": "black"
   },
   {
     "id": 37,
@@ -865,7 +901,8 @@
       ]
     ],
     "reward_piece_id": "L1_I",
-    "points": 5
+    "points": 5,
+    "deck_type": "black"
   },
   {
     "id": 38,
@@ -899,7 +936,8 @@
       ]
     ],
     "reward_piece_id": "L1_I",
-    "points": 4
+    "points": 4,
+    "deck_type": "black"
   },
   {
     "id": 39,
@@ -936,7 +974,8 @@
       ]
     ],
     "reward_piece_id": "L2_I",
-    "points": 4
+    "points": 4,
+    "deck_type": "black"
   },
   {
     "id": 40,
@@ -973,7 +1012,8 @@
       ]
     ],
     "reward_piece_id": "L2_I",
-    "points": 4
+    "points": 4,
+    "deck_type": "black"
   },
   {
     "id": 41,
@@ -1003,7 +1043,8 @@
       ]
     ],
     "reward_piece_id": "L2_I",
-    "points": 4
+    "points": 4,
+    "deck_type": "black"
   },
   {
     "id": 42,
@@ -1047,7 +1088,8 @@
       ]
     ],
     "reward_piece_id": "L2_I",
-    "points": 4
+    "points": 4,
+    "deck_type": "black"
   },
   {
     "id": 43,
@@ -1084,7 +1126,8 @@
       ]
     ],
     "reward_piece_id": "L3_I",
-    "points": 4
+    "points": 4,
+    "deck_type": "black"
   },
   {
     "id": 44,
@@ -1121,7 +1164,8 @@
       ]
     ],
     "reward_piece_id": "L3_I",
-    "points": 4
+    "points": 4,
+    "deck_type": "black"
   },
   {
     "id": 45,
@@ -1144,7 +1188,8 @@
       ]
     ],
     "reward_piece_id": "L2_I",
-    "points": 3
+    "points": 3,
+    "deck_type": "black"
   },
   {
     "id": 46,
@@ -1171,7 +1216,8 @@
       ]
     ],
     "reward_piece_id": "L3_V",
-    "points": 3
+    "points": 3,
+    "deck_type": "black"
   },
   {
     "id": 47,
@@ -1200,7 +1246,8 @@
       ]
     ],
     "reward_piece_id": "L3_I",
-    "points": 3
+    "points": 3,
+    "deck_type": "black"
   },
   {
     "id": 48,
@@ -1233,7 +1280,8 @@
       ]
     ],
     "reward_piece_id": "L4_Z",
-    "points": 3
+    "points": 3,
+    "deck_type": "black"
   },
   {
     "id": 49,
@@ -1262,7 +1310,8 @@
       ]
     ],
     "reward_piece_id": "L4_I",
-    "points": 3
+    "points": 3,
+    "deck_type": "black"
   },
   {
     "id": 50,
@@ -1291,7 +1340,8 @@
       ]
     ],
     "reward_piece_id": "L4_L",
-    "points": 3
+    "points": 3,
+    "deck_type": "black"
   },
   {
     "id": 51,
@@ -1325,7 +1375,8 @@
       ]
     ],
     "reward_piece_id": "L4_O",
-    "points": 3
+    "points": 3,
+    "deck_type": "black"
   },
   {
     "id": 52,
@@ -1354,6 +1405,7 @@
       ]
     ],
     "reward_piece_id": "L4_T",
-    "points": 3
+    "points": 3,
+    "deck_type": "black"
   }
 ]

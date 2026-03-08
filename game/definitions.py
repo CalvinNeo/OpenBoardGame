@@ -16,6 +16,7 @@ from game.incan_gold import IncanGoldGame
 from game.kobayakawa import KobayakawaGame
 from game.perfect_mismatch import PerfectMismatchGame
 from game.point_salad import PointSaladGame
+from game.project_l import ProjectLGame
 from game.six_nimmt import SixNimmtGame
 from game.the_gang import TheGangGame
 from game.yahtzee import YahtzeeGame
@@ -1148,6 +1149,102 @@ CARCASSONNE_CONFIG_SCHEMA = {
     "additionalProperties": False,
 }
 
+PROJECT_L_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {"type": "object", "properties": {"type": {"const": "take_level1"}}, "required": ["type"], "additionalProperties": False},
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "take_puzzle"},
+                "source": {"const": "market"},
+                "deck": {"type": "string", "enum": ["white", "black"]},
+                "index": {"type": "integer", "minimum": 0, "maximum": 3},
+            },
+            "required": ["type", "source", "deck", "index"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "take_puzzle"},
+                "source": {"const": "deck"},
+                "deck": {"type": "string", "enum": ["white", "black"]},
+            },
+            "required": ["type", "source", "deck"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "upgrade_piece"},
+                "from_piece_id": {"type": "string"},
+                "to_piece_id": {"type": "string"},
+            },
+            "required": ["type", "from_piece_id", "to_piece_id"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "place_piece"},
+                "puzzle_index": {"type": "integer", "minimum": 0},
+                "piece_id": {"type": "string"},
+                "rotation": {"type": "integer", "enum": [0, 90, 180, 270]},
+                "flip": {"type": "boolean"},
+                "row": {"type": "integer", "minimum": 0},
+                "col": {"type": "integer", "minimum": 0},
+            },
+            "required": ["type", "puzzle_index", "piece_id", "rotation", "flip", "row", "col"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "master_action"},
+                "placements": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "puzzle_index": {"type": "integer", "minimum": 0},
+                            "piece_id": {"type": "string"},
+                            "rotation": {"type": "integer", "enum": [0, 90, 180, 270]},
+                            "flip": {"type": "boolean"},
+                            "row": {"type": "integer", "minimum": 0},
+                            "col": {"type": "integer", "minimum": 0},
+                        },
+                        "required": ["puzzle_index", "piece_id", "rotation", "flip", "row", "col"],
+                        "additionalProperties": False,
+                    },
+                },
+            },
+            "required": ["type", "placements"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "finishing_place"},
+                "puzzle_index": {"type": "integer", "minimum": 0},
+                "piece_id": {"type": "string"},
+                "rotation": {"type": "integer", "enum": [0, 90, 180, 270]},
+                "flip": {"type": "boolean"},
+                "row": {"type": "integer", "minimum": 0},
+                "col": {"type": "integer", "minimum": 0},
+            },
+            "required": ["type", "puzzle_index", "piece_id", "rotation", "flip", "row", "col"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "finishing_done"}}, "required": ["type"], "additionalProperties": False},
+    ],
+}
+
+PROJECT_L_CONFIG_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+}
+
 register_game(
     GameDefinition(
         game_id=CaboGame.game_id,
@@ -1355,6 +1452,21 @@ register_game(
         module=BlokusGame,
         serialize=BlokusGame.serialize,
         deserialize=BlokusGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=ProjectLGame.game_id,
+        name="Project L",
+        min_players=ProjectLGame.min_players,
+        max_players=ProjectLGame.max_players,
+        turn_mode="turn",
+        action_schema=PROJECT_L_ACTION_SCHEMA,
+        config_schema=PROJECT_L_CONFIG_SCHEMA,
+        module=ProjectLGame,
+        serialize=ProjectLGame.serialize,
+        deserialize=ProjectLGame.deserialize,
     )
 )
 

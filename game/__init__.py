@@ -19,6 +19,7 @@ from game.incan_gold import IncanGoldGame
 from game.kobayakawa import KobayakawaGame
 from game.perfect_mismatch import PerfectMismatchGame
 from game.point_salad import PointSaladGame
+from game.project_l import ProjectLGame
 from game.registry import GameDefinition, get_game, list_games
 from game.six_nimmt import SixNimmtGame
 from game.splendor import SplendorGame
@@ -50,6 +51,7 @@ __all__ = [
     "KobayakawaGame",
     "PerfectMismatchGame",
     "PointSaladGame",
+    "ProjectLGame",
     "SixNimmtGame",
     "SplendorGame",
     "SkullGame",
