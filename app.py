@@ -34,6 +34,7 @@ fastapi_app.mount(
     StaticFiles(directory="assets/task36_tiles_svg"),
     name="carcassonne_tiles",
 )
+fastapi_app.mount("/static/project_l", StaticFiles(directory="assets/project_l"), name="project_l_assets")
 fastapi_app.mount("/static", StaticFiles(directory="static"), name="static")
 
 

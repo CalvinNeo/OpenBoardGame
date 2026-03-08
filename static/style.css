@@ -1213,6 +1213,13 @@ input, select {
   color: #4b5563;
 }
 
+.project-l-card-image {
+  width: 60px;
+  height: 60px;
+  image-rendering: pixelated;
+  align-self: flex-start;
+}
+
 .project-l-mini-grid {
   display: grid;
   gap: 1px;
@@ -1221,12 +1228,14 @@ input, select {
 .project-l-mini-cell {
   width: 8px;
   height: 8px;
-  background: #f3f4f6;
+  background: transparent;
   border-radius: 1px;
+  visibility: hidden;
 }
 
 .project-l-mini-cell.slot {
-  background: #d1d5db;
+  background: #9ca3af;
+  visibility: visible;
 }
 
 .project-l-puzzle-list {
@@ -1242,6 +1251,7 @@ input, select {
   background: #ffffff;
   display: grid;
   gap: 6px;
+  justify-items: start;
 }
 
 .project-l-puzzle-card.selected {
@@ -1250,32 +1260,54 @@ input, select {
 }
 
 .project-l-puzzle-grid {
-  --project-l-cell: 18px;
-  display: grid;
-  gap: 1px;
-  background: #e5e7eb;
-  padding: 4px;
+  --project-l-cell: 20px;
+  position: relative;
+  padding: 0;
   border-radius: 6px;
   justify-content: start;
+  justify-self: start;
+  align-self: start;
+}
+
+.project-l-puzzle-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+.project-l-puzzle-overlay {
+  position: absolute;
+  inset: 0;
 }
 
 .project-l-cell {
   width: var(--project-l-cell);
   height: var(--project-l-cell);
-  background: #f3f4f6;
+  position: absolute;
+  left: calc(var(--col) * var(--project-l-cell));
+  top: calc(var(--row) * var(--project-l-cell));
+  background: transparent;
   border-radius: 2px;
 }
 
 .project-l-cell.off {
-  background: #f8fafc;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .project-l-cell.slot {
-  background: #e5e7eb;
   cursor: pointer;
+  padding: 0;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  text-align: left;
 }
 
 .project-l-cell.ghost {
+  opacity: 1;
   outline: 2px dashed #0ea5e9;
   outline-offset: -2px;
 }
@@ -1376,7 +1408,7 @@ input, select {
   }
 
   .project-l-puzzle-grid {
-    --project-l-cell: 16px;
+    --project-l-cell: 20px;
   }
 }
 

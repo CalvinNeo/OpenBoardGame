@@ -12885,21 +12885,12 @@ function buildProjectLCard(cardDef) {
   reward.textContent = `Reward: ${cardDef.reward_piece_id}`;
   card.appendChild(reward);
 
-  const grid = document.createElement("div");
-  grid.className = "project-l-mini-grid";
-  grid.style.gridTemplateColumns = `repeat(${cardDef.width}, 8px)`;
-  grid.style.gridAutoRows = "8px";
-  cardDef.grid.forEach((row) => {
-    row.forEach((value) => {
-      const cell = document.createElement("div");
-      cell.className = "project-l-mini-cell";
-      if (value) {
-        cell.classList.add("slot");
-      }
-      grid.appendChild(cell);
-    });
-  });
-  card.appendChild(grid);
+  const image = document.createElement("img");
+  image.className = "project-l-card-image";
+  const cardId = String(cardDef.id).padStart(2, "0");
+  image.src = `/static/project_l/project_l_puzzles_svg/card_${cardId}.svg`;
+  image.alt = `Puzzle ${cardDef.id}`;
+  card.appendChild(image);
   return card;
 }
 
@@ -12938,8 +12929,20 @@ function renderProjectLMarket(view) {
 function renderProjectLPuzzleGrid(puzzleDef, puzzleState, puzzleIndex, options) {
   const grid = document.createElement("div");
   grid.className = "project-l-puzzle-grid";
-  grid.style.gridTemplateColumns = `repeat(${puzzleDef.width}, var(--project-l-cell))`;
-  grid.style.gridAutoRows = "var(--project-l-cell)";
+  const cellSize = 20;
+  grid.style.setProperty("--project-l-cell", `${cellSize}px`);
+  grid.style.width = `${puzzleDef.width * cellSize}px`;
+  grid.style.height = `${puzzleDef.height * cellSize}px`;
+  const cardId = String(puzzleDef.id).padStart(2, "0");
+  const image = document.createElement("img");
+  image.className = "project-l-puzzle-image";
+  image.src = `/static/project_l/project_l_puzzles_svg/card_${cardId}.svg`;
+  image.alt = `Puzzle ${puzzleDef.id}`;
+  grid.appendChild(image);
+
+  const overlay = document.createElement("div");
+  overlay.className = "project-l-puzzle-overlay";
+  grid.appendChild(overlay);
 
   const occupied = projectLOccupiedCells(puzzleState, currentProjectLView ? currentProjectLView.piece_defs : null);
   const ghostCells = options && options.ghostCells ? options.ghostCells : null;
@@ -12949,6 +12952,8 @@ function renderProjectLPuzzleGrid(puzzleDef, puzzleState, puzzleIndex, options) 
     for (let c = 0; c < puzzleDef.width; c += 1) {
       const cell = document.createElement("div");
       cell.className = "project-l-cell";
+      cell.style.setProperty("--row", r);
+      cell.style.setProperty("--col", c);
       if (puzzleDef.grid[r][c] === 1) {
         cell.classList.add("slot");
       } else {
@@ -12972,14 +12977,13 @@ function renderProjectLPuzzleGrid(puzzleDef, puzzleState, puzzleIndex, options) 
           cell.classList.add("invalid");
         }
       }
-      cell.addEventListener("click", (event) => {
-        event.stopPropagation();
-        if (puzzleDef.grid[r][c] !== 1) {
-          return;
-        }
-        setProjectLSelectedPuzzleAndOrigin(puzzleIndex, r, c);
-      });
-      grid.appendChild(cell);
+      if (puzzleDef.grid[r][c] === 1) {
+        cell.addEventListener("click", (event) => {
+          event.stopPropagation();
+          setProjectLSelectedPuzzleAndOrigin(puzzleIndex, r, c);
+        });
+      }
+      overlay.appendChild(cell);
     }
   }
   return grid;
