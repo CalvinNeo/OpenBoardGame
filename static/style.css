@@ -1254,11 +1254,23 @@ input, select {
   display: flex;
   align-items: flex-start;
   justify-content: flex-start;
+  position: relative;
 }
 
 .project-l-card-image {
   image-rendering: pixelated;
   display: block;
+}
+
+.project-l-card-image-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.85) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.85) 1px, transparent 1px);
+  background-size: var(--project-l-card-cell, 12px) var(--project-l-card-cell, 12px);
+  pointer-events: none;
 }
 
 .project-l-mini-grid {

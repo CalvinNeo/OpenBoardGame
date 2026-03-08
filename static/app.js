@@ -12927,8 +12927,13 @@ function buildProjectLCard(cardDef) {
   image.src = `/static/project_l/project_l_puzzles_svg/card_${cardId}.svg`;
   image.alt = `Puzzle ${cardDef.id}`;
   const cellSize = 12;
-  image.style.width = `${cardDef.width * cellSize}px`;
-  image.style.height = `${cardDef.height * cellSize}px`;
+  const imageWidth = cardDef.width * cellSize;
+  const imageHeight = cardDef.height * cellSize;
+  imageWrap.style.width = `${imageWidth}px`;
+  imageWrap.style.height = `${imageHeight}px`;
+  imageWrap.style.setProperty("--project-l-card-cell", `${cellSize}px`);
+  image.style.width = "100%";
+  image.style.height = "100%";
   imageWrap.appendChild(image);
   card.appendChild(imageWrap);
   return card;
