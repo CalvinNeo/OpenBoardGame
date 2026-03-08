@@ -1213,6 +1213,43 @@ input, select {
   color: #4b5563;
 }
 
+.project-l-upgrade-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.project-l-upgrade-piece {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #ffffff;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.project-l-upgrade-piece.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.project-l-upgrade-piece-grid {
+  display: grid;
+  gap: 1px;
+}
+
+.project-l-upgrade-piece-cell {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--piece-color, #111827);
+}
+
 .project-l-card-image {
   width: 60px;
   height: 60px;

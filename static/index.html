@@ -70,6 +70,19 @@
     </div>
   </section>
 
+  <section id="projectLUpgradeModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Select Upgrade Target</h2>
+        <button id="projectLUpgradeModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="projectLUpgradeFromLabel" class="hint"></div>
+        <div id="projectLUpgradeOptions" class="project-l-upgrade-options"></div>
+      </div>
+    </div>
+  </section>
+
   <div class="container">
     <h1>OpenBoardGame</h1>
 
@@ -1755,10 +1768,6 @@
                   <div id="projectLInventory" class="project-l-inventory"></div>
                   <h3>Upgrade</h3>
                   <div class="row">
-                    <label for="projectLUpgradeFrom">From</label>
-                    <select id="projectLUpgradeFrom"></select>
-                    <label for="projectLUpgradeTo">To</label>
-                    <select id="projectLUpgradeTo"></select>
                     <button id="projectLUpgradeBtn">Upgrade</button>
                   </div>
                   <h3>Placement</h3>

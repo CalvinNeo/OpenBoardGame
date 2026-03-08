@@ -616,6 +616,10 @@ const seatClaimEmpty = document.getElementById("seatClaimEmpty");
 const aidixitZoomModal = document.getElementById("aidixitZoomModal");
 const aidixitZoomCloseBtn = document.getElementById("aidixitZoomCloseBtn");
 const aidixitZoomImage = document.getElementById("aidixitZoomImage");
+const projectLUpgradeModal = document.getElementById("projectLUpgradeModal");
+const projectLUpgradeModalCloseBtn = document.getElementById("projectLUpgradeModalCloseBtn");
+const projectLUpgradeFromLabel = document.getElementById("projectLUpgradeFromLabel");
+const projectLUpgradeOptions = document.getElementById("projectLUpgradeOptions");
 const roomControlsPanel = document.getElementById("roomControlsPanel");
 const roomControlsToggleBtn = document.getElementById("roomControlsToggleBtn");
 
@@ -1685,6 +1689,84 @@ function closeAidixitZoom() {
   }
   setModalVisible(aidixitZoomModal, false);
   aidixitZoomImage.src = "";
+}
+
+function closeProjectLUpgradeModal() {
+  setModalVisible(projectLUpgradeModal, false);
+}
+
+function renderProjectLUpgradeModal(view) {
+  if (!projectLUpgradeOptions || !projectLUpgradeFromLabel) {
+    return;
+  }
+  projectLUpgradeOptions.innerHTML = "";
+  const fromPiece = getProjectLUpgradeFrom(view);
+  if (!fromPiece) {
+    projectLUpgradeFromLabel.textContent = "Select a piece from Inventory first.";
+    return;
+  }
+  projectLUpgradeFromLabel.textContent = `From: ${fromPiece}`;
+  const pieceDefs = view && view.piece_defs ? view.piece_defs : {};
+  const allPieces = Object.keys(pieceDefs).sort((a, b) => {
+    const la = pieceDefs[a].level;
+    const lb = pieceDefs[b].level;
+    if (la !== lb) {
+      return la - lb;
+    }
+    return a.localeCompare(b);
+  });
+  allPieces.forEach((pieceId) => {
+    const pieceDef = pieceDefs[pieceId];
+    const canUpgrade = projectLCanUpgrade(pieceDefs, fromPiece, pieceId);
+    const option = document.createElement("button");
+    option.type = "button";
+    option.className = "project-l-upgrade-piece";
+    if (!canUpgrade) {
+      option.classList.add("disabled");
+      option.disabled = true;
+    }
+    const grid = document.createElement("div");
+    grid.className = "project-l-upgrade-piece-grid";
+    grid.style.gridTemplateColumns = `repeat(${pieceDef.shape[0].length}, 14px)`;
+    grid.style.gridAutoRows = "14px";
+    pieceDef.shape.forEach((row) => {
+      row.forEach((value) => {
+        if (!value) {
+          const spacer = document.createElement("div");
+          spacer.style.width = "14px";
+          spacer.style.height = "14px";
+          grid.appendChild(spacer);
+          return;
+        }
+        const cell = document.createElement("div");
+        cell.className = "project-l-upgrade-piece-cell";
+        if (pieceDef.color) {
+          cell.style.background = pieceDef.color;
+        }
+        grid.appendChild(cell);
+      });
+    });
+    option.appendChild(grid);
+    const label = document.createElement("div");
+    label.className = "project-l-piece-label";
+    label.textContent = pieceId;
+    option.appendChild(label);
+    if (canUpgrade) {
+      option.addEventListener("click", () => {
+        sendAction({ type: "upgrade_piece", from_piece_id: fromPiece, to_piece_id: pieceId });
+        closeProjectLUpgradeModal();
+      });
+    }
+    projectLUpgradeOptions.appendChild(option);
+  });
+}
+
+function openProjectLUpgradeModal(view) {
+  if (!projectLUpgradeModal || !view) {
+    return;
+  }
+  renderProjectLUpgradeModal(view);
+  setModalVisible(projectLUpgradeModal, true);
 }
 
 function downloadSaveFile(sourceRoomId) {
@@ -12732,68 +12814,20 @@ function syncProjectLSelections(view) {
   });
 }
 
-function updateProjectLUpgradeOptions(view) {
-  if (!projectLUpgradeFromSelect || !projectLUpgradeToSelect) {
-    return;
-  }
-  const previousFrom = projectLUpgradeFromSelect.value;
-  const previousTo = projectLUpgradeToSelect.value;
-  projectLUpgradeFromSelect.innerHTML = "";
-  projectLUpgradeToSelect.innerHTML = "";
-  if (!view) {
-    return;
+function getProjectLUpgradeFrom(view) {
+  if (projectLUpgradeFromSelect) {
+    return projectLUpgradeFromSelect.value || null;
   }
   const you = getProjectLYou(view);
   if (!you) {
-    return;
+    return null;
   }
-  const fromPlaceholder = document.createElement("option");
-  fromPlaceholder.value = "";
-  fromPlaceholder.textContent = "Select";
-  projectLUpgradeFromSelect.appendChild(fromPlaceholder);
-  const counts = projectLInventoryCounts(you.inventory);
-  const fromOptions = Object.keys(counts).sort((a, b) => {
-    const la = view.piece_defs[a].level;
-    const lb = view.piece_defs[b].level;
-    if (la !== lb) {
-      return la - lb;
-    }
-    return a.localeCompare(b);
-  });
-  fromOptions.forEach((pieceId) => {
-    const option = document.createElement("option");
-    option.value = pieceId;
-    option.textContent = `${pieceId} (${counts[pieceId]})`;
-    projectLUpgradeFromSelect.appendChild(option);
-  });
-  const toPlaceholder = document.createElement("option");
-  toPlaceholder.value = "";
-  toPlaceholder.textContent = "Select";
-  projectLUpgradeToSelect.appendChild(toPlaceholder);
-  const allPieces = Object.keys(view.piece_defs || {}).sort((a, b) => {
-    const la = view.piece_defs[a].level;
-    const lb = view.piece_defs[b].level;
-    if (la !== lb) {
-      return la - lb;
-    }
-    return a.localeCompare(b);
-  }).forEach((pieceId) => {
-    const option = document.createElement("option");
-    option.value = pieceId;
-    option.textContent = pieceId;
-    projectLUpgradeToSelect.appendChild(option);
-  });
-  if (previousFrom && fromOptions.includes(previousFrom)) {
-    projectLUpgradeFromSelect.value = previousFrom;
-  } else {
-    projectLUpgradeFromSelect.value = "";
+  if (projectLSelectedPieceId && you.inventory.includes(projectLSelectedPieceId)) {
+    return projectLSelectedPieceId;
   }
-  if (previousTo && allPieces.includes(previousTo)) {
-    projectLUpgradeToSelect.value = previousTo;
-  } else {
-    projectLUpgradeToSelect.value = "";
-  }
+  return null;
 }
+
 
 function setProjectLSelectedMarket(deck, index) {
   projectLSelectedMarket = { deck, index };
@@ -12821,6 +12855,7 @@ function setProjectLSelectedPiece(pieceId) {
   if (currentProjectLView) {
     renderProjectLInventory(currentProjectLView);
     renderProjectLActivePuzzles(currentProjectLView);
+    updateProjectLUpgradeOptions(currentProjectLView);
   }
   updateProjectLActionButtons();
 }
@@ -13288,12 +13323,13 @@ function updateProjectLActionButtons() {
     projectLDrawBlackBtn.classList.toggle("action-allowed", allowed);
   }
   if (projectLUpgradeBtn) {
-    const fromPiece = projectLUpgradeFromSelect ? projectLUpgradeFromSelect.value : null;
-    const toPiece = projectLUpgradeToSelect ? projectLUpgradeToSelect.value : null;
-    const allowed = isProjectLActionAvailable("upgrade_piece")
-      && fromPiece
-      && toPiece
-      && projectLCanUpgrade(view.piece_defs, fromPiece, toPiece);
+    const fromPiece = getProjectLUpgradeFrom(view);
+    let allowed = isProjectLActionAvailable("upgrade_piece") && !!fromPiece;
+    if (allowed && fromPiece && view && view.piece_defs) {
+      allowed = Object.keys(view.piece_defs).some((pieceId) =>
+        projectLCanUpgrade(view.piece_defs, fromPiece, pieceId),
+      );
+    }
     projectLUpgradeBtn.disabled = !allowed;
     projectLUpgradeBtn.classList.toggle("action-allowed", allowed);
   }
@@ -13361,7 +13397,9 @@ function renderProjectLGameState(data) {
     setGamePanelVisibility("project_l");
   }
   syncProjectLSelections(view);
-  updateProjectLUpgradeOptions(view);
+  if (projectLUpgradeModal && !projectLUpgradeModal.classList.contains("hidden")) {
+    renderProjectLUpgradeModal(view);
+  }
 
   if (projectLPhaseLabel) {
     projectLPhaseLabel.textContent = view.phase || "-";
@@ -17684,6 +17722,20 @@ if (aidixitZoomModal) {
   });
 }
 
+if (projectLUpgradeModalCloseBtn) {
+  projectLUpgradeModalCloseBtn.addEventListener("click", () => {
+    closeProjectLUpgradeModal();
+  });
+}
+
+if (projectLUpgradeModal) {
+  projectLUpgradeModal.addEventListener("click", (event) => {
+    if (event.target === projectLUpgradeModal) {
+      closeProjectLUpgradeModal();
+    }
+  });
+}
+
 if (trekkingScoreCloseBtn) {
   trekkingScoreCloseBtn.addEventListener("click", () => {
     closeTrekkingScoreRules();
@@ -19638,13 +19690,12 @@ if (projectLUpgradeBtn) {
       log("Not your turn");
       return;
     }
-    const fromPiece = projectLUpgradeFromSelect ? projectLUpgradeFromSelect.value : null;
-    const toPiece = projectLUpgradeToSelect ? projectLUpgradeToSelect.value : null;
-    if (!fromPiece || !toPiece) {
-      log("Select pieces to upgrade");
+    const fromPiece = getProjectLUpgradeFrom(currentProjectLView);
+    if (!fromPiece) {
+      log("Select a piece from Inventory first");
       return;
     }
-    sendAction({ type: "upgrade_piece", from_piece_id: fromPiece, to_piece_id: toPiece });
+    openProjectLUpgradeModal(currentProjectLView);
   });
 }
 
@@ -19797,18 +19848,6 @@ if (projectLFinishingDoneBtn) {
       return;
     }
     sendAction({ type: "finishing_done" });
-  });
-}
-
-if (projectLUpgradeFromSelect) {
-  projectLUpgradeFromSelect.addEventListener("change", () => {
-    updateProjectLActionButtons();
-  });
-}
-
-if (projectLUpgradeToSelect) {
-  projectLUpgradeToSelect.addEventListener("change", () => {
-    updateProjectLActionButtons();
   });
 }
 
