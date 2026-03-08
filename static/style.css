@@ -5262,6 +5262,12 @@ body.log-open {
   padding: 2px 0;
 }
 
+.carc-player-name.carc-color-red { color: #ef4444; }
+.carc-player-name.carc-color-blue { color: #3b82f6; }
+.carc-player-name.carc-color-green { color: #22c55e; }
+.carc-player-name.carc-color-yellow { color: #f59e0b; }
+.carc-player-name.carc-color-black { color: #111827; }
+
 .carc-player-row.player-you {
   font-weight: 600;
 }

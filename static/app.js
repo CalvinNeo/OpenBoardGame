@@ -13139,8 +13139,19 @@ function renderCarcassonnePlayers(view) {
       row.classList.add("player-you");
     }
     const left = document.createElement("div");
+    left.className = "carc-player-left";
     const marker = player.player_id === view.current_turn ? "▶ " : "";
-    left.textContent = `${marker}${player.name || player.player_id} (${player.color || "-"})`;
+    const nameSpan = document.createElement("span");
+    nameSpan.className = "carc-player-name";
+    if (player.color) {
+      nameSpan.classList.add(`carc-color-${player.color}`);
+    }
+    nameSpan.textContent = `${marker}${player.name || player.player_id}`;
+    const metaSpan = document.createElement("span");
+    metaSpan.className = "carc-player-meta";
+    metaSpan.textContent = ` (${player.color || "-"})`;
+    left.appendChild(nameSpan);
+    left.appendChild(metaSpan);
     const right = document.createElement("div");
     right.textContent = `${player.score ?? 0} pts · ${player.meeples ?? 0} meeples`;
     row.appendChild(left);
