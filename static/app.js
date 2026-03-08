@@ -1100,7 +1100,6 @@ const projectLSelectedFlipLabel = document.getElementById("projectLSelectedFlip"
 const projectLRotateLeftBtn = document.getElementById("projectLRotateLeftBtn");
 const projectLRotateRightBtn = document.getElementById("projectLRotateRightBtn");
 const projectLFlipBtn = document.getElementById("projectLFlipBtn");
-const projectLClearSelectionBtn = document.getElementById("projectLClearSelectionBtn");
 const projectLMarketWhite = document.getElementById("projectLMarketWhite");
 const projectLMarketBlack = document.getElementById("projectLMarketBlack");
 const projectLTakeMarketBtn = document.getElementById("projectLTakeMarketBtn");
@@ -19612,8 +19611,19 @@ if (projectLFlipBtn) {
   });
 }
 
-if (projectLClearSelectionBtn) {
-  projectLClearSelectionBtn.addEventListener("click", () => {
+if (projectLPanel) {
+  projectLPanel.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+    if (target.closest(
+      "button, select, input, textarea, label, " +
+      ".project-l-card, .project-l-puzzle-card, .project-l-piece, " +
+      ".project-l-cell, .project-l-upgrade-piece, .project-l-queue-remove",
+    )) {
+      return;
+    }
     clearProjectLSelection();
   });
 }
