@@ -5654,3 +5654,131 @@ body.log-open {
     height: 72px;
   }
 }
+
+.texas-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.texas-card {
+  min-width: 44px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  text-align: center;
+  font-weight: 600;
+}
+
+.texas-card.red {
+  color: #dc2626;
+}
+
+.texas-card.black {
+  color: #111827;
+}
+
+.texas-card.hidden {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.muted {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.texas-players {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.texas-player-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #f9fafb;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.texas-player-card.active {
+  border-color: #1f6feb;
+  box-shadow: 0 0 0 2px rgba(31, 111, 235, 0.2);
+}
+
+.texas-player-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  align-items: center;
+}
+
+.texas-player-name {
+  font-weight: 600;
+}
+
+.texas-player-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.texas-player-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.texas-tag {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.texas-tag.role {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.texas-tag.all-in {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.texas-tag.folded {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.texas-summary-list {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.texas-action-row input {
+  width: 120px;
+}
+
+@media (max-width: 720px) {
+  .texas-players {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+
+  .texas-action-row input {
+    flex: 1;
+    min-width: 120px;
+  }
+}

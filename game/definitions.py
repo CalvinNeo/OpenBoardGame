@@ -27,6 +27,7 @@ from game.blitz_sketch import BlitzSketchGame
 from game.carcassonne import CarcassonneGame
 from game.skull import SkullGame
 from game.trekking_history import TrekkingHistoryGame
+from game.texas_holdem import TexasHoldemGame
 
 CABO_ACTION_SCHEMA = {
     "type": "object",
@@ -1245,6 +1246,40 @@ PROJECT_L_CONFIG_SCHEMA = {
     "additionalProperties": False,
 }
 
+TEXAS_HOLDEM_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {"type": "object", "properties": {"type": {"const": "fold"}}, "required": ["type"], "additionalProperties": False},
+        {"type": "object", "properties": {"type": {"const": "check"}}, "required": ["type"], "additionalProperties": False},
+        {"type": "object", "properties": {"type": {"const": "call"}}, "required": ["type"], "additionalProperties": False},
+        {"type": "object", "properties": {"type": {"const": "all_in"}}, "required": ["type"], "additionalProperties": False},
+        {
+            "type": "object",
+            "properties": {"type": {"const": "bet"}, "amount": {"type": "integer", "minimum": 1}},
+            "required": ["type", "amount"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "raise"}, "amount": {"type": "integer", "minimum": 1}},
+            "required": ["type", "amount"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "next_hand"}}, "required": ["type"], "additionalProperties": False},
+        {"type": "object", "properties": {"type": {"const": "rebuy"}}, "required": ["type"], "additionalProperties": False},
+    ],
+}
+
+TEXAS_HOLDEM_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "starting_chips": {"type": "integer", "minimum": 1},
+        "small_blind": {"type": "integer", "minimum": 1},
+        "big_blind": {"type": "integer", "minimum": 1},
+    },
+    "additionalProperties": False,
+}
+
 register_game(
     GameDefinition(
         game_id=CaboGame.game_id,
@@ -1257,6 +1292,21 @@ register_game(
         module=CaboGame,
         serialize=CaboGame.serialize,
         deserialize=CaboGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=TexasHoldemGame.game_id,
+        name="Texas Hold'em",
+        min_players=TexasHoldemGame.min_players,
+        max_players=TexasHoldemGame.max_players,
+        turn_mode="turn",
+        action_schema=TEXAS_HOLDEM_ACTION_SCHEMA,
+        config_schema=TEXAS_HOLDEM_CONFIG_SCHEMA,
+        module=TexasHoldemGame,
+        serialize=TexasHoldemGame.serialize,
+        deserialize=TexasHoldemGame.deserialize,
     )
 )
 

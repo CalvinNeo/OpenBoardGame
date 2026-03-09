@@ -120,6 +120,7 @@
                     <option value="gold_rush">Gold Rush</option>
                     <option value="incan_gold">Incan Gold</option>
                     <option value="kobayakawa">Kobayakawa</option>
+                    <option value="texas_holdem">Texas Hold'em</option>
                     <option value="halli_galli">Halli Galli</option>
                     <option value="coyote">Coyote</option>
                     <option value="six_nimmt">6 nimmt!</option>
@@ -277,6 +278,19 @@
                       <label for="hanabiFinalRoundToggle">Final Round Countdown</label>
                       <input id="hanabiFinalRoundToggle" type="checkbox" />
                       <span class="hint">Start the last round after the deck runs out.</span>
+                    </div>
+                  </div>
+                  <div class="game-config-card hidden" id="texasHoldemConfigBox" aria-hidden="true">
+                    <div class="game-config-title">Texas Hold'em</div>
+                    <div class="row">
+                      <label for="texasStartingChipsInput">Starting Chips</label>
+                      <input id="texasStartingChipsInput" type="number" min="1" step="1" value="1000" />
+                    </div>
+                    <div class="row">
+                      <label for="texasSmallBlindInput">Small Blind</label>
+                      <input id="texasSmallBlindInput" type="number" min="1" step="1" value="5" />
+                      <label for="texasBigBlindInput">Big Blind</label>
+                      <input id="texasBigBlindInput" type="number" min="1" step="1" value="10" />
                     </div>
                   </div>
                   <div class="game-config-card hidden" id="mismatchConfigBox" aria-hidden="true">
@@ -842,6 +856,57 @@
               <div class="row actions coyote-actions">
                 <button id="coyoteResetBtn">Reset Game</button>
               </div>
+            </div>
+
+            <div id="texasHoldemPanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="texasPhase">-</span></div>
+                <div>Hand: <span id="texasHand">-</span></div>
+                <div>Current Turn: <span id="texasTurn">-</span></div>
+              </div>
+              <div class="row">
+                <div>Pot: <span id="texasPot">-</span></div>
+                <div>Current Bet: <span id="texasCurrentBet">-</span></div>
+                <div>To Call: <span id="texasToCall">-</span></div>
+              </div>
+              <div class="row">
+                <div>Blinds: <span id="texasBlinds">-</span></div>
+                <div>Min Bet: <span id="texasMinBet">-</span></div>
+                <div>Min Raise To: <span id="texasMinRaiseTo">-</span></div>
+                <div>Max: <span id="texasMaxRaiseTo">-</span></div>
+              </div>
+
+              <h3>Community Cards</h3>
+              <div id="texasCommunityCards" class="texas-cards"></div>
+
+              <h3>Your Hand</h3>
+              <div id="texasYourHand" class="texas-cards"></div>
+
+              <h3>Actions</h3>
+              <div class="row actions texas-action-row">
+                <button id="texasFoldBtn">Fold</button>
+                <button id="texasCheckBtn">Check</button>
+                <button id="texasCallBtn">Call</button>
+                <button id="texasAllInBtn">All-in</button>
+              </div>
+              <div class="row actions texas-action-row">
+                <input id="texasBetInput" type="number" min="1" step="1" placeholder="Bet/Raise to" />
+                <button id="texasBetBtn">Bet</button>
+                <button id="texasRaiseBtn">Raise</button>
+              </div>
+              <div class="row actions texas-action-row">
+                <button id="texasNextHandBtn">Next Hand</button>
+                <button id="texasRebuyBtn">Rebuy</button>
+              </div>
+
+              <div id="texasSummary" class="round-notice hidden" aria-hidden="true">
+                <div class="round-notice-title">Last Hand</div>
+                <div id="texasSummaryBody" class="round-notice-body">-</div>
+                <div id="texasSummaryList" class="texas-summary-list"></div>
+              </div>
+
+              <h3>Players</h3>
+              <div id="texasPlayers" class="texas-players"></div>
             </div>
 
             <div id="sixNimmtPanel" class="hidden">

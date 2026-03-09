@@ -25,6 +25,7 @@ from game.six_nimmt import SixNimmtGame
 from game.splendor import SplendorGame
 from game.skull import SkullGame
 from game.the_gang import TheGangGame
+from game.texas_holdem import TexasHoldemGame
 from game.trekking_history import TrekkingHistoryGame
 from game.yahtzee import YahtzeeGame
 from game import definitions as _definitions
@@ -56,6 +57,7 @@ __all__ = [
     "SplendorGame",
     "SkullGame",
     "TheGangGame",
+    "TexasHoldemGame",
     "TrekkingHistoryGame",
     "YahtzeeGame",
     "GameDefinition",
