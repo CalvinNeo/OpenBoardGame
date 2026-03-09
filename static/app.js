@@ -13180,7 +13180,27 @@ function renderProjectLMarket(view) {
       }
       if (!card.disabled) {
         card.addEventListener("click", () => {
+          const alreadySelected = projectLSelectedMarket
+            && projectLSelectedMarket.deck === deckName
+            && projectLSelectedMarket.index === index;
+          if (alreadySelected && currentProjectLView && isProjectLActionAvailable("take_puzzle")) {
+            sendAction({ type: "take_puzzle", deck: deckName, index });
+            projectLSelectedMarket = null;
+            updateProjectLSelectionLabels();
+            return;
+          }
           setProjectLSelectedMarket(deckName, index);
+        });
+        card.addEventListener("dblclick", () => {
+          if (!currentProjectLView) {
+            return;
+          }
+          if (!isProjectLActionAvailable("take_puzzle")) {
+            return;
+          }
+          sendAction({ type: "take_puzzle", deck: deckName, index });
+          projectLSelectedMarket = null;
+          updateProjectLSelectionLabels();
         });
       }
       container.appendChild(card);
@@ -13367,6 +13387,7 @@ function renderProjectLInventory(view) {
     return;
   }
   const counts = projectLInventoryCounts(you.inventory);
+  const queueCounts = projectLInventoryCounts(projectLMasterQueueItems.map((entry) => entry.piece_id));
   const pieceIds = Object.keys(counts).sort((a, b) => {
     const la = view.piece_defs[a].level;
     const lb = view.piece_defs[b].level;
@@ -13420,6 +13441,12 @@ function renderProjectLInventory(view) {
     count.textContent = `x${counts[pieceId]}`;
     button.appendChild(count);
 
+    const remaining = Math.max(0, counts[pieceId] - (queueCounts[pieceId] || 0));
+    const remainingLine = document.createElement("div");
+    remainingLine.className = "project-l-piece-remaining";
+    remainingLine.textContent = `left ${remaining}`;
+    button.appendChild(remainingLine);
+
     projectLInventory.appendChild(button);
   });
 }
@@ -13451,6 +13478,7 @@ function renderProjectLMasterQueue(view) {
     remove.addEventListener("click", () => {
       projectLMasterQueueItems.splice(index, 1);
       renderProjectLMasterQueue(view);
+      renderProjectLInventory(view);
       updateProjectLActionButtons();
     });
     item.appendChild(remove);
@@ -20300,6 +20328,7 @@ if (projectLQueueMasterBtn) {
       projectLMasterQueueItems.push(payload);
     }
     renderProjectLMasterQueue(currentProjectLView);
+    renderProjectLInventory(currentProjectLView);
     updateProjectLActionButtons();
   });
 }
@@ -20308,6 +20337,7 @@ if (projectLClearMasterBtn) {
   projectLClearMasterBtn.addEventListener("click", () => {
     projectLMasterQueueItems = [];
     renderProjectLMasterQueue(currentProjectLView);
+    renderProjectLInventory(currentProjectLView);
     updateProjectLActionButtons();
   });
 }
@@ -20328,6 +20358,7 @@ if (projectLUseMasterBtn) {
     sendAction({ type: "master_action", placements: projectLMasterQueueItems });
     projectLMasterQueueItems = [];
     renderProjectLMasterQueue(currentProjectLView);
+    renderProjectLInventory(currentProjectLView);
     updateProjectLActionButtons();
   });
 }

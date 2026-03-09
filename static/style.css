@@ -1439,6 +1439,11 @@ input, select {
   color: #6b7280;
 }
 
+.project-l-piece-remaining {
+  font-size: 10px;
+  color: #374151;
+}
+
 .project-l-completed {
   display: flex;
   flex-wrap: wrap;
