@@ -13045,7 +13045,6 @@ function setProjectLSelectedPiece(pieceId) {
   if (currentProjectLView) {
     renderProjectLInventory(currentProjectLView);
     renderProjectLActivePuzzles(currentProjectLView);
-    updateProjectLUpgradeOptions(currentProjectLView);
   }
   updateProjectLActionButtons();
 }
@@ -13085,7 +13084,44 @@ function clearProjectLSelection() {
   updateProjectLActionButtons();
 }
 
-function buildProjectLCard(cardDef) {
+function buildProjectLReward(pieceId, pieceDefs, cellSize, labelPrefix) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "project-l-reward-row";
+  const label = document.createElement("div");
+  label.className = "project-l-reward-label";
+  label.textContent = labelPrefix ? `${labelPrefix} ${pieceId}` : pieceId;
+  wrapper.appendChild(label);
+
+  const pieceDef = pieceDefs ? pieceDefs[pieceId] : null;
+  if (!pieceDef) {
+    return wrapper;
+  }
+  const grid = document.createElement("div");
+  grid.className = "project-l-reward-piece";
+  grid.style.gridTemplateColumns = `repeat(${pieceDef.shape[0].length}, ${cellSize}px)`;
+  grid.style.gridAutoRows = `${cellSize}px`;
+  pieceDef.shape.forEach((row) => {
+    row.forEach((value) => {
+      if (!value) {
+        const spacer = document.createElement("div");
+        spacer.style.width = `${cellSize}px`;
+        spacer.style.height = `${cellSize}px`;
+        grid.appendChild(spacer);
+        return;
+      }
+      const cell = document.createElement("div");
+      cell.className = "project-l-reward-cell";
+      if (pieceDef.color) {
+        cell.style.background = pieceDef.color;
+      }
+      grid.appendChild(cell);
+    });
+  });
+  wrapper.appendChild(grid);
+  return wrapper;
+}
+
+function buildProjectLCard(cardDef, pieceDefs) {
   const card = document.createElement("button");
   card.type = "button";
   card.className = "project-l-card";
@@ -13105,9 +13141,8 @@ function buildProjectLCard(cardDef) {
   header.appendChild(points);
   card.appendChild(header);
 
-  const reward = document.createElement("div");
-  reward.className = "project-l-card-meta";
-  reward.textContent = `Reward: ${cardDef.reward_piece_id}`;
+  const reward = buildProjectLReward(cardDef.reward_piece_id, pieceDefs, 8, "Reward:");
+  reward.classList.add("project-l-card-meta");
   card.appendChild(reward);
 
   const imageWrap = document.createElement("div");
@@ -13139,7 +13174,7 @@ function renderProjectLMarket(view) {
     const cards = (view.market && view.market[deckName]) || [];
     cards.forEach((cardId, index) => {
       const def = view.puzzle_defs ? view.puzzle_defs[cardId] : null;
-      const card = buildProjectLCard(def);
+      const card = buildProjectLCard(def, view.piece_defs);
       if (projectLSelectedMarket && projectLSelectedMarket.deck === deckName && projectLSelectedMarket.index === index) {
         card.classList.add("selected");
       }
@@ -13256,9 +13291,8 @@ function renderProjectLActivePuzzles(view) {
     header.textContent = `#${puzzleDef.id} - ${puzzleDef.points} pts`;
     card.appendChild(header);
 
-    const reward = document.createElement("div");
-    reward.className = "project-l-card-meta";
-    reward.textContent = `Reward: ${puzzleDef.reward_piece_id}`;
+    const reward = buildProjectLReward(puzzleDef.reward_piece_id, view.piece_defs, 10, "Reward:");
+    reward.classList.add("project-l-card-meta");
     card.appendChild(reward);
 
     let ghostCells = null;
@@ -13525,14 +13559,10 @@ function updateProjectLActionButtons() {
   }
   if (projectLUpgradeBtn) {
     const fromPiece = getProjectLUpgradeFrom(view);
-    let allowed = isProjectLActionAvailable("upgrade_piece") && !!fromPiece;
-    if (allowed && fromPiece && view && view.piece_defs) {
-      allowed = Object.keys(view.piece_defs).some((pieceId) =>
-        projectLCanUpgrade(view.piece_defs, fromPiece, pieceId),
-      );
-    }
-    projectLUpgradeBtn.disabled = !allowed;
-    projectLUpgradeBtn.classList.toggle("action-allowed", allowed);
+    const hasPiece = !!fromPiece;
+    const canUpgradeNow = isProjectLActionAvailable("upgrade_piece") && hasPiece;
+    projectLUpgradeBtn.disabled = !hasPiece;
+    projectLUpgradeBtn.classList.toggle("action-allowed", canUpgradeNow);
   }
   if (projectLPlaceBtn) {
     const allowed = isProjectLActionAvailable("place_piece") && canPlace;

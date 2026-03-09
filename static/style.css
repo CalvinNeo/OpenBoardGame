@@ -1213,6 +1213,30 @@ input, select {
   color: #4b5563;
 }
 
+.project-l-reward-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.project-l-reward-label {
+  font-size: 11px;
+  color: #4b5563;
+}
+
+.project-l-reward-piece {
+  display: grid;
+  gap: 1px;
+}
+
+.project-l-reward-cell {
+  width: 100%;
+  height: 100%;
+  border-radius: 2px;
+  background: #111827;
+}
+
 .project-l-upgrade-options {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
