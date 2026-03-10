@@ -1189,6 +1189,7 @@ input, select {
   min-height: 86px;
   cursor: pointer;
   text-align: left;
+  touch-action: manipulation;
 }
 
 .project-l-card.selected {

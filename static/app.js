@@ -208,6 +208,8 @@ let projectLSelectedOrigin = null;
 let projectLRotation = 0;
 let projectLFlip = false;
 let projectLMasterQueueItems = [];
+let projectLLastMarketTap = null;
+let projectLLastMarketTakeAt = 0;
 let trekkingSelectedSlot = null;
 let trekkingLastDay = null;
 let trekkingWildModalState = null;
@@ -13018,6 +13020,29 @@ function getProjectLUpgradeFrom(view) {
   return null;
 }
 
+function projectLTakeMarketCard(deckName, index) {
+  if (!currentProjectLView) {
+    return;
+  }
+  if (!isProjectLActionAvailable("take_puzzle")) {
+    log("Not your turn");
+    return;
+  }
+  const now = Date.now();
+  if (now - projectLLastMarketTakeAt < 350) {
+    return;
+  }
+  projectLLastMarketTakeAt = now;
+  sendAction({ type: "take_puzzle", source: "market", deck: deckName, index });
+  projectLSelectedMarket = null;
+  projectLLastMarketTap = null;
+  updateProjectLSelectionLabels();
+  if (currentProjectLView) {
+    renderProjectLMarket(currentProjectLView);
+  }
+  updateProjectLActionButtons();
+}
+
 
 function setProjectLSelectedMarket(deck, index) {
   projectLSelectedMarket = { deck, index };
@@ -13075,6 +13100,7 @@ function clearProjectLSelection() {
   projectLSelectedOrigin = null;
   projectLRotation = 0;
   projectLFlip = false;
+  projectLLastMarketTap = null;
   updateProjectLSelectionLabels();
   if (currentProjectLView) {
     renderProjectLMarket(currentProjectLView);
@@ -13180,27 +13206,24 @@ function renderProjectLMarket(view) {
       }
       if (!card.disabled) {
         card.addEventListener("click", () => {
+          const now = Date.now();
           const alreadySelected = projectLSelectedMarket
             && projectLSelectedMarket.deck === deckName
             && projectLSelectedMarket.index === index;
-          if (alreadySelected && currentProjectLView && isProjectLActionAvailable("take_puzzle")) {
-            sendAction({ type: "take_puzzle", deck: deckName, index });
-            projectLSelectedMarket = null;
-            updateProjectLSelectionLabels();
+          const isDoubleTap = projectLLastMarketTap
+            && projectLLastMarketTap.deck === deckName
+            && projectLLastMarketTap.index === index
+            && now - projectLLastMarketTap.time < 350;
+          if (alreadySelected || isDoubleTap) {
+            projectLLastMarketTap = null;
+            projectLTakeMarketCard(deckName, index);
             return;
           }
+          projectLLastMarketTap = { deck: deckName, index, time: now };
           setProjectLSelectedMarket(deckName, index);
         });
         card.addEventListener("dblclick", () => {
-          if (!currentProjectLView) {
-            return;
-          }
-          if (!isProjectLActionAvailable("take_puzzle")) {
-            return;
-          }
-          sendAction({ type: "take_puzzle", deck: deckName, index });
-          projectLSelectedMarket = null;
-          updateProjectLSelectionLabels();
+          projectLTakeMarketCard(deckName, index);
         });
       }
       container.appendChild(card);
