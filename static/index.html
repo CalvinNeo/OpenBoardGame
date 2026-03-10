@@ -1797,12 +1797,6 @@
                 <div>Rotation: <span id="projectLSelectedRotation">0</span></div>
                 <div>Flip: <span id="projectLSelectedFlip">No</span></div>
               </div>
-              <div class="row actions">
-                <button id="projectLRotateLeftBtn">Rotate Left</button>
-                <button id="projectLRotateRightBtn">Rotate Right</button>
-                <button id="projectLFlipBtn">Flip</button>
-              </div>
-
               <div class="project-l-layout">
                 <div>
                   <h3>Market 🧩</h3>
@@ -1818,10 +1812,14 @@
                     <button id="projectLTakeMarketBtn">Take Selected Market</button>
                     <button id="projectLDrawWhiteBtn">Draw White Deck</button>
                     <button id="projectLDrawBlackBtn">Draw Black Deck</button>
-                    <button id="projectLTakeLevel1Btn">Take Level 1</button>
                   </div>
                 </div>
                 <div>
+                  <div class="row actions project-l-rotate-actions">
+                    <button id="projectLRotateLeftBtn">Rotate Left</button>
+                    <button id="projectLRotateRightBtn">Rotate Right</button>
+                    <button id="projectLFlipBtn">Flip</button>
+                  </div>
                   <h3>Active Puzzles 🧩</h3>
                   <div id="projectLActivePuzzles" class="project-l-puzzle-list"></div>
                   <h3>Completed ✅</h3>
@@ -1830,9 +1828,9 @@
                 <div>
                   <h3>Inventory 🎒</h3>
                   <div id="projectLInventory" class="project-l-inventory"></div>
-                  <h3>Upgrade ♻️</h3>
-                  <div class="row">
+                  <div class="row actions project-l-inventory-actions">
                     <button id="projectLUpgradeBtn">Upgrade</button>
+                    <button id="projectLTakeLevel1Btn">Take Level 1</button>
                   </div>
                   <h3>Placement 🧱</h3>
                   <div class="row actions">

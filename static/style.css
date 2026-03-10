@@ -1368,6 +1368,8 @@ input, select {
   top: calc(var(--row) * var(--project-l-cell));
   background: transparent;
   border-radius: 2px;
+  box-sizing: border-box;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.85);
 }
 
 .project-l-cell.off {
@@ -1398,6 +1400,14 @@ input, select {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+.project-l-inventory-actions {
+  margin-top: 8px;
+}
+
+.project-l-rotate-actions {
+  margin-bottom: 8px;
 }
 
 .project-l-piece {
