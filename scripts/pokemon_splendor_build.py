@@ -30,6 +30,7 @@ except Exception:
     EASYOCR_AVAILABLE = False
 EASYOCR_READER = None
 
+SCRIPT_DIR = Path(__file__).resolve().parent
 ASSETS_DIR = Path("assets/pokemon_splendor")
 CARDS_DIR = ASSETS_DIR / "cards"
 META_PATH = CARDS_DIR / "cards_meta.json"
@@ -38,6 +39,7 @@ SPECIES_PATH = ASSETS_DIR / "pokemon_species.csv"
 OUTPUT_PATH = ASSETS_DIR / "cards.json"
 DEBUG_PATH = ASSETS_DIR / "cards_debug.json"
 REPORT_PATH = ASSETS_DIR / "cards_review.json"
+CORRECT_PATH = SCRIPT_DIR / "pokemon_splendor_correct.txt"
 
 LEGENDARY_EN = {
     "Articuno",
@@ -1160,6 +1162,147 @@ def detect_cost_digit_in_row(img, ocr, window):
     return best
 
 
+def kmeans_digit_mask(patch, k=3):
+    if patch is None or patch.size == 0:
+        return None
+    lab = cv2.cvtColor(patch, cv2.COLOR_BGR2LAB)
+    Z = lab.reshape((-1, 3)).astype(np.float32)
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 1.0)
+    _, labels, centers = cv2.kmeans(Z, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
+    centers = centers.astype(np.float32)
+    scores = []
+    for c in centers:
+        L, a, b = c
+        chroma = float(((a - 128) ** 2 + (b - 128) ** 2) ** 0.5)
+        scores.append(float(L - chroma * 0.5))
+    idx = int(max(range(k), key=lambda i: scores[i]))
+    mask = (labels.flatten() == idx).astype(np.uint8).reshape(patch.shape[:2])
+    # keep largest component
+    num, labels2, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
+    if num > 1:
+        best = None
+        best_area = 0
+        for i in range(1, num):
+            x, y, w, h, area = stats[i]
+            if area > best_area:
+                best_area = area
+                best = i
+        if best is not None:
+            mask = (labels2 == best).astype(np.uint8)
+    return mask
+
+
+def hsv_digit_mask(patch, s_thr, v_thr):
+    if patch is None or patch.size == 0:
+        return None
+    hsv = cv2.cvtColor(patch, cv2.COLOR_BGR2HSV)
+    s = hsv[:, :, 1]
+    v = hsv[:, :, 2]
+    mask = ((s < s_thr) & (v > v_thr)).astype(np.uint8)
+    return mask
+
+
+def easyocr_read_digit_from_binary(bin_img):
+    reader = get_easyocr_reader()
+    if reader is None or bin_img is None:
+        return None
+    ys, xs = np.where(bin_img > 0)
+    if ys.size == 0:
+        return None
+    x0, x1 = int(xs.min()), int(xs.max())
+    y0, y1 = int(ys.min()), int(ys.max())
+    crop = bin_img[y0:y1 + 1, x0:x1 + 1]
+    up = cv2.resize(crop, (crop.shape[1] * 8, crop.shape[0] * 8), interpolation=cv2.INTER_NEAREST)
+    rgb = cv2.cvtColor(up, cv2.COLOR_GRAY2RGB)
+    res = reader.readtext(rgb, detail=1, allowlist="0123456789")
+    if not res:
+        return None
+    candidates = parse_digit_candidates(res)
+    if not candidates:
+        return None
+    # pick best score
+    best = max(candidates, key=lambda d: d["score"])
+    return best
+
+
+def detect_cost_digit_from_mask_easyocr(img, window, mask):
+    if mask is None:
+        return None
+    x0, y0, x1, y1, row_cy = window
+    roi = img[y0:y1, x0:x1]
+    if roi.size == 0:
+        return None
+    # crop digit patch
+    box = detect_digit_box_from_mask(roi, mask)
+    if not box:
+        return None
+    bx, by, bw, bh = box
+    patch = roi[by:by + bh, bx:bx + bw]
+    if patch.size == 0:
+        return None
+
+    candidates = []
+    # kmeans mask variants
+    km = kmeans_digit_mask(patch, k=3)
+    if km is not None:
+        base = (km * 255).astype(np.uint8)
+        variants = [
+            base,
+            255 - base,
+            cv2.dilate(base, np.ones((2, 2), np.uint8), iterations=1),
+            cv2.dilate(255 - base, np.ones((2, 2), np.uint8), iterations=1),
+        ]
+        for v in variants:
+            cand = easyocr_read_digit_from_binary(v)
+            if cand:
+                candidates.append(cand)
+                if cand["score"] >= 0.95:
+                    break
+
+    # HSV threshold variants (good for yellow/pink backgrounds)
+    hsv = cv2.cvtColor(patch, cv2.COLOR_BGR2HSV)
+    mean_s = float(np.mean(hsv[:, :, 1]))
+    if mean_s > 70:
+        s_list = [80, 90]
+    else:
+        s_list = [60, 70, 80]
+    v_list = [100, 120, 140, 160]
+    for s_thr in s_list:
+        for v_thr in v_list:
+            m = hsv_digit_mask(patch, s_thr, v_thr)
+            if m is None:
+                continue
+            base = (m * 255).astype(np.uint8)
+            variants = [
+                base,
+                255 - base,
+                cv2.dilate(base, np.ones((2, 2), np.uint8), iterations=1),
+                cv2.dilate(255 - base, np.ones((2, 2), np.uint8), iterations=1),
+            ]
+            for v in variants:
+                cand = easyocr_read_digit_from_binary(v)
+                if cand:
+                    candidates.append(cand)
+                    break
+        if candidates:
+            break
+
+    if not candidates:
+        return None
+    best = max(candidates, key=lambda d: d["score"])
+    # map to image coordinates roughly at digit box center
+    best["box"] = [
+        (bx + x0, by + y0),
+        (bx + bw + x0, by + y0),
+        (bx + bw + x0, by + bh + y0),
+        (bx + x0, by + bh + y0),
+    ]
+    best["cx"] = bx + x0 + bw / 2.0
+    best["cy"] = by + y0 + bh / 2.0
+    best["source_hint"] = "easyocr_mask"
+    return best
+
+
 def detect_cost_color(img, window, mask):
     h, w = img.shape[:2]
     x0, y0, x1, y1, _ = window
@@ -1222,6 +1365,12 @@ def map_costs_from_trapezoids(img, ocr, digits=None, templates=None):
         source = "row_ocr"
         if digit and "source_hint" in digit:
             source = digit.pop("source_hint")
+        # Try masked EasyOCR first when row OCR is weak
+        if not digit or digit.get("score", 0) < 0.2:
+            masked_digit = detect_cost_digit_from_mask_easyocr(img, window, mask)
+            if masked_digit:
+                digit = masked_digit
+                source = masked_digit.pop("source_hint", "easyocr_mask")
         if digits:
             fallback = select_digit_from_full(digits, window, w)
             if not digit and fallback:
@@ -1230,7 +1379,7 @@ def map_costs_from_trapezoids(img, ocr, digits=None, templates=None):
             elif digit and fallback:
                 # If full-image OCR is much stronger, trust it.
                 margin = 0.05
-                if source == "easyocr":
+                if source in {"easyocr", "easyocr_mask"}:
                     margin = 0.2
                 if fallback["score"] > digit.get("score", 0) + margin:
                     digit = fallback
@@ -1882,6 +2031,98 @@ def write_cost_debug(meta, ocr, ids=None, templates=None, output_name="index.htm
     print(f"Wrote {out_dir / output_name}")
 
 
+def load_correct_cards(path):
+    if not path.exists():
+        raise FileNotFoundError(f"missing correct list: {path}")
+    text = path.read_text(encoding="utf-8").strip()
+    if not text:
+        return []
+    if text.lstrip().startswith("["):
+        data = json.loads(text)
+        if not isinstance(data, list):
+            raise ValueError("correct list JSON must be an array or JSONL")
+        return data
+    cards = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        cards.append(json.loads(line))
+    return cards
+
+
+def normalize_cost(cost):
+    if cost is None:
+        return {}
+    out = {}
+    for key, value in cost.items():
+        try:
+            value_int = int(value)
+        except (TypeError, ValueError):
+            continue
+        if value_int:
+            out[str(key)] = value_int
+    return out
+
+
+def normalize_bonuses(bonuses):
+    if bonuses is None:
+        return []
+    if isinstance(bonuses, str):
+        bonuses = [bonuses]
+    return sorted(str(b) for b in bonuses)
+
+
+def compare_expected_field(field, expected, actual):
+    if field == "cost":
+        return normalize_cost(expected) == normalize_cost(actual)
+    if field in {"bonus", "bonuses"}:
+        return normalize_bonuses(expected) == normalize_bonuses(actual)
+    return expected == actual
+
+
+def run_self_assessment(cards, correct_path=CORRECT_PATH):
+    try:
+        correct_cards = load_correct_cards(correct_path)
+    except Exception as exc:
+        print(f"Self-assessment failed: {exc}")
+        return False
+    if not correct_cards:
+        print("Self-assessment failed: correct list is empty")
+        return False
+
+    cards_by_id = {c.get("id"): c for c in cards}
+    missing = []
+    mismatches = []
+    for expected in correct_cards:
+        card_id = expected.get("id")
+        if not card_id:
+            continue
+        actual = cards_by_id.get(card_id)
+        if actual is None:
+            missing.append(card_id)
+            continue
+        for field, exp_val in expected.items():
+            if field == "id":
+                continue
+            act_val = actual.get(field)
+            if not compare_expected_field(field, exp_val, act_val):
+                mismatches.append((card_id, field, exp_val, act_val))
+
+    if missing:
+        print(f"Self-assessment missing {len(missing)} cards:")
+        for card_id in missing:
+            print(f"  - {card_id}")
+    if mismatches:
+        print(f"Self-assessment mismatches: {len(mismatches)}")
+        for card_id, field, exp_val, act_val in mismatches:
+            print(f"  - {card_id} {field}: expected={exp_val} actual={act_val}")
+    if missing or mismatches:
+        return False
+    print(f"Self-assessment OK: {len(correct_cards)} cards matched.")
+    return True
+
+
 def update_costs_only():
     ocr = RapidOCR()
     meta = json.loads(META_PATH.read_text())
@@ -1937,6 +2178,7 @@ if __name__ == "__main__":
     parser.add_argument("--compare", action="store_true", help="write cards_compare.html/csv")
     parser.add_argument("--no-build", action="store_true", help="skip full build (use existing JSON outputs)")
     parser.add_argument("--cost-only", action="store_true", help="recompute costs only (no CLIP)")
+    parser.add_argument("--self-assessment", action="store_true", help="validate outputs against correct list")
     args = parser.parse_args()
 
     cards = None
@@ -1944,6 +2186,10 @@ if __name__ == "__main__":
 
     if args.cost_only:
         update_costs_only()
+        if OUTPUT_PATH.exists():
+            cards = json.loads(OUTPUT_PATH.read_text())
+        if DEBUG_PATH.exists():
+            debug = json.loads(DEBUG_PATH.read_text())
     elif not args.no_build:
         cards, debug, _ = build()
     else:
@@ -1954,6 +2200,16 @@ if __name__ == "__main__":
 
     if args.compare and cards is not None and debug is not None:
         write_compare_outputs(cards, debug)
+
+    if args.self_assessment:
+        if cards is None and OUTPUT_PATH.exists():
+            cards = json.loads(OUTPUT_PATH.read_text())
+        if cards is None:
+            print("Self-assessment failed: missing cards data")
+        else:
+            ok = run_self_assessment(cards)
+            if not ok:
+                raise SystemExit(1)
 
     if args.cost_debug:
         ocr = RapidOCR()
