@@ -2196,6 +2196,64 @@ body.log-open {
   overflow-y: auto;
 }
 
+.create-room-modal {
+  max-width: 500px;
+}
+
+.create-room-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.create-room-filters input {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.create-room-filters select {
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.game-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.game-item {
+  padding: 8px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f9fafb;
+  transition: background 0.15s;
+}
+
+.game-item:hover {
+  background: #e5e7eb;
+}
+
+.game-item-name {
+  font-weight: 500;
+}
+
+.game-item-players {
+  font-size: 12px;
+  color: #6b7280;
+}
+
 .modal-list,
 .seat-list {
   display: flex;

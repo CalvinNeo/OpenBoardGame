@@ -138,10 +138,11 @@ COST_COLOR_PAD = 6
 COST_COLOR_X_MAX_RATIO = 0.22
 COST_TRAPEZOID_MIN_AREA = 70
 DIGIT_TEMPLATE_SIZE = (20, 28)
-DIGIT_TEMPLATE_MIN_SCORE = 0.95
+DIGIT_TEMPLATE_MIN_SCORE = 0.6
 DIGIT_TEMPLATE_FALLBACK_SCORE = 0.6
 DIGIT_ALLOWED_VALUES = {1, 2, 3, 4, 5, 6, 7}
 DIGIT_TEMPLATE_SCAN_MIN_AREA = 150
+DIGIT_TEMPLATE_TOPK = 8
 
 
 def load_names():
@@ -656,13 +657,24 @@ def template_match_digit(patch, templates, exclude=None):
     for value, tmpl in templates.items():
         if tmpl is None or value in exclude:
             continue
-        denom = float(np.linalg.norm(patch) * np.linalg.norm(tmpl))
-        if denom == 0:
-            continue
-        score = float((patch * tmpl).sum() / denom)
-        if score > best_score:
-            best_score = score
-            best = value
+        if isinstance(tmpl, list):
+            # use the best similarity across top-K exemplars
+            for tpl in tmpl:
+                denom = float(np.linalg.norm(patch) * np.linalg.norm(tpl))
+                if denom == 0:
+                    continue
+                score = float((patch * tpl).sum() / denom)
+                if score > best_score:
+                    best_score = score
+                    best = value
+        else:
+            denom = float(np.linalg.norm(patch) * np.linalg.norm(tmpl))
+            if denom == 0:
+                continue
+            score = float((patch * tmpl).sum() / denom)
+            if score > best_score:
+                best_score = score
+                best = value
     return best, best_score
 
 
@@ -989,14 +1001,16 @@ def build_digit_templates(meta, ocr):
             patch = img[y0:y1, x0:x1]
             tpl = preprocess_digit_patch(patch)
             if tpl is not None:
-                templates[dig["value"]].append(tpl)
-    mean_templates = {}
+                templates[dig["value"]].append((dig["score"], tpl))
+    top_templates = {}
     for value, patches in templates.items():
         if not patches:
-            mean_templates[value] = None
+            top_templates[value] = None
             continue
-        mean_templates[value] = np.mean(np.stack(patches, axis=0), axis=0)
-    return mean_templates
+        patches.sort(key=lambda x: x[0], reverse=True)
+        top = [p for _, p in patches[:DIGIT_TEMPLATE_TOPK]]
+        top_templates[value] = top
+    return top_templates
 
 
 def get_cost_row_windows(img):

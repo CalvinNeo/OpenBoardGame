@@ -211,6 +211,7 @@ const MEMORIES_SUPPORTED_GAMES = new Set([
 let createRoomPending = false;
 let pendingReadyAfterJoin = false;
 let pendingReadyRoomId = null;
+let cachedGameList = null;
 let decryptoWordPacks = [];
 let decryptoPackSelections = new Set(["basic"]);
 let decryptoPacksLoaded = false;
@@ -471,6 +472,12 @@ const loadModalCloseBtn = document.getElementById("loadModalCloseBtn");
 const loadList = document.getElementById("loadList");
 const loadEmpty = document.getElementById("loadEmpty");
 const loadAutoSaveToggle = document.getElementById("loadAutoSaveToggle");
+const createRoomModal = document.getElementById("createRoomModal");
+const createRoomModalCloseBtn = document.getElementById("createRoomModalCloseBtn");
+const gameSearchInput = document.getElementById("gameSearchInput");
+const playerCountFilter = document.getElementById("playerCountFilter");
+const gameListEl = document.getElementById("gameList");
+const gameListEmpty = document.getElementById("gameListEmpty");
 const seatClaimModal = document.getElementById("seatClaimModal");
 const seatClaimCloseBtn = document.getElementById("seatClaimCloseBtn");
 const seatClaimNameHint = document.getElementById("seatClaimNameHint");
@@ -1440,6 +1447,108 @@ function openLoadModal() {
 
 function closeLoadModal() {
   setModalVisible(loadModal, false);
+}
+
+async function fetchGameList() {
+  if (cachedGameList) {
+    return cachedGameList;
+  }
+  try {
+    const res = await fetch("/api/games");
+    cachedGameList = await res.json();
+    return cachedGameList;
+  } catch (err) {
+    console.error("Failed to fetch game list", err);
+    return [];
+  }
+}
+
+function filterGames(games, searchText, playerCount) {
+  return games.filter((g) => {
+    const matchesSearch =
+      !searchText ||
+      g.name.toLowerCase().includes(searchText.toLowerCase()) ||
+      g.game_id.toLowerCase().includes(searchText.toLowerCase());
+    const matchesPlayers =
+      !playerCount || (g.min_players <= playerCount && playerCount <= g.max_players);
+    return matchesSearch && matchesPlayers;
+  });
+}
+
+function renderGameList(games) {
+  if (!gameListEl || !gameListEmpty) {
+    return;
+  }
+  gameListEl.innerHTML = "";
+  if (!games || !games.length) {
+    gameListEmpty.classList.remove("hidden");
+    return;
+  }
+  gameListEmpty.classList.add("hidden");
+  games.forEach((g) => {
+    const item = document.createElement("div");
+    item.className = "game-item";
+    item.dataset.gameId = g.game_id;
+    const nameEl = document.createElement("span");
+    nameEl.className = "game-item-name";
+    nameEl.textContent = g.name;
+    const playersEl = document.createElement("span");
+    playersEl.className = "game-item-players";
+    playersEl.textContent =
+      g.min_players === g.max_players
+        ? `${g.min_players} players`
+        : `${g.min_players}-${g.max_players} players`;
+    item.appendChild(nameEl);
+    item.appendChild(playersEl);
+    item.addEventListener("click", () => {
+      selectGameFromModal(g.game_id);
+    });
+    gameListEl.appendChild(item);
+  });
+}
+
+function selectGameFromModal(gameId) {
+  const name = getPlayerName();
+  if (!name) {
+    log("Name required");
+    closeCreateRoomModal();
+    if (nameInput) {
+      nameInput.focus();
+    }
+    return;
+  }
+  closeCreateRoomModal();
+  socket.emit("room:create", { name, game_type: gameId });
+}
+
+async function applyGameFilters() {
+  const games = await fetchGameList();
+  const searchText = gameSearchInput ? gameSearchInput.value.trim() : "";
+  const playerCount = playerCountFilter ? parseInt(playerCountFilter.value, 10) || 0 : 0;
+  const filtered = filterGames(games, searchText, playerCount);
+  renderGameList(filtered);
+}
+
+async function openCreateRoomModal() {
+  if (!createRoomModal) {
+    return;
+  }
+  if (gameSearchInput) {
+    gameSearchInput.value = "";
+  }
+  if (playerCountFilter) {
+    playerCountFilter.value = "";
+  }
+  setModalVisible(createRoomModal, true);
+  await applyGameFilters();
+  if (gameSearchInput) {
+    gameSearchInput.focus();
+  }
+}
+
+function closeCreateRoomModal() {
+  createRoomPending = false;
+  setModalVisible(createRoomModal, false);
 }
 
 function openSeatClaimModal(roomId, sourceRoomId) {
@@ -2476,6 +2585,11 @@ function startCreateRoomFlow() {
     if (nameInput) {
       nameInput.focus();
     }
+    return;
+  }
+  if (createRoomModal) {
+    createRoomPending = true;
+    openCreateRoomModal();
     return;
   }
   if (!gameSelect || !createGameRow) {
@@ -15705,9 +15819,35 @@ if (loadModalCloseBtn) {
   });
 }
 
+if (createRoomModalCloseBtn) {
+  createRoomModalCloseBtn.addEventListener("click", () => {
+    closeCreateRoomModal();
+  });
+}
+
+if (gameSearchInput) {
+  gameSearchInput.addEventListener("input", () => {
+    applyGameFilters();
+  });
+}
+
+if (playerCountFilter) {
+  playerCountFilter.addEventListener("change", () => {
+    applyGameFilters();
+  });
+}
+
 if (seatClaimCloseBtn) {
   seatClaimCloseBtn.addEventListener("click", () => {
     closeSeatClaimModal();
+  });
+}
+
+if (createRoomModal) {
+  createRoomModal.addEventListener("click", (event) => {
+    if (event.target === createRoomModal) {
+      closeCreateRoomModal();
+    }
   });
 }
 

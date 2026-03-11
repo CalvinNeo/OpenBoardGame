@@ -43,6 +43,19 @@ async def index():
     return FileResponse("static/index.html")
 
 
+@fastapi_app.get("/api/games")
+async def api_list_games():
+    return [
+        {
+            "game_id": g.game_id,
+            "name": g.name,
+            "min_players": g.min_players,
+            "max_players": g.max_players,
+        }
+        for g in list_games()
+    ]
+
+
 @fastapi_app.get("/api/carcassonne/templates")
 async def carcassonne_templates():
     return get_carcassonne_template_payload()
