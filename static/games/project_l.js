@@ -3,6 +3,15 @@ const projectLUpgradeModalCloseBtn = document.getElementById("projectLUpgradeMod
 const projectLUpgradeFromLabel = document.getElementById("projectLUpgradeFromLabel");
 const projectLUpgradeOptions = document.getElementById("projectLUpgradeOptions");
 
+const projectLHeaderActions = document.getElementById("projectLHeaderActions");
+const projectLHelpBtn = document.getElementById("projectLHelpBtn");
+const projectLExplainBtn = document.getElementById("projectLExplainBtn");
+const projectLHelpModal = document.getElementById("projectLHelpModal");
+const projectLHelpModalCloseBtn = document.getElementById("projectLHelpModalCloseBtn");
+const projectLExplainModal = document.getElementById("projectLExplainModal");
+const projectLExplainModalCloseBtn = document.getElementById("projectLExplainModalCloseBtn");
+const projectLExplainContent = document.getElementById("projectLExplainContent");
+
 const projectLPanel = document.getElementById("projectLPanel");
 const projectLPhaseLabel = document.getElementById("projectLPhase");
 const projectLApLabel = document.getElementById("projectLAp");
@@ -1513,3 +1522,331 @@ if (projectLFinishingDoneBtn) {
     sendAction({ type: "finishing_done" });
   });
 }
+
+// Help/Explain functionality
+const PROJECT_L_HELP_TEXT = `
+<h3>Game Overview</h3>
+<p>Project L is a puzzle-building game where players collect and place tetromino-like pieces onto puzzle cards to complete them and earn points. The game combines strategic piece management with spatial puzzle solving.</p>
+
+<h3>Game Setup</h3>
+<ul>
+  <li>Each player starts with 4 Level-1 pieces (O-shaped monomino)</li>
+  <li>Black deck contains harder puzzles (more points), White deck contains easier puzzles</li>
+  <li>A market of 4 puzzle cards is revealed from the decks</li>
+</ul>
+
+<h3>Turn Structure</h3>
+<p>On your turn, you have <strong>3 Action Points (AP)</strong> to spend. You can perform actions in any order, and you may do the same action multiple times.</p>
+
+<h4>Actions (1 AP each):</h4>
+<ul>
+  <li><strong>Take Puzzle</strong> - Take a puzzle from the market or draw from a deck. You can have up to 4 active puzzles.</li>
+  <li><strong>Take Level-1 Piece</strong> - Add a basic O-piece to your inventory (max 1 per turn).</li>
+  <li><strong>Place Piece</strong> - Place one piece from your inventory onto one of your active puzzles.</li>
+  <li><strong>Upgrade Piece</strong> - Return a piece to upgrade it to a higher level piece (difference of 1 level).</li>
+  <li><strong>Master Action</strong> - Place one piece on EACH of your active puzzles simultaneously (powerful!).</li>
+</ul>
+
+<h3>Completing Puzzles</h3>
+<ul>
+  <li>When all spaces on a puzzle are filled, it's complete</li>
+  <li>You earn the points shown on the puzzle card</li>
+  <li>You receive the reward piece shown on the card</li>
+  <li>The puzzle goes to your completed pile</li>
+</ul>
+
+<h3>Pieces & Upgrades</h3>
+<p>Pieces come in 5 levels (1-5). Higher level pieces cover more spaces:</p>
+<ul>
+  <li>Level 1: O (1 space)</li>
+  <li>Level 2: I2 (2 spaces)</li>
+  <li>Level 3: I3, L3, V3 (3 spaces)</li>
+  <li>Level 4: I4, L4, S4, T4, O4 (4 spaces)</li>
+  <li>Level 5: Various 5-space pieces</li>
+</ul>
+<p>You can upgrade a piece by 1 level. For example, L3 can upgrade to any Level 4 piece.</p>
+
+<h3>Piece Manipulation</h3>
+<ul>
+  <li><strong>Rotate</strong> - Rotate the selected piece 90° (free action)</li>
+  <li><strong>Flip</strong> - Mirror the piece horizontally (free action)</li>
+</ul>
+
+<h3>Master Action</h3>
+<p>The Master Action lets you place one piece on each of your active puzzles for just 1 AP - but only once per turn. Use the Queue system to set up placements:</p>
+<ul>
+  <li>Select a puzzle, piece, and position</li>
+  <li>Click "Queue Master" to add to the queue</li>
+  <li>Repeat for each puzzle</li>
+  <li>Click "Use Master" to execute all placements</li>
+</ul>
+
+<h3>Game End</h3>
+<p>The game end is triggered when the puzzle supply cannot be refilled. Each player gets one more turn, then enters the Finishing Phase:</p>
+<ul>
+  <li>You can place remaining pieces on puzzles</li>
+  <li>Each piece placed costs 1 point (penalty)</li>
+  <li>Click "Finish" when done</li>
+</ul>
+
+<h3>Scoring</h3>
+<p>Final score = Sum of completed puzzle points - Finishing phase penalties</p>
+<p>The player with the highest score wins!</p>
+
+<h3>Tips</h3>
+<ul>
+  <li>Try to complete puzzles that give useful reward pieces</li>
+  <li>Master Action is most efficient when you have 4 active puzzles</li>
+  <li>Higher level pieces are more flexible but harder to place precisely</li>
+  <li>Plan your upgrades - sometimes a Level 3 piece is better than Level 4</li>
+</ul>
+`;
+
+const PROJECT_L_BUTTON_EXPLANATIONS = {
+  projectLTakeMarketBtn: {
+    name: "Take Selected Market",
+    description: "Take the currently selected puzzle card from the market and add it to your active puzzles. You must first click on a market card to select it.",
+    cost: "1 AP",
+    costType: "ap"
+  },
+  projectLDrawWhiteBtn: {
+    name: "Draw White Deck",
+    description: "Draw a puzzle card from the White deck (easier puzzles, fewer points) and add it to your active puzzles.",
+    cost: "1 AP",
+    costType: "ap"
+  },
+  projectLDrawBlackBtn: {
+    name: "Draw Black Deck",
+    description: "Draw a puzzle card from the Black deck (harder puzzles, more points) and add it to your active puzzles.",
+    cost: "1 AP",
+    costType: "ap"
+  },
+  projectLRotateLeftBtn: {
+    name: "Rotate Left",
+    description: "Rotate the selected piece 90 degrees counter-clockwise. Use this to fit pieces into puzzle spaces.",
+    cost: "Free",
+    costType: "free"
+  },
+  projectLRotateRightBtn: {
+    name: "Rotate Right",
+    description: "Rotate the selected piece 90 degrees clockwise. Use this to fit pieces into puzzle spaces.",
+    cost: "Free",
+    costType: "free"
+  },
+  projectLFlipBtn: {
+    name: "Flip",
+    description: "Mirror the selected piece horizontally. Combined with rotation, this lets you orient pieces in any configuration.",
+    cost: "Free",
+    costType: "free"
+  },
+  projectLUpgradeBtn: {
+    name: "Upgrade",
+    description: "Upgrade the selected piece from your inventory to a higher level piece. You can only upgrade by 1 level (e.g., Level 3 → Level 4). Select a piece from inventory first, then click this button to choose the upgrade target.",
+    cost: "1 AP",
+    costType: "ap"
+  },
+  projectLTakeLevel1Btn: {
+    name: "Take Level 1",
+    description: "Add a basic Level-1 piece (O-shaped monomino) to your inventory. You can only do this once per turn.",
+    cost: "1 AP",
+    costType: "ap"
+  },
+  projectLPlaceBtn: {
+    name: "Place Piece",
+    description: "Place the selected piece onto the selected puzzle at the chosen position. Select a puzzle, select a piece from inventory, then click on the puzzle grid to choose the placement position.",
+    cost: "1 AP",
+    costType: "ap"
+  },
+  projectLQueueMasterBtn: {
+    name: "Queue Master",
+    description: "Add the current placement to the Master Action queue. The Master Action allows you to place one piece on each of your active puzzles for just 1 AP. Queue up placements for each puzzle, then use 'Use Master' to execute them all.",
+    cost: "Free (queue only)",
+    costType: "free"
+  },
+  projectLClearMasterBtn: {
+    name: "Clear Queue",
+    description: "Clear all placements from the Master Action queue. Use this to start over if you change your mind.",
+    cost: "Free",
+    costType: "free"
+  },
+  projectLUseMasterBtn: {
+    name: "Use Master",
+    description: "Execute all queued placements as a single Master Action. This places one piece on each of your active puzzles for just 1 AP. Can only be used once per turn.",
+    cost: "1 AP",
+    costType: "ap"
+  },
+  projectLFinishingPlaceBtn: {
+    name: "Finishing Place",
+    description: "During the Finishing Phase, place a piece on a puzzle. Each piece placed in this phase costs 1 point as a penalty, but helps complete puzzles for their full point value.",
+    cost: "-1 Point",
+    costType: "penalty"
+  },
+  projectLFinishingDoneBtn: {
+    name: "Finish",
+    description: "End your Finishing Phase and finalize your score. Any incomplete puzzles will not score points. Make sure you've placed all the pieces you want before clicking this!",
+    cost: "End Turn",
+    costType: "end"
+  }
+};
+
+let projectLExplainMode = false;
+
+function showProjectLHeaderActions(show) {
+  if (projectLHeaderActions) {
+    projectLHeaderActions.style.display = show ? "flex" : "none";
+  }
+}
+
+function showProjectLHelpModal() {
+  if (projectLHelpModal) {
+    const content = projectLHelpModal.querySelector(".project-l-help-content");
+    if (content) {
+      content.innerHTML = PROJECT_L_HELP_TEXT;
+    }
+    setModalVisible(projectLHelpModal, true);
+  }
+}
+
+function closeProjectLHelpModal() {
+  if (projectLHelpModal) {
+    setModalVisible(projectLHelpModal, false);
+  }
+}
+
+function updateExplainModeClasses(enabled) {
+  Object.keys(PROJECT_L_BUTTON_EXPLANATIONS).forEach((buttonId) => {
+    const btn = document.getElementById(buttonId);
+    if (btn) {
+      btn.classList.toggle("has-explanation", enabled);
+    }
+  });
+}
+
+function findButtonAtPoint(x, y) {
+  // Check all buttons with explanations to see if click is within their bounds
+  for (const buttonId of Object.keys(PROJECT_L_BUTTON_EXPLANATIONS)) {
+    const btn = document.getElementById(buttonId);
+    if (!btn) continue;
+    const rect = btn.getBoundingClientRect();
+    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+      return buttonId;
+    }
+  }
+  return null;
+}
+
+function toggleProjectLExplainMode() {
+  projectLExplainMode = !projectLExplainMode;
+  document.body.classList.toggle("project-l-explain-mode", projectLExplainMode);
+  updateExplainModeClasses(projectLExplainMode);
+  if (projectLExplainBtn) {
+    projectLExplainBtn.classList.toggle("active", projectLExplainMode);
+  }
+}
+
+function exitProjectLExplainMode() {
+  if (projectLExplainMode) {
+    projectLExplainMode = false;
+    document.body.classList.remove("project-l-explain-mode");
+    updateExplainModeClasses(false);
+    if (projectLExplainBtn) {
+      projectLExplainBtn.classList.remove("active");
+    }
+  }
+}
+
+function showButtonExplanation(buttonId) {
+  const explanation = PROJECT_L_BUTTON_EXPLANATIONS[buttonId];
+  if (!explanation || !projectLExplainContent || !projectLExplainModal) {
+    return;
+  }
+  let costClass = "free";
+  if (explanation.costType === "ap") costClass = "ap";
+  else if (explanation.costType === "penalty") costClass = "penalty";
+  else if (explanation.costType === "end") costClass = "end";
+
+  projectLExplainContent.innerHTML = `
+    <h4>${explanation.name}</h4>
+    <p>${explanation.description}</p>
+    <span class="explain-cost ${costClass}">${explanation.cost}</span>
+  `;
+  setModalVisible(projectLExplainModal, true);
+}
+
+function closeProjectLExplainModal() {
+  if (projectLExplainModal) {
+    setModalVisible(projectLExplainModal, false);
+  }
+}
+
+// Help button
+if (projectLHelpBtn) {
+  projectLHelpBtn.addEventListener("click", () => {
+    showProjectLHelpModal();
+  });
+}
+
+if (projectLHelpModalCloseBtn) {
+  projectLHelpModalCloseBtn.addEventListener("click", closeProjectLHelpModal);
+}
+
+// Explain button
+if (projectLExplainBtn) {
+  projectLExplainBtn.addEventListener("click", () => {
+    toggleProjectLExplainMode();
+  });
+}
+
+if (projectLExplainModalCloseBtn) {
+  projectLExplainModalCloseBtn.addEventListener("click", closeProjectLExplainModal);
+}
+
+// Capture pointer events in explain mode (works on disabled buttons too)
+document.addEventListener("pointerdown", (e) => {
+  if (!projectLExplainMode) return;
+
+  // Check if clicked on a button with explanation (including disabled ones)
+  const buttonId = findButtonAtPoint(e.clientX, e.clientY);
+  if (buttonId) {
+    e.preventDefault();
+    e.stopPropagation();
+    showButtonExplanation(buttonId);
+    exitProjectLExplainMode();
+    return;
+  }
+
+  const button = e.target.closest("button");
+
+  // Don't intercept the Help/Explain buttons themselves
+  if (button === projectLExplainBtn || button === projectLHelpBtn) return;
+
+  // Don't intercept modal close buttons
+  if (button === projectLHelpModalCloseBtn || button === projectLExplainModalCloseBtn) return;
+
+  // Block other button clicks
+  if (button) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+}, true);
+
+// Also block click to prevent action after pointerdown
+document.addEventListener("click", (e) => {
+  if (!projectLExplainMode) return;
+
+  const button = e.target.closest("button");
+  if (!button) return;
+
+  if (button === projectLExplainBtn || button === projectLHelpBtn) return;
+  if (button === projectLHelpModalCloseBtn || button === projectLExplainModalCloseBtn) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+}, true);
+
+// ESC to exit explain mode
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && projectLExplainMode) {
+    exitProjectLExplainMode();
+  }
+});

@@ -1758,6 +1758,9 @@ function setGamePanelVisibility(gameType) {
   if (projectLPanel) {
     projectLPanel.classList.toggle("hidden", !showProjectL);
   }
+  if (typeof showProjectLHeaderActions === "function") {
+    showProjectLHeaderActions(showProjectL);
+  }
   if (carcassonnePanel) {
     carcassonnePanel.classList.toggle("hidden", !showCarcassonne);
   }
