@@ -40,6 +40,10 @@ const CYBER_THRUSTER_RADIUS = 5;
 const CYBER_THRUSTER_TOLERANCE = 20;
 const CYBER_SYNTH_BARS = 10;
 
+function clampValue(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
 const cyberPicturesConfigBox = document.getElementById("cyberPicturesConfigBox");
 const cyberPicturesDuplicateRow = document.getElementById("cyberPicturesDuplicateRow");
 const cyberPicturesDuplicateToggle = document.getElementById("cyberPicturesDuplicateToggle");
