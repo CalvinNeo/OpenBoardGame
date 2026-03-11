@@ -1,4 +1,5 @@
 {"id": "scene_001_01", "vp": 2, "bonuses": ["yellow", "yellow"], "cost": {"purple": 1, "red": 3, "pink": 3, "black": 3}}
+{"id": "scene_001_02", "vp": 2, "bonuses": ["red", "red"], "cost": {"purple": 1, "pink": 3, "blue": 3, "yellow": 3}}
 {"id": "scene_001_03", "vp": 2, "bonuses": ["pink", "pink"], "cost": {"purple": 1, "blue": 3, "yellow": 3, "black": 3}}
 {"id": "scene_001_04", "vp": 2, "bonuses": ["blue", "blue"], "cost": {"purple": 1, "black": 3, "yellow": 3, "red": 3}}
 {"id": "scene_001_05", "vp": 2, "bonuses": ["black", "black"], "cost": {"purple": 1, "pink": 3, "red": 3, "blue": 3}}
@@ -12,6 +13,7 @@
 {"id": "scene_002_03", "vp": 0, "bonuses": ["yellow"], "cost": {"red": 2, "pink": 1}}
 {"id": "scene_002_04", "vp": 1, "bonuses": ["yellow"], "cost": {"yellow": 3, "pink": 2, "red": 2}}
 {"id": "scene_002_05", "vp": 3, "bonuses": ["yellow"], "cost": {"yellow": 5, "red": 2, "pink": 2}}
+{"id": "scene_002_06", "vp": 5, "bonuses": ["yellow"], "cost": {"red": 7, "pink": 3}}
 {"id": "scene_002_07", "vp": 3, "bonuses": ["yellow"], "cost": {"red": 4, "pink": 4, "blue": 1}}
 {"id": "scene_002_08", "vp": 1, "bonuses": ["yellow"], "cost": {"blue": 3, "pink": 2, "black": 2}}
 {"id": "scene_002_09", "vp": 1, "bonuses": ["yellow"], "cost": {"red": 3, "black": 2}}
@@ -56,12 +58,15 @@
 {"id": "scene_005_02", "vp": 3, "bonuses": ["blue"], "cost": {"blue": 6}}
 {"id": "scene_005_03", "vp": 0, "bonuses": ["blue"], "cost": {"yellow": 2, "black": 1}}
 {"id": "scene_005_04", "vp": 0, "bonuses": ["blue"], "cost": {"blue": 3, "pink": 2, "black": 2}}
+{"id": "scene_005_05", "vp": 3, "bonuses": ["blue"], "cost": {"blue": 5, "black": 2, "yellow": 2}}
 {"id": "scene_005_06", "vp": 5, "bonuses": ["blue"], "cost": {"black": 7, "yellow": 3}}
 {"id": "scene_005_07", "vp": 3, "bonuses": ["blue"], "cost": {"yellow": 4, "black": 4, "red": 1}}
 {"id": "scene_005_08", "vp": 1, "bonuses": ["blue"], "cost": {"red": 3, "yellow": 2, "pink": 2}}
 {"id": "scene_005_09", "vp": 1, "bonuses": ["blue"], "cost": {"black": 3, "pink": 2}}
 {"id": "scene_005_10", "vp": 0, "bonuses": ["blue"], "cost": {"blue": 2, "red": 2}}
+{"id": "scene_005_11", "vp": 0, "bonuses": ["blue"], "cost": {"pink": 3}}
 {"id": "scene_005_12", "vp": 2, "bonuses": ["blue"], "cost": {"blue": 5, "red": 2}}
+{"id": "scene_005_13", "vp": 0, "bonuses": ["blue"], "cost": {"red": 2, "yellow": 1, "blue": 1}}
 {"id": "scene_005_15", "vp": 2, "bonuses": ["blue"], "cost": {"pink": 4, "yellow": 2, "black": 1}}
 {"id": "scene_005_16", "vp": 0, "bonuses": ["blue"], "cost": {"black": 1, "yellow": 1, "pink": 4, "red": 1}}
 {"id": "scene_006_01", "vp": 0, "bonuses": ["black"], "cost": {"black": 4}}

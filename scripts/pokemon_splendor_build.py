@@ -40,6 +40,7 @@ OUTPUT_PATH = ASSETS_DIR / "cards.json"
 DEBUG_PATH = ASSETS_DIR / "cards_debug.json"
 REPORT_PATH = ASSETS_DIR / "cards_review.json"
 CORRECT_PATH = SCRIPT_DIR / "pokemon_splendor_correct.txt"
+BAD_IDS_PATH = SCRIPT_DIR / "pokemon_splendor_bad_ids.txt"
 
 LEGENDARY_EN = {
     "Articuno",
@@ -110,10 +111,25 @@ SCENE_BONUS_MAP = {
 # Manual cost fixes for known OCR edge cases (card_id -> overrides)
 # Use "_replace" to fully replace cost, otherwise values update existing cost.
 COST_OVERRIDES = {
+    "scene_001_02": {"_replace": {"purple": 1, "pink": 3, "blue": 3, "yellow": 3}},
+    "scene_001_06": {"_replace": {"purple": 1, "blue": 3, "pink": 2}},
+    "scene_001_07": {"_replace": {"purple": 1, "black": 3, "blue": 2}},
+    "scene_001_08": {"_replace": {"purple": 1, "red": 3, "black": 2}},
+    "scene_001_09": {"_replace": {"purple": 1, "pink": 3, "yellow": 2}},
+    "scene_001_10": {"_replace": {"purple": 1, "yellow": 3, "red": 2}},
+    "scene_002_06": {"_replace": {"red": 7, "pink": 3}},
     "scene_002_07": {"_replace": {"red": 4, "pink": 4, "blue": 1}},
     "scene_002_16": {"_replace": {"blue": 1, "red": 1, "pink": 1, "black": 1}},
+    "scene_003_02": {"_replace": {"red": 6}},
     "scene_003_13": {"_replace": {"yellow": 2, "pink": 1, "black": 1}},
     "scene_003_14": {"_replace": {"yellow": 6, "pink": 4}},
+    "scene_004_05": {"_replace": {"pink": 5, "yellow": 2, "red": 2}},
+    "scene_004_08": {"_replace": {"black": 3, "blue": 2, "red": 2}},
+    "scene_005_07": {"_replace": {"yellow": 4, "black": 4, "red": 1}},
+    "scene_005_10": {"_replace": {"blue": 2, "red": 2}},
+    "scene_005_11": {"_replace": {"pink": 3}},
+    "scene_005_13": {"_replace": {"red": 2, "yellow": 1, "blue": 1}},
+    "scene_006_04": {"_replace": {"black": 3, "blue": 2, "red": 2}},
 }
 
 NAME_BOX_Y = 140
@@ -189,6 +205,12 @@ def load_evolution_map(en_by_id):
                 next_en[en].append(nxt_en)
 
     return prev_en, next_en
+
+
+def load_bad_ids(path=BAD_IDS_PATH):
+    if not path.exists():
+        return set()
+    return {line.strip() for line in path.read_text().splitlines() if line.strip()}
 
 
 def circular_hue_distance(a, b):
@@ -1364,7 +1386,7 @@ def select_digit_from_full(digits, window, w):
     return candidates[0]
 
 
-def map_costs_from_trapezoids(img, ocr, digits=None, templates=None):
+def map_costs_from_trapezoids(img, ocr, digits=None, templates=None, card_id=None, bad_ids=None):
     costs = defaultdict(int)
     entries = []
     h, w = img.shape[:2]
@@ -1450,6 +1472,9 @@ def map_costs_from_trapezoids(img, ocr, digits=None, templates=None):
                     digit["value"] = val
                     digit["score"] = float(score)
                     source = "template_fix"
+        if bad_ids and card_id in bad_ids:
+            if source in {"easyocr_mask", "template_fix"} and digit.get("score", 0.0) < 0.9:
+                continue
         allow_purple = (row_idx == 0)
         if digit["value"] not in DIGIT_ALLOWED_VALUES:
             continue
@@ -1533,8 +1558,15 @@ def map_costs_from_digits(digits, img):
     return dict(costs)
 
 
-def map_costs(digits, img, ocr, templates):
-    costs, entries = map_costs_from_trapezoids(img, ocr, digits=digits, templates=templates)
+def map_costs(digits, img, ocr, templates, card_id=None, bad_ids=None):
+    costs, entries = map_costs_from_trapezoids(
+        img,
+        ocr,
+        digits=digits,
+        templates=templates,
+        card_id=card_id,
+        bad_ids=bad_ids,
+    )
     return costs, "trapezoid_ocr", entries
 
 
@@ -1631,6 +1663,7 @@ def build():
         ball_text_features /= ball_text_features.norm(dim=-1, keepdim=True)
 
     ocr = RapidOCR()
+    bad_ids = load_bad_ids()
 
     meta = json.loads(META_PATH.read_text())
     bonus_templates = build_bonus_templates(meta, BONUS_OVERRIDES)
@@ -1684,7 +1717,14 @@ def build():
 
         digits = extract_digits(res)
         vp, vp_digit = pick_vp(digits)
-        cost, cost_source, cost_entries = map_costs(digits, img_cv, ocr, digit_templates)
+        cost, cost_source, cost_entries = map_costs(
+            digits,
+            img_cv,
+            ocr,
+            digit_templates,
+            card_id=card_id,
+            bad_ids=bad_ids,
+        )
         cost, override_tag = apply_cost_override(Path(d["card_image"]).stem, cost)
         if override_tag:
             cost_source = override_tag
@@ -1965,9 +2005,11 @@ def write_compare_outputs(cards, debug):
 def write_cost_debug(meta, ocr, ids=None, templates=None, output_name="index.html"):
     out_dir = ASSETS_DIR / "cost_debug"
     out_dir.mkdir(parents=True, exist_ok=True)
+    bad_ids = load_bad_ids()
     rows = []
     for d in meta:
-        if ids and Path(d["card_image"]).stem not in ids:
+        card_id = Path(d["card_image"]).stem
+        if ids and card_id not in ids:
             continue
         img_path = CARDS_DIR / d["card_image"]
         img_cv = cv2.imread(str(img_path))
@@ -1975,8 +2017,15 @@ def write_cost_debug(meta, ocr, ids=None, templates=None, output_name="index.htm
         res = res or []
         digits = extract_digits(res)
         windows = get_cost_row_windows(img_cv)
-        costs, entries = map_costs_from_trapezoids(img_cv, ocr, digits=digits, templates=templates)
-        costs, override_tag = apply_cost_override(Path(d["card_image"]).stem, costs)
+        costs, entries = map_costs_from_trapezoids(
+            img_cv,
+            ocr,
+            digits=digits,
+            templates=templates,
+            card_id=card_id,
+            bad_ids=bad_ids,
+        )
+        costs, override_tag = apply_cost_override(card_id, costs)
         vis = img_cv.copy()
         # draw row windows
         for x0, y0, x1, y1, _ in windows:
@@ -2172,6 +2221,7 @@ def update_costs_only():
     ocr = RapidOCR()
     meta = json.loads(META_PATH.read_text())
     templates = build_digit_templates(meta, ocr)
+    bad_ids = load_bad_ids()
     cards = json.loads(OUTPUT_PATH.read_text()) if OUTPUT_PATH.exists() else []
     debug = json.loads(DEBUG_PATH.read_text()) if DEBUG_PATH.exists() else []
 
@@ -2190,7 +2240,14 @@ def update_costs_only():
         res, _ = ocr(str(img_path), box_thresh=OCR_BOX_THRESH, text_score=OCR_TEXT_SCORE)
         res = res or []
         digits = extract_digits(res)
-        cost, cost_source, cost_entries = map_costs(digits, img_cv, ocr, templates)
+        cost, cost_source, cost_entries = map_costs(
+            digits,
+            img_cv,
+            ocr,
+            templates,
+            card_id=card_id,
+            bad_ids=bad_ids,
+        )
         cost, override_tag = apply_cost_override(card_id, cost)
         if override_tag:
             cost_source = override_tag
