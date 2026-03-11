@@ -910,17 +910,48 @@ def find_trapezoid_mask(img, window):
     blur = cv2.GaussianBlur(gray, (3, 3), 0)
     edges = cv2.Canny(blur, 50, 150)
     edges = cv2.dilate(edges, np.ones((2, 2), np.uint8), iterations=1)
+    def pick_best(contours):
+        best = None
+        best_area = 0.0
+        for cnt in contours:
+            area = cv2.contourArea(cnt)
+            if area > best_area:
+                best_area = area
+                best = cnt
+        return best, best_area
+
     contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     if not contours:
         return None, None, None
-    best = None
-    best_area = 0.0
-    for cnt in contours:
-        area = cv2.contourArea(cnt)
-        if area > best_area:
-            best_area = area
-            best = cnt
-    if best is None or best_area < COST_TRAPEZOID_MIN_AREA:
+    best, best_area = pick_best(contours)
+
+    # If the best contour is too far right (often a ball), retry on left portion.
+    roi_w = roi.shape[1]
+    used_left = False
+    if best is not None:
+        M = cv2.moments(best)
+        cx = (M["m10"] / M["m00"]) if M["m00"] else 0.0
+        if cx > roi_w * 0.6 or best_area < COST_TRAPEZOID_MIN_AREA:
+            edges_left = edges.copy()
+            edges_left[:, int(roi_w * 0.65):] = 0
+            contours_left, _ = cv2.findContours(edges_left, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            best_left, area_left = pick_best(contours_left)
+            if best_left is not None:
+                M_left = cv2.moments(best_left)
+                cx_left = (M_left["m10"] / M_left["m00"]) if M_left["m00"] else 0.0
+                min_left_area = max(COST_TRAPEZOID_MIN_AREA * 0.7, 50)
+                if area_left >= min_left_area and cx_left < roi_w * 0.55:
+                    best = best_left
+                    best_area = area_left
+                    used_left = True
+
+    if best is None:
+        return None, None, None
+    if used_left:
+        min_left_area = max(COST_TRAPEZOID_MIN_AREA * 0.7, 50)
+        if best_area < min_left_area:
+            return None, None, None
+    elif best_area < COST_TRAPEZOID_MIN_AREA:
         return None, None, None
     mask = np.zeros(roi.shape[:2], dtype=np.uint8)
     cv2.drawContours(mask, [best], -1, 255, -1)
