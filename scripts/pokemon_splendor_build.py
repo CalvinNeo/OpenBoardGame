@@ -814,7 +814,7 @@ def trapezoid_top_bottom_ratio(mask):
     return best
 
 
-def classify_cost_color(h, s, v, dark_ratio=0.0):
+def classify_cost_color(h, s, v, dark_ratio=0.0, allow_purple=True):
     if h is None:
         return None
     if dark_ratio > 0.25 or (v < 60 and s < 80):
@@ -822,7 +822,7 @@ def classify_cost_color(h, s, v, dark_ratio=0.0):
     # Red wraps around 0/180
     if h >= 170 or h <= 10:
         if v < 180 and s < 105:
-            return "purple"
+            return "purple" if allow_purple else "red"
         return "red" if s >= 85 else "pink"
     # Yellow band (this set skews toward orange/yellow in screenshots)
     if 15 <= h <= 60:
@@ -832,7 +832,9 @@ def classify_cost_color(h, s, v, dark_ratio=0.0):
         return "blue"
     # Purple / pink bands
     if 135 <= h <= 155:
-        return "purple"
+        if allow_purple:
+            return "purple"
+        return "blue" if h < 145 else "pink"
     if 156 <= h < 170:
         return "pink"
     color = classify_color(h, s, v, COST_COLOR_CENTERS)
@@ -843,7 +845,7 @@ def classify_cost_color(h, s, v, dark_ratio=0.0):
     return color
 
 
-def classify_cost_color_from_bgr(mean_bgr, dark_ratio=0.0):
+def classify_cost_color_from_bgr(mean_bgr, dark_ratio=0.0, allow_purple=True):
     b, g, r = mean_bgr
     brightness = (b + g + r) / 3.0
     if dark_ratio > 0.2 and brightness < 160:
@@ -866,7 +868,9 @@ def classify_cost_color_from_bgr(mean_bgr, dark_ratio=0.0):
     # purple/pink: R dominant but close to B
     if r >= b and r >= g and (r - b) < 30:
         if (b - g) > 10 and brightness < 180:
-            return "purple"
+            if allow_purple:
+                return "purple"
+            return "blue" if b >= r else "pink"
         return "pink"
     if r >= g and r >= b:
         return "red"
@@ -1303,7 +1307,7 @@ def detect_cost_digit_from_mask_easyocr(img, window, mask):
     return best
 
 
-def detect_cost_color(img, window, mask):
+def detect_cost_color(img, window, mask, allow_purple=True):
     h, w = img.shape[:2]
     x0, y0, x1, y1, _ = window
     if x1 <= x0 or y1 <= y0:
@@ -1317,19 +1321,24 @@ def detect_cost_color(img, window, mask):
     dark_ratio = float((hsv[:, :, 2][mask > 0] < 100).mean()) if (mask > 0).any() else 0.0
     mean_hsv = mean_hsv_from_mask(roi, mask)
     if mean_hsv:
-        # prefer BGR-based heuristic for cost colors
-        mean_bgr = roi[mask > 0].mean(axis=0)
-        color = classify_cost_color_from_bgr(mean_bgr, dark_ratio=dark_ratio)
-        if color:
-            return color
         hue, sat, val = mean_hsv
-        color = classify_cost_color(hue, sat, val, dark_ratio=dark_ratio)
-        if color:
-            return color
+        mean_bgr = roi[mask > 0].mean(axis=0)
+        hue_color = classify_cost_color(hue, sat, val, dark_ratio=dark_ratio, allow_purple=allow_purple)
+        bgr_color = classify_cost_color_from_bgr(mean_bgr, dark_ratio=dark_ratio, allow_purple=allow_purple)
+        if hue_color and bgr_color:
+            if hue_color == bgr_color:
+                return hue_color
+            if sat >= 80:
+                return hue_color
+            return bgr_color
+        if hue_color:
+            return hue_color
+        if bgr_color:
+            return bgr_color
     hue_stats = dominant_hue_in_mask(hsv, mask)
     if hue_stats:
         hue, sat, val = hue_stats
-        color = classify_cost_color(hue, sat, val, dark_ratio=dark_ratio)
+        color = classify_cost_color(hue, sat, val, dark_ratio=dark_ratio, allow_purple=allow_purple)
         if color:
             return color
     return None
@@ -1341,6 +1350,8 @@ def select_digit_from_full(digits, window, w):
     x0, y0, x1, y1, row_cy = window
     candidates = []
     for d in digits:
+        if d["value"] not in DIGIT_ALLOWED_VALUES:
+            continue
         if d["cy"] < y0 or d["cy"] > y1:
             continue
         if d["cx"] > w * COST_ROW_X_MAX_RATIO:
@@ -1357,7 +1368,7 @@ def map_costs_from_trapezoids(img, ocr, digits=None, templates=None):
     costs = defaultdict(int)
     entries = []
     h, w = img.shape[:2]
-    for window in get_cost_row_windows(img):
+    for row_idx, window in enumerate(get_cost_row_windows(img)):
         mask, contour, area = find_trapezoid_mask(img, window)
         if mask is None:
             continue
@@ -1439,7 +1450,10 @@ def map_costs_from_trapezoids(img, ocr, digits=None, templates=None):
                     digit["value"] = val
                     digit["score"] = float(score)
                     source = "template_fix"
-        color = detect_cost_color(img, window, mask)
+        allow_purple = (row_idx == 0)
+        if digit["value"] not in DIGIT_ALLOWED_VALUES:
+            continue
+        color = detect_cost_color(img, window, mask, allow_purple=allow_purple)
         entry = {
             "value": digit["value"],
             "color": color,
@@ -1453,6 +1467,37 @@ def map_costs_from_trapezoids(img, ocr, digits=None, templates=None):
         entries.append(entry)
         if color:
             costs[color] += digit["value"]
+
+    # If any color total is >=9, drop the weakest entries for that color.
+    if costs:
+        filtered = []
+        by_color = defaultdict(list)
+        for entry in entries:
+            color = entry.get("color")
+            if not color:
+                filtered.append(entry)
+                continue
+            by_color[color].append(entry)
+        for color, items in by_color.items():
+            total = sum(e["value"] for e in items)
+            if total < 9:
+                filtered.extend(items)
+                continue
+            items_sorted = sorted(
+                items,
+                key=lambda e: (e.get("score", 0.0), e.get("trapezoid_area", 0.0)),
+            )
+            while total >= 9 and len(items_sorted) > 1:
+                removed = items_sorted.pop(0)
+                total -= removed["value"]
+            filtered.extend(items_sorted)
+        entries = filtered
+        costs = defaultdict(int)
+        for entry in entries:
+            color = entry.get("color")
+            if color:
+                costs[color] += entry["value"]
+
     return dict(costs), entries
 
 
