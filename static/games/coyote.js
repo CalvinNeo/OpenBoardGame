@@ -1,3 +1,27 @@
+let currentCoyoteView = null;
+
+const coyotePhaseLabel = document.getElementById("coyotePhase");
+const coyoteRoundLabel = document.getElementById("coyoteRound");
+const coyoteTurnLabel = document.getElementById("coyoteTurn");
+const coyoteBidLabel = document.getElementById("coyoteBid");
+const coyoteBidderLabel = document.getElementById("coyoteBidder");
+const coyoteWinnerLabel = document.getElementById("coyoteWinner");
+const coyoteRoundNotice = document.getElementById("coyoteRoundNotice");
+const coyoteRoundNoticeTitle = document.getElementById("coyoteRoundNoticeTitle");
+const coyoteRoundNoticeBody = document.getElementById("coyoteRoundNoticeBody");
+const coyoteBidInput = document.getElementById("coyoteBidInput");
+const coyoteBidMinusBtn = document.getElementById("coyoteBidMinusBtn");
+const coyoteBidPlusBtn = document.getElementById("coyoteBidPlusBtn");
+const coyoteBidBtn = document.getElementById("coyoteBidBtn");
+const coyoteChallengeBtn = document.getElementById("coyoteChallengeBtn");
+const coyoteResetBtn = document.getElementById("coyoteResetBtn");
+const coyotePlayers = document.getElementById("coyotePlayers");
+
+const coyoteActionButtons = {
+  bid: coyoteBidBtn,
+  challenge: coyoteChallengeBtn,
+};
+
 function formatCoyoteSummary(view) {
   const summary = view.last_round_summary;
   if (!summary) {
@@ -190,4 +214,101 @@ function updateCoyoteActionButtons() {
     button.disabled = !allowed;
   });
   updateCoyoteBidControls(currentCoyoteView);
+}
+
+function clearCoyoteState() {
+  currentCoyoteView = null;
+  coyotePhaseLabel.textContent = "-";
+  coyoteRoundLabel.textContent = "-";
+  coyoteTurnLabel.textContent = "-";
+  coyoteBidLabel.textContent = "-";
+  coyoteBidderLabel.textContent = "-";
+  coyoteWinnerLabel.textContent = "-";
+  if (coyoteRoundNotice) {
+    coyoteRoundNotice.classList.add("hidden");
+  }
+  if (coyoteRoundNoticeBody) {
+    coyoteRoundNoticeBody.textContent = "-";
+  }
+  if (coyoteBidInput) {
+    coyoteBidInput.value = "";
+  }
+  if (coyoteResetBtn) {
+    coyoteResetBtn.disabled = true;
+  }
+  coyotePlayers.innerHTML = "";
+  updateCoyoteActionButtons();
+}
+
+function renderCoyoteGameState(data) {
+  const view = data.view;
+  const previousView = currentCoyoteView;
+  currentCoyoteView = view;
+  if (currentGameType !== "coyote") {
+    currentGameType = "coyote";
+    setGamePanelVisibility("coyote");
+  }
+
+  coyotePhaseLabel.textContent = view.phase || "-";
+  coyoteRoundLabel.textContent = view.round ?? "-";
+  const currentPlayer = view.players.find((p) => p.player_id === view.current_turn);
+  coyoteTurnLabel.textContent = currentPlayer ? currentPlayer.name : view.current_turn || "-";
+  coyoteBidLabel.textContent = view.last_bid ?? "-";
+  coyoteBidderLabel.textContent = view.last_bidder ? findPlayerName(view, view.last_bidder) : "-";
+  coyoteWinnerLabel.textContent = view.winner ? findPlayerName(view, view.winner) : "-";
+
+  if (coyoteRoundNoticeTitle) {
+    coyoteRoundNoticeTitle.textContent = "Last Round";
+  }
+  renderCoyoteRoundNotice(view);
+  updateCoyoteBidInput(view, previousView);
+  updateCoyoteBidControls(view);
+
+  renderCoyotePlayers(view);
+  logGameEvents(data);
+  updateCoyoteActionButtons();
+  if (coyoteResetBtn) {
+    coyoteResetBtn.disabled = !(view && view.game_over);
+  }
+}
+
+if (coyoteBidInput) {
+  coyoteBidInput.addEventListener("input", () => {
+    updateCoyoteActionButtons();
+  });
+}
+
+if (coyoteBidMinusBtn) {
+  coyoteBidMinusBtn.addEventListener("click", () => {
+    adjustCoyoteBid(-1);
+  });
+}
+
+if (coyoteBidPlusBtn) {
+  coyoteBidPlusBtn.addEventListener("click", () => {
+    adjustCoyoteBid(1);
+  });
+}
+
+if (coyoteBidBtn) {
+  coyoteBidBtn.addEventListener("click", () => {
+    const bid = Number.parseInt(coyoteBidInput.value, 10);
+    if (!Number.isInteger(bid)) {
+      log("Enter a bid number");
+      return;
+    }
+    sendAction({ type: "bid", bid });
+  });
+}
+
+if (coyoteChallengeBtn) {
+  coyoteChallengeBtn.addEventListener("click", () => {
+    sendAction({ type: "challenge" });
+  });
+}
+
+if (coyoteResetBtn) {
+  coyoteResetBtn.addEventListener("click", () => {
+    emitRoomStart();
+  });
 }
