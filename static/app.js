@@ -33,8 +33,6 @@ let currentGoldRushView = null;
 let currentIncanGoldView = null;
 let currentKobayakawaView = null;
 let currentHalliView = null;
-let currentHanabiView = null;
-let currentGangView = null;
 let currentSixNimmtView = null;
 let halliCountdownTimer = null;
 let halliCountdownState = {
@@ -48,7 +46,6 @@ let halliServerTimeOffsetMs = 0;
 let currentPointSaladView = null;
 let currentAbracaView = null;
 let currentFangNiaoView = null;
-let currentAidixitView = null;
 let currentGameType = null;
 let abracaLastRoundNotice = null;
 let selectedSlots = [];
@@ -62,10 +59,6 @@ let roomControlsAutoCollapsed = false;
 let selectedTarget = null;
 let flip7SelectedTarget = null;
 let goldRushSelectedHandIndex = null;
-let hanabiSelectedCardIndex = null;
-let hanabiSelectedTargetId = null;
-let hanabiSelectedClueType = "color";
-let hanabiSelectedClueValue = null;
 let skullSelectedCardIndex = null;
 let skullSelectedCardType = null;
 let skullSelectedTarget = null;
@@ -77,22 +70,6 @@ let catInBoxSelectedColor = null;
 let pointSaladSelectedPile = null;
 let pointSaladSelectedMarket = [];
 let pointSaladSelectedFlips = new Set();
-const HANABI_COLORS = ["red", "yellow", "green", "blue", "white"];
-const HANABI_RANKS = [1, 2, 3, 4, 5];
-const HANABI_COLOR_LABELS = {
-  red: "Red",
-  yellow: "Yellow",
-  green: "Green",
-  blue: "Blue",
-  white: "White",
-};
-const HANABI_COLOR_SHORT = {
-  red: "R",
-  yellow: "Y",
-  green: "G",
-  blue: "B",
-  white: "W",
-};
 const FANG_NIAO_BIRD_META = {
   flamingo: { name: "\u706b\u70c8\u9e1f", emoji: "\ud83e\udda9", color: "#fb7185" },
   owl: { name: "\u732b\u5934\u9e70", emoji: "\ud83e\udd89", color: "#f59e0b" },
@@ -135,21 +112,10 @@ let cachedGameList = null;
 let currentRoomList = [];
 let pendingSeatClaimRoomId = null;
 let pendingSeatClaimSourceId = null;
-let aidixitDecksLoaded = false;
-let aidixitDecks = [];
-let aidixitDeckSelections = new Set();
-let aidixitSelectedHandCardId = null;
-let aidixitSelectedVoteCardId = null;
-let gangCountdownTimer = null;
 let sixNimmtCountdownTimer = null;
 let sixNimmtServerOffsetMs = 0;
 let sixNimmtLastTimeoutAt = null;
 let sixNimmtSummaryAckSent = false;
-let gangServerOffsetMs = 0;
-let gangAutoLockSent = false;
-let gangSelectedSpyTarget = null;
-let gangLastLockAt = null;
-let gangLastDeadline = null;
 const roomControlsDockQuery = window.matchMedia("(max-width: 900px)");
 
 const nameInput = document.getElementById("nameInput");
@@ -169,27 +135,18 @@ const reopenBtn = document.getElementById("reopenBtn");
 const downloadMemoriesBtn = document.getElementById("downloadMemoriesBtn");
 const removeBotBtn = document.getElementById("removeBotBtn");
 const logoutBtn = document.getElementById("logoutBtn");
-const aidixitConfigBox = document.getElementById("aidixitConfigBox");
-const aidixitDeckRow = document.getElementById("aidixitDeckRow");
-const aidixitDeckOptions = document.getElementById("aidixitDeckOptions");
 const halliConfigBox = document.getElementById("halliConfigBox");
 const halliDeckRow = document.getElementById("halliDeckRow");
 const halliDeckSelect = document.getElementById("halliDeckSelect");
 const goldRushConfigBox = document.getElementById("goldRushConfigBox");
 const goldRushModeRow = document.getElementById("goldRushModeRow");
 const goldRushModeSelect = document.getElementById("goldRushModeSelect");
-const hanabiConfigBox = document.getElementById("hanabiConfigBox");
-const hanabiFinalRoundRow = document.getElementById("hanabiFinalRoundRow");
-const hanabiFinalRoundToggle = document.getElementById("hanabiFinalRoundToggle");
 const texasHoldemConfigBox = document.getElementById("texasHoldemConfigBox");
 const texasStartingChipsInput = document.getElementById("texasStartingChipsInput");
 const texasSmallBlindInput = document.getElementById("texasSmallBlindInput");
 const texasBigBlindInput = document.getElementById("texasBigBlindInput");
 const mismatchConfigBox = document.getElementById("mismatchConfigBox");
 const mismatchSliderCount = document.getElementById("mismatchSliderCount");
-const gangConfigBox = document.getElementById("gangConfigBox");
-const gangModeSelect = document.getElementById("gangModeSelect");
-const gangTimeSelect = document.getElementById("gangTimeSelect");
 const autoSaveRow = document.getElementById("autoSaveRow");
 const autoSaveToggle = document.getElementById("autoSaveToggle");
 const caboPanel = document.getElementById("caboPanel");
@@ -200,8 +157,6 @@ const incanGoldPanel = document.getElementById("incanGoldPanel");
 const kobayakawaPanel = document.getElementById("kobayakawaPanel");
 const skullPanel = document.getElementById("skullPanel");
 const catInBoxPanel = document.getElementById("catInBoxPanel");
-const hanabiPanel = document.getElementById("hanabiPanel");
-const gangPanel = document.getElementById("theGangPanel");
 const mismatchPanel = document.getElementById("mismatchPanel");
 const coyotePanel = document.getElementById("coyotePanel");
 const texasHoldemPanel = document.getElementById("texasHoldemPanel");
@@ -209,7 +164,6 @@ const sixNimmtPanel = document.getElementById("sixNimmtPanel");
 const halliPanel = document.getElementById("halliPanel");
 const drawGuessPanel = document.getElementById("drawGuessPanel");
 const cyberPicturesPanel = document.getElementById("cyberPicturesPanel");
-const aidixitPanel = document.getElementById("aidixitPanel");
 
 const phaseLabel = document.getElementById("phaseLabel");
 const roundLabel = document.getElementById("roundLabel");
@@ -308,50 +262,6 @@ const kobayakawaPassBtn = document.getElementById("kobayakawaPassBtn");
 const kobayakawaDiscard = document.getElementById("kobayakawaDiscard");
 const kobayakawaPlayers = document.getElementById("kobayakawaPlayers");
 
-const hanabiTurnLabel = document.getElementById("hanabiTurn");
-const hanabiCluesLabel = document.getElementById("hanabiClues");
-const hanabiFusesLabel = document.getElementById("hanabiFuses");
-const hanabiDeckLabel = document.getElementById("hanabiDeck");
-const hanabiScoreLabel = document.getElementById("hanabiScore");
-const hanabiFinalTurnsLabel = document.getElementById("hanabiFinalTurns");
-const hanabiEndReasonLabel = document.getElementById("hanabiEndReason");
-const hanabiTableau = document.getElementById("hanabiTableau");
-const hanabiDiscardStats = document.getElementById("hanabiDiscardStats");
-const hanabiHand = document.getElementById("hanabiHand");
-const hanabiSelectedCardLabel = document.getElementById("hanabiSelectedCard");
-const hanabiClearSelectionBtn = document.getElementById("hanabiClearSelection");
-const hanabiPlayBtn = document.getElementById("hanabiPlayBtn");
-const hanabiDiscardBtn = document.getElementById("hanabiDiscardBtn");
-const hanabiTargetSelect = document.getElementById("hanabiTargetSelect");
-const hanabiClueTypeSelect = document.getElementById("hanabiClueTypeSelect");
-const hanabiClueValueSelect = document.getElementById("hanabiClueValueSelect");
-const hanabiClueBtn = document.getElementById("hanabiClueBtn");
-const hanabiPlayers = document.getElementById("hanabiPlayers");
-const hanabiLog = document.getElementById("hanabiLog");
-const gangPhaseLabel = document.getElementById("gangPhase");
-const gangLevelLabel = document.getElementById("gangLevel");
-const gangLivesLabel = document.getElementById("gangLives");
-const gangTokensLabel = document.getElementById("gangTokens");
-const gangModeLabel = document.getElementById("gangMode");
-const gangMissionLabel = document.getElementById("gangMission");
-const gangTimerLabel = document.getElementById("gangTimer");
-const gangLockLabel = document.getElementById("gangLockTimer");
-const gangCommunity = document.getElementById("gangCommunity");
-const gangRanking = document.getElementById("gangRanking");
-const gangRevealBtn = document.getElementById("gangRevealBtn");
-const gangReadyBtn = document.getElementById("gangReadyBtn");
-const gangLockBtn = document.getElementById("gangLockBtn");
-const gangMulliganBtn = document.getElementById("gangMulliganBtn");
-const gangSpyTargetSelect = document.getElementById("gangSpyTargetSelect");
-const gangSpyBtn = document.getElementById("gangSpyBtn");
-const gangNextRoundBtn = document.getElementById("gangNextRoundBtn");
-const gangPlayAgainBtn = document.getElementById("gangPlayAgainBtn");
-const gangRoundSummary = document.getElementById("gangRoundSummary");
-const gangRoundSummaryTitle = document.getElementById("gangRoundSummaryTitle");
-const gangRoundSummaryBody = document.getElementById("gangRoundSummaryBody");
-const gangRoundSummaryList = document.getElementById("gangRoundSummaryList");
-const gangPlayers = document.getElementById("gangPlayers");
-
 const handSlots = document.getElementById("handSlots");
 const selectedSlotsLabel = document.getElementById("selectedSlots");
 const targetSelection = document.getElementById("targetSelection");
@@ -382,9 +292,6 @@ const seatClaimNameHint = document.getElementById("seatClaimNameHint");
 const seatClaimRoomLabel = document.getElementById("seatClaimRoomLabel");
 const seatClaimList = document.getElementById("seatClaimList");
 const seatClaimEmpty = document.getElementById("seatClaimEmpty");
-const aidixitZoomModal = document.getElementById("aidixitZoomModal");
-const aidixitZoomCloseBtn = document.getElementById("aidixitZoomCloseBtn");
-const aidixitZoomImage = document.getElementById("aidixitZoomImage");
 const roomControlsPanel = document.getElementById("roomControlsPanel");
 const roomControlsToggleBtn = document.getElementById("roomControlsToggleBtn");
 
@@ -532,30 +439,6 @@ const halliFruitEmoji = {
   cherry: "🍒",
   lemon: "🍋",
 };
-
-
-
-const aidixitPhaseLabel = document.getElementById("aidixitPhase");
-const aidixitRoundLabel = document.getElementById("aidixitRound");
-const aidixitStorytellerLabel = document.getElementById("aidixitStoryteller");
-const aidixitClueLabel = document.getElementById("aidixitClue");
-const aidixitTargetScoreLabel = document.getElementById("aidixitTargetScore");
-const aidixitDeckCountLabel = document.getElementById("aidixitDeckCount");
-const aidixitDiscardCountLabel = document.getElementById("aidixitDiscardCount");
-const aidixitSubmittedLabel = document.getElementById("aidixitSubmitted");
-const aidixitVotedLabel = document.getElementById("aidixitVoted");
-const aidixitWinnerLabel = document.getElementById("aidixitWinner");
-const aidixitClueInput = document.getElementById("aidixitClueInput");
-const aidixitSubmitStoryBtn = document.getElementById("aidixitSubmitStoryBtn");
-const aidixitSubmitCardBtn = document.getElementById("aidixitSubmitCardBtn");
-const aidixitSubmitVoteBtn = document.getElementById("aidixitSubmitVoteBtn");
-const aidixitHand = document.getElementById("aidixitHand");
-const aidixitPool = document.getElementById("aidixitPool");
-const aidixitRoundNotice = document.getElementById("aidixitRoundNotice");
-const aidixitRoundNoticeBody = document.getElementById("aidixitRoundNoticeBody");
-const aidixitRoundNoticeCards = document.getElementById("aidixitRoundNoticeCards");
-const aidixitPlayers = document.getElementById("aidixitPlayers");
-
 
 
 const pointSaladPanel = document.getElementById("pointSaladPanel");
@@ -1213,23 +1096,6 @@ function closeSeatClaimModal() {
   setModalVisible(seatClaimModal, false);
 }
 
-function openAidixitZoom(imageUrl, altText) {
-  if (!aidixitZoomModal || !aidixitZoomImage || !imageUrl) {
-    return;
-  }
-  aidixitZoomImage.src = imageUrl;
-  aidixitZoomImage.alt = altText || "Card detail";
-  setModalVisible(aidixitZoomModal, true);
-}
-
-function closeAidixitZoom() {
-  if (!aidixitZoomModal || !aidixitZoomImage) {
-    return;
-  }
-  setModalVisible(aidixitZoomModal, false);
-  aidixitZoomImage.src = "";
-}
-
 function downloadSaveFile(sourceRoomId) {
   if (!sourceRoomId) {
     log("Missing source room id");
@@ -1649,20 +1515,6 @@ function roomHasBots() {
   );
 }
 
-function updateAidixitDeckRow() {
-  const showRow = currentRoomState && currentGameType === "aidixit" && currentRoomState.status === "lobby";
-  if (aidixitConfigBox) {
-    aidixitConfigBox.classList.toggle("hidden", !showRow);
-    aidixitConfigBox.setAttribute("aria-hidden", (!showRow).toString());
-  }
-  if (aidixitDeckRow) {
-    aidixitDeckRow.classList.toggle("hidden", !showRow);
-    aidixitDeckRow.setAttribute("aria-hidden", (!showRow).toString());
-  }
-  if (showRow && !aidixitDecksLoaded) {
-    fetchAidixitDecks();
-  }
-}
 
 function updateHalliConfigRow() {
   const showRow = currentRoomState && currentGameType === "halli_galli" && currentRoomState.status === "lobby";
@@ -1688,17 +1540,6 @@ function updateGoldRushConfigRow() {
   }
 }
 
-function updateHanabiConfigRow() {
-  const showRow = currentRoomState && currentGameType === "hanabi" && currentRoomState.status === "lobby";
-  if (hanabiConfigBox) {
-    hanabiConfigBox.classList.toggle("hidden", !showRow);
-    hanabiConfigBox.setAttribute("aria-hidden", (!showRow).toString());
-  }
-  if (hanabiFinalRoundRow) {
-    hanabiFinalRoundRow.classList.toggle("hidden", !showRow);
-    hanabiFinalRoundRow.setAttribute("aria-hidden", (!showRow).toString());
-  }
-}
 
 function updateTexasHoldemConfigRow() {
   const showRow = currentRoomState && currentGameType === "texas_holdem" && currentRoomState.status === "lobby";
@@ -1716,13 +1557,6 @@ function updateMismatchConfigRow() {
   }
 }
 
-function updateGangConfigRow() {
-  const showRow = currentRoomState && currentGameType === "the_gang" && currentRoomState.status === "lobby";
-  if (gangConfigBox) {
-    gangConfigBox.classList.toggle("hidden", !showRow);
-    gangConfigBox.setAttribute("aria-hidden", (!showRow).toString());
-  }
-}
 
 function updateAutoSaveRow() {
   const showRow =
@@ -1806,78 +1640,6 @@ function updateRoomControlsForStatus(status) {
   updateRoomControlsDock();
 }
 
-function fetchAidixitDecks() {
-  if (!aidixitDeckOptions) {
-    return;
-  }
-  aidixitDeckOptions.textContent = "Loading decks...";
-  fetch("/api/aidixit/decks")
-    .then((response) => response.json())
-    .then((data) => {
-      aidixitDecks = Array.isArray(data.decks) ? data.decks : [];
-      aidixitDecksLoaded = true;
-      renderAidixitDeckOptions();
-    })
-    .catch(() => {
-      aidixitDeckOptions.textContent = "Failed to load decks.";
-      aidixitDecksLoaded = false;
-    });
-}
-
-function renderAidixitDeckOptions() {
-  if (!aidixitDeckOptions) {
-    return;
-  }
-  aidixitDeckOptions.innerHTML = "";
-  if (!aidixitDecks.length) {
-    aidixitDeckOptions.textContent = "No decks available.";
-    return;
-  }
-  const availableDeckIds = new Set();
-  aidixitDecks.forEach((deck) => {
-    if (deck.id) {
-      availableDeckIds.add(deck.id);
-    }
-  });
-  aidixitDeckSelections = new Set(
-    Array.from(aidixitDeckSelections).filter((deckId) => availableDeckIds.has(deckId))
-  );
-  if (aidixitDeckSelections.size === 0) {
-    availableDeckIds.forEach((deckId) => {
-      aidixitDeckSelections.add(deckId);
-    });
-  }
-  aidixitDecks.forEach((deck) => {
-    const deckId = deck.id;
-    if (!deckId) {
-      return;
-    }
-    const label = document.createElement("label");
-    label.className = "decrypto-pack-option";
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.value = deckId;
-    checkbox.checked = aidixitDeckSelections.has(deckId);
-    checkbox.addEventListener("change", () => {
-      if (checkbox.checked) {
-        aidixitDeckSelections.add(deckId);
-      } else {
-        aidixitDeckSelections.delete(deckId);
-      }
-    });
-    const text = document.createElement("span");
-    const name = deck.name || deckId;
-    const count = Number.isFinite(deck.count) ? ` (${deck.count})` : "";
-    text.textContent = `${name}${count}`;
-    label.appendChild(checkbox);
-    label.appendChild(text);
-    aidixitDeckOptions.appendChild(label);
-  });
-}
-
-function getSelectedAidixitDecks() {
-  return Array.from(aidixitDeckSelections);
-}
 
 function requestRoomList() {
   socket.emit("room:list", {});
@@ -2432,120 +2194,6 @@ function clearKobayakawaState() {
   updateKobayakawaActionButtons();
 }
 
-function clearHanabiState() {
-  currentHanabiView = null;
-  hanabiSelectedCardIndex = null;
-  hanabiSelectedTargetId = null;
-  hanabiSelectedClueType = "color";
-  hanabiSelectedClueValue = null;
-  if (hanabiTurnLabel) {
-    hanabiTurnLabel.textContent = "-";
-  }
-  if (hanabiCluesLabel) {
-    hanabiCluesLabel.textContent = "-";
-  }
-  if (hanabiFusesLabel) {
-    hanabiFusesLabel.textContent = "-";
-  }
-  if (hanabiDeckLabel) {
-    hanabiDeckLabel.textContent = "-";
-  }
-  if (hanabiScoreLabel) {
-    hanabiScoreLabel.textContent = "-";
-  }
-  if (hanabiFinalTurnsLabel) {
-    hanabiFinalTurnsLabel.textContent = "-";
-  }
-  if (hanabiEndReasonLabel) {
-    hanabiEndReasonLabel.textContent = "-";
-  }
-  if (hanabiTableau) {
-    hanabiTableau.innerHTML = "";
-  }
-  if (hanabiDiscardStats) {
-    hanabiDiscardStats.innerHTML = "";
-  }
-  if (hanabiHand) {
-    hanabiHand.innerHTML = "";
-  }
-  if (hanabiSelectedCardLabel) {
-    hanabiSelectedCardLabel.textContent = "-";
-  }
-  if (hanabiTargetSelect) {
-    hanabiTargetSelect.innerHTML = "";
-  }
-  if (hanabiClueTypeSelect) {
-    hanabiClueTypeSelect.value = "color";
-  }
-  if (hanabiClueValueSelect) {
-    hanabiClueValueSelect.innerHTML = "";
-  }
-  if (hanabiPlayers) {
-    hanabiPlayers.innerHTML = "";
-  }
-  if (hanabiLog) {
-    hanabiLog.innerHTML = "";
-  }
-  updateHanabiActionButtons();
-}
-
-function clearGangState() {
-  currentGangView = null;
-  gangAutoLockSent = false;
-  gangSelectedSpyTarget = null;
-  gangLastLockAt = null;
-  gangLastDeadline = null;
-  if (gangCountdownTimer) {
-    clearInterval(gangCountdownTimer);
-    gangCountdownTimer = null;
-  }
-  if (gangPhaseLabel) {
-    gangPhaseLabel.textContent = "-";
-  }
-  if (gangLevelLabel) {
-    gangLevelLabel.textContent = "-";
-  }
-  if (gangLivesLabel) {
-    gangLivesLabel.textContent = "-";
-  }
-  if (gangTokensLabel) {
-    gangTokensLabel.textContent = "-";
-  }
-  if (gangModeLabel) {
-    gangModeLabel.textContent = "-";
-  }
-  if (gangMissionLabel) {
-    gangMissionLabel.textContent = "-";
-  }
-  if (gangTimerLabel) {
-    gangTimerLabel.textContent = "-";
-  }
-  if (gangLockLabel) {
-    gangLockLabel.textContent = "-";
-  }
-  if (gangCommunity) {
-    gangCommunity.innerHTML = "";
-  }
-  if (gangRanking) {
-    gangRanking.innerHTML = "";
-  }
-  if (gangPlayers) {
-    gangPlayers.innerHTML = "";
-  }
-  if (gangSpyTargetSelect) {
-    gangSpyTargetSelect.innerHTML = "";
-  }
-  if (gangRoundSummary) {
-    gangRoundSummary.classList.add("hidden");
-  }
-  if (gangRoundSummaryBody) {
-    gangRoundSummaryBody.textContent = "-";
-  }
-  if (gangRoundSummaryList) {
-    gangRoundSummaryList.innerHTML = "";
-  }
-  updateGangActionButtons();
-}
 
 function clearSkullState() {
   currentSkullView = null;
@@ -2866,64 +2514,6 @@ function clearHalliState() {
   updateHalliActionButtons();
 }
 
-function clearAidixitState() {
-  currentAidixitView = null;
-  aidixitSelectedHandCardId = null;
-  aidixitSelectedVoteCardId = null;
-  if (aidixitPhaseLabel) {
-    aidixitPhaseLabel.textContent = "-";
-  }
-  if (aidixitRoundLabel) {
-    aidixitRoundLabel.textContent = "-";
-  }
-  if (aidixitStorytellerLabel) {
-    aidixitStorytellerLabel.textContent = "-";
-  }
-  if (aidixitClueLabel) {
-    aidixitClueLabel.textContent = "-";
-  }
-  if (aidixitTargetScoreLabel) {
-    aidixitTargetScoreLabel.textContent = "-";
-  }
-  if (aidixitDeckCountLabel) {
-    aidixitDeckCountLabel.textContent = "-";
-  }
-  if (aidixitDiscardCountLabel) {
-    aidixitDiscardCountLabel.textContent = "-";
-  }
-  if (aidixitSubmittedLabel) {
-    aidixitSubmittedLabel.textContent = "-";
-  }
-  if (aidixitVotedLabel) {
-    aidixitVotedLabel.textContent = "-";
-  }
-  if (aidixitWinnerLabel) {
-    aidixitWinnerLabel.textContent = "-";
-  }
-  if (aidixitClueInput) {
-    aidixitClueInput.value = "";
-    aidixitClueInput.disabled = true;
-  }
-  if (aidixitHand) {
-    aidixitHand.innerHTML = "";
-  }
-  if (aidixitPool) {
-    aidixitPool.innerHTML = "";
-  }
-  if (aidixitRoundNotice) {
-    aidixitRoundNotice.classList.add("hidden");
-  }
-  if (aidixitRoundNoticeBody) {
-    aidixitRoundNoticeBody.textContent = "-";
-  }
-  if (aidixitRoundNoticeCards) {
-    aidixitRoundNoticeCards.innerHTML = "";
-  }
-  if (aidixitPlayers) {
-    aidixitPlayers.innerHTML = "";
-  }
-  updateAidixitButtons();
-}
 
 function clearPointSaladSelections() {
   pointSaladSelectedPile = null;
@@ -3304,300 +2894,6 @@ function renderPointSaladPlayers(view) {
     card.appendChild(cards);
     pointSaladPlayers.appendChild(card);
   });
-}
-
-function aidixitCardUrl(cardId) {
-  if (!cardId) {
-    return "";
-  }
-  const idx = cardId.indexOf("/");
-  if (idx <= 0) {
-    return "";
-  }
-  const deck = cardId.slice(0, idx);
-  const file = cardId.slice(idx + 1);
-  if (!deck || !file) {
-    return "";
-  }
-  return `/api/aidixit/card?deck=${encodeURIComponent(deck)}&file=${encodeURIComponent(file)}`;
-}
-
-function createAidixitCardElement(card, options = {}) {
-  const wrapper = document.createElement("div");
-  wrapper.className = "aidixit-card";
-  if (options.selected) {
-    wrapper.classList.add("selected");
-  }
-  if (options.disabled) {
-    wrapper.classList.add("disabled");
-  }
-  if (options.story) {
-    wrapper.classList.add("story");
-  }
-  const img = document.createElement("img");
-  const cardId = card.card_id || "";
-  img.src = card.image_url || aidixitCardUrl(cardId);
-  img.alt = cardId || "card";
-  wrapper.appendChild(img);
-  if (options.zoomable) {
-    const zoomBtn = document.createElement("button");
-    zoomBtn.type = "button";
-    zoomBtn.className = "aidixit-zoom-btn";
-    zoomBtn.setAttribute("aria-label", "Zoom card");
-    zoomBtn.title = "Zoom";
-    zoomBtn.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      openAidixitZoom(img.src, img.alt);
-    });
-    wrapper.appendChild(zoomBtn);
-  }
-  if (options.count !== undefined) {
-    const badge = document.createElement("div");
-    badge.className = "aidixit-card-count";
-    badge.textContent = String(options.count);
-    wrapper.appendChild(badge);
-  }
-  if (options.story) {
-    const label = document.createElement("div");
-    label.className = "aidixit-card-story";
-    label.textContent = "Story";
-    wrapper.appendChild(label);
-  }
-  return wrapper;
-}
-
-function renderAidixitHand(view) {
-  if (!aidixitHand) {
-    return;
-  }
-  aidixitHand.innerHTML = "";
-  if (!Array.isArray(view.hand) || !view.hand.length) {
-    aidixitHand.textContent = "-";
-    return;
-  }
-  const isStoryteller = view.storyteller_id === view.you;
-  const canSelect = (view.phase === "story" && isStoryteller) || (view.phase === "submit" && !isStoryteller);
-  const locked = view.game_over || !canSelect || view.submitted;
-  view.hand.forEach((card) => {
-    const selected = aidixitSelectedHandCardId === card.card_id;
-    const cardEl = createAidixitCardElement(card, { selected, disabled: locked, zoomable: true });
-    if (!locked) {
-      cardEl.addEventListener("click", () => {
-        aidixitSelectedHandCardId = card.card_id;
-        updateAidixitButtons();
-        renderAidixitHand(view);
-      });
-    }
-    aidixitHand.appendChild(cardEl);
-  });
-}
-
-function renderAidixitPool(view) {
-  if (!aidixitPool) {
-    return;
-  }
-  aidixitPool.innerHTML = "";
-  if (view.phase !== "vote") {
-    aidixitPool.textContent = "-";
-    return;
-  }
-  const isStoryteller = view.storyteller_id === view.you;
-  const selectedVoteId = view.voted ? view.vote_card_id : aidixitSelectedVoteCardId;
-  const disableAll = view.game_over || view.voted || isStoryteller;
-  const poolCards = Array.isArray(view.pool_cards) ? view.pool_cards : [];
-  if (!poolCards.length) {
-    aidixitPool.textContent = "-";
-    return;
-  }
-  poolCards.forEach((card) => {
-    const isOwn = view.your_submission === card.card_id;
-    const selected = selectedVoteId === card.card_id;
-    const cardEl = createAidixitCardElement(card, {
-      selected,
-      disabled: disableAll || isOwn,
-      zoomable: true,
-    });
-    if (!disableAll && !isOwn) {
-      cardEl.addEventListener("click", () => {
-        aidixitSelectedVoteCardId = card.card_id;
-        updateAidixitButtons();
-        renderAidixitPool(view);
-      });
-    }
-    aidixitPool.appendChild(cardEl);
-  });
-}
-
-function renderAidixitPlayers(view) {
-  if (!aidixitPlayers) {
-    return;
-  }
-  aidixitPlayers.innerHTML = "";
-  view.players.forEach((p) => {
-    const card = document.createElement("div");
-    card.className = "player-card";
-    if (p.player_id === view.storyteller_id) {
-      card.classList.add("current");
-    }
-
-    const header = document.createElement("div");
-    header.className = "player-header";
-    const nameRow = document.createElement("div");
-    nameRow.className = "player-name";
-    const colorDot = document.createElement("span");
-    colorDot.className = "aidixit-color-dot";
-    colorDot.style.backgroundColor = p.color || "#9ca3af";
-    nameRow.appendChild(colorDot);
-    const nameText = document.createElement("span");
-    nameText.textContent = p.name;
-    nameRow.appendChild(nameText);
-    header.appendChild(nameRow);
-
-    const badges = document.createElement("div");
-    badges.className = "player-badges";
-    const score = document.createElement("span");
-    score.className = "badge";
-    score.textContent = `score ${p.score}`;
-    badges.appendChild(score);
-    if (p.player_id === view.storyteller_id) {
-      const storyteller = document.createElement("span");
-      storyteller.className = "badge highlight";
-      storyteller.textContent = "storyteller";
-      badges.appendChild(storyteller);
-    }
-    if (p.player_id === view.you) {
-      const you = document.createElement("span");
-      you.className = "badge";
-      you.textContent = "you";
-      badges.appendChild(you);
-    }
-    if (p.is_bot) {
-      const bot = document.createElement("span");
-      bot.className = "badge";
-      bot.textContent = "bot";
-      badges.appendChild(bot);
-    }
-    header.appendChild(badges);
-
-    card.appendChild(header);
-    aidixitPlayers.appendChild(card);
-  });
-}
-
-function renderAidixitRoundNotice(view) {
-  if (!aidixitRoundNotice || !aidixitRoundNoticeBody) {
-    return;
-  }
-  const result = view.last_result;
-  if (!result) {
-    aidixitRoundNotice.classList.add("hidden");
-    if (aidixitRoundNoticeCards) {
-      aidixitRoundNoticeCards.innerHTML = "";
-    }
-    return;
-  }
-  aidixitRoundNotice.classList.remove("hidden");
-  const caseMap = {
-    all: "All guessed (too obvious)",
-    none: "None guessed (too obscure)",
-    partial: "Some guessed",
-  };
-  const label = caseMap[result.case] || result.case || "Round";
-  const correctNames = Array.isArray(result.correct_voters) && result.correct_voters.length
-    ? result.correct_voters.map((pid) => findPlayerName(view, pid)).join(", ")
-    : "none";
-  const scoreEntries = result.scores_delta || {};
-  const scoreSummary = Object.keys(scoreEntries)
-    .map((pid) => {
-      const delta = scoreEntries[pid];
-      const sign = delta >= 0 ? "+" : "";
-      return `${findPlayerName(view, pid)} ${sign}${delta}`;
-    })
-    .join(", ");
-  const clue = result.clue || view.clue || "-";
-  const storytellerName = result.storyteller_id ? findPlayerName(view, result.storyteller_id) : "-";
-  aidixitRoundNoticeBody.textContent =
-    `Storyteller: ${storytellerName} · Clue: ${clue} · ${label} · Correct: ${correctNames}` +
-    (scoreSummary ? ` · Scores: ${scoreSummary}` : "");
-
-  if (aidixitRoundNoticeCards) {
-    aidixitRoundNoticeCards.innerHTML = "";
-    const voteCounts = result.vote_counts || {};
-    const votesByCard = result.votes_by_card || {};
-    let cardIds = Array.isArray(result.pool_cards) ? result.pool_cards : [];
-    if (!cardIds.length) {
-      cardIds = Object.keys(voteCounts);
-    }
-    if (result.story_card && !cardIds.includes(result.story_card)) {
-      cardIds = [...cardIds, result.story_card];
-    }
-    cardIds.forEach((cardId) => {
-      const count = voteCounts[cardId];
-      const card = { card_id: cardId, image_url: aidixitCardUrl(cardId) };
-      const cardEl = createAidixitCardElement(card, {
-        count: typeof count === "number" ? count : undefined,
-        story: cardId === result.story_card,
-        disabled: true,
-        zoomable: true,
-      });
-      const votes = (votesByCard && votesByCard[cardId]) || [];
-      if (votes.length) {
-        const voteRow = document.createElement("div");
-        voteRow.className = "aidixit-votes";
-        votes.forEach((vote) => {
-          const dot = document.createElement("span");
-          dot.className = "aidixit-vote-dot";
-          if (vote.color) {
-            dot.style.backgroundColor = vote.color;
-          }
-          if (vote.name) {
-            dot.title = vote.name;
-          }
-          voteRow.appendChild(dot);
-        });
-        cardEl.appendChild(voteRow);
-      }
-      aidixitRoundNoticeCards.appendChild(cardEl);
-    });
-  }
-}
-
-function updateAidixitButtons() {
-  if (!aidixitSubmitStoryBtn || !aidixitSubmitCardBtn || !aidixitSubmitVoteBtn) {
-    return;
-  }
-  const view = currentAidixitView;
-  if (!view || currentGameType !== "aidixit") {
-    aidixitSubmitStoryBtn.disabled = true;
-    aidixitSubmitCardBtn.disabled = true;
-    aidixitSubmitVoteBtn.disabled = true;
-    return;
-  }
-  const isStoryteller = view.storyteller_id === view.you;
-  const clueReady = aidixitClueInput && aidixitClueInput.value.trim().length > 0;
-  const canStory =
-    !view.game_over &&
-    view.phase === "story" &&
-    isStoryteller &&
-    !!aidixitSelectedHandCardId &&
-    clueReady;
-  const canSubmit =
-    !view.game_over &&
-    view.phase === "submit" &&
-    !isStoryteller &&
-    !view.submitted &&
-    !!aidixitSelectedHandCardId;
-  const canVote =
-    !view.game_over &&
-    view.phase === "vote" &&
-    !isStoryteller &&
-    !view.voted &&
-    !!aidixitSelectedVoteCardId &&
-    aidixitSelectedVoteCardId !== view.your_submission;
-  aidixitSubmitStoryBtn.disabled = !canStory;
-  aidixitSubmitCardBtn.disabled = !canSubmit;
-  aidixitSubmitVoteBtn.disabled = !canVote;
 }
 
 function renderPointSaladGameState(data) {
@@ -5676,394 +4972,6 @@ function renderCatInBoxGameState(data) {
   logGameEvents(data);
 }
 
-function renderHanabiGameState(data) {
-  const view = data.view;
-  currentHanabiView = view;
-  if (currentGameType !== "hanabi") {
-    currentGameType = "hanabi";
-    setGamePanelVisibility("hanabi");
-  }
-
-  const you = getHanabiYou(view);
-  if (
-    !you ||
-    !Array.isArray(you.hand) ||
-    (Number.isInteger(hanabiSelectedCardIndex) && hanabiSelectedCardIndex >= you.hand.length)
-  ) {
-    hanabiSelectedCardIndex = null;
-  }
-  if (hanabiSelectedTargetId && !view.players.find((p) => p.player_id === hanabiSelectedTargetId)) {
-    hanabiSelectedTargetId = null;
-  }
-
-  if (hanabiTurnLabel) {
-    const currentPlayer = view.players.find((p) => p.player_id === view.current_turn);
-    hanabiTurnLabel.textContent = currentPlayer ? currentPlayer.name : view.current_turn || "-";
-  }
-  if (hanabiCluesLabel) {
-    hanabiCluesLabel.textContent = `${view.clue_tokens ?? "-"}/${view.max_clue_tokens ?? "-"}`;
-  }
-  if (hanabiFusesLabel) {
-    hanabiFusesLabel.textContent = `${view.fuse_tokens ?? "-"}/${view.max_fuse_tokens ?? "-"}`;
-  }
-  if (hanabiDeckLabel) {
-    hanabiDeckLabel.textContent = view.deck_count ?? "-";
-  }
-  if (hanabiScoreLabel) {
-    hanabiScoreLabel.textContent = view.score_display || "-";
-  }
-  if (hanabiFinalTurnsLabel) {
-    hanabiFinalTurnsLabel.textContent = Number.isInteger(view.final_rounds_remaining) ? view.final_rounds_remaining : "-";
-  }
-  if (hanabiEndReasonLabel) {
-    hanabiEndReasonLabel.textContent = view.end_reason || "-";
-  }
-
-  renderHanabiTableau(view);
-  renderHanabiDiscardStats(view);
-  renderHanabiHand(view);
-  renderHanabiPlayers(view);
-  renderHanabiClueTargets(view);
-  renderHanabiLog(view);
-  updateHanabiSelectedCardLabel(view);
-  logGameEvents(data);
-  updateHanabiActionButtons();
-}
-
-function formatGangCard(card) {
-  if (!card || card.hidden) {
-    return "??";
-  }
-  const rank = card.rank;
-  const rankLabel = rank === 14 ? "A" : rank === 13 ? "K" : rank === 12 ? "Q" : rank === 11 ? "J" : String(rank);
-  const suitMap = {
-    S: "♠️",
-    H: "♥️",
-    D: "♦️",
-    C: "♣️",
-  };
-  const rawSuit = typeof card.suit === "string" ? card.suit.trim() : "";
-  const suitKey = rawSuit.toUpperCase();
-  const suitEmoji = suitMap[suitKey];
-  const suitLabel = suitEmoji || (rawSuit && !/^[SHDC]$/i.test(rawSuit) ? rawSuit : "?");
-  return `${rankLabel}${suitLabel}`;
-}
-
-function createGangCardElement(card) {
-  const div = document.createElement("div");
-  div.className = "gang-card";
-  if (card && card.hidden) {
-    div.classList.add("hidden");
-  }
-  div.textContent = formatGangCard(card);
-  return div;
-}
-
-function renderGangCommunity(view) {
-  if (!gangCommunity) {
-    return;
-  }
-  gangCommunity.innerHTML = "";
-  const cards = Array.isArray(view.community_cards) ? view.community_cards : [];
-  const youEntry = Array.isArray(view.players) ? view.players.find((p) => p.player_id === view.you) : null;
-  const highlight = new Set();
-  if (youEntry && youEntry.hand_hint && Array.isArray(youEntry.hand_hint.best_cards)) {
-    youEntry.hand_hint.best_cards.forEach((card) => {
-      if (card && card.rank && card.suit) {
-        highlight.add(`${card.rank}-${card.suit}`);
-      }
-    });
-  }
-  if (!cards.length) {
-    gangCommunity.textContent = "-";
-    return;
-  }
-  cards.forEach((card) => {
-    const cardEl = createGangCardElement(card);
-    if (card && highlight.has(`${card.rank}-${card.suit}`)) {
-      cardEl.classList.add("highlight");
-    }
-    gangCommunity.appendChild(cardEl);
-  });
-}
-
-function renderGangRanking(view) {
-  if (!gangRanking) {
-    return;
-  }
-  gangRanking.innerHTML = "";
-  const ranking = Array.isArray(view.ranking) ? view.ranking : [];
-  const players = Array.isArray(view.players) ? view.players : [];
-  const nameMap = new Map(players.map((p) => [p.player_id, p.name || p.player_id]));
-  const readyMap = new Map(players.map((p) => [p.player_id, !!p.ready]));
-  const canMove = Array.isArray(view.legal_actions) && view.legal_actions.includes("move_rank");
-
-  ranking.forEach((pid, index) => {
-    const row = document.createElement("div");
-    row.className = "gang-slot";
-    const label = document.createElement("div");
-    label.className = "gang-slot-label";
-    label.textContent = `${index + 1}.`;
-    row.appendChild(label);
-
-    const select = document.createElement("select");
-    players.forEach((player) => {
-      const option = document.createElement("option");
-      option.value = player.player_id;
-      option.textContent = nameMap.get(player.player_id) || player.player_id;
-      select.appendChild(option);
-    });
-    if (pid) {
-      select.value = pid;
-    }
-    const occupantReady = readyMap.get(pid);
-    select.disabled = !canMove || (occupantReady && pid !== view.you);
-    select.addEventListener("change", () => {
-      sendAction({ type: "move_rank", player_id: select.value, to_index: index });
-    });
-    row.appendChild(select);
-
-    if (occupantReady) {
-      const badge = document.createElement("span");
-      badge.className = "gang-badge";
-      badge.textContent = "Ready";
-      row.appendChild(badge);
-    }
-    gangRanking.appendChild(row);
-  });
-}
-
-function renderGangSpyTargets(view) {
-  if (!gangSpyTargetSelect) {
-    return;
-  }
-  const players = Array.isArray(view.players)
-    ? view.players.filter((p) => p.player_id !== view.you)
-    : [];
-  gangSpyTargetSelect.innerHTML = "";
-  if (!players.length) {
-    const option = document.createElement("option");
-    option.value = "";
-    option.textContent = "No targets";
-    gangSpyTargetSelect.appendChild(option);
-    gangSpyTargetSelect.disabled = true;
-    gangSelectedSpyTarget = null;
-    return;
-  }
-  gangSpyTargetSelect.disabled = false;
-  players.forEach((player) => {
-    const option = document.createElement("option");
-    option.value = player.player_id;
-    option.textContent = player.name || player.player_id;
-    gangSpyTargetSelect.appendChild(option);
-  });
-  if (gangSelectedSpyTarget && players.some((p) => p.player_id === gangSelectedSpyTarget)) {
-    gangSpyTargetSelect.value = gangSelectedSpyTarget;
-  } else {
-    gangSelectedSpyTarget = players[0].player_id;
-    gangSpyTargetSelect.value = gangSelectedSpyTarget;
-  }
-}
-
-function renderGangPlayers(view) {
-  if (!gangPlayers) {
-    return;
-  }
-  gangPlayers.innerHTML = "";
-  const players = Array.isArray(view.players) ? view.players : [];
-  if (!players.length) {
-    gangPlayers.textContent = "-";
-    return;
-  }
-  players.forEach((player) => {
-    const card = document.createElement("div");
-    card.className = "gang-player-card";
-    if (player.ready) {
-      card.classList.add("ready");
-    }
-    if (player.player_id === view.you) {
-      card.classList.add("you");
-    }
-
-    const header = document.createElement("div");
-    header.textContent = player.name || player.player_id;
-    card.appendChild(header);
-
-    const status = document.createElement("div");
-    status.className = "gang-badge";
-    status.textContent = player.ready ? "Ready" : "Not Ready";
-    card.appendChild(status);
-
-    const handRow = document.createElement("div");
-    handRow.className = "gang-player-hand";
-    const handCards = Array.isArray(player.hand) ? player.hand : [];
-    handCards.forEach((slot) => {
-      handRow.appendChild(createGangCardElement(slot));
-    });
-    card.appendChild(handRow);
-
-    if (player.hand_hint) {
-      const hint = document.createElement("div");
-      hint.className = "gang-badge";
-      hint.textContent = `Hint: ${player.hand_hint.hand_name}`;
-      card.appendChild(hint);
-    }
-    if (Number.isFinite(player.hand_odds)) {
-      const odds = document.createElement("div");
-      odds.className = "gang-badge";
-      odds.textContent = `Win Odds: ${Math.round(player.hand_odds * 100)}%`;
-      card.appendChild(odds);
-    }
-
-    gangPlayers.appendChild(card);
-  });
-}
-
-function renderGangSummary(view) {
-  if (!gangRoundSummary || !gangRoundSummaryBody || !gangRoundSummaryList) {
-    return;
-  }
-  const summary = view.round_summary;
-  if (!summary) {
-    gangRoundSummary.classList.add("hidden");
-    gangRoundSummaryBody.textContent = "-";
-    gangRoundSummaryList.innerHTML = "";
-    return;
-  }
-  gangRoundSummary.classList.remove("hidden");
-  const parts = [];
-  parts.push(summary.success ? "Success" : "Failure");
-  if (summary.perfect) {
-    parts.push("Perfect Clear");
-  }
-  if (view.mission) {
-    parts.push(summary.mission_success ? "Mission OK" : "Mission Failed");
-  }
-  gangRoundSummaryBody.textContent = parts.join(" | ");
-  gangRoundSummaryList.innerHTML = "";
-
-  const actualGroups = Array.isArray(summary.actual_groups) ? summary.actual_groups : [];
-  const predicted = Array.isArray(summary.predicted_order) ? summary.predicted_order : [];
-  if (actualGroups.length) {
-    const actualLine = document.createElement("div");
-    actualLine.textContent = `Actual: ${actualGroups
-      .map((group) => group.map((pid) => findPlayerName(view, pid)).join(" = "))
-      .join(" > ")}`;
-    gangRoundSummaryList.appendChild(actualLine);
-  }
-  if (predicted.length) {
-    const predictedLine = document.createElement("div");
-    predictedLine.textContent = `Predicted: ${predicted.map((pid) => findPlayerName(view, pid)).join(" > ")}`;
-    gangRoundSummaryList.appendChild(predictedLine);
-  }
-
-  const hands = Array.isArray(summary.hands) ? summary.hands : [];
-  hands.forEach((entry) => {
-    const line = document.createElement("div");
-    const cards = Array.isArray(entry.best_cards) ? entry.best_cards.map((c) => formatGangCard(c)).join(" ") : "-";
-    line.textContent = `${findPlayerName(view, entry.player_id)}: ${entry.hand_name} (${cards})`;
-    gangRoundSummaryList.appendChild(line);
-  });
-}
-
-function updateGangTimers(view) {
-  if (gangCountdownTimer) {
-    clearInterval(gangCountdownTimer);
-    gangCountdownTimer = null;
-  }
-  if (!gangTimerLabel || !gangLockLabel) {
-    return;
-  }
-  if (!view || view.phase !== "river") {
-    gangTimerLabel.textContent = "-";
-    gangLockLabel.textContent = "-";
-    gangAutoLockSent = false;
-    return;
-  }
-
-  const lockAt = Number.isFinite(view.lock_at_ms) ? view.lock_at_ms : null;
-  const deadline = Number.isFinite(view.river_deadline_ms) ? view.river_deadline_ms : null;
-  if (!lockAt && !deadline) {
-    gangTimerLabel.textContent = "-";
-    gangLockLabel.textContent = "-";
-    gangAutoLockSent = false;
-    return;
-  }
-  if (lockAt !== gangLastLockAt || deadline !== gangLastDeadline) {
-    gangAutoLockSent = false;
-    gangLastLockAt = lockAt;
-    gangLastDeadline = deadline;
-  }
-  const serverNow = Number.isFinite(view.server_time_ms) ? view.server_time_ms : Date.now();
-  gangServerOffsetMs = serverNow - Date.now();
-
-  const update = () => {
-    const now = Date.now() + gangServerOffsetMs;
-    if (lockAt) {
-      const remaining = Math.max(0, lockAt - now);
-      gangLockLabel.textContent = `${Math.ceil(remaining / 1000)}s`;
-    } else {
-      gangLockLabel.textContent = "-";
-    }
-    if (deadline) {
-      const remaining = Math.max(0, deadline - now);
-      gangTimerLabel.textContent = `${Math.ceil(remaining / 1000)}s`;
-    } else {
-      gangTimerLabel.textContent = "-";
-    }
-    if (!gangAutoLockSent) {
-      if ((lockAt && now >= lockAt) || (deadline && now >= deadline)) {
-        gangAutoLockSent = true;
-        sendAction({ type: "lock_in" });
-      }
-    }
-  };
-  update();
-  gangCountdownTimer = setInterval(update, 250);
-}
-
-function renderGangGameState(data) {
-  const view = data.view;
-  currentGangView = view;
-  if (currentGameType !== "the_gang") {
-    currentGameType = "the_gang";
-    setGamePanelVisibility("the_gang");
-  }
-
-  if (gangPhaseLabel) {
-    gangPhaseLabel.textContent = view.phase || "-";
-  }
-  if (gangLevelLabel) {
-    gangLevelLabel.textContent = view.level ?? "-";
-  }
-  if (gangLivesLabel) {
-    gangLivesLabel.textContent = `${view.lives ?? "-"} / ${view.max_lives ?? "-"}`;
-  }
-  if (gangTokensLabel) {
-    gangTokensLabel.textContent = view.tokens ?? "-";
-  }
-  if (gangModeLabel) {
-    gangModeLabel.textContent = view.mode || "-";
-  }
-  if (gangMissionLabel) {
-    gangMissionLabel.textContent = view.mission ? view.mission.desc || view.mission.id : "-";
-  }
-
-  const youEntry = Array.isArray(view.players) ? view.players.find((p) => p.player_id === view.you) : null;
-  if (gangReadyBtn) {
-    gangReadyBtn.textContent = youEntry && youEntry.ready ? "Cancel Ready" : "Ready";
-  }
-
-  renderGangCommunity(view);
-  renderGangRanking(view);
-  renderGangSpyTargets(view);
-  renderGangPlayers(view);
-  renderGangSummary(view);
-  updateGangTimers(view);
-  logGameEvents(data);
-  updateGangActionButtons(view);
-}
-
 function renderMismatchGameState(data) {
   const view = data.view;
   currentMismatchView = view;
@@ -6831,84 +5739,6 @@ function renderHalliGameState(data) {
   updateHalliActionButtons();
 }
 
-function renderAidixitGameState(data) {
-  const view = data.view;
-  currentAidixitView = view;
-  if (currentGameType !== "aidixit") {
-    currentGameType = "aidixit";
-    setGamePanelVisibility("aidixit");
-  }
-  if (
-    aidixitSelectedHandCardId &&
-    (!Array.isArray(view.hand) || !view.hand.some((card) => card.card_id === aidixitSelectedHandCardId))
-  ) {
-    aidixitSelectedHandCardId = null;
-  }
-  if (
-    aidixitSelectedVoteCardId &&
-    (!Array.isArray(view.pool_cards) || !view.pool_cards.some((card) => card.card_id === aidixitSelectedVoteCardId))
-  ) {
-    aidixitSelectedVoteCardId = null;
-  }
-  if (view.phase !== "vote") {
-    aidixitSelectedVoteCardId = null;
-  }
-
-  if (aidixitPhaseLabel) {
-    aidixitPhaseLabel.textContent = view.phase || "-";
-  }
-  if (aidixitRoundLabel) {
-    aidixitRoundLabel.textContent = view.round ?? "-";
-  }
-  if (aidixitStorytellerLabel) {
-    aidixitStorytellerLabel.textContent = view.storyteller_id
-      ? findPlayerName(view, view.storyteller_id)
-      : "-";
-  }
-  if (aidixitClueLabel) {
-    aidixitClueLabel.textContent = view.clue || "-";
-  }
-  if (aidixitTargetScoreLabel) {
-    aidixitTargetScoreLabel.textContent = view.target_score ?? "-";
-  }
-  if (aidixitDeckCountLabel) {
-    aidixitDeckCountLabel.textContent = view.deck_count ?? "-";
-  }
-  if (aidixitDiscardCountLabel) {
-    aidixitDiscardCountLabel.textContent = view.discard_count ?? "-";
-  }
-  if (aidixitSubmittedLabel) {
-    aidixitSubmittedLabel.textContent = view.submitted ? "yes" : "no";
-  }
-  if (aidixitVotedLabel) {
-    aidixitVotedLabel.textContent = view.voted ? "yes" : "no";
-  }
-  if (aidixitWinnerLabel) {
-    if (Array.isArray(view.winner) && view.winner.length) {
-      const names = view.winner.map((pid) => findPlayerName(view, pid));
-      aidixitWinnerLabel.textContent = names.join(", ");
-    } else {
-      aidixitWinnerLabel.textContent = "-";
-    }
-  }
-
-  const isStoryteller = view.storyteller_id === view.you;
-  if (aidixitClueInput) {
-    const canEdit = !view.game_over && view.phase === "story" && isStoryteller;
-    aidixitClueInput.disabled = !canEdit;
-    if (!canEdit) {
-      aidixitClueInput.value = "";
-    }
-  }
-
-  renderAidixitHand(view);
-  renderAidixitPool(view);
-  renderAidixitPlayers(view);
-  renderAidixitRoundNotice(view);
-  logGameEvents(data);
-  updateAidixitButtons();
-}
-
 function renderGameState(data) {
   const gameType = data.game_type || (currentRoomState && currentRoomState.game_type);
   if (gameType === "cabo") {
@@ -7233,20 +6063,6 @@ if (createRoomModal) {
   createRoomModal.addEventListener("click", (event) => {
     if (event.target === createRoomModal) {
       closeCreateRoomModal();
-    }
-  });
-}
-
-if (aidixitZoomCloseBtn) {
-  aidixitZoomCloseBtn.addEventListener("click", () => {
-    closeAidixitZoom();
-  });
-}
-
-if (aidixitZoomModal) {
-  aidixitZoomModal.addEventListener("click", (event) => {
-    if (event.target === aidixitZoomModal) {
-      closeAidixitZoom();
     }
   });
 }
@@ -7702,131 +6518,6 @@ if (kobayakawaPassBtn) {
   });
 }
 
-if (hanabiClearSelectionBtn) {
-  hanabiClearSelectionBtn.addEventListener("click", () => {
-    hanabiSelectedCardIndex = null;
-    if (currentHanabiView) {
-      renderHanabiHand(currentHanabiView);
-      updateHanabiSelectedCardLabel(currentHanabiView);
-    } else if (hanabiSelectedCardLabel) {
-      hanabiSelectedCardLabel.textContent = "-";
-    }
-    updateHanabiActionButtons();
-  });
-}
-
-if (hanabiTargetSelect) {
-  hanabiTargetSelect.addEventListener("change", () => {
-    hanabiSelectedTargetId = hanabiTargetSelect.value || null;
-    if (currentHanabiView) {
-      updateHanabiClueOptions(currentHanabiView);
-    }
-    updateHanabiActionButtons();
-  });
-}
-
-if (hanabiClueTypeSelect) {
-  hanabiClueTypeSelect.addEventListener("change", () => {
-    hanabiSelectedClueType = hanabiClueTypeSelect.value || "color";
-    if (currentHanabiView) {
-      updateHanabiClueOptions(currentHanabiView);
-    }
-    updateHanabiActionButtons();
-  });
-}
-
-if (hanabiClueValueSelect) {
-  hanabiClueValueSelect.addEventListener("change", () => {
-    hanabiSelectedClueValue = hanabiClueValueSelect.value || null;
-    updateHanabiActionButtons();
-  });
-}
-
-if (hanabiPlayBtn) {
-  hanabiPlayBtn.addEventListener("click", () => {
-    if (!currentHanabiView) {
-      log("Game not ready");
-      return;
-    }
-    const you = getHanabiYou(currentHanabiView);
-    if (
-      !you ||
-      !Number.isInteger(hanabiSelectedCardIndex) ||
-      hanabiSelectedCardIndex < 0 ||
-      hanabiSelectedCardIndex >= you.hand.length
-    ) {
-      log("Select a card to play");
-      return;
-    }
-    if (isHanabiCardDefinitelyUnplayable(currentHanabiView, hanabiSelectedCardIndex)) {
-      const proceed = window.confirm("This play is guaranteed to fail based on known info. Play anyway?");
-      if (!proceed) {
-        return;
-      }
-    }
-    sendAction({ type: "play", card_index: hanabiSelectedCardIndex });
-    hanabiSelectedCardIndex = null;
-    renderHanabiHand(currentHanabiView);
-    updateHanabiSelectedCardLabel(currentHanabiView);
-    updateHanabiActionButtons();
-  });
-}
-
-if (hanabiDiscardBtn) {
-  hanabiDiscardBtn.addEventListener("click", () => {
-    if (!currentHanabiView) {
-      log("Game not ready");
-      return;
-    }
-    const you = getHanabiYou(currentHanabiView);
-    if (
-      !you ||
-      !Number.isInteger(hanabiSelectedCardIndex) ||
-      hanabiSelectedCardIndex < 0 ||
-      hanabiSelectedCardIndex >= you.hand.length
-    ) {
-      log("Select a card to discard");
-      return;
-    }
-    sendAction({ type: "discard", card_index: hanabiSelectedCardIndex });
-    hanabiSelectedCardIndex = null;
-    renderHanabiHand(currentHanabiView);
-    updateHanabiSelectedCardLabel(currentHanabiView);
-    updateHanabiActionButtons();
-  });
-}
-
-if (hanabiClueBtn) {
-  hanabiClueBtn.addEventListener("click", () => {
-    if (!currentHanabiView) {
-      log("Game not ready");
-      return;
-    }
-    const targetId = hanabiTargetSelect ? hanabiTargetSelect.value : null;
-    const clueType = hanabiClueTypeSelect ? hanabiClueTypeSelect.value || "color" : "color";
-    const clueValueRaw = hanabiClueValueSelect ? hanabiClueValueSelect.value : null;
-    if (!targetId || !clueValueRaw) {
-      log("Select a target and clue value");
-      return;
-    }
-    let value = clueValueRaw;
-    if (clueType === "rank") {
-      const parsed = Number.parseInt(clueValueRaw, 10);
-      if (!Number.isInteger(parsed)) {
-        log("Select a clue number");
-        return;
-      }
-      value = parsed;
-    }
-    sendAction({
-      type: "give_clue",
-      target_player_id: targetId,
-      clue_type: clueType,
-      value,
-    });
-  });
-}
-
 skullPlayBtn.addEventListener("click", () => {
   if (!skullSelectedCardType) {
     log("Select a card to play");
@@ -7971,58 +6662,6 @@ if (catInBoxPlayBtn) {
   });
 }
 
-if (gangRevealBtn) {
-  gangRevealBtn.addEventListener("click", () => {
-    sendAction({ type: "reveal_next" });
-  });
-}
-
-if (gangReadyBtn) {
-  gangReadyBtn.addEventListener("click", () => {
-    sendAction({ type: "toggle_ready" });
-  });
-}
-
-if (gangLockBtn) {
-  gangLockBtn.addEventListener("click", () => {
-    sendAction({ type: "lock_in" });
-  });
-}
-
-if (gangMulliganBtn) {
-  gangMulliganBtn.addEventListener("click", () => {
-    sendAction({ type: "mulligan" });
-  });
-}
-
-if (gangSpyTargetSelect) {
-  gangSpyTargetSelect.addEventListener("change", () => {
-    gangSelectedSpyTarget = gangSpyTargetSelect.value || null;
-  });
-}
-
-if (gangSpyBtn) {
-  gangSpyBtn.addEventListener("click", () => {
-    if (!gangSelectedSpyTarget) {
-      log("Select a spy target");
-      return;
-    }
-    sendAction({ type: "spy", target_player_id: gangSelectedSpyTarget });
-  });
-}
-
-if (gangNextRoundBtn) {
-  gangNextRoundBtn.addEventListener("click", () => {
-    sendAction({ type: "next_round" });
-  });
-}
-
-if (gangPlayAgainBtn) {
-  gangPlayAgainBtn.addEventListener("click", () => {
-    sendAction({ type: "play_again" });
-  });
-}
-
 if (mismatchRevealBtn) {
   mismatchRevealBtn.addEventListener("click", () => {
     sendAction({ type: "reveal" });
@@ -8088,73 +6727,6 @@ if (halliBellCenter) {
       event.preventDefault();
       ringBell();
     }
-  });
-}
-
-if (aidixitClueInput) {
-  aidixitClueInput.addEventListener("input", () => updateAidixitButtons());
-}
-
-if (aidixitSubmitStoryBtn) {
-  aidixitSubmitStoryBtn.addEventListener("click", () => {
-    if (!currentAidixitView) {
-      log("Game not ready");
-      return;
-    }
-    const cardId = aidixitSelectedHandCardId;
-    if (!cardId) {
-      log("Select a card");
-      return;
-    }
-    const clue = aidixitClueInput ? aidixitClueInput.value.trim() : "";
-    if (!clue) {
-      log("Enter a clue");
-      return;
-    }
-    sendAction({ type: "submit_story", card_id: cardId, clue });
-    aidixitSelectedHandCardId = null;
-    if (aidixitClueInput) {
-      aidixitClueInput.value = "";
-    }
-    updateAidixitButtons();
-  });
-}
-
-if (aidixitSubmitCardBtn) {
-  aidixitSubmitCardBtn.addEventListener("click", () => {
-    if (!currentAidixitView) {
-      log("Game not ready");
-      return;
-    }
-    const cardId = aidixitSelectedHandCardId;
-    if (!cardId) {
-      log("Select a card");
-      return;
-    }
-    sendAction({ type: "submit_card", card_id: cardId });
-    aidixitSelectedHandCardId = null;
-    updateAidixitButtons();
-  });
-}
-
-if (aidixitSubmitVoteBtn) {
-  aidixitSubmitVoteBtn.addEventListener("click", () => {
-    if (!currentAidixitView) {
-      log("Game not ready");
-      return;
-    }
-    const cardId = aidixitSelectedVoteCardId;
-    if (!cardId) {
-      log("Select a card to vote");
-      return;
-    }
-    if (cardId === currentAidixitView.your_submission) {
-      log("Cannot vote for your own card");
-      return;
-    }
-    sendAction({ type: "submit_vote", card_id: cardId });
-    aidixitSelectedVoteCardId = null;
-    updateAidixitButtons();
   });
 }
 
