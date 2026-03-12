@@ -1323,9 +1323,6 @@ async function openCreateRoomModal() {
   }
   setModalVisible(createRoomModal, true);
   await applyGameFilters();
-  if (gameSearchInput) {
-    gameSearchInput.focus();
-  }
 }
 
 function closeCreateRoomModal() {

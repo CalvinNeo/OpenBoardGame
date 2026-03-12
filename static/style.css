@@ -2200,6 +2200,12 @@ body.log-open {
   max-width: 500px;
 }
 
+@media (max-width: 640px) {
+  .create-room-modal {
+    max-width: calc(100% - 32px);
+  }
+}
+
 .create-room-filters {
   display: flex;
   gap: 8px;
