@@ -1,3 +1,22 @@
+let currentMismatchView = null;
+
+const mismatchPhaseLabel = document.getElementById("mismatchPhase");
+const mismatchRoundLabel = document.getElementById("mismatchRound");
+const mismatchLeaderLabel = document.getElementById("mismatchLeader");
+const mismatchTargetLabel = document.getElementById("mismatchTarget");
+const mismatchGuessingLabel = document.getElementById("mismatchGuessing");
+const mismatchWinnerLabel = document.getElementById("mismatchWinner");
+const mismatchWords = document.getElementById("mismatchWords");
+const mismatchYourGuessLabel = document.getElementById("mismatchYourGuess");
+const mismatchSliders = document.getElementById("mismatchSliders");
+const mismatchRevealBtn = document.getElementById("mismatchRevealBtn");
+const mismatchNextRoundBtn = document.getElementById("mismatchNextRoundBtn");
+const mismatchPlayAgainBtn = document.getElementById("mismatchPlayAgainBtn");
+const mismatchRoundSummary = document.getElementById("mismatchRoundSummary");
+const mismatchRoundSummaryBody = document.getElementById("mismatchRoundSummaryBody");
+const mismatchRoundSummaryGuesses = document.getElementById("mismatchRoundSummaryGuesses");
+const mismatchPlayers = document.getElementById("mismatchPlayers");
+
 function updateMismatchButtons(view) {
   if (!mismatchRevealBtn || !mismatchNextRoundBtn || !mismatchPlayAgainBtn) {
     return;
@@ -228,4 +247,129 @@ function renderMismatchSummary(view) {
   });
 
   mismatchRoundSummary.classList.remove("hidden");
+}
+
+function clearMismatchState() {
+  currentMismatchView = null;
+  if (mismatchPhaseLabel) {
+    mismatchPhaseLabel.textContent = "-";
+  }
+  if (mismatchRoundLabel) {
+    mismatchRoundLabel.textContent = "-";
+  }
+  if (mismatchLeaderLabel) {
+    mismatchLeaderLabel.textContent = "-";
+  }
+  if (mismatchTargetLabel) {
+    mismatchTargetLabel.textContent = "-";
+  }
+  if (mismatchGuessingLabel) {
+    mismatchGuessingLabel.textContent = "-";
+  }
+  if (mismatchWinnerLabel) {
+    mismatchWinnerLabel.textContent = "-";
+  }
+  if (mismatchYourGuessLabel) {
+    mismatchYourGuessLabel.textContent = "-";
+  }
+  if (mismatchWords) {
+    mismatchWords.innerHTML = "";
+  }
+  if (mismatchSliders) {
+    mismatchSliders.innerHTML = "";
+  }
+  if (mismatchPlayers) {
+    mismatchPlayers.innerHTML = "";
+  }
+  if (mismatchRoundSummary) {
+    mismatchRoundSummary.classList.add("hidden");
+  }
+  if (mismatchRoundSummaryBody) {
+    mismatchRoundSummaryBody.textContent = "-";
+  }
+  if (mismatchRoundSummaryGuesses) {
+    mismatchRoundSummaryGuesses.innerHTML = "";
+  }
+  if (mismatchRevealBtn) {
+    mismatchRevealBtn.disabled = true;
+    mismatchRevealBtn.classList.remove("action-allowed");
+  }
+  if (mismatchNextRoundBtn) {
+    mismatchNextRoundBtn.disabled = true;
+    mismatchNextRoundBtn.classList.remove("action-allowed");
+  }
+  if (mismatchPlayAgainBtn) {
+    mismatchPlayAgainBtn.disabled = true;
+    mismatchPlayAgainBtn.classList.remove("action-allowed");
+  }
+}
+
+function renderMismatchGameState(data) {
+  const view = data.view;
+  currentMismatchView = view;
+  if (currentGameType !== "perfect_mismatch") {
+    currentGameType = "perfect_mismatch";
+    setGamePanelVisibility("perfect_mismatch");
+  }
+
+  if (mismatchPhaseLabel) {
+    mismatchPhaseLabel.textContent = view.phase || "-";
+  }
+  if (mismatchRoundLabel) {
+    mismatchRoundLabel.textContent = view.round ?? "-";
+  }
+  if (mismatchLeaderLabel) {
+    mismatchLeaderLabel.textContent = view.leader_id ? findPlayerName(view, view.leader_id) : "-";
+  }
+  if (mismatchGuessingLabel) {
+    mismatchGuessingLabel.textContent = view.phase === "guessing" ? "open" : "closed";
+  }
+  if (mismatchWinnerLabel) {
+    if (view.game_over && Array.isArray(view.winner) && view.winner.length) {
+      const names = view.winner.map((pid) => findPlayerName(view, pid));
+      mismatchWinnerLabel.textContent = names.join(", ");
+    } else {
+      mismatchWinnerLabel.textContent = "-";
+    }
+  }
+  if (mismatchTargetLabel) {
+    if (Number.isInteger(view.target_index) && Array.isArray(view.words) && view.words[view.target_index]) {
+      mismatchTargetLabel.textContent = `${view.target_index + 1}. ${view.words[view.target_index]}`;
+    } else {
+      mismatchTargetLabel.textContent = "-";
+    }
+  }
+  if (mismatchYourGuessLabel) {
+    if (view.your_guess && Number.isInteger(view.your_guess.choice)) {
+      const order = Number.isInteger(view.your_guess.order) ? `#${view.your_guess.order}` : "#-";
+      mismatchYourGuessLabel.textContent = `${view.your_guess.choice + 1}. ${order}`;
+    } else {
+      mismatchYourGuessLabel.textContent = "-";
+    }
+  }
+
+  renderMismatchWords(view);
+  renderMismatchSliders(view);
+  renderMismatchPlayers(view);
+  renderMismatchSummary(view);
+  updateMismatchButtons(view);
+  logGameEvents(data);
+}
+
+if (mismatchRevealBtn) {
+  mismatchRevealBtn.addEventListener("click", () => {
+    sendAction({ type: "reveal" });
+  });
+}
+
+if (mismatchNextRoundBtn) {
+  mismatchNextRoundBtn.addEventListener("click", () => {
+    sendAction({ type: "next_round" });
+  });
+}
+
+if (mismatchPlayAgainBtn) {
+  mismatchPlayAgainBtn.addEventListener("click", () => {
+    sendAction({ type: "play_again" });
+  });
 }

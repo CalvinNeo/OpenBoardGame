@@ -22,8 +22,6 @@ const socket = io();
 let playerId = null;
 let roomId = null;
 let currentCaboView = null;
-let currentSkullView = null;
-let currentMismatchView = null;
 let currentCoyoteView = null;
 let currentTexasHoldemView = null;
 let currentFlip7View = null;
@@ -56,9 +54,6 @@ let roomControlsAutoCollapsed = false;
 let selectedTarget = null;
 let flip7SelectedTarget = null;
 let goldRushSelectedHandIndex = null;
-let skullSelectedCardIndex = null;
-let skullSelectedCardType = null;
-let skullSelectedTarget = null;
 let fangNiaoSelectedBird = null;
 let fangNiaoSelectedRow = null;
 let fangNiaoSelectedSide = null;
@@ -281,45 +276,6 @@ const seatClaimEmpty = document.getElementById("seatClaimEmpty");
 const roomControlsPanel = document.getElementById("roomControlsPanel");
 const roomControlsToggleBtn = document.getElementById("roomControlsToggleBtn");
 
-const skullPhaseLabel = document.getElementById("skullPhase");
-const skullRoundLabel = document.getElementById("skullRound");
-const skullTurnLabel = document.getElementById("skullTurn");
-const skullBidLabel = document.getElementById("skullBid");
-const skullBidderLabel = document.getElementById("skullBidder");
-const skullPassedLabel = document.getElementById("skullPassed");
-const skullRosesLabel = document.getElementById("skullRoses");
-const skullLastRevealLabel = document.getElementById("skullLastReveal");
-const skullWinnerLabel = document.getElementById("skullWinner");
-const skullHand = document.getElementById("skullHand");
-const skullSelectedCardLabel = document.getElementById("skullSelectedCard");
-const skullTargetSelection = document.getElementById("skullTargetSelection");
-const skullTargets = document.getElementById("skullTargets");
-const skullPlayers = document.getElementById("skullPlayers");
-const skullBidInput = document.getElementById("skullBidInput");
-const skullPlayBtn = document.getElementById("skullPlayBtn");
-const skullStartBidBtn = document.getElementById("skullStartBidBtn");
-const skullRaiseBidBtn = document.getElementById("skullRaiseBidBtn");
-const skullPassBidBtn = document.getElementById("skullPassBidBtn");
-const skullRevealBtn = document.getElementById("skullRevealBtn");
-const skullClearSelectionBtn = document.getElementById("skullClearSelection");
-
-const mismatchPhaseLabel = document.getElementById("mismatchPhase");
-const mismatchRoundLabel = document.getElementById("mismatchRound");
-const mismatchLeaderLabel = document.getElementById("mismatchLeader");
-const mismatchTargetLabel = document.getElementById("mismatchTarget");
-const mismatchGuessingLabel = document.getElementById("mismatchGuessing");
-const mismatchWinnerLabel = document.getElementById("mismatchWinner");
-const mismatchWords = document.getElementById("mismatchWords");
-const mismatchYourGuessLabel = document.getElementById("mismatchYourGuess");
-const mismatchSliders = document.getElementById("mismatchSliders");
-const mismatchRevealBtn = document.getElementById("mismatchRevealBtn");
-const mismatchNextRoundBtn = document.getElementById("mismatchNextRoundBtn");
-const mismatchPlayAgainBtn = document.getElementById("mismatchPlayAgainBtn");
-const mismatchRoundSummary = document.getElementById("mismatchRoundSummary");
-const mismatchRoundSummaryBody = document.getElementById("mismatchRoundSummaryBody");
-const mismatchRoundSummaryGuesses = document.getElementById("mismatchRoundSummaryGuesses");
-const mismatchPlayers = document.getElementById("mismatchPlayers");
-
 const coyotePhaseLabel = document.getElementById("coyotePhase");
 const coyoteRoundLabel = document.getElementById("coyoteRound");
 const coyoteTurnLabel = document.getElementById("coyoteTurn");
@@ -420,14 +376,6 @@ const actionButtons = {
   call_cabo: document.getElementById("callCaboBtn"),
   use_choice_action: document.getElementById("choiceBtn"),
   next_round: document.getElementById("nextRoundBtn"),
-};
-
-const skullActionButtons = {
-  play_card: skullPlayBtn,
-  start_bid: skullStartBidBtn,
-  raise_bid: skullRaiseBidBtn,
-  pass_bid: skullPassBidBtn,
-  reveal_card: skullRevealBtn,
 };
 
 const coyoteActionButtons = {
@@ -2121,83 +2069,6 @@ function clearKobayakawaState() {
   updateKobayakawaActionButtons();
 }
 
-
-function clearSkullState() {
-  currentSkullView = null;
-  skullSelectedCardIndex = null;
-  skullSelectedCardType = null;
-  skullSelectedTarget = null;
-  skullPhaseLabel.textContent = "-";
-  skullRoundLabel.textContent = "-";
-  skullTurnLabel.textContent = "-";
-  skullBidLabel.textContent = "-";
-  skullBidderLabel.textContent = "-";
-  skullPassedLabel.textContent = "-";
-  skullRosesLabel.textContent = "-";
-  skullLastRevealLabel.textContent = "-";
-  skullWinnerLabel.textContent = "-";
-  skullHand.innerHTML = "";
-  skullSelectedCardLabel.textContent = "-";
-  skullTargetSelection.textContent = "-";
-  skullTargets.innerHTML = "";
-  skullPlayers.innerHTML = "";
-  updateSkullActionButtons();
-}
-
-function clearMismatchState() {
-  currentMismatchView = null;
-  if (mismatchPhaseLabel) {
-    mismatchPhaseLabel.textContent = "-";
-  }
-  if (mismatchRoundLabel) {
-    mismatchRoundLabel.textContent = "-";
-  }
-  if (mismatchLeaderLabel) {
-    mismatchLeaderLabel.textContent = "-";
-  }
-  if (mismatchTargetLabel) {
-    mismatchTargetLabel.textContent = "-";
-  }
-  if (mismatchGuessingLabel) {
-    mismatchGuessingLabel.textContent = "-";
-  }
-  if (mismatchWinnerLabel) {
-    mismatchWinnerLabel.textContent = "-";
-  }
-  if (mismatchYourGuessLabel) {
-    mismatchYourGuessLabel.textContent = "-";
-  }
-  if (mismatchWords) {
-    mismatchWords.innerHTML = "";
-  }
-  if (mismatchSliders) {
-    mismatchSliders.innerHTML = "";
-  }
-  if (mismatchPlayers) {
-    mismatchPlayers.innerHTML = "";
-  }
-  if (mismatchRoundSummary) {
-    mismatchRoundSummary.classList.add("hidden");
-  }
-  if (mismatchRoundSummaryBody) {
-    mismatchRoundSummaryBody.textContent = "-";
-  }
-  if (mismatchRoundSummaryGuesses) {
-    mismatchRoundSummaryGuesses.innerHTML = "";
-  }
-  if (mismatchRevealBtn) {
-    mismatchRevealBtn.disabled = true;
-    mismatchRevealBtn.classList.remove("action-allowed");
-  }
-  if (mismatchNextRoundBtn) {
-    mismatchNextRoundBtn.disabled = true;
-    mismatchNextRoundBtn.classList.remove("action-allowed");
-  }
-  if (mismatchPlayAgainBtn) {
-    mismatchPlayAgainBtn.disabled = true;
-    mismatchPlayAgainBtn.classList.remove("action-allowed");
-  }
-}
 
 function clearCoyoteState() {
   currentCoyoteView = null;
@@ -4333,112 +4204,6 @@ function renderKobayakawaGameState(data) {
   updateKobayakawaActionButtons();
 }
 
-function renderSkullGameState(data) {
-  const view = data.view;
-  currentSkullView = view;
-  if (currentGameType !== "skull") {
-    currentGameType = "skull";
-    setGamePanelVisibility("skull");
-  }
-  if (skullSelectedTarget && !view.players.find((p) => p.player_id === skullSelectedTarget)) {
-    skullSelectedTarget = null;
-  }
-  if (skullSelectedCardIndex !== null && (!view.hand || skullSelectedCardIndex >= view.hand.length)) {
-    skullSelectedCardIndex = null;
-    skullSelectedCardType = null;
-  }
-
-  skullPhaseLabel.textContent = view.phase;
-  skullRoundLabel.textContent = view.round;
-  const currentPlayer = view.players.find((p) => p.player_id === view.current_turn);
-  skullTurnLabel.textContent = currentPlayer ? currentPlayer.name : view.current_turn || "-";
-  skullBidLabel.textContent = view.current_bid ?? "-";
-  skullBidderLabel.textContent = view.bidder ? findPlayerName(view, view.bidder) : "-";
-  if (Array.isArray(view.passed) && view.passed.length) {
-    skullPassedLabel.textContent = view.passed.map((pid) => findPlayerName(view, pid)).join(", ");
-  } else {
-    skullPassedLabel.textContent = "-";
-  }
-  skullRosesLabel.textContent = view.roses_revealed ?? "-";
-  if (view.last_reveal) {
-    skullLastRevealLabel.textContent = `${findPlayerName(view, view.last_reveal.player_id)} -> ${view.last_reveal.card}`;
-  } else {
-    skullLastRevealLabel.textContent = "-";
-  }
-  skullWinnerLabel.textContent = view.winner ? findPlayerName(view, view.winner) : "-";
-
-  renderSkullHand(view);
-  renderSkullTargets(view);
-  renderSkullPlayers(view);
-
-  logGameEvents(data);
-
-  if (view.last_round_summary) {
-    const summary = view.last_round_summary;
-    if (summary.result === "success") {
-      log(`Round success: bidder ${findPlayerName(view, summary.bidder)} bid ${summary.bid}`);
-    } else {
-      log(`Round fail: bidder ${findPlayerName(view, summary.bidder)} hit ${findPlayerName(view, summary.skull_owner)}`);
-    }
-  }
-
-  updateSkullSelectedCard();
-  updateSkullTargetSelection();
-  updateSkullActionButtons();
-}
-
-function renderMismatchGameState(data) {
-  const view = data.view;
-  currentMismatchView = view;
-  if (currentGameType !== "perfect_mismatch") {
-    currentGameType = "perfect_mismatch";
-    setGamePanelVisibility("perfect_mismatch");
-  }
-
-  if (mismatchPhaseLabel) {
-    mismatchPhaseLabel.textContent = view.phase || "-";
-  }
-  if (mismatchRoundLabel) {
-    mismatchRoundLabel.textContent = view.round ?? "-";
-  }
-  if (mismatchLeaderLabel) {
-    mismatchLeaderLabel.textContent = view.leader_id ? findPlayerName(view, view.leader_id) : "-";
-  }
-  if (mismatchGuessingLabel) {
-    mismatchGuessingLabel.textContent = view.phase === "guessing" ? "open" : "closed";
-  }
-  if (mismatchWinnerLabel) {
-    if (view.game_over && Array.isArray(view.winner) && view.winner.length) {
-      const names = view.winner.map((pid) => findPlayerName(view, pid));
-      mismatchWinnerLabel.textContent = names.join(", ");
-    } else {
-      mismatchWinnerLabel.textContent = "-";
-    }
-  }
-  if (mismatchTargetLabel) {
-    if (Number.isInteger(view.target_index) && Array.isArray(view.words) && view.words[view.target_index]) {
-      mismatchTargetLabel.textContent = `${view.target_index + 1}. ${view.words[view.target_index]}`;
-    } else {
-      mismatchTargetLabel.textContent = "-";
-    }
-  }
-  if (mismatchYourGuessLabel) {
-    if (view.your_guess && Number.isInteger(view.your_guess.choice)) {
-      const order = Number.isInteger(view.your_guess.order) ? `#${view.your_guess.order}` : "#-";
-      mismatchYourGuessLabel.textContent = `${view.your_guess.choice + 1}. ${order}`;
-    } else {
-      mismatchYourGuessLabel.textContent = "-";
-    }
-  }
-
-  renderMismatchWords(view);
-  renderMismatchSliders(view);
-  renderMismatchPlayers(view);
-  renderMismatchSummary(view);
-  updateMismatchButtons(view);
-  logGameEvents(data);
-}
-
 function renderCoyoteGameState(data) {
   const view = data.view;
   const previousView = currentCoyoteView;
@@ -5148,14 +4913,6 @@ if (flip7ClearTargetBtn) {
   });
 }
 
-skullClearSelectionBtn.addEventListener("click", () => {
-  clearSkullSelection();
-});
-
-skullBidInput.addEventListener("input", () => {
-  updateSkullActionButtons();
-});
-
 coyoteBidInput.addEventListener("input", () => {
   updateCoyoteActionButtons();
 });
@@ -5455,66 +5212,6 @@ if (kobayakawaFightBtn) {
 if (kobayakawaPassBtn) {
   kobayakawaPassBtn.addEventListener("click", () => {
     sendAction({ type: "pass" });
-  });
-}
-
-skullPlayBtn.addEventListener("click", () => {
-  if (!skullSelectedCardType) {
-    log("Select a card to play");
-    return;
-  }
-  sendAction({ type: "play_card", card_type: skullSelectedCardType });
-  clearSkullSelection();
-});
-
-skullStartBidBtn.addEventListener("click", () => {
-  const bid = Number.parseInt(skullBidInput.value, 10);
-  if (!Number.isInteger(bid)) {
-    log("Enter a bid number");
-    return;
-  }
-  sendAction({ type: "start_bid", bid });
-});
-
-skullRaiseBidBtn.addEventListener("click", () => {
-  const bid = Number.parseInt(skullBidInput.value, 10);
-  if (!Number.isInteger(bid)) {
-    log("Enter a bid number");
-    return;
-  }
-  sendAction({ type: "raise_bid", bid });
-});
-
-skullPassBidBtn.addEventListener("click", () => {
-  sendAction({ type: "pass_bid" });
-});
-
-skullRevealBtn.addEventListener("click", () => {
-  if (!skullSelectedTarget) {
-    log("Select a reveal target");
-    return;
-  }
-  sendAction({ type: "reveal_card", target_player_id: skullSelectedTarget });
-  skullSelectedTarget = null;
-  updateSkullTargetSelection();
-  updateSkullActionButtons();
-});
-
-if (mismatchRevealBtn) {
-  mismatchRevealBtn.addEventListener("click", () => {
-    sendAction({ type: "reveal" });
-  });
-}
-
-if (mismatchNextRoundBtn) {
-  mismatchNextRoundBtn.addEventListener("click", () => {
-    sendAction({ type: "next_round" });
-  });
-}
-
-if (mismatchPlayAgainBtn) {
-  mismatchPlayAgainBtn.addEventListener("click", () => {
-    sendAction({ type: "play_again" });
   });
 }
 

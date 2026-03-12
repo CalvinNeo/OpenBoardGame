@@ -1,3 +1,38 @@
+let currentSkullView = null;
+let skullSelectedCardIndex = null;
+let skullSelectedCardType = null;
+let skullSelectedTarget = null;
+
+const skullPhaseLabel = document.getElementById("skullPhase");
+const skullRoundLabel = document.getElementById("skullRound");
+const skullTurnLabel = document.getElementById("skullTurn");
+const skullBidLabel = document.getElementById("skullBid");
+const skullBidderLabel = document.getElementById("skullBidder");
+const skullPassedLabel = document.getElementById("skullPassed");
+const skullRosesLabel = document.getElementById("skullRoses");
+const skullLastRevealLabel = document.getElementById("skullLastReveal");
+const skullWinnerLabel = document.getElementById("skullWinner");
+const skullHand = document.getElementById("skullHand");
+const skullSelectedCardLabel = document.getElementById("skullSelectedCard");
+const skullTargetSelection = document.getElementById("skullTargetSelection");
+const skullTargets = document.getElementById("skullTargets");
+const skullPlayers = document.getElementById("skullPlayers");
+const skullBidInput = document.getElementById("skullBidInput");
+const skullPlayBtn = document.getElementById("skullPlayBtn");
+const skullStartBidBtn = document.getElementById("skullStartBidBtn");
+const skullRaiseBidBtn = document.getElementById("skullRaiseBidBtn");
+const skullPassBidBtn = document.getElementById("skullPassBidBtn");
+const skullRevealBtn = document.getElementById("skullRevealBtn");
+const skullClearSelectionBtn = document.getElementById("skullClearSelection");
+
+const skullActionButtons = {
+  play_card: skullPlayBtn,
+  start_bid: skullStartBidBtn,
+  raise_bid: skullRaiseBidBtn,
+  pass_bid: skullPassBidBtn,
+  reveal_card: skullRevealBtn,
+};
+
 function updateSkullSelectedCard() {
   skullSelectedCardLabel.textContent = skullSelectedCardType || "-";
 }
@@ -155,5 +190,145 @@ function updateSkullActionButtons() {
       button.classList.remove("action-allowed");
     }
     button.disabled = !allowed;
+  });
+}
+
+function clearSkullState() {
+  currentSkullView = null;
+  skullSelectedCardIndex = null;
+  skullSelectedCardType = null;
+  skullSelectedTarget = null;
+  skullPhaseLabel.textContent = "-";
+  skullRoundLabel.textContent = "-";
+  skullTurnLabel.textContent = "-";
+  skullBidLabel.textContent = "-";
+  skullBidderLabel.textContent = "-";
+  skullPassedLabel.textContent = "-";
+  skullRosesLabel.textContent = "-";
+  skullLastRevealLabel.textContent = "-";
+  skullWinnerLabel.textContent = "-";
+  skullHand.innerHTML = "";
+  skullSelectedCardLabel.textContent = "-";
+  skullTargetSelection.textContent = "-";
+  skullTargets.innerHTML = "";
+  skullPlayers.innerHTML = "";
+  updateSkullActionButtons();
+}
+
+function renderSkullGameState(data) {
+  const view = data.view;
+  currentSkullView = view;
+  if (currentGameType !== "skull") {
+    currentGameType = "skull";
+    setGamePanelVisibility("skull");
+  }
+  if (skullSelectedTarget && !view.players.find((p) => p.player_id === skullSelectedTarget)) {
+    skullSelectedTarget = null;
+  }
+  if (skullSelectedCardIndex !== null && (!view.hand || skullSelectedCardIndex >= view.hand.length)) {
+    skullSelectedCardIndex = null;
+    skullSelectedCardType = null;
+  }
+
+  skullPhaseLabel.textContent = view.phase;
+  skullRoundLabel.textContent = view.round;
+  const currentPlayer = view.players.find((p) => p.player_id === view.current_turn);
+  skullTurnLabel.textContent = currentPlayer ? currentPlayer.name : view.current_turn || "-";
+  skullBidLabel.textContent = view.current_bid ?? "-";
+  skullBidderLabel.textContent = view.bidder ? findPlayerName(view, view.bidder) : "-";
+  if (Array.isArray(view.passed) && view.passed.length) {
+    skullPassedLabel.textContent = view.passed.map((pid) => findPlayerName(view, pid)).join(", ");
+  } else {
+    skullPassedLabel.textContent = "-";
+  }
+  skullRosesLabel.textContent = view.roses_revealed ?? "-";
+  if (view.last_reveal) {
+    skullLastRevealLabel.textContent = `${findPlayerName(view, view.last_reveal.player_id)} -> ${view.last_reveal.card}`;
+  } else {
+    skullLastRevealLabel.textContent = "-";
+  }
+  skullWinnerLabel.textContent = view.winner ? findPlayerName(view, view.winner) : "-";
+
+  renderSkullHand(view);
+  renderSkullTargets(view);
+  renderSkullPlayers(view);
+
+  logGameEvents(data);
+
+  if (view.last_round_summary) {
+    const summary = view.last_round_summary;
+    if (summary.result === "success") {
+      log(`Round success: bidder ${findPlayerName(view, summary.bidder)} bid ${summary.bid}`);
+    } else {
+      log(`Round fail: bidder ${findPlayerName(view, summary.bidder)} hit ${findPlayerName(view, summary.skull_owner)}`);
+    }
+  }
+
+  updateSkullSelectedCard();
+  updateSkullTargetSelection();
+  updateSkullActionButtons();
+}
+
+if (skullClearSelectionBtn) {
+  skullClearSelectionBtn.addEventListener("click", () => {
+    clearSkullSelection();
+  });
+}
+
+if (skullBidInput) {
+  skullBidInput.addEventListener("input", () => {
+    updateSkullActionButtons();
+  });
+}
+
+if (skullPlayBtn) {
+  skullPlayBtn.addEventListener("click", () => {
+    if (!skullSelectedCardType) {
+      log("Select a card to play");
+      return;
+    }
+    sendAction({ type: "play_card", card_type: skullSelectedCardType });
+    clearSkullSelection();
+  });
+}
+
+if (skullStartBidBtn) {
+  skullStartBidBtn.addEventListener("click", () => {
+    const bid = Number.parseInt(skullBidInput.value, 10);
+    if (!Number.isInteger(bid)) {
+      log("Enter a bid number");
+      return;
+    }
+    sendAction({ type: "start_bid", bid });
+  });
+}
+
+if (skullRaiseBidBtn) {
+  skullRaiseBidBtn.addEventListener("click", () => {
+    const bid = Number.parseInt(skullBidInput.value, 10);
+    if (!Number.isInteger(bid)) {
+      log("Enter a bid number");
+      return;
+    }
+    sendAction({ type: "raise_bid", bid });
+  });
+}
+
+if (skullPassBidBtn) {
+  skullPassBidBtn.addEventListener("click", () => {
+    sendAction({ type: "pass_bid" });
+  });
+}
+
+if (skullRevealBtn) {
+  skullRevealBtn.addEventListener("click", () => {
+    if (!skullSelectedTarget) {
+      log("Select a reveal target");
+      return;
+    }
+    sendAction({ type: "reveal_card", target_player_id: skullSelectedTarget });
+    skullSelectedTarget = null;
+    updateSkullTargetSelection();
+    updateSkullActionButtons();
   });
 }
