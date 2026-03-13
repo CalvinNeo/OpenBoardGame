@@ -6202,3 +6202,201 @@ body.abraca-explain-mode button.has-explanation:hover {
   color: #6b7280;
   font-size: 12px;
 }
+
+/* Gold Rush Help/Explain */
+.gold-rush-header-btn {
+  padding: 4px 10px;
+  font-size: 13px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #f9fafb;
+  cursor: pointer;
+}
+
+.gold-rush-header-btn:hover {
+  background: #f3f4f6;
+}
+
+.gold-rush-header-btn.active {
+  background: #dbeafe;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+
+body.gold-rush-explain-mode button.has-explanation {
+  outline: 2px dashed #3b82f6;
+  outline-offset: 2px;
+  cursor: help;
+}
+
+body.gold-rush-explain-mode button.has-explanation:hover {
+  outline-color: #1d4ed8;
+  outline-style: solid;
+}
+
+.gold-rush-help-modal {
+  max-width: 720px;
+}
+
+.gold-rush-help-content {
+  max-height: 70vh;
+  overflow-y: auto;
+  line-height: 1.6;
+}
+
+.gold-rush-help-content h3 {
+  margin: 16px 0 8px;
+  font-size: 16px;
+  color: #111827;
+}
+
+.gold-rush-help-content h3:first-child {
+  margin-top: 0;
+}
+
+.gold-rush-help-content h4 {
+  margin: 12px 0 6px;
+  font-size: 14px;
+  color: #374151;
+}
+
+.gold-rush-help-content ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.gold-rush-help-content ol {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.gold-rush-help-content li {
+  margin-bottom: 4px;
+}
+
+.gold-rush-help-content p {
+  margin: 8px 0;
+}
+
+.gold-rush-explain-modal {
+  max-width: 520px;
+}
+
+#goldRushExplainContent {
+  line-height: 1.6;
+}
+
+#goldRushExplainContent h4 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: #111827;
+}
+
+#goldRushExplainContent p {
+  margin: 6px 0;
+  color: #374151;
+}
+
+#goldRushExplainContent .hint {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+/* Cat In The Box Help/Explain */
+.cat-box-header-btn {
+  padding: 4px 10px;
+  font-size: 13px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #f9fafb;
+  cursor: pointer;
+}
+
+.cat-box-header-btn:hover {
+  background: #f3f4f6;
+}
+
+.cat-box-header-btn.active {
+  background: #dbeafe;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+
+body.cat-in-box-explain-mode button.has-explanation {
+  outline: 2px dashed #3b82f6;
+  outline-offset: 2px;
+  cursor: help;
+}
+
+body.cat-in-box-explain-mode button.has-explanation:hover {
+  outline-color: #1d4ed8;
+  outline-style: solid;
+}
+
+.cat-box-help-modal {
+  max-width: 720px;
+}
+
+.cat-box-help-content {
+  max-height: 70vh;
+  overflow-y: auto;
+  line-height: 1.6;
+}
+
+.cat-box-help-content h3 {
+  margin: 16px 0 8px;
+  font-size: 16px;
+  color: #111827;
+}
+
+.cat-box-help-content h3:first-child {
+  margin-top: 0;
+}
+
+.cat-box-help-content h4 {
+  margin: 12px 0 6px;
+  font-size: 14px;
+  color: #374151;
+}
+
+.cat-box-help-content ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.cat-box-help-content ol {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.cat-box-help-content li {
+  margin-bottom: 4px;
+}
+
+.cat-box-help-content p {
+  margin: 8px 0;
+}
+
+.cat-box-explain-modal {
+  max-width: 520px;
+}
+
+#catInBoxExplainContent {
+  line-height: 1.6;
+}
+
+#catInBoxExplainContent h4 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: #111827;
+}
+
+#catInBoxExplainContent p {
+  margin: 6px 0;
+  color: #374151;
+}
+
+#catInBoxExplainContent .hint {
+  color: #6b7280;
+  font-size: 12px;
+}

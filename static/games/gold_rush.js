@@ -1,6 +1,16 @@
 let currentGoldRushView = null;
 let goldRushSelectedHandIndex = null;
 
+const goldRushHeaderActions = document.getElementById("goldRushHeaderActions");
+const goldRushHelpBtn = document.getElementById("goldRushHelpBtn");
+const goldRushExplainBtn = document.getElementById("goldRushExplainBtn");
+const goldRushHelpModal = document.getElementById("goldRushHelpModal");
+const goldRushHelpModalCloseBtn = document.getElementById("goldRushHelpModalCloseBtn");
+const goldRushExplainModal = document.getElementById("goldRushExplainModal");
+const goldRushExplainModalCloseBtn = document.getElementById("goldRushExplainModalCloseBtn");
+const goldRushHelpContent = document.getElementById("goldRushHelpContent");
+const goldRushExplainContent = document.getElementById("goldRushExplainContent");
+
 const GOLD_RUSH_COLOR_PALETTE = {
   red: "#d14343",
   brown: "#8b5e34",
@@ -28,6 +38,66 @@ const goldRushPlayAgainBtn = document.getElementById("goldRushPlayAgainBtn");
 const goldRushMines = document.getElementById("goldRushMines");
 const goldRushPlayers = document.getElementById("goldRushPlayers");
 const goldRushScoreBreakdown = document.getElementById("goldRushScoreBreakdown");
+
+const GOLD_RUSH_HELP_TEXT = `
+  <h3>Goal</h3>
+  <p>Score the most gold when the deck runs out.</p>
+
+  <h3>Turn</h3>
+  <ul>
+    <li>Classic mode: draw the top card and resolve it.</li>
+    <li>Hand mode: play one card from your hand.</li>
+  </ul>
+  <p>Card types:</p>
+  <ul>
+    <li><strong>Miner</strong>: place it in its matching mine. You may invest a token in that mine.</li>
+    <li><strong>Gold</strong>: choose any mine with space (max 6 gold cards) and place it.</li>
+  </ul>
+
+  <h3>Investing</h3>
+  <p>Each player starts with 3 ownership tokens. You can only invest right after placing a miner in that mine.</p>
+
+  <h3>Scoring</h3>
+  <ul>
+    <li>For each mine, total gold is divided by total tokens (floor).</li>
+    <li>Each player gains (tokens in mine) × (share per token).</li>
+    <li>Remainders are discarded.</li>
+    <li>Highest total score wins (ties break by most unused tokens).</li>
+  </ul>
+`;
+
+const GOLD_RUSH_BUTTON_EXPLANATIONS = {
+  goldRushMine: {
+    name: "Mine",
+    description: "Place a gold card into the selected mine during gold placement.",
+    note: "Only available when you are placing gold and the mine has space.",
+  },
+  goldRushClearSelection: {
+    name: "Clear",
+    description: "Clear the selected card from your hand.",
+  },
+  goldRushPlayCardBtn: {
+    name: "Play Card",
+    description: "Play the selected card from your hand.",
+    note: "Miner cards may trigger an Invest decision. Gold cards must be placed in a mine.",
+  },
+  goldRushDrawCardBtn: {
+    name: "Draw Card",
+    description: "Draw the top card (Classic mode) and resolve it.",
+  },
+  goldRushInvestYesBtn: {
+    name: "Invest",
+    description: "Place one ownership token in the current mine.",
+  },
+  goldRushInvestNoBtn: {
+    name: "Skip",
+    description: "Skip investing this time and end the decision.",
+  },
+  goldRushPlayAgainBtn: {
+    name: "Play Again",
+    description: "Restart the game after scoring.",
+  },
+};
 
 function getGoldRushHand(view) {
   if (!view || !Array.isArray(view.players)) {
@@ -332,6 +402,9 @@ function renderGoldRushMines(view) {
 
     goldRushMines.appendChild(wrapper);
   });
+  if (goldRushExplainMode) {
+    updateGoldRushExplainModeClasses(true);
+  }
 }
 
 function renderGoldRushPlayers(view) {
@@ -580,3 +653,171 @@ if (goldRushPlayAgainBtn) {
     sendAction({ type: "play_again" });
   });
 }
+
+let goldRushExplainMode = false;
+
+function showGoldRushHeaderActions(show) {
+  if (goldRushHeaderActions) {
+    goldRushHeaderActions.style.display = show ? "flex" : "none";
+  }
+  if (!show) {
+    exitGoldRushExplainMode();
+    closeGoldRushHelpModal();
+    closeGoldRushExplainModal();
+  }
+}
+
+function showGoldRushHelpModal() {
+  if (!goldRushHelpModal) {
+    return;
+  }
+  if (goldRushHelpContent) {
+    goldRushHelpContent.innerHTML = GOLD_RUSH_HELP_TEXT;
+  }
+  setModalVisible(goldRushHelpModal, true);
+}
+
+function closeGoldRushHelpModal() {
+  if (goldRushHelpModal) {
+    setModalVisible(goldRushHelpModal, false);
+  }
+}
+
+function updateGoldRushExplainModeClasses(enabled) {
+  Object.keys(GOLD_RUSH_BUTTON_EXPLANATIONS).forEach((buttonId) => {
+    if (buttonId === "goldRushMine") {
+      return;
+    }
+    const btn = document.getElementById(buttonId);
+    if (btn) {
+      btn.classList.toggle("has-explanation", enabled);
+    }
+  });
+  document.querySelectorAll(".gold-rush-mine").forEach((btn) => {
+    btn.classList.toggle("has-explanation", enabled);
+  });
+}
+
+function findGoldRushButtonAtPoint(x, y) {
+  for (const buttonId of Object.keys(GOLD_RUSH_BUTTON_EXPLANATIONS)) {
+    if (buttonId === "goldRushMine") {
+      continue;
+    }
+    const btn = document.getElementById(buttonId);
+    if (!btn) continue;
+    const rect = btn.getBoundingClientRect();
+    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+      return buttonId;
+    }
+  }
+  const mines = Array.from(document.querySelectorAll(".gold-rush-mine"));
+  for (const mine of mines) {
+    const rect = mine.getBoundingClientRect();
+    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+      return "goldRushMine";
+    }
+  }
+  return null;
+}
+
+function toggleGoldRushExplainMode() {
+  goldRushExplainMode = !goldRushExplainMode;
+  document.body.classList.toggle("gold-rush-explain-mode", goldRushExplainMode);
+  updateGoldRushExplainModeClasses(goldRushExplainMode);
+  if (goldRushExplainBtn) {
+    goldRushExplainBtn.classList.toggle("active", goldRushExplainMode);
+  }
+}
+
+function exitGoldRushExplainMode() {
+  if (!goldRushExplainMode) {
+    return;
+  }
+  goldRushExplainMode = false;
+  document.body.classList.remove("gold-rush-explain-mode");
+  updateGoldRushExplainModeClasses(false);
+  if (goldRushExplainBtn) {
+    goldRushExplainBtn.classList.remove("active");
+  }
+}
+
+function showGoldRushButtonExplanation(buttonId) {
+  const explanation = GOLD_RUSH_BUTTON_EXPLANATIONS[buttonId];
+  if (!explanation || !goldRushExplainContent || !goldRushExplainModal) {
+    return;
+  }
+  const note = explanation.note ? `<div class="hint">${explanation.note}</div>` : "";
+  goldRushExplainContent.innerHTML = `
+    <h4>${explanation.name}</h4>
+    <p>${explanation.description}</p>
+    ${note}
+  `;
+  setModalVisible(goldRushExplainModal, true);
+}
+
+function closeGoldRushExplainModal() {
+  if (goldRushExplainModal) {
+    setModalVisible(goldRushExplainModal, false);
+  }
+}
+
+if (goldRushHelpBtn) {
+  goldRushHelpBtn.addEventListener("click", () => {
+    showGoldRushHelpModal();
+  });
+}
+
+if (goldRushHelpModalCloseBtn) {
+  goldRushHelpModalCloseBtn.addEventListener("click", closeGoldRushHelpModal);
+}
+
+if (goldRushExplainBtn) {
+  goldRushExplainBtn.addEventListener("click", () => {
+    toggleGoldRushExplainMode();
+  });
+}
+
+if (goldRushExplainModalCloseBtn) {
+  goldRushExplainModalCloseBtn.addEventListener("click", closeGoldRushExplainModal);
+}
+
+document.addEventListener("pointerdown", (e) => {
+  if (!goldRushExplainMode) return;
+
+  const buttonId = findGoldRushButtonAtPoint(e.clientX, e.clientY);
+  if (buttonId) {
+    e.preventDefault();
+    e.stopPropagation();
+    showGoldRushButtonExplanation(buttonId);
+    exitGoldRushExplainMode();
+    return;
+  }
+
+  const button = e.target.closest("button");
+  if (button === goldRushExplainBtn || button === goldRushHelpBtn) return;
+  if (button === goldRushHelpModalCloseBtn || button === goldRushExplainModalCloseBtn) return;
+
+  if (button) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+}, true);
+
+document.addEventListener("click", (e) => {
+  if (!goldRushExplainMode) return;
+
+  const button = e.target.closest("button");
+  if (!button) return;
+
+  if (button === goldRushExplainBtn || button === goldRushHelpBtn) return;
+  if (button === goldRushHelpModalCloseBtn || button === goldRushExplainModalCloseBtn) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+}, true);
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && goldRushExplainMode) {
+    exitGoldRushExplainMode();
+  }
+});

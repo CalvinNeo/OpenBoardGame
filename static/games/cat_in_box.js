@@ -2,6 +2,16 @@ let currentCatInBoxView = null;
 let catInBoxSelectedCard = null;
 let catInBoxSelectedColor = null;
 
+const catInBoxHeaderActions = document.getElementById("catInBoxHeaderActions");
+const catInBoxHelpBtn = document.getElementById("catInBoxHelpBtn");
+const catInBoxExplainBtn = document.getElementById("catInBoxExplainBtn");
+const catInBoxHelpModal = document.getElementById("catInBoxHelpModal");
+const catInBoxHelpModalCloseBtn = document.getElementById("catInBoxHelpModalCloseBtn");
+const catInBoxExplainModal = document.getElementById("catInBoxExplainModal");
+const catInBoxExplainModalCloseBtn = document.getElementById("catInBoxExplainModalCloseBtn");
+const catInBoxHelpContent = document.getElementById("catInBoxHelpContent");
+const catInBoxExplainContent = document.getElementById("catInBoxExplainContent");
+
 const catInBoxPanel = document.getElementById("catInBoxPanel");
 const catInBoxPhaseLabel = document.getElementById("catInBoxPhase");
 const catInBoxRoundLabel = document.getElementById("catInBoxRound");
@@ -19,6 +29,10 @@ const catInBoxSelectedCardLabel = document.getElementById("catInBoxSelectedCard"
 const catInBoxSelectedColorLabel = document.getElementById("catInBoxSelectedColor");
 const catInBoxClearSelectionBtn = document.getElementById("catInBoxClearSelection");
 const catInBoxColorButtons = document.getElementById("catInBoxColorButtons");
+const catInBoxColorRedBtn = document.getElementById("catInBoxColorRedBtn");
+const catInBoxColorBlueBtn = document.getElementById("catInBoxColorBlueBtn");
+const catInBoxColorYellowBtn = document.getElementById("catInBoxColorYellowBtn");
+const catInBoxColorGreenBtn = document.getElementById("catInBoxColorGreenBtn");
 const catInBoxDiscardBtn = document.getElementById("catInBoxDiscardBtn");
 const catInBoxBid1Btn = document.getElementById("catInBoxBid1Btn");
 const catInBoxBid2Btn = document.getElementById("catInBoxBid2Btn");
@@ -33,6 +47,85 @@ const catInBoxColorEmoji = {
   blue: "🟦",
   yellow: "🟨",
   green: "🟩",
+};
+
+const CAT_IN_BOX_HELP_TEXT = `
+  <h3>Goal</h3>
+  <p>Score the most points after one round per player.</p>
+
+  <h3>Setup</h3>
+  <ul>
+    <li>Deck numbers range by player count (2p: 1-5, 3p: 1-6, 4p: 1-8, 5p: 1-9).</li>
+    <li>Each number appears five times.</li>
+    <li>Each round you receive a hand (10 cards, 9 in 5p).</li>
+    <li>In 3+ players, discard 1 card before bidding.</li>
+  </ul>
+
+  <h3>Phases</h3>
+  <ol>
+    <li>Discard: if required, discard one card.</li>
+    <li>Bidding: choose 1-3 tricks you aim to win.</li>
+    <li>Tricks: play cards by choosing a number and a color.</li>
+  </ol>
+
+  <h3>Trick Rules</h3>
+  <ul>
+    <li>First played color is the lead color.</li>
+    <li>Red is trump.</li>
+    <li>You must play a legal slot: the color is still available to you and the board slot is empty.</li>
+    <li>If you play off the lead color, you lose that lead color for the rest of the round.</li>
+  </ul>
+
+  <h3>Scoring</h3>
+  <ul>
+    <li>Score = tricks won.</li>
+    <li>If your bid equals your tricks, add bonus = largest connected group of your markers.</li>
+    <li>Paradox: if you have no legal move, round ends and you lose points equal to your tricks.</li>
+  </ul>
+`;
+
+const CAT_IN_BOX_BUTTON_EXPLANATIONS = {
+  catInBoxClearSelection: {
+    name: "Clear",
+    description: "Clear your selected card and color.",
+  },
+  catInBoxColorRedBtn: {
+    name: "Red",
+    description: "Choose red as the color for your selected number.",
+  },
+  catInBoxColorBlueBtn: {
+    name: "Blue",
+    description: "Choose blue as the color for your selected number.",
+  },
+  catInBoxColorYellowBtn: {
+    name: "Yellow",
+    description: "Choose yellow as the color for your selected number.",
+  },
+  catInBoxColorGreenBtn: {
+    name: "Green",
+    description: "Choose green as the color for your selected number.",
+  },
+  catInBoxDiscardBtn: {
+    name: "Discard",
+    description: "Discard one card during the discard phase.",
+  },
+  catInBoxBid1Btn: {
+    name: "Bid 1",
+    description: "Bid that you will win exactly 1 trick this round.",
+  },
+  catInBoxBid2Btn: {
+    name: "Bid 2",
+    description: "Bid that you will win exactly 2 tricks this round.",
+  },
+  catInBoxBid3Btn: {
+    name: "Bid 3",
+    description: "Bid that you will win exactly 3 tricks this round.",
+  },
+  catInBoxPlayBtn: {
+    name: "Play Card",
+    description: "Play the selected number in the selected color.",
+    note: "You must pick a number and color that is legal on the board.",
+  },
 };
 
 function formatCatInBoxColor(color) {
@@ -592,3 +685,155 @@ if (catInBoxPlayBtn) {
     updateCatInBoxActionButtons();
   });
 }
+
+let catInBoxExplainMode = false;
+
+function showCatInBoxHeaderActions(show) {
+  if (catInBoxHeaderActions) {
+    catInBoxHeaderActions.style.display = show ? "flex" : "none";
+  }
+  if (!show) {
+    exitCatInBoxExplainMode();
+    closeCatInBoxHelpModal();
+    closeCatInBoxExplainModal();
+  }
+}
+
+function showCatInBoxHelpModal() {
+  if (!catInBoxHelpModal) {
+    return;
+  }
+  if (catInBoxHelpContent) {
+    catInBoxHelpContent.innerHTML = CAT_IN_BOX_HELP_TEXT;
+  }
+  setModalVisible(catInBoxHelpModal, true);
+}
+
+function closeCatInBoxHelpModal() {
+  if (catInBoxHelpModal) {
+    setModalVisible(catInBoxHelpModal, false);
+  }
+}
+
+function updateCatInBoxExplainModeClasses(enabled) {
+  Object.keys(CAT_IN_BOX_BUTTON_EXPLANATIONS).forEach((buttonId) => {
+    const btn = document.getElementById(buttonId);
+    if (btn) {
+      btn.classList.toggle("has-explanation", enabled);
+    }
+  });
+}
+
+function findCatInBoxButtonAtPoint(x, y) {
+  for (const buttonId of Object.keys(CAT_IN_BOX_BUTTON_EXPLANATIONS)) {
+    const btn = document.getElementById(buttonId);
+    if (!btn) continue;
+    const rect = btn.getBoundingClientRect();
+    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+      return buttonId;
+    }
+  }
+  return null;
+}
+
+function toggleCatInBoxExplainMode() {
+  catInBoxExplainMode = !catInBoxExplainMode;
+  document.body.classList.toggle("cat-in-box-explain-mode", catInBoxExplainMode);
+  updateCatInBoxExplainModeClasses(catInBoxExplainMode);
+  if (catInBoxExplainBtn) {
+    catInBoxExplainBtn.classList.toggle("active", catInBoxExplainMode);
+  }
+}
+
+function exitCatInBoxExplainMode() {
+  if (!catInBoxExplainMode) {
+    return;
+  }
+  catInBoxExplainMode = false;
+  document.body.classList.remove("cat-in-box-explain-mode");
+  updateCatInBoxExplainModeClasses(false);
+  if (catInBoxExplainBtn) {
+    catInBoxExplainBtn.classList.remove("active");
+  }
+}
+
+function showCatInBoxButtonExplanation(buttonId) {
+  const explanation = CAT_IN_BOX_BUTTON_EXPLANATIONS[buttonId];
+  if (!explanation || !catInBoxExplainContent || !catInBoxExplainModal) {
+    return;
+  }
+  const note = explanation.note ? `<div class="hint">${explanation.note}</div>` : "";
+  catInBoxExplainContent.innerHTML = `
+    <h4>${explanation.name}</h4>
+    <p>${explanation.description}</p>
+    ${note}
+  `;
+  setModalVisible(catInBoxExplainModal, true);
+}
+
+function closeCatInBoxExplainModal() {
+  if (catInBoxExplainModal) {
+    setModalVisible(catInBoxExplainModal, false);
+  }
+}
+
+if (catInBoxHelpBtn) {
+  catInBoxHelpBtn.addEventListener("click", () => {
+    showCatInBoxHelpModal();
+  });
+}
+
+if (catInBoxHelpModalCloseBtn) {
+  catInBoxHelpModalCloseBtn.addEventListener("click", closeCatInBoxHelpModal);
+}
+
+if (catInBoxExplainBtn) {
+  catInBoxExplainBtn.addEventListener("click", () => {
+    toggleCatInBoxExplainMode();
+  });
+}
+
+if (catInBoxExplainModalCloseBtn) {
+  catInBoxExplainModalCloseBtn.addEventListener("click", closeCatInBoxExplainModal);
+}
+
+document.addEventListener("pointerdown", (e) => {
+  if (!catInBoxExplainMode) return;
+
+  const buttonId = findCatInBoxButtonAtPoint(e.clientX, e.clientY);
+  if (buttonId) {
+    e.preventDefault();
+    e.stopPropagation();
+    showCatInBoxButtonExplanation(buttonId);
+    exitCatInBoxExplainMode();
+    return;
+  }
+
+  const button = e.target.closest("button");
+  if (button === catInBoxExplainBtn || button === catInBoxHelpBtn) return;
+  if (button === catInBoxHelpModalCloseBtn || button === catInBoxExplainModalCloseBtn) return;
+
+  if (button) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+}, true);
+
+document.addEventListener("click", (e) => {
+  if (!catInBoxExplainMode) return;
+
+  const button = e.target.closest("button");
+  if (!button) return;
+
+  if (button === catInBoxExplainBtn || button === catInBoxHelpBtn) return;
+  if (button === catInBoxHelpModalCloseBtn || button === catInBoxExplainModalCloseBtn) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+}, true);
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && catInBoxExplainMode) {
+    exitCatInBoxExplainMode();
+  }
+});

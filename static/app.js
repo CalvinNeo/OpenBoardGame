@@ -68,6 +68,9 @@ function setGamePanelVisibility(gameType) {
   if (goldRushPanel) {
     goldRushPanel.classList.toggle("hidden", !showGoldRush);
   }
+  if (typeof showGoldRushHeaderActions === "function") {
+    showGoldRushHeaderActions(showGoldRush);
+  }
   if (incanGoldPanel) {
     incanGoldPanel.classList.toggle("hidden", !showIncanGold);
   }
@@ -77,6 +80,9 @@ function setGamePanelVisibility(gameType) {
   skullPanel.classList.toggle("hidden", !showSkull);
   if (catInBoxPanel) {
     catInBoxPanel.classList.toggle("hidden", !showCatInBox);
+  }
+  if (typeof showCatInBoxHeaderActions === "function") {
+    showCatInBoxHeaderActions(showCatInBox);
   }
   if (hanabiPanel) {
     hanabiPanel.classList.toggle("hidden", !showHanabi);

@@ -178,6 +178,50 @@
     </div>
   </section>
 
+  <section id="goldRushHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content gold-rush-help-modal">
+      <div class="modal-header">
+        <h2>Gold Rush - Game Rules</h2>
+        <button id="goldRushHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body gold-rush-help-content" id="goldRushHelpContent"></div>
+    </div>
+  </section>
+
+  <section id="goldRushExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content gold-rush-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="goldRushExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="goldRushExplainContent"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="catInBoxHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content cat-box-help-modal">
+      <div class="modal-header">
+        <h2>Cat In The Box - Game Rules</h2>
+        <button id="catInBoxHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body cat-box-help-content" id="catInBoxHelpContent"></div>
+    </div>
+  </section>
+
+  <section id="catInBoxExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content cat-box-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="catInBoxExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="catInBoxExplainContent"></div>
+      </div>
+    </div>
+  </section>
+
   <div class="container">
     <h1>OpenBoardGame</h1>
 
@@ -467,6 +511,14 @@
             <div class="panel-header-actions" id="abracaHeaderActions" style="display: none;">
               <button id="abracaHelpBtn" class="abraca-header-btn" type="button">Help</button>
               <button id="abracaExplainBtn" class="abraca-header-btn" type="button">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="goldRushHeaderActions" style="display: none;">
+              <button id="goldRushHelpBtn" class="gold-rush-header-btn" type="button">Help</button>
+              <button id="goldRushExplainBtn" class="gold-rush-header-btn" type="button">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="catInBoxHeaderActions" style="display: none;">
+              <button id="catInBoxHelpBtn" class="cat-box-header-btn" type="button">Help</button>
+              <button id="catInBoxExplainBtn" class="cat-box-header-btn" type="button">Explain</button>
             </div>
           </div>
           <div class="panel-body">
@@ -766,10 +818,10 @@
                 <button id="catInBoxClearSelection">Clear</button>
               </div>
               <div class="row actions cat-box-color-row" id="catInBoxColorButtons">
-                <button type="button" data-color="red">🟥 Red</button>
-                <button type="button" data-color="blue">🟦 Blue</button>
-                <button type="button" data-color="yellow">🟨 Yellow</button>
-                <button type="button" data-color="green">🟩 Green</button>
+                <button id="catInBoxColorRedBtn" type="button" data-color="red">🟥 Red</button>
+                <button id="catInBoxColorBlueBtn" type="button" data-color="blue">🟦 Blue</button>
+                <button id="catInBoxColorYellowBtn" type="button" data-color="yellow">🟨 Yellow</button>
+                <button id="catInBoxColorGreenBtn" type="button" data-color="green">🟩 Green</button>
               </div>
 
               <h3>Actions</h3>
