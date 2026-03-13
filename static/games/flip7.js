@@ -1,3 +1,28 @@
+const flip7PhaseLabel = document.getElementById("flip7Phase");
+const flip7RoundLabel = document.getElementById("flip7Round");
+const flip7TurnLabel = document.getElementById("flip7Turn");
+const flip7DeckLabel = document.getElementById("flip7Deck");
+const flip7DiscardLabel = document.getElementById("flip7Discard");
+const flip7TargetScoreLabel = document.getElementById("flip7TargetScore");
+const flip7PendingLabel = document.getElementById("flip7Pending");
+const flip7FlipWinnerLabel = document.getElementById("flip7FlipWinner");
+const flip7Tableau = document.getElementById("flip7Tableau");
+const flip7TargetSelection = document.getElementById("flip7TargetSelection");
+const flip7ClearTargetBtn = document.getElementById("flip7ClearTarget");
+const flip7Targets = document.getElementById("flip7Targets");
+const flip7LastRound = document.getElementById("flip7LastRound");
+const flip7Players = document.getElementById("flip7Players");
+const flip7FlipBtn = document.getElementById("flip7FlipBtn");
+const flip7StayBtn = document.getElementById("flip7StayBtn");
+
+const flip7ActionButtons = {
+  flip: flip7FlipBtn,
+  stay: flip7StayBtn,
+};
+
+let currentFlip7View = null;
+let flip7SelectedTarget = null;
+
 function clearFlip7TargetSelection() {
   flip7SelectedTarget = null;
   if (currentFlip7View) {
@@ -286,5 +311,118 @@ function updateFlip7ActionButtons() {
       button.classList.remove("action-allowed");
     }
     button.disabled = !allowed;
+  });
+}
+
+function clearFlip7State() {
+  currentFlip7View = null;
+  flip7SelectedTarget = null;
+  if (flip7PhaseLabel) {
+    flip7PhaseLabel.textContent = "-";
+  }
+  if (flip7RoundLabel) {
+    flip7RoundLabel.textContent = "-";
+  }
+  if (flip7TurnLabel) {
+    flip7TurnLabel.textContent = "-";
+  }
+  if (flip7DeckLabel) {
+    flip7DeckLabel.textContent = "-";
+  }
+  if (flip7DiscardLabel) {
+    flip7DiscardLabel.textContent = "-";
+  }
+  if (flip7TargetScoreLabel) {
+    flip7TargetScoreLabel.textContent = "-";
+  }
+  if (flip7PendingLabel) {
+    flip7PendingLabel.textContent = "-";
+  }
+  if (flip7FlipWinnerLabel) {
+    flip7FlipWinnerLabel.textContent = "-";
+  }
+  if (flip7Tableau) {
+    flip7Tableau.innerHTML = "";
+  }
+  if (flip7TargetSelection) {
+    flip7TargetSelection.textContent = "-";
+  }
+  if (flip7Targets) {
+    flip7Targets.innerHTML = "";
+  }
+  if (flip7LastRound) {
+    flip7LastRound.innerHTML = "";
+  }
+  if (flip7Players) {
+    flip7Players.innerHTML = "";
+  }
+  updateFlip7ActionButtons();
+}
+
+function renderFlip7GameState(data) {
+  const view = data.view;
+  currentFlip7View = view;
+  if (currentGameType !== "flip7") {
+    currentGameType = "flip7";
+    setGamePanelVisibility("flip7");
+  }
+  if (flip7PhaseLabel) {
+    flip7PhaseLabel.textContent = view.phase || "-";
+  }
+  if (flip7RoundLabel) {
+    flip7RoundLabel.textContent = view.round ?? "-";
+  }
+  if (flip7TurnLabel) {
+    const currentPlayer = view.players.find((p) => p.player_id === view.current_turn);
+    flip7TurnLabel.textContent = currentPlayer ? currentPlayer.name : view.current_turn || "-";
+  }
+  if (flip7DeckLabel) {
+    flip7DeckLabel.textContent = view.deck_count ?? "-";
+  }
+  if (flip7DiscardLabel) {
+    flip7DiscardLabel.textContent = view.discard_count ?? "-";
+  }
+  if (flip7TargetScoreLabel) {
+    flip7TargetScoreLabel.textContent = view.config ? view.config.target_score ?? "-" : "-";
+  }
+  if (flip7FlipWinnerLabel) {
+    flip7FlipWinnerLabel.textContent = view.flip7_winner
+      ? findPlayerName(view, view.flip7_winner)
+      : "-";
+  }
+  if (flip7PendingLabel) {
+    if (view.pending_action) {
+      const actorName = view.pending_action.actor_id
+        ? findPlayerName(view, view.pending_action.actor_id)
+        : "-";
+      flip7PendingLabel.textContent = `${view.pending_action.label} (${actorName})`;
+    } else {
+      flip7PendingLabel.textContent = "-";
+    }
+  }
+
+  renderFlip7Tableau(view);
+  updateFlip7TargetSelection(view);
+  renderFlip7LastRound(view);
+  renderFlip7Players(view);
+  logGameEvents(data);
+  updateFlip7ActionButtons();
+}
+
+if (flip7ClearTargetBtn) {
+  flip7ClearTargetBtn.addEventListener("click", () => {
+    clearFlip7TargetSelection();
+  });
+}
+
+if (flip7FlipBtn) {
+  flip7FlipBtn.addEventListener("click", () => {
+    sendAction({ type: "flip" });
+  });
+}
+
+if (flip7StayBtn) {
+  flip7StayBtn.addEventListener("click", () => {
+    sendAction({ type: "stay" });
   });
 }
