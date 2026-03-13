@@ -24,6 +24,16 @@ let trekkingCrystalModalState = null;
 
 let currentTrekkingView = null;
 
+const trekkingHeaderActions = document.getElementById("trekkingHeaderActions");
+const trekkingHelpBtn = document.getElementById("trekkingHelpBtn");
+const trekkingExplainBtn = document.getElementById("trekkingExplainBtn");
+const trekkingHelpModal = document.getElementById("trekkingHelpModal");
+const trekkingHelpModalCloseBtn = document.getElementById("trekkingHelpModalCloseBtn");
+const trekkingExplainModal = document.getElementById("trekkingExplainModal");
+const trekkingExplainModalCloseBtn = document.getElementById("trekkingExplainModalCloseBtn");
+const trekkingHelpContent = document.getElementById("trekkingHelpContent");
+const trekkingExplainContent = document.getElementById("trekkingExplainContent");
+
 const trekkingPanel = document.getElementById("trekkingPanel");
 const trekkingDayLabel = document.getElementById("trekkingDay");
 const trekkingTurnLabel = document.getElementById("trekkingTurn");
@@ -51,6 +61,76 @@ const trekkingScoreCloseBtn = document.getElementById("trekkingScoreCloseBtn");
 const trekkingTakeCardBtn = document.getElementById("trekkingTakeCardBtn");
 const trekkingTakeAncestorBtn = document.getElementById("trekkingTakeAncestorBtn");
 const trekkingPlayers = document.getElementById("trekkingPlayers");
+
+const TREKKING_HELP_TEXT = `
+  <h3>Goal</h3>
+  <p>Score the most points after 3 days.</p>
+
+  <h3>Turn</h3>
+  <ul>
+    <li>Choose one action: take a market card or take an ancestor.</li>
+    <li>Pay time equal to the cost (you may spend crystals to reduce it, minimum 1).</li>
+    <li>Gain the card tokens plus the slot reward.</li>
+  </ul>
+
+  <h3>Market & Slot Rewards</h3>
+  <ul>
+    <li>Slot 1 gives no reward.</li>
+    <li>Slots 2-5 give a token; slot 6 gives a crystal.</li>
+  </ul>
+
+  <h3>Tokens & Itinerary</h3>
+  <ul>
+    <li>Tokens fill your itinerary columns (Person/Event/Innovation/Progress).</li>
+    <li>Wild tokens let you choose the column.</li>
+    <li>Swirls and gems grant immediate bonuses; completing a row grants its reward.</li>
+  </ul>
+
+  <h3>Treks & Scoring</h3>
+  <ul>
+    <li>Cards with non-decreasing years stay in the same trek. Earlier years start a new trek.</li>
+    <li>Each trek scores by length. Crystals add +1 each at game end.</li>
+  </ul>
+
+  <h3>Days</h3>
+  <p>A day ends when all players reach time 12. There are 3 days total.</p>
+`;
+
+const TREKKING_BUTTON_EXPLANATIONS = {
+  trekkingTakeCardBtn: {
+    name: "Take Selected Card",
+    description: "Take the selected market card, pay its time cost, and gain its tokens plus the slot reward.",
+    note: "Wild tokens require you to choose a column.",
+  },
+  trekkingTakeAncestorBtn: {
+    name: "Take Ancestor",
+    description: "Gain an Ancestor card and a wild token. Costs 3 time (before crystal discounts).",
+  },
+  trekkingTakeCardWithCrystalBtn: {
+    name: "Take Selected Card With 💎",
+    description: "Spend crystals to reduce the card time cost (minimum 1).",
+  },
+  trekkingTakeAncestorWithCrystalBtn: {
+    name: "Take Ancestor With 💎",
+    description: "Spend crystals to reduce the ancestor time cost (minimum 1).",
+  },
+  trekkingWildCancelBtn: {
+    name: "Cancel Wild Choice",
+    description: "Cancel choosing wild slots and return to the action.",
+  },
+  trekkingCrystalConfirmBtn: {
+    name: "Confirm Crystal Spend",
+    description: "Confirm the selected crystal spend and continue.",
+  },
+  trekkingCrystalCancelBtn: {
+    name: "Cancel Crystal Spend",
+    description: "Cancel spending crystals and return.",
+  },
+  trekkingScoreCloseBtn: {
+    name: "Close Score Rules",
+    description: "Close the score rules panel.",
+  },
+};
 
 function clearTrekkingSelections() {
   trekkingSelectedSlot = null;
@@ -895,3 +975,155 @@ if (trekkingTakeAncestorWithCrystalBtn) {
       });
   });
 }
+
+let trekkingExplainMode = false;
+
+function showTrekkingHeaderActions(show) {
+  if (trekkingHeaderActions) {
+    trekkingHeaderActions.style.display = show ? "flex" : "none";
+  }
+  if (!show) {
+    exitTrekkingExplainMode();
+    closeTrekkingHelpModal();
+    closeTrekkingExplainModal();
+  }
+}
+
+function showTrekkingHelpModal() {
+  if (!trekkingHelpModal) {
+    return;
+  }
+  if (trekkingHelpContent) {
+    trekkingHelpContent.innerHTML = TREKKING_HELP_TEXT;
+  }
+  setModalVisible(trekkingHelpModal, true);
+}
+
+function closeTrekkingHelpModal() {
+  if (trekkingHelpModal) {
+    setModalVisible(trekkingHelpModal, false);
+  }
+}
+
+function updateTrekkingExplainModeClasses(enabled) {
+  Object.keys(TREKKING_BUTTON_EXPLANATIONS).forEach((buttonId) => {
+    const btn = document.getElementById(buttonId);
+    if (btn) {
+      btn.classList.toggle("has-explanation", enabled);
+    }
+  });
+}
+
+function findTrekkingButtonAtPoint(x, y) {
+  for (const buttonId of Object.keys(TREKKING_BUTTON_EXPLANATIONS)) {
+    const btn = document.getElementById(buttonId);
+    if (!btn) continue;
+    const rect = btn.getBoundingClientRect();
+    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+      return buttonId;
+    }
+  }
+  return null;
+}
+
+function toggleTrekkingExplainMode() {
+  trekkingExplainMode = !trekkingExplainMode;
+  document.body.classList.toggle("trekking-explain-mode", trekkingExplainMode);
+  updateTrekkingExplainModeClasses(trekkingExplainMode);
+  if (trekkingExplainBtn) {
+    trekkingExplainBtn.classList.toggle("active", trekkingExplainMode);
+  }
+}
+
+function exitTrekkingExplainMode() {
+  if (!trekkingExplainMode) {
+    return;
+  }
+  trekkingExplainMode = false;
+  document.body.classList.remove("trekking-explain-mode");
+  updateTrekkingExplainModeClasses(false);
+  if (trekkingExplainBtn) {
+    trekkingExplainBtn.classList.remove("active");
+  }
+}
+
+function showTrekkingButtonExplanation(buttonId) {
+  const explanation = TREKKING_BUTTON_EXPLANATIONS[buttonId];
+  if (!explanation || !trekkingExplainContent || !trekkingExplainModal) {
+    return;
+  }
+  const note = explanation.note ? `<div class="hint">${explanation.note}</div>` : "";
+  trekkingExplainContent.innerHTML = `
+    <h4>${explanation.name}</h4>
+    <p>${explanation.description}</p>
+    ${note}
+  `;
+  setModalVisible(trekkingExplainModal, true);
+}
+
+function closeTrekkingExplainModal() {
+  if (trekkingExplainModal) {
+    setModalVisible(trekkingExplainModal, false);
+  }
+}
+
+if (trekkingHelpBtn) {
+  trekkingHelpBtn.addEventListener("click", () => {
+    showTrekkingHelpModal();
+  });
+}
+
+if (trekkingHelpModalCloseBtn) {
+  trekkingHelpModalCloseBtn.addEventListener("click", closeTrekkingHelpModal);
+}
+
+if (trekkingExplainBtn) {
+  trekkingExplainBtn.addEventListener("click", () => {
+    toggleTrekkingExplainMode();
+  });
+}
+
+if (trekkingExplainModalCloseBtn) {
+  trekkingExplainModalCloseBtn.addEventListener("click", closeTrekkingExplainModal);
+}
+
+document.addEventListener("pointerdown", (e) => {
+  if (!trekkingExplainMode) return;
+
+  const buttonId = findTrekkingButtonAtPoint(e.clientX, e.clientY);
+  if (buttonId) {
+    e.preventDefault();
+    e.stopPropagation();
+    showTrekkingButtonExplanation(buttonId);
+    exitTrekkingExplainMode();
+    return;
+  }
+
+  const button = e.target.closest("button");
+  if (button === trekkingExplainBtn || button === trekkingHelpBtn) return;
+  if (button === trekkingHelpModalCloseBtn || button === trekkingExplainModalCloseBtn) return;
+
+  if (button) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+}, true);
+
+document.addEventListener("click", (e) => {
+  if (!trekkingExplainMode) return;
+
+  const button = e.target.closest("button");
+  if (!button) return;
+
+  if (button === trekkingExplainBtn || button === trekkingHelpBtn) return;
+  if (button === trekkingHelpModalCloseBtn || button === trekkingExplainModalCloseBtn) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+}, true);
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && trekkingExplainMode) {
+    exitTrekkingExplainMode();
+  }
+});

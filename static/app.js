@@ -130,6 +130,9 @@ function setGamePanelVisibility(gameType) {
   if (trekkingPanel) {
     trekkingPanel.classList.toggle("hidden", !showTrekking);
   }
+  if (typeof showTrekkingHeaderActions === "function") {
+    showTrekkingHeaderActions(showTrekking);
+  }
   if (abracaPanel) {
     abracaPanel.classList.toggle("hidden", !showAbraca);
   }
