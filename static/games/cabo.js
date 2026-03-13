@@ -1,3 +1,37 @@
+const phaseLabel = document.getElementById("phaseLabel");
+const roundLabel = document.getElementById("roundLabel");
+const turnLabel = document.getElementById("turnLabel");
+const deckCount = document.getElementById("deckCount");
+const discardTop = document.getElementById("discardTop");
+const lastDrawn = document.getElementById("lastDrawn");
+const caboBy = document.getElementById("caboBy");
+const caboLeft = document.getElementById("caboLeft");
+const pendingChoice = document.getElementById("pendingChoice");
+
+const handSlots = document.getElementById("handSlots");
+const selectedSlotsLabel = document.getElementById("selectedSlots");
+const targetSelection = document.getElementById("targetSelection");
+const targetList = document.getElementById("targetList");
+const clearTargetBtn = document.getElementById("clearTarget");
+const gamePlayers = document.getElementById("gamePlayers");
+
+const actionButtons = {
+  initial_peek: document.getElementById("peekBtn"),
+  draw_deck: document.getElementById("drawDeckBtn"),
+  draw_discard: discardTop,
+  replace_or_match: document.getElementById("replaceBtn"),
+  discard_drawn: document.getElementById("discardDrawnBtn"),
+  call_cabo: document.getElementById("callCaboBtn"),
+  use_choice_action: document.getElementById("choiceBtn"),
+  next_round: document.getElementById("nextRoundBtn"),
+};
+
+const clearSelectionBtn = document.getElementById("clearSelection");
+
+let currentCaboView = null;
+let selectedSlots = [];
+let selectedTarget = null;
+
 function updateSelectedSlots() {
   if (selectedSlotsLabel) {
     selectedSlotsLabel.textContent = selectedSlots.length ? selectedSlots.join(", ") : "-";
@@ -266,4 +300,214 @@ function renderTargets(view) {
       targetList.appendChild(wrapper);
     });
   updateTargetSelection();
+}
+
+function clearCaboState() {
+  currentCaboView = null;
+  selectedSlots = [];
+  selectedTarget = null;
+  phaseLabel.textContent = "-";
+  roundLabel.textContent = "-";
+  turnLabel.textContent = "-";
+  deckCount.textContent = "-";
+  discardTop.textContent = "-";
+  lastDrawn.textContent = "-";
+  caboBy.textContent = "-";
+  caboLeft.textContent = "-";
+  pendingChoice.textContent = "-";
+  handSlots.innerHTML = "";
+  if (selectedSlotsLabel) {
+    selectedSlotsLabel.textContent = "-";
+  }
+  if (targetSelection) {
+    targetSelection.textContent = "-";
+  }
+  if (targetList) {
+    targetList.innerHTML = "";
+  }
+  gamePlayers.innerHTML = "";
+  updateActionButtons();
+}
+
+function renderCaboGameState(data) {
+  const view = data.view;
+  currentCaboView = view;
+  if (currentGameType !== "cabo") {
+    currentGameType = "cabo";
+    setGamePanelVisibility("cabo");
+  }
+  const needsTarget =
+    view.pending_choice &&
+    (view.pending_choice.type === "spy" || view.pending_choice.type === "swap");
+  if (!needsTarget) {
+    selectedTarget = null;
+  } else if (selectedTarget) {
+    const targetPlayer = view.players.find((p) => p.player_id === selectedTarget.playerId);
+    const targetSlot =
+      targetPlayer && Array.isArray(targetPlayer.hand)
+        ? targetPlayer.hand[selectedTarget.slot]
+        : null;
+    if (!targetPlayer || !targetSlot || targetSlot.empty) {
+      selectedTarget = null;
+    }
+  }
+
+  phaseLabel.textContent = view.phase;
+  roundLabel.textContent = view.round;
+  const currentPlayer = view.players.find((p) => p.player_id === view.current_turn);
+  turnLabel.textContent = currentPlayer ? currentPlayer.name : view.current_turn;
+  deckCount.textContent = view.deck_count;
+  discardTop.textContent = view.discard_top === null ? "-" : view.discard_top;
+  if (view.last_drawn === null || view.last_drawn === undefined) {
+    lastDrawn.textContent = "-";
+  } else {
+    const choiceMap = {
+      7: "peek",
+      8: "peek",
+      9: "spy",
+      10: "spy",
+      11: "swap",
+      12: "swap",
+    };
+    const choice = choiceMap[view.last_drawn];
+    lastDrawn.textContent = choice ? `${view.last_drawn} (${choice})` : String(view.last_drawn);
+  }
+  const caboCaller = view.players.find((p) => p.player_id === view.cabo_called_by);
+  caboBy.textContent = caboCaller ? caboCaller.name : view.cabo_called_by || "-";
+  caboLeft.textContent = view.cabo_turns_left || "-";
+  pendingChoice.textContent = view.pending_choice ? view.pending_choice.type : "-";
+
+  renderHand(view);
+  renderGamePlayers(view);
+
+  logGameEvents(data);
+
+  if (view.last_round_summary) {
+    const summary = view.last_round_summary;
+    log(`Round summary: scores ${JSON.stringify(summary.round_scores)}`);
+  }
+
+  updateActionButtons();
+}
+
+if (clearSelectionBtn) {
+  clearSelectionBtn.addEventListener("click", () => {
+    clearSelection();
+  });
+}
+
+if (clearTargetBtn) {
+  clearTargetBtn.addEventListener("click", () => {
+    clearTargetSelection();
+  });
+}
+
+if (actionButtons.initial_peek) {
+  actionButtons.initial_peek.addEventListener("click", () => {
+    if (selectedSlots.length !== 2) {
+      log("Select two slots for initial peek");
+      return;
+    }
+    sendAction({ type: "initial_peek", slots: selectedSlots.slice(0, 2) });
+    clearSelection();
+  });
+}
+
+if (actionButtons.draw_deck) {
+  actionButtons.draw_deck.addEventListener("click", () => {
+    sendAction({ type: "draw_deck" });
+  });
+}
+
+if (discardTop) {
+  discardTop.addEventListener("click", () => {
+    if (!selectedSlots.length) {
+      log("Select a slot to replace from discard");
+      return;
+    }
+    sendAction({ type: "draw_discard", slot: selectedSlots[0] });
+    clearSelection();
+  });
+}
+
+if (actionButtons.replace_or_match) {
+  actionButtons.replace_or_match.addEventListener("click", () => {
+    if (!selectedSlots.length) {
+      log("Select 1 slot to replace or 2-4 slots to match");
+      return;
+    }
+    if (selectedSlots.length >= 2) {
+      sendAction({ type: "attempt_match", slots: selectedSlots.slice(0, 4) });
+    } else {
+      sendAction({ type: "replace_card", slot: selectedSlots[0] });
+    }
+    clearSelection();
+  });
+}
+
+if (actionButtons.discard_drawn) {
+  actionButtons.discard_drawn.addEventListener("click", () => {
+    sendAction({ type: "discard_drawn" });
+  });
+}
+
+if (actionButtons.call_cabo) {
+  actionButtons.call_cabo.addEventListener("click", () => {
+    sendAction({ type: "call_cabo" });
+  });
+}
+
+if (actionButtons.next_round) {
+  actionButtons.next_round.addEventListener("click", () => {
+    sendAction({ type: "next_round" });
+  });
+}
+
+if (actionButtons.use_choice_action) {
+  actionButtons.use_choice_action.addEventListener("click", () => {
+    if (!currentCaboView || !currentCaboView.pending_choice) {
+      log("No pending choice");
+      return;
+    }
+    const choiceType = currentCaboView.pending_choice.type;
+    if (choiceType === "peek") {
+      if (!selectedSlots.length) {
+        log("Select one of your slots to peek");
+        return;
+      }
+      const slot = selectedSlots[0];
+      sendAction({
+        type: "use_choice_action",
+        choice_type: "peek",
+        target: { slot },
+      });
+    } else if (choiceType === "spy") {
+      if (!selectedTarget) {
+        log("Select a target slot to spy");
+        return;
+      }
+      sendAction({
+        type: "use_choice_action",
+        choice_type: "spy",
+        target: { player_id: selectedTarget.playerId, slot: selectedTarget.slot },
+      });
+    } else if (choiceType === "swap") {
+      if (!selectedTarget || !selectedSlots.length) {
+        log("Select one of your slots and a target slot to swap");
+        return;
+      }
+      const self = selectedSlots[0];
+      sendAction({
+        type: "use_choice_action",
+        choice_type: "swap",
+        target: {
+          player_id: selectedTarget.playerId,
+          slot: selectedTarget.slot,
+          self_slot: self,
+        },
+      });
+    }
+    clearSelection();
+    clearTargetSelection();
+  });
 }
