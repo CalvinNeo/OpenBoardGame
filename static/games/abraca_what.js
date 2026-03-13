@@ -1,3 +1,12 @@
+const abracaHeaderActions = document.getElementById("abracaHeaderActions");
+const abracaHelpBtn = document.getElementById("abracaHelpBtn");
+const abracaExplainBtn = document.getElementById("abracaExplainBtn");
+const abracaHelpModal = document.getElementById("abracaHelpModal");
+const abracaHelpModalCloseBtn = document.getElementById("abracaHelpModalCloseBtn");
+const abracaExplainModal = document.getElementById("abracaExplainModal");
+const abracaExplainModalCloseBtn = document.getElementById("abracaExplainModalCloseBtn");
+const abracaHelpContent = document.getElementById("abracaHelpContent");
+const abracaExplainContent = document.getElementById("abracaExplainContent");
 const abracaPhaseLabel = document.getElementById("abracaPhase");
 const abracaRoundLabel = document.getElementById("abracaRound");
 const abracaTurnLabel = document.getElementById("abracaTurn");
@@ -68,6 +77,83 @@ const abracaSpellData = [
   { id: 6, number: 7, name: "Fireball", short: "Fireball", desc: "Right neighbor -1 HP.", total: 7 },
   { id: 7, number: 8, name: "Magic Potion", short: "Potion", desc: "You +1 HP (max 6).", total: 8 },
 ];
+
+const ABRACA_HELP_TEXT = `
+  <h3>Goal</h3>
+  <p>Be the first player to reach 8 points.</p>
+
+  <h3>Setup</h3>
+  <ul>
+    <li>Each player starts with 6 HP and a score marker at 0.</li>
+    <li>Set aside secret cards: 12 (2p), 6 (3p), 4 (4-5p).</li>
+    <li>Shuffle the rest, deal 5 cards to each player (others can see them, you cannot).</li>
+  </ul>
+
+  <h3>Turn</h3>
+  <ol>
+    <li>Cast at least 1 spell. Announce a spell number.</li>
+    <li>If you have it, play the card and resolve the effect.</li>
+    <li>If you do not, lose 1 HP and your turn ends immediately.</li>
+    <li>You may keep casting, but each next spell number must be >= the previous spell.</li>
+  </ol>
+  <p>When you stop or fail, draw back up to 5 cards.</p>
+
+  <h3>Round End & Scoring</h3>
+  <ul>
+    <li>If a player reaches 0 HP: caster +3, other survivors +1. Self-death: survivors +1.</li>
+    <li>If a player empties their hand with successful casts: that player +3.</li>
+    <li>Secret cards: +1 point each if you survive the round.</li>
+  </ul>
+
+  <h3>Hidden Info</h3>
+  <p>You cannot see your own hand; other players can. Secret cards are private.</p>
+
+  <h3>Spells</h3>
+  <ul>
+    <li>1 Ancient Dragon: roll 1-3, others lose that many HP. Miscast: you lose that many.</li>
+    <li>2 Dark Ghost: others -1 HP, you +1 HP (max 6).</li>
+    <li>3 Sweet Dreams: roll 1-3, you heal that many HP (max 6).</li>
+    <li>4 Owl: draw a secret card. Survive to score +1 per secret.</li>
+    <li>5 Lightning Storm: left and right neighbors -1 HP (2p: opponent -1).</li>
+    <li>6 Blizzard: left neighbor -1 HP.</li>
+    <li>7 Fireball: right neighbor -1 HP.</li>
+    <li>8 Magic Potion: you +1 HP (max 6).</li>
+  </ul>
+`;
+
+const ABRACA_BUTTON_EXPLANATIONS = {
+  abracaRollBtn: {
+    name: "Roll Dice",
+    description: "Roll a 1-3 die to resolve spell effects that require a dice result.",
+  },
+  abracaSecretBtn: {
+    name: "Take Secret",
+    description: "Draw a secret card into your private pool (Owl effect).",
+    note: "Secret cards score +1 each if you survive the round.",
+  },
+  abracaEndTurnBtn: {
+    name: "End Turn",
+    description: "Stop casting spells and end your turn.",
+    note: "After ending, you draw back up to 5 cards.",
+  },
+  abracaNextRoundBtn: {
+    name: "Start Next Round",
+    description: "Begin the next round after a round has ended.",
+  },
+  abracaNewGameBtn: {
+    name: "Start New Game",
+    description: "Restart the game after someone reaches 8 points.",
+  },
+};
+
+abracaSpellData.forEach((spell) => {
+  const buttonId = `abracaSpellBtn${spell.id}`;
+  ABRACA_BUTTON_EXPLANATIONS[buttonId] = {
+    name: `${spell.number}. ${spell.name}`,
+    description: spell.desc,
+    note: "You can only cast spells allowed by the current chain minimum.",
+  };
+});
 
 let currentAbracaView = null;
 let abracaLastRoundNotice = null;
@@ -552,6 +638,97 @@ function renderAbracaGameState(data) {
   updateAbracaActionButtons();
 }
 
+let abracaExplainMode = false;
+
+function showAbracaHeaderActions(show) {
+  if (abracaHeaderActions) {
+    abracaHeaderActions.style.display = show ? "flex" : "none";
+  }
+  if (!show) {
+    exitAbracaExplainMode();
+    closeAbracaHelpModal();
+    closeAbracaExplainModal();
+  }
+}
+
+function showAbracaHelpModal() {
+  if (!abracaHelpModal) {
+    return;
+  }
+  if (abracaHelpContent) {
+    abracaHelpContent.innerHTML = ABRACA_HELP_TEXT;
+  }
+  setModalVisible(abracaHelpModal, true);
+}
+
+function closeAbracaHelpModal() {
+  if (abracaHelpModal) {
+    setModalVisible(abracaHelpModal, false);
+  }
+}
+
+function updateAbracaExplainModeClasses(enabled) {
+  Object.keys(ABRACA_BUTTON_EXPLANATIONS).forEach((buttonId) => {
+    const btn = document.getElementById(buttonId);
+    if (btn) {
+      btn.classList.toggle("has-explanation", enabled);
+    }
+  });
+}
+
+function findAbracaButtonAtPoint(x, y) {
+  for (const buttonId of Object.keys(ABRACA_BUTTON_EXPLANATIONS)) {
+    const btn = document.getElementById(buttonId);
+    if (!btn) continue;
+    const rect = btn.getBoundingClientRect();
+    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+      return buttonId;
+    }
+  }
+  return null;
+}
+
+function toggleAbracaExplainMode() {
+  abracaExplainMode = !abracaExplainMode;
+  document.body.classList.toggle("abraca-explain-mode", abracaExplainMode);
+  updateAbracaExplainModeClasses(abracaExplainMode);
+  if (abracaExplainBtn) {
+    abracaExplainBtn.classList.toggle("active", abracaExplainMode);
+  }
+}
+
+function exitAbracaExplainMode() {
+  if (!abracaExplainMode) {
+    return;
+  }
+  abracaExplainMode = false;
+  document.body.classList.remove("abraca-explain-mode");
+  updateAbracaExplainModeClasses(false);
+  if (abracaExplainBtn) {
+    abracaExplainBtn.classList.remove("active");
+  }
+}
+
+function showAbracaButtonExplanation(buttonId) {
+  const explanation = ABRACA_BUTTON_EXPLANATIONS[buttonId];
+  if (!explanation || !abracaExplainContent || !abracaExplainModal) {
+    return;
+  }
+  const note = explanation.note ? `<div class="hint">${explanation.note}</div>` : "";
+  abracaExplainContent.innerHTML = `
+    <h4>${explanation.name}</h4>
+    <p>${explanation.description}</p>
+    ${note}
+  `;
+  setModalVisible(abracaExplainModal, true);
+}
+
+function closeAbracaExplainModal() {
+  if (abracaExplainModal) {
+    setModalVisible(abracaExplainModal, false);
+  }
+}
+
 if (abracaSpellButtons.length) {
   abracaSpellButtons.forEach((button) => {
     button.addEventListener("click", () => {
@@ -593,3 +770,64 @@ if (abracaNewGameBtn) {
     emitRoomStart();
   });
 }
+
+if (abracaHelpBtn) {
+  abracaHelpBtn.addEventListener("click", () => {
+    showAbracaHelpModal();
+  });
+}
+
+if (abracaHelpModalCloseBtn) {
+  abracaHelpModalCloseBtn.addEventListener("click", closeAbracaHelpModal);
+}
+
+if (abracaExplainBtn) {
+  abracaExplainBtn.addEventListener("click", () => {
+    toggleAbracaExplainMode();
+  });
+}
+
+if (abracaExplainModalCloseBtn) {
+  abracaExplainModalCloseBtn.addEventListener("click", closeAbracaExplainModal);
+}
+
+document.addEventListener("pointerdown", (e) => {
+  if (!abracaExplainMode) return;
+
+  const buttonId = findAbracaButtonAtPoint(e.clientX, e.clientY);
+  if (buttonId) {
+    e.preventDefault();
+    e.stopPropagation();
+    showAbracaButtonExplanation(buttonId);
+    exitAbracaExplainMode();
+    return;
+  }
+
+  const button = e.target.closest("button");
+  if (button === abracaExplainBtn || button === abracaHelpBtn) return;
+  if (button === abracaHelpModalCloseBtn || button === abracaExplainModalCloseBtn) return;
+
+  if (button) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+}, true);
+
+document.addEventListener("click", (e) => {
+  if (!abracaExplainMode) return;
+
+  const button = e.target.closest("button");
+  if (!button) return;
+
+  if (button === abracaExplainBtn || button === abracaHelpBtn) return;
+  if (button === abracaHelpModalCloseBtn || button === abracaExplainModalCloseBtn) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+}, true);
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && abracaExplainMode) {
+    exitAbracaExplainMode();
+  }
+});

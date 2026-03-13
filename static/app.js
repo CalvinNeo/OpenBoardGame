@@ -127,6 +127,9 @@ function setGamePanelVisibility(gameType) {
   if (abracaPanel) {
     abracaPanel.classList.toggle("hidden", !showAbraca);
   }
+  if (typeof showAbracaHeaderActions === "function") {
+    showAbracaHeaderActions(showAbraca);
+  }
   if (blokusPanel) {
     blokusPanel.classList.toggle("hidden", !showBlokus);
   }

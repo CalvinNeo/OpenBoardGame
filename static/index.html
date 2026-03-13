@@ -156,6 +156,28 @@
     </div>
   </section>
 
+  <section id="abracaHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content abraca-help-modal">
+      <div class="modal-header">
+        <h2>Abraca What - Game Rules</h2>
+        <button id="abracaHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body abraca-help-content" id="abracaHelpContent"></div>
+    </div>
+  </section>
+
+  <section id="abracaExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content abraca-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="abracaExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="abracaExplainContent"></div>
+      </div>
+    </div>
+  </section>
+
   <div class="container">
     <h1>OpenBoardGame</h1>
 
@@ -441,6 +463,10 @@
             <div class="panel-header-actions" id="carcassonneHeaderActions" style="display: none;">
               <button id="carcHelpBtn" class="carc-header-btn" type="button">Help</button>
               <button id="carcExplainBtn" class="carc-header-btn" type="button">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="abracaHeaderActions" style="display: none;">
+              <button id="abracaHelpBtn" class="abraca-header-btn" type="button">Help</button>
+              <button id="abracaExplainBtn" class="abraca-header-btn" type="button">Explain</button>
             </div>
           </div>
           <div class="panel-body">
@@ -1771,14 +1797,14 @@
 
               <h3>Actions</h3>
               <div class="row actions" id="abracaSpellButtons">
-                <button data-spell="0">1 Dragon</button>
-                <button data-spell="1">2 Ghost</button>
-                <button data-spell="2">3 Dreams</button>
-                <button data-spell="3">4 Owl</button>
-                <button data-spell="4">5 Lightning</button>
-                <button data-spell="5">6 Blizzard</button>
-                <button data-spell="6">7 Fireball</button>
-                <button data-spell="7">8 Potion</button>
+                <button id="abracaSpellBtn0" data-spell="0">1 Dragon</button>
+                <button id="abracaSpellBtn1" data-spell="1">2 Ghost</button>
+                <button id="abracaSpellBtn2" data-spell="2">3 Dreams</button>
+                <button id="abracaSpellBtn3" data-spell="3">4 Owl</button>
+                <button id="abracaSpellBtn4" data-spell="4">5 Lightning</button>
+                <button id="abracaSpellBtn5" data-spell="5">6 Blizzard</button>
+                <button id="abracaSpellBtn6" data-spell="6">7 Fireball</button>
+                <button id="abracaSpellBtn7" data-spell="7">8 Potion</button>
               </div>
               <div class="row actions">
                 <button id="abracaRollBtn">Roll Dice</button>
