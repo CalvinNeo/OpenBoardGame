@@ -1,3 +1,55 @@
+const halliConfigBox = document.getElementById("halliConfigBox");
+const halliDeckRow = document.getElementById("halliDeckRow");
+const halliDeckSelect = document.getElementById("halliDeckSelect");
+
+const halliTurnLabel = document.getElementById("halliTurn");
+const halliBellLabel = document.getElementById("halliBell");
+const halliWinnerLabel = document.getElementById("halliWinner");
+const halliFlipCountdownLabel = document.getElementById("halliFlipCountdown");
+const halliRingCountdownLabel = document.getElementById("halliRingCountdown");
+const halliLastActionLabel = document.getElementById("halliLastAction");
+const halliLastRingLabel = document.getElementById("halliLastRing");
+const halliFlipBtn = document.getElementById("halliFlipBtn");
+const halliRingBtn = document.getElementById("halliRingBtn");
+const halliPlayers = document.getElementById("halliPlayers");
+const halliBellCenter = document.getElementById("halliBellCenter");
+const halliBellCountdown = document.getElementById("halliBellCountdown");
+
+const halliFruitEmoji = {
+  banana: "🍌",
+  strawberry: "🍓",
+  cherry: "🍒",
+  lemon: "🍋",
+};
+
+const halliActionButtons = {
+  flip: halliFlipBtn,
+  ring: halliRingBtn,
+};
+
+let currentHalliView = null;
+let halliCountdownTimer = null;
+let halliCountdownState = {
+  flipReadyAtMs: 0,
+  ringReadyAtMs: 0,
+  ringPending: false,
+  turnSwitchAtMs: 0,
+  flipWaitMs: 0,
+};
+let halliServerTimeOffsetMs = 0;
+
+function updateHalliConfigRow() {
+  const showRow = currentRoomState && currentGameType === "halli_galli" && currentRoomState.status === "lobby";
+  if (halliConfigBox) {
+    halliConfigBox.classList.toggle("hidden", !showRow);
+    halliConfigBox.setAttribute("aria-hidden", (!showRow).toString());
+  }
+  if (halliDeckRow) {
+    halliDeckRow.classList.toggle("hidden", !showRow);
+    halliDeckRow.setAttribute("aria-hidden", (!showRow).toString());
+  }
+}
+
 function formatHalliFruit(fruit) {
   if (!fruit) {
     return "?";
@@ -319,4 +371,112 @@ function updateHalliActionButtons() {
     halliBellCenter.classList.toggle("halli-bell-center-disabled", !ringAllowed);
     halliBellCenter.setAttribute("aria-disabled", (!ringAllowed).toString());
   }
+}
+
+function clearHalliState() {
+  currentHalliView = null;
+  if (halliTurnLabel) {
+    halliTurnLabel.textContent = "-";
+  }
+  if (halliBellLabel) {
+    halliBellLabel.textContent = "-";
+  }
+  if (halliWinnerLabel) {
+    halliWinnerLabel.textContent = "-";
+  }
+  if (halliLastActionLabel) {
+    halliLastActionLabel.textContent = "-";
+  }
+  if (halliLastRingLabel) {
+    halliLastRingLabel.textContent = "-";
+  }
+  if (halliPlayers) {
+    halliPlayers.innerHTML = "";
+  }
+  if (halliBellCenter) {
+    halliBellCenter.classList.remove("halli-bell-center-ready", "halli-bell-center-waiting");
+    halliBellCenter.classList.remove("halli-bell-center-actionable", "halli-bell-center-disabled");
+    halliBellCenter.setAttribute("aria-disabled", "true");
+  }
+  if (halliBellCountdown) {
+    halliBellCountdown.textContent = "-";
+    halliBellCountdown.classList.add("hidden");
+  }
+  updateHalliCountdownState(null);
+  updateHalliActionButtons();
+}
+
+function renderHalliGameState(data) {
+  const view = data.view;
+  currentHalliView = view;
+  if (currentGameType !== "halli_galli") {
+    currentGameType = "halli_galli";
+    setGamePanelVisibility("halli_galli");
+  }
+  if (halliTurnLabel) {
+    const currentPlayer = view.players.find((p) => p.player_id === view.current_turn);
+    halliTurnLabel.textContent = currentPlayer ? currentPlayer.name : view.current_turn || "-";
+  }
+  if (halliBellLabel) {
+    const waiting = !!view.pending_flip;
+    if (waiting) {
+      halliBellLabel.textContent = "Wait";
+    } else if (view.bell_ready) {
+      const fruits = formatHalliFruitList(view.bell_fruits);
+      halliBellLabel.textContent = fruits === "-" ? "Yes" : `Yes (${fruits})`;
+    } else {
+      halliBellLabel.textContent = "No";
+    }
+    halliBellLabel.classList.toggle("halli-bell-ready", !waiting && !!view.bell_ready);
+  }
+  if (halliBellCenter) {
+    const waiting = !!view.pending_flip;
+    halliBellCenter.classList.toggle("halli-bell-center-ready", !waiting && !!view.bell_ready);
+    halliBellCenter.classList.toggle("halli-bell-center-waiting", waiting);
+  }
+  if (halliWinnerLabel) {
+    halliWinnerLabel.textContent = view.winner ? findPlayerName(view, view.winner) : "-";
+  }
+  if (halliLastActionLabel) {
+    halliLastActionLabel.textContent = formatHalliLastAction(view);
+  }
+  if (halliLastRingLabel) {
+    halliLastRingLabel.textContent = formatHalliLastRingResult(view);
+  }
+  updateHalliCountdownState(view);
+
+  renderHalliPlayers(view);
+  logGameEvents(data);
+  updateHalliActionButtons();
+}
+
+if (halliFlipBtn) {
+  halliFlipBtn.addEventListener("click", () => {
+    sendAction({ type: "flip" });
+  });
+}
+
+if (halliRingBtn) {
+  halliRingBtn.addEventListener("click", () => {
+    sendAction({ type: "ring" });
+  });
+}
+
+if (halliBellCenter) {
+  const ringBell = () => {
+    if (currentGameType !== "halli_galli") {
+      return;
+    }
+    if (!isHalliActionAvailable("ring")) {
+      return;
+    }
+    sendAction({ type: "ring" });
+  };
+  halliBellCenter.addEventListener("click", ringBell);
+  halliBellCenter.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      ringBell();
+    }
+  });
 }
