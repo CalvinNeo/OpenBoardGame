@@ -433,7 +433,7 @@ function requestSeatClaim(roomId, sourceRoomId, openImmediately = true) {
     }
     if (seatClaimRoomLabel) {
       const sourceLabel = sourceRoomId ? `Loaded from ${sourceRoomId}` : "Loaded room";
-    seatClaimRoomLabel.textContent = `Room ${roomId} \\u00b7 ${sourceLabel}`;
+    seatClaimRoomLabel.textContent = `Room ${roomId} · ${sourceLabel}`;
     }
     if (seatClaimList) {
       seatClaimList.innerHTML = "";
@@ -1052,7 +1052,7 @@ function renderRoomList(rooms) {
     meta.className = "room-item-meta";
     const maxPlayers = Number.isFinite(room.max_players) ? room.max_players : null;
     const count = `${room.player_count || 0}/${maxPlayers !== null ? maxPlayers : "-"}`;
-    meta.textContent = `${room.game_type || "-"} \\u00b7 ${count}`;
+    meta.textContent = `${room.game_type || "-"} · ${count}`;
 
     const players = document.createElement("div");
     players.className = "room-item-players";
@@ -1327,7 +1327,7 @@ socket.on("room:seat_list", (data) => {
   }
   if (seatClaimRoomLabel) {
     const sourceLabel = data.source_room_id ? `Loaded from ${data.source_room_id}` : "Loaded room";
-    seatClaimRoomLabel.textContent = `Room ${data.room_id} \\u00b7 ${sourceLabel}`;
+    seatClaimRoomLabel.textContent = `Room ${data.room_id} · ${sourceLabel}`;
   }
   setModalVisible(seatClaimModal, true);
   renderSeatList(data);
