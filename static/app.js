@@ -139,6 +139,9 @@ function setGamePanelVisibility(gameType) {
   if (carcassonnePanel) {
     carcassonnePanel.classList.toggle("hidden", !showCarcassonne);
   }
+  if (typeof showCarcassonneHeaderActions === "function") {
+    showCarcassonneHeaderActions(showCarcassonne);
+  }
   if (fangNiaoPanel) {
     fangNiaoPanel.classList.toggle("hidden", !showFangNiao);
   }

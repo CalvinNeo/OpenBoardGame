@@ -1,3 +1,13 @@
+const carcHeaderActions = document.getElementById("carcassonneHeaderActions");
+const carcHelpBtn = document.getElementById("carcHelpBtn");
+const carcExplainBtn = document.getElementById("carcExplainBtn");
+const carcHelpModal = document.getElementById("carcHelpModal");
+const carcHelpModalCloseBtn = document.getElementById("carcHelpModalCloseBtn");
+const carcExplainModal = document.getElementById("carcExplainModal");
+const carcExplainModalCloseBtn = document.getElementById("carcExplainModalCloseBtn");
+const carcHelpContent = document.getElementById("carcHelpContent");
+const carcExplainContent = document.getElementById("carcExplainContent");
+
 const carcPhaseLabel = document.getElementById("carcPhase");
 const carcTurnLabel = document.getElementById("carcTurn");
 const carcRemainingLabel = document.getElementById("carcRemaining");
@@ -1069,3 +1079,208 @@ if (carcClearMeepleBtn) {
     clearCarcassonneSelection();
   });
 }
+
+const CARC_HELP_TEXT = `
+  <p>Goal: score the most points by building cities, roads, monasteries, and fields.</p>
+  <h3>Turn</h3>
+  <ol>
+    <li>Draw and place a tile adjacent (orthogonal) to the board. All touching edges must match.</li>
+    <li>Optionally place one meeple on the new tile if the connected feature is empty.</li>
+    <li>Score any completed features and return those meeples (farmers stay).</li>
+  </ol>
+  <h3>Placement Rules</h3>
+  <ul>
+    <li>Tile must touch at least one existing tile.</li>
+    <li>Edges must match: road-road, city-city, field-field.</li>
+    <li>If no legal placement exists, the tile is discarded and you draw again.</li>
+  </ul>
+  <h3>Scoring</h3>
+  <ul>
+    <li>Road: 1 point per tile.</li>
+    <li>City: 2 points per tile + 2 per shield; incomplete cities score 1 + 1 at game end.</li>
+    <li>Monastery: 1 per surrounding tile (max 9).</li>
+    <li>Field (farmers): game end only, 3 per completed adjacent city.</li>
+  </ul>
+  <h3>End Game</h3>
+  <p>After the last tile is placed, score incomplete features and fields. Highest score wins (ties share).</p>
+`;
+
+const CARC_BUTTON_EXPLANATIONS = {
+  carcRotateLeftBtn: {
+    name: "Rotate Left",
+    description: "Rotate the pending tile 90° counterclockwise before placing.",
+    note: "Only affects the tile in the Pending Tile area.",
+  },
+  carcRotateRightBtn: {
+    name: "Rotate Right",
+    description: "Rotate the pending tile 90° clockwise before placing.",
+    note: "Only affects the tile in the Pending Tile area.",
+  },
+  carcSkipMeepleBtn: {
+    name: "Skip Meeple",
+    description: "Finish the turn without placing a meeple on the last tile.",
+    note: "Use this when you want to save meeples or no legal placement exists.",
+  },
+  carcConfirmMeepleBtn: {
+    name: "Confirm Meeple",
+    description: "Place a meeple on the selected feature of the last tile.",
+    note: "Requires selecting a legal feature first.",
+  },
+  carcClearMeepleBtn: {
+    name: "Clear Meeple",
+    description: "Clear your current meeple selection on the last tile.",
+    note: "Does not end your turn.",
+  },
+};
+
+let carcExplainMode = false;
+
+function showCarcassonneHeaderActions(show) {
+  if (carcHeaderActions) {
+    carcHeaderActions.style.display = show ? "flex" : "none";
+  }
+  if (!show) {
+    exitCarcassonneExplainMode();
+    closeCarcassonneHelpModal();
+    closeCarcassonneExplainModal();
+  }
+}
+
+function showCarcassonneHelpModal() {
+  if (!carcHelpModal) {
+    return;
+  }
+  if (carcHelpContent) {
+    carcHelpContent.innerHTML = CARC_HELP_TEXT;
+  }
+  setModalVisible(carcHelpModal, true);
+}
+
+function closeCarcassonneHelpModal() {
+  if (carcHelpModal) {
+    setModalVisible(carcHelpModal, false);
+  }
+}
+
+function updateCarcassonneExplainModeClasses(enabled) {
+  Object.keys(CARC_BUTTON_EXPLANATIONS).forEach((buttonId) => {
+    const btn = document.getElementById(buttonId);
+    if (btn) {
+      btn.classList.toggle("has-explanation", enabled);
+    }
+  });
+}
+
+function findCarcassonneButtonAtPoint(x, y) {
+  for (const buttonId of Object.keys(CARC_BUTTON_EXPLANATIONS)) {
+    const btn = document.getElementById(buttonId);
+    if (!btn) continue;
+    const rect = btn.getBoundingClientRect();
+    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+      return buttonId;
+    }
+  }
+  return null;
+}
+
+function toggleCarcassonneExplainMode() {
+  carcExplainMode = !carcExplainMode;
+  document.body.classList.toggle("carcassonne-explain-mode", carcExplainMode);
+  updateCarcassonneExplainModeClasses(carcExplainMode);
+  if (carcExplainBtn) {
+    carcExplainBtn.classList.toggle("active", carcExplainMode);
+  }
+}
+
+function exitCarcassonneExplainMode() {
+  if (!carcExplainMode) {
+    return;
+  }
+  carcExplainMode = false;
+  document.body.classList.remove("carcassonne-explain-mode");
+  updateCarcassonneExplainModeClasses(false);
+  if (carcExplainBtn) {
+    carcExplainBtn.classList.remove("active");
+  }
+}
+
+function showCarcassonneButtonExplanation(buttonId) {
+  const explanation = CARC_BUTTON_EXPLANATIONS[buttonId];
+  if (!explanation || !carcExplainContent || !carcExplainModal) {
+    return;
+  }
+  const note = explanation.note ? `<div class="hint">${explanation.note}</div>` : "";
+  carcExplainContent.innerHTML = `
+    <h4>${explanation.name}</h4>
+    <p>${explanation.description}</p>
+    ${note}
+  `;
+  setModalVisible(carcExplainModal, true);
+}
+
+function closeCarcassonneExplainModal() {
+  if (carcExplainModal) {
+    setModalVisible(carcExplainModal, false);
+  }
+}
+
+if (carcHelpBtn) {
+  carcHelpBtn.addEventListener("click", () => {
+    showCarcassonneHelpModal();
+  });
+}
+
+if (carcHelpModalCloseBtn) {
+  carcHelpModalCloseBtn.addEventListener("click", closeCarcassonneHelpModal);
+}
+
+if (carcExplainBtn) {
+  carcExplainBtn.addEventListener("click", () => {
+    toggleCarcassonneExplainMode();
+  });
+}
+
+if (carcExplainModalCloseBtn) {
+  carcExplainModalCloseBtn.addEventListener("click", closeCarcassonneExplainModal);
+}
+
+document.addEventListener("pointerdown", (e) => {
+  if (!carcExplainMode) return;
+
+  const buttonId = findCarcassonneButtonAtPoint(e.clientX, e.clientY);
+  if (buttonId) {
+    e.preventDefault();
+    e.stopPropagation();
+    showCarcassonneButtonExplanation(buttonId);
+    exitCarcassonneExplainMode();
+    return;
+  }
+
+  const button = e.target.closest("button");
+  if (button === carcExplainBtn || button === carcHelpBtn) return;
+  if (button === carcHelpModalCloseBtn || button === carcExplainModalCloseBtn) return;
+
+  if (button) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+}, true);
+
+document.addEventListener("click", (e) => {
+  if (!carcExplainMode) return;
+
+  const button = e.target.closest("button");
+  if (!button) return;
+
+  if (button === carcExplainBtn || button === carcHelpBtn) return;
+  if (button === carcHelpModalCloseBtn || button === carcExplainModalCloseBtn) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+}, true);
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && carcExplainMode) {
+    exitCarcassonneExplainMode();
+  }
+});

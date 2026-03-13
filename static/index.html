@@ -134,6 +134,28 @@
     </div>
   </section>
 
+  <section id="carcHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content carc-help-modal">
+      <div class="modal-header">
+        <h2>Carcassonne - Game Rules</h2>
+        <button id="carcHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body carc-help-content" id="carcHelpContent"></div>
+    </div>
+  </section>
+
+  <section id="carcExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content carc-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="carcExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="carcExplainContent"></div>
+      </div>
+    </div>
+  </section>
+
   <div class="container">
     <h1>OpenBoardGame</h1>
 
@@ -415,6 +437,10 @@
             <div class="panel-header-actions" id="projectLHeaderActions" style="display: none;">
               <button id="projectLHelpBtn" class="project-l-header-btn" type="button">Help</button>
               <button id="projectLExplainBtn" class="project-l-header-btn" type="button">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="carcassonneHeaderActions" style="display: none;">
+              <button id="carcHelpBtn" class="carc-header-btn" type="button">Help</button>
+              <button id="carcExplainBtn" class="carc-header-btn" type="button">Explain</button>
             </div>
           </div>
           <div class="panel-body">

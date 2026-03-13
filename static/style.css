@@ -6004,3 +6004,102 @@ body.project-l-explain-mode button.has-explanation:hover {
   background: #e0e7ff;
   color: #3730a3;
 }
+
+/* Carcassonne Help/Explain */
+.carc-header-btn {
+  padding: 4px 10px;
+  font-size: 13px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #f9fafb;
+  cursor: pointer;
+}
+
+.carc-header-btn:hover {
+  background: #f3f4f6;
+}
+
+.carc-header-btn.active {
+  background: #dbeafe;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+
+body.carcassonne-explain-mode button.has-explanation {
+  outline: 2px dashed #3b82f6;
+  outline-offset: 2px;
+  cursor: help;
+}
+
+body.carcassonne-explain-mode button.has-explanation:hover {
+  outline-color: #1d4ed8;
+  outline-style: solid;
+}
+
+.carc-help-modal {
+  max-width: 720px;
+}
+
+.carc-help-content {
+  max-height: 70vh;
+  overflow-y: auto;
+  line-height: 1.6;
+}
+
+.carc-help-content h3 {
+  margin: 16px 0 8px;
+  font-size: 16px;
+  color: #111827;
+}
+
+.carc-help-content h3:first-child {
+  margin-top: 0;
+}
+
+.carc-help-content h4 {
+  margin: 12px 0 6px;
+  font-size: 14px;
+  color: #374151;
+}
+
+.carc-help-content ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.carc-help-content ol {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.carc-help-content li {
+  margin-bottom: 4px;
+}
+
+.carc-help-content p {
+  margin: 8px 0;
+}
+
+.carc-explain-modal {
+  max-width: 520px;
+}
+
+#carcExplainContent {
+  line-height: 1.6;
+}
+
+#carcExplainContent h4 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: #111827;
+}
+
+#carcExplainContent p {
+  margin: 6px 0;
+  color: #374151;
+}
+
+#carcExplainContent .hint {
+  color: #6b7280;
+  font-size: 12px;
+}
