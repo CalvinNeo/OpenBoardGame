@@ -411,7 +411,7 @@ class CaboGame:
                         state["discard"].append(hand[s])
                         hand[s] = None
                         _clear_slot_knowledge(state, player_id, s)
-                    state["discard"].append(drawn)
+                    _add_card_to_hand(state, player_id, drawn)
                     events.append({"type": "game:match_success", "payload": {"player_id": player_id}})
                 else:
                     for s in slots:
