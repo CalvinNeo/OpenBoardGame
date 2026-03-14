@@ -53,6 +53,7 @@
 {"id": "scene_004_11", "vp": 2, "bonuses": ["pink"], "cost": {"pink": 5, "black": 2}}
 {"id": "scene_004_12", "vp": 0, "bonuses": ["pink"], "cost": {"black": 2, "blue": 1, "yellow": 1}}
 {"id": "scene_004_13", "vp": 4, "bonuses": ["pink"], "cost": {"blue": 6, "black": 4}}
+{"id": "scene_004_14", "vp": 1, "bonuses": ["pink"], "cost": {"purple": 1, "blue": 1, "yellow": 1, "black": 1}}
 {"id": "scene_004_15", "vp": 2, "bonuses": ["pink"], "cost": {"blue": 4, "red": 2, "yellow": 1}}
 {"id": "scene_005_01", "vp": 1, "bonuses": ["blue"], "cost": {"blue": 4}}
 {"id": "scene_005_02", "vp": 3, "bonuses": ["blue"], "cost": {"blue": 6}}
@@ -84,4 +85,5 @@
 {"id": "scene_006_12", "vp": 0, "bonuses": ["black"], "cost": {"blue": 2, "red": 1, "pink": 1}}
 {"id": "scene_006_13", "vp": 2, "bonuses": ["black"], "cost": {"black": 5, "yellow": 2}}
 {"id": "scene_006_14", "vp": 4, "bonuses": ["black"], "cost": {"red": 6, "yellow": 4}}
+{"id": "scene_006_15", "vp": 2, "bonuses": ["black"], "cost": {"red": 5, "blue": 2, "pink": 2}}
 {"id": "scene_006_16", "vp": 0, "bonuses": ["black"], "cost": {"red": 1, "yellow": 1, "pink": 1, "blue": 1}}

@@ -125,10 +125,16 @@ COST_OVERRIDES = {
     "scene_003_14": {"_replace": {"yellow": 6, "pink": 4}},
     "scene_004_05": {"_replace": {"pink": 5, "yellow": 2, "red": 2}},
     "scene_004_08": {"_replace": {"black": 3, "blue": 2, "red": 2}},
+    "scene_004_14": {"_replace": {"purple": 1, "blue": 1, "yellow": 1, "black": 1}},
     "scene_005_07": {"_replace": {"yellow": 4, "black": 4, "red": 1}},
     "scene_005_10": {"_replace": {"blue": 2, "red": 2}},
     "scene_005_11": {"_replace": {"pink": 3}},
     "scene_005_13": {"_replace": {"red": 2, "yellow": 1, "blue": 1}},
+    "scene_005_14": {"_replace": {"pink": 6, "red": 4}},
+    "scene_006_02": {"_replace": {"black": 6}},
+    "scene_006_05": {"_replace": {"black": 5, "blue": 2, "pink": 2}},
+    "scene_006_10": {"_replace": {"yellow": 3, "red": 2}},
+    "scene_006_15": {"_replace": {"red": 5, "blue": 2, "pink": 2}},
     "scene_006_04": {"_replace": {"black": 3, "blue": 2, "red": 2}},
 }
 
