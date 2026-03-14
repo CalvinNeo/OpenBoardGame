@@ -157,6 +157,9 @@ function setGamePanelVisibility(gameType) {
   if (fangNiaoPanel) {
     fangNiaoPanel.classList.toggle("hidden", !showFangNiao);
   }
+  if (typeof showFangNiaoHeaderActions === "function") {
+    showFangNiaoHeaderActions(showFangNiao);
+  }
   document.body.classList.toggle("trekking-active", showTrekking);
 }
 

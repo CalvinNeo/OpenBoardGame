@@ -1,3 +1,13 @@
+const fangNiaoHeaderActions = document.getElementById("fangNiaoHeaderActions");
+const fangNiaoHelpBtn = document.getElementById("fangNiaoHelpBtn");
+const fangNiaoExplainBtn = document.getElementById("fangNiaoExplainBtn");
+const fangNiaoHelpModal = document.getElementById("fangNiaoHelpModal");
+const fangNiaoHelpModalCloseBtn = document.getElementById("fangNiaoHelpModalCloseBtn");
+const fangNiaoExplainModal = document.getElementById("fangNiaoExplainModal");
+const fangNiaoExplainModalCloseBtn = document.getElementById("fangNiaoExplainModalCloseBtn");
+const fangNiaoHelpContent = document.getElementById("fangNiaoHelpContent");
+const fangNiaoExplainContent = document.getElementById("fangNiaoExplainContent");
+
 const fangNiaoPhaseLabel = document.getElementById("fangNiaoPhase");
 const fangNiaoTurnLabel = document.getElementById("fangNiaoTurn");
 const fangNiaoDeckLabel = document.getElementById("fangNiaoDeck");
@@ -14,6 +24,57 @@ const fangNiaoPlayBtn = document.getElementById("fangNiaoPlayBtn");
 const fangNiaoBankBtn = document.getElementById("fangNiaoBankBtn");
 const fangNiaoEndBtn = document.getElementById("fangNiaoEndBtn");
 const fangNiaoPlayers = document.getElementById("fangNiaoPlayers");
+
+const FANG_NIAO_HELP_TEXT = `
+  <h3>Goal</h3>
+  <p>Win by either collecting 7 different birds or getting two bird types to 3+ in your collection.</p>
+
+  <h3>Setup</h3>
+  <ul>
+    <li>Each of 4 rows starts with 3 different birds.</li>
+    <li>Players draw 8 cards and also start with 1 bird already in their collection.</li>
+  </ul>
+
+  <h3>Turn</h3>
+  <ol>
+    <li><strong>Lay birds</strong>: choose one bird type and play all of that type to a row and side.</li>
+    <li><strong>Capture</strong>: scan from that side to the first matching bird.
+      If there are cards in between, take those cards into your hand.
+      If no match or no cards in between, you draw 2 cards instead.</li>
+    <li><strong>Bank (optional)</strong>: if you have enough of a bird, keep 1 (small flock) or 2 (big flock)
+      and discard the rest to your collection.</li>
+  </ol>
+
+  <h3>End of Turn</h3>
+  <p>If your hand is empty, everyone discards their hand and all players draw 8 new cards.</p>
+`;
+
+const FANG_NIAO_BUTTON_EXPLANATIONS = {
+  fangNiaoClearSelection: {
+    name: "Clear",
+    description: "Clear the selected bird, row, and side.",
+  },
+  fangNiaoPlayBtn: {
+    name: "Play Birds",
+    description: "Play all cards of the selected bird type to the chosen row and side.",
+  },
+  fangNiaoBankBtn: {
+    name: "Bank",
+    description: "Score a flock if you have enough of the selected bird type.",
+  },
+  fangNiaoEndBtn: {
+    name: "End Turn",
+    description: "Finish your turn after banking (or skipping bank).",
+  },
+  fangNiaoRowSide: {
+    name: "Row Side",
+    description: "Choose which row and side to place your birds.",
+  },
+  fangNiaoHand: {
+    name: "Hand Bird",
+    description: "Select a bird type from your hand to play or bank.",
+  },
+};
 
 const FANG_NIAO_BIRD_META = {
   flamingo: { name: "火烈鸟", emoji: "🦩", color: "#fb7185" },
@@ -264,6 +325,9 @@ function renderFangNiaoRows(view) {
     rowEl.appendChild(rightBtn);
     fangNiaoRows.appendChild(rowEl);
   });
+  if (fangNiaoExplainMode) {
+    updateFangNiaoExplainModeClasses(true);
+  }
 }
 
 function renderFangNiaoHand(view) {
@@ -323,6 +387,9 @@ function renderFangNiaoHand(view) {
     });
     fangNiaoHand.appendChild(btn);
   });
+  if (fangNiaoExplainMode) {
+    updateFangNiaoExplainModeClasses(true);
+  }
 }
 
 function renderFangNiaoPlayers(view) {
@@ -553,3 +620,181 @@ if (fangNiaoEndBtn) {
     sendAction({ type: "end_turn" });
   });
 }
+
+let fangNiaoExplainMode = false;
+
+function showFangNiaoHeaderActions(show) {
+  if (fangNiaoHeaderActions) {
+    fangNiaoHeaderActions.style.display = show ? "flex" : "none";
+  }
+  if (!show) {
+    exitFangNiaoExplainMode();
+    closeFangNiaoHelpModal();
+    closeFangNiaoExplainModal();
+  }
+}
+
+function showFangNiaoHelpModal() {
+  if (!fangNiaoHelpModal) {
+    return;
+  }
+  if (fangNiaoHelpContent) {
+    fangNiaoHelpContent.innerHTML = FANG_NIAO_HELP_TEXT;
+  }
+  setModalVisible(fangNiaoHelpModal, true);
+}
+
+function closeFangNiaoHelpModal() {
+  if (fangNiaoHelpModal) {
+    setModalVisible(fangNiaoHelpModal, false);
+  }
+}
+
+function updateFangNiaoExplainModeClasses(enabled) {
+  Object.keys(FANG_NIAO_BUTTON_EXPLANATIONS).forEach((buttonId) => {
+    if (buttonId === "fangNiaoRowSide" || buttonId === "fangNiaoHand") {
+      return;
+    }
+    const btn = document.getElementById(buttonId);
+    if (btn) {
+      btn.classList.toggle("has-explanation", enabled);
+    }
+  });
+  document.querySelectorAll(".fang-niao-side-btn").forEach((btn) => {
+    btn.classList.toggle("has-explanation", enabled);
+  });
+  document.querySelectorAll(".fang-niao-hand-btn").forEach((btn) => {
+    btn.classList.toggle("has-explanation", enabled);
+  });
+}
+
+function findFangNiaoButtonAtPoint(x, y) {
+  for (const buttonId of Object.keys(FANG_NIAO_BUTTON_EXPLANATIONS)) {
+    if (buttonId === "fangNiaoRowSide" || buttonId === "fangNiaoHand") {
+      continue;
+    }
+    const btn = document.getElementById(buttonId);
+    if (!btn) continue;
+    const rect = btn.getBoundingClientRect();
+    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+      return buttonId;
+    }
+  }
+  const sideButtons = Array.from(document.querySelectorAll(".fang-niao-side-btn"));
+  for (const btn of sideButtons) {
+    const rect = btn.getBoundingClientRect();
+    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+      return "fangNiaoRowSide";
+    }
+  }
+  const handButtons = Array.from(document.querySelectorAll(".fang-niao-hand-btn"));
+  for (const btn of handButtons) {
+    const rect = btn.getBoundingClientRect();
+    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+      return "fangNiaoHand";
+    }
+  }
+  return null;
+}
+
+function toggleFangNiaoExplainMode() {
+  fangNiaoExplainMode = !fangNiaoExplainMode;
+  document.body.classList.toggle("fang-niao-explain-mode", fangNiaoExplainMode);
+  updateFangNiaoExplainModeClasses(fangNiaoExplainMode);
+  if (fangNiaoExplainBtn) {
+    fangNiaoExplainBtn.classList.toggle("active", fangNiaoExplainMode);
+  }
+}
+
+function exitFangNiaoExplainMode() {
+  if (!fangNiaoExplainMode) {
+    return;
+  }
+  fangNiaoExplainMode = false;
+  document.body.classList.remove("fang-niao-explain-mode");
+  updateFangNiaoExplainModeClasses(false);
+  if (fangNiaoExplainBtn) {
+    fangNiaoExplainBtn.classList.remove("active");
+  }
+}
+
+function showFangNiaoButtonExplanation(buttonId) {
+  const explanation = FANG_NIAO_BUTTON_EXPLANATIONS[buttonId];
+  if (!explanation || !fangNiaoExplainContent || !fangNiaoExplainModal) {
+    return;
+  }
+  const note = explanation.note ? `<div class="hint">${explanation.note}</div>` : "";
+  fangNiaoExplainContent.innerHTML = `
+    <h4>${explanation.name}</h4>
+    <p>${explanation.description}</p>
+    ${note}
+  `;
+  setModalVisible(fangNiaoExplainModal, true);
+}
+
+function closeFangNiaoExplainModal() {
+  if (fangNiaoExplainModal) {
+    setModalVisible(fangNiaoExplainModal, false);
+  }
+}
+
+if (fangNiaoHelpBtn) {
+  fangNiaoHelpBtn.addEventListener("click", () => {
+    showFangNiaoHelpModal();
+  });
+}
+
+if (fangNiaoHelpModalCloseBtn) {
+  fangNiaoHelpModalCloseBtn.addEventListener("click", closeFangNiaoHelpModal);
+}
+
+if (fangNiaoExplainBtn) {
+  fangNiaoExplainBtn.addEventListener("click", () => {
+    toggleFangNiaoExplainMode();
+  });
+}
+
+if (fangNiaoExplainModalCloseBtn) {
+  fangNiaoExplainModalCloseBtn.addEventListener("click", closeFangNiaoExplainModal);
+}
+
+document.addEventListener("pointerdown", (e) => {
+  if (!fangNiaoExplainMode) return;
+
+  const buttonId = findFangNiaoButtonAtPoint(e.clientX, e.clientY);
+  if (buttonId) {
+    e.preventDefault();
+    e.stopPropagation();
+    showFangNiaoButtonExplanation(buttonId);
+    exitFangNiaoExplainMode();
+    return;
+  }
+
+  const button = e.target.closest("button");
+  if (button === fangNiaoExplainBtn || button === fangNiaoHelpBtn) return;
+  if (button === fangNiaoHelpModalCloseBtn || button === fangNiaoExplainModalCloseBtn) return;
+
+  if (button) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+}, true);
+
+document.addEventListener("click", (e) => {
+  if (!fangNiaoExplainMode) return;
+
+  const button = e.target.closest("button");
+  if (!button) return;
+
+  if (button === fangNiaoExplainBtn || button === fangNiaoHelpBtn) return;
+  if (button === fangNiaoHelpModalCloseBtn || button === fangNiaoExplainModalCloseBtn) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+}, true);
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && fangNiaoExplainMode) {
+    exitFangNiaoExplainMode();
+  }
+});
