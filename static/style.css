@@ -6598,3 +6598,201 @@ body.fang-niao-explain-mode button.has-explanation:hover {
   color: #6b7280;
   font-size: 12px;
 }
+
+/* Point Salad Help/Explain */
+.point-salad-header-btn {
+  padding: 4px 10px;
+  font-size: 13px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #f9fafb;
+  cursor: pointer;
+}
+
+.point-salad-header-btn:hover {
+  background: #f3f4f6;
+}
+
+.point-salad-header-btn.active {
+  background: #dbeafe;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+
+body.point-salad-explain-mode button.has-explanation {
+  outline: 2px dashed #3b82f6;
+  outline-offset: 2px;
+  cursor: help;
+}
+
+body.point-salad-explain-mode button.has-explanation:hover {
+  outline-color: #1d4ed8;
+  outline-style: solid;
+}
+
+.point-salad-help-modal {
+  max-width: 720px;
+}
+
+.point-salad-help-content {
+  max-height: 70vh;
+  overflow-y: auto;
+  line-height: 1.6;
+}
+
+.point-salad-help-content h3 {
+  margin: 16px 0 8px;
+  font-size: 16px;
+  color: #111827;
+}
+
+.point-salad-help-content h3:first-child {
+  margin-top: 0;
+}
+
+.point-salad-help-content h4 {
+  margin: 12px 0 6px;
+  font-size: 14px;
+  color: #374151;
+}
+
+.point-salad-help-content ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.point-salad-help-content ol {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.point-salad-help-content li {
+  margin-bottom: 4px;
+}
+
+.point-salad-help-content p {
+  margin: 8px 0;
+}
+
+.point-salad-explain-modal {
+  max-width: 520px;
+}
+
+#pointSaladExplainContent {
+  line-height: 1.6;
+}
+
+#pointSaladExplainContent h4 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: #111827;
+}
+
+#pointSaladExplainContent p {
+  margin: 6px 0;
+  color: #374151;
+}
+
+#pointSaladExplainContent .hint {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+/* Decrypto Help/Explain */
+.decrypto-header-btn {
+  padding: 4px 10px;
+  font-size: 13px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #f9fafb;
+  cursor: pointer;
+}
+
+.decrypto-header-btn:hover {
+  background: #f3f4f6;
+}
+
+.decrypto-header-btn.active {
+  background: #dbeafe;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+
+body.decrypto-explain-mode button.has-explanation {
+  outline: 2px dashed #3b82f6;
+  outline-offset: 2px;
+  cursor: help;
+}
+
+body.decrypto-explain-mode button.has-explanation:hover {
+  outline-color: #1d4ed8;
+  outline-style: solid;
+}
+
+.decrypto-help-modal {
+  max-width: 720px;
+}
+
+.decrypto-help-content {
+  max-height: 70vh;
+  overflow-y: auto;
+  line-height: 1.6;
+}
+
+.decrypto-help-content h3 {
+  margin: 16px 0 8px;
+  font-size: 16px;
+  color: #111827;
+}
+
+.decrypto-help-content h3:first-child {
+  margin-top: 0;
+}
+
+.decrypto-help-content h4 {
+  margin: 12px 0 6px;
+  font-size: 14px;
+  color: #374151;
+}
+
+.decrypto-help-content ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.decrypto-help-content ol {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.decrypto-help-content li {
+  margin-bottom: 4px;
+}
+
+.decrypto-help-content p {
+  margin: 8px 0;
+}
+
+.decrypto-explain-modal {
+  max-width: 520px;
+}
+
+#decryptoExplainContent {
+  line-height: 1.6;
+}
+
+#decryptoExplainContent h4 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: #111827;
+}
+
+#decryptoExplainContent p {
+  margin: 6px 0;
+  color: #374151;
+}
+
+#decryptoExplainContent .hint {
+  color: #6b7280;
+  font-size: 12px;
+}

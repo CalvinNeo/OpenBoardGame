@@ -8,6 +8,16 @@ let decryptoBotStrategiesLoaded = false;
 let decryptoBotStrategyId = "native";
 let decryptoBotClueDirectness = 0.5;
 
+const decryptoHeaderActions = document.getElementById("decryptoHeaderActions");
+const decryptoHelpBtn = document.getElementById("decryptoHelpBtn");
+const decryptoExplainBtn = document.getElementById("decryptoExplainBtn");
+const decryptoHelpModal = document.getElementById("decryptoHelpModal");
+const decryptoHelpModalCloseBtn = document.getElementById("decryptoHelpModalCloseBtn");
+const decryptoExplainModal = document.getElementById("decryptoExplainModal");
+const decryptoExplainModalCloseBtn = document.getElementById("decryptoExplainModalCloseBtn");
+const decryptoHelpContent = document.getElementById("decryptoHelpContent");
+const decryptoExplainContent = document.getElementById("decryptoExplainContent");
+
 const decryptoConfigBox = document.getElementById("decryptoConfigBox");
 const decryptoPackRow = document.getElementById("decryptoPackRow");
 const decryptoPackOptions = document.getElementById("decryptoPackOptions");
@@ -72,6 +82,47 @@ const decryptoInterceptClueLabels = [
   document.getElementById("decryptoInterceptClueLabel3"),
 ];
 const decryptoSubmitInterceptBtn = document.getElementById("decryptoSubmitInterceptBtn");
+
+const DECRYPTO_HELP_TEXT = `
+  <h3>Goal</h3>
+  <p>Work with your team to avoid 2 miscommunications and score 2 intercepts before the other team.</p>
+
+  <h3>Setup</h3>
+  <ul>
+    <li>Players split into White and Black teams.</li>
+    <li>Each team gets 4 secret keywords.</li>
+  </ul>
+
+  <h3>Round Flow</h3>
+  <ol>
+    <li><strong>Encryption</strong>: the encryptor sees a 3-digit code (numbers 1-4) and writes 3 clues for their team.</li>
+    <li><strong>Guessing</strong>: teammates submit a decrypt guess for the code.</li>
+    <li><strong>Intercept</strong>: from round 2 onward, the opposing team may guess your code.</li>
+  </ol>
+
+  <h3>Scoring</h3>
+  <ul>
+    <li>If your team decrypt guess is wrong, you gain 1 miscommunication.</li>
+    <li>If the other team intercepts your code, they gain 1 intercept.</li>
+    <li>Two intercepts wins; two miscommunications loses.</li>
+    <li>If both teams reach the limit in the same round, the game is a draw.</li>
+  </ul>
+`;
+
+const DECRYPTO_BUTTON_EXPLANATIONS = {
+  decryptoSubmitCluesBtn: {
+    name: "Submit Clues",
+    description: "Send your 3 clues for the current code (encryptor only).",
+  },
+  decryptoSubmitDecryptBtn: {
+    name: "Submit Decrypt",
+    description: "Submit your team's guess of the code order (non-encryptor only).",
+  },
+  decryptoSubmitInterceptBtn: {
+    name: "Submit Intercept",
+    description: "Guess the opponent's code order (available from round 2).",
+  },
+};
 
 const decryptoActionButtons = {
   submit_clues: decryptoSubmitCluesBtn,
@@ -1066,3 +1117,155 @@ if (decryptoBotClueSelect) {
     decryptoBotClueDirectness = Number.isFinite(parsed) ? parsed : 0.5;
   });
 }
+
+let decryptoExplainMode = false;
+
+function showDecryptoHeaderActions(show) {
+  if (decryptoHeaderActions) {
+    decryptoHeaderActions.style.display = show ? "flex" : "none";
+  }
+  if (!show) {
+    exitDecryptoExplainMode();
+    closeDecryptoHelpModal();
+    closeDecryptoExplainModal();
+  }
+}
+
+function showDecryptoHelpModal() {
+  if (!decryptoHelpModal) {
+    return;
+  }
+  if (decryptoHelpContent) {
+    decryptoHelpContent.innerHTML = DECRYPTO_HELP_TEXT;
+  }
+  setModalVisible(decryptoHelpModal, true);
+}
+
+function closeDecryptoHelpModal() {
+  if (decryptoHelpModal) {
+    setModalVisible(decryptoHelpModal, false);
+  }
+}
+
+function updateDecryptoExplainModeClasses(enabled) {
+  Object.keys(DECRYPTO_BUTTON_EXPLANATIONS).forEach((buttonId) => {
+    const btn = document.getElementById(buttonId);
+    if (btn) {
+      btn.classList.toggle("has-explanation", enabled);
+    }
+  });
+}
+
+function findDecryptoButtonAtPoint(x, y) {
+  for (const buttonId of Object.keys(DECRYPTO_BUTTON_EXPLANATIONS)) {
+    const btn = document.getElementById(buttonId);
+    if (!btn) continue;
+    const rect = btn.getBoundingClientRect();
+    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+      return buttonId;
+    }
+  }
+  return null;
+}
+
+function toggleDecryptoExplainMode() {
+  decryptoExplainMode = !decryptoExplainMode;
+  document.body.classList.toggle("decrypto-explain-mode", decryptoExplainMode);
+  updateDecryptoExplainModeClasses(decryptoExplainMode);
+  if (decryptoExplainBtn) {
+    decryptoExplainBtn.classList.toggle("active", decryptoExplainMode);
+  }
+}
+
+function exitDecryptoExplainMode() {
+  if (!decryptoExplainMode) {
+    return;
+  }
+  decryptoExplainMode = false;
+  document.body.classList.remove("decrypto-explain-mode");
+  updateDecryptoExplainModeClasses(false);
+  if (decryptoExplainBtn) {
+    decryptoExplainBtn.classList.remove("active");
+  }
+}
+
+function showDecryptoButtonExplanation(buttonId) {
+  const explanation = DECRYPTO_BUTTON_EXPLANATIONS[buttonId];
+  if (!explanation || !decryptoExplainContent || !decryptoExplainModal) {
+    return;
+  }
+  const note = explanation.note ? `<div class="hint">${explanation.note}</div>` : "";
+  decryptoExplainContent.innerHTML = `
+    <h4>${explanation.name}</h4>
+    <p>${explanation.description}</p>
+    ${note}
+  `;
+  setModalVisible(decryptoExplainModal, true);
+}
+
+function closeDecryptoExplainModal() {
+  if (decryptoExplainModal) {
+    setModalVisible(decryptoExplainModal, false);
+  }
+}
+
+if (decryptoHelpBtn) {
+  decryptoHelpBtn.addEventListener("click", () => {
+    showDecryptoHelpModal();
+  });
+}
+
+if (decryptoHelpModalCloseBtn) {
+  decryptoHelpModalCloseBtn.addEventListener("click", closeDecryptoHelpModal);
+}
+
+if (decryptoExplainBtn) {
+  decryptoExplainBtn.addEventListener("click", () => {
+    toggleDecryptoExplainMode();
+  });
+}
+
+if (decryptoExplainModalCloseBtn) {
+  decryptoExplainModalCloseBtn.addEventListener("click", closeDecryptoExplainModal);
+}
+
+document.addEventListener("pointerdown", (e) => {
+  if (!decryptoExplainMode) return;
+
+  const buttonId = findDecryptoButtonAtPoint(e.clientX, e.clientY);
+  if (buttonId) {
+    e.preventDefault();
+    e.stopPropagation();
+    showDecryptoButtonExplanation(buttonId);
+    exitDecryptoExplainMode();
+    return;
+  }
+
+  const button = e.target.closest("button");
+  if (button === decryptoExplainBtn || button === decryptoHelpBtn) return;
+  if (button === decryptoHelpModalCloseBtn || button === decryptoExplainModalCloseBtn) return;
+
+  if (button) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+}, true);
+
+document.addEventListener("click", (e) => {
+  if (!decryptoExplainMode) return;
+
+  const button = e.target.closest("button");
+  if (!button) return;
+
+  if (button === decryptoExplainBtn || button === decryptoHelpBtn) return;
+  if (button === decryptoHelpModalCloseBtn || button === decryptoExplainModalCloseBtn) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+}, true);
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && decryptoExplainMode) {
+    exitDecryptoExplainMode();
+  }
+});

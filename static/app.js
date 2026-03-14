@@ -108,6 +108,9 @@ function setGamePanelVisibility(gameType) {
   if (decryptoPanel) {
     decryptoPanel.classList.toggle("hidden", !showDecrypto);
   }
+  if (typeof showDecryptoHeaderActions === "function") {
+    showDecryptoHeaderActions(showDecrypto);
+  }
   drawGuessPanel.classList.toggle("hidden", !showDrawGuess);
   if (blitzSketchPanel) {
     blitzSketchPanel.classList.toggle("hidden", !showBlitzSketch);
@@ -126,6 +129,9 @@ function setGamePanelVisibility(gameType) {
   }
   if (pointSaladPanel) {
     pointSaladPanel.classList.toggle("hidden", !showPointSalad);
+  }
+  if (typeof showPointSaladHeaderActions === "function") {
+    showPointSaladHeaderActions(showPointSalad);
   }
   if (trekkingPanel) {
     trekkingPanel.classList.toggle("hidden", !showTrekking);
