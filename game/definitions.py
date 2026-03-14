@@ -22,6 +22,7 @@ from game.the_gang import TheGangGame
 from game.yahtzee import YahtzeeGame
 from game.registry import GameDefinition, register_game
 from game.splendor import SplendorGame
+from game.splendor_pokemon import PokemonSplendorGame
 from game.blokus import BlokusGame
 from game.blitz_sketch import BlitzSketchGame
 from game.carcassonne import CarcassonneGame
@@ -861,6 +862,122 @@ SPLENDOR_CONFIG_SCHEMA = {
     "additionalProperties": False,
 }
 
+SPLENDOR_POKEMON_TOKEN_COUNTS_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "red": {"type": "integer", "minimum": 0},
+        "blue": {"type": "integer", "minimum": 0},
+        "yellow": {"type": "integer", "minimum": 0},
+        "green": {"type": "integer", "minimum": 0},
+        "pink": {"type": "integer", "minimum": 0},
+        "purple": {"type": "integer", "minimum": 0},
+    },
+    "additionalProperties": False,
+}
+
+SPLENDOR_POKEMON_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "take_tokens"},
+                "colors": {
+                    "type": "array",
+                    "items": {"enum": ["red", "blue", "yellow", "green", "pink"]},
+                    "minItems": 1,
+                    "maxItems": 3,
+                    "uniqueItems": True,
+                },
+            },
+            "required": ["type", "colors"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "take_tokens_same"},
+                "color": {"enum": ["red", "blue", "yellow", "green", "pink"]},
+            },
+            "required": ["type", "color"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "reserve_market"},
+                "tier": {"enum": ["lv1", "lv2", "lv3"]},
+                "index": {"type": "integer", "minimum": 0},
+            },
+            "required": ["type", "tier", "index"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "reserve_deck"},
+                "tier": {"enum": ["lv1", "lv2", "lv3"]},
+            },
+            "required": ["type", "tier"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "buy_market"},
+                "tier": {"enum": ["lv1", "lv2", "lv3", "rare", "legendary"]},
+                "index": {"type": "integer", "minimum": 0},
+                "payment": SPLENDOR_POKEMON_TOKEN_COUNTS_SCHEMA,
+            },
+            "required": ["type", "tier", "index"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "buy_reserved"},
+                "reserved_index": {"type": "integer", "minimum": 0},
+                "payment": SPLENDOR_POKEMON_TOKEN_COUNTS_SCHEMA,
+            },
+            "required": ["type", "reserved_index"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "evolve"},
+                "base_id": {"type": "string"},
+                "target_id": {"type": "string"},
+            },
+            "required": ["type", "base_id", "target_id"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "skip_evolution"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "discard_tokens"},
+                "tokens": SPLENDOR_POKEMON_TOKEN_COUNTS_SCHEMA,
+            },
+            "required": ["type", "tokens"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+SPLENDOR_POKEMON_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "target_score": {"type": "integer", "minimum": 1},
+    },
+    "additionalProperties": False,
+}
+
 POINT_SALAD_ACTION_SCHEMA = {
     "type": "object",
     "oneOf": [
@@ -1352,6 +1469,21 @@ register_game(
         module=SplendorGame,
         serialize=SplendorGame.serialize,
         deserialize=SplendorGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=PokemonSplendorGame.game_id,
+        name="Splendor: Pokemon",
+        min_players=PokemonSplendorGame.min_players,
+        max_players=PokemonSplendorGame.max_players,
+        turn_mode="turn",
+        action_schema=SPLENDOR_POKEMON_ACTION_SCHEMA,
+        config_schema=SPLENDOR_POKEMON_CONFIG_SCHEMA,
+        module=PokemonSplendorGame,
+        serialize=PokemonSplendorGame.serialize,
+        deserialize=PokemonSplendorGame.deserialize,
     )
 )
 

@@ -8,6 +8,7 @@
 - 应该尽量使用 Emoji 和颜色来方便阅读，例如：
   + 如果涉及到扑克牌花色，要用 Emoji 来显示，而不要用 H、C 这样的字母。
   + 涉及到 Checkbox 和对应的说明文字的情况，将两者贴近在同行放置。
+- 你需要支持 Help 和 Explain，你可以阅读 task40.md 进行了解。
 
 # Coding style
 

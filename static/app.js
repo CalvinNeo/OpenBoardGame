@@ -51,6 +51,7 @@ function setGamePanelVisibility(gameType) {
   const showAidixit = gameType === "aidixit";
   const showImpression = gameType === "impression_flower";
   const showSplendor = gameType === "splendor";
+  const showPokemonSplendor = gameType === "splendor_pokemon";
   const showPointSalad = gameType === "point_salad";
   const showAbraca = gameType === "abraca_what";
   const showTrekking = gameType === "trekking_history";
@@ -111,6 +112,9 @@ function setGamePanelVisibility(gameType) {
   if (typeof showDecryptoHeaderActions === "function") {
     showDecryptoHeaderActions(showDecrypto);
   }
+  if (typeof showPokemonSplendorHeaderActions === "function") {
+    showPokemonSplendorHeaderActions(showPokemonSplendor);
+  }
   drawGuessPanel.classList.toggle("hidden", !showDrawGuess);
   if (blitzSketchPanel) {
     blitzSketchPanel.classList.toggle("hidden", !showBlitzSketch);
@@ -126,6 +130,9 @@ function setGamePanelVisibility(gameType) {
   }
   if (splendorPanel) {
     splendorPanel.classList.toggle("hidden", !showSplendor);
+  }
+  if (pokemonSplendorPanel) {
+    pokemonSplendorPanel.classList.toggle("hidden", !showPokemonSplendor);
   }
   if (pointSaladPanel) {
     pointSaladPanel.classList.toggle("hidden", !showPointSalad);
@@ -336,6 +343,10 @@ function renderGameState(data) {
   }
   if (gameType === "trekking_history") {
     renderTrekkingGameState(data);
+    return;
+  }
+  if (gameType === "splendor_pokemon") {
+    renderPokemonSplendorGameState(data);
     return;
   }
   if (gameType === "splendor") {

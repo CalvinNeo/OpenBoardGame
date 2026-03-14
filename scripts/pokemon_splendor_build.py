@@ -42,6 +42,79 @@ REPORT_PATH = ASSETS_DIR / "cards_review.json"
 CORRECT_PATH = SCRIPT_DIR / "pokemon_splendor_correct.txt"
 BAD_IDS_PATH = SCRIPT_DIR / "pokemon_splendor_bad_ids.txt"
 
+# Manual evolution validation entries (card_id -> expected fields)
+# Supported keys: requirements, target_en, target_zh
+UPGRADE_GOLD = {
+    "scene_001_01": {"requirements": {}, "target_en": None, "target_zh": None},
+    "scene_001_02": {"requirements": {}, "target_en": None, "target_zh": None},
+    "scene_001_03": {"requirements": {}, "target_en": None, "target_zh": None},
+    "scene_001_04": {"requirements": {}, "target_en": None, "target_zh": None},
+    "scene_001_05": {"requirements": {}, "target_en": None, "target_zh": None},
+    "scene_001_06": {"requirements": {}, "target_en": None, "target_zh": None},
+    "scene_001_07": {"requirements": {}, "target_en": None, "target_zh": None},
+    "scene_001_08": {"requirements": {}, "target_en": None, "target_zh": None},
+    "scene_001_09": {"requirements": {}, "target_en": None, "target_zh": None},
+    "scene_001_10": {
+        "requirements": {},
+        "target_en": ["Vaporeon", "Jolteon", "Flareon"],
+        "target_zh": ["水伊布", "雷伊布", "火伊布"],
+    },
+    "scene_002_05": {"requirements": {}, "target_en": None, "target_zh": None},
+    "scene_002_06": {"requirements": {}, "target_en": None, "target_zh": None},
+    "scene_002_14": {"requirements": {}, "target_en": None, "target_zh": None},
+    "scene_003_03": {"requirements": {}, "target_en": None, "target_zh": None},
+    "scene_003_06": {"requirements": {}, "target_en": None, "target_zh": None},
+    "scene_003_14": {"requirements": {}, "target_en": None, "target_zh": None},
+    "scene_004_03": {"requirements": {}, "target_en": None, "target_zh": None},
+    "scene_004_05": {"requirements": {}, "target_en": "Poliwrath", "target_zh": "蚊香泳士"},
+    "scene_004_13": {"requirements": {}, "target_en": "Cloyster", "target_zh": "刺甲贝"},
+    "scene_004_14": {"requirements": {}, "target_en": "Metapod", "target_zh": "铁甲蛹"},
+    "scene_005_05": {"requirements": {}, "target_en": None, "target_zh": None},
+    "scene_005_06": {"requirements": {}, "target_en": None, "target_zh": None},
+    "scene_005_14": {"requirements": {}, "target_en": None, "target_zh": None},
+    "scene_006_05": {"requirements": {}, "target_en": None, "target_zh": None},
+    "scene_006_06": {"requirements": {}, "target_en": None, "target_zh": None},
+    "scene_006_14": {"requirements": {}, "target_en": None, "target_zh": None},
+    "scene_002_02": {"requirements": {"blue": 4}, "target_en": "Venusaur", "target_zh": "妙蛙花"},
+    "scene_002_03": {"requirements": {"blue": 2}, "target_en": "Nidorina", "target_zh": "尼多娜"},
+    "scene_002_04": {"requirements": {"blue": 4}, "target_en": "Nidorina", "target_zh": "尼多娜"},
+    "scene_002_08": {"requirements": {"blue": 4}, "target_en": "Nidorina", "target_zh": "尼多娜"},
+    "scene_002_10": {"requirements": {"blue": 2}, "target_en": "Nidorina", "target_zh": "尼多娜"},
+    "scene_002_11": {"requirements": {"blue": 2}, "target_en": "Nidorina", "target_zh": "尼多娜"},
+    "scene_002_01": {"requirements": {"pink": 3}, "target_en": "Ivysaur", "target_zh": "妙蛙草"},
+    "scene_002_07": {"requirements": {"blue": 4}, "target_en": "Venusaur", "target_zh": "妙蛙花"},
+    "scene_002_13": {"requirements": {"black": 3}, "target_en": "Haunter", "target_zh": "鬼斯通"},
+    "scene_003_07": {"requirements": {"pink": 4}, "target_en": "Blastoise", "target_zh": "水箭龟"},
+    "scene_003_13": {"requirements": {"yellow": 3}, "target_en": "Machoke", "target_zh": "豪力"},
+    "scene_003_04": {"requirements": {"pink": 2}, "target_en": "Weepinbell", "target_zh": "口呆花"},
+    "scene_003_05": {"requirements": {"pink": 4}, "target_en": "Victreebel", "target_zh": "大食花"},
+    "scene_003_08": {"requirements": {"pink": 4}, "target_en": "Victreebel", "target_zh": "大食花"},
+    "scene_003_10": {"requirements": {"pink": 2}, "target_en": "Weepinbell", "target_zh": "口呆花"},
+    "scene_003_11": {"requirements": {"pink": 2}, "target_en": "Weepinbell", "target_zh": "口呆花"},
+    "scene_004_12": {"requirements": {"blue": 3}, "target_en": "Butterfree", "target_zh": "巴大蝶"},
+    "scene_004_06": {"requirements": {"red": 3}, "target_en": "Alakazam", "target_zh": "胡地"},
+    "scene_004_08": {"requirements": {"black": 4}, "target_en": "Poliwrath", "target_zh": "蚊香泳士"},
+    "scene_004_15": {"requirements": {"yellow": 3}, "target_en": "Butterfree", "target_zh": "巴大蝶"},
+    "scene_005_02": {"requirements": {"red": 4}, "target_en": "Charizard", "target_zh": "喷火龙"},
+    "scene_005_03": {"requirements": {"pink": 2}, "target_en": "Pidgeotto", "target_zh": "比比鸟"},
+    "scene_005_04": {"requirements": {"red": 4}, "target_en": "Pidgeot", "target_zh": "大比鸟"},
+    "scene_005_16": {"requirements": {"pink": 3}, "target_en": "Graveler", "target_zh": "隆隆石"},
+    "scene_006_10": {"requirements": {"blue": 3}, "target_en": "Dragonair", "target_zh": "哈克龙"},
+    "scene_006_15": {"requirements": {"pink": 3}, "target_en": "Exeggutor", "target_zh": "椰蛋树"},
+    "scene_005_01": {"requirements": {"yellow": 3}, "target_en": "Charmeleon", "target_zh": "火恐龙"},
+    "scene_005_09": {"requirements": {"yellow": 3}, "target_en": "Charmeleon", "target_zh": "火恐龙"},
+    "scene_005_13": {"requirements": {"pink": 3}, "target_en": "Graveler", "target_zh": "隆隆石"},
+    "scene_006_01": {"requirements": {"blue": 3}, "target_en": "Dragonair", "target_zh": "哈克龙"},
+    "scene_006_02": {"requirements": {"yellow": 4}, "target_en": "Dragonite", "target_zh": "快龙"},
+    "scene_006_03": {"requirements": {"yellow": 2}, "target_en": "Gloom", "target_zh": "臭臭花"},
+    "scene_006_04": {"requirements": {"yellow": 4}, "target_en": None, "target_zh": None},
+    "scene_006_07": {"requirements": {"yellow": 4}, "target_en": "Dragonite", "target_zh": "快龙"},
+    "scene_006_08": {"requirements": {"yellow": 2}, "target_en": "Gloom", "target_zh": "臭臭花"},
+    "scene_006_09": {"requirements": {"yellow": 4}, "target_en": None, "target_zh": None},
+    "scene_006_11": {"requirements": {"yellow": 2}, "target_en": "Gloom", "target_zh": "臭臭花"},
+    "scene_006_13": {"requirements": {"pink": 3}, "target_en": "Butterfree", "target_zh": "巴大蝶"},
+}
+
 LEGENDARY_EN = {
     "Articuno",
     "Zapdos",
@@ -148,6 +221,9 @@ COST_Y_MIN = 80
 COST_X_MAX = 40
 REQ_Y_MAX = 80
 REQ_X_MIN = 30
+REQ_ROI_X0_RATIO = 0.33
+REQ_ROI_X1_RATIO = 0.68
+REQ_ROI_Y1_RATIO = 0.32
 
 OCR_BOX_THRESH = 0.2
 OCR_TEXT_SCORE = 0.1
@@ -167,6 +243,12 @@ DIGIT_TEMPLATE_FALLBACK_SCORE = 0.6
 DIGIT_ALLOWED_VALUES = {1, 2, 3, 4, 5, 6, 7}
 DIGIT_TEMPLATE_SCAN_MIN_AREA = 150
 DIGIT_TEMPLATE_TOPK = 8
+REQ_DIGIT_ALLOWED_VALUES = {1, 2, 3, 4, 5}
+REQ_DIGIT_TEMPLATE_MIN_SCORE = 0.85
+REQ_DIGIT_TEMPLATE_TOPK = 6
+REQ_DIGIT_TEMPLATE_MATCH_MIN_SCORE = 0.78
+REQ_BLOCK_MIN_AREA = 150
+REQ_BLOCK_MAX_AREA = 1400
 
 
 def load_names():
@@ -907,6 +989,352 @@ def classify_cost_color_from_bgr(mean_bgr, dark_ratio=0.0, allow_purple=True):
     return None
 
 
+def requirement_roi(img):
+    h, w = img.shape[:2]
+    x0 = int(w * REQ_ROI_X0_RATIO)
+    x1 = int(w * REQ_ROI_X1_RATIO)
+    y0 = 0
+    y1 = int(h * REQ_ROI_Y1_RATIO)
+    return x0, y0, x1, y1
+
+
+def select_requirement_digit_from_candidates(candidates, roi, circles=None):
+    if not candidates:
+        return None
+    x0, y0, x1, y1 = roi
+    if circles:
+        best = None
+        best_score = -1e9
+        for cand in candidates:
+            cx = cand.get("cx", 0.0)
+            cy = cand.get("cy", 0.0)
+            # prefer digits left of a circle and vertically aligned
+            for circle in circles:
+                ccx, ccy, _ = circle
+                if cx >= ccx - 2:
+                    continue
+                if abs(cy - ccy) > 12:
+                    continue
+                score = cand.get("score", 0.0) - abs(cx - ccx) * 0.02 - abs(cy - ccy) * 0.02
+                if score > best_score:
+                    best_score = score
+                    best = cand
+        if best is not None:
+            return best
+    cx0 = (x0 + x1) / 2.0
+    cy0 = (y0 + y1) / 2.0
+    candidates.sort(
+        key=lambda d: (
+            d.get("score", 0.0),
+            -abs(d.get("cx", 0.0) - cx0) - abs(d.get("cy", 0.0) - cy0),
+        ),
+        reverse=True,
+    )
+    return candidates[0]
+
+
+def select_requirement_digit(digits, roi, circles=None):
+    if not digits:
+        return None
+    x0, y0, x1, y1 = roi
+    candidates = []
+    for d in digits:
+        value = d.get("value")
+        if value is None or value <= 0 or value > 5:
+            continue
+        cx = d.get("cx")
+        cy = d.get("cy")
+        if cx is None or cy is None:
+            continue
+        if cx < x0 or cx > x1 or cy < y0 or cy > y1:
+            continue
+        if cx < VP_X_MAX and cy < VP_Y_MAX:
+            continue
+        candidates.append(d)
+    return select_requirement_digit_from_candidates(candidates, roi, circles=circles)
+
+
+def find_requirement_circles(img, roi):
+    x0, y0, x1, y1 = roi
+    roi_img = img[y0:y1, x0:x1]
+    if roi_img.size == 0:
+        return []
+    gray = cv2.cvtColor(roi_img, cv2.COLOR_BGR2GRAY)
+    gray = cv2.medianBlur(gray, 5)
+    circles = cv2.HoughCircles(
+        gray,
+        cv2.HOUGH_GRADIENT,
+        dp=1.2,
+        minDist=8,
+        param1=50,
+        param2=16,
+        minRadius=6,
+        maxRadius=12,
+    )
+    if circles is None:
+        return []
+    out = []
+    for x, y, r in circles[0]:
+        out.append((float(x) + x0, float(y) + y0, float(r)))
+    return out
+
+
+def parse_requirement_ocr_candidates(res, offset=(0, 0)):
+    x_off, y_off = offset
+    candidates = []
+    for box, text, score in res:
+        nums = re.findall(r"\d+", text)
+        if len(nums) != 1:
+            continue
+        num = nums[0]
+        if len(num) != 1:
+            continue
+        value = int(num)
+        if value <= 0 or value > 5:
+            continue
+        mapped = [(p[0] + x_off, p[1] + y_off) for p in box]
+        xs = [p[0] for p in mapped]
+        ys = [p[1] for p in mapped]
+        candidates.append({
+            "value": value,
+            "score": float(score),
+            "box": mapped,
+            "cx": sum(xs) / 4.0,
+            "cy": sum(ys) / 4.0,
+        })
+    return candidates
+
+
+def detect_requirement_digit_easyocr(roi):
+    reader = get_easyocr_reader()
+    if reader is None or roi is None or roi.size == 0:
+        return []
+    rgb = cv2.cvtColor(roi, cv2.COLOR_BGR2RGB)
+    res = reader.readtext(rgb, detail=1, allowlist="12345")
+    return res or []
+
+
+def detect_requirement_circle(img, digit, roi, circles=None):
+    if digit is None:
+        return None
+    if circles is None:
+        circles = find_requirement_circles(img, roi)
+    if not circles:
+        return None
+    d_cx = float(digit.get("cx", 0.0))
+    d_cy = float(digit.get("cy", 0.0))
+    best = None
+    best_score = 1e9
+    for cx, cy, r in circles:
+        dist = abs(cx - d_cx) + abs(cy - d_cy)
+        if cx < d_cx + 2:
+            dist += 50
+        if abs(cy - d_cy) > 12:
+            dist += 20
+        if dist < best_score:
+            best_score = dist
+            best = (cx, cy, float(r))
+    return best
+
+
+def classify_requirement_hsv(h, s, v, dark_ratio=0.0):
+    if h is None:
+        return None
+    if dark_ratio > 0.25 or (v < 70 and s < 80):
+        return "black"
+    if h >= 170 or h <= 12:
+        return "red" if s >= 90 else "pink"
+    if 15 <= h <= 60:
+        return "yellow"
+    if 70 <= h <= 130:
+        return "blue"
+    if 131 <= h <= 170:
+        return "pink"
+    color = classify_color(h, s, v, COLOR_CENTERS)
+    if color == "green":
+        return "blue"
+    return color
+
+
+def sample_requirement_colors(img, center, radius_x=5, radius_y=5, size=2, bottom_scale=0.5):
+    cx, cy = center
+    directions = [
+        (1, 0), (-1, 0),
+        (0, -1), (0, 1),
+        (1, 1), (1, -1), (-1, 1), (-1, -1),
+    ]
+    samples = []
+    h, w = img.shape[:2]
+    for dx, dy in directions:
+        ry = radius_y * (bottom_scale if dy > 0 else 1.0)
+        sx = int(round(cx + dx * radius_x))
+        sy = int(round(cy + dy * ry))
+        x0 = max(0, sx - size)
+        y0 = max(0, sy - size)
+        x1 = min(w, sx + size + 1)
+        y1 = min(h, sy + size + 1)
+        patch = img[y0:y1, x0:x1]
+        if patch.size == 0:
+            continue
+        hsv = cv2.cvtColor(patch, cv2.COLOR_BGR2HSV)
+        mask = (hsv[:, :, 1] > 30) & (hsv[:, :, 2] > 60)
+        if mask.sum() == 0:
+            continue
+        hue = float(np.mean(hsv[:, :, 0][mask]))
+        sat = float(np.mean(hsv[:, :, 1][mask]))
+        val = float(np.mean(hsv[:, :, 2][mask]))
+        color = classify_requirement_hsv(hue, sat, val, dark_ratio=0.0)
+        if color == "purple":
+            continue
+        if color == "green":
+            color = "blue"
+        if color:
+            samples.append({"color": color, "point": (sx, sy)})
+    return samples
+
+
+def classify_requirement_color(img, digit_box=None):
+    if digit_box is None:
+        return None, None, None, []
+    xs = [p[0] for p in digit_box]
+    ys = [p[1] for p in digit_box]
+    x0, x1 = int(min(xs)), int(max(xs))
+    y0, y1 = int(min(ys)), int(max(ys))
+    cx = (x0 + x1) / 2.0
+    cy = (y0 + y1) / 2.0
+    w = max(1, x1 - x0)
+    h = max(1, y1 - y0)
+
+    pad_x = max(3, int(h * 0.55))
+    pad_y_top = max(3, int(h * 0.55))
+    pad_y_bottom = max(2, int(h * 0.35))
+    outer_x0 = max(0, x0 - pad_x)
+    outer_y0 = max(0, y0 - pad_y_top)
+    outer_x1 = min(img.shape[1], x1 + pad_x)
+    outer_y1 = min(img.shape[0], y1 + pad_y_bottom)
+    outer_box = (outer_x0, outer_y0, outer_x1, outer_y1)
+
+    inner_pad = max(1, int(h * 0.4))
+    inner_x0 = max(0, x0 - inner_pad)
+    inner_y0 = max(0, y0 - inner_pad)
+    inner_x1 = min(img.shape[1], x1 + inner_pad)
+    inner_y1 = min(img.shape[0], y1 + inner_pad)
+    inner_box = (inner_x0, inner_y0, inner_x1, inner_y1)
+
+    patch = img[outer_y0:outer_y1, outer_x0:outer_x1]
+    if patch.size == 0:
+        return None, outer_box, inner_box, []
+    ring_mask = np.ones(patch.shape[:2], dtype=np.uint8)
+    ring_mask[(inner_y0 - outer_y0):(inner_y1 - outer_y0), (inner_x0 - outer_x0):(inner_x1 - outer_x0)] = 0
+
+    hsv = cv2.cvtColor(patch, cv2.COLOR_BGR2HSV)
+    mask = (ring_mask > 0) & (hsv[:, :, 1] > 35) & (hsv[:, :, 2] > 70)
+    if mask.sum() < 12:
+        mask = (ring_mask > 0) & (hsv[:, :, 1] > 28) & (hsv[:, :, 2] > 55)
+    samples = sample_requirement_colors(
+        img,
+        (cx, cy),
+        radius_x=max(3, int(h * 0.55) + 1),
+        radius_y=max(3, int(h * 0.55) + 1),
+        size=2,
+    )
+    sample_color = None
+    if samples:
+        from collections import Counter
+        counts = Counter([s["color"] for s in samples])
+        top_color, top_count = counts.most_common(1)[0]
+        if top_count >= 5:
+            sample_color = top_color
+
+    if mask.sum() == 0:
+        color = None
+        if sample_color:
+            color = sample_color
+        return color, outer_box, inner_box, samples
+
+    mask_uint8 = mask.astype(np.uint8)
+    # prefer the connected component that touches the digit center (avoid background bleed)
+    center_local = (cx - outer_x0, cy - outer_y0)
+    mask_cc = mask_uint8.copy()
+    # include inner box to keep the colored region connected around the digit
+    ix0 = max(0, inner_x0 - outer_x0)
+    iy0 = max(0, inner_y0 - outer_y0)
+    ix1 = max(0, inner_x1 - outer_x0)
+    iy1 = max(0, inner_y1 - outer_y0)
+    mask_cc[iy0:iy1, ix0:ix1] = 1
+    num, labels, stats, centroids = cv2.connectedComponentsWithStats(mask_cc, connectivity=8)
+    chosen = None
+    if num > 1:
+        cx_i = int(round(center_local[0]))
+        cy_i = int(round(center_local[1]))
+        if 0 <= cy_i < labels.shape[0] and 0 <= cx_i < labels.shape[1]:
+            label_at_center = labels[cy_i, cx_i]
+            if label_at_center != 0:
+                chosen = label_at_center
+        if chosen is None:
+            best = None
+            best_score = 1e9
+            for i in range(1, num):
+                area = stats[i, cv2.CC_STAT_AREA]
+                if area < 6:
+                    continue
+                cxi, cyi = centroids[i]
+                dist = abs(cxi - center_local[0]) + abs(cyi - center_local[1])
+                score = dist + 40.0 / max(area, 1)
+                if score < best_score:
+                    best_score = score
+                    best = i
+            chosen = best
+    if chosen is not None:
+        mask_uint8 = ((labels == chosen) & (mask_uint8 > 0)).astype(np.uint8)
+
+    mean = mean_hsv_from_mask(patch, mask_uint8)
+    dark_ratio = float((hsv[:, :, 2][ring_mask > 0] < 70).mean()) if (ring_mask > 0).any() else 0.0
+    color = None
+    if mean:
+        color = classify_requirement_hsv(mean[0], mean[1], mean[2], dark_ratio=dark_ratio)
+    if not color:
+        hue_stats = dominant_hue_in_mask(hsv, mask_uint8)
+        if hue_stats:
+            color = classify_requirement_hsv(hue_stats[0], hue_stats[1], hue_stats[2], dark_ratio=dark_ratio)
+
+    if sample_color and (color is None or color != sample_color):
+        color = sample_color
+    return color, outer_box, inner_box, samples
+
+
+def classify_requirement_color_from_block(img, block, digit_box=None):
+    x0, y0, x1, y1 = block
+    patch = img[y0:y1, x0:x1]
+    if patch.size == 0:
+        return None
+    hsv = cv2.cvtColor(patch, cv2.COLOR_BGR2HSV)
+    mask = np.ones(patch.shape[:2], dtype=np.uint8)
+    if digit_box:
+        xs = [p[0] for p in digit_box]
+        ys = [p[1] for p in digit_box]
+        dx0, dx1 = int(min(xs)) - 2, int(max(xs)) + 2
+        dy0, dy1 = int(min(ys)) - 2, int(max(ys)) + 2
+        dx0 = max(0, dx0 - x0)
+        dy0 = max(0, dy0 - y0)
+        dx1 = min(patch.shape[1], dx1 - x0)
+        dy1 = min(patch.shape[0], dy1 - y0)
+        mask[dy0:dy1, dx0:dx1] = 0
+    # remove low-saturation digit strokes
+    mask = (mask > 0) & (hsv[:, :, 1] > 30) & (hsv[:, :, 2] > 60)
+    if mask.sum() == 0:
+        return None
+    mean = mean_hsv_from_mask(patch, mask.astype(np.uint8))
+    if mean:
+        color = classify_requirement_hsv(mean[0], mean[1], mean[2], dark_ratio=0.0)
+        if color:
+            return color
+    hue_stats = dominant_hue_in_mask(hsv, mask.astype(np.uint8))
+    if hue_stats:
+        return classify_requirement_hsv(hue_stats[0], hue_stats[1], hue_stats[2], dark_ratio=0.0)
+    return None
+
+
 def pick_vp(digits):
     candidates = [d for d in digits if d["cx"] < VP_X_MAX and d["cy"] < VP_Y_MAX]
     if not candidates:
@@ -1045,6 +1473,305 @@ def build_digit_templates(meta, ocr):
         top = [p for _, p in patches[:DIGIT_TEMPLATE_TOPK]]
         top_templates[value] = top
     return top_templates
+
+
+def build_requirement_digit_templates(meta, ocr):
+    templates = {v: [] for v in sorted(REQ_DIGIT_ALLOWED_VALUES)}
+    # Seed templates from gold labels (more reliable)
+    for card_id, gold in UPGRADE_GOLD.items():
+        req = (gold or {}).get("requirements") or {}
+        if len(req) != 1:
+            continue
+        value = next(iter(req.values()))
+        try:
+            value = int(value)
+        except (TypeError, ValueError):
+            continue
+        if value not in REQ_DIGIT_ALLOWED_VALUES:
+            continue
+        img_path = CARDS_DIR / f"{card_id}.png"
+        if not img_path.exists():
+            continue
+        img = cv2.imread(str(img_path))
+        if img is None:
+            continue
+        roi = requirement_roi(img)
+        block = find_requirement_color_block(img, roi)
+        if block is None:
+            continue
+        digit = detect_requirement_digit_from_block(img, block, templates=None)
+        if digit is None or not digit.get("box"):
+            continue
+        xs = [p[0] for p in digit["box"]]
+        ys = [p[1] for p in digit["box"]]
+        x0, x1 = int(min(xs)) - 2, int(max(xs)) + 2
+        y0, y1 = int(min(ys)) - 2, int(max(ys)) + 2
+        x0 = max(0, x0)
+        y0 = max(0, y0)
+        x1 = min(img.shape[1], x1)
+        y1 = min(img.shape[0], y1)
+        patch = img[y0:y1, x0:x1]
+        tpl = preprocess_digit_patch(patch)
+        if tpl is None:
+            continue
+        templates[value].append((1.0, tpl))
+    for d in meta:
+        img_path = CARDS_DIR / d["card_image"]
+        img = cv2.imread(str(img_path))
+        if img is None:
+            continue
+        roi = requirement_roi(img)
+        res, _ = ocr(str(img_path), box_thresh=OCR_BOX_THRESH, text_score=OCR_TEXT_SCORE)
+        res = res or []
+        digits = extract_digits(res)
+        digit = select_requirement_digit(digits, roi, circles=None)
+        if digit is None:
+            continue
+        if digit.get("score", 0.0) < REQ_DIGIT_TEMPLATE_MIN_SCORE:
+            continue
+        value = digit.get("value")
+        if value not in REQ_DIGIT_ALLOWED_VALUES:
+            continue
+        box = digit.get("box")
+        if not box:
+            continue
+        xs = [p[0] for p in box]
+        ys = [p[1] for p in box]
+        x0, x1 = int(min(xs)) - 2, int(max(xs)) + 2
+        y0, y1 = int(min(ys)) - 2, int(max(ys)) + 2
+        x0 = max(0, x0)
+        y0 = max(0, y0)
+        x1 = min(img.shape[1], x1)
+        y1 = min(img.shape[0], y1)
+        patch = img[y0:y1, x0:x1]
+        tpl = preprocess_digit_patch(patch)
+        if tpl is None:
+            continue
+        templates[value].append((float(digit.get("score", 0.0)), tpl))
+    top_templates = {}
+    for value, patches in templates.items():
+        if not patches:
+            top_templates[value] = None
+            continue
+        patches.sort(key=lambda x: x[0], reverse=True)
+        top = [p for _, p in patches[:REQ_DIGIT_TEMPLATE_TOPK]]
+        top_templates[value] = top
+    return top_templates
+
+
+def find_requirement_color_block(img, roi):
+    x0, y0, x1, y1 = roi
+    patch = img[y0:y1, x0:x1]
+    if patch.size == 0:
+        return None
+    lab = cv2.cvtColor(patch, cv2.COLOR_BGR2LAB)
+    Zab = lab.reshape((-1, 3)).astype(np.float32)[:, 1:3]
+    K = 3
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 1.0)
+    try:
+        _, labels, _ = cv2.kmeans(Zab, K, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
+    except Exception:
+        return None
+    labels = labels.reshape(patch.shape[:2])
+    h, w = patch.shape[:2]
+    center = (w / 2.0, h / 2.0)
+    best = None
+    best_score = 1e9
+    for k in range(K):
+        mask = (labels == k).astype(np.uint8)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8), iterations=1)
+        num, _, stats, centroids = cv2.connectedComponentsWithStats(mask, connectivity=8)
+        for i in range(1, num):
+            bx, by, bw, bh, area = stats[i]
+            if area < REQ_BLOCK_MIN_AREA or area > REQ_BLOCK_MAX_AREA:
+                continue
+            ratio = bw / bh if bh else 0
+            if ratio < 0.5 or ratio > 2.0:
+                continue
+            block_patch = patch[by:by + bh, bx:bx + bw]
+            if block_patch.size == 0:
+                continue
+            hsv_block = cv2.cvtColor(block_patch, cv2.COLOR_BGR2HSV)
+            mean_s = float(np.mean(hsv_block[:, :, 1]))
+            mean_v = float(np.mean(hsv_block[:, :, 2]))
+            if mean_s < 45 or mean_v < 60:
+                continue
+            if float(np.std(hsv_block[:, :, 0])) > 35 and float(np.std(hsv_block[:, :, 1])) > 55:
+                continue
+            dist = abs(centroids[i][0] - center[0]) + abs(centroids[i][1] - center[1])
+            score = dist - area * 0.002
+            if score < best_score:
+                best_score = score
+                best = (bx, by, bw, bh)
+    if best is None:
+        return None
+    bx, by, bw, bh = best
+    return (bx + x0, by + y0, bx + x0 + bw, by + y0 + bh)
+
+
+def detect_requirement_digit_from_block(img, block, templates=None):
+    x0, y0, x1, y1 = block
+    patch = img[y0:y1, x0:x1]
+    if patch.size == 0:
+        return None
+    hsv = cv2.cvtColor(patch, cv2.COLOR_BGR2HSV)
+    s = hsv[:, :, 1]
+    v = hsv[:, :, 2]
+    mean_s = float(np.mean(s))
+    thresholds = [
+        int(mean_s * 0.6),
+        int(mean_s * 0.7),
+        int(mean_s * 0.8),
+        40,
+        50,
+    ]
+    thresholds = [max(20, min(70, t)) for t in thresholds]
+    center = ((x1 - x0) / 2.0, (y1 - y0) / 2.0)
+    best = None
+    best_score = -1e9
+    for thr in thresholds:
+        mask = (s < thr) & (v > 30)
+        mask = mask.astype(np.uint8)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((2, 2), np.uint8), iterations=1)
+        num, _, stats, centroids = cv2.connectedComponentsWithStats(mask, connectivity=8)
+        if num <= 1:
+            continue
+        for i in range(1, num):
+            bx, by, bw, bh, area = stats[i]
+            if area < 20:
+                continue
+            if bw < 4 or bh < 8 or bw > 26 or bh > 30:
+                continue
+            sub = patch[by:by + bh, bx:bx + bw]
+            tpl = preprocess_digit_patch(sub)
+            if tpl is None:
+                continue
+            val = None
+            score = 0.0
+            if templates:
+                val, score = template_match_digit(tpl, templates)
+                if val is None:
+                    continue
+                val, score, _ = refine_template_digit(tpl, templates, val, score)
+                if val is None:
+                    continue
+            dist = abs(centroids[i][0] - center[0]) + abs(centroids[i][1] - center[1])
+            score_adj = float(score) - dist * 0.01
+            if score_adj > best_score:
+                best_score = score_adj
+                best = {
+                    "value": val,
+                    "score": float(score),
+                    "box": [
+                        (bx + x0, by + y0),
+                        (bx + x0 + bw, by + y0),
+                        (bx + x0 + bw, by + y0 + bh),
+                        (bx + x0, by + y0 + bh),
+                    ],
+                    "source_hint": "req_block",
+                }
+    return best
+
+
+def requirement_candidate_masks(gray):
+    masks = []
+    # Otsu threshold (inv and normal)
+    _, th_inv = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    _, th = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    masks.extend([th_inv, th])
+
+    # Adaptive threshold (inv)
+    th_adapt = cv2.adaptiveThreshold(
+        gray,
+        255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY_INV,
+        11,
+        2,
+    )
+    masks.append(th_adapt)
+
+    # Blackhat / Tophat
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (9, 9))
+    blackhat = cv2.morphologyEx(gray, cv2.MORPH_BLACKHAT, kernel)
+    tophat = cv2.morphologyEx(gray, cv2.MORPH_TOPHAT, kernel)
+    for src in (blackhat, tophat):
+        src = cv2.normalize(src, None, 0, 255, cv2.NORM_MINMAX)
+        _, th_src = cv2.threshold(src, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        masks.append(th_src)
+    return masks
+
+
+def detect_requirement_digit_template(img, roi, templates):
+    if not templates:
+        return None
+    x0, y0, x1, y1 = roi
+    patch = img[y0:y1, x0:x1]
+    if patch.size == 0:
+        return None
+    gray = cv2.cvtColor(patch, cv2.COLOR_BGR2GRAY)
+    h, w = gray.shape[:2]
+    center = (w / 2.0, h / 2.0)
+    block = find_requirement_color_block(img, roi)
+    if block is not None:
+        digit = detect_requirement_digit_from_block(img, block, templates=templates)
+        if digit and digit.get("value") is not None and digit.get("score", 0.0) >= REQ_DIGIT_TEMPLATE_MATCH_MIN_SCORE:
+            return digit
+        return None
+    gray_region = gray
+    region_offset = (0, 0)
+    region_center = center
+    best = None
+    best_score = -1e9
+    for mask in requirement_candidate_masks(gray_region):
+        # light cleanup to connect strokes
+        mask = cv2.dilate(mask, np.ones((2, 2), np.uint8), iterations=1)
+        num, labels, stats, centroids = cv2.connectedComponentsWithStats(mask, connectivity=8)
+        for i in range(1, num):
+            x, y, ww, hh, area = stats[i]
+            if area < 18:
+                continue
+            if ww < 5 or hh < 7 or ww > 28 or hh > 32:
+                continue
+            # small padding
+            rx0, ry0 = region_offset
+            px0 = max(0, x - 1)
+            py0 = max(0, y - 1)
+            px1 = min(gray_region.shape[1], x + ww + 1)
+            py1 = min(gray_region.shape[0], y + hh + 1)
+            sub = patch[py0 + ry0:py1 + ry0, px0 + rx0:px1 + rx0]
+            tpl = preprocess_digit_patch(sub)
+            if tpl is None:
+                continue
+            val, score = template_match_digit(tpl, templates)
+            if val is None:
+                continue
+            val, score, _ = refine_template_digit(tpl, templates, val, score)
+            if val is None:
+                continue
+            dist = abs((centroids[i][0] + rx0) - region_center[0]) + abs((centroids[i][1] + ry0) - region_center[1])
+            score_adj = float(score) - dist * 0.01
+            if score_adj > best_score:
+                best_score = score_adj
+                best = {
+                    "value": val,
+                    "score": float(score),
+                    "box": [
+                        (px0 + rx0 + x0, py0 + ry0 + y0),
+                        (px1 + rx0 + x0, py0 + ry0 + y0),
+                        (px1 + rx0 + x0, py1 + ry0 + y0),
+                        (px0 + rx0 + x0, py1 + ry0 + y0),
+                    ],
+                    "source_hint": "req_template",
+                }
+    if best and best.get("score", 0.0) >= REQ_DIGIT_TEMPLATE_MATCH_MIN_SCORE:
+        # compute center
+        xs = [p[0] for p in best["box"]]
+        ys = [p[1] for p in best["box"]]
+        best["cx"] = sum(xs) / 4.0
+        best["cy"] = sum(ys) / 4.0
+        return best
+    return None
 
 
 def get_cost_row_windows(img):
@@ -1590,27 +2317,60 @@ def apply_cost_override(card_id, cost):
     return updated, "override_update"
 
 
-def map_requirements(digits, img):
-    req = defaultdict(int)
-    for d in digits:
-        # evolution requirements appear in the upper area (excluding VP)
-        if d["cy"] >= REQ_Y_MAX:
-            continue
-        if d["cx"] < REQ_X_MIN:
-            continue
-        # skip VP region
-        if d["cx"] < VP_X_MAX and d["cy"] < VP_Y_MAX:
-            continue
-        if d["value"] == 0:
-            continue
-        cx = int(d["cx"])
-        cy = int(d["cy"])
-        hue, sat, val = sample_hsv(img, cx, cy, r=8)
-        color = classify_color(hue, sat, val, COST_COLOR_CENTERS)
+def map_requirements(digits, img, ocr=None, req_templates=None):
+    req = {}
+    meta = {}
+    roi = requirement_roi(img)
+    meta["roi"] = roi
+    digit = select_requirement_digit(digits, roi, circles=None)
+    if digit is None and ocr is not None:
+        # fallback: re-run OCR on the requirement ROI
+        x0, y0, x1, y1 = roi
+        crop = img[y0:y1, x0:x1]
+        if crop.size:
+            res, _ = ocr(crop, box_thresh=OCR_BOX_THRESH, text_score=OCR_TEXT_SCORE)
+            res = res or []
+            candidates = parse_requirement_ocr_candidates(res, offset=(x0, y0))
+            if not candidates:
+                easy_res = detect_requirement_digit_easyocr(crop)
+                candidates = parse_requirement_ocr_candidates(easy_res, offset=(x0, y0))
+            digit = select_requirement_digit_from_candidates(candidates, roi, circles=None)
+    if digit is not None and req_templates is not None:
+        if digit.get("score", 0.0) < 0.8:
+            fallback = detect_requirement_digit_template(img, roi, req_templates)
+            if fallback:
+                digit = fallback
+            else:
+                digit = None
+    if digit is None and req_templates is not None:
+        digit = detect_requirement_digit_template(img, roi, req_templates)
+    if digit is None:
+        meta["digit"] = None
+        return req, meta
+
+    meta["digit"] = {
+        "value": digit.get("value"),
+        "score": digit.get("score"),
+        "box": digit.get("box"),
+        "source": digit.get("source_hint"),
+    }
+    box = digit.get("box")
+    color = None
+    block = find_requirement_color_block(img, roi) if box else None
+    if block:
+        meta["block"] = block
+    if box:
+        if block:
+            color = classify_requirement_color_from_block(img, block, digit_box=box)
         if not color:
-            continue
-        req[color] += d["value"]
-    return dict(req)
+            color, outer_box, inner_box, samples = classify_requirement_color(img, digit_box=box)
+            meta["color_box"] = outer_box
+            meta["color_box_inner"] = inner_box
+            meta["color_samples"] = samples
+    meta["color"] = color
+    if color:
+        req[color] = int(digit.get("value", 0))
+    return req, meta
 
 
 def best_name_by_ocr(ocr_hint, zh_by_en):
@@ -1674,6 +2434,7 @@ def build():
     meta = json.loads(META_PATH.read_text())
     bonus_templates = build_bonus_templates(meta, BONUS_OVERRIDES)
     digit_templates = build_digit_templates(meta, ocr)
+    req_digit_templates = build_requirement_digit_templates(meta, ocr)
     cards = []
     debug = []
     review = []
@@ -1734,7 +2495,7 @@ def build():
         cost, override_tag = apply_cost_override(Path(d["card_image"]).stem, cost)
         if override_tag:
             cost_source = override_tag
-        evo_req = map_requirements(digits, img_cv)
+        evo_req, evo_meta = map_requirements(digits, img_cv, ocr=ocr, req_templates=req_digit_templates)
         bonuses, bonus_scores = detect_bonus_colors(
             img_cv,
             bonus_templates,
@@ -1811,6 +2572,7 @@ def build():
             "cost_source": cost_source,
             "cost_entries": cost_entries,
             "evo_req": evo_req,
+            "evo_req_meta": evo_meta,
             "bonus_scores": bonus_scores,
         })
 
@@ -2131,6 +2893,153 @@ def write_cost_debug(meta, ocr, ids=None, templates=None, output_name="index.htm
     print(f"Wrote {out_dir / output_name}")
 
 
+def write_evolution_debug(cards, debug, output_name="index.html"):
+    out_dir = ASSETS_DIR / "evolution_debug"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    debug_by_id = {d.get("id"): d for d in (debug or [])}
+
+    html_rows = []
+    for card in cards:
+        card_id = card.get("id")
+        if not card_id:
+            continue
+        source = card.get("source") or {}
+        image = source.get("image")
+        if not image:
+            continue
+        evo = card.get("evolution") or {}
+        dbg = debug_by_id.get(card_id) or {}
+        evo_req = dbg.get("evo_req", {})
+        evo_meta = dbg.get("evo_req_meta") or {}
+        img_path = CARDS_DIR / image
+        img_cv = cv2.imread(str(img_path))
+        if img_cv is not None:
+            roi = evo_meta.get("roi")
+            if roi:
+                x0, y0, x1, y1 = roi
+                cv2.rectangle(img_cv, (x0, y0), (x1, y1), (255, 0, 255), 1)
+            digit = evo_meta.get("digit") or {}
+            box = digit.get("box")
+            if box:
+                xs = [p[0] for p in box]
+                ys = [p[1] for p in box]
+                x0, y0, x1, y1 = int(min(xs)), int(min(ys)), int(max(xs)), int(max(ys))
+                cv2.rectangle(img_cv, (x0, y0), (x1, y1), (0, 200, 0), 1)
+                label = str(digit.get("value"))
+                cv2.putText(
+                    img_cv,
+                    label,
+                    (x0, max(0, y0 - 2)),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.35,
+                    (0, 200, 0),
+                    1,
+                )
+            color_box = evo_meta.get("color_box")
+            if color_box:
+                x0, y0, x1, y1 = color_box
+                cv2.rectangle(img_cv, (x0, y0), (x1, y1), (0, 200, 200), 1)
+            inner_box = evo_meta.get("color_box_inner")
+            if inner_box:
+                x0, y0, x1, y1 = inner_box
+                cv2.rectangle(img_cv, (x0, y0), (x1, y1), (0, 160, 160), 1)
+            block = evo_meta.get("block")
+            if block:
+                x0, y0, x1, y1 = block
+                cv2.rectangle(img_cv, (x0, y0), (x1, y1), (255, 128, 0), 1)
+            samples = evo_meta.get("color_samples") or []
+            if samples:
+                color_map = {
+                    "red": (0, 0, 255),
+                    "yellow": (0, 255, 255),
+                    "blue": (255, 0, 0),
+                    "pink": (255, 0, 255),
+                    "black": (0, 0, 0),
+                }
+                for sample in samples:
+                    point = sample.get("point")
+                    if not point:
+                        continue
+                    sx, sy = int(point[0]), int(point[1])
+                    color = color_map.get(sample.get("color"), (255, 255, 255))
+                    cv2.circle(img_cv, (sx, sy), 2, color, -1)
+            out_path = out_dir / image
+            cv2.imwrite(str(out_path), img_cv)
+
+        html_rows.append(f"""
+      <div class="item">
+        <img src="{image}" alt="{card_id}">
+        <div class="meta">{card_id}</div>
+        <div class="meta">{card.get("name") or ""} / {card.get("name_en") or ""}</div>
+        <div class="meta">tier: {card.get("tier")}</div>
+        <div class="meta">evo_target_zh: {evo.get("target_zh")}</div>
+        <div class="meta">evo_target_en: {evo.get("target_en")}</div>
+        <div class="meta">requirements: {json.dumps(evo.get("requirements", {}), ensure_ascii=False)}</div>
+        <div class="meta">evo_req_raw: {json.dumps(evo_req or {}, ensure_ascii=False)}</div>
+        <div class="meta">evo_req_color: {evo_meta.get("color")}</div>
+      </div>
+""")
+
+    (out_dir / output_name).write_text(f"""<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Evolution Debug</title>
+  <style>
+    body {{
+      margin: 0;
+      font-family: "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background: #f6f4ef;
+      color: #1f2937;
+    }}
+    header {{
+      padding: 12px 16px;
+      border-bottom: 1px solid #e5e7eb;
+      background: #fff;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }}
+    .grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+      padding: 12px;
+    }}
+    .item {{
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      padding: 8px;
+    }}
+    img {{
+      width: 100%;
+      height: auto;
+      border: 1px solid #e5e7eb;
+      background: #fff;
+      display: block;
+    }}
+    .meta {{
+      font-size: 11px;
+      color: #6b7280;
+      margin-top: 4px;
+      word-break: break-all;
+    }}
+  </style>
+</head>
+<body>
+  <header>
+    <strong>Evolution Debug</strong>
+  </header>
+  <div class="grid">
+    {''.join(html_rows)}
+  </div>
+</body>
+</html>
+""", encoding="utf-8")
+    print(f"Wrote {out_dir / output_name}")
+
+
 def load_correct_cards(path):
     if not path.exists():
         raise FileNotFoundError(f"missing correct list: {path}")
@@ -2223,6 +3132,84 @@ def run_self_assessment(cards, correct_path=CORRECT_PATH):
     return True
 
 
+def normalize_evolution_target(value):
+    if value is None:
+        return None
+    if isinstance(value, list):
+        return sorted(value)
+    return value
+
+
+def normalize_requirements(req):
+    if req is None:
+        return {}
+    out = {}
+    for key, value in req.items():
+        try:
+            value_int = int(value)
+        except (TypeError, ValueError):
+            continue
+        if value_int:
+            out[str(key)] = value_int
+    return out
+
+
+def json_safe(value):
+    if isinstance(value, dict):
+        return {k: json_safe(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [json_safe(v) for v in value]
+    if isinstance(value, tuple):
+        return [json_safe(v) for v in value]
+    if isinstance(value, np.generic):
+        return value.item()
+    return value
+
+
+def run_upgrade_assessment(cards, gold=UPGRADE_GOLD):
+    if not gold:
+        print("Upgrade assessment failed: no gold labels defined")
+        return False
+    cards_by_id = {c.get("id"): c for c in cards}
+    missing = []
+    mismatches = []
+    for card_id, expected in gold.items():
+        actual_card = cards_by_id.get(card_id)
+        if actual_card is None:
+            missing.append(card_id)
+            continue
+        actual_evo = actual_card.get("evolution") or {}
+        for key, exp_val in expected.items():
+            if key == "requirements":
+                exp_norm = normalize_requirements(exp_val)
+                act_norm = normalize_requirements(actual_evo.get("requirements"))
+                if exp_norm != act_norm:
+                    mismatches.append((card_id, key, exp_norm, act_norm))
+                continue
+            if key in {"target_en", "target_zh"}:
+                exp_norm = normalize_evolution_target(exp_val)
+                act_norm = normalize_evolution_target(actual_evo.get(key))
+                if exp_norm != act_norm:
+                    mismatches.append((card_id, key, exp_norm, act_norm))
+                continue
+            act_val = actual_evo.get(key)
+            if exp_val != act_val:
+                mismatches.append((card_id, key, exp_val, act_val))
+
+    if missing:
+        print(f"Upgrade assessment missing {len(missing)} cards:")
+        for card_id in missing:
+            print(f"  - {card_id}")
+    if mismatches:
+        print(f"Upgrade assessment mismatches: {len(mismatches)}")
+        for card_id, key, exp_val, act_val in mismatches:
+            print(f"  - {card_id} {key}: expected={exp_val} actual={act_val}")
+    if missing or mismatches:
+        return False
+    print(f"Upgrade assessment OK: {len(gold)} cards matched.")
+    return True
+
+
 def update_costs_only():
     ocr = RapidOCR()
     meta = json.loads(META_PATH.read_text())
@@ -2278,6 +3265,51 @@ def update_costs_only():
     print(f"Wrote {DEBUG_PATH}")
 
 
+def update_requirements_only():
+    ocr = RapidOCR()
+    meta = json.loads(META_PATH.read_text())
+    req_digit_templates = build_requirement_digit_templates(meta, ocr)
+    cards = json.loads(OUTPUT_PATH.read_text()) if OUTPUT_PATH.exists() else []
+    debug = json.loads(DEBUG_PATH.read_text()) if DEBUG_PATH.exists() else []
+
+    cards_by_id = {c.get("id"): c for c in cards}
+    debug_by_id = {d.get("id"): d for d in debug}
+
+    cards_out = []
+    debug_out = []
+
+    for d in meta:
+        card_id = Path(d["card_image"]).stem
+        img_path = CARDS_DIR / d["card_image"]
+        img_cv = cv2.imread(str(img_path))
+        if img_cv is None:
+            continue
+        res, _ = ocr(str(img_path), box_thresh=OCR_BOX_THRESH, text_score=OCR_TEXT_SCORE)
+        res = res or []
+        digits = extract_digits(res)
+        evo_req, evo_meta = map_requirements(digits, img_cv, ocr=ocr, req_templates=req_digit_templates)
+
+        card = cards_by_id.get(card_id)
+        if card is None:
+            continue
+        evo = card.get("evolution") or {}
+        evo["requirements"] = evo_req
+        card["evolution"] = evo
+        cards_out.append(card)
+
+        dbg = debug_by_id.get(card_id)
+        if dbg is None:
+            dbg = {"id": card_id}
+        dbg["evo_req"] = evo_req
+        dbg["evo_req_meta"] = json_safe(evo_meta)
+        debug_out.append(dbg)
+
+    OUTPUT_PATH.write_text(json.dumps(cards_out, ensure_ascii=False, indent=2))
+    DEBUG_PATH.write_text(json.dumps(debug_out, ensure_ascii=False, indent=2))
+    print(f"Wrote {OUTPUT_PATH} ({len(cards_out)} cards)")
+    print(f"Wrote {DEBUG_PATH}")
+
+
 if __name__ == "__main__":
     import argparse
 
@@ -2286,7 +3318,10 @@ if __name__ == "__main__":
     parser.add_argument("--compare", action="store_true", help="write cards_compare.html/csv")
     parser.add_argument("--no-build", action="store_true", help="skip full build (use existing JSON outputs)")
     parser.add_argument("--cost-only", action="store_true", help="recompute costs only (no CLIP)")
+    parser.add_argument("--requirements-only", action="store_true", help="recompute evolution requirements only (no CLIP)")
     parser.add_argument("--self-assessment", action="store_true", help="validate outputs against correct list")
+    parser.add_argument("--assess-upgrade", action="store_true", help="validate evolution outputs against gold labels")
+    parser.add_argument("--evolution-debug", action="store_true", help="write evolution debug page")
     args = parser.parse_args()
 
     cards = None
@@ -2294,6 +3329,12 @@ if __name__ == "__main__":
 
     if args.cost_only:
         update_costs_only()
+        if OUTPUT_PATH.exists():
+            cards = json.loads(OUTPUT_PATH.read_text())
+        if DEBUG_PATH.exists():
+            debug = json.loads(DEBUG_PATH.read_text())
+    elif args.requirements_only:
+        update_requirements_only()
         if OUTPUT_PATH.exists():
             cards = json.loads(OUTPUT_PATH.read_text())
         if DEBUG_PATH.exists():
@@ -2324,3 +3365,23 @@ if __name__ == "__main__":
         meta = json.loads(META_PATH.read_text())
         templates = build_digit_templates(meta, ocr)
         write_cost_debug(meta, ocr, templates=templates)
+
+    if args.evolution_debug:
+        if cards is None and OUTPUT_PATH.exists():
+            cards = json.loads(OUTPUT_PATH.read_text())
+        if debug is None and DEBUG_PATH.exists():
+            debug = json.loads(DEBUG_PATH.read_text())
+        if cards is None:
+            print("Evolution debug failed: missing cards data")
+        else:
+            write_evolution_debug(cards, debug)
+
+    if args.assess_upgrade:
+        if cards is None and OUTPUT_PATH.exists():
+            cards = json.loads(OUTPUT_PATH.read_text())
+        if cards is None:
+            print("Upgrade assessment failed: missing cards data")
+        else:
+            ok = run_upgrade_assessment(cards)
+            if not ok:
+                raise SystemExit(1)

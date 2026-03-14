@@ -141,6 +141,7 @@ function renderRoomState(state) {
     clearAidixitState();
     clearImpressionFlowerState();
     clearSplendorState();
+    clearPokemonSplendorState();
     clearAbracaState();
     clearBlokusState();
     clearCarcassonneState();

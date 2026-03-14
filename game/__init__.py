@@ -23,6 +23,7 @@ from game.project_l import ProjectLGame
 from game.registry import GameDefinition, get_game, list_games
 from game.six_nimmt import SixNimmtGame
 from game.splendor import SplendorGame
+from game.splendor_pokemon import PokemonSplendorGame
 from game.skull import SkullGame
 from game.the_gang import TheGangGame
 from game.texas_holdem import TexasHoldemGame
@@ -55,6 +56,7 @@ __all__ = [
     "ProjectLGame",
     "SixNimmtGame",
     "SplendorGame",
+    "PokemonSplendorGame",
     "SkullGame",
     "TheGangGame",
     "TexasHoldemGame",
