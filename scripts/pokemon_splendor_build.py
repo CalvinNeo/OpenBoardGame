@@ -247,6 +247,7 @@ REQ_DIGIT_ALLOWED_VALUES = {1, 2, 3, 4, 5}
 REQ_DIGIT_TEMPLATE_MIN_SCORE = 0.85
 REQ_DIGIT_TEMPLATE_TOPK = 6
 REQ_DIGIT_TEMPLATE_MATCH_MIN_SCORE = 0.78
+REQ_DIGIT_TEMPLATE_MATCH_MIN_SCORE_BLOCK = 0.6
 REQ_BLOCK_MIN_AREA = 150
 REQ_BLOCK_MAX_AREA = 1400
 
@@ -1499,13 +1500,17 @@ def build_requirement_digit_templates(meta, ocr):
         block = find_requirement_color_block(img, roi)
         if block is None:
             continue
-        digit = detect_requirement_digit_from_block(img, block, templates=None)
-        if digit is None or not digit.get("box"):
+        bx0, by0, bx1, by1 = block
+        block_patch = img[by0:by1, bx0:bx1]
+        if block_patch.size == 0:
             continue
-        xs = [p[0] for p in digit["box"]]
-        ys = [p[1] for p in digit["box"]]
-        x0, x1 = int(min(xs)) - 2, int(max(xs)) + 2
-        y0, y1 = int(min(ys)) - 2, int(max(ys)) + 2
+        block_mask = (cv2.cvtColor(block_patch, cv2.COLOR_BGR2GRAY) >= 0).astype(np.uint8)
+        box = detect_digit_box_from_mask(block_patch, block_mask)
+        if not box:
+            continue
+        bdx, bdy, bw, bh = box
+        x0, x1 = bx0 + bdx - 2, bx0 + bdx + bw + 2
+        y0, y1 = by0 + bdy - 2, by0 + bdy + bh + 2
         x0 = max(0, x0)
         y0 = max(0, y0)
         x1 = min(img.shape[1], x1)
@@ -1566,43 +1571,44 @@ def find_requirement_color_block(img, roi):
         return None
     lab = cv2.cvtColor(patch, cv2.COLOR_BGR2LAB)
     Zab = lab.reshape((-1, 3)).astype(np.float32)[:, 1:3]
-    K = 3
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 1.0)
-    try:
-        _, labels, _ = cv2.kmeans(Zab, K, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
-    except Exception:
-        return None
-    labels = labels.reshape(patch.shape[:2])
     h, w = patch.shape[:2]
     center = (w / 2.0, h / 2.0)
     best = None
     best_score = 1e9
-    for k in range(K):
-        mask = (labels == k).astype(np.uint8)
-        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8), iterations=1)
-        num, _, stats, centroids = cv2.connectedComponentsWithStats(mask, connectivity=8)
-        for i in range(1, num):
-            bx, by, bw, bh, area = stats[i]
-            if area < REQ_BLOCK_MIN_AREA or area > REQ_BLOCK_MAX_AREA:
-                continue
-            ratio = bw / bh if bh else 0
-            if ratio < 0.5 or ratio > 2.0:
-                continue
-            block_patch = patch[by:by + bh, bx:bx + bw]
-            if block_patch.size == 0:
-                continue
-            hsv_block = cv2.cvtColor(block_patch, cv2.COLOR_BGR2HSV)
-            mean_s = float(np.mean(hsv_block[:, :, 1]))
-            mean_v = float(np.mean(hsv_block[:, :, 2]))
-            if mean_s < 45 or mean_v < 60:
-                continue
-            if float(np.std(hsv_block[:, :, 0])) > 35 and float(np.std(hsv_block[:, :, 1])) > 55:
-                continue
-            dist = abs(centroids[i][0] - center[0]) + abs(centroids[i][1] - center[1])
-            score = dist - area * 0.002
-            if score < best_score:
-                best_score = score
-                best = (bx, by, bw, bh)
+    cv2.setRNGSeed(0)
+    for K in (3, 4):
+        try:
+            _, labels, _ = cv2.kmeans(Zab, K, None, criteria, 10, cv2.KMEANS_PP_CENTERS)
+        except Exception:
+            continue
+        labels = labels.reshape(patch.shape[:2])
+        for k in range(K):
+            mask = (labels == k).astype(np.uint8)
+            mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8), iterations=1)
+            num, _, stats, centroids = cv2.connectedComponentsWithStats(mask, connectivity=8)
+            for i in range(1, num):
+                bx, by, bw, bh, area = stats[i]
+                if area < REQ_BLOCK_MIN_AREA or area > REQ_BLOCK_MAX_AREA:
+                    continue
+                ratio = bw / bh if bh else 0
+                if ratio < 0.5 or ratio > 2.0:
+                    continue
+                block_patch = patch[by:by + bh, bx:bx + bw]
+                if block_patch.size == 0:
+                    continue
+                hsv_block = cv2.cvtColor(block_patch, cv2.COLOR_BGR2HSV)
+                mean_s = float(np.mean(hsv_block[:, :, 1]))
+                mean_v = float(np.mean(hsv_block[:, :, 2]))
+                if mean_s < 45 or mean_v < 60:
+                    continue
+                if float(np.std(hsv_block[:, :, 0])) > 35 and float(np.std(hsv_block[:, :, 1])) > 55:
+                    continue
+                dist = abs(centroids[i][0] - center[0]) + abs(centroids[i][1] - center[1])
+                score = dist - area * 0.002
+                if score < best_score:
+                    best_score = score
+                    best = (bx, by, bw, bh)
     if best is None:
         return None
     bx, by, bw, bh = best
@@ -1629,6 +1635,34 @@ def detect_requirement_digit_from_block(img, block, templates=None):
     center = ((x1 - x0) / 2.0, (y1 - y0) / 2.0)
     best = None
     best_score = -1e9
+    # candidate from edge-based digit box
+    block_mask = (cv2.cvtColor(patch, cv2.COLOR_BGR2GRAY) >= 0).astype(np.uint8)
+    edge_box = detect_digit_box_from_mask(patch, block_mask)
+    if edge_box:
+        bx, by, bw, bh = edge_box
+        sub = patch[by:by + bh, bx:bx + bw]
+        tpl = preprocess_digit_patch(sub)
+        if tpl is not None:
+            val = None
+            score = 0.0
+            if templates:
+                val, score = template_match_digit(tpl, templates)
+                if val is not None:
+                    val, score, _ = refine_template_digit(tpl, templates, val, score)
+            dist = abs((bx + bw / 2.0) - center[0]) + abs((by + bh / 2.0) - center[1])
+            score_adj = float(score) - dist * 0.01
+            best_score = score_adj
+            best = {
+                "value": val,
+                "score": float(score),
+                "box": [
+                    (bx + x0, by + y0),
+                    (bx + x0 + bw, by + y0),
+                    (bx + x0 + bw, by + y0 + bh),
+                    (bx + x0, by + y0 + bh),
+                ],
+                "source_hint": "req_block",
+            }
     for thr in thresholds:
         mask = (s < thr) & (v > 30)
         mask = mask.astype(np.uint8)
@@ -1715,7 +1749,7 @@ def detect_requirement_digit_template(img, roi, templates):
     block = find_requirement_color_block(img, roi)
     if block is not None:
         digit = detect_requirement_digit_from_block(img, block, templates=templates)
-        if digit and digit.get("value") is not None and digit.get("score", 0.0) >= REQ_DIGIT_TEMPLATE_MATCH_MIN_SCORE:
+        if digit and digit.get("value") is not None and digit.get("score", 0.0) >= REQ_DIGIT_TEMPLATE_MATCH_MIN_SCORE_BLOCK:
             return digit
         return None
     gray_region = gray
