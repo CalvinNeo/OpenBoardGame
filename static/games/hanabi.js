@@ -41,8 +41,8 @@ const hanabiClearSelectionBtn = document.getElementById("hanabiClearSelection");
 const hanabiPlayBtn = document.getElementById("hanabiPlayBtn");
 const hanabiDiscardBtn = document.getElementById("hanabiDiscardBtn");
 const hanabiTargetSelect = document.getElementById("hanabiTargetSelect");
-const hanabiClueTypeSelect = document.getElementById("hanabiClueTypeSelect");
-const hanabiClueValueSelect = document.getElementById("hanabiClueValueSelect");
+const hanabiClueTypeGroup = document.getElementById("hanabiClueTypeGroup");
+const hanabiClueValueGroup = document.getElementById("hanabiClueValueGroup");
 const hanabiClueBtn = document.getElementById("hanabiClueBtn");
 const hanabiPlayers = document.getElementById("hanabiPlayers");
 const hanabiLog = document.getElementById("hanabiLog");
@@ -101,11 +101,11 @@ function clearHanabiState() {
   if (hanabiTargetSelect) {
     hanabiTargetSelect.innerHTML = "";
   }
-  if (hanabiClueTypeSelect) {
-    hanabiClueTypeSelect.value = "color";
+  if (hanabiClueTypeGroup) {
+    setHanabiSelectedClueType("color");
   }
-  if (hanabiClueValueSelect) {
-    hanabiClueValueSelect.innerHTML = "";
+  if (hanabiClueValueGroup) {
+    hanabiClueValueGroup.innerHTML = "";
   }
   if (hanabiPlayers) {
     hanabiPlayers.innerHTML = "";
@@ -122,6 +122,33 @@ function formatHanabiColor(color) {
 
 function formatHanabiColorShort(color) {
   return HANABI_COLOR_SHORT[color] || (color ? color[0].toUpperCase() : "?");
+}
+
+function getHanabiSelectedClueType() {
+  if (!hanabiClueTypeGroup) {
+    return hanabiSelectedClueType || "color";
+  }
+  const input = hanabiClueTypeGroup.querySelector('input[name="hanabiClueType"]:checked');
+  return input ? input.value : "color";
+}
+
+function setHanabiSelectedClueType(value) {
+  hanabiSelectedClueType = value || "color";
+  if (!hanabiClueTypeGroup) {
+    return;
+  }
+  const inputs = hanabiClueTypeGroup.querySelectorAll('input[name="hanabiClueType"]');
+  inputs.forEach((input) => {
+    input.checked = input.value === hanabiSelectedClueType;
+  });
+}
+
+function getHanabiSelectedClueValue() {
+  if (!hanabiClueValueGroup) {
+    return hanabiSelectedClueValue;
+  }
+  const input = hanabiClueValueGroup.querySelector('input[name="hanabiClueValue"]:checked');
+  return input ? input.value : null;
 }
 
 function getHanabiYou(view) {
@@ -406,14 +433,14 @@ function updateHanabiSelectedCardLabel(view) {
 }
 
 function updateHanabiClueOptions(view) {
-  if (!hanabiClueTypeSelect || !hanabiClueValueSelect) {
+  if (!hanabiClueValueGroup) {
     return;
   }
   if (!view) {
-    hanabiClueValueSelect.innerHTML = "";
+    hanabiClueValueGroup.innerHTML = "";
     return;
   }
-  const clueType = hanabiClueTypeSelect.value || "color";
+  const clueType = getHanabiSelectedClueType();
   const targetId = hanabiTargetSelect ? hanabiTargetSelect.value : null;
   const target = view.players.find((p) => p.player_id === targetId);
   const available = new Set();
@@ -431,23 +458,36 @@ function updateHanabiClueOptions(view) {
     clueType === "color"
       ? HANABI_COLORS.filter((color) => available.has(color))
       : HANABI_RANKS.filter((rank) => available.has(rank));
-  const previousValue = hanabiClueValueSelect.value;
-  hanabiClueValueSelect.innerHTML = "";
-  sortedValues.forEach((value) => {
-    const option = document.createElement("option");
-    option.value = String(value);
-    option.textContent = clueType === "color" ? formatHanabiColor(value) : String(value);
-    hanabiClueValueSelect.appendChild(option);
-  });
-  if (sortedValues.length) {
-    const targetValue = sortedValues.some((value) => String(value) === previousValue) ? previousValue : String(sortedValues[0]);
-    hanabiClueValueSelect.value = targetValue;
-    hanabiClueValueSelect.disabled = false;
-    hanabiSelectedClueValue = hanabiClueValueSelect.value;
-  } else {
-    hanabiClueValueSelect.disabled = true;
+  const previousValue = getHanabiSelectedClueValue();
+  hanabiClueValueGroup.innerHTML = "";
+  if (!sortedValues.length) {
+    const hint = document.createElement("div");
+    hint.className = "hint";
+    hint.textContent = "No valid clue values";
+    hanabiClueValueGroup.appendChild(hint);
     hanabiSelectedClueValue = null;
+    return;
   }
+  sortedValues.forEach((value, idx) => {
+    const label = document.createElement("label");
+    label.className = "hanabi-radio";
+    const input = document.createElement("input");
+    input.type = "radio";
+    input.name = "hanabiClueValue";
+    input.value = String(value);
+    const shouldCheck =
+      String(value) === String(previousValue) || (!previousValue && idx === 0);
+    input.checked = shouldCheck;
+    const span = document.createElement("span");
+    span.textContent = clueType === "color" ? formatHanabiColor(value) : String(value);
+    if (clueType === "color") {
+      label.classList.add(`hanabi-radio-${value}`);
+    }
+    label.appendChild(input);
+    label.appendChild(span);
+    hanabiClueValueGroup.appendChild(label);
+  });
+  hanabiSelectedClueValue = getHanabiSelectedClueValue();
 }
 
 function renderHanabiClueTargets(view) {
@@ -506,7 +546,7 @@ function updateHanabiActionButtons() {
     hanabiSelectedCardIndex >= 0 &&
     hanabiSelectedCardIndex < you.hand.length;
   const clueTarget = hanabiTargetSelect ? hanabiTargetSelect.value : "";
-  const clueValue = hanabiClueValueSelect ? hanabiClueValueSelect.value : "";
+  const clueValue = getHanabiSelectedClueValue() || "";
   const clueTargetValid = !!clueTarget && clueTarget !== currentHanabiView.you;
   const clueValueValid = !!clueValue;
   buttons.forEach(({ type, el }) => {
@@ -606,9 +646,13 @@ if (hanabiTargetSelect) {
   });
 }
 
-if (hanabiClueTypeSelect) {
-  hanabiClueTypeSelect.addEventListener("change", () => {
-    hanabiSelectedClueType = hanabiClueTypeSelect.value || "color";
+if (hanabiClueTypeGroup) {
+  hanabiClueTypeGroup.addEventListener("change", (event) => {
+    const input = event.target.closest('input[name="hanabiClueType"]');
+    if (!input) {
+      return;
+    }
+    setHanabiSelectedClueType(input.value || "color");
     if (currentHanabiView) {
       updateHanabiClueOptions(currentHanabiView);
     }
@@ -616,9 +660,13 @@ if (hanabiClueTypeSelect) {
   });
 }
 
-if (hanabiClueValueSelect) {
-  hanabiClueValueSelect.addEventListener("change", () => {
-    hanabiSelectedClueValue = hanabiClueValueSelect.value || null;
+if (hanabiClueValueGroup) {
+  hanabiClueValueGroup.addEventListener("change", (event) => {
+    const input = event.target.closest('input[name="hanabiClueValue"]');
+    if (!input) {
+      return;
+    }
+    hanabiSelectedClueValue = input.value || null;
     updateHanabiActionButtons();
   });
 }
@@ -684,8 +732,8 @@ if (hanabiClueBtn) {
       return;
     }
     const targetId = hanabiTargetSelect ? hanabiTargetSelect.value : null;
-    const clueType = hanabiClueTypeSelect ? hanabiClueTypeSelect.value || "color" : "color";
-    const clueValueRaw = hanabiClueValueSelect ? hanabiClueValueSelect.value : null;
+    const clueType = getHanabiSelectedClueType();
+    const clueValueRaw = getHanabiSelectedClueValue();
     if (!targetId || !clueValueRaw) {
       log("Select a target and clue value");
       return;

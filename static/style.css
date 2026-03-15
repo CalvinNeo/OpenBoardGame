@@ -2032,6 +2032,54 @@ body.log-open {
   color: #666;
 }
 
+.hanabi-radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.hanabi-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.hanabi-radio input {
+  margin: 0;
+}
+
+.hanabi-radio-red {
+  background: #ffe1e1;
+  border-color: #e17070;
+}
+
+.hanabi-radio-yellow {
+  background: #fff2b3;
+  border-color: #d6b94f;
+}
+
+.hanabi-radio-green {
+  background: #d8f2d8;
+  border-color: #6aaa64;
+}
+
+.hanabi-radio-blue {
+  background: #d7e9ff;
+  border-color: #5b8ad0;
+}
+
+.hanabi-radio-white {
+  background: #f2f2f2;
+  border-color: #b6b6b6;
+}
+
 .hanabi-discard-table {
   width: 100%;
   border-collapse: collapse;

@@ -1033,13 +1033,19 @@
               <div class="row actions">
                 <label for="hanabiTargetSelect">Clue Target</label>
                 <select id="hanabiTargetSelect"></select>
-                <label for="hanabiClueTypeSelect">Clue Type</label>
-                <select id="hanabiClueTypeSelect">
-                  <option value="color" selected>Color</option>
-                  <option value="rank">Number</option>
-                </select>
-                <label for="hanabiClueValueSelect">Value</label>
-                <select id="hanabiClueValueSelect"></select>
+                <label>Clue Type</label>
+                <div id="hanabiClueTypeGroup" class="hanabi-radio-group">
+                  <label class="hanabi-radio">
+                    <input type="radio" name="hanabiClueType" value="color" checked />
+                    <span>Color</span>
+                  </label>
+                  <label class="hanabi-radio">
+                    <input type="radio" name="hanabiClueType" value="rank" />
+                    <span>Number</span>
+                  </label>
+                </div>
+                <label>Value</label>
+                <div id="hanabiClueValueGroup" class="hanabi-radio-group"></div>
                 <button id="hanabiClueBtn">Give Clue</button>
               </div>
 
