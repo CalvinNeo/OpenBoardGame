@@ -79,8 +79,10 @@ UPGRADE_GOLD = {
     "scene_002_03": {"requirements": {"blue": 2}, "target_en": "Nidorina", "target_zh": "尼多娜"},
     "scene_002_04": {"requirements": {"blue": 4}, "target_en": "Nidorina", "target_zh": "尼多娜"},
     "scene_002_08": {"requirements": {"blue": 4}, "target_en": "Nidorina", "target_zh": "尼多娜"},
+    "scene_002_09": {"requirements": {"pink": 3}, "target_en": "Ivysaur", "target_zh": "妙蛙草"},
     "scene_002_10": {"requirements": {"blue": 2}, "target_en": "Nidorina", "target_zh": "尼多娜"},
     "scene_002_11": {"requirements": {"blue": 2}, "target_en": "Nidorina", "target_zh": "尼多娜"},
+    "scene_002_15": {"requirements": {"red": 3}, "target_en": "Gengar", "target_zh": "耿鬼"},
     "scene_002_01": {"requirements": {"pink": 3}, "target_en": "Ivysaur", "target_zh": "妙蛙草"},
     "scene_002_07": {"requirements": {"blue": 4}, "target_en": "Venusaur", "target_zh": "妙蛙花"},
     "scene_002_13": {"requirements": {"black": 3}, "target_en": "Haunter", "target_zh": "鬼斯通"},
@@ -92,15 +94,22 @@ UPGRADE_GOLD = {
     "scene_003_10": {"requirements": {"pink": 2}, "target_en": "Weepinbell", "target_zh": "口呆花"},
     "scene_003_11": {"requirements": {"pink": 2}, "target_en": "Weepinbell", "target_zh": "口呆花"},
     "scene_004_12": {"requirements": {"blue": 3}, "target_en": "Butterfree", "target_zh": "巴大蝶"},
+    "scene_004_01": {"requirements": {"red": 3}, "target_en": "Kadabra", "target_zh": "勇基拉"},
     "scene_004_06": {"requirements": {"red": 3}, "target_en": "Alakazam", "target_zh": "胡地"},
     "scene_004_08": {"requirements": {"black": 4}, "target_en": "Poliwrath", "target_zh": "蚊香泳士"},
+    "scene_004_11": {"requirements": {"yellow": 3}, "target_en": "Butterfree", "target_zh": "巴大蝶"},
     "scene_004_15": {"requirements": {"yellow": 3}, "target_en": "Butterfree", "target_zh": "巴大蝶"},
     "scene_005_02": {"requirements": {"red": 4}, "target_en": "Charizard", "target_zh": "喷火龙"},
     "scene_005_03": {"requirements": {"pink": 2}, "target_en": "Pidgeotto", "target_zh": "比比鸟"},
     "scene_005_04": {"requirements": {"red": 4}, "target_en": "Pidgeot", "target_zh": "大比鸟"},
+    "scene_005_07": {"requirements": {"red": 4}, "target_en": "Charizard", "target_zh": "喷火龙"},
+    "scene_005_10": {"requirements": {"red": 2}, "target_en": None, "target_zh": None},
+    "scene_005_11": {"requirements": {"red": 2}, "target_en": "Pidgeot", "target_zh": "大比鸟"},
     "scene_005_16": {"requirements": {"pink": 3}, "target_en": "Graveler", "target_zh": "隆隆石"},
     "scene_006_10": {"requirements": {"blue": 3}, "target_en": "Dragonair", "target_zh": "哈克龙"},
+    "scene_006_12": {"requirements": {"red": 3}, "target_en": "Kakuna", "target_zh": "铁壳蛹"},
     "scene_006_15": {"requirements": {"pink": 3}, "target_en": "Exeggutor", "target_zh": "椰蛋树"},
+    "scene_006_16": {"requirements": {"red": 3}, "target_en": "Kakuna", "target_zh": "铁壳蛹"},
     "scene_005_01": {"requirements": {"yellow": 3}, "target_en": "Charmeleon", "target_zh": "火恐龙"},
     "scene_005_09": {"requirements": {"yellow": 3}, "target_en": "Charmeleon", "target_zh": "火恐龙"},
     "scene_005_13": {"requirements": {"pink": 3}, "target_en": "Graveler", "target_zh": "隆隆石"},
@@ -2374,8 +2383,6 @@ def map_requirements(digits, img, ocr=None, req_templates=None):
             fallback = detect_requirement_digit_template(img, roi, req_templates)
             if fallback:
                 digit = fallback
-            else:
-                digit = None
     if digit is None and req_templates is not None:
         digit = detect_requirement_digit_template(img, roi, req_templates)
     if digit is None:

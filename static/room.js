@@ -62,6 +62,7 @@ const createRoomModal = document.getElementById("createRoomModal");
 const createRoomModalCloseBtn = document.getElementById("createRoomModalCloseBtn");
 const gameSearchInput = document.getElementById("gameSearchInput");
 const playerCountFilter = document.getElementById("playerCountFilter");
+const gameListCount = document.getElementById("gameListCount");
 const gameListEl = document.getElementById("gameList");
 const gameListEmpty = document.getElementById("gameListEmpty");
 const seatClaimModal = document.getElementById("seatClaimModal");
@@ -513,6 +514,15 @@ function renderGameList(games) {
   });
 }
 
+function updateGameListCount(count) {
+  if (!gameListCount) {
+    return;
+  }
+  const safeCount = Number.isFinite(count) && count >= 0 ? count : 0;
+  const label = safeCount === 1 ? "game" : "games";
+  gameListCount.textContent = `Showing ${safeCount} ${label}`;
+}
+
 function selectGameFromModal(gameId) {
   const name = getPlayerName();
   if (!name) {
@@ -532,6 +542,7 @@ async function applyGameFilters() {
   const searchText = gameSearchInput ? gameSearchInput.value.trim() : "";
   const playerCount = playerCountFilter ? parseInt(playerCountFilter.value, 10) || 0 : 0;
   const filtered = filterGames(games, searchText, playerCount);
+  updateGameListCount(filtered.length);
   renderGameList(filtered);
 }
 

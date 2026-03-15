@@ -2212,6 +2212,10 @@ body.log-open {
   margin-bottom: 12px;
 }
 
+.game-list-count {
+  margin: -4px 0 8px;
+}
+
 .create-room-filters input {
   flex: 1;
   padding: 8px 10px;
