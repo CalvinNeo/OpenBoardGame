@@ -1,0 +1,2350 @@
+[
+  {
+    "id": "scene_001_01",
+    "name": "急冻鸟",
+    "name_en": "Articuno",
+    "tier": "Legendary",
+    "vp": 2,
+    "bonus": "yellow",
+    "bonuses": [
+      "yellow",
+      "yellow"
+    ],
+    "cost": {
+      "purple": 1,
+      "red": 3,
+      "pink": 3,
+      "black": 3
+    },
+    "evolution": {
+      "target_en": null,
+      "target_zh": null,
+      "requirements": {
+        "yellow": 3
+      }
+    },
+    "source": {
+      "scene": "scene_001.png",
+      "image": "scene_001_01.png"
+    }
+  },
+  {
+    "id": "scene_001_02",
+    "name": "闪电鸟",
+    "name_en": "Zapdos",
+    "tier": "Legendary",
+    "vp": 2,
+    "bonus": "red",
+    "bonuses": [
+      "red",
+      "red"
+    ],
+    "cost": {
+      "purple": 1,
+      "pink": 3,
+      "blue": 3,
+      "yellow": 3
+    },
+    "evolution": {
+      "target_en": null,
+      "target_zh": null,
+      "requirements": {
+        "red": 2
+      }
+    },
+    "source": {
+      "scene": "scene_001.png",
+      "image": "scene_001_02.png"
+    }
+  },
+  {
+    "id": "scene_001_03",
+    "name": "火焰鸟",
+    "name_en": "Moltres",
+    "tier": "Legendary",
+    "vp": 2,
+    "bonus": "pink",
+    "bonuses": [
+      "pink",
+      "pink"
+    ],
+    "cost": {
+      "purple": 1,
+      "blue": 3,
+      "yellow": 3,
+      "black": 3
+    },
+    "evolution": {
+      "target_en": null,
+      "target_zh": null,
+      "requirements": {
+        "pink": 4
+      }
+    },
+    "source": {
+      "scene": "scene_001.png",
+      "image": "scene_001_03.png"
+    }
+  },
+  {
+    "id": "scene_001_04",
+    "name": "梦幻",
+    "name_en": "Mew",
+    "tier": "Legendary",
+    "vp": 2,
+    "bonus": "blue",
+    "bonuses": [
+      "blue",
+      "blue"
+    ],
+    "cost": {
+      "purple": 1,
+      "black": 3,
+      "yellow": 3,
+      "red": 3
+    },
+    "evolution": {
+      "target_en": null,
+      "target_zh": null,
+      "requirements": {
+        "blue": 2
+      }
+    },
+    "source": {
+      "scene": "scene_001.png",
+      "image": "scene_001_04.png"
+    }
+  },
+  {
+    "id": "scene_001_05",
+    "name": "超梦",
+    "name_en": "Mewtwo",
+    "tier": "Legendary",
+    "vp": 2,
+    "bonus": "black",
+    "bonuses": [
+      "black",
+      "black"
+    ],
+    "cost": {
+      "purple": 1,
+      "pink": 3,
+      "red": 3,
+      "blue": 3
+    },
+    "evolution": {
+      "target_en": null,
+      "target_zh": null,
+      "requirements": {
+        "yellow": 3
+      }
+    },
+    "source": {
+      "scene": "scene_001.png",
+      "image": "scene_001_05.png"
+    }
+  },
+  {
+    "id": "scene_001_06",
+    "name": "化石翼龙",
+    "name_en": "Aerodactyl",
+    "tier": "Rare",
+    "vp": 0,
+    "bonus": "yellow",
+    "bonuses": [
+      "yellow",
+      "yellow"
+    ],
+    "cost": {
+      "purple": 1,
+      "blue": 3,
+      "pink": 2
+    },
+    "evolution": {
+      "target_en": null,
+      "target_zh": null,
+      "requirements": {
+        "yellow": 2
+      }
+    },
+    "source": {
+      "scene": "scene_001.png",
+      "image": "scene_001_06.png"
+    }
+  },
+  {
+    "id": "scene_001_07",
+    "name": "拉普拉斯",
+    "name_en": "Lapras",
+    "tier": "Rare",
+    "vp": 0,
+    "bonus": "red",
+    "bonuses": [
+      "red"
+    ],
+    "cost": {
+      "purple": 1,
+      "black": 3,
+      "blue": 2
+    },
+    "evolution": {
+      "target_en": null,
+      "target_zh": null,
+      "requirements": {
+        "red": 3
+      }
+    },
+    "source": {
+      "scene": "scene_001.png",
+      "image": "scene_001_07.png"
+    }
+  },
+  {
+    "id": "scene_001_08",
+    "name": "卡比兽",
+    "name_en": "Snorlax",
+    "tier": "Rare",
+    "vp": 0,
+    "bonus": "pink",
+    "bonuses": [
+      "pink",
+      "pink"
+    ],
+    "cost": {
+      "purple": 1,
+      "red": 3,
+      "black": 2
+    },
+    "evolution": {
+      "target_en": null,
+      "target_zh": null,
+      "requirements": {
+        "pink": 3
+      }
+    },
+    "source": {
+      "scene": "scene_001.png",
+      "image": "scene_001_08.png"
+    }
+  },
+  {
+    "id": "scene_001_09",
+    "name": "百变怪",
+    "name_en": "Ditto",
+    "tier": "Rare",
+    "vp": 0,
+    "bonus": "blue",
+    "bonuses": [
+      "blue",
+      "blue"
+    ],
+    "cost": {
+      "purple": 1,
+      "pink": 3,
+      "yellow": 2
+    },
+    "evolution": {
+      "target_en": null,
+      "target_zh": null,
+      "requirements": {
+        "blue": 3
+      }
+    },
+    "source": {
+      "scene": "scene_001.png",
+      "image": "scene_001_09.png"
+    }
+  },
+  {
+    "id": "scene_001_10",
+    "name": "伊布",
+    "name_en": "Eevee",
+    "tier": "LV1",
+    "vp": 0,
+    "bonus": "black",
+    "bonuses": [
+      "black",
+      "black"
+    ],
+    "cost": {
+      "purple": 1,
+      "yellow": 3,
+      "red": 2
+    },
+    "evolution": {
+      "target_en": [
+        "Vaporeon",
+        "Jolteon",
+        "Flareon"
+      ],
+      "target_zh": [
+        "水伊布",
+        "雷伊布",
+        "火伊布"
+      ],
+      "requirements": {}
+    },
+    "source": {
+      "scene": "scene_001.png",
+      "image": "scene_001_10.png"
+    }
+  },
+  {
+    "id": "scene_002_01",
+    "name": "妙蛙种子",
+    "name_en": "Bulbasaur",
+    "tier": "LV1",
+    "vp": 1,
+    "bonus": "yellow",
+    "bonuses": [
+      "yellow"
+    ],
+    "cost": {
+      "yellow": 4
+    },
+    "evolution": {
+      "target_en": "Ivysaur",
+      "target_zh": "妙蛙草",
+      "requirements": {
+        "pink": 3
+      }
+    },
+    "source": {
+      "scene": "scene_002.png",
+      "image": "scene_002_01.png"
+    }
+  },
+  {
+    "id": "scene_002_02",
+    "name": "妙蛙草",
+    "name_en": "Ivysaur",
+    "tier": "LV2",
+    "vp": 3,
+    "bonus": "yellow",
+    "bonuses": [
+      "yellow"
+    ],
+    "cost": {
+      "yellow": 6
+    },
+    "evolution": {
+      "target_en": "Venusaur",
+      "target_zh": "妙蛙花",
+      "requirements": {
+        "yellow": 4
+      }
+    },
+    "source": {
+      "scene": "scene_002.png",
+      "image": "scene_002_02.png"
+    }
+  },
+  {
+    "id": "scene_002_03",
+    "name": "尼多兰",
+    "name_en": "Nidoran♀",
+    "tier": "LV1",
+    "vp": 0,
+    "bonus": "yellow",
+    "bonuses": [
+      "yellow"
+    ],
+    "cost": {
+      "red": 2,
+      "pink": 1
+    },
+    "evolution": {
+      "target_en": "Nidorina",
+      "target_zh": "尼多娜",
+      "requirements": {
+        "blue": 2
+      }
+    },
+    "source": {
+      "scene": "scene_002.png",
+      "image": "scene_002_03.png"
+    }
+  },
+  {
+    "id": "scene_002_04",
+    "name": "尼多兰",
+    "name_en": "Nidoran♀",
+    "tier": "LV1",
+    "vp": 1,
+    "bonus": "yellow",
+    "bonuses": [
+      "yellow"
+    ],
+    "cost": {
+      "yellow": 3,
+      "pink": 2,
+      "red": 2
+    },
+    "evolution": {
+      "target_en": "Nidorina",
+      "target_zh": "尼多娜",
+      "requirements": {
+        "yellow": 4
+      }
+    },
+    "source": {
+      "scene": "scene_002.png",
+      "image": "scene_002_04.png"
+    }
+  },
+  {
+    "id": "scene_002_05",
+    "name": "水箭龟",
+    "name_en": "Blastoise",
+    "tier": "LV3",
+    "vp": 3,
+    "bonus": "yellow",
+    "bonuses": [
+      "yellow"
+    ],
+    "cost": {
+      "yellow": 5,
+      "red": 2,
+      "pink": 2
+    },
+    "evolution": {
+      "target_en": null,
+      "target_zh": null,
+      "requirements": {
+        "yellow": 3
+      }
+    },
+    "source": {
+      "scene": "scene_002.png",
+      "image": "scene_002_05.png"
+    }
+  },
+  {
+    "id": "scene_002_06",
+    "name": "妙蛙花",
+    "name_en": "Venusaur",
+    "tier": "LV3",
+    "vp": 5,
+    "bonus": "yellow",
+    "bonuses": [
+      "yellow"
+    ],
+    "cost": {
+      "red": 7,
+      "pink": 3
+    },
+    "evolution": {
+      "target_en": null,
+      "target_zh": null,
+      "requirements": {}
+    },
+    "source": {
+      "scene": "scene_002.png",
+      "image": "scene_002_06.png"
+    }
+  },
+  {
+    "id": "scene_002_07",
+    "name": "妙蛙草",
+    "name_en": "Ivysaur",
+    "tier": "LV2",
+    "vp": 3,
+    "bonus": "yellow",
+    "bonuses": [
+      "yellow"
+    ],
+    "cost": {
+      "red": 4,
+      "pink": 4,
+      "blue": 1
+    },
+    "evolution": {
+      "target_en": "Venusaur",
+      "target_zh": "妙蛙花",
+      "requirements": {
+        "yellow": 4
+      }
+    },
+    "source": {
+      "scene": "scene_002.png",
+      "image": "scene_002_07.png"
+    }
+  },
+  {
+    "id": "scene_002_08",
+    "name": "尼多兰",
+    "name_en": "Nidoran♀",
+    "tier": "LV1",
+    "vp": 1,
+    "bonus": "yellow",
+    "bonuses": [
+      "yellow"
+    ],
+    "cost": {
+      "blue": 3,
+      "pink": 2,
+      "black": 2
+    },
+    "evolution": {
+      "target_en": "Nidorina",
+      "target_zh": "尼多娜",
+      "requirements": {
+        "yellow": 4
+      }
+    },
+    "source": {
+      "scene": "scene_002.png",
+      "image": "scene_002_08.png"
+    }
+  },
+  {
+    "id": "scene_002_09",
+    "name": "妙蛙种子",
+    "name_en": "Bulbasaur",
+    "tier": "LV1",
+    "vp": 1,
+    "bonus": "yellow",
+    "bonuses": [
+      "yellow"
+    ],
+    "cost": {
+      "red": 3,
+      "black": 2
+    },
+    "evolution": {
+      "target_en": "Ivysaur",
+      "target_zh": "妙蛙草",
+      "requirements": {
+        "pink": 3
+      }
+    },
+    "source": {
+      "scene": "scene_002.png",
+      "image": "scene_002_09.png"
+    }
+  },
+  {
+    "id": "scene_002_10",
+    "name": "尼多兰",
+    "name_en": "Nidoran♀",
+    "tier": "LV1",
+    "vp": 0,
+    "bonus": "yellow",
+    "bonuses": [
+      "yellow"
+    ],
+    "cost": {
+      "blue": 2,
+      "yellow": 2
+    },
+    "evolution": {
+      "target_en": "Nidorina",
+      "target_zh": "尼多娜",
+      "requirements": {
+        "blue": 3
+      }
+    },
+    "source": {
+      "scene": "scene_002.png",
+      "image": "scene_002_10.png"
+    }
+  },
+  {
+    "id": "scene_002_11",
+    "name": "尼多兰",
+    "name_en": "Nidoran♀",
+    "tier": "LV1",
+    "vp": 0,
+    "bonus": "yellow",
+    "bonuses": [
+      "yellow"
+    ],
+    "cost": {
+      "black": 3
+    },
+    "evolution": {
+      "target_en": "Nidorina",
+      "target_zh": "尼多娜",
+      "requirements": {
+        "blue": 2
+      }
+    },
+    "source": {
+      "scene": "scene_002.png",
+      "image": "scene_002_11.png"
+    }
+  },
+  {
+    "id": "scene_002_12",
+    "name": "鬼斯通",
+    "name_en": "Haunter",
+    "tier": "LV2",
+    "vp": 2,
+    "bonus": "yellow",
+    "bonuses": [
+      "yellow"
+    ],
+    "cost": {
+      "yellow": 5,
+      "blue": 2
+    },
+    "evolution": {
+      "target_en": "Gengar",
+      "target_zh": "耿鬼",
+      "requirements": {
+        "yellow": 3
+      }
+    },
+    "source": {
+      "scene": "scene_002.png",
+      "image": "scene_002_12.png"
+    }
+  },
+  {
+    "id": "scene_002_13",
+    "name": "鬼斯",
+    "name_en": "Gastly",
+    "tier": "LV1",
+    "vp": 0,
+    "bonus": "yellow",
+    "bonuses": [
+      "yellow"
+    ],
+    "cost": {
+      "pink": 2,
+      "black": 1,
+      "red": 1
+    },
+    "evolution": {
+      "target_en": "Haunter",
+      "target_zh": "鬼斯通",
+      "requirements": {
+        "yellow": 3
+      }
+    },
+    "source": {
+      "scene": "scene_002.png",
+      "image": "scene_002_13.png"
+    }
+  },
+  {
+    "id": "scene_002_14",
+    "name": "耿鬼",
+    "name_en": "Gengar",
+    "tier": "LV3",
+    "vp": 4,
+    "bonus": "yellow",
+    "bonuses": [
+      "yellow"
+    ],
+    "cost": {
+      "black": 6,
+      "blue": 4
+    },
+    "evolution": {
+      "target_en": null,
+      "target_zh": null,
+      "requirements": {}
+    },
+    "source": {
+      "scene": "scene_002.png",
+      "image": "scene_002_14.png"
+    }
+  },
+  {
+    "id": "scene_002_15",
+    "name": "鬼斯通",
+    "name_en": "Haunter",
+    "tier": "LV2",
+    "vp": 2,
+    "bonus": "yellow",
+    "bonuses": [
+      "yellow"
+    ],
+    "cost": {
+      "black": 4,
+      "pink": 2,
+      "red": 1
+    },
+    "evolution": {
+      "target_en": "Gengar",
+      "target_zh": "耿鬼",
+      "requirements": {
+        "red": 3
+      }
+    },
+    "source": {
+      "scene": "scene_002.png",
+      "image": "scene_002_15.png"
+    }
+  },
+  {
+    "id": "scene_002_16",
+    "name": "鬼斯",
+    "name_en": "Gastly",
+    "tier": "LV1",
+    "vp": 0,
+    "bonus": "yellow",
+    "bonuses": [
+      "yellow"
+    ],
+    "cost": {
+      "blue": 1,
+      "red": 1,
+      "pink": 1,
+      "black": 1
+    },
+    "evolution": {
+      "target_en": "Haunter",
+      "target_zh": "鬼斯通",
+      "requirements": {
+        "yellow": 3
+      }
+    },
+    "source": {
+      "scene": "scene_002.png",
+      "image": "scene_002_16.png"
+    }
+  },
+  {
+    "id": "scene_003_01",
+    "name": "杰尼龟",
+    "name_en": "Squirtle",
+    "tier": "LV1",
+    "vp": 0,
+    "bonus": "red",
+    "bonuses": [
+      "red"
+    ],
+    "cost": {
+      "red": 4
+    },
+    "evolution": {
+      "target_en": "Wartortle",
+      "target_zh": "卡咪龟",
+      "requirements": {
+        "red": 3
+      }
+    },
+    "source": {
+      "scene": "scene_003.png",
+      "image": "scene_003_01.png"
+    }
+  },
+  {
+    "id": "scene_003_02",
+    "name": "卡咪龟",
+    "name_en": "Wartortle",
+    "tier": "LV2",
+    "vp": 3,
+    "bonus": "red",
+    "bonuses": [
+      "red"
+    ],
+    "cost": {
+      "red": 6
+    },
+    "evolution": {
+      "target_en": "Blastoise",
+      "target_zh": "水箭龟",
+      "requirements": {
+        "pink": 2
+      }
+    },
+    "source": {
+      "scene": "scene_003.png",
+      "image": "scene_003_02.png"
+    }
+  },
+  {
+    "id": "scene_003_03",
+    "name": "水箭龟",
+    "name_en": "Blastoise",
+    "tier": "LV3",
+    "vp": 5,
+    "bonus": "red",
+    "bonuses": [
+      "red"
+    ],
+    "cost": {
+      "blue": 7,
+      "black": 3
+    },
+    "evolution": {
+      "target_en": null,
+      "target_zh": null,
+      "requirements": {}
+    },
+    "source": {
+      "scene": "scene_003.png",
+      "image": "scene_003_03.png"
+    }
+  },
+  {
+    "id": "scene_003_04",
+    "name": "喇叭芽",
+    "name_en": "Bellsprout",
+    "tier": "LV1",
+    "vp": 0,
+    "bonus": "red",
+    "bonuses": [
+      "red"
+    ],
+    "cost": {
+      "black": 2,
+      "blue": 1
+    },
+    "evolution": {
+      "target_en": "Weepinbell",
+      "target_zh": "口呆花",
+      "requirements": {
+        "pink": 3
+      }
+    },
+    "source": {
+      "scene": "scene_003.png",
+      "image": "scene_003_04.png"
+    }
+  },
+  {
+    "id": "scene_003_05",
+    "name": "口呆花",
+    "name_en": "Weepinbell",
+    "tier": "LV2",
+    "vp": 0,
+    "bonus": "red",
+    "bonuses": [
+      "red"
+    ],
+    "cost": {
+      "red": 3,
+      "black": 2,
+      "yellow": 2
+    },
+    "evolution": {
+      "target_en": "Victreebel",
+      "target_zh": "大食花",
+      "requirements": {
+        "red": 4
+      }
+    },
+    "source": {
+      "scene": "scene_003.png",
+      "image": "scene_003_05.png"
+    }
+  },
+  {
+    "id": "scene_003_06",
+    "name": "大食花",
+    "name_en": "Victreebel",
+    "tier": "LV3",
+    "vp": 3,
+    "bonus": "red",
+    "bonuses": [
+      "red"
+    ],
+    "cost": {
+      "red": 5,
+      "black": 2,
+      "blue": 2
+    },
+    "evolution": {
+      "target_en": null,
+      "target_zh": null,
+      "requirements": {
+        "red": 3
+      }
+    },
+    "source": {
+      "scene": "scene_003.png",
+      "image": "scene_003_06.png"
+    }
+  },
+  {
+    "id": "scene_003_07",
+    "name": "卡咪龟",
+    "name_en": "Wartortle",
+    "tier": "LV2",
+    "vp": 3,
+    "bonus": "red",
+    "bonuses": [
+      "red"
+    ],
+    "cost": {
+      "blue": 4,
+      "black": 4,
+      "pink": 1
+    },
+    "evolution": {
+      "target_en": "Blastoise",
+      "target_zh": "水箭龟",
+      "requirements": {
+        "pink": 3
+      }
+    },
+    "source": {
+      "scene": "scene_003.png",
+      "image": "scene_003_07.png"
+    }
+  },
+  {
+    "id": "scene_003_08",
+    "name": "口呆花",
+    "name_en": "Weepinbell",
+    "tier": "LV2",
+    "vp": 0,
+    "bonus": "red",
+    "bonuses": [
+      "red"
+    ],
+    "cost": {
+      "pink": 3,
+      "yellow": 2,
+      "black": 2
+    },
+    "evolution": {
+      "target_en": "Victreebel",
+      "target_zh": "大食花",
+      "requirements": {
+        "pink": 4
+      }
+    },
+    "source": {
+      "scene": "scene_003.png",
+      "image": "scene_003_08.png"
+    }
+  },
+  {
+    "id": "scene_003_09",
+    "name": "杰尼龟",
+    "name_en": "Squirtle",
+    "tier": "LV1",
+    "vp": 1,
+    "bonus": "red",
+    "bonuses": [
+      "red"
+    ],
+    "cost": {
+      "pink": 3,
+      "blue": 2
+    },
+    "evolution": {
+      "target_en": "Wartortle",
+      "target_zh": "卡咪龟",
+      "requirements": {
+        "pink": 3
+      }
+    },
+    "source": {
+      "scene": "scene_003.png",
+      "image": "scene_003_09.png"
+    }
+  },
+  {
+    "id": "scene_003_10",
+    "name": "喇叭芽",
+    "name_en": "Bellsprout",
+    "tier": "LV1",
+    "vp": 0,
+    "bonus": "red",
+    "bonuses": [
+      "red"
+    ],
+    "cost": {
+      "pink": 2,
+      "red": 2
+    },
+    "evolution": {
+      "target_en": "Weepinbell",
+      "target_zh": "口呆花",
+      "requirements": {
+        "red": 4
+      }
+    },
+    "source": {
+      "scene": "scene_003.png",
+      "image": "scene_003_10.png"
+    }
+  },
+  {
+    "id": "scene_003_11",
+    "name": "喇叭芽",
+    "name_en": "Bellsprout",
+    "tier": "LV1",
+    "vp": 0,
+    "bonus": "red",
+    "bonuses": [
+      "red"
+    ],
+    "cost": {
+      "yellow": 3
+    },
+    "evolution": {
+      "target_en": "Weepinbell",
+      "target_zh": "口呆花",
+      "requirements": {
+        "red": 2
+      }
+    },
+    "source": {
+      "scene": "scene_003.png",
+      "image": "scene_003_11.png"
+    }
+  },
+  {
+    "id": "scene_003_12",
+    "name": "怪力",
+    "name_en": "Machamp",
+    "tier": "LV3",
+    "vp": 2,
+    "bonus": "red",
+    "bonuses": [
+      "red"
+    ],
+    "cost": {
+      "red": 5,
+      "pink": 2
+    },
+    "evolution": {
+      "target_en": null,
+      "target_zh": null,
+      "requirements": {
+        "pink": 4
+      }
+    },
+    "source": {
+      "scene": "scene_003.png",
+      "image": "scene_003_12.png"
+    }
+  },
+  {
+    "id": "scene_003_13",
+    "name": "腕力",
+    "name_en": "Machop",
+    "tier": "LV1",
+    "vp": 0,
+    "bonus": "red",
+    "bonuses": [
+      "red"
+    ],
+    "cost": {
+      "yellow": 2,
+      "pink": 1,
+      "black": 1
+    },
+    "evolution": {
+      "target_en": "Machoke",
+      "target_zh": "豪力",
+      "requirements": {
+        "red": 3
+      }
+    },
+    "source": {
+      "scene": "scene_003.png",
+      "image": "scene_003_13.png"
+    }
+  },
+  {
+    "id": "scene_003_14",
+    "name": "怪力",
+    "name_en": "Machamp",
+    "tier": "LV3",
+    "vp": 4,
+    "bonus": "red",
+    "bonuses": [
+      "red"
+    ],
+    "cost": {
+      "yellow": 6,
+      "pink": 4
+    },
+    "evolution": {
+      "target_en": null,
+      "target_zh": null,
+      "requirements": {}
+    },
+    "source": {
+      "scene": "scene_003.png",
+      "image": "scene_003_14.png"
+    }
+  },
+  {
+    "id": "scene_003_15",
+    "name": "怪力",
+    "name_en": "Machamp",
+    "tier": "LV3",
+    "vp": 2,
+    "bonus": "red",
+    "bonuses": [
+      "red"
+    ],
+    "cost": {
+      "yellow": 4,
+      "black": 2,
+      "blue": 1
+    },
+    "evolution": {
+      "target_en": null,
+      "target_zh": null,
+      "requirements": {
+        "pink": 3
+      }
+    },
+    "source": {
+      "scene": "scene_003.png",
+      "image": "scene_003_15.png"
+    }
+  },
+  {
+    "id": "scene_003_16",
+    "name": "腕力",
+    "name_en": "Machop",
+    "tier": "LV1",
+    "vp": 0,
+    "bonus": "red",
+    "bonuses": [
+      "red"
+    ],
+    "cost": {
+      "blue": 1,
+      "yellow": 1,
+      "pink": 1,
+      "black": 1
+    },
+    "evolution": {
+      "target_en": "Machoke",
+      "target_zh": "豪力",
+      "requirements": {
+        "yellow": 2
+      }
+    },
+    "source": {
+      "scene": "scene_003.png",
+      "image": "scene_003_16.png"
+    }
+  },
+  {
+    "id": "scene_004_01",
+    "name": "凯西",
+    "name_en": "Abra",
+    "tier": "LV1",
+    "vp": 1,
+    "bonus": "pink",
+    "bonuses": [
+      "pink"
+    ],
+    "cost": {
+      "pink": 4
+    },
+    "evolution": {
+      "target_en": "Kadabra",
+      "target_zh": "勇基拉",
+      "requirements": {
+        "red": 3
+      }
+    },
+    "source": {
+      "scene": "scene_004.png",
+      "image": "scene_004_01.png"
+    }
+  },
+  {
+    "id": "scene_004_02",
+    "name": "勇基拉",
+    "name_en": "Kadabra",
+    "tier": "LV2",
+    "vp": 3,
+    "bonus": "pink",
+    "bonuses": [
+      "pink"
+    ],
+    "cost": {
+      "pink": 6
+    },
+    "evolution": {
+      "target_en": "Alakazam",
+      "target_zh": "胡地",
+      "requirements": {
+        "pink": 2
+      }
+    },
+    "source": {
+      "scene": "scene_004.png",
+      "image": "scene_004_02.png"
+    }
+  },
+  {
+    "id": "scene_004_03",
+    "name": "胡地",
+    "name_en": "Alakazam",
+    "tier": "LV3",
+    "vp": 5,
+    "bonus": "pink",
+    "bonuses": [
+      "pink"
+    ],
+    "cost": {
+      "yellow": 7,
+      "red": 3
+    },
+    "evolution": {
+      "target_en": null,
+      "target_zh": null,
+      "requirements": {}
+    },
+    "source": {
+      "scene": "scene_004.png",
+      "image": "scene_004_03.png"
+    }
+  },
+  {
+    "id": "scene_004_04",
+    "name": "蚊香蝌蚪",
+    "name_en": "Poliwag",
+    "tier": "LV1",
+    "vp": 0,
+    "bonus": "pink",
+    "bonuses": [
+      "pink"
+    ],
+    "cost": {
+      "blue": 2,
+      "yellow": 1
+    },
+    "evolution": {
+      "target_en": "Poliwhirl",
+      "target_zh": "蚊香君",
+      "requirements": {
+        "pink": 3
+      }
+    },
+    "source": {
+      "scene": "scene_004.png",
+      "image": "scene_004_04.png"
+    }
+  },
+  {
+    "id": "scene_004_05",
+    "name": "蚊香君",
+    "name_en": "Poliwhirl",
+    "tier": "LV2",
+    "vp": 3,
+    "bonus": "pink",
+    "bonuses": [
+      "pink"
+    ],
+    "cost": {
+      "pink": 5,
+      "yellow": 2,
+      "red": 2
+    },
+    "evolution": {
+      "target_en": "Poliwrath",
+      "target_zh": "蚊香泳士",
+      "requirements": {
+        "pink": 3
+      }
+    },
+    "source": {
+      "scene": "scene_004.png",
+      "image": "scene_004_05.png"
+    }
+  },
+  {
+    "id": "scene_004_06",
+    "name": "勇基拉",
+    "name_en": "Kadabra",
+    "tier": "LV2",
+    "vp": 1,
+    "bonus": "pink",
+    "bonuses": [
+      "pink"
+    ],
+    "cost": {
+      "blue": 3,
+      "yellow": 2
+    },
+    "evolution": {
+      "target_en": "Alakazam",
+      "target_zh": "胡地",
+      "requirements": {
+        "red": 3
+      }
+    },
+    "source": {
+      "scene": "scene_004.png",
+      "image": "scene_004_06.png"
+    }
+  },
+  {
+    "id": "scene_004_07",
+    "name": "勇基拉",
+    "name_en": "Kadabra",
+    "tier": "LV2",
+    "vp": 3,
+    "bonus": "pink",
+    "bonuses": [
+      "pink"
+    ],
+    "cost": {
+      "red": 4,
+      "yellow": 4,
+      "black": 1
+    },
+    "evolution": {
+      "target_en": "Alakazam",
+      "target_zh": "胡地",
+      "requirements": {
+        "pink": 4
+      }
+    },
+    "source": {
+      "scene": "scene_004.png",
+      "image": "scene_004_07.png"
+    }
+  },
+  {
+    "id": "scene_004_08",
+    "name": "蚊香君",
+    "name_en": "Poliwhirl",
+    "tier": "LV2",
+    "vp": 1,
+    "bonus": "pink",
+    "bonuses": [
+      "pink"
+    ],
+    "cost": {
+      "black": 3,
+      "blue": 2,
+      "red": 2
+    },
+    "evolution": {
+      "target_en": "Poliwrath",
+      "target_zh": "蚊香泳士",
+      "requirements": {
+        "pink": 4
+      }
+    },
+    "source": {
+      "scene": "scene_004.png",
+      "image": "scene_004_08.png"
+    }
+  },
+  {
+    "id": "scene_004_09",
+    "name": "蚊香蝌蚪",
+    "name_en": "Poliwag",
+    "tier": "LV1",
+    "vp": 0,
+    "bonus": "pink",
+    "bonuses": [
+      "pink"
+    ],
+    "cost": {
+      "pink": 2,
+      "black": 2
+    },
+    "evolution": {
+      "target_en": "Poliwhirl",
+      "target_zh": "蚊香君",
+      "requirements": {
+        "pink": 3
+      }
+    },
+    "source": {
+      "scene": "scene_004.png",
+      "image": "scene_004_09.png"
+    }
+  },
+  {
+    "id": "scene_004_10",
+    "name": "蚊香蝌蚪",
+    "name_en": "Poliwag",
+    "tier": "LV1",
+    "vp": 0,
+    "bonus": "pink",
+    "bonuses": [
+      "pink"
+    ],
+    "cost": {
+      "red": 3
+    },
+    "evolution": {
+      "target_en": "Poliwhirl",
+      "target_zh": "蚊香君",
+      "requirements": {
+        "pink": 2
+      }
+    },
+    "source": {
+      "scene": "scene_004.png",
+      "image": "scene_004_10.png"
+    }
+  },
+  {
+    "id": "scene_004_11",
+    "name": "铁甲蛹",
+    "name_en": "Metapod",
+    "tier": "LV2",
+    "vp": 2,
+    "bonus": "pink",
+    "bonuses": [
+      "pink"
+    ],
+    "cost": {
+      "pink": 5,
+      "black": 2
+    },
+    "evolution": {
+      "target_en": "Butterfree",
+      "target_zh": "巴大蝶",
+      "requirements": {
+        "yellow": 3
+      }
+    },
+    "source": {
+      "scene": "scene_004.png",
+      "image": "scene_004_11.png"
+    }
+  },
+  {
+    "id": "scene_004_12",
+    "name": "铁甲蛹",
+    "name_en": "Metapod",
+    "tier": "LV2",
+    "vp": 0,
+    "bonus": "pink",
+    "bonuses": [
+      "pink"
+    ],
+    "cost": {
+      "black": 2,
+      "blue": 1,
+      "yellow": 1
+    },
+    "evolution": {
+      "target_en": "Butterfree",
+      "target_zh": "巴大蝶",
+      "requirements": {
+        "blue": 3
+      }
+    },
+    "source": {
+      "scene": "scene_004.png",
+      "image": "scene_004_12.png"
+    }
+  },
+  {
+    "id": "scene_004_13",
+    "name": "大舌贝",
+    "name_en": "Shellder",
+    "tier": "LV1",
+    "vp": 4,
+    "bonus": "pink",
+    "bonuses": [
+      "pink"
+    ],
+    "cost": {
+      "blue": 6,
+      "black": 4
+    },
+    "evolution": {
+      "target_en": "Cloyster",
+      "target_zh": "刺甲贝",
+      "requirements": {}
+    },
+    "source": {
+      "scene": "scene_004.png",
+      "image": "scene_004_13.png"
+    }
+  },
+  {
+    "id": "scene_004_14",
+    "name": "绿毛虫",
+    "name_en": "Caterpie",
+    "tier": "LV1",
+    "vp": 1,
+    "bonus": "pink",
+    "bonuses": [
+      "pink"
+    ],
+    "cost": {
+      "purple": 1,
+      "blue": 1,
+      "yellow": 1,
+      "black": 1
+    },
+    "evolution": {
+      "target_en": "Metapod",
+      "target_zh": "铁甲蛹",
+      "requirements": {
+        "pink": 3
+      }
+    },
+    "source": {
+      "scene": "scene_004.png",
+      "image": "scene_004_14.png"
+    }
+  },
+  {
+    "id": "scene_004_15",
+    "name": "铁甲蛹",
+    "name_en": "Metapod",
+    "tier": "LV2",
+    "vp": 2,
+    "bonus": "pink",
+    "bonuses": [
+      "pink"
+    ],
+    "cost": {
+      "blue": 4,
+      "red": 2,
+      "yellow": 1
+    },
+    "evolution": {
+      "target_en": "Butterfree",
+      "target_zh": "巴大蝶",
+      "requirements": {
+        "pink": 3
+      }
+    },
+    "source": {
+      "scene": "scene_004.png",
+      "image": "scene_004_15.png"
+    }
+  },
+  {
+    "id": "scene_005_01",
+    "name": "小火龙",
+    "name_en": "Charmander",
+    "tier": "LV1",
+    "vp": 1,
+    "bonus": "blue",
+    "bonuses": [
+      "blue"
+    ],
+    "cost": {
+      "blue": 4
+    },
+    "evolution": {
+      "target_en": "Charmeleon",
+      "target_zh": "火恐龙",
+      "requirements": {
+        "yellow": 3
+      }
+    },
+    "source": {
+      "scene": "scene_005.png",
+      "image": "scene_005_01.png"
+    }
+  },
+  {
+    "id": "scene_005_02",
+    "name": "火恐龙",
+    "name_en": "Charmeleon",
+    "tier": "LV2",
+    "vp": 3,
+    "bonus": "blue",
+    "bonuses": [
+      "blue"
+    ],
+    "cost": {
+      "blue": 6
+    },
+    "evolution": {
+      "target_en": "Charizard",
+      "target_zh": "喷火龙",
+      "requirements": {
+        "red": 4
+      }
+    },
+    "source": {
+      "scene": "scene_005.png",
+      "image": "scene_005_02.png"
+    }
+  },
+  {
+    "id": "scene_005_03",
+    "name": "波波",
+    "name_en": "Pidgey",
+    "tier": "LV1",
+    "vp": 0,
+    "bonus": "blue",
+    "bonuses": [
+      "blue"
+    ],
+    "cost": {
+      "yellow": 2,
+      "black": 1
+    },
+    "evolution": {
+      "target_en": "Pidgeotto",
+      "target_zh": "比比鸟",
+      "requirements": {
+        "red": 2
+      }
+    },
+    "source": {
+      "scene": "scene_005.png",
+      "image": "scene_005_03.png"
+    }
+  },
+  {
+    "id": "scene_005_04",
+    "name": "比比鸟",
+    "name_en": "Pidgeotto",
+    "tier": "LV2",
+    "vp": 0,
+    "bonus": "blue",
+    "bonuses": [
+      "blue"
+    ],
+    "cost": {
+      "blue": 3,
+      "pink": 2,
+      "black": 2
+    },
+    "evolution": {
+      "target_en": "Pidgeot",
+      "target_zh": "大比鸟",
+      "requirements": {
+        "red": 4
+      }
+    },
+    "source": {
+      "scene": "scene_005.png",
+      "image": "scene_005_04.png"
+    }
+  },
+  {
+    "id": "scene_005_05",
+    "name": "大比鸟",
+    "name_en": "Pidgeot",
+    "tier": "LV3",
+    "vp": 3,
+    "bonus": "blue",
+    "bonuses": [
+      "blue"
+    ],
+    "cost": {
+      "blue": 5,
+      "black": 2,
+      "yellow": 2
+    },
+    "evolution": {
+      "target_en": null,
+      "target_zh": null,
+      "requirements": {
+        "blue": 3
+      }
+    },
+    "source": {
+      "scene": "scene_005.png",
+      "image": "scene_005_05.png"
+    }
+  },
+  {
+    "id": "scene_005_06",
+    "name": "喷火龙",
+    "name_en": "Charizard",
+    "tier": "LV3",
+    "vp": 5,
+    "bonus": "blue",
+    "bonuses": [
+      "blue"
+    ],
+    "cost": {
+      "black": 7,
+      "yellow": 3
+    },
+    "evolution": {
+      "target_en": null,
+      "target_zh": null,
+      "requirements": {}
+    },
+    "source": {
+      "scene": "scene_005.png",
+      "image": "scene_005_06.png"
+    }
+  },
+  {
+    "id": "scene_005_07",
+    "name": "火恐龙",
+    "name_en": "Charmeleon",
+    "tier": "LV2",
+    "vp": 3,
+    "bonus": "blue",
+    "bonuses": [
+      "blue"
+    ],
+    "cost": {
+      "yellow": 4,
+      "black": 4,
+      "red": 1
+    },
+    "evolution": {
+      "target_en": "Charizard",
+      "target_zh": "喷火龙",
+      "requirements": {
+        "red": 4
+      }
+    },
+    "source": {
+      "scene": "scene_005.png",
+      "image": "scene_005_07.png"
+    }
+  },
+  {
+    "id": "scene_005_08",
+    "name": "比比鸟",
+    "name_en": "Pidgeotto",
+    "tier": "LV2",
+    "vp": 1,
+    "bonus": "blue",
+    "bonuses": [
+      "blue"
+    ],
+    "cost": {
+      "red": 3,
+      "yellow": 2,
+      "pink": 2
+    },
+    "evolution": {
+      "target_en": "Pidgeot",
+      "target_zh": "大比鸟",
+      "requirements": {
+        "red": 3
+      }
+    },
+    "source": {
+      "scene": "scene_005.png",
+      "image": "scene_005_08.png"
+    }
+  },
+  {
+    "id": "scene_005_09",
+    "name": "小火龙",
+    "name_en": "Charmander",
+    "tier": "LV1",
+    "vp": 1,
+    "bonus": "blue",
+    "bonuses": [
+      "blue"
+    ],
+    "cost": {
+      "black": 3,
+      "pink": 2
+    },
+    "evolution": {
+      "target_en": "Charmeleon",
+      "target_zh": "火恐龙",
+      "requirements": {
+        "yellow": 2
+      }
+    },
+    "source": {
+      "scene": "scene_005.png",
+      "image": "scene_005_09.png"
+    }
+  },
+  {
+    "id": "scene_005_10",
+    "name": "大嘴雀",
+    "name_en": "Fearow",
+    "tier": "LV3",
+    "vp": 0,
+    "bonus": "blue",
+    "bonuses": [
+      "blue"
+    ],
+    "cost": {
+      "blue": 2,
+      "red": 2
+    },
+    "evolution": {
+      "target_en": null,
+      "target_zh": null,
+      "requirements": {
+        "red": 2
+      }
+    },
+    "source": {
+      "scene": "scene_005.png",
+      "image": "scene_005_10.png"
+    }
+  },
+  {
+    "id": "scene_005_11",
+    "name": "比比鸟",
+    "name_en": "Pidgeotto",
+    "tier": "LV2",
+    "vp": 0,
+    "bonus": "blue",
+    "bonuses": [
+      "blue"
+    ],
+    "cost": {
+      "pink": 3
+    },
+    "evolution": {
+      "target_en": "Pidgeot",
+      "target_zh": "大比鸟",
+      "requirements": {
+        "red": 2
+      }
+    },
+    "source": {
+      "scene": "scene_005.png",
+      "image": "scene_005_11.png"
+    }
+  },
+  {
+    "id": "scene_005_12",
+    "name": "小拳石",
+    "name_en": "Geodude",
+    "tier": "LV1",
+    "vp": 2,
+    "bonus": "blue",
+    "bonuses": [
+      "blue"
+    ],
+    "cost": {
+      "blue": 5,
+      "red": 2
+    },
+    "evolution": {
+      "target_en": "Graveler",
+      "target_zh": "隆隆石",
+      "requirements": {
+        "blue": 2
+      }
+    },
+    "source": {
+      "scene": "scene_005.png",
+      "image": "scene_005_12.png"
+    }
+  },
+  {
+    "id": "scene_005_13",
+    "name": "小拳石",
+    "name_en": "Geodude",
+    "tier": "LV1",
+    "vp": 0,
+    "bonus": "blue",
+    "bonuses": [
+      "blue"
+    ],
+    "cost": {
+      "red": 2,
+      "yellow": 1,
+      "blue": 1
+    },
+    "evolution": {
+      "target_en": "Graveler",
+      "target_zh": "隆隆石",
+      "requirements": {
+        "blue": 3
+      }
+    },
+    "source": {
+      "scene": "scene_005.png",
+      "image": "scene_005_13.png"
+    }
+  },
+  {
+    "id": "scene_005_14",
+    "name": "隆隆岩",
+    "name_en": "Golem",
+    "tier": "LV3",
+    "vp": 4,
+    "bonus": "blue",
+    "bonuses": [
+      "blue"
+    ],
+    "cost": {
+      "pink": 6,
+      "red": 4
+    },
+    "evolution": {
+      "target_en": null,
+      "target_zh": null,
+      "requirements": {}
+    },
+    "source": {
+      "scene": "scene_005.png",
+      "image": "scene_005_14.png"
+    }
+  },
+  {
+    "id": "scene_005_15",
+    "name": "隆隆石",
+    "name_en": "Graveler",
+    "tier": "LV2",
+    "vp": 2,
+    "bonus": "blue",
+    "bonuses": [
+      "blue"
+    ],
+    "cost": {
+      "pink": 4,
+      "yellow": 2,
+      "black": 1
+    },
+    "evolution": {
+      "target_en": "Golem",
+      "target_zh": "隆隆岩",
+      "requirements": {
+        "blue": 2
+      }
+    },
+    "source": {
+      "scene": "scene_005.png",
+      "image": "scene_005_15.png"
+    }
+  },
+  {
+    "id": "scene_005_16",
+    "name": "小拳石",
+    "name_en": "Geodude",
+    "tier": "LV1",
+    "vp": 0,
+    "bonus": "blue",
+    "bonuses": [
+      "blue"
+    ],
+    "cost": {
+      "black": 1,
+      "yellow": 1,
+      "pink": 4,
+      "red": 1
+    },
+    "evolution": {
+      "target_en": "Graveler",
+      "target_zh": "隆隆石",
+      "requirements": {
+        "blue": 3
+      }
+    },
+    "source": {
+      "scene": "scene_005.png",
+      "image": "scene_005_16.png"
+    }
+  },
+  {
+    "id": "scene_006_01",
+    "name": "迷你龙",
+    "name_en": "Dratini",
+    "tier": "LV1",
+    "vp": 0,
+    "bonus": "black",
+    "bonuses": [
+      "black"
+    ],
+    "cost": {
+      "black": 4
+    },
+    "evolution": {
+      "target_en": "Dragonair",
+      "target_zh": "哈克龙",
+      "requirements": {
+        "blue": 3
+      }
+    },
+    "source": {
+      "scene": "scene_006.png",
+      "image": "scene_006_01.png"
+    }
+  },
+  {
+    "id": "scene_006_02",
+    "name": "哈克龙",
+    "name_en": "Dragonair",
+    "tier": "LV2",
+    "vp": 3,
+    "bonus": "black",
+    "bonuses": [
+      "black"
+    ],
+    "cost": {
+      "black": 6
+    },
+    "evolution": {
+      "target_en": "Dragonite",
+      "target_zh": "快龙",
+      "requirements": {
+        "yellow": 4
+      }
+    },
+    "source": {
+      "scene": "scene_006.png",
+      "image": "scene_006_02.png"
+    }
+  },
+  {
+    "id": "scene_006_03",
+    "name": "走路草",
+    "name_en": "Oddish",
+    "tier": "LV1",
+    "vp": 0,
+    "bonus": "black",
+    "bonuses": [
+      "black"
+    ],
+    "cost": {
+      "pink": 2,
+      "red": 1
+    },
+    "evolution": {
+      "target_en": "Gloom",
+      "target_zh": "臭臭花",
+      "requirements": {
+        "yellow": 2
+      }
+    },
+    "source": {
+      "scene": "scene_006.png",
+      "image": "scene_006_03.png"
+    }
+  },
+  {
+    "id": "scene_006_04",
+    "name": "火暴猴",
+    "name_en": "Primeape",
+    "tier": "LV3",
+    "vp": 1,
+    "bonus": "black",
+    "bonuses": [
+      "black"
+    ],
+    "cost": {
+      "black": 3,
+      "blue": 2,
+      "red": 2
+    },
+    "evolution": {
+      "target_en": null,
+      "target_zh": null,
+      "requirements": {
+        "yellow": 3
+      }
+    },
+    "source": {
+      "scene": "scene_006.png",
+      "image": "scene_006_04.png"
+    }
+  },
+  {
+    "id": "scene_006_05",
+    "name": "霸王花",
+    "name_en": "Vileplume",
+    "tier": "LV3",
+    "vp": 3,
+    "bonus": "black",
+    "bonuses": [
+      "black"
+    ],
+    "cost": {
+      "black": 5,
+      "blue": 2,
+      "pink": 2
+    },
+    "evolution": {
+      "target_en": null,
+      "target_zh": null,
+      "requirements": {
+        "pink": 2
+      }
+    },
+    "source": {
+      "scene": "scene_006.png",
+      "image": "scene_006_05.png"
+    }
+  },
+  {
+    "id": "scene_006_06",
+    "name": "快龙",
+    "name_en": "Dragonite",
+    "tier": "LV3",
+    "vp": 5,
+    "bonus": "black",
+    "bonuses": [
+      "black"
+    ],
+    "cost": {
+      "pink": 7,
+      "blue": 3
+    },
+    "evolution": {
+      "target_en": null,
+      "target_zh": null,
+      "requirements": {}
+    },
+    "source": {
+      "scene": "scene_006.png",
+      "image": "scene_006_06.png"
+    }
+  },
+  {
+    "id": "scene_006_07",
+    "name": "哈克龙",
+    "name_en": "Dragonair",
+    "tier": "LV2",
+    "vp": 3,
+    "bonus": "black",
+    "bonuses": [
+      "black"
+    ],
+    "cost": {
+      "blue": 4,
+      "pink": 4,
+      "yellow": 1
+    },
+    "evolution": {
+      "target_en": "Dragonite",
+      "target_zh": "快龙",
+      "requirements": {
+        "yellow": 4
+      }
+    },
+    "source": {
+      "scene": "scene_006.png",
+      "image": "scene_006_07.png"
+    }
+  },
+  {
+    "id": "scene_006_08",
+    "name": "走路草",
+    "name_en": "Oddish",
+    "tier": "LV1",
+    "vp": 0,
+    "bonus": "black",
+    "bonuses": [
+      "black"
+    ],
+    "cost": {
+      "yellow": 2,
+      "black": 2
+    },
+    "evolution": {
+      "target_en": "Gloom",
+      "target_zh": "臭臭花",
+      "requirements": {
+        "yellow": 2
+      }
+    },
+    "source": {
+      "scene": "scene_006.png",
+      "image": "scene_006_08.png"
+    }
+  },
+  {
+    "id": "scene_006_09",
+    "name": "霸王花",
+    "name_en": "Vileplume",
+    "tier": "LV3",
+    "vp": 0,
+    "bonus": "black",
+    "bonuses": [
+      "black"
+    ],
+    "cost": {
+      "yellow": 3,
+      "blue": 2,
+      "red": 2
+    },
+    "evolution": {
+      "target_en": null,
+      "target_zh": null,
+      "requirements": {
+        "yellow": 4
+      }
+    },
+    "source": {
+      "scene": "scene_006.png",
+      "image": "scene_006_09.png"
+    }
+  },
+  {
+    "id": "scene_006_10",
+    "name": "迷你龙",
+    "name_en": "Dratini",
+    "tier": "LV1",
+    "vp": 0,
+    "bonus": "black",
+    "bonuses": [
+      "black"
+    ],
+    "cost": {
+      "yellow": 3,
+      "red": 2
+    },
+    "evolution": {
+      "target_en": "Dragonair",
+      "target_zh": "哈克龙",
+      "requirements": {
+        "blue": 3
+      }
+    },
+    "source": {
+      "scene": "scene_006.png",
+      "image": "scene_006_10.png"
+    }
+  },
+  {
+    "id": "scene_006_11",
+    "name": "走路草",
+    "name_en": "Oddish",
+    "tier": "LV1",
+    "vp": 0,
+    "bonus": "black",
+    "bonuses": [
+      "black"
+    ],
+    "cost": {
+      "blue": 3
+    },
+    "evolution": {
+      "target_en": "Gloom",
+      "target_zh": "臭臭花",
+      "requirements": {
+        "yellow": 2
+      }
+    },
+    "source": {
+      "scene": "scene_006.png",
+      "image": "scene_006_11.png"
+    }
+  },
+  {
+    "id": "scene_006_12",
+    "name": "独角虫",
+    "name_en": "Weedle",
+    "tier": "LV1",
+    "vp": 0,
+    "bonus": "black",
+    "bonuses": [
+      "black"
+    ],
+    "cost": {
+      "blue": 2,
+      "red": 1,
+      "pink": 1
+    },
+    "evolution": {
+      "target_en": "Kakuna",
+      "target_zh": "铁壳蛹",
+      "requirements": {
+        "red": 3
+      }
+    },
+    "source": {
+      "scene": "scene_006.png",
+      "image": "scene_006_12.png"
+    }
+  },
+  {
+    "id": "scene_006_13",
+    "name": "铁甲蛹",
+    "name_en": "Metapod",
+    "tier": "LV2",
+    "vp": 2,
+    "bonus": "black",
+    "bonuses": [
+      "black"
+    ],
+    "cost": {
+      "black": 5,
+      "yellow": 2
+    },
+    "evolution": {
+      "target_en": "Butterfree",
+      "target_zh": "巴大蝶",
+      "requirements": {
+        "pink": 3
+      }
+    },
+    "source": {
+      "scene": "scene_006.png",
+      "image": "scene_006_13.png"
+    }
+  },
+  {
+    "id": "scene_006_14",
+    "name": "大针蜂",
+    "name_en": "Beedrill",
+    "tier": "LV3",
+    "vp": 4,
+    "bonus": "black",
+    "bonuses": [
+      "black"
+    ],
+    "cost": {
+      "red": 6,
+      "yellow": 4
+    },
+    "evolution": {
+      "target_en": null,
+      "target_zh": null,
+      "requirements": {}
+    },
+    "source": {
+      "scene": "scene_006.png",
+      "image": "scene_006_14.png"
+    }
+  },
+  {
+    "id": "scene_006_15",
+    "name": "蛋蛋",
+    "name_en": "Exeggcute",
+    "tier": "LV1",
+    "vp": 2,
+    "bonus": "black",
+    "bonuses": [
+      "black"
+    ],
+    "cost": {
+      "red": 5,
+      "blue": 2,
+      "pink": 2
+    },
+    "evolution": {
+      "target_en": "Exeggutor",
+      "target_zh": "椰蛋树",
+      "requirements": {
+        "pink": 3
+      }
+    },
+    "source": {
+      "scene": "scene_006.png",
+      "image": "scene_006_15.png"
+    }
+  },
+  {
+    "id": "scene_006_16",
+    "name": "独角虫",
+    "name_en": "Weedle",
+    "tier": "LV1",
+    "vp": 0,
+    "bonus": "black",
+    "bonuses": [
+      "black"
+    ],
+    "cost": {
+      "red": 1,
+      "yellow": 1,
+      "pink": 1,
+      "blue": 1
+    },
+    "evolution": {
+      "target_en": "Kakuna",
+      "target_zh": "铁壳蛹",
+      "requirements": {
+        "red": 3
+      }
+    },
+    "source": {
+      "scene": "scene_006.png",
+      "image": "scene_006_16.png"
+    }
+  }
+]
