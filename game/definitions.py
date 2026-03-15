@@ -1732,7 +1732,7 @@ register_game(
 register_game(
     GameDefinition(
         game_id=Flip7Game.game_id,
-        name="flip7flash",
+        name="Flip7flash",
         min_players=Flip7Game.min_players,
         max_players=Flip7Game.max_players,
         turn_mode="turn",
