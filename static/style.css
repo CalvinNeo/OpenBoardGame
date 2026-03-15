@@ -6805,6 +6805,205 @@ body.decrypto-explain-mode button.has-explanation:hover {
   font-size: 12px;
 }
 
+/* Word Decode */
+.word-decode-hint-row input,
+.word-decode-base-row input {
+  flex: 1;
+  min-width: 140px;
+}
+
+#wordDecodeHintsList,
+#wordDecodeGuessList {
+  display: grid;
+  gap: 8px;
+}
+
+.word-decode-hint-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #f8fafc;
+}
+
+.word-decode-hint-header {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.word-decode-hint-chips,
+.word-decode-guess-hints {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.word-decode-hint-chip {
+  display: inline-flex;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1e3a8a;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.word-decode-hint-chip.muted {
+  background: #f3f4f6;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.word-decode-guess-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px dashed #e5e7eb;
+}
+
+.word-decode-guess-row:last-child {
+  border-bottom: none;
+}
+
+.word-decode-guess-label {
+  min-width: 120px;
+  font-weight: 600;
+}
+
+.word-decode-guess-row input {
+  flex: 1;
+  min-width: 140px;
+}
+
+.word-decode-summary-line {
+  margin: 6px 0;
+  font-weight: 600;
+}
+
+.word-decode-summary-list {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.word-decode-summary-row {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #f9fafb;
+}
+
+.word-decode-summary-name {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.word-decode-summary-detail {
+  font-size: 13px;
+  color: #374151;
+}
+
+.word-decode-summary-scores {
+  font-size: 13px;
+  color: #374151;
+  display: grid;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+@media (max-width: 720px) {
+  .word-decode-hint-row input,
+  .word-decode-base-row input,
+  .word-decode-guess-row input {
+    min-width: 120px;
+  }
+}
+
+/* Word Decode Help/Explain */
+.word-decode-header-btn {
+  padding: 4px 10px;
+  font-size: 13px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #f9fafb;
+  cursor: pointer;
+}
+
+.word-decode-header-btn:hover {
+  background: #f3f4f6;
+}
+
+.word-decode-header-btn.active {
+  background: #dbeafe;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+
+body.word-decode-explain-mode button.has-explanation {
+  outline: 2px dashed #3b82f6;
+  outline-offset: 2px;
+  cursor: help;
+}
+
+body.word-decode-explain-mode button.has-explanation:hover {
+  outline-color: #1d4ed8;
+  outline-style: solid;
+}
+
+.word-decode-help-modal {
+  max-width: 720px;
+}
+
+.word-decode-explain-modal {
+  max-width: 520px;
+}
+
+.word-decode-help-content {
+  max-height: 70vh;
+  overflow-y: auto;
+  line-height: 1.6;
+}
+
+.word-decode-help-content h3 {
+  margin: 16px 0 8px;
+  font-size: 16px;
+  color: #111827;
+}
+
+.word-decode-help-content h3:first-child {
+  margin-top: 0;
+}
+
+.word-decode-help-content ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.word-decode-help-content li {
+  margin-bottom: 4px;
+}
+
+#wordDecodeExplainContent {
+  line-height: 1.6;
+}
+
+#wordDecodeExplainContent h4 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: #111827;
+}
+
+#wordDecodeExplainContent p {
+  margin: 6px 0;
+  color: #374151;
+}
+
+#wordDecodeExplainContent .hint {
+  color: #6b7280;
+  font-size: 12px;
+}
+
 .gem-yellow {
   background: #fef3c7;
   color: #92400e;

@@ -49,7 +49,7 @@
       "target_en": null,
       "target_zh": null,
       "requirements": {
-        "red": 2
+        "red": 3
       }
     },
     "source": {
@@ -78,7 +78,7 @@
       "target_en": null,
       "target_zh": null,
       "requirements": {
-        "pink": 4
+        "pink": 3
       }
     },
     "source": {
@@ -107,7 +107,7 @@
       "target_en": null,
       "target_zh": null,
       "requirements": {
-        "blue": 2
+        "blue": 3
       }
     },
     "source": {
@@ -164,7 +164,7 @@
       "target_en": null,
       "target_zh": null,
       "requirements": {
-        "yellow": 2
+        "yellow": 3
       }
     },
     "source": {
@@ -282,7 +282,9 @@
         "雷伊布",
         "火伊布"
       ],
-      "requirements": {}
+      "requirements": {
+        "yellow": 3
+      }
     },
     "source": {
       "scene": "scene_001.png",
@@ -306,7 +308,7 @@
       "target_en": "Ivysaur",
       "target_zh": "妙蛙草",
       "requirements": {
-        "pink": 3
+        "yellow": 3
       }
     },
     "source": {
@@ -331,7 +333,7 @@
       "target_en": "Venusaur",
       "target_zh": "妙蛙花",
       "requirements": {
-        "yellow": 4
+        "yellow": 3
       }
     },
     "source": {
@@ -357,7 +359,7 @@
       "target_en": "Nidorina",
       "target_zh": "尼多娜",
       "requirements": {
-        "blue": 2
+        "yellow": 2
       }
     },
     "source": {
@@ -436,7 +438,9 @@
     "evolution": {
       "target_en": null,
       "target_zh": null,
-      "requirements": {}
+      "requirements": {
+        "yellow": 3
+      }
     },
     "source": {
       "scene": "scene_002.png",
@@ -462,7 +466,7 @@
       "target_en": "Venusaur",
       "target_zh": "妙蛙花",
       "requirements": {
-        "yellow": 4
+        "yellow": 3
       }
     },
     "source": {
@@ -489,7 +493,7 @@
       "target_en": "Nidorina",
       "target_zh": "尼多娜",
       "requirements": {
-        "yellow": 4
+        "yellow": 3
       }
     },
     "source": {
@@ -515,7 +519,7 @@
       "target_en": "Ivysaur",
       "target_zh": "妙蛙草",
       "requirements": {
-        "pink": 3
+        "yellow": 3
       }
     },
     "source": {
@@ -541,7 +545,7 @@
       "target_en": "Nidorina",
       "target_zh": "尼多娜",
       "requirements": {
-        "blue": 3
+        "yellow": 2
       }
     },
     "source": {
@@ -566,7 +570,7 @@
       "target_en": "Nidorina",
       "target_zh": "尼多娜",
       "requirements": {
-        "blue": 2
+        "yellow": 2
       }
     },
     "source": {
@@ -592,7 +596,7 @@
       "target_en": "Gengar",
       "target_zh": "耿鬼",
       "requirements": {
-        "yellow": 3
+        "red": 3
       }
     },
     "source": {
@@ -644,7 +648,9 @@
     "evolution": {
       "target_en": null,
       "target_zh": null,
-      "requirements": {}
+      "requirements": {
+        "yellow": 3
+      }
     },
     "source": {
       "scene": "scene_002.png",
@@ -748,7 +754,7 @@
       "target_en": "Blastoise",
       "target_zh": "水箭龟",
       "requirements": {
-        "pink": 2
+        "pink": 4
       }
     },
     "source": {
@@ -773,7 +779,9 @@
     "evolution": {
       "target_en": null,
       "target_zh": null,
-      "requirements": {}
+      "requirements": {
+        "red": 3
+      }
     },
     "source": {
       "scene": "scene_003.png",
@@ -798,7 +806,7 @@
       "target_en": "Weepinbell",
       "target_zh": "口呆花",
       "requirements": {
-        "pink": 3
+        "red": 3
       }
     },
     "source": {
@@ -825,7 +833,7 @@
       "target_en": "Victreebel",
       "target_zh": "大食花",
       "requirements": {
-        "red": 4
+        "pink": 4
       }
     },
     "source": {
@@ -879,7 +887,7 @@
       "target_en": "Blastoise",
       "target_zh": "水箭龟",
       "requirements": {
-        "pink": 3
+        "red": 4
       }
     },
     "source": {
@@ -906,7 +914,7 @@
       "target_en": "Victreebel",
       "target_zh": "大食花",
       "requirements": {
-        "pink": 4
+        "pink": 3
       }
     },
     "source": {
@@ -932,7 +940,7 @@
       "target_en": "Wartortle",
       "target_zh": "卡咪龟",
       "requirements": {
-        "pink": 3
+        "red": 3
       }
     },
     "source": {
@@ -1009,7 +1017,7 @@
       "target_en": null,
       "target_zh": null,
       "requirements": {
-        "pink": 4
+        "blue": 3
       }
     },
     "source": {
@@ -1061,7 +1069,9 @@
     "evolution": {
       "target_en": null,
       "target_zh": null,
-      "requirements": {}
+      "requirements": {
+        "red": 3
+      }
     },
     "source": {
       "scene": "scene_003.png",
@@ -1115,7 +1125,7 @@
       "target_en": "Machoke",
       "target_zh": "豪力",
       "requirements": {
-        "yellow": 2
+        "red": 3
       }
     },
     "source": {
@@ -1140,7 +1150,7 @@
       "target_en": "Kadabra",
       "target_zh": "勇基拉",
       "requirements": {
-        "red": 3
+        "red": 2
       }
     },
     "source": {
@@ -1190,7 +1200,9 @@
     "evolution": {
       "target_en": null,
       "target_zh": null,
-      "requirements": {}
+      "requirements": {
+        "pink": 3
+      }
     },
     "source": {
       "scene": "scene_004.png",
@@ -1215,7 +1227,7 @@
       "target_en": "Poliwhirl",
       "target_zh": "蚊香君",
       "requirements": {
-        "pink": 3
+        "pink": 4
       }
     },
     "source": {
@@ -1268,7 +1280,7 @@
       "target_en": "Alakazam",
       "target_zh": "胡地",
       "requirements": {
-        "red": 3
+        "red": 2
       }
     },
     "source": {
@@ -1295,7 +1307,7 @@
       "target_en": "Alakazam",
       "target_zh": "胡地",
       "requirements": {
-        "pink": 4
+        "pink": 2
       }
     },
     "source": {
@@ -1348,7 +1360,7 @@
       "target_en": "Poliwhirl",
       "target_zh": "蚊香君",
       "requirements": {
-        "pink": 3
+        "pink": 4
       }
     },
     "source": {
@@ -1373,7 +1385,7 @@
       "target_en": "Poliwhirl",
       "target_zh": "蚊香君",
       "requirements": {
-        "pink": 2
+        "pink": 3
       }
     },
     "source": {
@@ -1399,7 +1411,7 @@
       "target_en": "Butterfree",
       "target_zh": "巴大蝶",
       "requirements": {
-        "yellow": 3
+        "pink": 3
       }
     },
     "source": {
@@ -1451,7 +1463,9 @@
     "evolution": {
       "target_en": "Cloyster",
       "target_zh": "刺甲贝",
-      "requirements": {}
+      "requirements": {
+        "pink": 3
+      }
     },
     "source": {
       "scene": "scene_004.png",
@@ -1505,7 +1519,7 @@
       "target_en": "Butterfree",
       "target_zh": "巴大蝶",
       "requirements": {
-        "pink": 3
+        "red": 4
       }
     },
     "source": {
@@ -1530,7 +1544,7 @@
       "target_en": "Charmeleon",
       "target_zh": "火恐龙",
       "requirements": {
-        "yellow": 3
+        "blue": 3
       }
     },
     "source": {
@@ -1555,7 +1569,7 @@
       "target_en": "Charizard",
       "target_zh": "喷火龙",
       "requirements": {
-        "red": 4
+        "pink": 4
       }
     },
     "source": {
@@ -1581,7 +1595,7 @@
       "target_en": "Pidgeotto",
       "target_zh": "比比鸟",
       "requirements": {
-        "red": 2
+        "blue": 4
       }
     },
     "source": {
@@ -1608,7 +1622,7 @@
       "target_en": "Pidgeot",
       "target_zh": "大比鸟",
       "requirements": {
-        "red": 4
+        "pink": 3
       }
     },
     "source": {
@@ -1660,7 +1674,9 @@
     "evolution": {
       "target_en": null,
       "target_zh": null,
-      "requirements": {}
+      "requirements": {
+        "blue": 3
+      }
     },
     "source": {
       "scene": "scene_005.png",
@@ -1686,7 +1702,7 @@
       "target_en": "Charizard",
       "target_zh": "喷火龙",
       "requirements": {
-        "red": 4
+        "pink": 4
       }
     },
     "source": {
@@ -1713,7 +1729,7 @@
       "target_en": "Pidgeot",
       "target_zh": "大比鸟",
       "requirements": {
-        "red": 3
+        "pink": 2
       }
     },
     "source": {
@@ -1739,7 +1755,7 @@
       "target_en": "Charmeleon",
       "target_zh": "火恐龙",
       "requirements": {
-        "yellow": 2
+        "blue": 3
       }
     },
     "source": {
@@ -1765,7 +1781,7 @@
       "target_en": null,
       "target_zh": null,
       "requirements": {
-        "red": 2
+        "blue": 2
       }
     },
     "source": {
@@ -1790,7 +1806,7 @@
       "target_en": "Pidgeot",
       "target_zh": "大比鸟",
       "requirements": {
-        "red": 2
+        "blue": 2
       }
     },
     "source": {
@@ -1868,7 +1884,9 @@
     "evolution": {
       "target_en": null,
       "target_zh": null,
-      "requirements": {}
+      "requirements": {
+        "blue": 3
+      }
     },
     "source": {
       "scene": "scene_005.png",
@@ -1998,7 +2016,7 @@
       "target_en": "Gloom",
       "target_zh": "臭臭花",
       "requirements": {
-        "yellow": 2
+        "yellow": 3
       }
     },
     "source": {
@@ -2025,7 +2043,7 @@
       "target_en": null,
       "target_zh": null,
       "requirements": {
-        "yellow": 3
+        "yellow": 4
       }
     },
     "source": {
@@ -2052,7 +2070,7 @@
       "target_en": null,
       "target_zh": null,
       "requirements": {
-        "pink": 2
+        "blue": 3
       }
     },
     "source": {
@@ -2103,7 +2121,7 @@
       "target_en": "Dragonite",
       "target_zh": "快龙",
       "requirements": {
-        "yellow": 4
+        "yellow": 3
       }
     },
     "source": {
@@ -2129,7 +2147,7 @@
       "target_en": "Gloom",
       "target_zh": "臭臭花",
       "requirements": {
-        "yellow": 2
+        "yellow": 3
       }
     },
     "source": {
@@ -2156,7 +2174,7 @@
       "target_en": null,
       "target_zh": null,
       "requirements": {
-        "yellow": 4
+        "yellow": 3
       }
     },
     "source": {
@@ -2207,7 +2225,7 @@
       "target_en": "Gloom",
       "target_zh": "臭臭花",
       "requirements": {
-        "yellow": 2
+        "yellow": 3
       }
     },
     "source": {
@@ -2234,7 +2252,7 @@
       "target_en": "Kakuna",
       "target_zh": "铁壳蛹",
       "requirements": {
-        "red": 3
+        "red": 2
       }
     },
     "source": {
@@ -2339,7 +2357,7 @@
       "target_en": "Kakuna",
       "target_zh": "铁壳蛹",
       "requirements": {
-        "red": 3
+        "red": 2
       }
     },
     "source": {

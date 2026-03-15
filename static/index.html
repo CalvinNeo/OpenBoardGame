@@ -311,6 +311,28 @@
     </div>
   </section>
 
+  <section id="wordDecodeHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content word-decode-help-modal">
+      <div class="modal-header">
+        <h2>猜字解底 - Game Rules</h2>
+        <button id="wordDecodeHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body word-decode-help-content" id="wordDecodeHelpContent"></div>
+    </div>
+  </section>
+
+  <section id="wordDecodeExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content word-decode-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="wordDecodeExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="wordDecodeExplainContent"></div>
+      </div>
+    </div>
+  </section>
+
   <section id="pokemonSplendorHelpModal" class="modal hidden" aria-hidden="true">
     <div class="modal-content pokemon-splendor-help-modal">
       <div class="modal-header">
@@ -646,6 +668,10 @@
             <div class="panel-header-actions" id="decryptoHeaderActions" style="display: none;">
               <button id="decryptoHelpBtn" class="decrypto-header-btn" type="button">Help</button>
               <button id="decryptoExplainBtn" class="decrypto-header-btn" type="button">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="wordDecodeHeaderActions" style="display: none;">
+              <button id="wordDecodeHelpBtn" class="word-decode-header-btn" type="button">Help</button>
+              <button id="wordDecodeExplainBtn" class="word-decode-header-btn" type="button">Explain</button>
             </div>
             <div class="panel-header-actions" id="pokemonSplendorHeaderActions" style="display: none;">
               <button id="pokemonSplendorHelpBtn" class="pokemon-splendor-header-btn" type="button">Help</button>
@@ -1419,6 +1445,54 @@
                 <div id="decryptoSummaryBody" class="round-notice-body">-</div>
               </div>
 
+            </div>
+
+            <div id="wordDecodePanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="wordDecodePhase">-</span></div>
+                <div>Round: <span id="wordDecodeRound">-</span></div>
+                <div>Your Word: <span id="wordDecodeHidden">-</span></div>
+              </div>
+              <div class="row">
+                <div>Hints Submitted: <span id="wordDecodeHintsSubmitted">-</span></div>
+                <div>Guesses Submitted: <span id="wordDecodeGuessesSubmitted">-</span></div>
+              </div>
+
+              <div id="wordDecodeHintArea">
+                <h3>Write Hints</h3>
+                <div class="row actions word-decode-hint-row">
+                  <input id="wordDecodeHint1" type="text" placeholder="Hint 1" />
+                  <input id="wordDecodeHint2" type="text" placeholder="Hint 2" />
+                  <button id="wordDecodeSubmitHintsBtn">Submit Hints</button>
+                </div>
+                <div class="hint">Each hint should form a common two-character word with your hidden word.</div>
+              </div>
+
+              <div id="wordDecodeGuessArea">
+                <h3>Hints</h3>
+                <div id="wordDecodeHintsList"></div>
+
+                <h3>Guesses</h3>
+                <div class="row actions word-decode-base-row">
+                  <input id="wordDecodeBaseGuess" type="text" placeholder="Base word" />
+                </div>
+                <div id="wordDecodeGuessList"></div>
+                <div class="row actions">
+                  <button id="wordDecodeSubmitGuessesBtn">Submit Guesses</button>
+                </div>
+              </div>
+
+              <div id="wordDecodeRoundEnd" class="hidden">
+                <h3>Round Summary</h3>
+                <div id="wordDecodeSummary"></div>
+                <div class="row actions">
+                  <button id="wordDecodeNextRoundBtn">Next Round</button>
+                  <button id="wordDecodeEndGameBtn">End Game</button>
+                </div>
+              </div>
+
+              <h3>Players</h3>
+              <div id="wordDecodePlayers"></div>
             </div>
 
             <div id="drawGuessPanel" class="hidden">
@@ -2324,6 +2398,7 @@
   <script src="/static/games/splendor_pokemon.js?v=app_v1"></script>
   <script src="/static/games/project_l.js?v=app_v1"></script>
   <script src="/static/games/decrypto.js?v=app_v1"></script>
+  <script src="/static/games/word_decode.js?v=app_v1"></script>
   <script src="/static/games/trekking.js?v=app_v1"></script>
   <script src="/static/games/aidixit.js?v=app_v1"></script>
   <script src="/static/games/hanabi.js?v=app_v1"></script>

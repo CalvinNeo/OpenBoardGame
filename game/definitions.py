@@ -29,6 +29,7 @@ from game.carcassonne import CarcassonneGame
 from game.skull import SkullGame
 from game.trekking_history import TrekkingHistoryGame
 from game.texas_holdem import TexasHoldemGame
+from game.word_decode import WordDecodeGame
 
 CABO_ACTION_SCHEMA = {
     "type": "object",
@@ -1397,6 +1398,52 @@ TEXAS_HOLDEM_CONFIG_SCHEMA = {
     "additionalProperties": False,
 }
 
+WORD_DECODE_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "submit_hints"},
+                "hints": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "minItems": 2,
+                    "maxItems": 2,
+                },
+            },
+            "required": ["type", "hints"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "submit_guesses"},
+                "base_guess": {"type": "string"},
+                "hidden_guesses": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "target_player_id": {"type": "string"},
+                            "guess": {"type": "string"},
+                        },
+                        "required": ["target_player_id", "guess"],
+                        "additionalProperties": False,
+                    },
+                    "minItems": 1,
+                },
+            },
+            "required": ["type", "base_guess", "hidden_guesses"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "next_round"}}, "required": ["type"], "additionalProperties": False},
+        {"type": "object", "properties": {"type": {"const": "end_game"}}, "required": ["type"], "additionalProperties": False},
+    ],
+}
+
+WORD_DECODE_CONFIG_SCHEMA = {"type": "object", "properties": {}, "additionalProperties": False}
+
 register_game(
     GameDefinition(
         game_id=CaboGame.game_id,
@@ -1604,6 +1651,21 @@ register_game(
         module=DecryptoGame,
         serialize=DecryptoGame.serialize,
         deserialize=DecryptoGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=WordDecodeGame.game_id,
+        name="猜字解底",
+        min_players=WordDecodeGame.min_players,
+        max_players=WordDecodeGame.max_players,
+        turn_mode="simultaneous",
+        action_schema=WORD_DECODE_ACTION_SCHEMA,
+        config_schema=WORD_DECODE_CONFIG_SCHEMA,
+        module=WordDecodeGame,
+        serialize=WordDecodeGame.serialize,
+        deserialize=WordDecodeGame.deserialize,
     )
 )
 

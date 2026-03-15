@@ -174,16 +174,18 @@ def _score_round(state: Dict) -> Dict:
 
 def _bot_hints_for(card: Dict, hidden_word: str) -> List[str]:
     bot_hints = card.get("bot_hints") or {}
-    options = bot_hints.get(hidden_word, [])
-    cleaned = [hint for hint in options if isinstance(hint, str) and hint.strip()]
-    if len(cleaned) >= 2:
-        return cleaned[:2]
-    fallback = [hidden_word]
+    options = [hint for hint in bot_hints.get(hidden_word, []) if isinstance(hint, str) and hint.strip()]
+    if len(options) >= 2:
+        return random.sample(options, 2)
     base = card.get("base")
+    fallback = []
     if isinstance(base, str) and base.strip():
         fallback.append(base.strip())
-    if len(fallback) < 2:
+    fallback.append(hidden_word)
+    while len(fallback) < 2:
         fallback.append(hidden_word)
+    if options:
+        fallback[0] = options[0]
     return fallback[:2]
 
 

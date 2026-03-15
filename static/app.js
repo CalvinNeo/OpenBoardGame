@@ -22,6 +22,7 @@ const coyotePanel = document.getElementById("coyotePanel");
 const texasHoldemPanel = document.getElementById("texasHoldemPanel");
 const halliPanel = document.getElementById("halliPanel");
 const drawGuessPanel = document.getElementById("drawGuessPanel");
+const wordDecodePanel = document.getElementById("wordDecodePanel");
 const cyberPicturesPanel = document.getElementById("cyberPicturesPanel");
 
 const abracaPanel = document.getElementById("abracaPanel");
@@ -45,6 +46,7 @@ function setGamePanelVisibility(gameType) {
   const showSixNimmt = gameType === "six_nimmt";
   const showHalli = gameType === "halli_galli";
   const showDecrypto = gameType === "decrypto";
+  const showWordDecode = gameType === "word_decode";
   const showDrawGuess = gameType === "draw_guess";
   const showBlitzSketch = gameType === "blitz_sketch";
   const showCyber = gameType === "cyber_pictures";
@@ -112,10 +114,16 @@ function setGamePanelVisibility(gameType) {
   if (typeof showDecryptoHeaderActions === "function") {
     showDecryptoHeaderActions(showDecrypto);
   }
+  if (typeof showWordDecodeHeaderActions === "function") {
+    showWordDecodeHeaderActions(showWordDecode);
+  }
   if (typeof showPokemonSplendorHeaderActions === "function") {
     showPokemonSplendorHeaderActions(showPokemonSplendor);
   }
   drawGuessPanel.classList.toggle("hidden", !showDrawGuess);
+  if (wordDecodePanel) {
+    wordDecodePanel.classList.toggle("hidden", !showWordDecode);
+  }
   if (blitzSketchPanel) {
     blitzSketchPanel.classList.toggle("hidden", !showBlitzSketch);
   }
@@ -299,6 +307,10 @@ function renderGameState(data) {
   }
   if (gameType === "decrypto") {
     renderDecryptoGameState(data);
+    return;
+  }
+  if (gameType === "word_decode") {
+    renderWordDecodeGameState(data);
     return;
   }
   if (gameType === "draw_guess") {

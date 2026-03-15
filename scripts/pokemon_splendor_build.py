@@ -257,6 +257,10 @@ REQ_DIGIT_TEMPLATE_MIN_SCORE = 0.85
 REQ_DIGIT_TEMPLATE_TOPK = 6
 REQ_DIGIT_TEMPLATE_MATCH_MIN_SCORE = 0.78
 REQ_DIGIT_TEMPLATE_MATCH_MIN_SCORE_BLOCK = 0.6
+REQ_DIGIT_BOX_PAD = 3
+REQ_USE_FIXED_DIGIT_BOX = True
+# Fixed digit box relative to requirement ROI (based on scene_005_08 green box after padding)
+REQ_FIXED_BOX_IN_ROI = (11, 28, 19, 38)
 REQ_BLOCK_MIN_AREA = 150
 REQ_BLOCK_MAX_AREA = 1400
 
@@ -1210,106 +1214,49 @@ def classify_requirement_color(img, digit_box=None):
     ys = [p[1] for p in digit_box]
     x0, x1 = int(min(xs)), int(max(xs))
     y0, y1 = int(min(ys)), int(max(ys))
-    cx = (x0 + x1) / 2.0
-    cy = (y0 + y1) / 2.0
-    w = max(1, x1 - x0)
-    h = max(1, y1 - y0)
-
-    pad_x = max(3, int(h * 0.55))
-    pad_y_top = max(3, int(h * 0.55))
-    pad_y_bottom = max(2, int(h * 0.35))
-    outer_x0 = max(0, x0 - pad_x)
-    outer_y0 = max(0, y0 - pad_y_top)
-    outer_x1 = min(img.shape[1], x1 + pad_x)
-    outer_y1 = min(img.shape[0], y1 + pad_y_bottom)
+    h_img, w_img = img.shape[:2]
+    pad = 2
+    outer_x0 = max(0, x0 - pad)
+    outer_y0 = max(0, y0 - pad)
+    outer_x1 = min(w_img - 1, x1 + pad)
+    outer_y1 = min(h_img - 1, y1 + pad)
     outer_box = (outer_x0, outer_y0, outer_x1, outer_y1)
+    inner_box = (x0, y0, x1, y1)
 
-    inner_pad = max(1, int(h * 0.4))
-    inner_x0 = max(0, x0 - inner_pad)
-    inner_y0 = max(0, y0 - inner_pad)
-    inner_x1 = min(img.shape[1], x1 + inner_pad)
-    inner_y1 = min(img.shape[0], y1 + inner_pad)
-    inner_box = (inner_x0, inner_y0, inner_x1, inner_y1)
-
-    patch = img[outer_y0:outer_y1, outer_x0:outer_x1]
-    if patch.size == 0:
-        return None, outer_box, inner_box, []
-    ring_mask = np.ones(patch.shape[:2], dtype=np.uint8)
-    ring_mask[(inner_y0 - outer_y0):(inner_y1 - outer_y0), (inner_x0 - outer_x0):(inner_x1 - outer_x0)] = 0
-
-    hsv = cv2.cvtColor(patch, cv2.COLOR_BGR2HSV)
-    mask = (ring_mask > 0) & (hsv[:, :, 1] > 35) & (hsv[:, :, 2] > 70)
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    mask = np.zeros((h_img, w_img), dtype=np.uint8)
+    # sample along the expanded green box edge
+    cv2.rectangle(mask, (outer_x0, outer_y0), (outer_x1, outer_y1), 255, thickness=2)
+    mask = (mask > 0) & (hsv[:, :, 1] > 35) & (hsv[:, :, 2] > 70)
     if mask.sum() < 12:
-        mask = (ring_mask > 0) & (hsv[:, :, 1] > 28) & (hsv[:, :, 2] > 55)
-    samples = sample_requirement_colors(
-        img,
-        (cx, cy),
-        radius_x=max(3, int(h * 0.55) + 1),
-        radius_y=max(3, int(h * 0.55) + 1),
-        size=2,
-    )
-    sample_color = None
-    if samples:
-        from collections import Counter
-        counts = Counter([s["color"] for s in samples])
-        top_color, top_count = counts.most_common(1)[0]
-        if top_count >= 5:
-            sample_color = top_color
-
+        mask = (mask > 0) & (hsv[:, :, 1] > 28) & (hsv[:, :, 2] > 55)
     if mask.sum() == 0:
-        color = None
-        if sample_color:
-            color = sample_color
-        return color, outer_box, inner_box, samples
+        return None, outer_box, inner_box, []
 
-    mask_uint8 = mask.astype(np.uint8)
-    # prefer the connected component that touches the digit center (avoid background bleed)
-    center_local = (cx - outer_x0, cy - outer_y0)
-    mask_cc = mask_uint8.copy()
-    # include inner box to keep the colored region connected around the digit
-    ix0 = max(0, inner_x0 - outer_x0)
-    iy0 = max(0, inner_y0 - outer_y0)
-    ix1 = max(0, inner_x1 - outer_x0)
-    iy1 = max(0, inner_y1 - outer_y0)
-    mask_cc[iy0:iy1, ix0:ix1] = 1
-    num, labels, stats, centroids = cv2.connectedComponentsWithStats(mask_cc, connectivity=8)
-    chosen = None
-    if num > 1:
-        cx_i = int(round(center_local[0]))
-        cy_i = int(round(center_local[1]))
-        if 0 <= cy_i < labels.shape[0] and 0 <= cx_i < labels.shape[1]:
-            label_at_center = labels[cy_i, cx_i]
-            if label_at_center != 0:
-                chosen = label_at_center
-        if chosen is None:
-            best = None
-            best_score = 1e9
-            for i in range(1, num):
-                area = stats[i, cv2.CC_STAT_AREA]
-                if area < 6:
-                    continue
-                cxi, cyi = centroids[i]
-                dist = abs(cxi - center_local[0]) + abs(cyi - center_local[1])
-                score = dist + 40.0 / max(area, 1)
-                if score < best_score:
-                    best_score = score
-                    best = i
-            chosen = best
-    if chosen is not None:
-        mask_uint8 = ((labels == chosen) & (mask_uint8 > 0)).astype(np.uint8)
-
-    mean = mean_hsv_from_mask(patch, mask_uint8)
-    dark_ratio = float((hsv[:, :, 2][ring_mask > 0] < 70).mean()) if (ring_mask > 0).any() else 0.0
+    mean = mean_hsv_from_mask(img, mask.astype(np.uint8))
     color = None
     if mean:
-        color = classify_requirement_hsv(mean[0], mean[1], mean[2], dark_ratio=dark_ratio)
+        color = classify_requirement_hsv(mean[0], mean[1], mean[2], dark_ratio=0.0)
     if not color:
-        hue_stats = dominant_hue_in_mask(hsv, mask_uint8)
+        hue_stats = dominant_hue_in_mask(hsv, mask.astype(np.uint8))
         if hue_stats:
-            color = classify_requirement_hsv(hue_stats[0], hue_stats[1], hue_stats[2], dark_ratio=dark_ratio)
+            color = classify_requirement_hsv(hue_stats[0], hue_stats[1], hue_stats[2], dark_ratio=0.0)
 
-    if sample_color and (color is None or color != sample_color):
-        color = sample_color
+    samples = []
+    midx = int(round((x0 + x1) / 2))
+    midy = int(round((y0 + y1) / 2))
+    points = [
+        (midx, outer_y0),
+        (midx, outer_y1),
+        (outer_x0, midy),
+        (outer_x1, midy),
+    ]
+    for sx, sy in points:
+        if 0 <= sx < w_img and 0 <= sy < h_img:
+            hsv_px = hsv[sy, sx]
+            c = classify_requirement_hsv(float(hsv_px[0]), float(hsv_px[1]), float(hsv_px[2]))
+            if c:
+                samples.append({"color": c, "point": (sx, sy)})
     return color, outer_box, inner_box, samples
 
 
@@ -1714,6 +1661,120 @@ def detect_requirement_digit_from_block(img, block, templates=None):
                     "source_hint": "req_block",
                 }
     return best
+
+
+def detect_requirement_digit_in_fixed_box(img, fixed_box, templates):
+    if not fixed_box or templates is None:
+        return None
+    xs = [p[0] for p in fixed_box]
+    ys = [p[1] for p in fixed_box]
+    x0, x1 = int(min(xs)), int(max(xs))
+    y0, y1 = int(min(ys)), int(max(ys))
+    x0 = max(0, x0)
+    y0 = max(0, y0)
+    x1 = min(img.shape[1], x1)
+    y1 = min(img.shape[0], y1)
+    if x1 <= x0 or y1 <= y0:
+        return None
+    patch = img[y0:y1, x0:x1]
+    if patch.size == 0:
+        return None
+    gray = cv2.cvtColor(patch, cv2.COLOR_BGR2GRAY)
+    masks = [np.ones(gray.shape, dtype=np.uint8)]
+    for m in requirement_candidate_masks(gray):
+        if m is None:
+            continue
+        m_bin = (m > 0).astype(np.uint8)
+        masks.append(m_bin)
+    best = None
+    best_score = -1e9
+    h, w = gray.shape[:2]
+    center = (w / 2.0, h / 2.0)
+
+    def try_candidate_box(bx, by, bw, bh):
+        nonlocal best, best_score
+        for pad in (0, 1, 2):
+            px0 = max(0, bx - pad)
+            py0 = max(0, by - pad)
+            px1 = min(patch.shape[1], bx + bw + pad)
+            py1 = min(patch.shape[0], by + bh + pad)
+            sub = patch[py0:py1, px0:px1]
+            tpl = preprocess_digit_patch(sub)
+            if tpl is None:
+                continue
+            val, score = template_match_digit(tpl, templates)
+            if val is None:
+                continue
+            val, score, _ = refine_template_digit(tpl, templates, val, score)
+            if val is None:
+                continue
+            dist = abs((px0 + px1) / 2.0 - center[0]) + abs((py0 + py1) / 2.0 - center[1])
+            score_adj = float(score) - dist * 0.01
+            if score_adj > best_score:
+                best_score = score_adj
+                best = {
+                    "value": val,
+                    "score": float(score),
+                    "box": [
+                        (px0 + x0, py0 + y0),
+                        (px1 + x0, py0 + y0),
+                        (px1 + x0, py1 + y0),
+                        (px0 + x0, py1 + y0),
+                    ],
+                    "source_hint": "fixed_box",
+                }
+
+    for mask in masks:
+        if mask is None:
+            continue
+        # Ignore masks that are almost empty or full.
+        fill = float(mask.sum()) / float(mask.size)
+        if fill < 0.01 or fill > 0.98:
+            continue
+        # Clean up mask to isolate digit strokes
+        m = (mask > 0).astype(np.uint8)
+        m = cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((2, 2), np.uint8), iterations=1)
+        m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((2, 2), np.uint8), iterations=1)
+
+        num, labels, stats, centroids = cv2.connectedComponentsWithStats(m, connectivity=8)
+        for i in range(1, num):
+            bx, by, bw, bh, area = stats[i]
+            if area < 10:
+                continue
+            if bw < 4 or bh < 6 or bw > w or bh > h:
+                continue
+            # avoid giant blobs
+            if area > 0.6 * (w * h):
+                continue
+            ratio = bw / float(bh) if bh else 0.0
+            if ratio < 0.2 or ratio > 1.8:
+                continue
+            try_candidate_box(bx, by, bw, bh)
+
+        # Also try the legacy digit box on this mask (can help for thin strokes)
+        box = detect_digit_box_from_mask(patch, m)
+        if box:
+            bx, by, bw, bh = box
+            try_candidate_box(bx, by, bw, bh)
+
+    if best is not None:
+        return best
+    # fallback: match on whole fixed box
+    tpl = preprocess_digit_patch(patch)
+    if tpl is None:
+        return None
+    val, score = template_match_digit(tpl, templates)
+    if val is None:
+        return None
+    val, score, _ = refine_template_digit(tpl, templates, val, score)
+    if val is None:
+        return None
+    return {
+        "value": val,
+        "score": float(score),
+        "box": fixed_box,
+        "source_hint": "fixed_box_full",
+    }
 
 
 def requirement_candidate_masks(gray):
@@ -2365,6 +2426,16 @@ def map_requirements(digits, img, ocr=None, req_templates=None):
     meta = {}
     roi = requirement_roi(img)
     meta["roi"] = roi
+    fixed_box = None
+    if REQ_USE_FIXED_DIGIT_BOX:
+        rx0, ry0, rx1, ry1 = roi
+        fx0, fy0, fx1, fy1 = REQ_FIXED_BOX_IN_ROI
+        fixed_box = [
+            (rx0 + fx0, ry0 + fy0),
+            (rx0 + fx1, ry0 + fy0),
+            (rx0 + fx1, ry0 + fy1),
+            (rx0 + fx0, ry0 + fy1),
+        ]
     digit = select_requirement_digit(digits, roi, circles=None)
     if digit is None and ocr is not None:
         # fallback: re-run OCR on the requirement ROI
@@ -2378,6 +2449,11 @@ def map_requirements(digits, img, ocr=None, req_templates=None):
                 easy_res = detect_requirement_digit_easyocr(crop)
                 candidates = parse_requirement_ocr_candidates(easy_res, offset=(x0, y0))
             digit = select_requirement_digit_from_candidates(candidates, roi, circles=None)
+    # If using fixed digit box, override with template match from the fixed patch.
+    if fixed_box and req_templates is not None:
+        fixed_digit = detect_requirement_digit_in_fixed_box(img, fixed_box, req_templates)
+        if fixed_digit:
+            digit = fixed_digit
     if digit is not None and req_templates is not None:
         if digit.get("score", 0.0) < 0.8:
             fallback = detect_requirement_digit_template(img, roi, req_templates)
@@ -2389,25 +2465,48 @@ def map_requirements(digits, img, ocr=None, req_templates=None):
         meta["digit"] = None
         return req, meta
 
+    def expand_box_points(box, pad):
+        if not box:
+            return box
+        xs = [p[0] for p in box]
+        ys = [p[1] for p in box]
+        x0, x1 = int(min(xs)), int(max(xs))
+        y0, y1 = int(min(ys)), int(max(ys))
+        x0 = max(0, x0 - pad)
+        y0 = max(0, y0 - pad)
+        x1 = min(img.shape[1] - 1, x1 + pad)
+        y1 = min(img.shape[0] - 1, y1 + pad)
+        return [
+            (x0, y0),
+            (x1, y0),
+            (x1, y1),
+            (x0, y1),
+        ]
+
+    block = find_requirement_color_block(img, roi)
+    if block:
+        meta["block"] = block
+    raw_box = fixed_box or digit.get("box")
+
+    box = expand_box_points(raw_box, REQ_DIGIT_BOX_PAD) if raw_box else None
+
     meta["digit"] = {
         "value": digit.get("value"),
         "score": digit.get("score"),
-        "box": digit.get("box"),
+        "box": box,
         "source": digit.get("source_hint"),
     }
-    box = digit.get("box")
+    if raw_box:
+        meta["digit_box_raw"] = raw_box
+
     color = None
-    block = find_requirement_color_block(img, roi) if box else None
-    if block:
-        meta["block"] = block
     if box:
-        if block:
+        color, outer_box, inner_box, samples = classify_requirement_color(img, digit_box=box)
+        meta["color_box"] = outer_box
+        meta["color_box_inner"] = inner_box
+        meta["color_samples"] = samples
+        if not color and block:
             color = classify_requirement_color_from_block(img, block, digit_box=box)
-        if not color:
-            color, outer_box, inner_box, samples = classify_requirement_color(img, digit_box=box)
-            meta["color_box"] = outer_box
-            meta["color_box_inner"] = inner_box
-            meta["color_samples"] = samples
     meta["color"] = color
     if color:
         req[color] = int(digit.get("value", 0))
@@ -2955,10 +3054,6 @@ def write_evolution_debug(cards, debug, output_name="index.html"):
         img_path = CARDS_DIR / image
         img_cv = cv2.imread(str(img_path))
         if img_cv is not None:
-            roi = evo_meta.get("roi")
-            if roi:
-                x0, y0, x1, y1 = roi
-                cv2.rectangle(img_cv, (x0, y0), (x1, y1), (255, 0, 255), 1)
             digit = evo_meta.get("digit") or {}
             box = digit.get("box")
             if box:
@@ -2976,34 +3071,6 @@ def write_evolution_debug(cards, debug, output_name="index.html"):
                     (0, 200, 0),
                     1,
                 )
-            color_box = evo_meta.get("color_box")
-            if color_box:
-                x0, y0, x1, y1 = color_box
-                cv2.rectangle(img_cv, (x0, y0), (x1, y1), (0, 200, 200), 1)
-            inner_box = evo_meta.get("color_box_inner")
-            if inner_box:
-                x0, y0, x1, y1 = inner_box
-                cv2.rectangle(img_cv, (x0, y0), (x1, y1), (0, 160, 160), 1)
-            block = evo_meta.get("block")
-            if block:
-                x0, y0, x1, y1 = block
-                cv2.rectangle(img_cv, (x0, y0), (x1, y1), (255, 128, 0), 1)
-            samples = evo_meta.get("color_samples") or []
-            if samples:
-                color_map = {
-                    "red": (0, 0, 255),
-                    "yellow": (0, 255, 255),
-                    "blue": (255, 0, 0),
-                    "pink": (255, 0, 255),
-                    "black": (0, 0, 0),
-                }
-                for sample in samples:
-                    point = sample.get("point")
-                    if not point:
-                        continue
-                    sx, sy = int(point[0]), int(point[1])
-                    color = color_map.get(sample.get("color"), (255, 255, 255))
-                    cv2.circle(img_cv, (sx, sy), 2, color, -1)
             out_path = out_dir / image
             cv2.imwrite(str(out_path), img_cv)
 

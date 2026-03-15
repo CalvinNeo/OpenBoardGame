@@ -28,6 +28,7 @@ from game.skull import SkullGame
 from game.the_gang import TheGangGame
 from game.texas_holdem import TexasHoldemGame
 from game.trekking_history import TrekkingHistoryGame
+from game.word_decode import WordDecodeGame
 from game.yahtzee import YahtzeeGame
 from game import definitions as _definitions
 
@@ -61,6 +62,7 @@ __all__ = [
     "TheGangGame",
     "TexasHoldemGame",
     "TrekkingHistoryGame",
+    "WordDecodeGame",
     "YahtzeeGame",
     "GameDefinition",
     "get_game",

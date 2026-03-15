@@ -136,6 +136,7 @@ function renderRoomState(state) {
     clearGangState();
     clearMismatchState();
     clearDecryptoState();
+    clearWordDecodeState();
     clearDrawGuessState();
     clearBlitzSketchState();
     clearAidixitState();
