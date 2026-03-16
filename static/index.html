@@ -2404,15 +2404,21 @@
                 <button id="azulTakeBtn" type="button">Take Tiles</button>
               </div>
               <div class="azul-layout">
-                <div>
-                  <h3>Factories 🧱</h3>
-                  <div id="azulFactories" class="azul-factories"></div>
-                  <h3>Center 🏛️</h3>
-                  <div id="azulCenter" class="azul-center"></div>
+                <div class="azul-table" id="azulTable">
+                  <div id="azulFactoriesTop" class="azul-factories-row"></div>
+                  <div class="azul-center-area" id="azulCenterArea">
+                    <div class="azul-center-block">
+                      <h3>Center 🏛️</h3>
+                      <div id="azulCenter" class="azul-center"></div>
+                    </div>
+                    <div class="azul-board-block">
+                      <h3>Your Board</h3>
+                      <div id="azulYourBoard" class="azul-board"></div>
+                    </div>
+                  </div>
+                  <div id="azulFactoriesBottom" class="azul-factories-row"></div>
                 </div>
-                <div>
-                  <h3>Your Board</h3>
-                  <div id="azulYourBoard" class="azul-board"></div>
+                <div class="azul-side">
                   <h3>Players</h3>
                   <div id="azulPlayers"></div>
                 </div>

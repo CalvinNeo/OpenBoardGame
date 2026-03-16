@@ -14,7 +14,8 @@ const azulSelectedSourceLabel = document.getElementById("azulSelectedSource");
 const azulSelectedColorLabel = document.getElementById("azulSelectedColor");
 const azulSelectedRowLabel = document.getElementById("azulSelectedRow");
 
-const azulFactories = document.getElementById("azulFactories");
+const azulFactoriesTop = document.getElementById("azulFactoriesTop");
+const azulFactoriesBottom = document.getElementById("azulFactoriesBottom");
 const azulCenter = document.getElementById("azulCenter");
 const azulYourBoard = document.getElementById("azulYourBoard");
 const azulPlayers = document.getElementById("azulPlayers");
@@ -210,12 +211,16 @@ function makeAzulTile(color, sizeClass = "") {
   return tile;
 }
 
+const AZUL_FACTORIES_TOP_LIMIT = 3;
+
 function renderAzulFactories(view) {
-  if (!azulFactories) {
+  if (!azulFactoriesTop || !azulFactoriesBottom) {
     return;
   }
-  azulFactories.innerHTML = "";
+  azulFactoriesTop.innerHTML = "";
+  azulFactoriesBottom.innerHTML = "";
   const factories = Array.isArray(view.factories) ? view.factories : [];
+  const topCount = Math.min(AZUL_FACTORIES_TOP_LIMIT, factories.length);
   factories.forEach((factory, idx) => {
     const wrapper = document.createElement("div");
     wrapper.className = "azul-factory";
@@ -256,7 +261,8 @@ function renderAzulFactories(view) {
       });
     }
     wrapper.appendChild(tiles);
-    azulFactories.appendChild(wrapper);
+    const target = idx < topCount ? azulFactoriesTop : azulFactoriesBottom;
+    target.appendChild(wrapper);
   });
 }
 
@@ -531,7 +537,8 @@ function clearAzulState() {
   if (azulBagLabel) azulBagLabel.textContent = "-";
   if (azulDiscardLabel) azulDiscardLabel.textContent = "-";
   if (azulWinnerLabel) azulWinnerLabel.textContent = "-";
-  if (azulFactories) azulFactories.innerHTML = "";
+  if (azulFactoriesTop) azulFactoriesTop.innerHTML = "";
+  if (azulFactoriesBottom) azulFactoriesBottom.innerHTML = "";
   if (azulCenter) azulCenter.innerHTML = "";
   if (azulYourBoard) azulYourBoard.innerHTML = "";
   if (azulPlayers) azulPlayers.innerHTML = "";
