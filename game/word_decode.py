@@ -177,16 +177,12 @@ def _bot_hints_for(card: Dict, hidden_word: str) -> List[str]:
     options = [hint for hint in bot_hints.get(hidden_word, []) if isinstance(hint, str) and hint.strip()]
     if len(options) >= 2:
         return random.sample(options, 2)
+    if len(options) == 1:
+        return [options[0], options[0]]
     base = card.get("base")
-    fallback = []
     if isinstance(base, str) and base.strip():
-        fallback.append(base.strip())
-    fallback.append(hidden_word)
-    while len(fallback) < 2:
-        fallback.append(hidden_word)
-    if options:
-        fallback[0] = options[0]
-    return fallback[:2]
+        return [base.strip(), base.strip()]
+    return [hidden_word, hidden_word]
 
 
 class WordDecodeGame:
