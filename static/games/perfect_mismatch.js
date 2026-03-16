@@ -154,9 +154,13 @@ function renderMismatchSliders(view) {
     }
     const isActive = isLeader && canSet && index === activeIndex;
     input.disabled = !isActive;
+    if (isActive) {
+      valueLabel.textContent = String(input.value);
+    }
     updateMismatchSliderColor(input);
     input.addEventListener("input", () => {
       updateMismatchSliderColor(input);
+      valueLabel.textContent = String(input.value);
     });
 
     const setBtn = document.createElement("button");
