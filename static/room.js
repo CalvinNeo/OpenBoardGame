@@ -62,6 +62,7 @@ const createRoomModal = document.getElementById("createRoomModal");
 const createRoomModalCloseBtn = document.getElementById("createRoomModalCloseBtn");
 const gameSearchInput = document.getElementById("gameSearchInput");
 const playerCountFilter = document.getElementById("playerCountFilter");
+const gameSortSelect = document.getElementById("gameSortSelect");
 const gameListCount = document.getElementById("gameListCount");
 const gameListEl = document.getElementById("gameList");
 const gameListEmpty = document.getElementById("gameListEmpty");
@@ -482,6 +483,87 @@ function filterGames(games, searchText, playerCount) {
   });
 }
 
+const GAME_WEIGHT = {
+  abraca_what: 1.64,
+  aidixit: 1.19,
+  azul: 1.78,
+  blokus: 1.73,
+  cabo: 1.4,
+  carcassonne: 1.89,
+  cat_in_box: 2.03,
+  coyote: 1.3,
+  decrypto: 1.82,
+  flip7: 1.03,
+  halli_galli: 1.02,
+  hanabi: 1.69,
+  incan_gold: 1.11,
+  kobayakawa: 1.2,
+  perfect_mismatch: 1.0,
+  point_salad: 1.15,
+  project_l: 1.53,
+  six_nimmt: 1.19,
+  skull: 1.12,
+  splendor: 1.78,
+  the_gang: 1.58,
+  trekking_history: 1.76,
+  yahtzee: 1.17,
+};
+
+function getGameWeight(gameId) {
+  const weight = GAME_WEIGHT[gameId];
+  return Number.isFinite(weight) ? weight : null;
+}
+
+function formatGameWeight(gameId) {
+  const weight = getGameWeight(gameId);
+  return Number.isFinite(weight) ? weight.toFixed(2) : "?";
+}
+
+function getGameSortKey() {
+  if (!gameSortSelect) {
+    return "alpha";
+  }
+  return gameSortSelect.value || "alpha";
+}
+
+function sortGames(games, sortKey) {
+  const ordered = [...games];
+  if (sortKey === "difficulty_asc") {
+    ordered.sort((a, b) => {
+      const aWeight = getGameWeight(a.game_id);
+      const bWeight = getGameWeight(b.game_id);
+      if (Number.isFinite(aWeight) && Number.isFinite(bWeight)) {
+        const diff = aWeight - bWeight;
+        if (diff !== 0) return diff;
+      } else if (Number.isFinite(aWeight)) {
+        return -1;
+      } else if (Number.isFinite(bWeight)) {
+        return 1;
+      }
+      return a.name.localeCompare(b.name);
+    });
+    return ordered;
+  }
+  if (sortKey === "difficulty_desc") {
+    ordered.sort((a, b) => {
+      const aWeight = getGameWeight(a.game_id);
+      const bWeight = getGameWeight(b.game_id);
+      if (Number.isFinite(aWeight) && Number.isFinite(bWeight)) {
+        const diff = bWeight - aWeight;
+        if (diff !== 0) return diff;
+      } else if (Number.isFinite(aWeight)) {
+        return -1;
+      } else if (Number.isFinite(bWeight)) {
+        return 1;
+      }
+      return a.name.localeCompare(b.name);
+    });
+    return ordered;
+  }
+  ordered.sort((a, b) => a.name.localeCompare(b.name));
+  return ordered;
+}
+
 function renderGameList(games) {
   if (!gameListEl || !gameListEmpty) {
     return;
@@ -496,9 +578,11 @@ function renderGameList(games) {
     const item = document.createElement("div");
     item.className = "game-item";
     item.dataset.gameId = g.game_id;
+    const weightLabel = formatGameWeight(g.game_id);
+    item.title = `BGG Weight: ${weightLabel}`;
     const nameEl = document.createElement("span");
     nameEl.className = "game-item-name";
-    nameEl.textContent = g.name;
+    nameEl.textContent = `${g.name} (${weightLabel})`;
     const playersEl = document.createElement("span");
     playersEl.className = "game-item-players";
     playersEl.textContent =
@@ -542,8 +626,10 @@ async function applyGameFilters() {
   const searchText = gameSearchInput ? gameSearchInput.value.trim() : "";
   const playerCount = playerCountFilter ? parseInt(playerCountFilter.value, 10) || 0 : 0;
   const filtered = filterGames(games, searchText, playerCount);
-  updateGameListCount(filtered.length);
-  renderGameList(filtered);
+  const sortKey = getGameSortKey();
+  const sorted = sortGames(filtered, sortKey);
+  updateGameListCount(sorted.length);
+  renderGameList(sorted);
 }
 
 async function openCreateRoomModal() {
@@ -555,6 +641,9 @@ async function openCreateRoomModal() {
   }
   if (playerCountFilter) {
     playerCountFilter.value = "";
+  }
+  if (gameSortSelect) {
+    gameSortSelect.value = "alpha";
   }
   setModalVisible(createRoomModal, true);
   await applyGameFilters();
@@ -1458,6 +1547,12 @@ if (gameSearchInput) {
 
 if (playerCountFilter) {
   playerCountFilter.addEventListener("change", () => {
+    applyGameFilters();
+  });
+}
+
+if (gameSortSelect) {
+  gameSortSelect.addEventListener("change", () => {
     applyGameFilters();
   });
 }

@@ -2260,6 +2260,25 @@ body.log-open {
   margin-bottom: 12px;
 }
 
+.create-room-sort {
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.create-room-sort label {
+  min-width: 64px;
+  font-size: 13px;
+  color: #374151;
+}
+
+.create-room-sort select {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
 .game-list-count {
   margin: -4px 0 8px;
 }
