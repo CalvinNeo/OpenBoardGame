@@ -1,0 +1,757 @@
+[
+  {
+    "id": 1,
+    "english": "Bulbasaur",
+    "chinese": "妙蛙种子"
+  },
+  {
+    "id": 2,
+    "english": "Ivysaur",
+    "chinese": "妙蛙草"
+  },
+  {
+    "id": 3,
+    "english": "Venusaur",
+    "chinese": "妙蛙花"
+  },
+  {
+    "id": 4,
+    "english": "Charmander",
+    "chinese": "小火龙"
+  },
+  {
+    "id": 5,
+    "english": "Charmeleon",
+    "chinese": "火恐龙"
+  },
+  {
+    "id": 6,
+    "english": "Charizard",
+    "chinese": "喷火龙"
+  },
+  {
+    "id": 7,
+    "english": "Squirtle",
+    "chinese": "杰尼龟"
+  },
+  {
+    "id": 8,
+    "english": "Wartortle",
+    "chinese": "卡咪龟"
+  },
+  {
+    "id": 9,
+    "english": "Blastoise",
+    "chinese": "水箭龟"
+  },
+  {
+    "id": 10,
+    "english": "Caterpie",
+    "chinese": "绿毛虫"
+  },
+  {
+    "id": 11,
+    "english": "Metapod",
+    "chinese": "铁甲蛹"
+  },
+  {
+    "id": 12,
+    "english": "Butterfree",
+    "chinese": "巴大蝶"
+  },
+  {
+    "id": 13,
+    "english": "Weedle",
+    "chinese": "独角虫"
+  },
+  {
+    "id": 14,
+    "english": "Kakuna",
+    "chinese": "铁壳蛹"
+  },
+  {
+    "id": 15,
+    "english": "Beedrill",
+    "chinese": "大针蜂"
+  },
+  {
+    "id": 16,
+    "english": "Pidgey",
+    "chinese": "波波"
+  },
+  {
+    "id": 17,
+    "english": "Pidgeotto",
+    "chinese": "比比鸟"
+  },
+  {
+    "id": 18,
+    "english": "Pidgeot",
+    "chinese": "大比鸟"
+  },
+  {
+    "id": 19,
+    "english": "Rattata",
+    "chinese": "小拉达"
+  },
+  {
+    "id": 20,
+    "english": "Raticate",
+    "chinese": "拉达"
+  },
+  {
+    "id": 21,
+    "english": "Spearow",
+    "chinese": "烈雀"
+  },
+  {
+    "id": 22,
+    "english": "Fearow",
+    "chinese": "大嘴雀"
+  },
+  {
+    "id": 23,
+    "english": "Ekans",
+    "chinese": "阿柏蛇"
+  },
+  {
+    "id": 24,
+    "english": "Arbok",
+    "chinese": "阿柏怪"
+  },
+  {
+    "id": 25,
+    "english": "Pikachu",
+    "chinese": "皮卡丘"
+  },
+  {
+    "id": 26,
+    "english": "Raichu",
+    "chinese": "雷丘"
+  },
+  {
+    "id": 27,
+    "english": "Sandshrew",
+    "chinese": "穿山鼠"
+  },
+  {
+    "id": 28,
+    "english": "Sandslash",
+    "chinese": "穿山王"
+  },
+  {
+    "id": 29,
+    "english": "Nidoran♀",
+    "chinese": "尼多兰"
+  },
+  {
+    "id": 30,
+    "english": "Nidorina",
+    "chinese": "尼多娜"
+  },
+  {
+    "id": 31,
+    "english": "Nidoqueen",
+    "chinese": "尼多后"
+  },
+  {
+    "id": 32,
+    "english": "Nidoran♂",
+    "chinese": "尼多朗"
+  },
+  {
+    "id": 33,
+    "english": "Nidorino",
+    "chinese": "尼多力诺"
+  },
+  {
+    "id": 34,
+    "english": "Nidoking",
+    "chinese": "尼多王"
+  },
+  {
+    "id": 35,
+    "english": "Clefairy",
+    "chinese": "皮皮"
+  },
+  {
+    "id": 36,
+    "english": "Clefable",
+    "chinese": "皮可西"
+  },
+  {
+    "id": 37,
+    "english": "Vulpix",
+    "chinese": "六尾"
+  },
+  {
+    "id": 38,
+    "english": "Ninetales",
+    "chinese": "九尾"
+  },
+  {
+    "id": 39,
+    "english": "Jigglypuff",
+    "chinese": "胖丁"
+  },
+  {
+    "id": 40,
+    "english": "Wigglytuff",
+    "chinese": "胖可丁"
+  },
+  {
+    "id": 41,
+    "english": "Zubat",
+    "chinese": "超音蝠"
+  },
+  {
+    "id": 42,
+    "english": "Golbat",
+    "chinese": "大嘴蝠"
+  },
+  {
+    "id": 43,
+    "english": "Oddish",
+    "chinese": "走路草"
+  },
+  {
+    "id": 44,
+    "english": "Gloom",
+    "chinese": "臭臭花"
+  },
+  {
+    "id": 45,
+    "english": "Vileplume",
+    "chinese": "霸王花"
+  },
+  {
+    "id": 46,
+    "english": "Paras",
+    "chinese": "派拉斯"
+  },
+  {
+    "id": 47,
+    "english": "Parasect",
+    "chinese": "派拉斯特"
+  },
+  {
+    "id": 48,
+    "english": "Venonat",
+    "chinese": "毛球"
+  },
+  {
+    "id": 49,
+    "english": "Venomoth",
+    "chinese": "摩鲁蛾"
+  },
+  {
+    "id": 50,
+    "english": "Diglett",
+    "chinese": "地鼠"
+  },
+  {
+    "id": 51,
+    "english": "Dugtrio",
+    "chinese": "三地鼠"
+  },
+  {
+    "id": 52,
+    "english": "Meowth",
+    "chinese": "喵喵"
+  },
+  {
+    "id": 53,
+    "english": "Persian",
+    "chinese": "猫老大"
+  },
+  {
+    "id": 54,
+    "english": "Psyduck",
+    "chinese": "可达鸭"
+  },
+  {
+    "id": 55,
+    "english": "Golduck",
+    "chinese": "哥达鸭"
+  },
+  {
+    "id": 56,
+    "english": "Mankey",
+    "chinese": "猴怪"
+  },
+  {
+    "id": 57,
+    "english": "Primeape",
+    "chinese": "火暴猴"
+  },
+  {
+    "id": 58,
+    "english": "Growlithe",
+    "chinese": "卡蒂狗"
+  },
+  {
+    "id": 59,
+    "english": "Arcanine",
+    "chinese": "风速狗"
+  },
+  {
+    "id": 60,
+    "english": "Poliwag",
+    "chinese": "蚊香蝌蚪"
+  },
+  {
+    "id": 61,
+    "english": "Poliwhirl",
+    "chinese": "蚊香君"
+  },
+  {
+    "id": 62,
+    "english": "Poliwrath",
+    "chinese": "蚊香泳士"
+  },
+  {
+    "id": 63,
+    "english": "Abra",
+    "chinese": "凯西"
+  },
+  {
+    "id": 64,
+    "english": "Kadabra",
+    "chinese": "勇基拉"
+  },
+  {
+    "id": 65,
+    "english": "Alakazam",
+    "chinese": "胡地"
+  },
+  {
+    "id": 66,
+    "english": "Machop",
+    "chinese": "腕力"
+  },
+  {
+    "id": 67,
+    "english": "Machoke",
+    "chinese": "豪力"
+  },
+  {
+    "id": 68,
+    "english": "Machamp",
+    "chinese": "怪力"
+  },
+  {
+    "id": 69,
+    "english": "Bellsprout",
+    "chinese": "喇叭芽"
+  },
+  {
+    "id": 70,
+    "english": "Weepinbell",
+    "chinese": "口呆花"
+  },
+  {
+    "id": 71,
+    "english": "Victreebel",
+    "chinese": "大食花"
+  },
+  {
+    "id": 72,
+    "english": "Tentacool",
+    "chinese": "玛瑙水母"
+  },
+  {
+    "id": 73,
+    "english": "Tentacruel",
+    "chinese": "毒刺水母"
+  },
+  {
+    "id": 74,
+    "english": "Geodude",
+    "chinese": "小拳石"
+  },
+  {
+    "id": 75,
+    "english": "Graveler",
+    "chinese": "隆隆石"
+  },
+  {
+    "id": 76,
+    "english": "Golem",
+    "chinese": "隆隆岩"
+  },
+  {
+    "id": 77,
+    "english": "Ponyta",
+    "chinese": "小火马"
+  },
+  {
+    "id": 78,
+    "english": "Rapidash",
+    "chinese": "烈焰马"
+  },
+  {
+    "id": 79,
+    "english": "Slowpoke",
+    "chinese": "呆呆兽"
+  },
+  {
+    "id": 80,
+    "english": "Slowbro",
+    "chinese": "呆壳兽"
+  },
+  {
+    "id": 81,
+    "english": "Magnemite",
+    "chinese": "小磁怪"
+  },
+  {
+    "id": 82,
+    "english": "Magneton",
+    "chinese": "三合一磁怪"
+  },
+  {
+    "id": 83,
+    "english": "Farfetch'd",
+    "chinese": "大葱鸭"
+  },
+  {
+    "id": 84,
+    "english": "Doduo",
+    "chinese": "嘟嘟"
+  },
+  {
+    "id": 85,
+    "english": "Dodrio",
+    "chinese": "嘟嘟利"
+  },
+  {
+    "id": 86,
+    "english": "Seel",
+    "chinese": "小海狮"
+  },
+  {
+    "id": 87,
+    "english": "Dewgong",
+    "chinese": "白海狮"
+  },
+  {
+    "id": 88,
+    "english": "Grimer",
+    "chinese": "臭泥"
+  },
+  {
+    "id": 89,
+    "english": "Muk",
+    "chinese": "臭臭泥"
+  },
+  {
+    "id": 90,
+    "english": "Shellder",
+    "chinese": "大舌贝"
+  },
+  {
+    "id": 91,
+    "english": "Cloyster",
+    "chinese": "刺甲贝"
+  },
+  {
+    "id": 92,
+    "english": "Gastly",
+    "chinese": "鬼斯"
+  },
+  {
+    "id": 93,
+    "english": "Haunter",
+    "chinese": "鬼斯通"
+  },
+  {
+    "id": 94,
+    "english": "Gengar",
+    "chinese": "耿鬼"
+  },
+  {
+    "id": 95,
+    "english": "Onix",
+    "chinese": "大岩蛇"
+  },
+  {
+    "id": 96,
+    "english": "Drowzee",
+    "chinese": "催眠貘"
+  },
+  {
+    "id": 97,
+    "english": "Hypno",
+    "chinese": "引梦貘人"
+  },
+  {
+    "id": 98,
+    "english": "Krabby",
+    "chinese": "大钳蟹"
+  },
+  {
+    "id": 99,
+    "english": "Kingler",
+    "chinese": "巨钳蟹"
+  },
+  {
+    "id": 100,
+    "english": "Voltorb",
+    "chinese": "霹雳电球"
+  },
+  {
+    "id": 101,
+    "english": "Electrode",
+    "chinese": "顽皮雷弹"
+  },
+  {
+    "id": 102,
+    "english": "Exeggcute",
+    "chinese": "蛋蛋"
+  },
+  {
+    "id": 103,
+    "english": "Exeggutor",
+    "chinese": "椰蛋树"
+  },
+  {
+    "id": 104,
+    "english": "Cubone",
+    "chinese": "卡拉卡拉"
+  },
+  {
+    "id": 105,
+    "english": "Marowak",
+    "chinese": "嘎啦嘎啦"
+  },
+  {
+    "id": 106,
+    "english": "Hitmonlee",
+    "chinese": "飞腿郎"
+  },
+  {
+    "id": 107,
+    "english": "Hitmonchan",
+    "chinese": "快拳郎"
+  },
+  {
+    "id": 108,
+    "english": "Lickitung",
+    "chinese": "大舌头"
+  },
+  {
+    "id": 109,
+    "english": "Koffing",
+    "chinese": "瓦斯弹"
+  },
+  {
+    "id": 110,
+    "english": "Weezing",
+    "chinese": "双弹瓦斯"
+  },
+  {
+    "id": 111,
+    "english": "Rhyhorn",
+    "chinese": "独角犀牛"
+  },
+  {
+    "id": 112,
+    "english": "Rhydon",
+    "chinese": "钻角犀兽"
+  },
+  {
+    "id": 113,
+    "english": "Chansey",
+    "chinese": "吉利蛋"
+  },
+  {
+    "id": 114,
+    "english": "Tangela",
+    "chinese": "蔓藤怪"
+  },
+  {
+    "id": 115,
+    "english": "Kangaskhan",
+    "chinese": "袋兽"
+  },
+  {
+    "id": 116,
+    "english": "Horsea",
+    "chinese": "墨海马"
+  },
+  {
+    "id": 117,
+    "english": "Seadra",
+    "chinese": "海刺龙"
+  },
+  {
+    "id": 118,
+    "english": "Goldeen",
+    "chinese": "角金鱼"
+  },
+  {
+    "id": 119,
+    "english": "Seaking",
+    "chinese": "金鱼王"
+  },
+  {
+    "id": 120,
+    "english": "Staryu",
+    "chinese": "海星星"
+  },
+  {
+    "id": 121,
+    "english": "Starmie",
+    "chinese": "宝石海星"
+  },
+  {
+    "id": 122,
+    "english": "Mr. Mime",
+    "chinese": "魔墙人偶"
+  },
+  {
+    "id": 123,
+    "english": "Scyther",
+    "chinese": "飞天螳螂"
+  },
+  {
+    "id": 124,
+    "english": "Jynx",
+    "chinese": "迷唇姐"
+  },
+  {
+    "id": 125,
+    "english": "Electabuzz",
+    "chinese": "电击兽"
+  },
+  {
+    "id": 126,
+    "english": "Magmar",
+    "chinese": "鸭嘴火兽"
+  },
+  {
+    "id": 127,
+    "english": "Pinsir",
+    "chinese": "凯罗斯"
+  },
+  {
+    "id": 128,
+    "english": "Tauros",
+    "chinese": "肯泰罗"
+  },
+  {
+    "id": 129,
+    "english": "Magikarp",
+    "chinese": "鲤鱼王"
+  },
+  {
+    "id": 130,
+    "english": "Gyarados",
+    "chinese": "暴鲤龙"
+  },
+  {
+    "id": 131,
+    "english": "Lapras",
+    "chinese": "拉普拉斯"
+  },
+  {
+    "id": 132,
+    "english": "Ditto",
+    "chinese": "百变怪"
+  },
+  {
+    "id": 133,
+    "english": "Eevee",
+    "chinese": "伊布"
+  },
+  {
+    "id": 134,
+    "english": "Vaporeon",
+    "chinese": "水伊布"
+  },
+  {
+    "id": 135,
+    "english": "Jolteon",
+    "chinese": "雷伊布"
+  },
+  {
+    "id": 136,
+    "english": "Flareon",
+    "chinese": "火伊布"
+  },
+  {
+    "id": 137,
+    "english": "Porygon",
+    "chinese": "多边兽"
+  },
+  {
+    "id": 138,
+    "english": "Omanyte",
+    "chinese": "菊石兽"
+  },
+  {
+    "id": 139,
+    "english": "Omastar",
+    "chinese": "多刺菊石兽"
+  },
+  {
+    "id": 140,
+    "english": "Kabuto",
+    "chinese": "化石盔"
+  },
+  {
+    "id": 141,
+    "english": "Kabutops",
+    "chinese": "镰刀盔"
+  },
+  {
+    "id": 142,
+    "english": "Aerodactyl",
+    "chinese": "化石翼龙"
+  },
+  {
+    "id": 143,
+    "english": "Snorlax",
+    "chinese": "卡比兽"
+  },
+  {
+    "id": 144,
+    "english": "Articuno",
+    "chinese": "急冻鸟"
+  },
+  {
+    "id": 145,
+    "english": "Zapdos",
+    "chinese": "闪电鸟"
+  },
+  {
+    "id": 146,
+    "english": "Moltres",
+    "chinese": "火焰鸟"
+  },
+  {
+    "id": 147,
+    "english": "Dratini",
+    "chinese": "迷你龙"
+  },
+  {
+    "id": 148,
+    "english": "Dragonair",
+    "chinese": "哈克龙"
+  },
+  {
+    "id": 149,
+    "english": "Dragonite",
+    "chinese": "快龙"
+  },
+  {
+    "id": 150,
+    "english": "Mewtwo",
+    "chinese": "超梦"
+  },
+  {
+    "id": 151,
+    "english": "Mew",
+    "chinese": "梦幻"
+  }
+]

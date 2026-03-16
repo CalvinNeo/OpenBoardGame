@@ -62,11 +62,15 @@ UPGRADE_GOLD = {
     "scene_002_05": {"requirements": {}, "target_en": None, "target_zh": None},
     "scene_002_06": {"requirements": {}, "target_en": None, "target_zh": None},
     "scene_002_14": {"requirements": {}, "target_en": None, "target_zh": None},
+    "scene_002_16": {"requirements": {"black": 3}, "target_en": "Haunter", "target_zh": "鬼斯通"},
     "scene_003_03": {"requirements": {}, "target_en": None, "target_zh": None},
     "scene_003_06": {"requirements": {}, "target_en": None, "target_zh": None},
+    "scene_003_01": {"requirements": {"black": 3}, "target_en": "Wartortle", "target_zh": "卡咪龟"},
+    "scene_003_09": {"requirements": {"black": 3}, "target_en": "Wartortle", "target_zh": "卡咪龟"},
     "scene_003_14": {"requirements": {}, "target_en": None, "target_zh": None},
     "scene_004_03": {"requirements": {}, "target_en": None, "target_zh": None},
     "scene_004_05": {"requirements": {}, "target_en": "Poliwrath", "target_zh": "蚊香泳士"},
+    "scene_004_07": {"requirements": {"black": 4}, "target_en": "Alakazam", "target_zh": "胡地"},
     "scene_004_13": {"requirements": {}, "target_en": "Cloyster", "target_zh": "刺甲贝"},
     "scene_004_14": {"requirements": {}, "target_en": "Metapod", "target_zh": "铁甲蛹"},
     "scene_005_05": {"requirements": {}, "target_en": None, "target_zh": None},
@@ -82,6 +86,7 @@ UPGRADE_GOLD = {
     "scene_002_09": {"requirements": {"pink": 3}, "target_en": "Ivysaur", "target_zh": "妙蛙草"},
     "scene_002_10": {"requirements": {"blue": 2}, "target_en": "Nidorina", "target_zh": "尼多娜"},
     "scene_002_11": {"requirements": {"blue": 2}, "target_en": "Nidorina", "target_zh": "尼多娜"},
+    "scene_002_12": {"requirements": {"red": 3}, "target_en": "Gengar", "target_zh": "耿鬼"},
     "scene_002_15": {"requirements": {"red": 3}, "target_en": "Gengar", "target_zh": "耿鬼"},
     "scene_002_01": {"requirements": {"pink": 3}, "target_en": "Ivysaur", "target_zh": "妙蛙草"},
     "scene_002_07": {"requirements": {"blue": 4}, "target_en": "Venusaur", "target_zh": "妙蛙花"},
@@ -93,18 +98,28 @@ UPGRADE_GOLD = {
     "scene_003_08": {"requirements": {"pink": 4}, "target_en": "Victreebel", "target_zh": "大食花"},
     "scene_003_10": {"requirements": {"pink": 2}, "target_en": "Weepinbell", "target_zh": "口呆花"},
     "scene_003_11": {"requirements": {"pink": 2}, "target_en": "Weepinbell", "target_zh": "口呆花"},
+    "scene_003_02": {"requirements": {"pink": 4}, "target_en": "Blastoise", "target_zh": "水箭龟"},
+    "scene_003_12": {"requirements": {"blue": 3}, "target_en": None, "target_zh": None},
+    "scene_003_15": {"requirements": {"blue": 3}, "target_en": None, "target_zh": None},
+    "scene_003_16": {"requirements": {"yellow": 3}, "target_en": "Machoke", "target_zh": "豪力"},
     "scene_004_12": {"requirements": {"blue": 3}, "target_en": "Butterfree", "target_zh": "巴大蝶"},
     "scene_004_01": {"requirements": {"red": 3}, "target_en": "Kadabra", "target_zh": "勇基拉"},
     "scene_004_06": {"requirements": {"red": 3}, "target_en": "Alakazam", "target_zh": "胡地"},
     "scene_004_08": {"requirements": {"black": 4}, "target_en": "Poliwrath", "target_zh": "蚊香泳士"},
+    "scene_004_02": {"requirements": {"black": 4}, "target_en": "Alakazam", "target_zh": "胡地"},
+    "scene_004_04": {"requirements": {"black": 2}, "target_en": "Poliwhirl", "target_zh": "蚊香君"},
+    "scene_004_09": {"requirements": {"black": 2}, "target_en": "Poliwhirl", "target_zh": "蚊香君"},
+    "scene_004_10": {"requirements": {"black": 2}, "target_en": "Poliwhirl", "target_zh": "蚊香君"},
     "scene_004_11": {"requirements": {"yellow": 3}, "target_en": "Butterfree", "target_zh": "巴大蝶"},
     "scene_004_15": {"requirements": {"yellow": 3}, "target_en": "Butterfree", "target_zh": "巴大蝶"},
     "scene_005_02": {"requirements": {"red": 4}, "target_en": "Charizard", "target_zh": "喷火龙"},
     "scene_005_03": {"requirements": {"pink": 2}, "target_en": "Pidgeotto", "target_zh": "比比鸟"},
     "scene_005_04": {"requirements": {"red": 4}, "target_en": "Pidgeot", "target_zh": "大比鸟"},
     "scene_005_07": {"requirements": {"red": 4}, "target_en": "Charizard", "target_zh": "喷火龙"},
+    "scene_005_08": {"requirements": {"red": 4}, "target_en": "Pidgeot", "target_zh": "大比鸟"},
     "scene_005_10": {"requirements": {"red": 2}, "target_en": None, "target_zh": None},
     "scene_005_11": {"requirements": {"red": 2}, "target_en": "Pidgeot", "target_zh": "大比鸟"},
+    "scene_005_12": {"requirements": {"black": 3}, "target_en": "Graveler", "target_zh": "隆隆石"},
     "scene_005_16": {"requirements": {"pink": 3}, "target_en": "Graveler", "target_zh": "隆隆石"},
     "scene_006_10": {"requirements": {"blue": 3}, "target_en": "Dragonair", "target_zh": "哈克龙"},
     "scene_006_12": {"requirements": {"red": 3}, "target_en": "Kakuna", "target_zh": "铁壳蛹"},
@@ -113,6 +128,7 @@ UPGRADE_GOLD = {
     "scene_005_01": {"requirements": {"yellow": 3}, "target_en": "Charmeleon", "target_zh": "火恐龙"},
     "scene_005_09": {"requirements": {"yellow": 3}, "target_en": "Charmeleon", "target_zh": "火恐龙"},
     "scene_005_13": {"requirements": {"pink": 3}, "target_en": "Graveler", "target_zh": "隆隆石"},
+    "scene_005_15": {"requirements": {"black": 3}, "target_en": "Golem", "target_zh": "隆隆岩"},
     "scene_006_01": {"requirements": {"blue": 3}, "target_en": "Dragonair", "target_zh": "哈克龙"},
     "scene_006_02": {"requirements": {"yellow": 4}, "target_en": "Dragonite", "target_zh": "快龙"},
     "scene_006_03": {"requirements": {"yellow": 2}, "target_en": "Gloom", "target_zh": "臭臭花"},
@@ -124,12 +140,25 @@ UPGRADE_GOLD = {
     "scene_006_13": {"requirements": {"pink": 3}, "target_en": "Butterfree", "target_zh": "巴大蝶"},
 }
 
+# Manual requirement overrides (card_id -> requirements dict)
+REQ_OVERRIDES = {
+    "scene_005_03": {"pink": 2},
+}
+
 LEGENDARY_EN = {
     "Articuno",
     "Zapdos",
     "Moltres",
     "Mewtwo",
     "Mew",
+}
+
+RARE_EN = {
+    "Aerodactyl",
+    "Lapras",
+    "Snorlax",
+    "Ditto",
+    "Eevee",
 }
 
 COLOR_CENTERS = {
@@ -257,6 +286,8 @@ REQ_DIGIT_TEMPLATE_MIN_SCORE = 0.85
 REQ_DIGIT_TEMPLATE_TOPK = 6
 REQ_DIGIT_TEMPLATE_MATCH_MIN_SCORE = 0.78
 REQ_DIGIT_TEMPLATE_MATCH_MIN_SCORE_BLOCK = 0.6
+REQ_DIGIT_KNN_FALLBACK_SCORE = 0.85
+REQ_DIGIT_KNN_K = 3
 REQ_DIGIT_BOX_PAD = 3
 REQ_USE_FIXED_DIGIT_BOX = True
 # Fixed digit box relative to requirement ROI (based on scene_005_08 green box after padding)
@@ -774,6 +805,17 @@ def preprocess_digit_patch(patch):
     return th.astype(np.float32) / 255.0
 
 
+def requirement_knn_feature(patch):
+    if patch is None or patch.size == 0:
+        return None
+    gray = cv2.cvtColor(patch, cv2.COLOR_BGR2GRAY)
+    gray = cv2.resize(gray, DIGIT_TEMPLATE_SIZE, interpolation=cv2.INTER_AREA).astype(np.float32)
+    mean = float(gray.mean())
+    std = float(gray.std()) or 1.0
+    gray = (gray - mean) / std
+    return gray.reshape(-1)
+
+
 def template_match_digit(patch, templates, exclude=None):
     if patch is None or not templates:
         return None, 0.0
@@ -1215,41 +1257,51 @@ def classify_requirement_color(img, digit_box=None):
     x0, x1 = int(min(xs)), int(max(xs))
     y0, y1 = int(min(ys)), int(max(ys))
     h_img, w_img = img.shape[:2]
-    pad = 2
-    outer_x0 = max(0, x0 - pad)
-    outer_y0 = max(0, y0 - pad)
-    outer_x1 = min(w_img - 1, x1 + pad)
-    outer_y1 = min(h_img - 1, y1 + pad)
-    outer_box = (outer_x0, outer_y0, outer_x1, outer_y1)
-    inner_box = (x0, y0, x1, y1)
+    # Use the inner 1px border of the green digit box for color sampling.
+    inner_x0 = max(0, x0 + 1)
+    inner_y0 = max(0, y0 + 1)
+    inner_x1 = min(w_img - 1, x1 - 1)
+    inner_y1 = min(h_img - 1, y1 - 1)
+    outer_box = (x0, y0, x1, y1)
+    inner_box = (inner_x0, inner_y0, inner_x1, inner_y1)
+    if inner_x1 <= inner_x0 or inner_y1 <= inner_y0:
+        return None, outer_box, inner_box, []
 
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-    mask = np.zeros((h_img, w_img), dtype=np.uint8)
-    # sample along the expanded green box edge
-    cv2.rectangle(mask, (outer_x0, outer_y0), (outer_x1, outer_y1), 255, thickness=2)
-    mask = (mask > 0) & (hsv[:, :, 1] > 35) & (hsv[:, :, 2] > 70)
+    edge_mask = np.zeros((h_img, w_img), dtype=np.uint8)
+    # sample along the inner 1px edge of the green box
+    cv2.rectangle(edge_mask, (inner_x0, inner_y0), (inner_x1, inner_y1), 255, thickness=1)
+    edge = edge_mask > 0
+    if edge.sum() == 0:
+        return None, outer_box, inner_box, []
+    v_edge = hsv[:, :, 2][edge]
+    dark_ratio = float((v_edge < 70).mean()) if v_edge.size else 0.0
+    mask = edge & (hsv[:, :, 1] > 35) & (hsv[:, :, 2] > 70)
     if mask.sum() < 12:
-        mask = (mask > 0) & (hsv[:, :, 1] > 28) & (hsv[:, :, 2] > 55)
+        mask = edge & (hsv[:, :, 1] > 28) & (hsv[:, :, 2] > 55)
     if mask.sum() == 0:
+        # If the edge is very dark, treat as black; otherwise no decision.
+        if dark_ratio > 0.25:
+            return "black", outer_box, inner_box, []
         return None, outer_box, inner_box, []
 
     mean = mean_hsv_from_mask(img, mask.astype(np.uint8))
     color = None
     if mean:
-        color = classify_requirement_hsv(mean[0], mean[1], mean[2], dark_ratio=0.0)
+        color = classify_requirement_hsv(mean[0], mean[1], mean[2], dark_ratio=dark_ratio)
     if not color:
         hue_stats = dominant_hue_in_mask(hsv, mask.astype(np.uint8))
         if hue_stats:
-            color = classify_requirement_hsv(hue_stats[0], hue_stats[1], hue_stats[2], dark_ratio=0.0)
+            color = classify_requirement_hsv(hue_stats[0], hue_stats[1], hue_stats[2], dark_ratio=dark_ratio)
 
     samples = []
     midx = int(round((x0 + x1) / 2))
     midy = int(round((y0 + y1) / 2))
     points = [
-        (midx, outer_y0),
-        (midx, outer_y1),
-        (outer_x0, midy),
-        (outer_x1, midy),
+        (midx, inner_y0),
+        (midx, inner_y1),
+        (inner_x0, midy),
+        (inner_x1, midy),
     ]
     for sx, sy in points:
         if 0 <= sx < w_img and 0 <= sy < h_img:
@@ -1452,21 +1504,29 @@ def build_requirement_digit_templates(meta, ocr):
         img = cv2.imread(str(img_path))
         if img is None:
             continue
-        roi = requirement_roi(img)
-        block = find_requirement_color_block(img, roi)
-        if block is None:
-            continue
-        bx0, by0, bx1, by1 = block
-        block_patch = img[by0:by1, bx0:bx1]
-        if block_patch.size == 0:
-            continue
-        block_mask = (cv2.cvtColor(block_patch, cv2.COLOR_BGR2GRAY) >= 0).astype(np.uint8)
-        box = detect_digit_box_from_mask(block_patch, block_mask)
-        if not box:
-            continue
-        bdx, bdy, bw, bh = box
-        x0, x1 = bx0 + bdx - 2, bx0 + bdx + bw + 2
-        y0, y1 = by0 + bdy - 2, by0 + bdy + bh + 2
+        if REQ_USE_FIXED_DIGIT_BOX:
+            rx0, ry0, rx1, ry1 = requirement_roi(img)
+            fx0, fy0, fx1, fy1 = REQ_FIXED_BOX_IN_ROI
+            x0 = rx0 + fx0
+            y0 = ry0 + fy0
+            x1 = rx0 + fx1
+            y1 = ry0 + fy1
+        else:
+            roi = requirement_roi(img)
+            block = find_requirement_color_block(img, roi)
+            if block is None:
+                continue
+            bx0, by0, bx1, by1 = block
+            block_patch = img[by0:by1, bx0:bx1]
+            if block_patch.size == 0:
+                continue
+            block_mask = (cv2.cvtColor(block_patch, cv2.COLOR_BGR2GRAY) >= 0).astype(np.uint8)
+            box = detect_digit_box_from_mask(block_patch, block_mask)
+            if not box:
+                continue
+            bdx, bdy, bw, bh = box
+            x0, x1 = bx0 + bdx - 2, bx0 + bdx + bw + 2
+            y0, y1 = by0 + bdy - 2, by0 + bdy + bh + 2
         x0 = max(0, x0)
         y0 = max(0, y0)
         x1 = min(img.shape[1], x1)
@@ -1481,6 +1541,13 @@ def build_requirement_digit_templates(meta, ocr):
         img = cv2.imread(str(img_path))
         if img is None:
             continue
+        # If using fixed boxes and we already have templates for this value, skip OCR-based seeding.
+        # This keeps templates aligned to the fixed box geometry.
+        if REQ_USE_FIXED_DIGIT_BOX:
+            # only fill values that are missing fixed templates
+            missing_vals = {k for k, v in templates.items() if not v}
+            if not missing_vals:
+                continue
         roi = requirement_roi(img)
         res, _ = ocr(str(img_path), box_thresh=OCR_BOX_THRESH, text_score=OCR_TEXT_SCORE)
         res = res or []
@@ -1492,6 +1559,8 @@ def build_requirement_digit_templates(meta, ocr):
             continue
         value = digit.get("value")
         if value not in REQ_DIGIT_ALLOWED_VALUES:
+            continue
+        if REQ_USE_FIXED_DIGIT_BOX and value not in missing_vals:
             continue
         box = digit.get("box")
         if not box:
@@ -1518,6 +1587,70 @@ def build_requirement_digit_templates(meta, ocr):
         top = [p for _, p in patches[:REQ_DIGIT_TEMPLATE_TOPK]]
         top_templates[value] = top
     return top_templates
+
+
+def build_requirement_digit_knn():
+    if not REQ_USE_FIXED_DIGIT_BOX:
+        return None
+    features = []
+    labels = []
+    for card_id, gold in UPGRADE_GOLD.items():
+        req = (gold or {}).get("requirements") or {}
+        if len(req) != 1:
+            continue
+        value = next(iter(req.values()))
+        try:
+            value = int(value)
+        except (TypeError, ValueError):
+            continue
+        if value not in REQ_DIGIT_ALLOWED_VALUES:
+            continue
+        img_path = CARDS_DIR / f"{card_id}.png"
+        if not img_path.exists():
+            continue
+        img = cv2.imread(str(img_path))
+        if img is None:
+            continue
+        rx0, ry0, rx1, ry1 = requirement_roi(img)
+        fx0, fy0, fx1, fy1 = REQ_FIXED_BOX_IN_ROI
+        x0 = rx0 + fx0
+        y0 = ry0 + fy0
+        x1 = rx0 + fx1
+        y1 = ry0 + fy1
+        patch = img[y0:y1, x0:x1]
+        feat = requirement_knn_feature(patch)
+        if feat is None:
+            continue
+        features.append(feat)
+        labels.append(value)
+    if not features:
+        return None
+    return {
+        "features": np.stack(features, axis=0),
+        "labels": np.array(labels, dtype=np.int32),
+    }
+
+
+def requirement_knn_predict(patch, knn_data, k=REQ_DIGIT_KNN_K):
+    if knn_data is None:
+        return None, None
+    features = knn_data.get("features")
+    labels = knn_data.get("labels")
+    if features is None or labels is None or len(features) == 0:
+        return None, None
+    feat = requirement_knn_feature(patch)
+    if feat is None:
+        return None, None
+    dists = np.linalg.norm(features - feat, axis=1)
+    if dists.size == 0:
+        return None, None
+    k = max(1, min(int(k), dists.size))
+    idx = np.argsort(dists)[:k]
+    if dists[idx[0]] < 1e-6:
+        return int(labels[idx[0]]), float(dists[idx[0]])
+    vals, counts = np.unique(labels[idx], return_counts=True)
+    best_val = int(vals[np.argmax(counts)])
+    return best_val, float(dists[idx][0])
 
 
 def find_requirement_color_block(img, roi):
@@ -1663,7 +1796,7 @@ def detect_requirement_digit_from_block(img, block, templates=None):
     return best
 
 
-def detect_requirement_digit_in_fixed_box(img, fixed_box, templates):
+def detect_requirement_digit_in_fixed_box(img, fixed_box, templates, req_knn=None):
     if not fixed_box or templates is None:
         return None
     xs = [p[0] for p in fixed_box]
@@ -1757,24 +1890,130 @@ def detect_requirement_digit_in_fixed_box(img, fixed_box, templates):
             bx, by, bw, bh = box
             try_candidate_box(bx, by, bw, bh)
 
-    if best is not None:
-        return best
-    # fallback: match on whole fixed box
+    # Fallback: k-means on grayscale to isolate darker digit strokes
+    if best is None:
+        try:
+            Z = gray.reshape((-1, 1)).astype(np.float32)
+            criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 1.0)
+            cv2.setRNGSeed(0)
+            _, labels, centers = cv2.kmeans(Z, 2, None, criteria, 10, cv2.KMEANS_PP_CENTERS)
+            labels = labels.reshape(gray.shape)
+            dark_idx = int(np.argmin(centers.flatten()))
+            kmask = (labels == dark_idx).astype(np.uint8)
+            kmask = cv2.morphologyEx(kmask, cv2.MORPH_OPEN, np.ones((2, 2), np.uint8), iterations=1)
+            num, labels2, stats, centroids = cv2.connectedComponentsWithStats(kmask, connectivity=8)
+            for i in range(1, num):
+                bx, by, bw, bh, area = stats[i]
+                if area < 10 or bw < 4 or bh < 6:
+                    continue
+                if area > 0.6 * (w * h):
+                    continue
+                ratio = bw / float(bh) if bh else 0.0
+                if ratio < 0.2 or ratio > 1.8:
+                    continue
+                try_candidate_box(bx, by, bw, bh)
+        except Exception:
+            pass
+
+    # Always evaluate the whole fixed box; keep it if it scores better.
+    tpl = preprocess_digit_patch(patch)
+    if tpl is not None:
+        val, score = template_match_digit(tpl, templates)
+        if val is not None:
+            val, score, _ = refine_template_digit(tpl, templates, val, score)
+            if val is not None:
+                full_candidate = {
+                    "value": val,
+                    "score": float(score),
+                    "box": fixed_box,
+                    "source_hint": "fixed_box_full",
+                }
+                if best is None or float(score) > float(best.get("score", 0.0)):
+                    best = full_candidate
+
+    if req_knn is not None and best is not None:
+        best_score = float(best.get("score", 0.0))
+        if best_score < REQ_DIGIT_KNN_FALLBACK_SCORE:
+            knn_val, knn_dist = requirement_knn_predict(patch, req_knn, k=REQ_DIGIT_KNN_K)
+            if knn_val is not None and knn_val in REQ_DIGIT_ALLOWED_VALUES:
+                return {
+                    "value": knn_val,
+                    "score": float(max(best_score, REQ_DIGIT_KNN_FALLBACK_SCORE)),
+                    "box": fixed_box,
+                    "source_hint": "fixed_box_knn",
+                }
+        # Tie-breaker: if template margin is small and kNN disagrees, trust kNN.
+        knn_val, knn_dist = requirement_knn_predict(patch, req_knn, k=REQ_DIGIT_KNN_K)
+        if knn_val is not None and knn_val in REQ_DIGIT_ALLOWED_VALUES:
+            if knn_val != best.get("value"):
+                metrics = requirement_blank_metrics(patch, templates)
+                if metrics and metrics.get("margin", 1.0) < 0.2:
+                    return {
+                        "value": knn_val,
+                        "score": float(max(best_score, REQ_DIGIT_KNN_FALLBACK_SCORE)),
+                        "box": fixed_box,
+                        "source_hint": "fixed_box_knn_margin",
+                    }
+
+    return best
+
+
+def requirement_blank_metrics(patch, templates):
+    if patch is None or patch.size == 0 or not templates:
+        return None
+    gray = cv2.cvtColor(patch, cv2.COLOR_BGR2GRAY)
+    edges = cv2.Canny(gray, 50, 150)
+    edge_ratio = float((edges > 0).mean())
     tpl = preprocess_digit_patch(patch)
     if tpl is None:
-        return None
-    val, score = template_match_digit(tpl, templates)
-    if val is None:
-        return None
-    val, score, _ = refine_template_digit(tpl, templates, val, score)
-    if val is None:
-        return None
+        return {
+            "edge_ratio": edge_ratio,
+            "best_score": 0.0,
+            "margin": 0.0,
+        }
+    scores = []
+    for _, tmpl_list in templates.items():
+        if not tmpl_list:
+            continue
+        best = -1.0
+        for t in tmpl_list:
+            denom = float(np.linalg.norm(tpl) * np.linalg.norm(t))
+            if denom == 0:
+                continue
+            score = float((tpl * t).sum() / denom)
+            if score > best:
+                best = score
+        if best >= 0:
+            scores.append(best)
+    if not scores:
+        return {
+            "edge_ratio": edge_ratio,
+            "best_score": 0.0,
+            "margin": 0.0,
+        }
+    scores.sort(reverse=True)
+    best_score = float(scores[0])
+    margin = float(scores[0] - scores[1]) if len(scores) > 1 else float(scores[0])
     return {
-        "value": val,
-        "score": float(score),
-        "box": fixed_box,
-        "source_hint": "fixed_box_full",
+        "edge_ratio": edge_ratio,
+        "best_score": best_score,
+        "margin": margin,
     }
+
+
+def is_requirement_blank(patch, templates):
+    metrics = requirement_blank_metrics(patch, templates)
+    if metrics is None:
+        return False, None
+    edge_ratio = metrics["edge_ratio"]
+    best_score = metrics["best_score"]
+    margin = metrics["margin"]
+    blank = (
+        (edge_ratio < 0.2)
+        or (edge_ratio < 0.35 and best_score < 0.85 and margin < 0.04)
+        or (edge_ratio < 0.35 and best_score < 0.8 and margin < 0.06)
+    )
+    return blank, metrics
 
 
 def requirement_candidate_masks(gray):
@@ -2421,7 +2660,16 @@ def apply_cost_override(card_id, cost):
     return updated, "override_update"
 
 
-def map_requirements(digits, img, ocr=None, req_templates=None):
+def apply_requirement_override(card_id, req):
+    if not card_id:
+        return req, None
+    override = REQ_OVERRIDES.get(card_id)
+    if override is None:
+        return req, None
+    return dict(override), "override"
+
+
+def map_requirements(digits, img, ocr=None, req_templates=None, req_knn=None, card_id=None):
     req = {}
     meta = {}
     roi = requirement_roi(img)
@@ -2436,6 +2684,14 @@ def map_requirements(digits, img, ocr=None, req_templates=None):
             (rx0 + fx1, ry0 + fy1),
             (rx0 + fx0, ry0 + fy1),
         ]
+        if req_templates is not None:
+            patch = img[ry0 + fy0:ry0 + fy1, rx0 + fx0:rx0 + fx1]
+            blank, metrics = is_requirement_blank(patch, req_templates)
+            if metrics:
+                meta["blank_metrics"] = metrics
+            if blank:
+                meta["blank"] = True
+                return req, meta
     digit = select_requirement_digit(digits, roi, circles=None)
     if digit is None and ocr is not None:
         # fallback: re-run OCR on the requirement ROI
@@ -2451,7 +2707,7 @@ def map_requirements(digits, img, ocr=None, req_templates=None):
             digit = select_requirement_digit_from_candidates(candidates, roi, circles=None)
     # If using fixed digit box, override with template match from the fixed patch.
     if fixed_box and req_templates is not None:
-        fixed_digit = detect_requirement_digit_in_fixed_box(img, fixed_box, req_templates)
+        fixed_digit = detect_requirement_digit_in_fixed_box(img, fixed_box, req_templates, req_knn=req_knn)
         if fixed_digit:
             digit = fixed_digit
     if digit is not None and req_templates is not None:
@@ -2510,6 +2766,9 @@ def map_requirements(digits, img, ocr=None, req_templates=None):
     meta["color"] = color
     if color:
         req[color] = int(digit.get("value", 0))
+    req, override_tag = apply_requirement_override(card_id, req)
+    if override_tag:
+        meta["override"] = override_tag
     return req, meta
 
 
@@ -2575,6 +2834,7 @@ def build():
     bonus_templates = build_bonus_templates(meta, BONUS_OVERRIDES)
     digit_templates = build_digit_templates(meta, ocr)
     req_digit_templates = build_requirement_digit_templates(meta, ocr)
+    req_knn = build_requirement_digit_knn()
     cards = []
     debug = []
     review = []
@@ -2635,7 +2895,14 @@ def build():
         cost, override_tag = apply_cost_override(Path(d["card_image"]).stem, cost)
         if override_tag:
             cost_source = override_tag
-        evo_req, evo_meta = map_requirements(digits, img_cv, ocr=ocr, req_templates=req_digit_templates)
+        evo_req, evo_meta = map_requirements(
+            digits,
+            img_cv,
+            ocr=ocr,
+            req_templates=req_digit_templates,
+            req_knn=req_knn,
+            card_id=card_id,
+        )
         bonuses, bonus_scores = detect_bonus_colors(
             img_cv,
             bonus_templates,
@@ -2659,6 +2926,8 @@ def build():
 
         if name_en in LEGENDARY_EN:
             tier = "Legendary"
+        elif name_en in RARE_EN:
+            tier = "Rare"
         elif prev_name is None and next_names:
             tier = "LV1"
         elif prev_name and next_names:
@@ -3377,6 +3646,7 @@ def update_requirements_only():
     ocr = RapidOCR()
     meta = json.loads(META_PATH.read_text())
     req_digit_templates = build_requirement_digit_templates(meta, ocr)
+    req_knn = build_requirement_digit_knn()
     cards = json.loads(OUTPUT_PATH.read_text()) if OUTPUT_PATH.exists() else []
     debug = json.loads(DEBUG_PATH.read_text()) if DEBUG_PATH.exists() else []
 
@@ -3395,7 +3665,14 @@ def update_requirements_only():
         res, _ = ocr(str(img_path), box_thresh=OCR_BOX_THRESH, text_score=OCR_TEXT_SCORE)
         res = res or []
         digits = extract_digits(res)
-        evo_req, evo_meta = map_requirements(digits, img_cv, ocr=ocr, req_templates=req_digit_templates)
+        evo_req, evo_meta = map_requirements(
+            digits,
+            img_cv,
+            ocr=ocr,
+            req_templates=req_digit_templates,
+            req_knn=req_knn,
+            card_id=card_id,
+        )
 
         card = cards_by_id.get(card_id)
         if card is None:
