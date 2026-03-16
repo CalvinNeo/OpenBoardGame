@@ -157,6 +157,28 @@
     </div>
   </section>
 
+  <section id="azulHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content azul-help-modal">
+      <div class="modal-header">
+        <h2>Azul - Game Rules</h2>
+        <button id="azulHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body azul-help-content" id="azulHelpContent"></div>
+    </div>
+  </section>
+
+  <section id="azulExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content azul-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="azulExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="azulExplainContent"></div>
+      </div>
+    </div>
+  </section>
+
   <section id="abracaHelpModal" class="modal hidden" aria-hidden="true">
     <div class="modal-content abraca-help-modal">
       <div class="modal-header">
@@ -640,6 +662,10 @@
             <div class="panel-header-actions" id="carcassonneHeaderActions" style="display: none;">
               <button id="carcHelpBtn" class="carc-header-btn" type="button">Help</button>
               <button id="carcExplainBtn" class="carc-header-btn" type="button">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="azulHeaderActions" style="display: none;">
+              <button id="azulHelpBtn" class="azul-header-btn" type="button">Help</button>
+              <button id="azulExplainBtn" class="azul-header-btn" type="button">Explain</button>
             </div>
             <div class="panel-header-actions" id="abracaHeaderActions" style="display: none;">
               <button id="abracaHelpBtn" class="abraca-header-btn" type="button">Help</button>
@@ -2350,6 +2376,41 @@
               </div>
             </div>
 
+            <div id="azulPanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="azulPhase">-</span></div>
+                <div>Round: <span id="azulRound">-</span></div>
+                <div>Current Turn: <span id="azulTurn">-</span></div>
+                <div>Bag: <span id="azulBagCount">-</span></div>
+                <div>Discard: <span id="azulDiscardCount">-</span></div>
+                <div>Winner: <span id="azulWinner">-</span></div>
+              </div>
+              <div class="row">
+                <div>Selected Source: <span id="azulSelectedSource">-</span></div>
+                <div>Selected Color: <span id="azulSelectedColor">-</span></div>
+                <div>Target Row: <span id="azulSelectedRow">-</span></div>
+              </div>
+              <div class="row actions">
+                <button id="azulClearSelectionBtn" type="button">Clear Selection</button>
+                <button id="azulFloorBtn" type="button">Send to Floor</button>
+                <button id="azulTakeBtn" type="button">Take Tiles</button>
+              </div>
+              <div class="azul-layout">
+                <div>
+                  <h3>Factories 🧱</h3>
+                  <div id="azulFactories" class="azul-factories"></div>
+                  <h3>Center 🏛️</h3>
+                  <div id="azulCenter" class="azul-center"></div>
+                </div>
+                <div>
+                  <h3>Your Board</h3>
+                  <div id="azulYourBoard" class="azul-board"></div>
+                  <h3>Players</h3>
+                  <div id="azulPlayers"></div>
+                </div>
+              </div>
+            </div>
+
             <div id="fangNiaoPanel" class="hidden">
               <div class="row">
                 <div>Phase: <span id="fangNiaoPhase">-</span></div>
@@ -2396,6 +2457,7 @@
   <script src="/static/games/shared.js?v=app_v1"></script>
   <script src="/static/games/blokus.js?v=app_v1"></script>
   <script src="/static/games/carcassonne.js?v=app_v1"></script>
+  <script src="/static/games/azul.js?v=app_v1"></script>
   <script src="/static/games/draw_guess.js?v=app_v1"></script>
   <script src="/static/games/cyber_pictures.js?v=app_v1"></script>
   <script src="/static/games/blitz_sketch.js?v=app_v1"></script>

@@ -1,5 +1,6 @@
 from game.abraca_what import AbracaWhatGame
 from game.ai_dixit import AiDixitGame
+from game.azul import AzulGame
 from game.cabo import CaboGame
 from game.cat_in_box import CatInBoxGame
 from game.coyote import CoyoteGame
@@ -1268,6 +1269,29 @@ CARCASSONNE_CONFIG_SCHEMA = {
     "additionalProperties": False,
 }
 
+AZUL_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "take_tiles"},
+                "source": {"type": "string", "enum": ["factory", "center"]},
+                "source_index": {"type": "integer", "minimum": 0},
+                "color": {"type": "string", "enum": ["blue", "yellow", "red", "black", "white"]},
+                "target_row": {"type": "integer", "minimum": -1, "maximum": 4},
+            },
+            "required": ["type", "source", "color", "target_row"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+AZUL_CONFIG_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+}
+
 PROJECT_L_ACTION_SCHEMA = {
     "type": "object",
     "oneOf": [
@@ -1890,6 +1914,21 @@ register_game(
         module=CarcassonneGame,
         serialize=CarcassonneGame.serialize,
         deserialize=CarcassonneGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=AzulGame.game_id,
+        name="Azul",
+        min_players=AzulGame.min_players,
+        max_players=AzulGame.max_players,
+        turn_mode="turn",
+        action_schema=AZUL_ACTION_SCHEMA,
+        config_schema=AZUL_CONFIG_SCHEMA,
+        module=AzulGame,
+        serialize=AzulGame.serialize,
+        deserialize=AzulGame.deserialize,
     )
 )
 

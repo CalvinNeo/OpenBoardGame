@@ -1,6 +1,7 @@
 
 const fangNiaoPanel = document.getElementById("fangNiaoPanel");
 const carcassonnePanel = document.getElementById("carcassonnePanel");
+const azulPanel = document.getElementById("azulPanel");
 const goldRushConfigBox = document.getElementById("goldRushConfigBox");
 const goldRushModeRow = document.getElementById("goldRushModeRow");
 const goldRushModeSelect = document.getElementById("goldRushModeSelect");
@@ -60,6 +61,7 @@ function setGamePanelVisibility(gameType) {
   const showBlokus = gameType === "blokus";
   const showProjectL = gameType === "project_l";
   const showCarcassonne = gameType === "carcassonne";
+  const showAzul = gameType === "azul";
   const showFangNiao = gameType === "fang_niao";
   caboPanel.classList.toggle("hidden", !showCabo);
   if (flip7Panel) {
@@ -174,6 +176,12 @@ function setGamePanelVisibility(gameType) {
   }
   if (typeof showCarcassonneHeaderActions === "function") {
     showCarcassonneHeaderActions(showCarcassonne);
+  }
+  if (azulPanel) {
+    azulPanel.classList.toggle("hidden", !showAzul);
+  }
+  if (typeof showAzulHeaderActions === "function") {
+    showAzulHeaderActions(showAzul);
   }
   if (fangNiaoPanel) {
     fangNiaoPanel.classList.toggle("hidden", !showFangNiao);
@@ -343,6 +351,10 @@ function renderGameState(data) {
   }
   if (gameType === "carcassonne") {
     renderCarcassonneGameState(data);
+    return;
+  }
+  if (gameType === "azul") {
+    renderAzulGameState(data);
     return;
   }
   if (gameType === "fang_niao") {

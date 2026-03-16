@@ -146,6 +146,7 @@ function renderRoomState(state) {
     clearAbracaState();
     clearBlokusState();
     clearCarcassonneState();
+    clearAzulState();
     clearHalliState();
     clearGoldRushState();
     clearIncanGoldState();
