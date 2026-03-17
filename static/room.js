@@ -501,6 +501,7 @@ const GAME_WEIGHT = {
   halli_galli: 1.02,
   hanabi: 1.69,
   incan_gold: 1.11,
+  istanbul: 2.58,
   kobayakawa: 1.2,
   perfect_mismatch: 1.0,
   point_salad: 1.15,

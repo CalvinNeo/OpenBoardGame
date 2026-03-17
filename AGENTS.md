@@ -35,6 +35,12 @@
 - QuickDraw assets cache under `.quickdraw_cache/` (ignored in git).
 - If translation features are touched, note any required model setup in the PR.
 
+# BGG Weight Lookup
+- If you only have a BGG image link (e.g. `https://boardgamegeek.com/image/2417382/istanbul`), first locate the game page URL for that image by opening the image page and copying the linked boardgame URL (format: `https://boardgamegeek.com/boardgame/<id>/<slug>`).
+- Add the boardgame URL to `GAME_URLS` in `scripts/bgg_weight_scrape.py`.
+- Run `python scripts/bgg_weight_scrape.py` to fetch the `averageweight`.
+- Update `static/room.js` `GAME_WEIGHT` with the value (use 2 decimal places unless specified).
+
 # Code Style
 
 For frontend requirements, read ./FRONTEND.md.
