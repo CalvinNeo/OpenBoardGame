@@ -349,9 +349,9 @@
   },
   {
     "id": "scene_002_04",
-    "name": "尼多兰",
-    "name_en": "Nidoran♀",
-    "tier": "LV1",
+    "name": "尼多娜",
+    "name_en": "Nidorina",
+    "tier": "LV2",
     "vp": 1,
     "bonus": "yellow",
     "bonuses": [
@@ -363,8 +363,8 @@
       "red": 2
     },
     "evolution": {
-      "target_en": "Nidorina",
-      "target_zh": "尼多娜",
+      "target_en": "Nidoqueen",
+      "target_zh": "尼多后",
       "requirements": {
         "blue": 4
       }
@@ -1772,9 +1772,9 @@
   },
   {
     "id": "scene_005_12",
-    "name": "小拳石",
-    "name_en": "Geodude",
-    "tier": "LV1",
+    "name": "隆隆石",
+    "name_en": "Graveler",
+    "tier": "LV2",
     "vp": 2,
     "bonus": "blue",
     "bonuses": [
@@ -1785,8 +1785,8 @@
       "red": 2
     },
     "evolution": {
-      "target_en": "Graveler",
-      "target_zh": "隆隆石",
+      "target_en": "Golem",
+      "target_zh": "隆隆岩",
       "requirements": {
         "black": 3
       }

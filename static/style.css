@@ -7636,6 +7636,38 @@ body.pokemon-splendor-explain-mode button.has-explanation:hover {
   outline-style: solid;
 }
 
+.pokemon-reserve-menu {
+  min-width: 140px;
+  padding: 10px;
+  border-radius: 12px;
+  background: #fff7ea;
+  border: 1px solid #e2d5be;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.18);
+  display: grid;
+  gap: 8px;
+  z-index: 1200;
+}
+
+.pokemon-reserve-title {
+  font-weight: 600;
+  font-size: 12px;
+  color: #7c2d12;
+}
+
+.pokemon-reserve-option {
+  border: none;
+  border-radius: 999px;
+  padding: 6px 12px;
+  background: #0f766e;
+  color: #f0fdfa;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.pokemon-reserve-option:hover {
+  background: #115e59;
+}
+
 .istanbul-header-btn {
   padding: 4px 12px;
   font-size: 13px;
