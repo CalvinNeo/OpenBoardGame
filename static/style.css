@@ -7695,7 +7695,7 @@ body.pokemon-splendor-explain-mode button.has-explanation:hover {
 
 .istanbul-main {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr);
+  grid-template-columns: 1fr;
   gap: 16px;
 }
 
@@ -7839,6 +7839,12 @@ body.pokemon-splendor-explain-mode button.has-explanation:hover {
 .istanbul-side {
   display: grid;
   gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  align-items: start;
+}
+
+.istanbul-side .istanbul-card:first-child {
+  grid-column: 1 / -1;
 }
 
 .istanbul-card {
@@ -8085,7 +8091,7 @@ body.istanbul-explain-mode .istanbul-tile.has-explanation:hover {
 }
 
 @media (max-width: 900px) {
-  .istanbul-main {
+  .istanbul-side {
     grid-template-columns: 1fr;
   }
 
