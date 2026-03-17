@@ -9,6 +9,7 @@
   + 如果涉及到扑克牌花色，要用 Emoji 来显示，而不要用 H、C 这样的字母。
   + 涉及到 Checkbox 和对应的说明文字的情况，将两者贴近在同行放置。
 - 你需要支持 Help 和 Explain，你可以阅读 task40.md 进行了解。
+- 你尽量避免引入 Clear Selection 按钮，改为点击周围空白区域就可以取消选择。对于弹出的对话框，支持使用 Esc 键退出。
 
 # Coding style
 

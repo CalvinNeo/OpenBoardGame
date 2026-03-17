@@ -184,13 +184,19 @@ function moveBlitzSketch(event) {
   blitzSketchCtx.stroke();
 }
 
+function resetBlitzSketchDrawingState() {
+  blitzSketchIsDrawing = false;
+  if (blitzSketchCtx) {
+    blitzSketchCtx.beginPath();
+  }
+}
+
 function endBlitzSketch(event) {
   if (!blitzSketchIsDrawing || !blitzSketchCtx) {
     return;
   }
   event.preventDefault();
-  blitzSketchIsDrawing = false;
-  blitzSketchCtx.beginPath();
+  resetBlitzSketchDrawingState();
 }
 
 function setupBlitzSketchCanvas() {
@@ -268,6 +274,7 @@ function scheduleBlitzSketchAutoSubmit(view) {
   }
   blitzSketchActiveDrawIndex = view.draw_index;
   if (isNewIndex) {
+    resetBlitzSketchDrawingState();
     clearBlitzSketchCanvas();
   }
   const durationSec = Number.isFinite(view.draw_time_sec) ? view.draw_time_sec : 3;
@@ -497,6 +504,7 @@ function renderBlitzSketchGameState(data) {
     }
     scheduleBlitzSketchAutoSubmit(view);
   } else if (view.phase === "guess") {
+    resetBlitzSketchDrawingState();
     if (blitzSketchDrawArea) {
       blitzSketchDrawArea.classList.add("hidden");
     }
@@ -547,6 +555,7 @@ function renderBlitzSketchGameState(data) {
     }
     scheduleBlitzSketchReveal(view);
   } else if (view.phase === "review") {
+    resetBlitzSketchDrawingState();
     if (blitzSketchDrawArea) {
       blitzSketchDrawArea.classList.add("hidden");
     }
@@ -559,6 +568,7 @@ function renderBlitzSketchGameState(data) {
     stopBlitzSketchTimers();
     renderBlitzSketchReview(view);
   } else {
+    resetBlitzSketchDrawingState();
     if (blitzSketchDrawArea) {
       blitzSketchDrawArea.classList.add("hidden");
     }
