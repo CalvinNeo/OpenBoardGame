@@ -7790,6 +7790,12 @@ body.pokemon-splendor-explain-mode button.has-explanation:hover {
   font-weight: 600;
 }
 
+.istanbul-tile-desc {
+  font-size: 11px;
+  color: #6b7280;
+  line-height: 1.2;
+}
+
 .istanbul-tile-dice {
   font-size: 12px;
   color: #0f766e;
@@ -8107,6 +8113,10 @@ body.istanbul-explain-mode .istanbul-tile.has-explanation:hover {
 
   .istanbul-tile-name {
     font-size: 11px;
+  }
+
+  .istanbul-tile-desc {
+    font-size: 10px;
   }
 }
 

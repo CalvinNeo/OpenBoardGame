@@ -33,7 +33,7 @@ const GOOD_LABELS = {
 
 const BONUS_LABELS = {
   BC_GOOD: "Gain 1 Good",
-  BC_LIRA5: "Take 5 Lira",
+  BC_LIRA5: "Take 5 Lira💰",
   BC_SULTAN_2X: "Sultan Action x2",
   BC_POST_2X: "Post Office x2",
   BC_GEM_2X: "Gem Dealer x2",
@@ -48,25 +48,25 @@ const PLAYER_COLORS = ["#d97706", "#0f766e", "#b91c1c", "#2563eb", "#7c3aed"];
 
 const ISTANBUL_HELP_TEXT = `
 <h3>Goal</h3>
-<p>Be the first merchant to collect the required number of Rubies (5 in 3-5 players, 6 in 2 players).</p>
+<p>Be the first merchant to collect the required number of Rubies💎 (5 in 3-5 players, 6 in 2 players).</p>
 
 <h3>Turn Flow</h3>
 <ul>
   <li><strong>Move</strong> 1-2 spaces orthogonally (or use a bonus card to change this).</li>
-  <li><strong>Encounters</strong> with other merchants (pay 2 Lira each, except Fountain).</li>
+  <li><strong>Encounters</strong> with other merchants (pay 2 Lira💰 each, except Fountain).</li>
   <li><strong>Assistant</strong> drop or pick up to activate the place.</li>
   <li><strong>Place Action</strong> (market, warehouse, palace, etc.).</li>
   <li><strong>Encounters</strong> with family, Governor, Smuggler.</li>
 </ul>
 
 <h3>Goods</h3>
-<p>Goods are tracked by color. Use warehouses to fill up to your cart capacity. Trade at markets for Lira.</p>
+<p>Goods are tracked by color. Use warehouses to fill up to your cart capacity. Trade at markets for Lira💰.</p>
 
-<h3>Rubies</h3>
+<h3>Rubies💎</h3>
 <ul>
   <li><strong>Sultan's Palace</strong>: pay goods based on the track.</li>
-  <li><strong>Gemstone Dealer</strong>: pay Lira based on the track.</li>
-  <li><strong>Mosques</strong>: collect matching tiles for bonus Ruby.</li>
+  <li><strong>Gemstone Dealer</strong>: pay Lira💰 based on the track.</li>
+  <li><strong>Mosques</strong>: collect matching tiles for bonus Ruby💎.</li>
 </ul>
 
 <h3>Bonus Cards</h3>
@@ -115,8 +115,8 @@ const ISTANBUL_BUTTON_EXPLANATIONS = {
 const ISTANBUL_TILE_EXPLANATIONS = {
   1: {
     name: "Wainwright",
-    description: "Pay 7 Lira to increase your cart capacity by 1 (max 5). The first player to reach 5 gains a Ruby.",
-    cost: "7 Lira",
+    description: "Pay 7 Lira💰 to increase your cart capacity by 1 (max 5). The first player to reach 5 gains a Ruby💎.",
+    cost: "7 Lira💰",
     costType: "pay",
   },
   2: {
@@ -163,19 +163,19 @@ const ISTANBUL_TILE_EXPLANATIONS = {
   },
   9: {
     name: "Tea House",
-    description: "Call 3-12 and roll. If roll >= call, gain that many Lira; otherwise gain 2 Lira.",
+    description: "Call 3-12 and roll. If roll >= call, gain that many Lira💰; otherwise gain 2 Lira💰.",
     cost: "Free",
     costType: "free",
   },
   10: {
     name: "Large Market",
-    description: "Sell goods matching the demand tile (1-5 goods) for Lira, then cycle the tile.",
+    description: "Sell goods matching the demand tile (1-5 goods) for Lira💰, then cycle the tile.",
     cost: "Goods",
     costType: "pay",
   },
   11: {
     name: "Small Market",
-    description: "Sell goods matching the demand tile (1-5 goods) for Lira, then cycle the tile.",
+    description: "Sell goods matching the demand tile (1-5 goods) for Lira💰, then cycle the tile.",
     cost: "Goods",
     costType: "pay",
   },
@@ -187,14 +187,14 @@ const ISTANBUL_TILE_EXPLANATIONS = {
   },
   13: {
     name: "Sultan's Palace",
-    description: "Pay the current goods requirement to gain a Ruby; the requirement increases afterward.",
+    description: "Pay the current goods requirement to gain a Ruby💎; the requirement increases afterward.",
     cost: "Goods",
     costType: "pay",
   },
   14: {
     name: "Gemstone Dealer",
-    description: "Pay the current Lira cost to gain a Ruby; the cost increases afterward.",
-    cost: "Lira",
+    description: "Pay the current Lira💰 cost to gain a Ruby💎; the cost increases afterward.",
+    cost: "Lira💰",
     costType: "pay",
   },
   15: {
@@ -209,6 +209,25 @@ const ISTANBUL_TILE_EXPLANATIONS = {
     cost: "Goods",
     costType: "pay",
   },
+};
+
+const ISTANBUL_TILE_SUMMARY = {
+  1: "7💰->+1📦",
+  2: "+🔴到📦",
+  3: "+🟢到📦",
+  4: "+🟡到📦",
+  5: "📮奖励->📬+1",
+  6: "+2🎴-1🎴",
+  7: "召回👥",
+  8: "+1(🔴/🟢/🟡)+🎲🔵",
+  9: "叫数🎲->💰(失败+2💰)",
+  10: "需求卖货->💰",
+  11: "需求卖货->💰",
+  12: "👪->任意地行动",
+  13: "交货->💎",
+  14: "💰->💎",
+  15: "🔴/🟢->🕌",
+  16: "🟡/🔵->🕌",
 };
 
 let currentIstanbulView = null;
@@ -551,6 +570,14 @@ function renderIstanbulBoard(view) {
     name.className = "istanbul-tile-name";
     name.textContent = tile.name || "-";
 
+    const summary = ISTANBUL_TILE_SUMMARY[tile.place_id];
+    let desc = null;
+    if (summary) {
+      desc = document.createElement("div");
+      desc.className = "istanbul-tile-desc";
+      desc.textContent = summary;
+    }
+
     const tokenRow = document.createElement("div");
     tokenRow.className = "istanbul-token-row";
 
@@ -592,6 +619,9 @@ function renderIstanbulBoard(view) {
 
     tileEl.appendChild(header);
     tileEl.appendChild(name);
+    if (desc) {
+      tileEl.appendChild(desc);
+    }
     tileEl.appendChild(tokenRow);
 
     tileEl.addEventListener("click", () => {
@@ -660,7 +690,7 @@ function renderIstanbulPlayers(view) {
     row.appendChild(name);
 
     const stats = document.createElement("div");
-    stats.textContent = `Lira ${player.lira} | Rubies ${player.rubies} | Cart ${player.capacity}`;
+    stats.textContent = `Lira💰 ${player.lira} | Rubies💎 ${player.rubies} | Cart ${player.capacity}`;
     row.appendChild(stats);
 
     const goods = document.createElement("div");
@@ -683,8 +713,8 @@ function renderIstanbulYou(view) {
     return;
   }
   const items = [];
-  items.push(`<div class="istanbul-pill">Lira ${viewer.lira}</div>`);
-  items.push(`<div class="istanbul-pill">Rubies ${viewer.rubies}</div>`);
+  items.push(`<div class="istanbul-pill">Lira💰 ${viewer.lira}</div>`);
+  items.push(`<div class="istanbul-pill">Rubies💎 ${viewer.rubies}</div>`);
   items.push(`<div class="istanbul-pill">Cart ${viewer.capacity}</div>`);
   items.push(`<div class="istanbul-pill">Assistants ${viewer.assistants_in_stack}/${viewer.assistants_on_board.length}</div>`);
   const goodsLine = `<div>${formatGoodsLine(viewer.goods || {})}</div>`;
@@ -823,7 +853,7 @@ function renderPendingAction(view, pending) {
     const cardBtn = buildButton("Take Bonus", "istanbulRewardCardBtn", () => {
       sendAction({ type: "choose_reward", choice: "card" });
     });
-    const liraBtn = buildButton("Take 3 Lira", "istanbulRewardLiraBtn", () => {
+    const liraBtn = buildButton("Take 3 Lira💰", "istanbulRewardLiraBtn", () => {
       sendAction({ type: "choose_reward", choice: "lira" });
     }, "secondary");
     row.appendChild(cardBtn);
@@ -851,7 +881,7 @@ function renderPendingAction(view, pending) {
     paymentRow.className = "istanbul-control-row";
     const paymentSelect = document.createElement("select");
     paymentSelect.className = "istanbul-select";
-    paymentSelect.innerHTML = "<option value=\"lira\">Pay 2 Lira</option><option value=\"card\">Discard Bonus</option>";
+    paymentSelect.innerHTML = "<option value=\"lira\">Pay 2 Lira💰</option><option value=\"card\">Discard Bonus</option>";
     if (!hasCards) {
       const cardOption = paymentSelect.querySelector("option[value='card']");
       if (cardOption) {
@@ -909,7 +939,7 @@ function renderPendingAction(view, pending) {
       istanbulSelections.smugglerGood = value;
     });
     const paySelect = document.createElement("select");
-    paySelect.innerHTML = "<option value=\"lira\">Pay 2 Lira</option><option value=\"good\">Pay 1 Good</option>";
+    paySelect.innerHTML = "<option value=\"lira\">Pay 2 Lira💰</option><option value=\"good\">Pay 1 Good</option>";
     paySelect.value = istanbulSelections.smugglerPayment === "good" ? "good" : "lira";
     paySelect.addEventListener("change", () => {
       if (paySelect.value === "lira") {
@@ -944,14 +974,14 @@ function renderPendingAction(view, pending) {
     row.appendChild(acceptBtn);
     const canModify = canUseGreen(view);
     const rerollBtn = buildButton(
-      "Reroll (-2 Lira)",
+      "Reroll (-2 Lira💰)",
       "istanbulDiceRerollBtn",
       () => sendAction({ type: "dice_modify", choice: "reroll" }),
       "secondary",
       !canModify
     );
     const plusBtn = buildButton(
-      "+1 (-2 Lira)",
+      "+1 (-2 Lira💰)",
       "istanbulDicePlusBtn",
       () => sendAction({ type: "dice_modify", choice: "plus_one" }),
       "secondary",
@@ -1034,7 +1064,7 @@ function renderPlaceActionControls(view) {
 
   if (placeType === "wainwright") {
     const canPay = viewer.lira >= 7 && viewer.capacity < 5;
-    const btn = buildButton("Upgrade Cart (7 Lira)", "istanbulActionBtn", () => sendAction({ type: "location_action" }), "primary", !canPay);
+    const btn = buildButton("Upgrade Cart (7 Lira💰)", "istanbulActionBtn", () => sendAction({ type: "location_action" }), "primary", !canPay);
     istanbulActionControls.appendChild(btn);
   } else if (placeType === "warehouse") {
     const btn = buildButton("Fill to Capacity", "istanbulActionBtn", () => sendAction({ type: "location_action" }), "primary");
@@ -1056,10 +1086,10 @@ function renderPlaceActionControls(view) {
   } else if (placeType === "police_station") {
     renderPoliceControls(view);
   } else if (placeType === "sultan_palace") {
-    const btn = buildButton("Buy Ruby", "istanbulActionBtn", () => sendAction({ type: "location_action" }), "primary");
+    const btn = buildButton("Buy Ruby💎", "istanbulActionBtn", () => sendAction({ type: "location_action" }), "primary");
     istanbulActionControls.appendChild(btn);
   } else if (placeType === "gemstone_dealer") {
-    const btn = buildButton("Buy Ruby", "istanbulActionBtn", () => sendAction({ type: "location_action" }), "primary");
+    const btn = buildButton("Buy Ruby💎", "istanbulActionBtn", () => sendAction({ type: "location_action" }), "primary");
     istanbulActionControls.appendChild(btn);
   } else if (placeType === "small_mosque" || placeType === "great_mosque") {
     renderMosqueControls(view, placeType, false);
@@ -1275,7 +1305,7 @@ function renderMarketControls(view, placeType, isFamily) {
   if (revenueTable) {
     const payout = revenueTable[total] || 0;
     const summary = document.createElement("div");
-    summary.textContent = `Selected: ${total} goods => ${payout} Lira`;
+    summary.textContent = `Selected: ${total} goods => ${payout} Lira💰`;
     istanbulActionControls.appendChild(summary);
   }
   if (!isFamily) {
@@ -1350,7 +1380,7 @@ function renderBonusPlay(view) {
       istanbulSelections.bonusRewardChoice = "card";
       renderIstanbulGameState({ view });
     }, "secondary");
-    const liraBtn = buildButton("Take 3 Lira", "istanbulBonusRewardLira", () => {
+    const liraBtn = buildButton("Take 3 Lira💰", "istanbulBonusRewardLira", () => {
       istanbulSelections.bonusRewardChoice = "lira";
       renderIstanbulGameState({ view });
     }, "secondary");
@@ -1417,7 +1447,7 @@ function renderRedMosqueQuick(view) {
   if (viewer.lira < 2) return;
   if (!viewer.assistants_on_board.length) return;
   const title = document.createElement("div");
-  title.textContent = "Red Mosque: recall assistant (2 Lira)";
+  title.textContent = "Red Mosque: recall assistant (2 Lira💰)";
   istanbulActionControls.appendChild(title);
   const row = document.createElement("div");
   row.className = "istanbul-control-row";
