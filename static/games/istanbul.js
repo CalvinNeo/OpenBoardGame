@@ -13,6 +13,7 @@ const istanbulPlayers = document.getElementById("istanbulPlayers");
 const istanbulYou = document.getElementById("istanbulYou");
 const istanbulMarkets = document.getElementById("istanbulMarkets");
 const istanbulMosques = document.getElementById("istanbulMosques");
+const istanbulPostOffice = document.getElementById("istanbulPostOffice");
 
 const istanbulHeaderActions = document.getElementById("istanbulHeaderActions");
 const istanbulHelpBtn = document.getElementById("istanbulHelpBtn");
@@ -58,6 +59,20 @@ const ISTANBUL_HELP_TEXT = `
   <li><strong>Assistant</strong> drop or pick up to activate the place.</li>
   <li><strong>Place Action</strong> (market, warehouse, palace, etc.).</li>
   <li><strong>Encounters</strong> with family, Governor, Smuggler.</li>
+</ul>
+
+<h3>Encounters & NPCs</h3>
+<ul>
+  <li><strong>Governor (G)</strong>: you may take 1 bonus card 🎴 by paying 2💰 or discarding 1🎴. If you take it, the Governor moves to the tile matching a dice roll (🟢 mosque can reroll / +1 for 2💰).</li>
+  <li><strong>Smuggler (S)</strong>: you may take 1 good 🔴/🟢/🟡/🔵 by paying 2💰 or discarding 1🔴/🟢/🟡/🔵. If you take it, the Smuggler moves to the tile matching a dice roll (🟢 mosque can reroll / +1 for 2💰).</li>
+  <li><strong>Family encounter</strong>: if you land on another player's family, choose 1 reward: 1🎴 or 3💰. Their family returns to Police Station. If they own 🟡 mosque tile, they gain +2💰.</li>
+</ul>
+
+<h3>Family & Police Station</h3>
+<ul>
+  <li>Your family starts at the Police Station.</li>
+  <li>If your family is at the Police Station, you may send it to any place and perform that place's action (no encounters). The family stays there afterward.</li>
+  <li>Your family returns to the Police Station when another player meets it and takes the reward, or when you play the “Send Family to Police” bonus card.</li>
 </ul>
 
 <h3>Goods 🔴/🟢/🟡/🔵</h3>
@@ -231,6 +246,19 @@ const ISTANBUL_TILE_SUMMARY = {
   16: "🟡/🔵->🕌",
 };
 
+const ISTANBUL_MOSQUE_ABILITIES = {
+  small: [
+    "🔴: return 1 assistant for 2💰",
+    "🟢: reroll or +1 for 2💰 after 🎲",
+    "Set bonus: 🔴+🟢 => +💎",
+  ],
+  great: [
+    "🟡: +2💰 on Police reward",
+    "🔵: +1 assistant when taken (<5)",
+    "Set bonus: 🟡+🔵 => +💎",
+  ],
+};
+
 let currentIstanbulView = null;
 let istanbulExplainMode = false;
 let istanbulLastPhase = null;
@@ -293,6 +321,7 @@ function clearIstanbulState() {
   if (istanbulYou) istanbulYou.innerHTML = "";
   if (istanbulMarkets) istanbulMarkets.innerHTML = "";
   if (istanbulMosques) istanbulMosques.innerHTML = "";
+  if (istanbulPostOffice) istanbulPostOffice.innerHTML = "";
 }
 
 function showIstanbulHeaderActions(show) {
@@ -318,6 +347,9 @@ function updateIstanbulExplainClasses(enabled) {
     if (btn) {
       btn.classList.toggle("has-explanation", enabled);
     }
+  });
+  document.querySelectorAll(".istanbul-mosque-rubies").forEach((node) => {
+    node.classList.toggle("has-explanation", enabled);
   });
 }
 
@@ -403,6 +435,21 @@ function showIstanbulTileExplanation(placeId, pos) {
     <p>${explanation.description}</p>
     <span class="istanbul-explain-cost ${costClass}">${explanation.cost}</span>
     ${tokensHtml}
+  `;
+  setModalVisible(istanbulExplainModal, true);
+}
+
+function showIstanbulMosqueRubyExplanation(groupKey) {
+  if (!istanbulExplainContent || !istanbulExplainModal) return;
+  const view = currentIstanbulView || {};
+  const mosques = view.mosques || {};
+  const count = mosques[groupKey] ? mosques[groupKey].rubies : null;
+  const label = groupKey === "small" ? "Small Mosque" : "Great Mosque";
+  const remaining = Number.isInteger(count) ? count : 0;
+  istanbulExplainContent.innerHTML = `
+    <h4>${label} Bonus Rubies</h4>
+    <p>This pool rewards players who collect both tiles from this mosque. When you own both colors, take 1💎 from here.</p>
+    <span class="istanbul-explain-cost free">Remaining: 💎 ${remaining}</span>
   `;
   setModalVisible(istanbulExplainModal, true);
 }
@@ -522,6 +569,7 @@ function renderIstanbulGameState(data) {
   renderIstanbulYou(view);
   renderIstanbulMarkets(view);
   renderIstanbulMosques(view);
+  renderIstanbulPostOffice(view);
   renderIstanbulBonus(view);
   renderIstanbulActionCenter(view);
   updateIstanbulExplainClasses(istanbulExplainMode);
@@ -796,6 +844,8 @@ function renderIstanbulMosques(view) {
     title.textContent = `${group.label} 🕌`;
     const rubies = document.createElement("div");
     rubies.textContent = `💎 ${data.rubies ?? 0}`;
+    rubies.className = "istanbul-mosque-rubies";
+    rubies.dataset.mosque = group.key;
     header.appendChild(title);
     header.appendChild(rubies);
     row.appendChild(header);
@@ -838,8 +888,67 @@ function renderIstanbulMosques(view) {
       row.appendChild(youRow);
     }
 
+    const abilities = document.createElement("div");
+    abilities.className = "istanbul-mosque-abilities";
+    const lines = ISTANBUL_MOSQUE_ABILITIES[group.key] || [];
+    lines.forEach((line) => {
+      const item = document.createElement("div");
+      item.className = "istanbul-mosque-ability";
+      item.textContent = line;
+      abilities.appendChild(item);
+    });
+    row.appendChild(abilities);
+
     istanbulMosques.appendChild(row);
   });
+}
+
+function renderIstanbulPostOffice(view) {
+  if (!istanbulPostOffice) return;
+  istanbulPostOffice.innerHTML = "";
+  const rows = Array.isArray(view.post_office_rows) ? view.post_office_rows : [];
+  if (!rows.length) {
+    istanbulPostOffice.textContent = "Track unavailable.";
+    return;
+  }
+  const current = Number.isInteger(view.post_office_index) ? view.post_office_index : 0;
+  const track = document.createElement("div");
+  track.className = "istanbul-post-track";
+  rows.forEach((row, idx) => {
+    const line = document.createElement("div");
+    line.className = "istanbul-post-row";
+    if (idx === current) {
+      line.classList.add("current");
+    }
+    const indicator = document.createElement("div");
+    indicator.className = "istanbul-post-indicator";
+    indicator.textContent = idx === current ? "📬" : "·";
+    line.appendChild(indicator);
+
+    const rowLabel = document.createElement("div");
+    rowLabel.className = "istanbul-post-label";
+    rowLabel.textContent = `Row ${idx + 1}`;
+    line.appendChild(rowLabel);
+
+    const items = document.createElement("div");
+    items.className = "istanbul-post-items";
+    (row || []).forEach((item) => {
+      const span = document.createElement("span");
+      span.className = "istanbul-post-item";
+      if (typeof item === "string" && item.startsWith("coin")) {
+        const value = parseInt(item.replace("coin", ""), 10);
+        span.textContent = `+${Number.isInteger(value) ? value : 1}💰`;
+      } else if (GOOD_LABELS[item]) {
+        span.textContent = `+${GOOD_LABELS[item]}`;
+      } else {
+        span.textContent = String(item);
+      }
+      items.appendChild(span);
+    });
+    line.appendChild(items);
+    track.appendChild(line);
+  });
+  istanbulPostOffice.appendChild(track);
 }
 
 function renderIstanbulBonus(view) {
@@ -1639,6 +1748,15 @@ if (istanbulGamePanel) {
 if (document) {
   document.addEventListener("pointerdown", (e) => {
     if (!istanbulExplainMode) return;
+    const mosqueRubies = e.target.closest(".istanbul-mosque-rubies");
+    if (mosqueRubies) {
+      const key = mosqueRubies.dataset.mosque;
+      showIstanbulMosqueRubyExplanation(key);
+      e.preventDefault();
+      e.stopPropagation();
+      exitIstanbulExplainMode();
+      return;
+    }
     const tile = e.target.closest(".istanbul-tile");
     if (tile) {
       const placeId = Number(tile.dataset.placeId);

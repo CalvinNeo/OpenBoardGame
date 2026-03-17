@@ -7915,6 +7915,64 @@ body.pokemon-splendor-explain-mode button.has-explanation:hover {
   box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.35);
 }
 
+.istanbul-mosque-abilities {
+  display: grid;
+  gap: 4px;
+  font-size: 11px;
+  color: #4b5563;
+}
+
+.istanbul-mosque-ability {
+  display: flex;
+  gap: 6px;
+}
+
+.istanbul-post-track {
+  display: grid;
+  gap: 6px;
+}
+
+.istanbul-post-row {
+  display: grid;
+  grid-template-columns: 20px 54px 1fr;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: #fff7ea;
+  border: 1px solid #e2d5be;
+  font-size: 11px;
+}
+
+.istanbul-post-row.current {
+  border-color: var(--bazaar-teal);
+  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.12);
+}
+
+.istanbul-post-indicator {
+  text-align: center;
+  font-size: 12px;
+}
+
+.istanbul-post-label {
+  color: #92400e;
+  font-weight: 600;
+}
+
+.istanbul-post-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.istanbul-post-item {
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #fffdf7;
+  border: 1px solid #eadcc4;
+  font-size: 11px;
+}
+
 .istanbul-controls {
   display: grid;
   gap: 10px;
@@ -8116,6 +8174,19 @@ body.istanbul-explain-mode .istanbul-tile.has-explanation {
 }
 
 body.istanbul-explain-mode .istanbul-tile.has-explanation:hover {
+  outline-color: #c95b3a;
+  outline-style: solid;
+}
+
+body.istanbul-explain-mode .istanbul-mosque-rubies.has-explanation {
+  outline: 2px dashed #0f766e;
+  outline-offset: 2px;
+  border-radius: 8px;
+  cursor: help;
+  padding: 2px 6px;
+}
+
+body.istanbul-explain-mode .istanbul-mosque-rubies.has-explanation:hover {
   outline-color: #c95b3a;
   outline-style: solid;
 }
