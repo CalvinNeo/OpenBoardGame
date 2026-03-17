@@ -841,6 +841,90 @@ class IstanbulGame:
 
     @staticmethod
     def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
+        if state.get("game_over"):
+            return None
+        if bot_id not in state.get("players", {}):
+            return None
+
+        pending = state.get("pending")
+        if pending:
+            ptype = pending.get("type")
+            if ptype == "reward":
+                if state.get("bonus_deck") or state.get("bonus_discard"):
+                    return {"type": "choose_reward", "choice": "card"}
+                return {"type": "choose_reward", "choice": "lira"}
+            if ptype == "governor":
+                player = state["players"][bot_id]
+                if player.get("lira", 0) >= 2:
+                    return {"type": "governor_choice", "take": True, "payment": "lira"}
+                hand = player.get("bonus_hand", [])
+                if hand:
+                    return {"type": "governor_choice", "take": True, "payment": hand[0]["uid"]}
+                return {"type": "governor_choice", "take": False}
+            if ptype == "smuggler":
+                player = state["players"][bot_id]
+                payment = None
+                if player.get("lira", 0) >= 2:
+                    payment = "lira"
+                else:
+                    for color in GOODS:
+                        if player["goods"].get(color, 0) > 0:
+                            payment = color
+                            break
+                if not payment:
+                    return {"type": "smuggler_choice", "take": False}
+                good = min(GOODS, key=lambda c: player["goods"].get(c, 0))
+                return {"type": "smuggler_choice", "take": True, "good": good, "payment": payment}
+            if ptype == "dice":
+                return {"type": "dice_modify", "choice": "accept"}
+            if ptype == "caravan_discard":
+                hand = state["players"][bot_id].get("bonus_hand", [])
+                if not hand:
+                    return None
+                return {"type": "discard_bonus", "card_id": hand[0]["uid"]}
+            return None
+
+        if bot_id != state.get("current_player"):
+            return None
+
+        phase = state.get("phase")
+        player = state["players"][bot_id]
+
+        if phase == "movement":
+            min_steps, max_steps = 1, 2
+            mode = state.get("movement_mode", "normal")
+            if mode == "long":
+                min_steps, max_steps = 3, 4
+            if mode == "stay":
+                min_steps = max_steps = 0
+            path = _bot_choose_path(state, bot_id, min_steps, max_steps)
+            return {"type": "move", "path": path}
+
+        if phase == "assistant":
+            location = player["merchant_pos"]
+            assistants = player["assistants_on_board"]
+            in_stack = player["assistants_in_stack"]
+            has_here = location in assistants
+            can_drop = in_stack > 0 and not has_here
+            can_pick = has_here
+            if can_drop:
+                return {"type": "assistant", "mode": "drop"}
+            if can_pick:
+                return {"type": "assistant", "mode": "pickup"}
+            fountain_pos = _tile_by_place(state["board"], 7)["pos"]
+            if location == fountain_pos:
+                return {"type": "assistant", "mode": "none"}
+            return None
+
+        if phase == "action":
+            action = _bot_action_for_place(state, bot_id)
+            if action:
+                return action
+            bonus = _bot_try_bonus(state, bot_id)
+            if bonus:
+                return bonus
+            return None
+
         return None
 
     @staticmethod
@@ -1354,3 +1438,293 @@ def _handle_family_action(state: Dict, player_id: str, tile: Dict, action: Dict)
             state["wainwright_ruby"] = False
         return None
     return "unsupported family action"
+
+
+def _bot_reachable_paths(state: Dict, start: int, min_steps: int, max_steps: int) -> List[List[int]]:
+    neighbors = state.get("neighbors", {})
+    paths: List[List[int]] = []
+
+    def dfs(current: int, path: List[int]) -> None:
+        steps = len(path)
+        if steps >= min_steps and steps <= max_steps:
+            if not (steps >= 2 and current == start):
+                paths.append(list(path))
+        if steps == max_steps:
+            return
+        for nxt in neighbors.get(current, []):
+            path.append(nxt)
+            dfs(nxt, path)
+            path.pop()
+
+    dfs(start, [])
+    if not paths and min_steps == 0:
+        return [[]]
+    return paths
+
+
+def _bot_choose_path(state: Dict, player_id: str, min_steps: int, max_steps: int) -> List[int]:
+    start = state["players"][player_id]["merchant_pos"]
+    paths = _bot_reachable_paths(state, start, min_steps, max_steps)
+    if not paths:
+        return []
+    scored: List[Tuple[float, List[int]]] = []
+    any_scored: List[Tuple[float, List[int]]] = []
+    for path in paths:
+        dest = start if not path else path[-1]
+        tile = next((t for t in state["board"] if t["pos"] == dest), None)
+        if not tile:
+            continue
+        score = _bot_place_score(state, player_id, tile)
+        any_scored.append((score, path))
+        if _bot_can_act(state, player_id, tile):
+            scored.append((score, path))
+    candidates = scored or any_scored
+    if not candidates:
+        return paths[0]
+    candidates.sort(key=lambda item: item[0], reverse=True)
+    best_score = candidates[0][0]
+    best_paths = [p for score, p in candidates if score == best_score]
+    return random.choice(best_paths)
+
+
+def _bot_can_act(state: Dict, player_id: str, tile: Dict) -> bool:
+    player = state["players"][player_id]
+    place_type = tile.get("type")
+    place_id = tile.get("place_id")
+    if place_type == "wainwright":
+        return player["lira"] >= 7 and player["capacity"] < 5
+    if place_type == "warehouse":
+        return True
+    if place_type == "post_office":
+        return True
+    if place_type == "caravansary":
+        return True
+    if place_type == "fountain":
+        return True
+    if place_type == "black_market":
+        return True
+    if place_type == "tea_house":
+        return True
+    if place_type in ("market_large", "market_small"):
+        return _bot_market_sell_count(state, player_id, place_type) > 0
+    if place_type == "police_station":
+        return True
+    if place_type == "sultan_palace":
+        idx = state.get("sultan_index", 0)
+        costs = state.get("sultan_costs", [])
+        if idx >= len(costs):
+            return False
+        cost = costs[idx]
+        any_count = int(cost.get("any", 0))
+        base = {color: cost.get(color, 0) for color in GOODS}
+        return _pay_any_goods(player, base, any_count) is not None
+    if place_type == "gemstone_dealer":
+        idx = state.get("gem_index", 0)
+        costs = state.get("gem_costs", [])
+        if idx >= len(costs):
+            return False
+        return player.get("lira", 0) >= costs[idx]
+    if place_type in ("small_mosque", "great_mosque"):
+        mosque_key = "small" if place_type == "small_mosque" else "great"
+        options = ("red", "green") if place_type == "small_mosque" else ("yellow", "blue")
+        for color in options:
+            if (
+                state["mosques"][mosque_key].get(color)
+                and player["goods"].get(color, 0) > 0
+                and not player["mosque_tiles"].get(color)
+            ):
+                return True
+        return False
+    return place_id in (2, 3, 4, 5, 6, 7, 8, 9, 10, 11)
+
+
+def _bot_place_score(state: Dict, player_id: str, tile: Dict) -> float:
+    player = state["players"][player_id]
+    place_type = tile.get("type")
+    place_id = tile.get("place_id")
+    if place_type == "warehouse":
+        good = tile.get("good")
+        missing = max(0, player["capacity"] - player["goods"].get(good, 0))
+        return 1.0 + missing
+    if place_type == "post_office":
+        return 2.0
+    if place_type == "caravansary":
+        return 2.0
+    if place_type == "fountain":
+        return 1.5 if player["assistants_on_board"] else 0.2
+    if place_type == "black_market":
+        return 2.5
+    if place_type == "tea_house":
+        return 3.0 if player["lira"] < 5 else 1.5
+    if place_type in ("market_large", "market_small"):
+        count = _bot_market_sell_count(state, player_id, place_type)
+        return 2.0 + count
+    if place_type == "wainwright":
+        return 4.0 if player["lira"] >= 7 and player["capacity"] < 5 else 0.1
+    if place_type == "sultan_palace":
+        return 5.0 if _bot_can_act(state, player_id, tile) else 0.1
+    if place_type == "gemstone_dealer":
+        return 4.5 if _bot_can_act(state, player_id, tile) else 0.1
+    if place_type in ("small_mosque", "great_mosque"):
+        return 3.0 if _bot_can_act(state, player_id, tile) else 0.1
+    if place_type == "police_station":
+        return 1.0 if player.get("family_pos") == tile["pos"] else 0.1
+    return 0.5
+
+
+def _bot_market_sell_count(state: Dict, player_id: str, place_type: str) -> int:
+    player = state["players"][player_id]
+    deck_key = "market_large" if place_type == "market_large" else "market_small"
+    deck = state.get(deck_key, [])
+    if not deck:
+        return 0
+    tile_def = deck[0]
+    required = tile_def.get("goods", {})
+    if place_type == "market_small" and state.get("small_market_wild") == player_id:
+        totals = sorted([player["goods"].get(c, 0) for c in GOODS], reverse=True)
+        return min(5, sum(totals))
+    total = 0
+    for color in GOODS:
+        total += min(player["goods"].get(color, 0), required.get(color, 0))
+    return min(5, total)
+
+
+def _bot_action_for_place(state: Dict, player_id: str) -> Optional[Dict]:
+    player = state["players"][player_id]
+    pos = player["merchant_pos"]
+    tile = next((t for t in state["board"] if t["pos"] == pos), None)
+    if not tile:
+        return None
+    place_type = tile.get("type")
+
+    if place_type == "wainwright":
+        if player["lira"] >= 7 and player["capacity"] < 5:
+            return {"type": "location_action"}
+        return None
+    if place_type == "warehouse":
+        return {"type": "location_action"}
+    if place_type == "post_office":
+        return {"type": "location_action"}
+    if place_type == "caravansary":
+        return {"type": "location_action"}
+    if place_type == "fountain":
+        return {"type": "location_action"}
+    if place_type == "black_market":
+        good = min(["red", "green", "yellow"], key=lambda c: player["goods"].get(c, 0))
+        return {"type": "location_action", "good": good}
+    if place_type == "tea_house":
+        target = 7 if player["lira"] < 5 else 9
+        return {"type": "location_action", "target": target}
+    if place_type in ("market_large", "market_small"):
+        goods_to_sell = {color: 0 for color in GOODS}
+        deck_key = "market_large" if place_type == "market_large" else "market_small"
+        deck = state.get(deck_key, [])
+        if not deck:
+            return None
+        tile_def = deck[0]
+        required = tile_def.get("goods", {})
+        if place_type == "market_small" and state.get("small_market_wild") == player_id:
+            remaining = 5
+            ordered = sorted(GOODS, key=lambda c: player["goods"].get(c, 0), reverse=True)
+            for color in ordered:
+                if remaining <= 0:
+                    break
+                amount = min(player["goods"].get(color, 0), remaining)
+                if amount > 0:
+                    goods_to_sell[color] = amount
+                    remaining -= amount
+        else:
+            for color in GOODS:
+                goods_to_sell[color] = min(player["goods"].get(color, 0), required.get(color, 0))
+            total = sum(goods_to_sell.values())
+            if total > 5:
+                overflow = total - 5
+                for color in sorted(GOODS, key=lambda c: goods_to_sell.get(c, 0), reverse=True):
+                    if overflow <= 0:
+                        break
+                    take = min(goods_to_sell[color], overflow)
+                    goods_to_sell[color] -= take
+                    overflow -= take
+        if sum(goods_to_sell.values()) <= 0:
+            return None
+        return {"type": "location_action", "goods": goods_to_sell}
+    if place_type == "police_station":
+        if player.get("family_pos") != pos:
+            return {"type": "location_action"}
+        dest = _bot_choose_family_destination(state, player_id)
+        return {"type": "location_action", "destination": dest}
+    if place_type == "sultan_palace":
+        idx = state.get("sultan_index", 0)
+        costs = state.get("sultan_costs", [])
+        if idx >= len(costs):
+            return None
+        cost = costs[idx]
+        any_count = int(cost.get("any", 0))
+        base = {color: cost.get(color, 0) for color in GOODS}
+        if _pay_any_goods(player, base, any_count) is None:
+            return None
+        return {"type": "location_action"}
+    if place_type == "gemstone_dealer":
+        idx = state.get("gem_index", 0)
+        costs = state.get("gem_costs", [])
+        if idx >= len(costs):
+            return None
+        if player.get("lira", 0) < costs[idx]:
+            return None
+        return {"type": "location_action"}
+    if place_type in ("small_mosque", "great_mosque"):
+        mosque_key = "small" if place_type == "small_mosque" else "great"
+        options = ("red", "green") if place_type == "small_mosque" else ("yellow", "blue")
+        for color in options:
+            if (
+                state["mosques"][mosque_key].get(color)
+                and player["goods"].get(color, 0) > 0
+                and not player["mosque_tiles"].get(color)
+            ):
+                return {"type": "location_action", "color": color}
+        return None
+    return {"type": "location_action"}
+
+
+def _bot_choose_family_destination(state: Dict, player_id: str) -> int:
+    player = state["players"][player_id]
+    warehouses = [2, 3, 4]
+    deficits = []
+    for pid in warehouses:
+        tile = _tile_by_place(state["board"], pid)
+        if not tile:
+            continue
+        good = tile.get("good")
+        missing = max(0, player["capacity"] - player["goods"].get(good, 0))
+        deficits.append((missing, tile["pos"]))
+    deficits.sort(reverse=True)
+    if deficits and deficits[0][0] > 0:
+        return deficits[0][1]
+    fountain = _tile_by_place(state["board"], 7)
+    if fountain and player["assistants_on_board"]:
+        return fountain["pos"]
+    if deficits:
+        return deficits[0][1]
+    return random.choice(state["board"])["pos"]
+
+
+def _bot_try_bonus(state: Dict, player_id: str) -> Optional[Dict]:
+    player = state["players"][player_id]
+    pos = player["merchant_pos"]
+    tile = next((t for t in state["board"] if t["pos"] == pos), None)
+    if not tile:
+        return None
+    hand = player.get("bonus_hand", [])
+    if not hand:
+        return None
+    place_type = tile.get("type")
+    if place_type in ("gemstone_dealer", "wainwright") and player["lira"] < 7:
+        card = next((c for c in hand if c["kind"] == "BC_LIRA5"), None)
+        if card:
+            return {"type": "play_bonus", "card_id": card["uid"]}
+    if place_type in ("market_large", "market_small", "sultan_palace", "small_mosque", "great_mosque"):
+        card = next((c for c in hand if c["kind"] == "BC_GOOD"), None)
+        if card:
+            missing = min(GOODS, key=lambda c: player["goods"].get(c, 0))
+            return {"type": "play_bonus", "card_id": card["uid"], "good": missing}
+    return None
