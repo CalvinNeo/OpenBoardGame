@@ -304,6 +304,11 @@ class AzulGame:
         if not isinstance(target_row, int) or target_row < -1 or target_row > 4:
             return [], "invalid target row"
 
+        if target_row >= 0:
+            ok, reason = _is_row_placeable(state, player_id, color, target_row)
+            if not ok:
+                return [], reason
+
         taken: List[str] = []
         if source == "factory":
             source_index = action.get("source_index")
@@ -339,9 +344,6 @@ class AzulGame:
             return [], "no tiles taken"
 
         if target_row >= 0:
-            ok, reason = _is_row_placeable(state, player_id, color, target_row)
-            if not ok:
-                return [], reason
             line = state["players"][player_id]["pattern_lines"][target_row]
             capacity = target_row + 1
             free = capacity - len(line["tiles"])
