@@ -69,7 +69,7 @@ const ISTANBUL_HELP_TEXT = `
   <li><strong>Mosques</strong>: collect matching tiles for bonus Ruby💎.</li>
 </ul>
 
-<h3>Bonus Cards</h3>
+<h3>Bonus Cards 🎴</h3>
 <p>Bonus cards can be played before or after actions (see the card text). Use them to bend the rules and gain tempo.</p>
 `;
 
@@ -220,7 +220,7 @@ const ISTANBUL_TILE_SUMMARY = {
   6: "+2🎴-1🎴",
   7: "召回👥",
   8: "+1(🔴/🟢/🟡)+🎲🔵",
-  9: "叫数🎲->💰(失败+2💰)",
+  9: "Call X(3-12)=>🎲,✅+X,❎+2",
   10: "需求卖货->💰",
   11: "需求卖货->💰",
   12: "👪->任意地行动",
@@ -690,7 +690,7 @@ function renderIstanbulPlayers(view) {
     row.appendChild(name);
 
     const stats = document.createElement("div");
-    stats.textContent = `Lira💰 ${player.lira} | Rubies💎 ${player.rubies} | Cart ${player.capacity}`;
+    stats.textContent = `Lira💰 ${player.lira} | Rubies💎 ${player.rubies} | Cart📦 ${player.capacity}`;
     row.appendChild(stats);
 
     const goods = document.createElement("div");
@@ -698,7 +698,7 @@ function renderIstanbulPlayers(view) {
     row.appendChild(goods);
 
     const assistants = document.createElement("div");
-    assistants.textContent = `Assistants: ${player.assistants_in_stack} in stack, ${player.assistants_on_board.length} on board`;
+    assistants.textContent = `Assistants👥: ${player.assistants_in_stack} in stack, ${player.assistants_on_board.length} on board`;
     row.appendChild(assistants);
 
     istanbulPlayers.appendChild(row);
@@ -715,8 +715,8 @@ function renderIstanbulYou(view) {
   const items = [];
   items.push(`<div class="istanbul-pill">Lira💰 ${viewer.lira}</div>`);
   items.push(`<div class="istanbul-pill">Rubies💎 ${viewer.rubies}</div>`);
-  items.push(`<div class="istanbul-pill">Cart ${viewer.capacity}</div>`);
-  items.push(`<div class="istanbul-pill">Assistants ${viewer.assistants_in_stack}/${viewer.assistants_on_board.length}</div>`);
+  items.push(`<div class="istanbul-pill">Cart📦 ${viewer.capacity}</div>`);
+  items.push(`<div class="istanbul-pill">Assistants👥 ${viewer.assistants_in_stack}/${viewer.assistants_on_board.length}</div>`);
   const goodsLine = `<div>${formatGoodsLine(viewer.goods || {})}</div>`;
   istanbulYou.innerHTML = items.join("") + goodsLine;
 }
@@ -1064,7 +1064,7 @@ function renderPlaceActionControls(view) {
 
   if (placeType === "wainwright") {
     const canPay = viewer.lira >= 7 && viewer.capacity < 5;
-    const btn = buildButton("Upgrade Cart (7 Lira💰)", "istanbulActionBtn", () => sendAction({ type: "location_action" }), "primary", !canPay);
+    const btn = buildButton("Upgrade Cart📦 (7 Lira💰)", "istanbulActionBtn", () => sendAction({ type: "location_action" }), "primary", !canPay);
     istanbulActionControls.appendChild(btn);
   } else if (placeType === "warehouse") {
     const btn = buildButton("Fill to Capacity", "istanbulActionBtn", () => sendAction({ type: "location_action" }), "primary");
@@ -1198,7 +1198,7 @@ function renderFountainControls(view, isFamily) {
     istanbulActionControls.appendChild(row);
   }
   if (!isFamily) {
-    const btn = buildButton("Recall Assistants", "istanbulActionBtn", () => {
+    const btn = buildButton("Recall Assistants👥", "istanbulActionBtn", () => {
       const payload = { type: "location_action" };
       if (istanbulSelections.fountainReturns.size) {
         payload.return_assistants = Array.from(istanbulSelections.fountainReturns);
