@@ -7121,6 +7121,13 @@ body.word-decode-explain-mode button.has-explanation:hover {
   justify-items: center;
 }
 
+.azul-center-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
 .azul-side {
   display: flex;
   flex-direction: column;
