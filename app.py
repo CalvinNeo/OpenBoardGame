@@ -8,6 +8,7 @@ import sys
 import time
 import uuid
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Dict, List, Optional
 
 import socketio
@@ -26,6 +27,7 @@ from game.decrypto_ai import get_bot_strategies
 logger = logging.getLogger("openboardgame")
 sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
 fastapi_app = FastAPI()
+DEV_ORDER_PATH = Path(__file__).resolve().parent / "game" / "dev_order.json"
 CYBER_PICTURES_DIR = ".cyber_pictures"
 os.makedirs(CYBER_PICTURES_DIR, exist_ok=True)
 fastapi_app.mount("/static/cards", StaticFiles(directory=CYBER_PICTURES_DIR), name="cyber_pictures")
@@ -36,6 +38,25 @@ fastapi_app.mount(
 )
 fastapi_app.mount("/static/project_l", StaticFiles(directory="assets/project_l"), name="project_l_assets")
 fastapi_app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+def load_game_dev_order(path: Path) -> Dict[str, int]:
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        logger.warning("failed to load game dev order from %s: %s", path, exc)
+        return {}
+    if not isinstance(raw, dict):
+        logger.warning("invalid game dev order format at %s: expected object", path)
+        return {}
+    dev_order: Dict[str, int] = {}
+    for game_id, order in raw.items():
+        if isinstance(game_id, str) and isinstance(order, int):
+            dev_order[game_id] = order
+    return dev_order
+
+
+GAME_DEV_ORDER = load_game_dev_order(DEV_ORDER_PATH)
 
 
 @fastapi_app.get("/")
@@ -51,6 +72,7 @@ async def api_list_games():
             "name": g.name,
             "min_players": g.min_players,
             "max_players": g.max_players,
+            "dev_order": GAME_DEV_ORDER.get(g.game_id),
         }
         for g in list_games()
     ]

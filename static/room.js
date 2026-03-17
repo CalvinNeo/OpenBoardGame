@@ -532,8 +532,29 @@ function getGameSortKey() {
   return gameSortSelect.value || "alpha";
 }
 
+function getGameDevOrder(game) {
+  const order = Number(game && game.dev_order);
+  return Number.isFinite(order) ? order : null;
+}
+
 function sortGames(games, sortKey) {
   const ordered = [...games];
+  if (sortKey === "dev_order") {
+    ordered.sort((a, b) => {
+      const aOrder = getGameDevOrder(a);
+      const bOrder = getGameDevOrder(b);
+      if (Number.isFinite(aOrder) && Number.isFinite(bOrder)) {
+        const diff = aOrder - bOrder;
+        if (diff !== 0) return diff;
+      } else if (Number.isFinite(aOrder)) {
+        return -1;
+      } else if (Number.isFinite(bOrder)) {
+        return 1;
+      }
+      return a.name.localeCompare(b.name);
+    });
+    return ordered;
+  }
   if (sortKey === "difficulty_asc") {
     ordered.sort((a, b) => {
       const aWeight = getGameWeight(a.game_id);

@@ -24,6 +24,7 @@
 - Framework: `unittest` with `IsolatedAsyncioTestCase` for async flows.
 - File naming: `tests/test_*.py`; method naming: `test_*`.
 - Prefer deterministic tests; mock Socket.IO behaviors as seen in `tests/test_room_session.py`.
+- Keep `tests/test_game_dev_order.py` green: when adding a new game registration, run `python scripts/gen_dev_order.py` to refresh `game/dev_order.json`.
 
 ## Commit & Pull Request Guidelines
 - Commit messages are short and imperative (examples in history: “add prefetch”, “fix cabo”).

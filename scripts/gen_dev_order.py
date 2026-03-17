@@ -13,7 +13,7 @@ from game import list_games
 
 def first_commit_timestamp(path: str) -> int:
     result = subprocess.run(
-        ["git", "log", "--diff-filter=A", "--follow", "--format=%ct", "--", path],
+        ["git", "log", "--diff-filter=A", "--format=%ct", "--", path],
         cwd=ROOT_DIR,
         capture_output=True,
         check=True,
