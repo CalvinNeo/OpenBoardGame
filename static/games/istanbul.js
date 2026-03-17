@@ -12,6 +12,7 @@ const istanbulBonusHand = document.getElementById("istanbulBonusHand");
 const istanbulPlayers = document.getElementById("istanbulPlayers");
 const istanbulYou = document.getElementById("istanbulYou");
 const istanbulMarkets = document.getElementById("istanbulMarkets");
+const istanbulMosques = document.getElementById("istanbulMosques");
 
 const istanbulHeaderActions = document.getElementById("istanbulHeaderActions");
 const istanbulHelpBtn = document.getElementById("istanbulHelpBtn");
@@ -25,14 +26,14 @@ const istanbulExplainContent = document.getElementById("istanbulExplainContent")
 
 const GOODS = ["red", "green", "yellow", "blue"];
 const GOOD_LABELS = {
-  red: "🔴 Red",
-  green: "🟢 Green",
-  yellow: "🟡 Yellow",
-  blue: "🔵 Blue",
+  red: "🔴",
+  green: "🟢",
+  yellow: "🟡",
+  blue: "🔵",
 };
 
 const BONUS_LABELS = {
-  BC_GOOD: "Gain 1 Good",
+  BC_GOOD: "Gain 1 Good 🔴/🟢/🟡/🔵",
   BC_LIRA5: "Take 5 Lira💰",
   BC_SULTAN_2X: "Sultan Action x2",
   BC_POST_2X: "Post Office x2",
@@ -59,12 +60,12 @@ const ISTANBUL_HELP_TEXT = `
   <li><strong>Encounters</strong> with family, Governor, Smuggler.</li>
 </ul>
 
-<h3>Goods</h3>
-<p>Goods are tracked by color. Use warehouses to fill up to your cart capacity. Trade at markets for Lira💰.</p>
+<h3>Goods 🔴/🟢/🟡/🔵</h3>
+<p>Goods 🔴/🟢/🟡/🔵 are tracked by color. Use warehouses to fill up to your cart capacity. Trade at markets for Lira💰.</p>
 
 <h3>Rubies💎</h3>
 <ul>
-  <li><strong>Sultan's Palace</strong>: pay goods based on the track.</li>
+  <li><strong>Sultan's Palace</strong>: pay goods 🔴/🟢/🟡/🔵 based on the track.</li>
   <li><strong>Gemstone Dealer</strong>: pay Lira💰 based on the track.</li>
   <li><strong>Mosques</strong>: collect matching tiles for bonus Ruby💎.</li>
 </ul>
@@ -121,19 +122,19 @@ const ISTANBUL_TILE_EXPLANATIONS = {
   },
   2: {
     name: "Fabric Warehouse",
-    description: "Fill your red goods to cart capacity.",
+    description: "Fill your red goods 🔴 to cart capacity.",
     cost: "Free",
     costType: "free",
   },
   3: {
     name: "Spice Warehouse",
-    description: "Fill your green goods to cart capacity.",
+    description: "Fill your green goods 🟢 to cart capacity.",
     cost: "Free",
     costType: "free",
   },
   4: {
     name: "Fruit Warehouse",
-    description: "Fill your yellow goods to cart capacity.",
+    description: "Fill your yellow goods 🟡 to cart capacity.",
     cost: "Free",
     costType: "free",
   },
@@ -157,7 +158,7 @@ const ISTANBUL_TILE_EXPLANATIONS = {
   },
   8: {
     name: "Black Market",
-    description: "Gain 1 red/green/yellow good, then roll to gain blue goods (7-8:1, 9-10:2, 11-12:3).",
+    description: "Gain 1🔴/1🟢/1🟡, then roll to gain blue goods 🔵 (7-8:1🔵, 9-10:2🔵, 11-12:3🔵).",
     cost: "Free",
     costType: "free",
   },
@@ -169,14 +170,14 @@ const ISTANBUL_TILE_EXPLANATIONS = {
   },
   10: {
     name: "Large Market",
-    description: "Sell goods matching the demand tile (1-5 goods) for Lira💰, then cycle the tile.",
-    cost: "Goods",
+    description: "Sell 1-5 goods 🔴/🟢/🟡/🔵 matching the demand tile for Lira💰, then cycle the tile.",
+    cost: "1-5🔴/🟢/🟡/🔵",
     costType: "pay",
   },
   11: {
     name: "Small Market",
-    description: "Sell goods matching the demand tile (1-5 goods) for Lira💰, then cycle the tile.",
-    cost: "Goods",
+    description: "Sell 1-5 goods 🔴/🟢/🟡/🔵 matching the demand tile for Lira💰, then cycle the tile.",
+    cost: "1-5🔴/🟢/🟡/🔵",
     costType: "pay",
   },
   12: {
@@ -187,8 +188,8 @@ const ISTANBUL_TILE_EXPLANATIONS = {
   },
   13: {
     name: "Sultan's Palace",
-    description: "Pay the current goods requirement to gain a Ruby💎; the requirement increases afterward.",
-    cost: "Goods",
+    description: "Pay the current goods requirement 🔴/🟢/🟡/🔵 to gain a Ruby💎; the requirement increases afterward.",
+    cost: "Goods 🔴/🟢/🟡/🔵",
     costType: "pay",
   },
   14: {
@@ -199,32 +200,32 @@ const ISTANBUL_TILE_EXPLANATIONS = {
   },
   15: {
     name: "Small Mosque",
-    description: "Pay 1 red or green good to take the matching mosque tile (and its power).",
-    cost: "Goods",
+    description: "Pay 1🔴 or 1🟢 good to take the matching mosque tile (and its power).",
+    cost: "1🔴/1🟢",
     costType: "pay",
   },
   16: {
     name: "Great Mosque",
-    description: "Pay 1 yellow or blue good to take the matching mosque tile (and its power).",
-    cost: "Goods",
+    description: "Pay 1🟡 or 1🔵 good to take the matching mosque tile (and its power).",
+    cost: "1🟡/1🔵",
     costType: "pay",
   },
 };
 
 const ISTANBUL_TILE_SUMMARY = {
   1: "7💰->+1📦",
-  2: "+🔴到📦",
-  3: "+🟢到📦",
-  4: "+🟡到📦",
-  5: "📮奖励->📬+1",
+  2: "+🔴->📦",
+  3: "+🟢->📦",
+  4: "+🟡->📦",
+  5: "Mail row->📬+1",
   6: "+2🎴-1🎴",
-  7: "召回👥",
+  7: "Recall 👥",
   8: "+1(🔴/🟢/🟡)+🎲🔵",
   9: "Call X(3-12)=>🎲,✅+X,❎+2",
-  10: "需求卖货->💰",
-  11: "需求卖货->💰",
-  12: "👪->任意地行动",
-  13: "交货->💎",
+  10: "Goto 🛒,🔴🟢🟡🔵=>💰",
+  11: "Goto 🛒,🔴🟢🟡🔵=>💰",
+  12: "👪->Any action",
+  13: "Goods🔴/🟢/🟡/🔵->💎",
   14: "💰->💎",
   15: "🔴/🟢->🕌",
   16: "🟡/🔵->🕌",
@@ -291,6 +292,7 @@ function clearIstanbulState() {
   if (istanbulPlayers) istanbulPlayers.innerHTML = "";
   if (istanbulYou) istanbulYou.innerHTML = "";
   if (istanbulMarkets) istanbulMarkets.innerHTML = "";
+  if (istanbulMosques) istanbulMosques.innerHTML = "";
 }
 
 function showIstanbulHeaderActions(show) {
@@ -459,7 +461,7 @@ function selectionIsViewerTurn(view) {
 function formatGoodsLine(goods) {
   return GOODS.map((color) => {
     const count = goods[color] || 0;
-    return `${GOOD_LABELS[color]} x${count}`;
+    return `${count}${GOOD_LABELS[color]}`;
   }).join(" ");
 }
 
@@ -519,6 +521,7 @@ function renderIstanbulGameState(data) {
   renderIstanbulPlayers(view);
   renderIstanbulYou(view);
   renderIstanbulMarkets(view);
+  renderIstanbulMosques(view);
   renderIstanbulBonus(view);
   renderIstanbulActionCenter(view);
   updateIstanbulExplainClasses(istanbulExplainMode);
@@ -766,6 +769,79 @@ function renderIstanbulMarkets(view) {
   });
 }
 
+function renderIstanbulMosques(view) {
+  if (!istanbulMosques) return;
+  istanbulMosques.innerHTML = "";
+  const mosques = view.mosques;
+  if (!mosques) {
+    istanbulMosques.textContent = "Mosques unavailable.";
+    return;
+  }
+
+  const viewer = getViewer(view);
+  const owned = viewer && viewer.mosque_tiles ? viewer.mosque_tiles : {};
+  const groups = [
+    { key: "small", label: "Small", colors: ["red", "green"] },
+    { key: "great", label: "Great", colors: ["yellow", "blue"] },
+  ];
+
+  groups.forEach((group) => {
+    const data = mosques[group.key] || {};
+    const row = document.createElement("div");
+    row.className = "istanbul-mosque-row";
+
+    const header = document.createElement("div");
+    header.className = "istanbul-mosque-header";
+    const title = document.createElement("div");
+    title.textContent = `${group.label} 🕌`;
+    const rubies = document.createElement("div");
+    rubies.textContent = `💎 ${data.rubies ?? 0}`;
+    header.appendChild(title);
+    header.appendChild(rubies);
+    row.appendChild(header);
+
+    const available = document.createElement("div");
+    available.className = "istanbul-mosque-tiles";
+    const availableLabel = document.createElement("span");
+    availableLabel.className = "istanbul-mosque-label";
+    availableLabel.textContent = "Available:";
+    available.appendChild(availableLabel);
+    group.colors.forEach((color) => {
+      const tile = document.createElement("span");
+      tile.className = "istanbul-mosque-tile";
+      tile.textContent = GOOD_LABELS[color];
+      if (!data[color]) {
+        tile.classList.add("taken");
+      }
+      available.appendChild(tile);
+    });
+    row.appendChild(available);
+
+    if (viewer) {
+      const youRow = document.createElement("div");
+      youRow.className = "istanbul-mosque-tiles istanbul-mosque-you";
+      const youLabel = document.createElement("span");
+      youLabel.className = "istanbul-mosque-label";
+      youLabel.textContent = "You:";
+      youRow.appendChild(youLabel);
+      group.colors.forEach((color) => {
+        const tile = document.createElement("span");
+        tile.className = "istanbul-mosque-tile";
+        tile.textContent = GOOD_LABELS[color];
+        if (owned[color]) {
+          tile.classList.add("owned");
+        } else {
+          tile.classList.add("taken");
+        }
+        youRow.appendChild(tile);
+      });
+      row.appendChild(youRow);
+    }
+
+    istanbulMosques.appendChild(row);
+  });
+}
+
 function renderIstanbulBonus(view) {
   if (!istanbulBonusHand) return;
   istanbulBonusHand.innerHTML = "";
@@ -915,10 +991,10 @@ function renderPendingAction(view, pending) {
     return;
   }
   if (type === "smuggler") {
-    istanbulActionHint.textContent = "Smuggler: gain a good?";
+    istanbulActionHint.textContent = "Smuggler: gain a good 🔴/🟢/🟡/🔵?";
     const row = document.createElement("div");
     row.className = "istanbul-control-row";
-    const takeBtn = buildButton("Take Good", "istanbulSmugglerTakeBtn", () => {
+    const takeBtn = buildButton("Take 1🔴/🟢/🟡/🔵", "istanbulSmugglerTakeBtn", () => {
       sendAction({
         type: "smuggler_choice",
         take: true,
@@ -939,7 +1015,7 @@ function renderPendingAction(view, pending) {
       istanbulSelections.smugglerGood = value;
     });
     const paySelect = document.createElement("select");
-    paySelect.innerHTML = "<option value=\"lira\">Pay 2 Lira💰</option><option value=\"good\">Pay 1 Good</option>";
+    paySelect.innerHTML = "<option value=\"lira\">Pay 2 Lira💰</option><option value=\"good\">Pay 1🔴/🟢/🟡/🔵</option>";
     paySelect.value = istanbulSelections.smugglerPayment === "good" ? "good" : "lira";
     paySelect.addEventListener("change", () => {
       if (paySelect.value === "lira") {
@@ -1217,7 +1293,7 @@ function renderBlackMarketControls(view, isFamily) {
   }, true));
   istanbulActionControls.appendChild(row);
   if (!isFamily) {
-    const btn = buildButton("Trade Goods", "istanbulActionBtn", () => {
+    const btn = buildButton("Trade Goods 🔴/🟢/🟡/🔵", "istanbulActionBtn", () => {
       sendAction({ type: "location_action", good: istanbulSelections.blackGood });
     }, "primary");
     istanbulActionControls.appendChild(btn);
@@ -1260,7 +1336,7 @@ function renderMarketControls(view, placeType, isFamily) {
   istanbulActionControls.appendChild(demandLine);
   if (allowWild) {
     const wild = document.createElement("div");
-    wild.textContent = "Wild bonus active: any goods are accepted.";
+    wild.textContent = "Wild bonus active: any goods 🔴/🟢/🟡/🔵 are accepted.";
     istanbulActionControls.appendChild(wild);
   }
 
@@ -1305,11 +1381,11 @@ function renderMarketControls(view, placeType, isFamily) {
   if (revenueTable) {
     const payout = revenueTable[total] || 0;
     const summary = document.createElement("div");
-    summary.textContent = `Selected: ${total} goods => ${payout} Lira💰`;
+    summary.textContent = `Selected: ${total} goods 🔴/🟢/🟡/🔵 => ${payout} Lira💰`;
     istanbulActionControls.appendChild(summary);
   }
   if (!isFamily) {
-    const sellBtn = buildButton("Sell Goods", "istanbulActionBtn", () => {
+    const sellBtn = buildButton("Sell Goods 🔴/🟢/🟡/🔵", "istanbulActionBtn", () => {
       sendAction({ type: "location_action", goods: { ...istanbulSelections.marketGoods } });
     }, "primary", total <= 0 || total > 5);
     istanbulActionControls.appendChild(sellBtn);
@@ -1447,7 +1523,7 @@ function renderRedMosqueQuick(view) {
   if (viewer.lira < 2) return;
   if (!viewer.assistants_on_board.length) return;
   const title = document.createElement("div");
-  title.textContent = "Red Mosque: recall assistant (2 Lira💰)";
+  title.textContent = "🔴 Mosque: recall assistant (2 Lira💰)";
   istanbulActionControls.appendChild(title);
   const row = document.createElement("div");
   row.className = "istanbul-control-row";
