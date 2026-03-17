@@ -1,0 +1,19 @@
+{
+  "market_revenue": {
+    "small": {"1": 2, "2": 5, "3": 9, "4": 14, "5": 20},
+    "large": {"1": 3, "2": 7, "3": 12, "4": 18, "5": 25}
+  },
+  "tiles": [
+    {"id": "S1", "market": "small", "goods": {"blue": 1, "red": 1, "green": 1, "yellow": 2}},
+    {"id": "S2", "market": "small", "goods": {"blue": 1, "red": 1, "green": 2, "yellow": 1}},
+    {"id": "S3", "market": "small", "goods": {"red": 1, "green": 3, "yellow": 1}},
+    {"id": "S4", "market": "small", "goods": {"red": 1, "green": 2, "yellow": 2}},
+    {"id": "S5", "market": "small", "goods": {"blue": 1, "green": 2, "yellow": 2}},
+
+    {"id": "L1", "market": "large", "goods": {"blue": 2, "red": 2, "green": 1}},
+    {"id": "L2", "market": "large", "goods": {"blue": 3, "red": 1, "green": 1}},
+    {"id": "L3", "market": "large", "goods": {"blue": 2, "red": 2, "yellow": 1}},
+    {"id": "L4", "market": "large", "goods": {"blue": 3, "red": 1, "yellow": 1}},
+    {"id": "L5", "market": "large", "goods": {"blue": 2, "red": 1, "green": 1, "yellow": 1}}
+  ]
+}

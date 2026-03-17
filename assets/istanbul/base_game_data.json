@@ -1,0 +1,77 @@
+{
+  "bonus_cards": [
+    {
+      "id": "BC_GOOD",
+      "count": 4,
+      "text": "Gain 1 good of your choice. May only be played before or after an action, but not while carrying one out."
+    },
+    {
+      "id": "BC_LIRA5",
+      "count": 4,
+      "text": "Take 5 Lira from the general supply."
+    },
+    {
+      "id": "BC_SULTAN_2X",
+      "count": 2,
+      "text": "If you carry out the action at the Sultan's Palace (13), after completing the action, carry it out one more time. The number of goods to deliver to the Sultan increases after each action."
+    },
+    {
+      "id": "BC_POST_2X",
+      "count": 2,
+      "text": "If you carry out the action at the Post Office (5), after completing the action, carry it out one more time. Move a Mail indicator after each action as usual."
+    },
+    {
+      "id": "BC_GEM_2X",
+      "count": 2,
+      "text": "If you carry out the action at the Gemstone Dealer (16), after completing the action, carry it out one more time. The amount of Lira to pay for the Ruby increases after each action."
+    },
+    {
+      "id": "BC_FAMILY_POLICE_REWARD",
+      "count": 2,
+      "text": "Place your Family member on the Police Station (12) and collect the reward. Not playable if your Family member is already at the Police Station (12)."
+    },
+    {
+      "id": "BC_NO_MOVE",
+      "count": 2,
+      "text": "In the 1st phase of your turn, do not move your Merchant. Your Merchant stays at his current Place but you have to use an Assistant again."
+    },
+    {
+      "id": "BC_MOVE_3_4",
+      "count": 4,
+      "text": "In the 1st phase of your turn, move your Merchant stack by 3 or 4 Places (instead of 1 or 2)."
+    },
+    {
+      "id": "BC_RETURN_ASSISTANT",
+      "count": 2,
+      "text": "In the 1st phase of your turn, return 1 of your assistants to your merchant stack."
+    },
+    {
+      "id": "BC_SMALL_MARKET_WILD",
+      "count": 2,
+      "text": "If you carry out the action at the Small Market (11), you have to sell the required number of goods but you may use other types of goods than required."
+    }
+  ],
+  "post_office_track": {
+    "row_I": ["red", "coin2"],
+    "row_II": ["green", "coin1"],
+    "row_III": ["blue", "coin2"],
+    "row_IV": ["yellow", "coin1"],
+    "notes": "After taking resources shown in the uncovered row, move leftmost Mail indicator from top row to bottom row; when all are bottom, move all back to top."
+  },
+  "sultan_palace_track": {
+    "sequence": [
+      {"cost": {"red": 1, "blue": 1, "green": 1, "yellow": 1}},
+      {"cost": {"red": 1, "blue": 1, "green": 1, "yellow": 1, "any": 1}, "players": [4, 5]},
+      {"cost": {"red": 1, "blue": 1, "green": 1, "yellow": 1, "any": 1}, "players": [2, 3]},
+      {"cost": {"blue": 2, "red": 1, "green": 1, "yellow": 1}},
+      {"cost": {"blue": 2, "red": 1, "green": 1, "yellow": 1, "any": 1}},
+      {"cost": {"blue": 2, "red": 2, "green": 1, "yellow": 1, "any": 1}}
+    ],
+    "notes": "Track read left-to-right from the bottom row of the Sultan's Palace tile. The 2/3 and 4/5 markers indicate which space to skip based on player count."
+  },
+  "gemstone_dealer_track": {
+    "sequence": [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
+    "skip_for_players": {"2": 2, "3": 1, "4": 0, "5": 0},
+    "notes": "Use the lowest visible coin value not covered by a Ruby. The 4+ marker on 13 indicates that space is only used in 4-5 players."
+  }
+}
