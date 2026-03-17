@@ -14,6 +14,7 @@ from game.halli_galli import HalliGalliGame
 from game.hanabi import HanabiGame
 from game.impression_flower import ImpressionFlowerGame
 from game.incan_gold import IncanGoldGame
+from game.istanbul import IstanbulGame
 from game.kobayakawa import KobayakawaGame
 from game.perfect_mismatch import PerfectMismatchGame
 from game.point_salad import PointSaladGame
@@ -485,6 +486,21 @@ YAHTZEE_ACTION_SCHEMA = {
 
 YAHTZEE_CONFIG_SCHEMA = {
     "type": "object",
+    "additionalProperties": False,
+}
+
+ISTANBUL_ACTION_SCHEMA = {
+    "type": "object",
+    "properties": {"type": {"type": "string"}},
+    "required": ["type"],
+    "additionalProperties": True,
+}
+
+ISTANBUL_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "layout": {"type": "string", "enum": ["standard", "random"]},
+    },
     "additionalProperties": False,
 }
 
@@ -1780,6 +1796,21 @@ register_game(
         module=YahtzeeGame,
         serialize=YahtzeeGame.serialize,
         deserialize=YahtzeeGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=IstanbulGame.game_id,
+        name="Istanbul",
+        min_players=IstanbulGame.min_players,
+        max_players=IstanbulGame.max_players,
+        turn_mode="turn",
+        action_schema=ISTANBUL_ACTION_SCHEMA,
+        config_schema=ISTANBUL_CONFIG_SCHEMA,
+        module=IstanbulGame,
+        serialize=IstanbulGame.serialize,
+        deserialize=IstanbulGame.deserialize,
     )
 )
 

@@ -131,6 +131,7 @@ function renderRoomState(state) {
     clearCaboState();
     clearFlip7State();
     clearYahtzeeState();
+    clearIstanbulState();
     clearSkullState();
     clearCatInBoxState();
     clearGangState();

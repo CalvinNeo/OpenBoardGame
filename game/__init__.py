@@ -17,6 +17,7 @@ from game.halli_galli import HalliGalliGame
 from game.hanabi import HanabiGame
 from game.impression_flower import ImpressionFlowerGame
 from game.incan_gold import IncanGoldGame
+from game.istanbul import IstanbulGame
 from game.kobayakawa import KobayakawaGame
 from game.perfect_mismatch import PerfectMismatchGame
 from game.point_salad import PointSaladGame
@@ -53,6 +54,7 @@ __all__ = [
     "DecryptoGame",
     "ImpressionFlowerGame",
     "IncanGoldGame",
+    "IstanbulGame",
     "KobayakawaGame",
     "PerfectMismatchGame",
     "PointSaladGame",

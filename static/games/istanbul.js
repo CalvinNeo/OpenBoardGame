@@ -112,6 +112,105 @@ const ISTANBUL_BUTTON_EXPLANATIONS = {
   },
 };
 
+const ISTANBUL_TILE_EXPLANATIONS = {
+  1: {
+    name: "Wainwright",
+    description: "Pay 7 Lira to increase your cart capacity by 1 (max 5). The first player to reach 5 gains a Ruby.",
+    cost: "7 Lira",
+    costType: "pay",
+  },
+  2: {
+    name: "Fabric Warehouse",
+    description: "Fill your red goods to cart capacity.",
+    cost: "Free",
+    costType: "free",
+  },
+  3: {
+    name: "Spice Warehouse",
+    description: "Fill your green goods to cart capacity.",
+    cost: "Free",
+    costType: "free",
+  },
+  4: {
+    name: "Fruit Warehouse",
+    description: "Fill your yellow goods to cart capacity.",
+    cost: "Free",
+    costType: "free",
+  },
+  5: {
+    name: "Post Office",
+    description: "Take the resources in the current row, then advance the mail indicator.",
+    cost: "Free",
+    costType: "free",
+  },
+  6: {
+    name: "Caravansary",
+    description: "Draw 2 bonus cards, then discard 1 from your hand.",
+    cost: "Free",
+    costType: "free",
+  },
+  7: {
+    name: "Fountain",
+    description: "Recall any number of your assistants from the board.",
+    cost: "Free",
+    costType: "free",
+  },
+  8: {
+    name: "Black Market",
+    description: "Gain 1 red/green/yellow good, then roll to gain blue goods (7-8:1, 9-10:2, 11-12:3).",
+    cost: "Free",
+    costType: "free",
+  },
+  9: {
+    name: "Tea House",
+    description: "Call 3-12 and roll. If roll >= call, gain that many Lira; otherwise gain 2 Lira.",
+    cost: "Free",
+    costType: "free",
+  },
+  10: {
+    name: "Large Market",
+    description: "Sell goods matching the demand tile (1-5 goods) for Lira, then cycle the tile.",
+    cost: "Goods",
+    costType: "pay",
+  },
+  11: {
+    name: "Small Market",
+    description: "Sell goods matching the demand tile (1-5 goods) for Lira, then cycle the tile.",
+    cost: "Goods",
+    costType: "pay",
+  },
+  12: {
+    name: "Police Station",
+    description: "If your family is here, send them to any place and perform that place's action.",
+    cost: "Free",
+    costType: "free",
+  },
+  13: {
+    name: "Sultan's Palace",
+    description: "Pay the current goods requirement to gain a Ruby; the requirement increases afterward.",
+    cost: "Goods",
+    costType: "pay",
+  },
+  14: {
+    name: "Gemstone Dealer",
+    description: "Pay the current Lira cost to gain a Ruby; the cost increases afterward.",
+    cost: "Lira",
+    costType: "pay",
+  },
+  15: {
+    name: "Small Mosque",
+    description: "Pay 1 red or green good to take the matching mosque tile (and its power).",
+    cost: "Goods",
+    costType: "pay",
+  },
+  16: {
+    name: "Great Mosque",
+    description: "Pay 1 yellow or blue good to take the matching mosque tile (and its power).",
+    cost: "Goods",
+    costType: "pay",
+  },
+};
+
 let currentIstanbulView = null;
 let istanbulExplainMode = false;
 let istanbulLastPhase = null;
@@ -242,6 +341,47 @@ function showIstanbulButtonExplanation(buttonId) {
     <h4>${explanation.name}</h4>
     <p>${explanation.description}</p>
     <span class="istanbul-explain-cost ${costClass}">${explanation.cost}</span>
+  `;
+  setModalVisible(istanbulExplainModal, true);
+}
+
+function showIstanbulTileExplanation(placeId, pos) {
+  const explanation = ISTANBUL_TILE_EXPLANATIONS[placeId];
+  if (!explanation || !istanbulExplainContent || !istanbulExplainModal) {
+    return;
+  }
+  const tokenLines = [];
+  const view = currentIstanbulView || {};
+  const players = Array.isArray(view.players) ? view.players : [];
+  players.forEach((player) => {
+    if (player.merchant_pos === pos) {
+      const name = player.name || player.player_id || "Merchant";
+      const label = name.slice(0, 1).toUpperCase();
+      tokenLines.push(`🧿 Merchant: ${name} (${label})`);
+    }
+    if (player.family_pos === pos) {
+      const name = player.name || player.player_id || "Family";
+      tokenLines.push(`👪 Family: ${name} (F)`);
+    }
+  });
+  if (view.npc && view.npc.governor === pos) {
+    tokenLines.push("🟣 Governor (G)");
+  }
+  if (view.npc && view.npc.smuggler === pos) {
+    tokenLines.push("⚫ Smuggler (S)");
+  }
+  const tokensHtml = tokenLines.length
+    ? `<div><strong>Tokens Here</strong><ul>${tokenLines.map((line) => `<li>${line}</li>`).join("")}</ul></div>`
+    : "<div><strong>Tokens Here</strong><div>None</div></div>";
+
+  let costClass = "free";
+  if (explanation.costType === "pay") costClass = "pay";
+  if (explanation.costType === "end") costClass = "end";
+  istanbulExplainContent.innerHTML = `
+    <h4>${explanation.name}</h4>
+    <p>${explanation.description}</p>
+    <span class="istanbul-explain-cost ${costClass}">${explanation.cost}</span>
+    ${tokensHtml}
   `;
   setModalVisible(istanbulExplainModal, true);
 }
@@ -379,6 +519,10 @@ function renderIstanbulBoard(view) {
     tileEl.type = "button";
     tileEl.className = "istanbul-tile";
     tileEl.dataset.pos = tile.pos;
+    tileEl.dataset.placeId = tile.place_id;
+    if (istanbulExplainMode) {
+      tileEl.classList.add("has-explanation");
+    }
     if (viewer && viewer.merchant_pos === tile.pos) {
       tileEl.classList.add("current");
     }
@@ -1389,6 +1533,16 @@ if (istanbulGamePanel) {
 if (document) {
   document.addEventListener("pointerdown", (e) => {
     if (!istanbulExplainMode) return;
+    const tile = e.target.closest(".istanbul-tile");
+    if (tile) {
+      const placeId = Number(tile.dataset.placeId);
+      const pos = Number(tile.dataset.pos);
+      showIstanbulTileExplanation(placeId, pos);
+      e.preventDefault();
+      e.stopPropagation();
+      exitIstanbulExplainMode();
+      return;
+    }
     const buttonId = findIstanbulButtonAtPoint(e.clientX, e.clientY);
     if (buttonId) {
       e.preventDefault();
@@ -1408,6 +1562,11 @@ if (document) {
 
   document.addEventListener("click", (e) => {
     if (!istanbulExplainMode) return;
+    if (e.target.closest(".istanbul-tile")) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     const button = e.target.closest("button");
     if (!button) return;
     if (button === istanbulExplainBtn || button === istanbulHelpBtn) return;

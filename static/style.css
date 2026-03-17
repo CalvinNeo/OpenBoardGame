@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Work+Sans:wght@400;600&display=swap");
+
 *,
 *::before,
 *::after {
@@ -7633,6 +7635,475 @@ body.pokemon-splendor-explain-mode button.has-explanation:hover {
   outline-color: #ea580c;
   outline-style: solid;
 }
+
+.istanbul-header-btn {
+  padding: 4px 12px;
+  font-size: 13px;
+  border: 1px solid #0f766e;
+  border-radius: 999px;
+  background: #e6fffb;
+  color: #0f766e;
+  cursor: pointer;
+}
+
+.istanbul-header-btn:hover {
+  background: #ccfbf1;
+}
+
+.istanbul-header-btn.active {
+  background: #0f766e;
+  color: #f0fdfa;
+}
+
+.istanbul-panel {
+  --bazaar-ink: #1f2937;
+  --bazaar-sand: #f5e6c8;
+  --bazaar-terracotta: #c95b3a;
+  --bazaar-teal: #0f766e;
+  --bazaar-olive: #7c6f3f;
+  --bazaar-sky: #2563eb;
+  --bazaar-surface: #fffaf1;
+  --bazaar-border: #e2d5be;
+  font-family: "Work Sans", "Segoe UI", sans-serif;
+  color: var(--bazaar-ink);
+  background: radial-gradient(circle at top right, #fff3db 0%, #fdf6e9 45%, #f7efe2 100%);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.istanbul-panel h3 {
+  font-family: "Cinzel", "Times New Roman", serif;
+  font-size: 16px;
+  margin: 0 0 8px;
+  color: #6b3f2a;
+}
+
+.istanbul-top {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.istanbul-stat {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #fffdf7;
+  border: 1px solid var(--bazaar-border);
+  font-size: 13px;
+}
+
+.istanbul-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr);
+  gap: 16px;
+}
+
+.istanbul-board-wrap {
+  background: var(--bazaar-surface);
+  border: 1px solid var(--bazaar-border);
+  border-radius: 16px;
+  padding: 12px;
+}
+
+.istanbul-board-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.istanbul-hint {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.istanbul-board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.istanbul-tile {
+  position: relative;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid #e2d5be;
+  background: #fff7ea;
+  text-align: left;
+  cursor: pointer;
+  min-height: 92px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.istanbul-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+}
+
+.istanbul-tile.current {
+  border-color: var(--bazaar-teal);
+  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.15);
+}
+
+.istanbul-tile.path-step {
+  border-color: var(--bazaar-terracotta);
+}
+
+.istanbul-tile.family-target {
+  border-color: var(--bazaar-sky);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.istanbul-step-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--bazaar-terracotta);
+  color: #fff7ed;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.istanbul-tile-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #a16207;
+}
+
+.istanbul-tile-name {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.istanbul-tile-dice {
+  font-size: 12px;
+  color: #0f766e;
+  font-weight: 600;
+}
+
+.istanbul-token-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.istanbul-token {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #fff;
+  background: var(--bazaar-sky);
+}
+
+.istanbul-token.family {
+  border-radius: 6px;
+  background: #111827;
+}
+
+.istanbul-token.npc {
+  background: #6b21a8;
+  border-radius: 6px;
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+}
+
+.istanbul-token.smuggler {
+  background: #111827;
+  border-radius: 4px;
+}
+
+.istanbul-path-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.istanbul-side {
+  display: grid;
+  gap: 12px;
+}
+
+.istanbul-card {
+  background: #fffdf7;
+  border: 1px solid var(--bazaar-border);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.istanbul-controls {
+  display: grid;
+  gap: 10px;
+}
+
+.istanbul-control-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.istanbul-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 6px 12px;
+  background: var(--bazaar-teal);
+  color: #f0fdfa;
+  font-size: 12px;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.istanbul-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(15, 118, 110, 0.18);
+}
+
+.istanbul-btn.active {
+  background: var(--bazaar-terracotta);
+  color: #fff7ed;
+}
+
+.istanbul-btn.secondary {
+  background: #fde68a;
+  color: #854d0e;
+}
+
+.istanbul-btn.ghost {
+  background: transparent;
+  color: #7c2d12;
+  border: 1px dashed #f59e0b;
+}
+
+.istanbul-btn:disabled {
+  background: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.istanbul-good-stepper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.istanbul-select,
+.istanbul-panel input,
+.istanbul-panel select {
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  padding: 4px 6px;
+  font-size: 12px;
+}
+
+.istanbul-good-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.istanbul-good-btn:disabled {
+  background: #f3f4f6;
+  cursor: not-allowed;
+}
+
+.istanbul-bonus-hand {
+  display: grid;
+  gap: 8px;
+}
+
+.istanbul-bonus-card {
+  border: 1px solid #f5d0c5;
+  background: #fff7ed;
+  border-radius: 10px;
+  padding: 8px;
+  text-align: left;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.istanbul-bonus-card.active {
+  border-color: var(--bazaar-terracotta);
+  box-shadow: 0 0 0 2px rgba(201, 91, 58, 0.15);
+}
+
+.istanbul-bonus-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.istanbul-you {
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.istanbul-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #ecfdf3;
+  color: #166534;
+  font-size: 11px;
+}
+
+.istanbul-players {
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.istanbul-player-row {
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 10px;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+}
+
+.istanbul-player-row.current {
+  border-color: var(--bazaar-teal);
+  background: #ecfdf3;
+}
+
+.istanbul-player-name {
+  font-weight: 600;
+}
+
+.istanbul-markets {
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.istanbul-market-card {
+  border: 1px solid #e2d5be;
+  border-radius: 10px;
+  padding: 8px;
+  background: #fffbf2;
+}
+
+.istanbul-market-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.istanbul-mini-table {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 11px;
+}
+
+.istanbul-mini-table span {
+  background: #fff7ed;
+  border-radius: 6px;
+  padding: 2px 4px;
+  text-align: center;
+}
+
+body.istanbul-explain-mode button.has-explanation {
+  outline: 2px dashed #0f766e;
+  outline-offset: 2px;
+  cursor: help;
+}
+
+body.istanbul-explain-mode button.has-explanation:hover {
+  outline-color: #c95b3a;
+  outline-style: solid;
+}
+
+body.istanbul-explain-mode .istanbul-tile.has-explanation {
+  outline: 2px dashed #0f766e;
+  outline-offset: 2px;
+  cursor: help;
+}
+
+body.istanbul-explain-mode .istanbul-tile.has-explanation:hover {
+  outline-color: #c95b3a;
+  outline-style: solid;
+}
+
+.istanbul-explain-cost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.istanbul-explain-cost.ap {
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
+.istanbul-explain-cost.free {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.istanbul-explain-cost.pay {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.istanbul-explain-cost.end {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+@media (max-width: 900px) {
+  .istanbul-main {
+    grid-template-columns: 1fr;
+  }
+
+  .istanbul-board {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .istanbul-tile {
+    min-height: 72px;
+    padding: 8px;
+  }
+
+  .istanbul-tile-name {
+    font-size: 11px;
+  }
+}
+
 
 .pokemon-splendor-help-modal {
   max-width: 700px;

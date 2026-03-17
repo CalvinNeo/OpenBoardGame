@@ -144,6 +144,28 @@
     </div>
   </section>
 
+  <section id="istanbulHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content istanbul-help-modal">
+      <div class="modal-header">
+        <h2>Istanbul - Game Rules</h2>
+        <button id="istanbulHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body istanbul-help-content" id="istanbulHelpContent"></div>
+    </div>
+  </section>
+
+  <section id="istanbulExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content istanbul-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="istanbulExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="istanbulExplainContent"></div>
+      </div>
+    </div>
+  </section>
+
   <section id="carcHelpModal" class="modal hidden" aria-hidden="true">
     <div class="modal-content carc-help-modal">
       <div class="modal-header">
@@ -680,6 +702,10 @@
               <button id="abracaHelpBtn" class="abraca-header-btn" type="button">Help</button>
               <button id="abracaExplainBtn" class="abraca-header-btn" type="button">Explain</button>
             </div>
+            <div class="panel-header-actions" id="istanbulHeaderActions" style="display: none;">
+              <button id="istanbulHelpBtn" class="istanbul-header-btn" type="button">Help</button>
+              <button id="istanbulExplainBtn" class="istanbul-header-btn" type="button">Explain</button>
+            </div>
             <div class="panel-header-actions" id="goldRushHeaderActions" style="display: none;">
               <button id="goldRushHelpBtn" class="gold-rush-header-btn" type="button">Help</button>
               <button id="goldRushExplainBtn" class="gold-rush-header-btn" type="button">Explain</button>
@@ -816,6 +842,54 @@
 
               <h3>Scorecards</h3>
               <div id="yahtzeeScorecards"></div>
+            </div>
+
+            <div id="istanbulPanel" class="hidden istanbul-panel">
+              <div class="istanbul-top">
+                <div class="istanbul-stat">Phase: <span id="istanbulPhase">-</span></div>
+                <div class="istanbul-stat">Turn: <span id="istanbulTurn">-</span></div>
+                <div class="istanbul-stat">Movement: <span id="istanbulMoveMode">-</span></div>
+                <div class="istanbul-stat">Rubies to Win: <span id="istanbulWinTarget">-</span></div>
+              </div>
+
+              <div class="istanbul-main">
+                <section class="istanbul-board-wrap">
+                  <div class="istanbul-board-header">
+                    <h3>Board</h3>
+                    <div id="istanbulTurnHint" class="istanbul-hint">-</div>
+                  </div>
+                  <div id="istanbulBoard" class="istanbul-board"></div>
+                  <div id="istanbulPathHint" class="istanbul-path-hint"></div>
+                </section>
+
+                <section class="istanbul-side">
+                  <div class="istanbul-card">
+                    <h3>Action Center</h3>
+                    <div id="istanbulActionHint" class="istanbul-hint">-</div>
+                    <div id="istanbulActionControls" class="istanbul-controls"></div>
+                  </div>
+
+                  <div class="istanbul-card">
+                    <h3>Your Caravan</h3>
+                    <div id="istanbulYou" class="istanbul-you"></div>
+                  </div>
+
+                  <div class="istanbul-card">
+                    <h3>Bonus Cards</h3>
+                    <div id="istanbulBonusHand" class="istanbul-bonus-hand"></div>
+                  </div>
+
+                  <div class="istanbul-card">
+                    <h3>Markets</h3>
+                    <div id="istanbulMarkets" class="istanbul-markets"></div>
+                  </div>
+
+                  <div class="istanbul-card">
+                    <h3>Players</h3>
+                    <div id="istanbulPlayers" class="istanbul-players"></div>
+                  </div>
+                </section>
+              </div>
             </div>
 
             <div id="goldRushPanel" class="hidden">
@@ -2501,6 +2575,7 @@
   <script src="/static/games/halli_galli.js?v=app_v1"></script>
   <script src="/static/games/texas_holdem.js?v=app_v1"></script>
   <script src="/static/games/yahtzee.js?v=app_v1"></script>
+  <script src="/static/games/istanbul.js?v=app_v1"></script>
   <script src="/static/games/gold_rush.js?v=app_v1"></script>
   <script src="/static/games/incan_gold.js?v=app_v1"></script>
   <script src="/static/games/kobayakawa.js?v=app_v1"></script>

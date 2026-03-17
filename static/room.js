@@ -1292,6 +1292,7 @@ function resetRoomState() {
   clearCaboState();
   clearFlip7State();
   clearYahtzeeState();
+  clearIstanbulState();
   clearGoldRushState();
   clearIncanGoldState();
   clearKobayakawaState();
