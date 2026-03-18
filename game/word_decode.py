@@ -19,6 +19,25 @@ def _normalize_text(value: Optional[str]) -> str:
     return " ".join(value.strip().split())
 
 
+def _is_single_chinese_char(value: str) -> bool:
+    if not isinstance(value, str):
+        return False
+    text = value.strip()
+    if len(text) != 1:
+        return False
+    code = ord(text)
+    return (
+        0x4E00 <= code <= 0x9FFF
+        or 0x3400 <= code <= 0x4DBF
+        or 0x20000 <= code <= 0x2A6DF
+        or 0x2A700 <= code <= 0x2B73F
+        or 0x2B740 <= code <= 0x2B81F
+        or 0x2B820 <= code <= 0x2CEAF
+        or 0x2CEB0 <= code <= 0x2EBEF
+        or 0x30000 <= code <= 0x3134F
+    )
+
+
 def _load_cards() -> List[Dict]:
     global _CARD_CACHE
     if _CARD_CACHE is not None:
@@ -261,6 +280,8 @@ class WordDecodeGame:
             for hint in hints:
                 if not isinstance(hint, str) or not hint.strip():
                     return [], "invalid hint"
+                if not _is_single_chinese_char(hint):
+                    return [], "hint must be a single Chinese character"
                 cleaned.append(hint.strip())
             state["hints"][player_id] = cleaned
             if len(state["hints"]) >= len(state.get("assignments", {})):

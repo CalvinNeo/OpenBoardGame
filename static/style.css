@@ -6973,6 +6973,30 @@ body.decrypto-explain-mode button.has-explanation:hover {
   color: #374151;
 }
 
+.word-decode-summary-guess-list {
+  display: grid;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 13px;
+  color: #374151;
+}
+
+.word-decode-summary-guess-line {
+  display: grid;
+  grid-template-columns: minmax(90px, 140px) 1fr;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.word-decode-summary-guess-name {
+  font-weight: 600;
+  color: #111827;
+}
+
+.word-decode-summary-guess-value {
+  color: #374151;
+}
+
 .word-decode-summary-scores {
   font-size: 13px;
   color: #374151;
@@ -7666,6 +7690,74 @@ body.pokemon-splendor-explain-mode button.has-explanation:hover {
 
 .pokemon-reserve-option:hover {
   background: #115e59;
+}
+
+.pokemon-splendor-token-modal {
+  max-width: 520px;
+}
+
+.pokemon-token-section {
+  margin-bottom: 12px;
+}
+
+.pokemon-token-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #92400e;
+  margin-bottom: 6px;
+}
+
+.pokemon-token-pool {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pokemon-token-btn {
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  background: #fff;
+  cursor: pointer;
+  min-width: 64px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.pokemon-token-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pokemon-token-picked {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 32px;
+}
+
+.pokemon-token-chip {
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: #fff7ed;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.pokemon-token-empty {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.pokemon-token-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 .istanbul-header-btn {

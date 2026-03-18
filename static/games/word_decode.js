@@ -44,7 +44,7 @@ const WORD_DECODE_HELP_TEXT = `
   <h3>Round Flow</h3>
   <ol>
     <li>Each player receives a hidden word.</li>
-    <li>Write two hints. Each hint should form a common two-character word with your hidden word.</li>
+    <li>Write two hints. Each hint must be a single Chinese character that forms a common two-character word with your hidden word.</li>
     <li>After all hints are revealed, guess every other player's hidden word and the base word.</li>
   </ol>
 
@@ -93,6 +93,25 @@ function formatWordDecodePhase(phase) {
     game_over: "Game Over",
   };
   return map[phase] || phase || "-";
+}
+
+function isSingleChineseChar(value) {
+  const trimmed = value ? value.trim() : "";
+  const chars = Array.from(trimmed);
+  if (chars.length !== 1) {
+    return false;
+  }
+  const code = chars[0].codePointAt(0);
+  return (
+    (code >= 0x4e00 && code <= 0x9fff) ||
+    (code >= 0x3400 && code <= 0x4dbf) ||
+    (code >= 0x20000 && code <= 0x2a6df) ||
+    (code >= 0x2a700 && code <= 0x2b73f) ||
+    (code >= 0x2b740 && code <= 0x2b81f) ||
+    (code >= 0x2b820 && code <= 0x2ceaf) ||
+    (code >= 0x2ceb0 && code <= 0x2ebef) ||
+    (code >= 0x30000 && code <= 0x3134f)
+  );
 }
 
 function resetWordDecodeDrafts() {
@@ -256,6 +275,31 @@ function renderWordDecodeSummary(view) {
     correctLine.textContent = `Guessed by: ${correctNames.length ? correctNames.join(", ") : "-"}`;
     row.appendChild(correctLine);
 
+    const guessHeader = document.createElement("div");
+    guessHeader.className = "word-decode-summary-detail";
+    guessHeader.textContent = "Guesses:";
+    row.appendChild(guessHeader);
+
+    const guessList = document.createElement("div");
+    guessList.className = "word-decode-summary-guess-list";
+    view.players.forEach((guesser) => {
+      const guessRow = document.createElement("div");
+      guessRow.className = "word-decode-summary-guess-line";
+      const guessName = document.createElement("span");
+      guessName.className = "word-decode-summary-guess-name";
+      guessName.textContent = `${guesser.name}:`;
+      const guessValue = document.createElement("span");
+      guessValue.className = "word-decode-summary-guess-value";
+      const guessData = summary.guesses ? summary.guesses[guesser.player_id] : null;
+      const hiddenGuesses = guessData ? guessData.hidden_guesses : null;
+      const guessText = hiddenGuesses ? hiddenGuesses[player.player_id] : "";
+      guessValue.textContent = guessText || "-";
+      guessRow.appendChild(guessName);
+      guessRow.appendChild(guessValue);
+      guessList.appendChild(guessRow);
+    });
+    row.appendChild(guessList);
+
     list.appendChild(row);
   });
   wordDecodeSummary.appendChild(list);
@@ -316,7 +360,7 @@ function isWordDecodeActionAvailable(actionType) {
   if (actionType === "submit_hints") {
     const hint1 = wordDecodeHint1Input ? wordDecodeHint1Input.value.trim() : "";
     const hint2 = wordDecodeHint2Input ? wordDecodeHint2Input.value.trim() : "";
-    return !!(hint1 && hint2);
+    return isSingleChineseChar(hint1) && isSingleChineseChar(hint2);
   }
   if (actionType === "submit_guesses") {
     const baseGuess = wordDecodeBaseGuessInput ? wordDecodeBaseGuessInput.value.trim() : "";
@@ -468,8 +512,8 @@ if (wordDecodeSubmitHintsBtn) {
   wordDecodeSubmitHintsBtn.addEventListener("click", () => {
     const hint1 = wordDecodeHint1Input ? wordDecodeHint1Input.value.trim() : "";
     const hint2 = wordDecodeHint2Input ? wordDecodeHint2Input.value.trim() : "";
-    if (!hint1 || !hint2) {
-      log("Enter two hints");
+    if (!isSingleChineseChar(hint1) || !isSingleChineseChar(hint2)) {
+      log("Each hint must be a single Chinese character");
       return;
     }
     sendAction({ type: "submit_hints", hints: [hint1, hint2] });

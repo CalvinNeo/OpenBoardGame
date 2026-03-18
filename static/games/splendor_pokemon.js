@@ -7,6 +7,13 @@ const pokemonSplendorExplainModal = document.getElementById("pokemonSplendorExpl
 const pokemonSplendorExplainModalCloseBtn = document.getElementById("pokemonSplendorExplainModalCloseBtn");
 const pokemonSplendorHelpContent = document.getElementById("pokemonSplendorHelpContent");
 const pokemonSplendorExplainContent = document.getElementById("pokemonSplendorExplainContent");
+const pokemonSplendorTokenModal = document.getElementById("pokemonSplendorTokenModal");
+const pokemonSplendorTokenModalCloseBtn = document.getElementById("pokemonSplendorTokenModalCloseBtn");
+const pokemonSplendorTokenPool = document.getElementById("pokemonSplendorTokenPool");
+const pokemonSplendorTokenPicked = document.getElementById("pokemonSplendorTokenPicked");
+const pokemonSplendorDiscardSelectionModalRow = document.getElementById("pokemonSplendorDiscardSelectionModalRow");
+const pokemonSplendorDiscardSelectionModal = document.getElementById("pokemonSplendorDiscardSelectionModal");
+const pokemonSplendorDiscardHintModal = document.getElementById("pokemonSplendorDiscardHintModal");
 
 const pokemonSplendorPanel = document.getElementById("pokemonSplendorPanel");
 const pokemonSplendorPhaseLabel = document.getElementById("pokemonSplendorPhase");
@@ -23,12 +30,10 @@ const pokemonSplendorMarketLv1 = document.getElementById("pokemonSplendorMarketL
 const pokemonSplendorSelectedMarketLabel = document.getElementById("pokemonSplendorSelectedMarket");
 const pokemonSplendorSelectedReservedLabel = document.getElementById("pokemonSplendorSelectedReserved");
 const pokemonSplendorSelectedBaseLabel = document.getElementById("pokemonSplendorSelectedBase");
-const pokemonSplendorTokenSelectionEl = document.getElementById("pokemonSplendorTokenSelection");
 const pokemonSplendorDiscardSelectionRow = document.getElementById("pokemonSplendorDiscardSelectionRow");
 const pokemonSplendorDiscardSelectionEl = document.getElementById("pokemonSplendorDiscardSelection");
 const pokemonSplendorDiscardHint = document.getElementById("pokemonSplendorDiscardHint");
-const pokemonSplendorTakeThreeBtn = document.getElementById("pokemonSplendorTakeThreeBtn");
-const pokemonSplendorTakeTwoBtn = document.getElementById("pokemonSplendorTakeTwoBtn");
+const pokemonSplendorTakeTokensBtn = document.getElementById("pokemonSplendorTakeTokensBtn");
 const pokemonSplendorReserveMarketBtn = document.getElementById("pokemonSplendorReserveMarketBtn");
 const pokemonSplendorReserveDeckBtn = document.getElementById("pokemonSplendorReserveDeckBtn");
 const pokemonSplendorBuyMarketBtn = document.getElementById("pokemonSplendorBuyMarketBtn");
@@ -36,6 +41,8 @@ const pokemonSplendorBuyReservedBtn = document.getElementById("pokemonSplendorBu
 const pokemonSplendorEvolveBtn = document.getElementById("pokemonSplendorEvolveBtn");
 const pokemonSplendorSkipEvolveBtn = document.getElementById("pokemonSplendorSkipEvolveBtn");
 const pokemonSplendorDiscardBtn = document.getElementById("pokemonSplendorDiscardBtn");
+const pokemonSplendorConfirmThreeBtn = document.getElementById("pokemonSplendorConfirmThreeBtn");
+const pokemonSplendorConfirmTwoBtn = document.getElementById("pokemonSplendorConfirmTwoBtn");
 const pokemonSplendorReserved = document.getElementById("pokemonSplendorReserved");
 const pokemonSplendorCaptured = document.getElementById("pokemonSplendorCaptured");
 const pokemonSplendorPlayers = document.getElementById("pokemonSplendorPlayers");
@@ -103,13 +110,9 @@ const POKEMON_SPLENDOR_HELP_TEXT = `
 `;
 
 const POKEMON_SPLENDOR_BUTTON_EXPLANATIONS = {
-  pokemonSplendorTakeThreeBtn: {
-    name: "Take 3 Different",
-    description: "Take 1 each of different colors (or all remaining colors if fewer than 3 exist).",
-  },
-  pokemonSplendorTakeTwoBtn: {
-    name: "Take 2 Same",
-    description: "Take 2 of one color (only if 4+ remain in supply).",
+  pokemonSplendorTakeTokensBtn: {
+    name: "Take Tokens",
+    description: "Open the token picker to choose either 3 different colors or 2 of the same color.",
   },
   pokemonSplendorReserveMarketBtn: {
     name: "Reserve Market",
@@ -118,6 +121,14 @@ const POKEMON_SPLENDOR_BUTTON_EXPLANATIONS = {
   pokemonSplendorReserveDeckBtn: {
     name: "Reserve Deck",
     description: "Reserve a blind card from the deck. Choose LV1/LV2/LV3 after clicking.",
+  },
+  pokemonSplendorConfirmThreeBtn: {
+    name: "Take 3 Different",
+    description: "Confirm taking 1 each of different colors (or all remaining colors if fewer than 3 exist).",
+  },
+  pokemonSplendorConfirmTwoBtn: {
+    name: "Take 2 Same",
+    description: "Confirm taking 2 of one color (only if 4+ remain in supply).",
   },
   pokemonSplendorBuyMarketBtn: {
     name: "Catch Market",
@@ -153,7 +164,7 @@ const POKEMON_SPLENDOR_BUTTON_EXPLANATIONS = {
   },
   pokemonSplendorTokenPicker: {
     name: "Token Selection",
-    description: "Tap to adjust tokens you want to take or discard.",
+    description: "Tap to adjust tokens you want to discard.",
   },
 };
 
@@ -178,6 +189,7 @@ function clearPokemonSplendorState() {
   pokemonSplendorSelectedBase = null;
   resetPokemonSplendorTokenSelection();
   resetPokemonSplendorDiscardSelection();
+  closePokemonSplendorTokenModal();
   closePokemonSplendorReserveMenu();
   if (pokemonSplendorDiscardSelectionRow) {
     pokemonSplendorDiscardSelectionRow.classList.add("hidden");
@@ -185,6 +197,13 @@ function clearPokemonSplendorState() {
   if (pokemonSplendorDiscardHint) {
     pokemonSplendorDiscardHint.textContent = "";
     pokemonSplendorDiscardHint.classList.add("hidden");
+  }
+  if (pokemonSplendorDiscardSelectionModalRow) {
+    pokemonSplendorDiscardSelectionModalRow.classList.add("hidden");
+  }
+  if (pokemonSplendorDiscardHintModal) {
+    pokemonSplendorDiscardHintModal.textContent = "";
+    pokemonSplendorDiscardHintModal.classList.add("hidden");
   }
   if (pokemonSplendorPhaseLabel) {
     pokemonSplendorPhaseLabel.textContent = "-";
@@ -423,11 +442,25 @@ function updatePokemonSplendorDiscardHint(view) {
     if (pokemonSplendorDiscardSelectionRow) {
       pokemonSplendorDiscardSelectionRow.classList.remove("hidden");
     }
+    if (pokemonSplendorDiscardHintModal) {
+      pokemonSplendorDiscardHintModal.textContent = `Discard ${excess} token${excess === 1 ? "" : "s"} to stay at 10.`;
+      pokemonSplendorDiscardHintModal.classList.remove("hidden");
+    }
+    if (pokemonSplendorDiscardSelectionModalRow) {
+      pokemonSplendorDiscardSelectionModalRow.classList.remove("hidden");
+    }
   } else {
     pokemonSplendorDiscardHint.textContent = "";
     pokemonSplendorDiscardHint.classList.add("hidden");
     if (pokemonSplendorDiscardSelectionRow) {
       pokemonSplendorDiscardSelectionRow.classList.add("hidden");
+    }
+    if (pokemonSplendorDiscardHintModal) {
+      pokemonSplendorDiscardHintModal.textContent = "";
+      pokemonSplendorDiscardHintModal.classList.add("hidden");
+    }
+    if (pokemonSplendorDiscardSelectionModalRow) {
+      pokemonSplendorDiscardSelectionModalRow.classList.add("hidden");
     }
     resetPokemonSplendorDiscardSelection();
     renderPokemonSplendorDiscardSelection();
@@ -441,10 +474,11 @@ function clearPokemonSplendorSelection() {
   resetPokemonSplendorTokenSelection();
   resetPokemonSplendorDiscardSelection();
   updatePokemonSplendorSelectionLabels();
-  renderPokemonSplendorTokenSelection();
+  renderPokemonSplendorTokenModal(currentPokemonSplendorView);
   renderPokemonSplendorDiscardSelection();
   updatePokemonSplendorDiscardHint(currentPokemonSplendorView);
   updatePokemonSplendorActionButtons();
+  closePokemonSplendorTokenModal();
   closePokemonSplendorReserveMenu();
 }
 
@@ -533,7 +567,7 @@ function adjustPokemonSplendorTokenSelection(color, delta) {
     pokemonSplendorTokenSelection[color] = 0;
   }
   pokemonSplendorTokenSelection[color] = Math.max(0, pokemonSplendorTokenSelection[color] + delta);
-  renderPokemonSplendorTokenSelection();
+  renderPokemonSplendorTokenModal(currentPokemonSplendorView);
   updatePokemonSplendorDiscardHint(currentPokemonSplendorView);
   updatePokemonSplendorActionButtons();
 }
@@ -547,66 +581,147 @@ function adjustPokemonSplendorDiscardSelection(color, delta) {
   updatePokemonSplendorActionButtons();
 }
 
-function renderPokemonSplendorTokenSelection() {
-  if (!pokemonSplendorTokenSelectionEl) {
+function openPokemonSplendorTokenModal() {
+  if (!pokemonSplendorTokenModal) {
     return;
   }
+  resetPokemonSplendorTokenSelection();
+  renderPokemonSplendorTokenModal(currentPokemonSplendorView);
+  updatePokemonSplendorDiscardHint(currentPokemonSplendorView);
+  updatePokemonSplendorActionButtons();
+  setModalVisible(pokemonSplendorTokenModal, true);
+}
+
+function closePokemonSplendorTokenModal() {
+  if (!pokemonSplendorTokenModal) {
+    return;
+  }
+  setModalVisible(pokemonSplendorTokenModal, false);
+  resetPokemonSplendorTokenSelection();
+  renderPokemonSplendorTokenModal(currentPokemonSplendorView);
+  updatePokemonSplendorDiscardHint(currentPokemonSplendorView);
+  updatePokemonSplendorActionButtons();
+}
+
+function pokemonSplendorTokenRemaining(view, color) {
+  const supply = (view && view.tokens_supply) || {};
+  const selected = pokemonSplendorTokenSelection[color] || 0;
+  return Math.max(0, (supply[color] || 0) - selected);
+}
+
+function pokemonSplendorHasPairSelection() {
+  return pokemonSplendorBaseColors.some((color) => (pokemonSplendorTokenSelection[color] || 0) === 2);
+}
+
+function pokemonSplendorCanAddToken(view, color) {
+  if (!view) {
+    return false;
+  }
+  if (!pokemonSplendorBaseColors.includes(color)) {
+    return false;
+  }
+  const remaining = pokemonSplendorTokenRemaining(view, color);
+  if (remaining <= 0) {
+    return false;
+  }
+  const current = pokemonSplendorTokenSelection[color] || 0;
+  const total = pokemonSplendorTokenSelectionTotal();
+  if (total >= 3) {
+    return false;
+  }
+  if (current >= 2) {
+    return false;
+  }
+  if (current + 1 === 2 && (view.tokens_supply || {})[color] < 4) {
+    return false;
+  }
+  if (pokemonSplendorHasPairSelection() && current === 0) {
+    return false;
+  }
+  if (total + 1 === 3) {
+    if (current + 1 > 1) {
+      return false;
+    }
+    if (pokemonSplendorBaseColors.some((c) => (pokemonSplendorTokenSelection[c] || 0) > 1)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function renderPokemonSplendorTokenModal(view) {
   if (pokemonSplendorTokenSelection.purple) {
     pokemonSplendorTokenSelection.purple = 0;
   }
-  pokemonSplendorTokenSelectionEl.innerHTML = "";
+  if (!pokemonSplendorTokenPool || !pokemonSplendorTokenPicked) {
+    return;
+  }
+  pokemonSplendorTokenPool.innerHTML = "";
+  pokemonSplendorTokenPicked.innerHTML = "";
+
   pokemonSplendorBaseColors.forEach((color) => {
-    const wrapper = document.createElement("div");
-    wrapper.className = `token-picker gem-${color}`;
-    wrapper.dataset.explainId = "pokemonSplendorTokenPicker";
-    wrapper.addEventListener("click", (event) => {
-      if (event.shiftKey || event.altKey) {
-        adjustPokemonSplendorTokenSelection(color, -1);
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `pokemon-token-btn gem-${color}`;
+    const remaining = pokemonSplendorTokenRemaining(view, color);
+    btn.textContent = `${pokemonSplendorColorEmoji[color]} ${remaining}`;
+    btn.disabled = !pokemonSplendorCanAddToken(view, color);
+    btn.addEventListener("click", () => {
+      if (!pokemonSplendorCanAddToken(view, color)) {
         return;
       }
-      const rect = wrapper.getBoundingClientRect();
-      const midpoint = rect.left + rect.width / 2;
-      if (event.clientX < midpoint) {
-        adjustPokemonSplendorTokenSelection(color, -1);
-      } else {
-        adjustPokemonSplendorTokenSelection(color, 1);
-      }
-    });
-    wrapper.addEventListener("contextmenu", (event) => {
-      event.preventDefault();
-      adjustPokemonSplendorTokenSelection(color, -1);
-    });
-    const label = document.createElement("span");
-    label.textContent = `${pokemonSplendorColorEmoji[color]} ${pokemonSplendorColorLabels[color]}`;
-    const minus = document.createElement("button");
-    minus.type = "button";
-    minus.textContent = "-";
-    minus.addEventListener("click", (event) => {
-      event.stopPropagation();
-      adjustPokemonSplendorTokenSelection(color, -1);
-    });
-    const count = document.createElement("span");
-    count.textContent = pokemonSplendorTokenSelection[color] || 0;
-    const plus = document.createElement("button");
-    plus.type = "button";
-    plus.textContent = "+";
-    plus.addEventListener("click", (event) => {
-      event.stopPropagation();
       adjustPokemonSplendorTokenSelection(color, 1);
     });
-    wrapper.appendChild(label);
-    wrapper.appendChild(minus);
-    wrapper.appendChild(count);
-    wrapper.appendChild(plus);
-    pokemonSplendorTokenSelectionEl.appendChild(wrapper);
+    pokemonSplendorTokenPool.appendChild(btn);
   });
+
+  let pickedCount = 0;
+  pokemonSplendorBaseColors.forEach((color) => {
+    const count = pokemonSplendorTokenSelection[color] || 0;
+    for (let idx = 0; idx < count; idx += 1) {
+      pickedCount += 1;
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = `pokemon-token-chip gem-${color}`;
+      chip.textContent = pokemonSplendorColorEmoji[color];
+      chip.addEventListener("click", () => {
+        adjustPokemonSplendorTokenSelection(color, -1);
+      });
+      pokemonSplendorTokenPicked.appendChild(chip);
+    }
+  });
+  if (!pickedCount) {
+    const empty = document.createElement("div");
+    empty.className = "pokemon-token-empty";
+    empty.textContent = "None";
+    pokemonSplendorTokenPicked.appendChild(empty);
+  }
+
+  updatePokemonSplendorTokenConfirmButtons(view);
+}
+
+function updatePokemonSplendorTokenConfirmButtons(view) {
+  const legal = (view && view.legal_actions) || [];
+  if (pokemonSplendorConfirmThreeBtn) {
+    const gain = pokemonSplendorTokenGainForAction(view, "take_tokens");
+    pokemonSplendorConfirmThreeBtn.disabled = !legal.includes("take_tokens") || !gain;
+  }
+  if (pokemonSplendorConfirmTwoBtn) {
+    const gain = pokemonSplendorTokenGainForAction(view, "take_tokens_same");
+    pokemonSplendorConfirmTwoBtn.disabled = !legal.includes("take_tokens_same") || !gain;
+  }
 }
 
 function renderPokemonSplendorDiscardSelection() {
-  if (!pokemonSplendorDiscardSelectionEl) {
+  renderPokemonSplendorDiscardSelectionInto(pokemonSplendorDiscardSelectionEl);
+  renderPokemonSplendorDiscardSelectionInto(pokemonSplendorDiscardSelectionModal);
+}
+
+function renderPokemonSplendorDiscardSelectionInto(container) {
+  if (!container) {
     return;
   }
-  pokemonSplendorDiscardSelectionEl.innerHTML = "";
+  container.innerHTML = "";
   pokemonSplendorColors.forEach((color) => {
     const wrapper = document.createElement("div");
     wrapper.className = `token-picker gem-${color}`;
@@ -649,7 +764,7 @@ function renderPokemonSplendorDiscardSelection() {
     wrapper.appendChild(minus);
     wrapper.appendChild(count);
     wrapper.appendChild(plus);
-    pokemonSplendorDiscardSelectionEl.appendChild(wrapper);
+    container.appendChild(wrapper);
   });
 }
 
@@ -1003,13 +1118,11 @@ function updatePokemonSplendorActionButtons() {
   const selectedMarketCard = getPokemonSplendorSelectedMarketCard(view);
   const selectedReservedCard = getPokemonSplendorSelectedReservedCard(view);
 
-  if (pokemonSplendorTakeThreeBtn) {
-    const gain = pokemonSplendorTokenGainForAction(view, "take_tokens");
-    pokemonSplendorTakeThreeBtn.disabled = !legal.includes("take_tokens") || !gain;
+  if (pokemonSplendorTakeTokensBtn) {
+    pokemonSplendorTakeTokensBtn.disabled = !legal.includes("take_tokens") && !legal.includes("take_tokens_same");
   }
-  if (pokemonSplendorTakeTwoBtn) {
-    const gain = pokemonSplendorTokenGainForAction(view, "take_tokens_same");
-    pokemonSplendorTakeTwoBtn.disabled = !legal.includes("take_tokens_same") || !gain;
+  if (!legal.includes("take_tokens") && !legal.includes("take_tokens_same")) {
+    closePokemonSplendorTokenModal();
   }
   if (pokemonSplendorReserveMarketBtn) {
     const canReserveMarket =
@@ -1089,7 +1202,7 @@ function renderPokemonSplendorGameState(data) {
   renderPokemonSplendorCaptured(view);
   renderPokemonSplendorPlayers(view);
   updatePokemonSplendorSelectionLabels();
-  renderPokemonSplendorTokenSelection();
+  renderPokemonSplendorTokenModal(view);
   renderPokemonSplendorDiscardSelection();
   updatePokemonSplendorDiscardHint(view);
   updatePokemonSplendorActionButtons();
@@ -1126,15 +1239,24 @@ if (pokemonSplendorPanel) {
   });
 }
 
-if (pokemonSplendorTakeThreeBtn) {
-  pokemonSplendorTakeThreeBtn.addEventListener("click", () => {
+if (pokemonSplendorTakeTokensBtn) {
+  pokemonSplendorTakeTokensBtn.addEventListener("click", () => {
+    if (pokemonSplendorTakeTokensBtn.disabled) {
+      return;
+    }
+    openPokemonSplendorTokenModal();
+  });
+}
+
+if (pokemonSplendorConfirmThreeBtn) {
+  pokemonSplendorConfirmThreeBtn.addEventListener("click", () => {
     const view = currentPokemonSplendorView;
     if (!view) {
       return;
     }
     const gain = pokemonSplendorTokenGainForAction(view, "take_tokens");
     if (!gain) {
-      log("Select valid different colors to take");
+      log("Pick valid different colors");
       return;
     }
     const colors = pokemonSplendorBaseColors.filter((color) => gain[color] > 0);
@@ -1148,24 +1270,25 @@ if (pokemonSplendorTakeThreeBtn) {
       action.discard = discard;
     }
     sendAction(action);
+    closePokemonSplendorTokenModal();
     clearPokemonSplendorSelection();
   });
 }
 
-if (pokemonSplendorTakeTwoBtn) {
-  pokemonSplendorTakeTwoBtn.addEventListener("click", () => {
+if (pokemonSplendorConfirmTwoBtn) {
+  pokemonSplendorConfirmTwoBtn.addEventListener("click", () => {
     const view = currentPokemonSplendorView;
     if (!view) {
       return;
     }
     const gain = pokemonSplendorTokenGainForAction(view, "take_tokens_same");
     if (!gain) {
-      log("Select 2 tokens of the same color");
+      log("Pick 2 of the same color");
       return;
     }
     const color = pokemonSplendorBaseColors.find((c) => gain[c] === 2);
     if (!color) {
-      log("Select a color to take 2 tokens");
+      log("Pick a color to take 2 tokens");
       return;
     }
     const discard = pokemonSplendorDiscardPayloadForAction(view, "take_tokens_same");
@@ -1178,6 +1301,7 @@ if (pokemonSplendorTakeTwoBtn) {
       action.discard = discard;
     }
     sendAction(action);
+    closePokemonSplendorTokenModal();
     clearPokemonSplendorSelection();
   });
 }
@@ -1359,6 +1483,7 @@ function enterPokemonSplendorExplainMode() {
   if (pokemonSplendorExplainBtn) {
     pokemonSplendorExplainBtn.classList.add("active");
   }
+  closePokemonSplendorTokenModal();
   closePokemonSplendorReserveMenu();
   updatePokemonSplendorExplainModeClasses(true);
 }
@@ -1442,6 +1567,18 @@ if (pokemonSplendorExplainModalCloseBtn) {
   pokemonSplendorExplainModalCloseBtn.addEventListener("click", closePokemonSplendorExplainModal);
 }
 
+if (pokemonSplendorTokenModalCloseBtn) {
+  pokemonSplendorTokenModalCloseBtn.addEventListener("click", closePokemonSplendorTokenModal);
+}
+
+if (pokemonSplendorTokenModal) {
+  pokemonSplendorTokenModal.addEventListener("click", (event) => {
+    if (event.target === pokemonSplendorTokenModal) {
+      closePokemonSplendorTokenModal();
+    }
+  });
+}
+
 document.addEventListener(
   "click",
   (event) => {
@@ -1515,6 +1652,9 @@ document.addEventListener("keydown", (event) => {
   }
   if (pokemonSplendorReserveMenu && !pokemonSplendorReserveMenu.classList.contains("hidden")) {
     closePokemonSplendorReserveMenu();
+  }
+  if (pokemonSplendorTokenModal && !pokemonSplendorTokenModal.classList.contains("hidden")) {
+    closePokemonSplendorTokenModal();
   }
   if (pokemonSplendorExplainMode) {
     exitPokemonSplendorExplainMode();
