@@ -1,5 +1,6 @@
 from game.abraca_what import AbracaWhatGame
 from game.ai_dixit import AiDixitGame
+from game.age_of_war import AgeOfWarGame
 from game.azul import AzulGame
 from game.cabo import CaboGame
 from game.cat_in_box import CatInBoxGame
@@ -571,6 +572,42 @@ INCAN_GOLD_ACTION_SCHEMA = {
 }
 
 INCAN_GOLD_CONFIG_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+}
+
+AGE_OF_WAR_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "select_target"},
+                "target_type": {"type": "string", "enum": ["central", "player"]},
+                "castle_id": {"type": "string", "minLength": 1},
+                "defender_id": {"type": "string"},
+            },
+            "required": ["type", "target_type", "castle_id"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "roll"}}, "required": ["type"], "additionalProperties": False},
+        {
+            "type": "object",
+            "properties": {"type": {"const": "fill_line"}, "line_index": {"type": "integer", "minimum": 0}},
+            "required": ["type", "line_index"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "discard_die"}, "die_index": {"type": "integer", "minimum": 0}},
+            "required": ["type", "die_index"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "play_again"}}, "required": ["type"], "additionalProperties": False},
+    ],
+}
+
+AGE_OF_WAR_CONFIG_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
 }
@@ -1841,6 +1878,21 @@ register_game(
         module=IncanGoldGame,
         serialize=IncanGoldGame.serialize,
         deserialize=IncanGoldGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=AgeOfWarGame.game_id,
+        name="Age of War",
+        min_players=AgeOfWarGame.min_players,
+        max_players=AgeOfWarGame.max_players,
+        turn_mode="turn",
+        action_schema=AGE_OF_WAR_ACTION_SCHEMA,
+        config_schema=AGE_OF_WAR_CONFIG_SCHEMA,
+        module=AgeOfWarGame,
+        serialize=AgeOfWarGame.serialize,
+        deserialize=AgeOfWarGame.deserialize,
     )
 )
 

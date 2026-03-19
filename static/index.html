@@ -254,6 +254,28 @@
     </div>
   </section>
 
+  <section id="ageOfWarHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content age-of-war-help-modal">
+      <div class="modal-header">
+        <h2>Age of War - Game Rules</h2>
+        <button id="ageOfWarHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body age-of-war-help-content" id="ageOfWarHelpContent"></div>
+    </div>
+  </section>
+
+  <section id="ageOfWarExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content age-of-war-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="ageOfWarExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="ageOfWarExplainContent"></div>
+      </div>
+    </div>
+  </section>
+
   <section id="catInBoxHelpModal" class="modal hidden" aria-hidden="true">
     <div class="modal-content cat-box-help-modal">
       <div class="modal-header">
@@ -738,6 +760,10 @@
               <button id="goldRushHelpBtn" class="gold-rush-header-btn" type="button">Help</button>
               <button id="goldRushExplainBtn" class="gold-rush-header-btn" type="button">Explain</button>
             </div>
+            <div class="panel-header-actions" id="ageOfWarHeaderActions" style="display: none;">
+              <button id="ageOfWarHelpBtn" class="age-of-war-header-btn" type="button">Help</button>
+              <button id="ageOfWarExplainBtn" class="age-of-war-header-btn" type="button">Explain</button>
+            </div>
             <div class="panel-header-actions" id="catInBoxHeaderActions" style="display: none;">
               <button id="catInBoxHelpBtn" class="cat-box-header-btn" type="button">Help</button>
               <button id="catInBoxExplainBtn" class="cat-box-header-btn" type="button">Explain</button>
@@ -1002,6 +1028,34 @@
 
               <h3>Hazards Removed</h3>
               <div id="incanGoldRemovedHazards" class="incan-gold-hazards"></div>
+            </div>
+
+            <div id="ageOfWarPanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="ageOfWarPhase">-</span></div>
+                <div>Current Turn: <span id="ageOfWarTurn">-</span></div>
+                <div>Target: <span id="ageOfWarTarget">-</span></div>
+              </div>
+              <div class="row">
+                <div>Dice Left: <span id="ageOfWarDiceLeft">-</span></div>
+                <div>Winner: <span id="ageOfWarWinner">-</span></div>
+              </div>
+
+              <h3>Dice</h3>
+              <div id="ageOfWarDice" class="age-of-war-dice"></div>
+              <div class="row actions age-of-war-actions">
+                <button id="ageOfWarRollBtn">Roll Dice</button>
+                <button id="ageOfWarPlayAgainBtn">Play Again</button>
+              </div>
+
+              <h3>Target Lines</h3>
+              <div id="ageOfWarTargetLines" class="age-of-war-lines"></div>
+
+              <h3>Central Castles</h3>
+              <div id="ageOfWarCentral" class="age-of-war-castles"></div>
+
+              <h3>Players</h3>
+              <div id="ageOfWarPlayers"></div>
             </div>
 
             <div id="kobayakawaPanel" class="hidden">
@@ -2601,6 +2655,7 @@
   <script src="/static/games/yahtzee.js?v=app_v1"></script>
   <script src="/static/games/istanbul.js?v=app_v1"></script>
   <script src="/static/games/gold_rush.js?v=app_v1"></script>
+  <script src="/static/games/age_of_war.js?v=app_v1"></script>
   <script src="/static/games/incan_gold.js?v=app_v1"></script>
   <script src="/static/games/kobayakawa.js?v=app_v1"></script>
   <script src="/static/app.js?v=app_v1"></script>

@@ -17,6 +17,7 @@ const MEMORIES_SUPPORTED_GAMES = new Set([
   "decrypto",
   "blitz_sketch",
   "carcassonne",
+  "word_decode",
 ]);
 let createRoomPending = false;
 let pendingReadyAfterJoin = false;

@@ -4,6 +4,8 @@ import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+from game.memories import build_html_document, esc, format_bool, format_timestamp, render_table, section
+
 DEFAULT_CONFIG: Dict = {}
 
 _CARD_CACHE: Optional[List[Dict]] = None
@@ -204,6 +206,11 @@ def _bot_hints_for(card: Dict, hidden_word: str) -> List[str]:
     return [hidden_word, hidden_word]
 
 
+def _player_label(player_meta: Dict, player_id: str) -> str:
+    meta = player_meta.get(player_id, {})
+    return meta.get("name") or player_id or "-"
+
+
 class WordDecodeGame:
     game_id = "word_decode"
     min_players = 3
@@ -230,6 +237,7 @@ class WordDecodeGame:
             "hints": {},
             "guesses": {},
             "round_summary": None,
+            "round_history": [],
             "config": config or {},
             "game_over": False,
             "game_start_time": time.time(),
@@ -322,6 +330,11 @@ class WordDecodeGame:
             if len(state["guesses"]) >= len(state.get("assignments", {})):
                 summary = _score_round(state)
                 state["round_summary"] = summary
+                history = state.get("round_history")
+                if not isinstance(history, list):
+                    history = []
+                    state["round_history"] = history
+                history.append(summary)
                 state["phase"] = "round_end"
             return [], None
 
@@ -437,3 +450,140 @@ class WordDecodeGame:
     @staticmethod
     def deserialize(payload: Dict) -> Dict:
         return payload
+
+    @staticmethod
+    def download_memories(state: Dict, room_id: Optional[str] = None) -> str:
+        return build_memories_html(state, room_id)
+
+
+def build_memories_html(state: Dict, room_id: Optional[str] = None) -> str:
+    game_id = WordDecodeGame.game_id
+    status_label = "Game Over" if state.get("game_over") else "In Progress"
+    header = [
+        "<h1>Download Memories</h1>",
+        f"<div class=\"meta\">Game: {esc(game_id, '-')} · Room: {esc(room_id, '-')}</div>",
+        f"<div class=\"meta\">Status: {esc(status_label, status_label)}</div>",
+    ]
+    start_time = format_timestamp(state.get("game_start_time"))
+    if start_time != "-":
+        header.append(f"<div class=\"meta\">Game Start: {esc(start_time, start_time)}</div>")
+    header.append(f"<div class=\"meta\">Generated: {esc(format_timestamp(time.time()), '-')}</div>")
+
+    player_meta = state.get("player_meta", {})
+    order = state.get("turn_order", [])
+    player_rows: List[List[str]] = []
+    for pid in order:
+        meta = player_meta.get(pid, {})
+        score = state.get("players", {}).get(pid, {}).get("score", 0)
+        player_rows.append(
+            [
+                esc(pid, "-"),
+                esc(meta.get("name"), "-"),
+                esc(meta.get("seat"), "-"),
+                format_bool(meta.get("is_bot")),
+                esc(score, "0"),
+            ]
+        )
+    players_section = section(
+        "Players",
+        render_table(["Player ID", "Name", "Seat", "Bot", "Score"], player_rows, empty_message="No players"),
+    )
+
+    history = state.get("round_history")
+    if not isinstance(history, list):
+        history = []
+    if not history:
+        summary = state.get("round_summary")
+        if isinstance(summary, dict):
+            history = [summary]
+
+    round_blocks: List[str] = []
+    for entry in history:
+        if not isinstance(entry, dict):
+            continue
+        round_num = entry.get("round", "-")
+        base_word = entry.get("base", "-")
+        base_correct = entry.get("base_correct") or []
+        base_correct_names = [_player_label(player_meta, pid) for pid in base_correct]
+        base_correct_text = ", ".join(base_correct_names) if base_correct_names else "-"
+        round_header = [
+            f"<h3>Round {esc(round_num, round_num)}</h3>",
+            f"<div class=\"small\">Base Word: {esc(base_word, '-')}</div>",
+            f"<div class=\"small\">Base Guessed By: {esc(base_correct_text, base_correct_text)}</div>",
+        ]
+
+        assignments = entry.get("assignments", {}) or {}
+        hints = entry.get("hints", {}) or {}
+        hidden_correct = entry.get("hidden_correct", {}) or {}
+        hidden_rows: List[List[str]] = []
+        for pid in order:
+            hidden_word = assignments.get(pid)
+            hint_list = hints.get(pid, []) or []
+            hint_text = " / ".join(esc(hint, "-") for hint in hint_list) if hint_list else "-"
+            guessers = hidden_correct.get(pid, []) or []
+            guesser_names = ", ".join(_player_label(player_meta, gid) for gid in guessers) if guessers else "-"
+            hidden_rows.append(
+                [
+                    esc(_player_label(player_meta, pid), "-"),
+                    esc(hidden_word, "-"),
+                    hint_text,
+                    esc(guesser_names, "-"),
+                ]
+            )
+        hidden_table = render_table(
+            ["Player", "Hidden Word", "Hints", "Guessed By"],
+            hidden_rows,
+            empty_message="No hidden words",
+        )
+
+        guesses = entry.get("guesses", {}) or {}
+        guess_rows: List[List[str]] = []
+        for guesser_id in order:
+            guess_data = guesses.get(guesser_id, {}) or {}
+            base_guess = guess_data.get("base_guess")
+            base_correct_flag = "Yes" if guesser_id in base_correct else "No"
+            hidden_guesses = guess_data.get("hidden_guesses", {}) or {}
+            hidden_lines: List[str] = []
+            for target_id in order:
+                if target_id == guesser_id:
+                    continue
+                target_name = _player_label(player_meta, target_id)
+                guess_word = hidden_guesses.get(target_id)
+                hidden_lines.append(f"{esc(target_name, target_name)}: {esc(guess_word, '-')}")
+            hidden_cell = "<br/>".join(hidden_lines) if hidden_lines else "-"
+            guess_rows.append(
+                [
+                    esc(_player_label(player_meta, guesser_id), "-"),
+                    esc(base_guess, "-"),
+                    esc(base_correct_flag, "-"),
+                    hidden_cell,
+                ]
+            )
+        guesses_table = render_table(
+            ["Guesser", "Base Guess", "Base Correct", "Hidden Guesses"],
+            guess_rows,
+            empty_message="No guesses",
+        )
+
+        scores_delta = entry.get("scores_delta", {}) or {}
+        score_rows: List[List[str]] = []
+        for pid in order:
+            delta = scores_delta.get(pid, 0)
+            score_rows.append([esc(_player_label(player_meta, pid), "-"), esc(delta, "0")])
+        scores_table = render_table(
+            ["Player", "Score Delta"],
+            score_rows,
+            empty_message="No scores",
+        )
+
+        round_blocks.append(
+            "<div class=\"card\">" + "".join(round_header) + hidden_table + guesses_table + scores_table + "</div>"
+        )
+
+    rounds_section = section(
+        "Rounds",
+        "".join(round_blocks) if round_blocks else '<div class="muted">No rounds completed</div>',
+    )
+
+    body = "\n".join(header) + players_section + rounds_section
+    return build_html_document(f"{game_id} Memories", body)

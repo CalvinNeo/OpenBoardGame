@@ -5047,6 +5047,338 @@ button.splendor-card {
   margin-right: 0;
 }
 
+/* Age of War */
+.age-of-war-dice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.age-of-war-die {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 6px 10px;
+  min-width: 44px;
+  text-align: center;
+  font-weight: 600;
+  background: #ffffff;
+  color: #111827;
+}
+
+.age-of-war-die.infantry {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.age-of-war-die.archery {
+  background: #ecfdf3;
+  border-color: #34d399;
+}
+
+.age-of-war-die.cavalry {
+  background: #eff6ff;
+  border-color: #60a5fa;
+}
+
+.age-of-war-die.daimyo {
+  background: #fff7ed;
+  border-color: #fb923c;
+}
+
+.age-of-war-die.clickable {
+  cursor: pointer;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.age-of-war-hint,
+.age-of-war-empty {
+  width: 100%;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.age-of-war-lines {
+  display: grid;
+  gap: 8px;
+}
+
+.age-of-war-line {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.age-of-war-line.fillable {
+  border-color: #2563eb;
+  background: #eff6ff;
+  cursor: pointer;
+}
+
+.age-of-war-line.filled {
+  border-color: #22c55e;
+  background: #ecfdf3;
+}
+
+.age-of-war-line.bonus {
+  border-left: 4px solid #f59e0b;
+}
+
+.age-of-war-line-reqs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.age-of-war-req {
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  padding: 2px 6px;
+  font-size: 12px;
+  background: #ffffff;
+  color: #111827;
+}
+
+.age-of-war-req.infantry {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.age-of-war-req.archery {
+  background: #ecfdf3;
+  border-color: #34d399;
+}
+
+.age-of-war-req.cavalry {
+  background: #eff6ff;
+  border-color: #60a5fa;
+}
+
+.age-of-war-req.daimyo {
+  background: #fff7ed;
+  border-color: #fb923c;
+}
+
+.age-of-war-line-badges {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.age-of-war-badge {
+  font-size: 11px;
+  border-radius: 999px;
+  padding: 2px 6px;
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.age-of-war-badge.bonus {
+  background: #ffedd5;
+  color: #9a3412;
+  border: 1px solid #fdba74;
+}
+
+.age-of-war-badge.filled {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+}
+
+.age-of-war-castles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.age-of-war-castle-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.age-of-war-castle-card.selectable {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+  cursor: pointer;
+}
+
+.age-of-war-castle-card.selected {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.18);
+}
+
+.age-of-war-castle-card.locked {
+  opacity: 0.75;
+}
+
+.age-of-war-castle-title {
+  font-weight: 700;
+  color: #111827;
+}
+
+.age-of-war-castle-meta {
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.age-of-war-castle-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.age-of-war-castle-line {
+  font-size: 12px;
+  color: #374151;
+  background: #f3f4f6;
+  border-radius: 6px;
+  padding: 2px 6px;
+}
+
+.age-of-war-castle-line.empty {
+  background: transparent;
+  padding: 0;
+  font-style: italic;
+  color: #9ca3af;
+}
+
+.age-of-war-castle-tag {
+  font-size: 11px;
+  border-radius: 999px;
+  padding: 2px 6px;
+  background: #ffedd5;
+  color: #9a3412;
+  align-self: flex-start;
+}
+
+.age-of-war-player-card .age-of-war-player-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.age-of-war-player-name {
+  font-weight: 600;
+  color: #111827;
+}
+
+.age-of-war-player-score {
+  font-weight: 600;
+  font-size: 12px;
+  color: #111827;
+}
+
+.age-of-war-player-meta,
+.age-of-war-player-locked {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.age-of-war-player-castles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.age-of-war-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.age-of-war-actions button {
+  margin-right: 0;
+}
+
+.age-of-war-header-btn {
+  padding: 4px 10px;
+  font-size: 13px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #f9fafb;
+  cursor: pointer;
+}
+
+.age-of-war-header-btn:hover {
+  background: #f3f4f6;
+}
+
+.age-of-war-header-btn.active {
+  background: #e0f2fe;
+  border-color: #0ea5e9;
+  color: #0369a1;
+}
+
+body.age-of-war-explain-mode button.has-explanation {
+  outline: 2px dashed #0ea5e9;
+  outline-offset: 2px;
+  cursor: help;
+}
+
+body.age-of-war-explain-mode button.has-explanation:hover {
+  outline-color: #0284c7;
+  outline-style: solid;
+}
+
+.age-of-war-help-modal {
+  max-width: 720px;
+}
+
+.age-of-war-help-content {
+  max-height: 70vh;
+  overflow-y: auto;
+  line-height: 1.6;
+}
+
+.age-of-war-help-content h3 {
+  margin: 16px 0 8px;
+  font-size: 16px;
+  color: #111827;
+}
+
+.age-of-war-help-content h3:first-child {
+  margin-top: 0;
+}
+
+.age-of-war-help-content ul,
+.age-of-war-help-content ol {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.age-of-war-help-content li {
+  margin-bottom: 6px;
+}
+
+.age-of-war-explain-modal {
+  max-width: 480px;
+}
+
+#ageOfWarExplainContent h4 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: #111827;
+}
+
+#ageOfWarExplainContent p {
+  margin: 6px 0;
+  color: #374151;
+}
+
 @media (max-width: 900px) {
   .aidixit-hand,
   .aidixit-pool,

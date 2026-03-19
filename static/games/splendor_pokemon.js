@@ -1121,7 +1121,12 @@ function updatePokemonSplendorActionButtons() {
   if (pokemonSplendorTakeTokensBtn) {
     pokemonSplendorTakeTokensBtn.disabled = !legal.includes("take_tokens") && !legal.includes("take_tokens_same");
   }
-  if (!legal.includes("take_tokens") && !legal.includes("take_tokens_same")) {
+  if (
+    !legal.includes("take_tokens") &&
+    !legal.includes("take_tokens_same") &&
+    pokemonSplendorTokenModal &&
+    !pokemonSplendorTokenModal.classList.contains("hidden")
+  ) {
     closePokemonSplendorTokenModal();
   }
   if (pokemonSplendorReserveMarketBtn) {

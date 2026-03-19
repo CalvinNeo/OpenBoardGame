@@ -1,0 +1,424 @@
+{
+  "clans": [
+    {
+      "id": "tokugawa",
+      "name": "Tokugawa",
+      "set_bonus": 8,
+      "castle_ids": [
+        "inuyama",
+        "kiyosu",
+        "edo"
+      ],
+      "name_zh": "\u5fb7\u5ddd\u5bb6"
+    },
+    {
+      "id": "oda",
+      "name": "Oda",
+      "set_bonus": 10,
+      "castle_ids": [
+        "matsumoto",
+        "odani",
+        "gifu",
+        "azuchi"
+      ],
+      "name_zh": "\u7ec7\u7530\u5bb6"
+    },
+    {
+      "id": "mori",
+      "name": "Mori",
+      "set_bonus": 5,
+      "castle_ids": [
+        "gassantoda",
+        "takahashi"
+      ],
+      "name_zh": "\u6bdb\u5229\u5bb6"
+    },
+    {
+      "id": "uesugi",
+      "name": "Uesugi",
+      "set_bonus": 8,
+      "castle_ids": [
+        "kasugayama",
+        "kitanosho"
+      ],
+      "name_zh": "\u4e0a\u6749\u5bb6"
+    },
+    {
+      "id": "chosokabe",
+      "name": "Chosokabe",
+      "set_bonus": 4,
+      "castle_ids": [
+        "matsuyama",
+        "marugame"
+      ],
+      "name_zh": "\u957f\u5b97\u6211\u90e8\u5bb6"
+    },
+    {
+      "id": "shimazu",
+      "name": "Shimazu",
+      "set_bonus": 3,
+      "castle_ids": [
+        "kumamoto"
+      ],
+      "name_zh": "\u5c9b\u6d25\u5bb6"
+    }
+  ],
+  "castles": [
+    {
+      "id": "inuyama",
+      "name": "Inuyama",
+      "clan": "tokugawa",
+      "points": 1,
+      "battle_lines": [
+        [
+          {
+            "type": "cavalry",
+            "count": 1
+          }
+        ],
+        [
+          {
+            "type": "daimyo",
+            "count": 1
+          }
+        ]
+      ],
+      "name_zh": "\u72ac\u5c71\u57ce"
+    },
+    {
+      "id": "kiyosu",
+      "name": "Kiyosu",
+      "clan": "tokugawa",
+      "points": 2,
+      "battle_lines": [
+        [
+          {
+            "type": "daimyo",
+            "count": 1
+          }
+        ],
+        [
+          {
+            "type": "archery",
+            "count": 1
+          }
+        ],
+        [
+          {
+            "type": "cavalry",
+            "count": 1
+          },
+          {
+            "type": "infantry",
+            "sum": 3
+          }
+        ]
+      ],
+      "name_zh": "\u6e05\u6d32\u57ce"
+    },
+    {
+      "id": "edo",
+      "name": "Edo",
+      "clan": "tokugawa",
+      "points": 3,
+      "battle_lines": [
+        [
+          {
+            "type": "archery",
+            "count": 2
+          }
+        ],
+        [
+          {
+            "type": "cavalry",
+            "count": 2
+          }
+        ],
+        [
+          {
+            "type": "infantry",
+            "sum": 3
+          }
+        ]
+      ],
+      "name_zh": "\u6c5f\u6237\u57ce"
+    },
+    {
+      "id": "matsumoto",
+      "name": "Matsumoto",
+      "clan": "oda",
+      "points": 2,
+      "battle_lines": [
+        [
+          {
+            "type": "archery",
+            "count": 2
+          }
+        ],
+        [
+          {
+            "type": "infantry",
+            "sum": 7
+          }
+        ]
+      ],
+      "name_zh": "\u677e\u672c\u57ce"
+    },
+    {
+      "id": "odani",
+      "name": "Odani",
+      "clan": "oda",
+      "points": 1,
+      "battle_lines": [
+        [
+          {
+            "type": "infantry",
+            "sum": 10
+          }
+        ]
+      ],
+      "name_zh": "\u5c0f\u8c37\u57ce"
+    },
+    {
+      "id": "gifu",
+      "name": "Gifu",
+      "clan": "oda",
+      "points": 1,
+      "battle_lines": [
+        [
+          {
+            "type": "daimyo",
+            "count": 1
+          }
+        ],
+        [
+          {
+            "type": "archery",
+            "count": 1
+          }
+        ],
+        [
+          {
+            "type": "cavalry",
+            "count": 1
+          }
+        ]
+      ],
+      "name_zh": "\u5c90\u961c\u57ce"
+    },
+    {
+      "id": "azuchi",
+      "name": "Azuchi",
+      "clan": "oda",
+      "points": 3,
+      "battle_lines": [
+        [
+          {
+            "type": "archery",
+            "count": 1
+          }
+        ],
+        [
+          {
+            "type": "cavalry",
+            "count": 2
+          }
+        ],
+        [
+          {
+            "type": "infantry",
+            "sum": 5
+          }
+        ]
+      ],
+      "name_zh": "\u5b89\u571f\u57ce"
+    },
+    {
+      "id": "gassantoda",
+      "name": "Gassantoda",
+      "clan": "mori",
+      "points": 2,
+      "battle_lines": [
+        [
+          {
+            "type": "infantry",
+            "sum": 8
+          }
+        ],
+        [
+          {
+            "type": "archery",
+            "count": 2
+          }
+        ]
+      ],
+      "name_zh": "\u6708\u5c71\u5bcc\u7530\u57ce"
+    },
+    {
+      "id": "takahashi",
+      "name": "Takahashi",
+      "clan": "mori",
+      "points": 2,
+      "battle_lines": [
+        [
+          {
+            "type": "cavalry",
+            "count": 2
+          }
+        ],
+        [
+          {
+            "type": "infantry",
+            "sum": 5
+          }
+        ],
+        [
+          {
+            "type": "infantry",
+            "sum": 2
+          }
+        ]
+      ],
+      "name_zh": "\u5907\u4e2d\u9ad8\u677e\u57ce"
+    },
+    {
+      "id": "kitanosho",
+      "name": "Kitanosho",
+      "clan": "uesugi",
+      "points": 3,
+      "battle_lines": [
+        [
+          {
+            "type": "daimyo",
+            "count": 1
+          }
+        ],
+        [
+          {
+            "type": "archery",
+            "count": 1
+          }
+        ],
+        [
+          {
+            "type": "cavalry",
+            "count": 1
+          }
+        ],
+        [
+          {
+            "type": "infantry",
+            "sum": 6
+          }
+        ]
+      ],
+      "name_zh": "\u5317\u4e4b\u5e84\u57ce"
+    },
+    {
+      "id": "kasugayama",
+      "name": "Kasugayama",
+      "clan": "uesugi",
+      "points": 4,
+      "battle_lines": [
+        [
+          {
+            "type": "daimyo",
+            "count": 1
+          }
+        ],
+        [
+          {
+            "type": "archery",
+            "count": 2
+          }
+        ],
+        [
+          {
+            "type": "cavalry",
+            "count": 2
+          }
+        ]
+      ],
+      "name_zh": "\u6625\u65e5\u5c71\u57ce"
+    },
+    {
+      "id": "marugame",
+      "name": "Marugame",
+      "clan": "chosokabe",
+      "points": 1,
+      "battle_lines": [
+        [
+          {
+            "type": "archery",
+            "count": 1
+          },
+          {
+            "type": "daimyo",
+            "count": 1
+          },
+          {
+            "type": "cavalry",
+            "count": 1
+          }
+        ]
+      ],
+      "name_zh": "\u4e38\u9f9f\u57ce"
+    },
+    {
+      "id": "matsuyama",
+      "name": "Matsuyama",
+      "clan": "chosokabe",
+      "points": 2,
+      "battle_lines": [
+        [
+          {
+            "type": "archery",
+            "count": 1
+          },
+          {
+            "type": "cavalry",
+            "count": 1
+          }
+        ],
+        [
+          {
+            "type": "archery",
+            "count": 1
+          },
+          {
+            "type": "cavalry",
+            "count": 1
+          }
+        ]
+      ],
+      "name_zh": "\u677e\u5c71\u57ce"
+    },
+    {
+      "id": "kumamoto",
+      "name": "Kumamoto",
+      "clan": "shimazu",
+      "points": 3,
+      "battle_lines": [
+        [
+          {
+            "type": "daimyo",
+            "count": 1
+          },
+          {
+            "type": "archery",
+            "count": 1
+          },
+          {
+            "type": "cavalry",
+            "count": 1
+          },
+          {
+            "type": "infantry",
+            "sum": 5
+          }
+        ]
+      ],
+      "name_zh": "\u718a\u672c\u57ce"
+    }
+  ]
+}
