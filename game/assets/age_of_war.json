@@ -9,7 +9,7 @@
         "kiyosu",
         "edo"
       ],
-      "name_zh": "\u5fb7\u5ddd\u5bb6"
+      "name_zh": "德川家"
     },
     {
       "id": "oda",
@@ -21,7 +21,7 @@
         "gifu",
         "azuchi"
       ],
-      "name_zh": "\u7ec7\u7530\u5bb6"
+      "name_zh": "织田家"
     },
     {
       "id": "mori",
@@ -31,7 +31,7 @@
         "gassantoda",
         "takahashi"
       ],
-      "name_zh": "\u6bdb\u5229\u5bb6"
+      "name_zh": "毛利家"
     },
     {
       "id": "uesugi",
@@ -41,7 +41,7 @@
         "kasugayama",
         "kitanosho"
       ],
-      "name_zh": "\u4e0a\u6749\u5bb6"
+      "name_zh": "上杉家"
     },
     {
       "id": "chosokabe",
@@ -51,7 +51,7 @@
         "matsuyama",
         "marugame"
       ],
-      "name_zh": "\u957f\u5b97\u6211\u90e8\u5bb6"
+      "name_zh": "长宗我部家"
     },
     {
       "id": "shimazu",
@@ -60,7 +60,7 @@
       "castle_ids": [
         "kumamoto"
       ],
-      "name_zh": "\u5c9b\u6d25\u5bb6"
+      "name_zh": "岛津家"
     }
   ],
   "castles": [
@@ -72,18 +72,18 @@
       "battle_lines": [
         [
           {
-            "type": "cavalry",
+            "type": "daimyo",
             "count": 1
           }
         ],
         [
           {
-            "type": "daimyo",
-            "count": 1
+            "type": "archery",
+            "count": 2
           }
         ]
       ],
-      "name_zh": "\u72ac\u5c71\u57ce"
+      "name_zh": "犬山城"
     },
     {
       "id": "kiyosu",
@@ -107,14 +107,16 @@
           {
             "type": "cavalry",
             "count": 1
-          },
+          }
+        ],
+        [
           {
             "type": "infantry",
             "sum": 3
           }
         ]
       ],
-      "name_zh": "\u6e05\u6d32\u57ce"
+      "name_zh": "清洲城"
     },
     {
       "id": "edo",
@@ -125,13 +127,21 @@
         [
           {
             "type": "archery",
-            "count": 2
+            "count": 1
+          },
+          {
+            "type": "cavalry",
+            "count": 1
           }
         ],
         [
           {
+            "type": "archery",
+            "count": 1
+          },
+          {
             "type": "cavalry",
-            "count": 2
+            "count": 1
           }
         ],
         [
@@ -141,7 +151,7 @@
           }
         ]
       ],
-      "name_zh": "\u6c5f\u6237\u57ce"
+      "name_zh": "江户城"
     },
     {
       "id": "matsumoto",
@@ -152,7 +162,13 @@
         [
           {
             "type": "archery",
-            "count": 2
+            "count": 1
+          }
+        ],
+        [
+          {
+            "type": "archery",
+            "count": 1
           }
         ],
         [
@@ -162,7 +178,7 @@
           }
         ]
       ],
-      "name_zh": "\u677e\u672c\u57ce"
+      "name_zh": "松本城"
     },
     {
       "id": "odani",
@@ -177,7 +193,7 @@
           }
         ]
       ],
-      "name_zh": "\u5c0f\u8c37\u57ce"
+      "name_zh": "小谷城"
     },
     {
       "id": "gifu",
@@ -204,7 +220,7 @@
           }
         ]
       ],
-      "name_zh": "\u5c90\u961c\u57ce"
+      "name_zh": "岐阜城"
     },
     {
       "id": "azuchi",
@@ -231,7 +247,7 @@
           }
         ]
       ],
-      "name_zh": "\u5b89\u571f\u57ce"
+      "name_zh": "安土城"
     },
     {
       "id": "gassantoda",
@@ -241,18 +257,18 @@
       "battle_lines": [
         [
           {
-            "type": "infantry",
-            "sum": 8
+            "type": "daimyo",
+            "count": 1
           }
         ],
         [
           {
-            "type": "archery",
-            "count": 2
+            "type": "infantry",
+            "sum": 8
           }
         ]
       ],
-      "name_zh": "\u6708\u5c71\u5bcc\u7530\u57ce"
+      "name_zh": "月山富田城"
     },
     {
       "id": "takahashi",
@@ -279,7 +295,7 @@
           }
         ]
       ],
-      "name_zh": "\u5907\u4e2d\u9ad8\u677e\u57ce"
+      "name_zh": "备中高松城"
     },
     {
       "id": "kitanosho",
@@ -297,9 +313,7 @@
           {
             "type": "archery",
             "count": 1
-          }
-        ],
-        [
+          },
           {
             "type": "cavalry",
             "count": 1
@@ -312,7 +326,7 @@
           }
         ]
       ],
-      "name_zh": "\u5317\u4e4b\u5e84\u57ce"
+      "name_zh": "北之庄城"
     },
     {
       "id": "kasugayama",
@@ -322,12 +336,6 @@
       "battle_lines": [
         [
           {
-            "type": "daimyo",
-            "count": 1
-          }
-        ],
-        [
-          {
             "type": "archery",
             "count": 2
           }
@@ -339,7 +347,7 @@
           }
         ]
       ],
-      "name_zh": "\u6625\u65e5\u5c71\u57ce"
+      "name_zh": "春日山城"
     },
     {
       "id": "marugame",
@@ -349,20 +357,18 @@
       "battle_lines": [
         [
           {
-            "type": "archery",
-            "count": 1
-          },
-          {
             "type": "daimyo",
-            "count": 1
-          },
+            "count": 2
+          }
+        ],
+        [
           {
             "type": "cavalry",
             "count": 1
           }
         ]
       ],
-      "name_zh": "\u4e38\u9f9f\u57ce"
+      "name_zh": "丸龟城"
     },
     {
       "id": "matsuyama",
@@ -372,26 +378,24 @@
       "battle_lines": [
         [
           {
-            "type": "archery",
-            "count": 1
-          },
-          {
-            "type": "cavalry",
+            "type": "daimyo",
             "count": 1
           }
         ],
         [
           {
-            "type": "archery",
-            "count": 1
-          },
+            "type": "infantry",
+            "sum": 4
+          }
+        ],
+        [
           {
-            "type": "cavalry",
-            "count": 1
+            "type": "infantry",
+            "sum": 4
           }
         ]
       ],
-      "name_zh": "\u677e\u5c71\u57ce"
+      "name_zh": "松山城"
     },
     {
       "id": "kumamoto",
@@ -402,23 +406,29 @@
         [
           {
             "type": "daimyo",
-            "count": 1
-          },
+            "count": 2
+          }
+        ],
+        [
           {
             "type": "archery",
             "count": 1
-          },
+          }
+        ],
+        [
           {
             "type": "cavalry",
             "count": 1
-          },
+          }
+        ],
+        [
           {
             "type": "infantry",
-            "sum": 5
+            "sum": 4
           }
         ]
       ],
-      "name_zh": "\u718a\u672c\u57ce"
+      "name_zh": "熊本城"
     }
   ]
 }
