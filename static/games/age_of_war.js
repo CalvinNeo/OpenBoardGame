@@ -614,9 +614,15 @@ function renderAgeOfWarPlayers(view) {
   });
 }
 
-function renderAgeOfWarGameState(view) {
+function renderAgeOfWarGameState(data) {
+  const view = data && data.view ? data.view : data;
   currentAgeOfWarView = view;
+  if (currentGameType !== "age_of_war") {
+    currentGameType = "age_of_war";
+    setGamePanelVisibility("age_of_war");
+  }
   if (!view) {
+    clearAgeOfWarState();
     return;
   }
   if (ageOfWarPhaseLabel) {
