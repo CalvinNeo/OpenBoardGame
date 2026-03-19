@@ -28,8 +28,8 @@ const AGE_OF_WAR_HELP_TEXT = `
 
 <h3>Turn</h3>
 <ol>
-  <li>Select a target castle from the center or an unlocked opponent castle.</li>
-  <li>Roll all remaining dice.</li>
+  <li>Roll all remaining dice, then choose a target castle from the center or an unlocked opponent castle.</li>
+  <li>Once you select a target, you must continue the attack against that target for the rest of the turn.</li>
   <li>Assign dice to fill one battle line. Infantry dice add up to meet or exceed the sum; other types must match exactly.</li>
   <li>If you cannot or choose not to fill a line, discard one die and reroll the rest.</li>
 </ol>
@@ -47,7 +47,7 @@ const AGE_OF_WAR_HELP_TEXT = `
 const AGE_OF_WAR_BUTTON_EXPLANATIONS = {
   ageOfWarRollBtn: {
     name: "Roll Dice",
-    description: "Roll all remaining dice for this attack.",
+    description: "Roll all remaining dice. You can roll before choosing a target.",
   },
   ageOfWarPlayAgainBtn: {
     name: "Play Again",
@@ -175,7 +175,10 @@ function formatAgeOfWarWinner(view) {
 function formatAgeOfWarTarget(view) {
   if (!view || !view.target) {
     if (view && view.phase === "select_target") {
-      return "Select a castle";
+      if (Array.isArray(view.dice_pool) && view.dice_pool.length) {
+        return "Select a castle";
+      }
+      return "Roll dice or select a castle";
     }
     return "-";
   }
@@ -352,7 +355,13 @@ function renderAgeOfWarTargetLines(view) {
   if (!lines.length) {
     const empty = document.createElement("div");
     empty.className = "age-of-war-empty";
-    empty.textContent = "Select a target to see its battle lines.";
+    if (view && view.phase === "select_target" && Array.isArray(view.dice_pool) && view.dice_pool.length) {
+      empty.textContent = "Select a target to see its battle lines.";
+    } else if (view && view.phase === "select_target") {
+      empty.textContent = "Roll dice or select a target to see battle lines.";
+    } else {
+      empty.textContent = "Select a target to see its battle lines.";
+    }
     ageOfWarTargetLines.appendChild(empty);
     return;
   }

@@ -269,7 +269,10 @@ class AgeOfWarGame:
             return []
         phase = state.get("phase")
         if phase == "select_target":
-            return ["select_target"]
+            actions = ["select_target"]
+            if not state.get("target") and not state.get("dice_pool") and state.get("dice_remaining", 0) > 0:
+                actions.append("roll")
+            return actions
         if phase == "roll":
             return ["roll"]
         if phase == "assign":
@@ -306,6 +309,8 @@ class AgeOfWarGame:
         if action_type == "select_target":
             if phase != "select_target":
                 return [], "invalid phase"
+            if state.get("target"):
+                return [], "target already selected"
             target_type = action.get("target_type")
             castle_id = action.get("castle_id")
             if castle_id not in CASTLES:
@@ -316,7 +321,7 @@ class AgeOfWarGame:
                 state["target"] = {"type": "central", "castle_id": castle_id}
                 state["target_lines"] = _castle_lines(castle_id, False)
                 state["filled_lines"] = []
-                state["phase"] = "roll"
+                state["phase"] = "assign" if state.get("dice_pool") else "roll"
                 events.append({"type": "age_of_war:select_target", "payload": {"player_id": player_id, "castle_id": castle_id}})
                 return events, None
             if target_type == "player":
@@ -332,7 +337,7 @@ class AgeOfWarGame:
                 state["target"] = {"type": "player", "castle_id": castle_id, "defender_id": defender_id}
                 state["target_lines"] = _castle_lines(castle_id, True)
                 state["filled_lines"] = []
-                state["phase"] = "roll"
+                state["phase"] = "assign" if state.get("dice_pool") else "roll"
                 events.append(
                     {
                         "type": "age_of_war:select_target",
@@ -343,6 +348,17 @@ class AgeOfWarGame:
             return [], "invalid target"
 
         if action_type == "roll":
+            if phase == "select_target":
+                if state.get("target"):
+                    return [], "invalid phase"
+                if state.get("dice_pool"):
+                    return [], "dice already rolled"
+                remaining = int(state.get("dice_remaining", 0))
+                if remaining <= 0:
+                    return [], "no dice"
+                state["dice_pool"] = _roll_dice(remaining)
+                events.append({"type": "age_of_war:roll", "payload": {"player_id": player_id, "dice": list(state["dice_pool"])}})
+                return events, None
             if phase != "roll":
                 return [], "invalid phase"
             remaining = int(state.get("dice_remaining", 0))
