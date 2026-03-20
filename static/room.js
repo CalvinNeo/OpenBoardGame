@@ -515,6 +515,7 @@ const GAME_WEIGHT = {
   texas_holdem: 2.430830039525692,
   the_gang: 1.58,
   trekking_history: 1.76,
+  wandering_towers: 1.6,
   yahtzee: 1.17,
 };
 

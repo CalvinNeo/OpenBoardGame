@@ -49,6 +49,15 @@ const WANDERING_HELP_TEXT = `
 <h3>Goal</h3>
 <p>Guide all of your wizards into Ravenskeep and fill all your potion flasks (no empty flasks remaining). When someone finishes, the round ends after the player to the right of the start player completes their turn.</p>
 
+<h3>Icons</h3>
+<ul>
+  <li>${WANDERING_ICONS.wizard} Wizard (巫师)</li>
+  <li>${WANDERING_ICONS.tower} Tower (飞塔)</li>
+  <li>${WANDERING_ICONS.shield} Raven Shield (乌鸦盾)</li>
+  <li>${WANDERING_ICONS.castle} Ravenskeep / Castle (乌鸦堡)</li>
+  <li>${WANDERING_ICONS.dice} Dice (骰子)</li>
+</ul>
+
 <h3>Turn</h3>
 <ol>
   <li>Choose one main action: play 2 cards (1 in solo) or discard your whole hand to move a tower 1 step.</li>
