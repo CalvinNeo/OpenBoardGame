@@ -1111,6 +1111,8 @@ async def on_room_auto_save(sid, data):
         return
     if room.auto_save != requested:
         room.auto_save = requested
+        if requested:
+            _save_room_state(room)
     await _emit_room_state(room)
 
 
