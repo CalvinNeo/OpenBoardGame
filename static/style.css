@@ -5484,6 +5484,11 @@ body.wandering-towers-explain-mode .wandering-cell.has-explanation:hover {
   background: rgba(17, 24, 39, 0.06);
 }
 
+.wandering-wizard-chip.selected {
+  border-color: #2563eb;
+  background: #dbeafe;
+}
+
 .wandering-hand {
   display: flex;
   flex-wrap: wrap;
