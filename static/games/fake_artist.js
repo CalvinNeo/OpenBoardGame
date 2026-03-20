@@ -20,6 +20,11 @@ const fakeArtistDrawHint = document.getElementById("fakeArtistDrawHint");
 const fakeArtistVoteArea = document.getElementById("fakeArtistVoteArea");
 const fakeArtistVoteHint = document.getElementById("fakeArtistVoteHint");
 const fakeArtistVoteList = document.getElementById("fakeArtistVoteList");
+const fakeArtistLastGuessArea = document.getElementById("fakeArtistLastGuessArea");
+const fakeArtistLastGuessHint = document.getElementById("fakeArtistLastGuessHint");
+const fakeArtistLastGuessControls = document.getElementById("fakeArtistLastGuessControls");
+const fakeArtistLastGuessInput = document.getElementById("fakeArtistLastGuessInput");
+const fakeArtistLastGuessBtn = document.getElementById("fakeArtistLastGuessBtn");
 const fakeArtistResult = document.getElementById("fakeArtistResult");
 const fakeArtistResultText = document.getElementById("fakeArtistResultText");
 const fakeArtistVoteResult = document.getElementById("fakeArtistVoteResult");
@@ -53,16 +58,23 @@ const FAKE_ARTIST_HELP_TEXT = `
     <li>真艺术家看到「类别 + 词汇」，伪装艺术家只看到「类别」。</li>
     <li>按顺序每人画一笔，重复 X 轮。</li>
     <li>完成后进行投票，找出伪装艺术家。</li>
+    <li>若伪装艺术家被投出，可进行一次最终猜测。</li>
     <li>若出现平票，将重投一次；仍平票则伪装艺术家获胜。</li>
   </ul>
   <h3>胜利条件</h3>
   <ul>
-    <li>真艺术家：成功投出伪装艺术家。</li>
-    <li>伪装艺术家：未被投出，或投票平票。</li>
+    <li>真艺术家：成功投出伪装艺术家，且伪装艺术家未猜中。</li>
+    <li>伪装艺术家：未被投出，或最终猜测正确。</li>
   </ul>
 `;
 
 const FAKE_ARTIST_BUTTON_EXPLANATIONS = {
+  fakeArtistLastGuessBtn: {
+    name: "Submit Final Guess",
+    description: "Submit the Fake Artist's final guess after being voted out.",
+    cost: "End Round",
+    costType: "end",
+  },
   fakeArtistPlayAgainBtn: {
     name: "Play Again",
     description: "Start a new round with a fresh word while keeping the current scores.",
@@ -113,6 +125,10 @@ function clearFakeArtistState() {
   if (fakeArtistVoteHint) fakeArtistVoteHint.textContent = "";
   if (fakeArtistColorPalette) fakeArtistColorPalette.innerHTML = "";
   if (fakeArtistVoteList) fakeArtistVoteList.innerHTML = "";
+  if (fakeArtistLastGuessHint) fakeArtistLastGuessHint.textContent = "";
+  if (fakeArtistLastGuessInput) fakeArtistLastGuessInput.value = "";
+  if (fakeArtistLastGuessArea) fakeArtistLastGuessArea.classList.add("hidden");
+  if (fakeArtistLastGuessControls) fakeArtistLastGuessControls.classList.add("hidden");
   if (fakeArtistResultText) fakeArtistResultText.textContent = "";
   if (fakeArtistVoteResult) fakeArtistVoteResult.innerHTML = "";
   if (fakeArtistPlayers) fakeArtistPlayers.innerHTML = "";
@@ -329,6 +345,47 @@ function renderFakeArtistVoteList(view) {
   });
 }
 
+function submitFakeArtistLastGuess() {
+  if (!fakeArtistLastGuessInput || !isFakeArtistActionAvailable("submit_final_guess")) {
+    return;
+  }
+  const text = fakeArtistLastGuessInput.value.trim();
+  if (!text) {
+    return;
+  }
+  sendAction({ type: "submit_final_guess", text });
+  fakeArtistLastGuessInput.value = "";
+}
+
+function renderFakeArtistLastGuessArea(view) {
+  if (!fakeArtistLastGuessArea) {
+    return;
+  }
+  const isLastGuess = view.phase === "last_guess";
+  fakeArtistLastGuessArea.classList.toggle("hidden", !isLastGuess);
+  if (!isLastGuess) {
+    if (fakeArtistLastGuessHint) fakeArtistLastGuessHint.textContent = "";
+    if (fakeArtistLastGuessInput) fakeArtistLastGuessInput.value = "";
+    return;
+  }
+  const isFake = view.your_role === "fake";
+  if (fakeArtistLastGuessHint) {
+    fakeArtistLastGuessHint.textContent = isFake
+      ? "You were voted out. Enter your final guess."
+      : "Waiting for the Fake Artist's final guess...";
+  }
+  if (fakeArtistLastGuessControls) {
+    fakeArtistLastGuessControls.classList.toggle("hidden", !isFake);
+  }
+  const canGuess = isFake && isFakeArtistActionAvailable("submit_final_guess");
+  if (fakeArtistLastGuessInput) {
+    fakeArtistLastGuessInput.disabled = !canGuess;
+  }
+  if (fakeArtistLastGuessBtn) {
+    fakeArtistLastGuessBtn.disabled = !canGuess;
+  }
+}
+
 function renderFakeArtistPlayers(view) {
   if (!fakeArtistPlayers) {
     return;
@@ -385,7 +442,13 @@ function renderFakeArtistResult(view) {
   const fakePlayer = (view.players || []).find((player) => player.player_id === view.fake_player_id);
   const fakeName = fakePlayer ? fakePlayer.name || "Player" : "-";
   const revealWord = view.word || "-";
-  fakeArtistResultText.textContent = `${winnerLabel} · Fake Artist: ${fakeName} · Word: ${revealWord}`;
+  let guessSegment = "";
+  if (view.last_guess) {
+    const guessOutcome =
+      view.last_guess_correct === true ? "Correct" : view.last_guess_correct === false ? "Wrong" : "-";
+    guessSegment = ` · Final Guess: ${view.last_guess} (${guessOutcome})`;
+  }
+  fakeArtistResultText.textContent = `${winnerLabel} · Fake Artist: ${fakeName} · Word: ${revealWord}${guessSegment}`;
   const counts = view.vote_counts || {};
   const rows = [];
   (view.players || []).forEach((player) => {
@@ -417,6 +480,8 @@ function renderFakeArtistGameState(data) {
             ? "Vote"
             : view.phase === "revote"
               ? "Revote"
+              : view.phase === "last_guess"
+                ? "Final Guess"
               : view.phase === "result"
                 ? "Result"
                 : view.phase || "-";
@@ -451,6 +516,7 @@ function renderFakeArtistGameState(data) {
   if (fakeArtistVoteArea) {
     fakeArtistVoteArea.classList.toggle("hidden", !(view.phase === "vote" || view.phase === "revote"));
   }
+  renderFakeArtistLastGuessArea(view);
   if (fakeArtistResult) {
     fakeArtistResult.classList.toggle("hidden", !view.game_over);
   }
@@ -514,6 +580,21 @@ if (fakeArtistPlayAgainBtn) {
       return;
     }
     sendAction({ type: "play_again" });
+  });
+}
+
+if (fakeArtistLastGuessBtn) {
+  fakeArtistLastGuessBtn.addEventListener("click", () => {
+    submitFakeArtistLastGuess();
+  });
+}
+
+if (fakeArtistLastGuessInput) {
+  fakeArtistLastGuessInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      submitFakeArtistLastGuess();
+    }
   });
 }
 

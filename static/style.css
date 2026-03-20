@@ -3597,6 +3597,15 @@ body.log-open {
   color: #374151;
 }
 
+.fake-artist-guess-input {
+  flex: 1;
+  min-width: 180px;
+}
+
+#fakeArtistLastGuessControls button {
+  white-space: nowrap;
+}
+
 @media (max-width: 720px) {
   .fake-artist-color-grid {
     grid-template-columns: repeat(auto-fit, minmax(32px, 1fr));

@@ -427,6 +427,12 @@ FAKE_ARTIST_ACTION_SCHEMA = {
             "required": ["type", "target_id"],
             "additionalProperties": False,
         },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "submit_final_guess"}, "text": {"type": "string", "minLength": 1}},
+            "required": ["type", "text"],
+            "additionalProperties": False,
+        },
         {"type": "object", "properties": {"type": {"const": "play_again"}}, "required": ["type"], "additionalProperties": False},
     ],
 }

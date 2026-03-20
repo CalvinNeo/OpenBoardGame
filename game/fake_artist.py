@@ -1,6 +1,7 @@
 import base64
 import json
 import random
+import secrets
 import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -120,6 +121,12 @@ def _draw_prompt(pool: List[Dict[str, str]]) -> Dict[str, str]:
     return _PROMPT_BAG.pop()
 
 
+def _pick_fake_id(order: List[str]) -> Optional[str]:
+    if not order:
+        return None
+    return secrets.choice(order)
+
+
 def _now_ms() -> int:
     return int(time.time() * 1000)
 
@@ -179,6 +186,8 @@ def _snapshot_game(state: Dict, in_progress: bool) -> Dict:
         "winner_side": state.get("winner_side"),
         "vote_round": state.get("vote_round"),
         "vote_counts": state.get("last_vote_counts") or {},
+        "last_guess": state.get("last_guess"),
+        "last_guess_correct": state.get("last_guess_correct"),
         "strokes": list(state.get("strokes", []) or []),
         "in_progress": in_progress,
     }
@@ -241,6 +250,12 @@ def _vote_counts(state: Dict) -> Dict[str, int]:
     return counts
 
 
+def _normalize_guess(value: object) -> str:
+    if not isinstance(value, str):
+        return ""
+    return "".join(value.strip().casefold().split())
+
+
 def _finish_voting(state: Dict) -> Tuple[List[Dict], Optional[str]]:
     counts = _vote_counts(state)
     state["last_vote_counts"] = counts
@@ -255,20 +270,30 @@ def _finish_voting(state: Dict) -> Tuple[List[Dict], Optional[str]]:
         state["winner_side"] = "fake"
     else:
         fake_id = state.get("fake_player_id")
-        state["winner_side"] = "real" if top and top[0] == fake_id else "fake"
+        if top and top[0] == fake_id:
+            state["phase"] = "last_guess"
+            state["current_turn"] = None
+            state["turn_deadline_ms"] = None
+            state["pending_timeout"] = None
+            state["last_guess"] = None
+            state["last_guess_correct"] = None
+            return [{"type": "fake_artist:last_guess"}], None
+        state["winner_side"] = "fake"
     if state["winner_side"] == "real":
         for pdata in state.get("players", {}).values():
             if pdata.get("role") == "real":
                 pdata["score"] = pdata.get("score", 0) + 1
-    else:
+    elif state["winner_side"] == "fake":
         fake_id = state.get("fake_player_id")
         if fake_id and fake_id in state.get("players", {}):
             state["players"][fake_id]["score"] = state["players"][fake_id].get("score", 0) + 2
-    state["phase"] = "result"
-    state["game_over"] = True
-    state["current_game_end_time"] = time.time()
-    _record_history(state)
-    return [{"type": "fake_artist:result"}], None
+    if state.get("winner_side"):
+        state["phase"] = "result"
+        state["game_over"] = True
+        state["current_game_end_time"] = time.time()
+        _record_history(state)
+        return [{"type": "fake_artist:result"}], None
+    return [], "invalid vote resolution"
 
 
 class FakeArtistGame:
@@ -281,7 +306,7 @@ class FakeArtistGame:
         cfg = _merge_config(config)
         order = [p["player_id"] for p in sorted(players, key=lambda p: p.get("seat", 0))]
         player_meta = {p["player_id"]: p for p in players}
-        fake_id = random.choice(order) if order else None
+        fake_id = _pick_fake_id(order)
         pool = _load_prompt_pool()
         prompt = _draw_prompt(pool)
         state_players = {}
@@ -312,6 +337,8 @@ class FakeArtistGame:
             "current_game_start_time": time.time(),
             "current_game_end_time": None,
             "history": [],
+            "last_guess": None,
+            "last_guess_correct": None,
             "player_meta": player_meta,
             "game_over": False,
             "winner_side": None,
@@ -341,6 +368,10 @@ class FakeArtistGame:
         if phase in ("vote", "revote"):
             if player_id not in state.get("votes", {}):
                 return ["submit_vote"]
+            return []
+        if phase == "last_guess":
+            if player_id == state.get("fake_player_id") and not state.get("last_guess"):
+                return ["submit_final_guess"]
             return []
         return []
 
@@ -415,12 +446,39 @@ class FakeArtistGame:
             if len(state["votes"]) == len(state.get("turn_order", [])):
                 return _finish_voting(state)
             return [{"type": "fake_artist:vote"}], None
+        if phase == "last_guess":
+            if action_type != "submit_final_guess":
+                return [], "invalid action"
+            if player_id != state.get("fake_player_id"):
+                return [], "only fake artist can guess"
+            guess_text = action.get("text")
+            if not isinstance(guess_text, str) or not guess_text.strip():
+                return [], "text required"
+            cleaned_guess = guess_text.strip()
+            state["last_guess"] = cleaned_guess
+            correct = _normalize_guess(cleaned_guess) == _normalize_guess(state.get("word"))
+            state["last_guess_correct"] = correct
+            if correct:
+                state["winner_side"] = "fake"
+                fake_id = state.get("fake_player_id")
+                if fake_id and fake_id in state.get("players", {}):
+                    state["players"][fake_id]["score"] = state["players"][fake_id].get("score", 0) + 2
+            else:
+                state["winner_side"] = "real"
+                for pdata in state.get("players", {}).values():
+                    if pdata.get("role") == "real":
+                        pdata["score"] = pdata.get("score", 0) + 1
+            state["phase"] = "result"
+            state["game_over"] = True
+            state["current_game_end_time"] = time.time()
+            _record_history(state)
+            return [{"type": "fake_artist:result"}], None
         return [], "invalid action"
 
     @staticmethod
     def _handle_play_again(state: Dict) -> Tuple[List[Dict], Optional[str]]:
         order = state.get("turn_order", [])
-        fake_id = random.choice(order) if order else None
+        fake_id = _pick_fake_id(order)
         prompt = _draw_prompt(state.get("prompt_pool") or _load_prompt_pool())
         _record_history(state)
         if order:
@@ -429,6 +487,8 @@ class FakeArtistGame:
         state["game_index"] = int(state.get("game_index") or 1) + 1
         state["current_game_start_time"] = time.time()
         state["current_game_end_time"] = None
+        state["last_guess"] = None
+        state["last_guess_correct"] = None
         for pid, pdata in state.get("players", {}).items():
             pdata["role"] = "fake" if pid == fake_id else "real"
         state["fake_player_id"] = fake_id
@@ -471,6 +531,7 @@ class FakeArtistGame:
         current_meta = player_meta.get(current_turn, {}) if current_turn else {}
         viewer_data = state.get("players", {}).get(viewer_id, {})
         role = viewer_data.get("role")
+        show_fake = bool(state.get("game_over") or phase == "last_guess")
         word = state.get("word") if role == "real" or state.get("game_over") else None
         view_players = []
         for pid in order:
@@ -484,7 +545,7 @@ class FakeArtistGame:
                     "color": pdata.get("color"),
                     "score": pdata.get("score", 0),
                     "voted": pid in votes,
-                    "is_fake": bool(state.get("game_over") and pid == state.get("fake_player_id")),
+                    "is_fake": bool(show_fake and pid == state.get("fake_player_id")),
                 }
             )
         return {
@@ -502,9 +563,11 @@ class FakeArtistGame:
             "strokes": list(state.get("strokes", [])),
             "votes_submitted": len(votes),
             "vote_round": state.get("vote_round"),
-            "vote_counts": state.get("last_vote_counts") if state.get("game_over") else None,
+            "vote_counts": state.get("last_vote_counts") if state.get("game_over") or phase == "last_guess" else None,
             "winner_side": state.get("winner_side") if state.get("game_over") else None,
-            "fake_player_id": state.get("fake_player_id") if state.get("game_over") else None,
+            "fake_player_id": state.get("fake_player_id") if state.get("game_over") or phase == "last_guess" else None,
+            "last_guess": state.get("last_guess") if state.get("game_over") else None,
+            "last_guess_correct": state.get("last_guess_correct") if state.get("game_over") else None,
             "game_over": bool(state.get("game_over")),
             "current_turn": {
                 "player_id": current_turn,
@@ -542,6 +605,16 @@ class FakeArtistGame:
             options = list(state.get("turn_order", []))
             if options:
                 return {"type": "submit_vote", "target_id": random.choice(options), "delay_ms": 500}
+        if phase == "last_guess" and bot_id == state.get("fake_player_id") and not state.get("last_guess"):
+            pool = state.get("prompt_pool") or _load_prompt_pool()
+            category = state.get("category")
+            options = [entry.get("word") for entry in pool if entry.get("category") == category]
+            options = [word for word in options if isinstance(word, str) and word.strip()]
+            if not options:
+                options = [entry.get("word") for entry in pool if isinstance(entry.get("word"), str)]
+                options = [word for word in options if isinstance(word, str) and word.strip()]
+            if options:
+                return {"type": "submit_final_guess", "text": random.choice(options), "delay_ms": 600}
         return None
 
     @staticmethod
@@ -671,10 +744,15 @@ def build_memories_html(state: Dict, room_id: Optional[str] = None) -> str:
         fake_name = player_meta.get(fake_id, {}).get("name") if fake_id else None
         winner_side = entry.get("winner_side")
         winner_label = "Real Artists" if winner_side == "real" else "Fake Artist" if winner_side == "fake" else "-"
+        guess_value = entry.get("last_guess")
+        guess_correct = entry.get("last_guess_correct")
+        guess_label = "-" if guess_correct is None else format_bool(guess_correct)
         summary_rows = [
             ("Status", esc(status, status)),
             ("Category", esc(entry.get("category"), "-")),
             ("Word", esc(entry.get("word"), "-")),
+            ("Final Guess", esc(guess_value, "-")),
+            ("Final Guess Correct", esc(guess_label, "-")),
             ("Fake Artist", esc(fake_name or fake_id or "-", "-")),
             ("Winner", esc(winner_label, "-")),
             ("Vote Round", esc(entry.get("vote_round"), "-")),
