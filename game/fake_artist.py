@@ -1,9 +1,20 @@
+import base64
 import json
 import random
 import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+from game.memories import (
+    build_html_document,
+    esc,
+    format_bool,
+    format_timestamp,
+    render_image,
+    render_kv_table,
+    render_table,
+    section,
+)
 DEFAULT_CONFIG = {
     "rounds": 2,
     "turn_time_sec": 8,
@@ -149,6 +160,8 @@ def _start_drawing(state: Dict) -> None:
     order = state.get("turn_order", [])
     state["phase"] = "draw"
     state["round"] = 1
+    state["round_start_index"] = 0
+    state["turn_step"] = 0
     state["turn_index"] = 0
     state["current_turn"] = order[0] if order else None
     _set_turn_deadline(state)
@@ -170,14 +183,19 @@ def _advance_turn(state: Dict, skipped: bool = False) -> Optional[Dict]:
     total_rounds = int(state.get("config", {}).get("rounds", DEFAULT_CONFIG["rounds"]))
     current_round = int(state.get("round", 1))
     previous_turn = state.get("current_turn")
-    turn_index = int(state.get("turn_index", 0)) + 1
-    if turn_index >= len(order):
-        turn_index = 0
+    round_start_index = int(state.get("round_start_index", 0)) % len(order)
+    turn_step = int(state.get("turn_step", 0)) + 1
+    if turn_step >= len(order):
+        turn_step = 0
         current_round += 1
+        round_start_index = (round_start_index + 1) % len(order)
     if current_round > total_rounds:
         _start_voting(state)
         return {"type": "fake_artist:phase_vote"}
     state["round"] = current_round
+    state["round_start_index"] = round_start_index
+    state["turn_step"] = turn_step
+    turn_index = (round_start_index + turn_step) % len(order)
     state["turn_index"] = turn_index
     state["current_turn"] = order[turn_index]
     _set_turn_deadline(state)
@@ -491,3 +509,172 @@ class FakeArtistGame:
     @staticmethod
     def deserialize(payload: Dict) -> Dict:
         return payload
+
+    @staticmethod
+    def download_memories(state: Dict, room_id: Optional[str] = None) -> str:
+        return build_memories_html(state, room_id)
+
+
+def _points_to_path(points: List) -> str:
+    cleaned: List[Tuple[float, float]] = []
+    for entry in points:
+        if not isinstance(entry, (list, tuple)) or len(entry) < 2:
+            continue
+        try:
+            x = float(entry[0])
+            y = float(entry[1])
+        except (TypeError, ValueError):
+            continue
+        if x == x and y == y:
+            cleaned.append((x, y))
+    if len(cleaned) < 2:
+        return ""
+    head = cleaned[0]
+    tail = cleaned[1:]
+    parts = [f"M {head[0]:.2f} {head[1]:.2f}"]
+    parts.extend(f"L {x:.2f} {y:.2f}" for x, y in tail)
+    return " ".join(parts)
+
+
+def _svg_data_url(svg: str) -> str:
+    encoded = base64.b64encode(svg.encode("utf-8")).decode("ascii")
+    return f"data:image/svg+xml;base64,{encoded}"
+
+
+def _render_strokes_svg(strokes: List[Dict], width: int, height: int) -> str:
+    paths: List[str] = []
+    for stroke in strokes:
+        points = stroke.get("points") or []
+        if not isinstance(points, list):
+            continue
+        path = _points_to_path(points)
+        if not path:
+            continue
+        color = stroke.get("color") or "#111827"
+        paths.append(
+            f'<path d="{path}" stroke="{esc(color, "#111827")}" stroke-width="4" '
+            'fill="none" stroke-linecap="round" stroke-linejoin="round" />'
+        )
+    svg = (
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
+        f'viewBox="0 0 {width} {height}">'
+        '<rect width="100%" height="100%" fill="#ffffff" />'
+        + "".join(paths)
+        + "</svg>"
+    )
+    return _svg_data_url(svg)
+
+
+def build_memories_html(state: Dict, room_id: Optional[str] = None) -> str:
+    game_id = FakeArtistGame.game_id
+    status_label = "Game Over" if state.get("game_over") else "In Progress"
+    header = [
+        "<h1>Download Memories</h1>",
+        f"<div class=\"meta\">Game: {esc(game_id, '-')} · Room: {esc(room_id, '-')}</div>",
+        f"<div class=\"meta\">Status: {esc(status_label, status_label)}</div>",
+    ]
+    start_time = format_timestamp(state.get("game_start_time"))
+    if start_time != "-":
+        header.append(f"<div class=\"meta\">Game Start: {esc(start_time, start_time)}</div>")
+    header.append(f"<div class=\"meta\">Generated: {esc(format_timestamp(time.time()), '-')}</div>")
+
+    player_meta = state.get("player_meta", {})
+    order = state.get("turn_order", [])
+    player_rows: List[List[str]] = []
+    for pid in order:
+        meta = player_meta.get(pid, {})
+        pdata = state.get("players", {}).get(pid, {})
+        role = pdata.get("role") if state.get("game_over") else None
+        player_rows.append(
+            [
+                esc(pid, "-"),
+                esc(meta.get("name"), "-"),
+                esc(meta.get("seat"), "-"),
+                format_bool(meta.get("is_bot")),
+                esc(role or "-", "-"),
+                esc(pdata.get("score", 0), "0"),
+            ]
+        )
+    players_section = section(
+        "Players",
+        render_table(["Player ID", "Name", "Seat", "Bot", "Role", "Score"], player_rows, empty_message="No players"),
+    )
+
+    cfg = state.get("config", {})
+    config_rows = [
+        ("Rounds", esc(cfg.get("rounds"), "-")),
+        ("Turn Time (sec)", esc(cfg.get("turn_time_sec"), "-")),
+    ]
+    config_section = section("Config", render_kv_table(config_rows))
+
+    prompt_section = section(
+        "Prompt",
+        render_kv_table(
+            [
+                ("Category", esc(state.get("category"), "-")),
+                ("Word", esc(state.get("word"), "-")),
+                ("Fake Artist ID", esc(state.get("fake_player_id"), "-")),
+            ]
+        ),
+    )
+
+    canvas = state.get("canvas") or {}
+    width = int(canvas.get("width") or CANVAS_WIDTH)
+    height = int(canvas.get("height") or CANVAS_HEIGHT)
+    strokes = state.get("strokes", []) or []
+    drawing_url = _render_strokes_svg(strokes, width, height) if strokes else None
+    drawing_section = section("Final Drawing", render_image(drawing_url, alt="Final drawing"))
+
+    stroke_rows: List[List[str]] = []
+    for idx, stroke in enumerate(strokes, start=1):
+        pid = stroke.get("player_id")
+        meta = player_meta.get(pid, {})
+        mini_svg = _render_strokes_svg([stroke], width, height) if stroke.get("points") else None
+        stroke_rows.append(
+            [
+                esc(idx, "-"),
+                esc(pid, "-"),
+                esc(meta.get("name"), "-"),
+                esc(stroke.get("round"), "-"),
+                esc(stroke.get("color"), "-"),
+                render_image(mini_svg, alt="Stroke"),
+            ]
+        )
+    strokes_section = section(
+        "Strokes",
+        render_table(
+            ["#", "Player ID", "Name", "Round", "Color", "Stroke"],
+            stroke_rows,
+            empty_message="No strokes",
+        ),
+    )
+
+    result_rows = [
+        ("Winner Side", esc(state.get("winner_side"), "-")),
+        ("Vote Round", esc(state.get("vote_round"), "-")),
+    ]
+    result_section = section("Result", render_kv_table(result_rows))
+
+    vote_counts = state.get("last_vote_counts") or {}
+    vote_rows = []
+    for pid in order:
+        meta = player_meta.get(pid, {})
+        vote_rows.append([esc(pid, "-"), esc(meta.get("name"), "-"), esc(vote_counts.get(pid, 0), "0")])
+    votes_section = section(
+        "Vote Counts",
+        render_table(["Player ID", "Name", "Votes"], vote_rows, empty_message="No votes"),
+    )
+
+    body = "\n".join(
+        header
+        + [
+            players_section,
+            config_section,
+            prompt_section,
+            drawing_section,
+            strokes_section,
+            result_section,
+            votes_section,
+        ]
+    )
+    return build_html_document("Fake Artist Memories", body)

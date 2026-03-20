@@ -18,6 +18,7 @@ const MEMORIES_SUPPORTED_GAMES = new Set([
   "blitz_sketch",
   "carcassonne",
   "word_decode",
+  "fake_artist",
 ]);
 let createRoomPending = false;
 let pendingReadyAfterJoin = false;
