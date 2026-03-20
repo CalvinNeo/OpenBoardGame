@@ -491,6 +491,7 @@ const GAME_WEIGHT = {
   aidixit: 1.1924453280318092,
   azul: 1.78,
   blokus: 1.73,
+  blitz_sketch: 1.0,
   cabo: 1.4,
   carcassonne: 1.89,
   cat_in_box: 2.03,
@@ -518,6 +519,7 @@ const GAME_WEIGHT = {
   trekking_history: 1.76,
   wandering_towers: 1.59,
   yahtzee: 1.17,
+  fake_artist: 1.09,
 };
 
 function getGameWeight(gameId) {
