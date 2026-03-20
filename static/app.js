@@ -31,6 +31,7 @@ const cyberPicturesPanel = document.getElementById("cyberPicturesPanel");
 const abracaPanel = document.getElementById("abracaPanel");
 
 const blokusPanel = document.getElementById("blokusPanel");
+const wanderingTowersPanel = document.getElementById("wanderingTowersPanel");
 
 function setGamePanelVisibility(gameType) {
   const showCabo = gameType === "cabo";
@@ -40,6 +41,7 @@ function setGamePanelVisibility(gameType) {
   const showGoldRush = gameType === "gold_rush";
   const showIncanGold = gameType === "incan_gold";
   const showAgeOfWar = gameType === "age_of_war";
+  const showWanderingTowers = gameType === "wandering_towers";
   const showKobayakawa = gameType === "kobayakawa";
   const showSkull = gameType === "skull";
   const showCatInBox = gameType === "cat_in_box";
@@ -94,6 +96,12 @@ function setGamePanelVisibility(gameType) {
   }
   if (typeof showAgeOfWarHeaderActions === "function") {
     showAgeOfWarHeaderActions(showAgeOfWar);
+  }
+  if (wanderingTowersPanel) {
+    wanderingTowersPanel.classList.toggle("hidden", !showWanderingTowers);
+  }
+  if (typeof showWanderingTowersHeaderActions === "function") {
+    showWanderingTowersHeaderActions(showWanderingTowers);
   }
   if (kobayakawaPanel) {
     kobayakawaPanel.classList.toggle("hidden", !showKobayakawa);
@@ -291,6 +299,10 @@ function renderGameState(data) {
   }
   if (gameType === "age_of_war") {
     renderAgeOfWarGameState(data);
+    return;
+  }
+  if (gameType === "wandering_towers") {
+    renderWanderingTowersGameState(data);
     return;
   }
   if (gameType === "kobayakawa") {

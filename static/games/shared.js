@@ -152,6 +152,7 @@ function renderRoomState(state) {
     clearGoldRushState();
     clearIncanGoldState();
     clearAgeOfWarState();
+    clearWanderingTowersState();
     clearHanabiState();
     clearTexasHoldemState();
     clearSixNimmtState();

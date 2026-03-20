@@ -33,6 +33,7 @@ from game.texas_holdem import TexasHoldemGame
 from game.trekking_history import TrekkingHistoryGame
 from game.word_decode import WordDecodeGame
 from game.yahtzee import YahtzeeGame
+from game.wandering_towers import WanderingTowersGame
 from game import definitions as _definitions
 
 __all__ = [
@@ -70,6 +71,7 @@ __all__ = [
     "TrekkingHistoryGame",
     "WordDecodeGame",
     "YahtzeeGame",
+    "WanderingTowersGame",
     "GameDefinition",
     "get_game",
     "list_games",

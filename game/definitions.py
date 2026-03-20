@@ -33,6 +33,7 @@ from game.skull import SkullGame
 from game.trekking_history import TrekkingHistoryGame
 from game.texas_holdem import TexasHoldemGame
 from game.word_decode import WordDecodeGame
+from game.wandering_towers import WanderingTowersGame
 
 CABO_ACTION_SCHEMA = {
     "type": "object",
@@ -486,6 +487,54 @@ YAHTZEE_ACTION_SCHEMA = {
 }
 
 YAHTZEE_CONFIG_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+}
+
+WANDERING_TOWERS_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "play_card"},
+                "card_index": {"type": "integer", "minimum": 0},
+            },
+            "required": ["type", "card_index"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "choose_target"},
+                "target_type": {"type": "string", "enum": ["wizard", "tower"]},
+                "target_id": {"type": "string"},
+            },
+            "required": ["type", "target_type", "target_id"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "reroll_dice"}}, "required": ["type"], "additionalProperties": False},
+        {"type": "object", "properties": {"type": {"const": "accept_roll"}}, "required": ["type"], "additionalProperties": False},
+        {
+            "type": "object",
+            "properties": {"type": {"const": "discard_move"}, "tower_id": {"type": "string"}},
+            "required": ["type", "tower_id"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "cast_spell"},
+                "spell": {"type": "string", "enum": ["move_wizard", "move_tower"]},
+                "target_id": {"type": "string"},
+            },
+            "required": ["type", "spell", "target_id"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+WANDERING_TOWERS_CONFIG_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
 }
@@ -2027,5 +2076,20 @@ register_game(
         module=TrekkingHistoryGame,
         serialize=TrekkingHistoryGame.serialize,
         deserialize=TrekkingHistoryGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=WanderingTowersGame.game_id,
+        name="Wandering Towers",
+        min_players=WanderingTowersGame.min_players,
+        max_players=WanderingTowersGame.max_players,
+        turn_mode="turn",
+        action_schema=WANDERING_TOWERS_ACTION_SCHEMA,
+        config_schema=WANDERING_TOWERS_CONFIG_SCHEMA,
+        module=WanderingTowersGame,
+        serialize=WanderingTowersGame.serialize,
+        deserialize=WanderingTowersGame.deserialize,
     )
 )

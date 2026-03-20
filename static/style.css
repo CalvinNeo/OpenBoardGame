@@ -5354,6 +5354,200 @@ body.age-of-war-explain-mode button.has-explanation:hover {
   margin-top: 0;
 }
 
+.wandering-header-btn {
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #f9fafb;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 8px;
+}
+
+.wandering-header-btn:hover {
+  background: #f3f4f6;
+}
+
+.wandering-header-btn.active {
+  background: #e0f2fe;
+  border-color: #0ea5e9;
+  color: #0369a1;
+}
+
+body.wandering-towers-explain-mode button.has-explanation {
+  outline: 2px dashed #0ea5e9;
+  outline-offset: 2px;
+  cursor: help;
+}
+
+body.wandering-towers-explain-mode button.has-explanation:hover {
+  outline-color: #0284c7;
+  outline-style: solid;
+}
+
+body.wandering-towers-explain-mode .wandering-cell.has-explanation {
+  outline: 2px dashed #0ea5e9;
+  outline-offset: 2px;
+  cursor: help;
+}
+
+body.wandering-towers-explain-mode .wandering-cell.has-explanation:hover {
+  outline-color: #0284c7;
+  outline-style: solid;
+}
+
+.wandering-towers-help-modal {
+  max-width: 720px;
+}
+
+.wandering-towers-help-content {
+  max-height: 70vh;
+  overflow-y: auto;
+  line-height: 1.6;
+}
+
+.wandering-towers-help-content h3 {
+  margin: 16px 0 8px;
+  font-size: 16px;
+  color: #111827;
+}
+
+.wandering-towers-help-content h3:first-child {
+  margin-top: 0;
+}
+
+.wandering-board {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.wandering-cell {
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+  border-radius: 6px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wandering-cell-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.wandering-raven {
+  font-size: 14px;
+}
+
+.wandering-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wandering-layer {
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.wandering-layer.empty {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.wandering-wizard-chip {
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  padding: 2px 6px;
+  font-size: 11px;
+  color: var(--wizard-color, #111);
+  background: rgba(17, 24, 39, 0.06);
+}
+
+.wandering-hand {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.wandering-card {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: #f9fafb;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.wandering-card.selected {
+  border-color: #2563eb;
+  background: #dbeafe;
+}
+
+.wandering-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.wandering-item {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 12px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.wandering-item.selected {
+  border-color: #2563eb;
+  background: #dbeafe;
+}
+
+.wandering-item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.wandering-selection {
+  margin: 8px 0;
+  padding: 6px 8px;
+  border: 1px dashed #d1d5db;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #374151;
+  cursor: pointer;
+}
+
+.wandering-players {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wandering-player-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: #f9fafb;
+}
+
+.wandering-player-card.current {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
 .age-of-war-help-content ul,
 .age-of-war-help-content ol {
   margin: 8px 0;
