@@ -27,6 +27,7 @@ GAME_URLS = {
     "aidixit": "https://boardgamegeek.com/boardgame/39856/dixit",
     "flip7": "https://boardgamegeek.com/boardgame/420087/flip-7",
     "perfect_mismatch": "https://boardgamegeek.com/boardgame/424482/perfect-mismatch",
+    "age_of_war": "https://boardgamegeek.com/boardgame/28086/age-of-war",
 }
 
 

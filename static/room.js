@@ -486,6 +486,7 @@ function filterGames(games, searchText, playerCount) {
 
 const GAME_WEIGHT = {
   abraca_what: 1.64,
+  age_of_war: 1.15,
   aidixit: 1.1924453280318092,
   azul: 1.78,
   blokus: 1.73,
