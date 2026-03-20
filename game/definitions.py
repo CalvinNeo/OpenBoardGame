@@ -9,6 +9,7 @@ from game.cyber_pictures import CyberPicturesGame
 from game.decrypto import DecryptoGame
 from game.draw_guess import DrawGuessGame
 from game.fang_niao import FangNiaoGame
+from game.fake_artist import FakeArtistGame
 from game.flip7 import Flip7Game
 from game.gold_rush import GoldRushGame
 from game.halli_galli import HalliGalliGame
@@ -389,6 +390,52 @@ BLITZ_SKETCH_CONFIG_SCHEMA = {
         "guess_total": {"type": "integer", "minimum": 1},
         "draw_time_sec": {"type": "number", "enum": [1, 1.5, 2, 2.5, 3, 4]},
         "skip_reveal_sec": {"type": "integer", "minimum": 0},
+    },
+    "additionalProperties": False,
+}
+
+FAKE_ARTIST_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {"type": {"const": "choose_color"}, "color": {"type": "string", "minLength": 1}},
+            "required": ["type", "color"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "submit_stroke"},
+                "points": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "array",
+                        "minItems": 2,
+                        "maxItems": 2,
+                        "items": {"type": "number"},
+                    },
+                },
+            },
+            "required": ["type", "points"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "submit_vote"}, "target_id": {"type": "string", "minLength": 1}},
+            "required": ["type", "target_id"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "play_again"}}, "required": ["type"], "additionalProperties": False},
+    ],
+}
+
+FAKE_ARTIST_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "rounds": {"type": "integer", "minimum": 1},
+        "turn_time_sec": {"type": "number", "minimum": 1},
     },
     "additionalProperties": False,
 }
@@ -1747,6 +1794,21 @@ register_game(
         module=BlitzSketchGame,
         serialize=BlitzSketchGame.serialize,
         deserialize=BlitzSketchGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=FakeArtistGame.game_id,
+        name="A Fake Artist Goes to New York",
+        min_players=FakeArtistGame.min_players,
+        max_players=FakeArtistGame.max_players,
+        turn_mode="turn",
+        action_schema=FAKE_ARTIST_ACTION_SCHEMA,
+        config_schema=FAKE_ARTIST_CONFIG_SCHEMA,
+        module=FakeArtistGame,
+        serialize=FakeArtistGame.serialize,
+        deserialize=FakeArtistGame.deserialize,
     )
 )
 

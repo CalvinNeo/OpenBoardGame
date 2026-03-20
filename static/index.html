@@ -430,6 +430,28 @@
     </div>
   </section>
 
+  <section id="fakeArtistHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content fake-artist-help-modal">
+      <div class="modal-header">
+        <h2>A Fake Artist - Game Rules</h2>
+        <button id="fakeArtistHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body fake-artist-help-content" id="fakeArtistHelpContent"></div>
+    </div>
+  </section>
+
+  <section id="fakeArtistExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content fake-artist-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="fakeArtistExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="fakeArtistExplainContent"></div>
+      </div>
+    </div>
+  </section>
+
   <section id="pokemonSplendorHelpModal" class="modal hidden" aria-hidden="true">
     <div class="modal-content pokemon-splendor-help-modal">
       <div class="modal-header">
@@ -609,6 +631,25 @@
                         <option value="2.5">2.5s</option>
                         <option value="3" selected>3s</option>
                         <option value="4">4s</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="game-config-card hidden" id="fakeArtistConfigBox" aria-hidden="true">
+                    <div class="game-config-title">A Fake Artist</div>
+                    <div class="row hidden" id="fakeArtistRoundsRow">
+                      <label for="fakeArtistRoundsSelect">Rounds</label>
+                      <select id="fakeArtistRoundsSelect">
+                        <option value="1">1</option>
+                        <option value="2" selected>2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                      </select>
+                    </div>
+                    <div class="row hidden" id="fakeArtistTurnTimeRow">
+                      <label for="fakeArtistTurnTimeSelect">Turn Time</label>
+                      <select id="fakeArtistTurnTimeSelect">
+                        <option value="8" selected>8s</option>
+                        <option value="16">16s</option>
                       </select>
                     </div>
                   </div>
@@ -813,6 +854,10 @@
             <div class="panel-header-actions" id="wordDecodeHeaderActions" style="display: none;">
               <button id="wordDecodeHelpBtn" class="word-decode-header-btn" type="button">Help</button>
               <button id="wordDecodeExplainBtn" class="word-decode-header-btn" type="button">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="fakeArtistHeaderActions" style="display: none;">
+              <button id="fakeArtistHelpBtn" class="fake-artist-header-btn" type="button">Help</button>
+              <button id="fakeArtistExplainBtn" class="fake-artist-header-btn" type="button">Explain</button>
             </div>
             <div class="panel-header-actions" id="pokemonSplendorHeaderActions" style="display: none;">
               <button id="pokemonSplendorHelpBtn" class="pokemon-splendor-header-btn" type="button">Help</button>
@@ -1882,6 +1927,51 @@
               </div>
             </div>
 
+            <div id="fakeArtistPanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="fakeArtistPhase">-</span></div>
+                <div>Round: <span id="fakeArtistRound">-</span>/<span id="fakeArtistTotalRounds">-</span></div>
+                <div>Turn: <span id="fakeArtistTurn">-</span></div>
+                <div>Timer: <span id="fakeArtistTimer">-</span></div>
+              </div>
+              <div class="row">
+                <div>Role: <span id="fakeArtistRole">-</span></div>
+                <div>Category: <span id="fakeArtistCategory">-</span></div>
+                <div>Word: <span id="fakeArtistWord">-</span></div>
+              </div>
+
+              <div id="fakeArtistColorSelect" class="hidden">
+                <h3>Pick Color</h3>
+                <div id="fakeArtistColorPalette" class="fake-artist-color-grid"></div>
+                <div class="hint">Each color can only be used once.</div>
+              </div>
+
+              <div id="fakeArtistDrawArea">
+                <div class="row">
+                  <canvas id="fakeArtistCanvas" width="640" height="480"></canvas>
+                </div>
+                <div class="hint" id="fakeArtistDrawHint"></div>
+              </div>
+
+              <div id="fakeArtistVoteArea" class="hidden">
+                <h3>Vote</h3>
+                <div class="hint" id="fakeArtistVoteHint"></div>
+                <div id="fakeArtistVoteList" class="fake-artist-vote-list"></div>
+              </div>
+
+              <div id="fakeArtistResult" class="hidden">
+                <h3>Result</h3>
+                <div id="fakeArtistResultText"></div>
+                <div id="fakeArtistVoteResult" class="fake-artist-vote-result"></div>
+                <div class="row actions">
+                  <button id="fakeArtistPlayAgainBtn">Play Again</button>
+                </div>
+              </div>
+
+              <h3>Players</h3>
+              <div id="fakeArtistPlayers"></div>
+            </div>
+
             <div id="cyberPicturesPanel" class="hidden">
               <div class="row">
                 <div>Phase: <span id="cyberPhase">-</span></div>
@@ -2700,6 +2790,7 @@
   <script src="/static/games/draw_guess.js?v=app_v1"></script>
   <script src="/static/games/cyber_pictures.js?v=app_v1"></script>
   <script src="/static/games/blitz_sketch.js?v=app_v1"></script>
+  <script src="/static/games/fake_artist.js?v=app_v1"></script>
   <script src="/static/games/impression_flower.js?v=app_v1"></script>
   <script src="/static/games/splendor.js?v=app_v1"></script>
   <script src="/static/games/splendor_pokemon.js?v=app_v1"></script>

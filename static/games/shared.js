@@ -108,6 +108,12 @@ function emitRoomStart() {
     const rawTime = blitzSketchDrawTimeSelect ? Number.parseFloat(blitzSketchDrawTimeSelect.value) : NaN;
     const drawTime = Number.isFinite(rawTime) && rawTime > 0 ? rawTime : 3;
     payload.config = { draw_time_sec: drawTime };
+  } else if (currentGameType === "fake_artist") {
+    const rawRounds = fakeArtistRoundsSelect ? Number.parseInt(fakeArtistRoundsSelect.value, 10) : NaN;
+    const rounds = Number.isInteger(rawRounds) && rawRounds > 0 ? rawRounds : 2;
+    const rawTime = fakeArtistTurnTimeSelect ? Number.parseInt(fakeArtistTurnTimeSelect.value, 10) : NaN;
+    const turnTime = Number.isInteger(rawTime) && rawTime > 0 ? rawTime : 8;
+    payload.config = { rounds, turn_time_sec: turnTime };
   }
   socket.emit("room:start", payload);
 }
@@ -140,6 +146,7 @@ function renderRoomState(state) {
     clearWordDecodeState();
     clearDrawGuessState();
     clearBlitzSketchState();
+    clearFakeArtistState();
     clearAidixitState();
     clearImpressionFlowerState();
     clearSplendorState();
@@ -171,6 +178,7 @@ function renderRoomState(state) {
   updateGangConfigRow();
   updateImpressionConfigRow();
   updateBlitzSketchConfigRow();
+  updateFakeArtistConfigRow();
   updateAutoSaveRow();
   updateReopenButton();
   playersList.innerHTML = "";
