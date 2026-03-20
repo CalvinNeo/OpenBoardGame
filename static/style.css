@@ -5461,6 +5461,15 @@ body.wandering-towers-explain-mode .wandering-cell.has-explanation:hover {
   align-items: center;
 }
 
+.wandering-layer.tower-layer {
+  cursor: pointer;
+}
+
+.wandering-layer.tower-layer.selected {
+  border-color: #2563eb;
+  background: #dbeafe;
+}
+
 .wandering-layer.empty {
   color: #9ca3af;
   font-style: italic;

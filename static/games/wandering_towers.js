@@ -26,7 +26,6 @@ const wanderingSoloScoreLabel = document.getElementById("wanderingSoloScore");
 const wanderingBoard = document.getElementById("wanderingBoard");
 const wanderingHand = document.getElementById("wanderingHand");
 const wanderingWizards = document.getElementById("wanderingWizards");
-const wanderingTowers = document.getElementById("wanderingTowers");
 const wanderingPlayers = document.getElementById("wanderingPlayers");
 const wanderingSelection = document.getElementById("wanderingSelection");
 const wanderingSelectionLabel = document.getElementById("wanderingSelectionLabel");
@@ -173,9 +172,9 @@ function clearWanderingSelection() {
   updateWanderingSelectionLabel();
   updateWanderingActionButtons();
   if (currentWanderingView) {
+    renderWanderingBoard(currentWanderingView);
     renderWanderingHand(currentWanderingView);
     renderWanderingWizards(currentWanderingView);
-    renderWanderingTowers(currentWanderingView);
   }
 }
 
@@ -254,20 +253,19 @@ function isWanderingTowerMoveLegal(view, towerId, steps) {
 function buildWanderingCellExplanation(view, cell) {
   const playerMap = getWanderingPlayerMap(view);
   const layers = Array.isArray(cell.layers) ? cell.layers : [];
+  const displayLayers = layers.slice().reverse();
   const contents = [];
   const hasRaven = layers.some((layer) => layer.type === "ravenskeep");
   if (hasRaven) {
     contents.push(`${WANDERING_ICONS.castle} 乌鸦堡 (Ravenskeep)`);
   }
-  layers
-    .filter((layer) => layer.type === "tower")
-    .forEach((layer) => {
+  displayLayers.forEach((layer) => {
+    if (layer.type === "tower") {
       const shield = layer.has_shield ? ` ${WANDERING_ICONS.shield}` : "";
       contents.push(`${WANDERING_ICONS.tower} ${layer.tower_id}${shield}`);
-    });
-  layers
-    .filter((layer) => layer.type === "wizards")
-    .forEach((layer) => {
+      return;
+    }
+    if (layer.type === "wizards") {
       const ownerCounts = {};
       (layer.wizards || []).forEach((wiz) => {
         ownerCounts[wiz.owner_id] = (ownerCounts[wiz.owner_id] || 0) + 1;
@@ -276,7 +274,12 @@ function buildWanderingCellExplanation(view, cell) {
         const name = playerMap[ownerId]?.name || ownerId;
         contents.push(`${WANDERING_ICONS.wizard} ${name} x${count}`);
       });
-    });
+      return;
+    }
+    if (layer.type === "ravenskeep") {
+      contents.push(`${WANDERING_ICONS.castle} Ravenskeep`);
+    }
+  });
   if (!contents.length) {
     contents.push("Empty (空格)");
   }
@@ -284,7 +287,7 @@ function buildWanderingCellExplanation(view, cell) {
   return `
     <h4>Board Space #${cell.index}</h4>
     <p>卡片顶部显示格子编号与${WANDERING_ICONS.castle}乌鸦堡位置。</p>
-    <p>堆叠区从下到上显示该格子的所有实体：</p>
+    <p>堆叠区从上到下显示该格子的所有实体：</p>
     <ul>
       <li>${WANDERING_ICONS.tower} + ID：飞塔（${WANDERING_ICONS.shield} 表示带乌鸦盾）。</li>
       <li>${WANDERING_ICONS.wizard} 玩家巫师：按玩家颜色显示，xN 表示该层可见巫师数量。</li>
@@ -333,14 +336,18 @@ function renderWanderingBoard(view) {
     header.appendChild(raven);
     cellEl.appendChild(header);
 
-    const stack = document.createElement("div");
-    stack.className = "wandering-stack";
-    if (Array.isArray(cell.layers) && cell.layers.length) {
-      cell.layers.forEach((layer) => {
-        const layerEl = document.createElement("div");
-        layerEl.className = "wandering-layer";
+  const stack = document.createElement("div");
+  stack.className = "wandering-stack";
+  if (Array.isArray(cell.layers) && cell.layers.length) {
+    const displayLayers = cell.layers.slice().reverse();
+    displayLayers.forEach((layer) => {
+      const layerEl = document.createElement("div");
+      layerEl.className = "wandering-layer";
         if (layer.type === "tower") {
           layerEl.classList.add("tower-layer");
+          if (layer.tower_id === wanderingSelectedTowerId) {
+            layerEl.classList.add("selected");
+          }
           layerEl.textContent = `${WANDERING_ICONS.tower} ${layer.tower_id}`;
           if (layer.has_shield) {
             const shield = document.createElement("span");
@@ -348,6 +355,18 @@ function renderWanderingBoard(view) {
             shield.textContent = WANDERING_ICONS.shield;
             layerEl.appendChild(shield);
           }
+          layerEl.addEventListener("click", (e) => {
+            if (wanderingExplainMode) {
+              return;
+            }
+            e.stopPropagation();
+            wanderingSelectedTowerId = layer.tower_id;
+            wanderingSelectedWizardId = null;
+            updateWanderingSelectionLabel();
+            updateWanderingActionButtons();
+            renderWanderingBoard(view);
+            renderWanderingWizards(view);
+          });
         } else if (layer.type === "ravenskeep") {
           layerEl.classList.add("raven-layer");
           layerEl.textContent = `${WANDERING_ICONS.castle} Ravenskeep`;
@@ -453,49 +472,10 @@ function renderWanderingWizards(view) {
       wanderingSelectedTowerId = null;
       updateWanderingSelectionLabel();
       updateWanderingActionButtons();
+      renderWanderingBoard(view);
       renderWanderingWizards(view);
-      renderWanderingTowers(view);
     });
     wanderingWizards.appendChild(item);
-  });
-}
-
-function renderWanderingTowers(view) {
-  if (!wanderingTowers) {
-    return;
-  }
-  wanderingTowers.innerHTML = "";
-  if (!view || !Array.isArray(view.towers)) {
-    wanderingTowers.textContent = "-";
-    return;
-  }
-  const legal = getWanderingLegalTargets(view);
-  const spellTargets = getWanderingSpellTargets(view, "move_tower");
-  const allowed = new Set([...(legal.tower || []), ...(spellTargets.tower || [])]);
-  view.towers.forEach((tower) => {
-    const item = document.createElement("div");
-    item.className = "wandering-item";
-    const shield = tower.has_shield ? ` ${WANDERING_ICONS.shield}` : "";
-    item.textContent = `${WANDERING_ICONS.tower} ${tower.tower_id} @${tower.position}${shield}`;
-    const isAllowed = allowed.has(tower.tower_id);
-    if (!isAllowed && currentWanderingView?.pending) {
-      item.classList.add("disabled");
-    }
-    if (wanderingSelectedTowerId === tower.tower_id) {
-      item.classList.add("selected");
-    }
-    item.addEventListener("click", () => {
-      if (currentWanderingView?.pending && !isAllowed) {
-        return;
-      }
-      wanderingSelectedTowerId = tower.tower_id;
-      wanderingSelectedWizardId = null;
-      updateWanderingSelectionLabel();
-      updateWanderingActionButtons();
-      renderWanderingTowers(view);
-      renderWanderingWizards(view);
-    });
-    wanderingTowers.appendChild(item);
   });
 }
 
@@ -701,7 +681,6 @@ function renderWanderingTowersGameState(data) {
   renderWanderingBoard(view);
   renderWanderingHand(view);
   renderWanderingWizards(view);
-  renderWanderingTowers(view);
   renderWanderingPlayers(view);
   updateWanderingActionButtons();
 }
@@ -723,7 +702,6 @@ function clearWanderingTowersState() {
   if (wanderingBoard) wanderingBoard.textContent = "";
   if (wanderingHand) wanderingHand.textContent = "";
   if (wanderingWizards) wanderingWizards.textContent = "";
-  if (wanderingTowers) wanderingTowers.textContent = "";
   if (wanderingPlayers) wanderingPlayers.textContent = "";
   updateWanderingSelectionLabel();
   updateWanderingActionButtons();
