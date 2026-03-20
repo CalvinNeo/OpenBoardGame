@@ -168,6 +168,35 @@ def _start_drawing(state: Dict) -> None:
     _set_turn_deadline(state)
 
 
+def _snapshot_game(state: Dict, in_progress: bool) -> Dict:
+    return {
+        "index": int(state.get("game_index") or 1),
+        "start_time": state.get("current_game_start_time"),
+        "end_time": state.get("current_game_end_time"),
+        "category": state.get("category"),
+        "word": state.get("word"),
+        "fake_player_id": state.get("fake_player_id"),
+        "winner_side": state.get("winner_side"),
+        "vote_round": state.get("vote_round"),
+        "vote_counts": state.get("last_vote_counts") or {},
+        "strokes": list(state.get("strokes", []) or []),
+        "in_progress": in_progress,
+    }
+
+
+def _record_history(state: Dict) -> None:
+    history = state.setdefault("history", [])
+    if not isinstance(history, list):
+        history = []
+        state["history"] = history
+    current_index = int(state.get("game_index") or 1)
+    if any(entry.get("index") == current_index for entry in history if isinstance(entry, dict)):
+        return
+    entry = _snapshot_game(state, in_progress=False)
+    entry["end_time"] = time.time()
+    history.append(entry)
+
+
 def _start_voting(state: Dict) -> None:
     state["phase"] = "vote"
     state["current_turn"] = None
@@ -237,6 +266,8 @@ def _finish_voting(state: Dict) -> Tuple[List[Dict], Optional[str]]:
             state["players"][fake_id]["score"] = state["players"][fake_id].get("score", 0) + 2
     state["phase"] = "result"
     state["game_over"] = True
+    state["current_game_end_time"] = time.time()
+    _record_history(state)
     return [{"type": "fake_artist:result"}], None
 
 
@@ -277,6 +308,10 @@ class FakeArtistGame:
             "word": prompt.get("word"),
             "fake_player_id": fake_id,
             "game_start_index": 0,
+            "game_index": 1,
+            "current_game_start_time": time.time(),
+            "current_game_end_time": None,
+            "history": [],
             "player_meta": player_meta,
             "game_over": False,
             "winner_side": None,
@@ -387,9 +422,13 @@ class FakeArtistGame:
         order = state.get("turn_order", [])
         fake_id = random.choice(order) if order else None
         prompt = _draw_prompt(state.get("prompt_pool") or _load_prompt_pool())
+        _record_history(state)
         if order:
             current_start = int(state.get("game_start_index", 0)) % len(order)
             state["game_start_index"] = (current_start + 1) % len(order)
+        state["game_index"] = int(state.get("game_index") or 1) + 1
+        state["current_game_start_time"] = time.time()
+        state["current_game_end_time"] = None
         for pid, pdata in state.get("players", {}).items():
             pdata["role"] = "fake" if pid == fake_id else "real"
         state["fake_player_id"] = fake_id
@@ -401,7 +440,6 @@ class FakeArtistGame:
         state["winner_side"] = None
         state["last_vote_counts"] = None
         state["game_over"] = False
-        state["game_start_time"] = time.time()
         _start_drawing(state)
         return [{"type": "fake_artist:play_again"}], None
 
@@ -611,74 +649,86 @@ def build_memories_html(state: Dict, room_id: Optional[str] = None) -> str:
     ]
     config_section = section("Config", render_kv_table(config_rows))
 
-    prompt_section = section(
-        "Prompt",
-        render_kv_table(
-            [
-                ("Category", esc(state.get("category"), "-")),
-                ("Word", esc(state.get("word"), "-")),
-                ("Fake Artist ID", esc(state.get("fake_player_id"), "-")),
-            ]
-        ),
-    )
-
     canvas = state.get("canvas") or {}
     width = int(canvas.get("width") or CANVAS_WIDTH)
     height = int(canvas.get("height") or CANVAS_HEIGHT)
-    strokes = state.get("strokes", []) or []
-    drawing_url = _render_strokes_svg(strokes, width, height) if strokes else None
-    drawing_section = section("Final Drawing", render_image(drawing_url, alt="Final drawing"))
 
-    stroke_rows: List[List[str]] = []
-    for idx, stroke in enumerate(strokes, start=1):
-        pid = stroke.get("player_id")
-        meta = player_meta.get(pid, {})
-        mini_svg = _render_strokes_svg([stroke], width, height) if stroke.get("points") else None
-        stroke_rows.append(
-            [
-                esc(idx, "-"),
-                esc(pid, "-"),
-                esc(meta.get("name"), "-"),
-                esc(stroke.get("round"), "-"),
-                esc(stroke.get("color"), "-"),
-                render_image(mini_svg, alt="Stroke"),
-            ]
-        )
-    strokes_section = section(
-        "Strokes",
-        render_table(
+    entries: List[Dict] = []
+    history = state.get("history")
+    if isinstance(history, list):
+        entries.extend([entry for entry in history if isinstance(entry, dict)])
+    current_index = int(state.get("game_index") or (len(entries) + 1))
+    if not any(entry.get("index") == current_index for entry in entries):
+        entries.append(_snapshot_game(state, in_progress=not state.get("game_over")))
+    entries.sort(key=lambda entry: int(entry.get("index") or 0))
+
+    game_sections: List[str] = []
+    for entry in entries:
+        index = entry.get("index") or "?"
+        in_progress = bool(entry.get("in_progress"))
+        status = "In Progress" if in_progress else "Finished"
+        fake_id = entry.get("fake_player_id")
+        fake_name = player_meta.get(fake_id, {}).get("name") if fake_id else None
+        winner_side = entry.get("winner_side")
+        winner_label = "Real Artists" if winner_side == "real" else "Fake Artist" if winner_side == "fake" else "-"
+        summary_rows = [
+            ("Status", esc(status, status)),
+            ("Category", esc(entry.get("category"), "-")),
+            ("Word", esc(entry.get("word"), "-")),
+            ("Fake Artist", esc(fake_name or fake_id or "-", "-")),
+            ("Winner", esc(winner_label, "-")),
+            ("Vote Round", esc(entry.get("vote_round"), "-")),
+            ("Start Time", esc(format_timestamp(entry.get("start_time")), "-")),
+            ("End Time", esc(format_timestamp(entry.get("end_time")), "-")),
+        ]
+        summary_table = render_kv_table(summary_rows)
+
+        strokes = entry.get("strokes", []) or []
+        drawing_url = _render_strokes_svg(strokes, width, height) if strokes else None
+        drawing_block = render_image(drawing_url, alt="Final drawing")
+
+        stroke_rows: List[List[str]] = []
+        for idx, stroke in enumerate(strokes, start=1):
+            pid = stroke.get("player_id")
+            meta = player_meta.get(pid, {})
+            mini_svg = _render_strokes_svg([stroke], width, height) if stroke.get("points") else None
+            stroke_rows.append(
+                [
+                    esc(idx, "-"),
+                    esc(pid, "-"),
+                    esc(meta.get("name"), "-"),
+                    esc(stroke.get("round"), "-"),
+                    esc(stroke.get("color"), "-"),
+                    render_image(mini_svg, alt="Stroke"),
+                ]
+            )
+        strokes_table = render_table(
             ["#", "Player ID", "Name", "Round", "Color", "Stroke"],
             stroke_rows,
             empty_message="No strokes",
-        ),
-    )
+        )
 
-    result_rows = [
-        ("Winner Side", esc(state.get("winner_side"), "-")),
-        ("Vote Round", esc(state.get("vote_round"), "-")),
-    ]
-    result_section = section("Result", render_kv_table(result_rows))
+        vote_counts = entry.get("vote_counts") or {}
+        vote_rows = []
+        for pid in order:
+            meta = player_meta.get(pid, {})
+            vote_rows.append([esc(pid, "-"), esc(meta.get("name"), "-"), esc(vote_counts.get(pid, 0), "0")])
+        votes_table = render_table(["Player ID", "Name", "Votes"], vote_rows, empty_message="No votes")
 
-    vote_counts = state.get("last_vote_counts") or {}
-    vote_rows = []
-    for pid in order:
-        meta = player_meta.get(pid, {})
-        vote_rows.append([esc(pid, "-"), esc(meta.get("name"), "-"), esc(vote_counts.get(pid, 0), "0")])
-    votes_section = section(
-        "Vote Counts",
-        render_table(["Player ID", "Name", "Votes"], vote_rows, empty_message="No votes"),
-    )
+        body = (
+            summary_table
+            + section("Final Drawing", drawing_block)
+            + section("Strokes", strokes_table)
+            + section("Vote Counts", votes_table)
+        )
+        game_sections.append(section(f"Game {index}", body))
 
     body = "\n".join(
         header
         + [
             players_section,
             config_section,
-            prompt_section,
-            drawing_section,
-            strokes_section,
-            result_section,
-            votes_section,
         ]
+        + game_sections
     )
     return build_html_document("Fake Artist Memories", body)
