@@ -224,7 +224,7 @@ def _finish_voting(state: Dict) -> Tuple[List[Dict], Optional[str]]:
 
 class FakeArtistGame:
     game_id = "fake_artist"
-    min_players = 5
+    min_players = 4
     max_players = 10
 
     @staticmethod
