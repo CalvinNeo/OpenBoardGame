@@ -160,10 +160,11 @@ def _start_drawing(state: Dict) -> None:
     order = state.get("turn_order", [])
     state["phase"] = "draw"
     state["round"] = 1
-    state["round_start_index"] = 0
+    start_index = int(state.get("game_start_index", 0)) % len(order) if order else 0
+    state["round_start_index"] = start_index
     state["turn_step"] = 0
-    state["turn_index"] = 0
-    state["current_turn"] = order[0] if order else None
+    state["turn_index"] = start_index
+    state["current_turn"] = order[start_index] if order else None
     _set_turn_deadline(state)
 
 
@@ -188,7 +189,6 @@ def _advance_turn(state: Dict, skipped: bool = False) -> Optional[Dict]:
     if turn_step >= len(order):
         turn_step = 0
         current_round += 1
-        round_start_index = (round_start_index + 1) % len(order)
     if current_round > total_rounds:
         _start_voting(state)
         return {"type": "fake_artist:phase_vote"}
@@ -276,6 +276,7 @@ class FakeArtistGame:
             "category": prompt.get("category"),
             "word": prompt.get("word"),
             "fake_player_id": fake_id,
+            "game_start_index": 0,
             "player_meta": player_meta,
             "game_over": False,
             "winner_side": None,
@@ -386,6 +387,9 @@ class FakeArtistGame:
         order = state.get("turn_order", [])
         fake_id = random.choice(order) if order else None
         prompt = _draw_prompt(state.get("prompt_pool") or _load_prompt_pool())
+        if order:
+            current_start = int(state.get("game_start_index", 0)) % len(order)
+            state["game_start_index"] = (current_start + 1) % len(order)
         for pid, pdata in state.get("players", {}).items():
             pdata["role"] = "fake" if pid == fake_id else "real"
         state["fake_player_id"] = fake_id
