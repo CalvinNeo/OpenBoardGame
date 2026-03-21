@@ -53,7 +53,7 @@ const GANG_HELP_TEXT = `
   <ol>
     <li><strong>Preflop</strong>: everyone receives 2 hole cards. You may spend 1 token on <em>Mulligan</em> to redeal all hole cards.</li>
     <li><strong>Flop / Turn / River</strong>: everyone clicks Reveal Next to advance (3, then 1, then 1). After each reveal, adjust the ranking track.</li>
-    <li><strong>Ready & Lock In</strong>: on the river, each player clicks Ready. When all are ready, a short countdown starts and the order locks (a round timer can also auto-lock).</li>
+    <li><strong>Ready & Lock</strong>: on the river, each player clicks Ready. When all are ready, a short countdown starts and the order locks (a round timer can also auto-lock).</li>
     <li><strong>Showdown</strong>: all hole cards are revealed and the prediction is checked.</li>
   </ol>
 
@@ -86,10 +86,6 @@ const GANG_BUTTON_EXPLANATIONS = {
   gangReadyBtn: {
     name: "Ready / Cancel Ready",
     description: "Toggle your ready state. When all players are ready, a short countdown starts to lock in.",
-  },
-  gangLockBtn: {
-    name: "Lock In",
-    description: "Finalize the current ranking after the countdown or timer expires and proceed to showdown.",
   },
   gangMulliganBtn: {
     name: "Mulligan",
