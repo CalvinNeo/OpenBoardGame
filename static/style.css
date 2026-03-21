@@ -593,6 +593,24 @@ h1 {
   color: #b91c1c;
 }
 
+@media (max-width: 640px) {
+  .six-nimmt-row-header {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .six-nimmt-row-cards {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+
+  .six-nimmt-row-cards .six-nimmt-card {
+    width: calc((100% - 12px) / 3);
+    min-width: 0;
+    flex: 0 0 calc((100% - 12px) / 3);
+  }
+}
+
 .coyote-seat-1 {
   grid-area: 1 / 1;
 }
