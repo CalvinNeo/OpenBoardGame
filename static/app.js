@@ -121,6 +121,9 @@ function setGamePanelVisibility(gameType) {
   if (gangPanel) {
     gangPanel.classList.toggle("hidden", !showGang);
   }
+  if (typeof showGangHeaderActions === "function") {
+    showGangHeaderActions(showGang);
+  }
   if (mismatchPanel) {
     mismatchPanel.classList.toggle("hidden", !showMismatch);
   }

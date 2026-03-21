@@ -322,6 +322,24 @@ def _reset_ready(state: Dict) -> None:
         pdata["ready"] = False
 
 
+def _reset_reveal_ready(state: Dict) -> None:
+    for pdata in state.get("players", {}).values():
+        pdata["reveal_ready"] = False
+
+
+def _reveal_ready_all(state: Dict) -> bool:
+    return all(pdata.get("reveal_ready") for pdata in state.get("players", {}).values())
+
+
+def _reset_next_ready(state: Dict) -> None:
+    for pdata in state.get("players", {}).values():
+        pdata["next_ready"] = False
+
+
+def _next_ready_all(state: Dict) -> bool:
+    return all(pdata.get("next_ready") for pdata in state.get("players", {}).values())
+
+
 def _set_rank_default(state: Dict) -> None:
     state["ranking"] = list(state.get("turn_order", []))
 
@@ -373,6 +391,8 @@ def _start_round(state: Dict) -> None:
     state["discard"] = []
     state["community_cards"] = []
     _reset_ready(state)
+    _reset_reveal_ready(state)
+    _reset_next_ready(state)
     _set_rank_default(state)
     state["lock_at_ms"] = None
     state["river_deadline_ms"] = None
@@ -633,7 +653,9 @@ class TheGangGame:
         players_sorted = sorted(players, key=lambda p: p.get("seat", 0))
         player_ids = [p["player_id"] for p in players_sorted]
         player_meta = {p["player_id"]: p for p in players_sorted}
-        state_players = {pid: {"ready": False, "hole": []} for pid in player_ids}
+        state_players = {
+            pid: {"ready": False, "reveal_ready": False, "next_ready": False, "hole": []} for pid in player_ids
+        }
 
         state = {
             "players": state_players,
@@ -675,11 +697,13 @@ class TheGangGame:
         tokens = state.get("tokens", 0)
 
         if phase == "preflop":
-            actions.append("reveal_next")
+            if not state["players"][player_id].get("reveal_ready"):
+                actions.append("reveal_next")
             if tokens > 0:
                 actions.append("mulligan")
         elif phase in ("flop", "turn"):
-            actions.append("reveal_next")
+            if not state["players"][player_id].get("reveal_ready"):
+                actions.append("reveal_next")
             actions.append("move_rank")
             if tokens > 0:
                 actions.append("spy")
@@ -696,7 +720,8 @@ class TheGangGame:
             if isinstance(deadline, int) and deadline > 0 and now_ms >= deadline:
                 actions.append("lock_in")
         elif phase == "showdown":
-            actions.append("next_round")
+            if not state["players"][player_id].get("next_ready"):
+                actions.append("next_round")
 
         return actions
 
@@ -728,6 +753,13 @@ class TheGangGame:
 
         if action_type == "reveal_next":
             if phase == "preflop":
+                pdata = state["players"][player_id]
+                if pdata.get("reveal_ready"):
+                    return [], "already ready"
+                pdata["reveal_ready"] = True
+                if not _reveal_ready_all(state):
+                    return [], None
+                _reset_reveal_ready(state)
                 _deal_community(state, 3)
                 state["phase"] = "flop"
                 _update_hand_cache(state)
@@ -735,6 +767,13 @@ class TheGangGame:
                 events.append({"type": "gang:flop", "payload": {}})
                 return events, None
             if phase == "flop":
+                pdata = state["players"][player_id]
+                if pdata.get("reveal_ready"):
+                    return [], "already ready"
+                pdata["reveal_ready"] = True
+                if not _reveal_ready_all(state):
+                    return [], None
+                _reset_reveal_ready(state)
                 _deal_community(state, 1)
                 state["phase"] = "turn"
                 _update_hand_cache(state)
@@ -742,6 +781,13 @@ class TheGangGame:
                 events.append({"type": "gang:turn", "payload": {}})
                 return events, None
             if phase == "turn":
+                pdata = state["players"][player_id]
+                if pdata.get("reveal_ready"):
+                    return [], "already ready"
+                pdata["reveal_ready"] = True
+                if not _reveal_ready_all(state):
+                    return [], None
+                _reset_reveal_ready(state)
                 _deal_community(state, 1)
                 state["phase"] = "river"
                 _update_hand_cache(state)
@@ -815,6 +861,7 @@ class TheGangGame:
                 return [], "no tokens"
             state["tokens"] = state.get("tokens", 0) - 1
             state["round_tokens_spent"] = True
+            _reset_reveal_ready(state)
             for pdata in state.get("players", {}).values():
                 for card in pdata.get("hole", []):
                     state.setdefault("discard", []).append(card)
@@ -854,6 +901,13 @@ class TheGangGame:
                 return [], "invalid phase"
             if state.get("game_over"):
                 return [], "game over"
+            pdata = state["players"][player_id]
+            if pdata.get("next_ready"):
+                return [], None
+            pdata["next_ready"] = True
+            events.append({"type": "gang:next_ready", "payload": {"player_id": player_id}})
+            if not _next_ready_all(state):
+                return events, None
             _start_round(state)
             events.append({"type": "gang:next_round", "payload": {"level": state.get("level")}})
             return events, None
@@ -886,9 +940,11 @@ class TheGangGame:
                 "name": meta.get("name"),
                 "seat": meta.get("seat"),
                 "is_bot": meta.get("is_bot"),
-                "ready": pdata.get("ready", False),
-                "hand": hand_view,
-            }
+            "ready": pdata.get("ready", False),
+            "reveal_ready": pdata.get("reveal_ready", False),
+            "next_ready": pdata.get("next_ready", False),
+            "hand": hand_view,
+        }
             if pid == viewer_id:
                 if pid in hand_cache:
                     player_entry["hand_hint"] = {
@@ -942,6 +998,8 @@ class TheGangGame:
         phase = state.get("phase")
 
         if phase in ("preflop", "flop", "turn"):
+            if state["players"][bot_id].get("reveal_ready"):
+                return None
             return {"type": "reveal_next", "delay_ms": random.randint(400, 900)}
 
         if phase == "river":
@@ -950,6 +1008,8 @@ class TheGangGame:
             return None
 
         if phase == "showdown":
+            if state["players"][bot_id].get("next_ready"):
+                return None
             return {"type": "next_round", "delay_ms": random.randint(600, 1200)}
 
         return None

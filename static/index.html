@@ -452,6 +452,28 @@
     </div>
   </section>
 
+  <section id="gangHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content gang-help-modal">
+      <div class="modal-header">
+        <h2>The Gang - Game Rules</h2>
+        <button id="gangHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body gang-help-content" id="gangHelpContent"></div>
+    </div>
+  </section>
+
+  <section id="gangExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content gang-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="gangExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="gangExplainContent"></div>
+      </div>
+    </div>
+  </section>
+
   <section id="pokemonSplendorHelpModal" class="modal hidden" aria-hidden="true">
     <div class="modal-content pokemon-splendor-help-modal">
       <div class="modal-header">
@@ -858,6 +880,10 @@
             <div class="panel-header-actions" id="fakeArtistHeaderActions" style="display: none;">
               <button id="fakeArtistHelpBtn" class="fake-artist-header-btn" type="button">Help</button>
               <button id="fakeArtistExplainBtn" class="fake-artist-header-btn" type="button">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="gangHeaderActions" style="display: none;">
+              <button id="gangHelpBtn" class="gang-header-btn" type="button">Help</button>
+              <button id="gangExplainBtn" class="gang-header-btn" type="button">Explain</button>
             </div>
             <div class="panel-header-actions" id="pokemonSplendorHeaderActions" style="display: none;">
               <button id="pokemonSplendorHelpBtn" class="pokemon-splendor-header-btn" type="button">Help</button>

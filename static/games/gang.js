@@ -7,6 +7,16 @@ let gangLastDeadline = null;
 
 let currentGangView = null;
 
+const gangHeaderActions = document.getElementById("gangHeaderActions");
+const gangHelpBtn = document.getElementById("gangHelpBtn");
+const gangExplainBtn = document.getElementById("gangExplainBtn");
+const gangHelpModal = document.getElementById("gangHelpModal");
+const gangHelpModalCloseBtn = document.getElementById("gangHelpModalCloseBtn");
+const gangExplainModal = document.getElementById("gangExplainModal");
+const gangExplainModalCloseBtn = document.getElementById("gangExplainModalCloseBtn");
+const gangHelpContent = document.getElementById("gangHelpContent");
+const gangExplainContent = document.getElementById("gangExplainContent");
+
 const gangConfigBox = document.getElementById("gangConfigBox");
 const gangModeSelect = document.getElementById("gangModeSelect");
 const gangTimeSelect = document.getElementById("gangTimeSelect");
@@ -34,6 +44,78 @@ const gangRoundSummaryTitle = document.getElementById("gangRoundSummaryTitle");
 const gangRoundSummaryBody = document.getElementById("gangRoundSummaryBody");
 const gangRoundSummaryList = document.getElementById("gangRoundSummaryList");
 const gangPlayers = document.getElementById("gangPlayers");
+
+const GANG_HELP_TEXT = `
+  <h3>Goal</h3>
+  <p>Work together to order all players from strongest to weakest poker hand using only the public cards and your own hole cards. Clear levels before the team runs out of lives.</p>
+
+  <h3>Round Flow</h3>
+  <ol>
+    <li><strong>Preflop</strong>: everyone receives 2 hole cards. You may spend 1 token on <em>Mulligan</em> to redeal all hole cards.</li>
+    <li><strong>Flop / Turn / River</strong>: everyone clicks Reveal Next to advance (3, then 1, then 1). After each reveal, adjust the ranking track.</li>
+    <li><strong>Ready & Lock In</strong>: on the river, each player clicks Ready. When all are ready, a short countdown starts and the order locks (a round timer can also auto-lock).</li>
+    <li><strong>Showdown</strong>: all hole cards are revealed and the prediction is checked.</li>
+  </ol>
+
+  <h3>Lives, Tokens, Missions</h3>
+  <ul>
+    <li><strong>Lives</strong> are shared. A failed round costs 1 life and you replay the level; every 5 levels restores 1 life (up to the max).</li>
+    <li><strong>Tokens</strong> power <em>Mulligan</em> (preflop redeal) and <em>Spy</em> (reveal a random hole card). A perfect clear may award a token.</li>
+    <li><strong>Expert Mode</strong> adds a mission requirement shown under Mission.</li>
+  </ul>
+
+  <h3>Modes</h3>
+  <ul>
+    <li><strong>Novice</strong>: small placement errors are tolerated and your win odds are shown.</li>
+    <li><strong>Normal</strong>: exact order required (tied hands can be in any order).</li>
+    <li><strong>Expert</strong>: no hand hints, plus missions.</li>
+  </ul>
+
+  <h3>UI Tips</h3>
+  <ul>
+    <li>Ranking Track slots run from 1st (best) to last (worst). Use the dropdowns to assign players.</li>
+    <li>Your hand hint and highlighted best cards appear only outside Expert mode.</li>
+  </ul>
+`;
+
+const GANG_BUTTON_EXPLANATIONS = {
+  gangRevealBtn: {
+    name: "Reveal Next",
+    description: "Mark yourself ready to reveal. When all players click, the next community card(s) are revealed: flop (3), turn (1), river (1).",
+  },
+  gangReadyBtn: {
+    name: "Ready / Cancel Ready",
+    description: "Toggle your ready state. When all players are ready, a short countdown starts to lock in.",
+  },
+  gangLockBtn: {
+    name: "Lock In",
+    description: "Finalize the current ranking after the countdown or timer expires and proceed to showdown.",
+  },
+  gangMulliganBtn: {
+    name: "Mulligan",
+    description: "Spend 1 token to redeal all players' hole cards (preflop only).",
+  },
+  gangSpyTargetSelect: {
+    name: "Spy Target",
+    description: "Choose which player to reveal a random hole card from.",
+  },
+  gangSpyBtn: {
+    name: "Spy",
+    description: "Spend 1 token to reveal one random hole card from the selected player (public).",
+  },
+  gangRankingSlot: {
+    name: "Ranking Track",
+    description: "Assign each player to a position from strongest to weakest using the dropdowns.",
+  },
+  gangNextRoundBtn: {
+    name: "Next Round",
+    description: "Mark yourself ready for the next level. When everyone is ready, the next round starts.",
+  },
+  gangPlayAgainBtn: {
+    name: "Play Again",
+    description: "Restart the game after game over.",
+  },
+};
 
 function updateGangConfigRow() {
   const showRow = currentRoomState && currentGameType === "the_gang" && currentRoomState.status === "lobby";
@@ -202,6 +284,9 @@ function renderGangRanking(view) {
     }
     gangRanking.appendChild(row);
   });
+  if (gangExplainMode) {
+    updateGangExplainModeClasses(true);
+  }
 }
 
 function renderGangSpyTargets(view) {
@@ -246,10 +331,18 @@ function renderGangPlayers(view) {
     gangPlayers.textContent = "-";
     return;
   }
+  const phase = view.phase;
   players.forEach((player) => {
     const card = document.createElement("div");
     card.className = "gang-player-card";
-    if (player.ready) {
+    const showRevealReady = phase === "preflop" || phase === "flop" || phase === "turn";
+    const showNextReady = phase === "showdown";
+    const readyState = showRevealReady
+      ? !!player.reveal_ready
+      : showNextReady
+        ? !!player.next_ready
+        : !!player.ready;
+    if (readyState) {
       card.classList.add("ready");
     }
     if (player.player_id === view.you) {
@@ -262,7 +355,13 @@ function renderGangPlayers(view) {
 
     const status = document.createElement("div");
     status.className = "gang-badge";
-    status.textContent = player.ready ? "Ready" : "Not Ready";
+    if (showRevealReady) {
+      status.textContent = readyState ? "Reveal Ready" : "Not Ready";
+    } else if (showNextReady) {
+      status.textContent = readyState ? "Next Ready" : "Not Ready";
+    } else {
+      status.textContent = readyState ? "Ready" : "Not Ready";
+    }
     card.appendChild(status);
 
     const handRow = document.createElement("div");
@@ -395,10 +494,18 @@ function updateGangTimers(view) {
 
 function updateGangActionButtons(view) {
   const actions = view && Array.isArray(view.legal_actions) ? view.legal_actions : [];
+  const players = view && Array.isArray(view.players) ? view.players : [];
+  const youEntry = view ? players.find((p) => p.player_id === view.you) : null;
   if (gangRevealBtn) {
     const allowed = actions.includes("reveal_next");
-    gangRevealBtn.disabled = !allowed;
+    const alreadyReady = !!(youEntry && youEntry.reveal_ready);
+    gangRevealBtn.disabled = !allowed || alreadyReady;
     gangRevealBtn.classList.toggle("action-allowed", allowed);
+    if (allowed && youEntry) {
+      gangRevealBtn.textContent = alreadyReady ? "Reveal Ready" : "Reveal Next";
+    } else {
+      gangRevealBtn.textContent = "Reveal Next";
+    }
   }
   if (gangReadyBtn) {
     const allowed = actions.includes("toggle_ready");
@@ -426,8 +533,14 @@ function updateGangActionButtons(view) {
   }
   if (gangNextRoundBtn) {
     const allowed = actions.includes("next_round");
-    gangNextRoundBtn.disabled = !allowed;
+    const alreadyReady = !!(youEntry && youEntry.next_ready);
+    gangNextRoundBtn.disabled = !allowed || alreadyReady;
     gangNextRoundBtn.classList.toggle("action-allowed", allowed);
+    if (allowed && youEntry) {
+      gangNextRoundBtn.textContent = alreadyReady ? "Next Ready" : "Next Round";
+    } else {
+      gangNextRoundBtn.textContent = "Next Round";
+    }
   }
   if (gangPlayAgainBtn) {
     const allowed = actions.includes("play_again");
@@ -477,6 +590,182 @@ function renderGangGameState(data) {
   logGameEvents(data);
   updateGangActionButtons(view);
 }
+
+let gangExplainMode = false;
+
+function showGangHeaderActions(show) {
+  if (gangHeaderActions) {
+    gangHeaderActions.style.display = show ? "flex" : "none";
+  }
+  if (!show) {
+    exitGangExplainMode();
+    closeGangHelpModal();
+    closeGangExplainModal();
+  }
+}
+
+function showGangHelpModal() {
+  if (!gangHelpModal) {
+    return;
+  }
+  if (gangHelpContent) {
+    gangHelpContent.innerHTML = GANG_HELP_TEXT;
+  }
+  setModalVisible(gangHelpModal, true);
+}
+
+function closeGangHelpModal() {
+  if (gangHelpModal) {
+    setModalVisible(gangHelpModal, false);
+  }
+}
+
+function updateGangExplainModeClasses(enabled) {
+  Object.keys(GANG_BUTTON_EXPLANATIONS).forEach((buttonId) => {
+    if (buttonId === "gangRankingSlot") {
+      return;
+    }
+    const btn = document.getElementById(buttonId);
+    if (btn) {
+      btn.classList.toggle("has-explanation", enabled);
+    }
+  });
+  document.querySelectorAll("#gangRanking select").forEach((select) => {
+    select.classList.toggle("has-explanation", enabled);
+  });
+}
+
+function findGangButtonAtPoint(x, y) {
+  for (const buttonId of Object.keys(GANG_BUTTON_EXPLANATIONS)) {
+    if (buttonId === "gangRankingSlot") {
+      continue;
+    }
+    const btn = document.getElementById(buttonId);
+    if (!btn) continue;
+    const rect = btn.getBoundingClientRect();
+    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+      return buttonId;
+    }
+  }
+  const rankSelects = Array.from(document.querySelectorAll("#gangRanking select"));
+  for (const select of rankSelects) {
+    const rect = select.getBoundingClientRect();
+    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+      return "gangRankingSlot";
+    }
+  }
+  return null;
+}
+
+function toggleGangExplainMode() {
+  gangExplainMode = !gangExplainMode;
+  document.body.classList.toggle("gang-explain-mode", gangExplainMode);
+  updateGangExplainModeClasses(gangExplainMode);
+  if (gangExplainBtn) {
+    gangExplainBtn.classList.toggle("active", gangExplainMode);
+  }
+}
+
+function exitGangExplainMode() {
+  if (!gangExplainMode) {
+    return;
+  }
+  gangExplainMode = false;
+  document.body.classList.remove("gang-explain-mode");
+  updateGangExplainModeClasses(false);
+  if (gangExplainBtn) {
+    gangExplainBtn.classList.remove("active");
+  }
+}
+
+function showGangButtonExplanation(buttonId) {
+  const explanation = GANG_BUTTON_EXPLANATIONS[buttonId];
+  if (!explanation || !gangExplainContent || !gangExplainModal) {
+    return;
+  }
+  const note = explanation.note ? `<div class="hint">${explanation.note}</div>` : "";
+  gangExplainContent.innerHTML = `
+    <h4>${explanation.name}</h4>
+    <p>${explanation.description}</p>
+    ${note}
+  `;
+  setModalVisible(gangExplainModal, true);
+}
+
+function closeGangExplainModal() {
+  if (gangExplainModal) {
+    setModalVisible(gangExplainModal, false);
+  }
+}
+
+if (gangHelpBtn) {
+  gangHelpBtn.addEventListener("click", () => {
+    showGangHelpModal();
+  });
+}
+
+if (gangHelpModalCloseBtn) {
+  gangHelpModalCloseBtn.addEventListener("click", closeGangHelpModal);
+}
+
+if (gangExplainBtn) {
+  gangExplainBtn.addEventListener("click", () => {
+    toggleGangExplainMode();
+  });
+}
+
+if (gangExplainModalCloseBtn) {
+  gangExplainModalCloseBtn.addEventListener("click", closeGangExplainModal);
+}
+
+document.addEventListener(
+  "pointerdown",
+  (e) => {
+    if (!gangExplainMode) return;
+
+    const buttonId = findGangButtonAtPoint(e.clientX, e.clientY);
+    if (buttonId) {
+      e.preventDefault();
+      e.stopPropagation();
+      showGangButtonExplanation(buttonId);
+      exitGangExplainMode();
+      return;
+    }
+
+    const button = e.target.closest("button");
+    if (button === gangExplainBtn || button === gangHelpBtn) return;
+    if (button === gangHelpModalCloseBtn || button === gangExplainModalCloseBtn) return;
+
+    if (button) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  },
+  true
+);
+
+document.addEventListener(
+  "click",
+  (e) => {
+    if (!gangExplainMode) return;
+
+    const button = e.target.closest("button");
+    if (!button) return;
+
+    if (button === gangExplainBtn || button === gangHelpBtn) return;
+    if (button === gangHelpModalCloseBtn || button === gangExplainModalCloseBtn) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+  },
+  true
+);
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && gangExplainMode) {
+    exitGangExplainMode();
+  }
+});
 
 if (gangRevealBtn) {
   gangRevealBtn.addEventListener("click", () => {
