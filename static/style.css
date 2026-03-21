@@ -20,6 +20,12 @@ body {
   padding: 16px;
 }
 
+@media (min-width: 1400px) {
+  .container {
+    max-width: 1600px;
+  }
+}
+
 h1 {
   margin-top: 0;
 }
@@ -8694,8 +8700,9 @@ body.pokemon-splendor-explain-mode button.has-explanation:hover {
 
 .istanbul-main {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr) 280px;
   gap: 16px;
+  align-items: start;
 }
 
 .istanbul-board-wrap {
@@ -8703,6 +8710,7 @@ body.pokemon-splendor-explain-mode button.has-explanation:hover {
   border: 1px solid var(--bazaar-border);
   border-radius: 16px;
   padding: 12px;
+  position: relative;
 }
 
 .istanbul-board-header {
@@ -8716,6 +8724,67 @@ body.pokemon-splendor-explain-mode button.has-explanation:hover {
 .istanbul-hint {
   font-size: 12px;
   color: #6b7280;
+}
+
+.istanbul-board-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
+
+.istanbul-board-toggle {
+  border: 1px solid #e2d5be;
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: #fff7ea;
+  color: #854d0e;
+  font-size: 12px;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.1s ease;
+}
+
+.istanbul-board-toggle:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+}
+
+.istanbul-board-toggle.active {
+  background: var(--bazaar-teal);
+  border-color: var(--bazaar-teal);
+  color: #f0fdfa;
+}
+
+.istanbul-board-stage {
+  position: relative;
+}
+
+.istanbul-overlay-layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 10px;
+  gap: 10px;
+  border-radius: 12px;
+  z-index: 5;
+}
+
+.istanbul-overlay-layer.hidden {
+  display: none;
+}
+
+.istanbul-overlay-card {
+  background: #fffdf7;
+  border: 1px solid var(--bazaar-border);
+  border-radius: 12px;
+  padding: 10px;
+  width: min(320px, 90%);
+  max-height: 100%;
+  overflow-y: auto;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
 }
 
 .istanbul-board {
@@ -8842,14 +8911,9 @@ body.pokemon-splendor-explain-mode button.has-explanation:hover {
 }
 
 .istanbul-side {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  align-items: start;
-}
-
-.istanbul-side .istanbul-card:first-child {
-  grid-column: 1 / -1;
 }
 
 .istanbul-card {
@@ -8857,6 +8921,29 @@ body.pokemon-splendor-explain-mode button.has-explanation:hover {
   border: 1px solid var(--bazaar-border);
   border-radius: 14px;
   padding: 12px;
+}
+
+.istanbul-action-card {
+  padding: 10px;
+}
+
+.istanbul-action-card h3 {
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+.istanbul-action-card .istanbul-hint {
+  margin-bottom: 6px;
+  font-size: 11px;
+}
+
+.istanbul-action-card .istanbul-controls {
+  gap: 8px;
+}
+
+.istanbul-action-card .istanbul-btn {
+  padding: 5px 10px;
+  font-size: 11px;
 }
 
 .istanbul-mosques {
@@ -9222,8 +9309,12 @@ body.istanbul-explain-mode .istanbul-mosque-rubies.has-explanation:hover {
 }
 
 @media (max-width: 900px) {
-  .istanbul-side {
+  .istanbul-main {
     grid-template-columns: 1fr;
+  }
+
+  .istanbul-side {
+    width: 100%;
   }
 
   .istanbul-board {

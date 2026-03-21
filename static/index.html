@@ -1009,12 +1009,33 @@
                     <h3>Board</h3>
                     <div id="istanbulTurnHint" class="istanbul-hint">-</div>
                   </div>
-                  <div id="istanbulBoard" class="istanbul-board"></div>
-                  <div id="istanbulPathHint" class="istanbul-path-hint"></div>
+                  <div class="istanbul-board-tools">
+                    <button id="istanbulMarketsToggle" class="istanbul-board-toggle" type="button" aria-expanded="false">Markets 🛒</button>
+                    <button id="istanbulMosquesToggle" class="istanbul-board-toggle" type="button" aria-expanded="false">Mosques 🕌</button>
+                    <button id="istanbulPostOfficeToggle" class="istanbul-board-toggle" type="button" aria-expanded="false">Post Office 📮</button>
+                  </div>
+                  <div class="istanbul-board-stage">
+                    <div id="istanbulBoard" class="istanbul-board"></div>
+                    <div id="istanbulPathHint" class="istanbul-path-hint"></div>
+                    <div id="istanbulBoardOverlays" class="istanbul-overlay-layer hidden" aria-hidden="true">
+                      <div id="istanbulMarketsOverlay" class="istanbul-overlay-card hidden" data-istanbul-overlay="markets">
+                        <h3>Markets 🛒</h3>
+                        <div id="istanbulMarkets" class="istanbul-markets"></div>
+                      </div>
+                      <div id="istanbulMosquesOverlay" class="istanbul-overlay-card hidden" data-istanbul-overlay="mosques">
+                        <h3>Mosques 🕌</h3>
+                        <div id="istanbulMosques" class="istanbul-mosques"></div>
+                      </div>
+                      <div id="istanbulPostOfficeOverlay" class="istanbul-overlay-card hidden" data-istanbul-overlay="post">
+                        <h3>Post Office 📮</h3>
+                        <div id="istanbulPostOffice" class="istanbul-post-office"></div>
+                      </div>
+                    </div>
+                  </div>
                 </section>
 
                 <section class="istanbul-side">
-                  <div class="istanbul-card">
+                  <div class="istanbul-card istanbul-action-card">
                     <h3>Action Center</h3>
                     <div id="istanbulActionHint" class="istanbul-hint">-</div>
                     <div id="istanbulActionControls" class="istanbul-controls"></div>
@@ -1028,21 +1049,6 @@
                   <div class="istanbul-card">
                     <h3>Bonus Cards 🎴</h3>
                     <div id="istanbulBonusHand" class="istanbul-bonus-hand"></div>
-                  </div>
-
-                  <div class="istanbul-card">
-                    <h3>Markets 🛒</h3>
-                    <div id="istanbulMarkets" class="istanbul-markets"></div>
-                  </div>
-
-                  <div class="istanbul-card">
-                    <h3>Mosques 🕌</h3>
-                    <div id="istanbulMosques" class="istanbul-mosques"></div>
-                  </div>
-
-                  <div class="istanbul-card">
-                    <h3>Post Office 📮</h3>
-                    <div id="istanbulPostOffice" class="istanbul-post-office"></div>
                   </div>
 
                   <div class="istanbul-card">

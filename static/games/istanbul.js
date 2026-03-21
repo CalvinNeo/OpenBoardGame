@@ -14,6 +14,13 @@ const istanbulYou = document.getElementById("istanbulYou");
 const istanbulMarkets = document.getElementById("istanbulMarkets");
 const istanbulMosques = document.getElementById("istanbulMosques");
 const istanbulPostOffice = document.getElementById("istanbulPostOffice");
+const istanbulMarketsToggle = document.getElementById("istanbulMarketsToggle");
+const istanbulMosquesToggle = document.getElementById("istanbulMosquesToggle");
+const istanbulPostOfficeToggle = document.getElementById("istanbulPostOfficeToggle");
+const istanbulBoardOverlays = document.getElementById("istanbulBoardOverlays");
+const istanbulMarketsOverlay = document.getElementById("istanbulMarketsOverlay");
+const istanbulMosquesOverlay = document.getElementById("istanbulMosquesOverlay");
+const istanbulPostOfficeOverlay = document.getElementById("istanbulPostOfficeOverlay");
 
 const istanbulHeaderActions = document.getElementById("istanbulHeaderActions");
 const istanbulHelpBtn = document.getElementById("istanbulHelpBtn");
@@ -263,6 +270,7 @@ let currentIstanbulView = null;
 let istanbulExplainMode = false;
 let istanbulLastPhase = null;
 let istanbulLastTurn = null;
+let istanbulActiveOverlay = null;
 
 const istanbulSelections = {
   path: [],
@@ -302,11 +310,50 @@ function resetIstanbulSelections() {
   istanbulSelections.fountainReturns = new Set();
 }
 
+const ISTANBUL_OVERLAYS = {
+  markets: { button: istanbulMarketsToggle, panel: istanbulMarketsOverlay },
+  mosques: { button: istanbulMosquesToggle, panel: istanbulMosquesOverlay },
+  post: { button: istanbulPostOfficeToggle, panel: istanbulPostOfficeOverlay },
+};
+
+function setIstanbulOverlay(name) {
+  if (!istanbulBoardOverlays) return;
+  const next = name || null;
+  istanbulActiveOverlay = next;
+  const isOpen = Boolean(next);
+  istanbulBoardOverlays.classList.toggle("hidden", !isOpen);
+  istanbulBoardOverlays.setAttribute("aria-hidden", (!isOpen).toString());
+  Object.entries(ISTANBUL_OVERLAYS).forEach(([key, entry]) => {
+    const show = key === next;
+    if (entry.panel) entry.panel.classList.toggle("hidden", !show);
+    if (entry.button) {
+      entry.button.classList.toggle("active", show);
+      entry.button.setAttribute("aria-expanded", show.toString());
+    }
+  });
+}
+
+function toggleIstanbulOverlay(name) {
+  if (!istanbulBoardOverlays) return;
+  if (istanbulActiveOverlay === name) {
+    setIstanbulOverlay(null);
+    return;
+  }
+  setIstanbulOverlay(name);
+}
+
+function closeIstanbulOverlays() {
+  if (!istanbulActiveOverlay) return false;
+  setIstanbulOverlay(null);
+  return true;
+}
+
 function clearIstanbulState() {
   currentIstanbulView = null;
   istanbulLastPhase = null;
   istanbulLastTurn = null;
   resetIstanbulSelections();
+  closeIstanbulOverlays();
   if (istanbulPhaseLabel) istanbulPhaseLabel.textContent = "-";
   if (istanbulTurnLabel) istanbulTurnLabel.textContent = "-";
   if (istanbulMoveModeLabel) istanbulMoveModeLabel.textContent = "-";
@@ -347,6 +394,9 @@ function updateIstanbulExplainClasses(enabled) {
     if (btn) {
       btn.classList.toggle("has-explanation", enabled);
     }
+  });
+  document.querySelectorAll(".istanbul-tile").forEach((node) => {
+    node.classList.toggle("has-explanation", enabled);
   });
   document.querySelectorAll(".istanbul-mosque-rubies").forEach((node) => {
     node.classList.toggle("has-explanation", enabled);
@@ -1726,6 +1776,26 @@ if (istanbulExplainModalCloseBtn) {
   istanbulExplainModalCloseBtn.addEventListener("click", closeIstanbulExplainModal);
 }
 
+if (istanbulMarketsToggle) {
+  istanbulMarketsToggle.addEventListener("click", () => toggleIstanbulOverlay("markets"));
+}
+
+if (istanbulMosquesToggle) {
+  istanbulMosquesToggle.addEventListener("click", () => toggleIstanbulOverlay("mosques"));
+}
+
+if (istanbulPostOfficeToggle) {
+  istanbulPostOfficeToggle.addEventListener("click", () => toggleIstanbulOverlay("post"));
+}
+
+if (istanbulBoardOverlays) {
+  istanbulBoardOverlays.addEventListener("click", (event) => {
+    if (event.target.closest(".istanbul-overlay-card")) return;
+    closeIstanbulOverlays();
+    event.stopPropagation();
+  });
+}
+
 if (istanbulGamePanel) {
   istanbulGamePanel.addEventListener("click", (event) => {
     if (
@@ -1733,6 +1803,7 @@ if (istanbulGamePanel) {
       event.target.closest("input") ||
       event.target.closest("select") ||
       event.target.closest("textarea") ||
+      event.target.closest(".istanbul-overlay-card") ||
       event.target.closest(".istanbul-tile")
     ) {
       return;
@@ -1801,6 +1872,10 @@ if (document) {
 
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
+      if (closeIstanbulOverlays()) {
+        e.preventDefault();
+        return;
+      }
       if (istanbulExplainMode) {
         exitIstanbulExplainMode();
         return;
