@@ -603,6 +603,40 @@ function clearSelectionIfNeeded(view) {
   istanbulLastTurn = view.current_player;
 }
 
+function appendActionNote(text) {
+  if (!istanbulActionControls || !text) return;
+  const note = document.createElement("div");
+  note.className = "istanbul-action-note";
+  note.textContent = text;
+  istanbulActionControls.appendChild(note);
+}
+
+function canPaySultanCost(goods, cost) {
+  if (!cost || !goods) return false;
+  let surplus = 0;
+  for (const color of GOODS) {
+    const need = cost[color] || 0;
+    const have = goods[color] || 0;
+    if (have < need) return false;
+    surplus += have - need;
+  }
+  return surplus >= (cost.any || 0);
+}
+
+function formatSultanCost(cost) {
+  if (!cost) return "";
+  const parts = [];
+  GOODS.forEach((color) => {
+    if (cost[color]) {
+      parts.push(`${cost[color]}${GOOD_LABELS[color]}`);
+    }
+  });
+  if (cost.any) {
+    parts.push(`${cost.any} any`);
+  }
+  return parts.join(" ");
+}
+
 function renderIstanbulGameState(data) {
   const view = data.view || {};
   currentIstanbulView = view;
@@ -1299,6 +1333,12 @@ function renderPlaceActionControls(view) {
 
   if (placeType === "wainwright") {
     const canPay = viewer.lira >= 7 && viewer.capacity < 5;
+    if (!canPay) {
+      const reasons = [];
+      if (viewer.lira < 7) reasons.push("Need 7 Lira💰.");
+      if (viewer.capacity >= 5) reasons.push("Cart📦 already at max (5).");
+      appendActionNote(reasons.join(" "));
+    }
     const btn = buildButton("Upgrade Cart📦 (7 Lira💰)", "istanbulActionBtn", () => sendAction({ type: "location_action" }), "primary", !canPay);
     istanbulActionControls.appendChild(btn);
   } else if (placeType === "warehouse") {
@@ -1321,9 +1361,20 @@ function renderPlaceActionControls(view) {
   } else if (placeType === "police_station") {
     renderPoliceControls(view);
   } else if (placeType === "sultan_palace") {
+    const idx = Number.isInteger(view.sultan_index) ? view.sultan_index : 0;
+    const cost = Array.isArray(view.sultan_costs) ? view.sultan_costs[idx] : null;
+    if (!canPaySultanCost(viewer.goods || {}, cost)) {
+      const costText = formatSultanCost(cost);
+      appendActionNote(costText ? `Need ${costText} to buy a Ruby💎.` : "Not enough goods to buy a Ruby💎.");
+    }
     const btn = buildButton("Buy Ruby💎", "istanbulActionBtn", () => sendAction({ type: "location_action" }), "primary");
     istanbulActionControls.appendChild(btn);
   } else if (placeType === "gemstone_dealer") {
+    const idx = Number.isInteger(view.gem_index) ? view.gem_index : 0;
+    const cost = Array.isArray(view.gem_costs) ? view.gem_costs[idx] : null;
+    if (Number.isInteger(cost) && viewer.lira < cost) {
+      appendActionNote(`Need ${cost} Lira💰 to buy a Ruby💎.`);
+    }
     const btn = buildButton("Buy Ruby💎", "istanbulActionBtn", () => sendAction({ type: "location_action" }), "primary");
     istanbulActionControls.appendChild(btn);
   } else if (placeType === "small_mosque" || placeType === "great_mosque") {
@@ -1484,6 +1535,7 @@ function renderTeaHouseControls(view, isFamily) {
 }
 
 function renderMarketControls(view, placeType, isFamily) {
+  const viewer = getViewer(view);
   const marketKey = placeType === "market_large" ? "market_large" : "market_small";
   const market = view[marketKey] || {};
   const demand = market.current ? market.current.goods || {} : {};
@@ -1518,7 +1570,6 @@ function renderMarketControls(view, placeType, isFamily) {
     const plus = document.createElement("button");
     plus.type = "button";
     plus.className = "istanbul-good-btn";
-    const viewer = getViewer(view);
     const maxByGoods = viewer ? viewer.goods[color] || 0 : 0;
     const maxByReq = allowWild ? maxByGoods : Math.min(maxByGoods, demand[color] || 0);
     const total = GOODS.reduce((sum, g) => sum + (istanbulSelections.marketGoods[g] || 0), 0);
@@ -1544,6 +1595,21 @@ function renderMarketControls(view, placeType, isFamily) {
     istanbulActionControls.appendChild(summary);
   }
   if (!isFamily) {
+    if (total <= 0) {
+      const goodsTotal = viewer ? GOODS.reduce((sum, g) => sum + (viewer.goods[g] || 0), 0) : 0;
+      if (!goodsTotal) {
+        appendActionNote("No goods available to sell.");
+      } else if (!allowWild) {
+        const matchesDemand = GOODS.some((color) => (demand[color] || 0) > 0 && (viewer.goods[color] || 0) > 0);
+        if (!matchesDemand) {
+          appendActionNote("No goods match the current demand.");
+        } else {
+          appendActionNote("Select goods to sell.");
+        }
+      } else {
+        appendActionNote("Select goods to sell.");
+      }
+    }
     const sellBtn = buildButton("Sell Goods 🔴/🟢/🟡/🔵", "istanbulActionBtn", () => {
       sendAction({ type: "location_action", goods: { ...istanbulSelections.marketGoods } });
     }, "primary", total <= 0 || total > 5);
@@ -1557,10 +1623,12 @@ function renderMosqueControls(view, placeType, isFamily) {
   const row = document.createElement("div");
   row.className = "istanbul-control-row";
   const options = placeType === "small_mosque" ? ["red", "green"] : ["yellow", "blue"];
+  let anyAvailable = false;
   options.forEach((color) => {
     const available = view.mosques && view.mosques[mosqueKey] ? view.mosques[mosqueKey][color] : true;
     const hasGood = viewer && viewer.goods ? viewer.goods[color] > 0 : false;
     const disabled = !available || !hasGood;
+    if (!disabled) anyAvailable = true;
     const btn = buildButton(GOOD_LABELS[color], `istanbulMosque${color}Btn`, () => {
       istanbulSelections.mosqueColor = color;
       if (!isFamily) {
@@ -1570,6 +1638,9 @@ function renderMosqueControls(view, placeType, isFamily) {
     row.appendChild(btn);
   });
   istanbulActionControls.appendChild(row);
+  if (!isFamily && !anyAvailable) {
+    appendActionNote("Need 1 matching good and an available mosque tile.");
+  }
 }
 
 function renderBonusPlay(view) {

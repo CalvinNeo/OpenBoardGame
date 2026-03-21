@@ -1249,6 +1249,42 @@
               <div id="kobayakawaPlayers"></div>
             </div>
 
+            <div id="manilaPanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="manilaPhase">-</span></div>
+                <div>Round: <span id="manilaRound">-</span></div>
+                <div>Current: <span id="manilaCurrent">-</span></div>
+              </div>
+              <div class="row">
+                <div>Harbormaster: <span id="manilaHarbor">-</span></div>
+                <div>Bid: <span id="manilaHarborBid">-</span></div>
+              </div>
+              <div class="row">
+                <div>Prices: <span id="manilaPrices">-</span></div>
+              </div>
+
+              <h3>Boats</h3>
+              <div id="manilaBoats" class="manila-grid"></div>
+
+              <h3>Board</h3>
+              <div id="manilaBoard" class="manila-grid"></div>
+
+              <h3>Players</h3>
+              <div id="manilaPlayers" class="manila-grid"></div>
+
+              <h3>Actions</h3>
+              <div class="row actions">
+                <select id="manilaActionType"></select>
+                <button id="manilaActionSendBtn">Send</button>
+              </div>
+              <div class="row">
+                <textarea id="manilaActionPayload" class="manila-action-payload" rows="4" placeholder="Action payload JSON"></textarea>
+              </div>
+              <div class="row">
+                <div>Legal actions: <span id="manilaLegalActions">-</span></div>
+              </div>
+            </div>
+
             <div id="skullPanel" class="hidden">
               <div class="row">
                 <div>Phase: <span id="skullPhase">-</span></div>
@@ -2860,6 +2896,7 @@
   <script src="/static/games/age_of_war.js?v=app_v1"></script>
   <script src="/static/games/wandering_towers.js?v=app_v1"></script>
   <script src="/static/games/incan_gold.js?v=app_v1"></script>
+  <script src="/static/games/manila.js?v=app_v1"></script>
   <script src="/static/games/kobayakawa.js?v=app_v1"></script>
   <script src="/static/app.js?v=app_v1"></script>
   <script src="/static/room.js?v=app_v1"></script>

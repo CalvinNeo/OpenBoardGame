@@ -163,6 +163,9 @@ function renderRoomState(state) {
     clearHanabiState();
     clearTexasHoldemState();
     clearSixNimmtState();
+    if (typeof clearManilaState === "function") {
+      clearManilaState();
+    }
   }
   setGamePanelVisibility(currentGameType);
   updateDrawGuessLanguageRow();

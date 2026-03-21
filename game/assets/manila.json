@@ -1,0 +1,49 @@
+{
+  "cargo_list": ["nutmeg", "silk", "ginseng", "jade"],
+  "cargo": {
+    "nutmeg": {
+      "id": "nutmeg",
+      "name": "Nutmeg",
+      "color": "brown",
+      "total_value": 24,
+      "seat_costs": [2, 3, 4]
+    },
+    "silk": {
+      "id": "silk",
+      "name": "Silk",
+      "color": "yellow",
+      "total_value": 18,
+      "seat_costs": [1, 2, 3]
+    },
+    "ginseng": {
+      "id": "ginseng",
+      "name": "Ginseng",
+      "color": "green",
+      "total_value": 36,
+      "seat_costs": [3, 4, 5, 5]
+    },
+    "jade": {
+      "id": "jade",
+      "name": "Jade",
+      "color": "blue",
+      "total_value": 30,
+      "seat_costs": [3, 4, 5]
+    }
+  },
+  "board": {
+    "port": {
+      "A": {"place_cost": 4, "payout": 6},
+      "B": {"place_cost": 3, "payout": 8},
+      "C": {"place_cost": 2, "payout": 15}
+    },
+    "shipyard": {
+      "A": {"place_cost": 4, "payout": 6},
+      "B": {"place_cost": 3, "payout": 8},
+      "C": {"place_cost": 2, "payout": 15}
+    },
+    "pirates": {"place_cost": 5, "slots": ["captain", "pirate"]},
+    "pilots": {"small_cost": 2, "big_cost": 5},
+    "insurance": {"place_cost": 0, "immediate_gain": 10, "per_ship_cost": 10}
+  },
+  "price_track": [0, 5, 10, 20, 30]
+}

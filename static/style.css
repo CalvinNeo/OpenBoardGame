@@ -9064,6 +9064,15 @@ body.pokemon-splendor-explain-mode button.has-explanation:hover {
   gap: 10px;
 }
 
+.istanbul-action-note {
+  font-size: 11px;
+  color: #92400e;
+  background: #fff7ed;
+  border: 1px dashed #f59e0b;
+  border-radius: 10px;
+  padding: 6px 8px;
+}
+
 .istanbul-control-row {
   display: flex;
   flex-wrap: wrap;
@@ -9378,4 +9387,39 @@ body.istanbul-explain-mode .istanbul-mosque-rubies.has-explanation:hover {
 #pokemonSplendorExplainContent p {
   margin: 6px 0;
   color: #374151;
+}
+
+.manila-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.manila-card {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  background: #f8fafc;
+}
+
+.manila-card-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.manila-card-line {
+  font-size: 13px;
+  color: #374151;
+}
+
+.manila-empty {
+  color: #6b7280;
+  font-style: italic;
+}
+
+.manila-action-payload {
+  width: 100%;
+  min-height: 90px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
 }

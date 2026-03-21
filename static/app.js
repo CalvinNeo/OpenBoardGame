@@ -19,6 +19,7 @@ const goldRushPanel = document.getElementById("goldRushPanel");
 const incanGoldPanel = document.getElementById("incanGoldPanel");
 const ageOfWarPanel = document.getElementById("ageOfWarPanel");
 const kobayakawaPanel = document.getElementById("kobayakawaPanel");
+const manilaPanel = document.getElementById("manilaPanel");
 const skullPanel = document.getElementById("skullPanel");
 const mismatchPanel = document.getElementById("mismatchPanel");
 const coyotePanel = document.getElementById("coyotePanel");
@@ -44,6 +45,7 @@ function setGamePanelVisibility(gameType) {
   const showAgeOfWar = gameType === "age_of_war";
   const showWanderingTowers = gameType === "wandering_towers";
   const showKobayakawa = gameType === "kobayakawa";
+  const showManila = gameType === "manila";
   const showSkull = gameType === "skull";
   const showCatInBox = gameType === "cat_in_box";
   const showHanabi = gameType === "hanabi";
@@ -107,6 +109,9 @@ function setGamePanelVisibility(gameType) {
   }
   if (kobayakawaPanel) {
     kobayakawaPanel.classList.toggle("hidden", !showKobayakawa);
+  }
+  if (manilaPanel) {
+    manilaPanel.classList.toggle("hidden", !showManila);
   }
   skullPanel.classList.toggle("hidden", !showSkull);
   if (catInBoxPanel) {
@@ -318,6 +323,10 @@ function renderGameState(data) {
   }
   if (gameType === "kobayakawa") {
     renderKobayakawaGameState(data);
+    return;
+  }
+  if (gameType === "manila") {
+    renderManilaGameState(data);
     return;
   }
   if (gameType === "skull") {

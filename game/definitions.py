@@ -18,6 +18,7 @@ from game.impression_flower import ImpressionFlowerGame
 from game.incan_gold import IncanGoldGame
 from game.istanbul import IstanbulGame
 from game.kobayakawa import KobayakawaGame
+from game.manila import ManilaGame
 from game.perfect_mismatch import PerfectMismatchGame
 from game.point_salad import PointSaladGame
 from game.project_l import ProjectLGame
@@ -1623,6 +1624,105 @@ WORD_DECODE_ACTION_SCHEMA = {
 
 WORD_DECODE_CONFIG_SCHEMA = {"type": "object", "properties": {}, "additionalProperties": False}
 
+MANILA_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {"type": {"const": "bid"}, "amount": {"type": "integer", "minimum": 1}},
+            "required": ["type", "amount"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "pass_bid"}}, "required": ["type"], "additionalProperties": False},
+        {
+            "type": "object",
+            "properties": {"type": {"const": "buy_stock"}, "cargo": {"type": "string"}},
+            "required": ["type", "cargo"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "pay_bid"}}, "required": ["type"], "additionalProperties": False},
+        {"type": "object", "properties": {"type": {"const": "skip_buy"}}, "required": ["type"], "additionalProperties": False},
+        {
+            "type": "object",
+            "properties": {"type": {"const": "select_cargo"}, "cargo": {"type": "array", "items": {"type": "string"}, "minItems": 3, "maxItems": 3},
+            },
+            "required": ["type", "cargo"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "set_positions"},
+                "positions": {"type": "array", "items": {"type": "integer", "minimum": 0, "maximum": 13}, "minItems": 3, "maxItems": 3},
+            },
+            "required": ["type", "positions"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "place_worker"},
+                "location": {"type": "object"},
+            },
+            "required": ["type", "location"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "pass"}}, "required": ["type"], "additionalProperties": False},
+        {
+            "type": "object",
+            "properties": {"type": {"const": "pledge_stock"}, "cargo": {"type": "string"}},
+            "required": ["type", "cargo"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "pilot_move"},
+                "size": {"type": "string", "enum": ["small", "big"]},
+                "cargo": {"type": "string"},
+                "delta": {"type": "integer", "minimum": -2, "maximum": 2},
+            },
+            "required": ["type", "size", "cargo", "delta"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "pilot_split"},
+                "size": {"type": "string", "enum": ["big"]},
+                "cargo_a": {"type": "string"},
+                "cargo_b": {"type": "string"},
+                "delta_a": {"type": "integer", "minimum": -1, "maximum": 1},
+                "delta_b": {"type": "integer", "minimum": -1, "maximum": 1},
+            },
+            "required": ["type", "size", "cargo_a", "cargo_b", "delta_a", "delta_b"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "pirate_action"},
+                "mode": {"type": "string", "enum": ["board", "plunder", "skip"]},
+                "cargo": {"type": "string"},
+            },
+            "required": ["type", "mode"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "play_again"}}, "required": ["type"], "additionalProperties": False},
+    ],
+}
+
+MANILA_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "starting_cash": {"type": "integer", "minimum": 0},
+        "initial_stocks": {"type": "integer", "minimum": 0},
+        "loan_amount": {"type": "integer", "minimum": 0},
+        "loan_repay": {"type": "integer", "minimum": 0},
+    },
+    "additionalProperties": False,
+}
+
 register_game(
     GameDefinition(
         game_id=CaboGame.game_id,
@@ -2159,5 +2259,20 @@ register_game(
         module=WanderingTowersGame,
         serialize=WanderingTowersGame.serialize,
         deserialize=WanderingTowersGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=ManilaGame.game_id,
+        name="Manila",
+        min_players=ManilaGame.min_players,
+        max_players=ManilaGame.max_players,
+        turn_mode="turn",
+        action_schema=MANILA_ACTION_SCHEMA,
+        config_schema=MANILA_CONFIG_SCHEMA,
+        module=ManilaGame,
+        serialize=ManilaGame.serialize,
+        deserialize=ManilaGame.deserialize,
     )
 )
