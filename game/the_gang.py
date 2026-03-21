@@ -570,8 +570,6 @@ def _can_move_rank(state: Dict, mover_id: str, target_id: str, to_index: int) ->
     ranking = list(state.get("ranking", []))
     if target_id not in ranking:
         return False
-    if target_id != mover_id and state["players"][target_id].get("ready"):
-        return False
 
     try:
         current_index = ranking.index(target_id)
@@ -584,13 +582,6 @@ def _can_move_rank(state: Dict, mover_id: str, target_id: str, to_index: int) ->
         to_index = len(ranking)
     ranking.insert(to_index, target_id)
 
-    for pid, pdata in state.get("players", {}).items():
-        if pid == target_id:
-            continue
-        if not pdata.get("ready"):
-            continue
-        if ranking.index(pid) != state["ranking"].index(pid):
-            return False
     return True
 
 
@@ -810,11 +801,12 @@ class TheGangGame:
                 return [], "invalid to_index"
             if target_id not in state.get("players", {}):
                 return [], "unknown target"
-            if target_id == player_id and state["players"][target_id].get("ready"):
-                state["players"][target_id]["ready"] = False
-                _update_lock_timer(state)
             if not _can_move_rank(state, player_id, target_id, to_index):
                 return [], "target locked"
+            if any(pdata.get("ready") for pdata in state.get("players", {}).values()):
+                for pdata in state.get("players", {}).values():
+                    pdata["ready"] = False
+                _update_lock_timer(state)
             _apply_rank_move(state, target_id, to_index)
             events.append(
                 {

@@ -1249,39 +1249,132 @@
               <div id="kobayakawaPlayers"></div>
             </div>
 
-            <div id="manilaPanel" class="hidden">
-              <div class="row">
-                <div>Phase: <span id="manilaPhase">-</span></div>
-                <div>Round: <span id="manilaRound">-</span></div>
-                <div>Current: <span id="manilaCurrent">-</span></div>
-              </div>
-              <div class="row">
-                <div>Harbormaster: <span id="manilaHarbor">-</span></div>
-                <div>Bid: <span id="manilaHarborBid">-</span></div>
-              </div>
-              <div class="row">
-                <div>Prices: <span id="manilaPrices">-</span></div>
+            <div id="manilaPanel" class="hidden manila-panel">
+              <div class="manila-hero">
+                <div>
+                  <div class="manila-title">Manila</div>
+                  <div class="manila-subtitle">Harbor wagers, risky voyages, sudden fortunes.</div>
+                </div>
+                <div class="manila-status">
+                  <div class="manila-chip">
+                    Phase <span id="manilaPhase">-</span>
+                  </div>
+                  <div class="manila-chip">
+                    Round <span id="manilaRound">-</span>
+                  </div>
+                  <div class="manila-chip">
+                    Current <span id="manilaCurrent">-</span>
+                  </div>
+                  <div class="manila-chip">
+                    Harbormaster <span id="manilaHarbor">-</span>
+                  </div>
+                  <div class="manila-chip">
+                    Bid <span id="manilaHarborBid">-</span>
+                  </div>
+                </div>
               </div>
 
-              <h3>Boats</h3>
-              <div id="manilaBoats" class="manila-grid"></div>
-
-              <h3>Board</h3>
-              <div id="manilaBoard" class="manila-grid"></div>
-
-              <h3>Players</h3>
-              <div id="manilaPlayers" class="manila-grid"></div>
-
-              <h3>Actions</h3>
-              <div class="row actions">
-                <select id="manilaActionType"></select>
-                <button id="manilaActionSendBtn">Send</button>
+              <div class="manila-price-bar">
+                <div class="manila-price-title">Market Prices</div>
+                <div id="manilaPrices" class="manila-price-values">-</div>
               </div>
-              <div class="row">
-                <textarea id="manilaActionPayload" class="manila-action-payload" rows="4" placeholder="Action payload JSON"></textarea>
+
+              <div class="manila-auction-bar">
+                <div class="manila-auction-title">Auction</div>
+                <div id="manilaAuctionInfo" class="manila-auction-info">-</div>
               </div>
-              <div class="row">
-                <div>Legal actions: <span id="manilaLegalActions">-</span></div>
+
+              <div class="manila-columns">
+                <div class="manila-column">
+                  <h3 class="manila-section-title">Harbor</h3>
+                  <div class="manila-scene">
+                    <div id="manilaBoard" class="manila-map"></div>
+                    <div id="manilaBoats" class="manila-sea"></div>
+                  </div>
+                </div>
+
+                <div class="manila-column">
+                  <h3 class="manila-section-title">Players</h3>
+                  <div id="manilaPlayers" class="manila-grid"></div>
+
+                  <h3 class="manila-section-title">Actions</h3>
+                  <div class="manila-action-box">
+                    <div id="manilaAuctionGroup" class="manila-action-group hidden">
+                      <div class="manila-action-title">Auction</div>
+                      <div class="manila-action-row">
+                        <input id="manilaBidInput" type="number" min="1" step="1" />
+                        <button id="manilaBidBtn">Bid</button>
+                        <button id="manilaPassBidBtn">Pass</button>
+                      </div>
+                    </div>
+
+                    <div id="manilaPayBidGroup" class="manila-action-group hidden">
+                      <div class="manila-action-title">Pay Bid</div>
+                      <div class="manila-action-row">
+                        <button id="manilaPayBidBtn">Pay</button>
+                      </div>
+                    </div>
+
+                    <div id="manilaBuyStockGroup" class="manila-action-group hidden">
+                      <div class="manila-action-title">Buy Stock</div>
+                      <div id="manilaBuyStockButtons" class="manila-action-grid"></div>
+                      <div class="manila-action-row">
+                        <button id="manilaSkipBuyBtn">Skip Buy</button>
+                      </div>
+                    </div>
+
+                    <div id="manilaSelectCargoGroup" class="manila-action-group hidden">
+                      <div class="manila-action-title">Select 3 Cargo</div>
+                      <div id="manilaSelectCargoButtons" class="manila-action-grid"></div>
+                      <div class="manila-action-row">
+                        <button id="manilaConfirmCargoBtn">Confirm</button>
+                        <button id="manilaResetCargoBtn">Reset</button>
+                      </div>
+                    </div>
+
+                    <div id="manilaPositionsGroup" class="manila-action-group hidden">
+                      <div class="manila-action-title">Set Positions (sum = 9)</div>
+                      <div id="manilaPositionsWrap" class="manila-position-grid"></div>
+                      <div class="manila-action-row">
+                        <div>Sum: <span id="manilaPositionsSum">0</span></div>
+                        <button id="manilaConfirmPositionsBtn">Confirm</button>
+                      </div>
+                    </div>
+
+                    <div id="manilaPlacementGroup" class="manila-action-group hidden">
+                      <div class="manila-action-title">Placement</div>
+                      <div class="manila-action-hint">Click a dock or ship seat to place a worker.</div>
+                      <div class="manila-action-row">
+                        <button id="manilaPassBtn">Pass</button>
+                      </div>
+                    </div>
+
+                    <div id="manilaPilotGroup" class="manila-action-group hidden">
+                      <div class="manila-action-title">Pilot</div>
+                      <div id="manilaPilotRows" class="manila-pilot-rows"></div>
+                    </div>
+
+                    <div id="manilaPirateGroup" class="manila-action-group hidden">
+                      <div class="manila-action-title">Pirate (<span id="manilaPirateRole">-</span>)</div>
+                      <div class="manila-action-row">
+                        <select id="manilaPirateTargetSelect"></select>
+                        <button id="manilaPirateBoardBtn">Board</button>
+                        <button id="manilaPiratePlunderBtn">Plunder</button>
+                        <button id="manilaPirateSkipBtn">Skip</button>
+                      </div>
+                    </div>
+
+                    <div id="manilaPledgeGroup" class="manila-action-group">
+                      <div class="manila-action-title">Pledge Stock</div>
+                      <div class="manila-action-row">
+                        <select id="manilaPledgeSelect"></select>
+                        <button id="manilaPledgeBtn">Pledge</button>
+                      </div>
+                    </div>
+
+                    <div class="manila-legal">Legal actions: <span id="manilaLegalActions">-</span></div>
+                  </div>
+                </div>
               </div>
             </div>
 
