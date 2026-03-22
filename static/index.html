@@ -144,6 +144,94 @@
     </div>
   </section>
 
+  <section id="manilaHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content manila-help-modal">
+      <div class="modal-header">
+        <h2>Manila - Game Rules</h2>
+        <button id="manilaHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body manila-help-content"></div>
+    </div>
+  </section>
+
+  <section id="manilaExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content manila-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="manilaExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="manilaExplainContent"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="manilaCycleModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content manila-cycle-modal">
+      <div class="modal-header">
+        <div>
+          <h2>Harbormaster Cycle</h2>
+          <div id="manilaCyclePhase" class="manila-cycle-subtitle">Phase: -</div>
+        </div>
+        <button id="manilaCycleCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="manilaCycleRecap" class="manila-cycle-recap">No cycle data yet.</div>
+        <div class="manila-cycle-actions">
+          <div id="manilaAuctionGroup" class="manila-action-group hidden">
+            <div class="manila-action-title">Auction</div>
+            <div class="manila-action-row">
+              <input id="manilaBidInput" type="number" min="1" step="1" />
+              <button id="manilaBidBtn">Bid</button>
+              <button id="manilaPassBidBtn">Pass</button>
+            </div>
+          </div>
+
+          <div id="manilaPayBidGroup" class="manila-action-group hidden">
+            <div class="manila-action-title">Pay Bid</div>
+            <div class="manila-action-row">
+              <button id="manilaPayBidBtn">Pay</button>
+            </div>
+          </div>
+
+          <div id="manilaBuyStockGroup" class="manila-action-group hidden">
+            <div class="manila-action-title">Buy Stock</div>
+            <div id="manilaBuyStockButtons" class="manila-action-grid"></div>
+            <div class="manila-action-row">
+              <button id="manilaSkipBuyBtn">Skip Buy</button>
+            </div>
+          </div>
+
+          <div id="manilaSelectCargoGroup" class="manila-action-group hidden">
+            <div class="manila-action-title">Select 3 Cargo</div>
+            <div id="manilaSelectCargoButtons" class="manila-action-grid"></div>
+            <div class="manila-action-row">
+              <button id="manilaConfirmCargoBtn">Confirm</button>
+              <button id="manilaResetCargoBtn">Reset</button>
+            </div>
+          </div>
+
+          <div id="manilaPositionsGroup" class="manila-action-group hidden">
+            <div class="manila-action-title">Set Positions (sum = 9)</div>
+            <div id="manilaPositionsWrap" class="manila-position-grid"></div>
+            <div class="manila-action-row">
+              <div>Sum: <span id="manilaPositionsSum">0</span></div>
+              <button id="manilaConfirmPositionsBtn">Confirm</button>
+            </div>
+          </div>
+
+          <div id="manilaPlacementGroup" class="manila-action-group hidden">
+            <div class="manila-action-title">Placement</div>
+            <div class="manila-action-hint">Click a dock or ship seat to place a worker.</div>
+            <div class="manila-action-row">
+              <button id="manilaPassBtn">Pass</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section id="istanbulHelpModal" class="modal hidden" aria-hidden="true">
     <div class="modal-content istanbul-help-modal">
       <div class="modal-header">
@@ -825,6 +913,10 @@
               <button id="projectLHelpBtn" class="project-l-header-btn" type="button">Help</button>
               <button id="projectLExplainBtn" class="project-l-header-btn" type="button">Explain</button>
             </div>
+            <div class="panel-header-actions" id="manilaHeaderActions" style="display: none;">
+              <button id="manilaHelpBtn" class="manila-header-btn" type="button">Help</button>
+              <button id="manilaExplainBtn" class="manila-header-btn" type="button">Explain</button>
+            </div>
             <div class="panel-header-actions" id="carcassonneHeaderActions" style="display: none;">
               <button id="carcHelpBtn" class="carc-header-btn" type="button">Help</button>
               <button id="carcExplainBtn" class="carc-header-btn" type="button">Explain</button>
@@ -1299,54 +1391,9 @@
 
                   <h3 class="manila-section-title">Actions</h3>
                   <div class="manila-action-box">
-                    <div id="manilaAuctionGroup" class="manila-action-group hidden">
-                      <div class="manila-action-title">Auction</div>
-                      <div class="manila-action-row">
-                        <input id="manilaBidInput" type="number" min="1" step="1" />
-                        <button id="manilaBidBtn">Bid</button>
-                        <button id="manilaPassBidBtn">Pass</button>
-                      </div>
-                    </div>
-
-                    <div id="manilaPayBidGroup" class="manila-action-group hidden">
-                      <div class="manila-action-title">Pay Bid</div>
-                      <div class="manila-action-row">
-                        <button id="manilaPayBidBtn">Pay</button>
-                      </div>
-                    </div>
-
-                    <div id="manilaBuyStockGroup" class="manila-action-group hidden">
-                      <div class="manila-action-title">Buy Stock</div>
-                      <div id="manilaBuyStockButtons" class="manila-action-grid"></div>
-                      <div class="manila-action-row">
-                        <button id="manilaSkipBuyBtn">Skip Buy</button>
-                      </div>
-                    </div>
-
-                    <div id="manilaSelectCargoGroup" class="manila-action-group hidden">
-                      <div class="manila-action-title">Select 3 Cargo</div>
-                      <div id="manilaSelectCargoButtons" class="manila-action-grid"></div>
-                      <div class="manila-action-row">
-                        <button id="manilaConfirmCargoBtn">Confirm</button>
-                        <button id="manilaResetCargoBtn">Reset</button>
-                      </div>
-                    </div>
-
-                    <div id="manilaPositionsGroup" class="manila-action-group hidden">
-                      <div class="manila-action-title">Set Positions (sum = 9)</div>
-                      <div id="manilaPositionsWrap" class="manila-position-grid"></div>
-                      <div class="manila-action-row">
-                        <div>Sum: <span id="manilaPositionsSum">0</span></div>
-                        <button id="manilaConfirmPositionsBtn">Confirm</button>
-                      </div>
-                    </div>
-
-                    <div id="manilaPlacementGroup" class="manila-action-group hidden">
-                      <div class="manila-action-title">Placement</div>
-                      <div class="manila-action-hint">Click a dock or ship seat to place a worker.</div>
-                      <div class="manila-action-row">
-                        <button id="manilaPassBtn">Pass</button>
-                      </div>
+                    <div class="manila-cycle-bar">
+                      <button id="manilaCycleToggleBtn" type="button">Open Harbormaster Panel</button>
+                      <div id="manilaCycleStatus" class="manila-cycle-status">Cycle: -</div>
                     </div>
 
                     <div id="manilaPilotGroup" class="manila-action-group hidden">

@@ -435,6 +435,196 @@ def _player_view(state: Dict, player_id: str, viewer_id: str) -> Dict:
     return view
 
 
+def _bot_total_stock_count(state: Dict, player_id: str) -> int:
+    pdata = state.get("players", {}).get(player_id, {})
+    return sum(pdata.get("stocks", {}).values())
+
+
+def _bot_max_bid(state: Dict, player_id: str) -> int:
+    cash = int(state["players"][player_id].get("cash", 0))
+    loan_amount = int(state.get("config", {}).get("loan_amount", 12))
+    return cash + loan_amount * _bot_total_stock_count(state, player_id)
+
+
+def _bot_choose_pledge_cargo(state: Dict, player_id: str) -> Optional[str]:
+    pdata = state["players"][player_id]
+    candidates = [cargo_id for cargo_id, count in pdata.get("stocks", {}).items() if count > 0]
+    if not candidates:
+        return None
+    candidates.sort(key=lambda cargo_id: int(state.get("price_track", {}).get(cargo_id, 0)))
+    return candidates[0]
+
+
+def _bot_choose_buy_stock(state: Dict, player_id: str) -> Optional[str]:
+    cash = int(state["players"][player_id].get("cash", 0))
+    options: List[Tuple[int, str]] = []
+    for cargo_id in CARGO_LIST:
+        if state.get("stock_bank", {}).get(cargo_id, 0) <= 0:
+            continue
+        cost = _price_for_cargo(state, cargo_id)
+        if cost <= cash:
+            options.append((cost, cargo_id))
+    if not options:
+        return None
+    options.sort()
+    return options[0][1]
+
+
+def _bot_choose_cargo_selection() -> List[str]:
+    if len(CARGO_LIST) <= 3:
+        return list(CARGO_LIST)
+    return random.sample(CARGO_LIST, 3)
+
+
+def _bot_choose_positions() -> List[int]:
+    positions = [0, 4, 5]
+    random.shuffle(positions)
+    return positions
+
+
+def _bot_choose_placement(state: Dict, player_id: str) -> Optional[Dict]:
+    pdata = state["players"][player_id]
+    if pdata.get("workers_available", 0) <= 0:
+        return {"type": "pass"}
+    cash = int(pdata.get("cash", 0))
+    board = state.get("board", {})
+    options: List[Tuple[float, Dict]] = []
+
+    for cargo_id, boat in state.get("boats", {}).items():
+        seats = boat.get("seats", [])
+        costs = boat.get("seat_costs", [])
+        total_value = int(boat.get("total_value", 0))
+        for idx, cost in enumerate(costs):
+            if idx >= len(seats) or seats[idx] is not None:
+                continue
+            if cost > cash:
+                continue
+            score = (total_value / (cost + 1)) + 2
+            options.append(
+                (
+                    score,
+                    {"type": "place_worker", "location": {"type": "ship", "cargo": cargo_id, "seat": idx}},
+                )
+            )
+
+    for slot in ("A", "B", "C"):
+        if board.get("port", {}).get(slot):
+            continue
+        info = BOARD_DATA.get("port", {}).get(slot, {})
+        cost = int(info.get("place_cost", 0))
+        payout = int(info.get("payout", 0))
+        if cost <= cash:
+            options.append(
+                (
+                    payout - cost + 1,
+                    {"type": "place_worker", "location": {"type": "port", "slot": slot}},
+                )
+            )
+
+    for slot in ("A", "B", "C"):
+        if board.get("shipyard", {}).get(slot):
+            continue
+        info = BOARD_DATA.get("shipyard", {}).get(slot, {})
+        cost = int(info.get("place_cost", 0))
+        payout = int(info.get("payout", 0))
+        if cost <= cash:
+            options.append(
+                (
+                    payout - cost + 0.5,
+                    {"type": "place_worker", "location": {"type": "shipyard", "slot": slot}},
+                )
+            )
+
+    pirates = board.get("pirates", {})
+    pirate_cost = int(BOARD_DATA.get("pirates", {}).get("place_cost", 0))
+    if pirates.get("captain") is None and pirate_cost <= cash:
+        options.append((7.5, {"type": "place_worker", "location": {"type": "pirate", "slot": "captain"}}))
+    if pirates.get("pirate") is None and pirate_cost <= cash:
+        options.append((6.0, {"type": "place_worker", "location": {"type": "pirate", "slot": "pirate"}}))
+
+    pilots = board.get("pilots", {})
+    small_cost = int(BOARD_DATA.get("pilots", {}).get("small_cost", 0))
+    big_cost = int(BOARD_DATA.get("pilots", {}).get("big_cost", 0))
+    if pilots.get("small") is None and small_cost <= cash:
+        options.append((6.0, {"type": "place_worker", "location": {"type": "pilot", "size": "small"}}))
+    if pilots.get("big") is None and big_cost <= cash:
+        options.append((8.0, {"type": "place_worker", "location": {"type": "pilot", "size": "big"}}))
+
+    if board.get("insurance") is None:
+        ins_cost = int(BOARD_DATA.get("insurance", {}).get("place_cost", 0))
+        if ins_cost <= cash:
+            options.append((5.5, {"type": "place_worker", "location": {"type": "insurance"}}))
+
+    if not options:
+        return {"type": "pass"}
+
+    options.sort(key=lambda item: item[0], reverse=True)
+    top_score = options[0][0]
+    top_options = [action for score, action in options if abs(score - top_score) < 0.01]
+    return random.choice(top_options)
+
+
+def _bot_choose_pilot_action(state: Dict, player_id: str) -> Optional[Dict]:
+    pending = state.get("pending_pilots", [])
+    board = state.get("board", {})
+    size = None
+    for entry in pending:
+        if board.get("pilots", {}).get(entry) == player_id:
+            size = entry
+            break
+    if not size:
+        return None
+
+    boats = [
+        (cargo_id, boat)
+        for cargo_id, boat in state.get("boats", {}).items()
+        if int(boat.get("position", 0)) < 13
+    ]
+    if not boats:
+        return None
+
+    boats.sort(key=lambda item: int(item[1].get("position", 0)), reverse=True)
+
+    if size == "big" and len(boats) >= 2:
+        cargo_a = boats[0][0]
+        cargo_b = boats[1][0]
+        return {
+            "type": "pilot_split",
+            "size": "big",
+            "cargo_a": cargo_a,
+            "delta_a": 1,
+            "cargo_b": cargo_b,
+            "delta_b": 1,
+        }
+
+    cargo_id, boat = boats[0]
+    pos = int(boat.get("position", 0))
+    delta = 1
+    if size == "big" and pos <= 11:
+        delta = 2
+    return {"type": "pilot_move", "size": size, "cargo": cargo_id, "delta": delta}
+
+
+def _bot_choose_pirate_action(state: Dict, player_id: str) -> Optional[Dict]:
+    targets = list(state.get("pirate_targets", []))
+    if not targets:
+        return {"type": "pirate_action", "mode": "skip"}
+    pending = state.get("pirate_pending", [])
+    role = pending[0] if pending else None
+    if role == "captain":
+        best_target = max(targets, key=lambda cargo: int(state["boats"][cargo].get("total_value", 0)))
+        return {"type": "pirate_action", "mode": "plunder", "cargo": best_target}
+
+    for cargo_id in targets:
+        boat = state["boats"].get(cargo_id)
+        if not boat:
+            continue
+        seats = boat.get("seats", [])
+        if any(seat is None for seat in seats):
+            return {"type": "pirate_action", "mode": "board", "cargo": cargo_id}
+    return {"type": "pirate_action", "mode": "skip"}
+
+
 class ManilaGame:
     game_id = "manila"
     min_players = 3
@@ -834,6 +1024,76 @@ class ManilaGame:
             "game_over": state.get("game_over", False),
             "legal_actions": ManilaGame.get_legal_actions(state, viewer_id),
         }
+
+    @staticmethod
+    def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
+        if state.get("game_over"):
+            return None
+        if bot_id not in state.get("players", {}):
+            return None
+
+        phase = state.get("phase")
+
+        if phase == "auction":
+            if bot_id != state.get("current_player"):
+                return None
+            auction = state.get("auction", {})
+            current_bid = int(auction.get("highest_bid", 0))
+            max_bid = _bot_max_bid(state, bot_id)
+            if current_bid + 1 > max_bid:
+                return {"type": "pass_bid"}
+            if current_bid == 0 and random.random() < 0.7:
+                return {"type": "bid", "amount": 1}
+            if random.random() < 0.4:
+                return {"type": "bid", "amount": current_bid + 1}
+            return {"type": "pass_bid"}
+
+        if phase == "harbormaster_pay":
+            if bot_id != state.get("harbormaster"):
+                return None
+            bid = int(state.get("harbormaster_bid", 0))
+            cash = int(state["players"][bot_id].get("cash", 0))
+            if cash >= bid:
+                return {"type": "pay_bid"}
+            cargo_id = _bot_choose_pledge_cargo(state, bot_id)
+            if cargo_id:
+                return {"type": "pledge_stock", "cargo": cargo_id}
+            return None
+
+        if phase == "harbormaster_buy":
+            if bot_id != state.get("harbormaster"):
+                return None
+            cargo_id = _bot_choose_buy_stock(state, bot_id)
+            if cargo_id:
+                return {"type": "buy_stock", "cargo": cargo_id}
+            return {"type": "skip_buy"}
+
+        if phase == "harbormaster_cargo":
+            if bot_id != state.get("harbormaster"):
+                return None
+            return {"type": "select_cargo", "cargo": _bot_choose_cargo_selection()}
+
+        if phase == "harbormaster_position":
+            if bot_id != state.get("harbormaster"):
+                return None
+            return {"type": "set_positions", "positions": _bot_choose_positions()}
+
+        if phase == "placement":
+            if bot_id != state.get("current_player"):
+                return None
+            return _bot_choose_placement(state, bot_id)
+
+        if phase == "pilot":
+            if bot_id != state.get("current_player"):
+                return None
+            return _bot_choose_pilot_action(state, bot_id)
+
+        if phase == "pirate":
+            if bot_id != state.get("current_player"):
+                return None
+            return _bot_choose_pirate_action(state, bot_id)
+
+        return None
 
     @staticmethod
     def serialize(state: Dict) -> Dict:
