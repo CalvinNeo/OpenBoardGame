@@ -1050,22 +1050,30 @@ function renderManilaPlayers(view) {
     line1.textContent = `🪙 ${player.cash ?? 0} · 👥 ${player.workers_available ?? 0}/${player.workers_total ?? 0}`;
     card.appendChild(line1);
 
-    const line2 = document.createElement("div");
-    line2.className = "manila-card-line";
     if (player.stocks) {
+      const stocksLine = document.createElement("div");
+      stocksLine.className = "manila-card-line";
       const stockParts = Object.entries(player.stocks).map(([cargo, count]) => {
         const meta = getCargoMeta(cargo);
         return `${meta.icon}${count}`;
       });
+      stocksLine.textContent = `Stocks: ${stockParts.join(" ") || "-"}`;
+      card.appendChild(stocksLine);
+
+      const pledgedLine = document.createElement("div");
+      pledgedLine.className = "manila-card-line";
       const pledgeParts = Object.entries(player.pledged || {}).map(([cargo, count]) => {
         const meta = getCargoMeta(cargo);
         return `${meta.icon}${count}`;
       });
-      line2.textContent = `Stocks: ${stockParts.join(" ") || "-"} · Pledged: ${pledgeParts.join(" ") || "-"}`;
+      pledgedLine.textContent = `Pledged: ${pledgeParts.join(" ") || "-"}`;
+      card.appendChild(pledgedLine);
     } else {
+      const line2 = document.createElement("div");
+      line2.className = "manila-card-line";
       line2.textContent = `Stocks: ${player.stock_count ?? 0} · Pledged: ${player.pledged_count ?? 0}`;
+      card.appendChild(line2);
     }
-    card.appendChild(line2);
 
     manilaPlayers.appendChild(card);
   });
