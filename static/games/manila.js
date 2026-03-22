@@ -3,6 +3,8 @@ let manilaSelectedCargo = [];
 let manilaCycleOpen = false;
 let manilaCycleUserOverride = null;
 let manilaLastPhase = null;
+let manilaTooltipTimer = null;
+let manilaErrorListenerBound = false;
 
 const manilaPhaseLabel = document.getElementById("manilaPhase");
 const manilaRoundLabel = document.getElementById("manilaRound");
@@ -15,6 +17,7 @@ const manilaDiceBar = document.getElementById("manilaDiceBar");
 const manilaBoard = document.getElementById("manilaBoard");
 const manilaPlayers = document.getElementById("manilaPlayers");
 const manilaLegalActions = document.getElementById("manilaLegalActions");
+const manilaTooltip = document.getElementById("manilaTooltip");
 
 const manilaAuctionInfo = document.getElementById("manilaAuctionInfo");
 const manilaAuctionBidList = document.getElementById("manilaAuctionBidList");
@@ -359,6 +362,28 @@ function getCargoMeta(cargo) {
   return MANILA_CARGO_META[cargo] || { label: cargo, icon: "⬜", accent: "neutral" };
 }
 
+function renderManilaCargoChip(cargo) {
+  const meta = getCargoMeta(cargo);
+  const label = meta.label || cargo;
+  const accent = meta.accent || "neutral";
+  return `<span class="manila-cargo-chip manila-cargo-${accent}">${meta.icon} ${label}</span>`;
+}
+
+function showManilaTooltip(message) {
+  if (!manilaTooltip) {
+    return;
+  }
+  manilaTooltip.textContent = message;
+  setVisible(manilaTooltip, true);
+  if (manilaTooltipTimer) {
+    clearTimeout(manilaTooltipTimer);
+  }
+  manilaTooltipTimer = window.setTimeout(() => {
+    setVisible(manilaTooltip, false);
+    manilaTooltipTimer = null;
+  }, 3000);
+}
+
 function isActionAvailable(view, actionType) {
   if (!view || !Array.isArray(view.legal_actions)) {
     return false;
@@ -420,11 +445,16 @@ function updateManilaCycleRecap(view) {
   const harbor = formatManilaPlayerName(view, view.harbormaster);
   const bid = view.harbormaster_bid ?? 0;
   const cargoSlots = Array.isArray(view.cargo_slots) ? view.cargo_slots : [];
-  const cargoLabel = cargoSlots.length ? cargoSlots.join(", ") : "-";
+  const cargoLabel = cargoSlots.length ? cargoSlots.map((cargo) => renderManilaCargoChip(cargo)).join(" ") : "-";
+  const you = Array.isArray(view.players) ? view.players.find((p) => p.player_id === view.you) : null;
+  const cash = you ? Number(you.cash || 0) : 0;
+  const stockCount = you && you.stocks ? Object.values(you.stocks).reduce((sum, val) => sum + (val || 0), 0) : 0;
+  const selfLine = you ? `You: 🪙 ${cash} · Pledge ${stockCount}` : "";
   manilaCycleRecap.innerHTML = `
     <div>Phase: <span>${phaseLabel}</span></div>
     <div>Harbormaster: <span>${harbor}</span></div>
     <div>Bid: <span>🪙 ${bid}</span></div>
+    ${selfLine ? `<div class="manila-auction-self">${selfLine}</div>` : ""}
     <div>Cargo Slots: <span>${cargoLabel}</span></div>
   `;
 }
@@ -974,6 +1004,10 @@ function renderManilaBoard(view) {
   if (manilaPledgeGroup) {
     insuranceStack.appendChild(manilaPledgeGroup);
   }
+  if (manilaPirateGroup) {
+    manilaPirateGroup.classList.add("manila-pirate-facility", "manila-zone", "manila-zone-compact");
+    insuranceStack.appendChild(manilaPirateGroup);
+  }
   insuranceStack.appendChild(insuranceZone);
   if (manilaPassFacility) {
     insuranceStack.appendChild(manilaPassFacility);
@@ -1044,6 +1078,9 @@ function updateAuctionActions(view) {
     return;
   }
   const isMyTurn = view.current_player === view.you;
+  const you = Array.isArray(view.players) ? view.players.find((p) => p.player_id === view.you) : null;
+  const cash = you ? Number(you.cash || 0) : 0;
+  const stockCount = you && you.stocks ? Object.values(you.stocks).reduce((sum, val) => sum + (val || 0), 0) : 0;
   if (manilaBidInput) {
     const currentBid = view.auction ? view.auction.highest_bid || 0 : 0;
     manilaBidInput.min = String(currentBid + 1);
@@ -1102,7 +1139,8 @@ function updateBuyStockActions(view) {
     const cost = price > 0 ? price : 5;
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.textContent = `Buy ${cargo} (${cost})`;
+    btn.classList.add("manila-buy-stock-btn");
+    btn.innerHTML = `Buy ${renderManilaCargoChip(cargo)} <span class="manila-buy-cost">🪙 ${cost}</span>`;
     btn.addEventListener("click", () => sendAction({ type: "buy_stock", cargo }));
     setDisabled(btn, !isMyTurn);
     manilaBuyStockButtons.appendChild(btn);
@@ -1126,7 +1164,8 @@ function updateSelectCargoActions(view) {
     btn.type = "button";
     const isSelected = manilaSelectedCargo.includes(cargo);
     btn.className = isSelected ? "selected" : "";
-    btn.textContent = cargo;
+    btn.classList.add("manila-cargo-select-btn");
+    btn.innerHTML = renderManilaCargoChip(cargo);
     btn.addEventListener("click", () => {
       if (manilaSelectedCargo.includes(cargo)) {
         manilaSelectedCargo = manilaSelectedCargo.filter((c) => c !== cargo);
@@ -1153,7 +1192,7 @@ function updatePositionsActions(view) {
     const row = document.createElement("div");
     row.className = "manila-position-row";
     const label = document.createElement("div");
-    label.textContent = cargo;
+    label.innerHTML = renderManilaCargoChip(cargo);
     const input = document.createElement("input");
     input.type = "number";
     input.min = "0";
@@ -1352,6 +1391,29 @@ function updatePirateActions(view) {
   setDisabled(manilaPirateSkipBtn, !isMyTurn);
 }
 
+function formatManilaLedgerLabel(label) {
+  if (!label) {
+    return label;
+  }
+  if (label.startsWith("Ship ")) {
+    const cargo = label.slice(5).toLowerCase();
+    return `Ship ${renderManilaCargoChip(cargo)}`;
+  }
+  if (label.startsWith("Seat ")) {
+    const match = label.match(/^Seat\s+([A-Za-z]+)\s+#(\d+)/);
+    if (match) {
+      const cargo = match[1].toLowerCase();
+      const seatNo = match[2];
+      return `Seat ${renderManilaCargoChip(cargo)} #${seatNo}`;
+    }
+  }
+  if (label.startsWith("Buy ")) {
+    const cargo = label.slice(4).toLowerCase();
+    return `Buy ${renderManilaCargoChip(cargo)}`;
+  }
+  return label;
+}
+
 function updateRoundEnd(view) {
   const visible = view && view.phase === "round_end";
   setVisible(manilaRoundEndPanel, visible);
@@ -1360,6 +1422,7 @@ function updateRoundEnd(view) {
   }
   const players = Array.isArray(view.players) ? view.players : [];
   const readyMap = new Map(players.map((player) => [player.player_id, !!player.round_ready]));
+  const ledger = view.round_ledger || {};
   if (manilaRoundEndPlayers) {
     manilaRoundEndPlayers.innerHTML = "";
     players.forEach((player) => {
@@ -1376,6 +1439,67 @@ function updateRoundEnd(view) {
       status.textContent = readyMap.get(player.player_id) ? "Ready" : "Waiting";
       card.appendChild(name);
       card.appendChild(status);
+
+      const entry = ledger[player.player_id] || { earn: {}, spend: {} };
+      const earnEntries = entry.earn || {};
+      const spendEntries = entry.spend || {};
+      const earnTotal = Object.values(earnEntries).reduce((sum, val) => sum + Number(val || 0), 0);
+      const spendTotal = Object.values(spendEntries).reduce((sum, val) => sum + Number(val || 0), 0);
+
+      const breakdown = document.createElement("div");
+      breakdown.className = "manila-round-end-breakdown";
+
+      const earnBlock = document.createElement("div");
+      earnBlock.className = "manila-round-end-block";
+      const earnTitle = document.createElement("div");
+      earnTitle.className = "manila-round-end-label";
+      earnTitle.textContent = `Earned +${earnTotal}`;
+      earnBlock.appendChild(earnTitle);
+      const earnList = document.createElement("div");
+      earnList.className = "manila-round-end-list";
+      const earnItems = Object.entries(earnEntries);
+      if (!earnItems.length) {
+        const empty = document.createElement("div");
+        empty.className = "manila-round-end-line muted";
+        empty.textContent = "None";
+        earnList.appendChild(empty);
+      } else {
+        earnItems.forEach(([label, amount]) => {
+          const line = document.createElement("div");
+          line.className = "manila-round-end-line";
+          line.innerHTML = `${formatManilaLedgerLabel(label)}: +${amount}`;
+          earnList.appendChild(line);
+        });
+      }
+      earnBlock.appendChild(earnList);
+
+      const spendBlock = document.createElement("div");
+      spendBlock.className = "manila-round-end-block";
+      const spendTitle = document.createElement("div");
+      spendTitle.className = "manila-round-end-label";
+      spendTitle.textContent = `Spent -${spendTotal}`;
+      spendBlock.appendChild(spendTitle);
+      const spendList = document.createElement("div");
+      spendList.className = "manila-round-end-list";
+      const spendItems = Object.entries(spendEntries);
+      if (!spendItems.length) {
+        const empty = document.createElement("div");
+        empty.className = "manila-round-end-line muted";
+        empty.textContent = "None";
+        spendList.appendChild(empty);
+      } else {
+        spendItems.forEach(([label, amount]) => {
+          const line = document.createElement("div");
+          line.className = "manila-round-end-line";
+          line.innerHTML = `${formatManilaLedgerLabel(label)}: -${amount}`;
+          spendList.appendChild(line);
+        });
+      }
+      spendBlock.appendChild(spendList);
+
+      breakdown.appendChild(earnBlock);
+      breakdown.appendChild(spendBlock);
+      card.appendChild(breakdown);
       manilaRoundEndPlayers.appendChild(card);
     });
   }
@@ -1475,6 +1599,11 @@ function clearManilaState() {
   if (manilaRoundEndPanel) setVisible(manilaRoundEndPanel, false);
   if (manilaRoundEndPlayers) manilaRoundEndPlayers.innerHTML = "";
   if (manilaRoundEndStatus) manilaRoundEndStatus.textContent = "0/0 Ready";
+  if (manilaTooltip) setVisible(manilaTooltip, false);
+  if (manilaTooltipTimer) {
+    clearTimeout(manilaTooltipTimer);
+    manilaTooltipTimer = null;
+  }
 }
 
 if (manilaBidBtn && manilaBidInput) {
@@ -1644,6 +1773,22 @@ document.addEventListener("keydown", (event) => {
     exitManilaExplainMode();
   }
 });
+
+if (!manilaErrorListenerBound && typeof socket !== "undefined" && socket) {
+  manilaErrorListenerBound = true;
+  socket.on("system:error", (data) => {
+    if (currentGameType !== "manila") {
+      return;
+    }
+    const message = data && data.message ? String(data.message) : "";
+    if (!message) {
+      return;
+    }
+    if (message.includes("insufficient cash") && currentManilaView && currentManilaView.phase === "placement") {
+      showManilaTooltip("Not enough cash to place here.");
+    }
+  });
+}
 
 window.renderManilaGameState = renderManilaGameState;
 window.clearManilaState = clearManilaState;

@@ -57,6 +57,34 @@ def _init_player_state(cfg: Dict, player_ids: List[str], player_meta: Dict) -> D
     return players
 
 
+def _init_round_ledger(state: Dict) -> None:
+    state["round_ledger"] = {
+        pid: {"earn": {}, "spend": {}} for pid in state.get("players", {}).keys()
+    }
+
+
+def _record_earn(state: Dict, player_id: str, amount: int, reason: str) -> None:
+    if amount <= 0:
+        return
+    ledger = state.get("round_ledger")
+    if ledger is None:
+        return
+    player_entry = ledger.setdefault(player_id, {"earn": {}, "spend": {}})
+    earn = player_entry.setdefault("earn", {})
+    earn[reason] = int(earn.get(reason, 0)) + int(amount)
+
+
+def _record_spend(state: Dict, player_id: str, amount: int, reason: str) -> None:
+    if amount <= 0:
+        return
+    ledger = state.get("round_ledger")
+    if ledger is None:
+        return
+    player_entry = ledger.setdefault(player_id, {"earn": {}, "spend": {}})
+    spend = player_entry.setdefault("spend", {})
+    spend[reason] = int(spend.get(reason, 0)) + int(amount)
+
+
 def _deal_initial_stocks(state: Dict) -> None:
     deck = state.get("stock_deck", [])
     for pid in state.get("turn_order", []):
@@ -166,6 +194,7 @@ def _set_harbormaster(state: Dict, player_id: str) -> None:
     bid = state.get("auction", {}).get("highest_bid", 0)
     state["harbormaster_bid"] = bid
     if state["players"][player_id]["cash"] >= bid:
+        _record_spend(state, player_id, int(bid), "Bid")
         _pay_cash(state, player_id, bid)
         state["phase"] = "harbormaster_buy"
     else:
@@ -205,7 +234,9 @@ def _auto_pledge_one(state: Dict, player_id: str) -> bool:
     _, _, cargo_id = available[0]
     pdata["stocks"][cargo_id] -= 1
     pdata["pledged"][cargo_id] += 1
-    _gain_cash(state, player_id, state["config"].get("loan_amount", 12))
+    loan = state["config"].get("loan_amount", 12)
+    _gain_cash(state, player_id, loan)
+    _record_earn(state, player_id, int(loan), "Pledge Loan")
     return True
 
 
@@ -248,6 +279,7 @@ def _setup_round(state: Dict) -> None:
     state["pirate_day"] = None
     state["pending_pilots"] = []
     state["port_arrivals"] = _init_arrivals_state()
+    _init_round_ledger(state)
 
 
 def _start_placement_round(state: Dict) -> None:
@@ -399,6 +431,7 @@ def _resolve_round(state: Dict) -> None:
         payout = BOARD_DATA.get("port", {}).get(slot, {}).get("payout", 0)
         if occupant:
             _gain_cash(state, occupant, payout)
+            _record_earn(state, occupant, int(payout), f"Port {slot}")
 
     for idx, cargo_id in enumerate(failures):
         if idx >= len(shipyard_slots):
@@ -408,11 +441,14 @@ def _resolve_round(state: Dict) -> None:
         payout = BOARD_DATA.get("shipyard", {}).get(slot, {}).get("payout", 0)
         if occupant:
             _gain_cash(state, occupant, payout)
+            _record_earn(state, occupant, int(payout), f"Shipyard {slot}")
 
     insurance_holder = board.get("insurance")
     if insurance_holder:
         per_ship = int(BOARD_DATA.get("insurance", {}).get("per_ship_cost", 10))
-        _force_pay(state, insurance_holder, per_ship * len(failures))
+        insurance_cost = per_ship * len(failures)
+        _force_pay(state, insurance_holder, insurance_cost)
+        _record_spend(state, insurance_holder, int(insurance_cost), "Insurance Payout")
 
     for cargo_id in successes:
         _advance_price(state, cargo_id)
@@ -485,9 +521,12 @@ def _distribute_ship_value(state: Dict, boat: Dict) -> None:
     if total_workers <= 0:
         return
     total_value = int(boat.get("total_value", 0))
+    cargo_id = boat.get("cargo", "")
     for pid, count in counts.items():
         payout = math.ceil(total_value * (count / total_workers))
         _gain_cash(state, pid, payout)
+        label = f"Ship {cargo_id.title()}" if cargo_id else "Ship"
+        _record_earn(state, pid, int(payout), label)
 
 
 def _player_view(state: Dict, player_id: str, viewer_id: str) -> Dict:
@@ -737,6 +776,7 @@ class ManilaGame:
             "winner": [],
             "game_over": False,
         }
+        _init_round_ledger(state)
         _deal_initial_stocks(state)
         state["auction_start"] = random.choice(player_ids) if player_ids else None
         _start_auction(state)
@@ -803,10 +843,13 @@ class ManilaGame:
                 return [], "no stock to pledge"
             pdata["stocks"][cargo_id] -= 1
             pdata["pledged"][cargo_id] += 1
-            _gain_cash(state, player_id, state["config"].get("loan_amount", 12))
+            loan = state["config"].get("loan_amount", 12)
+            _gain_cash(state, player_id, loan)
+            _record_earn(state, player_id, int(loan), "Pledge Loan")
             if state.get("phase") == "harbormaster_pay" and player_id == state.get("harbormaster"):
                 bid = int(state.get("harbormaster_bid", 0))
                 if state["players"][player_id]["cash"] >= bid:
+                    _record_spend(state, player_id, int(bid), "Bid")
                     _pay_cash(state, player_id, bid)
                     state["phase"] = "harbormaster_buy"
             return events, None
@@ -858,6 +901,7 @@ class ManilaGame:
                 price = _price_for_cargo(state, cargo_id)
                 if not _ensure_cash(state, player_id, price):
                     return [], "insufficient cash"
+                _record_spend(state, player_id, int(price), f"Buy {cargo_id.title()}")
                 _pay_cash(state, player_id, price)
                 state["players"][player_id]["stocks"][cargo_id] += 1
                 state["stock_bank"][cargo_id] -= 1
@@ -1080,6 +1124,7 @@ class ManilaGame:
                     share = total_value // len(pirate_ids)
                     for pid in pirate_ids:
                         _gain_cash(state, pid, share)
+                        _record_earn(state, pid, int(share), "Pirate Plunder")
                 targets = [cid for cid in targets if cid != cargo_id]
                 state["pirate_targets"] = targets
                 if targets:
@@ -1136,6 +1181,7 @@ class ManilaGame:
             "boats": state.get("boats", {}),
             "board": state.get("board", {}),
             "port_arrivals": state.get("port_arrivals", {}),
+            "round_ledger": state.get("round_ledger", {}),
             "pirate_targets": state.get("pirate_targets", []),
             "pirate_pending": state.get("pirate_pending", []),
             "pirate_day": state.get("pirate_day"),
@@ -1243,6 +1289,7 @@ def _handle_place_worker(state: Dict, player_id: str, loc_type: str, location: D
         err = _place_worker(state, player_id, int(cost))
         if err:
             return err
+        _record_spend(state, player_id, int(cost), f"Port {slot}")
         board[slot] = player_id
         return None
     if loc_type == "shipyard":
@@ -1256,6 +1303,7 @@ def _handle_place_worker(state: Dict, player_id: str, loc_type: str, location: D
         err = _place_worker(state, player_id, int(cost))
         if err:
             return err
+        _record_spend(state, player_id, int(cost), f"Shipyard {slot}")
         board[slot] = player_id
         return None
     if loc_type == "pirate":
@@ -1267,6 +1315,7 @@ def _handle_place_worker(state: Dict, player_id: str, loc_type: str, location: D
         err = _place_worker(state, player_id, int(cost))
         if err:
             return err
+        _record_spend(state, player_id, int(cost), "Pirates")
         board[slot] = player_id
         return None
     if loc_type == "pilot":
@@ -1281,6 +1330,7 @@ def _handle_place_worker(state: Dict, player_id: str, loc_type: str, location: D
         err = _place_worker(state, player_id, int(cost))
         if err:
             return err
+        _record_spend(state, player_id, int(cost), f"Pilot {size.title()}")
         board[size] = player_id
         return None
     if loc_type == "insurance":
@@ -1291,9 +1341,11 @@ def _handle_place_worker(state: Dict, player_id: str, loc_type: str, location: D
         err = _place_worker(state, player_id, int(cost))
         if err:
             return err
+        _record_spend(state, player_id, int(cost), "Insurance")
         board["insurance"] = player_id
         immediate = BOARD_DATA.get("insurance", {}).get("immediate_gain", 10)
         _gain_cash(state, player_id, int(immediate))
+        _record_earn(state, player_id, int(immediate), "Insurance Bonus")
         return None
     if loc_type == "ship":
         cargo_id = location.get("cargo")
@@ -1312,6 +1364,7 @@ def _handle_place_worker(state: Dict, player_id: str, loc_type: str, location: D
         err = _place_worker(state, player_id, int(cost))
         if err:
             return err
+        _record_spend(state, player_id, int(cost), f"Seat {cargo_id.title()} #{seat_index + 1}")
         seats[seat_index] = player_id
         return None
     return "invalid location"

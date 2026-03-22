@@ -9407,6 +9407,20 @@ body.istanbul-explain-mode .istanbul-mosque-rubies.has-explanation:hover {
   color: var(--manila-ink);
 }
 
+.manila-tooltip {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.92);
+  color: #f8fafc;
+  font-size: 12px;
+  font-weight: 600;
+  z-index: 3;
+  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.25);
+}
+
 .manila-panel::before {
   content: "";
   position: absolute;
@@ -9703,6 +9717,40 @@ body.istanbul-explain-mode .istanbul-mosque-rubies.has-explanation:hover {
 .manila-round-end-player-status {
   font-size: 11px;
   color: var(--manila-muted);
+}
+
+.manila-round-end-breakdown {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.manila-round-end-block {
+  padding: 6px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.04);
+  display: grid;
+  gap: 4px;
+}
+
+.manila-round-end-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--manila-ink);
+}
+
+.manila-round-end-list {
+  display: grid;
+  gap: 2px;
+}
+
+.manila-round-end-line {
+  font-size: 11px;
+  color: var(--manila-muted);
+}
+
+.manila-round-end-line.muted {
+  font-style: italic;
 }
 
 .manila-round-end-actions {
@@ -10383,6 +10431,27 @@ body.istanbul-explain-mode .istanbul-mosque-rubies.has-explanation:hover {
   border: 1px solid rgba(148, 163, 184, 0.4);
 }
 
+.manila-pirate-facility {
+  padding: 6px;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.45);
+}
+
+.manila-pirate-facility .manila-action-title {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+
+.manila-pirate-facility .manila-action-row {
+  gap: 6px;
+}
+
+.manila-pirate-facility .manila-action-row select,
+.manila-pirate-facility .manila-action-row button {
+  height: 30px;
+}
+
 .manila-action-title {
   font-weight: 600;
   font-size: 12px;
@@ -10447,6 +10516,19 @@ body.istanbul-explain-mode .istanbul-mosque-rubies.has-explanation:hover {
   height: 36px;
 }
 
+.manila-buy-stock-btn,
+.manila-cargo-select-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.manila-buy-cost {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--manila-ink);
+}
+
 .manila-action-payload {
   width: 100%;
   min-height: 120px;
@@ -10461,6 +10543,12 @@ body.istanbul-explain-mode .istanbul-mosque-rubies.has-explanation:hover {
 .manila-legal {
   font-size: 12px;
   color: var(--manila-muted);
+}
+
+.manila-auction-self {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e3a8a;
 }
 
 .manila-action-group button:disabled,

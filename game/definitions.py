@@ -1704,10 +1704,12 @@ MANILA_ACTION_SCHEMA = {
                 "type": {"const": "pirate_action"},
                 "mode": {"type": "string", "enum": ["board", "plunder", "skip"]},
                 "cargo": {"type": "string"},
+                "result": {"type": "string", "enum": ["port", "shipyard"]},
             },
             "required": ["type", "mode"],
             "additionalProperties": False,
         },
+        {"type": "object", "properties": {"type": {"const": "next_round"}}, "required": ["type"], "additionalProperties": False},
         {"type": "object", "properties": {"type": {"const": "play_again"}}, "required": ["type"], "additionalProperties": False},
     ],
 }
