@@ -173,7 +173,10 @@
           <h2>Harbormaster Cycle</h2>
           <div id="manilaCyclePhase" class="manila-cycle-subtitle">Phase: -</div>
         </div>
-        <button id="manilaCycleCloseBtn" type="button">Close</button>
+        <div class="manila-cycle-header-actions">
+          <button id="manilaCycleExplainBtn" class="manila-header-btn" type="button">Explain</button>
+          <button id="manilaCycleCloseBtn" type="button">Close</button>
+        </div>
       </div>
       <div class="modal-body">
         <div id="manilaCycleRecap" class="manila-cycle-recap">No cycle data yet.</div>
@@ -1380,12 +1383,14 @@
                 <div class="manila-column">
                   <h3 class="manila-section-title">Harbor</h3>
                   <div class="manila-scene">
-                    <div id="manilaBoard" class="manila-map"></div>
                     <div id="manilaBoats" class="manila-sea"></div>
                   </div>
                 </div>
 
                 <div class="manila-column">
+                  <h3 class="manila-section-title">Facilities</h3>
+                  <div id="manilaBoard" class="manila-map"></div>
+
                   <h3 class="manila-section-title">Players</h3>
                   <div id="manilaPlayers" class="manila-grid"></div>
 

@@ -113,6 +113,9 @@ function setGamePanelVisibility(gameType) {
   if (manilaPanel) {
     manilaPanel.classList.toggle("hidden", !showManila);
   }
+  if (typeof showManilaHeaderActions === "function") {
+    showManilaHeaderActions(showManila);
+  }
   skullPanel.classList.toggle("hidden", !showSkull);
   if (catInBoxPanel) {
     catInBoxPanel.classList.toggle("hidden", !showCatInBox);

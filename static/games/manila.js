@@ -53,6 +53,7 @@ const manilaPirateSkipBtn = document.getElementById("manilaPirateSkipBtn");
 const manilaCycleModal = document.getElementById("manilaCycleModal");
 const manilaCycleToggleBtn = document.getElementById("manilaCycleToggleBtn");
 const manilaCycleCloseBtn = document.getElementById("manilaCycleCloseBtn");
+const manilaCycleExplainBtn = document.getElementById("manilaCycleExplainBtn");
 const manilaCycleStatus = document.getElementById("manilaCycleStatus");
 const manilaCyclePhase = document.getElementById("manilaCyclePhase");
 const manilaCycleRecap = document.getElementById("manilaCycleRecap");
@@ -123,6 +124,148 @@ const MANILA_CYCLE_PHASES = new Set([
   "harbormaster_position",
   "placement",
 ]);
+
+const MANILA_DYNAMIC_EXPLANATIONS = {
+  port: {
+    name: "Port Slot",
+    description: "Pays out when ships successfully reach port (based on arrival order).",
+    cost: "🪙 Pay slot cost",
+    costType: "pay",
+  },
+  shipyard: {
+    name: "Shipyard Slot",
+    description: "Pays out when ships fail to reach port (based on failure order).",
+    cost: "🪙 Pay slot cost",
+    costType: "pay",
+  },
+  pirate: {
+    name: "Pirate Role",
+    description: "Join pirates to board or plunder ships that hit port exactly.",
+    cost: "🪙 Pay slot cost",
+    costType: "pay",
+  },
+  pilot: {
+    name: "Pilot Role",
+    description: "Move ships forward before dice movement (big pilot can split).",
+    cost: "🪙 Pay slot cost",
+    costType: "pay",
+  },
+  insurance: {
+    name: "Insurance Broker",
+    description: "Gain immediate cash, then pay per failed ship this round.",
+    cost: "🪙 Pay slot cost",
+    costType: "pay",
+  },
+};
+
+const MANILA_HELP_TEXT = `
+<h3>Game Overview</h3>
+<p>Manila is a wagering-and-placement game where players invest in cargo ships, place workers in harbor roles, and profit as ships (hopefully) reach port.</p>
+
+<h3>Round Structure</h3>
+<ol>
+  <li><strong>Auction</strong> – Bid to become Harbormaster.</li>
+  <li><strong>Harbormaster Setup</strong> – Optional stock buy, choose 3 cargo, set initial positions.</li>
+  <li><strong>Placement (3 mini-rounds)</strong> – Place workers on ships, port, shipyard, pirate, pilot, insurance.</li>
+  <li><strong>Movement & Resolve</strong> – Ships move by dice (with pilots/pirates), then payouts occur.</li>
+</ol>
+
+<h3>Key Ideas</h3>
+<ul>
+  <li><strong>Ship seats</strong> share profits when a ship arrives.</li>
+  <li><strong>Port</strong> pays for successful ships; <strong>Shipyard</strong> pays for failures.</li>
+  <li><strong>Pirates</strong> can board or plunder exact-hit ships.</li>
+  <li><strong>Pilots</strong> can move ships forward (big pilot can split).</li>
+  <li><strong>Insurance</strong> pays immediately but collects per failed ship.</li>
+  <li><strong>Pledge Stock</strong> gives instant cash but costs more at final scoring.</li>
+</ul>
+
+<h3>Placement Tip</h3>
+<p>During placement, click a dock slot or ship seat directly on the board/boats.</p>
+`;
+
+const MANILA_BUTTON_EXPLANATIONS = {
+  manilaCycleToggleBtn: {
+    name: "Harbormaster Panel",
+    description: "Open or hide the Harbormaster cycle panel to review auction/setup actions.",
+    cost: "Free",
+    costType: "free",
+  },
+  manilaBidBtn: {
+    name: "Bid",
+    description: "Place a higher bid to become Harbormaster this round.",
+    cost: "🪙 Pay bid if you win",
+    costType: "pay",
+  },
+  manilaPassBidBtn: {
+    name: "Pass",
+    description: "Pass on the auction. You cannot bid again this round.",
+    cost: "Free",
+    costType: "free",
+  },
+  manilaPayBidBtn: {
+    name: "Pay Bid",
+    description: "Pay your winning bid to become Harbormaster and start setup.",
+    cost: "🪙 Pay bid",
+    costType: "pay",
+  },
+  manilaSkipBuyBtn: {
+    name: "Skip Buy",
+    description: "Skip the optional stock purchase and move to cargo selection.",
+    cost: "Free",
+    costType: "free",
+  },
+  manilaConfirmCargoBtn: {
+    name: "Confirm Cargo",
+    description: "Lock in the 3 cargo types that will sail this round.",
+    cost: "Free",
+    costType: "free",
+  },
+  manilaResetCargoBtn: {
+    name: "Reset Cargo",
+    description: "Clear your current cargo selection.",
+    cost: "Free",
+    costType: "free",
+  },
+  manilaConfirmPositionsBtn: {
+    name: "Confirm Positions",
+    description: "Set the three ships' starting positions (must sum to 9).",
+    cost: "Free",
+    costType: "free",
+  },
+  manilaPassBtn: {
+    name: "Pass Placement",
+    description: "Pass your placement turn without placing a worker.",
+    cost: "Free",
+    costType: "free",
+  },
+  manilaPirateBoardBtn: {
+    name: "Board",
+    description: "Send your pirate to board a ship (take a seat).",
+    cost: "Free",
+    costType: "free",
+  },
+  manilaPiratePlunderBtn: {
+    name: "Plunder",
+    description: "As Captain, plunder a ship that hit port exactly.",
+    cost: "Gain ship value",
+    costType: "gain",
+  },
+  manilaPirateSkipBtn: {
+    name: "Skip",
+    description: "Skip your pirate action.",
+    cost: "Free",
+    costType: "free",
+  },
+  manilaPledgeBtn: {
+    name: "Pledge Stock",
+    description: "Pledge one stock for immediate cash. You repay more at final scoring.",
+    cost: "Gain loan",
+    costType: "gain",
+  },
+};
+
+let manilaExplainMode = false;
 
 function formatManilaPlayerName(view, playerId) {
   if (!view || !Array.isArray(view.players)) {
@@ -284,10 +427,141 @@ function updateManilaCyclePanel(view) {
   manilaLastPhase = phase;
 }
 
-function createSlotButton({ label, meta, occupant, onClick, disabled }) {
+function showManilaHeaderActions(show) {
+  if (manilaHeaderActions) {
+    manilaHeaderActions.style.display = show ? "flex" : "none";
+  }
+}
+
+function showManilaHelpModal() {
+  if (!manilaHelpModal) {
+    return;
+  }
+  const content = manilaHelpModal.querySelector(".manila-help-content");
+  if (content) {
+    content.innerHTML = MANILA_HELP_TEXT;
+  }
+  if (typeof setModalVisible === "function") {
+    setModalVisible(manilaHelpModal, true);
+  } else {
+    setVisible(manilaHelpModal, true);
+  }
+}
+
+function closeManilaHelpModal() {
+  if (!manilaHelpModal) {
+    return;
+  }
+  if (typeof setModalVisible === "function") {
+    setModalVisible(manilaHelpModal, false);
+  } else {
+    setVisible(manilaHelpModal, false);
+  }
+}
+
+function updateManilaExplainClasses(enabled) {
+  Object.keys(MANILA_BUTTON_EXPLANATIONS).forEach((buttonId) => {
+    const btn = document.getElementById(buttonId);
+    if (btn) {
+      btn.classList.toggle("has-explanation", enabled);
+    }
+  });
+  document.querySelectorAll("[data-manila-explain]").forEach((node) => {
+    node.classList.toggle("has-explanation", enabled);
+  });
+}
+
+function findManilaExplainTargetAtPoint(x, y) {
+  for (const buttonId of Object.keys(MANILA_BUTTON_EXPLANATIONS)) {
+    const btn = document.getElementById(buttonId);
+    if (!btn) continue;
+    const rect = btn.getBoundingClientRect();
+    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+      return { type: "button", key: buttonId };
+    }
+  }
+  const nodes = document.querySelectorAll("[data-manila-explain]");
+  for (const node of nodes) {
+    const rect = node.getBoundingClientRect();
+    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+      return { type: "dynamic", key: node.dataset.manilaExplain };
+    }
+  }
+  return null;
+}
+
+function toggleManilaExplainMode() {
+  manilaExplainMode = !manilaExplainMode;
+  document.body.classList.toggle("manila-explain-mode", manilaExplainMode);
+  updateManilaExplainClasses(manilaExplainMode);
+  if (manilaExplainBtn) {
+    manilaExplainBtn.classList.toggle("active", manilaExplainMode);
+  }
+  if (manilaCycleExplainBtn) {
+    manilaCycleExplainBtn.classList.toggle("active", manilaExplainMode);
+  }
+}
+
+function exitManilaExplainMode() {
+  if (!manilaExplainMode) {
+    return;
+  }
+  manilaExplainMode = false;
+  document.body.classList.remove("manila-explain-mode");
+  updateManilaExplainClasses(false);
+  if (manilaExplainBtn) {
+    manilaExplainBtn.classList.remove("active");
+  }
+  if (manilaCycleExplainBtn) {
+    manilaCycleExplainBtn.classList.remove("active");
+  }
+}
+
+function showManilaButtonExplanation(target) {
+  let explanation = null;
+  if (target.type === "button") {
+    explanation = MANILA_BUTTON_EXPLANATIONS[target.key];
+  } else if (target.type === "dynamic") {
+    explanation = MANILA_DYNAMIC_EXPLANATIONS[target.key];
+  }
+  if (!explanation || !manilaExplainContent || !manilaExplainModal) {
+    return;
+  }
+  let costClass = "free";
+  if (explanation.costType === "pay") costClass = "pay";
+  else if (explanation.costType === "gain") costClass = "gain";
+  else if (explanation.costType === "end") costClass = "end";
+
+  manilaExplainContent.innerHTML = `
+    <h4>${explanation.name}</h4>
+    <p>${explanation.description}</p>
+    <span class="explain-cost ${costClass}">${explanation.cost}</span>
+  `;
+  if (typeof setModalVisible === "function") {
+    setModalVisible(manilaExplainModal, true);
+  } else {
+    setVisible(manilaExplainModal, true);
+  }
+}
+
+function closeManilaExplainModal() {
+  if (!manilaExplainModal) {
+    return;
+  }
+  if (typeof setModalVisible === "function") {
+    setModalVisible(manilaExplainModal, false);
+  } else {
+    setVisible(manilaExplainModal, false);
+  }
+}
+
+function createSlotButton({ label, meta, occupant, onClick, disabled, explainId }) {
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "manila-slot";
+  if (explainId) {
+    btn.dataset.manilaExplain = explainId;
+  }
   if (occupant) {
     btn.classList.add("occupied");
   }
@@ -314,108 +588,135 @@ function renderManilaBoats(view) {
   if (!view) {
     return;
   }
-  const cargoIds = getCargoOrder(view);
+  const selected = Array.isArray(view.cargo_slots) ? view.cargo_slots : [];
+  const cargoIds = selected.length ? selected : [];
   if (!cargoIds.length) {
     const empty = document.createElement("div");
     empty.className = "manila-empty";
-    empty.textContent = "No boats yet";
+    empty.textContent = "Harbormaster has not selected cargo yet.";
     manilaBoats.appendChild(empty);
     return;
   }
   const canPlace = canPlaceWorker(view);
+
+  const axis = document.createElement("div");
+  axis.className = "manila-axis-vertical";
+  const axisTitle = document.createElement("div");
+  axisTitle.className = "manila-axis-title";
+  axisTitle.textContent = "Shared Route Axis";
+  axis.appendChild(axisTitle);
+
+  const positionMap = {};
+  const pending = [];
   cargoIds.forEach((cargoId) => {
     const boat = view.boats ? view.boats[cargoId] : null;
-    const meta = getCargoMeta(cargoId);
-    const card = document.createElement("div");
-    card.className = `manila-boat-card manila-cargo-${meta.accent}`;
-    if (!boat) {
-      card.classList.add("inactive");
+    if (!boat || typeof boat.position !== "number") {
+      pending.push(cargoId);
+      return;
     }
-
-    const header = document.createElement("div");
-    header.className = "manila-boat-header";
-    const chip = document.createElement("div");
-    chip.className = `manila-cargo-chip manila-cargo-${meta.accent}`;
-    chip.textContent = `${meta.icon} ${meta.label || cargoId}`;
-    const value = document.createElement("div");
-    value.className = "manila-boat-value";
-    const totalValue = boat && typeof boat.total_value === "number" ? boat.total_value : meta.totalValue ?? 0;
-    value.textContent = `💰 ${totalValue}`;
-    header.appendChild(chip);
-    header.appendChild(value);
-    card.appendChild(header);
-
-    const track = document.createElement("div");
-    track.className = "manila-track";
-    const position = boat && typeof boat.position === "number" ? boat.position : null;
-    for (let i = 0; i <= 13; i += 1) {
-      const dot = document.createElement("div");
-      dot.className = "manila-track-dot";
-      if (i === 13) {
-        dot.classList.add("port");
-      }
-      if (position !== null && i === position) {
-        dot.classList.add("active");
-      } else if (!boat) {
-        dot.classList.add("inactive");
-      }
-      if (i === 0 || i === 5 || i === 10 || i === 13) {
-        dot.textContent = String(i);
-      }
-      dot.title = `Position ${i}`;
-      track.appendChild(dot);
+    const pos = boat.position;
+    if (!positionMap[pos]) {
+      positionMap[pos] = [];
     }
-    card.appendChild(track);
-
-    const seatWrap = document.createElement("div");
-    seatWrap.className = "manila-seat-grid";
-    const seats = boat && Array.isArray(boat.seats) ? boat.seats : [];
-    const costs =
-      boat && Array.isArray(boat.seat_costs)
-        ? boat.seat_costs
-        : Array.isArray(meta.seatCosts)
-          ? meta.seatCosts
-          : [];
-    costs.forEach((cost, idx) => {
-      const seatBtn = document.createElement("button");
-      seatBtn.type = "button";
-      seatBtn.className = "manila-seat";
-      const occupant = seats[idx];
-      const occupantLabel = boat ? (occupant ? formatManilaSeat(occupant, view) : "Empty") : "Not sailing";
-      seatBtn.innerHTML = `
-        <span class=\"manila-seat-title\">Seat ${idx + 1}</span>
-        <span class=\"manila-seat-meta\">🪙 ${cost}</span>
-        <span class=\"manila-seat-occupant\">${occupantLabel}</span>
-      `;
-      seatBtn.addEventListener("click", () => {
-        if (!boat) {
-          return;
-        }
-        sendAction({ type: "place_worker", location: { type: "ship", cargo: cargoId, seat: idx } });
-      });
-      if (!boat) {
-        seatBtn.classList.add("inactive");
-      }
-      setDisabled(seatBtn, !canPlace || !boat || !!occupant);
-      seatWrap.appendChild(seatBtn);
-    });
-    card.appendChild(seatWrap);
-
-    const flags = [];
-    const footer = document.createElement("div");
-    footer.className = "manila-boat-footer";
-    if (boat) {
-      if (boat.plundered) flags.push("plundered");
-      if (boat.safe_from_pirates) flags.push("safe");
-      if (boat.skip_roll) flags.push("arrived");
-      footer.textContent = flags.length ? `Flags: ${flags.join(", ")}` : "Flags: -";
-    } else {
-      footer.textContent = "Status: Not sailing this round.";
-    }
-    card.appendChild(footer);
-
-    manilaBoats.appendChild(card);
+    positionMap[pos].push(cargoId);
   });
+
+  if (pending.length) {
+    const row = document.createElement("div");
+    row.className = "manila-axis-row pending";
+    const tick = document.createElement("div");
+    tick.className = "manila-axis-tick-label";
+    tick.textContent = "Pending";
+    row.appendChild(tick);
+    const markers = document.createElement("div");
+    markers.className = "manila-axis-markers";
+    pending.forEach((cargoId) => {
+      const boat = view.boats ? view.boats[cargoId] : null;
+      markers.appendChild(buildManilaAxisBoat(cargoId, boat, view, canPlace));
+    });
+    row.appendChild(markers);
+    axis.appendChild(row);
+  }
+
+  for (let i = 13; i >= 0; i -= 1) {
+    const row = document.createElement("div");
+    row.className = "manila-axis-row";
+    if (i === 13) {
+      row.classList.add("port");
+    }
+    const tick = document.createElement("div");
+    tick.className = "manila-axis-tick-label";
+    tick.textContent = String(i);
+    row.appendChild(tick);
+    const markers = document.createElement("div");
+    markers.className = "manila-axis-markers";
+    const cargosHere = positionMap[i] || [];
+    cargosHere.forEach((cargoId) => {
+      const boat = view.boats ? view.boats[cargoId] : null;
+      markers.appendChild(buildManilaAxisBoat(cargoId, boat, view, canPlace));
+    });
+    row.appendChild(markers);
+    axis.appendChild(row);
+  }
+  manilaBoats.appendChild(axis);
+}
+
+function buildManilaAxisBoat(cargoId, boat, view, canPlace) {
+  const meta = getCargoMeta(cargoId);
+  const wrapper = document.createElement("div");
+  wrapper.className = `manila-axis-boat manila-cargo-${meta.accent}`;
+  if (!boat) {
+    wrapper.classList.add("inactive");
+  }
+
+  const header = document.createElement("div");
+  header.className = "manila-axis-boat-header";
+  const title = document.createElement("div");
+  title.className = "manila-axis-boat-title";
+  title.textContent = `${meta.icon} ${meta.label || cargoId}`;
+  const value = document.createElement("div");
+  value.className = "manila-axis-boat-value";
+  const totalValue = boat && typeof boat.total_value === "number" ? boat.total_value : meta.totalValue ?? 0;
+  value.textContent = `💰 ${totalValue}`;
+  header.appendChild(title);
+  header.appendChild(value);
+  wrapper.appendChild(header);
+
+  const seatWrap = document.createElement("div");
+  seatWrap.className = "manila-axis-seat-grid";
+  const seats = boat && Array.isArray(boat.seats) ? boat.seats : [];
+  const costs =
+    boat && Array.isArray(boat.seat_costs)
+      ? boat.seat_costs
+      : Array.isArray(meta.seatCosts)
+        ? meta.seatCosts
+        : [];
+  costs.forEach((cost, idx) => {
+    const seatBtn = document.createElement("button");
+    seatBtn.type = "button";
+    seatBtn.className = "manila-seat";
+    const occupant = seats[idx];
+    const occupantLabel = boat ? (occupant ? formatManilaSeat(occupant, view) : "Empty") : "Not sailing";
+    seatBtn.innerHTML = `
+      <span class=\"manila-seat-title\">Seat ${idx + 1}</span>
+      <span class=\"manila-seat-meta\">🪙 ${cost}</span>
+      <span class=\"manila-seat-occupant\">${occupantLabel}</span>
+    `;
+    seatBtn.addEventListener("click", () => {
+      if (!boat) {
+        return;
+      }
+      sendAction({ type: "place_worker", location: { type: "ship", cargo: cargoId, seat: idx } });
+    });
+    if (!boat) {
+      seatBtn.classList.add("inactive");
+    }
+    setDisabled(seatBtn, !canPlace || !boat || !!occupant);
+    seatWrap.appendChild(seatBtn);
+  });
+  wrapper.appendChild(seatWrap);
+
+  return wrapper;
 }
 
 function renderManilaBoard(view) {
@@ -446,6 +747,7 @@ function renderManilaBoard(view) {
       occupant: occupantId ? formatManilaSeat(occupantId, view) : "",
       disabled: !canPlace || !!occupantId,
       onClick: () => sendAction({ type: "place_worker", location: { type: "port", slot } }),
+      explainId: "port",
     });
     portGrid.appendChild(btn);
   });
@@ -465,6 +767,7 @@ function renderManilaBoard(view) {
       occupant: occupantId ? formatManilaSeat(occupantId, view) : "",
       disabled: !canPlace || !!occupantId,
       onClick: () => sendAction({ type: "place_worker", location: { type: "shipyard", slot } }),
+      explainId: "shipyard",
     });
     shipyardGrid.appendChild(btn);
   });
@@ -483,6 +786,7 @@ function renderManilaBoard(view) {
       occupant: pirates.captain ? formatManilaSeat(pirates.captain, view) : "",
       disabled: !canPlace || !!pirates.captain,
       onClick: () => sendAction({ type: "place_worker", location: { type: "pirate", slot: "captain" } }),
+      explainId: "pirate",
     })
   );
   rolesGrid.appendChild(
@@ -492,6 +796,7 @@ function renderManilaBoard(view) {
       occupant: pirates.pirate ? formatManilaSeat(pirates.pirate, view) : "",
       disabled: !canPlace || !!pirates.pirate,
       onClick: () => sendAction({ type: "place_worker", location: { type: "pirate", slot: "pirate" } }),
+      explainId: "pirate",
     })
   );
   const pilots = board.pilots || {};
@@ -502,6 +807,7 @@ function renderManilaBoard(view) {
       occupant: pilots.big ? formatManilaSeat(pilots.big, view) : "",
       disabled: !canPlace || !!pilots.big,
       onClick: () => sendAction({ type: "place_worker", location: { type: "pilot", size: "big" } }),
+      explainId: "pilot",
     })
   );
   rolesGrid.appendChild(
@@ -511,6 +817,7 @@ function renderManilaBoard(view) {
       occupant: pilots.small ? formatManilaSeat(pilots.small, view) : "",
       disabled: !canPlace || !!pilots.small,
       onClick: () => sendAction({ type: "place_worker", location: { type: "pilot", size: "small" } }),
+      explainId: "pilot",
     })
   );
   rolesZone.appendChild(rolesGrid);
@@ -527,6 +834,7 @@ function renderManilaBoard(view) {
       occupant: board.insurance ? formatManilaSeat(board.insurance, view) : "",
       disabled: !canPlace || !!board.insurance,
       onClick: () => sendAction({ type: "place_worker", location: { type: "insurance" } }),
+      explainId: "insurance",
     })
   );
   insuranceZone.appendChild(insuranceGrid);
@@ -963,6 +1271,7 @@ function clearManilaState() {
   if (manilaCyclePhase) manilaCyclePhase.textContent = "Phase: -";
   if (manilaCycleRecap) manilaCycleRecap.textContent = "No cycle data yet.";
   setManilaCycleOpen(false);
+  exitManilaExplainMode();
 }
 
 if (manilaBidBtn && manilaBidInput) {
@@ -1042,6 +1351,73 @@ if (manilaCycleCloseBtn) {
   });
 }
 
+if (manilaHelpBtn) {
+  manilaHelpBtn.addEventListener("click", showManilaHelpModal);
+}
+
+if (manilaHelpModalCloseBtn) {
+  manilaHelpModalCloseBtn.addEventListener("click", closeManilaHelpModal);
+}
+
+if (manilaExplainBtn) {
+  manilaExplainBtn.addEventListener("click", () => {
+    toggleManilaExplainMode();
+  });
+}
+
+if (manilaCycleExplainBtn) {
+  manilaCycleExplainBtn.addEventListener("click", () => {
+    toggleManilaExplainMode();
+  });
+}
+
+if (manilaExplainModalCloseBtn) {
+  manilaExplainModalCloseBtn.addEventListener("click", closeManilaExplainModal);
+}
+
+document.addEventListener("pointerdown", (event) => {
+  if (!manilaExplainMode) {
+    return;
+  }
+  const target = findManilaExplainTargetAtPoint(event.clientX, event.clientY);
+  if (target) {
+    event.preventDefault();
+    event.stopPropagation();
+    showManilaButtonExplanation(target);
+    exitManilaExplainMode();
+    return;
+  }
+
+  const button = event.target.closest("button");
+  if (!button) {
+    return;
+  }
+  if (button === manilaExplainBtn || button === manilaHelpBtn) return;
+  if (button === manilaCycleExplainBtn) return;
+  if (button === manilaHelpModalCloseBtn || button === manilaExplainModalCloseBtn) return;
+  if (button === manilaCycleCloseBtn) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+}, true);
+
+document.addEventListener("click", (event) => {
+  if (!manilaExplainMode) {
+    return;
+  }
+  const button = event.target.closest("button");
+  if (!button) {
+    return;
+  }
+  if (button === manilaExplainBtn || button === manilaHelpBtn) return;
+  if (button === manilaCycleExplainBtn) return;
+  if (button === manilaHelpModalCloseBtn || button === manilaExplainModalCloseBtn) return;
+  if (button === manilaCycleCloseBtn) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+}, true);
+
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") {
     return;
@@ -1050,7 +1426,17 @@ document.addEventListener("keydown", (event) => {
     manilaCycleUserOverride = "closed";
     setManilaCycleOpen(false);
   }
+  if (manilaHelpModal && !manilaHelpModal.classList.contains("hidden")) {
+    closeManilaHelpModal();
+  }
+  if (manilaExplainModal && !manilaExplainModal.classList.contains("hidden")) {
+    closeManilaExplainModal();
+  }
+  if (manilaExplainMode) {
+    exitManilaExplainMode();
+  }
 });
 
 window.renderManilaGameState = renderManilaGameState;
 window.clearManilaState = clearManilaState;
+window.showManilaHeaderActions = showManilaHeaderActions;
