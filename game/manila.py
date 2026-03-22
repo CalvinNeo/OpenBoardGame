@@ -109,6 +109,7 @@ def _start_auction(state: Dict) -> None:
         "highest_bid": 0,
         "leader": None,
         "start_player": start_pid,
+        "bids": {pid: 0 for pid in order},
     }
     state["current_player"] = start_pid
 
@@ -684,7 +685,7 @@ class ManilaGame:
         if phase == "harbormaster_pay":
             if player_id != state.get("harbormaster"):
                 return []
-            return ["pay_bid", "pledge_stock"]
+            return ["pledge_stock"]
         if phase == "harbormaster_buy":
             if player_id != state.get("harbormaster"):
                 return []
@@ -727,6 +728,11 @@ class ManilaGame:
             pdata["stocks"][cargo_id] -= 1
             pdata["pledged"][cargo_id] += 1
             _gain_cash(state, player_id, state["config"].get("loan_amount", 12))
+            if state.get("phase") == "harbormaster_pay" and player_id == state.get("harbormaster"):
+                bid = int(state.get("harbormaster_bid", 0))
+                if state["players"][player_id]["cash"] >= bid:
+                    _pay_cash(state, player_id, bid)
+                    state["phase"] = "harbormaster_buy"
             return events, None
 
         phase = state.get("phase")
@@ -749,6 +755,8 @@ class ManilaGame:
                     return [], "bid too low"
                 auction["highest_bid"] = bid
                 auction["leader"] = player_id
+                if "bids" in auction:
+                    auction["bids"][player_id] = bid
                 _advance_auction_turn(state)
                 return events, None
             if action_type == "pass_bid":
@@ -787,14 +795,7 @@ class ManilaGame:
         if phase == "harbormaster_pay":
             if player_id != state.get("harbormaster"):
                 return [], "not harbormaster"
-            if action_type != "pay_bid":
-                return [], "invalid action"
-            bid = int(state.get("harbormaster_bid", 0))
-            if state["players"][player_id]["cash"] < bid:
-                return [], "insufficient cash"
-            _pay_cash(state, player_id, bid)
-            state["phase"] = "harbormaster_buy"
-            return events, None
+            return [], "invalid action"
 
         if phase == "harbormaster_cargo":
             if player_id != state.get("harbormaster"):

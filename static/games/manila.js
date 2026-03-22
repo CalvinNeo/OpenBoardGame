@@ -11,15 +11,16 @@ const manilaHarborLabel = document.getElementById("manilaHarbor");
 const manilaHarborBidLabel = document.getElementById("manilaHarborBid");
 const manilaPricesLabel = document.getElementById("manilaPrices");
 const manilaBoats = document.getElementById("manilaBoats");
+const manilaDiceBar = document.getElementById("manilaDiceBar");
 const manilaBoard = document.getElementById("manilaBoard");
 const manilaPlayers = document.getElementById("manilaPlayers");
 const manilaLegalActions = document.getElementById("manilaLegalActions");
 
 const manilaAuctionInfo = document.getElementById("manilaAuctionInfo");
+const manilaAuctionBidList = document.getElementById("manilaAuctionBidList");
 const manilaBidInput = document.getElementById("manilaBidInput");
 const manilaBidBtn = document.getElementById("manilaBidBtn");
 const manilaPassBidBtn = document.getElementById("manilaPassBidBtn");
-const manilaPayBidBtn = document.getElementById("manilaPayBidBtn");
 const manilaPledgeSelect = document.getElementById("manilaPledgeSelect");
 const manilaPledgeBtn = document.getElementById("manilaPledgeBtn");
 
@@ -283,6 +284,38 @@ function formatManilaSeat(seat, view) {
     return "-";
   }
   return formatManilaPlayerName(view, seat);
+}
+
+function formatManilaBidLine(view) {
+  if (!view || !view.auction || !view.auction.bids || !Array.isArray(view.players)) {
+    return "";
+  }
+  const parts = view.players.map((player) => {
+    const amount = view.auction.bids[player.player_id] ?? 0;
+    const name = player.name || player.player_id;
+    return `${name} ${amount}`;
+  });
+  return parts.length ? `Bids: ${parts.join(" · ")}` : "";
+}
+
+function renderManilaBidList(view) {
+  if (!view || !view.auction || !view.auction.bids || !Array.isArray(view.players)) {
+    return "";
+  }
+  const active = new Set(view.auction.active || []);
+  const rows = view.players.map((player) => {
+    const amount = view.auction.bids[player.player_id] ?? 0;
+    const name = player.name || player.player_id;
+    const isLeader = view.auction.leader === player.player_id;
+    const isPassed = !active.has(player.player_id);
+    return `
+      <div class="manila-auction-bid-row ${isLeader ? "leader" : ""} ${isPassed ? "passed" : ""}">
+        <span>${name}${isPassed ? " (Passed)" : ""}</span>
+        <span>${isPassed ? "—" : `🪙 ${amount}`}</span>
+      </div>
+    `;
+  });
+  return rows.join("");
 }
 
 function getCargoList(view) {
@@ -595,16 +628,22 @@ function renderManilaBoats(view) {
     empty.className = "manila-empty";
     empty.textContent = "Harbormaster has not selected cargo yet.";
     manilaBoats.appendChild(empty);
+    if (manilaDiceBar) {
+      setVisible(manilaDiceBar, false);
+      manilaDiceBar.innerHTML = "";
+    }
     return;
   }
   const canPlace = canPlaceWorker(view);
 
   const axis = document.createElement("div");
   axis.className = "manila-axis-vertical";
+  const axisHeader = document.createElement("div");
+  axisHeader.className = "manila-axis-header";
   const axisTitle = document.createElement("div");
   axisTitle.className = "manila-axis-title";
   axisTitle.textContent = "Shared Route Axis";
-  axis.appendChild(axisTitle);
+  axisHeader.appendChild(axisTitle);
 
   const positionMap = {};
   const pending = [];
@@ -620,6 +659,48 @@ function renderManilaBoats(view) {
     }
     positionMap[pos].push(cargoId);
   });
+
+  if (manilaDiceBar) {
+    const diceEmoji = ["", "⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
+    const rolls = cargoIds.map((cargoId) => {
+      const boat = view.boats ? view.boats[cargoId] : null;
+      return {
+        cargoId,
+        roll: boat && typeof boat.last_roll === "number" ? boat.last_roll : null,
+      };
+    });
+    const hasRoll = rolls.some((entry) => entry.roll !== null);
+    if (!hasRoll) {
+      setVisible(manilaDiceBar, false);
+      manilaDiceBar.innerHTML = "";
+    } else {
+      setVisible(manilaDiceBar, true);
+      manilaDiceBar.innerHTML = "";
+      const title = document.createElement("div");
+      title.className = "manila-dice-title";
+      title.textContent = "Last Dice Roll";
+      const row = document.createElement("div");
+      row.className = "manila-dice-row";
+      rolls.forEach((entry) => {
+        const meta = getCargoMeta(entry.cargoId);
+        const chip = document.createElement("div");
+        chip.className = "manila-dice-chip";
+        const label = document.createElement("span");
+        label.textContent = `${meta.icon} ${meta.label || entry.cargoId}`;
+        const value = document.createElement("span");
+        value.className = "manila-dice-value";
+        value.textContent = entry.roll ? `${diceEmoji[entry.roll]} ${entry.roll}` : "—";
+        chip.appendChild(label);
+        chip.appendChild(value);
+        row.appendChild(chip);
+      });
+      manilaDiceBar.appendChild(title);
+      manilaDiceBar.appendChild(row);
+    }
+    axisHeader.appendChild(manilaDiceBar);
+  }
+
+  axis.appendChild(axisHeader);
 
   if (pending.length) {
     const row = document.createElement("div");
@@ -658,6 +739,7 @@ function renderManilaBoats(view) {
     row.appendChild(markers);
     axis.appendChild(row);
   }
+
   manilaBoats.appendChild(axis);
 }
 
@@ -915,18 +997,20 @@ function updateAuctionActions(view) {
   setDisabled(manilaPassBidBtn, !isMyTurn);
   if (manilaAuctionInfo && view.auction) {
     const leader = view.auction.leader ? formatManilaPlayerName(view, view.auction.leader) : "-";
-    manilaAuctionInfo.textContent = `Highest bid ${view.auction.highest_bid ?? 0} · Leader ${leader}`;
+    const highest = view.auction.highest_bid ?? 0;
+    const bidsLine = formatManilaBidLine(view);
+    manilaAuctionInfo.innerHTML = `
+      <div>Highest bid ${highest} · Leader ${leader}</div>
+      ${bidsLine ? `<div class="manila-auction-bids">${bidsLine}</div>` : ""}
+    `;
+  }
+  if (manilaAuctionBidList) {
+    manilaAuctionBidList.innerHTML = renderManilaBidList(view);
   }
 }
 
 function updatePayBidActions(view) {
-  const visible = view && view.phase === "harbormaster_pay";
-  setVisible(document.getElementById("manilaPayBidGroup"), visible);
-  if (!visible) {
-    return;
-  }
-  const isMyTurn = view.current_player === view.you;
-  setDisabled(manilaPayBidBtn, !isMyTurn);
+  return;
 }
 
 function updatePledgeActions(view) {
@@ -1263,6 +1347,10 @@ function clearManilaState() {
   if (manilaHarborBidLabel) manilaHarborBidLabel.textContent = "-";
   if (manilaPricesLabel) manilaPricesLabel.textContent = "-";
   if (manilaBoats) manilaBoats.innerHTML = "";
+  if (manilaDiceBar) {
+    manilaDiceBar.innerHTML = "";
+    setVisible(manilaDiceBar, false);
+  }
   if (manilaBoard) manilaBoard.innerHTML = "";
   if (manilaPlayers) manilaPlayers.innerHTML = "";
   if (manilaLegalActions) manilaLegalActions.textContent = "-";
@@ -1286,9 +1374,6 @@ if (manilaBidBtn && manilaBidInput) {
 }
 if (manilaPassBidBtn) {
   manilaPassBidBtn.addEventListener("click", () => sendAction({ type: "pass_bid" }));
-}
-if (manilaPayBidBtn) {
-  manilaPayBidBtn.addEventListener("click", () => sendAction({ type: "pay_bid" }));
 }
 if (manilaPledgeBtn && manilaPledgeSelect) {
   manilaPledgeBtn.addEventListener("click", () =>

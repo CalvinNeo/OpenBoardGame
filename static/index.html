@@ -188,13 +188,7 @@
               <button id="manilaBidBtn">Bid</button>
               <button id="manilaPassBidBtn">Pass</button>
             </div>
-          </div>
-
-          <div id="manilaPayBidGroup" class="manila-action-group hidden">
-            <div class="manila-action-title">Pay Bid</div>
-            <div class="manila-action-row">
-              <button id="manilaPayBidBtn">Pay</button>
-            </div>
+            <div id="manilaAuctionBidList" class="manila-auction-bidlist"></div>
           </div>
 
           <div id="manilaBuyStockGroup" class="manila-action-group hidden">
@@ -220,14 +214,6 @@
             <div class="manila-action-row">
               <div>Sum: <span id="manilaPositionsSum">0</span></div>
               <button id="manilaConfirmPositionsBtn">Confirm</button>
-            </div>
-          </div>
-
-          <div id="manilaPlacementGroup" class="manila-action-group hidden">
-            <div class="manila-action-title">Placement</div>
-            <div class="manila-action-hint">Click a dock or ship seat to place a worker.</div>
-            <div class="manila-action-row">
-              <button id="manilaPassBtn">Pass</button>
             </div>
           </div>
         </div>
@@ -1384,6 +1370,7 @@
                   <h3 class="manila-section-title">Harbor</h3>
                   <div class="manila-scene">
                     <div id="manilaBoats" class="manila-sea"></div>
+                    <div id="manilaDiceBar" class="manila-dice-bar hidden"></div>
                   </div>
                 </div>
 
@@ -1399,6 +1386,14 @@
                     <div class="manila-cycle-bar">
                       <button id="manilaCycleToggleBtn" type="button">Open Harbormaster Panel</button>
                       <div id="manilaCycleStatus" class="manila-cycle-status">Cycle: -</div>
+                    </div>
+
+                    <div id="manilaPlacementGroup" class="manila-action-group hidden">
+                      <div class="manila-action-title">Placement</div>
+                      <div class="manila-action-hint">Click a dock or ship seat to place a worker.</div>
+                      <div class="manila-action-row">
+                        <button id="manilaPassBtn">Pass</button>
+                      </div>
                     </div>
 
                     <div id="manilaPilotGroup" class="manila-action-group hidden">
