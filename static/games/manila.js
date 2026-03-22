@@ -1083,10 +1083,9 @@ function updateAuctionActions(view) {
   const stockCount = you && you.stocks ? Object.values(you.stocks).reduce((sum, val) => sum + (val || 0), 0) : 0;
   if (manilaBidInput) {
     const currentBid = view.auction ? view.auction.highest_bid || 0 : 0;
-    manilaBidInput.min = String(currentBid + 1);
-    if (!manilaBidInput.value) {
-      manilaBidInput.value = String(currentBid + 1);
-    }
+    const minBid = currentBid + 1;
+    manilaBidInput.min = String(minBid);
+    manilaBidInput.value = String(minBid);
   }
   setDisabled(manilaBidBtn, !isMyTurn);
   setDisabled(manilaPassBidBtn, !isMyTurn);
