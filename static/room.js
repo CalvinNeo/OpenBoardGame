@@ -520,6 +520,7 @@ const GAME_WEIGHT = {
   wandering_towers: 1.59,
   yahtzee: 1.17,
   fake_artist: 1.09,
+  manila: 2.04,
 };
 
 function getGameWeight(gameId) {

@@ -9485,6 +9485,7 @@ body.istanbul-explain-mode .istanbul-mosque-rubies.has-explanation:hover {
   background: rgba(255, 255, 255, 0.7);
   border: 1px solid rgba(148, 163, 184, 0.5);
   margin-bottom: 16px;
+  justify-content: space-between;
 }
 
 .manila-auction-title {
@@ -9498,6 +9499,14 @@ body.istanbul-explain-mode .istanbul-mosque-rubies.has-explanation:hover {
 .manila-auction-info {
   font-size: 13px;
   color: var(--manila-muted);
+}
+
+.manila-auction-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
 }
 
 .manila-auction-bids {
@@ -9573,6 +9582,37 @@ body.istanbul-explain-mode .istanbul-mosque-rubies.has-explanation:hover {
   background: linear-gradient(160deg, #fde68a 0%, #fef3c7 45%, #ffe4e6 100%);
   border: 1px solid rgba(180, 83, 9, 0.25);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+}
+
+.manila-pass-facility {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.06);
+  border: 1px dashed rgba(15, 23, 42, 0.25);
+  display: grid;
+  gap: 6px;
+}
+
+.manila-pass-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--manila-ink);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.manila-pass-hint {
+  font-size: 12px;
+  color: var(--manila-muted);
+}
+
+.manila-pass-facility button {
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  background: #f8fafc;
+  font-weight: 600;
 }
 
 .manila-map-grid {
@@ -9779,12 +9819,48 @@ body.istanbul-explain-mode .istanbul-mosque-rubies.has-explanation:hover {
   color: #0f766e;
 }
 
+.manila-axis-row.arrived .manila-axis-tick-label {
+  color: #0f766e;
+}
+
 .manila-axis-tick-label {
   font-size: 12px;
   font-weight: 700;
   color: var(--manila-muted);
   text-align: center;
   padding-top: 6px;
+}
+
+.manila-axis-arrived {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.manila-axis-arrived-slot {
+  display: grid;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px dashed rgba(15, 118, 110, 0.35);
+  background: rgba(240, 253, 250, 0.7);
+}
+
+.manila-axis-arrived-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #0f766e;
+}
+
+.manila-axis-arrived-empty {
+  font-size: 12px;
+  color: var(--manila-muted);
+  padding: 6px;
+  text-align: center;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.04);
 }
 
 .manila-axis-markers {

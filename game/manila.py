@@ -90,10 +90,35 @@ def _init_boat(cargo_id: str, position: int) -> Dict:
         "plundered": False,
         "plunderer": None,
         "skip_roll": False,
+        "arrived": False,
+        "arrived_slot": None,
         "arrived_by_pilot": False,
         "safe_from_pirates": False,
         "last_roll": None,
     }
+
+
+def _init_arrivals_state() -> Dict[str, Optional[str]]:
+    return {"A": None, "B": None, "C": None}
+
+
+def _next_port_slot(state: Dict) -> Optional[str]:
+    for slot in ("A", "B", "C"):
+        if not state.get("port_arrivals", {}).get(slot):
+            return slot
+    return None
+
+
+def _place_in_port(state: Dict, cargo_id: str) -> None:
+    boat = state.get("boats", {}).get(cargo_id)
+    if not boat or boat.get("arrived"):
+        return
+    slot = _next_port_slot(state)
+    if slot:
+        state["port_arrivals"][slot] = cargo_id
+        boat["arrived_slot"] = slot
+    boat["arrived"] = True
+    boat["skip_roll"] = True
 
 
 def _start_auction(state: Dict) -> None:
@@ -214,7 +239,9 @@ def _setup_round(state: Dict) -> None:
     state["placement_acted"] = []
     state["pirate_targets"] = []
     state["pirate_pending"] = []
+    state["pirate_day"] = None
     state["pending_pilots"] = []
+    state["port_arrivals"] = _init_arrivals_state()
 
 
 def _start_placement_round(state: Dict) -> None:
@@ -223,13 +250,10 @@ def _start_placement_round(state: Dict) -> None:
     state["current_player"] = state.get("harbormaster")
 
 
-def _roll_and_move(state: Dict) -> List[str]:
+def _roll_and_move(state: Dict, day: int) -> List[str]:
     pirate_targets: List[str] = []
     for cargo_id, boat in state.get("boats", {}).items():
-        if boat.get("skip_roll") or boat.get("plundered"):
-            continue
-        if int(boat.get("position", 0)) >= 13:
-            boat["skip_roll"] = True
+        if boat.get("skip_roll") or boat.get("plundered") or boat.get("arrived"):
             continue
         roll = random.randint(1, 6)
         boat["last_roll"] = roll
@@ -237,12 +261,15 @@ def _roll_and_move(state: Dict) -> List[str]:
         new_pos = pos + roll
         exact_hit = new_pos == 13
         overshoot = new_pos > 13
-        boat["position"] = 13 if new_pos >= 13 else new_pos
         if new_pos >= 13:
-            boat["skip_roll"] = True
+            boat["position"] = 13
+        else:
+            boat["position"] = new_pos
         boat["exact_hit"] = exact_hit
         boat["overshoot"] = overshoot
-        if exact_hit and not boat.get("safe_from_pirates"):
+        if overshoot:
+            _place_in_port(state, cargo_id)
+        elif exact_hit and not boat.get("safe_from_pirates"):
             pirate_targets.append(cargo_id)
     return pirate_targets
 
@@ -263,23 +290,38 @@ def _maybe_start_pilot_phase(state: Dict) -> bool:
     return False
 
 
-def _maybe_start_pirate_phase(state: Dict, targets: List[str]) -> bool:
-    if not targets:
+def _maybe_start_pirate_phase(state: Dict, targets: List[str], day: int) -> bool:
+    if not targets or day not in (2, 3):
         return False
     pirates = state.get("board", {}).get("pirates", {})
-    pending: List[str] = []
-    if pirates.get("captain"):
-        pending.append("captain")
-    if pirates.get("pirate"):
-        pending.append("pirate")
+    captain_id = pirates.get("captain")
+    pirate_id = pirates.get("pirate")
+    if not captain_id:
+        return False
+    if day == 2:
+        pending = [pid for pid in (captain_id, pirate_id) if pid]
+    else:
+        pending = [captain_id]
     if not pending:
         return False
     state["pirate_targets"] = targets
     state["pirate_pending"] = pending
+    state["pirate_day"] = day
     state["phase"] = "pirate"
-    first_role = pending[0]
-    state["current_player"] = pirates.get(first_role)
+    state["current_player"] = pending[0]
     return True
+
+
+def _finalize_no_pirate_arrivals(state: Dict) -> None:
+    pirates = state.get("board", {}).get("pirates", {})
+    if pirates.get("captain") or pirates.get("pirate"):
+        return
+    for cargo_id in state.get("cargo_slots", []):
+        boat = state.get("boats", {}).get(cargo_id)
+        if not boat or boat.get("arrived") or boat.get("plundered"):
+            continue
+        if int(boat.get("position", 0)) == 13:
+            _place_in_port(state, cargo_id)
 
 
 def _advance_after_movement(state: Dict) -> None:
@@ -288,6 +330,7 @@ def _advance_after_movement(state: Dict) -> None:
         state["placement_round"] = round_no + 1
         _start_placement_round(state)
         return
+    _finalize_no_pirate_arrivals(state)
     _resolve_round(state)
 
 
@@ -298,27 +341,38 @@ def _resolve_round(state: Dict) -> None:
 
     successes: List[str] = []
     failures: List[str] = []
+    port_candidates: List[str] = []
     for cargo_id in cargo_order:
         boat = state["boats"].get(cargo_id)
         if not boat:
             continue
         if boat.get("plundered"):
-            failures.append(cargo_id)
+            result = boat.get("plunder_result")
+            if result == "port":
+                successes.append(cargo_id)
+                port_candidates.append(cargo_id)
+            else:
+                failures.append(cargo_id)
             continue
-        if int(boat.get("position", 0)) >= 13:
+        if boat.get("arrived"):
             successes.append(cargo_id)
+            port_candidates.append(cargo_id)
         else:
             failures.append(cargo_id)
 
     for cargo_id in successes:
         boat = state["boats"][cargo_id]
+        if boat.get("plundered"):
+            continue
         _distribute_ship_value(state, boat)
 
+    for cargo_id in port_candidates:
+        _place_in_port(state, cargo_id)
+
     board = state.get("board", {})
-    for idx, cargo_id in enumerate(successes):
-        if idx >= len(port_slots):
-            break
-        slot = port_slots[idx]
+    for slot in port_slots:
+        if not state.get("port_arrivals", {}).get(slot):
+            continue
         occupant = board.get("port", {}).get(slot)
         payout = BOARD_DATA.get("port", {}).get(slot, {}).get("payout", 0)
         if occupant:
@@ -363,7 +417,9 @@ def _cleanup_round(state: Dict) -> None:
     state["placement_acted"] = []
     state["pirate_targets"] = []
     state["pirate_pending"] = []
+    state["pirate_day"] = None
     state["pending_pilots"] = []
+    state["port_arrivals"] = _init_arrivals_state()
 
 
 def _advance_price(state: Dict, cargo_id: str) -> None:
@@ -538,10 +594,8 @@ def _bot_choose_placement(state: Dict, player_id: str) -> Optional[Dict]:
 
     pirates = board.get("pirates", {})
     pirate_cost = int(BOARD_DATA.get("pirates", {}).get("place_cost", 0))
-    if pirates.get("captain") is None and pirate_cost <= cash:
-        options.append((7.5, {"type": "place_worker", "location": {"type": "pirate", "slot": "captain"}}))
-    if pirates.get("pirate") is None and pirate_cost <= cash:
-        options.append((6.0, {"type": "place_worker", "location": {"type": "pirate", "slot": "pirate"}}))
+    if (pirates.get("captain") is None or pirates.get("pirate") is None) and pirate_cost <= cash:
+        options.append((7.0, {"type": "place_worker", "location": {"type": "pirate"}}))
 
     pilots = board.get("pilots", {})
     small_cost = int(BOARD_DATA.get("pilots", {}).get("small_cost", 0))
@@ -579,7 +633,7 @@ def _bot_choose_pilot_action(state: Dict, player_id: str) -> Optional[Dict]:
     boats = [
         (cargo_id, boat)
         for cargo_id, boat in state.get("boats", {}).items()
-        if int(boat.get("position", 0)) < 13
+        if not boat.get("arrived")
     ]
     if not boats:
         return None
@@ -608,22 +662,22 @@ def _bot_choose_pilot_action(state: Dict, player_id: str) -> Optional[Dict]:
 
 def _bot_choose_pirate_action(state: Dict, player_id: str) -> Optional[Dict]:
     targets = list(state.get("pirate_targets", []))
-    if not targets:
+    day = state.get("pirate_day", 3)
+    if day == 2:
+        for cargo_id in targets:
+            boat = state["boats"].get(cargo_id)
+            if not boat:
+                continue
+            seats = boat.get("seats", [])
+            if any(seat is None for seat in seats):
+                return {"type": "pirate_action", "mode": "board", "cargo": cargo_id}
         return {"type": "pirate_action", "mode": "skip"}
-    pending = state.get("pirate_pending", [])
-    role = pending[0] if pending else None
-    if role == "captain":
+    if day == 3:
+        if not targets:
+            return None
         best_target = max(targets, key=lambda cargo: int(state["boats"][cargo].get("total_value", 0)))
-        return {"type": "pirate_action", "mode": "plunder", "cargo": best_target}
-
-    for cargo_id in targets:
-        boat = state["boats"].get(cargo_id)
-        if not boat:
-            continue
-        seats = boat.get("seats", [])
-        if any(seat is None for seat in seats):
-            return {"type": "pirate_action", "mode": "board", "cargo": cargo_id}
-    return {"type": "pirate_action", "mode": "skip"}
+        return {"type": "pirate_action", "mode": "plunder", "cargo": best_target, "result": "port"}
+    return None
 
 
 class ManilaGame:
@@ -654,6 +708,7 @@ class ManilaGame:
             "cargo_slots": [],
             "boats": {},
             "board": _init_board_state(),
+            "port_arrivals": _init_arrivals_state(),
             "placement_round": 1,
             "placement_acted": [],
             "price_track": {cargo_id: 0 for cargo_id in CARGO_LIST},
@@ -661,6 +716,7 @@ class ManilaGame:
             "stock_bank": stock_bank,
             "pirate_targets": [],
             "pirate_pending": [],
+            "pirate_day": None,
             "pending_pilots": [],
             "winner": [],
             "game_over": False,
@@ -831,6 +887,7 @@ class ManilaGame:
                 boats[cargo_id] = _init_boat(cargo_id, int(pos))
             state["boats"] = boats
             state["board"] = _init_board_state()
+            state["port_arrivals"] = _init_arrivals_state()
             state["placement_round"] = 1
             _start_placement_round(state)
             return events, None
@@ -854,8 +911,10 @@ class ManilaGame:
                 if state.get("placement_round", 1) == 3:
                     if _maybe_start_pilot_phase(state):
                         return events, None
-                targets = _roll_and_move(state)
-                if state.get("placement_round", 1) >= 2 and _maybe_start_pirate_phase(state, targets):
+                targets = _roll_and_move(state, state.get("placement_round", 1))
+                if state.get("placement_round", 1) >= 2 and _maybe_start_pirate_phase(
+                    state, targets, state.get("placement_round", 1)
+                ):
                     return events, None
                 _advance_after_movement(state)
                 return events, None
@@ -901,7 +960,7 @@ class ManilaGame:
                 if cargo_id not in state.get("boats", {}):
                     return [], "invalid cargo"
                 boat = state["boats"][cargo_id]
-                if int(boat.get("position", 0)) >= 13:
+                if boat.get("arrived"):
                     return [], "ship already arrived"
             for cargo_id, delta in moves:
                 boat = state["boats"][cargo_id]
@@ -910,11 +969,13 @@ class ManilaGame:
                 if new_pos < 0:
                     new_pos = 0
                 if new_pos >= 13:
-                    new_pos = 13
+                    boat["position"] = 13
                     boat["arrived_by_pilot"] = True
-                    boat["skip_roll"] = True
                     boat["safe_from_pirates"] = True
-                boat["position"] = new_pos
+                    if new_pos > 13:
+                        _place_in_port(state, cargo_id)
+                else:
+                    boat["position"] = new_pos
 
             pending.remove(size)
             state["pending_pilots"] = pending
@@ -922,8 +983,8 @@ class ManilaGame:
                 next_size = pending[0]
                 state["current_player"] = state.get("board", {}).get("pilots", {}).get(next_size)
                 return events, None
-            targets = _roll_and_move(state)
-            if _maybe_start_pirate_phase(state, targets):
+            targets = _roll_and_move(state, state.get("placement_round", 1))
+            if _maybe_start_pirate_phase(state, targets, state.get("placement_round", 1)):
                 return events, None
             _advance_after_movement(state)
             return events, None
@@ -934,56 +995,83 @@ class ManilaGame:
             pending = state.get("pirate_pending", [])
             if not pending:
                 return [], "no pirate action"
-            role = pending[0]
-            actor = state.get("board", {}).get("pirates", {}).get(role)
+            actor = pending[0]
             if actor != player_id:
                 return [], "not your turn"
             mode = action.get("mode")
             cargo_id = action.get("cargo")
             targets = state.get("pirate_targets", [])
-            if mode == "skip":
-                pass
-            elif mode == "plunder":
-                if role != "captain":
-                    return [], "only captain can plunder"
-                if cargo_id not in targets:
-                    return [], "invalid target"
-                boat = state["boats"][cargo_id]
-                boat["plundered"] = True
-                boat["plunderer"] = player_id
-                boat["seats"] = [None for _ in boat.get("seats", [])]
-                boat["skip_roll"] = True
-                _gain_cash(state, player_id, int(boat.get("total_value", 0)))
-                if cargo_id in targets:
-                    targets.remove(cargo_id)
-            elif mode == "board":
-                if cargo_id not in targets:
-                    return [], "invalid target"
-                boat = state["boats"][cargo_id]
-                if boat.get("plundered"):
-                    return [], "invalid target"
-                seats = boat.get("seats", [])
-                if player_id not in seats:
+            day = state.get("pirate_day", 3)
+
+            if day == 2:
+                if mode == "board":
+                    if cargo_id not in targets:
+                        return [], "invalid target"
+                    boat = state["boats"][cargo_id]
+                    seats = boat.get("seats", [])
                     try:
                         idx = seats.index(None)
                     except ValueError:
                         return [], "no seat available"
                     seats[idx] = player_id
-            else:
-                return [], "invalid pirate mode"
+                    pirates = state.get("board", {}).get("pirates", {})
+                    if player_id == pirates.get("captain"):
+                        if pirates.get("pirate"):
+                            pirates["captain"] = pirates.get("pirate")
+                            pirates["pirate"] = None
+                        else:
+                            pirates["captain"] = None
+                    elif player_id == pirates.get("pirate"):
+                        pirates["pirate"] = None
+                elif mode == "skip":
+                    pass
+                else:
+                    return [], "invalid pirate mode"
 
-            pending.pop(0)
-            state["pirate_pending"] = pending
-            state["pirate_targets"] = targets
-            if pending and targets:
-                next_role = pending[0]
-                state["current_player"] = state.get("board", {}).get("pirates", {}).get(next_role)
+                pending.pop(0)
+                state["pirate_pending"] = pending
+                if pending:
+                    state["current_player"] = pending[0]
+                    return events, None
+                state["pirate_pending"] = []
+                state["pirate_targets"] = []
+                state["pirate_day"] = None
+                _advance_after_movement(state)
                 return events, None
 
-            state["pirate_pending"] = []
-            state["pirate_targets"] = []
-            _advance_after_movement(state)
-            return events, None
+            if day == 3:
+                if mode != "plunder":
+                    return [], "plunder required"
+                if cargo_id not in targets:
+                    return [], "invalid target"
+                boat = state["boats"][cargo_id]
+                boat["plundered"] = True
+                boat["plunderer"] = player_id
+                result = action.get("result")
+                if result not in ("port", "shipyard"):
+                    result = "port"
+                boat["plunder_result"] = result
+                boat["seats"] = [None for _ in boat.get("seats", [])]
+                boat["skip_roll"] = True
+                pirates = state.get("board", {}).get("pirates", {})
+                pirate_ids = [pid for pid in pirates.values() if pid]
+                total_value = int(boat.get("total_value", 0))
+                if pirate_ids:
+                    share = total_value // len(pirate_ids)
+                    for pid in pirate_ids:
+                        _gain_cash(state, pid, share)
+                targets = [cid for cid in targets if cid != cargo_id]
+                state["pirate_targets"] = targets
+                if targets:
+                    state["current_player"] = actor
+                    return events, None
+                state["pirate_pending"] = []
+                state["pirate_targets"] = []
+                state["pirate_day"] = None
+                _advance_after_movement(state)
+                return events, None
+
+            return [], "invalid pirate day"
 
         return [], "invalid action"
 
@@ -1016,8 +1104,10 @@ class ManilaGame:
             "cargo_slots": state.get("cargo_slots", []),
             "boats": state.get("boats", {}),
             "board": state.get("board", {}),
+            "port_arrivals": state.get("port_arrivals", {}),
             "pirate_targets": state.get("pirate_targets", []),
             "pirate_pending": state.get("pirate_pending", []),
+            "pirate_day": state.get("pirate_day"),
             "pending_pilots": state.get("pending_pilots", []),
             "price_track": state.get("price_track", {}),
             "players": players_view,
@@ -1133,12 +1223,10 @@ def _handle_place_worker(state: Dict, player_id: str, loc_type: str, location: D
         board[slot] = player_id
         return None
     if loc_type == "pirate":
-        slot = location.get("slot")
-        if slot not in ("captain", "pirate"):
-            return "invalid pirate slot"
         board = state["board"]["pirates"]
-        if board.get(slot):
+        if board.get("captain") and board.get("pirate"):
             return "slot occupied"
+        slot = "captain" if not board.get("captain") else "pirate"
         cost = BOARD_DATA.get("pirates", {}).get("place_cost", 0)
         err = _place_worker(state, player_id, int(cost))
         if err:

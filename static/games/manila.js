@@ -39,6 +39,7 @@ const manilaPositionsSum = document.getElementById("manilaPositionsSum");
 const manilaConfirmPositionsBtn = document.getElementById("manilaConfirmPositionsBtn");
 
 const manilaPlacementGroup = document.getElementById("manilaPlacementGroup");
+const manilaPassFacility = document.getElementById("manilaPassFacility");
 const manilaPassBtn = document.getElementById("manilaPassBtn");
 
 const manilaPilotGroup = document.getElementById("manilaPilotGroup");
@@ -47,6 +48,7 @@ const manilaPilotRows = document.getElementById("manilaPilotRows");
 const manilaPirateGroup = document.getElementById("manilaPirateGroup");
 const manilaPirateRole = document.getElementById("manilaPirateRole");
 const manilaPirateTargetSelect = document.getElementById("manilaPirateTargetSelect");
+const manilaPirateResultSelect = document.getElementById("manilaPirateResultSelect");
 const manilaPirateBoardBtn = document.getElementById("manilaPirateBoardBtn");
 const manilaPiratePlunderBtn = document.getElementById("manilaPiratePlunderBtn");
 const manilaPirateSkipBtn = document.getElementById("manilaPirateSkipBtn");
@@ -141,7 +143,7 @@ const MANILA_DYNAMIC_EXPLANATIONS = {
   },
   pirate: {
     name: "Pirate Role",
-    description: "Join pirates to board or plunder ships that hit port exactly.",
+    description: "Join pirates to board ships that hit port exactly on day 2, or plunder ships that hit port exactly on day 3. First player becomes Captain, second becomes Pirate.",
     cost: "🪙 Pay slot cost",
     costType: "pay",
   },
@@ -175,7 +177,9 @@ const MANILA_HELP_TEXT = `
 <ul>
   <li><strong>Ship seats</strong> share profits when a ship arrives.</li>
   <li><strong>Port</strong> pays for successful ships; <strong>Shipyard</strong> pays for failures.</li>
-  <li><strong>Pirates</strong> can board or plunder exact-hit ships.</li>
+  <li><strong>Arrival order</strong> fills Port A/B/C when ships move past space 13.</li>
+  <li><strong>Pirates</strong> can board ships that hit port exactly on day 2, and plunder ships that hit port exactly on day 3.</li>
+  <li><strong>Plundered ships</strong> still resolve to Port or Shipyard based on the Captain's choice.</li>
   <li><strong>Pilots</strong> can move ships forward (big pilot can split).</li>
   <li><strong>Insurance</strong> pays immediately but collects per failed ship.</li>
   <li><strong>Pledge Stock</strong> gives instant cash but costs more at final scoring.</li>
@@ -646,11 +650,19 @@ function renderManilaBoats(view) {
   axisHeader.appendChild(axisTitle);
 
   const positionMap = {};
+  const portArrivals = view.port_arrivals || {};
+  const arrivalSlots = ["A", "B", "C"];
+  const arrivedCargo = new Set(
+    arrivalSlots.map((slot) => portArrivals[slot]).filter((cargoId) => !!cargoId),
+  );
   const pending = [];
   cargoIds.forEach((cargoId) => {
     const boat = view.boats ? view.boats[cargoId] : null;
     if (!boat || typeof boat.position !== "number") {
       pending.push(cargoId);
+      return;
+    }
+    if (arrivedCargo.has(cargoId) || boat.arrived || boat.plundered) {
       return;
     }
     const pos = boat.position;
@@ -718,6 +730,36 @@ function renderManilaBoats(view) {
     row.appendChild(markers);
     axis.appendChild(row);
   }
+
+  const arrivedRow = document.createElement("div");
+  arrivedRow.className = "manila-axis-row arrived";
+  const arrivedTick = document.createElement("div");
+  arrivedTick.className = "manila-axis-tick-label";
+  arrivedTick.textContent = "Arrived";
+  arrivedRow.appendChild(arrivedTick);
+  const arrivedMarkers = document.createElement("div");
+  arrivedMarkers.className = "manila-axis-arrived";
+  arrivalSlots.forEach((slot) => {
+    const slotWrap = document.createElement("div");
+    slotWrap.className = "manila-axis-arrived-slot";
+    const slotLabel = document.createElement("div");
+    slotLabel.className = "manila-axis-arrived-label";
+    slotLabel.textContent = `Port ${slot}`;
+    slotWrap.appendChild(slotLabel);
+    const cargoId = portArrivals[slot];
+    if (cargoId) {
+      const boat = view.boats ? view.boats[cargoId] : null;
+      slotWrap.appendChild(buildManilaAxisBoat(cargoId, boat, view, canPlace));
+    } else {
+      const empty = document.createElement("div");
+      empty.className = "manila-axis-arrived-empty";
+      empty.textContent = "Empty";
+      slotWrap.appendChild(empty);
+    }
+    arrivedMarkers.appendChild(slotWrap);
+  });
+  arrivedRow.appendChild(arrivedMarkers);
+  axis.appendChild(arrivedRow);
 
   for (let i = 13; i >= 0; i -= 1) {
     const row = document.createElement("div");
@@ -861,23 +903,17 @@ function renderManilaBoard(view) {
   const rolesGrid = document.createElement("div");
   rolesGrid.className = "manila-zone-grid";
   const pirates = board.pirates || {};
+  const pirateOccupants = [
+    `Captain: ${pirates.captain ? formatManilaSeat(pirates.captain, view) : "-"}`,
+    `Pirate: ${pirates.pirate ? formatManilaSeat(pirates.pirate, view) : "-"}`,
+  ].join(" · ");
   rolesGrid.appendChild(
     createSlotButton({
-      label: "Captain",
-      meta: `🪙 ${MANILA_BOARD_VALUES.pirates.cost}`,
-      occupant: pirates.captain ? formatManilaSeat(pirates.captain, view) : "",
-      disabled: !canPlace || !!pirates.captain,
-      onClick: () => sendAction({ type: "place_worker", location: { type: "pirate", slot: "captain" } }),
-      explainId: "pirate",
-    })
-  );
-  rolesGrid.appendChild(
-    createSlotButton({
-      label: "Pirate",
-      meta: `🪙 ${MANILA_BOARD_VALUES.pirates.cost}`,
-      occupant: pirates.pirate ? formatManilaSeat(pirates.pirate, view) : "",
-      disabled: !canPlace || !!pirates.pirate,
-      onClick: () => sendAction({ type: "place_worker", location: { type: "pirate", slot: "pirate" } }),
+      label: "Pirates",
+      meta: `🪙 ${MANILA_BOARD_VALUES.pirates.cost} · First = Captain`,
+      occupant: pirateOccupants,
+      disabled: !canPlace || (!!pirates.captain && !!pirates.pirate),
+      onClick: () => sendAction({ type: "place_worker", location: { type: "pirate" } }),
       explainId: "pirate",
     })
   );
@@ -920,6 +956,10 @@ function renderManilaBoard(view) {
     })
   );
   insuranceZone.appendChild(insuranceGrid);
+
+  if (manilaPassFacility) {
+    insuranceZone.appendChild(manilaPassFacility);
+  }
 
   map.appendChild(portZone);
   map.appendChild(shipyardZone);
@@ -1129,6 +1169,7 @@ function updatePositionsSum() {
 function updatePlacementActions(view) {
   const visible = view && view.phase === "placement";
   setVisible(manilaPlacementGroup, visible);
+  setVisible(manilaPassFacility, visible);
   if (!visible) {
     return;
   }
@@ -1257,6 +1298,7 @@ function updatePirateActions(view) {
   }
   const isMyTurn = view.current_player === view.you;
   const pirates = view.board ? view.board.pirates || {} : {};
+  const day = view.pirate_day || 3;
   if (manilaPirateRole) {
     let role = "-";
     if (pirates.captain === view.you) {
@@ -1275,9 +1317,21 @@ function updatePirateActions(view) {
       manilaPirateTargetSelect.appendChild(opt);
     });
   }
-  setDisabled(manilaPirateBoardBtn, !isMyTurn || !(view.pirate_targets || []).length);
-  const canPlunder = pirates.captain === view.you;
-  setDisabled(manilaPiratePlunderBtn, !isMyTurn || !canPlunder || !(view.pirate_targets || []).length);
+  const hasTargets = (view.pirate_targets || []).length > 0;
+  const isCaptain = pirates.captain === view.you;
+
+  if (manilaPirateResultSelect) {
+    setVisible(manilaPirateResultSelect, day === 3);
+  }
+
+  const showBoard = day === 2;
+  const showPlunder = day === 3;
+  setVisible(manilaPirateBoardBtn, showBoard);
+  setVisible(manilaPiratePlunderBtn, showPlunder);
+  setVisible(manilaPirateSkipBtn, day === 2);
+
+  setDisabled(manilaPirateBoardBtn, !isMyTurn || !hasTargets);
+  setDisabled(manilaPiratePlunderBtn, !isMyTurn || !isCaptain || !hasTargets);
   setDisabled(manilaPirateSkipBtn, !isMyTurn);
 }
 
@@ -1360,6 +1414,7 @@ function clearManilaState() {
   if (manilaCycleRecap) manilaCycleRecap.textContent = "No cycle data yet.";
   setManilaCycleOpen(false);
   exitManilaExplainMode();
+  if (manilaPassFacility) setVisible(manilaPassFacility, false);
 }
 
 if (manilaBidBtn && manilaBidInput) {
@@ -1414,7 +1469,12 @@ if (manilaPirateBoardBtn && manilaPirateTargetSelect) {
 }
 if (manilaPiratePlunderBtn && manilaPirateTargetSelect) {
   manilaPiratePlunderBtn.addEventListener("click", () =>
-    sendAction({ type: "pirate_action", mode: "plunder", cargo: manilaPirateTargetSelect.value })
+    sendAction({
+      type: "pirate_action",
+      mode: "plunder",
+      cargo: manilaPirateTargetSelect.value,
+      result: manilaPirateResultSelect ? manilaPirateResultSelect.value : "port",
+    })
   );
 }
 if (manilaPirateSkipBtn) {
