@@ -52,6 +52,7 @@ def _init_player_state(cfg: Dict, player_ids: List[str], player_meta: Dict) -> D
             "pledged": {cargo_id: 0 for cargo_id in CARGO_LIST},
             "workers_total": workers_total,
             "workers_available": workers_total,
+            "round_ready": False,
         }
     return players
 
@@ -231,6 +232,11 @@ def _reset_workers(state: Dict) -> None:
         pdata["workers_available"] = pdata.get("workers_total", 0)
 
 
+def _reset_round_ready(state: Dict) -> None:
+    for pdata in state.get("players", {}).values():
+        pdata["round_ready"] = False
+
+
 def _setup_round(state: Dict) -> None:
     state["cargo_slots"] = []
     state["boats"] = {}
@@ -334,6 +340,22 @@ def _advance_after_movement(state: Dict) -> None:
     _resolve_round(state)
 
 
+def _enter_round_end(state: Dict) -> None:
+    _reset_round_ready(state)
+    state["phase"] = "round_end"
+    state["current_player"] = None
+
+
+def _begin_next_round(state: Dict) -> None:
+    _cleanup_round(state)
+    _reset_round_ready(state)
+    state["round"] = state.get("round", 1) + 1
+    _setup_round(state)
+    if state.get("harbormaster") in state.get("turn_order", []):
+        state["auction_start"] = _advance_player(state, state.get("harbormaster"))
+    _start_auction(state)
+
+
 def _resolve_round(state: Dict) -> None:
     cargo_order = state.get("cargo_slots", [])
     port_slots = ["A", "B", "C"]
@@ -395,17 +417,10 @@ def _resolve_round(state: Dict) -> None:
     for cargo_id in successes:
         _advance_price(state, cargo_id)
 
-    _cleanup_round(state)
-
     if _check_game_end(state):
         _finalize_game(state)
         return
-
-    state["round"] = state.get("round", 1) + 1
-    _setup_round(state)
-    if state.get("harbormaster") in state.get("turn_order", []):
-        state["auction_start"] = _advance_player(state, state.get("harbormaster"))
-    _start_auction(state)
+    _enter_round_end(state)
 
 
 def _cleanup_round(state: Dict) -> None:
@@ -482,6 +497,7 @@ def _player_view(state: Dict, player_id: str, viewer_id: str) -> Dict:
         "cash": pdata.get("cash", 0),
         "workers_available": pdata.get("workers_available", 0),
         "workers_total": pdata.get("workers_total", 0),
+        "round_ready": pdata.get("round_ready", False),
     }
     if player_id == viewer_id:
         view["stocks"] = dict(pdata.get("stocks", {}))
@@ -764,6 +780,10 @@ class ManilaGame:
             if player_id != state.get("current_player"):
                 return []
             return ["pirate_action", "pledge_stock"]
+        if phase == "round_end":
+            if state["players"][player_id].get("round_ready"):
+                return []
+            return ["next_round"]
         return []
 
     @staticmethod
@@ -1073,6 +1093,17 @@ class ManilaGame:
 
             return [], "invalid pirate day"
 
+        if phase == "round_end":
+            if action_type != "next_round":
+                return [], "invalid action"
+            pdata = state["players"][player_id]
+            if pdata.get("round_ready"):
+                return [], "already ready"
+            pdata["round_ready"] = True
+            if all(p.get("round_ready") for p in state.get("players", {}).values()):
+                _begin_next_round(state)
+            return events, None
+
         return [], "invalid action"
 
     @staticmethod
@@ -1183,6 +1214,11 @@ class ManilaGame:
             if bot_id != state.get("current_player"):
                 return None
             return _bot_choose_pirate_action(state, bot_id)
+
+        if phase == "round_end":
+            if state["players"][bot_id].get("round_ready"):
+                return None
+            return {"type": "next_round"}
 
         return None
 

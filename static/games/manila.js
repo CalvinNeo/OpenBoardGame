@@ -38,7 +38,6 @@ const manilaPositionsWrap = document.getElementById("manilaPositionsWrap");
 const manilaPositionsSum = document.getElementById("manilaPositionsSum");
 const manilaConfirmPositionsBtn = document.getElementById("manilaConfirmPositionsBtn");
 
-const manilaPlacementGroup = document.getElementById("manilaPlacementGroup");
 const manilaPassFacility = document.getElementById("manilaPassFacility");
 const manilaPassBtn = document.getElementById("manilaPassBtn");
 
@@ -60,6 +59,13 @@ const manilaCycleExplainBtn = document.getElementById("manilaCycleExplainBtn");
 const manilaCycleStatus = document.getElementById("manilaCycleStatus");
 const manilaCyclePhase = document.getElementById("manilaCyclePhase");
 const manilaCycleRecap = document.getElementById("manilaCycleRecap");
+
+const manilaPledgeGroup = document.getElementById("manilaPledgeGroup");
+
+const manilaRoundEndPanel = document.getElementById("manilaRoundEndPanel");
+const manilaRoundEndPlayers = document.getElementById("manilaRoundEndPlayers");
+const manilaRoundEndStatus = document.getElementById("manilaRoundEndStatus");
+const manilaNextRoundBtn = document.getElementById("manilaNextRoundBtn");
 
 const manilaHeaderActions = document.getElementById("manilaHeaderActions");
 const manilaHelpBtn = document.getElementById("manilaHelpBtn");
@@ -241,6 +247,12 @@ const MANILA_BUTTON_EXPLANATIONS = {
   manilaPassBtn: {
     name: "Pass Placement",
     description: "Pass your placement turn without placing a worker.",
+    cost: "Free",
+    costType: "free",
+  },
+  manilaNextRoundBtn: {
+    name: "Next Round",
+    description: "Mark yourself ready. The next round starts when everyone is ready.",
     cost: "Free",
     costType: "free",
   },
@@ -941,7 +953,7 @@ function renderManilaBoard(view) {
   rolesZone.appendChild(rolesGrid);
 
   const insuranceZone = document.createElement("div");
-  insuranceZone.className = "manila-zone manila-zone-insurance";
+  insuranceZone.className = "manila-zone manila-zone-insurance manila-zone-compact";
   insuranceZone.innerHTML = "<div class=\"manila-zone-title\">Insurance</div>";
   const insuranceGrid = document.createElement("div");
   insuranceGrid.className = "manila-zone-grid";
@@ -957,14 +969,20 @@ function renderManilaBoard(view) {
   );
   insuranceZone.appendChild(insuranceGrid);
 
+  const insuranceStack = document.createElement("div");
+  insuranceStack.className = "manila-zone-stack";
+  if (manilaPledgeGroup) {
+    insuranceStack.appendChild(manilaPledgeGroup);
+  }
+  insuranceStack.appendChild(insuranceZone);
   if (manilaPassFacility) {
-    insuranceZone.appendChild(manilaPassFacility);
+    insuranceStack.appendChild(manilaPassFacility);
   }
 
   map.appendChild(portZone);
   map.appendChild(shipyardZone);
   map.appendChild(rolesZone);
-  map.appendChild(insuranceZone);
+  map.appendChild(insuranceStack);
   manilaBoard.appendChild(map);
 }
 
@@ -1054,7 +1072,7 @@ function updatePayBidActions(view) {
 }
 
 function updatePledgeActions(view) {
-  setVisible(document.getElementById("manilaPledgeGroup"), !!view);
+  setVisible(manilaPledgeGroup, !!view);
   if (!manilaPledgeSelect || !manilaPledgeBtn) {
     return;
   }
@@ -1168,7 +1186,6 @@ function updatePositionsSum() {
 
 function updatePlacementActions(view) {
   const visible = view && view.phase === "placement";
-  setVisible(manilaPlacementGroup, visible);
   setVisible(manilaPassFacility, visible);
   if (!visible) {
     return;
@@ -1335,6 +1352,45 @@ function updatePirateActions(view) {
   setDisabled(manilaPirateSkipBtn, !isMyTurn);
 }
 
+function updateRoundEnd(view) {
+  const visible = view && view.phase === "round_end";
+  setVisible(manilaRoundEndPanel, visible);
+  if (!visible) {
+    return;
+  }
+  const players = Array.isArray(view.players) ? view.players : [];
+  const readyMap = new Map(players.map((player) => [player.player_id, !!player.round_ready]));
+  if (manilaRoundEndPlayers) {
+    manilaRoundEndPlayers.innerHTML = "";
+    players.forEach((player) => {
+      const card = document.createElement("div");
+      card.className = "manila-round-end-player";
+      if (readyMap.get(player.player_id)) {
+        card.classList.add("ready");
+      }
+      const name = document.createElement("div");
+      name.className = "manila-round-end-player-name";
+      name.textContent = formatManilaPlayerName(view, player.player_id);
+      const status = document.createElement("div");
+      status.className = "manila-round-end-player-status";
+      status.textContent = readyMap.get(player.player_id) ? "Ready" : "Waiting";
+      card.appendChild(name);
+      card.appendChild(status);
+      manilaRoundEndPlayers.appendChild(card);
+    });
+  }
+  const readyCount = players.filter((player) => readyMap.get(player.player_id)).length;
+  if (manilaRoundEndStatus) {
+    manilaRoundEndStatus.textContent = `${readyCount}/${players.length} Ready`;
+  }
+  const canReady = Array.isArray(view.legal_actions) && view.legal_actions.includes("next_round");
+  const alreadyReady = !!readyMap.get(view.you);
+  if (manilaNextRoundBtn) {
+    manilaNextRoundBtn.textContent = alreadyReady ? "Waiting..." : "Next Round";
+    setDisabled(manilaNextRoundBtn, !canReady || alreadyReady);
+  }
+}
+
 function updateActions(view) {
   updateAuctionActions(view);
   updatePayBidActions(view);
@@ -1345,6 +1401,7 @@ function updateActions(view) {
   updatePlacementActions(view);
   updatePilotActions(view);
   updatePirateActions(view);
+  updateRoundEnd(view);
 }
 
 function renderManilaGameState(data) {
@@ -1415,6 +1472,9 @@ function clearManilaState() {
   setManilaCycleOpen(false);
   exitManilaExplainMode();
   if (manilaPassFacility) setVisible(manilaPassFacility, false);
+  if (manilaRoundEndPanel) setVisible(manilaRoundEndPanel, false);
+  if (manilaRoundEndPlayers) manilaRoundEndPlayers.innerHTML = "";
+  if (manilaRoundEndStatus) manilaRoundEndStatus.textContent = "0/0 Ready";
 }
 
 if (manilaBidBtn && manilaBidInput) {
@@ -1479,6 +1539,9 @@ if (manilaPiratePlunderBtn && manilaPirateTargetSelect) {
 }
 if (manilaPirateSkipBtn) {
   manilaPirateSkipBtn.addEventListener("click", () => sendAction({ type: "pirate_action", mode: "skip" }));
+}
+if (manilaNextRoundBtn) {
+  manilaNextRoundBtn.addEventListener("click", () => sendAction({ type: "next_round" }));
 }
 
 if (manilaCycleToggleBtn) {

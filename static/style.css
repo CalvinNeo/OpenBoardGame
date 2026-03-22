@@ -9585,17 +9585,21 @@ body.istanbul-explain-mode .istanbul-mosque-rubies.has-explanation:hover {
 }
 
 .manila-pass-facility {
-  margin-top: 10px;
-  padding: 10px;
+  margin-top: 0;
+  padding: 6px;
   border-radius: 12px;
   background: rgba(15, 23, 42, 0.06);
   border: 1px dashed rgba(15, 23, 42, 0.25);
   display: grid;
-  gap: 6px;
+  gap: 4px;
+}
+
+.manila-pass-facility.manila-zone {
+  box-shadow: none;
 }
 
 .manila-pass-title {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--manila-ink);
   text-transform: uppercase;
@@ -9603,16 +9607,124 @@ body.istanbul-explain-mode .istanbul-mosque-rubies.has-explanation:hover {
 }
 
 .manila-pass-hint {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--manila-muted);
 }
 
 .manila-pass-facility button {
-  height: 34px;
+  height: 30px;
   border-radius: 10px;
   border: 1px solid rgba(148, 163, 184, 0.6);
   background: #f8fafc;
   font-weight: 600;
+}
+
+.manila-pledge-facility {
+  display: grid;
+  gap: 6px;
+}
+
+.manila-pledge-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.manila-pledge-row select {
+  height: 30px;
+}
+
+.manila-pledge-row button {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  background: #f8fafc;
+  font-weight: 600;
+}
+
+.manila-round-end {
+  margin: 10px 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(30, 64, 175, 0.25);
+  background: linear-gradient(160deg, rgba(224, 242, 254, 0.9), rgba(191, 219, 254, 0.75));
+  display: grid;
+  gap: 10px;
+}
+
+.manila-round-end-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.manila-round-end-title {
+  font-size: 14px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #1e3a8a;
+}
+
+.manila-round-end-hint {
+  font-size: 12px;
+  color: #1e40af;
+}
+
+.manila-round-end-players {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.manila-round-end-player {
+  padding: 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  display: grid;
+  gap: 4px;
+}
+
+.manila-round-end-player.ready {
+  border-color: rgba(16, 185, 129, 0.6);
+  box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.2);
+}
+
+.manila-round-end-player-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--manila-ink);
+}
+
+.manila-round-end-player-status {
+  font-size: 11px;
+  color: var(--manila-muted);
+}
+
+.manila-round-end-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.manila-round-end-status {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e3a8a;
+}
+
+.manila-round-end-actions button {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(30, 64, 175, 0.4);
+  background: #eff6ff;
+  font-weight: 700;
 }
 
 .manila-map-grid {
@@ -9641,6 +9753,41 @@ body.istanbul-explain-mode .istanbul-mosque-rubies.has-explanation:hover {
   background: rgba(255, 255, 255, 0.7);
   border: 1px solid rgba(148, 163, 184, 0.45);
   box-shadow: 0 6px 12px rgba(15, 23, 42, 0.08);
+}
+
+.manila-zone-compact {
+  padding: 6px;
+}
+
+.manila-zone-compact .manila-zone-title {
+  font-size: 10px;
+  margin-bottom: 4px;
+}
+
+.manila-zone-compact .manila-zone-grid {
+  gap: 6px;
+}
+
+.manila-zone-compact .manila-slot {
+  padding: 6px;
+  gap: 3px;
+}
+
+.manila-zone-compact .manila-slot-label {
+  font-size: 11px;
+}
+
+.manila-zone-compact .manila-slot-meta {
+  font-size: 10px;
+}
+
+.manila-zone-compact .manila-slot-occupant {
+  font-size: 11px;
+}
+
+.manila-zone-stack {
+  display: grid;
+  gap: 10px;
 }
 
 .manila-zone-title {

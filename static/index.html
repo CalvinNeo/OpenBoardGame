@@ -1369,6 +1369,18 @@
                 </div>
               </div>
 
+              <div id="manilaRoundEndPanel" class="manila-round-end hidden">
+                <div class="manila-round-end-header">
+                  <div class="manila-round-end-title">Round End</div>
+                  <div class="manila-round-end-hint">Review the harbor, then click Next Round.</div>
+                </div>
+                <div id="manilaRoundEndPlayers" class="manila-round-end-players"></div>
+                <div class="manila-round-end-actions">
+                  <div id="manilaRoundEndStatus" class="manila-round-end-status">0/0 Ready</div>
+                  <button id="manilaNextRoundBtn" type="button">Next Round</button>
+                </div>
+              </div>
+
               <div class="manila-columns">
                 <div class="manila-column">
                   <h3 class="manila-section-title">Harbor</h3>
@@ -1381,7 +1393,14 @@
                 <div class="manila-column">
                   <h3 class="manila-section-title">Facilities</h3>
                   <div id="manilaBoard" class="manila-map"></div>
-                  <div id="manilaPassFacility" class="manila-pass-facility hidden">
+                  <div id="manilaPledgeGroup" class="manila-zone manila-zone-compact manila-pledge-facility hidden">
+                    <div class="manila-zone-title">Pledge Stock</div>
+                    <div class="manila-pledge-row">
+                      <select id="manilaPledgeSelect"></select>
+                      <button id="manilaPledgeBtn">Pledge</button>
+                    </div>
+                  </div>
+                  <div id="manilaPassFacility" class="manila-zone manila-zone-compact manila-pass-facility hidden">
                     <div class="manila-pass-title">Pass Placement</div>
                     <div class="manila-pass-hint">Skip your placement turn.</div>
                     <button id="manilaPassBtn" type="button">Pass</button>
@@ -1392,11 +1411,6 @@
 
                   <h3 class="manila-section-title">Actions</h3>
                   <div class="manila-action-box">
-                    <div id="manilaPlacementGroup" class="manila-action-group hidden">
-                      <div class="manila-action-title">Placement</div>
-                      <div class="manila-action-hint">Click a dock or ship seat to place a worker.</div>
-                    </div>
-
                     <div id="manilaPilotGroup" class="manila-action-group hidden">
                       <div class="manila-action-title">Pilot</div>
                       <div id="manilaPilotRows" class="manila-pilot-rows"></div>
@@ -1413,14 +1427,6 @@
                         <button id="manilaPirateBoardBtn">Board</button>
                         <button id="manilaPiratePlunderBtn">Plunder</button>
                         <button id="manilaPirateSkipBtn">Skip</button>
-                      </div>
-                    </div>
-
-                    <div id="manilaPledgeGroup" class="manila-action-group">
-                      <div class="manila-action-title">Pledge Stock</div>
-                      <div class="manila-action-row">
-                        <select id="manilaPledgeSelect"></select>
-                        <button id="manilaPledgeBtn">Pledge</button>
                       </div>
                     </div>
 
