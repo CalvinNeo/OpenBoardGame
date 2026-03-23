@@ -23,6 +23,7 @@ const manilaPanel = document.getElementById("manilaPanel");
 const skullPanel = document.getElementById("skullPanel");
 const mismatchPanel = document.getElementById("mismatchPanel");
 const coyotePanel = document.getElementById("coyotePanel");
+const tagironPanel = document.getElementById("tagironPanel");
 const texasHoldemPanel = document.getElementById("texasHoldemPanel");
 const halliPanel = document.getElementById("halliPanel");
 const drawGuessPanel = document.getElementById("drawGuessPanel");
@@ -52,6 +53,7 @@ function setGamePanelVisibility(gameType) {
   const showGang = gameType === "the_gang";
   const showMismatch = gameType === "perfect_mismatch";
   const showCoyote = gameType === "coyote";
+  const showTagiron = gameType === "tagiron";
   const showTexasHoldem = gameType === "texas_holdem";
   const showSixNimmt = gameType === "six_nimmt";
   const showHalli = gameType === "halli_galli";
@@ -137,6 +139,9 @@ function setGamePanelVisibility(gameType) {
   }
   if (coyotePanel) {
     coyotePanel.classList.toggle("hidden", !showCoyote);
+  }
+  if (tagironPanel) {
+    tagironPanel.classList.toggle("hidden", !showTagiron);
   }
   if (texasHoldemPanel) {
     texasHoldemPanel.classList.toggle("hidden", !showTexasHoldem);
@@ -354,6 +359,10 @@ function renderGameState(data) {
   }
   if (gameType === "coyote") {
     renderCoyoteGameState(data);
+    return;
+  }
+  if (gameType === "tagiron") {
+    renderTagironGameState(data);
     return;
   }
   if (gameType === "texas_holdem") {

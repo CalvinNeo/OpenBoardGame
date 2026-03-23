@@ -144,6 +144,9 @@ function renderRoomState(state) {
     clearMismatchState();
     clearDecryptoState();
     clearWordDecodeState();
+    if (typeof clearTagironState === "function") {
+      clearTagironState();
+    }
     clearDrawGuessState();
     clearBlitzSketchState();
     clearFakeArtistState();

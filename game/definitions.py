@@ -36,6 +36,7 @@ from game.trekking_history import TrekkingHistoryGame
 from game.texas_holdem import TexasHoldemGame
 from game.word_decode import WordDecodeGame
 from game.wandering_towers import WanderingTowersGame
+from game.tagiron import TagironGame
 
 CABO_ACTION_SCHEMA = {
     "type": "object",
@@ -130,6 +131,50 @@ COYOTE_CONFIG_SCHEMA = {
     "properties": {
         "max_penalties": {"type": "integer", "minimum": 1},
     },
+    "additionalProperties": False,
+}
+
+TAGIRON_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "ask_question"},
+                "question_id": {"type": "integer", "minimum": 1, "maximum": 21},
+                "choice": {"type": "integer"},
+            },
+            "required": ["type", "question_id"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "guess_tiles"},
+                "tiles": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "number": {"type": "integer", "minimum": 0, "maximum": 9},
+                            "color": {"type": "string", "enum": ["red", "blue", "green"]},
+                        },
+                        "required": ["number", "color"],
+                        "additionalProperties": False,
+                    },
+                    "minItems": 1,
+                    "maxItems": 5,
+                },
+            },
+            "required": ["type", "tiles"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+TAGIRON_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {},
     "additionalProperties": False,
 }
 
@@ -1767,6 +1812,21 @@ register_game(
         module=CoyoteGame,
         serialize=CoyoteGame.serialize,
         deserialize=CoyoteGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=TagironGame.game_id,
+        name="Tagiron",
+        min_players=TagironGame.min_players,
+        max_players=TagironGame.max_players,
+        turn_mode="turn",
+        action_schema=TAGIRON_ACTION_SCHEMA,
+        config_schema=TAGIRON_CONFIG_SCHEMA,
+        module=TagironGame,
+        serialize=TagironGame.serialize,
+        deserialize=TagironGame.deserialize,
     )
 )
 

@@ -32,6 +32,7 @@ from game.splendor_pokemon import PokemonSplendorGame
 from game.skull import SkullGame
 from game.the_gang import TheGangGame
 from game.texas_holdem import TexasHoldemGame
+from game.tagiron import TagironGame
 from game.trekking_history import TrekkingHistoryGame
 from game.word_decode import WordDecodeGame
 from game.yahtzee import YahtzeeGame
@@ -72,6 +73,7 @@ __all__ = [
     "SkullGame",
     "TheGangGame",
     "TexasHoldemGame",
+    "TagironGame",
     "TrekkingHistoryGame",
     "WordDecodeGame",
     "YahtzeeGame",

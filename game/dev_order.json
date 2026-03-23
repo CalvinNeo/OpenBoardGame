@@ -1,5 +1,5 @@
 {
-  "manila": 1,
+  "tagiron": 1,
   "cabo": 2,
   "skull": 3,
   "draw_guess": 4,
@@ -35,5 +35,6 @@
   "istanbul": 34,
   "age_of_war": 35,
   "wandering_towers": 36,
-  "fake_artist": 37
+  "fake_artist": 37,
+  "manila": 38
 }

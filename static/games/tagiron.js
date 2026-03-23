@@ -29,7 +29,7 @@ function ensureTagironGuessDrafts(count) {
   const next = [];
   for (let i = 0; i < count; i += 1) {
     const existing = tagironGuessDrafts[i] || {};
-    next.push({ color: existing.color ?? "", number: existing.number ?? "" });
+    next.push({ value: existing.value ?? "" });
   }
   tagironGuessDrafts = next;
 }
@@ -133,6 +133,14 @@ function renderTagironGuessForm(view) {
     tagironGuessForm.appendChild(empty);
     return;
   }
+  const numberOptions = [0, 1, 2, 3, 4, 6, 7, 8, 9];
+  const optionList = [];
+  numberOptions.forEach((num) => {
+    optionList.push({ value: `red:${num}`, label: `Red ${num}` });
+    optionList.push({ value: `blue:${num}`, label: `Blue ${num}` });
+  });
+  optionList.push({ value: "green:5", label: "Green 5" });
+
   for (let i = 0; i < count; i += 1) {
     const row = document.createElement("div");
     row.className = "tagiron-guess-row";
@@ -141,43 +149,24 @@ function renderTagironGuessForm(view) {
     label.textContent = `Pos ${i + 1}`;
     row.appendChild(label);
 
-    const numberSelect = document.createElement("select");
-    numberSelect.className = "tagiron-guess-number";
-    const emptyNum = document.createElement("option");
-    emptyNum.value = "";
-    emptyNum.textContent = "Number";
-    numberSelect.appendChild(emptyNum);
-    for (let n = 0; n <= 9; n += 1) {
+    const select = document.createElement("select");
+    select.className = "tagiron-guess-tile";
+    const emptyOpt = document.createElement("option");
+    emptyOpt.value = "";
+    emptyOpt.textContent = "Select tile";
+    select.appendChild(emptyOpt);
+    optionList.forEach((optData) => {
       const opt = document.createElement("option");
-      opt.value = String(n);
-      opt.textContent = String(n);
-      numberSelect.appendChild(opt);
-    }
-    numberSelect.value = tagironGuessDrafts[i].number ?? "";
-    numberSelect.addEventListener("change", (event) => {
-      tagironGuessDrafts[i].number = event.target.value;
+      opt.value = optData.value;
+      opt.textContent = optData.label;
+      select.appendChild(opt);
+    });
+    select.value = tagironGuessDrafts[i].value ?? "";
+    select.addEventListener("change", (event) => {
+      tagironGuessDrafts[i].value = event.target.value;
       updateTagironGuessButton();
     });
-    row.appendChild(numberSelect);
-
-    const colorSelect = document.createElement("select");
-    colorSelect.className = "tagiron-guess-color";
-    const emptyColor = document.createElement("option");
-    emptyColor.value = "";
-    emptyColor.textContent = "Color";
-    colorSelect.appendChild(emptyColor);
-    ["red", "blue", "green"].forEach((color) => {
-      const opt = document.createElement("option");
-      opt.value = color;
-      opt.textContent = color;
-      colorSelect.appendChild(opt);
-    });
-    colorSelect.value = tagironGuessDrafts[i].color ?? "";
-    colorSelect.addEventListener("change", (event) => {
-      tagironGuessDrafts[i].color = event.target.value;
-      updateTagironGuessButton();
-    });
-    row.appendChild(colorSelect);
+    row.appendChild(select);
 
     tagironGuessForm.appendChild(row);
   }
@@ -289,7 +278,7 @@ function updateTagironGuessButton() {
     currentTagironView.legal_actions.includes("guess_tiles");
   const ready =
     tagironGuessDrafts.length &&
-    tagironGuessDrafts.every((entry) => entry.color && entry.number !== "");
+    tagironGuessDrafts.every((entry) => entry.value);
   tagironGuessBtn.disabled = !(canGuess && ready);
 }
 
@@ -325,10 +314,13 @@ function renderTagironGameState(data) {
 if (tagironGuessBtn) {
   tagironGuessBtn.addEventListener("click", () => {
     if (!currentTagironView) return;
-    const tiles = tagironGuessDrafts.map((entry) => ({
-      color: entry.color,
-      number: Number.parseInt(entry.number, 10),
-    }));
+    const tiles = tagironGuessDrafts.map((entry) => {
+      const [color, numberRaw] = String(entry.value || "").split(":");
+      return {
+        color,
+        number: Number.parseInt(numberRaw, 10),
+      };
+    });
     sendAction({ type: "guess_tiles", tiles });
   });
 }

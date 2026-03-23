@@ -355,10 +355,13 @@ class TagironGame:
                 return [], "unknown question"
             choice = action.get("choice")
             answers: Dict[str, Dict] = {}
-            if state["players"] and len(state["players"]) == 4:
-                targets = list(state["players"].keys())
+            player_ids = list(state["players"].keys())
+            if question.get("shared_info"):
+                targets = player_ids
+            elif len(player_ids) == 4:
+                targets = player_ids
             else:
-                targets = [pid for pid in state["players"].keys() if pid != player_id]
+                targets = [pid for pid in player_ids if pid != player_id]
             for target in targets:
                 tiles = state["players"][target]["tiles"]
                 try:
