@@ -507,6 +507,28 @@
     </div>
   </section>
 
+  <section id="tagironHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content tagiron-help-modal">
+      <div class="modal-header">
+        <h2>Tagiron - Game Rules</h2>
+        <button id="tagironHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body tagiron-help-content" id="tagironHelpContent"></div>
+    </div>
+  </section>
+
+  <section id="tagironExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content tagiron-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="tagironExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="tagironExplainContent"></div>
+      </div>
+    </div>
+  </section>
+
   <section id="fakeArtistHelpModal" class="modal hidden" aria-hidden="true">
     <div class="modal-content fake-artist-help-modal">
       <div class="modal-header">
@@ -957,6 +979,10 @@
             <div class="panel-header-actions" id="wordDecodeHeaderActions" style="display: none;">
               <button id="wordDecodeHelpBtn" class="word-decode-header-btn" type="button">Help</button>
               <button id="wordDecodeExplainBtn" class="word-decode-header-btn" type="button">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="tagironHeaderActions" style="display: none;">
+              <button id="tagironHelpBtn" class="tagiron-header-btn" type="button">Help</button>
+              <button id="tagironExplainBtn" class="tagiron-header-btn" type="button">Explain</button>
             </div>
             <div class="panel-header-actions" id="fakeArtistHeaderActions" style="display: none;">
               <button id="fakeArtistHelpBtn" class="fake-artist-header-btn" type="button">Help</button>

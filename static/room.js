@@ -522,6 +522,7 @@ const GAME_WEIGHT = {
   fake_artist: 1.09,
   manila: 2.04,
   impression_flower: 1.00,
+  tagiron: 1.71,
 };
 
 function getGameWeight(gameId) {

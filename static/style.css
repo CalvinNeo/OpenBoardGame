@@ -10823,3 +10823,54 @@ body.manila-explain-mode button.has-explanation:hover {
   font-weight: 600;
   color: #24304a;
 }
+
+/* Tagiron Help/Explain */
+.tagiron-header-btn {
+  padding: 4px 10px;
+  font-size: 13px;
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.tagiron-header-btn:hover {
+  background: #f3f4f6;
+}
+
+.tagiron-header-btn.active {
+  background: #dbeafe;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+
+body.tagiron-explain-mode button.has-explanation {
+  outline: 2px dashed #3b82f6;
+  outline-offset: 2px;
+  cursor: help;
+}
+
+body.tagiron-explain-mode button.has-explanation:hover {
+  outline-color: #1d4ed8;
+  outline-style: solid;
+}
+
+.tagiron-help-modal {
+  max-width: 720px;
+}
+
+.tagiron-explain-modal {
+  max-width: 520px;
+}
+
+.tagiron-help-content {
+  max-height: 70vh;
+  overflow-y: auto;
+  line-height: 1.6;
+}
+
+.tagiron-help-content h3 {
+  margin: 16px 0 8px;
+  font-size: 16px;
+  color: #111827;
+}

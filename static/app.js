@@ -143,6 +143,9 @@ function setGamePanelVisibility(gameType) {
   if (tagironPanel) {
     tagironPanel.classList.toggle("hidden", !showTagiron);
   }
+  if (typeof showTagironHeaderActions === "function") {
+    showTagironHeaderActions(showTagiron);
+  }
   if (texasHoldemPanel) {
     texasHoldemPanel.classList.toggle("hidden", !showTexasHoldem);
   }

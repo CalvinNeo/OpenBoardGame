@@ -1,6 +1,16 @@
 let currentTagironView = null;
 let tagironGuessDrafts = [];
 
+const tagironHeaderActions = document.getElementById("tagironHeaderActions");
+const tagironHelpBtn = document.getElementById("tagironHelpBtn");
+const tagironExplainBtn = document.getElementById("tagironExplainBtn");
+const tagironHelpModal = document.getElementById("tagironHelpModal");
+const tagironHelpModalCloseBtn = document.getElementById("tagironHelpModalCloseBtn");
+const tagironHelpContent = document.getElementById("tagironHelpContent");
+const tagironExplainModal = document.getElementById("tagironExplainModal");
+const tagironExplainModalCloseBtn = document.getElementById("tagironExplainModalCloseBtn");
+const tagironExplainContent = document.getElementById("tagironExplainContent");
+
 const tagironPhaseLabel = document.getElementById("tagironPhase");
 const tagironRoundLabel = document.getElementById("tagironRound");
 const tagironTurnLabel = document.getElementById("tagironTurn");
@@ -15,6 +25,50 @@ const tagironGuessBtn = document.getElementById("tagironGuessBtn");
 const tagironLog = document.getElementById("tagironLog");
 const tagironPlayers = document.getElementById("tagironPlayers");
 
+const TAGIRON_HELP_TEXT = `
+  <h3>Goal</h3>
+  <p>Deduce the hidden sequence of colors and numbers by asking questions and reasoning.</p>
+
+  <h3>Setup</h3>
+  <ul>
+    <li>The system shuffles and deals tiles, then auto-sorts each hand by number ascending (red before blue when equal).</li>
+    <li>The question pool always shows 6 available cards.</li>
+  </ul>
+
+  <h3>On Your Turn</h3>
+  <ol>
+    <li><strong>Ask</strong>: Choose a question card. The system computes and broadcasts answers.</li>
+    <li><strong>Guess</strong>: Submit a full ordered sequence of color+number.</li>
+  </ol>
+
+  <h3>Who Answers</h3>
+  <ul>
+    <li><strong>Shared cards</strong>: All players, including the asker.</li>
+    <li><strong>Non-Shared cards</strong>: In 2/3 player games only opponents answer; in 4 players everyone answers.</li>
+  </ul>
+
+  <h3>Guess Outcome</h3>
+  <ul>
+    <li>2 players: a wrong guess ends your turn but the game continues.</li>
+    <li>3/4 players: a wrong guess eliminates you (you still answer questions).</li>
+    <li>A correct guess starts round-end countdown; finish the round, then winners are resolved.</li>
+  </ul>
+`;
+
+const TAGIRON_BUTTON_EXPLANATIONS = {
+  tagironGuessBtn: {
+    name: "Submit Guess",
+    description: "Submit your full ordered guess (color + number per position). A correct guess triggers round-end countdown; a wrong guess may eliminate you.",
+  },
+};
+
+const TAGIRON_DYNAMIC_EXPLANATIONS = {
+  ask_question: {
+    name: "Ask Question",
+    description: "Choose a question card and submit it. The system computes and broadcasts the answers.",
+  },
+};
+
 function clearTagironState() {
   currentTagironView = null;
   tagironGuessDrafts = [];
@@ -23,6 +77,8 @@ function clearTagironState() {
   if (tagironGuessForm) tagironGuessForm.innerHTML = "";
   if (tagironLog) tagironLog.innerHTML = "";
   if (tagironPlayers) tagironPlayers.innerHTML = "";
+  if (tagironHelpModal) setModalVisible(tagironHelpModal, false);
+  if (tagironExplainModal) setModalVisible(tagironExplainModal, false);
 }
 
 function ensureTagironGuessDrafts(count) {
@@ -100,6 +156,7 @@ function renderTagironQuestionPool(view) {
       choices.forEach((choice) => {
         const btn = document.createElement("button");
         btn.textContent = `Ask ${choice}`;
+        btn.dataset.tagironExplain = "ask_question";
         btn.disabled = !canAsk;
         btn.addEventListener("click", () => {
           sendAction({ type: "ask_question", question_id: question.id, choice });
@@ -109,6 +166,7 @@ function renderTagironQuestionPool(view) {
     } else {
       const btn = document.createElement("button");
       btn.textContent = "Ask";
+      btn.dataset.tagironExplain = "ask_question";
       btn.disabled = !canAsk;
       btn.addEventListener("click", () => {
         sendAction({ type: "ask_question", question_id: question.id });
@@ -133,13 +191,16 @@ function renderTagironGuessForm(view) {
     tagironGuessForm.appendChild(empty);
     return;
   }
-  const numberOptions = [0, 1, 2, 3, 4, 6, 7, 8, 9];
+  const numberOptions = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
   const optionList = [];
   numberOptions.forEach((num) => {
-    optionList.push({ value: `red:${num}`, label: `Red ${num}` });
-    optionList.push({ value: `blue:${num}`, label: `Blue ${num}` });
+    if (num === 5) {
+      optionList.push({ value: "green:5", label: "🟢 5", color: "#2e6b46" });
+      return;
+    }
+    optionList.push({ value: `red:${num}`, label: `🔴 ${num}`, color: "#b62f2f" });
+    optionList.push({ value: `blue:${num}`, label: `🔵 ${num}`, color: "#1f4b8f" });
   });
-  optionList.push({ value: "green:5", label: "Green 5" });
 
   for (let i = 0; i < count; i += 1) {
     const row = document.createElement("div");
@@ -159,6 +220,10 @@ function renderTagironGuessForm(view) {
       const opt = document.createElement("option");
       opt.value = optData.value;
       opt.textContent = optData.label;
+      if (optData.color) {
+        opt.style.color = optData.color;
+        opt.style.fontWeight = "600";
+      }
       select.appendChild(opt);
     });
     select.value = tagironGuessDrafts[i].value ?? "";
@@ -282,6 +347,108 @@ function updateTagironGuessButton() {
   tagironGuessBtn.disabled = !(canGuess && ready);
 }
 
+let tagironExplainMode = false;
+
+function showTagironHeaderActions(show) {
+  if (tagironHeaderActions) {
+    tagironHeaderActions.style.display = show ? "flex" : "none";
+  }
+  if (!show) {
+    exitTagironExplainMode();
+    closeTagironHelpModal();
+    closeTagironExplainModal();
+  }
+}
+
+function showTagironHelpModal() {
+  if (!tagironHelpModal) return;
+  if (tagironHelpContent) {
+    tagironHelpContent.innerHTML = TAGIRON_HELP_TEXT;
+  }
+  setModalVisible(tagironHelpModal, true);
+}
+
+function closeTagironHelpModal() {
+  if (tagironHelpModal) {
+    setModalVisible(tagironHelpModal, false);
+  }
+}
+
+function updateTagironExplainClasses(enabled) {
+  Object.keys(TAGIRON_BUTTON_EXPLANATIONS).forEach((buttonId) => {
+    const btn = document.getElementById(buttonId);
+    if (btn) {
+      btn.classList.toggle("has-explanation", enabled);
+    }
+  });
+  document.querySelectorAll("[data-tagiron-explain]").forEach((node) => {
+    node.classList.toggle("has-explanation", enabled);
+  });
+}
+
+function findTagironExplainTargetAtPoint(x, y) {
+  for (const buttonId of Object.keys(TAGIRON_BUTTON_EXPLANATIONS)) {
+    const btn = document.getElementById(buttonId);
+    if (!btn) continue;
+    const rect = btn.getBoundingClientRect();
+    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+      return { type: "button", key: buttonId };
+    }
+  }
+  const nodes = document.querySelectorAll("[data-tagiron-explain]");
+  for (const node of nodes) {
+    const rect = node.getBoundingClientRect();
+    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+      return { type: "dynamic", key: node.dataset.tagironExplain };
+    }
+  }
+  return null;
+}
+
+function toggleTagironExplainMode() {
+  tagironExplainMode = !tagironExplainMode;
+  document.body.classList.toggle("tagiron-explain-mode", tagironExplainMode);
+  updateTagironExplainClasses(tagironExplainMode);
+  if (tagironExplainBtn) {
+    tagironExplainBtn.classList.toggle("active", tagironExplainMode);
+  }
+}
+
+function exitTagironExplainMode() {
+  if (!tagironExplainMode) {
+    return;
+  }
+  tagironExplainMode = false;
+  document.body.classList.remove("tagiron-explain-mode");
+  updateTagironExplainClasses(false);
+  if (tagironExplainBtn) {
+    tagironExplainBtn.classList.remove("active");
+  }
+}
+
+function showTagironButtonExplanation(target) {
+  let explanation = null;
+  if (target.type === "button") {
+    explanation = TAGIRON_BUTTON_EXPLANATIONS[target.key];
+  } else if (target.type === "dynamic") {
+    explanation = TAGIRON_DYNAMIC_EXPLANATIONS[target.key];
+  }
+  if (!explanation || !tagironExplainContent || !tagironExplainModal) {
+    return;
+  }
+  tagironExplainContent.innerHTML = `
+    <h4>${explanation.name}</h4>
+    <p>${explanation.description}</p>
+  `;
+  setModalVisible(tagironExplainModal, true);
+}
+
+function closeTagironExplainModal() {
+  if (tagironExplainModal) {
+    setModalVisible(tagironExplainModal, false);
+  }
+}
+
 function renderTagironGameState(data) {
   if (!data || data.game_type !== "tagiron") return;
   const view = data.view || {};
@@ -309,6 +476,9 @@ function renderTagironGameState(data) {
   renderTagironLog(view);
   renderTagironPlayers(view);
   updateTagironGuessButton();
+  if (tagironExplainMode) {
+    updateTagironExplainClasses(true);
+  }
 }
 
 if (tagironGuessBtn) {
@@ -324,3 +494,65 @@ if (tagironGuessBtn) {
     sendAction({ type: "guess_tiles", tiles });
   });
 }
+
+if (tagironHelpBtn) {
+  tagironHelpBtn.addEventListener("click", () => {
+    showTagironHelpModal();
+  });
+}
+
+if (tagironHelpModalCloseBtn) {
+  tagironHelpModalCloseBtn.addEventListener("click", closeTagironHelpModal);
+}
+
+if (tagironExplainBtn) {
+  tagironExplainBtn.addEventListener("click", () => {
+    toggleTagironExplainMode();
+  });
+}
+
+if (tagironExplainModalCloseBtn) {
+  tagironExplainModalCloseBtn.addEventListener("click", closeTagironExplainModal);
+}
+
+document.addEventListener("pointerdown", (e) => {
+  if (!tagironExplainMode) return;
+
+  const target = findTagironExplainTargetAtPoint(e.clientX, e.clientY);
+  if (target) {
+    e.preventDefault();
+    e.stopPropagation();
+    showTagironButtonExplanation(target);
+    exitTagironExplainMode();
+    return;
+  }
+
+  const button = e.target.closest("button");
+  if (button === tagironExplainBtn || button === tagironHelpBtn) return;
+  if (button === tagironHelpModalCloseBtn || button === tagironExplainModalCloseBtn) return;
+
+  if (button) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+}, true);
+
+document.addEventListener("click", (e) => {
+  if (!tagironExplainMode) return;
+
+  const button = e.target.closest("button");
+  if (!button) return;
+  if (button === tagironExplainBtn || button === tagironHelpBtn) return;
+  if (button === tagironHelpModalCloseBtn || button === tagironExplainModalCloseBtn) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+}, true);
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && tagironExplainMode) {
+    exitTagironExplainMode();
+  }
+});
+
+window.showTagironHeaderActions = showTagironHeaderActions;
