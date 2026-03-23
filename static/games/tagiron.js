@@ -86,9 +86,25 @@ function ensureTagironGuessDrafts(count) {
   const next = [];
   for (let i = 0; i < count; i += 1) {
     const existing = tagironGuessDrafts[i] || {};
-    next.push({ value: existing.value ?? "" });
+    const filter = existing.filter || {};
+    next.push({
+      value: existing.value ?? "",
+      filter: {
+        numbers: Array.isArray(filter.numbers) ? filter.numbers : [],
+        colors: Array.isArray(filter.colors) ? filter.colors : [],
+      },
+    });
   }
   tagironGuessDrafts = next;
+}
+
+function toggleFilterValue(list, value) {
+  const idx = list.indexOf(value);
+  if (idx >= 0) {
+    list.splice(idx, 1);
+    return;
+  }
+  list.push(value);
 }
 
 function formatTagironTile(tile) {
@@ -208,27 +224,45 @@ function renderTagironGuessForm(view) {
     if (num === 5) {
       const owned = ownedCounts["green:5"] || 0;
       if (owned < 2) {
-        optionList.push({ value: "green:5", label: "🟢 5", color: "#2e6b46" });
+        optionList.push({ value: "green:5", label: "🟢 5", color: "#2e6b46", tileColor: "green", tileNumber: 5 });
       }
       return;
     }
     const redKey = `red:${num}`;
     if (!ownedCounts[redKey]) {
-      optionList.push({ value: redKey, label: `🔴 ${num}`, color: "#b62f2f" });
+      optionList.push({ value: redKey, label: `🔴 ${num}`, color: "#b62f2f", tileColor: "red", tileNumber: num });
     }
     const blueKey = `blue:${num}`;
     if (!ownedCounts[blueKey]) {
-      optionList.push({ value: blueKey, label: `🔵 ${num}`, color: "#1f4b8f" });
+      optionList.push({ value: blueKey, label: `🔵 ${num}`, color: "#1f4b8f", tileColor: "blue", tileNumber: num });
     }
   });
 
   for (let i = 0; i < count; i += 1) {
+    const filter = tagironGuessDrafts[i].filter || { numbers: [], colors: [] };
+    const filteredOptions = optionList.filter((opt) => {
+      if (filter.colors.includes(opt.tileColor)) {
+        return false;
+      }
+      if (filter.numbers.includes(opt.tileNumber)) {
+        return false;
+      }
+      return true;
+    });
+
     const row = document.createElement("div");
     row.className = "tagiron-guess-row";
+    const header = document.createElement("div");
+    header.className = "tagiron-guess-header";
     const label = document.createElement("div");
     label.className = "tagiron-guess-label";
     label.textContent = `Pos ${i + 1}`;
-    row.appendChild(label);
+    const filterTitle = document.createElement("div");
+    filterTitle.className = "tagiron-filter-title";
+    filterTitle.textContent = "Filter";
+    header.appendChild(label);
+    header.appendChild(filterTitle);
+    row.appendChild(header);
 
     const select = document.createElement("select");
     select.className = "tagiron-guess-tile";
@@ -236,7 +270,7 @@ function renderTagironGuessForm(view) {
     emptyOpt.value = "";
     emptyOpt.textContent = "Select tile";
     select.appendChild(emptyOpt);
-    optionList.forEach((optData) => {
+    filteredOptions.forEach((optData) => {
       const opt = document.createElement("option");
       opt.value = optData.value;
       opt.textContent = optData.label;
@@ -246,6 +280,11 @@ function renderTagironGuessForm(view) {
       }
       select.appendChild(opt);
     });
+    const valueSet = new Set(filteredOptions.map((optData) => optData.value));
+    const currentValue = tagironGuessDrafts[i].value ?? "";
+    if (currentValue && !valueSet.has(currentValue)) {
+      tagironGuessDrafts[i].value = "";
+    }
     select.value = tagironGuessDrafts[i].value ?? "";
     select.addEventListener("change", (event) => {
       tagironGuessDrafts[i].value = event.target.value;
@@ -253,6 +292,54 @@ function renderTagironGuessForm(view) {
     });
     row.appendChild(select);
 
+    const filterWrap = document.createElement("div");
+    filterWrap.className = "tagiron-filter";
+
+    const colorRow = document.createElement("div");
+    colorRow.className = "tagiron-filter-row";
+    [
+      { key: "red", label: "🔴", className: "tagiron-filter-red" },
+      { key: "blue", label: "🔵", className: "tagiron-filter-blue" },
+      { key: "green", label: "🟢", className: "tagiron-filter-green" },
+    ].forEach((colorItem) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = `tagiron-filter-chip ${colorItem.className}`;
+      if (filter.colors.includes(colorItem.key)) {
+        btn.classList.add("is-excluded");
+      }
+      btn.textContent = colorItem.label;
+      btn.addEventListener("click", () => {
+        toggleFilterValue(filter.colors, colorItem.key);
+        tagironGuessDrafts[i].filter = filter;
+        renderTagironGuessForm(view);
+        updateTagironGuessButton();
+      });
+      colorRow.appendChild(btn);
+    });
+    filterWrap.appendChild(colorRow);
+
+    const numberRow = document.createElement("div");
+    numberRow.className = "tagiron-filter-row";
+    for (let n = 0; n <= 9; n += 1) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "tagiron-filter-chip";
+      if (filter.numbers.includes(n)) {
+        btn.classList.add("is-excluded");
+      }
+      btn.textContent = String(n);
+      btn.addEventListener("click", () => {
+        toggleFilterValue(filter.numbers, n);
+        tagironGuessDrafts[i].filter = filter;
+        renderTagironGuessForm(view);
+        updateTagironGuessButton();
+      });
+      numberRow.appendChild(btn);
+    }
+    filterWrap.appendChild(numberRow);
+
+    row.appendChild(filterWrap);
     tagironGuessForm.appendChild(row);
   }
 }

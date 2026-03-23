@@ -10783,6 +10783,61 @@ body.manila-explain-mode button.has-explanation:hover {
   font-weight: 600;
 }
 
+.tagiron-guess-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tagiron-filter-title {
+  font-size: 11px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tagiron-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tagiron-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.tagiron-filter-chip {
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  background: #ffffff;
+  padding: 2px 6px;
+  font-size: 12px;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.tagiron-filter-chip.is-excluded {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #b91c1c;
+  text-decoration: line-through;
+}
+
+.tagiron-filter-chip.tagiron-filter-red {
+  color: #b62f2f;
+}
+
+.tagiron-filter-chip.tagiron-filter-blue {
+  color: #1f4b8f;
+}
+
+.tagiron-filter-chip.tagiron-filter-green {
+  color: #2e6b46;
+}
+
 @media (max-width: 900px) {
   .tagiron-question-pool {
     grid-template-columns: 1fr;
