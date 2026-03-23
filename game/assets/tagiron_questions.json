@@ -1,0 +1,23 @@
+[
+  {"id": 1, "text": "Where is 0?", "type": "where_number", "number": 0, "shared_info": false},
+  {"id": 2, "text": "What is the sum of your three middle tiles?", "type": "sum_middle_three", "shared_info": false, "not_for_player_counts": [4]},
+  {"id": 3, "text": "Is the middle tile greater than 4?", "type": "middle_gt_4", "shared_info": true, "not_for_player_counts": [4]},
+  {"id": 4, "text": "Where is 1 or 2? Choose one", "type": "where_number_choice", "choices": [1, 2], "shared_info": false},
+  {"id": 5, "text": "Where is 3 or 4? Choose one", "type": "where_number_choice", "choices": [3, 4], "shared_info": false},
+  {"id": 6, "text": "Where is 5?", "type": "where_number", "number": 5, "shared_info": false},
+  {"id": 7, "text": "Where is 6 or 7? (Choose one)", "type": "where_number_choice", "choices": [6, 7], "shared_info": false},
+  {"id": 8, "text": "Where is 8 or 9? (Choose one)", "type": "where_number_choice", "choices": [8, 9], "shared_info": false},
+  {"id": 9, "text": "Where do you have neighboring tiles of the same color?", "type": "neighbor_same_color", "shared_info": false},
+  {"id": 10, "text": "Where do you have tiles in sequential order?", "type": "sequential_order", "shared_info": false},
+  {"id": 11, "text": "What is the sum of your three left tiles?", "type": "sum_left_three", "shared_info": false},
+  {"id": 12, "text": "What is the sum of your three right tiles?", "type": "sum_right_three", "shared_info": false},
+  {"id": 13, "text": "What is the sum of your Red tiles?", "type": "sum_color", "color": "red", "shared_info": false},
+  {"id": 14, "text": "How many Red tiles do you have?", "type": "count_color", "color": "red", "shared_info": false},
+  {"id": 15, "text": "What is the sum of your Blue tiles?", "type": "sum_color", "color": "blue", "shared_info": false},
+  {"id": 16, "text": "How many Blue tiles do you have?", "type": "count_color", "color": "blue", "shared_info": false},
+  {"id": 17, "text": "How many even numbers do you have? (Including 0)", "type": "count_even", "shared_info": false},
+  {"id": 18, "text": "How many odd numbers do you have?", "type": "count_odd", "shared_info": false},
+  {"id": 19, "text": "How many pairs of the same number do you have?", "type": "count_pairs", "shared_info": false},
+  {"id": 20, "text": "What is the difference between the largest and smallest numbers?", "type": "range_diff", "shared_info": true},
+  {"id": 21, "text": "What is the sum of all of your tiles?", "type": "sum_all", "shared_info": true}
+]
