@@ -10728,8 +10728,8 @@ body.manila-explain-mode button.has-explanation:hover {
 }
 
 .tagiron-question-pool {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
   gap: 10px;
 }
 
@@ -10766,19 +10766,27 @@ body.manila-explain-mode button.has-explanation:hover {
 
 .tagiron-guess-form {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  gap: 12px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 4px;
 }
 
 .tagiron-guess-row {
-  display: grid;
-  grid-template-columns: 90px minmax(160px, 220px);
-  gap: 8px;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 140px;
 }
 
 .tagiron-guess-label {
   font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .tagiron-question-pool {
+    grid-template-columns: 1fr;
+  }
 }
 
 .tagiron-log {

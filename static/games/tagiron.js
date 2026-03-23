@@ -191,15 +191,34 @@ function renderTagironGuessForm(view) {
     tagironGuessForm.appendChild(empty);
     return;
   }
+  const ownedCounts = {};
+  const yourTiles = Array.isArray(view.your_tiles) ? view.your_tiles : [];
+  yourTiles.forEach((tile) => {
+    const color = tile.color;
+    const number = tile.number;
+    if (!color && number === undefined) return;
+    const key = `${color}:${number}`;
+    ownedCounts[key] = (ownedCounts[key] || 0) + 1;
+  });
+
   const numberOptions = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
   const optionList = [];
   numberOptions.forEach((num) => {
     if (num === 5) {
-      optionList.push({ value: "green:5", label: "🟢 5", color: "#2e6b46" });
+      const owned = ownedCounts["green:5"] || 0;
+      if (owned < 2) {
+        optionList.push({ value: "green:5", label: "🟢 5", color: "#2e6b46" });
+      }
       return;
     }
-    optionList.push({ value: `red:${num}`, label: `🔴 ${num}`, color: "#b62f2f" });
-    optionList.push({ value: `blue:${num}`, label: `🔵 ${num}`, color: "#1f4b8f" });
+    const redKey = `red:${num}`;
+    if (!ownedCounts[redKey]) {
+      optionList.push({ value: redKey, label: `🔴 ${num}`, color: "#b62f2f" });
+    }
+    const blueKey = `blue:${num}`;
+    if (!ownedCounts[blueKey]) {
+      optionList.push({ value: blueKey, label: `🔵 ${num}`, color: "#1f4b8f" });
+    }
   });
 
   for (let i = 0; i < count; i += 1) {
