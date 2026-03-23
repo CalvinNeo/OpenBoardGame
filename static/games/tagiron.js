@@ -43,8 +43,9 @@ const TAGIRON_HELP_TEXT = `
 
   <h3>Who Answers</h3>
   <ul>
+    <li><strong>2 players</strong>: Both players always answer, even for non-Shared cards.</li>
     <li><strong>Shared cards</strong>: All players, including the asker.</li>
-    <li><strong>Non-Shared cards</strong>: In 2/3 player games only opponents answer; in 4 players everyone answers.</li>
+    <li><strong>Non-Shared cards</strong>: In 3 players only opponents answer; in 4 players everyone answers.</li>
   </ul>
 
   <h3>Guess Outcome</h3>

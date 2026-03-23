@@ -356,7 +356,9 @@ class TagironGame:
             choice = action.get("choice")
             answers: Dict[str, Dict] = {}
             player_ids = list(state["players"].keys())
-            if question.get("shared_info"):
+            if len(player_ids) == 2:
+                targets = player_ids
+            elif question.get("shared_info"):
                 targets = player_ids
             elif len(player_ids) == 4:
                 targets = player_ids
