@@ -10941,7 +10941,7 @@ body.tagiron-explain-mode button.has-explanation:hover {
 .patchwork-ring-shell {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 2px;
 }
 
 .patchwork-ring-legend-row {
@@ -10982,10 +10982,14 @@ body.tagiron-explain-mode button.has-explanation:hover {
   display: block;
 }
 
+.patchwork-ring-bottom {
+  margin-top: -45px;
+}
+
 .patchwork-ring-middle {
   display: grid;
   grid-template-columns: minmax(90px, 104px) minmax(0, 1fr) minmax(90px, 104px);
-  gap: 8px;
+  gap: 6px;
   align-items: stretch;
 }
 
@@ -11016,7 +11020,7 @@ body.tagiron-explain-mode button.has-explanation:hover {
 .patchwork-market-side.left,
 .patchwork-market-side.right {
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-end;
 }
 
 .patchwork-layout {
@@ -11478,6 +11482,10 @@ body.patchwork-explain-mode [data-patchwork-explain].has-explanation {
 }
 
 @media (max-width: 1260px) {
+  .patchwork-ring-bottom {
+    margin-top: 0;
+  }
+
   .patchwork-ring-middle {
     grid-template-columns: 1fr;
   }
