@@ -4,6 +4,18 @@ let patchworkRotation = 0;
 let patchworkFlip = false;
 let patchworkAnchor = null;
 let patchworkExplainMode = false;
+const PATCHWORK_PREVIEW_JEWELS = [
+  { fillTop: "#fb7185", fillBottom: "#be123c", border: "#881337", glow: "rgba(244, 63, 94, 0.28)" },
+  { fillTop: "#60a5fa", fillBottom: "#1d4ed8", border: "#1e3a8a", glow: "rgba(37, 99, 235, 0.28)" },
+  { fillTop: "#34d399", fillBottom: "#047857", border: "#065f46", glow: "rgba(16, 185, 129, 0.28)" },
+  { fillTop: "#c084fc", fillBottom: "#7e22ce", border: "#581c87", glow: "rgba(147, 51, 234, 0.26)" },
+  { fillTop: "#fbbf24", fillBottom: "#b45309", border: "#78350f", glow: "rgba(245, 158, 11, 0.28)" },
+  { fillTop: "#22d3ee", fillBottom: "#0f766e", border: "#134e4a", glow: "rgba(6, 182, 212, 0.26)" },
+  { fillTop: "#f472b6", fillBottom: "#be185d", border: "#831843", glow: "rgba(236, 72, 153, 0.26)" },
+  { fillTop: "#a3e635", fillBottom: "#4d7c0f", border: "#365314", glow: "rgba(132, 204, 22, 0.24)" },
+  { fillTop: "#fdba74", fillBottom: "#c2410c", border: "#7c2d12", glow: "rgba(249, 115, 22, 0.24)" },
+  { fillTop: "#93c5fd", fillBottom: "#4f46e5", border: "#312e81", glow: "rgba(99, 102, 241, 0.24)" },
+];
 
 const patchworkPanel = document.getElementById("patchworkPanel");
 const patchworkHeaderActions = document.getElementById("patchworkHeaderActions");
@@ -294,6 +306,25 @@ function patchworkColorForKey(key) {
   };
 }
 
+function patchworkPreviewPaletteForKey(key) {
+  if (!key) {
+    return PATCHWORK_PREVIEW_JEWELS[0];
+  }
+  if (String(key).startsWith("leather_") || key === "leather_patch") {
+    return {
+      fillTop: "#d6a97b",
+      fillBottom: "#a16207",
+      border: "#7c4a2c",
+      glow: "rgba(161, 98, 7, 0.24)",
+    };
+  }
+  let hash = 0;
+  for (const char of String(key)) {
+    hash = ((hash * 33) + char.charCodeAt(0)) >>> 0;
+  }
+  return PATCHWORK_PREVIEW_JEWELS[hash % PATCHWORK_PREVIEW_JEWELS.length];
+}
+
 function patchworkBuildMiniGrid(cells, extraClass) {
   const wrapper = document.createElement("div");
   wrapper.className = `patchwork-mini-grid${extraClass ? ` ${extraClass}` : ""}`;
@@ -307,6 +338,33 @@ function patchworkBuildMiniGrid(cells, extraClass) {
   cells.forEach(([x, y]) => {
     const cell = document.createElement("div");
     cell.className = "patchwork-mini-cell";
+    cell.style.setProperty("--col", String(x));
+    cell.style.setProperty("--row", String(y));
+    wrapper.appendChild(cell);
+  });
+  return wrapper;
+}
+
+function patchworkBuildPreviewShape(cells, key) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "patchwork-preview-shape";
+  if (!cells || !cells.length) {
+    return wrapper;
+  }
+  const width = cells.reduce((max, [x]) => Math.max(max, x), 0) + 1;
+  const height = cells.reduce((max, [, y]) => Math.max(max, y), 0) + 1;
+  const cellSize = Math.max(18, Math.min(34, Math.floor(Math.min(176 / width, 136 / height))));
+  const palette = patchworkPreviewPaletteForKey(key);
+  wrapper.style.setProperty("--patchwork-preview-cols", String(width));
+  wrapper.style.setProperty("--patchwork-preview-rows", String(height));
+  wrapper.style.setProperty("--patchwork-preview-cell", `${cellSize}px`);
+  wrapper.style.setProperty("--patchwork-preview-fill-top", palette.fillTop);
+  wrapper.style.setProperty("--patchwork-preview-fill-bottom", palette.fillBottom);
+  wrapper.style.setProperty("--patchwork-preview-border", palette.border);
+  wrapper.style.setProperty("--patchwork-preview-glow", palette.glow);
+  cells.forEach(([x, y]) => {
+    const cell = document.createElement("div");
+    cell.className = "patchwork-preview-shape-cell";
     cell.style.setProperty("--col", String(x));
     cell.style.setProperty("--row", String(y));
     wrapper.appendChild(cell);
@@ -633,19 +691,87 @@ function patchworkBuildTrackPolyline(view) {
   return polyline;
 }
 
+function patchworkBoardCellCenters() {
+  const gridX = [24, 144, 262, 381, 500, 619, 740, 859, 978];
+  const gridY = [19, 139, 260, 380, 500, 619, 740, 860, 976];
+  const blocked = new Set(["3,3", "3,4", "4,3", "4,4", "7,5", "7,6", "7,7"]);
+  const centers = [];
+  for (let row = 0; row < 8; row += 1) {
+    for (let col = 0; col < 8; col += 1) {
+      if (blocked.has(`${row},${col}`)) {
+        continue;
+      }
+      centers.push([
+        (gridX[col] + gridX[col + 1]) / 2,
+        (gridY[row] + gridY[row + 1]) / 2,
+      ]);
+    }
+  }
+  return centers;
+}
+
+function patchworkSpiralTrackCenters() {
+  const gridX = [24, 144, 262, 381, 500, 619, 740, 859, 978];
+  const gridY = [19, 139, 260, 380, 500, 619, 740, 860, 976];
+  const blocked = new Set(["3,3", "3,4", "4,3", "4,4", "7,5", "7,6", "7,7"]);
+  const cells = [];
+
+  for (let ring = 0; ring < 3; ring += 1) {
+    const top = ring;
+    const left = ring;
+    const bottom = 7 - ring;
+    const right = 7 - ring;
+
+    for (let col = right; col >= left; col -= 1) {
+      const key = `${bottom},${col}`;
+      if (!blocked.has(key)) {
+        cells.push([bottom, col]);
+      }
+    }
+    for (let row = bottom - 1; row >= top; row -= 1) {
+      const key = `${row},${left}`;
+      if (!blocked.has(key)) {
+        cells.push([row, left]);
+      }
+    }
+    for (let col = left + 1; col <= right; col += 1) {
+      const key = `${top},${col}`;
+      if (!blocked.has(key)) {
+        cells.push([top, col]);
+      }
+    }
+    for (let row = top + 1; row < bottom; row += 1) {
+      const key = `${row},${right}`;
+      if (!blocked.has(key)) {
+        cells.push([row, right]);
+      }
+    }
+  }
+
+  return cells.map(([row, col]) => [
+    (gridX[col] + gridX[col + 1]) / 2,
+    (gridY[row] + gridY[row + 1]) / 2,
+  ]);
+}
+
+function patchworkSampleTrackCenters(points, targetCount) {
+  if (!Array.isArray(points) || points.length <= targetCount) {
+    return Array.isArray(points) ? points.slice() : [];
+  }
+  const sampled = [];
+  for (let index = 0; index < targetCount; index += 1) {
+    const sourceIndex = Math.round(index * (points.length - 1) / Math.max(targetCount - 1, 1));
+    sampled.push(points[sourceIndex]);
+  }
+  return sampled;
+}
+
 function patchworkBuildTrackPositions(view) {
   const trackEnd = Number.isInteger(view && view.track_end) ? view.track_end : 53;
-  const polyline = patchworkBuildTrackPolyline(view);
-  if (!polyline.length) {
-    return [[142, 861]];
-  }
-  const total = patchworkPathLength(polyline);
-  const points = [];
-  for (let position = 0; position <= trackEnd; position += 1) {
-    const distance = (total * position) / Math.max(trackEnd, 1);
-    points.push(patchworkPointAtDistance(polyline, distance));
-  }
-  return points;
+  const startStripCenter = [798.5, 918];
+  const spiralCenters = patchworkSpiralTrackCenters();
+  const remaining = patchworkSampleTrackCenters(spiralCenters, trackEnd);
+  return [startStripCenter, ...remaining];
 }
 
 function renderPatchworkMarket(view) {
@@ -781,12 +907,19 @@ function renderPatchworkPreview(view) {
 
   if (view.pending_special_patch) {
     const note = document.createElement("div");
-    note.className = "patchwork-preview-note";
+    note.className = "patchwork-preview-showcase patchwork-preview-showcase-special";
     note.innerHTML = `
       <div class="patchwork-preview-title">Leather Patch Pending</div>
-      <p>Click any empty square on your quilt to place a 1x1 leather patch.</p>
+      <div class="patchwork-preview-image patchwork-preview-image-special"></div>
+      <div class="patchwork-preview-meta">
+        <span>Place on any empty square</span>
+        <span>1x1 bonus patch</span>
+      </div>
     `;
-    note.appendChild(patchworkBuildMiniGrid([[0, 0]], "leather"));
+    const art = note.querySelector(".patchwork-preview-image");
+    if (art) {
+      art.appendChild(patchworkBuildPreviewShape([[0, 0]], "leather_patch"));
+    }
     patchworkPreview.appendChild(note);
     return;
   }
@@ -794,34 +927,32 @@ function renderPatchworkPreview(view) {
   const def = patchworkSelectedDef(view);
   if (!def) {
     const empty = document.createElement("div");
-    empty.className = "patchwork-preview-note";
-    empty.innerHTML = "<p>Select a patch from the first three market cards to preview it here.</p>";
+    empty.className = "patchwork-preview-showcase patchwork-preview-note";
+    empty.innerHTML = `
+      <div class="patchwork-preview-title">Preview Ready</div>
+      <p>Select one of the first three market patches to inspect it here.</p>
+    `;
     patchworkPreview.appendChild(empty);
     return;
   }
 
-  const title = document.createElement("div");
-  title.className = "patchwork-preview-title";
-  title.textContent = def.id;
-
-  const image = document.createElement("img");
-  image.className = "patchwork-preview-image";
-  image.src = def.svg_url;
-  image.alt = def.id;
-
-  const meta = document.createElement("div");
-  meta.className = "patchwork-preview-meta";
-  meta.innerHTML = `
-    <span>🔘 ${def.cost_buttons}</span>
-    <span>⏳ ${def.cost_time}</span>
-    <span>🪙 ${def.income_buttons}</span>
-    <span>Anchor ${patchworkAnchor ? `${patchworkAnchor.x}, ${patchworkAnchor.y}` : "-"}</span>
+  const showcase = document.createElement("div");
+  showcase.className = "patchwork-preview-showcase";
+  showcase.innerHTML = `
+    <div class="patchwork-preview-title">${def.id}</div>
+    <div class="patchwork-preview-image" aria-label="${def.id} preview"></div>
+    <div class="patchwork-preview-meta">
+      <span>🔘 ${def.cost_buttons}</span>
+      <span>⏳ ${def.cost_time}</span>
+      <span>🪙 ${def.income_buttons}</span>
+      <span>Anchor ${patchworkAnchor ? `${patchworkAnchor.x}, ${patchworkAnchor.y}` : "-"}</span>
+    </div>
   `;
-
-  patchworkPreview.appendChild(title);
-  patchworkPreview.appendChild(image);
-  patchworkPreview.appendChild(patchworkBuildMiniGrid(patchworkSelectedCells(view)));
-  patchworkPreview.appendChild(meta);
+  const art = showcase.querySelector(".patchwork-preview-image");
+  if (art) {
+    art.appendChild(patchworkBuildPreviewShape(patchworkSelectedCells(view), def.id));
+  }
+  patchworkPreview.appendChild(showcase);
 }
 
 function patchworkCreateCell(nodeName, occupiedKey) {
