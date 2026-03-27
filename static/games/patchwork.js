@@ -13,6 +13,11 @@ const patchworkHelpModal = document.getElementById("patchworkHelpModal");
 const patchworkHelpModalCloseBtn = document.getElementById("patchworkHelpModalCloseBtn");
 const patchworkExplainModal = document.getElementById("patchworkExplainModal");
 const patchworkExplainModalCloseBtn = document.getElementById("patchworkExplainModalCloseBtn");
+const patchworkQuiltModal = document.getElementById("patchworkQuiltModal");
+const patchworkQuiltModalCloseBtn = document.getElementById("patchworkQuiltModalCloseBtn");
+const patchworkQuiltModalTitle = document.getElementById("patchworkQuiltModalTitle");
+const patchworkQuiltModalMeta = document.getElementById("patchworkQuiltModalMeta");
+const patchworkQuiltModalBoard = document.getElementById("patchworkQuiltModalBoard");
 const patchworkHelpContent = document.getElementById("patchworkHelpContent");
 const patchworkExplainContent = document.getElementById("patchworkExplainContent");
 
@@ -29,17 +34,22 @@ const patchworkNoticeTitle = document.getElementById("patchworkNoticeTitle");
 const patchworkNoticeBody = document.getElementById("patchworkNoticeBody");
 const patchworkBoardArt = document.getElementById("patchworkBoardArt");
 const patchworkTrack = document.getElementById("patchworkTrack");
-const patchworkMarket = document.getElementById("patchworkMarket");
+const patchworkMarketLegend = document.getElementById("patchworkMarketLegend");
+const patchworkMarketTop = document.getElementById("patchworkMarketTop");
+const patchworkMarketRight = document.getElementById("patchworkMarketRight");
+const patchworkMarketBottom = document.getElementById("patchworkMarketBottom");
+const patchworkMarketLeft = document.getElementById("patchworkMarketLeft");
 const patchworkPlayers = document.getElementById("patchworkPlayers");
 const patchworkPreview = document.getElementById("patchworkPreview");
 const patchworkYourBoard = document.getElementById("patchworkYourBoard");
-const patchworkOtherBoards = document.getElementById("patchworkOtherBoards");
 const patchworkSelectionHint = document.getElementById("patchworkSelectionHint");
 const patchworkRotateLeftBtn = document.getElementById("patchworkRotateLeftBtn");
 const patchworkRotateRightBtn = document.getElementById("patchworkRotateRightBtn");
 const patchworkFlipBtn = document.getElementById("patchworkFlipBtn");
 const patchworkAdvanceBtn = document.getElementById("patchworkAdvanceBtn");
 const patchworkBuyBtn = document.getElementById("patchworkBuyBtn");
+const PATCHWORK_BOARD_WIDTH = 1000;
+const PATCHWORK_BOARD_HEIGHT = 999;
 
 const PATCHWORK_HELP_TEXT = `
   <h3>Goal</h3>
@@ -72,7 +82,7 @@ const PATCHWORK_HELP_TEXT = `
 const PATCHWORK_EXPLANATIONS = {
   track: {
     name: "Time Track",
-    description: "Shows button-income markers, leather markers, and both player positions from 0 to 53.",
+    description: "Shows both player markers directly on the stitched time-board path from 0 to 53.",
   },
   marketCard: {
     name: "Patch Market",
@@ -82,13 +92,21 @@ const PATCHWORK_EXPLANATIONS = {
     name: "Your Quilt Board",
     description: "Click to choose the top-left anchor for the selected patch preview. During a leather bonus, click any empty square to place the 1x1 tile.",
   },
-  otherBoard: {
-    name: "Opponent Quilt",
-    description: "Shows the current filled pattern, empty spaces, and score pressure on the other player.",
-  },
   preview: {
     name: "Preview",
     description: "Shows the selected patch, its current orientation, and the transformed cell footprint you are about to place.",
+  },
+  players: {
+    name: "Players",
+    description: "Each player card summarizes the current standing. Click a player card to open that player's quilt in a popup.",
+    details: [
+      "🔘 Buttons: current currency and final positive points.",
+      "⏳ Time: current position on the time track.",
+      "🪙 Income: buttons gained whenever crossing a button marker.",
+      "⬜ Empty: unfilled quilt squares, each worth -2 at the end.",
+      "⭐ Special: 7 if the player claimed the 7x7 bonus, otherwise 0.",
+      "🏁 Score: current score preview after buttons, bonus, and empty-space penalty.",
+    ],
   },
   patchworkRotateLeftBtn: {
     name: "Rotate Left",
@@ -144,11 +162,17 @@ function clearPatchworkState() {
   if (patchworkFirstFinishLabel) patchworkFirstFinishLabel.textContent = "-";
   if (patchworkWinnerLabel) patchworkWinnerLabel.textContent = "-";
   if (patchworkTrack) patchworkTrack.innerHTML = "";
-  if (patchworkMarket) patchworkMarket.innerHTML = "";
+  if (patchworkMarketLegend) patchworkMarketLegend.innerHTML = "";
+  [patchworkMarketTop, patchworkMarketRight, patchworkMarketBottom, patchworkMarketLeft].forEach((node) => {
+    if (node) {
+      node.innerHTML = "";
+    }
+  });
   if (patchworkPlayers) patchworkPlayers.innerHTML = "";
   if (patchworkPreview) patchworkPreview.innerHTML = "";
   if (patchworkYourBoard) patchworkYourBoard.innerHTML = "";
-  if (patchworkOtherBoards) patchworkOtherBoards.innerHTML = "";
+  if (patchworkQuiltModalBoard) patchworkQuiltModalBoard.innerHTML = "";
+  if (patchworkQuiltModalMeta) patchworkQuiltModalMeta.textContent = "-";
   if (patchworkSelectionHint) {
     patchworkSelectionHint.textContent = "Select one of the first three patches, then click your board.";
   }
@@ -156,6 +180,7 @@ function clearPatchworkState() {
     patchworkNotice.classList.add("hidden");
     patchworkNotice.setAttribute("aria-hidden", "true");
   }
+  closePatchworkQuiltModal();
   updatePatchworkActionButtons();
 }
 
@@ -362,9 +387,13 @@ function showPatchworkExplanation(explainId) {
   if (!explanation || !patchworkExplainContent || !patchworkExplainModal) {
     return;
   }
+  const details = Array.isArray(explanation.details) && explanation.details.length
+    ? `<ul>${explanation.details.map((line) => `<li>${line}</li>`).join("")}</ul>`
+    : "";
   patchworkExplainContent.innerHTML = `
     <h4>${explanation.name}</h4>
     <p>${explanation.description}</p>
+    ${details}
   `;
   setModalVisible(patchworkExplainModal, true);
 }
@@ -372,6 +401,29 @@ function showPatchworkExplanation(explainId) {
 function closePatchworkExplainModal() {
   if (patchworkExplainModal) {
     setModalVisible(patchworkExplainModal, false);
+  }
+}
+
+function showPatchworkQuiltModal(view, player) {
+  if (!patchworkQuiltModal || !patchworkQuiltModalBoard || !view || !player) {
+    return;
+  }
+  if (patchworkQuiltModalTitle) {
+    patchworkQuiltModalTitle.textContent = `${player.name}'s Quilt`;
+  }
+  if (patchworkQuiltModalMeta) {
+    const score = view.scores && Object.prototype.hasOwnProperty.call(view.scores, player.player_id)
+      ? view.scores[player.player_id]
+      : player.score_preview;
+    patchworkQuiltModalMeta.textContent = `🔘 ${player.buttons}  ·  ⏳ ${player.time_position}  ·  🪙 ${player.button_income}  ·  ⬜ ${player.empty_spaces}  ·  Score ${score}`;
+  }
+  renderPatchworkBoard(patchworkQuiltModalBoard, view, player, false);
+  setModalVisible(patchworkQuiltModal, true);
+}
+
+function closePatchworkQuiltModal() {
+  if (patchworkQuiltModal) {
+    setModalVisible(patchworkQuiltModal, false);
   }
 }
 
@@ -462,133 +514,261 @@ function renderPatchworkTrack(view) {
   patchworkTrack.innerHTML = "";
   patchworkTrack.setAttribute("data-patchwork-explain", "track");
 
-  const rail = document.createElement("div");
-  rail.className = "patchwork-track-rail";
-  patchworkTrack.appendChild(rail);
-
-  const markerLayer = document.createElement("div");
-  markerLayer.className = "patchwork-track-marker-layer";
-  patchworkTrack.appendChild(markerLayer);
-
-  const chipLayer = document.createElement("div");
-  chipLayer.className = "patchwork-track-chip-layer";
-  patchworkTrack.appendChild(chipLayer);
-
-  const trackEnd = Number.isInteger(view.track_end) ? view.track_end : 53;
-  const positionPct = (position) => `${(position / Math.max(trackEnd, 1)) * 100}%`;
-
-  [0, trackEnd].forEach((position) => {
-    const tick = document.createElement("div");
-    tick.className = "patchwork-track-tick";
-    tick.style.left = positionPct(position);
-    tick.textContent = String(position);
-    patchworkTrack.appendChild(tick);
+  const positions = patchworkBuildTrackPositions(view);
+  const stacks = new Map();
+  (view.players || []).forEach((player) => {
+    const key = String(player.time_position || 0);
+    const bucket = stacks.get(key) || [];
+    bucket.push(player.player_id);
+    stacks.set(key, bucket);
   });
-
-  (view.button_markers || []).forEach((position) => {
-    const marker = document.createElement("div");
-    marker.className = "patchwork-track-marker income";
-    marker.style.left = positionPct(position);
-    marker.textContent = "🔘";
-    marker.title = `Income at ${position}`;
-    markerLayer.appendChild(marker);
-  });
-
-  const claimed = new Set(view.claimed_leathers || []);
-  (view.leather_markers || []).forEach((position) => {
-    const marker = document.createElement("div");
-    marker.className = "patchwork-track-marker leather";
-    if (claimed.has(position)) {
-      marker.classList.add("claimed");
-    }
-    marker.style.left = positionPct(position);
-    marker.textContent = "🟫";
-    marker.title = claimed.has(position) ? `Leather at ${position} (claimed)` : `Leather at ${position}`;
-    markerLayer.appendChild(marker);
-  });
-
   (view.players || []).forEach((player, index) => {
+    const point = positions[player.time_position || 0] || positions[0];
+    if (!point) {
+      return;
+    }
+    const bucket = stacks.get(String(player.time_position || 0)) || [];
+    const stackIndex = bucket.indexOf(player.player_id);
+    const stackOffset = bucket.length > 1 ? (stackIndex - (bucket.length - 1) / 2) * 16 : 0;
     const chip = document.createElement("div");
     chip.className = `patchwork-track-chip seat-${player.seat ?? index}`;
-    chip.style.left = positionPct(player.time_position || 0);
-    chip.style.top = `${index * 30 + 14}px`;
+    if (player.player_id === view.current_turn) {
+      chip.classList.add("active");
+    }
+    chip.style.left = `${((point[0] + stackOffset) / PATCHWORK_BOARD_WIDTH) * 100}%`;
+    chip.style.top = `${(point[1] / PATCHWORK_BOARD_HEIGHT) * 100}%`;
     chip.title = `${player.name}: ${player.time_position}`;
+    chip.dataset.pos = String(player.time_position || 0);
     chip.textContent = (player.name || "?").slice(0, 1).toUpperCase();
-    chipLayer.appendChild(chip);
+    patchworkTrack.appendChild(chip);
   });
 }
 
-function renderPatchworkMarket(view) {
-  if (!patchworkMarket || !view) {
+function patchworkClonePoints(points) {
+  return (points || []).map((point) => [point[0], point[1]]);
+}
+
+function patchworkReversePoints(points) {
+  return patchworkClonePoints(points).reverse();
+}
+
+function patchworkAppendPolyline(target, points) {
+  if (!Array.isArray(points) || points.length === 0) {
     return;
   }
-  patchworkMarket.innerHTML = "";
-  const you = patchworkYou(view);
-  const selectable = new Set(view.selectable_patches || []);
-
-  (view.patch_circle || []).forEach((entry) => {
-    const def = view.patch_defs ? view.patch_defs[entry.patch_id] : null;
-    if (!def) {
-      return;
-    }
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "patchwork-market-card";
-    button.dataset.patchId = def.id;
-    button.setAttribute("data-patchwork-explain", "marketCard");
-    if (selectable.has(def.id)) {
-      button.classList.add("selectable");
-    } else {
-      button.classList.add("upcoming");
-    }
-    if (patchworkSelectedPatchId === def.id) {
-      button.classList.add("selected");
-    }
-    if (you && you.buttons < def.cost_buttons) {
-      button.classList.add("unaffordable");
-    }
-
-    const order = document.createElement("div");
-    order.className = "patchwork-market-order";
-    order.textContent = entry.offset < 3 ? `#${entry.offset + 1}` : `+${entry.offset}`;
-
-    const image = document.createElement("img");
-    image.className = "patchwork-market-image";
-    image.src = def.svg_url;
-    image.alt = def.id;
-
-    const meta = document.createElement("div");
-    meta.className = "patchwork-market-meta";
-    meta.innerHTML = `
-      <span>🔘 ${def.cost_buttons}</span>
-      <span>⏳ ${def.cost_time}</span>
-      <span>🪙 ${def.income_buttons}</span>
-      <span>◼︎ ${def.cell_count}</span>
-    `;
-
-    const label = document.createElement("div");
-    label.className = "patchwork-market-label";
-    label.textContent = def.id;
-
-    button.appendChild(order);
-    button.appendChild(image);
-    button.appendChild(meta);
-    button.appendChild(label);
-    button.addEventListener("click", () => {
-      if (!selectable.has(def.id) || view.pending_special_patch) {
+  points.forEach((point, index) => {
+    if (target.length > 0) {
+      const prev = target[target.length - 1];
+      if (prev[0] === point[0] && prev[1] === point[1]) {
         return;
       }
-      if (patchworkSelectedPatchId === def.id) {
-        patchworkClearSelection();
-      } else {
-        patchworkSelectedPatchId = def.id;
-        patchworkRotation = 0;
-        patchworkFlip = false;
-        patchworkAnchor = null;
+    }
+    if (index === 0 && target.length > 0) {
+      const prev = target[target.length - 1];
+      if (prev[0] !== point[0] || prev[1] !== point[1]) {
+        target.push([point[0], point[1]]);
       }
-      renderPatchworkGameState({ view });
+      return;
+    }
+    target.push([point[0], point[1]]);
+  });
+}
+
+function patchworkPathLength(points) {
+  let total = 0;
+  for (let index = 1; index < points.length; index += 1) {
+    const [x1, y1] = points[index - 1];
+    const [x2, y2] = points[index];
+    total += Math.hypot(x2 - x1, y2 - y1);
+  }
+  return total;
+}
+
+function patchworkPointAtDistance(points, distance) {
+  if (!Array.isArray(points) || points.length === 0) {
+    return null;
+  }
+  if (distance <= 0) {
+    return points[0];
+  }
+  let remaining = distance;
+  for (let index = 1; index < points.length; index += 1) {
+    const [x1, y1] = points[index - 1];
+    const [x2, y2] = points[index];
+    const segmentLength = Math.hypot(x2 - x1, y2 - y1);
+    if (remaining <= segmentLength) {
+      const ratio = segmentLength === 0 ? 0 : remaining / segmentLength;
+      return [
+        x1 + (x2 - x1) * ratio,
+        y1 + (y2 - y1) * ratio,
+      ];
+    }
+    remaining -= segmentLength;
+  }
+  return points[points.length - 1];
+}
+
+function patchworkBuildTrackPolyline(view) {
+  const layout = view && view.board_visual_layout ? view.board_visual_layout : null;
+  const segments = layout && Array.isArray(layout.track_segments) ? layout.track_segments : [];
+  if (segments.length < 5) {
+    return [];
+  }
+  const polyline = [];
+  const connectorA = [[858, 619], [858, 740]];
+  const connectorB = [[142, 740], [262, 619]];
+  const connectorC = [[740, 740], [619, 619]];
+  const connectorD = [[381, 619], [500, 619]];
+
+  patchworkAppendPolyline(polyline, patchworkClonePoints(segments[0]));
+  patchworkAppendPolyline(polyline, connectorA);
+  patchworkAppendPolyline(polyline, patchworkReversePoints(segments[1]));
+  patchworkAppendPolyline(polyline, connectorB);
+  patchworkAppendPolyline(polyline, patchworkClonePoints(segments[2]));
+  patchworkAppendPolyline(polyline, connectorC);
+  patchworkAppendPolyline(polyline, patchworkReversePoints(segments[3]));
+  patchworkAppendPolyline(polyline, connectorD);
+  patchworkAppendPolyline(polyline, patchworkClonePoints(segments[4]));
+
+  return polyline;
+}
+
+function patchworkBuildTrackPositions(view) {
+  const trackEnd = Number.isInteger(view && view.track_end) ? view.track_end : 53;
+  const polyline = patchworkBuildTrackPolyline(view);
+  if (!polyline.length) {
+    return [[142, 861]];
+  }
+  const total = patchworkPathLength(polyline);
+  const points = [];
+  for (let position = 0; position <= trackEnd; position += 1) {
+    const distance = (total * position) / Math.max(trackEnd, 1);
+    points.push(patchworkPointAtDistance(polyline, distance));
+  }
+  return points;
+}
+
+function renderPatchworkMarket(view) {
+  const sides = {
+    top: patchworkMarketTop,
+    right: patchworkMarketRight,
+    bottom: patchworkMarketBottom,
+    left: patchworkMarketLeft,
+  };
+  if (!view || Object.values(sides).every((node) => !node)) {
+    return;
+  }
+  Object.values(sides).forEach((node) => {
+    if (node) {
+      node.innerHTML = "";
+    }
+  });
+  const you = patchworkYou(view);
+  const selectable = new Set(view.selectable_patches || []);
+  const entries = Array.isArray(view.patch_circle) ? view.patch_circle : [];
+
+  if (patchworkMarketLegend) {
+    const orderedPlayers = [...(view.players || [])].sort((a, b) => (a.seat ?? 0) - (b.seat ?? 0));
+    patchworkMarketLegend.innerHTML = "";
+    orderedPlayers.forEach((player, index) => {
+      const badge = document.createElement("div");
+      badge.className = `patchwork-order-badge seat-${player.seat ?? index}`;
+      if (player.player_id === view.current_turn) {
+        badge.classList.add("active");
+      }
+      badge.textContent = `${index + 1}. ${player.name || player.player_id}`;
+      patchworkMarketLegend.appendChild(badge);
     });
-    patchworkMarket.appendChild(button);
+  }
+
+  const weights = [0.31, 0.19, 0.31, 0.19];
+  const sideNames = ["top", "right", "bottom", "left"];
+  const counts = weights.map((weight) => Math.floor(entries.length * weight));
+  let assigned = counts.reduce((sum, value) => sum + value, 0);
+  let cursor = 0;
+  while (assigned < entries.length) {
+    counts[cursor % counts.length] += 1;
+    assigned += 1;
+    cursor += 1;
+  }
+
+  let offset = 0;
+  const chunks = {};
+  sideNames.forEach((sideName, index) => {
+    chunks[sideName] = entries.slice(offset, offset + counts[index]);
+    offset += counts[index];
+  });
+
+  sideNames.forEach((sideName) => {
+    const sideNode = sides[sideName];
+    if (!sideNode) {
+      return;
+    }
+    sideNode.dataset.side = sideName;
+    (chunks[sideName] || []).forEach((entry) => {
+      const def = view.patch_defs ? view.patch_defs[entry.patch_id] : null;
+      if (!def) {
+        return;
+      }
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "patchwork-market-card";
+      button.dataset.patchId = def.id;
+      button.setAttribute("data-patchwork-explain", "marketCard");
+      if (selectable.has(def.id)) {
+        button.classList.add("selectable");
+      } else {
+        button.classList.add("upcoming");
+      }
+      if (patchworkSelectedPatchId === def.id) {
+        button.classList.add("selected");
+      }
+      if (you && you.buttons < def.cost_buttons) {
+        button.classList.add("unaffordable");
+      }
+
+      const order = document.createElement("div");
+      order.className = "patchwork-market-order";
+      order.textContent = entry.offset < 3 ? `#${entry.offset + 1}` : `+${entry.offset}`;
+
+      const image = document.createElement("img");
+      image.className = "patchwork-market-image";
+      image.src = def.svg_url;
+      image.alt = def.id;
+
+      const meta = document.createElement("div");
+      meta.className = "patchwork-market-meta";
+      meta.innerHTML = `
+        <span>🔘 ${def.cost_buttons}</span>
+        <span>⏳ ${def.cost_time}</span>
+        <span>🪙 ${def.income_buttons}</span>
+        <span>◼︎ ${def.cell_count}</span>
+      `;
+
+      const label = document.createElement("div");
+      label.className = "patchwork-market-label";
+      label.textContent = def.id;
+
+      button.appendChild(order);
+      button.appendChild(image);
+      button.appendChild(meta);
+      button.appendChild(label);
+      button.addEventListener("click", () => {
+        if (!selectable.has(def.id) || view.pending_special_patch) {
+          return;
+        }
+        if (patchworkSelectedPatchId === def.id) {
+          patchworkClearSelection();
+        } else {
+          patchworkSelectedPatchId = def.id;
+          patchworkRotation = 0;
+          patchworkFlip = false;
+          patchworkAnchor = null;
+        }
+        renderPatchworkGameState({ view });
+      });
+      sideNode.appendChild(button);
+    });
   });
 }
 
@@ -716,15 +896,16 @@ function renderPatchworkBoard(target, view, player, interactive) {
 }
 
 function renderPatchworkPlayers(view) {
-  if (!patchworkPlayers || !patchworkOtherBoards || !view) {
+  if (!patchworkPlayers || !view) {
     return;
   }
   patchworkPlayers.innerHTML = "";
-  patchworkOtherBoards.innerHTML = "";
 
   (view.players || []).forEach((player) => {
-    const card = document.createElement("div");
+    const card = document.createElement("button");
+    card.type = "button";
     card.className = "patchwork-player-card";
+    card.setAttribute("data-patchwork-explain", "players");
     card.classList.add(`seat-${player.seat ?? 0}`);
     if (player.player_id === view.you) {
       card.classList.add("you");
@@ -746,20 +927,10 @@ function renderPatchworkPlayers(view) {
         <span>🏁 ${score}</span>
       </div>
     `;
+    card.addEventListener("click", () => {
+      showPatchworkQuiltModal(view, player);
+    });
     patchworkPlayers.appendChild(card);
-
-    if (player.player_id !== view.you) {
-      const wrapper = document.createElement("div");
-      wrapper.className = "patchwork-opponent-card";
-      const title = document.createElement("div");
-      title.className = "patchwork-opponent-title";
-      title.textContent = `${player.name}'s Quilt`;
-      const board = document.createElement("div");
-      renderPatchworkBoard(board, view, player, false);
-      wrapper.appendChild(title);
-      wrapper.appendChild(board);
-      patchworkOtherBoards.appendChild(wrapper);
-    }
   });
 
   const you = patchworkYou(view);
@@ -904,6 +1075,10 @@ if (patchworkExplainModalCloseBtn) {
   patchworkExplainModalCloseBtn.addEventListener("click", closePatchworkExplainModal);
 }
 
+if (patchworkQuiltModalCloseBtn) {
+  patchworkQuiltModalCloseBtn.addEventListener("click", closePatchworkQuiltModal);
+}
+
 if (patchworkPanel) {
   patchworkPanel.addEventListener("pointerdown", (event) => {
     if (patchworkExplainMode || !currentPatchworkView || currentPatchworkView.pending_special_patch) {
@@ -963,5 +1138,9 @@ document.addEventListener("keydown", (event) => {
   }
   if (patchworkExplainModal && !patchworkExplainModal.classList.contains("hidden")) {
     closePatchworkExplainModal();
+    return;
+  }
+  if (patchworkQuiltModal && !patchworkQuiltModal.classList.contains("hidden")) {
+    closePatchworkQuiltModal();
   }
 });

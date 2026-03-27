@@ -584,6 +584,7 @@ class PatchworkGame:
             "starting_buttons": STARTING_BUTTONS,
             "special_tile_bonus": SPECIAL_TILE_BONUS,
             "board_svg_url": "/static/patchwork/board.svg",
+            "board_visual_layout": BOARD_META.get("visual_layout", {}),
             "legal_actions": PatchworkGame.get_legal_actions(state, viewer_id),
             "game_over": state.get("game_over", False),
             "winner": list(state.get("winner", [])),
