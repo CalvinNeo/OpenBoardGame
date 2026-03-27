@@ -463,6 +463,28 @@
     </div>
   </section>
 
+  <section id="patchworkHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content patchwork-help-modal">
+      <div class="modal-header">
+        <h2>Patchwork - Game Rules</h2>
+        <button id="patchworkHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body patchwork-help-content" id="patchworkHelpContent"></div>
+    </div>
+  </section>
+
+  <section id="patchworkExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content patchwork-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="patchworkExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="patchworkExplainContent"></div>
+      </div>
+    </div>
+  </section>
+
   <section id="decryptoHelpModal" class="modal hidden" aria-hidden="true">
     <div class="modal-content decrypto-help-modal">
       <div class="modal-header">
@@ -971,6 +993,10 @@
             <div class="panel-header-actions" id="pointSaladHeaderActions" style="display: none;">
               <button id="pointSaladHelpBtn" class="point-salad-header-btn" type="button">Help</button>
               <button id="pointSaladExplainBtn" class="point-salad-header-btn" type="button">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="patchworkHeaderActions" style="display: none;">
+              <button id="patchworkHelpBtn" class="patchwork-header-btn" type="button">Help</button>
+              <button id="patchworkExplainBtn" class="patchwork-header-btn" type="button">Explain</button>
             </div>
             <div class="panel-header-actions" id="decryptoHeaderActions" style="display: none;">
               <button id="decryptoHelpBtn" class="decrypto-header-btn" type="button">Help</button>
@@ -2940,6 +2966,58 @@
               </div>
             </div>
 
+            <div id="patchworkPanel" class="hidden">
+              <div class="row">
+                <div>Current Turn: <span id="patchworkTurn">-</span></div>
+                <div>Selected Patch: <span id="patchworkSelectedPatch">-</span></div>
+                <div>Rotation: <span id="patchworkRotation">0°</span></div>
+                <div>Flip: <span id="patchworkFlip">No</span></div>
+                <div>Anchor: <span id="patchworkAnchor">-</span></div>
+              </div>
+              <div class="row">
+                <div>Special 7x7: <span id="patchworkSpecialTile">-</span></div>
+                <div>First to Finish: <span id="patchworkFirstFinish">-</span></div>
+                <div>Winner: <span id="patchworkWinner">-</span></div>
+              </div>
+              <div id="patchworkNotice" class="round-notice hidden" aria-hidden="true">
+                <div id="patchworkNoticeTitle" class="round-notice-title">-</div>
+                <div id="patchworkNoticeBody" class="round-notice-body">-</div>
+              </div>
+              <div class="patchwork-layout">
+                <div class="patchwork-column">
+                  <h3>Time Board 🧵</h3>
+                  <div class="patchwork-track-card" data-patchwork-explain="track">
+                    <img id="patchworkBoardArt" class="patchwork-board-art" alt="Patchwork board art" />
+                    <div id="patchworkTrack" class="patchwork-track"></div>
+                  </div>
+                  <h3>Market 🧩</h3>
+                  <div id="patchworkMarket" class="patchwork-market"></div>
+                </div>
+                <div class="patchwork-column patchwork-center-column">
+                  <h3>Your Quilt 🪡</h3>
+                  <div class="patchwork-board-shell">
+                    <div id="patchworkYourBoard" class="patchwork-board"></div>
+                  </div>
+                  <div class="row actions patchwork-actions">
+                    <button id="patchworkRotateLeftBtn" type="button" data-patchwork-explain="patchworkRotateLeftBtn">Rotate Left</button>
+                    <button id="patchworkRotateRightBtn" type="button" data-patchwork-explain="patchworkRotateRightBtn">Rotate Right</button>
+                    <button id="patchworkFlipBtn" type="button" data-patchwork-explain="patchworkFlipBtn">Flip</button>
+                    <button id="patchworkAdvanceBtn" type="button" data-patchwork-explain="patchworkAdvanceBtn">Advance + Buttons</button>
+                    <button id="patchworkBuyBtn" type="button" data-patchwork-explain="patchworkBuyBtn">Buy Selected Patch</button>
+                  </div>
+                  <div id="patchworkSelectionHint" class="hint">Select one of the first three patches, then click your board.</div>
+                </div>
+                <div class="patchwork-column">
+                  <h3>Players 👥</h3>
+                  <div id="patchworkPlayers" class="patchwork-players"></div>
+                  <h3>Preview ✂️</h3>
+                  <div id="patchworkPreview" class="patchwork-preview"></div>
+                  <h3>Opponent Quilt</h3>
+                  <div id="patchworkOtherBoards" class="patchwork-other-boards"></div>
+                </div>
+              </div>
+            </div>
+
             <div id="carcassonnePanel" class="hidden">
               <div class="row">
                 <div>Phase: <span id="carcPhase">-</span></div>
@@ -3088,6 +3166,7 @@
   <script src="/static/games/gang.js?v=app_v1"></script>
   <script src="/static/games/cat_in_box.js?v=app_v1"></script>
   <script src="/static/games/point_salad.js?v=app_v1"></script>
+  <script src="/static/games/patchwork.js?v=app_v1"></script>
   <script src="/static/games/six_nimmt.js?v=app_v1"></script>
   <script src="/static/games/skull.js?v=app_v1"></script>
   <script src="/static/games/cabo.js?v=app_v1"></script>

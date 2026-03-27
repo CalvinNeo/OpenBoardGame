@@ -71,6 +71,7 @@ function setGamePanelVisibility(gameType) {
   const showAbraca = gameType === "abraca_what";
   const showTrekking = gameType === "trekking_history";
   const showBlokus = gameType === "blokus";
+  const showPatchwork = gameType === "patchwork";
   const showProjectL = gameType === "project_l";
   const showCarcassonne = gameType === "carcassonne";
   const showAzul = gameType === "azul";
@@ -215,6 +216,12 @@ function setGamePanelVisibility(gameType) {
   }
   if (blokusPanel) {
     blokusPanel.classList.toggle("hidden", !showBlokus);
+  }
+  if (patchworkPanel) {
+    patchworkPanel.classList.toggle("hidden", !showPatchwork);
+  }
+  if (typeof showPatchworkHeaderActions === "function") {
+    showPatchworkHeaderActions(showPatchwork);
   }
   if (projectLPanel) {
     projectLPanel.classList.toggle("hidden", !showProjectL);
@@ -418,6 +425,10 @@ function renderGameState(data) {
   }
   if (gameType === "blokus") {
     renderBlokusGameState(data);
+    return;
+  }
+  if (gameType === "patchwork") {
+    renderPatchworkGameState(data);
     return;
   }
   if (gameType === "project_l") {

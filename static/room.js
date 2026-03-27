@@ -1325,6 +1325,9 @@ function resetRoomState() {
   clearTrekkingState();
   clearAbracaState();
   clearBlokusState();
+  if (typeof clearPatchworkState === "function") {
+    clearPatchworkState();
+  }
   clearProjectLState();
   clearCarcassonneState();
   clearFangNiaoState();

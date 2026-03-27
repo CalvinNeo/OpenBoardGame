@@ -22,6 +22,7 @@ from game.incan_gold import IncanGoldGame
 from game.istanbul import IstanbulGame
 from game.kobayakawa import KobayakawaGame
 from game.manila import ManilaGame
+from game.patchwork import PatchworkGame
 from game.perfect_mismatch import PerfectMismatchGame
 from game.point_salad import PointSaladGame
 from game.project_l import ProjectLGame
@@ -64,6 +65,7 @@ __all__ = [
     "IstanbulGame",
     "KobayakawaGame",
     "ManilaGame",
+    "PatchworkGame",
     "PerfectMismatchGame",
     "PointSaladGame",
     "ProjectLGame",

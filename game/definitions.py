@@ -19,6 +19,7 @@ from game.incan_gold import IncanGoldGame
 from game.istanbul import IstanbulGame
 from game.kobayakawa import KobayakawaGame
 from game.manila import ManilaGame
+from game.patchwork import PatchworkGame
 from game.perfect_mismatch import PerfectMismatchGame
 from game.point_salad import PointSaladGame
 from game.project_l import ProjectLGame
@@ -1669,6 +1670,44 @@ WORD_DECODE_ACTION_SCHEMA = {
 
 WORD_DECODE_CONFIG_SCHEMA = {"type": "object", "properties": {}, "additionalProperties": False}
 
+PATCHWORK_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {"type": "object", "properties": {"type": {"const": "advance"}}, "required": ["type"], "additionalProperties": False},
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "buy_patch"},
+                "patch_id": {"type": "string"},
+                "rotation": {"type": "integer", "enum": [0, 90, 180, 270]},
+                "flip": {"type": "boolean"},
+                "x": {"type": "integer", "minimum": 0, "maximum": 8},
+                "y": {"type": "integer", "minimum": 0, "maximum": 8},
+            },
+            "required": ["type", "patch_id", "rotation", "flip", "x", "y"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "place_bonus_patch"},
+                "x": {"type": "integer", "minimum": 0, "maximum": 8},
+                "y": {"type": "integer", "minimum": 0, "maximum": 8},
+            },
+            "required": ["type", "x", "y"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+PATCHWORK_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "seed": {"type": "integer"},
+    },
+    "additionalProperties": False,
+}
+
 MANILA_ACTION_SCHEMA = {
     "type": "object",
     "oneOf": [
@@ -2321,6 +2360,21 @@ register_game(
         module=WanderingTowersGame,
         serialize=WanderingTowersGame.serialize,
         deserialize=WanderingTowersGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=PatchworkGame.game_id,
+        name="Patchwork",
+        min_players=PatchworkGame.min_players,
+        max_players=PatchworkGame.max_players,
+        turn_mode="turn",
+        action_schema=PATCHWORK_ACTION_SCHEMA,
+        config_schema=PATCHWORK_CONFIG_SCHEMA,
+        module=PatchworkGame,
+        serialize=PatchworkGame.serialize,
+        deserialize=PatchworkGame.deserialize,
     )
 )
 

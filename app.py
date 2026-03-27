@@ -37,6 +37,11 @@ fastapi_app.mount(
     name="carcassonne_tiles",
 )
 fastapi_app.mount("/static/project_l", StaticFiles(directory="assets/project_l"), name="project_l_assets")
+fastapi_app.mount(
+    "/static/patchwork",
+    StaticFiles(directory=Path(__file__).resolve().parent / "game" / "assets" / "patchwork"),
+    name="patchwork_assets",
+)
 fastapi_app.mount("/static", StaticFiles(directory="static"), name="static")
 
 

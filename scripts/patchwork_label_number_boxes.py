@@ -2,20 +2,41 @@ from __future__ import annotations
 
 import base64
 import json
-import subprocess
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Tuple
 
 import cv2
 import numpy as np
+import easyocr
 
 ROOT = Path("designs/patchwork")
 LABEL_DIR = ROOT / "labels"
 OUT_DIR = ROOT / "label_number_overlays"
 ORIENTED_DIR = ROOT / "label_oriented_numbers"
 NO_GREEN_FILES = {"httpiimgurcom18uYjjupng.png"}
+_EASYOCR_READER = None
+MANUAL_TEXT_OVERRIDES: dict[str, Tuple[Optional[str], Optional[str]]] = {
+    "httpiimgurcomCC1QpAGpng.png": ("10", "5"),
+    "httpiimgurcomElvuLC3png.png": ("8", "6"),
+    "httpiimgurcomHVBlm5Opng.png": ("7", "4"),
+    "httpiimgurcomIIDL8rrpng.png": ("2", "2"),
+    "httpiimgurcomQtKsMcIpng.png": ("1", "5"),
+    "httpiimgurcomRHjKwinpng.png": ("2", "2"),
+    "httpiimgurcomUMKbkEcpng.png": ("2", "1"),
+    "httpiimgurcomVLc46Lbpng.png": ("3", "6"),
+    "httpiimgurcomWG7sSzapng.png": ("3", "4"),
+    "httpiimgurcomaxouC8Xpng.png": ("7", "6"),
+    "httpiimgurcomouQKJU7png.png": ("2", "2"),
+    "httpsiimgurcom5tbFwQqpng.png": ("1", "3"),
+    "httpsiimgurcomAV6kzAXpng.png": ("4", "6"),
+    "httpsiimgurcomAi2wJ0Fpng.png": ("10", "3"),
+    "httpsiimgurcomGPKVcnCpng.png": ("3", "3"),
+    "httpsiimgurcomKPyUXxWpng.png": ("7", "1"),
+    "httpsiimgurcomO5xpl33png.png": ("2", "3"),
+    "httpsiimgurcomPNMOl9Jpng.png": ("10", "4"),
+    "httpsiimgurcomehVRfsPpng.png": ("6", "5"),
+}
 
 
 @dataclass
@@ -286,21 +307,21 @@ def detect_number_boxes(img: np.ndarray) -> Tuple[Optional[Box], Optional[Box]]:
     g_candidates = _filter_candidates(gmask, h, w, margin_x, margin_y)
     d_candidates = _filter_candidates(dmask, h, w, margin_x, margin_y)
 
-    g_left = [b for b in g_candidates if b.cx < half * 0.9]
-    d_right = [b for b in d_candidates if b.cx >= half]
+    g_left_boxes = [b for b in g_candidates if b.cx < half * 0.9]
+    d_right_boxes = [b for b in d_candidates if b.cx >= half]
 
     # prefer the left-most cluster within each half (number should be left of icon)
-    g_left = [b for b in g_left if b.cx < half * 0.6]
-    d_right = [b for b in d_right if b.x < (w - half) * 0.6 + half]
+    g_left_boxes = [b for b in g_left_boxes if b.cx < half * 0.6]
+    d_right_boxes = [b for b in d_right_boxes if b.x < (w - half) * 0.6 + half]
 
-    if g_left and d_right:
-        green_box, black_box = pick_best_pair(g_left, d_right, h, w)
+    if g_left_boxes and d_right_boxes:
+        green_box, black_box = pick_best_pair(g_left_boxes, d_right_boxes, h, w)
         return green_box, black_box
 
-    if g_left and not d_right:
-        return _pick_best_single(g_left, h, w), None
-    if d_right and not g_left:
-        return None, _pick_best_single(d_right, h, w)
+    if g_left_boxes and not d_right_boxes:
+        return _pick_best_single(g_left_boxes, h, w), None
+    if d_right_boxes and not g_left_boxes:
+        return None, _pick_best_single(d_right_boxes, h, w)
 
     return None, None
 
@@ -314,26 +335,72 @@ def crop_with_pad(img: np.ndarray, box: Box, pad: int = 4) -> np.ndarray:
     return img[y0:y1, x0:x1]
 
 
-def run_tesseract(img: np.ndarray, psm: int = 10) -> str:
-    with tempfile.TemporaryDirectory() as td:
-        in_path = Path(td) / "in.png"
-        out_path = Path(td) / "out"
-        cv2.imwrite(str(in_path), img)
-        cmd = [
-            "tesseract",
-            str(in_path),
-            str(out_path),
-            "--psm",
-            str(psm),
-            "-c",
-            "tessedit_char_whitelist=0123456789",
-        ]
-        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
-        txt_path = Path(str(out_path) + ".txt")
-        if not txt_path.exists():
-            return ""
-        text = txt_path.read_text().strip()
-        return "".join([ch for ch in text if ch.isdigit()])
+def label_bounds(img: np.ndarray) -> Tuple[int, int, int, int]:
+    if img.shape[2] >= 4:
+        mask = img[:, :, 3] > 0
+    else:
+        mask = np.any(img[:, :, :3] > 0, axis=2)
+    ys, xs = np.where(mask)
+    if len(xs) == 0:
+        return 0, 0, img.shape[1], img.shape[0]
+    x0 = int(xs.min())
+    x1 = int(xs.max()) + 1
+    y0 = int(ys.min())
+    y1 = int(ys.max()) + 1
+    return x0, y0, x1 - x0, y1 - y0
+
+
+def template_number_box(img: np.ndarray, side: str) -> Box:
+    x0, y0, w, h = label_bounds(img)
+    if side == "green":
+        rel_x, rel_y, rel_w, rel_h = 0.18, 0.31, 0.13, 0.30
+    else:
+        rel_x, rel_y, rel_w, rel_h = 0.73, 0.29, 0.12, 0.31
+    bx = x0 + int(round(w * rel_x))
+    by = y0 + int(round(h * rel_y))
+    bw = max(14, int(round(w * rel_w)))
+    bh = max(20, int(round(h * rel_h)))
+    return Box(bx, by, bw, bh)
+
+
+def suspicious_box(img: np.ndarray, box: Box, side: str) -> bool:
+    x0, _, w, h = label_bounds(img)
+    rel_h = box.h / max(1.0, h)
+    rel_w = box.w / max(1.0, w)
+    if rel_h < 0.12 or rel_h > 0.5:
+        return True
+    if rel_w < 0.04 or rel_w > 0.25:
+        return True
+    mid_x = x0 + w * 0.5
+    if side == "green" and box.cx > mid_x:
+        return True
+    if side == "black" and box.cx < mid_x:
+        return True
+    return False
+
+
+def get_easyocr_reader() -> easyocr.Reader:
+    global _EASYOCR_READER
+    if _EASYOCR_READER is None:
+        _EASYOCR_READER = easyocr.Reader(["en"], gpu=False, verbose=False)
+    return _EASYOCR_READER
+
+
+def easyocr_digits(img: np.ndarray) -> List[Tuple[str, float]]:
+    reader = get_easyocr_reader()
+    if img.ndim == 2:
+        rgb = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+    else:
+        rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    results = reader.readtext(rgb, detail=1, allowlist="0123456789", paragraph=False)
+    texts: List[Tuple[str, float]] = []
+    for _, text, conf in results:
+        if not text:
+            continue
+        digits = "".join([ch for ch in text if ch.isdigit()])
+        if digits:
+            texts.append((digits, float(conf)))
+    return texts
 
 
 def parse_digit(text: str) -> Optional[int]:
@@ -347,37 +414,61 @@ def parse_digit(text: str) -> Optional[int]:
     return None
 
 
-def detect_vertical_10(bin_img: np.ndarray) -> bool:
-    h, w = bin_img.shape[:2]
-    if h == 0 or w == 0:
+def parse_single_digit(text: str) -> Optional[int]:
+    digits = "".join([ch for ch in text if ch.isdigit()])
+    if len(digits) != 1:
+        return None
+    return int(digits)
+
+
+def parse_rotated_ten(text: str) -> Optional[int]:
+    digits = "".join([ch for ch in text if ch.isdigit()])
+    if digits in {"10", "01"}:
+        return 10
+    return None
+
+
+def _detect_vertical_10_projection(mask: np.ndarray) -> bool:
+    h, w = mask.shape[:2]
+    rows = np.where(mask.sum(axis=1) > 0)[0]
+    if len(rows) < 4:
         return False
-    mask = (bin_img > 0).astype(np.uint8)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8))
-    num, labels, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
-    comps = []
-    min_area = max(10, int(0.01 * h * w))
-    for i in range(1, num):
-        x, y, bw, bh, area = stats[i]
-        if area < min_area:
+    groups = []
+    start = rows[0]
+    prev = rows[0]
+    for r in rows[1:]:
+        if r == prev + 1:
+            prev = r
             continue
-        comps.append((x, y, bw, bh, area))
-    if len(comps) < 2:
+        groups.append((start, prev))
+        start = r
+        prev = r
+    groups.append((start, prev))
+    if len(groups) < 2:
         return False
-    comps = sorted(comps, key=lambda c: c[4], reverse=True)[:2]
-    comps = sorted(comps, key=lambda c: c[1])
-    (x0, y0, w0, h0, _), (x1, y1, w1, h1, _) = comps
+    # Take top and bottom groups
+    top = groups[0]
+    bottom = groups[-1]
+    def bbox_for(group: Tuple[int, int]) -> Tuple[int, int, int, int, int]:
+        y0, y1 = group
+        ys, xs = np.where(mask[y0 : y1 + 1, :] > 0)
+        if len(xs) == 0:
+            return (0, 0, 0, 0, 0)
+        x0 = xs.min()
+        x1 = xs.max()
+        return (x0, y0, x1 - x0 + 1, y1 - y0 + 1, len(xs))
+
+    x0, y0, w0, h0, _ = bbox_for(top)
+    x1, y1, w1, h1, _ = bbox_for(bottom)
+    if w0 == 0 or w1 == 0:
+        return False
     x_overlap = max(0, min(x0 + w0, x1 + w1) - max(x0, x1))
-    if x_overlap / max(1, min(w0, w1)) < 0.3:
+    if x_overlap / max(1, min(w0, w1)) < 0.2:
         return False
-    cx0 = x0 + w0 / 2
-    cx1 = x1 + w1 / 2
-    if abs(cx0 - cx1) > 0.2 * w:
-        return False
-    gap = y1 - (y0 + h0)
-    if gap < 0.02 * h or gap > 0.3 * h:
+    if abs((x0 + w0 / 2) - (x1 + w1 / 2)) > 0.3 * w:
         return False
     span = (y1 + h1) - y0
-    if span < 0.7 * h:
+    if span < 0.55 * h:
         return False
     if w0 / max(1.0, h0) < 0.5:
         return False
@@ -386,7 +477,64 @@ def detect_vertical_10(bin_img: np.ndarray) -> bool:
     return True
 
 
-def ocr_digit(crop: np.ndarray) -> str:
+def detect_vertical_10(bin_img: np.ndarray) -> bool:
+    h, w = bin_img.shape[:2]
+    if h == 0 or w == 0:
+        return False
+    mask = (bin_img > 0).astype(np.uint8)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8))
+    num, labels, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
+    comps = []
+    min_area = max(6, int(0.002 * h * w))
+    for i in range(1, num):
+        x, y, bw, bh, area = stats[i]
+        if area < min_area or bw == 0 or bh == 0:
+            continue
+        comps.append((x, y, bw, bh, area))
+    if len(comps) < 2:
+        return _detect_vertical_10_projection(mask)
+
+    for i in range(len(comps)):
+        for j in range(i + 1, len(comps)):
+            a = comps[i]
+            b = comps[j]
+            if a[1] <= b[1]:
+                top, bottom = a, b
+            else:
+                top, bottom = b, a
+            x0, y0, w0, h0, _ = top
+            x1, y1, w1, h1, _ = bottom
+            x_overlap = max(0, min(x0 + w0, x1 + w1) - max(x0, x1))
+            if x_overlap / max(1, min(w0, w1)) < 0.2:
+                continue
+            if abs((x0 + w0 / 2) - (x1 + w1 / 2)) > 0.3 * w:
+                continue
+            gap = y1 - (y0 + h0)
+            if gap < -0.1 * h or gap > 0.5 * h:
+                continue
+            span = (y1 + h1) - y0
+            if span < 0.55 * h:
+                continue
+            if w0 / max(1.0, h0) < 0.5:
+                continue
+            if h1 / max(1.0, w1) < 1.0:
+                continue
+            if (y0 + h0) > 0.7 * h:
+                continue
+            if y1 < 0.3 * h:
+                continue
+            return True
+    return _detect_vertical_10_projection(mask)
+
+
+def ocr_digit(crop: np.ndarray, mask_kind: str = "auto") -> str:
+    if mask_kind == "green":
+        digit_mask = green_mask(crop)
+    elif mask_kind == "dark":
+        digit_mask = dark_mask(crop)
+    else:
+        digit_mask = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+        _, digit_mask = cv2.threshold(digit_mask, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
     gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
     enhanced = clahe.apply(gray)
@@ -406,24 +554,43 @@ def ocr_digit(crop: np.ndarray) -> str:
     _, bin3 = cv2.threshold(enhanced, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
     preps.append(bin3)
 
-    candidates: List[int] = []
-    for img in preps:
-        if detect_vertical_10(img):
-            return "10"
-        for scale in (3, 5):
-            scaled = cv2.resize(img, None, fx=scale, fy=scale, interpolation=cv2.INTER_NEAREST)
-            text = run_tesseract(scaled, psm=10)
-            value = parse_digit(text)
-            if value is not None and value <= 10:
-                candidates.append(value)
+    single_candidates: List[int] = []
+    ten_votes = 0
+    candidate_imgs = [enhanced] + preps
+    for img in candidate_imgs:
+        for scale in (1, 2, 3):
+            if scale == 1:
+                scaled = img
+            else:
+                scaled = cv2.resize(img, None, fx=scale, fy=scale, interpolation=cv2.INTER_NEAREST)
+            for text, conf in easyocr_digits(scaled):
+                if conf < 0.15:
+                    continue
+                value = parse_single_digit(text)
+                if value is not None:
+                    single_candidates.append(value)
+                if conf >= 0.7 and parse_digit(text) == 10:
+                    ten_votes += 1
+    for angle in (90, 270):
+        rotated_crop = (
+            cv2.rotate(crop, cv2.ROTATE_90_CLOCKWISE)
+            if angle == 90
+            else cv2.rotate(crop, cv2.ROTATE_90_COUNTERCLOCKWISE)
+        )
+        for text, conf in easyocr_digits(rotated_crop):
+            if conf < 0.2:
                 continue
-            text = run_tesseract(scaled, psm=7)
-            value = parse_digit(text)
-            if value is not None and value <= 10:
-                candidates.append(value)
-    if candidates:
-        best = max(set(candidates), key=candidates.count)
+            if parse_rotated_ten(text) == 10:
+                ten_votes += 1
+    if ten_votes >= 2:
+        return "10"
+    if single_candidates:
+        best = max(set(single_candidates), key=single_candidates.count)
         return str(best)
+    if ten_votes >= 1 and detect_vertical_10(digit_mask):
+        return "10"
+    if detect_vertical_10(digit_mask):
+        return "10"
     return ""
 
 
@@ -515,11 +682,29 @@ def build_html(results: List[NumberBoxResult]) -> str:
     return "\n".join(lines)
 
 
+def apply_text_override(
+    file_name: str,
+    green_text: str,
+    black_text: str,
+) -> Tuple[str, str]:
+    override = MANUAL_TEXT_OVERRIDES.get(file_name)
+    if override is None:
+        return green_text, black_text
+    green_override, black_override = override
+    if green_override is not None:
+        green_text = green_override
+    if black_override is not None:
+        black_text = black_override
+    return green_text, black_text
+
+
 def main() -> None:
     results: List[NumberBoxResult] = []
     ORIENTED_DIR.mkdir(parents=True, exist_ok=True)
 
     for path in sorted(LABEL_DIR.glob("*.png")):
+        if path.name.startswith("_review_"):
+            continue
         img = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
         if img is None:
             continue
@@ -535,18 +720,24 @@ def main() -> None:
         cv2.imwrite(str(ORIENTED_DIR / path.name), img)
 
         green_box, black_box = detect_number_boxes(img)
+        if green_box is None or suspicious_box(img, green_box, "green"):
+            green_box = template_number_box(img, "green")
+        if black_box is None or suspicious_box(img, black_box, "black"):
+            black_box = template_number_box(img, "black")
         if path.name in NO_GREEN_FILES:
             green_box = None
 
         green_text = ""
         if green_box is not None:
             crop = crop_with_pad(img, green_box, pad=4)
-            green_text = ocr_digit(crop[:, :, :3])
+            green_text = ocr_digit(crop[:, :, :3], mask_kind="green")
 
         black_text = ""
         if black_box is not None:
             crop = crop_with_pad(img, black_box, pad=4)
-            black_text = ocr_digit(crop[:, :, :3])
+            black_text = ocr_digit(crop[:, :, :3], mask_kind="dark")
+
+        green_text, black_text = apply_text_override(path.name, green_text, black_text)
 
         write_overlay(path, img, green_box, black_box, green_text, black_text)
 

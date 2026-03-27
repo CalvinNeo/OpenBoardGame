@@ -22,6 +22,18 @@ class LabelResult:
     size: Tuple[int, int]
 
 
+def alpha_crop(img: np.ndarray) -> np.ndarray:
+    if img.shape[2] < 4:
+        return img
+    alpha = img[:, :, 3]
+    ys, xs = np.where(alpha > 0)
+    if len(xs) == 0:
+        return img
+    x0, x1 = xs.min(), xs.max() + 1
+    y0, y1 = ys.min(), ys.max() + 1
+    return img[y0:y1, x0:x1]
+
+
 def compute_low_variance_mask(
     gray: np.ndarray,
     alpha_mask: np.ndarray,
@@ -198,11 +210,79 @@ def rotate_and_crop_label(
     return cropped
 
 
+def rotate_image(img: np.ndarray, angle: float) -> np.ndarray:
+    if abs(angle) < 0.01:
+        return img
+    h, w = img.shape[:2]
+    pad = int(0.2 * max(h, w))
+    padded = cv2.copyMakeBorder(img, pad, pad, pad, pad, cv2.BORDER_CONSTANT, value=(0, 0, 0, 0))
+    ph, pw = padded.shape[:2]
+    M = cv2.getRotationMatrix2D((pw / 2, ph / 2), angle, 1.0)
+    rotated = cv2.warpAffine(
+        padded,
+        M,
+        (pw, ph),
+        flags=cv2.INTER_CUBIC,
+        borderMode=cv2.BORDER_CONSTANT,
+        borderValue=(0, 0, 0, 0),
+    )
+    return alpha_crop(rotated)
+
+
+def straighten_label(cropped: np.ndarray) -> np.ndarray:
+    if cropped.shape[2] == 3:
+        alpha = np.full(cropped.shape[:2], 255, dtype=np.uint8)
+        cropped = np.dstack([cropped, alpha])
+    alpha_mask = cropped[:, :, 3] > 0
+    if alpha_mask.sum() == 0:
+        return cropped
+
+    gray = cv2.cvtColor(cropped[:, :, :3], cv2.COLOR_BGR2GRAY)
+    low_mask = compute_low_variance_mask(gray, alpha_mask, percentile=20.0)
+    num, labels, stats, _ = cv2.connectedComponentsWithStats(low_mask.astype(np.uint8), connectivity=8)
+    if num <= 1:
+        return cropped
+    idx = 1 + int(np.argmax(stats[1:, 4]))
+    comp = (labels == idx).astype(np.uint8)
+    ys, xs = np.where(comp > 0)
+    if len(xs) < 20:
+        return cropped
+    pts = np.column_stack([xs, ys]).astype(np.float32)
+    rect = cv2.minAreaRect(pts)
+    (_, _), (rw, rh), angle = rect
+    if rw == 0 or rh == 0:
+        return cropped
+    if rw < rh:
+        angle += 90.0
+        rw, rh = rh, rw
+    ar = rw / max(1.0, rh)
+    if ar < 1.2:
+        return cropped
+    if abs(angle) < 3.0:
+        return cropped
+
+    h, w = cropped.shape[:2]
+    pad = int(0.15 * max(h, w))
+    padded = cv2.copyMakeBorder(cropped, pad, pad, pad, pad, cv2.BORDER_CONSTANT, value=(0, 0, 0, 0))
+    ph, pw = padded.shape[:2]
+    M = cv2.getRotationMatrix2D((pw / 2, ph / 2), angle, 1.0)
+    rotated = cv2.warpAffine(
+        padded,
+        M,
+        (pw, ph),
+        flags=cv2.INTER_CUBIC,
+        borderMode=cv2.BORDER_CONSTANT,
+        borderValue=(0, 0, 0, 0),
+    )
+    return alpha_crop(rotated)
+
+
 def extract_label(
     img: np.ndarray,
     expected_long: float,
     expected_short: float,
     extra_rotate_deg: float = 0.0,
+    post_rotate_deg: float = 0.0,
 ) -> Tuple[np.ndarray, float, Tuple[int, int, int, int], float] | None:
     if img.shape[2] == 3:
         alpha = np.full(img.shape[:2], 255, dtype=np.uint8)
@@ -234,6 +314,9 @@ def extract_label(
     (cx, cy), (w, h), angle = rect
     angle = float(angle) + float(extra_rotate_deg)
     cropped = rotate_and_crop_label(img, (cx, cy), (w, h), angle, expected_long, expected_short)
+    cropped = straighten_label(cropped)
+    if abs(post_rotate_deg) > 0.01:
+        cropped = rotate_image(cropped, post_rotate_deg)
     return cropped, angle, bbox, area_ratio
 
 
@@ -244,8 +327,12 @@ def main() -> None:
     expected_long, expected_short = estimate_label_size(patch_files)
     # Per-file rotation tweaks (positive = CCW). Clockwise 30° => -30.
     angle_overrides = {
-        "httpiimgurcomIIDL8rrpng": -30.0,
-        "httpiimgurcomUMKbkEcpng": -30.0,
+        "httpiimgurcomIIDL8rrpng": 22.5,
+        "httpiimgurcomUMKbkEcpng": 22.5,
+        "httpiimgurcomouQKJU7png": 0.0,
+    }
+    post_rotate_overrides = {
+        "httpiimgurcomouQKJU7png": 45.0,
     }
     for path in patch_files:
         img = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
@@ -254,7 +341,14 @@ def main() -> None:
             continue
 
         extra_rotate = angle_overrides.get(path.stem, 0.0)
-        extracted = extract_label(img, expected_long, expected_short, extra_rotate_deg=extra_rotate)
+        post_rotate = post_rotate_overrides.get(path.stem, 0.0)
+        extracted = extract_label(
+            img,
+            expected_long,
+            expected_short,
+            extra_rotate_deg=extra_rotate,
+            post_rotate_deg=post_rotate,
+        )
         if extracted is None:
             results.append(LabelResult(path.name, False, 0.0, (0, 0, 0, 0), 0.0, (0, 0)))
             continue

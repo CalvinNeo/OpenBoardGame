@@ -10937,3 +10937,425 @@ body.tagiron-explain-mode button.has-explanation:hover {
   font-size: 16px;
   color: #111827;
 }
+
+.patchwork-layout {
+  display: grid;
+  grid-template-columns: minmax(300px, 1.1fr) minmax(320px, 1.2fr) minmax(260px, 0.95fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.patchwork-column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.patchwork-center-column {
+  align-self: stretch;
+}
+
+.patchwork-track-card,
+.patchwork-board-shell,
+.patchwork-preview,
+.patchwork-opponent-card,
+.patchwork-player-card {
+  border: 1px solid #d9e2ec;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fffdf6 0%, #f7f8fb 100%);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.patchwork-track-card {
+  padding: 12px;
+}
+
+.patchwork-board-art {
+  display: block;
+  width: 100%;
+  max-height: 240px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #fffaf0;
+  border: 1px solid #eadfca;
+}
+
+.patchwork-track {
+  position: relative;
+  min-height: 96px;
+  padding: 18px 4px 26px;
+}
+
+.patchwork-track-rail {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 48px;
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #e2e8f0 0%, #cbd5e1 100%);
+  border: 1px solid #94a3b8;
+}
+
+.patchwork-track-marker-layer,
+.patchwork-track-chip-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.patchwork-track-marker {
+  position: absolute;
+  top: 20px;
+  transform: translateX(-50%);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.patchwork-track-marker.leather {
+  top: 68px;
+}
+
+.patchwork-track-marker.claimed {
+  opacity: 0.35;
+}
+
+.patchwork-track-chip {
+  position: absolute;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid rgba(15, 23, 42, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.15);
+}
+
+.patchwork-track-chip.seat-0,
+.patchwork-player-card.seat-0 {
+  background: linear-gradient(180deg, #fecaca 0%, #fca5a5 100%);
+}
+
+.patchwork-track-chip.seat-1,
+.patchwork-player-card.seat-1 {
+  background: linear-gradient(180deg, #bfdbfe 0%, #93c5fd 100%);
+}
+
+.patchwork-track-tick {
+  position: absolute;
+  bottom: 0;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: #475569;
+}
+
+.patchwork-market {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.patchwork-market-card {
+  min-width: 150px;
+  border: 1px solid #d8dee9;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  cursor: pointer;
+}
+
+.patchwork-market-card.selectable {
+  border-color: #f59e0b;
+}
+
+.patchwork-market-card.selected {
+  border-color: #0f766e;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.18);
+}
+
+.patchwork-market-card.upcoming {
+  opacity: 0.78;
+}
+
+.patchwork-market-order {
+  position: absolute;
+  right: 10px;
+  top: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.patchwork-market-image {
+  width: 100%;
+  height: 92px;
+  object-fit: contain;
+  border-radius: 10px;
+  background: #fff7ed;
+  border: 1px solid #fde7cf;
+  padding: 6px;
+}
+
+.patchwork-market-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 8px;
+  font-size: 12px;
+  color: #334155;
+}
+
+.patchwork-market-label {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 13px;
+}
+
+.patchwork-actions {
+  margin-top: 2px;
+}
+
+.patchwork-actions button {
+  flex: 1 1 140px;
+}
+
+.patchwork-board-shell {
+  padding: 12px;
+  display: flex;
+  justify-content: center;
+}
+
+.patchwork-board {
+  --patchwork-cell: 34px;
+  display: grid;
+  grid-template-columns: repeat(9, var(--patchwork-cell));
+  grid-template-rows: repeat(9, var(--patchwork-cell));
+  gap: 3px;
+  width: fit-content;
+  padding: 6px;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at top left, rgba(249, 168, 212, 0.32), transparent 35%),
+    radial-gradient(circle at bottom right, rgba(125, 211, 252, 0.26), transparent 42%),
+    #f8fafc;
+  border: 1px solid #dbeafe;
+}
+
+.patchwork-board.compact {
+  --patchwork-cell: 20px;
+  gap: 2px;
+  padding: 5px;
+}
+
+.patchwork-board-cell {
+  width: var(--patchwork-cell);
+  height: var(--patchwork-cell);
+  border-radius: 7px;
+  border: 1px solid #cbd5e1;
+  background: rgba(255, 255, 255, 0.92);
+  padding: 0;
+}
+
+.patchwork-board.interactive .patchwork-board-cell {
+  cursor: pointer;
+}
+
+.patchwork-board-cell.filled {
+  background: var(--patchwork-fill, #fcd34d);
+  border-color: var(--patchwork-stroke, #b45309);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+.patchwork-board-cell.preview {
+  background: rgba(13, 148, 136, 0.22);
+  border-color: #0f766e;
+}
+
+.patchwork-board-cell.preview.invalid {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: #dc2626;
+}
+
+.patchwork-board-cell.bonus-target:not(.filled) {
+  background: #fffbeb;
+  border-style: dashed;
+  border-color: #d97706;
+}
+
+.patchwork-players,
+.patchwork-other-boards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.patchwork-player-card {
+  padding: 10px 12px;
+}
+
+.patchwork-player-card.you {
+  border-color: #0f766e;
+}
+
+.patchwork-player-card.active {
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.22);
+}
+
+.patchwork-player-name,
+.patchwork-opponent-title,
+.patchwork-preview-title {
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 6px;
+}
+
+.patchwork-player-stats,
+.patchwork-preview-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  font-size: 13px;
+  color: #334155;
+}
+
+.patchwork-opponent-card {
+  padding: 10px;
+}
+
+.patchwork-preview {
+  padding: 12px;
+  min-height: 180px;
+}
+
+.patchwork-preview-note p {
+  margin: 0 0 10px;
+  color: #475569;
+}
+
+.patchwork-preview-image {
+  width: 100%;
+  max-height: 130px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #fff7ed;
+  border: 1px solid #fde7cf;
+  padding: 8px;
+  margin-bottom: 10px;
+}
+
+.patchwork-mini-grid {
+  --patchwork-mini-cell: 20px;
+  position: relative;
+  width: calc(var(--patchwork-mini-cols, 1) * var(--patchwork-mini-cell));
+  height: calc(var(--patchwork-mini-rows, 1) * var(--patchwork-mini-cell));
+  margin-bottom: 10px;
+}
+
+.patchwork-mini-cell {
+  position: absolute;
+  width: var(--patchwork-mini-cell);
+  height: var(--patchwork-mini-cell);
+  left: calc(var(--col) * var(--patchwork-mini-cell));
+  top: calc(var(--row) * var(--patchwork-mini-cell));
+  border-radius: 6px;
+  background: linear-gradient(180deg, #2dd4bf 0%, #14b8a6 100%);
+  border: 1px solid #0f766e;
+}
+
+.patchwork-mini-grid.leather .patchwork-mini-cell {
+  background: linear-gradient(180deg, #d6a97b 0%, #b7794d 100%);
+  border-color: #7c4a2c;
+}
+
+.patchwork-header-btn {
+  background: transparent;
+  border: 1px solid #d6d3d1;
+  color: #7c2d12;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.patchwork-header-btn:hover {
+  background: #fff7ed;
+}
+
+.patchwork-header-btn.active {
+  background: #ea580c;
+  color: #fff;
+  border-color: #ea580c;
+}
+
+body.patchwork-explain-mode [data-patchwork-explain].has-explanation {
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.24);
+  cursor: help;
+}
+
+.patchwork-help-modal,
+.patchwork-explain-modal {
+  max-width: 760px;
+}
+
+.patchwork-help-content h3 {
+  margin: 0 0 10px;
+  color: #9a3412;
+}
+
+.patchwork-help-content h3:not(:first-child) {
+  margin-top: 16px;
+}
+
+.patchwork-help-content p,
+.patchwork-help-content li {
+  color: #334155;
+}
+
+.patchwork-help-content ul {
+  margin: 0 0 12px 20px;
+  padding: 0;
+}
+
+@media (max-width: 1260px) {
+  .patchwork-layout {
+    grid-template-columns: repeat(2, minmax(280px, 1fr));
+  }
+
+  .patchwork-column:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 760px) {
+  .patchwork-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .patchwork-board {
+    --patchwork-cell: 30px;
+  }
+
+  .patchwork-board.compact {
+    --patchwork-cell: 18px;
+  }
+
+  .patchwork-actions button {
+    flex: 1 1 calc(50% - 8px);
+  }
+
+  .patchwork-market-card {
+    min-width: 132px;
+  }
+}
