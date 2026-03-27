@@ -449,19 +449,19 @@ class WanderingTowersGame:
                     continue
                 wid = queue.pop(0)
                 remaining = True
-            while tower_idx <= TOWER_COUNT:
-                cap = ghost_lights[tower_idx]
-                cell = board[tower_idx]
-                current = 0
-                if cell and cell[-1]["type"] == "wizards":
-                    current = len(cell[-1]["wizard_ids"])
-                if current < cap:
+                while tower_idx <= TOWER_COUNT:
+                    cap = ghost_lights[tower_idx]
+                    cell = board[tower_idx]
+                    current = 0
                     if cell and cell[-1]["type"] == "wizards":
-                        cell[-1]["wizard_ids"].append(wid)
-                    else:
-                        cell.append({"type": "wizards", "wizard_ids": [wid]})
-                    break
-                tower_idx += 1
+                        current = len(cell[-1]["wizard_ids"])
+                    if current < cap:
+                        if cell and cell[-1]["type"] == "wizards":
+                            cell[-1]["wizard_ids"].append(wid)
+                        else:
+                            cell.append({"type": "wizards", "wizard_ids": [wid]})
+                        break
+                    tower_idx += 1
 
         deck = _build_deck(cfg)
         discard: List[Dict] = []
