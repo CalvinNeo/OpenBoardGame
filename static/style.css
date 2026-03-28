@@ -10102,6 +10102,56 @@ body.istanbul-explain-mode .istanbul-mosque-rubies.has-explanation:hover {
   color: var(--manila-ink);
 }
 
+.manila-axis-boat-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.05);
+}
+
+.manila-axis-boat-control-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #0f172a;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.manila-axis-boat-control-buttons {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.manila-axis-boat-control-note {
+  font-size: 11px;
+  font-weight: 600;
+  color: #0f766e;
+  width: 100%;
+}
+
+.manila-pilot-btn {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 23, 42, 0.2);
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.manila-pilot-btn.selected {
+  background: #0f766e;
+  border-color: #0f766e;
+  color: #f8fafc;
+}
+
 .manila-axis-seat-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
@@ -10502,6 +10552,68 @@ body.istanbul-explain-mode .istanbul-mosque-rubies.has-explanation:hover {
 
 .manila-pilot-rows {
   display: grid;
+  gap: 8px;
+}
+
+.manila-pilot-facility {
+  margin-top: 10px;
+}
+
+.manila-pilot-status {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.manila-pilot-status.active {
+  border-color: rgba(15, 118, 110, 0.45);
+  box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.12);
+}
+
+.manila-pilot-status-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.manila-pilot-status-title-wrap {
+  display: grid;
+  gap: 2px;
+}
+
+.manila-pilot-status-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.manila-pilot-status-owner,
+.manila-pilot-status-hint,
+.manila-pilot-draft-text {
+  font-size: 12px;
+  color: var(--manila-muted);
+}
+
+.manila-pilot-status-badge {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(15, 118, 110, 0.12);
+  color: #0f766e;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.manila-pilot-draft {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 8px;
 }
 

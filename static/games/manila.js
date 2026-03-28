@@ -5,6 +5,7 @@ let manilaCycleUserOverride = null;
 let manilaLastPhase = null;
 let manilaTooltipTimer = null;
 let manilaErrorListenerBound = false;
+let manilaPilotDraft = null;
 
 const manilaPhaseLabel = document.getElementById("manilaPhase");
 const manilaRoundLabel = document.getElementById("manilaRound");
@@ -158,7 +159,7 @@ const MANILA_DYNAMIC_EXPLANATIONS = {
   },
   pilot: {
     name: "Pilot Role",
-    description: "Move ships forward before dice movement (big pilot can split).",
+    description: "Adjust ships by +/- before the final dice movement (big pilot can split or push one ship twice).",
     cost: "🪙 Pay slot cost",
     costType: "pay",
   },
@@ -189,13 +190,13 @@ const MANILA_HELP_TEXT = `
   <li><strong>Arrival order</strong> fills Port A/B/C when ships move past space 13.</li>
   <li><strong>Pirates</strong> can board ships that hit port exactly on day 2, and plunder ships that hit port exactly on day 3.</li>
   <li><strong>Plundered ships</strong> still resolve to Port or Shipyard based on the Captain's choice.</li>
-  <li><strong>Pilots</strong> can move ships forward (big pilot can split).</li>
+  <li><strong>Pilots</strong> can adjust ships by +/- before the last roll; big pilot can split across two ships or push one ship twice.</li>
   <li><strong>Insurance</strong> pays immediately but collects per failed ship.</li>
   <li><strong>Pledge Stock</strong> gives instant cash but costs more at final scoring.</li>
 </ul>
 
 <h3>Placement Tip</h3>
-<p>During placement, click a dock slot or ship seat directly on the board/boats.</p>
+<p>During placement, click a dock slot or ship seat directly on the board/boats. During the pilot phase, click the +/- buttons beside ships.</p>
 `;
 
 const MANILA_BUTTON_EXPLANATIONS = {
@@ -396,6 +397,117 @@ function canPlaceWorker(view) {
     return false;
   }
   return view.phase === "placement" && view.current_player === view.you && isActionAvailable(view, "place_worker");
+}
+
+function getActivePilotSize(view) {
+  if (!view || view.phase !== "pilot") {
+    return null;
+  }
+  const pending = Array.isArray(view.pending_pilots) ? view.pending_pilots : [];
+  return pending.length ? pending[0] : null;
+}
+
+function syncManilaPilotDraft(view) {
+  const activeSize = getActivePilotSize(view);
+  if (activeSize !== "big" || !manilaPilotDraft || manilaPilotDraft.size !== "big") {
+    manilaPilotDraft = null;
+    return;
+  }
+  const boats = view && view.boats ? view.boats : {};
+  const nextMoves = manilaPilotDraft.moves.filter((move) => {
+    const boat = boats[move.cargo];
+    return boat && !boat.arrived;
+  });
+  if (!nextMoves.length) {
+    manilaPilotDraft = null;
+    return;
+  }
+  manilaPilotDraft.moves = nextMoves.slice(0, 1);
+}
+
+function getPilotRemainingMoves(view, size) {
+  const pending = new Set(Array.isArray(view && view.pending_pilots) ? view.pending_pilots : []);
+  if (!pending.has(size)) {
+    return 0;
+  }
+  if (size === "big" && manilaPilotDraft && manilaPilotDraft.size === "big") {
+    return Math.max(0, 2 - manilaPilotDraft.moves.length);
+  }
+  return size === "big" ? 2 : 1;
+}
+
+function rerenderManilaPilotUi() {
+  if (!currentManilaView) {
+    return;
+  }
+  renderManilaBoats(currentManilaView);
+  updatePilotActions(currentManilaView);
+}
+
+function queueManilaPilotMove(cargoId, delta) {
+  const view = currentManilaView;
+  const activeSize = getActivePilotSize(view);
+  const boardPilots = view && view.board ? view.board.pilots || {} : {};
+  const isMyPilotTurn =
+    !!view &&
+    activeSize &&
+    view.current_player === view.you &&
+    boardPilots[activeSize] === view.you &&
+    isActionAvailable(view, activeSize === "big" ? "pilot_split" : "pilot_move");
+  if (!isMyPilotTurn) {
+    return;
+  }
+  const boat = view && view.boats ? view.boats[cargoId] : null;
+  if (!boat || boat.arrived) {
+    return;
+  }
+  if (delta < 0 && Number(boat.position || 0) <= 0) {
+    return;
+  }
+
+  if (activeSize === "small") {
+    sendAction({ type: "pilot_move", size: "small", cargo: cargoId, delta });
+    return;
+  }
+
+  if (!manilaPilotDraft || manilaPilotDraft.size !== "big") {
+    manilaPilotDraft = { size: "big", moves: [] };
+  }
+
+  const firstMove = manilaPilotDraft.moves[0];
+  if (!firstMove) {
+    manilaPilotDraft.moves = [{ cargo: cargoId, delta }];
+    showManilaTooltip(
+      `Big Pilot queued ${getCargoMeta(cargoId).label} ${delta > 0 ? "+1" : "-1"}. Click the same sign again for ${delta > 0 ? "+2" : "-2"}, or choose another ship to split.`
+    );
+    rerenderManilaPilotUi();
+    return;
+  }
+
+  manilaPilotDraft = null;
+  if (firstMove.cargo === cargoId) {
+    if (firstMove.delta !== delta) {
+      showManilaTooltip("Big Pilot cannot reverse the same ship. Start over or click the same sign again.");
+      rerenderManilaPilotUi();
+      return;
+    }
+    sendAction({
+      type: "pilot_move",
+      size: "big",
+      cargo: cargoId,
+      delta: delta * 2,
+    });
+    return;
+  }
+
+  sendAction({
+    type: "pilot_split",
+    size: "big",
+    cargo_a: firstMove.cargo,
+    delta_a: firstMove.delta,
+    cargo_b: cargoId,
+    delta_b: delta,
+  });
 }
 
 function setVisible(el, visible) {
@@ -848,6 +960,61 @@ function buildManilaAxisBoat(cargoId, boat, view, canPlace) {
   header.appendChild(value);
   wrapper.appendChild(header);
 
+  const activePilotSize = getActivePilotSize(view);
+  const activePilotHolder =
+    activePilotSize && view && view.board && view.board.pilots ? view.board.pilots[activePilotSize] : null;
+  const canPilotMove =
+    !!boat &&
+    !boat.arrived &&
+    activePilotSize &&
+    view.current_player === view.you &&
+    activePilotHolder === view.you &&
+    isActionAvailable(view, activePilotSize === "big" ? "pilot_split" : "pilot_move");
+  if (canPilotMove) {
+    const controls = document.createElement("div");
+    controls.className = "manila-axis-boat-controls";
+
+    const controlLabel = document.createElement("div");
+    controlLabel.className = "manila-axis-boat-control-label";
+    controlLabel.textContent = activePilotSize === "big" ? "Big Pilot" : "Small Pilot";
+    controls.appendChild(controlLabel);
+
+    const controlButtons = document.createElement("div");
+    controlButtons.className = "manila-axis-boat-control-buttons";
+    const draftMove =
+      activePilotSize === "big" && manilaPilotDraft && manilaPilotDraft.size === "big"
+        ? manilaPilotDraft.moves[0]
+        : null;
+    const position = Number(boat.position || 0);
+    [-1, 1].forEach((delta) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "manila-pilot-btn";
+      btn.textContent = delta > 0 ? "+" : "-";
+      const draftSelected = draftMove && draftMove.cargo === cargoId && draftMove.delta === delta;
+      if (draftSelected) {
+        btn.classList.add("selected");
+      }
+      const blockedByDraft =
+        !!draftMove &&
+        draftMove.cargo === cargoId &&
+        draftMove.delta !== delta &&
+        activePilotSize === "big";
+      setDisabled(btn, (delta < 0 && position <= 0) || blockedByDraft);
+      btn.addEventListener("click", () => queueManilaPilotMove(cargoId, delta));
+      controlButtons.appendChild(btn);
+    });
+    controls.appendChild(controlButtons);
+
+    if (draftMove && draftMove.cargo === cargoId) {
+      const queued = document.createElement("div");
+      queued.className = "manila-axis-boat-control-note";
+      queued.textContent = `Queued ${draftMove.delta > 0 ? "+1" : "-1"}`;
+      controls.appendChild(queued);
+    }
+    wrapper.appendChild(controls);
+  }
+
   const seatWrap = document.createElement("div");
   seatWrap.className = "manila-axis-seat-grid";
   const seats = boat && Array.isArray(boat.seats) ? boat.seats : [];
@@ -1247,11 +1414,12 @@ function updatePilotActions(view) {
     return;
   }
   manilaPilotRows.innerHTML = "";
-  const pending = Array.isArray(view.pending_pilots) ? view.pending_pilots : [];
-  const cargos = getCargoList(view);
-  const isMyTurn = view.current_player === view.you;
+  syncManilaPilotDraft(view);
+  const pending = new Set(Array.isArray(view.pending_pilots) ? view.pending_pilots : []);
+  const activeSize = getActivePilotSize(view);
+  const pilots = view.board ? view.board.pilots || {} : {};
 
-  if (!pending.length) {
+  if (!pending.size) {
     const empty = document.createElement("div");
     empty.className = "manila-empty";
     empty.textContent = "No pilots to move.";
@@ -1259,97 +1427,73 @@ function updatePilotActions(view) {
     return;
   }
 
-  pending.forEach((size) => {
+  ["big", "small"].forEach((size) => {
     const row = document.createElement("div");
-    row.className = "manila-action-row";
-    const label = document.createElement("div");
-    label.className = "manila-action-label";
-    label.textContent = size === "big" ? "Big Pilot" : "Small Pilot";
-    const cargoSelect = document.createElement("select");
-    cargos.forEach((cargo) => {
-      const opt = document.createElement("option");
-      opt.value = cargo;
-      opt.textContent = cargo;
-      cargoSelect.appendChild(opt);
-    });
-    const deltaSelect = document.createElement("select");
-    const deltas = size === "big" ? [-2, -1, 1, 2] : [-1, 1];
-    deltas.forEach((delta) => {
-      const opt = document.createElement("option");
-      opt.value = String(delta);
-      opt.textContent = delta > 0 ? `+${delta}` : `${delta}`;
-      deltaSelect.appendChild(opt);
-    });
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.textContent = "Move";
-    btn.addEventListener("click", () =>
-      sendAction({
-        type: "pilot_move",
-        size,
-        cargo: cargoSelect.value,
-        delta: Number.parseInt(deltaSelect.value, 10),
-      })
-    );
-    setDisabled(btn, !isMyTurn);
-    row.appendChild(label);
-    row.appendChild(cargoSelect);
-    row.appendChild(deltaSelect);
-    row.appendChild(btn);
-    manilaPilotRows.appendChild(row);
-
-    if (size === "big") {
-      const splitRow = document.createElement("div");
-      splitRow.className = "manila-action-row";
-      const splitLabel = document.createElement("div");
-      splitLabel.className = "manila-action-label";
-      splitLabel.textContent = "Split (+/-1)";
-      const cargoA = document.createElement("select");
-      const cargoB = document.createElement("select");
-      cargos.forEach((cargo) => {
-        const optA = document.createElement("option");
-        optA.value = cargo;
-        optA.textContent = cargo;
-        cargoA.appendChild(optA);
-        const optB = document.createElement("option");
-        optB.value = cargo;
-        optB.textContent = cargo;
-        cargoB.appendChild(optB);
-      });
-      const deltaA = document.createElement("select");
-      const deltaB = document.createElement("select");
-      [-1, 1].forEach((delta) => {
-        const optA = document.createElement("option");
-        optA.value = String(delta);
-        optA.textContent = delta > 0 ? `+${delta}` : `${delta}`;
-        deltaA.appendChild(optA);
-        const optB = document.createElement("option");
-        optB.value = String(delta);
-        optB.textContent = delta > 0 ? `+${delta}` : `${delta}`;
-        deltaB.appendChild(optB);
-      });
-      const splitBtn = document.createElement("button");
-      splitBtn.type = "button";
-      splitBtn.textContent = "Split Move";
-      splitBtn.addEventListener("click", () =>
-        sendAction({
-          type: "pilot_split",
-          size: "big",
-          cargo_a: cargoA.value,
-          delta_a: Number.parseInt(deltaA.value, 10),
-          cargo_b: cargoB.value,
-          delta_b: Number.parseInt(deltaB.value, 10),
-        })
-      );
-      setDisabled(splitBtn, !isMyTurn);
-      splitRow.appendChild(splitLabel);
-      splitRow.appendChild(cargoA);
-      splitRow.appendChild(deltaA);
-      splitRow.appendChild(cargoB);
-      splitRow.appendChild(deltaB);
-      splitRow.appendChild(splitBtn);
-      manilaPilotRows.appendChild(splitRow);
+    row.className = "manila-pilot-status";
+    if (size === activeSize) {
+      row.classList.add("active");
     }
+
+    const header = document.createElement("div");
+    header.className = "manila-pilot-status-header";
+
+    const titleWrap = document.createElement("div");
+    titleWrap.className = "manila-pilot-status-title-wrap";
+    const title = document.createElement("div");
+    title.className = "manila-pilot-status-title";
+    title.textContent = size === "big" ? "Pilot (Big)" : "Pilot (Small)";
+    titleWrap.appendChild(title);
+
+    const owner = document.createElement("div");
+    owner.className = "manila-pilot-status-owner";
+    owner.textContent = pilots[size] ? formatManilaPlayerName(view, pilots[size]) : "Unoccupied";
+    titleWrap.appendChild(owner);
+    header.appendChild(titleWrap);
+
+    const remaining = getPilotRemainingMoves(view, size);
+    const badge = document.createElement("div");
+    badge.className = "manila-pilot-status-badge";
+    badge.textContent = !pilots[size] ? "Empty" : pending.has(size) ? `${remaining} left` : "0 left";
+    header.appendChild(badge);
+    row.appendChild(header);
+
+    const hint = document.createElement("div");
+    hint.className = "manila-pilot-status-hint";
+    if (!pilots[size]) {
+      hint.textContent = "No one claimed this role.";
+    } else if (!pending.has(size)) {
+      hint.textContent = "Already used this round.";
+    } else if (size === "big") {
+      hint.textContent =
+        size === activeSize
+          ? "Click +/- beside ships. Same sign twice on one ship makes ±2; another ship makes a split."
+          : "Waiting for the Small Pilot to finish first.";
+    } else {
+      hint.textContent =
+        size === activeSize ? "Click +/- beside one ship to resolve this move." : "Waiting for this pilot's turn.";
+    }
+    row.appendChild(hint);
+
+    if (size === "big" && size === activeSize && manilaPilotDraft && manilaPilotDraft.moves.length) {
+      const draftRow = document.createElement("div");
+      draftRow.className = "manila-pilot-draft";
+      const move = manilaPilotDraft.moves[0];
+      const queued = document.createElement("div");
+      queued.className = "manila-pilot-draft-text";
+      queued.textContent = `Queued: ${getCargoMeta(move.cargo).label} ${move.delta > 0 ? "+1" : "-1"}`;
+      const resetBtn = document.createElement("button");
+      resetBtn.type = "button";
+      resetBtn.textContent = "Reset";
+      resetBtn.addEventListener("click", () => {
+        manilaPilotDraft = null;
+        rerenderManilaPilotUi();
+      });
+      draftRow.appendChild(queued);
+      draftRow.appendChild(resetBtn);
+      row.appendChild(draftRow);
+    }
+
+    manilaPilotRows.appendChild(row);
   });
 }
 
@@ -1569,6 +1713,7 @@ function renderManilaGameState(data) {
     const actions = Array.isArray(view.legal_actions) ? view.legal_actions : [];
     manilaLegalActions.textContent = actions.length ? actions.join(", ") : "-";
   }
+  syncManilaPilotDraft(view);
   updateManilaCyclePanel(view);
   renderManilaBoats(view);
   renderManilaBoard(view);
@@ -1582,6 +1727,7 @@ function clearManilaState() {
   manilaCycleOpen = false;
   manilaCycleUserOverride = null;
   manilaLastPhase = null;
+  manilaPilotDraft = null;
   if (manilaPhaseLabel) manilaPhaseLabel.textContent = "-";
   if (manilaRoundLabel) manilaRoundLabel.textContent = "-";
   if (manilaCurrentLabel) manilaCurrentLabel.textContent = "-";
