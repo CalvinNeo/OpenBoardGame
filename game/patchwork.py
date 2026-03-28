@@ -12,6 +12,7 @@ Shape = Tuple[Coord, ...]
 ASSET_PATH = Path(__file__).resolve().parent / "assets" / "patchwork" / "patchwork.json"
 ASSETS = json.loads(ASSET_PATH.read_text(encoding="utf-8"))
 BOARD_META = ASSETS["board"]
+BOARD_SVG_PATH = ASSET_PATH.parent / BOARD_META.get("board_svg", "board.svg")
 PATCH_DEFS: List[Dict] = list(ASSETS["patches"])
 PATCHES_BY_ID: Dict[str, Dict] = {patch["id"]: patch for patch in PATCH_DEFS}
 PATCH_IDS = [patch["id"] for patch in PATCH_DEFS]
@@ -21,6 +22,11 @@ LEATHER_MARKERS = set(BOARD_META["leather_markers"])
 END_POSITION = int(BOARD_META["time_track_end"])
 STARTING_BUTTONS = int(BOARD_META["starting_buttons"])
 SPECIAL_TILE_BONUS = int(BOARD_META["special_tile_bonus"])
+
+
+def _board_svg_url() -> str:
+    version = int(BOARD_SVG_PATH.stat().st_mtime_ns)
+    return f"/static/patchwork/{BOARD_SVG_PATH.name}?v={version}"
 
 
 def _normalize(coords: List[Coord]) -> Shape:
@@ -583,7 +589,7 @@ class PatchworkGame:
             "board_size": BOARD_SIZE,
             "starting_buttons": STARTING_BUTTONS,
             "special_tile_bonus": SPECIAL_TILE_BONUS,
-            "board_svg_url": "/static/patchwork/board.svg",
+            "board_svg_url": _board_svg_url(),
             "board_visual_layout": BOARD_META.get("visual_layout", {}),
             "legal_actions": PatchworkGame.get_legal_actions(state, viewer_id),
             "game_over": state.get("game_over", False),
