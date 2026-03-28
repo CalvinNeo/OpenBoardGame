@@ -87,6 +87,7 @@ function setGamePanelVisibility(gameType) {
   const showSplendor = gameType === "splendor";
   const showPokemonSplendor = gameType === "splendor_pokemon";
   const showPointSalad = gameType === "point_salad";
+  const showForestShuffle = gameType === "forest_shuffle";
   const showAbraca = gameType === "abraca_what";
   const showTrekking = gameType === "trekking_history";
   const showBlokus = gameType === "blokus";
@@ -244,6 +245,12 @@ function setGamePanelVisibility(gameType) {
   }
   if (typeof showPointSaladHeaderActions === "function") {
     showPointSaladHeaderActions(showPointSalad);
+  }
+  if (forestShufflePanel) {
+    forestShufflePanel.classList.toggle("hidden", !showForestShuffle);
+  }
+  if (typeof showForestShuffleHeaderActions === "function") {
+    showForestShuffleHeaderActions(showForestShuffle);
   }
   if (trekkingPanel) {
     trekkingPanel.classList.toggle("hidden", !showTrekking);
@@ -511,6 +518,10 @@ function renderGameState(data) {
   }
   if (gameType === "abraca_what") {
     renderAbracaGameState(data);
+    return;
+  }
+  if (gameType === "forest_shuffle") {
+    renderForestShuffleGameState(data);
     return;
   }
   if (gameType === "blokus") {

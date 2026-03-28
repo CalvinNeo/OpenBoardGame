@@ -15,6 +15,7 @@ from game.draw_guess import DrawGuessGame
 from game.fang_niao import FangNiaoGame
 from game.fake_artist import FakeArtistGame
 from game.flip7 import Flip7Game
+from game.forest_shuffle import ForestShuffleGame
 from game.gold_rush import GoldRushGame
 from game.halli_galli import HalliGalliGame
 from game.hanabi import HanabiGame
@@ -59,6 +60,7 @@ __all__ = [
     "FangNiaoGame",
     "FakeArtistGame",
     "Flip7Game",
+    "ForestShuffleGame",
     "GoldRushGame",
     "HalliGalliGame",
     "HanabiGame",

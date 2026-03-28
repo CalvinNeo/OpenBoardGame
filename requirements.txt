@@ -5,3 +5,4 @@ jsonschema==4.22.0
 quickdraw==1.0.0
 argostranslate==1.9.6
 opencc-python-reimplemented==0.1.7
+pypinyin==0.55.0

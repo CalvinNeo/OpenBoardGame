@@ -1,6 +1,6 @@
 import unittest
 
-from game.things_in_rings import ThingsInRingsGame, _load_rules, _load_things, _word_membership
+from game.things_in_rings import ThingsInRingsGame, _load_char_meta, _load_rules, _load_things, _word_membership
 
 
 def _players(count: int = 3):
@@ -43,6 +43,13 @@ class ThingsInRingsGameTests(unittest.TestCase):
             evaluator = rule.get("evaluator") or {}
             self.assertNotEqual(evaluator.get("kind"), "starts_with")
 
+    def test_char_meta_only_keeps_structure_and_radical(self):
+        meta = _load_char_meta()
+
+        self.assertIn("机", meta)
+        self.assertEqual(meta["机"]["structure"], "left_right")
+        self.assertNotIn("tone", meta["机"])
+
     def test_word_membership_supports_last_char_tone_and_structure(self):
         tone_rule = {
             "evaluator": {"kind": "last_char_tone_is", "value": 1},
@@ -55,6 +62,17 @@ class ThingsInRingsGameTests(unittest.TestCase):
         self.assertFalse(_word_membership(tone_rule, {"name": "盒子"}))
         self.assertTrue(_word_membership(structure_rule, {"name": "台灯"}))
         self.assertFalse(_word_membership(structure_rule, {"name": "箱子"}))
+
+    def test_word_membership_uses_phrase_aware_tone_lookup(self):
+        third_tone_rule = {
+            "evaluator": {"kind": "last_char_tone_is", "value": 3},
+        }
+        second_tone_rule = {
+            "evaluator": {"kind": "last_char_tone_is", "value": 2},
+        }
+
+        self.assertTrue(_word_membership(third_tone_rule, {"name": "班长"}))
+        self.assertTrue(_word_membership(second_tone_rule, {"name": "特长"}))
 
     def test_word_membership_supports_last_char_radical(self):
         radical_rule = {

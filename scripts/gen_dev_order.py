@@ -1,6 +1,7 @@
 import json
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -20,7 +21,12 @@ def first_commit_timestamp(path: str) -> int:
         text=True,
     )
     lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
-    return int(lines[-1]) if lines else 0
+    if lines:
+        return int(lines[-1])
+    abs_path = ROOT_DIR / path
+    if abs_path.exists():
+        return int(abs_path.stat().st_mtime)
+    return int(time.time())
 
 
 def build_dev_order() -> dict[str, int]:

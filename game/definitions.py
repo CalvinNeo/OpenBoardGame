@@ -12,6 +12,7 @@ from game.draw_guess import DrawGuessGame
 from game.fang_niao import FangNiaoGame
 from game.fake_artist import FakeArtistGame
 from game.flip7 import Flip7Game
+from game.forest_shuffle import ForestShuffleGame
 from game.gold_rush import GoldRushGame
 from game.halli_galli import HalliGalliGame
 from game.hanabi import HanabiGame
@@ -1854,6 +1855,81 @@ PATCHWORK_CONFIG_SCHEMA = {
     "additionalProperties": False,
 }
 
+FOREST_SHUFFLE_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "draw_cards"},
+                "sources": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "oneOf": [
+                            {
+                                "type": "object",
+                                "properties": {"zone": {"const": "deck"}},
+                                "required": ["zone"],
+                                "additionalProperties": False,
+                            },
+                            {
+                                "type": "object",
+                                "properties": {"zone": {"const": "clearing"}, "card_id": {"type": "string", "minLength": 1}},
+                                "required": ["zone", "card_id"],
+                                "additionalProperties": False,
+                            },
+                        ],
+                    },
+                    "minItems": 1,
+                    "maxItems": 2,
+                },
+            },
+            "required": ["type", "sources"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "play_card"},
+                "card_id": {"type": "string", "minLength": 1},
+                "half_index": {"type": "integer", "minimum": 0, "maximum": 1},
+                "target_tree_id": {"type": "string", "minLength": 1},
+                "play_as": {"type": "string", "enum": ["sapling"]},
+                "pay_card_ids": {
+                    "type": "array",
+                    "items": {"type": "string", "minLength": 1},
+                    "maxItems": 3,
+                },
+            },
+            "required": ["type", "card_id"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "finish_pending"}}, "required": ["type"], "additionalProperties": False},
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "resolve_raccoon"},
+                "card_ids": {
+                    "type": "array",
+                    "items": {"type": "string", "minLength": 1},
+                },
+            },
+            "required": ["type", "card_ids"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+FOREST_SHUFFLE_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "opening_mulligan_if_no_tree": {"type": "boolean"},
+        "seed": {"type": ["integer", "string"]},
+    },
+    "additionalProperties": False,
+}
+
 MANILA_ACTION_SCHEMA = {
     "type": "object",
     "oneOf": [
@@ -2726,6 +2802,21 @@ register_game(
         module=PatchworkGame,
         serialize=PatchworkGame.serialize,
         deserialize=PatchworkGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=ForestShuffleGame.game_id,
+        name="Forest Shuffle",
+        min_players=ForestShuffleGame.min_players,
+        max_players=ForestShuffleGame.max_players,
+        turn_mode="turn",
+        action_schema=FOREST_SHUFFLE_ACTION_SCHEMA,
+        config_schema=FOREST_SHUFFLE_CONFIG_SCHEMA,
+        module=ForestShuffleGame,
+        serialize=ForestShuffleGame.serialize,
+        deserialize=ForestShuffleGame.deserialize,
     )
 )
 

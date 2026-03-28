@@ -5,6 +5,7 @@ let thingsInRingsSelectedSeedIndex = null;
 let thingsInRingsDecisionMemberships = [];
 let thingsInRingsDecisionContextKey = null;
 let thingsInRingsExplainMode = false;
+let thingsInRingsExpandedZoneId = null;
 
 const thingsInRingsPhaseLabel = document.getElementById("thingsInRingsPhase");
 const thingsInRingsTurnLabel = document.getElementById("thingsInRingsTurn");
@@ -39,6 +40,58 @@ const thingsInRingsExplainModal = document.getElementById("thingsInRingsExplainM
 const thingsInRingsExplainModalCloseBtn = document.getElementById("thingsInRingsExplainModalCloseBtn");
 const thingsInRingsHelpContent = document.getElementById("thingsInRingsHelpContent");
 const thingsInRingsExplainContent = document.getElementById("thingsInRingsExplainContent");
+const thingsInRingsZoneModal = document.getElementById("thingsInRingsZoneModal");
+const thingsInRingsZoneModalCloseBtn = document.getElementById("thingsInRingsZoneModalCloseBtn");
+const thingsInRingsZoneModalTitle = document.getElementById("thingsInRingsZoneModalTitle");
+const thingsInRingsZoneModalSubtitle = document.getElementById("thingsInRingsZoneModalSubtitle");
+const thingsInRingsZoneModalList = document.getElementById("thingsInRingsZoneModalList");
+
+const THINGS_IN_RINGS_RING_THEMES = {
+  word: "word",
+  attribute: "attribute",
+  context: "context",
+};
+
+const THINGS_IN_RINGS_CIRCLE_LAYOUTS = {
+  1: [
+    { left: 27, top: 14, size: 46, labelLeft: 50, labelTop: 10 },
+  ],
+  2: [
+    { left: 10, top: 16, size: 50, labelLeft: 26, labelTop: 11 },
+    { left: 40, top: 16, size: 50, labelLeft: 74, labelTop: 11 },
+  ],
+  3: [
+    { left: 14, top: 11, size: 44, labelLeft: 24, labelTop: 9 },
+    { left: 42, top: 11, size: 44, labelLeft: 76, labelTop: 9 },
+    { left: 28, top: 38, size: 44, labelLeft: 50, labelTop: 86 },
+  ],
+};
+
+const THINGS_IN_RINGS_ZONE_LAYOUTS = {
+  1: {
+    "1": { x: 50, y: 44, w: 32, h: 24, previewLimit: 5 },
+  },
+  2: {
+    "10": { x: 25, y: 42, w: 26, h: 20, previewLimit: 4 },
+    "11": { x: 50, y: 42, w: 26, h: 22, previewLimit: 5 },
+    "01": { x: 75, y: 42, w: 26, h: 20, previewLimit: 4 },
+  },
+  3: {
+    "100": { x: 24, y: 32, w: 22, h: 16, previewLimit: 3 },
+    "110": { x: 50, y: 24, w: 24, h: 16, previewLimit: 4 },
+    "010": { x: 76, y: 32, w: 22, h: 16, previewLimit: 3 },
+    "101": { x: 36, y: 52, w: 23, h: 16, previewLimit: 4 },
+    "111": { x: 50, y: 41, w: 22, h: 17, previewLimit: 4 },
+    "011": { x: 64, y: 52, w: 23, h: 16, previewLimit: 4 },
+    "001": { x: 50, y: 69, w: 24, h: 16, previewLimit: 4 },
+  },
+};
+
+const THINGS_IN_RINGS_OUTSIDE_PREVIEW_LIMIT = {
+  1: 8,
+  2: 8,
+  3: 10,
+};
 
 const THINGS_IN_RINGS_HELP_TEXT = `
   <p><strong>Things in Rings</strong> is a hidden-rule deduction game. One player is the <strong>Knower</strong>; everyone else tries to place item cards into the correct ring zones.</p>
@@ -96,6 +149,7 @@ function clearThingsInRingsState() {
   thingsInRingsSelectedSeedIndex = null;
   thingsInRingsDecisionMemberships = [];
   thingsInRingsDecisionContextKey = null;
+  thingsInRingsExpandedZoneId = null;
   if (thingsInRingsPhaseLabel) thingsInRingsPhaseLabel.textContent = "-";
   if (thingsInRingsTurnLabel) thingsInRingsTurnLabel.textContent = "-";
   if (thingsInRingsKnowerLabel) thingsInRingsKnowerLabel.textContent = "-";
@@ -130,6 +184,7 @@ function clearThingsInRingsState() {
   if (thingsInRingsPlayAgainBtn) thingsInRingsPlayAgainBtn.disabled = true;
   if (thingsInRingsHelpModal) setModalVisible(thingsInRingsHelpModal, false);
   if (thingsInRingsExplainModal) setModalVisible(thingsInRingsExplainModal, false);
+  if (thingsInRingsZoneModal) setModalVisible(thingsInRingsZoneModal, false);
   exitThingsInRingsExplainMode();
 }
 
@@ -196,7 +251,8 @@ function renderThingsInRingsRings(view) {
   const rings = Array.isArray(view.rings) ? view.rings : [];
   rings.forEach((ring) => {
     const card = document.createElement("div");
-    card.className = "things-rings-rule-card";
+    const theme = THINGS_IN_RINGS_RING_THEMES[ring.type] || "generic";
+    card.className = `things-rings-rule-card ${theme}`;
 
     const top = document.createElement("div");
     top.className = "things-rings-rule-top";
@@ -215,6 +271,243 @@ function renderThingsInRingsRings(view) {
     card.appendChild(mode);
     thingsInRingsRingSummary.appendChild(card);
   });
+}
+
+function getThingsInRingsZoneCards(zone, view) {
+  const cards = Array.isArray(zone.cards) ? [...zone.cards] : [];
+  if (view.pending_judgement && view.pending_judgement.proposed_zone_id === zone.zone_id) {
+    cards.push({
+      thing_name: view.pending_judgement.thing_card ? view.pending_judgement.thing_card.name : "?",
+      source: "pending",
+    });
+  }
+  return cards;
+}
+
+function appendThingsInRingsCardChip(container, card) {
+  const chip = document.createElement("div");
+  chip.className = "things-rings-zone-card";
+  if (card.source === "clue") {
+    chip.classList.add("clue");
+  }
+  if (card.source === "pending") {
+    chip.classList.add("pending");
+  }
+  chip.textContent = card.thing_name || "?";
+  container.appendChild(chip);
+}
+
+function getThingsInRingsZoneLayout(ringCount, zoneId) {
+  const layouts = THINGS_IN_RINGS_ZONE_LAYOUTS[ringCount] || {};
+  return layouts[zoneId] || null;
+}
+
+function getThingsInRingsOutsideZoneId(ringCount) {
+  return "0".repeat(Math.max(1, ringCount));
+}
+
+function openThingsInRingsZoneModal(zoneId) {
+  thingsInRingsExpandedZoneId = zoneId;
+  renderThingsInRingsZoneModal(currentThingsInRingsView);
+}
+
+function closeThingsInRingsZoneModal() {
+  thingsInRingsExpandedZoneId = null;
+  if (thingsInRingsZoneModal) {
+    setModalVisible(thingsInRingsZoneModal, false);
+  }
+}
+
+function renderThingsInRingsZoneModal(view) {
+  if (!thingsInRingsZoneModal || !thingsInRingsZoneModalList || !thingsInRingsExpandedZoneId) {
+    return;
+  }
+  const zones = Array.isArray(view && view.zones) ? view.zones : [];
+  const zone = zones.find((entry) => entry.zone_id === thingsInRingsExpandedZoneId);
+  if (!zone) {
+    closeThingsInRingsZoneModal();
+    return;
+  }
+  const cards = getThingsInRingsZoneCards(zone, view || {});
+  if (thingsInRingsZoneModalTitle) {
+    thingsInRingsZoneModalTitle.textContent = zone.title || zone.zone_id;
+  }
+  if (thingsInRingsZoneModalSubtitle) {
+    const subtitle = zone.subtitle || "";
+    thingsInRingsZoneModalSubtitle.textContent = subtitle ? `${subtitle} · ${cards.length} cards` : `${cards.length} cards`;
+  }
+  thingsInRingsZoneModalList.innerHTML = "";
+  if (!cards.length) {
+    const empty = document.createElement("div");
+    empty.className = "things-rings-zone-empty";
+    empty.textContent = "No cards in this zone yet.";
+    thingsInRingsZoneModalList.appendChild(empty);
+  } else {
+    cards.forEach((card) => {
+      const row = document.createElement("div");
+      row.className = "things-rings-zone-modal-item";
+      appendThingsInRingsCardChip(row, card);
+      if (card.source === "clue" || card.source === "pending") {
+        const badge = document.createElement("span");
+        badge.className = `things-rings-zone-modal-badge ${card.source}`;
+        badge.textContent = card.source === "clue" ? "Clue" : "Pending";
+        row.appendChild(badge);
+      }
+      thingsInRingsZoneModalList.appendChild(row);
+    });
+  }
+  setModalVisible(thingsInRingsZoneModal, true);
+}
+
+function createThingsInRingsZoneRegion(zone, view, ringCount, layout, options = {}) {
+  if (!options.outside) {
+    const cards = getThingsInRingsZoneCards(zone, view);
+    const previewLimit = options.previewLimit || layout.previewLimit || 4;
+    const fragment = document.createDocumentFragment();
+    const canPlace = isThingsInRingsActionAvailable("submit_play");
+
+    const hitbox = document.createElement("button");
+    hitbox.type = "button";
+    hitbox.className = "things-rings-zone-hitbox";
+    hitbox.style.setProperty("--zone-x", `${layout.x}%`);
+    hitbox.style.setProperty("--zone-y", `${layout.y}%`);
+    hitbox.style.setProperty("--zone-w", `${layout.w}%`);
+    hitbox.style.setProperty("--zone-h", `${layout.h}%`);
+    hitbox.setAttribute("aria-label", `${zone.title || zone.zone_id}${zone.subtitle ? `. ${zone.subtitle}` : ""}`);
+    if (thingsInRingsSelectedZoneId === zone.zone_id && canPlace) {
+      hitbox.classList.add("selected");
+      hitbox.setAttribute("aria-pressed", "true");
+    } else {
+      hitbox.setAttribute("aria-pressed", "false");
+    }
+    if (canPlace) {
+      hitbox.classList.add("clickable");
+      hitbox.addEventListener("click", () => {
+        thingsInRingsSelectedZoneId = thingsInRingsSelectedZoneId === zone.zone_id ? null : zone.zone_id;
+        renderThingsInRingsBoard(view);
+        updateThingsInRingsButtons(view);
+      });
+    } else {
+      hitbox.disabled = true;
+    }
+    fragment.appendChild(hitbox);
+
+    if (cards.length) {
+      const cloud = document.createElement("div");
+      cloud.className = "things-rings-zone-cloud";
+      cloud.style.setProperty("--zone-x", `${layout.x}%`);
+      cloud.style.setProperty("--zone-y", `${layout.y}%`);
+      cloud.style.setProperty("--zone-w", `${layout.w}%`);
+
+      const list = document.createElement("div");
+      list.className = "things-rings-zone-cloud-cards";
+      cards.slice(0, previewLimit).forEach((card) => appendThingsInRingsCardChip(list, card));
+      cloud.appendChild(list);
+
+      if (cards.length > previewLimit) {
+        const footer = document.createElement("div");
+        footer.className = "things-rings-zone-cloud-footer";
+        const moreBtn = document.createElement("button");
+        moreBtn.type = "button";
+        moreBtn.className = "things-rings-zone-more-btn";
+        moreBtn.textContent = `View all (${cards.length})`;
+        moreBtn.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          openThingsInRingsZoneModal(zone.zone_id);
+        });
+        footer.appendChild(moreBtn);
+        cloud.appendChild(footer);
+      }
+      fragment.appendChild(cloud);
+    }
+    return fragment;
+  }
+
+  const canPlace = isThingsInRingsActionAvailable("submit_play");
+  const cards = getThingsInRingsZoneCards(zone, view);
+  const previewLimit = options.previewLimit || layout.previewLimit || 4;
+  const region = document.createElement("div");
+  region.className = "things-rings-zone";
+  region.style.setProperty("--zone-x", `${layout.x}%`);
+  region.style.setProperty("--zone-y", `${layout.y}%`);
+  region.style.setProperty("--zone-w", `${layout.w}%`);
+  region.style.setProperty("--zone-h", `${layout.h}%`);
+  if (options.outside) {
+    region.classList.add("outside");
+  }
+  if (thingsInRingsSelectedZoneId === zone.zone_id && canPlace) {
+    region.classList.add("selected");
+  }
+  if (canPlace) {
+    region.classList.add("clickable");
+    region.setAttribute("role", "button");
+    region.setAttribute("tabindex", "0");
+    region.setAttribute("aria-pressed", (thingsInRingsSelectedZoneId === zone.zone_id).toString());
+    const selectZone = () => {
+      thingsInRingsSelectedZoneId = thingsInRingsSelectedZoneId === zone.zone_id ? null : zone.zone_id;
+      renderThingsInRingsBoard(view);
+      updateThingsInRingsButtons(view);
+    };
+    region.addEventListener("click", selectZone);
+    region.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        selectZone();
+      }
+    });
+  }
+  region.setAttribute("aria-label", `${zone.title || zone.zone_id}${zone.subtitle ? `. ${zone.subtitle}` : ""}`);
+
+  if (options.outside) {
+    const titleRow = document.createElement("div");
+    titleRow.className = "things-rings-zone-title-row";
+
+    const title = document.createElement("div");
+    title.className = "things-rings-zone-title";
+    title.textContent = zone.title || zone.zone_id;
+    titleRow.appendChild(title);
+
+    const count = document.createElement("span");
+    count.className = "things-rings-zone-count";
+    count.textContent = String(cards.length);
+    titleRow.appendChild(count);
+    region.appendChild(titleRow);
+
+    const subtitle = document.createElement("div");
+    subtitle.className = "things-rings-zone-subtitle";
+    subtitle.textContent = zone.subtitle || "";
+    region.appendChild(subtitle);
+  }
+
+  const list = document.createElement("div");
+  list.className = "things-rings-zone-cards";
+  const previewCards = cards.slice(0, previewLimit);
+  previewCards.forEach((card) => appendThingsInRingsCardChip(list, card));
+  if (!previewCards.length && options.outside) {
+    const empty = document.createElement("div");
+    empty.className = "things-rings-zone-empty";
+    empty.textContent = options.outside ? "Nothing outside yet." : "Empty";
+    list.appendChild(empty);
+  }
+  region.appendChild(list);
+
+  const footer = document.createElement("div");
+  footer.className = "things-rings-zone-footer";
+  if (cards.length > previewLimit) {
+    const moreBtn = document.createElement("button");
+    moreBtn.type = "button";
+    moreBtn.className = "things-rings-zone-more-btn";
+    moreBtn.textContent = `View all (${cards.length})`;
+    moreBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      openThingsInRingsZoneModal(zone.zone_id);
+    });
+    footer.appendChild(moreBtn);
+  }
+  region.appendChild(footer);
+  return region;
 }
 
 function renderThingsInRingsHand(view) {
@@ -255,73 +548,70 @@ function renderThingsInRingsBoard(view) {
     return;
   }
   thingsInRingsBoard.innerHTML = "";
-  const canPlace = isThingsInRingsActionAvailable("submit_play");
   const zones = Array.isArray(view.zones) ? view.zones : [];
-  zones.forEach((zone) => {
-    const zoneCard = document.createElement("div");
-    zoneCard.className = "things-rings-zone";
-    if (thingsInRingsSelectedZoneId === zone.zone_id && canPlace) {
-      zoneCard.classList.add("selected");
-    }
-    if (canPlace) {
-      zoneCard.classList.add("clickable");
-      zoneCard.addEventListener("click", () => {
-        thingsInRingsSelectedZoneId = thingsInRingsSelectedZoneId === zone.zone_id ? null : zone.zone_id;
-        renderThingsInRingsBoard(view);
-        updateThingsInRingsButtons(view);
-      });
-    }
+  const rings = Array.isArray(view.rings) ? view.rings : [];
+  const ringCount = rings.length;
+  const outsideZoneId = getThingsInRingsOutsideZoneId(ringCount);
+  const outsideZone = zones.find((zone) => zone.zone_id === outsideZoneId) || null;
+  const shell = document.createElement("div");
+  shell.className = `things-rings-board-shell ring-count-${ringCount}`;
 
-    const title = document.createElement("div");
-    title.className = "things-rings-zone-title";
-    title.textContent = zone.title || zone.zone_id;
-    zoneCard.appendChild(title);
+  const stage = document.createElement("div");
+  stage.className = `things-rings-board-stage ring-count-${ringCount}`;
+  shell.appendChild(stage);
 
-    const subtitle = document.createElement("div");
-    subtitle.className = "things-rings-zone-subtitle";
-    subtitle.textContent = zone.subtitle || "";
-    zoneCard.appendChild(subtitle);
-
-    const bits = document.createElement("div");
-    bits.className = "things-rings-zone-bits";
-    (zone.bits || []).forEach((bit) => {
-      const chip = document.createElement("span");
-      chip.className = `things-rings-bit ${bit.inside ? "inside" : "outside"}`;
-      chip.textContent = `${bit.label}${bit.inside ? "✓" : "✗"}`;
-      bits.appendChild(chip);
-    });
-    zoneCard.appendChild(bits);
-
-    const list = document.createElement("div");
-    list.className = "things-rings-zone-cards";
-    const cards = Array.isArray(zone.cards) ? [...zone.cards] : [];
-    if (view.pending_judgement && view.pending_judgement.proposed_zone_id === zone.zone_id) {
-      cards.push({
-        thing_name: view.pending_judgement.thing_card ? view.pending_judgement.thing_card.name : "?",
-        source: "pending",
-      });
+  const circleLayouts = THINGS_IN_RINGS_CIRCLE_LAYOUTS[ringCount] || [];
+  rings.forEach((ring, index) => {
+    const layout = circleLayouts[index];
+    if (!layout) {
+      return;
     }
-    cards.forEach((card) => {
-      const chip = document.createElement("div");
-      chip.className = "things-rings-zone-card";
-      if (card.source === "clue") {
-        chip.classList.add("clue");
-      }
-      if (card.source === "pending") {
-        chip.classList.add("pending");
-      }
-      chip.textContent = card.thing_name || "?";
-      list.appendChild(chip);
-    });
-    if (!cards.length) {
-      const empty = document.createElement("div");
-      empty.className = "things-rings-zone-empty";
-      empty.textContent = "Empty";
-      list.appendChild(empty);
-    }
-    zoneCard.appendChild(list);
-    thingsInRingsBoard.appendChild(zoneCard);
+    const circle = document.createElement("div");
+    const theme = THINGS_IN_RINGS_RING_THEMES[ring.type] || "generic";
+    circle.className = `things-rings-circle ${theme}`;
+    circle.style.setProperty("--circle-left", `${layout.left}%`);
+    circle.style.setProperty("--circle-top", `${layout.top}%`);
+    circle.style.setProperty("--circle-size", `${layout.size}%`);
+    stage.appendChild(circle);
+
+    const label = document.createElement("div");
+    label.className = `things-rings-circle-label ${theme}`;
+    label.style.setProperty("--circle-label-left", `${layout.labelLeft}%`);
+    label.style.setProperty("--circle-label-top", `${layout.labelTop}%`);
+    label.textContent = ring.label || ring.type || "?";
+    stage.appendChild(label);
   });
+
+  const zoneLayer = document.createElement("div");
+  zoneLayer.className = "things-rings-zone-layer";
+  zones
+    .filter((zone) => zone.zone_id !== outsideZoneId)
+    .forEach((zone) => {
+      const layout = getThingsInRingsZoneLayout(ringCount, zone.zone_id);
+      if (!layout) {
+        return;
+      }
+      zoneLayer.appendChild(createThingsInRingsZoneRegion(zone, view, ringCount, layout));
+    });
+  stage.appendChild(zoneLayer);
+
+  if (outsideZone) {
+    const outsideWrap = document.createElement("div");
+    outsideWrap.className = "things-rings-outside-wrap";
+    outsideWrap.appendChild(
+      createThingsInRingsZoneRegion(outsideZone, view, ringCount, { x: 50, y: 50, w: 100, h: 100 }, {
+        outside: true,
+        previewLimit: THINGS_IN_RINGS_OUTSIDE_PREVIEW_LIMIT[ringCount] || 8,
+      })
+    );
+    shell.appendChild(outsideWrap);
+  }
+
+  thingsInRingsBoard.appendChild(shell);
+
+  if (thingsInRingsExpandedZoneId) {
+    renderThingsInRingsZoneModal(view);
+  }
 }
 
 function resetThingsInRingsDecision(autoMemberships) {
@@ -748,6 +1038,10 @@ if (thingsInRingsExplainModalCloseBtn) {
   thingsInRingsExplainModalCloseBtn.addEventListener("click", closeThingsInRingsExplainModal);
 }
 
+if (thingsInRingsZoneModalCloseBtn) {
+  thingsInRingsZoneModalCloseBtn.addEventListener("click", closeThingsInRingsZoneModal);
+}
+
 document.addEventListener(
   "pointerdown",
   (event) => {
@@ -786,6 +1080,10 @@ document.addEventListener(
 );
 
 document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && thingsInRingsZoneModal && !thingsInRingsZoneModal.classList.contains("hidden")) {
+    closeThingsInRingsZoneModal();
+    return;
+  }
   if (event.key === "Escape" && thingsInRingsExplainMode) {
     exitThingsInRingsExplainMode();
   }

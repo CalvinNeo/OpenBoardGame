@@ -521,9 +521,15 @@ const GAME_WEIGHT = {
   wandering_towers: 1.59,
   yahtzee: 1.17,
   fake_artist: 1.09,
+  forest_shuffle: 2.13,
   manila: 2.04,
   impression_flower: 1.00,
   tagiron: 1.71,
+  citadels: 2.05,
+  forest_shuffle: 2.21,
+  things_in_rings: 1.33,
+  patchwork: 1.60,
+  scout: 1.39,
 };
 
 function getGameWeight(gameId) {

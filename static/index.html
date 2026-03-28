@@ -463,6 +463,28 @@
     </div>
   </section>
 
+  <section id="forestShuffleHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content forest-shuffle-help-modal">
+      <div class="modal-header">
+        <h2>Forest Shuffle - Game Rules</h2>
+        <button id="forestShuffleHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body forest-shuffle-help-content" id="forestShuffleHelpContent"></div>
+    </div>
+  </section>
+
+  <section id="forestShuffleExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content forest-shuffle-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="forestShuffleExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="forestShuffleExplainContent"></div>
+      </div>
+    </div>
+  </section>
+
   <section id="patchworkHelpModal" class="modal hidden" aria-hidden="true">
     <div class="modal-content patchwork-help-modal">
       <div class="modal-header">
@@ -628,6 +650,19 @@
       </div>
       <div class="modal-body">
         <div id="thingsInRingsExplainContent"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="thingsInRingsZoneModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content things-rings-zone-modal">
+      <div class="modal-header">
+        <h2 id="thingsInRingsZoneModalTitle">Zone Contents</h2>
+        <button id="thingsInRingsZoneModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="thingsInRingsZoneModalSubtitle" class="things-rings-zone-modal-subtitle">-</div>
+        <div id="thingsInRingsZoneModalList" class="things-rings-zone-modal-list"></div>
       </div>
     </div>
   </section>
@@ -1179,6 +1214,10 @@
             <div class="panel-header-actions" id="pointSaladHeaderActions" style="display: none;">
               <button id="pointSaladHelpBtn" class="point-salad-header-btn" type="button">Help</button>
               <button id="pointSaladExplainBtn" class="point-salad-header-btn" type="button">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="forestShuffleHeaderActions" style="display: none;">
+              <button id="forestShuffleHelpBtn" class="forest-shuffle-header-btn" type="button">Help</button>
+              <button id="forestShuffleExplainBtn" class="forest-shuffle-header-btn" type="button">Explain</button>
             </div>
             <div class="panel-header-actions" id="patchworkHeaderActions" style="display: none;">
               <button id="patchworkHelpBtn" class="patchwork-header-btn" type="button">Help</button>
@@ -3116,6 +3155,46 @@
               <div id="pointSaladPlayers"></div>
             </div>
 
+            <div id="forestShufflePanel" class="hidden forest-shuffle-panel">
+              <div class="row">
+                <div>Current Turn: <span id="forestShuffleTurn">-</span></div>
+                <div>Winter: <span id="forestShuffleWinter">-</span></div>
+                <div>Deck: <span id="forestShuffleDeck">-</span></div>
+                <div>Winner: <span id="forestShuffleWinner">-</span></div>
+              </div>
+              <div id="forestShuffleStatus" class="forest-shuffle-status" data-forest-shuffle-explain="status">-</div>
+              <div id="forestShuffleNotes" class="forest-shuffle-notes"></div>
+
+              <div class="forest-shuffle-layout">
+                <section class="forest-shuffle-shell" data-forest-shuffle-explain="action">
+                  <div class="forest-shuffle-section-title">Action Console</div>
+                  <div id="forestShuffleActionHint" class="hint">-</div>
+                  <div id="forestShuffleDrawSources" class="forest-shuffle-draw-sources"></div>
+                  <div class="row actions forest-shuffle-action-row">
+                    <button id="forestShuffleDrawBtn" type="button">Draw Selected</button>
+                    <button id="forestShuffleFinishPendingBtn" type="button">Finish Pending</button>
+                    <button id="forestShuffleResolveRaccoonBtn" type="button">Confirm Cave</button>
+                  </div>
+                  <div id="forestShuffleSelectionSummary" class="forest-shuffle-selection-summary">-</div>
+                  <div class="row actions forest-shuffle-action-row">
+                    <button id="forestShufflePlayBtn" type="button">Play Selected</button>
+                    <button id="forestShuffleSaplingBtn" type="button">Play As Sapling</button>
+                  </div>
+                </section>
+
+                <section class="forest-shuffle-shell" data-forest-shuffle-explain="clearing">
+                  <div class="forest-shuffle-section-title">Clearing</div>
+                  <div id="forestShuffleClearing" class="forest-shuffle-card-grid"></div>
+                </section>
+              </div>
+
+              <h3>Your Hand</h3>
+              <div id="forestShuffleHand" class="forest-shuffle-card-grid" data-forest-shuffle-explain="hand"></div>
+
+              <h3>Players</h3>
+              <div id="forestShufflePlayers" class="forest-shuffle-player-grid" data-forest-shuffle-explain="players"></div>
+            </div>
+
             <div id="trekkingPanel" class="hidden trekking-panel">
               <div class="row">
                 <div>Day: <span id="trekkingDay">-</span></div>
@@ -3618,6 +3697,7 @@
   <script src="/static/games/gang.js?v=app_v1"></script>
   <script src="/static/games/cat_in_box.js?v=app_v1"></script>
   <script src="/static/games/point_salad.js?v=app_v1"></script>
+  <script src="/static/games/forest_shuffle.js?v=app_v1"></script>
   <script src="/static/games/patchwork.js?v=app_v1"></script>
   <script src="/static/games/six_nimmt.js?v=app_v1"></script>
   <script src="/static/games/skull.js?v=app_v1"></script>

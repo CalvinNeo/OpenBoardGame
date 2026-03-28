@@ -1,8 +1,11 @@
 import json
 import random
+import re
 import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+
+from pypinyin import Style, lazy_pinyin
 
 DEFAULT_CONFIG = {
     "ring_count": 3,
@@ -21,9 +24,9 @@ RING_TYPE_LABELS = {
 
 _THING_CACHE: Optional[List[Dict[str, str]]] = None
 _RULE_CACHE: Optional[Dict[str, List[Dict[str, object]]]] = None
-_LAST_CHAR_META_CACHE: Optional[Dict[str, Dict[str, object]]] = None
+_CHAR_META_CACHE: Optional[Dict[str, Dict[str, object]]] = None
 
-ALLOWED_LAST_CHAR_STRUCTURES = {
+ALLOWED_CHAR_STRUCTURES = {
     "left_right",
     "up_down",
     "single",
@@ -95,27 +98,44 @@ def _load_rules() -> Dict[str, List[Dict[str, object]]]:
     return {key: [dict(entry) for entry in value] for key, value in rules.items()}
 
 
-def _load_last_char_meta() -> Dict[str, Dict[str, object]]:
-    global _LAST_CHAR_META_CACHE
-    if _LAST_CHAR_META_CACHE is not None:
-        return {key: dict(value) for key, value in _LAST_CHAR_META_CACHE.items()}
-    raw = json.loads(_asset_path("things_in_rings_last_char_meta.json").read_text(encoding="utf-8"))
+def _load_char_meta() -> Dict[str, Dict[str, object]]:
+    global _CHAR_META_CACHE
+    if _CHAR_META_CACHE is not None:
+        return {key: dict(value) for key, value in _CHAR_META_CACHE.items()}
+    raw = json.loads(_asset_path("things_in_rings_char_meta.json").read_text(encoding="utf-8"))
     meta: Dict[str, Dict[str, object]] = {}
     for char, entry in raw.items():
         if not isinstance(char, str) or len(char) != 1 or not isinstance(entry, dict):
             continue
-        tone = entry.get("tone")
         structure = entry.get("structure")
         radical = entry.get("radical")
-        if tone not in (1, 2, 3, 4):
+        if structure not in ALLOWED_CHAR_STRUCTURES:
             continue
-        if structure not in ALLOWED_LAST_CHAR_STRUCTURES:
-            continue
-        meta[char] = {"tone": tone, "structure": structure}
+        meta[char] = {"structure": structure}
         if isinstance(radical, str) and radical:
             meta[char]["radical"] = radical
-    _LAST_CHAR_META_CACHE = meta
+    _CHAR_META_CACHE = meta
     return {key: dict(value) for key, value in meta.items()}
+
+
+def _tone_number_for_char(name: str, char_index: int) -> Optional[int]:
+    if not name or char_index >= len(name) or char_index < -len(name):
+        return None
+
+    syllables = lazy_pinyin(
+        name,
+        style=Style.TONE3,
+        neutral_tone_with_five=True,
+        strict=False,
+        errors="default",
+    )
+    if len(syllables) != len(name):
+        return None
+
+    match = re.search(r"([1-5])$", syllables[char_index])
+    if not match:
+        return None
+    return int(match.group(1))
 
 
 def _merge_config(config: Optional[Dict]) -> Dict:
@@ -205,19 +225,18 @@ def _word_membership(rule: Dict[str, object], thing_card: Dict[str, str]) -> boo
             seen.add(char)
         return False
     if kind == "last_char_tone_is":
-        meta = _load_last_char_meta().get(last_char)
-        return bool(meta) and meta.get("tone") == int(evaluator.get("value") or 0)
+        return _tone_number_for_char(name, -1) == int(evaluator.get("value") or 0)
     if kind == "last_char_structure_is":
-        meta = _load_last_char_meta().get(last_char)
+        meta = _load_char_meta().get(last_char)
         return bool(meta) and meta.get("structure") == str(evaluator.get("value") or "")
     if kind == "last_char_radical_is":
-        meta = _load_last_char_meta().get(last_char)
+        meta = _load_char_meta().get(last_char)
         return bool(meta) and meta.get("radical") == str(evaluator.get("value") or "")
     if kind == "first_char_structure_is":
-        meta = _load_last_char_meta().get(first_char)
+        meta = _load_char_meta().get(first_char)
         return bool(meta) and meta.get("structure") == str(evaluator.get("value") or "")
     if kind == "first_char_radical_is":
-        meta = _load_last_char_meta().get(first_char)
+        meta = _load_char_meta().get(first_char)
         return bool(meta) and meta.get("radical") == str(evaluator.get("value") or "")
     return False
 
