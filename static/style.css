@@ -11481,6 +11481,107 @@ body.patchwork-explain-mode [data-patchwork-explain].has-explanation {
   margin-top: 6px;
 }
 
+@media (max-width: 1520px) and (min-width: 1261px) {
+  .patchwork-ring-middle {
+    grid-template-columns: minmax(78px, 88px) minmax(0, 1fr) minmax(78px, 88px);
+    gap: 4px;
+  }
+
+  .patchwork-layout {
+    grid-template-columns: minmax(330px, 1fr) minmax(330px, 0.98fr);
+    gap: 8px 10px;
+  }
+
+  .patchwork-support-row {
+    grid-template-columns: minmax(210px, 0.72fr) minmax(250px, 0.92fr);
+    gap: 10px;
+  }
+
+  .patchwork-track-card,
+  .patchwork-board-shell,
+  .patchwork-preview,
+  .patchwork-player-card {
+    border-radius: 12px;
+  }
+
+  .patchwork-track-card,
+  .patchwork-board-shell,
+  .patchwork-preview {
+    padding: 8px;
+  }
+
+  .patchwork-market-card {
+    width: 74px;
+    padding: 7px 5px 5px;
+    gap: 4px;
+  }
+
+  .patchwork-market-image {
+    height: 42px;
+    padding: 3px;
+  }
+
+  .patchwork-market-meta,
+  .patchwork-market-label {
+    font-size: 9px;
+  }
+
+  .patchwork-board {
+    --patchwork-cell: 29px;
+    gap: 2px;
+    padding: 5px;
+  }
+
+  .patchwork-track-chip {
+    width: 24px;
+    height: 24px;
+    font-size: 11px;
+  }
+
+  .patchwork-track-chip::after {
+    top: 27px;
+    font-size: 9px;
+  }
+
+  .patchwork-preview-image {
+    min-height: 112px;
+  }
+
+  .patchwork-preview-shape {
+    --patchwork-preview-cell: 24px;
+  }
+
+  .patchwork-player-card {
+    padding: 8px 9px;
+  }
+}
+
+@media (max-width: 1380px) and (min-width: 1261px) {
+  .patchwork-ring-middle {
+    grid-template-columns: minmax(72px, 80px) minmax(0, 1fr) minmax(72px, 80px);
+  }
+
+  .patchwork-layout {
+    grid-template-columns: minmax(300px, 1fr) minmax(300px, 0.96fr);
+  }
+
+  .patchwork-market-card {
+    width: 68px;
+  }
+
+  .patchwork-market-image {
+    height: 38px;
+  }
+
+  .patchwork-board {
+    --patchwork-cell: 27px;
+  }
+
+  .patchwork-preview-image {
+    min-height: 104px;
+  }
+}
+
 @media (max-width: 1260px) {
   .patchwork-ring-bottom {
     margin-top: 0;
