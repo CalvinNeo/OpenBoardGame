@@ -7,6 +7,7 @@ from game.blitz_sketch import BlitzSketchGame
 from game.carcassonne import CarcassonneGame
 from game.cabo import CaboGame
 from game.cat_in_box import CatInBoxGame
+from game.citadels import CitadelsGame
 from game.coyote import CoyoteGame
 from game.cyber_pictures import CyberPicturesGame
 from game.decrypto import DecryptoGame
@@ -26,6 +27,7 @@ from game.patchwork import PatchworkGame
 from game.perfect_mismatch import PerfectMismatchGame
 from game.point_salad import PointSaladGame
 from game.project_l import ProjectLGame
+from game.scout import ScoutGame
 from game.registry import GameDefinition, get_game, list_games
 from game.six_nimmt import SixNimmtGame
 from game.splendor import SplendorGame
@@ -34,6 +36,7 @@ from game.skull import SkullGame
 from game.the_gang import TheGangGame
 from game.texas_holdem import TexasHoldemGame
 from game.tagiron import TagironGame
+from game.things_in_rings import ThingsInRingsGame
 from game.turing_machine import TuringMachineGame
 from game.trekking_history import TrekkingHistoryGame
 from game.word_decode import WordDecodeGame
@@ -51,6 +54,7 @@ __all__ = [
     "CarcassonneGame",
     "CaboGame",
     "CatInBoxGame",
+    "CitadelsGame",
     "DrawGuessGame",
     "FangNiaoGame",
     "FakeArtistGame",
@@ -70,6 +74,7 @@ __all__ = [
     "PerfectMismatchGame",
     "PointSaladGame",
     "ProjectLGame",
+    "ScoutGame",
     "SixNimmtGame",
     "SplendorGame",
     "PokemonSplendorGame",
@@ -77,6 +82,7 @@ __all__ = [
     "TheGangGame",
     "TexasHoldemGame",
     "TagironGame",
+    "ThingsInRingsGame",
     "TuringMachineGame",
     "TrekkingHistoryGame",
     "WordDecodeGame",

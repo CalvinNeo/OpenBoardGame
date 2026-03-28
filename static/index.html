@@ -610,6 +610,28 @@
     </div>
   </section>
 
+  <section id="thingsInRingsHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content things-rings-help-modal">
+      <div class="modal-header">
+        <h2>Things in Rings - Game Rules</h2>
+        <button id="thingsInRingsHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body things-rings-help-content" id="thingsInRingsHelpContent"></div>
+    </div>
+  </section>
+
+  <section id="thingsInRingsExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content things-rings-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="thingsInRingsExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="thingsInRingsExplainContent"></div>
+      </div>
+    </div>
+  </section>
+
   <section id="gangHelpModal" class="modal hidden" aria-hidden="true">
     <div class="modal-content gang-help-modal">
       <div class="modal-header">
@@ -682,6 +704,46 @@
     </div>
   </section>
 
+  <section id="citadelsHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content citadels-help-modal">
+      <div class="modal-header">
+        <h2>Citadels - Game Rules</h2>
+        <button id="citadelsHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body" id="citadelsHelpContent"></div>
+    </div>
+  </section>
+
+  <section id="citadelsExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content citadels-explain-modal">
+      <div class="modal-header">
+        <h2>Citadels - Button Explanation</h2>
+        <button id="citadelsExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body" id="citadelsExplainContent"></div>
+    </div>
+  </section>
+
+  <section id="scoutHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content scout-help-modal">
+      <div class="modal-header">
+        <h2>Scout - Rules</h2>
+        <button id="scoutHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body scout-help-content" id="scoutHelpContent"></div>
+    </div>
+  </section>
+
+  <section id="scoutExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content scout-explain-modal">
+      <div class="modal-header">
+        <h2>Scout - Explanation</h2>
+        <button id="scoutExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body" id="scoutExplainContent"></div>
+    </div>
+  </section>
+
   <div class="container">
     <h1>OpenBoardGame</h1>
 
@@ -719,9 +781,11 @@
                     <option value="gold_rush">Gold Rush</option>
                     <option value="incan_gold">Incan Gold</option>
                     <option value="kobayakawa">Kobayakawa</option>
+                    <option value="scout">Scout</option>
                     <option value="texas_holdem">Texas Hold'em</option>
                     <option value="halli_galli">Halli Galli</option>
                     <option value="coyote">Coyote</option>
+                    <option value="citadels">Citadels</option>
                     <option value="six_nimmt">6 nimmt!</option>
                     <option value="decrypto">Decrypto</option>
                     <option value="skull">Skull</option>
@@ -732,6 +796,7 @@
                     <option value="blitz_sketch">Blitz Sketch</option>
                     <option value="cyber_pictures">Cyber Pictures</option>
                     <option value="perfect_mismatch">Perfect Mismatch</option>
+                    <option value="things_in_rings">Things in Rings</option>
                     <option value="turing_machine">Turing Machine</option>
                     <option value="aidixit">AI Dixit</option>
                     <option value="impression_flower">Impression Flower</option>
@@ -834,6 +899,41 @@
                       </select>
                     </div>
                   </div>
+                  <div class="game-config-card hidden" id="thingsInRingsConfigBox" aria-hidden="true">
+                    <div class="game-config-title">Things in Rings</div>
+                    <div class="row hidden" id="thingsInRingsRingCountRow">
+                      <label for="thingsInRingsRingCountSelect">Ring Count</label>
+                      <select id="thingsInRingsRingCountSelect">
+                        <option value="1">1</option>
+                        <option value="2" selected>2</option>
+                        <option value="3">3</option>
+                      </select>
+                    </div>
+                    <div class="row hidden" id="thingsInRingsRingType1Row">
+                      <label for="thingsInRingsRingType1Select">Ring 1</label>
+                      <select id="thingsInRingsRingType1Select">
+                        <option value="word" selected>Word</option>
+                        <option value="attribute">Attribute</option>
+                        <option value="context">Context</option>
+                      </select>
+                    </div>
+                    <div class="row hidden" id="thingsInRingsRingType2Row">
+                      <label for="thingsInRingsRingType2Select">Ring 2</label>
+                      <select id="thingsInRingsRingType2Select">
+                        <option value="word">Word</option>
+                        <option value="attribute" selected>Attribute</option>
+                        <option value="context">Context</option>
+                      </select>
+                    </div>
+                    <div class="row hidden" id="thingsInRingsRingType3Row">
+                      <label for="thingsInRingsRingType3Select">Ring 3</label>
+                      <select id="thingsInRingsRingType3Select">
+                        <option value="word">Word</option>
+                        <option value="attribute">Attribute</option>
+                        <option value="context" selected>Context</option>
+                      </select>
+                    </div>
+                  </div>
                   <div class="game-config-card hidden" id="cyberPicturesConfigBox" aria-hidden="true">
                     <div class="game-config-title">Cyber Pictures</div>
                     <div class="row hidden toggle-row" id="cyberPicturesDuplicateRow">
@@ -889,6 +989,16 @@
                       <select id="goldRushModeSelect">
                         <option value="hand" selected>Hand</option>
                         <option value="classic">Classic</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="game-config-card hidden" id="citadelsConfigBox" aria-hidden="true">
+                    <div class="game-config-title">Citadels</div>
+                    <div class="row">
+                      <label for="citadelsWinningCitySizeSelect">Winning City Size</label>
+                      <select id="citadelsWinningCitySizeSelect">
+                        <option value="8" selected>8</option>
+                        <option value="7">7</option>
                       </select>
                     </div>
                   </div>
@@ -1050,6 +1160,10 @@
               <button id="wanderingTowersHelpBtn" class="wandering-header-btn" type="button">Help</button>
               <button id="wanderingTowersExplainBtn" class="wandering-header-btn" type="button">Explain</button>
             </div>
+            <div class="panel-header-actions" id="scoutHeaderActions" style="display: none;">
+              <button id="scoutHelpBtn" class="scout-header-btn" type="button">Help</button>
+              <button id="scoutExplainBtn" class="scout-header-btn" type="button">Explain</button>
+            </div>
             <div class="panel-header-actions" id="catInBoxHeaderActions" style="display: none;">
               <button id="catInBoxHelpBtn" class="cat-box-header-btn" type="button">Help</button>
               <button id="catInBoxExplainBtn" class="cat-box-header-btn" type="button">Explain</button>
@@ -1089,6 +1203,10 @@
             <div class="panel-header-actions" id="fakeArtistHeaderActions" style="display: none;">
               <button id="fakeArtistHelpBtn" class="fake-artist-header-btn" type="button">Help</button>
               <button id="fakeArtistExplainBtn" class="fake-artist-header-btn" type="button">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="thingsInRingsHeaderActions" style="display: none;">
+              <button id="thingsInRingsHelpBtn" class="things-rings-header-btn" type="button">Help</button>
+              <button id="thingsInRingsExplainBtn" class="things-rings-header-btn" type="button">Explain</button>
             </div>
             <div class="panel-header-actions" id="gangHeaderActions" style="display: none;">
               <button id="gangHelpBtn" class="gang-header-btn" type="button">Help</button>
@@ -1456,6 +1574,55 @@
 
               <h3>Players</h3>
               <div id="kobayakawaPlayers"></div>
+            </div>
+
+            <div id="scoutPanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="scoutPhase">-</span></div>
+                <div>Round: <span id="scoutRound">-</span></div>
+                <div>Current Turn: <span id="scoutTurn">-</span></div>
+              </div>
+              <div class="row">
+                <div>Start Player: <span id="scoutStartPlayer">-</span></div>
+                <div>Active Owner: <span id="scoutActiveOwner">-</span></div>
+                <div>Winner: <span id="scoutWinner">-</span></div>
+              </div>
+              <div class="row">
+                <div>Variant: <span id="scoutVariant">-</span></div>
+                <div>Center Scout: <span id="scoutCenterTokens">-</span></div>
+                <div>Selection: <span id="scoutSelectionLabel">-</span></div>
+              </div>
+
+              <div id="scoutRoundNotice" class="round-notice hidden" aria-hidden="true">
+                <div id="scoutRoundNoticeTitle" class="round-notice-title">Last Round</div>
+                <div id="scoutRoundNoticeBody" class="round-notice-body">-</div>
+                <div id="scoutRoundNoticeList" class="scout-summary-list"></div>
+              </div>
+
+              <h3>Opening Choice 🎪</h3>
+              <div id="scoutOpening" class="scout-opening"></div>
+
+              <h3>Active Set 🎭</h3>
+              <div id="scoutActiveSet" class="scout-active-set" data-scout-explain="activeSet"></div>
+
+              <div class="row actions scout-actions">
+                <button id="scoutReadyKeepBtn" type="button" data-scout-explain="readyKeepBtn">Keep Order</button>
+                <button id="scoutReadyFlipBtn" type="button" data-scout-explain="readyFlipBtn">Flip Whole Hand</button>
+                <button id="scoutToggleFaceBtn" type="button" data-scout-explain="toggleFaceBtn">Insert Face A</button>
+                <button id="scoutShowBtn" type="button" data-scout-explain="showBtn">Show Selected</button>
+                <button id="scoutScoutBtn" type="button" data-scout-explain="scoutBtn">Scout</button>
+                <button id="scoutScoutShowBtn" type="button" data-scout-explain="scoutShowBtn">Scout + Show</button>
+              </div>
+              <div id="scoutHint" class="hint">Pick your opening hand orientation, then start the show.</div>
+
+              <h3>Your Hand 🎴</h3>
+              <div id="scoutHand" class="scout-hand-shell" data-scout-explain="yourHand"></div>
+
+              <h3>After Scout Preview 🪄</h3>
+              <div id="scoutPreviewArea" class="scout-preview-area" data-scout-explain="previewHand"></div>
+
+              <h3>Players 👥</h3>
+              <div id="scoutPlayers" class="scout-players" data-scout-explain="players"></div>
             </div>
 
             <div id="manilaPanel" class="hidden manila-panel">
@@ -1840,6 +2007,53 @@
 
               <div class="row actions coyote-actions">
                 <button id="coyoteResetBtn">Reset Game</button>
+              </div>
+            </div>
+
+            <div id="citadelsPanel" class="hidden">
+              <div class="panel-header">
+                <h3>Citadels</h3>
+                <div id="citadelsHeaderActions" class="panel-header-actions">
+                  <button id="citadelsHelpBtn" type="button">Help</button>
+                  <button id="citadelsExplainBtn" type="button">Explain</button>
+                </div>
+              </div>
+              <div class="row">
+                <div>Phase: <span id="citadelsPhase">-</span></div>
+                <div>Round: <span id="citadelsRound">-</span></div>
+                <div>Mode: <span id="citadelsMode">-</span></div>
+                <div>Crown: <span id="citadelsCrownHolder">-</span></div>
+              </div>
+              <div class="row">
+                <div>Current Player: <span id="citadelsCurrentPlayer">-</span></div>
+                <div>Role: <span id="citadelsCurrentRole">-</span></div>
+                <div>Winning City Size: <span id="citadelsWinningCitySize">-</span></div>
+              </div>
+
+              <div id="citadelsBanner" class="round-notice">
+                <div class="round-notice-title">Status</div>
+                <div id="citadelsBannerBody" class="round-notice-body">-</div>
+              </div>
+
+              <div class="citadels-layout">
+                <div class="citadels-column">
+                  <h3>Your Roles</h3>
+                  <div id="citadelsYourRoles" class="citadels-role-list"></div>
+
+                  <h3>Draft / Turn Actions</h3>
+                  <div id="citadelsActions" class="citadels-actions"></div>
+
+                  <h3>Your Hand</h3>
+                  <div id="citadelsHand" class="citadels-card-grid"></div>
+
+                  <h3>Recent Log</h3>
+                  <div id="citadelsLog" class="citadels-log"></div>
+                </div>
+
+                <div class="citadels-column">
+                  <h3>Players</h3>
+                  <div id="citadelsPlayers"></div>
+                </div>
               </div>
             </div>
 
@@ -2439,6 +2653,62 @@
 
               <h3>Players</h3>
               <div id="fakeArtistPlayers"></div>
+            </div>
+
+            <div id="thingsInRingsPanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="thingsInRingsPhase">-</span></div>
+                <div>Current Turn: <span id="thingsInRingsTurn">-</span></div>
+                <div>Knower: <span id="thingsInRingsKnower">-</span></div>
+                <div>Deck: <span id="thingsInRingsDeck">-</span></div>
+              </div>
+              <div class="row">
+                <div>Your Role: <span id="thingsInRingsRole">-</span></div>
+                <div>Clues Left: <span id="thingsInRingsCluesLeft">-</span></div>
+                <div>Winner: <span id="thingsInRingsWinner">-</span></div>
+              </div>
+
+              <div id="thingsInRingsStatus" class="decrypto-status waiting" role="status" aria-live="polite">
+                <div class="decrypto-status-title">Your Next Step</div>
+                <div id="thingsInRingsStatusBody" class="decrypto-status-body">-</div>
+              </div>
+
+              <h3>Rings</h3>
+              <div id="thingsInRingsRingSummary" class="things-rings-ring-summary"></div>
+
+              <div id="thingsInRingsPlayArea">
+                <h3>Your Hand</h3>
+                <div id="thingsInRingsHand" class="things-rings-hand"></div>
+                <div class="row actions">
+                  <button id="thingsInRingsPlaceBtn" type="button">Place Selected Card</button>
+                </div>
+              </div>
+
+              <div id="thingsInRingsKnowerArea" class="hidden">
+                <h3 id="thingsInRingsKnowerTitle">Knower Panel</h3>
+                <div id="thingsInRingsKnowerPrompt" class="hint"></div>
+                <div id="thingsInRingsKnowerCards" class="things-rings-hand"></div>
+                <div id="thingsInRingsDecisionCard" class="things-rings-decision-card hidden" aria-hidden="true"></div>
+                <div id="thingsInRingsDecisionRings" class="things-rings-decision-grid"></div>
+                <div class="row actions">
+                  <button id="thingsInRingsJudgeConfirmBtn" type="button">Confirm Placement</button>
+                </div>
+              </div>
+
+              <h3>Board</h3>
+              <div id="thingsInRingsBoard" class="things-rings-board"></div>
+
+              <div id="thingsInRingsLastResolution" class="round-notice hidden" aria-hidden="true">
+                <div class="round-notice-title">Last Placement</div>
+                <div id="thingsInRingsLastResolutionBody" class="round-notice-body">-</div>
+              </div>
+
+              <h3>Players</h3>
+              <div id="thingsInRingsPlayers"></div>
+
+              <div class="row actions">
+                <button id="thingsInRingsPlayAgainBtn" type="button">Play Again</button>
+              </div>
             </div>
 
             <div id="cyberPicturesPanel" class="hidden">
@@ -3336,6 +3606,7 @@
   <script src="/static/games/cyber_pictures.js?v=app_v1"></script>
   <script src="/static/games/blitz_sketch.js?v=app_v1"></script>
   <script src="/static/games/fake_artist.js?v=app_v1"></script>
+  <script src="/static/games/things_in_rings.js?v=app_v1"></script>
   <script src="/static/games/impression_flower.js?v=app_v1"></script>
   <script src="/static/games/splendor.js?v=app_v1"></script>
   <script src="/static/games/splendor_pokemon.js?v=app_v1"></script>
@@ -3357,6 +3628,7 @@
   <script src="/static/games/fang_niao.js?v=app_v1"></script>
   <script src="/static/games/perfect_mismatch.js?v=app_v1"></script>
   <script src="/static/games/coyote.js?v=app_v1"></script>
+  <script src="/static/games/citadels.js?v=app_v1"></script>
   <script src="/static/games/tagiron.js?v=app_v1"></script>
   <script src="/static/games/turing_machine.js?v=app_v1"></script>
   <script src="/static/games/halli_galli.js?v=app_v1"></script>
@@ -3369,6 +3641,7 @@
   <script src="/static/games/incan_gold.js?v=app_v1"></script>
   <script src="/static/games/manila.js?v=app_v1"></script>
   <script src="/static/games/kobayakawa.js?v=app_v1"></script>
+  <script src="/static/games/scout.js?v=app_v1"></script>
   <script src="/static/app.js?v=app_v1"></script>
   <script src="/static/room.js?v=app_v1"></script>
 </body>

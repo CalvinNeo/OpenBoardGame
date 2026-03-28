@@ -4,6 +4,7 @@ from game.age_of_war import AgeOfWarGame
 from game.azul import AzulGame
 from game.cabo import CaboGame
 from game.cat_in_box import CatInBoxGame
+from game.citadels import CitadelsGame
 from game.coyote import CoyoteGame
 from game.cyber_pictures import CyberPicturesGame
 from game.decrypto import DecryptoGame
@@ -23,8 +24,10 @@ from game.patchwork import PatchworkGame
 from game.perfect_mismatch import PerfectMismatchGame
 from game.point_salad import PointSaladGame
 from game.project_l import ProjectLGame
+from game.scout import ScoutGame
 from game.six_nimmt import SixNimmtGame
 from game.the_gang import TheGangGame
+from game.things_in_rings import ThingsInRingsGame
 from game.yahtzee import YahtzeeGame
 from game.registry import GameDefinition, register_game
 from game.splendor import SplendorGame
@@ -566,6 +569,72 @@ FAKE_ARTIST_CONFIG_SCHEMA = {
     "properties": {
         "rounds": {"type": "integer", "minimum": 1},
         "turn_time_sec": {"type": "number", "minimum": 1},
+    },
+    "additionalProperties": False,
+}
+
+THINGS_IN_RINGS_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "submit_seed_clue"},
+                "hand_index": {"type": "integer", "minimum": 0},
+                "memberships": {
+                    "type": "array",
+                    "items": {"type": "boolean"},
+                    "minItems": 1,
+                    "maxItems": 3,
+                },
+            },
+            "required": ["type", "hand_index", "memberships"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "submit_play"},
+                "hand_index": {"type": "integer", "minimum": 0},
+                "zone_id": {"type": "string", "pattern": "^[01]{1,3}$"},
+            },
+            "required": ["type", "hand_index", "zone_id"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "judge_play"},
+                "memberships": {
+                    "type": "array",
+                    "items": {"type": "boolean"},
+                    "minItems": 1,
+                    "maxItems": 3,
+                },
+            },
+            "required": ["type", "memberships"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "play_again"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+THINGS_IN_RINGS_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "ring_count": {"type": "integer", "minimum": 1, "maximum": 3},
+        "ring_types": {
+            "type": "array",
+            "items": {"type": "string", "enum": ["word", "attribute", "context"]},
+            "minItems": 1,
+            "maxItems": 3,
+            "uniqueItems": True,
+        },
     },
     "additionalProperties": False,
 }
@@ -1886,6 +1955,166 @@ MANILA_CONFIG_SCHEMA = {
     "additionalProperties": False,
 }
 
+SCOUT_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "ready_hand"},
+                "flip": {"type": "boolean"},
+            },
+            "required": ["type", "flip"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "show"},
+                "start_index": {"type": "integer", "minimum": 0},
+                "end_index": {"type": "integer", "minimum": 0},
+            },
+            "required": ["type", "start_index", "end_index"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "scout"},
+                "take_side": {"type": "string", "enum": ["left", "right"]},
+                "insert_index": {"type": "integer", "minimum": 0},
+                "insert_face": {"type": "string", "enum": ["a", "b"]},
+            },
+            "required": ["type", "take_side", "insert_index", "insert_face"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "scout_and_show"},
+                "take_side": {"type": "string", "enum": ["left", "right"]},
+                "insert_index": {"type": "integer", "minimum": 0},
+                "insert_face": {"type": "string", "enum": ["a", "b"]},
+                "show_start_index": {"type": "integer", "minimum": 0},
+                "show_end_index": {"type": "integer", "minimum": 0},
+            },
+            "required": ["type", "take_side", "insert_index", "insert_face", "show_start_index", "show_end_index"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+SCOUT_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "seed": {"type": ["string", "integer", "number"]},
+    },
+    "additionalProperties": False,
+}
+
+CITADELS_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "draft_character"},
+                "rank": {"type": "integer", "minimum": 1, "maximum": 9},
+            },
+            "required": ["type", "rank"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "choose_income"},
+                "choice": {"type": "string", "enum": ["gold", "cards"]},
+            },
+            "required": ["type", "choice"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "choose_draw"},
+                "card_id": {"type": "string", "minLength": 1},
+            },
+            "required": ["type", "card_id"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "collect_tax"}}, "required": ["type"], "additionalProperties": False},
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "use_assassin"},
+                "target_rank": {"type": "integer", "minimum": 2, "maximum": 9},
+            },
+            "required": ["type", "target_rank"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "use_thief"},
+                "target_rank": {"type": "integer", "minimum": 3, "maximum": 9},
+            },
+            "required": ["type", "target_rank"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "magician_swap"},
+                "target_player_id": {"type": "string", "minLength": 1},
+            },
+            "required": ["type", "target_player_id"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "magician_redraw"},
+                "card_ids": {
+                    "type": "array",
+                    "items": {"type": "string", "minLength": 1},
+                    "minItems": 1,
+                    "uniqueItems": True,
+                },
+            },
+            "required": ["type", "card_ids"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "build"},
+                "card_id": {"type": "string", "minLength": 1},
+            },
+            "required": ["type", "card_id"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "destroy_district"},
+                "target_player_id": {"type": "string", "minLength": 1},
+                "district_id": {"type": "string", "minLength": 1},
+            },
+            "required": ["type", "target_player_id", "district_id"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "end_turn"}}, "required": ["type"], "additionalProperties": False},
+    ],
+}
+
+CITADELS_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "winning_city_size": {"type": "integer", "enum": [7, 8]},
+    },
+    "additionalProperties": False,
+}
+
 register_game(
     GameDefinition(
         game_id=CaboGame.game_id,
@@ -2113,6 +2342,21 @@ register_game(
 
 register_game(
     GameDefinition(
+        game_id=ThingsInRingsGame.game_id,
+        name="Things in Rings",
+        min_players=ThingsInRingsGame.min_players,
+        max_players=ThingsInRingsGame.max_players,
+        turn_mode="turn",
+        action_schema=THINGS_IN_RINGS_ACTION_SCHEMA,
+        config_schema=THINGS_IN_RINGS_CONFIG_SCHEMA,
+        module=ThingsInRingsGame,
+        serialize=ThingsInRingsGame.serialize,
+        deserialize=ThingsInRingsGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
         game_id=CyberPicturesGame.game_id,
         name="Cyber Pictures",
         min_players=CyberPicturesGame.min_players,
@@ -2323,6 +2567,21 @@ register_game(
 
 register_game(
     GameDefinition(
+        game_id=ScoutGame.game_id,
+        name="Scout",
+        min_players=ScoutGame.min_players,
+        max_players=ScoutGame.max_players,
+        turn_mode="turn",
+        action_schema=SCOUT_ACTION_SCHEMA,
+        config_schema=SCOUT_CONFIG_SCHEMA,
+        module=ScoutGame,
+        serialize=ScoutGame.serialize,
+        deserialize=ScoutGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
         game_id=HalliGalliGame.game_id,
         name="Halli Galli",
         min_players=HalliGalliGame.min_players,
@@ -2482,5 +2741,20 @@ register_game(
         module=ManilaGame,
         serialize=ManilaGame.serialize,
         deserialize=ManilaGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=CitadelsGame.game_id,
+        name="Citadels",
+        min_players=CitadelsGame.min_players,
+        max_players=CitadelsGame.max_players,
+        turn_mode="turn",
+        action_schema=CITADELS_ACTION_SCHEMA,
+        config_schema=CITADELS_CONFIG_SCHEMA,
+        module=CitadelsGame,
+        serialize=CitadelsGame.serialize,
+        deserialize=CitadelsGame.deserialize,
     )
 )

@@ -77,6 +77,10 @@ function emitRoomStart() {
   } else if (currentGameType === "gold_rush") {
     const mode = goldRushModeSelect ? goldRushModeSelect.value || "hand" : "hand";
     payload.config = { mode };
+  } else if (currentGameType === "citadels") {
+    const rawSize = citadelsWinningCitySizeSelect ? Number.parseInt(citadelsWinningCitySizeSelect.value, 10) : NaN;
+    const winningCitySize = rawSize === 7 ? 7 : 8;
+    payload.config = { winning_city_size: winningCitySize };
   } else if (currentGameType === "hanabi") {
     const finalRoundCountdown = hanabiFinalRoundToggle ? hanabiFinalRoundToggle.checked : false;
     payload.config = { final_round_countdown: finalRoundCountdown };
@@ -114,6 +118,21 @@ function emitRoomStart() {
     const rawTime = fakeArtistTurnTimeSelect ? Number.parseInt(fakeArtistTurnTimeSelect.value, 10) : NaN;
     const turnTime = Number.isInteger(rawTime) && rawTime > 0 ? rawTime : 8;
     payload.config = { rounds, turn_time_sec: turnTime };
+  } else if (currentGameType === "things_in_rings") {
+    const rawCount = thingsInRingsRingCountSelect ? Number.parseInt(thingsInRingsRingCountSelect.value, 10) : NaN;
+    const ringCount = Number.isInteger(rawCount) && rawCount >= 1 && rawCount <= 3 ? rawCount : 2;
+    const selects = [thingsInRingsRingType1Select, thingsInRingsRingType2Select, thingsInRingsRingType3Select];
+    const ringTypes = selects.slice(0, ringCount).map((select, index) => {
+      if (!select || !select.value) {
+        return index === 0 ? "word" : index === 1 ? "attribute" : "context";
+      }
+      return select.value;
+    });
+    if (new Set(ringTypes).size !== ringTypes.length) {
+      log("Ring types must be unique");
+      return;
+    }
+    payload.config = { ring_count: ringCount, ring_types: ringTypes };
   } else if (currentGameType === "turing_machine") {
     const mode = turingMachineModeSelect ? turingMachineModeSelect.value || "simple" : "simple";
     const scenarioSource = turingMachineSourceSelect ? turingMachineSourceSelect.value || "preset" : "preset";
@@ -155,6 +174,9 @@ function renderRoomState(state) {
     clearCatInBoxState();
     clearGangState();
     clearMismatchState();
+    if (typeof clearCitadelsState === "function") {
+      clearCitadelsState();
+    }
     clearDecryptoState();
     clearWordDecodeState();
     if (typeof clearTagironState === "function") {
@@ -166,6 +188,9 @@ function renderRoomState(state) {
     clearDrawGuessState();
     clearBlitzSketchState();
     clearFakeArtistState();
+    if (typeof clearThingsInRingsState === "function") {
+      clearThingsInRingsState();
+    }
     clearAidixitState();
     clearImpressionFlowerState();
     clearSplendorState();
@@ -194,6 +219,7 @@ function renderRoomState(state) {
   updateAidixitDeckRow();
   updateHalliConfigRow();
   updateGoldRushConfigRow();
+  updateCitadelsConfigRow();
   updateHanabiConfigRow();
   updateTexasHoldemConfigRow();
   updateMismatchConfigRow();
@@ -201,6 +227,7 @@ function renderRoomState(state) {
   updateImpressionConfigRow();
   updateBlitzSketchConfigRow();
   updateFakeArtistConfigRow();
+  updateThingsInRingsConfigRow();
   if (typeof updateTuringMachineConfigRow === "function") {
     updateTuringMachineConfigRow();
   }

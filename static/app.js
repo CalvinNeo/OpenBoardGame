@@ -5,6 +5,8 @@ const azulPanel = document.getElementById("azulPanel");
 const goldRushConfigBox = document.getElementById("goldRushConfigBox");
 const goldRushModeRow = document.getElementById("goldRushModeRow");
 const goldRushModeSelect = document.getElementById("goldRushModeSelect");
+const citadelsConfigBox = document.getElementById("citadelsConfigBox");
+const citadelsWinningCitySizeSelect = document.getElementById("citadelsWinningCitySizeSelect");
 const texasHoldemConfigBox = document.getElementById("texasHoldemConfigBox");
 const texasStartingChipsInput = document.getElementById("texasStartingChipsInput");
 const texasSmallBlindInput = document.getElementById("texasSmallBlindInput");
@@ -19,10 +21,12 @@ const goldRushPanel = document.getElementById("goldRushPanel");
 const incanGoldPanel = document.getElementById("incanGoldPanel");
 const ageOfWarPanel = document.getElementById("ageOfWarPanel");
 const kobayakawaPanel = document.getElementById("kobayakawaPanel");
+const scoutPanel = document.getElementById("scoutPanel");
 const manilaPanel = document.getElementById("manilaPanel");
 const skullPanel = document.getElementById("skullPanel");
 const mismatchPanel = document.getElementById("mismatchPanel");
 const coyotePanel = document.getElementById("coyotePanel");
+const citadelsPanel = document.getElementById("citadelsPanel");
 const tagironPanel = document.getElementById("tagironPanel");
 const turingMachinePanel = document.getElementById("turingMachinePanel");
 const texasHoldemPanel = document.getElementById("texasHoldemPanel");
@@ -31,6 +35,16 @@ const drawGuessPanel = document.getElementById("drawGuessPanel");
 const wordDecodePanel = document.getElementById("wordDecodePanel");
 const cyberPicturesPanel = document.getElementById("cyberPicturesPanel");
 const fakeArtistPanel = document.getElementById("fakeArtistPanel");
+const thingsInRingsPanel = document.getElementById("thingsInRingsPanel");
+const thingsInRingsConfigBox = document.getElementById("thingsInRingsConfigBox");
+const thingsInRingsRingCountRow = document.getElementById("thingsInRingsRingCountRow");
+const thingsInRingsRingCountSelect = document.getElementById("thingsInRingsRingCountSelect");
+const thingsInRingsRingType1Row = document.getElementById("thingsInRingsRingType1Row");
+const thingsInRingsRingType1Select = document.getElementById("thingsInRingsRingType1Select");
+const thingsInRingsRingType2Row = document.getElementById("thingsInRingsRingType2Row");
+const thingsInRingsRingType2Select = document.getElementById("thingsInRingsRingType2Select");
+const thingsInRingsRingType3Row = document.getElementById("thingsInRingsRingType3Row");
+const thingsInRingsRingType3Select = document.getElementById("thingsInRingsRingType3Select");
 
 const abracaPanel = document.getElementById("abracaPanel");
 
@@ -47,6 +61,7 @@ function setGamePanelVisibility(gameType) {
   const showAgeOfWar = gameType === "age_of_war";
   const showWanderingTowers = gameType === "wandering_towers";
   const showKobayakawa = gameType === "kobayakawa";
+  const showScout = gameType === "scout";
   const showManila = gameType === "manila";
   const showSkull = gameType === "skull";
   const showCatInBox = gameType === "cat_in_box";
@@ -54,6 +69,7 @@ function setGamePanelVisibility(gameType) {
   const showGang = gameType === "the_gang";
   const showMismatch = gameType === "perfect_mismatch";
   const showCoyote = gameType === "coyote";
+  const showCitadels = gameType === "citadels";
   const showTagiron = gameType === "tagiron";
   const showTuringMachine = gameType === "turing_machine";
   const showTexasHoldem = gameType === "texas_holdem";
@@ -64,6 +80,7 @@ function setGamePanelVisibility(gameType) {
   const showDrawGuess = gameType === "draw_guess";
   const showBlitzSketch = gameType === "blitz_sketch";
   const showFakeArtist = gameType === "fake_artist";
+  const showThingsInRings = gameType === "things_in_rings";
   const showCyber = gameType === "cyber_pictures";
   const showAidixit = gameType === "aidixit";
   const showImpression = gameType === "impression_flower";
@@ -115,6 +132,12 @@ function setGamePanelVisibility(gameType) {
   if (kobayakawaPanel) {
     kobayakawaPanel.classList.toggle("hidden", !showKobayakawa);
   }
+  if (scoutPanel) {
+    scoutPanel.classList.toggle("hidden", !showScout);
+  }
+  if (typeof showScoutHeaderActions === "function") {
+    showScoutHeaderActions(showScout);
+  }
   if (manilaPanel) {
     manilaPanel.classList.toggle("hidden", !showManila);
   }
@@ -142,6 +165,12 @@ function setGamePanelVisibility(gameType) {
   }
   if (coyotePanel) {
     coyotePanel.classList.toggle("hidden", !showCoyote);
+  }
+  if (citadelsPanel) {
+    citadelsPanel.classList.toggle("hidden", !showCitadels);
+  }
+  if (typeof showCitadelsHeaderActions === "function") {
+    showCitadelsHeaderActions(showCitadels);
   }
   if (tagironPanel) {
     tagironPanel.classList.toggle("hidden", !showTagiron);
@@ -176,6 +205,9 @@ function setGamePanelVisibility(gameType) {
   if (typeof showFakeArtistHeaderActions === "function") {
     showFakeArtistHeaderActions(showFakeArtist);
   }
+  if (typeof showThingsInRingsHeaderActions === "function") {
+    showThingsInRingsHeaderActions(showThingsInRings);
+  }
   if (typeof showPokemonSplendorHeaderActions === "function") {
     showPokemonSplendorHeaderActions(showPokemonSplendor);
   }
@@ -188,6 +220,9 @@ function setGamePanelVisibility(gameType) {
   }
   if (fakeArtistPanel) {
     fakeArtistPanel.classList.toggle("hidden", !showFakeArtist);
+  }
+  if (thingsInRingsPanel) {
+    thingsInRingsPanel.classList.toggle("hidden", !showThingsInRings);
   }
   if (cyberPicturesPanel) {
     cyberPicturesPanel.classList.toggle("hidden", !showCyber);
@@ -279,6 +314,14 @@ function updateGoldRushConfigRow() {
   }
 }
 
+function updateCitadelsConfigRow() {
+  const showRow = currentRoomState && currentGameType === "citadels" && currentRoomState.status === "lobby";
+  if (citadelsConfigBox) {
+    citadelsConfigBox.classList.toggle("hidden", !showRow);
+    citadelsConfigBox.setAttribute("aria-hidden", (!showRow).toString());
+  }
+}
+
 
 function updateTexasHoldemConfigRow() {
   const showRow = currentRoomState && currentGameType === "texas_holdem" && currentRoomState.status === "lobby";
@@ -294,6 +337,29 @@ function updateMismatchConfigRow() {
     mismatchConfigBox.classList.toggle("hidden", !showRow);
     mismatchConfigBox.setAttribute("aria-hidden", (!showRow).toString());
   }
+}
+
+function updateThingsInRingsConfigRow() {
+  const showRow = currentRoomState && currentGameType === "things_in_rings" && currentRoomState.status === "lobby";
+  if (thingsInRingsConfigBox) {
+    thingsInRingsConfigBox.classList.toggle("hidden", !showRow);
+    thingsInRingsConfigBox.setAttribute("aria-hidden", (!showRow).toString());
+  }
+  if (thingsInRingsRingCountRow) {
+    thingsInRingsRingCountRow.classList.toggle("hidden", !showRow);
+    thingsInRingsRingCountRow.setAttribute("aria-hidden", (!showRow).toString());
+  }
+  const rawCount = thingsInRingsRingCountSelect ? Number.parseInt(thingsInRingsRingCountSelect.value, 10) : 2;
+  const ringCount = Number.isInteger(rawCount) ? rawCount : 2;
+  const rows = [thingsInRingsRingType1Row, thingsInRingsRingType2Row, thingsInRingsRingType3Row];
+  rows.forEach((row, index) => {
+    if (!row) {
+      return;
+    }
+    const visible = showRow && index < ringCount;
+    row.classList.toggle("hidden", !visible);
+    row.setAttribute("aria-hidden", (!visible).toString());
+  });
 }
 
 function logGameEvents(data) {
@@ -351,6 +417,10 @@ function renderGameState(data) {
     renderKobayakawaGameState(data);
     return;
   }
+  if (gameType === "scout") {
+    renderScoutGameState(data);
+    return;
+  }
   if (gameType === "manila") {
     renderManilaGameState(data);
     return;
@@ -377,6 +447,10 @@ function renderGameState(data) {
   }
   if (gameType === "coyote") {
     renderCoyoteGameState(data);
+    return;
+  }
+  if (gameType === "citadels") {
+    renderCitadelsGameState(data);
     return;
   }
   if (gameType === "tagiron") {
@@ -421,6 +495,10 @@ function renderGameState(data) {
   }
   if (gameType === "fake_artist") {
     renderFakeArtistGameState(data);
+    return;
+  }
+  if (gameType === "things_in_rings") {
+    renderThingsInRingsGameState(data);
     return;
   }
   if (gameType === "cyber_pictures") {
