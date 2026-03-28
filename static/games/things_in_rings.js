@@ -54,16 +54,16 @@ const THINGS_IN_RINGS_RING_THEMES = {
 
 const THINGS_IN_RINGS_CIRCLE_LAYOUTS = {
   1: [
-    { left: 27, top: 14, size: 46, labelLeft: 50, labelTop: 10 },
+    { left: 23.55, top: 10.55, size: 52.9, labelLeft: 50, labelTop: 9 },
   ],
   2: [
-    { left: 10, top: 16, size: 50, labelLeft: 26, labelTop: 11 },
-    { left: 40, top: 16, size: 50, labelLeft: 74, labelTop: 11 },
+    { left: 4, top: 12.25, size: 57.5, labelLeft: 24, labelTop: 10 },
+    { left: 38.5, top: 12.25, size: 57.5, labelLeft: 76, labelTop: 10 },
   ],
   3: [
-    { left: 14, top: 11, size: 44, labelLeft: 24, labelTop: 9 },
-    { left: 42, top: 11, size: 44, labelLeft: 76, labelTop: 9 },
-    { left: 28, top: 38, size: 44, labelLeft: 50, labelTop: 86 },
+    { left: 7.2, top: 2.8, size: 60.95, labelLeft: 20, labelTop: 6 },
+    { left: 36.0, top: 2.8, size: 60.95, labelLeft: 80, labelTop: 6 },
+    { left: 19.9, top: 31.5, size: 60.95, labelLeft: 50, labelTop: 87 },
   ],
 };
 
@@ -78,11 +78,11 @@ const THINGS_IN_RINGS_ZONE_LAYOUTS = {
   },
   3: {
     "100": { x: 24, y: 32, w: 22, h: 16, previewLimit: 3 },
-    "110": { x: 50, y: 24, w: 24, h: 16, previewLimit: 4 },
+    "110": { x: 50, y: 18.5, w: 20, h: 14, previewLimit: 6 },
     "010": { x: 76, y: 32, w: 22, h: 16, previewLimit: 3 },
-    "101": { x: 36, y: 52, w: 23, h: 16, previewLimit: 4 },
+    "101": { x: 30.5, y: 58.5, w: 19, h: 14, previewLimit: 6 },
     "111": { x: 50, y: 41, w: 22, h: 17, previewLimit: 4 },
-    "011": { x: 64, y: 52, w: 23, h: 16, previewLimit: 4 },
+    "011": { x: 69.5, y: 58.5, w: 19, h: 14, previewLimit: 6 },
     "001": { x: 50, y: 69, w: 24, h: 16, previewLimit: 4 },
   },
 };
@@ -362,7 +362,11 @@ function renderThingsInRingsZoneModal(view) {
 function createThingsInRingsZoneRegion(zone, view, ringCount, layout, options = {}) {
   if (!options.outside) {
     const cards = getThingsInRingsZoneCards(zone, view);
-    const previewLimit = options.previewLimit || layout.previewLimit || 4;
+    const insideCount = zone.zone_id.split("").filter((char) => char === "1").length;
+    let previewLimit = options.previewLimit || layout.previewLimit || 4;
+    if (window.innerWidth <= 720 && insideCount === 2) {
+      previewLimit = Math.min(previewLimit, 4);
+    }
     const fragment = document.createDocumentFragment();
     const canPlace = isThingsInRingsActionAvailable("submit_play");
 
@@ -395,6 +399,13 @@ function createThingsInRingsZoneRegion(zone, view, ringCount, layout, options = 
     if (cards.length) {
       const cloud = document.createElement("div");
       cloud.className = "things-rings-zone-cloud";
+      if (insideCount === 1) {
+        cloud.classList.add("single");
+      } else if (insideCount === 2) {
+        cloud.classList.add("pair");
+      } else if (insideCount === 3) {
+        cloud.classList.add("triple");
+      }
       cloud.style.setProperty("--zone-x", `${layout.x}%`);
       cloud.style.setProperty("--zone-y", `${layout.y}%`);
       cloud.style.setProperty("--zone-w", `${layout.w}%`);

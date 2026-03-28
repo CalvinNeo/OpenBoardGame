@@ -12998,8 +12998,9 @@ body.patchwork-explain-mode [data-patchwork-explain].has-explanation {
 }
 
 .things-rings-board-stage {
+  --things-rings-board-lift: -16px;
   position: relative;
-  width: min(100%, 920px);
+  width: min(100%, 1020px);
   margin: 0 auto;
   border-radius: 32px;
   border: 1px solid rgba(148, 163, 184, 0.22);
@@ -13026,7 +13027,7 @@ body.patchwork-explain-mode [data-patchwork-explain].has-explanation {
 .things-rings-circle {
   position: absolute;
   left: var(--circle-left);
-  top: var(--circle-top);
+  top: calc(var(--circle-top) + var(--things-rings-board-lift));
   width: var(--circle-size);
   aspect-ratio: 1;
   border-radius: 50%;
@@ -13058,7 +13059,7 @@ body.patchwork-explain-mode [data-patchwork-explain].has-explanation {
 .things-rings-circle-label {
   position: absolute;
   left: var(--circle-label-left);
-  top: var(--circle-label-top);
+  top: calc(var(--circle-label-top) + var(--things-rings-board-lift));
   transform: translate(-50%, -50%);
   z-index: 2;
   padding: 7px 12px;
@@ -13093,7 +13094,7 @@ body.patchwork-explain-mode [data-patchwork-explain].has-explanation {
 .things-rings-zone-hitbox {
   position: absolute;
   left: var(--zone-x);
-  top: var(--zone-y);
+  top: calc(var(--zone-y) + var(--things-rings-board-lift));
   width: var(--zone-w);
   height: var(--zone-h);
   transform: translate(-50%, -50%);
@@ -13128,7 +13129,7 @@ body.patchwork-explain-mode [data-patchwork-explain].has-explanation {
 .things-rings-zone-cloud {
   position: absolute;
   left: var(--zone-x);
-  top: var(--zone-y);
+  top: calc(var(--zone-y) + var(--things-rings-board-lift));
   transform: translate(-50%, -50%);
   z-index: 6;
   width: max-content;
@@ -13149,6 +13150,31 @@ body.patchwork-explain-mode [data-patchwork-explain].has-explanation {
 .things-rings-zone-cloud-footer {
   display: flex;
   justify-content: center;
+}
+
+.things-rings-zone-cloud.pair {
+  width: 158px;
+  max-width: 158px;
+}
+
+.things-rings-zone-cloud.pair .things-rings-zone-cloud-cards {
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  justify-content: center;
+  width: 100%;
+  gap: 4px 6px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.things-rings-zone-cloud.pair .things-rings-zone-card {
+  padding: 3px 7px;
+  font-size: 11px;
+  background: #ffffff;
+  border-color: #e5e7eb;
+  box-shadow: none;
+  text-shadow: none;
 }
 
 .things-rings-zone {
@@ -13191,7 +13217,7 @@ body.patchwork-explain-mode [data-patchwork-explain].has-explanation {
 
 .things-rings-zone.outside {
   position: relative;
-  width: min(100%, 920px);
+  width: min(100%, 1020px);
   margin: 0 auto;
   min-height: 132px;
   border-style: dashed;
@@ -13203,7 +13229,7 @@ body.patchwork-explain-mode [data-patchwork-explain].has-explanation {
 }
 
 .things-rings-outside-wrap {
-  width: min(100%, 920px);
+  width: min(100%, 1020px);
   margin: 0 auto;
 }
 
@@ -13329,6 +13355,7 @@ body.patchwork-explain-mode [data-patchwork-explain].has-explanation {
 
 .things-rings-decision-grid {
   display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 10px;
 }
@@ -13529,6 +13556,7 @@ body.things-rings-explain-mode button.has-explanation:hover {
   }
 
   .things-rings-board-stage {
+    --things-rings-board-lift: -8px;
     width: 100%;
     border-radius: 24px;
   }
@@ -13553,6 +13581,11 @@ body.things-rings-explain-mode button.has-explanation:hover {
     max-width: max(84px, var(--zone-w));
   }
 
+  .things-rings-zone-cloud.pair {
+    width: auto;
+    max-width: max(84px, var(--zone-w));
+  }
+
   .things-rings-zone-title {
     font-size: 12px;
   }
@@ -13562,13 +13595,27 @@ body.things-rings-explain-mode button.has-explanation:hover {
   }
 
   .things-rings-zone-card {
-    font-size: 11px;
-    padding: 4px 7px;
+    font-size: 8px;
+    padding: 2px 5px;
+  }
+
+  .things-rings-zone-cloud.pair .things-rings-zone-card {
+    font-size: 8px;
+    padding: 2px 5px;
+  }
+
+  .things-rings-zone-more-btn {
+    font-size: 9px;
+    padding: 3px 6px;
   }
 
   .things-rings-circle-label {
     font-size: 11px;
     padding: 6px 10px;
+  }
+
+  .things-rings-decision-grid {
+    grid-template-columns: 1fr;
   }
 
   .things-rings-decision-actions {
