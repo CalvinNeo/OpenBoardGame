@@ -114,6 +114,19 @@ function emitRoomStart() {
     const rawTime = fakeArtistTurnTimeSelect ? Number.parseInt(fakeArtistTurnTimeSelect.value, 10) : NaN;
     const turnTime = Number.isInteger(rawTime) && rawTime > 0 ? rawTime : 8;
     payload.config = { rounds, turn_time_sec: turnTime };
+  } else if (currentGameType === "turing_machine") {
+    const mode = turingMachineModeSelect ? turingMachineModeSelect.value || "simple" : "simple";
+    const scenarioSource = turingMachineSourceSelect ? turingMachineSourceSelect.value || "preset" : "preset";
+    const difficulty = turingMachineDifficultySelect ? turingMachineDifficultySelect.value || "standard" : "standard";
+    const presetId = turingMachinePresetSelect ? turingMachinePresetSelect.value || "relay-standard-01" : "relay-standard-01";
+    const seed = turingMachineSeedInput ? (turingMachineSeedInput.value || "").trim() : "";
+    payload.config = {
+      mode,
+      scenario_source: scenarioSource,
+      difficulty,
+      preset_id: presetId,
+      seed,
+    };
   }
   socket.emit("room:start", payload);
 }
@@ -146,6 +159,9 @@ function renderRoomState(state) {
     clearWordDecodeState();
     if (typeof clearTagironState === "function") {
       clearTagironState();
+    }
+    if (typeof clearTuringMachineState === "function") {
+      clearTuringMachineState();
     }
     clearDrawGuessState();
     clearBlitzSketchState();
@@ -185,6 +201,9 @@ function renderRoomState(state) {
   updateImpressionConfigRow();
   updateBlitzSketchConfigRow();
   updateFakeArtistConfigRow();
+  if (typeof updateTuringMachineConfigRow === "function") {
+    updateTuringMachineConfigRow();
+  }
   updateAutoSaveRow();
   updateReopenButton();
   playersList.innerHTML = "";

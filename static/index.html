@@ -566,6 +566,28 @@
     </div>
   </section>
 
+  <section id="turingMachineHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content turing-machine-help-modal">
+      <div class="modal-header">
+        <h2>Turing Machine - Game Rules</h2>
+        <button id="turingMachineHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body turing-machine-help-content" id="turingMachineHelpContent"></div>
+    </div>
+  </section>
+
+  <section id="turingMachineExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content turing-machine-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="turingMachineExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="turingMachineExplainContent"></div>
+      </div>
+    </div>
+  </section>
+
   <section id="fakeArtistHelpModal" class="modal hidden" aria-hidden="true">
     <div class="modal-content fake-artist-help-modal">
       <div class="modal-header">
@@ -710,6 +732,7 @@
                     <option value="blitz_sketch">Blitz Sketch</option>
                     <option value="cyber_pictures">Cyber Pictures</option>
                     <option value="perfect_mismatch">Perfect Mismatch</option>
+                    <option value="turing_machine">Turing Machine</option>
                     <option value="aidixit">AI Dixit</option>
                     <option value="impression_flower">Impression Flower</option>
                     <option value="splendor">Splendor</option>
@@ -930,6 +953,40 @@
                       <span class="hint">Enable review votes during round recap.</span>
                     </div>
                   </div>
+                  <div class="game-config-card hidden" id="turingMachineConfigBox" aria-hidden="true">
+                    <div class="game-config-title">Turing Machine</div>
+                    <div class="row" id="turingMachineModeRow">
+                      <label for="turingMachineModeSelect">Assist Mode</label>
+                      <select id="turingMachineModeSelect">
+                        <option value="simple" selected>Simple</option>
+                        <option value="expert">Expert</option>
+                      </select>
+                    </div>
+                    <div class="row" id="turingMachineSourceRow">
+                      <label for="turingMachineSourceSelect">Scenario</label>
+                      <select id="turingMachineSourceSelect">
+                        <option value="preset" selected>Preset</option>
+                        <option value="random">Random Seed</option>
+                      </select>
+                    </div>
+                    <div class="row" id="turingMachineDifficultyRow">
+                      <label for="turingMachineDifficultySelect">Difficulty</label>
+                      <select id="turingMachineDifficultySelect">
+                        <option value="easy">Easy</option>
+                        <option value="standard" selected>Standard</option>
+                        <option value="hard">Hard</option>
+                        <option value="expert">Expert</option>
+                      </select>
+                    </div>
+                    <div class="row" id="turingMachinePresetRow">
+                      <label for="turingMachinePresetSelect">Preset</label>
+                      <select id="turingMachinePresetSelect"></select>
+                    </div>
+                    <div class="row hidden" id="turingMachineSeedRow">
+                      <label for="turingMachineSeedInput">Seed</label>
+                      <input id="turingMachineSeedInput" type="text" maxlength="80" placeholder="Leave blank for random" />
+                    </div>
+                  </div>
                 </div>
                 <div class="row hidden toggle-row" id="autoSaveRow">
                   <label for="autoSaveToggle">Auto Save</label>
@@ -1024,6 +1081,10 @@
             <div class="panel-header-actions" id="tagironHeaderActions" style="display: none;">
               <button id="tagironHelpBtn" class="tagiron-header-btn" type="button">Help</button>
               <button id="tagironExplainBtn" class="tagiron-header-btn" type="button">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="turingMachineHeaderActions" style="display: none;">
+              <button id="turingMachineHelpBtn" class="turing-machine-header-btn" type="button">Help</button>
+              <button id="turingMachineExplainBtn" class="turing-machine-header-btn" type="button">Explain</button>
             </div>
             <div class="panel-header-actions" id="fakeArtistHeaderActions" style="display: none;">
               <button id="fakeArtistHelpBtn" class="fake-artist-header-btn" type="button">Help</button>
@@ -1811,6 +1872,89 @@
 
               <h3>Players</h3>
               <div id="tagironPlayers"></div>
+            </div>
+
+            <div id="turingMachinePanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="turingMachinePhase">-</span></div>
+                <div>Round: <span id="turingMachineRound">-</span></div>
+                <div>Mode: <span id="turingMachineMode">-</span></div>
+                <div>Difficulty: <span id="turingMachineDifficulty">-</span></div>
+              </div>
+              <div class="row">
+                <div>Scenario: <span id="turingMachineScenario">-</span></div>
+                <div>Share Seed: <span id="turingMachineSeed">-</span></div>
+              </div>
+              <div class="row">
+                <div>Status: <span id="turingMachineStatus">-</span></div>
+              </div>
+              <div class="row">
+                <div>Blocking: <span id="turingMachineBlocking">-</span></div>
+                <div>Winners: <span id="turingMachineWinners">-</span></div>
+              </div>
+              <div class="row hidden" id="turingMachineSolutionRow" aria-hidden="true">
+                <div>Solution: <span id="turingMachineSolution">-</span></div>
+              </div>
+
+              <div class="tm-layout">
+                <section class="tm-section tm-machine-section">
+                  <div class="tm-section-title">Code Console</div>
+                  <div id="turingMachineCodeBuilder" class="tm-code-builder"></div>
+                  <div class="row">
+                    <div>Round Code: <span id="turingMachineCurrentProposal">-</span></div>
+                    <div>Checks Left: <span id="turingMachineTestsRemaining">-</span></div>
+                  </div>
+                  <div class="row actions tm-action-row">
+                    <button id="turingMachineUseCodeBtn" type="button">Use As Round Code</button>
+                    <button id="turingMachineGuessBtn" type="button">Submit Final Guess</button>
+                    <button id="turingMachineEndRoundBtn" type="button">End Round</button>
+                    <button id="turingMachineGiveUpBtn" type="button">Give Up</button>
+                  </div>
+
+                  <div class="tm-section-title">This Round</div>
+                  <div id="turingMachineCurrentTests" class="tm-current-tests"></div>
+                </section>
+
+                <section class="tm-section">
+                  <div class="tm-section-title">Verifier Cards</div>
+                  <div id="turingMachineCriteria" class="tm-verifier-grid"></div>
+                </section>
+
+                <section class="tm-section hidden" id="turingMachineDeductionPanel" aria-hidden="true">
+                  <div class="tm-section-title">Auto Deduction</div>
+                  <div class="row">
+                    <div>Candidate Codes: <span id="turingMachineCandidateCount">-</span></div>
+                  </div>
+                  <div id="turingMachineCandidateGrid" class="tm-candidate-grid"></div>
+                  <div id="turingMachineDigitStats" class="tm-stats-grid"></div>
+                  <div id="turingMachineVariantStats" class="tm-stats-grid"></div>
+                </section>
+
+                <section class="tm-section">
+                  <div class="tm-section-title">Manual Notes</div>
+                  <div id="turingMachineNotes" class="tm-notes-board"></div>
+                </section>
+
+                <section class="tm-section">
+                  <div class="tm-section-title">Your Verifier History</div>
+                  <div id="turingMachineClueHistory" class="tm-history-list"></div>
+                </section>
+
+                <section class="tm-section">
+                  <div class="tm-section-title">Your Final Guesses</div>
+                  <div id="turingMachineGuessHistory" class="tm-history-list"></div>
+                </section>
+
+                <section class="tm-section">
+                  <div class="tm-section-title">Public Log</div>
+                  <div id="turingMachinePublicLog" class="tm-history-list"></div>
+                </section>
+
+                <section class="tm-section">
+                  <div class="tm-section-title">Players</div>
+                  <div id="turingMachinePlayers" class="tm-player-grid"></div>
+                </section>
+              </div>
             </div>
 
             <div id="texasHoldemPanel" class="hidden">
@@ -3214,6 +3358,7 @@
   <script src="/static/games/perfect_mismatch.js?v=app_v1"></script>
   <script src="/static/games/coyote.js?v=app_v1"></script>
   <script src="/static/games/tagiron.js?v=app_v1"></script>
+  <script src="/static/games/turing_machine.js?v=app_v1"></script>
   <script src="/static/games/halli_galli.js?v=app_v1"></script>
   <script src="/static/games/texas_holdem.js?v=app_v1"></script>
   <script src="/static/games/yahtzee.js?v=app_v1"></script>

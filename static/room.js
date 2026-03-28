@@ -517,6 +517,7 @@ const GAME_WEIGHT = {
   texas_holdem: 2.430830039525692,
   the_gang: 1.58,
   trekking_history: 1.76,
+  turing_machine: 2.41,
   wandering_towers: 1.59,
   yahtzee: 1.17,
   fake_artist: 1.09,
@@ -1311,6 +1312,9 @@ function resetRoomState() {
   clearGangState();
   clearMismatchState();
   clearCoyoteState();
+  if (typeof clearTuringMachineState === "function") {
+    clearTuringMachineState();
+  }
   clearTexasHoldemState();
   clearSixNimmtState();
   clearHalliState();
@@ -1345,6 +1349,9 @@ function resetRoomState() {
   updateGangConfigRow();
   updateImpressionConfigRow();
   updateBlitzSketchConfigRow();
+  if (typeof updateTuringMachineConfigRow === "function") {
+    updateTuringMachineConfigRow();
+  }
   updateAutoSaveRow();
   updateReopenButton();
   if (drawGuessLanguageSelect) {
@@ -1391,6 +1398,27 @@ function resetRoomState() {
   }
   if (impressionVoteToggle) {
     impressionVoteToggle.checked = false;
+  }
+  if (turingMachineModeSelect) {
+    turingMachineModeSelect.value = "simple";
+  }
+  if (turingMachineSourceSelect) {
+    turingMachineSourceSelect.value = "preset";
+  }
+  if (turingMachineDifficultySelect) {
+    turingMachineDifficultySelect.value = "standard";
+  }
+  if (typeof populateTuringMachinePresetSelect === "function") {
+    populateTuringMachinePresetSelect();
+  }
+  if (turingMachinePresetSelect) {
+    turingMachinePresetSelect.value = "relay-standard-01";
+  }
+  if (turingMachineSeedInput) {
+    turingMachineSeedInput.value = "";
+  }
+  if (typeof updateTuringMachineConfigRowsFromSource === "function") {
+    updateTuringMachineConfigRowsFromSource();
   }
   createRoomPending = false;
   setCreateGameRowVisible(false);

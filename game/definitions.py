@@ -38,6 +38,7 @@ from game.texas_holdem import TexasHoldemGame
 from game.word_decode import WordDecodeGame
 from game.wandering_towers import WanderingTowersGame
 from game.tagiron import TagironGame
+from game.turing_machine import TuringMachineGame
 
 CABO_ACTION_SCHEMA = {
     "type": "object",
@@ -176,6 +177,82 @@ TAGIRON_ACTION_SCHEMA = {
 TAGIRON_CONFIG_SCHEMA = {
     "type": "object",
     "properties": {},
+    "additionalProperties": False,
+}
+
+TURING_MACHINE_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "set_proposal"},
+                "code": {
+                    "type": "array",
+                    "items": {"type": "integer", "minimum": 1, "maximum": 5},
+                    "minItems": 3,
+                    "maxItems": 3,
+                },
+            },
+            "required": ["type", "code"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "test_criterion"},
+                "slot": {"type": "string", "minLength": 1, "maxLength": 8},
+            },
+            "required": ["type", "slot"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "end_round"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "submit_guess"},
+                "code": {
+                    "type": "array",
+                    "items": {"type": "integer", "minimum": 1, "maximum": 5},
+                    "minItems": 3,
+                    "maxItems": 3,
+                },
+            },
+            "required": ["type", "code"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "give_up"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "update_notes"},
+                "notes": {"type": "object"},
+            },
+            "required": ["type", "notes"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+TURING_MACHINE_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "mode": {"type": "string", "enum": ["simple", "expert"]},
+        "scenario_source": {"type": "string", "enum": ["preset", "random"]},
+        "difficulty": {"type": "string", "enum": ["easy", "standard", "hard", "expert"]},
+        "preset_id": {"type": "string", "minLength": 1, "maxLength": 80},
+        "seed": {"type": "string", "maxLength": 80},
+    },
     "additionalProperties": False,
 }
 
@@ -1866,6 +1943,21 @@ register_game(
         module=TagironGame,
         serialize=TagironGame.serialize,
         deserialize=TagironGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=TuringMachineGame.game_id,
+        name="Turing Machine",
+        min_players=TuringMachineGame.min_players,
+        max_players=TuringMachineGame.max_players,
+        turn_mode="simultaneous",
+        action_schema=TURING_MACHINE_ACTION_SCHEMA,
+        config_schema=TURING_MACHINE_CONFIG_SCHEMA,
+        module=TuringMachineGame,
+        serialize=TuringMachineGame.serialize,
+        deserialize=TuringMachineGame.deserialize,
     )
 )
 

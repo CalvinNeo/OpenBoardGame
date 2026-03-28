@@ -34,6 +34,7 @@ from game.skull import SkullGame
 from game.the_gang import TheGangGame
 from game.texas_holdem import TexasHoldemGame
 from game.tagiron import TagironGame
+from game.turing_machine import TuringMachineGame
 from game.trekking_history import TrekkingHistoryGame
 from game.word_decode import WordDecodeGame
 from game.yahtzee import YahtzeeGame
@@ -76,6 +77,7 @@ __all__ = [
     "TheGangGame",
     "TexasHoldemGame",
     "TagironGame",
+    "TuringMachineGame",
     "TrekkingHistoryGame",
     "WordDecodeGame",
     "YahtzeeGame",
