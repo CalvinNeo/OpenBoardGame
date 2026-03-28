@@ -1,6 +1,6 @@
 import unittest
 
-from game.things_in_rings import ThingsInRingsGame
+from game.things_in_rings import ThingsInRingsGame, _load_rules, _load_things, _word_membership
 
 
 def _players(count: int = 3):
@@ -16,6 +16,61 @@ def _players(count: int = 3):
 
 
 class ThingsInRingsGameTests(unittest.TestCase):
+    def test_word_rule_assets_are_usable(self):
+        things = _load_things()
+        word_rules = _load_rules()["word"]
+
+        self.assertGreater(len(things), 0)
+        self.assertGreater(len(word_rules), 0)
+
+        for rule in word_rules:
+            matches = sum(1 for thing in things if _word_membership(rule, thing))
+            self.assertGreater(
+                matches,
+                0,
+                msg=f"word rule {rule['id']} should match at least one thing",
+            )
+            self.assertLess(
+                matches,
+                len(things),
+                msg=f"word rule {rule['id']} should not match every thing",
+            )
+
+    def test_word_rules_do_not_use_first_char_patterns(self):
+        word_rules = _load_rules()["word"]
+
+        for rule in word_rules:
+            evaluator = rule.get("evaluator") or {}
+            self.assertNotEqual(evaluator.get("kind"), "starts_with")
+
+    def test_word_membership_supports_last_char_tone_and_structure(self):
+        tone_rule = {
+            "evaluator": {"kind": "last_char_tone_is", "value": 1},
+        }
+        structure_rule = {
+            "evaluator": {"kind": "last_char_structure_is", "value": "left_right"},
+        }
+
+        self.assertTrue(_word_membership(tone_rule, {"name": "手机"}))
+        self.assertFalse(_word_membership(tone_rule, {"name": "盒子"}))
+        self.assertTrue(_word_membership(structure_rule, {"name": "台灯"}))
+        self.assertFalse(_word_membership(structure_rule, {"name": "箱子"}))
+
+    def test_word_membership_supports_last_char_radical(self):
+        radical_rule = {
+            "evaluator": {"kind": "last_char_radical_is", "value": "金字旁"},
+        }
+
+        self.assertTrue(_word_membership(radical_rule, {"name": "眼镜"}))
+        self.assertFalse(_word_membership(radical_rule, {"name": "台灯"}))
+
+    def test_default_config_uses_three_rings(self):
+        state = ThingsInRingsGame.init_game(None, _players(3))
+
+        self.assertEqual(state["config"]["ring_count"], 3)
+        self.assertEqual(state["config"]["ring_types"], ["word", "attribute", "context"])
+        self.assertEqual(len(state["rings"]), 3)
+
     def test_seed_clue_uses_word_auto_rule(self):
         state = ThingsInRingsGame.init_game({"ring_count": 1, "ring_types": ["word"]}, _players(3))
         state["rings"] = [

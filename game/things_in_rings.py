@@ -5,8 +5,8 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 DEFAULT_CONFIG = {
-    "ring_count": 2,
-    "ring_types": ["word", "attribute"],
+    "ring_count": 3,
+    "ring_types": ["word", "attribute", "context"],
 }
 
 THING_HAND_SIZE = 5
@@ -21,6 +21,18 @@ RING_TYPE_LABELS = {
 
 _THING_CACHE: Optional[List[Dict[str, str]]] = None
 _RULE_CACHE: Optional[Dict[str, List[Dict[str, object]]]] = None
+_LAST_CHAR_META_CACHE: Optional[Dict[str, Dict[str, object]]] = None
+
+ALLOWED_LAST_CHAR_STRUCTURES = {
+    "left_right",
+    "up_down",
+    "single",
+    "left_middle_right",
+    "up_middle_down",
+    "semi_enclosure",
+    "full_enclosure",
+    "other",
+}
 
 
 def _asset_path(filename: str) -> Path:
@@ -81,6 +93,29 @@ def _load_rules() -> Dict[str, List[Dict[str, object]]]:
             rules[ring_type] = cleaned
     _RULE_CACHE = rules
     return {key: [dict(entry) for entry in value] for key, value in rules.items()}
+
+
+def _load_last_char_meta() -> Dict[str, Dict[str, object]]:
+    global _LAST_CHAR_META_CACHE
+    if _LAST_CHAR_META_CACHE is not None:
+        return {key: dict(value) for key, value in _LAST_CHAR_META_CACHE.items()}
+    raw = json.loads(_asset_path("things_in_rings_last_char_meta.json").read_text(encoding="utf-8"))
+    meta: Dict[str, Dict[str, object]] = {}
+    for char, entry in raw.items():
+        if not isinstance(char, str) or len(char) != 1 or not isinstance(entry, dict):
+            continue
+        tone = entry.get("tone")
+        structure = entry.get("structure")
+        radical = entry.get("radical")
+        if tone not in (1, 2, 3, 4):
+            continue
+        if structure not in ALLOWED_LAST_CHAR_STRUCTURES:
+            continue
+        meta[char] = {"tone": tone, "structure": structure}
+        if isinstance(radical, str) and radical:
+            meta[char]["radical"] = radical
+    _LAST_CHAR_META_CACHE = meta
+    return {key: dict(value) for key, value in meta.items()}
 
 
 def _merge_config(config: Optional[Dict]) -> Dict:
@@ -146,6 +181,7 @@ def _word_membership(rule: Dict[str, object], thing_card: Dict[str, str]) -> boo
     if not isinstance(evaluator, dict):
         return False
     name = _normalize_name(thing_card.get("name"))
+    last_char = name[-1] if name else ""
     kind = evaluator.get("kind")
     if kind == "char_count_eq":
         return len(name) == int(evaluator.get("value") or 0)
@@ -167,6 +203,15 @@ def _word_membership(rule: Dict[str, object], thing_card: Dict[str, str]) -> boo
                 return True
             seen.add(char)
         return False
+    if kind == "last_char_tone_is":
+        meta = _load_last_char_meta().get(last_char)
+        return bool(meta) and meta.get("tone") == int(evaluator.get("value") or 0)
+    if kind == "last_char_structure_is":
+        meta = _load_last_char_meta().get(last_char)
+        return bool(meta) and meta.get("structure") == str(evaluator.get("value") or "")
+    if kind == "last_char_radical_is":
+        meta = _load_last_char_meta().get(last_char)
+        return bool(meta) and meta.get("radical") == str(evaluator.get("value") or "")
     return False
 
 

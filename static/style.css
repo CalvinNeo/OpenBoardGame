@@ -13029,6 +13029,37 @@ body.scout-explain-mode [data-scout-explain].has-explanation {
   box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.2), 0 14px 26px rgba(127, 29, 29, 0.16);
 }
 
+.scout-card-face-selection {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  height: calc(50% - 5px);
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.16), rgba(245, 158, 11, 0.2));
+  box-shadow: inset 0 0 0 2px rgba(185, 28, 28, 0.28);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.scout-card-face-selection.top {
+  top: 4px;
+  border-radius: 10px 10px 8px 8px;
+}
+
+.scout-card-face-selection.bottom {
+  bottom: 4px;
+  border-radius: 8px 8px 10px 10px;
+}
+
+.scout-card-split-line {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 50%;
+  border-top: 1px dashed rgba(127, 29, 29, 0.28);
+  pointer-events: none;
+  z-index: 0;
+}
+
 .scout-card.ghost {
   border-style: dashed;
   background:
@@ -13044,6 +13075,7 @@ body.scout-explain-mode [data-scout-explain].has-explanation {
   font-weight: 800;
   line-height: 1;
   color: var(--scout-red-dark);
+  z-index: 1;
 }
 
 .scout-card-back {
@@ -13053,6 +13085,7 @@ body.scout-explain-mode [data-scout-explain].has-explanation {
   font-size: 17px;
   font-weight: 700;
   opacity: 0.8;
+  z-index: 1;
 }
 
 .scout-card-edge {
@@ -13067,6 +13100,7 @@ body.scout-explain-mode [data-scout-explain].has-explanation {
   font-size: 12px;
   font-weight: 800;
   text-align: center;
+  z-index: 2;
 }
 
 .scout-actions {

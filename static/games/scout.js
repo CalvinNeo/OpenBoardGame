@@ -40,7 +40,6 @@ const scoutHint = document.getElementById("scoutHint")
 
 const scoutReadyKeepBtn = document.getElementById("scoutReadyKeepBtn")
 const scoutReadyFlipBtn = document.getElementById("scoutReadyFlipBtn")
-const scoutToggleFaceBtn = document.getElementById("scoutToggleFaceBtn")
 const scoutShowBtn = document.getElementById("scoutShowBtn")
 const scoutScoutBtn = document.getElementById("scoutScoutBtn")
 const scoutScoutShowBtn = document.getElementById("scoutScoutShowBtn")
@@ -63,7 +62,7 @@ const SCOUT_HELP_TEXT = `
   <h3>Scout</h3>
   <ul>
     <li>Take only the leftmost or rightmost card from the active set.</li>
-    <li>Insert it anywhere into your hand and choose which side is face-up.</li>
+    <li>Insert it anywhere into your hand and choose which number stays face-up.</li>
     <li>In 3-5 player games, the active-set owner gains 1 Scout point whenever someone scouts from them.</li>
   </ul>
 
@@ -80,7 +79,7 @@ const SCOUT_HELP_TEXT = `
   <h3>Interface</h3>
   <ul>
     <li>Click cards in your hand to choose a continuous range for Show.</li>
-    <li>Click the edge cards of the active set to choose a Scout side.</li>
+    <li>Click the top or bottom half of an edge card to choose both the Scout side and the number you want.</li>
     <li>Choose an insertion gap, then use <strong>Scout</strong> or <strong>Scout + Show</strong>.</li>
     <li>Click empty space in your hand area to clear the current selection.</li>
   </ul>
@@ -89,7 +88,7 @@ const SCOUT_HELP_TEXT = `
 const SCOUT_EXPLANATIONS = {
   activeSet: {
     name: "Active Set",
-    description: "This is the current public set on stage. Everyone must beat this set with Show, or take one edge card with Scout.",
+    description: "This is the current public set on stage. Everyone must beat it with Show, or click the upper or lower half of an edge card to Scout that number.",
   },
   yourHand: {
     name: "Your Hand",
@@ -110,10 +109,6 @@ const SCOUT_EXPLANATIONS = {
   readyFlipBtn: {
     name: "Flip Whole Hand",
     description: "Reverse the entire hand and flip every card to its opposite face-up side.",
-  },
-  toggleFaceBtn: {
-    name: "Insert Face",
-    description: "Switch which side of the scouted card will face up after insertion.",
   },
   showBtn: {
     name: "Show Selected",
@@ -241,11 +236,28 @@ function scoutFaceIndex(face) {
   return face === "b" ? 1 : 0
 }
 
+function scoutCanonicalFace(face) {
+  return face === "b" ? "b" : "a"
+}
+
+function scoutOppositeFace(face) {
+  return scoutCanonicalFace(face) === "b" ? "a" : "b"
+}
+
 function scoutValue(card, face) {
   if (!card || !Array.isArray(card.values) || card.values.length < 2) {
     return null
   }
   return card.values[scoutFaceIndex(face || card.face_up)]
+}
+
+function scoutFaceForRegion(card, region) {
+  const faceUp = scoutCanonicalFace(card && card.face_up)
+  return region === "bottom" ? scoutOppositeFace(faceUp) : faceUp
+}
+
+function scoutRegionForFace(card, face) {
+  return scoutCanonicalFace(face) === scoutCanonicalFace(card && card.face_up) ? "top" : "bottom"
 }
 
 function scoutCurrentValue(card) {
@@ -325,9 +337,9 @@ function scoutPreviewInsertedCard(view) {
   if (!card) {
     return null
   }
-  const face = scoutInsertFace || "a"
+  const face = scoutCanonicalFace(scoutInsertFace)
   const current = scoutValue(card, face)
-  const back = scoutValue(card, face === "a" ? "b" : "a")
+  const back = scoutValue(card, scoutOppositeFace(face))
   return {
     id: `${card.id}:${face}`,
     values: Array.isArray(card.values) ? [...card.values] : [card.current, card.back],
@@ -381,16 +393,21 @@ function scoutActiveAfterScout(view) {
 
 function scoutSelectionSummary(view) {
   const range = scoutSelectedRange()
+  const inserted = scoutPreviewInsertedCard(view)
   if (scoutTakeSide && Number.isInteger(scoutInsertIndex)) {
     const workingHand = scoutWorkingHand(view)
     if (!range) {
-      return `${scoutTakeSide} edge -> gap ${scoutInsertIndex}`
+      return inserted
+        ? `${scoutTakeSide} ${inserted.current} -> gap ${scoutInsertIndex}`
+        : `${scoutTakeSide} edge -> gap ${scoutInsertIndex}`
     }
     const combo = scoutClassifyCards(scoutRangeCards(workingHand, range))
     return combo ? `Preview ${scoutComboLabel(combo)}` : `Preview cards ${range.start + 1}-${range.end + 1}`
   }
   if (!range) {
-    return scoutTakeSide ? `${scoutTakeSide} edge selected` : "-"
+    return scoutTakeSide
+      ? (inserted ? `${scoutTakeSide} ${inserted.current} selected` : `${scoutTakeSide} edge selected`)
+      : "-"
   }
   const baseHand = Array.isArray(view && view.your_hand) ? view.your_hand : []
   const combo = scoutClassifyCards(scoutRangeCards(baseHand, range))
@@ -454,9 +471,12 @@ function renderScoutCard(card, options = {}) {
     selected = false,
     ghost = false,
     edge = null,
+    faceSelection = null,
     onClick = null,
+    onRegionClick = null,
   } = options
-  const element = document.createElement(clickable ? "button" : "div")
+  const interactive = clickable || typeof onClick === "function" || typeof onRegionClick === "function"
+  const element = document.createElement(interactive ? "button" : "div")
   element.className = "scout-card"
   if (selected) {
     element.classList.add("selected")
@@ -464,16 +484,29 @@ function renderScoutCard(card, options = {}) {
   if (ghost) {
     element.classList.add("ghost")
   }
-  if (clickable) {
+  if (interactive) {
     element.type = "button"
     element.classList.add("clickable")
+  }
+  if (typeof onRegionClick === "function") {
+    element.classList.add("split-pickable")
+  }
+  if (faceSelection === "top" || faceSelection === "bottom") {
+    const overlay = document.createElement("span")
+    overlay.className = `scout-card-face-selection ${faceSelection}`
+    element.appendChild(overlay)
+  }
+  if (typeof onRegionClick === "function") {
+    const splitLine = document.createElement("span")
+    splitLine.className = "scout-card-split-line"
+    element.appendChild(splitLine)
   }
   const current = document.createElement("span")
   current.className = "scout-card-current"
   current.textContent = String(scoutCurrentValue(card))
   const back = document.createElement("span")
   back.className = "scout-card-back"
-  back.textContent = String(card && Number.isInteger(card.back) ? card.back : scoutValue(card, card.face_up === "a" ? "b" : "a"))
+  back.textContent = String(card && Number.isInteger(card.back) ? card.back : scoutValue(card, scoutOppositeFace(card ? card.face_up : "a")))
   element.append(current, back)
   if (edge) {
     const badge = document.createElement("span")
@@ -481,7 +514,14 @@ function renderScoutCard(card, options = {}) {
     badge.textContent = edge
     element.appendChild(badge)
   }
-  if (clickable && typeof onClick === "function") {
+  if (typeof onRegionClick === "function") {
+    element.addEventListener("click", (event) => {
+      event.stopPropagation()
+      const rect = element.getBoundingClientRect()
+      const region = event.clientY - rect.top < rect.height / 2 ? "top" : "bottom"
+      onRegionClick(region)
+    })
+  } else if (interactive && typeof onClick === "function") {
     element.addEventListener("click", (event) => {
       event.stopPropagation()
       onClick()
@@ -609,15 +649,21 @@ function renderScoutActiveSet(view) {
     const element = renderScoutCard(card, {
       clickable,
       selected: (edge === "L" && scoutTakeSide === "left") || (edge === "R" && scoutTakeSide === "right"),
+      faceSelection: (
+        (edge === "L" && scoutTakeSide === "left") ||
+        (edge === "R" && scoutTakeSide === "right")
+      ) ? scoutRegionForFace(card, scoutInsertFace) : null,
       edge,
-      onClick: () => {
+      onRegionClick: (region) => {
         const nextSide = edge === "L" ? "left" : "right"
-        if (scoutTakeSide === nextSide) {
+        const nextFace = scoutFaceForRegion(card, region)
+        if (scoutTakeSide === nextSide && scoutCanonicalFace(scoutInsertFace) === nextFace) {
           scoutTakeSide = null
           scoutInsertIndex = null
           clearScoutRangeSelection()
         } else {
           scoutTakeSide = nextSide
+          scoutInsertFace = nextFace
           scoutInsertIndex = null
           clearScoutRangeSelection()
         }
@@ -715,7 +761,7 @@ function renderScoutPreview(view) {
   if (!scoutTakeSide) {
     const note = document.createElement("div")
     note.className = "scout-empty-state"
-    note.textContent = "Choose the left or right edge of the active set to plan a Scout."
+    note.textContent = "Click the upper or lower half of an edge card to choose the number you want to Scout."
     scoutPreviewArea.appendChild(note)
     return
   }
@@ -731,7 +777,7 @@ function renderScoutPreview(view) {
   meta.className = "scout-preview-meta"
   const inserted = scoutPreviewInsertedCard(view)
   const afterScout = scoutActiveAfterScout(view)
-  meta.textContent = `Taking ${scoutTakeSide} edge · insert at gap ${scoutInsertIndex} · face ${scoutInsertFace.toUpperCase()} (${inserted ? inserted.current : "-"}) · remaining stage ${afterScout ? scoutComboLabel(afterScout) : "empty"}`
+  meta.textContent = `Taking ${scoutTakeSide} edge · value ${inserted ? inserted.current : "-"} · insert at gap ${scoutInsertIndex} · remaining stage ${afterScout ? scoutComboLabel(afterScout) : "empty"}`
   scoutPreviewArea.appendChild(meta)
 
   const shell = document.createElement("div")
@@ -816,13 +862,6 @@ function updateScoutButtons(view) {
   if (scoutReadyFlipBtn) {
     scoutReadyFlipBtn.disabled = !canReady
   }
-  if (scoutToggleFaceBtn) {
-    const chosen = scoutChosenActiveCard(view)
-    scoutToggleFaceBtn.disabled = !(chosen && (scoutHasLegalAction("scout") || scoutHasLegalAction("scout_and_show")))
-    scoutToggleFaceBtn.textContent = chosen
-      ? `Insert Face ${scoutInsertFace.toUpperCase()} (${scoutValue(chosen, scoutInsertFace)})`
-      : "Insert Face A"
-  }
   if (scoutShowBtn) {
     scoutShowBtn.disabled = !scoutCanShow(view)
   }
@@ -865,18 +904,21 @@ function renderScoutSummary(view) {
     scoutSelectionLabel.textContent = scoutSelectionSummary(view)
   }
   if (scoutHint) {
+    const inserted = scoutPreviewInsertedCard(view)
     if (view.phase === "choose_orientation") {
       scoutHint.textContent = view.initial_hand_options
         ? "Choose whether to keep the dealt order or flip the entire hand."
         : "Your hand is locked. Waiting for the rest of the table."
     } else if (scoutTakeSide && !Number.isInteger(scoutInsertIndex)) {
-      scoutHint.textContent = "Choose an insertion gap in your hand."
+      scoutHint.textContent = inserted
+        ? `Choose an insertion gap for ${inserted.current}.`
+        : "Choose an insertion gap in your hand."
     } else if (scoutTakeSide && Number.isInteger(scoutInsertIndex)) {
       scoutHint.textContent = scoutHasLegalAction("scout_and_show")
         ? "You may Scout immediately, or select a range in the preview and use Scout + Show."
         : "Use Scout to insert the chosen edge card."
     } else {
-      scoutHint.textContent = "Click cards in your hand to choose a Show. Click an edge card on stage to plan a Scout."
+      scoutHint.textContent = "Click cards in your hand to choose a Show. Click the top or bottom half of an edge card to plan a Scout."
     }
   }
 }
@@ -948,15 +990,6 @@ if (scoutReadyKeepBtn) {
 if (scoutReadyFlipBtn) {
   scoutReadyFlipBtn.addEventListener("click", () => {
     sendAction({ type: "ready_hand", flip: true })
-  })
-}
-
-if (scoutToggleFaceBtn) {
-  scoutToggleFaceBtn.addEventListener("click", () => {
-    scoutInsertFace = scoutInsertFace === "a" ? "b" : "a"
-    if (currentScoutView) {
-      renderScoutGameState({ view: currentScoutView, events: [] })
-    }
   })
 }
 

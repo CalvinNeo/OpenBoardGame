@@ -867,6 +867,505 @@ def _build_action_options(state: Dict, viewer_id: str) -> Dict:
     return options
 
 
+def _player_city_value(state: Dict, player_id: str) -> int:
+    city = state["players"][player_id]["city"]
+    return len(city) * 10 + sum(int(card["cost"]) for card in city)
+
+
+def _role_slots_per_player(state: Dict) -> int:
+    return 2 if len(state["turn_order"]) <= 3 else 1
+
+
+def _public_known_role_owner(state: Dict, viewer_id: str, rank: int) -> Optional[str]:
+    for player_id in state["turn_order"]:
+        if rank in state["players"][player_id]["revealed_ranks"]:
+            return player_id
+    viewer_roles = state["players"].get(viewer_id, {}).get("chosen_ranks", [])
+    if rank in viewer_roles:
+        return viewer_id
+    return None
+
+
+def _public_hidden_role_slots(state: Dict, viewer_id: str) -> Dict[str, int]:
+    slots: Dict[str, int] = {}
+    default_slots = _role_slots_per_player(state)
+    for player_id in state["turn_order"]:
+        revealed_count = len(state["players"][player_id]["revealed_ranks"])
+        if player_id == viewer_id:
+            total_known = len(state["players"][player_id].get("chosen_ranks", []))
+            slots[player_id] = max(0, total_known - revealed_count)
+        else:
+            slots[player_id] = max(0, default_slots - revealed_count)
+    return slots
+
+
+def _public_hidden_role_ranks(state: Dict, viewer_id: str) -> List[int]:
+    hidden_ranks: List[int] = []
+    face_up_removed = set(state.get("draft_state", {}).get("face_up_removed", []))
+    for rank in range(1, int(state["max_rank"]) + 1):
+        if rank in face_up_removed:
+            continue
+        if _public_known_role_owner(state, viewer_id, rank) is not None:
+            continue
+        hidden_ranks.append(rank)
+    return hidden_ranks
+
+
+def _public_possible_role_holders(state: Dict, viewer_id: str, rank: int) -> List[str]:
+    if rank in set(state.get("draft_state", {}).get("face_up_removed", [])):
+        return []
+    known_owner = _public_known_role_owner(state, viewer_id, rank)
+    if known_owner is not None:
+        return [known_owner]
+    hidden_slots = _public_hidden_role_slots(state, viewer_id)
+    viewer_hidden_roles = set(
+        rank_value
+        for rank_value in state["players"].get(viewer_id, {}).get("chosen_ranks", [])
+        if rank_value not in state["players"].get(viewer_id, {}).get("revealed_ranks", [])
+    )
+    holders: List[str] = []
+    for player_id in state["turn_order"]:
+        if hidden_slots.get(player_id, 0) <= 0:
+            continue
+        if player_id == viewer_id:
+            if rank in viewer_hidden_roles:
+                return [viewer_id]
+            continue
+        holders.append(player_id)
+    return holders
+
+
+def _public_role_in_play_prior(state: Dict, viewer_id: str, rank: int) -> float:
+    known_owner = _public_known_role_owner(state, viewer_id, rank)
+    if known_owner is not None:
+        return 1.0
+    holders = _public_possible_role_holders(state, viewer_id, rank)
+    if not holders:
+        return 0.0
+    hidden_ranks = _public_hidden_role_ranks(state, viewer_id)
+    total_hidden_slots = sum(_public_hidden_role_slots(state, viewer_id).values())
+    if not hidden_ranks:
+        return 0.0
+    return min(1.0, total_hidden_slots / max(1, len(hidden_ranks)))
+
+
+def _is_city_color_complete_with_card(state: Dict, player_id: str, card: Dict) -> bool:
+    colors = {district["color"] for district in state["players"][player_id]["city"]}
+    if card["counts_as_any_color"]:
+        return len(colors) >= 4
+    colors.add(card["color"])
+    return len(colors) >= 5
+
+
+def _district_keep_score(state: Dict, player_id: str, card: Dict, rank: Optional[int] = None) -> int:
+    player = state["players"][player_id]
+    city = player["city"]
+    score = int(card["cost"]) * 4
+    score += int(card.get("score_bonus", 0)) * 8
+    if card.get("counts_as_any_color"):
+        score += 8
+    if card.get("protect_from_warlord"):
+        score += 6
+    existing_colors = {district["color"] for district in city}
+    if card["color"] not in existing_colors:
+        score += 5
+    if _is_city_color_complete_with_card(state, player_id, card):
+        score += 12
+    if len(city) + 1 >= int(state["config"]["winning_city_size"]):
+        score += 30
+    elif len(city) + 1 == int(state["config"]["winning_city_size"]) - 1:
+        score += 10
+    if rank in ROLE_TAX_COLORS and ROLE_TAX_COLORS[rank] == card["color"]:
+        score += 6
+    return score
+
+
+def _district_build_score(state: Dict, player_id: str, card: Dict, rank: Optional[int] = None) -> int:
+    player = state["players"][player_id]
+    active_turn = state.get("active_turn") or {}
+    score = _district_keep_score(state, player_id, card, rank) + 10
+    remaining_gold = int(player["gold"]) - int(card["cost"])
+    remaining_builds = int(active_turn.get("build_limit", 1)) - int(active_turn.get("builds_used", 0)) - 1
+    if remaining_builds > 0:
+        other_cards = [entry for entry in player["hand"] if entry["id"] != card["id"]]
+        if any(
+            not any(built["name_cn"] == entry["name_cn"] for built in player["city"] + [card])
+            and entry["cost"] <= remaining_gold
+            for entry in other_cards
+        ):
+            score += 8
+    if remaining_gold == 0:
+        score += 1
+    return score
+
+
+def _best_buildable_card(state: Dict, player_id: str, rank: Optional[int] = None) -> Optional[Dict]:
+    player = state["players"][player_id]
+    buildable = [card for card in player["hand"] if _can_build_card(player, card)]
+    if not buildable:
+        return None
+    return max(
+        buildable,
+        key=lambda card: (
+            _district_build_score(state, player_id, card, rank),
+            int(card["cost"]),
+            card["name_cn"],
+        ),
+    )
+
+
+def _best_tax_matching_build(state: Dict, player_id: str, rank: int) -> Optional[Dict]:
+    tax_color = ROLE_TAX_COLORS.get(rank)
+    if not tax_color:
+        return None
+    player = state["players"][player_id]
+    matching = [
+        card
+        for card in player["hand"]
+        if card["color"] == tax_color and _can_build_card(player, card)
+    ]
+    if not matching:
+        return None
+    return max(
+        matching,
+        key=lambda card: (
+            _district_build_score(state, player_id, card, rank),
+            int(card["cost"]),
+            card["name_cn"],
+        ),
+    )
+
+
+def _best_draw_choice(state: Dict, player_id: str, offered_cards: List[Dict], rank: Optional[int] = None) -> Optional[Dict]:
+    if not offered_cards:
+        return None
+    return max(
+        offered_cards,
+        key=lambda card: (
+            _district_keep_score(state, player_id, card, rank),
+            int(card["cost"]),
+            card["name_cn"],
+        ),
+    )
+
+
+def _draft_role_score(state: Dict, player_id: str, rank: int) -> int:
+    player = state["players"][player_id]
+    hand = player["hand"]
+    city = player["city"]
+    gold = int(player["gold"])
+    winning_city_size = int(state["config"]["winning_city_size"])
+    city_count = len(city)
+    matching_tax = sum(1 for card in city if card["color"] == ROLE_TAX_COLORS.get(rank))
+    affordable_count = sum(1 for card in hand if _can_build_card(player, card))
+    other_players = [pid for pid in state["turn_order"] if pid != player_id]
+    highest_other_city = max((len(state["players"][pid]["city"]) for pid in other_players), default=0)
+    highest_other_gold = max((int(state["players"][pid]["gold"]) for pid in other_players), default=0)
+
+    base_scores = {
+        1: 74,
+        2: 76,
+        3: 73,
+        4: 82,
+        5: 78,
+        6: 84,
+        7: 88,
+        8: 80,
+        9: 68,
+    }
+    score = base_scores.get(rank, 50)
+    score += matching_tax * 6
+
+    if rank == 1 and highest_other_city >= winning_city_size - 1:
+        score += 18
+    if rank == 2:
+        score += highest_other_gold * 2
+    if rank == 3:
+        if len(hand) <= 2:
+            score += 12
+        if max((len(state["players"][pid]["hand"]) for pid in other_players), default=0) >= len(hand) + 2:
+            score += 10
+    if rank == 4:
+        if player_id != state.get("crown_holder"):
+            score += 8
+        if city_count >= winning_city_size - 2:
+            score += 8
+    if rank == 5 and city_count >= winning_city_size - 1:
+        score += 12
+    if rank == 6:
+        if gold < 3:
+            score += 7
+        if affordable_count > 0:
+            score += 4
+    if rank == 7:
+        score += affordable_count * 5
+        if len(hand) <= 3:
+            score += 8
+        if city_count >= winning_city_size - 2:
+            score += 10
+    if rank == 8:
+        score += 10 if highest_other_city >= winning_city_size - 1 else 0
+        score += 8 if any(len(state["players"][pid]["city"]) > city_count for pid in other_players) else 0
+    if rank == 9 and len(state["turn_order"]) >= 5:
+        if state.get("crown_holder") in _seat_neighbors(state["turn_order"], player_id):
+            score += 6
+
+    return score
+
+
+def _best_draft_rank(state: Dict, player_id: str) -> Optional[int]:
+    pool = list(state.get("draft_state", {}).get("pool", []))
+    if not pool:
+        return None
+    return max(
+        pool,
+        key=lambda rank: (
+            _draft_role_score(state, player_id, rank),
+            -rank,
+        ),
+    )
+
+
+def _public_role_interest_score(state: Dict, player_id: str, rank: int) -> int:
+    player = state["players"][player_id]
+    city = player["city"]
+    city_count = len(city)
+    gold = int(player["gold"])
+    hand_count = len(player["hand"])
+    winning_city_size = int(state["config"]["winning_city_size"])
+    matching_tax = sum(1 for card in city if card["color"] == ROLE_TAX_COLORS.get(rank))
+    highest_other_city = max(
+        (len(state["players"][pid]["city"]) for pid in state["turn_order"] if pid != player_id),
+        default=0,
+    )
+
+    base = {
+        1: 60,
+        2: 58,
+        3: 46,
+        4: 54,
+        5: 48,
+        6: 56,
+        7: 64,
+        8: 55,
+        9: 42,
+    }.get(rank, 40)
+    score = base + matching_tax * 10
+
+    if rank == 1 and highest_other_city >= winning_city_size - 1:
+        score += 12
+    if rank == 2:
+        richest_other = max(
+            (int(state["players"][pid]["gold"]) for pid in state["turn_order"] if pid != player_id),
+            default=0,
+        )
+        score += richest_other * 2
+        if gold <= 2:
+            score += 6
+    if rank == 3:
+        if hand_count <= 2:
+            score += 10
+        if hand_count == 0:
+            score += 12
+    if rank == 4:
+        if player_id != state.get("crown_holder"):
+            score += 8
+        if city_count >= winning_city_size - 2:
+            score += 5
+    if rank == 5:
+        if city_count >= winning_city_size - 1:
+            score += 14
+    if rank == 6:
+        if gold <= 3:
+            score += 8
+        if hand_count >= 2:
+            score += 4
+    if rank == 7:
+        score += hand_count * 4
+        if city_count >= winning_city_size - 2:
+            score += 16
+    if rank == 8:
+        score += gold * 3
+        if highest_other_city >= winning_city_size - 1:
+            score += 14
+    if rank == 9 and len(state["turn_order"]) >= 5:
+        if state.get("crown_holder") in _seat_neighbors(state["turn_order"], player_id):
+            score += 12
+
+    return score
+
+
+def _public_holder_threat_score(state: Dict, player_id: str) -> int:
+    player = state["players"][player_id]
+    return (
+        len(player["city"]) * 14
+        + int(player["gold"]) * 3
+        + len(player["hand"]) * 2
+    )
+
+
+def _assassin_target_rank_score(state: Dict, viewer_id: str, target_rank: int) -> float:
+    candidates = _public_possible_role_holders(state, viewer_id, target_rank)
+    candidates = [player_id for player_id in candidates if player_id != viewer_id]
+    if not candidates:
+        return -1.0
+    role_threat = {
+        2: 48,
+        3: 56,
+        4: 82,
+        5: 74,
+        6: 88,
+        7: 92,
+        8: 84,
+        9: 68,
+    }.get(target_rank, 40)
+    best_holder_score = max(
+        _public_role_interest_score(state, player_id, target_rank) + _public_holder_threat_score(state, player_id)
+        for player_id in candidates
+    )
+    prior = _public_role_in_play_prior(state, viewer_id, target_rank)
+    return prior * (role_threat + best_holder_score)
+
+
+def _best_assassin_target(state: Dict, viewer_id: str) -> Optional[int]:
+    candidates = list(range(2, int(state["max_rank"]) + 1))
+    if not candidates:
+        return None
+    viable = [
+        (rank, _assassin_target_rank_score(state, viewer_id, rank))
+        for rank in candidates
+    ]
+    viable = [entry for entry in viable if entry[1] >= 0]
+    if not viable:
+        return None
+    return max(viable, key=lambda entry: (entry[1], -entry[0]))[0]
+
+
+def _best_thief_target(state: Dict, viewer_id: str) -> Optional[int]:
+    candidates = [
+        rank
+        for rank in range(3, int(state["max_rank"]) + 1)
+        if rank != state.get("killed_rank")
+    ]
+    if not candidates:
+        return None
+
+    def rank_score(rank: int) -> float:
+        holders = [player_id for player_id in _public_possible_role_holders(state, viewer_id, rank) if player_id != viewer_id]
+        if not holders:
+            return -1.0
+        prior = _public_role_in_play_prior(state, viewer_id, rank)
+        base = {
+            3: 50,
+            4: 78,
+            5: 60,
+            6: 90,
+            7: 86,
+            8: 76,
+            9: 72,
+        }.get(rank, 40)
+        richest_holder_estimate = max(
+            int(state["players"][player_id]["gold"]) * 5
+            + _public_role_interest_score(state, player_id, rank)
+            + _public_holder_threat_score(state, player_id)
+            for player_id in holders
+        )
+        return prior * (base + richest_holder_estimate)
+
+    viable = [(rank, rank_score(rank)) for rank in candidates]
+    viable = [entry for entry in viable if entry[1] >= 0]
+    if not viable:
+        return None
+    return max(viable, key=lambda entry: (entry[1], -entry[0]))[0]
+
+
+def _best_magician_action(state: Dict, player_id: str) -> Optional[Dict]:
+    player = state["players"][player_id]
+    hand = list(player["hand"])
+    buildable_cards = [card for card in hand if _can_build_card(player, card)]
+    other_players = [pid for pid in state["turn_order"] if pid != player_id]
+    if other_players:
+        swap_target = max(other_players, key=lambda pid: len(state["players"][pid]["hand"]))
+        swap_target_hand = len(state["players"][swap_target]["hand"])
+        if (not hand and swap_target_hand > 0) or (swap_target_hand >= len(hand) + 2 and not buildable_cards):
+            return {"type": "magician_swap", "target_player_id": swap_target}
+
+    redraw_candidates = sorted(
+        hand,
+        key=lambda card: (
+            _district_keep_score(state, player_id, card),
+            int(card["cost"]),
+            card["name_cn"],
+        ),
+    )
+    if redraw_candidates and (not buildable_cards or len(hand) >= 4):
+        redraw_count = 0
+        redraw_ids: List[str] = []
+        for card in redraw_candidates:
+            if redraw_count >= 3:
+                break
+            is_unbuildable = card["cost"] > int(player["gold"])
+            low_value = _district_keep_score(state, player_id, card) <= 18
+            if is_unbuildable or low_value or not buildable_cards:
+                redraw_ids.append(card["id"])
+                redraw_count += 1
+        if redraw_ids:
+            return {"type": "magician_redraw", "card_ids": redraw_ids}
+    return None
+
+
+def _best_destroy_target(state: Dict, player_id: str) -> Optional[Dict]:
+    targets = _warlord_destroy_targets(state, player_id)
+    if not targets:
+        return None
+    winning_city_size = int(state["config"]["winning_city_size"])
+
+    def target_score(target: Dict) -> int:
+        target_player_id = target["player_id"]
+        city_count = len(state["players"][target_player_id]["city"])
+        district = next(
+            (card for card in state["players"][target_player_id]["city"] if card["id"] == target["district_id"]),
+            None,
+        )
+        district_cost = int(district["cost"]) if district else 0
+        score = _player_city_value(state, target_player_id)
+        score += district_cost * 4
+        score -= int(target["destroy_cost"]) * 3
+        if city_count >= winning_city_size - 1:
+            score += 30
+        if target_player_id != player_id:
+            score += 4
+        return score
+
+    return max(
+        targets,
+        key=lambda target: (
+            target_score(target),
+            -int(target["destroy_cost"]),
+            target["name_cn"],
+        ),
+    )
+
+
+def _choose_income_for_bot(state: Dict, player_id: str, rank: int) -> str:
+    player = state["players"][player_id]
+    hand = player["hand"]
+    buildable_now = [card for card in hand if _can_build_card(player, card)]
+    if rank == 7:
+        if buildable_now and len(hand) >= 2:
+            return "gold"
+        return "cards"
+    if len(hand) <= 1:
+        return "cards"
+    if any(int(card["cost"]) <= int(player["gold"]) + 2 for card in hand):
+        return "gold"
+    if not buildable_now and len(hand) >= 3:
+        return "cards"
+    if buildable_now and len(player["city"]) >= int(state["config"]["winning_city_size"]) - 2:
+        return "gold"
+    return "cards" if len(hand) <= 2 else "gold"
+
+
 class CitadelsGame:
     game_id = "citadels"
     min_players = 2
@@ -1092,6 +1591,83 @@ class CitadelsGame:
             "game_over": bool(state.get("game_over")),
         }
         return view
+
+    @staticmethod
+    def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
+        if state.get("game_over"):
+            return None
+        if bot_id not in state.get("players", {}):
+            return None
+
+        if state.get("phase") == "draft":
+            draft_state = state.get("draft_state") or {}
+            if draft_state.get("current_player") != bot_id:
+                return None
+            rank = _best_draft_rank(state, bot_id)
+            if rank is None:
+                return None
+            return {"type": "draft_character", "rank": rank}
+
+        active_turn = state.get("active_turn")
+        if not isinstance(active_turn, dict) or active_turn.get("player_id") != bot_id:
+            return None
+
+        rank = int(active_turn["rank"])
+        step = active_turn.get("step")
+        if step == "choose_income":
+            return {"type": "choose_income", "choice": _choose_income_for_bot(state, bot_id, rank)}
+        if step == "choose_draw":
+            best_card = _best_draw_choice(state, bot_id, list(active_turn.get("draw_offer", [])), rank)
+            if not best_card:
+                return None
+            return {"type": "choose_draw", "card_id": best_card["id"]}
+        if step != "main":
+            return None
+
+        legal = set(CitadelsGame.get_legal_actions(state, bot_id))
+        if "use_assassin" in legal:
+            target_rank = _best_assassin_target(state, bot_id)
+            if target_rank is not None:
+                return {"type": "use_assassin", "target_rank": target_rank}
+        if "use_thief" in legal:
+            target_rank = _best_thief_target(state, bot_id)
+            if target_rank is not None:
+                return {"type": "use_thief", "target_rank": target_rank}
+
+        if rank == 3 and not active_turn.get("ability_used") and "build" not in legal:
+            magician_action = _best_magician_action(state, bot_id)
+            if magician_action:
+                return magician_action
+
+        tax_build = _best_tax_matching_build(state, bot_id, rank)
+        if tax_build and "build" in legal and "collect_tax" in legal and not active_turn.get("collected_tax"):
+            return {"type": "build", "card_id": tax_build["id"]}
+
+        if "collect_tax" in legal:
+            return {"type": "collect_tax"}
+
+        if "destroy_district" in legal:
+            destroy_target = _best_destroy_target(state, bot_id)
+            if destroy_target:
+                return {
+                    "type": "destroy_district",
+                    "target_player_id": destroy_target["player_id"],
+                    "district_id": destroy_target["district_id"],
+                }
+
+        if "build" in legal:
+            best_build = _best_buildable_card(state, bot_id, rank)
+            if best_build:
+                return {"type": "build", "card_id": best_build["id"]}
+
+        if rank == 3 and not active_turn.get("ability_used"):
+            magician_action = _best_magician_action(state, bot_id)
+            if magician_action:
+                return magician_action
+
+        if "end_turn" in legal:
+            return {"type": "end_turn"}
+        return None
 
     @staticmethod
     def serialize(state: Dict) -> Dict:
