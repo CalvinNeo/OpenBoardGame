@@ -1,0 +1,665 @@
+{
+  "他": {
+    "structure": "left_right",
+    "tone": 1
+  },
+  "伞": {
+    "structure": "up_down",
+    "tone": 3
+  },
+  "偶": {
+    "structure": "left_right",
+    "tone": 3
+  },
+  "刀": {
+    "structure": "single",
+    "tone": 1
+  },
+  "刷": {
+    "structure": "other",
+    "tone": 1
+  },
+  "勺": {
+    "structure": "single",
+    "tone": 2
+  },
+  "包": {
+    "structure": "semi_enclosure",
+    "tone": 1
+  },
+  "匙": {
+    "structure": "other",
+    "tone": 2
+  },
+  "匣": {
+    "radical": "匚",
+    "structure": "semi_enclosure",
+    "tone": 2
+  },
+  "器": {
+    "structure": "other",
+    "tone": 4
+  },
+  "图": {
+    "structure": "full_enclosure",
+    "tone": 2
+  },
+  "垫": {
+    "structure": "up_down",
+    "tone": 4
+  },
+  "堡": {
+    "structure": "up_down",
+    "tone": 3
+  },
+  "壶": {
+    "structure": "up_down",
+    "tone": 2
+  },
+  "头": {
+    "structure": "single",
+    "tone": 2
+  },
+  "夹": {
+    "structure": "other",
+    "tone": 1
+  },
+  "套": {
+    "structure": "up_down",
+    "tone": 4
+  },
+  "子": {
+    "structure": "single",
+    "tone": 3
+  },
+  "宝": {
+    "structure": "up_down",
+    "tone": 3
+  },
+  "巾": {
+    "structure": "single",
+    "tone": 1
+  },
+  "布": {
+    "structure": "single",
+    "tone": 4
+  },
+  "帘": {
+    "structure": "up_down",
+    "tone": 2
+  },
+  "帚": {
+    "structure": "up_down",
+    "tone": 3
+  },
+  "带": {
+    "structure": "other",
+    "tone": 4
+  },
+  "徽": {
+    "radical": "彳",
+    "structure": "left_middle_right",
+    "tone": 1
+  },
+  "戒": {
+    "structure": "other",
+    "tone": 4
+  },
+  "扇": {
+    "structure": "other",
+    "tone": 4
+  },
+  "扣": {
+    "radical": "提手旁",
+    "structure": "left_right",
+    "tone": 4
+  },
+  "把": {
+    "radical": "提手旁",
+    "structure": "left_right",
+    "tone": 3
+  },
+  "拍": {
+    "radical": "提手旁",
+    "structure": "left_right",
+    "tone": 1
+  },
+  "指": {
+    "radical": "提手旁",
+    "structure": "left_right",
+    "tone": 3
+  },
+  "星": {
+    "structure": "up_down",
+    "tone": 1
+  },
+  "木": {
+    "structure": "single",
+    "tone": 4
+  },
+  "本": {
+    "structure": "single",
+    "tone": 3
+  },
+  "机": {
+    "structure": "left_right",
+    "tone": 1
+  },
+  "杆": {
+    "structure": "left_right",
+    "tone": 3
+  },
+  "杯": {
+    "structure": "left_right",
+    "tone": 1
+  },
+  "板": {
+    "radical": "木字旁",
+    "structure": "left_right",
+    "tone": 3
+  },
+  "枕": {
+    "radical": "木字旁",
+    "structure": "left_right",
+    "tone": 3
+  },
+  "果": {
+    "structure": "up_down",
+    "tone": 3
+  },
+  "架": {
+    "radical": "木字旁",
+    "structure": "up_down",
+    "tone": 4
+  },
+  "柄": {
+    "radical": "木字旁",
+    "structure": "left_right",
+    "tone": 3
+  },
+  "标": {
+    "radical": "木字旁",
+    "structure": "left_right",
+    "tone": 1
+  },
+  "栽": {
+    "radical": "木字旁",
+    "structure": "other",
+    "tone": 1
+  },
+  "框": {
+    "radical": "木字旁",
+    "structure": "left_right",
+    "tone": 4
+  },
+  "桶": {
+    "radical": "木字旁",
+    "structure": "left_right",
+    "tone": 3
+  },
+  "植": {
+    "radical": "木字旁",
+    "structure": "left_right",
+    "tone": 2
+  },
+  "槌": {
+    "structure": "left_right",
+    "tone": 2
+  },
+  "毯": {
+    "structure": "left_right",
+    "tone": 3
+  },
+  "水": {
+    "structure": "single",
+    "tone": 3
+  },
+  "泡": {
+    "structure": "left_right",
+    "tone": 4
+  },
+  "源": {
+    "structure": "left_right",
+    "tone": 2
+  },
+  "灯": {
+    "structure": "left_right",
+    "tone": 1
+  },
+  "炉": {
+    "structure": "left_right",
+    "tone": 2
+  },
+  "烛": {
+    "structure": "left_right",
+    "tone": 2
+  },
+  "照": {
+    "structure": "up_down",
+    "tone": 4
+  },
+  "煲": {
+    "structure": "up_down",
+    "tone": 1
+  },
+  "牌": {
+    "structure": "left_right",
+    "tone": 2
+  },
+  "环": {
+    "structure": "left_right",
+    "tone": 2
+  },
+  "球": {
+    "structure": "left_right",
+    "tone": 2
+  },
+  "琴": {
+    "structure": "up_down",
+    "tone": 2
+  },
+  "瓶": {
+    "structure": "left_right",
+    "tone": 2
+  },
+  "皂": {
+    "structure": "up_down",
+    "tone": 4
+  },
+  "盒": {
+    "structure": "up_down",
+    "tone": 2
+  },
+  "盔": {
+    "structure": "up_down",
+    "tone": 1
+  },
+  "盘": {
+    "structure": "up_down",
+    "tone": 2
+  },
+  "票": {
+    "structure": "up_down",
+    "tone": 4
+  },
+  "章": {
+    "radical": "立",
+    "structure": "up_middle_down",
+    "tone": 1
+  },
+  "笔": {
+    "radical": "竹字头",
+    "structure": "up_down",
+    "tone": 3
+  },
+  "筒": {
+    "radical": "竹字头",
+    "structure": "up_down",
+    "tone": 3
+  },
+  "签": {
+    "radical": "竹字头",
+    "structure": "up_down",
+    "tone": 1
+  },
+  "箱": {
+    "radical": "竹字头",
+    "structure": "up_down",
+    "tone": 1
+  },
+  "篷": {
+    "radical": "竹字头",
+    "structure": "up_down",
+    "tone": 2
+  },
+  "糕": {
+    "structure": "left_right",
+    "tone": 1
+  },
+  "糖": {
+    "structure": "left_right",
+    "tone": 2
+  },
+  "素": {
+    "structure": "up_down",
+    "tone": 4
+  },
+  "纸": {
+    "structure": "left_right",
+    "tone": 3
+  },
+  "线": {
+    "structure": "left_right",
+    "tone": 4
+  },
+  "绵": {
+    "structure": "left_right",
+    "tone": 2
+  },
+  "缸": {
+    "structure": "left_right",
+    "tone": 1
+  },
+  "罩": {
+    "structure": "up_down",
+    "tone": 4
+  },
+  "胎": {
+    "structure": "left_right",
+    "tone": 1
+  },
+  "脑": {
+    "structure": "left_right",
+    "tone": 3
+  },
+  "膏": {
+    "structure": "up_down",
+    "tone": 1
+  },
+  "蕉": {
+    "structure": "up_down",
+    "tone": 1
+  },
+  "衣": {
+    "structure": "single",
+    "tone": 1
+  },
+  "表": {
+    "structure": "up_down",
+    "tone": 3
+  },
+  "袋": {
+    "structure": "up_down",
+    "tone": 4
+  },
+  "裙": {
+    "structure": "left_right",
+    "tone": 2
+  },
+  "贴": {
+    "structure": "left_right",
+    "tone": 1
+  },
+  "车": {
+    "structure": "single",
+    "tone": 1
+  },
+  "针": {
+    "structure": "left_right",
+    "tone": 1
+  },
+  "钉": {
+    "radical": "金字旁",
+    "structure": "left_right",
+    "tone": 1
+  },
+  "钟": {
+    "radical": "金字旁",
+    "structure": "left_right",
+    "tone": 1
+  },
+  "铃": {
+    "radical": "金字旁",
+    "structure": "left_right",
+    "tone": 2
+  },
+  "铲": {
+    "radical": "金字旁",
+    "structure": "left_right",
+    "tone": 3
+  },
+  "链": {
+    "radical": "金字旁",
+    "structure": "left_right",
+    "tone": 4
+  },
+  "锁": {
+    "structure": "left_right",
+    "tone": 3
+  },
+  "锅": {
+    "radical": "金字旁",
+    "structure": "left_right",
+    "tone": 1
+  },
+  "镜": {
+    "radical": "金字旁",
+    "structure": "left_right",
+    "tone": 4
+  },
+  "钥": {
+    "radical": "金字旁",
+    "structure": "left_right",
+    "tone": 4
+  },
+  "镯": {
+    "radical": "金字旁",
+    "structure": "left_right",
+    "tone": 2
+  },
+  "霜": {
+    "structure": "up_down",
+    "tone": 1
+  },
+  "靴": {
+    "structure": "left_right",
+    "tone": 1
+  },
+  "鞋": {
+    "structure": "left_right",
+    "tone": 2
+  },
+  "电": {
+    "structure": "left_right",
+    "tone": 4
+  },
+  "手": {
+    "structure": "single",
+    "tone": 3
+  },
+  "雨": {
+    "structure": "single",
+    "tone": 3
+  },
+  "洗": {
+    "structure": "left_right",
+    "tone": 3
+  },
+  "书": {
+    "structure": "single",
+    "tone": 1
+  },
+  "奖": {
+    "structure": "up_down",
+    "tone": 3
+  },
+  "保": {
+    "structure": "left_right",
+    "tone": 3
+  },
+  "毛": {
+    "structure": "single",
+    "tone": 2
+  },
+  "牙": {
+    "structure": "single",
+    "tone": 2
+  },
+  "护": {
+    "radical": "提手旁",
+    "structure": "left_right",
+    "tone": 4
+  },
+  "药": {
+    "radical": "草字头",
+    "structure": "up_down",
+    "tone": 4
+  },
+  "台": {
+    "structure": "up_down",
+    "tone": 2
+  },
+  "打": {
+    "radical": "提手旁",
+    "structure": "left_right",
+    "tone": 3
+  },
+  "吹": {
+    "structure": "left_right",
+    "tone": 1
+  },
+  "自": {
+    "structure": "single",
+    "tone": 4
+  },
+  "火": {
+    "structure": "single",
+    "tone": 3
+  },
+  "茶": {
+    "radical": "草字头",
+    "structure": "up_down",
+    "tone": 2
+  },
+  "香": {
+    "structure": "up_down",
+    "tone": 1
+  },
+  "饭": {
+    "structure": "left_right",
+    "tone": 4
+  },
+  "围": {
+    "structure": "full_enclosure",
+    "tone": 2
+  },
+  "拖": {
+    "radical": "提手旁",
+    "structure": "left_right",
+    "tone": 1
+  },
+  "雪": {
+    "structure": "up_down",
+    "tone": 3
+  },
+  "胶": {
+    "structure": "left_right",
+    "tone": 1
+  },
+  "门": {
+    "structure": "single",
+    "tone": 2
+  },
+  "口": {
+    "structure": "single",
+    "tone": 3
+  },
+  "订": {
+    "structure": "left_right",
+    "tone": 4
+  },
+  "耳": {
+    "structure": "single",
+    "tone": 3
+  },
+  "睡": {
+    "structure": "left_right",
+    "tone": 4
+  },
+  "地": {
+    "structure": "left_right",
+    "tone": 4
+  },
+  "蓝": {
+    "radical": "草字头",
+    "structure": "up_down",
+    "tone": 2
+  },
+  "校": {
+    "radical": "木字旁",
+    "structure": "left_right",
+    "tone": 4
+  },
+  "会": {
+    "structure": "up_down",
+    "tone": 4
+  },
+  "队": {
+    "structure": "left_right",
+    "tone": 4
+  },
+  "草": {
+    "radical": "草字头",
+    "structure": "up_down",
+    "tone": 3
+  },
+  "菜": {
+    "radical": "草字头",
+    "structure": "up_down",
+    "tone": 4
+  },
+  "落": {
+    "radical": "草字头",
+    "structure": "up_down",
+    "tone": 4
+  },
+  "钻": {
+    "radical": "金字旁",
+    "structure": "left_right",
+    "tone": 4
+  },
+  "铅": {
+    "radical": "金字旁",
+    "structure": "left_right",
+    "tone": 1
+  },
+  "键": {
+    "radical": "金字旁",
+    "structure": "left_right",
+    "tone": 4
+  },
+  "杯": {
+    "radical": "木字旁",
+    "structure": "left_right",
+    "tone": 1
+  },
+  "椅": {
+    "radical": "木字旁",
+    "structure": "left_right",
+    "tone": 3
+  },
+  "梯": {
+    "radical": "木字旁",
+    "structure": "left_right",
+    "tone": 1
+  },
+  "梳": {
+    "radical": "木字旁",
+    "structure": "left_right",
+    "tone": 1
+  },
+  "棒": {
+    "radical": "木字旁",
+    "structure": "left_right",
+    "tone": 4
+  },
+  "桃": {
+    "radical": "木字旁",
+    "structure": "left_right",
+    "tone": 2
+  },
+  "梨": {
+    "radical": "木字旁",
+    "structure": "left_right",
+    "tone": 2
+  },
+  "榨": {
+    "radical": "木字旁",
+    "structure": "left_right",
+    "tone": 4
+  },
+  "鸟": {
+    "structure": "other",
+    "tone": 3
+  }
+}
