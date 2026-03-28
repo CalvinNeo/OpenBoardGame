@@ -64,6 +64,22 @@ class ThingsInRingsGameTests(unittest.TestCase):
         self.assertTrue(_word_membership(radical_rule, {"name": "眼镜"}))
         self.assertFalse(_word_membership(radical_rule, {"name": "台灯"}))
 
+    def test_word_membership_supports_first_char_structure(self):
+        structure_rule = {
+            "evaluator": {"kind": "first_char_structure_is", "value": "single"},
+        }
+
+        self.assertTrue(_word_membership(structure_rule, {"name": "手机"}))
+        self.assertFalse(_word_membership(structure_rule, {"name": "台灯"}))
+
+    def test_word_membership_supports_first_char_radical(self):
+        radical_rule = {
+            "evaluator": {"kind": "first_char_radical_is", "value": "提手旁"},
+        }
+
+        self.assertTrue(_word_membership(radical_rule, {"name": "打印机"}))
+        self.assertFalse(_word_membership(radical_rule, {"name": "手机"}))
+
     def test_default_config_uses_three_rings(self):
         state = ThingsInRingsGame.init_game(None, _players(3))
 

@@ -181,6 +181,7 @@ def _word_membership(rule: Dict[str, object], thing_card: Dict[str, str]) -> boo
     if not isinstance(evaluator, dict):
         return False
     name = _normalize_name(thing_card.get("name"))
+    first_char = name[0] if name else ""
     last_char = name[-1] if name else ""
     kind = evaluator.get("kind")
     if kind == "char_count_eq":
@@ -211,6 +212,12 @@ def _word_membership(rule: Dict[str, object], thing_card: Dict[str, str]) -> boo
         return bool(meta) and meta.get("structure") == str(evaluator.get("value") or "")
     if kind == "last_char_radical_is":
         meta = _load_last_char_meta().get(last_char)
+        return bool(meta) and meta.get("radical") == str(evaluator.get("value") or "")
+    if kind == "first_char_structure_is":
+        meta = _load_last_char_meta().get(first_char)
+        return bool(meta) and meta.get("structure") == str(evaluator.get("value") or "")
+    if kind == "first_char_radical_is":
+        meta = _load_last_char_meta().get(first_char)
         return bool(meta) and meta.get("radical") == str(evaluator.get("value") or "")
     return False
 

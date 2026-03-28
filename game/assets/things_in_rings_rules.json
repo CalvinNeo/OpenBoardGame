@@ -214,6 +214,69 @@
         "kind": "last_char_radical_is",
         "value": "提手旁"
       }
+    },
+    {
+      "id": "word_first_char_left_right",
+      "text": "名称第一个字是左右结构",
+      "evaluation_mode": "auto",
+      "evaluator": {
+        "kind": "first_char_structure_is",
+        "value": "left_right"
+      }
+    },
+    {
+      "id": "word_first_char_up_down",
+      "text": "名称第一个字是上下结构",
+      "evaluation_mode": "auto",
+      "evaluator": {
+        "kind": "first_char_structure_is",
+        "value": "up_down"
+      }
+    },
+    {
+      "id": "word_first_char_single",
+      "text": "名称第一个字是独体字",
+      "evaluation_mode": "auto",
+      "evaluator": {
+        "kind": "first_char_structure_is",
+        "value": "single"
+      }
+    },
+    {
+      "id": "word_first_char_radical_hand",
+      "text": "名称第一个字的部首是提手旁",
+      "evaluation_mode": "auto",
+      "evaluator": {
+        "kind": "first_char_radical_is",
+        "value": "提手旁"
+      }
+    },
+    {
+      "id": "word_first_char_radical_grass",
+      "text": "名称第一个字的部首是草字头",
+      "evaluation_mode": "auto",
+      "evaluator": {
+        "kind": "first_char_radical_is",
+        "value": "草字头"
+      }
+    },
+    {
+      "id": "word_first_char_radical_metal",
+      "text": "名称第一个字的部首是金字旁",
+      "evaluation_mode": "auto",
+      "evaluator": {
+        "kind": "first_char_radical_is",
+        "value": "金字旁"
+      }
+    },
+    {
+      "id": "word_first_char_radical_wood",
+      "text": "名称第一个字的部首是木字旁",
+      "evaluation_mode": "auto",
+      "evaluator": {
+        "kind": "first_char_radical_is",
+        "value": "木字旁"
+      }
     }
   ],
   "attribute": [
