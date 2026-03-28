@@ -167,9 +167,9 @@
 <rect x="24" y="260" width="120" height="120" fill="url(#lime_rings)" />
 <rect x="24" y="260" width="120" height="120" fill="none" stroke="#6d5a45" stroke-width="2" />
 <rect x="27" y="263" width="114" height="114" fill="none" stroke="#ceb99a" stroke-width="1" stroke-dasharray="1 7" stroke-linecap="round" opacity="0.55" />
-<rect x="144" y="260" width="118" height="120" fill="url(#cream_medallion)" />
-<rect x="144" y="260" width="118" height="120" fill="none" stroke="#6d5a45" stroke-width="2" />
-<rect x="147" y="263" width="112" height="114" fill="none" stroke="#ceb99a" stroke-width="1" stroke-dasharray="1 7" stroke-linecap="round" opacity="0.55" />
+<rect x="144" y="260" width="118" height="168" fill="url(#cream_medallion)" />
+<rect x="144" y="260" width="118" height="168" fill="none" stroke="#6d5a45" stroke-width="2" />
+<rect x="147" y="263" width="112" height="162" fill="none" stroke="#ceb99a" stroke-width="1" stroke-dasharray="1 7" stroke-linecap="round" opacity="0.55" />
 <rect x="262" y="260" width="119" height="120" fill="url(#blue_diag)" />
 <rect x="262" y="260" width="119" height="120" fill="none" stroke="#6d5a45" stroke-width="2" />
 <rect x="265" y="263" width="113" height="114" fill="none" stroke="#ceb99a" stroke-width="1" stroke-dasharray="1 7" stroke-linecap="round" opacity="0.55" />
@@ -191,9 +191,6 @@
 <rect x="24" y="380" width="120" height="120" fill="url(#tan_dots)" />
 <rect x="24" y="380" width="120" height="120" fill="none" stroke="#6d5a45" stroke-width="2" />
 <rect x="27" y="383" width="114" height="114" fill="none" stroke="#ceb99a" stroke-width="1" stroke-dasharray="1 7" stroke-linecap="round" opacity="0.55" />
-<rect x="144" y="380" width="118" height="120" fill="url(#purple_diamond)" />
-<rect x="144" y="380" width="118" height="120" fill="none" stroke="#6d5a45" stroke-width="2" />
-<rect x="147" y="383" width="112" height="114" fill="none" stroke="#ceb99a" stroke-width="1" stroke-dasharray="1 7" stroke-linecap="round" opacity="0.55" />
 <rect x="262" y="380" width="119" height="120" fill="url(#starburst)" />
 <rect x="262" y="380" width="119" height="120" fill="none" stroke="#6d5a45" stroke-width="2" />
 <rect x="265" y="383" width="113" height="114" fill="none" stroke="#ceb99a" stroke-width="1" stroke-dasharray="1 7" stroke-linecap="round" opacity="0.55" />
@@ -209,9 +206,9 @@
 <rect x="24" y="500" width="120" height="119" fill="url(#blue_vertical)" />
 <rect x="24" y="500" width="120" height="119" fill="none" stroke="#6d5a45" stroke-width="2" />
 <rect x="27" y="503" width="114" height="113" fill="none" stroke="#ceb99a" stroke-width="1" stroke-dasharray="1 7" stroke-linecap="round" opacity="0.55" />
-<rect x="144" y="500" width="118" height="119" fill="url(#purple_diamond)" />
-<rect x="144" y="500" width="118" height="119" fill="none" stroke="#6d5a45" stroke-width="2" />
-<rect x="147" y="503" width="112" height="113" fill="none" stroke="#ceb99a" stroke-width="1" stroke-dasharray="1 7" stroke-linecap="round" opacity="0.55" />
+<rect x="144" y="428" width="118" height="191" fill="url(#purple_diamond)" />
+<rect x="144" y="428" width="118" height="191" fill="none" stroke="#6d5a45" stroke-width="2" />
+<rect x="147" y="431" width="112" height="185" fill="none" stroke="#ceb99a" stroke-width="1" stroke-dasharray="1 7" stroke-linecap="round" opacity="0.55" />
 <rect x="262" y="500" width="119" height="119" fill="url(#blue_blocks)" />
 <rect x="262" y="500" width="119" height="119" fill="none" stroke="#6d5a45" stroke-width="2" />
 <rect x="265" y="503" width="113" height="113" fill="none" stroke="#ceb99a" stroke-width="1" stroke-dasharray="1 7" stroke-linecap="round" opacity="0.55" />
@@ -298,11 +295,11 @@
 <path d="M 799 918 C 799 902 798 889 795 878 C 789 866 777 860 760 860 L 142 860 L 142 139 L 858 139 L 858 740 L 262 740 L 262 260 L 740 260 L 740 619 L 381 619 L 381 380 L 619 380 L 619 619 L 500 619" fill="none" stroke="#2f1812" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" opacity="0.9" />
 <path d="M 799 918 C 799 902 798 889 795 878 C 789 866 777 860 760 860 L 142 860 L 142 139 L 858 139 L 858 740 L 262 740 L 262 260 L 740 260 L 740 619 L 381 619 L 381 380 L 619 380 L 619 619 L 500 619" fill="none" stroke="#8d5a3c" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
 <path d="M 799 918 C 799 902 798 889 795 878 C 789 866 777 860 760 860 L 142 860 L 142 139 L 858 139 L 858 740 L 262 740 L 262 260 L 740 260 L 740 619 L 381 619 L 381 380 L 619 380 L 619 619 L 500 619" fill="none" stroke="#e0b287" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1 12" opacity="0.9" />
-<g transform="translate(918 210) rotate(2)" filter="url(#soft-shadow)">
+<g transform="translate(859 210) rotate(2)" filter="url(#soft-shadow)">
 <rect x="-25.5" y="-25.5" width="51" height="51" fill="url(#leather-fill)" stroke="#4e3c27" stroke-width="2" />
 <rect x="-20.5" y="-20.5" width="41" height="41" fill="none" stroke="#a58b65" stroke-width="1.2" stroke-dasharray="1 5" stroke-linecap="round" opacity="0.55" />
 </g>
-<g transform="translate(535 337) rotate(12)" filter="url(#soft-shadow)">
+<g transform="translate(500 337) rotate(12)" filter="url(#soft-shadow)">
 <rect x="-25.5" y="-25.5" width="51" height="51" fill="url(#leather-fill)" stroke="#4e3c27" stroke-width="2" />
 <rect x="-20.5" y="-20.5" width="41" height="41" fill="none" stroke="#a58b65" stroke-width="1.2" stroke-dasharray="1 5" stroke-linecap="round" opacity="0.55" />
 </g>
@@ -310,11 +307,11 @@
 <rect x="-26.5" y="-26.5" width="53" height="53" fill="url(#leather-fill)" stroke="#4e3c27" stroke-width="2" />
 <rect x="-21.5" y="-21.5" width="43" height="43" fill="none" stroke="#a58b65" stroke-width="1.2" stroke-dasharray="1 5" stroke-linecap="round" opacity="0.55" />
 </g>
-<g transform="translate(541 663) rotate(-8)" filter="url(#soft-shadow)">
+<g transform="translate(500 663) rotate(-8)" filter="url(#soft-shadow)">
 <rect x="-26.5" y="-26.5" width="53" height="53" fill="url(#leather-fill)" stroke="#4e3c27" stroke-width="2" />
 <rect x="-21.5" y="-21.5" width="43" height="43" fill="none" stroke="#a58b65" stroke-width="1.2" stroke-dasharray="1 5" stroke-linecap="round" opacity="0.55" />
 </g>
-<g transform="translate(683 793) rotate(-14)" filter="url(#soft-shadow)">
+<g transform="translate(683 740) rotate(-14)" filter="url(#soft-shadow)">
 <rect x="-26.5" y="-26.5" width="53" height="53" fill="url(#leather-fill)" stroke="#4e3c27" stroke-width="2" />
 <rect x="-21.5" y="-21.5" width="43" height="43" fill="none" stroke="#a58b65" stroke-width="1.2" stroke-dasharray="1 5" stroke-linecap="round" opacity="0.55" />
 </g>
