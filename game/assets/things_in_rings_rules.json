@@ -1,0 +1,132 @@
+{
+  "word": [
+    {
+      "id": "word_len_2",
+      "text": "名称恰好 2 个字",
+      "evaluation_mode": "auto",
+      "evaluator": {"kind": "char_count_eq", "value": 2}
+    },
+    {
+      "id": "word_len_3",
+      "text": "名称恰好 3 个字",
+      "evaluation_mode": "auto",
+      "evaluator": {"kind": "char_count_eq", "value": 3}
+    },
+    {
+      "id": "word_len_gte_4",
+      "text": "名称至少 4 个字",
+      "evaluation_mode": "auto",
+      "evaluator": {"kind": "char_count_gte", "value": 4}
+    },
+    {
+      "id": "word_contains_hand",
+      "text": "名称里有“手”",
+      "evaluation_mode": "auto",
+      "evaluator": {"kind": "contains", "value": "手"}
+    },
+    {
+      "id": "word_contains_electric",
+      "text": "名称里有“电”",
+      "evaluation_mode": "auto",
+      "evaluator": {"kind": "contains", "value": "电"}
+    },
+    {
+      "id": "word_contains_car",
+      "text": "名称里有“车”",
+      "evaluation_mode": "auto",
+      "evaluator": {"kind": "contains", "value": "车"}
+    },
+    {
+      "id": "word_contains_light",
+      "text": "名称里有“灯”",
+      "evaluation_mode": "auto",
+      "evaluator": {"kind": "contains", "value": "灯"}
+    },
+    {
+      "id": "word_contains_bag",
+      "text": "名称里有“包”",
+      "evaluation_mode": "auto",
+      "evaluator": {"kind": "contains", "value": "包"}
+    },
+    {
+      "id": "word_contains_cup",
+      "text": "名称里有“杯”",
+      "evaluation_mode": "auto",
+      "evaluator": {"kind": "contains", "value": "杯"}
+    },
+    {
+      "id": "word_contains_knife",
+      "text": "名称里有“刀”",
+      "evaluation_mode": "auto",
+      "evaluator": {"kind": "contains", "value": "刀"}
+    },
+    {
+      "id": "word_ends_zi",
+      "text": "名称以“子”结尾",
+      "evaluation_mode": "auto",
+      "evaluator": {"kind": "ends_with", "value": "子"}
+    },
+    {
+      "id": "word_ends_ji",
+      "text": "名称以“机”结尾",
+      "evaluation_mode": "auto",
+      "evaluator": {"kind": "ends_with", "value": "机"}
+    },
+    {
+      "id": "word_ends_qi",
+      "text": "名称以“器”结尾",
+      "evaluation_mode": "auto",
+      "evaluator": {"kind": "ends_with", "value": "器"}
+    },
+    {
+      "id": "word_starts_rain",
+      "text": "名称第一个字是“雨”",
+      "evaluation_mode": "auto",
+      "evaluator": {"kind": "starts_with", "value": "雨"}
+    },
+    {
+      "id": "word_starts_electric",
+      "text": "名称第一个字是“电”",
+      "evaluation_mode": "auto",
+      "evaluator": {"kind": "starts_with", "value": "电"}
+    },
+    {
+      "id": "word_has_repeat",
+      "text": "名称里有重复字",
+      "evaluation_mode": "auto",
+      "evaluator": {"kind": "has_repeated_char"}
+    }
+  ],
+  "attribute": [
+    {"id": "attr_soft", "text": "通常是柔软的", "evaluation_mode": "knower"},
+    {"id": "attr_hard", "text": "通常是坚硬的", "evaluation_mode": "knower"},
+    {"id": "attr_wearable", "text": "通常可以穿在身上", "evaluation_mode": "knower"},
+    {"id": "attr_powered", "text": "通常需要插电或充电", "evaluation_mode": "knower"},
+    {"id": "attr_sharp", "text": "通常有锋利边缘", "evaluation_mode": "knower"},
+    {"id": "attr_transparent", "text": "通常是透明或半透明的", "evaluation_mode": "knower"},
+    {"id": "attr_metal", "text": "通常主要由金属构成", "evaluation_mode": "knower"},
+    {"id": "attr_pocket", "text": "通常可以放进衣服口袋", "evaluation_mode": "knower"},
+    {"id": "attr_fragile", "text": "通常是易碎的", "evaluation_mode": "knower"},
+    {"id": "attr_glow", "text": "通常能够发光", "evaluation_mode": "knower"},
+    {"id": "attr_container", "text": "通常可以装东西", "evaluation_mode": "knower"},
+    {"id": "attr_round", "text": "通常是圆形或接近圆形", "evaluation_mode": "knower"},
+    {"id": "attr_sound", "text": "通常会发出明显声音", "evaluation_mode": "knower"},
+    {"id": "attr_one_hand", "text": "通常适合单手拿起", "evaluation_mode": "knower"}
+  ],
+  "context": [
+    {"id": "ctx_kitchen", "text": "常在厨房里使用", "evaluation_mode": "knower"},
+    {"id": "ctx_bedroom", "text": "常在卧室里出现", "evaluation_mode": "knower"},
+    {"id": "ctx_bathroom", "text": "常在浴室里出现", "evaluation_mode": "knower"},
+    {"id": "ctx_school", "text": "常在学校里出现", "evaluation_mode": "knower"},
+    {"id": "ctx_office", "text": "常在办公室里出现", "evaluation_mode": "knower"},
+    {"id": "ctx_travel", "text": "常在旅行途中出现", "evaluation_mode": "knower"},
+    {"id": "ctx_rain", "text": "常在下雨天使用", "evaluation_mode": "knower"},
+    {"id": "ctx_outdoor", "text": "常在运动或户外活动中出现", "evaluation_mode": "knower"},
+    {"id": "ctx_formal", "text": "常在正式场合出现", "evaluation_mode": "knower"},
+    {"id": "ctx_dining", "text": "常在吃饭时出现", "evaluation_mode": "knower"},
+    {"id": "ctx_repair", "text": "常在维修或施工时出现", "evaluation_mode": "knower"},
+    {"id": "ctx_winter", "text": "常在冬天更常见", "evaluation_mode": "knower"},
+    {"id": "ctx_stage", "text": "常在舞台或表演中出现", "evaluation_mode": "knower"},
+    {"id": "ctx_entrance", "text": "常在家门口附近出现", "evaluation_mode": "knower"}
+  ]
+}
