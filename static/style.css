@@ -13662,14 +13662,26 @@ body.scout-explain-mode [data-scout-explain].has-explanation {
   color: #9a3412;
 }
 
+.scout-explain-content h4 {
+  margin: 0 0 10px;
+  color: #9a3412;
+}
+
 .scout-help-content p,
-.scout-help-content li {
+.scout-help-content li,
+.scout-explain-content p,
+.scout-explain-content li {
   color: #4b5563;
   line-height: 1.5;
 }
 
-.scout-help-content ul {
+.scout-help-content ul,
+.scout-explain-content ul {
   margin: 8px 0 0 20px;
+}
+
+.scout-explain-list strong {
+  color: #7f1d1d;
 }
 
 #scoutPanel {

@@ -107,6 +107,22 @@ const SCOUT_EXPLANATIONS = {
   players: {
     name: "Players",
     description: "Each player card shows current score, hand count, captured cards this round, and round-specific Scout resources.",
+    details(view) {
+      const rows = [
+        { icon: "Σ", text: "Total score across completed rounds." },
+        { icon: "✋", text: "Cards currently left in that player's hand." },
+        { icon: "🎭", text: "Cards captured this round by beating the previous active set." },
+      ]
+      if (view && view.variant === "duel") {
+        rows.push({ icon: "🎟️", text: "Scout tokens left this round in the 2-player duel variant." })
+      } else {
+        rows.push({ icon: "⭐", text: "Scout points earned this round when other players Scout from your active set." })
+        rows.push({ icon: "🎪", text: "This player still has their once-per-round Scout + Show available." })
+      }
+      rows.push({ icon: "Outline", text: "The emphasized border marks the current turn." })
+      rows.push({ icon: "Glow", text: "The warmer highlighted card marks the round's start player." })
+      return rows
+    },
   },
   readyKeepBtn: {
     name: "Keep Order",
@@ -179,9 +195,20 @@ function showScoutExplanation(explainId) {
   if (!explanation || !scoutExplainContent || !scoutExplainModal) {
     return
   }
+  const detailRows = typeof explanation.details === "function"
+    ? explanation.details(currentScoutView)
+    : explanation.details
+  const detailsHtml = Array.isArray(detailRows) && detailRows.length
+    ? `
+      <ul class="scout-explain-list">
+        ${detailRows.map((row) => `<li><strong>${row.icon}</strong>: ${row.text}</li>`).join("")}
+      </ul>
+    `
+    : ""
   scoutExplainContent.innerHTML = `
     <h4>${explanation.name}</h4>
     <p>${explanation.description}</p>
+    ${detailsHtml}
   `
   setModalVisible(scoutExplainModal, true)
 }
