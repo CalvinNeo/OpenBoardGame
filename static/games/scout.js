@@ -67,7 +67,7 @@ const SCOUT_HELP_TEXT = `
   </ul>
 
   <h3>Scout + Show</h3>
-  <p>In 3-5 player games, each player may use <strong>Scout + Show</strong> once per round: scout a card and immediately show from the updated hand.</p>
+  <p>In 3-5 player games, each player may use <strong>Scout + Show</strong> once per round: scout a card, keep the turn, then either Show from the updated hand or finish the turn without Showing.</p>
 
   <h3>2-Player Duel</h3>
   <ul>
@@ -81,6 +81,7 @@ const SCOUT_HELP_TEXT = `
     <li>Click cards in your hand to choose a continuous range for Show.</li>
     <li>Click the top or bottom half of an edge card to choose both the Scout side and the number you want.</li>
     <li>Choose an insertion gap, then use <strong>Scout</strong> or <strong>Scout + Show</strong>.</li>
+    <li>After <strong>Scout + Show</strong>, select from your real hand to Show, or click <strong>Finish Turn</strong>.</li>
     <li>Click empty space in your hand area to clear the current selection.</li>
   </ul>
 `
@@ -96,7 +97,7 @@ const SCOUT_EXPLANATIONS = {
   },
   previewHand: {
     name: "After Scout Preview",
-    description: "When you choose a Scout side and insertion gap, this preview shows the post-Scout hand. Select a range here for Scout + Show.",
+    description: "When you choose a Scout side and insertion gap, this preview shows the post-Scout hand. If you use Scout + Show, the Scout resolves first and you may then Show from Your Hand or finish turn.",
   },
   players: {
     name: "Players",
@@ -120,7 +121,7 @@ const SCOUT_EXPLANATIONS = {
   },
   scoutShowBtn: {
     name: "Scout + Show",
-    description: "Available once per round in 3-5 player games. Scout first, then immediately Show from the preview hand.",
+    description: "Available once per round in 3-5 player games. Use it to Scout and keep the turn. Then you may Show from Your Hand or finish turn.",
   },
 }
 
@@ -131,6 +132,10 @@ function scoutPlayerName(view, playerId) {
 
 function scoutHasLegalAction(actionType) {
   return !!(currentScoutView && Array.isArray(currentScoutView.legal_actions) && currentScoutView.legal_actions.includes(actionType))
+}
+
+function scoutIsPendingScoutShow(view) {
+  return !!(view && view.your_scout_and_show_pending)
 }
 
 function showScoutHeaderActions(show) {
@@ -428,13 +433,11 @@ function scoutCanScout(view) {
 }
 
 function scoutCanScoutShow(view) {
-  if (!view || !scoutHasLegalAction("scout_and_show") || !scoutTakeSide || !Number.isInteger(scoutInsertIndex)) {
-    return false
-  }
-  const range = scoutSelectedRange()
-  const workingHand = scoutWorkingHand(view)
-  const combo = scoutClassifyCards(scoutRangeCards(workingHand, range))
-  return !!(combo && scoutBeats(combo, scoutActiveAfterScout(view)))
+  return !!(view && scoutHasLegalAction("scout_and_show") && scoutTakeSide && Number.isInteger(scoutInsertIndex))
+}
+
+function scoutCanFinishScoutShow(view) {
+  return !!(view && scoutHasLegalAction("finish_scout_and_show"))
 }
 
 function scoutSyncSelection(view) {
@@ -447,6 +450,10 @@ function scoutSyncSelection(view) {
     return
   }
   const baseHand = Array.isArray(view.your_hand) ? view.your_hand : []
+  if (scoutIsPendingScoutShow(view)) {
+    scoutTakeSide = null
+    scoutInsertIndex = null
+  }
   if (!view.active_set || !scoutTakeSide || view.active_set.owner_player_id === view.you) {
     scoutTakeSide = null
     scoutInsertIndex = null
@@ -758,6 +765,13 @@ function renderScoutPreview(view) {
     return
   }
   scoutPreviewArea.innerHTML = ""
+  if (scoutIsPendingScoutShow(view)) {
+    const note = document.createElement("div")
+    note.className = "scout-empty-state"
+    note.textContent = "Scout + Show is active. Choose a Show from Your Hand, or click Finish Turn."
+    scoutPreviewArea.appendChild(note)
+    return
+  }
   if (!scoutTakeSide) {
     const note = document.createElement("div")
     note.className = "scout-empty-state"
@@ -782,45 +796,18 @@ function renderScoutPreview(view) {
 
   const shell = document.createElement("div")
   shell.className = "scout-hand-board preview"
-  shell.addEventListener("click", () => {
-    clearScoutRangeSelection()
-    renderScoutGameState({ view, events: [] })
-  })
 
   const row = document.createElement("div")
   row.className = "scout-card-row"
-  const selected = scoutSelectedRange()
-  scoutWorkingHand(view).forEach((card, index) => {
+  scoutWorkingHand(view).forEach((card) => {
     row.appendChild(
       renderScoutCard(card, {
-        clickable: scoutHasLegalAction("scout_and_show"),
-        selected: !!selected && index >= selected.start && index <= selected.end,
         ghost: !!card.ghost,
-        onClick: () => {
-          if (!Number.isInteger(scoutRangeAnchor)) {
-            scoutRangeAnchor = index
-            scoutRangeFocus = index
-          } else {
-            scoutRangeFocus = index
-          }
-          renderScoutGameState({ view, events: [] })
-        },
       }),
     )
   })
   shell.appendChild(row)
   scoutPreviewArea.appendChild(shell)
-
-  const range = scoutSelectedRange()
-  if (range) {
-    const combo = scoutClassifyCards(scoutRangeCards(scoutWorkingHand(view), range))
-    const badge = document.createElement("div")
-    badge.className = "scout-preview-selection"
-    badge.textContent = combo
-      ? `Selected: ${scoutComboLabel(combo)}${scoutBeats(combo, afterScout) ? " · beats stage" : " · does not beat stage"}`
-      : `Selected cards ${range.start + 1}-${range.end + 1}`
-    scoutPreviewArea.appendChild(badge)
-  }
 }
 
 function renderScoutPlayers(view) {
@@ -869,7 +856,13 @@ function updateScoutButtons(view) {
     scoutScoutBtn.disabled = !scoutCanScout(view)
   }
   if (scoutScoutShowBtn) {
-    scoutScoutShowBtn.disabled = !scoutCanScoutShow(view)
+    if (scoutCanFinishScoutShow(view)) {
+      scoutScoutShowBtn.textContent = "Finish Turn"
+      scoutScoutShowBtn.disabled = false
+    } else {
+      scoutScoutShowBtn.textContent = "Scout + Show"
+      scoutScoutShowBtn.disabled = !scoutCanScoutShow(view)
+    }
   }
 }
 
@@ -909,13 +902,15 @@ function renderScoutSummary(view) {
       scoutHint.textContent = view.initial_hand_options
         ? "Choose whether to keep the dealt order or flip the entire hand."
         : "Your hand is locked. Waiting for the rest of the table."
+    } else if (scoutIsPendingScoutShow(view)) {
+      scoutHint.textContent = "Your special Scout is done. Show from Your Hand, or click Finish Turn."
     } else if (scoutTakeSide && !Number.isInteger(scoutInsertIndex)) {
       scoutHint.textContent = inserted
         ? `Choose an insertion gap for ${inserted.current}.`
         : "Choose an insertion gap in your hand."
     } else if (scoutTakeSide && Number.isInteger(scoutInsertIndex)) {
       scoutHint.textContent = scoutHasLegalAction("scout_and_show")
-        ? "You may Scout immediately, or select a range in the preview and use Scout + Show."
+        ? "Use Scout to finish now, or use Scout + Show to Scout first and keep the turn."
         : "Use Scout to insert the chosen edge card."
     } else {
       scoutHint.textContent = "Click cards in your hand to choose a Show. Click the top or bottom half of an edge card to plan a Scout."
@@ -1019,17 +1014,21 @@ if (scoutScoutBtn) {
 
 if (scoutScoutShowBtn) {
   scoutScoutShowBtn.addEventListener("click", () => {
-    if (!currentScoutView || !scoutCanScoutShow(currentScoutView)) {
+    if (!currentScoutView) {
       return
     }
-    const range = scoutSelectedRange()
+    if (scoutCanFinishScoutShow(currentScoutView)) {
+      sendAction({ type: "finish_scout_and_show" })
+      return
+    }
+    if (!scoutCanScoutShow(currentScoutView)) {
+      return
+    }
     sendAction({
       type: "scout_and_show",
       take_side: scoutTakeSide,
       insert_index: scoutInsertIndex,
       insert_face: scoutInsertFace,
-      show_start_index: range.start,
-      show_end_index: range.end,
     })
   })
 }

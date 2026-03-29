@@ -328,7 +328,12 @@ def _round_end_reason_label(reason: str) -> str:
     return reason
 
 
+def _clear_pending_scout_and_show(state: Dict) -> None:
+    state["pending_scout_and_show_player"] = None
+
+
 def _finish_round(state: Dict, winner_player_id: str, reason: str) -> None:
+    _clear_pending_scout_and_show(state)
     variant = state["variant"]
     round_summary_players: List[Dict] = []
     for pid in _player_order(state):
@@ -401,6 +406,7 @@ def _setup_round(state: Dict, round_number: int, start_player_id: Optional[str])
     state["current_turn"] = None
     state["active_set"] = None
     state["center_scout_tokens"] = 0
+    state["pending_scout_and_show_player"] = None
 
     for pid in order:
         pdata = state["players"][pid]
@@ -465,6 +471,8 @@ def _apply_show(state: Dict, player_id: str, start_index: int, end_index: int) -
     if error:
         return [], error
     pdata = state["players"][player_id]
+    if state.get("pending_scout_and_show_player") == player_id:
+        _clear_pending_scout_and_show(state)
     previous_active = state.get("active_set")
     if previous_active:
         pdata["captured_count"] = int(pdata.get("captured_count", 0)) + len(previous_active["cards"])
@@ -573,29 +581,10 @@ def _apply_scout_and_show(state: Dict, player_id: str, action: Dict) -> Tuple[Li
     if error:
         return [], error
 
-    simulated_hand, simulated_active = _simulate_scout(pdata["hand"], state["active_set"], take_side, insert_index, face_index)
-    validated_show, show_error = _validate_show(
-        state,
-        player_id,
-        action.get("show_start_index"),
-        action.get("show_end_index"),
-        hand_override=simulated_hand,
-        active_override=simulated_active,
-    )
-    if show_error:
-        return [], show_error
-
     scout_events = _perform_scout_mutation(state, player_id, take_side, insert_index, insert_face, face_index)
-
     pdata["scout_and_show_available"] = False
-    previous_active = state.get("active_set")
-    if previous_active:
-        pdata["captured_count"] = int(pdata.get("captured_count", 0)) + len(previous_active["cards"])
-
-    start_index = action.get("show_start_index")
-    end_index = action.get("show_end_index")
-    del pdata["hand"][start_index : end_index + 1]
-    state["active_set"] = _build_active_set(player_id, validated_show["cards"])
+    state["current_turn"] = player_id
+    state["pending_scout_and_show_player"] = player_id
 
     events = list(scout_events)
     events.append(
@@ -603,19 +592,25 @@ def _apply_scout_and_show(state: Dict, player_id: str, action: Dict) -> Tuple[Li
             "type": "scout:scout_and_show",
             "payload": {
                 "player_id": player_id,
-                "length": validated_show["combo"]["length"],
-                "combo_type": validated_show["combo"]["combo_type"],
-                "rank_value": validated_show["combo"]["rank_value"],
+                "take_side": take_side,
+                "insert_index": insert_index,
+                "insert_face": insert_face,
+                "keeps_turn": True,
             },
         }
     )
-
-    if not pdata["hand"]:
-        _finish_round(state, player_id, "empty_hand")
-        return events, None
-
-    _advance_after_base_action(state, player_id)
     return events, None
+
+
+def _apply_finish_scout_and_show(state: Dict, player_id: str) -> Tuple[List[Dict], Optional[str]]:
+    if state["variant"] != "base":
+        return [], "Scout & Show is not available in 2-player games"
+    if state.get("pending_scout_and_show_player") != player_id:
+        return [], "no pending Scout & Show turn"
+
+    _clear_pending_scout_and_show(state)
+    _advance_after_base_action(state, player_id)
+    return [{"type": "scout:finish_scout_and_show", "payload": {"player_id": player_id}}], None
 
 
 def _base_bot_ready_action(state: Dict, player_id: str) -> Dict:
@@ -675,8 +670,6 @@ def _best_scout_and_show_for_bot(state: Dict, player_id: str) -> Optional[Dict]:
                 "take_side": option["take_side"],
                 "insert_index": option["insert_index"],
                 "insert_face": option["insert_face"],
-                "show_start_index": show_move["start_index"],
-                "show_end_index": show_move["end_index"],
             }
     return best_action
 
@@ -708,6 +701,7 @@ class ScoutGame:
             "current_turn": None,
             "active_set": None,
             "center_scout_tokens": 0,
+            "pending_scout_and_show_player": None,
             "last_round_summary": None,
             "winner": None,
             "game_over": False,
@@ -744,6 +738,15 @@ class ScoutGame:
         if player_id != state.get("current_turn"):
             return []
 
+        if state.get("pending_scout_and_show_player"):
+            if state.get("pending_scout_and_show_player") != player_id:
+                return []
+            legal: List[str] = []
+            if _best_show_move(pdata.get("hand", []), state.get("active_set")):
+                legal.append("show")
+            legal.append("finish_scout_and_show")
+            return legal
+
         legal: List[str] = []
         if _best_show_move(pdata.get("hand", []), state.get("active_set")):
             legal.append("show")
@@ -754,7 +757,7 @@ class ScoutGame:
                     legal.append("scout")
             else:
                 legal.append("scout")
-                if pdata.get("scout_and_show_available") and _has_scout_and_show_move(state, player_id):
+                if pdata.get("scout_and_show_available"):
                     legal.append("scout_and_show")
         return legal
 
@@ -799,6 +802,8 @@ class ScoutGame:
             )
         if action_type == "scout_and_show":
             return _apply_scout_and_show(state, player_id, action)
+        if action_type == "finish_scout_and_show":
+            return _apply_finish_scout_and_show(state, player_id)
 
         return [], "invalid action"
 
@@ -853,6 +858,8 @@ class ScoutGame:
             "start_player": state.get("start_player"),
             "active_set": active_set_view,
             "center_scout_tokens": int(state.get("center_scout_tokens", 0)),
+            "pending_scout_and_show_player": state.get("pending_scout_and_show_player"),
+            "your_scout_and_show_pending": state.get("pending_scout_and_show_player") == viewer_id,
             "players": players_view,
             "your_hand": your_hand,
             "initial_hand_options": initial_options,
@@ -884,6 +891,11 @@ class ScoutGame:
         active_set = state.get("active_set")
         show_move = _best_show_move(pdata.get("hand", []), active_set)
 
+        if state.get("pending_scout_and_show_player") == bot_id:
+            if show_move:
+                return {"type": "show", "start_index": show_move["start_index"], "end_index": show_move["end_index"]}
+            return {"type": "finish_scout_and_show"}
+
         if state["variant"] == "base" and pdata.get("scout_and_show_available"):
             scout_and_show_action = _best_scout_and_show_for_bot(state, bot_id)
             if scout_and_show_action:
@@ -891,27 +903,15 @@ class ScoutGame:
                     return {"type": "show", "start_index": show_move["start_index"], "end_index": show_move["end_index"]}
                 if not show_move:
                     return scout_and_show_action
-                scout_show_combo = _validate_show(
-                    state,
-                    bot_id,
-                    scout_and_show_action["show_start_index"],
-                    scout_and_show_action["show_end_index"],
-                    hand_override=_simulate_scout(
-                        pdata["hand"],
-                        active_set,
-                        scout_and_show_action["take_side"],
-                        scout_and_show_action["insert_index"],
-                        _face_to_index(scout_and_show_action["insert_face"]),
-                    )[0],
-                    active_override=_simulate_scout(
-                        pdata["hand"],
-                        active_set,
-                        scout_and_show_action["take_side"],
-                        scout_and_show_action["insert_index"],
-                        _face_to_index(scout_and_show_action["insert_face"]),
-                    )[1],
-                )[0]
-                if scout_show_combo and _combo_sort_key(scout_show_combo["combo"]) > _combo_sort_key(show_move["combo"]):
+                next_hand, next_active = _simulate_scout(
+                    pdata["hand"],
+                    active_set,
+                    scout_and_show_action["take_side"],
+                    scout_and_show_action["insert_index"],
+                    _face_to_index(scout_and_show_action["insert_face"]),
+                )
+                next_show_move = _best_show_move(next_hand, next_active)
+                if next_show_move and _combo_sort_key(next_show_move["combo"]) > _combo_sort_key(show_move["combo"]):
                     return scout_and_show_action
 
         if show_move:

@@ -45,7 +45,7 @@ class ScoutGameTests(unittest.TestCase):
         self.assertEqual([card["id"] for card in hand], ["2-9", "1-7"])
         self.assertEqual([card["face_up"] for card in hand], [0, 1])
 
-    def test_scout_and_show_uses_token_and_ends_round_on_empty_hand(self):
+    def test_scout_and_show_keeps_turn_then_show_ends_round_on_empty_hand(self):
         state = ScoutGame.init_game({"seed": "scout-show"}, _players(3))
         state["phase"] = "playing"
         state["current_turn"] = "p2"
@@ -66,13 +66,28 @@ class ScoutGameTests(unittest.TestCase):
                 "take_side": "left",
                 "insert_index": 1,
                 "insert_face": "b",
-                "show_start_index": 0,
-                "show_end_index": 2,
             },
         )
 
         self.assertIsNone(error)
         self.assertEqual(events[-1]["type"], "scout:scout_and_show")
+        self.assertEqual(state["current_turn"], "p2")
+        self.assertEqual(state["pending_scout_and_show_player"], "p2")
+        self.assertFalse(state["players"]["p2"]["scout_and_show_available"])
+        self.assertEqual([card["id"] for card in state["players"]["p2"]["hand"]], ["4-8", "2-5", "1-6"])
+
+        events, error = ScoutGame.apply_action(
+            state,
+            "p2",
+            {
+                "type": "show",
+                "start_index": 0,
+                "end_index": 2,
+            },
+        )
+
+        self.assertIsNone(error)
+        self.assertEqual(events[-1]["type"], "scout:show")
         self.assertEqual(state["last_round_summary"]["winner"], "p2")
         self.assertEqual(state["last_round_summary"]["reason"], "empty_hand")
         p1_summary = next(row for row in state["last_round_summary"]["players"] if row["player_id"] == "p1")
@@ -82,6 +97,42 @@ class ScoutGameTests(unittest.TestCase):
         self.assertEqual(state["players"]["p2"]["score"], 1)
         self.assertEqual(state["phase"], "choose_orientation")
         self.assertEqual(state["round"], 2)
+
+    def test_scout_and_show_can_finish_turn_without_show(self):
+        state = ScoutGame.init_game({"seed": "scout-finish"}, _players(3))
+        state["phase"] = "playing"
+        state["current_turn"] = "p2"
+        state["start_player"] = "p1"
+        for pid in ("p1", "p2", "p3"):
+            state["players"][pid]["hand_ready"] = True
+        state["players"]["p1"]["hand"] = [_card(1, 4, 0)]
+        state["players"]["p2"]["hand"] = [_card(4, 8, 0), _card(1, 6, 1)]
+        state["players"]["p3"]["hand"] = [_card(1, 3, 0)]
+        state["active_set"] = _build_active_set("p1", [_card(2, 5, 1), _card(3, 5, 1)])
+
+        _, error = ScoutGame.apply_action(
+            state,
+            "p2",
+            {
+                "type": "scout_and_show",
+                "take_side": "left",
+                "insert_index": 1,
+                "insert_face": "b",
+            },
+        )
+
+        self.assertIsNone(error)
+        self.assertEqual(state["current_turn"], "p2")
+        self.assertEqual(state["pending_scout_and_show_player"], "p2")
+
+        events, error = ScoutGame.apply_action(state, "p2", {"type": "finish_scout_and_show"})
+
+        self.assertIsNone(error)
+        self.assertEqual(events[-1]["type"], "scout:finish_scout_and_show")
+        self.assertIsNone(state["pending_scout_and_show_player"])
+        self.assertEqual(state["current_turn"], "p3")
+        self.assertEqual(state["active_set"]["owner_player_id"], "p1")
+        self.assertEqual(len(state["active_set"]["cards"]), 1)
 
     def test_base_round_ends_when_turn_returns_to_active_owner(self):
         state = ScoutGame.init_game({"seed": "owner-return"}, _players(3))
