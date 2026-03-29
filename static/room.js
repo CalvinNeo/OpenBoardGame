@@ -502,6 +502,7 @@ const GAME_WEIGHT = {
   fang_niao: 1.3142857142857143,
   flip7: 1.028056112224449,
   gold_rush: 1.1839080459770115,
+  gizmos: 2.05,
   halli_galli: 1.02,
   hanabi: 1.69,
   incan_gold: 1.11,
@@ -530,6 +531,8 @@ const GAME_WEIGHT = {
   things_in_rings: 1.33,
   patchwork: 1.60,
   scout: 1.39,
+  davinci_code: 1.48,
+  gizmos: 2.05,
 };
 
 function getGameWeight(gameId) {

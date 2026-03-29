@@ -14319,3 +14319,180 @@ body.scout-explain-mode [data-scout-explain].has-explanation {
     font-size: 15px;
   }
 }
+
+.gizmos-header-btn {
+  padding: 6px 10px;
+}
+
+.gizmos-help-modal .modal-content,
+.gizmos-explain-modal .modal-content {
+  max-width: 620px;
+}
+
+.gizmos-prompt {
+  border: 1px solid #d8c9a4;
+  background: linear-gradient(135deg, #fff6dc, #fffdf4);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin: 10px 0 14px;
+  color: #6d4f13;
+}
+
+.gizmos-energy-row,
+.gizmos-actions,
+.gizmos-player-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gizmos-energy-chip,
+.gizmos-btn {
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  background: #ffffff;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+.gizmos-btn {
+  border-radius: 10px;
+}
+
+.gizmos-btn.ghost {
+  background: #f9fafb;
+}
+
+.gizmos-energy-chip.color-red {
+  background: #fff2f2;
+  border-color: #f5b2b2;
+}
+
+.gizmos-energy-chip.color-yellow {
+  background: #fff9df;
+  border-color: #ead370;
+}
+
+.gizmos-energy-chip.color-blue {
+  background: #edf6ff;
+  border-color: #9cc5ef;
+}
+
+.gizmos-energy-chip.color-black {
+  background: #f2f4f7;
+  border-color: #bac2ce;
+}
+
+.gizmos-display,
+.gizmos-player-list,
+.gizmos-active-groups {
+  display: grid;
+  gap: 12px;
+}
+
+.gizmos-level-section,
+.gizmos-player-card,
+.gizmos-active-group {
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  background: #ffffff;
+  padding: 12px;
+}
+
+.gizmos-level-section h4,
+.gizmos-active-heading,
+.gizmos-player-name {
+  margin: 0 0 10px;
+  font-weight: 700;
+}
+
+.gizmos-player-name {
+  font-size: 16px;
+}
+
+.gizmos-player-card.current {
+  border-color: #d6b85d;
+  box-shadow: 0 0 0 2px rgba(214, 184, 93, 0.16);
+}
+
+.gizmos-player-card.you {
+  background: linear-gradient(180deg, #ffffff, #fffdf7);
+}
+
+.gizmos-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.gizmos-cards.compact {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.gizmos-card {
+  border: 1px solid #d9dde4;
+  border-radius: 12px;
+  padding: 10px;
+  background: linear-gradient(180deg, #ffffff, #fafafa);
+  display: grid;
+  gap: 8px;
+}
+
+.gizmos-card.level-1 {
+  border-left: 5px solid #b7c4d8;
+}
+
+.gizmos-card.level-2 {
+  border-left: 5px solid #9ec7b2;
+}
+
+.gizmos-card.level-3 {
+  border-left: 5px solid #d8b170;
+}
+
+.gizmos-card-top,
+.gizmos-card-meta,
+.gizmos-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.gizmos-card-top,
+.gizmos-card-meta,
+.gizmos-card-text,
+.gizmos-player-archive-line {
+  font-size: 13px;
+  color: #374151;
+}
+
+.gizmos-card-title {
+  font-weight: 700;
+}
+
+.gizmos-empty {
+  color: #6b7280;
+  font-size: 13px;
+  padding: 8px 0;
+}
+
+@media (max-width: 640px) {
+  .gizmos-card {
+    padding: 9px;
+  }
+
+  .gizmos-energy-chip,
+  .gizmos-btn {
+    width: 100%;
+  }
+
+  .gizmos-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .gizmos-actions .gizmos-btn {
+    width: auto;
+  }
+}

@@ -711,6 +711,28 @@
     </div>
   </section>
 
+  <section id="gizmosHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content gizmos-help-modal">
+      <div class="modal-header">
+        <h2>Gizmos - Game Rules</h2>
+        <button id="gizmosHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body" id="gizmosHelpContent"></div>
+    </div>
+  </section>
+
+  <section id="gizmosExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content gizmos-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="gizmosExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="gizmosExplainContent"></div>
+      </div>
+    </div>
+  </section>
+
   <section id="pokemonSplendorTokenModal" class="modal hidden" aria-hidden="true">
     <div class="modal-content pokemon-splendor-token-modal">
       <div class="modal-header">
@@ -1269,6 +1291,10 @@
             <div class="panel-header-actions" id="pokemonSplendorHeaderActions" style="display: none;">
               <button id="pokemonSplendorHelpBtn" class="pokemon-splendor-header-btn" type="button">Help</button>
               <button id="pokemonSplendorExplainBtn" class="pokemon-splendor-header-btn" type="button">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="gizmosHeaderActions" style="display: none;">
+              <button id="gizmosHelpBtn" class="gizmos-header-btn" type="button">Help</button>
+              <button id="gizmosExplainBtn" class="gizmos-header-btn" type="button">Explain</button>
             </div>
           </div>
           <div class="panel-body">
@@ -3111,6 +3137,44 @@
               <div id="splendorPlayers"></div>
             </div>
 
+            <div id="gizmosPanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="gizmosPhase">-</span></div>
+                <div>Current Turn: <span id="gizmosTurn">-</span></div>
+                <div>Bag: <span id="gizmosBagCount">-</span></div>
+                <div>Final Round: <span id="gizmosFinalRound">-</span></div>
+              </div>
+              <div class="row">
+                <div>Winner: <span id="gizmosWinner">-</span></div>
+              </div>
+
+              <div id="gizmosPrompt" class="gizmos-prompt">Waiting for state…</div>
+
+              <h3>Energy Row</h3>
+              <div id="gizmosEnergyRow" class="gizmos-energy-row"></div>
+
+              <h3>Display</h3>
+              <div id="gizmosDisplay" class="gizmos-display"></div>
+
+              <h3>Your Lab</h3>
+              <div id="gizmosYou" class="gizmos-player-card"></div>
+
+              <div id="gizmosResearchWrap" class="hidden">
+                <h3>Research</h3>
+                <div class="hint">Bottom order: leftmost card becomes the deepest card at the bottom of the deck.</div>
+                <div id="gizmosResearchCards" class="gizmos-cards"></div>
+                <div class="row actions">
+                  <button id="gizmosResearchSkipBtn" type="button">Skip Research Choice</button>
+                </div>
+              </div>
+
+              <h3>Actions</h3>
+              <div id="gizmosActions" class="gizmos-actions"></div>
+
+              <h3>Players</h3>
+              <div id="gizmosPlayers" class="gizmos-player-list"></div>
+            </div>
+
             <div id="pokemonSplendorPanel" class="hidden">
               <div class="row">
                 <div>Phase: <span id="pokemonSplendorPhase">-</span></div>
@@ -3767,6 +3831,7 @@
   <script src="/static/games/fake_artist.js?v=app_v4"></script>
   <script src="/static/games/things_in_rings.js?v=app_v4"></script>
   <script src="/static/games/impression_flower.js?v=app_v4"></script>
+  <script src="/static/games/gizmos.js?v=app_v4"></script>
   <script src="/static/games/splendor.js?v=app_v4"></script>
   <script src="/static/games/splendor_pokemon.js?v=app_v4"></script>
   <script src="/static/games/project_l.js?v=app_v4"></script>

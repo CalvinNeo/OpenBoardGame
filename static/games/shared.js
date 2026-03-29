@@ -199,6 +199,9 @@ function renderRoomState(state) {
     }
     clearAidixitState();
     clearImpressionFlowerState();
+    if (typeof clearGizmosState === "function") {
+      clearGizmosState();
+    }
     clearSplendorState();
     clearPokemonSplendorState();
     if (typeof clearForestShuffleState === "function") {

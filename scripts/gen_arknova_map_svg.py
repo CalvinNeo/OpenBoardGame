@@ -81,6 +81,15 @@ def build_cells(config):
     return cells
 
 
+def nearest_cell_ids(cells, x, y, limit=3):
+    ranked = []
+    for cell in cells:
+        distance = math.dist((cell["x"], cell["y"]), (x, y))
+        ranked.append((distance, cell["id"]))
+    ranked.sort()
+    return [cell_id for _, cell_id in ranked[:limit]]
+
+
 def render_svg(config, cells, output_path):
     width = config["image_size"]["width"]
     height = config["image_size"]["height"]
@@ -155,8 +164,9 @@ def render_svg(config, cells, output_path):
     )
 
     for index, feature in enumerate(config.get("terrain_features", [])):
+        approx = ", ".join(feature["approx_cells"]) if feature["approx_cells"] else "(unmapped edge feature)"
         lines.append(
-            f'  <text x="42" y="{legend_y + 184 + index * 24}" class="small">- {feature["id"]}: {feature["type"]} near {", ".join(feature["approx_cells"])}</text>'
+            f'  <text x="42" y="{legend_y + 184 + index * 24}" class="small">- {feature["id"]}: {feature["type"]} near {approx}</text>'
         )
 
     lines.append("</svg>")
@@ -175,6 +185,20 @@ def main():
     config = json.loads(input_path.read_text(encoding="utf-8"))
     cells = build_cells(config)
     expanded = dict(config)
+    expanded["cover_bonuses"] = [
+        {
+            **bonus,
+            "nearest_cells": nearest_cell_ids(cells, bonus["x"], bonus["y"]),
+        }
+        for bonus in config.get("cover_bonuses", [])
+    ]
+    expanded["build_ii_cells"] = [
+        {
+            **item,
+            "nearest_cells": nearest_cell_ids(cells, item["x"], item["y"]),
+        }
+        for item in config.get("build_ii_cells", [])
+    ]
     expanded["cells"] = cells
     expanded_path.write_text(json.dumps(expanded, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     render_svg(config, cells, svg_path)

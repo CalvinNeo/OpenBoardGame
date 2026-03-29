@@ -15,6 +15,7 @@ from game.fake_artist import FakeArtistGame
 from game.flip7 import Flip7Game
 from game.forest_shuffle import ForestShuffleGame
 from game.gold_rush import GoldRushGame
+from game.gizmos import GizmosGame
 from game.halli_galli import HalliGalliGame
 from game.hanabi import HanabiGame
 from game.impression_flower import ImpressionFlowerGame
@@ -255,6 +256,96 @@ DAVINCI_CODE_CONFIG_SCHEMA = {
     "type": "object",
     "properties": {
         "mode": {"type": "string", "enum": ["standard", "advanced"]},
+    },
+    "additionalProperties": False,
+}
+
+GIZMOS_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "pick_energy"},
+                "color": {"type": "string", "enum": ["red", "yellow", "blue", "black"]},
+            },
+            "required": ["type", "color"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "file_display"},
+                "card_id": {"type": "string", "minLength": 1, "maxLength": 120},
+            },
+            "required": ["type", "card_id"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "build_display"},
+                "card_id": {"type": "string", "minLength": 1, "maxLength": 120},
+            },
+            "required": ["type", "card_id"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "build_archive"},
+                "card_id": {"type": "string", "minLength": 1, "maxLength": 120},
+            },
+            "required": ["type", "card_id"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "research"},
+                "level": {"type": "integer", "enum": [1, 2, 3]},
+            },
+            "required": ["type", "level"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "resolve_research"},
+                "choice": {"type": "string", "enum": ["none", "file", "build"]},
+                "card_id": {"type": "string", "minLength": 1, "maxLength": 120},
+                "return_order": {
+                    "type": "array",
+                    "items": {"type": "string", "minLength": 1, "maxLength": 120},
+                },
+            },
+            "required": ["type", "choice", "return_order"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "resolve_effect"},
+                "effect_id": {"type": "integer", "minimum": 1},
+            },
+            "required": ["type", "effect_id"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "pass_effects"}}, "required": ["type"], "additionalProperties": False},
+        {"type": "object", "properties": {"type": {"const": "pass_turn"}}, "required": ["type"], "additionalProperties": False},
+    ],
+}
+
+GIZMOS_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "seed": {
+            "oneOf": [
+                {"type": "integer"},
+                {"type": "string"},
+                {"type": "null"},
+            ]
+        },
     },
     "additionalProperties": False,
 }
@@ -2374,6 +2465,21 @@ register_game(
         module=SixNimmtGame,
         serialize=SixNimmtGame.serialize,
         deserialize=SixNimmtGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=GizmosGame.game_id,
+        name="Gizmos",
+        min_players=GizmosGame.min_players,
+        max_players=GizmosGame.max_players,
+        turn_mode="turn",
+        action_schema=GIZMOS_ACTION_SCHEMA,
+        config_schema=GIZMOS_CONFIG_SCHEMA,
+        module=GizmosGame,
+        serialize=GizmosGame.serialize,
+        deserialize=GizmosGame.deserialize,
     )
 )
 
