@@ -36,34 +36,44 @@ class ThingsInRingsGameTests(unittest.TestCase):
                 msg=f"word rule {rule['id']} should not match every thing",
             )
 
-    def test_word_rules_do_not_use_first_char_patterns(self):
+    def test_word_rules_do_not_use_literal_prefix_or_suffix_patterns(self):
         word_rules = _load_rules()["word"]
 
         for rule in word_rules:
             evaluator = rule.get("evaluator") or {}
             self.assertNotEqual(evaluator.get("kind"), "starts_with")
+            self.assertNotEqual(evaluator.get("kind"), "ends_with")
 
-    def test_char_meta_only_keeps_structure_and_radical(self):
+    def test_char_meta_keeps_structure_radical_and_grammatical_roles(self):
         meta = _load_char_meta()
 
         self.assertIn("机", meta)
         self.assertEqual(meta["机"]["structure"], "left_right")
+        self.assertEqual(meta["机"]["grammatical_roles"], ["noun"])
         self.assertNotIn("tone", meta["机"])
 
-    def test_word_membership_supports_last_char_tone_and_structure(self):
-        tone_rule = {
+    def test_word_membership_supports_first_and_last_char_tone_and_structure(self):
+        first_tone_rule = {
+            "evaluator": {"kind": "first_char_tone_is", "value": 3},
+        }
+        last_tone_rule = {
             "evaluator": {"kind": "last_char_tone_is", "value": 1},
         }
         structure_rule = {
             "evaluator": {"kind": "last_char_structure_is", "value": "left_right"},
         }
 
-        self.assertTrue(_word_membership(tone_rule, {"name": "手机"}))
-        self.assertFalse(_word_membership(tone_rule, {"name": "盒子"}))
+        self.assertTrue(_word_membership(first_tone_rule, {"name": "手机"}))
+        self.assertFalse(_word_membership(first_tone_rule, {"name": "台灯"}))
+        self.assertTrue(_word_membership(last_tone_rule, {"name": "手机"}))
+        self.assertFalse(_word_membership(last_tone_rule, {"name": "盒子"}))
         self.assertTrue(_word_membership(structure_rule, {"name": "台灯"}))
         self.assertFalse(_word_membership(structure_rule, {"name": "箱子"}))
 
-    def test_word_membership_uses_phrase_aware_tone_lookup(self):
+    def test_word_membership_uses_phrase_aware_tone_lookup_for_first_and_last_char(self):
+        first_char_second_tone_rule = {
+            "evaluator": {"kind": "first_char_tone_is", "value": 2},
+        }
         third_tone_rule = {
             "evaluator": {"kind": "last_char_tone_is", "value": 3},
         }
@@ -71,6 +81,8 @@ class ThingsInRingsGameTests(unittest.TestCase):
             "evaluator": {"kind": "last_char_tone_is", "value": 2},
         }
 
+        self.assertTrue(_word_membership(first_char_second_tone_rule, {"name": "长跑"}))
+        self.assertFalse(_word_membership(first_char_second_tone_rule, {"name": "厂牌"}))
         self.assertTrue(_word_membership(third_tone_rule, {"name": "班长"}))
         self.assertTrue(_word_membership(second_tone_rule, {"name": "特长"}))
 
@@ -97,6 +109,29 @@ class ThingsInRingsGameTests(unittest.TestCase):
 
         self.assertTrue(_word_membership(radical_rule, {"name": "打印机"}))
         self.assertFalse(_word_membership(radical_rule, {"name": "手机"}))
+
+    def test_word_membership_supports_char_grammatical_roles(self):
+        first_char_noun_rule = {
+            "evaluator": {"kind": "first_char_grammatical_role_is", "value": "noun"},
+        }
+        first_char_verb_rule = {
+            "evaluator": {"kind": "first_char_grammatical_role_is", "value": "verb"},
+        }
+        last_char_noun_rule = {
+            "evaluator": {"kind": "last_char_grammatical_role_is", "value": "noun"},
+        }
+        last_char_verb_rule = {
+            "evaluator": {"kind": "last_char_grammatical_role_is", "value": "verb"},
+        }
+
+        self.assertTrue(_word_membership(first_char_noun_rule, {"name": "手机"}))
+        self.assertFalse(_word_membership(first_char_noun_rule, {"name": "打印机"}))
+        self.assertTrue(_word_membership(first_char_verb_rule, {"name": "洗衣机"}))
+        self.assertFalse(_word_membership(first_char_verb_rule, {"name": "雨伞"}))
+        self.assertTrue(_word_membership(last_char_noun_rule, {"name": "手机"}))
+        self.assertFalse(_word_membership(last_char_noun_rule, {"name": "牙刷"}))
+        self.assertTrue(_word_membership(last_char_verb_rule, {"name": "牙刷"}))
+        self.assertFalse(_word_membership(last_char_verb_rule, {"name": "台灯"}))
 
     def test_default_config_uses_three_rings(self):
         state = ThingsInRingsGame.init_game(None, _players(3))

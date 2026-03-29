@@ -101,7 +101,7 @@ const TURING_MACHINE_HELP_TEXT = `
   <ol>
     <li>Pick one round code.</li>
     <li>Test up to 3 different verifier cards with that same code.</li>
-    <li>End your round. The next round starts only after every still-active player finishes.</li>
+    <li>When you are done, click <strong>Next Round</strong>. The next round starts only after every still-active player clicks it.</li>
   </ol>
 
   <h3>Final Guess</h3>
@@ -135,8 +135,8 @@ const TURING_MACHINE_BUTTON_EXPLANATIONS = {
     description: "Submit the draft code as your final answer. A wrong guess eliminates you immediately.",
   },
   turingMachineEndRoundBtn: {
-    name: "End Round",
-    description: "Mark yourself done for the round. The next round starts only after every still-active player is done.",
+    name: "Next Round",
+    description: "Finish your current round and wait. The next round starts only after every still-active player clicks Next Round.",
   },
   turingMachineGiveUpBtn: {
     name: "Give Up",
@@ -698,7 +698,7 @@ function renderTuringMachineGameState(data) {
 
   if (turingMachineUseCodeBtn) turingMachineUseCodeBtn.disabled = !turingMachineCan(view, "set_proposal");
   if (turingMachineGuessBtn) turingMachineGuessBtn.disabled = !turingMachineCan(view, "submit_guess");
-  if (turingMachineEndRoundBtn) turingMachineEndRoundBtn.disabled = !turingMachineCan(view, "end_round");
+  if (turingMachineEndRoundBtn) turingMachineEndRoundBtn.disabled = !turingMachineCan(view, "next_round");
   if (turingMachineGiveUpBtn) turingMachineGiveUpBtn.disabled = !turingMachineCan(view, "give_up");
 
   if (turingMachineExplainMode) {
@@ -832,7 +832,7 @@ if (turingMachineGuessBtn) {
 
 if (turingMachineEndRoundBtn) {
   turingMachineEndRoundBtn.addEventListener("click", () => {
-    sendAction({ type: "end_round" });
+    sendAction({ type: "next_round" });
   });
 }
 

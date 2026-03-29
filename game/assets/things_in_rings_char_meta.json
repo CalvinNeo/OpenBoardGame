@@ -9,29 +9,35 @@
     "structure": "left_right"
   },
   "刀": {
-    "structure": "single"
+    "structure": "single",
+    "grammatical_roles": ["noun"]
   },
   "刷": {
-    "structure": "other"
+    "structure": "other",
+    "grammatical_roles": ["verb"]
   },
   "勺": {
     "structure": "single"
   },
   "包": {
-    "structure": "semi_enclosure"
+    "structure": "semi_enclosure",
+    "grammatical_roles": ["noun", "verb"]
   },
   "匙": {
     "structure": "other"
   },
   "匣": {
     "radical": "匚",
-    "structure": "semi_enclosure"
+    "structure": "semi_enclosure",
+    "grammatical_roles": ["noun"]
   },
   "器": {
-    "structure": "other"
+    "structure": "other",
+    "grammatical_roles": ["noun"]
   },
   "图": {
-    "structure": "full_enclosure"
+    "structure": "full_enclosure",
+    "grammatical_roles": ["noun", "verb"]
   },
   "垫": {
     "structure": "up_down"
@@ -40,7 +46,8 @@
     "structure": "up_down"
   },
   "壶": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "grammatical_roles": ["noun"]
   },
   "头": {
     "structure": "single"
@@ -52,13 +59,15 @@
     "structure": "up_down"
   },
   "子": {
-    "structure": "single"
+    "structure": "single",
+    "grammatical_roles": ["noun"]
   },
   "宝": {
     "structure": "up_down"
   },
   "巾": {
-    "structure": "single"
+    "structure": "single",
+    "grammatical_roles": ["noun"]
   },
   "布": {
     "structure": "single"
@@ -74,7 +83,8 @@
   },
   "徽": {
     "radical": "彳",
-    "structure": "left_middle_right"
+    "structure": "left_middle_right",
+    "grammatical_roles": ["noun"]
   },
   "戒": {
     "structure": "other"
@@ -88,18 +98,21 @@
   },
   "把": {
     "radical": "提手旁",
-    "structure": "left_right"
+    "structure": "left_right",
+    "grammatical_roles": ["verb"]
   },
   "拍": {
     "radical": "提手旁",
-    "structure": "left_right"
+    "structure": "left_right",
+    "grammatical_roles": ["verb"]
   },
   "指": {
     "radical": "提手旁",
     "structure": "left_right"
   },
   "星": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "grammatical_roles": ["noun"]
   },
   "木": {
     "structure": "single"
@@ -108,18 +121,21 @@
     "structure": "single"
   },
   "机": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "grammatical_roles": ["noun"]
   },
   "杆": {
     "structure": "left_right"
   },
   "杯": {
     "radical": "木字旁",
-    "structure": "left_right"
+    "structure": "left_right",
+    "grammatical_roles": ["noun"]
   },
   "板": {
     "radical": "木字旁",
-    "structure": "left_right"
+    "structure": "left_right",
+    "grammatical_roles": ["noun"]
   },
   "枕": {
     "radical": "木字旁",
@@ -138,7 +154,8 @@
   },
   "标": {
     "radical": "木字旁",
-    "structure": "left_right"
+    "structure": "left_right",
+    "grammatical_roles": ["verb"]
   },
   "栽": {
     "radical": "木字旁",
@@ -163,16 +180,19 @@
     "structure": "left_right"
   },
   "水": {
-    "structure": "single"
+    "structure": "single",
+    "grammatical_roles": ["noun"]
   },
   "泡": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "grammatical_roles": ["verb"]
   },
   "源": {
     "structure": "left_right"
   },
   "灯": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "grammatical_roles": ["noun"]
   },
   "炉": {
     "structure": "left_right"
@@ -181,7 +201,8 @@
     "structure": "left_right"
   },
   "照": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "grammatical_roles": ["verb"]
   },
   "煲": {
     "structure": "up_down"
@@ -193,19 +214,22 @@
     "structure": "left_right"
   },
   "球": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "grammatical_roles": ["noun"]
   },
   "琴": {
     "structure": "up_down"
   },
   "瓶": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "grammatical_roles": ["noun"]
   },
   "皂": {
     "structure": "up_down"
   },
   "盒": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "grammatical_roles": ["noun"]
   },
   "盔": {
     "structure": "up_down"
@@ -218,15 +242,18 @@
   },
   "章": {
     "radical": "立",
-    "structure": "up_middle_down"
+    "structure": "up_middle_down",
+    "grammatical_roles": ["noun"]
   },
   "笔": {
     "radical": "竹字头",
-    "structure": "up_down"
+    "structure": "up_down",
+    "grammatical_roles": ["noun"]
   },
   "筒": {
     "radical": "竹字头",
-    "structure": "up_down"
+    "structure": "up_down",
+    "grammatical_roles": ["noun"]
   },
   "签": {
     "radical": "竹字头",
@@ -234,7 +261,8 @@
   },
   "箱": {
     "radical": "竹字头",
-    "structure": "up_down"
+    "structure": "up_down",
+    "grammatical_roles": ["noun"]
   },
   "篷": {
     "radical": "竹字头",
@@ -268,7 +296,8 @@
     "structure": "left_right"
   },
   "脑": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "grammatical_roles": ["noun"]
   },
   "膏": {
     "structure": "up_down"
@@ -292,7 +321,8 @@
     "structure": "left_right"
   },
   "车": {
-    "structure": "single"
+    "structure": "single",
+    "grammatical_roles": ["noun"]
   },
   "针": {
     "structure": "left_right"
@@ -318,7 +348,8 @@
     "structure": "left_right"
   },
   "锁": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "grammatical_roles": ["noun", "verb"]
   },
   "锅": {
     "radical": "金字旁",
@@ -326,7 +357,8 @@
   },
   "镜": {
     "radical": "金字旁",
-    "structure": "left_right"
+    "structure": "left_right",
+    "grammatical_roles": ["noun"]
   },
   "钥": {
     "radical": "金字旁",
@@ -343,62 +375,76 @@
     "structure": "left_right"
   },
   "鞋": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "grammatical_roles": ["noun"]
   },
   "电": {
     "structure": "left_right"
   },
   "手": {
-    "structure": "single"
+    "structure": "single",
+    "grammatical_roles": ["noun"]
   },
   "雨": {
-    "structure": "single"
+    "structure": "single",
+    "grammatical_roles": ["noun"]
   },
   "洗": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "grammatical_roles": ["verb"]
   },
   "书": {
-    "structure": "single"
+    "structure": "single",
+    "grammatical_roles": ["noun"]
   },
   "奖": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "grammatical_roles": ["noun", "verb"]
   },
   "保": {
     "structure": "left_right"
   },
   "毛": {
-    "structure": "single"
+    "structure": "single",
+    "grammatical_roles": ["noun"]
   },
   "牙": {
-    "structure": "single"
+    "structure": "single",
+    "grammatical_roles": ["noun"]
   },
   "护": {
     "radical": "提手旁",
-    "structure": "left_right"
+    "structure": "left_right",
+    "grammatical_roles": ["verb"]
   },
   "药": {
     "radical": "草字头",
-    "structure": "up_down"
+    "structure": "up_down",
+    "grammatical_roles": ["noun"]
   },
   "台": {
     "structure": "up_down"
   },
   "打": {
     "radical": "提手旁",
-    "structure": "left_right"
+    "structure": "left_right",
+    "grammatical_roles": ["verb"]
   },
   "吹": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "grammatical_roles": ["verb"]
   },
   "自": {
     "structure": "single"
   },
   "火": {
-    "structure": "single"
+    "structure": "single",
+    "grammatical_roles": ["noun"]
   },
   "茶": {
     "radical": "草字头",
-    "structure": "up_down"
+    "structure": "up_down",
+    "grammatical_roles": ["noun"]
   },
   "香": {
     "structure": "up_down"
@@ -411,7 +457,8 @@
   },
   "拖": {
     "radical": "提手旁",
-    "structure": "left_right"
+    "structure": "left_right",
+    "grammatical_roles": ["verb"]
   },
   "雪": {
     "structure": "up_down"
@@ -420,19 +467,24 @@
     "structure": "left_right"
   },
   "门": {
-    "structure": "single"
+    "structure": "single",
+    "grammatical_roles": ["noun"]
   },
   "口": {
-    "structure": "single"
+    "structure": "single",
+    "grammatical_roles": ["noun"]
   },
   "订": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "grammatical_roles": ["verb"]
   },
   "耳": {
-    "structure": "single"
+    "structure": "single",
+    "grammatical_roles": ["noun"]
   },
   "睡": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "grammatical_roles": ["verb"]
   },
   "地": {
     "structure": "left_right"

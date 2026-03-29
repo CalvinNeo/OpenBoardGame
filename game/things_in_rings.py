@@ -36,6 +36,7 @@ ALLOWED_CHAR_STRUCTURES = {
     "full_enclosure",
     "other",
 }
+ALLOWED_GRAMMATICAL_ROLES = {"noun", "verb"}
 
 
 def _asset_path(filename: str) -> Path:
@@ -101,7 +102,7 @@ def _load_rules() -> Dict[str, List[Dict[str, object]]]:
 def _load_char_meta() -> Dict[str, Dict[str, object]]:
     global _CHAR_META_CACHE
     if _CHAR_META_CACHE is not None:
-        return {key: dict(value) for key, value in _CHAR_META_CACHE.items()}
+        return _copy_char_meta(_CHAR_META_CACHE)
     raw = json.loads(_asset_path("things_in_rings_char_meta.json").read_text(encoding="utf-8"))
     meta: Dict[str, Dict[str, object]] = {}
     for char, entry in raw.items():
@@ -109,13 +110,31 @@ def _load_char_meta() -> Dict[str, Dict[str, object]]:
             continue
         structure = entry.get("structure")
         radical = entry.get("radical")
+        grammatical_roles = entry.get("grammatical_roles")
         if structure not in ALLOWED_CHAR_STRUCTURES:
             continue
         meta[char] = {"structure": structure}
         if isinstance(radical, str) and radical:
             meta[char]["radical"] = radical
+        if isinstance(grammatical_roles, list):
+            normalized_roles: List[str] = []
+            for role in grammatical_roles:
+                if role in ALLOWED_GRAMMATICAL_ROLES and role not in normalized_roles:
+                    normalized_roles.append(role)
+            if normalized_roles:
+                meta[char]["grammatical_roles"] = normalized_roles
     _CHAR_META_CACHE = meta
-    return {key: dict(value) for key, value in meta.items()}
+    return _copy_char_meta(meta)
+
+
+def _copy_char_meta(meta: Dict[str, Dict[str, object]]) -> Dict[str, Dict[str, object]]:
+    copied: Dict[str, Dict[str, object]] = {}
+    for char, entry in meta.items():
+        cloned = dict(entry)
+        if isinstance(entry.get("grammatical_roles"), list):
+            cloned["grammatical_roles"] = list(entry["grammatical_roles"])
+        copied[char] = cloned
+    return copied
 
 
 def _tone_number_for_char(name: str, char_index: int) -> Optional[int]:
@@ -136,6 +155,18 @@ def _tone_number_for_char(name: str, char_index: int) -> Optional[int]:
     if not match:
         return None
     return int(match.group(1))
+
+
+def _char_has_grammatical_role(char: str, role: object) -> bool:
+    if not char:
+        return False
+    meta = _load_char_meta().get(char)
+    if not meta:
+        return False
+    grammatical_roles = meta.get("grammatical_roles")
+    if not isinstance(grammatical_roles, list):
+        return False
+    return str(role or "") in grammatical_roles
 
 
 def _merge_config(config: Optional[Dict]) -> Dict:
@@ -226,18 +257,24 @@ def _word_membership(rule: Dict[str, object], thing_card: Dict[str, str]) -> boo
         return False
     if kind == "last_char_tone_is":
         return _tone_number_for_char(name, -1) == int(evaluator.get("value") or 0)
+    if kind == "first_char_tone_is":
+        return _tone_number_for_char(name, 0) == int(evaluator.get("value") or 0)
     if kind == "last_char_structure_is":
         meta = _load_char_meta().get(last_char)
         return bool(meta) and meta.get("structure") == str(evaluator.get("value") or "")
     if kind == "last_char_radical_is":
         meta = _load_char_meta().get(last_char)
         return bool(meta) and meta.get("radical") == str(evaluator.get("value") or "")
+    if kind == "last_char_grammatical_role_is":
+        return _char_has_grammatical_role(last_char, evaluator.get("value"))
     if kind == "first_char_structure_is":
         meta = _load_char_meta().get(first_char)
         return bool(meta) and meta.get("structure") == str(evaluator.get("value") or "")
     if kind == "first_char_radical_is":
         meta = _load_char_meta().get(first_char)
         return bool(meta) and meta.get("radical") == str(evaluator.get("value") or "")
+    if kind == "first_char_grammatical_role_is":
+        return _char_has_grammatical_role(first_char, evaluator.get("value"))
     return False
 
 

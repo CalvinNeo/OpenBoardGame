@@ -68,15 +68,42 @@ class TuringMachineGameTests(unittest.TestCase):
         self.assertEqual(events, [])
         _, error = TuringMachineGame.apply_action(state, "p1", {"type": "test_criterion", "slot": slot})
         self.assertIsNone(error)
-        _, error = TuringMachineGame.apply_action(state, "p1", {"type": "end_round"})
+        _, error = TuringMachineGame.apply_action(state, "p1", {"type": "next_round"})
         self.assertIsNone(error)
         self.assertEqual(state["round"], 1)
 
-        _, error = TuringMachineGame.apply_action(state, "p2", {"type": "end_round"})
+        _, error = TuringMachineGame.apply_action(state, "p2", {"type": "set_proposal", "code": [2, 2, 2]})
+        self.assertIsNone(error)
+        _, error = TuringMachineGame.apply_action(state, "p2", {"type": "next_round"})
         self.assertIsNone(error)
         self.assertEqual(state["round"], 2)
         self.assertIsNone(state["players"]["p1"]["current_round"]["proposal"])
         self.assertFalse(state["players"]["p1"]["current_round"]["ended"])
+
+    def test_third_verifier_does_not_auto_advance_round(self):
+        state = TuringMachineGame.init_game(
+            {
+                "mode": "simple",
+                "scenario_source": "preset",
+                "preset_id": "relay-standard-01",
+            },
+            _players(1),
+        )
+        slots = [card["slot"] for card in state["scenario"]["cards"][:3]]
+
+        _, error = TuringMachineGame.apply_action(state, "p1", {"type": "set_proposal", "code": [1, 1, 1]})
+        self.assertIsNone(error)
+        for slot in slots:
+            _, error = TuringMachineGame.apply_action(state, "p1", {"type": "test_criterion", "slot": slot})
+            self.assertIsNone(error)
+
+        self.assertEqual(state["round"], 1)
+        self.assertFalse(state["players"]["p1"]["current_round"]["ended"])
+        self.assertIn("next_round", TuringMachineGame.get_legal_actions(state, "p1"))
+
+        _, error = TuringMachineGame.apply_action(state, "p1", {"type": "next_round"})
+        self.assertIsNone(error)
+        self.assertEqual(state["round"], 2)
 
     def test_wrong_guess_eliminates_and_correct_guess_wins(self):
         state = TuringMachineGame.init_game(
@@ -145,6 +172,27 @@ class TuringMachineGameTests(unittest.TestCase):
         action = TuringMachineGame.bot_move(state, "p2")
         self.assertIsNotNone(action)
         self.assertEqual(action["type"], "give_up")
+
+    def test_bot_clicks_next_round_after_third_verifier(self):
+        state = TuringMachineGame.init_game(
+            {
+                "mode": "simple",
+                "scenario_source": "preset",
+                "preset_id": "relay-standard-01",
+            },
+            _players(1),
+        )
+        slots = [card["slot"] for card in state["scenario"]["cards"][:3]]
+        state["players"]["p1"]["current_round"]["proposal"] = [1, 1, 1]
+        state["players"]["p1"]["current_round"]["tests"] = [
+            {"slot": slots[0], "result": False},
+            {"slot": slots[1], "result": False},
+            {"slot": slots[2], "result": True},
+        ]
+
+        action = TuringMachineGame.bot_move(state, "p1")
+        self.assertIsNotNone(action)
+        self.assertEqual(action["type"], "next_round")
 
 
 if __name__ == "__main__":

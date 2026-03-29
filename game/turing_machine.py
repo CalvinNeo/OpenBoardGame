@@ -1199,11 +1199,12 @@ def _legal_actions(state: Dict, player_id: str) -> List[str]:
     legal = ["submit_guess", "give_up", "update_notes"]
     current_round = pdata["current_round"]
     if not current_round.get("ended"):
-        legal.append("end_round")
         if not current_round.get("tests"):
             legal.append("set_proposal")
         if current_round.get("proposal") and len(current_round.get("tests", [])) < 3:
             legal.append("test_criterion")
+        if current_round.get("proposal") or current_round.get("tests"):
+            legal.append("next_round")
     return legal
 
 
@@ -1223,6 +1224,8 @@ def _status_detail(state: Dict, player_id: str) -> str:
                 return f"Waiting for {', '.join(blockers)}."
             return "Waiting for the next round."
         tests_taken = len(pdata["current_round"].get("tests", []))
+        if tests_taken >= 3:
+            return f"Round {state.get('round', 1)} complete. Click Next Round when ready."
         return f"Round {state.get('round', 1)}: {tests_taken}/3 verifiers checked."
     if status == "solved":
         round_no = pdata.get("solved_at_round") or "-"
@@ -1343,15 +1346,13 @@ class TuringMachineGame:
             current_round["tests"].append(test_entry)
             pdata["question_count"] = int(pdata.get("question_count", 0)) + 1
             _append_private_entry(pdata["clues"], test_entry)
-            if len(current_round["tests"]) >= 3:
-                current_round["ended"] = True
-                pdata["rounds_completed"] = max(int(pdata.get("rounds_completed", 0)), int(state.get("round", 1)))
-                _maybe_finish_or_advance(state)
             return events, None
 
-        if action_type == "end_round":
+        if action_type in ("next_round", "end_round"):
             if current_round.get("ended"):
                 return [], "round already ended"
+            if not current_round.get("proposal") and not current_round.get("tests"):
+                return [], "set a round code first"
             current_round["ended"] = True
             pdata["rounds_completed"] = max(int(pdata.get("rounds_completed", 0)), int(state.get("round", 1)))
             _maybe_finish_or_advance(state)
@@ -1508,11 +1509,9 @@ class TuringMachineGame:
 
         used_slots = {test.get("slot") for test in current_round.get("tests", [])}
         available_cards = [card for card in _scenario_cards(state) if card.get("slot") not in used_slots]
-        if available_cards and len(current_round.get("tests", [])) < 2:
+        if available_cards and len(current_round.get("tests", [])) < 3:
             return {"type": "test_criterion", "slot": available_cards[0].get("slot"), "delay_ms": 220}
-        if available_cards and len(current_round.get("tests", [])) < 3 and random.random() < 0.5:
-            return {"type": "test_criterion", "slot": available_cards[0].get("slot"), "delay_ms": 220}
-        return {"type": "end_round", "delay_ms": 180}
+        return {"type": "next_round", "delay_ms": 220}
 
     @staticmethod
     def serialize(state: Dict) -> Dict:

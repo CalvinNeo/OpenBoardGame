@@ -46,33 +46,6 @@
       }
     },
     {
-      "id": "word_ends_zi",
-      "text": "名称以“子”结尾",
-      "evaluation_mode": "auto",
-      "evaluator": {
-        "kind": "ends_with",
-        "value": "子"
-      }
-    },
-    {
-      "id": "word_ends_ji",
-      "text": "名称以“机”结尾",
-      "evaluation_mode": "auto",
-      "evaluator": {
-        "kind": "ends_with",
-        "value": "机"
-      }
-    },
-    {
-      "id": "word_ends_qi",
-      "text": "名称以“器”结尾",
-      "evaluation_mode": "auto",
-      "evaluator": {
-        "kind": "ends_with",
-        "value": "器"
-      }
-    },
-    {
       "id": "word_has_repeat",
       "text": "名称里有重复字",
       "evaluation_mode": "auto",
@@ -225,6 +198,42 @@
       }
     },
     {
+      "id": "word_first_char_tone_1",
+      "text": "名称第一个字读第一声（阴平）",
+      "evaluation_mode": "auto",
+      "evaluator": {
+        "kind": "first_char_tone_is",
+        "value": 1
+      }
+    },
+    {
+      "id": "word_first_char_tone_2",
+      "text": "名称第一个字读第二声（阳平）",
+      "evaluation_mode": "auto",
+      "evaluator": {
+        "kind": "first_char_tone_is",
+        "value": 2
+      }
+    },
+    {
+      "id": "word_first_char_tone_3",
+      "text": "名称第一个字读第三声（上声）",
+      "evaluation_mode": "auto",
+      "evaluator": {
+        "kind": "first_char_tone_is",
+        "value": 3
+      }
+    },
+    {
+      "id": "word_first_char_tone_4",
+      "text": "名称第一个字读第四声（去声）",
+      "evaluation_mode": "auto",
+      "evaluator": {
+        "kind": "first_char_tone_is",
+        "value": 4
+      }
+    },
+    {
       "id": "word_first_char_up_down",
       "text": "名称第一个字是上下结构",
       "evaluation_mode": "auto",
@@ -276,6 +285,42 @@
       "evaluator": {
         "kind": "first_char_radical_is",
         "value": "木字旁"
+      }
+    },
+    {
+      "id": "word_first_char_noun",
+      "text": "名称第一个字通常可以单独作名词",
+      "evaluation_mode": "auto",
+      "evaluator": {
+        "kind": "first_char_grammatical_role_is",
+        "value": "noun"
+      }
+    },
+    {
+      "id": "word_first_char_verb",
+      "text": "名称第一个字通常可以单独作动词",
+      "evaluation_mode": "auto",
+      "evaluator": {
+        "kind": "first_char_grammatical_role_is",
+        "value": "verb"
+      }
+    },
+    {
+      "id": "word_last_char_noun",
+      "text": "名称最后一个字通常可以单独作名词",
+      "evaluation_mode": "auto",
+      "evaluator": {
+        "kind": "last_char_grammatical_role_is",
+        "value": "noun"
+      }
+    },
+    {
+      "id": "word_last_char_verb",
+      "text": "名称最后一个字通常可以单独作动词",
+      "evaluation_mode": "auto",
+      "evaluator": {
+        "kind": "last_char_grammatical_role_is",
+        "value": "verb"
       }
     }
   ],
@@ -398,6 +443,106 @@
     {
       "id": "attr_pair",
       "text": "通常会成对使用或穿戴",
+      "evaluation_mode": "knower"
+    },
+    {
+      "id": "attr_kick_away",
+      "text": "通常可以被一脚踢飞",
+      "evaluation_mode": "knower"
+    },
+    {
+      "id": "attr_one_bite",
+      "text": "通常可以被一口吃掉",
+      "evaluation_mode": "knower"
+    },
+    {
+      "id": "attr_fist_sized",
+      "text": "通常可以握在拳头里",
+      "evaluation_mode": "knower"
+    },
+    {
+      "id": "attr_hang_on_wall",
+      "text": "通常可以挂在墙上或门上",
+      "evaluation_mode": "knower"
+    },
+    {
+      "id": "attr_twist_open",
+      "text": "通常可以拧开或旋开",
+      "evaluation_mode": "knower"
+    },
+    {
+      "id": "attr_absorbent",
+      "text": "通常能够吸水",
+      "evaluation_mode": "knower"
+    },
+    {
+      "id": "attr_sticky",
+      "text": "通常会粘在别的东西上",
+      "evaluation_mode": "knower"
+    },
+    {
+      "id": "attr_reflective",
+      "text": "通常表面可以反光",
+      "evaluation_mode": "knower"
+    },
+    {
+      "id": "attr_squeezable",
+      "text": "通常可以被挤压变形",
+      "evaluation_mode": "knower"
+    },
+    {
+      "id": "attr_rolls",
+      "text": "通常容易滚来滚去",
+      "evaluation_mode": "knower"
+    },
+    {
+      "id": "attr_flutters",
+      "text": "通常在风里会飘动",
+      "evaluation_mode": "knower"
+    },
+    {
+      "id": "attr_shake_sound",
+      "text": "通常摇一摇会发出声响",
+      "evaluation_mode": "knower"
+    },
+    {
+      "id": "attr_stains",
+      "text": "通常会留下明显污渍",
+      "evaluation_mode": "knower"
+    },
+    {
+      "id": "attr_consumes_on_use",
+      "text": "通常用一次就会少一点",
+      "evaluation_mode": "knower"
+    },
+    {
+      "id": "attr_stackable",
+      "text": "通常可以整齐叠放",
+      "evaluation_mode": "knower"
+    },
+    {
+      "id": "attr_cover_surface",
+      "text": "通常可以铺开覆盖一个平面",
+      "evaluation_mode": "knower"
+    },
+    {
+      "id": "attr_tie_or_buckle",
+      "text": "通常可以系、绑或扣在别处",
+      "evaluation_mode": "knower"
+    },
+    {
+      "id": "attr_sleeve_like",
+      "text": "通常可以套在别的东西外面",
+      "evaluation_mode": "knower"
+    },
+    {
+      "id": "attr_has_lid",
+      "text": "通常有盖子或盖帽",
+      "evaluation_mode": "knower"
+    },
+    {
+      "id": "attr_roll_up",
+      "text": "通常可以卷起来收纳",
       "evaluation_mode": "knower"
     }
   ],

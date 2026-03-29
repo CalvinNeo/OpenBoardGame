@@ -212,7 +212,7 @@ TURING_MACHINE_ACTION_SCHEMA = {
         },
         {
             "type": "object",
-            "properties": {"type": {"const": "end_round"}},
+            "properties": {"type": {"const": "next_round"}},
             "required": ["type"],
             "additionalProperties": False,
         },
