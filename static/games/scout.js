@@ -5,6 +5,9 @@ let scoutTakeSide = null
 let scoutInsertIndex = null
 let scoutInsertFace = "a"
 let scoutExplainMode = false
+let scoutHintOverride = ""
+let scoutHintCycleKey = ""
+let scoutHintCycleIndex = -1
 
 const scoutGamePanel = document.getElementById("scoutPanel")
 const scoutHeaderActions = document.getElementById("scoutHeaderActions")
@@ -40,6 +43,7 @@ const scoutHint = document.getElementById("scoutHint")
 
 const scoutReadyKeepBtn = document.getElementById("scoutReadyKeepBtn")
 const scoutReadyFlipBtn = document.getElementById("scoutReadyFlipBtn")
+const scoutHintBtn = document.getElementById("scoutHintBtn")
 const scoutShowBtn = document.getElementById("scoutShowBtn")
 const scoutScoutBtn = document.getElementById("scoutScoutBtn")
 const scoutScoutShowBtn = document.getElementById("scoutScoutShowBtn")
@@ -78,8 +82,9 @@ const SCOUT_HELP_TEXT = `
 
   <h3>Interface</h3>
   <ul>
-    <li>Click cards in your hand to choose a continuous range for Show.</li>
+    <li>Click cards in your hand to build a Show range. You may only extend the current selection with adjacent cards; clicking elsewhere starts a new selection.</li>
     <li>Click the top or bottom half of an edge card to choose both the Scout side and the number you want.</li>
+    <li>Click <strong>Hint</strong> to cycle through legal Show options from your hand. It does not suggest Scout lines.</li>
     <li>Choose an insertion gap, then use <strong>Scout</strong> or <strong>Scout + Show</strong>.</li>
     <li>After <strong>Scout + Show</strong>, select from your real hand to Show, or click <strong>Finish Turn</strong>.</li>
     <li>Click empty space in your hand area to clear the current selection.</li>
@@ -93,7 +98,7 @@ const SCOUT_EXPLANATIONS = {
   },
   yourHand: {
     name: "Your Hand",
-    description: "Click one card, then another, to select a continuous interval for Show. Hand order is fixed during the round.",
+    description: "Click one card to start a Show selection. You can only extend it with adjacent cards; clicking a non-adjacent card starts a new selection.",
   },
   previewHand: {
     name: "After Scout Preview",
@@ -110,6 +115,10 @@ const SCOUT_EXPLANATIONS = {
   readyFlipBtn: {
     name: "Flip Whole Hand",
     description: "Reverse the entire hand and flip every card to its opposite face-up side.",
+  },
+  hintBtn: {
+    name: "Hint",
+    description: "Cycles through legal Show choices from your current hand. It does not suggest Scout or Scout + Show choices.",
   },
   showBtn: {
     name: "Show Selected",
@@ -215,16 +224,24 @@ function scoutExplainIdForElement(node) {
   return target ? target.getAttribute("data-scout-explain") : null
 }
 
+function resetScoutHintState() {
+  scoutHintOverride = ""
+  scoutHintCycleKey = ""
+  scoutHintCycleIndex = -1
+}
+
 function clearScoutSelection() {
   scoutRangeAnchor = null
   scoutRangeFocus = null
   scoutTakeSide = null
   scoutInsertIndex = null
+  resetScoutHintState()
 }
 
 function clearScoutRangeSelection() {
   scoutRangeAnchor = null
   scoutRangeFocus = null
+  resetScoutHintState()
 }
 
 function scoutSelectedRange() {
@@ -235,6 +252,110 @@ function scoutSelectedRange() {
     start: Math.min(scoutRangeAnchor, scoutRangeFocus),
     end: Math.max(scoutRangeAnchor, scoutRangeFocus),
   }
+}
+
+function scoutSelectHandIndex(index) {
+  if (!Number.isInteger(index)) {
+    return
+  }
+  resetScoutHintState()
+  const range = scoutSelectedRange()
+  if (!range) {
+    scoutRangeAnchor = index
+    scoutRangeFocus = index
+    return
+  }
+  if (index === range.start - 1) {
+    scoutRangeAnchor = index
+    scoutRangeFocus = range.end
+    return
+  }
+  if (index === range.end + 1) {
+    scoutRangeAnchor = range.start
+    scoutRangeFocus = index
+    return
+  }
+  scoutRangeAnchor = index
+  scoutRangeFocus = index
+}
+
+function scoutComboSortKey(combo) {
+  if (!combo) {
+    return [0, 0, 0]
+  }
+  let typeOrder = 0
+  if (combo.combo_type === "run") {
+    typeOrder = 1
+  } else if (combo.combo_type === "set") {
+    typeOrder = 2
+  }
+  return [combo.length || 0, typeOrder, combo.rank_value || 0]
+}
+
+function scoutCompareSortKey(left, right) {
+  const maxLength = Math.max(left.length, right.length)
+  for (let index = 0; index < maxLength; index += 1) {
+    const a = left[index] || 0
+    const b = right[index] || 0
+    if (a !== b) {
+      return a - b
+    }
+  }
+  return 0
+}
+
+function scoutEnumerateShowMoves(cards, activeSet) {
+  if (!Array.isArray(cards) || !cards.length) {
+    return []
+  }
+  const moves = []
+  for (let start = 0; start < cards.length; start += 1) {
+    for (let end = start; end < cards.length; end += 1) {
+      const chosen = cards.slice(start, end + 1)
+      const combo = scoutClassifyCards(chosen)
+      if (!combo || !scoutBeats(combo, activeSet)) {
+        continue
+      }
+      moves.push({
+        start,
+        end,
+        combo,
+        remainingCount: cards.length - chosen.length,
+      })
+    }
+  }
+  return moves
+}
+
+function scoutShowMoveKey(move) {
+  return [
+    move && move.remainingCount === 0 ? 1 : 0,
+    ...scoutComboSortKey(move ? move.combo : null),
+    -(move ? move.start : 0),
+  ]
+}
+
+function scoutSortedShowMoves(cards, activeSet) {
+  const moves = scoutEnumerateShowMoves(cards, activeSet)
+  moves.sort((left, right) => scoutCompareSortKey(scoutShowMoveKey(right), scoutShowMoveKey(left)))
+  return moves
+}
+
+function scoutBestShowMove(cards, activeSet) {
+  return scoutSortedShowMoves(cards, activeSet)[0] || null
+}
+
+function scoutHintKeyForView(view) {
+  if (!view) {
+    return ""
+  }
+  const handKey = Array.isArray(view.your_hand)
+    ? view.your_hand.map((card) => `${card.id}:${card.face_up}:${card.current}`).join("|")
+    : ""
+  const activeKey = view.active_set
+    ? `${view.active_set.owner_player_id}:${view.active_set.combo_type}:${view.active_set.length}:${view.active_set.rank_value}:${(view.active_set.cards || []).map((card) => `${card.id}:${card.face_up}:${card.current}`).join("|")}`
+    : "none"
+  return `${view.phase}|${view.you}|${handKey}|${activeKey}`
 }
 
 function scoutFaceIndex(face) {
@@ -669,6 +790,7 @@ function renderScoutActiveSet(view) {
           scoutInsertIndex = null
           clearScoutRangeSelection()
         } else {
+          resetScoutHintState()
           scoutTakeSide = nextSide
           scoutInsertFace = nextFace
           scoutInsertIndex = null
@@ -722,6 +844,7 @@ function renderScoutHand(view) {
       gapBtn.setAttribute("aria-label", `Insert at position ${index + 1}`)
       gapBtn.addEventListener("click", (event) => {
         event.stopPropagation()
+        resetScoutHintState()
         scoutInsertIndex = scoutInsertIndex === index ? null : index
         clearScoutRangeSelection()
         renderScoutGameState({ view, events: [] })
@@ -743,12 +866,7 @@ function renderScoutHand(view) {
           clickable: !scoutTakeSide && scoutHasLegalAction("show"),
           selected: !!selected && index >= selected.start && index <= selected.end,
           onClick: () => {
-            if (!Number.isInteger(scoutRangeAnchor)) {
-              scoutRangeAnchor = index
-              scoutRangeFocus = index
-            } else {
-              scoutRangeFocus = index
-            }
+            scoutSelectHandIndex(index)
             renderScoutGameState({ view, events: [] })
           },
         }),
@@ -849,6 +967,9 @@ function updateScoutButtons(view) {
   if (scoutReadyFlipBtn) {
     scoutReadyFlipBtn.disabled = !canReady
   }
+  if (scoutHintBtn) {
+    scoutHintBtn.disabled = !(view && scoutHasLegalAction("show") && scoutBestShowMove(view.your_hand || [], view.active_set))
+  }
   if (scoutShowBtn) {
     scoutShowBtn.disabled = !scoutCanShow(view)
   }
@@ -898,7 +1019,9 @@ function renderScoutSummary(view) {
   }
   if (scoutHint) {
     const inserted = scoutPreviewInsertedCard(view)
-    if (view.phase === "choose_orientation") {
+    if (scoutHintOverride) {
+      scoutHint.textContent = scoutHintOverride
+    } else if (view.phase === "choose_orientation") {
       scoutHint.textContent = view.initial_hand_options
         ? "Choose whether to keep the dealt order or flip the entire hand."
         : "Your hand is locked. Waiting for the rest of the table."
@@ -920,6 +1043,9 @@ function renderScoutSummary(view) {
 
 function renderScoutGameState(data) {
   const view = data.view || data
+  if (data && Array.isArray(data.events) && data.events.length) {
+    resetScoutHintState()
+  }
   currentScoutView = view
   scoutSyncSelection(view)
   if (currentGameType !== "scout") {
@@ -995,6 +1121,32 @@ if (scoutShowBtn) {
     }
     const range = scoutSelectedRange()
     sendAction({ type: "show", start_index: range.start, end_index: range.end })
+  })
+}
+
+if (scoutHintBtn) {
+  scoutHintBtn.addEventListener("click", () => {
+    if (!currentScoutView || !scoutHasLegalAction("show")) {
+      return
+    }
+    const moves = scoutSortedShowMoves(currentScoutView.your_hand || [], currentScoutView.active_set)
+    if (!moves.length) {
+      return
+    }
+    const hintKey = scoutHintKeyForView(currentScoutView)
+    if (hintKey !== scoutHintCycleKey) {
+      scoutHintCycleKey = hintKey
+      scoutHintCycleIndex = 0
+    } else {
+      scoutHintCycleIndex = (scoutHintCycleIndex + 1 + moves.length) % moves.length
+    }
+    const move = moves[scoutHintCycleIndex]
+    scoutTakeSide = null
+    scoutInsertIndex = null
+    scoutRangeAnchor = move.start
+    scoutRangeFocus = move.end
+    scoutHintOverride = `Hint ${scoutHintCycleIndex + 1}/${moves.length}: try ${scoutComboLabel(move.combo)} from cards ${move.start + 1}-${move.end + 1}.`
+    renderScoutGameState({ view: currentScoutView, events: [] })
   })
 }
 
