@@ -14189,9 +14189,9 @@ body.scout-explain-mode [data-scout-explain].has-explanation {
   color: #1f2937;
 }
 
-.davinci-tile.hidden {
-  background: linear-gradient(180deg, #28303f 0%, #151b26 100%);
-  border-color: #0f172a;
+.davinci-tile.unknown {
+  background: linear-gradient(180deg, #b3bcc8 0%, #808b9b 100%);
+  border-color: #677282;
   color: #f8fafc;
 }
 

@@ -29,6 +29,9 @@ def build_cells(config):
     for terrain, cell_ids in config.get("terrain_hints", {}).items():
         for cell_id in cell_ids:
             terrain_map[cell_id] = terrain
+    build_requirement_map = {
+        item["cell"]: item["raw_type"] for item in config.get("build_ii_cells", [])
+    }
 
     cells = []
     for row_index, count in enumerate(rows):
@@ -46,6 +49,7 @@ def build_cells(config):
                     "x": center_x,
                     "y": round(center_y),
                     "terrain_hint": terrain_map.get(cell_id, "land"),
+                    "build_requirement": build_requirement_map.get(cell_id),
                 }
             )
 
@@ -58,6 +62,7 @@ def build_cells(config):
                 "x": extra["x"],
                 "y": extra["y"],
                 "terrain_hint": extra.get("terrain_hint", terrain_map.get(extra["id"], "land")),
+                "build_requirement": build_requirement_map.get(extra["id"]),
                 "note": extra.get("note"),
             }
         )
@@ -98,7 +103,7 @@ def render_svg(config, cells, output_path):
         f'  <image href="{reference_image}" x="0" y="0" width="{width}" height="{height}" preserveAspectRatio="none" />',
         '  <rect x="18" y="18" width="760" height="108" rx="20" fill="rgba(255,248,238,0.9)" stroke="#b89563" stroke-width="4" />',
         '  <text x="42" y="66" class="title">Map 0 Annotated</text>',
-        '  <text x="42" y="102" class="subtitle">Cells, terrain hints, cover bonuses, and left-track rewards.</text>',
+        '  <text x="42" y="102" class="subtitle">Cells, terrain hints, cover bonuses, Build II cells, and left-track rewards.</text>',
     ]
 
     for cell in cells:
@@ -115,6 +120,14 @@ def render_svg(config, cells, output_path):
             f'  <rect x="{x - 44}" y="{y - 62}" width="88" height="34" rx="10" fill="rgba(255,247,210,0.96)" stroke="#8a6a1f" stroke-width="3" />'
         )
         lines.append(f'  <text x="{x}" y="{y - 45}" class="bonus-label">{bonus["code"]}</text>')
+
+    for requirement in config.get("build_ii_cells", []):
+        x = requirement["x"]
+        y = requirement["y"]
+        lines.append(
+            f'  <rect x="{x - 42}" y="{y - 62}" width="84" height="34" rx="10" fill="rgba(255,235,220,0.96)" stroke="#b25a2b" stroke-width="3" />'
+        )
+        lines.append(f'  <text x="{x}" y="{y - 45}" class="bonus-label">{requirement["code"]}</text>')
 
     for reward in config.get("left_track_rewards", []):
         x = reward["x"]
@@ -134,15 +147,16 @@ def render_svg(config, cells, output_path):
             f'  <text x="312" y="{legend_y + 6}" class="legend-label">water hint</text>',
             f'  <circle cx="520" cy="{legend_y}" r="18" fill="{TERRAIN_COLORS["rock"]}" stroke="#fff" stroke-width="3" />',
             f'  <text x="552" y="{legend_y + 6}" class="legend-label">rock hint</text>',
-            f'  <text x="42" y="{legend_y + 52}" class="small">Bonus codes: CARD = draw card, M5/M10/M12 = money, X/X3 = X-token, REP1 = reputation, UP = upgrade, WRK = worker.</text>',
-            f'  <text x="42" y="{legend_y + 84}" class="small">I2 preserves the raw image icon because its exact rules meaning still needs a second verification pass.</text>',
-            f'  <text x="42" y="{legend_y + 116}" class="small">The southeast shoreline uses manual cells SE1/SE2. Use terrain_features in the JSON when a cell hint looks ambiguous.</text>',
+            f'  <text x="42" y="{legend_y + 52}" class="small">Cover bonus codes: CARD = draw card, M5/M10 = money, X = X-token, ACT1 = move one action card to slot 1, REP2 = reputation 2.</text>',
+            f'  <text x="42" y="{legend_y + 84}" class="small">Build II: BII = this cell can only be covered after your Build action is upgraded to side II.</text>',
+            f'  <text x="42" y="{legend_y + 116}" class="small">Left track: SNAP = take 1 card from the display, ENC2 = size-2 enclosure, M5/M12 = money, CONS1 = conservation, WRK = worker, X3 = 3 X-tokens.</text>',
+            f'  <text x="42" y="{legend_y + 148}" class="small">The southeast shoreline uses manual cells SE1/SE2. Use terrain_features in the JSON when a cell hint looks ambiguous.</text>',
         ]
     )
 
     for index, feature in enumerate(config.get("terrain_features", [])):
         lines.append(
-            f'  <text x="42" y="{legend_y + 152 + index * 24}" class="small">- {feature["id"]}: {feature["type"]} near {", ".join(feature["approx_cells"])}</text>'
+            f'  <text x="42" y="{legend_y + 184 + index * 24}" class="small">- {feature["id"]}: {feature["type"]} near {", ".join(feature["approx_cells"])}</text>'
         )
 
     lines.append("</svg>")

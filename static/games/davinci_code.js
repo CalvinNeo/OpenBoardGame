@@ -44,6 +44,9 @@ const DAVINCI_HELP_HTML = `
     <li>If you stop, your drawn tile is inserted hidden. If you miss, your drawn tile is inserted revealed.</li>
   </ol>
 
+  <h3>Row Order</h3>
+  <p>Number tiles always stay in ascending order from left to right. If two tiles show the same number, dark stays left of light.</p>
+
   <h3>Empty Deck</h3>
   <p>When the draw pile runs out, wrong guesses no longer reveal a drawn tile. Instead, you must reveal one of your own hidden tiles.</p>
 
@@ -403,7 +406,7 @@ function renderDaVinciCodeTable(view) {
       const interactive = tile.guessable && daVinciCan(view, "guess_tile");
       const el = document.createElement(interactive ? "button" : "div");
       el.className = "davinci-tile";
-      if (!tile.face_visible) el.classList.add("hidden");
+      if (!tile.face_visible) el.classList.add("unknown");
       if (tile.face_visible && tile.color === "dark") el.classList.add("dark");
       if (tile.face_visible && tile.color === "light") el.classList.add("light");
       if (tile.revealed) el.classList.add("revealed");
