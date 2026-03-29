@@ -7,6 +7,7 @@ from game.cat_in_box import CatInBoxGame
 from game.citadels import CitadelsGame
 from game.coyote import CoyoteGame
 from game.cyber_pictures import CyberPicturesGame
+from game.davinci_code import DaVinciCodeGame
 from game.decrypto import DecryptoGame
 from game.draw_guess import DrawGuessGame
 from game.fang_niao import FangNiaoGame
@@ -181,6 +182,80 @@ TAGIRON_ACTION_SCHEMA = {
 TAGIRON_CONFIG_SCHEMA = {
     "type": "object",
     "properties": {},
+    "additionalProperties": False,
+}
+
+DAVINCI_CODE_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "arrange_initial_tiles"},
+                "ordered_tile_ids": {
+                    "type": "array",
+                    "items": {"type": "string", "minLength": 1, "maxLength": 40},
+                    "minItems": 1,
+                },
+            },
+            "required": ["type", "ordered_tile_ids"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "guess_tile"},
+                "target_player_id": {"type": "string", "minLength": 1, "maxLength": 80},
+                "target_index": {"type": "integer", "minimum": 0},
+                "declared_color": {"type": "string", "enum": ["dark", "light"]},
+                "declared_value": {
+                    "oneOf": [
+                        {"type": "integer", "minimum": 0, "maximum": 11},
+                        {"const": "dash"},
+                    ]
+                },
+            },
+            "required": ["type", "target_player_id", "target_index", "declared_color", "declared_value"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "continue_guess"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "stop_turn"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "reveal_own_tile"},
+                "tile_index": {"type": "integer", "minimum": 0},
+            },
+            "required": ["type", "tile_index"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "insert_pending_tile"},
+                "insert_index": {"type": "integer", "minimum": 0},
+            },
+            "required": ["type", "insert_index"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+DAVINCI_CODE_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "mode": {"type": "string", "enum": ["standard", "advanced"]},
+    },
     "additionalProperties": False,
 }
 
@@ -2269,6 +2344,21 @@ register_game(
         module=TuringMachineGame,
         serialize=TuringMachineGame.serialize,
         deserialize=TuringMachineGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=DaVinciCodeGame.game_id,
+        name="Da Vinci Code",
+        min_players=DaVinciCodeGame.min_players,
+        max_players=DaVinciCodeGame.max_players,
+        turn_mode="turn",
+        action_schema=DAVINCI_CODE_ACTION_SCHEMA,
+        config_schema=DAVINCI_CODE_CONFIG_SCHEMA,
+        module=DaVinciCodeGame,
+        serialize=DaVinciCodeGame.serialize,
+        deserialize=DaVinciCodeGame.deserialize,
     )
 )
 

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v2" />
 </head>
 <body>
   <section id="logPanel" class="log-panel hidden" aria-hidden="true">
@@ -645,7 +645,7 @@
   <section id="thingsInRingsExplainModal" class="modal hidden" aria-hidden="true">
     <div class="modal-content things-rings-explain-modal">
       <div class="modal-header">
-        <h2>Button Explanation</h2>
+        <h2>UI Explanation</h2>
         <button id="thingsInRingsExplainModalCloseBtn" type="button">Close</button>
       </div>
       <div class="modal-body">
@@ -832,6 +832,7 @@
                     <option value="cyber_pictures">Cyber Pictures</option>
                     <option value="perfect_mismatch">Perfect Mismatch</option>
                     <option value="things_in_rings">Things in Rings</option>
+                    <option value="davinci_code">Da Vinci Code</option>
                     <option value="turing_machine">Turing Machine</option>
                     <option value="aidixit">AI Dixit</option>
                     <option value="impression_flower">Impression Flower</option>
@@ -1132,6 +1133,16 @@
                       <input id="turingMachineSeedInput" type="text" maxlength="80" placeholder="Leave blank for random" />
                     </div>
                   </div>
+                  <div class="game-config-card hidden" id="davinciCodeConfigBox" aria-hidden="true">
+                    <div class="game-config-title">Da Vinci Code</div>
+                    <div class="row" id="davinciCodeModeRow">
+                      <label for="davinciCodeModeSelect">Mode</label>
+                      <select id="davinciCodeModeSelect">
+                        <option value="standard" selected>Standard</option>
+                        <option value="advanced">Advanced</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
                 <div class="row hidden toggle-row" id="autoSaveRow">
                   <label for="autoSaveToggle">Auto Save</label>
@@ -1234,6 +1245,10 @@
             <div class="panel-header-actions" id="tagironHeaderActions" style="display: none;">
               <button id="tagironHelpBtn" class="tagiron-header-btn" type="button">Help</button>
               <button id="tagironExplainBtn" class="tagiron-header-btn" type="button">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="davinciCodeHeaderActions" style="display: none;">
+              <button id="davinciCodeHelpBtn" class="davinci-header-btn" type="button">Help</button>
+              <button id="davinciCodeExplainBtn" class="davinci-header-btn" type="button">Explain</button>
             </div>
             <div class="panel-header-actions" id="turingMachineHeaderActions" style="display: none;">
               <button id="turingMachineHelpBtn" class="turing-machine-header-btn" type="button">Help</button>
@@ -2123,6 +2138,53 @@
 
               <h3>Players</h3>
               <div id="tagironPlayers"></div>
+            </div>
+
+            <div id="davinciCodePanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="davinciCodePhase">-</span></div>
+                <div>Mode: <span id="davinciCodeMode">-</span></div>
+                <div>Current Turn: <span id="davinciCodeTurn">-</span></div>
+                <div>Draw Pile: <span id="davinciCodeDeck">-</span></div>
+              </div>
+              <div class="row">
+                <div>Detail: <span id="davinciCodeDetail">-</span></div>
+              </div>
+              <div class="row">
+                <div>Winners: <span id="davinciCodeWinners">-</span></div>
+              </div>
+
+              <section id="davinciCodeSetup" class="davinci-section hidden" aria-hidden="true">
+                <div class="davinci-section-title">Setup</div>
+                <div id="davinciCodeSetupOptions" class="davinci-option-list"></div>
+              </section>
+
+              <div class="davinci-layout">
+                <section class="davinci-section davinci-table-section">
+                  <div class="davinci-section-title">Table</div>
+                  <div id="davinciCodeTable" class="davinci-player-grid"></div>
+                </section>
+
+                <section class="davinci-section">
+                  <div class="davinci-section-title">Controls</div>
+                  <div id="davinciCodeGuessTarget" class="davinci-target-line">Select a hidden opponent tile.</div>
+                  <div class="davinci-guess-row">
+                    <select id="davinciCodeGuessColor">
+                      <option value="dark">⚫ Dark</option>
+                      <option value="light">⚪ Light</option>
+                    </select>
+                    <select id="davinciCodeGuessValue"></select>
+                    <button id="davinciCodeGuessBtn" type="button">Submit Guess</button>
+                  </div>
+                  <div id="davinciCodePending" class="davinci-pending">-</div>
+                  <div id="davinciCodeControls" class="davinci-option-list"></div>
+                </section>
+
+                <section class="davinci-section">
+                  <div class="davinci-section-title">Public Log</div>
+                  <div id="davinciCodeLog" class="davinci-log"></div>
+                </section>
+              </div>
             </div>
 
             <div id="turingMachinePanel" class="hidden">
@@ -3667,6 +3729,26 @@
               <div id="fangNiaoPlayers"></div>
             </div>
 
+            <div id="davinciCodeHelpModal" class="modal davinci-help-modal hidden" aria-hidden="true">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h2>Da Vinci Code Help</h2>
+                  <button id="davinciCodeHelpModalCloseBtn" type="button">Close</button>
+                </div>
+                <div class="modal-body" id="davinciCodeHelpContent"></div>
+              </div>
+            </div>
+
+            <div id="davinciCodeExplainModal" class="modal davinci-explain-modal hidden" aria-hidden="true">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h2>Da Vinci Code Explain</h2>
+                  <button id="davinciCodeExplainModalCloseBtn" type="button">Close</button>
+                </div>
+                <div class="modal-body" id="davinciCodeExplainContent"></div>
+              </div>
+            </div>
+
           </div>
         </section>
       </main>
@@ -3675,52 +3757,53 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js"></script>
-  <script src="/static/games/shared.js?v=app_v1"></script>
-  <script src="/static/games/blokus.js?v=app_v1"></script>
-  <script src="/static/games/carcassonne.js?v=app_v1"></script>
-  <script src="/static/games/azul.js?v=app_v1"></script>
-  <script src="/static/games/draw_guess.js?v=app_v1"></script>
-  <script src="/static/games/cyber_pictures.js?v=app_v1"></script>
-  <script src="/static/games/blitz_sketch.js?v=app_v1"></script>
-  <script src="/static/games/fake_artist.js?v=app_v1"></script>
-  <script src="/static/games/things_in_rings.js?v=app_v1"></script>
-  <script src="/static/games/impression_flower.js?v=app_v1"></script>
-  <script src="/static/games/splendor.js?v=app_v1"></script>
-  <script src="/static/games/splendor_pokemon.js?v=app_v1"></script>
-  <script src="/static/games/project_l.js?v=app_v1"></script>
-  <script src="/static/games/decrypto.js?v=app_v1"></script>
-  <script src="/static/games/word_decode.js?v=app_v1"></script>
-  <script src="/static/games/trekking.js?v=app_v1"></script>
-  <script src="/static/games/aidixit.js?v=app_v1"></script>
-  <script src="/static/games/hanabi.js?v=app_v1"></script>
-  <script src="/static/games/gang.js?v=app_v1"></script>
-  <script src="/static/games/cat_in_box.js?v=app_v1"></script>
-  <script src="/static/games/point_salad.js?v=app_v1"></script>
-  <script src="/static/games/forest_shuffle.js?v=app_v1"></script>
-  <script src="/static/games/patchwork.js?v=app_v1"></script>
-  <script src="/static/games/six_nimmt.js?v=app_v1"></script>
-  <script src="/static/games/skull.js?v=app_v1"></script>
-  <script src="/static/games/cabo.js?v=app_v1"></script>
-  <script src="/static/games/flip7.js?v=app_v1"></script>
-  <script src="/static/games/abraca_what.js?v=app_v1"></script>
-  <script src="/static/games/fang_niao.js?v=app_v1"></script>
-  <script src="/static/games/perfect_mismatch.js?v=app_v1"></script>
-  <script src="/static/games/coyote.js?v=app_v1"></script>
-  <script src="/static/games/citadels.js?v=app_v1"></script>
-  <script src="/static/games/tagiron.js?v=app_v1"></script>
-  <script src="/static/games/turing_machine.js?v=app_v1"></script>
-  <script src="/static/games/halli_galli.js?v=app_v1"></script>
-  <script src="/static/games/texas_holdem.js?v=app_v1"></script>
-  <script src="/static/games/yahtzee.js?v=app_v1"></script>
-  <script src="/static/games/istanbul.js?v=app_v1"></script>
-  <script src="/static/games/gold_rush.js?v=app_v1"></script>
-  <script src="/static/games/age_of_war.js?v=app_v1"></script>
-  <script src="/static/games/wandering_towers.js?v=app_v1"></script>
-  <script src="/static/games/incan_gold.js?v=app_v1"></script>
-  <script src="/static/games/manila.js?v=app_v1"></script>
-  <script src="/static/games/kobayakawa.js?v=app_v1"></script>
-  <script src="/static/games/scout.js?v=app_v1"></script>
-  <script src="/static/app.js?v=app_v1"></script>
-  <script src="/static/room.js?v=app_v1"></script>
+  <script src="/static/games/shared.js?v=app_v2"></script>
+  <script src="/static/games/blokus.js?v=app_v2"></script>
+  <script src="/static/games/carcassonne.js?v=app_v2"></script>
+  <script src="/static/games/azul.js?v=app_v2"></script>
+  <script src="/static/games/draw_guess.js?v=app_v2"></script>
+  <script src="/static/games/cyber_pictures.js?v=app_v2"></script>
+  <script src="/static/games/blitz_sketch.js?v=app_v2"></script>
+  <script src="/static/games/fake_artist.js?v=app_v2"></script>
+  <script src="/static/games/things_in_rings.js?v=app_v2"></script>
+  <script src="/static/games/impression_flower.js?v=app_v2"></script>
+  <script src="/static/games/splendor.js?v=app_v2"></script>
+  <script src="/static/games/splendor_pokemon.js?v=app_v2"></script>
+  <script src="/static/games/project_l.js?v=app_v2"></script>
+  <script src="/static/games/decrypto.js?v=app_v2"></script>
+  <script src="/static/games/word_decode.js?v=app_v2"></script>
+  <script src="/static/games/trekking.js?v=app_v2"></script>
+  <script src="/static/games/aidixit.js?v=app_v2"></script>
+  <script src="/static/games/hanabi.js?v=app_v2"></script>
+  <script src="/static/games/gang.js?v=app_v2"></script>
+  <script src="/static/games/cat_in_box.js?v=app_v2"></script>
+  <script src="/static/games/point_salad.js?v=app_v2"></script>
+  <script src="/static/games/forest_shuffle.js?v=app_v2"></script>
+  <script src="/static/games/patchwork.js?v=app_v2"></script>
+  <script src="/static/games/six_nimmt.js?v=app_v2"></script>
+  <script src="/static/games/skull.js?v=app_v2"></script>
+  <script src="/static/games/cabo.js?v=app_v2"></script>
+  <script src="/static/games/flip7.js?v=app_v2"></script>
+  <script src="/static/games/abraca_what.js?v=app_v2"></script>
+  <script src="/static/games/fang_niao.js?v=app_v2"></script>
+  <script src="/static/games/perfect_mismatch.js?v=app_v2"></script>
+  <script src="/static/games/coyote.js?v=app_v2"></script>
+  <script src="/static/games/citadels.js?v=app_v2"></script>
+  <script src="/static/games/tagiron.js?v=app_v2"></script>
+  <script src="/static/games/davinci_code.js?v=app_v2"></script>
+  <script src="/static/games/turing_machine.js?v=app_v2"></script>
+  <script src="/static/games/halli_galli.js?v=app_v2"></script>
+  <script src="/static/games/texas_holdem.js?v=app_v2"></script>
+  <script src="/static/games/yahtzee.js?v=app_v2"></script>
+  <script src="/static/games/istanbul.js?v=app_v2"></script>
+  <script src="/static/games/gold_rush.js?v=app_v2"></script>
+  <script src="/static/games/age_of_war.js?v=app_v2"></script>
+  <script src="/static/games/wandering_towers.js?v=app_v2"></script>
+  <script src="/static/games/incan_gold.js?v=app_v2"></script>
+  <script src="/static/games/manila.js?v=app_v2"></script>
+  <script src="/static/games/kobayakawa.js?v=app_v2"></script>
+  <script src="/static/games/scout.js?v=app_v2"></script>
+  <script src="/static/app.js?v=app_v2"></script>
+  <script src="/static/room.js?v=app_v2"></script>
 </body>
 </html>

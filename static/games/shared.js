@@ -146,6 +146,9 @@ function emitRoomStart() {
       preset_id: presetId,
       seed,
     };
+  } else if (currentGameType === "davinci_code") {
+    const mode = davinciCodeModeSelect ? davinciCodeModeSelect.value || "standard" : "standard";
+    payload.config = { mode };
   }
   socket.emit("room:start", payload);
 }
@@ -181,6 +184,9 @@ function renderRoomState(state) {
     clearWordDecodeState();
     if (typeof clearTagironState === "function") {
       clearTagironState();
+    }
+    if (typeof clearDaVinciCodeState === "function") {
+      clearDaVinciCodeState();
     }
     if (typeof clearTuringMachineState === "function") {
       clearTuringMachineState();
@@ -233,6 +239,9 @@ function renderRoomState(state) {
   updateThingsInRingsConfigRow();
   if (typeof updateTuringMachineConfigRow === "function") {
     updateTuringMachineConfigRow();
+  }
+  if (typeof updateDavinciCodeConfigRow === "function") {
+    updateDavinciCodeConfigRow();
   }
   updateAutoSaveRow();
   updateReopenButton();

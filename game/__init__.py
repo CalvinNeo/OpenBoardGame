@@ -10,6 +10,7 @@ from game.cat_in_box import CatInBoxGame
 from game.citadels import CitadelsGame
 from game.coyote import CoyoteGame
 from game.cyber_pictures import CyberPicturesGame
+from game.davinci_code import DaVinciCodeGame
 from game.decrypto import DecryptoGame
 from game.draw_guess import DrawGuessGame
 from game.fang_niao import FangNiaoGame
@@ -57,6 +58,7 @@ __all__ = [
     "CatInBoxGame",
     "CitadelsGame",
     "DrawGuessGame",
+    "DaVinciCodeGame",
     "FangNiaoGame",
     "FakeArtistGame",
     "Flip7Game",

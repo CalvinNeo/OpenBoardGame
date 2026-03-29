@@ -66,7 +66,7 @@ GAME_DEV_ORDER = load_game_dev_order(DEV_ORDER_PATH)
 
 @fastapi_app.get("/")
 async def index():
-    return FileResponse("static/index.html")
+    return FileResponse("static/index.html", headers={"Cache-Control": "no-store"})
 
 
 @fastapi_app.get("/api/games")

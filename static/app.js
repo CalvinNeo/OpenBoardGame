@@ -28,6 +28,7 @@ const mismatchPanel = document.getElementById("mismatchPanel");
 const coyotePanel = document.getElementById("coyotePanel");
 const citadelsPanel = document.getElementById("citadelsPanel");
 const tagironPanel = document.getElementById("tagironPanel");
+const davinciCodePanel = document.getElementById("davinciCodePanel");
 const turingMachinePanel = document.getElementById("turingMachinePanel");
 const texasHoldemPanel = document.getElementById("texasHoldemPanel");
 const halliPanel = document.getElementById("halliPanel");
@@ -71,6 +72,7 @@ function setGamePanelVisibility(gameType) {
   const showCoyote = gameType === "coyote";
   const showCitadels = gameType === "citadels";
   const showTagiron = gameType === "tagiron";
+  const showDaVinciCode = gameType === "davinci_code";
   const showTuringMachine = gameType === "turing_machine";
   const showTexasHoldem = gameType === "texas_holdem";
   const showSixNimmt = gameType === "six_nimmt";
@@ -178,6 +180,12 @@ function setGamePanelVisibility(gameType) {
   }
   if (typeof showTagironHeaderActions === "function") {
     showTagironHeaderActions(showTagiron);
+  }
+  if (davinciCodePanel) {
+    davinciCodePanel.classList.toggle("hidden", !showDaVinciCode);
+  }
+  if (typeof showDaVinciCodeHeaderActions === "function") {
+    showDaVinciCodeHeaderActions(showDaVinciCode);
   }
   if (turingMachinePanel) {
     turingMachinePanel.classList.toggle("hidden", !showTuringMachine);
@@ -462,6 +470,10 @@ function renderGameState(data) {
   }
   if (gameType === "tagiron") {
     renderTagironGameState(data);
+    return;
+  }
+  if (gameType === "davinci_code") {
+    renderDaVinciCodeGameState(data);
     return;
   }
   if (gameType === "turing_machine") {

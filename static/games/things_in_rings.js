@@ -109,7 +109,7 @@ const THINGS_IN_RINGS_HELP_TEXT = `
   </ul>
 `;
 
-const THINGS_IN_RINGS_BUTTON_EXPLANATIONS = {
+const THINGS_IN_RINGS_EXPLANATIONS = {
   thingsInRingsPlaceBtn: {
     name: "Place Selected Card",
     description: "Submit the selected hand card to the selected zone on the board.",
@@ -124,6 +124,27 @@ const THINGS_IN_RINGS_BUTTON_EXPLANATIONS = {
     name: "Play Again",
     description: "Start a new round and rotate the Knower to the next seat.",
     cost: "New Round",
+  },
+  thingsRingsChipPlaced: {
+    name: "White Card Chip",
+    description: "A white chip is a resolved board card. Its zone has already been confirmed by the system or the Knower.",
+    cost: "Board Meaning",
+    swatchClass: "plain",
+    swatchLabel: "White = resolved card",
+  },
+  thingsRingsChipClue: {
+    name: "Yellow Card Chip",
+    description: "A yellow chip is one of the Knower's opening clue cards. It starts on the board already placed correctly.",
+    cost: "Board Meaning",
+    swatchClass: "clue",
+    swatchLabel: "Yellow = opening clue",
+  },
+  thingsRingsChipPending: {
+    name: "Purple Card Chip",
+    description: "A purple chip is still under judgement. The card was proposed for this zone, but the Knower has not confirmed the final result yet.",
+    cost: "Board Meaning",
+    swatchClass: "pending",
+    swatchLabel: "Purple = pending judgement",
   },
 };
 
@@ -284,15 +305,42 @@ function getThingsInRingsZoneCards(zone, view) {
   return cards;
 }
 
+function decorateThingsInRingsExplainTarget(element, key) {
+  if (!element || !key) {
+    return;
+  }
+  element.dataset.thingsRingsExplainKey = key;
+  element.classList.add("has-explanation");
+}
+
+function findThingsInRingsZone(view, zoneId) {
+  return (view && Array.isArray(view.zones) ? view.zones : []).find((zone) => zone.zone_id === zoneId) || null;
+}
+
+function formatThingsInRingsZoneLabel(view, zoneId) {
+  if (!zoneId) {
+    return "-";
+  }
+  const zone = findThingsInRingsZone(view, zoneId);
+  if (!zone) {
+    return zoneId;
+  }
+  return zone.subtitle ? `${zone.title} · ${zone.subtitle}` : zone.title;
+}
+
 function appendThingsInRingsCardChip(container, card) {
   const chip = document.createElement("div");
   chip.className = "things-rings-zone-card";
+  let explainKey = "thingsRingsChipPlaced";
   if (card.source === "clue") {
     chip.classList.add("clue");
+    explainKey = "thingsRingsChipClue";
   }
   if (card.source === "pending") {
     chip.classList.add("pending");
+    explainKey = "thingsRingsChipPending";
   }
+  decorateThingsInRingsExplainTarget(chip, explainKey);
   chip.textContent = card.thing_name || "?";
   container.appendChild(chip);
 }
@@ -637,6 +685,8 @@ function getThingsInRingsDecisionContext(view) {
       autoMemberships: view.pending_judgement.auto_memberships || [],
       cardName: view.pending_judgement.thing_card ? view.pending_judgement.thing_card.name : "?",
       mode: "judge",
+      playerName: view.pending_judgement.player_name || "Unknown player",
+      proposedZoneId: view.pending_judgement.proposed_zone_id || "",
     };
   }
   if (view.phase === "seed_clues" && view.your_role === "knower") {
@@ -725,7 +775,34 @@ function renderThingsInRingsKnowerArea(view) {
   }
 
   if (thingsInRingsDecisionCard) {
-    thingsInRingsDecisionCard.textContent = context.cardName;
+    thingsInRingsDecisionCard.innerHTML = "";
+    const name = document.createElement("div");
+    name.className = "things-rings-decision-card-name";
+    name.textContent = context.cardName;
+    thingsInRingsDecisionCard.appendChild(name);
+
+    if (context.mode === "judge") {
+      const proposedZoneLabel = formatThingsInRingsZoneLabel(view, context.proposedZoneId);
+      const meta = document.createElement("div");
+      meta.className = "things-rings-decision-card-meta";
+
+      const playerChip = document.createElement("span");
+      playerChip.className = "things-rings-decision-meta-chip";
+      playerChip.textContent = `Played by: ${context.playerName}`;
+      meta.appendChild(playerChip);
+
+      const zoneChip = document.createElement("span");
+      zoneChip.className = "things-rings-decision-meta-chip";
+      zoneChip.textContent = `Initial zone: ${proposedZoneLabel}`;
+      meta.appendChild(zoneChip);
+
+      const idChip = document.createElement("span");
+      idChip.className = "things-rings-decision-meta-chip subtle";
+      idChip.textContent = `Zone ID: ${context.proposedZoneId}`;
+      meta.appendChild(idChip);
+
+      thingsInRingsDecisionCard.appendChild(meta);
+    }
     thingsInRingsDecisionCard.classList.remove("hidden");
     thingsInRingsDecisionCard.setAttribute("aria-hidden", "false");
   }
@@ -973,24 +1050,21 @@ function closeThingsInRingsHelpModal() {
 }
 
 function updateThingsInRingsExplainModeClasses(enabled) {
-  Object.keys(THINGS_IN_RINGS_BUTTON_EXPLANATIONS).forEach((buttonId) => {
-    const btn = document.getElementById(buttonId);
+  Object.keys(THINGS_IN_RINGS_EXPLANATIONS).forEach((key) => {
+    const btn = document.getElementById(key);
     if (btn) {
+      decorateThingsInRingsExplainTarget(btn, key);
       btn.classList.toggle("has-explanation", enabled);
     }
   });
+  document.querySelectorAll("[data-things-rings-explain-key]").forEach((element) => {
+    element.classList.toggle("has-explanation", enabled);
+  });
 }
 
-function findThingsInRingsButtonAtPoint(x, y) {
-  for (const buttonId of Object.keys(THINGS_IN_RINGS_BUTTON_EXPLANATIONS)) {
-    const btn = document.getElementById(buttonId);
-    if (!btn) continue;
-    const rect = btn.getBoundingClientRect();
-    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
-      return buttonId;
-    }
-  }
-  return null;
+function findThingsInRingsExplainKey(target) {
+  const explainTarget = target && target.closest ? target.closest("[data-things-rings-explain-key]") : null;
+  return explainTarget ? explainTarget.dataset.thingsRingsExplainKey || null : null;
 }
 
 function toggleThingsInRingsExplainMode() {
@@ -1014,14 +1088,23 @@ function exitThingsInRingsExplainMode() {
   }
 }
 
-function showThingsInRingsButtonExplanation(buttonId) {
-  const explanation = THINGS_IN_RINGS_BUTTON_EXPLANATIONS[buttonId];
+function showThingsInRingsExplanation(explainKey) {
+  const explanation = THINGS_IN_RINGS_EXPLANATIONS[explainKey];
   if (!explanation || !thingsInRingsExplainContent || !thingsInRingsExplainModal) {
     return;
   }
+  const swatchHtml =
+    explanation.swatchClass && explanation.swatchLabel
+      ? `
+        <div class="things-rings-explain-swatch-row">
+          <span class="things-rings-zone-card ${explanation.swatchClass} explain-swatch">${explanation.swatchLabel}</span>
+        </div>
+      `
+      : "";
   thingsInRingsExplainContent.innerHTML = `
     <h4>${explanation.name}</h4>
     <p>${explanation.description}</p>
+    ${swatchHtml}
     <span class="explain-cost end">${explanation.cost}</span>
   `;
   setModalVisible(thingsInRingsExplainModal, true);
@@ -1057,11 +1140,11 @@ document.addEventListener(
   "pointerdown",
   (event) => {
     if (!thingsInRingsExplainMode) return;
-    const buttonId = findThingsInRingsButtonAtPoint(event.clientX, event.clientY);
-    if (buttonId) {
+    const explainKey = findThingsInRingsExplainKey(event.target);
+    if (explainKey) {
       event.preventDefault();
       event.stopPropagation();
-      showThingsInRingsButtonExplanation(buttonId);
+      showThingsInRingsExplanation(explainKey);
       exitThingsInRingsExplainMode();
       return;
     }

@@ -13140,6 +13140,10 @@ body.patchwork-explain-mode [data-patchwork-explain].has-explanation {
   pointer-events: none;
 }
 
+body.things-rings-explain-mode .things-rings-zone-cloud {
+  pointer-events: auto;
+}
+
 .things-rings-zone-cloud-cards {
   display: flex;
   flex-wrap: wrap;
@@ -13342,15 +13346,41 @@ body.patchwork-explain-mode [data-patchwork-explain].has-explanation {
 }
 
 .things-rings-decision-card {
-  display: inline-flex;
-  align-items: center;
-  padding: 8px 12px;
-  border-radius: 999px;
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 16px;
   background: #fff7ed;
   border: 1px solid #fdba74;
   color: #9a3412;
-  font-weight: 700;
   margin-bottom: 10px;
+}
+
+.things-rings-decision-card-name {
+  font-weight: 800;
+}
+
+.things-rings-decision-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.things-rings-decision-meta-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(253, 186, 116, 0.85);
+  color: #9a3412;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.things-rings-decision-meta-chip.subtle {
+  color: #7c2d12;
+  background: rgba(255, 247, 237, 0.92);
 }
 
 .things-rings-decision-grid {
@@ -13442,13 +13472,13 @@ body.patchwork-explain-mode [data-patchwork-explain].has-explanation {
   color: #9a3412;
 }
 
-body.things-rings-explain-mode button.has-explanation {
+body.things-rings-explain-mode .has-explanation[data-things-rings-explain-key] {
   outline: 2px dashed #f97316;
   outline-offset: 2px;
   cursor: help;
 }
 
-body.things-rings-explain-mode button.has-explanation:hover {
+body.things-rings-explain-mode .has-explanation[data-things-rings-explain-key]:hover {
   outline-color: #c2410c;
   outline-style: solid;
 }
@@ -13539,6 +13569,14 @@ body.things-rings-explain-mode button.has-explanation:hover {
   color: #374151;
 }
 
+#thingsInRingsExplainContent .things-rings-explain-swatch-row {
+  margin-top: 10px;
+}
+
+#thingsInRingsExplainContent .things-rings-zone-card.explain-swatch {
+  max-width: none;
+}
+
 #thingsInRingsExplainContent .explain-cost {
   display: inline-block;
   padding: 2px 8px;
@@ -13621,6 +13659,10 @@ body.things-rings-explain-mode button.has-explanation:hover {
   .things-rings-decision-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .things-rings-decision-card-meta {
+    display: grid;
   }
 
   .things-rings-card {
@@ -13990,5 +14032,290 @@ body.scout-explain-mode [data-scout-explain].has-explanation {
 
   .scout-actions button {
     min-width: 0;
+  }
+}
+
+.davinci-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.davinci-section {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #fffdf7 0%, #f8f6ee 100%);
+  padding: 12px;
+}
+
+.davinci-table-section {
+  grid-row: span 2;
+}
+
+.davinci-section-title {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 12px;
+  color: #6b5d35;
+  margin-bottom: 10px;
+}
+
+.davinci-player-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.davinci-empty-card {
+  padding: 16px;
+  border: 1px dashed #d7c69a;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at top right, rgba(217, 119, 6, 0.12), transparent 30%),
+    linear-gradient(180deg, #fffdf7 0%, #f7f1df 100%);
+  color: #6b4f1d;
+}
+
+.davinci-empty-title {
+  margin-bottom: 8px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.davinci-empty-copy {
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+
+.davinci-seat-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.davinci-seat-pill {
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(176, 126, 41, 0.2);
+  color: #5f4a1e;
+  font-size: 12px;
+}
+
+.davinci-seat-pill.ready {
+  background: #effcf1;
+  border-color: #9bd1b1;
+  color: #17603a;
+}
+
+.davinci-seat-pill.bot {
+  background: #f7f4ff;
+  border-color: #d7c9ff;
+  color: #4c3f88;
+}
+
+.davinci-seat-pill.you {
+  box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.12);
+}
+
+.davinci-step-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+}
+
+.davinci-player-card {
+  border: 1px solid #d9d2bf;
+  border-radius: 10px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.davinci-player-card.you {
+  border-color: #b07e29;
+  box-shadow: 0 0 0 2px rgba(176, 126, 41, 0.12);
+}
+
+.davinci-player-card.current {
+  background: linear-gradient(180deg, #fff7df 0%, #fffdf7 100%);
+}
+
+.davinci-player-card.out {
+  opacity: 0.72;
+}
+
+.davinci-player-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.davinci-player-name {
+  font-weight: 700;
+}
+
+.davinci-player-meta,
+.davinci-pending-line,
+.davinci-pending,
+.davinci-target-line {
+  font-size: 12px;
+  color: #5f6368;
+}
+
+.davinci-rack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.davinci-tile {
+  min-width: 48px;
+  min-height: 64px;
+  border-radius: 8px;
+  border: 1px solid #b5b9bf;
+  padding: 8px 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 16px;
+  background: #f7f8fa;
+  color: #1f2937;
+}
+
+.davinci-tile.hidden {
+  background: linear-gradient(180deg, #28303f 0%, #151b26 100%);
+  border-color: #0f172a;
+  color: #f8fafc;
+}
+
+.davinci-tile.dark {
+  background: linear-gradient(180deg, #384251 0%, #20252f 100%);
+  border-color: #111827;
+  color: #f8fafc;
+}
+
+.davinci-tile.light {
+  background: linear-gradient(180deg, #ffffff 0%, #edf0f4 100%);
+  border-color: #cbd5e1;
+  color: #111827;
+}
+
+.davinci-tile.revealed {
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.davinci-tile.guessable {
+  cursor: pointer;
+}
+
+.davinci-tile.is-target {
+  outline: 3px solid #d97706;
+  outline-offset: 1px;
+}
+
+.davinci-guess-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.davinci-guess-row select,
+.davinci-guess-row button {
+  min-width: 0;
+}
+
+.davinci-option-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.davinci-lobby-note {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #e7d9ab;
+  background: #fff8e3;
+  color: #6b5d35;
+  font-size: 13px;
+}
+
+.davinci-option-btn {
+  text-align: left;
+}
+
+.davinci-log {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.davinci-log-entry {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.davinci-log-entry.kind-correct {
+  border-color: #9bd1b1;
+  background: #f0faf3;
+}
+
+.davinci-log-entry.kind-wrong,
+.davinci-log-entry.kind-eliminated {
+  border-color: #efc1c1;
+  background: #fff5f5;
+}
+
+.davinci-log-entry.kind-turn,
+.davinci-log-entry.kind-setup {
+  border-color: #e4d6ab;
+  background: #fffbed;
+}
+
+.davinci-header-btn {
+  padding: 6px 10px;
+}
+
+.davinci-help-modal .modal-content,
+.davinci-explain-modal .modal-content {
+  max-width: 560px;
+}
+
+@media (max-width: 900px) {
+  .davinci-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .davinci-table-section {
+    grid-row: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .davinci-guess-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .davinci-guess-row button {
+    grid-column: span 2;
+  }
+
+  .davinci-tile {
+    min-width: 42px;
+    min-height: 56px;
+    padding: 6px 8px;
+    font-size: 15px;
   }
 }
