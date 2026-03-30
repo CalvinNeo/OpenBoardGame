@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+<rect x="0" y="0" width="100" height="100" fill="#78c850" stroke="#3f7d29" stroke-width="2" rx="8"/>
+<polygon points="0,0 100,0 68,42 32,42" fill="#4aa9e9" stroke="#176eab" stroke-width="1.5"/>
+<polygon points="100,0 100,100 58,68 58,32" fill="#78c850" stroke="#3f7d29" stroke-width="1.5"/>
+<polygon points="0,100 100,100 68,58 32,58" fill="#78c850" stroke="#3f7d29" stroke-width="1.5"/>
+<polygon points="0,0 0,100 42,68 42,32" fill="#9097a1" stroke="#59606a" stroke-width="1.5"/>
+<rect x="50" y="44" width="50" height="12" fill="#dcc28e" stroke="#8a6a3c" stroke-width="1.5" rx="5"/>
+<circle cx="50" cy="50" r="10" fill="#dcc28e" stroke="#8a6a3c" stroke-width="1.5"/>
+<circle cx="60" cy="58" r="9" fill="#facc15" stroke="#ffffff" stroke-width="1.5"/>
+<text x="60" y="61" text-anchor="middle" font-family="Verdana, sans-serif" font-size="7" font-weight="700" fill="#111111">Li</text>
+<circle cx="80" cy="58" r="9" fill="#b45309" stroke="#ffffff" stroke-width="1.5"/>
+<text x="80" y="61" text-anchor="middle" font-family="Verdana, sans-serif" font-size="7" font-weight="700" fill="#111111">Wh</text>
+<rect x="4" y="4" width="16" height="12" rx="3" fill="rgba(255,255,255,0.9)" stroke="#475569" stroke-width="1"/>
+<text x="12" y="13" text-anchor="middle" font-family="Verdana, sans-serif" font-size="8" fill="#0f172a">45</text>
+</svg>
