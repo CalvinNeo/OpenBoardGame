@@ -503,14 +503,26 @@
       2,
       2
     ],
-    "annotation_status": "needs_manual_annotation",
-    "has_scroll": null,
-    "terrain_edges": null,
-    "center_features": [],
+    "annotation_status": "ai_draft_v1",
+    "has_scroll": false,
+    "terrain_edges": {
+      "N": "pasture",
+      "E": "mountain",
+      "S": "pasture",
+      "W": "mountain"
+    },
+    "center_features": [
+      "broch",
+      "whisky"
+    ],
     "score_icons": [],
-    "roads": null,
-    "rivers": null,
-    "notes": ""
+    "roads": [
+      "N",
+      "S",
+      "W"
+    ],
+    "rivers": [],
+    "notes": "AI draft from image: broch + whisky coin; roads appear to connect north/south/west."
   },
   {
     "tile_no": 21,
@@ -967,14 +979,28 @@
       2,
       0
     ],
-    "annotation_status": "needs_manual_annotation",
-    "has_scroll": null,
-    "terrain_edges": null,
-    "center_features": [],
+    "annotation_status": "ai_draft_v1",
+    "has_scroll": false,
+    "terrain_edges": {
+      "N": "mountain",
+      "E": "pasture",
+      "S": "pasture",
+      "W": "water"
+    },
+    "center_features": [
+      "farm",
+      "sheep",
+      "cattle"
+    ],
     "score_icons": [],
-    "roads": null,
-    "rivers": null,
-    "notes": ""
+    "roads": [
+      "N",
+      "E"
+    ],
+    "rivers": [
+      "W"
+    ],
+    "notes": "AI draft from image: farm/sheep/cattle tile with west water edge and road exits north/east."
   },
   {
     "tile_no": 39,
@@ -990,14 +1016,26 @@
       0,
       0
     ],
-    "annotation_status": "needs_manual_annotation",
-    "has_scroll": null,
-    "terrain_edges": null,
-    "center_features": [],
+    "annotation_status": "ai_draft_v1",
+    "has_scroll": false,
+    "terrain_edges": {
+      "N": "water",
+      "E": "mountain",
+      "S": "mountain",
+      "W": "pasture"
+    },
+    "center_features": [
+      "lighthouse"
+    ],
     "score_icons": [],
-    "roads": null,
-    "rivers": null,
-    "notes": ""
+    "roads": [
+      "E",
+      "S"
+    ],
+    "rivers": [
+      "N"
+    ],
+    "notes": "AI draft from image: lighthouse in water; road appears to exit east and south."
   },
   {
     "tile_no": 40,
@@ -1084,14 +1122,30 @@
       1,
       0
     ],
-    "annotation_status": "needs_manual_annotation",
-    "has_scroll": null,
-    "terrain_edges": null,
-    "center_features": [],
+    "annotation_status": "ai_draft_v1",
+    "has_scroll": false,
+    "terrain_edges": {
+      "N": "mountain",
+      "E": "pasture",
+      "S": "pasture",
+      "W": "water"
+    },
+    "center_features": [
+      "lighthouse",
+      "farm",
+      "cattle",
+      "whisky"
+    ],
     "score_icons": [],
-    "roads": null,
-    "rivers": null,
-    "notes": ""
+    "roads": [
+      "N",
+      "E",
+      "S"
+    ],
+    "rivers": [
+      "W"
+    ],
+    "notes": "AI draft from image: T-junction road; lighthouse on west water edge; farm+cattle+whisky visible."
   },
   {
     "tile_no": 44,
@@ -1297,14 +1351,33 @@
       0,
       0
     ],
-    "annotation_status": "needs_manual_annotation",
-    "has_scroll": null,
-    "terrain_edges": null,
-    "center_features": [],
-    "score_icons": [],
-    "roads": null,
-    "rivers": null,
-    "notes": ""
+    "annotation_status": "ai_draft_v1",
+    "has_scroll": true,
+    "terrain_edges": {
+      "N": "water",
+      "E": "mountain",
+      "S": "mountain",
+      "W": "water"
+    },
+    "center_features": [
+      "ship"
+    ],
+    "score_icons": [
+      {
+        "type": "scroll",
+        "reward": "per_broch",
+        "value": 1
+      }
+    ],
+    "roads": [
+      "E",
+      "S"
+    ],
+    "rivers": [
+      "N",
+      "W"
+    ],
+    "notes": "AI draft from image: scroll icon showing 1 VP per broch; ship visible on water."
   },
   {
     "tile_no": 53,
