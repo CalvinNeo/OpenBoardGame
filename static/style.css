@@ -14525,7 +14525,7 @@ body.gizmos-explain-mode .gizmos-player-card.has-explanation:hover {
 
 .skye-layout {
   display: grid;
-  grid-template-columns: minmax(360px, 1.35fr) minmax(300px, 0.95fr) minmax(280px, 0.9fr);
+  grid-template-columns: minmax(380px, 1.35fr) minmax(520px, 1.25fr);
   gap: 16px;
   align-items: start;
 }
@@ -14542,10 +14542,44 @@ body.gizmos-explain-mode .gizmos-player-card.has-explanation:hover {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
-.skye-center-column,
-.skye-side-column {
+.skye-right-column {
   display: grid;
   gap: 16px;
+}
+
+.skye-right-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.skye-right-grid > :last-child {
+  grid-column: 1 / -1;
+}
+
+.skye-shared-action-card .skye-tile-list {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.skye-shared-action-card {
+  width: 100%;
+}
+
+.skye-pricing-tile-list {
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+}
+
+.skye-build-queue-section {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed #cbd5e1;
+  display: grid;
+  gap: 10px;
+}
+
+.skye-build-queue-section > h3 {
+  margin: 0;
 }
 
 .skye-board {
@@ -14867,8 +14901,20 @@ body.skye-explain-mode .has-explanation {
     grid-template-columns: 1fr;
   }
 
+  .skye-right-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .skye-right-grid > :last-child {
+    grid-column: auto;
+  }
+
   .skye-board {
     min-height: 360px;
+  }
+
+  .skye-pricing-tile-list {
+    grid-template-columns: 1fr;
   }
 }
 

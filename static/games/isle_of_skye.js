@@ -35,6 +35,7 @@ const skyePhaseTitle = document.getElementById("skyePhaseTitle");
 const skyePhasePanel = document.getElementById("skyePhasePanel");
 const skyeScoringTiles = document.getElementById("skyeScoringTiles");
 const skyeBuildQueue = document.getElementById("skyeBuildQueue");
+const skyeBuildQueueSection = document.getElementById("skyeBuildQueueSection");
 const skyePlayers = document.getElementById("skyePlayers");
 const skyeRoundRecap = document.getElementById("skyeRoundRecap");
 
@@ -86,6 +87,14 @@ const SKYE_HELP_TEXT = `
     <li>Adjacent terrain edges must match exactly.</li>
     <li>Roads and bridges do not need to connect for placement, but they matter for income and some scoring tiles.</li>
     <li>The tile faces are generated as semantic SVGs from the current Skye tile draft, but the per-tile data still needs validation against the source art.</li>
+  </ul>
+
+  <h3>Tile Icon Legend</h3>
+  <ul>
+    <li>🏠 Farm, 🐑 Sheep, 🐂 Cattle, 🥃 Whisky, ⛵ Ship, 🗼 Broch, 💡 Lighthouse, 📜 Scroll, 🏰 Castle.</li>
+    <li>Icons with a number mean quantity, e.g. 🐑2 means two sheep on that tile.</li>
+    <li>Road summary uses 🛣️ for ordinary roads and 🌉 for bridges, followed by edge letters (N/E/S/W).</li>
+    <li>Edge terrain summary shows N/E/S/W with terrain emojis: 🌿 pasture, ⛰️ mountain, 🌊 water.</li>
   </ul>
 `;
 
@@ -155,6 +164,7 @@ function clearSkyeState() {
   if (skyePhasePanel) skyePhasePanel.innerHTML = "";
   if (skyeScoringTiles) skyeScoringTiles.innerHTML = "";
   if (skyeBuildQueue) skyeBuildQueue.innerHTML = "";
+  if (skyeBuildQueueSection) skyeBuildQueueSection.classList.add("hidden");
   if (skyePlayers) skyePlayers.innerHTML = "";
   if (skyeBoard) {
     skyeBoard.innerHTML = "";
@@ -533,7 +543,7 @@ function renderSkyePricingPanel(view) {
   skyePhasePanel.appendChild(info);
 
   const tiles = document.createElement("div");
-  tiles.className = "skye-tile-list";
+  tiles.className = "skye-tile-list skye-pricing-tile-list";
   (me.drawn_tile_ids || []).forEach((tileId) => {
     const wrapper = document.createElement("div");
     wrapper.className = "skye-phase-tile";
@@ -709,19 +719,25 @@ function renderSkyePhase(view) {
 }
 
 function renderSkyeBuildQueuePanel(view) {
-  if (!skyeBuildQueue) return;
+  if (!skyeBuildQueue || !skyeBuildQueueSection) return;
+  const buildPhase = view.phase === "build";
+  skyeBuildQueueSection.classList.toggle("hidden", !buildPhase);
+  if (!buildPhase) {
+    skyeBuildQueue.innerHTML = "";
+    return;
+  }
   skyeBuildQueue.innerHTML = "";
   const me = skyeYou(view);
   const queue = me && Array.isArray(me.build_queue) ? me.build_queue : [];
   if (!queue.length) {
-    skyeBuildQueue.textContent = view.phase === "build" ? "No tiles left to place." : "Build queue will appear after buying.";
+    skyeBuildQueue.textContent = "No tiles left to place.";
     return;
   }
   queue.forEach((tileId) => {
     const card = createSkyeTileCard(view, tileId, {
       rotation: skyeSelectedBuildTileId === tileId ? skyeSelectedRotation : 0,
       selected: skyeSelectedBuildTileId === tileId,
-      compact: true,
+      compact: false,
     });
     card.addEventListener("click", () => {
       if (skyeSelectedBuildTileId === tileId) {
