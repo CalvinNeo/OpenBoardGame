@@ -5,9 +5,9 @@
 <polygon points="0,100 100,100 68,58 32,58" fill="#9097a1" stroke="#59606a" stroke-width="1.5"/>
 <polygon points="0,0 0,100 42,68 42,32" fill="#9097a1" stroke="#59606a" stroke-width="1.5"/>
 <circle cx="40" cy="40" r="9" fill="#cbd5e1" stroke="#ffffff" stroke-width="1.5"/>
-<text x="40" y="43" text-anchor="middle" font-family="Verdana, sans-serif" font-size="7" font-weight="700" fill="#111111">Br2</text>
+<text x="40" y="43" text-anchor="middle" font-family="Verdana, sans-serif" font-size="7" font-weight="700" fill="#111111">🗼2</text>
 <circle cx="60" cy="40" r="9" fill="#b45309" stroke="#ffffff" stroke-width="1.5"/>
-<text x="60" y="43" text-anchor="middle" font-family="Verdana, sans-serif" font-size="7" font-weight="700" fill="#111111">Wh</text>
+<text x="60" y="43" text-anchor="middle" font-family="Verdana, sans-serif" font-size="7" font-weight="700" fill="#111111">🥃</text>
 <rect x="4" y="4" width="16" height="12" rx="3" fill="rgba(255,255,255,0.9)" stroke="#475569" stroke-width="1"/>
 <text x="12" y="13" text-anchor="middle" font-family="Verdana, sans-serif" font-size="8" fill="#0f172a">11</text>
 </svg>

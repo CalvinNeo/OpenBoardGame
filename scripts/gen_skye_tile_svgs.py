@@ -16,15 +16,15 @@ TERRAIN_STYLE = {
 }
 
 ICON_STYLE = {
-    "castle": {"fill": "#334155", "text": "Ca"},
-    "whisky": {"fill": "#b45309", "text": "Wh"},
-    "sheep": {"fill": "#e5e7eb", "text": "Sh"},
-    "cattle": {"fill": "#92400e", "text": "Ct"},
-    "ship": {"fill": "#ef4444", "text": "Bo"},
-    "broch": {"fill": "#cbd5e1", "text": "Br"},
-    "farm": {"fill": "#a16207", "text": "Fa"},
-    "lighthouse": {"fill": "#facc15", "text": "Li"},
-    "scroll": {"fill": "#f4e1b5", "text": "Sc"},
+    "castle": {"fill": "#334155", "text": "🏰"},
+    "whisky": {"fill": "#b45309", "text": "🥃"},
+    "sheep": {"fill": "#e5e7eb", "text": "🐑"},
+    "cattle": {"fill": "#92400e", "text": "🐂"},
+    "ship": {"fill": "#ef4444", "text": "⛵"},
+    "broch": {"fill": "#cbd5e1", "text": "🗼"},
+    "farm": {"fill": "#a16207", "text": "🏠"},
+    "lighthouse": {"fill": "#facc15", "text": "💡"},
+    "scroll": {"fill": "#f4e1b5", "text": "📜"},
 }
 
 EDGE_POLYGONS = {
