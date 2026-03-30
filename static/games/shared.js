@@ -209,6 +209,9 @@ function renderRoomState(state) {
     }
     clearAbracaState();
     clearBlokusState();
+    if (typeof clearSkyeState === "function") {
+      clearSkyeState();
+    }
     clearCarcassonneState();
     clearAzulState();
     clearHalliState();

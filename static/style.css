@@ -14324,6 +14324,20 @@ body.scout-explain-mode [data-scout-explain].has-explanation {
   padding: 6px 10px;
 }
 
+body.gizmos-explain-mode button.has-explanation,
+body.gizmos-explain-mode .gizmos-card.has-explanation,
+body.gizmos-explain-mode .gizmos-player-card.has-explanation {
+  cursor: help;
+  outline: 2px dashed #2563eb;
+  outline-offset: 2px;
+}
+
+body.gizmos-explain-mode button.has-explanation:hover,
+body.gizmos-explain-mode .gizmos-card.has-explanation:hover,
+body.gizmos-explain-mode .gizmos-player-card.has-explanation:hover {
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+}
+
 .gizmos-help-modal .modal-content,
 .gizmos-explain-modal .modal-content {
   max-width: 620px;
@@ -14494,5 +14508,375 @@ body.scout-explain-mode [data-scout-explain].has-explanation {
 
   .gizmos-actions .gizmos-btn {
     width: auto;
+  }
+}
+
+.skye-layout {
+  display: grid;
+  grid-template-columns: minmax(360px, 1.35fr) minmax(300px, 0.95fr) minmax(280px, 0.9fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.skye-column {
+  min-width: 0;
+}
+
+.skye-phase-card {
+  background: #f8fafc;
+  border: 1px solid #dbe4ee;
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.skye-center-column,
+.skye-side-column {
+  display: grid;
+  gap: 16px;
+}
+
+.skye-board {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  overflow: auto;
+  padding: 8px;
+  min-height: 420px;
+  background:
+    linear-gradient(180deg, rgba(246, 246, 235, 0.92), rgba(234, 237, 228, 0.92)),
+    radial-gradient(circle at top left, rgba(191, 219, 179, 0.45), transparent 45%);
+  border: 1px solid #d6d3c7;
+  border-radius: 18px;
+}
+
+.skye-board-cell {
+  min-height: 88px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px dashed rgba(148, 163, 184, 0.45);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+}
+
+.skye-board-cell.empty {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.skye-board-cell.legal {
+  background: rgba(250, 204, 21, 0.14);
+  border-color: rgba(202, 138, 4, 0.65);
+  cursor: pointer;
+  box-shadow: inset 0 0 0 2px rgba(250, 204, 21, 0.2);
+}
+
+.skye-board-cell.legal:hover {
+  transform: translateY(-1px);
+  box-shadow: inset 0 0 0 2px rgba(250, 204, 21, 0.32), 0 6px 16px rgba(202, 138, 4, 0.16);
+}
+
+.skye-cell-coord {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.skye-global-actions {
+  flex-wrap: wrap;
+}
+
+.skye-tile-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.skye-market-groups {
+  display: grid;
+  gap: 14px;
+}
+
+.skye-market-group {
+  display: grid;
+  gap: 10px;
+}
+
+.skye-market-title,
+.skye-recap-title,
+.skye-player-name {
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.skye-phase-info,
+.skye-player-meta,
+.skye-scoring-desc,
+.skye-round-recap,
+.skye-tile-meta,
+.skye-tile-roads {
+  font-size: 13px;
+  color: #475569;
+}
+
+.skye-tile-card,
+.skye-market-entry,
+.skye-final-card,
+.skye-recap-card,
+.skye-player-card,
+.skye-phase-tile {
+  position: relative;
+  border: 1px solid #d7dde8;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  padding: 10px;
+  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.05);
+}
+
+.skye-market-entry,
+.skye-phase-tile {
+  display: grid;
+  gap: 10px;
+}
+
+.skye-player-card.current-turn {
+  border-color: #ca8a04;
+  box-shadow: 0 12px 22px rgba(202, 138, 4, 0.15);
+}
+
+.skye-player-card.you {
+  background: linear-gradient(180deg, #f8fff6, #ffffff);
+}
+
+.skye-tile-card {
+  display: grid;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.skye-tile-card.compact {
+  padding: 8px;
+}
+
+.skye-tile-card.selected {
+  border-color: #ca8a04;
+  box-shadow: 0 12px 24px rgba(202, 138, 4, 0.22);
+  transform: translateY(-1px);
+}
+
+.skye-tile-card.on-board {
+  cursor: default;
+  padding: 4px;
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.skye-tile-title,
+.skye-scoring-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.skye-price-badge,
+.skye-scoring-slot {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  background: #fef3c7;
+  color: #92400e;
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+
+.skye-scoring-slot {
+  right: auto;
+  left: 10px;
+  top: 10px;
+}
+
+.skye-tile {
+  position: relative;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: 112px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff, #f3f4f6);
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+}
+
+.skye-tile.compact {
+  min-height: 78px;
+}
+
+.skye-tile-art {
+  min-height: 84px;
+  margin: 8px;
+  border-radius: 12px;
+  background-color: #eef2f7;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  transform-origin: center;
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.3);
+}
+
+.skye-tile.compact .skye-tile-art {
+  min-height: 58px;
+  margin: 6px;
+  border-radius: 10px;
+}
+
+.skye-tile-edge {
+  position: absolute;
+}
+
+.skye-tile-edge.north,
+.skye-tile-edge.south {
+  left: 0;
+  right: 0;
+  height: 12px;
+}
+
+.skye-tile-edge.west,
+.skye-tile-edge.east {
+  top: 0;
+  bottom: 0;
+  width: 12px;
+}
+
+.skye-tile-edge.north { top: 0; }
+.skye-tile-edge.east { right: 0; }
+.skye-tile-edge.south { bottom: 0; }
+.skye-tile-edge.west { left: 0; }
+
+.skye-tile-edge.pasture { background: linear-gradient(180deg, #84cc16, #65a30d); }
+.skye-tile-edge.mountain { background: linear-gradient(180deg, #94a3b8, #475569); }
+.skye-tile-edge.water { background: linear-gradient(180deg, #38bdf8, #0284c7); }
+
+.skye-tile-center {
+  min-height: 100%;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  padding: 18px 14px 28px;
+  text-align: center;
+}
+
+.skye-tile.compact .skye-tile-center {
+  padding: 16px 12px 24px;
+}
+
+.skye-tile-icons {
+  font-size: 14px;
+  line-height: 1.35;
+  color: #111827;
+}
+
+.skye-tile.compact .skye-tile-icons {
+  font-size: 12px;
+}
+
+.skye-tile-meta {
+  padding: 0 10px 8px;
+  text-align: center;
+  font-size: 11px;
+}
+
+.skye-tile-roads {
+  margin-top: 6px;
+}
+
+.skye-pricing-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.skye-discard-label,
+.skye-price-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #334155;
+}
+
+.skye-price-select select {
+  min-width: 74px;
+}
+
+.skye-selected-preview {
+  margin-top: 12px;
+}
+
+.skye-scoring-tiles {
+  display: grid;
+  gap: 10px;
+}
+
+.skye-scoring-card {
+  position: relative;
+  border-radius: 16px;
+  border: 1px solid #cbd5e1;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  padding: 16px 12px 12px 12px;
+}
+
+.skye-scoring-card.active {
+  border-color: #f59e0b;
+  box-shadow: 0 10px 18px rgba(245, 158, 11, 0.18);
+  background: linear-gradient(180deg, #fff7ed, #ffffff);
+}
+
+.skye-help-modal .modal-content,
+.skye-explain-modal .modal-content {
+  max-width: 760px;
+}
+
+body.skye-explain-mode .has-explanation {
+  cursor: help;
+  outline: 2px dashed #0f766e;
+  outline-offset: 3px;
+}
+
+.skye-header-btn.active {
+  background: #0f766e;
+  color: #ffffff;
+}
+
+@media (max-width: 1100px) {
+  .skye-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .skye-board {
+    min-height: 360px;
+  }
+}
+
+@media (max-width: 640px) {
+  .skye-board {
+    min-height: 300px;
+    padding: 6px;
+    gap: 6px;
+  }
+
+  .skye-board-cell {
+    min-height: 76px;
+  }
+
+  .skye-tile-list {
+    grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  }
+
+  .skye-global-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
   }
 }

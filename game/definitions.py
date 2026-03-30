@@ -20,6 +20,7 @@ from game.halli_galli import HalliGalliGame
 from game.hanabi import HanabiGame
 from game.impression_flower import ImpressionFlowerGame
 from game.incan_gold import IncanGoldGame
+from game.isle_of_skye import IsleOfSkyeGame
 from game.istanbul import IstanbulGame
 from game.kobayakawa import KobayakawaGame
 from game.manila import ManilaGame
@@ -2021,6 +2022,86 @@ PATCHWORK_CONFIG_SCHEMA = {
     "additionalProperties": False,
 }
 
+ISLE_OF_SKYE_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "submit_prices"},
+                "discard_tile_id": {"type": "string", "minLength": 1},
+                "priced_tiles": {
+                    "type": "array",
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "tile_id": {"type": "string", "minLength": 1},
+                            "price": {"type": "integer", "minimum": 1},
+                        },
+                        "required": ["tile_id", "price"],
+                        "additionalProperties": False,
+                    },
+                },
+            },
+            "required": ["type", "discard_tile_id", "priced_tiles"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "buy_tile"},
+                "seller_id": {"type": "string", "minLength": 1},
+                "tile_id": {"type": "string", "minLength": 1},
+            },
+            "required": ["type", "seller_id", "tile_id"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "pass_buy"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "place_tile"},
+                "tile_id": {"type": "string", "minLength": 1},
+                "x": {"type": "integer"},
+                "y": {"type": "integer"},
+                "rotation": {"type": "integer", "enum": [0, 90, 180, 270]},
+            },
+            "required": ["type", "tile_id", "x", "y", "rotation"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "return_tile"},
+                "tile_id": {"type": "string", "minLength": 1},
+            },
+            "required": ["type", "tile_id"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "finish_build"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+ISLE_OF_SKYE_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "seed": {"type": "integer"},
+    },
+    "additionalProperties": False,
+}
+
 FOREST_SHUFFLE_ACTION_SCHEMA = {
     "type": "object",
     "oneOf": [
@@ -3004,6 +3085,21 @@ register_game(
         module=PatchworkGame,
         serialize=PatchworkGame.serialize,
         deserialize=PatchworkGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=IsleOfSkyeGame.game_id,
+        name="Isle of Skye",
+        min_players=IsleOfSkyeGame.min_players,
+        max_players=IsleOfSkyeGame.max_players,
+        turn_mode="turn",
+        action_schema=ISLE_OF_SKYE_ACTION_SCHEMA,
+        config_schema=ISLE_OF_SKYE_CONFIG_SCHEMA,
+        module=IsleOfSkyeGame,
+        serialize=IsleOfSkyeGame.serialize,
+        deserialize=IsleOfSkyeGame.deserialize,
     )
 )
 

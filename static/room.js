@@ -525,6 +525,7 @@ const GAME_WEIGHT = {
   forest_shuffle: 2.13,
   manila: 2.04,
   impression_flower: 1.00,
+  isle_of_skye: 2.25,
   tagiron: 1.71,
   citadels: 2.05,
   forest_shuffle: 2.21,

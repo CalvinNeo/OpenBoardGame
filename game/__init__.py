@@ -23,6 +23,7 @@ from game.halli_galli import HalliGalliGame
 from game.hanabi import HanabiGame
 from game.impression_flower import ImpressionFlowerGame
 from game.incan_gold import IncanGoldGame
+from game.isle_of_skye import IsleOfSkyeGame
 from game.istanbul import IstanbulGame
 from game.kobayakawa import KobayakawaGame
 from game.manila import ManilaGame
@@ -73,6 +74,7 @@ __all__ = [
     "DecryptoGame",
     "ImpressionFlowerGame",
     "IncanGoldGame",
+    "IsleOfSkyeGame",
     "IstanbulGame",
     "KobayakawaGame",
     "ManilaGame",

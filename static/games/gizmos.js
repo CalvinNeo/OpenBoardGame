@@ -1,5 +1,6 @@
 let currentGizmosView = null;
 let gizmosResearchOrder = [];
+let gizmosExplainMode = false;
 
 const gizmosPanel = document.getElementById("gizmosPanel");
 const gizmosPhaseLabel = document.getElementById("gizmosPhase");
@@ -44,6 +45,15 @@ const GIZMOS_PANEL_LABELS = {
   generic: "✨ Generic",
 };
 
+const GIZMOS_LOCATION_LABELS = {
+  display: "Display",
+  archive: "Archive",
+  research: "Research",
+  active: "Active Gizmo",
+  player: "Player Summary",
+  lab: "Your Lab",
+};
+
 const GIZMOS_HELP_HTML = `
   <h3>Goal</h3>
   <p>Build the strongest machine chain. The game ends when someone builds a 4th Level 3 Gizmo or reaches 16 total Gizmos, then the round finishes and total points decide the winner.</p>
@@ -84,6 +94,7 @@ function gizmosFindPlayer(view, playerId) {
 function clearGizmosState() {
   currentGizmosView = null;
   gizmosResearchOrder = [];
+  exitGizmosExplainMode();
   if (gizmosPhaseLabel) gizmosPhaseLabel.textContent = "-";
   if (gizmosTurnLabel) gizmosTurnLabel.textContent = "-";
   if (gizmosBagCountLabel) gizmosBagCountLabel.textContent = "-";
@@ -105,6 +116,7 @@ function showGizmosHeaderActions(show) {
   if (!gizmosHeaderActions) return;
   gizmosHeaderActions.style.display = show ? "flex" : "none";
   if (!show) {
+    exitGizmosExplainMode();
     if (gizmosHelpModal) setModalVisible(gizmosHelpModal, false);
     if (gizmosExplainModal) setModalVisible(gizmosExplainModal, false);
   }
@@ -116,35 +128,139 @@ function openGizmosHelpModal() {
   setModalVisible(gizmosHelpModal, true);
 }
 
-function buildGizmosExplainHtml(view) {
-  const prompt = (view && view.prompt) || {};
-  const items = [];
-  if (view && view.current_turn) {
-    items.push(`<li>Current actor: <strong>${findPlayerName(view, view.current_turn)}</strong></li>`);
-  }
-  if (prompt.phase === "choose_effect") {
-    items.push("<li>Resolve one triggered Gizmo at a time. If you are done with optional effects, use End Chain.</li>");
-  }
-  if (prompt.phase === "bonus_action" && prompt.bonus_context) {
-    const ctx = prompt.bonus_context;
-    if (ctx.kind === "pick") items.push("<li>Pick from the Energy Row. Only legal colors are enabled.</li>");
-    if (ctx.kind === "file") items.push("<li>Choose one display card and File it into your Archive.</li>");
-    if (ctx.kind === "research") items.push("<li>Choose a deck level, then resolve the Research cards.</li>");
-    if (ctx.kind === "build_free_level1") items.push("<li>Choose any Level 1 card from display or Archive to build for free.</li>");
-  }
-  if (prompt.phase === "research") {
-    items.push("<li>Use ◀ / ▶ to reorder the leftover cards before sending them back to the bottom.</li>");
-    items.push("<li>Build or File exactly one researched card, or skip and return them all.</li>");
-  }
-  items.push("<li>Build buttons are enabled only when the server can auto-pay the cost with your current energy and unused converters.</li>");
-  items.push("<li>Your lab shows grouped active Gizmos, Archive, storage limits, and projected score.</li>");
-  return `<ul>${items.join("")}</ul>`;
+function setGizmosExplanation(node, explanation) {
+  if (!node || !explanation) return node;
+  const details = Array.isArray(explanation.details) ? explanation.details : [];
+  node.dataset.gizmosExplain = "1";
+  node.dataset.gizmosExplainTitle = explanation.title || "";
+  node.dataset.gizmosExplainDescription = explanation.description || "";
+  node.dataset.gizmosExplainDetails = JSON.stringify(details);
+  return node;
 }
 
-function openGizmosExplainModal() {
+function buildGizmosExplanationHtml(explanation) {
+  const details = Array.isArray(explanation && explanation.details) ? explanation.details : [];
+  const listHtml = details.length ? `<ul>${details.map((item) => `<li>${item}</li>`).join("")}</ul>` : "";
+  const description = explanation && explanation.description ? `<p>${explanation.description}</p>` : "";
+  return `
+    <h4>${(explanation && explanation.title) || "Explanation"}</h4>
+    ${description}
+    ${listHtml}
+  `;
+}
+
+function showGizmosExplanation(explanation) {
   if (!gizmosExplainContent || !gizmosExplainModal) return;
-  gizmosExplainContent.innerHTML = buildGizmosExplainHtml(currentGizmosView);
+  gizmosExplainContent.innerHTML = buildGizmosExplanationHtml(explanation);
   setModalVisible(gizmosExplainModal, true);
+}
+
+function gizmosExplainableNodes() {
+  return Array.from(document.querySelectorAll("#gizmosPanel [data-gizmos-explain]"));
+}
+
+function updateGizmosExplainModeClasses(enabled) {
+  gizmosExplainableNodes().forEach((node) => {
+    node.classList.toggle("has-explanation", enabled);
+  });
+}
+
+function toggleGizmosExplainMode() {
+  gizmosExplainMode = !gizmosExplainMode;
+  document.body.classList.toggle("gizmos-explain-mode", gizmosExplainMode);
+  updateGizmosExplainModeClasses(gizmosExplainMode);
+  if (gizmosExplainBtn) {
+    gizmosExplainBtn.classList.toggle("active", gizmosExplainMode);
+  }
+}
+
+function exitGizmosExplainMode() {
+  if (!gizmosExplainMode) return;
+  gizmosExplainMode = false;
+  document.body.classList.remove("gizmos-explain-mode");
+  updateGizmosExplainModeClasses(false);
+  if (gizmosExplainBtn) {
+    gizmosExplainBtn.classList.remove("active");
+  }
+}
+
+function gizmosFindExplainTargetFromNode(node) {
+  if (!node || !node.closest) return null;
+  const target = node.closest("[data-gizmos-explain]");
+  if (!target || !(gizmosPanel && gizmosPanel.contains(target))) return null;
+  return target;
+}
+
+function gizmosFindButtonAtPoint(x, y) {
+  if (typeof document.elementsFromPoint !== "function") return null;
+  const elements = document.elementsFromPoint(x, y);
+  for (const element of elements) {
+    if (element instanceof HTMLButtonElement) return element;
+    if (element.closest) {
+      const button = element.closest("button");
+      if (button instanceof HTMLButtonElement) return button;
+    }
+  }
+  return null;
+}
+
+function gizmosFindExplainTargetAtPoint(x, y) {
+  if (typeof document.elementsFromPoint !== "function") return null;
+  const elements = document.elementsFromPoint(x, y);
+  for (const element of elements) {
+    const target = gizmosFindExplainTargetFromNode(element);
+    if (target) return target;
+  }
+  return null;
+}
+
+function gizmosIgnoredExplainButton(button) {
+  return button === gizmosExplainBtn
+    || button === gizmosHelpBtn
+    || button === gizmosHelpModalCloseBtn
+    || button === gizmosExplainModalCloseBtn;
+}
+
+function gizmosExplanationFromNode(node) {
+  if (!node || !node.dataset) return null;
+  let details = [];
+  if (node.dataset.gizmosExplainDetails) {
+    try {
+      details = JSON.parse(node.dataset.gizmosExplainDetails);
+    } catch (_error) {
+      details = [];
+    }
+  }
+  return {
+    title: node.dataset.gizmosExplainTitle || "Explanation",
+    description: node.dataset.gizmosExplainDescription || "",
+    details,
+  };
+}
+
+function gizmosCardExplanation(card, location) {
+  const locationLabel = GIZMOS_LOCATION_LABELS[location] || location;
+  const details = [
+    `Location: ${locationLabel}`,
+    `Panel: ${GIZMOS_PANEL_LABELS[card.panel] || card.panel}`,
+    `Energy: ${GIZMOS_ENERGY_LABELS[card.energy_type] || card.energy_icon || card.energy_type || "Unknown"}`,
+    `Cost: ${card.cost}`,
+    `VP: ${card.vp}`,
+  ];
+  if (location === "display") {
+    details.push("Use the buttons on the card to File it or Build it when legal.");
+  } else if (location === "archive") {
+    details.push("Archive cards are public in this digital version.");
+  } else if (location === "research") {
+    details.push("Cards you do not keep go back to the bottom of the deck in the chosen order.");
+  } else if (location === "active") {
+    details.push("Built Gizmos can trigger later in the same turn if their condition matches.");
+  }
+  return {
+    title: card.title,
+    description: card.text,
+    details,
+  };
 }
 
 function gizmosSyncResearchOrder(cards) {
@@ -185,12 +301,13 @@ function gizmosResolveResearch(choice, cardId) {
   sendAction(payload);
 }
 
-function createGizmosButton(label, onClick, disabled = false, variant = "") {
+function createGizmosButton(label, onClick, disabled = false, variant = "", explanation = null) {
   const button = document.createElement("button");
   button.type = "button";
   button.textContent = label;
   button.className = variant ? `gizmos-btn ${variant}` : "gizmos-btn";
   button.disabled = !!disabled;
+  setGizmosExplanation(button, explanation);
   if (!disabled) {
     button.addEventListener("click", onClick);
   }
@@ -213,6 +330,16 @@ function createGizmosEnergyButton(view, color) {
     enabled = allowed.includes(color);
   }
   button.disabled = !enabled;
+  setGizmosExplanation(button, {
+    title: GIZMOS_ENERGY_LABELS[color] || color,
+    description: "Take this visible energy from the row. In Explain mode, this chip only shows what the action does and does not actually pick it.",
+    details: [
+      "Picking energy is one of the four base actions.",
+      enabled
+        ? "This color is currently legal to pick."
+        : "This color is not currently legal in the current phase or bonus restriction.",
+    ],
+  });
   if (enabled) {
     button.addEventListener("click", () => sendAction({ type: "pick_energy", color }));
   }
@@ -222,6 +349,7 @@ function createGizmosEnergyButton(view, color) {
 function createGizmosCard(view, card, location) {
   const cardEl = document.createElement("article");
   cardEl.className = `gizmos-card level-${card.level}`;
+  setGizmosExplanation(cardEl, gizmosCardExplanation(card, location));
 
   const top = document.createElement("div");
   top.className = "gizmos-card-top";
@@ -253,17 +381,51 @@ function createGizmosCard(view, card, location) {
   const isFreeLevel1 = prompt.phase === "bonus_action" && prompt.bonus_context && prompt.bonus_context.kind === "build_free_level1";
 
   if (canFile && prompt.phase === "action") {
-    controls.appendChild(createGizmosButton("🗂️ File", () => sendAction({ type: "file_display", card_id: card.id })));
+    controls.appendChild(createGizmosButton(
+      "🗂️ File",
+      () => sendAction({ type: "file_display", card_id: card.id }),
+      false,
+      "",
+      {
+        title: "File This Gizmo",
+        description: "Move this display card into your Archive. Filing usually uses your base action.",
+        details: [
+          "Archive cards remain public in this implementation.",
+          "After filing, matching File Gizmos may trigger.",
+        ],
+      }
+    ));
   }
   if (canFile && prompt.phase === "bonus_action" && prompt.bonus_context && prompt.bonus_context.kind === "file") {
-    controls.appendChild(createGizmosButton("🗂️ File", () => sendAction({ type: "file_display", card_id: card.id })));
+    controls.appendChild(createGizmosButton(
+      "🗂️ File",
+      () => sendAction({ type: "file_display", card_id: card.id }),
+      false,
+      "",
+      {
+        title: "Bonus File",
+        description: "Resolve a bonus File and move this display card into your Archive.",
+        details: [
+          "This File comes from a triggered effect rather than your normal base action.",
+        ],
+      }
+    ));
   }
   if (canBuildDisplay) {
     controls.appendChild(
       createGizmosButton(
         isFreeLevel1 ? "🛠️ Free Build" : "🛠️ Build",
         () => sendAction({ type: "build_display", card_id: card.id }),
-        !card.buildable
+        !card.buildable,
+        "",
+        {
+          title: isFreeLevel1 ? "Free Build This Gizmo" : "Build This Gizmo",
+          description: "Build this display card into your lab. The server auto-pays with your stored energy and any legal unused converters.",
+          details: [
+            isFreeLevel1 ? "This build ignores energy cost, but only works for Level 1 Gizmos." : "If this button is disabled, your current energy and converters cannot pay the cost.",
+            "After building, matching Build Gizmos may trigger.",
+          ],
+        }
       )
     );
   }
@@ -272,7 +434,16 @@ function createGizmosCard(view, card, location) {
       createGizmosButton(
         isFreeLevel1 ? "🛠️ Free Build" : "🛠️ Build",
         () => sendAction({ type: "build_archive", card_id: card.id }),
-        !card.buildable
+        !card.buildable,
+        "",
+        {
+          title: isFreeLevel1 ? "Free Build From Archive" : "Build From Archive",
+          description: "Build this archived card into your lab. The server auto-pays with your stored energy and any legal unused converters.",
+          details: [
+            "Archive cards remain public in this implementation.",
+            isFreeLevel1 ? "This build ignores cost, but only for Level 1 Gizmos." : "If this button is disabled, you cannot currently pay for this archived card.",
+          ],
+        }
       )
     );
   }
@@ -333,6 +504,14 @@ function renderGizmosYou(view) {
     gizmosYou.textContent = "-";
     return;
   }
+  setGizmosExplanation(gizmosYou, {
+    title: "Your Lab",
+    description: "This panel summarizes your stored energy, archive, score, and all built Gizmos grouped by panel.",
+    details: [
+      "Archive and stored energy are public in this digital implementation.",
+      "Projected score includes printed VP, VP tokens, and currently visible end-game scoring effects.",
+    ],
+  });
 
   const stats = document.createElement("div");
   stats.className = "gizmos-player-stats";
@@ -404,10 +583,58 @@ function renderGizmosResearch(view) {
     const cardEl = createGizmosCard(view, card, "research");
     const orderRow = document.createElement("div");
     orderRow.className = "gizmos-card-actions";
-    orderRow.appendChild(createGizmosButton("◀", () => gizmosMoveResearchCard(card.id, -1), gizmosResearchOrder[0] === card.id));
-    orderRow.appendChild(createGizmosButton("▶", () => gizmosMoveResearchCard(card.id, 1), gizmosResearchOrder[gizmosResearchOrder.length - 1] === card.id));
-    orderRow.appendChild(createGizmosButton("🛠️ Build", () => gizmosResolveResearch("build", card.id), !card.buildable));
-    orderRow.appendChild(createGizmosButton("🗂️ File", () => gizmosResolveResearch("file", card.id)));
+    orderRow.appendChild(createGizmosButton(
+      "◀",
+      () => gizmosMoveResearchCard(card.id, -1),
+      gizmosResearchOrder[0] === card.id,
+      "",
+      {
+        title: "Move Left",
+        description: "Move this researched card one step left in the return order.",
+        details: [
+          "The leftmost leftover card goes deepest to the bottom of the deck.",
+        ],
+      }
+    ));
+    orderRow.appendChild(createGizmosButton(
+      "▶",
+      () => gizmosMoveResearchCard(card.id, 1),
+      gizmosResearchOrder[gizmosResearchOrder.length - 1] === card.id,
+      "",
+      {
+        title: "Move Right",
+        description: "Move this researched card one step right in the return order.",
+        details: [
+          "The rightmost leftover card returns closest to the top among the returned cards.",
+        ],
+      }
+    ));
+    orderRow.appendChild(createGizmosButton(
+      "🛠️ Build",
+      () => gizmosResolveResearch("build", card.id),
+      !card.buildable,
+      "",
+      {
+        title: "Build Researched Card",
+        description: "Build this researched card now. The other researched cards return to the bottom in the current order.",
+        details: [
+          card.buildable ? "This researched card is currently payable." : "This researched card is not currently payable with your energy and converters.",
+        ],
+      }
+    ));
+    orderRow.appendChild(createGizmosButton(
+      "🗂️ File",
+      () => gizmosResolveResearch("file", card.id),
+      false,
+      "",
+      {
+        title: "File Researched Card",
+        description: "Archive this researched card. The other researched cards return to the bottom in the current order.",
+        details: [
+          "Filing from Research still counts as your choice for this Research action.",
+        ],
+      }
+    ));
     cardEl.appendChild(orderRow);
     gizmosResearchCards.appendChild(cardEl);
   });
@@ -458,23 +685,72 @@ function renderGizmosActions(view) {
   if (prompt.phase === "choose_effect" && Array.isArray(prompt.pending_effects)) {
     prompt.pending_effects.forEach((effect) => {
       gizmosActions.appendChild(
-        createGizmosButton(effect.label, () => sendAction({ type: "resolve_effect", effect_id: effect.effect_id }), !effect.resolvable)
+        createGizmosButton(
+          effect.label,
+          () => sendAction({ type: "resolve_effect", effect_id: effect.effect_id }),
+          !effect.resolvable,
+          "",
+          {
+            title: "Resolve Triggered Gizmo",
+            description: effect.label,
+            details: [
+              "Triggered effects resolve one at a time.",
+              effect.resolvable ? "This effect can currently be resolved." : "This effect is currently not resolvable.",
+            ],
+          }
+        )
       );
     });
   }
 
   if (gizmosCan(view, "pass_effects")) {
-    gizmosActions.appendChild(createGizmosButton("End Chain", () => sendAction({ type: "pass_effects" }), false, "ghost"));
+    gizmosActions.appendChild(createGizmosButton(
+      "End Chain",
+      () => sendAction({ type: "pass_effects" }),
+      false,
+      "ghost",
+      {
+        title: "End Chain",
+        description: "Stop resolving optional triggered effects and continue the turn flow.",
+        details: [
+          "Use this when you do not want to resolve any more optional triggers.",
+        ],
+      }
+    ));
   }
 
   if (gizmosCan(view, "research") && (prompt.phase === "action" || (prompt.phase === "bonus_action" && prompt.bonus_context && prompt.bonus_context.kind === "research"))) {
     [1, 2, 3].forEach((level) => {
-      gizmosActions.appendChild(createGizmosButton(`🔍 Research L${level}`, () => sendAction({ type: "research", level })));
+      gizmosActions.appendChild(createGizmosButton(
+        `🔍 Research L${level}`,
+        () => sendAction({ type: "research", level }),
+        false,
+        "",
+        {
+          title: `Research Level ${level}`,
+          description: `Draw up to your Research amount from the Level ${level} deck, then choose one to Build or File, or return them all.`,
+          details: [
+            "Cards you do not keep go to the bottom of the chosen deck.",
+          ],
+        }
+      ));
     });
   }
 
   if (gizmosCan(view, "pass_turn") && prompt.phase === "action") {
-    gizmosActions.appendChild(createGizmosButton("Pass Turn", () => sendAction({ type: "pass_turn" }), false, "ghost"));
+    gizmosActions.appendChild(createGizmosButton(
+      "Pass Turn",
+      () => sendAction({ type: "pass_turn" }),
+      false,
+      "ghost",
+      {
+        title: "Pass Turn",
+        description: "Pass only when the server sees no legal base action left for you.",
+        details: [
+          "If you still have a legal Pick, File, Build, or Research, the server will reject this.",
+        ],
+      }
+    ));
   }
 }
 
@@ -484,6 +760,15 @@ function renderGizmosPlayers(view) {
   (view.players || []).forEach((player) => {
     const card = document.createElement("section");
     card.className = "gizmos-player-card";
+    setGizmosExplanation(card, {
+      title: `${player.name}`,
+      description: "Public summary of this player's machine, score, and archived cards.",
+      details: [
+        `Energy: ${(player.storage || []).map((color) => GIZMOS_ENERGY_LABELS[color] || color).join(" ") || "-"}`,
+        `Archive count: ${(player.archive || []).length}`,
+        `Level 3 Gizmos: ${player.level3_count}`,
+      ],
+    });
     if (player.player_id === view.current_turn) card.classList.add("current");
     if (player.player_id === view.you) card.classList.add("you");
     const title = document.createElement("div");
@@ -541,10 +826,18 @@ function renderGizmosGameState(data) {
   renderGizmosResearch(view);
   renderGizmosActions(view);
   renderGizmosPlayers(view);
+  updateGizmosExplainModeClasses(gizmosExplainMode);
   logGameEvents(data);
 }
 
 if (gizmosResearchSkipBtn) {
+  setGizmosExplanation(gizmosResearchSkipBtn, {
+    title: "Skip Research Choice",
+    description: "Keep none of the researched cards. They all return to the bottom of the deck in the current left-to-right order.",
+    details: [
+      "Use the ◀ / ▶ buttons first if you want to change the return order.",
+    ],
+  });
   gizmosResearchSkipBtn.addEventListener("click", () => gizmosResolveResearch("none"));
 }
 
@@ -553,7 +846,7 @@ if (gizmosHelpBtn) {
 }
 
 if (gizmosExplainBtn) {
-  gizmosExplainBtn.addEventListener("click", openGizmosExplainModal);
+  gizmosExplainBtn.addEventListener("click", toggleGizmosExplainMode);
 }
 
 if (gizmosHelpModalCloseBtn) {
@@ -586,6 +879,10 @@ if (gizmosExplainModal) {
 
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
+  if (gizmosExplainMode) {
+    exitGizmosExplainMode();
+    return;
+  }
   if (gizmosHelpModal && !gizmosHelpModal.classList.contains("hidden")) {
     setModalVisible(gizmosHelpModal, false);
   }
@@ -593,3 +890,44 @@ document.addEventListener("keydown", (event) => {
     setModalVisible(gizmosExplainModal, false);
   }
 });
+
+document.addEventListener("pointerdown", (event) => {
+  if (!gizmosExplainMode || currentGameType !== "gizmos") return;
+
+  const button = gizmosFindButtonAtPoint(event.clientX, event.clientY);
+  if (button) {
+    if (gizmosIgnoredExplainButton(button)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const explanation = button.dataset && button.dataset.gizmosExplain ? gizmosExplanationFromNode(button) : null;
+    if (explanation) {
+      showGizmosExplanation(explanation);
+      exitGizmosExplainMode();
+    }
+    return;
+  }
+
+  const target = gizmosFindExplainTargetAtPoint(event.clientX, event.clientY);
+  if (!target) return;
+  event.preventDefault();
+  event.stopPropagation();
+  showGizmosExplanation(gizmosExplanationFromNode(target));
+  exitGizmosExplainMode();
+}, true);
+
+document.addEventListener("click", (event) => {
+  if (!gizmosExplainMode || currentGameType !== "gizmos") return;
+
+  const button = event.target.closest ? event.target.closest("button") : null;
+  if (button) {
+    if (gizmosIgnoredExplainButton(button)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
+
+  const target = gizmosFindExplainTargetFromNode(event.target);
+  if (!target) return;
+  event.preventDefault();
+  event.stopPropagation();
+}, true);

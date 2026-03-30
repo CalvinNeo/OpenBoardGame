@@ -52,6 +52,7 @@ const abracaPanel = document.getElementById("abracaPanel");
 
 const blokusPanel = document.getElementById("blokusPanel");
 const wanderingTowersPanel = document.getElementById("wanderingTowersPanel");
+const skyePanel = document.getElementById("skyePanel");
 
 function setGamePanelVisibility(gameType) {
   const showCabo = gameType === "cabo";
@@ -96,6 +97,7 @@ function setGamePanelVisibility(gameType) {
   const showTrekking = gameType === "trekking_history";
   const showBlokus = gameType === "blokus";
   const showPatchwork = gameType === "patchwork";
+  const showSkye = gameType === "isle_of_skye";
   const showProjectL = gameType === "project_l";
   const showCarcassonne = gameType === "carcassonne";
   const showAzul = gameType === "azul";
@@ -288,6 +290,12 @@ function setGamePanelVisibility(gameType) {
   }
   if (typeof showPatchworkHeaderActions === "function") {
     showPatchworkHeaderActions(showPatchwork);
+  }
+  if (skyePanel) {
+    skyePanel.classList.toggle("hidden", !showSkye);
+  }
+  if (typeof showSkyeHeaderActions === "function") {
+    showSkyeHeaderActions(showSkye);
   }
   if (projectLPanel) {
     projectLPanel.classList.toggle("hidden", !showProjectL);
@@ -554,6 +562,10 @@ function renderGameState(data) {
   }
   if (gameType === "patchwork") {
     renderPatchworkGameState(data);
+    return;
+  }
+  if (gameType === "isle_of_skye") {
+    renderSkyeGameState(data);
     return;
   }
   if (gameType === "project_l") {
