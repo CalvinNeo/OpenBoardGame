@@ -26,7 +26,7 @@ ROUND_TRACK = {
 }
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-CURATED_TILE_MANIFEST_PATH = REPO_ROOT / "designs" / "skye" / "curated" / "base" / "tile_manifest_draft.json"
+CURATED_TILE_MANIFEST_PATH = REPO_ROOT / "assets" / "skye" / "tile_manifest_draft.json"
 
 TERRAIN_CODE = {
     "P": "pasture",

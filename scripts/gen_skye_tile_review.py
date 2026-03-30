@@ -3,8 +3,8 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-MANIFEST_PATH = REPO_ROOT / "designs" / "skye" / "curated" / "base" / "tile_manifest_draft.json"
-OUTPUT_PATH = REPO_ROOT / "designs" / "skye" / "curated" / "base" / "tile_review.html"
+MANIFEST_PATH = REPO_ROOT / "assets" / "skye" / "tile_manifest_draft.json"
+OUTPUT_PATH = REPO_ROOT / "assets" / "skye" / "tile_review.html"
 
 GROUP_TITLES = {
     "general": "General",

@@ -6,8 +6,8 @@ from typing import Dict, List, Tuple
 
 ROOT = Path(__file__).resolve().parents[1]
 GAME_MODULE_PATH = ROOT / "game" / "isle_of_skye.py"
-OUT_DIR = ROOT / "designs" / "skye" / "curated" / "base" / "svg_tiles"
-REVIEW_PATH = ROOT / "designs" / "skye" / "curated" / "base" / "tile_svg_review.html"
+OUT_DIR = ROOT / "assets" / "skye" / "svg_tiles"
+REVIEW_PATH = ROOT / "assets" / "skye" / "tile_svg_review.html"
 
 TERRAIN_STYLE = {
     "pasture": {"fill": "#78c850", "stroke": "#3f7d29"},
