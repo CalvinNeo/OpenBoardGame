@@ -534,6 +534,7 @@ const GAME_WEIGHT = {
   scout: 1.39,
   davinci_code: 1.48,
   gizmos: 2.05,
+  lost_code: 2.38,
 };
 
 function getGameWeight(gameId) {
