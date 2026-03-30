@@ -1,6 +1,7 @@
 let currentLostCodeView = null;
 let lostCodeSelectedDieIndex = 0;
 let lostCodeSelectedWheelId = null;
+let lostCodeSelectedRangeCenter = null;
 let lostCodeShortcutGuesses = new Set();
 
 const lostCodeConfigBox = document.getElementById("lostCodeConfigBox");
@@ -249,6 +250,7 @@ function clearLostCodeState() {
   currentLostCodeView = null;
   lostCodeSelectedDieIndex = 0;
   lostCodeSelectedWheelId = null;
+  lostCodeSelectedRangeCenter = null;
   lostCodeShortcutGuesses = new Set();
   if (lostCodePhaseLabel) lostCodePhaseLabel.textContent = "-";
   if (lostCodeRoundLabel) lostCodeRoundLabel.textContent = "-";
@@ -522,6 +524,7 @@ function renderLostCodeWheelControls(view, host) {
     markLostCodeExplainable(btn, `wheel_pick:${wheel.id}`);
     btn.addEventListener("click", () => {
       lostCodeSelectedWheelId = wheel.id;
+      lostCodeSelectedRangeCenter = null;
       renderLostCodeControls(view);
     });
     wheelRow.appendChild(btn);
@@ -529,31 +532,71 @@ function renderLostCodeWheelControls(view, host) {
   host.appendChild(wheelRow);
 
   const wheel = wheels.find((item) => item.id === lostCodeSelectedWheelId);
-  const minMax = wheel ? Math.max(0, Number(view.max_sum || 21) - Number(wheel.window_size || 1) + 1) : 0;
-  const row = document.createElement("div");
-  row.className = "row";
-  const label = document.createElement("label");
-  label.textContent = "Range Start";
-  const input = document.createElement("input");
-  input.type = "number";
-  input.min = "0";
-  input.max = String(minMax);
-  input.value = "0";
-  row.appendChild(label);
-  row.appendChild(input);
-  host.appendChild(row);
+  const maxSum = Number(view.max_sum || 21);
+  if (!wheel) {
+    const hint = document.createElement("div");
+    hint.className = "hint";
+    hint.textContent = "Select a wheel first.";
+    host.appendChild(hint);
+    return;
+  }
+
+  const windowSize = Number(wheel.window_size || 1);
+  const leftSpan = Math.floor((windowSize - 1) / 2);
+  const rightSpan = windowSize - 1 - leftSpan;
+  const minCenter = leftSpan;
+  const maxCenter = maxSum - rightSpan;
+  const defaultCenter = minCenter <= maxCenter ? minCenter : 0;
+  if (!Number.isInteger(lostCodeSelectedRangeCenter) || lostCodeSelectedRangeCenter < minCenter || lostCodeSelectedRangeCenter > maxCenter) {
+    lostCodeSelectedRangeCenter = defaultCenter;
+  }
+
+  const strip = document.createElement("div");
+  strip.className = "lost-code-range-strip";
+  for (let value = 0; value <= maxSum; value += 1) {
+    const cell = document.createElement("button");
+    cell.type = "button";
+    cell.className = "lost-code-range-cell";
+    cell.textContent = String(value);
+    const selectable = value >= minCenter && value <= maxCenter;
+    if (!selectable) {
+      cell.disabled = true;
+      cell.classList.add("edge-disabled");
+    } else {
+      cell.addEventListener("click", () => {
+        lostCodeSelectedRangeCenter = value;
+        renderLostCodeControls(view);
+      });
+    }
+    if (value === lostCodeSelectedRangeCenter) {
+      cell.classList.add("center");
+    }
+    const rangeMin = Number(lostCodeSelectedRangeCenter) - leftSpan;
+    const rangeMax = Number(lostCodeSelectedRangeCenter) + rightSpan;
+    if (value >= rangeMin && value <= rangeMax) {
+      cell.classList.add("in-range");
+    }
+    strip.appendChild(cell);
+  }
+  host.appendChild(strip);
+
+  const preview = document.createElement("div");
+  preview.className = "hint";
+  const min = Number(lostCodeSelectedRangeCenter) - leftSpan;
+  const max = Number(lostCodeSelectedRangeCenter) + rightSpan;
+  preview.textContent = `Range preview: [${min}-${max}] (center ${lostCodeSelectedRangeCenter}, width ${windowSize})`;
+  host.appendChild(preview);
 
   const submitBtn = document.createElement("button");
   submitBtn.type = "button";
   submitBtn.textContent = "Submit Guess";
   markLostCodeExplainable(submitBtn, "wheel_submit");
-  submitBtn.disabled = !wheel;
+  submitBtn.disabled = !(Number.isInteger(lostCodeSelectedRangeCenter) && minCenter <= maxCenter);
   submitBtn.addEventListener("click", () => {
-    if (!wheel) return;
-    const min = Number.parseInt(input.value, 10);
-    const safeMin = Number.isInteger(min) ? Math.max(0, Math.min(min, minMax)) : 0;
-    const max = safeMin + Number(wheel.window_size) - 1;
-    sendAction({ type: "submit_guess", wheel_id: wheel.id, min: safeMin, max });
+    if (!wheel || !Number.isInteger(lostCodeSelectedRangeCenter)) return;
+    const submitMin = Number(lostCodeSelectedRangeCenter) - leftSpan;
+    const submitMax = Number(lostCodeSelectedRangeCenter) + rightSpan;
+    sendAction({ type: "submit_guess", wheel_id: wheel.id, min: submitMin, max: submitMax });
   });
   host.appendChild(submitBtn);
 }
@@ -667,6 +710,7 @@ function renderLostCodeControls(view) {
     if (!lostCodeSelectedWheelId) {
       const available = Array.isArray(view.available_wheel_ids) ? view.available_wheel_ids : [];
       lostCodeSelectedWheelId = available.length ? available[0] : null;
+      lostCodeSelectedRangeCenter = null;
     }
     renderLostCodeWheelControls(view, lostCodeControlsEl);
     return;

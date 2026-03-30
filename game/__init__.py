@@ -26,6 +26,7 @@ from game.incan_gold import IncanGoldGame
 from game.isle_of_skye import IsleOfSkyeGame
 from game.istanbul import IstanbulGame
 from game.kobayakawa import KobayakawaGame
+from game.lost_code import LostCodeGame
 from game.manila import ManilaGame
 from game.patchwork import PatchworkGame
 from game.perfect_mismatch import PerfectMismatchGame
@@ -77,6 +78,7 @@ __all__ = [
     "IsleOfSkyeGame",
     "IstanbulGame",
     "KobayakawaGame",
+    "LostCodeGame",
     "ManilaGame",
     "PatchworkGame",
     "PerfectMismatchGame",

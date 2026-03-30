@@ -23,6 +23,7 @@ from game.incan_gold import IncanGoldGame
 from game.isle_of_skye import IsleOfSkyeGame
 from game.istanbul import IstanbulGame
 from game.kobayakawa import KobayakawaGame
+from game.lost_code import LostCodeGame
 from game.manila import ManilaGame
 from game.patchwork import PatchworkGame
 from game.perfect_mismatch import PerfectMismatchGame
@@ -2444,6 +2445,93 @@ CITADELS_CONFIG_SCHEMA = {
     "additionalProperties": False,
 }
 
+LOST_CODE_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {"type": "object", "properties": {"type": {"const": "roll_dice"}}, "required": ["type"], "additionalProperties": False},
+        {
+            "type": "object",
+            "properties": {"type": {"const": "pass_shortcut"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "take_shortcut"},
+                "guesses": {
+                    "type": "array",
+                    "items": {"type": "integer", "minimum": 0, "maximum": 8},
+                    "minItems": 1,
+                    "maxItems": 3,
+                    "uniqueItems": True,
+                },
+            },
+            "required": ["type", "guesses"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "modify_die"},
+                "die_index": {"type": "integer", "minimum": 0, "maximum": 2},
+                "symbol": {"type": "string"},
+            },
+            "required": ["type", "die_index", "symbol"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "confirm_dice"}}, "required": ["type"], "additionalProperties": False},
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "submit_guess"},
+                "wheel_id": {"type": "string"},
+                "min": {"type": "integer", "minimum": 0},
+                "max": {"type": "integer", "minimum": 0},
+            },
+            "required": ["type", "wheel_id", "min", "max"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "replace_stone"},
+                "symbol": {"type": "string"},
+            },
+            "required": ["type", "symbol"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "skip_exchange"}}, "required": ["type"], "additionalProperties": False},
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "submit_final_guesses"},
+                "guesses": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {"type": "integer", "minimum": 0, "maximum": 8},
+                        "maxItems": 3,
+                        "uniqueItems": True,
+                    },
+                },
+            },
+            "required": ["type", "guesses"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+LOST_CODE_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "mode": {"type": "string", "enum": ["standard", "intro", "x_race"]},
+        "deadly_shortcut": {"type": "boolean"},
+        "curse_of_temple": {"type": "boolean"},
+    },
+    "additionalProperties": False,
+}
+
 register_game(
     GameDefinition(
         game_id=CaboGame.game_id,
@@ -3145,5 +3233,20 @@ register_game(
         module=CitadelsGame,
         serialize=CitadelsGame.serialize,
         deserialize=CitadelsGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=LostCodeGame.game_id,
+        name="The Lost Code",
+        min_players=LostCodeGame.min_players,
+        max_players=LostCodeGame.max_players,
+        turn_mode="turn",
+        action_schema=LOST_CODE_ACTION_SCHEMA,
+        config_schema=LOST_CODE_CONFIG_SCHEMA,
+        module=LostCodeGame,
+        serialize=LostCodeGame.serialize,
+        deserialize=LostCodeGame.deserialize,
     )
 )

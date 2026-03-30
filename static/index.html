@@ -1187,6 +1187,25 @@
                       </select>
                     </div>
                   </div>
+                  <div class="game-config-card hidden" id="lostCodeConfigBox" aria-hidden="true">
+                    <div class="game-config-title">The Lost Code</div>
+                    <div class="row">
+                      <label for="lostCodeModeSelect">Mode</label>
+                      <select id="lostCodeModeSelect">
+                        <option value="standard" selected>Standard</option>
+                        <option value="intro">Intro</option>
+                        <option value="x_race">X-Race</option>
+                      </select>
+                    </div>
+                    <div class="row compact-row">
+                      <label for="lostCodeShortcutToggle">Deadly Shortcut</label>
+                      <input id="lostCodeShortcutToggle" type="checkbox" />
+                    </div>
+                    <div class="row compact-row">
+                      <label for="lostCodeCurseToggle">Curse of Temple</label>
+                      <input id="lostCodeCurseToggle" type="checkbox" />
+                    </div>
+                  </div>
                 </div>
                 <div class="row hidden toggle-row" id="autoSaveRow">
                   <label for="autoSaveToggle">Auto Save</label>
@@ -1297,6 +1316,10 @@
             <div class="panel-header-actions" id="davinciCodeHeaderActions" style="display: none;">
               <button id="davinciCodeHelpBtn" class="davinci-header-btn" type="button">Help</button>
               <button id="davinciCodeExplainBtn" class="davinci-header-btn" type="button">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="lostCodeHeaderActions" style="display: none;">
+              <button id="lostCodeHelpBtn" class="lost-code-header-btn" type="button">Help</button>
+              <button id="lostCodeExplainBtn" class="lost-code-header-btn" type="button">Explain</button>
             </div>
             <div class="panel-header-actions" id="turingMachineHeaderActions" style="display: none;">
               <button id="turingMachineHelpBtn" class="turing-machine-header-btn" type="button">Help</button>
@@ -1426,6 +1449,34 @@
 
               <h3>Scorecards</h3>
               <div id="yahtzeeScorecards"></div>
+            </div>
+
+            <div id="lostCodePanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="lostCodePhase">-</span></div>
+                <div>Round: <span id="lostCodeRound">-</span></div>
+                <div>Current Turn: <span id="lostCodeTurn">-</span></div>
+                <div>Mode: <span id="lostCodeModeLabel">-</span></div>
+              </div>
+              <div id="lostCodeHint" class="hint">-</div>
+
+              <h3>Dice 🎲</h3>
+              <div id="lostCodeDice" class="lost-code-chip-wrap"></div>
+
+              <h3>Controls</h3>
+              <div id="lostCodeControls" class="lost-code-controls"></div>
+
+              <h3>Players</h3>
+              <div id="lostCodePlayers" class="lost-code-player-list"></div>
+
+              <h3>Logs</h3>
+              <div id="lostCodeLogs" class="lost-code-log-grid"></div>
+
+              <h3>Shortcut Tokens</h3>
+              <div id="lostCodeTokenStatus" class="lost-code-token-list"></div>
+
+              <h3>Round Guesses</h3>
+              <div id="lostCodeGuesses" class="lost-code-guess-list"></div>
             </div>
 
             <div id="istanbulPanel" class="hidden istanbul-panel">
@@ -3892,6 +3943,26 @@
               </div>
             </div>
 
+            <div id="lostCodeHelpModal" class="modal hidden" aria-hidden="true">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h2>The Lost Code Help</h2>
+                  <button id="lostCodeHelpModalCloseBtn" type="button">Close</button>
+                </div>
+                <div class="modal-body" id="lostCodeHelpContent"></div>
+              </div>
+            </div>
+
+            <div id="lostCodeExplainModal" class="modal hidden" aria-hidden="true">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h2>The Lost Code Explain</h2>
+                  <button id="lostCodeExplainModalCloseBtn" type="button">Close</button>
+                </div>
+                <div class="modal-body" id="lostCodeExplainContent"></div>
+              </div>
+            </div>
+
           </div>
         </section>
       </main>
@@ -3936,6 +4007,7 @@
   <script src="/static/games/citadels.js?v=app_v4"></script>
   <script src="/static/games/tagiron.js?v=app_v4"></script>
   <script src="/static/games/davinci_code.js?v=app_v4"></script>
+  <script src="/static/games/lost_code.js?v=app_v4"></script>
   <script src="/static/games/turing_machine.js?v=app_v4"></script>
   <script src="/static/games/halli_galli.js?v=app_v4"></script>
   <script src="/static/games/texas_holdem.js?v=app_v4"></script>

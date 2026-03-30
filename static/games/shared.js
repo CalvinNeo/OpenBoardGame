@@ -149,6 +149,15 @@ function emitRoomStart() {
   } else if (currentGameType === "davinci_code") {
     const mode = davinciCodeModeSelect ? davinciCodeModeSelect.value || "standard" : "standard";
     payload.config = { mode };
+  } else if (currentGameType === "lost_code") {
+    const mode = lostCodeModeSelect ? lostCodeModeSelect.value || "standard" : "standard";
+    const deadlyShortcut = lostCodeShortcutToggle ? lostCodeShortcutToggle.checked : false;
+    const curseOfTemple = lostCodeCurseToggle ? lostCodeCurseToggle.checked : false;
+    payload.config = {
+      mode,
+      deadly_shortcut: deadlyShortcut,
+      curse_of_temple: curseOfTemple,
+    };
   }
   socket.emit("room:start", payload);
 }
@@ -172,6 +181,9 @@ function renderRoomState(state) {
     clearCaboState();
     clearFlip7State();
     clearYahtzeeState();
+    if (typeof clearLostCodeState === "function") {
+      clearLostCodeState();
+    }
     clearIstanbulState();
     clearSkullState();
     clearCatInBoxState();
@@ -248,6 +260,9 @@ function renderRoomState(state) {
   }
   if (typeof updateDavinciCodeConfigRow === "function") {
     updateDavinciCodeConfigRow();
+  }
+  if (typeof updateLostCodeConfigRow === "function") {
+    updateLostCodeConfigRow();
   }
   updateAutoSaveRow();
   updateReopenButton();

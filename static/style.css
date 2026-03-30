@@ -14938,3 +14938,141 @@ body.skye-explain-mode .has-explanation {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+.lost-code-chip-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.lost-code-chip {
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #ffffff;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.lost-code-chip.selected {
+  border-color: #2563eb;
+  background: #dbeafe;
+}
+
+.lost-code-controls {
+  display: grid;
+  gap: 10px;
+}
+
+.lost-code-player-list,
+.lost-code-token-list,
+.lost-code-guess-list {
+  display: grid;
+  gap: 6px;
+}
+
+.lost-code-player-row,
+.lost-code-token-line,
+.lost-code-guess-line {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  padding: 6px 10px;
+}
+
+.lost-code-player-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.lost-code-log-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.lost-code-log-card {
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 10px;
+}
+
+.lost-code-log-title {
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.lost-code-slot-grid {
+  display: grid;
+  gap: 6px;
+}
+
+.lost-code-slot {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 4px 8px;
+}
+
+.lost-code-slot-value {
+  font-weight: 700;
+}
+
+.lost-code-final-form {
+  display: grid;
+  gap: 8px;
+}
+
+.lost-code-final-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) repeat(3, minmax(56px, 72px));
+  gap: 6px;
+  align-items: center;
+}
+
+.lost-code-range-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(34px, 1fr));
+  gap: 4px;
+}
+
+.lost-code-range-cell {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  min-height: 34px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.lost-code-range-cell.edge-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.lost-code-range-cell.in-range {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+.lost-code-range-cell.center {
+  background: #2563eb;
+  border-color: #1d4ed8;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+body.lost-code-explain-mode button.has-explanation {
+  cursor: help;
+  outline: 2px dashed #2563eb;
+  outline-offset: 2px;
+}
+
+.lost-code-header-btn.active {
+  background: #1d4ed8;
+  color: #ffffff;
+}

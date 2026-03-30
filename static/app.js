@@ -16,6 +16,7 @@ const mismatchSliderCount = document.getElementById("mismatchSliderCount");
 const caboPanel = document.getElementById("caboPanel");
 const flip7Panel = document.getElementById("flip7Panel");
 const yahtzeePanel = document.getElementById("yahtzeePanel");
+const lostCodePanel = document.getElementById("lostCodePanel");
 const istanbulPanel = document.getElementById("istanbulPanel");
 const goldRushPanel = document.getElementById("goldRushPanel");
 const incanGoldPanel = document.getElementById("incanGoldPanel");
@@ -58,6 +59,7 @@ function setGamePanelVisibility(gameType) {
   const showCabo = gameType === "cabo";
   const showFlip7 = gameType === "flip7";
   const showYahtzee = gameType === "yahtzee";
+  const showLostCode = gameType === "lost_code";
   const showIstanbul = gameType === "istanbul";
   const showGoldRush = gameType === "gold_rush";
   const showIncanGold = gameType === "incan_gold";
@@ -108,6 +110,12 @@ function setGamePanelVisibility(gameType) {
   }
   if (yahtzeePanel) {
     yahtzeePanel.classList.toggle("hidden", !showYahtzee);
+  }
+  if (lostCodePanel) {
+    lostCodePanel.classList.toggle("hidden", !showLostCode);
+  }
+  if (typeof showLostCodeHeaderActions === "function") {
+    showLostCodeHeaderActions(showLostCode);
   }
   if (istanbulPanel) {
     istanbulPanel.classList.toggle("hidden", !showIstanbul);
@@ -422,6 +430,10 @@ function renderGameState(data) {
   }
   if (gameType === "yahtzee") {
     renderYahtzeeGameState(data);
+    return;
+  }
+  if (gameType === "lost_code") {
+    renderLostCodeGameState(data);
     return;
   }
   if (gameType === "istanbul") {
