@@ -46,36 +46,69 @@ const GIZMOS_PANEL_LABELS = {
 };
 
 const GIZMOS_LOCATION_LABELS = {
-  display: "Display",
-  archive: "Archive",
-  research: "Research",
-  active: "Active Gizmo",
-  player: "Player Summary",
-  lab: "Your Lab",
+  display: "🪟 Display",
+  archive: "🗂️ Archive",
+  research: "🔍 Research",
+  active: "⚙️ Active Gizmo",
+  player: "👥 Player Summary",
+  lab: "🧪 Your Lab",
 };
 
 const GIZMOS_HELP_HTML = `
-  <h3>Goal</h3>
-  <p>Build the strongest machine chain. The game ends when someone builds a 4th Level 3 Gizmo or reaches 16 total Gizmos, then the round finishes and total points decide the winner.</p>
+  <h3>🎯 Goal</h3>
+  <p>Build the strongest machine (<strong>🛠️ Gizmo</strong>) chain. The game ends when someone builds a 4th Level 3 Gizmo or reaches 16 total Gizmos, then the round finishes and total points decide the winner.</p>
 
-  <h3>Base Actions</h3>
+  <h3>📋 Base Actions</h3>
   <ul>
-    <li><strong>File</strong>: take one display card into your Archive.</li>
-    <li><strong>Pick</strong>: take one visible energy from the row.</li>
-    <li><strong>Build</strong>: build a Gizmo from display or Archive by paying energy.</li>
-    <li><strong>Research</strong>: draw from one level deck, then File or Build one of those cards, or keep none.</li>
+    <li><strong>🗂️ File</strong>: take one <strong>🪟 display</strong> card into your <strong>🗂️ Archive</strong>.</li>
+    <li><strong>🫳 Pick</strong>: take one visible energy from the row (🔴 🟡 🔵 ⚫).</li>
+    <li><strong>🛠️ Build</strong>: build a Gizmo from <strong>🪟 display</strong> or <strong>🗂️ Archive</strong> by paying energy.</li>
+    <li><strong>🔍 Research</strong>: draw from one level deck, then <strong>🗂️ File</strong> or <strong>🛠️ Build</strong> one of those cards, or keep none.</li>
   </ul>
 
-  <h3>Combos</h3>
-  <p>Built Gizmos trigger after matching actions. Resolve them in the order the game offers during the chain. This implementation auto-computes build payments and converter usage for you.</p>
+  <h3>⚡ Combos</h3>
+  <p>Built Gizmos trigger after matching actions (<strong>🗂️ File</strong> / <strong>🫳 Pick</strong> / <strong>🛠️ Build</strong> / <strong>🔍 Research</strong>, etc.). Resolve them in the order the game offers during the chain. This implementation auto-computes build payments and <strong>🔁 converter</strong> usage for you.</p>
 
-  <h3>Important Notes</h3>
+  <h3>📌 Important Notes</h3>
   <ul>
-    <li>Archive and stored energy are public in this digital implementation.</li>
-    <li>Research return order matters: leftmost card in the Research area will go deepest to the bottom.</li>
+    <li><strong>🗂️ Archive</strong> and stored energy are public in this digital implementation.</li>
+    <li><strong>🔍 Research</strong> return order matters: leftmost card in the Research area will go deepest to the bottom.</li>
     <li>This version prioritizes full gameplay flow. The card pool is a near-official implementation, not a scanned card-for-card reproduction.</li>
   </ul>
 `;
+
+function gizmosTitleHasLeadingEmoji(title) {
+  const t = (title || "").trim();
+  if (!t) return false;
+  return /^(\p{Extended_Pictographic}|\uD83C[\uDF00-\uDFFF]|\uD83D[\uDC00-\uDDFF]|\uD83E[\uDD00-\uDDFF])/u.test(t);
+}
+
+function gizmosExplainTitleWithIcon(title) {
+  if (title == null || title === "") return "💡 Explanation";
+  if (typeof title !== "string") return String(title);
+  if (gizmosTitleHasLeadingEmoji(title)) return title;
+  const known = {
+    Explanation: "💡 Explanation",
+    "Your Lab": "🧪 Your Lab",
+    "File This Gizmo": "🗂️ File This Gizmo",
+    "Bonus File": "🗂️ Bonus File",
+    "Build This Gizmo": "🛠️ Build This Gizmo",
+    "Free Build This Gizmo": "🛠️ Free Build This Gizmo",
+    "Build From Archive": "🛠️ Build From Archive",
+    "Free Build From Archive": "🛠️ Free Build From Archive",
+    "Move Left": "⬅️ Move Left",
+    "Move Right": "➡️ Move Right",
+    "Build Researched Card": "🛠️ Build Researched Card",
+    "File Researched Card": "🗂️ File Researched Card",
+    "Resolve Triggered Gizmo": "⚡ Resolve Triggered Gizmo",
+    "End Chain": "🔗 End Chain",
+    "Pass Turn": "⏭️ Pass Turn",
+    "Skip Research Choice": "🔍 Skip Research Choice",
+  };
+  if (known[title]) return known[title];
+  if (/^Research Level \d$/.test(title)) return `🔍 ${title}`;
+  return title;
+}
 
 function gizmosCan(view, action) {
   return Array.isArray(view && view.legal_actions) && view.legal_actions.includes(action);
@@ -142,8 +175,10 @@ function buildGizmosExplanationHtml(explanation) {
   const details = Array.isArray(explanation && explanation.details) ? explanation.details : [];
   const listHtml = details.length ? `<ul>${details.map((item) => `<li>${item}</li>`).join("")}</ul>` : "";
   const description = explanation && explanation.description ? `<p>${explanation.description}</p>` : "";
+  const rawTitle = (explanation && explanation.title) || "Explanation";
+  const title = gizmosExplainTitleWithIcon(rawTitle);
   return `
-    <h4>${(explanation && explanation.title) || "Explanation"}</h4>
+    <h4>${title}</h4>
     ${description}
     ${listHtml}
   `;
@@ -256,8 +291,9 @@ function gizmosCardExplanation(card, location) {
   } else if (location === "active") {
     details.push("Built Gizmos can trigger later in the same turn if their condition matches.");
   }
+  const panelPrefix = card.panel_icon ? `${card.panel_icon} ` : "";
   return {
-    title: card.title,
+    title: `${panelPrefix}${card.title}`.trim(),
     description: card.text,
     details,
   };
@@ -761,7 +797,7 @@ function renderGizmosPlayers(view) {
     const card = document.createElement("section");
     card.className = "gizmos-player-card";
     setGizmosExplanation(card, {
-      title: `${player.name}`,
+      title: `👤 ${player.name}`,
       description: "Public summary of this player's machine, score, and archived cards.",
       details: [
         `Energy: ${(player.storage || []).map((color) => GIZMOS_ENERGY_LABELS[color] || color).join(" ") || "-"}`,
