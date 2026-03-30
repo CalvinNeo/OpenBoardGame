@@ -35,12 +35,37 @@ const LOST_CODE_HELP_HTML = `
   <h3>Goal</h3>
   <p>Read clues and score the most points by predicting your hidden code.</p>
 
+  <h3>Modes</h3>
+  <ul>
+    <li><strong>Standard</strong>: Six symbols on the dice; each symbol uses stone values <strong>0–7</strong> (three dice, max sum <strong>21</strong>). The roller may change <strong>one</strong> die to any symbol before guesses.</li>
+    <li><strong>Intro</strong>: The red bear is removed—only <strong>five</strong> symbols are in play, so rolls never show bears. Otherwise the same as Standard (one die may still be changed).</li>
+    <li><strong>X-Race</strong>: Same six symbols as Standard, but stones go up to <strong>8</strong> per symbol (max sum <strong>24</strong>). Wheel sizes and round flow are unchanged.</li>
+  </ul>
+
+  <h3>Deadly Shortcut (expansion)</h3>
+  <p>Extra tokens—one per symbol—can be claimed after a roll when the <strong>raw</strong> three-dice result shows a symbol <strong>twice or three times</strong>. Offers run <strong>before</strong> the roller modifies a die.</p>
+  <ul>
+    <li>Order is the same as wheel picking: from <strong>most behind</strong> on the score track to the leader (roller is the most-behind player for that round).</li>
+    <li>For each triggered symbol, players in turn <strong>pass</strong> or <strong>take</strong>. Taking locks <strong>1–3</strong> numbers for that symbol for <strong>end-of-game scoring only</strong>; the commit cannot be changed.</li>
+    <li>Each symbol’s token can be taken <strong>once per match</strong>. Starting <strong>three rounds before the end</strong>, unused tokens are removed.</li>
+    <li>At final scoring for that symbol: hit <strong>+10</strong> / <strong>+4</strong> / <strong>+2</strong> if you locked 1 / 2 / 3 numbers and one of them is correct; miss <strong>−4</strong>. Mid-round wheel scoring is unchanged.</li>
+  </ul>
+
+  <h3>Curse of the Temple (expansion)</h3>
+  <p>A single curse mark moves among players during the game.</p>
+  <ul>
+    <li>If no one is cursed, the <strong>first player to reach 7 VP or more</strong> immediately takes the curse.</li>
+    <li>If you are cursed and your <strong>range guess is correct</strong>: you earn your wheel VP <strong>plus +1 VP for each other player who guessed wrong</strong> this round.</li>
+    <li>If you are cursed and your <strong>guess is wrong</strong>: you <strong>lose VP equal to that wheel’s value</strong> (then still replace a stone like other wrong guesses).</li>
+    <li>After each round: if <strong>anyone has 13+ VP</strong>, or it is the <strong>forced cut</strong> before the last round, the curse is removed. Otherwise it passes to the <strong>score leader</strong> (ties broken like the physical rules).</li>
+  </ul>
+
   <h3>Round Flow</h3>
   <ol>
-    <li>Roll 3 symbol dice.</li>
-    <li>Roller may modify one die (Intro mode must replace all red bears).</li>
-    <li>From trailing to leading, each player picks one wheel and submits a range.</li>
-    <li>Correct range gains points; wrong players replace one stone of a symbol that still has pile cards.</li>
+    <li>Roll 3 symbol dice (active symbol set depends on mode).</li>
+    <li>If Deadly Shortcut is on, resolve shortcut offers using the <strong>rolled</strong> faces, then the roller may modify <strong>one</strong> die and confirms.</li>
+    <li>From most behind to most ahead, each player picks one wheel and submits a sum range.</li>
+    <li>Correct range scores wheel VP (plus curse bonuses if applicable); wrong players exchange one stone where the pile still has cards.</li>
   </ol>
 
   <h3>Visibility</h3>
