@@ -45,6 +45,7 @@ from game.tagiron import TagironGame
 from game.things_in_rings import ThingsInRingsGame
 from game.turing_machine import TuringMachineGame
 from game.trekking_history import TrekkingHistoryGame
+from game.wavelength import WavelengthGame
 from game.word_decode import WordDecodeGame
 from game.yahtzee import YahtzeeGame
 from game.wandering_towers import WanderingTowersGame
@@ -97,6 +98,7 @@ __all__ = [
     "ThingsInRingsGame",
     "TuringMachineGame",
     "TrekkingHistoryGame",
+    "WavelengthGame",
     "WordDecodeGame",
     "YahtzeeGame",
     "WanderingTowersGame",

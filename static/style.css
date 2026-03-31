@@ -8660,6 +8660,131 @@ body.decrypto-explain-mode button.has-explanation:hover {
   font-size: 12px;
 }
 
+/* Wavelength */
+.wavelength-header-btn {
+  padding: 4px 10px;
+  font-size: 13px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #f9fafb;
+  cursor: pointer;
+}
+
+.wavelength-header-btn:hover {
+  background: #f3f4f6;
+}
+
+.wavelength-header-btn.active {
+  background: #dbeafe;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+
+body.wavelength-explain-mode button.has-explanation {
+  outline: 2px dashed #3b82f6;
+  outline-offset: 2px;
+  cursor: help;
+}
+
+.wavelength-track {
+  position: relative;
+  margin: 24px 0 14px;
+  height: 34px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: linear-gradient(90deg, #f97316 0%, #facc15 50%, #22c55e 100%);
+}
+
+.wavelength-track.is-draggable {
+  cursor: pointer;
+}
+
+.wavelength-track-end {
+  position: absolute;
+  top: -20px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.wavelength-track-end.left {
+  left: 0;
+}
+
+.wavelength-track-end.right {
+  right: 0;
+}
+
+.wavelength-marker {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  border-radius: 999px;
+  transform: translateY(-50%);
+  border: 2px solid #111827;
+  z-index: 3;
+}
+
+.wavelength-marker.target {
+  background: #ef4444;
+}
+
+.wavelength-marker.guess {
+  background: #2563eb;
+}
+
+.wavelength-zone {
+  position: absolute;
+  top: 50%;
+  height: 22px;
+  transform: translateY(-50%);
+  border-radius: 999px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.wavelength-zone.zone2 {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.wavelength-zone.zone3 {
+  background: rgba(59, 130, 246, 0.34);
+}
+
+.wavelength-zone.zone4 {
+  background: rgba(37, 99, 235, 0.5);
+}
+
+.wavelength-action-row input[type="text"] {
+  flex: 1 1 240px;
+}
+
+.wavelength-action-row input[type="range"] {
+  flex: 1 1 260px;
+}
+
+.wavelength-player-row,
+.wavelength-history-row,
+#wavelengthPlayers,
+#wavelengthHistory {
+  border-radius: 6px;
+}
+
+#wavelengthPlayers,
+#wavelengthHistory {
+  border: 1px solid #e5e7eb;
+  background: #fafafa;
+  padding: 8px;
+}
+
+.wavelength-player-row,
+.wavelength-history-row {
+  padding: 4px 0;
+  color: #1f2937;
+}
+
 /* Word Decode */
 .word-decode-hint-row input,
 .word-decode-base-row input {

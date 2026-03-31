@@ -566,6 +566,28 @@
     </div>
   </section>
 
+  <section id="wavelengthHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content wavelength-help-modal">
+      <div class="modal-header">
+        <h2>Wavelength - Game Rules</h2>
+        <button id="wavelengthHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body wavelength-help-content" id="wavelengthHelpContent"></div>
+    </div>
+  </section>
+
+  <section id="wavelengthExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content wavelength-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="wavelengthExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="wavelengthExplainContent"></div>
+      </div>
+    </div>
+  </section>
+
   <section id="wordDecodeHelpModal" class="modal hidden" aria-hidden="true">
     <div class="modal-content word-decode-help-modal">
       <div class="modal-header">
@@ -867,6 +889,7 @@
                     <option value="citadels">Citadels</option>
                     <option value="six_nimmt">6 nimmt!</option>
                     <option value="decrypto">Decrypto</option>
+                    <option value="wavelength">Wavelength</option>
                     <option value="skull">Skull</option>
                     <option value="cat_in_box">Cat in the Box</option>
                     <option value="hanabi">Hanabi</option>
@@ -1341,6 +1364,10 @@
             <div class="panel-header-actions" id="decryptoHeaderActions" style="display: none;">
               <button id="decryptoHelpBtn" class="decrypto-header-btn" type="button">Help</button>
               <button id="decryptoExplainBtn" class="decrypto-header-btn" type="button">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="wavelengthHeaderActions" style="display: none;">
+              <button id="wavelengthHelpBtn" class="wavelength-header-btn" type="button">Help</button>
+              <button id="wavelengthExplainBtn" class="wavelength-header-btn" type="button">Explain</button>
             </div>
             <div class="panel-header-actions" id="wordDecodeHeaderActions" style="display: none;">
               <button id="wordDecodeHelpBtn" class="word-decode-header-btn" type="button">Help</button>
@@ -2710,6 +2737,56 @@
 
             </div>
 
+            <div id="wavelengthPanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="wavelengthPhase">-</span></div>
+                <div>Round: <span id="wavelengthRound">-</span></div>
+                <div>Score: <span id="wavelengthScores">-</span></div>
+              </div>
+              <div class="row">
+                <div>Your Team: <span id="wavelengthYourTeam">-</span></div>
+                <div>Your Role: <span id="wavelengthYourRole">-</span></div>
+              </div>
+              <div class="row">
+                <div>Spectrum: <span id="wavelengthCard">-</span></div>
+                <div>Clue: <span id="wavelengthClue">-</span></div>
+                <div>Target: <span id="wavelengthTarget">Hidden</span></div>
+              </div>
+              <div class="decrypto-status waiting" role="status" aria-live="polite">
+                <div class="decrypto-status-title">Your Next Step</div>
+                <div id="wavelengthStatusBody" class="decrypto-status-body">-</div>
+              </div>
+              <div class="wavelength-track" aria-label="Spectrum track">
+                <div class="wavelength-track-end left">⬅️ 左侧</div>
+                <div class="wavelength-track-end right">右侧 ➡️</div>
+                <div id="wavelengthZone2" class="wavelength-zone zone2 hidden" title="2-point zone"></div>
+                <div id="wavelengthZone3" class="wavelength-zone zone3 hidden" title="3-point zone"></div>
+                <div id="wavelengthZone4" class="wavelength-zone zone4 hidden" title="4-point zone"></div>
+                <div id="wavelengthTrackTarget" class="wavelength-marker target hidden" title="Target"></div>
+                <div id="wavelengthTrackGuess" class="wavelength-marker guess hidden" title="Team Guess"></div>
+              </div>
+              <h3>Actions</h3>
+              <div class="row actions wavelength-action-row">
+                <input id="wavelengthClueInput" type="text" maxlength="80" placeholder="Psychic clue" />
+                <button id="wavelengthSubmitClueBtn">Submit Clue</button>
+              </div>
+              <div class="row actions wavelength-action-row">
+                <span id="wavelengthGuessValue">0.00</span>
+                <button id="wavelengthSubmitGuessBtn">Submit Guess</button>
+              </div>
+              <div class="row actions wavelength-action-row">
+                <button id="wavelengthSideLeftBtn">⬅️ LEFT</button>
+                <button id="wavelengthSideRightBtn">RIGHT ➡️</button>
+              </div>
+              <div class="row actions wavelength-action-row">
+                <button id="wavelengthContinueBtn">Continue</button>
+              </div>
+              <h3>Players</h3>
+              <div id="wavelengthPlayers"></div>
+              <h3>Last Round</h3>
+              <div id="wavelengthHistory"></div>
+            </div>
+
             <div id="wordDecodePanel" class="hidden">
               <div class="row">
                 <div>Phase: <span id="wordDecodePhase">-</span></div>
@@ -4071,6 +4148,7 @@
   <script src="/static/games/splendor_pokemon.js?v=app_v4"></script>
   <script src="/static/games/project_l.js?v=app_v4"></script>
   <script src="/static/games/decrypto.js?v=app_v4"></script>
+  <script src="/static/games/wavelength.js?v=app_v4"></script>
   <script src="/static/games/word_decode.js?v=app_v4"></script>
   <script src="/static/games/trekking.js?v=app_v4"></script>
   <script src="/static/games/aidixit.js?v=app_v4"></script>

@@ -206,6 +206,9 @@ function renderRoomState(state) {
     }
     clearDecryptoState();
     clearWordDecodeState();
+    if (typeof clearWavelengthState === "function") {
+      clearWavelengthState();
+    }
     if (typeof clearTagironState === "function") {
       clearTagironState();
     }

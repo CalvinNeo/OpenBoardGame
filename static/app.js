@@ -37,6 +37,7 @@ const halliPanel = document.getElementById("halliPanel");
 const drawGuessPanel = document.getElementById("drawGuessPanel");
 const gizmosPanelEl = document.getElementById("gizmosPanel");
 const wordDecodePanel = document.getElementById("wordDecodePanel");
+const wavelengthPanel = document.getElementById("wavelengthPanel");
 const cyberPicturesPanel = document.getElementById("cyberPicturesPanel");
 const fakeArtistPanel = document.getElementById("fakeArtistPanel");
 const thingsInRingsPanel = document.getElementById("thingsInRingsPanel");
@@ -85,6 +86,7 @@ function setGamePanelVisibility(gameType) {
   const showHalli = gameType === "halli_galli";
   const showDecrypto = gameType === "decrypto";
   const showWordDecode = gameType === "word_decode";
+  const showWavelength = gameType === "wavelength";
   const showDrawGuess = gameType === "draw_guess";
   const showGizmos = gameType === "gizmos";
   const showBlitzSketch = gameType === "blitz_sketch";
@@ -231,6 +233,9 @@ function setGamePanelVisibility(gameType) {
   if (typeof showWordDecodeHeaderActions === "function") {
     showWordDecodeHeaderActions(showWordDecode);
   }
+  if (typeof showWavelengthHeaderActions === "function") {
+    showWavelengthHeaderActions(showWavelength);
+  }
   if (typeof showFakeArtistHeaderActions === "function") {
     showFakeArtistHeaderActions(showFakeArtist);
   }
@@ -249,6 +254,9 @@ function setGamePanelVisibility(gameType) {
   }
   if (wordDecodePanel) {
     wordDecodePanel.classList.toggle("hidden", !showWordDecode);
+  }
+  if (wavelengthPanel) {
+    wavelengthPanel.classList.toggle("hidden", !showWavelength);
   }
   if (blitzSketchPanel) {
     blitzSketchPanel.classList.toggle("hidden", !showBlitzSketch);
@@ -542,6 +550,10 @@ function renderGameState(data) {
   }
   if (gameType === "word_decode") {
     renderWordDecodeGameState(data);
+    return;
+  }
+  if (gameType === "wavelength") {
+    renderWavelengthGameState(data);
     return;
   }
   if (gameType === "draw_guess") {

@@ -44,6 +44,7 @@ from game.carcassonne import CarcassonneGame
 from game.skull import SkullGame
 from game.trekking_history import TrekkingHistoryGame
 from game.texas_holdem import TexasHoldemGame
+from game.wavelength import WavelengthGame
 from game.word_decode import WordDecodeGame
 from game.wandering_towers import WanderingTowersGame
 from game.tagiron import TagironGame
@@ -2569,6 +2570,46 @@ CRIMINAL_DANCE_CONFIG_SCHEMA = {
     "additionalProperties": False,
 }
 
+WAVELENGTH_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {"type": {"const": "submit_clue"}, "clue": {"type": "string", "minLength": 1, "maxLength": 200}},
+            "required": ["type", "clue"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "submit_team_guess"}, "pos": {"type": "number", "minimum": -1.0, "maximum": 1.0}},
+            "required": ["type", "pos"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "submit_side_guess"}, "side": {"type": "string", "enum": ["LEFT", "RIGHT"]}},
+            "required": ["type", "side"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "continue_next_round"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+WAVELENGTH_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "target_score": {"type": "integer", "minimum": 1},
+        "starting_score_second_team": {"type": "integer", "minimum": 0},
+        "enable_catch_up_rule": {"type": "boolean"},
+    },
+    "additionalProperties": False,
+}
+
 register_game(
     GameDefinition(
         game_id=CaboGame.game_id,
@@ -3300,5 +3341,20 @@ register_game(
         module=CriminalDanceGame,
         serialize=CriminalDanceGame.serialize,
         deserialize=CriminalDanceGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=WavelengthGame.game_id,
+        name="Wavelength",
+        min_players=WavelengthGame.min_players,
+        max_players=WavelengthGame.max_players,
+        turn_mode="simultaneous",
+        action_schema=WAVELENGTH_ACTION_SCHEMA,
+        config_schema=WAVELENGTH_CONFIG_SCHEMA,
+        module=WavelengthGame,
+        serialize=WavelengthGame.serialize,
+        deserialize=WavelengthGame.deserialize,
     )
 )

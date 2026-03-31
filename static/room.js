@@ -536,6 +536,7 @@ const GAME_WEIGHT = {
   gizmos: 2.05,
   lost_code: 2.38,
   criminal_dance: 1.16,
+  wavelength: 1.11,
 };
 
 function getGameWeight(gameId) {
@@ -1337,6 +1338,9 @@ function resetRoomState() {
   clearSixNimmtState();
   clearHalliState();
   clearDecryptoState();
+  if (typeof clearWavelengthState === "function") {
+    clearWavelengthState();
+  }
   clearDrawGuessState();
   clearBlitzSketchState();
   clearCyberState();

@@ -92,6 +92,19 @@ def _players_for_team(order: List[str], team_id: str) -> List[str]:
     return [pid for idx, pid in enumerate(order) if TEAM_IDS[idx % 2] == team_id]
 
 
+def _all_player_ids(state: Dict) -> List[str]:
+    return list(state.get("turn_order", []))
+
+
+def _bot_player_ids(state: Dict) -> List[str]:
+    bots: List[str] = []
+    for pid in _all_player_ids(state):
+        meta = state.get("player_meta", {}).get(pid, {})
+        if bool(meta.get("is_bot")):
+            bots.append(pid)
+    return bots
+
+
 def _next_psychic_index(state: Dict, team_id: str) -> int:
     players = _players_for_team(state["turn_order"], team_id)
     if not players:
@@ -224,6 +237,7 @@ def _resolve_round(state: Dict) -> None:
         next_team = active
     state["pending_next_team"] = next_team
     state["phase"] = "round_summary"
+    state["continue_confirmed"] = list(_bot_player_ids(state))
 
 
 class WavelengthGame:
@@ -255,6 +269,7 @@ class WavelengthGame:
             "game_over": False,
             "winner": None,
             "pending_next_team": None,
+            "continue_confirmed": [],
             "game_start_time": time.time(),
         }
         _build_new_round(state, "A")
@@ -285,7 +300,8 @@ class WavelengthGame:
                 return ["submit_side_guess"]
             return []
         if phase == "round_summary":
-            if team_id == active_team:
+            confirmed = set(state.get("continue_confirmed", []))
+            if player_id not in confirmed:
                 return ["continue_next_round"]
             return []
         return []
@@ -329,9 +345,21 @@ class WavelengthGame:
             next_team = state.get("pending_next_team")
             if next_team not in TEAM_IDS:
                 return [], "round continuation unavailable"
-            _build_new_round(state, next_team)
-            state["pending_next_team"] = None
-            events.append({"type": "wavelength:round_continued", "payload": {"player_id": player_id}})
+            confirmed = set(state.get("continue_confirmed", []))
+            confirmed.add(player_id)
+            state["continue_confirmed"] = sorted(list(confirmed))
+            total_players = len(_all_player_ids(state))
+            events.append(
+                {
+                    "type": "wavelength:continue_clicked",
+                    "payload": {"player_id": player_id, "confirmed_count": len(confirmed), "total_players": total_players},
+                }
+            )
+            if len(confirmed) >= total_players:
+                _build_new_round(state, next_team)
+                state["pending_next_team"] = None
+                state["continue_confirmed"] = []
+                events.append({"type": "wavelength:round_continued", "payload": {"player_id": player_id}})
             return events, None
         return [], "invalid action"
 
@@ -343,15 +371,16 @@ class WavelengthGame:
         active_team = round_state.get("active_team")
         opponent_team = round_state.get("opponent_team")
         psychic_id = round_state.get("psychic_player_id")
+        phase = state.get("phase")
         show_target = bool(
             state.get("game_over")
+            or phase == "round_summary"
             or (
                 viewer_id == psychic_id
-                and state.get("phase") in ("psychic_clue", "team_guess", "opponent_guess", "round_summary")
+                and phase in ("psychic_clue", "team_guess", "opponent_guess", "round_summary")
             )
         )
-        phase = state.get("phase")
-        show_round_details = bool(phase != "round_summary" or viewer_team == active_team or state.get("game_over"))
+        show_round_details = bool(phase != "round_summary" or state.get("game_over") or state.get("last_round_summary"))
         players_view = []
         for pid in order:
             meta = state["player_meta"].get(pid, {})
@@ -384,8 +413,10 @@ class WavelengthGame:
             "last_round_summary": state.get("last_round_summary"),
             "history_tail": state.get("history", [])[-6:],
             "round_pause_summary": state.get("last_round_summary")
-            if phase == "round_summary" and viewer_team == active_team
+            if phase == "round_summary"
             else None,
+            "continue_confirmed_player_ids": sorted(list(state.get("continue_confirmed", []))),
+            "continue_total_players": len(_all_player_ids(state)),
             "tiebreak_pending": list(state.get("tiebreak_pending", [])),
             "winner": state.get("winner"),
             "game_over": bool(state.get("game_over")),

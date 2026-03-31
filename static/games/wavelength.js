@@ -35,6 +35,7 @@ const wavelengthGuessValue = document.getElementById("wavelengthGuessValue");
 const wavelengthSubmitGuessBtn = document.getElementById("wavelengthSubmitGuessBtn");
 const wavelengthSideLeftBtn = document.getElementById("wavelengthSideLeftBtn");
 const wavelengthSideRightBtn = document.getElementById("wavelengthSideRightBtn");
+const wavelengthContinueBtn = document.getElementById("wavelengthContinueBtn");
 let wavelengthTrackDragging = false;
 let wavelengthEditableGuessPos = 0;
 const WAVELENGTH_SCORE_BANDS = [
@@ -66,6 +67,7 @@ const WAVELENGTH_EXPLAIN = {
   wavelengthSubmitGuessBtn: "Lock your team's final dial position on the spectrum.",
   wavelengthSideLeftBtn: "Opponent prediction: hidden target is left of your dial.",
   wavelengthSideRightBtn: "Opponent prediction: hidden target is right of your dial.",
+  wavelengthContinueBtn: "After recap, continue to the next round.",
 };
 
 const wavelengthActionButtons = {
@@ -73,9 +75,10 @@ const wavelengthActionButtons = {
   submit_team_guess: wavelengthSubmitGuessBtn,
   submit_side_guess_left: wavelengthSideLeftBtn,
   submit_side_guess_right: wavelengthSideRightBtn,
+  continue_next_round: wavelengthContinueBtn,
 };
 
-[wavelengthSubmitClueBtn, wavelengthSubmitGuessBtn, wavelengthSideLeftBtn, wavelengthSideRightBtn].forEach((button) => {
+[wavelengthSubmitClueBtn, wavelengthSubmitGuessBtn, wavelengthSideLeftBtn, wavelengthSideRightBtn, wavelengthContinueBtn].forEach((button) => {
   if (button) {
     button.classList.add("has-explanation");
   }
@@ -166,8 +169,10 @@ function renderWavelengthHistory(view) {
     const card = last.card || {};
     const row = document.createElement("div");
     row.className = "wavelength-history-row";
+    const side = last.side_guess === "LEFT" ? "⬅️ LEFT" : "RIGHT ➡️";
     row.textContent = `R${last.round_number} · ${formatWavelengthTeam(last.active_team)} clue "${last.clue_text}" · `
       + `${card.left_label || "左侧"} ↔ ${card.right_label || "右侧"} · `
+      + `team ${Number(last.guess_pos).toFixed(2)} · opponent ${side} · `
       + `+${last.active_points} / +${last.opponent_points}`;
     wavelengthHistory.appendChild(row);
   } else {
@@ -195,6 +200,20 @@ function updateWavelengthStatus(view) {
   }
   if (wavelengthCan("submit_side_guess")) {
     wavelengthStatusBody.textContent = "Choose LEFT or RIGHT against their dial.";
+    return;
+  }
+  if (wavelengthCan("continue_next_round")) {
+    const summary = currentWavelengthView && currentWavelengthView.round_pause_summary;
+    const confirmed = Array.isArray(currentWavelengthView && currentWavelengthView.continue_confirmed_player_ids)
+      ? currentWavelengthView.continue_confirmed_player_ids.length
+      : 0;
+    const total = Number(currentWavelengthView && currentWavelengthView.continue_total_players) || 0;
+    if (summary) {
+      const side = summary.side_guess === "LEFT" ? "left ⬅️" : "right ➡️";
+      wavelengthStatusBody.textContent = `Recap: your guess ${Number(summary.guess_pos).toFixed(2)}, opponent guessed ${side}. Continue ${confirmed}/${total}.`;
+    } else {
+      wavelengthStatusBody.textContent = `Round recap ready. Continue ${confirmed}/${total}.`;
+    }
     return;
   }
   wavelengthStatusBody.textContent = "Waiting for other players.";
@@ -384,6 +403,13 @@ if (wavelengthSideRightBtn) {
   wavelengthSideRightBtn.addEventListener("click", () => {
     if (!wavelengthCan("submit_side_guess")) return;
     sendAction({ type: "submit_side_guess", side: "RIGHT" });
+  });
+}
+
+if (wavelengthContinueBtn) {
+  wavelengthContinueBtn.addEventListener("click", () => {
+    if (!wavelengthCan("continue_next_round")) return;
+    sendAction({ type: "continue_next_round" });
   });
 }
 
