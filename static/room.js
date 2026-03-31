@@ -535,6 +535,7 @@ const GAME_WEIGHT = {
   davinci_code: 1.48,
   gizmos: 2.05,
   lost_code: 2.38,
+  criminal_dance: 1.16,
 };
 
 function getGameWeight(gameId) {
