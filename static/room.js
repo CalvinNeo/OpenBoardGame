@@ -1314,6 +1314,12 @@ function resetRoomState() {
   clearCaboState();
   clearFlip7State();
   clearYahtzeeState();
+  if (typeof clearLostCodeState === "function") {
+    clearLostCodeState();
+  }
+  if (typeof clearCriminalDanceState === "function") {
+    clearCriminalDanceState();
+  }
   clearIstanbulState();
   clearGoldRushState();
   clearIncanGoldState();
@@ -1362,6 +1368,12 @@ function resetRoomState() {
   updateBlitzSketchConfigRow();
   if (typeof updateTuringMachineConfigRow === "function") {
     updateTuringMachineConfigRow();
+  }
+  if (typeof updateLostCodeConfigRow === "function") {
+    updateLostCodeConfigRow();
+  }
+  if (typeof updateCriminalDanceConfigRow === "function") {
+    updateCriminalDanceConfigRow();
   }
   updateAutoSaveRow();
   updateReopenButton();
@@ -1427,6 +1439,33 @@ function resetRoomState() {
   }
   if (turingMachineSeedInput) {
     turingMachineSeedInput.value = "";
+  }
+  if (lostCodeModeSelect) {
+    lostCodeModeSelect.value = "standard";
+  }
+  if (lostCodeShortcutToggle) {
+    lostCodeShortcutToggle.checked = false;
+  }
+  if (lostCodeCurseToggle) {
+    lostCodeCurseToggle.checked = false;
+  }
+  if (criminalDanceDetectiveRuleSelect) {
+    criminalDanceDetectiveRuleSelect.value = "hand_leq_3";
+  }
+  if (criminalDanceDogFailSelect) {
+    criminalDanceDogFailSelect.value = "discard";
+  }
+  if (criminalDanceBoyToggle) {
+    criminalDanceBoyToggle.checked = true;
+  }
+  if (criminalDanceChiefToggle) {
+    criminalDanceChiefToggle.checked = false;
+  }
+  if (criminalDanceScoringToggle) {
+    criminalDanceScoringToggle.checked = true;
+  }
+  if (criminalDanceBoyVisibilitySelect) {
+    criminalDanceBoyVisibilitySelect.value = "boy_knows_criminal";
   }
   if (typeof updateTuringMachineConfigRowsFromSource === "function") {
     updateTuringMachineConfigRowsFromSource();

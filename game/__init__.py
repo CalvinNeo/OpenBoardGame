@@ -8,6 +8,7 @@ from game.carcassonne import CarcassonneGame
 from game.cabo import CaboGame
 from game.cat_in_box import CatInBoxGame
 from game.citadels import CitadelsGame
+from game.criminal_dance import CriminalDanceGame
 from game.coyote import CoyoteGame
 from game.cyber_pictures import CyberPicturesGame
 from game.davinci_code import DaVinciCodeGame
@@ -60,6 +61,7 @@ __all__ = [
     "CaboGame",
     "CatInBoxGame",
     "CitadelsGame",
+    "CriminalDanceGame",
     "DrawGuessGame",
     "DaVinciCodeGame",
     "FangNiaoGame",

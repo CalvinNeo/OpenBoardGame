@@ -1206,6 +1206,43 @@
                       <input id="lostCodeCurseToggle" type="checkbox" />
                     </div>
                   </div>
+                  <div class="game-config-card hidden" id="criminalDanceConfigBox" aria-hidden="true">
+                    <div class="game-config-title">Criminal Dance</div>
+                    <div class="row compact-row">
+                      <label for="criminalDanceDetectiveRuleSelect">Detective Rule</label>
+                      <select id="criminalDanceDetectiveRuleSelect">
+                        <option value="hand_leq_3" selected>Hand <= 3</option>
+                        <option value="round_ge_2">Round >= 2</option>
+                        <option value="always">Always</option>
+                      </select>
+                    </div>
+                    <div class="row compact-row">
+                      <label for="criminalDanceDogFailSelect">Dog Fail</label>
+                      <select id="criminalDanceDogFailSelect">
+                        <option value="discard" selected>Discard</option>
+                        <option value="give_to_target">Give To Target</option>
+                      </select>
+                    </div>
+                    <div class="row compact-row">
+                      <label for="criminalDanceBoyVisibilitySelect">Boy Visibility</label>
+                      <select id="criminalDanceBoyVisibilitySelect">
+                        <option value="boy_knows_criminal" selected>Boy -> Criminal</option>
+                        <option value="mutual">Mutual</option>
+                      </select>
+                    </div>
+                    <div class="row compact-row">
+                      <label for="criminalDanceBoyToggle">Enable Boy</label>
+                      <input id="criminalDanceBoyToggle" type="checkbox" checked />
+                    </div>
+                    <div class="row compact-row">
+                      <label for="criminalDanceChiefToggle">Enable Chief</label>
+                      <input id="criminalDanceChiefToggle" type="checkbox" />
+                    </div>
+                    <div class="row compact-row">
+                      <label for="criminalDanceScoringToggle">Scoring</label>
+                      <input id="criminalDanceScoringToggle" type="checkbox" checked />
+                    </div>
+                  </div>
                 </div>
                 <div class="row hidden toggle-row" id="autoSaveRow">
                   <label for="autoSaveToggle">Auto Save</label>
@@ -1320,6 +1357,10 @@
             <div class="panel-header-actions" id="lostCodeHeaderActions" style="display: none;">
               <button id="lostCodeHelpBtn" class="lost-code-header-btn" type="button">Help</button>
               <button id="lostCodeExplainBtn" class="lost-code-header-btn" type="button">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="criminalDanceHeaderActions" style="display: none;">
+              <button id="criminalDanceHelpBtn" class="criminal-dance-header-btn" type="button">Help</button>
+              <button id="criminalDanceExplainBtn" class="criminal-dance-header-btn" type="button">Explain</button>
             </div>
             <div class="panel-header-actions" id="turingMachineHeaderActions" style="display: none;">
               <button id="turingMachineHelpBtn" class="turing-machine-header-btn" type="button">Help</button>
@@ -1477,6 +1518,30 @@
 
               <h3>Round Guesses</h3>
               <div id="lostCodeGuesses" class="lost-code-guess-list"></div>
+            </div>
+
+            <div id="criminalDancePanel" class="hidden">
+              <div class="row">
+                <div>Round: <span id="criminalDanceRound">-</span></div>
+                <div>Current Turn: <span id="criminalDanceTurn">-</span></div>
+              </div>
+              <div id="criminalDanceSummary" class="hint">-</div>
+
+              <h3>Players</h3>
+              <div id="criminalDancePlayers" class="criminal-dance-player-list"></div>
+
+              <h3>Your Hand</h3>
+              <div id="criminalDanceHand" class="criminal-dance-hand"></div>
+              <div id="criminalDanceCardDetail" class="hint">Select a card to view what it does.</div>
+
+              <h3>Controls</h3>
+              <div id="criminalDanceControls" class="criminal-dance-controls"></div>
+
+              <h3>Played Cards</h3>
+              <div id="criminalDancePlayed" class="criminal-dance-public-list"></div>
+
+              <h3>Private Notes</h3>
+              <div id="criminalDancePrivate" class="criminal-dance-private-list"></div>
             </div>
 
             <div id="istanbulPanel" class="hidden istanbul-panel">
@@ -3963,6 +4028,26 @@
               </div>
             </div>
 
+            <div id="criminalDanceHelpModal" class="modal hidden" aria-hidden="true">
+              <div class="modal-card">
+                <div class="modal-header">
+                  <h3>Criminal Dance Help</h3>
+                  <button id="criminalDanceHelpModalCloseBtn" type="button">Close</button>
+                </div>
+                <div class="modal-body" id="criminalDanceHelpContent"></div>
+              </div>
+            </div>
+
+            <div id="criminalDanceExplainModal" class="modal hidden" aria-hidden="true">
+              <div class="modal-card">
+                <div class="modal-header">
+                  <h3>Button Explanation</h3>
+                  <button id="criminalDanceExplainModalCloseBtn" type="button">Close</button>
+                </div>
+                <div class="modal-body" id="criminalDanceExplainContent"></div>
+              </div>
+            </div>
+
           </div>
         </section>
       </main>
@@ -4008,6 +4093,7 @@
   <script src="/static/games/tagiron.js?v=app_v4"></script>
   <script src="/static/games/davinci_code.js?v=app_v4"></script>
   <script src="/static/games/lost_code.js?v=app_v4"></script>
+  <script src="/static/games/criminal_dance.js?v=app_v4"></script>
   <script src="/static/games/turing_machine.js?v=app_v4"></script>
   <script src="/static/games/halli_galli.js?v=app_v4"></script>
   <script src="/static/games/texas_holdem.js?v=app_v4"></script>

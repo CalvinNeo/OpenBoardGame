@@ -158,6 +158,15 @@ function emitRoomStart() {
       deadly_shortcut: deadlyShortcut,
       curse_of_temple: curseOfTemple,
     };
+  } else if (currentGameType === "criminal_dance") {
+    payload.config = {
+      enable_boy: criminalDanceBoyToggle ? criminalDanceBoyToggle.checked : true,
+      enable_chief: criminalDanceChiefToggle ? criminalDanceChiefToggle.checked : false,
+      detective_activation_rule: criminalDanceDetectiveRuleSelect ? criminalDanceDetectiveRuleSelect.value || "hand_leq_3" : "hand_leq_3",
+      dog_fail_behavior: criminalDanceDogFailSelect ? criminalDanceDogFailSelect.value || "discard" : "discard",
+      boy_visibility_mode: criminalDanceBoyVisibilitySelect ? criminalDanceBoyVisibilitySelect.value || "boy_knows_criminal" : "boy_knows_criminal",
+      scoring_enabled: criminalDanceScoringToggle ? criminalDanceScoringToggle.checked : true,
+    };
   }
   socket.emit("room:start", payload);
 }
@@ -183,6 +192,9 @@ function renderRoomState(state) {
     clearYahtzeeState();
     if (typeof clearLostCodeState === "function") {
       clearLostCodeState();
+    }
+    if (typeof clearCriminalDanceState === "function") {
+      clearCriminalDanceState();
     }
     clearIstanbulState();
     clearSkullState();
@@ -263,6 +275,9 @@ function renderRoomState(state) {
   }
   if (typeof updateLostCodeConfigRow === "function") {
     updateLostCodeConfigRow();
+  }
+  if (typeof updateCriminalDanceConfigRow === "function") {
+    updateCriminalDanceConfigRow();
   }
   updateAutoSaveRow();
   updateReopenButton();

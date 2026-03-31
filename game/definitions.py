@@ -5,6 +5,7 @@ from game.azul import AzulGame
 from game.cabo import CaboGame
 from game.cat_in_box import CatInBoxGame
 from game.citadels import CitadelsGame
+from game.criminal_dance import CriminalDanceGame
 from game.coyote import CoyoteGame
 from game.cyber_pictures import CyberPicturesGame
 from game.davinci_code import DaVinciCodeGame
@@ -2532,6 +2533,42 @@ LOST_CODE_CONFIG_SCHEMA = {
     "additionalProperties": False,
 }
 
+CRIMINAL_DANCE_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "play_card"},
+                "card_id": {"type": "string", "minLength": 1},
+                "target_player_id": {"type": "string", "minLength": 1},
+                "your_card_id": {"type": "string", "minLength": 1},
+                "target_card_id": {"type": "string", "minLength": 1},
+            },
+            "required": ["type", "card_id"],
+            "additionalProperties": True,
+        },
+        {"type": "object", "properties": {"type": {"const": "play_again"}}, "required": ["type"], "additionalProperties": False},
+    ],
+}
+
+CRIMINAL_DANCE_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "enable_boy": {"type": "boolean"},
+        "enable_chief": {"type": "boolean"},
+        "detective_activation_rule": {"type": "string", "enum": ["hand_leq_3", "round_ge_2", "always"]},
+        "dog_fail_behavior": {"type": "string", "enum": ["discard", "give_to_target"]},
+        "boy_visibility_mode": {"type": "string", "enum": ["boy_knows_criminal", "mutual"]},
+        "scoring_enabled": {"type": "boolean"},
+        "target_score_by_player_count": {
+            "type": "object",
+            "additionalProperties": {"type": "integer", "minimum": 1},
+        },
+    },
+    "additionalProperties": False,
+}
+
 register_game(
     GameDefinition(
         game_id=CaboGame.game_id,
@@ -3248,5 +3285,20 @@ register_game(
         module=LostCodeGame,
         serialize=LostCodeGame.serialize,
         deserialize=LostCodeGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=CriminalDanceGame.game_id,
+        name="Criminal Dance",
+        min_players=CriminalDanceGame.min_players,
+        max_players=CriminalDanceGame.max_players,
+        turn_mode="turn",
+        action_schema=CRIMINAL_DANCE_ACTION_SCHEMA,
+        config_schema=CRIMINAL_DANCE_CONFIG_SCHEMA,
+        module=CriminalDanceGame,
+        serialize=CriminalDanceGame.serialize,
+        deserialize=CriminalDanceGame.deserialize,
     )
 )

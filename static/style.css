@@ -15076,3 +15076,58 @@ body.lost-code-explain-mode button.has-explanation {
   background: #1d4ed8;
   color: #ffffff;
 }
+
+.criminal-dance-player-list,
+.criminal-dance-public-list,
+.criminal-dance-private-list {
+  display: grid;
+  gap: 6px;
+}
+
+.criminal-dance-player,
+.criminal-dance-public,
+.criminal-dance-private {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  padding: 6px 10px;
+}
+
+.criminal-dance-hand {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 40px;
+  padding: 6px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+}
+
+.criminal-dance-card {
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #ffffff;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.criminal-dance-card.selected {
+  border-color: #2563eb;
+  background: #dbeafe;
+}
+
+.criminal-dance-controls {
+  display: grid;
+  gap: 10px;
+}
+
+body.criminal-dance-explain-mode [data-criminal-dance-explain-key].has-explanation {
+  cursor: help;
+  outline: 2px dashed #2563eb;
+  outline-offset: 2px;
+}
+
+.criminal-dance-header-btn.active {
+  background: #1d4ed8;
+  color: #ffffff;
+}
