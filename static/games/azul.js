@@ -141,6 +141,54 @@ function clearAzulSelection() {
   }
 }
 
+function getAzulSelfPlayer(view) {
+  if (!view || !Array.isArray(view.players)) {
+    return null;
+  }
+  return view.players.find((player) => player.player_id === view.you) || null;
+}
+
+function isAzulRowPlaceable(view, rowIndex, color) {
+  if (!Number.isInteger(rowIndex) || rowIndex < 0 || rowIndex > 4 || !color) {
+    return false;
+  }
+  const you = getAzulSelfPlayer(view);
+  if (!you || !Array.isArray(you.pattern_lines) || !Array.isArray(you.wall)) {
+    return false;
+  }
+  const line = you.pattern_lines[rowIndex];
+  if (!line) {
+    return false;
+  }
+  if (line.color && line.color !== color) {
+    return false;
+  }
+  if (line.count >= line.capacity) {
+    return false;
+  }
+  const colIndex = AZUL_WALL_PATTERN[rowIndex].indexOf(color);
+  if (colIndex < 0) {
+    return false;
+  }
+  if (you.wall[rowIndex] && you.wall[rowIndex][colIndex]) {
+    return false;
+  }
+  return true;
+}
+
+function canSubmitAzulSelection(view) {
+  if (!isAzulActionAvailable("take_tiles")) {
+    return false;
+  }
+  if (!azulSelectedSource || !azulSelectedColor || typeof azulSelectedRow !== "number") {
+    return false;
+  }
+  if (azulSelectedRow < 0) {
+    return true;
+  }
+  return isAzulRowPlaceable(view, azulSelectedRow, azulSelectedColor);
+}
+
 function syncAzulSelection(view) {
   if (!view) {
     clearAzulSelection();
@@ -172,6 +220,14 @@ function syncAzulSelection(view) {
       azulSelectedRow = null;
     }
   }
+  if (
+    azulSelectedRow !== null &&
+    azulSelectedRow >= 0 &&
+    azulSelectedColor &&
+    !isAzulRowPlaceable(view, azulSelectedRow, azulSelectedColor)
+  ) {
+    azulSelectedRow = null;
+  }
   updateAzulSelectionLabels();
 }
 
@@ -186,11 +242,7 @@ function updateAzulActionButtons() {
   if (!azulTakeBtn) {
     return;
   }
-  const canTake =
-    isAzulActionAvailable("take_tiles") &&
-    azulSelectedSource &&
-    azulSelectedColor &&
-    typeof azulSelectedRow === "number";
+  const canTake = canSubmitAzulSelection(currentAzulView);
   azulTakeBtn.disabled = !canTake;
   if (azulFloorBtn) {
     azulFloorBtn.disabled = !isAzulActionAvailable("take_tiles");
@@ -331,7 +383,7 @@ function buildAzulWallGrid(wall, compact) {
   return grid;
 }
 
-function buildAzulPatternLine(line, rowIndex, interactive) {
+function buildAzulPatternLine(line, rowIndex, interactive, canSelect = true) {
   const lineWrap = document.createElement("div");
   lineWrap.className = "azul-pattern-line";
   const label = document.createElement("div");
@@ -343,6 +395,9 @@ function buildAzulPatternLine(line, rowIndex, interactive) {
   const capacity = rowIndex + 1;
   const count = line ? line.count : 0;
   const color = line ? line.color : null;
+  if (count >= capacity) {
+    lineWrap.classList.add("full");
+  }
   for (let i = 0; i < capacity; i += 1) {
     const slot = document.createElement("div");
     slot.className = "azul-pattern-slot";
@@ -357,12 +412,16 @@ function buildAzulPatternLine(line, rowIndex, interactive) {
   lineWrap.appendChild(slots);
   if (interactive) {
     lineWrap.classList.add("selectable");
-    lineWrap.addEventListener("click", () => {
-      azulSelectedRow = rowIndex;
-      updateAzulSelectionLabels();
-      updateAzulActionButtons();
-      renderAzulYourBoard(currentAzulView);
-    });
+    if (canSelect) {
+      lineWrap.addEventListener("click", () => {
+        azulSelectedRow = rowIndex;
+        updateAzulSelectionLabels();
+        updateAzulActionButtons();
+        renderAzulYourBoard(currentAzulView);
+      });
+    } else {
+      lineWrap.classList.add("disabled");
+    }
   }
   return lineWrap;
 }
@@ -386,7 +445,8 @@ function renderAzulYourBoard(view) {
   const patternCol = document.createElement("div");
   patternCol.className = "azul-pattern-column";
   you.pattern_lines.forEach((line, idx) => {
-    const lineWrap = buildAzulPatternLine(line, idx, true);
+    const canSelectRow = !azulSelectedColor || isAzulRowPlaceable(view, idx, azulSelectedColor);
+    const lineWrap = buildAzulPatternLine(line, idx, true, canSelectRow);
     if (azulSelectedRow === idx) {
       lineWrap.classList.add("selected");
     }
@@ -416,6 +476,11 @@ function renderAzulYourBoard(view) {
   for (let i = 0; i < 7; i += 1) {
     const slot = document.createElement("div");
     slot.className = "azul-floor-slot";
+    const penaltyValue = AZUL_FLOOR_PENALTIES[i] ?? 0;
+    const penaltyText = document.createElement("span");
+    penaltyText.className = "azul-floor-slot-penalty";
+    penaltyText.textContent = String(penaltyValue);
+    slot.appendChild(penaltyText);
     const tile = you.floor && you.floor[i] ? you.floor[i] : null;
     if (tile === "first_player") {
       const token = document.createElement("div");
@@ -433,10 +498,6 @@ function renderAzulYourBoard(view) {
     slots.appendChild(slot);
   }
   floorWrap.appendChild(slots);
-  const penalty = document.createElement("div");
-  penalty.className = "azul-floor-penalty";
-  penalty.textContent = `Penalties: ${AZUL_FLOOR_PENALTIES.join(" ")}`;
-  floorWrap.appendChild(penalty);
   board.appendChild(floorWrap);
   azulYourBoard.appendChild(board);
 }
@@ -564,6 +625,10 @@ if (azulTakeBtn) {
   azulTakeBtn.addEventListener("click", () => {
     if (!azulSelectedSource || !azulSelectedColor || typeof azulSelectedRow !== "number") {
       log("Select a source, color, and target row first");
+      return;
+    }
+    if (azulSelectedRow >= 0 && !isAzulRowPlaceable(currentAzulView, azulSelectedRow, azulSelectedColor)) {
+      log("That row cannot accept this color. Choose another row or send tiles to floor.");
       return;
     }
     const action = {

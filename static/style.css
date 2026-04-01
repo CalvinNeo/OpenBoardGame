@@ -9269,6 +9269,27 @@ body.fake-artist-explain-mode button.has-explanation:hover {
   border-color: #cbd5e1;
 }
 
+.azul-tile.white,
+.azul-pattern-slot.white,
+.azul-wall-cell.white {
+  position: relative;
+}
+
+.azul-tile.white::after,
+.azul-pattern-slot.white::after,
+.azul-wall-cell.white::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 70.71%;
+  height: 70.71%;
+  background: #0abab5;
+  transform: translate(-50%, -50%) rotate(45deg);
+  border-radius: 1px;
+  pointer-events: none;
+}
+
 .azul-token {
   width: 28px;
   height: 28px;
@@ -9314,6 +9335,7 @@ body.fake-artist-explain-mode button.has-explanation:hover {
   gap: 6px;
   padding: 4px 6px;
   border-radius: 6px;
+  border: 1px solid transparent;
 }
 
 .azul-pattern-line.selectable {
@@ -9322,6 +9344,12 @@ body.fake-artist-explain-mode button.has-explanation:hover {
 
 .azul-pattern-line.selected {
   background: #dbeafe;
+}
+
+.azul-pattern-line.full {
+  border-color: #0f766e;
+  background: #ecfeff;
+  box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.35);
 }
 
 .azul-row-label {
@@ -9411,15 +9439,29 @@ body.fake-artist-explain-mode button.has-explanation:hover {
   align-items: center;
   justify-content: center;
   background: #ffffff;
+  position: relative;
+  overflow: hidden;
 }
 
 .azul-floor-slot.empty {
   background: #f3f4f6;
 }
 
-.azul-floor-penalty {
-  font-size: 11px;
+.azul-floor-slot-penalty {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 700;
   color: #6b7280;
+}
+
+.azul-floor-slot .azul-tile,
+.azul-floor-slot .azul-token {
+  position: relative;
+  z-index: 1;
 }
 
 .azul-player-card .azul-wall-grid {
