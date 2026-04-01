@@ -9318,7 +9318,7 @@ body.fake-artist-explain-mode button.has-explanation:hover {
 
 .azul-board-main {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
   flex-wrap: wrap;
 }
@@ -9540,8 +9540,8 @@ body.fake-artist-explain-mode button.has-explanation:hover {
   }
 
   .azul-board-main .azul-wall-grid:not(.compact) {
-    --azul-cell: 23px;
-    gap: 5px;
+    --azul-cell: 28px;
+    gap: 6px;
   }
 
   .azul-tile.lg {
