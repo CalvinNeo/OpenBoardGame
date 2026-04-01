@@ -614,10 +614,25 @@ if (azulClearSelectionBtn) {
 
 if (azulFloorBtn) {
   azulFloorBtn.addEventListener("click", () => {
+    if (isAzulActionAvailable("take_tiles") && azulSelectedSource && azulSelectedColor) {
+      const action = {
+        type: "take_tiles",
+        source: azulSelectedSource.type,
+        color: azulSelectedColor,
+        target_row: -1,
+      };
+      if (azulSelectedSource.type === "factory") {
+        action.source_index = azulSelectedSource.index;
+      }
+      sendAction(action);
+      clearAzulSelection();
+      return;
+    }
     azulSelectedRow = -1;
     updateAzulSelectionLabels();
     updateAzulActionButtons();
     renderAzulYourBoard(currentAzulView);
+    log("Select a source and color first, then click Send to Floor to submit.");
   });
 }
 

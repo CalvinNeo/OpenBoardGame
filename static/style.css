@@ -9385,6 +9385,11 @@ body.fake-artist-explain-mode button.has-explanation:hover {
   gap: 4px;
 }
 
+.azul-board-main .azul-wall-grid:not(.compact) {
+  --azul-cell: 28px;
+  gap: 6px;
+}
+
 .azul-wall-grid.compact {
   --azul-cell: 16px;
 }
@@ -9532,6 +9537,11 @@ body.fake-artist-explain-mode button.has-explanation:hover {
 
   .azul-wall-grid.compact {
     --azul-cell: 14px;
+  }
+
+  .azul-board-main .azul-wall-grid:not(.compact) {
+    --azul-cell: 23px;
+    gap: 5px;
   }
 
   .azul-tile.lg {
