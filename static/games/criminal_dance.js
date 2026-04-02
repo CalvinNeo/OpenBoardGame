@@ -224,7 +224,8 @@ function renderCriminalDancePlayed(view) {
     row.className = "criminal-dance-public";
     markCriminalDanceExplainable(row, `card:${entry.card.type}`);
     const name = (view.players || []).find((p) => p.player_id === entry.player_id)?.name || entry.player_id;
-    row.textContent = `${name}: ${criminalDanceCardLabel(entry.card.type)} - ${criminalDanceCardInfo(entry.card.type)}`;
+    const resultText = typeof entry.result === "string" && entry.result ? ` | ${entry.result}` : "";
+    row.textContent = `${name}: ${criminalDanceCardLabel(entry.card.type)} - ${criminalDanceCardInfo(entry.card.type)}${resultText}`;
     criminalDancePlayedEl.appendChild(row);
   });
 }

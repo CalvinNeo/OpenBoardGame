@@ -434,7 +434,8 @@ class CriminalDanceGame:
         if card_type == CARD_CRIMINAL and hand_before != 1:
             state["players"][player_id]["hand"].append(card)
             return [], "criminal can only be played as last card"
-        state["played"].append({"player_id": player_id, "card": card})
+        played_entry = {"player_id": player_id, "card": card}
+        state["played"].append(played_entry)
         state["discard"].append(card)
         events: List[Dict] = [{"type": "criminal_dance:play_card", "payload": {"player_id": player_id, "card_type": card_type}}]
 
@@ -444,6 +445,7 @@ class CriminalDanceGame:
             target_id = action.get("target_player_id")
             if target_id not in state["players"] or target_id == player_id:
                 return [], "valid target_player_id required"
+            played_entry["result"] = f"Looked at {_player_name(state, target_id)}'s hand."
             hand_types = [c["type"] for c in state["players"][target_id]["hand"]]
             _push_private_note(state, player_id, f"Witness: {_player_name(state, target_id)} has {hand_types}.")
         elif card_type == CARD_INFO_CONTROL:
@@ -454,6 +456,7 @@ class CriminalDanceGame:
             target_id = action.get("target_player_id")
             if target_id not in state["players"] or target_id == player_id:
                 return [], "valid target_player_id required"
+            played_entry["result"] = f"Traded with {_player_name(state, target_id)}."
             target_hand = state["players"][target_id]["hand"]
             your_hand = state["players"][player_id]["hand"]
             if not target_hand:
@@ -479,14 +482,20 @@ class CriminalDanceGame:
             target_id = action.get("target_player_id")
             if target_id not in state["players"] or target_id == player_id:
                 return [], "valid target_player_id required"
+            target_name = _player_name(state, target_id)
             if _detective_is_active(state, hand_before):
                 target_hand = state["players"][target_id]["hand"]
                 has_criminal = _hand_has_type(target_hand, CARD_CRIMINAL)
                 if has_criminal and not _hand_has_type(target_hand, CARD_ALIBI):
+                    played_entry["result"] = f"Accused {target_name}: Criminal found, no Alibi."
                     _end_round(state, "detective", [player_id], f"{_player_name(state, player_id)} caught the criminal.")
                 elif has_criminal:
+                    played_entry["result"] = f"Accused {target_name}: Criminal found but blocked by Alibi."
                     events.append({"type": "criminal_dance:alibi_block", "payload": {"player_id": target_id}})
+                else:
+                    played_entry["result"] = f"Accused {target_name}: no Criminal found."
             else:
+                played_entry["result"] = f"Detective inactive by rule ({state['config']['detective_activation_rule']})."
                 events.append({"type": "criminal_dance:detective_inactive", "payload": {"player_id": player_id}})
         elif card_type == CARD_DOG:
             target_id = action.get("target_player_id")
