@@ -15140,6 +15140,19 @@ body.skye-explain-mode .has-explanation {
   gap: 10px;
 }
 
+.lost-code-dice-op {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: #334155;
+  padding: 0 2px;
+}
+
+.lost-code-dice-equals {
+  margin-left: 4px;
+}
+
 .lost-code-player-list,
 .lost-code-token-list,
 .lost-code-guess-list {

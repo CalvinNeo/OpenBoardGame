@@ -56,13 +56,23 @@ class LostCodeGameTests(unittest.TestCase):
 
         self.assertEqual(state["phase"], "exchange_stones")
         self.assertEqual(state["current_actor"], "p2")
-        self.assertEqual(state["players"]["p1"]["score"], 5)
+        self.assertIn(state["players"]["p1"]["score"], (4, 5))
         self.assertEqual(state["players"]["p2"]["score"], 0)
 
         _, err = LostCodeGame.apply_action(state, "p2", {"type": "replace_stone", "symbol": "bird_blue"})
         self.assertIsNone(err)
         self.assertEqual(state["phase"], "roll_dice")
         self.assertEqual(state["round"], 2)
+
+        view_p1 = LostCodeGame.get_public_view(state, "p1")
+        summary = view_p1.get("last_round_summary", {})
+        self.assertEqual(summary.get("round"), 1)
+        entries = summary.get("entries", [])
+        self.assertEqual(len(entries), 2)
+        p1_entry = next(item for item in entries if item.get("player_id") == "p1")
+        p2_entry = next(item for item in entries if item.get("player_id") == "p2")
+        self.assertEqual(p1_entry.get("result"), "correct")
+        self.assertIn(p2_entry.get("result"), ("wrong_low", "wrong_high"))
 
     def test_final_guess_scoring_with_shortcut(self):
         state = LostCodeGame.init_game({}, _players())

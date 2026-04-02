@@ -31,15 +31,46 @@ const lostCodeControlsEl = document.getElementById("lostCodeControls");
 const lostCodeTokenEl = document.getElementById("lostCodeTokenStatus");
 const lostCodeGuessesEl = document.getElementById("lostCodeGuesses");
 
-const LOST_CODE_HELP_HTML = `
+let lostCodeHelpLanguage = "zh";
+
+const LOST_CODE_HELP_HTML_EN = `
   <h3>Goal</h3>
   <p>Read clues and score the most points by predicting your hidden code.</p>
+  <p><strong>What exactly are you guessing?</strong></p>
+  <ul>
+    <li><strong>During each round:</strong> you guess a range for <strong>your own total</strong> from the 3 dice symbols. Your total is the sum of your hidden stone values for those symbols, counting repeats (example: A, A, B means <code>A + A + B</code>).</li>
+    <li><strong>At final scoring:</strong> you guess the <strong>exact value</strong> of each symbol in your own hidden log (or use locked values from Deadly Shortcut if you took those tokens).</li>
+  </ul>
+
+  <h3>Setup (how many and what range)</h3>
+  <ul>
+    <li>This game uses <strong>stone values</strong> (not hand cards).</li>
+    <li>Each player gets <strong>1 private log</strong> with <strong>1 stone per active symbol</strong>.</li>
+    <li><strong>Standard / X-Race:</strong> 6 active symbols, so each player has <strong>6 hidden stones</strong> (one for each symbol).</li>
+    <li><strong>Intro:</strong> 5 active symbols (no red bear), so each player has <strong>5 hidden stones</strong>.</li>
+    <li><strong>Value range per symbol:</strong> Standard/Intro uses <strong>0-7</strong>; X-Race uses <strong>0-8</strong>.</li>
+  </ul>
 
   <h3>Modes</h3>
   <ul>
     <li><strong>Standard</strong>: Six symbols on the dice; each symbol uses stone values <strong>0–7</strong> (three dice, max sum <strong>21</strong>). The roller may change <strong>one</strong> die to any symbol before guesses.</li>
     <li><strong>Intro</strong>: The red bear is removed—only <strong>five</strong> symbols are in play, so rolls never show bears. Otherwise the same as Standard (one die may still be changed).</li>
     <li><strong>X-Race</strong>: Same six symbols as Standard, but stones go up to <strong>8</strong> per symbol (max sum <strong>24</strong>). Wheel sizes and round flow are unchanged.</li>
+  </ul>
+
+  <h3>Round Flow</h3>
+  <ol>
+    <li>Roll 3 symbol dice (active symbol set depends on mode).</li>
+    <li>If Deadly Shortcut is on, resolve shortcut offers using the <strong>rolled</strong> faces, then the roller may modify <strong>one</strong> die and confirms.</li>
+    <li>From most behind to most ahead, each player picks one wheel and submits a sum range.</li>
+    <li>Correct range scores wheel VP (plus curse bonuses if applicable); wrong players exchange one stone where the pile still has cards.</li>
+  </ol>
+
+  <h3>Visibility</h3>
+  <ul>
+    <li>You cannot see your own current stone values.</li>
+    <li>You can see other players and neutral logs.</li>
+    <li>Discarded stones are public.</li>
   </ul>
 
   <h3>Deadly Shortcut (expansion)</h3>
@@ -59,22 +90,97 @@ const LOST_CODE_HELP_HTML = `
     <li>If you are cursed and your <strong>guess is wrong</strong>: you <strong>lose VP equal to that wheel’s value</strong> (then still replace a stone like other wrong guesses).</li>
     <li>After each round: if <strong>anyone has 13+ VP</strong>, or it is the <strong>forced cut</strong> before the last round, the curse is removed. Otherwise it passes to the <strong>score leader</strong> (ties broken like the physical rules).</li>
   </ul>
+`;
 
-  <h3>Round Flow</h3>
+const LOST_CODE_HELP_HTML_ZH = `
+  <h3>目标</h3>
+  <p>通过观察线索，尽可能准确推测自己的隐藏密码并获得最高分。</p>
+  <p><strong>你到底在猜什么？</strong></p>
+  <ul>
+    <li><strong>每一轮：</strong>你要猜的是 <strong>你自己的总和区间</strong>。总和由 3 个骰子符号决定：把你日志里对应符号的隐藏数值相加；如果符号重复就重复加（例如 A、A、B 就是 <code>A + A + B</code>）。</li>
+    <li><strong>终局结算：</strong>你要猜自己日志里每个符号的 <strong>精确数值</strong>（若拿过 Deadly Shortcut，则该符号按你锁定的数字结算）。</li>
+  </ul>
+
+  <h3>开局信息（数量与范围）</h3>
+  <ul>
+    <li>这个游戏使用的是 <strong>石头数值</strong>，不是手牌。</li>
+    <li>每位玩家有 <strong>1 本私有日志</strong>，每个启用符号对应 <strong>1 颗石头</strong>。</li>
+    <li><strong>Standard / X-Race：</strong>共有 6 种符号，所以每人有 <strong>6 颗隐藏石头</strong>。</li>
+    <li><strong>Intro：</strong>去掉红熊，只用 5 种符号，所以每人有 <strong>5 颗隐藏石头</strong>。</li>
+    <li><strong>每个符号的数值范围：</strong>Standard / Intro 为 <strong>0-7</strong>；X-Race 为 <strong>0-8</strong>。</li>
+  </ul>
+
+  <h3>模式</h3>
+  <ul>
+    <li><strong>Standard</strong>：6 种符号；每种符号石头数值 <strong>0-7</strong>（3 颗骰子的总和上限 <strong>21</strong>）。掷骰者在猜测前可把 <strong>1</strong> 颗骰子改成任意符号。</li>
+    <li><strong>Intro</strong>：移除红熊，只用 <strong>5</strong> 种符号，掷骰不会出现熊。其余与 Standard 相同（仍可改 <strong>1</strong> 颗骰子）。</li>
+    <li><strong>X-Race</strong>：符号同 Standard，但每种符号数值上限为 <strong>8</strong>（总和上限 <strong>24</strong>）。轮盘和回合流程不变。</li>
+  </ul>
+
+  <h3>每轮流程</h3>
   <ol>
-    <li>Roll 3 symbol dice (active symbol set depends on mode).</li>
-    <li>If Deadly Shortcut is on, resolve shortcut offers using the <strong>rolled</strong> faces, then the roller may modify <strong>one</strong> die and confirms.</li>
-    <li>From most behind to most ahead, each player picks one wheel and submits a sum range.</li>
-    <li>Correct range scores wheel VP (plus curse bonuses if applicable); wrong players exchange one stone where the pile still has cards.</li>
+    <li>掷 3 颗符号骰（可用符号受模式影响）。</li>
+    <li>若开启 Deadly Shortcut，先按 <strong>原始掷骰结果</strong> 处理 token 抢夺，再由掷骰者改 <strong>1</strong> 颗骰并确认。</li>
+    <li>从落后到领先，玩家依次选择一个轮盘并提交总和区间。</li>
+    <li>猜中得轮盘分（若有诅咒再加成/惩罚）；猜错者需在可抽堆中选择一个符号换石头。</li>
   </ol>
 
-  <h3>Visibility</h3>
+  <h3>可见信息</h3>
   <ul>
-    <li>You cannot see your own current stone values.</li>
-    <li>You can see other players and neutral logs.</li>
-    <li>Discarded stones are public.</li>
+    <li>你看不到自己当前石头的数值。</li>
+    <li>你能看到其他玩家日志和中立日志。</li>
+    <li>被弃掉的石头是公开信息。</li>
+  </ul>
+
+  <h3>Deadly Shortcut（扩展）</h3>
+  <p>每个符号各有一个额外 token。若原始 3 颗骰子结果中某符号出现 <strong>2 次或 3 次</strong>，会触发该符号的 token 抢夺流程。此流程发生在掷骰者改骰子之前。</p>
+  <ul>
+    <li>顺序与选轮盘相同：从 <strong>当前最落后</strong> 到领先者（该轮掷骰者视为最落后）。</li>
+    <li>对每个触发符号，玩家依次选择 <strong>pass</strong> 或 <strong>take</strong>。拿取后需为该符号锁定 <strong>1-3</strong> 个数字，仅用于 <strong>终局结算</strong>，且不可更改。</li>
+    <li>每个符号 token 整局只能被拿一次。距离终局还剩 <strong>3 轮</strong> 时，未被拿走的 token 会移除。</li>
+    <li>终局该符号结算：若命中，锁 1/2/3 个数字分别得 <strong>+10/+4/+2</strong>；未命中则 <strong>-4</strong>。不影响回合内轮盘得分逻辑。</li>
+  </ul>
+
+  <h3>Curse of the Temple（扩展）</h3>
+  <p>游戏中会有一个诅咒标记在玩家之间流转。</p>
+  <ul>
+    <li>若当前无人被诅咒，<strong>第一个到达 7 分及以上</strong> 的玩家会立刻获得诅咒。</li>
+    <li>被诅咒玩家若本轮 <strong>猜中区间</strong>：除轮盘分外，再获得 <strong>每位猜错玩家 +1 分</strong>。</li>
+    <li>被诅咒玩家若本轮 <strong>猜错</strong>：会 <strong>扣除该轮盘对应分值</strong>（之后仍照常执行换石头）。</li>
+    <li>每轮结束后：若 <strong>有人 13 分以上</strong>，或到达最终轮前的强制清除节点，诅咒移除；否则转移给 <strong>当前领先者</strong>（平分按实体规则的顺位处理）。</li>
   </ul>
 `;
+
+function renderLostCodeHelpContent() {
+  if (!lostCodeHelpContent) return;
+  const isZh = lostCodeHelpLanguage === "zh";
+  const bodyHtml = isZh ? LOST_CODE_HELP_HTML_ZH : LOST_CODE_HELP_HTML_EN;
+  lostCodeHelpContent.innerHTML = `
+    <div class="row actions" style="justify-content:flex-end;gap:8px;margin-bottom:10px;">
+      <button id="lostCodeHelpLangZhBtn" type="button" ${isZh ? "class=\"active\"" : ""}>中文</button>
+      <button id="lostCodeHelpLangEnBtn" type="button" ${isZh ? "" : "class=\"active\""}>English</button>
+    </div>
+    ${bodyHtml}
+  `;
+  const zhBtn = document.getElementById("lostCodeHelpLangZhBtn");
+  const enBtn = document.getElementById("lostCodeHelpLangEnBtn");
+  if (zhBtn) {
+    zhBtn.addEventListener("click", () => {
+      if (lostCodeHelpLanguage !== "zh") {
+        lostCodeHelpLanguage = "zh";
+        renderLostCodeHelpContent();
+      }
+    });
+  }
+  if (enBtn) {
+    enBtn.addEventListener("click", () => {
+      if (lostCodeHelpLanguage !== "en") {
+        lostCodeHelpLanguage = "en";
+        renderLostCodeHelpContent();
+      }
+    });
+  }
+}
 
 const LOST_CODE_BUTTON_EXPLANATIONS = {
   dice_pick: {
@@ -91,7 +197,7 @@ const LOST_CODE_BUTTON_EXPLANATIONS = {
   },
   modify_symbol: {
     name: "Modify Die Symbol",
-    description: "Change the selected die into this symbol.",
+    description: "Change the selected die into this symbol. Active means this symbol is legal now; inactive means you cannot choose it in the current step.",
     cost: "1 die change",
     costType: "ap",
   },
@@ -127,7 +233,7 @@ const LOST_CODE_BUTTON_EXPLANATIONS = {
   },
   exchange_symbol: {
     name: "Replace Symbol Stone",
-    description: "Discard current stone and draw same-symbol replacement.",
+    description: "Discard current stone and draw same-symbol replacement. In the button label, (N) means how many stones remain in that symbol's draw pile. Active means you can replace with this symbol now; inactive means this symbol is currently unavailable (usually N = 0).",
     cost: "Forced after wrong guess",
     costType: "penalty",
   },
@@ -221,6 +327,7 @@ function showLostCodeButtonExplanation(explainKey) {
           <h3>${wheelId} · Wheel Meaning</h3>
           <p>${meaning.summary}</p>
           <ul>
+            <li><strong>Button label format:</strong> ${wheelId} (${meaning.windowSize} / +${meaning.vp})</li>
             <li><strong>Window size:</strong> ${meaning.windowSize} (you must submit exactly ${meaning.windowSize} contiguous numbers)</li>
             <li><strong>Reward:</strong> +${meaning.vp} VP if your actual sum falls in the chosen range</li>
             <li><strong>Trade-off:</strong> narrower window = harder hit, higher reward</li>
@@ -340,7 +447,20 @@ function renderLostCodeDice(view) {
   if (!lostCodeDiceEl) return;
   lostCodeDiceEl.innerHTML = "";
   const dice = Array.isArray(view.dice_symbols) ? view.dice_symbols : [];
+  if (!dice.length) {
+    const empty = document.createElement("div");
+    empty.className = "hint";
+    empty.textContent = "-";
+    lostCodeDiceEl.appendChild(empty);
+    return;
+  }
   dice.forEach((symbol, index) => {
+    if (index > 0) {
+      const plus = document.createElement("span");
+      plus.className = "lost-code-dice-op";
+      plus.textContent = "+";
+      lostCodeDiceEl.appendChild(plus);
+    }
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "lost-code-chip";
@@ -359,6 +479,10 @@ function renderLostCodeDice(view) {
     }
     lostCodeDiceEl.appendChild(btn);
   });
+  const equals = document.createElement("span");
+  equals.className = "lost-code-dice-op lost-code-dice-equals";
+  equals.textContent = "= ?";
+  lostCodeDiceEl.appendChild(equals);
 }
 
 function renderLostCodePlayers(view) {
@@ -438,19 +562,65 @@ function renderLostCodeTokenStatus(view) {
 function renderLostCodeGuesses(view) {
   if (!lostCodeGuessesEl) return;
   lostCodeGuessesEl.innerHTML = "";
+  const formatResult = (result) => {
+    if (result === "correct") return "correct ✅";
+    if (result === "wrong" || result === "wrong_low" || result === "wrong_high") return "wrong ❌";
+    return result || "pending";
+  };
+
+  const lastSummary = view.last_round_summary || {};
+  const summaryEntries = Array.isArray(lastSummary.entries) ? lastSummary.entries : [];
+  if (summaryEntries.length) {
+    const title = document.createElement("div");
+    title.className = "hint";
+    const roundText = Number.isInteger(lastSummary.round) ? `Round ${lastSummary.round}` : "Previous Round";
+    const dice = Array.isArray(lastSummary.dice_symbols)
+      ? lastSummary.dice_symbols.map((symbol) => lostCodeSymbolLabel(symbol)).join(" ")
+      : "";
+    title.textContent = dice ? `${roundText} resolved (${dice})` : `${roundText} resolved`;
+    lostCodeGuessesEl.appendChild(title);
+
+    summaryEntries.forEach((entry) => {
+      const row = document.createElement("div");
+      row.className = "lost-code-guess-line";
+      const wheel = entry.wheel_id || "-";
+      const range = entry.min !== undefined && entry.max !== undefined ? `[${entry.min}-${entry.max}]` : "-";
+      row.textContent = `${lostCodeFindPlayerName(entry.player_id)}: ${wheel} ${range} -> ${formatResult(entry.result)}`;
+      lostCodeGuessesEl.appendChild(row);
+    });
+  }
+
   const guesses = view.guesses || {};
   const players = Array.isArray(view.players) ? view.players : [];
+  const currentRows = [];
   players.forEach((player) => {
     const guess = guesses[player.player_id];
     if (!guess) return;
-    const row = document.createElement("div");
-    row.className = "lost-code-guess-line";
     const wheel = guess.wheel_id || "-";
     const range = guess.min !== undefined && guess.max !== undefined ? `[${guess.min}-${guess.max}]` : "-";
-    const result = guess.result || "pending";
-    row.textContent = `${player.name || player.player_id}: ${wheel} ${range} -> ${result}`;
-    lostCodeGuessesEl.appendChild(row);
+    currentRows.push(`${player.name || player.player_id}: ${wheel} ${range} -> ${formatResult(guess.result)}`);
   });
+  if (currentRows.length) {
+    if (summaryEntries.length) {
+      const spacer = document.createElement("div");
+      spacer.className = "hint";
+      spacer.textContent = "Current round";
+      lostCodeGuessesEl.appendChild(spacer);
+    }
+    currentRows.forEach((text) => {
+      const row = document.createElement("div");
+      row.className = "lost-code-guess-line";
+      row.textContent = text;
+      lostCodeGuessesEl.appendChild(row);
+    });
+  }
+
+  if (!summaryEntries.length && !currentRows.length) {
+    const empty = document.createElement("div");
+    empty.className = "hint";
+    empty.textContent = "No resolved guesses yet.";
+    lostCodeGuessesEl.appendChild(empty);
+  }
 }
 
 function renderLostCodeModifyControls(view, host) {
@@ -757,7 +927,7 @@ function renderLostCodeControls(view) {
 
 function openLostCodeHelpModal() {
   if (!lostCodeHelpModal || !lostCodeHelpContent) return;
-  lostCodeHelpContent.innerHTML = LOST_CODE_HELP_HTML;
+  renderLostCodeHelpContent();
   setModalVisible(lostCodeHelpModal, true);
 }
 

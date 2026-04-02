@@ -347,6 +347,26 @@ def _resolve_round_guesses(state: Dict) -> None:
             if int(state["players"][player_id]["score"]) >= 7:
                 state["cursed_player_id"] = player_id
 
+    summary_entries: List[Dict] = []
+    for player_id in guess_order:
+        entry = guesses.get(player_id)
+        if not entry:
+            continue
+        summary_entries.append(
+            {
+                "player_id": player_id,
+                "wheel_id": entry.get("wheel_id"),
+                "min": entry.get("min"),
+                "max": entry.get("max"),
+                "result": entry.get("result"),
+            }
+        )
+    state["last_round_summary"] = {
+        "round": int(state.get("round", 1)),
+        "dice_symbols": list(state.get("dice_symbols", [])),
+        "entries": summary_entries,
+    }
+
     context["wrong_queue"] = wrong_ids
     context["exchange_index"] = 0
     if wrong_ids:
@@ -559,6 +579,7 @@ class LostCodeGame:
             "winner_ids": [],
             "game_over": False,
             "next_stack_order": next_stack,
+            "last_round_summary": {},
         }
         _start_round(state)
         return state
@@ -848,6 +869,7 @@ class LostCodeGame:
             "winner_ids": list(state.get("winner_ids", [])),
             "game_over": bool(state.get("game_over")),
             "legal_actions": LostCodeGame.get_legal_actions(state, viewer_id),
+            "last_round_summary": dict(state.get("last_round_summary", {})),
         }
 
     @staticmethod
