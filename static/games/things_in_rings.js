@@ -704,6 +704,37 @@ function getThingsInRingsDecisionContext(view) {
   return null;
 }
 
+function getThingsInRingsJudgeOutcome(view, context) {
+  if (!context || context.mode !== "judge") {
+    return null;
+  }
+  if (
+    !Array.isArray(thingsInRingsDecisionMemberships) ||
+    thingsInRingsDecisionMemberships.length !== (view.rings || []).length ||
+    !thingsInRingsDecisionMemberships.every((value) => typeof value === "boolean")
+  ) {
+    return null;
+  }
+  const proposedZoneId = context.proposedZoneId || "";
+  const actualZoneId = thingsInRingsDecisionMemberships.map((value) => (value ? "1" : "0")).join("");
+  const mismatches = [];
+  const rings = Array.isArray(view.rings) ? view.rings : [];
+  for (let index = 0; index < actualZoneId.length; index += 1) {
+    const proposedFits = proposedZoneId[index] === "1";
+    const actualFits = actualZoneId[index] === "1";
+    if (proposedFits === actualFits) {
+      continue;
+    }
+    const ringLabel = rings[index] && rings[index].label ? rings[index].label : `Ring ${index + 1}`;
+    mismatches.push(`${ringLabel} ring guessed ${proposedFits ? "Fits" : "Not Fit"}, actual is ${actualFits ? "Fits" : "Not Fit"}`);
+  }
+  return {
+    correct: proposedZoneId === actualZoneId,
+    actualZoneId,
+    mismatches,
+  };
+}
+
 function renderThingsInRingsKnowerArea(view) {
   if (!thingsInRingsKnowerArea || !thingsInRingsKnowerCards || !thingsInRingsDecisionRings) {
     return;
@@ -796,10 +827,23 @@ function renderThingsInRingsKnowerArea(view) {
       zoneChip.textContent = `Initial zone: ${proposedZoneLabel}`;
       meta.appendChild(zoneChip);
 
-      const idChip = document.createElement("span");
-      idChip.className = "things-rings-decision-meta-chip subtle";
-      idChip.textContent = `Zone ID: ${context.proposedZoneId}`;
-      meta.appendChild(idChip);
+      const outcome = getThingsInRingsJudgeOutcome(view, context);
+      if (outcome) {
+        const outcomeChip = document.createElement("span");
+        outcomeChip.className = "things-rings-decision-meta-chip";
+        outcomeChip.textContent = outcome.correct ? "Judgement: Correct guess" : "Judgement: Wrong guess";
+        meta.appendChild(outcomeChip);
+
+        if (!outcome.correct) {
+          const actualZoneLabel = formatThingsInRingsZoneLabel(view, outcome.actualZoneId);
+          const reasonChip = document.createElement("span");
+          reasonChip.className = "things-rings-decision-meta-chip subtle";
+          reasonChip.textContent = outcome.mismatches.length
+            ? `Mismatch: ${outcome.mismatches.join("; ")}`
+            : `Mismatch: guessed ${proposedZoneLabel}, actual is ${actualZoneLabel}`;
+          meta.appendChild(reasonChip);
+        }
+      }
 
       thingsInRingsDecisionCard.appendChild(meta);
     }
