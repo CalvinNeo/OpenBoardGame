@@ -1,37 +1,45 @@
 {
   "他": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "亻"
   },
   "伞": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "人"
   },
   "偶": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "亻"
   },
   "刀": {
     "structure": "single",
     "grammatical_roles": [
       "noun"
-    ]
+    ],
+    "radical": "刀"
   },
   "刷": {
     "structure": "other",
     "grammatical_roles": [
       "verb"
-    ]
+    ],
+    "radical": "刂"
   },
   "勺": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "勹"
   },
   "包": {
     "structure": "semi_enclosure",
     "grammatical_roles": [
       "noun",
       "verb"
-    ]
+    ],
+    "radical": "勹"
   },
   "匙": {
-    "structure": "other"
+    "structure": "other",
+    "radical": "匕"
   },
   "匣": {
     "radical": "匚",
@@ -44,62 +52,77 @@
     "structure": "other",
     "grammatical_roles": [
       "noun"
-    ]
+    ],
+    "radical": "口"
   },
   "图": {
     "structure": "full_enclosure",
     "grammatical_roles": [
       "noun",
       "verb"
-    ]
+    ],
+    "radical": "囗"
   },
   "垫": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "土"
   },
   "堡": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "土"
   },
   "壶": {
     "structure": "up_down",
     "grammatical_roles": [
       "noun"
-    ]
+    ],
+    "radical": "士"
   },
   "头": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "大"
   },
   "夹": {
-    "structure": "other"
+    "structure": "other",
+    "radical": "大"
   },
   "套": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "大"
   },
   "子": {
     "structure": "single",
     "grammatical_roles": [
       "noun"
-    ]
+    ],
+    "radical": "子"
   },
   "宝": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "宀"
   },
   "巾": {
     "structure": "single",
     "grammatical_roles": [
       "noun"
-    ]
+    ],
+    "radical": "巾"
   },
   "布": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "巾"
   },
   "帘": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "巾"
   },
   "帚": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "巾"
   },
   "带": {
-    "structure": "other"
+    "structure": "other",
+    "radical": "巾"
   },
   "徽": {
     "radical": "彳",
@@ -109,10 +132,12 @@
     ]
   },
   "戒": {
-    "structure": "other"
+    "structure": "other",
+    "radical": "戈"
   },
   "扇": {
-    "structure": "other"
+    "structure": "other",
+    "radical": "户"
   },
   "扣": {
     "radical": "提手旁",
@@ -140,22 +165,27 @@
     "structure": "up_down",
     "grammatical_roles": [
       "noun"
-    ]
+    ],
+    "radical": "日"
   },
   "木": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "木字旁"
   },
   "本": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "木字旁"
   },
   "机": {
     "structure": "left_right",
     "grammatical_roles": [
       "noun"
-    ]
+    ],
+    "radical": "木字旁"
   },
   "杆": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "木字旁"
   },
   "杯": {
     "radical": "木字旁",
@@ -176,7 +206,8 @@
     "structure": "left_right"
   },
   "果": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "木字旁"
   },
   "架": {
     "radical": "木字旁",
@@ -210,85 +241,105 @@
     "structure": "left_right"
   },
   "槌": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "木字旁"
   },
   "毯": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "毛"
   },
   "水": {
     "structure": "single",
     "grammatical_roles": [
       "noun"
-    ]
+    ],
+    "radical": "水"
   },
   "泡": {
     "structure": "left_right",
     "grammatical_roles": [
       "verb"
-    ]
+    ],
+    "radical": "氵"
   },
   "源": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "氵"
   },
   "灯": {
     "structure": "left_right",
     "grammatical_roles": [
       "noun"
-    ]
+    ],
+    "radical": "火"
   },
   "炉": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "火"
   },
   "烛": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "火"
   },
   "照": {
     "structure": "up_down",
     "grammatical_roles": [
       "verb"
-    ]
+    ],
+    "radical": "灬"
   },
   "煲": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "火"
   },
   "牌": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "片"
   },
   "环": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "王"
   },
   "球": {
     "structure": "left_right",
     "grammatical_roles": [
       "noun"
-    ]
+    ],
+    "radical": "王"
   },
   "琴": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "王"
   },
   "瓶": {
     "structure": "left_right",
     "grammatical_roles": [
       "noun"
-    ]
+    ],
+    "radical": "瓦"
   },
   "皂": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "白"
   },
   "盒": {
     "structure": "up_down",
     "grammatical_roles": [
       "noun"
-    ]
+    ],
+    "radical": "皿"
   },
   "盔": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "皿"
   },
   "盘": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "皿"
   },
   "票": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "示"
   },
   "章": {
     "radical": "立",
@@ -327,67 +378,86 @@
     "structure": "up_down"
   },
   "糕": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "米"
   },
   "糖": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "米"
   },
   "素": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "糸"
   },
   "纸": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "纟"
   },
   "线": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "纟"
   },
   "绵": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "纟"
   },
   "缸": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "缶"
   },
   "罩": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "罒"
   },
   "胎": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "月"
   },
   "脑": {
     "structure": "left_right",
     "grammatical_roles": [
       "noun"
-    ]
+    ],
+    "radical": "月"
   },
   "膏": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "月"
   },
   "蕉": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "草字头"
   },
   "衣": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "衣"
   },
   "表": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "衣"
   },
   "袋": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "衣"
   },
   "裙": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "衤"
   },
   "贴": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "贝"
   },
   "车": {
     "structure": "single",
     "grammatical_roles": [
       "noun"
-    ]
+    ],
+    "radical": "车"
   },
   "针": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "金字旁"
   },
   "钉": {
     "radical": "金字旁",
@@ -414,7 +484,8 @@
     "grammatical_roles": [
       "noun",
       "verb"
-    ]
+    ],
+    "radical": "金字旁"
   },
   "锅": {
     "radical": "金字旁",
@@ -436,65 +507,77 @@
     "structure": "left_right"
   },
   "霜": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "雨"
   },
   "靴": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "革"
   },
   "鞋": {
     "structure": "left_right",
     "grammatical_roles": [
       "noun"
-    ]
+    ],
+    "radical": "革"
   },
   "电": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "田"
   },
   "手": {
     "structure": "single",
     "grammatical_roles": [
       "noun"
-    ]
+    ],
+    "radical": "手"
   },
   "雨": {
     "structure": "single",
     "grammatical_roles": [
       "noun"
-    ]
+    ],
+    "radical": "雨"
   },
   "洗": {
     "structure": "left_right",
     "grammatical_roles": [
       "verb"
-    ]
+    ],
+    "radical": "氵"
   },
   "书": {
     "structure": "single",
     "grammatical_roles": [
       "noun"
-    ]
+    ],
+    "radical": "乙"
   },
   "奖": {
     "structure": "up_down",
     "grammatical_roles": [
       "noun",
       "verb"
-    ]
+    ],
+    "radical": "大"
   },
   "保": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "亻"
   },
   "毛": {
     "structure": "single",
     "grammatical_roles": [
       "noun"
-    ]
+    ],
+    "radical": "毛"
   },
   "牙": {
     "structure": "single",
     "grammatical_roles": [
       "noun"
-    ]
+    ],
+    "radical": "牙"
   },
   "护": {
     "radical": "提手旁",
@@ -511,7 +594,8 @@
     ]
   },
   "台": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "口"
   },
   "打": {
     "radical": "提手旁",
@@ -524,16 +608,19 @@
     "structure": "left_right",
     "grammatical_roles": [
       "verb"
-    ]
+    ],
+    "radical": "口"
   },
   "自": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "自"
   },
   "火": {
     "structure": "single",
     "grammatical_roles": [
       "noun"
-    ]
+    ],
+    "radical": "火"
   },
   "茶": {
     "radical": "草字头",
@@ -543,13 +630,16 @@
     ]
   },
   "香": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "香"
   },
   "饭": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "饣"
   },
   "围": {
-    "structure": "full_enclosure"
+    "structure": "full_enclosure",
+    "radical": "囗"
   },
   "拖": {
     "radical": "提手旁",
@@ -559,43 +649,51 @@
     ]
   },
   "雪": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "雨"
   },
   "胶": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "月"
   },
   "门": {
     "structure": "single",
     "grammatical_roles": [
       "noun"
-    ]
+    ],
+    "radical": "门"
   },
   "口": {
     "structure": "single",
     "grammatical_roles": [
       "noun"
-    ]
+    ],
+    "radical": "口"
   },
   "订": {
     "structure": "left_right",
     "grammatical_roles": [
       "verb"
-    ]
+    ],
+    "radical": "讠"
   },
   "耳": {
     "structure": "single",
     "grammatical_roles": [
       "noun"
-    ]
+    ],
+    "radical": "耳"
   },
   "睡": {
     "structure": "left_right",
     "grammatical_roles": [
       "verb"
-    ]
+    ],
+    "radical": "目"
   },
   "地": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "土"
   },
   "蓝": {
     "radical": "草字头",
@@ -606,10 +704,12 @@
     "structure": "left_right"
   },
   "会": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "人"
   },
   "队": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "阝"
   },
   "草": {
     "radical": "草字头",
@@ -664,525 +764,699 @@
     "structure": "left_right"
   },
   "鸟": {
-    "structure": "other"
+    "structure": "other",
+    "radical": "鸟"
   },
   "U": {
-    "structure": "other"
+    "structure": "other",
+    "radical": "other"
   },
   "三": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "一"
   },
   "交": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "亠"
   },
   "人": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "人"
   },
   "仪": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "亻"
   },
   "体": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "亻"
   },
   "便": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "亻"
   },
   "信": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "亻"
   },
   "充": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "亠"
   },
   "内": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "冂"
   },
   "册": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "丿"
   },
   "冰": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "冫"
   },
   "冲": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "冫"
   },
   "几": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "几"
   },
   "划": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "刂"
   },
   "刨": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "刂"
   },
   "刮": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "刂"
   },
   "剂": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "刂"
   },
   "加": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "力"
   },
   "医": {
-    "structure": "semi_enclosure"
+    "structure": "semi_enclosure",
+    "radical": "匚"
   },
   "卡": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "丨"
   },
   "卷": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "㔾"
   },
   "历": {
-    "structure": "semi_enclosure"
+    "structure": "semi_enclosure",
+    "radical": "厂"
   },
   "去": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "厶"
   },
   "反": {
-    "structure": "semi_enclosure"
+    "structure": "semi_enclosure",
+    "radical": "又"
   },
   "发": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "又"
   },
   "名": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "口"
   },
   "听": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "口"
   },
   "吸": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "口"
   },
   "哨": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "口"
   },
   "啤": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "口"
   },
   "回": {
-    "structure": "full_enclosure"
+    "structure": "full_enclosure",
+    "radical": "囗"
   },
   "圆": {
-    "structure": "full_enclosure"
+    "structure": "full_enclosure",
+    "radical": "囗"
   },
   "圈": {
-    "structure": "full_enclosure"
+    "structure": "full_enclosure",
+    "radical": "囗"
   },
   "坞": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "土"
   },
   "垃": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "土"
   },
   "墙": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "土"
   },
   "奶": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "女"
   },
   "封": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "寸"
   },
   "小": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "小"
   },
   "尤": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "尢"
   },
   "尺": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "尸"
   },
   "工": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "工"
   },
   "帽": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "巾"
   },
   "幕": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "巾"
   },
   "床": {
-    "structure": "semi_enclosure"
+    "structure": "semi_enclosure",
+    "radical": "广"
   },
   "开": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "廾"
   },
   "录": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "彐"
   },
   "徒": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "彳"
   },
   "扑": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "提手旁"
   },
   "扩": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "提手旁"
   },
   "扫": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "提手旁"
   },
   "投": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "提手旁"
   },
   "折": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "提手旁"
   },
   "披": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "提手旁"
   },
   "拔": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "提手旁"
   },
   "拼": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "提手旁"
   },
   "挂": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "提手旁"
   },
   "掸": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "提手旁"
   },
   "擦": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "提手旁"
   },
   "收": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "攵"
   },
   "救": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "攵"
   },
   "数": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "攵"
   },
   "文": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "文"
   },
   "斗": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "斗"
   },
   "料": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "斗"
   },
   "无": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "一"
   },
   "日": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "日"
   },
   "晾": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "日"
   },
   "暖": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "日"
   },
   "望": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "月"
   },
   "杖": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "木字旁"
   },
   "枪": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "木字旁"
   },
   "柜": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "木字旁"
   },
   "桌": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "木字旁"
   },
   "档": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "木字旁"
   },
   "桨": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "木字旁"
   },
   "棉": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "木字旁"
   },
   "棋": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "木字旁"
   },
   "模": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "木字旁"
   },
   "橡": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "木字旁"
   },
   "求": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "水"
   },
   "汤": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "氵"
   },
   "沙": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "氵"
   },
   "沥": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "氵"
   },
   "油": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "氵"
   },
   "泳": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "氵"
   },
   "消": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "氵"
   },
   "液": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "氵"
   },
   "清": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "氵"
   },
   "漏": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "氵"
   },
   "炒": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "火"
   },
   "点": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "灬"
   },
   "烘": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "火"
   },
   "烤": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "火"
   },
   "热": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "灬"
   },
   "煎": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "灬"
   },
   "片": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "片"
   },
   "玩": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "王"
   },
   "玻": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "王"
   },
   "登": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "癶"
   },
   "白": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "白"
   },
   "盅": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "皿"
   },
   "盆": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "皿"
   },
   "盖": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "皿"
   },
   "相": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "目"
   },
   "砂": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "石"
   },
   "砧": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "石"
   },
   "秤": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "禾"
   },
   "积": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "禾"
   },
   "移": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "禾"
   },
   "空": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "穴"
   },
   "笼": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "龙"
   },
   "筐": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "竹字头"
   },
   "筛": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "竹字头"
   },
   "筝": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "竹字头"
   },
   "篓": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "竹字头"
   },
   "篮": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "竹字头"
   },
   "米": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "米"
   },
   "粘": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "米"
   },
   "精": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "米"
   },
   "红": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "纟"
   },
   "纱": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "纟"
   },
   "绳": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "纟"
   },
   "罐": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "缶"
   },
   "网": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "冂"
   },
   "置": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "罒"
   },
   "肘": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "月"
   },
   "胸": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "月"
   },
   "脏": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "月"
   },
   "腕": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "月"
   },
   "腰": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "月"
   },
   "膜": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "月"
   },
   "膝": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "月"
   },
   "船": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "舟"
   },
   "荧": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "草字头"
   },
   "蒜": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "草字头"
   },
   "蒸": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "草字头"
   },
   "蛋": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "虫"
   },
   "螺": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "虫"
   },
   "血": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "血"
   },
   "行": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "行"
   },
   "裁": {
-    "structure": "semi_enclosure"
+    "structure": "semi_enclosure",
+    "radical": "衣"
   },
   "计": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "讠"
   },
   "记": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "讠"
   },
   "读": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "讠"
   },
   "调": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "讠"
   },
   "象": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "豕"
   },
   "路": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "足"
   },
   "跳": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "足"
   },
   "转": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "车"
   },
   "遥": {
-    "structure": "semi_enclosure"
+    "structure": "semi_enclosure",
+    "radical": "辶"
   },
   "邮": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "阝"
   },
   "酒": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "酉"
   },
   "醒": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "酉"
   },
   "里": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "里"
   },
   "野": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "里"
   },
   "量": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "里"
   },
   "钢": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "金字旁"
   },
   "锡": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "金字旁"
   },
   "长": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "长"
   },
   "闹": {
-    "structure": "semi_enclosure"
+    "structure": "semi_enclosure",
+    "radical": "门"
   },
   "防": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "阝"
   },
   "陀": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "阝"
   },
   "除": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "阝"
   },
   "面": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "面"
   },
   "风": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "风"
   },
   "食": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "飠"
   },
   "餐": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "飠"
   },
   "饼": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "饣"
   },
   "首": {
-    "structure": "up_down"
+    "structure": "up_down",
+    "radical": "首"
   },
   "马": {
-    "structure": "single"
+    "structure": "single",
+    "radical": "马"
   },
   "骰": {
-    "structure": "left_right"
+    "structure": "left_right",
+    "radical": "骨"
   }
 }
