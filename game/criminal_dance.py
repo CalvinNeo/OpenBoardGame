@@ -306,8 +306,8 @@ def _is_card_playable(state: Dict, player_id: str, card: Dict) -> bool:
         return any(len(state["players"][pid]["hand"]) > 0 for pid in state["player_order"] if pid != player_id)
     if card_type == CARD_WITNESS:
         return any(len(state["players"][pid]["hand"]) > 0 for pid in state["player_order"] if pid != player_id)
-    # Trade is still considered playable when it is your only card: the played trade card
-    # can be the card you give away.
+    # Trade is still playable as last hand card. In that case, if no extra card is left
+    # after playing Trade, its exchange effect simply does not trigger.
     return True
 
 
@@ -338,21 +338,6 @@ def _same_time_right_draw(state: Dict) -> None:
         if pick is None or pick >= len(donor_hand):
             continue
         state["players"][pid]["hand"].append(donor_hand.pop(pick))
-
-
-def _remove_last_discard_card(state: Dict, card_id: str) -> Optional[Dict]:
-    for idx in range(len(state["discard"]) - 1, -1, -1):
-        if state["discard"][idx]["id"] == card_id:
-            return state["discard"].pop(idx)
-    return None
-
-
-def _remove_last_played_entry(state: Dict, card_id: str) -> None:
-    for idx in range(len(state["played"]) - 1, -1, -1):
-        entry = state["played"][idx]
-        if isinstance(entry, dict) and isinstance(entry.get("card"), dict) and entry["card"].get("id") == card_id:
-            state["played"].pop(idx)
-            return
 
 
 class CriminalDanceGame:
@@ -456,28 +441,30 @@ class CriminalDanceGame:
             target_id = action.get("target_player_id")
             if target_id not in state["players"] or target_id == player_id:
                 return [], "valid target_player_id required"
-            played_entry["result"] = f"Traded with {_player_name(state, target_id)}."
-            target_hand = state["players"][target_id]["hand"]
+            target_name = _player_name(state, target_id)
             your_hand = state["players"][player_id]["hand"]
-            if not target_hand:
-                return [], "target has no cards"
             your_pick_id = action.get("your_card_id")
             your_card = _remove_card_from_hand(state, player_id, your_pick_id) if isinstance(your_pick_id, str) else None
             if not your_card:
-                if your_hand:
-                    your_card = your_hand.pop(random.randrange(len(your_hand)))
+                if not your_hand:
+                    played_entry["result"] = f"Tried to trade with {target_name}, but had no card left. No effect."
+                    your_card = None
                 else:
-                    # Trade is the last hand card: give the played Trade card itself.
-                    your_card = _remove_last_discard_card(state, card["id"])
-                    _remove_last_played_entry(state, card["id"])
-                    if not your_card:
-                        return [], "you have no card to trade"
-            target_pick_id = action.get("target_card_id")
-            target_card = _remove_card_from_hand(state, target_id, target_pick_id) if isinstance(target_pick_id, str) else None
-            if not target_card:
-                target_card = target_hand.pop(random.randrange(len(target_hand)))
-            state["players"][player_id]["hand"].append(target_card)
-            state["players"][target_id]["hand"].append(your_card)
+                    your_card = your_hand.pop(random.randrange(len(your_hand)))
+            if your_card is None:
+                pass
+            else:
+                target_hand = state["players"][target_id]["hand"]
+                if not target_hand:
+                    state["players"][player_id]["hand"].append(your_card)
+                    return [], "target has no cards"
+                played_entry["result"] = f"Traded with {target_name}."
+                target_pick_id = action.get("target_card_id")
+                target_card = _remove_card_from_hand(state, target_id, target_pick_id) if isinstance(target_pick_id, str) else None
+                if not target_card:
+                    target_card = target_hand.pop(random.randrange(len(target_hand)))
+                state["players"][player_id]["hand"].append(target_card)
+                state["players"][target_id]["hand"].append(your_card)
         elif card_type == CARD_DETECTIVE:
             target_id = action.get("target_player_id")
             if target_id not in state["players"] or target_id == player_id:

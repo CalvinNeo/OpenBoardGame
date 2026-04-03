@@ -88,7 +88,7 @@ class CriminalDanceGameTests(unittest.TestCase):
         self.assertIn("result", state["played"][-1])
         self.assertIn("blocked by Alibi", state["played"][-1]["result"])
 
-    def test_trade_as_last_card_is_allowed(self):
+    def test_trade_as_last_card_has_no_effect(self):
         state = CriminalDanceGame.init_game({}, _players(3))
         actor = state["current_player_id"]
         target = next(pid for pid in state["player_order"] if pid != actor)
@@ -100,7 +100,9 @@ class CriminalDanceGameTests(unittest.TestCase):
             {"type": "play_card", "card_id": "t1", "target_player_id": target},
         )
         self.assertIsNone(error)
-        self.assertTrue(state["players"][actor]["hand"])
+        self.assertEqual([], state["players"][actor]["hand"])
+        self.assertEqual(1, len(state["players"][target]["hand"]))
+        self.assertIn("No effect", state["played"][-1]["result"])
 
     def test_bot_must_play_first_finder_first(self):
         state = CriminalDanceGame.init_game({}, _players(3))
