@@ -168,6 +168,7 @@ def _start_round(state: Dict) -> None:
     state["assignments"] = assignments
     state["hints"] = {}
     state["guesses"] = {}
+    state["guess_submit_order"] = []
     state["guess_drafts"] = {}
     state["guess_deadline_ms"] = None
     state["pending_timeout"] = None
@@ -201,6 +202,7 @@ def _finalize_round(state: Dict) -> None:
     state["phase"] = "round_end"
     state["guess_deadline_ms"] = None
     state["pending_timeout"] = None
+    state["guess_submit_order"] = []
     state["guess_drafts"] = {}
 
 
@@ -236,6 +238,10 @@ def _score_round(state: Dict) -> Dict:
     base_correct: List[str] = []
 
     normalized_base = _normalize_text(base_word)
+    first_submitter = None
+    submit_order = state.get("guess_submit_order")
+    if isinstance(submit_order, list) and submit_order:
+        first_submitter = submit_order[0]
     for guesser_id, guess_data in guesses.items():
         base_guess = _normalize_text(guess_data.get("base_guess"))
         if base_guess and base_guess == normalized_base:
@@ -249,6 +255,11 @@ def _score_round(state: Dict) -> Dict:
                 scores_delta[guesser_id] = scores_delta.get(guesser_id, 0) + 1
                 scores_delta[target_id] = scores_delta.get(target_id, 0) + 1
                 hidden_correct[target_id].append(guesser_id)
+
+    base_first_bonus_player = None
+    if first_submitter and first_submitter in base_correct:
+        scores_delta[first_submitter] = scores_delta.get(first_submitter, 0) + 1
+        base_first_bonus_player = first_submitter
 
     for pid, delta in scores_delta.items():
         if pid in state.get("players", {}):
@@ -268,6 +279,7 @@ def _score_round(state: Dict) -> Dict:
         },
         "scores_delta": scores_delta,
         "base_correct": base_correct,
+        "base_first_bonus_player": base_first_bonus_player,
         "hidden_correct": hidden_correct,
     }
     return summary
@@ -317,6 +329,7 @@ class WordDecodeGame:
             "assignments": {},
             "hints": {},
             "guesses": {},
+            "guess_submit_order": [],
             "guess_drafts": {},
             "guess_deadline_ms": None,
             "pending_timeout": None,
@@ -439,6 +452,12 @@ class WordDecodeGame:
                 "base_guess": base_guess.strip(),
                 "hidden_guesses": guess_map,
             }
+            submit_order = state.get("guess_submit_order")
+            if not isinstance(submit_order, list):
+                submit_order = []
+                state["guess_submit_order"] = submit_order
+            if player_id not in submit_order:
+                submit_order.append(player_id)
             drafts = state.get("guess_drafts")
             if isinstance(drafts, dict):
                 drafts.pop(player_id, None)
@@ -582,11 +601,17 @@ class WordDecodeGame:
             return None
 
         auto_submitted_ids: List[str] = []
+        submit_order = state.get("guess_submit_order")
+        if not isinstance(submit_order, list):
+            submit_order = []
+            state["guess_submit_order"] = submit_order
         all_players = list(state.get("assignments", {}).keys())
         for pid in all_players:
             if pid in state.get("guesses", {}):
                 continue
             state["guesses"][pid] = _build_timeout_guess_data(state, pid)
+            if pid not in submit_order:
+                submit_order.append(pid)
             auto_submitted_ids.append(pid)
 
         _finalize_round(state)
