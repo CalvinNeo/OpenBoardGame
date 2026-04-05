@@ -176,6 +176,7 @@ class Room:
     halli_flip_wait_at_ms: Optional[int] = None
     six_nimmt_timeout_at_ms: Optional[int] = None
     fake_artist_timeout_at_ms: Optional[int] = None
+    word_decode_timeout_at_ms: Optional[int] = None
     bot_running: bool = False
     auto_save: bool = False
     schema_validation_enabled: bool = True
@@ -414,6 +415,7 @@ async def _emit_game_state(room: Room, events: Optional[List[Dict]] = None) -> N
         return
     _schedule_six_nimmt_timeout(room)
     _schedule_fake_artist_timeout(room)
+    _schedule_word_decode_timeout(room)
     game_module = game_def.module
     for player in room.players:
         if player.socket_id is None:
@@ -610,6 +612,70 @@ def _schedule_fake_artist_timeout(room: Room) -> None:
         from game.fake_artist import FakeArtistGame
 
         events = FakeArtistGame.resolve_timeout(state_now, int(time.time() * 1000))
+        if not events:
+            return
+        room.state_version += 1
+        if state_now.get("game_over"):
+            if room.status != "game_over":
+                room.status = "game_over"
+                await _emit_room_state(room)
+                await _emit_room_list_update()
+        elif room.status == "game_over":
+            room.status = "in_game"
+            await _emit_room_state(room)
+            await _emit_room_list_update()
+        _save_room_state(room)
+        await _emit_game_state(room, events)
+        await _maybe_run_bots(room)
+
+    asyncio.create_task(_resolve(at_ms))
+
+
+def _schedule_word_decode_timeout(room: Room) -> None:
+    if room.game_type != "word_decode" or room.status != "in_game" or not room.game_state:
+        room.word_decode_timeout_at_ms = None
+        return
+    state = room.game_state
+    pending = state.get("pending_timeout")
+    if not isinstance(pending, dict):
+        room.word_decode_timeout_at_ms = None
+        return
+    if pending.get("type") != "guess":
+        room.word_decode_timeout_at_ms = None
+        return
+    try:
+        at_ms = int(pending.get("at_ms", 0))
+    except (TypeError, ValueError):
+        room.word_decode_timeout_at_ms = None
+        return
+    if at_ms <= 0:
+        room.word_decode_timeout_at_ms = None
+        return
+    if room.word_decode_timeout_at_ms == at_ms:
+        return
+    room.word_decode_timeout_at_ms = at_ms
+    delay_s = max(0.0, (at_ms - int(time.time() * 1000)) / 1000.0)
+
+    async def _resolve(expected_at: int) -> None:
+        await asyncio.sleep(delay_s)
+        if room.game_type != "word_decode" or room.status != "in_game" or not room.game_state:
+            return
+        state_now = room.game_state
+        pending_now = state_now.get("pending_timeout")
+        if not isinstance(pending_now, dict):
+            return
+        if pending_now.get("type") != "guess":
+            return
+        try:
+            current_at = int(pending_now.get("at_ms", 0))
+        except (TypeError, ValueError):
+            return
+        if current_at != expected_at:
+            return
+
+        from game.word_decode import WordDecodeGame
+
+        events = WordDecodeGame.resolve_guess_timeout(state_now, int(time.time() * 1000))
         if not events:
             return
         room.state_version += 1

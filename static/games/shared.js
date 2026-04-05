@@ -118,6 +118,13 @@ function emitRoomStart() {
     const rawTime = fakeArtistTurnTimeSelect ? Number.parseInt(fakeArtistTurnTimeSelect.value, 10) : NaN;
     const turnTime = Number.isInteger(rawTime) && rawTime > 0 ? rawTime : 8;
     payload.config = { rounds, turn_time_sec: turnTime };
+  } else if (currentGameType === "word_decode") {
+    const rawLimit = wordDecodeGuessTimeSelect ? Number.parseInt(wordDecodeGuessTimeSelect.value, 10) : NaN;
+    let guessTimeLimitSec = 0;
+    if (rawLimit === 60 || rawLimit === 120) {
+      guessTimeLimitSec = rawLimit;
+    }
+    payload.config = { guess_time_limit_sec: guessTimeLimitSec };
   } else if (currentGameType === "things_in_rings") {
     const rawCount = thingsInRingsRingCountSelect ? Number.parseInt(thingsInRingsRingCountSelect.value, 10) : NaN;
     const ringCount = Number.isInteger(rawCount) && rawCount >= 1 && rawCount <= 3 ? rawCount : 2;
@@ -266,6 +273,9 @@ function renderRoomState(state) {
   updateTexasHoldemConfigRow();
   updateMismatchConfigRow();
   updateGangConfigRow();
+  if (typeof updateWordDecodeConfigRow === "function") {
+    updateWordDecodeConfigRow();
+  }
   updateImpressionConfigRow();
   updateBlitzSketchConfigRow();
   updateFakeArtistConfigRow();

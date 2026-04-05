@@ -1158,6 +1158,17 @@
                       </select>
                     </div>
                   </div>
+                  <div class="game-config-card hidden" id="wordDecodeConfigBox" aria-hidden="true">
+                    <div class="game-config-title">Word Decode</div>
+                    <div class="row" id="wordDecodeGuessTimeRow">
+                      <label for="wordDecodeGuessTimeSelect">Guess Timer</label>
+                      <select id="wordDecodeGuessTimeSelect">
+                        <option value="0" selected>Unlimited</option>
+                        <option value="60">60s</option>
+                        <option value="120">120s</option>
+                      </select>
+                    </div>
+                  </div>
                   <div class="game-config-card hidden" id="impressionConfigBox" aria-hidden="true">
                     <div class="game-config-title">Impression Flower</div>
                     <div class="row hidden toggle-row" id="impressionVoteRow">
@@ -2796,6 +2807,7 @@
               <div class="row">
                 <div>Hints Submitted: <span id="wordDecodeHintsSubmitted">-</span></div>
                 <div>Guesses Submitted: <span id="wordDecodeGuessesSubmitted">-</span></div>
+                <div>Guess Timer: <span id="wordDecodeGuessTimer">-</span></div>
               </div>
 
               <div id="wordDecodeHintArea">
@@ -2812,7 +2824,7 @@
                 <h3>Hints</h3>
                 <div id="wordDecodeHintsList"></div>
 
-                <h3>Guesses</h3>
+                <h3>Guesses <span id="wordDecodeGuessCaptionTimer"></span></h3>
                 <div class="row actions word-decode-base-row">
                   <input id="wordDecodeBaseGuess" type="text" placeholder="Base word" />
                 </div>

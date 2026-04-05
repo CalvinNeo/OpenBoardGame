@@ -1369,6 +1369,9 @@ function resetRoomState() {
   updateTexasHoldemConfigRow();
   updateMismatchConfigRow();
   updateGangConfigRow();
+  if (typeof updateWordDecodeConfigRow === "function") {
+    updateWordDecodeConfigRow();
+  }
   updateImpressionConfigRow();
   updateBlitzSketchConfigRow();
   if (typeof updateTuringMachineConfigRow === "function") {
@@ -1423,6 +1426,9 @@ function resetRoomState() {
   }
   if (gangTimeSelect) {
     gangTimeSelect.value = "0";
+  }
+  if (wordDecodeGuessTimeSelect) {
+    wordDecodeGuessTimeSelect.value = "0";
   }
   if (impressionVoteToggle) {
     impressionVoteToggle.checked = false;

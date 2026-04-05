@@ -2,12 +2,19 @@ let currentWordDecodeView = null;
 let wordDecodeHintDrafts = ["", ""];
 let wordDecodeBaseDraft = "";
 let wordDecodeGuessDrafts = {};
+let wordDecodeGuessTimerHandle = null;
+let wordDecodeDraftSyncHandle = null;
+let wordDecodeLastDraftFingerprint = "";
+
+const wordDecodeConfigBox = document.getElementById("wordDecodeConfigBox");
+const wordDecodeGuessTimeSelect = document.getElementById("wordDecodeGuessTimeSelect");
 
 const wordDecodePhaseLabel = document.getElementById("wordDecodePhase");
 const wordDecodeRoundLabel = document.getElementById("wordDecodeRound");
 const wordDecodeHiddenLabel = document.getElementById("wordDecodeHidden");
 const wordDecodeHintsSubmittedLabel = document.getElementById("wordDecodeHintsSubmitted");
 const wordDecodeGuessesSubmittedLabel = document.getElementById("wordDecodeGuessesSubmitted");
+const wordDecodeGuessTimerLabel = document.getElementById("wordDecodeGuessTimer");
 
 const wordDecodeHintArea = document.getElementById("wordDecodeHintArea");
 const wordDecodeHint1Input = document.getElementById("wordDecodeHint1");
@@ -16,6 +23,7 @@ const wordDecodeSubmitHintsBtn = document.getElementById("wordDecodeSubmitHintsB
 
 const wordDecodeGuessArea = document.getElementById("wordDecodeGuessArea");
 const wordDecodeHintsList = document.getElementById("wordDecodeHintsList");
+const wordDecodeGuessCaptionTimerLabel = document.getElementById("wordDecodeGuessCaptionTimer");
 const wordDecodeBaseGuessInput = document.getElementById("wordDecodeBaseGuess");
 const wordDecodeGuessList = document.getElementById("wordDecodeGuessList");
 const wordDecodeSubmitGuessesBtn = document.getElementById("wordDecodeSubmitGuessesBtn");
@@ -93,6 +101,118 @@ function formatWordDecodePhase(phase) {
     game_over: "Game Over",
   };
   return map[phase] || phase || "-";
+}
+
+function updateWordDecodeConfigRow() {
+  const showRow = currentRoomState && currentGameType === "word_decode" && currentRoomState.status === "lobby";
+  if (wordDecodeConfigBox) {
+    wordDecodeConfigBox.classList.toggle("hidden", !showRow);
+    wordDecodeConfigBox.setAttribute("aria-hidden", (!showRow).toString());
+  }
+}
+
+function formatWordDecodeTimerMs(ms) {
+  const sec = Math.max(0, Math.ceil(ms / 1000));
+  return `${sec}s`;
+}
+
+function stopWordDecodeGuessTimer() {
+  if (wordDecodeGuessTimerHandle) {
+    clearInterval(wordDecodeGuessTimerHandle);
+    wordDecodeGuessTimerHandle = null;
+  }
+}
+
+function renderWordDecodeGuessTimer(view) {
+  if (!wordDecodeGuessTimerLabel) {
+    return;
+  }
+  if (!view || view.phase !== "guess") {
+    stopWordDecodeGuessTimer();
+    wordDecodeGuessTimerLabel.textContent = "-";
+    if (wordDecodeGuessCaptionTimerLabel) {
+      wordDecodeGuessCaptionTimerLabel.textContent = "";
+    }
+    return;
+  }
+  const config = view.config || {};
+  const limit = Number.parseInt(config.guess_time_limit_sec, 10);
+  if (!Number.isFinite(limit) || limit <= 0) {
+    stopWordDecodeGuessTimer();
+    wordDecodeGuessTimerLabel.textContent = "Off";
+    if (wordDecodeGuessCaptionTimerLabel) {
+      wordDecodeGuessCaptionTimerLabel.textContent = "";
+    }
+    return;
+  }
+  const deadlineMs = Number.parseInt(view.guess_deadline_ms, 10);
+  if (!Number.isFinite(deadlineMs) || deadlineMs <= 0) {
+    stopWordDecodeGuessTimer();
+    wordDecodeGuessTimerLabel.textContent = "Off";
+    if (wordDecodeGuessCaptionTimerLabel) {
+      wordDecodeGuessCaptionTimerLabel.textContent = "";
+    }
+    return;
+  }
+  const update = () => {
+    const remainMs = deadlineMs - Date.now();
+    const remainText = formatWordDecodeTimerMs(remainMs);
+    wordDecodeGuessTimerLabel.textContent = remainText;
+    if (wordDecodeGuessCaptionTimerLabel) {
+      wordDecodeGuessCaptionTimerLabel.textContent = `(${remainText})`;
+    }
+  };
+  update();
+  if (wordDecodeGuessTimerHandle) {
+    return;
+  }
+  wordDecodeGuessTimerHandle = setInterval(update, 250);
+}
+
+function getWordDecodeDraftPayload() {
+  if (!wordDecodeGuessList) {
+    return null;
+  }
+  const hiddenGuesses = [];
+  const inputs = wordDecodeGuessList.querySelectorAll("input[data-target]");
+  inputs.forEach((input) => {
+    const targetId = input.getAttribute("data-target");
+    if (!targetId) {
+      return;
+    }
+    hiddenGuesses.push({ target_player_id: targetId, guess: input.value || "" });
+  });
+  return {
+    base_guess: wordDecodeBaseGuessInput ? wordDecodeBaseGuessInput.value || "" : "",
+    hidden_guesses: hiddenGuesses,
+  };
+}
+
+function flushWordDecodeGuessDraft() {
+  wordDecodeDraftSyncHandle = null;
+  if (!currentWordDecodeView || currentWordDecodeView.phase !== "guess") {
+    return;
+  }
+  if (!Array.isArray(currentWordDecodeView.legal_actions) || !currentWordDecodeView.legal_actions.includes("submit_guesses")) {
+    return;
+  }
+  const payload = getWordDecodeDraftPayload();
+  if (!payload) {
+    return;
+  }
+  const fingerprint = JSON.stringify(payload);
+  if (fingerprint === wordDecodeLastDraftFingerprint) {
+    return;
+  }
+  wordDecodeLastDraftFingerprint = fingerprint;
+  sendAction({ type: "update_guess_draft", ...payload });
+}
+
+function scheduleWordDecodeGuessDraftSync() {
+  if (wordDecodeDraftSyncHandle) {
+    clearTimeout(wordDecodeDraftSyncHandle);
+  }
+  wordDecodeDraftSyncHandle = setTimeout(flushWordDecodeGuessDraft, 500);
 }
 
 function isSingleChineseChar(value) {
@@ -217,6 +337,7 @@ function renderWordDecodeGuessList(view) {
     input.addEventListener("input", () => {
       wordDecodeGuessDrafts[player.player_id] = input.value || "";
       updateWordDecodeActionButtons();
+      scheduleWordDecodeGuessDraftSync();
     });
     row.appendChild(input);
 
@@ -363,22 +484,6 @@ function isWordDecodeActionAvailable(actionType) {
     return isSingleChineseChar(hint1) && isSingleChineseChar(hint2);
   }
   if (actionType === "submit_guesses") {
-    const baseGuess = wordDecodeBaseGuessInput ? wordDecodeBaseGuessInput.value.trim() : "";
-    if (!baseGuess) {
-      return false;
-    }
-    if (!wordDecodeGuessList) {
-      return false;
-    }
-    const inputs = wordDecodeGuessList.querySelectorAll("input[data-target]");
-    if (!inputs.length) {
-      return false;
-    }
-    for (const input of inputs) {
-      if (!input.value.trim()) {
-        return false;
-      }
-    }
     return true;
   }
   return true;
@@ -402,11 +507,19 @@ function updateWordDecodeActionButtons() {
 function clearWordDecodeState() {
   currentWordDecodeView = null;
   resetWordDecodeDrafts();
+  stopWordDecodeGuessTimer();
+  if (wordDecodeDraftSyncHandle) {
+    clearTimeout(wordDecodeDraftSyncHandle);
+    wordDecodeDraftSyncHandle = null;
+  }
+  wordDecodeLastDraftFingerprint = "";
   if (wordDecodePhaseLabel) wordDecodePhaseLabel.textContent = "-";
   if (wordDecodeRoundLabel) wordDecodeRoundLabel.textContent = "-";
   if (wordDecodeHiddenLabel) wordDecodeHiddenLabel.textContent = "-";
   if (wordDecodeHintsSubmittedLabel) wordDecodeHintsSubmittedLabel.textContent = "-";
   if (wordDecodeGuessesSubmittedLabel) wordDecodeGuessesSubmittedLabel.textContent = "-";
+  if (wordDecodeGuessTimerLabel) wordDecodeGuessTimerLabel.textContent = "-";
+  if (wordDecodeGuessCaptionTimerLabel) wordDecodeGuessCaptionTimerLabel.textContent = "";
   if (wordDecodeHintsList) wordDecodeHintsList.innerHTML = "";
   if (wordDecodeGuessList) wordDecodeGuessList.innerHTML = "";
   if (wordDecodeSummary) wordDecodeSummary.textContent = "-";
@@ -429,6 +542,7 @@ function renderWordDecodeGameState(data) {
 
   if (!previousView || previousView.round !== view.round) {
     resetWordDecodeDrafts();
+    wordDecodeLastDraftFingerprint = "";
   }
 
   if (wordDecodePhaseLabel) {
@@ -460,6 +574,10 @@ function renderWordDecodeGameState(data) {
     const showSummary = view.phase === "round_end" || view.phase === "game_over";
     wordDecodeRoundEnd.classList.toggle("hidden", !showSummary);
   }
+  if (view.phase !== "guess" && wordDecodeDraftSyncHandle) {
+    clearTimeout(wordDecodeDraftSyncHandle);
+    wordDecodeDraftSyncHandle = null;
+  }
 
   const canSubmitHints = Array.isArray(view.legal_actions) && view.legal_actions.includes("submit_hints");
   if (wordDecodeHint1Input) {
@@ -483,6 +601,7 @@ function renderWordDecodeGameState(data) {
   }
   renderWordDecodeSummary(view);
   renderWordDecodePlayers(view);
+  renderWordDecodeGuessTimer(view);
   logGameEvents(data);
   updateWordDecodeActionButtons();
 }
@@ -505,6 +624,7 @@ if (wordDecodeBaseGuessInput) {
   wordDecodeBaseGuessInput.addEventListener("input", () => {
     wordDecodeBaseDraft = wordDecodeBaseGuessInput.value || "";
     updateWordDecodeActionButtons();
+    scheduleWordDecodeGuessDraftSync();
   });
 }
 
@@ -522,11 +642,7 @@ if (wordDecodeSubmitHintsBtn) {
 
 if (wordDecodeSubmitGuessesBtn) {
   wordDecodeSubmitGuessesBtn.addEventListener("click", () => {
-    const baseGuess = wordDecodeBaseGuessInput ? wordDecodeBaseGuessInput.value.trim() : "";
-    if (!baseGuess) {
-      log("Enter base word guess");
-      return;
-    }
+    const baseGuess = wordDecodeBaseGuessInput ? wordDecodeBaseGuessInput.value : "";
     if (!wordDecodeGuessList) {
       return;
     }
@@ -534,11 +650,10 @@ if (wordDecodeSubmitGuessesBtn) {
     const guesses = [];
     for (const input of inputs) {
       const targetId = input.getAttribute("data-target");
-      const guess = input.value.trim();
-      if (!targetId || !guess) {
-        log("Fill all guesses");
+      if (!targetId) {
         return;
       }
+      const guess = input.value;
       guesses.push({ target_player_id: targetId, guess });
     }
     sendAction({ type: "submit_guesses", base_guess: baseGuess, hidden_guesses: guesses });

@@ -6,7 +6,8 @@ from typing import Dict, List, Optional, Tuple
 
 from game.memories import build_html_document, esc, format_bool, format_timestamp, render_table, section
 
-DEFAULT_CONFIG: Dict = {}
+DEFAULT_CONFIG: Dict = {"guess_time_limit_sec": 0}
+GUESS_TIME_LIMIT_OPTIONS = {0, 60, 120}
 
 _CARD_CACHE: Optional[List[Dict]] = None
 
@@ -19,6 +20,30 @@ def _normalize_text(value: Optional[str]) -> str:
     if not isinstance(value, str):
         return ""
     return " ".join(value.strip().split())
+
+
+def _now_ms() -> int:
+    return int(time.time() * 1000)
+
+
+def _normalize_guess_time_limit(value: object) -> Optional[int]:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    if parsed not in GUESS_TIME_LIMIT_OPTIONS:
+        return None
+    return parsed
+
+
+def _merge_config(config: Optional[Dict]) -> Dict:
+    merged = dict(DEFAULT_CONFIG)
+    if not isinstance(config, dict):
+        return merged
+    guess_time_limit = _normalize_guess_time_limit(config.get("guess_time_limit_sec"))
+    if guess_time_limit is not None:
+        merged["guess_time_limit_sec"] = guess_time_limit
+    return merged
 
 
 def _is_single_chinese_char(value: str) -> bool:
@@ -143,8 +168,63 @@ def _start_round(state: Dict) -> None:
     state["assignments"] = assignments
     state["hints"] = {}
     state["guesses"] = {}
+    state["guess_drafts"] = {}
+    state["guess_deadline_ms"] = None
+    state["pending_timeout"] = None
     state["round_summary"] = None
     state["phase"] = "hint"
+
+
+def _set_guess_timeout(state: Dict) -> None:
+    config = state.get("config") or {}
+    raw_limit = config.get("guess_time_limit_sec", DEFAULT_CONFIG["guess_time_limit_sec"])
+    limit_sec = _normalize_guess_time_limit(raw_limit)
+    if limit_sec is None:
+        limit_sec = DEFAULT_CONFIG["guess_time_limit_sec"]
+    if limit_sec <= 0:
+        state["guess_deadline_ms"] = None
+        state["pending_timeout"] = None
+        return
+    deadline_ms = _now_ms() + limit_sec * 1000
+    state["guess_deadline_ms"] = deadline_ms
+    state["pending_timeout"] = {"type": "guess", "at_ms": deadline_ms}
+
+
+def _finalize_round(state: Dict) -> None:
+    summary = _score_round(state)
+    state["round_summary"] = summary
+    history = state.get("round_history")
+    if not isinstance(history, list):
+        history = []
+        state["round_history"] = history
+    history.append(summary)
+    state["phase"] = "round_end"
+    state["guess_deadline_ms"] = None
+    state["pending_timeout"] = None
+    state["guess_drafts"] = {}
+
+
+def _build_timeout_guess_data(state: Dict, player_id: str) -> Dict:
+    draft_map = state.get("guess_drafts")
+    if not isinstance(draft_map, dict):
+        draft_map = {}
+    player_draft = draft_map.get(player_id)
+    if not isinstance(player_draft, dict):
+        player_draft = {}
+
+    raw_base = player_draft.get("base_guess")
+    base_guess = raw_base.strip() if isinstance(raw_base, str) else ""
+
+    raw_hidden = player_draft.get("hidden_guesses")
+    hidden_draft = raw_hidden if isinstance(raw_hidden, dict) else {}
+
+    targets = [pid for pid in state.get("turn_order", []) if pid != player_id]
+    hidden_guesses: Dict[str, str] = {}
+    for target_id in targets:
+        guess_value = hidden_draft.get(target_id)
+        hidden_guesses[target_id] = guess_value.strip() if isinstance(guess_value, str) else ""
+
+    return {"base_guess": base_guess, "hidden_guesses": hidden_guesses}
 
 
 def _score_round(state: Dict) -> Dict:
@@ -223,6 +303,7 @@ class WordDecodeGame:
         cards = _load_cards()
         players_state = {pid: {"score": 0} for pid in order}
 
+        merged_config = _merge_config(config)
         state = {
             "players": players_state,
             "player_meta": player_meta,
@@ -236,9 +317,12 @@ class WordDecodeGame:
             "assignments": {},
             "hints": {},
             "guesses": {},
+            "guess_drafts": {},
+            "guess_deadline_ms": None,
+            "pending_timeout": None,
             "round_summary": None,
             "round_history": [],
-            "config": config or {},
+            "config": merged_config,
             "game_over": False,
             "game_start_time": time.time(),
         }
@@ -294,21 +378,50 @@ class WordDecodeGame:
             state["hints"][player_id] = cleaned
             if len(state["hints"]) >= len(state.get("assignments", {})):
                 state["phase"] = "guess"
+                _set_guess_timeout(state)
             return [], None
 
         if phase == "guess":
+            if action_type == "update_guess_draft":
+                if player_id in state.get("guesses", {}):
+                    return [], None
+                base_guess = action.get("base_guess")
+                if not isinstance(base_guess, str):
+                    base_guess = ""
+                hidden_guesses_raw = action.get("hidden_guesses")
+                if not isinstance(hidden_guesses_raw, list):
+                    hidden_guesses_raw = []
+                targets = [pid for pid in state.get("turn_order", []) if pid != player_id]
+                draft_map: Dict[str, str] = {}
+                for entry in hidden_guesses_raw:
+                    if not isinstance(entry, dict):
+                        continue
+                    target_id = entry.get("target_player_id")
+                    guess = entry.get("guess")
+                    if target_id not in targets or target_id in draft_map:
+                        continue
+                    if not isinstance(guess, str):
+                        continue
+                    draft_map[target_id] = guess.strip()
+                drafts = state.get("guess_drafts")
+                if not isinstance(drafts, dict):
+                    drafts = {}
+                    state["guess_drafts"] = drafts
+                drafts[player_id] = {"base_guess": base_guess.strip(), "hidden_guesses": draft_map}
+                return [], None
             if action_type != "submit_guesses":
                 return [], "invalid action"
             if player_id in state.get("guesses", {}):
                 return [], "already submitted"
             base_guess = action.get("base_guess")
-            if not isinstance(base_guess, str) or not base_guess.strip():
+            if not isinstance(base_guess, str):
                 return [], "base_guess required"
             hidden_guesses_raw = action.get("hidden_guesses")
             if not isinstance(hidden_guesses_raw, list):
                 return [], "hidden_guesses required"
             targets = [pid for pid in state.get("turn_order", []) if pid != player_id]
-            guess_map: Dict[str, str] = {}
+            guess_map: Dict[str, str] = {target_id: "" for target_id in targets}
+            seen_targets = set()
             for entry in hidden_guesses_raw:
                 if not isinstance(entry, dict):
                     return [], "invalid hidden guess"
@@ -316,26 +429,21 @@ class WordDecodeGame:
                 guess = entry.get("guess")
                 if target_id not in targets:
                     return [], "invalid target"
-                if target_id in guess_map:
+                if target_id in seen_targets:
                     return [], "duplicate target"
-                if not isinstance(guess, str) or not guess.strip():
+                if not isinstance(guess, str):
                     return [], "invalid guess"
                 guess_map[target_id] = guess.strip()
-            if len(guess_map) != len(targets):
-                return [], "guesses incomplete"
+                seen_targets.add(target_id)
             state["guesses"][player_id] = {
                 "base_guess": base_guess.strip(),
                 "hidden_guesses": guess_map,
             }
+            drafts = state.get("guess_drafts")
+            if isinstance(drafts, dict):
+                drafts.pop(player_id, None)
             if len(state["guesses"]) >= len(state.get("assignments", {})):
-                summary = _score_round(state)
-                state["round_summary"] = summary
-                history = state.get("round_history")
-                if not isinstance(history, list):
-                    history = []
-                    state["round_history"] = history
-                history.append(summary)
-                state["phase"] = "round_end"
+                _finalize_round(state)
             return [], None
 
         if phase == "round_end":
@@ -346,6 +454,8 @@ class WordDecodeGame:
             if action_type == "end_game":
                 state["phase"] = "game_over"
                 state["game_over"] = True
+                state["pending_timeout"] = None
+                state["guess_deadline_ms"] = None
                 return [], None
             return [], "invalid action"
 
@@ -392,6 +502,8 @@ class WordDecodeGame:
             "players": players_view,
             "your_hidden_word": your_hidden,
             "hints": hints_view,
+            "guess_deadline_ms": state.get("guess_deadline_ms") if phase == "guess" else None,
+            "config": dict(state.get("config") or {}),
             "round_summary": reveal,
             "legal_actions": WordDecodeGame.get_legal_actions(state, viewer_id),
             "game_over": state.get("game_over", False),
@@ -450,6 +562,42 @@ class WordDecodeGame:
     @staticmethod
     def deserialize(payload: Dict) -> Dict:
         return payload
+
+    @staticmethod
+    def resolve_guess_timeout(state: Dict, now_ms: int) -> Optional[List[Dict]]:
+        if state.get("phase") != "guess":
+            return None
+        pending = state.get("pending_timeout")
+        if not isinstance(pending, dict):
+            return None
+        if pending.get("type") != "guess":
+            return None
+        try:
+            at_ms = int(pending.get("at_ms", 0))
+        except (TypeError, ValueError):
+            state["pending_timeout"] = None
+            state["guess_deadline_ms"] = None
+            return None
+        if at_ms <= 0 or now_ms < at_ms:
+            return None
+
+        auto_submitted_ids: List[str] = []
+        all_players = list(state.get("assignments", {}).keys())
+        for pid in all_players:
+            if pid in state.get("guesses", {}):
+                continue
+            state["guesses"][pid] = _build_timeout_guess_data(state, pid)
+            auto_submitted_ids.append(pid)
+
+        _finalize_round(state)
+        return [
+            {
+                "type": "word_decode:guess_timeout",
+                "payload": {
+                    "auto_submitted_player_ids": auto_submitted_ids,
+                },
+            }
+        ]
 
     @staticmethod
     def download_memories(state: Dict, room_id: Optional[str] = None) -> str:

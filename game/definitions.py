@@ -1974,7 +1974,27 @@ WORD_DECODE_ACTION_SCHEMA = {
                         "required": ["target_player_id", "guess"],
                         "additionalProperties": False,
                     },
-                    "minItems": 1,
+                },
+            },
+            "required": ["type", "base_guess", "hidden_guesses"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "update_guess_draft"},
+                "base_guess": {"type": "string"},
+                "hidden_guesses": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "target_player_id": {"type": "string"},
+                            "guess": {"type": "string"},
+                        },
+                        "required": ["target_player_id", "guess"],
+                        "additionalProperties": False,
+                    },
                 },
             },
             "required": ["type", "base_guess", "hidden_guesses"],
@@ -1985,7 +2005,13 @@ WORD_DECODE_ACTION_SCHEMA = {
     ],
 }
 
-WORD_DECODE_CONFIG_SCHEMA = {"type": "object", "properties": {}, "additionalProperties": False}
+WORD_DECODE_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "guess_time_limit_sec": {"type": "integer", "enum": [0, 60, 120]},
+    },
+    "additionalProperties": False,
+}
 
 PATCHWORK_ACTION_SCHEMA = {
     "type": "object",
