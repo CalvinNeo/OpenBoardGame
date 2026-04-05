@@ -32,6 +32,34 @@ let currentCaboView = null;
 let selectedSlots = [];
 let selectedTarget = null;
 
+function getInitialPeekInactiveReason() {
+  if (!currentCaboView) {
+    return "Initial Peek inactive: no game view";
+  }
+  if (!Array.isArray(currentCaboView.legal_actions)) {
+    return "Initial Peek inactive: legal actions unavailable";
+  }
+  if (!currentCaboView.legal_actions.includes("initial_peek")) {
+    if (currentCaboView.phase !== "initial_peek") {
+      return `Initial Peek inactive: phase is ${currentCaboView.phase}`;
+    }
+    const self = Array.isArray(currentCaboView.players)
+      ? currentCaboView.players.find((p) => p.player_id === currentCaboView.you)
+      : null;
+    if (self && self.initial_peek_done) {
+      return "Initial Peek inactive: already completed";
+    }
+    return `Initial Peek inactive: legal actions are ${JSON.stringify(currentCaboView.legal_actions)}`;
+  }
+  if (selectedSlots.length < 2) {
+    return `Initial Peek inactive: select 2 slots (current ${selectedSlots.length})`;
+  }
+  if (selectedSlots.length > 2) {
+    return `Initial Peek inactive: select only 2 slots (current ${selectedSlots.length})`;
+  }
+  return null;
+}
+
 function updateSelectedSlots() {
   if (selectedSlotsLabel) {
     selectedSlotsLabel.textContent = selectedSlots.length ? selectedSlots.join(", ") : "-";
@@ -79,7 +107,7 @@ function isActionAvailable(actionType) {
     return false;
   }
   if (actionType === "initial_peek") {
-    return selectedSlots.length === 2;
+    return !getInitialPeekInactiveReason();
   }
   if (actionType === "draw_discard") {
     return selectedSlots.length >= 1;
@@ -112,12 +140,19 @@ function updateActionButtons() {
   }
   Object.entries(actionButtons).forEach(([actionType, button]) => {
     const allowed = isActionAvailable(actionType);
+    const inactiveReason = actionType === "initial_peek" ? getInitialPeekInactiveReason() : "";
     if (allowed) {
       button.classList.add("action-allowed");
     } else {
       button.classList.remove("action-allowed");
     }
-    button.disabled = !allowed;
+    if (actionType === "initial_peek" && currentGameType === "cabo") {
+      button.disabled = false;
+      button.title = inactiveReason || "";
+    } else {
+      button.disabled = !allowed;
+      button.title = "";
+    }
   });
 }
 
@@ -151,10 +186,16 @@ function renderHand(view) {
     div.textContent = `#${idx} ${label}`;
     if (selectedSlots.includes(idx)) div.classList.add("selected");
     div.addEventListener("click", () => {
+      if (slot.empty) {
+        return;
+      }
       if (selectedSlots.includes(idx)) {
         selectedSlots = selectedSlots.filter((s) => s !== idx);
         div.classList.remove("selected");
       } else {
+        if (currentCaboView && currentCaboView.phase === "initial_peek" && selectedSlots.length >= 2) {
+          selectedSlots = selectedSlots.slice(-1);
+        }
         selectedSlots.push(idx);
         div.classList.add("selected");
       }
@@ -404,8 +445,9 @@ if (clearTargetBtn) {
 
 if (actionButtons.initial_peek) {
   actionButtons.initial_peek.addEventListener("click", () => {
-    if (selectedSlots.length !== 2) {
-      log("Select two slots for initial peek");
+    const reason = getInitialPeekInactiveReason();
+    if (reason) {
+      log(reason);
       return;
     }
     sendAction({ type: "initial_peek", slots: selectedSlots.slice(0, 2) });
