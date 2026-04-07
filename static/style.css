@@ -13345,7 +13345,7 @@ body.patchwork-explain-mode [data-patchwork-explain].has-explanation {
   transform: translate(-50%, -50%);
   z-index: 6;
   width: max-content;
-  max-width: max(112px, var(--zone-w));
+  max-width: max(84px, var(--zone-cloud-max-width, var(--zone-w)));
   display: grid;
   gap: 6px;
   justify-items: center;
@@ -13374,8 +13374,8 @@ body.things-rings-explain-mode .things-rings-zone-cloud {
 }
 
 .things-rings-zone-cloud.pair {
-  width: 158px;
-  max-width: 158px;
+  width: min(158px, var(--zone-cloud-max-width, 158px));
+  max-width: var(--zone-cloud-max-width, 158px);
 }
 
 .things-rings-zone-cloud.pair .things-rings-zone-cloud-cards {
@@ -13833,12 +13833,12 @@ body.things-rings-explain-mode .has-explanation[data-things-rings-explain-key]:h
   }
 
   .things-rings-zone-cloud {
-    max-width: max(84px, var(--zone-w));
+    max-width: max(84px, var(--zone-cloud-max-width, var(--zone-w)));
   }
 
   .things-rings-zone-cloud.pair {
     width: auto;
-    max-width: max(84px, var(--zone-w));
+    max-width: max(84px, var(--zone-cloud-max-width, var(--zone-w)));
   }
 
   .things-rings-zone-title {

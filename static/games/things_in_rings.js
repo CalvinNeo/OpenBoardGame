@@ -460,6 +460,7 @@ function getThingsInRingsZoneScanData(stage, ringCount, zoneId) {
     .join(" ");
 
   return {
+    area,
     bounds: {
       minX,
       maxX,
@@ -491,6 +492,7 @@ function getThingsInRingsZoneGeometry(stage, ringCount, zoneId) {
   const centerX = (fallback.x / 100) * rect.width;
   const centerY = (fallback.y / 100) * rect.height + getThingsInRingsBoardLiftPx(stage);
   return {
+    area: width * height * 0.7,
     bounds: {
       minX: centerX - width / 2,
       maxX: centerX + width / 2,
@@ -513,18 +515,8 @@ function selectThingsInRingsZone(zoneId, view) {
   updateThingsInRingsButtons(view);
 }
 
-function appendThingsInRingsZoneCloud(zoneLayer, zone, view, ringCount, geometry, options = {}) {
-  const cards = getThingsInRingsZoneCards(zone, view);
-  if (!cards.length) {
-    return;
-  }
+function createThingsInRingsZoneCloudElement(zone, cards, previewCount, maxWidthPx, showMoreButton) {
   const insideCount = zone.zone_id.split("").filter((char) => char === "1").length;
-  const layout = getThingsInRingsZoneLayout(ringCount, zone.zone_id);
-  let previewLimit = options.previewLimit || (layout && layout.previewLimit) || 4;
-  if (window.innerWidth <= 720 && insideCount === 2) {
-    previewLimit = Math.min(previewLimit, 4);
-  }
-
   const cloud = document.createElement("div");
   cloud.className = "things-rings-zone-cloud";
   if (insideCount === 1) {
@@ -534,29 +526,122 @@ function appendThingsInRingsZoneCloud(zoneLayer, zone, view, ringCount, geometry
   } else if (insideCount === 3) {
     cloud.classList.add("triple");
   }
-  cloud.style.left = `${geometry.center.x}px`;
-  cloud.style.top = `${geometry.center.y}px`;
-  cloud.style.setProperty("--zone-w", `${Math.min(geometry.bounds.width + 18, 220)}px`);
+  cloud.style.setProperty("--zone-cloud-max-width", `${Math.max(84, Math.round(maxWidthPx))}px`);
 
   const list = document.createElement("div");
   list.className = "things-rings-zone-cloud-cards";
-  cards.slice(0, previewLimit).forEach((card) => appendThingsInRingsCardChip(list, card));
+  cards.slice(0, previewCount).forEach((card) => appendThingsInRingsCardChip(list, card));
   cloud.appendChild(list);
 
-  if (cards.length > previewLimit) {
+  if (showMoreButton) {
     const footer = document.createElement("div");
     footer.className = "things-rings-zone-cloud-footer";
     const moreBtn = document.createElement("button");
     moreBtn.type = "button";
     moreBtn.className = "things-rings-zone-more-btn";
     moreBtn.textContent = `View all (${cards.length})`;
+    footer.appendChild(moreBtn);
+    cloud.appendChild(footer);
+  }
+
+  return cloud;
+}
+
+function getThingsInRingsZoneCloudBudget(geometry, insideCount) {
+  const isMobile = window.innerWidth <= 720;
+  const horizontalPadding = isMobile ? 14 : 18;
+  const verticalPadding = isMobile ? 16 : 20;
+  const safeWidth = Math.max(78, geometry.bounds.width - horizontalPadding);
+  const safeHeight = Math.max(26, geometry.bounds.height - verticalPadding);
+  const maxWidths = {
+    1: isMobile ? 150 : 240,
+    2: isMobile ? 128 : 188,
+    3: isMobile ? 118 : 154,
+  };
+  const widthFactors = {
+    1: isMobile ? 0.96 : 1.04,
+    2: isMobile ? 0.82 : 0.9,
+    3: isMobile ? 0.74 : 0.78,
+  };
+  const heightFactors = {
+    1: isMobile ? 0.72 : 0.82,
+    2: isMobile ? 0.58 : 0.68,
+    3: isMobile ? 0.44 : 0.5,
+  };
+  const areaFactors = {
+    1: isMobile ? 0.3 : 0.38,
+    2: isMobile ? 0.22 : 0.28,
+    3: isMobile ? 0.16 : 0.2,
+  };
+  return {
+    maxWidth: Math.max(78, Math.min(safeWidth * (widthFactors[insideCount] || 0.8), maxWidths[insideCount] || 180)),
+    maxHeight: Math.max(26, safeHeight * (heightFactors[insideCount] || 0.6)),
+    maxArea: Math.max(1800, geometry.area * (areaFactors[insideCount] || 0.24)),
+  };
+}
+
+function measureThingsInRingsZoneCloud(zone, cards, previewCount, maxWidthPx, showMoreButton) {
+  const probe = createThingsInRingsZoneCloudElement(zone, cards, previewCount, maxWidthPx, showMoreButton);
+  probe.style.position = "fixed";
+  probe.style.left = "-10000px";
+  probe.style.top = "-10000px";
+  probe.style.visibility = "hidden";
+  probe.style.pointerEvents = "none";
+  document.body.appendChild(probe);
+  const rect = probe.getBoundingClientRect();
+  document.body.removeChild(probe);
+  return {
+    width: rect.width,
+    height: rect.height,
+    area: rect.width * rect.height,
+  };
+}
+
+function getThingsInRingsDynamicPreviewLimit(zone, cards, geometry) {
+  if (!cards.length) {
+    return 0;
+  }
+  const insideCount = zone.zone_id.split("").filter((char) => char === "1").length;
+  const budget = getThingsInRingsZoneCloudBudget(geometry, insideCount);
+  const probeCap = Math.min(cards.length, 14);
+  let bestCount = 0;
+
+  for (let previewCount = 1; previewCount <= probeCap; previewCount += 1) {
+    const metrics = measureThingsInRingsZoneCloud(zone, cards, previewCount, budget.maxWidth, previewCount < cards.length);
+    if (
+      metrics.width > budget.maxWidth + 1 ||
+      metrics.height > budget.maxHeight + 1 ||
+      metrics.area > budget.maxArea
+    ) {
+      break;
+    }
+    bestCount = previewCount;
+  }
+
+  return Math.max(1, bestCount);
+}
+
+function appendThingsInRingsZoneCloud(zoneLayer, zone, view, ringCount, geometry, options = {}) {
+  const cards = getThingsInRingsZoneCards(zone, view);
+  if (!cards.length) {
+    return;
+  }
+  const layout = getThingsInRingsZoneLayout(ringCount, zone.zone_id);
+  const previewLimit =
+    options.previewLimit || Math.min(getThingsInRingsDynamicPreviewLimit(zone, cards, geometry), (layout && layout.previewLimit * 3) || 14);
+  const maxWidthPx = getThingsInRingsZoneCloudBudget(geometry, zone.zone_id.split("").filter((char) => char === "1").length).maxWidth;
+
+  const cloud = createThingsInRingsZoneCloudElement(zone, cards, previewLimit, maxWidthPx, cards.length > previewLimit);
+  cloud.style.left = `${geometry.center.x}px`;
+  cloud.style.top = `${geometry.center.y}px`;
+  cloud.style.setProperty("--zone-w", `${Math.round(maxWidthPx)}px`);
+  const moreBtn = cloud.querySelector(".things-rings-zone-more-btn");
+  if (moreBtn) {
     moreBtn.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
       openThingsInRingsZoneModal(zone.zone_id);
     });
-    footer.appendChild(moreBtn);
-    cloud.appendChild(footer);
   }
 
   zoneLayer.appendChild(cloud);
