@@ -127,6 +127,19 @@ def _pick_fake_id(order: List[str]) -> Optional[str]:
     return secrets.choice(order)
 
 
+def _set_fake_player(state: Dict, fake_id: Optional[str]) -> None:
+    for pid, pdata in state.get("players", {}).items():
+        pdata["role"] = "fake" if pid == fake_id else "real"
+    state["fake_player_id"] = fake_id
+
+
+def _pick_next_fake_id(order: List[str], previous_fake_id: Optional[str]) -> Optional[str]:
+    if not order:
+        return None
+    candidates = [pid for pid in order if pid != previous_fake_id]
+    return _pick_fake_id(candidates or order)
+
+
 def _now_ms() -> int:
     return int(time.time() * 1000)
 
@@ -230,6 +243,10 @@ def _advance_turn(state: Dict, skipped: bool = False) -> Optional[Dict]:
     if current_round > total_rounds:
         _start_voting(state)
         return {"type": "fake_artist:phase_vote"}
+    if turn_step == 0:
+        previous_fake_id = state.get("fake_player_id")
+        next_fake_id = _pick_next_fake_id(order, previous_fake_id)
+        _set_fake_player(state, next_fake_id)
     state["round"] = current_round
     state["round_start_index"] = round_start_index
     state["turn_step"] = turn_step
@@ -347,6 +364,7 @@ class FakeArtistGame:
             "pending_timeout": None,
             "game_start_time": time.time(),
         }
+        _set_fake_player(state, fake_id)
         _assign_bot_colors(state)
         if _all_colors_selected(state):
             _start_drawing(state)
@@ -489,9 +507,7 @@ class FakeArtistGame:
         state["current_game_end_time"] = None
         state["last_guess"] = None
         state["last_guess_correct"] = None
-        for pid, pdata in state.get("players", {}).items():
-            pdata["role"] = "fake" if pid == fake_id else "real"
-        state["fake_player_id"] = fake_id
+        _set_fake_player(state, fake_id)
         state["category"] = prompt.get("category")
         state["word"] = prompt.get("word")
         state["strokes"] = []
