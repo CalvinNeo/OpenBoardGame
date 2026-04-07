@@ -63,7 +63,7 @@ const THINGS_IN_RINGS_CIRCLE_LAYOUTS = {
   3: [
     { left: 7.2, top: 2.8, size: 60.95, labelLeft: 20, labelTop: 6 },
     { left: 36.0, top: 2.8, size: 60.95, labelLeft: 80, labelTop: 6 },
-    { left: 19.9, top: 31.5, size: 60.95, labelLeft: 50, labelTop: 87 },
+    { left: 19.9, top: 31.5, size: 60.95, labelLeft: 50, labelTop: 92 },
   ],
 };
 
@@ -92,6 +92,9 @@ const THINGS_IN_RINGS_OUTSIDE_PREVIEW_LIMIT = {
   2: 8,
   3: 10,
 };
+
+const THINGS_IN_RINGS_ZONE_SCAN_STEP = 6;
+const THINGS_IN_RINGS_ZONE_SVG_NS = "http://www.w3.org/2000/svg";
 
 const THINGS_IN_RINGS_HELP_TEXT = `
   <p><strong>Things in Rings</strong> is a hidden-rule deduction game. One player is the <strong>Knower</strong>; everyone else tries to place item cards into the correct ring zones.</p>
@@ -350,6 +353,259 @@ function getThingsInRingsZoneLayout(ringCount, zoneId) {
   return layouts[zoneId] || null;
 }
 
+function getThingsInRingsBoardLiftPx(stage) {
+  if (!stage) {
+    return 0;
+  }
+  const raw = window.getComputedStyle(stage).getPropertyValue("--things-rings-board-lift");
+  const value = Number.parseFloat(raw);
+  return Number.isFinite(value) ? value : 0;
+}
+
+function getThingsInRingsCircleGeometry(stage, ringCount) {
+  if (!stage) {
+    return [];
+  }
+  const layouts = THINGS_IN_RINGS_CIRCLE_LAYOUTS[ringCount] || [];
+  const rect = stage.getBoundingClientRect();
+  const lift = getThingsInRingsBoardLiftPx(stage);
+  return layouts.map((layout) => {
+    const diameter = rect.width * (layout.size / 100);
+    const radius = diameter / 2;
+    return {
+      cx: rect.width * (layout.left / 100) + radius,
+      cy: rect.height * (layout.top / 100) + lift + radius,
+      radius,
+    };
+  });
+}
+
+function getThingsInRingsZoneIdAtPoint(circles, x, y) {
+  if (!circles.length) {
+    return "";
+  }
+  return circles.map((circle) => ((x - circle.cx) ** 2 + (y - circle.cy) ** 2 <= circle.radius ** 2 ? "1" : "0")).join("");
+}
+
+function getThingsInRingsZoneScanData(stage, ringCount, zoneId) {
+  const rect = stage.getBoundingClientRect();
+  const circles = getThingsInRingsCircleGeometry(stage, ringCount);
+  const step = Math.max(4, rect.width <= 720 ? THINGS_IN_RINGS_ZONE_SCAN_STEP - 1 : THINGS_IN_RINGS_ZONE_SCAN_STEP);
+  const rows = [];
+  let area = 0;
+  let sumX = 0;
+  let sumY = 0;
+  let minX = rect.width;
+  let maxX = 0;
+  let minY = rect.height;
+  let maxY = 0;
+
+  for (let centerY = step / 2; centerY < rect.height; centerY += step) {
+    const yTop = Math.max(0, centerY - step / 2);
+    const yBottom = Math.min(rect.height, centerY + step / 2);
+    const xStops = [0, rect.width];
+
+    circles.forEach((circle) => {
+      const deltaY = centerY - circle.cy;
+      const rest = circle.radius ** 2 - deltaY ** 2;
+      if (rest <= 0) {
+        return;
+      }
+      const offset = Math.sqrt(rest);
+      xStops.push(Math.max(0, circle.cx - offset), Math.min(rect.width, circle.cx + offset));
+    });
+
+    xStops.sort((a, b) => a - b);
+    const intervals = [];
+    for (let index = 0; index < xStops.length - 1; index += 1) {
+      const start = xStops[index];
+      const end = xStops[index + 1];
+      if (end - start < 1) {
+        continue;
+      }
+      const middle = (start + end) / 2;
+      if (getThingsInRingsZoneIdAtPoint(circles, middle, centerY) !== zoneId) {
+        continue;
+      }
+      intervals.push([start, end]);
+      const sliceArea = (end - start) * (yBottom - yTop);
+      const sliceCenterX = (start + end) / 2;
+      const sliceCenterY = (yTop + yBottom) / 2;
+      area += sliceArea;
+      sumX += sliceCenterX * sliceArea;
+      sumY += sliceCenterY * sliceArea;
+      minX = Math.min(minX, start);
+      maxX = Math.max(maxX, end);
+      minY = Math.min(minY, yTop);
+      maxY = Math.max(maxY, yBottom);
+    }
+    if (intervals.length) {
+      rows.push({ yTop, yBottom, intervals });
+    }
+  }
+
+  if (!area || !rows.length) {
+    return null;
+  }
+
+  const path = rows
+    .map((row) =>
+      row.intervals
+        .map(
+          ([start, end]) =>
+            `M ${start.toFixed(2)} ${row.yTop.toFixed(2)} L ${end.toFixed(2)} ${row.yTop.toFixed(2)} L ${end.toFixed(2)} ${row.yBottom.toFixed(2)} L ${start.toFixed(2)} ${row.yBottom.toFixed(2)} Z`
+        )
+        .join(" ")
+    )
+    .join(" ");
+
+  return {
+    bounds: {
+      minX,
+      maxX,
+      minY,
+      maxY,
+      width: Math.max(1, maxX - minX),
+      height: Math.max(1, maxY - minY),
+    },
+    center: {
+      x: sumX / area,
+      y: sumY / area,
+    },
+    path,
+  };
+}
+
+function getThingsInRingsZoneGeometry(stage, ringCount, zoneId) {
+  const scanData = getThingsInRingsZoneScanData(stage, ringCount, zoneId);
+  if (scanData) {
+    return scanData;
+  }
+  const fallback = getThingsInRingsZoneLayout(ringCount, zoneId);
+  const rect = stage.getBoundingClientRect();
+  if (!fallback) {
+    return null;
+  }
+  const width = (fallback.w / 100) * rect.width;
+  const height = (fallback.h / 100) * rect.height;
+  const centerX = (fallback.x / 100) * rect.width;
+  const centerY = (fallback.y / 100) * rect.height + getThingsInRingsBoardLiftPx(stage);
+  return {
+    bounds: {
+      minX: centerX - width / 2,
+      maxX: centerX + width / 2,
+      minY: centerY - height / 2,
+      maxY: centerY + height / 2,
+      width,
+      height,
+    },
+    center: {
+      x: centerX,
+      y: centerY,
+    },
+    path: `M ${(centerX - width / 2).toFixed(2)} ${(centerY - height / 2).toFixed(2)} L ${(centerX + width / 2).toFixed(2)} ${(centerY - height / 2).toFixed(2)} L ${(centerX + width / 2).toFixed(2)} ${(centerY + height / 2).toFixed(2)} L ${(centerX - width / 2).toFixed(2)} ${(centerY + height / 2).toFixed(2)} Z`,
+  };
+}
+
+function selectThingsInRingsZone(zoneId, view) {
+  thingsInRingsSelectedZoneId = thingsInRingsSelectedZoneId === zoneId ? null : zoneId;
+  renderThingsInRingsBoard(view);
+  updateThingsInRingsButtons(view);
+}
+
+function appendThingsInRingsZoneCloud(zoneLayer, zone, view, ringCount, geometry, options = {}) {
+  const cards = getThingsInRingsZoneCards(zone, view);
+  if (!cards.length) {
+    return;
+  }
+  const insideCount = zone.zone_id.split("").filter((char) => char === "1").length;
+  const layout = getThingsInRingsZoneLayout(ringCount, zone.zone_id);
+  let previewLimit = options.previewLimit || (layout && layout.previewLimit) || 4;
+  if (window.innerWidth <= 720 && insideCount === 2) {
+    previewLimit = Math.min(previewLimit, 4);
+  }
+
+  const cloud = document.createElement("div");
+  cloud.className = "things-rings-zone-cloud";
+  if (insideCount === 1) {
+    cloud.classList.add("single");
+  } else if (insideCount === 2) {
+    cloud.classList.add("pair");
+  } else if (insideCount === 3) {
+    cloud.classList.add("triple");
+  }
+  cloud.style.left = `${geometry.center.x}px`;
+  cloud.style.top = `${geometry.center.y}px`;
+  cloud.style.setProperty("--zone-w", `${Math.min(geometry.bounds.width + 18, 220)}px`);
+
+  const list = document.createElement("div");
+  list.className = "things-rings-zone-cloud-cards";
+  cards.slice(0, previewLimit).forEach((card) => appendThingsInRingsCardChip(list, card));
+  cloud.appendChild(list);
+
+  if (cards.length > previewLimit) {
+    const footer = document.createElement("div");
+    footer.className = "things-rings-zone-cloud-footer";
+    const moreBtn = document.createElement("button");
+    moreBtn.type = "button";
+    moreBtn.className = "things-rings-zone-more-btn";
+    moreBtn.textContent = `View all (${cards.length})`;
+    moreBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      openThingsInRingsZoneModal(zone.zone_id);
+    });
+    footer.appendChild(moreBtn);
+    cloud.appendChild(footer);
+  }
+
+  zoneLayer.appendChild(cloud);
+}
+
+function buildThingsInRingsZoneMap(zoneLayer, stage, zones, view, ringCount) {
+  const rect = stage.getBoundingClientRect();
+  if (!rect.width || !rect.height) {
+    return;
+  }
+  const canPlace = isThingsInRingsActionAvailable("submit_play");
+  const svg = document.createElementNS(THINGS_IN_RINGS_ZONE_SVG_NS, "svg");
+  svg.classList.add("things-rings-zone-map");
+  svg.setAttribute("viewBox", `0 0 ${rect.width} ${rect.height}`);
+  svg.setAttribute("preserveAspectRatio", "none");
+  zoneLayer.appendChild(svg);
+
+  zones.forEach((zone) => {
+    const geometry = getThingsInRingsZoneGeometry(stage, ringCount, zone.zone_id);
+    if (!geometry) {
+      return;
+    }
+    const path = document.createElementNS(THINGS_IN_RINGS_ZONE_SVG_NS, "path");
+    path.setAttribute("d", geometry.path);
+    path.classList.add("things-rings-zone-shape");
+    path.classList.add(`inside-count-${zone.zone_id.split("").filter((char) => char === "1").length}`);
+    if (thingsInRingsSelectedZoneId === zone.zone_id && canPlace) {
+      path.classList.add("selected");
+    }
+    path.setAttribute("aria-label", `${zone.title || zone.zone_id}${zone.subtitle ? `. ${zone.subtitle}` : ""}`);
+    if (canPlace) {
+      path.classList.add("clickable");
+      path.setAttribute("tabindex", "0");
+      path.setAttribute("role", "button");
+      path.addEventListener("click", () => {
+        selectThingsInRingsZone(zone.zone_id, view);
+      });
+      path.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          selectThingsInRingsZone(zone.zone_id, view);
+        }
+      });
+    }
+    svg.appendChild(path);
+    appendThingsInRingsZoneCloud(zoneLayer, zone, view, ringCount, geometry);
+  });
+}
+
 function getThingsInRingsOutsideZoneId(ringCount) {
   return "0".repeat(Math.max(1, ringCount));
 }
@@ -409,78 +665,7 @@ function renderThingsInRingsZoneModal(view) {
 
 function createThingsInRingsZoneRegion(zone, view, ringCount, layout, options = {}) {
   if (!options.outside) {
-    const cards = getThingsInRingsZoneCards(zone, view);
-    const insideCount = zone.zone_id.split("").filter((char) => char === "1").length;
-    let previewLimit = options.previewLimit || layout.previewLimit || 4;
-    if (window.innerWidth <= 720 && insideCount === 2) {
-      previewLimit = Math.min(previewLimit, 4);
-    }
-    const fragment = document.createDocumentFragment();
-    const canPlace = isThingsInRingsActionAvailable("submit_play");
-
-    const hitbox = document.createElement("button");
-    hitbox.type = "button";
-    hitbox.className = "things-rings-zone-hitbox";
-    hitbox.style.setProperty("--zone-x", `${layout.x}%`);
-    hitbox.style.setProperty("--zone-y", `${layout.y}%`);
-    hitbox.style.setProperty("--zone-w", `${layout.w}%`);
-    hitbox.style.setProperty("--zone-h", `${layout.h}%`);
-    hitbox.setAttribute("aria-label", `${zone.title || zone.zone_id}${zone.subtitle ? `. ${zone.subtitle}` : ""}`);
-    if (thingsInRingsSelectedZoneId === zone.zone_id && canPlace) {
-      hitbox.classList.add("selected");
-      hitbox.setAttribute("aria-pressed", "true");
-    } else {
-      hitbox.setAttribute("aria-pressed", "false");
-    }
-    if (canPlace) {
-      hitbox.classList.add("clickable");
-      hitbox.addEventListener("click", () => {
-        thingsInRingsSelectedZoneId = thingsInRingsSelectedZoneId === zone.zone_id ? null : zone.zone_id;
-        renderThingsInRingsBoard(view);
-        updateThingsInRingsButtons(view);
-      });
-    } else {
-      hitbox.disabled = true;
-    }
-    fragment.appendChild(hitbox);
-
-    if (cards.length) {
-      const cloud = document.createElement("div");
-      cloud.className = "things-rings-zone-cloud";
-      if (insideCount === 1) {
-        cloud.classList.add("single");
-      } else if (insideCount === 2) {
-        cloud.classList.add("pair");
-      } else if (insideCount === 3) {
-        cloud.classList.add("triple");
-      }
-      cloud.style.setProperty("--zone-x", `${layout.x}%`);
-      cloud.style.setProperty("--zone-y", `${layout.y}%`);
-      cloud.style.setProperty("--zone-w", `${layout.w}%`);
-
-      const list = document.createElement("div");
-      list.className = "things-rings-zone-cloud-cards";
-      cards.slice(0, previewLimit).forEach((card) => appendThingsInRingsCardChip(list, card));
-      cloud.appendChild(list);
-
-      if (cards.length > previewLimit) {
-        const footer = document.createElement("div");
-        footer.className = "things-rings-zone-cloud-footer";
-        const moreBtn = document.createElement("button");
-        moreBtn.type = "button";
-        moreBtn.className = "things-rings-zone-more-btn";
-        moreBtn.textContent = `View all (${cards.length})`;
-        moreBtn.addEventListener("click", (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          openThingsInRingsZoneModal(zone.zone_id);
-        });
-        footer.appendChild(moreBtn);
-        cloud.appendChild(footer);
-      }
-      fragment.appendChild(cloud);
-    }
-    return fragment;
+    return document.createDocumentFragment();
   }
 
   const canPlace = isThingsInRingsActionAvailable("submit_play");
@@ -643,15 +828,6 @@ function renderThingsInRingsBoard(view) {
 
   const zoneLayer = document.createElement("div");
   zoneLayer.className = "things-rings-zone-layer";
-  zones
-    .filter((zone) => zone.zone_id !== outsideZoneId)
-    .forEach((zone) => {
-      const layout = getThingsInRingsZoneLayout(ringCount, zone.zone_id);
-      if (!layout) {
-        return;
-      }
-      zoneLayer.appendChild(createThingsInRingsZoneRegion(zone, view, ringCount, layout));
-    });
   stage.appendChild(zoneLayer);
 
   if (outsideZone) {
@@ -667,6 +843,13 @@ function renderThingsInRingsBoard(view) {
   }
 
   thingsInRingsBoard.appendChild(shell);
+  buildThingsInRingsZoneMap(
+    zoneLayer,
+    stage,
+    zones.filter((zone) => zone.zone_id !== outsideZoneId),
+    view,
+    ringCount
+  );
 
   if (thingsInRingsExpandedZoneId) {
     renderThingsInRingsZoneModal(view);
@@ -1179,6 +1362,13 @@ if (thingsInRingsExplainModalCloseBtn) {
 if (thingsInRingsZoneModalCloseBtn) {
   thingsInRingsZoneModalCloseBtn.addEventListener("click", closeThingsInRingsZoneModal);
 }
+
+window.addEventListener("resize", () => {
+  if (currentGameType !== "things_in_rings" || !currentThingsInRingsView) {
+    return;
+  }
+  renderThingsInRingsBoard(currentThingsInRingsView);
+});
 
 document.addEventListener(
   "pointerdown",
