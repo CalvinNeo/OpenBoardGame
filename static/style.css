@@ -13198,7 +13198,7 @@ body.patchwork-explain-mode [data-patchwork-explain].has-explanation {
 }
 
 .things-rings-board-shell.ring-count-3 .things-rings-board-stage {
-  aspect-ratio: 1 / 1.02;
+  aspect-ratio: 1 / 0.9;
 }
 
 .things-rings-circle {
@@ -13785,7 +13785,7 @@ body.things-rings-explain-mode .has-explanation[data-things-rings-explain-key]:h
   }
 
   .things-rings-board-shell.ring-count-3 .things-rings-board-stage {
-    aspect-ratio: 1 / 1.08;
+    aspect-ratio: 1 / 0.9;
   }
 
   .things-rings-zone-hitbox {
