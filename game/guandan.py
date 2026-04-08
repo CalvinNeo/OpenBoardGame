@@ -1152,20 +1152,17 @@ def _apply_round_result(state: Dict) -> None:
     order = state["finish_order"]
     if len(order) < 4:
         return
-    dealer_team = state["dealer_team"]
     winning_team = _team_of(state, order[0])
-    if winning_team != dealer_team:
-        state["dealer_team"] = winning_team
+    state["dealer_team"] = winning_team
+    second_team = _team_of(state, order[1])
+    third_team = _team_of(state, order[2])
+    if second_team == winning_team:
+        delta = 3
+    elif third_team == winning_team:
+        delta = 2
     else:
-        second_team = _team_of(state, order[1])
-        third_team = _team_of(state, order[2])
-        if second_team == dealer_team:
-            delta = 3
-        elif third_team == dealer_team:
-            delta = 2
-        else:
-            delta = 1
-        state["teams"][dealer_team]["level"] = min(14, state["teams"][dealer_team]["level"] + delta)
+        delta = 1
+    state["teams"][winning_team]["level"] = min(14, state["teams"][winning_team]["level"] + delta)
     state["level_rank"] = state["teams"][state["dealer_team"]]["level"]
 
 
@@ -1258,9 +1255,12 @@ def _advance_to_round_end(state: Dict) -> None:
 
 def _start_next_round(state: Dict) -> None:
     state["round_number"] += 1
-    head = state["finish_order"][0] if state["finish_order"] else None
+    previous_finish = state["finish_order"][:]
+    head = previous_finish[0] if previous_finish else None
     _deal_round(state, first_round=False, start_player=head)
+    state["finish_order"] = previous_finish
     _setup_tribute(state)
+    state["finish_order"] = []
 
 
 class GuandanGame:

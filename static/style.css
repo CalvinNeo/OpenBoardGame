@@ -7666,10 +7666,20 @@ body.guandan-explain-mode button.has-explanation:hover {
 
 #guandanPanel .guandan-hand-row {
   width: 100%;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  flex-direction: row;
+  align-items: center;
 }
 
 #guandanPanel .guandan-inline-btn {
   margin-left: auto;
+  width: auto;
+  padding: 4px 8px;
+}
+
+#guandanPanel .guandan-hand-row h3 {
+  margin: 0;
 }
 
 #guandanPanel .guandan-cascade-hand {
@@ -7686,8 +7696,8 @@ body.guandan-explain-mode button.has-explanation:hover {
 
 #guandanPanel .guandan-cascade-select {
   align-self: center;
-  min-width: 60px;
-  padding: 10px 12px;
+  min-width: 48px;
+  padding: 8px 10px;
   border: 1px solid #ccc;
   background: #fff;
   border-radius: 4px;
@@ -7699,7 +7709,7 @@ body.guandan-explain-mode button.has-explanation:hover {
   margin-top: -10px;
 }
 
-#guandanPanel .guandan-cascade-col .slot:first-child {
+#guandanPanel .guandan-cascade-col .slot:first-of-type {
   margin-top: 0;
 }
 
@@ -7707,6 +7717,11 @@ body.guandan-explain-mode button.has-explanation:hover {
   background: #dbeafe;
   border-color: #3b82f6;
   color: #1d4ed8;
+}
+
+#guandanPanel .slot {
+  min-width: 48px;
+  padding: 8px 10px;
 }
 
 #guandanPanel .guandan-pile {
