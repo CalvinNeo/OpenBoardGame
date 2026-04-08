@@ -222,6 +222,17 @@ function renderGuandanHand(view) {
   groups.forEach((group) => {
     const col = document.createElement("div");
     col.className = "guandan-cascade-col";
+    const selectBtn = document.createElement("button");
+    selectBtn.type = "button";
+    selectBtn.className = "guandan-cascade-select";
+    selectBtn.textContent = "↓";
+    selectBtn.addEventListener("click", () => {
+      guandanSelected = group.cards.map((card) => card.id);
+      updateGuandanSelected();
+      updateGuandanButtons();
+      renderGuandanHand(view);
+    });
+    col.appendChild(selectBtn);
     group.cards.forEach((card) => {
       const div = document.createElement("div");
       div.className = "slot";

@@ -1464,6 +1464,7 @@ class GuandanGame:
             if not state.get("current_trick"):
                 return events, "cannot pass"
             state["pass_count"] += 1
+            state.setdefault("trick_plays", {})[player_id] = "pass"
             active_count = len(_active_players(state))
             needed = max(1, active_count - 1)
             if state["pass_count"] >= needed:
@@ -1579,11 +1580,15 @@ class GuandanGame:
             if not cards:
                 continue
             meta = state["player_meta"].get(pid, {})
+            if cards == "pass":
+                labels = ["Pass"]
+            else:
+                labels = [_card_label(card) for card in cards]
             trick_plays_view.append(
                 {
                     "player_id": pid,
                     "name": meta.get("name"),
-                    "cards": [_card_label(card) for card in cards],
+                    "cards": labels,
                 }
             )
 
