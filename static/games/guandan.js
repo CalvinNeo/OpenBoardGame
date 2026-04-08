@@ -1,8 +1,9 @@
 let currentGuandanView = null;
 let guandanSelected = [];
 let guandanExplainMode = false;
-let guandanPile = [];
+let guandanPiles = [];
 let guandanLastSfKey = null;
+let guandanCascadeMode = false;
 
 const guandanPhaseLabel = document.getElementById("guandanPhase");
 const guandanRoundLabel = document.getElementById("guandanRound");
@@ -28,6 +29,7 @@ const guandanExplainContent = document.getElementById("guandanExplainContent");
 const guandanPlayBtn = document.getElementById("guandanPlayBtn");
 const guandanPassBtn = document.getElementById("guandanPassBtn");
 const guandanHintBtn = document.getElementById("guandanHintBtn");
+const guandanCascadeBtn = document.getElementById("guandanCascadeBtn");
 const guandanFindSfBtn = document.getElementById("guandanFindSfBtn");
 const guandanPileBtn = document.getElementById("guandanPileBtn");
 const guandanTributeBtn = document.getElementById("guandanTributeBtn");
@@ -38,14 +40,19 @@ const guandanPlayAgainBtn = document.getElementById("guandanPlayAgainBtn");
 function clearGuandanState() {
   currentGuandanView = null;
   guandanSelected = [];
-  guandanPile = [];
+  guandanPiles = [];
   guandanLastSfKey = null;
+  guandanCascadeMode = false;
+  if (guandanCascadeBtn) {
+    guandanCascadeBtn.classList.remove("active");
+  }
   updateGuandanSelected();
   if (guandanTrickPlaysLabel) {
     guandanTrickPlaysLabel.textContent = "-";
   }
   if (guandanHandEl) {
     guandanHandEl.textContent = "-";
+    guandanHandEl.classList.remove("guandan-cascade-hand");
   }
   if (guandanPileEl) {
     guandanPileEl.textContent = "-";
@@ -97,6 +104,7 @@ function updateGuandanButtons() {
       guandanPlayBtn,
       guandanPassBtn,
       guandanHintBtn,
+      guandanCascadeBtn,
       guandanFindSfBtn,
       guandanPileBtn,
       guandanTributeBtn,
@@ -106,6 +114,9 @@ function updateGuandanButtons() {
     ].forEach((btn) => {
       if (btn) btn.disabled = true;
     });
+    if (guandanTributeBtn) guandanTributeBtn.classList.add("hidden");
+    if (guandanReturnBtn) guandanReturnBtn.classList.add("hidden");
+    if (guandanPlayAgainBtn) guandanPlayAgainBtn.classList.add("hidden");
     return;
   }
   const legal = Array.isArray(currentGuandanView.legal_actions) ? currentGuandanView.legal_actions : [];
@@ -122,6 +133,9 @@ function updateGuandanButtons() {
   if (guandanHintBtn) {
     guandanHintBtn.disabled = !hintOptions.length;
   }
+  if (guandanCascadeBtn) {
+    guandanCascadeBtn.disabled = false;
+  }
   if (guandanFindSfBtn) {
     guandanFindSfBtn.disabled = !sfCandidates.length;
   }
@@ -129,47 +143,104 @@ function updateGuandanButtons() {
     guandanPileBtn.disabled = guandanSelected.length < 1;
   }
   if (guandanTributeBtn) {
-    guandanTributeBtn.disabled = !(legal.includes("tribute_select") && guandanSelected.length === 1);
+    const showTribute = legal.includes("tribute_select");
+    guandanTributeBtn.disabled = !(showTribute && guandanSelected.length === 1);
+    guandanTributeBtn.classList.toggle("hidden", !showTribute);
   }
   if (guandanReturnBtn) {
-    guandanReturnBtn.disabled = !(legal.includes("return_select") && guandanSelected.length === 1);
+    const showReturn = legal.includes("return_select");
+    guandanReturnBtn.disabled = !(showReturn && guandanSelected.length === 1);
+    guandanReturnBtn.classList.toggle("hidden", !showReturn);
   }
   if (guandanNextRoundBtn) {
     guandanNextRoundBtn.disabled = !legal.includes("next_round");
   }
   if (guandanPlayAgainBtn) {
-    guandanPlayAgainBtn.disabled = !legal.includes("play_again");
+    const showPlayAgain = legal.includes("play_again");
+    guandanPlayAgainBtn.disabled = !showPlayAgain;
+    guandanPlayAgainBtn.classList.toggle("hidden", !showPlayAgain);
   }
 }
 
 function renderGuandanHand(view) {
   if (!guandanHandEl) return;
   guandanHandEl.innerHTML = "";
+  guandanHandEl.classList.toggle("guandan-cascade-hand", guandanCascadeMode);
   const you = Array.isArray(view.players) ? view.players.find((p) => p.player_id === view.you) : null;
   if (!you || !Array.isArray(you.hand)) {
     guandanHandEl.textContent = "-";
     return;
   }
   const handIds = new Set(you.hand.map((card) => card.id));
-  guandanPile = guandanPile.filter((cid) => handIds.has(cid));
+  guandanPiles = guandanPiles
+    .map((row) => row.filter((cid) => handIds.has(cid)))
+    .filter((row) => row.length);
   guandanSelected = guandanSelected.filter((cid) => handIds.has(cid));
-  you.hand.filter((card) => !guandanPile.includes(card.id)).forEach((card) => {
-    const div = document.createElement("div");
-    div.className = "slot";
-    if (card.is_wild) div.classList.add("wild-card");
-    if (guandanSelected.includes(card.id)) div.classList.add("selected");
-    div.textContent = card.label;
-    div.addEventListener("click", () => {
-      if (guandanSelected.includes(card.id)) {
-        guandanSelected = guandanSelected.filter((cid) => cid !== card.id);
-      } else {
-        guandanSelected.push(card.id);
-      }
-      updateGuandanSelected();
-      updateGuandanButtons();
-      renderGuandanHand(view);
+  const piledIds = new Set(guandanPiles.flat());
+  const available = you.hand.filter((card) => !piledIds.has(card.id));
+  if (!guandanCascadeMode) {
+    available.forEach((card) => {
+      const div = document.createElement("div");
+      div.className = "slot";
+      if (card.is_wild) div.classList.add("wild-card");
+      if (guandanSelected.includes(card.id)) div.classList.add("selected");
+      div.textContent = card.label;
+      div.addEventListener("click", () => {
+        if (guandanSelected.includes(card.id)) {
+          guandanSelected = guandanSelected.filter((cid) => cid !== card.id);
+        } else {
+          guandanSelected.push(card.id);
+        }
+        updateGuandanSelected();
+        updateGuandanButtons();
+        renderGuandanHand(view);
+      });
+      guandanHandEl.appendChild(div);
     });
-    guandanHandEl.appendChild(div);
+    return;
+  }
+
+  const groups = [];
+  const groupMap = new Map();
+  available.forEach((card) => {
+    let key = "";
+    if (card.joker) {
+      key = `joker-${card.joker}`;
+    } else if (card.rank != null) {
+      key = `rank-${card.rank}`;
+    } else {
+      key = `label-${card.label}`;
+    }
+    let group = groupMap.get(key);
+    if (!group) {
+      group = { key, cards: [] };
+      groupMap.set(key, group);
+      groups.push(group);
+    }
+    group.cards.push(card);
+  });
+  groups.forEach((group) => {
+    const col = document.createElement("div");
+    col.className = "guandan-cascade-col";
+    group.cards.forEach((card) => {
+      const div = document.createElement("div");
+      div.className = "slot";
+      if (card.is_wild) div.classList.add("wild-card");
+      if (guandanSelected.includes(card.id)) div.classList.add("selected");
+      div.textContent = card.label;
+      div.addEventListener("click", () => {
+        if (guandanSelected.includes(card.id)) {
+          guandanSelected = guandanSelected.filter((cid) => cid !== card.id);
+        } else {
+          guandanSelected.push(card.id);
+        }
+        updateGuandanSelected();
+        updateGuandanButtons();
+        renderGuandanHand(view);
+      });
+      col.appendChild(div);
+    });
+    guandanHandEl.appendChild(col);
   });
 }
 
@@ -177,28 +248,63 @@ function renderGuandanPile(view) {
   if (!guandanPileEl) return;
   guandanPileEl.innerHTML = "";
   const you = Array.isArray(view.players) ? view.players.find((p) => p.player_id === view.you) : null;
-  if (!you || !Array.isArray(you.hand) || !guandanPile.length) {
+  if (!you || !Array.isArray(you.hand) || !guandanPiles.length) {
     guandanPileEl.textContent = "-";
     return;
   }
   const lookup = new Map(you.hand.map((card) => [card.id, card]));
-  guandanPile.forEach((cid) => {
-    const card = lookup.get(cid);
-    if (!card) return;
-    const div = document.createElement("div");
-    div.className = "slot";
-    if (card.is_wild) div.classList.add("wild-card");
-    if (guandanSelected.includes(card.id)) div.classList.add("selected");
-    div.textContent = card.label;
-    div.addEventListener("click", () => {
-      guandanPile = guandanPile.filter((pid) => pid !== card.id);
-      guandanSelected = guandanSelected.filter((pid) => pid !== card.id);
+  guandanPiles.forEach((row, rowIndex) => {
+    const rowEl = document.createElement("div");
+    rowEl.className = "guandan-pile-row";
+    const clearBtn = document.createElement("button");
+    clearBtn.type = "button";
+    clearBtn.className = "guandan-pile-clear";
+    clearBtn.textContent = "↑";
+    clearBtn.addEventListener("click", () => {
+      guandanPiles = guandanPiles.filter((_, idx) => idx !== rowIndex);
       updateGuandanSelected();
       updateGuandanButtons();
       renderGuandanHand(view);
       renderGuandanPile(view);
     });
-    guandanPileEl.appendChild(div);
+    rowEl.appendChild(clearBtn);
+    const selectBtn = document.createElement("button");
+    selectBtn.type = "button";
+    selectBtn.className = "guandan-pile-select";
+    selectBtn.textContent = "A";
+    selectBtn.addEventListener("click", () => {
+      guandanSelected = [...row];
+      updateGuandanSelected();
+      updateGuandanButtons();
+      renderGuandanHand(view);
+      renderGuandanPile(view);
+    });
+    rowEl.appendChild(selectBtn);
+    let added = 0;
+    row.forEach((cid) => {
+      const card = lookup.get(cid);
+      if (!card) return;
+      const div = document.createElement("div");
+      div.className = "slot";
+      if (card.is_wild) div.classList.add("wild-card");
+      if (guandanSelected.includes(card.id)) div.classList.add("selected");
+      div.textContent = card.label;
+      div.addEventListener("click", () => {
+        guandanPiles = guandanPiles
+          .map((pile, idx) => (idx === rowIndex ? pile.filter((pid) => pid !== card.id) : pile))
+          .filter((pile) => pile.length);
+        guandanSelected = guandanSelected.filter((pid) => pid !== card.id);
+        updateGuandanSelected();
+        updateGuandanButtons();
+        renderGuandanHand(view);
+        renderGuandanPile(view);
+      });
+      rowEl.appendChild(div);
+      added += 1;
+    });
+    if (added) {
+      guandanPileEl.appendChild(rowEl);
+    }
   });
 }
 
@@ -336,6 +442,12 @@ const GUANDAN_BUTTON_EXPLANATIONS = {
     cost: "Assist",
     costType: "free",
   },
+  guandanCascadeBtn: {
+    name: "Cascade",
+    description: "Stack cards of the same rank vertically in your hand for easier scanning.",
+    cost: "Layout",
+    costType: "free",
+  },
   guandanFindSfBtn: {
     name: "Find SF",
     description: "Cycle through available straight flush selections in your hand.",
@@ -460,7 +572,6 @@ function applyGuandanSelection(cardIds) {
   if (!Array.isArray(cardIds) || !cardIds.length || !currentGuandanView) {
     return;
   }
-  guandanPile = guandanPile.filter((cid) => !cardIds.includes(cid));
   guandanSelected = [...cardIds];
   updateGuandanSelected();
   renderGuandanHand(currentGuandanView);
@@ -504,6 +615,17 @@ if (guandanHintBtn) {
   });
 }
 
+if (guandanCascadeBtn) {
+  guandanCascadeBtn.addEventListener("click", () => {
+    guandanCascadeMode = !guandanCascadeMode;
+    guandanCascadeBtn.classList.toggle("active", guandanCascadeMode);
+    if (currentGuandanView) {
+      renderGuandanHand(currentGuandanView);
+      updateGuandanButtons();
+    }
+  });
+}
+
 if (guandanFindSfBtn) {
   guandanFindSfBtn.addEventListener("click", () => {
     if (!currentGuandanView) return;
@@ -525,11 +647,11 @@ if (guandanFindSfBtn) {
 if (guandanPileBtn) {
   guandanPileBtn.addEventListener("click", () => {
     if (!currentGuandanView || !guandanSelected.length) return;
-    guandanSelected.forEach((cid) => {
-      if (!guandanPile.includes(cid)) {
-        guandanPile.push(cid);
-      }
-    });
+    const newRow = [...guandanSelected];
+    guandanPiles = guandanPiles
+      .map((row) => row.filter((cid) => !newRow.includes(cid)))
+      .filter((row) => row.length);
+    guandanPiles.push(newRow);
     guandanSelected = [];
     updateGuandanSelected();
     renderGuandanHand(currentGuandanView);

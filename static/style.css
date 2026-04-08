@@ -7664,6 +7664,67 @@ body.guandan-explain-mode button.has-explanation:hover {
   margin-right: 0;
 }
 
+#guandanPanel .guandan-cascade-hand {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+#guandanPanel .guandan-cascade-col {
+  display: flex;
+  flex-direction: column;
+}
+
+#guandanPanel .guandan-cascade-col .slot {
+  margin-top: -10px;
+}
+
+#guandanPanel .guandan-cascade-col .slot:first-child {
+  margin-top: 0;
+}
+
+#guandanPanel #guandanCascadeBtn.active {
+  background: #dbeafe;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+
+#guandanPanel .guandan-pile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+#guandanPanel .guandan-pile-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+  align-items: center;
+}
+
+#guandanPanel .guandan-pile-row .slot {
+  flex: 0 0 auto;
+}
+
+#guandanPanel .guandan-pile-clear {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+#guandanPanel .guandan-pile-select {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
 /* Carcassonne Help/Explain */
 .carc-header-btn {
   padding: 4px 10px;

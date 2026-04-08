@@ -1543,6 +1543,9 @@ class GuandanGame:
                             "label": _card_label(card),
                             "is_wild": _is_wild(card, level_rank),
                             "is_joker": _is_joker(card),
+                            "rank": card.get("rank"),
+                            "suit": card.get("suit"),
+                            "joker": card.get("joker"),
                         }
                     )
             players_view.append(
