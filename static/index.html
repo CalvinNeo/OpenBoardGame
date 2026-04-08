@@ -2749,48 +2749,110 @@
             </div>
 
             <div id="wavelengthPanel" class="hidden">
-              <div class="row">
-                <div>Phase: <span id="wavelengthPhase">-</span></div>
-                <div>Round: <span id="wavelengthRound">-</span></div>
-                <div>Score: <span id="wavelengthScores">-</span></div>
+              <div class="wavelength-summary-grid">
+                <div class="wavelength-summary-card">
+                  <div class="wavelength-summary-label">Phase</div>
+                  <div class="wavelength-summary-value" id="wavelengthPhase">-</div>
+                </div>
+                <div class="wavelength-summary-card">
+                  <div class="wavelength-summary-label">Round</div>
+                  <div class="wavelength-summary-value" id="wavelengthRound">-</div>
+                </div>
+                <div class="wavelength-summary-card wavelength-summary-card--wide">
+                  <div class="wavelength-summary-label">Score</div>
+                  <div class="wavelength-summary-value" id="wavelengthScores">-</div>
+                </div>
               </div>
-              <div class="row">
-                <div>Your Team: <span id="wavelengthYourTeam">-</span></div>
-                <div>Your Role: <span id="wavelengthYourRole">-</span></div>
+              <div class="wavelength-summary-grid">
+                <div class="wavelength-summary-card">
+                  <div class="wavelength-summary-label">Your Team</div>
+                  <div class="wavelength-summary-value" id="wavelengthYourTeam">-</div>
+                </div>
+                <div class="wavelength-summary-card">
+                  <div class="wavelength-summary-label">Your Role</div>
+                  <div class="wavelength-summary-value" id="wavelengthYourRole">-</div>
+                </div>
               </div>
-              <div class="row">
-                <div>Spectrum: <span id="wavelengthCard">-</span></div>
-                <div>Clue: <span id="wavelengthClue">-</span></div>
-                <div>Target: <span id="wavelengthTarget">Hidden</span></div>
+              <div class="wavelength-summary-grid wavelength-summary-grid--detail">
+                <div class="wavelength-summary-card wavelength-summary-card--wide">
+                  <div class="wavelength-summary-label">Spectrum</div>
+                  <div class="wavelength-summary-value" id="wavelengthCard">-</div>
+                </div>
+                <div class="wavelength-summary-card wavelength-summary-card--wide">
+                  <div class="wavelength-summary-label">Clue</div>
+                  <div class="wavelength-summary-value" id="wavelengthClue">-</div>
+                </div>
+                <div class="wavelength-summary-card">
+                  <div class="wavelength-summary-label">Target</div>
+                  <div class="wavelength-summary-value" id="wavelengthTarget">Hidden</div>
+                </div>
               </div>
               <div class="decrypto-status waiting" role="status" aria-live="polite">
                 <div class="decrypto-status-title">Your Next Step</div>
                 <div id="wavelengthStatusBody" class="decrypto-status-body">-</div>
               </div>
-              <div class="wavelength-track" aria-label="Spectrum track">
-                <div class="wavelength-track-end left">⬅️ 左侧</div>
-                <div class="wavelength-track-end right">右侧 ➡️</div>
-                <div id="wavelengthZone2" class="wavelength-zone zone2 hidden" title="2-point zone"></div>
-                <div id="wavelengthZone3" class="wavelength-zone zone3 hidden" title="3-point zone"></div>
-                <div id="wavelengthZone4" class="wavelength-zone zone4 hidden" title="4-point zone"></div>
-                <div id="wavelengthTrackTarget" class="wavelength-marker target hidden" title="Target"></div>
-                <div id="wavelengthTrackGuess" class="wavelength-marker guess hidden" title="Team Guess"></div>
+              <div class="wavelength-track-card">
+                <div class="wavelength-track-header">
+                  <div class="wavelength-track-title">🎯 Scoring Track</div>
+                  <div class="wavelength-track-hint">Drag only when your team is placing the dial.</div>
+                </div>
+                <div class="wavelength-track-legend">
+                  <span><span class="wavelength-legend-dot wavelength-legend-dot--guess"></span>Your dial</span>
+                  <span><span class="wavelength-legend-dot wavelength-legend-dot--target"></span>Hidden target</span>
+                  <span><span class="wavelength-legend-swatch wavelength-legend-swatch--zone"></span>Blue bands are scoring zones</span>
+                </div>
+                <div class="wavelength-track-label-row" aria-hidden="true">
+                  <div class="wavelength-track-end left">⬅️ Left</div>
+                  <div class="wavelength-track-center">Outside the blue bands: miss</div>
+                  <div class="wavelength-track-end right">Right ➡️</div>
+                </div>
+                <div class="wavelength-track" aria-label="Spectrum track">
+                  <div id="wavelengthZone2" class="wavelength-zone zone2 hidden" title="2-point zone"></div>
+                  <div id="wavelengthZone3" class="wavelength-zone zone3 hidden" title="3-point zone"></div>
+                  <div id="wavelengthZone4" class="wavelength-zone zone4 hidden" title="4-point zone"></div>
+                  <div id="wavelengthLabel2" class="wavelength-zone-label hidden">2 pts</div>
+                  <div id="wavelengthLabel3" class="wavelength-zone-label hidden">3 pts</div>
+                  <div id="wavelengthLabel4" class="wavelength-zone-label hidden">4 pts</div>
+                  <div id="wavelengthTrackTarget" class="wavelength-marker target hidden" title="Target"></div>
+                  <div id="wavelengthTrackGuess" class="wavelength-marker guess hidden" title="Team Guess"></div>
+                </div>
               </div>
               <h3>Actions</h3>
-              <div class="row actions wavelength-action-row">
-                <input id="wavelengthClueInput" type="text" maxlength="80" placeholder="Psychic clue" />
-                <button id="wavelengthSubmitClueBtn">Submit Clue</button>
-              </div>
-              <div class="row actions wavelength-action-row">
-                <span id="wavelengthGuessValue">0.00</span>
-                <button id="wavelengthSubmitGuessBtn">Submit Guess</button>
-              </div>
-              <div class="row actions wavelength-action-row">
-                <button id="wavelengthSideLeftBtn">⬅️ LEFT</button>
-                <button id="wavelengthSideRightBtn">RIGHT ➡️</button>
-              </div>
-              <div class="row actions wavelength-action-row">
-                <button id="wavelengthContinueBtn">Continue</button>
+              <div class="wavelength-action-grid">
+                <section class="wavelength-action-card" id="wavelengthClueCard">
+                  <div class="wavelength-action-title">🔮 Psychic Clue</div>
+                  <div class="wavelength-action-copy" id="wavelengthClueCardCopy">Only the psychic should type one clue for the active team.</div>
+                  <div class="row actions wavelength-action-row">
+                    <input id="wavelengthClueInput" type="text" maxlength="80" placeholder="Psychic clue" />
+                    <button id="wavelengthSubmitClueBtn">Submit Clue</button>
+                  </div>
+                </section>
+                <section class="wavelength-action-card" id="wavelengthGuessCard">
+                  <div class="wavelength-action-title">🧭 Team Dial</div>
+                  <div class="wavelength-action-copy" id="wavelengthGuessCardCopy">Discuss with your active team, drag the dial, then lock the final position.</div>
+                  <div class="wavelength-guess-display">
+                    <span class="wavelength-guess-label">Dial Position</span>
+                    <span id="wavelengthGuessValue" class="wavelength-guess-pill">Center 0.00</span>
+                  </div>
+                  <div class="row actions wavelength-action-row">
+                    <button id="wavelengthSubmitGuessBtn">Submit Guess</button>
+                  </div>
+                </section>
+                <section class="wavelength-action-card" id="wavelengthSideCard">
+                  <div class="wavelength-action-title">🕵️ Opponent Side Guess</div>
+                  <div class="wavelength-action-copy" id="wavelengthSideCardCopy">Only the opposing team chooses whether the hidden target is LEFT or RIGHT of that dial.</div>
+                  <div class="row actions wavelength-action-row wavelength-action-row--double">
+                    <button id="wavelengthSideLeftBtn">⬅️ LEFT</button>
+                    <button id="wavelengthSideRightBtn">RIGHT ➡️</button>
+                  </div>
+                </section>
+                <section class="wavelength-action-card wavelength-action-card--compact" id="wavelengthContinueCard">
+                  <div class="wavelength-action-title">⏭️ Continue</div>
+                  <div class="wavelength-action-copy" id="wavelengthContinueCardCopy">After the recap, every player confirms before the next round starts.</div>
+                  <div class="row actions wavelength-action-row">
+                    <button id="wavelengthContinueBtn">Continue</button>
+                  </div>
+                </section>
               </div>
               <h3>Players</h3>
               <div id="wavelengthPlayers"></div>

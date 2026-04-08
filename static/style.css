@@ -8686,45 +8686,158 @@ body.wavelength-explain-mode button.has-explanation {
   cursor: help;
 }
 
+.wavelength-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.wavelength-summary-grid--detail {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.wavelength-summary-card {
+  padding: 10px 12px;
+  border: 1px solid #d9e3f0;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+}
+
+.wavelength-summary-card--wide {
+  min-width: 0;
+}
+
+.wavelength-summary-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #5b6b82;
+}
+
+.wavelength-summary-value {
+  margin-top: 4px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #122033;
+  overflow-wrap: anywhere;
+}
+
+.wavelength-track-card {
+  margin: 18px 0 20px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid #d7e2ef;
+  background: linear-gradient(180deg, #fffdf8 0%, #f8fbff 100%);
+}
+
+.wavelength-track-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.wavelength-track-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #122033;
+}
+
+.wavelength-track-hint {
+  font-size: 12px;
+  color: #5b6b82;
+}
+
+.wavelength-track-legend {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  font-size: 12px;
+  color: #334155;
+}
+
+.wavelength-track-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wavelength-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 2px solid #111827;
+}
+
+.wavelength-legend-dot--guess {
+  background: #2563eb;
+}
+
+.wavelength-legend-dot--target {
+  background: #ef4444;
+}
+
+.wavelength-legend-swatch {
+  width: 16px;
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  background: rgba(37, 99, 235, 0.24);
+}
+
+.wavelength-track-label-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.wavelength-track-center {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+}
+
 .wavelength-track {
   position: relative;
-  margin: 24px 0 14px;
-  height: 34px;
-  border-radius: 999px;
+  margin: 10px 0 14px;
+  height: 56px;
+  border-radius: 18px;
   overflow: hidden;
-  background: linear-gradient(90deg, #f97316 0%, #facc15 50%, #22c55e 100%);
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: linear-gradient(90deg, #f59e0b 0%, #fde68a 18%, #f8fafc 50%, #bbf7d0 82%, #22c55e 100%);
 }
 
 .wavelength-track.is-draggable {
   cursor: pointer;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 .wavelength-track-end {
-  position: absolute;
-  top: -20px;
   font-size: 12px;
   font-weight: 700;
   color: #374151;
 }
 
-.wavelength-track-end.left {
-  left: 0;
-}
-
-.wavelength-track-end.right {
-  right: 0;
-}
-
 .wavelength-marker {
   position: absolute;
   top: 50%;
-  width: 12px;
-  height: 12px;
-  margin-left: -6px;
+  width: 16px;
+  height: 16px;
+  margin-left: -8px;
   border-radius: 999px;
   transform: translateY(-50%);
-  border: 2px solid #111827;
-  z-index: 3;
+  border: 3px solid #111827;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.2);
+  z-index: 4;
 }
 
 .wavelength-marker.target {
@@ -8738,7 +8851,7 @@ body.wavelength-explain-mode button.has-explanation {
 .wavelength-zone {
   position: absolute;
   top: 50%;
-  height: 22px;
+  height: 28px;
   transform: translateY(-50%);
   border-radius: 999px;
   pointer-events: none;
@@ -8746,23 +8859,124 @@ body.wavelength-explain-mode button.has-explanation {
 }
 
 .wavelength-zone.zone2 {
-  background: rgba(59, 130, 246, 0.2);
+  background: rgba(59, 130, 246, 0.14);
 }
 
 .wavelength-zone.zone3 {
-  background: rgba(59, 130, 246, 0.34);
+  background: rgba(59, 130, 246, 0.24);
 }
 
 .wavelength-zone.zone4 {
-  background: rgba(37, 99, 235, 0.5);
+  background: rgba(37, 99, 235, 0.36);
+}
+
+.wavelength-zone-label {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  color: #0f172a;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+
+#wavelengthLabel4 {
+  top: 10px;
+}
+
+#wavelengthLabel3 {
+  top: 27px;
+}
+
+#wavelengthLabel2 {
+  top: 44px;
 }
 
 .wavelength-action-row input[type="text"] {
   flex: 1 1 240px;
 }
 
-.wavelength-action-row input[type="range"] {
-  flex: 1 1 260px;
+.wavelength-action-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.wavelength-action-card {
+  border: 1px solid #d8e2ee;
+  border-radius: 16px;
+  padding: 12px;
+  background: #ffffff;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.05);
+}
+
+.wavelength-action-card--compact {
+  align-self: start;
+}
+
+.wavelength-action-title {
+  font-weight: 800;
+  color: #122033;
+}
+
+.wavelength-action-copy {
+  margin: 6px 0 10px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #4b5563;
+}
+
+.wavelength-action-card.is-active {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.16);
+}
+
+.wavelength-action-card.is-blocked {
+  background: #f8fafc;
+}
+
+.wavelength-action-row {
+  margin: 0;
+}
+
+.wavelength-action-row--double button {
+  flex: 1 1 0;
+}
+
+.wavelength-guess-display {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.wavelength-guess-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #5b6b82;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.wavelength-guess-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 118px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #eff6ff 0%, #dbeafe 100%);
+  color: #1d4ed8;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
 }
 
 .wavelength-player-row,
@@ -8781,8 +8995,22 @@ body.wavelength-explain-mode button.has-explanation {
 
 .wavelength-player-row,
 .wavelength-history-row {
-  padding: 4px 0;
+  padding: 6px 0;
   color: #1f2937;
+}
+
+@media (max-width: 720px) {
+  .wavelength-track {
+    height: 62px;
+  }
+
+  .wavelength-zone-label {
+    font-size: 9px;
+  }
+
+  .wavelength-track-center {
+    font-size: 10px;
+  }
 }
 
 /* Word Decode */

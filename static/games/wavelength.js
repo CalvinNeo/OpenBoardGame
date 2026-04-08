@@ -25,23 +25,34 @@ const wavelengthTrackGuess = document.getElementById("wavelengthTrackGuess");
 const wavelengthZone2 = document.getElementById("wavelengthZone2");
 const wavelengthZone3 = document.getElementById("wavelengthZone3");
 const wavelengthZone4 = document.getElementById("wavelengthZone4");
+const wavelengthLabel2 = document.getElementById("wavelengthLabel2");
+const wavelengthLabel3 = document.getElementById("wavelengthLabel3");
+const wavelengthLabel4 = document.getElementById("wavelengthLabel4");
 const wavelengthTrack = document.querySelector("#wavelengthPanel .wavelength-track");
 const wavelengthPlayers = document.getElementById("wavelengthPlayers");
 const wavelengthHistory = document.getElementById("wavelengthHistory");
 
 const wavelengthClueInput = document.getElementById("wavelengthClueInput");
+const wavelengthClueCard = document.getElementById("wavelengthClueCard");
+const wavelengthClueCardCopy = document.getElementById("wavelengthClueCardCopy");
 const wavelengthSubmitClueBtn = document.getElementById("wavelengthSubmitClueBtn");
+const wavelengthGuessCard = document.getElementById("wavelengthGuessCard");
+const wavelengthGuessCardCopy = document.getElementById("wavelengthGuessCardCopy");
 const wavelengthGuessValue = document.getElementById("wavelengthGuessValue");
 const wavelengthSubmitGuessBtn = document.getElementById("wavelengthSubmitGuessBtn");
+const wavelengthSideCard = document.getElementById("wavelengthSideCard");
+const wavelengthSideCardCopy = document.getElementById("wavelengthSideCardCopy");
 const wavelengthSideLeftBtn = document.getElementById("wavelengthSideLeftBtn");
 const wavelengthSideRightBtn = document.getElementById("wavelengthSideRightBtn");
+const wavelengthContinueCard = document.getElementById("wavelengthContinueCard");
+const wavelengthContinueCardCopy = document.getElementById("wavelengthContinueCardCopy");
 const wavelengthContinueBtn = document.getElementById("wavelengthContinueBtn");
 let wavelengthTrackDragging = false;
 let wavelengthEditableGuessPos = 0;
 const WAVELENGTH_SCORE_BANDS = [
-  { halfWidth: 0.38, el: wavelengthZone2 },
-  { halfWidth: 0.24, el: wavelengthZone3 },
-  { halfWidth: 0.12, el: wavelengthZone4 },
+  { halfWidth: 0.38, el: wavelengthZone2, labelEl: wavelengthLabel2 },
+  { halfWidth: 0.24, el: wavelengthZone3, labelEl: wavelengthLabel3 },
+  { halfWidth: 0.12, el: wavelengthZone4, labelEl: wavelengthLabel4 },
 ];
 
 const WAVELENGTH_HELP_HTML = `
@@ -124,15 +135,67 @@ function setWavelengthEditableGuess(pos) {
   const clamped = Math.max(-1, Math.min(1, Number(pos) || 0));
   wavelengthEditableGuessPos = clamped;
   if (wavelengthGuessValue) {
-    wavelengthGuessValue.textContent = clamped.toFixed(2);
+    const side = clamped < 0 ? "Left" : clamped > 0 ? "Right" : "Center";
+    wavelengthGuessValue.textContent = `${side} ${clamped.toFixed(2)}`;
   }
   setWavelengthMarker(wavelengthTrackGuess, clamped);
 }
 
-function setWavelengthZone(zoneEl, center, halfWidth) {
+function setWavelengthActionCardState(card, active) {
+  if (!card) return;
+  card.classList.toggle("is-active", active);
+  card.classList.toggle("is-blocked", !active);
+}
+
+function updateWavelengthActionCards(view) {
+  const yourTeam = formatWavelengthTeam(view && view.your_team);
+  const activeTeam = formatWavelengthTeam(view && view.active_team);
+  const opponentTeam = formatWavelengthTeam(view && view.opponent_team);
+  const canClue = wavelengthCan("submit_clue");
+  const canGuess = wavelengthCan("submit_team_guess");
+  const canSide = wavelengthCan("submit_side_guess");
+  const canContinue = wavelengthCan("continue_next_round");
+
+  setWavelengthActionCardState(wavelengthClueCard, canClue);
+  setWavelengthActionCardState(wavelengthGuessCard, canGuess);
+  setWavelengthActionCardState(wavelengthSideCard, canSide);
+  setWavelengthActionCardState(wavelengthContinueCard, canContinue);
+
+  if (wavelengthClueCardCopy) {
+    wavelengthClueCardCopy.textContent = !view
+      ? "Only the psychic types one clue for the active team."
+      : canClue
+        ? `You are the psychic for ${activeTeam}. Enter one clue now.`
+        : `Only the psychic for ${activeTeam} types a clue in this step.`;
+  }
+  if (wavelengthGuessCardCopy) {
+    wavelengthGuessCardCopy.textContent = !view
+      ? "The active team discusses, drags the dial, and locks one final position."
+      : canGuess
+        ? "Your team is active. Drag the dial on the track, then submit the final position."
+        : `${activeTeam} is the team that places the dial this round. Your team is ${yourTeam}.`;
+  }
+  if (wavelengthSideCardCopy) {
+    wavelengthSideCardCopy.textContent = !view
+      ? "After the dial is locked, the other team guesses LEFT or RIGHT."
+      : canSide
+        ? `Your team is defending. Choose whether the hidden target is LEFT or RIGHT of ${activeTeam}'s dial.`
+        : `${opponentTeam} is the team that makes the side guess after ${activeTeam} locks the dial.`;
+  }
+  if (wavelengthContinueCardCopy) {
+    wavelengthContinueCardCopy.textContent = canContinue
+      ? "Round recap is ready. Confirm to move on."
+      : "After reveal, everyone confirms here before the next round starts.";
+  }
+}
+
+function setWavelengthZone(zoneEl, center, halfWidth, labelEl) {
   if (!zoneEl) return;
   if (typeof center !== "number" || Number.isNaN(center)) {
     zoneEl.classList.add("hidden");
+    if (labelEl) {
+      labelEl.classList.add("hidden");
+    }
     return;
   }
   const leftRatio = Math.max(0, (center - halfWidth + 1) / 2);
@@ -141,11 +204,15 @@ function setWavelengthZone(zoneEl, center, halfWidth) {
   zoneEl.style.left = `${leftRatio * 100}%`;
   zoneEl.style.width = `${widthRatio * 100}%`;
   zoneEl.classList.remove("hidden");
+  if (labelEl) {
+    labelEl.style.left = `${((leftRatio + rightRatio) / 2) * 100}%`;
+    labelEl.classList.remove("hidden");
+  }
 }
 
 function setWavelengthZones(center) {
   WAVELENGTH_SCORE_BANDS.forEach((band) => {
-    setWavelengthZone(band.el, center, band.halfWidth);
+    setWavelengthZone(band.el, center, band.halfWidth, band.labelEl);
   });
 }
 
@@ -253,7 +320,7 @@ function clearWavelengthState() {
   if (wavelengthTargetLabel) wavelengthTargetLabel.textContent = "Hidden";
   if (wavelengthPlayers) wavelengthPlayers.innerHTML = "";
   if (wavelengthHistory) wavelengthHistory.innerHTML = "";
-  if (wavelengthGuessValue) wavelengthGuessValue.textContent = "0.00";
+  if (wavelengthGuessValue) wavelengthGuessValue.textContent = "Center 0.00";
   if (wavelengthClueInput) wavelengthClueInput.value = "";
   wavelengthEditableGuessPos = 0;
   setWavelengthZones(null);
@@ -261,6 +328,7 @@ function clearWavelengthState() {
   setWavelengthMarker(wavelengthTrackGuess, null);
   updateWavelengthStatus(null);
   updateWavelengthActionButtons();
+  updateWavelengthActionCards(null);
 }
 
 function renderWavelengthGameState(data) {
@@ -296,6 +364,7 @@ function renderWavelengthGameState(data) {
   renderWavelengthHistory(view);
   updateWavelengthStatus(view);
   updateWavelengthActionButtons();
+  updateWavelengthActionCards(view);
 }
 
 function showWavelengthHelpModal() {
