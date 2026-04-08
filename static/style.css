@@ -7664,6 +7664,19 @@ body.guandan-explain-mode button.has-explanation:hover {
   margin-right: 0;
 }
 
+@media (max-width: 640px) {
+  #guandanPanel .guandan-actions-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  #guandanPanel .guandan-actions-grid button {
+    padding: 4px 6px;
+    min-height: 18px;
+    font-size: 11px;
+  }
+}
+
 #guandanPanel .guandan-hand-row {
   width: 100%;
   flex-wrap: nowrap;
