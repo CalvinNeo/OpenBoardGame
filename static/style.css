@@ -2196,6 +2196,43 @@ input, select {
   font-weight: 600;
 }
 
+@media (max-width: 720px) {
+  .decrypto-clue-row {
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .decrypto-clue-entry {
+    flex: 1 1 100%;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(82px, auto) minmax(0, 1fr);
+    column-gap: 8px;
+    row-gap: 0;
+    align-items: center;
+  }
+
+  .decrypto-clue-entry input {
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+  }
+
+  .decrypto-clue-code {
+    min-width: 0;
+    gap: 4px;
+  }
+
+  .decrypto-clue-word {
+    line-height: 1.2;
+  }
+
+  #decryptoSubmitCluesBtn {
+    width: 100%;
+    margin-right: 0;
+  }
+}
+
 .decrypto-guess-select {
   width: 72px;
   flex: 0 0 auto;
