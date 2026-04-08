@@ -7696,8 +7696,9 @@ body.guandan-explain-mode button.has-explanation:hover {
 
 #guandanPanel .guandan-cascade-select {
   align-self: center;
-  min-width: 48px;
-  padding: 5px 10px;
+  min-width: 38px;
+  padding: 3px 8px;
+  font-size: 10px;
   border: 1px solid #ccc;
   background: #fff;
   border-radius: 4px;
@@ -7741,8 +7742,9 @@ body.guandan-explain-mode button.has-explanation:hover {
   vertical-align: top;
 }
 #guandanPanel .slot {
-  min-width: 48px;
-  padding: 8px 10px;
+  min-width: 38px;
+  padding: 6px 8px;
+  font-size: 10px;
 }
 
 #guandanPanel .guandan-pile {
