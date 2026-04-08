@@ -7652,13 +7652,14 @@ body.guandan-explain-mode button.has-explanation:hover {
   color: #3730a3;
 }
 
-#guandanPanel .row.actions.guandan-actions-grid {
-  display: grid !important;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+#guandanPanel .guandan-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+  margin-bottom: 8px;
 }
 
-#guandanPanel .row.actions.guandan-actions-grid button {
+#guandanPanel .guandan-actions-grid button {
   width: 100%;
   margin-right: 0;
 }

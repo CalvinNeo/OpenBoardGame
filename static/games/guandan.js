@@ -1,6 +1,8 @@
 let currentGuandanView = null;
 let guandanSelected = [];
 let guandanExplainMode = false;
+let guandanPile = [];
+let guandanLastSfKey = null;
 
 const guandanPhaseLabel = document.getElementById("guandanPhase");
 const guandanRoundLabel = document.getElementById("guandanRound");
@@ -12,6 +14,7 @@ const guandanTrickPlaysLabel = document.getElementById("guandanTrickPlays");
 const guandanTributeLabel = document.getElementById("guandanTribute");
 const guandanSelectedLabel = document.getElementById("guandanSelected");
 const guandanHandEl = document.getElementById("guandanHand");
+const guandanPileEl = document.getElementById("guandanPile");
 const guandanPlayersEl = document.getElementById("guandanPlayers");
 const guandanPanelEl = document.getElementById("guandanPanel");
 const guandanHeaderActions = document.getElementById("guandanHeaderActions");
@@ -24,6 +27,9 @@ const guandanExplainModalCloseBtn = document.getElementById("guandanExplainModal
 const guandanExplainContent = document.getElementById("guandanExplainContent");
 const guandanPlayBtn = document.getElementById("guandanPlayBtn");
 const guandanPassBtn = document.getElementById("guandanPassBtn");
+const guandanHintBtn = document.getElementById("guandanHintBtn");
+const guandanFindSfBtn = document.getElementById("guandanFindSfBtn");
+const guandanPileBtn = document.getElementById("guandanPileBtn");
 const guandanTributeBtn = document.getElementById("guandanTributeBtn");
 const guandanReturnBtn = document.getElementById("guandanReturnBtn");
 const guandanNextRoundBtn = document.getElementById("guandanNextRoundBtn");
@@ -32,12 +38,17 @@ const guandanPlayAgainBtn = document.getElementById("guandanPlayAgainBtn");
 function clearGuandanState() {
   currentGuandanView = null;
   guandanSelected = [];
+  guandanPile = [];
+  guandanLastSfKey = null;
   updateGuandanSelected();
   if (guandanTrickPlaysLabel) {
     guandanTrickPlaysLabel.textContent = "-";
   }
   if (guandanHandEl) {
     guandanHandEl.textContent = "-";
+  }
+  if (guandanPileEl) {
+    guandanPileEl.textContent = "-";
   }
   if (guandanPlayersEl) {
     guandanPlayersEl.textContent = "-";
@@ -65,21 +76,57 @@ function updateGuandanSelected() {
   }
 }
 
+function guandanOptionKey(cards) {
+  return [...cards].sort((a, b) => a - b).join("-");
+}
+
+function getGuandanHintOptions(view) {
+  if (!view) return [];
+  if (Array.isArray(view.hint_options) && view.hint_options.length) {
+    return view.hint_options;
+  }
+  if (Array.isArray(view.hint_cards) && view.hint_cards.length) {
+    return [view.hint_cards];
+  }
+  return [];
+}
+
 function updateGuandanButtons() {
   if (!currentGuandanView) {
-    [guandanPlayBtn, guandanPassBtn, guandanTributeBtn, guandanReturnBtn, guandanNextRoundBtn, guandanPlayAgainBtn].forEach(
-      (btn) => {
-        if (btn) btn.disabled = true;
-      }
-    );
+    [
+      guandanPlayBtn,
+      guandanPassBtn,
+      guandanHintBtn,
+      guandanFindSfBtn,
+      guandanPileBtn,
+      guandanTributeBtn,
+      guandanReturnBtn,
+      guandanNextRoundBtn,
+      guandanPlayAgainBtn,
+    ].forEach((btn) => {
+      if (btn) btn.disabled = true;
+    });
     return;
   }
   const legal = Array.isArray(currentGuandanView.legal_actions) ? currentGuandanView.legal_actions : [];
+  const hintOptions = getGuandanHintOptions(currentGuandanView);
+  const sfCandidates = Array.isArray(currentGuandanView.sf_candidates)
+    ? currentGuandanView.sf_candidates
+    : [];
   if (guandanPlayBtn) {
     guandanPlayBtn.disabled = !(legal.includes("play") && guandanSelected.length >= 1);
   }
   if (guandanPassBtn) {
     guandanPassBtn.disabled = !legal.includes("pass");
+  }
+  if (guandanHintBtn) {
+    guandanHintBtn.disabled = !hintOptions.length;
+  }
+  if (guandanFindSfBtn) {
+    guandanFindSfBtn.disabled = !sfCandidates.length;
+  }
+  if (guandanPileBtn) {
+    guandanPileBtn.disabled = guandanSelected.length < 1;
   }
   if (guandanTributeBtn) {
     guandanTributeBtn.disabled = !(legal.includes("tribute_select") && guandanSelected.length === 1);
@@ -103,7 +150,10 @@ function renderGuandanHand(view) {
     guandanHandEl.textContent = "-";
     return;
   }
-  you.hand.forEach((card) => {
+  const handIds = new Set(you.hand.map((card) => card.id));
+  guandanPile = guandanPile.filter((cid) => handIds.has(cid));
+  guandanSelected = guandanSelected.filter((cid) => handIds.has(cid));
+  you.hand.filter((card) => !guandanPile.includes(card.id)).forEach((card) => {
     const div = document.createElement("div");
     div.className = "slot";
     if (card.is_wild) div.classList.add("wild-card");
@@ -120,6 +170,35 @@ function renderGuandanHand(view) {
       renderGuandanHand(view);
     });
     guandanHandEl.appendChild(div);
+  });
+}
+
+function renderGuandanPile(view) {
+  if (!guandanPileEl) return;
+  guandanPileEl.innerHTML = "";
+  const you = Array.isArray(view.players) ? view.players.find((p) => p.player_id === view.you) : null;
+  if (!you || !Array.isArray(you.hand) || !guandanPile.length) {
+    guandanPileEl.textContent = "-";
+    return;
+  }
+  const lookup = new Map(you.hand.map((card) => [card.id, card]));
+  guandanPile.forEach((cid) => {
+    const card = lookup.get(cid);
+    if (!card) return;
+    const div = document.createElement("div");
+    div.className = "slot";
+    if (card.is_wild) div.classList.add("wild-card");
+    if (guandanSelected.includes(card.id)) div.classList.add("selected");
+    div.textContent = card.label;
+    div.addEventListener("click", () => {
+      guandanPile = guandanPile.filter((pid) => pid !== card.id);
+      guandanSelected = guandanSelected.filter((pid) => pid !== card.id);
+      updateGuandanSelected();
+      updateGuandanButtons();
+      renderGuandanHand(view);
+      renderGuandanPile(view);
+    });
+    guandanPileEl.appendChild(div);
   });
 }
 
@@ -198,6 +277,7 @@ function renderGuandanGameState(data) {
   renderGuandanTrickPlays(view);
   renderGuandanTribute(view);
   renderGuandanHand(view);
+  renderGuandanPile(view);
   renderGuandanPlayers(view);
   updateGuandanSelected();
   updateGuandanButtons();
@@ -248,6 +328,24 @@ const GUANDAN_BUTTON_EXPLANATIONS = {
     name: "Pass",
     description: "Skip your turn when you cannot or do not want to beat the current trick.",
     cost: "Your Turn",
+    costType: "free",
+  },
+  guandanHintBtn: {
+    name: "Hint",
+    description: "Auto-select the next playable combo based on the current trick.",
+    cost: "Assist",
+    costType: "free",
+  },
+  guandanFindSfBtn: {
+    name: "Find SF",
+    description: "Cycle through available straight flush selections in your hand.",
+    cost: "Assist",
+    costType: "free",
+  },
+  guandanPileBtn: {
+    name: "Pile",
+    description: "Move the selected cards into a personal pile to organize your hand.",
+    cost: "Organize",
     costType: "free",
   },
   guandanTributeBtn: {
@@ -358,12 +456,29 @@ function closeGuandanExplainModal() {
   }
 }
 
+function applyGuandanSelection(cardIds) {
+  if (!Array.isArray(cardIds) || !cardIds.length || !currentGuandanView) {
+    return;
+  }
+  guandanPile = guandanPile.filter((cid) => !cardIds.includes(cid));
+  guandanSelected = [...cardIds];
+  updateGuandanSelected();
+  renderGuandanHand(currentGuandanView);
+  renderGuandanPile(currentGuandanView);
+  updateGuandanButtons();
+}
+
 if (guandanPlayBtn) {
   guandanPlayBtn.addEventListener("click", () => {
     if (!guandanSelected.length) return;
     sendAction({ type: "play", card_ids: guandanSelected });
     guandanSelected = [];
     updateGuandanSelected();
+    if (currentGuandanView) {
+      renderGuandanHand(currentGuandanView);
+      renderGuandanPile(currentGuandanView);
+      updateGuandanButtons();
+    }
   });
 }
 
@@ -373,12 +488,67 @@ if (guandanPassBtn) {
   });
 }
 
+if (guandanHintBtn) {
+  guandanHintBtn.addEventListener("click", () => {
+    if (!currentGuandanView) return;
+    const options = getGuandanHintOptions(currentGuandanView);
+    if (!options.length) return;
+    const optionKeys = options.map((cards) => guandanOptionKey(cards));
+    const selectedKey = guandanSelected.length ? guandanOptionKey(guandanSelected) : "";
+    let idx = -1;
+    if (selectedKey) {
+      idx = optionKeys.indexOf(selectedKey);
+    }
+    const nextCards = options[(idx + 1) % options.length];
+    applyGuandanSelection(nextCards || []);
+  });
+}
+
+if (guandanFindSfBtn) {
+  guandanFindSfBtn.addEventListener("click", () => {
+    if (!currentGuandanView) return;
+    const list = Array.isArray(currentGuandanView.sf_candidates) ? currentGuandanView.sf_candidates : [];
+    if (!list.length) return;
+    let idx = 0;
+    if (guandanLastSfKey) {
+      const found = list.findIndex((entry) => entry.key === guandanLastSfKey);
+      if (found >= 0) {
+        idx = (found + 1) % list.length;
+      }
+    }
+    const chosen = list[idx];
+    guandanLastSfKey = chosen.key;
+    applyGuandanSelection(chosen.cards || []);
+  });
+}
+
+if (guandanPileBtn) {
+  guandanPileBtn.addEventListener("click", () => {
+    if (!currentGuandanView || !guandanSelected.length) return;
+    guandanSelected.forEach((cid) => {
+      if (!guandanPile.includes(cid)) {
+        guandanPile.push(cid);
+      }
+    });
+    guandanSelected = [];
+    updateGuandanSelected();
+    renderGuandanHand(currentGuandanView);
+    renderGuandanPile(currentGuandanView);
+    updateGuandanButtons();
+  });
+}
+
 if (guandanTributeBtn) {
   guandanTributeBtn.addEventListener("click", () => {
     if (guandanSelected.length !== 1) return;
     sendAction({ type: "tribute_select", card_id: guandanSelected[0] });
     guandanSelected = [];
     updateGuandanSelected();
+    if (currentGuandanView) {
+      renderGuandanHand(currentGuandanView);
+      renderGuandanPile(currentGuandanView);
+      updateGuandanButtons();
+    }
   });
 }
 
@@ -388,6 +558,11 @@ if (guandanReturnBtn) {
     sendAction({ type: "return_select", card_id: guandanSelected[0] });
     guandanSelected = [];
     updateGuandanSelected();
+    if (currentGuandanView) {
+      renderGuandanHand(currentGuandanView);
+      renderGuandanPile(currentGuandanView);
+      updateGuandanButtons();
+    }
   });
 }
 
@@ -411,6 +586,7 @@ if (guandanPanelEl) {
     updateGuandanSelected();
     if (currentGuandanView) {
       renderGuandanHand(currentGuandanView);
+      renderGuandanPile(currentGuandanView);
       updateGuandanButtons();
     }
   });

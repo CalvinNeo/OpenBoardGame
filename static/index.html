@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css?v=app_v4" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v6" />
 </head>
 <body>
   <section id="logPanel" class="log-panel hidden" aria-hidden="true">
@@ -1487,7 +1487,7 @@
               </div>
 
               <h3>Actions</h3>
-              <div class="row actions guandan-actions-grid">
+              <div class="row actions">
                 <button id="peekBtn">Initial Peek</button>
                 <button id="drawDeckBtn">Draw Deck</button>
                 <button id="replaceBtn">Replace / Match</button>
@@ -1527,11 +1527,18 @@
               <div class="row">
                 <div>Selected: <span id="guandanSelected">-</span></div>
               </div>
+              <div class="row">
+                <div>Pile</div>
+              </div>
+              <div id="guandanPile" class="hand"></div>
 
               <h3>Actions</h3>
-              <div class="row actions">
+              <div class="guandan-actions-grid">
                 <button id="guandanPlayBtn">Play</button>
                 <button id="guandanPassBtn">Pass</button>
+                <button id="guandanHintBtn">Hint</button>
+                <button id="guandanFindSfBtn">Find SF</button>
+                <button id="guandanPileBtn">Pile</button>
                 <button id="guandanTributeBtn">Tribute</button>
                 <button id="guandanReturnBtn">Return</button>
                 <button id="guandanNextRoundBtn">Next Round</button>
@@ -4303,7 +4310,7 @@
   <script src="/static/games/isle_of_skye.js?v=app_v4"></script>
   <script src="/static/games/six_nimmt.js?v=app_v4"></script>
   <script src="/static/games/skull.js?v=app_v4"></script>
-  <script src="/static/games/guandan.js?v=app_v4"></script>
+  <script src="/static/games/guandan.js?v=app_v6"></script>
   <script src="/static/games/cabo.js?v=app_v5"></script>
   <script src="/static/games/flip7.js?v=app_v4"></script>
   <script src="/static/games/abraca_what.js?v=app_v4"></script>

@@ -895,6 +895,208 @@ def _choose_lead_play(hand: List[Dict], level_rank: int, config: Dict, state: Di
     return candidates[0][1]
 
 
+def _cards_key(cards: List[int]) -> str:
+    return "-".join(str(cid) for cid in sorted(cards))
+
+
+def _dedupe_card_sets(options: List[List[int]]) -> List[List[int]]:
+    seen = set()
+    unique: List[List[int]] = []
+    for cards in options:
+        key = _cards_key(cards)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(cards)
+    return unique
+
+
+def _list_single_options(hand: List[Dict], level_rank: int, threshold: int) -> List[List[int]]:
+    candidates = []
+    for card in hand:
+        value = _single_order_value(card, level_rank)
+        if value > threshold:
+            candidates.append((value, _is_wild(card, level_rank), _is_joker(card), card["id"]))
+    candidates.sort(key=lambda item: (item[0], item[1], item[2]))
+    return [[cid] for _, _, _, cid in candidates]
+
+
+def _list_rank_group_options(
+    hand: List[Dict], level_rank: int, threshold: int, size: int
+) -> List[List[int]]:
+    info = _hand_info(hand, level_rank)
+    strength = _rank_strength(level_rank)
+    options: List[List[int]] = []
+    for rank in _ranks_sorted_by_strength(level_rank, ascending=True):
+        if strength[rank] <= threshold:
+            continue
+        built = _build_of_rank(rank, size, info)
+        if built:
+            options.append(built[0])
+    if size == 2:
+        if len(info["jokers_big"]) >= 2 and 100 > threshold:
+            options.append(info["jokers_big"][:2])
+        if len(info["jokers_small"]) >= 2 and 90 > threshold:
+            options.append(info["jokers_small"][:2])
+    return _dedupe_card_sets(options)
+
+
+def _list_full_house_options(hand: List[Dict], level_rank: int, threshold: int) -> List[List[int]]:
+    strength = _rank_strength(level_rank)
+    base_info = _hand_info(hand, level_rank)
+    options: List[List[int]] = []
+    for triple_rank in _ranks_sorted_by_strength(level_rank, ascending=True):
+        if strength[triple_rank] <= threshold:
+            continue
+        built = _build_of_rank(triple_rank, 3, base_info)
+        if not built:
+            continue
+        triple_cards, info = built
+        pair_cards = _find_lowest_pair(info, exclude_rank=triple_rank, level_rank=level_rank)
+        if pair_cards:
+            options.append(triple_cards + pair_cards)
+    return _dedupe_card_sets(options)
+
+
+def _list_straight_options(hand: List[Dict], level_rank: int, threshold: int) -> List[List[int]]:
+    info = _hand_info(hand, level_rank)
+    options: List[List[int]] = []
+    for seq, high_value in STRAIGHT_SEQUENCES:
+        if high_value <= threshold:
+            continue
+        cards: List[int] = []
+        wilds = list(info["wild_cards"])
+        needed = 0
+        for rank in seq:
+            normals = list(info["normals_by_rank"].get(rank, []))
+            if normals:
+                cards.append(normals[0])
+            else:
+                needed += 1
+        if needed <= len(wilds):
+            cards.extend(wilds[:needed])
+            options.append(cards)
+    return _dedupe_card_sets(options)
+
+
+def _list_three_pairs_options(hand: List[Dict], level_rank: int, threshold: int) -> List[List[int]]:
+    info = _hand_info(hand, level_rank)
+    options: List[List[int]] = []
+    for start in range(2, 14):
+        high_value = start + 2
+        if high_value <= threshold or start + 2 > 14:
+            continue
+        seq = [start, start + 1, start + 2]
+        cards: List[int] = []
+        wilds = list(info["wild_cards"])
+        needed = 0
+        for rank in seq:
+            normals = list(info["normals_by_rank"].get(rank, []))
+            take = normals[:2]
+            cards.extend(take)
+            missing = 2 - len(take)
+            needed += missing
+        if needed <= len(wilds):
+            cards.extend(wilds[:needed])
+            options.append(cards)
+    return _dedupe_card_sets(options)
+
+
+def _list_steel_plate_options(hand: List[Dict], level_rank: int, threshold: int) -> List[List[int]]:
+    info = _hand_info(hand, level_rank)
+    options: List[List[int]] = []
+    for start in range(2, 14):
+        high_value = start + 1
+        if high_value <= threshold or start + 1 > 14:
+            continue
+        seq = [start, start + 1]
+        cards: List[int] = []
+        wilds = list(info["wild_cards"])
+        needed = 0
+        for rank in seq:
+            normals = list(info["normals_by_rank"].get(rank, []))
+            take = normals[:3]
+            cards.extend(take)
+            missing = 3 - len(take)
+            needed += missing
+        if needed <= len(wilds):
+            cards.extend(wilds[:needed])
+            options.append(cards)
+    return _dedupe_card_sets(options)
+
+
+def _list_bomb_options(
+    hand: List[Dict], level_rank: int, current_combo: Optional[Dict], config: Dict
+) -> List[List[int]]:
+    candidates = _find_bomb_candidates(hand, level_rank)
+    if not current_combo:
+        return [cand["cards"] for cand in candidates]
+    options: List[List[int]] = []
+    for cand in candidates:
+        combo = {
+            "type": cand["type"],
+            "size": len(cand["cards"]),
+            "rank_value": cand.get("rank_value", 0),
+            "high_value": cand.get("high_value", 0),
+            "tier": cand.get("tier", 0),
+            "uses_wild": cand.get("uses_wild", False),
+        }
+        if _compare_combos(current_combo, combo, level_rank, config):
+            options.append(cand["cards"])
+    return _dedupe_card_sets(options)
+
+
+def _list_hint_options(state: Dict, player_id: str) -> List[List[int]]:
+    legal = GuandanGame.get_legal_actions(state, player_id)
+    if "play" not in legal:
+        return []
+    pdata = state["players"].get(player_id)
+    if not pdata:
+        return []
+    hand = pdata.get("hand", [])
+    if not hand:
+        return []
+    current_trick = state.get("current_trick")
+    level_rank = state["level_rank"]
+    config = state.get("config", {})
+    options: List[List[int]] = []
+    if current_trick:
+        combo = current_trick["combo"]
+        combo_type = combo["type"]
+        threshold = combo.get("rank_value", 0)
+        high_threshold = combo.get("high_value", 0)
+        if combo_type == "single":
+            options = _list_single_options(hand, level_rank, threshold)
+        elif combo_type == "pair":
+            options = _list_rank_group_options(hand, level_rank, threshold, 2)
+        elif combo_type == "three":
+            options = _list_rank_group_options(hand, level_rank, threshold, 3)
+        elif combo_type == "full_house":
+            options = _list_full_house_options(hand, level_rank, threshold)
+        elif combo_type == "straight":
+            options = _list_straight_options(hand, level_rank, high_threshold)
+        elif combo_type == "three_pairs":
+            options = _list_three_pairs_options(hand, level_rank, high_threshold)
+        elif combo_type == "steel_plate":
+            options = _list_steel_plate_options(hand, level_rank, high_threshold)
+        options += _list_bomb_options(hand, level_rank, combo, config)
+    else:
+        options.extend(_list_single_options(hand, level_rank, 0))
+        options.extend(_list_rank_group_options(hand, level_rank, 0, 2))
+        options.extend(_list_rank_group_options(hand, level_rank, 0, 3))
+        options.extend(_list_full_house_options(hand, level_rank, 0))
+        options.extend(_list_straight_options(hand, level_rank, 0))
+        options.extend(_list_three_pairs_options(hand, level_rank, 0))
+        options.extend(_list_steel_plate_options(hand, level_rank, 0))
+        options.extend(_list_bomb_options(hand, level_rank, None, config))
+    return _dedupe_card_sets(options)
+
+
+def _suggest_hint_cards(state: Dict, player_id: str) -> Optional[List[int]]:
+    options = _list_hint_options(state, player_id)
+    return options[0] if options else None
+
+
 def _finish_player(state: Dict, player_id: str) -> None:
     pdata = state["players"][player_id]
     if pdata["finished"]:
@@ -1394,6 +1596,15 @@ class GuandanGame:
                 "return_cards": {pid: _card_label(card) for pid, card in tribute.get("return_cards", {}).items()},
             }
 
+        hint_options = _list_hint_options(state, viewer_id)
+        hint_cards = hint_options[0] if hint_options else []
+        sf_candidates = []
+        if viewer_id in state["players"]:
+            hand = state["players"][viewer_id]["hand"]
+            for high_value, cards in _find_straight_flush_candidates(hand, level_rank):
+                key = "-".join(str(cid) for cid in sorted(cards))
+                sf_candidates.append({"key": key, "high_value": high_value, "cards": [c for c in cards]})
+
         return {
             "game_id": GuandanGame.game_id,
             "you": viewer_id,
@@ -1405,6 +1616,9 @@ class GuandanGame:
             "current_turn": state.get("current_turn"),
             "current_trick": trick_view,
             "trick_plays": trick_plays_view,
+            "hint_cards": hint_cards or [],
+            "hint_options": hint_options,
+            "sf_candidates": sf_candidates,
             "finish_order": state.get("finish_order"),
             "players": players_view,
             "legal_actions": GuandanGame.get_legal_actions(state, viewer_id),
