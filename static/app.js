@@ -41,6 +41,7 @@ const wavelengthPanel = document.getElementById("wavelengthPanel");
 const cyberPicturesPanel = document.getElementById("cyberPicturesPanel");
 const fakeArtistPanel = document.getElementById("fakeArtistPanel");
 const thingsInRingsPanel = document.getElementById("thingsInRingsPanel");
+const guandanPanel = document.getElementById("guandanPanel");
 const thingsInRingsConfigBox = document.getElementById("thingsInRingsConfigBox");
 const thingsInRingsRingCountRow = document.getElementById("thingsInRingsRingCountRow");
 const thingsInRingsRingCountSelect = document.getElementById("thingsInRingsRingCountSelect");
@@ -59,6 +60,7 @@ const skyePanel = document.getElementById("skyePanel");
 
 function setGamePanelVisibility(gameType) {
   const showCabo = gameType === "cabo";
+  const showGuandan = gameType === "guandan";
   const showFlip7 = gameType === "flip7";
   const showYahtzee = gameType === "yahtzee";
   const showLostCode = gameType === "lost_code";
@@ -109,6 +111,12 @@ function setGamePanelVisibility(gameType) {
   const showAzul = gameType === "azul";
   const showFangNiao = gameType === "fang_niao";
   caboPanel.classList.toggle("hidden", !showCabo);
+  if (guandanPanel) {
+    guandanPanel.classList.toggle("hidden", !showGuandan);
+  }
+  if (typeof showGuandanHeaderActions === "function") {
+    showGuandanHeaderActions(showGuandan);
+  }
   if (flip7Panel) {
     flip7Panel.classList.toggle("hidden", !showFlip7);
   }
@@ -438,6 +446,10 @@ function renderGameState(data) {
   const gameType = data.game_type || (currentRoomState && currentRoomState.game_type);
   if (gameType === "cabo") {
     renderCaboGameState(data);
+    return;
+  }
+  if (gameType === "guandan") {
+    renderGuandanGameState(data);
     return;
   }
   if (gameType === "flip7") {

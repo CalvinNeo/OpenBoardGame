@@ -488,6 +488,413 @@ def _eligible_return_cards(hand: List[Dict]) -> List[Dict]:
     return hand[:]
 
 
+def _hand_info(hand: List[Dict], level_rank: int) -> Dict:
+    wild_cards: List[int] = []
+    jokers_big: List[int] = []
+    jokers_small: List[int] = []
+    normals_by_rank: Dict[int, List[int]] = {}
+    normals_by_suit: Dict[str, Dict[int, List[int]]] = {suit: {} for suit in SUITS}
+    for card in hand:
+        card_id = card["id"]
+        if _is_wild(card, level_rank):
+            wild_cards.append(card_id)
+            continue
+        joker = card.get("joker")
+        if joker == "big":
+            jokers_big.append(card_id)
+            continue
+        if joker == "small":
+            jokers_small.append(card_id)
+            continue
+        rank = card.get("rank")
+        suit = card.get("suit")
+        normals_by_rank.setdefault(rank, []).append(card_id)
+        normals_by_suit.setdefault(suit, {}).setdefault(rank, []).append(card_id)
+    return {
+        "wild_cards": wild_cards,
+        "jokers_big": jokers_big,
+        "jokers_small": jokers_small,
+        "normals_by_rank": normals_by_rank,
+        "normals_by_suit": normals_by_suit,
+    }
+
+
+def _rank_strength(level_rank: int) -> Dict[int, int]:
+    return {rank: _point_order_value(rank, level_rank) for rank in RANKS}
+
+
+def _ranks_sorted_by_strength(level_rank: int, ascending: bool = True) -> List[int]:
+    strength = _rank_strength(level_rank)
+    return sorted(RANKS, key=lambda r: strength[r], reverse=not ascending)
+
+
+def _take_from_list(source: List[int], count: int) -> Tuple[List[int], List[int]]:
+    taken = source[:count]
+    remaining = source[count:]
+    return taken, remaining
+
+
+def _build_of_rank(rank: int, count: int, info: Dict) -> Optional[Tuple[List[int], List[int]]]:
+    normals = list(info["normals_by_rank"].get(rank, []))
+    wilds = list(info["wild_cards"])
+    take_norm = min(len(normals), count)
+    selected = normals[:take_norm]
+    remaining_normals = normals[take_norm:]
+    needed = count - take_norm
+    if needed > len(wilds):
+        return None
+    selected += wilds[:needed]
+    remaining_wilds = wilds[needed:]
+    info_copy = {**info, "wild_cards": remaining_wilds}
+    if remaining_normals:
+        ranks = dict(info_copy["normals_by_rank"])
+        ranks[rank] = remaining_normals
+        info_copy["normals_by_rank"] = ranks
+    else:
+        ranks = dict(info_copy["normals_by_rank"])
+        ranks.pop(rank, None)
+        info_copy["normals_by_rank"] = ranks
+    return selected, info_copy
+
+
+def _find_single_to_beat(hand: List[Dict], level_rank: int, threshold: int) -> Optional[List[int]]:
+    candidates = []
+    for card in hand:
+        value = _single_order_value(card, level_rank)
+        if value > threshold:
+            candidates.append((value, card["id"], _is_wild(card, level_rank), _is_joker(card)))
+    if not candidates:
+        return None
+    candidates.sort(key=lambda item: (item[0], item[2], item[3]))
+    return [candidates[0][1]]
+
+
+def _find_pair_to_beat(hand: List[Dict], level_rank: int, threshold: int) -> Optional[List[int]]:
+    info = _hand_info(hand, level_rank)
+    strength = _rank_strength(level_rank)
+    for rank in _ranks_sorted_by_strength(level_rank, ascending=True):
+        if strength[rank] <= threshold:
+            continue
+        built = _build_of_rank(rank, 2, info)
+        if built:
+            return built[0]
+    if len(info["jokers_big"]) >= 2 and 100 > threshold:
+        return info["jokers_big"][:2]
+    if len(info["jokers_small"]) >= 2 and 90 > threshold:
+        return info["jokers_small"][:2]
+    return None
+
+
+def _find_three_to_beat(hand: List[Dict], level_rank: int, threshold: int) -> Optional[List[int]]:
+    info = _hand_info(hand, level_rank)
+    strength = _rank_strength(level_rank)
+    for rank in _ranks_sorted_by_strength(level_rank, ascending=True):
+        if strength[rank] <= threshold:
+            continue
+        built = _build_of_rank(rank, 3, info)
+        if built:
+            return built[0]
+    return None
+
+
+def _find_full_house_to_beat(hand: List[Dict], level_rank: int, threshold: int) -> Optional[List[int]]:
+    strength = _rank_strength(level_rank)
+    base_info = _hand_info(hand, level_rank)
+    for triple_rank in _ranks_sorted_by_strength(level_rank, ascending=True):
+        if strength[triple_rank] <= threshold:
+            continue
+        built = _build_of_rank(triple_rank, 3, base_info)
+        if not built:
+            continue
+        triple_cards, info = built
+        pair_cards = _find_lowest_pair(info, exclude_rank=triple_rank, level_rank=level_rank)
+        if pair_cards:
+            return triple_cards + pair_cards
+    return None
+
+
+def _find_lowest_pair(info: Dict, exclude_rank: Optional[int], level_rank: int) -> Optional[List[int]]:
+    strength = _rank_strength(level_rank)
+    ranks_sorted = _ranks_sorted_by_strength(level_rank, ascending=True)
+    for rank in ranks_sorted:
+        if exclude_rank is not None and rank == exclude_rank:
+            continue
+        normals = list(info["normals_by_rank"].get(rank, []))
+        wilds = list(info["wild_cards"])
+        if len(normals) >= 2:
+            return normals[:2]
+        if len(normals) == 1 and len(wilds) >= 1:
+            return [normals[0], wilds[0]]
+        if len(normals) == 0 and len(wilds) >= 2:
+            return wilds[:2]
+    if len(info.get("jokers_big", [])) >= 2:
+        return info["jokers_big"][:2]
+    if len(info.get("jokers_small", [])) >= 2:
+        return info["jokers_small"][:2]
+    return None
+
+
+def _find_straight_to_beat(hand: List[Dict], level_rank: int, threshold: int) -> Optional[List[int]]:
+    info = _hand_info(hand, level_rank)
+    for seq, high_value in STRAIGHT_SEQUENCES:
+        if high_value <= threshold:
+            continue
+        needed = []
+        wilds = list(info["wild_cards"])
+        cards: List[int] = []
+        for rank in seq:
+            normals = info["normals_by_rank"].get(rank, [])
+            if normals:
+                cards.append(normals[0])
+            else:
+                needed.append(rank)
+        if len(needed) <= len(wilds):
+            cards.extend(wilds[: len(needed)])
+            return cards
+    return None
+
+
+def _find_three_pairs_to_beat(hand: List[Dict], level_rank: int, threshold: int) -> Optional[List[int]]:
+    info = _hand_info(hand, level_rank)
+    for start in range(2, 12):
+        high_value = start + 2
+        if high_value <= threshold:
+            continue
+        seq = [start, start + 1, start + 2]
+        cards: List[int] = []
+        wilds = list(info["wild_cards"])
+        needed = 0
+        for rank in seq:
+            normals = list(info["normals_by_rank"].get(rank, []))
+            take = normals[:2]
+            cards.extend(take)
+            missing = 2 - len(take)
+            needed += missing
+        if needed <= len(wilds):
+            cards.extend(wilds[:needed])
+            return cards
+    return None
+
+
+def _find_steel_plate_to_beat(hand: List[Dict], level_rank: int, threshold: int) -> Optional[List[int]]:
+    info = _hand_info(hand, level_rank)
+    for start in range(2, 14):
+        high_value = start + 1
+        if high_value <= threshold or start + 1 > 14:
+            continue
+        seq = [start, start + 1]
+        cards: List[int] = []
+        wilds = list(info["wild_cards"])
+        needed = 0
+        for rank in seq:
+            normals = list(info["normals_by_rank"].get(rank, []))
+            take = normals[:3]
+            cards.extend(take)
+            missing = 3 - len(take)
+            needed += missing
+        if needed <= len(wilds):
+            cards.extend(wilds[:needed])
+            return cards
+    return None
+
+
+def _find_straight_flush_candidates(hand: List[Dict], level_rank: int) -> List[Tuple[int, List[int]]]:
+    info = _hand_info(hand, level_rank)
+    candidates: List[Tuple[int, List[int]]] = []
+    for suit in SUITS:
+        suit_map = info["normals_by_suit"].get(suit, {})
+        for seq, high_value in STRAIGHT_SEQUENCES:
+            cards: List[int] = []
+            wilds = list(info["wild_cards"])
+            needed = 0
+            for rank in seq:
+                normals = suit_map.get(rank, [])
+                if normals:
+                    cards.append(normals[0])
+                else:
+                    needed += 1
+            if needed <= len(wilds):
+                cards.extend(wilds[:needed])
+                candidates.append((high_value, cards))
+    candidates.sort(key=lambda item: item[0])
+    return candidates
+
+
+def _bomb_tier_for_size(size: int) -> int:
+    if size <= 5:
+        return size - 3
+    return size - 2
+
+
+def _find_bomb_candidates(hand: List[Dict], level_rank: int) -> List[Dict]:
+    info = _hand_info(hand, level_rank)
+    strength = _rank_strength(level_rank)
+    wilds = list(info["wild_cards"])
+    candidates: List[Dict] = []
+
+    if len(info["jokers_big"]) >= 2 and len(info["jokers_small"]) >= 2:
+        candidates.append(
+            {
+                "type": "heavenly",
+                "tier": 7,
+                "rank_value": 0,
+                "high_value": 0,
+                "cards": info["jokers_big"][:2] + info["jokers_small"][:2],
+                "uses_wild": False,
+            }
+        )
+
+    straight_flushes = _find_straight_flush_candidates(hand, level_rank)
+    for high_value, cards in straight_flushes:
+        candidates.append(
+            {
+                "type": "straight_flush",
+                "tier": 3,
+                "rank_value": 0,
+                "high_value": high_value,
+                "cards": cards,
+                "uses_wild": any(card in wilds for card in cards),
+            }
+        )
+
+    for rank, card_ids in info["normals_by_rank"].items():
+        total = len(card_ids) + len(wilds)
+        for size in range(4, min(8, total) + 1):
+            tier = _bomb_tier_for_size(size)
+            needed = max(0, size - len(card_ids))
+            if needed > len(wilds):
+                continue
+            cards = card_ids[: min(len(card_ids), size)]
+            if needed:
+                cards = cards + wilds[:needed]
+            candidates.append(
+                {
+                    "type": "bomb",
+                    "tier": tier,
+                    "rank_value": strength[rank],
+                    "high_value": 0,
+                    "cards": cards,
+                    "uses_wild": needed > 0,
+                }
+            )
+    candidates.sort(key=lambda item: (item["tier"], item["rank_value"], item["high_value"], item["uses_wild"]))
+    return candidates
+
+
+def _pick_bomb_to_beat(hand: List[Dict], level_rank: int, current_combo: Optional[Dict], config: Dict) -> Optional[List[int]]:
+    candidates = _find_bomb_candidates(hand, level_rank)
+    if not current_combo:
+        for cand in candidates:
+            if cand["type"] != "heavenly":
+                return cand["cards"]
+        return candidates[0]["cards"] if candidates else None
+    current_type = current_combo["type"]
+    if current_type == "heavenly":
+        return None
+    current_tier = _bomb_tier(current_combo)
+    current_rank_value = current_combo.get("rank_value", 0)
+    current_high_value = current_combo.get("high_value", 0)
+    for cand in candidates:
+        if cand["tier"] > current_tier:
+            return cand["cards"]
+        if cand["tier"] < current_tier:
+            continue
+        if current_type == "straight_flush":
+            if cand["type"] == "straight_flush" and cand["high_value"] > current_high_value:
+                return cand["cards"]
+            continue
+        if cand["type"] == "bomb" and cand["rank_value"] > current_rank_value:
+            if config.get("hard_bomb_beats_soft") and cand["rank_value"] == current_rank_value:
+                if not cand["uses_wild"]:
+                    return cand["cards"]
+            return cand["cards"]
+    return None
+
+
+def _can_play_all(hand: List[Dict], level_rank: int, config: Dict, current_combo: Optional[Dict]) -> bool:
+    combo = _evaluate_combo(hand, level_rank, config)
+    if not combo:
+        return False
+    if not current_combo:
+        return True
+    return _compare_combos(current_combo, combo, level_rank, config)
+
+
+def _choose_lead_play(hand: List[Dict], level_rank: int, config: Dict, state: Dict, bot_id: str) -> List[int]:
+    if _can_play_all(hand, level_rank, config, None):
+        return [card["id"] for card in hand]
+    info = _hand_info(hand, level_rank)
+    strength = _rank_strength(level_rank)
+    partner = _teammate_of(state, bot_id)
+    partner_left = len(state["players"][partner]["hand"]) if partner else 99
+    opp_left = min(
+        len(state["players"][pid]["hand"])
+        for pid in state["turn_order"]
+        if _team_of(state, pid) != _team_of(state, bot_id) and not state["players"][pid]["finished"]
+    )
+
+    candidates: List[Tuple[float, List[int]]] = []
+
+    straight = _find_straight_to_beat(hand, level_rank, threshold=0)
+    if straight:
+        candidates.append((50.0, straight))
+    three_pairs = _find_three_pairs_to_beat(hand, level_rank, threshold=0)
+    if three_pairs:
+        candidates.append((48.0, three_pairs))
+    steel = _find_steel_plate_to_beat(hand, level_rank, threshold=0)
+    if steel:
+        candidates.append((47.0, steel))
+
+    for rank in _ranks_sorted_by_strength(level_rank, ascending=True):
+        built = _build_of_rank(rank, 3, info)
+        if built:
+            triple_cards = built[0]
+            pair_cards = _find_lowest_pair(built[1], exclude_rank=rank, level_rank=level_rank)
+            if pair_cards:
+                candidates.append((45.0, triple_cards + pair_cards))
+            break
+
+    for rank in _ranks_sorted_by_strength(level_rank, ascending=True):
+        built = _build_of_rank(rank, 3, info)
+        if built:
+            candidates.append((30.0, built[0]))
+            break
+
+    for rank in _ranks_sorted_by_strength(level_rank, ascending=True):
+        built = _build_of_rank(rank, 2, info)
+        if built:
+            candidates.append((25.0, built[0]))
+            break
+
+    singles = sorted(hand, key=lambda c: _single_order_value(c, level_rank))
+    if singles:
+        candidates.append((20.0, [singles[0]["id"]]))
+
+    bombs = _find_bomb_candidates(hand, level_rank)
+    for bomb in bombs:
+        penalty = 20.0
+        if opp_left <= 2:
+            penalty = 5.0
+        candidates.append((10.0 - penalty + bomb["tier"], bomb["cards"]))
+        break
+
+    if not candidates:
+        return [singles[0]["id"]] if singles else []
+
+    def score(entry: Tuple[float, List[int]]) -> float:
+        base, cards = entry
+        wild_penalty = sum(
+            1 for card in cards if any(card == wid for wid in info["wild_cards"])
+        )
+        size_bonus = len(cards) * 2.0
+        partner_bonus = 5.0 if partner_left <= 3 else 0.0
+        opp_bonus = 3.0 if opp_left <= 2 else 0.0
+        return base + size_bonus - wild_penalty * 3 + partner_bonus + opp_bonus
+
+    candidates.sort(key=score, reverse=True)
+    return candidates[0][1]
+
+
 def _finish_player(state: Dict, player_id: str) -> None:
     pdata = state["players"][player_id]
     if pdata["finished"]:
@@ -595,6 +1002,7 @@ def _deal_round(state: Dict, first_round: bool, start_player: Optional[str]) -> 
     state["finish_order"] = []
     state["current_trick"] = None
     state["pass_count"] = 0
+    state["trick_plays"] = {}
     state["visible_card_id"] = visible_card_id
     if first_round and visible_card_id is not None:
         for pid, hand in hands.items():
@@ -696,6 +1104,7 @@ class GuandanGame:
             "current_turn": None,
             "current_trick": None,
             "pass_count": 0,
+            "trick_plays": {},
             "finish_order": [],
             "last_round_summary": None,
             "visible_card_id": None,
@@ -859,6 +1268,7 @@ class GuandanGame:
                 winner = state["current_trick"]["player_id"]
                 state["current_trick"] = None
                 state["pass_count"] = 0
+                state["trick_plays"] = {}
                 if len(state["finish_order"]) >= 3:
                     _advance_to_round_end(state)
                     return events, None
@@ -901,6 +1311,7 @@ class GuandanGame:
             "cards": card_ids,
             "player_id": player_id,
         }
+        state["trick_plays"][player_id] = cards
         state["pass_count"] = 0
         if not state["players"][player_id]["hand"]:
             _finish_player(state, player_id)
@@ -957,6 +1368,20 @@ class GuandanGame:
                 "cards": state["current_trick"]["cards"],
             }
 
+        trick_plays_view = []
+        for pid in order:
+            cards = state.get("trick_plays", {}).get(pid)
+            if not cards:
+                continue
+            meta = state["player_meta"].get(pid, {})
+            trick_plays_view.append(
+                {
+                    "player_id": pid,
+                    "name": meta.get("name"),
+                    "cards": [_card_label(card) for card in cards],
+                }
+            )
+
         tribute_view = None
         tribute = state.get("tribute")
         if tribute:
@@ -979,6 +1404,7 @@ class GuandanGame:
             "team_levels": {k: v["level"] for k, v in state["teams"].items()},
             "current_turn": state.get("current_turn"),
             "current_trick": trick_view,
+            "trick_plays": trick_plays_view,
             "finish_order": state.get("finish_order"),
             "players": players_view,
             "legal_actions": GuandanGame.get_legal_actions(state, viewer_id),
@@ -995,3 +1421,76 @@ class GuandanGame:
     @staticmethod
     def deserialize(payload: Dict) -> Dict:
         return payload
+
+    @staticmethod
+    def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
+        if state.get("game_over"):
+            return None
+        legal = GuandanGame.get_legal_actions(state, bot_id)
+        if not legal:
+            return None
+        if "play_again" in legal:
+            return {"type": "play_again", "delay_ms": 800}
+        if "next_round" in legal:
+            return {"type": "next_round", "delay_ms": 500}
+        if "tribute_select" in legal:
+            hand = state["players"][bot_id]["hand"]
+            candidates = _max_tribute_cards(hand, state["level_rank"])
+            card = min(candidates, key=lambda c: _single_order_value(c, state["level_rank"]))
+            return {"type": "tribute_select", "card_id": card["id"]}
+        if "return_select" in legal:
+            hand = state["players"][bot_id]["hand"]
+            candidates = _eligible_return_cards(hand)
+            card = min(candidates, key=lambda c: _single_order_value(c, state["level_rank"]))
+            return {"type": "return_select", "card_id": card["id"]}
+
+        if "play" not in legal and "pass" in legal:
+            return {"type": "pass"}
+
+        hand = state["players"][bot_id]["hand"]
+        current_trick = state.get("current_trick")
+        current_combo = current_trick["combo"] if current_trick else None
+        config = state.get("config", {})
+
+        teammate = _teammate_of(state, bot_id)
+        if current_trick and teammate == current_trick.get("player_id"):
+            if _can_play_all(hand, state["level_rank"], config, current_combo):
+                return {"type": "play", "card_ids": [card["id"] for card in hand]}
+            if "pass" in legal:
+                return {"type": "pass"}
+
+        if current_combo:
+            combo_type = current_combo["type"]
+            threshold = current_combo.get("rank_value", 0)
+            high_threshold = current_combo.get("high_value", 0)
+            if combo_type == "single":
+                cards = _find_single_to_beat(hand, state["level_rank"], threshold)
+            elif combo_type == "pair":
+                cards = _find_pair_to_beat(hand, state["level_rank"], threshold)
+            elif combo_type == "three":
+                cards = _find_three_to_beat(hand, state["level_rank"], threshold)
+            elif combo_type == "full_house":
+                cards = _find_full_house_to_beat(hand, state["level_rank"], threshold)
+            elif combo_type == "straight":
+                cards = _find_straight_to_beat(hand, state["level_rank"], high_threshold)
+            elif combo_type == "three_pairs":
+                cards = _find_three_pairs_to_beat(hand, state["level_rank"], high_threshold)
+            elif combo_type == "steel_plate":
+                cards = _find_steel_plate_to_beat(hand, state["level_rank"], high_threshold)
+            else:
+                cards = None
+            if cards:
+                return {"type": "play", "card_ids": cards}
+            bomb = _pick_bomb_to_beat(hand, state["level_rank"], current_combo, config)
+            if bomb:
+                return {"type": "play", "card_ids": bomb}
+            if "pass" in legal:
+                return {"type": "pass"}
+            return None
+
+        lead_cards = _choose_lead_play(hand, state["level_rank"], config, state, bot_id)
+        if lead_cards:
+            return {"type": "play", "card_ids": lead_cards}
+        if hand:
+            return {"type": "play", "card_ids": [hand[0]["id"]]}
+        return None

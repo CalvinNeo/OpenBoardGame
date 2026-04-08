@@ -8,6 +8,7 @@ const guandanTurnLabel = document.getElementById("guandanTurn");
 const guandanDealerLabel = document.getElementById("guandanDealer");
 const guandanLevelLabel = document.getElementById("guandanLevel");
 const guandanTrickLabel = document.getElementById("guandanTrick");
+const guandanTrickPlaysLabel = document.getElementById("guandanTrickPlays");
 const guandanTributeLabel = document.getElementById("guandanTribute");
 const guandanSelectedLabel = document.getElementById("guandanSelected");
 const guandanHandEl = document.getElementById("guandanHand");
@@ -32,6 +33,9 @@ function clearGuandanState() {
   currentGuandanView = null;
   guandanSelected = [];
   updateGuandanSelected();
+  if (guandanTrickPlaysLabel) {
+    guandanTrickPlaysLabel.textContent = "-";
+  }
   if (guandanHandEl) {
     guandanHandEl.textContent = "-";
   }
@@ -150,6 +154,20 @@ function renderGuandanTrick(view) {
   guandanTrickLabel.textContent = `${trick.type} by ${ownerName} (size ${trick.size})`;
 }
 
+function renderGuandanTrickPlays(view) {
+  if (!guandanTrickPlaysLabel) return;
+  if (!Array.isArray(view.trick_plays) || !view.trick_plays.length) {
+    guandanTrickPlaysLabel.textContent = "-";
+    return;
+  }
+  const parts = view.trick_plays.map((entry) => {
+    const name = entry.name || entry.player_id;
+    const cards = Array.isArray(entry.cards) ? entry.cards.join(" ") : "-";
+    return `${name}: ${cards}`;
+  });
+  guandanTrickPlaysLabel.textContent = parts.join(" | ");
+}
+
 function renderGuandanTribute(view) {
   if (!guandanTributeLabel) return;
   if (!view.tribute) {
@@ -177,6 +195,7 @@ function renderGuandanGameState(data) {
   if (guandanDealerLabel) guandanDealerLabel.textContent = view.dealer_team || "-";
   if (guandanLevelLabel) guandanLevelLabel.textContent = view.level_rank || "-";
   renderGuandanTrick(view);
+  renderGuandanTrickPlays(view);
   renderGuandanTribute(view);
   renderGuandanHand(view);
   renderGuandanPlayers(view);

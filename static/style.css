@@ -2315,6 +2315,15 @@ body.log-open {
   width: 100%;
 }
 
+.wild-card {
+  border-color: #f2a74b;
+  background: #fff1d6;
+}
+
+.guandan-player {
+  padding: 2px 0;
+}
+
 .cat-box-board {
   --cat-box-cols: 5;
   display: grid;
@@ -5286,6 +5295,7 @@ button.splendor-card {
     width: 100%;
   }
 
+
   .yahtzee-dice-container {
     flex-direction: column;
     align-items: stretch;
@@ -7538,6 +7548,119 @@ body.project-l-explain-mode button.has-explanation:hover {
 #projectLExplainContent .explain-cost.end {
   background: #e0e7ff;
   color: #3730a3;
+}
+
+/* Guandan Help/Explain */
+.guandan-header-btn {
+  padding: 4px 10px;
+  font-size: 13px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #f9fafb;
+  cursor: pointer;
+}
+
+.guandan-header-btn:hover {
+  background: #f3f4f6;
+}
+
+.guandan-header-btn.active {
+  background: #dbeafe;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+
+body.guandan-explain-mode button.has-explanation {
+  outline: 2px dashed #3b82f6;
+  outline-offset: 2px;
+  cursor: help;
+}
+
+body.guandan-explain-mode button.has-explanation:hover {
+  outline-color: #1d4ed8;
+  outline-style: solid;
+}
+
+.guandan-help-modal {
+  max-width: 700px;
+}
+
+.guandan-explain-modal {
+  max-width: 450px;
+}
+
+.guandan-help-content {
+  max-height: 70vh;
+  overflow-y: auto;
+  line-height: 1.6;
+}
+
+.guandan-help-content h3 {
+  margin: 16px 0 8px;
+  font-size: 16px;
+  color: #111827;
+}
+
+.guandan-help-content h3:first-child {
+  margin-top: 0;
+}
+
+.guandan-help-content ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.guandan-help-content li {
+  margin-bottom: 4px;
+}
+
+.guandan-help-content p {
+  margin: 8px 0;
+}
+
+#guandanExplainContent {
+  line-height: 1.6;
+}
+
+#guandanExplainContent h4 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: #111827;
+}
+
+#guandanExplainContent p {
+  margin: 6px 0;
+  color: #374151;
+}
+
+#guandanExplainContent .explain-cost {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+#guandanExplainContent .explain-cost.free {
+  background: #dcfce7;
+  color: #166534;
+}
+
+#guandanExplainContent .explain-cost.end {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+#guandanPanel .row.actions.guandan-actions-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 8px;
+}
+
+#guandanPanel .row.actions.guandan-actions-grid button {
+  width: 100%;
+  margin-right: 0;
 }
 
 /* Carcassonne Help/Explain */

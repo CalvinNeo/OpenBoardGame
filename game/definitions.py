@@ -17,6 +17,7 @@ from game.flip7 import Flip7Game
 from game.forest_shuffle import ForestShuffleGame
 from game.gold_rush import GoldRushGame
 from game.gizmos import GizmosGame
+from game.guandan import GuandanGame
 from game.halli_galli import HalliGalliGame
 from game.hanabi import HanabiGame
 from game.impression_flower import ImpressionFlowerGame
@@ -2636,6 +2637,49 @@ WAVELENGTH_CONFIG_SCHEMA = {
     "additionalProperties": False,
 }
 
+GUANDAN_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "play"},
+                "card_ids": {
+                    "type": "array",
+                    "items": {"type": "integer"},
+                    "minItems": 1,
+                },
+            },
+            "required": ["type", "card_ids"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "pass"}}, "required": ["type"], "additionalProperties": False},
+        {
+            "type": "object",
+            "properties": {"type": {"const": "tribute_select"}, "card_id": {"type": "integer"}},
+            "required": ["type", "card_id"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "return_select"}, "card_id": {"type": "integer"}},
+            "required": ["type", "card_id"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "next_round"}}, "required": ["type"], "additionalProperties": False},
+        {"type": "object", "properties": {"type": {"const": "play_again"}}, "required": ["type"], "additionalProperties": False},
+    ],
+}
+
+GUANDAN_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "hard_bomb_beats_soft": {"type": "boolean"},
+        "require_partner_not_last_for_a": {"type": "boolean"},
+    },
+    "additionalProperties": False,
+}
+
 register_game(
     GameDefinition(
         game_id=CaboGame.game_id,
@@ -2648,6 +2692,21 @@ register_game(
         module=CaboGame,
         serialize=CaboGame.serialize,
         deserialize=CaboGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=GuandanGame.game_id,
+        name="Guandan",
+        min_players=GuandanGame.min_players,
+        max_players=GuandanGame.max_players,
+        turn_mode="turn",
+        action_schema=GUANDAN_ACTION_SCHEMA,
+        config_schema=GUANDAN_CONFIG_SCHEMA,
+        module=GuandanGame,
+        serialize=GuandanGame.serialize,
+        deserialize=GuandanGame.deserialize,
     )
 )
 

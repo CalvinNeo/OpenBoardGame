@@ -20,6 +20,7 @@ from game.flip7 import Flip7Game
 from game.forest_shuffle import ForestShuffleGame
 from game.gold_rush import GoldRushGame
 from game.gizmos import GizmosGame
+from game.guandan import GuandanGame
 from game.halli_galli import HalliGalliGame
 from game.hanabi import HanabiGame
 from game.impression_flower import ImpressionFlowerGame
@@ -71,6 +72,7 @@ __all__ = [
     "ForestShuffleGame",
     "GoldRushGame",
     "GizmosGame",
+    "GuandanGame",
     "HalliGalliGame",
     "HanabiGame",
     "CoyoteGame",
