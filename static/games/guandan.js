@@ -3,7 +3,8 @@ let guandanSelected = [];
 let guandanExplainMode = false;
 let guandanPiles = [];
 let guandanLastSfKey = null;
-let guandanCascadeMode = false;
+let guandanHandLayout = "cascade";
+let guandanCascadeLayoutFrame = null;
 
 const guandanPhaseLabel = document.getElementById("guandanPhase");
 const guandanRoundLabel = document.getElementById("guandanRound");
@@ -28,7 +29,7 @@ const guandanExplainContent = document.getElementById("guandanExplainContent");
 const guandanPlayBtn = document.getElementById("guandanPlayBtn");
 const guandanPassBtn = document.getElementById("guandanPassBtn");
 const guandanHintBtn = document.getElementById("guandanHintBtn");
-const guandanCascadeBtn = document.getElementById("guandanCascadeBtn");
+const guandanCascadeSelect = document.getElementById("guandanCascadeSelect");
 const guandanFindSfBtn = document.getElementById("guandanFindSfBtn");
 const guandanPileBtn = document.getElementById("guandanPileBtn");
 const guandanTributeBtn = document.getElementById("guandanTributeBtn");
@@ -36,14 +37,18 @@ const guandanReturnBtn = document.getElementById("guandanReturnBtn");
 const guandanNextRoundBtn = document.getElementById("guandanNextRoundBtn");
 const guandanPlayAgainBtn = document.getElementById("guandanPlayAgainBtn");
 
+if (guandanCascadeSelect) {
+  guandanCascadeSelect.value = guandanHandLayout;
+}
+
 function clearGuandanState() {
   currentGuandanView = null;
   guandanSelected = [];
   guandanPiles = [];
   guandanLastSfKey = null;
-  guandanCascadeMode = false;
-  if (guandanCascadeBtn) {
-    guandanCascadeBtn.classList.remove("active");
+  guandanHandLayout = "cascade";
+  if (guandanCascadeSelect) {
+    guandanCascadeSelect.value = guandanHandLayout;
   }
   updateGuandanSelected();
   if (guandanTrickPlaysLabel) {
@@ -63,6 +68,54 @@ function clearGuandanState() {
 
 function updateGuandanSelected() {
   return;
+}
+
+function scheduleGuandanCascadeLayout() {
+  if (guandanHandLayout !== "compact" || !guandanHandEl) return;
+  if (guandanCascadeLayoutFrame) {
+    cancelAnimationFrame(guandanCascadeLayoutFrame);
+  }
+  guandanCascadeLayoutFrame = requestAnimationFrame(() => {
+    guandanCascadeLayoutFrame = null;
+    layoutGuandanCascade();
+  });
+}
+
+function layoutGuandanCascade() {
+  if (guandanHandLayout !== "compact" || !guandanHandEl) return;
+  const cols = Array.from(guandanHandEl.querySelectorAll(".guandan-cascade-col"));
+  if (!cols.length) return;
+  const styles = window.getComputedStyle(guandanHandEl);
+  const gap = parseFloat(styles.getPropertyValue("--guandan-cascade-gap")) || 12;
+  const widthCandidates = cols.map((col) => Math.ceil(col.getBoundingClientRect().width)).filter((w) => w > 0);
+  const fallbackSlot = guandanHandEl.querySelector(".slot") || guandanHandEl.querySelector(".guandan-cascade-select");
+  if (fallbackSlot) {
+    widthCandidates.push(Math.ceil(fallbackSlot.getBoundingClientRect().width));
+  }
+  const colWidth = Math.max(48, ...widthCandidates);
+  const containerWidth = guandanHandEl.clientWidth;
+  const lanes = Math.max(1, Math.floor((containerWidth + gap) / (colWidth + gap)));
+  const heights = new Array(lanes).fill(0);
+  cols.forEach((col) => {
+    col.style.width = `${colWidth}px`;
+    let colHeight = Math.ceil(col.getBoundingClientRect().height);
+    if (!colHeight) {
+      colHeight = Math.ceil(col.scrollHeight);
+    }
+    let targetLane = 0;
+    for (let i = 1; i < lanes; i += 1) {
+      if (heights[i] < heights[targetLane]) {
+        targetLane = i;
+      }
+    }
+    const left = targetLane * (colWidth + gap);
+    const top = heights[targetLane];
+    col.style.left = `${left}px`;
+    col.style.top = `${top}px`;
+    heights[targetLane] = top + colHeight + gap;
+  });
+  const maxHeight = heights.reduce((max, h) => (h > max ? h : max), 0);
+  guandanHandEl.style.height = maxHeight ? `${maxHeight - gap}px` : "";
 }
 
 function guandanOptionKey(cards) {
@@ -86,7 +139,7 @@ function updateGuandanButtons() {
       guandanPlayBtn,
       guandanPassBtn,
       guandanHintBtn,
-      guandanCascadeBtn,
+      guandanCascadeSelect,
       guandanFindSfBtn,
       guandanPileBtn,
       guandanTributeBtn,
@@ -115,8 +168,8 @@ function updateGuandanButtons() {
   if (guandanHintBtn) {
     guandanHintBtn.disabled = !hintOptions.length;
   }
-  if (guandanCascadeBtn) {
-    guandanCascadeBtn.disabled = false;
+  if (guandanCascadeSelect) {
+    guandanCascadeSelect.disabled = false;
   }
   if (guandanFindSfBtn) {
     guandanFindSfBtn.disabled = !sfCandidates.length;
@@ -147,7 +200,12 @@ function updateGuandanButtons() {
 function renderGuandanHand(view) {
   if (!guandanHandEl) return;
   guandanHandEl.innerHTML = "";
-  guandanHandEl.classList.toggle("guandan-cascade-hand", guandanCascadeMode);
+  const cascadeActive = guandanHandLayout !== "normal";
+  guandanHandEl.classList.toggle("guandan-cascade-hand", cascadeActive);
+  guandanHandEl.classList.toggle("guandan-compact-hand", guandanHandLayout === "compact");
+  if (guandanHandLayout !== "compact") {
+    guandanHandEl.style.height = "";
+  }
   const you = Array.isArray(view.players) ? view.players.find((p) => p.player_id === view.you) : null;
   if (!you || !Array.isArray(you.hand)) {
     guandanHandEl.textContent = "-";
@@ -160,7 +218,7 @@ function renderGuandanHand(view) {
   guandanSelected = guandanSelected.filter((cid) => handIds.has(cid));
   const piledIds = new Set(guandanPiles.flat());
   const available = you.hand.filter((card) => !piledIds.has(card.id));
-  if (!guandanCascadeMode) {
+  if (guandanHandLayout === "normal") {
     available.forEach((card) => {
       const div = document.createElement("div");
       div.className = "slot";
@@ -204,6 +262,11 @@ function renderGuandanHand(view) {
   groups.forEach((group) => {
     const col = document.createElement("div");
     col.className = "guandan-cascade-col";
+    if (guandanHandLayout !== "compact") {
+      col.style.left = "";
+      col.style.top = "";
+      col.style.width = "";
+    }
     const selectBtn = document.createElement("button");
     selectBtn.type = "button";
     selectBtn.className = "guandan-cascade-select";
@@ -235,6 +298,7 @@ function renderGuandanHand(view) {
     });
     guandanHandEl.appendChild(col);
   });
+  scheduleGuandanCascadeLayout();
 }
 
 function renderGuandanPile(view) {
@@ -435,12 +499,6 @@ const GUANDAN_BUTTON_EXPLANATIONS = {
     cost: "Assist",
     costType: "free",
   },
-  guandanCascadeBtn: {
-    name: "Cascade",
-    description: "Stack cards of the same rank vertically in your hand for easier scanning.",
-    cost: "Layout",
-    costType: "free",
-  },
   guandanFindSfBtn: {
     name: "Find SF",
     description: "Cycle through available straight flush selections in your hand.",
@@ -608,16 +666,27 @@ if (guandanHintBtn) {
   });
 }
 
-if (guandanCascadeBtn) {
-  guandanCascadeBtn.addEventListener("click", () => {
-    guandanCascadeMode = !guandanCascadeMode;
-    guandanCascadeBtn.classList.toggle("active", guandanCascadeMode);
+if (guandanCascadeSelect) {
+  guandanCascadeSelect.addEventListener("change", () => {
+    const value = guandanCascadeSelect.value;
+    if (value === "normal" || value === "cascade" || value === "compact") {
+      guandanHandLayout = value;
+    } else {
+      guandanHandLayout = "cascade";
+      guandanCascadeSelect.value = guandanHandLayout;
+    }
     if (currentGuandanView) {
       renderGuandanHand(currentGuandanView);
       updateGuandanButtons();
     }
   });
 }
+
+window.addEventListener("resize", () => {
+  if (guandanHandLayout === "compact") {
+    scheduleGuandanCascadeLayout();
+  }
+});
 
 if (guandanFindSfBtn) {
   guandanFindSfBtn.addEventListener("click", () => {
