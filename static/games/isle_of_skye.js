@@ -238,7 +238,7 @@ function skyeRoadSummary(tileDef) {
   return parts.join(" / ");
 }
 
-function createSkyeTileFace(view, tileId, rotation, compact = false) {
+function createSkyeTileFace(view, tileId, rotation, compact = false, showMeta = true) {
   const tileDef = skyeRotatedTileDef(view, tileId, rotation);
   if (!tileDef) {
     const fallback = document.createElement("div");
@@ -258,14 +258,16 @@ function createSkyeTileFace(view, tileId, rotation, compact = false) {
   art.style.transform = `rotate(${rotation}deg)`;
   tile.appendChild(art);
 
-  const meta = document.createElement("div");
-  meta.className = "skye-tile-meta";
-  meta.textContent = [
-    iconSummary || "·",
-    roadSummary,
-    `N${SKYE_TERRAIN_META[tileDef.edges.N].emoji} E${SKYE_TERRAIN_META[tileDef.edges.E].emoji} S${SKYE_TERRAIN_META[tileDef.edges.S].emoji} W${SKYE_TERRAIN_META[tileDef.edges.W].emoji}`,
-  ].filter(Boolean).join(" · ");
-  tile.appendChild(meta);
+  if (showMeta) {
+    const meta = document.createElement("div");
+    meta.className = "skye-tile-meta";
+    meta.textContent = [
+      iconSummary || "·",
+      roadSummary,
+      `N${SKYE_TERRAIN_META[tileDef.edges.N].emoji} E${SKYE_TERRAIN_META[tileDef.edges.E].emoji} S${SKYE_TERRAIN_META[tileDef.edges.S].emoji} W${SKYE_TERRAIN_META[tileDef.edges.W].emoji}`,
+    ].filter(Boolean).join(" · ");
+    tile.appendChild(meta);
+  }
 
   return tile;
 }
@@ -274,6 +276,7 @@ function createSkyeTileCard(view, tileId, options = {}) {
   const rotation = options.rotation || 0;
   const selected = !!options.selected;
   const compact = !!options.compact;
+  const showMeta = options.showMeta !== false;
   const card = document.createElement("div");
   card.className = `skye-tile-card${selected ? " selected" : ""}${compact ? " compact" : ""}`;
 
@@ -289,8 +292,30 @@ function createSkyeTileCard(view, tileId, options = {}) {
     card.appendChild(badge);
   }
 
-  card.appendChild(createSkyeTileFace(view, tileId, rotation, compact));
+  card.appendChild(createSkyeTileFace(view, tileId, rotation, compact, showMeta));
   return card;
+}
+
+function createSkyeBoardTile(view, tileId, rotation) {
+  const tileDef = skyeRotatedTileDef(view, tileId, rotation);
+  if (!tileDef) {
+    const fallback = document.createElement("div");
+    fallback.className = "skye-board-tile";
+    fallback.textContent = tileId;
+    return fallback;
+  }
+
+  const tile = document.createElement("div");
+  tile.className = "skye-board-tile";
+  tile.title = tileDef.display_name || tileId;
+
+  const art = document.createElement("div");
+  art.className = "skye-tile-art skye-board-tile-art";
+  art.style.backgroundImage = `url(${skyeSvgTileUrl(tileId)})`;
+  art.style.transform = `rotate(${rotation}deg)`;
+  tile.appendChild(art);
+
+  return tile;
 }
 
 function skyeEnsurePricingDraft(view) {
@@ -782,13 +807,9 @@ function renderSkyeBoardPanel(view) {
       cell.className = "skye-board-cell";
       const placedTile = territoryMap.get(`${x},${y}`);
       if (placedTile) {
-        const card = createSkyeTileCard(view, placedTile.tile_id, {
-          rotation: placedTile.rotation,
-          compact: true,
-          label: `(${x}, ${y})`,
-        });
-        card.classList.add("on-board");
-        cell.appendChild(card);
+        cell.classList.add("occupied");
+        cell.title = `(${x}, ${y})`;
+        cell.appendChild(createSkyeBoardTile(view, placedTile.tile_id, placedTile.rotation));
       } else {
         cell.classList.add("empty");
         const canPlace = (
