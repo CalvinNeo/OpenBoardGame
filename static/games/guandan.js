@@ -272,7 +272,20 @@ function renderGuandanHand(view) {
     selectBtn.className = "guandan-cascade-select";
     selectBtn.textContent = "↓";
     selectBtn.addEventListener("click", () => {
-      guandanSelected = group.cards.map((card) => card.id);
+      const addIds = group.cards.map((card) => card.id);
+      const existing = new Set(guandanSelected);
+      const allSelected = addIds.every((cid) => existing.has(cid));
+      if (allSelected) {
+        guandanSelected = guandanSelected.filter((cid) => !addIds.includes(cid));
+      } else {
+        const merged = [...guandanSelected];
+        addIds.forEach((cid) => {
+          if (!existing.has(cid)) {
+            merged.push(cid);
+          }
+        });
+        guandanSelected = merged;
+      }
       updateGuandanSelected();
       updateGuandanButtons();
       renderGuandanHand(view);

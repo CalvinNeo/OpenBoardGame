@@ -1246,6 +1246,24 @@ def _setup_tribute(state: Dict) -> None:
     state["phase"] = "tribute"
 
 
+def _tribute_leader(tribute: Dict, level_rank: int) -> Optional[str]:
+    payers = tribute.get("payers", [])
+    if not payers:
+        return None
+    if len(payers) == 1:
+        return payers[0]
+    tribute_cards = tribute.get("tribute_cards", {})
+    ranked = []
+    for pid in payers:
+        card = tribute_cards.get(pid)
+        if card:
+            ranked.append((pid, _single_order_value(card, level_rank)))
+    if ranked:
+        ranked.sort(key=lambda item: item[1], reverse=True)
+        return ranked[0][0]
+    return payers[0] if payers else None
+
+
 def _advance_to_round_end(state: Dict) -> None:
     _apply_round_result(state)
     state["last_round_summary"] = _summarize_round(state)
@@ -1445,8 +1463,11 @@ class GuandanGame:
                 if payer:
                     state["players"][payer]["hand"].append(card)
                 if len(tribute["return_cards"]) == len(tribute.get("receivers", [])):
+                    leader = _tribute_leader(tribute, state["level_rank"])
                     state["tribute"] = None
                     state["phase"] = "playing"
+                    if leader:
+                        state["current_turn"] = leader
                 return events, None
             return events, "invalid action"
 
