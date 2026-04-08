@@ -13,7 +13,6 @@ const guandanLevelLabel = document.getElementById("guandanLevel");
 const guandanTrickLabel = document.getElementById("guandanTrick");
 const guandanTrickPlaysLabel = document.getElementById("guandanTrickPlays");
 const guandanTributeLabel = document.getElementById("guandanTribute");
-const guandanSelectedLabel = document.getElementById("guandanSelected");
 const guandanHandEl = document.getElementById("guandanHand");
 const guandanPileEl = document.getElementById("guandanPile");
 const guandanPlayersEl = document.getElementById("guandanPlayers");
@@ -63,24 +62,7 @@ function clearGuandanState() {
 }
 
 function updateGuandanSelected() {
-  if (guandanSelectedLabel) {
-    if (!guandanSelected.length) {
-      guandanSelectedLabel.textContent = "-";
-      return;
-    }
-    if (!currentGuandanView || !Array.isArray(currentGuandanView.players)) {
-      guandanSelectedLabel.textContent = guandanSelected.join(", ");
-      return;
-    }
-    const you = currentGuandanView.players.find((p) => p.player_id === currentGuandanView.you);
-    if (!you || !Array.isArray(you.hand)) {
-      guandanSelectedLabel.textContent = guandanSelected.join(", ");
-      return;
-    }
-    const labelMap = new Map(you.hand.map((card) => [card.id, card.label]));
-    const labels = guandanSelected.map((id) => labelMap.get(id) || id);
-    guandanSelectedLabel.textContent = labels.join(", ");
-  }
+  return;
 }
 
 function guandanOptionKey(cards) {
