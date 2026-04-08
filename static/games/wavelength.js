@@ -16,8 +16,11 @@ const wavelengthRoundLabel = document.getElementById("wavelengthRound");
 const wavelengthYourTeamLabel = document.getElementById("wavelengthYourTeam");
 const wavelengthYourRoleLabel = document.getElementById("wavelengthYourRole");
 const wavelengthScoresLabel = document.getElementById("wavelengthScores");
+const wavelengthSpectrumCard = document.getElementById("wavelengthSpectrumCard");
 const wavelengthCardLabel = document.getElementById("wavelengthCard");
+const wavelengthClueInfoCard = document.getElementById("wavelengthClueInfoCard");
 const wavelengthClueLabel = document.getElementById("wavelengthClue");
+const wavelengthTargetInfoCard = document.getElementById("wavelengthTargetInfoCard");
 const wavelengthTargetLabel = document.getElementById("wavelengthTarget");
 const wavelengthStatusBody = document.getElementById("wavelengthStatusBody");
 const wavelengthTrackTarget = document.getElementById("wavelengthTrackTarget");
@@ -81,6 +84,36 @@ const WAVELENGTH_EXPLAIN = {
   wavelengthContinueBtn: "After recap, continue to the next round.",
 };
 
+const wavelengthExplainTargets = {
+  wavelengthSpectrumCard: () => {
+    const card = (currentWavelengthView && currentWavelengthView.spectrum_card) || {};
+    const left = card.left_label || "左侧";
+    const right = card.right_label || "右侧";
+    return {
+      title: "Spectrum",
+      body: `This round's scale runs from ${left} on the left to ${right} on the right. The psychic sees the hidden target somewhere on this line and should give one clue that helps teammates aim near that spot.`,
+    };
+  },
+  wavelengthClueInfoCard: () => {
+    const clue = (currentWavelengthView && currentWavelengthView.clue_text) || "";
+    return {
+      title: "Clue",
+      body: clue
+        ? `This is the psychic's one clue for the current spectrum. Teammates should interpret it relative to the left and right ends, then place the dial. Current clue: ${clue}`
+        : "This is where the psychic's one clue will appear. Until a clue is submitted, teammates should wait here for guidance.",
+    };
+  },
+  wavelengthTargetInfoCard: () => {
+    const targetVisible = currentWavelengthView && typeof currentWavelengthView.target_center === "number";
+    return {
+      title: "Target",
+      body: targetVisible
+        ? "This is the true hidden target position on the spectrum. Closer guesses score more: within 0.12 is 4 points, within 0.24 is 3 points, and within 0.38 is 2 points."
+        : "This shows the hidden target position. Most players should not see it before reveal. Usually only the psychic, or everyone after the round ends, can view the true target.",
+    };
+  },
+};
+
 const wavelengthActionButtons = {
   submit_clue: wavelengthSubmitClueBtn,
   submit_team_guess: wavelengthSubmitGuessBtn,
@@ -92,6 +125,12 @@ const wavelengthActionButtons = {
 [wavelengthSubmitClueBtn, wavelengthSubmitGuessBtn, wavelengthSideLeftBtn, wavelengthSideRightBtn, wavelengthContinueBtn].forEach((button) => {
   if (button) {
     button.classList.add("has-explanation");
+  }
+});
+
+[wavelengthSpectrumCard, wavelengthClueInfoCard, wavelengthTargetInfoCard].forEach((card) => {
+  if (card) {
+    card.classList.add("has-explanation");
   }
 });
 
@@ -373,6 +412,12 @@ function showWavelengthHelpModal() {
   setModalVisible(wavelengthHelpModal, true);
 }
 
+function exitWavelengthExplainMode() {
+  wavelengthExplainMode = false;
+  document.body.classList.remove("wavelength-explain-mode");
+  if (wavelengthExplainBtn) wavelengthExplainBtn.classList.remove("active");
+}
+
 function closeWavelengthHelpModal() {
   if (wavelengthHelpModal) setModalVisible(wavelengthHelpModal, false);
 }
@@ -380,19 +425,24 @@ function closeWavelengthHelpModal() {
 function showWavelengthHeaderActions(show) {
   if (wavelengthHeaderActions) wavelengthHeaderActions.style.display = show ? "flex" : "none";
   if (!show) {
-    wavelengthExplainMode = false;
-    document.body.classList.remove("wavelength-explain-mode");
-    if (wavelengthExplainBtn) wavelengthExplainBtn.classList.remove("active");
+    exitWavelengthExplainMode();
     closeWavelengthHelpModal();
     if (wavelengthExplainModal) setModalVisible(wavelengthExplainModal, false);
   }
 }
 
-function showWavelengthButtonExplanation(buttonId) {
+function showWavelengthExplanation(explainId) {
   if (!wavelengthExplainModal || !wavelengthExplainContent) return;
-  const text = WAVELENGTH_EXPLAIN[buttonId];
-  if (!text) return;
-  wavelengthExplainContent.innerHTML = `<p>${text}</p>`;
+  if (explainId in WAVELENGTH_EXPLAIN) {
+    wavelengthExplainContent.innerHTML = `<p>${WAVELENGTH_EXPLAIN[explainId]}</p>`;
+    setModalVisible(wavelengthExplainModal, true);
+    return;
+  }
+  const build = wavelengthExplainTargets[explainId];
+  if (!build) return;
+  const explanation = build();
+  if (!explanation) return;
+  wavelengthExplainContent.innerHTML = `<h3>${explanation.title}</h3><p>${explanation.body}</p>`;
   setModalVisible(wavelengthExplainModal, true);
 }
 
@@ -484,28 +534,22 @@ if (wavelengthContinueBtn) {
 
 document.addEventListener("pointerdown", (e) => {
   if (!wavelengthExplainMode) return;
-  const button = e.target.closest("button");
-  if (!button) {
-    wavelengthExplainMode = false;
-    document.body.classList.remove("wavelength-explain-mode");
-    if (wavelengthExplainBtn) wavelengthExplainBtn.classList.remove("active");
+  const explainTarget = e.target.closest(".has-explanation");
+  if (!explainTarget) {
+    exitWavelengthExplainMode();
     return;
   }
-  const buttonId = button.id || "";
-  if (buttonId in WAVELENGTH_EXPLAIN) {
+  const explainId = explainTarget.id || "";
+  if (explainId in WAVELENGTH_EXPLAIN || explainId in wavelengthExplainTargets) {
     e.preventDefault();
     e.stopPropagation();
-    showWavelengthButtonExplanation(buttonId);
-    wavelengthExplainMode = false;
-    document.body.classList.remove("wavelength-explain-mode");
-    if (wavelengthExplainBtn) wavelengthExplainBtn.classList.remove("active");
+    showWavelengthExplanation(explainId);
+    exitWavelengthExplainMode();
   }
 }, true);
 
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && wavelengthExplainMode) {
-    wavelengthExplainMode = false;
-    document.body.classList.remove("wavelength-explain-mode");
-    if (wavelengthExplainBtn) wavelengthExplainBtn.classList.remove("active");
+    exitWavelengthExplainMode();
   }
 });

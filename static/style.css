@@ -8686,6 +8686,12 @@ body.wavelength-explain-mode button.has-explanation {
   cursor: help;
 }
 
+body.wavelength-explain-mode .wavelength-summary-card.has-explanation {
+  outline: 2px dashed #3b82f6;
+  outline-offset: 2px;
+  cursor: help;
+}
+
 .wavelength-summary-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -8901,6 +8907,10 @@ body.wavelength-explain-mode button.has-explanation {
   flex: 1 1 240px;
 }
 
+#wavelengthClueInput {
+  min-width: 0;
+}
+
 .wavelength-action-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -9010,6 +9020,31 @@ body.wavelength-explain-mode button.has-explanation {
 
   .wavelength-track-center {
     font-size: 10px;
+  }
+
+  .wavelength-action-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  #wavelengthClueCard .wavelength-action-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+  }
+
+  #wavelengthClueInput {
+    width: 100%;
+    min-width: 0;
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+
+  #wavelengthSubmitClueBtn {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    padding: 8px 12px;
   }
 }
 
