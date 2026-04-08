@@ -7747,6 +7747,20 @@ body.guandan-explain-mode button.has-explanation:hover {
   font-size: 10px;
 }
 
+@media (min-width: 641px) {
+  #guandanPanel .slot {
+    min-width: 48px;
+    padding: 8px 10px;
+    font-size: inherit;
+  }
+
+  #guandanPanel .guandan-cascade-select {
+    min-width: 48px;
+    padding: 5px 10px;
+    font-size: inherit;
+  }
+}
+
 #guandanPanel .guandan-pile {
   display: flex;
   flex-direction: column;
