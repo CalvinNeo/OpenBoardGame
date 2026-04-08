@@ -398,16 +398,44 @@ function renderGuandanTrick(view) {
 
 function renderGuandanTrickPlays(view) {
   if (!guandanTrickPlaysLabel) return;
-  if (!Array.isArray(view.trick_plays) || !view.trick_plays.length) {
+  if (!Array.isArray(view.players) || !view.players.length) {
     guandanTrickPlaysLabel.textContent = "-";
     return;
   }
-  const parts = view.trick_plays.map((entry) => {
-    const name = entry.name || entry.player_id;
-    const cards = Array.isArray(entry.cards) ? entry.cards.join(" ") : "-";
-    return `${name}: ${cards}`;
-  });
-  guandanTrickPlaysLabel.textContent = parts.join(" | ");
+  const playsById = new Map();
+  if (Array.isArray(view.trick_plays)) {
+    view.trick_plays.forEach((entry) => {
+      if (!entry) return;
+      playsById.set(entry.player_id, entry);
+    });
+  }
+  const rows = view.players
+    .map((player) => {
+      const entry = playsById.get(player.player_id);
+      const cards = entry && Array.isArray(entry.cards) && entry.cards.length ? entry.cards.join(" ") : "-";
+      return `
+        <tr>
+          <td>${player.name || player.player_id}</td>
+          <td>${player.hand_count ?? "-"}</td>
+          <td>${cards}</td>
+        </tr>
+      `;
+    })
+    .join("");
+  guandanTrickPlaysLabel.innerHTML = `
+    <table class="guandan-trick-plays-table">
+      <thead>
+        <tr>
+          <th>Player</th>
+          <th>Cards Left</th>
+          <th>Trick</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows}
+      </tbody>
+    </table>
+  `;
 }
 
 function renderGuandanTribute(view) {

@@ -7725,6 +7725,21 @@ body.guandan-explain-mode button.has-explanation:hover {
   position: absolute;
   display: flex;
 }
+
+#guandanPanel .guandan-trick-plays-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+#guandanPanel .guandan-trick-plays-table th,
+#guandanPanel .guandan-trick-plays-table td {
+  border: 1px solid #e5e7eb;
+  padding: 4px 6px;
+  text-align: left;
+  vertical-align: top;
+}
 #guandanPanel .slot {
   min-width: 48px;
   padding: 8px 10px;
