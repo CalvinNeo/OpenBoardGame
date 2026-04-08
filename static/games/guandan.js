@@ -445,9 +445,29 @@ function renderGuandanTribute(view) {
     return;
   }
   const tribute = view.tribute;
-  guandanTributeLabel.textContent = `${tribute.stage} ${tribute.type} | payers: ${tribute.payers.join(
-    ", "
-  )} | receivers: ${tribute.receivers.join(", ")}`;
+  const parts = [];
+  parts.push(`${tribute.stage} ${tribute.type}`);
+  if (Array.isArray(tribute.payers) && tribute.payers.length) {
+    parts.push(`payers: ${tribute.payers.join(", ")}`);
+  }
+  if (Array.isArray(tribute.receivers) && tribute.receivers.length) {
+    parts.push(`receivers: ${tribute.receivers.join(", ")}`);
+  }
+  if (tribute.tribute_cards && typeof tribute.tribute_cards === "object") {
+    const entries = Object.entries(tribute.tribute_cards);
+    if (entries.length) {
+      const labels = entries.map(([name, card]) => `${name}: ${card}`);
+      parts.push(`tribute cards: ${labels.join(", ")}`);
+    }
+  }
+  if (tribute.return_cards && typeof tribute.return_cards === "object") {
+    const entries = Object.entries(tribute.return_cards);
+    if (entries.length) {
+      const labels = entries.map(([name, card]) => `${name}: ${card}`);
+      parts.push(`return cards: ${labels.join(", ")}`);
+    }
+  }
+  guandanTributeLabel.textContent = parts.join(" | ");
 }
 
 function renderGuandanGameState(data) {

@@ -1595,13 +1595,21 @@ class GuandanGame:
         tribute_view = None
         tribute = state.get("tribute")
         if tribute:
+            name_map = {pid: meta.get("name") or pid for pid, meta in state["player_meta"].items()}
+
+            def name_of(pid: str) -> str:
+                return name_map.get(pid, pid)
+
+            def map_cards(card_map: Dict[str, Dict]) -> Dict[str, str]:
+                return {name_of(pid): _card_label(card) for pid, card in card_map.items()}
+
             tribute_view = {
                 "type": tribute.get("type"),
                 "stage": tribute.get("stage"),
-                "payers": tribute.get("payers", []),
-                "receivers": tribute.get("receivers", []),
-                "tribute_cards": {pid: _card_label(card) for pid, card in tribute.get("tribute_cards", {}).items()},
-                "return_cards": {pid: _card_label(card) for pid, card in tribute.get("return_cards", {}).items()},
+                "payers": [name_of(pid) for pid in tribute.get("payers", [])],
+                "receivers": [name_of(pid) for pid in tribute.get("receivers", [])],
+                "tribute_cards": map_cards(tribute.get("tribute_cards", {})),
+                "return_cards": map_cards(tribute.get("return_cards", {})),
             }
 
         hint_options = _list_hint_options(state, viewer_id)
