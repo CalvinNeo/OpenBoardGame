@@ -7675,6 +7675,13 @@ body.guandan-explain-mode button.has-explanation:hover {
     min-height: 18px;
     font-size: 11px;
   }
+
+  #guandanPanel .guandan-hand-row button,
+  #guandanPanel .guandan-hand-row select {
+    padding: 4px 6px;
+    min-height: 18px;
+    font-size: 11px;
+  }
 }
 
 #guandanPanel .guandan-hand-row {
@@ -7685,8 +7692,17 @@ body.guandan-explain-mode button.has-explanation:hover {
   align-items: center;
 }
 
+#guandanPanel .guandan-hand-row button {
+  width: auto;
+}
+
 #guandanPanel .guandan-inline-select {
   margin-left: auto;
+  width: auto;
+  padding: 4px 8px;
+}
+
+#guandanPanel .guandan-inline-btn {
   width: auto;
   padding: 4px 8px;
 }
