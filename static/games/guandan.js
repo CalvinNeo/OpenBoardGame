@@ -709,6 +709,8 @@ const GUANDAN_BOT_COMPONENT_LABELS = {
   opp_block: "Opp likely blocked",
   opp_risk: "Opp likely beats",
   avoid_overtrick: "Avoid overtrick",
+  seize_tempo: "Seize tempo",
+  pass_opportunity_cost: "Pass opportunity cost",
   lead_finish_bonus: "Lead finish",
   remaining_penalty: "Remaining penalty",
   mcts_avg: "MCTS avg",
