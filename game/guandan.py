@@ -1102,6 +1102,7 @@ def _lead_option_score(state: Dict, player_id: str, cards: List[int]) -> float:
 
     if combo["type"] == "single":
         score -= _single_order_value(play_cards[0], state["level_rank"]) * 0.12
+        score -= _lead_single_break_penalty(hand, cards, state["level_rank"])
     else:
         score -= _combo_value(combo) * 0.03
 
@@ -1143,6 +1144,11 @@ def _rank_lead_options(state: Dict, player_id: str, options: List[List[int]]) ->
     if not scored:
         return options
 
+    best_non_single_score = max(
+        (score for score, combo_type, _ in scored if combo_type != "single"),
+        default=None,
+    )
+
     best_by_type: Dict[str, Tuple[float, str, List[int]]] = {}
     for entry in scored:
         score, combo_type, _ = entry
@@ -1152,13 +1158,21 @@ def _rank_lead_options(state: Dict, player_id: str, options: List[List[int]]) ->
 
     ranked: List[List[int]] = []
     seen = set()
-    for _, _, cards in sorted(best_by_type.values(), key=lambda item: item[0], reverse=True):
+    for score, combo_type, cards in sorted(best_by_type.values(), key=lambda item: item[0], reverse=True):
+        if combo_type == "single" and _should_prune_weak_lead_single(
+            state, player_id, cards, score, best_non_single_score
+        ):
+            continue
         key = _cards_key(cards)
         if key in seen:
             continue
         seen.add(key)
         ranked.append(cards)
-    for _, _, cards in sorted(scored, key=lambda item: item[0], reverse=True):
+    for score, combo_type, cards in sorted(scored, key=lambda item: item[0], reverse=True):
+        if combo_type == "single" and _should_prune_weak_lead_single(
+            state, player_id, cards, score, best_non_single_score
+        ):
+            continue
         key = _cards_key(cards)
         if key in seen:
             continue
@@ -1248,6 +1262,7 @@ def _hand_strength_score(hand: List[Dict], level_rank: int) -> float:
     if not hand:
         return 0.0
     info = _hand_info(hand, level_rank)
+    strength = _rank_strength(level_rank)
     counts = [len(cards) for cards in info["normals_by_rank"].values()]
     pair_ranks = sum(1 for count in counts if count >= 2)
     triple_ranks = sum(1 for count in counts if count >= 3)
@@ -1262,6 +1277,12 @@ def _hand_strength_score(hand: List[Dict], level_rank: int) -> float:
     score += triple_ranks * 1.4
     score += quad_ranks * 1.9
     score -= singles * 0.35
+    low_single_burden = 0.0
+    for rank, count in info["normals_by_rank"].items():
+        if count != 1:
+            continue
+        low_single_burden += max(0.0, 56 - strength[rank]) * 0.18
+    score -= min(3.0, low_single_burden)
     score += wild_count * 0.5
     score += joker_big * 1.8 + joker_small * 1.2
 
@@ -1346,6 +1367,35 @@ def _shape_transition_score(hand: List[Dict], cards: List[int], level_rank: int)
             score += 0.9
 
     return score
+
+
+def _lead_single_break_penalty(hand: List[Dict], cards: List[int], level_rank: int) -> float:
+    if len(cards) != 1:
+        return 0.0
+    hand_map = _map_hand_by_id(hand)
+    card = hand_map.get(cards[0])
+    if not card or _is_joker(card) or _is_wild(card, level_rank):
+        return 0.0
+    rank = card.get("rank")
+    if rank is None:
+        return 0.0
+    before_count = _rank_count_map(hand, level_rank).get(rank, 0)
+    if before_count <= 1:
+        return 0.0
+    low_value = max(0.0, 56 - _single_order_value(card, level_rank))
+    return 1.2 + max(0, before_count - 2) * 0.8 + low_value * 0.9
+
+
+def _should_prune_weak_lead_single(
+    state: Dict, player_id: str, cards: List[int], single_score: float, best_non_single_score: Optional[float]
+) -> bool:
+    if best_non_single_score is None or state.get("current_trick"):
+        return False
+    hand = state["players"][player_id]["hand"]
+    penalty = _lead_single_break_penalty(hand, cards, state["level_rank"])
+    if penalty < 4.5:
+        return False
+    return best_non_single_score - single_score >= 8.0
 
 
 def _takeover_opportunity_score(state: Dict, player_id: str, cards: List[int]) -> float:
