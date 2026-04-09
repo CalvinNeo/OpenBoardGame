@@ -11,12 +11,12 @@ RANK_LABELS = {11: "J", 12: "Q", 13: "K", 14: "A"}
 DEFAULT_CONFIG = {
     "hard_bomb_beats_soft": False,
     "require_partner_not_last_for_a": False,
-    "bot_search_depth": 2,
-    "bot_mcts_sims": 60,
-    "bot_mcts_depth": 8,
-    "bot_endgame_threshold": 18,
-    "bot_minimax_depth": 4,
-    "bot_minimax_width": 6,
+    "bot_search_depth": 3,
+    "bot_mcts_sims": 120,
+    "bot_mcts_depth": 10,
+    "bot_endgame_threshold": 24,
+    "bot_minimax_depth": 5,
+    "bot_minimax_width": 8,
 }
 
 STRAIGHT_SEQUENCES: List[Tuple[List[int], int]] = []
@@ -1202,6 +1202,13 @@ def _candidate_actions(state: Dict, player_id: str, limit: int) -> List[Dict]:
     actions: List[Dict] = []
     if "play" in legal:
         options = _list_hint_options(state, player_id)
+        hand = state["players"][player_id]["hand"]
+        current_trick = state.get("current_trick")
+        current_combo = current_trick["combo"] if current_trick else None
+        if hand and _can_play_all(hand, state["level_rank"], state.get("config", {}), current_combo):
+            play_all = [card["id"] for card in hand]
+            if play_all not in options:
+                options = [play_all] + options
         current_trick = state.get("current_trick")
         if current_trick and current_trick["combo"]["type"] in ("bomb", "straight_flush", "heavenly"):
             minimal = _minimal_bomb_response(
@@ -1463,6 +1470,11 @@ def _bot_select_play(state: Dict, bot_id: str, depth: int) -> Optional[List[int]
     legal = GuandanGame.get_legal_actions(state, bot_id)
     if "play" not in legal:
         return None
+    hand = state["players"][bot_id]["hand"]
+    current_trick = state.get("current_trick")
+    current_combo = current_trick["combo"] if current_trick else None
+    if hand and _can_play_all(hand, state["level_rank"], state.get("config", {}), current_combo):
+        return [card["id"] for card in hand]
     options = _list_hint_options(state, bot_id)
     current_trick = state.get("current_trick")
     if current_trick and current_trick["combo"]["type"] in ("bomb", "straight_flush", "heavenly"):
