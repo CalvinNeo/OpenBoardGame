@@ -876,9 +876,9 @@ async def _maybe_run_bots(room: Room) -> None:
     if not game_def:
         return
     game_module = game_def.module
+    room.bot_running = True
 
     async def _runner():
-        room.bot_running = True
         try:
             while room.status == "in_game":
                 state = room.game_state
@@ -889,7 +889,16 @@ async def _maybe_run_bots(room: Room) -> None:
                 for candidate in room.players:
                     if not candidate.is_bot:
                         continue
-                    action = game_module.bot_move(state, candidate.player_id)
+                    try:
+                        action = game_module.bot_move(state, candidate.player_id)
+                    except Exception:
+                        logger.exception(
+                            "bot_move failed room=%s game=%s player=%s",
+                            room.room_id,
+                            room.game_type,
+                            candidate.player_id,
+                        )
+                        action = None
                     if action:
                         bot_action = action
                         bot_player = candidate
@@ -914,8 +923,26 @@ async def _maybe_run_bots(room: Room) -> None:
                     state = room.game_state
                     if state.get("game_over"):
                         break
-                events, error = game_module.apply_action(state, bot_player.player_id, action_payload)
+                try:
+                    events, error = game_module.apply_action(state, bot_player.player_id, action_payload)
+                except Exception:
+                    logger.exception(
+                        "bot apply_action failed room=%s game=%s player=%s action=%s",
+                        room.room_id,
+                        room.game_type,
+                        bot_player.player_id,
+                        action_payload,
+                    )
+                    break
                 if error:
+                    logger.warning(
+                        "bot action rejected room=%s game=%s player=%s action=%s error=%s",
+                        room.room_id,
+                        room.game_type,
+                        bot_player.player_id,
+                        action_payload,
+                        error,
+                    )
                     break
                 bot_event = {
                     "type": "bot:action",

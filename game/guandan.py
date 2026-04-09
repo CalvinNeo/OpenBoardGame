@@ -1110,10 +1110,15 @@ def _lead_option_score(state: Dict, player_id: str, cards: List[int]) -> float:
 
     teammate = _teammate_of(state, player_id)
     partner_left = len(state["players"][teammate]["hand"]) if teammate else 99
-    opp_left = min(
-        len(state["players"][pid]["hand"])
+    active_opponents = [
+        pid
         for pid in state["turn_order"]
         if _team_of(state, pid) != _team_of(state, player_id) and not state["players"][pid]["finished"]
+    ]
+    opp_left = (
+        min(len(state["players"][pid]["hand"]) for pid in active_opponents)
+        if active_opponents
+        else 0
     )
     if opp_left <= 2 and combo["type"] != "single":
         score += 2.5
