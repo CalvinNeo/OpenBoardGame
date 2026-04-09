@@ -131,8 +131,6 @@ def _single_order_value(card: Dict, level_rank: int) -> int:
         return 100
     if joker == "small":
         return 90
-    if card.get("rank") == level_rank and card.get("suit") == "hearts":
-        return 80
     if card.get("rank") == level_rank:
         return 70
     base = _base_rank_order(level_rank)
@@ -1657,6 +1655,15 @@ def _filter_overbomb_options(state: Dict, player_id: str, options: List[List[int
                 has_non_bomb = True
     if has_non_bomb:
         return filtered
+    if bombs:
+        minimal = None
+        candidates = _find_bomb_candidates(hand, level_rank)
+        if candidates:
+            minimal = candidates[0]["cards"]
+        if minimal:
+            full_hand = [card["id"] for card in hand]
+            keep = [full_hand] if full_hand in bombs and full_hand != minimal else []
+            return [minimal] + keep
     return filtered + bombs
 
 
