@@ -852,76 +852,17 @@ def _can_play_all(hand: List[Dict], level_rank: int, config: Dict, current_combo
 def _choose_lead_play(hand: List[Dict], level_rank: int, config: Dict, state: Dict, bot_id: str) -> List[int]:
     if _can_play_all(hand, level_rank, config, None):
         return [card["id"] for card in hand]
-    info = _hand_info(hand, level_rank)
-    strength = _rank_strength(level_rank)
-    partner = _teammate_of(state, bot_id)
-    partner_left = len(state["players"][partner]["hand"]) if partner else 99
-    opp_left = min(
-        len(state["players"][pid]["hand"])
-        for pid in state["turn_order"]
-        if _team_of(state, pid) != _team_of(state, bot_id) and not state["players"][pid]["finished"]
-    )
-
-    candidates: List[Tuple[float, List[int]]] = []
-
-    straight = _find_straight_to_beat(hand, level_rank, threshold=0)
-    if straight:
-        candidates.append((50.0, straight))
-    three_pairs = _find_three_pairs_to_beat(hand, level_rank, threshold=0)
-    if three_pairs:
-        candidates.append((48.0, three_pairs))
-    steel = _find_steel_plate_to_beat(hand, level_rank, threshold=0)
-    if steel:
-        candidates.append((47.0, steel))
-
-    for rank in _ranks_sorted_by_strength(level_rank, ascending=True):
-        built = _build_of_rank(rank, 3, info)
-        if built:
-            triple_cards = built[0]
-            pair_cards = _find_lowest_pair(built[1], exclude_rank=rank, level_rank=level_rank)
-            if pair_cards:
-                candidates.append((45.0, triple_cards + pair_cards))
-            break
-
-    for rank in _ranks_sorted_by_strength(level_rank, ascending=True):
-        built = _build_of_rank(rank, 3, info)
-        if built:
-            candidates.append((30.0, built[0]))
-            break
-
-    for rank in _ranks_sorted_by_strength(level_rank, ascending=True):
-        built = _build_of_rank(rank, 2, info)
-        if built:
-            candidates.append((25.0, built[0]))
-            break
-
-    singles = sorted(hand, key=lambda c: _single_order_value(c, level_rank))
-    if singles:
-        candidates.append((20.0, [singles[0]["id"]]))
-
-    bombs = _find_bomb_candidates(hand, level_rank)
-    for bomb in bombs:
-        penalty = 20.0
-        if opp_left <= 2:
-            penalty = 5.0
-        candidates.append((10.0 - penalty + bomb["tier"], bomb["cards"]))
-        break
-
-    if not candidates:
-        return [singles[0]["id"]] if singles else []
-
-    def score(entry: Tuple[float, List[int]]) -> float:
-        base, cards = entry
-        wild_penalty = sum(
-            1 for card in cards if any(card == wid for wid in info["wild_cards"])
-        )
-        size_bonus = len(cards) * 2.0
-        partner_bonus = 5.0 if partner_left <= 3 else 0.0
-        opp_bonus = 3.0 if opp_left <= 2 else 0.0
-        return base + size_bonus - wild_penalty * 3 + partner_bonus + opp_bonus
-
-    candidates.sort(key=score, reverse=True)
-    return candidates[0][1]
+    options: List[List[int]] = []
+    options.extend(_list_single_options(hand, level_rank, 0))
+    options.extend(_list_rank_group_options(hand, level_rank, 0, 2))
+    options.extend(_list_rank_group_options(hand, level_rank, 0, 3))
+    options.extend(_list_full_house_options(hand, level_rank, 0))
+    options.extend(_list_straight_options(hand, level_rank, 0))
+    options.extend(_list_three_pairs_options(hand, level_rank, 0))
+    options.extend(_list_steel_plate_options(hand, level_rank, 0))
+    options.extend(_list_bomb_options(hand, level_rank, None, config))
+    ranked = _rank_lead_options(state, bot_id, _dedupe_card_sets(options))
+    return ranked[0] if ranked else []
 
 
 def _cards_key(cards: List[int]) -> str:
@@ -1125,6 +1066,100 @@ def _combo_value(combo: Dict) -> int:
     if combo["type"] in ("straight", "three_pairs", "steel_plate"):
         return combo.get("high_value", 0)
     return combo.get("rank_value", 0)
+
+
+def _lead_option_score(state: Dict, player_id: str, cards: List[int]) -> float:
+    hand = state["players"][player_id]["hand"]
+    hand_map = _map_hand_by_id(hand)
+    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+    combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
+    if not combo:
+        return -999.0
+    if len(cards) == len(hand):
+        return 1000.0
+
+    base_by_type = {
+        "straight": 64.0,
+        "three_pairs": 62.0,
+        "steel_plate": 61.0,
+        "full_house": 58.0,
+        "three": 46.0,
+        "pair": 38.0,
+        "single": 20.0,
+        "bomb": 6.0,
+        "straight_flush": 4.0,
+        "heavenly": 2.0,
+    }
+    base = base_by_type.get(combo["type"], 10.0)
+    structure_delta = _play_structure_delta(hand, cards, state["level_rank"])
+    remaining = _remove_cards(hand, cards)
+    remaining_strength = _hand_strength_score(remaining, state["level_rank"])
+
+    score = base
+    score += len(cards) * 1.2
+    score -= structure_delta * 2.6
+    score += remaining_strength * 0.18
+
+    if combo["type"] == "single":
+        score -= _single_order_value(play_cards[0], state["level_rank"]) * 0.12
+    else:
+        score -= _combo_value(combo) * 0.03
+
+    if combo["type"] in BOMB_TYPES:
+        score -= 14.0 + _bomb_tier(combo) * 2.0
+
+    teammate = _teammate_of(state, player_id)
+    partner_left = len(state["players"][teammate]["hand"]) if teammate else 99
+    opp_left = min(
+        len(state["players"][pid]["hand"])
+        for pid in state["turn_order"]
+        if _team_of(state, pid) != _team_of(state, player_id) and not state["players"][pid]["finished"]
+    )
+    if opp_left <= 2 and combo["type"] != "single":
+        score += 2.5
+    if partner_left <= 3 and combo["type"] in ("pair", "three", "full_house", "straight", "three_pairs", "steel_plate"):
+        score += 1.5
+    return score
+
+
+def _rank_lead_options(state: Dict, player_id: str, options: List[List[int]]) -> List[List[int]]:
+    if not options:
+        return []
+    hand = state["players"][player_id]["hand"]
+    hand_map = _map_hand_by_id(hand)
+    scored: List[Tuple[float, str, List[int]]] = []
+    for cards in options:
+        combo_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+        combo = _evaluate_combo(combo_cards, state["level_rank"], state.get("config", {}))
+        if not combo:
+            continue
+        score = _lead_option_score(state, player_id, cards)
+        scored.append((score, combo["type"], cards))
+    if not scored:
+        return options
+
+    best_by_type: Dict[str, Tuple[float, str, List[int]]] = {}
+    for entry in scored:
+        score, combo_type, _ = entry
+        existing = best_by_type.get(combo_type)
+        if existing is None or score > existing[0]:
+            best_by_type[combo_type] = entry
+
+    ranked: List[List[int]] = []
+    seen = set()
+    for _, _, cards in sorted(best_by_type.values(), key=lambda item: item[0], reverse=True):
+        key = _cards_key(cards)
+        if key in seen:
+            continue
+        seen.add(key)
+        ranked.append(cards)
+    for _, _, cards in sorted(scored, key=lambda item: item[0], reverse=True):
+        key = _cards_key(cards)
+        if key in seen:
+            continue
+        seen.add(key)
+        ranked.append(cards)
+    return ranked
 
 
 def _bot_estimate_opponent_can_beat(state: Dict, opponent_id: str, combo: Dict) -> bool:
@@ -1399,6 +1434,8 @@ def _candidate_actions(state: Dict, player_id: str, limit: int) -> List[Dict]:
             )
             if minimal:
                 options = [minimal]
+        if not current_trick:
+            options = _rank_lead_options(state, player_id, options)
         for cards in options[:limit]:
             actions.append({"type": "play", "card_ids": cards})
     if "pass" in legal:
@@ -1465,7 +1502,16 @@ def _rollout_policy_action(state: Dict, player_id: str) -> Optional[Dict]:
             teammate = _teammate_of(state, player_id)
             if teammate and leader == teammate and random.random() < 0.6:
                 return {"type": "pass"}
-        cards = _suggest_hint_cards(state, player_id)
+        if not state.get("current_trick"):
+            cards = _choose_lead_play(
+                state["players"][player_id]["hand"],
+                state["level_rank"],
+                state.get("config", {}),
+                state,
+                player_id,
+            )
+        else:
+            cards = _suggest_hint_cards(state, player_id)
         if cards:
             return {"type": "play", "card_ids": cards}
     if "pass" in legal:
@@ -1790,6 +1836,8 @@ def _bot_select_play(state: Dict, bot_id: str, depth: int) -> Optional[List[int]
         )
         if minimal:
             options = [minimal]
+    if not current_trick:
+        options = _rank_lead_options(state, bot_id, options)
     options = _filter_overbomb_options(state, bot_id, options)
     if not options:
         return None
@@ -1916,6 +1964,8 @@ def _build_bot_explain(
         )
         if minimal:
             options = [minimal]
+    if not current_trick:
+        options = _rank_lead_options(state, bot_id, options)
     options = _filter_overbomb_options(state, bot_id, options)
 
     scored: List[Tuple[List[int], float, Dict[str, float]]] = []
