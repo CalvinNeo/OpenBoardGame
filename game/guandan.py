@@ -7,6 +7,7 @@ SUIT_LABELS = {"spades": "S", "hearts": "H", "clubs": "C", "diamonds": "D"}
 SUIT_EMOJI = {"spades": "♠️", "hearts": "♥️", "clubs": "♣️", "diamonds": "♦️"}
 RANKS = list(range(2, 15))
 RANK_LABELS = {11: "J", 12: "Q", 13: "K", 14: "A"}
+BOMB_TYPES = ("bomb", "straight_flush", "heavenly")
 
 DEFAULT_CONFIG = {
     "hard_bomb_beats_soft": False,
@@ -1309,6 +1310,7 @@ def _mcts_pick_action(state: Dict, bot_id: str, sims: int, depth: int, width: in
     if "play" not in legal:
         return None
     candidates = _candidate_actions(state, bot_id, width)
+    candidates = _filter_overbomb_actions(state, bot_id, candidates)
     if not candidates:
         return None
     rng = random.Random()
@@ -1371,6 +1373,7 @@ def _minimax_pick_action(state: Dict, bot_id: str, depth: int, width: int) -> Op
     if "play" not in legal:
         return None
     actions = _candidate_actions(state, bot_id, width)
+    actions = _filter_overbomb_actions(state, bot_id, actions)
     if not actions:
         return None
     best_action = None
@@ -1407,36 +1410,41 @@ def _minimal_bomb_response(
     return None
 
 
-def _bot_score_play(state: Dict, bot_id: str, cards: Optional[List[int]], depth: int) -> float:
+def _bot_score_components(
+    state: Dict, bot_id: str, cards: Optional[List[int]], depth: int
+) -> Dict[str, float]:
     level_rank = state["level_rank"]
     config = state.get("config", {})
     hand = state["players"][bot_id]["hand"]
     current_trick = state.get("current_trick")
     teammate = _teammate_of(state, bot_id)
+    components: Dict[str, float] = {}
 
     if not cards:
-        score = 0.0
         if current_trick and teammate == current_trick.get("player_id"):
-            score += 6.0
-        score -= len(hand) * 0.2
-        score += _team_finish_score(state, bot_id, len(hand)) * 2.0
-        return score
+            components["protect_teammate"] = 6.0
+        components["hand_pressure"] = -len(hand) * 0.2
+        components["team_finish"] = _team_finish_score(state, bot_id, len(hand)) * 2.0
+        components["total"] = sum(components.values())
+        return components
 
     hand_map = _map_hand_by_id(hand)
     play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
     combo = _evaluate_combo(play_cards, level_rank, config)
     if not combo:
-        return -999.0
+        return {"total": -999.0}
 
     remaining = _remove_cards(hand, cards)
-    score = 0.0
-    score += len(cards) * 0.6
+    components["play_cards"] = len(cards) * 0.6
     if not remaining:
-        score += 100.0
-    if combo["type"] in ("bomb", "straight_flush", "heavenly"):
-        score += 8.0 + _bomb_tier(combo)
+        components["finish_bonus"] = 100.0
+    if combo["type"] in BOMB_TYPES:
+        base = 2.0
+        if current_trick and current_trick.get("combo", {}).get("type") in BOMB_TYPES:
+            base = 5.0
+        components["bomb_bonus"] = base + _bomb_tier(combo)
     if combo.get("uses_wild"):
-        score -= 1.5
+        components["wild_penalty"] = -1.5
 
     opp_ids = [
         pid
@@ -1450,20 +1458,85 @@ def _bot_score_play(state: Dict, bot_id: str, cards: Optional[List[int]], depth:
             likely_beats += 1
         else:
             likely_blocks += 1
-    score += likely_blocks * 4.0
-    score -= likely_beats * 3.0
+    if likely_blocks:
+        components["opp_block"] = likely_blocks * 4.0
+    if likely_beats:
+        components["opp_risk"] = -likely_beats * 3.0
 
     if current_trick and teammate == current_trick.get("player_id"):
-        score -= 5.0
+        components["avoid_overtrick"] = -5.0
 
-    score += _team_finish_score(state, bot_id, len(remaining)) * 2.0
+    components["team_finish"] = _team_finish_score(state, bot_id, len(remaining)) * 2.0
 
     if depth >= 2 and remaining:
         lead_cards = _choose_lead_play(remaining, level_rank, config, state, bot_id)
         if lead_cards and len(lead_cards) == len(remaining):
-            score += 12.0
-        score -= len(remaining) * 0.3
-    return score
+            components["lead_finish_bonus"] = 12.0
+        components["remaining_penalty"] = -len(remaining) * 0.3
+
+    components["total"] = sum(components.values())
+    return components
+
+
+def _bot_score_play(state: Dict, bot_id: str, cards: Optional[List[int]], depth: int) -> float:
+    return _bot_score_components(state, bot_id, cards, depth).get("total", -999.0)
+
+
+def _filter_overbomb_options(state: Dict, player_id: str, options: List[List[int]]) -> List[List[int]]:
+    current_trick = state.get("current_trick")
+    if not current_trick:
+        return options
+    if current_trick.get("combo", {}).get("type") in BOMB_TYPES:
+        return options
+    pdata = state["players"].get(player_id)
+    if not pdata:
+        return options
+    hand = pdata.get("hand", [])
+    if not hand:
+        return options
+    hand_map = _map_hand_by_id(hand)
+    level_rank = state["level_rank"]
+    config = state.get("config", {})
+    filtered: List[List[int]] = []
+    bombs: List[List[int]] = []
+    has_non_bomb = False
+    for cards in options:
+        combo_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+        combo = _evaluate_combo(combo_cards, level_rank, config)
+        if combo and combo["type"] in BOMB_TYPES:
+            if len(cards) == len(hand):
+                filtered.append(cards)
+            else:
+                bombs.append(cards)
+        else:
+            filtered.append(cards)
+            if combo:
+                has_non_bomb = True
+    if has_non_bomb:
+        return filtered
+    return filtered + bombs
+
+
+def _filter_overbomb_actions(state: Dict, player_id: str, actions: List[Dict]) -> List[Dict]:
+    if not actions:
+        return actions
+    play_actions = [action for action in actions if action.get("type") == "play"]
+    if not play_actions:
+        return actions
+    options = [action.get("card_ids", []) for action in play_actions]
+    filtered_options = _filter_overbomb_options(state, player_id, options)
+    if len(filtered_options) == len(options):
+        return actions
+    allowed = {tuple(option) for option in filtered_options}
+    filtered: List[Dict] = []
+    for action in actions:
+        if action.get("type") != "play":
+            filtered.append(action)
+            continue
+        card_ids = tuple(action.get("card_ids", []))
+        if card_ids in allowed:
+            filtered.append(action)
+    return filtered
 
 
 def _bot_select_play(state: Dict, bot_id: str, depth: int) -> Optional[List[int]]:
@@ -1486,6 +1559,7 @@ def _bot_select_play(state: Dict, bot_id: str, depth: int) -> Optional[List[int]
         )
         if minimal:
             options = [minimal]
+    options = _filter_overbomb_options(state, bot_id, options)
     if not options:
         return None
     current_trick = state.get("current_trick")
@@ -1495,6 +1569,66 @@ def _bot_select_play(state: Dict, bot_id: str, depth: int) -> Optional[List[int]
     scored = [(cand, _bot_score_play(state, bot_id, cand, depth)) for cand in candidates]
     scored.sort(key=lambda item: item[1], reverse=True)
     return scored[0][0]
+
+
+def _build_bot_explain(
+    state: Dict, bot_id: str, chosen_cards: List[int], method: str, depth: int
+) -> Dict:
+    hand = state["players"][bot_id]["hand"]
+    hand_map = _map_hand_by_id(hand)
+    options = _list_hint_options(state, bot_id)
+    current_trick = state.get("current_trick")
+    current_combo = current_trick["combo"] if current_trick else None
+    if hand and _can_play_all(hand, state["level_rank"], state.get("config", {}), current_combo):
+        play_all = [card["id"] for card in hand]
+        if play_all not in options:
+            options = [play_all] + options
+    if current_trick and current_trick["combo"]["type"] in ("bomb", "straight_flush", "heavenly"):
+        minimal = _minimal_bomb_response(
+            hand,
+            state["level_rank"],
+            current_trick["combo"],
+            state.get("config", {}),
+        )
+        if minimal:
+            options = [minimal]
+    options = _filter_overbomb_options(state, bot_id, options)
+
+    def label_cards(card_ids: List[int]) -> List[str]:
+        labels = []
+        for cid in card_ids:
+            card = hand_map.get(cid)
+            labels.append(_card_label(card) if card else str(cid))
+        return labels
+
+    scored: List[Tuple[List[int], float, Dict[str, float]]] = []
+    for cards in options:
+        comps = _bot_score_components(state, bot_id, cards, depth)
+        scored.append((cards, comps.get("total", -999.0), comps))
+    scored.sort(key=lambda item: item[1], reverse=True)
+    top = []
+    for cards, score, comps in scored[:3]:
+        comps_clean = {k: v for k, v in comps.items() if k != "total" and abs(v) > 0.001}
+        top.append(
+            {
+                "cards": label_cards(cards),
+                "score": score,
+                "components": comps_clean,
+            }
+        )
+
+    chosen_comps = _bot_score_components(state, bot_id, chosen_cards, depth)
+    chosen_clean = {k: v for k, v in chosen_comps.items() if k != "total" and abs(v) > 0.001}
+    return {
+        "method": method,
+        "score_model": "heuristic",
+        "chosen": {
+            "cards": label_cards(chosen_cards),
+            "score": chosen_comps.get("total", -999.0),
+            "components": chosen_clean,
+        },
+        "top": top,
+    }
 
 
 def _suggest_hint_cards(state: Dict, player_id: str) -> Optional[List[int]]:
@@ -1610,6 +1744,7 @@ def _deal_round(state: Dict, first_round: bool, start_player: Optional[str]) -> 
     state["visible_card_id"] = visible_card_id
     state["pass_limits"] = {}
     state["seen_cards"] = []
+    state["bot_explain"] = {}
     if first_round and visible_card_id is not None:
         for pid, hand in hands.items():
             if any(card["id"] == visible_card_id for card in hand):
@@ -1759,6 +1894,7 @@ class GuandanGame:
             "last_round_summary": None,
             "visible_card_id": None,
             "tribute": None,
+            "bot_explain": {},
             "game_over": False,
             "winner_team": None,
         }
@@ -2007,6 +2143,7 @@ class GuandanGame:
                     "player_id": pid,
                     "name": meta.get("name"),
                     "seat": meta.get("seat"),
+                    "is_bot": meta.get("is_bot", False),
                     "team": _team_of(state, pid),
                     "hand_count": len(hand),
                     "finished": pdata["finished"],
@@ -2093,6 +2230,7 @@ class GuandanGame:
             "legal_actions": GuandanGame.get_legal_actions(state, viewer_id),
             "last_round_summary": state.get("last_round_summary"),
             "tribute": tribute_view,
+            "bot_explain": state.get("bot_explain", {}),
             "game_over": state.get("game_over"),
             "winner_team": state.get("winner_team"),
         }
@@ -2133,6 +2271,9 @@ class GuandanGame:
         config = state.get("config", {})
         total_left = sum(len(state["players"][pid]["hand"]) for pid in state["turn_order"])
         endgame_threshold = config.get("bot_endgame_threshold", 18)
+        depth = config.get("bot_search_depth", 2)
+        chosen = None
+        method = "heuristic"
         if total_left <= endgame_threshold:
             det = _determinize_state(state, bot_id, random.Random())
             chosen = _minimax_pick_action(
@@ -2142,20 +2283,25 @@ class GuandanGame:
                 config.get("bot_minimax_width", 6),
             )
             if chosen:
-                return {"type": "play", "card_ids": chosen}
-        mcts_cards = _mcts_pick_action(
-            state,
-            bot_id,
-            config.get("bot_mcts_sims", 60),
-            config.get("bot_mcts_depth", 8),
-            config.get("bot_minimax_width", 6),
-        )
-        if mcts_cards:
-            return {"type": "play", "card_ids": mcts_cards}
-
-        depth = config.get("bot_search_depth", 2)
-        chosen = _bot_select_play(state, bot_id, depth)
+                method = "minimax"
+        if not chosen:
+            mcts_cards = _mcts_pick_action(
+                state,
+                bot_id,
+                config.get("bot_mcts_sims", 60),
+                config.get("bot_mcts_depth", 8),
+                config.get("bot_minimax_width", 6),
+            )
+            if mcts_cards:
+                chosen = mcts_cards
+                method = "mcts"
+        if not chosen:
+            chosen = _bot_select_play(state, bot_id, depth)
+            if chosen:
+                method = "heuristic"
         if chosen:
+            explain = _build_bot_explain(state, bot_id, chosen, method, depth)
+            state.setdefault("bot_explain", {})[bot_id] = explain
             return {"type": "play", "card_ids": chosen}
         if "pass" in legal:
             return {"type": "pass"}

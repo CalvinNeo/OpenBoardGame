@@ -7589,6 +7589,10 @@ body.guandan-explain-mode button.has-explanation:hover {
   max-width: 450px;
 }
 
+.guandan-bot-explain-modal {
+  max-width: 560px;
+}
+
 .guandan-help-content {
   max-height: 70vh;
   overflow-y: auto;
@@ -7769,6 +7773,42 @@ body.guandan-explain-mode button.has-explanation:hover {
   padding: 4px 6px;
   text-align: left;
   vertical-align: top;
+}
+
+#guandanPanel .guandan-bot-explain-btn {
+  padding: 2px 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #f9fafb;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+#guandanPanel .guandan-bot-explain-btn:hover {
+  background: #f3f4f6;
+}
+
+#guandanBotExplainContent .guandan-bot-explain-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+#guandanBotExplainContent .guandan-bot-explain-table th,
+#guandanBotExplainContent .guandan-bot-explain-table td {
+  border: 1px solid #e5e7eb;
+  padding: 4px 6px;
+  text-align: left;
+  vertical-align: top;
+}
+
+#guandanBotExplainContent .guandan-bot-explain-components {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 11px;
+  color: #374151;
 }
 #guandanPanel .slot {
   min-width: 38px;

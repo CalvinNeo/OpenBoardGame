@@ -26,6 +26,9 @@ const guandanHelpModalCloseBtn = document.getElementById("guandanHelpModalCloseB
 const guandanExplainModal = document.getElementById("guandanExplainModal");
 const guandanExplainModalCloseBtn = document.getElementById("guandanExplainModalCloseBtn");
 const guandanExplainContent = document.getElementById("guandanExplainContent");
+const guandanBotExplainModal = document.getElementById("guandanBotExplainModal");
+const guandanBotExplainModalCloseBtn = document.getElementById("guandanBotExplainModalCloseBtn");
+const guandanBotExplainContent = document.getElementById("guandanBotExplainContent");
 const guandanPlayBtn = document.getElementById("guandanPlayBtn");
 const guandanPassBtn = document.getElementById("guandanPassBtn");
 const guandanHintBtn = document.getElementById("guandanHintBtn");
@@ -422,15 +425,21 @@ function renderGuandanTrickPlays(view) {
       playsById.set(entry.player_id, entry);
     });
   }
+  const botExplain = view.bot_explain || {};
   const rows = view.players
     .map((player) => {
       const entry = playsById.get(player.player_id);
       const cards = entry && Array.isArray(entry.cards) && entry.cards.length ? entry.cards.join(" ") : "-";
+      const explain = botExplain[player.player_id];
+      let trickCell = cards;
+      if (player.is_bot && explain && cards !== "-") {
+        trickCell = `<button type="button" class="guandan-bot-explain-btn" data-player="${player.player_id}">${cards}</button>`;
+      }
       return `
         <tr>
           <td>${player.name || player.player_id}</td>
           <td>${player.hand_count ?? "-"}</td>
-          <td>${cards}</td>
+          <td>${trickCell}</td>
         </tr>
       `;
     })
@@ -449,6 +458,15 @@ function renderGuandanTrickPlays(view) {
       </tbody>
     </table>
   `;
+  const explainBtns = guandanTrickPlaysLabel.querySelectorAll(".guandan-bot-explain-btn");
+  explainBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const playerId = btn.getAttribute("data-player");
+      if (playerId) {
+        showGuandanBotExplain(playerId);
+      }
+    });
+  });
 }
 
 function renderGuandanTribute(view) {
@@ -680,6 +698,84 @@ function closeGuandanExplainModal() {
   }
 }
 
+const GUANDAN_BOT_COMPONENT_LABELS = {
+  protect_teammate: "Protect teammate",
+  hand_pressure: "Hand pressure",
+  team_finish: "Team finish",
+  play_cards: "Play size",
+  finish_bonus: "Finish bonus",
+  bomb_bonus: "Bomb bonus",
+  wild_penalty: "Wild penalty",
+  opp_block: "Opp likely blocked",
+  opp_risk: "Opp likely beats",
+  avoid_overtrick: "Avoid overtrick",
+  lead_finish_bonus: "Lead finish",
+  remaining_penalty: "Remaining penalty",
+};
+
+function formatGuandanBotComponents(components) {
+  if (!components) return "-";
+  const entries = Object.entries(components)
+    .filter(([, value]) => Math.abs(value) > 0.001)
+    .map(([key, value]) => {
+      const label = GUANDAN_BOT_COMPONENT_LABELS[key] || key;
+      const rounded = Math.round(value * 10) / 10;
+      return `<span>${label}: ${rounded}</span>`;
+    });
+  if (!entries.length) return "-";
+  return `<div class="guandan-bot-explain-components">${entries.join("")}</div>`;
+}
+
+function showGuandanBotExplain(playerId) {
+  if (!guandanBotExplainModal || !guandanBotExplainContent || !currentGuandanView) return;
+  const explain = currentGuandanView.bot_explain ? currentGuandanView.bot_explain[playerId] : null;
+  if (!explain) {
+    guandanBotExplainContent.textContent = "No explanation available.";
+    setModalVisible(guandanBotExplainModal, true);
+    return;
+  }
+  const method = explain.method || "heuristic";
+  const chosen = explain.chosen || {};
+  const chosenCards = Array.isArray(chosen.cards) ? chosen.cards.join(" ") : "-";
+  const chosenScore = typeof chosen.score === "number" ? Math.round(chosen.score * 10) / 10 : "-";
+  const chosenComponents = formatGuandanBotComponents(chosen.components);
+  const top = Array.isArray(explain.top) ? explain.top : [];
+  const rows = top
+    .map((entry, index) => {
+      const cards = Array.isArray(entry.cards) ? entry.cards.join(" ") : "-";
+      const score = typeof entry.score === "number" ? Math.round(entry.score * 10) / 10 : "-";
+      const comps = formatGuandanBotComponents(entry.components);
+      return `
+        <tr>
+          <td>${index + 1}</td>
+          <td>${cards}</td>
+          <td>${score}</td>
+          <td>${comps}</td>
+        </tr>
+      `;
+    })
+    .join("");
+  guandanBotExplainContent.innerHTML = `
+    <div><strong>Method:</strong> ${method}</div>
+    <div><strong>Chosen:</strong> ${chosenCards} <span class="hint">(score ${chosenScore})</span></div>
+    <div><strong>Score Breakdown:</strong> ${chosenComponents}</div>
+    <table class="guandan-bot-explain-table">
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>Cards</th>
+          <th>Score</th>
+          <th>Components</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows || ""}
+      </tbody>
+    </table>
+  `;
+  setModalVisible(guandanBotExplainModal, true);
+}
+
 function applyGuandanSelection(cardIds) {
   if (!Array.isArray(cardIds) || !cardIds.length || !currentGuandanView) {
     return;
@@ -855,6 +951,14 @@ if (guandanExplainBtn) {
 
 if (guandanExplainModalCloseBtn) {
   guandanExplainModalCloseBtn.addEventListener("click", closeGuandanExplainModal);
+}
+
+if (guandanBotExplainModalCloseBtn) {
+  guandanBotExplainModalCloseBtn.addEventListener("click", () => {
+    if (guandanBotExplainModal) {
+      setModalVisible(guandanBotExplainModal, false);
+    }
+  });
 }
 
 document.addEventListener("pointerdown", (e) => {
