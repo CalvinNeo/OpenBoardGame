@@ -1708,6 +1708,104 @@ def _best_takeover_opportunity(state: Dict, player_id: str) -> float:
     return max(_takeover_opportunity_score(state, player_id, cards) for cards in options)
 
 
+def _best_response_play_score(state: Dict, player_id: str, depth: int, non_bomb_only: bool = True) -> Optional[float]:
+    current_trick = state.get("current_trick")
+    if not current_trick:
+        return None
+    leader = current_trick.get("player_id")
+    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+        return None
+    options = _list_hint_options(state, player_id)
+    options = _filter_overbomb_options(state, player_id, options)
+    options = _rank_response_options(state, player_id, options)
+    if not options:
+        return None
+
+    hand = state["players"][player_id]["hand"]
+    hand_map = _map_hand_by_id(hand)
+    scored: List[Tuple[float, str]] = []
+    for cards in options:
+        play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+        combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
+        if not combo:
+            continue
+        scored.append((_bot_score_play(state, player_id, cards, depth), combo["type"]))
+    if not scored:
+        return None
+
+    if non_bomb_only:
+        natural = [score for score, combo_type in scored if combo_type not in BOMB_TYPES]
+        if natural:
+            return max(natural)
+    return max(score for score, _ in scored)
+
+
+def _teammate_lead_context(state: Dict, player_id: str) -> Optional[str]:
+    current_trick = state.get("current_trick")
+    if not current_trick:
+        return None
+    teammate = _teammate_of(state, player_id)
+    if not teammate:
+        return None
+    if current_trick.get("player_id") != teammate:
+        return None
+    return teammate
+
+
+def _teammate_protect_bonus(state: Dict, player_id: str) -> float:
+    teammate = _teammate_lead_context(state, player_id)
+    if not teammate:
+        return 0.0
+    active_counts = [
+        len(state["players"][pid]["hand"])
+        for pid in state["turn_order"]
+        if not state["players"][pid]["finished"]
+    ]
+    teammate_left = len(state["players"][teammate]["hand"])
+    opp_counts = [
+        len(state["players"][pid]["hand"])
+        for pid in state["turn_order"]
+        if _team_of(state, pid) != _team_of(state, player_id) and not state["players"][pid]["finished"]
+    ]
+    bonus = 6.0
+    if active_counts and min(active_counts) >= 10:
+        bonus += 8.0
+    elif teammate_left >= 8:
+        bonus += 4.0
+    if opp_counts and min(opp_counts) >= 8:
+        bonus += 2.0
+    return bonus
+
+
+def _teammate_overtrick_penalty(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+    remaining_count: int,
+) -> float:
+    teammate = _teammate_lead_context(state, player_id)
+    if not teammate:
+        return 0.0
+    hand_count = len(state["players"][player_id]["hand"])
+    if remaining_count == 0 or len(cards) == hand_count:
+        return 0.0
+    teammate_left = len(state["players"][teammate]["hand"])
+    current_combo = (state.get("current_trick") or {}).get("combo", {})
+    penalty = _teammate_protect_bonus(state, player_id) * 0.85
+    if combo["type"] in BOMB_TYPES:
+        penalty += 8.0 + _bomb_tier(combo) * 2.5
+        if current_combo.get("type") not in BOMB_TYPES:
+            penalty += 4.0
+    if teammate_left <= 2:
+        penalty -= 7.0
+    elif teammate_left <= 4:
+        penalty -= 4.0
+    if remaining_count <= 2:
+        penalty -= 6.0
+    return max(0.0, penalty)
+
+
 def _evaluate_state_for_bot(state: Dict, bot_id: str) -> float:
     if state.get("game_over"):
         return 1000.0 if state.get("winner_team") == _team_of(state, bot_id) else -1000.0
@@ -1725,11 +1823,17 @@ def _evaluate_state_for_bot(state: Dict, bot_id: str) -> float:
             if leader == bot_id:
                 score += 2.6
             elif _team_of(state, leader) == _team_of(state, bot_id):
-                score += 1.5
+                score += max(1.5, _teammate_protect_bonus(state, bot_id) * 0.35)
             else:
                 score -= 2.2
                 if state.get("current_turn") == bot_id:
-                    score -= min(5.2, _best_takeover_opportunity(state, bot_id) * 1.4)
+                    response_score = _best_response_play_score(state, bot_id, 3, non_bomb_only=True)
+                    if response_score is not None and response_score > 0:
+                        score -= min(6.5, response_score * 0.7)
+                    else:
+                        opportunity = _best_takeover_opportunity(state, bot_id)
+                        if opportunity > 0:
+                            score -= min(4.5, opportunity * 1.1)
 
     if teammate and not state["players"][teammate]["finished"]:
         teammate_remaining = len(state["players"][teammate]["hand"])
@@ -1848,8 +1952,19 @@ def _rollout_policy_action(state: Dict, player_id: str) -> Optional[Dict]:
         if "pass" in legal and state.get("current_trick"):
             leader = state["current_trick"].get("player_id")
             teammate = _teammate_of(state, player_id)
-            if teammate and leader == teammate and random.random() < 0.6:
-                return {"type": "pass"}
+            if teammate and leader == teammate:
+                options = _list_hint_options(state, player_id)
+                options = _filter_overbomb_options(state, player_id, options)
+                options = _rank_response_options(state, player_id, options)
+                if not options:
+                    return {"type": "pass"}
+                best_cards = options[0]
+                pass_score = _bot_score_play(state, player_id, None, 2)
+                best_score = _bot_score_play(state, player_id, best_cards, 2)
+                if pass_score >= best_score - 1.0:
+                    return {"type": "pass"}
+                if random.random() < 0.85:
+                    return {"type": "pass"}
         if not state.get("current_trick"):
             cards = _choose_lead_play(
                 state["players"][player_id]["hand"],
@@ -1942,8 +2057,10 @@ def _mcts_root_heuristic_value(state: Dict, bot_id: str, action: Dict, depth: in
     current_trick = state.get("current_trick")
     if current_trick:
         if action.get("type") == "pass":
-            return -_best_takeover_opportunity(state, bot_id) * 0.6
+            return _bot_score_play(state, bot_id, None, base_depth)
         if action.get("type") == "play":
+            if _teammate_lead_context(state, bot_id):
+                return _bot_score_play(state, bot_id, action.get("card_ids") or [], base_depth)
             cards = action.get("card_ids", []) or []
             hand = state["players"][bot_id]["hand"]
             hand_map = _map_hand_by_id(hand)
@@ -2227,11 +2344,15 @@ def _bot_score_components(
 
     if not cards:
         if current_trick and teammate == current_trick.get("player_id"):
-            components["protect_teammate"] = 6.0
+            components["protect_teammate"] = _teammate_protect_bonus(state, bot_id)
         elif current_trick and _team_of(state, current_trick.get("player_id")) != _team_of(state, bot_id):
-            opportunity = _best_takeover_opportunity(state, bot_id)
-            if opportunity > 0:
-                components["pass_opportunity_cost"] = -min(8.0, opportunity * 1.35)
+            response_score = _best_response_play_score(state, bot_id, max(2, depth), non_bomb_only=True)
+            if response_score is not None and response_score > 0:
+                components["pass_opportunity_cost"] = -min(8.5, response_score * 0.72)
+            else:
+                opportunity = _best_takeover_opportunity(state, bot_id)
+                if opportunity > 0:
+                    components["pass_opportunity_cost"] = -min(6.0, opportunity * 1.55)
         components["hand_pressure"] = -len(hand) * 0.2
         components["team_finish"] = _team_finish_score(state, bot_id, len(hand)) * 2.0
         components["total"] = sum(components.values())
@@ -2283,7 +2404,15 @@ def _bot_score_components(
         components["opp_risk"] = -likely_beats * 3.0
 
     if current_trick and teammate == current_trick.get("player_id"):
-        components["avoid_overtrick"] = -5.0
+        overtrick_penalty = _teammate_overtrick_penalty(
+            state,
+            bot_id,
+            cards,
+            combo,
+            len(remaining),
+        )
+        if overtrick_penalty > 0:
+            components["avoid_overtrick"] = -overtrick_penalty
     elif current_trick and _team_of(state, current_trick.get("player_id")) != _team_of(state, bot_id):
         seize = _takeover_opportunity_score(state, bot_id, cards)
         if seize > 0:
