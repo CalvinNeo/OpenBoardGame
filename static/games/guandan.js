@@ -712,14 +712,22 @@ const GUANDAN_BOT_COMPONENT_LABELS = {
   lead_finish_bonus: "Lead finish",
   remaining_penalty: "Remaining penalty",
   mcts_avg: "MCTS avg",
+  mcts_std: "MCTS std",
+  mcts_win_rate: "MCTS win rate",
+  mcts_min: "MCTS min",
+  mcts_max: "MCTS max",
 };
 
 function formatGuandanBotComponents(components) {
   if (!components) return "-";
   const entries = Object.entries(components)
-    .filter(([key, value]) => key === "mcts_avg" || Math.abs(value) > 0.001)
+    .filter(([key, value]) => key.startsWith("mcts_") || Math.abs(value) > 0.001)
     .map(([key, value]) => {
       const label = GUANDAN_BOT_COMPONENT_LABELS[key] || key;
+      if (key === "mcts_win_rate") {
+        const percent = Math.round(value * 100);
+        return `<span>${label}: ${percent}%</span>`;
+      }
       const rounded = Math.round(value * 10) / 10;
       return `<span>${label}: ${rounded}</span>`;
     });
@@ -741,6 +749,16 @@ function showGuandanBotExplain(playerId) {
   const chosenCards = Array.isArray(chosen.cards) ? chosen.cards.join(" ") : "-";
   const chosenScore = typeof chosen.score === "number" ? Math.round(chosen.score * 10) / 10 : "-";
   const chosenComponents = formatGuandanBotComponents(chosen.components);
+  const hand = Array.isArray(explain.hand) ? explain.hand : [];
+  const handItems = hand.map((card) => `<span class="guandan-bot-hand-card">${card}</span>`).join("");
+  const handBlock = hand.length
+    ? `
+      <div class="guandan-bot-hand-row">
+        <button type="button" class="guandan-bot-hand-toggle">View Hand</button>
+      </div>
+      <div class="guandan-bot-hand hidden">${handItems}</div>
+    `
+    : "";
   const top = Array.isArray(explain.top) ? explain.top : [];
   const rows = top
     .map((entry, index) => {
@@ -768,9 +786,15 @@ function showGuandanBotExplain(playerId) {
     detailParts.push(`Candidates ${methodDetails.candidates}`);
   }
   const detailLine = detailParts.length ? `<div class="hint">${detailParts.join(" · ")}</div>` : "";
+  const mctsLine =
+    explain.score_model === "mcts"
+      ? `<div class="hint">MCTS avg is the mean rollout score. Win rate is rollouts with positive score.</div>`
+      : "";
   guandanBotExplainContent.innerHTML = `
     <div><strong>Method:</strong> ${method}</div>
     ${detailLine}
+    ${mctsLine}
+    ${handBlock}
     <div><strong>Chosen:</strong> ${chosenCards} <span class="hint">(score ${chosenScore})</span></div>
     <div><strong>Score Breakdown:</strong> ${chosenComponents}</div>
     <table class="guandan-bot-explain-table">
@@ -787,6 +811,16 @@ function showGuandanBotExplain(playerId) {
       </tbody>
     </table>
   `;
+  if (hand.length) {
+    const toggleBtn = guandanBotExplainContent.querySelector(".guandan-bot-hand-toggle");
+    const handContainer = guandanBotExplainContent.querySelector(".guandan-bot-hand");
+    if (toggleBtn && handContainer) {
+      toggleBtn.addEventListener("click", () => {
+        const isHidden = handContainer.classList.toggle("hidden");
+        toggleBtn.textContent = isHidden ? "View Hand" : "Hide Hand";
+      });
+    }
+  }
   setModalVisible(guandanBotExplainModal, true);
 }
 

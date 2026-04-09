@@ -7810,6 +7810,34 @@ body.guandan-explain-mode button.has-explanation:hover {
   font-size: 11px;
   color: #374151;
 }
+
+#guandanBotExplainContent .guandan-bot-hand-row {
+  margin: 6px 0 4px;
+}
+
+#guandanBotExplainContent .guandan-bot-hand-toggle {
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+#guandanBotExplainContent .guandan-bot-hand {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+#guandanBotExplainContent .guandan-bot-hand.hidden {
+  display: none;
+}
+
+#guandanBotExplainContent .guandan-bot-hand-card {
+  padding: 3px 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: rgba(0, 0, 0, 0.04);
+  font-size: 12px;
+}
 #guandanPanel .slot {
   min-width: 38px;
   padding: 6px 8px;

@@ -1,4 +1,5 @@
 import copy
+import math
 import random
 from typing import Dict, List, Optional, Tuple
 
@@ -1172,12 +1173,119 @@ def _team_finish_score(state: Dict, bot_id: str, bot_remaining: int) -> float:
     return 0.0
 
 
+def _longest_run(ranks: List[int]) -> int:
+    if not ranks:
+        return 0
+    ranks_sorted = sorted(set(ranks))
+    best = 1
+    current = 1
+    for idx in range(1, len(ranks_sorted)):
+        if ranks_sorted[idx] == ranks_sorted[idx - 1] + 1:
+            current += 1
+        else:
+            best = max(best, current)
+            current = 1
+    return max(best, current)
+
+
+def _control_card_score(hand: List[Dict], level_rank: int) -> float:
+    score = 0.0
+    for card in hand:
+        joker = card.get("joker")
+        if joker == "big":
+            score += 2.0
+            continue
+        if joker == "small":
+            score += 1.5
+            continue
+        value = _single_order_value(card, level_rank)
+        if value >= 80:
+            score += 1.0
+        elif value >= 60:
+            score += 0.4
+    return score
+
+
+def _hand_strength_score(hand: List[Dict], level_rank: int) -> float:
+    if not hand:
+        return 0.0
+    info = _hand_info(hand, level_rank)
+    counts = [len(cards) for cards in info["normals_by_rank"].values()]
+    pair_ranks = sum(1 for count in counts if count >= 2)
+    triple_ranks = sum(1 for count in counts if count >= 3)
+    quad_ranks = sum(1 for count in counts if count >= 4)
+    singles = sum(1 for count in counts if count == 1)
+    wild_count = len(info["wild_cards"])
+    joker_big = len(info["jokers_big"])
+    joker_small = len(info["jokers_small"])
+
+    score = 0.0
+    score += pair_ranks * 0.8
+    score += triple_ranks * 1.4
+    score += quad_ranks * 1.9
+    score -= singles * 0.35
+    score += wild_count * 0.5
+    score += joker_big * 1.8 + joker_small * 1.2
+
+    if triple_ranks >= 1 and (pair_ranks >= 2 or triple_ranks >= 2):
+        score += 1.2
+    if pair_ranks >= 3:
+        score += 1.0
+    if triple_ranks >= 2:
+        score += 1.6
+
+    max_run = _longest_run(list(info["normals_by_rank"].keys()))
+    if max_run >= 5:
+        score += 1.4
+    elif max_run == 4 and wild_count >= 1:
+        score += 0.9
+    elif max_run == 3 and wild_count >= 2:
+        score += 0.6
+
+    turn_savings = 0.0
+    for count in counts:
+        if count >= 4:
+            turn_savings += 3.0
+        elif count == 3:
+            turn_savings += 2.0
+        elif count == 2:
+            turn_savings += 1.0
+    if max_run >= 5:
+        turn_savings += 2.5
+    elif max_run == 4 and wild_count >= 1:
+        turn_savings += 1.5
+    elif max_run == 3 and wild_count >= 2:
+        turn_savings += 1.0
+    score += min(6.0, turn_savings * 0.55)
+
+    bombs = _find_bomb_candidates(hand, level_rank)
+    if bombs:
+        bomb_score = 0.0
+        for bomb in bombs:
+            tier = bomb.get("tier", 0)
+            bomb_score += 0.8 + 0.45 * tier
+        score += min(4.0, bomb_score)
+    return score
+
+
 def _evaluate_state_for_bot(state: Dict, bot_id: str) -> float:
     if state.get("game_over"):
         return 1000.0 if state.get("winner_team") == _team_of(state, bot_id) else -1000.0
-    remaining = len(state["players"][bot_id]["hand"])
+    hand = state["players"][bot_id]["hand"]
+    remaining = len(hand)
     score = _team_finish_score(state, bot_id, remaining) * 2.0
     score -= remaining * 0.15
+    score += _hand_strength_score(hand, state["level_rank"]) * 0.7
+
+    teammate = _teammate_of(state, bot_id)
+    if teammate and not state["players"][teammate]["finished"]:
+        teammate_remaining = len(state["players"][teammate]["hand"])
+        control = _control_card_score(hand, state["level_rank"])
+        if teammate_remaining <= 5:
+            score += min(3.0, control * 0.4)
+        current_trick = state.get("current_trick")
+        if current_trick and current_trick.get("player_id") == teammate:
+            score += 1.5
     return score
 
 
@@ -1281,6 +1389,11 @@ def _rollout_policy_action(state: Dict, player_id: str) -> Optional[Dict]:
     if "play_again" in legal:
         return {"type": "play_again"}
     if "play" in legal:
+        if "pass" in legal and state.get("current_trick"):
+            leader = state["current_trick"].get("player_id")
+            teammate = _teammate_of(state, player_id)
+            if teammate and leader == teammate and random.random() < 0.6:
+                return {"type": "pass"}
         cards = _suggest_hint_cards(state, player_id)
         if cards:
             return {"type": "play", "card_ids": cards}
@@ -1307,7 +1420,7 @@ def _rollout_value(state: Dict, bot_id: str, depth: int) -> float:
 
 def _mcts_score_actions(
     state: Dict, bot_id: str, sims: int, depth: int, width: int
-) -> List[Tuple[Dict, float, int]]:
+) -> List[Tuple[Dict, float, int, Dict[str, float]]]:
     legal = GuandanGame.get_legal_actions(state, bot_id)
     if "play" not in legal:
         return []
@@ -1317,24 +1430,46 @@ def _mcts_score_actions(
         return []
     rng = random.Random()
     sims_per = max(1, sims // max(1, len(candidates)))
-    scored: List[Tuple[Dict, float, int]] = []
+    scored: List[Tuple[Dict, float, int, Dict[str, float]]] = []
     for action in candidates:
         total = 0.0
+        total_sq = 0.0
+        wins = 0
+        min_val = None
+        max_val = None
         for _ in range(sims_per):
             det = _determinize_state(state, bot_id, rng)
             _, err = GuandanGame.apply_action(det, bot_id, action)
             if err:
                 continue
-            total += _rollout_value(det, bot_id, depth)
+            value = _rollout_value(det, bot_id, depth)
+            total += value
+            total_sq += value * value
+            if value > 0:
+                wins += 1
+            if min_val is None or value < min_val:
+                min_val = value
+            if max_val is None or value > max_val:
+                max_val = value
         avg = total / sims_per if sims_per else total
-        scored.append((action, avg, sims_per))
+        variance = (total_sq / sims_per) - avg * avg if sims_per else 0.0
+        std = math.sqrt(max(0.0, variance))
+        win_rate = wins / sims_per if sims_per else 0.0
+        stats = {
+            "avg": avg,
+            "std": std,
+            "win_rate": win_rate,
+            "min": min_val if min_val is not None else avg,
+            "max": max_val if max_val is not None else avg,
+        }
+        scored.append((action, avg, sims_per, stats))
     scored.sort(key=lambda item: item[1], reverse=True)
     return scored
 
 
 def _mcts_pick_action(
     state: Dict, bot_id: str, sims: int, depth: int, width: int
-) -> Tuple[Optional[Dict], List[Tuple[Dict, float, int]]]:
+) -> Tuple[Optional[Dict], List[Tuple[Dict, float, int, Dict[str, float]]]]:
     scored = _mcts_score_actions(state, bot_id, sims, depth, width)
     if not scored:
         return None, []
@@ -1585,7 +1720,7 @@ def _build_bot_explain(
     chosen_cards: List[int],
     method: str,
     depth: int,
-    method_scores: Optional[List[Tuple[Dict, float, int]]] = None,
+    method_scores: Optional[List[Tuple[Dict, float, int, Dict[str, float]]]] = None,
     method_meta: Optional[Dict] = None,
     chosen_action_type: str = "play",
 ) -> Dict:
@@ -1604,39 +1739,66 @@ def _build_bot_explain(
             return ["Pass"]
         return label_cards(card_ids)
 
+    def hand_labels_for(action_type: str) -> List[str]:
+        remaining = hand
+        if action_type == "play" and chosen_cards:
+            remaining = _remove_cards(hand, chosen_cards)
+        sorted_hand = sorted(
+            remaining, key=lambda c: _single_order_value(c, state["level_rank"]), reverse=True
+        )
+        return [_card_label(card) for card in sorted_hand]
+
     if method == "mcts" and method_scores:
         play_scores = [
-            (action, score, sims)
-            for action, score, sims in method_scores
+            (action, score, sims, stats)
+            for action, score, sims, stats in method_scores
             if action.get("type") == "play"
         ]
         all_scores = method_scores[:]
         if not play_scores:
             play_scores = all_scores
         chosen_score = None
+        chosen_stats = None
         chosen_action_type = chosen_action_type or "play"
-        for action, score, _ in all_scores:
+        for action, score, _, stats in all_scores:
             if action.get("type") != chosen_action_type:
                 continue
             if chosen_action_type == "pass":
                 chosen_score = score
+                chosen_stats = stats
                 break
             if action.get("card_ids") == chosen_cards:
                 chosen_score = score
+                chosen_stats = stats
                 break
         if chosen_score is None and all_scores:
             chosen_score = all_scores[0][1]
+            chosen_stats = all_scores[0][3]
         top = []
-        for action, score, _ in all_scores[:3]:
+        for action, score, _, stats in all_scores[:3]:
             cards = action.get("card_ids") or []
             action_type = action.get("type", "play")
+            comps = {
+                "mcts_avg": stats.get("avg", score) if stats else score,
+                "mcts_std": stats.get("std", 0.0) if stats else 0.0,
+                "mcts_win_rate": stats.get("win_rate", 0.0) if stats else 0.0,
+                "mcts_min": stats.get("min", score) if stats else score,
+                "mcts_max": stats.get("max", score) if stats else score,
+            }
             top.append(
                 {
                     "cards": label_action(action_type, cards),
                     "score": score,
-                    "components": {"mcts_avg": score},
+                    "components": comps,
                 }
             )
+        chosen_comps = {
+            "mcts_avg": chosen_stats.get("avg", chosen_score) if chosen_stats else chosen_score,
+            "mcts_std": chosen_stats.get("std", 0.0) if chosen_stats else 0.0,
+            "mcts_win_rate": chosen_stats.get("win_rate", 0.0) if chosen_stats else 0.0,
+            "mcts_min": chosen_stats.get("min", chosen_score) if chosen_stats else chosen_score,
+            "mcts_max": chosen_stats.get("max", chosen_score) if chosen_stats else chosen_score,
+        }
         return {
             "method": method,
             "score_model": "mcts",
@@ -1644,8 +1806,9 @@ def _build_bot_explain(
             "chosen": {
                 "cards": label_action(chosen_action_type, chosen_cards),
                 "score": chosen_score if chosen_score is not None else -999.0,
-                "components": {"mcts_avg": chosen_score if chosen_score is not None else -999.0},
+                "components": chosen_comps,
             },
+            "hand": hand_labels_for(chosen_action_type),
             "top": top,
         }
 
@@ -1693,6 +1856,7 @@ def _build_bot_explain(
             "score": chosen_comps.get("total", -999.0),
             "components": chosen_clean,
         },
+        "hand": hand_labels_for(chosen_action_type),
         "top": top,
     }
 
