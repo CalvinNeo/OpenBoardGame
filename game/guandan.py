@@ -14,14 +14,14 @@ DEFAULT_CONFIG = {
     "hard_bomb_beats_soft": False,
     "require_partner_not_last_for_a": False,
     "bot_search_depth": 4,
-    "bot_mcts_sims": 160,
-    "bot_mcts_depth": 10,
+    "bot_mcts_sims": 96,
+    "bot_mcts_depth": 8,
     "bot_mcts_tree_ply": 2,
-    "bot_mcts_reply_width": 3,
+    "bot_mcts_reply_width": 2,
     "bot_mcts_risk_lambda": 0.28,
     "bot_endgame_threshold": 24,
-    "bot_minimax_depth": 6,
-    "bot_minimax_width": 10,
+    "bot_minimax_depth": 5,
+    "bot_minimax_width": 8,
 }
 
 STRAIGHT_SEQUENCES: List[Tuple[List[int], int]] = []
@@ -1959,6 +1959,41 @@ def _mcts_root_heuristic_value(state: Dict, bot_id: str, action: Dict, depth: in
     return _bot_score_play(state, bot_id, cards, base_depth)
 
 
+def _mcts_budget(
+    state: Dict,
+    base_sims: int,
+    base_depth: int,
+    tree_ply: int,
+    reply_width: int,
+    candidate_count: int,
+) -> Tuple[int, int, int, int]:
+    if candidate_count <= 1:
+        return 0, 0, 0, 1
+
+    total_left = sum(len(state["players"][pid]["hand"]) for pid in state["turn_order"])
+    scale = 1.0
+    if candidate_count == 2:
+        scale *= 0.65
+    elif candidate_count <= 4:
+        scale *= 0.82
+
+    if not state.get("current_trick"):
+        scale *= 0.8
+    if total_left >= 70:
+        scale *= 0.72
+    elif total_left >= 50:
+        scale *= 0.82
+
+    if base_sims <= 16:
+        sims = base_sims
+    else:
+        sims = min(base_sims, max(4, int(base_sims * scale)))
+    depth = max(4, min(base_depth, 6 if total_left >= 50 else base_depth))
+    tree = min(tree_ply, 1 if candidate_count <= 3 else tree_ply, depth)
+    width = max(1, min(reply_width, 2 if candidate_count <= 4 else reply_width))
+    return sims, depth, tree, width
+
+
 def _mcts_score_actions(
     state: Dict,
     bot_id: str,
@@ -1977,7 +2012,15 @@ def _mcts_score_actions(
     if not candidates:
         return []
 
-    heuristic_weight = 2.2
+    effective_sims, effective_depth, effective_tree_ply, effective_reply_width = _mcts_budget(
+        state,
+        sims,
+        depth,
+        tree_ply,
+        reply_width,
+        len(candidates),
+    )
+    heuristic_weight = 3.8 if state.get("current_trick") and len(candidates) <= 2 else 2.2
     heuristic_values: Dict[Tuple, float] = {}
     for action in candidates:
         key = (
@@ -1989,10 +2032,39 @@ def _mcts_score_actions(
     heuristic_center = sum(heuristic_values.values()) / len(heuristic_values)
     heuristic_scale = max(1.0, max(abs(value - heuristic_center) for value in heuristic_values.values()))
 
+    if len(candidates) == 1:
+        only = candidates[0]
+        key = (
+            only.get("type"),
+            tuple(only.get("card_ids", []) or []),
+            only.get("card_id"),
+        )
+        heuristic = heuristic_values[key]
+        return [
+            (
+                only,
+                heuristic,
+                0,
+                {
+                    "avg": heuristic,
+                    "adjusted": heuristic,
+                    "std": 0.0,
+                    "win_rate": 1.0,
+                    "min": heuristic,
+                    "max": heuristic,
+                    "heuristic": heuristic,
+                    "heuristic_norm": 0.0,
+                    "depth": 0,
+                    "tree_ply": 0,
+                    "reply_width": 1,
+                },
+            )
+        ]
+
     rng = random.Random()
-    sims_per = max(1, sims // max(1, len(candidates)))
-    effective_tree_ply = max(0, min(tree_ply, depth))
-    leaf_rollout_depth = max(0, depth - effective_tree_ply)
+    sims_per = max(1, effective_sims // max(1, len(candidates)))
+    effective_tree_ply = max(0, min(effective_tree_ply, effective_depth))
+    leaf_rollout_depth = max(0, effective_depth - effective_tree_ply)
     scored: List[Tuple[Dict, float, int, Dict[str, float]]] = []
     for action in candidates:
         total = 0.0
@@ -2009,7 +2081,7 @@ def _mcts_score_actions(
                 det,
                 bot_id,
                 effective_tree_ply,
-                max(1, reply_width),
+                max(1, effective_reply_width),
                 leaf_rollout_depth,
             )
             total += value
@@ -2041,8 +2113,9 @@ def _mcts_score_actions(
             "max": max_val if max_val is not None else avg,
             "heuristic": heuristic,
             "heuristic_norm": heuristic_norm,
+            "depth": effective_depth,
             "tree_ply": effective_tree_ply,
-            "reply_width": max(1, reply_width),
+            "reply_width": max(1, effective_reply_width),
         }
         scored.append((action, adjusted, sims_per, stats))
     scored.sort(key=lambda item: item[1], reverse=True)
@@ -3168,12 +3241,13 @@ class GuandanGame:
                 method = "mcts"
                 method_scores = mcts_scores
                 sims_per_action = mcts_scores[0][2] if mcts_scores else 0
+                first_stats = mcts_scores[0][3] if mcts_scores else {}
                 method_meta = {
                     "sims_per_action": sims_per_action,
-                    "depth": config.get("bot_mcts_depth", 8),
+                    "depth": first_stats.get("depth", config.get("bot_mcts_depth", 8)),
                     "candidates": len(mcts_scores),
-                    "tree_ply": config.get("bot_mcts_tree_ply", 2),
-                    "reply_width": config.get("bot_mcts_reply_width", 4),
+                    "tree_ply": first_stats.get("tree_ply", config.get("bot_mcts_tree_ply", 2)),
+                    "reply_width": first_stats.get("reply_width", config.get("bot_mcts_reply_width", 4)),
                     "risk_lambda": config.get("bot_mcts_risk_lambda", 0.28),
                 }
                 if mcts_action.get("type") == "play":
