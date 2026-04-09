@@ -1202,6 +1202,16 @@ def _candidate_actions(state: Dict, player_id: str, limit: int) -> List[Dict]:
     actions: List[Dict] = []
     if "play" in legal:
         options = _list_hint_options(state, player_id)
+        current_trick = state.get("current_trick")
+        if current_trick and current_trick["combo"]["type"] in ("bomb", "straight_flush", "heavenly"):
+            minimal = _minimal_bomb_response(
+                state["players"][player_id]["hand"],
+                state["level_rank"],
+                current_trick["combo"],
+                state.get("config", {}),
+            )
+            if minimal:
+                options = [minimal]
         for cards in options[:limit]:
             actions.append({"type": "play", "card_ids": cards})
     if "pass" in legal:
@@ -1372,6 +1382,24 @@ def _minimax_pick_action(state: Dict, bot_id: str, depth: int, width: int) -> Op
     return None
 
 
+def _minimal_bomb_response(
+    hand: List[Dict], level_rank: int, current_combo: Dict, config: Dict
+) -> Optional[List[int]]:
+    candidates = _find_bomb_candidates(hand, level_rank)
+    for cand in candidates:
+        combo = {
+            "type": cand["type"],
+            "size": len(cand["cards"]),
+            "rank_value": cand.get("rank_value", 0),
+            "high_value": cand.get("high_value", 0),
+            "tier": cand.get("tier", 0),
+            "uses_wild": cand.get("uses_wild", False),
+        }
+        if _compare_combos(current_combo, combo, level_rank, config):
+            return cand["cards"]
+    return None
+
+
 def _bot_score_play(state: Dict, bot_id: str, cards: Optional[List[int]], depth: int) -> float:
     level_rank = state["level_rank"]
     config = state.get("config", {})
@@ -1436,6 +1464,16 @@ def _bot_select_play(state: Dict, bot_id: str, depth: int) -> Optional[List[int]
     if "play" not in legal:
         return None
     options = _list_hint_options(state, bot_id)
+    current_trick = state.get("current_trick")
+    if current_trick and current_trick["combo"]["type"] in ("bomb", "straight_flush", "heavenly"):
+        minimal = _minimal_bomb_response(
+            state["players"][bot_id]["hand"],
+            state["level_rank"],
+            current_trick["combo"],
+            state.get("config", {}),
+        )
+        if minimal:
+            options = [minimal]
     if not options:
         return None
     current_trick = state.get("current_trick")
