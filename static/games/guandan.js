@@ -704,6 +704,7 @@ const GUANDAN_BOT_COMPONENT_LABELS = {
   hand_pressure: "Hand pressure",
   team_finish: "Team finish",
   play_cards: "Play size",
+  shape_value: "Shape value",
   finish_bonus: "Finish bonus",
   bomb_bonus: "Bomb bonus",
   wild_penalty: "Wild penalty",

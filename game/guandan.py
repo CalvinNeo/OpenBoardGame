@@ -13,12 +13,12 @@ BOMB_TYPES = ("bomb", "straight_flush", "heavenly")
 DEFAULT_CONFIG = {
     "hard_bomb_beats_soft": False,
     "require_partner_not_last_for_a": False,
-    "bot_search_depth": 3,
-    "bot_mcts_sims": 120,
-    "bot_mcts_depth": 10,
+    "bot_search_depth": 4,
+    "bot_mcts_sims": 220,
+    "bot_mcts_depth": 12,
     "bot_endgame_threshold": 24,
-    "bot_minimax_depth": 5,
-    "bot_minimax_width": 8,
+    "bot_minimax_depth": 6,
+    "bot_minimax_width": 10,
 }
 
 STRAIGHT_SEQUENCES: List[Tuple[List[int], int]] = []
@@ -1308,6 +1308,41 @@ def _play_structure_delta(hand: List[Dict], cards: List[int], level_rank: int) -
     return before - after
 
 
+def _rank_count_map(hand: List[Dict], level_rank: int) -> Dict[int, int]:
+    counts: Dict[int, int] = {}
+    for card in hand:
+        if _is_joker(card) or _is_wild(card, level_rank):
+            continue
+        rank = card.get("rank")
+        if rank is None:
+            continue
+        counts[rank] = counts.get(rank, 0) + 1
+    return counts
+
+
+def _shape_transition_score(hand: List[Dict], cards: List[int], level_rank: int) -> float:
+    remaining = _remove_cards(hand, cards)
+    before_counts = _rank_count_map(hand, level_rank)
+    after_counts = _rank_count_map(remaining, level_rank)
+    before_singletons = sum(1 for count in before_counts.values() if count == 1)
+    after_singletons = sum(1 for count in after_counts.values() if count == 1)
+
+    score = 0.0
+    singleton_delta = after_singletons - before_singletons
+    score -= singleton_delta * 1.3
+
+    for rank, before_count in before_counts.items():
+        after_count = after_counts.get(rank, 0)
+        if before_count >= 2 and 0 < after_count < before_count:
+            score -= 2.2 + 0.4 * (before_count - 1)
+        elif before_count >= 2 and after_count == 0:
+            score += 1.2 + 0.3 * before_count
+        elif before_count == 1 and after_count == 0:
+            score += 0.9
+
+    return score
+
+
 def _takeover_opportunity_score(state: Dict, player_id: str, cards: List[int]) -> float:
     current_trick = state.get("current_trick")
     if not current_trick or not cards:
@@ -1324,6 +1359,7 @@ def _takeover_opportunity_score(state: Dict, player_id: str, cards: List[int]) -
 
     structure_delta = _play_structure_delta(hand, cards, state["level_rank"])
     score = max(0.0, 3.2 - structure_delta)
+    score += max(-4.0, _shape_transition_score(hand, cards, state["level_rank"]) * 0.7)
     if combo["type"] not in BOMB_TYPES:
         score += 0.8
     else:
@@ -1383,7 +1419,7 @@ def _evaluate_state_for_bot(state: Dict, bot_id: str) -> float:
             else:
                 score -= 2.2
                 if state.get("current_turn") == bot_id:
-                    score -= min(3.8, _best_takeover_opportunity(state, bot_id))
+                    score -= min(5.2, _best_takeover_opportunity(state, bot_id) * 1.4)
 
     if teammate and not state["players"][teammate]["finished"]:
         teammate_remaining = len(state["players"][teammate]["hand"])
@@ -1686,7 +1722,7 @@ def _bot_score_components(
         elif current_trick and _team_of(state, current_trick.get("player_id")) != _team_of(state, bot_id):
             opportunity = _best_takeover_opportunity(state, bot_id)
             if opportunity > 0:
-                components["pass_opportunity_cost"] = -min(6.0, opportunity)
+                components["pass_opportunity_cost"] = -min(8.0, opportunity * 1.35)
         components["hand_pressure"] = -len(hand) * 0.2
         components["team_finish"] = _team_finish_score(state, bot_id, len(hand)) * 2.0
         components["total"] = sum(components.values())
@@ -1700,6 +1736,9 @@ def _bot_score_components(
 
     remaining = _remove_cards(hand, cards)
     components["play_cards"] = len(cards) * 0.6
+    shape_score = _shape_transition_score(hand, cards, level_rank)
+    if abs(shape_score) > 0.001:
+        components["shape_value"] = shape_score
     if not remaining:
         components["finish_bonus"] = 100.0
     if combo["type"] in BOMB_TYPES:
@@ -1732,7 +1771,7 @@ def _bot_score_components(
     elif current_trick and _team_of(state, current_trick.get("player_id")) != _team_of(state, bot_id):
         seize = _takeover_opportunity_score(state, bot_id, cards)
         if seize > 0:
-            components["seize_tempo"] = seize
+            components["seize_tempo"] = seize * 1.25
 
     components["team_finish"] = _team_finish_score(state, bot_id, len(remaining)) * 2.0
 
