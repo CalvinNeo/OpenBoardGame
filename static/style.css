@@ -7775,6 +7775,10 @@ body.guandan-explain-mode button.has-explanation:hover {
   vertical-align: top;
 }
 
+#guandanPanel .guandan-trick-plays-table .guandan-current-turn-row td {
+  background: #eef9ee;
+}
+
 #guandanPanel .guandan-bot-explain-btn {
   padding: 2px 6px;
   border: 1px solid #d1d5db;

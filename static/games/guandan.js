@@ -431,12 +431,13 @@ function renderGuandanTrickPlays(view) {
       const entry = playsById.get(player.player_id);
       const cards = entry && Array.isArray(entry.cards) && entry.cards.length ? entry.cards.join(" ") : "-";
       const explain = botExplain[player.player_id];
+      const rowClass = player.player_id === view.current_turn ? "guandan-current-turn-row" : "";
       let trickCell = cards;
       if (player.is_bot && explain && cards !== "-") {
         trickCell = `<button type="button" class="guandan-bot-explain-btn" data-player="${player.player_id}">${cards}</button>`;
       }
       return `
-        <tr>
+        <tr class="${rowClass}">
           <td>${player.name || player.player_id}</td>
           <td>${player.hand_count ?? "-"}</td>
           <td>${trickCell}</td>
