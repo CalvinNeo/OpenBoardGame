@@ -1,3 +1,4 @@
+import copy
 import random
 from typing import Dict, List, Optional, Tuple
 
@@ -11,6 +12,11 @@ DEFAULT_CONFIG = {
     "hard_bomb_beats_soft": False,
     "require_partner_not_last_for_a": False,
     "bot_search_depth": 2,
+    "bot_mcts_sims": 60,
+    "bot_mcts_depth": 8,
+    "bot_endgame_threshold": 18,
+    "bot_minimax_depth": 4,
+    "bot_minimax_width": 6,
 }
 
 STRAIGHT_SEQUENCES: List[Tuple[List[int], int]] = []
@@ -48,6 +54,28 @@ def _build_deck() -> List[Dict]:
         deck.append({"id": card_id, "rank": None, "suit": None, "joker": "small"})
         card_id += 1
     random.shuffle(deck)
+    return deck
+
+
+def _full_deck() -> List[Dict]:
+    deck: List[Dict] = []
+    card_id = 0
+    for _ in range(2):
+        for suit in SUITS:
+            for rank in RANKS:
+                deck.append(
+                    {
+                        "id": card_id,
+                        "rank": rank,
+                        "suit": suit,
+                        "joker": None,
+                    }
+                )
+                card_id += 1
+        deck.append({"id": card_id, "rank": None, "suit": None, "joker": "big"})
+        card_id += 1
+        deck.append({"id": card_id, "rank": None, "suit": None, "joker": "small"})
+        card_id += 1
     return deck
 
 
@@ -1143,6 +1171,207 @@ def _team_finish_score(state: Dict, bot_id: str, bot_remaining: int) -> float:
     return 0.0
 
 
+def _evaluate_state_for_bot(state: Dict, bot_id: str) -> float:
+    if state.get("game_over"):
+        return 1000.0 if state.get("winner_team") == _team_of(state, bot_id) else -1000.0
+    remaining = len(state["players"][bot_id]["hand"])
+    score = _team_finish_score(state, bot_id, remaining) * 2.0
+    score -= remaining * 0.15
+    return score
+
+
+def _candidate_actions(state: Dict, player_id: str, limit: int) -> List[Dict]:
+    legal = GuandanGame.get_legal_actions(state, player_id)
+    if not legal:
+        return []
+    if "tribute_select" in legal:
+        hand = state["players"][player_id]["hand"]
+        candidates = _max_tribute_cards(hand, state["level_rank"])
+        card = min(candidates, key=lambda c: _single_order_value(c, state["level_rank"]))
+        return [{"type": "tribute_select", "card_id": card["id"]}]
+    if "return_select" in legal:
+        hand = state["players"][player_id]["hand"]
+        candidates = _eligible_return_cards(hand)
+        card = min(candidates, key=lambda c: _single_order_value(c, state["level_rank"]))
+        return [{"type": "return_select", "card_id": card["id"]}]
+    if "next_round" in legal:
+        return [{"type": "next_round"}]
+    if "play_again" in legal:
+        return [{"type": "play_again"}]
+
+    actions: List[Dict] = []
+    if "play" in legal:
+        options = _list_hint_options(state, player_id)
+        for cards in options[:limit]:
+            actions.append({"type": "play", "card_ids": cards})
+    if "pass" in legal:
+        actions.append({"type": "pass"})
+    return actions
+
+
+def _determinize_state(state: Dict, perspective_id: str, rng: random.Random) -> Dict:
+    det = copy.deepcopy(state)
+    full = _full_deck()
+    id_to_card = {card["id"]: card for card in full}
+    known_ids = set(det.get("seen_cards", []) or [])
+    if perspective_id in det["players"]:
+        known_ids.update(card["id"] for card in det["players"][perspective_id]["hand"])
+    if det.get("current_trick"):
+        known_ids.update(det["current_trick"].get("cards", []) or [])
+
+    all_ids = set(id_to_card.keys())
+    unknown_ids = [cid for cid in all_ids if cid not in known_ids]
+    rng.shuffle(unknown_ids)
+
+    idx = 0
+    for pid in det["turn_order"]:
+        if pid == perspective_id:
+            continue
+        count = len(det["players"][pid]["hand"])
+        assigned = unknown_ids[idx : idx + count]
+        idx += count
+        if len(assigned) < count:
+            # fallback: keep existing cards if not enough unknowns
+            continue
+        det["players"][pid]["hand"] = [id_to_card[cid] for cid in assigned]
+    return det
+
+
+def _next_actor(state: Dict) -> Optional[str]:
+    for pid in state["turn_order"]:
+        if GuandanGame.get_legal_actions(state, pid):
+            return pid
+    return None
+
+
+def _rollout_policy_action(state: Dict, player_id: str) -> Optional[Dict]:
+    legal = GuandanGame.get_legal_actions(state, player_id)
+    if not legal:
+        return None
+    if "tribute_select" in legal:
+        hand = state["players"][player_id]["hand"]
+        candidates = _max_tribute_cards(hand, state["level_rank"])
+        card = min(candidates, key=lambda c: _single_order_value(c, state["level_rank"]))
+        return {"type": "tribute_select", "card_id": card["id"]}
+    if "return_select" in legal:
+        hand = state["players"][player_id]["hand"]
+        candidates = _eligible_return_cards(hand)
+        card = min(candidates, key=lambda c: _single_order_value(c, state["level_rank"]))
+        return {"type": "return_select", "card_id": card["id"]}
+    if "next_round" in legal:
+        return {"type": "next_round"}
+    if "play_again" in legal:
+        return {"type": "play_again"}
+    if "play" in legal:
+        cards = _suggest_hint_cards(state, player_id)
+        if cards:
+            return {"type": "play", "card_ids": cards}
+    if "pass" in legal:
+        return {"type": "pass"}
+    return None
+
+
+def _rollout_value(state: Dict, bot_id: str, depth: int) -> float:
+    steps = 0
+    while steps < depth and not state.get("game_over"):
+        actor = _next_actor(state)
+        if actor is None:
+            break
+        action = _rollout_policy_action(state, actor)
+        if not action:
+            break
+        _, err = GuandanGame.apply_action(state, actor, action)
+        if err:
+            break
+        steps += 1
+    return _evaluate_state_for_bot(state, bot_id)
+
+
+def _mcts_pick_action(state: Dict, bot_id: str, sims: int, depth: int, width: int) -> Optional[List[int]]:
+    legal = GuandanGame.get_legal_actions(state, bot_id)
+    if "play" not in legal:
+        return None
+    candidates = _candidate_actions(state, bot_id, width)
+    if not candidates:
+        return None
+    rng = random.Random()
+    sims_per = max(1, sims // max(1, len(candidates)))
+    scored: List[Tuple[Dict, float]] = []
+    for action in candidates:
+        total = 0.0
+        for _ in range(sims_per):
+            det = _determinize_state(state, bot_id, rng)
+            _, err = GuandanGame.apply_action(det, bot_id, action)
+            if err:
+                continue
+            total += _rollout_value(det, bot_id, depth)
+        avg = total / sims_per if sims_per else total
+        scored.append((action, avg))
+    scored.sort(key=lambda item: item[1], reverse=True)
+    best = scored[0][0]
+    if best.get("type") == "play":
+        return best.get("card_ids")
+    return None
+
+
+def _minimax_value(state: Dict, bot_id: str, depth: int, alpha: float, beta: float, width: int) -> float:
+    if depth <= 0 or state.get("game_over"):
+        return _evaluate_state_for_bot(state, bot_id)
+    actor = _next_actor(state)
+    if actor is None:
+        return _evaluate_state_for_bot(state, bot_id)
+    actions = _candidate_actions(state, actor, width)
+    if not actions:
+        return _evaluate_state_for_bot(state, bot_id)
+    maximize = _team_of(state, actor) == _team_of(state, bot_id)
+    if maximize:
+        value = -1e9
+        for action in actions:
+            nxt = copy.deepcopy(state)
+            _, err = GuandanGame.apply_action(nxt, actor, action)
+            if err:
+                continue
+            value = max(value, _minimax_value(nxt, bot_id, depth - 1, alpha, beta, width))
+            alpha = max(alpha, value)
+            if beta <= alpha:
+                break
+        return value
+    value = 1e9
+    for action in actions:
+        nxt = copy.deepcopy(state)
+        _, err = GuandanGame.apply_action(nxt, actor, action)
+        if err:
+            continue
+        value = min(value, _minimax_value(nxt, bot_id, depth - 1, alpha, beta, width))
+        beta = min(beta, value)
+        if beta <= alpha:
+            break
+    return value
+
+
+def _minimax_pick_action(state: Dict, bot_id: str, depth: int, width: int) -> Optional[List[int]]:
+    legal = GuandanGame.get_legal_actions(state, bot_id)
+    if "play" not in legal:
+        return None
+    actions = _candidate_actions(state, bot_id, width)
+    if not actions:
+        return None
+    best_action = None
+    best_value = -1e9
+    for action in actions:
+        nxt = copy.deepcopy(state)
+        _, err = GuandanGame.apply_action(nxt, bot_id, action)
+        if err:
+            continue
+        value = _minimax_value(nxt, bot_id, depth - 1, -1e9, 1e9, width)
+        if value > best_value:
+            best_value = value
+            best_action = action
+    if best_action and best_action.get("type") == "play":
+        return best_action.get("card_ids")
+    return None
+
+
 def _bot_score_play(state: Dict, bot_id: str, cards: Optional[List[int]], depth: int) -> float:
     level_rank = state["level_rank"]
     config = state.get("config", {})
@@ -1851,7 +2080,30 @@ class GuandanGame:
         if "play" not in legal and "pass" in legal:
             return {"type": "pass"}
 
-        depth = state.get("config", {}).get("bot_search_depth", 2)
+        config = state.get("config", {})
+        total_left = sum(len(state["players"][pid]["hand"]) for pid in state["turn_order"])
+        endgame_threshold = config.get("bot_endgame_threshold", 18)
+        if total_left <= endgame_threshold:
+            det = _determinize_state(state, bot_id, random.Random())
+            chosen = _minimax_pick_action(
+                det,
+                bot_id,
+                config.get("bot_minimax_depth", 4),
+                config.get("bot_minimax_width", 6),
+            )
+            if chosen:
+                return {"type": "play", "card_ids": chosen}
+        mcts_cards = _mcts_pick_action(
+            state,
+            bot_id,
+            config.get("bot_mcts_sims", 60),
+            config.get("bot_mcts_depth", 8),
+            config.get("bot_minimax_width", 6),
+        )
+        if mcts_cards:
+            return {"type": "play", "card_ids": mcts_cards}
+
+        depth = config.get("bot_search_depth", 2)
         chosen = _bot_select_play(state, bot_id, depth)
         if chosen:
             return {"type": "play", "card_ids": chosen}
