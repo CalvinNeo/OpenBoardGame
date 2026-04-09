@@ -1102,6 +1102,7 @@ def _lead_option_score(state: Dict, player_id: str, cards: List[int]) -> float:
     score += len(cards) * 1.2
     score -= structure_delta * 2.6
     score += remaining_strength * 0.18
+    score -= _control_group_break_penalty(hand, cards, state["level_rank"])
 
     if combo["type"] == "single":
         score -= _single_order_value(play_cards[0], state["level_rank"]) * 0.12
@@ -1151,6 +1152,15 @@ def _rank_lead_options(state: Dict, player_id: str, options: List[List[int]]) ->
         (score for score, combo_type, _ in scored if combo_type != "single"),
         default=None,
     )
+    best_safe_score = max(
+        (
+            score
+            for score, combo_type, cards in scored
+            if combo_type not in BOMB_TYPES
+            and _control_group_break_penalty(hand, cards, state["level_rank"]) < 3.0
+        ),
+        default=None,
+    )
 
     best_by_type: Dict[str, Tuple[float, str, List[int]]] = {}
     for entry in scored:
@@ -1162,6 +1172,8 @@ def _rank_lead_options(state: Dict, player_id: str, options: List[List[int]]) ->
     ranked: List[List[int]] = []
     seen = set()
     for score, combo_type, cards in sorted(best_by_type.values(), key=lambda item: item[0], reverse=True):
+        if _should_prune_wasteful_control_break(state, player_id, cards, combo_type, score, best_safe_score):
+            continue
         if combo_type == "single" and _should_prune_weak_lead_single(
             state, player_id, cards, score, best_non_single_score
         ):
@@ -1172,6 +1184,8 @@ def _rank_lead_options(state: Dict, player_id: str, options: List[List[int]]) ->
         seen.add(key)
         ranked.append(cards)
     for score, combo_type, cards in sorted(scored, key=lambda item: item[0], reverse=True):
+        if _should_prune_wasteful_control_break(state, player_id, cards, combo_type, score, best_safe_score):
+            continue
         if combo_type == "single" and _should_prune_weak_lead_single(
             state, player_id, cards, score, best_non_single_score
         ):
@@ -1296,6 +1310,19 @@ def _hand_strength_score(hand: List[Dict], level_rank: int) -> float:
     if triple_ranks >= 2:
         score += 1.6
 
+    grouped_control = 0.0
+    for rank, rank_cards in info["normals_by_rank"].items():
+        count = len(rank_cards)
+        if count < 2:
+            continue
+        strength_bonus = max(0.0, strength[rank] - 56)
+        if strength_bonus <= 0:
+            continue
+        grouped_control += strength_bonus * min(count, 4) * 0.18
+        if count >= 4:
+            grouped_control += 0.7 + strength_bonus * 0.35 + (count - 4) * 0.45
+    score += min(5.5, grouped_control)
+
     max_run = _longest_run(list(info["normals_by_rank"].keys()))
     if max_run >= 5:
         score += 1.4
@@ -1372,6 +1399,29 @@ def _shape_transition_score(hand: List[Dict], cards: List[int], level_rank: int)
     return score
 
 
+def _control_group_break_penalty(hand: List[Dict], cards: List[int], level_rank: int) -> float:
+    remaining = _remove_cards(hand, cards)
+    before_counts = _rank_count_map(hand, level_rank)
+    after_counts = _rank_count_map(remaining, level_rank)
+    penalty = 0.0
+    for rank, before_count in before_counts.items():
+        after_count = after_counts.get(rank, 0)
+        removed = before_count - after_count
+        if removed <= 0 or after_count <= 0:
+            continue
+        strength = _point_order_value(rank, level_rank)
+        control = max(0.0, strength - 56)
+        if before_count >= 5:
+            penalty += 2.6 + (before_count - 4) * 0.9 + removed * 0.45 + control * 0.5
+        elif before_count == 4:
+            penalty += 2.0 + removed * 0.4 + control * 0.42
+        elif before_count == 3 and strength >= 58:
+            penalty += 1.1 + removed * 0.35 + control * 0.35
+        elif before_count == 2 and strength >= 59 and removed == 1:
+            penalty += 0.8 + control * 0.3
+    return penalty
+
+
 def _lead_single_break_penalty(hand: List[Dict], cards: List[int], level_rank: int) -> float:
     if len(cards) != 1:
         return 0.0
@@ -1399,6 +1449,23 @@ def _should_prune_weak_lead_single(
     if penalty < 4.5:
         return False
     return best_non_single_score - single_score >= 8.0
+
+
+def _should_prune_wasteful_control_break(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo_type: str,
+    score: float,
+    best_safe_score: Optional[float],
+) -> bool:
+    if state.get("current_trick") or best_safe_score is None or combo_type in BOMB_TYPES:
+        return False
+    hand = state["players"][player_id]["hand"]
+    penalty = _control_group_break_penalty(hand, cards, state["level_rank"])
+    if penalty < 6.0:
+        return False
+    return best_safe_score >= score - 1.75
 
 
 def _takeover_opportunity_score(state: Dict, player_id: str, cards: List[int]) -> float:
@@ -1877,6 +1944,9 @@ def _bot_score_components(
     shape_score = _shape_transition_score(hand, cards, level_rank)
     if abs(shape_score) > 0.001:
         components["shape_value"] = shape_score
+    control_break = _control_group_break_penalty(hand, cards, level_rank)
+    if control_break > 0.001 and combo["type"] not in BOMB_TYPES:
+        components["control_break_penalty"] = -control_break
     if not remaining:
         components["finish_bonus"] = 100.0
     if combo["type"] in BOMB_TYPES:
