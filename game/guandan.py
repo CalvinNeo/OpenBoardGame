@@ -10,6 +10,7 @@ RANK_LABELS = {11: "J", 12: "Q", 13: "K", 14: "A"}
 DEFAULT_CONFIG = {
     "hard_bomb_beats_soft": False,
     "require_partner_not_last_for_a": False,
+    "bot_search_depth": 2,
 }
 
 STRAIGHT_SEQUENCES: List[Tuple[List[int], int]] = []
@@ -1092,6 +1093,131 @@ def _list_hint_options(state: Dict, player_id: str) -> List[List[int]]:
     return _dedupe_card_sets(options)
 
 
+def _combo_value(combo: Dict) -> int:
+    if combo["type"] in ("straight", "three_pairs", "steel_plate"):
+        return combo.get("high_value", 0)
+    return combo.get("rank_value", 0)
+
+
+def _bot_estimate_opponent_can_beat(state: Dict, opponent_id: str, combo: Dict) -> bool:
+    combo_type = combo.get("type")
+    if combo_type in ("bomb", "straight_flush", "heavenly"):
+        return True
+    limits = state.get("pass_limits", {}).get(opponent_id, {})
+    limit = limits.get(combo_type)
+    if limit is None:
+        return True
+    value = _combo_value(combo)
+    return value <= limit
+
+
+def _predict_finish_order(state: Dict, adjusted_counts: Dict[str, int]) -> List[str]:
+    finished = list(state.get("finish_order", []) or [])
+    remaining = [pid for pid in state["turn_order"] if pid not in finished]
+    order_index = {pid: idx for idx, pid in enumerate(state["turn_order"])}
+    remaining.sort(key=lambda pid: (adjusted_counts.get(pid, len(state["players"][pid]["hand"])), order_index[pid]))
+    return finished + remaining
+
+
+def _team_finish_score(state: Dict, bot_id: str, bot_remaining: int) -> float:
+    counts = {pid: len(state["players"][pid]["hand"]) for pid in state["turn_order"]}
+    counts[bot_id] = bot_remaining
+    predicted = _predict_finish_order(state, counts)
+    team = _team_of(state, bot_id)
+    team_positions = [idx + 1 for idx, pid in enumerate(predicted) if _team_of(state, pid) == team]
+    if len(team_positions) < 2:
+        return 0.0
+    team_positions.sort()
+    if team_positions == [1, 2]:
+        return 8.0
+    if team_positions == [1, 3]:
+        return 5.0
+    if team_positions == [1, 4]:
+        return 2.0
+    if team_positions == [2, 3]:
+        return 1.0
+    if team_positions == [2, 4]:
+        return -2.0
+    if team_positions == [3, 4]:
+        return -6.0
+    return 0.0
+
+
+def _bot_score_play(state: Dict, bot_id: str, cards: Optional[List[int]], depth: int) -> float:
+    level_rank = state["level_rank"]
+    config = state.get("config", {})
+    hand = state["players"][bot_id]["hand"]
+    current_trick = state.get("current_trick")
+    teammate = _teammate_of(state, bot_id)
+
+    if not cards:
+        score = 0.0
+        if current_trick and teammate == current_trick.get("player_id"):
+            score += 6.0
+        score -= len(hand) * 0.2
+        score += _team_finish_score(state, bot_id, len(hand)) * 2.0
+        return score
+
+    hand_map = _map_hand_by_id(hand)
+    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+    combo = _evaluate_combo(play_cards, level_rank, config)
+    if not combo:
+        return -999.0
+
+    remaining = _remove_cards(hand, cards)
+    score = 0.0
+    score += len(cards) * 0.6
+    if not remaining:
+        score += 100.0
+    if combo["type"] in ("bomb", "straight_flush", "heavenly"):
+        score += 8.0 + _bomb_tier(combo)
+    if combo.get("uses_wild"):
+        score -= 1.5
+
+    opp_ids = [
+        pid
+        for pid in state["turn_order"]
+        if _team_of(state, pid) != _team_of(state, bot_id) and not state["players"][pid]["finished"]
+    ]
+    likely_blocks = 0
+    likely_beats = 0
+    for opp in opp_ids:
+        if _bot_estimate_opponent_can_beat(state, opp, combo):
+            likely_beats += 1
+        else:
+            likely_blocks += 1
+    score += likely_blocks * 4.0
+    score -= likely_beats * 3.0
+
+    if current_trick and teammate == current_trick.get("player_id"):
+        score -= 5.0
+
+    score += _team_finish_score(state, bot_id, len(remaining)) * 2.0
+
+    if depth >= 2 and remaining:
+        lead_cards = _choose_lead_play(remaining, level_rank, config, state, bot_id)
+        if lead_cards and len(lead_cards) == len(remaining):
+            score += 12.0
+        score -= len(remaining) * 0.3
+    return score
+
+
+def _bot_select_play(state: Dict, bot_id: str, depth: int) -> Optional[List[int]]:
+    legal = GuandanGame.get_legal_actions(state, bot_id)
+    if "play" not in legal:
+        return None
+    options = _list_hint_options(state, bot_id)
+    if not options:
+        return None
+    current_trick = state.get("current_trick")
+    candidates: List[Optional[List[int]]] = options[:]
+    if current_trick and "pass" in legal:
+        candidates.append(None)
+    scored = [(cand, _bot_score_play(state, bot_id, cand, depth)) for cand in candidates]
+    scored.sort(key=lambda item: item[1], reverse=True)
+    return scored[0][0]
+
+
 def _suggest_hint_cards(state: Dict, player_id: str) -> Optional[List[int]]:
     options = _list_hint_options(state, player_id)
     return options[0] if options else None
@@ -1203,6 +1329,8 @@ def _deal_round(state: Dict, first_round: bool, start_player: Optional[str]) -> 
     state["pass_count"] = 0
     state["trick_plays"] = {}
     state["visible_card_id"] = visible_card_id
+    state["pass_limits"] = {}
+    state["seen_cards"] = []
     if first_round and visible_card_id is not None:
         for pid, hand in hands.items():
             if any(card["id"] == visible_card_id for card in hand):
@@ -1262,6 +1390,29 @@ def _tribute_leader(tribute: Dict, level_rank: int) -> Optional[str]:
         ranked.sort(key=lambda item: item[1], reverse=True)
         return ranked[0][0]
     return payers[0] if payers else None
+
+
+def _record_seen_cards(state: Dict, card_ids: List[int]) -> None:
+    seen = set(state.get("seen_cards", []) or [])
+    for cid in card_ids:
+        seen.add(cid)
+    state["seen_cards"] = list(seen)
+
+
+def _record_pass_limit(state: Dict, player_id: str, combo: Dict) -> None:
+    if combo.get("type") in ("bomb", "straight_flush", "heavenly"):
+        return
+    combo_type = combo.get("type")
+    if combo_type in ("straight", "three_pairs", "steel_plate"):
+        value = combo.get("high_value")
+    else:
+        value = combo.get("rank_value")
+    if value is None:
+        return
+    limits = state.setdefault("pass_limits", {}).setdefault(player_id, {})
+    prev = limits.get(combo_type)
+    if prev is None or value > prev:
+        limits[combo_type] = value
 
 
 def _advance_to_round_end(state: Dict) -> None:
@@ -1486,6 +1637,7 @@ class GuandanGame:
                 return events, "cannot pass"
             state["pass_count"] += 1
             state.setdefault("trick_plays", {})[player_id] = "pass"
+            _record_pass_limit(state, player_id, state["current_trick"]["combo"])
             active_count = len(_active_players(state))
             needed = max(1, active_count - 1)
             if state["pass_count"] >= needed:
@@ -1530,6 +1682,7 @@ class GuandanGame:
             if not _compare_combos(current_trick["combo"], combo, state["level_rank"], state["config"]):
                 return events, "combo not strong enough"
         state["players"][player_id]["hand"] = _remove_cards(hand, card_ids)
+        _record_seen_cards(state, card_ids)
         state["current_trick"] = {
             "combo": combo,
             "cards": card_ids,
@@ -1698,50 +1851,10 @@ class GuandanGame:
         if "play" not in legal and "pass" in legal:
             return {"type": "pass"}
 
-        hand = state["players"][bot_id]["hand"]
-        current_trick = state.get("current_trick")
-        current_combo = current_trick["combo"] if current_trick else None
-        config = state.get("config", {})
-
-        teammate = _teammate_of(state, bot_id)
-        if current_trick and teammate == current_trick.get("player_id"):
-            if _can_play_all(hand, state["level_rank"], config, current_combo):
-                return {"type": "play", "card_ids": [card["id"] for card in hand]}
-            if "pass" in legal:
-                return {"type": "pass"}
-
-        if current_combo:
-            combo_type = current_combo["type"]
-            threshold = current_combo.get("rank_value", 0)
-            high_threshold = current_combo.get("high_value", 0)
-            if combo_type == "single":
-                cards = _find_single_to_beat(hand, state["level_rank"], threshold)
-            elif combo_type == "pair":
-                cards = _find_pair_to_beat(hand, state["level_rank"], threshold)
-            elif combo_type == "three":
-                cards = _find_three_to_beat(hand, state["level_rank"], threshold)
-            elif combo_type == "full_house":
-                cards = _find_full_house_to_beat(hand, state["level_rank"], threshold)
-            elif combo_type == "straight":
-                cards = _find_straight_to_beat(hand, state["level_rank"], high_threshold)
-            elif combo_type == "three_pairs":
-                cards = _find_three_pairs_to_beat(hand, state["level_rank"], high_threshold)
-            elif combo_type == "steel_plate":
-                cards = _find_steel_plate_to_beat(hand, state["level_rank"], high_threshold)
-            else:
-                cards = None
-            if cards:
-                return {"type": "play", "card_ids": cards}
-            bomb = _pick_bomb_to_beat(hand, state["level_rank"], current_combo, config)
-            if bomb:
-                return {"type": "play", "card_ids": bomb}
-            if "pass" in legal:
-                return {"type": "pass"}
-            return None
-
-        lead_cards = _choose_lead_play(hand, state["level_rank"], config, state, bot_id)
-        if lead_cards:
-            return {"type": "play", "card_ids": lead_cards}
-        if hand:
-            return {"type": "play", "card_ids": [hand[0]["id"]]}
+        depth = state.get("config", {}).get("bot_search_depth", 2)
+        chosen = _bot_select_play(state, bot_id, depth)
+        if chosen:
+            return {"type": "play", "card_ids": chosen}
+        if "pass" in legal:
+            return {"type": "pass"}
         return None
