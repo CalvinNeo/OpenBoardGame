@@ -711,12 +711,13 @@ const GUANDAN_BOT_COMPONENT_LABELS = {
   avoid_overtrick: "Avoid overtrick",
   lead_finish_bonus: "Lead finish",
   remaining_penalty: "Remaining penalty",
+  mcts_avg: "MCTS avg",
 };
 
 function formatGuandanBotComponents(components) {
   if (!components) return "-";
   const entries = Object.entries(components)
-    .filter(([, value]) => Math.abs(value) > 0.001)
+    .filter(([key, value]) => key === "mcts_avg" || Math.abs(value) > 0.001)
     .map(([key, value]) => {
       const label = GUANDAN_BOT_COMPONENT_LABELS[key] || key;
       const rounded = Math.round(value * 10) / 10;
@@ -735,6 +736,7 @@ function showGuandanBotExplain(playerId) {
     return;
   }
   const method = explain.method || "heuristic";
+  const methodDetails = explain.method_details || null;
   const chosen = explain.chosen || {};
   const chosenCards = Array.isArray(chosen.cards) ? chosen.cards.join(" ") : "-";
   const chosenScore = typeof chosen.score === "number" ? Math.round(chosen.score * 10) / 10 : "-";
@@ -755,8 +757,20 @@ function showGuandanBotExplain(playerId) {
       `;
     })
     .join("");
+  const detailParts = [];
+  if (methodDetails && typeof methodDetails.sims_per_action === "number") {
+    detailParts.push(`Rollouts/action ${methodDetails.sims_per_action}`);
+  }
+  if (methodDetails && typeof methodDetails.depth === "number") {
+    detailParts.push(`Depth ${methodDetails.depth}`);
+  }
+  if (methodDetails && typeof methodDetails.candidates === "number") {
+    detailParts.push(`Candidates ${methodDetails.candidates}`);
+  }
+  const detailLine = detailParts.length ? `<div class="hint">${detailParts.join(" · ")}</div>` : "";
   guandanBotExplainContent.innerHTML = `
     <div><strong>Method:</strong> ${method}</div>
+    ${detailLine}
     <div><strong>Chosen:</strong> ${chosenCards} <span class="hint">(score ${chosenScore})</span></div>
     <div><strong>Score Breakdown:</strong> ${chosenComponents}</div>
     <table class="guandan-bot-explain-table">

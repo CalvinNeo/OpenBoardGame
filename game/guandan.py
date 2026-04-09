@@ -1305,17 +1305,19 @@ def _rollout_value(state: Dict, bot_id: str, depth: int) -> float:
     return _evaluate_state_for_bot(state, bot_id)
 
 
-def _mcts_pick_action(state: Dict, bot_id: str, sims: int, depth: int, width: int) -> Optional[List[int]]:
+def _mcts_score_actions(
+    state: Dict, bot_id: str, sims: int, depth: int, width: int
+) -> List[Tuple[Dict, float, int]]:
     legal = GuandanGame.get_legal_actions(state, bot_id)
     if "play" not in legal:
-        return None
+        return []
     candidates = _candidate_actions(state, bot_id, width)
     candidates = _filter_overbomb_actions(state, bot_id, candidates)
     if not candidates:
-        return None
+        return []
     rng = random.Random()
     sims_per = max(1, sims // max(1, len(candidates)))
-    scored: List[Tuple[Dict, float]] = []
+    scored: List[Tuple[Dict, float, int]] = []
     for action in candidates:
         total = 0.0
         for _ in range(sims_per):
@@ -1325,12 +1327,18 @@ def _mcts_pick_action(state: Dict, bot_id: str, sims: int, depth: int, width: in
                 continue
             total += _rollout_value(det, bot_id, depth)
         avg = total / sims_per if sims_per else total
-        scored.append((action, avg))
+        scored.append((action, avg, sims_per))
     scored.sort(key=lambda item: item[1], reverse=True)
-    best = scored[0][0]
-    if best.get("type") == "play":
-        return best.get("card_ids")
-    return None
+    return scored
+
+
+def _mcts_pick_action(
+    state: Dict, bot_id: str, sims: int, depth: int, width: int
+) -> Tuple[Optional[Dict], List[Tuple[Dict, float, int]]]:
+    scored = _mcts_score_actions(state, bot_id, sims, depth, width)
+    if not scored:
+        return None, []
+    return scored[0][0], scored
 
 
 def _minimax_value(state: Dict, bot_id: str, depth: int, alpha: float, beta: float, width: int) -> float:
@@ -1572,10 +1580,75 @@ def _bot_select_play(state: Dict, bot_id: str, depth: int) -> Optional[List[int]
 
 
 def _build_bot_explain(
-    state: Dict, bot_id: str, chosen_cards: List[int], method: str, depth: int
+    state: Dict,
+    bot_id: str,
+    chosen_cards: List[int],
+    method: str,
+    depth: int,
+    method_scores: Optional[List[Tuple[Dict, float, int]]] = None,
+    method_meta: Optional[Dict] = None,
+    chosen_action_type: str = "play",
 ) -> Dict:
     hand = state["players"][bot_id]["hand"]
     hand_map = _map_hand_by_id(hand)
+
+    def label_cards(card_ids: List[int]) -> List[str]:
+        labels = []
+        for cid in card_ids:
+            card = hand_map.get(cid)
+            labels.append(_card_label(card) if card else str(cid))
+        return labels
+
+    def label_action(action_type: str, card_ids: List[int]) -> List[str]:
+        if action_type == "pass":
+            return ["Pass"]
+        return label_cards(card_ids)
+
+    if method == "mcts" and method_scores:
+        play_scores = [
+            (action, score, sims)
+            for action, score, sims in method_scores
+            if action.get("type") == "play"
+        ]
+        all_scores = method_scores[:]
+        if not play_scores:
+            play_scores = all_scores
+        chosen_score = None
+        chosen_action_type = chosen_action_type or "play"
+        for action, score, _ in all_scores:
+            if action.get("type") != chosen_action_type:
+                continue
+            if chosen_action_type == "pass":
+                chosen_score = score
+                break
+            if action.get("card_ids") == chosen_cards:
+                chosen_score = score
+                break
+        if chosen_score is None and all_scores:
+            chosen_score = all_scores[0][1]
+        top = []
+        for action, score, _ in all_scores[:3]:
+            cards = action.get("card_ids") or []
+            action_type = action.get("type", "play")
+            top.append(
+                {
+                    "cards": label_action(action_type, cards),
+                    "score": score,
+                    "components": {"mcts_avg": score},
+                }
+            )
+        return {
+            "method": method,
+            "score_model": "mcts",
+            "method_details": method_meta or {},
+            "chosen": {
+                "cards": label_action(chosen_action_type, chosen_cards),
+                "score": chosen_score if chosen_score is not None else -999.0,
+                "components": {"mcts_avg": chosen_score if chosen_score is not None else -999.0},
+            },
+            "top": top,
+        }
+
     options = _list_hint_options(state, bot_id)
     current_trick = state.get("current_trick")
     current_combo = current_trick["combo"] if current_trick else None
@@ -1583,7 +1656,7 @@ def _build_bot_explain(
         play_all = [card["id"] for card in hand]
         if play_all not in options:
             options = [play_all] + options
-    if current_trick and current_trick["combo"]["type"] in ("bomb", "straight_flush", "heavenly"):
+    if current_trick and current_trick["combo"]["type"] in BOMB_TYPES:
         minimal = _minimal_bomb_response(
             hand,
             state["level_rank"],
@@ -1593,13 +1666,6 @@ def _build_bot_explain(
         if minimal:
             options = [minimal]
     options = _filter_overbomb_options(state, bot_id, options)
-
-    def label_cards(card_ids: List[int]) -> List[str]:
-        labels = []
-        for cid in card_ids:
-            card = hand_map.get(cid)
-            labels.append(_card_label(card) if card else str(cid))
-        return labels
 
     scored: List[Tuple[List[int], float, Dict[str, float]]] = []
     for cards in options:
@@ -1623,7 +1689,7 @@ def _build_bot_explain(
         "method": method,
         "score_model": "heuristic",
         "chosen": {
-            "cards": label_cards(chosen_cards),
+            "cards": label_action(chosen_action_type, chosen_cards),
             "score": chosen_comps.get("total", -999.0),
             "components": chosen_clean,
         },
@@ -2273,7 +2339,11 @@ class GuandanGame:
         endgame_threshold = config.get("bot_endgame_threshold", 18)
         depth = config.get("bot_search_depth", 2)
         chosen = None
+        chosen_action_type = None
+        decided = False
         method = "heuristic"
+        method_scores = None
+        method_meta = None
         if total_left <= endgame_threshold:
             det = _determinize_state(state, bot_id, random.Random())
             chosen = _minimax_pick_action(
@@ -2283,25 +2353,53 @@ class GuandanGame:
                 config.get("bot_minimax_width", 6),
             )
             if chosen:
+                decided = True
+                chosen_action_type = "play"
                 method = "minimax"
         if not chosen:
-            mcts_cards = _mcts_pick_action(
+            mcts_action, mcts_scores = _mcts_pick_action(
                 state,
                 bot_id,
                 config.get("bot_mcts_sims", 60),
                 config.get("bot_mcts_depth", 8),
                 config.get("bot_minimax_width", 6),
             )
-            if mcts_cards:
-                chosen = mcts_cards
+            if mcts_action is not None:
+                decided = True
                 method = "mcts"
-        if not chosen:
+                method_scores = mcts_scores
+                sims_per_action = mcts_scores[0][2] if mcts_scores else 0
+                method_meta = {
+                    "sims_per_action": sims_per_action,
+                    "depth": config.get("bot_mcts_depth", 8),
+                    "candidates": len(mcts_scores),
+                }
+                if mcts_action.get("type") == "play":
+                    chosen = mcts_action.get("card_ids") or []
+                    chosen_action_type = "play"
+                else:
+                    chosen = []
+                    chosen_action_type = "pass"
+        if not decided:
             chosen = _bot_select_play(state, bot_id, depth)
             if chosen:
+                decided = True
+                chosen_action_type = "play"
                 method = "heuristic"
-        if chosen:
-            explain = _build_bot_explain(state, bot_id, chosen, method, depth)
+        if decided:
+            explain = _build_bot_explain(
+                state,
+                bot_id,
+                chosen or [],
+                method,
+                depth,
+                method_scores if method == "mcts" else None,
+                method_meta if method == "mcts" else None,
+                chosen_action_type or "play",
+            )
             state.setdefault("bot_explain", {})[bot_id] = explain
+            if chosen_action_type == "pass":
+                return {"type": "pass"}
             return {"type": "play", "card_ids": chosen}
         if "pass" in legal:
             return {"type": "pass"}
