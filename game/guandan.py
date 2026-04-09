@@ -16,6 +16,9 @@ DEFAULT_CONFIG = {
     "bot_search_depth": 4,
     "bot_mcts_sims": 220,
     "bot_mcts_depth": 12,
+    "bot_mcts_tree_ply": 2,
+    "bot_mcts_reply_width": 4,
+    "bot_mcts_risk_lambda": 0.28,
     "bot_endgame_threshold": 24,
     "bot_minimax_depth": 6,
     "bot_minimax_width": 10,
@@ -1626,8 +1629,69 @@ def _rollout_value(state: Dict, bot_id: str, depth: int) -> float:
     return _evaluate_state_for_bot(state, bot_id)
 
 
+def _mcts_reply_tree_value(
+    state: Dict,
+    bot_id: str,
+    ply: int,
+    width: int,
+    rollout_depth: int,
+    alpha: float = -1e9,
+    beta: float = 1e9,
+) -> float:
+    if state.get("game_over"):
+        return _evaluate_state_for_bot(state, bot_id)
+    actor = _next_actor(state)
+    if actor is None:
+        return _evaluate_state_for_bot(state, bot_id)
+    if ply <= 0:
+        return _rollout_value(state, bot_id, rollout_depth)
+
+    actions = _candidate_actions(state, actor, width)
+    actions = _filter_overbomb_actions(state, actor, actions)
+    if not actions:
+        return _rollout_value(state, bot_id, rollout_depth)
+
+    maximize = _team_of(state, actor) == _team_of(state, bot_id)
+    ordered_children: List[Tuple[float, Dict]] = []
+    for action in actions:
+        nxt = copy.deepcopy(state)
+        _, err = GuandanGame.apply_action(nxt, actor, action)
+        if err:
+            continue
+        ordered_children.append((_evaluate_state_for_bot(nxt, bot_id), nxt))
+    if not ordered_children:
+        return _rollout_value(state, bot_id, rollout_depth)
+
+    ordered_children.sort(key=lambda item: item[0], reverse=maximize)
+    if maximize:
+        value = -1e9
+        for _, nxt in ordered_children:
+            child_value = _mcts_reply_tree_value(nxt, bot_id, ply - 1, width, rollout_depth, alpha, beta)
+            value = max(value, child_value)
+            alpha = max(alpha, value)
+            if beta <= alpha:
+                break
+        return value
+
+    value = 1e9
+    for _, nxt in ordered_children:
+        child_value = _mcts_reply_tree_value(nxt, bot_id, ply - 1, width, rollout_depth, alpha, beta)
+        value = min(value, child_value)
+        beta = min(beta, value)
+        if beta <= alpha:
+            break
+    return value
+
+
 def _mcts_score_actions(
-    state: Dict, bot_id: str, sims: int, depth: int, width: int
+    state: Dict,
+    bot_id: str,
+    sims: int,
+    depth: int,
+    width: int,
+    tree_ply: int,
+    reply_width: int,
+    risk_lambda: float,
 ) -> List[Tuple[Dict, float, int, Dict[str, float]]]:
     legal = GuandanGame.get_legal_actions(state, bot_id)
     if "play" not in legal:
@@ -1638,6 +1702,8 @@ def _mcts_score_actions(
         return []
     rng = random.Random()
     sims_per = max(1, sims // max(1, len(candidates)))
+    effective_tree_ply = max(0, min(tree_ply, depth))
+    leaf_rollout_depth = max(0, depth - effective_tree_ply)
     scored: List[Tuple[Dict, float, int, Dict[str, float]]] = []
     for action in candidates:
         total = 0.0
@@ -1650,7 +1716,13 @@ def _mcts_score_actions(
             _, err = GuandanGame.apply_action(det, bot_id, action)
             if err:
                 continue
-            value = _rollout_value(det, bot_id, depth)
+            value = _mcts_reply_tree_value(
+                det,
+                bot_id,
+                effective_tree_ply,
+                max(1, reply_width),
+                leaf_rollout_depth,
+            )
             total += value
             total_sq += value * value
             if value > 0:
@@ -1663,22 +1735,33 @@ def _mcts_score_actions(
         variance = (total_sq / sims_per) - avg * avg if sims_per else 0.0
         std = math.sqrt(max(0.0, variance))
         win_rate = wins / sims_per if sims_per else 0.0
+        adjusted = avg - risk_lambda * std
         stats = {
             "avg": avg,
+            "adjusted": adjusted,
             "std": std,
             "win_rate": win_rate,
             "min": min_val if min_val is not None else avg,
             "max": max_val if max_val is not None else avg,
+            "tree_ply": effective_tree_ply,
+            "reply_width": max(1, reply_width),
         }
-        scored.append((action, avg, sims_per, stats))
+        scored.append((action, adjusted, sims_per, stats))
     scored.sort(key=lambda item: item[1], reverse=True)
     return scored
 
 
 def _mcts_pick_action(
-    state: Dict, bot_id: str, sims: int, depth: int, width: int
+    state: Dict,
+    bot_id: str,
+    sims: int,
+    depth: int,
+    width: int,
+    tree_ply: int,
+    reply_width: int,
+    risk_lambda: float,
 ) -> Tuple[Optional[Dict], List[Tuple[Dict, float, int, Dict[str, float]]]]:
-    scored = _mcts_score_actions(state, bot_id, sims, depth, width)
+    scored = _mcts_score_actions(state, bot_id, sims, depth, width, tree_ply, reply_width, risk_lambda)
     if not scored:
         return None, []
     return scored[0][0], scored
@@ -1978,11 +2061,11 @@ def _build_bot_explain(
         )
         return [_card_label(card) for card in sorted_hand]
 
-    if method == "mcts" and method_scores:
-        play_scores = [
-            (action, score, sims, stats)
-            for action, score, sims, stats in method_scores
-            if action.get("type") == "play"
+        if method == "mcts" and method_scores:
+            play_scores = [
+                (action, score, sims, stats)
+                for action, score, sims, stats in method_scores
+                if action.get("type") == "play"
         ]
         all_scores = method_scores[:]
         if not play_scores:
@@ -2010,6 +2093,7 @@ def _build_bot_explain(
             action_type = action.get("type", "play")
             comps = {
                 "mcts_avg": stats.get("avg", score) if stats else score,
+                "mcts_adjusted": stats.get("adjusted", score) if stats else score,
                 "mcts_std": stats.get("std", 0.0) if stats else 0.0,
                 "mcts_win_rate": stats.get("win_rate", 0.0) if stats else 0.0,
                 "mcts_min": stats.get("min", score) if stats else score,
@@ -2024,6 +2108,7 @@ def _build_bot_explain(
             )
         chosen_comps = {
             "mcts_avg": chosen_stats.get("avg", chosen_score) if chosen_stats else chosen_score,
+            "mcts_adjusted": chosen_stats.get("adjusted", chosen_score) if chosen_stats else chosen_score,
             "mcts_std": chosen_stats.get("std", 0.0) if chosen_stats else 0.0,
             "mcts_win_rate": chosen_stats.get("win_rate", 0.0) if chosen_stats else 0.0,
             "mcts_min": chosen_stats.get("min", chosen_score) if chosen_stats else chosen_score,
@@ -2759,6 +2844,9 @@ class GuandanGame:
                 config.get("bot_mcts_sims", 60),
                 config.get("bot_mcts_depth", 8),
                 config.get("bot_minimax_width", 6),
+                config.get("bot_mcts_tree_ply", 2),
+                config.get("bot_mcts_reply_width", 4),
+                config.get("bot_mcts_risk_lambda", 0.28),
             )
             if mcts_action is not None:
                 decided = True
@@ -2769,6 +2857,9 @@ class GuandanGame:
                     "sims_per_action": sims_per_action,
                     "depth": config.get("bot_mcts_depth", 8),
                     "candidates": len(mcts_scores),
+                    "tree_ply": config.get("bot_mcts_tree_ply", 2),
+                    "reply_width": config.get("bot_mcts_reply_width", 4),
+                    "risk_lambda": config.get("bot_mcts_risk_lambda", 0.28),
                 }
                 if mcts_action.get("type") == "play":
                     chosen = mcts_action.get("card_ids") or []
