@@ -14,10 +14,10 @@ DEFAULT_CONFIG = {
     "hard_bomb_beats_soft": False,
     "require_partner_not_last_for_a": False,
     "bot_search_depth": 4,
-    "bot_mcts_sims": 220,
-    "bot_mcts_depth": 12,
+    "bot_mcts_sims": 160,
+    "bot_mcts_depth": 10,
     "bot_mcts_tree_ply": 2,
-    "bot_mcts_reply_width": 4,
+    "bot_mcts_reply_width": 3,
     "bot_mcts_risk_lambda": 0.28,
     "bot_endgame_threshold": 24,
     "bot_minimax_depth": 6,
@@ -2061,11 +2061,11 @@ def _build_bot_explain(
         )
         return [_card_label(card) for card in sorted_hand]
 
-        if method == "mcts" and method_scores:
-            play_scores = [
-                (action, score, sims, stats)
-                for action, score, sims, stats in method_scores
-                if action.get("type") == "play"
+    if method == "mcts" and method_scores:
+        play_scores = [
+            (action, score, sims, stats)
+            for action, score, sims, stats in method_scores
+            if action.get("type") == "play"
         ]
         all_scores = method_scores[:]
         if not play_scores:
