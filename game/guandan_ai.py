@@ -454,6 +454,8 @@ def _takeover_opportunity_score(state: Dict, player_id: str, cards: List[int]) -
     combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
     if not combo:
         return 0.0
+    leader_left = len(state["players"].get(leader, {}).get("hand", []))
+    current_combo = current_trick.get("combo", {})
 
     structure_delta = _play_structure_delta(hand, cards, state["level_rank"])
     score = max(0.0, 3.2 - structure_delta)
@@ -464,9 +466,23 @@ def _takeover_opportunity_score(state: Dict, player_id: str, cards: List[int]) -
         score -= (material_cost - 7.0) * 0.45
     if combo["type"] not in BOMB_TYPES:
         score += 0.8
+        if combo.get("type") == current_combo.get("type"):
+            pressure_bonus = 0.0
+            if leader_left <= 14:
+                pressure_bonus += 5.0
+            if leader_left <= 10:
+                pressure_bonus += 4.0
+            if leader_left <= 6:
+                pressure_bonus += 5.0
+            if combo.get("type") in ("full_house", "straight", "three_pairs", "steel_plate"):
+                pressure_bonus += 3.0
+            if not _cards_use_special_material(play_cards, state["level_rank"]):
+                pressure_bonus += 1.5
+            else:
+                pressure_bonus *= 0.65
+            score += pressure_bonus
     else:
         score -= 1.8 + _bomb_tier(combo) * 0.6
-        current_combo = current_trick.get("combo", {})
         minimal = _minimal_bomb_response(hand, state["level_rank"], current_combo, state.get("config", {}))
         if (
             current_combo.get("type") == "single"
@@ -1602,7 +1618,7 @@ def _mcts_finalize_scores(
         if count <= 0:
             avg = heuristic
             std = 0.0
-            win_rate = 1.0
+            win_rate = 0.0
             min_val = heuristic
             max_val = heuristic
             adjusted = heuristic
@@ -1953,7 +1969,15 @@ def _bot_score_components(
             response_score = _best_response_play_score(state, bot_id, max(2, depth), non_bomb_only=True)
             teammate_control = _teammate_future_control_probability(state, bot_id)
             if response_score is not None and response_score > 0:
-                components["pass_opportunity_cost"] = -min(8.5, response_score * 0.72)
+                leader_left = len(state["players"].get(current_trick.get("player_id"), {}).get("hand", []))
+                pass_cap = 8.5
+                if leader_left <= 14:
+                    pass_cap += 2.5
+                if leader_left <= 10:
+                    pass_cap += 2.5
+                if leader_left <= 6:
+                    pass_cap += 2.5
+                components["pass_opportunity_cost"] = -min(pass_cap, response_score * 0.72)
             else:
                 bomb_profile = _high_single_bomb_profile(state, bot_id)
                 if teammate_control > 0 and current_trick.get("combo", {}).get("type") == "single":
@@ -2046,6 +2070,17 @@ def _bot_score_components(
         seize = _takeover_opportunity_score(state, bot_id, cards)
         if seize > 0:
             components["seize_tempo"] = seize * 1.25
+        leader_left = len(state["players"].get(current_trick.get("player_id"), {}).get("hand", []))
+        if combo.get("type") == (current_trick.get("combo") or {}).get("type") and combo.get("type") not in BOMB_TYPES:
+            natural_takeover = 0.0
+            if leader_left <= 14:
+                natural_takeover += 3.5
+            if leader_left <= 10:
+                natural_takeover += 3.0
+            if leader_left <= 6:
+                natural_takeover += 4.0
+            if natural_takeover > 0 and not _cards_use_special_material(play_cards, level_rank):
+                components["deny_short_lead"] = natural_takeover
         if combo["type"] in BOMB_TYPES and current_trick.get("combo", {}).get("type") == "single":
             teammate_control = _teammate_future_control_probability(state, bot_id)
             if teammate_control > 0:

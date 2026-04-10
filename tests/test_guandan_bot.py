@@ -412,6 +412,38 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertEqual(explain.get("method"), "heuristic")
         self.assertEqual(explain.get("chosen", {}).get("cards"), [guandan._card_label(big)])
 
+    def test_bot_move_ignores_zero_sample_mcts_override(self):
+        state, big = self._make_state()
+        state["config"]["bot_endgame_threshold"] = 0
+        fake_scores = [
+            (
+                {"type": "pass"},
+                99.0,
+                0,
+                {
+                    "avg": 99.0,
+                    "adjusted": 99.0,
+                    "std": 0.0,
+                    "win_rate": 0.0,
+                    "min": 99.0,
+                    "max": 99.0,
+                    "heuristic": 99.0,
+                    "heuristic_norm": 0.0,
+                    "depth": 0,
+                    "tree_ply": 0,
+                    "reply_width": 1,
+                },
+            )
+        ]
+
+        with mock.patch.object(guandan, "_mcts_pick_action", return_value=({"type": "pass"}, fake_scores)):
+            action = guandan.GuandanGame.bot_move(state, "bot")
+
+        self.assertEqual(action.get("type"), "play")
+        self.assertEqual(action.get("card_ids"), [big["id"]])
+        explain = state.get("bot_explain", {}).get("bot", {})
+        self.assertEqual(explain.get("method"), "heuristic")
+
     def test_mcts_explain_includes_mcts_score(self):
         state, big = self._make_state()
         action = {"type": "play", "card_ids": [big["id"]]}
@@ -1598,6 +1630,73 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertEqual(action.get("type"), "play")
         chosen = state.get("bot_explain", {}).get("bot", {}).get("chosen", {}).get("cards", [])
         self.assertEqual(chosen, ["♠️10", "♦️10", "♠️J", "♥️J", "♠️Q", "♥️Q"])
+
+    def test_opponent_short_three_pairs_prefers_natural_takeover_over_pass(self):
+        players = [
+            {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
+            {"player_id": "bot3", "name": "Bot 3", "seat": 1, "is_bot": True},
+            {"player_id": "zhu", "name": "zhu", "seat": 2, "is_bot": False},
+            {"player_id": "bot4", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["round_number"] = 1
+        state["dealer_team"] = "A"
+        state["level_rank"] = 2
+        state["current_turn"] = "bot4"
+        state["config"]["bot_endgame_threshold"] = 0
+
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        hand = [
+            pick_label(label)
+            for label in [
+                "🃏S",
+                "♦️A",
+                "♠️K",
+                "♣️K",
+                "♣️Q",
+                "♠️Q",
+                "♦️J",
+                "♥️J",
+                "♠️J",
+                "♥️10",
+                "♣️10",
+                "♣️10",
+                "♣️8",
+                "♠️7",
+                "♦️7",
+                "♥️7",
+                "♠️7",
+                "♠️6",
+                "♦️5",
+                "♠️5",
+                "♥️5",
+                "♠️4",
+            ]
+        ]
+        trick_cards = [pick_label(label) for label in ["♣️9", "♥️9", "♦️10", "♠️10", "♣️J", "♥️J"]]
+        state["players"]["bot4"]["hand"] = hand
+        for pid, count in (("calvin", 22), ("bot3", 20), ("zhu", 14)):
+            state["players"][pid]["hand"] = deck[:count]
+            del deck[:count]
+        state["current_trick"] = {
+            "player_id": "zhu",
+            "cards": [card["id"] for card in trick_cards],
+            "combo": guandan._evaluate_combo(trick_cards, state["level_rank"], state.get("config", {})),
+        }
+        state["trick_plays"] = {"zhu": trick_cards}
+
+        action = guandan.GuandanGame.bot_move(state, "bot4")
+        self.assertEqual(action.get("type"), "play")
+        chosen = state.get("bot_explain", {}).get("bot4", {}).get("chosen", {}).get("cards", [])
+        self.assertEqual(chosen, ["♦️J", "♥️J", "♣️Q", "♠️Q", "♠️K", "♣️K"])
 
     def test_small_hand_leads_low_single_before_pairs(self):
         players = [

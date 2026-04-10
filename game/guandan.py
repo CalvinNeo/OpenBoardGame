@@ -1832,9 +1832,11 @@ def _response_material_cost(
         cost += margin * factor
         if combo["type"] in ("full_house", "straight", "three_pairs", "steel_plate"):
             if not _cards_use_special_material(play_cards, level_rank):
-                cost *= 0.5
+                cost *= 0.3
+                cost = max(0.0, cost - 2.2)
             else:
-                cost *= 0.72
+                cost *= 0.5
+                cost = max(0.0, cost - 0.8)
 
     wild_count = sum(1 for card in play_cards if _is_wild(card, level_rank))
     small_joker_count = sum(1 for card in play_cards if card.get("joker") == "small")
@@ -2861,6 +2863,11 @@ class GuandanGame:
                 config.get("bot_mcts_risk_lambda", 0.28),
                 deadline=deadline,
             )
+            has_real_search = any(count > 0 for _, _, count, _ in (mcts_scores or []))
+            has_fast_path = any((stats or {}).get("fast_path") for _, _, _, stats in (mcts_scores or []))
+            if not has_real_search and not has_fast_path:
+                mcts_action = None
+                mcts_scores = None
             if mcts_action is not None and _should_accept_mcts_override(
                 state,
                 bot_id,
