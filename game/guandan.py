@@ -1653,9 +1653,32 @@ def _lead_short_next_opponent_penalty(state: Dict, player_id: str, cards: List[i
 def _should_prune_weak_lead_single(
     state: Dict, player_id: str, cards: List[int], single_score: float, best_non_single_score: Optional[float]
 ) -> bool:
-    if best_non_single_score is None or state.get("current_trick"):
+    if state.get("current_trick"):
         return False
     hand = state["players"][player_id]["hand"]
+    next_pid = _next_active_player(state, player_id)
+    if next_pid and _team_of(state, next_pid) != _team_of(state, player_id):
+        next_left = len(state["players"][next_pid]["hand"])
+        if next_left <= 2:
+            hand_map = _map_hand_by_id(hand)
+            card = hand_map.get(cards[0]) if len(cards) == 1 else None
+            if card and not _is_joker(card) and not _is_wild(card, state["level_rank"]):
+                counts = _rank_count_map(hand, state["level_rank"])
+                if counts.get(card.get("rank"), 0) == 1:
+                    best_safe_single = max(
+                        (
+                            _single_order_value(other, state["level_rank"])
+                            for other in hand
+                            if not _is_joker(other)
+                            and not _is_wild(other, state["level_rank"])
+                            and counts.get(other.get("rank"), 0) == 1
+                        ),
+                        default=_single_order_value(card, state["level_rank"]),
+                    )
+                    if best_safe_single - _single_order_value(card, state["level_rank"]) >= (2 if next_left <= 1 else 4):
+                        return True
+    if best_non_single_score is None:
+        return False
     penalty = _lead_single_break_penalty(hand, cards, state["level_rank"])
     if penalty < 4.5:
         return False

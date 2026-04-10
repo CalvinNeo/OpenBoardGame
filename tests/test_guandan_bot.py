@@ -1994,6 +1994,66 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         labels = [guandan._card_label(hand_map[cid]) for cid in chosen]
         self.assertEqual(labels, ["♠️4"])
 
+    def test_minimax_lead_avoids_feeding_low_single_to_immediate_short_opponent(self):
+        players = [
+            {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
+            {"player_id": "bot2", "name": "Bot 2", "seat": 1, "is_bot": True},
+            {"player_id": "zhu", "name": "zhu", "seat": 2, "is_bot": False},
+            {"player_id": "bot4", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["round_number"] = 1
+        state["dealer_team"] = "A"
+        state["level_rank"] = 2
+        state["current_turn"] = "bot4"
+        state["current_trick"] = None
+        state["finish_order"] = ["zhu"]
+        state["players"]["zhu"]["finished"] = True
+        state["players"]["zhu"]["finish_rank"] = 1
+        state["config"]["bot_endgame_threshold"] = 999
+        state["config"]["bot_minimax_depth"] = 5
+        state["config"]["bot_minimax_width"] = 8
+
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        state["players"]["bot4"]["hand"] = [
+            pick_label(label)
+            for label in ["♣️2", "♦️2", "♠️2", "♣️2", "♣️Q", "♥️J", "♦️10", "♦️7", "♠️5", "♥️4"]
+        ]
+        state["players"]["calvin"]["hand"] = [pick_label("♠️A")]
+        state["players"]["bot2"]["hand"] = [
+            pick_label(label) for label in ["♠️K", "♥️K", "♣️J", "♦️6", "♣️5"]
+        ]
+        state["players"]["zhu"]["hand"] = []
+
+        actions = guandan._candidate_actions(state, "bot4", 12)
+        hand_map = guandan._map_hand_by_id(state["players"]["bot4"]["hand"])
+        play_labels = [
+            [guandan._card_label(hand_map[cid]) for cid in action.get("card_ids", [])]
+            for action in actions
+            if action.get("type") == "play"
+        ]
+        self.assertIn(["♣️Q"], play_labels)
+        self.assertNotIn(["♥️4"], play_labels)
+        self.assertNotIn(["♠️5"], play_labels)
+        self.assertNotIn(["♦️7"], play_labels)
+
+        real_random = random.Random
+        with mock.patch.object(guandan.random, "Random", side_effect=lambda *args, **kwargs: real_random(0)):
+            action = guandan.GuandanGame.bot_move(state, "bot4")
+
+        self.assertEqual(action.get("type"), "play")
+        chosen_cards = [hand_map[cid] for cid in action.get("card_ids", []) if cid in hand_map]
+        chosen_labels = [guandan._card_label(card) for card in chosen_cards]
+        self.assertEqual(chosen_labels, ["♣️Q"])
+
     def test_midgame_lead_prefers_structured_straight_over_high_single(self):
         players = [
             {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
