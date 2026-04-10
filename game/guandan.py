@@ -22,6 +22,10 @@ DEFAULT_CONFIG = {
     "bot_mcts_tree_ply": 2,
     "bot_mcts_reply_width": 2,
     "bot_mcts_risk_lambda": 0.28,
+    "bot_mcts_early_stop_min_rounds": 4,
+    "bot_mcts_early_stop_gap": 7.5,
+    "bot_mcts_early_stop_stable_rounds": 2,
+    "bot_mcts_obvious_response_margin": 2.25,
     "bot_endgame_threshold": 24,
     "bot_minimax_depth": 5,
     "bot_minimax_width": 8,
@@ -1296,6 +1300,14 @@ def _rank_lead_options(state: Dict, player_id: str, options: List[List[int]]) ->
         (score for score, combo_type, _ in scored if combo_type != "single"),
         default=None,
     )
+    best_non_bomb_score = max(
+        (score for score, combo_type, _ in scored if combo_type not in BOMB_TYPES),
+        default=None,
+    )
+    best_multi_non_bomb_score = max(
+        (score for score, combo_type, cards in scored if combo_type not in BOMB_TYPES and len(cards) > 1),
+        default=None,
+    )
     best_safe_score = max(
         (
             score
@@ -1316,6 +1328,16 @@ def _rank_lead_options(state: Dict, player_id: str, options: List[List[int]]) ->
     ranked: List[List[int]] = []
     seen = set()
     for score, combo_type, cards in sorted(best_by_type.values(), key=lambda item: item[0], reverse=True):
+        if _should_prune_wasteful_lead_bomb(
+            state,
+            player_id,
+            cards,
+            combo_type,
+            score,
+            best_non_bomb_score,
+            best_multi_non_bomb_score,
+        ):
+            continue
         if _should_prune_wasteful_control_break(state, player_id, cards, combo_type, score, best_safe_score):
             continue
         if combo_type == "single" and _should_prune_weak_lead_single(
@@ -1328,6 +1350,16 @@ def _rank_lead_options(state: Dict, player_id: str, options: List[List[int]]) ->
         seen.add(key)
         ranked.append(cards)
     for score, combo_type, cards in sorted(scored, key=lambda item: item[0], reverse=True):
+        if _should_prune_wasteful_lead_bomb(
+            state,
+            player_id,
+            cards,
+            combo_type,
+            score,
+            best_non_bomb_score,
+            best_multi_non_bomb_score,
+        ):
+            continue
         if _should_prune_wasteful_control_break(state, player_id, cards, combo_type, score, best_safe_score):
             continue
         if combo_type == "single" and _should_prune_weak_lead_single(
@@ -1843,6 +1875,47 @@ def _should_prune_wasteful_control_break(
     return best_safe_score >= score - 1.75
 
 
+def _should_prune_wasteful_lead_bomb(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo_type: str,
+    score: float,
+    best_non_bomb_score: Optional[float],
+    best_multi_non_bomb_score: Optional[float],
+) -> bool:
+    if state.get("current_trick") or combo_type not in BOMB_TYPES or best_non_bomb_score is None:
+        return False
+    hand = state["players"][player_id]["hand"]
+    if len(hand) <= 10:
+        return False
+
+    teammate = _teammate_of(state, player_id)
+    partner_left = len(state["players"][teammate]["hand"]) if teammate else 99
+    active_opponents = [
+        pid
+        for pid in state["turn_order"]
+        if _team_of(state, pid) != _team_of(state, player_id) and not state["players"][pid]["finished"]
+    ]
+    opp_left = (
+        min(len(state["players"][pid]["hand"]) for pid in active_opponents)
+        if active_opponents
+        else 0
+    )
+    if partner_left <= 2 or opp_left <= 2:
+        return False
+
+    remaining = _remove_cards(hand, cards)
+    if len(remaining) <= 6 or _can_play_all(remaining, state["level_rank"], state.get("config", {}), None):
+        return False
+
+    if best_multi_non_bomb_score is not None:
+        gap = -1.0 if len(hand) >= 16 else 1.5
+        if best_multi_non_bomb_score >= score - gap:
+            return True
+    return len(hand) >= 15 and best_non_bomb_score >= score + 1.5
+
+
 def _takeover_opportunity_score(state: Dict, player_id: str, cards: List[int]) -> float:
     current_trick = state.get("current_trick")
     if not current_trick or not cards:
@@ -2333,6 +2406,14 @@ def _mcts_root_heuristic_value(state: Dict, bot_id: str, action: Dict, depth: in
     return _bot_score_play(state, bot_id, cards, base_depth)
 
 
+def _mcts_action_key(action: Dict) -> Tuple:
+    return (
+        action.get("type"),
+        tuple(action.get("card_ids", []) or []),
+        action.get("card_id"),
+    )
+
+
 def _mcts_budget(
     state: Dict,
     base_sims: int,
@@ -2368,6 +2449,151 @@ def _mcts_budget(
     return sims, depth, tree, width
 
 
+def _is_obvious_low_single_response(state: Dict, player_id: str, cards: List[int]) -> bool:
+    current_trick = state.get("current_trick")
+    if not current_trick:
+        return False
+    current_combo = current_trick.get("combo") or {}
+    if current_combo.get("type") != "single" or current_combo.get("rank_value", 0) >= 58:
+        return False
+
+    hand = state["players"][player_id]["hand"]
+    hand_map = _map_hand_by_id(hand)
+    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+    combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
+    if not combo or combo.get("type") != "single" or combo["type"] in BOMB_TYPES:
+        return False
+    if _cards_use_special_material(play_cards, state["level_rank"]):
+        return False
+    if _response_material_cost(state, player_id, cards, combo) > 1.4:
+        return False
+    if _control_group_break_penalty(hand, cards, state["level_rank"]) > 0.6:
+        return False
+    if _group_fragment_penalty(hand, cards, state["level_rank"], combo) > 0.9:
+        return False
+    return True
+
+
+def _mcts_obvious_response_scores(
+    state: Dict,
+    bot_id: str,
+    candidates: List[Dict],
+    heuristic_values: Dict[Tuple, float],
+) -> Optional[List[Tuple[Dict, float, int, Dict[str, float]]]]:
+    current_trick = state.get("current_trick")
+    if not current_trick or _teammate_lead_context(state, bot_id):
+        return None
+    current_combo = current_trick.get("combo") or {}
+    if current_combo.get("type") != "single" or current_combo.get("rank_value", 0) >= 58:
+        return None
+
+    play_actions = [action for action in candidates if action.get("type") == "play"]
+    if not play_actions:
+        return None
+    ranked_actions = sorted(candidates, key=lambda item: heuristic_values.get(_mcts_action_key(item), -999.0), reverse=True)
+    ranked_plays = [action for action in ranked_actions if action.get("type") == "play"]
+    top_action = ranked_plays[0] if ranked_plays else None
+    if top_action is None or not _is_obvious_low_single_response(state, bot_id, top_action.get("card_ids", []) or []):
+        return None
+
+    cfg = state.get("config", {})
+    top_heuristic = heuristic_values.get(_mcts_action_key(top_action), -999.0)
+    pass_action = next((action for action in candidates if action.get("type") == "pass"), None)
+    pass_heuristic = heuristic_values.get(_mcts_action_key(pass_action), -999.0) if pass_action else -999.0
+    if pass_action and top_heuristic < pass_heuristic + cfg.get("bot_mcts_obvious_response_margin", 2.25):
+        return None
+
+    ordered = [top_action]
+    seen = {_mcts_action_key(top_action)}
+    for action in ranked_actions:
+        key = _mcts_action_key(action)
+        if key in seen:
+            continue
+        ordered.append(action)
+        seen.add(key)
+
+    scored: List[Tuple[Dict, float, int, Dict[str, float]]] = []
+    for action in ordered:
+        heuristic = heuristic_values.get(_mcts_action_key(action), -999.0)
+        scored.append(
+            (
+                action,
+                heuristic,
+                0,
+                {
+                    "avg": heuristic,
+                    "adjusted": heuristic,
+                    "std": 0.0,
+                    "win_rate": 1.0 if action == top_action else 0.0,
+                    "min": heuristic,
+                    "max": heuristic,
+                    "heuristic": heuristic,
+                    "heuristic_norm": 0.0,
+                    "depth": 0,
+                    "tree_ply": 0,
+                    "reply_width": 1,
+                    "fast_path": 1.0,
+                },
+            )
+        )
+    return scored
+
+
+def _mcts_finalize_scores(
+    candidates: List[Dict],
+    samples: Dict[Tuple, Dict[str, float]],
+    heuristic_values: Dict[Tuple, float],
+    heuristic_center: float,
+    heuristic_scale: float,
+    heuristic_weight: float,
+    risk_lambda: float,
+    effective_depth: int,
+    effective_tree_ply: int,
+    effective_reply_width: int,
+) -> List[Tuple[Dict, float, int, Dict[str, float]]]:
+    scored: List[Tuple[Dict, float, int, Dict[str, float]]] = []
+    for action in candidates:
+        key = _mcts_action_key(action)
+        sample = samples.get(key, {})
+        count = int(sample.get("count", 0))
+        heuristic = heuristic_values.get(key, 0.0)
+        heuristic_norm = (heuristic - heuristic_center) / heuristic_scale
+        if count <= 0:
+            avg = heuristic
+            std = 0.0
+            win_rate = 1.0
+            min_val = heuristic
+            max_val = heuristic
+            adjusted = heuristic
+        else:
+            total = sample.get("total", 0.0)
+            total_sq = sample.get("total_sq", 0.0)
+            wins = sample.get("wins", 0.0)
+            avg = total / count
+            variance = (total_sq / count) - avg * avg
+            std = math.sqrt(max(0.0, variance))
+            win_rate = wins / count
+            min_val = sample.get("min", avg)
+            max_val = sample.get("max", avg)
+            adjusted = avg - risk_lambda * std + heuristic_norm * heuristic_weight
+        stats = {
+            "avg": avg,
+            "adjusted": adjusted,
+            "std": std,
+            "win_rate": win_rate,
+            "min": min_val,
+            "max": max_val,
+            "heuristic": heuristic,
+            "heuristic_norm": heuristic_norm,
+            "depth": effective_depth if count > 0 else 0,
+            "tree_ply": effective_tree_ply if count > 0 else 0,
+            "reply_width": max(1, effective_reply_width) if count > 0 else 1,
+        }
+        scored.append((action, adjusted, count, stats))
+    scored.sort(key=lambda item: item[1], reverse=True)
+    return scored
+
+
 def _mcts_score_actions(
     state: Dict,
     bot_id: str,
@@ -2397,23 +2623,13 @@ def _mcts_score_actions(
     heuristic_weight = 3.8 if state.get("current_trick") and len(candidates) <= 2 else 2.2
     heuristic_values: Dict[Tuple, float] = {}
     for action in candidates:
-        key = (
-            action.get("type"),
-            tuple(action.get("card_ids", []) or []),
-            action.get("card_id"),
-        )
-        heuristic_values[key] = _mcts_root_heuristic_value(state, bot_id, action, depth)
+        heuristic_values[_mcts_action_key(action)] = _mcts_root_heuristic_value(state, bot_id, action, depth)
     heuristic_center = sum(heuristic_values.values()) / len(heuristic_values)
     heuristic_scale = max(1.0, max(abs(value - heuristic_center) for value in heuristic_values.values()))
 
     if len(candidates) == 1:
         only = candidates[0]
-        key = (
-            only.get("type"),
-            tuple(only.get("card_ids", []) or []),
-            only.get("card_id"),
-        )
-        heuristic = heuristic_values[key]
+        heuristic = heuristic_values[_mcts_action_key(only)]
         return [
             (
                 only,
@@ -2435,18 +2651,50 @@ def _mcts_score_actions(
             )
         ]
 
+    obvious_scores = _mcts_obvious_response_scores(state, bot_id, candidates, heuristic_values)
+    if obvious_scores:
+        return obvious_scores
+
+    current_combo = (state.get("current_trick") or {}).get("combo") or {}
+    has_pass = any(action.get("type") == "pass" for action in candidates)
+    has_bomb_response = False
+    for action in candidates:
+        if action.get("type") != "play":
+            continue
+        hand = state["players"][bot_id]["hand"]
+        hand_map = _map_hand_by_id(hand)
+        play_cards = [hand_map[cid] for cid in action.get("card_ids", []) if cid in hand_map]
+        combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
+        if combo and combo.get("type") in BOMB_TYPES:
+            has_bomb_response = True
+            break
+    if (
+        len(candidates) == 2
+        and has_pass
+        and has_bomb_response
+        and current_combo.get("type") == "single"
+        and current_combo.get("rank_value", 0) >= 70
+    ):
+        effective_sims = max(effective_sims, 14)
+
     rng = random.Random()
     sims_per = max(1, effective_sims // max(1, len(candidates)))
     effective_tree_ply = max(0, min(effective_tree_ply, effective_depth))
     leaf_rollout_depth = max(0, effective_depth - effective_tree_ply)
-    scored: List[Tuple[Dict, float, int, Dict[str, float]]] = []
-    for action in candidates:
-        total = 0.0
-        total_sq = 0.0
-        wins = 0
-        min_val = None
-        max_val = None
-        for _ in range(sims_per):
+    samples: Dict[Tuple, Dict[str, float]] = {
+        _mcts_action_key(action): {"count": 0, "total": 0.0, "total_sq": 0.0, "wins": 0.0, "min": None, "max": None}
+        for action in candidates
+    }
+    cfg = state.get("config", {})
+    min_rounds = max(1, int(cfg.get("bot_mcts_early_stop_min_rounds", 4)))
+    stable_rounds_needed = max(1, int(cfg.get("bot_mcts_early_stop_stable_rounds", 2)))
+    early_stop_gap = float(cfg.get("bot_mcts_early_stop_gap", 7.5))
+    stable_rounds = 0
+    previous_top_key = None
+    final_scored: List[Tuple[Dict, float, int, Dict[str, float]]] = []
+    for round_idx in range(sims_per):
+        for action in candidates:
+            key = _mcts_action_key(action)
             det = _determinize_state(state, bot_id, rng)
             _, err = GuandanGame.apply_action(det, bot_id, action)
             if err:
@@ -2458,42 +2706,57 @@ def _mcts_score_actions(
                 max(1, effective_reply_width),
                 leaf_rollout_depth,
             )
-            total += value
-            total_sq += value * value
+            sample = samples[key]
+            sample["count"] += 1
+            sample["total"] += value
+            sample["total_sq"] += value * value
             if value > 0:
-                wins += 1
-            if min_val is None or value < min_val:
-                min_val = value
-            if max_val is None or value > max_val:
-                max_val = value
-        avg = total / sims_per if sims_per else total
-        variance = (total_sq / sims_per) - avg * avg if sims_per else 0.0
-        std = math.sqrt(max(0.0, variance))
-        win_rate = wins / sims_per if sims_per else 0.0
-        key = (
-            action.get("type"),
-            tuple(action.get("card_ids", []) or []),
-            action.get("card_id"),
+                sample["wins"] += 1
+            if sample["min"] is None or value < sample["min"]:
+                sample["min"] = value
+            if sample["max"] is None or value > sample["max"]:
+                sample["max"] = value
+        final_scored = _mcts_finalize_scores(
+            candidates,
+            samples,
+            heuristic_values,
+            heuristic_center,
+            heuristic_scale,
+            heuristic_weight,
+            risk_lambda,
+            effective_depth,
+            effective_tree_ply,
+            effective_reply_width,
         )
-        heuristic = heuristic_values.get(key, 0.0)
-        heuristic_norm = (heuristic - heuristic_center) / heuristic_scale
-        adjusted = avg - risk_lambda * std + heuristic_norm * heuristic_weight
-        stats = {
-            "avg": avg,
-            "adjusted": adjusted,
-            "std": std,
-            "win_rate": win_rate,
-            "min": min_val if min_val is not None else avg,
-            "max": max_val if max_val is not None else avg,
-            "heuristic": heuristic,
-            "heuristic_norm": heuristic_norm,
-            "depth": effective_depth,
-            "tree_ply": effective_tree_ply,
-            "reply_width": max(1, effective_reply_width),
-        }
-        scored.append((action, adjusted, sims_per, stats))
-    scored.sort(key=lambda item: item[1], reverse=True)
-    return scored
+        if round_idx + 1 < min_rounds or len(final_scored) < 2:
+            continue
+        top_key = _mcts_action_key(final_scored[0][0])
+        gap = final_scored[0][1] - final_scored[1][1]
+        if gap >= early_stop_gap:
+            if top_key == previous_top_key:
+                stable_rounds += 1
+            else:
+                stable_rounds = 1
+                previous_top_key = top_key
+            if stable_rounds >= stable_rounds_needed:
+                break
+        else:
+            previous_top_key = top_key
+            stable_rounds = 0
+    if final_scored:
+        return final_scored
+    return _mcts_finalize_scores(
+        candidates,
+        samples,
+        heuristic_values,
+        heuristic_center,
+        heuristic_scale,
+        heuristic_weight,
+        risk_lambda,
+        effective_depth,
+        effective_tree_ply,
+        effective_reply_width,
+    )
 
 
 def _mcts_pick_action(
