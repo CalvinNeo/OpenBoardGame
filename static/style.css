@@ -7819,9 +7819,22 @@ body.guandan-explain-mode button.has-explanation:hover {
   margin: 6px 0 4px;
 }
 
+#guandanBotExplainContent .guandan-bot-explain-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+#guandanBotExplainContent .guandan-bot-explain-copy,
 #guandanBotExplainContent .guandan-bot-hand-toggle {
   padding: 4px 10px;
   border-radius: 999px;
+}
+
+#guandanBotExplainContent .guandan-bot-copy-status {
+  font-size: 11px;
+  color: #6b7280;
 }
 
 #guandanBotExplainContent .guandan-bot-hand {

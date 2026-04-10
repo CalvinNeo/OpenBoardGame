@@ -739,6 +739,170 @@ function formatGuandanBotComponents(components) {
   return `<div class="guandan-bot-explain-components">${entries.join("")}</div>`;
 }
 
+function formatGuandanBotComponentsText(components) {
+  if (!components) return "-";
+  const entries = Object.entries(components)
+    .filter(([key, value]) => key.startsWith("mcts_") || Math.abs(value) > 0.001)
+    .map(([key, value]) => {
+      const label = GUANDAN_BOT_COMPONENT_LABELS[key] || key;
+      if (key === "mcts_win_rate") {
+        return `${label}: ${Math.round(value * 100)}%`;
+      }
+      const rounded = Math.round(value * 10) / 10;
+      return `${label}: ${rounded}`;
+    });
+  return entries.length ? entries.join("\n") : "-";
+}
+
+function getGuandanPlayerName(view, playerId) {
+  if (!view || !Array.isArray(view.players)) return playerId || "-";
+  const player = view.players.find((entry) => entry.player_id === playerId);
+  return player ? player.name || player.player_id : playerId || "-";
+}
+
+function getGuandanCurrentTrickCards(view) {
+  if (!view || !view.current_trick) return "-";
+  if (Array.isArray(view.trick_plays)) {
+    const entry = view.trick_plays.find((play) => play && play.player_id === view.current_trick.player_id);
+    if (entry && Array.isArray(entry.cards) && entry.cards.length) {
+      return entry.cards.join(" ");
+    }
+  }
+  return `${view.current_trick.type || "-"} (size ${view.current_trick.size ?? "-"})`;
+}
+
+async function copyGuandanBotExplainToClipboard(text) {
+  if (typeof copyTextToClipboard === "function") {
+    return copyTextToClipboard(text);
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+  return false;
+}
+
+function buildGuandanBotExplainClipboardText(playerId, explain) {
+  const view = currentGuandanView;
+  if (!view || !explain) return "";
+  const chosen = explain.chosen || {};
+  const chosenCards = Array.isArray(chosen.cards) ? chosen.cards : [];
+  const chosenIsPass = chosenCards.length === 1 && chosenCards[0] === "Pass";
+  const remainingHand = Array.isArray(explain.hand) ? explain.hand : [];
+  const handBeforeAction = chosenIsPass ? [...remainingHand] : [...chosenCards, ...remainingHand];
+  const players = Array.isArray(view.players) ? view.players : [];
+  const trickPlays = Array.isArray(view.trick_plays) ? view.trick_plays : [];
+  const top = Array.isArray(explain.top) ? explain.top : [];
+  const methodDetails = explain.method_details || {};
+  const playerLines = players
+    .map((player) => {
+      const parts = [`${player.name || player.player_id} [${player.team || "-"}]`];
+      parts.push(`cards=${player.hand_count ?? "-"}`);
+      if (player.finished) parts.push(`finish=#${player.finish_rank ?? "-"}`);
+      if (player.player_id === view.current_turn) parts.push("turn");
+      if (player.player_id === playerId) parts.push("reviewed_bot");
+      return `- ${parts.join(" | ")}`;
+    })
+    .join("\n");
+  const trickLines = trickPlays.length
+    ? trickPlays
+        .map((entry) => `- ${entry.name || getGuandanPlayerName(view, entry.player_id)}: ${(entry.cards || []).join(" ") || "-"}`)
+        .join("\n")
+    : "-";
+  const topLines = top.length
+    ? top
+        .map((entry, index) => {
+          const cards = Array.isArray(entry.cards) ? entry.cards.join(" ") : "-";
+          const score = typeof entry.score === "number" ? Math.round(entry.score * 10) / 10 : "-";
+          return `${index + 1}. ${cards}\nscore: ${score}\n${formatGuandanBotComponentsText(entry.components)}`;
+        })
+        .join("\n\n")
+    : "-";
+  const summary = {
+    game: "guandan",
+    phase: view.phase || null,
+    round_number: view.round_number ?? null,
+    dealer_team: view.dealer_team ?? null,
+    level_rank: view.level_rank ?? null,
+    current_turn: {
+      player_id: view.current_turn || null,
+      name: getGuandanPlayerName(view, view.current_turn),
+    },
+    current_trick: view.current_trick
+      ? {
+          player_id: view.current_trick.player_id,
+          name: getGuandanPlayerName(view, view.current_trick.player_id),
+          type: view.current_trick.type || null,
+          size: view.current_trick.size ?? null,
+          cards: getGuandanCurrentTrickCards(view),
+        }
+      : null,
+    legal_actions: Array.isArray(view.legal_actions) ? view.legal_actions : [],
+    players: players.map((player) => ({
+      player_id: player.player_id,
+      name: player.name || player.player_id,
+      team: player.team || null,
+      hand_count: player.hand_count ?? null,
+      finished: !!player.finished,
+      finish_rank: player.finish_rank ?? null,
+    })),
+    trick_plays: trickPlays.map((entry) => ({
+      player_id: entry.player_id,
+      name: entry.name || getGuandanPlayerName(view, entry.player_id),
+      cards: Array.isArray(entry.cards) ? entry.cards : [],
+    })),
+    reviewed_bot: {
+      player_id: playerId,
+      name: getGuandanPlayerName(view, playerId),
+      method: explain.method || "heuristic",
+      method_details: methodDetails,
+      chosen: chosen,
+      hand_before_action: handBeforeAction,
+      remaining_hand_after_action: remainingHand,
+      top: top,
+    },
+  };
+  return [
+    "Guandan Bot Decision Review",
+    "",
+    `Bot: ${getGuandanPlayerName(view, playerId)}`,
+    `Method: ${explain.method || "heuristic"}`,
+    `Phase: ${view.phase || "-"}`,
+    `Round: ${view.round_number ?? "-"}`,
+    `Dealer Team: ${view.dealer_team ?? "-"}`,
+    `Level: ${view.level_rank ?? "-"}`,
+    `Current Turn: ${getGuandanPlayerName(view, view.current_turn)}`,
+    `Current Trick: ${view.current_trick ? `${view.current_trick.type || "-"} by ${getGuandanPlayerName(view, view.current_trick.player_id)} -> ${getGuandanCurrentTrickCards(view)}` : "-"}`,
+    "",
+    "Players:",
+    playerLines || "-",
+    "",
+    "Trick Plays:",
+    trickLines,
+    "",
+    "Bot Hand Before Action:",
+    handBeforeAction.join(" ") || "-",
+    "",
+    "Bot Remaining Hand After Action:",
+    remainingHand.join(" ") || "-",
+    "",
+    `Chosen: ${chosenCards.join(" ") || "-"}`,
+    `Chosen Score: ${typeof chosen.score === "number" ? Math.round(chosen.score * 10) / 10 : "-"}`,
+    "Score Breakdown:",
+    formatGuandanBotComponentsText(chosen.components),
+    "",
+    "Top Candidates:",
+    topLines,
+    "",
+    "Structured Summary JSON:",
+    JSON.stringify(summary, null, 2),
+  ].join("\n");
+}
+
 function showGuandanBotExplain(playerId) {
   if (!guandanBotExplainModal || !guandanBotExplainContent || !currentGuandanView) return;
   const explain = currentGuandanView.bot_explain ? currentGuandanView.bot_explain[playerId] : null;
@@ -755,14 +919,14 @@ function showGuandanBotExplain(playerId) {
   const chosenComponents = formatGuandanBotComponents(chosen.components);
   const hand = Array.isArray(explain.hand) ? explain.hand : [];
   const handItems = hand.map((card) => `<span class="guandan-bot-hand-card">${card}</span>`).join("");
-  const handBlock = hand.length
-    ? `
-      <div class="guandan-bot-hand-row">
-        <button type="button" class="guandan-bot-hand-toggle">View Hand</button>
-      </div>
-      <div class="guandan-bot-hand hidden">${handItems}</div>
-    `
-    : "";
+  const actionsRow = `
+    <div class="guandan-bot-hand-row guandan-bot-explain-actions">
+      <button type="button" class="guandan-bot-explain-copy" data-player="${playerId}">Copy</button>
+      ${hand.length ? `<button type="button" class="guandan-bot-hand-toggle">View Hand</button>` : ""}
+      <span class="guandan-bot-copy-status" aria-live="polite"></span>
+    </div>
+  `;
+  const handBlock = hand.length ? `<div class="guandan-bot-hand hidden">${handItems}</div>` : "";
   const top = Array.isArray(explain.top) ? explain.top : [];
   const rows = top
     .map((entry, index) => {
@@ -795,6 +959,7 @@ function showGuandanBotExplain(playerId) {
       ? `<div class="hint">MCTS avg is the mean rollout score. Win rate is rollouts with positive score.</div>`
       : "";
   guandanBotExplainContent.innerHTML = `
+    ${actionsRow}
     <div><strong>Method:</strong> ${method}</div>
     ${detailLine}
     ${mctsLine}
@@ -815,6 +980,24 @@ function showGuandanBotExplain(playerId) {
       </tbody>
     </table>
   `;
+  const copyBtn = guandanBotExplainContent.querySelector(".guandan-bot-explain-copy");
+  const copyStatus = guandanBotExplainContent.querySelector(".guandan-bot-copy-status");
+  if (copyBtn) {
+    copyBtn.addEventListener("click", async () => {
+      const text = buildGuandanBotExplainClipboardText(playerId, explain);
+      const ok = await copyGuandanBotExplainToClipboard(text);
+      copyBtn.textContent = ok ? "Copied" : "Copy Failed";
+      if (copyStatus) {
+        copyStatus.textContent = ok ? "Bot context copied." : "Clipboard unavailable.";
+      }
+      window.setTimeout(() => {
+        copyBtn.textContent = "Copy";
+        if (copyStatus) {
+          copyStatus.textContent = "";
+        }
+      }, 1400);
+    });
+  }
   if (hand.length) {
     const toggleBtn = guandanBotExplainContent.querySelector(".guandan-bot-hand-toggle");
     const handContainer = guandanBotExplainContent.querySelector(".guandan-bot-hand");
