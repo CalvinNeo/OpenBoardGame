@@ -161,6 +161,83 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertEqual(action.get("type"), "play")
         self.assertNotEqual(self._combo_type(state, action.get("card_ids", [])), "bomb")
 
+    def test_mcts_low_single_response_prefers_clean_singleton_over_split_pair(self):
+        players = [
+            {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
+            {"player_id": "bot2", "name": "Bot 2", "seat": 1, "is_bot": True},
+            {"player_id": "bot3", "name": "Bot 3", "seat": 2, "is_bot": True},
+            {"player_id": "bot4", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["current_turn"] = "bot3"
+        state["dealer_team"] = "A"
+        state["round_number"] = 1
+        state["level_rank"] = 2
+
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        state["players"]["bot3"]["hand"] = [
+            pick_label(label)
+            for label in [
+                "🃏B",
+                "🃏B",
+                "🃏S",
+                "♠️2",
+                "♥️2",
+                "♣️A",
+                "♠️K",
+                "♠️K",
+                "♥️Q",
+                "♣️Q",
+                "♣️J",
+                "♥️10",
+                "♣️10",
+                "♠️10",
+                "♦️6",
+                "♣️6",
+                "♥️4",
+                "♠️4",
+                "♥️4",
+                "♦️4",
+            ]
+        ]
+        lead = pick_label("♣️4")
+        combo = guandan._evaluate_combo([lead], state["level_rank"], state.get("config", {}))
+        state["current_trick"] = {"player_id": "bot2", "cards": [lead["id"]], "combo": combo}
+        state["trick_plays"] = {"bot2": [lead]}
+
+        for pid, count in (("calvin", 16), ("bot2", 18), ("bot4", 25)):
+            state["players"][pid]["hand"] = deck[:count]
+            del deck[:count]
+
+        real_random = random.Random
+        with mock.patch.object(guandan.random, "Random", side_effect=lambda *args, **kwargs: real_random(0)):
+            action = guandan.GuandanGame.bot_move(state, "bot3")
+
+        self.assertEqual(action.get("type"), "play")
+        hand_map = guandan._map_hand_by_id(state["players"]["bot3"]["hand"])
+        chosen_cards = [hand_map[cid] for cid in action.get("card_ids", []) if cid in hand_map]
+        chosen_labels = [guandan._card_label(card) for card in chosen_cards]
+        chosen_combo = guandan._evaluate_combo(chosen_cards, state["level_rank"], state.get("config", {}))
+        self.assertEqual(chosen_combo.get("type"), "single")
+        self.assertIn(chosen_labels[0], {"♠️2", "♣️A", "♣️J"})
+        self.assertEqual(
+            guandan._group_fragment_penalty(
+                state["players"]["bot3"]["hand"], action.get("card_ids", []), state["level_rank"], chosen_combo
+            ),
+            0.0,
+        )
+        explain = state.get("bot_explain", {}).get("bot3", {})
+        self.assertEqual(explain.get("method"), "mcts")
+        self.assertEqual(explain.get("chosen", {}).get("cards"), chosen_labels)
+
     def test_mcts_explain_includes_mcts_score(self):
         state, big = self._make_state()
         action = {"type": "play", "card_ids": [big["id"]]}

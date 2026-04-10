@@ -653,6 +653,70 @@ def _is_obvious_low_single_response(state: Dict, player_id: str, cards: List[int
     return True
 
 
+def _is_clean_low_single_response(state: Dict, player_id: str, cards: List[int]) -> bool:
+    current_trick = state.get("current_trick")
+    if not current_trick:
+        return False
+    current_combo = current_trick.get("combo") or {}
+    if current_combo.get("type") != "single" or current_combo.get("rank_value", 0) >= 58:
+        return False
+
+    hand = state["players"][player_id]["hand"]
+    hand_map = _map_hand_by_id(hand)
+    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+    combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
+    if not combo or combo.get("type") != "single" or combo["type"] in BOMB_TYPES:
+        return False
+    if _cards_use_special_material(play_cards, state["level_rank"]):
+        return False
+    if _group_fragment_penalty(hand, cards, state["level_rank"], combo) > 0.01:
+        return False
+    if _control_group_break_penalty(hand, cards, state["level_rank"]) > 0.01:
+        return False
+    if _shape_transition_score(hand, cards, state["level_rank"]) < -0.1:
+        return False
+    return True
+
+
+def _mcts_fast_path_scores(
+    candidates: List[Dict],
+    heuristic_values: Dict[Tuple, float],
+    top_action: Dict,
+    tag: str,
+) -> List[Tuple[Dict, float, int, Dict[str, float]]]:
+    top_key = _mcts_action_key(top_action)
+    ordered = [top_action]
+    seen = {top_key}
+    ranked_rest = sorted(candidates, key=lambda item: heuristic_values.get(_mcts_action_key(item), -999.0), reverse=True)
+    for action in ranked_rest:
+        key = _mcts_action_key(action)
+        if key in seen:
+            continue
+        ordered.append(action)
+        seen.add(key)
+
+    scored: List[Tuple[Dict, float, int, Dict[str, float]]] = []
+    for action in ordered:
+        heuristic = heuristic_values.get(_mcts_action_key(action), -999.0)
+        stats = {
+            "avg": heuristic,
+            "adjusted": heuristic,
+            "std": 0.0,
+            "win_rate": 1.0 if _mcts_action_key(action) == top_key else 0.0,
+            "min": heuristic,
+            "max": heuristic,
+            "heuristic": heuristic,
+            "heuristic_norm": 0.0,
+            "depth": 0,
+            "tree_ply": 0,
+            "reply_width": 1,
+            "fast_path": 1.0,
+        }
+        stats[tag] = 1.0 if _mcts_action_key(action) == top_key else 0.0
+        scored.append((action, heuristic, 0, stats))
+    return scored
+
+
 def _mcts_obvious_response_scores(
     state: Dict,
     bot_id: str,
@@ -671,51 +735,32 @@ def _mcts_obvious_response_scores(
         return None
     ranked_actions = sorted(candidates, key=lambda item: heuristic_values.get(_mcts_action_key(item), -999.0), reverse=True)
     ranked_plays = [action for action in ranked_actions if action.get("type") == "play"]
+    cfg = state.get("config", {})
+    pass_action = next((action for action in candidates if action.get("type") == "pass"), None)
+    pass_heuristic = heuristic_values.get(_mcts_action_key(pass_action), -999.0) if pass_action else -999.0
+    clean_candidates = [
+        action
+        for action in ranked_plays
+        if _is_clean_low_single_response(state, bot_id, action.get("card_ids", []) or [])
+    ]
+    if clean_candidates:
+        top_clean = clean_candidates[0]
+        clean_margin = cfg.get(
+            "bot_mcts_clean_response_margin",
+            max(0.9, cfg.get("bot_mcts_obvious_response_margin", 2.25) * 0.5),
+        )
+        clean_heuristic = heuristic_values.get(_mcts_action_key(top_clean), -999.0)
+        if not pass_action or clean_heuristic >= pass_heuristic + clean_margin:
+            return _mcts_fast_path_scores(candidates, heuristic_values, top_clean, "clean_single_fast_path")
+
     top_action = ranked_plays[0] if ranked_plays else None
     if top_action is None or not _is_obvious_low_single_response(state, bot_id, top_action.get("card_ids", []) or []):
         return None
 
-    cfg = state.get("config", {})
     top_heuristic = heuristic_values.get(_mcts_action_key(top_action), -999.0)
-    pass_action = next((action for action in candidates if action.get("type") == "pass"), None)
-    pass_heuristic = heuristic_values.get(_mcts_action_key(pass_action), -999.0) if pass_action else -999.0
     if pass_action and top_heuristic < pass_heuristic + cfg.get("bot_mcts_obvious_response_margin", 2.25):
         return None
-
-    ordered = [top_action]
-    seen = {_mcts_action_key(top_action)}
-    for action in ranked_actions:
-        key = _mcts_action_key(action)
-        if key in seen:
-            continue
-        ordered.append(action)
-        seen.add(key)
-
-    scored: List[Tuple[Dict, float, int, Dict[str, float]]] = []
-    for action in ordered:
-        heuristic = heuristic_values.get(_mcts_action_key(action), -999.0)
-        scored.append(
-            (
-                action,
-                heuristic,
-                0,
-                {
-                    "avg": heuristic,
-                    "adjusted": heuristic,
-                    "std": 0.0,
-                    "win_rate": 1.0 if action == top_action else 0.0,
-                    "min": heuristic,
-                    "max": heuristic,
-                    "heuristic": heuristic,
-                    "heuristic_norm": 0.0,
-                    "depth": 0,
-                    "tree_ply": 0,
-                    "reply_width": 1,
-                    "fast_path": 1.0,
-                },
-            )
-        )
-    return scored
+    return _mcts_fast_path_scores(candidates, heuristic_values, top_action, "obvious_response_fast_path")
 
 
 def _mcts_high_single_bomb_scores(
