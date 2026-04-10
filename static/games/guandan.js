@@ -744,14 +744,13 @@ function formatGuandanBotComponentsText(components) {
   const entries = Object.entries(components)
     .filter(([key, value]) => key.startsWith("mcts_") || Math.abs(value) > 0.001)
     .map(([key, value]) => {
-      const label = GUANDAN_BOT_COMPONENT_LABELS[key] || key;
       if (key === "mcts_win_rate") {
-        return `${label}: ${Math.round(value * 100)}%`;
+        return `${key}=${Math.round(value * 100)}%`;
       }
       const rounded = Math.round(value * 10) / 10;
-      return `${label}: ${rounded}`;
+      return `${key}=${rounded}`;
     });
-  return entries.length ? entries.join("\n") : "-";
+  return entries.length ? entries.join(", ") : "-";
 }
 
 function getGuandanPlayerName(view, playerId) {
@@ -789,117 +788,73 @@ async function copyGuandanBotExplainToClipboard(text) {
 function buildGuandanBotExplainClipboardText(playerId, explain) {
   const view = currentGuandanView;
   if (!view || !explain) return "";
+  const context = explain.decision || view;
   const chosen = explain.chosen || {};
   const chosenCards = Array.isArray(chosen.cards) ? chosen.cards : [];
-  const chosenIsPass = chosenCards.length === 1 && chosenCards[0] === "Pass";
   const remainingHand = Array.isArray(explain.hand) ? explain.hand : [];
-  const handBeforeAction = chosenIsPass ? [...remainingHand] : [...chosenCards, ...remainingHand];
-  const players = Array.isArray(view.players) ? view.players : [];
-  const trickPlays = Array.isArray(view.trick_plays) ? view.trick_plays : [];
+  const handBeforeAction = Array.isArray(explain.hand_before) ? explain.hand_before : remainingHand;
+  const players = Array.isArray(context.players) ? context.players : [];
+  const trickPlays = Array.isArray(context.trick_plays) ? context.trick_plays : [];
   const top = Array.isArray(explain.top) ? explain.top : [];
   const methodDetails = explain.method_details || {};
-  const playerLines = players
+  const playerLine = players
     .map((player) => {
-      const parts = [`${player.name || player.player_id} [${player.team || "-"}]`];
-      parts.push(`cards=${player.hand_count ?? "-"}`);
-      if (player.finished) parts.push(`finish=#${player.finish_rank ?? "-"}`);
-      if (player.player_id === view.current_turn) parts.push("turn");
-      if (player.player_id === playerId) parts.push("reviewed_bot");
-      return `- ${parts.join(" | ")}`;
+      const tags = [];
+      if (player.player_id === playerId) tags.push("bot");
+      if (player.player_id === context.current_turn) tags.push("turn");
+      if (player.finished) tags.push(`finish#${player.finish_rank ?? "-"}`);
+      const suffix = tags.length ? `(${tags.join(",")})` : "";
+      return `${player.name || player.player_id}[${player.team || "-"}]:${player.hand_count ?? "-"}${suffix}`;
     })
-    .join("\n");
-  const trickLines = trickPlays.length
+    .join(" | ");
+  const trickLine = trickPlays.length
     ? trickPlays
-        .map((entry) => `- ${entry.name || getGuandanPlayerName(view, entry.player_id)}: ${(entry.cards || []).join(" ") || "-"}`)
-        .join("\n")
+        .map((entry) => `${entry.name || getGuandanPlayerName(context, entry.player_id)}:${(entry.cards || []).join(" ") || "-"}`)
+        .join(" | ")
     : "-";
   const topLines = top.length
     ? top
         .map((entry, index) => {
           const cards = Array.isArray(entry.cards) ? entry.cards.join(" ") : "-";
           const score = typeof entry.score === "number" ? Math.round(entry.score * 10) / 10 : "-";
-          return `${index + 1}. ${cards}\nscore: ${score}\n${formatGuandanBotComponentsText(entry.components)}`;
+          return `${index + 1}) ${cards} @${score} :: ${formatGuandanBotComponentsText(entry.components)}`;
         })
-        .join("\n\n")
+        .join("\n")
     : "-";
-  const summary = {
-    game: "guandan",
-    phase: view.phase || null,
-    round_number: view.round_number ?? null,
-    dealer_team: view.dealer_team ?? null,
-    level_rank: view.level_rank ?? null,
-    current_turn: {
-      player_id: view.current_turn || null,
-      name: getGuandanPlayerName(view, view.current_turn),
-    },
-    current_trick: view.current_trick
-      ? {
-          player_id: view.current_trick.player_id,
-          name: getGuandanPlayerName(view, view.current_trick.player_id),
-          type: view.current_trick.type || null,
-          size: view.current_trick.size ?? null,
-          cards: getGuandanCurrentTrickCards(view),
-        }
-      : null,
-    legal_actions: Array.isArray(view.legal_actions) ? view.legal_actions : [],
-    players: players.map((player) => ({
-      player_id: player.player_id,
-      name: player.name || player.player_id,
-      team: player.team || null,
-      hand_count: player.hand_count ?? null,
-      finished: !!player.finished,
-      finish_rank: player.finish_rank ?? null,
-    })),
-    trick_plays: trickPlays.map((entry) => ({
-      player_id: entry.player_id,
-      name: entry.name || getGuandanPlayerName(view, entry.player_id),
-      cards: Array.isArray(entry.cards) ? entry.cards : [],
-    })),
-    reviewed_bot: {
-      player_id: playerId,
-      name: getGuandanPlayerName(view, playerId),
-      method: explain.method || "heuristic",
-      method_details: methodDetails,
-      chosen: chosen,
-      hand_before_action: handBeforeAction,
-      remaining_hand_after_action: remainingHand,
-      top: top,
-    },
-  };
+  const detailBits = [];
+  if (typeof methodDetails.sims_per_action === "number") {
+    detailBits.push(`sims=${methodDetails.sims_per_action}`);
+  }
+  if (typeof methodDetails.depth === "number") {
+    detailBits.push(`depth=${methodDetails.depth}`);
+  }
+  if (typeof methodDetails.candidates === "number") {
+    detailBits.push(`cand=${methodDetails.candidates}`);
+  }
+  if (typeof methodDetails.tree_ply === "number") {
+    detailBits.push(`tree=${methodDetails.tree_ply}`);
+  }
+  if (typeof methodDetails.reply_width === "number") {
+    detailBits.push(`reply=${methodDetails.reply_width}`);
+  }
+  if (typeof methodDetails.risk_lambda === "number") {
+    detailBits.push(`risk=${methodDetails.risk_lambda}`);
+  }
+  const trickSummary = context.current_trick
+    ? `${context.current_trick.type || "-"}:${getGuandanPlayerName(context, context.current_trick.player_id)}:${getGuandanCurrentTrickCards(context)}`
+    : "-";
   return [
-    "Guandan Bot Decision Review",
-    "",
-    `Bot: ${getGuandanPlayerName(view, playerId)}`,
-    `Method: ${explain.method || "heuristic"}`,
-    `Phase: ${view.phase || "-"}`,
-    `Round: ${view.round_number ?? "-"}`,
-    `Dealer Team: ${view.dealer_team ?? "-"}`,
-    `Level: ${view.level_rank ?? "-"}`,
-    `Current Turn: ${getGuandanPlayerName(view, view.current_turn)}`,
-    `Current Trick: ${view.current_trick ? `${view.current_trick.type || "-"} by ${getGuandanPlayerName(view, view.current_trick.player_id)} -> ${getGuandanCurrentTrickCards(view)}` : "-"}`,
-    "",
-    "Players:",
-    playerLines || "-",
-    "",
-    "Trick Plays:",
-    trickLines,
-    "",
-    "Bot Hand Before Action:",
-    handBeforeAction.join(" ") || "-",
-    "",
-    "Bot Remaining Hand After Action:",
-    remainingHand.join(" ") || "-",
-    "",
-    `Chosen: ${chosenCards.join(" ") || "-"}`,
-    `Chosen Score: ${typeof chosen.score === "number" ? Math.round(chosen.score * 10) / 10 : "-"}`,
-    "Score Breakdown:",
-    formatGuandanBotComponentsText(chosen.components),
-    "",
-    "Top Candidates:",
+    "guandan_bot_review",
+    `bot=${getGuandanPlayerName(context, playerId)} method=${explain.method || "heuristic"} ${detailBits.join(" ")}`.trim(),
+    `phase=${context.phase || "-"} round=${context.round_number ?? "-"} dealer=${context.dealer_team ?? "-"} level=${context.level_rank ?? "-"} turn=${getGuandanPlayerName(context, context.current_turn)}`,
+    `trick=${trickSummary}`,
+    `players=${playerLine || "-"}`,
+    `trick_plays=${trickLine}`,
+    `hand_before=${handBeforeAction.join(" ") || "-"}`,
+    `hand_after=${remainingHand.join(" ") || "-"}`,
+    `chosen=${chosenCards.join(" ") || "-"} score=${typeof chosen.score === "number" ? Math.round(chosen.score * 10) / 10 : "-"} comps=${formatGuandanBotComponentsText(chosen.components)}`,
+    "top=",
     topLines,
-    "",
-    "Structured Summary JSON:",
-    JSON.stringify(summary, null, 2),
   ].join("\n");
 }
 

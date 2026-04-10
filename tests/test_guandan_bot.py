@@ -189,6 +189,11 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertIn("mcts_win_rate", explain.get("chosen", {}).get("components", {}))
         self.assertIn("hand", explain)
         self.assertNotIn("🃏B", explain.get("hand", []))
+        self.assertIn("hand_before", explain)
+        self.assertIn("🃏B", explain.get("hand_before", []))
+        self.assertEqual(explain.get("decision", {}).get("current_turn"), "bot")
+        self.assertEqual(explain.get("decision", {}).get("phase"), "playing")
+        self.assertEqual(explain.get("decision", {}).get("level_rank"), state["level_rank"])
 
     def test_mcts_pick_action_uses_risk_adjusted_score(self):
         players = [

@@ -1335,6 +1335,60 @@ def _bot_select_play(state: Dict, bot_id: str, depth: int) -> Optional[List[int]
     return scored[0][0]
 
 
+def _bot_explain_snapshot(state: Dict) -> Dict:
+    order = state.get("turn_order") or list(state.get("players", {}).keys())
+    players = []
+    for pid in order:
+        pdata = state["players"].get(pid, {})
+        meta = state.get("player_meta", {}).get(pid, {})
+        players.append(
+            {
+                "player_id": pid,
+                "name": meta.get("name"),
+                "team": _team_of(state, pid),
+                "hand_count": len(pdata.get("hand", [])),
+                "finished": pdata.get("finished", False),
+                "finish_rank": pdata.get("finish_rank"),
+            }
+        )
+
+    trick_view = None
+    current_trick = state.get("current_trick")
+    if current_trick:
+        combo = current_trick.get("combo") or {}
+        trick_view = {
+            "player_id": current_trick.get("player_id"),
+            "type": combo.get("type"),
+            "size": combo.get("size"),
+            "rank_value": combo.get("rank_value"),
+            "high_value": combo.get("high_value"),
+            "cards": list(current_trick.get("cards") or []),
+        }
+
+    trick_plays = []
+    for pid in order:
+        cards = (state.get("trick_plays") or {}).get(pid)
+        if not cards:
+            continue
+        meta = state.get("player_meta", {}).get(pid, {})
+        if cards == "pass":
+            labels = ["Pass"]
+        else:
+            labels = [_card_label(card) for card in cards]
+        trick_plays.append({"player_id": pid, "name": meta.get("name"), "cards": labels})
+
+    return {
+        "phase": state.get("phase"),
+        "round_number": state.get("round_number"),
+        "dealer_team": state.get("dealer_team"),
+        "level_rank": state.get("level_rank"),
+        "current_turn": state.get("current_turn"),
+        "players": players,
+        "current_trick": trick_view,
+        "trick_plays": trick_plays,
+    }
+
+
 def _build_bot_explain(
     state: Dict,
     bot_id: str,
@@ -1347,6 +1401,9 @@ def _build_bot_explain(
 ) -> Dict:
     hand = state["players"][bot_id]["hand"]
     hand_map = _map_hand_by_id(hand)
+    hand_before = sorted(hand, key=lambda c: _single_order_value(c, state["level_rank"]), reverse=True)
+    hand_before_labels = [_card_label(card) for card in hand_before]
+    decision = _bot_explain_snapshot(state)
 
     def label_cards(card_ids: List[int]) -> List[str]:
         labels = []
@@ -1435,6 +1492,8 @@ def _build_bot_explain(
                 "score": chosen_score if chosen_score is not None else -999.0,
                 "components": chosen_comps,
             },
+            "decision": decision,
+            "hand_before": hand_before_labels,
             "hand": hand_labels_for(chosen_action_type),
             "top": top,
         }
@@ -1487,6 +1546,8 @@ def _build_bot_explain(
             "score": chosen_comps.get("total", -999.0),
             "components": chosen_clean,
         },
+        "decision": decision,
+        "hand_before": hand_before_labels,
         "hand": hand_labels_for(chosen_action_type),
         "top": top,
     }
