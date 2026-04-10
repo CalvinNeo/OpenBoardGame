@@ -28,6 +28,8 @@ DEFAULT_CONFIG = {
     "bot_mcts_early_stop_gap": 7.5,
     "bot_mcts_early_stop_stable_rounds": 2,
     "bot_mcts_obvious_response_margin": 2.25,
+    "bot_mcts_override_margin": 5.5,
+    "bot_mcts_structure_guard_margin": 2.5,
     "bot_endgame_threshold": 24,
     "bot_minimax_depth": 5,
     "bot_minimax_width": 8,
@@ -1897,65 +1899,11 @@ def _lead_single_break_penalty(hand: List[Dict], cards: List[int], level_rank: i
 
 
 def _lead_low_single_escape_bonus(hand: List[Dict], cards: List[int], level_rank: int) -> float:
-    if len(cards) != 1 or len(hand) > 6:
-        return 0.0
-    hand_map = _map_hand_by_id(hand)
-    card = hand_map.get(cards[0])
-    if not card or _is_joker(card) or _is_wild(card, level_rank):
-        return 0.0
-    rank = card.get("rank")
-    if rank is None:
-        return 0.0
-    before_count = _rank_count_map(hand, level_rank).get(rank, 0)
-    if before_count != 1:
-        return 0.0
-    value = _single_order_value(card, level_rank)
-    if value >= 58:
-        return 0.0
-    bonus = 3.0 + (58 - value) * 0.55
-    if len(hand) <= 5:
-        bonus *= 1.2
-    return bonus
+    raise RuntimeError("_lead_low_single_escape_bonus should be bound from guandan_ai")
 
 
 def _lead_low_single_trap_penalty(hand: List[Dict], cards: List[int], level_rank: int) -> float:
-    if len(hand) > 6:
-        return 0.0
-    remaining = _remove_cards(hand, cards)
-    if not remaining:
-        return 0.0
-
-    counts = _rank_count_map(remaining, level_rank)
-    low_single_burden = 0.0
-    control_singles = 0
-    strong_pairs = 0
-    special_cover = 0
-
-    for rank, count in counts.items():
-        value = _point_order_value(rank, level_rank)
-        if count == 1 and value < 58:
-            low_single_burden += 3.0 + (58 - value) * 0.55
-        elif count == 1 and value >= 60:
-            control_singles += 1
-        elif count >= 2 and value >= 60:
-            strong_pairs += 1
-
-    if low_single_burden <= 0.001:
-        return 0.0
-
-    for card in remaining:
-        if _is_joker(card) or _is_wild(card, level_rank):
-            special_cover += 1
-
-    if len(remaining) <= 3:
-        low_single_burden *= 1.85
-    elif len(remaining) <= 4:
-        low_single_burden *= 1.6
-    else:
-        low_single_burden *= 1.25
-
-    cover = control_singles * 2.5 + strong_pairs * 0.9 + special_cover * 2.2
-    return max(0.0, low_single_burden - cover)
+    raise RuntimeError("_lead_low_single_trap_penalty should be bound from guandan_ai")
 
 
 def _should_prune_weak_lead_single(
@@ -2029,131 +1977,15 @@ def _should_prune_wasteful_lead_bomb(
 
 
 def _single_lock_bonus(state: Dict, player_id: str, cards: List[int], combo: Dict) -> float:
-    current_trick = state.get("current_trick")
-    if not current_trick or len(cards) != 1:
-        return 0.0
-    leader = current_trick.get("player_id")
-    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
-        return 0.0
-    current_combo = current_trick.get("combo") or {}
-    if current_combo.get("type") != "single" or combo.get("type") != "single":
-        return 0.0
-    if current_combo.get("rank_value", 0) > 54:
-        return 0.0
-
-    hand = state["players"][player_id]["hand"]
-    hand_map = _map_hand_by_id(hand)
-    card = hand_map.get(cards[0])
-    level_rank = state["level_rank"]
-    if not card or _is_joker(card) or _is_wild(card, level_rank):
-        return 0.0
-    if card.get("rank") != level_rank:
-        return 0.0
-
-    counts = _rank_count_map(hand, level_rank)
-    if counts.get(level_rank, 0) != 1:
-        return 0.0
-
-    chosen_value = _single_order_value(card, level_rank)
-    threshold = current_combo.get("rank_value", 0)
-    for other in hand:
-        if other["id"] == card["id"] or _is_joker(other) or _is_wild(other, level_rank):
-            continue
-        value = _single_order_value(other, level_rank)
-        if value <= threshold or value >= chosen_value:
-            continue
-        if counts.get(other.get("rank"), 0) == 1:
-            return 0.0
-
-    active_opponents = [
-        pid
-        for pid in state["turn_order"]
-        if _team_of(state, pid) != _team_of(state, player_id) and not state["players"][pid]["finished"]
-    ]
-    if not active_opponents:
-        return 0.0
-
-    bonus = 4.0
-    if len(active_opponents) >= 2:
-        bonus += 1.0
-    if min(len(state["players"][pid]["hand"]) for pid in active_opponents) <= 5:
-        bonus += 1.5
-    return bonus
+    raise RuntimeError("_single_lock_bonus should be bound from guandan_ai")
 
 
 def _takeover_opportunity_score(state: Dict, player_id: str, cards: List[int]) -> float:
-    current_trick = state.get("current_trick")
-    if not current_trick or not cards:
-        return 0.0
-    leader = current_trick.get("player_id")
-    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
-        return 0.0
-    hand = state["players"][player_id]["hand"]
-    hand_map = _map_hand_by_id(hand)
-    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
-    combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
-    if not combo:
-        return 0.0
-
-    structure_delta = _play_structure_delta(hand, cards, state["level_rank"])
-    score = max(0.0, 3.2 - structure_delta)
-    score += max(-4.0, _shape_transition_score(hand, cards, state["level_rank"]) * 0.7)
-    material_cost = _response_material_cost(state, player_id, cards, combo)
-    score += max(0.0, 6.2 - material_cost) * 0.95
-    if material_cost > 7.0:
-        score -= (material_cost - 7.0) * 0.45
-    if combo["type"] not in BOMB_TYPES:
-        score += 0.8
-    else:
-        score -= 1.8 + _bomb_tier(combo) * 0.6
-        current_combo = current_trick.get("combo", {})
-        minimal = _minimal_bomb_response(hand, state["level_rank"], current_combo, state.get("config", {}))
-        if (
-            current_combo.get("type") == "single"
-            and current_combo.get("rank_value", 0) >= 90
-            and minimal is not None
-            and tuple(sorted(minimal)) == tuple(sorted(cards))
-        ):
-            low_bomb_anchor = _point_order_value(3, state["level_rank"])
-            rank_pressure = max(0.0, combo.get("rank_value", 0) - low_bomb_anchor)
-            score += max(0.0, 7.5 - rank_pressure * 1.3)
-        teammate_control = _teammate_future_control_probability(state, player_id)
-        if current_combo.get("type") == "single" and current_combo.get("rank_value", 0) >= 70 and teammate_control > 0:
-            score -= teammate_control * (7.5 + _bomb_tier(combo) * 1.8)
-
-    opp_ids = [
-        pid
-        for pid in state["turn_order"]
-        if _team_of(state, pid) != _team_of(state, player_id) and not state["players"][pid]["finished"]
-    ]
-    likely_blocks = 0
-    likely_beats = 0
-    for opp in opp_ids:
-        if _bot_estimate_opponent_can_beat(state, opp, combo):
-            likely_beats += 1
-        else:
-            likely_blocks += 1
-    score += _single_lock_bonus(state, player_id, cards, combo)
-    score += likely_blocks * 0.7
-    score -= likely_beats * 0.4
-    if len(cards) == len(hand):
-        score += 10.0
-    return max(0.0, score)
+    raise RuntimeError("_takeover_opportunity_score should be bound from guandan_ai")
 
 
 def _best_takeover_opportunity(state: Dict, player_id: str) -> float:
-    current_trick = state.get("current_trick")
-    if not current_trick:
-        return 0.0
-    leader = current_trick.get("player_id")
-    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
-        return 0.0
-    options = _list_hint_options(state, player_id)
-    options = _filter_overbomb_options(state, player_id, options)
-    options = _rank_response_options(state, player_id, options)
-    if not options:
-        return 0.0
-    return max(_takeover_opportunity_score(state, player_id, cards) for cards in options)
+    raise RuntimeError("_best_takeover_opportunity should be bound from guandan_ai")
 
 
 def _best_response_play_score(state: Dict, player_id: str, depth: int, non_bomb_only: bool = True) -> Optional[float]:
@@ -2208,8 +2040,12 @@ _AI_EXPORTED_FUNCS = (
     "_teammate_protect_bonus",
     "_teammate_overtrick_penalty",
     "_evaluate_state_for_bot",
+    "_action_combo",
+    "_heuristic_best_action",
     "_candidate_actions",
+    "_should_use_mcts",
     "_determinize_state",
+    "_should_accept_mcts_override",
     "_next_actor",
     "_rollout_policy_action",
     "_rollout_value",
@@ -2225,7 +2061,12 @@ _AI_EXPORTED_FUNCS = (
     "_mcts_pick_action",
     "_minimax_value",
     "_minimax_pick_action",
+    "_lead_low_single_escape_bonus",
+    "_lead_low_single_trap_penalty",
     "_minimal_bomb_response",
+    "_single_lock_bonus",
+    "_takeover_opportunity_score",
+    "_best_takeover_opportunity",
     "_bot_score_components",
     "_bot_score_play",
     "_filter_overbomb_options",
@@ -2931,6 +2772,8 @@ class GuandanGame:
         total_left = sum(len(state["players"][pid]["hand"]) for pid in state["turn_order"])
         endgame_threshold = config.get("bot_endgame_threshold", 18)
         depth = config.get("bot_search_depth", 2)
+        search_width = config.get("bot_minimax_width", 6)
+        heuristic_action = _heuristic_best_action(state, bot_id, depth)
         chosen = None
         chosen_action_type = None
         decided = False
@@ -2943,24 +2786,30 @@ class GuandanGame:
                 det,
                 bot_id,
                 config.get("bot_minimax_depth", 4),
-                config.get("bot_minimax_width", 6),
+                search_width,
             )
             if chosen:
                 decided = True
                 chosen_action_type = "play"
                 method = "minimax"
-        if not chosen:
+        if not decided and total_left > endgame_threshold and _should_use_mcts(state, bot_id, search_width):
             mcts_action, mcts_scores = _mcts_pick_action(
                 state,
                 bot_id,
                 config.get("bot_mcts_sims", 60),
                 config.get("bot_mcts_depth", 8),
-                config.get("bot_minimax_width", 6),
+                search_width,
                 config.get("bot_mcts_tree_ply", 2),
                 config.get("bot_mcts_reply_width", 4),
                 config.get("bot_mcts_risk_lambda", 0.28),
             )
-            if mcts_action is not None:
+            if mcts_action is not None and _should_accept_mcts_override(
+                state,
+                bot_id,
+                heuristic_action,
+                mcts_action,
+                depth,
+            ):
                 decided = True
                 method = "mcts"
                 method_scores = mcts_scores
@@ -2981,10 +2830,15 @@ class GuandanGame:
                     chosen = []
                     chosen_action_type = "pass"
         if not decided:
-            chosen = _bot_select_play(state, bot_id, depth)
-            if chosen:
+            if heuristic_action and heuristic_action.get("type") == "play":
+                chosen = heuristic_action.get("card_ids") or []
                 decided = True
                 chosen_action_type = "play"
+                method = "heuristic"
+            elif heuristic_action and heuristic_action.get("type") == "pass":
+                chosen = []
+                decided = True
+                chosen_action_type = "pass"
                 method = "heuristic"
         if decided:
             explain = _build_bot_explain(

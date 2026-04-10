@@ -235,8 +235,67 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             0.0,
         )
         explain = state.get("bot_explain", {}).get("bot3", {})
-        self.assertEqual(explain.get("method"), "mcts")
+        self.assertEqual(explain.get("method"), "heuristic")
         self.assertEqual(explain.get("chosen", {}).get("cards"), chosen_labels)
+
+    def test_bot_move_skips_mcts_on_lead_position(self):
+        players = [
+            {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
+            {"player_id": "opp", "name": "Opp", "seat": 1, "is_bot": False},
+            {"player_id": "mate", "name": "Mate", "seat": 2, "is_bot": False},
+            {"player_id": "opp2", "name": "Opp2", "seat": 3, "is_bot": False},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["current_turn"] = "bot"
+        state["current_trick"] = None
+        state["config"]["bot_endgame_threshold"] = 0
+
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        state["players"]["bot"]["hand"] = [
+            pick_label(label)
+            for label in ["♠️A", "♥️A", "♣️K", "♦️K", "♠️Q", "♥️Q", "♣️J", "♦️10", "♠️9", "♥️8"]
+        ]
+        for pid, count in (("opp", 18), ("mate", 18), ("opp2", 18)):
+            state["players"][pid]["hand"] = deck[:count]
+            del deck[:count]
+
+        with mock.patch.object(guandan, "_mcts_pick_action", side_effect=AssertionError("mcts should not run on lead")):
+            action = guandan.GuandanGame.bot_move(state, "bot")
+
+        self.assertEqual(action.get("type"), "play")
+        explain = state.get("bot_explain", {}).get("bot", {})
+        self.assertEqual(explain.get("method"), "heuristic")
+
+    def test_bot_move_rejects_bad_mcts_override_when_heuristic_structure_is_better(self):
+        state, big = self._make_state()
+        state["config"]["bot_endgame_threshold"] = 0
+        bomb_cards = [card for card in state["players"]["bot"]["hand"] if card.get("rank") == 9][:4]
+        bad_action = {"type": "play", "card_ids": [card["id"] for card in bomb_cards]}
+        bad_scores = [
+            (
+                bad_action,
+                99.0,
+                4,
+                {"avg": 99.0, "adjusted": 99.0, "std": 0.0, "win_rate": 1.0, "min": 99.0, "max": 99.0},
+            )
+        ]
+
+        with mock.patch.object(guandan, "_mcts_pick_action", return_value=(bad_action, bad_scores)):
+            action = guandan.GuandanGame.bot_move(state, "bot")
+
+        self.assertEqual(action.get("type"), "play")
+        self.assertEqual(action.get("card_ids"), [big["id"]])
+        explain = state.get("bot_explain", {}).get("bot", {})
+        self.assertEqual(explain.get("method"), "heuristic")
+        self.assertEqual(explain.get("chosen", {}).get("cards"), [guandan._card_label(big)])
 
     def test_mcts_explain_includes_mcts_score(self):
         state, big = self._make_state()
@@ -450,7 +509,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         action = guandan.GuandanGame.bot_move(state, "bot")
         self.assertEqual(action.get("type"), "pass")
         explain = state.get("bot_explain", {}).get("bot", {})
-        self.assertEqual(explain.get("method"), "mcts")
+        self.assertEqual(explain.get("method"), "heuristic")
         self.assertEqual(explain.get("chosen", {}).get("cards"), ["Pass"])
 
     def test_evaluate_state_prefers_stronger_hand(self):

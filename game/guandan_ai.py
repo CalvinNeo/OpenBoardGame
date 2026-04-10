@@ -41,6 +41,8 @@ _card_label = _proxy("_card_label")
 _remove_cards = _proxy("_remove_cards")
 _single_order_value = _proxy("_single_order_value")
 _point_order_value = _proxy("_point_order_value")
+_is_joker = _proxy("_is_joker")
+_is_wild = _proxy("_is_wild")
 _evaluate_combo = _proxy("_evaluate_combo")
 _team_of = _proxy("_team_of")
 _teammate_of = _proxy("_teammate_of")
@@ -56,16 +58,15 @@ _bot_estimate_opponent_can_beat = _proxy("_bot_estimate_opponent_can_beat")
 _control_group_break_penalty = _proxy("_control_group_break_penalty")
 _group_fragment_penalty = _proxy("_group_fragment_penalty")
 _shape_transition_score = _proxy("_shape_transition_score")
+_play_structure_delta = _proxy("_play_structure_delta")
+_rank_count_map = _proxy("_rank_count_map")
 _cards_use_special_material = _proxy("_cards_use_special_material")
-_lead_low_single_trap_penalty = _proxy("_lead_low_single_trap_penalty")
-_lead_low_single_escape_bonus = _proxy("_lead_low_single_escape_bonus")
 _list_hint_options = _proxy("_list_hint_options")
 _rank_response_options = _proxy("_rank_response_options")
 _rank_lead_options = _proxy("_rank_lead_options")
 _choose_lead_play = _proxy("_choose_lead_play")
 _can_play_all = _proxy("_can_play_all")
 _minimal_bomb_response = _proxy("_minimal_bomb_response")
-_single_lock_bonus = _proxy("_single_lock_bonus")
 _find_bomb_candidates = _proxy("_find_bomb_candidates")
 _compare_combos = _proxy("_compare_combos")
 _max_tribute_cards = _proxy("_max_tribute_cards")
@@ -283,6 +284,196 @@ def _high_single_bomb_profile(state: Dict, player_id: str) -> Optional[Dict]:
     }
 
 
+def _lead_low_single_escape_bonus(hand: List[Dict], cards: List[int], level_rank: int) -> float:
+    if len(cards) != 1 or len(hand) > 6:
+        return 0.0
+    hand_map = _map_hand_by_id(hand)
+    card = hand_map.get(cards[0])
+    if not card or _is_joker(card) or _is_wild(card, level_rank):
+        return 0.0
+    rank = card.get("rank")
+    if rank is None:
+        return 0.0
+    before_count = _rank_count_map(hand, level_rank).get(rank, 0)
+    if before_count != 1:
+        return 0.0
+    value = _single_order_value(card, level_rank)
+    if value >= 58:
+        return 0.0
+    bonus = 3.0 + (58 - value) * 0.55
+    if len(hand) <= 5:
+        bonus *= 1.2
+    return bonus
+
+
+def _lead_low_single_trap_penalty(hand: List[Dict], cards: List[int], level_rank: int) -> float:
+    if len(hand) > 6:
+        return 0.0
+    remaining = _remove_cards(hand, cards)
+    if not remaining:
+        return 0.0
+
+    counts = _rank_count_map(remaining, level_rank)
+    low_single_burden = 0.0
+    control_singles = 0
+    strong_pairs = 0
+    special_cover = 0
+
+    for rank, count in counts.items():
+        value = _point_order_value(rank, level_rank)
+        if count == 1 and value < 58:
+            low_single_burden += 3.0 + (58 - value) * 0.55
+        elif count == 1 and value >= 60:
+            control_singles += 1
+        elif count >= 2 and value >= 60:
+            strong_pairs += 1
+
+    if low_single_burden <= 0.001:
+        return 0.0
+
+    for card in remaining:
+        if _is_joker(card) or _is_wild(card, level_rank):
+            special_cover += 1
+
+    if len(remaining) <= 3:
+        low_single_burden *= 1.85
+    elif len(remaining) <= 4:
+        low_single_burden *= 1.6
+    else:
+        low_single_burden *= 1.25
+
+    cover = control_singles * 2.5 + strong_pairs * 0.9 + special_cover * 2.2
+    return max(0.0, low_single_burden - cover)
+
+
+def _single_lock_bonus(state: Dict, player_id: str, cards: List[int], combo: Dict) -> float:
+    current_trick = state.get("current_trick")
+    if not current_trick or len(cards) != 1:
+        return 0.0
+    leader = current_trick.get("player_id")
+    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+        return 0.0
+    current_combo = current_trick.get("combo") or {}
+    if current_combo.get("type") != "single" or combo.get("type") != "single":
+        return 0.0
+    if current_combo.get("rank_value", 0) > 54:
+        return 0.0
+
+    hand = state["players"][player_id]["hand"]
+    hand_map = _map_hand_by_id(hand)
+    card = hand_map.get(cards[0])
+    level_rank = state["level_rank"]
+    if not card or _is_joker(card) or _is_wild(card, level_rank):
+        return 0.0
+    if card.get("rank") != level_rank:
+        return 0.0
+
+    counts = _rank_count_map(hand, level_rank)
+    if counts.get(level_rank, 0) != 1:
+        return 0.0
+
+    chosen_value = _single_order_value(card, level_rank)
+    threshold = current_combo.get("rank_value", 0)
+    for other in hand:
+        if other["id"] == card["id"] or _is_joker(other) or _is_wild(other, level_rank):
+            continue
+        value = _single_order_value(other, level_rank)
+        if value <= threshold or value >= chosen_value:
+            continue
+        if counts.get(other.get("rank"), 0) == 1:
+            return 0.0
+
+    active_opponents = [
+        pid
+        for pid in state["turn_order"]
+        if _team_of(state, pid) != _team_of(state, player_id) and not state["players"][pid]["finished"]
+    ]
+    if not active_opponents:
+        return 0.0
+
+    bonus = 4.0
+    if len(active_opponents) >= 2:
+        bonus += 1.0
+    if min(len(state["players"][pid]["hand"]) for pid in active_opponents) <= 5:
+        bonus += 1.5
+    return bonus
+
+
+def _takeover_opportunity_score(state: Dict, player_id: str, cards: List[int]) -> float:
+    current_trick = state.get("current_trick")
+    if not current_trick or not cards:
+        return 0.0
+    leader = current_trick.get("player_id")
+    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+        return 0.0
+    hand = state["players"][player_id]["hand"]
+    hand_map = _map_hand_by_id(hand)
+    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+    combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
+    if not combo:
+        return 0.0
+
+    structure_delta = _play_structure_delta(hand, cards, state["level_rank"])
+    score = max(0.0, 3.2 - structure_delta)
+    score += max(-4.0, _shape_transition_score(hand, cards, state["level_rank"]) * 0.7)
+    material_cost = _response_material_cost(state, player_id, cards, combo)
+    score += max(0.0, 6.2 - material_cost) * 0.95
+    if material_cost > 7.0:
+        score -= (material_cost - 7.0) * 0.45
+    if combo["type"] not in BOMB_TYPES:
+        score += 0.8
+    else:
+        score -= 1.8 + _bomb_tier(combo) * 0.6
+        current_combo = current_trick.get("combo", {})
+        minimal = _minimal_bomb_response(hand, state["level_rank"], current_combo, state.get("config", {}))
+        if (
+            current_combo.get("type") == "single"
+            and current_combo.get("rank_value", 0) >= 90
+            and minimal is not None
+            and tuple(sorted(minimal)) == tuple(sorted(cards))
+        ):
+            low_bomb_anchor = _point_order_value(3, state["level_rank"])
+            rank_pressure = max(0.0, combo.get("rank_value", 0) - low_bomb_anchor)
+            score += max(0.0, 7.5 - rank_pressure * 1.3)
+        teammate_control = _teammate_future_control_probability(state, player_id)
+        if current_combo.get("type") == "single" and current_combo.get("rank_value", 0) >= 70 and teammate_control > 0:
+            score -= teammate_control * (7.5 + _bomb_tier(combo) * 1.8)
+
+    opp_ids = [
+        pid
+        for pid in state["turn_order"]
+        if _team_of(state, pid) != _team_of(state, player_id) and not state["players"][pid]["finished"]
+    ]
+    likely_blocks = 0
+    likely_beats = 0
+    for opp in opp_ids:
+        if _bot_estimate_opponent_can_beat(state, opp, combo):
+            likely_beats += 1
+        else:
+            likely_blocks += 1
+    score += _single_lock_bonus(state, player_id, cards, combo)
+    score += likely_blocks * 0.7
+    score -= likely_beats * 0.4
+    if len(cards) == len(hand):
+        score += 10.0
+    return max(0.0, score)
+
+
+def _best_takeover_opportunity(state: Dict, player_id: str) -> float:
+    current_trick = state.get("current_trick")
+    if not current_trick:
+        return 0.0
+    leader = current_trick.get("player_id")
+    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+        return 0.0
+    options = _list_hint_options(state, player_id)
+    options = _filter_overbomb_options(state, player_id, options)
+    options = _rank_response_options(state, player_id, options)
+    if not options:
+        return 0.0
+    return max(_takeover_opportunity_score(state, player_id, cards) for cards in options)
+
+
 def _hand_state_value_components(state: Dict, bot_id: str, hand: List[Dict]) -> Dict[str, float]:
     level_rank = state["level_rank"]
     remaining = len(hand)
@@ -350,6 +541,29 @@ def _evaluate_state_for_bot(state: Dict, bot_id: str) -> float:
     return score
 
 
+def _action_combo(state: Dict, player_id: str, action: Optional[Dict]) -> Optional[Dict]:
+    if not action or action.get("type") != "play":
+        return None
+    hand = state["players"][player_id]["hand"]
+    hand_map = _map_hand_by_id(hand)
+    play_cards = [hand_map[cid] for cid in action.get("card_ids", []) if cid in hand_map]
+    if not play_cards:
+        return None
+    return _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
+
+
+def _heuristic_best_action(state: Dict, bot_id: str, depth: int) -> Optional[Dict]:
+    legal = GuandanGame.get_legal_actions(state, bot_id)
+    if "play" not in legal:
+        return None
+    chosen = _bot_select_play(state, bot_id, depth)
+    if chosen:
+        return {"type": "play", "card_ids": chosen}
+    if state.get("current_trick") and "pass" in legal:
+        return {"type": "pass"}
+    return None
+
+
 def _candidate_actions(state: Dict, player_id: str, limit: int) -> List[Dict]:
     legal = GuandanGame.get_legal_actions(state, player_id)
     if not legal:
@@ -400,6 +614,38 @@ def _candidate_actions(state: Dict, player_id: str, limit: int) -> List[Dict]:
     return actions
 
 
+def _should_use_mcts(state: Dict, bot_id: str, width: int) -> bool:
+    legal = GuandanGame.get_legal_actions(state, bot_id)
+    if "play" not in legal:
+        return False
+    current_trick = state.get("current_trick")
+    if not current_trick:
+        return False
+    if _teammate_lead_context(state, bot_id):
+        return False
+
+    actions = _candidate_actions(state, bot_id, width)
+    actions = _filter_overbomb_actions(state, bot_id, actions)
+    play_actions = [action for action in actions if action.get("type") == "play"]
+    has_pass = any(action.get("type") == "pass" for action in actions)
+    if not play_actions:
+        return False
+
+    current_combo = current_trick.get("combo") or {}
+    combo_type = current_combo.get("type")
+    if combo_type in BOMB_TYPES:
+        return True
+
+    has_bomb_response = any((_action_combo(state, bot_id, action) or {}).get("type") in BOMB_TYPES for action in play_actions)
+    if combo_type == "single":
+        return current_combo.get("rank_value", 0) >= 70 or has_bomb_response
+    if combo_type in ("pair", "three"):
+        return has_bomb_response or (has_pass and len(play_actions) <= 2)
+    if combo_type in ("full_house", "straight", "three_pairs", "steel_plate"):
+        return has_bomb_response or has_pass or len(play_actions) <= 4
+    return False
+
+
 def _determinize_state(state: Dict, perspective_id: str, rng: random.Random) -> Dict:
     det = copy.deepcopy(state)
     full = _full_deck()
@@ -426,6 +672,66 @@ def _determinize_state(state: Dict, perspective_id: str, rng: random.Random) -> 
             continue
         det["players"][pid]["hand"] = [id_to_card[cid] for cid in assigned]
     return det
+
+
+def _should_accept_mcts_override(
+    state: Dict,
+    bot_id: str,
+    heuristic_action: Optional[Dict],
+    mcts_action: Optional[Dict],
+    depth: int,
+) -> bool:
+    if not mcts_action:
+        return False
+    if not heuristic_action:
+        return True
+    if _mcts_action_key(heuristic_action) == _mcts_action_key(mcts_action):
+        return True
+
+    cfg = state.get("config", {})
+    override_margin = float(cfg.get("bot_mcts_override_margin", 5.5))
+    structure_margin = float(cfg.get("bot_mcts_structure_guard_margin", 2.5))
+    heuristic_score = _mcts_root_heuristic_value(state, bot_id, heuristic_action, depth)
+    mcts_score = _mcts_root_heuristic_value(state, bot_id, mcts_action, depth)
+    if heuristic_score >= mcts_score + override_margin:
+        return False
+
+    if heuristic_action.get("type") == "play" and mcts_action.get("type") == "pass":
+        current_trick = state.get("current_trick")
+        leader = current_trick.get("player_id") if current_trick else None
+        if leader is not None and _team_of(state, leader) != _team_of(state, bot_id):
+            if heuristic_score >= mcts_score + structure_margin:
+                return False
+        return True
+
+    if heuristic_action.get("type") != "play" or mcts_action.get("type") != "play":
+        return True
+
+    heuristic_combo = _action_combo(state, bot_id, heuristic_action)
+    mcts_combo = _action_combo(state, bot_id, mcts_action)
+    if not heuristic_combo or not mcts_combo:
+        return True
+
+    hand = state["players"][bot_id]["hand"]
+    heuristic_cards = heuristic_action.get("card_ids", []) or []
+    mcts_cards = mcts_action.get("card_ids", []) or []
+    heuristic_fragment = _group_fragment_penalty(hand, heuristic_cards, state["level_rank"], heuristic_combo)
+    mcts_fragment = _group_fragment_penalty(hand, mcts_cards, state["level_rank"], mcts_combo)
+    heuristic_break = _control_group_break_penalty(hand, heuristic_cards, state["level_rank"])
+    mcts_break = _control_group_break_penalty(hand, mcts_cards, state["level_rank"])
+    heuristic_shape = _shape_transition_score(hand, heuristic_cards, state["level_rank"])
+    mcts_shape = _shape_transition_score(hand, mcts_cards, state["level_rank"])
+
+    if (
+        heuristic_score >= mcts_score + structure_margin
+        and (
+            mcts_fragment > heuristic_fragment + 0.9
+            or mcts_break > heuristic_break + 0.6
+            or mcts_shape + 1.2 < heuristic_shape
+        )
+    ):
+        return False
+    return True
 
 
 def _next_actor(state: Dict) -> Optional[str]:
