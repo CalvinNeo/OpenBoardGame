@@ -1260,6 +1260,7 @@ def _lead_option_score(state: Dict, player_id: str, cards: List[int]) -> float:
     score += remaining_strength * 0.18
     score -= _control_group_break_penalty(hand, cards, state["level_rank"])
     score -= _lead_low_single_trap_penalty(hand, cards, state["level_rank"])
+    score -= _lead_short_next_opponent_penalty(state, player_id, cards)
 
     if combo["type"] == "single":
         score -= _single_order_value(play_cards[0], state["level_rank"]) * 0.12
@@ -1645,6 +1646,10 @@ def _lead_low_single_trap_penalty(hand: List[Dict], cards: List[int], level_rank
     raise RuntimeError("_lead_low_single_trap_penalty should be bound from guandan_ai")
 
 
+def _lead_short_next_opponent_penalty(state: Dict, player_id: str, cards: List[int]) -> float:
+    raise RuntimeError("_lead_short_next_opponent_penalty should be bound from guandan_ai")
+
+
 def _should_prune_weak_lead_single(
     state: Dict, player_id: str, cards: List[int], single_score: float, best_non_single_score: Optional[float]
 ) -> bool:
@@ -1810,6 +1815,7 @@ _AI_EXPORTED_FUNCS = (
     "_minimax_pick_action",
     "_lead_low_single_escape_bonus",
     "_lead_low_single_trap_penalty",
+    "_lead_short_next_opponent_penalty",
     "_minimal_bomb_response",
     "_single_lock_bonus",
     "_takeover_opportunity_score",

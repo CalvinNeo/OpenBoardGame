@@ -807,6 +807,9 @@ function buildGuandanBotExplainClipboardText(playerId, explain) {
       return `${player.name || player.player_id}[${player.team || "-"}]:${player.hand_count ?? "-"}${suffix}`;
     })
     .join(" | ");
+  const countLine = players
+    .map((player) => `${player.name || player.player_id}:${player.hand_count ?? "-"}`)
+    .join(" | ");
   const trickLine = trickPlays.length
     ? trickPlays
         .map((entry) => `${entry.name || getGuandanPlayerName(context, entry.player_id)}:${(entry.cards || []).join(" ") || "-"}`)
@@ -849,6 +852,7 @@ function buildGuandanBotExplainClipboardText(playerId, explain) {
     `phase=${context.phase || "-"} round=${context.round_number ?? "-"} dealer=${context.dealer_team ?? "-"} level=${context.level_rank ?? "-"} turn=${getGuandanPlayerName(context, context.current_turn)}`,
     `trick=${trickSummary}`,
     `players=${playerLine || "-"}`,
+    `counts=${countLine || "-"}`,
     `trick_plays=${trickLine}`,
     `hand_before=${handBeforeAction.join(" ") || "-"}`,
     `hand_after=${remainingHand.join(" ") || "-"}`,

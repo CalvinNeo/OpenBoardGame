@@ -159,6 +159,62 @@ def _combo_numeric_value(combo: Dict) -> int:
     return combo.get("rank_value", 0)
 
 
+def _next_active_after(state: Dict, player_id: str) -> Optional[str]:
+    order = state.get("turn_order") or []
+    if not order:
+        return None
+    if player_id not in order:
+        return order[0]
+    idx = order.index(player_id)
+    for offset in range(1, len(order) + 1):
+        pid = order[(idx + offset) % len(order)]
+        if not state["players"][pid]["finished"]:
+            return pid
+    return None
+
+
+def _lead_short_next_opponent_penalty(state: Dict, player_id: str, cards: List[int]) -> float:
+    if not cards or state.get("current_trick"):
+        return 0.0
+
+    next_pid = _next_active_after(state, player_id)
+    if not next_pid or _team_of(state, next_pid) == _team_of(state, player_id):
+        return 0.0
+
+    next_left = len(state["players"][next_pid]["hand"])
+    if next_left > 2:
+        return 0.0
+
+    hand = state["players"][player_id]["hand"]
+    hand_map = _map_hand_by_id(hand)
+    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+    combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
+    if not combo or combo.get("type") != "single":
+        return 0.0
+
+    rank_value = combo.get("rank_value", 0)
+    if rank_value >= 90:
+        return 0.0
+
+    pressure = max(0.0, 60.0 - float(rank_value))
+    penalty = pressure * (1.45 if next_left <= 1 else 0.75)
+    penalty += 6.0 if next_left <= 1 else 2.5
+
+    if rank_value >= 70:
+        penalty *= 0.12
+    elif rank_value >= 60:
+        penalty *= 0.42
+    elif rank_value >= 58:
+        penalty *= 0.7
+
+    remaining = max(0, len(hand) - len(cards))
+    if remaining <= 4:
+        penalty *= 0.65
+    if remaining <= 2:
+        penalty *= 0.7
+    return max(0.0, penalty)
+
+
 def _teammate_lead_strength(state: Dict, player_id: str) -> float:
     teammate = _teammate_lead_context(state, player_id)
     if not teammate:
