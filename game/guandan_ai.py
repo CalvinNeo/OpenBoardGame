@@ -1513,6 +1513,57 @@ def _is_clean_low_single_response(state: Dict, player_id: str, cards: List[int])
     return True
 
 
+def _cheap_clean_single_takeover_bonus(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Optional[Dict] = None,
+) -> float:
+    current_trick = state.get("current_trick")
+    if not current_trick or len(cards) != 1:
+        return 0.0
+    leader = current_trick.get("player_id")
+    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+        return 0.0
+    current_combo = current_trick.get("combo") or {}
+    if current_combo.get("type") != "single" or current_combo.get("rank_value", 0) >= 55:
+        return 0.0
+    if not _is_clean_low_single_response(state, player_id, cards):
+        return 0.0
+
+    hand = state["players"][player_id]["hand"]
+    hand_map = _map_hand_by_id(hand)
+    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+    if len(play_cards) != 1:
+        return 0.0
+    card = play_cards[0]
+    level_rank = state["level_rank"]
+    if combo is None:
+        combo = _evaluate_combo(play_cards, level_rank, state.get("config", {}))
+    if not combo or combo.get("type") != "single":
+        return 0.0
+    chosen_value = combo.get("rank_value", 0)
+    if chosen_value >= 58:
+        return 0.0
+
+    margin = chosen_value - current_combo.get("rank_value", 0)
+    if margin < 1 or margin > 3:
+        return 0.0
+
+    counts = _rank_count_map(hand, level_rank)
+    rank = card.get("rank")
+    if rank is None or counts.get(rank, 0) != 1:
+        return 0.0
+
+    leader_left = len(state["players"].get(leader, {}).get("hand", []))
+    bonus = 1.9 + (3 - margin) * 0.55
+    if leader_left <= 10:
+        bonus += 0.5
+    if leader_left <= 6:
+        bonus += 0.5
+    return bonus
+
+
 def _mcts_fast_path_scores(
     candidates: List[Dict],
     heuristic_values: Dict[Tuple, float],
@@ -2100,6 +2151,9 @@ def _bot_score_components(
         lock_bonus = _single_lock_bonus(state, bot_id, cards, combo)
         if lock_bonus > 0.001:
             components["single_lock"] = lock_bonus
+        clean_single_bonus = _cheap_clean_single_takeover_bonus(state, bot_id, cards, combo)
+        if clean_single_bonus > 0.001:
+            components["cheap_clean_single_takeover"] = clean_single_bonus
     if not remaining:
         components["finish_bonus"] = 100.0
     if combo["type"] in BOMB_TYPES:
