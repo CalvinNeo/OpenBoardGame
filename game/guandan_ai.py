@@ -74,6 +74,7 @@ _minimal_bomb_response = _proxy("_minimal_bomb_response")
 _find_bomb_candidates = _proxy("_find_bomb_candidates")
 _compare_combos = _proxy("_compare_combos")
 _combo_value = _proxy("_combo_value")
+_lead_option_score = _proxy("_lead_option_score")
 _max_tribute_cards = _proxy("_max_tribute_cards")
 _eligible_return_cards = _proxy("_eligible_return_cards")
 _full_deck = _proxy("_full_deck")
@@ -142,13 +143,13 @@ def _teammate_protect_bonus(state: Dict, player_id: str) -> float:
         for pid in state["turn_order"]
         if _team_of(state, pid) != _team_of(state, player_id) and not state["players"][pid]["finished"]
     ]
-    bonus = 6.0
+    bonus = 4.0
     if active_counts and min(active_counts) >= 10:
-        bonus += 8.0
-    elif teammate_left >= 8:
         bonus += 4.0
+    elif teammate_left >= 8:
+        bonus += 2.5
     if opp_counts and min(opp_counts) >= 8:
-        bonus += 2.0
+        bonus += 1.5
     return bonus
 
 
@@ -230,9 +231,9 @@ def _teammate_overtrick_penalty(
         return 0.0
     teammate_left = len(state["players"][teammate]["hand"])
     current_combo = (state.get("current_trick") or {}).get("combo", {})
-    penalty = _teammate_protect_bonus(state, player_id) * 0.85
+    penalty = _teammate_protect_bonus(state, player_id) * 0.6
     lead_strength = _teammate_lead_strength(state, player_id)
-    penalty += lead_strength
+    penalty += lead_strength * 0.75
     if combo["type"] not in BOMB_TYPES and _breaks_bomb_shape(hand, cards, state["level_rank"]):
         penalty += 18.0 if lead_strength >= 8.0 else 10.0
     if combo["type"] in BOMB_TYPES:
@@ -241,17 +242,17 @@ def _teammate_overtrick_penalty(
             penalty += 4.0
     response_cost = _response_material_cost(state, player_id, cards, combo)
     if response_cost > 0:
-        penalty += response_cost * (0.9 if lead_strength >= 8.0 else 0.55)
+        penalty += response_cost * (0.65 if lead_strength >= 8.0 else 0.42)
     if combo.get("type") == current_combo.get("type"):
         margin = max(0.0, _combo_numeric_value(combo) - _combo_numeric_value(current_combo))
         if lead_strength >= 8.0:
-            penalty += max(0.0, 4.5 - margin * 1.8)
+            penalty += max(0.0, 2.8 - margin * 1.4)
     if (
         combo.get("type") in ("pair", "three", "full_house")
         and _combo_numeric_value(combo) >= _point_order_value(14, state["level_rank"])
         and lead_strength >= 8.0
     ):
-        penalty += 4.5
+        penalty += 3.0
     if teammate_left <= 2:
         penalty -= 7.0
     elif teammate_left <= 4:
@@ -2533,6 +2534,9 @@ def _bot_score_components(
                 components["save_bomb_for_teammate"] = -teammate_control * (7.5 + _bomb_tier(combo) * 1.8)
 
     if not current_trick:
+        lead_score = _lead_option_score(state, bot_id, cards)
+        if abs(lead_score) > 0.001:
+            components["lead_plan"] = lead_score * 0.18
         trap_penalty = _lead_low_single_trap_penalty(hand, cards, level_rank)
         if trap_penalty > 0.001:
             components["low_single_trap"] = -trap_penalty
