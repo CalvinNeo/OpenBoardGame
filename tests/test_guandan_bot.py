@@ -831,6 +831,59 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
 
         self.assertGreater(pass_score, play_score)
 
+    def test_strong_teammate_pair_not_overtricked_by_split_ace_bomb(self):
+        players = [
+            {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
+            {"player_id": "opp", "name": "Opp", "seat": 1, "is_bot": False},
+            {"player_id": "mate", "name": "Mate", "seat": 2, "is_bot": False},
+            {"player_id": "opp2", "name": "Opp2", "seat": 3, "is_bot": False},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["current_turn"] = "bot"
+        state["level_rank"] = 2
+        state["config"]["bot_endgame_threshold"] = 0
+
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        hand = [
+            pick_label(label)
+            for label in ["♦️A", "♥️A", "♠️A", "♣️A", "♥️K", "♦️K", "♠️K", "♥️Q", "♠️Q", "♦️J", "♠️J", "♠️10", "♠️8", "♥️6", "♥️6"]
+        ]
+        teammate_pair = [pick_label("♠️K"), pick_label("♣️K")]
+        state["players"]["bot"]["hand"] = hand
+        idx = 0
+        for pid in ("opp", "mate", "opp2"):
+            state["players"][pid]["hand"] = deck[idx : idx + 15]
+            idx += 15
+
+        state["current_trick"] = {
+            "player_id": "mate",
+            "cards": [card["id"] for card in teammate_pair],
+            "combo": guandan._evaluate_combo(teammate_pair, state["level_rank"], state.get("config", {})),
+        }
+
+        aa_ids = [card["id"] for card in hand if guandan._card_label(card) in ("♦️A", "♥️A")]
+        pass_score = guandan._bot_score_components(state, "bot", None, depth=4)
+        play_score = guandan._bot_score_components(state, "bot", aa_ids, depth=4)
+        self.assertIn("avoid_overtrick", play_score)
+        self.assertGreater(pass_score["total"], play_score["total"])
+
+        rollout_action = guandan._rollout_policy_action(state, "bot")
+        self.assertEqual(rollout_action, {"type": "pass"})
+
+        real_random = random.Random
+        with mock.patch.object(guandan.random, "Random", side_effect=lambda *args, **kwargs: real_random(0)):
+            action = guandan.GuandanGame.bot_move(state, "bot")
+
+        self.assertEqual(action.get("type"), "pass")
+
     def test_mcts_does_not_bomb_teammate_early_when_only_bomb_can_beat(self):
         players = [
             {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},

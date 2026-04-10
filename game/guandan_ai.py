@@ -146,6 +146,68 @@ def _teammate_protect_bonus(state: Dict, player_id: str) -> float:
     return bonus
 
 
+def _combo_numeric_value(combo: Dict) -> int:
+    if combo.get("type") in ("straight", "three_pairs", "steel_plate"):
+        return combo.get("high_value", 0)
+    return combo.get("rank_value", 0)
+
+
+def _teammate_lead_strength(state: Dict, player_id: str) -> float:
+    teammate = _teammate_lead_context(state, player_id)
+    if not teammate:
+        return 0.0
+    current_combo = (state.get("current_trick") or {}).get("combo") or {}
+    combo_type = current_combo.get("type")
+    value = _combo_numeric_value(current_combo)
+    level_rank = state["level_rank"]
+    if combo_type in BOMB_TYPES:
+        return 18.0 + _bomb_tier(current_combo) * 2.0
+    if combo_type == "single":
+        if value >= 90:
+            return 16.0
+        if value >= 80:
+            return 13.0
+        if value >= _point_order_value(14, level_rank):
+            return 9.0
+        return 0.0
+    if combo_type in ("pair", "three", "full_house"):
+        if value >= _point_order_value(13, level_rank):
+            return 11.0 + max(0.0, value - _point_order_value(13, level_rank)) * 2.0
+        if value >= _point_order_value(12, level_rank):
+            return 6.0
+        return 0.0
+    if combo_type in ("straight", "three_pairs", "steel_plate"):
+        if value >= 13:
+            return 10.0
+        if value >= 12:
+            return 5.0
+    return 0.0
+
+
+def _breaks_bomb_shape(hand: List[Dict], cards: List[int], level_rank: int) -> bool:
+    if not cards:
+        return False
+    selected = set(cards)
+    total_by_rank: Dict[int, int] = {}
+    used_by_rank: Dict[int, int] = {}
+    for card in hand:
+        if card.get("joker") in ("big", "small"):
+            continue
+        if card.get("suit") == "hearts" and card.get("rank") == level_rank:
+            continue
+        rank = card.get("rank")
+        if rank is None:
+            continue
+        total_by_rank[rank] = total_by_rank.get(rank, 0) + 1
+        if card["id"] in selected:
+            used_by_rank[rank] = used_by_rank.get(rank, 0) + 1
+    for rank, total in total_by_rank.items():
+        used = used_by_rank.get(rank, 0)
+        if total >= 4 and 0 < used < total:
+            return True
+    return False
+
+
 def _teammate_overtrick_penalty(
     state: Dict,
     player_id: str,
@@ -156,16 +218,34 @@ def _teammate_overtrick_penalty(
     teammate = _teammate_lead_context(state, player_id)
     if not teammate:
         return 0.0
-    hand_count = len(state["players"][player_id]["hand"])
+    hand = state["players"][player_id]["hand"]
+    hand_count = len(hand)
     if remaining_count == 0 or len(cards) == hand_count:
         return 0.0
     teammate_left = len(state["players"][teammate]["hand"])
     current_combo = (state.get("current_trick") or {}).get("combo", {})
     penalty = _teammate_protect_bonus(state, player_id) * 0.85
+    lead_strength = _teammate_lead_strength(state, player_id)
+    penalty += lead_strength
+    if combo["type"] not in BOMB_TYPES and _breaks_bomb_shape(hand, cards, state["level_rank"]):
+        penalty += 18.0 if lead_strength >= 8.0 else 10.0
     if combo["type"] in BOMB_TYPES:
         penalty += 8.0 + _bomb_tier(combo) * 2.5
         if current_combo.get("type") not in BOMB_TYPES:
             penalty += 4.0
+    response_cost = _response_material_cost(state, player_id, cards, combo)
+    if response_cost > 0:
+        penalty += response_cost * (0.9 if lead_strength >= 8.0 else 0.55)
+    if combo.get("type") == current_combo.get("type"):
+        margin = max(0.0, _combo_numeric_value(combo) - _combo_numeric_value(current_combo))
+        if lead_strength >= 8.0:
+            penalty += max(0.0, 4.5 - margin * 1.8)
+    if (
+        combo.get("type") in ("pair", "three", "full_house")
+        and _combo_numeric_value(combo) >= _point_order_value(14, state["level_rank"])
+        and lead_strength >= 8.0
+    ):
+        penalty += 4.5
     if teammate_left <= 2:
         penalty -= 7.0
     elif teammate_left <= 4:
@@ -386,6 +466,25 @@ def _rollout_policy_action(state: Dict, player_id: str) -> Optional[Dict]:
                 best_cards = options[0]
                 pass_score = _bot_score_play(state, player_id, None, 2)
                 best_score = _bot_score_play(state, player_id, best_cards, 2)
+                hand = state["players"][player_id]["hand"]
+                hand_map = _map_hand_by_id(hand)
+                play_cards = [hand_map[cid] for cid in best_cards if cid in hand_map]
+                best_combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
+                strong_lead = _teammate_lead_strength(state, player_id)
+                if best_combo and strong_lead >= 6.0 and best_combo.get("type") not in BOMB_TYPES:
+                    if _breaks_bomb_shape(hand, best_cards, state["level_rank"]):
+                        return {"type": "pass"}
+                if best_combo and strong_lead >= 8.0:
+                    remaining_count = len(_remove_cards(hand, best_cards))
+                    force_pass_penalty = _teammate_overtrick_penalty(
+                        state,
+                        player_id,
+                        best_cards,
+                        best_combo,
+                        remaining_count,
+                    )
+                    if pass_score >= best_score - 3.0 or force_pass_penalty >= 14.0:
+                        return {"type": "pass"}
                 if pass_score >= best_score - 1.0:
                     return {"type": "pass"}
                 if random.random() < 0.85:
