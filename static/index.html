@@ -1003,6 +1003,26 @@
                       <span class="hint">Show the number of characters while guessing.</span>
                     </div>
                   </div>
+                  <div class="game-config-card hidden" id="guandanConfigBox" aria-hidden="true">
+                    <div class="game-config-title">Guandan</div>
+                    <div class="row hidden" id="guandanBotModeRow">
+                      <label for="guandanBotModeSelect">Bot Mode</label>
+                      <select id="guandanBotModeSelect">
+                        <option value="auto" selected>Auto</option>
+                        <option value="heuristic">Heuristic</option>
+                        <option value="nn">NN</option>
+                      </select>
+                    </div>
+                    <div class="row hidden" id="guandanNnCheckpointRow">
+                      <label for="guandanNnCheckpointInput">NN Checkpoint</label>
+                      <input
+                        id="guandanNnCheckpointInput"
+                        type="text"
+                        value="checkpoints/guandan_nn.pt"
+                        placeholder="checkpoints/guandan_nn.pt"
+                      />
+                    </div>
+                  </div>
                   <div class="game-config-card hidden" id="blitzSketchConfigBox" aria-hidden="true">
                     <div class="game-config-title">Blitz Sketch</div>
                     <div class="row hidden" id="blitzSketchDrawTimeRow">
@@ -4296,7 +4316,7 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js"></script>
-  <script src="/static/games/shared.js?v=app_v4"></script>
+  <script src="/static/games/shared.js?v=app_v5"></script>
   <script src="/static/games/blokus.js?v=app_v4"></script>
   <script src="/static/games/carcassonne.js?v=app_v4"></script>
   <script src="/static/games/azul.js?v=app_v4"></script>
@@ -4324,7 +4344,7 @@
   <script src="/static/games/isle_of_skye.js?v=app_v4"></script>
   <script src="/static/games/six_nimmt.js?v=app_v4"></script>
   <script src="/static/games/skull.js?v=app_v4"></script>
-  <script src="/static/games/guandan.js?v=app_v6"></script>
+  <script src="/static/games/guandan.js?v=app_v7"></script>
   <script src="/static/games/cabo.js?v=app_v5"></script>
   <script src="/static/games/flip7.js?v=app_v4"></script>
   <script src="/static/games/abraca_what.js?v=app_v4"></script>
@@ -4349,6 +4369,6 @@
   <script src="/static/games/kobayakawa.js?v=app_v4"></script>
   <script src="/static/games/scout.js?v=app_v4"></script>
   <script src="/static/app.js?v=app_v4"></script>
-  <script src="/static/room.js?v=app_v5"></script>
+  <script src="/static/room.js?v=app_v6"></script>
 </body>
 </html>

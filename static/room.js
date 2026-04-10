@@ -1380,6 +1380,9 @@ function resetRoomState() {
   if (typeof updateCriminalDanceConfigRow === "function") {
     updateCriminalDanceConfigRow();
   }
+  if (typeof updateGuandanConfigRow === "function") {
+    updateGuandanConfigRow();
+  }
   updateAutoSaveRow();
   updateReopenButton();
   if (drawGuessLanguageSelect) {
@@ -1474,6 +1477,9 @@ function resetRoomState() {
   }
   if (criminalDanceBoyVisibilitySelect) {
     criminalDanceBoyVisibilitySelect.value = "boy_knows_criminal";
+  }
+  if (typeof resetGuandanRoomConfig === "function") {
+    resetGuandanRoomConfig();
   }
   if (typeof updateTuringMachineConfigRowsFromSource === "function") {
     updateTuringMachineConfigRowsFromSource();

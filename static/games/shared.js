@@ -174,6 +174,8 @@ function emitRoomStart() {
       boy_visibility_mode: criminalDanceBoyVisibilitySelect ? criminalDanceBoyVisibilitySelect.value || "boy_knows_criminal" : "boy_knows_criminal",
       scoring_enabled: criminalDanceScoringToggle ? criminalDanceScoringToggle.checked : true,
     };
+  } else if (currentGameType === "guandan") {
+    payload.config = typeof getGuandanRoomConfig === "function" ? getGuandanRoomConfig() : {};
   }
   socket.emit("room:start", payload);
 }
@@ -291,6 +293,9 @@ function renderRoomState(state) {
   }
   if (typeof updateCriminalDanceConfigRow === "function") {
     updateCriminalDanceConfigRow();
+  }
+  if (typeof updateGuandanConfigRow === "function") {
+    updateGuandanConfigRow();
   }
   updateAutoSaveRow();
   updateReopenButton();

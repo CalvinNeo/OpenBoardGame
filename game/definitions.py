@@ -2676,6 +2676,8 @@ GUANDAN_CONFIG_SCHEMA = {
     "properties": {
         "hard_bomb_beats_soft": {"type": "boolean"},
         "require_partner_not_last_for_a": {"type": "boolean"},
+        "bot_mode": {"type": "string", "enum": ["auto", "heuristic", "nn"]},
+        "bot_nn_checkpoint": {"type": "string", "maxLength": 240},
     },
     "additionalProperties": False,
 }

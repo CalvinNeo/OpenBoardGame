@@ -3,6 +3,7 @@ import math
 import random
 import sys
 import time
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from game import guandan_ai as _guandan_ai
@@ -18,6 +19,10 @@ BOMB_TYPES = ("bomb", "straight_flush", "heavenly")
 DEFAULT_CONFIG = {
     "hard_bomb_beats_soft": False,
     "require_partner_not_last_for_a": False,
+    "bot_mode": "auto",
+    "bot_nn_checkpoint": "checkpoints/guandan_nn.pt",
+    "bot_nn_candidate_limit": 12,
+    "bot_nn_temperature": 0.0,
     "bot_search_depth": 4,
     "bot_mcts_sims": 96,
     "bot_mcts_depth": 8,
@@ -41,6 +46,9 @@ DEFAULT_CONFIG = {
     "bot_minimax_time_ms": 180,
 }
 
+_NN_CHECKPOINT_ROOT = Path(__file__).resolve().parent.parent
+_NN_MODEL_CACHE: Dict[str, Dict[str, object]] = {}
+
 STRAIGHT_SEQUENCES: List[Tuple[List[int], int]] = []
 STRAIGHT_SEQUENCES.append(([14, 2, 3, 4, 5], 5))
 for start in range(2, 11):
@@ -54,6 +62,42 @@ def _merge_config(config: Optional[Dict]) -> Dict:
         for key, value in config.items():
             cfg[key] = value
     return cfg
+
+
+def _resolve_nn_checkpoint_path(checkpoint: Optional[str]) -> Path:
+    raw = str(checkpoint or DEFAULT_CONFIG["bot_nn_checkpoint"]).strip()
+    if not raw:
+        raw = DEFAULT_CONFIG["bot_nn_checkpoint"]
+    candidate = Path(raw)
+    if not candidate.is_absolute():
+        candidate = _NN_CHECKPOINT_ROOT / candidate
+    return candidate
+
+
+def _load_nn_policy_model(checkpoint: Optional[str]) -> Tuple[Optional[object], Optional[str], str]:
+    resolved = _resolve_nn_checkpoint_path(checkpoint)
+    resolved_str = str(resolved)
+    if not resolved.exists():
+        return None, f"checkpoint not found: {resolved_str}", resolved_str
+    try:
+        mtime = resolved.stat().st_mtime
+    except OSError as exc:
+        return None, str(exc), resolved_str
+
+    cached = _NN_MODEL_CACHE.get(resolved_str)
+    if cached and cached.get("mtime") == mtime:
+        return cached.get("model"), None, resolved_str
+
+    try:
+        from game import guandan_nn_train as _guandan_nn_train
+
+        model, _payload = _guandan_nn_train.load_checkpoint(resolved_str, device="cpu")
+        model.eval()
+    except Exception as exc:
+        return None, str(exc), resolved_str
+
+    _NN_MODEL_CACHE[resolved_str] = {"mtime": mtime, "model": model}
+    return model, None, resolved_str
 
 
 def _build_deck() -> List[Dict]:
@@ -2092,6 +2136,75 @@ def _start_next_round(state: Dict) -> None:
     state["finish_order"] = []
 
 
+def _nn_pick_action(state: Dict, bot_id: str) -> Tuple[Optional[Dict], Optional[List[Tuple[Dict, float, int, Dict[str, float]]]], Dict]:
+    config = state.get("config", {})
+    model, error, resolved_path = _load_nn_policy_model(config.get("bot_nn_checkpoint"))
+    if model is None:
+        return None, None, {"checkpoint": resolved_path, "error": error or "load failed"}
+
+    try:
+        from game import guandan_nn_train as _guandan_nn_train
+    except Exception as exc:
+        return None, None, {"checkpoint": resolved_path, "error": str(exc)}
+
+    candidate_limit = max(2, int(config.get("bot_nn_candidate_limit", DEFAULT_CONFIG["bot_nn_candidate_limit"])))
+    temperature = max(0.0, float(config.get("bot_nn_temperature", DEFAULT_CONFIG["bot_nn_temperature"])))
+    actions = _guandan_nn_train.guandan._candidate_actions(state, bot_id, candidate_limit)
+    if not actions:
+        return None, None, {"checkpoint": resolved_path, "error": "no candidate actions"}
+
+    try:
+        scored, state_value = _guandan_nn_train.evaluate_actions(model, state, bot_id, actions, device="cpu")
+    except Exception as exc:
+        return None, None, {"checkpoint": resolved_path, "error": str(exc)}
+
+    if not scored:
+        return None, None, {"checkpoint": resolved_path, "error": "empty nn scores"}
+
+    logits = [score for _, score in scored]
+    max_logit = max(logits)
+    exp_values = [math.exp(value - max_logit) for value in logits]
+    total = sum(exp_values) or 1.0
+    probs = [value / total for value in exp_values]
+    scored_with_probs = list(zip(scored, probs))
+    ranked = sorted(scored_with_probs, key=lambda item: item[0][1], reverse=True)
+
+    chosen_action = None
+    if temperature > 1e-6:
+        sampled_action, _, _ = _guandan_nn_train.select_model_action(
+            model,
+            state,
+            bot_id,
+            device="cpu",
+            candidate_limit=candidate_limit,
+            temperature=temperature,
+        )
+        chosen_action = sampled_action
+    if chosen_action is None:
+        chosen_action = dict(ranked[0][0][0])
+
+    method_scores: List[Tuple[Dict, float, int, Dict[str, float]]] = []
+    for (action, score), prob in ranked:
+        method_scores.append(
+            (
+                dict(action),
+                score,
+                0,
+                {
+                    "logit": score,
+                    "policy_prob": prob,
+                    "state_value": state_value,
+                },
+            )
+        )
+    method_meta = {
+        "candidates": len(actions),
+        "checkpoint": Path(resolved_path).name,
+        "temperature": temperature,
+    }
+    return chosen_action, method_scores, method_meta
+
+
 class GuandanGame:
     game_id = "guandan"
     min_players = 4
@@ -2545,6 +2658,9 @@ class GuandanGame:
             return {"type": "pass"}
 
         config = state.get("config", {})
+        bot_mode = str(config.get("bot_mode", DEFAULT_CONFIG["bot_mode"]) or DEFAULT_CONFIG["bot_mode"]).strip().lower()
+        if bot_mode not in {"auto", "heuristic", "nn"}:
+            bot_mode = DEFAULT_CONFIG["bot_mode"]
         total_left = sum(len(state["players"][pid]["hand"]) for pid in state["turn_order"])
         endgame_threshold = config.get("bot_endgame_threshold", 18)
         depth = config.get("bot_search_depth", 2)
@@ -2560,66 +2676,80 @@ class GuandanGame:
         method = "heuristic"
         method_scores = None
         method_meta = None
-        if total_left <= endgame_threshold:
-            minimax_budget_ms = max(25, int(config.get("bot_minimax_time_ms", default_minimax_budget_ms)))
-            deadline = time.perf_counter() + minimax_budget_ms / 1000.0
-            det = _determinize_state(state, bot_id, random.Random())
-            chosen = _minimax_pick_action(
-                det,
-                bot_id,
-                config.get("bot_minimax_depth", 4),
-                search_width,
-                deadline=deadline,
-            )
-            if chosen:
+        if bot_mode == "nn":
+            nn_action, nn_scores, nn_meta = _nn_pick_action(state, bot_id)
+            if nn_action is not None:
                 decided = True
-                chosen_action_type = "play"
-                method = "minimax"
-        if not decided and total_left > endgame_threshold and _should_use_mcts(state, bot_id, mcts_width):
-            mcts_budget_ms = max(25, int(config.get("bot_mcts_time_ms", default_mcts_budget_ms)))
-            deadline = time.perf_counter() + mcts_budget_ms / 1000.0
-            mcts_action, mcts_scores = _mcts_pick_action(
-                state,
-                bot_id,
-                config.get("bot_mcts_sims", 60),
-                config.get("bot_mcts_depth", 8),
-                mcts_width,
-                config.get("bot_mcts_tree_ply", 2),
-                config.get("bot_mcts_reply_width", 4),
-                config.get("bot_mcts_risk_lambda", 0.28),
-                deadline=deadline,
-            )
-            has_real_search = any(count > 0 for _, _, count, _ in (mcts_scores or []))
-            has_fast_path = any((stats or {}).get("fast_path") for _, _, _, stats in (mcts_scores or []))
-            if not has_real_search and not has_fast_path:
-                mcts_action = None
-                mcts_scores = None
-            if mcts_action is not None and _should_accept_mcts_override(
-                state,
-                bot_id,
-                heuristic_action,
-                mcts_action,
-                depth,
-            ):
-                decided = True
-                method = "mcts"
-                method_scores = mcts_scores
-                sims_per_action = mcts_scores[0][2] if mcts_scores else 0
-                first_stats = mcts_scores[0][3] if mcts_scores else {}
-                method_meta = {
-                    "sims_per_action": sims_per_action,
-                    "depth": first_stats.get("depth", config.get("bot_mcts_depth", 8)),
-                    "candidates": len(mcts_scores),
-                    "tree_ply": first_stats.get("tree_ply", config.get("bot_mcts_tree_ply", 2)),
-                    "reply_width": first_stats.get("reply_width", config.get("bot_mcts_reply_width", 4)),
-                    "risk_lambda": config.get("bot_mcts_risk_lambda", 0.28),
-                }
-                if mcts_action.get("type") == "play":
-                    chosen = mcts_action.get("card_ids") or []
+                method = "nn"
+                method_scores = nn_scores
+                method_meta = nn_meta
+                if nn_action.get("type") == "play":
+                    chosen = nn_action.get("card_ids") or []
                     chosen_action_type = "play"
                 else:
                     chosen = []
                     chosen_action_type = "pass"
+        elif bot_mode == "auto":
+            if total_left <= endgame_threshold:
+                minimax_budget_ms = max(25, int(config.get("bot_minimax_time_ms", default_minimax_budget_ms)))
+                deadline = time.perf_counter() + minimax_budget_ms / 1000.0
+                det = _determinize_state(state, bot_id, random.Random())
+                chosen = _minimax_pick_action(
+                    det,
+                    bot_id,
+                    config.get("bot_minimax_depth", 4),
+                    search_width,
+                    deadline=deadline,
+                )
+                if chosen:
+                    decided = True
+                    chosen_action_type = "play"
+                    method = "minimax"
+            if not decided and total_left > endgame_threshold and _should_use_mcts(state, bot_id, mcts_width):
+                mcts_budget_ms = max(25, int(config.get("bot_mcts_time_ms", default_mcts_budget_ms)))
+                deadline = time.perf_counter() + mcts_budget_ms / 1000.0
+                mcts_action, mcts_scores = _mcts_pick_action(
+                    state,
+                    bot_id,
+                    config.get("bot_mcts_sims", 60),
+                    config.get("bot_mcts_depth", 8),
+                    mcts_width,
+                    config.get("bot_mcts_tree_ply", 2),
+                    config.get("bot_mcts_reply_width", 4),
+                    config.get("bot_mcts_risk_lambda", 0.28),
+                    deadline=deadline,
+                )
+                has_real_search = any(count > 0 for _, _, count, _ in (mcts_scores or []))
+                has_fast_path = any((stats or {}).get("fast_path") for _, _, _, stats in (mcts_scores or []))
+                if not has_real_search and not has_fast_path:
+                    mcts_action = None
+                    mcts_scores = None
+                if mcts_action is not None and _should_accept_mcts_override(
+                    state,
+                    bot_id,
+                    heuristic_action,
+                    mcts_action,
+                    depth,
+                ):
+                    decided = True
+                    method = "mcts"
+                    method_scores = mcts_scores
+                    sims_per_action = mcts_scores[0][2] if mcts_scores else 0
+                    first_stats = mcts_scores[0][3] if mcts_scores else {}
+                    method_meta = {
+                        "sims_per_action": sims_per_action,
+                        "depth": first_stats.get("depth", config.get("bot_mcts_depth", 8)),
+                        "candidates": len(mcts_scores),
+                        "tree_ply": first_stats.get("tree_ply", config.get("bot_mcts_tree_ply", 2)),
+                        "reply_width": first_stats.get("reply_width", config.get("bot_mcts_reply_width", 4)),
+                        "risk_lambda": config.get("bot_mcts_risk_lambda", 0.28),
+                    }
+                    if mcts_action.get("type") == "play":
+                        chosen = mcts_action.get("card_ids") or []
+                        chosen_action_type = "play"
+                    else:
+                        chosen = []
+                        chosen_action_type = "pass"
         if not decided:
             if heuristic_action and heuristic_action.get("type") == "play":
                 chosen = heuristic_action.get("card_ids") or []
@@ -2638,8 +2768,8 @@ class GuandanGame:
                 chosen or [],
                 method,
                 depth,
-                method_scores if method == "mcts" else None,
-                method_meta if method == "mcts" else None,
+                method_scores if method in ("mcts", "nn") else None,
+                method_meta if method in ("mcts", "nn") else None,
                 chosen_action_type or "play",
             )
             state.setdefault("bot_explain", {})[bot_id] = explain

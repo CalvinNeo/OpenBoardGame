@@ -3050,6 +3050,61 @@ def _build_bot_explain(
         )
         return [_card_label(card) for card in sorted_hand]
 
+    if method == "nn" and method_scores:
+        all_scores = method_scores[:]
+        chosen_score = None
+        chosen_stats = None
+        chosen_action_type = chosen_action_type or "play"
+        for action, score, _, stats in all_scores:
+            if action.get("type") != chosen_action_type:
+                continue
+            if chosen_action_type == "pass":
+                chosen_score = score
+                chosen_stats = stats
+                break
+            if action.get("card_ids") == chosen_cards:
+                chosen_score = score
+                chosen_stats = stats
+                break
+        if chosen_score is None and all_scores:
+            chosen_score = all_scores[0][1]
+            chosen_stats = all_scores[0][3]
+        top = []
+        for action, score, _, stats in all_scores[:3]:
+            cards = action.get("card_ids") or []
+            action_type = action.get("type", "play")
+            comps = {
+                "nn_logit": stats.get("logit", score) if stats else score,
+                "nn_policy_prob": stats.get("policy_prob", 0.0) if stats else 0.0,
+                "nn_state_value": stats.get("state_value", 0.0) if stats else 0.0,
+            }
+            top.append(
+                {
+                    "cards": label_action(action_type, cards),
+                    "score": score,
+                    "components": comps,
+                }
+            )
+        chosen_comps = {
+            "nn_logit": chosen_stats.get("logit", chosen_score) if chosen_stats else chosen_score,
+            "nn_policy_prob": chosen_stats.get("policy_prob", 0.0) if chosen_stats else 0.0,
+            "nn_state_value": chosen_stats.get("state_value", 0.0) if chosen_stats else 0.0,
+        }
+        return {
+            "method": method,
+            "score_model": "nn",
+            "method_details": method_meta or {},
+            "chosen": {
+                "cards": label_action(chosen_action_type, chosen_cards),
+                "score": chosen_score if chosen_score is not None else -999.0,
+                "components": chosen_comps,
+            },
+            "decision": decision,
+            "hand_before": hand_before_labels,
+            "hand": hand_labels_for(chosen_action_type),
+            "top": top,
+        }
+
     if method == "mcts" and method_scores:
         play_scores = [
             (action, score, sims, stats)

@@ -478,6 +478,87 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertEqual(explain.get("decision", {}).get("phase"), "playing")
         self.assertEqual(explain.get("decision", {}).get("level_rank"), state["level_rank"])
 
+    def test_nn_explain_includes_nn_scores(self):
+        state, big = self._make_state()
+        action = {"type": "play", "card_ids": [big["id"]]}
+        method_scores = [
+            (
+                action,
+                2.5,
+                0,
+                {"logit": 2.5, "policy_prob": 0.8, "state_value": 0.35},
+            )
+        ]
+
+        explain = guandan._build_bot_explain(
+            state,
+            "bot",
+            [big["id"]],
+            "nn",
+            depth=3,
+            method_scores=method_scores,
+            method_meta={"candidates": 1, "checkpoint": "guandan_nn.pt"},
+        )
+
+        self.assertEqual(explain.get("score_model"), "nn")
+        self.assertAlmostEqual(explain["chosen"]["components"]["nn_logit"], 2.5)
+        self.assertAlmostEqual(explain["chosen"]["components"]["nn_policy_prob"], 0.8)
+        self.assertAlmostEqual(explain["chosen"]["components"]["nn_state_value"], 0.35)
+
+    def test_bot_move_uses_nn_mode_when_configured(self):
+        state, big = self._make_state()
+        state["config"]["bot_mode"] = "nn"
+        nn_action = {"type": "play", "card_ids": [big["id"]]}
+        nn_scores = [
+            (
+                nn_action,
+                1.75,
+                0,
+                {"logit": 1.75, "policy_prob": 0.9, "state_value": 0.2},
+            )
+        ]
+
+        with mock.patch.object(guandan, "_nn_pick_action", return_value=(nn_action, nn_scores, {"candidates": 1})):
+            with mock.patch.object(guandan, "_mcts_pick_action", side_effect=AssertionError("mcts should not run in nn mode")):
+                with mock.patch.object(guandan, "_minimax_pick_action", side_effect=AssertionError("minimax should not run in nn mode")):
+                    action = guandan.GuandanGame.bot_move(state, "bot")
+
+        self.assertEqual(action, nn_action)
+        explain = state.get("bot_explain", {}).get("bot", {})
+        self.assertEqual(explain.get("method"), "nn")
+        self.assertEqual(explain.get("score_model"), "nn")
+        self.assertEqual(explain.get("chosen", {}).get("cards"), [guandan._card_label(big)])
+
+    def test_bot_move_nn_mode_falls_back_to_heuristic(self):
+        state, big = self._make_state()
+        state["config"]["bot_mode"] = "nn"
+        heuristic_action = {"type": "play", "card_ids": [big["id"]]}
+
+        with mock.patch.object(guandan, "_nn_pick_action", return_value=(None, None, {"error": "missing checkpoint"})):
+            with mock.patch.object(guandan, "_heuristic_best_action", return_value=heuristic_action):
+                with mock.patch.object(guandan, "_mcts_pick_action", side_effect=AssertionError("mcts should not run in nn fallback")):
+                    with mock.patch.object(guandan, "_minimax_pick_action", side_effect=AssertionError("minimax should not run in nn fallback")):
+                        action = guandan.GuandanGame.bot_move(state, "bot")
+
+        self.assertEqual(action, heuristic_action)
+        explain = state.get("bot_explain", {}).get("bot", {})
+        self.assertEqual(explain.get("method"), "heuristic")
+
+    def test_bot_move_heuristic_mode_skips_search(self):
+        state, big = self._make_state()
+        state["config"]["bot_mode"] = "heuristic"
+        heuristic_action = {"type": "play", "card_ids": [big["id"]]}
+        state["config"]["bot_endgame_threshold"] = 99
+
+        with mock.patch.object(guandan, "_heuristic_best_action", return_value=heuristic_action):
+            with mock.patch.object(guandan, "_mcts_pick_action", side_effect=AssertionError("mcts should not run in heuristic mode")):
+                with mock.patch.object(guandan, "_minimax_pick_action", side_effect=AssertionError("minimax should not run in heuristic mode")):
+                    action = guandan.GuandanGame.bot_move(state, "bot")
+
+        self.assertEqual(action, heuristic_action)
+        explain = state.get("bot_explain", {}).get("bot", {})
+        self.assertEqual(explain.get("method"), "heuristic")
+
     def test_mcts_pick_action_uses_risk_adjusted_score(self):
         players = [
             {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},

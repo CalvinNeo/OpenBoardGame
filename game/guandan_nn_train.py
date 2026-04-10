@@ -885,17 +885,17 @@ def train_model(
     return history
 
 
-def score_actions(
+def evaluate_actions(
     model: "GuandanPolicyValueNet",
     state: Dict,
     player_id: str,
     actions: Sequence[Dict],
     device: str = "cpu",
-) -> List[Tuple[Dict, float]]:
+) -> Tuple[List[Tuple[Dict, float]], float]:
     if torch is None:
         raise RuntimeError("torch is required to score actions with the Guandan NN model")
     if not actions:
-        return []
+        return [], 0.0
     model.eval()
     state_features = _state_feature_vector(state, player_id)
     action_features = [_action_feature_vector(state, player_id, action) for action in actions]
@@ -903,9 +903,21 @@ def score_actions(
         state_tensor = torch.tensor([state_features], dtype=torch.float32, device=device)
         action_tensor = torch.tensor([action_features], dtype=torch.float32, device=device)
         mask = torch.ones((1, len(actions)), dtype=torch.bool, device=device)
-        logits, _ = model(state_tensor, action_tensor, mask)
+        logits, value = model(state_tensor, action_tensor, mask)
         values = logits[0].detach().cpu().tolist()
-    return list(zip(actions, values))
+        state_value = float(value[0].detach().cpu().item())
+    return list(zip(actions, values)), state_value
+
+
+def score_actions(
+    model: "GuandanPolicyValueNet",
+    state: Dict,
+    player_id: str,
+    actions: Sequence[Dict],
+    device: str = "cpu",
+) -> List[Tuple[Dict, float]]:
+    scored, _ = evaluate_actions(model, state, player_id, actions, device=device)
+    return scored
 
 
 def select_model_action(
@@ -915,13 +927,13 @@ def select_model_action(
     device: str = "cpu",
     candidate_limit: int = DEFAULT_CANDIDATE_LIMIT,
     temperature: float = 0.0,
-) -> Tuple[Optional[Dict], List[Tuple[str, float]]]:
+) -> Tuple[Optional[Dict], List[Tuple[str, float]], float]:
     if torch is None:
         raise RuntimeError("torch is required to select model actions")
     actions = guandan._candidate_actions(state, player_id, candidate_limit)
     if not actions:
-        return None, []
-    scored = score_actions(model, state, player_id, actions, device=device)
+        return None, [], 0.0
+    scored, state_value = evaluate_actions(model, state, player_id, actions, device=device)
     labels = [(_action_label(state, player_id, action), score) for action, score in scored]
     if temperature > 1e-6:
         logits = [score / temperature for _, score in scored]
@@ -933,9 +945,9 @@ def select_model_action(
         for (action, _), weight in zip(scored, exp_values):
             cumulative += weight
             if pick <= cumulative:
-                return _sanitize_action(action), labels
+                return _sanitize_action(action), labels, state_value
     best_action, _ = max(scored, key=lambda item: item[1])
-    return _sanitize_action(best_action), labels
+    return _sanitize_action(best_action), labels, state_value
 
 
 def save_checkpoint(

@@ -5,6 +5,14 @@ let guandanPiles = [];
 let guandanLastSfKey = null;
 let guandanHandLayout = "cascade";
 let guandanCascadeLayoutFrame = null;
+const GUANDAN_DEFAULT_BOT_MODE = "auto";
+const GUANDAN_DEFAULT_NN_CHECKPOINT = "checkpoints/guandan_nn.pt";
+
+const guandanConfigBox = document.getElementById("guandanConfigBox");
+const guandanBotModeRow = document.getElementById("guandanBotModeRow");
+const guandanBotModeSelect = document.getElementById("guandanBotModeSelect");
+const guandanNnCheckpointRow = document.getElementById("guandanNnCheckpointRow");
+const guandanNnCheckpointInput = document.getElementById("guandanNnCheckpointInput");
 
 const guandanPhaseLabel = document.getElementById("guandanPhase");
 const guandanRoundLabel = document.getElementById("guandanRound");
@@ -42,6 +50,45 @@ const guandanPlayAgainBtn = document.getElementById("guandanPlayAgainBtn");
 
 if (guandanCascadeSelect) {
   guandanCascadeSelect.value = guandanHandLayout;
+}
+
+function updateGuandanConfigRow() {
+  const showRow = currentRoomState && currentGameType === "guandan" && currentRoomState.status === "lobby";
+  const mode = guandanBotModeSelect ? guandanBotModeSelect.value || GUANDAN_DEFAULT_BOT_MODE : GUANDAN_DEFAULT_BOT_MODE;
+  const showCheckpoint = showRow && mode === "nn";
+  if (guandanConfigBox) {
+    guandanConfigBox.classList.toggle("hidden", !showRow);
+    guandanConfigBox.setAttribute("aria-hidden", (!showRow).toString());
+  }
+  if (guandanBotModeRow) {
+    guandanBotModeRow.classList.toggle("hidden", !showRow);
+    guandanBotModeRow.setAttribute("aria-hidden", (!showRow).toString());
+  }
+  if (guandanNnCheckpointRow) {
+    guandanNnCheckpointRow.classList.toggle("hidden", !showCheckpoint);
+    guandanNnCheckpointRow.setAttribute("aria-hidden", (!showCheckpoint).toString());
+  }
+}
+
+function getGuandanRoomConfig() {
+  const rawMode = guandanBotModeSelect ? guandanBotModeSelect.value || GUANDAN_DEFAULT_BOT_MODE : GUANDAN_DEFAULT_BOT_MODE;
+  const botMode = ["auto", "heuristic", "nn"].includes(rawMode) ? rawMode : GUANDAN_DEFAULT_BOT_MODE;
+  const checkpoint = guandanNnCheckpointInput ? guandanNnCheckpointInput.value.trim() : "";
+  const config = { bot_mode: botMode };
+  if (checkpoint) {
+    config.bot_nn_checkpoint = checkpoint;
+  }
+  return config;
+}
+
+function resetGuandanRoomConfig() {
+  if (guandanBotModeSelect) {
+    guandanBotModeSelect.value = GUANDAN_DEFAULT_BOT_MODE;
+  }
+  if (guandanNnCheckpointInput) {
+    guandanNnCheckpointInput.value = GUANDAN_DEFAULT_NN_CHECKPOINT;
+  }
+  updateGuandanConfigRow();
 }
 
 function clearGuandanState() {
@@ -1030,6 +1077,12 @@ if (guandanCascadeSelect) {
       renderGuandanHand(currentGuandanView);
       updateGuandanButtons();
     }
+  });
+}
+
+if (guandanBotModeSelect) {
+  guandanBotModeSelect.addEventListener("change", () => {
+    updateGuandanConfigRow();
   });
 }
 
