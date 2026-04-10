@@ -1388,18 +1388,47 @@ def _bot_estimate_opponent_can_beat(state: Dict, opponent_id: str, combo: Dict) 
     return value <= limit
 
 
-def _predict_finish_order(state: Dict, adjusted_counts: Dict[str, int]) -> List[str]:
+def _predict_finish_order(
+    state: Dict,
+    adjusted_counts: Dict[str, int],
+    adjusted_turns: Optional[Dict[str, float]] = None,
+) -> List[str]:
     finished = list(state.get("finish_order", []) or [])
     remaining = [pid for pid in state["turn_order"] if pid not in finished]
     order_index = {pid: idx for idx, pid in enumerate(state["turn_order"])}
-    remaining.sort(key=lambda pid: (adjusted_counts.get(pid, len(state["players"][pid]["hand"])), order_index[pid]))
+    level_rank = state.get("level_rank", 2)
+
+    def predicted_turns(pid: str) -> float:
+        if adjusted_turns and pid in adjusted_turns:
+            return adjusted_turns[pid]
+        return _estimated_turns_to_finish(state["players"][pid]["hand"], level_rank)
+
+    remaining.sort(
+        key=lambda pid: (
+            predicted_turns(pid),
+            adjusted_counts.get(pid, len(state["players"][pid]["hand"])),
+            order_index[pid],
+        )
+    )
     return finished + remaining
 
 
-def _team_finish_score(state: Dict, bot_id: str, bot_remaining: int) -> float:
+def _team_finish_score(
+    state: Dict,
+    bot_id: str,
+    bot_remaining: int,
+    bot_hand: Optional[List[Dict]] = None,
+) -> float:
     counts = {pid: len(state["players"][pid]["hand"]) for pid in state["turn_order"]}
     counts[bot_id] = bot_remaining
-    predicted = _predict_finish_order(state, counts)
+    level_rank = state.get("level_rank", 2)
+    turns = {}
+    for pid in state["turn_order"]:
+        if pid == bot_id and bot_hand is not None:
+            turns[pid] = _estimated_turns_to_finish(bot_hand, level_rank)
+        else:
+            turns[pid] = _estimated_turns_to_finish(state["players"][pid]["hand"], level_rank)
+    predicted = _predict_finish_order(state, counts, turns)
     team = _team_of(state, bot_id)
     team_positions = [idx + 1 for idx, pid in enumerate(predicted) if _team_of(state, pid) == team]
     if len(team_positions) < 2:
@@ -1435,6 +1464,11 @@ def _longest_run(ranks: List[int]) -> int:
     return max(best, current)
 
 
+def _longest_group_run(rank_counts: Dict[int, int], min_count: int) -> int:
+    ranks = [rank for rank, count in rank_counts.items() if count >= min_count]
+    return _longest_run(ranks)
+
+
 def _control_card_score(hand: List[Dict], level_rank: int) -> float:
     score = 0.0
     for card in hand:
@@ -1453,13 +1487,33 @@ def _control_card_score(hand: List[Dict], level_rank: int) -> float:
     return score
 
 
-def _hand_strength_score(hand: List[Dict], level_rank: int) -> float:
+def _hand_structure_metrics(hand: List[Dict], level_rank: int) -> Dict[str, float]:
     if not hand:
-        return 0.0
+        return {
+            "pair_ranks": 0.0,
+            "pure_pair_ranks": 0.0,
+            "triple_ranks": 0.0,
+            "quad_ranks": 0.0,
+            "singles": 0.0,
+            "wild_count": 0.0,
+            "joker_big": 0.0,
+            "joker_small": 0.0,
+            "low_single_burden": 0.0,
+            "grouped_control": 0.0,
+            "max_run": 0.0,
+            "pair_run": 0.0,
+            "triple_run": 0.0,
+            "turn_savings": 0.0,
+            "shape_synergy": 0.0,
+            "bomb_reserve": 0.0,
+        }
+
     info = _hand_info(hand, level_rank)
     strength = _rank_strength(level_rank)
-    counts = [len(cards) for cards in info["normals_by_rank"].values()]
+    rank_counts = {rank: len(cards) for rank, cards in info["normals_by_rank"].items()}
+    counts = list(rank_counts.values())
     pair_ranks = sum(1 for count in counts if count >= 2)
+    pure_pair_ranks = sum(1 for count in counts if count == 2)
     triple_ranks = sum(1 for count in counts if count >= 3)
     quad_ranks = sum(1 for count in counts if count >= 4)
     singles = sum(1 for count in counts if count == 1)
@@ -1467,34 +1521,14 @@ def _hand_strength_score(hand: List[Dict], level_rank: int) -> float:
     joker_big = len(info["jokers_big"])
     joker_small = len(info["jokers_small"])
 
-    score = 0.0
-    score += pair_ranks * 0.8
-    score += triple_ranks * 1.4
-    score += quad_ranks * 1.9
-    score -= singles * 0.35
     low_single_burden = 0.0
-    for rank, count in info["normals_by_rank"].items():
+    for rank, count in rank_counts.items():
         if count != 1:
             continue
         low_single_burden += max(0.0, 56 - strength[rank]) * 0.18
-    score -= min(3.0, low_single_burden)
-    score += wild_count * 0.7
-    score += joker_big * 2.2 + joker_small * 1.5
-    if joker_small >= 2:
-        score += 2.4
-    if joker_big >= 2:
-        score += 3.2
-
-    if triple_ranks >= 1 and (pair_ranks >= 2 or triple_ranks >= 2):
-        score += 1.2
-    if pair_ranks >= 3:
-        score += 1.0
-    if triple_ranks >= 2:
-        score += 1.6
 
     grouped_control = 0.0
-    for rank, rank_cards in info["normals_by_rank"].items():
-        count = len(rank_cards)
+    for rank, count in rank_counts.items():
         if count < 2:
             continue
         strength_bonus = max(0.0, strength[rank] - 56)
@@ -1503,15 +1537,10 @@ def _hand_strength_score(hand: List[Dict], level_rank: int) -> float:
         grouped_control += strength_bonus * min(count, 4) * 0.18
         if count >= 4:
             grouped_control += 0.7 + strength_bonus * 0.35 + (count - 4) * 0.45
-    score += min(5.5, grouped_control)
 
-    max_run = _longest_run(list(info["normals_by_rank"].keys()))
-    if max_run >= 5:
-        score += 1.4
-    elif max_run == 4 and wild_count >= 1:
-        score += 0.9
-    elif max_run == 3 and wild_count >= 2:
-        score += 0.6
+    max_run = _longest_run(list(rank_counts.keys()))
+    pair_run = _longest_group_run(rank_counts, 2)
+    triple_run = _longest_group_run(rank_counts, 3)
 
     turn_savings = 0.0
     for count in counts:
@@ -1527,22 +1556,103 @@ def _hand_strength_score(hand: List[Dict], level_rank: int) -> float:
         turn_savings += 1.5
     elif max_run == 3 and wild_count >= 2:
         turn_savings += 1.0
-    score += min(6.0, turn_savings * 0.55)
 
+    shape_synergy = 0.0
+    if pure_pair_ranks >= 1 and triple_ranks >= 1:
+        shape_synergy += 1.0
+    if pair_run >= 3:
+        shape_synergy += 2.0 + min(1.0, (pair_run - 3) * 0.5)
+    if triple_run >= 2:
+        shape_synergy += 1.2 + min(0.8, (triple_run - 2) * 0.4)
+    if max_run >= 5:
+        shape_synergy += 1.5 + min(1.0, (max_run - 5) * 0.3)
+
+    bomb_reserve = 0.0
     bombs = _find_bomb_candidates(hand, level_rank)
     if bombs:
-        bomb_score = 0.0
         reserve_factor = 1.0 + min(0.7, max(0.0, (len(hand) - 6) * 0.07))
+        low_bomb_anchor = _point_order_value(3, level_rank)
         for bomb in bombs:
             tier = bomb.get("tier", 0)
             base = 1.2 + 0.8 * tier
-            if bomb.get("type") == "straight_flush":
+            if bomb.get("type") == "bomb":
+                rank_pressure = max(0.0, bomb.get("rank_value", low_bomb_anchor) - low_bomb_anchor)
+                base += rank_pressure * 0.45
+            elif bomb.get("type") == "straight_flush":
                 base += 1.0
             elif bomb.get("type") == "heavenly":
                 base += 2.0
-            bomb_score += base * reserve_factor
-        score += min(7.0, bomb_score)
+            bomb_reserve += base * reserve_factor
+
+    return {
+        "pair_ranks": float(pair_ranks),
+        "pure_pair_ranks": float(pure_pair_ranks),
+        "triple_ranks": float(triple_ranks),
+        "quad_ranks": float(quad_ranks),
+        "singles": float(singles),
+        "wild_count": float(wild_count),
+        "joker_big": float(joker_big),
+        "joker_small": float(joker_small),
+        "low_single_burden": low_single_burden,
+        "grouped_control": grouped_control,
+        "max_run": float(max_run),
+        "pair_run": float(pair_run),
+        "triple_run": float(triple_run),
+        "turn_savings": turn_savings,
+        "shape_synergy": shape_synergy,
+        "bomb_reserve": bomb_reserve,
+    }
+
+
+def _hand_strength_score(hand: List[Dict], level_rank: int) -> float:
+    if not hand:
+        return 0.0
+    metrics = _hand_structure_metrics(hand, level_rank)
+
+    score = 0.0
+    score += metrics["pair_ranks"] * 0.8
+    score += metrics["triple_ranks"] * 1.4
+    score += metrics["quad_ranks"] * 1.9
+    score -= metrics["singles"] * 0.35
+    score -= min(3.0, metrics["low_single_burden"])
+    score += metrics["wild_count"] * 0.7
+    score += metrics["joker_big"] * 2.2 + metrics["joker_small"] * 1.5
+    if metrics["joker_small"] >= 2:
+        score += 2.4
+    if metrics["joker_big"] >= 2:
+        score += 3.2
+
+    if metrics["triple_ranks"] >= 1 and (metrics["pair_ranks"] >= 2 or metrics["triple_ranks"] >= 2):
+        score += 1.2
+    if metrics["pair_ranks"] >= 3:
+        score += 1.0
+    if metrics["triple_ranks"] >= 2:
+        score += 1.6
+    score += min(2.6, metrics["shape_synergy"] * 0.9)
+    score += min(5.5, metrics["grouped_control"])
+
+    if metrics["max_run"] >= 5:
+        score += 1.4
+    elif metrics["max_run"] == 4 and metrics["wild_count"] >= 1:
+        score += 0.9
+    elif metrics["max_run"] == 3 and metrics["wild_count"] >= 2:
+        score += 0.6
+    score += min(6.0, metrics["turn_savings"] * 0.55)
+    score += min(7.0, metrics["bomb_reserve"])
     return score
+
+
+def _estimated_turns_to_finish(hand: List[Dict], level_rank: int) -> float:
+    if not hand:
+        return 0.0
+    metrics = _hand_structure_metrics(hand, level_rank)
+    turns = float(len(hand))
+    turns -= metrics["turn_savings"]
+    turns -= metrics["shape_synergy"]
+    turns -= min(1.0, metrics["wild_count"] * 0.22 + metrics["joker_small"] * 0.18 + metrics["joker_big"] * 0.28)
+    turns += min(2.4, metrics["low_single_burden"] * 0.12)
+    turns -= min(1.2, metrics["grouped_control"] * 0.08)
+    return max(1.0, turns)
 
 
 def _play_structure_delta(hand: List[Dict], cards: List[int], level_rank: int) -> float:
@@ -1700,9 +1810,9 @@ def _response_material_cost(
             if combo["type"] == "bomb":
                 low_bomb_anchor = _point_order_value(3, level_rank)
                 rank_pressure = max(0.0, combo.get("rank_value", 0) - low_bomb_anchor)
-                cost += 10.0 + _bomb_tier(combo) * 2.2 + rank_pressure * 0.5 - (4.0 if is_minimal else 0.0)
+                cost += 10.0 + _bomb_tier(combo) * 2.2 + rank_pressure * 1.2 - (4.0 if is_minimal else 0.0)
                 if is_minimal:
-                    cost -= max(0.0, 60 - combo.get("rank_value", 0)) * 0.9
+                    cost -= max(0.0, 60 - combo.get("rank_value", 0)) * 1.1
             elif combo["type"] == "straight_flush":
                 cost += 13.0 + _bomb_tier(combo) * 2.8 - (2.0 if is_minimal else 0.0)
             else:
@@ -1918,6 +2028,59 @@ def _should_prune_wasteful_lead_bomb(
     return len(hand) >= 15 and best_non_bomb_score >= score + 1.5
 
 
+def _single_lock_bonus(state: Dict, player_id: str, cards: List[int], combo: Dict) -> float:
+    current_trick = state.get("current_trick")
+    if not current_trick or len(cards) != 1:
+        return 0.0
+    leader = current_trick.get("player_id")
+    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+        return 0.0
+    current_combo = current_trick.get("combo") or {}
+    if current_combo.get("type") != "single" or combo.get("type") != "single":
+        return 0.0
+    if current_combo.get("rank_value", 0) > 54:
+        return 0.0
+
+    hand = state["players"][player_id]["hand"]
+    hand_map = _map_hand_by_id(hand)
+    card = hand_map.get(cards[0])
+    level_rank = state["level_rank"]
+    if not card or _is_joker(card) or _is_wild(card, level_rank):
+        return 0.0
+    if card.get("rank") != level_rank:
+        return 0.0
+
+    counts = _rank_count_map(hand, level_rank)
+    if counts.get(level_rank, 0) != 1:
+        return 0.0
+
+    chosen_value = _single_order_value(card, level_rank)
+    threshold = current_combo.get("rank_value", 0)
+    for other in hand:
+        if other["id"] == card["id"] or _is_joker(other) or _is_wild(other, level_rank):
+            continue
+        value = _single_order_value(other, level_rank)
+        if value <= threshold or value >= chosen_value:
+            continue
+        if counts.get(other.get("rank"), 0) == 1:
+            return 0.0
+
+    active_opponents = [
+        pid
+        for pid in state["turn_order"]
+        if _team_of(state, pid) != _team_of(state, player_id) and not state["players"][pid]["finished"]
+    ]
+    if not active_opponents:
+        return 0.0
+
+    bonus = 4.0
+    if len(active_opponents) >= 2:
+        bonus += 1.0
+    if min(len(state["players"][pid]["hand"]) for pid in active_opponents) <= 5:
+        bonus += 1.5
+    return bonus
+
+
 def _takeover_opportunity_score(state: Dict, player_id: str, cards: List[int]) -> float:
     current_trick = state.get("current_trick")
     if not current_trick or not cards:
@@ -1970,6 +2133,7 @@ def _takeover_opportunity_score(state: Dict, player_id: str, cards: List[int]) -
             likely_beats += 1
         else:
             likely_blocks += 1
+    score += _single_lock_bonus(state, player_id, cards, combo)
     score += likely_blocks * 0.7
     score -= likely_beats * 0.4
     if len(cards) == len(hand):
@@ -2055,6 +2219,7 @@ _AI_EXPORTED_FUNCS = (
     "_mcts_budget",
     "_is_obvious_low_single_response",
     "_mcts_obvious_response_scores",
+    "_mcts_high_single_bomb_scores",
     "_mcts_finalize_scores",
     "_mcts_score_actions",
     "_mcts_pick_action",

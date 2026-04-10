@@ -400,6 +400,58 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         strong_score = guandan._evaluate_state_for_bot(state, "bot")
         self.assertGreater(strong_score, weak_score)
 
+    def test_estimated_turns_to_finish_prefers_connected_groups(self):
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        structured = [pick_label(label) for label in ["♠️3", "♥️3", "♠️4", "♥️4", "♠️5", "♥️5"]]
+        weak = [pick_label(label) for label in ["♣️6", "♦️8", "♠️10", "♥️J", "♣️K", "♦️A"]]
+
+        structured_turns = guandan._estimated_turns_to_finish(structured, 2)
+        weak_turns = guandan._estimated_turns_to_finish(weak, 2)
+        self.assertLess(structured_turns, weak_turns)
+
+    def test_team_finish_score_uses_effective_turns_not_only_card_count(self):
+        players = [
+            {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
+            {"player_id": "opp", "name": "Opp", "seat": 1, "is_bot": False},
+            {"player_id": "mate", "name": "Mate", "seat": 2, "is_bot": False},
+            {"player_id": "opp2", "name": "Opp2", "seat": 3, "is_bot": False},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["current_turn"] = "bot"
+        state["current_trick"] = None
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        bot_hand = [pick_label(label) for label in ["♠️3", "♥️3", "♣️3", "♠️4", "♥️4", "♣️4"]]
+        opp_hand = [pick_label(label) for label in ["♦️5", "♠️7", "♥️9", "♣️J", "♦️K"]]
+        mate_hand = [pick_label(label) for label in ["♣️6", "♦️8", "♠️10", "♥️Q", "♣️A", "♦️6", "♠️8", "♥️10", "♣️Q", "♦️A"]]
+        opp2_hand = [pick_label(label) for label in ["♠️5", "♥️7", "♣️9", "♦️J", "♠️K", "♥️6", "♣️8", "♦️10", "♠️Q"]]
+
+        state["players"]["bot"]["hand"] = bot_hand
+        state["players"]["opp"]["hand"] = opp_hand
+        state["players"]["mate"]["hand"] = mate_hand
+        state["players"]["opp2"]["hand"] = opp2_hand
+
+        bot_turns = guandan._estimated_turns_to_finish(bot_hand, state["level_rank"])
+        opp_turns = guandan._estimated_turns_to_finish(opp_hand, state["level_rank"])
+        self.assertLess(bot_turns, opp_turns)
+
+        score = guandan._team_finish_score(state, "bot", len(bot_hand), bot_hand=bot_hand)
+        self.assertGreater(score, 0.0)
+
     def test_structure_penalty_breaks_pair(self):
         players = [
             {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
@@ -688,6 +740,62 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
 
         self.assertGreater(play_score, pass_score)
         self.assertEqual(guandan._bot_select_play(state, "bot", depth=3), [five["id"]])
+
+    def test_low_single_prefers_lone_level_single_lock_over_pass(self):
+        players = [
+            {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
+            {"player_id": "opp", "name": "Opp", "seat": 1, "is_bot": False},
+            {"player_id": "mate", "name": "Mate", "seat": 2, "is_bot": False},
+            {"player_id": "opp2", "name": "Opp2", "seat": 3, "is_bot": False},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["current_turn"] = "bot"
+        state["level_rank"] = 2
+        state["config"]["bot_endgame_threshold"] = 0
+
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        four = pick_label("♠️4")
+        two = pick_label("♠️2")
+        state["players"]["bot"]["hand"] = [
+            two,
+            pick_label("♠️7"),
+            pick_label("♥️7"),
+            pick_label("♠️9"),
+            pick_label("♥️9"),
+            pick_label("♣️J"),
+            pick_label("♦️J"),
+        ]
+        idx = 0
+        for pid in ("opp", "mate", "opp2"):
+            state["players"][pid]["hand"] = deck[idx : idx + 7]
+            idx += 7
+
+        state["current_trick"] = {
+            "player_id": "opp",
+            "cards": [four["id"]],
+            "combo": guandan._evaluate_combo([four], state["level_rank"], state.get("config", {})),
+        }
+
+        pass_score = guandan._bot_score_components(state, "bot", None, depth=4)
+        play_score = guandan._bot_score_components(state, "bot", [two["id"]], depth=4)
+        self.assertIn("single_lock", play_score)
+        self.assertGreater(play_score["single_lock"], 0.0)
+        self.assertGreater(play_score["total"], pass_score["total"])
+
+        real_random = random.Random
+        with mock.patch.object(guandan.random, "Random", side_effect=lambda *args, **kwargs: real_random(0)):
+            action = guandan.GuandanGame.bot_move(state, "bot")
+
+        self.assertEqual(action.get("type"), "play")
+        self.assertEqual(action.get("card_ids"), [two["id"]])
 
     def test_teammate_lead_can_still_prefer_pass(self):
         players = [

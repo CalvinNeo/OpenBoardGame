@@ -45,6 +45,7 @@ _evaluate_combo = _proxy("_evaluate_combo")
 _team_of = _proxy("_team_of")
 _teammate_of = _proxy("_teammate_of")
 _hand_strength_score = _proxy("_hand_strength_score")
+_estimated_turns_to_finish = _proxy("_estimated_turns_to_finish")
 _control_card_score = _proxy("_control_card_score")
 _team_finish_score = _proxy("_team_finish_score")
 _best_response_play_score = _proxy("_best_response_play_score")
@@ -64,6 +65,7 @@ _rank_lead_options = _proxy("_rank_lead_options")
 _choose_lead_play = _proxy("_choose_lead_play")
 _can_play_all = _proxy("_can_play_all")
 _minimal_bomb_response = _proxy("_minimal_bomb_response")
+_single_lock_bonus = _proxy("_single_lock_bonus")
 _find_bomb_candidates = _proxy("_find_bomb_candidates")
 _compare_combos = _proxy("_compare_combos")
 _max_tribute_cards = _proxy("_max_tribute_cards")
@@ -173,14 +175,63 @@ def _teammate_overtrick_penalty(
     return max(0.0, penalty)
 
 
+def _high_single_bomb_profile(state: Dict, player_id: str) -> Optional[Dict]:
+    current_trick = state.get("current_trick")
+    if not current_trick:
+        return None
+    current_combo = current_trick.get("combo") or {}
+    if current_combo.get("type") != "single" or current_combo.get("rank_value", 0) < 90:
+        return None
+    hand = state["players"][player_id]["hand"]
+    minimal = _minimal_bomb_response(hand, state["level_rank"], current_combo, state.get("config", {}))
+    if not minimal:
+        return None
+    hand_map = _map_hand_by_id(hand)
+    play_cards = [hand_map[cid] for cid in minimal if cid in hand_map]
+    combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
+    if not combo or combo.get("type") not in BOMB_TYPES:
+        return None
+    low_bomb_anchor = _point_order_value(3, state["level_rank"])
+    if combo.get("type") == "bomb":
+        rank_pressure = max(0.0, combo.get("rank_value", low_bomb_anchor) - low_bomb_anchor)
+    else:
+        rank_pressure = 6.0 + _bomb_tier(combo) * 1.5
+    return {
+        "cards": minimal,
+        "combo": combo,
+        "rank_pressure": rank_pressure,
+    }
+
+
+def _hand_state_value_components(state: Dict, bot_id: str, hand: List[Dict]) -> Dict[str, float]:
+    level_rank = state["level_rank"]
+    remaining = len(hand)
+    turns = _estimated_turns_to_finish(hand, level_rank)
+    strength = _hand_strength_score(hand, level_rank)
+    control = _control_card_score(hand, level_rank)
+    components: Dict[str, float] = {
+        "team_finish": _team_finish_score(state, bot_id, remaining, bot_hand=hand) * 2.2,
+    }
+    if remaining == 0:
+        components["finished_hand"] = 42.0
+        return components
+    components["turn_efficiency"] = -turns * 0.34
+    structure_credit = max(0.0, remaining - turns)
+    if structure_credit > 0.001:
+        components["structure_credit"] = structure_credit * 0.75
+    if abs(strength) > 0.001:
+        components["hand_strength"] = strength * 0.48
+    components["hand_pressure"] = -remaining * 0.06
+    if control > 0.001:
+        components["control_stock"] = min(3.2, control * 0.22)
+    return components
+
+
 def _evaluate_state_for_bot(state: Dict, bot_id: str) -> float:
     if state.get("game_over"):
         return 1000.0 if state.get("winner_team") == _team_of(state, bot_id) else -1000.0
     hand = state["players"][bot_id]["hand"]
-    remaining = len(hand)
-    score = _team_finish_score(state, bot_id, remaining) * 2.0
-    score -= remaining * 0.15
-    score += _hand_strength_score(hand, state["level_rank"]) * 0.7
+    score = sum(_hand_state_value_components(state, bot_id, hand).values())
 
     teammate = _teammate_of(state, bot_id)
     current_trick = state.get("current_trick")
@@ -198,9 +249,16 @@ def _evaluate_state_for_bot(state: Dict, bot_id: str) -> float:
                     if response_score is not None and response_score > 0:
                         score -= min(6.5, response_score * 0.7)
                     else:
+                        bomb_profile = _high_single_bomb_profile(state, bot_id)
                         opportunity = _best_takeover_opportunity(state, bot_id)
                         if opportunity > 0:
                             score -= min(4.5, opportunity * 1.1)
+                        if bomb_profile:
+                            rank_pressure = bomb_profile["rank_pressure"]
+                            if rank_pressure <= 2.5:
+                                score -= 4.5 - rank_pressure * 1.2
+                            elif rank_pressure >= 4.0:
+                                score += (rank_pressure - 3.5) * 2.0
 
     if teammate and not state["players"][teammate]["finished"]:
         teammate_remaining = len(state["players"][teammate]["hand"])
@@ -421,26 +479,11 @@ def _mcts_reply_tree_value(
 
 def _mcts_root_heuristic_value(state: Dict, bot_id: str, action: Dict, depth: int) -> float:
     base_depth = max(2, min(4, depth if depth > 0 else 2))
-    current_trick = state.get("current_trick")
-    if current_trick:
-        if action.get("type") == "pass":
-            return _bot_score_play(state, bot_id, None, base_depth)
-        if action.get("type") == "play":
-            if _teammate_lead_context(state, bot_id):
-                return _bot_score_play(state, bot_id, action.get("card_ids") or [], base_depth)
-            cards = action.get("card_ids", []) or []
-            hand = state["players"][bot_id]["hand"]
-            hand_map = _map_hand_by_id(hand)
-            play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
-            combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
-            if not combo:
-                return -999.0
-            if combo["type"] in BOMB_TYPES:
-                response_cost = _response_material_cost(state, bot_id, cards, combo)
-                return _takeover_opportunity_score(state, bot_id, cards) - response_cost * 0.1
-            return _bot_score_play(state, bot_id, cards, base_depth)
-    cards = action.get("card_ids") if action.get("type") == "play" else None
-    return _bot_score_play(state, bot_id, cards, base_depth)
+    if action.get("type") == "pass":
+        return _bot_score_play(state, bot_id, None, base_depth)
+    if action.get("type") == "play":
+        return _bot_score_play(state, bot_id, action.get("card_ids") or [], base_depth)
+    return -999.0
 
 
 def _mcts_action_key(action: Dict) -> Tuple:
@@ -576,6 +619,69 @@ def _mcts_obvious_response_scores(
     return scored
 
 
+def _mcts_high_single_bomb_scores(
+    state: Dict,
+    bot_id: str,
+    candidates: List[Dict],
+    heuristic_values: Dict[Tuple, float],
+) -> Optional[List[Tuple[Dict, float, int, Dict[str, float]]]]:
+    current_trick = state.get("current_trick")
+    if not current_trick or _teammate_lead_context(state, bot_id):
+        return None
+    current_combo = current_trick.get("combo") or {}
+    if current_combo.get("type") != "single" or current_combo.get("rank_value", 0) < 90:
+        return None
+    if len(candidates) != 2:
+        return None
+
+    pass_action = next((action for action in candidates if action.get("type") == "pass"), None)
+    play_action = next((action for action in candidates if action.get("type") == "play"), None)
+    if not pass_action or not play_action:
+        return None
+
+    hand = state["players"][bot_id]["hand"]
+    hand_map = _map_hand_by_id(hand)
+    play_cards = [hand_map[cid] for cid in play_action.get("card_ids", []) if cid in hand_map]
+    combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
+    if not combo or combo.get("type") not in BOMB_TYPES:
+        return None
+
+    pass_heuristic = heuristic_values.get(_mcts_action_key(pass_action), -999.0)
+    play_heuristic = heuristic_values.get(_mcts_action_key(play_action), -999.0)
+    gap = abs(play_heuristic - pass_heuristic)
+    if gap < 6.0:
+        return None
+
+    ordered = sorted(candidates, key=lambda action: heuristic_values.get(_mcts_action_key(action), -999.0), reverse=True)
+    scored: List[Tuple[Dict, float, int, Dict[str, float]]] = []
+    top_action = ordered[0]
+    for action in ordered:
+        heuristic = heuristic_values.get(_mcts_action_key(action), -999.0)
+        scored.append(
+            (
+                action,
+                heuristic,
+                0,
+                {
+                    "avg": heuristic,
+                    "adjusted": heuristic,
+                    "std": 0.0,
+                    "win_rate": 1.0 if action == top_action else 0.0,
+                    "min": heuristic,
+                    "max": heuristic,
+                    "heuristic": heuristic,
+                    "heuristic_norm": 0.0,
+                    "depth": 0,
+                    "tree_ply": 0,
+                    "reply_width": 1,
+                    "fast_path": 1.0,
+                    "high_single_bomb_fast_path": 1.0,
+                },
+            )
+        )
+    return scored
+
+
 def _mcts_finalize_scores(
     candidates: List[Dict],
     samples: Dict[Tuple, Dict[str, float]],
@@ -691,6 +797,9 @@ def _mcts_score_actions(
     obvious_scores = _CORE._mcts_obvious_response_scores(state, bot_id, candidates, heuristic_values)
     if obvious_scores:
         return obvious_scores
+    high_single_bomb_scores = _CORE._mcts_high_single_bomb_scores(state, bot_id, candidates, heuristic_values)
+    if high_single_bomb_scores:
+        return high_single_bomb_scores
 
     current_combo = (state.get("current_trick") or {}).get("combo") or {}
     has_pass = any(action.get("type") == "pass" for action in candidates)
@@ -713,6 +822,7 @@ def _mcts_score_actions(
         and current_combo.get("rank_value", 0) >= 70
     ):
         effective_sims = max(effective_sims, 14)
+        heuristic_weight = max(heuristic_weight, 7.0 if current_combo.get("rank_value", 0) >= 90 else 5.0)
 
     rng = random.Random()
     sims_per = max(1, effective_sims // max(1, len(candidates)))
@@ -897,9 +1007,8 @@ def _bot_score_components(
     hand = state["players"][bot_id]["hand"]
     current_trick = state.get("current_trick")
     teammate = _teammate_of(state, bot_id)
-    components: Dict[str, float] = {}
-
     if not cards:
+        components: Dict[str, float] = _hand_state_value_components(state, bot_id, hand)
         if current_trick and teammate == current_trick.get("player_id"):
             components["protect_teammate"] = _teammate_protect_bonus(state, bot_id)
         elif current_trick and _team_of(state, current_trick.get("player_id")) != _team_of(state, bot_id):
@@ -908,13 +1017,18 @@ def _bot_score_components(
             if response_score is not None and response_score > 0:
                 components["pass_opportunity_cost"] = -min(8.5, response_score * 0.72)
             else:
+                bomb_profile = _high_single_bomb_profile(state, bot_id)
                 if teammate_control > 0 and current_trick.get("combo", {}).get("type") == "single":
                     components["defer_to_teammate_control"] = teammate_control * 7.0
                 opportunity = _best_takeover_opportunity(state, bot_id)
                 if opportunity > 0:
                     components["pass_opportunity_cost"] = -min(6.0, opportunity * 1.55)
-        components["hand_pressure"] = -len(hand) * 0.2
-        components["team_finish"] = _team_finish_score(state, bot_id, len(hand)) * 2.0
+                if bomb_profile:
+                    rank_pressure = bomb_profile["rank_pressure"]
+                    if rank_pressure <= 2.5:
+                        components["cheap_bomb_pass_penalty"] = -(4.5 - rank_pressure * 1.2)
+                    elif rank_pressure >= 4.0:
+                        components["preserve_premium_bomb"] = (rank_pressure - 3.5) * 2.0
         components["total"] = sum(components.values())
         return components
 
@@ -925,6 +1039,7 @@ def _bot_score_components(
         return {"total": -999.0}
 
     remaining = _remove_cards(hand, cards)
+    components: Dict[str, float] = _hand_state_value_components(state, bot_id, remaining)
     components["play_cards"] = len(cards) * 0.6
     shape_score = _shape_transition_score(hand, cards, level_rank)
     if abs(shape_score) > 0.001:
@@ -936,6 +1051,9 @@ def _bot_score_components(
         response_cost = _response_material_cost(state, bot_id, cards, combo)
         if response_cost > 0.001:
             components["response_material"] = -response_cost * 0.55
+        lock_bonus = _single_lock_bonus(state, bot_id, cards, combo)
+        if lock_bonus > 0.001:
+            components["single_lock"] = lock_bonus
     if not remaining:
         components["finish_bonus"] = 100.0
     if combo["type"] in BOMB_TYPES:
@@ -943,6 +1061,19 @@ def _bot_score_components(
         if current_trick and current_trick.get("combo", {}).get("type") in BOMB_TYPES:
             base = 1.5
         components["bomb_bonus"] = base + _bomb_tier(combo) * 0.35
+        if current_trick and (current_trick.get("combo") or {}).get("type") == "single":
+            current_rank = current_trick.get("combo", {}).get("rank_value", 0)
+            if current_rank >= 90:
+                low_bomb_anchor = _point_order_value(3, level_rank)
+                if combo.get("type") == "bomb":
+                    rank_pressure = max(0.0, combo.get("rank_value", low_bomb_anchor) - low_bomb_anchor)
+                else:
+                    rank_pressure = 6.0 + _bomb_tier(combo) * 1.5
+                minimal = _minimal_bomb_response(hand, level_rank, current_trick.get("combo", {}), config)
+                if minimal is not None and tuple(sorted(minimal)) == tuple(sorted(cards)) and rank_pressure <= 2.5:
+                    components["cheap_bomb_takeover"] = 4.5 - rank_pressure * 1.2
+                elif rank_pressure >= 4.0:
+                    components["premium_bomb_spend_penalty"] = -(rank_pressure - 3.5) * 2.0
     if combo.get("uses_wild"):
         components["wild_penalty"] = -2.0
 
@@ -982,8 +1113,6 @@ def _bot_score_components(
             if teammate_control > 0:
                 components["save_bomb_for_teammate"] = -teammate_control * (7.5 + _bomb_tier(combo) * 1.8)
 
-    components["team_finish"] = _team_finish_score(state, bot_id, len(remaining)) * 2.0
-
     if not current_trick:
         trap_penalty = _lead_low_single_trap_penalty(hand, cards, level_rank)
         if trap_penalty > 0.001:
@@ -996,7 +1125,6 @@ def _bot_score_components(
         lead_cards = _choose_lead_play(remaining, level_rank, config, state, bot_id)
         if lead_cards and len(lead_cards) == len(remaining):
             components["lead_finish_bonus"] = 12.0
-        components["remaining_penalty"] = -len(remaining) * 0.3
 
     components["total"] = sum(components.values())
     return components
@@ -1270,4 +1398,3 @@ def _suggest_hint_cards(state: Dict, player_id: str) -> Optional[List[int]]:
     if state.get("current_trick"):
         options = _rank_response_options(state, player_id, options)
     return options[0] if options else None
-
