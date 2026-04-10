@@ -6,13 +6,17 @@ let guandanLastSfKey = null;
 let guandanHandLayout = "cascade";
 let guandanCascadeLayoutFrame = null;
 const GUANDAN_DEFAULT_BOT_MODE = "auto";
-const GUANDAN_DEFAULT_NN_CHECKPOINT = "checkpoints/guandan_nn.pt";
+const GUANDAN_DEFAULT_NN_CHECKPOINT = "assets/guandan/checkpoints/guandan_nn.pt";
 
 const guandanConfigBox = document.getElementById("guandanConfigBox");
 const guandanBotModeRow = document.getElementById("guandanBotModeRow");
 const guandanBotModeSelect = document.getElementById("guandanBotModeSelect");
 const guandanNnCheckpointRow = document.getElementById("guandanNnCheckpointRow");
-const guandanNnCheckpointInput = document.getElementById("guandanNnCheckpointInput");
+const guandanNnCheckpointSelect = document.getElementById("guandanNnCheckpointSelect");
+let guandanCheckpointOptions = [];
+let guandanCheckpointOptionsLoaded = false;
+let guandanCheckpointOptionsLoading = false;
+let guandanCheckpointOptionsFailed = false;
 
 const guandanPhaseLabel = document.getElementById("guandanPhase");
 const guandanRoundLabel = document.getElementById("guandanRound");
@@ -52,6 +56,77 @@ if (guandanCascadeSelect) {
   guandanCascadeSelect.value = guandanHandLayout;
 }
 
+function renderGuandanCheckpointOptions() {
+  if (!guandanNnCheckpointSelect) {
+    return;
+  }
+  const currentValue = guandanNnCheckpointSelect.value || GUANDAN_DEFAULT_NN_CHECKPOINT;
+  guandanNnCheckpointSelect.innerHTML = "";
+  if (guandanCheckpointOptionsLoading && !guandanCheckpointOptionsLoaded) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "Loading checkpoints...";
+    guandanNnCheckpointSelect.appendChild(option);
+    guandanNnCheckpointSelect.disabled = true;
+    return;
+  }
+  if (guandanCheckpointOptionsFailed) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "Failed to load checkpoints";
+    guandanNnCheckpointSelect.appendChild(option);
+    guandanNnCheckpointSelect.disabled = true;
+    return;
+  }
+  if (!guandanCheckpointOptions.length) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "No checkpoints found";
+    guandanNnCheckpointSelect.appendChild(option);
+    guandanNnCheckpointSelect.disabled = true;
+    return;
+  }
+  guandanCheckpointOptions.forEach((entry) => {
+    const option = document.createElement("option");
+    option.value = entry.path;
+    option.textContent = entry.label || entry.path;
+    guandanNnCheckpointSelect.appendChild(option);
+  });
+  const availableValues = new Set(guandanCheckpointOptions.map((entry) => entry.path));
+  if (availableValues.has(currentValue)) {
+    guandanNnCheckpointSelect.value = currentValue;
+  } else if (availableValues.has(GUANDAN_DEFAULT_NN_CHECKPOINT)) {
+    guandanNnCheckpointSelect.value = GUANDAN_DEFAULT_NN_CHECKPOINT;
+  } else {
+    guandanNnCheckpointSelect.value = guandanCheckpointOptions[0].path;
+  }
+  guandanNnCheckpointSelect.disabled = false;
+}
+
+function fetchGuandanCheckpointOptions() {
+  if (!guandanNnCheckpointSelect || guandanCheckpointOptionsLoading) {
+    return;
+  }
+  guandanCheckpointOptionsLoading = true;
+  guandanCheckpointOptionsFailed = false;
+  renderGuandanCheckpointOptions();
+  fetch("/api/guandan/checkpoints")
+    .then((response) => response.json())
+    .then((data) => {
+      guandanCheckpointOptions = Array.isArray(data.checkpoints) ? data.checkpoints : [];
+      guandanCheckpointOptionsLoaded = true;
+      guandanCheckpointOptionsLoading = false;
+      guandanCheckpointOptionsFailed = false;
+      renderGuandanCheckpointOptions();
+    })
+    .catch(() => {
+      guandanCheckpointOptionsLoaded = false;
+      guandanCheckpointOptionsLoading = false;
+      guandanCheckpointOptionsFailed = true;
+      renderGuandanCheckpointOptions();
+    });
+}
+
 function updateGuandanConfigRow() {
   const showRow = currentRoomState && currentGameType === "guandan" && currentRoomState.status === "lobby";
   const mode = guandanBotModeSelect ? guandanBotModeSelect.value || GUANDAN_DEFAULT_BOT_MODE : GUANDAN_DEFAULT_BOT_MODE;
@@ -68,12 +143,15 @@ function updateGuandanConfigRow() {
     guandanNnCheckpointRow.classList.toggle("hidden", !showCheckpoint);
     guandanNnCheckpointRow.setAttribute("aria-hidden", (!showCheckpoint).toString());
   }
+  if (showCheckpoint && !guandanCheckpointOptionsLoaded && !guandanCheckpointOptionsLoading) {
+    fetchGuandanCheckpointOptions();
+  }
 }
 
 function getGuandanRoomConfig() {
   const rawMode = guandanBotModeSelect ? guandanBotModeSelect.value || GUANDAN_DEFAULT_BOT_MODE : GUANDAN_DEFAULT_BOT_MODE;
   const botMode = ["auto", "heuristic", "nn"].includes(rawMode) ? rawMode : GUANDAN_DEFAULT_BOT_MODE;
-  const checkpoint = guandanNnCheckpointInput ? guandanNnCheckpointInput.value.trim() : "";
+  const checkpoint = guandanNnCheckpointSelect ? guandanNnCheckpointSelect.value || "" : "";
   const config = { bot_mode: botMode };
   if (checkpoint) {
     config.bot_nn_checkpoint = checkpoint;
@@ -85,9 +163,10 @@ function resetGuandanRoomConfig() {
   if (guandanBotModeSelect) {
     guandanBotModeSelect.value = GUANDAN_DEFAULT_BOT_MODE;
   }
-  if (guandanNnCheckpointInput) {
-    guandanNnCheckpointInput.value = GUANDAN_DEFAULT_NN_CHECKPOINT;
+  if (guandanNnCheckpointSelect) {
+    guandanNnCheckpointSelect.value = GUANDAN_DEFAULT_NN_CHECKPOINT;
   }
+  renderGuandanCheckpointOptions();
   updateGuandanConfigRow();
 }
 

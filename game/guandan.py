@@ -20,7 +20,7 @@ DEFAULT_CONFIG = {
     "hard_bomb_beats_soft": False,
     "require_partner_not_last_for_a": False,
     "bot_mode": "auto",
-    "bot_nn_checkpoint": "checkpoints/guandan_nn.pt",
+    "bot_nn_checkpoint": "assets/guandan/checkpoints/guandan_nn.pt",
     "bot_nn_candidate_limit": 12,
     "bot_nn_temperature": 0.0,
     "bot_search_depth": 4,

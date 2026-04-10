@@ -3,6 +3,8 @@ import json
 import math
 import os
 import random
+import sys
+import time
 from dataclasses import asdict, dataclass, field
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
@@ -96,6 +98,20 @@ DEFAULT_TRAIN_CONFIG = {
     "bot_think_time_ms": 60,
     "bot_endgame_threshold": 14,
 }
+
+
+def _format_duration(seconds: float) -> str:
+    total = max(0, int(round(seconds)))
+    minutes, secs = divmod(total, 60)
+    hours, minutes = divmod(minutes, 60)
+    if hours:
+        return f"{hours:d}:{minutes:02d}:{secs:02d}"
+    return f"{minutes:02d}:{secs:02d}"
+
+
+def _progress(message: str) -> None:
+    stamp = time.strftime("%H:%M:%S")
+    print(f"[{stamp}] {message}", file=sys.stderr, flush=True)
 
 
 def _one_hot(value: str, choices: Sequence[str]) -> List[float]:
@@ -573,9 +589,17 @@ def collect_bootstrap_examples(
     teacher_mix: float = 0.2,
     temperature: float = 0.0,
     config_overrides: Optional[Dict] = None,
+    verbose: bool = False,
+    progress_label: str = "bootstrap",
 ) -> List[DecisionExample]:
     rng = random.Random(seed)
     examples: List[DecisionExample] = []
+    started_at = time.perf_counter()
+
+    if verbose and episodes > 0:
+        _progress(
+            f"{progress_label}: start episodes={episodes} teacher={teacher} rounds={rounds_per_episode}"
+        )
 
     for episode_idx in range(episodes):
         players = [
@@ -667,6 +691,22 @@ def collect_bootstrap_examples(
                     item.metadata["episode"] = episode_idx
                     item.metadata["round_finish_order"] = fallback_order
                     examples.append(item)
+        if verbose:
+            done = episode_idx + 1
+            elapsed = time.perf_counter() - started_at
+            avg = elapsed / done
+            eta = avg * max(0, episodes - done)
+            _progress(
+                f"{progress_label}: episode {done}/{episodes} "
+                f"({done / max(1, episodes) * 100:.0f}%) "
+                f"examples={len(examples)} elapsed={_format_duration(elapsed)} eta={_format_duration(eta)}"
+            )
+    if verbose and episodes > 0:
+        total_elapsed = time.perf_counter() - started_at
+        _progress(
+            f"{progress_label}: done episodes={episodes} examples={len(examples)} "
+            f"elapsed={_format_duration(total_elapsed)}"
+        )
     return examples
 
 
@@ -829,6 +869,8 @@ def train_model(
     value_weight: float = 0.35,
     device: str = "cpu",
     seed: int = 0,
+    verbose: bool = False,
+    progress_label: str = "train",
 ) -> List[TrainingStats]:
     if torch is None:
         raise RuntimeError("torch is required to train the Guandan NN model")
@@ -839,6 +881,13 @@ def train_model(
     model.to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
     history: List[TrainingStats] = []
+    started_at = time.perf_counter()
+
+    if verbose and epochs > 0:
+        _progress(
+            f"{progress_label}: start epochs={epochs} examples={len(examples)} "
+            f"batch_size={batch_size} lr={learning_rate:g} device={device}"
+        )
 
     for epoch_idx in range(epochs):
         model.train()
@@ -882,6 +931,21 @@ def train_model(
                 policy_accuracy=correct / max(1, total),
             )
         )
+        if verbose:
+            stat = history[-1]
+            done = epoch_idx + 1
+            elapsed = time.perf_counter() - started_at
+            avg = elapsed / done
+            eta = avg * max(0, epochs - done)
+            _progress(
+                f"{progress_label}: epoch {done}/{epochs} "
+                f"loss={stat.loss:.4f} policy={stat.policy_loss:.4f} "
+                f"value={stat.value_loss:.4f} acc={stat.policy_accuracy:.1%} "
+                f"elapsed={_format_duration(elapsed)} eta={_format_duration(eta)}"
+            )
+    if verbose and epochs > 0:
+        total_elapsed = time.perf_counter() - started_at
+        _progress(f"{progress_label}: done elapsed={_format_duration(total_elapsed)}")
     return history
 
 
@@ -993,6 +1057,7 @@ def run_training_pipeline(args) -> Dict[str, object]:
         raise RuntimeError("torch is required to run the Guandan NN training pipeline")
 
     device = args.device
+    verbose = not args.quiet
     random.seed(args.seed)
     torch.manual_seed(args.seed)
 
@@ -1000,13 +1065,23 @@ def run_training_pipeline(args) -> Dict[str, object]:
     model: Optional[GuandanPolicyValueNet] = None
     metadata: Dict[str, object] = {}
 
+    if verbose:
+        _progress(
+            f"training start: device={device} bootstrap={args.bootstrap_episodes} "
+            f"epochs={args.epochs} self_play={args.self_play_iterations}x{args.self_play_episodes}"
+        )
+
     if args.load_checkpoint:
         model, payload = load_checkpoint(args.load_checkpoint, device=device)
         metadata["loaded_checkpoint"] = args.load_checkpoint
         metadata["loaded_history"] = payload.get("history", [])
+        if verbose:
+            _progress(f"loaded checkpoint: {args.load_checkpoint}")
 
     if args.dataset_in:
         examples.extend(load_examples_jsonl(args.dataset_in))
+        if verbose:
+            _progress(f"loaded dataset: {args.dataset_in} examples={len(examples)}")
 
     if args.bootstrap_episodes > 0:
         bootstrap_teacher = args.teacher if model is None else args.teacher
@@ -1021,11 +1096,19 @@ def run_training_pipeline(args) -> Dict[str, object]:
                 rounds_per_episode=args.rounds_per_episode,
                 teacher_mix=args.teacher_mix,
                 temperature=args.temperature,
+                verbose=verbose,
+                progress_label="bootstrap",
             )
         )
+        if verbose:
+            _progress(f"bootstrap complete: examples={len(examples)}")
 
     if model is None:
         model = build_model(hidden_dim=args.hidden_dim, dropout=args.dropout)
+        if verbose:
+            _progress(
+                f"built model: hidden_dim={args.hidden_dim} dropout={args.dropout:g}"
+            )
 
     history: List[TrainingStats] = []
     if args.epochs > 0 and examples:
@@ -1039,10 +1122,13 @@ def run_training_pipeline(args) -> Dict[str, object]:
                 value_weight=args.value_weight,
                 device=device,
                 seed=args.seed,
+                verbose=verbose,
+                progress_label="train/bootstrap",
             )
         )
 
     for iteration in range(args.self_play_iterations):
+        label = f"self-play {iteration + 1}/{args.self_play_iterations}"
         new_examples = collect_bootstrap_examples(
             args.self_play_episodes,
             teacher="mixed" if args.teacher_mix > 0 else "model",
@@ -1053,8 +1139,12 @@ def run_training_pipeline(args) -> Dict[str, object]:
             rounds_per_episode=args.rounds_per_episode,
             teacher_mix=args.teacher_mix,
             temperature=args.temperature,
+            verbose=verbose,
+            progress_label=f"{label}/collect",
         )
         examples.extend(new_examples)
+        if verbose:
+            _progress(f"{label}: collected={len(new_examples)} total_examples={len(examples)}")
         if new_examples:
             history.extend(
                 train_model(
@@ -1066,11 +1156,15 @@ def run_training_pipeline(args) -> Dict[str, object]:
                     value_weight=args.value_weight,
                     device=device,
                     seed=args.seed + iteration + 1,
+                    verbose=verbose,
+                    progress_label=f"{label}/train",
                 )
             )
 
     if args.dataset_out:
         save_examples_jsonl(args.dataset_out, examples)
+        if verbose:
+            _progress(f"saved dataset: {args.dataset_out} examples={len(examples)}")
     if args.save_checkpoint:
         save_checkpoint(
             args.save_checkpoint,
@@ -1081,6 +1175,10 @@ def run_training_pipeline(args) -> Dict[str, object]:
                 "args": vars(args),
             },
         )
+        if verbose:
+            _progress(f"saved checkpoint: {args.save_checkpoint}")
+    if verbose:
+        _progress(f"training complete: examples={len(examples)} history_points={len(history)}")
     return {
         "example_count": len(examples),
         "history": [asdict(item) for item in history],
@@ -1110,6 +1208,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--temperature", type=float, default=0.0)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--device", type=str, default="cpu")
+    parser.add_argument("--quiet", action="store_true")
     return parser
 
 

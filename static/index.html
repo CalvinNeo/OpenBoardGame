@@ -1014,13 +1014,10 @@
                       </select>
                     </div>
                     <div class="row hidden" id="guandanNnCheckpointRow">
-                      <label for="guandanNnCheckpointInput">NN Checkpoint</label>
-                      <input
-                        id="guandanNnCheckpointInput"
-                        type="text"
-                        value="checkpoints/guandan_nn.pt"
-                        placeholder="checkpoints/guandan_nn.pt"
-                      />
+                      <label for="guandanNnCheckpointSelect">NN Checkpoint</label>
+                      <select id="guandanNnCheckpointSelect">
+                        <option value="">Loading checkpoints...</option>
+                      </select>
                     </div>
                   </div>
                   <div class="game-config-card hidden" id="blitzSketchConfigBox" aria-hidden="true">
@@ -4344,7 +4341,7 @@
   <script src="/static/games/isle_of_skye.js?v=app_v4"></script>
   <script src="/static/games/six_nimmt.js?v=app_v4"></script>
   <script src="/static/games/skull.js?v=app_v4"></script>
-  <script src="/static/games/guandan.js?v=app_v7"></script>
+  <script src="/static/games/guandan.js?v=app_v8"></script>
   <script src="/static/games/cabo.js?v=app_v5"></script>
   <script src="/static/games/flip7.js?v=app_v4"></script>
   <script src="/static/games/abraca_what.js?v=app_v4"></script>

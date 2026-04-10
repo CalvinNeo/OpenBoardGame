@@ -29,7 +29,10 @@ sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
 fastapi_app = FastAPI()
 DEV_ORDER_PATH = Path(__file__).resolve().parent / "game" / "dev_order.json"
 CYBER_PICTURES_DIR = ".cyber_pictures"
+GUANDAN_CHECKPOINT_DIR = Path(__file__).resolve().parent / "assets" / "guandan" / "checkpoints"
+GUANDAN_CHECKPOINT_SUFFIXES = {".pt", ".pth", ".ckpt", ".bin"}
 os.makedirs(CYBER_PICTURES_DIR, exist_ok=True)
+os.makedirs(GUANDAN_CHECKPOINT_DIR, exist_ok=True)
 fastapi_app.mount("/static/cards", StaticFiles(directory=CYBER_PICTURES_DIR), name="cyber_pictures")
 fastapi_app.mount(
     "/static/carcassonne",
@@ -101,6 +104,24 @@ async def decrypto_word_packs():
 @fastapi_app.get("/api/decrypto/bot_strategies")
 async def decrypto_bot_strategies():
     return {"strategies": get_bot_strategies()}
+
+
+@fastapi_app.get("/api/guandan/checkpoints")
+async def guandan_checkpoints():
+    root = Path(__file__).resolve().parent
+    checkpoints = []
+    for path in sorted(GUANDAN_CHECKPOINT_DIR.iterdir(), key=lambda item: item.name.lower()):
+        if not path.is_file() or path.name.startswith("."):
+            continue
+        if path.suffix.lower() not in GUANDAN_CHECKPOINT_SUFFIXES:
+            continue
+        checkpoints.append(
+            {
+                "label": path.name,
+                "path": path.relative_to(root).as_posix(),
+            }
+        )
+    return {"checkpoints": checkpoints}
 
 
 @fastapi_app.get("/api/aidixit/decks")

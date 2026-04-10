@@ -1,4 +1,6 @@
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import app
 
@@ -252,3 +254,26 @@ class RoomSessionTests(unittest.IsolatedAsyncioTestCase):
         errors = [event for event in app.sio.emits if event["event"] == "system:error"]
         self.assertTrue(errors)
         self.assertEqual(errors[-1]["payload"]["message"], "auto-save already enabled")
+
+    async def test_guandan_checkpoint_api_lists_supported_files(self):
+        with TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "alpha.pt").write_text("x", encoding="utf-8")
+            (root / "beta.pth").write_text("x", encoding="utf-8")
+            (root / "notes.txt").write_text("x", encoding="utf-8")
+            original_dir = app.GUANDAN_CHECKPOINT_DIR
+            try:
+                app.GUANDAN_CHECKPOINT_DIR = root
+                payload = await app.guandan_checkpoints()
+            finally:
+                app.GUANDAN_CHECKPOINT_DIR = original_dir
+
+        self.assertEqual(
+            payload,
+            {
+                "checkpoints": [
+                    {"label": "alpha.pt", "path": "alpha.pt"},
+                    {"label": "beta.pth", "path": "beta.pth"},
+                ]
+            },
+        )
