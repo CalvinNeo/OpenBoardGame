@@ -1245,10 +1245,12 @@ def _lead_option_score(state: Dict, player_id: str, cards: List[int]) -> float:
     score -= structure_delta * 2.6
     score += remaining_strength * 0.18
     score -= _control_group_break_penalty(hand, cards, state["level_rank"])
+    score -= _lead_low_single_trap_penalty(hand, cards, state["level_rank"])
 
     if combo["type"] == "single":
         score -= _single_order_value(play_cards[0], state["level_rank"]) * 0.12
         score -= _lead_single_break_penalty(hand, cards, state["level_rank"])
+        score += _lead_low_single_escape_bonus(hand, cards, state["level_rank"])
     else:
         score -= _combo_value(combo) * 0.03
 
@@ -1750,6 +1752,68 @@ def _lead_single_break_penalty(hand: List[Dict], cards: List[int], level_rank: i
     return 1.2 + max(0, before_count - 2) * 0.8 + low_value * 0.9
 
 
+def _lead_low_single_escape_bonus(hand: List[Dict], cards: List[int], level_rank: int) -> float:
+    if len(cards) != 1 or len(hand) > 6:
+        return 0.0
+    hand_map = _map_hand_by_id(hand)
+    card = hand_map.get(cards[0])
+    if not card or _is_joker(card) or _is_wild(card, level_rank):
+        return 0.0
+    rank = card.get("rank")
+    if rank is None:
+        return 0.0
+    before_count = _rank_count_map(hand, level_rank).get(rank, 0)
+    if before_count != 1:
+        return 0.0
+    value = _single_order_value(card, level_rank)
+    if value >= 58:
+        return 0.0
+    bonus = 3.0 + (58 - value) * 0.55
+    if len(hand) <= 5:
+        bonus *= 1.2
+    return bonus
+
+
+def _lead_low_single_trap_penalty(hand: List[Dict], cards: List[int], level_rank: int) -> float:
+    if len(hand) > 6:
+        return 0.0
+    remaining = _remove_cards(hand, cards)
+    if not remaining:
+        return 0.0
+
+    counts = _rank_count_map(remaining, level_rank)
+    low_single_burden = 0.0
+    control_singles = 0
+    strong_pairs = 0
+    special_cover = 0
+
+    for rank, count in counts.items():
+        value = _point_order_value(rank, level_rank)
+        if count == 1 and value < 58:
+            low_single_burden += 3.0 + (58 - value) * 0.55
+        elif count == 1 and value >= 60:
+            control_singles += 1
+        elif count >= 2 and value >= 60:
+            strong_pairs += 1
+
+    if low_single_burden <= 0.001:
+        return 0.0
+
+    for card in remaining:
+        if _is_joker(card) or _is_wild(card, level_rank):
+            special_cover += 1
+
+    if len(remaining) <= 3:
+        low_single_burden *= 1.85
+    elif len(remaining) <= 4:
+        low_single_burden *= 1.6
+    else:
+        low_single_burden *= 1.25
+
+    cover = control_singles * 2.5 + strong_pairs * 0.9 + special_cover * 2.2
+    return max(0.0, low_single_burden - cover)
+
+
 def _should_prune_weak_lead_single(
     state: Dict, player_id: str, cards: List[int], single_score: float, best_non_single_score: Optional[float]
 ) -> bool:
@@ -1815,6 +1879,9 @@ def _takeover_opportunity_score(state: Dict, player_id: str, cards: List[int]) -
             low_bomb_anchor = _point_order_value(3, state["level_rank"])
             rank_pressure = max(0.0, combo.get("rank_value", 0) - low_bomb_anchor)
             score += max(0.0, 7.5 - rank_pressure * 1.3)
+        teammate_control = _teammate_future_control_probability(state, player_id)
+        if current_combo.get("type") == "single" and current_combo.get("rank_value", 0) >= 70 and teammate_control > 0:
+            score -= teammate_control * (7.5 + _bomb_tier(combo) * 1.8)
 
     opp_ids = [
         pid
@@ -1880,6 +1947,54 @@ def _best_response_play_score(state: Dict, player_id: str, depth: int, non_bomb_
         if natural:
             return max(natural)
     return max(score for score, _ in scored)
+
+
+def _hypergeom_hit_probability(total: int, hits: int, draws: int) -> float:
+    if total <= 0 or hits <= 0 or draws <= 0:
+        return 0.0
+    draws = min(draws, total)
+    misses = total - hits
+    miss_prob = 1.0
+    for idx in range(draws):
+        denom = total - idx
+        if denom <= 0:
+            break
+        miss_prob *= max(0, misses - idx) / denom
+    return max(0.0, min(1.0, 1.0 - miss_prob))
+
+
+def _teammate_future_control_probability(state: Dict, player_id: str) -> float:
+    current_trick = state.get("current_trick")
+    if not current_trick:
+        return 0.0
+    teammate = _teammate_of(state, player_id)
+    if not teammate or state["players"][teammate]["finished"]:
+        return 0.0
+    if teammate in (state.get("trick_plays") or {}):
+        return 0.0
+    leader = current_trick.get("player_id")
+    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+        return 0.0
+    combo = current_trick.get("combo") or {}
+    if combo.get("type") != "single":
+        return 0.0
+    threshold = combo.get("rank_value", 0)
+    if threshold != 70:
+        return 0.0
+
+    level_rank = state["level_rank"]
+    known_ids = set(state.get("seen_cards", []) or [])
+    known_ids.update(card["id"] for card in state["players"].get(player_id, {}).get("hand", []))
+    known_ids.update((current_trick.get("cards") or []))
+
+    full = _full_deck()
+    unknown_cards = [card for card in full if card["id"] not in known_ids]
+    target_hits = [card for card in unknown_cards if _single_order_value(card, level_rank) > threshold]
+    if not target_hits:
+        return 0.0
+
+    teammate_count = len(state["players"][teammate]["hand"])
+    return _hypergeom_hit_probability(len(unknown_cards), len(target_hits), teammate_count)
 
 
 def _teammate_lead_context(state: Dict, player_id: str) -> Optional[str]:
@@ -2489,9 +2604,12 @@ def _bot_score_components(
             components["protect_teammate"] = _teammate_protect_bonus(state, bot_id)
         elif current_trick and _team_of(state, current_trick.get("player_id")) != _team_of(state, bot_id):
             response_score = _best_response_play_score(state, bot_id, max(2, depth), non_bomb_only=True)
+            teammate_control = _teammate_future_control_probability(state, bot_id)
             if response_score is not None and response_score > 0:
                 components["pass_opportunity_cost"] = -min(8.5, response_score * 0.72)
             else:
+                if teammate_control > 0 and current_trick.get("combo", {}).get("type") == "single":
+                    components["defer_to_teammate_control"] = teammate_control * 7.0
                 opportunity = _best_takeover_opportunity(state, bot_id)
                 if opportunity > 0:
                     components["pass_opportunity_cost"] = -min(6.0, opportunity * 1.55)
@@ -2559,8 +2677,20 @@ def _bot_score_components(
         seize = _takeover_opportunity_score(state, bot_id, cards)
         if seize > 0:
             components["seize_tempo"] = seize * 1.25
+        if combo["type"] in BOMB_TYPES and current_trick.get("combo", {}).get("type") == "single":
+            teammate_control = _teammate_future_control_probability(state, bot_id)
+            if teammate_control > 0:
+                components["save_bomb_for_teammate"] = -teammate_control * (7.5 + _bomb_tier(combo) * 1.8)
 
     components["team_finish"] = _team_finish_score(state, bot_id, len(remaining)) * 2.0
+
+    if not current_trick:
+        trap_penalty = _lead_low_single_trap_penalty(hand, cards, level_rank)
+        if trap_penalty > 0.001:
+            components["low_single_trap"] = -trap_penalty
+        escape_bonus = _lead_low_single_escape_bonus(hand, cards, level_rank)
+        if escape_bonus > 0.001:
+            components["shed_low_single"] = escape_bonus
 
     if depth >= 2 and remaining:
         lead_cards = _choose_lead_play(remaining, level_rank, config, state, bot_id)
