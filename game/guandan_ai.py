@@ -291,6 +291,55 @@ def _high_single_bomb_profile(state: Dict, player_id: str) -> Optional[Dict]:
     }
 
 
+def _critical_pair_three_bomb_bonus(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Optional[Dict] = None,
+) -> float:
+    current_trick = state.get("current_trick")
+    if not current_trick or not cards:
+        return 0.0
+    leader = current_trick.get("player_id")
+    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+        return 0.0
+    current_combo = current_trick.get("combo") or {}
+    combo_type = current_combo.get("type")
+    if combo_type not in ("pair", "three") or current_combo.get("rank_value", 0) < 80:
+        return 0.0
+
+    leader_left = len(state["players"].get(leader, {}).get("hand", []))
+    if leader_left > 10:
+        return 0.0
+
+    hand = state["players"][player_id]["hand"]
+    if combo is None:
+        hand_map = _map_hand_by_id(hand)
+        play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+        combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
+    if not combo or combo.get("type") not in BOMB_TYPES:
+        return 0.0
+
+    minimal = _minimal_bomb_response(hand, state["level_rank"], current_combo, state.get("config", {}))
+    if minimal is None or tuple(sorted(minimal)) != tuple(sorted(cards)):
+        return 0.0
+
+    low_bomb_anchor = _point_order_value(3, state["level_rank"])
+    if combo.get("type") == "bomb":
+        rank_pressure = max(0.0, combo.get("rank_value", low_bomb_anchor) - low_bomb_anchor)
+    else:
+        rank_pressure = 6.0 + _bomb_tier(combo) * 1.8
+
+    bonus = 12.0 + max(0.0, 10 - leader_left) * 1.35
+    if combo_type == "pair":
+        bonus += 3.0
+    else:
+        bonus += 4.0
+    if leader_left <= 6:
+        bonus += 3.0
+    return max(0.0, bonus - rank_pressure * 0.95)
+
+
 def _lead_low_single_escape_bonus(hand: List[Dict], cards: List[int], level_rank: int) -> float:
     if len(cards) != 1 or len(hand) > 6:
         return 0.0
@@ -483,7 +532,23 @@ def _takeover_opportunity_score(state: Dict, player_id: str, cards: List[int]) -
             score += pressure_bonus
     else:
         score -= 1.8 + _bomb_tier(combo) * 0.6
+        critical_bonus = _critical_pair_three_bomb_bonus(state, player_id, cards, combo)
+        if critical_bonus > 0:
+            score += critical_bonus
         minimal = _minimal_bomb_response(hand, state["level_rank"], current_combo, state.get("config", {}))
+        if (
+            minimal is not None
+            and tuple(sorted(minimal)) == tuple(sorted(cards))
+            and current_combo.get("type") == "single"
+            and current_combo.get("rank_value", 0) >= 80
+            and leader_left <= 10
+        ):
+            low_bomb_anchor = _point_order_value(3, state["level_rank"])
+            rank_pressure = max(0.0, combo.get("rank_value", low_bomb_anchor) - low_bomb_anchor)
+            control_pressure = 6.5 + max(0.0, 10 - leader_left) * 0.9
+            if leader_left <= 6:
+                control_pressure += 2.5
+            score += max(0.0, control_pressure - rank_pressure * 0.9)
         if (
             current_combo.get("type") == "single"
             and current_combo.get("rank_value", 0) >= 90
@@ -1982,9 +2047,28 @@ def _bot_score_components(
                 bomb_profile = _high_single_bomb_profile(state, bot_id)
                 if teammate_control > 0 and current_trick.get("combo", {}).get("type") == "single":
                     components["defer_to_teammate_control"] = teammate_control * 7.0
+                leader_left = len(state["players"].get(current_trick.get("player_id"), {}).get("hand", []))
+                combo_type = (current_trick.get("combo") or {}).get("type")
+                combo_value = (current_trick.get("combo") or {}).get("rank_value", 0)
+                if leader_left <= 10 and combo_type in ("pair", "three") and combo_value >= 80:
+                    critical_bomb_bonus = 0.0
+                    for option in _filter_overbomb_options(state, bot_id, _list_hint_options(state, bot_id)):
+                        critical_bomb_bonus = max(
+                            critical_bomb_bonus,
+                            _critical_pair_three_bomb_bonus(state, bot_id, option),
+                        )
+                    if critical_bomb_bonus > 0:
+                        components["critical_bomb_pass_penalty"] = -min(12.0, critical_bomb_bonus * 0.95)
                 opportunity = _best_takeover_opportunity(state, bot_id)
                 if opportunity > 0:
-                    components["pass_opportunity_cost"] = -min(6.0, opportunity * 1.55)
+                    pass_cap = 6.0
+                    if leader_left <= 10 and combo_type in ("single", "pair", "three") and combo_value >= 80:
+                        pass_cap += 5.0
+                    if leader_left <= 10 and combo_type in ("pair", "three") and combo_value >= 80:
+                        pass_cap += 4.0
+                    if leader_left <= 6 and combo_type in ("single", "pair", "three") and combo_value >= 80:
+                        pass_cap += 3.0
+                    components["pass_opportunity_cost"] = -min(pass_cap, opportunity * 1.55)
                 if bomb_profile:
                     rank_pressure = bomb_profile["rank_pressure"]
                     if rank_pressure <= 2.5:
@@ -2023,6 +2107,9 @@ def _bot_score_components(
         if current_trick and current_trick.get("combo", {}).get("type") in BOMB_TYPES:
             base = 1.5
         components["bomb_bonus"] = base + _bomb_tier(combo) * 0.35
+        critical_bonus = _critical_pair_three_bomb_bonus(state, bot_id, cards, combo)
+        if critical_bonus > 0:
+            components["critical_bomb_takeover"] = critical_bonus
         if current_trick and (current_trick.get("combo") or {}).get("type") == "single":
             current_rank = current_trick.get("combo", {}).get("rank_value", 0)
             if current_rank >= 90:

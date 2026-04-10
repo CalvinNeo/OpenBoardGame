@@ -2067,6 +2067,7 @@ def _best_response_play_score(state: Dict, player_id: str, depth: int, non_bomb_
         natural = [score for score, combo_type in scored if combo_type not in BOMB_TYPES]
         if natural:
             return max(natural)
+        return None
     return max(score for score, _ in scored)
 
 
