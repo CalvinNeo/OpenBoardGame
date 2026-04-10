@@ -180,6 +180,27 @@ def _teammate_protect_bonus(state: Dict, player_id: str) -> float:
     return bonus
 
 
+def _has_natural_same_type_response(
+    state: Dict,
+    player_id: str,
+    combo_type: str,
+    exclude_cards: List[int],
+) -> bool:
+    hand = state["players"][player_id]["hand"]
+    hand_map = _map_hand_by_id(hand)
+    exclude_key = tuple(sorted(exclude_cards))
+    for option in _list_hint_options(state, player_id):
+        if tuple(sorted(option)) == exclude_key:
+            continue
+        play_cards = [hand_map[cid] for cid in option if cid in hand_map]
+        combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
+        if not combo or combo.get("type") != combo_type:
+            continue
+        if not _cards_use_special_material(play_cards, state["level_rank"]):
+            return True
+    return False
+
+
 def _combo_numeric_value(combo: Dict) -> int:
     if combo.get("type") in ("straight", "three_pairs", "steel_plate"):
         return combo.get("high_value", 0)
@@ -484,6 +505,49 @@ def _lead_low_single_trap_penalty(hand: List[Dict], cards: List[int], level_rank
     return max(0.0, low_single_burden - cover)
 
 
+def _lead_structure_overreach_penalty(
+    hand: List[Dict],
+    cards: List[int],
+    combo: Dict,
+    level_rank: int,
+) -> float:
+    combo_type = combo.get("type")
+    if combo_type not in ("straight", "full_house", "three_pairs", "steel_plate"):
+        return 0.0
+
+    hand_map = _map_hand_by_id(hand)
+    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+    if not play_cards:
+        return 0.0
+
+    premium_threshold = _point_order_value(12, level_rank)
+    premium_count = sum(
+        1
+        for card in play_cards
+        if not _is_joker(card)
+        and not _is_wild(card, level_rank)
+        and _single_order_value(card, level_rank) >= premium_threshold
+    )
+    penalty = 0.0
+    if combo.get("uses_wild"):
+        if combo_type == "straight":
+            penalty += 11.0 if len(hand) >= 14 else 6.0
+        else:
+            penalty += 4.0
+    if combo_type == "straight":
+        penalty += max(0, premium_count - 1) * 3.0
+        high_value = combo.get("high_value", 0)
+        if high_value >= 13:
+            penalty += 8.0
+        elif high_value >= 12:
+            penalty += 3.0
+        elif high_value >= 11:
+            penalty += 3.5
+    else:
+        penalty += max(0, premium_count - 2) * 1.6
+    return penalty
+
+
 def _lead_single_initiative_penalty(hand: List[Dict], cards: List[int], level_rank: int) -> float:
     if len(cards) != 1 or len(hand) <= 8:
         return 0.0
@@ -562,6 +626,58 @@ def _plan_alignment_score(hand: List[Dict], cards: List[int], combo: Dict, level
     if combo_type in BOMB_TYPES and before.get("bomb_turns", 0.0) > after.get("bomb_turns", 0.0) and before_turns >= 6:
         score -= 0.8
     return score
+
+
+def _response_special_overuse_penalty(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+) -> float:
+    current_trick = state.get("current_trick")
+    if not current_trick or not cards:
+        return 0.0
+    hand = state["players"][player_id]["hand"]
+    hand_map = _map_hand_by_id(hand)
+    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+    if not play_cards or not _cards_use_special_material(play_cards, state["level_rank"]):
+        return 0.0
+
+    combo_type = combo.get("type") or ""
+    current_combo = current_trick.get("combo") or {}
+    leader = current_trick.get("player_id")
+    leader_left = len(state["players"].get(leader, {}).get("hand", [])) if leader else 99
+    natural_alt = _has_natural_same_type_response(state, player_id, combo_type, cards)
+    wild_count = sum(1 for card in play_cards if _is_wild(card, state["level_rank"]))
+    joker_count = sum(1 for card in play_cards if _is_joker(card))
+
+    penalty = wild_count * 1.8 + joker_count * 2.6
+    if natural_alt:
+        penalty += {
+            "single": 6.5,
+            "pair": 5.2,
+            "three": 5.8,
+            "full_house": 7.6,
+            "straight": 8.4,
+            "three_pairs": 7.8,
+            "steel_plate": 7.8,
+        }.get(combo_type, 4.0)
+
+    current_value = current_combo.get("high_value", current_combo.get("rank_value", 0))
+    if combo_type == "single":
+        if current_value < 60:
+            penalty += 3.2
+        elif current_value < 70:
+            penalty += 1.8
+    elif combo_type in ("pair", "three"):
+        if current_value < 70:
+            penalty += 1.6
+    elif combo_type in ("full_house", "straight", "three_pairs", "steel_plate"):
+        if leader_left >= 16:
+            penalty += 4.2 if natural_alt else 2.8
+        elif leader_left >= 12:
+            penalty += 2.6 if natural_alt else 1.6
+    return penalty
 
 
 def _single_lock_bonus(state: Dict, player_id: str, cards: List[int], combo: Dict) -> float:
@@ -657,6 +773,13 @@ def _takeover_opportunity_score(state: Dict, player_id: str, cards: List[int]) -
             else:
                 pressure_bonus *= 0.65
             score += pressure_bonus
+        if combo.get("type") in ("full_house", "straight", "three_pairs", "steel_plate"):
+            if leader_left >= 16:
+                score -= 3.4
+            elif leader_left >= 12:
+                score -= 1.8
+            if _cards_use_special_material(play_cards, state["level_rank"]):
+                score -= 2.4
     else:
         score -= 1.8 + _bomb_tier(combo) * 0.6
         critical_bonus = _critical_pair_three_bomb_bonus(state, player_id, cards, combo)
@@ -2529,9 +2652,26 @@ def _bot_score_components(
                 if leader_left <= 6:
                     pass_cap += 2.5
                 components["pass_opportunity_cost"] = -min(pass_cap, response_score * 0.72)
+                if combo_type in ("three_pairs", "steel_plate"):
+                    has_natural_structure = _has_natural_same_type_response(state, bot_id, combo_type, [])
+                    if has_natural_structure:
+                        structured_cap = 0.0
+                        if leader_left <= 14:
+                            structured_cap += 3.0
+                        if leader_left <= 10:
+                            structured_cap += 2.0
+                        if leader_left <= 6:
+                            structured_cap += 2.5
+                        structured_cap += 1.5
+                        if structured_cap > 0.001:
+                            components["pass_structure_concession"] = -min(structured_cap, response_score * 0.24)
                 opponents_before_teammate = _opponents_before_teammate_this_trick(state, bot_id)
                 if opponents_before_teammate > 0 and combo_type in ("single", "pair", "three"):
                     lane_cap = 8.0 + opponents_before_teammate * 4.0
+                    if combo_type == "pair":
+                        lane_cap += 2.5
+                    elif combo_type == "three":
+                        lane_cap += 6.0
                     if leader_left <= 14:
                         lane_cap += 1.5
                     if leader_left <= 10:
@@ -2541,6 +2681,10 @@ def _bot_score_components(
                     lane_factor = 0.24 + opponents_before_teammate * 0.1
                     if combo_type == "single":
                         lane_factor *= 1.2
+                    elif combo_type == "pair":
+                        lane_factor *= 1.7
+                    elif combo_type == "three":
+                        lane_factor *= 2.7
                     lane_penalty = min(lane_cap, response_score * lane_factor)
                     if lane_penalty > 0.001:
                         components["pass_lane_concession"] = -lane_penalty
@@ -2601,6 +2745,9 @@ def _bot_score_components(
         response_cost = _response_material_cost(state, bot_id, cards, combo)
         if response_cost > 0.001:
             components["response_material"] = -response_cost * 0.55
+        special_overuse = _response_special_overuse_penalty(state, bot_id, cards, combo)
+        if special_overuse > 0.001:
+            components["special_response_overuse"] = -special_overuse
         lock_bonus = _single_lock_bonus(state, bot_id, cards, combo)
         if lock_bonus > 0.001:
             components["single_lock"] = lock_bonus
@@ -2684,6 +2831,9 @@ def _bot_score_components(
         lead_score = _lead_option_score(state, bot_id, cards)
         if abs(lead_score) > 0.001:
             components["lead_plan"] = lead_score * 0.18
+        overreach_penalty = _lead_structure_overreach_penalty(hand, cards, combo, level_rank)
+        if overreach_penalty > 0.001:
+            components["lead_overreach"] = -overreach_penalty
         trap_penalty = _lead_low_single_trap_penalty(hand, cards, level_rank)
         if trap_penalty > 0.001:
             components["low_single_trap"] = -trap_penalty
