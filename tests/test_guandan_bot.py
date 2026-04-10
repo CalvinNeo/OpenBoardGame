@@ -1064,7 +1064,49 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         play_score = guandan._bot_score_play(state, "bot", [five["id"]], depth=3)
 
         self.assertGreater(play_score, pass_score)
-        self.assertEqual(guandan._bot_select_play(state, "bot", depth=3), [five["id"]])
+
+    def test_heuristic_low_single_response_prefers_clean_singleton_over_split_pair(self):
+        players = [
+            {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
+            {"player_id": "opp", "name": "Opp", "seat": 1, "is_bot": False},
+            {"player_id": "mate", "name": "Mate", "seat": 2, "is_bot": False},
+            {"player_id": "opp2", "name": "Opp2", "seat": 3, "is_bot": False},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["current_turn"] = "bot"
+        state["level_rank"] = 2
+        state["config"]["bot_endgame_threshold"] = 0
+
+        deck = guandan._full_deck()
+        four = next(card for card in deck if card.get("rank") == 4 and card.get("suit") == "spades")
+        five_a = next(card for card in deck if card.get("rank") == 5 and card.get("suit") == "spades")
+        five_b = next(card for card in deck if card.get("rank") == 5 and card.get("suit") == "hearts")
+        six = next(card for card in deck if card.get("rank") == 6 and card.get("suit") == "spades")
+        nine = next(card for card in deck if card.get("rank") == 9 and card.get("suit") == "clubs")
+        jack = next(card for card in deck if card.get("rank") == 11 and card.get("suit") == "diamonds")
+        king = next(card for card in deck if card.get("rank") == 13 and card.get("suit") == "hearts")
+
+        state["players"]["bot"]["hand"] = [five_a, five_b, six, nine, jack, king]
+        used = {card["id"] for card in state["players"]["bot"]["hand"]} | {four["id"]}
+        remaining = [card for card in deck if card["id"] not in used]
+        idx = 0
+        for pid in ("opp", "mate", "opp2"):
+            state["players"][pid]["hand"] = remaining[idx : idx + 6]
+            idx += 6
+
+        combo = guandan._evaluate_combo([four], state["level_rank"], state.get("config", {}))
+        state["current_trick"] = {"player_id": "opp", "cards": [four["id"]], "combo": combo}
+
+        split_score = guandan._bot_score_components(state, "bot", [five_a["id"]], depth=3)
+        clean_score = guandan._bot_score_components(state, "bot", [six["id"]], depth=3)
+        self.assertLess(split_score.get("plan_alignment", 0.0), 0.0)
+        self.assertGreater(clean_score.get("total", -999.0), split_score.get("total", -999.0))
+
+        action = guandan.GuandanGame.bot_move(state, "bot")
+        self.assertEqual(action.get("type"), "play")
+        self.assertEqual(action.get("card_ids"), [six["id"]])
+        self.assertEqual(guandan._bot_select_play(state, "bot", depth=3), [six["id"]])
 
     def test_low_single_prefers_lone_level_single_lock_over_pass(self):
         players = [

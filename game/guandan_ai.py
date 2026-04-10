@@ -436,6 +436,51 @@ def _lead_single_initiative_penalty(hand: List[Dict], cards: List[int], level_ra
     return max(0.0, penalty)
 
 
+def _plan_alignment_score(hand: List[Dict], cards: List[int], combo: Dict, level_rank: int) -> float:
+    if not hand or not cards:
+        return 0.0
+
+    before = _hand_decomposition_summary(hand, level_rank)
+    remaining = _remove_cards(hand, cards)
+    after = _hand_decomposition_summary(remaining, level_rank) if remaining else _empty_hand_decomposition_summary()
+    combo_type = combo.get("type")
+    structured_types = {"straight", "three_pairs", "steel_plate", "full_house", "three", "pair"}
+    score = 0.0
+
+    plan_types = tuple(before.get("plan_types", ()))
+    primary_type = plan_types[0] if plan_types else None
+    if primary_type:
+        if combo_type == primary_type:
+            score += 1.4 if combo_type == "single" else 3.0
+            if combo_type in structured_types and before.get("grouped_cards", 0.0) >= max(6.0, float(len(hand) - 4)):
+                score += 0.8
+        elif primary_type in structured_types and combo_type == "single" and len(hand) >= 9:
+            score -= 2.4
+        elif primary_type == "pair" and combo_type == "single" and len(hand) >= 7:
+            score -= 1.4
+
+    before_turns = before.get("turns", float(len(hand)))
+    after_turns = after.get("turns", 0.0)
+    projected_turns = after_turns + (0.0 if not remaining else 1.0)
+    turn_gain = before_turns - projected_turns
+    if turn_gain > 0.01:
+        score += min(2.4, turn_gain * 1.2)
+    elif turn_gain < -0.01:
+        score += max(-1.6, turn_gain * 0.8)
+
+    low_single_delta = before.get("low_singles", 0.0) - after.get("low_singles", 0.0)
+    if low_single_delta > 0.01:
+        score += min(1.6, low_single_delta * 0.75)
+    elif low_single_delta < -0.01:
+        score -= min(2.0, abs(low_single_delta) * 1.0)
+
+    if combo_type == "single" and before.get("group_turns", 0.0) >= 2 and after.get("group_turns", 0.0) >= before.get("group_turns", 0.0) and len(hand) >= 10:
+        score -= 0.8
+    if combo_type in BOMB_TYPES and before.get("bomb_turns", 0.0) > after.get("bomb_turns", 0.0) and before_turns >= 6:
+        score -= 0.8
+    return score
+
+
 def _single_lock_bonus(state: Dict, player_id: str, cards: List[int], combo: Dict) -> float:
     current_trick = state.get("current_trick")
     if not current_trick or len(cards) != 1:
@@ -2447,6 +2492,11 @@ def _bot_score_components(
     shape_score = _shape_transition_score(hand, cards, level_rank)
     if abs(shape_score) > 0.001:
         components["shape_value"] = shape_score
+    plan_score = _plan_alignment_score(hand, cards, combo, level_rank)
+    if current_trick and combo.get("type") == "single" and _is_clean_low_single_response(state, bot_id, cards):
+        plan_score = max(0.8, plan_score)
+    if abs(plan_score) > 0.001:
+        components["plan_alignment"] = plan_score
     control_break = _control_group_break_penalty(hand, cards, level_rank)
     if control_break > 0.001 and combo["type"] not in BOMB_TYPES:
         components["control_break_penalty"] = -control_break
