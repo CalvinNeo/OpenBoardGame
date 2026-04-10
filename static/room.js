@@ -10,16 +10,6 @@ const ACTION_LOG_MAX = 500;
 const ACTION_LOG_TRUNCATE_AT = 500;
 let roomControlsGameActive = false;
 let roomControlsAutoCollapsed = false;
-const MEMORIES_SUPPORTED_GAMES = new Set([
-  "draw_guess",
-  "impression_flower",
-  "cyber_pictures",
-  "decrypto",
-  "blitz_sketch",
-  "carcassonne",
-  "word_decode",
-  "fake_artist",
-]);
 let createRoomPending = false;
 let pendingReadyAfterJoin = false;
 let pendingReadyRoomId = null;
@@ -752,12 +742,13 @@ async function downloadMemoriesFile(activeRoomId) {
     log("Not in a room");
     return;
   }
-  if (!currentGameType || !MEMORIES_SUPPORTED_GAMES.has(currentGameType)) {
-    log("not supported");
-    return;
-  }
   const url = `/api/room/memories?room_id=${encodeURIComponent(activeRoomId)}`;
+  const originalLabel = downloadMemoriesBtn ? downloadMemoriesBtn.textContent : "";
   try {
+    if (downloadMemoriesBtn) {
+      downloadMemoriesBtn.disabled = true;
+      downloadMemoriesBtn.textContent = "Preparing...";
+    }
     const response = await fetch(url);
     if (!response.ok) {
       let message = "Download failed.";
@@ -786,6 +777,11 @@ async function downloadMemoriesFile(activeRoomId) {
     URL.revokeObjectURL(objectUrl);
   } catch {
     log("Download failed.");
+  } finally {
+    if (downloadMemoriesBtn) {
+      downloadMemoriesBtn.disabled = false;
+      downloadMemoriesBtn.textContent = originalLabel || "Download Memories";
+    }
   }
 }
 

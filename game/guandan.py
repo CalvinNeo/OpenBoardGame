@@ -1,7 +1,10 @@
 import copy
 import math
 import random
+import time
 from typing import Dict, List, Optional, Tuple
+
+from game.memories import build_html_document, esc, format_bool, format_timestamp, render_kv_table, render_table, section
 
 SUITS = ["spades", "hearts", "clubs", "diamonds"]
 SUIT_LABELS = {"spades": "S", "hearts": "H", "clubs": "C", "diamonds": "D"}
@@ -138,6 +141,145 @@ def _single_order_value(card: Dict, level_rank: int) -> int:
         return 70
     base = _base_rank_order(level_rank)
     return 60 - base.index(card.get("rank"))
+
+
+def _card_sort_key(card: Dict, level_rank: int) -> Tuple[int, int, int]:
+    suit = card.get("suit")
+    suit_idx = SUITS.index(suit) if suit in SUITS else len(SUITS)
+    rank = card.get("rank") or 0
+    return (-_single_order_value(card, level_rank), suit_idx, -rank)
+
+
+def _memory_card(card: Dict, level_rank: int) -> Dict:
+    return {
+        "label": _card_label(card),
+        "rank": card.get("rank"),
+        "suit": card.get("suit"),
+        "joker": card.get("joker"),
+        "is_wild": _is_wild(card, level_rank),
+    }
+
+
+def _memory_hand(hand: List[Dict], level_rank: int) -> List[Dict]:
+    ordered = sorted(hand, key=lambda card: _card_sort_key(card, level_rank))
+    return [_memory_card(card, level_rank) for card in ordered]
+
+
+def _memory_hand_map(state: Dict) -> Dict[str, List[Dict]]:
+    level_rank = state.get("level_rank", 2)
+    return {pid: _memory_hand(state["players"][pid]["hand"], level_rank) for pid in state.get("turn_order", [])}
+
+
+def _memory_visible_card(state: Dict) -> Optional[Dict]:
+    visible_card_id = state.get("visible_card_id")
+    if visible_card_id is None:
+        return None
+    for card in _full_deck():
+        if card["id"] == visible_card_id:
+            return _memory_card(card, state.get("level_rank", 2))
+    return None
+
+
+def _current_round_memory(state: Dict) -> Optional[Dict]:
+    memories = state.get("round_memories") or []
+    if not memories:
+        return None
+    return memories[-1]
+
+
+def _start_round_memory(state: Dict) -> Dict:
+    entry = {
+        "round_number": state.get("round_number", 1),
+        "dealer_team": state.get("dealer_team"),
+        "level_rank": state.get("level_rank"),
+        "team_levels_start": {team: data.get("level") for team, data in state.get("teams", {}).items()},
+        "start_player": state.get("current_turn"),
+        "visible_card": _memory_visible_card(state),
+        "initial_hands": _memory_hand_map(state),
+        "tribute": None,
+        "tricks": [],
+        "finish_order": [],
+        "status": "in_progress",
+    }
+    memories = state.setdefault("round_memories", [])
+    if memories and memories[-1].get("round_number") == entry["round_number"]:
+        memories[-1] = entry
+    else:
+        memories.append(entry)
+    return entry
+
+
+def _ensure_round_memories(state: Dict) -> List[Dict]:
+    memories = state.setdefault("round_memories", [])
+    if not memories:
+        _start_round_memory(state)
+    return memories
+
+
+def _ensure_open_trick_memory(state: Dict, leader_id: Optional[str]) -> Dict:
+    round_entry = _current_round_memory(state)
+    if round_entry is None:
+        _ensure_round_memories(state)
+        round_entry = _current_round_memory(state)
+    tricks = round_entry.setdefault("tricks", [])
+    if tricks and tricks[-1].get("status") == "in_progress":
+        return tricks[-1]
+    trick = {
+        "index": len(tricks) + 1,
+        "leader_id": leader_id,
+        "actions": [],
+        "winner_id": None,
+        "status": "in_progress",
+    }
+    tricks.append(trick)
+    return trick
+
+
+def _close_open_trick_memory(state: Dict, winner_id: Optional[str], status: str = "completed") -> None:
+    round_entry = _current_round_memory(state)
+    if round_entry is None:
+        return
+    tricks = round_entry.get("tricks") or []
+    if not tricks:
+        return
+    trick = tricks[-1]
+    if trick.get("status") != "in_progress":
+        return
+    trick["winner_id"] = winner_id
+    trick["status"] = status
+
+
+def _snapshot_tribute_memory(tribute: Dict, level_rank: int) -> Dict:
+    def map_cards(card_map: Dict[str, Dict]) -> Dict[str, Dict]:
+        return {pid: _memory_card(card, level_rank) for pid, card in (card_map or {}).items()}
+
+    return {
+        "type": tribute.get("type"),
+        "stage": tribute.get("stage"),
+        "payers": list(tribute.get("payers", [])),
+        "receivers": list(tribute.get("receivers", [])),
+        "tribute_cards": map_cards(tribute.get("tribute_cards", {})),
+        "return_cards": map_cards(tribute.get("return_cards", {})),
+        "assignments": dict(tribute.get("assignments", {})),
+    }
+
+
+def _set_round_tribute_memory(state: Dict, payload: Optional[Dict]) -> None:
+    round_entry = _current_round_memory(state)
+    if round_entry is None:
+        _ensure_round_memories(state)
+        round_entry = _current_round_memory(state)
+    round_entry["tribute"] = payload
+
+
+def _update_round_memory_result(state: Dict, status: str = "completed") -> None:
+    round_entry = _current_round_memory(state)
+    if round_entry is None:
+        return
+    round_entry["finish_order"] = list(state.get("finish_order", []))
+    round_entry["team_levels_after"] = {team: data.get("level") for team, data in state.get("teams", {}).items()}
+    round_entry["dealer_team_after"] = state.get("dealer_team")
+    round_entry["status"] = status
 
 
 def _sorted_rank_candidates(level_rank: int) -> List[int]:
@@ -2818,6 +2960,7 @@ def _deal_round(state: Dict, first_round: bool, start_player: Optional[str]) -> 
         start_player = state["turn_order"][0]
     state["current_turn"] = start_player
     state["level_rank"] = state["teams"][state["dealer_team"]]["level"]
+    _start_round_memory(state)
 
 
 def _setup_tribute(state: Dict) -> None:
@@ -2825,6 +2968,7 @@ def _setup_tribute(state: Dict) -> None:
     state["tribute"] = None
     if tribute_type == "none":
         state["phase"] = "playing"
+        _set_round_tribute_memory(state, {"type": "none", "status": "not_required"})
         return
     order = state["finish_order"]
     payers = []
@@ -2839,6 +2983,16 @@ def _setup_tribute(state: Dict) -> None:
         big_count = sum(1 for card in state["players"][pid]["hand"] if card.get("joker") == "big")
         if big_count >= 2:
             state["phase"] = "playing"
+            _set_round_tribute_memory(
+                state,
+                {
+                    "type": tribute_type,
+                    "status": "waived",
+                    "reason": "double_big_joker",
+                    "payers": list(payers),
+                    "receivers": list(receivers),
+                },
+            )
             return
     state["tribute"] = {
         "type": tribute_type,
@@ -2850,6 +3004,7 @@ def _setup_tribute(state: Dict) -> None:
         "assignments": {},
     }
     state["phase"] = "tribute"
+    _set_round_tribute_memory(state, _snapshot_tribute_memory(state["tribute"], state["level_rank"]))
 
 
 def _tribute_leader(tribute: Dict, level_rank: int) -> Optional[str]:
@@ -2897,6 +3052,7 @@ def _advance_to_round_end(state: Dict) -> None:
     _apply_round_result(state)
     state["last_round_summary"] = _summarize_round(state)
     state["phase"] = "round_end"
+    _update_round_memory_result(state)
     _check_game_over(state)
 
 
@@ -2941,6 +3097,7 @@ class GuandanGame:
 
         state = {
             "config": cfg,
+            "game_start_time": time.time(),
             "player_meta": player_meta,
             "turn_order": player_ids,
             "players": state_players,
@@ -2959,6 +3116,7 @@ class GuandanGame:
             "visible_card_id": None,
             "tribute": None,
             "bot_explain": {},
+            "round_memories": [],
             "game_over": False,
             "winner_team": None,
         }
@@ -2966,6 +3124,7 @@ class GuandanGame:
         if state["current_turn"]:
             state["dealer_team"] = _team_of(state, state["current_turn"])
             state["level_rank"] = state["teams"][state["dealer_team"]]["level"]
+            _start_round_memory(state)
         return state
 
     @staticmethod
@@ -3068,6 +3227,7 @@ class GuandanGame:
                         state["players"][head]["hand"].append(cards[0][1])
                         state["players"][second]["hand"].append(cards[1][1])
                     tribute["stage"] = "return"
+                _set_round_tribute_memory(state, _snapshot_tribute_memory(tribute, state["level_rank"]))
                 return events, None
             if action_type == "return_select":
                 if tribute.get("stage") != "return":
@@ -3094,10 +3254,16 @@ class GuandanGame:
                     state["players"][payer]["hand"].append(card)
                 if len(tribute["return_cards"]) == len(tribute.get("receivers", [])):
                     leader = _tribute_leader(tribute, state["level_rank"])
+                    tribute_memory = _snapshot_tribute_memory(tribute, state["level_rank"])
+                    tribute_memory["status"] = "completed"
+                    tribute_memory["leader_id"] = leader
+                    _set_round_tribute_memory(state, tribute_memory)
                     state["tribute"] = None
                     state["phase"] = "playing"
                     if leader:
                         state["current_turn"] = leader
+                else:
+                    _set_round_tribute_memory(state, _snapshot_tribute_memory(tribute, state["level_rank"]))
                 return events, None
             return events, "invalid action"
 
@@ -3114,6 +3280,8 @@ class GuandanGame:
         if action_type == "pass":
             if not state.get("current_trick"):
                 return events, "cannot pass"
+            trick_entry = _ensure_open_trick_memory(state, state["current_trick"].get("player_id"))
+            trick_entry["actions"].append({"player_id": player_id, "type": "pass"})
             state["pass_count"] += 1
             state.setdefault("trick_plays", {})[player_id] = "pass"
             _record_pass_limit(state, player_id, state["current_trick"]["combo"])
@@ -3121,6 +3289,7 @@ class GuandanGame:
             needed = max(1, active_count - 1)
             if state["pass_count"] >= needed:
                 winner = state["current_trick"]["player_id"]
+                _close_open_trick_memory(state, winner)
                 state["current_trick"] = None
                 state["pass_count"] = 0
                 state["trick_plays"] = {}
@@ -3162,6 +3331,17 @@ class GuandanGame:
                 return events, "combo not strong enough"
         state["players"][player_id]["hand"] = _remove_cards(hand, card_ids)
         _record_seen_cards(state, card_ids)
+        trick_entry = _ensure_open_trick_memory(state, player_id if not current_trick else current_trick.get("player_id"))
+        trick_entry["actions"].append(
+            {
+                "player_id": player_id,
+                "type": "play",
+                "cards": [_memory_card(card, state["level_rank"]) for card in cards],
+                "combo_type": combo.get("type"),
+                "combo_size": combo.get("size"),
+                "hand_count_after": len(state["players"][player_id]["hand"]),
+            }
+        )
         state["current_trick"] = {
             "combo": combo,
             "cards": card_ids,
@@ -3171,7 +3351,9 @@ class GuandanGame:
         state["pass_count"] = 0
         if not state["players"][player_id]["hand"]:
             _finish_player(state, player_id)
+            trick_entry["actions"][-1]["finished_rank"] = state["players"][player_id].get("finish_rank")
         if len(state["finish_order"]) >= 3:
+            _close_open_trick_memory(state, player_id, status="round_end")
             _advance_to_round_end(state)
             return events, None
         next_player = _next_active_player(state, player_id)
@@ -3308,6 +3490,10 @@ class GuandanGame:
         return payload
 
     @staticmethod
+    def download_memories(state: Dict, room_id: Optional[str] = None) -> str:
+        return build_memories_html(state, room_id)
+
+    @staticmethod
     def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
         if state.get("game_over"):
             return None
@@ -3409,3 +3595,355 @@ class GuandanGame:
         if "pass" in legal:
             return {"type": "pass"}
         return None
+
+
+def _memory_card_html(card: Dict) -> str:
+    label = esc(card.get("label"), "-")
+    classes = ["gd-mem-card"]
+    suit = card.get("suit")
+    if suit in ("hearts", "diamonds"):
+        classes.append("is-red")
+    if card.get("joker"):
+        classes.append("is-joker")
+    if card.get("is_wild"):
+        classes.append("is-wild")
+    return f'<span class="{" ".join(classes)}">{label}</span>'
+
+
+def _render_memory_cards_inline(cards: List[Dict]) -> str:
+    if not cards:
+        return '<span class="muted">-</span>'
+    return '<div class="gd-mem-inline-cards">' + "".join(_memory_card_html(card) for card in cards) + "</div>"
+
+
+def _render_memory_cascade(cards: List[Dict], level_rank: int) -> str:
+    if not cards:
+        return '<div class="muted">No cards</div>'
+    ordered = sorted(cards, key=lambda card: _card_sort_key(card, level_rank))
+    groups: List[List[Dict]] = []
+    for card in ordered:
+        key = (card.get("joker"), card.get("rank"))
+        if not groups:
+            groups.append([card])
+            continue
+        prev = groups[-1][0]
+        prev_key = (prev.get("joker"), prev.get("rank"))
+        if key == prev_key:
+            groups[-1].append(card)
+        else:
+            groups.append([card])
+    columns = []
+    for group in groups:
+        columns.append(
+            '<div class="gd-mem-cascade-col">'
+            + "".join(_memory_card_html(card) for card in group)
+            + "</div>"
+        )
+    return '<div class="gd-mem-cascade">' + "".join(columns) + "</div>"
+
+
+def _player_name_for_memory(state: Dict, player_id: Optional[str]) -> str:
+    if not player_id:
+        return "-"
+    meta = state.get("player_meta", {}).get(player_id, {})
+    return meta.get("name") or player_id
+
+
+def _player_caption_for_memory(state: Dict, player_id: str) -> str:
+    meta = state.get("player_meta", {}).get(player_id, {})
+    team = state.get("player_teams", {}).get(player_id, "-")
+    seat = meta.get("seat")
+    parts = [_player_name_for_memory(state, player_id), f"Team {team}"]
+    if seat is not None:
+        parts.append(f"Seat {seat}")
+    if meta.get("is_bot"):
+        parts.append("Bot")
+    return " · ".join(parts)
+
+
+def _fallback_round_memory(state: Dict) -> Dict:
+    trick_actions = []
+    for pid in state.get("turn_order", []):
+        cards = state.get("trick_plays", {}).get(pid)
+        if not cards:
+            continue
+        if cards == "pass":
+            trick_actions.append({"player_id": pid, "type": "pass"})
+        else:
+            combo = _evaluate_combo(cards, state.get("level_rank", 2), state.get("config", {})) or {}
+            trick_actions.append(
+                {
+                    "player_id": pid,
+                    "type": "play",
+                    "cards": [_memory_card(card, state.get("level_rank", 2)) for card in cards],
+                    "combo_type": combo.get("type"),
+                    "combo_size": combo.get("size"),
+                }
+            )
+    tricks = []
+    if trick_actions:
+        tricks.append(
+            {
+                "index": 1,
+                "leader_id": (state.get("current_trick") or {}).get("player_id"),
+                "winner_id": (state.get("current_trick") or {}).get("player_id"),
+                "status": "in_progress",
+                "actions": trick_actions,
+            }
+        )
+    return {
+        "round_number": state.get("round_number", 1),
+        "dealer_team": state.get("dealer_team"),
+        "level_rank": state.get("level_rank"),
+        "team_levels_start": {team: data.get("level") for team, data in state.get("teams", {}).items()},
+        "start_player": state.get("current_turn"),
+        "visible_card": _memory_visible_card(state),
+        "initial_hands": _memory_hand_map(state),
+        "tribute": None,
+        "tricks": tricks,
+        "finish_order": list(state.get("finish_order", [])),
+        "status": "in_progress",
+        "note": "This room started before Guandan memories tracking was available. Earlier actions may be missing.",
+    }
+
+
+def _render_tribute_memory(state: Dict, tribute: Optional[Dict]) -> str:
+    if not tribute:
+        return '<div class="muted">No tribute data</div>'
+    tribute_type = tribute.get("type")
+    status = tribute.get("status") or tribute.get("stage") or "-"
+    if tribute_type == "none":
+        return '<div class="muted">No tribute this round.</div>'
+    if status == "waived":
+        return (
+            '<div class="muted">'
+            f'Tribute waived. Reason: {esc(tribute.get("reason"), "-")}.'
+            "</div>"
+        )
+    assignments = tribute.get("assignments", {}) or {}
+    tribute_cards = tribute.get("tribute_cards", {}) or {}
+    return_cards = tribute.get("return_cards", {}) or {}
+    receivers = tribute.get("receivers", []) or []
+    payers = tribute.get("payers", []) or []
+    rows: List[List[str]] = []
+    if receivers:
+        for receiver_id in receivers:
+            payer_id = assignments.get(receiver_id)
+            rows.append(
+                [
+                    esc(_player_name_for_memory(state, receiver_id), "-"),
+                    esc(_player_name_for_memory(state, payer_id), "-"),
+                    _render_memory_cards_inline([tribute_cards[payer_id]]) if payer_id in tribute_cards else "-",
+                    _render_memory_cards_inline([return_cards[receiver_id]]) if receiver_id in return_cards else "-",
+                ]
+            )
+    else:
+        for payer_id in payers:
+            rows.append(
+                [
+                    esc(_player_name_for_memory(state, payer_id), "-"),
+                    "-",
+                    _render_memory_cards_inline([tribute_cards[payer_id]]) if payer_id in tribute_cards else "-",
+                    "-",
+                ]
+            )
+    meta_lines = [
+        f'<div class="small">Type: {esc(tribute_type, "-")} · Status: {esc(status, "-")}</div>'
+    ]
+    leader_id = tribute.get("leader_id")
+    if leader_id:
+        meta_lines.append(f'<div class="small">First Lead After Tribute: {esc(_player_name_for_memory(state, leader_id), "-")}</div>')
+    return "".join(meta_lines) + render_table(
+        ["Receiver", "Payer", "Tribute", "Return"],
+        rows,
+        empty_message="No tribute actions",
+    )
+
+
+def build_memories_html(state: Dict, room_id: Optional[str] = None) -> str:
+    game_id = GuandanGame.game_id
+    status_label = "Game Over" if state.get("game_over") else "In Progress"
+    header = [
+        "<h1>Download Memories</h1>",
+        f'<div class="meta">Game: {esc(game_id, "-")} · Room: {esc(room_id, "-")}</div>',
+        f'<div class="meta">Status: {esc(status_label, status_label)}</div>',
+    ]
+    start_time = format_timestamp(state.get("game_start_time"))
+    if start_time != "-":
+        header.append(f'<div class="meta">Game Start: {esc(start_time, start_time)}</div>')
+    header.append(f'<div class="meta">Generated: {esc(format_timestamp(time.time()), "-")}</div>')
+
+    order = state.get("turn_order", [])
+    player_rows: List[List[str]] = []
+    for pid in order:
+        meta = state.get("player_meta", {}).get(pid, {})
+        player_rows.append(
+            [
+                esc(meta.get("name"), "-"),
+                esc(meta.get("seat"), "-"),
+                esc(state.get("player_teams", {}).get(pid), "-"),
+                esc(format_bool(meta.get("is_bot"))),
+            ]
+        )
+    players_section = section(
+        "Players",
+        render_table(["Name", "Seat", "Team", "Bot"], player_rows, empty_message="No players"),
+    )
+
+    summary_rows = [
+        ("Current Round", esc(state.get("round_number"), "-")),
+        ("Dealer Team", esc(state.get("dealer_team"), "-")),
+        ("Level", esc(state.get("level_rank"), "-")),
+        ("Winner Team", esc(state.get("winner_team"), "-")),
+    ]
+    overview_section = section("Overview", render_kv_table(summary_rows))
+
+    round_entries = state.get("round_memories") or [_fallback_round_memory(state)]
+    round_blocks: List[str] = []
+    for entry in round_entries:
+        if not isinstance(entry, dict):
+            continue
+        round_number = entry.get("round_number", "-")
+        visible_card = entry.get("visible_card")
+        info_rows = [
+            ("Dealer Team", esc(entry.get("dealer_team"), "-")),
+            ("Level", esc(entry.get("level_rank"), "-")),
+            ("Start Player", esc(_player_name_for_memory(state, entry.get("start_player")), "-")),
+            ("Status", esc(entry.get("status"), "-")),
+        ]
+        if visible_card:
+            info_rows.append(("Visible Card", _render_memory_cards_inline([visible_card])))
+        if entry.get("team_levels_start"):
+            levels_start = entry.get("team_levels_start", {})
+            info_rows.append(
+                ("Team Levels (Start)", esc(f'A {levels_start.get("A", "-")} · B {levels_start.get("B", "-")}', "-"))
+            )
+        if entry.get("team_levels_after"):
+            levels_after = entry.get("team_levels_after", {})
+            info_rows.append(
+                ("Team Levels (After)", esc(f'A {levels_after.get("A", "-")} · B {levels_after.get("B", "-")}', "-"))
+            )
+        if entry.get("finish_order"):
+            finish_names = " → ".join(_player_name_for_memory(state, pid) for pid in entry.get("finish_order", []))
+            info_rows.append(("Finish Order", esc(finish_names, "-")))
+
+        hands_html: List[str] = []
+        for pid in order:
+            hand_cards = entry.get("initial_hands", {}).get(pid, [])
+            hands_html.append(
+                '<div class="card">'
+                f'<h3>{esc(_player_caption_for_memory(state, pid), "-")}</h3>'
+                + _render_memory_cascade(hand_cards, entry.get("level_rank") or state.get("level_rank", 2))
+                + "</div>"
+            )
+
+        trick_blocks: List[str] = []
+        for trick in entry.get("tricks", []) or []:
+            action_rows: List[List[str]] = []
+            for idx, action in enumerate(trick.get("actions", []) or [], start=1):
+                player_name = _player_name_for_memory(state, action.get("player_id"))
+                if action.get("type") == "pass":
+                    play_html = '<span class="gd-mem-pass">Pass</span>'
+                    combo_label = "-"
+                else:
+                    play_html = _render_memory_cards_inline(action.get("cards", []))
+                    combo_label = esc(action.get("combo_type"), "-")
+                note_parts = []
+                if action.get("finished_rank"):
+                    note_parts.append(f'Finished #{action.get("finished_rank")}')
+                if action.get("hand_count_after") is not None:
+                    note_parts.append(f'Hand Left: {action.get("hand_count_after")}')
+                action_rows.append(
+                    [
+                        esc(idx, "-"),
+                        esc(player_name, "-"),
+                        play_html,
+                        combo_label,
+                        esc(" · ".join(note_parts) if note_parts else "-", "-"),
+                    ]
+                )
+            trick_meta = (
+                f'<div class="small">Leader: {esc(_player_name_for_memory(state, trick.get("leader_id")), "-")} · '
+                f'Winner: {esc(_player_name_for_memory(state, trick.get("winner_id")), "-")} · '
+                f'Status: {esc(trick.get("status"), "-")}</div>'
+            )
+            trick_blocks.append(
+                '<div class="card">'
+                f'<h3>Trick {esc(trick.get("index"), "-")}</h3>'
+                + trick_meta
+                + render_table(["Turn", "Player", "Play", "Combo", "Notes"], action_rows, empty_message="No plays")
+                + "</div>"
+            )
+
+        note_html = ""
+        if entry.get("note"):
+            note_html = f'<div class="small">{esc(entry.get("note"), "-")}</div>'
+        round_blocks.append(
+            section(
+                f"Round {round_number}",
+                note_html
+                + render_kv_table(info_rows)
+                + section("Opening Hands", '<div class="gd-mem-hand-grid">' + "".join(hands_html) + "</div>")
+                + section("Tribute", _render_tribute_memory(state, entry.get("tribute")))
+                + section("Tricks", "".join(trick_blocks) if trick_blocks else '<div class="muted">No plays yet</div>'),
+            )
+        )
+
+    extra_style = """
+.gd-mem-hand-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+.gd-mem-cascade {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.gd-mem-cascade-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.gd-mem-card {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+.gd-mem-card.is-red {
+  color: #b91c1c;
+}
+.gd-mem-card.is-joker {
+  background: #fef3c7;
+}
+.gd-mem-card.is-wild {
+  outline: 2px solid #fb7185;
+}
+.gd-mem-inline-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.gd-mem-pass {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  color: #374151;
+  font-weight: 600;
+}
+"""
+
+    body = "\n".join(header) + players_section + overview_section + "".join(round_blocks)
+    return build_html_document(f"{game_id} Memories", body, extra_style=extra_style)
+
+
+download_memories = build_memories_html
