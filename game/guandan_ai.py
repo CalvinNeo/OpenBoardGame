@@ -128,6 +128,33 @@ def _teammate_lead_context(state: Dict, player_id: str) -> Optional[str]:
     return teammate
 
 
+def _opponents_before_teammate_this_trick(state: Dict, player_id: str) -> int:
+    current_trick = state.get("current_trick")
+    if not current_trick:
+        return 0
+    teammate = _teammate_of(state, player_id)
+    leader = current_trick.get("player_id")
+    order = state.get("turn_order") or []
+    if not teammate or teammate not in order or player_id not in order or leader not in order:
+        return 0
+    if state["players"][teammate]["finished"]:
+        return 0
+
+    idx = order.index(player_id)
+    opponents = 0
+    for offset in range(1, len(order) + 1):
+        pid = order[(idx + offset) % len(order)]
+        if pid == leader:
+            break
+        if state["players"][pid]["finished"]:
+            continue
+        if pid == teammate:
+            return opponents
+        if _team_of(state, pid) != _team_of(state, player_id):
+            opponents += 1
+    return 0
+
+
 def _teammate_protect_bonus(state: Dict, player_id: str) -> float:
     teammate = _teammate_lead_context(state, player_id)
     if not teammate:
@@ -2491,8 +2518,9 @@ def _bot_score_components(
         elif current_trick and _team_of(state, current_trick.get("player_id")) != _team_of(state, bot_id):
             response_score = _best_response_play_score(state, bot_id, max(2, depth), non_bomb_only=True)
             teammate_control = _teammate_future_control_probability(state, bot_id)
+            combo_type = (current_trick.get("combo") or {}).get("type")
+            leader_left = len(state["players"].get(current_trick.get("player_id"), {}).get("hand", []))
             if response_score is not None and response_score > 0:
-                leader_left = len(state["players"].get(current_trick.get("player_id"), {}).get("hand", []))
                 pass_cap = 8.5
                 if leader_left <= 14:
                     pass_cap += 2.5
@@ -2501,12 +2529,25 @@ def _bot_score_components(
                 if leader_left <= 6:
                     pass_cap += 2.5
                 components["pass_opportunity_cost"] = -min(pass_cap, response_score * 0.72)
+                opponents_before_teammate = _opponents_before_teammate_this_trick(state, bot_id)
+                if opponents_before_teammate > 0 and combo_type in ("single", "pair", "three"):
+                    lane_cap = 8.0 + opponents_before_teammate * 4.0
+                    if leader_left <= 14:
+                        lane_cap += 1.5
+                    if leader_left <= 10:
+                        lane_cap += 2.0
+                    if leader_left <= 6:
+                        lane_cap += 2.0
+                    lane_factor = 0.24 + opponents_before_teammate * 0.1
+                    if combo_type == "single":
+                        lane_factor *= 1.2
+                    lane_penalty = min(lane_cap, response_score * lane_factor)
+                    if lane_penalty > 0.001:
+                        components["pass_lane_concession"] = -lane_penalty
             else:
                 bomb_profile = _high_single_bomb_profile(state, bot_id)
                 if teammate_control > 0 and current_trick.get("combo", {}).get("type") == "single":
                     components["defer_to_teammate_control"] = teammate_control * 7.0
-                leader_left = len(state["players"].get(current_trick.get("player_id"), {}).get("hand", []))
-                combo_type = (current_trick.get("combo") or {}).get("type")
                 combo_value = (current_trick.get("combo") or {}).get("rank_value", 0)
                 if leader_left <= 10 and combo_type in ("pair", "three") and combo_value >= 80:
                     critical_bomb_bonus = 0.0
