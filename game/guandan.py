@@ -23,6 +23,7 @@ DEFAULT_CONFIG = {
     "bot_mcts_depth": 8,
     "bot_mcts_tree_ply": 2,
     "bot_mcts_reply_width": 2,
+    "bot_mcts_root_width": 5,
     "bot_mcts_risk_lambda": 0.28,
     "bot_mcts_early_stop_min_rounds": 4,
     "bot_mcts_early_stop_gap": 7.5,
@@ -30,9 +31,14 @@ DEFAULT_CONFIG = {
     "bot_mcts_obvious_response_margin": 2.25,
     "bot_mcts_override_margin": 5.5,
     "bot_mcts_structure_guard_margin": 2.5,
+    "bot_determinize_samples": 3,
+    "bot_rollout_heuristic_depth": 2,
     "bot_endgame_threshold": 24,
     "bot_minimax_depth": 5,
     "bot_minimax_width": 8,
+    "bot_think_time_ms": 320,
+    "bot_mcts_time_ms": 220,
+    "bot_minimax_time_ms": 180,
 }
 
 STRAIGHT_SEQUENCES: List[Tuple[List[int], int]] = []
@@ -1265,6 +1271,11 @@ def _lead_option_score(state: Dict, player_id: str, cards: List[int]) -> float:
     if combo["type"] in BOMB_TYPES:
         score -= 14.0 + _bomb_tier(combo) * 2.0
 
+    if remaining and _can_play_all(remaining, state["level_rank"], state.get("config", {}), None):
+        score += 7.5
+    elif len(remaining) <= 2 and combo["type"] != "single":
+        score += 2.0
+
     teammate = _teammate_of(state, player_id)
     partner_left = len(state["players"][teammate]["hand"]) if teammate else 99
     active_opponents = [
@@ -1489,6 +1500,10 @@ def _control_card_score(hand: List[Dict], level_rank: int) -> float:
     return score
 
 
+def _hand_decomposition_summary(hand: List[Dict], level_rank: int) -> Dict:
+    return _guandan_ai.call(sys.modules[__name__], "_hand_decomposition_summary", hand, level_rank)
+
+
 def _hand_structure_metrics(hand: List[Dict], level_rank: int) -> Dict[str, float]:
     if not hand:
         return {
@@ -1508,6 +1523,13 @@ def _hand_structure_metrics(hand: List[Dict], level_rank: int) -> Dict[str, floa
             "turn_savings": 0.0,
             "shape_synergy": 0.0,
             "bomb_reserve": 0.0,
+            "decomp_score": 0.0,
+            "decomp_turns": 0.0,
+            "decomp_singles": 0.0,
+            "decomp_low_singles": 0.0,
+            "decomp_grouped_cards": 0.0,
+            "decomp_bomb_turns": 0.0,
+            "decomp_special_turns": 0.0,
         }
 
     info = _hand_info(hand, level_rank)
@@ -1586,6 +1608,8 @@ def _hand_structure_metrics(hand: List[Dict], level_rank: int) -> Dict[str, floa
                 base += 2.0
             bomb_reserve += base * reserve_factor
 
+    decomp = _hand_decomposition_summary(hand, level_rank)
+
     return {
         "pair_ranks": float(pair_ranks),
         "pure_pair_ranks": float(pure_pair_ranks),
@@ -1603,6 +1627,13 @@ def _hand_structure_metrics(hand: List[Dict], level_rank: int) -> Dict[str, floa
         "turn_savings": turn_savings,
         "shape_synergy": shape_synergy,
         "bomb_reserve": bomb_reserve,
+        "decomp_score": float(decomp.get("score", 0.0)),
+        "decomp_turns": float(decomp.get("turns", 0.0)),
+        "decomp_singles": float(decomp.get("singles", 0.0)),
+        "decomp_low_singles": float(decomp.get("low_singles", 0.0)),
+        "decomp_grouped_cards": float(decomp.get("grouped_cards", 0.0)),
+        "decomp_bomb_turns": float(decomp.get("bomb_turns", 0.0)),
+        "decomp_special_turns": float(decomp.get("special_material_turns", 0.0)),
     }
 
 
@@ -1641,6 +1672,13 @@ def _hand_strength_score(hand: List[Dict], level_rank: int) -> float:
         score += 0.6
     score += min(6.0, metrics["turn_savings"] * 0.55)
     score += min(7.0, metrics["bomb_reserve"])
+    score += min(9.0, metrics["decomp_score"] * 0.42)
+    score += min(4.0, max(0.0, len(hand) - metrics["decomp_turns"]) * 0.52)
+    score -= metrics["decomp_low_singles"] * 0.55
+    score -= max(0.0, metrics["decomp_singles"] - 2.0) * 0.18
+    score += min(2.6, metrics["decomp_grouped_cards"] * 0.07)
+    score += metrics["decomp_bomb_turns"] * 0.32
+    score -= metrics["decomp_special_turns"] * 0.18
     return score
 
 
@@ -1654,6 +1692,11 @@ def _estimated_turns_to_finish(hand: List[Dict], level_rank: int) -> float:
     turns -= min(1.0, metrics["wild_count"] * 0.22 + metrics["joker_small"] * 0.18 + metrics["joker_big"] * 0.28)
     turns += min(2.4, metrics["low_single_burden"] * 0.12)
     turns -= min(1.2, metrics["grouped_control"] * 0.08)
+    decomp_turns = metrics["decomp_turns"]
+    if decomp_turns > 0:
+        decomp_turns += metrics["decomp_low_singles"] * 0.18
+        decomp_turns += metrics["decomp_special_turns"] * 0.08
+        turns = min(turns, decomp_turns)
     return max(1.0, turns)
 
 
@@ -1787,6 +1830,11 @@ def _response_material_cost(
         margin = max(0, _combo_value(combo) - _combo_value(current_combo))
         factor = 0.22 if combo["type"] in ("single", "pair", "three") else 0.16
         cost += margin * factor
+        if combo["type"] in ("full_house", "straight", "three_pairs", "steel_plate"):
+            if not _cards_use_special_material(play_cards, level_rank):
+                cost *= 0.5
+            else:
+                cost *= 0.72
 
     wild_count = sum(1 for card in play_cards if _is_wild(card, level_rank))
     small_joker_count = sum(1 for card in play_cards if card.get("joker") == "small")
@@ -2773,7 +2821,11 @@ class GuandanGame:
         endgame_threshold = config.get("bot_endgame_threshold", 18)
         depth = config.get("bot_search_depth", 2)
         search_width = config.get("bot_minimax_width", 6)
+        mcts_width = max(2, int(config.get("bot_mcts_root_width", min(search_width, 5))))
         heuristic_action = _heuristic_best_action(state, bot_id, depth)
+        think_budget_ms = max(40, int(config.get("bot_think_time_ms", 320)))
+        default_mcts_budget_ms = min(think_budget_ms, 220)
+        default_minimax_budget_ms = min(think_budget_ms, 180)
         chosen = None
         chosen_action_type = None
         decided = False
@@ -2781,27 +2833,33 @@ class GuandanGame:
         method_scores = None
         method_meta = None
         if total_left <= endgame_threshold:
+            minimax_budget_ms = max(25, int(config.get("bot_minimax_time_ms", default_minimax_budget_ms)))
+            deadline = time.perf_counter() + minimax_budget_ms / 1000.0
             det = _determinize_state(state, bot_id, random.Random())
             chosen = _minimax_pick_action(
                 det,
                 bot_id,
                 config.get("bot_minimax_depth", 4),
                 search_width,
+                deadline=deadline,
             )
             if chosen:
                 decided = True
                 chosen_action_type = "play"
                 method = "minimax"
-        if not decided and total_left > endgame_threshold and _should_use_mcts(state, bot_id, search_width):
+        if not decided and total_left > endgame_threshold and _should_use_mcts(state, bot_id, mcts_width):
+            mcts_budget_ms = max(25, int(config.get("bot_mcts_time_ms", default_mcts_budget_ms)))
+            deadline = time.perf_counter() + mcts_budget_ms / 1000.0
             mcts_action, mcts_scores = _mcts_pick_action(
                 state,
                 bot_id,
                 config.get("bot_mcts_sims", 60),
                 config.get("bot_mcts_depth", 8),
-                search_width,
+                mcts_width,
                 config.get("bot_mcts_tree_ply", 2),
                 config.get("bot_mcts_reply_width", 4),
                 config.get("bot_mcts_risk_lambda", 0.28),
+                deadline=deadline,
             )
             if mcts_action is not None and _should_accept_mcts_override(
                 state,

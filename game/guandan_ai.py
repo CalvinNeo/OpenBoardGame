@@ -1,6 +1,7 @@
 import copy
 import math
 import random
+import time
 from typing import Dict, List, Optional, Tuple
 
 BOMB_TYPES = ("bomb", "straight_flush", "heavenly")
@@ -62,6 +63,12 @@ _play_structure_delta = _proxy("_play_structure_delta")
 _rank_count_map = _proxy("_rank_count_map")
 _cards_use_special_material = _proxy("_cards_use_special_material")
 _list_hint_options = _proxy("_list_hint_options")
+_list_single_options = _proxy("_list_single_options")
+_list_rank_group_options = _proxy("_list_rank_group_options")
+_list_full_house_options = _proxy("_list_full_house_options")
+_list_straight_options = _proxy("_list_straight_options")
+_list_three_pairs_options = _proxy("_list_three_pairs_options")
+_list_steel_plate_options = _proxy("_list_steel_plate_options")
 _rank_response_options = _proxy("_rank_response_options")
 _rank_lead_options = _proxy("_rank_lead_options")
 _choose_lead_play = _proxy("_choose_lead_play")
@@ -346,6 +353,41 @@ def _lead_low_single_trap_penalty(hand: List[Dict], cards: List[int], level_rank
     return max(0.0, low_single_burden - cover)
 
 
+def _lead_single_initiative_penalty(hand: List[Dict], cards: List[int], level_rank: int) -> float:
+    if len(cards) != 1 or len(hand) <= 8:
+        return 0.0
+    hand_map = _map_hand_by_id(hand)
+    card = hand_map.get(cards[0])
+    if not card or _is_joker(card) or _is_wild(card, level_rank):
+        return 0.0
+
+    value = _single_order_value(card, level_rank)
+    if value >= 60:
+        return 0.0
+
+    remaining = _remove_cards(hand, cards)
+    if not remaining:
+        return 0.0
+
+    decomp = _hand_decomposition_summary(remaining, level_rank)
+    plan_types = tuple(decomp.get("plan_types", ()))
+    penalty = 1.2 + max(0.0, 58 - value) * 0.16
+    if decomp.get("group_turns", 0.0) >= 2:
+        penalty += 1.4
+    if decomp.get("grouped_cards", 0.0) >= max(6.0, float(len(remaining) - 3)):
+        penalty += 0.8
+    if decomp.get("turns", float(len(remaining))) <= max(4.0, len(remaining) * 0.42):
+        penalty += 0.7
+    if plan_types and plan_types[0] in ("full_house", "three_pairs", "steel_plate", "straight", "three"):
+        penalty += 0.6
+
+    before_low = sum(1 for entry in hand if _single_order_value(entry, level_rank) < 58)
+    after_low = decomp.get("low_singles", 0.0)
+    if before_low > 0 and after_low <= before_low - 1:
+        penalty -= 1.2
+    return max(0.0, penalty)
+
+
 def _single_lock_bonus(state: Dict, player_id: str, cards: List[int], combo: Dict) -> float:
     current_trick = state.get("current_trick")
     if not current_trick or len(cards) != 1:
@@ -472,6 +514,325 @@ def _best_takeover_opportunity(state: Dict, player_id: str) -> float:
     if not options:
         return 0.0
     return max(_takeover_opportunity_score(state, player_id, cards) for cards in options)
+
+
+_HAND_DECOMP_CACHE: Dict[Tuple[int, Tuple[str, ...]], Dict[str, float]] = {}
+_HAND_DECOMP_CACHE_LIMIT = 4096
+
+
+def _hand_decomposition_cache_key(hand: List[Dict], level_rank: int) -> Tuple[int, Tuple[str, ...]]:
+    return level_rank, tuple(sorted(_card_label(card) for card in hand))
+
+
+def _empty_hand_decomposition_summary() -> Dict[str, float]:
+    return {
+        "score": 0.0,
+        "turns": 0.0,
+        "singles": 0.0,
+        "low_singles": 0.0,
+        "control_singles": 0.0,
+        "group_turns": 0.0,
+        "bomb_turns": 0.0,
+        "grouped_cards": 0.0,
+        "special_material_turns": 0.0,
+        "top_combo_size": 0.0,
+        "plan_types": (),
+    }
+
+
+def _copy_hand_decomposition_summary(summary: Dict[str, float]) -> Dict[str, float]:
+    copied = dict(summary)
+    copied["plan_types"] = tuple(summary.get("plan_types", ()))
+    return copied
+
+
+def _decomposition_single_candidates(hand: List[Dict], level_rank: int) -> List[List[int]]:
+    all_singles = _list_single_options(hand, level_rank, 0)
+    if len(hand) <= 6:
+        return all_singles
+
+    counts = _rank_count_map(hand, level_rank)
+    hand_map = _map_hand_by_id(hand)
+    selected: List[List[int]] = []
+    seen = set()
+
+    def add(cards: List[int]) -> None:
+        key = tuple(sorted(cards))
+        if key in seen:
+            return
+        seen.add(key)
+        selected.append(cards)
+
+    for cards in all_singles[:2]:
+        add(cards)
+    for cards in all_singles[-2:]:
+        add(cards)
+    for card in hand:
+        rank = card.get("rank")
+        if _is_joker(card) or _is_wild(card, level_rank) or (rank is not None and counts.get(rank, 0) == 1):
+            add([card["id"]])
+
+    singles_ranked = []
+    for cards in selected:
+        card = hand_map.get(cards[0])
+        if not card:
+            continue
+        value = _single_order_value(card, level_rank)
+        singles_ranked.append((value, _is_joker(card), _is_wild(card, level_rank), cards))
+    singles_ranked.sort(key=lambda item: (item[0], item[1], item[2]))
+    return [cards for _, _, _, cards in singles_ranked]
+
+
+def _decomposition_local_value(hand: List[Dict], cards: List[int], combo: Dict, level_rank: int) -> float:
+    hand_map = _map_hand_by_id(hand)
+    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+    combo_type = combo.get("type")
+    type_base = {
+        "straight_flush": 13.0,
+        "bomb": 9.6,
+        "steel_plate": 11.4,
+        "three_pairs": 10.9,
+        "straight": 10.2,
+        "full_house": 9.8,
+        "three": 7.1,
+        "pair": 4.8,
+        "single": 1.1,
+    }
+    value = type_base.get(combo_type, 3.0)
+    value += len(cards) * 1.08
+    value -= 4.25
+    value += _shape_transition_score(hand, cards, level_rank) * 0.62
+    value -= _group_fragment_penalty(hand, cards, level_rank, combo) * 1.05
+    value -= _control_group_break_penalty(hand, cards, level_rank) * 0.92
+
+    if combo_type == "single" and play_cards:
+        card = play_cards[0]
+        single_value = _single_order_value(card, level_rank)
+        if single_value >= 90:
+            value += 3.0
+        elif single_value >= 80:
+            value += 2.2
+        elif single_value >= 60:
+            value += 0.7
+        else:
+            value -= 1.6 + (58 - single_value) * 0.24
+        if not _is_joker(card) and not _is_wild(card, level_rank):
+            rank = card.get("rank")
+            rank_count = _rank_count_map(hand, level_rank).get(rank, 0)
+            if rank_count > 1:
+                value -= 2.4 + (rank_count - 2) * 1.1
+    else:
+        value += min(3.2, _combo_numeric_value(combo) * 0.03)
+        if combo_type in ("straight", "three_pairs", "steel_plate", "full_house"):
+            value += 1.35
+        elif combo_type == "three":
+            value += 0.6
+
+    if combo.get("uses_wild"):
+        value -= 1.6
+    if _cards_use_special_material(play_cards, level_rank):
+        value -= 0.45
+    if combo_type in BOMB_TYPES:
+        value += 1.1 + _bomb_tier(combo) * 0.38
+        if combo.get("uses_wild"):
+            value -= 0.55
+    return value
+
+
+def _decomposition_candidates(hand: List[Dict], level_rank: int) -> List[Tuple[List[int], Dict, float]]:
+    config = {}
+    options: List[List[int]] = []
+    if hand and _can_play_all(hand, level_rank, config, None):
+        options.append([card["id"] for card in hand])
+
+    options.extend([cand["cards"] for cand in _find_bomb_candidates(hand, level_rank)])
+    options.extend(_list_steel_plate_options(hand, level_rank, 0))
+    options.extend(_list_three_pairs_options(hand, level_rank, 0))
+    options.extend(_list_straight_options(hand, level_rank, 0))
+    options.extend(_list_full_house_options(hand, level_rank, 0))
+    options.extend(_list_rank_group_options(hand, level_rank, 0, 3))
+    options.extend(_list_rank_group_options(hand, level_rank, 0, 2))
+    options.extend(_decomposition_single_candidates(hand, level_rank))
+
+    hand_map = _map_hand_by_id(hand)
+    by_type: Dict[str, List[Tuple[float, int, str, List[int], Dict]]] = {}
+    for cards in _CORE._dedupe_card_sets(options):
+        play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+        combo = _evaluate_combo(play_cards, level_rank, config)
+        if not combo:
+            continue
+        local_value = _decomposition_local_value(hand, cards, combo, level_rank)
+        combo_type = combo.get("type") or "unknown"
+        by_type.setdefault(combo_type, []).append(
+            (
+                local_value,
+                len(cards),
+                _CORE._cards_key(cards),
+                cards,
+                combo,
+            )
+        )
+
+    limits = {
+        "straight_flush": 2,
+        "bomb": 2,
+        "steel_plate": 2,
+        "three_pairs": 2,
+        "straight": 3,
+        "full_house": 3,
+        "three": 4,
+        "pair": 4,
+        "single": 5,
+    }
+    if len(hand) <= 10:
+        limits["single"] = 6
+        limits["pair"] = 5
+
+    kept: List[Tuple[List[int], Dict, float]] = []
+    for combo_type, entries in by_type.items():
+        entries.sort(key=lambda item: (item[0], item[1], item[2]), reverse=True)
+        for local_value, _, _, cards, combo in entries[: limits.get(combo_type, 3)]:
+            kept.append((cards, combo, local_value))
+
+    priority = {
+        "straight_flush": 8,
+        "bomb": 7,
+        "steel_plate": 6,
+        "three_pairs": 6,
+        "straight": 5,
+        "full_house": 5,
+        "three": 4,
+        "pair": 3,
+        "single": 1,
+    }
+    kept.sort(
+        key=lambda item: (
+            priority.get(item[1].get("type") or "", 0),
+            item[2],
+            len(item[0]),
+            _CORE._cards_key(item[0]),
+        ),
+        reverse=True,
+    )
+    return kept[: (8 if len(hand) >= 16 else 10)]
+
+
+def _hand_decomposition_summary(hand: List[Dict], level_rank: int) -> Dict[str, float]:
+    if not hand:
+        return _empty_hand_decomposition_summary()
+
+    if len(hand) >= 23:
+        counts = _rank_count_map(hand, level_rank)
+        summary = _empty_hand_decomposition_summary()
+        summary["turns"] = float(len(hand))
+        summary["singles"] = float(sum(1 for count in counts.values() if count == 1))
+        summary["low_singles"] = float(
+            sum(1 for rank, count in counts.items() if count == 1 and _point_order_value(rank, level_rank) < 58)
+        )
+        summary["control_singles"] = float(
+            sum(1 for rank, count in counts.items() if count == 1 and _point_order_value(rank, level_rank) >= 60)
+        )
+        return summary
+
+    cache_key = _hand_decomposition_cache_key(hand, level_rank)
+    cached = _HAND_DECOMP_CACHE.get(cache_key)
+    if cached is not None:
+        return _copy_hand_decomposition_summary(cached)
+
+    priority = {
+        "straight_flush": 8,
+        "bomb": 7,
+        "steel_plate": 6,
+        "three_pairs": 6,
+        "straight": 5,
+        "full_house": 5,
+        "three": 4,
+        "pair": 3,
+        "single": 1,
+    }
+
+    def apply_step(
+        current_hand: List[Dict],
+        cards: List[int],
+        combo: Dict,
+        child: Dict[str, float],
+    ) -> Dict[str, float]:
+        hand_map = _map_hand_by_id(current_hand)
+        play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+        summary = _copy_hand_decomposition_summary(child)
+        combo_type = combo.get("type") or "unknown"
+        summary["score"] = child["score"] + _decomposition_local_value(current_hand, cards, combo, level_rank)
+        summary["turns"] = child["turns"] + 1.0
+        if combo_type == "single":
+            summary["singles"] = child["singles"] + 1.0
+            single_value = combo.get("rank_value", 0)
+            if single_value < 58:
+                summary["low_singles"] = child["low_singles"] + 1.0
+            elif single_value >= 60:
+                summary["control_singles"] = child["control_singles"] + 1.0
+        else:
+            summary["group_turns"] = child["group_turns"] + 1.0
+            summary["grouped_cards"] = child["grouped_cards"] + float(len(cards))
+        if combo_type in BOMB_TYPES:
+            summary["bomb_turns"] = child["bomb_turns"] + 1.0
+        if combo.get("uses_wild") or any(_is_joker(card) for card in play_cards):
+            summary["special_material_turns"] = child["special_material_turns"] + 1.0
+        summary["top_combo_size"] = max(child["top_combo_size"], float(len(cards)))
+        summary["plan_types"] = (combo_type,) + tuple(child.get("plan_types", ()))[:5]
+        return summary
+
+    def search(current_hand: List[Dict], ply: int = 0) -> Dict[str, float]:
+        if not current_hand:
+            return _empty_hand_decomposition_summary()
+        candidates = _decomposition_candidates(current_hand, level_rank)
+        if not candidates:
+            fallback = _empty_hand_decomposition_summary()
+            fallback["turns"] = float(len(current_hand))
+            fallback["singles"] = float(len(current_hand))
+            fallback["low_singles"] = float(
+                sum(1 for card in current_hand if _single_order_value(card, level_rank) < 58)
+            )
+            fallback["control_singles"] = float(
+                sum(1 for card in current_hand if _single_order_value(card, level_rank) >= 60)
+            )
+            fallback["score"] = -4.0 * len(current_hand)
+            fallback["top_combo_size"] = 1.0
+            fallback["plan_types"] = tuple("single" for _ in current_hand[:6])
+            return fallback
+
+        beam = 4 if len(current_hand) >= 12 else 6
+        best_choice = None
+        best_key = None
+        for cards, combo, local_value in candidates[:beam]:
+            remaining = _remove_cards(current_hand, cards)
+            future = 0.0
+            if remaining and ply < 1:
+                next_candidates = _decomposition_candidates(remaining, level_rank)
+                if next_candidates:
+                    future = next_candidates[0][2] * 0.58
+            choice_key = (
+                local_value + future,
+                priority.get(combo.get("type") or "", 0),
+                len(cards),
+                _combo_numeric_value(combo),
+                -float(combo.get("uses_wild", False)),
+            )
+            if best_key is None or choice_key > best_key:
+                best_key = choice_key
+                best_choice = (cards, combo, remaining)
+
+        if best_choice is None:
+            return _empty_hand_decomposition_summary()
+
+        cards, combo, remaining = best_choice
+        child = search(remaining, ply + 1)
+        return apply_step(current_hand, cards, combo, child)
+
+    summary = _copy_hand_decomposition_summary(search(hand, 0))
+    if len(_HAND_DECOMP_CACHE) >= _HAND_DECOMP_CACHE_LIMIT:
+        _HAND_DECOMP_CACHE.clear()
+    _HAND_DECOMP_CACHE[cache_key] = _copy_hand_decomposition_summary(summary)
+    return summary
 
 
 def _hand_state_value_components(state: Dict, bot_id: str, hand: List[Dict]) -> Dict[str, float]:
@@ -637,13 +998,72 @@ def _should_use_mcts(state: Dict, bot_id: str, width: int) -> bool:
         return True
 
     has_bomb_response = any((_action_combo(state, bot_id, action) or {}).get("type") in BOMB_TYPES for action in play_actions)
+    if len(play_actions) >= 5 and not has_bomb_response and combo_type != "single":
+        return False
     if combo_type == "single":
         return current_combo.get("rank_value", 0) >= 70 or has_bomb_response
     if combo_type in ("pair", "three"):
         return has_bomb_response or (has_pass and len(play_actions) <= 2)
     if combo_type in ("full_house", "straight", "three_pairs", "steel_plate"):
-        return has_bomb_response or has_pass or len(play_actions) <= 4
+        return has_bomb_response or len(play_actions) <= 2
     return False
+
+
+def _max_combo_value_for_hand(hand: List[Dict], level_rank: int, combo_type: str, config: Dict) -> Optional[int]:
+    if combo_type == "single":
+        if not hand:
+            return None
+        return max(_single_order_value(card, level_rank) for card in hand)
+
+    if combo_type == "pair":
+        options = _list_rank_group_options(hand, level_rank, 0, 2)
+    elif combo_type == "three":
+        options = _list_rank_group_options(hand, level_rank, 0, 3)
+    elif combo_type == "full_house":
+        options = _list_full_house_options(hand, level_rank, 0)
+    elif combo_type == "straight":
+        options = _list_straight_options(hand, level_rank, 0)
+    elif combo_type == "three_pairs":
+        options = _list_three_pairs_options(hand, level_rank, 0)
+    elif combo_type == "steel_plate":
+        options = _list_steel_plate_options(hand, level_rank, 0)
+    else:
+        return None
+
+    if not options:
+        return None
+    hand_map = _map_hand_by_id(hand)
+    best = None
+    for cards in options:
+        play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+        combo = _evaluate_combo(play_cards, level_rank, config)
+        if not combo or combo.get("type") != combo_type:
+            continue
+        value = combo.get("high_value") if combo_type in ("straight", "three_pairs", "steel_plate") else combo.get("rank_value")
+        if value is None:
+            continue
+        if best is None or value > best:
+            best = value
+    return best
+
+
+def _pass_limit_penalty_for_hand(state: Dict, player_id: str, hand: List[Dict]) -> float:
+    limits = state.get("pass_limits", {}).get(player_id, {})
+    if not limits:
+        return 0.0
+    level_rank = state["level_rank"]
+    config = state.get("config", {})
+    penalty = 0.0
+    for combo_type, limit in limits.items():
+        max_value = _max_combo_value_for_hand(hand, level_rank, combo_type, config)
+        if max_value is None or max_value <= limit:
+            continue
+        gap = max_value - limit
+        if combo_type in ("single", "pair", "three"):
+            penalty += 1.2 + min(4.0, gap * 0.14)
+        else:
+            penalty += 1.8 + min(5.0, gap * 0.22)
+    return penalty
 
 
 def _determinize_state(state: Dict, perspective_id: str, rng: random.Random) -> Dict:
@@ -658,19 +1078,45 @@ def _determinize_state(state: Dict, perspective_id: str, rng: random.Random) -> 
 
     all_ids = set(id_to_card.keys())
     unknown_ids = [cid for cid in all_ids if cid not in known_ids]
-    rng.shuffle(unknown_ids)
+    targets = [
+        (pid, len(det["players"][pid]["hand"]))
+        for pid in det["turn_order"]
+        if pid != perspective_id
+    ]
+    if not targets:
+        return det
 
-    idx = 0
-    for pid in det["turn_order"]:
-        if pid == perspective_id:
+    sample_count = max(1, int(det.get("config", {}).get("bot_determinize_samples", 3)))
+    best_assignment = None
+    best_penalty = None
+    for _ in range(sample_count):
+        sample_unknown = list(unknown_ids)
+        rng.shuffle(sample_unknown)
+        idx = 0
+        assignment: Dict[str, List[Dict]] = {}
+        failed = False
+        for pid, count in targets:
+            assigned = sample_unknown[idx : idx + count]
+            idx += count
+            if len(assigned) < count:
+                failed = True
+                break
+            assignment[pid] = [id_to_card[cid] for cid in assigned]
+        if failed:
             continue
-        count = len(det["players"][pid]["hand"])
-        assigned = unknown_ids[idx : idx + count]
-        idx += count
-        if len(assigned) < count:
-            # fallback: keep existing cards if not enough unknowns
-            continue
-        det["players"][pid]["hand"] = [id_to_card[cid] for cid in assigned]
+        penalty = 0.0
+        for pid, cards in assignment.items():
+            penalty += _pass_limit_penalty_for_hand(det, pid, cards)
+        if best_penalty is None or penalty < best_penalty:
+            best_penalty = penalty
+            best_assignment = assignment
+            if penalty <= 0.001:
+                break
+
+    if best_assignment is None:
+        return det
+    for pid, cards in best_assignment.items():
+        det["players"][pid]["hand"] = cards
     return det
 
 
@@ -760,6 +1206,16 @@ def _rollout_policy_action(state: Dict, player_id: str) -> Optional[Dict]:
     if "play_again" in legal:
         return {"type": "play_again"}
     if "play" in legal:
+        if not state.get("current_trick"):
+            cards = _choose_lead_play(
+                state["players"][player_id]["hand"],
+                state["level_rank"],
+                state.get("config", {}),
+                state,
+                player_id,
+            )
+            if cards:
+                return {"type": "play", "card_ids": cards}
         if "pass" in legal and state.get("current_trick"):
             leader = state["current_trick"].get("player_id")
             teammate = _teammate_of(state, player_id)
@@ -795,18 +1251,10 @@ def _rollout_policy_action(state: Dict, player_id: str) -> Optional[Dict]:
                     return {"type": "pass"}
                 if random.random() < 0.85:
                     return {"type": "pass"}
-        if not state.get("current_trick"):
-            cards = _choose_lead_play(
-                state["players"][player_id]["hand"],
-                state["level_rank"],
-                state.get("config", {}),
-                state,
-                player_id,
-            )
-        else:
-            cards = _suggest_hint_cards(state, player_id)
-        if cards:
-            return {"type": "play", "card_ids": cards}
+        heuristic_depth = max(1, int(state.get("config", {}).get("bot_rollout_heuristic_depth", 2)))
+        heuristic_action = _heuristic_best_action(state, player_id, heuristic_depth)
+        if heuristic_action:
+            return heuristic_action
     if "pass" in legal:
         return {"type": "pass"}
     return None
@@ -1196,6 +1644,7 @@ def _mcts_score_actions(
     tree_ply: int,
     reply_width: int,
     risk_lambda: float,
+    deadline: Optional[float] = None,
 ) -> List[Tuple[Dict, float, int, Dict[str, float]]]:
     legal = GuandanGame.get_legal_actions(state, bot_id)
     if "play" not in legal:
@@ -1290,7 +1739,11 @@ def _mcts_score_actions(
     previous_top_key = None
     final_scored: List[Tuple[Dict, float, int, Dict[str, float]]] = []
     for round_idx in range(sims_per):
+        if deadline is not None and time.perf_counter() >= deadline:
+            break
         for action in candidates:
+            if deadline is not None and time.perf_counter() >= deadline:
+                break
             key = _mcts_action_key(action)
             det = _CORE._determinize_state(state, bot_id, rng)
             _, err = GuandanGame.apply_action(det, bot_id, action)
@@ -1340,6 +1793,8 @@ def _mcts_score_actions(
         else:
             previous_top_key = top_key
             stable_rounds = 0
+        if deadline is not None and time.perf_counter() >= deadline:
+            break
     if final_scored:
         return final_scored
     return _mcts_finalize_scores(
@@ -1365,14 +1820,35 @@ def _mcts_pick_action(
     tree_ply: int,
     reply_width: int,
     risk_lambda: float,
+    deadline: Optional[float] = None,
 ) -> Tuple[Optional[Dict], List[Tuple[Dict, float, int, Dict[str, float]]]]:
-    scored = _CORE._mcts_score_actions(state, bot_id, sims, depth, width, tree_ply, reply_width, risk_lambda)
+    scored = _CORE._mcts_score_actions(
+        state,
+        bot_id,
+        sims,
+        depth,
+        width,
+        tree_ply,
+        reply_width,
+        risk_lambda,
+        deadline=deadline,
+    )
     if not scored:
         return None, []
     return scored[0][0], scored
 
 
-def _minimax_value(state: Dict, bot_id: str, depth: int, alpha: float, beta: float, width: int) -> float:
+def _minimax_value(
+    state: Dict,
+    bot_id: str,
+    depth: int,
+    alpha: float,
+    beta: float,
+    width: int,
+    deadline: Optional[float] = None,
+) -> float:
+    if deadline is not None and time.perf_counter() >= deadline:
+        return _evaluate_state_for_bot(state, bot_id)
     if depth <= 0 or state.get("game_over"):
         return _evaluate_state_for_bot(state, bot_id)
     actor = _next_actor(state)
@@ -1385,29 +1861,39 @@ def _minimax_value(state: Dict, bot_id: str, depth: int, alpha: float, beta: flo
     if maximize:
         value = -1e9
         for action in actions:
+            if deadline is not None and time.perf_counter() >= deadline:
+                break
             nxt = copy.deepcopy(state)
             _, err = GuandanGame.apply_action(nxt, actor, action)
             if err:
                 continue
-            value = max(value, _minimax_value(nxt, bot_id, depth - 1, alpha, beta, width))
+            value = max(value, _minimax_value(nxt, bot_id, depth - 1, alpha, beta, width, deadline=deadline))
             alpha = max(alpha, value)
             if beta <= alpha:
                 break
         return value
     value = 1e9
     for action in actions:
+        if deadline is not None and time.perf_counter() >= deadline:
+            break
         nxt = copy.deepcopy(state)
         _, err = GuandanGame.apply_action(nxt, actor, action)
         if err:
             continue
-        value = min(value, _minimax_value(nxt, bot_id, depth - 1, alpha, beta, width))
+        value = min(value, _minimax_value(nxt, bot_id, depth - 1, alpha, beta, width, deadline=deadline))
         beta = min(beta, value)
         if beta <= alpha:
             break
     return value
 
 
-def _minimax_pick_action(state: Dict, bot_id: str, depth: int, width: int) -> Optional[List[int]]:
+def _minimax_pick_action(
+    state: Dict,
+    bot_id: str,
+    depth: int,
+    width: int,
+    deadline: Optional[float] = None,
+) -> Optional[List[int]]:
     legal = GuandanGame.get_legal_actions(state, bot_id)
     if "play" not in legal:
         return None
@@ -1418,11 +1904,13 @@ def _minimax_pick_action(state: Dict, bot_id: str, depth: int, width: int) -> Op
     best_action = None
     best_value = -1e9
     for action in actions:
+        if deadline is not None and time.perf_counter() >= deadline:
+            break
         nxt = copy.deepcopy(state)
         _, err = GuandanGame.apply_action(nxt, bot_id, action)
         if err:
             continue
-        value = _minimax_value(nxt, bot_id, depth - 1, -1e9, 1e9, width)
+        value = _minimax_value(nxt, bot_id, depth - 1, -1e9, 1e9, width, deadline=deadline)
         if value > best_value:
             best_value = value
             best_action = action
@@ -1570,6 +2058,9 @@ def _bot_score_components(
         escape_bonus = _lead_low_single_escape_bonus(hand, cards, level_rank)
         if escape_bonus > 0.001:
             components["shed_low_single"] = escape_bonus
+        initiative_penalty = _lead_single_initiative_penalty(hand, cards, level_rank)
+        if initiative_penalty > 0.001:
+            components["keep_initiative_shape"] = -initiative_penalty
 
     if depth >= 2 and remaining:
         lead_cards = _choose_lead_play(remaining, level_rank, config, state, bot_id)

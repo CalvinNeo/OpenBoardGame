@@ -527,6 +527,7 @@ const GAME_WEIGHT = {
   lost_code: 2.38,
   criminal_dance: 1.16,
   wavelength: 1.11,
+  guandan: 2.33,
 };
 
 function getGameWeight(gameId) {

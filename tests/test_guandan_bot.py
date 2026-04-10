@@ -86,6 +86,20 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertIn("single", filtered_types)
         self.assertNotIn("bomb", filtered_types)
 
+    def test_natural_level_card_remains_available_as_single_with_heart_level_wild(self):
+        deck = guandan._full_deck()
+        club_two = next(card for card in deck if guandan._card_label(card) == "♣️2")
+        heart_two = next(card for card in deck if guandan._card_label(card) == "♥️2")
+
+        single_combo = guandan._evaluate_combo([club_two], 2, {})
+        pair_combo = guandan._evaluate_combo([club_two, heart_two], 2, {})
+        single_options = guandan._list_single_options([club_two, heart_two], 2, 0)
+
+        self.assertEqual(single_combo.get("type"), "single")
+        self.assertEqual(single_combo.get("rank_value"), guandan._single_order_value(club_two, 2))
+        self.assertEqual(pair_combo.get("type"), "pair")
+        self.assertIn([club_two["id"]], single_options)
+
     def test_filter_overbomb_actions_removes_bomb_plays(self):
         state, _ = self._make_state()
         actions = guandan._candidate_actions(state, "bot", 20)
@@ -95,6 +109,50 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         for action in play_actions:
             combo_type = self._combo_type(state, action.get("card_ids", []))
             self.assertNotEqual(combo_type, "bomb")
+
+    def test_determinize_state_prefers_assignments_consistent_with_pass_limits(self):
+        players = [
+            {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
+            {"player_id": "opp", "name": "Opp", "seat": 1, "is_bot": False},
+            {"player_id": "mate", "name": "Mate", "seat": 2, "is_bot": False},
+            {"player_id": "opp2", "name": "Opp2", "seat": 3, "is_bot": False},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["current_turn"] = "bot"
+        state["config"]["bot_determinize_samples"] = 4
+
+        deck = guandan._full_deck()
+        bot_card = next(card for card in deck if guandan._card_label(card) == "♣️5")
+        low_single = next(card for card in deck if guandan._card_label(card) == "♣️3")
+        high_single = next(card for card in deck if guandan._card_label(card) == "♠️A")
+        filler_a = next(card for card in deck if guandan._card_label(card) == "♦️7")
+        filler_b = next(card for card in deck if guandan._card_label(card) == "♥️9")
+
+        state["players"]["bot"]["hand"] = [bot_card]
+        state["players"]["opp"]["hand"] = [filler_a]
+        state["players"]["mate"]["hand"] = []
+        state["players"]["opp2"]["hand"] = [filler_b]
+        state["seen_cards"] = [
+            card["id"]
+            for card in guandan._full_deck()
+            if card["id"] not in {low_single["id"], high_single["id"], bot_card["id"]}
+        ]
+        state["pass_limits"] = {
+            "opp": {"single": guandan._single_order_value(low_single, state["level_rank"])},
+        }
+
+        det = guandan._determinize_state(state, "bot", random.Random(0))
+        opp_labels = [guandan._card_label(card) for card in det["players"]["opp"]["hand"]]
+        opp2_labels = [guandan._card_label(card) for card in det["players"]["opp2"]["hand"]]
+
+        self.assertEqual(opp_labels, ["♣️3"])
+        self.assertEqual(opp2_labels, ["♠️A"])
+
+    def test_rollout_policy_uses_heuristic_action(self):
+        state, big = self._make_state()
+        action = guandan._rollout_policy_action(state, "bot")
+        self.assertEqual(action, {"type": "play", "card_ids": [big["id"]]})
 
     def test_bot_select_play_avoids_bomb(self):
         state, big = self._make_state()
@@ -274,6 +332,63 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         explain = state.get("bot_explain", {}).get("bot", {})
         self.assertEqual(explain.get("method"), "heuristic")
 
+    def test_lead_with_dense_combo_hand_does_not_dump_low_single(self):
+        players = [
+            {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
+            {"player_id": "opp", "name": "Opp", "seat": 1, "is_bot": False},
+            {"player_id": "mate", "name": "Mate", "seat": 2, "is_bot": False},
+            {"player_id": "opp2", "name": "Opp2", "seat": 3, "is_bot": False},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["current_turn"] = "bot"
+        state["current_trick"] = None
+        state["config"]["bot_endgame_threshold"] = 0
+
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        state["players"]["bot"]["hand"] = [
+            pick_label(label)
+            for label in [
+                "♣️K",
+                "♠️K",
+                "♥️K",
+                "♦️10",
+                "♥️10",
+                "♥️9",
+                "♠️9",
+                "♥️8",
+                "♣️8",
+                "♦️8",
+                "♦️4",
+                "♠️3",
+                "♥️3",
+                "♣️3",
+            ]
+        ]
+        idx = 0
+        for pid in ("opp", "mate", "opp2"):
+            state["players"][pid]["hand"] = deck[idx : idx + 14]
+            idx += 14
+
+        action = guandan.GuandanGame.bot_move(state, "bot")
+        self.assertEqual(action.get("type"), "play")
+
+        hand_map = guandan._map_hand_by_id(state["players"]["bot"]["hand"])
+        chosen_cards = [hand_map[cid] for cid in action.get("card_ids", []) if cid in hand_map]
+        chosen_labels = [guandan._card_label(card) for card in chosen_cards]
+        chosen_combo = guandan._evaluate_combo(chosen_cards, state["level_rank"], state.get("config", {}))
+
+        self.assertIsNotNone(chosen_combo)
+        self.assertNotEqual(chosen_combo.get("type"), "single")
+        self.assertNotEqual(chosen_labels, ["♦️4"])
+
     def test_bot_move_rejects_bad_mcts_override_when_heuristic_structure_is_better(self):
         state, big = self._make_state()
         state["config"]["bot_endgame_threshold"] = 0
@@ -413,6 +528,43 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertEqual(picked, only_action)
         self.assertEqual(scored[0][2], 0)
         self.assertEqual(scored[0][3]["depth"], 0)
+        reply_tree.assert_not_called()
+
+    def test_mcts_past_deadline_returns_heuristic_without_rollout(self):
+        players = [
+            {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
+            {"player_id": "opp", "name": "Opp", "seat": 1, "is_bot": False},
+            {"player_id": "mate", "name": "Mate", "seat": 2, "is_bot": False},
+            {"player_id": "opp2", "name": "Opp2", "seat": 3, "is_bot": False},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["current_turn"] = "bot"
+
+        action_a = {"type": "play", "card_ids": [11]}
+        action_b = {"type": "play", "card_ids": [22]}
+
+        def heuristic_value(_state, _bot, action, _depth):
+            return 5.0 if action == action_a else 1.0
+
+        with mock.patch.object(guandan, "_candidate_actions", return_value=[action_a, action_b]):
+            with mock.patch.object(guandan, "_filter_overbomb_actions", side_effect=lambda _s, _p, acts: acts):
+                with mock.patch.object(guandan, "_mcts_root_heuristic_value", side_effect=heuristic_value):
+                    with mock.patch.object(guandan, "_mcts_reply_tree_value") as reply_tree:
+                        picked, scored = guandan._mcts_pick_action(
+                            state,
+                            "bot",
+                            sims=40,
+                            depth=6,
+                            width=2,
+                            tree_ply=2,
+                            reply_width=2,
+                            risk_lambda=0.28,
+                            deadline=0.0,
+                        )
+
+        self.assertEqual(picked, action_a)
+        self.assertEqual(scored[0][0], action_a)
         reply_tree.assert_not_called()
 
     def test_mcts_obvious_low_single_response_skips_rollout(self):
