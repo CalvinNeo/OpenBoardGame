@@ -1,4 +1,5 @@
 import argparse
+import copy
 import json
 import math
 import os
@@ -84,12 +85,28 @@ HEURISTIC_COMPONENT_KEYS = (
 MAX_STATE_SCALE = 6.0
 MAX_ACTION_SCALE = 6.0
 DEFAULT_CANDIDATE_LIMIT = 12
+DEFAULT_POLICY_TARGET_SOURCE = "search"
 POLICY_TARGET_BLEND = 0.35
 PASS_SAMPLE_WEIGHT = 0.82
 NON_PASS_SAMPLE_BONUS = 0.1
 COMPLEX_COMBO_BONUS = 0.08
 MULTI_CARD_COMBO_BONUS = 0.06
 MAX_MARGIN_BONUS = 0.24
+DEFAULT_REANALYSIS_CANDIDATE_CAP = 6
+DEFAULT_REANALYSIS_MCTS_SIMS = 10
+DEFAULT_REANALYSIS_MCTS_DEPTH = 5
+DEFAULT_REANALYSIS_MCTS_TREE_PLY = 1
+DEFAULT_REANALYSIS_MCTS_REPLY_WIDTH = 1
+DEFAULT_REANALYSIS_MCTS_RISK_LAMBDA = 0.18
+DEFAULT_REANALYSIS_MINIMAX_DEPTH = 3
+DEFAULT_REANALYSIS_MINIMAX_WIDTH = 6
+DEFAULT_SELF_PLAY_POLICY = "search"
+DEFAULT_MODEL_SEARCH_SIMS = 24
+DEFAULT_MODEL_SEARCH_DEPTH = 6
+DEFAULT_MODEL_SEARCH_C_PUCT = 1.2
+DEFAULT_MODEL_SEARCH_DIRICHLET_ALPHA = 0.3
+DEFAULT_MODEL_SEARCH_DIRICHLET_EPSILON = 0.20
+DEFAULT_MODEL_SEARCH_TEMPERATURE = 0.85
 DEFAULT_TRAIN_CONFIG = {
     "bot_search_depth": 3,
     "bot_mcts_sims": 20,
@@ -442,6 +459,50 @@ def _build_policy_target(chosen_index: int, scores: Sequence[float], teacher: st
     return _one_hot_index(len(scores), chosen_index)
 
 
+def _normalize_policy(values: Sequence[float]) -> List[float]:
+    items = [max(0.0, float(value)) for value in values]
+    total = sum(items)
+    if total > 1e-9:
+        return [value / total for value in items]
+    return []
+
+
+def _softmax(values: Sequence[float], temperature: float = 1.0) -> List[float]:
+    if not values:
+        return []
+    if len(values) == 1:
+        return [1.0]
+    safe_temp = max(1e-6, float(temperature))
+    scaled = [float(value) / safe_temp for value in values]
+    top = max(scaled)
+    exp_values = [math.exp(value - top) for value in scaled]
+    total = sum(exp_values) or 1.0
+    return [value / total for value in exp_values]
+
+
+def _sample_from_distribution(weights: Sequence[float], rng: random.Random) -> int:
+    if not weights:
+        return 0
+    total = sum(max(0.0, float(weight)) for weight in weights)
+    if total <= 1e-9:
+        return 0
+    pick = rng.random() * total
+    cumulative = 0.0
+    for idx, weight in enumerate(weights):
+        cumulative += max(0.0, float(weight))
+        if pick <= cumulative:
+            return idx
+    return max(0, len(weights) - 1)
+
+
+def _sample_dirichlet(alpha: float, size: int, rng: random.Random) -> List[float]:
+    if size <= 0:
+        return []
+    safe_alpha = max(1e-3, float(alpha))
+    draws = [rng.gammavariate(safe_alpha, 1.0) for _ in range(size)]
+    return _normalize_policy(draws) or [1.0 / size] * size
+
+
 def _sample_weight_for_example(
     chosen_action: Dict,
     chosen_score: float,
@@ -463,6 +524,417 @@ def _sample_weight_for_example(
         margin = max(0.0, float(chosen_score) - float(sorted_scores[1]))
         weight += min(MAX_MARGIN_BONUS, margin / 20.0)
     return max(0.5, min(1.8, weight))
+
+
+def _terminal_team_value(state: Dict, player_id: str) -> Optional[float]:
+    finish_order = list((state.get("last_round_summary") or {}).get("finish_order") or state.get("finish_order") or [])
+    if len(finish_order) == 4:
+        return _team_finish_value(finish_order, guandan._team_of(state, player_id), state)
+    winner_team = state.get("winner_team")
+    if winner_team:
+        return 1.0 if winner_team == guandan._team_of(state, player_id) else -1.0
+    return None
+
+
+def _advance_to_model_decision(state: Dict, fallback_rng: random.Random, step_cap: int = 12) -> Tuple[Dict, bool]:
+    current = copy.deepcopy(state)
+    for _ in range(max(1, step_cap)):
+        terminal = _terminal_team_value(current, current.get("current_turn") or (current.get("turn_order") or [None])[0])
+        if terminal is not None:
+            return current, True
+        acting_id = current.get("current_turn")
+        if not acting_id:
+            break
+        legal = guandan.GuandanGame.get_legal_actions(current, acting_id)
+        if not legal:
+            break
+        if current.get("phase") == "playing" and ("play" in legal or "pass" in legal):
+            return current, False
+        action = _auto_progress_action(current, acting_id)
+        if action is None:
+            action = _teacher_action(
+                current,
+                acting_id,
+                "random",
+                fallback_rng,
+                model=None,
+                candidate_limit=DEFAULT_CANDIDATE_LIMIT,
+            )
+        if action is None:
+            break
+        _, err = guandan.GuandanGame.apply_action(current, acting_id, _sanitize_action(action))
+        if err:
+            break
+    return current, _terminal_team_value(current, current.get("current_turn") or (current.get("turn_order") or [None])[0]) is not None
+
+
+def _leaf_model_value(
+    model: "GuandanPolicyValueNet",
+    state: Dict,
+    root_player_id: str,
+    device: str,
+    candidate_limit: int,
+) -> float:
+    terminal = _terminal_team_value(state, root_player_id)
+    if terminal is not None:
+        return terminal
+    acting_id = state.get("current_turn")
+    if not acting_id:
+        return 0.0
+    actions = guandan._candidate_actions(state, acting_id, candidate_limit)
+    if not actions:
+        return 0.0
+    try:
+        _, state_value = evaluate_actions(model, state, acting_id, actions, device=device)
+    except Exception:
+        return 0.0
+    acting_team = guandan._team_of(state, acting_id)
+    root_team = guandan._team_of(state, root_player_id)
+    return float(state_value if acting_team == root_team else -state_value)
+
+
+def _rollout_model_policy_action(
+    model: "GuandanPolicyValueNet",
+    state: Dict,
+    player_id: str,
+    device: str,
+    candidate_limit: int,
+    temperature: float,
+    rng: random.Random,
+) -> Optional[Dict]:
+    actions = guandan._candidate_actions(state, player_id, candidate_limit)
+    if not actions:
+        return None
+    scored, _state_value = evaluate_actions(model, state, player_id, actions, device=device)
+    if not scored:
+        return None
+    if temperature <= 1e-6:
+        best_action, _ = max(scored, key=lambda item: item[1])
+        return _sanitize_action(best_action)
+    probs = _softmax([score for _, score in scored], temperature=temperature)
+    chosen_idx = _sample_from_distribution(probs, rng)
+    return _sanitize_action(scored[chosen_idx][0])
+
+
+def _model_rollout_value(
+    model: "GuandanPolicyValueNet",
+    state: Dict,
+    root_player_id: str,
+    device: str,
+    candidate_limit: int,
+    depth: int,
+    temperature: float,
+    rng: random.Random,
+) -> float:
+    current, terminal = _advance_to_model_decision(state, rng)
+    if terminal:
+        return _terminal_team_value(current, root_player_id) or 0.0
+    if depth <= 0:
+        return _leaf_model_value(model, current, root_player_id, device, candidate_limit)
+    acting_id = current.get("current_turn")
+    if not acting_id:
+        return _leaf_model_value(model, current, root_player_id, device, candidate_limit)
+    action = _rollout_model_policy_action(
+        model,
+        current,
+        acting_id,
+        device=device,
+        candidate_limit=candidate_limit,
+        temperature=temperature,
+        rng=rng,
+    )
+    if action is None:
+        return _leaf_model_value(model, current, root_player_id, device, candidate_limit)
+    nxt = copy.deepcopy(current)
+    _, err = guandan.GuandanGame.apply_action(nxt, acting_id, action)
+    if err:
+        return _leaf_model_value(model, current, root_player_id, device, candidate_limit)
+    return _model_rollout_value(
+        model,
+        nxt,
+        root_player_id,
+        device=device,
+        candidate_limit=candidate_limit,
+        depth=depth - 1,
+        temperature=temperature,
+        rng=rng,
+    )
+
+
+@dataclass
+class SearchDecision:
+    action: Dict
+    candidates: List[Dict]
+    policy_target: List[float]
+    target_scores: List[float]
+    metadata: Dict[str, object] = field(default_factory=dict)
+
+
+def _model_search_decision(
+    model: "GuandanPolicyValueNet",
+    state: Dict,
+    player_id: str,
+    device: str = "cpu",
+    candidate_limit: int = DEFAULT_CANDIDATE_LIMIT,
+    sims: int = DEFAULT_MODEL_SEARCH_SIMS,
+    depth: int = DEFAULT_MODEL_SEARCH_DEPTH,
+    c_puct: float = DEFAULT_MODEL_SEARCH_C_PUCT,
+    dirichlet_alpha: float = DEFAULT_MODEL_SEARCH_DIRICHLET_ALPHA,
+    dirichlet_epsilon: float = DEFAULT_MODEL_SEARCH_DIRICHLET_EPSILON,
+    rollout_temperature: float = DEFAULT_MODEL_SEARCH_TEMPERATURE,
+    rng: Optional[random.Random] = None,
+) -> Optional[SearchDecision]:
+    if model is None:
+        return None
+    actions = [dict(item) for item in guandan._candidate_actions(state, player_id, candidate_limit)]
+    if not actions:
+        return None
+    if len(actions) == 1:
+        only = dict(actions[0])
+        return SearchDecision(
+            action=only,
+            candidates=[only],
+            policy_target=[1.0],
+            target_scores=[1.0],
+            metadata={"source": "model_search", "sims": 0, "depth": 0, "single_candidate": True},
+        )
+
+    search_rng = rng or random.Random()
+    scored, root_state_value = evaluate_actions(model, state, player_id, actions, device=device)
+    if not scored:
+        return None
+    logits = [float(score) for _action, score in scored]
+    priors = _softmax(logits, temperature=1.0)
+    if len(priors) > 1 and dirichlet_epsilon > 1e-6:
+        noise = _sample_dirichlet(dirichlet_alpha, len(priors), search_rng)
+        priors = [
+            (1.0 - dirichlet_epsilon) * prior + dirichlet_epsilon * sample
+            for prior, sample in zip(priors, noise)
+        ]
+        priors = _normalize_policy(priors) or priors
+
+    visits = [0] * len(actions)
+    total_values = [0.0] * len(actions)
+    total_sq = [0.0] * len(actions)
+    for _ in range(max(1, sims)):
+        total_visit_count = sum(visits)
+        best_idx = 0
+        best_score = None
+        root_scale = math.sqrt(max(1.0, float(total_visit_count + 1)))
+        for idx, prior in enumerate(priors):
+            q_value = total_values[idx] / visits[idx] if visits[idx] else 0.0
+            u_value = float(c_puct) * float(prior) * root_scale / float(1 + visits[idx])
+            score = q_value + u_value
+            if best_score is None or score > best_score:
+                best_score = score
+                best_idx = idx
+        nxt = copy.deepcopy(state)
+        _, err = guandan.GuandanGame.apply_action(nxt, player_id, _sanitize_action(actions[best_idx]))
+        if err:
+            visits[best_idx] += 1
+            continue
+        value = _model_rollout_value(
+            model,
+            nxt,
+            player_id,
+            device=device,
+            candidate_limit=candidate_limit,
+            depth=max(0, depth - 1),
+            temperature=rollout_temperature,
+            rng=search_rng,
+        )
+        visits[best_idx] += 1
+        total_values[best_idx] += value
+        total_sq[best_idx] += value * value
+
+    visit_target = _normalize_policy(visits) or priors
+    avg_scores = [
+        (total_values[idx] / visits[idx]) if visits[idx] else float(root_state_value)
+        for idx in range(len(actions))
+    ]
+    chosen_idx = max(range(len(actions)), key=lambda idx: (visit_target[idx], avg_scores[idx]))
+    per_action = []
+    for idx, action in enumerate(actions):
+        visit_count = visits[idx]
+        avg = avg_scores[idx]
+        variance = (total_sq[idx] / visit_count - avg * avg) if visit_count else 0.0
+        per_action.append(
+            {
+                "label": _action_label(state, player_id, action),
+                "prior": priors[idx],
+                "visit_prob": visit_target[idx],
+                "visits": visit_count,
+                "avg_value": avg,
+                "std": math.sqrt(max(0.0, variance)),
+            }
+        )
+    return SearchDecision(
+        action=_sanitize_action(actions[chosen_idx]) or {"type": "pass"},
+        candidates=[dict(item) for item in actions],
+        policy_target=visit_target,
+        target_scores=avg_scores,
+        metadata={
+            "source": "model_search",
+            "sims": max(1, sims),
+            "depth": max(1, depth),
+            "c_puct": float(c_puct),
+            "dirichlet_alpha": float(dirichlet_alpha),
+            "dirichlet_epsilon": float(dirichlet_epsilon),
+            "rollout_temperature": float(rollout_temperature),
+            "root_state_value": float(root_state_value),
+            "search_actions": per_action,
+        },
+    )
+
+
+def _heuristic_policy_scores(
+    state: Dict,
+    player_id: str,
+    candidates: Sequence[Dict],
+    depth: int,
+) -> Tuple[List[float], str, Dict[str, object]]:
+    scores = []
+    for action in candidates:
+        score, _, _ = _score_candidate_for_target(state, player_id, action, depth)
+        scores.append(score)
+    return scores, "heuristic", {"candidate_count": len(candidates)}
+
+
+def _minimax_policy_scores(
+    state: Dict,
+    player_id: str,
+    candidates: Sequence[Dict],
+    depth: int,
+    width: int,
+) -> Tuple[List[float], str, Dict[str, object]]:
+    heuristic_scores, _, _ = _heuristic_policy_scores(state, player_id, candidates, depth)
+    score_map = {}
+    search_depth = max(1, depth)
+    search_width = max(2, width)
+    for action in candidates:
+        nxt = copy.deepcopy(state)
+        _, err = guandan.GuandanGame.apply_action(nxt, player_id, action)
+        if err:
+            continue
+        score_map[_action_key(action)] = guandan._minimax_value(
+            nxt,
+            player_id,
+            search_depth - 1,
+            -1e9,
+            1e9,
+            search_width,
+            deadline=None,
+        )
+    if not score_map:
+        return heuristic_scores, "heuristic", {"candidate_count": len(candidates), "fallback": "minimax_empty"}
+    scores = [float(score_map.get(_action_key(action), heuristic_scores[idx])) for idx, action in enumerate(candidates)]
+    return scores, "minimax", {"candidate_count": len(candidates), "depth": search_depth, "width": search_width}
+
+
+def _mcts_policy_scores(
+    state: Dict,
+    player_id: str,
+    candidates: Sequence[Dict],
+    heuristic_scores: Sequence[float],
+    sims: int,
+    depth: int,
+    tree_ply: int,
+    reply_width: int,
+    risk_lambda: float,
+) -> Tuple[List[float], str, Dict[str, object]]:
+    try:
+        scored = guandan._mcts_score_actions(
+            state,
+            player_id,
+            sims=max(2, sims),
+            depth=max(2, depth),
+            width=max(2, len(candidates)),
+            tree_ply=max(0, tree_ply),
+            reply_width=max(1, reply_width),
+            risk_lambda=risk_lambda,
+            deadline=None,
+        )
+    except Exception:
+        return list(heuristic_scores), "heuristic", {"candidate_count": len(candidates), "fallback": "mcts_error"}
+
+    if not scored:
+        return list(heuristic_scores), "heuristic", {"candidate_count": len(candidates), "fallback": "mcts_empty"}
+
+    score_map = {}
+    positive_rollouts = 0
+    for action, score, count, stats in scored:
+        score_map[_action_key(action)] = float((stats or {}).get("adjusted", score))
+        if count > 0 or (stats or {}).get("fast_path"):
+            positive_rollouts += 1
+    scores = [float(score_map.get(_action_key(action), heuristic_scores[idx])) for idx, action in enumerate(candidates)]
+    source = "mcts" if positive_rollouts > 0 else "heuristic"
+    meta = {
+        "candidate_count": len(candidates),
+        "sims": max(2, sims),
+        "depth": max(2, depth),
+        "tree_ply": max(0, tree_ply),
+        "reply_width": max(1, reply_width),
+        "risk_lambda": risk_lambda,
+    }
+    if source != "mcts":
+        meta["fallback"] = "mcts_no_rollouts"
+    return scores, source, meta
+
+
+def _policy_target_scores(
+    state: Dict,
+    player_id: str,
+    candidates: Sequence[Dict],
+    depth: int,
+    policy_target_source: str = "heuristic",
+    reanalysis_candidate_cap: int = DEFAULT_REANALYSIS_CANDIDATE_CAP,
+    reanalysis_mcts_sims: int = DEFAULT_REANALYSIS_MCTS_SIMS,
+    reanalysis_mcts_depth: int = DEFAULT_REANALYSIS_MCTS_DEPTH,
+    reanalysis_mcts_tree_ply: int = DEFAULT_REANALYSIS_MCTS_TREE_PLY,
+    reanalysis_mcts_reply_width: int = DEFAULT_REANALYSIS_MCTS_REPLY_WIDTH,
+    reanalysis_mcts_risk_lambda: float = DEFAULT_REANALYSIS_MCTS_RISK_LAMBDA,
+    reanalysis_minimax_depth: int = DEFAULT_REANALYSIS_MINIMAX_DEPTH,
+    reanalysis_minimax_width: int = DEFAULT_REANALYSIS_MINIMAX_WIDTH,
+) -> Tuple[List[float], str, Dict[str, object]]:
+    heuristic_scores, _, heuristic_meta = _heuristic_policy_scores(state, player_id, candidates, depth)
+    source = (policy_target_source or "heuristic").strip().lower()
+    if source != "search" or len(candidates) <= 1:
+        return heuristic_scores, "heuristic", heuristic_meta
+
+    candidate_cap = max(2, reanalysis_candidate_cap)
+    if len(candidates) > candidate_cap:
+        meta = dict(heuristic_meta)
+        meta["fallback"] = "candidate_cap"
+        meta["candidate_cap"] = candidate_cap
+        return heuristic_scores, "heuristic", meta
+
+    total_left = sum(len(state["players"][pid]["hand"]) for pid in state.get("turn_order", []))
+    endgame_threshold = int((state.get("config") or {}).get("bot_endgame_threshold", DEFAULT_TRAIN_CONFIG["bot_endgame_threshold"]))
+    if total_left <= endgame_threshold:
+        return _minimax_policy_scores(
+            state,
+            player_id,
+            candidates,
+            depth=max(1, reanalysis_minimax_depth),
+            width=max(2, reanalysis_minimax_width),
+        )
+
+    if guandan._should_use_mcts(state, player_id, min(candidate_cap, len(candidates))):
+        return _mcts_policy_scores(
+            state,
+            player_id,
+            candidates,
+            heuristic_scores,
+            sims=reanalysis_mcts_sims,
+            depth=reanalysis_mcts_depth,
+            tree_ply=reanalysis_mcts_tree_ply,
+            reply_width=reanalysis_mcts_reply_width,
+            risk_lambda=reanalysis_mcts_risk_lambda,
+        )
+
+    meta = dict(heuristic_meta)
+    meta["fallback"] = "mcts_gate"
+    return heuristic_scores, "heuristic", meta
 
 
 @dataclass
@@ -554,12 +1026,31 @@ def build_decision_example(
     teacher: str = "bot",
     candidate_limit: int = DEFAULT_CANDIDATE_LIMIT,
     depth: int = 3,
+    candidate_actions_override: Optional[Sequence[Dict]] = None,
+    policy_target_override: Optional[Sequence[float]] = None,
+    target_scores_override: Optional[Sequence[float]] = None,
+    target_source_override: Optional[str] = None,
+    target_meta_override: Optional[Dict[str, object]] = None,
+    policy_target_source: str = "heuristic",
+    reanalysis_candidate_cap: int = DEFAULT_REANALYSIS_CANDIDATE_CAP,
+    reanalysis_mcts_sims: int = DEFAULT_REANALYSIS_MCTS_SIMS,
+    reanalysis_mcts_depth: int = DEFAULT_REANALYSIS_MCTS_DEPTH,
+    reanalysis_mcts_tree_ply: int = DEFAULT_REANALYSIS_MCTS_TREE_PLY,
+    reanalysis_mcts_reply_width: int = DEFAULT_REANALYSIS_MCTS_REPLY_WIDTH,
+    reanalysis_mcts_risk_lambda: float = DEFAULT_REANALYSIS_MCTS_RISK_LAMBDA,
+    reanalysis_minimax_depth: int = DEFAULT_REANALYSIS_MINIMAX_DEPTH,
+    reanalysis_minimax_width: int = DEFAULT_REANALYSIS_MINIMAX_WIDTH,
 ) -> DecisionExample:
     chosen_action = _sanitize_action(chosen_action)
     if not chosen_action:
         raise ValueError("chosen_action is required")
     state_features = _state_feature_vector(state, player_id)
-    candidates = _candidate_actions_for_decision(state, player_id, candidate_limit, chosen_action)
+    if candidate_actions_override is not None:
+        candidates = [dict(item) for item in candidate_actions_override]
+        if all(_action_key(item) != _action_key(chosen_action) for item in candidates):
+            candidates.append(dict(chosen_action))
+    else:
+        candidates = _candidate_actions_for_decision(state, player_id, candidate_limit, chosen_action)
     chosen_key = _action_key(chosen_action)
     chosen_index = -1
     action_features: List[List[float]] = []
@@ -572,15 +1063,42 @@ def build_decision_example(
             chosen_index = idx
         action_features.append(_action_feature_vector(state, player_id, action, depth=depth))
         action_labels.append(_action_label(state, player_id, action))
-        score, combo_type, combo_size = _score_candidate_for_target(state, player_id, action, depth)
-        candidate_scores.append(score)
+        raw_score, combo_type, combo_size = _score_candidate_for_target(state, player_id, action, depth)
+        candidate_scores.append(raw_score)
         candidate_combo_types.append(combo_type)
         candidate_combo_sizes.append(combo_size)
     if chosen_index < 0:
         raise RuntimeError("chosen action not found in candidate set")
-    chosen_score = candidate_scores[chosen_index]
-    sorted_scores = sorted(candidate_scores, reverse=True)
-    policy_target = _build_policy_target(chosen_index, candidate_scores, teacher)
+    if target_scores_override is not None:
+        target_scores = [float(score) for score in target_scores_override]
+        target_source = str(target_source_override or "override")
+        target_meta = dict(target_meta_override or {})
+    else:
+        target_scores, target_source, target_meta = _policy_target_scores(
+            state,
+            player_id,
+            candidates,
+            depth=depth,
+            policy_target_source=policy_target_source,
+            reanalysis_candidate_cap=reanalysis_candidate_cap,
+            reanalysis_mcts_sims=reanalysis_mcts_sims,
+            reanalysis_mcts_depth=reanalysis_mcts_depth,
+            reanalysis_mcts_tree_ply=reanalysis_mcts_tree_ply,
+            reanalysis_mcts_reply_width=reanalysis_mcts_reply_width,
+            reanalysis_mcts_risk_lambda=reanalysis_mcts_risk_lambda,
+            reanalysis_minimax_depth=reanalysis_minimax_depth,
+            reanalysis_minimax_width=reanalysis_minimax_width,
+        )
+    if len(target_scores) != len(candidate_scores):
+        target_scores = list(candidate_scores)
+        target_source = "heuristic"
+        target_meta = {"fallback": "score_len_mismatch", "candidate_count": len(candidates)}
+    chosen_score = target_scores[chosen_index]
+    sorted_scores = sorted(target_scores, reverse=True)
+    if policy_target_override is not None and len(policy_target_override) == len(candidates):
+        policy_target = _normalize_policy(policy_target_override) or _build_policy_target(chosen_index, target_scores, teacher)
+    else:
+        policy_target = _build_policy_target(chosen_index, target_scores, teacher)
     sample_weight = _sample_weight_for_example(
         chosen_action,
         chosen_score,
@@ -605,7 +1123,10 @@ def build_decision_example(
             "current_turn": state.get("current_turn"),
             "current_trick_type": ((state.get("current_trick") or {}).get("combo") or {}).get("type"),
             "candidate_scores": candidate_scores,
+            "target_scores": target_scores,
             "chosen_score": chosen_score,
+            "policy_target_source": target_source,
+            "policy_target_meta": target_meta,
         },
     )
 
@@ -695,6 +1216,21 @@ def collect_bootstrap_examples(
     config_overrides: Optional[Dict] = None,
     verbose: bool = False,
     progress_label: str = "bootstrap",
+    policy_target_source: str = "heuristic",
+    reanalysis_candidate_cap: int = DEFAULT_REANALYSIS_CANDIDATE_CAP,
+    reanalysis_mcts_sims: int = DEFAULT_REANALYSIS_MCTS_SIMS,
+    reanalysis_mcts_depth: int = DEFAULT_REANALYSIS_MCTS_DEPTH,
+    reanalysis_mcts_tree_ply: int = DEFAULT_REANALYSIS_MCTS_TREE_PLY,
+    reanalysis_mcts_reply_width: int = DEFAULT_REANALYSIS_MCTS_REPLY_WIDTH,
+    reanalysis_mcts_risk_lambda: float = DEFAULT_REANALYSIS_MCTS_RISK_LAMBDA,
+    reanalysis_minimax_depth: int = DEFAULT_REANALYSIS_MINIMAX_DEPTH,
+    reanalysis_minimax_width: int = DEFAULT_REANALYSIS_MINIMAX_WIDTH,
+    model_search_sims: int = DEFAULT_MODEL_SEARCH_SIMS,
+    model_search_depth: int = DEFAULT_MODEL_SEARCH_DEPTH,
+    model_search_c_puct: float = DEFAULT_MODEL_SEARCH_C_PUCT,
+    model_search_dirichlet_alpha: float = DEFAULT_MODEL_SEARCH_DIRICHLET_ALPHA,
+    model_search_dirichlet_epsilon: float = DEFAULT_MODEL_SEARCH_DIRICHLET_EPSILON,
+    model_search_rollout_temperature: float = DEFAULT_MODEL_SEARCH_TEMPERATURE,
 ) -> List[DecisionExample]:
     rng = random.Random(seed)
     examples: List[DecisionExample] = []
@@ -730,17 +1266,35 @@ def collect_bootstrap_examples(
                 break
 
             if state.get("phase") == "playing" and ("play" in legal or "pass" in legal):
-                action = _teacher_action(
-                    state,
-                    acting_id,
-                    teacher,
-                    rng,
-                    model=model,
-                    device=device,
-                    candidate_limit=candidate_limit,
-                    temperature=temperature,
-                    teacher_mix=teacher_mix,
-                )
+                search_decision: Optional[SearchDecision] = None
+                if teacher == "model_search":
+                    search_decision = _model_search_decision(
+                        model,
+                        state,
+                        acting_id,
+                        device=device,
+                        candidate_limit=candidate_limit,
+                        sims=model_search_sims,
+                        depth=model_search_depth,
+                        c_puct=model_search_c_puct,
+                        dirichlet_alpha=model_search_dirichlet_alpha,
+                        dirichlet_epsilon=model_search_dirichlet_epsilon,
+                        rollout_temperature=model_search_rollout_temperature,
+                        rng=rng,
+                    )
+                    action = search_decision.action if search_decision else None
+                else:
+                    action = _teacher_action(
+                        state,
+                        acting_id,
+                        teacher,
+                        rng,
+                        model=model,
+                        device=device,
+                        candidate_limit=candidate_limit,
+                        temperature=temperature,
+                        teacher_mix=teacher_mix,
+                    )
                 if action is None:
                     break
                 if action.get("type") in ("play", "pass"):
@@ -752,6 +1306,20 @@ def collect_bootstrap_examples(
                             teacher=teacher,
                             candidate_limit=candidate_limit,
                             depth=int(config.get("bot_search_depth", 3)),
+                            candidate_actions_override=search_decision.candidates if search_decision else None,
+                            policy_target_override=search_decision.policy_target if search_decision else None,
+                            target_scores_override=search_decision.target_scores if search_decision else None,
+                            target_source_override=(search_decision.metadata or {}).get("source") if search_decision else None,
+                            target_meta_override=search_decision.metadata if search_decision else None,
+                            policy_target_source=policy_target_source,
+                            reanalysis_candidate_cap=reanalysis_candidate_cap,
+                            reanalysis_mcts_sims=reanalysis_mcts_sims,
+                            reanalysis_mcts_depth=reanalysis_mcts_depth,
+                            reanalysis_mcts_tree_ply=reanalysis_mcts_tree_ply,
+                            reanalysis_mcts_reply_width=reanalysis_mcts_reply_width,
+                            reanalysis_mcts_risk_lambda=reanalysis_mcts_risk_lambda,
+                            reanalysis_minimax_depth=reanalysis_minimax_depth,
+                            reanalysis_minimax_width=reanalysis_minimax_width,
                         )
                     )
             else:
@@ -1187,7 +1755,8 @@ def run_training_pipeline(args) -> Dict[str, object]:
     if verbose:
         _progress(
             f"training start: device={device} bootstrap={args.bootstrap_episodes} "
-            f"epochs={args.epochs} self_play={args.self_play_iterations}x{args.self_play_episodes}"
+            f"epochs={args.epochs} self_play={args.self_play_iterations}x{args.self_play_episodes} "
+            f"self_play_policy={args.self_play_policy}"
         )
 
     if args.load_checkpoint:
@@ -1217,6 +1786,21 @@ def run_training_pipeline(args) -> Dict[str, object]:
                 temperature=args.temperature,
                 verbose=verbose,
                 progress_label="bootstrap",
+                policy_target_source=args.policy_target_source,
+                reanalysis_candidate_cap=args.reanalysis_candidate_cap,
+                reanalysis_mcts_sims=args.reanalysis_mcts_sims,
+                reanalysis_mcts_depth=args.reanalysis_mcts_depth,
+                reanalysis_mcts_tree_ply=args.reanalysis_mcts_tree_ply,
+                reanalysis_mcts_reply_width=args.reanalysis_mcts_reply_width,
+                reanalysis_mcts_risk_lambda=args.reanalysis_mcts_risk_lambda,
+                reanalysis_minimax_depth=args.reanalysis_minimax_depth,
+                reanalysis_minimax_width=args.reanalysis_minimax_width,
+                model_search_sims=args.model_search_sims,
+                model_search_depth=args.model_search_depth,
+                model_search_c_puct=args.model_search_c_puct,
+                model_search_dirichlet_alpha=args.model_search_dirichlet_alpha,
+                model_search_dirichlet_epsilon=args.model_search_dirichlet_epsilon,
+                model_search_rollout_temperature=args.model_search_rollout_temperature,
             )
         )
         if verbose:
@@ -1248,9 +1832,10 @@ def run_training_pipeline(args) -> Dict[str, object]:
 
     for iteration in range(args.self_play_iterations):
         label = f"self-play {iteration + 1}/{args.self_play_iterations}"
+        self_play_teacher = "model_search" if args.self_play_policy == "search" else ("mixed" if args.teacher_mix > 0 else "model")
         new_examples = collect_bootstrap_examples(
             args.self_play_episodes,
-            teacher="mixed" if args.teacher_mix > 0 else "model",
+            teacher=self_play_teacher,
             seed=args.seed + iteration + 1,
             candidate_limit=args.candidate_limit,
             model=model,
@@ -1260,6 +1845,21 @@ def run_training_pipeline(args) -> Dict[str, object]:
             temperature=args.temperature,
             verbose=verbose,
             progress_label=f"{label}/collect",
+            policy_target_source=args.policy_target_source,
+            reanalysis_candidate_cap=args.reanalysis_candidate_cap,
+            reanalysis_mcts_sims=args.reanalysis_mcts_sims,
+            reanalysis_mcts_depth=args.reanalysis_mcts_depth,
+            reanalysis_mcts_tree_ply=args.reanalysis_mcts_tree_ply,
+            reanalysis_mcts_reply_width=args.reanalysis_mcts_reply_width,
+            reanalysis_mcts_risk_lambda=args.reanalysis_mcts_risk_lambda,
+            reanalysis_minimax_depth=args.reanalysis_minimax_depth,
+            reanalysis_minimax_width=args.reanalysis_minimax_width,
+            model_search_sims=args.model_search_sims,
+            model_search_depth=args.model_search_depth,
+            model_search_c_puct=args.model_search_c_puct,
+            model_search_dirichlet_alpha=args.model_search_dirichlet_alpha,
+            model_search_dirichlet_epsilon=args.model_search_dirichlet_epsilon,
+            model_search_rollout_temperature=args.model_search_rollout_temperature,
         )
         examples.extend(new_examples)
         if verbose:
@@ -1318,6 +1918,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--self-play-iterations", type=int, default=0)
     parser.add_argument("--self-play-episodes", type=int, default=6)
     parser.add_argument("--self-play-epochs", type=int, default=2)
+    parser.add_argument("--self-play-policy", choices=("model", "search"), default=DEFAULT_SELF_PLAY_POLICY)
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--learning-rate", type=float, default=1e-3)
     parser.add_argument("--value-weight", type=float, default=0.35)
@@ -1327,6 +1928,21 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--temperature", type=float, default=0.0)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--device", type=str, default="cpu")
+    parser.add_argument("--policy-target-source", choices=("heuristic", "search"), default=DEFAULT_POLICY_TARGET_SOURCE)
+    parser.add_argument("--reanalysis-candidate-cap", type=int, default=DEFAULT_REANALYSIS_CANDIDATE_CAP)
+    parser.add_argument("--reanalysis-mcts-sims", type=int, default=DEFAULT_REANALYSIS_MCTS_SIMS)
+    parser.add_argument("--reanalysis-mcts-depth", type=int, default=DEFAULT_REANALYSIS_MCTS_DEPTH)
+    parser.add_argument("--reanalysis-mcts-tree-ply", type=int, default=DEFAULT_REANALYSIS_MCTS_TREE_PLY)
+    parser.add_argument("--reanalysis-mcts-reply-width", type=int, default=DEFAULT_REANALYSIS_MCTS_REPLY_WIDTH)
+    parser.add_argument("--reanalysis-mcts-risk-lambda", type=float, default=DEFAULT_REANALYSIS_MCTS_RISK_LAMBDA)
+    parser.add_argument("--reanalysis-minimax-depth", type=int, default=DEFAULT_REANALYSIS_MINIMAX_DEPTH)
+    parser.add_argument("--reanalysis-minimax-width", type=int, default=DEFAULT_REANALYSIS_MINIMAX_WIDTH)
+    parser.add_argument("--model-search-sims", type=int, default=DEFAULT_MODEL_SEARCH_SIMS)
+    parser.add_argument("--model-search-depth", type=int, default=DEFAULT_MODEL_SEARCH_DEPTH)
+    parser.add_argument("--model-search-c-puct", type=float, default=DEFAULT_MODEL_SEARCH_C_PUCT)
+    parser.add_argument("--model-search-dirichlet-alpha", type=float, default=DEFAULT_MODEL_SEARCH_DIRICHLET_ALPHA)
+    parser.add_argument("--model-search-dirichlet-epsilon", type=float, default=DEFAULT_MODEL_SEARCH_DIRICHLET_EPSILON)
+    parser.add_argument("--model-search-rollout-temperature", type=float, default=DEFAULT_MODEL_SEARCH_TEMPERATURE)
     parser.add_argument("--quiet", action="store_true")
     return parser
 

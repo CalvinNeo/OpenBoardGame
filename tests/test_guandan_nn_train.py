@@ -1,4 +1,5 @@
 import unittest
+from unittest import mock
 
 from game import guandan
 from game import guandan_nn_train as trainer
@@ -73,6 +74,97 @@ class GuandanNNTrainTests(unittest.TestCase):
             self.assertEqual(len(example.policy_target), len(example.action_features))
             self.assertAlmostEqual(sum(example.policy_target), 1.0, places=5)
             self.assertGreater(example.sample_weight, 0.0)
+
+    def test_search_policy_targets_can_use_mcts_reanalysis(self):
+        state, player_id = self._build_state()
+        actions = guandan._candidate_actions(state, player_id, 6)
+        self.assertGreaterEqual(len(actions), 2)
+
+        scored = [
+            (
+                actions[0],
+                1.0,
+                4,
+                {"adjusted": 1.0, "avg": 1.0, "fast_path": 0.0},
+            ),
+            (
+                actions[1],
+                3.5,
+                4,
+                {"adjusted": 3.5, "avg": 3.5, "fast_path": 0.0},
+            ),
+        ]
+
+        with mock.patch.object(guandan, "_should_use_mcts", return_value=True):
+            with mock.patch.object(guandan, "_mcts_score_actions", return_value=scored):
+                example = trainer.build_decision_example(
+                    state,
+                    player_id,
+                    actions[0],
+                    teacher="heuristic",
+                    candidate_limit=6,
+                    policy_target_source="search",
+                    reanalysis_candidate_cap=6,
+                )
+
+        self.assertEqual(example.metadata.get("policy_target_source"), "mcts")
+        self.assertEqual(example.metadata.get("target_scores")[:2], [1.0, 3.5])
+        self.assertLess(example.policy_target[0], example.policy_target[1])
+
+    def test_decision_example_accepts_policy_override(self):
+        state, player_id = self._build_state()
+        actions = guandan._candidate_actions(state, player_id, 6)
+        self.assertGreaterEqual(len(actions), 2)
+
+        example = trainer.build_decision_example(
+            state,
+            player_id,
+            actions[0],
+            teacher="model_search",
+            candidate_actions_override=actions[:2],
+            policy_target_override=[0.2, 0.8],
+            target_scores_override=[1.5, 3.0],
+            target_source_override="model_search",
+            target_meta_override={"sims": 12},
+        )
+
+        self.assertEqual(example.metadata.get("policy_target_source"), "model_search")
+        self.assertEqual(example.metadata.get("target_scores"), [1.5, 3.0])
+        self.assertAlmostEqual(example.policy_target[0], 0.2, places=5)
+        self.assertAlmostEqual(example.policy_target[1], 0.8, places=5)
+        self.assertEqual(example.metadata.get("policy_target_meta", {}).get("sims"), 12)
+
+    def test_collect_examples_model_search_uses_search_targets(self):
+        def fake_search(_model, state, player_id, **kwargs):
+            actions = guandan._candidate_actions(state, player_id, 4)
+            if not actions:
+                return None
+            target = [0.0] * len(actions)
+            target[0] = 1.0
+            scores = [float(len(actions) - idx) for idx in range(len(actions))]
+            return trainer.SearchDecision(
+                action=dict(actions[0]),
+                candidates=[dict(action) for action in actions],
+                policy_target=target,
+                target_scores=scores,
+                metadata={"source": "model_search", "sims": 5},
+            )
+
+        with mock.patch.object(trainer, "_model_search_decision", side_effect=fake_search):
+            examples = trainer.collect_bootstrap_examples(
+                1,
+                teacher="model_search",
+                seed=0,
+                candidate_limit=4,
+                rounds_per_episode=1,
+                model=object(),
+            )
+
+        self.assertTrue(examples)
+        self.assertEqual(examples[0].teacher, "model_search")
+        self.assertEqual(examples[0].metadata.get("policy_target_source"), "model_search")
+        self.assertAlmostEqual(sum(examples[0].policy_target), 1.0, places=5)
+        self.assertEqual(examples[0].metadata.get("policy_target_meta", {}).get("sims"), 5)
 
     @unittest.skipIf(trainer.torch is None, "torch not installed")
     def test_model_forward_matches_batch_shape(self):
