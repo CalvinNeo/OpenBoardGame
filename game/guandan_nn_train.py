@@ -84,6 +84,12 @@ HEURISTIC_COMPONENT_KEYS = (
 MAX_STATE_SCALE = 6.0
 MAX_ACTION_SCALE = 6.0
 DEFAULT_CANDIDATE_LIMIT = 12
+POLICY_TARGET_BLEND = 0.35
+PASS_SAMPLE_WEIGHT = 0.82
+NON_PASS_SAMPLE_BONUS = 0.1
+COMPLEX_COMBO_BONUS = 0.08
+MULTI_CARD_COMBO_BONUS = 0.06
+MAX_MARGIN_BONUS = 0.24
 DEFAULT_TRAIN_CONFIG = {
     "bot_search_depth": 3,
     "bot_mcts_sims": 20,
@@ -386,13 +392,88 @@ def _action_label(state: Dict, player_id: str, action: Dict) -> str:
     return str(action.get("type") or "action")
 
 
+def _one_hot_index(size: int, index: int) -> List[float]:
+    target = [0.0] * size
+    if 0 <= index < size:
+        target[index] = 1.0
+    return target
+
+
+def _score_candidate_for_target(state: Dict, player_id: str, action: Dict, depth: int) -> Tuple[float, str, int]:
+    action = _sanitize_action(action) or {"type": "pass"}
+    if action.get("type") == "pass":
+        components = guandan._bot_score_components(state, player_id, None, depth)
+        return float(components.get("total", 0.0)), "pass", 0
+    cards = list(action.get("card_ids") or [])
+    hand_map = guandan._map_hand_by_id(state["players"][player_id]["hand"])
+    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+    combo = guandan._evaluate_combo(play_cards, state.get("level_rank", 2), state.get("config", {})) or {}
+    components = guandan._bot_score_components(state, player_id, cards, depth)
+    return (
+        float(components.get("total", 0.0)),
+        str(combo.get("type") or "none"),
+        int(combo.get("size", len(cards))),
+    )
+
+
+def _normalized_score_distribution(scores: Sequence[float]) -> List[float]:
+    if not scores:
+        return []
+    if len(scores) == 1:
+        return [1.0]
+    mean = sum(scores) / len(scores)
+    variance = sum((score - mean) ** 2 for score in scores) / len(scores)
+    scale = max(1.0, math.sqrt(max(0.0, variance)))
+    normalized = [(score - mean) / scale for score in scores]
+    max_value = max(normalized)
+    exp_values = [math.exp(value - max_value) for value in normalized]
+    total = sum(exp_values) or 1.0
+    return [value / total for value in exp_values]
+
+
+def _build_policy_target(chosen_index: int, scores: Sequence[float], teacher: str) -> List[float]:
+    if teacher == "random":
+        size = len(scores)
+        return [1.0 / size] * size if size else []
+    else:
+        soft = _normalized_score_distribution(scores)
+    if soft:
+        return soft
+    return _one_hot_index(len(scores), chosen_index)
+
+
+def _sample_weight_for_example(
+    chosen_action: Dict,
+    chosen_score: float,
+    sorted_scores: Sequence[float],
+    chosen_combo_type: str,
+    chosen_combo_size: int,
+) -> float:
+    action = _sanitize_action(chosen_action) or {"type": "pass"}
+    weight = 1.0
+    if action.get("type") == "pass":
+        weight *= PASS_SAMPLE_WEIGHT
+    else:
+        weight += NON_PASS_SAMPLE_BONUS
+        if chosen_combo_size >= 2:
+            weight += MULTI_CARD_COMBO_BONUS
+        if chosen_combo_type not in ("single", "pair", "three", "pass", "none"):
+            weight += COMPLEX_COMBO_BONUS
+    if len(sorted_scores) >= 2:
+        margin = max(0.0, float(chosen_score) - float(sorted_scores[1]))
+        weight += min(MAX_MARGIN_BONUS, margin / 20.0)
+    return max(0.5, min(1.8, weight))
+
+
 @dataclass
 class DecisionExample:
     state_features: List[float]
     action_features: List[List[float]]
     action_labels: List[str]
     chosen_index: int
+    policy_target: List[float]
     outcome: float
+    sample_weight: float
     player_id: str
     team: str
     round_number: int
@@ -409,7 +490,9 @@ class DecisionExample:
             action_features=[list(item) for item in payload["action_features"]],
             action_labels=list(payload["action_labels"]),
             chosen_index=int(payload["chosen_index"]),
+            policy_target=list(payload.get("policy_target") or _one_hot_index(len(payload["action_labels"]), int(payload["chosen_index"]))),
             outcome=float(payload["outcome"]),
+            sample_weight=float(payload.get("sample_weight", 1.0)),
             player_id=str(payload["player_id"]),
             team=str(payload["team"]),
             round_number=int(payload["round_number"]),
@@ -481,19 +564,38 @@ def build_decision_example(
     chosen_index = -1
     action_features: List[List[float]] = []
     action_labels: List[str] = []
+    candidate_scores: List[float] = []
+    candidate_combo_types: List[str] = []
+    candidate_combo_sizes: List[int] = []
     for idx, action in enumerate(candidates):
         if _action_key(action) == chosen_key and chosen_index < 0:
             chosen_index = idx
         action_features.append(_action_feature_vector(state, player_id, action, depth=depth))
         action_labels.append(_action_label(state, player_id, action))
+        score, combo_type, combo_size = _score_candidate_for_target(state, player_id, action, depth)
+        candidate_scores.append(score)
+        candidate_combo_types.append(combo_type)
+        candidate_combo_sizes.append(combo_size)
     if chosen_index < 0:
         raise RuntimeError("chosen action not found in candidate set")
+    chosen_score = candidate_scores[chosen_index]
+    sorted_scores = sorted(candidate_scores, reverse=True)
+    policy_target = _build_policy_target(chosen_index, candidate_scores, teacher)
+    sample_weight = _sample_weight_for_example(
+        chosen_action,
+        chosen_score,
+        sorted_scores,
+        candidate_combo_types[chosen_index],
+        candidate_combo_sizes[chosen_index],
+    )
     return DecisionExample(
         state_features=state_features,
         action_features=action_features,
         action_labels=action_labels,
         chosen_index=chosen_index,
+        policy_target=policy_target,
         outcome=0.0,
+        sample_weight=sample_weight,
         player_id=player_id,
         team=guandan._team_of(state, player_id),
         round_number=state.get("round_number", 1),
@@ -502,6 +604,8 @@ def build_decision_example(
             "phase": state.get("phase"),
             "current_turn": state.get("current_turn"),
             "current_trick_type": ((state.get("current_trick") or {}).get("combo") or {}).get("type"),
+            "candidate_scores": candidate_scores,
+            "chosen_score": chosen_score,
         },
     )
 
@@ -753,12 +857,17 @@ def collate_examples(batch: Sequence[DecisionExample]):
     actions = torch.zeros(len(batch), max_actions, action_dim, dtype=torch.float32)
     mask = torch.zeros(len(batch), max_actions, dtype=torch.bool)
     chosen = torch.zeros(len(batch), dtype=torch.long)
+    policy_target = torch.zeros(len(batch), max_actions, dtype=torch.float32)
     outcomes = torch.zeros(len(batch), dtype=torch.float32)
+    sample_weight = torch.ones(len(batch), dtype=torch.float32)
 
     for row, item in enumerate(batch):
         states[row] = torch.tensor(item.state_features, dtype=torch.float32)
         chosen[row] = item.chosen_index
         outcomes[row] = item.outcome
+        sample_weight[row] = item.sample_weight
+        if item.policy_target:
+            policy_target[row, : len(item.policy_target)] = torch.tensor(item.policy_target, dtype=torch.float32)
         for col, action_features in enumerate(item.action_features):
             actions[row, col] = torch.tensor(action_features, dtype=torch.float32)
             mask[row, col] = True
@@ -767,7 +876,9 @@ def collate_examples(batch: Sequence[DecisionExample]):
         "actions": actions,
         "mask": mask,
         "chosen": chosen,
+        "policy_target": policy_target,
         "outcome": outcomes,
+        "sample_weight": sample_weight,
     }
 
 
@@ -904,12 +1015,20 @@ def train_model(
             actions = batch["actions"].to(device)
             mask = batch["mask"].to(device)
             chosen = batch["chosen"].to(device)
+            policy_target = batch["policy_target"].to(device)
             outcome = batch["outcome"].to(device)
+            sample_weight = batch["sample_weight"].to(device)
+            sample_weight_sum = torch.clamp(sample_weight.sum(), min=1e-6)
 
             optimizer.zero_grad()
             logits, value = model(states, actions, mask)
-            policy_loss = F.cross_entropy(logits, chosen)
-            value_loss = F.mse_loss(value, outcome)
+            hard_policy_loss = F.cross_entropy(logits, chosen, reduction="none")
+            log_probs = F.log_softmax(logits, dim=1)
+            soft_policy_loss = -(policy_target * log_probs).sum(dim=1)
+            combined_policy = (1.0 - POLICY_TARGET_BLEND) * hard_policy_loss + POLICY_TARGET_BLEND * soft_policy_loss
+            policy_loss = (combined_policy * sample_weight).sum() / sample_weight_sum
+            value_error = F.smooth_l1_loss(value, outcome, reduction="none")
+            value_loss = (value_error * sample_weight).sum() / sample_weight_sum
             loss = policy_loss + value_weight * value_loss
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)

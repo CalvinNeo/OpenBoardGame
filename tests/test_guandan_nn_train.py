@@ -33,6 +33,28 @@ class GuandanNNTrainTests(unittest.TestCase):
         self.assertGreaterEqual(len(example.action_features), 1)
         for action_features in example.action_features:
             self.assertEqual(len(action_features), action_dim)
+        self.assertEqual(len(example.policy_target), len(example.action_features))
+        self.assertAlmostEqual(sum(example.policy_target), 1.0, places=5)
+        self.assertGreater(example.sample_weight, 0.0)
+
+    def test_decision_example_from_dict_supports_legacy_payload(self):
+        payload = {
+            "state_features": [0.1, 0.2],
+            "action_features": [[0.3], [0.4]],
+            "action_labels": ["A", "B"],
+            "chosen_index": 1,
+            "outcome": 0.5,
+            "player_id": "p0",
+            "team": "A",
+            "round_number": 1,
+            "teacher": "heuristic",
+            "metadata": {},
+        }
+
+        example = trainer.DecisionExample.from_dict(payload)
+
+        self.assertEqual(example.policy_target, [0.0, 1.0])
+        self.assertEqual(example.sample_weight, 1.0)
 
     def test_collect_bootstrap_examples_assigns_outcomes(self):
         examples = trainer.collect_bootstrap_examples(
@@ -48,6 +70,9 @@ class GuandanNNTrainTests(unittest.TestCase):
             self.assertLess(example.chosen_index, len(example.action_features))
             self.assertGreaterEqual(example.outcome, -1.0)
             self.assertLessEqual(example.outcome, 1.0)
+            self.assertEqual(len(example.policy_target), len(example.action_features))
+            self.assertAlmostEqual(sum(example.policy_target), 1.0, places=5)
+            self.assertGreater(example.sample_weight, 0.0)
 
     @unittest.skipIf(trainer.torch is None, "torch not installed")
     def test_model_forward_matches_batch_shape(self):
@@ -67,6 +92,8 @@ class GuandanNNTrainTests(unittest.TestCase):
 
         self.assertEqual(tuple(logits.shape), (2, len(example.action_features)))
         self.assertEqual(tuple(value.shape), (2,))
+        self.assertEqual(tuple(batch["policy_target"].shape), (2, len(example.action_features)))
+        self.assertEqual(tuple(batch["sample_weight"].shape), (2,))
 
 
 if __name__ == "__main__":
