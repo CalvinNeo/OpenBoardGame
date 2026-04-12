@@ -1,3 +1,4 @@
+import tempfile
 import unittest
 from unittest import mock
 
@@ -165,6 +166,80 @@ class GuandanNNTrainTests(unittest.TestCase):
         self.assertEqual(examples[0].metadata.get("policy_target_source"), "model_search")
         self.assertAlmostEqual(sum(examples[0].policy_target), 1.0, places=5)
         self.assertEqual(examples[0].metadata.get("policy_target_meta", {}).get("sims"), 5)
+
+    def test_run_training_pipeline_uses_bootstrap_cache_when_present(self):
+        state, player_id = self._build_state()
+        actions = guandan._candidate_actions(state, player_id, 6)
+        example = trainer.build_decision_example(
+            state,
+            player_id,
+            actions[0],
+            teacher="heuristic",
+            candidate_limit=6,
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cache_path = f"{tmpdir}/bootstrap.jsonl"
+            trainer.save_examples_jsonl(cache_path, [example])
+            args = trainer.build_arg_parser().parse_args(
+                [
+                    "--bootstrap-episodes",
+                    "1",
+                    "--epochs",
+                    "0",
+                    "--self-play-iterations",
+                    "0",
+                    "--bootstrap-cache",
+                    cache_path,
+                    "--quiet",
+                ]
+            )
+            fake_torch = mock.Mock()
+            fake_torch.manual_seed = mock.Mock()
+            with mock.patch.object(trainer, "torch", fake_torch):
+                with mock.patch.object(trainer, "build_model", return_value=object()):
+                    with mock.patch.object(trainer, "collect_bootstrap_examples", side_effect=AssertionError("should use bootstrap cache")):
+                        result = trainer.run_training_pipeline(args)
+
+        self.assertEqual(result["example_count"], 1)
+
+    def test_run_training_pipeline_uses_self_play_cache_when_present(self):
+        state, player_id = self._build_state()
+        actions = guandan._candidate_actions(state, player_id, 6)
+        example = trainer.build_decision_example(
+            state,
+            player_id,
+            actions[0],
+            teacher="model_search",
+            candidate_limit=6,
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cache_path = trainer._self_play_cache_path(tmpdir, 0)
+            trainer.save_examples_jsonl(cache_path, [example])
+            args = trainer.build_arg_parser().parse_args(
+                [
+                    "--bootstrap-episodes",
+                    "0",
+                    "--epochs",
+                    "0",
+                    "--self-play-iterations",
+                    "1",
+                    "--self-play-epochs",
+                    "0",
+                    "--self-play-cache-dir",
+                    tmpdir,
+                    "--quiet",
+                ]
+            )
+            fake_torch = mock.Mock()
+            fake_torch.manual_seed = mock.Mock()
+            with mock.patch.object(trainer, "torch", fake_torch):
+                with mock.patch.object(trainer, "build_model", return_value=object()):
+                    with mock.patch.object(trainer, "collect_bootstrap_examples", side_effect=AssertionError("should use self-play cache")):
+                        result = trainer.run_training_pipeline(args)
+
+        self.assertEqual(result["example_count"], 1)
 
     @unittest.skipIf(trainer.torch is None, "torch not installed")
     def test_model_forward_matches_batch_shape(self):

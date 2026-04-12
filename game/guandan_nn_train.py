@@ -1402,6 +1402,47 @@ def load_examples_jsonl(path: str) -> List[DecisionExample]:
     return examples
 
 
+def _cache_path(path: str) -> str:
+    return os.path.abspath(path)
+
+
+def _try_load_cached_examples(
+    path: str,
+    loaded_paths: set,
+    verbose: bool = False,
+    label: str = "cache",
+) -> Tuple[Optional[List[DecisionExample]], bool, str]:
+    resolved = _cache_path(path)
+    if resolved in loaded_paths:
+        if verbose:
+            _progress(f"{label}: skip already loaded {resolved}")
+        return [], True, resolved
+    if not os.path.exists(resolved):
+        return None, False, resolved
+    examples = load_examples_jsonl(resolved)
+    loaded_paths.add(resolved)
+    if verbose:
+        _progress(f"{label}: loaded {resolved} examples={len(examples)}")
+    return examples, True, resolved
+
+
+def _save_cached_examples(
+    path: str,
+    examples: Sequence[DecisionExample],
+    verbose: bool = False,
+    label: str = "cache",
+) -> str:
+    resolved = _cache_path(path)
+    save_examples_jsonl(resolved, examples)
+    if verbose:
+        _progress(f"{label}: saved {resolved} examples={len(examples)}")
+    return resolved
+
+
+def _self_play_cache_path(root: str, iteration_index: int) -> str:
+    return os.path.join(root, f"self_play_iter_{iteration_index + 1:03d}.jsonl")
+
+
 class DecisionDatasetBase(Dataset):
     def __init__(self, examples: Sequence[DecisionExample]):
         self.examples = list(examples)
@@ -1751,6 +1792,7 @@ def run_training_pipeline(args) -> Dict[str, object]:
     examples: List[DecisionExample] = []
     model: Optional[GuandanPolicyValueNet] = None
     metadata: Dict[str, object] = {}
+    loaded_example_paths: set = set()
 
     if verbose:
         _progress(
@@ -1768,13 +1810,25 @@ def run_training_pipeline(args) -> Dict[str, object]:
 
     if args.dataset_in:
         examples.extend(load_examples_jsonl(args.dataset_in))
+        loaded_example_paths.add(_cache_path(args.dataset_in))
         if verbose:
             _progress(f"loaded dataset: {args.dataset_in} examples={len(examples)}")
 
-    if args.bootstrap_episodes > 0:
+    bootstrap_examples: List[DecisionExample] = []
+    bootstrap_cache_hit = False
+    if args.bootstrap_cache:
+        cached_examples, bootstrap_cache_hit, _resolved = _try_load_cached_examples(
+            args.bootstrap_cache,
+            loaded_example_paths,
+            verbose=verbose,
+            label="bootstrap cache",
+        )
+        if cached_examples is not None:
+            bootstrap_examples = cached_examples
+
+    if args.bootstrap_episodes > 0 and not bootstrap_cache_hit:
         bootstrap_teacher = args.teacher if model is None else args.teacher
-        examples.extend(
-            collect_bootstrap_examples(
+        bootstrap_examples = collect_bootstrap_examples(
                 args.bootstrap_episodes,
                 teacher=bootstrap_teacher,
                 seed=args.seed,
@@ -1802,7 +1856,17 @@ def run_training_pipeline(args) -> Dict[str, object]:
                 model_search_dirichlet_epsilon=args.model_search_dirichlet_epsilon,
                 model_search_rollout_temperature=args.model_search_rollout_temperature,
             )
-        )
+        if args.bootstrap_cache:
+            loaded_example_paths.add(
+                _save_cached_examples(
+                    args.bootstrap_cache,
+                    bootstrap_examples,
+                    verbose=verbose,
+                    label="bootstrap cache",
+                )
+            )
+    examples.extend(bootstrap_examples)
+    if args.bootstrap_episodes > 0 or bootstrap_cache_hit:
         if verbose:
             _progress(f"bootstrap complete: examples={len(examples)}")
 
@@ -1833,38 +1897,62 @@ def run_training_pipeline(args) -> Dict[str, object]:
     for iteration in range(args.self_play_iterations):
         label = f"self-play {iteration + 1}/{args.self_play_iterations}"
         self_play_teacher = "model_search" if args.self_play_policy == "search" else ("mixed" if args.teacher_mix > 0 else "model")
-        new_examples = collect_bootstrap_examples(
-            args.self_play_episodes,
-            teacher=self_play_teacher,
-            seed=args.seed + iteration + 1,
-            candidate_limit=args.candidate_limit,
-            model=model,
-            device=device,
-            rounds_per_episode=args.rounds_per_episode,
-            teacher_mix=args.teacher_mix,
-            temperature=args.temperature,
-            verbose=verbose,
-            progress_label=f"{label}/collect",
-            policy_target_source=args.policy_target_source,
-            reanalysis_candidate_cap=args.reanalysis_candidate_cap,
-            reanalysis_mcts_sims=args.reanalysis_mcts_sims,
-            reanalysis_mcts_depth=args.reanalysis_mcts_depth,
-            reanalysis_mcts_tree_ply=args.reanalysis_mcts_tree_ply,
-            reanalysis_mcts_reply_width=args.reanalysis_mcts_reply_width,
-            reanalysis_mcts_risk_lambda=args.reanalysis_mcts_risk_lambda,
-            reanalysis_minimax_depth=args.reanalysis_minimax_depth,
-            reanalysis_minimax_width=args.reanalysis_minimax_width,
-            model_search_sims=args.model_search_sims,
-            model_search_depth=args.model_search_depth,
-            model_search_c_puct=args.model_search_c_puct,
-            model_search_dirichlet_alpha=args.model_search_dirichlet_alpha,
-            model_search_dirichlet_epsilon=args.model_search_dirichlet_epsilon,
-            model_search_rollout_temperature=args.model_search_rollout_temperature,
-        )
+        new_examples: List[DecisionExample] = []
+        self_play_cache_hit = False
+        self_play_cache_path = ""
+        if args.self_play_cache_dir:
+            os.makedirs(args.self_play_cache_dir, exist_ok=True)
+            self_play_cache_path = _self_play_cache_path(args.self_play_cache_dir, iteration)
+            cached_examples, self_play_cache_hit, _resolved = _try_load_cached_examples(
+                self_play_cache_path,
+                loaded_example_paths,
+                verbose=verbose,
+                label=f"{label}/cache",
+            )
+            if cached_examples is not None:
+                new_examples = cached_examples
+        if not self_play_cache_hit:
+            new_examples = collect_bootstrap_examples(
+                args.self_play_episodes,
+                teacher=self_play_teacher,
+                seed=args.seed + iteration + 1,
+                candidate_limit=args.candidate_limit,
+                model=model,
+                device=device,
+                rounds_per_episode=args.rounds_per_episode,
+                teacher_mix=args.teacher_mix,
+                temperature=args.temperature,
+                verbose=verbose,
+                progress_label=f"{label}/collect",
+                policy_target_source=args.policy_target_source,
+                reanalysis_candidate_cap=args.reanalysis_candidate_cap,
+                reanalysis_mcts_sims=args.reanalysis_mcts_sims,
+                reanalysis_mcts_depth=args.reanalysis_mcts_depth,
+                reanalysis_mcts_tree_ply=args.reanalysis_mcts_tree_ply,
+                reanalysis_mcts_reply_width=args.reanalysis_mcts_reply_width,
+                reanalysis_mcts_risk_lambda=args.reanalysis_mcts_risk_lambda,
+                reanalysis_minimax_depth=args.reanalysis_minimax_depth,
+                reanalysis_minimax_width=args.reanalysis_minimax_width,
+                model_search_sims=args.model_search_sims,
+                model_search_depth=args.model_search_depth,
+                model_search_c_puct=args.model_search_c_puct,
+                model_search_dirichlet_alpha=args.model_search_dirichlet_alpha,
+                model_search_dirichlet_epsilon=args.model_search_dirichlet_epsilon,
+                model_search_rollout_temperature=args.model_search_rollout_temperature,
+            )
+            if self_play_cache_path:
+                loaded_example_paths.add(
+                    _save_cached_examples(
+                        self_play_cache_path,
+                        new_examples,
+                        verbose=verbose,
+                        label=f"{label}/cache",
+                    )
+                )
         examples.extend(new_examples)
         if verbose:
             _progress(f"{label}: collected={len(new_examples)} total_examples={len(examples)}")
-        if new_examples:
+        if new_examples and args.self_play_epochs > 0:
             history.extend(
                 train_model(
                     model,
@@ -1912,6 +2000,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--candidate-limit", type=int, default=DEFAULT_CANDIDATE_LIMIT)
     parser.add_argument("--dataset-in", type=str, default="")
     parser.add_argument("--dataset-out", type=str, default="")
+    parser.add_argument("--bootstrap-cache", type=str, default="")
+    parser.add_argument("--self-play-cache-dir", type=str, default="")
     parser.add_argument("--load-checkpoint", type=str, default="")
     parser.add_argument("--save-checkpoint", type=str, default="")
     parser.add_argument("--epochs", type=int, default=4)

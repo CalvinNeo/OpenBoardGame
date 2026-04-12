@@ -1551,15 +1551,51 @@ def _action_combo(state: Dict, player_id: str, action: Optional[Dict]) -> Option
     return _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
 
 
+def _action_identity(action: Optional[Dict]) -> Tuple:
+    if not action:
+        return ("none",)
+    action_type = action.get("type")
+    if action_type == "play":
+        return ("play", tuple(sorted(action.get("card_ids") or [])))
+    if action_type in ("tribute_select", "return_select"):
+        return (action_type, action.get("card_id"))
+    return (action_type,)
+
+
+def _is_legal_action(state: Dict, bot_id: str, action: Optional[Dict]) -> bool:
+    if not action:
+        return False
+    trial = copy.deepcopy(state)
+    _, err = GuandanGame.apply_action(trial, bot_id, dict(action))
+    return err is None
+
+
+def _legalize_action_choice(
+    state: Dict,
+    bot_id: str,
+    action: Optional[Dict],
+    limit: int = 64,
+) -> Optional[Dict]:
+    if _is_legal_action(state, bot_id, action):
+        return dict(action)
+    target_key = _action_identity(action)
+    for candidate in _candidate_actions(state, bot_id, max(2, limit)):
+        if _action_identity(candidate) == target_key:
+            continue
+        if _is_legal_action(state, bot_id, candidate):
+            return dict(candidate)
+    return None
+
+
 def _heuristic_best_action(state: Dict, bot_id: str, depth: int) -> Optional[Dict]:
     legal = GuandanGame.get_legal_actions(state, bot_id)
     if "play" not in legal:
         return None
     chosen = _bot_select_play(state, bot_id, depth)
     if chosen:
-        return {"type": "play", "card_ids": chosen}
+        return _legalize_action_choice(state, bot_id, {"type": "play", "card_ids": chosen})
     if state.get("current_trick") and "pass" in legal:
-        return {"type": "pass"}
+        return _legalize_action_choice(state, bot_id, {"type": "pass"})
     return None
 
 

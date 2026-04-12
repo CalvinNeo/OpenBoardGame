@@ -6,6 +6,35 @@ from game import guandan
 
 
 class GuandanBotBombAvoidanceTests(unittest.TestCase):
+    def _make_single_response_state(self):
+        players = [
+            {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
+            {"player_id": "opp", "name": "Opp", "seat": 1, "is_bot": False},
+            {"player_id": "mate", "name": "Mate", "seat": 2, "is_bot": False},
+            {"player_id": "opp2", "name": "Opp2", "seat": 3, "is_bot": False},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["current_turn"] = "bot"
+        state["config"]["bot_mode"] = "heuristic"
+
+        deck = guandan._full_deck()
+        low = next(card for card in deck if guandan._card_label(card) == "♣️5")
+        high = next(card for card in deck if guandan._card_label(card) == "♣️7")
+        lead = next(card for card in deck if guandan._card_label(card) == "♣️6")
+
+        state["players"]["bot"]["hand"] = [low, high]
+        state["players"]["opp"]["hand"] = [lead]
+        state["players"]["mate"]["hand"] = []
+        state["players"]["opp2"]["hand"] = []
+        combo = guandan._evaluate_combo([lead], state["level_rank"], state.get("config", {}))
+        state["current_trick"] = {
+            "player_id": "opp",
+            "cards": [lead["id"]],
+            "combo": combo,
+        }
+        return state, low, high
+
     def _make_state(self):
         players = [
             {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
@@ -153,6 +182,20 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         state, big = self._make_state()
         action = guandan._rollout_policy_action(state, "bot")
         self.assertEqual(action, {"type": "play", "card_ids": [big["id"]]})
+
+    def test_heuristic_best_action_falls_back_from_illegal_response(self):
+        state, low, high = self._make_single_response_state()
+        with mock.patch.object(guandan, "_bot_select_play", return_value=[low["id"]]):
+            action = guandan._heuristic_best_action(state, "bot", depth=3)
+        self.assertEqual(action, {"type": "play", "card_ids": [high["id"]]})
+
+    def test_bot_move_nn_mode_falls_back_from_illegal_action(self):
+        state, low, high = self._make_single_response_state()
+        state["config"]["bot_mode"] = "nn"
+        invalid_nn_action = {"type": "play", "card_ids": [low["id"]]}
+        with mock.patch.object(guandan, "_nn_pick_action", return_value=(invalid_nn_action, None, {"candidates": 1})):
+            action = guandan.GuandanGame.bot_move(state, "bot")
+        self.assertEqual(action, {"type": "play", "card_ids": [high["id"]]})
 
     def test_bot_select_play_avoids_bomb(self):
         state, big = self._make_state()

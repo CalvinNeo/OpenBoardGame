@@ -2667,6 +2667,53 @@ class GuandanGame:
         search_width = config.get("bot_minimax_width", 6)
         mcts_width = max(2, int(config.get("bot_mcts_root_width", min(search_width, 5))))
         heuristic_action = _heuristic_best_action(state, bot_id, depth)
+
+        def _action_key(action: Optional[Dict]) -> Tuple:
+            if not action:
+                return ("none",)
+            action_type = action.get("type")
+            if action_type == "play":
+                return ("play", tuple(sorted(action.get("card_ids") or [])))
+            if action_type in ("tribute_select", "return_select"):
+                return (action_type, action.get("card_id"))
+            return (action_type,)
+
+        def _validate_action(action: Optional[Dict]) -> Optional[str]:
+            if not action:
+                return "missing action"
+            trial = copy.deepcopy(state)
+            _, err = GuandanGame.apply_action(trial, bot_id, dict(action))
+            return err
+
+        def _legalize_action(action: Optional[Dict]) -> Tuple[Optional[Dict], Optional[str]]:
+            err = _validate_action(action)
+            if err is None:
+                return dict(action), None
+            seen = {_action_key(action)}
+            fallback_candidates: List[Dict] = []
+            if heuristic_action:
+                fallback_candidates.append(dict(heuristic_action))
+            fallback_candidates.extend(
+                dict(candidate)
+                for candidate in _candidate_actions(
+                    state,
+                    bot_id,
+                    max(16, search_width * 4, mcts_width * 4),
+                )
+            )
+            for candidate in fallback_candidates:
+                key = _action_key(candidate)
+                if key in seen:
+                    continue
+                seen.add(key)
+                if _validate_action(candidate) is None:
+                    return candidate, err
+            if state.get("current_trick") and "pass" in legal:
+                pass_action = {"type": "pass"}
+                if _validate_action(pass_action) is None:
+                    return pass_action, err
+            return None, err
+
         think_budget_ms = max(40, int(config.get("bot_think_time_ms", 320)))
         default_mcts_budget_ms = min(think_budget_ms, 220)
         default_minimax_budget_ms = min(think_budget_ms, 180)
@@ -2762,6 +2809,18 @@ class GuandanGame:
                 chosen_action_type = "pass"
                 method = "heuristic"
         if decided:
+            selected_action = {"type": "pass"} if chosen_action_type == "pass" else {"type": "play", "card_ids": chosen or []}
+            legal_action, illegal_err = _legalize_action(selected_action)
+            if legal_action is None:
+                if "pass" in legal:
+                    return {"type": "pass"}
+                return None
+            if illegal_err is not None:
+                method = "heuristic"
+                method_scores = None
+                method_meta = None
+            chosen_action_type = legal_action.get("type", chosen_action_type or "play")
+            chosen = list(legal_action.get("card_ids") or [])
             explain = _build_bot_explain(
                 state,
                 bot_id,
