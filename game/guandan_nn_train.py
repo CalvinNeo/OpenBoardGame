@@ -87,6 +87,8 @@ MAX_ACTION_SCALE = 6.0
 DEFAULT_CANDIDATE_LIMIT = 12
 DEFAULT_POLICY_TARGET_SOURCE = "search"
 POLICY_TARGET_BLEND = 0.35
+SEARCH_POLICY_TARGET_BLEND = 0.55
+MODEL_SEARCH_POLICY_TARGET_BLEND = 0.90
 PASS_SAMPLE_WEIGHT = 0.82
 NON_PASS_SAMPLE_BONUS = 0.1
 COMPLEX_COMBO_BONUS = 0.08
@@ -524,6 +526,16 @@ def _sample_weight_for_example(
         margin = max(0.0, float(chosen_score) - float(sorted_scores[1]))
         weight += min(MAX_MARGIN_BONUS, margin / 20.0)
     return max(0.5, min(1.8, weight))
+
+
+def _policy_target_blend_for_example(example: "DecisionExample") -> float:
+    source = str((example.metadata or {}).get("policy_target_source") or "").strip().lower()
+    teacher = str(getattr(example, "teacher", "") or "").strip().lower()
+    if source == "model_search" or teacher == "model_search":
+        return MODEL_SEARCH_POLICY_TARGET_BLEND
+    if source in {"mcts", "minimax"}:
+        return SEARCH_POLICY_TARGET_BLEND
+    return POLICY_TARGET_BLEND
 
 
 def _terminal_team_value(state: Dict, player_id: str) -> Optional[float]:
@@ -1467,12 +1479,14 @@ def collate_examples(batch: Sequence[DecisionExample]):
     mask = torch.zeros(len(batch), max_actions, dtype=torch.bool)
     chosen = torch.zeros(len(batch), dtype=torch.long)
     policy_target = torch.zeros(len(batch), max_actions, dtype=torch.float32)
+    policy_blend = torch.zeros(len(batch), dtype=torch.float32)
     outcomes = torch.zeros(len(batch), dtype=torch.float32)
     sample_weight = torch.ones(len(batch), dtype=torch.float32)
 
     for row, item in enumerate(batch):
         states[row] = torch.tensor(item.state_features, dtype=torch.float32)
         chosen[row] = item.chosen_index
+        policy_blend[row] = float(_policy_target_blend_for_example(item))
         outcomes[row] = item.outcome
         sample_weight[row] = item.sample_weight
         if item.policy_target:
@@ -1486,6 +1500,7 @@ def collate_examples(batch: Sequence[DecisionExample]):
         "mask": mask,
         "chosen": chosen,
         "policy_target": policy_target,
+        "policy_blend": policy_blend,
         "outcome": outcomes,
         "sample_weight": sample_weight,
     }
@@ -1625,6 +1640,7 @@ def train_model(
             mask = batch["mask"].to(device)
             chosen = batch["chosen"].to(device)
             policy_target = batch["policy_target"].to(device)
+            policy_blend = batch["policy_blend"].to(device)
             outcome = batch["outcome"].to(device)
             sample_weight = batch["sample_weight"].to(device)
             sample_weight_sum = torch.clamp(sample_weight.sum(), min=1e-6)
@@ -1634,7 +1650,7 @@ def train_model(
             hard_policy_loss = F.cross_entropy(logits, chosen, reduction="none")
             log_probs = F.log_softmax(logits, dim=1)
             soft_policy_loss = -(policy_target * log_probs).sum(dim=1)
-            combined_policy = (1.0 - POLICY_TARGET_BLEND) * hard_policy_loss + POLICY_TARGET_BLEND * soft_policy_loss
+            combined_policy = (1.0 - policy_blend) * hard_policy_loss + policy_blend * soft_policy_loss
             policy_loss = (combined_policy * sample_weight).sum() / sample_weight_sum
             value_error = F.smooth_l1_loss(value, outcome, reduction="none")
             value_loss = (value_error * sample_weight).sum() / sample_weight_sum

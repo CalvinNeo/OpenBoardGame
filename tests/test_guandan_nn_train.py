@@ -167,6 +167,39 @@ class GuandanNNTrainTests(unittest.TestCase):
         self.assertAlmostEqual(sum(examples[0].policy_target), 1.0, places=5)
         self.assertEqual(examples[0].metadata.get("policy_target_meta", {}).get("sims"), 5)
 
+    def test_policy_target_blend_prefers_soft_targets_for_model_search(self):
+        state, player_id = self._build_state()
+        actions = guandan._candidate_actions(state, player_id, 6)
+        heuristic_example = trainer.build_decision_example(
+            state,
+            player_id,
+            actions[0],
+            teacher="heuristic",
+            candidate_limit=6,
+        )
+        search_example = trainer.build_decision_example(
+            state,
+            player_id,
+            actions[0],
+            teacher="model_search",
+            candidate_limit=6,
+            candidate_actions_override=actions[:2],
+            policy_target_override=[0.1, 0.9],
+            target_scores_override=[1.0, 2.0],
+            target_source_override="model_search",
+        )
+
+        self.assertAlmostEqual(
+            trainer._policy_target_blend_for_example(heuristic_example),
+            trainer.POLICY_TARGET_BLEND,
+            places=6,
+        )
+        self.assertAlmostEqual(
+            trainer._policy_target_blend_for_example(search_example),
+            trainer.MODEL_SEARCH_POLICY_TARGET_BLEND,
+            places=6,
+        )
+
     def test_run_training_pipeline_uses_bootstrap_cache_when_present(self):
         state, player_id = self._build_state()
         actions = guandan._candidate_actions(state, player_id, 6)
@@ -260,6 +293,7 @@ class GuandanNNTrainTests(unittest.TestCase):
         self.assertEqual(tuple(logits.shape), (2, len(example.action_features)))
         self.assertEqual(tuple(value.shape), (2,))
         self.assertEqual(tuple(batch["policy_target"].shape), (2, len(example.action_features)))
+        self.assertEqual(tuple(batch["policy_blend"].shape), (2,))
         self.assertEqual(tuple(batch["sample_weight"].shape), (2,))
 
 
