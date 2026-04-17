@@ -845,25 +845,24 @@ def _find_full_house_to_beat(hand: List[Dict], level_rank: int, threshold: int) 
     return None
 
 
-def _find_lowest_pair(info: Dict, exclude_rank: Optional[int], level_rank: int) -> Optional[List[int]]:
-    strength = _rank_strength(level_rank)
-    ranks_sorted = _ranks_sorted_by_strength(level_rank, ascending=True)
-    for rank in ranks_sorted:
+def _list_pair_choices(info: Dict, exclude_rank: Optional[int], level_rank: int) -> List[List[int]]:
+    options: List[List[int]] = []
+    for rank in _ranks_sorted_by_strength(level_rank, ascending=True):
         if exclude_rank is not None and rank == exclude_rank:
             continue
-        normals = list(info["normals_by_rank"].get(rank, []))
-        wilds = list(info["wild_cards"])
-        if len(normals) >= 2:
-            return normals[:2]
-        if len(normals) == 1 and len(wilds) >= 1:
-            return [normals[0], wilds[0]]
-        if len(normals) == 0 and len(wilds) >= 2:
-            return wilds[:2]
+        built = _build_of_rank(rank, 2, info)
+        if built:
+            options.append(built[0])
     if len(info.get("jokers_big", [])) >= 2:
-        return info["jokers_big"][:2]
+        options.append(info["jokers_big"][:2])
     if len(info.get("jokers_small", [])) >= 2:
-        return info["jokers_small"][:2]
-    return None
+        options.append(info["jokers_small"][:2])
+    return _dedupe_card_sets(options)
+
+
+def _find_lowest_pair(info: Dict, exclude_rank: Optional[int], level_rank: int) -> Optional[List[int]]:
+    options = _list_pair_choices(info, exclude_rank, level_rank)
+    return options[0] if options else None
 
 
 def _find_straight_to_beat(hand: List[Dict], level_rank: int, threshold: int) -> Optional[List[int]]:
@@ -1125,8 +1124,7 @@ def _list_full_house_options(hand: List[Dict], level_rank: int, threshold: int) 
         if not built:
             continue
         triple_cards, info = built
-        pair_cards = _find_lowest_pair(info, exclude_rank=triple_rank, level_rank=level_rank)
-        if pair_cards:
+        for pair_cards in _list_pair_choices(info, exclude_rank=triple_rank, level_rank=level_rank):
             options.append(triple_cards + pair_cards)
     return _dedupe_card_sets(options)
 
@@ -1628,12 +1626,17 @@ def _rank_response_options(state: Dict, player_id: str, options: List[List[int]]
     config = state.get("config", {})
     entries = []
     natural_by_type: Dict[str, bool] = {}
+    has_natural_full_house = False
+    leader = current_trick.get("player_id")
+    leader_left = len(state["players"].get(leader, {}).get("hand", [])) if leader else 99
     for cards in _dedupe_card_sets(options):
         play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
         combo = _evaluate_combo(play_cards, level_rank, config)
         if not combo:
             continue
         uses_special = _cards_use_special_material(play_cards, level_rank)
+        if combo["type"] == "full_house" and not uses_special:
+            has_natural_full_house = True
         entries.append((cards, combo, uses_special))
         if not uses_special:
             natural_by_type[combo["type"]] = True
@@ -1642,6 +1645,13 @@ def _rank_response_options(state: Dict, player_id: str, options: List[List[int]]
 
     scored = []
     for cards, combo, uses_special in entries:
+        if (
+            combo["type"] == "full_house"
+            and uses_special
+            and leader_left >= 12
+            and has_natural_full_house
+        ):
+            continue
         natural_alt = uses_special and natural_by_type.get(combo["type"], False)
         cost = _response_material_cost(state, player_id, cards, combo, natural_alt)
         scored.append((cards, combo, cost))
