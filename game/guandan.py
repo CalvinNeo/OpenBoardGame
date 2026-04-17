@@ -1280,16 +1280,16 @@ def _lead_option_score(state: Dict, player_id: str, cards: List[int]) -> float:
         return 1000.0
 
     base_by_type = {
-        "straight": 64.0,
-        "three_pairs": 62.0,
-        "steel_plate": 61.0,
-        "full_house": 58.0,
-        "three": 46.0,
-        "pair": 38.0,
-        "single": 20.0,
-        "bomb": 6.0,
-        "straight_flush": 4.0,
-        "heavenly": 2.0,
+        "straight": 9.2,
+        "three_pairs": 8.8,
+        "steel_plate": 8.6,
+        "full_house": 8.1,
+        "three": 5.4,
+        "pair": 4.0,
+        "single": 2.0,
+        "bomb": -8.0,
+        "straight_flush": -10.0,
+        "heavenly": -12.0,
     }
     base = base_by_type.get(combo["type"], 10.0)
     structure_delta = _play_structure_delta(hand, cards, state["level_rank"])
@@ -1297,22 +1297,30 @@ def _lead_option_score(state: Dict, player_id: str, cards: List[int]) -> float:
     remaining_strength = _hand_strength_score(remaining, state["level_rank"])
 
     score = base
-    score += len(cards) * 1.2
-    score -= structure_delta * 2.6
-    score += remaining_strength * 0.18
-    score -= _control_group_break_penalty(hand, cards, state["level_rank"])
+    score += len(cards) * 0.12
+    score -= structure_delta * 1.35
+    score += remaining_strength * 0.16
+    score += _shape_transition_score(hand, cards, state["level_rank"]) * 1.25
+    score -= _group_fragment_penalty(hand, cards, state["level_rank"], combo) * 1.2
+    score -= _control_group_break_penalty(hand, cards, state["level_rank"]) * 1.0
     score -= _lead_low_single_trap_penalty(hand, cards, state["level_rank"])
     score -= _lead_short_next_opponent_penalty(state, player_id, cards)
+    score -= _lead_structure_overreach_penalty(hand, cards, combo, state["level_rank"])
+    score -= _lead_special_material_penalty(state, player_id, cards, combo)
+    score += _lead_turn_efficiency_bonus(state, player_id, cards, combo)
+    score += _lead_same_type_reentry_bonus(state, player_id, cards, combo)
+    score += _lead_teammate_support_bonus(state, player_id, cards, combo)
+    score -= _lead_speculative_followup_penalty(state, player_id, cards, combo)
 
     if combo["type"] == "single":
         score -= _single_order_value(play_cards[0], state["level_rank"]) * 0.12
         score -= _lead_single_break_penalty(hand, cards, state["level_rank"])
         score += _lead_low_single_escape_bonus(hand, cards, state["level_rank"])
     else:
-        score -= _combo_value(combo) * 0.03
+        score -= _combo_value(combo) * 0.015
 
     if combo["type"] in BOMB_TYPES:
-        score -= 14.0 + _bomb_tier(combo) * 2.0
+        score -= 18.0 + _bomb_tier(combo) * 2.4
 
     if remaining and _can_play_all(remaining, state["level_rank"], state.get("config", {}), None):
         score += 7.5
@@ -1704,6 +1712,35 @@ def _lead_short_next_opponent_penalty(state: Dict, player_id: str, cards: List[i
     raise RuntimeError("_lead_short_next_opponent_penalty should be bound from guandan_ai")
 
 
+def _lead_special_material_penalty(state: Dict, player_id: str, cards: List[int], combo: Dict) -> float:
+    raise RuntimeError("_lead_special_material_penalty should be bound from guandan_ai")
+
+
+def _lead_same_type_reentry_bonus(state: Dict, player_id: str, cards: List[int], combo: Dict) -> float:
+    raise RuntimeError("_lead_same_type_reentry_bonus should be bound from guandan_ai")
+
+
+def _lead_turn_efficiency_bonus(state: Dict, player_id: str, cards: List[int], combo: Dict) -> float:
+    raise RuntimeError("_lead_turn_efficiency_bonus should be bound from guandan_ai")
+
+
+def _lead_teammate_support_bonus(state: Dict, player_id: str, cards: List[int], combo: Dict) -> float:
+    raise RuntimeError("_lead_teammate_support_bonus should be bound from guandan_ai")
+
+
+def _lead_structure_overreach_penalty(
+    hand: List[Dict],
+    cards: List[int],
+    combo: Dict,
+    level_rank: int,
+) -> float:
+    raise RuntimeError("_lead_structure_overreach_penalty should be bound from guandan_ai")
+
+
+def _lead_speculative_followup_penalty(state: Dict, player_id: str, cards: List[int], combo: Dict) -> float:
+    raise RuntimeError("_lead_speculative_followup_penalty should be bound from guandan_ai")
+
+
 def _should_prune_weak_lead_single(
     state: Dict, player_id: str, cards: List[int], single_score: float, best_non_single_score: Optional[float]
 ) -> bool:
@@ -1893,6 +1930,12 @@ _AI_EXPORTED_FUNCS = (
     "_lead_low_single_escape_bonus",
     "_lead_low_single_trap_penalty",
     "_lead_short_next_opponent_penalty",
+    "_lead_structure_overreach_penalty",
+    "_lead_special_material_penalty",
+    "_lead_same_type_reentry_bonus",
+    "_lead_turn_efficiency_bonus",
+    "_lead_teammate_support_bonus",
+    "_lead_speculative_followup_penalty",
     "_minimal_bomb_response",
     "_single_lock_bonus",
     "_takeover_opportunity_score",

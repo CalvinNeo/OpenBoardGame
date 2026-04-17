@@ -548,6 +548,357 @@ def _lead_structure_overreach_penalty(
     return penalty
 
 
+def _lead_same_type_options(
+    hand: List[Dict],
+    level_rank: int,
+    combo_type: str,
+    threshold: int,
+) -> List[List[int]]:
+    if combo_type == "single":
+        return _list_single_options(hand, level_rank, threshold)
+    if combo_type == "pair":
+        return _list_rank_group_options(hand, level_rank, threshold, 2)
+    if combo_type == "three":
+        return _list_rank_group_options(hand, level_rank, threshold, 3)
+    if combo_type == "full_house":
+        return _list_full_house_options(hand, level_rank, threshold)
+    if combo_type == "straight":
+        return _list_straight_options(hand, level_rank, threshold)
+    if combo_type == "three_pairs":
+        return _list_three_pairs_options(hand, level_rank, threshold)
+    if combo_type == "steel_plate":
+        return _list_steel_plate_options(hand, level_rank, threshold)
+    return []
+
+
+def _lead_natural_type_values(
+    state: Dict,
+    player_id: str,
+    exclude_cards: List[int],
+) -> Dict[str, int]:
+    if state.get("current_trick"):
+        return {}
+    hand = state["players"][player_id]["hand"]
+    hand_map = _map_hand_by_id(hand)
+    exclude_key = tuple(sorted(exclude_cards))
+    values: Dict[str, int] = {}
+    for option in _CORE._dedupe_card_sets(_list_hint_options(state, player_id)):
+        if tuple(sorted(option)) == exclude_key:
+            continue
+        play_cards = [hand_map[cid] for cid in option if cid in hand_map]
+        combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
+        if not combo or _cards_use_special_material(play_cards, state["level_rank"]):
+            continue
+        combo_type = combo.get("type") or ""
+        combo_value = _combo_numeric_value(combo)
+        values[combo_type] = max(values.get(combo_type, -10**9), combo_value)
+    return values
+
+
+def _lead_special_material_penalty(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+) -> float:
+    if state.get("current_trick"):
+        return 0.0
+    combo_type = combo.get("type") or ""
+    if combo_type not in ("three", "full_house", "straight", "three_pairs", "steel_plate"):
+        return 0.0
+
+    hand = state["players"][player_id]["hand"]
+    hand_map = _map_hand_by_id(hand)
+    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+    if not play_cards or not _cards_use_special_material(play_cards, state["level_rank"]):
+        return 0.0
+
+    penalty = {
+        "pair": 1.2,
+        "three": 2.0,
+        "full_house": 4.2,
+        "straight": 6.4,
+        "three_pairs": 6.8,
+        "steel_plate": 6.2,
+    }.get(combo_type, 0.0)
+
+    natural_values = _lead_natural_type_values(state, player_id, cards)
+    current_value = _combo_numeric_value(combo)
+    same_type_value = natural_values.get(combo_type)
+    if same_type_value is not None:
+        penalty += {
+            "pair": 2.0,
+            "three": 2.8,
+            "full_house": 5.4,
+            "straight": 4.2,
+            "three_pairs": 4.8,
+            "steel_plate": 4.5,
+        }.get(combo_type, 0.0)
+        penalty += min(2.6, max(0.0, same_type_value - current_value) * 0.22)
+
+    if combo_type in ("straight", "three_pairs", "steel_plate"):
+        if "full_house" in natural_values:
+            penalty += 4.8
+        if "three" in natural_values:
+            penalty += 1.8
+    elif combo_type == "full_house":
+        if "three" in natural_values and "pair" in natural_values:
+            penalty += 1.2
+
+    if len(hand) >= 18 and combo_type in ("straight", "three_pairs", "steel_plate", "full_house"):
+        penalty += 1.1
+    return penalty
+
+
+def _lead_same_type_reentry_bonus(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+) -> float:
+    if state.get("current_trick"):
+        return 0.0
+    combo_type = combo.get("type") or ""
+    if combo_type not in ("three", "full_house", "straight", "three_pairs", "steel_plate"):
+        return 0.0
+
+    hand = state["players"][player_id]["hand"]
+    remaining = _remove_cards(hand, cards)
+    if not remaining:
+        return 0.0
+
+    level_rank = state["level_rank"]
+    threshold = _combo_numeric_value(combo)
+    options = _lead_same_type_options(remaining, level_rank, combo_type, threshold)
+    if not options:
+        return 0.0
+
+    remaining_map = _map_hand_by_id(remaining)
+    best = 0.0
+    for option in options:
+        play_cards = [remaining_map[cid] for cid in option if cid in remaining_map]
+        followup = _evaluate_combo(play_cards, level_rank, state.get("config", {}))
+        if not followup:
+            continue
+        margin = max(0.0, _combo_numeric_value(followup) - threshold)
+        bonus = {
+            "pair": 1.0,
+            "three": 1.8,
+            "full_house": 4.8,
+            "straight": 1.4,
+            "three_pairs": 1.6,
+            "steel_plate": 1.8,
+        }.get(combo_type, 0.0)
+        bonus += min(3.2, margin * 0.26)
+        if not _cards_use_special_material(play_cards, level_rank):
+            bonus += {
+                "pair": 0.6,
+                "three": 1.1,
+                "full_house": 3.4,
+                "straight": 0.7,
+                "three_pairs": 0.9,
+                "steel_plate": 1.1,
+            }.get(combo_type, 0.0)
+        best = max(best, bonus)
+    return best
+
+
+def _lead_turn_efficiency_bonus(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+) -> float:
+    if state.get("current_trick"):
+        return 0.0
+
+    hand = state["players"][player_id]["hand"]
+    remaining = _remove_cards(hand, cards)
+    level_rank = state["level_rank"]
+    before = _hand_decomposition_summary(hand, level_rank)
+    after = _hand_decomposition_summary(remaining, level_rank) if remaining else _empty_hand_decomposition_summary()
+
+    before_turns = before.get("turns", float(len(hand)))
+    after_turns = after.get("turns", 0.0)
+    projected_turns = 0.0 if not remaining else after_turns + 1.0
+    turn_gain = before_turns - projected_turns
+
+    combo_type = combo.get("type") or ""
+    structured_types = {"straight", "three_pairs", "steel_plate", "full_house", "three"}
+    primary_type = (before.get("plan_types") or (None,))[0]
+    score = 0.0
+    if turn_gain >= 0.0:
+        score += min(11.0, turn_gain * 5.8)
+    else:
+        score += max(-12.0, turn_gain * 7.0)
+
+    plan_score = _plan_alignment_score(hand, cards, combo, level_rank)
+    if abs(plan_score) > 0.001:
+        score += plan_score * 1.35
+
+    if primary_type in structured_types:
+        if combo_type == primary_type:
+            score += 2.2
+        elif combo_type in structured_types and turn_gain >= 0.35:
+            score += 0.9
+        elif combo_type == "single" and turn_gain < 0.6:
+            score -= 3.0
+        elif combo_type == "pair" and turn_gain < 0.6:
+            score -= 1.8
+        elif combo_type == "three" and primary_type in ("full_house", "three_pairs", "steel_plate") and turn_gain < 0.8:
+            score -= 0.9
+
+    low_single_delta = before.get("low_singles", 0.0) - after.get("low_singles", 0.0)
+    if low_single_delta > 0.01:
+        score += min(4.2, low_single_delta * 1.8)
+    elif low_single_delta < -0.01:
+        score -= min(5.0, abs(low_single_delta) * 2.4)
+
+    if before.get("group_turns", 0.0) >= 2.0 and after.get("group_turns", 0.0) <= 0.0 and len(remaining) >= 4:
+        score -= 2.8
+    elif combo_type in ("single", "pair", "three") and after.get("group_turns", 0.0) > 0.0:
+        score += min(1.4, after.get("group_turns", 0.0) * 0.28)
+
+    if before.get("bomb_turns", 0.0) > after.get("bomb_turns", 0.0) and combo_type not in BOMB_TYPES and len(hand) >= 10:
+        score -= 4.4 + (before.get("bomb_turns", 0.0) - after.get("bomb_turns", 0.0)) * 1.1
+
+    if combo_type in ("straight", "three_pairs", "steel_plate") and turn_gain < 0.35:
+        score -= 3.4
+    elif combo_type == "full_house" and turn_gain < 0.25:
+        score -= 1.4
+    elif combo_type == "single" and before.get("group_turns", 0.0) >= 2.0 and turn_gain <= 0.0:
+        score -= 1.8
+
+    before_quality = before.get("score", 0.0) / max(1.0, before_turns)
+    if remaining:
+        after_quality = after.get("score", 0.0) / max(1.0, after_turns)
+        score += max(-2.6, min(2.6, (after_quality - before_quality) * 0.55))
+    return score
+
+
+def _lead_teammate_support_bonus(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+) -> float:
+    if state.get("current_trick"):
+        return 0.0
+
+    teammate = _teammate_of(state, player_id)
+    if not teammate or state["players"][teammate]["finished"]:
+        return 0.0
+
+    team = _team_of(state, player_id)
+    level_rank = state["level_rank"]
+    teammate_hand = state["players"][teammate]["hand"]
+    if not teammate_hand:
+        return 0.0
+
+    opponent_turns = [
+        _estimated_turns_to_finish(state["players"][pid]["hand"], level_rank)
+        for pid in state["turn_order"]
+        if _team_of(state, pid) != team and not state["players"][pid]["finished"]
+    ]
+    if not opponent_turns:
+        return 0.0
+
+    hand = state["players"][player_id]["hand"]
+    remaining = _remove_cards(hand, cards)
+    teammate_turns = _estimated_turns_to_finish(teammate_hand, level_rank)
+    bot_after_turns = 0.0 if not remaining else _estimated_turns_to_finish(remaining, level_rank) + 1.0
+    support_edge = bot_after_turns - teammate_turns
+    race_window = min(opponent_turns) - teammate_turns
+    if support_edge < 1.0 or race_window < 0.8:
+        return 0.0
+
+    hand_map = _map_hand_by_id(hand)
+    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+    if not play_cards:
+        return 0.0
+
+    combo_type = combo.get("type") or ""
+    if combo_type in BOMB_TYPES:
+        return 0.0
+
+    combo_value = _combo_numeric_value(combo)
+    uses_special = _cards_use_special_material(play_cards, level_rank)
+    fragment_penalty = _group_fragment_penalty(hand, cards, level_rank, combo)
+    control_break = _control_group_break_penalty(hand, cards, level_rank)
+    factor = min(1.0, 0.2 + support_edge * 0.16 + max(0.0, race_window) * 0.12)
+
+    bonus = 0.0
+    if combo_type == "single":
+        if combo_value <= 58 and not uses_special and fragment_penalty <= 0.1:
+            bonus += 2.8
+        elif combo_value <= 62 and control_break < 0.4:
+            bonus += 1.4
+        elif combo_value >= 70:
+            bonus -= 2.1
+    elif combo_type == "pair":
+        if combo_value <= 60 and not uses_special and control_break < 1.0:
+            bonus += 2.0
+        elif combo_value >= 80:
+            bonus -= 1.4
+    elif combo_type == "three":
+        if combo_value <= 62 and not uses_special and control_break < 1.4:
+            bonus += 1.3
+    elif combo_type in ("straight", "three_pairs", "steel_plate"):
+        bonus -= 1.8
+    elif combo_type == "full_house" and combo_value >= 60:
+        bonus -= 0.8
+
+    teammate_limits = state.get("pass_limits", {}).get(teammate, {})
+    limit = teammate_limits.get(combo_type)
+    if limit is not None and combo_type in ("single", "pair", "three"):
+        if combo_value > limit:
+            bonus -= 0.8 + min(1.6, max(0.0, combo_value - limit) * 0.12)
+        else:
+            bonus += 0.6
+    return bonus * factor
+
+
+def _lead_speculative_followup_penalty(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+) -> float:
+    if state.get("current_trick"):
+        return 0.0
+
+    combo_type = combo.get("type") or ""
+    if combo_type not in ("single", "pair"):
+        return 0.0
+
+    hand = state["players"][player_id]["hand"]
+    remaining = _remove_cards(hand, cards)
+    if len(remaining) < 4 or not _can_play_all(remaining, state["level_rank"], state.get("config", {}), None):
+        return 0.0
+
+    combo_value = _combo_numeric_value(combo)
+    remaining_combo = _evaluate_combo(remaining, state["level_rank"], state.get("config", {}))
+    if combo_type == "single":
+        if combo_value >= 90:
+            return 0.0
+        penalty = 7.2 if len(remaining) >= 5 else 4.6
+        if combo_value >= 80:
+            penalty *= 0.45
+        elif combo_value >= 70:
+            penalty *= 0.68
+        if remaining_combo:
+            remaining_type = remaining_combo.get("type")
+            if remaining_type in ("full_house", "three_pairs", "steel_plate"):
+                penalty += 2.4
+            elif remaining_type == "straight":
+                penalty += 1.6
+        return penalty
+
+    if combo_value >= 80:
+        return 0.0
+    return 3.6 if len(remaining) >= 5 else 2.0
+
+
 def _lead_single_initiative_penalty(hand: List[Dict], cards: List[int], level_rank: int) -> float:
     if len(cards) != 1 or len(hand) <= 8:
         return 0.0
@@ -2765,7 +3116,6 @@ def _bot_score_components(
 
     remaining = _remove_cards(hand, cards)
     components: Dict[str, float] = _hand_state_value_components(state, bot_id, remaining)
-    components["play_cards"] = len(cards) * 0.6
     shape_score = _shape_transition_score(hand, cards, level_rank)
     if abs(shape_score) > 0.001:
         components["shape_value"] = shape_score
@@ -2774,6 +3124,10 @@ def _bot_score_components(
         plan_score = max(0.8, plan_score)
     if abs(plan_score) > 0.001:
         components["plan_alignment"] = plan_score
+    play_weight = 0.6 if current_trick else 0.14
+    if not current_trick and combo["type"] in BOMB_TYPES:
+        play_weight = 0.04
+    components["play_cards"] = len(cards) * play_weight
     control_break = _control_group_break_penalty(hand, cards, level_rank)
     if control_break > 0.001 and combo["type"] not in BOMB_TYPES:
         components["control_break_penalty"] = -control_break
@@ -2867,6 +3221,15 @@ def _bot_score_components(
         lead_score = _lead_option_score(state, bot_id, cards)
         if abs(lead_score) > 0.001:
             components["lead_plan"] = lead_score * 0.18
+        turn_bonus = _lead_turn_efficiency_bonus(state, bot_id, cards, combo)
+        if abs(turn_bonus) > 0.001:
+            components["lead_turns"] = turn_bonus
+        teammate_bonus = _lead_teammate_support_bonus(state, bot_id, cards, combo)
+        if abs(teammate_bonus) > 0.001:
+            components["lead_teammate"] = teammate_bonus
+        speculative_penalty = _lead_speculative_followup_penalty(state, bot_id, cards, combo)
+        if speculative_penalty > 0.001:
+            components["lead_followup_risk"] = -speculative_penalty
         overreach_penalty = _lead_structure_overreach_penalty(hand, cards, combo, level_rank)
         if overreach_penalty > 0.001:
             components["lead_overreach"] = -overreach_penalty
@@ -2879,11 +3242,28 @@ def _bot_score_components(
         initiative_penalty = _lead_single_initiative_penalty(hand, cards, level_rank)
         if initiative_penalty > 0.001:
             components["keep_initiative_shape"] = -initiative_penalty
+        special_penalty = _lead_special_material_penalty(state, bot_id, cards, combo)
+        if special_penalty > 0.001:
+            components["lead_special_material"] = -special_penalty
+        reentry_bonus = _lead_same_type_reentry_bonus(state, bot_id, cards, combo)
+        if reentry_bonus > 0.001:
+            components["lead_reentry"] = reentry_bonus
 
     if depth >= 2 and remaining:
         lead_cards = _choose_lead_play(remaining, level_rank, config, state, bot_id)
         if lead_cards and len(lead_cards) == len(remaining):
-            components["lead_finish_bonus"] = 12.0
+            finish_bonus = 12.0
+            if combo["type"] == "single":
+                rank_value = combo.get("rank_value", 0)
+                if rank_value < 80:
+                    finish_bonus = 2.5
+                elif rank_value < 90:
+                    finish_bonus = 5.5
+                else:
+                    finish_bonus = 8.0
+            elif combo["type"] == "pair":
+                finish_bonus = 8.0
+            components["lead_finish_bonus"] = finish_bonus
 
     components["total"] = sum(components.values())
     return components
