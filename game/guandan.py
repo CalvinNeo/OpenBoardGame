@@ -1310,6 +1310,7 @@ def _lead_option_score(state: Dict, player_id: str, cards: List[int]) -> float:
     score += _lead_turn_efficiency_bonus(state, player_id, cards, combo)
     score += _lead_same_type_reentry_bonus(state, player_id, cards, combo)
     score += _lead_teammate_support_bonus(state, player_id, cards, combo)
+    score += _lead_initiative_retention_bonus(state, player_id, cards, combo)
     score -= _lead_speculative_followup_penalty(state, player_id, cards, combo)
     score -= _lead_opening_commitment_penalty(state, player_id, cards, combo)
 
@@ -1729,6 +1730,10 @@ def _lead_teammate_support_bonus(state: Dict, player_id: str, cards: List[int], 
     raise RuntimeError("_lead_teammate_support_bonus should be bound from guandan_ai")
 
 
+def _lead_initiative_retention_bonus(state: Dict, player_id: str, cards: List[int], combo: Dict) -> float:
+    raise RuntimeError("_lead_initiative_retention_bonus should be bound from guandan_ai")
+
+
 def _lead_structure_overreach_penalty(
     hand: List[Dict],
     cards: List[int],
@@ -1940,6 +1945,7 @@ _AI_EXPORTED_FUNCS = (
     "_lead_same_type_reentry_bonus",
     "_lead_turn_efficiency_bonus",
     "_lead_teammate_support_bonus",
+    "_lead_initiative_retention_bonus",
     "_lead_speculative_followup_penalty",
     "_lead_opening_commitment_penalty",
     "_minimal_bomb_response",

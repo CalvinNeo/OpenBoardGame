@@ -2891,6 +2891,80 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertEqual(chosen_combo.get("type"), "steel_plate")
         self.assertEqual(chosen_labels, ["♣️3", "♠️3", "♣️3", "♥️4", "♣️4", "♣️4"])
 
+    def test_opening_values_hard_to_answer_steel_plate_over_small_three(self):
+        players = [
+            {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
+            {"player_id": "bot2", "name": "Bot 2", "seat": 1, "is_bot": True},
+            {"player_id": "zhu", "name": "zhu", "seat": 2, "is_bot": False},
+            {"player_id": "bot4", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["round_number"] = 1
+        state["dealer_team"] = "A"
+        state["level_rank"] = 2
+        state["current_turn"] = "bot2"
+        state["current_trick"] = None
+        state["config"]["bot_mode"] = "heuristic"
+
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        hand = [
+            pick_label(label)
+            for label in [
+                "🃏S",
+                "♥️A",
+                "♠️K",
+                "♦️K",
+                "♣️Q",
+                "♦️J",
+                "♠️J",
+                "♥️10",
+                "♠️10",
+                "♦️7",
+                "♠️7",
+                "♦️7",
+                "♣️7",
+                "♦️6",
+                "♣️6",
+                "♦️6",
+                "♥️5",
+                "♣️5",
+                "♦️5",
+                "♥️4",
+                "♠️4",
+                "♦️4",
+            ]
+        ]
+        state["players"]["bot2"]["hand"] = hand
+        for pid, count in (("calvin", 25), ("zhu", 26), ("bot4", 27)):
+            state["players"][pid]["hand"] = deck[:count]
+            del deck[:count]
+
+        real_random = random.Random
+        with mock.patch.object(guandan.random, "Random", side_effect=lambda *args, **kwargs: real_random(0)):
+            action = guandan.GuandanGame.bot_move(state, "bot2")
+
+        self.assertEqual(action.get("type"), "play")
+        hand_map = guandan._map_hand_by_id(hand)
+        chosen_cards = [hand_map[cid] for cid in action.get("card_ids", []) if cid in hand_map]
+        chosen_labels = [guandan._card_label(card) for card in chosen_cards]
+        chosen_combo = guandan._evaluate_combo(chosen_cards, state["level_rank"], state.get("config", {}))
+        self.assertEqual(chosen_combo.get("type"), "steel_plate")
+        self.assertIn(
+            chosen_labels,
+            [
+                ["♥️4", "♠️4", "♦️4", "♥️5", "♣️5", "♦️5"],
+                ["♥️5", "♣️5", "♦️5", "♦️6", "♣️6", "♦️6"],
+            ],
+        )
+
     def test_lead_avoids_high_wild_straight_and_prefers_three_pairs(self):
         players = [
             {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},

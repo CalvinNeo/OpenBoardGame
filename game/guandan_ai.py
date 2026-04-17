@@ -781,7 +781,7 @@ def _lead_same_type_reentry_bonus(
     if state.get("current_trick"):
         return 0.0
     combo_type = combo.get("type") or ""
-    if combo_type not in ("three", "full_house", "straight", "three_pairs", "steel_plate"):
+    if combo_type not in ("pair", "three", "full_house", "straight", "three_pairs", "steel_plate"):
         return 0.0
 
     hand = state["players"][player_id]["hand"]
@@ -1058,6 +1058,307 @@ def _lead_speculative_followup_penalty(
     return 3.6 if len(remaining) >= 5 else 2.0
 
 
+def _hypergeom_at_least(total: int, hits: int, draws: int, need: int) -> float:
+    if need <= 1:
+        return _hypergeom_hit_probability(total, hits, draws)
+    if total <= 0 or hits <= 0 or draws <= 0:
+        return 0.0
+    draws = min(draws, total)
+    max_hits = min(hits, draws)
+    if need > max_hits:
+        return 0.0
+    denom = math.comb(total, draws)
+    if denom <= 0:
+        return 0.0
+    miss = 0.0
+    other = total - hits
+    for taken in range(0, min(need - 1, max_hits) + 1):
+        remain = draws - taken
+        if remain < 0 or remain > other:
+            continue
+        miss += (math.comb(hits, taken) * math.comb(other, remain)) / denom
+    return max(0.0, min(1.0, 1.0 - miss))
+
+
+def _aggregate_event_probability(probabilities: List[float]) -> float:
+    miss = 1.0
+    for value in probabilities:
+        prob = max(0.0, min(1.0, value))
+        miss *= 1.0 - prob
+    return max(0.0, min(1.0, 1.0 - miss))
+
+
+def _lead_unknown_pool_profile(state: Dict, player_id: str) -> Tuple[int, Dict[int, int], int, Dict[str, int]]:
+    level_rank = state["level_rank"]
+    known_ids = set(state.get("seen_cards", []) or [])
+    known_ids.update(card["id"] for card in state["players"].get(player_id, {}).get("hand", []))
+    current_trick = state.get("current_trick") or {}
+    known_ids.update(current_trick.get("cards") or [])
+
+    rank_counts: Dict[int, int] = {}
+    wild_count = 0
+    joker_counts = {"small": 0, "big": 0}
+    unknown_total = 0
+    for card in _full_deck():
+        if card["id"] in known_ids:
+            continue
+        unknown_total += 1
+        if _is_joker(card):
+            joker = card.get("joker")
+            if joker in joker_counts:
+                joker_counts[joker] += 1
+            continue
+        if _is_wild(card, level_rank):
+            wild_count += 1
+            continue
+        rank = card.get("rank")
+        if rank is None:
+            continue
+        rank_counts[rank] = rank_counts.get(rank, 0) + 1
+    return unknown_total, rank_counts, wild_count, joker_counts
+
+
+def _reply_rank_probability(
+    unknown_total: int,
+    rank_counts: Dict[int, int],
+    hand_count: int,
+    rank: int,
+    need: int,
+) -> float:
+    return _hypergeom_at_least(unknown_total, rank_counts.get(rank, 0), hand_count, need)
+
+
+def _opponent_same_type_reply_probability(
+    state: Dict,
+    opponent_id: str,
+    combo: Dict,
+    unknown_total: int,
+    rank_counts: Dict[int, int],
+    wild_count: int,
+) -> float:
+    combo_type = combo.get("type") or ""
+    hand_count = len(state["players"].get(opponent_id, {}).get("hand", []))
+    if hand_count <= 0:
+        return 0.0
+
+    level_rank = state["level_rank"]
+    if state.get("pass_limits", {}).get(opponent_id):
+        if not _bot_estimate_opponent_can_beat(state, opponent_id, combo):
+            return 0.0
+
+    wild_relief = min(0.08, wild_count * 0.025 * min(1.0, hand_count / 18.0))
+    rank_prob_cache: Dict[Tuple[int, int], float] = {}
+
+    def rank_prob(rank: int, need: int) -> float:
+        key = (rank, need)
+        cached = rank_prob_cache.get(key)
+        if cached is not None:
+            return cached
+        value = _reply_rank_probability(unknown_total, rank_counts, hand_count, rank, need)
+        rank_prob_cache[key] = value
+        return value
+
+    if combo_type == "single":
+        threshold = combo.get("rank_value", 0)
+        hits = sum(
+            count
+            for rank, count in rank_counts.items()
+            if _point_order_value(rank, level_rank) > threshold
+        )
+        hits += wild_count
+        return _hypergeom_hit_probability(unknown_total, hits, hand_count)
+
+    if combo_type == "pair":
+        threshold = combo.get("rank_value", 0)
+        probs = [
+            rank_prob(rank, 2)
+            for rank in range(2, 15)
+            if _point_order_value(rank, level_rank) > threshold
+        ]
+        return min(1.0, _aggregate_event_probability(probs) + wild_relief)
+
+    if combo_type == "three":
+        threshold = combo.get("rank_value", 0)
+        probs = [
+            rank_prob(rank, 3)
+            for rank in range(2, 15)
+            if _point_order_value(rank, level_rank) > threshold
+        ]
+        return min(1.0, _aggregate_event_probability(probs) + wild_relief)
+
+    if combo_type == "full_house":
+        threshold = combo.get("rank_value", 0)
+        probs: List[float] = []
+        pair_probs = {
+            rank: rank_prob(rank, 2)
+            for rank in range(2, 15)
+        }
+        for triple_rank in range(2, 15):
+            if _point_order_value(triple_rank, level_rank) <= threshold:
+                continue
+            triple_prob = rank_prob(triple_rank, 3)
+            if triple_prob <= 0.0:
+                continue
+            pair_prob = _aggregate_event_probability(
+                [prob for rank, prob in pair_probs.items() if rank != triple_rank]
+            )
+            probs.append(triple_prob * pair_prob)
+        return min(1.0, _aggregate_event_probability(probs) + wild_relief)
+
+    if combo_type == "straight":
+        threshold = combo.get("high_value", 0)
+        probs = []
+        sequences = [([14, 2, 3, 4, 5], 5)]
+        sequences.extend((list(range(start, start + 5)), start + 4) for start in range(2, 11))
+        for seq, high_value in sequences:
+            if high_value <= threshold:
+                continue
+            probs.append(math.prod(rank_prob(rank, 1) for rank in seq))
+        return min(1.0, _aggregate_event_probability(probs) + wild_relief)
+
+    if combo_type == "three_pairs":
+        threshold = combo.get("high_value", 0)
+        probs = []
+        for start in range(2, 14):
+            high_value = start + 2
+            if high_value <= threshold or high_value > 14:
+                continue
+            seq = [start, start + 1, start + 2]
+            probs.append(math.prod(rank_prob(rank, 2) for rank in seq))
+        return min(1.0, _aggregate_event_probability(probs) + wild_relief)
+
+    if combo_type == "steel_plate":
+        threshold = combo.get("high_value", 0)
+        probs = []
+        for start in range(2, 14):
+            high_value = start + 1
+            if high_value <= threshold or high_value > 14:
+                continue
+            seq = [start, start + 1]
+            probs.append(math.prod(rank_prob(rank, 3) for rank in seq))
+        return min(1.0, _aggregate_event_probability(probs) + wild_relief)
+
+    return 0.0
+
+
+def _opponent_bomb_reply_probability(
+    state: Dict,
+    opponent_id: str,
+    combo: Dict,
+    unknown_total: int,
+    rank_counts: Dict[int, int],
+    joker_counts: Dict[str, int],
+) -> float:
+    if combo.get("type") in BOMB_TYPES:
+        return 0.0
+    hand_count = len(state["players"].get(opponent_id, {}).get("hand", []))
+    if hand_count <= 0:
+        return 0.0
+
+    bomb_probs = [
+        _reply_rank_probability(unknown_total, rank_counts, hand_count, rank, 4)
+        for rank in range(2, 15)
+        if rank_counts.get(rank, 0) >= 4
+    ]
+    bomb_prob = _aggregate_event_probability(bomb_probs)
+    heavenly_prob = 0.0
+    if joker_counts.get("small", 0) > 0 and joker_counts.get("big", 0) > 0:
+        small = _hypergeom_hit_probability(unknown_total, joker_counts["small"], hand_count)
+        big = _hypergeom_hit_probability(unknown_total, joker_counts["big"], hand_count)
+        heavenly_prob = small * big
+    return min(1.0, bomb_prob * 0.35 + heavenly_prob * 0.2)
+
+
+def _lead_initiative_retention_bonus(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+) -> float:
+    if state.get("current_trick"):
+        return 0.0
+
+    combo_type = combo.get("type") or ""
+    if combo_type not in ("three", "full_house", "straight", "three_pairs", "steel_plate"):
+        return 0.0
+
+    hand = state["players"][player_id]["hand"]
+    hand_map = _map_hand_by_id(hand)
+    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+    level_rank = state["level_rank"]
+    if not play_cards:
+        return 0.0
+    if _cards_use_special_material(play_cards, level_rank):
+        return 0.0
+
+    remaining = _remove_cards(hand, cards)
+    if not remaining or len(play_cards) >= len(hand):
+        return 0.0
+
+    opponents = [
+        pid
+        for pid in state.get("turn_order", [])
+        if _team_of(state, pid) != _team_of(state, player_id) and not state["players"][pid]["finished"]
+    ]
+    if not opponents:
+        return 0.0
+
+    unknown_total, rank_counts, wild_count, joker_counts = _lead_unknown_pool_profile(state, player_id)
+    if unknown_total <= 0:
+        return 0.0
+
+    opponent_reply_probs = []
+    same_type_reply = 0.0
+    for opponent_id in opponents:
+        same_type_prob = _opponent_same_type_reply_probability(
+            state,
+            opponent_id,
+            combo,
+            unknown_total,
+            rank_counts,
+            wild_count,
+        )
+        bomb_prob = _opponent_bomb_reply_probability(
+            state,
+            opponent_id,
+            combo,
+            unknown_total,
+            rank_counts,
+            joker_counts,
+        )
+        same_type_reply = max(same_type_reply, same_type_prob)
+        opponent_reply_probs.append(1.0 - (1.0 - same_type_prob) * (1.0 - bomb_prob))
+
+    any_reply = _aggregate_event_probability(opponent_reply_probs)
+    hold_prob = max(0.0, 1.0 - any_reply)
+
+    after = _hand_decomposition_summary(remaining, level_rank)
+    same_type_reentry = _lead_same_type_reentry_bonus(state, player_id, cards, combo)
+    control_stock = _control_card_score(remaining, level_rank)
+    recovery = 0.0
+    if same_type_reentry > 0.0:
+        recovery += min(0.55, same_type_reentry / 7.0)
+    if control_stock > 0.0:
+        recovery += min(0.28, control_stock / 16.0)
+    if after.get("bomb_turns", 0.0) > 0.0:
+        recovery += min(0.22, after.get("bomb_turns", 0.0) * 0.16)
+    if after.get("control_singles", 0.0) > 0.0:
+        recovery += min(0.16, after.get("control_singles", 0.0) * 0.07)
+    recovery = min(1.0, recovery)
+
+    score = (hold_prob - 0.5) * 16.0
+    score += (recovery - 0.42) * any_reply * 6.0
+    if same_type_reply >= 0.58 and recovery < 0.45:
+        score -= (same_type_reply - 0.58) * 9.0
+    if hold_prob >= 0.62:
+        score += min(3.4, (hold_prob - 0.62) * 7.5)
+    if any_reply >= 0.7:
+        score -= min(3.6, (any_reply - 0.7) * 9.0)
+    if combo_type == "pair":
+        return max(-4.5, min(0.0, score * 0.7))
+    return max(-8.0, min(9.5, score))
+
+
 def _opening_safe_group_leads(
     state: Dict,
     player_id: str,
@@ -1088,6 +1389,41 @@ def _opening_safe_group_leads(
     return options
 
 
+def _opening_safe_structured_leads(
+    state: Dict,
+    player_id: str,
+    exclude_cards: Optional[List[int]] = None,
+) -> List[Tuple[List[int], Dict]]:
+    hand = state["players"][player_id]["hand"]
+    level_rank = state["level_rank"]
+    hand_map = _map_hand_by_id(hand)
+    exclude_key = tuple(sorted(exclude_cards or []))
+    options: List[Tuple[List[int], Dict]] = []
+    specs = (
+        (_list_straight_options, "straight", 10),
+        (_list_three_pairs_options, "three_pairs", 6),
+        (_list_steel_plate_options, "steel_plate", 6),
+    )
+    for builder, expected_type, max_value in specs:
+        for cards in builder(hand, level_rank, 0):
+            if tuple(sorted(cards)) == exclude_key:
+                continue
+            play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+            combo = _evaluate_combo(play_cards, level_rank, state.get("config", {}))
+            if not combo or combo.get("type") != expected_type:
+                continue
+            if _cards_use_special_material(play_cards, level_rank):
+                continue
+            if _combo_numeric_value(combo) > max_value:
+                continue
+            if _group_fragment_penalty(hand, cards, level_rank, combo) > 1.6:
+                continue
+            if _control_group_break_penalty(hand, cards, level_rank) > 2.6:
+                continue
+            options.append((cards, combo))
+    return options
+
+
 def _lead_opening_commitment_penalty(
     state: Dict,
     player_id: str,
@@ -1109,7 +1445,11 @@ def _lead_opening_commitment_penalty(
         return 0.0
 
     combo_type = combo.get("type") or ""
+    level_rank = state["level_rank"]
+    hand_map = _map_hand_by_id(hand)
+    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
     cheap_groups = _opening_safe_group_leads(state, player_id, cards)
+    cheap_structures = _opening_safe_structured_leads(state, player_id, cards)
     if combo_type in ("pair", "three"):
         if not cheap_groups:
             return 0.0
@@ -1117,10 +1457,16 @@ def _lead_opening_commitment_penalty(
         uses_special = bool(combo.get("uses_wild"))
         if combo_type == "pair" and combo_value <= 58 and not uses_special:
             patience = 3.9 - max(0.0, combo_value - 50.0) * 0.48
-            return -max(1.2, patience)
+            reserve_penalty = 0.0
+            if cheap_structures and combo_value >= 55:
+                reserve_penalty = min(5.8, 4.0 + max(0.0, combo_value - 55.0) * 0.8)
+            return reserve_penalty - max(1.2, patience)
         if combo_type == "three" and combo_value <= 56 and not uses_special:
             patience = 2.8 - max(0.0, combo_value - 48.0) * 0.32
-            return -max(0.9, patience)
+            reserve_penalty = 0.0
+            if cheap_structures and combo_value >= 54:
+                reserve_penalty = min(3.2, 1.6 + max(0.0, combo_value - 54.0) * 0.45)
+            return reserve_penalty - max(0.9, patience)
         penalty = 0.0
         if combo_type == "pair":
             penalty += 2.2
@@ -1151,6 +1497,25 @@ def _lead_opening_commitment_penalty(
         penalty += 1.2
     elif combo_type in ("straight", "three_pairs", "steel_plate") and combo_value >= 58:
         penalty += 1.8
+
+    if (
+        penalty > 0.0
+        and combo_type in ("straight", "three_pairs", "steel_plate")
+        and play_cards
+        and not _cards_use_special_material(play_cards, level_rank)
+    ):
+        before = _hand_decomposition_summary(hand, level_rank)
+        after = _hand_decomposition_summary(_remove_cards(hand, cards), level_rank)
+        turn_bonus = max(0.0, _lead_turn_efficiency_bonus(state, player_id, cards, combo))
+        retention_bonus = _lead_initiative_retention_bonus(state, player_id, cards, combo)
+        relief = min(6.2, turn_bonus * 1.65)
+        if after.get("group_turns", 0.0) >= max(2.0, before.get("group_turns", 0.0) - 1.0):
+            relief += 2.8
+        if after.get("low_singles", 0.0) <= before.get("low_singles", 0.0):
+            relief += 1.2
+        if retention_bonus > -6.5:
+            relief += min(3.6, (retention_bonus + 6.5) * 1.55)
+        penalty = max(0.0, penalty - relief)
     return penalty
 
 
@@ -3515,6 +3880,9 @@ def _bot_score_components(
         reentry_bonus = _lead_same_type_reentry_bonus(state, bot_id, cards, combo)
         if reentry_bonus > 0.001:
             components["lead_reentry"] = reentry_bonus
+        retention_bonus = _lead_initiative_retention_bonus(state, bot_id, cards, combo)
+        if abs(retention_bonus) > 0.001:
+            components["lead_hold"] = retention_bonus
 
     if depth >= 2 and remaining:
         lead_cards = _choose_lead_play(remaining, level_rank, config, state, bot_id)
