@@ -180,6 +180,106 @@ def _teammate_protect_bonus(state: Dict, player_id: str) -> float:
     return bonus
 
 
+def _public_card_single_value(card: Dict, level_rank: int) -> int:
+    joker = card.get("joker")
+    if joker == "big":
+        return 100
+    if joker == "small":
+        return 90
+    if card.get("is_wild"):
+        return 70
+    rank = card.get("rank")
+    if rank is None:
+        return 0
+    return _point_order_value(rank, level_rank)
+
+
+def _teammate_public_history_profile(state: Dict, player_id: str) -> Dict[str, float]:
+    teammate = _teammate_of(state, player_id)
+    profile = {
+        "confidence": 0.0,
+        "play_count": 0.0,
+        "pass_count": 0.0,
+        "single_lane": 0.0,
+        "pair_lane": 0.0,
+        "three_lane": 0.0,
+        "structure_lane": 0.0,
+        "low_single_revealed": 0.0,
+        "control_revealed": 0.0,
+        "last_hand_after": 99.0,
+    }
+    if not teammate:
+        return profile
+
+    round_entries = state.get("round_memories") or []
+    round_entry = round_entries[-1] if round_entries else None
+    if not round_entry:
+        return profile
+
+    actions: List[Dict] = []
+    for trick in round_entry.get("tricks", []) or []:
+        for action in trick.get("actions", []) or []:
+            if action.get("player_id") == teammate:
+                actions.append(action)
+    if not actions:
+        return profile
+
+    play_actions = [action for action in actions if action.get("type") == "play"]
+    pass_count = sum(1 for action in actions if action.get("type") == "pass")
+    profile["play_count"] = float(len(play_actions))
+    profile["pass_count"] = float(pass_count)
+    if not play_actions:
+        profile["confidence"] = min(0.35, pass_count * 0.08)
+        return profile
+
+    total = max(1, len(play_actions))
+    level_rank = state["level_rank"]
+    for idx, action in enumerate(play_actions):
+        weight = 0.7 + ((idx + 1) / total) * 0.6
+        combo_type = action.get("combo_type") or ""
+        hand_after = action.get("hand_count_after")
+        if hand_after is not None:
+            profile["last_hand_after"] = float(hand_after)
+
+        if combo_type == "single":
+            cards = action.get("cards") or []
+            value = max((_public_card_single_value(card, level_rank) for card in cards), default=0)
+            lane = 0.9
+            if value <= 58:
+                profile["low_single_revealed"] += weight
+                lane += 0.25
+            elif value >= 80:
+                profile["control_revealed"] += weight
+                lane += 0.35
+            profile["single_lane"] += weight * lane
+        elif combo_type == "pair":
+            profile["pair_lane"] += weight * 1.0
+        elif combo_type == "three":
+            profile["three_lane"] += weight * 1.15
+        elif combo_type == "full_house":
+            profile["pair_lane"] += weight * 0.65
+            profile["three_lane"] += weight * 0.9
+            profile["structure_lane"] += weight * 0.75
+        elif combo_type == "straight":
+            profile["structure_lane"] += weight * 1.0
+        elif combo_type == "three_pairs":
+            profile["pair_lane"] += weight * 1.0
+            profile["structure_lane"] += weight * 1.15
+        elif combo_type == "steel_plate":
+            profile["three_lane"] += weight * 0.95
+            profile["structure_lane"] += weight * 1.2
+        elif combo_type in BOMB_TYPES:
+            profile["control_revealed"] += weight * 0.8
+
+    confidence = 0.22 * len(play_actions) + 0.06 * pass_count
+    if profile["last_hand_after"] <= 8:
+        confidence += 0.12
+    if profile["last_hand_after"] <= 5:
+        confidence += 0.12
+    profile["confidence"] = min(1.0, confidence)
+    return profile
+
+
 def _has_natural_same_type_response(
     state: Dict,
     player_id: str,
@@ -604,7 +704,7 @@ def _lead_special_material_penalty(
     if state.get("current_trick"):
         return 0.0
     combo_type = combo.get("type") or ""
-    if combo_type not in ("three", "full_house", "straight", "three_pairs", "steel_plate"):
+    if combo_type not in ("single", "pair", "three", "full_house", "straight", "three_pairs", "steel_plate"):
         return 0.0
 
     hand = state["players"][player_id]["hand"]
@@ -614,9 +714,10 @@ def _lead_special_material_penalty(
         return 0.0
 
     penalty = {
-        "pair": 1.2,
-        "three": 2.0,
-        "full_house": 4.2,
+        "single": 2.6,
+        "pair": 4.6,
+        "three": 5.0,
+        "full_house": 6.2,
         "straight": 6.4,
         "three_pairs": 6.8,
         "steel_plate": 6.2,
@@ -627,14 +728,28 @@ def _lead_special_material_penalty(
     same_type_value = natural_values.get(combo_type)
     if same_type_value is not None:
         penalty += {
-            "pair": 2.0,
-            "three": 2.8,
+            "single": 4.8,
+            "pair": 7.4,
+            "three": 6.0,
             "full_house": 5.4,
             "straight": 4.2,
             "three_pairs": 4.8,
             "steel_plate": 4.5,
         }.get(combo_type, 0.0)
         penalty += min(2.6, max(0.0, same_type_value - current_value) * 0.22)
+
+    if combo_type in ("single", "pair", "three"):
+        cheap_groups = _opening_safe_group_leads(state, player_id, cards)
+        if cheap_groups:
+            penalty += {
+                "single": 1.2,
+                "pair": 4.2,
+                "three": 2.8,
+            }.get(combo_type, 0.0)
+        if combo_type == "single" and "pair" in natural_values:
+            penalty += 1.8
+        elif combo_type == "pair" and "three" in natural_values:
+            penalty += 1.0
 
     if combo_type in ("straight", "three_pairs", "steel_plate"):
         if "full_house" in natural_values:
@@ -645,8 +760,15 @@ def _lead_special_material_penalty(
         if "three" in natural_values and "pair" in natural_values:
             penalty += 1.2
 
-    if len(hand) >= 18 and combo_type in ("straight", "three_pairs", "steel_plate", "full_house"):
-        penalty += 1.1
+    if len(hand) >= 18 and combo_type in ("pair", "three", "full_house", "straight", "three_pairs", "steel_plate"):
+        penalty += {
+            "pair": 0.9,
+            "three": 0.7,
+            "full_house": 1.4,
+            "straight": 1.1,
+            "three_pairs": 1.2,
+            "steel_plate": 1.1,
+        }.get(combo_type, 0.0)
     return penalty
 
 
@@ -794,6 +916,7 @@ def _lead_teammate_support_bonus(
     teammate_hand = state["players"][teammate]["hand"]
     if not teammate_hand:
         return 0.0
+    history = _teammate_public_history_profile(state, player_id)
 
     opponent_turns = [
         _estimated_turns_to_finish(state["players"][pid]["hand"], level_rank)
@@ -855,6 +978,42 @@ def _lead_teammate_support_bonus(
             bonus -= 0.8 + min(1.6, max(0.0, combo_value - limit) * 0.12)
         else:
             bonus += 0.6
+
+    confidence = history.get("confidence", 0.0)
+    if confidence > 0.001:
+        history_delta = 0.0
+        last_hand_after = history.get("last_hand_after", 99.0)
+        if combo_type == "single":
+            history_delta += history.get("single_lane", 0.0) * 0.9
+            history_delta += history.get("control_revealed", 0.0) * 0.16
+            history_delta -= history.get("pair_lane", 0.0) * 0.24
+            history_delta -= history.get("three_lane", 0.0) * 0.32
+            history_delta -= history.get("structure_lane", 0.0) * 0.28
+            if combo_value <= 58:
+                history_delta += history.get("low_single_revealed", 0.0) * 0.34
+            elif combo_value >= 80:
+                history_delta -= 0.75
+        elif combo_type == "pair":
+            history_delta += history.get("pair_lane", 0.0) * 0.86
+            history_delta += history.get("structure_lane", 0.0) * 0.18
+            history_delta -= history.get("single_lane", 0.0) * 0.18
+            if last_hand_after <= 8 and combo_value <= 60:
+                history_delta += 0.6
+        elif combo_type == "three":
+            history_delta += history.get("three_lane", 0.0) * 0.92
+            history_delta += history.get("structure_lane", 0.0) * 0.22
+            history_delta -= history.get("single_lane", 0.0) * 0.16
+            if last_hand_after <= 8 and combo_value <= 62:
+                history_delta += 0.5
+        elif combo_type == "full_house":
+            history_delta += history.get("three_lane", 0.0) * 0.32
+            history_delta += history.get("pair_lane", 0.0) * 0.24
+            history_delta += history.get("structure_lane", 0.0) * 0.14
+        elif combo_type in ("straight", "three_pairs", "steel_plate"):
+            history_delta += history.get("structure_lane", 0.0) * 0.18
+            history_delta += max(history.get("pair_lane", 0.0), history.get("three_lane", 0.0)) * 0.08
+            history_delta -= history.get("single_lane", 0.0) * 0.08
+        bonus += max(-2.4, min(3.2, history_delta * 0.55 * confidence))
     return bonus * factor
 
 
@@ -897,6 +1056,102 @@ def _lead_speculative_followup_penalty(
     if combo_value >= 80:
         return 0.0
     return 3.6 if len(remaining) >= 5 else 2.0
+
+
+def _opening_safe_group_leads(
+    state: Dict,
+    player_id: str,
+    exclude_cards: Optional[List[int]] = None,
+) -> List[Tuple[List[int], Dict]]:
+    hand = state["players"][player_id]["hand"]
+    level_rank = state["level_rank"]
+    hand_map = _map_hand_by_id(hand)
+    exclude_key = tuple(sorted(exclude_cards or []))
+    options: List[Tuple[List[int], Dict]] = []
+    for size, max_value in ((2, 58), (3, 56)):
+        for cards in _list_rank_group_options(hand, level_rank, 0, size):
+            if tuple(sorted(cards)) == exclude_key:
+                continue
+            play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+            combo = _evaluate_combo(play_cards, level_rank, state.get("config", {}))
+            if not combo or combo.get("type") not in ("pair", "three"):
+                continue
+            if _cards_use_special_material(play_cards, level_rank):
+                continue
+            if _combo_numeric_value(combo) > max_value:
+                continue
+            if _group_fragment_penalty(hand, cards, level_rank, combo) > 1.2:
+                continue
+            if _control_group_break_penalty(hand, cards, level_rank) > 1.2:
+                continue
+            options.append((cards, combo))
+    return options
+
+
+def _lead_opening_commitment_penalty(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+) -> float:
+    if state.get("current_trick"):
+        return 0.0
+
+    hand = state["players"][player_id]["hand"]
+    if len(hand) < 18:
+        return 0.0
+    active_counts = [
+        len(state["players"][pid]["hand"])
+        for pid in state.get("turn_order", [])
+        if not state["players"][pid]["finished"]
+    ]
+    if not active_counts or min(active_counts) < 18:
+        return 0.0
+
+    combo_type = combo.get("type") or ""
+    cheap_groups = _opening_safe_group_leads(state, player_id, cards)
+    if combo_type in ("pair", "three"):
+        if not cheap_groups:
+            return 0.0
+        combo_value = _combo_numeric_value(combo)
+        uses_special = bool(combo.get("uses_wild"))
+        if combo_type == "pair" and combo_value <= 58 and not uses_special:
+            patience = 3.9 - max(0.0, combo_value - 50.0) * 0.48
+            return -max(1.2, patience)
+        if combo_type == "three" and combo_value <= 56 and not uses_special:
+            patience = 2.8 - max(0.0, combo_value - 48.0) * 0.32
+            return -max(0.9, patience)
+        penalty = 0.0
+        if combo_type == "pair":
+            penalty += 2.2
+            if combo_value >= 60:
+                penalty += min(3.4, max(0.0, combo_value - 58) * 0.18)
+        else:
+            penalty += 3.6
+            if combo_value >= 58:
+                penalty += min(4.2, max(0.0, combo_value - 56) * 0.2)
+        if uses_special:
+            penalty += 2.4 if combo_type == "pair" else 2.0
+        return penalty
+
+    if combo_type not in ("full_house", "straight", "three_pairs", "steel_plate"):
+        return 0.0
+
+    penalty = 0.0
+    if cheap_groups:
+        penalty += 7.8
+        if combo_type == "full_house":
+            penalty += 6.4
+        else:
+            penalty += 7.2
+    if combo.get("uses_wild"):
+        penalty += 3.8 if combo_type == "full_house" else 4.6
+    combo_value = _combo_numeric_value(combo)
+    if combo_type == "full_house" and combo_value >= 58:
+        penalty += 1.2
+    elif combo_type in ("straight", "three_pairs", "steel_plate") and combo_value >= 58:
+        penalty += 1.8
+    return penalty
 
 
 def _lead_single_initiative_penalty(hand: List[Dict], cards: List[int], level_rank: int) -> float:
@@ -3131,6 +3386,13 @@ def _bot_score_components(
     control_break = _control_group_break_penalty(hand, cards, level_rank)
     if control_break > 0.001 and combo["type"] not in BOMB_TYPES:
         components["control_break_penalty"] = -control_break
+    fragment_penalty = _group_fragment_penalty(hand, cards, level_rank, combo)
+    if (
+        fragment_penalty > 0.001
+        and not current_trick
+        and combo["type"] in ("single", "pair", "three")
+    ):
+        components["fragment_penalty"] = -fragment_penalty * 1.12
     if current_trick:
         response_cost = _response_material_cost(state, bot_id, cards, combo)
         if response_cost > 0.001:
@@ -3230,6 +3492,11 @@ def _bot_score_components(
         speculative_penalty = _lead_speculative_followup_penalty(state, bot_id, cards, combo)
         if speculative_penalty > 0.001:
             components["lead_followup_risk"] = -speculative_penalty
+        opening_commitment = _lead_opening_commitment_penalty(state, bot_id, cards, combo)
+        if opening_commitment > 0.001:
+            components["lead_opening_commitment"] = -opening_commitment
+        elif opening_commitment < -0.001:
+            components["lead_opening_patience"] = -opening_commitment
         overreach_penalty = _lead_structure_overreach_penalty(hand, cards, combo, level_rank)
         if overreach_penalty > 0.001:
             components["lead_overreach"] = -overreach_penalty

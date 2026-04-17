@@ -1311,6 +1311,7 @@ def _lead_option_score(state: Dict, player_id: str, cards: List[int]) -> float:
     score += _lead_same_type_reentry_bonus(state, player_id, cards, combo)
     score += _lead_teammate_support_bonus(state, player_id, cards, combo)
     score -= _lead_speculative_followup_penalty(state, player_id, cards, combo)
+    score -= _lead_opening_commitment_penalty(state, player_id, cards, combo)
 
     if combo["type"] == "single":
         score -= _single_order_value(play_cards[0], state["level_rank"]) * 0.12
@@ -1741,6 +1742,10 @@ def _lead_speculative_followup_penalty(state: Dict, player_id: str, cards: List[
     raise RuntimeError("_lead_speculative_followup_penalty should be bound from guandan_ai")
 
 
+def _lead_opening_commitment_penalty(state: Dict, player_id: str, cards: List[int], combo: Dict) -> float:
+    raise RuntimeError("_lead_opening_commitment_penalty should be bound from guandan_ai")
+
+
 def _should_prune_weak_lead_single(
     state: Dict, player_id: str, cards: List[int], single_score: float, best_non_single_score: Optional[float]
 ) -> bool:
@@ -1936,6 +1941,7 @@ _AI_EXPORTED_FUNCS = (
     "_lead_turn_efficiency_bonus",
     "_lead_teammate_support_bonus",
     "_lead_speculative_followup_penalty",
+    "_lead_opening_commitment_penalty",
     "_minimal_bomb_response",
     "_single_lock_bonus",
     "_takeover_opportunity_score",
