@@ -1191,6 +1191,7 @@ def _response_material_cost(
     cost += shape_penalty * 0.8
     cost += control_break * 1.05
     cost += fragment_penalty
+    cost += _wild_structure_opportunity_loss(hand, cards, level_rank) * 1.15
 
     if current_combo and combo["type"] == current_combo.get("type"):
         margin = max(0, _combo_value(combo) - _combo_value(current_combo))
@@ -3507,6 +3508,14 @@ def _response_special_overuse_penalty(
     joker_count = sum(1 for card in play_cards if _is_joker(card))
 
     penalty = wild_count * 1.8 + joker_count * 2.6
+    structure_loss = _wild_structure_opportunity_loss(hand, cards, state["level_rank"])
+    if structure_loss > 0.0:
+        scale = 0.95
+        if combo_type in ("full_house", "straight", "three_pairs", "steel_plate"):
+            scale = 1.25
+        elif combo_type in ("pair", "three"):
+            scale = 1.05
+        penalty += structure_loss * scale
     if natural_alt:
         penalty += {
             "single": 6.5,
@@ -3558,6 +3567,76 @@ def _has_natural_level_straight_bridge(hand: List[Dict], level_rank: int) -> boo
             if combo and combo.get("type") == "straight":
                 return True
     return False
+
+
+def _wild_structure_potential(hand: List[Dict], level_rank: int) -> float:
+    info = _hand_info(hand, level_rank)
+    wild_count = len(info["wild_cards"])
+    if wild_count <= 0:
+        return 0.0
+
+    rank_counts = {rank: len(cards) for rank, cards in info["normals_by_rank"].items()}
+    potential = 0.0
+
+    for rank, count in rank_counts.items():
+        if count >= 3:
+            upgrade = min(wild_count, max(0, 8 - count))
+            if upgrade > 0:
+                base = 4.8 if count == 3 else 3.2
+                pressure = max(0.0, _point_order_value(rank, level_rank) - 50) * 0.04
+                potential += upgrade * (base + pressure)
+        elif count == 2:
+            potential += min(wild_count, 2) * 0.95
+
+    for start in range(2, 14):
+        if start + 2 > 14:
+            continue
+        need = 0
+        support = 0
+        for rank in (start, start + 1, start + 2):
+            count = rank_counts.get(rank, 0)
+            support += min(count, 2)
+            need += max(0, 2 - count)
+        if 0 < need <= wild_count and support >= 4:
+            potential += 2.4 + max(0.0, 3 - need) * 0.8
+
+    for start in range(2, 14):
+        if start + 1 > 14:
+            continue
+        need = 0
+        support = 0
+        for rank in (start, start + 1):
+            count = rank_counts.get(rank, 0)
+            support += min(count, 3)
+            need += max(0, 3 - count)
+        if 0 < need <= wild_count and support >= 4:
+            potential += 3.0 + max(0.0, 3 - need) * 1.0
+
+    suit_maps = info["normals_by_suit"]
+    for suit in ("spades", "hearts", "clubs", "diamonds"):
+        suit_map = suit_maps.get(suit, {})
+        for seq, high_value in _CORE.STRAIGHT_SEQUENCES:
+            need = 0
+            present = 0
+            for rank in seq:
+                if suit_map.get(rank):
+                    present += 1
+                else:
+                    need += 1
+            if 0 < need <= wild_count and present >= 4:
+                premium = 1.0 if high_value >= 11 else 0.0
+                potential += 3.6 + premium + max(0.0, 2 - need) * 0.8
+
+    return potential
+
+
+def _wild_structure_opportunity_loss(hand: List[Dict], cards: List[int], level_rank: int) -> float:
+    before = _wild_structure_potential(hand, level_rank)
+    if before <= 0.0:
+        return 0.0
+    remaining = _remove_cards(hand, cards)
+    after = _wild_structure_potential(remaining, level_rank)
+    return max(0.0, before - after)
 
 
 def _level_response_flexibility_bonus(
@@ -4183,6 +4262,7 @@ def _hand_structure_metrics(hand: List[Dict], level_rank: int) -> Dict[str, floa
             "turn_savings": 0.0,
             "shape_synergy": 0.0,
             "bomb_reserve": 0.0,
+            "wild_structure_potential": 0.0,
             "decomp_score": 0.0,
             "decomp_turns": 0.0,
             "decomp_singles": 0.0,
@@ -4287,6 +4367,7 @@ def _hand_structure_metrics(hand: List[Dict], level_rank: int) -> Dict[str, floa
         "turn_savings": turn_savings,
         "shape_synergy": shape_synergy,
         "bomb_reserve": bomb_reserve,
+        "wild_structure_potential": _wild_structure_potential(hand, level_rank),
         "decomp_score": float(decomp.get("score", 0.0)),
         "decomp_turns": float(decomp.get("turns", 0.0)),
         "decomp_singles": float(decomp.get("singles", 0.0)),
@@ -4332,6 +4413,7 @@ def _hand_strength_score(hand: List[Dict], level_rank: int) -> float:
         score += 0.6
     score += min(6.0, metrics["turn_savings"] * 0.55)
     score += min(7.0, metrics["bomb_reserve"])
+    score += min(8.5, metrics["wild_structure_potential"] * 0.52)
     score += min(9.0, metrics["decomp_score"] * 0.42)
     score += min(4.0, max(0.0, len(hand) - metrics["decomp_turns"]) * 0.52)
     score -= metrics["decomp_low_singles"] * 0.55
