@@ -183,6 +183,184 @@ def _teammate_protect_bonus(state: Dict, player_id: str) -> float:
     return bonus
 
 
+def _teammate_backstop_confidence(
+    state: Dict,
+    player_id: str,
+    combo: Optional[Dict] = None,
+) -> float:
+    current_trick = state.get("current_trick")
+    teammate = _teammate_of(state, player_id)
+    if not current_trick or not teammate:
+        return 0.0
+    if state["players"][teammate]["finished"]:
+        return 0.0
+    if teammate in (state.get("trick_plays") or {}):
+        return 0.0
+
+    leader = current_trick.get("player_id")
+    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+        return 0.0
+
+    trick_combo = combo or current_trick.get("combo") or {}
+    combo_type = trick_combo.get("type") or ""
+    confidence = 0.05
+    teammate_history = _teammate_public_history_profile(state, player_id)
+    confidence += teammate_history.get("confidence", 0.0) * 0.18
+
+    teammate_left = len(state["players"][teammate]["hand"])
+    if teammate_left <= 6:
+        confidence += 0.08
+    if teammate_left <= 3:
+        confidence += 0.05
+
+    limits = state.get("pass_limits", {}).get(teammate, {})
+    limit = limits.get(combo_type)
+    if limit is not None:
+        if limit >= _combo_numeric_value(trick_combo):
+            confidence += 0.24
+        else:
+            confidence -= 0.04
+
+    if combo_type == "single":
+        confidence += _teammate_future_control_probability(state, player_id) * 0.55
+    elif combo_type == "pair":
+        confidence += min(0.12, teammate_history.get("pair_lane", 0.0) * 0.03)
+    elif combo_type == "three":
+        confidence += min(0.12, teammate_history.get("three_lane", 0.0) * 0.025)
+    elif combo_type in ("full_house", "straight", "three_pairs", "steel_plate"):
+        confidence += min(0.1, teammate_history.get("structure_lane", 0.0) * 0.02)
+
+    return max(0.0, min(0.72, confidence))
+
+
+def _short_enemy_defer_bomb_risk_penalty(state: Dict, player_id: str) -> float:
+    current_trick = state.get("current_trick")
+    if not current_trick:
+        return 0.0
+    leader = current_trick.get("player_id")
+    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+        return 0.0
+
+    combo = current_trick.get("combo") or {}
+    combo_type = combo.get("type") or ""
+    if combo_type not in ("single", "pair", "three", "full_house", "straight", "three_pairs", "steel_plate"):
+        return 0.0
+
+    leader_left = len(state["players"].get(leader, {}).get("hand", []))
+    if leader_left > 6:
+        return 0.0
+
+    minimal_bomb = _minimal_bomb_response(
+        state["players"][player_id]["hand"],
+        state["level_rank"],
+        combo,
+        state.get("config", {}),
+    )
+    if minimal_bomb is None:
+        return 0.0
+    takeover = _best_takeover_opportunity(state, player_id)
+
+    combo_value = _combo_numeric_value(combo)
+    if combo_type == "single" and combo_value < 80:
+        return 0.0
+    if combo_type in ("pair", "three") and combo_value < 80 and leader_left > 4:
+        return 0.0
+
+    base = 0.0
+    if leader_left <= 6:
+        base += 4.0
+    if leader_left <= 4:
+        base += 5.0
+    if leader_left <= 2:
+        base += 6.5
+
+    if combo_type in ("full_house", "straight", "three_pairs", "steel_plate"):
+        base += 5.0
+    elif combo_type == "three":
+        base += 4.0
+    elif combo_type == "pair":
+        base += 3.0
+    elif combo_type == "single":
+        base += 2.0
+
+    if combo_value >= 80:
+        base += 1.5
+    if combo_type in ("straight", "three_pairs", "steel_plate") and combo_value >= 12:
+        base += 1.5
+
+    opponents_before_teammate = _opponents_before_teammate_this_trick(state, player_id)
+    lane_factor = 1.0 + opponents_before_teammate * 0.6
+    if opponents_before_teammate <= 0:
+        lane_factor *= 0.72
+
+    takeover_factor = 1.0 + min(0.45, max(0.0, takeover) / 18.0)
+    if takeover <= 0.0:
+        takeover_factor += 0.12
+    teammate_backstop = _teammate_backstop_confidence(state, player_id, combo)
+    return base * lane_factor * takeover_factor * (1.0 - teammate_backstop)
+
+
+def _short_enemy_bomb_takeover_bonus(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+    remaining: List[Dict],
+) -> float:
+    current_trick = state.get("current_trick")
+    if not current_trick or combo.get("type") not in BOMB_TYPES:
+        return 0.0
+
+    leader = current_trick.get("player_id")
+    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+        return 0.0
+
+    leader_left = len(state["players"].get(leader, {}).get("hand", []))
+    if leader_left > 6:
+        return 0.0
+
+    current_combo = current_trick.get("combo") or {}
+    current_type = current_combo.get("type") or ""
+    if current_type not in ("pair", "three", "full_house", "straight", "three_pairs", "steel_plate"):
+        return 0.0
+
+    base = 2.5
+    if leader_left <= 6:
+        base += 2.5
+    if leader_left <= 4:
+        base += 2.5
+    if leader_left <= 2:
+        base += 3.0
+
+    if current_type in ("full_house", "straight", "three_pairs", "steel_plate"):
+        base += 3.5
+    elif current_type == "three":
+        base += 2.2
+    else:
+        base += 1.4
+
+    minimal = _minimal_bomb_response(
+        state["players"][player_id]["hand"],
+        state["level_rank"],
+        current_combo,
+        state.get("config", {}),
+    )
+    if minimal is not None and tuple(sorted(minimal)) == tuple(sorted(cards)):
+        base += 2.4
+
+    if not remaining:
+        base += 6.0
+    elif len(remaining) <= 4:
+        base += 3.2
+    else:
+        after_turns = _estimated_turns_to_finish(remaining, state["level_rank"])
+        if after_turns <= 2.2:
+            base += 2.0
+
+    teammate_backstop = _teammate_backstop_confidence(state, player_id, current_combo)
+    return base * max(0.45, 1.0 - teammate_backstop)
+
+
 def _public_card_single_value(card: Dict, level_rank: int) -> int:
     joker = card.get("joker")
     if joker == "big":
@@ -5497,6 +5675,9 @@ def _bot_score_components(
                     if leader_left <= 6 and combo_type in ("single", "pair", "three") and combo_value >= 80:
                         pass_cap += 3.0
                     components["pass_opportunity_cost"] = -min(pass_cap, opportunity * 1.55)
+                short_enemy_defer_risk = _short_enemy_defer_bomb_risk_penalty(state, bot_id)
+                if short_enemy_defer_risk > 0.001:
+                    components["pass_short_enemy_defer_risk"] = -short_enemy_defer_risk
                 if bomb_profile:
                     rank_pressure = bomb_profile["rank_pressure"]
                     if rank_pressure <= 2.5:
@@ -5650,6 +5831,9 @@ def _bot_score_components(
             closeout_bonus = _bomb_response_closeout_bonus(state, bot_id, cards, combo, remaining)
             if closeout_bonus > 0.001:
                 components["bomb_closeout_ev"] = closeout_bonus
+            short_enemy_bonus = _short_enemy_bomb_takeover_bonus(state, bot_id, cards, combo, remaining)
+            if short_enemy_bonus > 0.001:
+                components["bomb_short_enemy_block"] = short_enemy_bonus
         closeout_block = _opponent_one_card_closeout_bonus(state, bot_id, cards, combo)
         if closeout_block > 0.001:
             components["block_closeout"] = closeout_block
