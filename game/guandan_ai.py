@@ -6,6 +6,15 @@ from typing import Dict, List, Optional, Tuple
 
 BOMB_TYPES = ("bomb", "straight_flush", "heavenly")
 
+# Shared single-card strength bands used throughout Guandan heuristics.
+LOW_SINGLE_VALUE_MAX = 58
+CONTROL_SINGLE_VALUE_MIN = 60
+HIGH_CONTROL_SINGLE_VALUE_MIN = 70
+PREMIUM_SINGLE_VALUE_MIN = 80
+TOP_SINGLE_VALUE_MIN = 90
+
+UNKNOWN_PUBLIC_HAND_AFTER = 99.0
+
 _CORE = None
 
 
@@ -102,7 +111,7 @@ def _teammate_future_control_probability(state: Dict, player_id: str) -> float:
     if combo.get("type") != "single":
         return 0.0
     threshold = combo.get("rank_value", 0)
-    if threshold != 70:
+    if threshold != HIGH_CONTROL_SINGLE_VALUE_MIN:
         return 0.0
 
     level_rank = state["level_rank"]
@@ -388,7 +397,7 @@ def _teammate_public_history_profile(state: Dict, player_id: str) -> Dict[str, f
         "structure_lane": 0.0,
         "low_single_revealed": 0.0,
         "control_revealed": 0.0,
-        "last_hand_after": 99.0,
+        "last_hand_after": UNKNOWN_PUBLIC_HAND_AFTER,
     }
     if not teammate:
         return profile
@@ -427,10 +436,10 @@ def _teammate_public_history_profile(state: Dict, player_id: str) -> Dict[str, f
             cards = action.get("cards") or []
             value = max((_public_card_single_value(card, level_rank) for card in cards), default=0)
             lane = 0.9
-            if value <= 58:
+            if value <= LOW_SINGLE_VALUE_MAX:
                 profile["low_single_revealed"] += weight
                 lane += 0.25
-            elif value >= 80:
+            elif value >= PREMIUM_SINGLE_VALUE_MIN:
                 profile["control_revealed"] += weight
                 lane += 0.35
             profile["single_lane"] += weight * lane
@@ -473,7 +482,7 @@ def _public_history_profile_for_target(state: Dict, target_id: str) -> Dict[str,
         "structure_lane": 0.0,
         "low_single_revealed": 0.0,
         "control_revealed": 0.0,
-        "last_hand_after": 99.0,
+        "last_hand_after": UNKNOWN_PUBLIC_HAND_AFTER,
     }
     if not target_id:
         return profile
@@ -512,10 +521,10 @@ def _public_history_profile_for_target(state: Dict, target_id: str) -> Dict[str,
             cards = action.get("cards") or []
             value = max((_public_card_single_value(card, level_rank) for card in cards), default=0)
             lane = 0.9
-            if value <= 58:
+            if value <= LOW_SINGLE_VALUE_MAX:
                 profile["low_single_revealed"] += weight
                 lane += 0.25
-            elif value >= 80:
+            elif value >= PREMIUM_SINGLE_VALUE_MIN:
                 profile["control_revealed"] += weight
                 lane += 0.35
             profile["single_lane"] += weight * lane
@@ -1381,7 +1390,7 @@ def _lead_short_next_opponent_penalty(state: Dict, player_id: str, cards: List[i
         return 0.0
 
     rank_value = combo.get("rank_value", 0)
-    if rank_value >= 90:
+    if rank_value >= TOP_SINGLE_VALUE_MIN:
         return 0.0
 
     config = state.get("config", {})
@@ -1396,21 +1405,21 @@ def _lead_short_next_opponent_penalty(state: Dict, player_id: str, cards: List[i
         penalty = 24.0
         if remaining >= 5:
             penalty += 4.0
-        if rank_value < 60:
+        if rank_value < CONTROL_SINGLE_VALUE_MIN:
             penalty += 2.5
-        elif rank_value < 80:
+        elif rank_value < PREMIUM_SINGLE_VALUE_MIN:
             penalty += 1.0
         return penalty
 
-    pressure = max(0.0, 60.0 - float(rank_value))
+    pressure = max(0.0, float(CONTROL_SINGLE_VALUE_MIN) - float(rank_value))
     penalty = pressure * (1.45 if next_left <= 1 else 0.75)
     penalty += 6.0 if next_left <= 1 else 2.5
 
-    if rank_value >= 70:
+    if rank_value >= HIGH_CONTROL_SINGLE_VALUE_MIN:
         penalty *= 0.12
-    elif rank_value >= 60:
+    elif rank_value >= CONTROL_SINGLE_VALUE_MIN:
         penalty *= 0.42
-    elif rank_value >= 58:
+    elif rank_value >= LOW_SINGLE_VALUE_MAX:
         penalty *= 0.7
 
     remaining = max(0, len(hand) - len(cards))
@@ -1596,9 +1605,9 @@ def _teammate_lead_strength(state: Dict, player_id: str) -> float:
     if combo_type in BOMB_TYPES:
         return 18.0 + _bomb_tier(current_combo) * 2.0
     if combo_type == "single":
-        if value >= 90:
+        if value >= TOP_SINGLE_VALUE_MIN:
             return 16.0
-        if value >= 80:
+        if value >= PREMIUM_SINGLE_VALUE_MIN:
             return 13.0
         if value >= _point_order_value(14, level_rank):
             return 9.0
@@ -1693,7 +1702,7 @@ def _high_single_bomb_profile(state: Dict, player_id: str) -> Optional[Dict]:
     if not current_trick:
         return None
     current_combo = current_trick.get("combo") or {}
-    if current_combo.get("type") != "single" or current_combo.get("rank_value", 0) < 90:
+    if current_combo.get("type") != "single" or current_combo.get("rank_value", 0) < TOP_SINGLE_VALUE_MIN:
         return None
     hand = state["players"][player_id]["hand"]
     minimal = _minimal_bomb_response(hand, state["level_rank"], current_combo, state.get("config", {}))
@@ -1730,7 +1739,7 @@ def _critical_pair_three_bomb_bonus(
         return 0.0
     current_combo = current_trick.get("combo") or {}
     combo_type = current_combo.get("type")
-    if combo_type not in ("pair", "three") or current_combo.get("rank_value", 0) < 80:
+    if combo_type not in ("pair", "three") or current_combo.get("rank_value", 0) < PREMIUM_SINGLE_VALUE_MIN:
         return 0.0
 
     leader_left = len(state["players"].get(leader, {}).get("hand", []))
@@ -1779,9 +1788,9 @@ def _lead_low_single_escape_bonus(hand: List[Dict], cards: List[int], level_rank
     if before_count != 1:
         return 0.0
     value = _single_order_value(card, level_rank)
-    if value >= 58:
+    if value >= LOW_SINGLE_VALUE_MAX:
         return 0.0
-    bonus = 3.0 + (58 - value) * 0.55
+    bonus = 3.0 + (LOW_SINGLE_VALUE_MAX - value) * 0.55
     if len(hand) <= 5:
         bonus *= 1.2
     return bonus
@@ -1802,11 +1811,11 @@ def _lead_low_single_trap_penalty(hand: List[Dict], cards: List[int], level_rank
 
     for rank, count in counts.items():
         value = _point_order_value(rank, level_rank)
-        if count == 1 and value < 58:
-            low_single_burden += 3.0 + (58 - value) * 0.55
-        elif count == 1 and value >= 60:
+        if count == 1 and value < LOW_SINGLE_VALUE_MAX:
+            low_single_burden += 3.0 + (LOW_SINGLE_VALUE_MAX - value) * 0.55
+        elif count == 1 and value >= CONTROL_SINGLE_VALUE_MIN:
             control_singles += 1
-        elif count >= 2 and value >= 60:
+        elif count >= 2 and value >= CONTROL_SINGLE_VALUE_MIN:
             strong_pairs += 1
 
     if low_single_burden <= 0.001:
@@ -2400,11 +2409,15 @@ def _short_hand_singleton_pressure_weight(state: Dict, opponent_id: str, hand: L
             singleton_cards.append(card)
 
     singleton_count = len(singleton_cards)
-    premium_singletons = sum(1 for card in singleton_cards if _single_order_value(card, level_rank) >= 60)
-    control_singletons = sum(1 for card in singleton_cards if _single_order_value(card, level_rank) >= 80)
+    premium_singletons = sum(
+        1 for card in singleton_cards if _single_order_value(card, level_rank) >= CONTROL_SINGLE_VALUE_MIN
+    )
+    control_singletons = sum(
+        1 for card in singleton_cards if _single_order_value(card, level_rank) >= PREMIUM_SINGLE_VALUE_MIN
+    )
 
     weight = 1.0
-    if profile.get("single_lane", 0.0) >= 2.0 or profile.get("last_hand_after", 99.0) <= 8:
+    if profile.get("single_lane", 0.0) >= 2.0 or profile.get("last_hand_after", UNKNOWN_PUBLIC_HAND_AFTER) <= 8:
         if singleton_count <= 1:
             weight *= 1.18
         elif singleton_count == 2:
@@ -3100,9 +3113,9 @@ def _lead_short_opponent_breakup_penalty(
             alt_recovery += min(0.38, alt_after.get("bomb_turns", 0.0) * 0.18)
         if alt_combo.get("type") == "single":
             value = alt_combo.get("rank_value", 0)
-            if value <= 58:
+            if value <= LOW_SINGLE_VALUE_MAX:
                 alt_recovery += 0.22
-            elif value >= 80:
+            elif value >= PREMIUM_SINGLE_VALUE_MIN:
                 alt_recovery -= 0.1
         elif alt_combo.get("type") == "pair":
             alt_recovery += 0.18
@@ -3143,7 +3156,7 @@ def _opening_safe_group_leads(
     hand_map = _map_hand_by_id(hand)
     exclude_key = tuple(sorted(exclude_cards or []))
     options: List[Tuple[List[int], Dict]] = []
-    for size, max_value in ((2, 58), (3, 56)):
+    for size, max_value in ((2, LOW_SINGLE_VALUE_MAX), (3, 56)):
         for cards in _list_rank_group_options(hand, level_rank, 0, size):
             if tuple(sorted(cards)) == exclude_key:
                 continue
