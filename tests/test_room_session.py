@@ -69,6 +69,17 @@ class RoomSessionTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn(room_id, app.ROOMS)
         self.assertEqual(app.SESSIONS[sid]["room_id"], room_id)
 
+    async def test_create_marks_host_ready(self):
+        sid = "sid-1"
+        room_id = await self._create_room(sid, "Alice")
+
+        room = app.ROOMS[room_id]
+        self.assertTrue(room.players[0].ready)
+
+        room_state_events = [event for event in app.sio.emits if event["event"] == "room:state"]
+        self.assertTrue(room_state_events)
+        self.assertTrue(room_state_events[-1]["payload"]["players"][0]["ready"])
+
     async def test_reconnect_cleans_previous_session(self):
         sid_old = "sid-old"
         room_id_old = await self._create_room(sid_old, "Alice")

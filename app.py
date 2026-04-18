@@ -1050,6 +1050,7 @@ async def on_room_create(sid, data):
         name=name,
         seat=0,
         socket_id=sid,
+        ready=True,
         seat_claimed=True,
         reconnect_token=reconnect_token,
         last_seen=time.time(),
