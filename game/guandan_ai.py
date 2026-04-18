@@ -4044,6 +4044,7 @@ def _filter_overbomb_options(state: Dict, player_id: str, options: List[List[int
     filtered: List[List[int]] = []
     bombs: List[List[int]] = []
     has_non_bomb = False
+    has_structurally_clean_non_bomb = False
     for cards in options:
         combo_cards = [hand_map[cid] for cid in cards if cid in hand_map]
         combo = _evaluate_combo(combo_cards, level_rank, config)
@@ -4056,7 +4057,16 @@ def _filter_overbomb_options(state: Dict, player_id: str, options: List[List[int
             filtered.append(cards)
             if combo:
                 has_non_bomb = True
-    if has_non_bomb:
+                fragment_penalty = _group_fragment_penalty(hand, cards, level_rank, combo)
+                control_break = _control_group_break_penalty(hand, cards, level_rank)
+                shape_score = _shape_transition_score(hand, cards, level_rank)
+                if (
+                    fragment_penalty < 6.0
+                    and control_break < 4.5
+                    and shape_score > -4.0
+                ):
+                    has_structurally_clean_non_bomb = True
+    if has_non_bomb and has_structurally_clean_non_bomb:
         return filtered
     if bombs:
         minimal = None
@@ -4066,6 +4076,8 @@ def _filter_overbomb_options(state: Dict, player_id: str, options: List[List[int
         if minimal:
             full_hand = [card["id"] for card in hand]
             keep = [full_hand] if full_hand in bombs and full_hand != minimal else []
+            if has_non_bomb:
+                return filtered + [minimal] + keep
             return [minimal] + keep
     return filtered + bombs
 
