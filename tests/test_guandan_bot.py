@@ -3198,6 +3198,99 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         chosen_labels = [guandan._card_label(card) for card in chosen_cards]
         self.assertEqual(chosen_labels, ["♣️Q"])
 
+    def test_endgame_response_blocks_one_card_opponent_with_big_joker(self):
+        players = [
+            {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
+            {"player_id": "opp", "name": "Opp", "seat": 1, "is_bot": False},
+            {"player_id": "mate", "name": "Mate", "seat": 2, "is_bot": False},
+            {"player_id": "opp2", "name": "Opp2", "seat": 3, "is_bot": False},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["round_number"] = 1
+        state["current_turn"] = "bot"
+        state["level_rank"] = 2
+        state["config"]["bot_mode"] = "heuristic"
+        state["config"]["bot_endgame_threshold"] = 0
+
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        big = next(deck.pop(idx) for idx, card in enumerate(deck) if card.get("joker") == "big")
+        lead_ace = pick_label("♠️A")
+        state["players"]["bot"]["hand"] = [
+            big,
+            pick_label("♠️K"),
+            pick_label("♥️K"),
+            pick_label("♣️K"),
+            pick_label("♠️7"),
+            pick_label("♥️7"),
+            pick_label("♣️5"),
+        ]
+        state["players"]["opp"]["hand"] = [pick_label("♣️3")]
+        state["players"]["mate"]["hand"] = [pick_label("♣️Q"), pick_label("♦️Q"), pick_label("♠️6")]
+        state["players"]["opp2"]["hand"] = [pick_label("♣️4"), pick_label("♦️4"), pick_label("♠️4")]
+        state["current_trick"] = {
+            "player_id": "opp",
+            "cards": [lead_ace["id"]],
+            "combo": guandan._evaluate_combo([lead_ace], state["level_rank"], state.get("config", {})),
+        }
+
+        action = guandan.GuandanGame.bot_move(state, "bot")
+        self.assertEqual(action, {"type": "play", "card_ids": [big["id"]]})
+
+    def test_endgame_lead_avoids_exposed_single_after_forcing_control(self):
+        players = [
+            {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
+            {"player_id": "opp", "name": "Opp", "seat": 1, "is_bot": False},
+            {"player_id": "mate", "name": "Mate", "seat": 2, "is_bot": False},
+            {"player_id": "opp2", "name": "Opp2", "seat": 3, "is_bot": False},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["round_number"] = 1
+        state["current_turn"] = "bot"
+        state["level_rank"] = 2
+        state["config"]["bot_mode"] = "auto"
+        state["config"]["bot_endgame_threshold"] = 999
+        state["config"]["bot_minimax_depth"] = 5
+        state["config"]["bot_minimax_width"] = 10
+
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        big = next(deck.pop(idx) for idx, card in enumerate(deck) if card.get("joker") == "big")
+        state["players"]["bot"]["hand"] = [
+            big,
+            pick_label("♠️K"),
+            pick_label("♥️K"),
+            pick_label("♣️K"),
+            pick_label("♠️7"),
+            pick_label("♥️7"),
+            pick_label("♣️5"),
+        ]
+        state["players"]["opp"]["hand"] = [pick_label("♠️A")]
+        state["players"]["mate"]["hand"] = [pick_label("♣️Q"), pick_label("♦️Q"), pick_label("♠️6")]
+        state["players"]["opp2"]["hand"] = [pick_label("♣️4"), pick_label("♦️4"), pick_label("♠️4")]
+        state["current_trick"] = None
+
+        hand_map = guandan._map_hand_by_id(state["players"]["bot"]["hand"])
+        action = guandan.GuandanGame.bot_move(state, "bot")
+        self.assertEqual(action.get("type"), "play")
+        chosen_labels = [guandan._card_label(hand_map[cid]) for cid in action.get("card_ids", [])]
+        self.assertNotEqual(chosen_labels, ["♣️5"])
+        self.assertIn(chosen_labels, (["♠️7", "♥️7"], ["♠️K", "♥️K", "♣️K", "♠️7", "♥️7"], ["♠️K", "♥️K", "♣️K"]))
+
     def test_lead_prefers_lower_steel_plate_when_two_steel_plates_exist(self):
         players = [
             {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},

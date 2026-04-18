@@ -427,6 +427,24 @@ def _lead_short_next_opponent_penalty(state: Dict, player_id: str, cards: List[i
     if rank_value >= 90:
         return 0.0
 
+    config = state.get("config", {})
+    exact_max = _max_combo_value_for_hand(
+        state["players"].get(next_pid, {}).get("hand", []),
+        state["level_rank"],
+        "single",
+        config,
+    )
+    if next_left <= 1 and exact_max is not None and exact_max > rank_value:
+        remaining = max(0, len(hand) - len(cards))
+        penalty = 24.0
+        if remaining >= 5:
+            penalty += 4.0
+        if rank_value < 60:
+            penalty += 2.5
+        elif rank_value < 80:
+            penalty += 1.0
+        return penalty
+
     pressure = max(0.0, 60.0 - float(rank_value))
     penalty = pressure * (1.45 if next_left <= 1 else 0.75)
     penalty += 6.0 if next_left <= 1 else 2.5
@@ -444,6 +462,120 @@ def _lead_short_next_opponent_penalty(state: Dict, player_id: str, cards: List[i
     if remaining <= 2:
         penalty *= 0.7
     return max(0.0, penalty)
+
+
+def _single_lead_finish_window_penalty(state: Dict, bot_id: str) -> float:
+    current_trick = state.get("current_trick")
+    if not current_trick:
+        return 0.0
+
+    leader = current_trick.get("player_id")
+    if leader is None or _team_of(state, leader) != _team_of(state, bot_id):
+        return 0.0
+
+    combo = current_trick.get("combo") or {}
+    if combo.get("type") != "single":
+        return 0.0
+
+    next_pid = _next_active_after(state, leader)
+    if not next_pid or _team_of(state, next_pid) == _team_of(state, bot_id):
+        return 0.0
+
+    next_hand = state["players"].get(next_pid, {}).get("hand", [])
+    next_left = len(next_hand)
+    if next_left > 1:
+        return 0.0
+
+    exact_max = _max_combo_value_for_hand(
+        next_hand,
+        state["level_rank"],
+        "single",
+        state.get("config", {}),
+    )
+    if exact_max is None or exact_max <= combo.get("rank_value", 0):
+        return 0.0
+
+    bot_remaining = len(state["players"].get(bot_id, {}).get("hand", []))
+    penalty = 20.0
+    if not state.get("finish_order"):
+        penalty += 6.0
+    if bot_remaining >= 5:
+        penalty += 3.0
+    return penalty
+
+
+def _opponent_finish_pressure_penalty(state: Dict, bot_id: str) -> float:
+    team = _team_of(state, bot_id)
+    teammate = _teammate_of(state, bot_id)
+    own_finish_ranks = [
+        state["players"][pid].get("finish_rank")
+        for pid in state.get("turn_order", [])
+        if _team_of(state, pid) == team and state["players"][pid].get("finished")
+    ]
+    opp_finish_ranks = [
+        state["players"][pid].get("finish_rank")
+        for pid in state.get("turn_order", [])
+        if _team_of(state, pid) != team and state["players"][pid].get("finished")
+    ]
+    own_finish_ranks = [rank for rank in own_finish_ranks if rank]
+    opp_finish_ranks = [rank for rank in opp_finish_ranks if rank]
+    if not opp_finish_ranks:
+        return 0.0
+
+    penalty = 0.0
+    bot_remaining = len(state["players"].get(bot_id, {}).get("hand", []))
+    teammate_remaining = 0
+    if teammate and not state["players"][teammate]["finished"]:
+        teammate_remaining = len(state["players"][teammate]["hand"])
+
+    if 1 in opp_finish_ranks and 1 not in own_finish_ranks:
+        penalty += 18.0 + min(12.0, bot_remaining * 1.15 + teammate_remaining * 0.45)
+    if 2 in opp_finish_ranks and not any(rank in (1, 2) for rank in own_finish_ranks):
+        penalty += 14.0
+    if len(opp_finish_ranks) >= 2:
+        penalty += 80.0
+    return penalty
+
+
+def _opponent_one_card_closeout_bonus(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+) -> float:
+    current_trick = state.get("current_trick")
+    if not current_trick:
+        return 0.0
+
+    leader = current_trick.get("player_id")
+    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+        return 0.0
+
+    leader_left = len(state["players"].get(leader, {}).get("hand", []))
+    if leader_left > 1:
+        return 0.0
+
+    current_combo = current_trick.get("combo") or {}
+    if not current_combo:
+        return 0.0
+
+    level_rank = state["level_rank"]
+    config = state.get("config", {})
+    if not _compare_combos(current_combo, combo, level_rank, config):
+        return 0.0
+
+    bonus = 18.0
+    if current_combo.get("type") == "single" and combo.get("type") == "single":
+        margin = combo.get("rank_value", 0) - current_combo.get("rank_value", 0)
+        if margin <= 3:
+            bonus += 4.0
+        elif margin <= 10:
+            bonus += 2.0
+    if combo.get("type") in BOMB_TYPES:
+        bonus -= 3.5 + _bomb_tier(combo) * 0.6
+    if len(cards) >= 2:
+        bonus += 1.5
+    return max(8.0, bonus)
 
 
 def _teammate_lead_strength(state: Dict, player_id: str) -> float:
@@ -2853,6 +2985,9 @@ def _evaluate_state_for_bot(state: Dict, bot_id: str) -> float:
         return 1000.0 if state.get("winner_team") == _team_of(state, bot_id) else -1000.0
     hand = state["players"][bot_id]["hand"]
     score = sum(_hand_state_value_components(state, bot_id, hand).values())
+    finish_pressure = _opponent_finish_pressure_penalty(state, bot_id)
+    if finish_pressure > 0.0:
+        score -= finish_pressure
 
     teammate = _teammate_of(state, bot_id)
     current_trick = state.get("current_trick")
@@ -2880,6 +3015,9 @@ def _evaluate_state_for_bot(state: Dict, bot_id: str) -> float:
                                 score -= 4.5 - rank_pressure * 1.2
                             elif rank_pressure >= 4.0:
                                 score += (rank_pressure - 3.5) * 2.0
+        single_finish_window = _single_lead_finish_window_penalty(state, bot_id)
+        if single_finish_window > 0.0:
+            score -= single_finish_window
 
     if teammate and not state["players"][teammate]["finished"]:
         teammate_remaining = len(state["players"][teammate]["hand"])
@@ -4075,6 +4213,8 @@ def _bot_score_components(
                     lane_penalty = min(lane_cap, response_score * lane_factor)
                     if lane_penalty > 0.001:
                         components["pass_lane_concession"] = -lane_penalty
+                if leader_left <= 1:
+                    components["pass_closeout_threat"] = -max(14.0, min(28.0, response_score * 1.45))
             else:
                 bomb_profile = _high_single_bomb_profile(state, bot_id)
                 if teammate_control > 0 and current_trick.get("combo", {}).get("type") == "single":
@@ -4247,6 +4387,9 @@ def _bot_score_components(
             closeout_bonus = _bomb_response_closeout_bonus(state, bot_id, cards, combo, remaining)
             if closeout_bonus > 0.001:
                 components["bomb_closeout_ev"] = closeout_bonus
+        closeout_block = _opponent_one_card_closeout_bonus(state, bot_id, cards, combo)
+        if closeout_block > 0.001:
+            components["block_closeout"] = closeout_block
 
     if not current_trick:
         lead_score = _lead_option_score(state, bot_id, cards)
@@ -4278,6 +4421,9 @@ def _bot_score_components(
         initiative_penalty = _lead_single_initiative_penalty(hand, cards, level_rank)
         if initiative_penalty > 0.001:
             components["keep_initiative_shape"] = -initiative_penalty
+        short_next_penalty = _lead_short_next_opponent_penalty(state, bot_id, cards)
+        if short_next_penalty > 0.001:
+            components["deny_one_card_window"] = -short_next_penalty
         overlap_low_single_bonus = _lead_overlap_run_low_single_bonus(state, bot_id, hand, cards, level_rank)
         if abs(overlap_low_single_bonus) > 0.001:
             components["overlap_run_low_single"] = overlap_low_single_bonus
