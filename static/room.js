@@ -1600,6 +1600,22 @@ socket.on("game:state", (data) => {
   renderGameState(data);
 });
 
+socket.on("game:bot_progress", (data) => {
+  if (!data || !lastGameStatePayload) {
+    return;
+  }
+  if (data.room_id !== lastGameStatePayload.room_id || data.game_type !== lastGameStatePayload.game_type) {
+    return;
+  }
+  lastGameStatePayload.bot_status = data.bot_status || null;
+  if (data.state_version != null) {
+    lastGameStatePayload.state_version = data.state_version;
+  }
+  if (currentGameType === "guandan" && typeof renderGuandanBotProgress === "function") {
+    renderGuandanBotProgress(data.bot_status || null);
+  }
+});
+
 // UI actions
 
 hydrateNameInput();

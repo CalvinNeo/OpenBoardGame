@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 import json
 import logging
 import os
@@ -204,6 +205,11 @@ class Room:
     source_room_id: Optional[str] = None
     bot_player_id: Optional[str] = None
     bot_started_at_ms: Optional[int] = None
+    bot_progress: float = 0.0
+    bot_stage: Optional[str] = None
+    bot_detail: Optional[str] = None
+    bot_progress_emit_scheduled: bool = False
+    bot_progress_last_emit_ms: int = 0
 
 
 ROOMS: Dict[str, Room] = {}
@@ -444,18 +450,7 @@ async def _emit_game_state(room: Room, events: Optional[List[Dict]] = None) -> N
         if player.socket_id is None:
             continue
         view = game_module.get_public_view(room.game_state, player.player_id)
-        bot_status = {
-            "running": bool(room.bot_running and room.bot_player_id),
-            "player_id": room.bot_player_id,
-            "started_at_ms": room.bot_started_at_ms,
-        }
-        if room.game_type == "guandan" and room.game_state:
-            config = room.game_state.get("config", {}) if isinstance(room.game_state, dict) else {}
-            try:
-                think_budget_ms = int(config.get("bot_think_time_ms", 320))
-            except (TypeError, ValueError):
-                think_budget_ms = 320
-            bot_status["think_budget_ms"] = max(40, think_budget_ms)
+        bot_status = _bot_status_payload(room)
         payload = {
             "room_id": room.room_id,
             "state_version": room.state_version,
@@ -466,6 +461,58 @@ async def _emit_game_state(room: Room, events: Optional[List[Dict]] = None) -> N
             "bot_status": bot_status,
         }
         await sio.emit("game:state", payload, to=player.socket_id)
+
+
+def _bot_status_payload(room: Room) -> Dict:
+    bot_status = {
+        "running": bool(room.bot_running and room.bot_player_id),
+        "player_id": room.bot_player_id,
+        "started_at_ms": room.bot_started_at_ms,
+    }
+    if room.game_type == "guandan" and room.game_state:
+        config = room.game_state.get("config", {}) if isinstance(room.game_state, dict) else {}
+        try:
+            think_budget_ms = int(config.get("bot_think_time_ms", 320))
+        except (TypeError, ValueError):
+            think_budget_ms = 320
+        bot_status["think_budget_ms"] = max(40, think_budget_ms)
+    if bot_status["running"]:
+        bot_status["progress"] = max(0.0, min(0.99, float(room.bot_progress or 0.0)))
+        bot_status["stage"] = room.bot_stage
+        bot_status["detail"] = room.bot_detail
+    return bot_status
+
+
+async def _emit_bot_progress(room: Room) -> None:
+    payload = {
+        "room_id": room.room_id,
+        "state_version": room.state_version,
+        "room_status": room.status,
+        "game_type": room.game_type,
+        "bot_status": _bot_status_payload(room),
+    }
+    for player in room.players:
+        if player.socket_id is None:
+            continue
+        await sio.emit("game:bot_progress", payload, to=player.socket_id)
+
+
+def _schedule_bot_progress_emit(room: Room, loop: asyncio.AbstractEventLoop, force: bool = False) -> None:
+    now_ms = int(time.time() * 1000)
+    if room.bot_progress_emit_scheduled:
+        return
+    if not force and now_ms - room.bot_progress_last_emit_ms < 90:
+        return
+    room.bot_progress_emit_scheduled = True
+
+    async def _runner() -> None:
+        try:
+            await _emit_bot_progress(room)
+        finally:
+            room.bot_progress_emit_scheduled = False
+            room.bot_progress_last_emit_ms = int(time.time() * 1000)
+
+    loop.create_task(_runner())
 
 
 def _schedule_halli_flip_reveal(room: Room) -> None:
@@ -916,6 +963,7 @@ async def _maybe_run_bots(room: Room) -> None:
 
     async def _runner():
         try:
+            loop = asyncio.get_running_loop()
             while room.status == "in_game":
                 state = room.game_state
                 if state.get("game_over"):
@@ -935,10 +983,36 @@ async def _maybe_run_bots(room: Room) -> None:
                             continue
                     room.bot_player_id = candidate.player_id
                     room.bot_started_at_ms = int(time.time() * 1000)
-                    await _emit_game_state(room, [])
-                    await asyncio.sleep(0)
+                    room.bot_progress = 0.02
+                    room.bot_stage = "starting"
+                    room.bot_detail = "Preparing bot search"
+                    await _emit_bot_progress(room)
+
+                    def progress_callback(stage: str, progress: float, detail: Optional[str] = None) -> None:
+                        room.bot_progress = max(0.0, min(0.99, float(progress or 0.0)))
+                        room.bot_stage = stage or "thinking"
+                        room.bot_detail = detail or None
+                        loop.call_soon_threadsafe(_schedule_bot_progress_emit, room, loop, False)
+
                     try:
-                        action = game_module.bot_move(state, candidate.player_id)
+                        if room.game_type == "guandan":
+                            action = await asyncio.to_thread(
+                                game_module.bot_move,
+                                state,
+                                candidate.player_id,
+                                progress_callback=progress_callback,
+                            )
+                        else:
+                            params = inspect.signature(game_module.bot_move).parameters
+                            if "progress_callback" in params:
+                                action = await asyncio.to_thread(
+                                    game_module.bot_move,
+                                    state,
+                                    candidate.player_id,
+                                    progress_callback=progress_callback,
+                                )
+                            else:
+                                action = await asyncio.to_thread(game_module.bot_move, state, candidate.player_id)
                     except Exception:
                         logger.exception(
                             "bot_move failed room=%s game=%s player=%s",
@@ -955,6 +1029,9 @@ async def _maybe_run_bots(room: Room) -> None:
                     break
                 room.bot_player_id = None
                 room.bot_started_at_ms = None
+                room.bot_progress = 0.0
+                room.bot_stage = None
+                room.bot_detail = None
                 action_payload = bot_action
                 delay_ms = 0
                 if isinstance(bot_action, dict) and "delay_ms" in bot_action:
@@ -1015,6 +1092,10 @@ async def _maybe_run_bots(room: Room) -> None:
             room.bot_running = False
             room.bot_player_id = None
             room.bot_started_at_ms = None
+            room.bot_progress = 0.0
+            room.bot_stage = None
+            room.bot_detail = None
+            await _emit_bot_progress(room)
 
     asyncio.create_task(_runner())
 

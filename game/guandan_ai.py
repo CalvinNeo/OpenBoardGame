@@ -1,8 +1,9 @@
 import copy
 import math
 import random
+import threading
 import time
-from typing import Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 BOMB_TYPES = ("bomb", "straight_flush", "heavenly")
 
@@ -15,24 +16,39 @@ TOP_SINGLE_VALUE_MIN = 90
 
 UNKNOWN_PUBLIC_HAND_AFTER = 99.0
 
-_CORE = None
+_CORE_LOCAL = threading.local()
+
+
+def _get_core():
+    return getattr(_CORE_LOCAL, "value", None)
+
+
+class _CoreProxy:
+    def __getattr__(self, name: str):
+        core = _get_core()
+        if core is None:
+            raise RuntimeError("guandan_ai core accessed without binding")
+        return getattr(core, name)
+
+
+_CORE = _CoreProxy()
 
 
 def call(core, name: str, *args, **kwargs):
-    global _CORE
-    prev = _CORE
-    _CORE = core
+    prev = _get_core()
+    _CORE_LOCAL.value = core
     try:
         return globals()[name](*args, **kwargs)
     finally:
-        _CORE = prev
+        _CORE_LOCAL.value = prev
 
 
 def _proxy(name: str):
     def wrapped(*args, **kwargs):
-        if _CORE is None:
+        core = _get_core()
+        if core is None:
             raise RuntimeError(f"guandan_ai.{name} called without core binding")
-        return getattr(_CORE, name)(*args, **kwargs)
+        return getattr(core, name)(*args, **kwargs)
 
     wrapped.__name__ = name
     return wrapped
@@ -40,9 +56,36 @@ def _proxy(name: str):
 
 class _GuandanGameProxy:
     def __getattr__(self, name: str):
-        if _CORE is None:
+        core = _get_core()
+        if core is None:
             raise RuntimeError("guandan_ai.GuandanGame accessed without core binding")
-        return getattr(_CORE.GuandanGame, name)
+        return getattr(core.GuandanGame, name)
+
+
+def _report_progress(
+    progress_callback: Optional[Callable[[str, float, Optional[str]], None]],
+    stage: str,
+    progress: float,
+    detail: Optional[str] = None,
+) -> None:
+    if not callable(progress_callback):
+        return
+    try:
+        progress_callback(stage, max(0.0, min(0.99, float(progress))), detail)
+    except Exception:
+        pass
+
+
+def _report_progress_scaled(
+    progress_callback: Optional[Callable[[str, float, Optional[str]], None]],
+    stage: str,
+    start: float,
+    end: float,
+    local_progress: float,
+    detail: Optional[str] = None,
+) -> None:
+    clamped = max(0.0, min(1.0, float(local_progress)))
+    _report_progress(progress_callback, stage, start + (end - start) * clamped, detail)
 
 
 GuandanGame = _GuandanGameProxy()
@@ -5826,6 +5869,9 @@ def _mcts_score_actions(
     reply_width: int,
     risk_lambda: float,
     deadline: Optional[float] = None,
+    progress_callback: Optional[Callable[[str, float, Optional[str]], None]] = None,
+    progress_start: float = 0.0,
+    progress_end: float = 1.0,
 ) -> List[Tuple[Dict, float, int, Dict[str, float]]]:
     legal = GuandanGame.get_legal_actions(state, bot_id)
     if "play" not in legal:
@@ -5834,6 +5880,14 @@ def _mcts_score_actions(
     candidates = _CORE._filter_overbomb_actions(state, bot_id, candidates)
     if not candidates:
         return []
+    _report_progress_scaled(
+        progress_callback,
+        "mcts",
+        progress_start,
+        progress_end,
+        0.08,
+        f"Preparing MCTS with {len(candidates)} candidates",
+    )
 
     effective_sims, effective_depth, effective_tree_ply, effective_reply_width = _CORE._mcts_budget(
         state,
@@ -5853,6 +5907,7 @@ def _mcts_score_actions(
     if len(candidates) == 1:
         only = candidates[0]
         heuristic = heuristic_values[_mcts_action_key(only)]
+        _report_progress_scaled(progress_callback, "mcts", progress_start, progress_end, 1.0, "Single forced candidate")
         return [
             (
                 only,
@@ -5876,9 +5931,11 @@ def _mcts_score_actions(
 
     obvious_scores = _CORE._mcts_obvious_response_scores(state, bot_id, candidates, heuristic_values)
     if obvious_scores:
+        _report_progress_scaled(progress_callback, "mcts", progress_start, progress_end, 1.0, "Fast-path obvious response")
         return obvious_scores
     high_single_bomb_scores = _CORE._mcts_high_single_bomb_scores(state, bot_id, candidates, heuristic_values)
     if high_single_bomb_scores:
+        _report_progress_scaled(progress_callback, "mcts", progress_start, progress_end, 1.0, "Fast-path bomb decision")
         return high_single_bomb_scores
 
     current_combo = (state.get("current_trick") or {}).get("combo") or {}
@@ -5919,6 +5976,9 @@ def _mcts_score_actions(
     stable_rounds = 0
     previous_top_key = None
     final_scored: List[Tuple[Dict, float, int, Dict[str, float]]] = []
+    total_visits_target = max(1, sims_per * max(1, len(candidates)))
+    completed_visits = 0
+    report_stride = max(1, total_visits_target // 24)
     for round_idx in range(sims_per):
         if deadline is not None and time.perf_counter() >= deadline:
             break
@@ -5947,6 +6007,16 @@ def _mcts_score_actions(
                 sample["min"] = value
             if sample["max"] is None or value > sample["max"]:
                 sample["max"] = value
+            completed_visits += 1
+            if completed_visits == total_visits_target or completed_visits % report_stride == 0:
+                _report_progress_scaled(
+                    progress_callback,
+                    "mcts",
+                    progress_start,
+                    progress_end,
+                    min(0.96, 0.14 + 0.8 * (completed_visits / total_visits_target)),
+                    f"Running MCTS {completed_visits}/{total_visits_target}",
+                )
         final_scored = _mcts_finalize_scores(
             candidates,
             samples,
@@ -5977,7 +6047,9 @@ def _mcts_score_actions(
         if deadline is not None and time.perf_counter() >= deadline:
             break
     if final_scored:
+        _report_progress_scaled(progress_callback, "mcts", progress_start, progress_end, 1.0, "MCTS finalized")
         return final_scored
+    _report_progress_scaled(progress_callback, "mcts", progress_start, progress_end, 1.0, "MCTS finalized")
     return _mcts_finalize_scores(
         candidates,
         samples,
@@ -6002,6 +6074,9 @@ def _mcts_pick_action(
     reply_width: int,
     risk_lambda: float,
     deadline: Optional[float] = None,
+    progress_callback: Optional[Callable[[str, float, Optional[str]], None]] = None,
+    progress_start: float = 0.0,
+    progress_end: float = 1.0,
 ) -> Tuple[Optional[Dict], List[Tuple[Dict, float, int, Dict[str, float]]]]:
     scored = _CORE._mcts_score_actions(
         state,
@@ -6013,6 +6088,9 @@ def _mcts_pick_action(
         reply_width,
         risk_lambda,
         deadline=deadline,
+        progress_callback=progress_callback,
+        progress_start=progress_start,
+        progress_end=progress_end,
     )
     if not scored:
         return None, []
@@ -6074,6 +6152,9 @@ def _minimax_pick_action(
     depth: int,
     width: int,
     deadline: Optional[float] = None,
+    progress_callback: Optional[Callable[[str, float, Optional[str]], None]] = None,
+    progress_start: float = 0.0,
+    progress_end: float = 1.0,
 ) -> Optional[List[int]]:
     legal = GuandanGame.get_legal_actions(state, bot_id)
     if "play" not in legal:
@@ -6082,9 +6163,18 @@ def _minimax_pick_action(
     actions = _CORE._filter_overbomb_actions(state, bot_id, actions)
     if not actions:
         return None
+    total_actions = max(1, len(actions))
+    _report_progress_scaled(
+        progress_callback,
+        "minimax",
+        progress_start,
+        progress_end,
+        0.05,
+        f"Preparing minimax with {total_actions} root candidates",
+    )
     best_action = None
     best_value = -1e9
-    for action in actions:
+    for index, action in enumerate(actions, start=1):
         if deadline is not None and time.perf_counter() >= deadline:
             break
         nxt = copy.deepcopy(state)
@@ -6095,8 +6185,18 @@ def _minimax_pick_action(
         if value > best_value:
             best_value = value
             best_action = action
+        _report_progress_scaled(
+            progress_callback,
+            "minimax",
+            progress_start,
+            progress_end,
+            min(0.98, 0.08 + 0.9 * (index / total_actions)),
+            f"Evaluating minimax root {index}/{total_actions}",
+        )
     if best_action and best_action.get("type") == "play":
+        _report_progress_scaled(progress_callback, "minimax", progress_start, progress_end, 1.0, "Minimax finalized")
         return best_action.get("card_ids")
+    _report_progress_scaled(progress_callback, "minimax", progress_start, progress_end, 1.0, "Minimax finalized")
     return None
 
 

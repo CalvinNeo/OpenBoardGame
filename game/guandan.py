@@ -4,7 +4,7 @@ import random
 import sys
 import time
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 from game import guandan_ai as _guandan_ai
 from game.memories import build_html_document, esc, format_bool, format_timestamp, render_kv_table, render_table, section
@@ -1439,8 +1439,14 @@ def _start_next_round(state: Dict) -> None:
     state["finish_order"] = []
 
 
-def _nn_pick_action(state: Dict, bot_id: str) -> Tuple[Optional[Dict], Optional[List[Tuple[Dict, float, int, Dict[str, float]]]], Dict]:
+def _nn_pick_action(
+    state: Dict,
+    bot_id: str,
+    progress_callback: Optional[Callable[[str, float, Optional[str]], None]] = None,
+) -> Tuple[Optional[Dict], Optional[List[Tuple[Dict, float, int, Dict[str, float]]]], Dict]:
     config = state.get("config", {})
+    if callable(progress_callback):
+        progress_callback("nn", 0.28, "Loading NN checkpoint")
     model, error, resolved_path = _load_nn_policy_model(config.get("bot_nn_checkpoint"))
     if model is None:
         return None, None, {"checkpoint": resolved_path, "error": error or "load failed"}
@@ -1455,6 +1461,8 @@ def _nn_pick_action(state: Dict, bot_id: str) -> Tuple[Optional[Dict], Optional[
     actions = _guandan_nn_train.guandan._candidate_actions(state, bot_id, candidate_limit)
     if not actions:
         return None, None, {"checkpoint": resolved_path, "error": "no candidate actions"}
+    if callable(progress_callback):
+        progress_callback("nn", 0.46, f"Scoring {len(actions)} NN candidates")
 
     try:
         scored, state_value = _guandan_nn_train.evaluate_actions(model, state, bot_id, actions, device="cpu")
@@ -1485,6 +1493,8 @@ def _nn_pick_action(state: Dict, bot_id: str) -> Tuple[Optional[Dict], Optional[
         chosen_action = sampled_action
     if chosen_action is None:
         chosen_action = dict(ranked[0][0][0])
+    if callable(progress_callback):
+        progress_callback("nn", 0.88, "NN action selected")
 
     method_scores: List[Tuple[Dict, float, int, Dict[str, float]]] = []
     for (action, score), prob in ranked:
@@ -1959,7 +1969,11 @@ class GuandanGame:
         return build_memories_html(state, room_id)
 
     @staticmethod
-    def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
+    def bot_move(
+        state: Dict,
+        bot_id: str,
+        progress_callback: Optional[Callable[[str, float, Optional[str]], None]] = None,
+    ) -> Optional[Dict]:
         if state.get("game_over"):
             return None
         legal = GuandanGame.get_legal_actions(state, bot_id)
@@ -1986,6 +2000,11 @@ class GuandanGame:
         config = state.get("config", {})
         state["_ai_eval_cache"] = {}
         try:
+            def _progress(stage: str, progress: float, detail: Optional[str] = None) -> None:
+                if not callable(progress_callback):
+                    return
+                progress_callback(stage, max(0.0, min(0.99, float(progress))), detail)
+
             bot_mode = str(config.get("bot_mode", DEFAULT_CONFIG["bot_mode"]) or DEFAULT_CONFIG["bot_mode"]).strip().lower()
             if bot_mode not in {"auto", "heuristic", "nn"}:
                 bot_mode = DEFAULT_CONFIG["bot_mode"]
@@ -1994,7 +2013,9 @@ class GuandanGame:
             depth = config.get("bot_search_depth", 2)
             search_width = config.get("bot_minimax_width", 6)
             mcts_width = max(2, int(config.get("bot_mcts_root_width", min(search_width, 5))))
+            _progress("heuristic", 0.06, "Evaluating heuristic baseline")
             heuristic_action = _heuristic_best_action(state, bot_id, depth)
+            _progress("heuristic", 0.18, "Heuristic baseline ready")
 
             def _action_key(action: Optional[Dict]) -> Tuple:
                 if not action:
@@ -2052,7 +2073,7 @@ class GuandanGame:
             method_scores = None
             method_meta = None
             if bot_mode == "nn":
-                nn_action, nn_scores, nn_meta = _nn_pick_action(state, bot_id)
+                nn_action, nn_scores, nn_meta = _nn_pick_action(state, bot_id, progress_callback=_progress)
                 if nn_action is not None:
                     decided = True
                     method = "nn"
@@ -2068,6 +2089,7 @@ class GuandanGame:
                 if total_left <= endgame_threshold:
                     minimax_budget_ms = max(25, int(config.get("bot_minimax_time_ms", default_minimax_budget_ms)))
                     deadline = time.perf_counter() + minimax_budget_ms / 1000.0
+                    _progress("minimax", 0.22, "Determinizing endgame state")
                     det = _determinize_state(state, bot_id, random.Random())
                     chosen = _minimax_pick_action(
                         det,
@@ -2075,6 +2097,9 @@ class GuandanGame:
                         config.get("bot_minimax_depth", 4),
                         search_width,
                         deadline=deadline,
+                        progress_callback=_progress,
+                        progress_start=0.26,
+                        progress_end=0.9,
                     )
                     if chosen:
                         decided = True
@@ -2083,6 +2108,7 @@ class GuandanGame:
                 if not decided and total_left > endgame_threshold and _should_use_mcts(state, bot_id, mcts_width):
                     mcts_budget_ms = max(25, int(config.get("bot_mcts_time_ms", default_mcts_budget_ms)))
                     deadline = time.perf_counter() + mcts_budget_ms / 1000.0
+                    _progress("mcts", 0.22, "Preparing MCTS search")
                     mcts_action, mcts_scores = _mcts_pick_action(
                         state,
                         bot_id,
@@ -2093,6 +2119,9 @@ class GuandanGame:
                         config.get("bot_mcts_reply_width", 4),
                         config.get("bot_mcts_risk_lambda", 0.28),
                         deadline=deadline,
+                        progress_callback=_progress,
+                        progress_start=0.26,
+                        progress_end=0.9,
                     )
                     has_real_search = any(count > 0 for _, _, count, _ in (mcts_scores or []))
                     has_fast_path = any((stats or {}).get("fast_path") for _, _, _, stats in (mcts_scores or []))
@@ -2137,6 +2166,7 @@ class GuandanGame:
                     chosen_action_type = "pass"
                     method = "heuristic"
             if decided:
+                _progress("finalizing", 0.94, "Legalizing chosen action")
                 selected_action = {"type": "pass"} if chosen_action_type == "pass" else {"type": "play", "card_ids": chosen or []}
                 legal_action, illegal_err = _legalize_action(selected_action)
                 if legal_action is None:
@@ -2149,6 +2179,7 @@ class GuandanGame:
                     method_meta = None
                 chosen_action_type = legal_action.get("type", chosen_action_type or "play")
                 chosen = list(legal_action.get("card_ids") or [])
+                _progress("finalizing", 0.97, "Building bot explanation")
                 explain = _build_bot_explain(
                     state,
                     bot_id,
@@ -2168,7 +2199,9 @@ class GuandanGame:
                     chosen,
                 )
                 if chosen_action_type == "pass":
+                    _progress("finalizing", 0.99, "Action ready")
                     return {"type": "pass"}
+                _progress("finalizing", 0.99, "Action ready")
                 return {"type": "play", "card_ids": chosen}
             if "pass" in legal:
                 return {"type": "pass"}

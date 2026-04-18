@@ -628,6 +628,9 @@ function getGuandanBotProgressValue() {
   if (!status || !status.running || !status.player_id) {
     return null;
   }
+  if (typeof status.progress === "number" && Number.isFinite(status.progress)) {
+    return Math.max(0.0, Math.min(0.99, status.progress));
+  }
   const startedAt = Number(status.started_at_ms || 0);
   const thinkBudget = Math.max(40, Number(status.think_budget_ms || 320));
   if (!startedAt) {
@@ -651,9 +654,12 @@ function getGuandanBotProgressMarkup(playerId) {
   if (progress == null) {
     return "";
   }
-  const percent = Math.max(8, Math.min(96, Math.round(progress * 100)));
+  const percent = Math.max(1, Math.min(99, Math.round(progress * 100)));
+  const title = [status.stage || "thinking", status.detail || "AI thinking"]
+    .filter(Boolean)
+    .join(": ");
   return `
-    <span class="guandan-bot-progress" aria-label="AI thinking ${percent}%">
+    <span class="guandan-bot-progress" aria-label="AI thinking ${percent}%" title="${title}">
       <span class="guandan-bot-progress-bar">
         <span class="guandan-bot-progress-fill" style="width:${percent}%"></span>
       </span>
@@ -675,6 +681,13 @@ function syncGuandanBotProgress(status) {
     }
     renderGuandanTrickPlays(currentGuandanView);
   }, 120);
+}
+
+function renderGuandanBotProgress(status) {
+  syncGuandanBotProgress(status || null);
+  if (currentGuandanView) {
+    renderGuandanTrickPlays(currentGuandanView);
+  }
 }
 
 function renderGuandanTribute(view) {
