@@ -2616,6 +2616,111 @@ def _response_special_overuse_penalty(
     return penalty
 
 
+def _non_wild_level_rank_count(hand: List[Dict], level_rank: int) -> int:
+    count = 0
+    for card in hand:
+        if _is_joker(card) or _is_wild(card, level_rank):
+            continue
+        if card.get("rank") == level_rank:
+            count += 1
+    return count
+
+
+def _has_natural_level_straight_bridge(hand: List[Dict], level_rank: int) -> bool:
+    if _non_wild_level_rank_count(hand, level_rank) <= 0:
+        return False
+    hand_map = _map_hand_by_id(hand)
+    for cards in _list_straight_options(hand, level_rank, 0):
+        play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+        if not play_cards or _cards_use_special_material(play_cards, level_rank):
+            continue
+        if any(card.get("rank") == level_rank for card in play_cards):
+            combo = _evaluate_combo(play_cards, level_rank, {})
+            if combo and combo.get("type") == "straight":
+                return True
+    return False
+
+
+def _level_response_flexibility_bonus(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+) -> float:
+    current_trick = state.get("current_trick")
+    if not current_trick or not cards:
+        return 0.0
+    if combo.get("type") not in ("single", "pair", "three", "bomb"):
+        return 0.0
+
+    hand = state["players"][player_id]["hand"]
+    hand_map = _map_hand_by_id(hand)
+    level_rank = state["level_rank"]
+    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+    if not play_cards:
+        return 0.0
+
+    before_level_count = _non_wild_level_rank_count(hand, level_rank)
+    if before_level_count <= 0:
+        return 0.0
+
+    used_non_wild_level = [
+        card
+        for card in play_cards
+        if not _is_joker(card) and not _is_wild(card, level_rank) and card.get("rank") == level_rank
+    ]
+    if not used_non_wild_level:
+        return 0.0
+
+    remaining = _remove_cards(hand, cards)
+    after_level_count = _non_wild_level_rank_count(remaining, level_rank)
+    if after_level_count <= 0:
+        return 0.0
+
+    bonus = 0.0
+    current_combo = current_trick.get("combo") or {}
+    leader = current_trick.get("player_id")
+    leader_left = len(state["players"].get(leader, {}).get("hand", [])) if leader else 99
+
+    # Non-heart level cards are still premium control singles after splitting.
+    bonus += 1.8 + min(2.2, after_level_count * 0.9)
+    if combo.get("type") == "single":
+        bonus += 0.8
+    elif combo.get("type") == "pair":
+        bonus += 1.6
+    elif combo.get("type") == "three":
+        bonus += 2.0
+    elif combo.get("type") == "bomb":
+        bonus += 2.8
+
+    if leader_left <= 10:
+        bonus += 0.8
+    if leader_left <= 6:
+        bonus += 0.8
+
+    if before_level_count >= 3 and after_level_count == 1:
+        bonus += 3.8
+        if combo.get("type") == "pair":
+            bonus += 1.8
+        elif combo.get("type") == "bomb":
+            bonus += 2.6
+
+    before_bridge = _has_natural_level_straight_bridge(hand, level_rank)
+    after_bridge = _has_natural_level_straight_bridge(remaining, level_rank)
+    if after_bridge:
+        bonus += 3.8
+        if not before_bridge:
+            bonus += 2.2
+
+    before_summary = _hand_decomposition_summary(hand, level_rank)
+    after_summary = _hand_decomposition_summary(remaining, level_rank)
+    if after_summary.get("low_singles", 0.0) + 1.0 < before_summary.get("low_singles", 0.0):
+        bonus += min(3.2, (before_summary.get("low_singles", 0.0) - after_summary.get("low_singles", 0.0)) * 1.1)
+    if after_summary.get("group_turns", 0.0) + 0.01 >= before_summary.get("group_turns", 0.0):
+        bonus += 1.0
+    return bonus
+
+
 def _single_lock_bonus(state: Dict, player_id: str, cards: List[int], combo: Dict) -> float:
     current_trick = state.get("current_trick")
     if not current_trick or len(cards) != 1:
@@ -5050,6 +5155,9 @@ def _bot_score_components(
         special_overuse = _response_special_overuse_penalty(state, bot_id, cards, combo)
         if special_overuse > 0.001:
             components["special_response_overuse"] = -special_overuse
+        level_flex_bonus = _level_response_flexibility_bonus(state, bot_id, cards, combo)
+        if level_flex_bonus > 0.001:
+            components["level_response_flex"] = level_flex_bonus
         lock_bonus = _single_lock_bonus(state, bot_id, cards, combo)
         if lock_bonus > 0.001:
             components["single_lock"] = lock_bonus
