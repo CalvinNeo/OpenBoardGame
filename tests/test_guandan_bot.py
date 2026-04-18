@@ -1092,6 +1092,26 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         explain = state.get("bot_explain", {}).get("bot", {})
         self.assertEqual(explain.get("method"), "heuristic")
 
+    def test_bot_move_records_explain_history_and_public_view_exposes_it(self):
+        state, big = self._make_state()
+        state["config"]["bot_mode"] = "heuristic"
+
+        action = guandan.GuandanGame.bot_move(state, "bot")
+
+        self.assertEqual(action, {"type": "play", "card_ids": [big["id"]]})
+        history = state.get("bot_explain_history", {}).get("bot", [])
+        self.assertEqual(len(history), 1)
+        self.assertEqual(history[0].get("round_number"), state.get("round_number"))
+        self.assertEqual(history[0].get("action_type"), "play")
+        self.assertEqual(history[0].get("card_ids"), [big["id"]])
+        self.assertEqual(history[0].get("explain", {}).get("chosen", {}).get("cards"), ["🃏B"])
+
+        view = guandan.GuandanGame.get_public_view(state, "bot")
+        public_history = view.get("bot_explain_history", {}).get("bot", [])
+        self.assertEqual(len(public_history), 1)
+        self.assertEqual(public_history[0].get("action_type"), "play")
+        self.assertEqual(public_history[0].get("explain", {}).get("chosen", {}).get("cards"), ["🃏B"])
+
     def test_mcts_explain_includes_mcts_score(self):
         state, big = self._make_state()
         action = {"type": "play", "card_ids": [big["id"]]}

@@ -5,6 +5,8 @@ let guandanPiles = [];
 let guandanLastSfKey = null;
 let guandanHandLayout = "cascade";
 let guandanCascadeLayoutFrame = null;
+let guandanBotExplainPlayerId = null;
+let guandanBotExplainHistoryIndex = -1;
 const GUANDAN_DEFAULT_BOT_MODE = "auto";
 const GUANDAN_DEFAULT_NN_CHECKPOINT = "assets/guandan/checkpoints/guandan_nn.pt";
 
@@ -552,19 +554,26 @@ function renderGuandanTrickPlays(view) {
     });
   }
   const botExplain = view.bot_explain || {};
+  const botExplainHistory = view.bot_explain_history || {};
   const rows = view.players
     .map((player) => {
       const entry = playsById.get(player.player_id);
       const cards = entry && Array.isArray(entry.cards) && entry.cards.length ? entry.cards.join(" ") : "-";
       const explain = botExplain[player.player_id];
+      const history = Array.isArray(botExplainHistory[player.player_id]) ? botExplainHistory[player.player_id] : [];
+      const hasExplain = !!explain || history.length > 0;
       const rowClass = player.player_id === view.current_turn ? "guandan-current-turn-row" : "";
+      let playerCell = player.name || player.player_id;
+      if (player.is_bot && hasExplain) {
+        playerCell = `<button type="button" class="guandan-bot-explain-btn" data-player="${player.player_id}">${playerCell}</button>`;
+      }
       let trickCell = cards;
       if (player.is_bot && explain && cards !== "-") {
         trickCell = `<button type="button" class="guandan-bot-explain-btn" data-player="${player.player_id}">${cards}</button>`;
       }
       return `
         <tr class="${rowClass}">
-          <td>${player.name || player.player_id}</td>
+          <td>${playerCell}</td>
           <td>${player.hand_count ?? "-"}</td>
           <td>${trickCell}</td>
         </tr>
@@ -1065,14 +1074,52 @@ function buildGuandanBotExplainVerboseClipboardText(playerId, explain) {
   return `${base}\n=====\n${history}`;
 }
 
-function showGuandanBotExplain(playerId) {
+function getGuandanBotExplainEntries(playerId) {
+  if (!currentGuandanView || !playerId) return [];
+  const historyByBot = currentGuandanView.bot_explain_history || {};
+  const entries = Array.isArray(historyByBot[playerId]) ? historyByBot[playerId].slice() : [];
+  const latest = currentGuandanView.bot_explain ? currentGuandanView.bot_explain[playerId] : null;
+  const latestChosen = Array.isArray(latest && latest.chosen && latest.chosen.cards)
+    ? latest.chosen.cards.join("|")
+    : "";
+  const tail = entries.length ? entries[entries.length - 1] : null;
+  const tailExplain = tail && tail.explain ? tail.explain : null;
+  const tailChosen = Array.isArray(tailExplain && tailExplain.chosen && tailExplain.chosen.cards)
+    ? tailExplain.chosen.cards.join("|")
+    : "";
+  const sameLatest =
+    !!latest &&
+    !!tailExplain &&
+    tailChosen === latestChosen &&
+    (tail.round_number ?? null) === (currentGuandanView.round_number ?? null) &&
+    (tail.action_type || "") ===
+      (Array.isArray(latest.chosen && latest.chosen.cards) && latest.chosen.cards[0] === "Pass" ? "pass" : "play");
+  if (latest && !sameLatest) {
+    entries.push({
+      round_number: currentGuandanView.round_number,
+      phase: currentGuandanView.phase,
+      action_type: Array.isArray(latest.chosen && latest.chosen.cards) && latest.chosen.cards[0] === "Pass" ? "pass" : "play",
+      card_ids: [],
+      explain: latest,
+    });
+  }
+  return entries;
+}
+
+function showGuandanBotExplain(playerId, historyIndex = null) {
   if (!guandanBotExplainModal || !guandanBotExplainContent || !currentGuandanView) return;
-  const explain = currentGuandanView.bot_explain ? currentGuandanView.bot_explain[playerId] : null;
+  const entries = getGuandanBotExplainEntries(playerId);
+  const safeIndex =
+    historyIndex == null ? entries.length - 1 : Math.max(0, Math.min(historyIndex, entries.length - 1));
+  const entry = entries[safeIndex] || null;
+  const explain = entry && entry.explain ? entry.explain : currentGuandanView.bot_explain ? currentGuandanView.bot_explain[playerId] : null;
   if (!explain) {
     guandanBotExplainContent.textContent = "No explanation available.";
     setModalVisible(guandanBotExplainModal, true);
     return;
   }
+  guandanBotExplainPlayerId = playerId;
+  guandanBotExplainHistoryIndex = safeIndex;
   const method = explain.method || "heuristic";
   const methodDetails = explain.method_details || null;
   const chosen = explain.chosen || {};
@@ -1081,8 +1128,27 @@ function showGuandanBotExplain(playerId) {
   const chosenComponents = formatGuandanBotComponents(chosen.components);
   const hand = Array.isArray(explain.hand) ? explain.hand : [];
   const handItems = hand.map((card) => `<span class="guandan-bot-hand-card">${card}</span>`).join("");
+  const navButtons =
+    entries.length > 1
+      ? `
+      <button type="button" class="guandan-bot-explain-nav" data-dir="-1" ${safeIndex <= 0 ? "disabled" : ""}>&lt;</button>
+      <span class="hint">Action ${safeIndex + 1} / ${entries.length}</span>
+      <button type="button" class="guandan-bot-explain-nav" data-dir="1" ${safeIndex >= entries.length - 1 ? "disabled" : ""}>&gt;</button>
+    `
+      : "";
+  const contextBits = [];
+  if (entry && entry.round_number != null) {
+    contextBits.push(`Round ${entry.round_number}`);
+  }
+  if (entry && entry.phase) {
+    contextBits.push(entry.phase);
+  }
+  if (entry && entry.action_type) {
+    contextBits.push(entry.action_type);
+  }
   const actionsRow = `
     <div class="guandan-bot-hand-row guandan-bot-explain-actions">
+      ${navButtons}
       <button type="button" class="guandan-bot-explain-copy" data-player="${playerId}">Copy</button>
       <button type="button" class="guandan-bot-explain-copy guandan-bot-explain-copy-verbose" data-player="${playerId}">Copy Verbose</button>
       ${hand.length ? `<button type="button" class="guandan-bot-hand-toggle">View Hand</button>` : ""}
@@ -1117,6 +1183,7 @@ function showGuandanBotExplain(playerId) {
     detailParts.push(`Candidates ${methodDetails.candidates}`);
   }
   const detailLine = detailParts.length ? `<div class="hint">${detailParts.join(" · ")}</div>` : "";
+  const contextLine = contextBits.length ? `<div class="hint">${contextBits.join(" · ")}</div>` : "";
   const mctsLine =
     explain.score_model === "mcts"
       ? `<div class="hint">MCTS avg is the mean rollout score. Win rate is rollouts with positive score.</div>`
@@ -1124,6 +1191,7 @@ function showGuandanBotExplain(playerId) {
   guandanBotExplainContent.innerHTML = `
     ${actionsRow}
     <div><strong>Method:</strong> ${method}</div>
+    ${contextLine}
     ${detailLine}
     ${mctsLine}
     ${handBlock}
@@ -1146,6 +1214,14 @@ function showGuandanBotExplain(playerId) {
   const copyBtn = guandanBotExplainContent.querySelector(".guandan-bot-explain-copy");
   const copyVerboseBtn = guandanBotExplainContent.querySelector(".guandan-bot-explain-copy-verbose");
   const copyStatus = guandanBotExplainContent.querySelector(".guandan-bot-copy-status");
+  const navBtns = guandanBotExplainContent.querySelectorAll(".guandan-bot-explain-nav");
+  navBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const delta = Number(btn.getAttribute("data-dir") || "0");
+      if (!delta || !guandanBotExplainPlayerId) return;
+      showGuandanBotExplain(guandanBotExplainPlayerId, guandanBotExplainHistoryIndex + delta);
+    });
+  });
   if (copyBtn) {
     copyBtn.addEventListener("click", async () => {
       const text = buildGuandanBotExplainClipboardText(playerId, explain);

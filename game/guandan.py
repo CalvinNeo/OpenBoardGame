@@ -2270,6 +2270,26 @@ def _nn_pick_action(state: Dict, bot_id: str) -> Tuple[Optional[Dict], Optional[
     return chosen_action, method_scores, method_meta
 
 
+def _append_bot_explain_history(
+    state: Dict,
+    bot_id: str,
+    explain: Dict,
+    action_type: str,
+    card_ids: Optional[List[int]] = None,
+) -> None:
+    history = state.setdefault("bot_explain_history", {})
+    entries = history.setdefault(bot_id, [])
+    entries.append(
+        {
+            "round_number": state.get("round_number"),
+            "phase": state.get("phase"),
+            "action_type": action_type,
+            "card_ids": list(card_ids or []),
+            "explain": copy.deepcopy(explain),
+        }
+    )
+
+
 class GuandanGame:
     game_id = "guandan"
     min_players = 4
@@ -2320,6 +2340,7 @@ class GuandanGame:
             "visible_card_id": None,
             "tribute": None,
             "bot_explain": {},
+            "bot_explain_history": {},
             "round_memories": [],
             "game_over": False,
             "winner_team": None,
@@ -2681,6 +2702,7 @@ class GuandanGame:
             "last_round_summary": state.get("last_round_summary"),
             "tribute": tribute_view,
             "bot_explain": state.get("bot_explain", {}),
+            "bot_explain_history": state.get("bot_explain_history", {}),
             "round_history": _public_round_history(state),
             "game_over": state.get("game_over"),
             "winner_team": state.get("winner_team"),
@@ -2898,6 +2920,13 @@ class GuandanGame:
                 chosen_action_type or "play",
             )
             state.setdefault("bot_explain", {})[bot_id] = explain
+            _append_bot_explain_history(
+                state,
+                bot_id,
+                explain,
+                chosen_action_type or "play",
+                chosen,
+            )
             if chosen_action_type == "pass":
                 return {"type": "pass"}
             return {"type": "play", "card_ids": chosen}
