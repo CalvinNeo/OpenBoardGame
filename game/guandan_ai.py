@@ -3451,6 +3451,97 @@ def _public_action_line_penalty_for_hand(state: Dict, player_id: str, hand: List
     return penalty
 
 
+def _public_action_sequence_consistency_bonus(state: Dict, player_id: str, hand: List[Dict]) -> float:
+    round_entries = state.get("round_memories") or []
+    round_entry = round_entries[-1] if round_entries else None
+    if not round_entry or not hand:
+        return 0.0
+
+    actions: List[Dict] = []
+    for trick in round_entry.get("tricks", []) or []:
+        for action in trick.get("actions", []) or []:
+            if action.get("player_id") == player_id and action.get("type") == "play":
+                actions.append(action)
+    if not actions:
+        return 0.0
+
+    level_rank = state["level_rank"]
+    future_cards: List[Dict] = []
+    next_synth_id = -1
+    bonus = 0.0
+    # Reconstruct the hand before each public action by adding back all later played cards.
+    for action in reversed(actions):
+        pre_hand = list(hand) + future_cards
+        cards = action.get("cards") or []
+        if not cards:
+            continue
+
+        chosen_ids = []
+        used_pre = set()
+        matched = True
+        for target in cards:
+            found = None
+            for idx, card in enumerate(pre_hand):
+                if idx in used_pre:
+                    continue
+                if (
+                    card.get("rank") == target.get("rank")
+                    and card.get("suit") == target.get("suit")
+                    and card.get("joker") == target.get("joker")
+                ):
+                    found = card
+                    used_pre.add(idx)
+                    break
+            if found is None:
+                matched = False
+                break
+            chosen_ids.append(found["id"])
+        if not matched:
+            for card in cards:
+                cloned = dict(card)
+                cloned["id"] = next_synth_id
+                next_synth_id -= 1
+                future_cards.append(cloned)
+            continue
+
+        post_hand = _remove_cards(pre_hand, chosen_ids)
+        combo_type = action.get("combo_type") or ""
+        hand_after = int(action.get("hand_count_after") or 99)
+        post_summary = _hand_decomposition_summary(post_hand, level_rank) if post_hand else _empty_hand_decomposition_summary()
+
+        if combo_type == "single" and hand_after <= 8 and cards:
+            value = max((_public_card_single_value(card, level_rank) for card in cards), default=0)
+            if value < 60:
+                group_turns = post_summary.get("group_turns", 0.0)
+                bonus += min(1.8, group_turns * 0.35)
+                if post_summary.get("top_combo_size", 0.0) >= 3.0:
+                    bonus += 0.45
+                if post_summary.get("plan_types", ()) and (post_summary.get("plan_types") or (None,))[0] in (
+                    "three",
+                    "full_house",
+                    "three_pairs",
+                    "steel_plate",
+                ):
+                    bonus += 0.55
+        elif combo_type in BOMB_TYPES and hand_after <= 10:
+            group_turns = post_summary.get("group_turns", 0.0)
+            if group_turns > 0.0:
+                bonus += min(1.2, group_turns * 0.24)
+            if post_summary.get("top_combo_size", 0.0) >= 3.0:
+                bonus += 0.5
+        elif combo_type in ("pair", "three", "full_house"):
+            # Mildly reward action lines that still leave coherent grouped follow-up.
+            if post_summary.get("group_turns", 0.0) > 0.0:
+                bonus += 0.15
+
+        for card in cards:
+            cloned = dict(card)
+            cloned["id"] = next_synth_id
+            next_synth_id -= 1
+            future_cards.append(cloned)
+    return min(3.0, bonus)
+
+
 def _determinize_state(state: Dict, perspective_id: str, rng: random.Random) -> Dict:
     det = copy.deepcopy(state)
     full = _full_deck()
@@ -3494,6 +3585,7 @@ def _determinize_state(state: Dict, perspective_id: str, rng: random.Random) -> 
             penalty += _pass_limit_penalty_for_hand(det, pid, cards)
             penalty += _revealed_rank_cap_penalty_for_hand(det, pid, cards)
             penalty += _public_action_line_penalty_for_hand(det, pid, cards)
+            penalty -= _public_action_sequence_consistency_bonus(det, pid, cards)
         if best_penalty is None or penalty < best_penalty:
             best_penalty = penalty
             best_assignment = assignment
