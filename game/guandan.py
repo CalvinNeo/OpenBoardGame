@@ -2681,6 +2681,7 @@ class GuandanGame:
             "last_round_summary": state.get("last_round_summary"),
             "tribute": tribute_view,
             "bot_explain": state.get("bot_explain", {}),
+            "round_history": _public_round_history(state),
             "game_over": state.get("game_over"),
             "winner_team": state.get("winner_team"),
         }
@@ -3013,6 +3014,48 @@ def _fallback_round_memory(state: Dict) -> Dict:
         "status": "in_progress",
         "note": "This room started before Guandan memories tracking was available. Earlier actions may be missing.",
     }
+
+
+def _public_round_history(state: Dict) -> List[Dict]:
+    entries = state.get("round_memories") or [_fallback_round_memory(state)]
+    history: List[Dict] = []
+    for entry in entries:
+        tricks: List[Dict] = []
+        for trick in entry.get("tricks", []) or []:
+            actions: List[Dict] = []
+            for action in trick.get("actions", []) or []:
+                action_view = {
+                    "player_id": action.get("player_id"),
+                    "type": action.get("type"),
+                }
+                if action.get("type") == "play":
+                    action_view["cards"] = [card.get("label") for card in action.get("cards", []) or []]
+                    action_view["combo_type"] = action.get("combo_type")
+                    action_view["combo_size"] = action.get("combo_size")
+                if action.get("hand_count_after") is not None:
+                    action_view["hand_count_after"] = action.get("hand_count_after")
+                if action.get("finished_rank") is not None:
+                    action_view["finished_rank"] = action.get("finished_rank")
+                actions.append(action_view)
+            tricks.append(
+                {
+                    "index": trick.get("index"),
+                    "leader_id": trick.get("leader_id"),
+                    "winner_id": trick.get("winner_id"),
+                    "status": trick.get("status"),
+                    "actions": actions,
+                }
+            )
+        history.append(
+            {
+                "round_number": entry.get("round_number"),
+                "dealer_team": entry.get("dealer_team"),
+                "level_rank": entry.get("level_rank"),
+                "status": entry.get("status"),
+                "tricks": tricks,
+            }
+        )
+    return history
 
 
 def _render_tribute_memory(state: Dict, tribute: Optional[Dict]) -> str:

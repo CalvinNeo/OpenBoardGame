@@ -91,6 +91,22 @@ class GuandanMemoriesTests(unittest.TestCase):
         self.assertIn("Download Memories", html)
         self.assertIn("Round 1", html)
 
+    def test_public_view_exposes_round_history_without_hidden_hands(self):
+        state = self._build_state_with_trick_history()
+        view = guandan.GuandanGame.get_public_view(state, "p1")
+
+        self.assertIn("round_history", view)
+        self.assertEqual(len(view["round_history"]), 1)
+        round_entry = view["round_history"][0]
+        self.assertEqual(round_entry["round_number"], 1)
+        self.assertEqual(len(round_entry["tricks"]), 1)
+        trick = round_entry["tricks"][0]
+        self.assertEqual(trick["leader_id"], "p1")
+        self.assertEqual(trick["winner_id"], "p4")
+        self.assertEqual(trick["actions"][0]["cards"], ["♠️4"])
+        self.assertEqual(trick["actions"][-1]["type"], "pass")
+        self.assertNotIn("initial_hands", round_entry)
+
 
 if __name__ == "__main__":
     unittest.main()

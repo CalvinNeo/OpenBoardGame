@@ -911,6 +911,74 @@ async function copyGuandanBotExplainToClipboard(text) {
   return false;
 }
 
+function buildGuandanRoundHistoryClipboardText(view) {
+  if (!view || !Array.isArray(view.round_history) || !view.round_history.length) {
+    return "";
+  }
+  const sections = [];
+  view.round_history.forEach((roundEntry) => {
+    const roundNumber = roundEntry && roundEntry.round_number != null ? roundEntry.round_number : "-";
+    const headerBits = [`Round ${roundNumber}`];
+    if (roundEntry && roundEntry.dealer_team) {
+      headerBits.push(`dealer=${roundEntry.dealer_team}`);
+    }
+    if (roundEntry && roundEntry.level_rank != null) {
+      headerBits.push(`level=${roundEntry.level_rank}`);
+    }
+    if (roundEntry && roundEntry.status) {
+      headerBits.push(`status=${roundEntry.status}`);
+    }
+    sections.push(headerBits.join(" "));
+    const tricks = Array.isArray(roundEntry && roundEntry.tricks) ? roundEntry.tricks : [];
+    if (!tricks.length) {
+      sections.push("No tricks yet.");
+      return;
+    }
+    tricks.forEach((trick) => {
+      const leader = getGuandanPlayerName(view, trick && trick.leader_id);
+      const winner = getGuandanPlayerName(view, trick && trick.winner_id);
+      sections.push(
+        `Trick ${trick && trick.index != null ? trick.index : "-"} leader=${leader} winner=${winner} status=${(trick && trick.status) || "-"}`
+      );
+      const actions = Array.isArray(trick && trick.actions) ? trick.actions : [];
+      if (!actions.length) {
+        sections.push("  (no actions)");
+        return;
+      }
+      actions.forEach((action, index) => {
+        const actor = getGuandanPlayerName(view, action && action.player_id);
+        if (action && action.type === "play") {
+          const cards = Array.isArray(action.cards) && action.cards.length ? action.cards.join(" ") : "-";
+          const notes = [];
+          if (action.combo_type) {
+            notes.push(`combo=${action.combo_type}`);
+          }
+          if (action.combo_size != null) {
+            notes.push(`size=${action.combo_size}`);
+          }
+          if (action.hand_count_after != null) {
+            notes.push(`left=${action.hand_count_after}`);
+          }
+          if (action.finished_rank != null) {
+            notes.push(`finish#${action.finished_rank}`);
+          }
+          sections.push(`${index + 1}. ${actor}: ${cards}${notes.length ? ` (${notes.join(", ")})` : ""}`);
+          return;
+        }
+        const notes = [];
+        if (action && action.hand_count_after != null) {
+          notes.push(`left=${action.hand_count_after}`);
+        }
+        if (action && action.finished_rank != null) {
+          notes.push(`finish#${action.finished_rank}`);
+        }
+        sections.push(`${index + 1}. ${actor}: Pass${notes.length ? ` (${notes.join(", ")})` : ""}`);
+      });
+    });
+  });
+  return sections.join("\n");
+}
+
 function buildGuandanBotExplainClipboardText(playerId, explain) {
   const view = currentGuandanView;
   if (!view || !explain) return "";
@@ -988,6 +1056,15 @@ function buildGuandanBotExplainClipboardText(playerId, explain) {
   ].join("\n");
 }
 
+function buildGuandanBotExplainVerboseClipboardText(playerId, explain) {
+  const base = buildGuandanBotExplainClipboardText(playerId, explain);
+  const history = buildGuandanRoundHistoryClipboardText(currentGuandanView);
+  if (!history) {
+    return base;
+  }
+  return `${base}\n=====\n${history}`;
+}
+
 function showGuandanBotExplain(playerId) {
   if (!guandanBotExplainModal || !guandanBotExplainContent || !currentGuandanView) return;
   const explain = currentGuandanView.bot_explain ? currentGuandanView.bot_explain[playerId] : null;
@@ -1007,6 +1084,7 @@ function showGuandanBotExplain(playerId) {
   const actionsRow = `
     <div class="guandan-bot-hand-row guandan-bot-explain-actions">
       <button type="button" class="guandan-bot-explain-copy" data-player="${playerId}">Copy</button>
+      <button type="button" class="guandan-bot-explain-copy guandan-bot-explain-copy-verbose" data-player="${playerId}">Copy Verbose</button>
       ${hand.length ? `<button type="button" class="guandan-bot-hand-toggle">View Hand</button>` : ""}
       <span class="guandan-bot-copy-status" aria-live="polite"></span>
     </div>
@@ -1066,6 +1144,7 @@ function showGuandanBotExplain(playerId) {
     </table>
   `;
   const copyBtn = guandanBotExplainContent.querySelector(".guandan-bot-explain-copy");
+  const copyVerboseBtn = guandanBotExplainContent.querySelector(".guandan-bot-explain-copy-verbose");
   const copyStatus = guandanBotExplainContent.querySelector(".guandan-bot-copy-status");
   if (copyBtn) {
     copyBtn.addEventListener("click", async () => {
@@ -1077,6 +1156,22 @@ function showGuandanBotExplain(playerId) {
       }
       window.setTimeout(() => {
         copyBtn.textContent = "Copy";
+        if (copyStatus) {
+          copyStatus.textContent = "";
+        }
+      }, 1400);
+    });
+  }
+  if (copyVerboseBtn) {
+    copyVerboseBtn.addEventListener("click", async () => {
+      const text = buildGuandanBotExplainVerboseClipboardText(playerId, explain);
+      const ok = await copyGuandanBotExplainToClipboard(text);
+      copyVerboseBtn.textContent = ok ? "Copied" : "Copy Failed";
+      if (copyStatus) {
+        copyStatus.textContent = ok ? "Verbose bot context copied." : "Clipboard unavailable.";
+      }
+      window.setTimeout(() => {
+        copyVerboseBtn.textContent = "Copy Verbose";
         if (copyStatus) {
           copyStatus.textContent = "";
         }
