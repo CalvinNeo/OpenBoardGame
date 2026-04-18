@@ -1467,6 +1467,70 @@ def _short_hand_has_structured_shape(hand: List[Dict], level_rank: int) -> bool:
     return pattern not in ((1, 1, 1, 1, 1, 1), (2, 1, 1, 1, 1))
 
 
+def _short_hand_singleton_pressure_weight(state: Dict, opponent_id: str, hand: List[Dict], level_rank: int) -> float:
+    profile = _public_history_profile_for_target(state, opponent_id)
+    pass_limit_single = state.get("pass_limits", {}).get(opponent_id, {}).get("single")
+    if profile.get("single_lane", 0.0) <= 0.0 and pass_limit_single is None:
+        return 1.0
+
+    counts: Dict[object, int] = {}
+    singleton_cards: List[Dict] = []
+    for card in hand:
+        if _is_joker(card):
+            key = ("joker", card.get("joker"))
+        elif _is_wild(card, level_rank):
+            key = ("wild", level_rank)
+        else:
+            key = ("rank", card.get("rank"))
+        counts[key] = counts.get(key, 0) + 1
+    for card in hand:
+        if _is_joker(card):
+            key = ("joker", card.get("joker"))
+        elif _is_wild(card, level_rank):
+            key = ("wild", level_rank)
+        else:
+            key = ("rank", card.get("rank"))
+        if counts.get(key, 0) == 1:
+            singleton_cards.append(card)
+
+    singleton_count = len(singleton_cards)
+    premium_singletons = sum(1 for card in singleton_cards if _single_order_value(card, level_rank) >= 60)
+    control_singletons = sum(1 for card in singleton_cards if _single_order_value(card, level_rank) >= 80)
+
+    weight = 1.0
+    if profile.get("single_lane", 0.0) >= 2.0 or profile.get("last_hand_after", 99.0) <= 8:
+        if singleton_count <= 1:
+            weight *= 1.18
+        elif singleton_count == 2:
+            weight *= 0.72
+        else:
+            weight *= 0.28
+
+    if profile.get("low_single_revealed", 0.0) >= 1.2:
+        if singleton_count == 0:
+            weight *= 1.08
+        elif singleton_count == 1 and premium_singletons >= 1:
+            weight *= 1.12
+        elif singleton_count >= 2:
+            weight *= 0.74
+
+    if pass_limit_single is not None:
+        if singleton_count == 0:
+            weight *= 1.06
+        elif singleton_count == 1 and premium_singletons >= 1:
+            weight *= 1.16
+        elif singleton_count == 1:
+            weight *= 0.92
+        elif singleton_count == 2:
+            weight *= 0.54
+        else:
+            weight *= 0.18
+        if control_singletons > 1:
+            weight *= 0.65
+
+    return max(0.05, min(1.35, weight))
+
+
 def _hand_has_same_type_beat(hand: List[Dict], level_rank: int, combo: Dict, config: Dict) -> bool:
     combo_type = combo.get("type")
     threshold = _combo_numeric_value(combo)
@@ -1562,6 +1626,8 @@ def _short_hand_structured_reply_breakdown(
         if not _short_hand_has_structured_shape(hand, level_rank):
             continue
         if not obey_caps(hand):
+            continue
+        if rng.random() > _short_hand_singleton_pressure_weight(state, opponent_id, hand, level_rank):
             continue
         accepted += 1
         if _hand_has_same_type_beat(hand, level_rank, combo, config):
