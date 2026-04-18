@@ -794,6 +794,10 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertGreater(any_with, any_without)
 
     def test_short_opponent_risk_softly_reduces_full_house_lead_score(self):
+        # This scenario still keeps a strong natural re-entry (AAAKK), so the
+        # bot may legally keep 888TT as a top lead. The check here is only that
+        # short-hand risk nudges the full-house score downward instead of
+        # forcing an automatic breakup.
         players = [
             {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
             {"player_id": "bot3", "name": "Bot 3", "seat": 1, "is_bot": True},
@@ -927,6 +931,128 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertIn(tuple(sorted(target_ids)), {tuple(sorted(cards)) for cards in risky_ranked})
         self.assertLess(risky_score, neutral_score)
         self.assertGreater(risky_score, neutral_score - 3.5)
+
+    def test_short_opponent_risk_avoids_888tt_without_aaa_reentry(self):
+        players = [
+            {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
+            {"player_id": "bot3", "name": "Bot 3", "seat": 1, "is_bot": True},
+            {"player_id": "zhu", "name": "zhu", "seat": 2, "is_bot": False},
+            {"player_id": "bot4", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["round_number"] = 1
+        state["dealer_team"] = "A"
+        state["level_rank"] = 2
+        state["current_turn"] = "bot4"
+        state["config"]["bot_mode"] = "heuristic"
+        state["config"]["bot_short_hand_structured_samples"] = 120
+        state["config"]["bot_short_hand_structured_max_attempts"] = 1800
+        state["pass_limits"] = {"calvin": {"single": 90}}
+
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        played = []
+        for label in [
+            "♠️3", "♦️3", "♦️7", "♥️7", "♥️J", "♦️J", "♥️Q", "♥️Q", "♣️K", "♠️K", "♣️3", "♠️3", "♥️3", "♥️2",
+            "♣️5", "♠️5", "♦️2", "♦️2",
+            "♦️3", "♦️4", "♥️5", "♦️6", "♥️7",
+            "♠️6", "♦️7", "♦️8", "♦️9", "♣️10", "♠️7", "♥️8", "♥️9", "♥️10", "♥️J", "♥️2", "♦️Q", "♠️Q", "♠️Q",
+            "♥️3", "♠️5", "♥️8", "♣️9", "🃏B",
+            "♣️6", "♥️9", "♠️10", "♥️K", "♠️2", "🃏S",
+        ]:
+            played.append(pick_label(label))
+
+        state["seen_cards"] = [card["id"] for card in played]
+        state["players"]["bot4"]["hand"] = [
+            pick_label(label)
+            for label in [
+                "♠️2", "♠️4", "♠️4",
+                "♦️K", "♠️K", "♣️Q", "♣️J", "♠️J",
+                "♥️10", "♦️10", "♦️8", "♠️8", "♣️8", "♣️6", "♣️4", "♥️4", "♣️4",
+            ]
+        ]
+        state["players"]["calvin"]["hand"] = deck[:6]
+        state["players"]["bot3"]["hand"] = deck[6:23]
+        state["players"]["zhu"]["hand"] = deck[23:43]
+        state["round_memories"] = [
+            {
+                "round_number": 1,
+                "tricks": [
+                    {
+                        "actions": [
+                            {
+                                "player_id": "calvin",
+                                "type": "play",
+                                "combo_type": "pair",
+                                "cards": [
+                                    {"label": "♥️J", "rank": 11, "suit": "hearts", "joker": None, "is_wild": False},
+                                    {"label": "♦️J", "rank": 11, "suit": "diamonds", "joker": None, "is_wild": False},
+                                ],
+                                "hand_count_after": 25,
+                            }
+                        ],
+                    },
+                    {
+                        "actions": [
+                            {
+                                "player_id": "calvin",
+                                "type": "play",
+                                "combo_type": "pair",
+                                "cards": [
+                                    {"label": "♦️2", "rank": 2, "suit": "diamonds", "joker": None, "is_wild": False},
+                                    {"label": "♦️2", "rank": 2, "suit": "diamonds", "joker": None, "is_wild": False},
+                                ],
+                                "hand_count_after": 23,
+                            }
+                        ],
+                    },
+                    {
+                        "actions": [
+                            {
+                                "player_id": "calvin",
+                                "type": "play",
+                                "combo_type": "single",
+                                "cards": [{"label": "♥️3", "rank": 3, "suit": "hearts", "joker": None, "is_wild": False}],
+                                "hand_count_after": 8,
+                            },
+                            {
+                                "player_id": "calvin",
+                                "type": "play",
+                                "combo_type": "single",
+                                "cards": [{"label": "🃏B", "rank": None, "suit": None, "joker": "big", "is_wild": False}],
+                                "hand_count_after": 7,
+                            },
+                        ],
+                    },
+                    {
+                        "actions": [
+                            {
+                                "player_id": "calvin",
+                                "type": "play",
+                                "combo_type": "single",
+                                "cards": [{"label": "♣️6", "rank": 6, "suit": "clubs", "joker": None, "is_wild": False}],
+                                "hand_count_after": 6,
+                            },
+                            {"player_id": "calvin", "type": "pass"},
+                        ],
+                    },
+                ],
+            }
+        ]
+
+        chosen = guandan._bot_select_play(state, "bot4", depth=1)
+        hand = state["players"]["bot4"]["hand"]
+        hand_map = guandan._map_hand_by_id(hand)
+        chosen_labels = {guandan._card_label(hand_map[cid]) for cid in chosen}
+
+        self.assertNotEqual(chosen_labels, {"♦️8", "♠️8", "♣️8", "♥️10", "♦️10"})
 
     def test_rollout_policy_uses_heuristic_action(self):
         state, big = self._make_state()
