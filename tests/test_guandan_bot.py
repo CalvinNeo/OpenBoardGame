@@ -1857,6 +1857,64 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertEqual(action.get("card_ids"), [six["id"]])
         self.assertEqual(guandan._bot_select_play(state, "bot", depth=3), [six["id"]])
 
+    def test_single_response_raises_gate_for_immediate_one_card_opponent(self):
+        players = [
+            {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
+            {"player_id": "bot3", "name": "Bot 3", "seat": 1, "is_bot": False},
+            {"player_id": "zhu", "name": "zhu", "seat": 2, "is_bot": False},
+            {"player_id": "bot4", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["round_number"] = 1
+        state["dealer_team"] = "A"
+        state["level_rank"] = 2
+        state["current_turn"] = "bot4"
+        state["config"]["bot_mode"] = "heuristic"
+
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        bot_hand = [
+            pick_label(label)
+            for label in ["♥️A", "♣️A", "♠️A", "♣️Q", "♣️J", "♠️J", "♣️6", "♣️4", "♥️4", "♠️4"]
+        ]
+        state["players"]["bot4"]["hand"] = bot_hand
+        state["players"]["calvin"]["hand"] = [pick_label("♦️K")]
+        state["players"]["bot3"]["hand"] = deck[:9]
+        del deck[:9]
+        state["players"]["zhu"]["hand"] = deck[:11]
+        del deck[:11]
+
+        lead = pick_label("♦️4")
+        state["current_trick"] = {
+            "player_id": "zhu",
+            "cards": [lead["id"]],
+            "combo": guandan._evaluate_combo([lead], state["level_rank"], state.get("config", {})),
+        }
+        state["trick_plays"] = {"zhu": [lead]}
+
+        hand_map = {guandan._card_label(card): card for card in bot_hand}
+        low_response = [hand_map["♣️6"]["id"]]
+        high_response = [hand_map["♣️Q"]["id"]]
+        low_score = guandan._bot_score_components(state, "bot4", low_response, depth=3)
+        high_score = guandan._bot_score_components(state, "bot4", high_response, depth=3)
+
+        self.assertGreater(
+            high_score.get("block_next_closeout", 0.0),
+            low_score.get("block_next_closeout", 0.0),
+        )
+        self.assertGreater(high_score.get("total", -999.0), low_score.get("total", -999.0))
+
+        action = guandan.GuandanGame.bot_move(state, "bot4")
+        self.assertEqual(action.get("type"), "play")
+        self.assertEqual(action.get("card_ids"), high_response)
+
     def test_low_single_prefers_lone_level_single_lock_over_pass(self):
         players = [
             {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},

@@ -578,6 +578,56 @@ def _opponent_one_card_closeout_bonus(
     return max(8.0, bonus)
 
 
+def _next_opponent_one_card_block_bonus(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+) -> float:
+    current_trick = state.get("current_trick")
+    if not current_trick or combo.get("type") != "single" or len(cards) != 1:
+        return 0.0
+
+    leader = current_trick.get("player_id")
+    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+        return 0.0
+
+    next_pid = _next_active_after(state, player_id)
+    if not next_pid or _team_of(state, next_pid) == _team_of(state, player_id):
+        return 0.0
+
+    next_left = len(state["players"].get(next_pid, {}).get("hand", []))
+    if next_left > 1:
+        return 0.0
+
+    current_combo = current_trick.get("combo") or {}
+    if current_combo.get("type") != "single":
+        return 0.0
+
+    level_rank = state["level_rank"]
+    config = state.get("config", {})
+    if not _compare_combos(current_combo, combo, level_rank, config):
+        return 0.0
+
+    hand = state["players"][player_id]["hand"]
+    hand_map = _map_hand_by_id(hand)
+    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+    if len(play_cards) != 1:
+        return 0.0
+
+    chosen_value = combo.get("rank_value", 0)
+    current_value = current_combo.get("rank_value", 0)
+    margin = max(0.0, float(chosen_value - current_value))
+    bonus = 2.5 + min(8.0, margin * 0.85)
+    if chosen_value >= 58:
+        bonus += 4.0
+    if chosen_value >= 70:
+        bonus += 1.8
+    if _cards_use_special_material(play_cards, level_rank):
+        bonus -= 2.5
+    return max(0.0, bonus)
+
+
 def _teammate_lead_strength(state: Dict, player_id: str) -> float:
     teammate = _teammate_lead_context(state, player_id)
     if not teammate:
@@ -4390,6 +4440,9 @@ def _bot_score_components(
         closeout_block = _opponent_one_card_closeout_bonus(state, bot_id, cards, combo)
         if closeout_block > 0.001:
             components["block_closeout"] = closeout_block
+        next_closeout_block = _next_opponent_one_card_block_bonus(state, bot_id, cards, combo)
+        if next_closeout_block > 0.001:
+            components["block_next_closeout"] = next_closeout_block
 
     if not current_trick:
         lead_score = _lead_option_score(state, bot_id, cards)
