@@ -4148,6 +4148,67 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertNotEqual(chosen_labels, ["♣️5"])
         self.assertIn(chosen_labels, (["♠️7", "♥️7"], ["♠️K", "♥️K", "♣️K", "♠️7", "♥️7"], ["♠️K", "♥️K", "♣️K"]))
 
+    def test_minimax_stops_at_round_end_instead_of_searching_next_round(self):
+        players = [
+            {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
+            {"player_id": "bot3", "name": "Bot 3", "seat": 1, "is_bot": True},
+            {"player_id": "zhu", "name": "zhu", "seat": 2, "is_bot": False},
+            {"player_id": "bot4", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["round_number"] = 1
+        state["dealer_team"] = "A"
+        state["level_rank"] = 2
+        state["current_turn"] = "bot4"
+        state["current_trick"] = None
+        state["pass_count"] = 0
+        state["trick_plays"] = {}
+        state["finish_order"] = ["calvin"]
+        state["players"]["calvin"]["hand"] = []
+        state["players"]["calvin"]["finished"] = True
+        state["players"]["calvin"]["finish_rank"] = 1
+        state["config"]["bot_mode"] = "auto"
+        state["config"]["bot_endgame_threshold"] = 999
+        state["config"]["bot_minimax_depth"] = 5
+        state["config"]["bot_minimax_width"] = 8
+
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        state["players"]["zhu"]["hand"] = [pick_label("♣️K")]
+        state["players"]["bot3"]["hand"] = [
+            pick_label("♣️J"),
+            pick_label("♠️7"),
+            pick_label("♣️7"),
+            pick_label("♦️7"),
+            pick_label("♠️7"),
+            pick_label("♠️Q"),
+        ]
+        state["players"]["bot4"]["hand"] = [
+            pick_label("♣️A"),
+            pick_label("♣️A"),
+            pick_label("♣️Q"),
+            pick_label("♥️10"),
+            pick_label("♠️10"),
+            pick_label("♣️10"),
+            pick_label("♥️4"),
+        ]
+        for pid in ("zhu", "bot3", "bot4"):
+            state["players"][pid]["finished"] = False
+            state["players"][pid]["finish_rank"] = None
+
+        hand_map = guandan._map_hand_by_id(state["players"]["bot4"]["hand"])
+        chosen = guandan._minimax_pick_action(state, "bot4", depth=5, width=8, deadline=None)
+        self.assertIsNotNone(chosen)
+        chosen_labels = [guandan._card_label(hand_map[cid]) for cid in chosen]
+        self.assertNotEqual(chosen_labels, ["♥️4"])
+
     def test_lead_prefers_lower_steel_plate_when_two_steel_plates_exist(self):
         players = [
             {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},

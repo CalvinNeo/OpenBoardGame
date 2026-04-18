@@ -5839,7 +5839,7 @@ def _minimax_value(
 ) -> float:
     if deadline is not None and time.perf_counter() >= deadline:
         return _evaluate_state_for_bot(state, bot_id)
-    if depth <= 0 or state.get("game_over"):
+    if depth <= 0 or state.get("game_over") or state.get("phase") != "playing":
         return _evaluate_state_for_bot(state, bot_id)
     actor = _next_actor(state)
     if actor is None:
