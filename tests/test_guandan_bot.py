@@ -2769,6 +2769,67 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         labels = [guandan._card_label(hand_map[cid]) for cid in chosen]
         self.assertEqual(labels, ["♠️4"])
 
+    def test_midgame_single_lead_prefers_low_orphan_over_overlap_run_bonus(self):
+        players = [
+            {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
+            {"player_id": "bot2", "name": "Bot 2", "seat": 1, "is_bot": True},
+            {"player_id": "bot3", "name": "Bot 3", "seat": 2, "is_bot": False},
+            {"player_id": "bot4", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["round_number"] = 1
+        state["dealer_team"] = "B"
+        state["level_rank"] = 2
+        state["current_turn"] = "bot2"
+        state["current_trick"] = None
+        state["config"]["bot_mode"] = "heuristic"
+
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        hand = [
+            pick_label(label)
+            for label in [
+                "♣️2",
+                "♠️K",
+                "♥️K",
+                "♠️Q",
+                "♥️Q",
+                "♣️Q",
+                "♠️J",
+                "♥️J",
+                "♣️J",
+                "♦️J",
+                "♦️7",
+                "♥️6",
+                "♦️6",
+                "♠️6",
+                "♥️5",
+                "♠️5",
+                "♣️4",
+                "♥️4",
+                "♣️3",
+            ]
+        ]
+        state["players"]["bot2"]["hand"] = hand
+        for pid, count in (("calvin", 19), ("bot3", 27), ("bot4", 27)):
+            state["players"][pid]["hand"] = deck[:count]
+            del deck[:count]
+
+        hand_map = guandan._map_hand_by_id(hand)
+        club_three = [next(card["id"] for card in hand if guandan._card_label(card) == "♣️3")]
+        diamond_seven = [next(card["id"] for card in hand if guandan._card_label(card) == "♦️7")]
+        self.assertGreater(
+            guandan._bot_score_play(state, "bot2", club_three, depth=2),
+            guandan._bot_score_play(state, "bot2", diamond_seven, depth=2),
+        )
+
     def test_minimax_lead_avoids_feeding_low_single_to_immediate_short_opponent(self):
         players = [
             {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},

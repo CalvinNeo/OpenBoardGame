@@ -1356,6 +1356,15 @@ def _lead_initiative_retention_bonus(
         score -= min(3.6, (any_reply - 0.7) * 9.0)
     if combo_type == "pair":
         return max(-4.5, min(0.0, score * 0.7))
+    if combo_type == "straight" and after.get("group_turns", 0.0) >= 3.0:
+        active_players = sum(
+            1
+            for pid in state.get("turn_order", [])
+            if not state["players"][pid]["finished"]
+        )
+        remaining_pairs = sum(1 for count in _rank_count_map(remaining, level_rank).values() if count >= 2)
+        if active_players <= 3 and remaining_pairs >= 3:
+            score = max(-1.0, score)
     return max(-8.0, min(9.5, score))
 
 
@@ -1550,8 +1559,78 @@ def _lead_single_initiative_penalty(hand: List[Dict], cards: List[int], level_ra
     before_low = sum(1 for entry in hand if _single_order_value(entry, level_rank) < 58)
     after_low = decomp.get("low_singles", 0.0)
     if before_low > 0 and after_low <= before_low - 1:
-        penalty -= 1.2
+        penalty -= 1.2 + min(1.6, max(0.0, 58 - value) * 0.18)
     return max(0.0, penalty)
+
+
+def _lead_overlap_run_low_single_bonus(
+    state: Dict,
+    player_id: str,
+    hand: List[Dict],
+    cards: List[int],
+    level_rank: int,
+) -> float:
+    if len(cards) != 1 or len(hand) < 12:
+        return 0.0
+
+    hand_map = _map_hand_by_id(hand)
+    card = hand_map.get(cards[0])
+    if not card or _is_joker(card) or _is_wild(card, level_rank):
+        return 0.0
+
+    rank = card.get("rank")
+    if rank is None:
+        return 0.0
+    counts = _rank_count_map(hand, level_rank)
+    if counts.get(rank, 0) != 1:
+        return 0.0
+
+    value = _single_order_value(card, level_rank)
+    if value >= 58:
+        return 0.0
+
+    before_metrics = _hand_structure_metrics(hand, level_rank)
+    if before_metrics.get("max_run", 0.0) < 5.0:
+        return 0.0
+    if before_metrics.get("pair_run", 0.0) < 3.0 and before_metrics.get("triple_run", 0.0) < 2.0:
+        return 0.0
+
+    before = _hand_decomposition_summary(hand, level_rank)
+    remaining = _remove_cards(hand, cards)
+    after = _hand_decomposition_summary(remaining, level_rank) if remaining else _empty_hand_decomposition_summary()
+    if after.get("group_turns", 0.0) + 0.01 < before.get("group_turns", 0.0):
+        return 0.0
+    if after.get("bomb_turns", 0.0) + 0.01 < before.get("bomb_turns", 0.0):
+        return 0.0
+
+    bonus = 0.7 + max(0.0, 58 - value) * 0.18
+    if after.get("low_singles", 0.0) <= before.get("low_singles", 0.0) - 1.0:
+        bonus += 0.55
+    if tuple(after.get("plan_types", ()))[:4] == tuple(before.get("plan_types", ()))[:4]:
+        bonus += 0.35
+
+    raw_turns = _estimated_turns_to_finish(remaining, level_rank)
+    corrected_turns = after.get("turns", raw_turns)
+    corrected_turns += after.get("low_singles", 0.0) * 0.18
+    corrected_turns += after.get("special_material_turns", 0.0) * 0.08
+    if corrected_turns <= raw_turns + 0.75:
+        return bonus
+
+    remaining_count = len(remaining)
+    raw_team_finish = _team_finish_score(state, player_id, remaining_count, bot_hand=remaining)
+    corrected_team_finish = _team_finish_score_with_turn_override(
+        state,
+        player_id,
+        remaining_count,
+        corrected_turns,
+    )
+    raw_structure_credit = max(0.0, remaining_count - raw_turns) * 0.75
+    corrected_structure_credit = max(0.0, remaining_count - corrected_turns) * 0.75
+    correction = bonus
+    correction += (corrected_team_finish - raw_team_finish) * 2.2
+    correction += (-corrected_turns * 0.34) - (-raw_turns * 0.34)
+    correction += corrected_structure_credit - raw_structure_credit
+    return correction
 
 
 def _plan_alignment_score(hand: List[Dict], cards: List[int], combo: Dict, level_rank: int) -> float:
@@ -2409,6 +2488,42 @@ def _team_finish_score(
     for pid in state["turn_order"]:
         if pid == bot_id and bot_hand is not None:
             turns[pid] = _estimated_turns_to_finish(bot_hand, level_rank)
+        else:
+            turns[pid] = _estimated_turns_to_finish(state["players"][pid]["hand"], level_rank)
+    predicted = _predict_finish_order(state, counts, turns)
+    team = _team_of(state, bot_id)
+    team_positions = [idx + 1 for idx, pid in enumerate(predicted) if _team_of(state, pid) == team]
+    if len(team_positions) < 2:
+        return 0.0
+    team_positions.sort()
+    if team_positions == [1, 2]:
+        return 8.0
+    if team_positions == [1, 3]:
+        return 5.0
+    if team_positions == [1, 4]:
+        return 2.0
+    if team_positions == [2, 3]:
+        return 1.0
+    if team_positions == [2, 4]:
+        return -2.0
+    if team_positions == [3, 4]:
+        return -6.0
+    return 0.0
+
+
+def _team_finish_score_with_turn_override(
+    state: Dict,
+    bot_id: str,
+    bot_remaining: int,
+    bot_turns: float,
+) -> float:
+    counts = {pid: len(state["players"][pid]["hand"]) for pid in state["turn_order"]}
+    counts[bot_id] = bot_remaining
+    level_rank = state.get("level_rank", 2)
+    turns = {}
+    for pid in state["turn_order"]:
+        if pid == bot_id:
+            turns[pid] = bot_turns
         else:
             turns[pid] = _estimated_turns_to_finish(state["players"][pid]["hand"], level_rank)
     predicted = _predict_finish_order(state, counts, turns)
@@ -3874,6 +3989,9 @@ def _bot_score_components(
         initiative_penalty = _lead_single_initiative_penalty(hand, cards, level_rank)
         if initiative_penalty > 0.001:
             components["keep_initiative_shape"] = -initiative_penalty
+        overlap_low_single_bonus = _lead_overlap_run_low_single_bonus(state, bot_id, hand, cards, level_rank)
+        if abs(overlap_low_single_bonus) > 0.001:
+            components["overlap_run_low_single"] = overlap_low_single_bonus
         special_penalty = _lead_special_material_penalty(state, bot_id, cards, combo)
         if special_penalty > 0.001:
             components["lead_special_material"] = -special_penalty
