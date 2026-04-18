@@ -66,6 +66,7 @@ _list_full_house_options = _proxy("_list_full_house_options")
 _list_straight_options = _proxy("_list_straight_options")
 _list_three_pairs_options = _proxy("_list_three_pairs_options")
 _list_steel_plate_options = _proxy("_list_steel_plate_options")
+_ranks_sorted_by_strength = _proxy("_ranks_sorted_by_strength")
 _rank_response_options = _proxy("_rank_response_options")
 _rank_lead_options = _proxy("_rank_lead_options")
 _choose_lead_play = _proxy("_choose_lead_play")
@@ -638,6 +639,140 @@ def _choose_lead_play(hand: List[Dict], level_rank: int, config: Dict, state: Di
     return ranked[0] if ranked else []
 
 
+def _bomb_tier_for_size(size: int) -> int:
+    if size <= 5:
+        return size - 3
+    return size - 2
+
+
+def _find_straight_flush_candidates(hand: List[Dict], level_rank: int) -> List[Tuple[int, List[int]]]:
+    info = _hand_info(hand, level_rank)
+    candidates: List[Tuple[int, List[int]]] = []
+    for suit in ("spades", "hearts", "clubs", "diamonds"):
+        suit_map = info["normals_by_suit"].get(suit, {})
+        for seq, high_value in _CORE.STRAIGHT_SEQUENCES:
+            cards: List[int] = []
+            wilds = list(info["wild_cards"])
+            needed = 0
+            for rank in seq:
+                normals = suit_map.get(rank, [])
+                if normals:
+                    cards.append(normals[0])
+                else:
+                    needed += 1
+            if needed <= len(wilds):
+                cards.extend(wilds[:needed])
+                candidates.append((high_value, cards))
+    candidates.sort(key=lambda item: item[0])
+    return candidates
+
+
+def _find_bomb_candidates(hand: List[Dict], level_rank: int) -> List[Dict]:
+    info = _hand_info(hand, level_rank)
+    strength = _rank_strength(level_rank)
+    wilds = list(info["wild_cards"])
+    candidates: List[Dict] = []
+
+    if len(info["jokers_big"]) >= 2 and len(info["jokers_small"]) >= 2:
+        candidates.append(
+            {
+                "type": "heavenly",
+                "tier": 7,
+                "rank_value": 0,
+                "high_value": 0,
+                "cards": info["jokers_big"][:2] + info["jokers_small"][:2],
+                "uses_wild": False,
+            }
+        )
+
+    straight_flushes = _find_straight_flush_candidates(hand, level_rank)
+    for high_value, cards in straight_flushes:
+        candidates.append(
+            {
+                "type": "straight_flush",
+                "tier": 3,
+                "rank_value": 0,
+                "high_value": high_value,
+                "cards": cards,
+                "uses_wild": any(card in wilds for card in cards),
+            }
+        )
+
+    for rank, card_ids in info["normals_by_rank"].items():
+        total = len(card_ids) + len(wilds)
+        for size in range(4, min(8, total) + 1):
+            tier = _bomb_tier_for_size(size)
+            needed = max(0, size - len(card_ids))
+            if needed > len(wilds):
+                continue
+            cards = card_ids[: min(len(card_ids), size)]
+            if needed:
+                cards = cards + wilds[:needed]
+            candidates.append(
+                {
+                    "type": "bomb",
+                    "tier": tier,
+                    "rank_value": strength[rank],
+                    "high_value": 0,
+                    "cards": cards,
+                    "uses_wild": needed > 0,
+                }
+            )
+    candidates.sort(key=lambda item: (item["tier"], item["rank_value"], item["high_value"], item["uses_wild"]))
+    return candidates
+
+
+def _pick_bomb_to_beat(hand: List[Dict], level_rank: int, current_combo: Optional[Dict], config: Dict) -> Optional[List[int]]:
+    candidates = _find_bomb_candidates(hand, level_rank)
+    if not current_combo:
+        for cand in candidates:
+            if cand["type"] != "heavenly":
+                return cand["cards"]
+        return candidates[0]["cards"] if candidates else None
+    current_type = current_combo["type"]
+    if current_type == "heavenly":
+        return None
+    current_tier = _bomb_tier(current_combo)
+    current_rank_value = current_combo.get("rank_value", 0)
+    current_high_value = current_combo.get("high_value", 0)
+    for cand in candidates:
+        if cand["tier"] > current_tier:
+            return cand["cards"]
+        if cand["tier"] < current_tier:
+            continue
+        if current_type == "straight_flush":
+            if cand["type"] == "straight_flush" and cand["high_value"] > current_high_value:
+                return cand["cards"]
+            continue
+        if cand["type"] == "bomb" and cand["rank_value"] > current_rank_value:
+            if config.get("hard_bomb_beats_soft") and cand["rank_value"] == current_rank_value:
+                if not cand["uses_wild"]:
+                    return cand["cards"]
+            return cand["cards"]
+    return None
+
+
+def _list_bomb_options(
+    hand: List[Dict], level_rank: int, current_combo: Optional[Dict], config: Dict
+) -> List[List[int]]:
+    candidates = _find_bomb_candidates(hand, level_rank)
+    if not current_combo:
+        return [cand["cards"] for cand in candidates]
+    options: List[List[int]] = []
+    for cand in candidates:
+        combo = {
+            "type": cand["type"],
+            "size": len(cand["cards"]),
+            "rank_value": cand.get("rank_value", 0),
+            "high_value": cand.get("high_value", 0),
+            "tier": cand.get("tier", 0),
+            "uses_wild": cand.get("uses_wild", False),
+        }
+        if _compare_combos(current_combo, combo, level_rank, config):
+            options.append(cand["cards"])
+    return _dedupe_card_sets(options)
+
+
 def _lead_option_score(state: Dict, player_id: str, cards: List[int]) -> float:
     hand = state["players"][player_id]["hand"]
     hand_map = _map_hand_by_id(hand)
@@ -1005,6 +1140,211 @@ def _should_prune_wasteful_lead_bomb(
         if best_multi_non_bomb_score >= score - gap:
             return True
     return len(hand) >= 15 and best_non_bomb_score >= score + 1.5
+
+
+def _cards_use_special_material(play_cards: List[Dict], level_rank: int) -> bool:
+    return any(_is_joker(card) or _is_wild(card, level_rank) for card in play_cards)
+
+
+def _response_value_tolerance(combo_type: str) -> int:
+    if combo_type in ("single", "pair", "three", "full_house", "straight", "three_pairs", "steel_plate"):
+        return 1
+    return 0
+
+
+def _response_material_cost(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Optional[Dict] = None,
+    natural_alternative: bool = False,
+) -> float:
+    hand = state["players"][player_id]["hand"]
+    hand_map = _map_hand_by_id(hand)
+    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+    if not play_cards:
+        return 999.0
+    level_rank = state["level_rank"]
+    config = state.get("config", {})
+    if combo is None:
+        combo = _evaluate_combo(play_cards, level_rank, config)
+    if not combo:
+        return 999.0
+
+    current_trick = state.get("current_trick")
+    current_combo = current_trick.get("combo") if current_trick else None
+    structure_delta = max(0.0, _play_structure_delta(hand, cards, level_rank))
+    shape_penalty = max(0.0, -_shape_transition_score(hand, cards, level_rank))
+    control_break = _control_group_break_penalty(hand, cards, level_rank)
+    fragment_penalty = _group_fragment_penalty(hand, cards, level_rank, combo)
+
+    cost = structure_delta * 1.55
+    cost += shape_penalty * 0.8
+    cost += control_break * 1.05
+    cost += fragment_penalty
+
+    if current_combo and combo["type"] == current_combo.get("type"):
+        margin = max(0, _combo_value(combo) - _combo_value(current_combo))
+        factor = 0.22 if combo["type"] in ("single", "pair", "three") else 0.16
+        cost += margin * factor
+        if combo["type"] in ("full_house", "straight", "three_pairs", "steel_plate"):
+            if not _cards_use_special_material(play_cards, level_rank):
+                cost *= 0.3
+                cost = max(0.0, cost - 2.2)
+            else:
+                cost *= 0.5
+                cost = max(0.0, cost - 0.8)
+
+    wild_count = sum(1 for card in play_cards if _is_wild(card, level_rank))
+    small_joker_count = sum(1 for card in play_cards if card.get("joker") == "small")
+    big_joker_count = sum(1 for card in play_cards if card.get("joker") == "big")
+
+    if wild_count:
+        cost += wild_count * 4.5
+        if natural_alternative:
+            cost += 4.0 + 1.2 * wild_count
+    if small_joker_count:
+        cost += small_joker_count * 3.5
+    if big_joker_count:
+        cost += big_joker_count * 4.5
+    if combo["type"] == "pair" and small_joker_count == 2:
+        cost += 7.0 + (5.5 if natural_alternative else 0.0)
+    if combo["type"] == "pair" and big_joker_count == 2:
+        cost += 8.5 + (6.0 if natural_alternative else 0.0)
+
+    if combo["type"] in BOMB_TYPES:
+        if current_combo and current_combo.get("type") not in BOMB_TYPES:
+            minimal = _minimal_bomb_response(hand, level_rank, current_combo, config)
+            is_minimal = minimal is not None and tuple(sorted(minimal)) == tuple(sorted(cards))
+            if combo["type"] == "bomb":
+                low_bomb_anchor = _point_order_value(3, level_rank)
+                rank_pressure = max(0.0, combo.get("rank_value", 0) - low_bomb_anchor)
+                cost += 10.0 + _bomb_tier(combo) * 2.2 + rank_pressure * 1.2 - (4.0 if is_minimal else 0.0)
+                if is_minimal:
+                    cost -= max(0.0, 60 - combo.get("rank_value", 0)) * 1.1
+            elif combo["type"] == "straight_flush":
+                cost += 13.0 + _bomb_tier(combo) * 2.8 - (2.0 if is_minimal else 0.0)
+            else:
+                cost += 16.0 + _bomb_tier(combo) * 3.2
+        else:
+            cost += 7.0 + _bomb_tier(combo) * 2.0
+
+    for card in play_cards:
+        if _is_joker(card) or _is_wild(card, level_rank):
+            continue
+        value = _single_order_value(card, level_rank)
+        if value >= 80:
+            cost += 0.6
+        elif value >= 60:
+            cost += 0.2
+    return cost
+
+
+def _rank_response_options(state: Dict, player_id: str, options: List[List[int]]) -> List[List[int]]:
+    current_trick = state.get("current_trick")
+    if not current_trick or not options:
+        return options
+
+    hand = state["players"][player_id]["hand"]
+    hand_map = _map_hand_by_id(hand)
+    level_rank = state["level_rank"]
+    config = state.get("config", {})
+    entries = []
+    natural_by_type: Dict[str, bool] = {}
+    has_natural_full_house = False
+    leader = current_trick.get("player_id")
+    leader_left = len(state["players"].get(leader, {}).get("hand", [])) if leader else 99
+    for cards in _dedupe_card_sets(options):
+        play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+        combo = _evaluate_combo(play_cards, level_rank, config)
+        if not combo:
+            continue
+        uses_special = _cards_use_special_material(play_cards, level_rank)
+        if combo["type"] == "full_house" and not uses_special:
+            has_natural_full_house = True
+        entries.append((cards, combo, uses_special))
+        if not uses_special:
+            natural_by_type[combo["type"]] = True
+    if not entries:
+        return options
+
+    scored = []
+    for cards, combo, uses_special in entries:
+        if (
+            combo["type"] == "full_house"
+            and uses_special
+            and leader_left >= 12
+            and has_natural_full_house
+        ):
+            continue
+        natural_alt = uses_special and natural_by_type.get(combo["type"], False)
+        cost = _response_material_cost(state, player_id, cards, combo, natural_alt)
+        scored.append((cards, combo, cost))
+
+    filtered = []
+    for cards, combo, cost in scored:
+        dominated = False
+        tolerance = _response_value_tolerance(combo["type"])
+        for other_cards, other_combo, other_cost in scored:
+            if other_cards == cards or other_combo["type"] != combo["type"]:
+                continue
+            other_value = _combo_value(other_combo)
+            value = _combo_value(combo)
+            if other_value <= value + tolerance and other_cost <= cost - 2.25:
+                dominated = True
+                break
+        if not dominated:
+            filtered.append((cards, combo, cost))
+
+    filtered.sort(key=lambda item: (item[2], _combo_value(item[1]), len(item[0]), _cards_key(item[0])))
+    return [cards for cards, _, _ in filtered]
+
+
+def _best_response_play_score(state: Dict, player_id: str, depth: int, non_bomb_only: bool = True) -> Optional[float]:
+    current_trick = state.get("current_trick")
+    if not current_trick:
+        return None
+    leader = current_trick.get("player_id")
+    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+        return None
+    options = _list_hint_options(state, player_id)
+    options = _filter_overbomb_options(state, player_id, options)
+    options = _rank_response_options(state, player_id, options)
+    if not options:
+        return None
+
+    hand = state["players"][player_id]["hand"]
+    hand_map = _map_hand_by_id(hand)
+    scored: List[Tuple[float, str]] = []
+    for cards in options:
+        play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+        combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
+        if not combo:
+            continue
+        scored.append((_bot_score_play(state, player_id, cards, depth), combo["type"]))
+    if not scored:
+        return None
+
+    if non_bomb_only:
+        natural = [score for score, combo_type in scored if combo_type not in BOMB_TYPES]
+        if natural:
+            return max(natural)
+        return None
+    return max(score for score, _ in scored)
+
+
+def _hypergeom_hit_probability(total: int, hits: int, draws: int) -> float:
+    if total <= 0 or hits <= 0 or draws <= 0:
+        return 0.0
+    draws = min(draws, total)
+    misses = total - hits
+    miss_prob = 1.0
+    for idx in range(draws):
+        denom = total - idx
+        if denom <= 0:
+            break
+        miss_prob *= max(0, misses - idx) / denom
+    return max(0.0, min(1.0, 1.0 - miss_prob))
 
 
 def _next_active_after(state: Dict, player_id: str) -> Optional[str]:
