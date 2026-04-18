@@ -280,6 +280,89 @@ def _teammate_public_history_profile(state: Dict, player_id: str) -> Dict[str, f
     return profile
 
 
+def _public_history_profile_for_target(state: Dict, target_id: str) -> Dict[str, float]:
+    profile = {
+        "confidence": 0.0,
+        "play_count": 0.0,
+        "pass_count": 0.0,
+        "single_lane": 0.0,
+        "pair_lane": 0.0,
+        "three_lane": 0.0,
+        "structure_lane": 0.0,
+        "low_single_revealed": 0.0,
+        "control_revealed": 0.0,
+        "last_hand_after": 99.0,
+    }
+    if not target_id:
+        return profile
+
+    round_entries = state.get("round_memories") or []
+    round_entry = round_entries[-1] if round_entries else None
+    if not round_entry:
+        return profile
+
+    actions: List[Dict] = []
+    for trick in round_entry.get("tricks", []) or []:
+        for action in trick.get("actions", []) or []:
+            if action.get("player_id") == target_id:
+                actions.append(action)
+    if not actions:
+        return profile
+
+    play_actions = [action for action in actions if action.get("type") == "play"]
+    pass_count = sum(1 for action in actions if action.get("type") == "pass")
+    profile["play_count"] = float(len(play_actions))
+    profile["pass_count"] = float(pass_count)
+    if not play_actions:
+        profile["confidence"] = min(0.35, pass_count * 0.08)
+        return profile
+
+    total = max(1, len(play_actions))
+    level_rank = state["level_rank"]
+    for idx, action in enumerate(play_actions):
+        weight = 0.7 + ((idx + 1) / total) * 0.6
+        combo_type = action.get("combo_type") or ""
+        hand_after = action.get("hand_count_after")
+        if hand_after is not None:
+            profile["last_hand_after"] = float(hand_after)
+
+        if combo_type == "single":
+            cards = action.get("cards") or []
+            value = max((_public_card_single_value(card, level_rank) for card in cards), default=0)
+            lane = 0.9
+            if value <= 58:
+                profile["low_single_revealed"] += weight
+                lane += 0.25
+            elif value >= 80:
+                profile["control_revealed"] += weight
+                lane += 0.35
+            profile["single_lane"] += weight * lane
+        elif combo_type == "pair":
+            profile["pair_lane"] += weight * 1.0
+        elif combo_type == "three":
+            profile["three_lane"] += weight * 1.15
+        elif combo_type == "full_house":
+            profile["pair_lane"] += weight * 0.65
+            profile["three_lane"] += weight * 0.7
+            profile["structure_lane"] += weight * 1.0
+        elif combo_type in ("straight", "three_pairs", "steel_plate"):
+            profile["structure_lane"] += weight * 1.25
+            if combo_type == "three_pairs":
+                profile["pair_lane"] += weight * 0.55
+            elif combo_type == "steel_plate":
+                profile["three_lane"] += weight * 0.6
+        elif combo_type in BOMB_TYPES:
+            profile["control_revealed"] += weight * 0.85
+
+    confidence = 0.22 * len(play_actions) + 0.06 * pass_count
+    if profile["structure_lane"] > 0.4:
+        confidence += 0.08
+    if profile["last_hand_after"] <= 8:
+        confidence += 0.06
+    profile["confidence"] = min(1.0, confidence)
+    return profile
+
+
 def _has_natural_same_type_response(
     state: Dict,
     player_id: str,
@@ -1267,6 +1350,161 @@ def _opponent_bomb_reply_probability(
         big = _hypergeom_hit_probability(unknown_total, joker_counts["big"], hand_count)
         heavenly_prob = small * big
     return min(1.0, bomb_prob * 0.35 + heavenly_prob * 0.2)
+
+
+def _opponent_overbomb_reply_probability(
+    state: Dict,
+    opponent_id: str,
+    combo: Dict,
+    unknown_total: int,
+    rank_counts: Dict[int, int],
+    joker_counts: Dict[str, int],
+) -> float:
+    combo_type = combo.get("type")
+    if combo_type == "heavenly":
+        return 0.0
+    hand_count = len(state["players"].get(opponent_id, {}).get("hand", []))
+    if hand_count <= 0:
+        return 0.0
+
+    level_rank = state["level_rank"]
+    if combo_type == "bomb":
+        threshold = combo.get("rank_value", 0)
+        probs = [
+            _reply_rank_probability(unknown_total, rank_counts, hand_count, rank, 4)
+            for rank in range(2, 15)
+            if rank_counts.get(rank, 0) >= 4 and _point_order_value(rank, level_rank) > threshold
+        ]
+        overbomb_prob = _aggregate_event_probability(probs)
+    else:
+        overbomb_prob = 0.0
+
+    heavenly_prob = 0.0
+    if joker_counts.get("small", 0) > 0 and joker_counts.get("big", 0) > 0:
+        small = _hypergeom_hit_probability(unknown_total, joker_counts["small"], hand_count)
+        big = _hypergeom_hit_probability(unknown_total, joker_counts["big"], hand_count)
+        heavenly_prob = small * big
+
+    return min(1.0, overbomb_prob + heavenly_prob * 0.85)
+
+
+def _opponent_followup_reply_bias(state: Dict, opponent_id: str, combo: Dict) -> float:
+    combo_type = combo.get("type") or ""
+    profile = _public_history_profile_for_target(state, opponent_id)
+    confidence = profile.get("confidence", 0.0)
+    if confidence <= 0.0:
+        return 0.0
+
+    bias = 0.0
+    if combo_type == "single":
+        bias += profile.get("single_lane", 0.0) * 0.03
+        bias += profile.get("control_revealed", 0.0) * 0.02
+    elif combo_type == "pair":
+        bias += profile.get("pair_lane", 0.0) * 0.04
+    elif combo_type == "three":
+        bias += profile.get("three_lane", 0.0) * 0.045
+    elif combo_type in ("full_house", "straight", "three_pairs", "steel_plate"):
+        bias += profile.get("structure_lane", 0.0) * 0.06
+        bias += profile.get("pair_lane", 0.0) * 0.018
+        bias += profile.get("three_lane", 0.0) * 0.018
+    if profile.get("last_hand_after", 99.0) <= 6:
+        bias += 0.05
+    return min(0.28, bias * min(1.0, 0.55 + confidence * 0.7))
+
+
+def _bomb_response_closeout_bonus(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+    remaining: List[Dict],
+) -> float:
+    current_trick = state.get("current_trick")
+    if not current_trick or combo.get("type") not in BOMB_TYPES or not remaining:
+        return 0.0
+    leader = current_trick.get("player_id")
+    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+        return 0.0
+
+    level_rank = state["level_rank"]
+    config = state.get("config", {})
+    seen_count = len(state.get("seen_cards", []) or [])
+    active_opponents = [
+        pid
+        for pid in state["turn_order"]
+        if _team_of(state, pid) != _team_of(state, player_id) and not state["players"][pid]["finished"]
+    ]
+    history_confidence = max(
+        (_public_history_profile_for_target(state, opp).get("confidence", 0.0) for opp in active_opponents),
+        default=0.0,
+    )
+    if seen_count < 12 and history_confidence < 0.55:
+        return 0.0
+
+    followup_ids = _choose_lead_play(remaining, level_rank, config, state, player_id)
+    if not followup_ids or len(followup_ids) != len(remaining):
+        return 0.0
+
+    remaining_map = _map_hand_by_id(remaining)
+    followup_cards = [remaining_map[cid] for cid in followup_ids if cid in remaining_map]
+    followup_combo = _evaluate_combo(followup_cards, level_rank, config)
+    if not followup_combo:
+        return 0.0
+
+    unknown_total, rank_counts, wild_count, joker_counts = _lead_unknown_pool_profile(state, player_id)
+    if not active_opponents:
+        return 0.0
+
+    bomb_hold_prob = 1.0
+    followup_hold_prob = 1.0
+    for opp in active_opponents:
+        overbomb_prob = _opponent_overbomb_reply_probability(
+            state,
+            opp,
+            combo,
+            unknown_total,
+            rank_counts,
+            joker_counts,
+        )
+        bomb_hold_prob *= max(0.0, 1.0 - overbomb_prob)
+
+        same_type_prob = _opponent_same_type_reply_probability(
+            state,
+            opp,
+            followup_combo,
+            unknown_total,
+            rank_counts,
+            wild_count,
+        )
+        bomb_reply_prob = _opponent_bomb_reply_probability(
+            state,
+            opp,
+            followup_combo,
+            unknown_total,
+            rank_counts,
+            joker_counts,
+        )
+        followup_reply_prob = 1.0 - (1.0 - same_type_prob) * (1.0 - bomb_reply_prob)
+        followup_reply_prob = min(
+            1.0,
+            followup_reply_prob + _opponent_followup_reply_bias(state, opp, followup_combo),
+        )
+        followup_hold_prob *= max(0.0, 1.0 - followup_reply_prob)
+
+    closeout_prob = bomb_hold_prob * followup_hold_prob
+    if closeout_prob <= 0.0:
+        return 0.0
+
+    combo_type = followup_combo.get("type") or ""
+    if combo_type in ("three_pairs", "steel_plate", "straight", "full_house"):
+        base = 30.0
+    elif combo_type in ("pair", "three"):
+        base = 22.0
+    else:
+        base = 14.0
+    if len(remaining) <= 6:
+        base += 4.0
+    return closeout_prob * base
 
 
 def _lead_initiative_retention_bonus(
@@ -3944,17 +4182,37 @@ def _bot_score_components(
         for pid in state["turn_order"]
         if _team_of(state, pid) != _team_of(state, bot_id) and not state["players"][pid]["finished"]
     ]
-    likely_blocks = 0
-    likely_beats = 0
-    for opp in opp_ids:
-        if _bot_estimate_opponent_can_beat(state, opp, combo):
-            likely_beats += 1
-        else:
-            likely_blocks += 1
-    if likely_blocks:
-        components["opp_block"] = likely_blocks * 4.0
-    if likely_beats:
-        components["opp_risk"] = -likely_beats * 3.0
+    if combo["type"] in BOMB_TYPES:
+        unknown_total, rank_counts, _wild_count, joker_counts = _lead_unknown_pool_profile(state, bot_id)
+        expected_blocks = 0.0
+        expected_beats = 0.0
+        for opp in opp_ids:
+            beat_prob = _opponent_overbomb_reply_probability(
+                state,
+                opp,
+                combo,
+                unknown_total,
+                rank_counts,
+                joker_counts,
+            )
+            expected_beats += beat_prob
+            expected_blocks += max(0.0, 1.0 - beat_prob)
+        if expected_blocks > 0.001:
+            components["opp_block"] = expected_blocks * 4.0
+        if expected_beats > 0.001:
+            components["opp_risk"] = -expected_beats * 3.0
+    else:
+        likely_blocks = 0
+        likely_beats = 0
+        for opp in opp_ids:
+            if _bot_estimate_opponent_can_beat(state, opp, combo):
+                likely_beats += 1
+            else:
+                likely_blocks += 1
+        if likely_blocks:
+            components["opp_block"] = likely_blocks * 4.0
+        if likely_beats:
+            components["opp_risk"] = -likely_beats * 3.0
 
     if current_trick and teammate == current_trick.get("player_id"):
         overtrick_penalty = _teammate_overtrick_penalty(
@@ -3985,6 +4243,10 @@ def _bot_score_components(
             teammate_control = _teammate_future_control_probability(state, bot_id)
             if teammate_control > 0:
                 components["save_bomb_for_teammate"] = -teammate_control * (7.5 + _bomb_tier(combo) * 1.8)
+        if combo["type"] in BOMB_TYPES:
+            closeout_bonus = _bomb_response_closeout_bonus(state, bot_id, cards, combo, remaining)
+            if closeout_bonus > 0.001:
+                components["bomb_closeout_ev"] = closeout_bonus
 
     if not current_trick:
         lead_score = _lead_option_score(state, bot_id, cards)

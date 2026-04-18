@@ -2377,6 +2377,184 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         chosen = state.get("bot_explain", {}).get("bot", {}).get("chosen", {}).get("cards", [])
         self.assertEqual(chosen, ["Pass"])
 
+    def test_mcts_bombs_small_joker_when_seen_cards_remove_all_larger_overbombs(self):
+        players = [
+            {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
+            {"player_id": "opp", "name": "Opp", "seat": 1, "is_bot": False},
+            {"player_id": "mate", "name": "Mate", "seat": 2, "is_bot": False},
+            {"player_id": "opp2", "name": "Opp2", "seat": 3, "is_bot": False},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["current_turn"] = "bot"
+        state["config"]["bot_endgame_threshold"] = 0
+
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        bomb_labels = ["♠️9", "♥️9", "♣️9", "♦️9"]
+        tail_labels = ["♠️A", "♥️A", "♠️K", "♥️K", "♠️Q", "♥️Q"]
+        state["players"]["bot"]["hand"] = [pick_label(label) for label in bomb_labels + tail_labels]
+        state["seen_cards"] = [
+            pick_label(label)["id"]
+            for label in [
+                "🃏B",
+                "♠️10",
+                "♥️10",
+                "♣️10",
+                "♦️10",
+                "♠️J",
+                "♥️J",
+                "♣️J",
+                "♦️J",
+                "♣️Q",
+                "♦️Q",
+                "♣️K",
+                "♦️K",
+                "♦️A",
+                "♠️2",
+                "♥️2",
+                "♣️2",
+                "♦️2",
+            ]
+        ]
+        for pid in ("opp", "mate", "opp2"):
+            state["players"][pid]["hand"] = deck[:8]
+            del deck[:8]
+
+        small_joker = pick_label("🃏S")
+        state["current_trick"] = {
+            "player_id": "opp",
+            "cards": [small_joker["id"]],
+            "combo": guandan._evaluate_combo([small_joker], state["level_rank"], state.get("config", {})),
+        }
+        state["round_memories"] = [
+            {
+                "round_number": 1,
+                "tricks": [
+                    {
+                        "actions": [
+                            {
+                                "player_id": "opp",
+                                "type": "play",
+                                "combo_type": "single",
+                                "cards": [{"label": "♦️A", "rank": 14, "suit": "diamonds", "joker": None, "is_wild": False}],
+                                "hand_count_after": 9,
+                            },
+                            {
+                                "player_id": "opp2",
+                                "type": "play",
+                                "combo_type": "pair",
+                                "cards": [
+                                    {"label": "♣️K", "rank": 13, "suit": "clubs", "joker": None, "is_wild": False},
+                                    {"label": "♦️K", "rank": 13, "suit": "diamonds", "joker": None, "is_wild": False},
+                                ],
+                                "hand_count_after": 8,
+                            },
+                        ]
+                    }
+                ],
+            }
+        ]
+
+        bomb_ids = [card["id"] for card in state["players"]["bot"]["hand"] if guandan._card_label(card) in set(bomb_labels)]
+        pass_score = guandan._bot_score_play(state, "bot", None, depth=4)
+        bomb_score = guandan._bot_score_play(state, "bot", bomb_ids, depth=4)
+        self.assertGreater(bomb_score, pass_score)
+
+        real_random = random.Random
+        with mock.patch.object(guandan.random, "Random", side_effect=lambda *args, **kwargs: real_random(0)):
+            action = guandan.GuandanGame.bot_move(state, "bot")
+
+        self.assertEqual(action.get("type"), "play")
+        chosen = state.get("bot_explain", {}).get("bot", {}).get("chosen", {}).get("cards", [])
+        self.assertEqual(chosen, bomb_labels)
+
+    def test_mcts_preserves_bomb_against_small_joker_when_tail_is_low_three_pairs_and_history_is_structured(self):
+        players = [
+            {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
+            {"player_id": "opp", "name": "Opp", "seat": 1, "is_bot": False},
+            {"player_id": "mate", "name": "Mate", "seat": 2, "is_bot": False},
+            {"player_id": "opp2", "name": "Opp2", "seat": 3, "is_bot": False},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["current_turn"] = "bot"
+        state["config"]["bot_endgame_threshold"] = 0
+
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        bomb_labels = ["♠️9", "♥️9", "♣️9", "♦️9"]
+        tail_labels = ["♠️3", "♥️3", "♠️4", "♥️4", "♠️5", "♥️5", "♣️6"]
+        state["players"]["bot"]["hand"] = [pick_label(label) for label in bomb_labels + tail_labels]
+        state["seen_cards"] = [pick_label("♦️A")["id"]]
+        for pid in ("opp", "mate", "opp2"):
+            state["players"][pid]["hand"] = deck[:8]
+            del deck[:8]
+
+        small_joker = pick_label("🃏S")
+        state["current_trick"] = {
+            "player_id": "opp",
+            "cards": [small_joker["id"]],
+            "combo": guandan._evaluate_combo([small_joker], state["level_rank"], state.get("config", {})),
+        }
+        state["round_memories"] = [
+            {
+                "round_number": 1,
+                "tricks": [
+                    {
+                        "actions": [
+                            {
+                                "player_id": "opp2",
+                                "type": "play",
+                                "combo_type": "pair",
+                                "cards": [
+                                    {"label": "♠️6", "rank": 6, "suit": "spades", "joker": None, "is_wild": False},
+                                    {"label": "♥️6", "rank": 6, "suit": "hearts", "joker": None, "is_wild": False},
+                                ],
+                                "hand_count_after": 8,
+                            },
+                            {
+                                "player_id": "opp2",
+                                "type": "play",
+                                "combo_type": "three",
+                                "cards": [
+                                    {"label": "♠️7", "rank": 7, "suit": "spades", "joker": None, "is_wild": False},
+                                    {"label": "♥️7", "rank": 7, "suit": "hearts", "joker": None, "is_wild": False},
+                                    {"label": "♣️7", "rank": 7, "suit": "clubs", "joker": None, "is_wild": False},
+                                ],
+                                "hand_count_after": 5,
+                            },
+                        ]
+                    }
+                ],
+            }
+        ]
+
+        bomb_ids = [card["id"] for card in state["players"]["bot"]["hand"] if guandan._card_label(card) in set(bomb_labels)]
+        pass_score = guandan._bot_score_play(state, "bot", None, depth=4)
+        bomb_score = guandan._bot_score_play(state, "bot", bomb_ids, depth=4)
+        self.assertGreater(pass_score, bomb_score)
+
+        real_random = random.Random
+        with mock.patch.object(guandan.random, "Random", side_effect=lambda *args, **kwargs: real_random(0)):
+            action = guandan.GuandanGame.bot_move(state, "bot")
+
+        self.assertEqual(action.get("type"), "pass")
+        chosen = state.get("bot_explain", {}).get("bot", {}).get("chosen", {}).get("cards", [])
+        self.assertEqual(chosen, ["Pass"])
+
     def test_passes_on_level_single_when_teammate_might_hold_unseen_joker(self):
         players = [
             {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
