@@ -929,22 +929,6 @@ def _find_steel_plate_to_beat(hand: List[Dict], level_rank: int, threshold: int)
     return None
 
 
-def _find_straight_flush_candidates(hand: List[Dict], level_rank: int) -> List[Tuple[int, List[int]]]:
-    raise RuntimeError("_find_straight_flush_candidates should be bound from guandan_ai")
-
-
-def _bomb_tier_for_size(size: int) -> int:
-    raise RuntimeError("_bomb_tier_for_size should be bound from guandan_ai")
-
-
-def _find_bomb_candidates(hand: List[Dict], level_rank: int) -> List[Dict]:
-    raise RuntimeError("_find_bomb_candidates should be bound from guandan_ai")
-
-
-def _pick_bomb_to_beat(hand: List[Dict], level_rank: int, current_combo: Optional[Dict], config: Dict) -> Optional[List[int]]:
-    raise RuntimeError("_pick_bomb_to_beat should be bound from guandan_ai")
-
-
 def _can_play_all(hand: List[Dict], level_rank: int, config: Dict, current_combo: Optional[Dict]) -> bool:
     combo = _evaluate_combo(hand, level_rank, config)
     if not combo:
@@ -952,10 +936,6 @@ def _can_play_all(hand: List[Dict], level_rank: int, config: Dict, current_combo
     if not current_combo:
         return True
     return _compare_combos(current_combo, combo, level_rank, config)
-
-
-def _choose_lead_play(hand: List[Dict], level_rank: int, config: Dict, state: Dict, bot_id: str) -> List[int]:
-    raise RuntimeError("_choose_lead_play should be bound from guandan_ai")
 
 
 def _cards_key(cards: List[int]) -> str:
@@ -1087,12 +1067,6 @@ def _list_steel_plate_options(hand: List[Dict], level_rank: int, threshold: int)
     return _dedupe_card_sets(options)
 
 
-def _list_bomb_options(
-    hand: List[Dict], level_rank: int, current_combo: Optional[Dict], config: Dict
-) -> List[List[int]]:
-    raise RuntimeError("_list_bomb_options should be bound from guandan_ai")
-
-
 def _list_hint_options(state: Dict, player_id: str) -> List[List[int]]:
     legal = GuandanGame.get_legal_actions(state, player_id)
     if "play" not in legal:
@@ -1143,162 +1117,6 @@ def _combo_value(combo: Dict) -> int:
     if combo["type"] in ("straight", "three_pairs", "steel_plate"):
         return combo.get("high_value", 0)
     return combo.get("rank_value", 0)
-
-
-def _lead_option_score(state: Dict, player_id: str, cards: List[int]) -> float:
-    raise RuntimeError("_lead_option_score should be bound from guandan_ai")
-
-
-def _rank_lead_options(state: Dict, player_id: str, options: List[List[int]]) -> List[List[int]]:
-    raise RuntimeError("_rank_lead_options should be bound from guandan_ai")
-
-
-def _play_structure_delta(hand: List[Dict], cards: List[int], level_rank: int) -> float:
-    raise RuntimeError("_play_structure_delta should be bound from guandan_ai")
-
-
-def _rank_count_map(hand: List[Dict], level_rank: int) -> Dict[int, int]:
-    raise RuntimeError("_rank_count_map should be bound from guandan_ai")
-
-
-def _shape_transition_score(hand: List[Dict], cards: List[int], level_rank: int) -> float:
-    raise RuntimeError("_shape_transition_score should be bound from guandan_ai")
-
-
-def _group_fragment_penalty(hand: List[Dict], cards: List[int], level_rank: int, combo: Optional[Dict]) -> float:
-    raise RuntimeError("_group_fragment_penalty should be bound from guandan_ai")
-
-
-def _control_group_break_penalty(hand: List[Dict], cards: List[int], level_rank: int) -> float:
-    raise RuntimeError("_control_group_break_penalty should be bound from guandan_ai")
-
-
-def _cards_use_special_material(play_cards: List[Dict], level_rank: int) -> bool:
-    raise RuntimeError("_cards_use_special_material should be bound from guandan_ai")
-
-
-def _response_value_tolerance(combo_type: str) -> int:
-    raise RuntimeError("_response_value_tolerance should be bound from guandan_ai")
-
-
-def _response_material_cost(
-    state: Dict,
-    player_id: str,
-    cards: List[int],
-    combo: Optional[Dict] = None,
-    natural_alternative: bool = False,
-) -> float:
-    raise RuntimeError("_response_material_cost should be bound from guandan_ai")
-
-
-def _rank_response_options(state: Dict, player_id: str, options: List[List[int]]) -> List[List[int]]:
-    raise RuntimeError("_rank_response_options should be bound from guandan_ai")
-
-
-def _lead_single_break_penalty(hand: List[Dict], cards: List[int], level_rank: int) -> float:
-    raise RuntimeError("_lead_single_break_penalty should be bound from guandan_ai")
-
-
-def _lead_low_single_escape_bonus(hand: List[Dict], cards: List[int], level_rank: int) -> float:
-    raise RuntimeError("_lead_low_single_escape_bonus should be bound from guandan_ai")
-
-
-def _lead_low_single_trap_penalty(hand: List[Dict], cards: List[int], level_rank: int) -> float:
-    raise RuntimeError("_lead_low_single_trap_penalty should be bound from guandan_ai")
-
-
-def _lead_short_next_opponent_penalty(state: Dict, player_id: str, cards: List[int]) -> float:
-    raise RuntimeError("_lead_short_next_opponent_penalty should be bound from guandan_ai")
-
-
-def _lead_special_material_penalty(state: Dict, player_id: str, cards: List[int], combo: Dict) -> float:
-    raise RuntimeError("_lead_special_material_penalty should be bound from guandan_ai")
-
-
-def _lead_same_type_reentry_bonus(state: Dict, player_id: str, cards: List[int], combo: Dict) -> float:
-    raise RuntimeError("_lead_same_type_reentry_bonus should be bound from guandan_ai")
-
-
-def _lead_turn_efficiency_bonus(state: Dict, player_id: str, cards: List[int], combo: Dict) -> float:
-    raise RuntimeError("_lead_turn_efficiency_bonus should be bound from guandan_ai")
-
-
-def _lead_teammate_support_bonus(state: Dict, player_id: str, cards: List[int], combo: Dict) -> float:
-    raise RuntimeError("_lead_teammate_support_bonus should be bound from guandan_ai")
-
-
-def _lead_initiative_retention_bonus(state: Dict, player_id: str, cards: List[int], combo: Dict) -> float:
-    raise RuntimeError("_lead_initiative_retention_bonus should be bound from guandan_ai")
-
-
-def _lead_short_opponent_breakup_penalty(state: Dict, player_id: str, cards: List[int], combo: Dict) -> float:
-    raise RuntimeError("_lead_short_opponent_breakup_penalty should be bound from guandan_ai")
-
-
-def _lead_structure_overreach_penalty(
-    hand: List[Dict],
-    cards: List[int],
-    combo: Dict,
-    level_rank: int,
-) -> float:
-    raise RuntimeError("_lead_structure_overreach_penalty should be bound from guandan_ai")
-
-
-def _lead_speculative_followup_penalty(state: Dict, player_id: str, cards: List[int], combo: Dict) -> float:
-    raise RuntimeError("_lead_speculative_followup_penalty should be bound from guandan_ai")
-
-
-def _lead_opening_commitment_penalty(state: Dict, player_id: str, cards: List[int], combo: Dict) -> float:
-    raise RuntimeError("_lead_opening_commitment_penalty should be bound from guandan_ai")
-
-
-def _should_prune_weak_lead_single(
-    state: Dict, player_id: str, cards: List[int], single_score: float, best_non_single_score: Optional[float]
-) -> bool:
-    raise RuntimeError("_should_prune_weak_lead_single should be bound from guandan_ai")
-
-
-def _should_prune_wasteful_control_break(
-    state: Dict,
-    player_id: str,
-    cards: List[int],
-    combo_type: str,
-    score: float,
-    best_safe_score: Optional[float],
-) -> bool:
-    raise RuntimeError("_should_prune_wasteful_control_break should be bound from guandan_ai")
-
-
-def _should_prune_wasteful_lead_bomb(
-    state: Dict,
-    player_id: str,
-    cards: List[int],
-    combo_type: str,
-    score: float,
-    best_non_bomb_score: Optional[float],
-    best_multi_non_bomb_score: Optional[float],
-) -> bool:
-    raise RuntimeError("_should_prune_wasteful_lead_bomb should be bound from guandan_ai")
-
-
-def _single_lock_bonus(state: Dict, player_id: str, cards: List[int], combo: Dict) -> float:
-    raise RuntimeError("_single_lock_bonus should be bound from guandan_ai")
-
-
-def _takeover_opportunity_score(state: Dict, player_id: str, cards: List[int]) -> float:
-    raise RuntimeError("_takeover_opportunity_score should be bound from guandan_ai")
-
-
-def _best_takeover_opportunity(state: Dict, player_id: str) -> float:
-    raise RuntimeError("_best_takeover_opportunity should be bound from guandan_ai")
-
-
-def _best_response_play_score(state: Dict, player_id: str, depth: int, non_bomb_only: bool = True) -> Optional[float]:
-    raise RuntimeError("_best_response_play_score should be bound from guandan_ai")
-
-
-def _hypergeom_hit_probability(total: int, hits: int, draws: int) -> float:
-    raise RuntimeError("_hypergeom_hit_probability should be bound from guandan_ai")
 
 
 _AI_EXPORTED_FUNCS = (
