@@ -90,6 +90,13 @@ _eligible_return_cards = _proxy("_eligible_return_cards")
 _full_deck = _proxy("_full_deck")
 _hypergeom_hit_probability = _proxy("_hypergeom_hit_probability")
 _bomb_tier = _proxy("_bomb_tier")
+
+_HAND_STRUCTURE_CACHE: Dict[Tuple[int, Tuple[str, ...]], Dict[str, float]] = {}
+_HAND_STRUCTURE_CACHE_LIMIT = 4096
+_HAND_STRENGTH_CACHE: Dict[Tuple[int, Tuple[str, ...]], float] = {}
+_HAND_STRENGTH_CACHE_LIMIT = 4096
+_HAND_TURNS_CACHE: Dict[Tuple[int, Tuple[str, ...]], float] = {}
+_HAND_TURNS_CACHE_LIMIT = 4096
 _cards_key = _proxy("_cards_key")
 _dedupe_card_sets = _proxy("_dedupe_card_sets")
 _next_active_player = _proxy("_next_active_player")
@@ -3916,6 +3923,71 @@ def _copy_hand_decomposition_summary(summary: Dict[str, float]) -> Dict[str, flo
     return copied
 
 
+def _copy_hand_structure_metrics(metrics: Dict[str, float]) -> Dict[str, float]:
+    return dict(metrics)
+
+
+def _heuristic_score_cache_key(state: Dict, bot_id: str, depth: int) -> Tuple:
+    hand = state["players"].get(bot_id, {}).get("hand", [])
+    hand_key = tuple(sorted(card["id"] for card in hand))
+    current_trick = state.get("current_trick") or {}
+    combo = current_trick.get("combo") or {}
+    trick_key = (
+        current_trick.get("player_id"),
+        combo.get("type"),
+        combo.get("rank_value"),
+        combo.get("high_value"),
+        tuple(current_trick.get("cards") or ()),
+    )
+    return (
+        bot_id,
+        depth,
+        state.get("round_number"),
+        state.get("phase"),
+        state.get("current_turn"),
+        hand_key,
+        trick_key,
+    )
+
+
+def _store_heuristic_scored_candidates(
+    state: Dict,
+    bot_id: str,
+    depth: int,
+    scored: List[Tuple[Optional[List[int]], float, Dict[str, float]]],
+) -> None:
+    cache = state.setdefault("_ai_eval_cache", {})
+    heuristic_cache = cache.setdefault("heuristic_scored_candidates", {})
+    heuristic_cache[_heuristic_score_cache_key(state, bot_id, depth)] = [
+        (
+            None if cards is None else list(cards),
+            float(score),
+            dict(components),
+        )
+        for cards, score, components in scored
+    ]
+
+
+def _get_cached_heuristic_scored_candidates(
+    state: Dict,
+    bot_id: str,
+    depth: int,
+) -> Optional[List[Tuple[Optional[List[int]], float, Dict[str, float]]]]:
+    cache = state.get("_ai_eval_cache") or {}
+    heuristic_cache = cache.get("heuristic_scored_candidates") or {}
+    cached = heuristic_cache.get(_heuristic_score_cache_key(state, bot_id, depth))
+    if cached is None:
+        return None
+    return [
+        (
+            None if cards is None else list(cards),
+            float(score),
+            dict(components),
+        )
+        for cards, score, components in cached
+    ]
+
+
 def _decomposition_single_candidates(hand: List[Dict], level_rank: int) -> List[List[int]]:
     all_singles = _list_single_options(hand, level_rank, 0)
     if len(hand) <= 6:
@@ -4272,6 +4344,11 @@ def _hand_structure_metrics(hand: List[Dict], level_rank: int) -> Dict[str, floa
             "decomp_special_turns": 0.0,
         }
 
+    cache_key = _hand_decomposition_cache_key(hand, level_rank)
+    cached = _HAND_STRUCTURE_CACHE.get(cache_key)
+    if cached is not None:
+        return _copy_hand_structure_metrics(cached)
+
     info = _hand_info(hand, level_rank)
     strength = _rank_strength(level_rank)
     rank_counts = {rank: len(cards) for rank, cards in info["normals_by_rank"].items()}
@@ -4350,7 +4427,7 @@ def _hand_structure_metrics(hand: List[Dict], level_rank: int) -> Dict[str, floa
 
     decomp = _hand_decomposition_summary(hand, level_rank)
 
-    return {
+    metrics = {
         "pair_ranks": float(pair_ranks),
         "pure_pair_ranks": float(pure_pair_ranks),
         "triple_ranks": float(triple_ranks),
@@ -4376,11 +4453,19 @@ def _hand_structure_metrics(hand: List[Dict], level_rank: int) -> Dict[str, floa
         "decomp_bomb_turns": float(decomp.get("bomb_turns", 0.0)),
         "decomp_special_turns": float(decomp.get("special_material_turns", 0.0)),
     }
+    if len(_HAND_STRUCTURE_CACHE) >= _HAND_STRUCTURE_CACHE_LIMIT:
+        _HAND_STRUCTURE_CACHE.clear()
+    _HAND_STRUCTURE_CACHE[cache_key] = _copy_hand_structure_metrics(metrics)
+    return metrics
 
 
 def _hand_strength_score(hand: List[Dict], level_rank: int) -> float:
     if not hand:
         return 0.0
+    cache_key = _hand_decomposition_cache_key(hand, level_rank)
+    cached = _HAND_STRENGTH_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
     metrics = _hand_structure_metrics(hand, level_rank)
 
     score = 0.0
@@ -4421,12 +4506,19 @@ def _hand_strength_score(hand: List[Dict], level_rank: int) -> float:
     score += min(2.6, metrics["decomp_grouped_cards"] * 0.07)
     score += metrics["decomp_bomb_turns"] * 0.32
     score -= metrics["decomp_special_turns"] * 0.18
+    if len(_HAND_STRENGTH_CACHE) >= _HAND_STRENGTH_CACHE_LIMIT:
+        _HAND_STRENGTH_CACHE.clear()
+    _HAND_STRENGTH_CACHE[cache_key] = score
     return score
 
 
 def _estimated_turns_to_finish(hand: List[Dict], level_rank: int) -> float:
     if not hand:
         return 0.0
+    cache_key = _hand_decomposition_cache_key(hand, level_rank)
+    cached = _HAND_TURNS_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
     metrics = _hand_structure_metrics(hand, level_rank)
     turns = float(len(hand))
     turns -= metrics["turn_savings"]
@@ -4439,7 +4531,11 @@ def _estimated_turns_to_finish(hand: List[Dict], level_rank: int) -> float:
         decomp_turns += metrics["decomp_low_singles"] * 0.18
         decomp_turns += metrics["decomp_special_turns"] * 0.08
         turns = min(turns, decomp_turns)
-    return max(1.0, turns)
+    result = max(1.0, turns)
+    if len(_HAND_TURNS_CACHE) >= _HAND_TURNS_CACHE_LIMIT:
+        _HAND_TURNS_CACHE.clear()
+    _HAND_TURNS_CACHE[cache_key] = result
+    return result
 
 
 def _predict_finish_order(
@@ -6564,7 +6660,11 @@ def _bot_select_play(state: Dict, bot_id: str, depth: int) -> Optional[List[int]
     candidates: List[Optional[List[int]]] = options[:]
     if current_trick and "pass" in legal:
         candidates.append(None)
-    scored = [(cand, _bot_score_play(state, bot_id, cand, depth)) for cand in candidates]
+    scored = []
+    for cand in candidates:
+        components = _bot_score_components(state, bot_id, cand, depth)
+        scored.append((cand, components.get("total", -999.0), components))
+    _store_heuristic_scored_candidates(state, bot_id, depth, scored)
     scored.sort(key=lambda item: item[1], reverse=True)
     return scored[0][0]
 
@@ -6809,13 +6909,29 @@ def _build_bot_explain(
         options = _rank_lead_options(state, bot_id, options)
     options = _filter_overbomb_options(state, bot_id, options)
 
-    scored: List[Tuple[List[int], float, Dict[str, float]]] = []
-    for cards in options:
-        comps = _bot_score_components(state, bot_id, cards, depth)
-        scored.append((cards, comps.get("total", -999.0), comps))
-    scored.sort(key=lambda item: item[1], reverse=True)
+    cached_scored = _get_cached_heuristic_scored_candidates(state, bot_id, depth)
+    scored: List[Tuple[Optional[List[int]], float, Dict[str, float]]] = []
+    if cached_scored is not None:
+        valid_keys = {tuple(cards) for cards in options}
+        if current_trick:
+            valid_keys.add(())
+        for cards, score, comps in cached_scored:
+            key = () if cards is None else tuple(cards)
+            if key not in valid_keys:
+                continue
+            scored.append((cards, score, comps))
+    if not scored:
+        for cards in options:
+            comps = _bot_score_components(state, bot_id, cards, depth)
+            scored.append((cards, comps.get("total", -999.0), comps))
+        scored.sort(key=lambda item: item[1], reverse=True)
+        _store_heuristic_scored_candidates(state, bot_id, depth, scored)
+    else:
+        scored.sort(key=lambda item: item[1], reverse=True)
     top = []
     for cards, score, comps in scored[:3]:
+        if cards is None:
+            continue
         comps_clean = {k: v for k, v in comps.items() if k != "total" and abs(v) > 0.001}
         top.append(
             {
@@ -6824,8 +6940,15 @@ def _build_bot_explain(
                 "components": comps_clean,
             }
         )
-
-    chosen_comps = _bot_score_components(state, bot_id, chosen_cards, depth)
+    chosen_comps = None
+    chosen_key = () if chosen_action_type == "pass" else tuple(chosen_cards)
+    for cards, _score, comps in scored:
+        key = () if cards is None else tuple(cards)
+        if key == chosen_key:
+            chosen_comps = comps
+            break
+    if chosen_comps is None:
+        chosen_comps = _bot_score_components(state, bot_id, chosen_cards, depth)
     chosen_clean = {k: v for k, v in chosen_comps.items() if k != "total" and abs(v) > 0.001}
     return {
         "method": method,
