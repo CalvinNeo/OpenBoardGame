@@ -2077,6 +2077,156 @@ def _lead_initiative_retention_bonus(
     return max(-8.0, min(9.5, score))
 
 
+def _lead_short_opponent_breakup_penalty(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+) -> float:
+    if state.get("current_trick"):
+        return 0.0
+
+    combo_type = combo.get("type") or ""
+    if combo_type not in ("full_house", "straight", "three_pairs", "steel_plate"):
+        return 0.0
+
+    opponents = [
+        pid
+        for pid in state.get("turn_order", [])
+        if _team_of(state, pid) != _team_of(state, player_id)
+        and not state["players"][pid]["finished"]
+        and len(state["players"][pid]["hand"]) <= 6
+    ]
+    if not opponents:
+        return 0.0
+
+    hand = state["players"][player_id]["hand"]
+    remaining = _remove_cards(hand, cards)
+    if not remaining:
+        return 0.0
+
+    level_rank = state["level_rank"]
+    config = state.get("config", {})
+    after = _hand_decomposition_summary(remaining, level_rank)
+    current_recovery = 0.0
+    current_recovery += min(0.85, _control_card_score(remaining, level_rank) / 16.0)
+    current_recovery += min(0.75, _lead_same_type_reentry_bonus(state, player_id, cards, combo) / 6.0)
+    if after.get("group_turns", 0.0) > 0.0:
+        current_recovery += min(0.45, after.get("group_turns", 0.0) * 0.12)
+    if after.get("bomb_turns", 0.0) > 0.0:
+        current_recovery += min(0.35, after.get("bomb_turns", 0.0) * 0.18)
+
+    unknown_cards = _lead_unknown_pool_cards(state, player_id)
+    unknown_total, rank_counts, wild_count, joker_counts = _lead_unknown_pool_profile(state, player_id)
+    current_reply = 0.0
+    for opponent_id in opponents:
+        same_type_prob = _opponent_same_type_reply_probability(
+            state,
+            opponent_id,
+            combo,
+            unknown_total,
+            rank_counts,
+            wild_count,
+            unknown_cards=unknown_cards,
+        )
+        bomb_prob = _opponent_bomb_reply_probability(
+            state,
+            opponent_id,
+            combo,
+            unknown_total,
+            rank_counts,
+            joker_counts,
+            unknown_cards=unknown_cards,
+        )
+        reply_prob = 1.0 - (1.0 - same_type_prob) * (1.0 - bomb_prob)
+        reply_prob = min(1.0, reply_prob + _opponent_followup_reply_bias(state, opponent_id, combo))
+        current_reply = max(current_reply, reply_prob)
+    if current_reply < 0.12:
+        return 0.0
+
+    hand_map = _map_hand_by_id(hand)
+    current_key = tuple(sorted(cards))
+    best_alt_value = None
+    best_alt_reply = None
+    best_alt_recovery = None
+    for option in _list_hint_options(state, player_id):
+        if tuple(sorted(option)) == current_key:
+            continue
+        play_cards = [hand_map[cid] for cid in option if cid in hand_map]
+        alt_combo = _evaluate_combo(play_cards, level_rank, config)
+        if not alt_combo or alt_combo.get("type") not in ("single", "pair", "three"):
+            continue
+
+        alt_remaining = _remove_cards(hand, option)
+        if not alt_remaining:
+            continue
+        alt_after = _hand_decomposition_summary(alt_remaining, level_rank)
+        alt_reply = 0.0
+        for opponent_id in opponents:
+            same_type_prob = _opponent_same_type_reply_probability(
+                state,
+                opponent_id,
+                alt_combo,
+                unknown_total,
+                rank_counts,
+                wild_count,
+                unknown_cards=unknown_cards,
+            )
+            bomb_prob = _opponent_bomb_reply_probability(
+                state,
+                opponent_id,
+                alt_combo,
+                unknown_total,
+                rank_counts,
+                joker_counts,
+                unknown_cards=unknown_cards,
+            )
+            reply_prob = 1.0 - (1.0 - same_type_prob) * (1.0 - bomb_prob)
+            reply_prob = min(1.0, reply_prob + _opponent_followup_reply_bias(state, opponent_id, alt_combo))
+            alt_reply = max(alt_reply, reply_prob)
+
+        alt_recovery = 0.0
+        alt_recovery += min(0.95, _control_card_score(alt_remaining, level_rank) / 15.0)
+        alt_recovery += min(0.8, _lead_same_type_reentry_bonus(state, player_id, option, alt_combo) / 5.5)
+        if alt_after.get("group_turns", 0.0) > 0.0:
+            alt_recovery += min(0.55, alt_after.get("group_turns", 0.0) * 0.14)
+        if alt_after.get("bomb_turns", 0.0) > 0.0:
+            alt_recovery += min(0.38, alt_after.get("bomb_turns", 0.0) * 0.18)
+        if alt_combo.get("type") == "single":
+            value = alt_combo.get("rank_value", 0)
+            if value <= 58:
+                alt_recovery += 0.22
+            elif value >= 80:
+                alt_recovery -= 0.1
+        elif alt_combo.get("type") == "pair":
+            alt_recovery += 0.18
+        elif alt_combo.get("type") == "three":
+            alt_recovery += 0.28
+
+        alt_value = (current_reply - alt_reply) * 12.0 + alt_recovery * 2.6 - current_recovery * 1.4
+        if best_alt_value is None or alt_value > best_alt_value:
+            best_alt_value = alt_value
+            best_alt_reply = alt_reply
+            best_alt_recovery = alt_recovery
+
+    if best_alt_value is None or best_alt_reply is None or best_alt_recovery is None:
+        return 0.0
+    if best_alt_reply > current_reply + 0.02:
+        return 0.0
+    if best_alt_recovery < 0.45:
+        return 0.0
+
+    risk_edge = max(0.0, current_reply - best_alt_reply)
+    recovery_edge = max(0.0, best_alt_recovery - current_recovery)
+    penalty = 0.45 + risk_edge * 3.4 + recovery_edge * 0.9
+    penalty += max(0.0, best_alt_value) * 0.14
+    if combo_type == "full_house":
+        penalty += 0.3
+    elif combo_type in ("three_pairs", "steel_plate"):
+        penalty += 0.18
+    return max(0.0, min(2.6, penalty))
+
+
 def _opening_safe_group_leads(
     state: Dict,
     player_id: str,
