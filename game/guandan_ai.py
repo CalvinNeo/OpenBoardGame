@@ -1493,6 +1493,7 @@ def _lead_opening_commitment_penalty(
         return 0.0
 
     penalty = 0.0
+    strategic_reserve_penalty = 0.0
     if cheap_groups:
         penalty += 7.8
         if combo_type == "full_house":
@@ -1506,6 +1507,32 @@ def _lead_opening_commitment_penalty(
         penalty += 1.2
     elif combo_type in ("straight", "three_pairs", "steel_plate") and combo_value >= 58:
         penalty += 1.8
+
+    if combo_type == "straight":
+        low_three_pairs_exists = any(
+            alt_combo.get("type") == "three_pairs" and _combo_numeric_value(alt_combo) <= 6
+            for _, alt_combo in cheap_structures
+        )
+        if low_three_pairs_exists and combo_value >= 13 and not combo.get("uses_wild"):
+            # In early deep-hand positions, preserve premium natural straights when a low,
+            # self-contained three-pairs lead can be spent to probe opponents first.
+            strategic_reserve_penalty += 10.5 + min(1.8, (combo_value - 13) * 0.9)
+    elif combo_type == "three_pairs":
+        premium_straight_exists = False
+        for alt_cards in _list_straight_options(hand, level_rank, 0):
+            if tuple(sorted(alt_cards)) == tuple(sorted(cards)):
+                continue
+            alt_play_cards = [hand_map[cid] for cid in alt_cards if cid in hand_map]
+            alt_combo = _evaluate_combo(alt_play_cards, level_rank, state.get("config", {}))
+            if not alt_combo or alt_combo.get("type") != "straight":
+                continue
+            if _cards_use_special_material(alt_play_cards, level_rank):
+                continue
+            if _combo_numeric_value(alt_combo) >= 13:
+                premium_straight_exists = True
+                break
+        if premium_straight_exists and combo_value <= 6 and not combo.get("uses_wild"):
+            penalty = max(0.0, penalty - 3.6)
 
     if (
         penalty > 0.0
@@ -1525,7 +1552,7 @@ def _lead_opening_commitment_penalty(
         if retention_bonus > -6.5:
             relief += min(3.6, (retention_bonus + 6.5) * 1.55)
         penalty = max(0.0, penalty - relief)
-    return penalty
+    return penalty + strategic_reserve_penalty
 
 
 def _lead_single_initiative_penalty(hand: List[Dict], cards: List[int], level_rank: int) -> float:
