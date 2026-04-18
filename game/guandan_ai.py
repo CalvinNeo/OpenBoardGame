@@ -5727,6 +5727,101 @@ def _bot_score_play(state: Dict, bot_id: str, cards: Optional[List[int]], depth:
     return _bot_score_components(state, bot_id, cards, depth).get("total", -999.0)
 
 
+def _should_keep_structural_upgrade_bomb(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    non_bomb_options: Optional[List[List[int]]] = None,
+) -> bool:
+    current_trick = state.get("current_trick")
+    if not current_trick or not cards:
+        return False
+    current_combo = current_trick.get("combo") or {}
+    if current_combo.get("type") in BOMB_TYPES:
+        return False
+
+    pdata = state["players"].get(player_id)
+    if not pdata:
+        return False
+    hand = pdata.get("hand", [])
+    if not hand or len(cards) >= len(hand):
+        return False
+
+    level_rank = state["level_rank"]
+    config = state.get("config", {})
+    hand_map = _map_hand_by_id(hand)
+    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+    combo = _evaluate_combo(play_cards, level_rank, config)
+    if not combo or combo.get("type") != "bomb" or not combo.get("uses_wild"):
+        return False
+
+    # Only keep low-rank promotion bombs. High natural-value bombs should still
+    # stay heavily filtered unless no clean non-bomb response exists.
+    if combo.get("rank_value", 99) > _point_order_value(7, level_rank):
+        return False
+
+    counts_before = _rank_count_map(hand, level_rank)
+    promoted_ranks = set()
+    for card in play_cards:
+        if _is_joker(card) or _is_wild(card, level_rank):
+            continue
+        rank = card.get("rank")
+        if rank is None:
+            continue
+        promoted_ranks.add(rank)
+    if not any(3 <= counts_before.get(rank, 0) < 4 for rank in promoted_ranks):
+        return False
+
+    # If the natural same-type answer spends a premium control lane such as a
+    # level pair/trips, keep the promoted low-rank bomb available for search.
+    if current_combo.get("type") in ("pair", "three") and non_bomb_options:
+        premium_same_type_response = False
+        for option in non_bomb_options:
+            option_cards = [hand_map[cid] for cid in option if cid in hand_map]
+            option_combo = _evaluate_combo(option_cards, level_rank, config)
+            if not option_combo or option_combo.get("type") != current_combo.get("type"):
+                continue
+            if not _cards_use_special_material(option_cards, level_rank):
+                continue
+            if _combo_numeric_value(option_combo) >= 80:
+                premium_same_type_response = True
+                break
+        if premium_same_type_response:
+            return True
+
+    remaining = _remove_cards(hand, cards)
+    if not remaining:
+        return True
+
+    before_summary = _hand_decomposition_summary(hand, level_rank)
+    after_summary = _hand_decomposition_summary(remaining, level_rank)
+    before_strength = _hand_strength_score(hand, level_rank)
+    after_strength = _hand_strength_score(remaining, level_rank)
+    before_control = _control_card_score(hand, level_rank)
+    after_control = _control_card_score(remaining, level_rank)
+    shape_score = _shape_transition_score(hand, cards, level_rank)
+    fragment_penalty = _group_fragment_penalty(hand, cards, level_rank, combo)
+    control_break = _control_group_break_penalty(hand, cards, level_rank)
+
+    future_turn_gain = before_summary.get("turns", float(len(hand))) - after_summary.get("turns", float(len(remaining)))
+    low_single_gain = before_summary.get("low_singles", 0.0) - after_summary.get("low_singles", 0.0)
+    grouped_gain = after_summary.get("group_turns", 0.0) - before_summary.get("group_turns", 0.0)
+    strength_delta = after_strength - before_strength
+    control_delta = after_control - before_control
+
+    upgrade_score = 0.0
+    upgrade_score += future_turn_gain * 1.55
+    upgrade_score += low_single_gain * 1.1
+    upgrade_score += grouped_gain * 1.8
+    upgrade_score += strength_delta * 1.15
+    upgrade_score += control_delta * 2.2
+    upgrade_score += max(-1.5, shape_score) * 0.45
+    upgrade_score -= fragment_penalty * 0.35
+    upgrade_score -= control_break * 0.7
+
+    return upgrade_score >= 2.4 and control_delta >= -0.2
+
+
 def _filter_overbomb_options(state: Dict, player_id: str, options: List[List[int]]) -> List[List[int]]:
     current_trick = state.get("current_trick")
     if not current_trick:
@@ -5768,7 +5863,21 @@ def _filter_overbomb_options(state: Dict, player_id: str, options: List[List[int
                 ):
                     has_structurally_clean_non_bomb = True
     if has_non_bomb and has_structurally_clean_non_bomb:
-        return filtered
+        upgrade_bombs = [
+            cards
+            for cards in bombs
+            if _should_keep_structural_upgrade_bomb(state, player_id, cards, non_bomb_options=filtered)
+        ]
+        if not upgrade_bombs:
+            return filtered
+        minimal_upgrade = min(
+            upgrade_bombs,
+            key=lambda cards: (
+                len(cards),
+                _CORE._cards_key(cards),
+            ),
+        )
+        return filtered + [minimal_upgrade]
     if bombs:
         minimal = None
         candidates = _find_bomb_candidates(hand, level_rank)

@@ -295,6 +295,74 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertIn(tuple(sorted(["♠️7", "♠️7", "♦️8", "♣️8", "♠️9", "♠️9"])), filtered_labels)
         self.assertIn(tuple(sorted(["♦️J", "♣️J", "♥️J", "♠️J"])), filtered_labels)
 
+    def test_filter_overbomb_options_keeps_low_triple_promotion_bomb_with_wild(self):
+        players = [
+            {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
+            {"player_id": "bot3", "name": "Bot 3", "seat": 1, "is_bot": True},
+            {"player_id": "zhu", "name": "zhu", "seat": 2, "is_bot": False},
+            {"player_id": "bot4", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["round_number"] = 1
+        state["dealer_team"] = "B"
+        state["level_rank"] = 2
+        state["current_turn"] = "bot3"
+
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        state["players"]["bot3"]["hand"] = [
+            pick_label(label)
+            for label in [
+                "♣️2",
+                "♥️2",
+                "♥️J",
+                "♥️9",
+                "♣️9",
+                "♣️8",
+                "♠️8",
+                "♥️6",
+                "♣️6",
+                "♠️6",
+                "♥️5",
+                "♣️5",
+                "♠️5",
+                "♦️4",
+                "♣️4",
+                "♥️4",
+                "♠️4",
+                "♣️3",
+                "♥️3",
+                "♠️K",
+            ]
+        ]
+        trick_cards = [pick_label("♠️K"), pick_label("♣️K")]
+        state["current_trick"] = {
+            "player_id": "calvin",
+            "cards": [card["id"] for card in trick_cards],
+            "combo": guandan._evaluate_combo(trick_cards, state["level_rank"], state.get("config", {})),
+        }
+        for pid, count in (("calvin", 14), ("zhu", 20), ("bot4", 19)):
+            state["players"][pid]["hand"] = deck[:count]
+            del deck[:count]
+
+        options = guandan._list_hint_options(state, "bot3")
+        filtered = guandan._filter_overbomb_options(state, "bot3", options)
+        hand_map = guandan._map_hand_by_id(state["players"]["bot3"]["hand"])
+        filtered_labels = {
+            tuple(sorted(guandan._card_label(hand_map[cid]) for cid in cards))
+            for cards in filtered
+        }
+
+        self.assertIn(tuple(sorted(["♣️2", "♥️2"])), filtered_labels)
+        self.assertIn(tuple(sorted(["♥️2", "♥️5", "♣️5", "♠️5"])), filtered_labels)
+
     def test_natural_level_card_remains_available_as_single_with_heart_level_wild(self):
         deck = guandan._full_deck()
         club_two = next(card for card in deck if guandan._card_label(card) == "♣️2")
