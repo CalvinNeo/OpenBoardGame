@@ -1052,19 +1052,7 @@ def _can_play_all(hand: List[Dict], level_rank: int, config: Dict, current_combo
 
 
 def _choose_lead_play(hand: List[Dict], level_rank: int, config: Dict, state: Dict, bot_id: str) -> List[int]:
-    if _can_play_all(hand, level_rank, config, None):
-        return [card["id"] for card in hand]
-    options: List[List[int]] = []
-    options.extend(_list_single_options(hand, level_rank, 0))
-    options.extend(_list_rank_group_options(hand, level_rank, 0, 2))
-    options.extend(_list_rank_group_options(hand, level_rank, 0, 3))
-    options.extend(_list_full_house_options(hand, level_rank, 0))
-    options.extend(_list_straight_options(hand, level_rank, 0))
-    options.extend(_list_three_pairs_options(hand, level_rank, 0))
-    options.extend(_list_steel_plate_options(hand, level_rank, 0))
-    options.extend(_list_bomb_options(hand, level_rank, None, config))
-    ranked = _rank_lead_options(state, bot_id, _dedupe_card_sets(options))
-    return ranked[0] if ranked else []
+    raise RuntimeError("_choose_lead_play should be bound from guandan_ai")
 
 
 def _cards_key(cards: List[int]) -> str:
@@ -1270,262 +1258,31 @@ def _combo_value(combo: Dict) -> int:
 
 
 def _lead_option_score(state: Dict, player_id: str, cards: List[int]) -> float:
-    hand = state["players"][player_id]["hand"]
-    hand_map = _map_hand_by_id(hand)
-    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
-    combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
-    if not combo:
-        return -999.0
-    if len(cards) == len(hand):
-        return 1000.0
-
-    base_by_type = {
-        "straight": 9.2,
-        "three_pairs": 8.8,
-        "steel_plate": 8.6,
-        "full_house": 8.1,
-        "three": 5.4,
-        "pair": 4.0,
-        "single": 2.0,
-        "bomb": -8.0,
-        "straight_flush": -10.0,
-        "heavenly": -12.0,
-    }
-    base = base_by_type.get(combo["type"], 10.0)
-    structure_delta = _play_structure_delta(hand, cards, state["level_rank"])
-    remaining = _remove_cards(hand, cards)
-    remaining_strength = _hand_strength_score(remaining, state["level_rank"])
-
-    score = base
-    score += len(cards) * 0.12
-    score -= structure_delta * 1.35
-    score += remaining_strength * 0.16
-    score += _shape_transition_score(hand, cards, state["level_rank"]) * 1.25
-    score -= _group_fragment_penalty(hand, cards, state["level_rank"], combo) * 1.2
-    score -= _control_group_break_penalty(hand, cards, state["level_rank"]) * 1.0
-    score -= _lead_low_single_trap_penalty(hand, cards, state["level_rank"])
-    score -= _lead_short_next_opponent_penalty(state, player_id, cards)
-    score -= _lead_structure_overreach_penalty(hand, cards, combo, state["level_rank"])
-    score -= _lead_special_material_penalty(state, player_id, cards, combo)
-    score += _lead_turn_efficiency_bonus(state, player_id, cards, combo)
-    score += _lead_same_type_reentry_bonus(state, player_id, cards, combo)
-    score += _lead_teammate_support_bonus(state, player_id, cards, combo)
-    score += _lead_initiative_retention_bonus(state, player_id, cards, combo)
-    score -= _lead_short_opponent_breakup_penalty(state, player_id, cards, combo)
-    score -= _lead_speculative_followup_penalty(state, player_id, cards, combo)
-    score -= _lead_opening_commitment_penalty(state, player_id, cards, combo)
-
-    if combo["type"] == "single":
-        score -= _single_order_value(play_cards[0], state["level_rank"]) * 0.12
-        score -= _lead_single_break_penalty(hand, cards, state["level_rank"])
-        score += _lead_low_single_escape_bonus(hand, cards, state["level_rank"])
-    else:
-        score -= _combo_value(combo) * 0.015
-
-    if combo["type"] in BOMB_TYPES:
-        score -= 18.0 + _bomb_tier(combo) * 2.4
-
-    if remaining and _can_play_all(remaining, state["level_rank"], state.get("config", {}), None):
-        score += 7.5
-    elif len(remaining) <= 2 and combo["type"] != "single":
-        score += 2.0
-
-    teammate = _teammate_of(state, player_id)
-    partner_left = len(state["players"][teammate]["hand"]) if teammate else 99
-    active_opponents = [
-        pid
-        for pid in state["turn_order"]
-        if _team_of(state, pid) != _team_of(state, player_id) and not state["players"][pid]["finished"]
-    ]
-    opp_left = (
-        min(len(state["players"][pid]["hand"]) for pid in active_opponents)
-        if active_opponents
-        else 0
-    )
-    if opp_left <= 2 and combo["type"] != "single":
-        score += 2.5
-    if partner_left <= 3 and combo["type"] in ("pair", "three", "full_house", "straight", "three_pairs", "steel_plate"):
-        score += 1.5
-    return score
+    raise RuntimeError("_lead_option_score should be bound from guandan_ai")
 
 
 def _rank_lead_options(state: Dict, player_id: str, options: List[List[int]]) -> List[List[int]]:
-    if not options:
-        return []
-    hand = state["players"][player_id]["hand"]
-    hand_map = _map_hand_by_id(hand)
-    scored: List[Tuple[float, str, List[int]]] = []
-    for cards in options:
-        combo_cards = [hand_map[cid] for cid in cards if cid in hand_map]
-        combo = _evaluate_combo(combo_cards, state["level_rank"], state.get("config", {}))
-        if not combo:
-            continue
-        score = _lead_option_score(state, player_id, cards)
-        scored.append((score, combo["type"], cards))
-    if not scored:
-        return options
-
-    best_non_single_score = max(
-        (score for score, combo_type, _ in scored if combo_type != "single"),
-        default=None,
-    )
-    best_non_bomb_score = max(
-        (score for score, combo_type, _ in scored if combo_type not in BOMB_TYPES),
-        default=None,
-    )
-    best_multi_non_bomb_score = max(
-        (score for score, combo_type, cards in scored if combo_type not in BOMB_TYPES and len(cards) > 1),
-        default=None,
-    )
-    best_safe_score = max(
-        (
-            score
-            for score, combo_type, cards in scored
-            if combo_type not in BOMB_TYPES
-            and _control_group_break_penalty(hand, cards, state["level_rank"]) < 3.0
-        ),
-        default=None,
-    )
-
-    best_by_type: Dict[str, Tuple[float, str, List[int]]] = {}
-    for entry in scored:
-        score, combo_type, _ = entry
-        existing = best_by_type.get(combo_type)
-        if existing is None or score > existing[0]:
-            best_by_type[combo_type] = entry
-
-    ranked: List[List[int]] = []
-    seen = set()
-    for score, combo_type, cards in sorted(best_by_type.values(), key=lambda item: item[0], reverse=True):
-        if _should_prune_wasteful_lead_bomb(
-            state,
-            player_id,
-            cards,
-            combo_type,
-            score,
-            best_non_bomb_score,
-            best_multi_non_bomb_score,
-        ):
-            continue
-        if _should_prune_wasteful_control_break(state, player_id, cards, combo_type, score, best_safe_score):
-            continue
-        if combo_type == "single" and _should_prune_weak_lead_single(
-            state, player_id, cards, score, best_non_single_score
-        ):
-            continue
-        key = _cards_key(cards)
-        if key in seen:
-            continue
-        seen.add(key)
-        ranked.append(cards)
-    for score, combo_type, cards in sorted(scored, key=lambda item: item[0], reverse=True):
-        if _should_prune_wasteful_lead_bomb(
-            state,
-            player_id,
-            cards,
-            combo_type,
-            score,
-            best_non_bomb_score,
-            best_multi_non_bomb_score,
-        ):
-            continue
-        if _should_prune_wasteful_control_break(state, player_id, cards, combo_type, score, best_safe_score):
-            continue
-        if combo_type == "single" and _should_prune_weak_lead_single(
-            state, player_id, cards, score, best_non_single_score
-        ):
-            continue
-        key = _cards_key(cards)
-        if key in seen:
-            continue
-        seen.add(key)
-        ranked.append(cards)
-    return ranked
+    raise RuntimeError("_rank_lead_options should be bound from guandan_ai")
 
 
 def _play_structure_delta(hand: List[Dict], cards: List[int], level_rank: int) -> float:
-    remaining = _remove_cards(hand, cards)
-    before = _hand_strength_score(hand, level_rank)
-    after = _hand_strength_score(remaining, level_rank)
-    return before - after
+    raise RuntimeError("_play_structure_delta should be bound from guandan_ai")
 
 
 def _rank_count_map(hand: List[Dict], level_rank: int) -> Dict[int, int]:
-    counts: Dict[int, int] = {}
-    for card in hand:
-        if _is_joker(card) or _is_wild(card, level_rank):
-            continue
-        rank = card.get("rank")
-        if rank is None:
-            continue
-        counts[rank] = counts.get(rank, 0) + 1
-    return counts
+    raise RuntimeError("_rank_count_map should be bound from guandan_ai")
 
 
 def _shape_transition_score(hand: List[Dict], cards: List[int], level_rank: int) -> float:
-    remaining = _remove_cards(hand, cards)
-    before_counts = _rank_count_map(hand, level_rank)
-    after_counts = _rank_count_map(remaining, level_rank)
-    before_singletons = sum(1 for count in before_counts.values() if count == 1)
-    after_singletons = sum(1 for count in after_counts.values() if count == 1)
-
-    score = 0.0
-    singleton_delta = after_singletons - before_singletons
-    score -= singleton_delta * 1.3
-
-    for rank, before_count in before_counts.items():
-        after_count = after_counts.get(rank, 0)
-        if before_count >= 2 and 0 < after_count < before_count:
-            score -= 2.2 + 0.4 * (before_count - 1)
-        elif before_count >= 2 and after_count == 0:
-            score += 1.2 + 0.3 * before_count
-        elif before_count == 1 and after_count == 0:
-            score += 0.9
-
-    return score
+    raise RuntimeError("_shape_transition_score should be bound from guandan_ai")
 
 
 def _group_fragment_penalty(hand: List[Dict], cards: List[int], level_rank: int, combo: Optional[Dict]) -> float:
-    remaining = _remove_cards(hand, cards)
-    before_counts = _rank_count_map(hand, level_rank)
-    after_counts = _rank_count_map(remaining, level_rank)
-    combo_type = combo.get("type") if combo else None
-    penalty = 0.0
-    for rank, before_count in before_counts.items():
-        after_count = after_counts.get(rank, 0)
-        removed = before_count - after_count
-        if removed <= 0 or after_count <= 0:
-            continue
-        if before_count >= 4 and combo_type not in BOMB_TYPES:
-            penalty += 5.2 + (before_count - 4) * 1.5 + removed * 0.7
-        elif before_count == 3 and combo_type not in ("three", "full_house", "steel_plate", "bomb"):
-            penalty += 3.4 + (1.0 if after_count == 1 else 0.0)
-        elif before_count == 2 and combo_type == "single":
-            penalty += 2.0
-    return penalty
+    raise RuntimeError("_group_fragment_penalty should be bound from guandan_ai")
 
 
 def _control_group_break_penalty(hand: List[Dict], cards: List[int], level_rank: int) -> float:
-    remaining = _remove_cards(hand, cards)
-    before_counts = _rank_count_map(hand, level_rank)
-    after_counts = _rank_count_map(remaining, level_rank)
-    penalty = 0.0
-    for rank, before_count in before_counts.items():
-        after_count = after_counts.get(rank, 0)
-        removed = before_count - after_count
-        if removed <= 0 or after_count <= 0:
-            continue
-        strength = _point_order_value(rank, level_rank)
-        control = max(0.0, strength - 56)
-        if before_count >= 5:
-            penalty += 2.6 + (before_count - 4) * 0.9 + removed * 0.45 + control * 0.5
-        elif before_count == 4:
-            penalty += 2.0 + removed * 0.4 + control * 0.42
-        elif before_count == 3 and strength >= 58:
-            penalty += 1.1 + removed * 0.35 + control * 0.35
-        elif before_count == 2 and strength >= 59 and removed == 1:
-            penalty += 0.8 + control * 0.3
-    return penalty
+    raise RuntimeError("_control_group_break_penalty should be bound from guandan_ai")
 
 
 def _cards_use_special_material(play_cards: List[Dict], level_rank: int) -> bool:
@@ -1687,20 +1444,7 @@ def _rank_response_options(state: Dict, player_id: str, options: List[List[int]]
 
 
 def _lead_single_break_penalty(hand: List[Dict], cards: List[int], level_rank: int) -> float:
-    if len(cards) != 1:
-        return 0.0
-    hand_map = _map_hand_by_id(hand)
-    card = hand_map.get(cards[0])
-    if not card or _is_joker(card) or _is_wild(card, level_rank):
-        return 0.0
-    rank = card.get("rank")
-    if rank is None:
-        return 0.0
-    before_count = _rank_count_map(hand, level_rank).get(rank, 0)
-    if before_count <= 1:
-        return 0.0
-    low_value = max(0.0, 56 - _single_order_value(card, level_rank))
-    return 1.2 + max(0, before_count - 2) * 0.8 + low_value * 0.9
+    raise RuntimeError("_lead_single_break_penalty should be bound from guandan_ai")
 
 
 def _lead_low_single_escape_bonus(hand: List[Dict], cards: List[int], level_rank: int) -> float:
@@ -1759,36 +1503,7 @@ def _lead_opening_commitment_penalty(state: Dict, player_id: str, cards: List[in
 def _should_prune_weak_lead_single(
     state: Dict, player_id: str, cards: List[int], single_score: float, best_non_single_score: Optional[float]
 ) -> bool:
-    if state.get("current_trick"):
-        return False
-    hand = state["players"][player_id]["hand"]
-    next_pid = _next_active_player(state, player_id)
-    if next_pid and _team_of(state, next_pid) != _team_of(state, player_id):
-        next_left = len(state["players"][next_pid]["hand"])
-        if next_left <= 2:
-            hand_map = _map_hand_by_id(hand)
-            card = hand_map.get(cards[0]) if len(cards) == 1 else None
-            if card and not _is_joker(card) and not _is_wild(card, state["level_rank"]):
-                counts = _rank_count_map(hand, state["level_rank"])
-                if counts.get(card.get("rank"), 0) == 1:
-                    best_safe_single = max(
-                        (
-                            _single_order_value(other, state["level_rank"])
-                            for other in hand
-                            if not _is_joker(other)
-                            and not _is_wild(other, state["level_rank"])
-                            and counts.get(other.get("rank"), 0) == 1
-                        ),
-                        default=_single_order_value(card, state["level_rank"]),
-                    )
-                    if best_safe_single - _single_order_value(card, state["level_rank"]) >= (2 if next_left <= 1 else 4):
-                        return True
-    if best_non_single_score is None:
-        return False
-    penalty = _lead_single_break_penalty(hand, cards, state["level_rank"])
-    if penalty < 4.5:
-        return False
-    return best_non_single_score - single_score >= 8.0
+    raise RuntimeError("_should_prune_weak_lead_single should be bound from guandan_ai")
 
 
 def _should_prune_wasteful_control_break(
@@ -1799,13 +1514,7 @@ def _should_prune_wasteful_control_break(
     score: float,
     best_safe_score: Optional[float],
 ) -> bool:
-    if state.get("current_trick") or best_safe_score is None or combo_type in BOMB_TYPES:
-        return False
-    hand = state["players"][player_id]["hand"]
-    penalty = _control_group_break_penalty(hand, cards, state["level_rank"])
-    if penalty < 6.0:
-        return False
-    return best_safe_score >= score - 1.75
+    raise RuntimeError("_should_prune_wasteful_control_break should be bound from guandan_ai")
 
 
 def _should_prune_wasteful_lead_bomb(
@@ -1817,36 +1526,7 @@ def _should_prune_wasteful_lead_bomb(
     best_non_bomb_score: Optional[float],
     best_multi_non_bomb_score: Optional[float],
 ) -> bool:
-    if state.get("current_trick") or combo_type not in BOMB_TYPES or best_non_bomb_score is None:
-        return False
-    hand = state["players"][player_id]["hand"]
-    if len(hand) <= 10:
-        return False
-
-    teammate = _teammate_of(state, player_id)
-    partner_left = len(state["players"][teammate]["hand"]) if teammate else 99
-    active_opponents = [
-        pid
-        for pid in state["turn_order"]
-        if _team_of(state, pid) != _team_of(state, player_id) and not state["players"][pid]["finished"]
-    ]
-    opp_left = (
-        min(len(state["players"][pid]["hand"]) for pid in active_opponents)
-        if active_opponents
-        else 0
-    )
-    if partner_left <= 2 or opp_left <= 2:
-        return False
-
-    remaining = _remove_cards(hand, cards)
-    if len(remaining) <= 6 or _can_play_all(remaining, state["level_rank"], state.get("config", {}), None):
-        return False
-
-    if best_multi_non_bomb_score is not None:
-        gap = -1.0 if len(hand) >= 16 else 1.5
-        if best_multi_non_bomb_score >= score - gap:
-            return True
-    return len(hand) >= 15 and best_non_bomb_score >= score + 1.5
+    raise RuntimeError("_should_prune_wasteful_lead_bomb should be bound from guandan_ai")
 
 
 def _single_lock_bonus(state: Dict, player_id: str, cards: List[int], combo: Dict) -> float:
@@ -1944,6 +1624,18 @@ _AI_EXPORTED_FUNCS = (
     "_minimax_pick_action",
     "_lead_low_single_escape_bonus",
     "_lead_low_single_trap_penalty",
+    "_choose_lead_play",
+    "_lead_option_score",
+    "_rank_lead_options",
+    "_play_structure_delta",
+    "_rank_count_map",
+    "_shape_transition_score",
+    "_group_fragment_penalty",
+    "_control_group_break_penalty",
+    "_lead_single_break_penalty",
+    "_should_prune_weak_lead_single",
+    "_should_prune_wasteful_control_break",
+    "_should_prune_wasteful_lead_bomb",
     "_lead_short_next_opponent_penalty",
     "_lead_structure_overreach_penalty",
     "_lead_special_material_penalty",
