@@ -7,6 +7,8 @@ let guandanHandLayout = "cascade";
 let guandanCascadeLayoutFrame = null;
 let guandanBotExplainPlayerId = null;
 let guandanBotExplainHistoryIndex = -1;
+let guandanBotProgressStatus = null;
+let guandanBotProgressTimer = null;
 const GUANDAN_DEFAULT_BOT_MODE = "auto";
 const GUANDAN_DEFAULT_NN_CHECKPOINT = "assets/guandan/checkpoints/guandan_nn.pt";
 
@@ -174,6 +176,8 @@ function resetGuandanRoomConfig() {
 
 function clearGuandanState() {
   currentGuandanView = null;
+  guandanBotProgressStatus = null;
+  stopGuandanBotProgressTimer();
   guandanSelected = [];
   guandanPiles = [];
   guandanLastSfKey = null;
@@ -567,13 +571,20 @@ function renderGuandanTrickPlays(view) {
       if (player.is_bot && hasExplain) {
         playerCell = `<button type="button" class="guandan-bot-explain-btn" data-player="${player.player_id}">${playerCell}</button>`;
       }
+      const progress = getGuandanBotProgressMarkup(player.player_id);
+      const playerCellContent = `
+        <div class="guandan-player-cell">
+          <span class="guandan-player-name">${playerCell}</span>
+          ${progress}
+        </div>
+      `;
       let trickCell = cards;
       if (player.is_bot && explain && cards !== "-") {
         trickCell = `<button type="button" class="guandan-bot-explain-btn" data-player="${player.player_id}">${cards}</button>`;
       }
       return `
         <tr class="${rowClass}">
-          <td>${playerCell}</td>
+          <td>${playerCellContent}</td>
           <td>${player.hand_count ?? "-"}</td>
           <td>${trickCell}</td>
         </tr>
@@ -603,6 +614,67 @@ function renderGuandanTrickPlays(view) {
       }
     });
   });
+}
+
+function stopGuandanBotProgressTimer() {
+  if (guandanBotProgressTimer) {
+    window.clearInterval(guandanBotProgressTimer);
+    guandanBotProgressTimer = null;
+  }
+}
+
+function getGuandanBotProgressValue() {
+  const status = guandanBotProgressStatus;
+  if (!status || !status.running || !status.player_id) {
+    return null;
+  }
+  const startedAt = Number(status.started_at_ms || 0);
+  const thinkBudget = Math.max(40, Number(status.think_budget_ms || 320));
+  if (!startedAt) {
+    return 0.08;
+  }
+  const elapsed = Math.max(0, Date.now() - startedAt);
+  const ratio = elapsed / thinkBudget;
+  if (ratio <= 0) return 0.08;
+  if (ratio < 0.85) return Math.max(0.08, ratio * 0.88);
+  if (ratio < 1.4) return 0.75 + (ratio - 0.85) / 0.55 * 0.15;
+  if (ratio < 2.5) return 0.9 + (ratio - 1.4) / 1.1 * 0.06;
+  return 0.96;
+}
+
+function getGuandanBotProgressMarkup(playerId) {
+  const status = guandanBotProgressStatus;
+  if (!status || !status.running || status.player_id !== playerId) {
+    return "";
+  }
+  const progress = getGuandanBotProgressValue();
+  if (progress == null) {
+    return "";
+  }
+  const percent = Math.max(8, Math.min(96, Math.round(progress * 100)));
+  return `
+    <span class="guandan-bot-progress" aria-label="AI thinking ${percent}%">
+      <span class="guandan-bot-progress-bar">
+        <span class="guandan-bot-progress-fill" style="width:${percent}%"></span>
+      </span>
+      <span class="guandan-bot-progress-text">${percent}%</span>
+    </span>
+  `;
+}
+
+function syncGuandanBotProgress(status) {
+  guandanBotProgressStatus = status && status.running ? { ...status } : null;
+  stopGuandanBotProgressTimer();
+  if (!guandanBotProgressStatus || !currentGuandanView) {
+    return;
+  }
+  guandanBotProgressTimer = window.setInterval(() => {
+    if (!guandanBotProgressStatus || !currentGuandanView) {
+      stopGuandanBotProgressTimer();
+      return;
+    }
+    renderGuandanTrickPlays(currentGuandanView);
+  }, 120);
 }
 
 function renderGuandanTribute(view) {
@@ -641,6 +713,7 @@ function renderGuandanGameState(data) {
   const view = data.view;
   if (!view) return;
   currentGuandanView = view;
+  syncGuandanBotProgress(data.bot_status || null);
   if (guandanPhaseLabel) guandanPhaseLabel.textContent = view.phase || "-";
   if (guandanRoundLabel) guandanRoundLabel.textContent = view.round_number || "-";
   if (guandanTurnLabel) {

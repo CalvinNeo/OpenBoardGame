@@ -7779,6 +7779,48 @@ body.guandan-explain-mode button.has-explanation:hover {
   background: #eef9ee;
 }
 
+#guandanPanel .guandan-player-cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+#guandanPanel .guandan-player-name {
+  min-width: 0;
+}
+
+#guandanPanel .guandan-bot-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 88px;
+  flex: 0 0 auto;
+}
+
+#guandanPanel .guandan-bot-progress-bar {
+  width: 56px;
+  height: 6px;
+  border-radius: 999px;
+  background: #dbe7f3;
+  overflow: hidden;
+  position: relative;
+}
+
+#guandanPanel .guandan-bot-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #60a5fa 0%, #2563eb 100%);
+  transition: width 120ms linear;
+}
+
+#guandanPanel .guandan-bot-progress-text {
+  font-size: 10px;
+  color: #475569;
+  font-variant-numeric: tabular-nums;
+}
+
 #guandanPanel .guandan-bot-explain-btn {
   padding: 2px 6px;
   border: 1px solid #d1d5db;

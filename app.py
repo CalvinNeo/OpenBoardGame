@@ -202,6 +202,8 @@ class Room:
     auto_save: bool = False
     schema_validation_enabled: bool = True
     source_room_id: Optional[str] = None
+    bot_player_id: Optional[str] = None
+    bot_started_at_ms: Optional[int] = None
 
 
 ROOMS: Dict[str, Room] = {}
@@ -442,6 +444,18 @@ async def _emit_game_state(room: Room, events: Optional[List[Dict]] = None) -> N
         if player.socket_id is None:
             continue
         view = game_module.get_public_view(room.game_state, player.player_id)
+        bot_status = {
+            "running": bool(room.bot_running and room.bot_player_id),
+            "player_id": room.bot_player_id,
+            "started_at_ms": room.bot_started_at_ms,
+        }
+        if room.game_type == "guandan" and room.game_state:
+            config = room.game_state.get("config", {}) if isinstance(room.game_state, dict) else {}
+            try:
+                think_budget_ms = int(config.get("bot_think_time_ms", 320))
+            except (TypeError, ValueError):
+                think_budget_ms = 320
+            bot_status["think_budget_ms"] = max(40, think_budget_ms)
         payload = {
             "room_id": room.room_id,
             "state_version": room.state_version,
@@ -449,6 +463,7 @@ async def _emit_game_state(room: Room, events: Optional[List[Dict]] = None) -> N
             "game_type": room.game_type,
             "view": view,
             "events": events or [],
+            "bot_status": bot_status,
         }
         await sio.emit("game:state", payload, to=player.socket_id)
 
@@ -910,6 +925,18 @@ async def _maybe_run_bots(room: Room) -> None:
                 for candidate in room.players:
                     if not candidate.is_bot:
                         continue
+                    get_legal_actions = getattr(game_module, "get_legal_actions", None)
+                    if callable(get_legal_actions):
+                        try:
+                            legal_actions = get_legal_actions(state, candidate.player_id)
+                        except Exception:
+                            legal_actions = None
+                        if not legal_actions:
+                            continue
+                    room.bot_player_id = candidate.player_id
+                    room.bot_started_at_ms = int(time.time() * 1000)
+                    await _emit_game_state(room, [])
+                    await asyncio.sleep(0)
                     try:
                         action = game_module.bot_move(state, candidate.player_id)
                     except Exception:
@@ -926,6 +953,8 @@ async def _maybe_run_bots(room: Room) -> None:
                         break
                 if not bot_action or not bot_player:
                     break
+                room.bot_player_id = None
+                room.bot_started_at_ms = None
                 action_payload = bot_action
                 delay_ms = 0
                 if isinstance(bot_action, dict) and "delay_ms" in bot_action:
@@ -984,6 +1013,8 @@ async def _maybe_run_bots(room: Room) -> None:
                 await asyncio.sleep(0.25)
         finally:
             room.bot_running = False
+            room.bot_player_id = None
+            room.bot_started_at_ms = None
 
     asyncio.create_task(_runner())
 
