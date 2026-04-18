@@ -363,6 +363,57 @@ def _public_history_profile_for_target(state: Dict, target_id: str) -> Dict[str,
     return profile
 
 
+def _public_revealed_rank_caps_for_target(state: Dict, target_id: str) -> Dict[int, int]:
+    if not target_id:
+        return {}
+
+    round_entries = state.get("round_memories") or []
+    round_entry = round_entries[-1] if round_entries else None
+    if not round_entry:
+        return {}
+
+    caps: Dict[int, int] = {}
+    for trick in round_entry.get("tricks", []) or []:
+        for action in trick.get("actions", []) or []:
+            if action.get("player_id") != target_id or action.get("type") != "play":
+                continue
+            cards = action.get("cards") or []
+            if not cards:
+                continue
+            if any(card.get("joker") or card.get("is_wild") for card in cards):
+                continue
+
+            rank_counts: Dict[int, int] = {}
+            for card in cards:
+                rank = card.get("rank")
+                if rank is None:
+                    continue
+                rank_counts[rank] = rank_counts.get(rank, 0) + 1
+
+            combo_type = action.get("combo_type") or ""
+            if combo_type == "pair":
+                for rank, count in rank_counts.items():
+                    if count >= 2:
+                        # Natural pairs weakly suggest the player is not hiding a same-rank bomb.
+                        caps[rank] = min(caps.get(rank, 8), 1)
+            elif combo_type == "three":
+                for rank, count in rank_counts.items():
+                    if count >= 3:
+                        # Natural trips are treated as consuming the rank for future same-rank structures.
+                        caps[rank] = min(caps.get(rank, 8), 0)
+            elif combo_type == "full_house":
+                for rank, count in rank_counts.items():
+                    if count >= 3:
+                        caps[rank] = min(caps.get(rank, 8), 0)
+                    elif count >= 2:
+                        caps[rank] = min(caps.get(rank, 8), 1)
+            elif combo_type == "bomb":
+                for rank, count in rank_counts.items():
+                    if count >= 4:
+                        caps[rank] = min(caps.get(rank, 8), 0)
+    return caps
+
+
 def _has_natural_same_type_response(
     state: Dict,
     player_id: str,
@@ -1407,6 +1458,7 @@ def _opponent_same_type_reply_probability(
         return 0.0
 
     level_rank = state["level_rank"]
+    revealed_caps = _public_revealed_rank_caps_for_target(state, opponent_id)
     if state.get("pass_limits", {}).get(opponent_id):
         if not _bot_estimate_opponent_can_beat(state, opponent_id, combo):
             return 0.0
@@ -1419,7 +1471,11 @@ def _opponent_same_type_reply_probability(
         cached = rank_prob_cache.get(key)
         if cached is not None:
             return cached
-        value = _reply_rank_probability(unknown_total, rank_counts, hand_count, rank, need)
+        effective_hits = rank_counts.get(rank, 0)
+        cap = revealed_caps.get(rank)
+        if cap is not None:
+            effective_hits = min(effective_hits, max(0, cap))
+        value = _hypergeom_at_least(unknown_total, effective_hits, hand_count, need)
         rank_prob_cache[key] = value
         return value
 
@@ -1520,10 +1576,11 @@ def _opponent_bomb_reply_probability(
     if hand_count <= 0:
         return 0.0
 
+    revealed_caps = _public_revealed_rank_caps_for_target(state, opponent_id)
     bomb_probs = [
-        _reply_rank_probability(unknown_total, rank_counts, hand_count, rank, 4)
+        _hypergeom_at_least(unknown_total, min(rank_counts.get(rank, 0), max(0, revealed_caps.get(rank, 8))), hand_count, 4)
         for rank in range(2, 15)
-        if rank_counts.get(rank, 0) >= 4
+        if min(rank_counts.get(rank, 0), max(0, revealed_caps.get(rank, 8))) >= 4
     ]
     bomb_prob = _aggregate_event_probability(bomb_probs)
     heavenly_prob = 0.0
@@ -1550,12 +1607,19 @@ def _opponent_overbomb_reply_probability(
         return 0.0
 
     level_rank = state["level_rank"]
+    revealed_caps = _public_revealed_rank_caps_for_target(state, opponent_id)
     if combo_type == "bomb":
         threshold = combo.get("rank_value", 0)
         probs = [
-            _reply_rank_probability(unknown_total, rank_counts, hand_count, rank, 4)
+            _hypergeom_at_least(
+                unknown_total,
+                min(rank_counts.get(rank, 0), max(0, revealed_caps.get(rank, 8))),
+                hand_count,
+                4,
+            )
             for rank in range(2, 15)
-            if rank_counts.get(rank, 0) >= 4 and _point_order_value(rank, level_rank) > threshold
+            if min(rank_counts.get(rank, 0), max(0, revealed_caps.get(rank, 8))) >= 4
+            and _point_order_value(rank, level_rank) > threshold
         ]
         overbomb_prob = _aggregate_event_probability(probs)
     else:
@@ -3279,6 +3343,114 @@ def _pass_limit_penalty_for_hand(state: Dict, player_id: str, hand: List[Dict]) 
     return penalty
 
 
+def _revealed_rank_cap_penalty_for_hand(state: Dict, player_id: str, hand: List[Dict]) -> float:
+    caps = _public_revealed_rank_caps_for_target(state, player_id)
+    if not caps:
+        return 0.0
+
+    level_rank = state["level_rank"]
+    counts: Dict[int, int] = {}
+    for card in hand:
+        if _is_joker(card) or _is_wild(card, level_rank):
+            continue
+        rank = card.get("rank")
+        if rank is None:
+            continue
+        counts[rank] = counts.get(rank, 0) + 1
+
+    penalty = 0.0
+    for rank, cap in caps.items():
+        actual = counts.get(rank, 0)
+        overflow = actual - max(0, cap)
+        if overflow <= 0:
+            continue
+        base = 4.5 if cap <= 0 else 2.6
+        penalty += base * overflow
+        if cap <= 0 and actual >= 2:
+            penalty += 1.2 * (actual - 1)
+    return penalty
+
+
+def _public_action_line_penalty_for_hand(state: Dict, player_id: str, hand: List[Dict]) -> float:
+    round_entries = state.get("round_memories") or []
+    round_entry = round_entries[-1] if round_entries else None
+    if not round_entry or not hand:
+        return 0.0
+
+    actions: List[Dict] = []
+    for trick in round_entry.get("tricks", []) or []:
+        for action in trick.get("actions", []) or []:
+            if action.get("player_id") == player_id and action.get("type") == "play":
+                actions.append(action)
+    if not actions:
+        return 0.0
+
+    level_rank = state["level_rank"]
+    low_single_short = 0
+    control_single_led = 0
+    bomb_played = 0
+    for action in actions:
+        combo_type = action.get("combo_type") or ""
+        cards = action.get("cards") or []
+        hand_after = int(action.get("hand_count_after") or 99)
+        if combo_type == "single" and hand_after <= 8 and cards:
+            value = max((_public_card_single_value(card, level_rank) for card in cards), default=0)
+            if value < 60:
+                low_single_short += 1
+            elif value >= 70:
+                control_single_led += 1
+        elif combo_type in BOMB_TYPES:
+            bomb_played += 1
+
+    if low_single_short <= 0 and bomb_played <= 0:
+        return 0.0
+
+    counts = _rank_count_map(hand, level_rank)
+    isolated_control = 0
+    isolated_premium = 0
+    for card in hand:
+        if _is_joker(card) or _is_wild(card, level_rank):
+            continue
+        rank = card.get("rank")
+        if rank is None or counts.get(rank, 0) != 1:
+            continue
+        value = _single_order_value(card, level_rank)
+        if value >= 60:
+            isolated_control += 1
+        if value >= _point_order_value(13, level_rank):
+            isolated_premium += 1
+
+    natural_structures = 0
+    hand_map = _map_hand_by_id(hand)
+    for combo_type, options in (
+        ("full_house", _list_full_house_options(hand, level_rank, 0)),
+        ("straight", _list_straight_options(hand, level_rank, 0)),
+        ("three_pairs", _list_three_pairs_options(hand, level_rank, 0)),
+        ("steel_plate", _list_steel_plate_options(hand, level_rank, 0)),
+    ):
+        found = False
+        for cards in options:
+            play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+            if not play_cards or _cards_use_special_material(play_cards, level_rank):
+                continue
+            combo = _evaluate_combo(play_cards, level_rank, state.get("config", {}))
+            if combo and combo.get("type") == combo_type:
+                natural_structures += 1
+                found = True
+                break
+        if found and natural_structures >= 2:
+            break
+
+    # Public action lines provide only weak evidence about what a player chose not to keep.
+    # Keep this as a light tie-breaker; do not strongly penalize preserved control groups such as KKK.
+    penalty = 0.0
+    if low_single_short > 0 and control_single_led <= 0:
+        penalty += min(0.9, isolated_control * 0.08 + natural_structures * 0.12)
+    if bomb_played > 0 and low_single_short > 0:
+        penalty += min(0.6, isolated_premium * 0.08 + natural_structures * 0.08)
+    return penalty
+
+
 def _determinize_state(state: Dict, perspective_id: str, rng: random.Random) -> Dict:
     det = copy.deepcopy(state)
     full = _full_deck()
@@ -3320,6 +3492,8 @@ def _determinize_state(state: Dict, perspective_id: str, rng: random.Random) -> 
         penalty = 0.0
         for pid, cards in assignment.items():
             penalty += _pass_limit_penalty_for_hand(det, pid, cards)
+            penalty += _revealed_rank_cap_penalty_for_hand(det, pid, cards)
+            penalty += _public_action_line_penalty_for_hand(det, pid, cards)
         if best_penalty is None or penalty < best_penalty:
             best_penalty = penalty
             best_assignment = assignment
@@ -3331,6 +3505,80 @@ def _determinize_state(state: Dict, perspective_id: str, rng: random.Random) -> 
     for pid, cards in best_assignment.items():
         det["players"][pid]["hand"] = cards
     return det
+
+
+def _hand_can_beat_combo(hand: List[Dict], level_rank: int, combo: Dict, config: Dict) -> bool:
+    combo_type = combo.get("type")
+    threshold = _combo_numeric_value(combo)
+    hand_map = _map_hand_by_id(hand)
+
+    if combo_type == "single":
+        options = _list_single_options(hand, level_rank, threshold)
+    elif combo_type == "pair":
+        options = _list_rank_group_options(hand, level_rank, threshold, 2)
+    elif combo_type == "three":
+        options = _list_rank_group_options(hand, level_rank, threshold, 3)
+    elif combo_type == "full_house":
+        options = _list_full_house_options(hand, level_rank, threshold)
+    elif combo_type == "straight":
+        options = _list_straight_options(hand, level_rank, threshold)
+    elif combo_type == "three_pairs":
+        options = _list_three_pairs_options(hand, level_rank, threshold)
+    elif combo_type == "steel_plate":
+        options = _list_steel_plate_options(hand, level_rank, threshold)
+    else:
+        options = []
+
+    for cards in options:
+        play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+        challenger = _evaluate_combo(play_cards, level_rank, config)
+        if challenger and _compare_combos(combo, challenger, level_rank, config):
+            return True
+
+    if combo_type not in BOMB_TYPES:
+        for cand in _find_bomb_candidates(hand, level_rank):
+            challenger = {
+                "type": cand["type"],
+                "size": len(cand["cards"]),
+                "rank_value": cand.get("rank_value", 0),
+                "high_value": cand.get("high_value", 0),
+                "tier": cand.get("tier", 0),
+                "uses_wild": cand.get("uses_wild", False),
+            }
+            if _compare_combos(combo, challenger, level_rank, config):
+                return True
+    return False
+
+
+def _estimate_target_reply_probability_by_determinization(
+    state: Dict,
+    perspective_id: str,
+    target_id: str,
+    combo: Dict,
+    samples: int = 48,
+) -> float:
+    if not combo or not target_id or target_id == perspective_id:
+        return 0.0
+    hand_count = len(state["players"].get(target_id, {}).get("hand", []))
+    if hand_count <= 0:
+        return 0.0
+
+    rng = random.Random(0)
+    hits = 0
+    total = 0
+    level_rank = state["level_rank"]
+    config = state.get("config", {})
+    for _ in range(max(1, samples)):
+        det = _determinize_state(state, perspective_id, rng)
+        hand = det["players"].get(target_id, {}).get("hand", [])
+        if not hand:
+            continue
+        total += 1
+        if _hand_can_beat_combo(hand, level_rank, combo, config):
+            hits += 1
+    if total <= 0:
+        return 0.0
+    return hits / total
 
 
 def _should_accept_mcts_override(

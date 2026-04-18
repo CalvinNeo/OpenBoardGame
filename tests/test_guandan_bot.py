@@ -383,6 +383,100 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertEqual(opp_labels, ["♣️3"])
         self.assertEqual(opp2_labels, ["♠️A"])
 
+    def test_public_revealed_rank_caps_reduce_same_rank_reply_probability(self):
+        players = [
+            {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
+            {"player_id": "opp", "name": "Opp", "seat": 1, "is_bot": False},
+            {"player_id": "mate", "name": "Mate", "seat": 2, "is_bot": False},
+            {"player_id": "opp2", "name": "Opp2", "seat": 3, "is_bot": False},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["level_rank"] = 2
+
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        bot_hand = [pick_label(label) for label in ["♠️8", "♥️8", "♣️8", "♠️10", "♥️10", "♣️A"]]
+        state["players"]["bot"]["hand"] = bot_hand
+        state["players"]["opp"]["hand"] = deck[:6]
+        state["players"]["mate"]["hand"] = deck[6:14]
+        state["players"]["opp2"]["hand"] = deck[14:22]
+        state["round_memories"] = [
+            {
+                "round_number": 1,
+                "tricks": [
+                    {
+                        "actions": [
+                            {
+                                "player_id": "opp",
+                                "type": "play",
+                                "combo_type": "full_house",
+                                "cards": [
+                                    {"label": "♠️K", "rank": 13, "suit": "spades", "joker": None, "is_wild": False},
+                                    {"label": "♥️K", "rank": 13, "suit": "hearts", "joker": None, "is_wild": False},
+                                    {"label": "♣️K", "rank": 13, "suit": "clubs", "joker": None, "is_wild": False},
+                                    {"label": "♠️4", "rank": 4, "suit": "spades", "joker": None, "is_wild": False},
+                                    {"label": "♥️4", "rank": 4, "suit": "hearts", "joker": None, "is_wild": False},
+                                ],
+                                "hand_count_after": 6,
+                            }
+                        ]
+                    }
+                ],
+            }
+        ]
+
+        combo = guandan._evaluate_combo(bot_hand[:5], state["level_rank"], state.get("config", {}))
+        unknown_total, rank_counts, wild_count, joker_counts = guandan._guandan_ai.call(
+            guandan, "_lead_unknown_pool_profile", state, "bot"
+        )
+        with_caps = guandan._guandan_ai.call(
+            guandan, "_opponent_same_type_reply_probability", state, "opp", combo, unknown_total, rank_counts, wild_count
+        )
+        with_bomb_caps = guandan._guandan_ai.call(
+            guandan, "_opponent_bomb_reply_probability", state, "opp", combo, unknown_total, rank_counts, joker_counts
+        )
+
+        state_no_history = guandan.GuandanGame.init_game({}, players)
+        state_no_history["phase"] = "playing"
+        state_no_history["level_rank"] = 2
+        state_no_history["players"]["bot"]["hand"] = bot_hand
+        state_no_history["players"]["opp"]["hand"] = state["players"]["opp"]["hand"]
+        state_no_history["players"]["mate"]["hand"] = state["players"]["mate"]["hand"]
+        state_no_history["players"]["opp2"]["hand"] = state["players"]["opp2"]["hand"]
+        baseline_unknown_total, baseline_rank_counts, baseline_wild_count, baseline_joker_counts = guandan._guandan_ai.call(
+            guandan, "_lead_unknown_pool_profile", state_no_history, "bot"
+        )
+        baseline_same = guandan._guandan_ai.call(
+            guandan,
+            "_opponent_same_type_reply_probability",
+            state_no_history,
+            "opp",
+            combo,
+            baseline_unknown_total,
+            baseline_rank_counts,
+            baseline_wild_count,
+        )
+        baseline_bomb = guandan._guandan_ai.call(
+            guandan,
+            "_opponent_bomb_reply_probability",
+            state_no_history,
+            "opp",
+            combo,
+            baseline_unknown_total,
+            baseline_rank_counts,
+            baseline_joker_counts,
+        )
+
+        self.assertLess(with_caps, baseline_same)
+        self.assertLess(with_bomb_caps, baseline_bomb)
+
     def test_rollout_policy_uses_heuristic_action(self):
         state, big = self._make_state()
         action = guandan._rollout_policy_action(state, "bot")
