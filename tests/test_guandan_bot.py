@@ -477,6 +477,146 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertLess(with_caps, baseline_same)
         self.assertLess(with_bomb_caps, baseline_bomb)
 
+    def test_six_card_structured_prior_boosts_full_house_reply_probability(self):
+        players = [
+            {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
+            {"player_id": "bot3", "name": "Bot 3", "seat": 1, "is_bot": True},
+            {"player_id": "zhu", "name": "zhu", "seat": 2, "is_bot": False},
+            {"player_id": "bot4", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["round_number"] = 1
+        state["dealer_team"] = "A"
+        state["level_rank"] = 2
+        state["current_turn"] = "bot4"
+        state["config"]["bot_short_hand_structured_samples"] = 400
+        state["config"]["bot_short_hand_structured_max_attempts"] = 6000
+
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        played = []
+        for label in [
+            "♠️3", "♦️3", "♦️7", "♥️7", "♥️J", "♦️J", "♥️Q", "♥️Q", "♣️K", "♠️K", "♣️3", "♠️3", "♥️3", "♥️2",
+            "♣️5", "♠️5", "♦️2", "♦️2",
+            "♦️3", "♦️4", "♥️5", "♦️6", "♥️7",
+            "♠️6", "♦️7", "♦️8", "♦️9", "♣️10", "♠️7", "♥️8", "♥️9", "♥️10", "♥️J", "♥️2", "♦️Q", "♠️Q", "♠️Q",
+            "♥️3", "♠️5", "♥️8", "♣️9", "🃏B",
+            "♣️6", "♥️9", "♠️10", "♥️K", "♠️2", "🃏S",
+        ]:
+            played.append(pick_label(label))
+
+        state["seen_cards"] = [card["id"] for card in played]
+        state["players"]["bot4"]["hand"] = [
+            pick_label(label)
+            for label in [
+                "♥️A", "♣️A", "♣️A", "♦️K", "♠️K", "♣️Q", "♣️J", "♠️J",
+                "♥️10", "♦️10", "♦️8", "♠️8", "♣️8", "♣️6", "♣️4", "♥️4", "♣️4",
+            ]
+        ]
+        state["players"]["calvin"]["hand"] = deck[:6]
+        state["players"]["bot3"]["hand"] = deck[6:23]
+        state["players"]["zhu"]["hand"] = deck[23:43]
+        state["round_memories"] = [
+            {
+                "round_number": 1,
+                "tricks": [
+                    {
+                        "actions": [
+                            {
+                                "player_id": "calvin",
+                                "type": "play",
+                                "combo_type": "pair",
+                                "cards": [
+                                    {"label": "♥️J", "rank": 11, "suit": "hearts", "joker": None, "is_wild": False},
+                                    {"label": "♦️J", "rank": 11, "suit": "diamonds", "joker": None, "is_wild": False},
+                                ],
+                                "hand_count_after": 25,
+                            }
+                        ],
+                    },
+                    {
+                        "actions": [
+                            {
+                                "player_id": "calvin",
+                                "type": "play",
+                                "combo_type": "pair",
+                                "cards": [
+                                    {"label": "♦️2", "rank": 2, "suit": "diamonds", "joker": None, "is_wild": False},
+                                    {"label": "♦️2", "rank": 2, "suit": "diamonds", "joker": None, "is_wild": False},
+                                ],
+                                "hand_count_after": 23,
+                            }
+                        ],
+                    },
+                ],
+            }
+        ]
+
+        need = {"♦️8", "♠️8", "♣️8", "♥️10", "♦️10"}
+        combo_cards = [card for card in state["players"]["bot4"]["hand"] if guandan._card_label(card) in need]
+        combo = guandan._evaluate_combo(combo_cards, state["level_rank"], state.get("config", {}))
+
+        unknown_cards = guandan._guandan_ai.call(guandan, "_lead_unknown_pool_cards", state, "bot4")
+        unknown_total, rank_counts, wild_count, joker_counts = guandan._guandan_ai.call(
+            guandan, "_lead_unknown_pool_profile", state, "bot4"
+        )
+
+        baseline_same = guandan._guandan_ai.call(
+            guandan,
+            "_opponent_same_type_reply_probability",
+            state,
+            "calvin",
+            combo,
+            unknown_total,
+            rank_counts,
+            wild_count,
+        )
+        baseline_bomb = guandan._guandan_ai.call(
+            guandan,
+            "_opponent_bomb_reply_probability",
+            state,
+            "calvin",
+            combo,
+            unknown_total,
+            rank_counts,
+            joker_counts,
+        )
+        structured_same = guandan._guandan_ai.call(
+            guandan,
+            "_opponent_same_type_reply_probability",
+            state,
+            "calvin",
+            combo,
+            unknown_total,
+            rank_counts,
+            wild_count,
+            unknown_cards,
+        )
+        structured_bomb = guandan._guandan_ai.call(
+            guandan,
+            "_opponent_bomb_reply_probability",
+            state,
+            "calvin",
+            combo,
+            unknown_total,
+            rank_counts,
+            joker_counts,
+            unknown_cards,
+        )
+
+        baseline_any = 1.0 - (1.0 - baseline_same) * (1.0 - baseline_bomb)
+        structured_any = 1.0 - (1.0 - structured_same) * (1.0 - structured_bomb)
+
+        self.assertGreater(structured_any, baseline_any)
+        self.assertGreater(structured_any, 0.02)
+
     def test_rollout_policy_uses_heuristic_action(self):
         state, big = self._make_state()
         action = guandan._rollout_policy_action(state, "bot")

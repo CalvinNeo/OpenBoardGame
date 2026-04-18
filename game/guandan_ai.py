@@ -1404,20 +1404,25 @@ def _aggregate_event_probability(probabilities: List[float]) -> float:
     return max(0.0, min(1.0, 1.0 - miss))
 
 
-def _lead_unknown_pool_profile(state: Dict, player_id: str) -> Tuple[int, Dict[int, int], int, Dict[str, int]]:
+def _lead_unknown_pool_cards(state: Dict, player_id: str) -> List[Dict]:
     level_rank = state["level_rank"]
     known_ids = set(state.get("seen_cards", []) or [])
     known_ids.update(card["id"] for card in state["players"].get(player_id, {}).get("hand", []))
     current_trick = state.get("current_trick") or {}
     known_ids.update(current_trick.get("cards") or [])
 
+    return [card for card in _full_deck() if card["id"] not in known_ids]
+
+
+def _lead_unknown_pool_profile(state: Dict, player_id: str) -> Tuple[int, Dict[int, int], int, Dict[str, int]]:
+    level_rank = state["level_rank"]
+    unknown_cards = _lead_unknown_pool_cards(state, player_id)
+
     rank_counts: Dict[int, int] = {}
     wild_count = 0
     joker_counts = {"small": 0, "big": 0}
     unknown_total = 0
-    for card in _full_deck():
-        if card["id"] in known_ids:
-            continue
+    for card in unknown_cards:
         unknown_total += 1
         if _is_joker(card):
             joker = card.get("joker")
@@ -1444,6 +1449,138 @@ def _reply_rank_probability(
     return _hypergeom_at_least(unknown_total, rank_counts.get(rank, 0), hand_count, need)
 
 
+def _short_hand_shape_pattern(hand: List[Dict], level_rank: int) -> Tuple[int, ...]:
+    counts: Dict[object, int] = {}
+    for card in hand:
+        if _is_joker(card):
+            key = ("joker", card.get("joker"))
+        elif _is_wild(card, level_rank):
+            key = ("wild", level_rank)
+        else:
+            key = ("rank", card.get("rank"))
+        counts[key] = counts.get(key, 0) + 1
+    return tuple(sorted(counts.values(), reverse=True))
+
+
+def _short_hand_has_structured_shape(hand: List[Dict], level_rank: int) -> bool:
+    pattern = _short_hand_shape_pattern(hand, level_rank)
+    return pattern not in ((1, 1, 1, 1, 1, 1), (2, 1, 1, 1, 1))
+
+
+def _hand_has_same_type_beat(hand: List[Dict], level_rank: int, combo: Dict, config: Dict) -> bool:
+    combo_type = combo.get("type")
+    threshold = _combo_numeric_value(combo)
+    hand_map = _map_hand_by_id(hand)
+
+    if combo_type == "single":
+        options = _list_single_options(hand, level_rank, threshold)
+    elif combo_type == "pair":
+        options = _list_rank_group_options(hand, level_rank, threshold, 2)
+    elif combo_type == "three":
+        options = _list_rank_group_options(hand, level_rank, threshold, 3)
+    elif combo_type == "full_house":
+        options = _list_full_house_options(hand, level_rank, threshold)
+    elif combo_type == "straight":
+        options = _list_straight_options(hand, level_rank, threshold)
+    elif combo_type == "three_pairs":
+        options = _list_three_pairs_options(hand, level_rank, threshold)
+    elif combo_type == "steel_plate":
+        options = _list_steel_plate_options(hand, level_rank, threshold)
+    else:
+        options = []
+
+    for cards in options:
+        play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+        challenger = _evaluate_combo(play_cards, level_rank, config)
+        if challenger and _compare_combos(combo, challenger, level_rank, config):
+            return True
+    return False
+
+
+def _hand_has_bomb_beat(hand: List[Dict], level_rank: int, combo: Dict, config: Dict) -> bool:
+    for cand in _find_bomb_candidates(hand, level_rank):
+        challenger = {
+            "type": cand["type"],
+            "size": len(cand["cards"]),
+            "rank_value": cand.get("rank_value", 0),
+            "high_value": cand.get("high_value", 0),
+            "tier": cand.get("tier", 0),
+            "uses_wild": cand.get("uses_wild", False),
+        }
+        if _compare_combos(combo, challenger, level_rank, config):
+            return True
+    return False
+
+
+def _short_hand_structured_reply_breakdown(
+    state: Dict,
+    opponent_id: str,
+    combo: Dict,
+    unknown_cards: List[Dict],
+    accepted_target: int = 160,
+    max_attempts: int = 1920,
+) -> Optional[Dict[str, float]]:
+    hand_count = len(state["players"].get(opponent_id, {}).get("hand", []))
+    if hand_count != 6 or len(unknown_cards) < hand_count:
+        return None
+
+    level_rank = state["level_rank"]
+    config = state.get("config", {})
+    accepted_target = max(16, int(config.get("bot_short_hand_structured_samples", accepted_target)))
+    max_attempts = max(accepted_target * 4, int(config.get("bot_short_hand_structured_max_attempts", max_attempts)))
+    caps = _public_revealed_rank_caps_for_target(state, opponent_id)
+
+    def obey_caps(hand: List[Dict]) -> bool:
+        if not caps:
+            return True
+        counts: Dict[int, int] = {}
+        for card in hand:
+            if _is_joker(card) or _is_wild(card, level_rank):
+                continue
+            rank = card.get("rank")
+            if rank is None:
+                continue
+            counts[rank] = counts.get(rank, 0) + 1
+            if counts[rank] > max(0, caps.get(rank, 8)):
+                return False
+        return True
+
+    seed = (
+        len(unknown_cards) * 131
+        + sum(card["id"] for card in unknown_cards[:12])
+        + sum(ord(ch) for ch in f"{opponent_id}:{combo.get('type')}:{_combo_numeric_value(combo)}")
+    )
+    rng = random.Random(seed)
+    accepted = 0
+    same_type_hits = 0
+    bomb_hits = 0
+    overbomb_hits = 0
+    attempts = 0
+    while attempts < max_attempts and accepted < accepted_target:
+        attempts += 1
+        hand = rng.sample(unknown_cards, hand_count)
+        if not _short_hand_has_structured_shape(hand, level_rank):
+            continue
+        if not obey_caps(hand):
+            continue
+        accepted += 1
+        if _hand_has_same_type_beat(hand, level_rank, combo, config):
+            same_type_hits += 1
+        if _hand_has_bomb_beat(hand, level_rank, combo, config):
+            if combo.get("type") in BOMB_TYPES:
+                overbomb_hits += 1
+            else:
+                bomb_hits += 1
+
+    if accepted <= 0:
+        return None
+    return {
+        "same_type": same_type_hits / accepted,
+        "bomb": bomb_hits / accepted,
+        "overbomb": overbomb_hits / accepted,
+    }
+
+
 def _opponent_same_type_reply_probability(
     state: Dict,
     opponent_id: str,
@@ -1451,6 +1588,7 @@ def _opponent_same_type_reply_probability(
     unknown_total: int,
     rank_counts: Dict[int, int],
     wild_count: int,
+    unknown_cards: Optional[List[Dict]] = None,
 ) -> float:
     combo_type = combo.get("type") or ""
     hand_count = len(state["players"].get(opponent_id, {}).get("hand", []))
@@ -1462,6 +1600,10 @@ def _opponent_same_type_reply_probability(
     if state.get("pass_limits", {}).get(opponent_id):
         if not _bot_estimate_opponent_can_beat(state, opponent_id, combo):
             return 0.0
+    if unknown_cards is not None:
+        short_reply = _short_hand_structured_reply_breakdown(state, opponent_id, combo, unknown_cards)
+        if short_reply is not None:
+            return short_reply["same_type"]
 
     wild_relief = min(0.08, wild_count * 0.025 * min(1.0, hand_count / 18.0))
     rank_prob_cache: Dict[Tuple[int, int], float] = {}
@@ -1569,12 +1711,17 @@ def _opponent_bomb_reply_probability(
     unknown_total: int,
     rank_counts: Dict[int, int],
     joker_counts: Dict[str, int],
+    unknown_cards: Optional[List[Dict]] = None,
 ) -> float:
     if combo.get("type") in BOMB_TYPES:
         return 0.0
     hand_count = len(state["players"].get(opponent_id, {}).get("hand", []))
     if hand_count <= 0:
         return 0.0
+    if unknown_cards is not None:
+        short_reply = _short_hand_structured_reply_breakdown(state, opponent_id, combo, unknown_cards)
+        if short_reply is not None:
+            return short_reply["bomb"]
 
     revealed_caps = _public_revealed_rank_caps_for_target(state, opponent_id)
     bomb_probs = [
@@ -1598,6 +1745,7 @@ def _opponent_overbomb_reply_probability(
     unknown_total: int,
     rank_counts: Dict[int, int],
     joker_counts: Dict[str, int],
+    unknown_cards: Optional[List[Dict]] = None,
 ) -> float:
     combo_type = combo.get("type")
     if combo_type == "heavenly":
@@ -1605,6 +1753,10 @@ def _opponent_overbomb_reply_probability(
     hand_count = len(state["players"].get(opponent_id, {}).get("hand", []))
     if hand_count <= 0:
         return 0.0
+    if unknown_cards is not None:
+        short_reply = _short_hand_structured_reply_breakdown(state, opponent_id, combo, unknown_cards)
+        if short_reply is not None:
+            return short_reply["overbomb"]
 
     level_rank = state["level_rank"]
     revealed_caps = _public_revealed_rank_caps_for_target(state, opponent_id)
@@ -1697,6 +1849,7 @@ def _bomb_response_closeout_bonus(
     if not followup_combo:
         return 0.0
 
+    unknown_cards = _lead_unknown_pool_cards(state, player_id)
     unknown_total, rank_counts, wild_count, joker_counts = _lead_unknown_pool_profile(state, player_id)
     if not active_opponents:
         return 0.0
@@ -1711,6 +1864,7 @@ def _bomb_response_closeout_bonus(
             unknown_total,
             rank_counts,
             joker_counts,
+            unknown_cards=unknown_cards,
         )
         bomb_hold_prob *= max(0.0, 1.0 - overbomb_prob)
 
@@ -1721,6 +1875,7 @@ def _bomb_response_closeout_bonus(
             unknown_total,
             rank_counts,
             wild_count,
+            unknown_cards=unknown_cards,
         )
         bomb_reply_prob = _opponent_bomb_reply_probability(
             state,
@@ -1729,6 +1884,7 @@ def _bomb_response_closeout_bonus(
             unknown_total,
             rank_counts,
             joker_counts,
+            unknown_cards=unknown_cards,
         )
         followup_reply_prob = 1.0 - (1.0 - same_type_prob) * (1.0 - bomb_reply_prob)
         followup_reply_prob = min(
@@ -1787,6 +1943,7 @@ def _lead_initiative_retention_bonus(
     if not opponents:
         return 0.0
 
+    unknown_cards = _lead_unknown_pool_cards(state, player_id)
     unknown_total, rank_counts, wild_count, joker_counts = _lead_unknown_pool_profile(state, player_id)
     if unknown_total <= 0:
         return 0.0
@@ -1801,6 +1958,7 @@ def _lead_initiative_retention_bonus(
             unknown_total,
             rank_counts,
             wild_count,
+            unknown_cards=unknown_cards,
         )
         bomb_prob = _opponent_bomb_reply_probability(
             state,
@@ -1809,6 +1967,7 @@ def _lead_initiative_retention_bonus(
             unknown_total,
             rank_counts,
             joker_counts,
+            unknown_cards=unknown_cards,
         )
         same_type_reply = max(same_type_reply, same_type_prob)
         opponent_reply_probs.append(1.0 - (1.0 - same_type_prob) * (1.0 - bomb_prob))
@@ -4713,6 +4872,7 @@ def _bot_score_components(
         if _team_of(state, pid) != _team_of(state, bot_id) and not state["players"][pid]["finished"]
     ]
     if combo["type"] in BOMB_TYPES:
+        unknown_cards = _lead_unknown_pool_cards(state, bot_id)
         unknown_total, rank_counts, _wild_count, joker_counts = _lead_unknown_pool_profile(state, bot_id)
         expected_blocks = 0.0
         expected_beats = 0.0
@@ -4724,6 +4884,7 @@ def _bot_score_components(
                 unknown_total,
                 rank_counts,
                 joker_counts,
+                unknown_cards=unknown_cards,
             )
             expected_beats += beat_prob
             expected_blocks += max(0.0, 1.0 - beat_prob)
