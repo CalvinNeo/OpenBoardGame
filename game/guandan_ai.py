@@ -400,6 +400,10 @@ def _short_enemy_defer_bomb_risk_penalty(state: Dict, player_id: str) -> float:
     if opponents_before_teammate <= 0:
         lane_factor *= 0.72
 
+    history_pressure = _structured_enemy_history_pressure(state, leader, combo)
+    if history_pressure > 0.0:
+        base += history_pressure
+
     takeover_factor = 1.0 + min(0.45, max(0.0, takeover) / 18.0)
     if takeover <= 0.0:
         takeover_factor += 0.12
@@ -480,6 +484,10 @@ def _short_enemy_bomb_takeover_bonus(
         base += 2.2
     else:
         base += 1.4
+
+    history_pressure = _structured_enemy_history_pressure(state, leader, current_combo)
+    if history_pressure > 0.0:
+        base += history_pressure * 0.9
 
     minimal = _minimal_bomb_response(
         state["players"][player_id]["hand"],
@@ -684,6 +692,33 @@ def _public_history_profile_for_target(state: Dict, target_id: str) -> Dict[str,
         confidence += 0.06
     profile["confidence"] = min(1.0, confidence)
     return profile
+
+
+def _structured_enemy_history_pressure(state: Dict, leader_id: str, combo: Dict) -> float:
+    combo_type = combo.get("type") or ""
+    if combo_type not in ("pair", "three", "full_house", "straight", "three_pairs", "steel_plate"):
+        return 0.0
+    profile = _public_history_profile_for_target(state, leader_id)
+    confidence = profile.get("confidence", 0.0)
+    if confidence <= 0.0:
+        return 0.0
+
+    pressure = 0.0
+    if combo_type == "pair":
+        pressure += profile.get("pair_lane", 0.0) * 0.32
+    elif combo_type == "three":
+        pressure += profile.get("three_lane", 0.0) * 0.38
+        pressure += profile.get("pair_lane", 0.0) * 0.12
+    else:
+        pressure += profile.get("structure_lane", 0.0) * 0.62
+        pressure += profile.get("three_lane", 0.0) * 0.16
+        pressure += profile.get("pair_lane", 0.0) * 0.12
+
+    if profile.get("last_hand_after", 99.0) <= 8:
+        pressure += 0.75
+    if profile.get("last_hand_after", 99.0) <= 5:
+        pressure += 0.6
+    return pressure * min(1.0, 0.45 + confidence * 0.55)
 
 
 def _public_revealed_rank_caps_for_target(state: Dict, target_id: str) -> Dict[int, int]:

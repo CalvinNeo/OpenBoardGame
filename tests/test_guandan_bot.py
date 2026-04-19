@@ -4066,6 +4066,146 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         chosen_labels = sorted(guandan._card_label(hand_map[cid]) for cid in action.get("card_ids", []))
         self.assertEqual(chosen_labels, sorted(["♠️7", "♣️7", "♦️7", "♠️7"]))
 
+    def test_short_structured_history_prefers_wild_bomb_block_over_pass(self):
+        players = [
+            {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
+            {"player_id": "bot3", "name": "Bot 3", "seat": 1, "is_bot": True},
+            {"player_id": "zhu", "name": "zhu", "seat": 2, "is_bot": False},
+            {"player_id": "bot4", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["round_number"] = 1
+        state["dealer_team"] = "A"
+        state["level_rank"] = 2
+        state["current_turn"] = "bot3"
+        state["config"]["bot_mode"] = "heuristic"
+
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        bot3_hand = [
+            pick_label(label)
+            for label in [
+                "🃏S", "♥️2", "♠️A", "♣️A", "♠️K", "♥️K", "♣️Q", "♠️J", "♠️10", "♥️9",
+                "♠️9", "♠️8", "♣️7", "♥️7", "♣️7", "♣️6", "♠️6", "♠️6", "♠️5", "♦️5",
+                "♣️4", "♥️4", "♠️4", "♦️3", "♦️3",
+            ]
+        ]
+        trick_cards = [
+            pick_label(label)
+            for label in ["♦️A", "♣️A", "♥️A", "♣️9", "♥️9"]
+        ]
+        state["players"]["bot3"]["hand"] = bot3_hand
+        state["players"]["calvin"]["hand"] = deck[:4]
+        del deck[:4]
+        state["players"]["zhu"]["hand"] = deck[:25]
+        del deck[:25]
+        state["players"]["bot4"]["hand"] = deck[:20]
+        del deck[:20]
+        state["current_trick"] = {
+            "player_id": "calvin",
+            "cards": [card["id"] for card in trick_cards],
+            "combo": guandan._evaluate_combo(trick_cards, state["level_rank"], state.get("config", {})),
+        }
+        state["trick_plays"] = {"calvin": trick_cards}
+        state["round_memories"] = [
+            {
+                "round_number": 1,
+                "tricks": [
+                    {
+                        "actions": [
+                            {
+                                "player_id": "calvin",
+                                "type": "play",
+                                "combo_type": "full_house",
+                                "cards": [
+                                    {"label": "♦️10", "rank": 10, "suit": "diamonds", "joker": None, "is_wild": False},
+                                    {"label": "♥️10", "rank": 10, "suit": "hearts", "joker": None, "is_wild": False},
+                                    {"label": "♠️10", "rank": 10, "suit": "spades", "joker": None, "is_wild": False},
+                                    {"label": "♣️4", "rank": 4, "suit": "clubs", "joker": None, "is_wild": False},
+                                    {"label": "♠️4", "rank": 4, "suit": "spades", "joker": None, "is_wild": False},
+                                ],
+                                "hand_count_after": 20,
+                            }
+                        ]
+                    },
+                    {
+                        "actions": [
+                            {
+                                "player_id": "calvin",
+                                "type": "play",
+                                "combo_type": "steel_plate",
+                                "cards": [
+                                    {"label": "♥️Q", "rank": 12, "suit": "hearts", "joker": None, "is_wild": False},
+                                    {"label": "♣️Q", "rank": 12, "suit": "clubs", "joker": None, "is_wild": False},
+                                    {"label": "♦️Q", "rank": 12, "suit": "diamonds", "joker": None, "is_wild": False},
+                                    {"label": "♣️J", "rank": 11, "suit": "clubs", "joker": None, "is_wild": False},
+                                    {"label": "♥️J", "rank": 11, "suit": "hearts", "joker": None, "is_wild": False},
+                                    {"label": "♦️J", "rank": 11, "suit": "diamonds", "joker": None, "is_wild": False},
+                                ],
+                                "hand_count_after": 10,
+                            }
+                        ]
+                    },
+                    {
+                        "actions": [
+                            {
+                                "player_id": "calvin",
+                                "type": "play",
+                                "combo_type": "single",
+                                "cards": [{"label": "🃏B", "rank": None, "suit": None, "joker": "big", "is_wild": False}],
+                                "hand_count_after": 9,
+                            }
+                        ]
+                    },
+                ],
+            }
+        ]
+
+        bomb_ids = [card["id"] for card in bot3_hand if guandan._card_label(card) in ("♣️4", "♥️4", "♠️4", "♥️2")]
+        no_history_state = copy.deepcopy(state)
+        no_history_state["round_memories"] = []
+
+        self.assertGreater(
+            guandan._guandan_ai.call(guandan, "_short_enemy_defer_bomb_risk_penalty", state, "bot3"),
+            guandan._guandan_ai.call(guandan, "_short_enemy_defer_bomb_risk_penalty", no_history_state, "bot3"),
+        )
+
+        hand_map = guandan._map_hand_by_id(bot3_hand)
+        bomb_cards = [hand_map[cid] for cid in bomb_ids]
+        bomb_combo = guandan._evaluate_combo(bomb_cards, state["level_rank"], state.get("config", {}))
+        remaining = guandan._remove_cards(bot3_hand, bomb_ids)
+        self.assertGreater(
+            guandan._guandan_ai.call(
+                guandan, "_short_enemy_bomb_takeover_bonus", state, "bot3", bomb_ids, bomb_combo, remaining
+            ),
+            guandan._guandan_ai.call(
+                guandan, "_short_enemy_bomb_takeover_bonus",
+                no_history_state, "bot3", bomb_ids, bomb_combo, remaining
+            ),
+        )
+
+        pass_components = guandan._bot_score_components(state, "bot3", None, depth=4)
+        bomb_components = guandan._bot_score_components(state, "bot3", bomb_ids, depth=4)
+
+        self.assertIn("pass_short_enemy_defer_risk", pass_components)
+        self.assertIn("bomb_short_enemy_block", bomb_components)
+        self.assertGreater(bomb_components["total"], pass_components["total"])
+
+        real_random = random.Random
+        with mock.patch.object(guandan.random, "Random", side_effect=lambda *args, **kwargs: real_random(0)):
+            action = guandan.GuandanGame.bot_move(state, "bot3")
+
+        self.assertEqual(action.get("type"), "play")
+        chosen_labels = sorted(guandan._card_label(hand_map[cid]) for cid in action.get("card_ids", []))
+        self.assertEqual(chosen_labels, sorted(["♣️4", "♥️4", "♠️4", "♥️2"]))
+
     def test_opponent_short_bomb_prefers_minimal_overbomb_to_block_lead(self):
         players = [
             {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
