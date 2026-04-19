@@ -5279,3 +5279,228 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertEqual(action.get("type"), "play")
         chosen_labels = [guandan._card_label(hand_map[cid]) for cid in action.get("card_ids", [])]
         self.assertEqual(chosen_labels, ["♠️2", "♦️2"])
+
+    def test_midgame_straight_response_prefers_89TJQ_from_reconstructed_history(self):
+        players = [
+            {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
+            {"player_id": "bot3", "name": "Bot 3", "seat": 1, "is_bot": True},
+            {"player_id": "zhu", "name": "zhu", "seat": 2, "is_bot": False},
+            {"player_id": "bot4", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["round_number"] = 1
+        state["dealer_team"] = "A"
+        state["level_rank"] = 2
+        state["current_turn"] = "bot3"
+        state["config"]["bot_mode"] = "heuristic"
+        state["config"]["bot_endgame_threshold"] = 0
+
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        bot3_hand = [
+            pick_label(label)
+            for label in [
+                "🃏S",
+                "♥️2",
+                "♠️A",
+                "♣️A",
+                "♠️K",
+                "♥️K",
+                "♣️Q",
+                "♠️J",
+                "♠️10",
+                "♥️9",
+                "♠️9",
+                "♠️8",
+                "♣️7",
+                "♥️7",
+                "♣️7",
+                "♣️6",
+                "♠️6",
+                "♠️6",
+                "♠️5",
+                "♦️5",
+            ]
+        ]
+        trick_cards = [pick_label(label) for label in ["♣️3", "♦️4", "♣️5", "♠️A", "♣️2"]]
+
+        state["players"]["bot3"]["hand"] = bot3_hand
+        state["players"]["calvin"]["hand"] = []
+        state["players"]["calvin"]["finished"] = True
+        state["finish_order"] = ["calvin"]
+        state["players"]["zhu"]["hand"] = deck[:20]
+        del deck[:20]
+        state["players"]["bot4"]["hand"] = deck[:20]
+        del deck[:20]
+        state["current_trick"] = {
+            "player_id": "zhu",
+            "cards": [card["id"] for card in trick_cards],
+            "combo": guandan._evaluate_combo(trick_cards, state["level_rank"], state.get("config", {})),
+        }
+        state["trick_plays"] = {"zhu": trick_cards}
+        state["round_memories"] = [
+            {
+                "round_number": 1,
+                "tricks": [
+                    {
+                        "actions": [
+                            {
+                                "player_id": "calvin",
+                                "type": "play",
+                                "combo_type": "single",
+                                "cards": [{"label": "♠️3", "rank": 3, "suit": "spades", "joker": None, "is_wild": False}],
+                                "hand_count_after": 26,
+                            },
+                            {
+                                "player_id": "bot3",
+                                "type": "play",
+                                "combo_type": "single",
+                                "cards": [{"label": "♣️2", "rank": 2, "suit": "clubs", "joker": None, "is_wild": False}],
+                                "hand_count_after": 26,
+                            },
+                            {
+                                "player_id": "zhu",
+                                "type": "play",
+                                "combo_type": "single",
+                                "cards": [{"label": "🃏B", "rank": None, "suit": None, "joker": "big", "is_wild": False}],
+                                "hand_count_after": 26,
+                            },
+                            {"player_id": "bot4", "type": "pass"},
+                            {"player_id": "calvin", "type": "pass"},
+                            {"player_id": "bot3", "type": "pass"},
+                        ]
+                    },
+                    {
+                        "actions": [
+                            {
+                                "player_id": "zhu",
+                                "type": "play",
+                                "combo_type": "single",
+                                "cards": [{"label": "♥️5", "rank": 5, "suit": "hearts", "joker": None, "is_wild": False}],
+                                "hand_count_after": 25,
+                            },
+                            {
+                                "player_id": "bot4",
+                                "type": "play",
+                                "combo_type": "single",
+                                "cards": [{"label": "♣️8", "rank": 8, "suit": "clubs", "joker": None, "is_wild": False}],
+                                "hand_count_after": 26,
+                            },
+                            {
+                                "player_id": "calvin",
+                                "type": "play",
+                                "combo_type": "single",
+                                "cards": [{"label": "♣️K", "rank": 13, "suit": "clubs", "joker": None, "is_wild": False}],
+                                "hand_count_after": 25,
+                            },
+                            {"player_id": "bot3", "type": "pass"},
+                            {"player_id": "zhu", "type": "pass"},
+                            {"player_id": "bot4", "type": "pass"},
+                        ]
+                    },
+                    {
+                        "actions": [
+                            {"player_id": "calvin", "type": "play", "combo_type": "full_house", "cards": [], "hand_count_after": 20},
+                            {"player_id": "bot3", "type": "pass"},
+                            {"player_id": "zhu", "type": "pass"},
+                            {"player_id": "bot4", "type": "play", "combo_type": "bomb", "cards": [], "hand_count_after": 22},
+                            {"player_id": "calvin", "type": "pass"},
+                            {"player_id": "bot3", "type": "pass"},
+                            {"player_id": "zhu", "type": "pass"},
+                        ]
+                    },
+                    {
+                        "actions": [
+                            {"player_id": "bot4", "type": "play", "combo_type": "pair", "cards": [], "hand_count_after": 20},
+                            {"player_id": "calvin", "type": "play", "combo_type": "pair", "cards": [], "hand_count_after": 18},
+                            {"player_id": "bot3", "type": "pass"},
+                            {"player_id": "zhu", "type": "pass"},
+                            {"player_id": "bot4", "type": "pass"},
+                        ]
+                    },
+                    {
+                        "actions": [
+                            {
+                                "player_id": "calvin",
+                                "type": "play",
+                                "combo_type": "single",
+                                "cards": [{"label": "♥️8", "rank": 8, "suit": "hearts", "joker": None, "is_wild": False}],
+                                "hand_count_after": 17,
+                            },
+                            {
+                                "player_id": "bot3",
+                                "type": "play",
+                                "combo_type": "single",
+                                "cards": [{"label": "♥️Q", "rank": 12, "suit": "hearts", "joker": None, "is_wild": False}],
+                                "hand_count_after": 25,
+                            },
+                            {"player_id": "zhu", "type": "pass"},
+                            {"player_id": "bot4", "type": "pass"},
+                            {
+                                "player_id": "calvin",
+                                "type": "play",
+                                "combo_type": "single",
+                                "cards": [{"label": "🃏S", "rank": None, "suit": None, "joker": "small", "is_wild": False}],
+                                "hand_count_after": 16,
+                            },
+                            {"player_id": "bot3", "type": "pass"},
+                            {"player_id": "zhu", "type": "pass"},
+                            {"player_id": "bot4", "type": "pass"},
+                        ]
+                    },
+                    {
+                        "actions": [
+                            {"player_id": "calvin", "type": "play", "combo_type": "steel_plate", "cards": [], "hand_count_after": 10},
+                            {"player_id": "bot3", "type": "pass"},
+                            {"player_id": "zhu", "type": "pass"},
+                            {"player_id": "bot4", "type": "pass"},
+                        ]
+                    },
+                    {
+                        "actions": [
+                            {
+                                "player_id": "calvin",
+                                "type": "play",
+                                "combo_type": "single",
+                                "cards": [{"label": "🃏B", "rank": None, "suit": None, "joker": "big", "is_wild": False}],
+                                "hand_count_after": 9,
+                            },
+                            {"player_id": "bot3", "type": "pass"},
+                            {"player_id": "zhu", "type": "pass"},
+                            {"player_id": "bot4", "type": "pass"},
+                        ]
+                    },
+                    {
+                        "actions": [
+                            {"player_id": "calvin", "type": "play", "combo_type": "full_house", "cards": [], "hand_count_after": 4},
+                            {"player_id": "bot3", "type": "pass"},
+                            {"player_id": "zhu", "type": "pass"},
+                            {"player_id": "bot4", "type": "pass"},
+                        ]
+                    },
+                    {
+                        "actions": [
+                            {"player_id": "calvin", "type": "play", "combo_type": "bomb", "cards": [], "hand_count_after": 0},
+                            {"player_id": "bot3", "type": "pass"},
+                            {"player_id": "zhu", "type": "pass"},
+                        ]
+                    },
+                ],
+            }
+        ]
+
+        real_random = random.Random
+        with mock.patch.object(guandan.random, "Random", side_effect=lambda *args, **kwargs: real_random(0)):
+            action = guandan.GuandanGame.bot_move(state, "bot3")
+
+        self.assertEqual(action.get("type"), "play")
+        hand_map = guandan._map_hand_by_id(bot3_hand)
+        chosen_labels = [guandan._card_label(hand_map[cid]) for cid in action.get("card_ids", [])]
+        self.assertEqual(chosen_labels, ["♠️8", "♥️9", "♠️10", "♠️J", "♣️Q"])
