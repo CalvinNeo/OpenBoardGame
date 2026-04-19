@@ -303,6 +303,53 @@ def _short_enemy_defer_bomb_risk_penalty(state: Dict, player_id: str) -> float:
 
     combo = current_trick.get("combo") or {}
     combo_type = combo.get("type") or ""
+    if combo_type in BOMB_TYPES:
+        leader_left = len(state["players"].get(leader, {}).get("hand", []))
+        if leader_left > 8:
+            return 0.0
+        minimal_bomb = _minimal_bomb_response(
+            state["players"][player_id]["hand"],
+            state["level_rank"],
+            combo,
+            state.get("config", {}),
+        )
+        if minimal_bomb is None:
+            return 0.0
+
+        hand = state["players"][player_id]["hand"]
+        hand_map = _map_hand_by_id(hand)
+        play_cards = [hand_map[cid] for cid in minimal_bomb if cid in hand_map]
+        minimal_combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
+        if not minimal_combo or minimal_combo.get("type") not in BOMB_TYPES:
+            return 0.0
+
+        remaining = _remove_cards(hand, minimal_bomb)
+        rank_anchor = _point_order_value(3, state["level_rank"])
+        if minimal_combo.get("type") == "bomb":
+            rank_pressure = max(0.0, minimal_combo.get("rank_value", rank_anchor) - rank_anchor)
+        else:
+            rank_pressure = 7.0 + _bomb_tier(minimal_combo) * 1.8
+
+        base = 8.0
+        if leader_left <= 8:
+            base += 4.5
+        if leader_left <= 6:
+            base += 4.0
+        if leader_left <= 4:
+            base += 4.5
+        if leader_left <= 2:
+            base += 5.5
+        if not remaining:
+            base += 8.0
+        elif len(remaining) <= 4:
+            base += 3.5
+        elif _estimated_turns_to_finish(remaining, state["level_rank"]) <= 2.2:
+            base += 2.0
+
+        teammate_backstop = _teammate_backstop_confidence(state, player_id, combo)
+        pressure_adjust = max(0.4, 1.0 - rank_pressure * 0.035)
+        return base * pressure_adjust * max(0.45, 1.0 - teammate_backstop)
+
     if combo_type not in ("single", "pair", "three", "full_house", "straight", "three_pairs", "steel_plate"):
         return 0.0
 
@@ -376,11 +423,46 @@ def _short_enemy_bomb_takeover_bonus(
         return 0.0
 
     leader_left = len(state["players"].get(leader, {}).get("hand", []))
+    current_combo = current_trick.get("combo") or {}
+    current_type = current_combo.get("type") or ""
+    if current_type in BOMB_TYPES:
+        if leader_left > 8:
+            return 0.0
+
+        base = 7.0
+        if leader_left <= 8:
+            base += 3.0
+        if leader_left <= 6:
+            base += 3.0
+        if leader_left <= 4:
+            base += 3.5
+        if leader_left <= 2:
+            base += 4.0
+
+        minimal = _minimal_bomb_response(
+            state["players"][player_id]["hand"],
+            state["level_rank"],
+            current_combo,
+            state.get("config", {}),
+        )
+        if minimal is not None and tuple(sorted(minimal)) == tuple(sorted(cards)):
+            base += 3.6
+
+        if not remaining:
+            base += 8.0
+        elif len(remaining) <= 4:
+            base += 3.6
+        elif _estimated_turns_to_finish(remaining, state["level_rank"]) <= 2.2:
+            base += 2.2
+
+        if _find_bomb_candidates(remaining, state["level_rank"]):
+            base += 1.2
+        teammate_backstop = _teammate_backstop_confidence(state, player_id, current_combo)
+        return base * max(0.45, 1.0 - teammate_backstop)
+
     if leader_left > 6:
         return 0.0
 
-    current_combo = current_trick.get("combo") or {}
-    current_type = current_combo.get("type") or ""
     if current_type not in ("pair", "three", "full_house", "straight", "three_pairs", "steel_plate"):
         return 0.0
 
