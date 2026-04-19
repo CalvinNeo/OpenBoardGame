@@ -3912,28 +3912,69 @@ def _has_natural_level_straight_bridge(hand: List[Dict], level_rank: int) -> boo
     return False
 
 
-def _wild_structure_potential(hand: List[Dict], level_rank: int) -> float:
+def _wild_structure_candidate_priority(kind: str) -> int:
+    return {
+        "bomb": 5,
+        "straight_flush": 4,
+        "steel_plate": 3,
+        "three_pairs": 3,
+        "straight": 2,
+        "set_upgrade": 1,
+    }.get(kind, 0)
+
+
+def _wild_structure_ranked_candidates(hand: List[Dict], level_rank: int) -> List[Dict[str, float]]:
     info = _hand_info(hand, level_rank)
     wild_count = len(info["wild_cards"])
     if wild_count <= 0:
-        return 0.0
+        return []
 
     rank_counts = {rank: len(cards) for rank, cards in info["normals_by_rank"].items()}
-    potential = 0.0
+    strength = _rank_strength(level_rank)
+    control = _control_card_score(hand, level_rank)
+    candidates: List[Dict[str, float]] = []
+
+    def add_candidate(
+        kind: str,
+        needed_wilds: int,
+        score: float,
+        signature: Tuple,
+        **extra,
+    ) -> None:
+        if needed_wilds <= 0 or needed_wilds > wild_count or score <= 0.0:
+            return
+        entry: Dict[str, float] = {
+            "kind": kind,
+            "needed_wilds": float(needed_wilds),
+            "score": score,
+            "priority": float(_wild_structure_candidate_priority(kind)),
+            "signature": signature,
+        }
+        entry.update(extra)
+        candidates.append(entry)
 
     for rank, count in rank_counts.items():
         if count >= 3:
-            upgrade = min(wild_count, max(0, 8 - count))
-            if upgrade > 0:
-                base = 4.8 if count == 3 else 3.2
-                pressure = max(0.0, _point_order_value(rank, level_rank) - 50) * 0.04
-                potential += upgrade * (base + pressure)
+            needed = max(0, 4 - count)
+            if needed <= 0:
+                needed = 1
+            max_size = min(8, count + wild_count)
+            size_bonus = max(0, max_size - 4) * (1.1 if count == 3 else 0.8)
+            rank_bonus = max(0.0, strength[rank] - 50) * 0.06
+            base = 13.5 if count == 3 else 9.4
+            add_candidate(
+                "bomb",
+                needed,
+                base + size_bonus + rank_bonus,
+                ("bomb", rank, count),
+                rank=float(rank),
+                target_size=float(max_size),
+            )
         elif count == 2:
-            potential += min(wild_count, 2) * 0.95
+            rank_bonus = max(0.0, strength[rank] - 50) * 0.025
+            add_candidate("set_upgrade", 1, 1.2 + rank_bonus, ("set", rank), rank=float(rank))
 
-    for start in range(2, 14):
-        if start + 2 > 14:
-            continue
+    for start in range(2, 13):
         need = 0
         support = 0
         for rank in (start, start + 1, start + 2):
@@ -3941,11 +3982,17 @@ def _wild_structure_potential(hand: List[Dict], level_rank: int) -> float:
             support += min(count, 2)
             need += max(0, 2 - count)
         if 0 < need <= wild_count and support >= 4:
-            potential += 2.4 + max(0.0, 3 - need) * 0.8
+            high_value = _point_order_value(start + 2, level_rank)
+            score = 5.4 + max(0.0, support - 4) * 0.45 + max(0.0, high_value - 52) * 0.045
+            add_candidate(
+                "three_pairs",
+                need,
+                score,
+                ("three_pairs", start),
+                high_value=float(high_value),
+            )
 
     for start in range(2, 14):
-        if start + 1 > 14:
-            continue
         need = 0
         support = 0
         for rank in (start, start + 1):
@@ -3953,7 +4000,34 @@ def _wild_structure_potential(hand: List[Dict], level_rank: int) -> float:
             support += min(count, 3)
             need += max(0, 3 - count)
         if 0 < need <= wild_count and support >= 4:
-            potential += 3.0 + max(0.0, 3 - need) * 1.0
+            high_value = _point_order_value(start + 1, level_rank)
+            score = 6.1 + max(0.0, support - 4) * 0.55 + max(0.0, high_value - 52) * 0.05
+            add_candidate(
+                "steel_plate",
+                need,
+                score,
+                ("steel_plate", start),
+                high_value=float(high_value),
+            )
+
+    for seq, high_value in _CORE.STRAIGHT_SEQUENCES:
+        need = 0
+        present = 0
+        for rank in seq:
+            if rank_counts.get(rank, 0) > 0:
+                present += 1
+            else:
+                need += 1
+        if 0 < need <= wild_count and present >= 4:
+            control_gap = max(0.0, 2.2 - control)
+            score = 6.8 + (present - 4) * 0.45 + max(0.0, high_value - 10) * 0.22 + control_gap * 0.85
+            add_candidate(
+                "straight",
+                need,
+                score,
+                ("straight", tuple(seq)),
+                high_value=float(high_value),
+            )
 
     suit_maps = info["normals_by_suit"]
     for suit in ("spades", "hearts", "clubs", "diamonds"):
@@ -3967,10 +4041,58 @@ def _wild_structure_potential(hand: List[Dict], level_rank: int) -> float:
                 else:
                     need += 1
             if 0 < need <= wild_count and present >= 4:
-                premium = 1.0 if high_value >= 11 else 0.0
-                potential += 3.6 + premium + max(0.0, 2 - need) * 0.8
+                score = 9.4 + (present - 4) * 0.55 + max(0.0, high_value - 10) * 0.28
+                add_candidate(
+                    "straight_flush",
+                    need,
+                    score,
+                    ("straight_flush", suit, tuple(seq)),
+                    high_value=float(high_value),
+                )
 
-    return potential
+    unique: Dict[Tuple, Dict[str, float]] = {}
+    for cand in candidates:
+        signature = cand["signature"]
+        current = unique.get(signature)
+        if current is None or cand["score"] > current["score"]:
+            unique[signature] = cand
+
+    ranked = sorted(
+        unique.values(),
+        key=lambda item: (
+            item["priority"],
+            item["score"],
+            -(item["needed_wilds"]),
+        ),
+        reverse=True,
+    )
+    return ranked
+
+
+def _wild_structure_potential(hand: List[Dict], level_rank: int) -> float:
+    info = _hand_info(hand, level_rank)
+    wild_count = len(info["wild_cards"])
+    if wild_count <= 0:
+        return 0.0
+
+    ranked = _wild_structure_ranked_candidates(hand, level_rank)
+    if not ranked:
+        return 0.0
+
+    remaining_wilds = wild_count
+    multipliers = (1.0, 0.72, 0.52)
+    total = 0.0
+    chosen = 0
+    for cand in ranked:
+        needed = int(cand["needed_wilds"])
+        if needed > remaining_wilds:
+            continue
+        total += cand["score"] * multipliers[min(chosen, len(multipliers) - 1)]
+        remaining_wilds -= needed
+        chosen += 1
+        if chosen >= 3 or remaining_wilds <= 0:
+            break
+    return total
 
 
 def _wild_structure_opportunity_loss(hand: List[Dict], cards: List[int], level_rank: int) -> float:

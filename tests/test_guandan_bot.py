@@ -65,6 +65,73 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         }
         return state, big
 
+    def test_wild_structure_ranking_prioritizes_bomb_upgrade_over_other_shapes(self):
+        players = [
+            {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
+            {"player_id": "opp", "name": "Opp", "seat": 1, "is_bot": False},
+            {"player_id": "mate", "name": "Mate", "seat": 2, "is_bot": False},
+            {"player_id": "opp2", "name": "Opp2", "seat": 3, "is_bot": False},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["level_rank"] = 2
+
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        hand = [
+            pick_label(label)
+            for label in [
+                "♥️2",
+                "♠️8", "♥️8", "♣️8",
+                "♠️3", "♥️4", "♣️6", "♦️7",
+                "♣️K", "♦️J",
+            ]
+        ]
+
+        ranked = guandan._guandan_ai.call(guandan, "_wild_structure_ranked_candidates", hand, state["level_rank"])
+        self.assertTrue(ranked)
+        self.assertEqual(ranked[0].get("kind"), "bomb")
+        self.assertEqual(ranked[0].get("rank"), 8.0)
+
+    def test_wild_structure_ranking_values_straight_when_no_bomb_upgrade_exists(self):
+        players = [
+            {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
+            {"player_id": "opp", "name": "Opp", "seat": 1, "is_bot": False},
+            {"player_id": "mate", "name": "Mate", "seat": 2, "is_bot": False},
+            {"player_id": "opp2", "name": "Opp2", "seat": 3, "is_bot": False},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["level_rank"] = 2
+
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        hand = [
+            pick_label(label)
+            for label in [
+                "♥️2",
+                "♠️3", "♥️4", "♣️6", "♦️7",
+                "♣️9", "♦️J", "♣️K", "♦️A",
+            ]
+        ]
+
+        ranked = guandan._guandan_ai.call(guandan, "_wild_structure_ranked_candidates", hand, state["level_rank"])
+        self.assertTrue(ranked)
+        self.assertEqual(ranked[0].get("kind"), "straight")
+        self.assertEqual(ranked[0].get("high_value"), 7.0)
+
     def _make_pass_state(self):
         players = [
             {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
@@ -2643,6 +2710,66 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertEqual(action.get("type"), "play")
         self.assertEqual(action.get("card_ids"), [six["id"]])
         self.assertEqual(guandan._bot_select_play(state, "bot", depth=3), [six["id"]])
+
+    def test_single_response_to_low_lead_prefers_medium_control_over_level_lock(self):
+        players = [
+            {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
+            {"player_id": "bot3", "name": "Bot 3", "seat": 1, "is_bot": True},
+            {"player_id": "zhu", "name": "zhu", "seat": 2, "is_bot": False},
+            {"player_id": "bot4", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["round_number"] = 1
+        state["dealer_team"] = "A"
+        state["level_rank"] = 2
+        state["current_turn"] = "bot3"
+        state["config"]["bot_mode"] = "heuristic"
+
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        lead = pick_label("♠️3")
+        bot_hand = [
+            pick_label(label)
+            for label in [
+                "🃏S", "♥️2", "♣️2", "♠️A", "♣️A", "♠️K", "♥️K", "♣️Q", "♥️Q",
+                "♠️J", "♠️10", "♥️9", "♠️9", "♠️8", "♣️7", "♥️7", "♣️7", "♣️6",
+                "♠️6", "♠️6", "♠️5", "♦️5", "♣️4", "♥️4", "♠️4", "♦️3", "♦️3",
+            ]
+        ]
+        state["players"]["bot3"]["hand"] = bot_hand
+        state["players"]["calvin"]["hand"] = deck[:26]
+        del deck[:26]
+        state["players"]["zhu"]["hand"] = deck[:27]
+        del deck[:27]
+        state["players"]["bot4"]["hand"] = deck[:27]
+        del deck[:27]
+        state["current_trick"] = {
+            "player_id": "calvin",
+            "cards": [lead["id"]],
+            "combo": guandan._evaluate_combo([lead], state["level_rank"], state.get("config", {})),
+        }
+
+        real_random = random.Random
+        with mock.patch.object(guandan.random, "Random", side_effect=lambda *args, **kwargs: real_random(0)):
+            action = guandan.GuandanGame.bot_move(state, "bot3")
+
+        self.assertEqual(action.get("type"), "play")
+        hand_map = guandan._map_hand_by_id(bot_hand)
+        chosen_cards = [hand_map[cid] for cid in action.get("card_ids", []) if cid in hand_map]
+        chosen_labels = [guandan._card_label(card) for card in chosen_cards]
+        self.assertEqual(chosen_labels, ["♠️8"])
+
+        explain = state.get("bot_explain", {}).get("bot3", {})
+        top_cards = [entry.get("cards") for entry in explain.get("top", [])]
+        self.assertIn(["♠️8"], top_cards)
+        self.assertNotIn(["♣️2"], top_cards[:1])
 
     def test_single_response_raises_gate_for_immediate_one_card_opponent(self):
         players = [
