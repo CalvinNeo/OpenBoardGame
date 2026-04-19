@@ -912,19 +912,135 @@ def _lead_option_score(state: Dict, player_id: str, cards: List[int]) -> float:
     return score
 
 
+def _lead_cheap_option_score(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Optional[Dict] = None,
+) -> float:
+    hand = state["players"][player_id]["hand"]
+    hand_map = _map_hand_by_id(hand)
+    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+    if combo is None:
+        combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
+    if not combo:
+        return -999.0
+    if len(cards) == len(hand):
+        return 1000.0
+
+    base_by_type = {
+        "straight": 9.2,
+        "three_pairs": 8.8,
+        "steel_plate": 8.6,
+        "full_house": 8.1,
+        "three": 5.4,
+        "pair": 4.0,
+        "single": 2.0,
+        "bomb": -8.0,
+        "straight_flush": -10.0,
+        "heavenly": -12.0,
+    }
+    score = base_by_type.get(combo["type"], 10.0)
+    score += len(cards) * 0.12
+    score += _shape_transition_score(hand, cards, state["level_rank"]) * 1.25
+    score -= _group_fragment_penalty(hand, cards, state["level_rank"], combo) * 1.2
+    score -= _control_group_break_penalty(hand, cards, state["level_rank"]) * 1.0
+    score -= _lead_low_single_trap_penalty(hand, cards, state["level_rank"])
+    score -= _lead_short_next_opponent_penalty(state, player_id, cards)
+    score -= _lead_structure_overreach_penalty(hand, cards, combo, state["level_rank"])
+    score -= _lead_special_material_penalty(state, player_id, cards, combo)
+
+    if combo["type"] == "single":
+        score -= _single_order_value(play_cards[0], state["level_rank"]) * 0.12
+        score -= _lead_single_break_penalty(hand, cards, state["level_rank"])
+        score += _lead_low_single_escape_bonus(hand, cards, state["level_rank"])
+    else:
+        score -= _combo_value(combo) * 0.015
+
+    if combo["type"] in BOMB_TYPES:
+        score -= 18.0 + _bomb_tier(combo) * 2.4
+
+    remaining = _remove_cards(hand, cards)
+    if remaining and _can_play_all(remaining, state["level_rank"], state.get("config", {}), None):
+        score += 7.5
+    elif len(remaining) <= 2 and combo["type"] != "single":
+        score += 2.0
+
+    teammate = _teammate_of(state, player_id)
+    partner_left = len(state["players"][teammate]["hand"]) if teammate else 99
+    active_opponents = [
+        pid
+        for pid in state["turn_order"]
+        if _team_of(state, pid) != _team_of(state, player_id) and not state["players"][pid]["finished"]
+    ]
+    opp_left = (
+        min(len(state["players"][pid]["hand"]) for pid in active_opponents)
+        if active_opponents
+        else 0
+    )
+    if opp_left <= 2 and combo["type"] != "single":
+        score += 2.5
+    if partner_left <= 3 and combo["type"] in ("pair", "three", "full_house", "straight", "three_pairs", "steel_plate"):
+        score += 1.5
+    return score
+
+
 def _rank_lead_options(state: Dict, player_id: str, options: List[List[int]]) -> List[List[int]]:
     if not options:
         return []
     hand = state["players"][player_id]["hand"]
     hand_map = _map_hand_by_id(hand)
-    scored: List[Tuple[float, str, List[int]]] = []
+    config = state.get("config", {})
+
+    combo_entries: List[Tuple[str, List[int], Dict]] = []
     for cards in options:
         combo_cards = [hand_map[cid] for cid in cards if cid in hand_map]
         combo = _evaluate_combo(combo_cards, state["level_rank"], state.get("config", {}))
         if not combo:
             continue
+        combo_entries.append((combo["type"], cards, combo))
+    if not combo_entries:
+        return options
+
+    prescore_enabled = bool(config.get("bot_lead_prescore_enabled", True))
+    prescore_min_hand = max(1, int(config.get("bot_lead_prescore_min_hand", 12)))
+    prescore_min_options = max(1, int(config.get("bot_lead_prescore_min_options", 24)))
+    prescore_limit = max(4, int(config.get("bot_lead_prescore_limit", 16)))
+
+    if prescore_enabled and len(hand) >= prescore_min_hand and len(combo_entries) >= prescore_min_options:
+        cheap_scored: List[Tuple[float, str, List[int], Dict]] = []
+        for combo_type, cards, combo in combo_entries:
+            score = _lead_cheap_option_score(state, player_id, cards, combo)
+            cheap_scored.append((score, combo_type, cards, combo))
+
+        shortlist: List[Tuple[str, List[int], Dict]] = []
+        seen_keys = set()
+        best_by_type: Dict[str, Tuple[float, str, List[int], Dict]] = {}
+        for entry in cheap_scored:
+            score, combo_type, cards, _combo = entry
+            existing = best_by_type.get(combo_type)
+            if existing is None or score > existing[0]:
+                best_by_type[combo_type] = entry
+        for score, combo_type, cards, combo in sorted(best_by_type.values(), key=lambda item: item[0], reverse=True):
+            key = _cards_key(cards)
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
+            shortlist.append((combo_type, cards, combo))
+        for score, combo_type, cards, combo in sorted(cheap_scored, key=lambda item: item[0], reverse=True):
+            if len(shortlist) >= prescore_limit:
+                break
+            key = _cards_key(cards)
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
+            shortlist.append((combo_type, cards, combo))
+        combo_entries = shortlist
+
+    scored: List[Tuple[float, str, List[int]]] = []
+    for combo_type, cards, _combo in combo_entries:
         score = _lead_option_score(state, player_id, cards)
-        scored.append((score, combo["type"], cards))
+        scored.append((score, combo_type, cards))
     if not scored:
         return options
 
