@@ -4660,9 +4660,8 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
                 "♣️Q",
                 "♣️Q",
                 "♦️Q",
-                "♥️Q",
-                "♦️8",
                 "♦️7",
+                "♦️8",
                 "♣️7",
                 "♠️7",
                 "♥️7",
@@ -4691,6 +4690,8 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         chosen_cards = [hand_map[cid] for cid in action.get("card_ids", []) if cid in hand_map]
         chosen_combo = guandan._evaluate_combo(chosen_cards, state["level_rank"], state.get("config", {}))
         self.assertEqual(chosen_combo.get("type"), "three")
+        chosen_labels = [guandan._card_label(card) for card in chosen_cards]
+        self.assertEqual(chosen_labels, ["♣️Q", "♣️Q", "♦️Q"])
 
     def test_midgame_lead_prefers_structured_straight_over_high_single(self):
         players = [

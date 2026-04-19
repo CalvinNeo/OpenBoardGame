@@ -4052,6 +4052,54 @@ def _best_takeover_opportunity(state: Dict, player_id: str) -> float:
     return max(_takeover_opportunity_score(state, player_id, cards) for cards in options)
 
 
+def _response_teammate_lane_bonus(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+) -> float:
+    current_trick = state.get("current_trick")
+    if not current_trick or not cards:
+        return 0.0
+    leader = current_trick.get("player_id")
+    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+        return 0.0
+
+    current_combo = current_trick.get("combo") or {}
+    combo_type = combo.get("type") or ""
+    if combo_type not in ("pair", "three"):
+        return 0.0
+    if combo_type != current_combo.get("type"):
+        return 0.0
+
+    opponents_before_teammate = _opponents_before_teammate_this_trick(state, player_id)
+    if opponents_before_teammate <= 0:
+        return 0.0
+
+    hand = state["players"][player_id]["hand"]
+    hand_map = _map_hand_by_id(hand)
+    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+    if not play_cards or _cards_use_special_material(play_cards, state["level_rank"]):
+        return 0.0
+
+    control_break = _control_group_break_penalty(hand, cards, state["level_rank"])
+    fragment_penalty = _group_fragment_penalty(hand, cards, state["level_rank"], combo)
+
+    leader_left = len(state["players"].get(leader, {}).get("hand", []))
+    bonus = 8.0 + opponents_before_teammate * (3.0 if combo_type == "pair" else 4.5)
+    if combo_type == "three":
+        bonus += 2.5
+    if leader_left <= 14:
+        bonus += 1.2
+    if leader_left <= 10:
+        bonus += 1.6
+    if leader_left <= 6:
+        bonus += 2.0
+    bonus -= control_break * 0.6
+    bonus -= fragment_penalty * 0.35
+    return max(0.0, bonus)
+
+
 _HAND_DECOMP_CACHE: Dict[Tuple[int, Tuple[str, ...]], Dict[str, float]] = {}
 _HAND_DECOMP_CACHE_LIMIT = 4096
 
@@ -6559,6 +6607,9 @@ def _bot_score_components(
         seize = _takeover_opportunity_score(state, bot_id, cards)
         if seize > 0:
             components["seize_tempo"] = seize * 1.25
+        teammate_lane_bonus = _response_teammate_lane_bonus(state, bot_id, cards, combo)
+        if teammate_lane_bonus > 0.001:
+            components["protect_teammate_lane"] = teammate_lane_bonus
         leader_left = len(state["players"].get(current_trick.get("player_id"), {}).get("hand", []))
         if combo.get("type") == (current_trick.get("combo") or {}).get("type") and combo.get("type") not in BOMB_TYPES:
             natural_takeover = 0.0
