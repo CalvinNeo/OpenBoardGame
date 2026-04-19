@@ -4372,16 +4372,29 @@ def _hand_decomposition_summary(hand: List[Dict], level_rank: int) -> Dict[str, 
 
     if len(hand) >= 23:
         counts = _rank_count_map(hand, level_rank)
-        summary = _empty_hand_decomposition_summary()
-        summary["turns"] = float(len(hand))
-        summary["singles"] = float(sum(1 for count in counts.values() if count == 1))
-        summary["low_singles"] = float(
-            sum(1 for rank, count in counts.items() if count == 1 and _point_order_value(rank, level_rank) < 58)
+        pair_ranks = sum(1 for count in counts.values() if count >= 2)
+        triple_ranks = sum(1 for count in counts.values() if count >= 3)
+        quad_ranks = sum(1 for count in counts.values() if count >= 4)
+        structured_large_hand = (
+            quad_ranks >= 2
+            and (
+                triple_ranks >= 1
+                or pair_ranks >= 4
+                or _longest_group_run(counts, 2) >= 3
+                or _longest_run(list(counts.keys())) >= 5
+            )
         )
-        summary["control_singles"] = float(
-            sum(1 for rank, count in counts.items() if count == 1 and _point_order_value(rank, level_rank) >= 60)
-        )
-        return summary
+        if not structured_large_hand:
+            summary = _empty_hand_decomposition_summary()
+            summary["turns"] = float(len(hand))
+            summary["singles"] = float(sum(1 for count in counts.values() if count == 1))
+            summary["low_singles"] = float(
+                sum(1 for rank, count in counts.items() if count == 1 and _point_order_value(rank, level_rank) < 58)
+            )
+            summary["control_singles"] = float(
+                sum(1 for rank, count in counts.items() if count == 1 and _point_order_value(rank, level_rank) >= 60)
+            )
+            return summary
 
     cache_key = _hand_decomposition_cache_key(hand, level_rank)
     cached = _HAND_DECOMP_CACHE.get(cache_key)
