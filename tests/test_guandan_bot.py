@@ -3631,6 +3631,63 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             self.assertFalse(any(card.get("joker") == "small" for card in chosen_cards))
             self.assertFalse(any(guandan._is_wild(card, state["level_rank"]) for card in chosen_cards))
 
+    def test_single_response_spends_small_joker_to_retake_initiative_when_natural_alts_break_control(self):
+        players = [
+            {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
+            {"player_id": "bot2", "name": "Bot 2", "seat": 1, "is_bot": True},
+            {"player_id": "wan", "name": "万", "seat": 2, "is_bot": False},
+            {"player_id": "bot4", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["round_number"] = 1
+        state["dealer_team"] = "B"
+        state["level_rank"] = 2
+        state["current_turn"] = "bot4"
+        state["config"]["bot_mode"] = "heuristic"
+
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        state["players"]["bot4"]["hand"] = [
+            pick_label(label)
+            for label in [
+                "🃏S", "♠️2", "♣️2", "♥️A", "♣️A", "♣️A", "♠️A", "♣️Q", "♦️Q",
+                "♠️J", "♥️J", "♦️J", "♣️J", "♠️10", "♥️10", "♥️9", "♣️9", "♥️9",
+                "♠️5", "♣️5", "♦️4",
+            ]
+        ]
+        for pid, count in (("calvin", 18), ("bot2", 25), ("wan", 25)):
+            state["players"][pid]["hand"] = deck[:count]
+            del deck[:count]
+
+        lead = pick_label("♦️Q")
+        state["current_trick"] = {
+            "player_id": "wan",
+            "cards": [lead["id"]],
+            "combo": guandan._evaluate_combo([lead], state["level_rank"], state.get("config", {})),
+        }
+
+        small_joker = next(card for card in state["players"]["bot4"]["hand"] if card.get("joker") == "small")
+        pass_score = guandan._bot_score_play(state, "bot4", None, depth=3)
+        joker_score = guandan._bot_score_play(state, "bot4", [small_joker["id"]], depth=3)
+        self.assertGreater(joker_score, pass_score)
+
+        real_random = random.Random
+        with mock.patch.object(guandan.random, "Random", side_effect=lambda *args, **kwargs: real_random(0)):
+            action = guandan.GuandanGame.bot_move(state, "bot4")
+
+        self.assertEqual(action.get("type"), "play")
+        hand_map = guandan._map_hand_by_id(state["players"]["bot4"]["hand"])
+        chosen_cards = [hand_map[cid] for cid in action.get("card_ids", []) if cid in hand_map]
+        chosen_labels = [guandan._card_label(card) for card in chosen_cards]
+        self.assertEqual(chosen_labels, ["🃏S"])
+
     def test_mcts_prefers_natural_three_pairs_over_wild_structure_break(self):
         players = [
             {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},

@@ -3650,6 +3650,99 @@ def _plan_alignment_score(hand: List[Dict], cards: List[int], combo: Dict, level
     return score
 
 
+def _has_clean_natural_single_response(
+    state: Dict,
+    player_id: str,
+    exclude_cards: List[int],
+) -> bool:
+    current_trick = state.get("current_trick")
+    if not current_trick:
+        return False
+    current_combo = current_trick.get("combo") or {}
+    if current_combo.get("type") != "single":
+        return False
+
+    hand = state["players"][player_id]["hand"]
+    hand_map = _map_hand_by_id(hand)
+    level_rank = state["level_rank"]
+    before = _hand_decomposition_summary(hand, level_rank)
+    exclude_key = tuple(sorted(exclude_cards))
+    for option in _list_hint_options(state, player_id):
+        if tuple(sorted(option)) == exclude_key:
+            continue
+        if len(option) != 1:
+            continue
+        play_cards = [hand_map[cid] for cid in option if cid in hand_map]
+        combo = _evaluate_combo(play_cards, level_rank, state.get("config", {}))
+        if not combo or combo.get("type") != "single":
+            continue
+        if _cards_use_special_material(play_cards, level_rank):
+            continue
+        remaining = _remove_cards(hand, option)
+        after = _hand_decomposition_summary(remaining, level_rank)
+        if after.get("bomb_turns", 0.0) + 0.01 < before.get("bomb_turns", 0.0):
+            continue
+        if after.get("group_turns", 0.0) + 0.01 < before.get("group_turns", 0.0):
+            continue
+        if after.get("turns", float(len(remaining))) > before.get("turns", float(len(hand))) + 0.25:
+            continue
+        return True
+    return False
+
+
+def _small_joker_single_retake_relief(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+    natural_alt: bool,
+) -> float:
+    current_trick = state.get("current_trick")
+    if not current_trick or len(cards) != 1 or combo.get("type") != "single":
+        return 0.0
+    leader = current_trick.get("player_id")
+    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+        return 0.0
+
+    hand = state["players"][player_id]["hand"]
+    hand_map = _map_hand_by_id(hand)
+    level_rank = state["level_rank"]
+    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+    if len(play_cards) != 1 or play_cards[0].get("joker") != "small":
+        return 0.0
+
+    current_combo = current_trick.get("combo") or {}
+    if current_combo.get("type") != "single":
+        return 0.0
+
+    remaining = _remove_cards(hand, cards)
+    if not remaining:
+        return 0.0
+
+    before = _hand_decomposition_summary(hand, level_rank)
+    after = _hand_decomposition_summary(remaining, level_rank)
+    leader_left = len(state["players"].get(leader, {}).get("hand", []))
+    current_value = current_combo.get("rank_value", 0)
+    clean_natural_alt = _has_clean_natural_single_response(state, player_id, cards)
+
+    relief = 0.0
+    if natural_alt and not clean_natural_alt:
+        relief += 6.0
+    if current_value < 60:
+        relief += 2.4
+    elif current_value < 70:
+        relief += 1.1
+    if after.get("group_turns", 0.0) + 0.01 >= before.get("group_turns", 0.0):
+        relief += 1.2
+    if after.get("turns", float(len(remaining))) <= max(6.0, before.get("turns", float(len(hand))) - 1.0):
+        relief += 1.4
+    if _find_bomb_candidates(remaining, level_rank):
+        relief += 1.6
+    if leader_left >= 18:
+        relief += 0.9
+    return min(10.8, relief)
+
+
 def _response_special_overuse_penalty(
     state: Dict,
     player_id: str,
@@ -3699,6 +3792,8 @@ def _response_special_overuse_penalty(
             penalty += 3.2
         elif current_value < 70:
             penalty += 1.8
+        if joker_count and not wild_count:
+            penalty = max(0.0, penalty - _small_joker_single_retake_relief(state, player_id, cards, combo, natural_alt))
     elif combo_type in ("pair", "three"):
         if current_value < 70:
             penalty += 1.6
