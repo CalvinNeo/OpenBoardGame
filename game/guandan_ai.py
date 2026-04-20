@@ -2440,6 +2440,70 @@ def _lead_same_type_value_conservation_penalty(
     return penalty
 
 
+def _lead_full_house_value_conservation_penalty(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+) -> float:
+    if state.get("current_trick"):
+        return 0.0
+    if (combo.get("type") or "") != "full_house":
+        return 0.0
+
+    hand = state["players"][player_id]["hand"]
+    if len(hand) < 9:
+        return 0.0
+
+    level_rank = state["level_rank"]
+    hand_map = _map_hand_by_id(hand)
+    current_key = tuple(sorted(cards))
+    current_value = _combo_numeric_value(combo)
+    current_remaining = _remove_cards(hand, cards)
+    current_after = _hand_decomposition_summary(current_remaining, level_rank) if current_remaining else _empty_hand_decomposition_summary()
+    current_turns = current_after.get("turns", float(len(current_remaining)))
+    current_reentry = _lead_same_type_reentry_bonus(state, player_id, cards, combo)
+
+    best_lower_value = None
+    for option in _list_full_house_options(hand, level_rank, 0):
+        if tuple(sorted(option)) == current_key:
+            continue
+        play_cards = [hand_map[cid] for cid in option if cid in hand_map]
+        alt_combo = _evaluate_combo(play_cards, level_rank, state.get("config", {}))
+        if not alt_combo or alt_combo.get("type") != "full_house":
+            continue
+        if _cards_use_special_material(play_cards, level_rank):
+            continue
+        alt_value = _combo_numeric_value(alt_combo)
+        if alt_value >= current_value:
+            continue
+
+        alt_remaining = _remove_cards(hand, option)
+        alt_after = _hand_decomposition_summary(alt_remaining, level_rank) if alt_remaining else _empty_hand_decomposition_summary()
+        alt_turns = alt_after.get("turns", float(len(alt_remaining)))
+        if alt_turns > current_turns + 0.55:
+            continue
+        if alt_after.get("bomb_turns", 0.0) + 0.01 < current_after.get("bomb_turns", 0.0):
+            continue
+
+        alt_reentry = _lead_same_type_reentry_bonus(state, player_id, option, alt_combo)
+        if alt_reentry + 0.8 < current_reentry:
+            continue
+        if best_lower_value is None or alt_value < best_lower_value:
+            best_lower_value = alt_value
+
+    if best_lower_value is None:
+        return 0.0
+
+    gap = max(0.0, current_value - best_lower_value)
+    if gap <= 0.0:
+        return 0.0
+    penalty = 8.0 + min(6.0, gap * 1.5)
+    if len(hand) >= 18:
+        penalty += 0.7
+    return penalty
+
+
 def _lead_special_material_penalty(
     state: Dict,
     player_id: str,
@@ -3582,9 +3646,22 @@ def _lead_initiative_retention_bonus(
     after = _hand_decomposition_summary(remaining, level_rank)
     same_type_reentry = _lead_same_type_reentry_bonus(state, player_id, cards, combo)
     control_stock = _control_card_score(remaining, level_rank)
+    combo_value = _combo_numeric_value(combo)
+    low_structure_anchor = {
+        "full_house": 52,
+        "straight": 11,
+        "three_pairs": 5,
+        "steel_plate": 4,
+    }.get(combo_type, 0)
+    structure_is_low = combo_value <= low_structure_anchor
+    reentry_weight = 1.0
+    if combo_type == "full_house" and structure_is_low and hold_prob < 0.4:
+        reentry_weight = 0.72
+        if hold_prob < 0.32:
+            reentry_weight *= 0.75
     recovery = 0.0
     if same_type_reentry > 0.0:
-        recovery += min(0.55, same_type_reentry / 7.0)
+        recovery += min(0.55, same_type_reentry / 7.0) * reentry_weight
     if control_stock > 0.0:
         recovery += min(0.28, control_stock / 16.0)
     if after.get("bomb_turns", 0.0) > 0.0:
@@ -3602,6 +3679,19 @@ def _lead_initiative_retention_bonus(
         score += min(3.4, (hold_prob - 0.62) * 7.5)
     if any_reply >= 0.7:
         score -= min(3.6, (any_reply - 0.7) * 9.0)
+    if combo_type == "full_house":
+        independent_retake = 0.0
+        independent_retake += min(0.48, control_stock / 10.0)
+        independent_retake += min(0.32, after.get("bomb_turns", 0.0) * 0.18)
+        independent_retake += min(0.18, after.get("control_singles", 0.0) * 0.08)
+        if structure_is_low and hold_prob < 0.42 and independent_retake < 0.32:
+            score -= (0.46 - hold_prob) * 20.0
+        if structure_is_low and hold_prob < 0.35 and independent_retake < 0.28:
+            score -= (0.4 - hold_prob) * 18.0
+        if structure_is_low and any_reply >= 0.68 and independent_retake < 0.32:
+            score -= (any_reply - 0.62) * (9.0 + max(0.0, 0.38 - independent_retake) * 10.0)
+        if structure_is_low and same_type_reentry > 0.0 and independent_retake < 0.28:
+            score -= min(4.8, same_type_reentry * 0.28 + max(0.0, 0.42 - independent_retake) * 5.2)
     if combo_type == "pair":
         return max(-4.5, min(0.0, score * 0.7))
     if combo_type == "straight" and after.get("group_turns", 0.0) >= 3.0:
@@ -3931,6 +4021,13 @@ def _lead_opening_commitment_penalty(
                 break
         if premium_straight_exists and combo_value <= 6 and not combo.get("uses_wild"):
             penalty = max(0.0, penalty - 3.6)
+    elif combo_type == "full_house" and penalty > 0.0 and not combo.get("uses_wild"):
+        same_type_reentry = _lead_same_type_reentry_bonus(state, player_id, cards, combo)
+        if combo_value >= 52 and same_type_reentry >= 9.0:
+            penalty = max(
+                0.0,
+                penalty - min(16.0, 14.0 + (combo_value - 52.0) * 2.5 + (same_type_reentry - 9.0) * 1.2),
+            )
 
     if (
         penalty > 0.0
@@ -3950,6 +4047,13 @@ def _lead_opening_commitment_penalty(
         if retention_bonus > -6.5:
             relief += min(3.6, (retention_bonus + 6.5) * 1.55)
         penalty = max(0.0, penalty - relief)
+    if combo_type == "full_house":
+        retention_penalty = max(0.0, -_lead_initiative_retention_bonus(state, player_id, cards, combo))
+        low_commit_structure = combo_value <= 52
+        if retention_penalty > 0.0 and low_commit_structure:
+            penalty += min(8.0, retention_penalty * 0.95)
+            if combo_type == "full_house" and combo_value <= 52:
+                penalty += min(4.4, 1.8 + retention_penalty * 0.45)
     return penalty + strategic_reserve_penalty
 
 
@@ -7354,6 +7458,9 @@ def _bot_score_components(
         same_type_conservation = _lead_same_type_value_conservation_penalty(state, bot_id, cards, combo)
         if same_type_conservation > 0.001:
             components["preserve_high_same_type"] = -same_type_conservation
+        full_house_conservation = _lead_full_house_value_conservation_penalty(state, bot_id, cards, combo)
+        if full_house_conservation > 0.001:
+            components["preserve_high_full_house"] = -full_house_conservation
         trap_penalty = _lead_low_single_trap_penalty(hand, cards, level_rank)
         if trap_penalty > 0.001:
             components["low_single_trap"] = -trap_penalty

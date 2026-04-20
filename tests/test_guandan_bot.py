@@ -1891,6 +1891,61 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertEqual(chosen_combo.get("type"), "pair")
         self.assertEqual(chosen_labels, ["♣️3", "♦️3"])
 
+    def test_opening_avoids_low_full_house_when_it_lacks_real_retake(self):
+        players = [
+            {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
+            {"player_id": "bot2", "name": "Bot 2", "seat": 1, "is_bot": True},
+            {"player_id": "bot3", "name": "Bot 3", "seat": 2, "is_bot": True},
+            {"player_id": "bot4", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["round_number"] = 1
+        state["dealer_team"] = "B"
+        state["level_rank"] = 2
+        state["current_turn"] = "bot2"
+        state["current_trick"] = None
+        state["config"]["bot_mode"] = "heuristic"
+
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        state["players"]["bot2"]["hand"] = [
+            pick_label(label)
+            for label in [
+                "🃏B", "🃏S", "♥️2", "♥️2", "♦️A", "♥️K", "♣️K",
+                "♥️Q", "♣️Q", "♠️Q", "♦️Q",
+                "♠️J", "♠️J",
+                "♠️10", "♠️10",
+                "♣️9",
+                "♦️8", "♦️8",
+                "♣️7", "♣️7",
+                "♦️6", "♦️5",
+                "♠️4", "♥️4", "♣️4",
+                "♦️3", "♥️3",
+            ]
+        ]
+        for pid in ("calvin", "bot3", "bot4"):
+            state["players"][pid]["hand"] = deck[:27]
+            del deck[:27]
+
+        action = guandan.GuandanGame.bot_move(state, "bot2")
+
+        self.assertEqual(action.get("type"), "play")
+        hand_map = guandan._map_hand_by_id(state["players"]["bot2"]["hand"])
+        chosen_cards = [hand_map[cid] for cid in action.get("card_ids", []) if cid in hand_map]
+        chosen_labels = [guandan._card_label(card) for card in chosen_cards]
+        chosen_combo = guandan._evaluate_combo(chosen_cards, state["level_rank"], state.get("config", {}))
+
+        self.assertIsNotNone(chosen_combo)
+        self.assertNotEqual(chosen_combo.get("type"), "full_house")
+        self.assertNotEqual(chosen_labels, ["♠️4", "♥️4", "♣️4", "♦️3", "♥️3"])
+
     def test_bot_move_rejects_bad_mcts_override_when_heuristic_structure_is_better(self):
         state, big = self._make_state()
         state["config"]["bot_endgame_threshold"] = 0
