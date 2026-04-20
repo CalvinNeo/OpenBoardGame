@@ -263,11 +263,26 @@ def _teammate_backstop_confidence(
 
     trick_combo = combo or current_trick.get("combo") or {}
     combo_type = trick_combo.get("type") or ""
+    combo_size = int(trick_combo.get("size") or 0)
+    teammate_left = len(state["players"][teammate]["hand"])
+    teammate_hand = state["players"].get(teammate, {}).get("hand", [])
+    if combo_type not in BOMB_TYPES and combo_size > 0 and teammate_left < combo_size:
+        return 0.0
+
+    if combo_type in ("full_house", "straight", "three_pairs", "steel_plate"):
+        exact_max = _max_combo_value_for_hand(
+            teammate_hand,
+            state["level_rank"],
+            combo_type,
+            state.get("config", {}),
+        )
+        if exact_max is None or exact_max <= _combo_numeric_value(trick_combo):
+            return 0.0
+
     confidence = 0.05
     teammate_history = _teammate_public_history_profile(state, player_id)
     confidence += teammate_history.get("confidence", 0.0) * 0.18
 
-    teammate_left = len(state["players"][teammate]["hand"])
     if teammate_left <= 6:
         confidence += 0.08
     if teammate_left <= 3:
@@ -403,6 +418,10 @@ def _short_enemy_defer_bomb_risk_penalty(state: Dict, player_id: str) -> float:
     history_pressure = _structured_enemy_history_pressure(state, leader, combo)
     if history_pressure > 0.0:
         base += history_pressure
+    if leader_left <= 2 and combo_type in ("full_house", "straight", "three_pairs", "steel_plate"):
+        base += 8.0
+    elif leader_left <= 2 and combo_type in ("pair", "three"):
+        base += 4.0
 
     takeover_factor = 1.0 + min(0.45, max(0.0, takeover) / 18.0)
     if takeover <= 0.0:
@@ -497,6 +516,11 @@ def _short_enemy_bomb_takeover_bonus(
     )
     if minimal is not None and tuple(sorted(minimal)) == tuple(sorted(cards)):
         base += 2.4
+
+    if leader_left <= 2 and current_type in ("full_house", "straight", "three_pairs", "steel_plate"):
+        base += 7.5
+    elif leader_left <= 2 and current_type in ("pair", "three"):
+        base += 3.5
 
     if not remaining:
         base += 6.0
@@ -1527,6 +1551,28 @@ def _response_material_cost(
                 cost += 13.0 + _bomb_tier(combo) * 2.8 - (2.0 if is_minimal else 0.0)
             else:
                 cost += 16.0 + _bomb_tier(combo) * 3.2
+
+            leader = current_trick.get("player_id") if current_trick else None
+            leader_left = len(state["players"].get(leader, {}).get("hand", [])) if leader else 99
+            current_type = current_combo.get("type") or ""
+            if (
+                leader is not None
+                and _team_of(state, leader) != _team_of(state, player_id)
+                and leader_left <= 2
+                and current_type in ("pair", "three", "full_house", "straight", "three_pairs", "steel_plate")
+                and is_minimal
+            ):
+                remaining_after_bomb = _remove_cards(hand, cards)
+                relief = 8.0
+                if current_type in ("full_house", "straight", "three_pairs", "steel_plate"):
+                    relief += 7.0
+                elif current_type == "three":
+                    relief += 3.0
+                if not remaining_after_bomb:
+                    relief += 4.0
+                elif len(remaining_after_bomb) <= 6:
+                    relief += 2.0
+                cost = max(0.0, cost - relief)
         else:
             cost += 7.0 + _bomb_tier(combo) * 2.0
 
