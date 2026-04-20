@@ -1434,11 +1434,16 @@ if (guandanFindSfBtn) {
     const list = Array.isArray(currentGuandanView.sf_candidates) ? currentGuandanView.sf_candidates : [];
     if (!list.length) return;
     let idx = 0;
-    if (guandanLastSfKey) {
-      const found = list.findIndex((entry) => entry.key === guandanLastSfKey);
-      if (found >= 0) {
-        idx = (found + 1) % list.length;
-      }
+    const selectedKey = guandanSelected.length ? guandanOptionKey(guandanSelected) : "";
+    let found = -1;
+    if (selectedKey) {
+      found = list.findIndex((entry) => entry.key === selectedKey);
+    }
+    if (found < 0 && guandanLastSfKey) {
+      found = list.findIndex((entry) => entry.key === guandanLastSfKey);
+    }
+    if (found >= 0) {
+      idx = (found + 1) % list.length;
     }
     const chosen = list[idx];
     guandanLastSfKey = chosen.key;
