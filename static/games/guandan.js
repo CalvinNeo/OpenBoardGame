@@ -1218,6 +1218,7 @@ function showGuandanBotExplain(playerId, historyIndex = null) {
   guandanBotExplainHistoryIndex = safeIndex;
   const method = explain.method || "heuristic";
   const methodDetails = explain.method_details || null;
+  const context = explain.decision || currentGuandanView;
   const chosen = explain.chosen || {};
   const chosenCards = Array.isArray(chosen.cards) ? chosen.cards.join(" ") : "-";
   const chosenScore = typeof chosen.score === "number" ? Math.round(chosen.score * 10) / 10 : "-";

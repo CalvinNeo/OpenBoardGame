@@ -3947,6 +3947,10 @@ def _lead_opening_commitment_penalty(
     play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
     cheap_groups = _opening_safe_group_leads(state, player_id, cards)
     cheap_structures = _opening_safe_structured_leads(state, player_id, cards)
+    low_pair_probe_exists = any(
+        alt_combo.get("type") == "pair" and _combo_numeric_value(alt_combo) <= 55
+        for _, alt_combo in cheap_groups
+    )
     if combo_type in ("pair", "three"):
         if not cheap_groups:
             return 0.0
@@ -3973,6 +3977,8 @@ def _lead_opening_commitment_penalty(
             penalty += 3.6
             if combo_value >= 58:
                 penalty += min(4.2, max(0.0, combo_value - 56) * 0.2)
+            if low_pair_probe_exists and combo_value >= 58 and not uses_special:
+                penalty += 8.5 + min(2.5, (combo_value - 58) * 0.24)
         if uses_special:
             penalty += 2.4 if combo_type == "pair" else 2.0
         return penalty
@@ -3982,15 +3988,17 @@ def _lead_opening_commitment_penalty(
 
     penalty = 0.0
     strategic_reserve_penalty = 0.0
+    combo_value = _combo_numeric_value(combo)
     if cheap_groups:
         penalty += 7.8
         if combo_type == "full_house":
             penalty += 6.4
         else:
             penalty += 7.2
+        if combo_type == "full_house" and low_pair_probe_exists and not combo.get("uses_wild") and combo_value >= 58:
+            strategic_reserve_penalty += 18.0 + min(4.0, (combo_value - 58) * 0.32)
     if combo.get("uses_wild"):
         penalty += 3.8 if combo_type == "full_house" else 4.6
-    combo_value = _combo_numeric_value(combo)
     if combo_type == "full_house" and combo_value >= 58:
         penalty += 1.2
     elif combo_type in ("straight", "three_pairs", "steel_plate") and combo_value >= 58:
@@ -4161,10 +4169,11 @@ def _lead_overlap_run_low_single_bonus(
         remaining_count,
         corrected_turns,
     )
+    finish_weight = _team_finish_visibility_weight(state, player_id)
     raw_structure_credit = max(0.0, remaining_count - raw_turns) * 0.75
     corrected_structure_credit = max(0.0, remaining_count - corrected_turns) * 0.75
     correction = bonus
-    correction += (corrected_team_finish - raw_team_finish) * 2.2
+    correction += (corrected_team_finish - raw_team_finish) * 2.2 * finish_weight
     correction += (-corrected_turns * 0.34) - (-raw_turns * 0.34)
     correction += corrected_structure_credit - raw_structure_credit
     return correction
@@ -5637,6 +5646,44 @@ def _team_finish_score_with_turn_override(
     return 0.0
 
 
+def _team_finish_visibility_weight(state: Dict, bot_id: str) -> float:
+    seen_cards = len(state.get("seen_cards", []) or [])
+    current_trick = state.get("current_trick") or {}
+    seen_cards += len(current_trick.get("cards") or [])
+
+    round_entries = state.get("round_memories") or []
+    round_entry = round_entries[-1] if round_entries else None
+    public_actions = 0
+    if round_entry:
+        for trick in round_entry.get("tricks", []) or []:
+            for action in trick.get("actions", []) or []:
+                if action.get("type") in ("play", "pass"):
+                    public_actions += 1
+
+    finished_count = len(state.get("finish_order", []) or [])
+    active_opponents = [
+        pid
+        for pid in state.get("turn_order", [])
+        if _team_of(state, pid) != _team_of(state, bot_id) and not state["players"][pid]["finished"]
+    ]
+
+    weight = 0.18
+    weight += min(0.42, seen_cards * 0.012)
+    weight += min(0.22, public_actions * 0.02)
+    weight += min(0.28, finished_count * 0.14)
+    if active_opponents:
+        shortest_opp = min(len(state["players"][pid]["hand"]) for pid in active_opponents)
+        if shortest_opp <= 8:
+            weight += 0.08
+        if shortest_opp <= 5:
+            weight += 0.12
+        if shortest_opp <= 3:
+            weight += 0.12
+    if state.get("current_trick"):
+        weight += 0.08
+    return max(0.18, min(1.0, weight))
+
+
 def _bot_estimate_opponent_can_beat(state: Dict, opponent_id: str, combo: Dict) -> bool:
     combo_type = combo.get("type")
     if combo_type in ("bomb", "straight_flush", "heavenly"):
@@ -5655,8 +5702,9 @@ def _hand_state_value_components(state: Dict, bot_id: str, hand: List[Dict]) -> 
     turns = _estimated_turns_to_finish(hand, level_rank)
     strength = _hand_strength_score(hand, level_rank)
     control = _control_card_score(hand, level_rank)
+    finish_weight = _team_finish_visibility_weight(state, bot_id)
     components: Dict[str, float] = {
-        "team_finish": _team_finish_score(state, bot_id, remaining, bot_hand=hand) * 2.2,
+        "team_finish": _team_finish_score(state, bot_id, remaining, bot_hand=hand) * 2.2 * finish_weight,
     }
     if remaining == 0:
         components["finished_hand"] = 42.0
