@@ -985,6 +985,7 @@ def _lead_option_score(state: Dict, player_id: str, cards: List[int]) -> float:
     score -= _control_group_break_penalty(hand, cards, state["level_rank"]) * 1.0
     score -= _lead_low_single_trap_penalty(hand, cards, state["level_rank"])
     score -= _lead_short_next_opponent_penalty(state, player_id, cards)
+    score -= _lead_short_escape_window_penalty(state, player_id, cards, combo)
     score -= _lead_structure_overreach_penalty(hand, cards, combo, state["level_rank"])
     score -= _lead_same_type_value_conservation_penalty(state, player_id, cards, combo)
     score -= _lead_special_material_penalty(state, player_id, cards, combo)
@@ -992,6 +993,7 @@ def _lead_option_score(state: Dict, player_id: str, cards: List[int]) -> float:
     score += _lead_same_type_reentry_bonus(state, player_id, cards, combo)
     score += _lead_teammate_support_bonus(state, player_id, cards, combo)
     score += _lead_initiative_retention_bonus(state, player_id, cards, combo)
+    score += _lead_retake_control_bonus(state, player_id, cards, combo)
     score -= _lead_short_opponent_breakup_penalty(state, player_id, cards, combo)
     score -= _lead_speculative_followup_penalty(state, player_id, cards, combo)
     score -= _lead_opening_commitment_penalty(state, player_id, cards, combo)
@@ -1000,6 +1002,7 @@ def _lead_option_score(state: Dict, player_id: str, cards: List[int]) -> float:
         score -= _single_order_value(play_cards[0], state["level_rank"]) * 0.12
         score -= _lead_single_break_penalty(hand, cards, state["level_rank"])
         score += _lead_low_single_escape_bonus(hand, cards, state["level_rank"])
+        score -= _lead_single_initiative_penalty(state, player_id, cards, combo)
     else:
         score -= _combo_value(combo) * 0.015
 
@@ -1065,14 +1068,17 @@ def _lead_cheap_option_score(
     score -= _control_group_break_penalty(hand, cards, state["level_rank"]) * 1.0
     score -= _lead_low_single_trap_penalty(hand, cards, state["level_rank"])
     score -= _lead_short_next_opponent_penalty(state, player_id, cards)
+    score -= _lead_short_escape_window_penalty(state, player_id, cards, combo)
     score -= _lead_structure_overreach_penalty(hand, cards, combo, state["level_rank"])
     score -= _lead_same_type_value_conservation_penalty(state, player_id, cards, combo)
     score -= _lead_special_material_penalty(state, player_id, cards, combo)
+    score += min(3.0, _lead_retake_control_bonus(state, player_id, cards, combo))
 
     if combo["type"] == "single":
         score -= _single_order_value(play_cards[0], state["level_rank"]) * 0.12
         score -= _lead_single_break_penalty(hand, cards, state["level_rank"])
         score += _lead_low_single_escape_bonus(hand, cards, state["level_rank"])
+        score -= _lead_single_initiative_penalty(state, player_id, cards, combo)
     else:
         score -= _combo_value(combo) * 0.015
 
@@ -1714,6 +1720,75 @@ def _lead_short_next_opponent_penalty(state: Dict, player_id: str, cards: List[i
     if remaining <= 2:
         penalty *= 0.7
     return max(0.0, penalty)
+
+
+def _lead_short_escape_window_penalty(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+) -> float:
+    if state.get("current_trick") or not cards:
+        return 0.0
+
+    combo_type = combo.get("type") or ""
+    if combo_type in BOMB_TYPES:
+        return 0.0
+
+    target_size = len(cards)
+    if target_size <= 0:
+        return 0.0
+
+    config = state.get("config", {})
+    level_rank = state["level_rank"]
+    penalty = 0.0
+    for pid in state.get("turn_order", []):
+        if _team_of(state, pid) == _team_of(state, player_id):
+            continue
+        pdata = state["players"].get(pid, {})
+        if pdata.get("finished"):
+            continue
+        hand = pdata.get("hand", [])
+        if len(hand) != target_size:
+            continue
+
+        base = 20.0
+        if target_size == 1:
+            base = 24.0
+        elif target_size == 2:
+            base = 21.0
+        elif target_size >= 5:
+            base = 18.0
+
+        exact_closeout = _can_play_all(hand, level_rank, config, combo)
+        if exact_closeout:
+            certainty = 1.0
+        else:
+            certainty = 0.82 if target_size == 1 else 0.28
+
+        if combo_type == "single":
+            rank_value = combo.get("rank_value", 0)
+            if rank_value >= TOP_SINGLE_VALUE_MIN:
+                base *= 0.18
+            elif rank_value >= PREMIUM_SINGLE_VALUE_MIN:
+                base *= 0.34
+            elif rank_value >= HIGH_CONTROL_SINGLE_VALUE_MIN:
+                base *= 0.55
+        elif combo_type in ("pair", "three"):
+            rank_value = combo.get("rank_value", 0)
+            if rank_value >= PREMIUM_SINGLE_VALUE_MIN:
+                base *= 0.3
+            elif rank_value >= HIGH_CONTROL_SINGLE_VALUE_MIN:
+                base *= 0.52
+        else:
+            combo_value = _combo_numeric_value(combo)
+            if combo_value >= 13:
+                base *= 0.42
+            elif combo_value >= 11:
+                base *= 0.65
+
+        penalty = max(penalty, base * certainty)
+    return penalty
 
 
 def _single_lead_finish_window_penalty(state: Dict, bot_id: str) -> float:
@@ -2405,7 +2480,7 @@ def _lead_same_type_reentry_bonus(
     if state.get("current_trick"):
         return 0.0
     combo_type = combo.get("type") or ""
-    if combo_type not in ("pair", "three", "full_house", "straight", "three_pairs", "steel_plate"):
+    if combo_type not in ("single", "pair", "three", "full_house", "straight", "three_pairs", "steel_plate"):
         return 0.0
 
     hand = state["players"][player_id]["hand"]
@@ -2428,6 +2503,7 @@ def _lead_same_type_reentry_bonus(
             continue
         margin = max(0.0, _combo_numeric_value(followup) - threshold)
         bonus = {
+            "single": 0.35,
             "pair": 1.0,
             "three": 1.8,
             "full_house": 4.8,
@@ -2435,9 +2511,10 @@ def _lead_same_type_reentry_bonus(
             "three_pairs": 1.6,
             "steel_plate": 1.8,
         }.get(combo_type, 0.0)
-        bonus += min(3.2, margin * 0.26)
+        bonus += min(3.2, margin * (0.08 if combo_type == "single" else 0.26))
         if not _cards_use_special_material(play_cards, level_rank):
             bonus += {
+                "single": 0.18,
                 "pair": 0.6,
                 "three": 1.1,
                 "full_house": 3.4,
@@ -2445,6 +2522,18 @@ def _lead_same_type_reentry_bonus(
                 "three_pairs": 0.9,
                 "steel_plate": 1.1,
             }.get(combo_type, 0.0)
+        if combo_type == "single":
+            follow_value = followup.get("rank_value", 0)
+            if follow_value >= TOP_SINGLE_VALUE_MIN:
+                bonus += 0.95
+            elif follow_value >= PREMIUM_SINGLE_VALUE_MIN:
+                bonus += 0.62
+            elif follow_value >= HIGH_CONTROL_SINGLE_VALUE_MIN:
+                bonus += 0.35
+            if _opening_safe_structured_leads(state, player_id, cards):
+                bonus *= 0.12
+            elif _opening_safe_group_leads(state, player_id, cards):
+                bonus *= 0.5
         best = max(best, bonus)
     return best
 
@@ -3287,6 +3376,97 @@ def _bomb_response_closeout_bonus(
     return closeout_prob * base
 
 
+def _lead_retake_control_bonus(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Optional[Dict] = None,
+) -> float:
+    if state.get("current_trick"):
+        return 0.0
+
+    hand = state["players"][player_id]["hand"]
+    remaining = _remove_cards(hand, cards)
+    if not remaining:
+        return 0.0
+
+    level_rank = state["level_rank"]
+    if combo is None:
+        hand_map = _map_hand_by_id(hand)
+        play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+        combo = _evaluate_combo(play_cards, level_rank, state.get("config", {}))
+    combo_type = (combo or {}).get("type") or ""
+
+    single_values = sorted(
+        (_single_order_value(card, level_rank) for card in remaining),
+        reverse=True,
+    )
+    if not single_values:
+        return 0.0
+
+    best_single = single_values[0]
+    second_single = single_values[1] if len(single_values) >= 2 else 0
+    decomp = _hand_decomposition_summary(remaining, level_rank)
+
+    bonus = 0.0
+    if best_single >= TOP_SINGLE_VALUE_MIN:
+        bonus += 4.8
+    elif best_single >= PREMIUM_SINGLE_VALUE_MIN:
+        bonus += 3.4
+    elif best_single >= HIGH_CONTROL_SINGLE_VALUE_MIN:
+        bonus += 2.2
+    elif best_single >= CONTROL_SINGLE_VALUE_MIN:
+        bonus += 1.1
+
+    if second_single >= PREMIUM_SINGLE_VALUE_MIN:
+        bonus += 2.1
+    elif second_single >= HIGH_CONTROL_SINGLE_VALUE_MIN:
+        bonus += 1.2
+    elif second_single >= CONTROL_SINGLE_VALUE_MIN:
+        bonus += 0.6
+
+    bonus += min(2.0, _control_card_score(remaining, level_rank) * 0.16)
+    bonus += min(1.8, decomp.get("bomb_turns", 0.0) * 0.55)
+    if combo is not None:
+        bonus += min(1.8, max(0.0, _lead_same_type_reentry_bonus(state, player_id, cards, combo)) * 0.24)
+
+    active_opponents = [
+        pid
+        for pid in state.get("turn_order", [])
+        if _team_of(state, pid) != _team_of(state, player_id) and not state["players"][pid]["finished"]
+    ]
+    if active_opponents:
+        min_opp = min(len(state["players"][pid]["hand"]) for pid in active_opponents)
+        if min_opp <= 1:
+            return 0.0
+        elif min_opp <= 2:
+            bonus *= 0.22
+        elif min_opp <= 3:
+            bonus *= 0.4
+        elif min_opp <= 5:
+            bonus *= 0.68
+
+    type_scale = {
+        "single": 1.0,
+        "pair": 0.72,
+        "three": 0.48,
+        "full_house": 0.0,
+        "straight": 0.0,
+        "three_pairs": 0.0,
+        "steel_plate": 0.0,
+    }.get(combo_type, 0.0)
+    bonus *= type_scale
+    escape_penalty = _lead_short_escape_window_penalty(state, player_id, cards, combo)
+    if escape_penalty > 0.001:
+        bonus *= 0.08
+    if combo_type == "single" and _opening_safe_structured_leads(state, player_id, cards):
+        bonus *= 0.14
+    elif combo_type in ("pair", "three") and _opening_safe_structured_leads(state, player_id, cards):
+        bonus *= 0.55
+
+    return max(0.0, min(9.5, bonus))
+
+
 def _lead_initiative_retention_bonus(
     state: Dict,
     player_id: str,
@@ -3365,6 +3545,7 @@ def _lead_initiative_retention_bonus(
         recovery += min(0.22, after.get("bomb_turns", 0.0) * 0.16)
     if after.get("control_singles", 0.0) > 0.0:
         recovery += min(0.16, after.get("control_singles", 0.0) * 0.07)
+    recovery += min(0.4, _lead_retake_control_bonus(state, player_id, cards, combo) * 0.07)
     recovery = min(1.0, recovery)
 
     score = (hold_prob - 0.5) * 16.0
@@ -3726,7 +3907,14 @@ def _lead_opening_commitment_penalty(
     return penalty + strategic_reserve_penalty
 
 
-def _lead_single_initiative_penalty(hand: List[Dict], cards: List[int], level_rank: int) -> float:
+def _lead_single_initiative_penalty(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Optional[Dict] = None,
+) -> float:
+    hand = state["players"][player_id]["hand"]
+    level_rank = state["level_rank"]
     if len(cards) != 1 or len(hand) <= 8:
         return 0.0
     hand_map = _map_hand_by_id(hand)
@@ -3758,6 +3946,7 @@ def _lead_single_initiative_penalty(hand: List[Dict], cards: List[int], level_ra
     after_low = decomp.get("low_singles", 0.0)
     if before_low > 0 and after_low <= before_low - 1:
         penalty -= 1.2 + min(1.6, max(0.0, 58 - value) * 0.18)
+    penalty -= min(3.8, _lead_retake_control_bonus(state, player_id, cards, combo) * 0.68)
     return max(0.0, penalty)
 
 
@@ -7125,12 +7314,18 @@ def _bot_score_components(
         escape_bonus = _lead_low_single_escape_bonus(hand, cards, level_rank)
         if escape_bonus > 0.001:
             components["shed_low_single"] = escape_bonus
-        initiative_penalty = _lead_single_initiative_penalty(hand, cards, level_rank)
+        initiative_penalty = _lead_single_initiative_penalty(state, bot_id, cards, combo)
         if initiative_penalty > 0.001:
             components["keep_initiative_shape"] = -initiative_penalty
+        retake_bonus = _lead_retake_control_bonus(state, bot_id, cards, combo)
+        if retake_bonus > 0.001:
+            components["lead_retake_stock"] = retake_bonus
         short_next_penalty = _lead_short_next_opponent_penalty(state, bot_id, cards)
         if short_next_penalty > 0.001:
             components["deny_one_card_window"] = -short_next_penalty
+        short_escape_penalty = _lead_short_escape_window_penalty(state, bot_id, cards, combo)
+        if short_escape_penalty > 0.001:
+            components["deny_short_runout_window"] = -short_escape_penalty
         overlap_low_single_bonus = _lead_overlap_run_low_single_bonus(state, bot_id, hand, cards, level_rank)
         if abs(overlap_low_single_bonus) > 0.001:
             components["overlap_run_low_single"] = overlap_low_single_bonus
