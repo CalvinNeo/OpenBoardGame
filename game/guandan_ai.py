@@ -986,6 +986,7 @@ def _lead_option_score(state: Dict, player_id: str, cards: List[int]) -> float:
     score -= _lead_low_single_trap_penalty(hand, cards, state["level_rank"])
     score -= _lead_short_next_opponent_penalty(state, player_id, cards)
     score -= _lead_structure_overreach_penalty(hand, cards, combo, state["level_rank"])
+    score -= _lead_same_type_value_conservation_penalty(state, player_id, cards, combo)
     score -= _lead_special_material_penalty(state, player_id, cards, combo)
     score += _lead_turn_efficiency_bonus(state, player_id, cards, combo)
     score += _lead_same_type_reentry_bonus(state, player_id, cards, combo)
@@ -1065,6 +1066,7 @@ def _lead_cheap_option_score(
     score -= _lead_low_single_trap_penalty(hand, cards, state["level_rank"])
     score -= _lead_short_next_opponent_penalty(state, player_id, cards)
     score -= _lead_structure_overreach_penalty(hand, cards, combo, state["level_rank"])
+    score -= _lead_same_type_value_conservation_penalty(state, player_id, cards, combo)
     score -= _lead_special_material_penalty(state, player_id, cards, combo)
 
     if combo["type"] == "single":
@@ -2208,6 +2210,113 @@ def _lead_natural_type_values(
         combo_value = _combo_numeric_value(combo)
         values[combo_type] = max(values.get(combo_type, -10**9), combo_value)
     return values
+
+
+def _lead_same_type_value_conservation_penalty(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+) -> float:
+    if state.get("current_trick"):
+        return 0.0
+
+    combo_type = combo.get("type") or ""
+    if combo_type not in ("single", "pair", "three"):
+        return 0.0
+
+    hand = state["players"][player_id]["hand"]
+    if len(hand) < 9:
+        return 0.0
+
+    opponents = [
+        pid
+        for pid in state.get("turn_order", [])
+        if _team_of(state, pid) != _team_of(state, player_id) and not state["players"][pid]["finished"]
+    ]
+    if not opponents:
+        return 0.0
+    if min(len(state["players"][pid]["hand"]) for pid in opponents) <= 2:
+        return 0.0
+
+    level_rank = state["level_rank"]
+    hand_map = _map_hand_by_id(hand)
+    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+    if not play_cards:
+        return 0.0
+
+    current_value = _combo_numeric_value(combo)
+    current_uses_special = _cards_use_special_material(play_cards, level_rank)
+    current_metric = current_value + (40.0 if current_uses_special and combo_type in ("pair", "three") else 0.0)
+    current_remaining = _remove_cards(hand, cards)
+    current_after = _hand_decomposition_summary(current_remaining, level_rank) if current_remaining else _empty_hand_decomposition_summary()
+    current_turns = current_after.get("turns", float(len(current_remaining)))
+
+    best_lower_value = None
+    for option in _lead_same_type_options(hand, level_rank, combo_type, 0):
+        if tuple(sorted(option)) == tuple(sorted(cards)):
+            continue
+        alt_cards = [hand_map[cid] for cid in option if cid in hand_map]
+        alt_combo = _evaluate_combo(alt_cards, level_rank, state.get("config", {}))
+        if not alt_combo or alt_combo.get("type") != combo_type:
+            continue
+        if _cards_use_special_material(alt_cards, level_rank):
+            continue
+        alt_value = _combo_numeric_value(alt_combo)
+        if alt_value >= current_metric:
+            continue
+
+        alt_remaining = _remove_cards(hand, option)
+        alt_after = _hand_decomposition_summary(alt_remaining, level_rank) if alt_remaining else _empty_hand_decomposition_summary()
+        alt_turns = alt_after.get("turns", float(len(alt_remaining)))
+        if combo_type == "single":
+            if alt_after.get("bomb_turns", 0.0) + 0.01 < current_after.get("bomb_turns", 0.0):
+                continue
+        else:
+            if alt_turns > current_turns + 1.1:
+                continue
+            if alt_after.get("bomb_turns", 0.0) + 0.01 < current_after.get("bomb_turns", 0.0):
+                continue
+
+        if best_lower_value is None or alt_value < best_lower_value:
+            best_lower_value = alt_value
+
+    if best_lower_value is None:
+        return 0.0
+
+    gap = max(0.0, current_value - best_lower_value)
+    if gap <= 0.0:
+        return 0.0
+
+    penalty = {
+        "single": 1.6,
+        "pair": 2.8,
+        "three": 2.4,
+    }.get(combo_type, 0.0)
+    penalty += {
+        "single": min(6.0, gap * 0.18),
+        "pair": min(7.2, gap * 0.16),
+        "three": min(6.0, gap * 0.14),
+    }.get(combo_type, 0.0)
+
+    if current_uses_special:
+        penalty += {
+            "single": 1.8,
+            "pair": 3.2,
+            "three": 2.6,
+        }.get(combo_type, 0.0)
+
+    if combo_type == "single":
+        if current_value >= PREMIUM_SINGLE_VALUE_MIN:
+            penalty += 1.8
+        elif current_value >= CONTROL_SINGLE_VALUE_MIN:
+            penalty += 0.9
+    elif combo_type == "pair":
+        remaining_high_pairs = _lead_same_type_options(current_remaining, level_rank, "pair", current_value)
+        if not remaining_high_pairs:
+            penalty += 0.9
+
+    return penalty
 
 
 def _lead_special_material_penalty(
@@ -7007,6 +7116,9 @@ def _bot_score_components(
         overreach_penalty = _lead_structure_overreach_penalty(hand, cards, combo, level_rank)
         if overreach_penalty > 0.001:
             components["lead_overreach"] = -overreach_penalty
+        same_type_conservation = _lead_same_type_value_conservation_penalty(state, bot_id, cards, combo)
+        if same_type_conservation > 0.001:
+            components["preserve_high_same_type"] = -same_type_conservation
         trap_penalty = _lead_low_single_trap_penalty(hand, cards, level_rank)
         if trap_penalty > 0.001:
             components["low_single_trap"] = -trap_penalty

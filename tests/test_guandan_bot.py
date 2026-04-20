@@ -4536,6 +4536,145 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             guandan._bot_score_play(state, "bot2", diamond_seven, depth=2),
         )
 
+    def test_midgame_lead_preserves_lower_same_type_options_over_high_pair_two_and_high_single(self):
+        players = [
+            {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
+            {"player_id": "bot2", "name": "Bot 2", "seat": 1, "is_bot": True},
+            {"player_id": "bot3", "name": "Bot 3", "seat": 2, "is_bot": True},
+            {"player_id": "bot4", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["round_number"] = 1
+        state["dealer_team"] = "A"
+        state["level_rank"] = 2
+        state["current_turn"] = "bot4"
+        state["current_trick"] = None
+        state["config"]["bot_mode"] = "heuristic"
+        state["config"]["bot_endgame_threshold"] = 0
+
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        bot4_hand = [
+            pick_label(label)
+            for label in [
+                "🃏S",
+                "♣️2",
+                "♦️2",
+                "♥️Q",
+                "♥️9",
+                "♣️8",
+                "♠️8",
+                "♣️7",
+                "♥️7",
+                "♦️6",
+                "♥️6",
+                "♥️5",
+                "♥️5",
+                "♠️5",
+                "♣️4",
+            ]
+        ]
+        state["players"]["bot4"]["hand"] = bot4_hand
+        state["players"]["calvin"]["hand"] = [
+            pick_label(label)
+            for label in [
+                "♠️A",
+                "♥️A",
+                "♣️A",
+                "♦️A",
+                "♠️K",
+                "♥️K",
+                "♣️K",
+                "♦️K",
+                "♠️Q",
+                "♦️Q",
+                "♠️J",
+                "♦️J",
+                "♠️10",
+                "♦️10",
+            ]
+        ]
+        state["players"]["bot2"]["hand"] = [
+            pick_label(label)
+            for label in [
+                "♠️9",
+                "♦️9",
+                "♥️8",
+                "♦️8",
+                "♠️7",
+                "♦️7",
+                "♠️6",
+                "♣️6",
+                "♠️4",
+                "♥️4",
+                "♦️4",
+                "♠️3",
+                "♥️3",
+                "♦️3",
+                "♣️3",
+                "🃏B",
+            ]
+        ]
+        state["players"]["bot3"]["hand"] = [
+            pick_label(label)
+            for label in [
+                "♣️J",
+                "♥️J",
+                "♣️10",
+                "♥️10",
+                "♣️9",
+                "♥️2",
+                "♠️2",
+                "♣️2",
+                "♦️2",
+                "♣️5",
+                "♦️5",
+                "♣️4",
+                "♥️6",
+                "♥️7",
+                "♣️8",
+                "♠️8",
+                "♥️9",
+                "♣️Q",
+                "🃏S",
+                "🃏B",
+                "♠️5",
+                "♠️6",
+                "♠️7",
+                "♠️10",
+                "♣️A",
+            ]
+        ]
+
+        hand_map = guandan._map_hand_by_id(bot4_hand)
+
+        pair_two_ids = [card["id"] for card in bot4_hand if guandan._card_label(card) in ("♣️2", "♦️2")]
+        pair_eight_ids = [card["id"] for card in bot4_hand if guandan._card_label(card) in ("♣️8", "♠️8")]
+        club_four_id = [next(card["id"] for card in bot4_hand if guandan._card_label(card) == "♣️4")]
+        heart_queen_id = [next(card["id"] for card in bot4_hand if guandan._card_label(card) == "♥️Q")]
+
+        pair_two_components = guandan._bot_score_components(state, "bot4", pair_two_ids, depth=2)
+        queen_components = guandan._bot_score_components(state, "bot4", heart_queen_id, depth=2)
+
+        self.assertLess(pair_two_components.get("preserve_high_same_type", 0.0), 0.0)
+        self.assertLess(queen_components.get("preserve_high_same_type", 0.0), 0.0)
+        self.assertGreater(
+            guandan._bot_score_play(state, "bot4", club_four_id, depth=2),
+            guandan._bot_score_play(state, "bot4", heart_queen_id, depth=2),
+        )
+
+        action = guandan.GuandanGame.bot_move(state, "bot4")
+        self.assertEqual(action.get("type"), "play")
+        chosen_labels = [guandan._card_label(hand_map[cid]) for cid in action.get("card_ids", [])]
+        self.assertEqual(chosen_labels, ["♣️4"])
+
     def test_minimax_lead_avoids_feeding_low_single_to_immediate_short_opponent(self):
         players = [
             {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
