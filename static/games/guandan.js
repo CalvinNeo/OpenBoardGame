@@ -991,6 +991,14 @@ function getGuandanCurrentTrickCards(view) {
   return `${view.current_trick.type || "-"} (size ${view.current_trick.size ?? "-"})`;
 }
 
+function getGuandanBotExplainTargetText(view) {
+  if (!view || !view.current_trick) return "Lead / no target";
+  const comboType = view.current_trick.type || "-";
+  const leader = getGuandanPlayerName(view, view.current_trick.player_id);
+  const cards = getGuandanCurrentTrickCards(view);
+  return `${comboType} by ${leader}: ${cards}`;
+}
+
 async function copyGuandanBotExplainToClipboard(text) {
   if (typeof copyTextToClipboard === "function") {
     return copyTextToClipboard(text);
@@ -1135,11 +1143,13 @@ function buildGuandanBotExplainClipboardText(playerId, explain) {
   const trickSummary = context.current_trick
     ? `${context.current_trick.type || "-"}:${getGuandanPlayerName(context, context.current_trick.player_id)}:${getGuandanCurrentTrickCards(context)}`
     : "-";
+  const targetSummary = getGuandanBotExplainTargetText(context);
   return [
     "guandan_bot_review",
     `bot=${getGuandanPlayerName(context, playerId)} method=${explain.method || "heuristic"} ${detailBits.join(" ")}`.trim(),
     `phase=${context.phase || "-"} round=${context.round_number ?? "-"} dealer=${context.dealer_team ?? "-"} level=${context.level_rank ?? "-"} turn=${getGuandanPlayerName(context, context.current_turn)}`,
     `trick=${trickSummary}`,
+    `target=${targetSummary}`,
     `players=${playerLine || "-"}`,
     `counts=${countLine || "-"}`,
     `trick_plays=${trickLine}`,
@@ -1212,6 +1222,7 @@ function showGuandanBotExplain(playerId, historyIndex = null) {
   const chosenCards = Array.isArray(chosen.cards) ? chosen.cards.join(" ") : "-";
   const chosenScore = typeof chosen.score === "number" ? Math.round(chosen.score * 10) / 10 : "-";
   const chosenComponents = formatGuandanBotComponents(chosen.components);
+  const targetSummary = getGuandanBotExplainTargetText(context);
   const hand = Array.isArray(explain.hand) ? explain.hand : [];
   const handItems = hand.map((card) => `<span class="guandan-bot-hand-card">${card}</span>`).join("");
   const navButtons =
@@ -1281,6 +1292,7 @@ function showGuandanBotExplain(playerId, historyIndex = null) {
     ${detailLine}
     ${mctsLine}
     ${handBlock}
+    <div><strong>Target:</strong> ${targetSummary}</div>
     <div><strong>Chosen:</strong> ${chosenCards} <span class="hint">(score ${chosenScore})</span></div>
     <div><strong>Score Breakdown:</strong> ${chosenComponents}</div>
     <table class="guandan-bot-explain-table">
