@@ -594,6 +594,7 @@ def _schedule_halli_flip_wait(room: Room) -> None:
             return
         room.halli_flip_wait_at_ms = None
         await _emit_game_state(room)
+        await _maybe_run_bots(room)
 
     asyncio.create_task(_notify(ready_at_ms))
 
