@@ -16,6 +16,7 @@ const mismatchSliderCount = document.getElementById("mismatchSliderCount");
 const caboPanel = document.getElementById("caboPanel");
 const flip7Panel = document.getElementById("flip7Panel");
 const yahtzeePanel = document.getElementById("yahtzeePanel");
+const acquirePanel = document.getElementById("acquirePanel");
 const lostCodePanel = document.getElementById("lostCodePanel");
 const criminalDancePanel = document.getElementById("criminalDancePanel");
 const istanbulPanel = document.getElementById("istanbulPanel");
@@ -64,6 +65,7 @@ function setGamePanelVisibility(gameType) {
   const showGuandan = gameType === "guandan";
   const showFlip7 = gameType === "flip7";
   const showYahtzee = gameType === "yahtzee";
+  const showAcquire = gameType === "acquire";
   const showLostCode = gameType === "lost_code";
   const showCriminalDance = gameType === "criminal_dance";
   const showIstanbul = gameType === "istanbul";
@@ -124,6 +126,9 @@ function setGamePanelVisibility(gameType) {
   }
   if (yahtzeePanel) {
     yahtzeePanel.classList.toggle("hidden", !showYahtzee);
+  }
+  if (acquirePanel) {
+    acquirePanel.classList.toggle("hidden", !showAcquire);
   }
   if (lostCodePanel) {
     lostCodePanel.classList.toggle("hidden", !showLostCode);
@@ -331,6 +336,9 @@ function setGamePanelVisibility(gameType) {
   if (typeof showPatchworkHeaderActions === "function") {
     showPatchworkHeaderActions(showPatchwork);
   }
+  if (typeof showAcquireHeaderActions === "function") {
+    showAcquireHeaderActions(showAcquire);
+  }
   if (skyePanel) {
     skyePanel.classList.toggle("hidden", !showSkye);
   }
@@ -466,6 +474,10 @@ function renderGameState(data) {
   }
   if (gameType === "yahtzee") {
     renderYahtzeeGameState(data);
+    return;
+  }
+  if (gameType === "acquire") {
+    renderAcquireGameState(data);
     return;
   }
   if (gameType === "lost_code") {

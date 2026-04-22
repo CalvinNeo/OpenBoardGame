@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css?v=app_v6" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v7" />
 </head>
 <body>
   <section id="logPanel" class="log-panel hidden" aria-hidden="true">
@@ -552,6 +552,28 @@
         <div class="patchwork-board-shell patchwork-modal-board-shell">
           <div id="patchworkQuiltModalBoard" class="patchwork-board compact"></div>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="acquireHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content acquire-help-modal">
+      <div class="modal-header">
+        <h2>Acquire - Game Rules</h2>
+        <button id="acquireHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body acquire-help-content" id="acquireHelpContent"></div>
+    </div>
+  </section>
+
+  <section id="acquireExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content acquire-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="acquireExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="acquireExplainContent"></div>
       </div>
     </div>
   </section>
@@ -1440,6 +1462,10 @@
               <button id="patchworkHelpBtn" class="patchwork-header-btn" type="button">Help</button>
               <button id="patchworkExplainBtn" class="patchwork-header-btn" type="button">Explain</button>
             </div>
+            <div class="panel-header-actions" id="acquireHeaderActions" style="display: none;">
+              <button id="acquireHelpBtn" class="acquire-header-btn" type="button">Help</button>
+              <button id="acquireExplainBtn" class="acquire-header-btn" type="button">Explain</button>
+            </div>
             <div class="panel-header-actions" id="skyeHeaderActions" style="display: none;">
               <button id="skyeHelpBtn" class="skye-header-btn" type="button">Help</button>
               <button id="skyeExplainBtn" class="skye-header-btn" type="button">Explain</button>
@@ -1659,6 +1685,38 @@
 
               <h3>Scorecards</h3>
               <div id="yahtzeeScorecards"></div>
+            </div>
+
+            <div id="acquirePanel" class="hidden acquire-panel">
+              <div class="row">
+                <div>Turn: <span id="acquireTurn">-</span></div>
+                <div>Stage: <span id="acquireStage">-</span></div>
+                <div>Last Tile: <span id="acquireLastTile">-</span></div>
+                <div>Winner: <span id="acquireWinner">-</span></div>
+              </div>
+              <div class="row actions">
+                <button id="acquireClearBuyBtn" type="button" data-acquire-explain="acquireClearBuyBtn">Clear Buys</button>
+                <button id="acquireSubmitBuyBtn" type="button" data-acquire-explain="acquireSubmitBuyBtn">Confirm Buys</button>
+                <button id="acquireEndTurnBtn" type="button" data-acquire-explain="acquireEndTurnBtn">End Turn</button>
+                <button id="acquireEndGameBtn" type="button" data-acquire-explain="acquireEndGameBtn">End + Score</button>
+              </div>
+              <div id="acquirePending" class="acquire-pending" data-acquire-explain="pending"></div>
+              <div class="acquire-layout">
+                <div class="acquire-main">
+                  <h3>Board</h3>
+                  <div id="acquireBoard" class="acquire-board" data-acquire-explain="board"></div>
+                  <h3>Your Hand</h3>
+                  <div id="acquireHand" class="acquire-hand" data-acquire-explain="hand"></div>
+                  <div id="acquireBuyQueue" class="hint" data-acquire-explain="buyQueue">Queued buys: -</div>
+                  <div id="acquireActions" class="acquire-actions" data-acquire-explain="actionArea"></div>
+                </div>
+                <div class="acquire-side">
+                  <h3>Chains</h3>
+                  <div id="acquireChains" class="acquire-chains" data-acquire-explain="chains"></div>
+                  <h3>Players</h3>
+                  <div id="acquirePlayers" class="acquire-players" data-acquire-explain="players"></div>
+                </div>
+              </div>
             </div>
 
             <div id="lostCodePanel" class="hidden">
@@ -4412,7 +4470,7 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js"></script>
-  <script src="/static/games/shared.js?v=app_v5"></script>
+  <script src="/static/games/shared.js?v=app_v6"></script>
   <script src="/static/games/blokus.js?v=app_v4"></script>
   <script src="/static/games/carcassonne.js?v=app_v4"></script>
   <script src="/static/games/azul.js?v=app_v4"></script>
@@ -4444,6 +4502,7 @@
   <script src="/static/games/guandan.js?v=app_v8"></script>
   <script src="/static/games/cabo.js?v=app_v5"></script>
   <script src="/static/games/flip7.js?v=app_v4"></script>
+  <script src="/static/games/acquire.js?v=app_v1"></script>
   <script src="/static/games/abraca_what.js?v=app_v4"></script>
   <script src="/static/games/fang_niao.js?v=app_v4"></script>
   <script src="/static/games/perfect_mismatch.js?v=app_v4"></script>
@@ -4465,7 +4524,7 @@
   <script src="/static/games/manila.js?v=app_v4"></script>
   <script src="/static/games/kobayakawa.js?v=app_v4"></script>
   <script src="/static/games/scout.js?v=app_v4"></script>
-  <script src="/static/app.js?v=app_v4"></script>
-  <script src="/static/room.js?v=app_v6"></script>
+  <script src="/static/app.js?v=app_v5"></script>
+  <script src="/static/room.js?v=app_v7"></script>
 </body>
 </html>

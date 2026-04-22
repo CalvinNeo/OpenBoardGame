@@ -199,6 +199,9 @@ function renderRoomState(state) {
     clearCaboState();
     clearFlip7State();
     clearYahtzeeState();
+    if (typeof clearAcquireState === "function") {
+      clearAcquireState();
+    }
     if (typeof clearLostCodeState === "function") {
       clearLostCodeState();
     }
@@ -303,6 +306,29 @@ function renderRoomState(state) {
   const orderedPlayers = Array.isArray(state.players)
     ? [...state.players].sort((a, b) => (a.seat ?? 0) - (b.seat ?? 0))
     : [];
+  const startBtn = document.getElementById("startBtn");
+  if (startBtn) {
+    let startDisabled = true;
+    let startTitle = "";
+    if (state.status === "lobby") {
+      const gameMeta = Array.isArray(cachedGameList)
+        ? cachedGameList.find((entry) => entry && entry.game_id === state.game_type)
+        : null;
+      const minPlayers = gameMeta && Number.isFinite(gameMeta.min_players) ? gameMeta.min_players : 1;
+      const enoughPlayers = orderedPlayers.length >= minPlayers;
+      const allReady = orderedPlayers.every((player) => player.is_bot || player.ready);
+      startDisabled = !(enoughPlayers && allReady);
+      if (!enoughPlayers) {
+        startTitle = `Need at least ${minPlayers} players`;
+      } else if (!allReady) {
+        startTitle = "All players must be ready";
+      }
+    } else {
+      startTitle = "Game already started";
+    }
+    startBtn.disabled = startDisabled;
+    startBtn.title = startTitle;
+  }
   orderedPlayers.forEach((p, idx) => {
     const row = document.createElement("div");
     row.className = "player-row";

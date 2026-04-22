@@ -1,3 +1,4 @@
+from game.acquire import AcquireGame
 from game.abraca_what import AbracaWhatGame
 from game.ai_dixit import AiDixitGame
 from game.age_of_war import AgeOfWarGame
@@ -51,6 +52,76 @@ from game.word_decode import WordDecodeGame
 from game.wandering_towers import WanderingTowersGame
 from game.tagiron import TagironGame
 from game.turing_machine import TuringMachineGame
+
+ACQUIRE_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "play_tile"},
+                "tile": {"type": "string", "minLength": 2, "maxLength": 3},
+            },
+            "required": ["type", "tile"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "choose_chain"},
+                "chain_id": {"type": "string", "enum": ["worldwide", "sackson", "festival", "imperial", "american", "continental", "tower"]},
+            },
+            "required": ["type", "chain_id"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "dispose_stock"},
+                "sell": {"type": "integer", "minimum": 0},
+                "trade": {"type": "integer", "minimum": 0},
+                "hold": {"type": "integer", "minimum": 0},
+            },
+            "required": ["type", "sell", "trade", "hold"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "buy_stocks"},
+                "chain_ids": {
+                    "type": "array",
+                    "items": {"type": "string", "enum": ["worldwide", "sackson", "festival", "imperial", "american", "continental", "tower"]},
+                    "maxItems": 3,
+                },
+            },
+            "required": ["type", "chain_ids"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "end_turn"},
+                "declare_end": {"type": "boolean"},
+            },
+            "required": ["type", "declare_end"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+ACQUIRE_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "seed": {
+            "oneOf": [
+                {"type": "integer"},
+                {"type": "string", "minLength": 1, "maxLength": 80},
+            ]
+        }
+    },
+    "additionalProperties": False,
+}
 
 CABO_ACTION_SCHEMA = {
     "type": "object",
@@ -3494,6 +3565,21 @@ register_game(
         module=WavelengthGame,
         serialize=WavelengthGame.serialize,
         deserialize=WavelengthGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=AcquireGame.game_id,
+        name="Acquire",
+        min_players=AcquireGame.min_players,
+        max_players=AcquireGame.max_players,
+        turn_mode="turn",
+        action_schema=ACQUIRE_ACTION_SCHEMA,
+        config_schema=ACQUIRE_CONFIG_SCHEMA,
+        module=AcquireGame,
+        serialize=AcquireGame.serialize,
+        deserialize=AcquireGame.deserialize,
     )
 )
 

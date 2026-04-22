@@ -116,10 +116,14 @@ async def guandan_checkpoints():
             continue
         if path.suffix.lower() not in GUANDAN_CHECKPOINT_SUFFIXES:
             continue
+        try:
+            relative = path.relative_to(root).as_posix()
+        except ValueError:
+            relative = path.name
         checkpoints.append(
             {
                 "label": path.name,
-                "path": path.relative_to(root).as_posix(),
+                "path": relative,
             }
         )
     return {"checkpoints": checkpoints}

@@ -1,6 +1,8 @@
 let currentAcquireView = null;
 let acquireBuyQueue = [];
+let acquireExplainMode = false;
 
+const acquireHeaderActions = document.getElementById("acquireHeaderActions");
 const acquirePanelEl = document.getElementById("acquirePanel");
 const acquireTurnLabel = document.getElementById("acquireTurn");
 const acquireStageLabel = document.getElementById("acquireStage");
@@ -8,12 +10,16 @@ const acquireLastTileLabel = document.getElementById("acquireLastTile");
 const acquireWinnerLabel = document.getElementById("acquireWinner");
 const acquireHelpBtn = document.getElementById("acquireHelpBtn");
 const acquireExplainBtn = document.getElementById("acquireExplainBtn");
+const acquireHelpModal = document.getElementById("acquireHelpModal");
+const acquireHelpModalCloseBtn = document.getElementById("acquireHelpModalCloseBtn");
+const acquireHelpContent = document.getElementById("acquireHelpContent");
+const acquireExplainModal = document.getElementById("acquireExplainModal");
+const acquireExplainModalCloseBtn = document.getElementById("acquireExplainModalCloseBtn");
+const acquireExplainContent = document.getElementById("acquireExplainContent");
 const acquireClearBuyBtn = document.getElementById("acquireClearBuyBtn");
 const acquireSubmitBuyBtn = document.getElementById("acquireSubmitBuyBtn");
 const acquireEndTurnBtn = document.getElementById("acquireEndTurnBtn");
 const acquireEndGameBtn = document.getElementById("acquireEndGameBtn");
-const acquireHelpBox = document.getElementById("acquireHelpBox");
-const acquireExplainBox = document.getElementById("acquireExplainBox");
 const acquirePending = document.getElementById("acquirePending");
 const acquireBoard = document.getElementById("acquireBoard");
 const acquireHand = document.getElementById("acquireHand");
@@ -23,28 +29,108 @@ const acquireChains = document.getElementById("acquireChains");
 const acquirePlayers = document.getElementById("acquirePlayers");
 
 const ACQUIRE_HELP_TEXT = `
-  <strong>Goal</strong>: finish with the most money.
-  <br />
-  <strong>Turn</strong>: play 1 tile, resolve founding / merger if needed, buy up to 3 shares, then decide whether to end the game.
-  <br />
-  <strong>Founding</strong>: when your tile touches only orphan tiles, choose an inactive chain and take 1 free share if available.
-  <br />
-  <strong>Merge</strong>: the biggest chain survives. If tied, the current player chooses. Resolve bonuses, then each holder of the defunct chain chooses sell / trade / hold.
-  <br />
-  <strong>Dead Tile</strong>: a tile that would connect two safe chains cannot be played.
+  <h3>Goal</h3>
+  <p>Finish with the most cash after all chain bonuses and stock sales are resolved.</p>
+
+  <h3>Turn Flow</h3>
+  <ul>
+    <li><strong>Play 1 tile</strong>: place a tile from your hand onto the 12 x 9 board.</li>
+    <li><strong>Resolve result</strong>: the tile may stay orphaned, found a chain, expand a chain, or trigger a merger.</li>
+    <li><strong>Buy up to 3 shares</strong>: only active chains may be bought.</li>
+    <li><strong>End turn</strong>: draw back to 6 tiles automatically. If an end condition is met, you may declare the end of the game.</li>
+  </ul>
+
+  <h3>Founding</h3>
+  <p>If your tile touches only orphan tiles, choose any inactive chain. The founder gets 1 free share if the bank still has one.</p>
+
+  <h3>Mergers</h3>
+  <ul>
+    <li>The largest chain survives. If survival is tied, the current player chooses.</li>
+    <li>Defunct chains pay majority / minority bonuses before stock disposal.</li>
+    <li>Each holder then resolves the defunct stock in order: <strong>sell</strong>, <strong>trade 2:1</strong>, or <strong>hold</strong>.</li>
+  </ul>
+
+  <h3>Dead Tiles</h3>
+  <p>A tile that would connect two safe chains cannot be played.</p>
+
+  <h3>End Game</h3>
+  <p>You may end the game when a chain reaches size 41+, or every active chain is safe. All active chains then pay bonuses and all remaining shares are sold automatically.</p>
 `;
 
-const ACQUIRE_EXPLAIN_TEXT = `
-  <strong>Board</strong>: empty spaces show coordinates; colored spaces show placed tiles and their chain.
-  <br />
-  <strong>Your Hand</strong>: click a legal tile to play it. Dead tiles are marked in red.
-  <br />
-  <strong>Chains</strong>: each card shows size, safety, price, and remaining bank shares.
-  <br />
-  <strong>Players</strong>: cash and public stock holdings.
-  <br />
-  <strong>Pending</strong>: merger tie-breaks, founding choices, and stock disposal all appear here.
-`;
+const ACQUIRE_EXPLANATIONS = {
+  board: {
+    name: "Board",
+    description: "Shows the full 12 x 9 grid. Empty cells keep their coordinate, orphan tiles are gray, and chain tiles are color-coded.",
+  },
+  hand: {
+    name: "Your Hand",
+    description: "Click a legal tile to play it. Dead tiles stay visible and are marked in red so you can understand why they cannot be placed.",
+  },
+  handTile: {
+    name: "Playable Tile",
+    description: "Play this tile onto the matching board coordinate. In explain mode even disabled tiles can be inspected without triggering a move.",
+  },
+  pending: {
+    name: "Pending Resolution",
+    description: "Shows founding prompts, merger tie-break choices, and stock disposal steps that must be resolved before the turn can continue.",
+  },
+  actionArea: {
+    name: "Pending Actions",
+    description: "Contains temporary actions created by the current state, such as choosing a new chain or resolving defunct shares in a merger.",
+  },
+  chooseChainBtn: {
+    name: "Choose Chain",
+    description: "Use this button to found a specific inactive chain, pick a surviving chain in a tie, or choose the next defunct chain in a multi-merge.",
+  },
+  disposeControls: {
+    name: "Dispose Stock Controls",
+    description: "Set how many defunct shares to sell, trade, or hold. The counts must add up to your current holding in that defunct chain.",
+  },
+  confirmDisposalBtn: {
+    name: "Confirm Disposal",
+    description: "Submit your sell / trade / hold decision for the current defunct chain.",
+  },
+  chains: {
+    name: "Chains",
+    description: "Each chain card shows whether the chain is active, its size, safety status, market price, and how many shares remain in the bank.",
+  },
+  chainCard: {
+    name: "Chain Card",
+    description: "Summarizes one hotel chain. Active chains can be bought during the buy step if the bank still has shares.",
+  },
+  queueBuyBtn: {
+    name: "Queue Buy",
+    description: "Add one share of this active chain to your buy queue. You may queue up to 3 shares total before confirming.",
+  },
+  buyQueue: {
+    name: "Buy Queue",
+    description: "Shows the shares you plan to buy this turn before you confirm the purchase.",
+  },
+  acquireClearBuyBtn: {
+    name: "Clear Buys",
+    description: "Clear the queued stock purchases for this turn.",
+  },
+  acquireSubmitBuyBtn: {
+    name: "Confirm Buys",
+    description: "Buy every share currently listed in the queue, up to 3 total, then advance to the end-turn step.",
+  },
+  acquireEndTurnBtn: {
+    name: "End Turn",
+    description: "Finish the current turn without ending the game.",
+  },
+  acquireEndGameBtn: {
+    name: "End + Score",
+    description: "Declare the end of the game when an end condition is met. All bonuses and remaining shares will be settled automatically.",
+  },
+  players: {
+    name: "Players",
+    description: "Shows each player's cash, starting tile, and public stock holdings. The active player is highlighted.",
+  },
+  playerCard: {
+    name: "Player Summary",
+    description: "Summarizes one player's current cash position and public stock portfolio.",
+  },
+};
 
 const ACQUIRE_CHAIN_THEME = {
   worldwide: { bg: "#dbeafe", fg: "#1d4ed8" },
@@ -72,9 +158,108 @@ function acquirePlayerName(playerId) {
   return player ? player.name || playerId : playerId || "-";
 }
 
+function showAcquireHeaderActions(show) {
+  if (acquireHeaderActions) {
+    acquireHeaderActions.style.display = show ? "flex" : "none";
+  }
+  if (!show) {
+    exitAcquireExplainMode();
+    closeAcquireHelpModal();
+    closeAcquireExplainModal();
+  }
+}
+
+function showAcquireHelpModal() {
+  if (!acquireHelpModal || !acquireHelpContent) {
+    return;
+  }
+  acquireHelpContent.innerHTML = ACQUIRE_HELP_TEXT;
+  setModalVisible(acquireHelpModal, true);
+}
+
+function closeAcquireHelpModal() {
+  if (acquireHelpModal) {
+    setModalVisible(acquireHelpModal, false);
+  }
+}
+
+function showAcquireExplainModal(explainId) {
+  const explanation = ACQUIRE_EXPLANATIONS[explainId];
+  if (!explanation || !acquireExplainContent || !acquireExplainModal) {
+    return;
+  }
+  acquireExplainContent.innerHTML = `
+    <h4>${explanation.name}</h4>
+    <p>${explanation.description}</p>
+  `;
+  setModalVisible(acquireExplainModal, true);
+}
+
+function closeAcquireExplainModal() {
+  if (acquireExplainModal) {
+    setModalVisible(acquireExplainModal, false);
+  }
+}
+
+function updateAcquireExplainClasses(enabled) {
+  Object.keys(ACQUIRE_EXPLANATIONS).forEach((id) => {
+    const button = document.getElementById(id);
+    if (button) {
+      button.classList.toggle("has-explanation", enabled);
+    }
+  });
+  document.querySelectorAll("[data-acquire-explain]").forEach((node) => {
+    node.classList.toggle("has-explanation", enabled);
+  });
+}
+
+function toggleAcquireExplainMode() {
+  acquireExplainMode = !acquireExplainMode;
+  document.body.classList.toggle("acquire-explain-mode", acquireExplainMode);
+  updateAcquireExplainClasses(acquireExplainMode);
+  if (acquireExplainBtn) {
+    acquireExplainBtn.classList.toggle("active", acquireExplainMode);
+  }
+}
+
+function exitAcquireExplainMode() {
+  if (!acquireExplainMode) {
+    return;
+  }
+  acquireExplainMode = false;
+  document.body.classList.remove("acquire-explain-mode");
+  updateAcquireExplainClasses(false);
+  if (acquireExplainBtn) {
+    acquireExplainBtn.classList.remove("active");
+  }
+}
+
+function findAcquireExplainTargetAtPoint(x, y) {
+  for (const id of Object.keys(ACQUIRE_EXPLANATIONS)) {
+    const direct = document.getElementById(id);
+    if (direct) {
+      const rect = direct.getBoundingClientRect();
+      if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+        return id;
+      }
+    }
+  }
+  const nodes = document.querySelectorAll("[data-acquire-explain]");
+  for (const node of nodes) {
+    const rect = node.getBoundingClientRect();
+    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+      return node.dataset.acquireExplain || null;
+    }
+  }
+  return null;
+}
+
 function clearAcquireState() {
   currentAcquireView = null;
   acquireBuyQueue = [];
+  exitAcquireExplainMode();
+  closeAcquireHelpModal();
+  closeAcquireExplainModal();
   if (acquireTurnLabel) acquireTurnLabel.textContent = "-";
   if (acquireStageLabel) acquireStageLabel.textContent = "-";
   if (acquireLastTileLabel) acquireLastTileLabel.textContent = "-";
@@ -86,14 +271,6 @@ function clearAcquireState() {
   if (acquireChains) acquireChains.innerHTML = "";
   if (acquirePlayers) acquirePlayers.innerHTML = "";
   if (acquireBuyQueueLabel) acquireBuyQueueLabel.textContent = "Queued buys: -";
-  if (acquireHelpBox) {
-    acquireHelpBox.classList.add("hidden");
-    acquireHelpBox.innerHTML = ACQUIRE_HELP_TEXT;
-  }
-  if (acquireExplainBox) {
-    acquireExplainBox.classList.add("hidden");
-    acquireExplainBox.innerHTML = ACQUIRE_EXPLAIN_TEXT;
-  }
 }
 
 function acquireCanAct() {
@@ -170,6 +347,7 @@ function renderAcquireHand(view) {
     button.className = "acquire-hand-tile";
     button.textContent = entry.tile;
     button.dataset.status = entry.status;
+    button.dataset.acquireExplain = "handTile";
     if (entry.status !== "legal" || view.turn_stage !== "play_tile" || !acquireCanAct() || view.pending) {
       button.disabled = true;
     }
@@ -191,6 +369,7 @@ function renderAcquireChains(view) {
   (view.chains || []).forEach((chain) => {
     const card = document.createElement("div");
     card.className = "acquire-chain-card";
+    card.dataset.acquireExplain = "chainCard";
     const title = document.createElement("div");
     title.className = "acquire-chain-title";
     title.textContent = chain.name;
@@ -204,6 +383,7 @@ function renderAcquireChains(view) {
     bank.textContent = `Share ${chain.price || "-"} · Bank ${chain.available_shares}`;
     const buyBtn = document.createElement("button");
     buyBtn.type = "button";
+    buyBtn.dataset.acquireExplain = "queueBuyBtn";
     buyBtn.textContent = chain.active ? `Queue Buy (${chain.price})` : "Inactive";
     const canQueue =
       acquireCanAct() &&
@@ -239,6 +419,7 @@ function renderAcquirePlayers(view) {
   (view.players || []).forEach((player) => {
     const card = document.createElement("div");
     card.className = "acquire-player-card";
+    card.dataset.acquireExplain = "playerCard";
     if (player.player_id === view.current_turn) {
       card.classList.add("active");
     }
@@ -275,6 +456,7 @@ function acquireBuildChoiceButtons(options, label) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "acquire-choice-btn";
+    button.dataset.acquireExplain = "chooseChainBtn";
     button.textContent = acquireChainName(chainId);
     button.addEventListener("click", () => sendAction({ type: "choose_chain", chain_id: chainId }));
     wrap.appendChild(button);
@@ -305,6 +487,7 @@ function acquireBuildDisposeControls(view, pending) {
   }
   const controls = document.createElement("div");
   controls.className = "acquire-dispose-controls";
+  controls.dataset.acquireExplain = "disposeControls";
   const tradeLabel = document.createElement("label");
   tradeLabel.textContent = "Trade";
   const tradeInput = document.createElement("input");
@@ -357,6 +540,7 @@ function acquireBuildDisposeControls(view, pending) {
   controls.appendChild(holdInput);
   const submit = document.createElement("button");
   submit.type = "button";
+  submit.dataset.acquireExplain = "confirmDisposalBtn";
   submit.textContent = "Confirm Disposal";
   submit.addEventListener("click", () => {
     sendAction({
@@ -417,6 +601,9 @@ function updateAcquireButtons(view) {
   if (acquireEndGameBtn) {
     acquireEndGameBtn.disabled = !(acquireCanAct() && view.turn_stage === "end_turn" && view.can_end_game);
   }
+  if (acquireExplainMode) {
+    updateAcquireExplainClasses(true);
+  }
 }
 
 function renderAcquireGameState(data) {
@@ -444,17 +631,35 @@ function renderAcquireGameState(data) {
   updateAcquireButtons(view);
 }
 
-if (acquireHelpBtn && acquireHelpBox) {
-  acquireHelpBox.innerHTML = ACQUIRE_HELP_TEXT;
-  acquireHelpBtn.addEventListener("click", () => {
-    acquireHelpBox.classList.toggle("hidden");
+if (acquireHelpBtn) {
+  acquireHelpBtn.addEventListener("click", showAcquireHelpModal);
+}
+
+if (acquireHelpModalCloseBtn) {
+  acquireHelpModalCloseBtn.addEventListener("click", closeAcquireHelpModal);
+}
+
+if (acquireExplainBtn) {
+  acquireExplainBtn.addEventListener("click", toggleAcquireExplainMode);
+}
+
+if (acquireExplainModalCloseBtn) {
+  acquireExplainModalCloseBtn.addEventListener("click", closeAcquireExplainModal);
+}
+
+if (acquireHelpModal) {
+  acquireHelpModal.addEventListener("click", (event) => {
+    if (event.target === acquireHelpModal) {
+      closeAcquireHelpModal();
+    }
   });
 }
 
-if (acquireExplainBtn && acquireExplainBox) {
-  acquireExplainBox.innerHTML = ACQUIRE_EXPLAIN_TEXT;
-  acquireExplainBtn.addEventListener("click", () => {
-    acquireExplainBox.classList.toggle("hidden");
+if (acquireExplainModal) {
+  acquireExplainModal.addEventListener("click", (event) => {
+    if (event.target === acquireExplainModal) {
+      closeAcquireExplainModal();
+    }
   });
 }
 
@@ -488,3 +693,67 @@ if (acquireEndGameBtn) {
     sendAction({ type: "end_turn", declare_end: true });
   });
 }
+
+document.addEventListener("pointerdown", (event) => {
+  if (!acquireExplainMode || currentGameType !== "acquire") {
+    return;
+  }
+  const explainId = findAcquireExplainTargetAtPoint(event.clientX, event.clientY);
+  if (explainId) {
+    event.preventDefault();
+    event.stopPropagation();
+    showAcquireExplainModal(explainId);
+    exitAcquireExplainMode();
+    return;
+  }
+  const button = event.target.closest("button");
+  if (button === acquireExplainBtn || button === acquireHelpBtn) {
+    return;
+  }
+  if (button === acquireHelpModalCloseBtn || button === acquireExplainModalCloseBtn) {
+    return;
+  }
+  if (button) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+}, true);
+
+document.addEventListener("click", (event) => {
+  if (!acquireExplainMode || currentGameType !== "acquire") {
+    return;
+  }
+  const button = event.target.closest("button");
+  if (!button) {
+    return;
+  }
+  if (button === acquireExplainBtn || button === acquireHelpBtn) {
+    return;
+  }
+  if (button === acquireHelpModalCloseBtn || button === acquireExplainModalCloseBtn) {
+    return;
+  }
+  event.preventDefault();
+  event.stopPropagation();
+}, true);
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape" || currentGameType !== "acquire") {
+    return;
+  }
+  if (acquireExplainMode) {
+    exitAcquireExplainMode();
+    return;
+  }
+  if (acquireHelpModal && !acquireHelpModal.classList.contains("hidden")) {
+    closeAcquireHelpModal();
+    return;
+  }
+  if (acquireExplainModal && !acquireExplainModal.classList.contains("hidden")) {
+    closeAcquireExplainModal();
+  }
+});
+
+window.clearAcquireState = clearAcquireState;
+window.renderAcquireGameState = renderAcquireGameState;
+window.showAcquireHeaderActions = showAcquireHeaderActions;

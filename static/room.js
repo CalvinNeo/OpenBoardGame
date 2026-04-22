@@ -1313,6 +1313,9 @@ function resetRoomState() {
   clearCaboState();
   clearFlip7State();
   clearYahtzeeState();
+  if (typeof clearAcquireState === "function") {
+    clearAcquireState();
+  }
   if (typeof clearLostCodeState === "function") {
     clearLostCodeState();
   }
