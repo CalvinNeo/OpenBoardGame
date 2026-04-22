@@ -16334,11 +16334,53 @@ body.criminal-dance-explain-mode [data-criminal-dance-explain-key].has-explanati
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .acquire-empty {
   background: #f8fafc;
   color: #94a3b8;
+}
+
+.acquire-hand-target {
+  position: relative;
+}
+
+.acquire-hand-target-legal {
+  background:
+    radial-gradient(circle at top, rgba(16, 185, 129, 0.22), transparent 58%),
+    #ecfdf5;
+  border-color: #10b981;
+  color: #065f46;
+  box-shadow: inset 0 0 0 2px rgba(16, 185, 129, 0.22);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.acquire-hand-target-legal::after {
+  content: "Play";
+  position: absolute;
+  right: 4px;
+  bottom: 3px;
+  font-size: 10px;
+  line-height: 1;
+  color: #047857;
+}
+
+.acquire-hand-target-dead {
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      rgba(220, 38, 38, 0.08),
+      rgba(220, 38, 38, 0.08) 6px,
+      transparent 6px,
+      transparent 12px
+    ),
+    #fff7f7;
+  border-color: #ef4444;
+  color: #991b1b;
+  box-shadow: inset 0 0 0 2px rgba(239, 68, 68, 0.14);
 }
 
 .acquire-orphan {
@@ -16350,6 +16392,17 @@ body.criminal-dance-explain-mode [data-criminal-dance-explain-key].has-explanati
 .acquire-chain-cell {
   border-width: 2px;
   font-weight: 800;
+}
+
+.acquire-cell-coord {
+  font-size: 11px;
+  line-height: 1;
+}
+
+.acquire-cell-chain {
+  font-size: 13px;
+  line-height: 1;
+  letter-spacing: 0.04em;
 }
 
 .acquire-hand {
@@ -16449,5 +16502,19 @@ body.acquire-explain-mode button.has-explanation {
     min-height: 42px;
     font-size: 10px;
     padding: 2px;
+  }
+
+  .acquire-cell-coord {
+    font-size: 9px;
+  }
+
+  .acquire-cell-chain {
+    font-size: 10px;
+  }
+
+  .acquire-hand-target-legal::after {
+    right: 3px;
+    bottom: 2px;
+    font-size: 8px;
   }
 }

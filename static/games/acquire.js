@@ -133,13 +133,13 @@ const ACQUIRE_EXPLANATIONS = {
 };
 
 const ACQUIRE_CHAIN_THEME = {
-  worldwide: { bg: "#dbeafe", fg: "#1d4ed8" },
-  sackson: { bg: "#dcfce7", fg: "#15803d" },
-  festival: { bg: "#fef3c7", fg: "#b45309" },
-  imperial: { bg: "#fee2e2", fg: "#b91c1c" },
-  american: { bg: "#ede9fe", fg: "#6d28d9" },
-  continental: { bg: "#e0f2fe", fg: "#0369a1" },
-  tower: { bg: "#fce7f3", fg: "#be185d" },
+  worldwide: { bg: "#dbeafe", fg: "#1d4ed8", short: "WOR" },
+  sackson: { bg: "#dcfce7", fg: "#15803d", short: "SAX" },
+  festival: { bg: "#fef3c7", fg: "#b45309", short: "FES" },
+  imperial: { bg: "#fee2e2", fg: "#b91c1c", short: "IMP" },
+  american: { bg: "#ede9fe", fg: "#6d28d9", short: "AME" },
+  continental: { bg: "#e0f2fe", fg: "#0369a1", short: "CON" },
+  tower: { bg: "#fce7f3", fg: "#be185d", short: "TOW" },
 };
 
 function acquireChainName(chainId) {
@@ -277,6 +277,17 @@ function acquireCanAct() {
   return currentAcquireView && currentAcquireView.you === currentAcquireView.current_turn && !currentAcquireView.game_over;
 }
 
+function acquireHandStatusMap(view) {
+  const me = (view && Array.isArray(view.players) ? view.players : []).find((player) => player.player_id === view.you);
+  const mapping = new Map();
+  (me && Array.isArray(me.hand_status) ? me.hand_status : []).forEach((entry) => {
+    if (entry && entry.tile) {
+      mapping.set(entry.tile, entry.status || "unknown");
+    }
+  });
+  return mapping;
+}
+
 function renderAcquireBuyQueue() {
   if (!acquireBuyQueueLabel) {
     return;
@@ -288,11 +299,17 @@ function renderAcquireBuyQueue() {
   acquireBuyQueueLabel.textContent = `Queued buys: ${acquireBuyQueue.map((chainId) => acquireChainName(chainId)).join(", ")}`;
 }
 
+function acquireQueuedCount(chainId) {
+  return acquireBuyQueue.filter((entry) => entry === chainId).length;
+}
+
 function renderAcquireBoard(view) {
   if (!acquireBoard) {
     return;
   }
   acquireBoard.innerHTML = "";
+  const handStatus = acquireHandStatusMap(view);
+  const canPlayFromBoard = acquireCanAct() && view.turn_stage === "play_tile" && !view.pending;
   const grid = document.createElement("div");
   grid.className = "acquire-board-grid";
   const corner = document.createElement("div");
@@ -313,16 +330,43 @@ function renderAcquireBoard(view) {
       const node = document.createElement("div");
       node.className = "acquire-cell";
       const owner = cell.owner;
+      const handTileStatus = handStatus.get(cell.tile) || null;
       if (!owner) {
         node.classList.add("acquire-empty");
         node.textContent = cell.tile;
+        if (handTileStatus) {
+          node.classList.add("acquire-hand-target");
+          node.dataset.status = handTileStatus;
+          if (handTileStatus === "legal") {
+            node.classList.add("acquire-hand-target-legal");
+            node.title = canPlayFromBoard ? `Play ${cell.tile}` : `${cell.tile} is in your hand`;
+            if (canPlayFromBoard) {
+              node.role = "button";
+              node.tabIndex = 0;
+              node.addEventListener("click", () => {
+                sendAction({ type: "play_tile", tile: cell.tile });
+              });
+              node.addEventListener("keydown", (event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  sendAction({ type: "play_tile", tile: cell.tile });
+                }
+              });
+            }
+          } else if (handTileStatus === "dead") {
+            node.classList.add("acquire-hand-target-dead");
+            node.title = `${cell.tile} is a dead tile`;
+          }
+        }
       } else if (owner === "orphan") {
         node.classList.add("acquire-orphan");
         node.textContent = cell.tile;
       } else {
         node.classList.add("acquire-chain-cell");
         node.dataset.chainId = owner;
-        node.textContent = `${cell.tile}\n${acquireChainName(owner).slice(0, 3).toUpperCase()}`;
+        const short = (ACQUIRE_CHAIN_THEME[owner] && ACQUIRE_CHAIN_THEME[owner].short) || acquireChainName(owner).slice(0, 3).toUpperCase();
+        node.innerHTML = `<span class="acquire-cell-coord">${cell.tile}</span><span class="acquire-cell-chain">${short}</span>`;
+        node.title = `${cell.tile} · ${acquireChainName(owner)}`;
         const theme = ACQUIRE_CHAIN_THEME[owner];
         if (theme) {
           node.style.background = theme.bg;
@@ -348,6 +392,9 @@ function renderAcquireHand(view) {
     button.textContent = entry.tile;
     button.dataset.status = entry.status;
     button.dataset.acquireExplain = "handTile";
+    if (entry.status === "legal") {
+      button.title = "This tile is highlighted on the board and can be played from either place.";
+    }
     if (entry.status !== "legal" || view.turn_stage !== "play_tile" || !acquireCanAct() || view.pending) {
       button.disabled = true;
     }
@@ -380,22 +427,50 @@ function renderAcquireChains(view) {
       : `Tier ${chain.tier} · Inactive`;
     const bank = document.createElement("div");
     bank.className = "acquire-chain-meta";
-    bank.textContent = `Share ${chain.price || "-"} · Bank ${chain.available_shares}`;
+    const queuedCount = acquireQueuedCount(chain.chain_id);
+    const effectiveAvailableShares = Math.max(0, (chain.available_shares || 0) - queuedCount);
+    bank.textContent = `Share ${chain.price || "-"} · Bank ${effectiveAvailableShares}`;
+    const holders = [];
+    (view.players || []).forEach((player) => {
+      const count = player && player.stocks ? player.stocks[chain.chain_id] || 0 : 0;
+      if (count > 0) {
+        holders.push({ name: player.name || player.player_id, count });
+      }
+    });
+    holders.sort((a, b) => (b.count - a.count) || a.name.localeCompare(b.name));
+    const influence = document.createElement("div");
+    influence.className = "acquire-chain-meta";
+    if (!holders.length) {
+      influence.textContent = "No shareholders";
+    } else if (holders.length === 1) {
+      influence.textContent = `Owner: ${holders[0].name} ${holders[0].count}`;
+    } else {
+      const topCount = holders[0].count;
+      const majority = holders.filter((entry) => entry.count === topCount);
+      const next = holders.find((entry) => entry.count < topCount);
+      const minority = next ? holders.filter((entry) => entry.count === next.count) : [];
+      const majorityText = `Maj: ${majority.map((entry) => `${entry.name} ${entry.count}`).join(", ")}`;
+      const minorityText = minority.length
+        ? ` · Min: ${minority.map((entry) => `${entry.name} ${entry.count}`).join(", ")}`
+        : "";
+      influence.textContent = majorityText + minorityText;
+    }
     const buyBtn = document.createElement("button");
     buyBtn.type = "button";
     buyBtn.dataset.acquireExplain = "queueBuyBtn";
-    buyBtn.textContent = chain.active ? `Queue Buy (${chain.price})` : "Inactive";
+    buyBtn.textContent = chain.active && effectiveAvailableShares > 0 ? `Queue Buy (${chain.price})` : "Inactive";
     const canQueue =
       acquireCanAct() &&
       view.turn_stage === "buy" &&
       !view.pending &&
       chain.active &&
-      chain.available_shares > 0 &&
+      effectiveAvailableShares > 0 &&
       acquireBuyQueue.length < 3;
     buyBtn.disabled = !canQueue;
     buyBtn.addEventListener("click", () => {
       acquireBuyQueue.push(chain.chain_id);
       renderAcquireBuyQueue();
+      renderAcquireChains(view);
       updateAcquireButtons(view);
     });
     const theme = ACQUIRE_CHAIN_THEME[chain.chain_id];
@@ -406,6 +481,7 @@ function renderAcquireChains(view) {
     card.appendChild(title);
     card.appendChild(meta);
     card.appendChild(bank);
+    card.appendChild(influence);
     card.appendChild(buyBtn);
     acquireChains.appendChild(card);
   });
@@ -668,6 +744,7 @@ if (acquireClearBuyBtn) {
     acquireBuyQueue = [];
     renderAcquireBuyQueue();
     if (currentAcquireView) {
+      renderAcquireChains(currentAcquireView);
       updateAcquireButtons(currentAcquireView);
     }
   });
