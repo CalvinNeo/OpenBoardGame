@@ -94,8 +94,9 @@ ACQUIRE_ACTION_SCHEMA = {
                     "items": {"type": "string", "enum": ["worldwide", "sackson", "festival", "imperial", "american", "continental", "tower"]},
                     "maxItems": 3,
                 },
+                "declare_end": {"type": "boolean"},
             },
-            "required": ["type", "chain_ids"],
+            "required": ["type", "chain_ids", "declare_end"],
             "additionalProperties": False,
         },
         {

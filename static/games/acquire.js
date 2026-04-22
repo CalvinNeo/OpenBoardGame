@@ -18,7 +18,6 @@ const acquireExplainModalCloseBtn = document.getElementById("acquireExplainModal
 const acquireExplainContent = document.getElementById("acquireExplainContent");
 const acquireClearBuyBtn = document.getElementById("acquireClearBuyBtn");
 const acquireSubmitBuyBtn = document.getElementById("acquireSubmitBuyBtn");
-const acquireEndTurnBtn = document.getElementById("acquireEndTurnBtn");
 const acquireEndGameBtn = document.getElementById("acquireEndGameBtn");
 const acquirePending = document.getElementById("acquirePending");
 const acquireBoard = document.getElementById("acquireBoard");
@@ -36,8 +35,8 @@ const ACQUIRE_HELP_TEXT = `
   <ul>
     <li><strong>Play 1 tile</strong>: place a tile from your hand onto the 12 x 9 board.</li>
     <li><strong>Resolve result</strong>: the tile may stay orphaned, found a chain, expand a chain, or trigger a merger.</li>
-    <li><strong>Buy up to 3 shares</strong>: only active chains may be bought.</li>
-    <li><strong>End turn</strong>: draw back to 6 tiles automatically. If an end condition is met, you may declare the end of the game.</li>
+    <li><strong>Buy up to 3 shares</strong>: only active chains may be bought. Confirming the buy also ends your turn.</li>
+    <li><strong>End turn</strong>: you may buy zero shares; confirming an empty queue still passes the turn. If an end condition is met, you may declare the end of the game instead.</li>
   </ul>
 
   <h3>Founding</h3>
@@ -111,16 +110,12 @@ const ACQUIRE_EXPLANATIONS = {
     description: "Clear the queued stock purchases for this turn.",
   },
   acquireSubmitBuyBtn: {
-    name: "Confirm Buys",
-    description: "Buy every share currently listed in the queue, up to 3 total, then advance to the end-turn step.",
-  },
-  acquireEndTurnBtn: {
-    name: "End Turn",
-    description: "Finish the current turn without ending the game.",
+    name: "Confirm Buys + End Turn",
+    description: "Buy every queued share, up to 3 total, then immediately finish the turn. An empty queue means skip buying and just pass.",
   },
   acquireEndGameBtn: {
     name: "End + Score",
-    description: "Declare the end of the game when an end condition is met. All bonuses and remaining shares will be settled automatically.",
+    description: "Declare the end of the game when an end condition is met. Any queued buys are processed first, then all bonuses and remaining shares are settled automatically.",
   },
   players: {
     name: "Players",
@@ -671,11 +666,8 @@ function updateAcquireButtons(view) {
   if (acquireSubmitBuyBtn) {
     acquireSubmitBuyBtn.disabled = !(acquireCanAct() && view.turn_stage === "buy");
   }
-  if (acquireEndTurnBtn) {
-    acquireEndTurnBtn.disabled = !(acquireCanAct() && view.turn_stage === "end_turn");
-  }
   if (acquireEndGameBtn) {
-    acquireEndGameBtn.disabled = !(acquireCanAct() && view.turn_stage === "end_turn" && view.can_end_game);
+    acquireEndGameBtn.disabled = !(acquireCanAct() && view.turn_stage === "buy" && view.can_end_game);
   }
   if (acquireExplainMode) {
     updateAcquireExplainClasses(true);
@@ -755,19 +747,13 @@ if (acquireSubmitBuyBtn) {
     if (!currentAcquireView || currentAcquireView.turn_stage !== "buy") {
       return;
     }
-    sendAction({ type: "buy_stocks", chain_ids: acquireBuyQueue.slice(0, 3) });
-  });
-}
-
-if (acquireEndTurnBtn) {
-  acquireEndTurnBtn.addEventListener("click", () => {
-    sendAction({ type: "end_turn", declare_end: false });
+    sendAction({ type: "buy_stocks", chain_ids: acquireBuyQueue.slice(0, 3), declare_end: false });
   });
 }
 
 if (acquireEndGameBtn) {
   acquireEndGameBtn.addEventListener("click", () => {
-    sendAction({ type: "end_turn", declare_end: true });
+    sendAction({ type: "buy_stocks", chain_ids: acquireBuyQueue.slice(0, 3), declare_end: true });
   });
 }
 

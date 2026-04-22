@@ -659,6 +659,7 @@ class AcquireGame:
             if state.get("turn_stage") != "buy":
                 return [], "cannot buy stocks now"
             chain_ids = action.get("chain_ids")
+            declare_end = bool(action.get("declare_end"))
             if not isinstance(chain_ids, list):
                 return [], "chain_ids required"
             if len(chain_ids) > 3:
@@ -685,8 +686,23 @@ class AcquireGame:
             player["money"] -= total_cost
             for chain_id in chain_ids:
                 player["stocks"][chain_id] += 1
-            state["turn_stage"] = "end_turn"
-            events.append({"type": "acquire:buy_stocks", "payload": {"player_id": player_id, "chain_ids": list(chain_ids)}})
+            events.append(
+                {
+                    "type": "acquire:buy_stocks",
+                    "payload": {"player_id": player_id, "chain_ids": list(chain_ids), "declare_end": declare_end},
+                }
+            )
+            if declare_end:
+                if not _can_end_game(state):
+                    for chain_id in chain_ids:
+                        player["stocks"][chain_id] -= 1
+                        state["chains"][chain_id]["available_shares"] += 1
+                    player["money"] += total_cost
+                    return [], "end condition not met"
+                _finalize_game(state, events)
+                return events, None
+            _advance_turn(state)
+            events.append({"type": "acquire:end_turn", "payload": {"player_id": player_id, "next_player_id": state["current_turn"]}})
             return events, None
         if action_type == "end_turn":
             if state.get("turn_stage") != "end_turn":
