@@ -622,6 +622,26 @@
     </div>
   </section>
 
+  <section id="dumbQuestionsHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content dumb-questions-help-modal">
+      <div class="modal-header">
+        <h2>Dumb Questions Help</h2>
+        <button id="dumbQuestionsHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body dumb-questions-help-content" id="dumbQuestionsHelpContent"></div>
+    </div>
+  </section>
+
+  <section id="dumbQuestionsExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content dumb-questions-explain-modal">
+      <div class="modal-header">
+        <h2>Dumb Questions Explain</h2>
+        <button id="dumbQuestionsExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body" id="dumbQuestionsExplainContent"></div>
+    </div>
+  </section>
+
   <section id="wordDecodeHelpModal" class="modal hidden" aria-hidden="true">
     <div class="modal-content word-decode-help-modal">
       <div class="modal-header">
@@ -924,6 +944,7 @@
                     <option value="six_nimmt">6 nimmt!</option>
                     <option value="decrypto">Decrypto</option>
                     <option value="wavelength">Wavelength</option>
+                    <option value="dumb_questions">Dumb Questions</option>
                     <option value="skull">Skull</option>
                     <option value="cat_in_box">Cat in the Box</option>
                     <option value="hanabi">Hanabi</option>
@@ -1430,6 +1451,10 @@
             <div class="panel-header-actions" id="wavelengthHeaderActions" style="display: none;">
               <button id="wavelengthHelpBtn" class="wavelength-header-btn" type="button">Help</button>
               <button id="wavelengthExplainBtn" class="wavelength-header-btn" type="button">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="dumbQuestionsHeaderActions" style="display: none;">
+              <button id="dumbQuestionsHelpBtn" class="dumb-questions-header-btn" type="button">Help</button>
+              <button id="dumbQuestionsExplainBtn" class="dumb-questions-header-btn" type="button">Explain</button>
             </div>
             <div class="panel-header-actions" id="wordDecodeHeaderActions" style="display: none;">
               <button id="wordDecodeHelpBtn" class="word-decode-header-btn" type="button">Help</button>
@@ -2966,6 +2991,79 @@
               <div id="wavelengthHistory"></div>
             </div>
 
+            <div id="dumbQuestionsPanel" class="hidden">
+              <div class="dumb-questions-summary-grid">
+                <div class="dumb-questions-summary-card">
+                  <div class="dumb-questions-summary-label">Phase</div>
+                  <div class="dumb-questions-summary-value" id="dumbQuestionsPhase">-</div>
+                </div>
+                <div class="dumb-questions-summary-card">
+                  <div class="dumb-questions-summary-label">Round</div>
+                  <div class="dumb-questions-summary-value" id="dumbQuestionsRound">-</div>
+                </div>
+                <div class="dumb-questions-summary-card">
+                  <div class="dumb-questions-summary-label">Guesser</div>
+                  <div class="dumb-questions-summary-value" id="dumbQuestionsGuesser">-</div>
+                </div>
+                <div class="dumb-questions-summary-card">
+                  <div class="dumb-questions-summary-label">Category</div>
+                  <div class="dumb-questions-summary-value" id="dumbQuestionsCategory">-</div>
+                </div>
+              </div>
+              <div id="dumbQuestionsStatusCard" class="round-notice dumb-questions-status-card">
+                <div class="round-notice-title">Status</div>
+                <div id="dumbQuestionsStatusBody" class="round-notice-body">-</div>
+              </div>
+              <div class="dumb-questions-grid">
+                <div class="dumb-questions-column dumb-questions-column--main">
+                  <div id="dumbQuestionsPromptCard" class="dumb-questions-card">
+                    <div class="dumb-questions-card-title">🎯 Prompt</div>
+                    <div id="dumbQuestionsPrompt" class="dumb-questions-prompt">-</div>
+                  </div>
+                  <div id="dumbQuestionsCategoryCard" class="dumb-questions-card">
+                    <div class="dumb-questions-card-title">🗂️ Choose Category</div>
+                    <div id="dumbQuestionsCategories" class="dumb-questions-categories"></div>
+                  </div>
+                  <div id="dumbQuestionsAnswerCard" class="dumb-questions-card">
+                    <div class="dumb-questions-card-title">✍️ Your Answer</div>
+                    <div class="dumb-questions-answer-row">
+                      <textarea id="dumbQuestionsAnswerInput" rows="3" placeholder="Type one honest answer..."></textarea>
+                      <button id="dumbQuestionsSubmitAnswerBtn" type="button">Submit Answer</button>
+                    </div>
+                  </div>
+                  <div id="dumbQuestionsAnswersCard" class="dumb-questions-card">
+                    <div class="dumb-questions-card-title">🧠 Answers</div>
+                    <div id="dumbQuestionsAnswers" class="dumb-questions-answers"></div>
+                  </div>
+                  <div id="dumbQuestionsPendingCard" class="dumb-questions-card">
+                    <div class="dumb-questions-card-title">🃏 Current Card</div>
+                    <div id="dumbQuestionsPendingBody" class="dumb-questions-pending-body">Reveal the next card to begin ranking.</div>
+                    <div class="row actions">
+                      <button id="dumbQuestionsRevealBtn" type="button">Reveal Next Card</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="dumb-questions-column">
+                  <div id="dumbQuestionsBoardCard" class="dumb-questions-card">
+                    <div class="dumb-questions-card-title">📊 Score Board</div>
+                    <div id="dumbQuestionsBoard" class="dumb-questions-board"></div>
+                  </div>
+                  <div id="dumbQuestionsSummaryCard" class="dumb-questions-card hidden">
+                    <div class="dumb-questions-card-title">🏁 Round Summary</div>
+                    <div id="dumbQuestionsSummaryBody" class="dumb-questions-summary-body">-</div>
+                  </div>
+                  <div class="dumb-questions-card">
+                    <div class="dumb-questions-card-title">👥 Players</div>
+                    <div id="dumbQuestionsPlayers" class="dumb-questions-players"></div>
+                  </div>
+                  <div class="row actions">
+                    <button id="dumbQuestionsContinueBtn" type="button">Continue</button>
+                    <button id="dumbQuestionsPlayAgainBtn" type="button">Play Again</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div id="wordDecodePanel" class="hidden">
               <div class="row">
                 <div>Phase: <span id="wordDecodePhase">-</span></div>
@@ -4329,6 +4427,7 @@
   <script src="/static/games/project_l.js?v=app_v4"></script>
   <script src="/static/games/decrypto.js?v=app_v4"></script>
   <script src="/static/games/wavelength.js?v=app_v4"></script>
+  <script src="/static/games/dumb_questions.js?v=app_v1"></script>
   <script src="/static/games/word_decode.js?v=app_v4"></script>
   <script src="/static/games/trekking.js?v=app_v4"></script>
   <script src="/static/games/aidixit.js?v=app_v4"></script>

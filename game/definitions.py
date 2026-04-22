@@ -10,6 +10,7 @@ from game.coyote import CoyoteGame
 from game.cyber_pictures import CyberPicturesGame
 from game.davinci_code import DaVinciCodeGame
 from game.decrypto import DecryptoGame
+from game.dumb_questions import DumbQuestionsGame
 from game.draw_guess import DrawGuessGame
 from game.fang_niao import FangNiaoGame
 from game.fake_artist import FakeArtistGame
@@ -1610,6 +1611,45 @@ PERFECT_MISMATCH_CONFIG_SCHEMA = {
     "type": "object",
     "properties": {
         "slider_count": {"type": "integer", "minimum": 1, "maximum": 5},
+    },
+    "additionalProperties": False,
+}
+
+DUMB_QUESTIONS_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {"type": {"const": "select_category"}, "category": {"type": "string"}},
+            "required": ["type", "category"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "submit_answer"}, "answer_text": {"type": "string", "minLength": 1}},
+            "required": ["type", "answer_text"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "reveal_next_card"}}, "required": ["type"], "additionalProperties": False},
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "place_card"},
+                "slot": {"type": "integer", "minimum": 0, "maximum": 4},
+                "card_id": {"type": "string", "minLength": 1},
+            },
+            "required": ["type", "slot", "card_id"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "continue_next_round"}}, "required": ["type"], "additionalProperties": False},
+        {"type": "object", "properties": {"type": {"const": "play_again"}}, "required": ["type"], "additionalProperties": False},
+    ],
+}
+
+DUMB_QUESTIONS_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "rounds_per_guesser": {"type": "integer", "minimum": 1, "maximum": 3},
     },
     "additionalProperties": False,
 }
@@ -3443,5 +3483,20 @@ register_game(
         module=WavelengthGame,
         serialize=WavelengthGame.serialize,
         deserialize=WavelengthGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=DumbQuestionsGame.game_id,
+        name="Dumb Questions to Ask Your Friends",
+        min_players=DumbQuestionsGame.min_players,
+        max_players=DumbQuestionsGame.max_players,
+        turn_mode="simultaneous",
+        action_schema=DUMB_QUESTIONS_ACTION_SCHEMA,
+        config_schema=DUMB_QUESTIONS_CONFIG_SCHEMA,
+        module=DumbQuestionsGame,
+        serialize=DumbQuestionsGame.serialize,
+        deserialize=DumbQuestionsGame.deserialize,
     )
 )

@@ -38,6 +38,7 @@ const drawGuessPanel = document.getElementById("drawGuessPanel");
 const gizmosPanelEl = document.getElementById("gizmosPanel");
 const wordDecodePanel = document.getElementById("wordDecodePanel");
 const wavelengthPanel = document.getElementById("wavelengthPanel");
+const dumbQuestionsPanel = document.getElementById("dumbQuestionsPanel");
 const cyberPicturesPanel = document.getElementById("cyberPicturesPanel");
 const fakeArtistPanel = document.getElementById("fakeArtistPanel");
 const thingsInRingsPanel = document.getElementById("thingsInRingsPanel");
@@ -89,6 +90,7 @@ function setGamePanelVisibility(gameType) {
   const showDecrypto = gameType === "decrypto";
   const showWordDecode = gameType === "word_decode";
   const showWavelength = gameType === "wavelength";
+  const showDumbQuestions = gameType === "dumb_questions";
   const showDrawGuess = gameType === "draw_guess";
   const showGizmos = gameType === "gizmos";
   const showBlitzSketch = gameType === "blitz_sketch";
@@ -244,6 +246,9 @@ function setGamePanelVisibility(gameType) {
   if (typeof showWavelengthHeaderActions === "function") {
     showWavelengthHeaderActions(showWavelength);
   }
+  if (typeof showDumbQuestionsHeaderActions === "function") {
+    showDumbQuestionsHeaderActions(showDumbQuestions);
+  }
   if (typeof showFakeArtistHeaderActions === "function") {
     showFakeArtistHeaderActions(showFakeArtist);
   }
@@ -265,6 +270,9 @@ function setGamePanelVisibility(gameType) {
   }
   if (wavelengthPanel) {
     wavelengthPanel.classList.toggle("hidden", !showWavelength);
+  }
+  if (dumbQuestionsPanel) {
+    dumbQuestionsPanel.classList.toggle("hidden", !showDumbQuestions);
   }
   if (blitzSketchPanel) {
     blitzSketchPanel.classList.toggle("hidden", !showBlitzSketch);
@@ -566,6 +574,10 @@ function renderGameState(data) {
   }
   if (gameType === "wavelength") {
     renderWavelengthGameState(data);
+    return;
+  }
+  if (gameType === "dumb_questions") {
+    renderDumbQuestionsGameState(data);
     return;
   }
   if (gameType === "draw_guess") {

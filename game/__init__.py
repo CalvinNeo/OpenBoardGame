@@ -13,6 +13,7 @@ from game.coyote import CoyoteGame
 from game.cyber_pictures import CyberPicturesGame
 from game.davinci_code import DaVinciCodeGame
 from game.decrypto import DecryptoGame
+from game.dumb_questions import DumbQuestionsGame
 from game.draw_guess import DrawGuessGame
 from game.fang_niao import FangNiaoGame
 from game.fake_artist import FakeArtistGame
@@ -78,6 +79,7 @@ __all__ = [
     "CoyoteGame",
     "CyberPicturesGame",
     "DecryptoGame",
+    "DumbQuestionsGame",
     "ImpressionFlowerGame",
     "IncanGoldGame",
     "IsleOfSkyeGame",

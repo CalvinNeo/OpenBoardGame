@@ -1335,10 +1335,13 @@ function resetRoomState() {
   clearSixNimmtState();
   clearHalliState();
   clearDecryptoState();
-  if (typeof clearWavelengthState === "function") {
-    clearWavelengthState();
-  }
-  clearDrawGuessState();
+    if (typeof clearWavelengthState === "function") {
+      clearWavelengthState();
+    }
+    if (typeof clearDumbQuestionsState === "function") {
+      clearDumbQuestionsState();
+    }
+    clearDrawGuessState();
   clearBlitzSketchState();
   clearCyberState();
   clearAidixitState();
