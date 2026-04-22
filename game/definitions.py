@@ -1641,6 +1641,17 @@ DUMB_QUESTIONS_ACTION_SCHEMA = {
             "required": ["type", "slot", "card_id"],
             "additionalProperties": False,
         },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "move_card"},
+                "slot": {"type": "integer", "minimum": 0, "maximum": 4},
+                "direction": {"type": "string", "enum": ["up", "down"]},
+            },
+            "required": ["type", "slot", "direction"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "finish_ranking"}}, "required": ["type"], "additionalProperties": False},
         {"type": "object", "properties": {"type": {"const": "continue_next_round"}}, "required": ["type"], "additionalProperties": False},
         {"type": "object", "properties": {"type": {"const": "play_again"}}, "required": ["type"], "additionalProperties": False},
     ],

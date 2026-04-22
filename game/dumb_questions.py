@@ -162,26 +162,25 @@ def _next_round_setup(state: Dict) -> None:
     state["last_round_summary"] = None
 
 
-def _insert_card_at_slot(placements: Dict[int, str], slot: int, card_id: str) -> bool:
+def _move_card(placements: Dict[int, str], slot: int, direction: str) -> bool:
     if slot not in placements:
-        placements[slot] = card_id
-        return True
-
-    empty_above = next((index for index in range(slot + 1, 5) if index not in placements), None)
-    if empty_above is not None:
-        for index in range(empty_above, slot, -1):
-            placements[index] = placements[index - 1]
-        placements[slot] = card_id
-        return True
-
-    empty_below = next((index for index in range(slot - 1, -1, -1) if index not in placements), None)
-    if empty_below is not None:
-        for index in range(empty_below, slot):
-            placements[index] = placements[index + 1]
-        placements[slot] = card_id
-        return True
-
-    return False
+        return False
+    if direction == "up":
+        target_slot = slot - 1
+    elif direction == "down":
+        target_slot = slot + 1
+    else:
+        return False
+    if target_slot < 0 or target_slot > 4:
+        return False
+    current_card = placements[slot]
+    target_card = placements.get(target_slot)
+    placements[target_slot] = current_card
+    if target_card is None:
+        placements.pop(slot, None)
+    else:
+        placements[slot] = target_card
+    return True
 
 
 def _score_current_round(state: Dict) -> Dict:
@@ -315,6 +314,14 @@ class DumbQuestionsGame:
                 actions.append("reveal_next_card")
             if state.get("pending_card_id"):
                 actions.append("place_card")
+            if state.get("placements"):
+                actions.append("move_card")
+            if (
+                not state.get("pending_card_id")
+                and int(state.get("revealed_count", 0)) >= len(state.get("shuffled_card_order", []))
+                and len(state.get("placements", {})) >= 5
+            ):
+                actions.append("finish_ranking")
             return actions
         if phase == "reveal" and player_id == guesser_id:
             return ["continue_next_round"]
@@ -409,18 +416,56 @@ class DumbQuestionsGame:
             if card_id != pending_card_id:
                 return [], "card does not match pending card"
             placements = state.setdefault("placements", {})
-            if not _insert_card_at_slot(placements, slot, card_id):
-                return [], "board is full"
+            if slot in placements:
+                return [], "slot already filled"
+            placements[slot] = card_id
             state["pending_card_id"] = None
-            if len(placements) >= 5:
-                _score_current_round(state)
-                _finish_or_advance_game(state)
             events.append(
                 {
                     "type": "dumb_questions:place_card",
                     "payload": {"player_id": player_id, "slot": slot, "card_id": card_id},
                 }
             )
+            return events, None
+
+        if action_type == "move_card":
+            if phase != "guessing":
+                return [], "invalid phase"
+            if player_id != guesser_id:
+                return [], "not guesser"
+            slot = action.get("slot")
+            direction = action.get("direction")
+            if not isinstance(slot, int):
+                return [], "invalid slot"
+            if slot < 0 or slot > 4:
+                return [], "slot out of range"
+            if not isinstance(direction, str):
+                return [], "invalid direction"
+            placements = state.setdefault("placements", {})
+            if not _move_card(placements, slot, direction):
+                return [], "cannot move card"
+            events.append(
+                {
+                    "type": "dumb_questions:move_card",
+                    "payload": {"player_id": player_id, "slot": slot, "direction": direction},
+                }
+            )
+            return events, None
+
+        if action_type == "finish_ranking":
+            if phase != "guessing":
+                return [], "invalid phase"
+            if player_id != guesser_id:
+                return [], "not guesser"
+            if state.get("pending_card_id"):
+                return [], "place current card first"
+            if int(state.get("revealed_count", 0)) < len(state.get("shuffled_card_order", [])):
+                return [], "reveal all cards first"
+            if len(state.get("placements", {})) < 5:
+                return [], "place all cards first"
+            _score_current_round(state)
+            _finish_or_advance_game(state)
+            events.append({"type": "dumb_questions:finish_ranking", "payload": {"player_id": player_id}})
             return events, None
 
         if action_type == "continue_next_round":
@@ -470,6 +515,8 @@ class DumbQuestionsGame:
                     "card_id": card_id,
                     "question_text": card.get("question_text"),
                     "is_target": bool(card_id and card_id == state.get("target_card_id") and state.get("phase") in ("reveal", "game_over")),
+                    "can_move_up": bool(card_id and slot > 0),
+                    "can_move_down": bool(card_id and slot < 4),
                 }
             )
 
@@ -557,14 +604,19 @@ class DumbQuestionsGame:
             }
         if phase == "guessing" and bot_id == guesser_id:
             if state.get("pending_card_id"):
+                open_slots = [slot for slot in range(5) if slot not in state.get("placements", {})]
+                if not open_slots:
+                    return None
                 return {
                     "type": "place_card",
-                    "slot": random.randint(0, 4),
+                    "slot": random.choice(open_slots),
                     "card_id": state["pending_card_id"],
                     "delay_ms": random.randint(500, 1000),
                 }
             if int(state.get("revealed_count", 0)) < len(state.get("shuffled_card_order", [])):
                 return {"type": "reveal_next_card", "delay_ms": random.randint(400, 900)}
+            if len(state.get("placements", {})) >= 5:
+                return {"type": "finish_ranking", "delay_ms": random.randint(600, 1000)}
         if phase == "reveal" and bot_id == guesser_id:
             return {"type": "continue_next_round", "delay_ms": random.randint(700, 1200)}
         return None

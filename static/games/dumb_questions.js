@@ -32,6 +32,7 @@ const dumbQuestionsBoard = document.getElementById("dumbQuestionsBoard");
 const dumbQuestionsSummaryCard = document.getElementById("dumbQuestionsSummaryCard");
 const dumbQuestionsSummaryBody = document.getElementById("dumbQuestionsSummaryBody");
 const dumbQuestionsPlayers = document.getElementById("dumbQuestionsPlayers");
+const dumbQuestionsFinishBtn = document.getElementById("dumbQuestionsFinishBtn");
 const dumbQuestionsContinueBtn = document.getElementById("dumbQuestionsContinueBtn");
 const dumbQuestionsPlayAgainBtn = document.getElementById("dumbQuestionsPlayAgainBtn");
 
@@ -43,11 +44,11 @@ const DUMB_QUESTIONS_HELP_HTML = `
     <li>The guesser picks one category.</li>
     <li>The game draws 5 prompts from that category. The first drawn prompt becomes the secret target.</li>
     <li>All answerers see the target prompt and submit one honest answer.</li>
-    <li>The guesser reveals the 5 prompts one by one and inserts each prompt into score slots 0 to 4.</li>
+    <li>The guesser reveals the 5 prompts one by one, places them into slots 0 to 4, and can reorder them with ↑ and ↓.</li>
     <li>The real target is revealed. The guesser scores the value of the slot holding that prompt.</li>
   </ol>
   <h3>Ranking Rule</h3>
-  <p>A newly revealed prompt can be inserted into an occupied slot. Existing prompts will shift toward the nearest empty space, so later reveals can reorder the ranking.</p>
+  <p>Placed prompts are not locked. Put each new prompt into an empty slot, then use the arrow buttons to move prompts up or down before scoring.</p>
 `;
 
 const DUMB_QUESTIONS_EXPLAIN = {
@@ -55,6 +56,7 @@ const DUMB_QUESTIONS_EXPLAIN = {
   dumbQuestionsExplainBtn: "Enter explanation mode. Click an outlined control to see what it does.",
   dumbQuestionsSubmitAnswerBtn: "Submit or update your current answer while the answer phase is open.",
   dumbQuestionsRevealBtn: "Reveal the next unseen prompt card for the guesser.",
+  dumbQuestionsFinishBtn: "After all prompts are placed, score the round with the current ranking.",
   dumbQuestionsContinueBtn: "After scoring, move to the next round.",
   dumbQuestionsPlayAgainBtn: "Restart the whole game with fresh scores and a new first guesser.",
 };
@@ -111,6 +113,7 @@ function clearDumbQuestionsState() {
   if (dumbQuestionsAnswerInput) dumbQuestionsAnswerInput.value = "";
   if (dumbQuestionsSummaryCard) dumbQuestionsSummaryCard.classList.add("hidden");
   if (dumbQuestionsRevealBtn) dumbQuestionsRevealBtn.disabled = true;
+  if (dumbQuestionsFinishBtn) dumbQuestionsFinishBtn.disabled = true;
   if (dumbQuestionsContinueBtn) dumbQuestionsContinueBtn.disabled = true;
   if (dumbQuestionsPlayAgainBtn) dumbQuestionsPlayAgainBtn.disabled = true;
   exitDumbQuestionsExplainMode();
@@ -183,7 +186,7 @@ function buildDumbQuestionsSlot(slot, view) {
 
   const state = document.createElement("div");
   state.className = "dumb-questions-slot-state";
-  state.textContent = slot.card_id ? (slot.is_target ? "Target" : "Locked") : "Empty";
+  state.textContent = slot.card_id ? (slot.is_target ? "Target" : "Placed") : "Empty";
   head.appendChild(state);
   wrapper.appendChild(head);
 
@@ -192,17 +195,44 @@ function buildDumbQuestionsSlot(slot, view) {
   body.textContent = slot.question_text || "No card placed yet.";
   wrapper.appendChild(body);
 
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "dumb-questions-slot-btn";
-  button.textContent = slot.card_id ? `Insert Here (${slot.slot})` : `Place Here (${slot.slot})`;
-  const canPlace = dumbQuestionsCan("place_card") && view.pending_card;
-  button.disabled = !canPlace;
-  button.addEventListener("click", () => {
+  const controls = document.createElement("div");
+  controls.className = "mismatch-word-actions";
+
+  const placeBtn = document.createElement("button");
+  placeBtn.type = "button";
+  placeBtn.className = "dumb-questions-slot-btn";
+  placeBtn.textContent = `Place Here (${slot.slot})`;
+  const canPlace = dumbQuestionsCan("place_card") && view.pending_card && !slot.card_id;
+  placeBtn.disabled = !canPlace;
+  placeBtn.addEventListener("click", () => {
     if (!canPlace || !view.pending_card) return;
     sendAction({ type: "place_card", slot: slot.slot, card_id: view.pending_card.card_id });
   });
-  wrapper.appendChild(button);
+  controls.appendChild(placeBtn);
+
+  if (slot.card_id) {
+    const upBtn = document.createElement("button");
+    upBtn.type = "button";
+    upBtn.textContent = "↑";
+    upBtn.disabled = !dumbQuestionsCan("move_card") || !slot.can_move_up;
+    upBtn.addEventListener("click", () => {
+      if (upBtn.disabled) return;
+      sendAction({ type: "move_card", slot: slot.slot, direction: "up" });
+    });
+    controls.appendChild(upBtn);
+
+    const downBtn = document.createElement("button");
+    downBtn.type = "button";
+    downBtn.textContent = "↓";
+    downBtn.disabled = !dumbQuestionsCan("move_card") || !slot.can_move_down;
+    downBtn.addEventListener("click", () => {
+      if (downBtn.disabled) return;
+      sendAction({ type: "move_card", slot: slot.slot, direction: "down" });
+    });
+    controls.appendChild(downBtn);
+  }
+
+  wrapper.appendChild(controls);
   return wrapper;
 }
 
@@ -215,13 +245,17 @@ function renderDumbQuestionsBoard(view) {
   if (pending && pending.question_text) {
     dumbQuestionsPendingBody.textContent = pending.question_text;
   } else if (view.phase === "guessing") {
-    dumbQuestionsPendingBody.textContent = "Reveal the next card, then insert it anywhere on the ranking board.";
+    dumbQuestionsPendingBody.textContent = "Reveal the next card, place it into an empty slot, then use ↑ ↓ to reorder freely.";
   } else {
     dumbQuestionsPendingBody.textContent = "No active card.";
   }
   dumbQuestionsPendingCard.classList.toggle("hidden", !["guessing", "reveal", "game_over"].includes(view.phase));
   dumbQuestionsRevealBtn.disabled = !dumbQuestionsCan("reveal_next_card");
   dumbQuestionsRevealBtn.classList.add("has-explanation");
+  if (dumbQuestionsFinishBtn) {
+    dumbQuestionsFinishBtn.disabled = !dumbQuestionsCan("finish_ranking");
+    dumbQuestionsFinishBtn.classList.add("has-explanation");
+  }
 }
 
 function renderDumbQuestionsSummary(view) {
@@ -312,6 +346,12 @@ if (dumbQuestionsRevealBtn) {
   dumbQuestionsRevealBtn.addEventListener("click", () => {
     if (!dumbQuestionsCan("reveal_next_card")) return;
     sendAction({ type: "reveal_next_card" });
+  });
+}
+if (dumbQuestionsFinishBtn) {
+  dumbQuestionsFinishBtn.addEventListener("click", () => {
+    if (!dumbQuestionsCan("finish_ranking")) return;
+    sendAction({ type: "finish_ranking" });
   });
 }
 if (dumbQuestionsContinueBtn) {

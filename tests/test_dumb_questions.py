@@ -12,14 +12,14 @@ def _players(count: int) -> list[dict]:
 
 
 class DumbQuestionsGameTests(unittest.TestCase):
-    def test_insert_into_filled_slot_shifts_existing_cards(self):
+    def test_move_card_swaps_with_adjacent_slot(self):
+        from game.dumb_questions import _move_card
+
         placements = {1: "a", 2: "b", 4: "c"}
-        from game.dumb_questions import _insert_card_at_slot
+        moved = _move_card(placements, 2, "up")
 
-        inserted = _insert_card_at_slot(placements, 2, "x")
-
-        self.assertTrue(inserted)
-        self.assertEqual(placements, {1: "a", 2: "x", 3: "b", 4: "c"})
+        self.assertTrue(moved)
+        self.assertEqual(placements, {1: "b", 2: "a", 4: "c"})
 
     def test_round_flow_scores_guesser_by_target_slot(self):
         with patch("game.dumb_questions.random.randrange", return_value=0), patch(
@@ -47,20 +47,22 @@ class DumbQuestionsGameTests(unittest.TestCase):
         self.assertEqual(state["phase"], "guessing")
 
         target_card_id = state["target_card_id"]
-        while state["phase"] == "guessing":
+        while state["phase"] == "guessing" and state["revealed_count"] < len(state["shuffled_card_order"]):
             DumbQuestionsGame.apply_action(state, guesser_id, {"type": "reveal_next_card"})
             pending_card_id = state["pending_card_id"]
             self.assertIsNotNone(pending_card_id)
             if pending_card_id == target_card_id:
                 slot = 4
             else:
-                slot = next(open_slot for open_slot in range(5) if open_slot not in state["placements"] and open_slot != 4)
+                slot = next(open_slot for open_slot in range(4) if open_slot not in state["placements"])
             DumbQuestionsGame.apply_action(
                 state,
                 guesser_id,
                 {"type": "place_card", "slot": slot, "card_id": pending_card_id},
             )
-
+        events, error = DumbQuestionsGame.apply_action(state, guesser_id, {"type": "finish_ranking"})
+        self.assertIsNone(error)
+        self.assertTrue(events)
         self.assertEqual(state["phase"], "reveal")
         self.assertEqual(state["players"][guesser_id]["score"], 4)
         self.assertEqual(state["last_round_summary"]["points"], 4)
@@ -96,7 +98,7 @@ class DumbQuestionsGameTests(unittest.TestCase):
         state["round_cards"] = [{"card_id": f"player_{index}", "question_text": f"Q{index}"} for index in range(1, 6)]
         state["placements"] = {0: "player_2", 1: "player_3", 2: "player_4", 3: "player_5", 4: target_card_id}
 
-        DumbQuestionsGame.apply_action(state, state["guesser_id"], {"type": "place_card", "slot": 4, "card_id": target_card_id})
+        DumbQuestionsGame.apply_action(state, state["guesser_id"], {"type": "finish_ranking"})
         state["phase"] = "game_over"
         state["game_over"] = True
 
@@ -116,3 +118,18 @@ class DumbQuestionsGameTests(unittest.TestCase):
 
         action = DumbQuestionsGame.bot_move(state, bot_answerer_id)
         self.assertIsNone(action)
+
+    def test_finish_ranking_requires_all_cards_placed(self):
+        with patch("game.dumb_questions.random.randrange", return_value=0), patch(
+            "game.dumb_questions.random.shuffle", side_effect=lambda seq: None
+        ):
+            state = DumbQuestionsGame.init_game(None, _players(3))
+
+        guesser_id = state["guesser_id"]
+        DumbQuestionsGame.apply_action(state, guesser_id, {"type": "select_category", "category": "player"})
+        for pid in [pid for pid in state["turn_order"] if pid != guesser_id]:
+            DumbQuestionsGame.apply_action(state, pid, {"type": "submit_answer", "answer_text": "x"})
+
+        events, error = DumbQuestionsGame.apply_action(state, guesser_id, {"type": "finish_ranking"})
+        self.assertEqual(events, [])
+        self.assertEqual(error, "reveal all cards first")
