@@ -16490,12 +16490,55 @@ body.acquire-explain-mode button.has-explanation {
 }
 
 @media (max-width: 900px) {
+  #acquirePanel h3:nth-of-type(2) {
+    display: none;
+  }
+
+  #acquireHand {
+    display: none;
+  }
+
+  #acquirePanel > .row:first-child {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 10px;
+  }
+
+  #acquirePanel > .row.actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    align-items: stretch;
+  }
+
+  #acquirePanel > .row.actions button {
+    min-width: 0;
+    width: 100%;
+    padding: 10px 8px;
+    font-size: 13px;
+    line-height: 1.2;
+  }
+
+  #acquireEndGameBtn {
+    grid-column: 1 / -1;
+  }
+
   .acquire-layout {
     grid-template-columns: 1fr;
+    gap: 14px;
   }
 
   .acquire-board-grid {
     gap: 3px;
+  }
+
+  .acquire-board-corner,
+  .acquire-board-header {
+    display: none;
+  }
+
+  .acquire-board-grid {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
   }
 
   .acquire-cell {
@@ -16516,5 +16559,72 @@ body.acquire-explain-mode button.has-explanation {
     right: 3px;
     bottom: 2px;
     font-size: 8px;
+  }
+
+  .acquire-hand {
+    gap: 6px;
+  }
+
+  .acquire-hand-tile {
+    min-width: 56px;
+    padding: 8px 6px;
+  }
+
+  .acquire-actions,
+  .acquire-choice-wrap,
+  .acquire-dispose-wrap {
+    gap: 6px;
+  }
+
+  .acquire-chains {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .acquire-chain-card {
+    padding: 8px 9px;
+  }
+
+  .acquire-chain-title {
+    font-size: 13px;
+  }
+
+  .acquire-chain-meta {
+    font-size: 11px;
+    line-height: 1.25;
+    margin-bottom: 3px;
+  }
+
+  .acquire-chain-card button {
+    width: 100%;
+    min-width: 0;
+    padding: 8px 6px;
+    font-size: 12px;
+    line-height: 1.2;
+  }
+
+  .acquire-choice-wrap button,
+  .acquire-dispose-wrap button {
+    min-width: 0;
+    padding: 9px 8px;
+    font-size: 13px;
+    line-height: 1.2;
+  }
+
+  .acquire-dispose-controls {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    width: 100%;
+    align-items: end;
+  }
+
+  .acquire-dispose-controls label {
+    font-size: 12px;
+  }
+
+  .acquire-dispose-controls input {
+    width: 100%;
+    min-width: 0;
   }
 }
