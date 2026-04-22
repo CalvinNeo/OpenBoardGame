@@ -1320,6 +1320,7 @@ def _deal_round(state: Dict, first_round: bool, start_player: Optional[str]) -> 
         state["players"][pid]["hand"] = hands[pid]
         state["players"][pid]["finished"] = False
         state["players"][pid]["finish_rank"] = None
+        state["players"][pid]["round_ready"] = False
     state["finish_order"] = []
     state["current_trick"] = None
     state["pass_count"] = 0
@@ -1429,6 +1430,8 @@ def _advance_to_round_end(state: Dict) -> None:
     _apply_round_result(state)
     state["last_round_summary"] = _summarize_round(state)
     state["phase"] = "round_end"
+    for pid in state.get("turn_order", []):
+        state["players"][pid]["round_ready"] = False
     _update_round_memory_result(state)
     _check_game_over(state)
 
@@ -1569,6 +1572,7 @@ class GuandanGame:
                 "hand": [],
                 "finished": False,
                 "finish_rank": None,
+                "round_ready": False,
             }
 
         state = {
@@ -1611,6 +1615,8 @@ class GuandanGame:
         if player_id not in state["players"]:
             return []
         if state["phase"] == "round_end":
+            if state["players"][player_id].get("round_ready"):
+                return []
             return ["next_round"]
         if state["phase"] == "tribute":
             tribute = state.get("tribute") or {}
@@ -1657,7 +1663,12 @@ class GuandanGame:
         if state["phase"] == "round_end":
             if action_type != "next_round":
                 return events, "round over"
-            _start_next_round(state)
+            pdata = state["players"][player_id]
+            if pdata.get("round_ready"):
+                return events, "already ready"
+            pdata["round_ready"] = True
+            if all(state["players"][pid].get("round_ready") for pid in state.get("turn_order", [])):
+                _start_next_round(state)
             return events, None
 
         if state["phase"] == "tribute":

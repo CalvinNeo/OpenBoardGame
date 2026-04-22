@@ -5289,6 +5289,45 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         chosen_labels = [guandan._card_label(hand_map[cid]) for cid in chosen]
         self.assertNotEqual(chosen_labels, ["♥️4"])
 
+    def test_round_end_waits_for_all_players_to_ready(self):
+        players = [
+            {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
+            {"player_id": "bot3", "name": "Bot 3", "seat": 1, "is_bot": True},
+            {"player_id": "zhu", "name": "zhu", "seat": 2, "is_bot": False},
+            {"player_id": "bot4", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "round_end"
+        state["round_number"] = 3
+        state["finish_order"] = ["calvin", "bot3", "zhu", "bot4"]
+        state["dealer_team"] = "A"
+        for pid in state["turn_order"]:
+            state["players"][pid]["round_ready"] = False
+
+        action = guandan.GuandanGame.bot_move(state, "bot3")
+        self.assertEqual(action, {"type": "next_round", "delay_ms": 500})
+
+        _, error = guandan.GuandanGame.apply_action(state, "bot3", {"type": "next_round"})
+        self.assertIsNone(error)
+        self.assertEqual(state["phase"], "round_end")
+        self.assertEqual(state["round_number"], 3)
+        self.assertTrue(state["players"]["bot3"]["round_ready"])
+        self.assertEqual(guandan.GuandanGame.get_legal_actions(state, "bot3"), [])
+        self.assertEqual(guandan.GuandanGame.get_legal_actions(state, "calvin"), ["next_round"])
+
+        _, error = guandan.GuandanGame.apply_action(state, "calvin", {"type": "next_round"})
+        self.assertIsNone(error)
+        _, error = guandan.GuandanGame.apply_action(state, "zhu", {"type": "next_round"})
+        self.assertIsNone(error)
+        self.assertEqual(state["phase"], "round_end")
+        self.assertEqual(state["round_number"], 3)
+
+        _, error = guandan.GuandanGame.apply_action(state, "bot4", {"type": "next_round"})
+        self.assertIsNone(error)
+        self.assertEqual(state["round_number"], 4)
+        self.assertIn(state["phase"], ("playing", "tribute"))
+        self.assertTrue(all(not state["players"][pid]["round_ready"] for pid in state["turn_order"]))
+
     def test_lead_prefers_lower_steel_plate_when_two_steel_plates_exist(self):
         players = [
             {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
