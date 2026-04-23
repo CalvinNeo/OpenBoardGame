@@ -1915,9 +1915,15 @@ def _active_lead_escape_window_penalty(state: Dict, bot_id: str) -> float:
             baseline = 5.5
         elif rank_value >= PREMIUM_SINGLE_VALUE_MIN:
             baseline = 7.0
+        next_max = _max_combo_value_for_hand(next_hand, level_rank, "single", config)
+        if next_max is not None:
+            if next_max > rank_value:
+                baseline += min(10.0, 2.4 + (next_max - rank_value) * 0.22)
+            else:
+                baseline -= min(2.0, max(0.0, rank_value - next_max) * 0.08)
         if leader == bot_id:
             baseline += 2.0
-        return baseline
+        return max(0.0, baseline)
 
     exact_closeout = False
     if next_left == len(current_trick.get("cards") or []):
@@ -7498,6 +7504,43 @@ def _minimax_value(
     return value
 
 
+def _minimax_root_lead_single_penalty(state: Dict, bot_id: str, action: Dict) -> float:
+    if state.get("current_trick") or action.get("type") != "play":
+        return 0.0
+
+    hand = state["players"].get(bot_id, {}).get("hand", [])
+    hand_map = _map_hand_by_id(hand)
+    play_cards = [hand_map[cid] for cid in action.get("card_ids", []) if cid in hand_map]
+    combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
+    if not combo or combo.get("type") != "single":
+        return 0.0
+
+    next_pid = _next_active_after(state, bot_id)
+    if not next_pid or _team_of(state, next_pid) == _team_of(state, bot_id):
+        return 0.0
+
+    next_hand = state["players"].get(next_pid, {}).get("hand", [])
+    if len(next_hand) != 1:
+        return 0.0
+
+    chosen_value = combo.get("rank_value", 0)
+    next_max = _max_combo_value_for_hand(next_hand, state["level_rank"], "single", state.get("config", {}))
+    if next_max is None:
+        return 0.0
+
+    best_single = max((_single_order_value(card, state["level_rank"]) for card in hand), default=chosen_value)
+    penalty = 4.0
+    if next_max > chosen_value:
+        penalty += min(14.0, 3.2 + (next_max - chosen_value) * 0.6)
+    elif chosen_value >= next_max:
+        penalty -= min(1.2, max(0.0, chosen_value - next_max) * 0.06)
+    if chosen_value < PREMIUM_SINGLE_VALUE_MIN:
+        penalty += min(6.0, (PREMIUM_SINGLE_VALUE_MIN - chosen_value) * 0.16)
+    if best_single > chosen_value:
+        penalty += min(8.0, (best_single - chosen_value) * 1.4)
+    return max(0.0, penalty)
+
+
 def _minimax_pick_action(
     state: Dict,
     bot_id: str,
@@ -7515,6 +7558,13 @@ def _minimax_pick_action(
     actions = _CORE._filter_overbomb_actions(state, bot_id, actions)
     if not actions:
         return None
+    actions = sorted(
+        actions,
+        key=lambda action: (
+            _minimax_root_lead_single_penalty(state, bot_id, action),
+            0 if action.get("type") == "play" else 1,
+        ),
+    )
     total_actions = max(1, len(actions))
     _report_progress_scaled(
         progress_callback,
@@ -7526,6 +7576,7 @@ def _minimax_pick_action(
     )
     best_action = None
     best_value = -1e9
+    root_scored: List[Tuple[Dict, float]] = []
     for index, action in enumerate(actions, start=1):
         if deadline is not None and time.perf_counter() >= deadline:
             break
@@ -7534,6 +7585,8 @@ def _minimax_pick_action(
         if err:
             continue
         value = _minimax_value(nxt, bot_id, depth - 1, -1e9, 1e9, width, deadline=deadline)
+        value -= _minimax_root_lead_single_penalty(state, bot_id, action)
+        root_scored.append((action, value))
         if value > best_value:
             best_value = value
             best_action = action
@@ -7545,6 +7598,31 @@ def _minimax_pick_action(
             min(0.98, 0.08 + 0.9 * (index / total_actions)),
             f"Evaluating minimax root {index}/{total_actions}",
         )
+    if best_action and not state.get("current_trick"):
+        next_pid = _next_active_after(state, bot_id)
+        if next_pid and _team_of(state, next_pid) != _team_of(state, bot_id):
+            next_hand = state["players"].get(next_pid, {}).get("hand", [])
+            if len(next_hand) == 1:
+                hand = state["players"][bot_id]["hand"]
+                hand_map = _map_hand_by_id(hand)
+                single_choices: List[Tuple[int, float, Dict]] = []
+                for action, value in root_scored:
+                    if action.get("type") != "play":
+                        continue
+                    play_cards = [hand_map[cid] for cid in action.get("card_ids", []) if cid in hand_map]
+                    combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
+                    if not combo or combo.get("type") != "single":
+                        continue
+                    if _cards_use_special_material(play_cards, state["level_rank"]):
+                        continue
+                    single_choices.append((combo.get("rank_value", 0), value, action))
+                if single_choices:
+                    best_single_value = max(value for _, value, _ in single_choices)
+                    safe_margin = 4.0
+                    viable = [entry for entry in single_choices if entry[1] >= best_single_value - safe_margin]
+                    if viable:
+                        viable.sort(key=lambda item: (item[0], item[1]), reverse=True)
+                        best_action = viable[0][2]
     if best_action and best_action.get("type") == "play":
         _report_progress_scaled(progress_callback, "minimax", progress_start, progress_end, 1.0, "Minimax finalized")
         return best_action.get("card_ids")
