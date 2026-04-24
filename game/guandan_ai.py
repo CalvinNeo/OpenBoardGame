@@ -4061,14 +4061,16 @@ def _lead_initiative_retention_bonus(
     recovery += min(0.4, _lead_retake_control_bonus(state, player_id, cards, combo) * 0.07)
     recovery = min(1.0, recovery)
 
-    score = (hold_prob - 0.5) * 16.0
+    score = (hold_prob - 0.5) * 18.0
     score += (recovery - 0.42) * any_reply * 6.0
     if same_type_reply >= 0.58 and recovery < 0.45:
-        score -= (same_type_reply - 0.58) * 9.0
+        score -= (same_type_reply - 0.58) * 10.5
     if hold_prob >= 0.62:
         score += min(3.4, (hold_prob - 0.62) * 7.5)
     if any_reply >= 0.7:
-        score -= min(3.6, (any_reply - 0.7) * 9.0)
+        score -= min(4.2, (any_reply - 0.7) * 11.0)
+    if hold_prob < 0.14 and any_reply >= 0.86 and recovery < 0.9:
+        score -= min(2.6, (0.16 - hold_prob) * 8.0 + (any_reply - 0.86) * 7.0)
     if combo_type == "full_house":
         independent_retake = 0.0
         independent_retake += min(0.48, control_stock / 10.0)
@@ -4093,7 +4095,7 @@ def _lead_initiative_retention_bonus(
         remaining_pairs = sum(1 for count in _rank_count_map(remaining, level_rank).values() if count >= 2)
         if active_players <= 3 and remaining_pairs >= 3:
             score = max(-1.0, score)
-    return max(-8.0, min(9.5, score))
+    return max(-10.5, min(9.5, score))
 
 
 def _lead_short_opponent_breakup_penalty(

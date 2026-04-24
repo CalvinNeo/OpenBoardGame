@@ -1615,6 +1615,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
 
         three_pairs_components = guandan._bot_score_components(state, "bot4", three_pairs, depth=2)
         self.assertLess(three_pairs_components.get("preserve_lighter_shape", 0.0), 0.0)
+        self.assertLessEqual(three_pairs_components.get("lead_hold", 0.0), -9.0)
         self.assertGreater(
             guandan._bot_score_play(state, "bot4", full_house, depth=2),
             guandan._bot_score_play(state, "bot4", three_pairs, depth=2),
