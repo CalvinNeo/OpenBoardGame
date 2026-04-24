@@ -1320,6 +1320,7 @@ def _lead_option_score(state: Dict, player_id: str, cards: List[int]) -> float:
     score -= _lead_composite_support_tension_penalty(state, player_id, cards, combo)
     score -= _lead_lighter_shape_preservation_penalty(state, player_id, cards, combo)
     score -= _lead_low_pair_probe_penalty(state, player_id, cards, combo)
+    score -= _lead_low_pair_full_house_carry_penalty(state, player_id, cards, combo)
     score -= _lead_low_single_probe_penalty(state, player_id, cards, combo)
     score += _lead_turn_efficiency_bonus(state, player_id, cards, combo)
     score += _lead_same_type_reentry_bonus(state, player_id, cards, combo)
@@ -5003,6 +5004,77 @@ def _lead_low_pair_probe_penalty(
     return 4.8 + min(2.4, max(0.0, best_reentry - 8.0) * 0.4)
 
 
+def _lead_low_pair_full_house_carry_penalty(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+) -> float:
+    if state.get("current_trick"):
+        return 0.0
+    if (combo.get("type") or "") != "three" or combo.get("uses_wild"):
+        return 0.0
+
+    hand = state["players"][player_id]["hand"]
+    if len(hand) < 12:
+        return 0.0
+
+    level_rank = state["level_rank"]
+    hand_map = _map_hand_by_id(hand)
+    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+    if len(play_cards) != 3 or _cards_use_special_material(play_cards, level_rank):
+        return 0.0
+
+    play_ranks = {
+        card.get("rank")
+        for card in play_cards
+        if not _is_joker(card) and not _is_wild(card, level_rank)
+    }
+    if len(play_ranks) != 1:
+        return 0.0
+
+    remaining_after_three = _remove_cards(hand, cards)
+    three_score = _lead_cheap_option_score(state, player_id, cards, combo)
+    best_penalty = 0.0
+    for option in _list_full_house_options(hand, level_rank, 0):
+        if not set(cards).issubset(option):
+            continue
+        option_cards = [hand_map[cid] for cid in option if cid in hand_map]
+        alt_combo = _evaluate_combo(option_cards, level_rank, state.get("config", {}))
+        if not alt_combo or alt_combo.get("type") != "full_house" or alt_combo.get("uses_wild"):
+            continue
+
+        rank_counts = _rank_count_map(option_cards, level_rank)
+        pair_rank = next((rank for rank, count in rank_counts.items() if count == 2), None)
+        if pair_rank is None:
+            continue
+        pair_value = _point_order_value(pair_rank, level_rank)
+        if pair_value > 54:
+            continue
+
+        if sum(1 for card in remaining_after_three if card.get("rank") == pair_rank) != 2:
+            continue
+
+        remaining_after_full_house = _remove_cards(hand, option)
+        keep_another_full_house = False
+        for alt_option in _list_full_house_options(remaining_after_full_house, level_rank, 0):
+            alt_cards = [card for card in remaining_after_full_house if card["id"] in set(alt_option)]
+            alt_full_house = _evaluate_combo(alt_cards, level_rank, state.get("config", {}))
+            if not alt_full_house or alt_full_house.get("type") != "full_house" or alt_full_house.get("uses_wild"):
+                continue
+            keep_another_full_house = True
+            break
+        if not keep_another_full_house:
+            continue
+
+        full_house_score = _lead_cheap_option_score(state, player_id, option, alt_combo)
+        penalty = 4.8 + max(0.0, 54.0 - pair_value) * 0.08
+        if full_house_score + 2.4 >= three_score:
+            penalty += min(2.6, max(0.0, full_house_score + 2.4 - three_score) * 0.45)
+        best_penalty = max(best_penalty, penalty)
+    return best_penalty
+
+
 def _lead_low_single_probe_penalty(
     state: Dict,
     player_id: str,
@@ -8626,6 +8698,9 @@ def _bot_score_components(
         low_pair_probe_penalty = _lead_low_pair_probe_penalty(state, bot_id, cards, combo)
         if low_pair_probe_penalty > 0.001:
             components["lead_low_pair_probe"] = -low_pair_probe_penalty
+        low_pair_carry_penalty = _lead_low_pair_full_house_carry_penalty(state, bot_id, cards, combo)
+        if low_pair_carry_penalty > 0.001:
+            components["lead_low_pair_carry"] = -low_pair_carry_penalty
         reentry_bonus = _lead_same_type_reentry_bonus(state, bot_id, cards, combo)
         if reentry_bonus > 0.001:
             components["lead_reentry"] = reentry_bonus

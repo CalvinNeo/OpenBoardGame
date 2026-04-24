@@ -1529,6 +1529,14 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
                         break
             return ids
 
+        three_components = guandan._bot_score_components(
+            state,
+            "bot4",
+            ids_for(["♣️6", "♦️6", "♠️6"]),
+            depth=2,
+        )
+        self.assertLess(three_components.get("lead_low_pair_carry", 0.0), 0.0)
+
         natural_full_house = ids_for(["♣️6", "♦️6", "♠️6", "♠️3", "♣️3"])
         wild_three_pairs = ids_for(["♠️3", "♣️3", "♣️4", "♥️4", "♠️5", "♥️2"])
         self.assertGreater(
