@@ -535,6 +535,234 @@ def _short_enemy_bomb_takeover_bonus(
     return base * max(0.45, 1.0 - teammate_backstop)
 
 
+def _bomb_rank_pressure(combo: Dict, level_rank: int) -> float:
+    if combo.get("type") == "bomb":
+        low_bomb_anchor = _point_order_value(3, level_rank)
+        return max(0.0, combo.get("rank_value", low_bomb_anchor) - low_bomb_anchor)
+    if combo.get("type") == "straight_flush":
+        return 6.0 + _bomb_tier(combo) * 1.5
+    if combo.get("type") == "heavenly":
+        return 12.0
+    return 0.0
+
+
+def _bomb_followup_upgrade_metrics(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+    remaining: List[Dict],
+) -> Dict[str, float]:
+    if combo.get("type") not in BOMB_TYPES:
+        return {"score": 0.0, "turn_gain": 0.0, "quality_gain": 0.0}
+
+    hand = state["players"].get(player_id, {}).get("hand", [])
+    level_rank = state["level_rank"]
+    before = _hand_decomposition_summary(hand, level_rank)
+    after = _hand_decomposition_summary(remaining, level_rank) if remaining else _empty_hand_decomposition_summary()
+
+    before_turns = before.get("turns", float(len(hand)))
+    after_turns = after.get("turns", 0.0)
+    projected_turns = 0.0 if not remaining else after_turns + 1.0
+    turn_gain = before_turns - projected_turns
+
+    before_quality = before.get("score", 0.0) / max(1.0, before_turns)
+    if remaining:
+        after_quality = after.get("score", 0.0) / max(1.0, after_turns)
+    else:
+        after_quality = before_quality + 3.0
+    quality_gain = after_quality - before_quality
+
+    score = 0.0
+    if turn_gain > 0.0:
+        score += min(7.5, turn_gain * 5.2)
+    elif turn_gain < 0.0:
+        score += max(-4.5, turn_gain * 4.0)
+
+    if quality_gain > 0.0:
+        score += min(4.5, quality_gain * 1.75)
+    elif quality_gain < 0.0:
+        score += max(-2.5, quality_gain * 1.2)
+
+    low_single_relief = before.get("low_singles", 0.0) - after.get("low_singles", 0.0)
+    if low_single_relief > 0.01:
+        score += min(2.6, low_single_relief * 1.15)
+
+    if after.get("group_turns", 0.0) + 0.01 >= before.get("group_turns", 0.0):
+        score += 1.2
+    elif after.get("group_turns", 0.0) + 1.01 >= before.get("group_turns", 0.0):
+        score += 0.45
+
+    followup_ids = []
+    if remaining:
+        followup_ids = _choose_lead_play(remaining, level_rank, state.get("config", {}), state, player_id)
+    if followup_ids and len(followup_ids) < len(remaining):
+        remaining_map = _map_hand_by_id(remaining)
+        followup_cards = [remaining_map[cid] for cid in followup_ids if cid in remaining_map]
+        followup_combo = _evaluate_combo(followup_cards, level_rank, state.get("config", {}))
+        if followup_combo:
+            followup_type = followup_combo.get("type") or ""
+            if followup_type in ("pair", "three", "full_house", "straight", "three_pairs", "steel_plate"):
+                score += 1.2
+            elif followup_type == "single" and followup_combo.get("rank_value", 0) <= LOW_SINGLE_VALUE_MAX:
+                score += 0.6
+            if not _cards_use_special_material(followup_cards, level_rank):
+                score += 0.8
+
+    pressure_scale = max(0.35, 1.0 - _bomb_rank_pressure(combo, level_rank) * 0.08)
+    return {
+        "score": max(0.0, score) * pressure_scale,
+        "turn_gain": turn_gain,
+        "quality_gain": quality_gain,
+    }
+
+
+def _teammate_handoff_bonus_after_bomb(
+    state: Dict,
+    player_id: str,
+    combo: Dict,
+    remaining: List[Dict],
+) -> float:
+    current_trick = state.get("current_trick")
+    teammate = _teammate_of(state, player_id)
+    if combo.get("type") not in BOMB_TYPES or not current_trick or not teammate or not remaining:
+        return 0.0
+    if _team_of(state, current_trick.get("player_id")) == _team_of(state, player_id):
+        return 0.0
+    if state["players"].get(teammate, {}).get("finished"):
+        return 0.0
+
+    history = _teammate_public_history_profile(state, player_id)
+    confidence = history.get("confidence", 0.0)
+    if confidence <= 0.0:
+        return 0.0
+
+    level_rank = state["level_rank"]
+    remaining_map = _map_hand_by_id(remaining)
+    lane_bonus = 0.0
+
+    if history.get("single_lane", 0.0) >= max(history.get("pair_lane", 0.0), history.get("three_lane", 0.0), history.get("structure_lane", 0.0)):
+        for option in _list_single_options(remaining, level_rank, 0):
+            followup_cards = [remaining_map[cid] for cid in option if cid in remaining_map]
+            followup_combo = _evaluate_combo(followup_cards, level_rank, state.get("config", {}))
+            if followup_combo and followup_combo.get("type") == "single" and followup_combo.get("rank_value", 0) <= LOW_SINGLE_VALUE_MAX:
+                lane_bonus = max(lane_bonus, 1.8)
+                break
+
+    if history.get("pair_lane", 0.0) > 0.0:
+        for option in _list_rank_group_options(remaining, level_rank, 0, 2):
+            followup_cards = [remaining_map[cid] for cid in option if cid in remaining_map]
+            followup_combo = _evaluate_combo(followup_cards, level_rank, state.get("config", {}))
+            if (
+                followup_combo
+                and followup_combo.get("type") == "pair"
+                and not _cards_use_special_material(followup_cards, level_rank)
+            ):
+                bonus = 1.2
+                if followup_combo.get("rank_value", 0) <= _point_order_value(10, level_rank):
+                    bonus += 0.8
+                lane_bonus = max(lane_bonus, bonus)
+                break
+
+    if history.get("three_lane", 0.0) > 0.0:
+        for option in _list_rank_group_options(remaining, level_rank, 0, 3):
+            followup_cards = [remaining_map[cid] for cid in option if cid in remaining_map]
+            followup_combo = _evaluate_combo(followup_cards, level_rank, state.get("config", {}))
+            if (
+                followup_combo
+                and followup_combo.get("type") == "three"
+                and not _cards_use_special_material(followup_cards, level_rank)
+            ):
+                bonus = 1.5
+                if followup_combo.get("rank_value", 0) <= _point_order_value(10, level_rank):
+                    bonus += 0.8
+                lane_bonus = max(lane_bonus, bonus)
+                break
+
+    if history.get("structure_lane", 0.0) > 0.0:
+        for option_getter, combo_type, base in (
+            (_list_full_house_options, "full_house", 2.4),
+            (_list_straight_options, "straight", 2.8),
+            (_list_three_pairs_options, "three_pairs", 2.9),
+            (_list_steel_plate_options, "steel_plate", 3.0),
+        ):
+            for option in option_getter(remaining, level_rank, 0):
+                followup_cards = [remaining_map[cid] for cid in option if cid in remaining_map]
+                followup_combo = _evaluate_combo(followup_cards, level_rank, state.get("config", {}))
+                if (
+                    followup_combo
+                    and followup_combo.get("type") == combo_type
+                    and not _cards_use_special_material(followup_cards, level_rank)
+                ):
+                    lane_bonus = max(lane_bonus, base)
+                    break
+
+    return lane_bonus * min(1.0, 0.45 + confidence * 0.55)
+
+
+def _defer_bomb_upgrade_risk_penalty(state: Dict, player_id: str) -> float:
+    current_trick = state.get("current_trick")
+    if not current_trick:
+        return 0.0
+    leader = current_trick.get("player_id")
+    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+        return 0.0
+
+    combo = current_trick.get("combo") or {}
+    if (combo.get("type") or "") in BOMB_TYPES:
+        return 0.0
+    if (combo.get("type") or "") == "single":
+        return 0.0
+
+    hand = state["players"].get(player_id, {}).get("hand", [])
+    level_rank = state["level_rank"]
+    minimal_bomb = _minimal_bomb_response(hand, level_rank, combo, state.get("config", {}))
+    if minimal_bomb is None:
+        return 0.0
+
+    hand_map = _map_hand_by_id(hand)
+    bomb_cards = [hand_map[cid] for cid in minimal_bomb if cid in hand_map]
+    minimal_combo = _evaluate_combo(bomb_cards, level_rank, state.get("config", {}))
+    if not minimal_combo or minimal_combo.get("type") not in BOMB_TYPES:
+        return 0.0
+
+    response_options = _rank_response_options(state, player_id, _list_hint_options(state, player_id))
+    non_bomb_responses = []
+    for option in response_options:
+        if tuple(sorted(option)) == tuple(sorted(minimal_bomb)):
+            continue
+        option_cards = [hand_map[cid] for cid in option if cid in hand_map]
+        option_combo = _evaluate_combo(option_cards, level_rank, state.get("config", {}))
+        if option_combo and option_combo.get("type") not in BOMB_TYPES:
+            non_bomb_responses.append(option)
+    if non_bomb_responses:
+        return 0.0
+
+    remaining = _remove_cards(hand, minimal_bomb)
+    upgrade = _bomb_followup_upgrade_metrics(state, player_id, minimal_bomb, minimal_combo, remaining)
+    if upgrade["score"] <= 0.0:
+        return 0.0
+
+    leader_left = len(state["players"].get(leader, {}).get("hand", []))
+    combo_type = combo.get("type") or ""
+    combo_value = _combo_numeric_value(combo)
+    base = upgrade["score"] * 1.35
+    if leader_left <= 16:
+        base += 2.8
+    if leader_left <= 12:
+        base += 2.2
+    if combo_type in ("pair", "three"):
+        if combo_value >= _point_order_value(14, level_rank):
+            base += 6.5
+        elif combo_value >= _point_order_value(13, level_rank):
+            base += 3.8
+    elif combo_type in ("full_house", "straight", "three_pairs", "steel_plate"):
+        base += 3.2
+
+    backstop = _teammate_backstop_confidence(state, player_id, combo)
+    return max(0.0, base * max(0.4, 1.0 - backstop * 0.9))
+
+
 def _public_card_single_value(card: Dict, level_rank: int) -> int:
     joker = card.get("joker")
     if joker == "big":
@@ -7739,6 +7967,9 @@ def _bot_score_components(
                 short_enemy_defer_risk = _short_enemy_defer_bomb_risk_penalty(state, bot_id)
                 if short_enemy_defer_risk > 0.001:
                     components["pass_short_enemy_defer_risk"] = -short_enemy_defer_risk
+                defer_upgrade_risk = _defer_bomb_upgrade_risk_penalty(state, bot_id)
+                if defer_upgrade_risk > 0.001:
+                    components["pass_stall_shape_risk"] = -defer_upgrade_risk
                 if bomb_profile:
                     rank_pressure = bomb_profile["rank_pressure"]
                     if rank_pressure <= 2.5:
@@ -7898,6 +8129,21 @@ def _bot_score_components(
             short_enemy_bonus = _short_enemy_bomb_takeover_bonus(state, bot_id, cards, combo, remaining)
             if short_enemy_bonus > 0.001:
                 components["bomb_short_enemy_block"] = short_enemy_bonus
+            current_combo = current_trick.get("combo") or {}
+            minimal = _minimal_bomb_response(hand, level_rank, current_combo, config)
+            stall_escape = _defer_bomb_upgrade_risk_penalty(state, bot_id)
+            if (
+                stall_escape > 0.001
+                and minimal is not None
+                and tuple(sorted(minimal)) == tuple(sorted(cards))
+            ):
+                components["bomb_stall_escape"] = stall_escape * 1.45
+            upgrade = _bomb_followup_upgrade_metrics(state, bot_id, cards, combo, remaining)
+            if upgrade["score"] > 0.001:
+                components["bomb_shape_upgrade"] = upgrade["score"]
+            teammate_handoff = _teammate_handoff_bonus_after_bomb(state, bot_id, combo, remaining)
+            if teammate_handoff > 0.001:
+                components["bomb_teammate_handoff"] = teammate_handoff
         closeout_block = _opponent_one_card_closeout_bonus(state, bot_id, cards, combo)
         if closeout_block > 0.001:
             components["block_closeout"] = closeout_block
