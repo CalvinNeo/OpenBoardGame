@@ -8625,6 +8625,9 @@ def _bot_score_components(
             upgrade = _bomb_followup_upgrade_metrics(state, bot_id, cards, combo, remaining)
             if upgrade["score"] > 0.001:
                 components["bomb_shape_upgrade"] = upgrade["score"]
+            straight_flush_upgrade = _straight_flush_structural_upgrade_bonus(state, bot_id, cards, combo)
+            if straight_flush_upgrade > 0.001:
+                components["straight_flush_upgrade"] = straight_flush_upgrade
             teammate_handoff = _teammate_handoff_bonus_after_bomb(state, bot_id, combo, remaining)
             if teammate_handoff > 0.001:
                 components["bomb_teammate_handoff"] = teammate_handoff
@@ -8757,7 +8760,39 @@ def _should_keep_structural_upgrade_bomb(
     hand_map = _map_hand_by_id(hand)
     play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
     combo = _evaluate_combo(play_cards, level_rank, config)
-    if not combo or combo.get("type") != "bomb" or not combo.get("uses_wild"):
+    if not combo:
+        return False
+
+    if combo.get("type") == "straight_flush" and current_combo.get("type") == "straight":
+        if not non_bomb_options:
+            return False
+        remaining = _remove_cards(hand, cards)
+        remaining_turns = _hand_decomposition_summary(remaining, level_rank).get("turns", float(len(remaining)))
+        remaining_strength = _hand_strength_score(remaining, level_rank)
+        card_set = set(cards)
+        for option in non_bomb_options:
+            option_cards = [hand_map[cid] for cid in option if cid in hand_map]
+            option_combo = _evaluate_combo(option_cards, level_rank, config)
+            if not option_combo or option_combo.get("type") != "straight":
+                continue
+            if len(option) != len(cards):
+                continue
+            if option_combo.get("high_value", 0) > combo.get("high_value", 0):
+                continue
+            # Treat a straight flush as a structural upgrade when it is effectively
+            # the same lane with one off-suit card upgraded into a bomb.
+            if len(card_set.intersection(option)) < len(cards) - 1:
+                continue
+            option_remaining = _remove_cards(hand, option)
+            option_turns = _hand_decomposition_summary(option_remaining, level_rank).get(
+                "turns", float(len(option_remaining))
+            )
+            option_strength = _hand_strength_score(option_remaining, level_rank)
+            if remaining_turns <= option_turns + 0.35 and remaining_strength + 0.35 >= option_strength:
+                return True
+        return False
+
+    if combo.get("type") != "bomb" or not combo.get("uses_wild"):
         return False
 
     # Only keep low-rank promotion bombs. High natural-value bombs should still
@@ -8825,6 +8860,64 @@ def _should_keep_structural_upgrade_bomb(
     upgrade_score -= control_break * 0.7
 
     return upgrade_score >= 2.4 and control_delta >= -0.2
+
+
+def _straight_flush_structural_upgrade_bonus(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+) -> float:
+    current_trick = state.get("current_trick")
+    if not current_trick or combo.get("type") != "straight_flush":
+        return 0.0
+    current_combo = current_trick.get("combo") or {}
+    if current_combo.get("type") != "straight":
+        return 0.0
+
+    pdata = state["players"].get(player_id)
+    if not pdata:
+        return 0.0
+    hand = pdata.get("hand", [])
+    if not hand or len(cards) >= len(hand):
+        return 0.0
+
+    level_rank = state["level_rank"]
+    config = state.get("config", {})
+    hand_map = _map_hand_by_id(hand)
+    remaining = _remove_cards(hand, cards)
+    remaining_turns = _hand_decomposition_summary(remaining, level_rank).get("turns", float(len(remaining)))
+    remaining_strength = _hand_strength_score(remaining, level_rank)
+    current_card_set = set(cards)
+
+    best_bonus = 0.0
+    for option in _list_straight_options(hand, level_rank, current_combo.get("high_value", 0)):
+        option_cards = [hand_map[cid] for cid in option if cid in hand_map]
+        option_combo = _evaluate_combo(option_cards, level_rank, config)
+        if not option_combo or option_combo.get("type") != "straight":
+            continue
+        if len(option) != len(cards):
+            continue
+        if option_combo.get("high_value", 0) > combo.get("high_value", 0):
+            continue
+        if len(current_card_set.intersection(option)) < len(cards) - 1:
+            continue
+
+        option_remaining = _remove_cards(hand, option)
+        option_turns = _hand_decomposition_summary(option_remaining, level_rank).get(
+            "turns", float(len(option_remaining))
+        )
+        option_strength = _hand_strength_score(option_remaining, level_rank)
+        if remaining_turns > option_turns + 0.35 or remaining_strength + 0.35 < option_strength:
+            continue
+
+        bonus = 18.0
+        bonus += max(0.0, option_turns - remaining_turns) * 3.5
+        bonus += max(0.0, remaining_strength - option_strength) * 1.4
+        if combo.get("high_value", 0) == option_combo.get("high_value", 0):
+            bonus += 3.0
+        best_bonus = max(best_bonus, bonus)
+    return best_bonus
 
 
 def _filter_overbomb_options(state: Dict, player_id: str, options: List[List[int]]) -> List[List[int]]:

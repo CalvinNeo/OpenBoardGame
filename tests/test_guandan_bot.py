@@ -362,6 +362,151 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertIn(tuple(sorted(["♠️7", "♠️7", "♦️8", "♣️8", "♠️9", "♠️9"])), filtered_labels)
         self.assertIn(tuple(sorted(["♦️J", "♣️J", "♥️J", "♠️J"])), filtered_labels)
 
+    def test_filter_overbomb_options_keeps_straight_flush_structural_upgrade(self):
+        players = [
+            {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
+            {"player_id": "bot2", "name": "Bot 2", "seat": 1, "is_bot": True},
+            {"player_id": "zhu", "name": "zhu", "seat": 2, "is_bot": False},
+            {"player_id": "bot3", "name": "Bot 3", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["round_number"] = 1
+        state["dealer_team"] = "A"
+        state["level_rank"] = 2
+        state["current_turn"] = "bot2"
+        state["config"]["bot_mode"] = "heuristic"
+
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        bot_hand = [
+            pick_label(label)
+            for label in [
+                "🃏B",
+                "🃏S",
+                "♥️2",
+                "♣️2",
+                "♦️2",
+                "♦️A",
+                "♥️A",
+                "♥️A",
+                "♦️A",
+                "♣️10",
+                "♣️9",
+                "♣️8",
+                "♣️7",
+                "♦️7",
+                "♠️6",
+                "♣️6",
+                "♠️5",
+                "♣️5",
+            ]
+        ]
+        state["players"]["bot2"]["hand"] = bot_hand
+        for pid, count in (("calvin", 16), ("zhu", 12), ("bot3", 16)):
+            state["players"][pid]["hand"] = deck[:count]
+            del deck[:count]
+
+        trick_cards = [pick_label(label) for label in ["♦️4", "♥️5", "♥️6", "♥️7", "♥️8"]]
+        state["current_trick"] = {
+            "player_id": "zhu",
+            "cards": [card["id"] for card in trick_cards],
+            "combo": guandan._evaluate_combo(trick_cards, state["level_rank"], state.get("config", {})),
+        }
+
+        options = guandan._list_hint_options(state, "bot2")
+        filtered = guandan._filter_overbomb_options(state, "bot2", options)
+        hand_map = guandan._map_hand_by_id(bot_hand)
+        filtered_labels = {
+            tuple(sorted(guandan._card_label(hand_map[cid]) for cid in cards))
+            for cards in filtered
+        }
+
+        self.assertIn(
+            tuple(sorted(["♠️6", "♣️7", "♣️8", "♣️9", "♣️10"])),
+            filtered_labels,
+        )
+        self.assertIn(
+            tuple(sorted(["♣️6", "♣️7", "♣️8", "♣️9", "♣️10"])),
+            filtered_labels,
+        )
+
+    def test_bot_prefers_straight_flush_structural_upgrade_over_plain_straight(self):
+        players = [
+            {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
+            {"player_id": "bot2", "name": "Bot 2", "seat": 1, "is_bot": True},
+            {"player_id": "zhu", "name": "zhu", "seat": 2, "is_bot": False},
+            {"player_id": "bot3", "name": "Bot 3", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["round_number"] = 1
+        state["dealer_team"] = "A"
+        state["level_rank"] = 2
+        state["current_turn"] = "bot2"
+        state["config"]["bot_mode"] = "heuristic"
+        state["config"]["bot_endgame_threshold"] = 0
+
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        bot_hand = [
+            pick_label(label)
+            for label in [
+                "🃏B",
+                "🃏S",
+                "♥️2",
+                "♣️2",
+                "♦️2",
+                "♦️A",
+                "♥️A",
+                "♥️A",
+                "♦️A",
+                "♣️10",
+                "♣️9",
+                "♣️8",
+                "♣️7",
+                "♦️7",
+                "♠️6",
+                "♣️6",
+                "♠️5",
+                "♣️5",
+            ]
+        ]
+        state["players"]["bot2"]["hand"] = bot_hand
+        for pid, count in (("calvin", 22), ("zhu", 12), ("bot3", 16)):
+            state["players"][pid]["hand"] = deck[:count]
+            del deck[:count]
+
+        trick_cards = [pick_label(label) for label in ["♦️4", "♥️5", "♥️6", "♥️7", "♥️8"]]
+        state["current_trick"] = {
+            "player_id": "zhu",
+            "cards": [card["id"] for card in trick_cards],
+            "combo": guandan._evaluate_combo(trick_cards, state["level_rank"], state.get("config", {})),
+        }
+
+        action = guandan.GuandanGame.bot_move(state, "bot2")
+        self.assertEqual(action.get("type"), "play")
+        hand_map = guandan._map_hand_by_id(bot_hand)
+        chosen_cards = [hand_map[cid] for cid in action.get("card_ids", []) if cid in hand_map]
+        chosen_combo = guandan._evaluate_combo(chosen_cards, state["level_rank"], state.get("config", {}))
+        self.assertEqual(chosen_combo.get("type"), "straight_flush")
+        self.assertEqual(
+            sorted(guandan._card_label(card) for card in chosen_cards),
+            sorted(["♣️6", "♣️7", "♣️8", "♣️9", "♣️10"]),
+        )
+
     def test_filter_overbomb_options_keeps_low_triple_promotion_bomb_with_wild(self):
         players = [
             {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
