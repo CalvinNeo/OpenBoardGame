@@ -3427,6 +3427,171 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
 
         self.assertEqual(action.get("type"), "pass")
 
+    def test_does_not_bomb_enemy_overcall_when_teammate_can_retake_same_lane(self):
+        players = [
+            {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
+            {"player_id": "bot2", "name": "Bot 2", "seat": 1, "is_bot": True},
+            {"player_id": "zhu", "name": "zhu", "seat": 2, "is_bot": False},
+            {"player_id": "bot3", "name": "Bot 3", "seat": 3, "is_bot": False},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["round_number"] = 1
+        state["dealer_team"] = "A"
+        state["level_rank"] = 2
+        state["current_turn"] = "bot2"
+        state["config"]["bot_endgame_threshold"] = 0
+
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        bot_hand = [
+            pick_label(label)
+            for label in [
+                "♣️J", "♥️J", "♦️J", "♠️J",
+                "🃏B", "🃏S", "♠️2", "♣️2",
+                "♦️A", "♥️A", "♣️10", "♣️9",
+                "♣️8", "♣️7", "♦️7", "♠️6", "♣️6", "♠️5", "♣️5",
+            ]
+        ]
+        bot3_hand = [
+            pick_label(label)
+            for label in [
+                "♠️4", "♥️4", "♣️4",
+                "♠️K", "♥️K", "♣️K",
+                "♠️A", "♥️Q", "♣️Q", "♠️9", "♥️9", "♠️8", "♥️8", "♠️7", "♥️7",
+            ]
+        ]
+        calvin_hand = [
+            pick_label(label)
+            for label in [
+                "♥️6", "♣️6", "♦️6",
+                "♠️10", "♥️10", "♣️10",
+                "♠️5", "♥️5", "♣️5", "♦️5",
+                "♠️3", "♥️3", "♣️3", "♦️3", "♦️9",
+            ]
+        ]
+        zhu_hand = deck[:15]
+
+        state["players"]["bot2"]["hand"] = bot_hand
+        state["players"]["bot3"]["hand"] = bot3_hand
+        state["players"]["calvin"]["hand"] = calvin_hand
+        state["players"]["zhu"]["hand"] = zhu_hand
+
+        teammate_three = [card for card in bot3_hand if guandan._card_label(card) in ("♠️4", "♥️4", "♣️4")]
+        enemy_three = [card for card in calvin_hand if guandan._card_label(card) in ("♥️6", "♣️6", "♦️6")]
+        current_combo = guandan._evaluate_combo(enemy_three, state["level_rank"], state.get("config", {}))
+        state["current_trick"] = {
+            "player_id": "calvin",
+            "cards": [card["id"] for card in enemy_three],
+            "combo": current_combo,
+        }
+        state["trick_plays"] = {
+            "bot3": teammate_three,
+            "calvin": enemy_three,
+        }
+
+        bomb_ids = [card["id"] for card in bot_hand if guandan._card_label(card) in ("♣️J", "♥️J", "♦️J", "♠️J")]
+        pass_components = guandan._bot_score_components(state, "bot2", None, depth=4)
+        bomb_components = guandan._bot_score_components(state, "bot2", bomb_ids, depth=4)
+
+        self.assertLess(bomb_components.get("respect_teammate_lane", 0.0), 0.0)
+        self.assertGreater(pass_components["total"], bomb_components["total"])
+
+        action = guandan.GuandanGame.bot_move(state, "bot2")
+        self.assertEqual(action.get("type"), "pass")
+
+    def test_passes_high_full_house_when_teammate_can_retake_lane(self):
+        players = [
+            {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
+            {"player_id": "bot2", "name": "Bot 2", "seat": 1, "is_bot": True},
+            {"player_id": "zhu", "name": "zhu", "seat": 2, "is_bot": False},
+            {"player_id": "bot3", "name": "Bot 3", "seat": 3, "is_bot": False},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["round_number"] = 1
+        state["dealer_team"] = "A"
+        state["level_rank"] = 2
+        state["current_turn"] = "bot2"
+        state["config"]["bot_endgame_threshold"] = 0
+
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        bot_hand = [
+            pick_label(label)
+            for label in [
+                "♠️2", "♣️2", "♦️2",
+                "♠️3", "♥️3",
+                "♣️A", "♦️A", "♣️K", "♦️K",
+                "♣️Q", "♦️Q", "♣️J", "♦️J",
+                "♣️9", "♦️9", "♣️8", "♦️8",
+            ]
+        ]
+        bot3_remaining = [
+            pick_label(label)
+            for label in [
+                "♠️K", "♥️K", "♣️K", "♠️A", "♥️A",
+                "♠️Q", "♥️Q", "♠️J",
+            ]
+        ]
+        calvin_remaining = [
+            pick_label(label)
+            for label in [
+                "♠️10", "♥️10", "♣️10", "♦️10",
+                "♠️8", "♥️8", "♠️4", "♥️4",
+            ]
+        ]
+        zhu_hand = deck[:13]
+
+        state["players"]["bot2"]["hand"] = bot_hand
+        state["players"]["bot3"]["hand"] = bot3_remaining
+        state["players"]["calvin"]["hand"] = calvin_remaining
+        state["players"]["zhu"]["hand"] = zhu_hand
+
+        teammate_full_house = [
+            pick_label(label)
+            for label in ("♠️3", "♦️3", "♣️3", "♠️7", "♥️7")
+        ]
+        enemy_full_house = [
+            pick_label(label)
+            for label in ("♠️5", "♥️5", "♣️5", "♠️6", "♥️6")
+        ]
+        current_combo = guandan._evaluate_combo(enemy_full_house, state["level_rank"], state.get("config", {}))
+        state["current_trick"] = {
+            "player_id": "calvin",
+            "cards": [card["id"] for card in enemy_full_house],
+            "combo": current_combo,
+        }
+        state["trick_plays"] = {
+            "bot3": teammate_full_house,
+            "calvin": enemy_full_house,
+        }
+
+        high_full_house_ids = [
+            next(card["id"] for card in bot_hand if guandan._card_label(card) == label)
+            for label in ("♠️2", "♣️2", "♦️2", "♠️3", "♥️3")
+        ]
+        pass_components = guandan._bot_score_components(state, "bot2", None, depth=4)
+        play_components = guandan._bot_score_components(state, "bot2", high_full_house_ids, depth=4)
+
+        self.assertLess(play_components.get("defer_teammate_lane", 0.0), 0.0)
+        self.assertGreater(pass_components["total"], play_components["total"])
+
+        action = guandan.GuandanGame.bot_move(state, "bot2")
+        self.assertEqual(action.get("type"), "pass")
+
     def test_lead_candidates_prioritize_combo_over_single(self):
         players = [
             {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},

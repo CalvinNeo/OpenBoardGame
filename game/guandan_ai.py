@@ -5720,6 +5720,152 @@ def _response_teammate_lane_bonus(
     return max(0.0, bonus)
 
 
+def _teammate_can_retake_current_lane(
+    state: Dict,
+    player_id: str,
+) -> bool:
+    current_trick = state.get("current_trick")
+    teammate = _teammate_of(state, player_id)
+    if not current_trick or not teammate:
+        return False
+    if state["players"].get(teammate, {}).get("finished"):
+        return False
+    teammate_play = (state.get("trick_plays") or {}).get(teammate)
+    if not teammate_play or teammate_play == "pass":
+        return False
+
+    leader = current_trick.get("player_id")
+    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+        return False
+
+    teammate_cards = [card for card in teammate_play if isinstance(card, dict)]
+    if not teammate_cards:
+        return False
+    teammate_combo = _evaluate_combo(teammate_cards, state["level_rank"], state.get("config", {}))
+    current_combo = current_trick.get("combo") or {}
+    if not teammate_combo or teammate_combo.get("type") != current_combo.get("type"):
+        return False
+
+    teammate_hand = state["players"].get(teammate, {}).get("hand", [])
+    if not teammate_hand:
+        return False
+    return _hand_has_same_type_beat(
+        teammate_hand,
+        state["level_rank"],
+        current_combo,
+        state.get("config", {}),
+    )
+
+
+def _teammate_lane_deference_penalty(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+) -> float:
+    current_trick = state.get("current_trick")
+    if not current_trick or not cards:
+        return 0.0
+    leader = current_trick.get("player_id")
+    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+        return 0.0
+    if not _teammate_can_retake_current_lane(state, player_id):
+        return 0.0
+
+    current_combo = current_trick.get("combo") or {}
+    combo_type = combo.get("type") or ""
+    if combo_type != current_combo.get("type") and combo_type not in BOMB_TYPES:
+        return 0.0
+    if not _compare_combos(current_combo, combo, state["level_rank"], state.get("config", {})):
+        return 0.0
+
+    teammate = _teammate_of(state, player_id)
+    teammate_left = len(state["players"].get(teammate, {}).get("hand", [])) if teammate else 99
+    opponents_before_teammate = _opponents_before_teammate_this_trick(state, player_id)
+    hand = state["players"][player_id]["hand"]
+    hand_map = _map_hand_by_id(hand)
+    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+    if not play_cards:
+        return 0.0
+
+    uses_special = _cards_use_special_material(play_cards, state["level_rank"])
+    material_cost = _response_material_cost(state, player_id, cards, combo)
+    control_break = _control_group_break_penalty(hand, cards, state["level_rank"])
+    fragment_penalty = _group_fragment_penalty(hand, cards, state["level_rank"], combo)
+    combo_gap = max(0.0, _combo_numeric_value(combo) - _combo_numeric_value(current_combo))
+
+    penalty = 9.0
+    if combo_type == "pair":
+        penalty += 2.0
+    elif combo_type == "three":
+        penalty += 5.5
+    elif combo_type in ("full_house", "straight", "three_pairs", "steel_plate"):
+        penalty += 8.0
+    elif combo_type in BOMB_TYPES:
+        penalty += 14.0
+
+    if opponents_before_teammate > 0:
+        penalty += opponents_before_teammate * (2.5 if combo_type in ("pair", "three") else 1.5)
+    if uses_special:
+        penalty += 7.0 if combo_type not in BOMB_TYPES else 4.0
+    if combo_type not in BOMB_TYPES:
+        penalty += min(4.0, combo_gap * 0.18)
+    penalty += min(4.5, material_cost * 0.12)
+    penalty += min(3.0, control_break * 0.35 + fragment_penalty * 0.18)
+    if teammate_left <= 6:
+        penalty -= 2.0
+    if teammate_left <= 3:
+        penalty -= 2.5
+    return max(0.0, penalty)
+
+
+def _bomb_overcall_teammate_lane_penalty(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+) -> float:
+    current_trick = state.get("current_trick")
+    if not current_trick or combo.get("type") not in BOMB_TYPES:
+        return 0.0
+
+    if not _teammate_can_retake_current_lane(state, player_id):
+        return 0.0
+
+    current_combo = current_trick.get("combo") or {}
+    combo_type = current_combo.get("type") or ""
+    teammate = _teammate_of(state, player_id)
+    teammate_hand = state["players"].get(teammate, {}).get("hand", []) if teammate else []
+    teammate_backstop = _teammate_backstop_confidence(state, player_id, current_combo)
+
+    hand = state["players"][player_id]["hand"]
+    bomb_rank_pressure = _bomb_rank_pressure(combo, state["level_rank"])
+    response_cost = _response_material_cost(state, player_id, cards, combo)
+    leader_left = len(state["players"].get(current_trick.get("player_id"), {}).get("hand", []))
+    teammate_left = len(teammate_hand)
+
+    penalty = 14.0
+    if combo_type == "three":
+        penalty += 7.0
+    elif combo_type in ("full_house", "three_pairs", "steel_plate", "straight"):
+        penalty += 4.5
+    penalty += 8.5
+    penalty += max(0.0, teammate_backstop - 0.72) * 12.0
+    if leader_left >= 10:
+        penalty += 2.5
+    if leader_left >= 16:
+        penalty += 1.5
+    if teammate_left <= 6:
+        penalty -= 2.5
+    if teammate_left <= 3:
+        penalty -= 2.0
+    penalty += min(4.0, bomb_rank_pressure * 0.75)
+    penalty += min(5.0, response_cost * 0.22)
+    if _find_bomb_candidates(_remove_cards(hand, cards), state["level_rank"]):
+        penalty -= 2.0
+    return max(0.0, penalty)
+
+
 _HAND_DECOMP_CACHE: Dict[Tuple[int, Tuple[str, ...]], Dict[str, float]] = {}
 _HAND_DECOMP_CACHE_LIMIT = 4096
 
@@ -8354,12 +8500,16 @@ def _bot_score_components(
         if overtrick_penalty > 0:
             components["avoid_overtrick"] = -overtrick_penalty
     elif current_trick and _team_of(state, current_trick.get("player_id")) != _team_of(state, bot_id):
+        teammate_can_retake_lane = _teammate_can_retake_current_lane(state, bot_id)
         seize = _takeover_opportunity_score(state, bot_id, cards)
-        if seize > 0:
+        if seize > 0 and not teammate_can_retake_lane:
             components["seize_tempo"] = seize * 1.25
         teammate_lane_bonus = _response_teammate_lane_bonus(state, bot_id, cards, combo)
         if teammate_lane_bonus > 0.001:
             components["protect_teammate_lane"] = teammate_lane_bonus
+        teammate_lane_deference = _teammate_lane_deference_penalty(state, bot_id, cards, combo)
+        if teammate_lane_deference > 0.001:
+            components["defer_teammate_lane"] = -teammate_lane_deference
         leader_left = len(state["players"].get(current_trick.get("player_id"), {}).get("hand", []))
         if combo.get("type") == (current_trick.get("combo") or {}).get("type") and combo.get("type") not in BOMB_TYPES:
             natural_takeover = 0.0
@@ -8369,13 +8519,20 @@ def _bot_score_components(
                 natural_takeover += 3.0
             if leader_left <= 6:
                 natural_takeover += 4.0
-            if natural_takeover > 0 and not _cards_use_special_material(play_cards, level_rank):
+            if (
+                natural_takeover > 0
+                and not teammate_can_retake_lane
+                and not _cards_use_special_material(play_cards, level_rank)
+            ):
                 components["deny_short_lead"] = natural_takeover
         if combo["type"] in BOMB_TYPES and current_trick.get("combo", {}).get("type") == "single":
             teammate_control = _teammate_future_control_probability(state, bot_id)
             if teammate_control > 0:
                 components["save_bomb_for_teammate"] = -teammate_control * (7.5 + _bomb_tier(combo) * 1.8)
         if combo["type"] in BOMB_TYPES:
+            teammate_lane_bomb_penalty = _bomb_overcall_teammate_lane_penalty(state, bot_id, cards, combo)
+            if teammate_lane_bomb_penalty > 0.001:
+                components["respect_teammate_lane"] = -teammate_lane_bomb_penalty
             closeout_bonus = _bomb_response_closeout_bonus(state, bot_id, cards, combo, remaining)
             if closeout_bonus > 0.001:
                 components["bomb_closeout_ev"] = closeout_bonus
