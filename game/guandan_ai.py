@@ -486,8 +486,75 @@ def _short_enemy_bomb_takeover_bonus(
     if leader_left > 6:
         return 0.0
 
-    if current_type not in ("pair", "three", "full_house", "straight", "three_pairs", "steel_plate"):
+    if current_type not in ("single", "pair", "three", "full_house", "straight", "three_pairs", "steel_plate"):
         return 0.0
+
+    hand = state["players"].get(player_id, {}).get("hand", [])
+    level_rank = state["level_rank"]
+    hand_map = _map_hand_by_id(hand)
+    before_turns = _estimated_turns_to_finish(hand, level_rank)
+    bomb_projected_turns = (_estimated_turns_to_finish(remaining, level_rank) if remaining else 0.0) + 1.0
+    bomb_turn_gain = before_turns - bomb_projected_turns
+    bomb_shape_score = bomb_turn_gain * 3.3 + _shape_transition_score(hand, cards, level_rank) * 0.6
+    bomb_shape_score += _bomb_followup_upgrade_metrics(state, player_id, cards, combo, remaining).get("score", 0.0) * 0.8
+
+    natural_best_score = None
+    clean_natural_exists = False
+    bomb_key = tuple(sorted(cards))
+    for option in _rank_response_options(state, player_id, _list_hint_options(state, player_id)):
+        if tuple(sorted(option)) == bomb_key:
+            continue
+        play_cards = [hand_map[cid] for cid in option if cid in hand_map]
+        natural_combo = _evaluate_combo(play_cards, level_rank, state.get("config", {}))
+        if not natural_combo or natural_combo.get("type") != current_type or natural_combo.get("type") in BOMB_TYPES:
+            continue
+
+        natural_remaining = _remove_cards(hand, option)
+        natural_projected_turns = (
+            (_estimated_turns_to_finish(natural_remaining, level_rank) if natural_remaining else 0.0) + 1.0
+        )
+        natural_turn_gain = before_turns - natural_projected_turns
+        fragment = _group_fragment_penalty(hand, option, level_rank, natural_combo)
+        control_break = _control_group_break_penalty(hand, option, level_rank)
+        response_cost = _response_material_cost(state, player_id, option, natural_combo)
+        shape = _shape_transition_score(hand, option, level_rank)
+        uses_special = _cards_use_special_material(play_cards, level_rank)
+
+        natural_score = (
+            natural_turn_gain * 3.1
+            + shape * 0.6
+            - fragment * 1.15
+            - control_break * 1.05
+            - response_cost * 0.75
+        )
+        if uses_special:
+            natural_score -= 2.4
+
+        is_clean = (
+            not uses_special
+            and fragment <= 0.35
+            and control_break <= 0.35
+            and response_cost <= 2.2
+        )
+        if current_type == "single" and _is_clean_low_single_response(state, player_id, option):
+            natural_score += 3.6
+            is_clean = True
+        elif current_type in ("pair", "three") and is_clean:
+            natural_score += 2.6
+
+        if is_clean:
+            clean_natural_exists = True
+        if natural_best_score is None or natural_score > natural_best_score:
+            natural_best_score = natural_score
+
+    if current_type in ("single", "pair", "three") and natural_best_score is not None:
+        pressure = 6.5 + max(0, 5 - leader_left) * 2.0
+        if current_type == "single":
+            return -(pressure + 5.0)
+        if clean_natural_exists and natural_best_score >= bomb_shape_score - 1.5:
+            return -(pressure + 4.0 + max(0.0, natural_best_score - bomb_shape_score) * 0.7)
+        if natural_best_score >= bomb_shape_score + 2.0:
+            return -(pressure * 0.85 + (natural_best_score - bomb_shape_score) * 1.05)
 
     base = 2.5
     if leader_left <= 6:
@@ -501,6 +568,8 @@ def _short_enemy_bomb_takeover_bonus(
         base += 3.5
     elif current_type == "three":
         base += 2.2
+    elif current_type == "single":
+        base += 0.8
     else:
         base += 1.4
 
@@ -530,6 +599,11 @@ def _short_enemy_bomb_takeover_bonus(
         after_turns = _estimated_turns_to_finish(remaining, state["level_rank"])
         if after_turns <= 2.2:
             base += 2.0
+
+    if current_type in ("single", "pair", "three") and natural_best_score is None:
+        base += 2.4
+    elif current_type in ("single", "pair", "three") and bomb_shape_score >= (natural_best_score or 0.0) + 2.5:
+        base += min(6.0, bomb_shape_score - (natural_best_score or 0.0))
 
     teammate_backstop = _teammate_backstop_confidence(state, player_id, current_combo)
     return base * max(0.45, 1.0 - teammate_backstop)
@@ -8129,6 +8203,8 @@ def _bot_score_components(
             short_enemy_bonus = _short_enemy_bomb_takeover_bonus(state, bot_id, cards, combo, remaining)
             if short_enemy_bonus > 0.001:
                 components["bomb_short_enemy_block"] = short_enemy_bonus
+            elif short_enemy_bonus < -0.001:
+                components["bomb_natural_cover_penalty"] = short_enemy_bonus
             current_combo = current_trick.get("combo") or {}
             minimal = _minimal_bomb_response(hand, level_rank, current_combo, config)
             stall_escape = _defer_bomb_upgrade_risk_penalty(state, bot_id)

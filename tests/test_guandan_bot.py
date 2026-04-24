@@ -6046,6 +6046,80 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         chosen_labels = sorted(guandan._card_label(hand_map[cid]) for cid in action.get("card_ids", []))
         self.assertEqual(chosen_labels, ["♠️4", "♣️4", "♥️4", "♦️4"])
 
+    def test_short_hand_single_pressure_prefers_clean_natural_cover_over_bomb(self):
+        players = [
+            {"player_id": "shuai", "name": "帅比", "seat": 0, "is_bot": False},
+            {"player_id": "bot3", "name": "Bot 3", "seat": 1, "is_bot": True},
+            {"player_id": "zhu", "name": "zhu", "seat": 2, "is_bot": False},
+            {"player_id": "bot2", "name": "Bot 2", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["round_number"] = 1
+        state["dealer_team"] = "B"
+        state["level_rank"] = 2
+        state["current_turn"] = "bot3"
+        state["config"]["bot_mode"] = "heuristic"
+
+        deck = guandan._full_deck()
+        available = list(deck)
+
+        def take(label: str):
+            for idx, card in enumerate(available):
+                if guandan._card_label(card) == label:
+                    return available.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        bot3_hand = [
+            take("♣️9"),
+            take("♥️9"),
+            take("♠️9"),
+            take("♦️9"),
+            take("♦️7"),
+            take("♥️7"),
+            take("♥️6"),
+            take("♠️6"),
+            take("♦️6"),
+            take("♠️5"),
+            take("♥️5"),
+        ]
+        shuai_hand = [take("♠️Q"), take("♣️Q"), take("♠️4"), take("♣️4"), take("♥️8")]
+        zhu_hand = [take("♣️A")]
+        bot2_hand = [take("♣️K")]
+        lead_card = take("♣️6")
+
+        state["players"]["bot3"]["hand"] = bot3_hand
+        state["players"]["shuai"]["hand"] = shuai_hand
+        state["players"]["zhu"]["hand"] = zhu_hand
+        state["players"]["bot2"]["hand"] = bot2_hand
+        state["players"]["zhu"]["finished"] = True
+        state["players"]["zhu"]["finish_rank"] = 1
+        state["players"]["bot2"]["finished"] = True
+        state["players"]["bot2"]["finish_rank"] = 2
+        state["finish_order"] = ["zhu", "bot2"]
+
+        state["current_trick"] = {
+            "player_id": "shuai",
+            "cards": [lead_card["id"]],
+            "combo": guandan._evaluate_combo([lead_card], state["level_rank"], state.get("config", {})),
+        }
+        state["trick_plays"] = {"shuai": [lead_card]}
+
+        bomb_ids = [
+            card["id"]
+            for card in bot3_hand
+            if guandan._card_label(card) in ("♣️9", "♥️9", "♠️9", "♦️9")
+        ]
+        single_seven_ids = [[card["id"]] for card in bot3_hand if guandan._card_label(card) in ("♦️7", "♥️7")]
+
+        bomb_components = guandan._bot_score_components(state, "bot3", bomb_ids, depth=2)
+        bomb_score = guandan._bot_score_play(state, "bot3", bomb_ids, depth=2)
+        single_scores = [guandan._bot_score_play(state, "bot3", option, depth=2) for option in single_seven_ids]
+
+        self.assertLess(bomb_components.get("bomb_natural_cover_penalty", 0.0), 0.0)
+        self.assertTrue(single_scores)
+        self.assertGreater(max(single_scores), bomb_score)
+
     def test_midgame_straight_response_prefers_89TJQ_from_reconstructed_history(self):
         players = [
             {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
