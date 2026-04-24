@@ -491,6 +491,7 @@ def _short_enemy_bomb_takeover_bonus(
 
     hand = state["players"].get(player_id, {}).get("hand", [])
     level_rank = state["level_rank"]
+    grouped_control_rank_min = _point_order_value(13, level_rank)
     hand_map = _map_hand_by_id(hand)
     before_turns = _estimated_turns_to_finish(hand, level_rank)
     bomb_projected_turns = (_estimated_turns_to_finish(remaining, level_rank) if remaining else 0.0) + 1.0
@@ -1317,6 +1318,7 @@ def _lead_option_score(state: Dict, player_id: str, cards: List[int]) -> float:
     score -= _lead_special_material_penalty(state, player_id, cards, combo)
     score -= _lead_probe_deferral_penalty(state, player_id, cards, combo)
     score -= _lead_composite_support_tension_penalty(state, player_id, cards, combo)
+    score -= _lead_lighter_shape_preservation_penalty(state, player_id, cards, combo)
     score -= _lead_low_pair_probe_penalty(state, player_id, cards, combo)
     score -= _lead_low_single_probe_penalty(state, player_id, cards, combo)
     score += _lead_turn_efficiency_bonus(state, player_id, cards, combo)
@@ -2747,6 +2749,7 @@ def _lead_same_type_value_conservation_penalty(
         return 0.0
 
     level_rank = state["level_rank"]
+    grouped_control_rank_min = _point_order_value(13, level_rank)
     hand_map = _map_hand_by_id(hand)
     play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
     if not play_cards:
@@ -2842,6 +2845,7 @@ def _lead_full_house_value_conservation_penalty(
         return 0.0
 
     level_rank = state["level_rank"]
+    grouped_control_rank_min = _point_order_value(13, level_rank)
     hand_map = _map_hand_by_id(hand)
     current_key = tuple(sorted(cards))
     current_value = _combo_numeric_value(combo)
@@ -4767,6 +4771,179 @@ def _lead_composite_support_tension_penalty(
         penalty += 1.6
         break
     return penalty
+
+
+def _lead_lighter_shape_preservation_penalty(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+) -> float:
+    if state.get("current_trick"):
+        return 0.0
+
+    combo_type = combo.get("type") or ""
+    if combo_type not in ("full_house", "three_pairs", "steel_plate"):
+        return 0.0
+
+    hand = state["players"][player_id]["hand"]
+    if len(hand) < 10:
+        return 0.0
+
+    level_rank = state["level_rank"]
+    grouped_control_rank_min = _point_order_value(13, level_rank)
+    hand_map = _map_hand_by_id(hand)
+    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+    if not play_cards:
+        return 0.0
+
+    current_score = _lead_cheap_option_score(state, player_id, cards, combo)
+    current_remaining = _remove_cards(hand, cards)
+    current_turns = (
+        _estimated_turns_to_finish(current_remaining, level_rank) if current_remaining else 0.0
+    )
+
+    natural_groups: Dict[int, int] = {}
+    for card in play_cards:
+        if _is_joker(card) or _is_wild(card, level_rank):
+            continue
+        rank = card.get("rank")
+        if rank is None:
+            continue
+        natural_groups[rank] = natural_groups.get(rank, 0) + 1
+
+    best_penalty = 0.0
+    for rank, count in natural_groups.items():
+        if count < 2:
+            continue
+        rank_value = _point_order_value(rank, level_rank)
+        if rank_value < grouped_control_rank_min:
+            continue
+
+        candidate_specs: List[Tuple[int, float]] = []
+        if count >= 3:
+            candidate_specs.append((3, 2.8))
+        candidate_specs.append((2, 2.2))
+
+        group_cards = [
+            card["id"]
+            for card in hand
+            if not _is_joker(card)
+            and not _is_wild(card, level_rank)
+            and card.get("rank") == rank
+        ]
+        if len(group_cards) < 2:
+            continue
+
+        for group_size, base_penalty in candidate_specs:
+            if len(group_cards) < group_size:
+                continue
+            alt_cards = group_cards[:group_size]
+            alt_play_cards = [hand_map[cid] for cid in alt_cards if cid in hand_map]
+            alt_combo = _evaluate_combo(alt_play_cards, level_rank, state.get("config", {}))
+            expected_type = "three" if group_size == 3 else "pair"
+            if not alt_combo or alt_combo.get("type") != expected_type:
+                continue
+
+            alt_remaining = _remove_cards(hand, alt_cards)
+            alt_turns = _estimated_turns_to_finish(alt_remaining, level_rank) if alt_remaining else 0.0
+            if alt_turns > current_turns + 1.6:
+                continue
+
+            alt_score = _lead_cheap_option_score(state, player_id, alt_cards, alt_combo)
+            if alt_score + (2.6 if group_size == 3 else 1.6) < current_score:
+                continue
+
+            penalty = base_penalty
+            if rank_value >= PREMIUM_SINGLE_VALUE_MIN:
+                penalty += 3.0
+            elif rank_value >= HIGH_CONTROL_SINGLE_VALUE_MIN:
+                penalty += 1.7
+            else:
+                penalty += 0.9
+
+            score_gap = max(0.0, current_score - alt_score)
+            penalty += max(0.0, 2.2 - score_gap) * 0.65
+
+            control_delta = _control_card_score(hand, level_rank) - _control_card_score(alt_remaining, level_rank)
+            if control_delta > 0.0:
+                penalty += min(2.8, control_delta * 0.7)
+
+            if combo_type == "three_pairs" and group_size == 2 and rank_value >= CONTROL_SINGLE_VALUE_MIN:
+                penalty += 2.2
+                if rank_value >= PREMIUM_SINGLE_VALUE_MIN:
+                    penalty += 1.6
+
+                better_alt_exists = False
+                better_alt_score = None
+                for option_fn in (_list_full_house_options, _list_three_pairs_options):
+                    for option in option_fn(hand, level_rank, 0):
+                        if tuple(sorted(option)) == tuple(sorted(cards)):
+                            continue
+                        alt_struct_cards = [hand_map[cid] for cid in option if cid in hand_map]
+                        alt_struct_combo = _evaluate_combo(
+                            alt_struct_cards, level_rank, state.get("config", {})
+                        )
+                        if not alt_struct_combo or _cards_use_special_material(alt_struct_cards, level_rank):
+                            continue
+                        if tuple(sorted(option)) == tuple(sorted(alt_cards)):
+                            continue
+                        if any(
+                            not _is_joker(card)
+                            and not _is_wild(card, level_rank)
+                            and card.get("rank") == rank
+                            for card in alt_struct_cards
+                        ):
+                            continue
+                        alt_struct_score = _lead_cheap_option_score(
+                            state, player_id, option, alt_struct_combo
+                        )
+                        alt_struct_adjustment = 4.6 if alt_struct_combo.get("type") == "full_house" else 2.8
+                        if alt_struct_score + alt_struct_adjustment >= current_score:
+                            better_alt_exists = True
+                            better_alt_score = alt_struct_score
+                            break
+                    if better_alt_exists:
+                        break
+                if better_alt_exists:
+                    penalty += 2.4
+                    if better_alt_score is not None:
+                        penalty += min(2.2, max(0.0, better_alt_score + 4.6 - current_score) * 0.6)
+
+            best_penalty = max(best_penalty, penalty)
+
+    if combo_type == "three_pairs":
+        protected_ranks = {
+            rank
+            for rank, count in natural_groups.items()
+            if count >= 2 and _point_order_value(rank, level_rank) >= grouped_control_rank_min
+        }
+        if protected_ranks:
+            for option in _list_full_house_options(hand, level_rank, 0):
+                if tuple(sorted(option)) == tuple(sorted(cards)):
+                    continue
+                alt_play_cards = [hand_map[cid] for cid in option if cid in hand_map]
+                alt_combo = _evaluate_combo(alt_play_cards, level_rank, state.get("config", {}))
+                if not alt_combo or alt_combo.get("type") != "full_house":
+                    continue
+                if _cards_use_special_material(alt_play_cards, level_rank):
+                    continue
+                alt_ranks = {
+                    card.get("rank")
+                    for card in alt_play_cards
+                    if not _is_joker(card) and not _is_wild(card, level_rank)
+                }
+                if protected_ranks & alt_ranks:
+                    continue
+                alt_score = _lead_cheap_option_score(state, player_id, option, alt_combo)
+                if alt_score + 4.6 < current_score:
+                    continue
+                best_penalty = max(
+                    best_penalty,
+                    6.2 + min(4.2, max(0.0, alt_score + 4.6 - current_score) * 0.8),
+                )
+                break
+    return best_penalty
 
 
 def _lead_low_pair_probe_penalty(
@@ -8254,6 +8431,9 @@ def _bot_score_components(
         full_house_conservation = _lead_full_house_value_conservation_penalty(state, bot_id, cards, combo)
         if full_house_conservation > 0.001:
             components["preserve_high_full_house"] = -full_house_conservation
+        lighter_shape_conservation = _lead_lighter_shape_preservation_penalty(state, bot_id, cards, combo)
+        if lighter_shape_conservation > 0.001:
+            components["preserve_lighter_shape"] = -lighter_shape_conservation
         trap_penalty = _lead_low_single_trap_penalty(hand, cards, level_rank)
         if trap_penalty > 0.001:
             components["low_single_trap"] = -trap_penalty

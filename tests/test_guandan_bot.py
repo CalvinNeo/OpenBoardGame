@@ -1536,6 +1536,174 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             guandan._lead_option_score(state, "bot4", wild_three_pairs),
         )
 
+    def test_opening_three_pairs_preserves_control_pair_when_full_house_exists(self):
+        players = [
+            {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
+            {"player_id": "bot2", "name": "Bot 2", "seat": 1, "is_bot": True},
+            {"player_id": "zhu", "name": "zhu", "seat": 2, "is_bot": False},
+            {"player_id": "bot4", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["round_number"] = 1
+        state["dealer_team"] = "B"
+        state["level_rank"] = 2
+        state["current_turn"] = "bot4"
+        state["current_trick"] = None
+        state["config"]["bot_mode"] = "heuristic"
+
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        bot4_hand = [
+            pick_label(label)
+            for label in [
+                "🃏B",
+                "♣️2",
+                "♦️2",
+                "♦️A",
+                "♠️K",
+                "♠️K",
+                "♣️K",
+                "♣️Q",
+                "♦️Q",
+                "♠️J",
+                "♠️J",
+                "♥️J",
+                "♣️10",
+                "♦️10",
+                "♦️9",
+                "♣️9",
+                "♥️9",
+                "♦️7",
+                "♣️6",
+                "♠️6",
+                "♣️5",
+                "♦️5",
+                "♥️5",
+                "♦️4",
+                "♥️4",
+                "♦️3",
+                "♣️3",
+            ]
+        ]
+        state["players"]["bot4"]["hand"] = bot4_hand
+        for pid in ("calvin", "bot2", "zhu"):
+            state["players"][pid]["hand"] = deck[:27]
+            del deck[:27]
+
+        def ids_for(labels):
+            ids = []
+            used = set()
+            for label in labels:
+                for card in bot4_hand:
+                    if card["id"] in used:
+                        continue
+                    if guandan._card_label(card) == label:
+                        ids.append(card["id"])
+                        used.add(card["id"])
+                        break
+            return ids
+
+        three_pairs = ids_for(["♣️2", "♦️2", "♦️3", "♣️3", "♦️4", "♥️4"])
+        full_house = ids_for(["♦️9", "♣️9", "♥️9", "♣️10", "♦️10"])
+
+        three_pairs_components = guandan._bot_score_components(state, "bot4", three_pairs, depth=2)
+        self.assertLess(three_pairs_components.get("preserve_lighter_shape", 0.0), 0.0)
+        self.assertGreater(
+            guandan._bot_score_play(state, "bot4", full_house, depth=2),
+            guandan._bot_score_play(state, "bot4", three_pairs, depth=2),
+        )
+
+    def test_opening_full_house_penalizes_consuming_premium_groups_over_three(self):
+        players = [
+            {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
+            {"player_id": "bot2", "name": "Bot 2", "seat": 1, "is_bot": True},
+            {"player_id": "zhu", "name": "zhu", "seat": 2, "is_bot": False},
+            {"player_id": "bot4", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["round_number"] = 1
+        state["dealer_team"] = "B"
+        state["level_rank"] = 2
+        state["current_turn"] = "bot4"
+        state["current_trick"] = None
+        state["config"]["bot_mode"] = "heuristic"
+
+        deck = guandan._full_deck()
+
+        def pick_label(label):
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    return deck.pop(idx)
+            raise AssertionError(f"missing card {label}")
+
+        bot4_hand = [
+            pick_label(label)
+            for label in [
+                "🃏B",
+                "♣️2",
+                "♦️2",
+                "♦️A",
+                "♠️K",
+                "♠️K",
+                "♣️K",
+                "♣️Q",
+                "♦️Q",
+                "♠️J",
+                "♠️J",
+                "♥️J",
+                "♣️10",
+                "♦️10",
+                "♦️9",
+                "♣️9",
+                "♥️9",
+                "♦️7",
+                "♣️6",
+                "♠️6",
+                "♣️5",
+                "♦️5",
+                "♥️5",
+                "♦️4",
+                "♥️4",
+                "♦️3",
+                "♣️3",
+            ]
+        ]
+        state["players"]["bot4"]["hand"] = bot4_hand
+        for pid in ("calvin", "bot2", "zhu"):
+            state["players"][pid]["hand"] = deck[:27]
+            del deck[:27]
+
+        def ids_for(labels):
+            ids = []
+            used = set()
+            for label in labels:
+                for card in bot4_hand:
+                    if card["id"] in used:
+                        continue
+                    if guandan._card_label(card) == label:
+                        ids.append(card["id"])
+                        used.add(card["id"])
+                        break
+            return ids
+
+        premium_full_house = ids_for(["♠️K", "♠️K", "♣️K", "♣️Q", "♦️Q"])
+        premium_three = ids_for(["♠️K", "♠️K", "♣️K"])
+
+        full_house_components = guandan._bot_score_components(state, "bot4", premium_full_house, depth=2)
+        self.assertLess(full_house_components.get("preserve_lighter_shape", 0.0), 0.0)
+        self.assertGreater(
+            guandan._bot_score_play(state, "bot4", premium_three, depth=2),
+            guandan._bot_score_play(state, "bot4", premium_full_house, depth=2),
+        )
+
     def test_followup_lead_avoids_wild_full_house_and_keeps_opening_clean(self):
         players = [
             {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
