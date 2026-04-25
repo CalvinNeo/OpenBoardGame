@@ -1803,6 +1803,150 @@ def _should_prune_wasteful_lead_bomb(
     return len(hand) >= 15 and best_non_bomb_score >= score + 1.5
 
 
+def _lead_bomb_alternative_profile(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+) -> Dict[str, float]:
+    if state.get("current_trick") or combo.get("type") not in BOMB_TYPES:
+        return {
+            "has_non_bomb": 0.0,
+            "best_non_bomb_score": -999.0,
+            "best_multi_non_bomb_score": -999.0,
+            "best_clean_non_bomb_score": -999.0,
+            "gap": 0.0,
+        }
+
+    hand = state["players"].get(player_id, {}).get("hand", [])
+    if not hand or len(cards) >= len(hand):
+        return {
+            "has_non_bomb": 0.0,
+            "best_non_bomb_score": -999.0,
+            "best_multi_non_bomb_score": -999.0,
+            "best_clean_non_bomb_score": -999.0,
+            "gap": 0.0,
+        }
+
+    level_rank = state["level_rank"]
+    hand_map = _map_hand_by_id(hand)
+    bomb_score = _lead_option_score(state, player_id, cards)
+    options: List[List[int]] = []
+    options.extend(_list_single_options(hand, level_rank, 0))
+    options.extend(_list_rank_group_options(hand, level_rank, 0, 2))
+    options.extend(_list_rank_group_options(hand, level_rank, 0, 3))
+    options.extend(_list_full_house_options(hand, level_rank, 0))
+    options.extend(_list_straight_options(hand, level_rank, 0))
+    options.extend(_list_three_pairs_options(hand, level_rank, 0))
+    options.extend(_list_steel_plate_options(hand, level_rank, 0))
+
+    best_non_bomb_score = -999.0
+    best_multi_non_bomb_score = -999.0
+    best_clean_non_bomb_score = -999.0
+    has_non_bomb = False
+    chosen_key = _cards_key(cards)
+    for option in _dedupe_card_sets(options):
+        if _cards_key(option) == chosen_key:
+            continue
+        play_cards = [hand_map[cid] for cid in option if cid in hand_map]
+        alt_combo = _evaluate_combo(play_cards, level_rank, state.get("config", {}))
+        if not alt_combo or alt_combo.get("type") in BOMB_TYPES:
+            continue
+        has_non_bomb = True
+        alt_score = _lead_option_score(state, player_id, option)
+        best_non_bomb_score = max(best_non_bomb_score, alt_score)
+        if len(option) > 1:
+            best_multi_non_bomb_score = max(best_multi_non_bomb_score, alt_score)
+        if (
+            not _cards_use_special_material(play_cards, level_rank)
+            and _group_fragment_penalty(hand, option, level_rank, alt_combo) <= 2.8
+            and _control_group_break_penalty(hand, option, level_rank) <= 2.4
+        ):
+            best_clean_non_bomb_score = max(best_clean_non_bomb_score, alt_score)
+
+    if not has_non_bomb:
+        return {
+            "has_non_bomb": 0.0,
+            "best_non_bomb_score": -999.0,
+            "best_multi_non_bomb_score": -999.0,
+            "best_clean_non_bomb_score": -999.0,
+            "gap": 0.0,
+        }
+
+    return {
+        "has_non_bomb": 1.0,
+        "best_non_bomb_score": best_non_bomb_score,
+        "best_multi_non_bomb_score": best_multi_non_bomb_score,
+        "best_clean_non_bomb_score": best_clean_non_bomb_score,
+        "gap": best_non_bomb_score - bomb_score,
+    }
+
+
+def _lead_empty_bomb_penalty(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+    alternative_profile: Optional[Dict[str, float]] = None,
+) -> float:
+    if state.get("current_trick") or combo.get("type") not in BOMB_TYPES:
+        return 0.0
+
+    hand = state["players"].get(player_id, {}).get("hand", [])
+    if not hand or len(cards) >= len(hand):
+        return 0.0
+
+    remaining = _remove_cards(hand, cards)
+    if not remaining:
+        return 0.0
+    if _can_play_all(remaining, state["level_rank"], state.get("config", {}), None):
+        return 0.0
+
+    teammate = _teammate_of(state, player_id)
+    partner_left = len(state["players"][teammate]["hand"]) if teammate else 99
+    active_opponents = [
+        pid
+        for pid in state["turn_order"]
+        if _team_of(state, pid) != _team_of(state, player_id) and not state["players"][pid]["finished"]
+    ]
+    opp_left = (
+        min(len(state["players"][pid]["hand"]) for pid in active_opponents)
+        if active_opponents
+        else 99
+    )
+    if partner_left <= 2 or opp_left <= 2:
+        return 0.0
+
+    profile = alternative_profile or _lead_bomb_alternative_profile(state, player_id, cards, combo)
+    if not profile.get("has_non_bomb"):
+        return 0.0
+
+    gap = profile.get("gap", 0.0)
+    best_non_bomb_score = profile.get("best_non_bomb_score", -999.0)
+    best_multi_non_bomb_score = profile.get("best_multi_non_bomb_score", -999.0)
+    best_clean_non_bomb_score = profile.get("best_clean_non_bomb_score", -999.0)
+    penalty = 0.0
+    if gap > 0.0:
+        penalty += min(15.0, 6.5 + gap * 0.18)
+    elif best_non_bomb_score > -999.0:
+        penalty += 3.5
+
+    if best_multi_non_bomb_score > -999.0:
+        penalty += 2.4
+    if best_clean_non_bomb_score > -999.0:
+        penalty += 2.0
+
+    if len(remaining) >= 6:
+        penalty += 2.2
+    elif len(remaining) >= 4:
+        penalty += 1.2
+
+    if combo.get("type") == "bomb" and combo.get("rank_value", 99) <= _point_order_value(10, state["level_rank"]):
+        penalty += 1.2
+
+    return penalty
+
+
 def _cards_use_special_material(play_cards: List[Dict], level_rank: int) -> bool:
     return any(_is_joker(card) or _is_wild(card, level_rank) for card in play_cards)
 
@@ -8650,6 +8794,7 @@ def _bot_score_components(
     remaining = _remove_cards(hand, cards)
     components: Dict[str, float] = _hand_state_value_components(state, bot_id, remaining)
     shape_score = _shape_transition_score(hand, cards, level_rank)
+    lead_bomb_profile: Optional[Dict[str, float]] = None
     if abs(shape_score) > 0.001:
         components["shape_value"] = shape_score
     plan_score = _plan_alignment_score(hand, cards, combo, level_rank)
@@ -8694,6 +8839,17 @@ def _bot_score_components(
         if current_trick and current_trick.get("combo", {}).get("type") in BOMB_TYPES:
             base = 1.5
         components["bomb_bonus"] = base + _bomb_tier(combo) * 0.35
+        if not current_trick:
+            lead_bomb_profile = _lead_bomb_alternative_profile(state, bot_id, cards, combo)
+            empty_bomb_penalty = _lead_empty_bomb_penalty(
+                state,
+                bot_id,
+                cards,
+                combo,
+                alternative_profile=lead_bomb_profile,
+            )
+            if empty_bomb_penalty > 0.001:
+                components["lead_empty_bomb"] = -empty_bomb_penalty
         critical_bonus = _critical_pair_three_bomb_bonus(state, bot_id, cards, combo)
         if critical_bonus > 0:
             components["critical_bomb_takeover"] = critical_bonus
@@ -8735,8 +8891,15 @@ def _bot_score_components(
             )
             expected_beats += beat_prob
             expected_blocks += max(0.0, 1.0 - beat_prob)
+        block_scale = 1.0
+        if not current_trick:
+            if lead_bomb_profile is None:
+                lead_bomb_profile = _lead_bomb_alternative_profile(state, bot_id, cards, combo)
+            if lead_bomb_profile.get("has_non_bomb"):
+                gap = max(0.0, lead_bomb_profile.get("gap", 0.0))
+                block_scale = max(0.18, 0.55 - min(0.35, gap * 0.012))
         if expected_blocks > 0.001:
-            components["opp_block"] = expected_blocks * 4.0
+            components["opp_block"] = expected_blocks * 4.0 * block_scale
         if expected_beats > 0.001:
             components["opp_risk"] = -expected_beats * 3.0
     else:

@@ -76,6 +76,34 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         }
         return state, big
 
+    def _make_empty_lead_bomb_state(self):
+        players = [
+            {"player_id": "p1", "name": "帅逼", "seat": 0, "is_bot": False},
+            {"player_id": "p2", "name": "Bot 2", "seat": 1, "is_bot": True},
+            {"player_id": "bot3", "name": "Bot 3", "seat": 2, "is_bot": True},
+            {"player_id": "p4", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["round_number"] = 1
+        state["dealer_team"] = "A"
+        state["level_rank"] = 2
+        state["current_turn"] = "bot3"
+        state["current_trick"] = None
+        state["trick_plays"] = {}
+        state["config"]["bot_mode"] = "heuristic"
+        state["config"]["bot_endgame_threshold"] = 0
+
+        deck = guandan._full_deck()
+        state["players"]["bot3"]["hand"] = self._pick_labels(
+            deck,
+            ["🃏S", "♠️A", "♣️A", "♥️9", "♦️9", "♣️9", "♠️8", "♠️8", "♦️8", "♥️8"],
+        )
+        state["players"]["p1"]["hand"] = deck[:14]
+        state["players"]["p2"]["hand"] = deck[14:34]
+        state["players"]["p4"]["hand"] = deck[34:51]
+        return state
+
     def test_wild_structure_ranking_prioritizes_bomb_upgrade_over_other_shapes(self):
         players = [
             {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
@@ -184,6 +212,47 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             if candidate.get("type") == "bomb" and candidate.get("rank_value") == guandan._point_order_value(5, state["level_rank"])
         )
         self.assertEqual(rank_five_sizes, [4])
+
+    def test_lead_empty_bomb_penalty_beats_residual_hand_value(self):
+        state = self._make_empty_lead_bomb_state()
+        hand = state["players"]["bot3"]["hand"]
+        labels_to_ids = {}
+        for card in hand:
+            labels_to_ids.setdefault(guandan._card_label(card), []).append(card["id"])
+
+        bomb_ids = [
+            labels_to_ids["♠️8"].pop(),
+            labels_to_ids["♠️8"].pop(),
+            labels_to_ids["♦️8"].pop(),
+            labels_to_ids["♥️8"].pop(),
+        ]
+        full_house_ids = [
+            labels_to_ids["♥️9"].pop(),
+            labels_to_ids["♦️9"].pop(),
+            labels_to_ids["♣️9"].pop(),
+            labels_to_ids["♠️A"].pop(),
+            labels_to_ids["♣️A"].pop(),
+        ]
+
+        bomb_components = guandan._bot_score_components(state, "bot3", bomb_ids, depth=2)
+        full_house_components = guandan._bot_score_components(state, "bot3", full_house_ids, depth=2)
+
+        self.assertLess(bomb_components["total"], full_house_components["total"])
+        self.assertIn("lead_empty_bomb", bomb_components)
+        self.assertLess(bomb_components["lead_empty_bomb"], -5.0)
+
+    def test_heuristic_lead_avoids_empty_bomb_when_full_house_exists(self):
+        state = self._make_empty_lead_bomb_state()
+
+        action = guandan.GuandanGame.bot_move(state, "bot3")
+
+        self.assertEqual(action.get("type"), "play")
+        hand = state["players"]["bot3"]["hand"]
+        hand_map = {card["id"]: card for card in hand}
+        chosen_cards = [hand_map[cid] for cid in action.get("card_ids", [])]
+        combo = guandan._evaluate_combo(chosen_cards, state["level_rank"], state.get("config", {}))
+        self.assertIsNotNone(combo)
+        self.assertNotIn(combo.get("type"), guandan._guandan_ai.BOMB_TYPES)
 
     def test_lead_prefers_low_control_probe_single_when_bombs_cover_retake(self):
         players = [
