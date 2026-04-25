@@ -2698,6 +2698,102 @@ def _lead_same_type_options(
     return []
 
 
+def _lead_trip_promotion_bomb_conservation_penalty(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+) -> float:
+    if state.get("current_trick"):
+        return 0.0
+    if (combo.get("type") or "") != "three":
+        return 0.0
+
+    hand = state["players"][player_id]["hand"]
+    if len(hand) < 9:
+        return 0.0
+
+    level_rank = state["level_rank"]
+    hand_map = _map_hand_by_id(hand)
+    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+    if not play_cards or _cards_use_special_material(play_cards, level_rank):
+        return 0.0
+
+    rank_counts = _rank_count_map(hand, level_rank)
+    play_ranks = {
+        card.get("rank")
+        for card in play_cards
+        if not _is_joker(card) and not _is_wild(card, level_rank) and card.get("rank") is not None
+    }
+    if len(play_ranks) != 1:
+        return 0.0
+    play_rank = next(iter(play_ranks))
+    if rank_counts.get(play_rank, 0) != 3:
+        return 0.0
+    current_value = _point_order_value(play_rank, level_rank)
+    if current_value < _point_order_value(11, level_rank):
+        return 0.0
+
+    current_remaining = _remove_cards(hand, cards)
+    current_after = (
+        _hand_decomposition_summary(current_remaining, level_rank)
+        if current_remaining
+        else _empty_hand_decomposition_summary()
+    )
+    current_turns = current_after.get("turns", float(len(current_remaining)))
+
+    preserved_best = None
+    for option in _lead_same_type_options(hand, level_rank, "three", 0):
+        if tuple(sorted(option)) == tuple(sorted(cards)):
+            continue
+        alt_cards = [hand_map[cid] for cid in option if cid in hand_map]
+        alt_combo = _evaluate_combo(alt_cards, level_rank, state.get("config", {}))
+        if not alt_combo or alt_combo.get("type") != "three":
+            continue
+        if _cards_use_special_material(alt_cards, level_rank):
+            continue
+
+        alt_ranks = {
+            card.get("rank")
+            for card in alt_cards
+            if not _is_joker(card) and not _is_wild(card, level_rank) and card.get("rank") is not None
+        }
+        if len(alt_ranks) != 1:
+            continue
+        alt_rank = next(iter(alt_ranks))
+        if alt_rank == play_rank or rank_counts.get(alt_rank, 0) != 3:
+            continue
+        alt_value = _point_order_value(alt_rank, level_rank)
+        if alt_value >= current_value:
+            continue
+
+        alt_remaining = _remove_cards(hand, option)
+        alt_after = (
+            _hand_decomposition_summary(alt_remaining, level_rank)
+            if alt_remaining
+            else _empty_hand_decomposition_summary()
+        )
+        alt_turns = alt_after.get("turns", float(len(alt_remaining)))
+        if alt_turns > current_turns + 1.1:
+            continue
+        if alt_after.get("bomb_turns", 0.0) + 0.01 < current_after.get("bomb_turns", 0.0):
+            continue
+
+        preserved_best = max(preserved_best or alt_value, alt_value)
+
+    if preserved_best is None:
+        return 0.0
+
+    gap = max(0.0, current_value - preserved_best)
+    if gap <= 0.0:
+        return 0.0
+
+    penalty = 6.5 + min(7.5, gap * 0.45)
+    if len(hand) >= 14:
+        penalty += 0.8
+    return penalty
+
+
 def _lead_natural_type_values(
     state: Dict,
     player_id: str,
@@ -2826,6 +2922,8 @@ def _lead_same_type_value_conservation_penalty(
         remaining_high_pairs = _lead_same_type_options(current_remaining, level_rank, "pair", current_value)
         if not remaining_high_pairs:
             penalty += 0.9
+    elif combo_type == "three":
+        penalty += _lead_trip_promotion_bomb_conservation_penalty(state, player_id, cards, combo)
 
     return penalty
 
