@@ -5187,7 +5187,15 @@ def _lead_lighter_shape_preservation_penalty(
                 continue
 
             alt_score = _lead_cheap_option_score(state, player_id, alt_cards, alt_combo)
-            if alt_score + (2.6 if group_size == 3 else 1.6) < current_score:
+            score_allowance = 2.6 if group_size == 3 else 1.6
+            if combo_type == "full_house" and group_size == 3 and rank_value >= grouped_control_rank_min:
+                # High natural trips should still contribute lighter-shape pressure even when the
+                # local full-house lane looks much cheaper, as long as the lighter lead keeps a
+                # comparable turn count. This catches openings like KKKQQ where preserving the
+                # trip/pair split matters more than the immediate local combo score.
+                if alt_turns <= current_turns + 1.0:
+                    score_allowance = max(score_allowance, current_score - alt_score)
+            if alt_score + score_allowance < current_score:
                 continue
 
             penalty = base_penalty
@@ -8773,6 +8781,14 @@ def _bot_score_components(
                 short_enemy_defer_risk = _short_enemy_defer_bomb_risk_penalty(state, bot_id)
                 if short_enemy_defer_risk > 0.001:
                     components["pass_short_enemy_defer_risk"] = -short_enemy_defer_risk
+                best_short_enemy_bomb_score = _best_short_enemy_pressure_bomb_score(state, bot_id, depth)
+                if best_short_enemy_bomb_score is not None:
+                    current_total = sum(components.values())
+                    if best_short_enemy_bomb_score > current_total + 0.5:
+                        components["pass_best_bomb_gap"] = -min(
+                            18.0,
+                            (best_short_enemy_bomb_score - current_total) * 0.85,
+                        )
                 defer_upgrade_risk = _defer_bomb_upgrade_risk_penalty(state, bot_id)
                 if defer_upgrade_risk > 0.001:
                     components["pass_stall_shape_risk"] = -defer_upgrade_risk
@@ -9277,6 +9293,111 @@ def _straight_flush_structural_upgrade_bonus(
     return best_bonus
 
 
+def _short_enemy_pressure_bomb_options(state: Dict, player_id: str) -> List[List[int]]:
+    current_trick = state.get("current_trick")
+    if not current_trick:
+        return []
+    current_combo = current_trick.get("combo") or {}
+    if current_combo.get("type") in BOMB_TYPES:
+        return []
+
+    leader = current_trick.get("player_id")
+    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+        return []
+    leader_left = len(state["players"].get(leader, {}).get("hand", []))
+    if leader_left > 4:
+        return []
+    if current_combo.get("type") not in ("full_house", "straight", "three_pairs", "steel_plate"):
+        return []
+
+    hand = state["players"].get(player_id, {}).get("hand", [])
+    if not hand:
+        return []
+
+    level_rank = state["level_rank"]
+    config = state.get("config", {})
+    hand_map = _map_hand_by_id(hand)
+    options = _list_bomb_options(hand, level_rank, current_combo, config)
+    if not options:
+        return []
+
+    entries = []
+    minimal = _minimal_bomb_response(hand, level_rank, current_combo, config)
+    minimal_key = tuple(sorted(minimal)) if minimal else None
+    for cards in _dedupe_card_sets(options):
+        play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+        combo = _evaluate_combo(play_cards, level_rank, config)
+        if not combo or combo.get("type") not in BOMB_TYPES:
+            continue
+        remaining = _remove_cards(hand, cards)
+        natural = 1 if not _cards_use_special_material(play_cards, level_rank) else 0
+        finish_push = 0.0
+        if not remaining:
+            finish_push += 3.0
+        elif len(remaining) <= 4:
+            finish_push += 1.2
+        elif _estimated_turns_to_finish(remaining, level_rank) <= 2.2:
+            finish_push += 0.6
+        entries.append(
+            (
+                cards,
+                combo,
+                tuple(sorted(cards)) == minimal_key,
+                natural,
+                finish_push,
+            )
+        )
+
+    if not entries:
+        return []
+
+    entries.sort(
+        key=lambda item: (
+            item[2],
+            item[3],
+            _bomb_tier(item[1]),
+            _combo_numeric_value(item[1]),
+            item[4],
+            -len(item[0]),
+            _cards_key(item[0]),
+        ),
+        reverse=True,
+    )
+
+    chosen: List[List[int]] = []
+    seen = set()
+    for cards, _combo, is_minimal, natural, _finish_push in entries:
+        key = tuple(cards)
+        if key in seen:
+            continue
+        if is_minimal or natural:
+            chosen.append(cards)
+            seen.add(key)
+
+    if not chosen:
+        chosen.append(entries[0][0])
+        seen.add(tuple(entries[0][0]))
+
+    for cards, _combo, _is_minimal, _natural, _finish_push in entries:
+        key = tuple(cards)
+        if key in seen:
+            continue
+        chosen.append(cards)
+        seen.add(key)
+        if len(chosen) >= 4:
+            break
+    return chosen
+
+
+def _best_short_enemy_pressure_bomb_score(state: Dict, player_id: str, depth: int) -> Optional[float]:
+    best_score = None
+    for cards in _short_enemy_pressure_bomb_options(state, player_id):
+        score = _bot_score_play(state, player_id, cards, max(1, depth))
+        if best_score is None or score > best_score:
+            best_score = score
+    return best_score
+
+
 def _filter_overbomb_options(state: Dict, player_id: str, options: List[List[int]]) -> List[List[int]]:
     current_trick = state.get("current_trick")
     if not current_trick:
@@ -9292,6 +9413,10 @@ def _filter_overbomb_options(state: Dict, player_id: str, options: List[List[int
     hand_map = _map_hand_by_id(hand)
     level_rank = state["level_rank"]
     config = state.get("config", {})
+    leader = current_trick.get("player_id")
+    leader_left = len(state["players"].get(leader, {}).get("hand", [])) if leader else 99
+    current_combo = current_trick.get("combo") or {}
+    pressure_bombs = _short_enemy_pressure_bomb_options(state, player_id)
     filtered: List[List[int]] = []
     bombs: List[List[int]] = []
     has_non_bomb = False
@@ -9317,6 +9442,15 @@ def _filter_overbomb_options(state: Dict, player_id: str, options: List[List[int
                     and shape_score > -4.0
                 ):
                     has_structurally_clean_non_bomb = True
+    if (
+        pressure_bombs
+        and leader_left <= 4
+        and current_combo.get("type") in ("full_house", "straight", "three_pairs", "steel_plate")
+    ):
+        if not has_non_bomb:
+            return pressure_bombs
+        if has_structurally_clean_non_bomb:
+            return filtered + [cards for cards in pressure_bombs if tuple(cards) not in {tuple(item) for item in filtered}]
     if has_non_bomb and has_structurally_clean_non_bomb:
         upgrade_bombs = [
             cards
