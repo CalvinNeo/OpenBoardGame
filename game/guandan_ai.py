@@ -1170,6 +1170,27 @@ def _find_straight_flush_candidates(hand: List[Dict], level_rank: int) -> List[T
     return candidates
 
 
+def _five_of_kind_prefers_four_bomb_with_kicker(hand: List[Dict], level_rank: int, rank: int) -> bool:
+    rank_cards = [
+        card for card in hand if not _is_joker(card) and not _is_wild(card, level_rank) and card.get("rank") == rank
+    ]
+    if len(rank_cards) != 5:
+        return False
+
+    other_cards = [card for card in hand if card.get("id") not in {card["id"] for card in rank_cards}]
+    for kicker in rank_cards:
+        reduced_hand = other_cards + [kicker]
+        for option in _list_straight_options(reduced_hand, level_rank, 0):
+            if kicker["id"] not in option:
+                continue
+            option_map = _map_hand_by_id(reduced_hand)
+            play_cards = [option_map[cid] for cid in option if cid in option_map]
+            combo = _evaluate_combo(play_cards, level_rank, {})
+            if combo and combo.get("type") == "straight" and not _cards_use_special_material(play_cards, level_rank):
+                return True
+    return False
+
+
 def _find_bomb_candidates(hand: List[Dict], level_rank: int) -> List[Dict]:
     info = _hand_info(hand, level_rank)
     strength = _rank_strength(level_rank)
@@ -1203,7 +1224,13 @@ def _find_bomb_candidates(hand: List[Dict], level_rank: int) -> List[Dict]:
 
     for rank, card_ids in info["normals_by_rank"].items():
         total = len(card_ids) + len(wilds)
-        for size in range(4, min(8, total) + 1):
+        sizes = list(range(4, min(8, total) + 1))
+        if len(card_ids) == 5 and not wilds:
+            if _five_of_kind_prefers_four_bomb_with_kicker(hand, level_rank, rank):
+                sizes = [size for size in sizes if size != 5]
+            else:
+                sizes = [size for size in sizes if size != 4]
+        for size in sizes:
             tier = _bomb_tier_for_size(size)
             needed = max(0, size - len(card_ids))
             if needed > len(wilds):

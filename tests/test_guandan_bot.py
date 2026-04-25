@@ -7,6 +7,17 @@ from game import guandan
 
 
 class GuandanBotBombAvoidanceTests(unittest.TestCase):
+    def _pick_labels(self, deck, labels):
+        picked = []
+        for label in labels:
+            for idx, card in enumerate(deck):
+                if guandan._card_label(card) == label:
+                    picked.append(deck.pop(idx))
+                    break
+            else:
+                raise AssertionError(f"missing card {label}")
+        return picked
+
     def _make_single_response_state(self):
         players = [
             {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
@@ -131,6 +142,48 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertTrue(ranked)
         self.assertEqual(ranked[0].get("kind"), "straight")
         self.assertEqual(ranked[0].get("high_value"), 7.0)
+
+    def test_five_of_kind_prefers_full_bomb_without_straight_kicker_use(self):
+        state, _big = self._make_state()
+        deck = guandan._full_deck()
+        state["players"]["bot"]["hand"] = self._pick_labels(
+            deck,
+            ["♠️5", "♥️5", "♣️5", "♦️5", "♠️5", "♣️9", "♦️J"],
+        )
+
+        candidates = guandan._guandan_ai.call(
+            guandan,
+            "_find_bomb_candidates",
+            state["players"]["bot"]["hand"],
+            state["level_rank"],
+        )
+        rank_five_sizes = sorted(
+            len(candidate["cards"])
+            for candidate in candidates
+            if candidate.get("type") == "bomb" and candidate.get("rank_value") == guandan._point_order_value(5, state["level_rank"])
+        )
+        self.assertEqual(rank_five_sizes, [5])
+
+    def test_five_of_kind_keeps_four_bomb_when_extra_card_completes_straight(self):
+        state, _big = self._make_state()
+        deck = guandan._full_deck()
+        state["players"]["bot"]["hand"] = self._pick_labels(
+            deck,
+            ["♠️4", "♠️5", "♥️5", "♣️5", "♦️5", "♠️5", "♣️6", "♦️7", "♥️8", "♣️Q"],
+        )
+
+        candidates = guandan._guandan_ai.call(
+            guandan,
+            "_find_bomb_candidates",
+            state["players"]["bot"]["hand"],
+            state["level_rank"],
+        )
+        rank_five_sizes = sorted(
+            len(candidate["cards"])
+            for candidate in candidates
+            if candidate.get("type") == "bomb" and candidate.get("rank_value") == guandan._point_order_value(5, state["level_rank"])
+        )
+        self.assertEqual(rank_five_sizes, [4])
 
     def _make_pass_state(self):
         players = [
