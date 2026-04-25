@@ -1349,6 +1349,7 @@ def _lead_option_score(state: Dict, player_id: str, cards: List[int]) -> float:
     score -= _lead_low_pair_probe_penalty(state, player_id, cards, combo)
     score -= _lead_low_pair_full_house_carry_penalty(state, player_id, cards, combo)
     score -= _lead_low_single_probe_penalty(state, player_id, cards, combo)
+    score += _lead_control_probe_bonus(state, player_id, cards, combo)
     score += _lead_turn_efficiency_bonus(state, player_id, cards, combo)
     score += _lead_same_type_reentry_bonus(state, player_id, cards, combo)
     score += _lead_teammate_support_bonus(state, player_id, cards, combo)
@@ -2616,6 +2617,69 @@ def _lead_low_single_escape_bonus(hand: List[Dict], cards: List[int], level_rank
     bonus = 3.0 + (LOW_SINGLE_VALUE_MAX - value) * 0.55
     if len(hand) <= 5:
         bonus *= 1.2
+    return bonus
+
+
+def _lead_control_probe_bonus(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+) -> float:
+    if state.get("current_trick"):
+        return 0.0
+    if (combo.get("type") or "") != "single" or len(cards) != 1:
+        return 0.0
+
+    hand = state["players"][player_id]["hand"]
+    if len(hand) < 14:
+        return 0.0
+
+    level_rank = state["level_rank"]
+    hand_map = _map_hand_by_id(hand)
+    card = hand_map.get(cards[0])
+    if not card or _is_joker(card) or _is_wild(card, level_rank):
+        return 0.0
+    if _rank_count_map(hand, level_rank).get(card.get("rank"), 0) != 1:
+        return 0.0
+
+    value = combo.get("rank_value", 0)
+    if value > _point_order_value(10, level_rank):
+        return 0.0
+
+    before = _hand_decomposition_summary(hand, level_rank)
+    if before.get("bomb_turns", 0.0) < 1.0:
+        return 0.0
+
+    remaining = _remove_cards(hand, cards)
+    if not remaining:
+        return 0.0
+
+    after = _hand_decomposition_summary(remaining, level_rank)
+    single_values = sorted((_single_order_value(other, level_rank) for other in remaining), reverse=True)
+    best_single = single_values[0] if single_values else 0
+    if best_single < HIGH_CONTROL_SINGLE_VALUE_MIN and after.get("bomb_turns", 0.0) < 1.5:
+        return 0.0
+
+    active_opponents = [
+        pid
+        for pid in state.get("turn_order", [])
+        if _team_of(state, pid) != _team_of(state, player_id) and not state["players"][pid]["finished"]
+    ]
+    if active_opponents:
+        min_opp = min(len(state["players"][pid]["hand"]) for pid in active_opponents)
+        if min_opp <= 3:
+            return 0.0
+
+    bonus = 4.8
+    bonus += min(2.8, before.get("bomb_turns", 0.0) * 1.1)
+    bonus += min(2.2, after.get("bomb_turns", 0.0) * 0.9)
+    if best_single >= PREMIUM_SINGLE_VALUE_MIN:
+        bonus += min(2.6, max(0.0, best_single - PREMIUM_SINGLE_VALUE_MIN) * 0.12)
+    elif best_single >= HIGH_CONTROL_SINGLE_VALUE_MIN:
+        bonus += 1.4
+    if len(single_values) >= 2 and single_values[1] >= HIGH_CONTROL_SINGLE_VALUE_MIN:
+        bonus += 1.2
     return bonus
 
 
@@ -5223,6 +5287,8 @@ def _lead_low_single_probe_penalty(
 
     single_value = combo.get("rank_value", 0)
     if single_value >= 58:
+        return 0.0
+    if _lead_control_probe_bonus(state, player_id, cards, combo) > 0.001:
         return 0.0
 
     before_metrics = _hand_structure_metrics(hand, level_rank)
@@ -8829,6 +8895,9 @@ def _bot_score_components(
         low_pair_carry_penalty = _lead_low_pair_full_house_carry_penalty(state, bot_id, cards, combo)
         if low_pair_carry_penalty > 0.001:
             components["lead_low_pair_carry"] = -low_pair_carry_penalty
+        control_probe_bonus = _lead_control_probe_bonus(state, bot_id, cards, combo)
+        if control_probe_bonus > 0.001:
+            components["lead_control_probe"] = control_probe_bonus
         reentry_bonus = _lead_same_type_reentry_bonus(state, bot_id, cards, combo)
         if reentry_bonus > 0.001:
             components["lead_reentry"] = reentry_bonus

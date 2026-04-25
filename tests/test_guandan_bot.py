@@ -185,6 +185,52 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         )
         self.assertEqual(rank_five_sizes, [4])
 
+    def test_lead_prefers_low_control_probe_single_when_bombs_cover_retake(self):
+        players = [
+            {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
+            {"player_id": "bot2", "name": "Bot 2", "seat": 1, "is_bot": True},
+            {"player_id": "bot3", "name": "Bot 3", "seat": 2, "is_bot": False},
+            {"player_id": "bot4", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["round_number"] = 1
+        state["dealer_team"] = "A"
+        state["level_rank"] = 2
+        state["current_turn"] = "bot4"
+        state["current_trick"] = None
+        state["trick_plays"] = {}
+
+        deck = guandan._full_deck()
+        bot4_hand = self._pick_labels(
+            deck,
+            [
+                "♠️2", "♠️2", "♦️2", "♥️2",
+                "♥️10",
+                "♣️7", "♠️7", "♠️7", "♥️7",
+                "♥️5", "♦️5", "♣️5", "♠️5", "♥️5",
+                "♦️3", "♣️3", "♣️3",
+                "♥️K", "♠️K", "♣️K",
+            ],
+        )
+        state["players"]["bot4"]["hand"] = bot4_hand
+        state["players"]["calvin"]["hand"] = deck[:21]
+        state["players"]["bot2"]["hand"] = deck[21:43]
+        state["players"]["bot3"]["hand"] = deck[43:65]
+
+        options = guandan._list_hint_options(state, "bot4")
+        ranked = guandan._rank_lead_options(state, "bot4", options)
+        hand_map = guandan._map_hand_by_id(bot4_hand)
+        ranked_labels = [
+            tuple(sorted(guandan._card_label(hand_map[cid]) for cid in cards))
+            for cards in ranked
+        ]
+
+        self.assertEqual(ranked_labels[0], ("♥️10",))
+        chosen = guandan._bot_select_play(state, "bot4", depth=2)
+        chosen_labels = tuple(sorted(guandan._card_label(hand_map[cid]) for cid in chosen))
+        self.assertEqual(chosen_labels, ("♥️10",))
+
     def _make_pass_state(self):
         players = [
             {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
