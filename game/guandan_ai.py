@@ -2650,6 +2650,19 @@ def _teammate_overtrick_penalty(
         margin = max(0.0, _combo_numeric_value(combo) - _combo_numeric_value(current_combo))
         if lead_strength >= 8.0:
             penalty += max(0.0, 2.8 - margin * 1.4)
+        if combo.get("type") in ("straight", "three_pairs", "steel_plate"):
+            round_entries = state.get("round_memories") or []
+            round_entry = round_entries[-1] if round_entries else None
+            public_actions = 0
+            if round_entry:
+                for trick in round_entry.get("tricks", []) or []:
+                    for action in trick.get("actions", []) or []:
+                        if action.get("type") in ("play", "pass"):
+                            public_actions += 1
+            seen_count = len(state.get("seen_cards", []) or []) + len((state.get("current_trick") or {}).get("cards") or [])
+            visibility = min(1.0, 0.18 + seen_count * 0.028 + public_actions * 0.06)
+            if visibility < 0.58:
+                penalty += 8.0 + max(0.0, 0.58 - visibility) * 12.0
     if (
         combo.get("type") in ("pair", "three", "full_house")
         and _combo_numeric_value(combo) >= _point_order_value(14, state["level_rank"])
@@ -2662,7 +2675,103 @@ def _teammate_overtrick_penalty(
         penalty -= 4.0
     if remaining_count <= 2:
         penalty -= 6.0
+    safety = _teammate_safe_overtake_profile(state, player_id, cards, combo)
+    if safety.get("qualified"):
+        penalty *= max(0.08, 1.0 - safety.get("relief_scale", 0.0))
     return max(0.0, penalty)
+
+
+def _teammate_safe_overtake_profile(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+) -> Dict[str, float]:
+    teammate = _teammate_lead_context(state, player_id)
+    current_trick = state.get("current_trick")
+    if not teammate or not current_trick or not cards:
+        return {"qualified": 0.0, "bonus": 0.0, "relief_scale": 0.0}
+
+    current_combo = current_trick.get("combo") or {}
+    combo_type = combo.get("type") or ""
+    if combo_type != current_combo.get("type"):
+        return {"qualified": 0.0, "bonus": 0.0, "relief_scale": 0.0}
+    if combo_type not in ("straight", "three_pairs", "steel_plate"):
+        return {"qualified": 0.0, "bonus": 0.0, "relief_scale": 0.0}
+
+    hand = state["players"].get(player_id, {}).get("hand", [])
+    hand_map = _map_hand_by_id(hand)
+    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+    if not play_cards or _cards_use_special_material(play_cards, state["level_rank"]):
+        return {"qualified": 0.0, "bonus": 0.0, "relief_scale": 0.0}
+
+    remaining = _remove_cards(hand, cards)
+    if len(cards) < 5 or not remaining:
+        return {"qualified": 0.0, "bonus": 0.0, "relief_scale": 0.0}
+
+    round_entries = state.get("round_memories") or []
+    round_entry = round_entries[-1] if round_entries else None
+    public_actions = 0
+    if round_entry:
+        for trick in round_entry.get("tricks", []) or []:
+            for action in trick.get("actions", []) or []:
+                if action.get("type") in ("play", "pass"):
+                    public_actions += 1
+
+    seen_count = len(state.get("seen_cards", []) or []) + len(current_trick.get("cards") or [])
+    visibility = min(1.0, 0.18 + seen_count * 0.028 + public_actions * 0.06)
+    if visibility < 0.58:
+        return {"qualified": 0.0, "bonus": 0.0, "relief_scale": 0.0}
+
+    unknown_cards = _lead_unknown_pool_cards(state, player_id)
+    unknown_total, rank_counts, wild_count, joker_counts = _lead_unknown_pool_profile(state, player_id)
+    active_opponents = [
+        pid
+        for pid in state.get("turn_order", [])
+        if _team_of(state, pid) != _team_of(state, player_id) and not state["players"][pid]["finished"]
+    ]
+    if not active_opponents:
+        return {"qualified": 0.0, "bonus": 0.0, "relief_scale": 0.0}
+
+    reply_probs = []
+    for opp in active_opponents:
+        same_type_prob = _opponent_same_type_reply_probability(
+            state,
+            opp,
+            combo,
+            unknown_total,
+            rank_counts,
+            wild_count,
+            unknown_cards,
+        )
+        bomb_prob = _opponent_bomb_reply_probability(
+            state,
+            opp,
+            combo,
+            unknown_total,
+            rank_counts,
+            joker_counts,
+            unknown_cards,
+        )
+        reply_probs.append(min(1.0, same_type_prob + bomb_prob * 0.55))
+    reply_risk = _aggregate_event_probability(reply_probs)
+    if reply_risk > 0.11:
+        return {"qualified": 0.0, "bonus": 0.0, "relief_scale": 0.0}
+
+    before_turns = _estimated_turns_to_finish(hand, state["level_rank"])
+    after_turns = _estimated_turns_to_finish(remaining, state["level_rank"]) if remaining else 0.0
+    projected_turn_gain = before_turns - (after_turns + 1.0 if remaining else 0.0)
+
+    bonus = 26.0
+    bonus += len(cards) * 3.0
+    bonus += min(9.0, max(0.0, projected_turn_gain) * 4.5)
+    if combo.get("high_value", 0) >= 14:
+        bonus += 4.0
+    elif combo.get("high_value", 0) >= 13:
+        bonus += 2.5
+    bonus *= max(0.45, 1.0 - reply_risk * 2.2)
+    relief_scale = min(0.92, 0.55 + visibility * 0.28 + max(0.0, 0.12 - reply_risk) * 1.5)
+    return {"qualified": 1.0, "bonus": bonus, "relief_scale": relief_scale}
 
 
 def _high_single_bomb_profile(state: Dict, player_id: str) -> Optional[Dict]:
@@ -8580,6 +8689,22 @@ def _minimax_root_lead_single_penalty(state: Dict, bot_id: str, action: Dict) ->
         penalty += min(6.0, (PREMIUM_SINGLE_VALUE_MIN - chosen_value) * 0.16)
     if best_single > chosen_value:
         penalty += min(8.0, (best_single - chosen_value) * 1.4)
+    if len(hand) <= 7 and chosen_value < PREMIUM_SINGLE_VALUE_MIN:
+        grouped_options = 0
+        for option in _list_hint_options(state, bot_id):
+            if len(option) <= 1:
+                continue
+            play_cards = [hand_map[cid] for cid in option if cid in hand_map]
+            alt_combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
+            if not alt_combo or alt_combo.get("type") in BOMB_TYPES:
+                continue
+            grouped_options += 1
+        if grouped_options > 0:
+            penalty += 10.0 + min(8.0, grouped_options * 2.0)
+        remaining = _remove_cards(hand, action.get("card_ids", []))
+        rem_summary = _hand_decomposition_summary(remaining, state["level_rank"]) if remaining else _empty_hand_decomposition_summary()
+        if rem_summary.get("group_turns", 0.0) > 0.0:
+            penalty += min(10.0, 4.0 + rem_summary.get("group_turns", 0.0) * 2.6)
     return max(0.0, penalty)
 
 
@@ -8645,6 +8770,9 @@ def _minimax_pick_action(
         if next_pid and _team_of(state, next_pid) != _team_of(state, bot_id):
             next_hand = state["players"].get(next_pid, {}).get("hand", [])
             if len(next_hand) == 1:
+                next_max = _max_combo_value_for_hand(next_hand, state["level_rank"], "single", state.get("config", {}))
+                if next_max is None:
+                    next_max = 0
                 hand = state["players"][bot_id]["hand"]
                 hand_map = _map_hand_by_id(hand)
                 single_choices: List[Tuple[int, float, Dict]] = []
@@ -8656,6 +8784,8 @@ def _minimax_pick_action(
                     if not combo or combo.get("type") != "single":
                         continue
                     if _cards_use_special_material(play_cards, state["level_rank"]):
+                        continue
+                    if combo.get("rank_value", 0) < next_max:
                         continue
                     single_choices.append((combo.get("rank_value", 0), value, action))
                 if single_choices:
@@ -8941,6 +9071,9 @@ def _bot_score_components(
         )
         if overtrick_penalty > 0:
             components["avoid_overtrick"] = -overtrick_penalty
+        safe_overtake = _teammate_safe_overtake_profile(state, bot_id, cards, combo)
+        if safe_overtake.get("qualified") and safe_overtake.get("bonus", 0.0) > 0.001:
+            components["safe_teammate_overtake"] = safe_overtake["bonus"]
     elif current_trick and _team_of(state, current_trick.get("player_id")) != _team_of(state, bot_id):
         teammate_can_retake_lane = _teammate_can_retake_current_lane(state, bot_id)
         seize = _takeover_opportunity_score(state, bot_id, cards)

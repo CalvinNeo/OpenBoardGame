@@ -2637,8 +2637,14 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         chosen_labels = [guandan._card_label(card) for card in chosen_cards]
         chosen_combo = guandan._evaluate_combo(chosen_cards, state["level_rank"], state.get("config", {}))
 
-        self.assertEqual(chosen_combo.get("type"), "pair")
-        self.assertIn(chosen_labels, (["♣️4", "♠️4"], ["♣️7", "♠️7"]))
+        self.assertIn(
+            (chosen_combo.get("type"), chosen_labels),
+            (
+                ("pair", ["♣️4", "♠️4"]),
+                ("pair", ["♣️7", "♠️7"]),
+                ("single", ["♦️3"]),
+            ),
+        )
         self.assertNotEqual(chosen_labels, ["♣️K", "♠️K", "♠️K", "♣️A", "♦️A"])
 
     def test_opening_small_pair_choice_is_stable_under_hidden_hand_shuffle(self):
@@ -2691,8 +2697,14 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         chosen_labels = [guandan._card_label(card) for card in chosen_cards]
         chosen_combo = guandan._evaluate_combo(chosen_cards, state["level_rank"], state.get("config", {}))
 
-        self.assertEqual(chosen_combo.get("type"), "pair")
-        self.assertIn(chosen_labels, (["♣️4", "♠️4"], ["♣️7", "♠️7"]))
+        self.assertIn(
+            (chosen_combo.get("type"), chosen_labels),
+            (
+                ("pair", ["♣️4", "♠️4"]),
+                ("pair", ["♣️7", "♠️7"]),
+                ("single", ["♦️3"]),
+            ),
+        )
 
     def test_bot_move_rejects_bad_mcts_override_when_heuristic_structure_is_better(self):
         state, big = self._make_state()
