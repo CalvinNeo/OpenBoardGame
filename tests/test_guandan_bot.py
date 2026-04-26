@@ -104,6 +104,49 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         state["players"]["p4"]["hand"] = deck[34:51]
         return state
 
+    def _make_deep_structured_response_state(
+        self,
+        trick_labels,
+        bot_labels,
+        leader_left=21,
+        teammate_left=26,
+        opp2_left=26,
+    ):
+        players = [
+            {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
+            {"player_id": "bot2", "name": "Bot 2", "seat": 1, "is_bot": True},
+            {"player_id": "mate", "name": "工", "seat": 2, "is_bot": False},
+            {"player_id": "bot4", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["round_number"] = 1
+        state["dealer_team"] = "A"
+        state["level_rank"] = 2
+        state["current_turn"] = "bot2"
+        state["config"]["bot_mode"] = "heuristic"
+        state["config"]["bot_endgame_threshold"] = 0
+        state["trick_plays"] = {}
+
+        deck = guandan._full_deck()
+        trick_cards = self._pick_labels(deck, trick_labels)
+        bot_hand = self._pick_labels(deck, bot_labels)
+
+        state["players"]["calvin"]["hand"] = deck[:leader_left]
+        state["players"]["bot2"]["hand"] = bot_hand
+        state["players"]["mate"]["hand"] = deck[leader_left : leader_left + teammate_left]
+        start = leader_left + teammate_left
+        state["players"]["bot4"]["hand"] = deck[start : start + opp2_left]
+
+        trick_combo = guandan._evaluate_combo(trick_cards, state["level_rank"], state.get("config", {}))
+        state["current_trick"] = {
+            "player_id": "calvin",
+            "cards": [card["id"] for card in trick_cards],
+            "combo": trick_combo,
+        }
+        state["trick_plays"]["calvin"] = trick_cards
+        return state
+
     def test_wild_structure_ranking_prioritizes_bomb_upgrade_over_other_shapes(self):
         players = [
             {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
@@ -253,6 +296,99 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         combo = guandan._evaluate_combo(chosen_cards, state["level_rank"], state.get("config", {}))
         self.assertIsNotNone(combo)
         self.assertNotIn(combo.get("type"), guandan._guandan_ai.BOMB_TYPES)
+
+    def test_response_material_cost_penalizes_full_house_that_breaks_four_of_a_kind(self):
+        # This protects against treating a "no wild/joker" full house as cheap when it only
+        # exists by splitting a live four-of-a-kind bomb.
+        state = self._make_deep_structured_response_state(
+            ["♣️3", "♦️3", "♥️3", "♦️4", "♥️4"],
+            [
+                "🃏B", "🃏S", "♥️2", "♥️2", "♣️2",
+                "♣️K", "♥️K", "♦️Q", "♣️Q", "♥️J", "♠️J",
+                "♥️10", "♦️10",
+                "♦️9", "♦️9", "♣️9", "♥️9",
+                "♦️8", "♦️8",
+                "♠️7",
+                "♦️6", "♣️6",
+                "♠️5", "♣️5",
+                "♦️4", "♦️3", "♥️3",
+            ],
+        )
+        hand = state["players"]["bot2"]["hand"]
+        hand_map = {card["id"]: card for card in hand}
+        break_bomb_cards = []
+        for label in ["♦️9", "♦️9", "♣️9", "♠️5", "♣️5"]:
+            for cid, card in hand_map.items():
+                if guandan._card_label(card) == label and cid not in break_bomb_cards:
+                    break_bomb_cards.append(cid)
+                    break
+        play_cards = [hand_map[cid] for cid in break_bomb_cards]
+        combo = guandan._evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
+
+        bomb_break = guandan._guandan_ai.call(
+            guandan,
+            "_bomb_structure_break_penalty",
+            hand,
+            break_bomb_cards,
+            state["level_rank"],
+            combo,
+        )
+        material_cost = guandan._guandan_ai.call(
+            guandan,
+            "_response_material_cost",
+            state,
+            "bot2",
+            break_bomb_cards,
+            combo,
+        )
+
+        self.assertEqual(combo.get("type"), "full_house")
+        self.assertGreater(bomb_break, 8.0)
+        self.assertGreater(material_cost, 7.5)
+
+    def test_heuristic_passes_when_full_house_reply_only_exists_by_breaking_bomb(self):
+        # With all players still deep, the bot should preserve the four-of-a-kind bomb instead
+        # of answering a small full house by splitting 9999 into 999+55.
+        state = self._make_deep_structured_response_state(
+            ["♣️3", "♦️3", "♥️3", "♦️4", "♥️4"],
+            [
+                "🃏B", "🃏S", "♥️2", "♥️2", "♣️2",
+                "♣️K", "♥️K", "♦️Q", "♣️Q", "♥️J", "♠️J",
+                "♥️10", "♦️10",
+                "♦️9", "♦️9", "♣️9", "♥️9",
+                "♦️8", "♦️8",
+                "♠️7",
+                "♦️6", "♣️6",
+                "♠️5", "♣️5",
+                "♦️4", "♦️3", "♥️3",
+            ],
+        )
+
+        action = guandan.GuandanGame.bot_move(state, "bot2")
+
+        self.assertEqual(action, {"type": "pass"})
+
+    def test_heuristic_passes_when_three_pairs_reply_only_exists_by_breaking_bomb(self):
+        # The same preservation rule should apply to three-pairs: do not split 7777 into a
+        # normal 77 pair just to answer a low structured trick while everyone still has many cards.
+        state = self._make_deep_structured_response_state(
+            ["♣️3", "♦️3", "♣️4", "♦️4", "♣️5", "♦️5"],
+            [
+                "🃏B", "🃏S", "♥️2", "♣️2",
+                "♣️A", "♦️A", "♠️A",
+                "♥️K", "♦️J",
+                "♥️Q", "♣️Q",
+                "♥️J", "♠️10", "♦️9", "♥️9",
+                "♦️8", "♣️8",
+                "♦️7", "♦️7", "♣️7", "♥️7",
+                "♠️6", "♣️6",
+                "♠️5", "♣️4", "♠️3", "♥️A",
+            ],
+        )
+
+        action = guandan.GuandanGame.bot_move(state, "bot2")
+
+        self.assertEqual(action, {"type": "pass"})
 
     def test_lead_prefers_low_control_probe_single_when_bombs_cover_retake(self):
         players = [

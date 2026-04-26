@@ -1693,6 +1693,54 @@ def _control_group_break_penalty(hand: List[Dict], cards: List[int], level_rank:
     return penalty
 
 
+def _bomb_structure_break_penalty(
+    hand: List[Dict],
+    cards: List[int],
+    level_rank: int,
+    combo: Optional[Dict] = None,
+) -> float:
+    if not hand or not cards:
+        return 0.0
+
+    combo_type = combo.get("type") if combo else None
+    if combo_type in BOMB_TYPES:
+        return 0.0
+
+    remaining = _remove_cards(hand, cards)
+    before_counts = _rank_count_map(hand, level_rank)
+    after_counts = _rank_count_map(remaining, level_rank)
+    penalty = 0.0
+    structured_types = {"full_house", "three_pairs", "steel_plate", "straight"}
+
+    for rank, before_count in before_counts.items():
+        if before_count < 4:
+            continue
+        after_count = after_counts.get(rank, 0)
+        removed = before_count - after_count
+        if removed <= 0:
+            continue
+
+        rank_value = _point_order_value(rank, level_rank)
+        control_pressure = max(0.0, rank_value - 56)
+        base = 8.0 + (before_count - 4) * 2.0 + removed * 1.25 + control_pressure * 0.28
+
+        if combo_type in structured_types:
+            base += 2.2
+        elif combo_type in ("three", "pair"):
+            base += 1.4
+        elif combo_type == "single":
+            base += 0.9
+
+        if after_count <= 1:
+            base += 1.6
+        elif after_count == 2:
+            base += 0.7
+
+        penalty += base
+
+    return penalty
+
+
 def _lead_single_break_penalty(hand: List[Dict], cards: List[int], level_rank: int) -> float:
     if len(cards) != 1:
         return 0.0
@@ -1982,11 +2030,13 @@ def _response_material_cost(
     shape_penalty = max(0.0, -_shape_transition_score(hand, cards, level_rank))
     control_break = _control_group_break_penalty(hand, cards, level_rank)
     fragment_penalty = _group_fragment_penalty(hand, cards, level_rank, combo)
+    bomb_break_penalty = _bomb_structure_break_penalty(hand, cards, level_rank, combo)
 
     cost = structure_delta * 1.55
     cost += shape_penalty * 0.8
     cost += control_break * 1.05
     cost += fragment_penalty
+    cost += bomb_break_penalty
     cost += _wild_structure_opportunity_loss(hand, cards, level_rank) * 1.15
 
     if current_combo and combo["type"] == current_combo.get("type"):
@@ -2017,6 +2067,11 @@ def _response_material_cost(
         cost += 7.0 + (5.5 if natural_alternative else 0.0)
     if combo["type"] == "pair" and big_joker_count == 2:
         cost += 8.5 + (6.0 if natural_alternative else 0.0)
+
+    if bomb_break_penalty > 0.0 and current_trick and _team_of(state, current_trick.get("player_id")) == _team_of(state, player_id):
+        safety = _teammate_safe_overtake_profile(state, player_id, cards, combo)
+        if safety.get("qualified"):
+            cost = max(0.0, cost - bomb_break_penalty * safety.get("relief_scale", 0.0) * 0.9)
 
     if combo["type"] in BOMB_TYPES:
         if current_combo and current_combo.get("type") not in BOMB_TYPES:
@@ -6102,9 +6157,12 @@ def _takeover_opportunity_score(state: Dict, player_id: str, cards: List[int]) -
     score = max(0.0, 3.2 - structure_delta)
     score += max(-4.0, _shape_transition_score(hand, cards, state["level_rank"]) * 0.7)
     material_cost = _response_material_cost(state, player_id, cards, combo)
+    bomb_break_penalty = _bomb_structure_break_penalty(hand, cards, state["level_rank"], combo)
     score += max(0.0, 6.2 - material_cost) * 0.95
     if material_cost > 7.0:
         score -= (material_cost - 7.0) * 0.45
+    if bomb_break_penalty > 0.0:
+        score -= bomb_break_penalty * 0.9
     if combo["type"] not in BOMB_TYPES:
         score += 0.8
         if combo.get("type") == current_combo.get("type"):
