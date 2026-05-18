@@ -24,11 +24,13 @@ const goldRushPanel = document.getElementById("goldRushPanel");
 const incanGoldPanel = document.getElementById("incanGoldPanel");
 const ageOfWarPanel = document.getElementById("ageOfWarPanel");
 const kobayakawaPanel = document.getElementById("kobayakawaPanel");
+const raPanel = document.getElementById("raPanel");
 const scoutPanel = document.getElementById("scoutPanel");
 const manilaPanel = document.getElementById("manilaPanel");
 const skullPanel = document.getElementById("skullPanel");
 const mismatchPanel = document.getElementById("mismatchPanel");
 const coyotePanel = document.getElementById("coyotePanel");
+const inAGrovePanel = document.getElementById("inAGrovePanel");
 const citadelsPanel = document.getElementById("citadelsPanel");
 const tagironPanel = document.getElementById("tagironPanel");
 const davinciCodePanel = document.getElementById("davinciCodePanel");
@@ -74,6 +76,7 @@ function setGamePanelVisibility(gameType) {
   const showAgeOfWar = gameType === "age_of_war";
   const showWanderingTowers = gameType === "wandering_towers";
   const showKobayakawa = gameType === "kobayakawa";
+  const showRa = gameType === "ra";
   const showScout = gameType === "scout";
   const showManila = gameType === "manila";
   const showSkull = gameType === "skull";
@@ -82,6 +85,7 @@ function setGamePanelVisibility(gameType) {
   const showGang = gameType === "the_gang";
   const showMismatch = gameType === "perfect_mismatch";
   const showCoyote = gameType === "coyote";
+  const showInAGrove = gameType === "in_a_grove";
   const showCitadels = gameType === "citadels";
   const showTagiron = gameType === "tagiron";
   const showDaVinciCode = gameType === "davinci_code";
@@ -172,6 +176,12 @@ function setGamePanelVisibility(gameType) {
   if (kobayakawaPanel) {
     kobayakawaPanel.classList.toggle("hidden", !showKobayakawa);
   }
+  if (raPanel) {
+    raPanel.classList.toggle("hidden", !showRa);
+  }
+  if (typeof showRaHeaderActions === "function") {
+    showRaHeaderActions(showRa);
+  }
   if (scoutPanel) {
     scoutPanel.classList.toggle("hidden", !showScout);
   }
@@ -205,6 +215,12 @@ function setGamePanelVisibility(gameType) {
   }
   if (coyotePanel) {
     coyotePanel.classList.toggle("hidden", !showCoyote);
+  }
+  if (inAGrovePanel) {
+    inAGrovePanel.classList.toggle("hidden", !showInAGrove);
+  }
+  if (typeof showInAGroveHeaderActions === "function") {
+    showInAGroveHeaderActions(showInAGrove);
   }
   if (citadelsPanel) {
     citadelsPanel.classList.toggle("hidden", !showCitadels);
@@ -512,6 +528,10 @@ function renderGameState(data) {
     renderKobayakawaGameState(data);
     return;
   }
+  if (gameType === "ra") {
+    renderRaGameState(data);
+    return;
+  }
   if (gameType === "scout") {
     renderScoutGameState(data);
     return;
@@ -542,6 +562,10 @@ function renderGameState(data) {
   }
   if (gameType === "coyote") {
     renderCoyoteGameState(data);
+    return;
+  }
+  if (gameType === "in_a_grove") {
+    renderInAGroveGameState(data);
     return;
   }
   if (gameType === "citadels") {

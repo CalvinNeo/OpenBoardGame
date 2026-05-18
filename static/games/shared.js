@@ -258,6 +258,9 @@ function renderRoomState(state) {
     clearIncanGoldState();
     clearAgeOfWarState();
     clearWanderingTowersState();
+    if (typeof clearRaState === "function") {
+      clearRaState();
+    }
     clearHanabiState();
     clearTexasHoldemState();
     clearSixNimmtState();

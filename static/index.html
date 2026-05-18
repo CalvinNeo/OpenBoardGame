@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css?v=app_v7" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v13" />
 </head>
 <body>
   <section id="logPanel" class="log-panel hidden" aria-hidden="true">
@@ -362,6 +362,26 @@
       <div class="modal-body">
         <div id="goldRushExplainContent"></div>
       </div>
+    </div>
+  </section>
+
+  <section id="inAGroveHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content in-a-grove-help-modal">
+      <div class="modal-header">
+        <h2>In a Grove - Game Rules</h2>
+        <button id="inAGroveHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body" id="inAGroveHelpContent"></div>
+    </div>
+  </section>
+
+  <section id="inAGroveExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content in-a-grove-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="inAGroveExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body" id="inAGroveExplainContent"></div>
     </div>
   </section>
 
@@ -921,6 +941,26 @@
     </div>
   </section>
 
+  <section id="raHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Ra Help</h2>
+        <button id="raHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body" id="raHelpContent"></div>
+    </div>
+  </section>
+
+  <section id="raExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Ra Explain</h2>
+        <button id="raExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body" id="raExplainContent"></div>
+    </div>
+  </section>
+
   <div class="container">
     <h1>OpenBoardGame</h1>
 
@@ -958,6 +998,7 @@
                     <option value="gold_rush">Gold Rush</option>
                     <option value="incan_gold">Incan Gold</option>
                     <option value="kobayakawa">Kobayakawa</option>
+                    <option value="ra">Ra</option>
                     <option value="scout">Scout</option>
                     <option value="texas_holdem">Texas Hold'em</option>
                     <option value="halli_galli">Halli Galli</option>
@@ -1438,6 +1479,10 @@
               <button id="scoutHelpBtn" class="scout-header-btn" type="button">Help</button>
               <button id="scoutExplainBtn" class="scout-header-btn" type="button">Explain</button>
             </div>
+            <div class="panel-header-actions" id="raHeaderActions" style="display: none;">
+              <button id="raHelpBtn" type="button">Help</button>
+              <button id="raExplainBtn" type="button">Explain</button>
+            </div>
             <div class="panel-header-actions" id="catInBoxHeaderActions" style="display: none;">
               <button id="catInBoxHelpBtn" class="cat-box-header-btn" type="button">Help</button>
               <button id="catInBoxExplainBtn" class="cat-box-header-btn" type="button">Explain</button>
@@ -1485,6 +1530,10 @@
             <div class="panel-header-actions" id="wordDecodeHeaderActions" style="display: none;">
               <button id="wordDecodeHelpBtn" class="word-decode-header-btn" type="button">Help</button>
               <button id="wordDecodeExplainBtn" class="word-decode-header-btn" type="button">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="inAGroveHeaderActions" style="display: none;">
+              <button id="inAGroveHelpBtn" class="in-a-grove-header-btn" type="button">Help</button>
+              <button id="inAGroveExplainBtn" class="in-a-grove-header-btn" type="button">Explain</button>
             </div>
             <div class="panel-header-actions" id="tagironHeaderActions" style="display: none;">
               <button id="tagironHelpBtn" class="tagiron-header-btn" type="button">Help</button>
@@ -2024,6 +2073,65 @@
               <div id="kobayakawaPlayers"></div>
             </div>
 
+            <div id="raPanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="raPhase">-</span></div>
+                <div>Epoch: <span id="raEpoch">-</span></div>
+                <div>Current Turn: <span id="raTurn">-</span></div>
+                <div>Bag: <span id="raBag">-</span></div>
+              </div>
+              <div class="row">
+                <div>Center Sun: <span id="raCenterDisk">-</span></div>
+                <div>Ra Track: <span id="raTrackCount">-</span></div>
+                <div>Auction: <span id="raAuctionCount">-</span></div>
+                <div>Winner: <span id="raWinner">-</span></div>
+              </div>
+              <div id="raEpochNotice" class="round-notice hidden" aria-hidden="true">
+                <div id="raEpochNoticeTitle" class="round-notice-title">Epoch Scoring</div>
+                <div id="raEpochNoticeBody" class="round-notice-body">-</div>
+                <div id="raEpochNoticeList" class="ra-score-list"></div>
+              </div>
+
+              <div class="ra-layout">
+                <section class="ra-board">
+                  <h3>Board</h3>
+                  <div class="ra-track-row">
+                    <div>
+                      <div class="ra-section-label">Ra Track ☀️</div>
+                      <div id="raTrack" class="ra-track"></div>
+                    </div>
+                    <div>
+                      <div class="ra-section-label">Auction Track 🏺</div>
+                      <div id="raAuctionTrack" class="ra-auction-track"></div>
+                    </div>
+                  </div>
+                  <div id="raAuctionBox" class="ra-auction-box hidden" aria-hidden="true">
+                    <div id="raAuctionInfo" class="ra-auction-info">-</div>
+                    <div id="raBidButtons" class="ra-bid-buttons"></div>
+                  </div>
+                  <div id="raDisasterBox" class="ra-auction-box hidden" aria-hidden="true">
+                    <div id="raDisasterInfo" class="ra-auction-info">-</div>
+                    <div id="raDisasterChoices" class="ra-disaster-choices"></div>
+                    <button id="raResolveDisasterBtn" type="button">Resolve Disaster</button>
+                  </div>
+                  <h3>Actions</h3>
+                  <div class="row actions ra-actions">
+                    <button id="raDrawBtn" type="button">Draw Tile</button>
+                    <button id="raInvokeBtn" type="button">Invoke Ra</button>
+                    <button id="raPlayGodBtn" type="button">Play God</button>
+                    <button id="raPassBtn" type="button">Pass</button>
+                    <button id="raNextRoundBtn" type="button">Next Round</button>
+                  </div>
+                  <div id="raSelectionLabel" class="hint">Selected: -</div>
+                </section>
+
+                <section class="ra-side">
+                  <h3>Players</h3>
+                  <div id="raPlayers" class="ra-players"></div>
+                </section>
+              </div>
+            </div>
+
             <div id="scoutPanel" class="hidden">
               <div class="row">
                 <div>Phase: <span id="scoutPhase">-</span></div>
@@ -2453,6 +2561,56 @@
 
               <div class="row actions coyote-actions">
                 <button id="coyoteResetBtn">Reset Game</button>
+              </div>
+            </div>
+
+            <div id="inAGrovePanel" class="hidden">
+              <div class="row">
+                <div>Phase: <span id="inAGrovePhase">-</span></div>
+                <div>Round: <span id="inAGroveRound">-</span></div>
+                <div>Current Turn: <span id="inAGroveTurn">-</span></div>
+              </div>
+              <div class="row">
+                <div>First Player: <span id="inAGroveFirstPlayer">-</span></div>
+                <div>Blocked Suspect: <span id="inAGroveBlocked">-</span></div>
+                <div>Winner: <span id="inAGroveWinner">-</span></div>
+              </div>
+
+              <div class="in-a-grove-layout">
+                <section class="in-a-grove-side">
+                  <h3>Your Alibis</h3>
+                  <div id="inAGroveYourTiles" class="in-a-grove-alibis"></div>
+
+                  <h3>Public Info</h3>
+                  <div class="in-a-grove-public-card">
+                    <div>Public Alibi: <span id="inAGrovePublicAlibi">-</span></div>
+                    <div>Victim: <span id="inAGroveVictim">-</span></div>
+                  </div>
+
+                  <div class="row actions in-a-grove-actions">
+                    <button id="inAGrovePeekBtn">Peek Selected</button>
+                    <button id="inAGroveSwapBtn">Swap with Victim</button>
+                    <button id="inAGroveSkipSwapBtn">Skip Swap</button>
+                    <button id="inAGroveBetBtn">Place Bet</button>
+                    <button id="inAGroveNextRoundBtn">Next Round</button>
+                    <button id="inAGrovePlayAgainBtn">Start New Game</button>
+                  </div>
+                </section>
+
+                <section class="in-a-grove-main">
+                  <h3>Suspects</h3>
+                  <div id="inAGroveTable" class="in-a-grove-table">
+                    <div id="inAGroveSuspects" class="in-a-grove-suspects"></div>
+                  </div>
+
+                  <div id="inAGroveRoundSummary" class="round-notice hidden">
+                    <div class="round-notice-title">Last Round</div>
+                    <div id="inAGroveRoundSummaryBody" class="round-notice-body">-</div>
+                  </div>
+
+                  <h3>Players</h3>
+                  <div id="inAGrovePlayers" class="in-a-grove-players"></div>
+                </section>
               </div>
             </div>
 
@@ -4506,6 +4664,7 @@
   <script src="/static/games/fang_niao.js?v=app_v4"></script>
   <script src="/static/games/perfect_mismatch.js?v=app_v4"></script>
   <script src="/static/games/coyote.js?v=app_v4"></script>
+  <script src="/static/games/in_a_grove.js?v=app_v2"></script>
   <script src="/static/games/citadels.js?v=app_v4"></script>
   <script src="/static/games/tagiron.js?v=app_v4"></script>
   <script src="/static/games/davinci_code.js?v=app_v4"></script>
@@ -4522,8 +4681,9 @@
   <script src="/static/games/incan_gold.js?v=app_v4"></script>
   <script src="/static/games/manila.js?v=app_v4"></script>
   <script src="/static/games/kobayakawa.js?v=app_v4"></script>
+  <script src="/static/games/ra.js?v=app_v3"></script>
   <script src="/static/games/scout.js?v=app_v4"></script>
-  <script src="/static/app.js?v=app_v5"></script>
-  <script src="/static/room.js?v=app_v7"></script>
+  <script src="/static/app.js?v=app_v7"></script>
+  <script src="/static/room.js?v=app_v9"></script>
 </body>
 </html>

@@ -27,6 +27,7 @@ from game.halli_galli import HalliGalliGame
 from game.hanabi import HanabiGame
 from game.impression_flower import ImpressionFlowerGame
 from game.incan_gold import IncanGoldGame
+from game.in_a_grove import InAGroveGame
 from game.isle_of_skye import IsleOfSkyeGame
 from game.istanbul import IstanbulGame
 from game.kobayakawa import KobayakawaGame
@@ -36,6 +37,7 @@ from game.patchwork import PatchworkGame
 from game.perfect_mismatch import PerfectMismatchGame
 from game.point_salad import PointSaladGame
 from game.project_l import ProjectLGame
+from game.ra import RaGame
 from game.scout import ScoutGame
 from game.registry import GameDefinition, get_game, list_games
 from game.six_nimmt import SixNimmtGame
@@ -84,6 +86,7 @@ __all__ = [
     "DumbQuestionsGame",
     "ImpressionFlowerGame",
     "IncanGoldGame",
+    "InAGroveGame",
     "IsleOfSkyeGame",
     "IstanbulGame",
     "KobayakawaGame",
@@ -93,6 +96,7 @@ __all__ = [
     "PerfectMismatchGame",
     "PointSaladGame",
     "ProjectLGame",
+    "RaGame",
     "ScoutGame",
     "SixNimmtGame",
     "SplendorGame",

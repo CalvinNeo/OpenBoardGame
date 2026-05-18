@@ -24,6 +24,7 @@ from game.halli_galli import HalliGalliGame
 from game.hanabi import HanabiGame
 from game.impression_flower import ImpressionFlowerGame
 from game.incan_gold import IncanGoldGame
+from game.in_a_grove import InAGroveGame
 from game.isle_of_skye import IsleOfSkyeGame
 from game.istanbul import IstanbulGame
 from game.kobayakawa import KobayakawaGame
@@ -33,6 +34,7 @@ from game.patchwork import PatchworkGame
 from game.perfect_mismatch import PerfectMismatchGame
 from game.point_salad import PointSaladGame
 from game.project_l import ProjectLGame
+from game.ra import RaGame
 from game.scout import ScoutGame
 from game.six_nimmt import SixNimmtGame
 from game.the_gang import TheGangGame
@@ -217,6 +219,62 @@ COYOTE_CONFIG_SCHEMA = {
     "properties": {
         "max_penalties": {"type": "integer", "minimum": 1},
     },
+    "additionalProperties": False,
+}
+
+IN_A_GROVE_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "peek_suspects"},
+                "suspect_indexes": {
+                    "type": "array",
+                    "items": {"type": "integer", "minimum": 0, "maximum": 2},
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "uniqueItems": True,
+                },
+            },
+            "required": ["type", "suspect_indexes"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "swap_with_victim"},
+                "suspect_index": {"type": "integer", "minimum": 0, "maximum": 2},
+            },
+            "required": ["type", "suspect_index"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "skip_swap"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "place_bet"},
+                "suspect_index": {"type": "integer", "minimum": 0, "maximum": 2},
+            },
+            "required": ["type", "suspect_index"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "next_round"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+IN_A_GROVE_CONFIG_SCHEMA = {
+    "type": "object",
     "additionalProperties": False,
 }
 
@@ -654,6 +712,54 @@ KOBAYAKAWA_CONFIG_SCHEMA = {
         "end_mode": {"type": "string", "enum": ["bankrupt", "rounds"]},
         "round_limit": {"type": "integer", "minimum": 1},
     },
+    "additionalProperties": False,
+}
+
+RA_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {"type": "object", "properties": {"type": {"const": "draw_tile"}}, "required": ["type"], "additionalProperties": False},
+        {"type": "object", "properties": {"type": {"const": "invoke_ra"}}, "required": ["type"], "additionalProperties": False},
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "play_god"},
+                "tile_ids": {
+                    "type": "array",
+                    "items": {"type": "string", "minLength": 1, "maxLength": 40},
+                    "minItems": 1,
+                    "maxItems": 8,
+                },
+            },
+            "required": ["type", "tile_ids"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "bid"}, "disk": {"type": "integer", "minimum": 1, "maximum": 16}},
+            "required": ["type", "disk"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "pass"}}, "required": ["type"], "additionalProperties": False},
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "resolve_disaster"},
+                "tile_ids": {
+                    "type": "array",
+                    "items": {"type": "string", "minLength": 1, "maxLength": 40},
+                    "maxItems": 8,
+                },
+            },
+            "required": ["type", "tile_ids"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "next_round"}}, "required": ["type"], "additionalProperties": False},
+    ],
+}
+
+RA_CONFIG_SCHEMA = {
+    "type": "object",
     "additionalProperties": False,
 }
 
@@ -2867,6 +2973,21 @@ register_game(
 
 register_game(
     GameDefinition(
+        game_id=InAGroveGame.game_id,
+        name="In a Grove",
+        min_players=InAGroveGame.min_players,
+        max_players=InAGroveGame.max_players,
+        turn_mode="turn",
+        action_schema=IN_A_GROVE_ACTION_SCHEMA,
+        config_schema=IN_A_GROVE_CONFIG_SCHEMA,
+        module=InAGroveGame,
+        serialize=InAGroveGame.serialize,
+        deserialize=InAGroveGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
         game_id=TagironGame.game_id,
         name="Tagiron",
         min_players=TagironGame.min_players,
@@ -3297,6 +3418,21 @@ register_game(
         module=KobayakawaGame,
         serialize=KobayakawaGame.serialize,
         deserialize=KobayakawaGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=RaGame.game_id,
+        name="Ra",
+        min_players=RaGame.min_players,
+        max_players=RaGame.max_players,
+        turn_mode="turn",
+        action_schema=RA_ACTION_SCHEMA,
+        config_schema=RA_CONFIG_SCHEMA,
+        module=RaGame,
+        serialize=RaGame.serialize,
+        deserialize=RaGame.deserialize,
     )
 )
 

@@ -1,6 +1,8 @@
 let currentRaView = null;
 let selectedRaAuctionTiles = new Set();
 let selectedRaDisasterTiles = new Set();
+let raExplainMode = false;
+let raSuppressNextClick = false;
 
 const raPhaseLabel = document.getElementById("raPhase");
 const raEpochLabel = document.getElementById("raEpoch");
@@ -48,6 +50,57 @@ const RA_HELP_HTML = `
     <p>Disasters force the winner to discard up to 2 matching tiles. Epoch scoring pauses until every player clicks Next Round.</p>
   </div>
 `;
+
+const RA_BUTTON_EXPLANATIONS = {
+  raDrawBtn: {
+    name: "Draw Tile",
+    description:
+      "Draw one tile from the bag. Normal tiles go to the auction track. A Ra tile goes to the Ra track and starts a forced auction unless it fills the Ra track, which ends the epoch immediately.",
+  },
+  raInvokeBtn: {
+    name: "Invoke Ra",
+    description:
+      "Start a voluntary auction without drawing. If every other player passes, you must bid one of your ready sun disks.",
+  },
+  raPlayGodBtn: {
+    name: "Play God",
+    description:
+      "Spend God tiles from your tableau to take selected non-God tiles from the auction track. Select auction tiles first, then click this button.",
+  },
+  raPassBtn: {
+    name: "Pass",
+    description:
+      "Pass your single auction decision. In a voluntary auction, the invoking player cannot pass if nobody else has bid.",
+  },
+  raNextRoundBtn: {
+    name: "Next Round",
+    description:
+      "Confirm that you have reviewed the epoch scoring. The next epoch starts only after every player clicks Next Round.",
+  },
+  raResolveDisasterBtn: {
+    name: "Resolve Disaster",
+    description:
+      "Confirm the tiles you must discard for disasters. You must select the exact number and matching types shown in the disaster box.",
+  },
+};
+
+const RA_DYNAMIC_EXPLANATIONS = {
+  bidDisk: {
+    name: "Bid Sun Disk",
+    description:
+      "Bid this ready sun disk in the current auction. The bid must be higher than the current high bid. If you win, this disk moves to the center and you take the old center disk spent.",
+  },
+  auctionTile: {
+    name: "Auction Tile",
+    description:
+      "Select this tile when using a God tile. God cannot take another God tile. Auction tiles are otherwise won together through auctions.",
+  },
+  disasterTile: {
+    name: "Disaster Discard",
+    description:
+      "Select this tile as a discard target for the pending disaster. War hits Pharaohs, Drought hits rivers, Funeral hits civilizations, and Earthquake hits monuments.",
+  },
+};
 
 const RA_TILE_META = {
   ra: ["☀️", "Ra"],
@@ -118,6 +171,7 @@ function clearRaSelections() {
 function clearRaState() {
   currentRaView = null;
   clearRaSelections();
+  exitRaExplainMode();
   [
     raPhaseLabel,
     raEpochLabel,
@@ -161,6 +215,7 @@ function showRaHeaderActions(show) {
   }
   raHeaderActions.style.display = show ? "flex" : "none";
   if (!show) {
+    exitRaExplainMode();
     if (raHelpModal) {
       setModalVisible(raHelpModal, false);
     }
@@ -178,37 +233,76 @@ function openRaHelpModal() {
   setModalVisible(raHelpModal, true);
 }
 
-function buildRaExplainHtml(view) {
-  if (!view) {
-    return "<p>No active Ra state.</p>";
-  }
-  const legal = (view.legal_actions || []).join(", ") || "none";
-  const auction = view.auction
-    ? `<p>Auction: ${view.auction.forced ? "forced" : "voluntary"}, current bidder ${raPlayerName(view, view.current_turn)}.</p>`
-    : "";
-  const disaster = view.pending_disaster
-    ? `<p>Disaster: ${Object.entries(view.pending_disaster.requirements || {})
-        .map(([kind, count]) => `${RA_TILE_META[kind] ? RA_TILE_META[kind][1] : kind} ${count}`)
-        .join(", ")}.</p>`
-    : "";
-  return `
-    <div class="rules-block">
-      <p>Phase: ${view.phase}. Epoch ${view.epoch}. Legal actions for you: ${legal}.</p>
-      <p>Draw Tile adds to the auction track unless it is ☀️ Ra, which advances the Ra track and starts a forced auction.</p>
-      <p>Invoke Ra starts a voluntary auction. If everyone passes, the invoker must bid.</p>
-      <p>Play God uses selected ⚡ God tiles from your tableau to take selected non-God auction tiles.</p>
-      ${auction}
-      ${disaster}
-    </div>
-  `;
+function raExplanationForKey(key) {
+  return RA_BUTTON_EXPLANATIONS[key] || RA_DYNAMIC_EXPLANATIONS[key] || null;
 }
 
-function openRaExplainModal() {
-  if (!raExplainModal || !raExplainContent) {
+function updateRaExplainModeClasses(enabled) {
+  Object.keys(RA_BUTTON_EXPLANATIONS).forEach((buttonId) => {
+    const button = document.getElementById(buttonId);
+    if (button) {
+      button.classList.toggle("has-explanation", enabled);
+    }
+  });
+  document.querySelectorAll("[data-ra-explain-key]").forEach((el) => {
+    el.classList.toggle("has-explanation", enabled);
+  });
+}
+
+function toggleRaExplainMode() {
+  raExplainMode = !raExplainMode;
+  document.body.classList.toggle("ra-explain-mode", raExplainMode);
+  updateRaExplainModeClasses(raExplainMode);
+  if (raExplainBtn) {
+    raExplainBtn.classList.toggle("active", raExplainMode);
+  }
+}
+
+function exitRaExplainMode() {
+  if (!raExplainMode) {
     return;
   }
-  raExplainContent.innerHTML = buildRaExplainHtml(currentRaView);
+  raExplainMode = false;
+  document.body.classList.remove("ra-explain-mode");
+  updateRaExplainModeClasses(false);
+  if (raExplainBtn) {
+    raExplainBtn.classList.remove("active");
+  }
+}
+
+function showRaButtonExplanation(key) {
+  const explanation = raExplanationForKey(key);
+  if (!explanation || !raExplainModal || !raExplainContent) {
+    return;
+  }
+  raExplainContent.innerHTML = `
+    <div class="rules-block">
+      <h4>${explanation.name}</h4>
+      <p>${explanation.description}</p>
+    </div>
+  `;
   setModalVisible(raExplainModal, true);
+}
+
+function findRaExplainTargetAtPoint(x, y) {
+  for (const buttonId of Object.keys(RA_BUTTON_EXPLANATIONS)) {
+    const button = document.getElementById(buttonId);
+    if (!button) {
+      continue;
+    }
+    const rect = button.getBoundingClientRect();
+    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+      return buttonId;
+    }
+  }
+  const dynamicTargets = document.querySelectorAll("[data-ra-explain-key]");
+  for (const target of dynamicTargets) {
+    const rect = target.getBoundingClientRect();
+    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+      return target.dataset.raExplainKey;
+    }
+  }
+  return null;
 }
 
 function updateRaButtons() {
@@ -252,6 +346,10 @@ function makeRaTile(tile, options = {}) {
   if (options.selected) {
     chip.classList.add("selected");
   }
+  if (options.explainKey) {
+    chip.dataset.raExplainKey = options.explainKey;
+    chip.classList.toggle("has-explanation", raExplainMode);
+  }
   if (!options.clickable) {
     chip.disabled = true;
   } else {
@@ -265,23 +363,42 @@ function renderRaTrack(view) {
     return;
   }
   raTrackEl.innerHTML = "";
-  for (let idx = 0; idx < (view.ra_limit || 0); idx += 1) {
+  const raLimit = view.ra_limit || 0;
+  raTrackEl.style.setProperty("--ra-track-count", String(raLimit || 1));
+  for (let idx = 0; idx < raLimit; idx += 1) {
     const slot = document.createElement("div");
     slot.className = "ra-slot";
-    slot.textContent = idx < (view.ra_track || []).length ? "☀️" : "";
+    slot.classList.toggle("filled", idx < (view.ra_track || []).length);
+    slot.classList.toggle("finish", idx === raLimit - 1);
+    const marker = document.createElement("span");
+    marker.className = "ra-slot-marker";
+    marker.textContent = idx < (view.ra_track || []).length ? "☀️" : String(idx + 1);
+    const label = document.createElement("span");
+    label.className = "ra-slot-label";
+    label.textContent = idx === raLimit - 1 ? "End" : "";
+    slot.append(marker, label);
     raTrackEl.appendChild(slot);
   }
 
   raAuctionTrackEl.innerHTML = "";
   const auctionTiles = view.auction_track || [];
-  for (let idx = 0; idx < (view.auction_limit || 8); idx += 1) {
+  const auctionLimit = view.auction_limit || 8;
+  raAuctionTrackEl.style.setProperty("--ra-track-count", String(auctionLimit));
+  for (let idx = 0; idx < auctionLimit; idx += 1) {
     const tile = auctionTiles[idx];
     const slot = document.createElement("div");
     slot.className = "ra-auction-slot";
+    slot.classList.toggle("filled", Boolean(tile));
+    slot.classList.toggle("finish", idx === auctionLimit - 1);
+    const index = document.createElement("span");
+    index.className = "ra-auction-index";
+    index.textContent = String(idx + 1);
+    slot.appendChild(index);
     if (tile) {
       const clickable = raLegal("play_god") && tile.kind !== "god";
       const chip = makeRaTile(tile, {
         clickable,
+        explainKey: clickable ? "auctionTile" : null,
         selected: selectedRaAuctionTiles.has(tile.id),
         onClick: () => {
           if (selectedRaAuctionTiles.has(tile.id)) {
@@ -293,6 +410,11 @@ function renderRaTrack(view) {
         },
       });
       slot.appendChild(chip);
+    } else {
+      const empty = document.createElement("span");
+      empty.className = "ra-empty-label";
+      empty.textContent = idx === auctionLimit - 1 ? "Full" : "";
+      slot.appendChild(empty);
     }
     raAuctionTrackEl.appendChild(slot);
   }
@@ -319,10 +441,12 @@ function renderRaAuction(view) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "ra-sun-disk";
+    button.dataset.raExplainKey = "bidDisk";
     button.textContent = `☀️ ${disk.value}`;
     const allowed = raLegal("bid") && disk.ready && Number(disk.value) > currentBid;
     button.disabled = !allowed;
     button.classList.toggle("action-allowed", allowed);
+    button.classList.toggle("has-explanation", raExplainMode);
     button.addEventListener("click", () => sendAction({ type: "bid", disk: Number(disk.value) }));
     raBidButtons.appendChild(button);
   });
@@ -349,6 +473,7 @@ function renderRaDisaster(view) {
   (you && you.tiles ? you.tiles : []).forEach((tile) => {
     const chip = makeRaTile(tile, {
       clickable: true,
+      explainKey: "disasterTile",
       selected: selectedRaDisasterTiles.has(tile.id),
       onClick: () => {
         if (selectedRaDisasterTiles.has(tile.id)) {
@@ -482,6 +607,7 @@ function renderRaGameState(data) {
   renderRaPlayers(view);
   logGameEvents(data);
   updateRaButtons();
+  updateRaExplainModeClasses(raExplainMode);
 }
 
 if (raDrawBtn) {
@@ -512,7 +638,7 @@ if (raHelpBtn) {
   raHelpBtn.addEventListener("click", openRaHelpModal);
 }
 if (raExplainBtn) {
-  raExplainBtn.addEventListener("click", openRaExplainModal);
+  raExplainBtn.addEventListener("click", toggleRaExplainMode);
 }
 if (raHelpModalCloseBtn) {
   raHelpModalCloseBtn.addEventListener("click", () => setModalVisible(raHelpModal, false));
@@ -534,6 +660,9 @@ document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") {
     return;
   }
+  if (raExplainMode) {
+    exitRaExplainMode();
+  }
   if (raHelpModal && !raHelpModal.classList.contains("hidden")) {
     setModalVisible(raHelpModal, false);
   }
@@ -541,7 +670,64 @@ document.addEventListener("keydown", (event) => {
     setModalVisible(raExplainModal, false);
   }
 });
+document.addEventListener(
+  "pointerdown",
+  (event) => {
+    if (!raExplainMode) {
+      return;
+    }
+    const button = event.target.closest("button");
+    if (
+      button === raExplainBtn ||
+      button === raHelpBtn ||
+      button === raHelpModalCloseBtn ||
+      button === raExplainModalCloseBtn
+    ) {
+      return;
+    }
+
+    const explainKey = findRaExplainTargetAtPoint(event.clientX, event.clientY);
+    if (explainKey) {
+      event.preventDefault();
+      event.stopPropagation();
+      raSuppressNextClick = true;
+      showRaButtonExplanation(explainKey);
+      exitRaExplainMode();
+      return;
+    }
+
+    if (button) {
+      event.preventDefault();
+      event.stopPropagation();
+      raSuppressNextClick = true;
+    }
+  },
+  true
+);
 document.addEventListener("click", (event) => {
+  if (raSuppressNextClick) {
+    event.preventDefault();
+    event.stopPropagation();
+    raSuppressNextClick = false;
+    return;
+  }
+  if (raExplainMode) {
+    const button = event.target.closest("button");
+    if (!button) {
+      return;
+    }
+    if (
+      button === raExplainBtn ||
+      button === raHelpBtn ||
+      button === raHelpModalCloseBtn ||
+      button === raExplainModalCloseBtn
+    ) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
   if (!currentRaView || currentGameType !== "ra") {
     return;
   }
@@ -550,7 +736,7 @@ document.addEventListener("click", (event) => {
     clearRaSelections();
     updateRaButtons();
   }
-});
+}, true);
 
 window.clearRaState = clearRaState;
 window.renderRaGameState = renderRaGameState;

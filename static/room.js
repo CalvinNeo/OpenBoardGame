@@ -1327,11 +1327,17 @@ function resetRoomState() {
   clearGoldRushState();
   clearIncanGoldState();
   clearKobayakawaState();
+  if (typeof clearRaState === "function") {
+    clearRaState();
+  }
   clearSkullState();
   clearCatInBoxState();
   clearGangState();
   clearMismatchState();
   clearCoyoteState();
+  if (typeof clearInAGroveState === "function") {
+    clearInAGroveState();
+  }
   if (typeof clearTuringMachineState === "function") {
     clearTuringMachineState();
   }
