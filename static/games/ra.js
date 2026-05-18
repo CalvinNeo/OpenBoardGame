@@ -128,6 +128,17 @@ const RA_TILE_META = {
   earthquake: ["💥", "Earthquake"],
 };
 
+const RA_EPOCH_DISCARD_KINDS = new Set([
+  "god",
+  "gold",
+  "flood",
+  "astronomy",
+  "agriculture",
+  "writing",
+  "religion",
+  "art",
+]);
+
 function raTileLabel(tile) {
   const meta = RA_TILE_META[tile && tile.kind] || ["■", (tile && tile.label) || "Tile"];
   const groupLabel = {
@@ -538,21 +549,83 @@ function renderRaPlayers(view) {
       chip.textContent = `☀️${disk.value}`;
       disks.appendChild(chip);
     });
+
+    const projected = player.projected_epoch_score || { total: 0, projected_total_score: player.score, details: [] };
+    const scoreBox = document.createElement("div");
+    scoreBox.className = "ra-projected-score";
+    const scoreHeader = document.createElement("div");
+    scoreHeader.className = "ra-projected-score-header";
+    const total = Number(projected.total || 0);
+    scoreHeader.textContent = `Projected Epoch: ${total >= 0 ? "+" : ""}${total} · Total ${projected.projected_total_score ?? player.score}`;
+    const scoreDetails = document.createElement("div");
+    scoreDetails.className = "ra-projected-score-details";
+    const details = Array.isArray(projected.details) ? projected.details : [];
+    if (details.length) {
+      details.forEach((item) => {
+        const chip = document.createElement("span");
+        chip.className = "ra-score-chip";
+        const points = Number(item.points || 0);
+        chip.classList.toggle("negative", points < 0);
+        chip.textContent = `${item.type}: ${points >= 0 ? "+" : ""}${points}`;
+        scoreDetails.appendChild(chip);
+      });
+    } else {
+      const empty = document.createElement("span");
+      empty.className = "hint";
+      empty.textContent = "No projected score";
+      scoreDetails.appendChild(empty);
+    }
+    scoreBox.append(scoreHeader, scoreDetails);
+
     const tiles = document.createElement("div");
     tiles.className = "ra-player-tiles";
+
+    const keepColumn = document.createElement("div");
+    keepColumn.className = "ra-player-tile-column keep";
+    const discardColumn = document.createElement("div");
+    discardColumn.className = "ra-player-tile-column discard";
+
+    const keepTitle = document.createElement("div");
+    keepTitle.className = "ra-tile-column-title";
+    keepTitle.textContent = "Keep";
+    const discardTitle = document.createElement("div");
+    discardTitle.className = "ra-tile-column-title";
+    discardTitle.textContent = "Discard at Epoch End";
+
+    const keepList = document.createElement("div");
+    keepList.className = "ra-player-tile-list";
+    const discardList = document.createElement("div");
+    discardList.className = "ra-player-tile-list";
+
     (player.tiles || []).forEach((tile) => {
-      tiles.appendChild(makeRaTile(tile, { clickable: false }));
+      if (RA_EPOCH_DISCARD_KINDS.has(tile.kind)) {
+        discardList.appendChild(makeRaTile(tile, { clickable: false }));
+      } else {
+        keepList.appendChild(makeRaTile(tile, { clickable: false }));
+      }
     });
-    if (!player.tiles || !player.tiles.length) {
+
+    if (!keepList.childNodes.length) {
       const empty = document.createElement("div");
       empty.className = "hint";
-      empty.textContent = "No tiles.";
-      tiles.appendChild(empty);
+      empty.textContent = "None";
+      keepList.appendChild(empty);
     }
+    if (!discardList.childNodes.length) {
+      const empty = document.createElement("div");
+      empty.className = "hint";
+      empty.textContent = "None";
+      discardList.appendChild(empty);
+    }
+
+    keepColumn.append(keepTitle, keepList);
+    discardColumn.append(discardTitle, discardList);
+    tiles.append(keepColumn, discardColumn);
+
     const ready = document.createElement("div");
     ready.className = "hint";
     ready.textContent = view.phase === "epoch_pause" ? `Next Round: ${player.ready_for_next ? "ready" : "waiting"}` : "";
-    card.append(name, disks, tiles, ready);
+    card.append(name, disks, scoreBox, tiles, ready);
     raPlayersEl.appendChild(card);
   });
 }

@@ -95,6 +95,26 @@ class RaGameTest(unittest.TestCase):
         self.assertEqual(state["phase"], "turn")
         self.assertEqual(state["epoch"], 2)
 
+    def test_public_view_includes_projected_epoch_score(self):
+        state = RaGame.init_game({}, players(3))
+        state["players"]["p0"]["tiles"] = [
+            {"id": "god_1", "kind": "god", "group": "god", "label": "God"},
+            {"id": "gold_1", "kind": "gold", "group": "gold", "label": "Gold"},
+            {"id": "flood_1", "kind": "flood", "group": "river", "label": "Flood"},
+            {"id": "nile_1", "kind": "nile", "group": "river", "label": "Nile"},
+            {"id": "pharaoh_1", "kind": "pharaoh", "group": "pharaoh", "label": "Pharaoh"},
+        ]
+
+        view = RaGame.get_public_view(state, "p0")
+        p0 = next(player for player in view["players"] if player["player_id"] == "p0")
+
+        self.assertEqual(p0["projected_epoch_score"]["total"], 7)
+        self.assertEqual(p0["projected_epoch_score"]["projected_total_score"], 17)
+        self.assertEqual(
+            [(item["type"], item["points"]) for item in p0["projected_epoch_score"]["details"]],
+            [("Gods", 2), ("Gold", 3), ("River", 2), ("Civilization", -5), ("Pharaohs", 5)],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

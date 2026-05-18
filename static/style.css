@@ -16775,7 +16775,7 @@ body.in-a-grove-explain-mode button.has-explanation {
 
 .ra-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.55fr);
   gap: 16px;
   align-items: start;
 }
@@ -16806,11 +16806,11 @@ body.in-a-grove-explain-mode button.has-explanation {
 }
 
 .ra-track {
-  grid-template-columns: repeat(var(--ra-track-count, 10), minmax(42px, 1fr));
+  grid-template-columns: repeat(var(--ra-track-count, 10), minmax(36px, 1fr));
 }
 
 .ra-auction-track {
-  grid-template-columns: repeat(var(--ra-track-count, 8), minmax(72px, 1fr));
+  grid-template-columns: repeat(var(--ra-track-count, 8), minmax(58px, 1fr));
 }
 
 .ra-slot,
@@ -17014,8 +17014,7 @@ body.in-a-grove-explain-mode button.has-explanation {
 
 .ra-bid-buttons,
 .ra-disaster-choices,
-.ra-disk-row,
-.ra-player-tiles {
+.ra-disk-row {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -17051,9 +17050,83 @@ body.in-a-grove-explain-mode button.has-explanation {
   gap: 8px;
 }
 
-.ra-player-tiles .ra-tile {
+.ra-projected-score {
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  background: #f0fdf4;
+  padding: 7px;
+}
+
+.ra-projected-score-header {
+  margin-bottom: 6px;
+  color: #14532d;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.ra-projected-score-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.ra-score-chip {
+  border: 1px solid #86efac;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #14532d;
+  padding: 3px 7px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ra-score-chip.negative {
+  border-color: #fecaca;
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.ra-player-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ra-player-tile-column {
+  min-width: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 7px;
+  background: #f8fafc;
+}
+
+.ra-player-tile-column.keep {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.ra-player-tile-column.discard {
+  border-color: #fcd34d;
+  background: #fffbeb;
+}
+
+.ra-tile-column-title {
+  margin-bottom: 6px;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ra-player-tile-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ra-player-tile-list .ra-tile {
   width: auto;
-  min-width: 86px;
+  min-width: 74px;
+  max-width: 100%;
 }
 
 .ra-score-list {
@@ -17081,7 +17154,7 @@ body.ra-explain-mode button.has-explanation:hover {
   color: #ffffff;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1200px) {
   .ra-layout {
     grid-template-columns: 1fr;
   }
@@ -17121,6 +17194,40 @@ body.ra-explain-mode button.has-explanation:hover {
   .ra-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .ra-player-tiles {
+    grid-template-columns: 1fr;
+  }
+
+  .ra-track {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .ra-auction-track {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ra-slot:nth-child(5n)::before,
+  .ra-auction-slot:nth-child(4n)::before {
+    right: 0;
+  }
+
+  .ra-slot:nth-child(5n + 1)::before,
+  .ra-auction-slot:nth-child(4n + 1)::before {
+    left: 0;
+  }
+
+  .ra-slot:nth-child(3n)::before,
+  .ra-auction-slot:nth-child(2n)::before {
+    right: 50%;
+  }
+
+  .ra-slot:nth-child(3n + 1)::before,
+  .ra-auction-slot:nth-child(2n + 1)::before {
+    left: 50%;
   }
 }
 

@@ -134,25 +134,27 @@ def _advance_turn(state: Dict, current_pid: str) -> None:
     _end_epoch(state, reason="all_sun_disks_spent")
 
 
-def _score_epoch(state: Dict) -> Dict:
+def _calculate_epoch_scores(state: Dict) -> Tuple[Dict[str, int], Dict[str, List[Dict]]]:
     player_ids = _sorted_player_ids(state)
     deltas = {pid: 0 for pid in player_ids}
     details = {pid: [] for pid in player_ids}
     counts = {pid: _count_kinds(state["players"][pid].get("tiles", [])) for pid in player_ids}
 
+    def add_detail(pid: str, label: str, points: int) -> None:
+        if points == 0:
+            return
+        deltas[pid] += points
+        details[pid].append({"type": label, "points": points})
+
     for pid in player_ids:
         c = counts[pid]
-        god_gold = c["god"] * 2 + c["gold"] * 3
         if c["god"]:
-            details[pid].append(f"Gods +{c['god'] * 2}")
+            add_detail(pid, "Gods", c["god"] * 2)
         if c["gold"]:
-            details[pid].append(f"Gold +{c['gold'] * 3}")
-        deltas[pid] += god_gold
+            add_detail(pid, "Gold", c["gold"] * 3)
 
         if c["flood"] > 0:
-            river_score = c["flood"] + c["nile"]
-            deltas[pid] += river_score
-            details[pid].append(f"River +{river_score}")
+            add_detail(pid, "River", c["flood"] + c["nile"])
 
         civ_types = sum(1 for kind in CIVILIZATIONS if c[kind] > 0)
         civ_score = 0
@@ -160,9 +162,7 @@ def _score_epoch(state: Dict) -> Dict:
             civ_score = -5
         elif civ_types >= 3:
             civ_score = {3: 5, 4: 10, 5: 15}[civ_types]
-        if civ_score:
-            deltas[pid] += civ_score
-            details[pid].append(f"Civilization {civ_score:+d}")
+        add_detail(pid, "Civilization", civ_score)
 
     pharaoh_values = {pid: counts[pid]["pharaoh"] for pid in player_ids}
     if len(set(pharaoh_values.values())) > 1:
@@ -170,11 +170,9 @@ def _score_epoch(state: Dict) -> Dict:
         low = min(pharaoh_values.values())
         for pid, value in pharaoh_values.items():
             if value == high:
-                deltas[pid] += 5
-                details[pid].append("Pharaohs +5")
+                add_detail(pid, "Pharaohs", 5)
             if value == low:
-                deltas[pid] -= 2
-                details[pid].append("Pharaohs -2")
+                add_detail(pid, "Pharaohs", -2)
 
     if int(state.get("epoch", 1)) == 3:
         disk_sums = {}
@@ -191,20 +189,29 @@ def _score_epoch(state: Dict) -> Dict:
             for kind in MONUMENTS:
                 if c[kind] >= 3:
                     monument_score += {3: 5, 4: 10}.get(c[kind], 15)
-            if monument_score:
-                deltas[pid] += monument_score
-                details[pid].append(f"Monuments +{monument_score}")
+            add_detail(pid, "Monuments", monument_score)
             disk_sums[pid] = sum(int(d["value"]) for d in state["players"][pid].get("sun_disks", []))
         if len(set(disk_sums.values())) > 1:
             high = max(disk_sums.values())
             low = min(disk_sums.values())
             for pid, value in disk_sums.items():
                 if value == high:
-                    deltas[pid] += 5
-                    details[pid].append("Sun disks +5")
+                    add_detail(pid, "Sun disks", 5)
                 if value == low:
-                    deltas[pid] -= 5
-                    details[pid].append("Sun disks -5")
+                    add_detail(pid, "Sun disks", -5)
+
+    return deltas, details
+
+
+def _format_score_details(details: List[Dict]) -> List[str]:
+    if not details:
+        return ["No score"]
+    return [f"{item['type']} {item['points']:+d}" for item in details]
+
+
+def _score_epoch(state: Dict) -> Dict:
+    player_ids = _sorted_player_ids(state)
+    deltas, details = _calculate_epoch_scores(state)
 
     rows = []
     for pid in player_ids:
@@ -214,7 +221,7 @@ def _score_epoch(state: Dict) -> Dict:
                 "player_id": pid,
                 "delta": deltas[pid],
                 "score": state["players"][pid]["score"],
-                "details": details[pid] or ["No score"],
+                "details": _format_score_details(details[pid]),
             }
         )
     return {"epoch": state.get("epoch"), "rows": rows}
@@ -543,6 +550,7 @@ class RaGame:
     @staticmethod
     def get_public_view(state: Dict, viewer_id: str) -> Dict:
         player_ids = _sorted_player_ids(state)
+        projected_deltas, projected_details = _calculate_epoch_scores(state)
         players = []
         for pid in player_ids:
             pdata = state["players"][pid]
@@ -558,6 +566,11 @@ class RaGame:
                     "sun_disks": sorted(pdata.get("sun_disks", []), key=lambda disk: disk.get("value", 0)),
                     "tiles": tiles,
                     "tile_counts": dict(_count_kinds(tiles)),
+                    "projected_epoch_score": {
+                        "total": projected_deltas.get(pid, 0),
+                        "projected_total_score": pdata.get("score", 0) + projected_deltas.get(pid, 0),
+                        "details": projected_details.get(pid, []),
+                    },
                     "ready_for_next": pid in state.get("next_round_ready", []),
                 }
             )
