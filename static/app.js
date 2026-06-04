@@ -22,8 +22,11 @@ const criminalDancePanel = document.getElementById("criminalDancePanel");
 const istanbulPanel = document.getElementById("istanbulPanel");
 const goldRushPanel = document.getElementById("goldRushPanel");
 const incanGoldPanel = document.getElementById("incanGoldPanel");
+const celestiaPanel = document.getElementById("celestiaPanel");
 const ageOfWarPanel = document.getElementById("ageOfWarPanel");
 const kobayakawaPanel = document.getElementById("kobayakawaPanel");
+const tucanoPanel = document.getElementById("tucanoPanel");
+const witchsBrewPanel = document.getElementById("witchsBrewPanel");
 const raPanel = document.getElementById("raPanel");
 const scoutPanel = document.getElementById("scoutPanel");
 const manilaPanel = document.getElementById("manilaPanel");
@@ -73,9 +76,12 @@ function setGamePanelVisibility(gameType) {
   const showIstanbul = gameType === "istanbul";
   const showGoldRush = gameType === "gold_rush";
   const showIncanGold = gameType === "incan_gold";
+  const showCelestia = gameType === "celestia";
   const showAgeOfWar = gameType === "age_of_war";
   const showWanderingTowers = gameType === "wandering_towers";
   const showKobayakawa = gameType === "kobayakawa";
+  const showTucano = gameType === "tucano";
+  const showWitchsBrew = gameType === "witchs_brew";
   const showRa = gameType === "ra";
   const showScout = gameType === "scout";
   const showManila = gameType === "manila";
@@ -161,6 +167,12 @@ function setGamePanelVisibility(gameType) {
   if (incanGoldPanel) {
     incanGoldPanel.classList.toggle("hidden", !showIncanGold);
   }
+  if (celestiaPanel) {
+    celestiaPanel.classList.toggle("hidden", !showCelestia);
+  }
+  if (typeof showCelestiaHeaderActions === "function") {
+    showCelestiaHeaderActions(showCelestia);
+  }
   if (ageOfWarPanel) {
     ageOfWarPanel.classList.toggle("hidden", !showAgeOfWar);
   }
@@ -175,6 +187,18 @@ function setGamePanelVisibility(gameType) {
   }
   if (kobayakawaPanel) {
     kobayakawaPanel.classList.toggle("hidden", !showKobayakawa);
+  }
+  if (tucanoPanel) {
+    tucanoPanel.classList.toggle("hidden", !showTucano);
+  }
+  if (typeof showTucanoHeaderActions === "function") {
+    showTucanoHeaderActions(showTucano);
+  }
+  if (witchsBrewPanel) {
+    witchsBrewPanel.classList.toggle("hidden", !showWitchsBrew);
+  }
+  if (typeof showWitchsBrewHeaderActions === "function") {
+    showWitchsBrewHeaderActions(showWitchsBrew);
   }
   if (raPanel) {
     raPanel.classList.toggle("hidden", !showRa);
@@ -516,6 +540,10 @@ function renderGameState(data) {
     renderIncanGoldGameState(data);
     return;
   }
+  if (gameType === "celestia") {
+    renderCelestiaGameState(data);
+    return;
+  }
   if (gameType === "age_of_war") {
     renderAgeOfWarGameState(data);
     return;
@@ -526,6 +554,14 @@ function renderGameState(data) {
   }
   if (gameType === "kobayakawa") {
     renderKobayakawaGameState(data);
+    return;
+  }
+  if (gameType === "tucano") {
+    renderTucanoGameState(data);
+    return;
+  }
+  if (gameType === "witchs_brew") {
+    renderWitchsBrewGameState(data);
     return;
   }
   if (gameType === "ra") {

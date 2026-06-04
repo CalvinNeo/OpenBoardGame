@@ -5,6 +5,7 @@ from game.age_of_war import AgeOfWarGame
 from game.azul import AzulGame
 from game.cabo import CaboGame
 from game.cat_in_box import CatInBoxGame
+from game.celestia import CelestiaGame
 from game.citadels import CitadelsGame
 from game.criminal_dance import CriminalDanceGame
 from game.coyote import CoyoteGame
@@ -54,6 +55,8 @@ from game.word_decode import WordDecodeGame
 from game.wandering_towers import WanderingTowersGame
 from game.tagiron import TagironGame
 from game.turing_machine import TuringMachineGame
+from game.tucano import TucanoGame
+from game.witchs_brew import WitchsBrewGame
 
 ACQUIRE_ACTION_SCHEMA = {
     "type": "object",
@@ -712,6 +715,106 @@ KOBAYAKAWA_CONFIG_SCHEMA = {
         "end_mode": {"type": "string", "enum": ["bankrupt", "rounds"]},
         "round_limit": {"type": "integer", "minimum": 1},
     },
+    "additionalProperties": False,
+}
+
+TUCANO_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "draft_column"},
+                "column": {"type": "integer", "minimum": 0, "maximum": 2},
+            },
+            "required": ["type", "column"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "resolve_toucan"},
+                "fruit": {"type": "string", "minLength": 1, "maxLength": 40},
+                "target_player": {"type": "string", "minLength": 1, "maxLength": 80},
+            },
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "skip_toucan"}}, "required": ["type"], "additionalProperties": False},
+    ],
+}
+
+TUCANO_CONFIG_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+}
+
+WITCHS_BREW_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "select_roles"},
+                "roles": {
+                    "type": "array",
+                    "items": {"type": "string", "minLength": 1, "maxLength": 40},
+                    "minItems": 5,
+                    "maxItems": 5,
+                },
+            },
+            "required": ["type", "roles"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "play_role"},
+                "role": {"type": "string", "minLength": 1, "maxLength": 40},
+            },
+            "required": ["type", "role"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "respond"},
+                "response": {"type": "string", "enum": ["claim_full", "take_favor"]},
+            },
+            "required": ["type", "response"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "resolve_action"},
+                "skip": {"type": "boolean"},
+                "pay_ingredient": {"type": "string", "enum": ["red", "green", "white"]},
+                "gain_ingredients": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+                "extra_ingredient": {"type": "string", "enum": ["red", "green", "white"]},
+                "stack": {"type": "string", "enum": ["iron", "copper", "silver"]},
+                "payment": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+                "augment_gold": {"type": "integer", "minimum": 0},
+                "augment_ingredients": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+            },
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "choose_loss"},
+                "loss": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+            },
+            "required": ["type", "loss"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "next_round"}}, "required": ["type"], "additionalProperties": False},
+    ],
+}
+
+WITCHS_BREW_CONFIG_SCHEMA = {
+    "type": "object",
     "additionalProperties": False,
 }
 
@@ -2703,6 +2806,69 @@ CITADELS_CONFIG_SCHEMA = {
     "additionalProperties": False,
 }
 
+CELESTIA_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {"type": "object", "properties": {"type": {"const": "roll_dice"}}, "required": ["type"], "additionalProperties": False},
+        {"type": "object", "properties": {"type": {"const": "solo_leave"}}, "required": ["type"], "additionalProperties": False},
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "passenger_choice"},
+                "choice": {"type": "string", "enum": ["stay", "leave"]},
+            },
+            "required": ["type", "choice"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "play_power"},
+                "card_id": {"type": "string"},
+                "target_player_id": {"type": "string"},
+                "dice_indexes": {
+                    "type": "array",
+                    "items": {"type": "integer", "minimum": 0, "maximum": 3},
+                    "maxItems": 4,
+                },
+            },
+            "required": ["type", "card_id"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "pass_special"}}, "required": ["type"], "additionalProperties": False},
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "captain_resolve"},
+                "method": {"type": "string", "enum": ["cards", "telescope"]},
+                "treasure_id": {"type": "string"},
+            },
+            "required": ["type", "method"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "captain_fail"}}, "required": ["type"], "additionalProperties": False},
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "jetpack_decision"},
+                "use": {"type": "boolean"},
+            },
+            "required": ["type", "use"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "next_journey"}}, "required": ["type"], "additionalProperties": False},
+        {"type": "object", "properties": {"type": {"const": "play_again"}}, "required": ["type"], "additionalProperties": False},
+    ],
+}
+
+CELESTIA_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "target_score": {"type": "integer", "minimum": 1},
+    },
+    "additionalProperties": False,
+}
+
 LOST_CODE_ACTION_SCHEMA = {
     "type": "object",
     "oneOf": [
@@ -3393,6 +3559,21 @@ register_game(
 
 register_game(
     GameDefinition(
+        game_id=CelestiaGame.game_id,
+        name="Celestia",
+        min_players=CelestiaGame.min_players,
+        max_players=CelestiaGame.max_players,
+        turn_mode="turn",
+        action_schema=CELESTIA_ACTION_SCHEMA,
+        config_schema=CELESTIA_CONFIG_SCHEMA,
+        module=CelestiaGame,
+        serialize=CelestiaGame.serialize,
+        deserialize=CelestiaGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
         game_id=AgeOfWarGame.game_id,
         name="Age of War",
         min_players=AgeOfWarGame.min_players,
@@ -3418,6 +3599,36 @@ register_game(
         module=KobayakawaGame,
         serialize=KobayakawaGame.serialize,
         deserialize=KobayakawaGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=TucanoGame.game_id,
+        name="Tucano",
+        min_players=TucanoGame.min_players,
+        max_players=TucanoGame.max_players,
+        turn_mode="turn",
+        action_schema=TUCANO_ACTION_SCHEMA,
+        config_schema=TUCANO_CONFIG_SCHEMA,
+        module=TucanoGame,
+        serialize=TucanoGame.serialize,
+        deserialize=TucanoGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=WitchsBrewGame.game_id,
+        name="Witch's Brew",
+        min_players=WitchsBrewGame.min_players,
+        max_players=WitchsBrewGame.max_players,
+        turn_mode="turn",
+        action_schema=WITCHS_BREW_ACTION_SCHEMA,
+        config_schema=WITCHS_BREW_CONFIG_SCHEMA,
+        module=WitchsBrewGame,
+        serialize=WitchsBrewGame.serialize,
+        deserialize=WitchsBrewGame.deserialize,
     )
 )
 

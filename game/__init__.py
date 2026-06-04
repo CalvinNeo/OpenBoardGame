@@ -7,6 +7,7 @@ from game.blokus import BlokusGame
 from game.blitz_sketch import BlitzSketchGame
 from game.carcassonne import CarcassonneGame
 from game.cabo import CaboGame
+from game.celestia import CelestiaGame
 from game.cat_in_box import CatInBoxGame
 from game.citadels import CitadelsGame
 from game.criminal_dance import CriminalDanceGame
@@ -50,7 +51,9 @@ from game.tagiron import TagironGame
 from game.things_in_rings import ThingsInRingsGame
 from game.turing_machine import TuringMachineGame
 from game.trekking_history import TrekkingHistoryGame
+from game.tucano import TucanoGame
 from game.wavelength import WavelengthGame
+from game.witchs_brew import WitchsBrewGame
 from game.word_decode import WordDecodeGame
 from game.yahtzee import YahtzeeGame
 from game.wandering_towers import WanderingTowersGame
@@ -66,6 +69,7 @@ __all__ = [
     "BlitzSketchGame",
     "CarcassonneGame",
     "CaboGame",
+    "CelestiaGame",
     "CatInBoxGame",
     "CitadelsGame",
     "CriminalDanceGame",
@@ -108,7 +112,9 @@ __all__ = [
     "ThingsInRingsGame",
     "TuringMachineGame",
     "TrekkingHistoryGame",
+    "TucanoGame",
     "WavelengthGame",
+    "WitchsBrewGame",
     "WordDecodeGame",
     "YahtzeeGame",
     "WanderingTowersGame",

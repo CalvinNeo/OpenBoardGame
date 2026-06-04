@@ -261,6 +261,12 @@ function renderRoomState(state) {
     if (typeof clearRaState === "function") {
       clearRaState();
     }
+    if (typeof clearTucanoState === "function") {
+      clearTucanoState();
+    }
+    if (typeof clearWitchsBrewState === "function") {
+      clearWitchsBrewState();
+    }
     clearHanabiState();
     clearTexasHoldemState();
     clearSixNimmtState();

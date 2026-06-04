@@ -961,6 +961,26 @@
     </div>
   </section>
 
+  <section id="celestiaHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Celestia Help</h2>
+        <button id="celestiaHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body" id="celestiaHelpContent"></div>
+    </div>
+  </section>
+
+  <section id="celestiaExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Celestia Explain</h2>
+        <button id="celestiaExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body" id="celestiaExplainContent"></div>
+    </div>
+  </section>
+
   <div class="container">
     <h1>OpenBoardGame</h1>
 
@@ -997,7 +1017,10 @@
                     <option value="yahtzee">Yahtzee</option>
                     <option value="gold_rush">Gold Rush</option>
                     <option value="incan_gold">Incan Gold</option>
+                    <option value="celestia">Celestia</option>
                     <option value="kobayakawa">Kobayakawa</option>
+                    <option value="tucano">Tucano</option>
+                    <option value="witchs_brew">Witch's Brew</option>
                     <option value="ra">Ra</option>
                     <option value="scout">Scout</option>
                     <option value="texas_holdem">Texas Hold'em</option>
@@ -1957,6 +1980,71 @@
               <div id="incanGoldRemovedHazards" class="incan-gold-hazards"></div>
             </div>
 
+            <div id="celestiaPanel" class="hidden">
+              <div class="panel-header">
+                <h3>Celestia</h3>
+                <div id="celestiaHeaderActions" class="panel-header-actions" style="display: none;">
+                  <button id="celestiaHelpBtn" type="button">Help</button>
+                  <button id="celestiaExplainBtn" type="button">Explain</button>
+                </div>
+              </div>
+
+              <div class="row">
+                <div>Phase: <span id="celestiaPhase">-</span></div>
+                <div>Journey: <span id="celestiaJourney">-</span></div>
+                <div>Captain: <span id="celestiaCaptain">-</span></div>
+              </div>
+              <div class="row">
+                <div>Current City: <span id="celestiaCurrentCity">-</span></div>
+                <div>Next City: <span id="celestiaNextCity">-</span></div>
+                <div>Required Dice: <span id="celestiaRequiredDice">-</span></div>
+              </div>
+              <div class="row">
+                <div>Your Score: <span id="celestiaYourScore">-</span></div>
+                <div>Ready: <span id="celestiaReadyCount">-</span></div>
+                <div>Winner: <span id="celestiaWinner">-</span></div>
+              </div>
+
+              <div id="celestiaSummary" class="round-notice hidden">
+                <div class="round-notice-title">Journey Summary</div>
+                <div id="celestiaSummaryBody" class="round-notice-body">-</div>
+                <div id="celestiaSummaryRewards" class="celestia-summary-rewards"></div>
+              </div>
+
+              <h3>Sky Route</h3>
+              <div id="celestiaRoute" class="celestia-route"></div>
+
+              <h3>Dice</h3>
+              <div id="celestiaDice" class="celestia-dice"></div>
+
+              <h3>Your Hand</h3>
+              <div id="celestiaHand" class="celestia-card-grid"></div>
+
+              <h3>Your Treasures</h3>
+              <div id="celestiaTreasures" class="celestia-card-grid"></div>
+
+              <div id="celestiaSelection" class="celestia-selection">Selected: -</div>
+
+              <div class="row actions celestia-actions">
+                <button id="celestiaRollBtn" type="button">Roll Dice</button>
+                <button id="celestiaSoloLeaveBtn" type="button">Solo Leave</button>
+                <button id="celestiaStayBtn" type="button">Stay</button>
+                <button id="celestiaLeaveBtn" type="button">Leave</button>
+                <button id="celestiaPlayPowerBtn" type="button">Play Selected Power</button>
+                <button id="celestiaPassSpecialBtn" type="button">Pass</button>
+                <button id="celestiaResolveCardsBtn" type="button">Use Cards</button>
+                <button id="celestiaResolveTelescopeBtn" type="button">Use Telescope</button>
+                <button id="celestiaCrashBtn" type="button">Crash</button>
+                <button id="celestiaJetpackUseBtn" type="button">Use Jetpack</button>
+                <button id="celestiaJetpackSkipBtn" type="button">Skip Jetpack</button>
+                <button id="celestiaNextJourneyBtn" type="button">Next Journey</button>
+                <button id="celestiaPlayAgainBtn" type="button">Play Again</button>
+              </div>
+
+              <h3>Crew</h3>
+              <div id="celestiaPlayers" class="celestia-players"></div>
+            </div>
+
             <div id="ageOfWarPanel" class="hidden">
               <div class="row">
                 <div>Phase: <span id="ageOfWarPhase">-</span></div>
@@ -2071,6 +2159,123 @@
 
               <h3>Players</h3>
               <div id="kobayakawaPlayers"></div>
+            </div>
+
+            <div id="tucanoPanel" class="hidden tucano-panel">
+              <div class="tucano-header">
+                <div>
+                  <h2>Tucano</h2>
+                  <div class="tucano-subtitle">Draft fruit columns, use toucans, protect sets.</div>
+                </div>
+                <div class="tucano-header-actions">
+                  <button id="tucanoHelpBtn" type="button">Help</button>
+                  <button id="tucanoExplainBtn" type="button">Explain</button>
+                </div>
+              </div>
+
+              <div class="tucano-status-grid">
+                <div>Phase: <span id="tucanoPhase">-</span></div>
+                <div>Current Turn: <span id="tucanoTurn">-</span></div>
+                <div>Deck: <span id="tucanoDeck">-</span></div>
+                <div>Winner: <span id="tucanoWinner">-</span></div>
+              </div>
+
+              <div id="tucanoNotice" class="round-notice hidden" aria-hidden="true">
+                <div id="tucanoNoticeTitle" class="round-notice-title">Toucan</div>
+                <div id="tucanoNoticeBody" class="round-notice-body">-</div>
+              </div>
+
+              <h3>Columns</h3>
+              <div id="tucanoColumns" class="tucano-columns"></div>
+
+              <h3>Actions</h3>
+              <div class="row actions tucano-actions">
+                <button id="tucanoFlipBtn" type="button">🛡️ Flip</button>
+                <button id="tucanoSkipBtn" type="button">Skip</button>
+              </div>
+              <div id="tucanoSelection" class="tucano-selection">Selected: -</div>
+
+              <h3>Players</h3>
+              <div id="tucanoPlayers" class="tucano-players"></div>
+
+              <section id="tucanoHelpModal" class="modal hidden" aria-hidden="true">
+                <div class="modal-content tucano-modal">
+                  <div class="modal-header">
+                    <h2>Tucano Help</h2>
+                    <button id="tucanoHelpModalCloseBtn" type="button">Close</button>
+                  </div>
+                  <div id="tucanoHelpContent" class="modal-body"></div>
+                </div>
+              </section>
+
+              <section id="tucanoExplainModal" class="modal hidden" aria-hidden="true">
+                <div class="modal-content tucano-modal">
+                  <div class="modal-header">
+                    <h2>Tucano Explain</h2>
+                    <button id="tucanoExplainModalCloseBtn" type="button">Close</button>
+                  </div>
+                  <div id="tucanoExplainContent" class="modal-body"></div>
+                </div>
+              </section>
+            </div>
+
+            <div id="witchsBrewPanel" class="hidden witchs-brew-panel">
+              <div class="witchs-brew-header">
+                <div>
+                  <h2>Witch's Brew</h2>
+                  <div class="witchs-brew-subtitle">Choose roles, challenge claims, brew potions.</div>
+                </div>
+                <div class="witchs-brew-header-actions">
+                  <button id="witchsBrewHelpBtn" type="button">Help</button>
+                  <button id="witchsBrewExplainBtn" type="button">Explain</button>
+                </div>
+              </div>
+
+              <div class="witchs-brew-status-grid">
+                <div>Phase: <span id="witchsBrewPhase">-</span></div>
+                <div>Current: <span id="witchsBrewCurrent">-</span></div>
+                <div>Role: <span id="witchsBrewRole">-</span></div>
+                <div>Spell: <span id="witchsBrewSpell">-</span></div>
+                <div>Ravens: <span id="witchsBrewRavens">-</span></div>
+                <div>Winner: <span id="witchsBrewWinner">-</span></div>
+              </div>
+
+              <div id="witchsBrewNotice" class="round-notice hidden" aria-hidden="true">
+                <div id="witchsBrewNoticeTitle" class="round-notice-title">Round</div>
+                <div id="witchsBrewNoticeBody" class="round-notice-body">-</div>
+              </div>
+
+              <h3>Public Cards</h3>
+              <div id="witchsBrewPublicCards" class="witchs-brew-public"></div>
+
+              <h3>Your Roles</h3>
+              <div id="witchsBrewHand" class="witchs-brew-hand"></div>
+
+              <h3>Actions</h3>
+              <div id="witchsBrewActions" class="witchs-brew-actions"></div>
+
+              <h3>Players</h3>
+              <div id="witchsBrewPlayers" class="witchs-brew-players"></div>
+
+              <section id="witchsBrewHelpModal" class="modal hidden" aria-hidden="true">
+                <div class="modal-content witchs-brew-modal">
+                  <div class="modal-header">
+                    <h2>Witch's Brew Help</h2>
+                    <button id="witchsBrewHelpModalCloseBtn" type="button">Close</button>
+                  </div>
+                  <div id="witchsBrewHelpContent" class="modal-body"></div>
+                </div>
+              </section>
+
+              <section id="witchsBrewExplainModal" class="modal hidden" aria-hidden="true">
+                <div class="modal-content witchs-brew-modal">
+                  <div class="modal-header">
+                    <h2>Witch's Brew Explain</h2>
+                    <button id="witchsBrewExplainModalCloseBtn" type="button">Close</button>
+                  </div>
+                  <div id="witchsBrewExplainContent" class="modal-body"></div>
+                </div>
+              </section>
             </div>
 
             <div id="raPanel" class="hidden">
@@ -4679,8 +4884,11 @@
   <script src="/static/games/age_of_war.js?v=app_v4"></script>
   <script src="/static/games/wandering_towers.js?v=app_v4"></script>
   <script src="/static/games/incan_gold.js?v=app_v4"></script>
+  <script src="/static/games/celestia.js?v=app_v2"></script>
   <script src="/static/games/manila.js?v=app_v4"></script>
   <script src="/static/games/kobayakawa.js?v=app_v4"></script>
+  <script src="/static/games/tucano.js?v=app_v1"></script>
+  <script src="/static/games/witchs_brew.js?v=app_v1"></script>
   <script src="/static/games/ra.js?v=app_v5"></script>
   <script src="/static/games/scout.js?v=app_v4"></script>
   <script src="/static/app.js?v=app_v7"></script>

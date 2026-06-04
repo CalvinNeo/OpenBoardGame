@@ -498,6 +498,7 @@ const GAME_WEIGHT = {
   incan_gold: 1.11,
   istanbul: 2.58,
   kobayakawa: 1.2,
+  tucano: 1.09,
   perfect_mismatch: 1.0,
   point_salad: 1.15,
   project_l: 1.53,
@@ -529,6 +530,9 @@ const GAME_WEIGHT = {
   wavelength: 1.11,
   guandan: 2.33,
   acquire: 2.49,
+  ra: 2.31,
+  in_a_grove: 1.42,
+  celestia: 1.32,
 };
 
 function getGameWeight(gameId) {
@@ -1326,7 +1330,13 @@ function resetRoomState() {
   clearIstanbulState();
   clearGoldRushState();
   clearIncanGoldState();
+  if (typeof clearCelestiaState === "function") {
+    clearCelestiaState();
+  }
   clearKobayakawaState();
+  if (typeof clearTucanoState === "function") {
+    clearTucanoState();
+  }
   if (typeof clearRaState === "function") {
     clearRaState();
   }

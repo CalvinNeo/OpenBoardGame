@@ -1499,7 +1499,7 @@ input, select {
 }
 
 .hidden {
-  display: none;
+  display: none !important;
 }
 
 .hint {
@@ -17264,4 +17264,564 @@ body.ra-explain-mode button.has-explanation:hover {
     padding: 12px 10px;
   }
 
+}
+
+.celestia-route {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+  gap: 10px;
+}
+
+.celestia-city {
+  border: 1px solid #d6c7b1;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fff7ed 0%, #fef3c7 100%);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.celestia-city.current {
+  border-color: #f97316;
+  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.18);
+}
+
+.celestia-city.next {
+  border-color: #0f766e;
+  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.14);
+}
+
+.celestia-city-name {
+  font-weight: 700;
+}
+
+.celestia-city-meta {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.celestia-dice,
+.celestia-card-grid,
+.celestia-players,
+.celestia-summary-rewards {
+  display: grid;
+  gap: 10px;
+}
+
+.celestia-dice {
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+}
+
+.celestia-card-grid {
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+.celestia-players {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.celestia-summary-rewards {
+  margin-top: 8px;
+}
+
+.celestia-die,
+.celestia-card,
+.celestia-player {
+  border: 1px solid #d6d3d1;
+  border-radius: 14px;
+  background: #ffffff;
+  padding: 10px 12px;
+}
+
+.celestia-die {
+  text-align: center;
+  font-weight: 700;
+}
+
+.celestia-die.selected,
+.celestia-card.selected,
+.celestia-player.selected {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18);
+}
+
+.celestia-card.power {
+  background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%);
+}
+
+.celestia-card.treasure {
+  background: linear-gradient(180deg, #fffbeb 0%, #fde68a 100%);
+}
+
+.celestia-card-title,
+.celestia-player-name {
+  font-weight: 700;
+}
+
+.celestia-card-meta,
+.celestia-player-meta,
+.celestia-selection {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.celestia-selection {
+  margin: 8px 0 2px;
+}
+
+.celestia-actions {
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.celestia-empty {
+  color: #6b7280;
+  padding: 8px 0;
+}
+
+body.celestia-explain-mode .has-explanation {
+  cursor: help;
+  outline: 2px dashed #2563eb;
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .celestia-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.tucano-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.tucano-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tucano-header h2 {
+  margin: 0;
+}
+
+.tucano-subtitle,
+.tucano-player-meta,
+.tucano-selection,
+.tucano-score-breakdown {
+  color: #5f6b61;
+  font-size: 13px;
+}
+
+.tucano-header-actions,
+.tucano-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tucano-status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.tucano-status-grid > div,
+.tucano-selection {
+  border: 1px solid #cbd8c2;
+  border-radius: 8px;
+  background: #fbfdf8;
+  padding: 8px 10px;
+}
+
+.tucano-columns {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.tucano-column {
+  min-height: 156px;
+  border: 1px solid #b8d2b0;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #f9fff2 0%, #e8f6df 100%);
+  color: #20351f;
+  padding: 10px;
+  text-align: left;
+}
+
+.tucano-column:disabled {
+  color: #5b665c;
+}
+
+.tucano-column-title,
+.tucano-player-header {
+  font-weight: 700;
+}
+
+.tucano-card-list,
+.tucano-fruit-grid,
+.tucano-score-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.tucano-card-list {
+  align-items: stretch;
+  gap: 8px;
+}
+
+.tucano-card,
+.tucano-fruit-chip,
+.tucano-target-btn {
+  border: 1px solid #d5d9c0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #233024;
+  padding: 6px 8px;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.tucano-card {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  align-items: center;
+  justify-items: center;
+  width: 88px;
+  min-height: 122px;
+  border-color: #b7c8a8;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.52)),
+    #f7fff2;
+  padding: 8px 7px;
+  text-align: center;
+  box-shadow: 0 3px 8px rgba(37, 64, 31, 0.1);
+}
+
+.tucano-card-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.tucano-card-name {
+  margin-top: 6px;
+  color: #1f3320;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.tucano-card-effect {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  margin-top: 6px;
+  color: #4f5f50;
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.tucano-card-toucan {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(255, 250, 232, 0.5)),
+    #fff3d6;
+  border-color: #e8be67;
+}
+
+.tucano-card-joker {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(247, 240, 255, 0.5)),
+    #f3ecff;
+  border-color: #cab6f1;
+}
+
+.tucano-players {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+}
+
+.tucano-player-card {
+  border-color: #cad7bf;
+  background: #ffffff;
+}
+
+.tucano-player-card.current {
+  border-color: #2f8f5b;
+  box-shadow: 0 0 0 2px rgba(47, 143, 91, 0.14);
+}
+
+.tucano-player-card.self {
+  background: #f7fbff;
+}
+
+.tucano-player-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tucano-fruit-chip {
+  cursor: pointer;
+}
+
+.tucano-fruit-chip:disabled {
+  cursor: default;
+}
+
+.tucano-fruit-chip.selected,
+.tucano-target-btn:hover,
+.tucano-column.action-allowed:hover {
+  border-color: #22784d;
+  box-shadow: 0 0 0 2px rgba(34, 120, 77, 0.16);
+}
+
+.tucano-score-breakdown {
+  border-top: 1px solid #e2e8d8;
+  padding-top: 8px;
+}
+
+.tucano-score-title {
+  width: 100%;
+  color: #20351f;
+  font-weight: 700;
+}
+
+.tucano-score-row {
+  border: 1px solid #dce5d3;
+  border-radius: 8px;
+  background: #fbfdf8;
+  padding: 5px 7px;
+  color: #3f4f40;
+}
+
+.tucano-modal {
+  max-width: 720px;
+}
+
+body.tucano-explain-mode .has-explanation {
+  cursor: help;
+  outline: 2px dashed #22784d;
+  outline-offset: 2px;
+}
+
+@media (max-width: 700px) {
+  .tucano-header {
+    flex-direction: column;
+  }
+
+  .tucano-header-actions,
+  .tucano-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .tucano-card {
+    width: 82px;
+    min-height: 116px;
+  }
+
+  .tucano-player-header {
+    flex-direction: column;
+  }
+}
+
+.witchs-brew-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.witchs-brew-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.witchs-brew-header h2 {
+  margin: 0;
+}
+
+.witchs-brew-subtitle,
+.witchs-brew-player-meta,
+.witchs-brew-selection-label,
+.witchs-brew-action-form .hint {
+  color: #5e6570;
+  font-size: 13px;
+}
+
+.witchs-brew-header-actions,
+.witchs-brew-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.witchs-brew-status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.witchs-brew-status-grid > div {
+  border: 1px solid #d2d8df;
+  border-radius: 8px;
+  background: #fbfcfe;
+  padding: 8px 10px;
+}
+
+.witchs-brew-public,
+.witchs-brew-hand,
+.witchs-brew-players {
+  display: grid;
+  gap: 10px;
+}
+
+.witchs-brew-public {
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+}
+
+.witchs-brew-hand {
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+}
+
+.witchs-brew-players {
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+}
+
+.witchs-brew-public-card,
+.witchs-brew-role-card,
+.witchs-brew-player-card,
+.witchs-brew-action-form {
+  border: 1px solid #d2d8df;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #26313d;
+  padding: 10px;
+}
+
+.witchs-brew-public-card {
+  display: grid;
+  gap: 6px;
+  min-height: 86px;
+}
+
+.witchs-brew-public-card strong,
+.witchs-brew-action-title,
+.witchs-brew-player-header {
+  font-weight: 700;
+}
+
+.witchs-brew-public-card small,
+.witchs-brew-role-card small {
+  color: #5e6570;
+  font-size: 12px;
+}
+
+.witchs-brew-role-card {
+  display: grid;
+  grid-template-rows: auto auto 1fr 1fr;
+  gap: 5px;
+  min-height: 138px;
+  text-align: left;
+}
+
+.witchs-brew-role-card > span {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.witchs-brew-role-card.selected {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.16);
+}
+
+.witchs-brew-role-card:disabled {
+  cursor: default;
+}
+
+.witchs-brew-player-card.current {
+  border-color: #9333ea;
+  box-shadow: 0 0 0 2px rgba(147, 51, 234, 0.14);
+}
+
+.witchs-brew-player-card.self {
+  background: #f8fbff;
+}
+
+.witchs-brew-player-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.witchs-brew-action-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.witchs-brew-action-title {
+  width: 100%;
+}
+
+.witchs-brew-pay-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.witchs-brew-pay-grid label,
+.witchs-brew-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.witchs-brew-number {
+  width: 64px;
+}
+
+.witchs-brew-modal {
+  max-width: 760px;
+}
+
+body.witchs-brew-explain-mode .has-explanation {
+  cursor: help;
+  outline: 2px dashed #2563eb;
+  outline-offset: 2px;
+}
+
+@media (max-width: 700px) {
+  .witchs-brew-header {
+    flex-direction: column;
+  }
+
+  .witchs-brew-header-actions,
+  .witchs-brew-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .witchs-brew-actions .witchs-brew-action-form,
+  .witchs-brew-actions .hint,
+  .witchs-brew-actions .witchs-brew-selection-label {
+    grid-column: 1 / -1;
+  }
+
+  .witchs-brew-player-header {
+    flex-direction: column;
+  }
 }
