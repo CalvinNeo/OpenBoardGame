@@ -25,6 +25,7 @@ const incanGoldPanel = document.getElementById("incanGoldPanel");
 const celestiaPanel = document.getElementById("celestiaPanel");
 const ageOfWarPanel = document.getElementById("ageOfWarPanel");
 const kobayakawaPanel = document.getElementById("kobayakawaPanel");
+const highSocietyPanel = document.getElementById("highSocietyPanel");
 const tucanoPanel = document.getElementById("tucanoPanel");
 const witchsBrewPanel = document.getElementById("witchsBrewPanel");
 const raPanel = document.getElementById("raPanel");
@@ -81,6 +82,7 @@ function setGamePanelVisibility(gameType) {
   const showAgeOfWar = gameType === "age_of_war";
   const showWanderingTowers = gameType === "wandering_towers";
   const showKobayakawa = gameType === "kobayakawa";
+  const showHighSociety = gameType === "high_society";
   const showTucano = gameType === "tucano";
   const showWitchsBrew = gameType === "witchs_brew";
   const showRa = gameType === "ra";
@@ -189,6 +191,12 @@ function setGamePanelVisibility(gameType) {
   }
   if (kobayakawaPanel) {
     kobayakawaPanel.classList.toggle("hidden", !showKobayakawa);
+  }
+  if (highSocietyPanel) {
+    highSocietyPanel.classList.toggle("hidden", !showHighSociety);
+  }
+  if (typeof showHighSocietyHeaderActions === "function") {
+    showHighSocietyHeaderActions(showHighSociety);
   }
   if (tucanoPanel) {
     tucanoPanel.classList.toggle("hidden", !showTucano);
@@ -562,6 +570,10 @@ function renderGameState(data) {
   }
   if (gameType === "kobayakawa") {
     renderKobayakawaGameState(data);
+    return;
+  }
+  if (gameType === "high_society") {
+    renderHighSocietyGameState(data);
     return;
   }
   if (gameType === "tucano") {

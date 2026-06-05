@@ -178,6 +178,28 @@
     </div>
   </section>
 
+  <section id="highSocietyHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content high-society-help-modal">
+      <div class="modal-header">
+        <h2>High Society - Game Rules</h2>
+        <button id="highSocietyHelpCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body high-society-help-content"></div>
+    </div>
+  </section>
+
+  <section id="highSocietyExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="highSocietyExplainCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="highSocietyExplainContent"></div>
+      </div>
+    </div>
+  </section>
+
   <section id="manilaHelpModal" class="modal hidden" aria-hidden="true">
     <div class="modal-content manila-help-modal">
       <div class="modal-header">
@@ -1019,6 +1041,7 @@
                     <option value="incan_gold">Incan Gold</option>
                     <option value="celestia">Celestia</option>
                     <option value="kobayakawa">Kobayakawa</option>
+                    <option value="high_society">High Society</option>
                     <option value="tucano">Tucano</option>
                     <option value="witchs_brew">Witch's Brew</option>
                     <option value="ra">Ra</option>
@@ -1602,6 +1625,10 @@
               <button id="guandanHelpBtn" class="guandan-header-btn" type="button">Help</button>
               <button id="guandanExplainBtn" class="guandan-header-btn" type="button">Explain</button>
             </div>
+            <div class="panel-header-actions" id="highSocietyHeaderActions" style="display: none;">
+              <button id="highSocietyHelpBtn" type="button">Help</button>
+              <button id="highSocietyExplainBtn" type="button">Explain</button>
+            </div>
           </div>
           <div class="panel-body">
             <div id="caboPanel" class="hidden">
@@ -2159,6 +2186,59 @@
 
               <h3>Players</h3>
               <div id="kobayakawaPlayers"></div>
+            </div>
+
+            <div id="highSocietyPanel" class="hidden high-society-panel">
+              <div class="high-society-topbar">
+                <div>
+                  <h2>High Society</h2>
+                  <div class="high-society-subtitle">
+                    Round <span id="highSocietyRound">-</span> · Phase <span id="highSocietyPhase">-</span>
+                  </div>
+                </div>
+                <div class="high-society-deck">
+                  Deck <span id="highSocietyDeckCount">-</span> · Timer <span id="highSocietyTimer">-</span>/4
+                </div>
+              </div>
+
+              <div id="highSocietyNotice" class="round-notice hidden">
+                <div id="highSocietyNoticeTitle" class="round-notice-title">Round Summary</div>
+                <div id="highSocietyNoticeBody" class="round-notice-body">-</div>
+                <div id="highSocietyFinalResults" class="high-society-final-results"></div>
+              </div>
+
+              <div class="high-society-table">
+                <section class="high-society-current">
+                  <h3>Current Auction</h3>
+                  <div id="highSocietyCurrentCard" class="high-society-status-card">-</div>
+                  <div class="high-society-auction-meta">
+                    <div>Current Turn: <span id="highSocietyTurn">-</span></div>
+                    <div>Start Player: <span id="highSocietyStart">-</span></div>
+                    <div>High Bid: <span id="highSocietyHighBid">-</span></div>
+                    <div>High Bidder: <span id="highSocietyHighBidder">-</span></div>
+                  </div>
+                </section>
+
+                <section class="high-society-actions">
+                  <h3>Your Money</h3>
+                  <div id="highSocietyHand" class="high-society-money-row"></div>
+                  <div class="high-society-selection">
+                    Selected: <span id="highSocietySelectedTotal">0</span>
+                  </div>
+                  <div class="row actions high-society-action-row">
+                    <button id="highSocietyBidBtn" type="button">Bid</button>
+                    <button id="highSocietyPassBtn" type="button">Pass</button>
+                    <button id="highSocietyNextBtn" type="button">Next Round</button>
+                  </div>
+                  <div id="highSocietyFauxPasBox" class="high-society-faux-pas hidden">
+                    <div class="hint">Choose one luxury card to discard.</div>
+                    <div id="highSocietyFauxPasChoices" class="high-society-card-list"></div>
+                  </div>
+                </section>
+              </div>
+
+              <h3>Players</h3>
+              <div id="highSocietyPlayers" class="high-society-players"></div>
             </div>
 
             <div id="tucanoPanel" class="hidden tucano-panel">
@@ -4940,6 +5020,7 @@
   <script src="/static/games/celestia.js?v=app_v2"></script>
   <script src="/static/games/manila.js?v=app_v4"></script>
   <script src="/static/games/kobayakawa.js?v=app_v4"></script>
+  <script src="/static/games/high_society.js?v=app_v1"></script>
   <script src="/static/games/tucano.js?v=app_v1"></script>
   <script src="/static/games/witchs_brew.js?v=app_v1"></script>
   <script src="/static/games/ra.js?v=app_v5"></script>

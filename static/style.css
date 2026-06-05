@@ -7329,7 +7329,181 @@ body.gang-explain-mode select.has-explanation:hover {
   padding: 4px 8px;
 }
 
+.high-society-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.high-society-topbar,
+.high-society-table {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.high-society-topbar {
+  align-items: center;
+}
+
+.high-society-subtitle,
+.high-society-deck,
+.high-society-player-meta,
+.high-society-selection {
+  color: #555;
+  font-size: 13px;
+}
+
+.high-society-current,
+.high-society-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.high-society-auction-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 12px;
+  font-size: 13px;
+}
+
+.high-society-money-row,
+.high-society-table-money,
+.high-society-card-list,
+.high-society-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.high-society-money-card,
+.high-society-money-chip {
+  min-width: 72px;
+  min-height: 32px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.high-society-money-card.selected {
+  background: #dcfce7;
+  border-color: #22c55e;
+}
+
+.high-society-money-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  min-height: 24px;
+}
+
+.high-society-status-card {
+  min-height: 96px;
+}
+
+.high-society-card-face {
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  width: 118px;
+  min-height: 82px;
+  padding: 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111827;
+}
+
+.high-society-card-face.type-luxury {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.high-society-card-face.type-prestige {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.high-society-card-face.type-disgrace {
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+.high-society-card-title {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.high-society-card-detail {
+  color: #555;
+  font-size: 12px;
+}
+
+.high-society-players {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.high-society-player-card {
+  display: grid;
+  gap: 8px;
+}
+
+.high-society-player-card.eliminated {
+  opacity: 0.72;
+}
+
+.high-society-faux-pas {
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fff7f7;
+}
+
+.high-society-faux-choice {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.high-society-result-row {
+  padding: 3px 0;
+  font-size: 13px;
+}
+
+.high-society-help-content {
+  display: grid;
+  gap: 8px;
+}
+
+.high-society-panel button.has-explanation {
+  cursor: help;
+  outline: 2px dashed #2563eb;
+  outline-offset: 2px;
+}
+
 @media (max-width: 640px) {
+  .high-society-topbar,
+  .high-society-table {
+    grid-template-columns: 1fr;
+  }
+
+  .high-society-auction-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .high-society-money-card {
+    min-width: calc(50% - 6px);
+  }
+
   .fang-niao-row {
     padding: 6px;
   }

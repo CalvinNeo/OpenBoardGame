@@ -533,6 +533,9 @@ const GAME_WEIGHT = {
   ra: 2.31,
   in_a_grove: 1.42,
   celestia: 1.32,
+  witches_brew: 1.87,
+  century_spice_road: 1.80,
+  high_society: 1.48,
 };
 
 function getGameWeight(gameId) {

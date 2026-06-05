@@ -24,6 +24,7 @@ from game.gizmos import GizmosGame
 from game.guandan import GuandanGame
 from game.halli_galli import HalliGalliGame
 from game.hanabi import HanabiGame
+from game.high_society import HighSocietyGame
 from game.impression_flower import ImpressionFlowerGame
 from game.incan_gold import IncanGoldGame
 from game.in_a_grove import InAGroveGame
@@ -127,6 +128,42 @@ ACQUIRE_CONFIG_SCHEMA = {
             ]
         }
     },
+    "additionalProperties": False,
+}
+
+HIGH_SOCIETY_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "bid"},
+                "money_values": {
+                    "type": "array",
+                    "items": {"type": "integer", "enum": [1000, 2000, 3000, 4000, 6000, 8000, 10000, 12000, 15000, 20000, 25000]},
+                    "minItems": 1,
+                    "uniqueItems": True,
+                },
+            },
+            "required": ["type", "money_values"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "pass"}}, "required": ["type"], "additionalProperties": False},
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "choose_faux_pas_discard"},
+                "card_id": {"type": "string", "pattern": "^luxury_(10|[1-9])$"},
+            },
+            "required": ["type", "card_id"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "next_round"}}, "required": ["type"], "additionalProperties": False},
+    ],
+}
+
+HIGH_SOCIETY_CONFIG_SCHEMA = {
+    "type": "object",
     "additionalProperties": False,
 }
 
@@ -4035,5 +4072,20 @@ register_game(
         module=DumbQuestionsGame,
         serialize=DumbQuestionsGame.serialize,
         deserialize=DumbQuestionsGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=HighSocietyGame.game_id,
+        name="High Society",
+        min_players=HighSocietyGame.min_players,
+        max_players=HighSocietyGame.max_players,
+        turn_mode="turn",
+        action_schema=HIGH_SOCIETY_ACTION_SCHEMA,
+        config_schema=HIGH_SOCIETY_CONFIG_SCHEMA,
+        module=HighSocietyGame,
+        serialize=HighSocietyGame.serialize,
+        deserialize=HighSocietyGame.deserialize,
     )
 )
