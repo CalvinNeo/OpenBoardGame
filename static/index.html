@@ -1055,6 +1055,7 @@
                     <option value="wavelength">Wavelength</option>
                     <option value="dumb_questions">Dumb Questions</option>
                     <option value="skull">Skull</option>
+                    <option value="rebel_princess">Rebel Princess</option>
                     <option value="cat_in_box">Cat in the Box</option>
                     <option value="hanabi">Hanabi</option>
                     <option value="the_gang">The Gang</option>
@@ -2666,6 +2667,89 @@
               <div id="catInBoxSummary" class="round-notice hidden">
                 <div class="round-notice-body" id="catInBoxSummaryBody">-</div>
               </div>
+            </div>
+
+            <div id="rebelPrincessPanel" class="hidden rebel-princess-panel">
+              <div class="rebel-topline">
+                <div>
+                  <div class="rebel-round-title" id="rebelRoundTitle">-</div>
+                  <div class="hint" id="rebelRoundSummary">-</div>
+                </div>
+                <div class="rebel-status-grid">
+                  <div>Phase: <span id="rebelPhase">-</span></div>
+                  <div>Round: <span id="rebelRound">-</span>/5</div>
+                  <div>Leader: <span id="rebelLeader">-</span></div>
+                  <div>Turn: <span id="rebelTurn">-</span></div>
+                </div>
+              </div>
+
+              <div class="rebel-rule-strip">
+                <div>Lead: <span id="rebelLeadSuit">-</span></div>
+                <div>Required: <span id="rebelRequiredSuit">-</span></div>
+                <div>Princes: <span id="rebelPrinceStatus">-</span></div>
+                <div>Tricks: <span id="rebelTricks">-</span></div>
+              </div>
+
+              <div class="rebel-board">
+                <section>
+                  <h3>Current Trick</h3>
+                  <div id="rebelTrick" class="rebel-trick"></div>
+                </section>
+                <section>
+                  <h3>Players</h3>
+                  <div id="rebelPlayers" class="rebel-players"></div>
+                </section>
+              </div>
+
+              <section>
+                <h3>Your Princess</h3>
+                <div id="rebelPrincess" class="rebel-princess-card">-</div>
+              </section>
+
+              <section>
+                <h3>Your Hand</h3>
+                <div id="rebelHand" class="rebel-hand"></div>
+              </section>
+
+              <section>
+                <h3>Selection</h3>
+                <div class="rebel-selection-row">
+                  <div>Cards: <span id="rebelSelectedCards">-</span></div>
+                  <div>Suit: <span id="rebelSelectedSuit">-</span></div>
+                  <div>Target: <span id="rebelSelectedTarget">-</span></div>
+                </div>
+              </section>
+
+              <section>
+                <h3>Actions</h3>
+                <div class="rebel-action-panel">
+                  <div id="rebelSuitButtons" class="rebel-button-row"></div>
+                  <select id="rebelTargetSelect" aria-label="Target player"></select>
+                  <select id="rebelTrickCardSelect" aria-label="Trick card"></select>
+                  <label class="toggle-row rebel-toggle">
+                    <input id="rebelSnowWhiteToggle" type="checkbox" />
+                    <span>Use Snow White on played card</span>
+                  </label>
+                  <label class="toggle-row rebel-toggle">
+                    <input id="rebelPeaToggle" type="checkbox" />
+                    <span>Use Pea Princess with played card</span>
+                  </label>
+                  <button id="rebelSubmitBtn" type="button">Submit</button>
+                  <button id="rebelPrincessBtn" type="button">Use Princess</button>
+                  <button id="rebelSkipBtn" type="button">Skip</button>
+                  <button id="rebelNextRoundBtn" type="button">Next Round</button>
+                </div>
+              </section>
+
+              <section id="rebelSummary" class="round-notice hidden">
+                <h3>Round Summary</h3>
+                <div id="rebelSummaryBody" class="round-notice-body">-</div>
+              </section>
+
+              <section>
+                <h3>Game Log</h3>
+                <div id="rebelLog" class="rebel-log"></div>
+              </section>
             </div>
 
             <div id="hanabiPanel" class="hidden">
@@ -4994,6 +5078,7 @@
   <script src="/static/games/isle_of_skye.js?v=app_v4"></script>
   <script src="/static/games/six_nimmt.js?v=app_v4"></script>
   <script src="/static/games/skull.js?v=app_v4"></script>
+  <script src="/static/games/rebel_princess.js?v=app_v1"></script>
   <script src="/static/games/guandan.js?v=app_v8"></script>
   <script src="/static/games/cabo.js?v=app_v5"></script>
   <script src="/static/games/flip7.js?v=app_v4"></script>

@@ -39,6 +39,7 @@ from game.perfect_mismatch import PerfectMismatchGame
 from game.point_salad import PointSaladGame
 from game.project_l import ProjectLGame
 from game.ra import RaGame
+from game.rebel_princess import RebelPrincessGame
 from game.scout import ScoutGame
 from game.registry import GameDefinition, get_game, list_games
 from game.six_nimmt import SixNimmtGame
@@ -101,6 +102,7 @@ __all__ = [
     "PointSaladGame",
     "ProjectLGame",
     "RaGame",
+    "RebelPrincessGame",
     "ScoutGame",
     "SixNimmtGame",
     "SplendorGame",

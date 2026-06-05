@@ -1502,6 +1502,188 @@ input, select {
   display: none !important;
 }
 
+.rebel-princess-panel {
+  color: #25312b;
+}
+
+.rebel-topline {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(240px, 360px);
+  gap: 12px;
+  align-items: start;
+  margin-bottom: 12px;
+}
+
+.rebel-round-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.rebel-status-grid,
+.rebel-rule-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 12px;
+}
+
+.rebel-rule-strip {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 8px 0;
+  border-top: 1px solid #d6ded8;
+  border-bottom: 1px solid #d6ded8;
+  margin-bottom: 12px;
+}
+
+.rebel-board {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(260px, 1.15fr);
+  gap: 14px;
+}
+
+.rebel-trick,
+.rebel-players,
+.rebel-hand,
+.rebel-button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rebel-trick-card,
+.rebel-player-row,
+.rebel-princess-card {
+  border: 1px solid #d6ded8;
+  border-radius: 8px;
+  background: #f8faf8;
+}
+
+.rebel-trick-card {
+  min-width: 86px;
+  min-height: 64px;
+  padding: 8px;
+  display: grid;
+  gap: 4px;
+}
+
+.rebel-trick-card span {
+  font-size: 0.8rem;
+  color: #66736a;
+}
+
+.rebel-trick-card strong {
+  font-size: 1.05rem;
+}
+
+.rebel-player-row {
+  width: 100%;
+  padding: 8px;
+}
+
+.rebel-player-row.you {
+  border-color: #3a7f62;
+  background: #f1f8f4;
+}
+
+.rebel-player-main,
+.rebel-player-stats,
+.rebel-selection-row,
+.rebel-action-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.rebel-player-main {
+  justify-content: space-between;
+}
+
+.rebel-player-stats,
+.rebel-revealed {
+  font-size: 0.88rem;
+  color: #5c685f;
+}
+
+.rebel-princess-card {
+  padding: 10px;
+  display: grid;
+  gap: 4px;
+}
+
+.rebel-card {
+  min-width: 58px;
+  min-height: 44px;
+  border: 1px solid #bccdc2;
+  border-radius: 8px;
+  background: #ffffff;
+  font-weight: 700;
+}
+
+.rebel-card[data-suit="queen"] {
+  border-color: #d5b23f;
+}
+
+.rebel-card[data-suit="fairy"] {
+  border-color: #7d9dd6;
+}
+
+.rebel-card[data-suit="pet"] {
+  border-color: #60a978;
+}
+
+.rebel-card[data-suit="prince"] {
+  border-color: #c77a7a;
+}
+
+.rebel-card.selected,
+.rebel-button-row button.selected {
+  outline: 3px solid #2e7d62;
+  outline-offset: 1px;
+}
+
+.rebel-action-panel {
+  align-items: stretch;
+}
+
+.rebel-action-panel select {
+  min-height: 36px;
+}
+
+.rebel-toggle {
+  white-space: nowrap;
+}
+
+.rebel-log {
+  max-height: 180px;
+  overflow: auto;
+  border: 1px solid #d6ded8;
+  border-radius: 8px;
+  padding: 8px;
+  background: #fbfcfb;
+}
+
+@media (max-width: 720px) {
+  .rebel-topline,
+  .rebel-board,
+  .rebel-rule-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .rebel-status-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .rebel-card {
+    min-width: 52px;
+  }
+
+  .rebel-action-panel > button,
+  .rebel-action-panel > select {
+    flex: 1 1 calc(50% - 8px);
+  }
+}
+
 .hint {
   font-size: 12px;
   color: #6b7280;

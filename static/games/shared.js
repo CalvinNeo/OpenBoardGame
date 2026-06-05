@@ -271,6 +271,9 @@ function renderRoomState(state) {
       clearCenturyState();
     }
     clearHanabiState();
+    if (typeof clearRebelPrincessState === "function") {
+      clearRebelPrincessState();
+    }
     clearTexasHoldemState();
     clearSixNimmtState();
     if (typeof clearManilaState === "function") {

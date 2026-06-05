@@ -38,6 +38,7 @@ from game.perfect_mismatch import PerfectMismatchGame
 from game.point_salad import PointSaladGame
 from game.project_l import ProjectLGame
 from game.ra import RaGame
+from game.rebel_princess import RebelPrincessGame
 from game.scout import ScoutGame
 from game.six_nimmt import SixNimmtGame
 from game.the_gang import TheGangGame
@@ -163,6 +164,46 @@ HIGH_SOCIETY_ACTION_SCHEMA = {
 }
 
 HIGH_SOCIETY_CONFIG_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+}
+
+REBEL_PRINCESS_ACTION_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "type": {
+            "type": "string",
+            "enum": [
+                "pass_cards",
+                "setup_choice",
+                "choose_card",
+                "play_card",
+                "use_princess",
+                "skip",
+                "next_round_ready",
+            ],
+        },
+        "card_id": {"type": "string", "minLength": 3, "maxLength": 20},
+        "card_ids": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 3, "maxLength": 20},
+            "maxItems": 12,
+            "uniqueItems": True,
+        },
+        "suit": {"type": "string", "enum": ["queen", "fairy", "pet", "prince"]},
+        "target_player_id": {"type": "string", "minLength": 1, "maxLength": 80},
+        "hand_card_id": {"type": "string", "minLength": 3, "maxLength": 20},
+        "trick_card_id": {"type": "string", "minLength": 3, "maxLength": 20},
+        "give_card_id": {"type": "string", "minLength": 3, "maxLength": 20},
+        "keep_card_id": {"type": "string", "minLength": 3, "maxLength": 20},
+        "use_snow_white": {"type": "boolean"},
+        "use_pea_princess": {"type": "boolean"},
+    },
+    "required": ["type"],
+    "additionalProperties": False,
+}
+
+REBEL_PRINCESS_CONFIG_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
 }
@@ -3758,6 +3799,21 @@ register_game(
         module=RaGame,
         serialize=RaGame.serialize,
         deserialize=RaGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=RebelPrincessGame.game_id,
+        name="Rebel Princess",
+        min_players=RebelPrincessGame.min_players,
+        max_players=RebelPrincessGame.max_players,
+        turn_mode="turn",
+        action_schema=REBEL_PRINCESS_ACTION_SCHEMA,
+        config_schema=REBEL_PRINCESS_CONFIG_SCHEMA,
+        module=RebelPrincessGame,
+        serialize=RebelPrincessGame.serialize,
+        deserialize=RebelPrincessGame.deserialize,
     )
 )
 

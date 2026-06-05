@@ -32,6 +32,7 @@ const raPanel = document.getElementById("raPanel");
 const scoutPanel = document.getElementById("scoutPanel");
 const manilaPanel = document.getElementById("manilaPanel");
 const skullPanel = document.getElementById("skullPanel");
+const rebelPrincessPanel = document.getElementById("rebelPrincessPanel");
 const mismatchPanel = document.getElementById("mismatchPanel");
 const coyotePanel = document.getElementById("coyotePanel");
 const inAGrovePanel = document.getElementById("inAGrovePanel");
@@ -89,6 +90,7 @@ function setGamePanelVisibility(gameType) {
   const showScout = gameType === "scout";
   const showManila = gameType === "manila";
   const showSkull = gameType === "skull";
+  const showRebelPrincess = gameType === "rebel_princess";
   const showCatInBox = gameType === "cat_in_box";
   const showHanabi = gameType === "hanabi";
   const showGang = gameType === "the_gang";
@@ -229,6 +231,9 @@ function setGamePanelVisibility(gameType) {
     showManilaHeaderActions(showManila);
   }
   skullPanel.classList.toggle("hidden", !showSkull);
+  if (rebelPrincessPanel) {
+    rebelPrincessPanel.classList.toggle("hidden", !showRebelPrincess);
+  }
   if (catInBoxPanel) {
     catInBoxPanel.classList.toggle("hidden", !showCatInBox);
   }
@@ -602,6 +607,10 @@ function renderGameState(data) {
   }
   if (gameType === "skull") {
     renderSkullGameState(data);
+    return;
+  }
+  if (gameType === "rebel_princess") {
+    renderRebelPrincessGameState(data);
     return;
   }
   if (gameType === "cat_in_box") {
