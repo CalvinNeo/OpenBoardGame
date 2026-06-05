@@ -17803,6 +17803,138 @@ body.witchs-brew-explain-mode .has-explanation {
   outline-offset: 2px;
 }
 
+.century-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.century-header-actions,
+.century-actions,
+.century-pay-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.century-prompt {
+  margin: 10px 0;
+  padding: 10px 12px;
+  border-left: 4px solid #0f766e;
+  background: #ecfdf5;
+  color: #134e4a;
+}
+
+.century-card-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(138px, 1fr));
+  gap: 8px;
+}
+
+.century-card {
+  display: grid;
+  gap: 5px;
+  min-height: 92px;
+  padding: 10px;
+  border: 1px solid #d0d7de;
+  border-radius: 8px;
+  background: #fff;
+  color: #1f2328;
+  text-align: left;
+}
+
+button.century-card {
+  cursor: pointer;
+}
+
+button.century-card:disabled {
+  cursor: default;
+  opacity: 0.68;
+}
+
+.century-point-card {
+  border-top: 4px solid #b45309;
+}
+
+.century-merchant-card {
+  border-top: 4px solid #0f766e;
+}
+
+.century-hand-card {
+  border-top: 4px solid #2563eb;
+}
+
+.century-played-card {
+  border-top: 4px solid #6b7280;
+  background: #f6f8fa;
+}
+
+.century-player-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.century-player-card {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid #d0d7de;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.century-player-card.self {
+  background: #f8fbff;
+}
+
+.century-player-card.current {
+  border-color: #0f766e;
+  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.14);
+}
+
+.century-player-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.century-action-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.century-action-title {
+  width: 100%;
+  font-weight: 700;
+}
+
+.century-inline,
+.century-pay-grid label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.century-number {
+  width: 64px;
+}
+
+.century-modal {
+  max-width: 760px;
+}
+
+body.century-explain-mode .has-explanation {
+  cursor: help;
+  outline: 2px dashed #0f766e;
+  outline-offset: 2px;
+}
+
 @media (max-width: 700px) {
   .witchs-brew-header {
     flex-direction: column;
@@ -17822,6 +17954,26 @@ body.witchs-brew-explain-mode .has-explanation {
   }
 
   .witchs-brew-player-header {
+    flex-direction: column;
+  }
+
+  .century-header {
+    flex-direction: column;
+  }
+
+  .century-header-actions,
+  .century-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .century-actions .century-action-form,
+  .century-actions .hint {
+    grid-column: 1 / -1;
+  }
+
+  .century-player-header {
     flex-direction: column;
   }
 }

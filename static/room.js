@@ -1340,6 +1340,9 @@ function resetRoomState() {
   if (typeof clearRaState === "function") {
     clearRaState();
   }
+  if (typeof clearCenturyState === "function") {
+    clearCenturyState();
+  }
   clearSkullState();
   clearCatInBoxState();
   clearGangState();

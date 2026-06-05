@@ -6,6 +6,7 @@ from game.azul import AzulGame
 from game.cabo import CaboGame
 from game.cat_in_box import CatInBoxGame
 from game.celestia import CelestiaGame
+from game.century_spice_road import CenturySpiceRoadGame
 from game.citadels import CitadelsGame
 from game.criminal_dance import CriminalDanceGame
 from game.coyote import CoyoteGame
@@ -2806,6 +2807,82 @@ CITADELS_CONFIG_SCHEMA = {
     "additionalProperties": False,
 }
 
+CENTURY_SPICE_ROAD_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "play"},
+                "card_id": {"type": "string"},
+                "upgrades": {
+                    "type": "array",
+                    "items": {"type": "string", "enum": ["yellow", "red", "green"]},
+                    "maxItems": 3,
+                },
+                "times": {"type": "integer", "minimum": 0},
+            },
+            "required": ["type", "card_id"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "acquire"},
+                "index": {"type": "integer", "minimum": 0, "maximum": 5},
+                "payments": {
+                    "type": "array",
+                    "items": {"type": "string", "enum": ["yellow", "red", "green", "brown"]},
+                    "maxItems": 5,
+                },
+            },
+            "required": ["type", "index", "payments"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "rest"}}, "required": ["type"], "additionalProperties": False},
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "claim"},
+                "index": {"type": "integer", "minimum": 0, "maximum": 4},
+            },
+            "required": ["type", "index"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "discard"},
+                "spices": {
+                    "type": "object",
+                    "properties": {
+                        "yellow": {"type": "integer", "minimum": 0},
+                        "red": {"type": "integer", "minimum": 0},
+                        "green": {"type": "integer", "minimum": 0},
+                        "brown": {"type": "integer", "minimum": 0},
+                    },
+                    "additionalProperties": False,
+                },
+            },
+            "required": ["type", "spices"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+CENTURY_SPICE_ROAD_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "seed": {
+            "oneOf": [
+                {"type": "integer"},
+                {"type": "string", "minLength": 1, "maxLength": 80},
+            ]
+        }
+    },
+    "additionalProperties": False,
+}
+
 CELESTIA_ACTION_SCHEMA = {
     "type": "object",
     "oneOf": [
@@ -3868,6 +3945,21 @@ register_game(
         module=CitadelsGame,
         serialize=CitadelsGame.serialize,
         deserialize=CitadelsGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=CenturySpiceRoadGame.game_id,
+        name="Century: Spice Road",
+        min_players=CenturySpiceRoadGame.min_players,
+        max_players=CenturySpiceRoadGame.max_players,
+        turn_mode="turn",
+        action_schema=CENTURY_SPICE_ROAD_ACTION_SCHEMA,
+        config_schema=CENTURY_SPICE_ROAD_CONFIG_SCHEMA,
+        module=CenturySpiceRoadGame,
+        serialize=CenturySpiceRoadGame.serialize,
+        deserialize=CenturySpiceRoadGame.deserialize,
     )
 )
 
