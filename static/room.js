@@ -536,6 +536,7 @@ const GAME_WEIGHT = {
   witches_brew: 1.87,
   century_spice_road: 1.80,
   high_society: 1.48,
+  felix: 1.40,
 };
 
 function getGameWeight(gameId) {

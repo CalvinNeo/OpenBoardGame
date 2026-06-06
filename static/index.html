@@ -200,6 +200,28 @@
     </div>
   </section>
 
+  <section id="felixHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content felix-help-modal">
+      <div class="modal-header">
+        <h2>Felix - Game Rules</h2>
+        <button id="felixHelpCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body felix-help-content"></div>
+    </div>
+  </section>
+
+  <section id="felixExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="felixExplainCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="felixExplainContent"></div>
+      </div>
+    </div>
+  </section>
+
   <section id="manilaHelpModal" class="modal hidden" aria-hidden="true">
     <div class="modal-content manila-help-modal">
       <div class="modal-header">
@@ -1042,6 +1064,7 @@
                     <option value="celestia">Celestia</option>
                     <option value="kobayakawa">Kobayakawa</option>
                     <option value="high_society">High Society</option>
+                    <option value="felix">Felix: The Cat in the Sack</option>
                     <option value="tucano">Tucano</option>
                     <option value="witchs_brew">Witch's Brew</option>
                     <option value="ra">Ra</option>
@@ -2240,6 +2263,62 @@
 
               <h3>Players</h3>
               <div id="highSocietyPlayers" class="high-society-players"></div>
+            </div>
+
+            <div id="felixPanel" class="hidden felix-panel">
+              <div class="felix-topbar">
+                <div>
+                  <h2>Felix: The Cat in the Sack</h2>
+                  <div class="felix-subtitle">
+                    Round <span id="felixRound">-</span>/9 · Phase <span id="felixPhase">-</span>
+                  </div>
+                </div>
+                <div class="felix-header-actions" id="felixHeaderActions">
+                  <button id="felixHelpBtn" type="button">Help</button>
+                  <button id="felixExplainBtn" type="button">Explain</button>
+                </div>
+              </div>
+
+              <div id="felixNotice" class="round-notice hidden">
+                <div id="felixNoticeTitle" class="round-notice-title">Round Summary</div>
+                <div id="felixNoticeBody" class="round-notice-body">-</div>
+                <div id="felixFinalResults" class="felix-final-results"></div>
+              </div>
+
+              <div class="felix-table">
+                <section class="felix-sack">
+                  <h3>Bag</h3>
+                  <div id="felixMouseCards" class="felix-mouse-row"></div>
+                  <div id="felixTableSlots" class="felix-slot-row"></div>
+                </section>
+
+                <section class="felix-auction">
+                  <h3>Auction</h3>
+                  <div class="felix-auction-meta">
+                    <div>Current Turn: <span id="felixTurn">-</span></div>
+                    <div>Start Player: <span id="felixStart">-</span></div>
+                    <div>High Bid: <span id="felixBid">-</span> 🐭</div>
+                    <div>High Bidder: <span id="felixBidder">-</span></div>
+                    <div>Bank: <span id="felixBank">-</span> 🐭</div>
+                  </div>
+                  <div class="felix-bid-controls">
+                    <label for="felixBidInput">Bid</label>
+                    <input id="felixBidInput" type="number" min="1" step="1" inputmode="numeric" />
+                    <button id="felixBidBtn" type="button">Bid</button>
+                    <button id="felixPassBtn" type="button">Pass</button>
+                    <button id="felixBuyOneBtn" type="button">Buy for 1</button>
+                    <button id="felixNextBtn" type="button">Next Round</button>
+                  </div>
+                </section>
+              </div>
+
+              <section class="felix-hand-section">
+                <h3>Your Hand</h3>
+                <div id="felixHand" class="felix-hand"></div>
+              </section>
+
+              <h3>Players</h3>
+              <div id="felixPlayers" class="felix-players"></div>
             </div>
 
             <div id="tucanoPanel" class="hidden tucano-panel">
@@ -5106,6 +5185,7 @@
   <script src="/static/games/manila.js?v=app_v4"></script>
   <script src="/static/games/kobayakawa.js?v=app_v4"></script>
   <script src="/static/games/high_society.js?v=app_v1"></script>
+  <script src="/static/games/felix.js?v=app_v1"></script>
   <script src="/static/games/tucano.js?v=app_v1"></script>
   <script src="/static/games/witchs_brew.js?v=app_v1"></script>
   <script src="/static/games/ra.js?v=app_v5"></script>

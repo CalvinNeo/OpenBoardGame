@@ -26,6 +26,7 @@ const celestiaPanel = document.getElementById("celestiaPanel");
 const ageOfWarPanel = document.getElementById("ageOfWarPanel");
 const kobayakawaPanel = document.getElementById("kobayakawaPanel");
 const highSocietyPanel = document.getElementById("highSocietyPanel");
+const felixPanel = document.getElementById("felixPanel");
 const tucanoPanel = document.getElementById("tucanoPanel");
 const witchsBrewPanel = document.getElementById("witchsBrewPanel");
 const raPanel = document.getElementById("raPanel");
@@ -84,6 +85,7 @@ function setGamePanelVisibility(gameType) {
   const showWanderingTowers = gameType === "wandering_towers";
   const showKobayakawa = gameType === "kobayakawa";
   const showHighSociety = gameType === "high_society";
+  const showFelix = gameType === "felix";
   const showTucano = gameType === "tucano";
   const showWitchsBrew = gameType === "witchs_brew";
   const showRa = gameType === "ra";
@@ -199,6 +201,12 @@ function setGamePanelVisibility(gameType) {
   }
   if (typeof showHighSocietyHeaderActions === "function") {
     showHighSocietyHeaderActions(showHighSociety);
+  }
+  if (felixPanel) {
+    felixPanel.classList.toggle("hidden", !showFelix);
+  }
+  if (typeof showFelixHeaderActions === "function") {
+    showFelixHeaderActions(showFelix);
   }
   if (tucanoPanel) {
     tucanoPanel.classList.toggle("hidden", !showTucano);
@@ -579,6 +587,10 @@ function renderGameState(data) {
   }
   if (gameType === "high_society") {
     renderHighSocietyGameState(data);
+    return;
+  }
+  if (gameType === "felix") {
+    renderFelixGameState(data);
     return;
   }
   if (gameType === "tucano") {

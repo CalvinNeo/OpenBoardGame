@@ -17,6 +17,7 @@ from game.dumb_questions import DumbQuestionsGame
 from game.draw_guess import DrawGuessGame
 from game.fang_niao import FangNiaoGame
 from game.fake_artist import FakeArtistGame
+from game.felix import FelixGame
 from game.flip7 import Flip7Game
 from game.forest_shuffle import ForestShuffleGame
 from game.gold_rush import GoldRushGame
@@ -164,6 +165,38 @@ HIGH_SOCIETY_ACTION_SCHEMA = {
 }
 
 HIGH_SOCIETY_CONFIG_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+}
+
+FELIX_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "choose_card"},
+                "card_id": {"type": "string", "minLength": 3, "maxLength": 40},
+            },
+            "required": ["type", "card_id"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "bid"},
+                "amount": {"type": "integer", "minimum": 1, "maximum": 200},
+            },
+            "required": ["type", "amount"],
+            "additionalProperties": False,
+        },
+        {"type": "object", "properties": {"type": {"const": "pass"}}, "required": ["type"], "additionalProperties": False},
+        {"type": "object", "properties": {"type": {"const": "buy_for_one"}}, "required": ["type"], "additionalProperties": False},
+        {"type": "object", "properties": {"type": {"const": "next_round"}}, "required": ["type"], "additionalProperties": False},
+    ],
+}
+
+FELIX_CONFIG_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
 }
@@ -4143,5 +4176,20 @@ register_game(
         module=HighSocietyGame,
         serialize=HighSocietyGame.serialize,
         deserialize=HighSocietyGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=FelixGame.game_id,
+        name="Felix: The Cat in the Sack",
+        min_players=FelixGame.min_players,
+        max_players=FelixGame.max_players,
+        turn_mode="turn",
+        action_schema=FELIX_ACTION_SCHEMA,
+        config_schema=FELIX_CONFIG_SCHEMA,
+        module=FelixGame,
+        serialize=FelixGame.serialize,
+        deserialize=FelixGame.deserialize,
     )
 )

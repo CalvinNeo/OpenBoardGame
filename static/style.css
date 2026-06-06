@@ -7672,6 +7672,238 @@ body.gang-explain-mode select.has-explanation:hover {
   outline-offset: 2px;
 }
 
+.felix-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.felix-topbar,
+.felix-table {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.5fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.felix-topbar {
+  align-items: center;
+}
+
+.felix-subtitle,
+.felix-auction-meta,
+.felix-player-meta,
+.felix-slot-status {
+  color: #555;
+  font-size: 13px;
+}
+
+.felix-header-actions,
+.felix-bid-controls,
+.felix-mouse-row,
+.felix-slot-row,
+.felix-hand,
+.felix-won-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.felix-sack,
+.felix-auction,
+.felix-hand-section {
+  border: 1px solid #d7dde7;
+  border-radius: 8px;
+  padding: 12px;
+  background: #ffffff;
+}
+
+.felix-sack h3,
+.felix-auction h3,
+.felix-hand-section h3 {
+  margin-top: 0;
+}
+
+.felix-auction-meta {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+
+.felix-bid-controls label {
+  font-weight: 700;
+}
+
+.felix-bid-controls input {
+  width: 86px;
+}
+
+.felix-mouse-card {
+  min-width: 74px;
+  min-height: 58px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  display: grid;
+  place-items: center;
+  padding: 6px;
+  text-align: center;
+}
+
+.felix-mouse-card span {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.felix-mouse-card small {
+  color: #64748b;
+}
+
+.felix-mouse-card.bag {
+  background: #fff7ed;
+  border-color: #fdba74;
+}
+
+.felix-slot {
+  width: 116px;
+  min-height: 154px;
+  border: 1px solid #d7dde7;
+  border-radius: 8px;
+  padding: 8px;
+  background: #f8fafc;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 6px;
+}
+
+.felix-slot-owner {
+  font-weight: 700;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.felix-slot.resolution-awarded {
+  border-color: #22c55e;
+  background: #f0fdf4;
+}
+
+.felix-slot.resolution-removed {
+  border-color: #ef4444;
+  background: #fff1f2;
+}
+
+.felix-card {
+  width: 88px;
+  min-height: 92px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #172033;
+  display: grid;
+  place-items: center;
+  gap: 4px;
+  padding: 8px 6px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.felix-card:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.felix-card.selected,
+.felix-card:not(:disabled):hover {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.16);
+}
+
+.felix-card.face-down {
+  background: #1f2937;
+  color: #ffffff;
+  border-color: #111827;
+}
+
+.felix-card.kind-cat {
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+
+.felix-card.kind-rabbit {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+
+.felix-card.kind-big_dog,
+.felix-card.kind-small_dog {
+  background: #fff7ed;
+  border-color: #fdba74;
+}
+
+.felix-card-emoji {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.felix-card-label {
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.felix-players {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.felix-player-card {
+  display: grid;
+  gap: 8px;
+}
+
+.felix-player-card.passed {
+  opacity: 0.72;
+}
+
+.felix-won-row {
+  min-height: 38px;
+  max-height: 184px;
+  overflow: auto;
+}
+
+.felix-won-row .felix-card {
+  width: 58px;
+  min-height: 62px;
+  padding: 5px;
+}
+
+.felix-won-row .felix-card-emoji {
+  font-size: 21px;
+}
+
+.felix-won-row .felix-card-label {
+  font-size: 12px;
+}
+
+.felix-final-results,
+.felix-help-content {
+  max-height: 320px;
+  overflow: auto;
+}
+
+.felix-result-row {
+  padding: 4px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.felix-panel button.has-explanation {
+  cursor: help;
+  outline: 2px dashed #2563eb;
+  outline-offset: 2px;
+}
+
 @media (max-width: 640px) {
   .high-society-topbar,
   .high-society-table {
@@ -7684,6 +7916,34 @@ body.gang-explain-mode select.has-explanation:hover {
 
   .high-society-money-card {
     min-width: calc(50% - 6px);
+  }
+
+  .felix-topbar,
+  .felix-table {
+    grid-template-columns: 1fr;
+  }
+
+  .felix-slot {
+    width: 96px;
+  }
+
+  .felix-card {
+    width: 78px;
+    min-height: 84px;
+  }
+
+  .felix-bid-controls {
+    display: grid;
+    grid-template-columns: auto minmax(70px, 1fr) 1fr 1fr;
+  }
+
+  .felix-bid-controls input {
+    width: 100%;
+  }
+
+  .felix-bid-controls #felixBuyOneBtn,
+  .felix-bid-controls #felixNextBtn {
+    grid-column: span 2;
   }
 
   .fang-niao-row {
