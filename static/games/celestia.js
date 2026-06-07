@@ -4,6 +4,7 @@ let celestiaSelectedTreasureId = null;
 let celestiaSelectedTargetPlayerId = null;
 let celestiaSelectedDiceIndexes = [];
 let celestiaExplainMode = false;
+let celestiaSuppressClickButtonId = null;
 
 const celestiaHeaderActions = document.getElementById("celestiaHeaderActions");
 const celestiaHelpBtn = document.getElementById("celestiaHelpBtn");
@@ -90,19 +91,54 @@ const CELESTIA_HELP_TEXT = `
 `;
 
 const CELESTIA_BUTTON_EXPLANATIONS = {
-  celestiaRollBtn: "Roll dice as captain.",
-  celestiaSoloLeaveBtn: "Leave safely when you are the only player on the ship.",
-  celestiaStayBtn: "Stay on the ship as the pending passenger.",
-  celestiaLeaveBtn: "Leave the ship and take a treasure from the current city.",
-  celestiaPlayPowerBtn: "Play the selected power card. Alternative Route also needs selected dice; Ejection needs a selected target.",
-  celestiaPassSpecialBtn: "Pass during a special-card window.",
-  celestiaResolveCardsBtn: "Resolve hazards with equipment and Turbo cards.",
-  celestiaResolveTelescopeBtn: "Resolve hazards with a selected or available Magic Spyglass.",
-  celestiaCrashBtn: "Declare that the captain cannot resolve the hazards.",
-  celestiaJetpackUseBtn: "Use Jetpack after a crash and take current-city treasure.",
-  celestiaJetpackSkipBtn: "Decline to use Jetpack after a crash.",
-  celestiaNextJourneyBtn: "Mark yourself ready for the next journey.",
-  celestiaPlayAgainBtn: "Restart after the game is over.",
+  celestiaRollBtn: {
+    name: "Roll Dice",
+    description: "Roll dice as the captain to reveal the hazards for the next city.",
+  },
+  celestiaSoloLeaveBtn: {
+    name: "Solo Leave",
+    description: "Leave safely when you are the only player still on the ship and take current-city treasure.",
+  },
+  celestiaStayBtn: {
+    name: "Stay",
+    description: "Stay on the ship as the pending passenger and continue toward the next city.",
+  },
+  celestiaLeaveBtn: {
+    name: "Leave",
+    description: "Leave the ship now and take a treasure from the current city.",
+  },
+  celestiaPlayPowerBtn: {
+    name: "Play Selected Power",
+    description: "Play the selected power card. Alternative Route also needs selected dice; Ejection needs a selected target player.",
+  },
+  celestiaPassSpecialBtn: {
+    name: "Pass",
+    description: "Pass during a special-card window without playing a power card.",
+  },
+  celestiaResolveCardsBtn: {
+    name: "Use Cards",
+    description: "Resolve all hazards with matching equipment cards and Turbo cards.",
+  },
+  celestiaResolveTelescopeBtn: {
+    name: "Use Telescope",
+    description: "Resolve hazards with a selected or available Magic Spyglass treasure when normal cards are not enough.",
+  },
+  celestiaCrashBtn: {
+    name: "Crash",
+    description: "Declare that the captain cannot resolve the hazards. The ship crashes and normal passengers get no treasure.",
+  },
+  celestiaJetpackSkipBtn: {
+    name: "Skip Jetpack",
+    description: "Decline to use Jetpack after a crash and take no treasure from that crash.",
+  },
+  celestiaNextJourneyBtn: {
+    name: "Next Journey",
+    description: "Mark yourself ready after a journey ends. The next journey starts after all players are ready.",
+  },
+  celestiaPlayAgainBtn: {
+    name: "Play Again",
+    description: "Restart the game after the game is over.",
+  },
 };
 
 const celestiaActionButtons = {
@@ -118,6 +154,13 @@ const celestiaActionButtons = {
   play_again: celestiaPlayAgainBtn,
 };
 
+const CELESTIA_DYNAMIC_EXPLANATIONS = {
+  jetpack_card: {
+    name: "Jetpack Card",
+    description: "Play this Jetpack after a crash to take a treasure from the current city.",
+  },
+};
+
 function formatCelestiaPhase(phase) {
   return CELESTIA_PHASE_LABELS[phase] || phase || "-";
 }
@@ -128,6 +171,10 @@ function celestiaHasAction(actionType) {
     Array.isArray(currentCelestiaView.legal_actions) &&
     currentCelestiaView.legal_actions.includes(actionType)
   );
+}
+
+function isCelestiaJetpackPlayable(card) {
+  return !!(card && card.kind === "jetpack" && celestiaHasAction("jetpack_decision"));
 }
 
 function formatCelestiaHazards(view) {
@@ -220,7 +267,14 @@ function renderCelestiaHand(view) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = `celestia-card ${card.category || ""}`;
-    if (card.id === celestiaSelectedCardId) {
+    const jetpackPlayable = isCelestiaJetpackPlayable(card);
+    if (jetpackPlayable) {
+      button.classList.add("action-allowed");
+      button.dataset.celestiaExplainId = "jetpack_card";
+      if (celestiaExplainMode) {
+        button.classList.add("has-explanation");
+      }
+    } else if (card.id === celestiaSelectedCardId) {
       button.classList.add("selected");
     }
 
@@ -231,10 +285,14 @@ function renderCelestiaHand(view) {
 
     const meta = document.createElement("div");
     meta.className = "celestia-card-meta";
-    meta.textContent = card.category || "-";
+    meta.textContent = jetpackPlayable ? "Play after crash" : card.category || "-";
     button.appendChild(meta);
 
     button.addEventListener("click", () => {
+      if (jetpackPlayable) {
+        sendAction({ type: "jetpack_decision", use: true });
+        return;
+      }
       celestiaSelectedCardId = celestiaSelectedCardId === card.id ? null : card.id;
       renderCelestiaHand(currentCelestiaView);
       updateCelestiaSelection();
@@ -480,7 +538,6 @@ function updateCelestiaActionButtons() {
     { el: celestiaResolveCardsBtn, allowed: canResolveWithCards() },
     { el: celestiaResolveTelescopeBtn, allowed: canResolveWithTelescope() },
     { el: celestiaCrashBtn, allowed: celestiaHasAction("captain_fail") },
-    { el: celestiaJetpackUseBtn, allowed: celestiaHasAction("jetpack_decision") },
     { el: celestiaJetpackSkipBtn, allowed: celestiaHasAction("jetpack_decision") },
     { el: celestiaNextJourneyBtn, allowed: celestiaHasAction("next_journey") },
     { el: celestiaPlayAgainBtn, allowed: celestiaHasAction("play_again") },
@@ -492,6 +549,11 @@ function updateCelestiaActionButtons() {
     el.disabled = !allowed;
     el.classList.toggle("action-allowed", allowed);
   });
+  if (celestiaJetpackUseBtn) {
+    celestiaJetpackUseBtn.classList.add("hidden");
+    celestiaJetpackUseBtn.disabled = true;
+    celestiaJetpackUseBtn.classList.remove("action-allowed", "has-explanation");
+  }
 }
 
 function clearCelestiaState() {
@@ -584,6 +646,10 @@ function showCelestiaHeaderActions(show) {
   if (celestiaHeaderActions) {
     celestiaHeaderActions.style.display = show ? "flex" : "none";
   }
+  if (!show) {
+    exitCelestiaExplainMode();
+    closeCelestiaExplainModal();
+  }
 }
 
 function openCelestiaHelp() {
@@ -595,35 +661,83 @@ function openCelestiaHelp() {
   }
 }
 
-function openCelestiaExplain() {
-  if (celestiaExplainContent) {
-    celestiaExplainContent.innerHTML = "";
-    Object.entries(CELESTIA_BUTTON_EXPLANATIONS).forEach(([id, description]) => {
-      const row = document.createElement("div");
-      row.className = "explain-row";
-      const name = document.createElement("strong");
-      const button = document.getElementById(id);
-      name.textContent = button ? button.textContent : id;
-      row.appendChild(name);
-      const text = document.createElement("p");
-      text.textContent = description;
-      row.appendChild(text);
-      celestiaExplainContent.appendChild(row);
+function updateCelestiaExplainModeClasses(enabled) {
+  Object.keys(CELESTIA_BUTTON_EXPLANATIONS).forEach((buttonId) => {
+    const button = document.getElementById(buttonId);
+    if (button) {
+      button.classList.toggle("has-explanation", enabled);
+    }
+  });
+  const panel = document.getElementById("celestiaPanel");
+  if (panel) {
+    panel.querySelectorAll("[data-celestia-explain-id]").forEach((button) => {
+      button.classList.toggle("has-explanation", enabled);
     });
-    const hazards = document.createElement("p");
-    hazards.textContent = currentCelestiaView ? `Current hazards: ${formatCelestiaHazards(currentCelestiaView)}` : "";
-    celestiaExplainContent.appendChild(hazards);
   }
-  celestiaExplainMode = true;
-  document.body.classList.add("celestia-explain-mode");
+}
+
+function findCelestiaExplainButtonAtPoint(x, y) {
+  for (const buttonId of Object.keys(CELESTIA_BUTTON_EXPLANATIONS)) {
+    const button = document.getElementById(buttonId);
+    if (!button || button.classList.contains("hidden")) {
+      continue;
+    }
+    const rect = button.getBoundingClientRect();
+    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+      return buttonId;
+    }
+  }
+  const panel = document.getElementById("celestiaPanel");
+  if (panel) {
+    const dynamicButtons = panel.querySelectorAll("[data-celestia-explain-id]");
+    for (const button of dynamicButtons) {
+      const rect = button.getBoundingClientRect();
+      if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+        return button.dataset.celestiaExplainId;
+      }
+    }
+  }
+  return null;
+}
+
+function toggleCelestiaExplainMode() {
+  celestiaExplainMode = !celestiaExplainMode;
+  document.body.classList.toggle("celestia-explain-mode", celestiaExplainMode);
+  updateCelestiaExplainModeClasses(celestiaExplainMode);
+  if (celestiaExplainBtn) {
+    celestiaExplainBtn.classList.toggle("active", celestiaExplainMode);
+  }
+}
+
+function exitCelestiaExplainMode() {
+  if (!celestiaExplainMode) {
+    return;
+  }
+  celestiaExplainMode = false;
+  document.body.classList.remove("celestia-explain-mode");
+  updateCelestiaExplainModeClasses(false);
+  if (celestiaExplainBtn) {
+    celestiaExplainBtn.classList.remove("active");
+  }
+}
+
+function showCelestiaButtonExplanation(buttonId) {
+  const explanation = CELESTIA_BUTTON_EXPLANATIONS[buttonId] || CELESTIA_DYNAMIC_EXPLANATIONS[buttonId];
+  if (!explanation || !celestiaExplainContent || !celestiaExplainModal) {
+    return;
+  }
+  const hazards = currentCelestiaView ? `<p>Current hazards: ${formatCelestiaHazards(currentCelestiaView)}</p>` : "";
+  celestiaExplainContent.innerHTML = `
+    <h4>${explanation.name}</h4>
+    <p>${explanation.description}</p>
+    ${hazards}
+  `;
   if (typeof setModalVisible === "function") {
     setModalVisible(celestiaExplainModal, true);
   }
 }
 
-function closeCelestiaExplain() {
-  celestiaExplainMode = false;
-  document.body.classList.remove("celestia-explain-mode");
+function closeCelestiaExplainModal() {
   if (typeof setModalVisible === "function") {
     setModalVisible(celestiaExplainModal, false);
   }
@@ -640,10 +754,10 @@ if (celestiaHelpModalCloseBtn) {
   });
 }
 if (celestiaExplainBtn) {
-  celestiaExplainBtn.addEventListener("click", openCelestiaExplain);
+  celestiaExplainBtn.addEventListener("click", toggleCelestiaExplainMode);
 }
 if (celestiaExplainModalCloseBtn) {
-  celestiaExplainModalCloseBtn.addEventListener("click", closeCelestiaExplain);
+  celestiaExplainModalCloseBtn.addEventListener("click", closeCelestiaExplainModal);
 }
 
 if (celestiaRollBtn) {
@@ -706,9 +820,73 @@ if (celestiaPlayAgainBtn) {
   celestiaPlayAgainBtn.addEventListener("click", () => sendAction({ type: "play_again" }));
 }
 
+document.addEventListener("pointerdown", (event) => {
+  if (!celestiaExplainMode || currentGameType !== "celestia") {
+    return;
+  }
+
+  const buttonId = findCelestiaExplainButtonAtPoint(event.clientX, event.clientY);
+  if (buttonId) {
+    event.preventDefault();
+    event.stopPropagation();
+    celestiaSuppressClickButtonId = buttonId;
+    setTimeout(() => {
+      celestiaSuppressClickButtonId = null;
+    }, 500);
+    showCelestiaButtonExplanation(buttonId);
+    exitCelestiaExplainMode();
+    return;
+  }
+
+  const button = event.target.closest("button");
+  if (!button) {
+    return;
+  }
+  if (button === celestiaExplainBtn || button === celestiaHelpBtn) {
+    return;
+  }
+  if (button === celestiaHelpModalCloseBtn || button === celestiaExplainModalCloseBtn) {
+    return;
+  }
+  event.preventDefault();
+  event.stopPropagation();
+}, true);
+
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("button");
+  const buttonExplainId = button ? button.id || button.dataset.celestiaExplainId : null;
+  if (celestiaSuppressClickButtonId && buttonExplainId === celestiaSuppressClickButtonId) {
+    celestiaSuppressClickButtonId = null;
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
+  if (!celestiaExplainMode || currentGameType !== "celestia") {
+    return;
+  }
+
+  if (!button) {
+    return;
+  }
+  if (button === celestiaExplainBtn || button === celestiaHelpBtn) {
+    return;
+  }
+  if (button === celestiaHelpModalCloseBtn || button === celestiaExplainModalCloseBtn) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+}, true);
+
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && celestiaExplainMode) {
-    closeCelestiaExplain();
+  if (event.key === "Escape") {
+    if (celestiaExplainMode) {
+      exitCelestiaExplainMode();
+    }
+    if (celestiaExplainModal && !celestiaExplainModal.classList.contains("hidden")) {
+      closeCelestiaExplainModal();
+    }
   }
 });
 
