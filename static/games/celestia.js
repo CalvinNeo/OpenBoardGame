@@ -63,6 +63,21 @@ const CELESTIA_EQUIPMENT_FOR_HAZARD = {
   pirate: "cannon",
 };
 
+const CELESTIA_EQUIPMENT_LABELS = {
+  compass: "Compass",
+  lightning_rod: "Lightning Arrester",
+  foghorn: "Foghorn",
+  cannon: "Cannon",
+};
+
+const CELESTIA_HAZARD_LABELS = {
+  cloud: "Cloud",
+  lightning: "Lightning",
+  bird: "Bird",
+  pirate: "Pirate",
+  blank: "Blank",
+};
+
 const CELESTIA_PHASE_LABELS = {
   roll: "Roll Dice",
   reroll_window: "Reroll Window",
@@ -95,29 +110,21 @@ const CELESTIA_BUTTON_EXPLANATIONS = {
     name: "Roll Dice",
     description: "Roll dice as the captain to reveal the hazards for the next city.",
   },
-  celestiaSoloLeaveBtn: {
-    name: "Solo Leave",
-    description: "Leave safely when you are the only player still on the ship and take current-city treasure.",
-  },
   celestiaStayBtn: {
     name: "Stay",
     description: "Stay on the ship as the pending passenger and continue toward the next city.",
   },
   celestiaLeaveBtn: {
     name: "Leave",
-    description: "Leave the ship now and take a treasure from the current city.",
+    description: "Leave the ship and take current-city treasure. During passenger choice this leaves as a passenger; when you are the only player still on the ship, this ends the journey safely.",
   },
   celestiaPlayPowerBtn: {
-    name: "Play Selected Power",
-    description: "Play the selected power card. Alternative Route also needs selected dice; Ejection needs a selected target player.",
+    name: "Play Card",
+    description: "Play the relevant card action. During special windows this plays the selected power card; as captain this uses equipment and Turbo cards to resolve hazards.",
   },
   celestiaPassSpecialBtn: {
     name: "Pass",
     description: "Pass during a special-card window without playing a power card.",
-  },
-  celestiaResolveCardsBtn: {
-    name: "Use Cards",
-    description: "Resolve all hazards with matching equipment cards and Turbo cards.",
   },
   celestiaResolveTelescopeBtn: {
     name: "Use Telescope",
@@ -145,7 +152,6 @@ const celestiaActionButtons = {
   roll_dice: celestiaRollBtn,
   solo_leave: celestiaSoloLeaveBtn,
   pass_special: celestiaPassSpecialBtn,
-  captain_resolve_cards: celestiaResolveCardsBtn,
   captain_resolve_telescope: celestiaResolveTelescopeBtn,
   captain_fail: celestiaCrashBtn,
   jetpack_use: celestiaJetpackUseBtn,
@@ -175,6 +181,53 @@ function celestiaHasAction(actionType) {
 
 function isCelestiaJetpackPlayable(card) {
   return !!(card && card.kind === "jetpack" && celestiaHasAction("jetpack_decision"));
+}
+
+function setCelestiaDynamicExplanation(key, name, description) {
+  if (!key) {
+    return;
+  }
+  CELESTIA_DYNAMIC_EXPLANATIONS[key] = { name, description };
+}
+
+function buildCelestiaDieExplanation(face, index) {
+  const label = CELESTIA_HAZARD_LABELS[face] || face || "Die";
+  if (face === "blank") {
+    return {
+      key: `die_${index}`,
+      name: `${label} Die`,
+      description: "Blank dice do not create hazards. The captain does not need to spend any equipment for this die.",
+    };
+  }
+  const equipmentKind = CELESTIA_EQUIPMENT_FOR_HAZARD[face];
+  const equipment = CELESTIA_EQUIPMENT_LABELS[equipmentKind] || equipmentKind || "matching equipment";
+  return {
+    key: `die_${index}`,
+    name: `${label} Die`,
+    description: `This die creates a ${label.toLowerCase()} hazard. The captain can cover it with ${equipment}; Turbo can cover any missing hazard. Magic Spyglass resolves the whole hazard set only when normal equipment is not enough.`,
+  };
+}
+
+function buildCelestiaHandCardExplanation(card) {
+  const kind = card && card.kind;
+  const label = (card && (card.label || card.kind)) || "Card";
+  const title = label.replace(/^[^\w]+ /, "");
+  const descriptions = {
+    compass: "Equipment card. It covers one Cloud die when the captain resolves hazards.",
+    lightning_rod: "Equipment card. It covers one Lightning die when the captain resolves hazards.",
+    foghorn: "Equipment card. It covers one Bird die when the captain resolves hazards.",
+    cannon: "Equipment card. It covers one Pirate die when the captain resolves hazards.",
+    turbo: "Wild card. It can cover one missing hazard of any type when the captain resolves hazards.",
+    alternative_route: "Power card. During the reroll window, the captain can select dice and play this to reroll those dice.",
+    wind_gust: "Power card. During the reroll window, play this to reroll all blank dice.",
+    ejection: "Power card. During the ejection window, play this after selecting a passenger to eject them and give them current-city treasure.",
+    jetpack: "Power card. After a crash, play Jetpack to still take current-city treasure. You may also skip using it.",
+  };
+  return {
+    key: `hand_${card && card.id ? card.id : kind || "card"}`,
+    name: title,
+    description: descriptions[kind] || "Card in your hand.",
+  };
 }
 
 function formatCelestiaHazards(view) {
@@ -232,6 +285,12 @@ function renderCelestiaDice(view) {
     const die = document.createElement("button");
     die.type = "button";
     die.className = "celestia-die";
+    const explanation = buildCelestiaDieExplanation(face, index);
+    setCelestiaDynamicExplanation(explanation.key, explanation.name, explanation.description);
+    die.dataset.celestiaExplainId = explanation.key;
+    if (celestiaExplainMode) {
+      die.classList.add("has-explanation");
+    }
     if (celestiaSelectedDiceIndexes.includes(index)) {
       die.classList.add("selected");
     }
@@ -268,12 +327,14 @@ function renderCelestiaHand(view) {
     button.type = "button";
     button.className = `celestia-card ${card.category || ""}`;
     const jetpackPlayable = isCelestiaJetpackPlayable(card);
+    const explanation = buildCelestiaHandCardExplanation(card);
+    setCelestiaDynamicExplanation(explanation.key, explanation.name, explanation.description);
+    button.dataset.celestiaExplainId = explanation.key;
+    if (celestiaExplainMode) {
+      button.classList.add("has-explanation");
+    }
     if (jetpackPlayable) {
       button.classList.add("action-allowed");
-      button.dataset.celestiaExplainId = "jetpack_card";
-      if (celestiaExplainMode) {
-        button.classList.add("has-explanation");
-      }
     } else if (card.id === celestiaSelectedCardId) {
       button.classList.add("selected");
     }
@@ -504,6 +565,10 @@ function canResolveWithCards() {
   return celestiaHasAction("captain_resolve") && celestiaFullResolutionPossible();
 }
 
+function canUseCelestiaPlayCardButton() {
+  return canPlaySelectedCelestiaPower() || canResolveWithCards();
+}
+
 function updateCelestiaActionButtons() {
   Object.values(celestiaActionButtons).forEach((button) => {
     if (!button) {
@@ -525,17 +590,25 @@ function updateCelestiaActionButtons() {
       celestiaPlayPowerBtn.disabled = true;
       celestiaPlayPowerBtn.classList.remove("action-allowed");
     }
+    if (celestiaSoloLeaveBtn) {
+      celestiaSoloLeaveBtn.classList.add("hidden");
+      celestiaSoloLeaveBtn.disabled = true;
+      celestiaSoloLeaveBtn.classList.remove("action-allowed", "has-explanation");
+    }
+    if (celestiaResolveCardsBtn) {
+      celestiaResolveCardsBtn.classList.add("hidden");
+      celestiaResolveCardsBtn.disabled = true;
+      celestiaResolveCardsBtn.classList.remove("action-allowed", "has-explanation");
+    }
     return;
   }
 
   const states = [
     { el: celestiaRollBtn, allowed: celestiaHasAction("roll_dice") },
-    { el: celestiaSoloLeaveBtn, allowed: celestiaHasAction("solo_leave") },
     { el: celestiaStayBtn, allowed: celestiaHasAction("passenger_choice") },
-    { el: celestiaLeaveBtn, allowed: celestiaHasAction("passenger_choice") },
-    { el: celestiaPlayPowerBtn, allowed: canPlaySelectedCelestiaPower() },
+    { el: celestiaLeaveBtn, allowed: celestiaHasAction("passenger_choice") || celestiaHasAction("solo_leave") },
+    { el: celestiaPlayPowerBtn, allowed: canUseCelestiaPlayCardButton() },
     { el: celestiaPassSpecialBtn, allowed: celestiaHasAction("pass_special") },
-    { el: celestiaResolveCardsBtn, allowed: canResolveWithCards() },
     { el: celestiaResolveTelescopeBtn, allowed: canResolveWithTelescope() },
     { el: celestiaCrashBtn, allowed: celestiaHasAction("captain_fail") },
     { el: celestiaJetpackSkipBtn, allowed: celestiaHasAction("jetpack_decision") },
@@ -553,6 +626,16 @@ function updateCelestiaActionButtons() {
     celestiaJetpackUseBtn.classList.add("hidden");
     celestiaJetpackUseBtn.disabled = true;
     celestiaJetpackUseBtn.classList.remove("action-allowed", "has-explanation");
+  }
+  if (celestiaSoloLeaveBtn) {
+    celestiaSoloLeaveBtn.classList.add("hidden");
+    celestiaSoloLeaveBtn.disabled = true;
+    celestiaSoloLeaveBtn.classList.remove("action-allowed", "has-explanation");
+  }
+  if (celestiaResolveCardsBtn) {
+    celestiaResolveCardsBtn.classList.add("hidden");
+    celestiaResolveCardsBtn.disabled = true;
+    celestiaResolveCardsBtn.classList.remove("action-allowed", "has-explanation");
   }
 }
 
@@ -770,10 +853,20 @@ if (celestiaStayBtn) {
   celestiaStayBtn.addEventListener("click", () => sendAction({ type: "passenger_choice", choice: "stay" }));
 }
 if (celestiaLeaveBtn) {
-  celestiaLeaveBtn.addEventListener("click", () => sendAction({ type: "passenger_choice", choice: "leave" }));
+  celestiaLeaveBtn.addEventListener("click", () => {
+    if (celestiaHasAction("solo_leave")) {
+      sendAction({ type: "solo_leave" });
+      return;
+    }
+    sendAction({ type: "passenger_choice", choice: "leave" });
+  });
 }
 if (celestiaPlayPowerBtn) {
   celestiaPlayPowerBtn.addEventListener("click", () => {
+    if (canResolveWithCards()) {
+      sendAction({ type: "captain_resolve", method: "cards" });
+      return;
+    }
     const action = { type: "play_power", card_id: celestiaSelectedCardId };
     const hand = (currentCelestiaView && currentCelestiaView.your_hand) || [];
     const card = hand.find((item) => item.id === celestiaSelectedCardId);
