@@ -195,6 +195,10 @@ function renderHand(view) {
       } else {
         if (currentCaboView && currentCaboView.phase === "initial_peek" && selectedSlots.length >= 2) {
           selectedSlots = selectedSlots.slice(-1);
+          handSlots.querySelectorAll(".slot.selected").forEach((slotElement) => {
+            const slotIndex = Number(slotElement.dataset.slot);
+            slotElement.classList.toggle("selected", selectedSlots.includes(slotIndex));
+          });
         }
         selectedSlots.push(idx);
         div.classList.add("selected");
@@ -248,6 +252,12 @@ function renderGamePlayers(view) {
       turn.className = "badge highlight";
       turn.textContent = "turn";
       badges.appendChild(turn);
+    }
+    if (view.phase === "round_end") {
+      const ready = document.createElement("span");
+      ready.className = "badge";
+      ready.textContent = p.round_ready ? "✅ ready" : "⏳ waiting";
+      badges.appendChild(ready);
     }
     header.appendChild(badges);
 

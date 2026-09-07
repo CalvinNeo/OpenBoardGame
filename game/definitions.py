@@ -261,13 +261,13 @@ CABO_ACTION_SCHEMA = {
         {"type": "object", "properties": {"type": {"const": "draw_deck"}}, "required": ["type"], "additionalProperties": False},
         {
             "type": "object",
-            "properties": {"type": {"const": "draw_discard"}, "slot": {"type": "integer", "minimum": 0, "maximum": 3}},
+            "properties": {"type": {"const": "draw_discard"}, "slot": {"type": "integer", "minimum": 0}},
             "required": ["type", "slot"],
             "additionalProperties": False,
         },
         {
             "type": "object",
-            "properties": {"type": {"const": "replace_card"}, "slot": {"type": "integer", "minimum": 0, "maximum": 3}},
+            "properties": {"type": {"const": "replace_card"}, "slot": {"type": "integer", "minimum": 0}},
             "required": ["type", "slot"],
             "additionalProperties": False,
         },
@@ -278,7 +278,7 @@ CABO_ACTION_SCHEMA = {
                 "type": {"const": "attempt_match"},
                 "slots": {
                     "type": "array",
-                    "items": {"type": "integer", "minimum": 0, "maximum": 3},
+                    "items": {"type": "integer", "minimum": 0},
                     "minItems": 2,
                     "maxItems": 4,
                 },

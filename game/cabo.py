@@ -187,6 +187,7 @@ class CaboGame:
                 "score": 0,
                 "score_reset_used": False,
                 "initial_peek_done": False,
+                "round_ready": False,
             }
 
         discard = [deck.pop()]
@@ -223,6 +224,7 @@ class CaboGame:
             state["players"][pid]["hand"] = hand
             state["players"][pid]["public_known"] = [False, False, False, False]
             state["players"][pid]["initial_peek_done"] = False
+            state["players"][pid]["round_ready"] = False
 
         state["knowledge"] = _init_knowledge(player_ids)
         state["discard"] = [deck.pop()]
@@ -234,6 +236,7 @@ class CaboGame:
         state["cabo_turns_left"] = 0
         state["round"] += 1
         state["current_turn"] = state["turn_order"][0]
+        state["last_round_summary"] = None
         state["game_over"] = False
 
     @staticmethod
@@ -248,6 +251,8 @@ class CaboGame:
 
         if state["phase"] == "round_end":
             if state.get("game_over"):
+                return []
+            if state["players"][player_id].get("round_ready"):
                 return []
             return ["next_round"]
 
@@ -303,8 +308,14 @@ class CaboGame:
                 return [], "game over"
             if action_type != "next_round":
                 return [], "only next_round allowed"
-            CaboGame.start_new_round(state)
-            events.append({"type": "game:next_round", "payload": {"round": state["round"]}})
+            player = state["players"][player_id]
+            if player.get("round_ready"):
+                return [], "already ready"
+            player["round_ready"] = True
+            events.append({"type": "game:next_round_ready", "payload": {"player_id": player_id}})
+            if all(state["players"][pid].get("round_ready") for pid in state["turn_order"]):
+                CaboGame.start_new_round(state)
+                events.append({"type": "game:next_round", "payload": {"round": state["round"]}})
             return events, None
 
         if player_id != state["current_turn"]:
@@ -411,7 +422,7 @@ class CaboGame:
                         state["discard"].append(hand[s])
                         hand[s] = None
                         _clear_slot_knowledge(state, player_id, s)
-                    _add_card_to_hand(state, player_id, drawn)
+                    state["discard"].append(drawn)
                     events.append({"type": "game:match_success", "payload": {"player_id": player_id}})
                 else:
                     for s in slots:
@@ -515,6 +526,7 @@ class CaboGame:
                     "hand": hand_view,
                     "hand_count": len([c for c in pdata["hand"] if c is not None]),
                     "initial_peek_done": pdata["initial_peek_done"],
+                    "round_ready": bool(pdata.get("round_ready")),
                 }
             )
 
@@ -553,6 +565,11 @@ class CaboGame:
             if not state["players"][bot_id]["initial_peek_done"]:
                 slots = random.sample([0, 1, 2, 3], 2)
                 return {"type": "initial_peek", "slots": slots}
+            return None
+
+        if state["phase"] == "round_end":
+            if "next_round" in CaboGame.get_legal_actions(state, bot_id):
+                return {"type": "next_round", "delay_ms": 300}
             return None
 
         if bot_id != state["current_turn"]:
