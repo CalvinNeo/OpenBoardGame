@@ -1830,6 +1830,99 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertEqual(first, second)
         self.assertEqual(compute.call_count, 1)
 
+    def test_bot_score_components_are_reused_within_one_position(self):
+        state, big = self._make_state()
+        state["_ai_eval_cache"] = {}
+
+        with mock.patch(
+            "game.guandan_ai._compute_bot_score_components",
+            wraps=guandan._guandan_ai._compute_bot_score_components,
+        ) as compute:
+            first = guandan._bot_score_components(state, "bot", [big["id"]], depth=3)
+            second = guandan._bot_score_components(state, "bot", [big["id"]], depth=3)
+
+        self.assertEqual(first, second)
+        self.assertIsNot(first, second)
+        self.assertEqual(compute.call_count, 1)
+
+    def test_candidate_features_match_structural_helpers_and_are_cached(self):
+        state, big = self._make_state()
+        state["_ai_eval_cache"] = {}
+        cards = [big["id"]]
+
+        first = guandan._guandan_ai.call(guandan, "_candidate_features", state, "bot", cards)
+        second = guandan._guandan_ai.call(guandan, "_candidate_features", state, "bot", cards)
+
+        self.assertIs(first, second)
+        self.assertEqual(
+            first["shape_score"],
+            guandan._shape_transition_score(first["hand"], cards, state["level_rank"]),
+        )
+        self.assertEqual(
+            first["fragment_penalty"],
+            guandan._group_fragment_penalty(first["hand"], cards, state["level_rank"], first["combo"]),
+        )
+        self.assertEqual(
+            first["control_break"],
+            guandan._control_group_break_penalty(first["hand"], cards, state["level_rank"]),
+        )
+
+    def test_heuristic_deadline_keeps_deterministic_minimum_batch_and_pass(self):
+        state, _big = self._make_state()
+        state["config"]["bot_heuristic_min_deep_candidates"] = 3
+        options = [[11], [22], [33], [44]]
+
+        def score_components(_state, _bot_id, cards, _depth):
+            score = 100.0 if cards is None else float(cards[0])
+            return {"total": score}
+
+        with mock.patch("game.guandan_ai._can_play_all", return_value=False):
+            with mock.patch("game.guandan_ai._list_hint_options", return_value=options):
+                with mock.patch("game.guandan_ai._rank_response_options", side_effect=lambda _s, _p, items: items):
+                    with mock.patch("game.guandan_ai._filter_overbomb_options", side_effect=lambda _s, _p, items: items):
+                        with mock.patch("game.guandan_ai._bot_score_components", side_effect=score_components) as score:
+                            chosen = guandan._bot_select_play(state, "bot", depth=3, deadline=0.0)
+
+        self.assertIsNone(chosen)
+        self.assertEqual(score.call_args_list[0].args[2], [11])
+        self.assertIsNone(score.call_args_list[1].args[2])
+        self.assertEqual(score.call_count, 4)
+        self.assertEqual(
+            state["_ai_eval_cache"]["heuristic_anytime"],
+            {"evaluated": 4, "total": 5, "interrupted": True},
+        )
+
+    def test_search_clone_isolated_from_root_state(self):
+        players = [
+            {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
+            {"player_id": "opp", "name": "Opp", "seat": 1, "is_bot": False},
+            {"player_id": "mate", "name": "Mate", "seat": 2, "is_bot": False},
+            {"player_id": "opp2", "name": "Opp2", "seat": 3, "is_bot": False},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["current_trick"] = None
+        actor = state["current_turn"]
+        action = {"type": "play", "card_ids": guandan._list_hint_options(state, actor)[0]}
+        original_hand_count = len(state["players"][actor]["hand"])
+        original_trick_count = len(state["round_memories"][-1].get("tricks") or [])
+
+        cloned = guandan._clone_search_state(state)
+        _events, err = guandan.GuandanGame.apply_action(cloned, actor, action)
+
+        self.assertIsNone(err)
+        self.assertEqual(len(state["players"][actor]["hand"]), original_hand_count)
+        self.assertIsNone(state["current_trick"])
+        self.assertEqual(len(state["round_memories"][-1].get("tricks") or []), original_trick_count)
+        self.assertEqual(
+            len(cloned["players"][actor]["hand"]),
+            original_hand_count - len(action["card_ids"]),
+        )
+        self.assertIs(cloned["config"], state["config"])
+        self.assertIs(cloned["player_meta"], state["player_meta"])
+        self.assertIsNot(cloned["players"], state["players"])
+        self.assertIsNot(cloned["round_memories"][-1], state["round_memories"][-1])
+
     def test_heuristic_best_action_falls_back_from_illegal_response(self):
         state, low, high = self._make_single_response_state()
         with mock.patch.object(guandan, "_bot_select_play", return_value=[low["id"]]):
@@ -3298,6 +3391,12 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         ]
         particle_counter = [0]
         branches_by_particle = {}
+        deepcopy_patcher = mock.patch(
+            "game.guandan_ai.copy.deepcopy",
+            side_effect=AssertionError("MCTS should use the compact search clone"),
+        )
+        deepcopy_mock = deepcopy_patcher.start()
+        self.addCleanup(deepcopy_patcher.stop)
 
         def fake_determinize(_state, _player_id, _rng):
             particle_counter[0] += 1
@@ -3340,6 +3439,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         counts = {tuple(action["card_ids"]): count for action, _score, count, _stats in scored}
         self.assertGreater(counts[(11,)], counts[(33,)])
         self.assertGreater(counts[(22,)], counts[(44,)])
+        deepcopy_mock.assert_not_called()
 
     def test_mcts_gate_uses_heuristic_score_gap(self):
         state, _big = self._make_state()
