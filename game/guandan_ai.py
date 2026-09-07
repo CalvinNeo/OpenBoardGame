@@ -1303,7 +1303,7 @@ def _list_bomb_options(
     return _dedupe_card_sets(options)
 
 
-def _lead_option_score(state: Dict, player_id: str, cards: List[int]) -> float:
+def _compute_lead_option_score(state: Dict, player_id: str, cards: List[int]) -> float:
     hand = state["players"][player_id]["hand"]
     hand_map = _map_hand_by_id(hand)
     play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
@@ -1391,6 +1391,39 @@ def _lead_option_score(state: Dict, player_id: str, cards: List[int]) -> float:
         score += 2.5
     if partner_left <= 3 and combo["type"] in ("pair", "three", "full_house", "straight", "three_pairs", "steel_plate"):
         score += 1.5
+    return score
+
+
+def _lead_option_score(state: Dict, player_id: str, cards: List[int]) -> float:
+    eval_cache = state.get("_ai_eval_cache")
+    cache_key = None
+    if isinstance(eval_cache, dict):
+        hand_key = tuple(sorted(card["id"] for card in state["players"][player_id]["hand"]))
+        table_key = tuple(
+            (
+                pid,
+                len(state["players"][pid].get("hand", [])),
+                bool(state["players"][pid].get("finished")),
+            )
+            for pid in state.get("turn_order", [])
+        )
+        cache_key = (
+            player_id,
+            state["level_rank"],
+            state.get("round_number"),
+            state.get("current_turn"),
+            len(state.get("action_history", [])),
+            table_key,
+            hand_key,
+            _cards_key(cards),
+        )
+        lead_cache = eval_cache.setdefault("lead_option_scores", {})
+        cached = lead_cache.get(cache_key)
+        if cached is not None:
+            return float(cached)
+    score = _compute_lead_option_score(state, player_id, cards)
+    if cache_key is not None:
+        eval_cache["lead_option_scores"][cache_key] = float(score)
     return score
 
 
@@ -7377,11 +7410,16 @@ def _legalize_action_choice(
     return None
 
 
-def _heuristic_best_action(state: Dict, bot_id: str, depth: int) -> Optional[Dict]:
+def _heuristic_best_action(
+    state: Dict,
+    bot_id: str,
+    depth: int,
+    deadline: Optional[float] = None,
+) -> Optional[Dict]:
     legal = GuandanGame.get_legal_actions(state, bot_id)
     if "play" not in legal:
         return None
-    chosen = _bot_select_play(state, bot_id, depth)
+    chosen = _bot_select_play(state, bot_id, depth, deadline=deadline)
     if chosen:
         return _legalize_action_choice(state, bot_id, {"type": "play", "card_ids": chosen})
     if state.get("current_trick") and "pass" in legal:
@@ -7462,15 +7500,39 @@ def _should_use_mcts(state: Dict, bot_id: str, width: int) -> bool:
         return True
 
     has_bomb_response = any((_action_combo(state, bot_id, action) or {}).get("type") in BOMB_TYPES for action in play_actions)
+    cached = _get_cached_heuristic_scored_candidates(
+        state,
+        bot_id,
+        max(1, int(state.get("config", {}).get("bot_search_depth", 4))),
+    )
+    heuristic_gap: Optional[float] = None
+    if cached and len(cached) >= 2:
+        ordered_scores = sorted((entry[1] for entry in cached), reverse=True)
+        heuristic_gap = ordered_scores[0] - ordered_scores[1]
+        confidence_gap = float(state.get("config", {}).get("bot_mcts_gate_score_gap", 10.0))
+        critical_high_single = combo_type == "single" and current_combo.get("rank_value", 0) >= 70
+        if heuristic_gap >= confidence_gap and not has_bomb_response and not critical_high_single:
+            return False
+
+    base_decision = False
     if len(play_actions) >= 5 and not has_bomb_response and combo_type != "single":
-        return False
-    if combo_type == "single":
-        return current_combo.get("rank_value", 0) >= 70 or has_bomb_response
-    if combo_type in ("pair", "three"):
-        return has_bomb_response or (has_pass and len(play_actions) <= 2)
-    if combo_type in ("full_house", "straight", "three_pairs", "steel_plate"):
-        return has_bomb_response or len(play_actions) <= 2
-    return False
+        base_decision = False
+    elif combo_type == "single":
+        base_decision = current_combo.get("rank_value", 0) >= 70 or has_bomb_response
+    elif combo_type in ("pair", "three"):
+        base_decision = has_bomb_response or (has_pass and len(play_actions) <= 2)
+    elif combo_type in ("full_house", "straight", "three_pairs", "steel_plate"):
+        base_decision = has_bomb_response or len(play_actions) <= 2
+    if base_decision:
+        return True
+
+    ambiguity_gap = float(state.get("config", {}).get("bot_mcts_ambiguity_score_gap", 2.0))
+    return (
+        heuristic_gap is not None
+        and heuristic_gap <= ambiguity_gap
+        and has_pass
+        and len(play_actions) <= 4
+    )
 
 
 def _max_combo_value_for_hand(hand: List[Dict], level_rank: int, combo_type: str, config: Dict) -> Optional[int]:
@@ -7946,55 +8008,25 @@ def _rollout_policy_action(state: Dict, player_id: str) -> Optional[Dict]:
     if "play_again" in legal:
         return {"type": "play_again"}
     if "play" in legal:
-        if not state.get("current_trick"):
-            cards = _choose_lead_play(
-                state["players"][player_id]["hand"],
-                state["level_rank"],
-                state.get("config", {}),
-                state,
-                player_id,
-            )
-            if cards:
-                return {"type": "play", "card_ids": cards}
-        if "pass" in legal and state.get("current_trick"):
-            leader = state["current_trick"].get("player_id")
-            teammate = _teammate_of(state, player_id)
-            if teammate and leader == teammate:
-                options = _list_hint_options(state, player_id)
-                options = _filter_overbomb_options(state, player_id, options)
-                options = _rank_response_options(state, player_id, options)
-                if not options:
-                    return {"type": "pass"}
-                best_cards = options[0]
-                pass_score = _bot_score_play(state, player_id, None, 2)
-                best_score = _bot_score_play(state, player_id, best_cards, 2)
-                hand = state["players"][player_id]["hand"]
-                hand_map = _map_hand_by_id(hand)
-                play_cards = [hand_map[cid] for cid in best_cards if cid in hand_map]
-                best_combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
-                strong_lead = _teammate_lead_strength(state, player_id)
-                if best_combo and strong_lead >= 6.0 and best_combo.get("type") not in BOMB_TYPES:
-                    if _breaks_bomb_shape(hand, best_cards, state["level_rank"]):
-                        return {"type": "pass"}
-                if best_combo and strong_lead >= 8.0:
-                    remaining_count = len(_remove_cards(hand, best_cards))
-                    force_pass_penalty = _teammate_overtrick_penalty(
-                        state,
-                        player_id,
-                        best_cards,
-                        best_combo,
-                        remaining_count,
-                    )
-                    if pass_score >= best_score - 3.0 or force_pass_penalty >= 14.0:
-                        return {"type": "pass"}
-                if pass_score >= best_score - 1.0:
-                    return {"type": "pass"}
-                if random.random() < 0.85:
-                    return {"type": "pass"}
-        heuristic_depth = max(1, int(state.get("config", {}).get("bot_rollout_heuristic_depth", 2)))
-        heuristic_action = _heuristic_best_action(state, player_id, heuristic_depth)
-        if heuristic_action:
-            return heuristic_action
+        hand = state["players"][player_id]["hand"]
+        current_trick = state.get("current_trick")
+        current_combo = current_trick.get("combo") if current_trick else None
+        if hand and _can_play_all(hand, state["level_rank"], state.get("config", {}), current_combo):
+            return {"type": "play", "card_ids": [card["id"] for card in hand]}
+
+        # Rollouts need a stable direction, not another full search. Use a small,
+        # cheap candidate set and reserve detailed heuristic evaluation for roots.
+        options = _list_hint_options(state, player_id)
+        options = _filter_overbomb_options(state, player_id, options)
+        candidate_limit = max(2, int(state.get("config", {}).get("bot_rollout_candidate_limit", 6)))
+        options = _shortlist_scoring_options(state, player_id, options, candidate_limit)
+        if current_trick and "pass" in legal:
+            leader = current_trick.get("player_id")
+            if leader == _teammate_of(state, player_id):
+                return {"type": "pass"}
+        if options:
+            best_cards = max(options, key=lambda cards: _quick_candidate_score(state, player_id, cards))
+            return {"type": "play", "card_ids": best_cards}
     if "pass" in legal:
         return {"type": "pass"}
     return None
@@ -8544,16 +8576,30 @@ def _mcts_score_actions(
     previous_top_key = None
     final_scored: List[Tuple[Dict, float, int, Dict[str, float]]] = []
     total_visits_target = max(1, sims_per * max(1, len(candidates)))
-    completed_visits = 0
+    attempted_visits = 0
     report_stride = max(1, total_visits_target // 24)
-    for round_idx in range(sims_per):
+    active_candidates = list(candidates)
+    halving_min_rounds = max(
+        2,
+        int(cfg.get("bot_mcts_successive_halving_min_rounds", min_rounds)),
+    )
+    next_halving_round = halving_min_rounds
+    round_idx = 0
+    while attempted_visits < total_visits_target and active_candidates:
         if deadline is not None and time.perf_counter() >= deadline:
             break
-        for action in candidates:
+        # One determinization is one root-world particle. Comparing every active
+        # action against the same particle reduces variance and avoids rebuilding
+        # the hidden hands once per action.
+        particle = _CORE._determinize_state(state, bot_id, rng)
+        for action in active_candidates:
+            if attempted_visits >= total_visits_target:
+                break
             if deadline is not None and time.perf_counter() >= deadline:
                 break
+            attempted_visits += 1
             key = _mcts_action_key(action)
-            det = _CORE._determinize_state(state, bot_id, rng)
+            det = copy.deepcopy(particle)
             _, err = GuandanGame.apply_action(det, bot_id, action)
             if err:
                 continue
@@ -8574,16 +8620,16 @@ def _mcts_score_actions(
                 sample["min"] = value
             if sample["max"] is None or value > sample["max"]:
                 sample["max"] = value
-            completed_visits += 1
-            if completed_visits == total_visits_target or completed_visits % report_stride == 0:
+            if attempted_visits == total_visits_target or attempted_visits % report_stride == 0:
                 _report_progress_scaled(
                     progress_callback,
                     "mcts",
                     progress_start,
                     progress_end,
-                    min(0.96, 0.14 + 0.8 * (completed_visits / total_visits_target)),
-                    f"Running MCTS {completed_visits}/{total_visits_target}",
+                    min(0.96, 0.14 + 0.8 * (attempted_visits / total_visits_target)),
+                    f"Running MCTS {attempted_visits}/{total_visits_target}",
                 )
+        round_idx += 1
         final_scored = _mcts_finalize_scores(
             candidates,
             samples,
@@ -8596,10 +8642,12 @@ def _mcts_score_actions(
             effective_tree_ply,
             effective_reply_width,
         )
-        if round_idx + 1 < min_rounds or len(final_scored) < 2:
+        active_keys = {_mcts_action_key(action) for action in active_candidates}
+        active_scored = [item for item in final_scored if _mcts_action_key(item[0]) in active_keys]
+        if round_idx < min_rounds or len(active_scored) < 2:
             continue
-        top_key = _mcts_action_key(final_scored[0][0])
-        gap = final_scored[0][1] - final_scored[1][1]
+        top_key = _mcts_action_key(active_scored[0][0])
+        gap = active_scored[0][1] - active_scored[1][1]
         if gap >= early_stop_gap:
             if top_key == previous_top_key:
                 stable_rounds += 1
@@ -8611,9 +8659,22 @@ def _mcts_score_actions(
         else:
             previous_top_key = top_key
             stable_rounds = 0
+        if (
+            len(active_candidates) > 2
+            and round_idx >= next_halving_round
+            and attempted_visits < total_visits_target
+        ):
+            keep_count = max(2, math.ceil(len(active_candidates) / 2))
+            active_candidates = [item[0] for item in active_scored[:keep_count]]
+            next_halving_round += halving_min_rounds
         if deadline is not None and time.perf_counter() >= deadline:
             break
     if final_scored:
+        active_keys = {_mcts_action_key(action) for action in active_candidates}
+        final_scored.sort(
+            key=lambda item: (_mcts_action_key(item[0]) in active_keys, item[1]),
+            reverse=True,
+        )
         _report_progress_scaled(progress_callback, "mcts", progress_start, progress_end, 1.0, "MCTS finalized")
         return final_scored
     _report_progress_scaled(progress_callback, "mcts", progress_start, progress_end, 1.0, "MCTS finalized")
@@ -9200,6 +9261,8 @@ def _bot_score_components(
             components["block_next_closeout"] = next_closeout_block
 
     if not current_trick:
+        # Lead ranking has already populated the per-decision cache, so the
+        # detailed score is reused here instead of computed a second time.
         lead_score = _lead_option_score(state, bot_id, cards)
         if abs(lead_score) > 0.001:
             components["lead_plan"] = lead_score * 0.18
@@ -9694,7 +9757,102 @@ def _filter_overbomb_actions(state: Dict, player_id: str, actions: List[Dict]) -
     return filtered
 
 
-def _bot_select_play(state: Dict, bot_id: str, depth: int) -> Optional[List[int]]:
+def _quick_candidate_score(state: Dict, player_id: str, cards: Optional[List[int]]) -> float:
+    current_trick = state.get("current_trick")
+    if not cards:
+        if current_trick and current_trick.get("player_id") == _teammate_of(state, player_id):
+            return 20.0
+        return -6.0
+
+    hand = state["players"][player_id]["hand"]
+    hand_map = _map_hand_by_id(hand)
+    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+    combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
+    if not combo:
+        return -999.0
+    if len(cards) == len(hand):
+        return 1000.0
+    if not current_trick:
+        return _lead_cheap_option_score(state, player_id, cards, combo)
+
+    base_by_type = {
+        "single": 7.0,
+        "pair": 8.0,
+        "three": 9.0,
+        "full_house": 10.0,
+        "straight": 10.0,
+        "three_pairs": 10.5,
+        "steel_plate": 11.0,
+        "bomb": -10.0,
+        "straight_flush": -13.0,
+        "heavenly": -16.0,
+    }
+    score = base_by_type.get(combo.get("type"), 0.0)
+    score += len(cards) * 0.35
+    score -= _combo_numeric_value(combo) * 0.02
+    score -= _group_fragment_penalty(hand, cards, state["level_rank"], combo) * 0.7
+    score -= _control_group_break_penalty(hand, cards, state["level_rank"]) * 0.8
+    if _cards_use_special_material(play_cards, state["level_rank"]):
+        score -= 2.5
+    leader = current_trick.get("player_id")
+    if leader and _team_of(state, leader) != _team_of(state, player_id):
+        leader_left = len(state["players"].get(leader, {}).get("hand", []))
+        if leader_left <= 2:
+            score += 8.0
+    return score
+
+
+def _shortlist_scoring_options(
+    state: Dict,
+    player_id: str,
+    options: List[List[int]],
+    limit: int,
+) -> List[List[int]]:
+    """Cheaply retain the strongest option of each type, then fill by pre-score."""
+    if len(options) <= limit:
+        return list(options)
+    hand = state["players"][player_id]["hand"]
+    hand_map = _map_hand_by_id(hand)
+    scored: List[Tuple[float, str, List[int]]] = []
+    for cards in options:
+        play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+        combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
+        if not combo:
+            continue
+        scored.append((_quick_candidate_score(state, player_id, cards), combo.get("type", ""), cards))
+    if not scored:
+        return list(options[:limit])
+
+    best_by_type: Dict[str, Tuple[float, str, List[int]]] = {}
+    for entry in scored:
+        existing = best_by_type.get(entry[1])
+        if existing is None or entry[0] > existing[0]:
+            best_by_type[entry[1]] = entry
+    selected: List[List[int]] = []
+    seen = set()
+    for _score, _combo_type, cards in sorted(best_by_type.values(), key=lambda item: item[0], reverse=True):
+        if len(selected) >= limit:
+            break
+        key = _cards_key(cards)
+        if key not in seen:
+            seen.add(key)
+            selected.append(cards)
+    for _score, _combo_type, cards in sorted(scored, key=lambda item: item[0], reverse=True):
+        if len(selected) >= limit:
+            break
+        key = _cards_key(cards)
+        if key not in seen:
+            seen.add(key)
+            selected.append(cards)
+    return selected
+
+
+def _bot_select_play(
+    state: Dict,
+    bot_id: str,
+    depth: int,
+    deadline: Optional[float] = None,
+) -> Optional[List[int]]:
     legal = GuandanGame.get_legal_actions(state, bot_id)
     if "play" not in legal:
         return None
@@ -9704,6 +9862,8 @@ def _bot_select_play(state: Dict, bot_id: str, depth: int) -> Optional[List[int]
     if hand and _can_play_all(hand, state["level_rank"], state.get("config", {}), current_combo):
         return [card["id"] for card in hand]
     options = _list_hint_options(state, bot_id)
+    deep_limit = max(4, int(state.get("config", {}).get("bot_heuristic_deep_candidate_limit", 10)))
+    is_lead = not bool(current_trick)
     current_trick = state.get("current_trick")
     if current_trick and current_trick["combo"]["type"] in ("bomb", "straight_flush", "heavenly"):
         minimal = _minimal_bomb_response(
@@ -9717,8 +9877,17 @@ def _bot_select_play(state: Dict, bot_id: str, depth: int) -> Optional[List[int]
     elif current_trick:
         options = _rank_response_options(state, bot_id, options)
     else:
+        prescore_limit = max(
+            deep_limit,
+            int(state.get("config", {}).get("bot_lead_prescore_limit", 16)),
+        )
+        options = _shortlist_scoring_options(state, bot_id, options, prescore_limit)
         options = _rank_lead_options(state, bot_id, options)
     options = _filter_overbomb_options(state, bot_id, options)
+    if is_lead:
+        options = options[:deep_limit]
+    else:
+        options = _shortlist_scoring_options(state, bot_id, options, deep_limit)
     if not options:
         return None
     current_trick = state.get("current_trick")

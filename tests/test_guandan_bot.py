@@ -1788,10 +1788,47 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
 
         self.assertNotEqual(chosen_labels, {"♦️8", "♠️8", "♣️8", "♥️10", "♦️10"})
 
-    def test_rollout_policy_uses_heuristic_action(self):
+    def test_rollout_policy_uses_lightweight_action(self):
         state, big = self._make_state()
-        action = guandan._rollout_policy_action(state, "bot")
+        with mock.patch(
+            "game.guandan_ai._heuristic_best_action",
+            side_effect=AssertionError("rollout should use the lightweight policy"),
+        ):
+            action = guandan._rollout_policy_action(state, "bot")
         self.assertEqual(action, {"type": "play", "card_ids": [big["id"]]})
+
+    def test_auto_bot_passes_total_deadline_to_heuristic(self):
+        state, big = self._make_state()
+        state["config"]["bot_mode"] = "auto"
+        state["config"]["bot_endgame_threshold"] = 0
+        captured = {}
+
+        def fake_heuristic(_state, _bot_id, _depth, deadline=None):
+            captured["deadline"] = deadline
+            return {"type": "play", "card_ids": [big["id"]]}
+
+        with mock.patch.object(guandan, "_heuristic_best_action", side_effect=fake_heuristic):
+            with mock.patch.object(guandan, "_should_use_mcts", return_value=False):
+                action = guandan.GuandanGame.bot_move(state, "bot")
+
+        self.assertEqual(action, {"type": "play", "card_ids": [big["id"]]})
+        self.assertIsInstance(captured.get("deadline"), float)
+
+    def test_lead_option_score_is_reused_within_one_decision(self):
+        state, _big = self._make_state()
+        state["current_trick"] = None
+        state["_ai_eval_cache"] = {}
+        cards = [state["players"]["bot"]["hand"][0]["id"]]
+
+        with mock.patch(
+            "game.guandan_ai._compute_lead_option_score",
+            wraps=guandan._guandan_ai._compute_lead_option_score,
+        ) as compute:
+            first = guandan._lead_option_score(state, "bot", cards)
+            second = guandan._lead_option_score(state, "bot", cards)
+
+        self.assertEqual(first, second)
+        self.assertEqual(compute.call_count, 1)
 
     def test_heuristic_best_action_falls_back_from_illegal_response(self):
         state, low, high = self._make_single_response_state()
@@ -3241,6 +3278,92 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertEqual(picked, action_a)
         self.assertLess(reply_tree.call_count, 40)
         self.assertLess(scored[0][2], 20)
+
+    def test_mcts_reuses_root_particles_and_halves_weak_candidates(self):
+        players = [
+            {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
+            {"player_id": "opp", "name": "Opp", "seat": 1, "is_bot": False},
+            {"player_id": "mate", "name": "Mate", "seat": 2, "is_bot": False},
+            {"player_id": "opp2", "name": "Opp2", "seat": 3, "is_bot": False},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["current_turn"] = "bot"
+        state["config"]["bot_mcts_early_stop_gap"] = 999.0
+        state["config"]["bot_mcts_successive_halving_min_rounds"] = 2
+
+        actions = [
+            {"type": "play", "card_ids": [card_id]}
+            for card_id in (11, 22, 33, 44)
+        ]
+        particle_counter = [0]
+        branches_by_particle = {}
+
+        def fake_determinize(_state, _player_id, _rng):
+            particle_counter[0] += 1
+            return {"particle": particle_counter[0]}
+
+        def fake_apply_action(target_state, _player_id, action):
+            branch = tuple(action.get("card_ids", []))
+            target_state["branch"] = branch
+            branches_by_particle.setdefault(target_state["particle"], set()).add(branch)
+            return [], None
+
+        def fake_tree_value(target_state, _bot_id, _ply, _width, _rollout_depth, alpha=-1e9, beta=1e9):
+            del _bot_id, _ply, _width, _rollout_depth, alpha, beta
+            return {11: 9.0, 22: 6.0, 33: 2.0, 44: 0.0}[target_state["branch"][0]]
+
+        with mock.patch.object(guandan, "_candidate_actions", return_value=actions):
+            with mock.patch.object(guandan, "_filter_overbomb_actions", side_effect=lambda _s, _p, acts: acts):
+                with mock.patch.object(guandan, "_mcts_root_heuristic_value", return_value=0.0):
+                    with mock.patch.object(guandan, "_mcts_obvious_response_scores", return_value=None):
+                        with mock.patch.object(guandan, "_mcts_high_single_bomb_scores", return_value=None):
+                            with mock.patch.object(guandan, "_mcts_budget", return_value=(24, 4, 1, 2)):
+                                with mock.patch.object(guandan, "_determinize_state", side_effect=fake_determinize):
+                                    with mock.patch.object(guandan.GuandanGame, "apply_action", side_effect=fake_apply_action):
+                                        with mock.patch.object(guandan, "_mcts_reply_tree_value", side_effect=fake_tree_value) as reply_tree:
+                                            picked, scored = guandan._mcts_pick_action(
+                                                state,
+                                                "bot",
+                                                sims=24,
+                                                depth=4,
+                                                width=4,
+                                                tree_ply=1,
+                                                reply_width=2,
+                                                risk_lambda=0.28,
+                                            )
+
+        self.assertEqual(picked, actions[0])
+        self.assertEqual(branches_by_particle[1], {(11,), (22,), (33,), (44,)})
+        self.assertEqual(branches_by_particle[2], {(11,), (22,), (33,), (44,)})
+        self.assertLess(particle_counter[0], reply_tree.call_count)
+        counts = {tuple(action["card_ids"]): count for action, _score, count, _stats in scored}
+        self.assertGreater(counts[(11,)], counts[(33,)])
+        self.assertGreater(counts[(22,)], counts[(44,)])
+
+    def test_mcts_gate_uses_heuristic_score_gap(self):
+        state, _big = self._make_state()
+        state["current_trick"]["combo"] = {"type": "full_house", "rank_value": 55, "size": 5}
+        actions = [
+            {"type": "play", "card_ids": [11, 12, 13, 14, 15]},
+            {"type": "play", "card_ids": [21, 22, 23, 24, 25]},
+            {"type": "play", "card_ids": [31, 32, 33, 34, 35]},
+            {"type": "pass"},
+        ]
+
+        with mock.patch("game.guandan_ai._candidate_actions", return_value=actions):
+            with mock.patch("game.guandan_ai._filter_overbomb_actions", side_effect=lambda _s, _p, acts: acts):
+                with mock.patch("game.guandan_ai._action_combo", return_value={"type": "pair"}):
+                    with mock.patch(
+                        "game.guandan_ai._get_cached_heuristic_scored_candidates",
+                        return_value=[(actions[0]["card_ids"], 30.0, {}), (None, 5.0, {})],
+                    ):
+                        self.assertFalse(guandan._should_use_mcts(state, "bot", width=4))
+                    with mock.patch(
+                        "game.guandan_ai._get_cached_heuristic_scored_candidates",
+                        return_value=[(actions[0]["card_ids"], 10.0, {}), (None, 9.5, {})],
+                    ):
+                        self.assertTrue(guandan._should_use_mcts(state, "bot", width=4))
 
     def test_mcts_pass_does_not_fallback(self):
         state = self._make_pass_state()

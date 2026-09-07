@@ -33,11 +33,15 @@ DEFAULT_CONFIG = {
     "bot_mcts_early_stop_min_rounds": 4,
     "bot_mcts_early_stop_gap": 7.5,
     "bot_mcts_early_stop_stable_rounds": 2,
+    "bot_mcts_successive_halving_min_rounds": 4,
+    "bot_mcts_gate_score_gap": 10.0,
+    "bot_mcts_ambiguity_score_gap": 2.0,
     "bot_mcts_obvious_response_margin": 2.25,
     "bot_mcts_override_margin": 5.5,
     "bot_mcts_structure_guard_margin": 2.5,
     "bot_determinize_samples": 3,
     "bot_rollout_heuristic_depth": 2,
+    "bot_rollout_candidate_limit": 6,
     "bot_endgame_threshold": 24,
     "bot_minimax_depth": 5,
     "bot_minimax_width": 8,
@@ -45,6 +49,7 @@ DEFAULT_CONFIG = {
     "bot_lead_prescore_min_hand": 12,
     "bot_lead_prescore_min_options": 24,
     "bot_lead_prescore_limit": 16,
+    "bot_heuristic_deep_candidate_limit": 10,
     "bot_think_time_ms": 320,
     "bot_mcts_time_ms": 220,
     "bot_minimax_time_ms": 180,
@@ -2014,22 +2019,27 @@ class GuandanGame:
 
         config = state.get("config", {})
         state["_ai_eval_cache"] = {}
+        bot_mode = str(config.get("bot_mode", DEFAULT_CONFIG["bot_mode"]) or DEFAULT_CONFIG["bot_mode"]).strip().lower()
+        if bot_mode not in {"auto", "heuristic", "nn"}:
+            bot_mode = DEFAULT_CONFIG["bot_mode"]
+        think_budget_ms = max(40, int(config.get("bot_think_time_ms", 320)))
+        decision_deadline = time.perf_counter() + think_budget_ms / 1000.0
+        search_deadline = decision_deadline
+        heuristic_deadline = search_deadline if bot_mode in {"auto", "heuristic"} else None
+        current_combo = (state.get("current_trick") or {}).get("combo") or {}
         try:
             def _progress(stage: str, progress: float, detail: Optional[str] = None) -> None:
                 if not callable(progress_callback):
                     return
                 progress_callback(stage, max(0.0, min(0.99, float(progress))), detail)
 
-            bot_mode = str(config.get("bot_mode", DEFAULT_CONFIG["bot_mode"]) or DEFAULT_CONFIG["bot_mode"]).strip().lower()
-            if bot_mode not in {"auto", "heuristic", "nn"}:
-                bot_mode = DEFAULT_CONFIG["bot_mode"]
             total_left = sum(len(state["players"][pid]["hand"]) for pid in state["turn_order"])
             endgame_threshold = config.get("bot_endgame_threshold", 18)
             depth = config.get("bot_search_depth", 2)
             search_width = config.get("bot_minimax_width", 6)
             mcts_width = max(2, int(config.get("bot_mcts_root_width", min(search_width, 5))))
             _progress("heuristic", 0.06, "Evaluating heuristic baseline")
-            heuristic_action = _heuristic_best_action(state, bot_id, depth)
+            heuristic_action = _heuristic_best_action(state, bot_id, depth, deadline=heuristic_deadline)
             _progress("heuristic", 0.18, "Heuristic baseline ready")
 
             def _action_key(action: Optional[Dict]) -> Tuple:
@@ -2078,7 +2088,6 @@ class GuandanGame:
                         return pass_action, err
                 return None, err
 
-            think_budget_ms = max(40, int(config.get("bot_think_time_ms", 320)))
             default_mcts_budget_ms = min(think_budget_ms, 220)
             default_minimax_budget_ms = min(think_budget_ms, 180)
             chosen = None
@@ -2103,7 +2112,9 @@ class GuandanGame:
             elif bot_mode == "auto":
                 if total_left <= endgame_threshold:
                     minimax_budget_ms = max(25, int(config.get("bot_minimax_time_ms", default_minimax_budget_ms)))
-                    deadline = time.perf_counter() + minimax_budget_ms / 1000.0
+                    deadline = min(search_deadline, time.perf_counter() + minimax_budget_ms / 1000.0)
+                    if deadline <= time.perf_counter():
+                        deadline = time.perf_counter() + minimax_budget_ms / 1000.0
                     _progress("minimax", 0.22, "Determinizing endgame state")
                     det = _determinize_state(state, bot_id, random.Random())
                     chosen = _minimax_pick_action(
@@ -2120,9 +2131,21 @@ class GuandanGame:
                         decided = True
                         chosen_action_type = "play"
                         method = "minimax"
-                if not decided and total_left > endgame_threshold and _should_use_mcts(state, bot_id, mcts_width):
+                if (
+                    not decided
+                    and total_left > endgame_threshold
+                    and (
+                        time.perf_counter() < search_deadline
+                        or current_combo.get("type") in BOMB_TYPES
+                        or (
+                            current_combo.get("type") == "single"
+                            and current_combo.get("rank_value", 0) >= 70
+                        )
+                    )
+                    and _should_use_mcts(state, bot_id, mcts_width)
+                ):
                     mcts_budget_ms = max(25, int(config.get("bot_mcts_time_ms", default_mcts_budget_ms)))
-                    deadline = time.perf_counter() + mcts_budget_ms / 1000.0
+                    deadline = min(search_deadline, time.perf_counter() + mcts_budget_ms / 1000.0)
                     _progress("mcts", 0.22, "Preparing MCTS search")
                     mcts_action, mcts_scores = _mcts_pick_action(
                         state,
