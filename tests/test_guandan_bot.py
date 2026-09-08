@@ -8181,3 +8181,89 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         hand_map = guandan._map_hand_by_id(bot3_hand)
         chosen_labels = [guandan._card_label(hand_map[cid]) for cid in action.get("card_ids", [])]
         self.assertEqual(chosen_labels, ["♠️8", "♥️9", "♠️10", "♠️J", "♣️Q"])
+
+    def test_relays_clean_single_after_enemy_overcalls_teammate(self):
+        players = [
+            {"player_id": "mate", "name": "Mate", "seat": 0, "is_bot": False},
+            {"player_id": "opp", "name": "Opp", "seat": 1, "is_bot": False},
+            {"player_id": "bot", "name": "Bot", "seat": 2, "is_bot": True},
+            {"player_id": "opp2", "name": "Opp 2", "seat": 3, "is_bot": False},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["current_turn"] = "bot"
+        state["config"]["bot_mode"] = "heuristic"
+
+        deck = guandan._full_deck()
+        teammate_lead = self._pick_labels(deck, ["♥️3"])[0]
+        enemy_overcall = self._pick_labels(deck, ["♦️4"])[0]
+        state["players"]["bot"]["hand"] = self._pick_labels(
+            deck,
+            ["♦️7", "♣️7", "♥️9", "♠️9"],
+        )
+        state["players"]["mate"]["hand"] = self._pick_labels(
+            deck,
+            ["♠️6", "♣️10", "♦️J", "♣️Q"],
+        )
+        state["players"]["opp"]["hand"] = deck[:8]
+        state["players"]["opp2"]["hand"] = deck[8:16]
+        state["current_trick"] = {
+            "player_id": "opp",
+            "cards": [enemy_overcall["id"]],
+            "combo": guandan._evaluate_combo(
+                [enemy_overcall],
+                state["level_rank"],
+                state.get("config", {}),
+            ),
+        }
+        state["trick_plays"] = {
+            "mate": [teammate_lead],
+            "opp": [enemy_overcall],
+        }
+
+        action = guandan.GuandanGame.bot_move(state, "bot")
+
+        self.assertEqual(action.get("type"), "play")
+        hand_map = guandan._map_hand_by_id(state["players"]["bot"]["hand"])
+        chosen = [hand_map[cid] for cid in action.get("card_ids", [])]
+        self.assertEqual(len(chosen), 1)
+        self.assertIn(guandan._card_label(chosen[0]), ("♦️7", "♣️7", "♥️9", "♠️9"))
+
+    def test_relays_clean_single_over_teammate_when_holding_short_tail(self):
+        players = [
+            {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
+            {"player_id": "opp", "name": "Opp", "seat": 1, "is_bot": False},
+            {"player_id": "mate", "name": "Mate", "seat": 2, "is_bot": False},
+            {"player_id": "opp2", "name": "Opp 2", "seat": 3, "is_bot": False},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["current_turn"] = "bot"
+        state["config"]["bot_mode"] = "heuristic"
+
+        deck = guandan._full_deck()
+        teammate_lead = self._pick_labels(deck, ["♦️5"])[0]
+        state["players"]["bot"]["hand"] = self._pick_labels(deck, ["♣️9", "♣️10"])
+        state["players"]["mate"]["hand"] = self._pick_labels(
+            deck,
+            ["♥️6", "♥️7", "♠️7", "♣️K", "🃏S"],
+        )
+        state["players"]["opp"]["hand"] = deck[:8]
+        state["players"]["opp2"]["hand"] = deck[8:16]
+        state["current_trick"] = {
+            "player_id": "mate",
+            "cards": [teammate_lead["id"]],
+            "combo": guandan._evaluate_combo(
+                [teammate_lead],
+                state["level_rank"],
+                state.get("config", {}),
+            ),
+        }
+        state["trick_plays"] = {"mate": [teammate_lead]}
+
+        action = guandan.GuandanGame.bot_move(state, "bot")
+
+        self.assertEqual(action.get("type"), "play")
+        hand_map = guandan._map_hand_by_id(state["players"]["bot"]["hand"])
+        chosen_labels = [guandan._card_label(hand_map[cid]) for cid in action.get("card_ids", [])]
+        self.assertEqual(chosen_labels, ["♣️9"])

@@ -11184,6 +11184,87 @@ def _overbomb_soft_pruning_penalty(state: Dict, player_id: str, cards: List[int]
     return float(penalties.get((player_id, _cards_key(cards)), 0.0))
 
 
+def _quick_clean_single_relay_bonus(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+    features: Dict,
+    teammate_can_retake: bool,
+) -> float:
+    """Let partners relay cheap singles without weakening grouped material."""
+    current_trick = state.get("current_trick")
+    current_combo = (current_trick or {}).get("combo") or {}
+    if (
+        not current_trick
+        or combo.get("type") != "single"
+        or current_combo.get("type") != "single"
+        or len(cards) != 1
+    ):
+        return 0.0
+
+    play_cards = features.get("play_cards") or []
+    if len(play_cards) != 1 or _cards_use_special_material(play_cards, state["level_rank"]):
+        return 0.0
+    card = play_cards[0]
+    card_value = _single_order_value(card, state["level_rank"])
+    current_value = current_combo.get("rank_value", 0)
+    margin = card_value - current_value
+    if card_value > LOW_SINGLE_VALUE_MAX or margin <= 0 or margin > 6:
+        return 0.0
+
+    rank = card.get("rank")
+    rank_count = features.get("before_counts", {}).get(rank, 0) if rank is not None else 0
+    if rank_count <= 0 or rank_count > 2:
+        return 0.0
+    if features.get("fragment_penalty", 0.0) > 2.05 or features.get("control_break", 0.0) > 0.5:
+        return 0.0
+
+    # Rank counts miss straight and straight-flush material. Keep only physical
+    # cards whose removal leaves the cheap residual structure nearly intact.
+    hand = features.get("hand") or []
+    hand_key = tuple(sorted(item["id"] for item in hand))
+    residual_cache = state.setdefault("_ai_eval_cache", {}).setdefault(
+        "quick_single_relay_residual",
+        {},
+    )
+    before_key = (player_id, hand_key, ())
+    after_key = (player_id, hand_key, tuple(sorted(cards)))
+    if before_key not in residual_cache:
+        residual_cache[before_key] = _CORE._materialization_residual_score(
+            hand,
+            [],
+            state["level_rank"],
+        )
+    if after_key not in residual_cache:
+        residual_cache[after_key] = _CORE._materialization_residual_score(
+            hand,
+            cards,
+            state["level_rank"],
+        )
+    residual_loss = residual_cache[before_key] - residual_cache[after_key]
+    if residual_loss > 5.5:
+        return 0.0
+
+    teammate = _teammate_of(state, player_id)
+    leader = current_trick.get("player_id")
+    if leader == teammate:
+        teammate_left = len(state["players"].get(teammate, {}).get("hand", [])) if teammate else 99
+        if teammate_left <= 1:
+            return 0.0
+        bonus = 15.5 + max(0.0, 4 - len(hand)) * 2.0
+        if len(hand) <= 8:
+            bonus += 2.5
+        return bonus
+
+    if teammate_can_retake and leader and _team_of(state, leader) != _team_of(state, player_id):
+        bonus = 4.0 + max(0.0, 6 - margin) * 0.25
+        if len(hand) <= 6:
+            bonus += 2.5
+        return bonus
+    return 0.0
+
+
 def _quick_candidate_score(state: Dict, player_id: str, cards: Optional[List[int]]) -> float:
     current_trick = state.get("current_trick")
     if not cards:
@@ -11329,8 +11410,19 @@ def _quick_candidate_score(state: Dict, player_id: str, cards: Optional[List[int
     critical_bomb_prior = _critical_pair_three_bomb_bonus(state, player_id, cards, combo)
     if critical_bomb_prior > 0.0:
         score += critical_bomb_prior
+    clean_single_relay = _quick_clean_single_relay_bonus(
+        state,
+        player_id,
+        cards,
+        combo,
+        features,
+        teammate_can_retake,
+    )
     if teammate_can_retake and (combo.get("type") == current_type or combo.get("type") in BOMB_TYPES):
-        score -= 24.0
+        if clean_single_relay <= 0.0:
+            score -= 24.0
+    if clean_single_relay > 0.0:
+        score += clean_single_relay
     if leader and _team_of(state, leader) != _team_of(state, player_id):
         if leader_left <= 2:
             score += 8.0
@@ -11364,7 +11456,8 @@ def _quick_candidate_score(state: Dict, player_id: str, cards: Optional[List[int
         score += 12.5
     if combo.get("type") == "single":
         score += _next_opponent_one_card_block_bonus(state, player_id, cards, combo)
-    score -= _response_soft_pruning_penalty(state, player_id, cards)
+    if clean_single_relay <= 0.0:
+        score -= _response_soft_pruning_penalty(state, player_id, cards)
     score -= _overbomb_soft_pruning_penalty(state, player_id, cards)
     return score
 
