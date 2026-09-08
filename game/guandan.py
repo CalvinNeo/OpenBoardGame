@@ -1,4 +1,5 @@
 import copy
+import functools
 import math
 import random
 import sys
@@ -39,6 +40,9 @@ DEFAULT_CONFIG = {
     "bot_mcts_obvious_response_margin": 2.25,
     "bot_mcts_override_margin": 5.5,
     "bot_mcts_structure_guard_margin": 2.5,
+    "bot_mcts_critical_sims_scale": 0.96,
+    "bot_mcts_ambiguous_sims_scale": 0.86,
+    "bot_mcts_confident_sims_scale": 0.58,
     "bot_determinize_samples": 3,
     "bot_rollout_heuristic_depth": 2,
     "bot_rollout_candidate_limit": 6,
@@ -483,7 +487,7 @@ def _pair_possible(
     return False
 
 
-def _evaluate_combo(cards: List[Dict], level_rank: int, config: Dict) -> Optional[Dict]:
+def _compute_evaluate_combo(cards: List[Dict], level_rank: int, config: Dict) -> Optional[Dict]:
     if not cards:
         return None
     size = len(cards)
@@ -664,6 +668,45 @@ def _evaluate_combo(cards: List[Dict], level_rank: int, config: Dict) -> Optiona
         return None
 
     return None
+
+
+def _combo_cards_signature(cards: List[Dict]) -> Tuple[Tuple[int, str, str], ...]:
+    """Return the physical-card-independent shape used by combo evaluation."""
+    return tuple(
+        sorted(
+            (
+                int(card["rank"]) if card.get("rank") is not None else -1,
+                str(card.get("suit") or ""),
+                str(card.get("joker") or ""),
+            )
+            for card in cards
+        )
+    )
+
+
+@functools.lru_cache(maxsize=16384)
+def _evaluate_combo_cached(
+    signature: Tuple[Tuple[int, str, str], ...],
+    level_rank: int,
+) -> Optional[Dict]:
+    cards = [
+        {
+            "rank": None if rank < 0 else rank,
+            "suit": suit or None,
+            "joker": joker or None,
+        }
+        for rank, suit, joker in signature
+    ]
+    return _compute_evaluate_combo(cards, level_rank, {})
+
+
+def _evaluate_combo(cards: List[Dict], level_rank: int, config: Dict) -> Optional[Dict]:
+    """Evaluate a play, reusing results for equivalent cards from either deck."""
+    del config  # Combo classification currently depends only on cards and level rank.
+    if not cards:
+        return None
+    cached = _evaluate_combo_cached(_combo_cards_signature(cards), level_rank)
+    return dict(cached) if cached is not None else None
 
 
 def _bomb_tier(combo: Dict) -> int:
@@ -1093,6 +1136,42 @@ def _list_hint_options(state: Dict, player_id: str) -> List[List[int]]:
     current_trick = state.get("current_trick")
     level_rank = state["level_rank"]
     config = state.get("config", {})
+    eval_cache = state.get("_ai_eval_cache")
+    option_cache = None
+    cache_key = None
+    if isinstance(eval_cache, dict):
+        option_cache = eval_cache.setdefault("legal_action_options", {})
+        current_combo = (current_trick or {}).get("combo") or {}
+        hand_signature = tuple(
+            sorted(
+                (
+                    card["id"],
+                    int(card["rank"]) if card.get("rank") is not None else -1,
+                    str(card.get("suit") or ""),
+                    str(card.get("joker") or ""),
+                )
+                for card in hand
+            )
+        )
+        cache_key = (
+            player_id,
+            state.get("phase"),
+            state.get("current_turn"),
+            level_rank,
+            hand_signature,
+            (current_trick or {}).get("player_id"),
+            tuple((current_trick or {}).get("cards") or ()),
+            current_combo.get("type"),
+            current_combo.get("size"),
+            current_combo.get("tier"),
+            current_combo.get("rank_value"),
+            current_combo.get("high_value"),
+            bool(current_combo.get("uses_wild")),
+            bool(config.get("hard_bomb_beats_soft")),
+        )
+        cached = option_cache.get(cache_key)
+        if cached is not None:
+            return [list(cards) for cards in cached]
     options: List[List[int]] = []
     if current_trick:
         combo = current_trick["combo"]
@@ -1123,7 +1202,10 @@ def _list_hint_options(state: Dict, player_id: str) -> List[List[int]]:
         options.extend(_list_three_pairs_options(hand, level_rank, 0))
         options.extend(_list_steel_plate_options(hand, level_rank, 0))
         options.extend(_list_bomb_options(hand, level_rank, None, config))
-    return _dedupe_card_sets(options)
+    options = _dedupe_card_sets(options)
+    if option_cache is not None and cache_key is not None:
+        option_cache[cache_key] = tuple(tuple(cards) for cards in options)
+    return [list(cards) for cards in options]
 
 
 def _combo_value(combo: Dict) -> int:

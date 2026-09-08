@@ -1830,6 +1830,132 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertEqual(first, second)
         self.assertEqual(compute.call_count, 1)
 
+    def test_combo_evaluation_cache_reuses_equivalent_deck_cards(self):
+        deck = guandan._full_deck()
+        copies = [
+            card
+            for card in deck
+            if card.get("rank") == 7 and card.get("suit") == "spades"
+        ]
+        self.assertEqual(len(copies), 2)
+        guandan._evaluate_combo_cached.cache_clear()
+
+        with mock.patch.object(
+            guandan,
+            "_compute_evaluate_combo",
+            wraps=guandan._compute_evaluate_combo,
+        ) as compute:
+            first = guandan._evaluate_combo([copies[0]], 2, {})
+            first["label"] = "mutated"
+            second = guandan._evaluate_combo([copies[1]], 2, {})
+
+        self.assertEqual(second["type"], "single")
+        self.assertNotEqual(second["label"], "mutated")
+        self.assertEqual(compute.call_count, 1)
+
+    def test_hint_options_cache_is_position_keyed_and_defensive(self):
+        state, _big = self._make_state()
+        state["_ai_eval_cache"] = {}
+
+        with mock.patch.object(
+            guandan,
+            "_list_single_options",
+            wraps=guandan._list_single_options,
+        ) as list_singles:
+            first = guandan._list_hint_options(state, "bot")
+            first.append([999999])
+            second = guandan._list_hint_options(state, "bot")
+            state["players"]["bot"]["hand"] = state["players"]["bot"]["hand"][:-1]
+            guandan._list_hint_options(state, "bot")
+
+        self.assertNotIn([999999], second)
+        self.assertEqual(list_singles.call_count, 2)
+
+    def test_lead_hierarchy_keeps_candidates_beyond_prescore_limit(self):
+        state, _big = self._make_state()
+        state["current_trick"] = None
+        state["_ai_eval_cache"] = {}
+        state["config"]["bot_lead_prescore_min_hand"] = 1
+        state["config"]["bot_lead_prescore_min_options"] = 4
+        state["config"]["bot_lead_prescore_limit"] = 4
+        hand = [card for card in guandan._full_deck() if not card.get("joker")][:24]
+        state["players"]["bot"]["hand"] = hand
+        options = [[card["id"]] for card in hand]
+        true_best = options[-1]
+        cheap_order = {cards[0]: float(len(options) - index) for index, cards in enumerate(options)}
+
+        def detailed_score(_state, _player_id, cards):
+            return 1000.0 if cards == true_best else float(cards[0])
+
+        with mock.patch(
+            "game.guandan_ai._lead_structure_group_key",
+            side_effect=lambda _state, _player_id, cards, _combo: tuple(cards),
+        ):
+            with mock.patch(
+                "game.guandan_ai._lead_cheap_option_score",
+                side_effect=lambda _state, _player_id, cards, _combo=None: cheap_order[cards[0]],
+            ):
+                with mock.patch(
+                    "game.guandan_ai._lead_option_score",
+                    side_effect=detailed_score,
+                ) as detailed:
+                    with mock.patch(
+                        "game.guandan_ai._should_prune_weak_lead_single",
+                        return_value=False,
+                    ):
+                        ranked = guandan._rank_lead_options(state, "bot", options)
+
+        self.assertEqual(ranked[0], true_best)
+        self.assertEqual({tuple(cards) for cards in ranked}, {tuple(cards) for cards in options})
+        self.assertEqual(detailed.call_count, len(options))
+
+    def test_mcts_budget_spends_more_on_ambiguous_and_critical_positions(self):
+        state, _big = self._make_state()
+        state["players"]["opp"]["hand"] = guandan._full_deck()[:10]
+        state["current_trick"]["combo"] = {"type": "pair", "size": 2, "rank_value": 40}
+        candidates = [
+            {"type": "play", "card_ids": [state["players"]["bot"]["hand"][0]["id"]]},
+            {"type": "pass"},
+        ]
+        keys = [guandan._mcts_action_key(action) for action in candidates]
+
+        ambiguous = guandan._mcts_budget(
+            state,
+            96,
+            8,
+            3,
+            4,
+            2,
+            candidates=candidates,
+            heuristic_values={keys[0]: 10.0, keys[1]: 9.5},
+        )
+        confident = guandan._mcts_budget(
+            state,
+            96,
+            8,
+            3,
+            4,
+            2,
+            candidates=candidates,
+            heuristic_values={keys[0]: 30.0, keys[1]: 0.0},
+        )
+        state["current_trick"]["combo"] = {"type": "bomb", "size": 4, "tier": 1, "rank_value": 50}
+        critical = guandan._mcts_budget(
+            state,
+            96,
+            8,
+            3,
+            4,
+            2,
+            candidates=candidates,
+            heuristic_values={keys[0]: 30.0, keys[1]: 0.0},
+        )
+
+        self.assertGreater(ambiguous[0], confident[0])
+        self.assertGreater(critical[0], confident[0])
+        self.assertGreaterEqual(ambiguous[2], confident[2])
+        self.assertGreaterEqual(critical[2], confident[2])
+
     def test_bot_score_components_are_reused_within_one_position(self):
         state, big = self._make_state()
         state["_ai_eval_cache"] = {}

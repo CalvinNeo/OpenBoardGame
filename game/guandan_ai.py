@@ -1636,6 +1636,52 @@ def _lead_cheap_option_score(
     return score
 
 
+def _lead_structure_group_key(state: Dict, player_id: str, cards: List[int], combo: Dict) -> Tuple:
+    """Group physically interchangeable leads without discarding any action."""
+    features = _candidate_features(state, player_id, cards, combo=combo)
+    remaining = features["remaining"]
+    level_rank = state["level_rank"]
+    rank_counts: Dict[int, int] = {}
+    suit_rank_counts: Dict[Tuple[str, int], int] = {}
+    wild_count = 0
+    big_jokers = 0
+    small_jokers = 0
+    for card in remaining:
+        if _is_wild(card, level_rank):
+            wild_count += 1
+            continue
+        joker = card.get("joker")
+        if joker == "big":
+            big_jokers += 1
+            continue
+        if joker == "small":
+            small_jokers += 1
+            continue
+        rank = card.get("rank")
+        suit = str(card.get("suit") or "")
+        if rank is None:
+            continue
+        rank_counts[rank] = rank_counts.get(rank, 0) + 1
+        suit_key = (suit, rank)
+        suit_rank_counts[suit_key] = suit_rank_counts.get(suit_key, 0) + 1
+    remaining_signature = (
+        tuple(sorted(rank_counts.items())),
+        tuple(sorted((suit, rank, count) for (suit, rank), count in suit_rank_counts.items())),
+        wild_count,
+        big_jokers,
+        small_jokers,
+    )
+    return (
+        combo.get("type"),
+        combo.get("size"),
+        combo.get("tier"),
+        combo.get("rank_value"),
+        combo.get("high_value"),
+        bool(combo.get("uses_wild")),
+        remaining_signature,
+    )
+
+
 def _rank_lead_options(
     state: Dict,
     player_id: str,
@@ -1661,41 +1707,57 @@ def _rank_lead_options(
     prescore_min_options = max(1, int(config.get("bot_lead_prescore_min_options", 24)))
     prescore_limit = max(4, int(config.get("bot_lead_prescore_limit", 16)))
 
-    if prescore_enabled and len(hand) >= prescore_min_hand and len(combo_entries) >= prescore_min_options:
-        cheap_scored: List[Tuple[float, str, List[int], Dict]] = []
-        for combo_type, cards, combo in combo_entries:
-            score = _lead_cheap_option_score(state, player_id, cards, combo)
-            cheap_scored.append((score, combo_type, cards, combo))
+    hierarchy_enabled = (
+        prescore_enabled
+        and len(hand) >= prescore_min_hand
+        and len(combo_entries) >= prescore_min_options
+    )
+    grouped: Dict[Tuple, List[Tuple[float, str, List[int], Dict]]] = {}
+    group_order: List[Tuple] = []
+    for combo_type, cards, combo in combo_entries:
+        group_key = _lead_structure_group_key(state, player_id, cards, combo)
+        if group_key not in grouped:
+            grouped[group_key] = []
+            group_order.append(group_key)
+        cheap_score = _lead_cheap_option_score(state, player_id, cards, combo)
+        grouped[group_key].append((cheap_score, combo_type, cards, combo))
 
-        shortlist: List[Tuple[str, List[int], Dict]] = []
-        seen_keys = set()
-        best_by_type: Dict[str, Tuple[float, str, List[int], Dict]] = {}
-        for entry in cheap_scored:
-            score, combo_type, cards, _combo = entry
-            existing = best_by_type.get(combo_type)
+    representatives = {
+        group_key: max(entries, key=lambda item: item[0])
+        for group_key, entries in grouped.items()
+    }
+    if hierarchy_enabled:
+        scheduled_keys: List[Tuple] = []
+        seen_group_keys = set()
+        best_group_by_type: Dict[str, Tuple[float, Tuple]] = {}
+        for group_key, representative in representatives.items():
+            score, combo_type, _cards, _combo = representative
+            existing = best_group_by_type.get(combo_type)
             if existing is None or score > existing[0]:
-                best_by_type[combo_type] = entry
-        for score, combo_type, cards, combo in sorted(best_by_type.values(), key=lambda item: item[0], reverse=True):
-            key = _cards_key(cards)
-            if key in seen_keys:
+                best_group_by_type[combo_type] = (score, group_key)
+        for _score, group_key in sorted(best_group_by_type.values(), key=lambda item: item[0], reverse=True):
+            seen_group_keys.add(group_key)
+            scheduled_keys.append(group_key)
+        for group_key, representative in sorted(
+            representatives.items(),
+            key=lambda item: item[1][0],
+            reverse=True,
+        ):
+            if group_key in seen_group_keys:
                 continue
-            seen_keys.add(key)
-            shortlist.append((combo_type, cards, combo))
-        for score, combo_type, cards, combo in sorted(cheap_scored, key=lambda item: item[0], reverse=True):
-            if len(shortlist) >= prescore_limit:
-                break
-            key = _cards_key(cards)
-            if key in seen_keys:
-                continue
-            seen_keys.add(key)
-            shortlist.append((combo_type, cards, combo))
-        combo_entries = shortlist
+            seen_group_keys.add(group_key)
+            scheduled_keys.append(group_key)
+        group_order = scheduled_keys
 
     scored: List[Tuple[float, str, List[int]]] = []
     config = state.get("config", {})
     min_detailed = max(1, int(config.get("bot_heuristic_min_lead_rank_candidates", 16)))
+    if hierarchy_enabled:
+        min_detailed = max(min_detailed, prescore_limit)
     check_batch = max(1, int(config.get("bot_heuristic_time_check_batch", 2)))
-    for index, (combo_type, cards, _combo) in enumerate(combo_entries):
+    evaluated_groups = 0
+    for index, group_key in enumerate(group_order):
+        entries = grouped[group_key]
         if (
             deadline is not None
             and len(scored) >= min_detailed
@@ -1703,8 +1765,11 @@ def _rank_lead_options(
             and time.perf_counter() >= deadline
         ):
             break
-        score = _lead_option_score(state, player_id, cards)
-        scored.append((score, combo_type, cards))
+        _cheap_score, _combo_type, representative_cards, _combo = representatives[group_key]
+        score = _lead_option_score(state, player_id, representative_cards)
+        for _member_cheap, combo_type, cards, _member_combo in entries:
+            scored.append((score, combo_type, cards))
+        evaluated_groups += 1
     if not scored:
         return options
     evaluated_keys = {_cards_key(cards) for _score, _combo_type, cards in scored}
@@ -1786,12 +1851,14 @@ def _rank_lead_options(
         ranked.append(cards)
     # On interruption, retain every unevaluated candidate behind the stable
     # detailed prefix. The caller can keep improving this ordering if time remains.
-    for _combo_type, cards, _combo in combo_entries:
-        key = _cards_key(cards)
-        if key in seen or key in evaluated_keys:
-            continue
-        seen.add(key)
-        ranked.append(cards)
+    for group_key in group_order[evaluated_groups:]:
+        entries = grouped[group_key]
+        for _cheap_score, _combo_type, cards, _combo in sorted(entries, key=lambda item: item[0], reverse=True):
+            key = _cards_key(cards)
+            if key in seen or key in evaluated_keys:
+                continue
+            seen.add(key)
+            ranked.append(cards)
     return ranked
 
 
@@ -8040,7 +8107,7 @@ def _copy_root_eval_cache_for_search(state: Dict) -> Dict:
     if not isinstance(source, dict):
         return {}
     copied: Dict = {}
-    for name in ("lead_option_scores", "lead_cheap_scores"):
+    for name in ("lead_option_scores", "lead_cheap_scores", "legal_action_options"):
         values = source.get(name)
         if isinstance(values, dict):
             copied[name] = dict(values)
@@ -8450,16 +8517,56 @@ def _mcts_budget(
     tree_ply: int,
     reply_width: int,
     candidate_count: int,
+    candidates: Optional[List[Dict]] = None,
+    heuristic_values: Optional[Dict[Tuple, float]] = None,
 ) -> Tuple[int, int, int, int]:
     if candidate_count <= 1:
         return 0, 0, 0, 1
 
+    cfg = state.get("config", {})
     total_left = sum(len(state["players"][pid]["hand"]) for pid in state["turn_order"])
+    current_trick = state.get("current_trick") or {}
+    current_combo = current_trick.get("combo") or {}
+    combo_type = current_combo.get("type")
+    leader = current_trick.get("player_id")
+    actor_id = state.get("current_turn")
+    leader_is_enemy = (
+        leader in state.get("player_teams", {})
+        and actor_id in state.get("player_teams", {})
+        and _team_of(state, leader) != _team_of(state, actor_id)
+    )
+    leader_left = len(state["players"].get(leader, {}).get("hand", [])) if leader else 99
+
+    ordered_heuristics = sorted((heuristic_values or {}).values(), reverse=True)
+    heuristic_gap = (
+        ordered_heuristics[0] - ordered_heuristics[1]
+        if len(ordered_heuristics) >= 2
+        else None
+    )
+    ambiguous_gap = float(cfg.get("bot_mcts_ambiguity_score_gap", 2.0))
+    confident_gap = float(cfg.get("bot_mcts_gate_score_gap", 10.0))
+    is_ambiguous = heuristic_gap is not None and heuristic_gap <= ambiguous_gap
+    is_confident = heuristic_gap is not None and heuristic_gap >= confident_gap
+    has_pass = any(action.get("type") == "pass" for action in candidates or [])
+    has_bomb_response = any(
+        (_action_combo(state, actor_id, action) or {}).get("type") in BOMB_TYPES
+        for action in candidates or []
+        if action.get("type") == "play" and actor_id in state.get("players", {})
+    )
+    critical = (
+        combo_type in BOMB_TYPES
+        or (combo_type == "single" and current_combo.get("rank_value", 0) >= HIGH_CONTROL_SINGLE_VALUE_MIN)
+        or (leader_is_enemy and leader_left <= 2)
+        or (has_pass and has_bomb_response)
+    )
+
     scale = 1.0
     if candidate_count == 2:
-        scale *= 0.65
+        scale *= 0.72
     elif candidate_count <= 4:
-        scale *= 0.82
+        scale *= 0.84
+    elif candidate_count >= 7:
+        scale *= 0.9
 
     if not state.get("current_trick"):
         scale *= 0.8
@@ -8468,13 +8575,40 @@ def _mcts_budget(
     elif total_left >= 50:
         scale *= 0.82
 
+    if is_ambiguous:
+        scale = max(scale, float(cfg.get("bot_mcts_ambiguous_sims_scale", 0.86)))
+    if critical:
+        scale = max(scale, float(cfg.get("bot_mcts_critical_sims_scale", 0.96)))
+    elif is_confident:
+        scale *= float(cfg.get("bot_mcts_confident_sims_scale", 0.58))
+    scale = max(0.2, min(1.0, scale))
+
     if base_sims <= 16:
         sims = base_sims
     else:
-        sims = min(base_sims, max(4, int(base_sims * scale)))
-    depth = max(4, min(base_depth, 6 if total_left >= 50 else base_depth))
-    tree = min(tree_ply, 1 if candidate_count <= 3 else tree_ply, depth)
-    width = max(1, min(reply_width, 2 if candidate_count <= 4 else reply_width))
+        visit_floor = max(4, candidate_count * 2)
+        sims = min(base_sims, max(visit_floor, int(round(base_sims * scale))))
+
+    phase_depth_cap = 5 if total_left >= 70 else 6 if total_left >= 50 else base_depth
+    if critical and base_depth >= 6:
+        phase_depth_cap = max(phase_depth_cap, 6)
+    depth = max(4, min(base_depth, phase_depth_cap))
+
+    if critical or is_ambiguous:
+        tree_cap = 2
+    elif candidate_count <= 3 or total_left >= 70:
+        tree_cap = 1
+    else:
+        tree_cap = tree_ply
+    tree = min(tree_ply, tree_cap, depth)
+
+    if critical and is_ambiguous:
+        width_cap = reply_width
+    elif candidate_count <= 4 or total_left >= 70:
+        width_cap = 2
+    else:
+        width_cap = reply_width
+    width = max(1, min(reply_width, width_cap))
     return sims, depth, tree, width
 
 
@@ -8812,6 +8946,10 @@ def _mcts_score_actions(
         f"Preparing MCTS with {len(candidates)} candidates",
     )
 
+    heuristic_weight = 3.8 if state.get("current_trick") and len(candidates) <= 2 else 2.2
+    heuristic_values: Dict[Tuple, float] = {}
+    for action in candidates:
+        heuristic_values[_mcts_action_key(action)] = _CORE._mcts_root_heuristic_value(state, bot_id, action, depth)
     effective_sims, effective_depth, effective_tree_ply, effective_reply_width = _CORE._mcts_budget(
         state,
         sims,
@@ -8819,11 +8957,9 @@ def _mcts_score_actions(
         tree_ply,
         reply_width,
         len(candidates),
+        candidates=candidates,
+        heuristic_values=heuristic_values,
     )
-    heuristic_weight = 3.8 if state.get("current_trick") and len(candidates) <= 2 else 2.2
-    heuristic_values: Dict[Tuple, float] = {}
-    for action in candidates:
-        heuristic_values[_mcts_action_key(action)] = _CORE._mcts_root_heuristic_value(state, bot_id, action, depth)
     heuristic_center = sum(heuristic_values.values()) / len(heuristic_values)
     heuristic_scale = max(1.0, max(abs(value - heuristic_center) for value in heuristic_values.values()))
 
@@ -10318,11 +10454,6 @@ def _bot_select_play(
     elif current_trick:
         options = _rank_response_options(state, bot_id, options)
     else:
-        prescore_limit = max(
-            deep_limit,
-            int(state.get("config", {}).get("bot_lead_prescore_limit", 16)),
-        )
-        options = _shortlist_scoring_options(state, bot_id, options, prescore_limit)
         options = _rank_lead_options(state, bot_id, options, deadline=deadline)
     options = _filter_overbomb_options(state, bot_id, options)
     if is_lead:
