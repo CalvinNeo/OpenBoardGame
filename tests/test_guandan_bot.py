@@ -233,7 +233,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             for candidate in candidates
             if candidate.get("type") == "bomb" and candidate.get("rank_value") == guandan._point_order_value(5, state["level_rank"])
         )
-        self.assertEqual(rank_five_sizes, [5])
+        self.assertEqual(rank_five_sizes, [4, 5])
 
     def test_five_of_kind_keeps_four_bomb_when_extra_card_completes_straight(self):
         state, _big = self._make_state()
@@ -254,7 +254,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             for candidate in candidates
             if candidate.get("type") == "bomb" and candidate.get("rank_value") == guandan._point_order_value(5, state["level_rank"])
         )
-        self.assertEqual(rank_five_sizes, [4])
+        self.assertEqual(rank_five_sizes, [4, 5])
 
     def test_lead_empty_bomb_penalty_beats_residual_hand_value(self):
         state = self._make_empty_lead_bomb_state()
@@ -1993,7 +1993,94 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             guandan._control_group_break_penalty(first["hand"], cards, state["level_rank"]),
         )
 
-    def test_heuristic_deadline_keeps_deterministic_minimum_batch_and_pass(self):
+    def test_lead_prescore_does_not_call_decomposition_or_reply_search(self):
+        state, big = self._make_state()
+        state["current_trick"] = None
+        state["_ai_eval_cache"] = {}
+        cards = [big["id"]]
+
+        with mock.patch(
+            "game.guandan_ai._hand_decomposition_summary",
+            side_effect=AssertionError("greedy decomposition must not run in prescore"),
+        ):
+            with mock.patch(
+                "game.guandan_ai._global_hand_decomposition_summary",
+                side_effect=AssertionError("global decomposition must not run in prescore"),
+            ):
+                with mock.patch(
+                    "game.guandan_ai._lead_retake_control_bonus",
+                    side_effect=AssertionError("reply estimation must not run in prescore"),
+                ):
+                    score = guandan._guandan_ai.call(
+                        guandan,
+                        "_compute_lead_cheap_option_score",
+                        state,
+                        "bot",
+                        cards,
+                    )
+
+        self.assertIsInstance(score, float)
+
+    def test_deadline_lead_ranking_skips_detailed_prescore(self):
+        state, _big = self._make_state()
+        state["current_trick"] = None
+        state["_ai_eval_cache"] = {}
+        options = [[card["id"]] for card in state["players"]["bot"]["hand"]]
+
+        with mock.patch(
+            "game.guandan_ai._lead_option_score",
+            side_effect=AssertionError("deadline ranking must stay lightweight"),
+        ) as detailed:
+            ranked = guandan._rank_lead_options(state, "bot", options, deadline=10**12)
+
+        self.assertEqual({tuple(cards) for cards in ranked}, {tuple(cards) for cards in options})
+        detailed.assert_not_called()
+
+    def test_top_k_straight_materializations_keep_distinct_remainders(self):
+        deck = guandan._full_deck()
+        hand = self._pick_labels(
+            deck,
+            [
+                "♠️3", "♥️3",
+                "♠️4", "♥️4",
+                "♠️5", "♥️5",
+                "♠️6", "♥️6",
+                "♠️7", "♥️7",
+            ],
+        )
+
+        options = guandan._list_straight_options(hand, 2, 0, materialization_limit=3)
+        signatures = {
+            guandan._materialization_residual_signature(hand, cards, 2)
+            for cards in options
+        }
+
+        self.assertEqual(len(options), 3)
+        self.assertEqual(len(signatures), 3)
+        for cards in options:
+            hand_map = guandan._map_hand_by_id(hand)
+            combo = guandan._evaluate_combo([hand_map[cid] for cid in cards], 2, {})
+            self.assertEqual(combo.get("type"), "straight")
+
+    def test_global_decomposition_can_improve_greedy_finalist_plan(self):
+        hand = guandan._full_deck()[:18]
+
+        baseline = guandan._guandan_ai.call(
+            guandan,
+            "_hand_decomposition_summary",
+            hand,
+            2,
+        )
+        global_plan = guandan._guandan_ai.call(
+            guandan,
+            "_global_hand_decomposition_summary",
+            hand,
+            2,
+        )
+
+        self.assertLess(global_plan["turns"], baseline["turns"])
+
+    def test_heuristic_deadline_returns_quick_incumbent_without_detailed_batch(self):
         state, _big = self._make_state()
         state["config"]["bot_heuristic_min_deep_candidates"] = 3
         options = [[11], [22], [33], [44]]
@@ -2009,13 +2096,11 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
                         with mock.patch("game.guandan_ai._bot_score_components", side_effect=score_components) as score:
                             chosen = guandan._bot_select_play(state, "bot", depth=3, deadline=0.0)
 
-        self.assertIsNone(chosen)
-        self.assertEqual(score.call_args_list[0].args[2], [11])
-        self.assertIsNone(score.call_args_list[1].args[2])
-        self.assertEqual(score.call_count, 4)
+        self.assertIn(chosen, options)
+        score.assert_not_called()
         self.assertEqual(
             state["_ai_eval_cache"]["heuristic_anytime"],
-            {"evaluated": 4, "total": 5, "interrupted": True},
+            {"evaluated": 0, "total": 5, "interrupted": True},
         )
 
     def test_search_clone_isolated_from_root_state(self):
@@ -5613,7 +5698,11 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         action = guandan.GuandanGame.bot_move(state, "bot4")
         self.assertEqual(action.get("type"), "play")
         chosen = state.get("bot_explain", {}).get("bot4", {}).get("chosen", {}).get("cards", [])
-        self.assertEqual(chosen, ["♦️J", "♥️J", "♣️Q", "♠️Q", "♠️K", "♣️K"])
+        chosen_cards = [card for card in hand if guandan._card_label(card) in chosen]
+        chosen_combo = guandan._evaluate_combo(chosen_cards, state["level_rank"], state.get("config", {}))
+        chosen_ranks = sorted(card.get("rank") for card in chosen_cards)
+        self.assertEqual(chosen_combo.get("type"), "three_pairs")
+        self.assertEqual(chosen_ranks, [11, 11, 12, 12, 13, 13])
 
     def test_opponent_short_pair_of_level_prefers_minimal_bomb_over_pass(self):
         players = [
@@ -7375,8 +7464,10 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         action = guandan.GuandanGame.bot_move(state, "bot2")
         self.assertEqual(action.get("type"), "play")
         hand_map = guandan._map_hand_by_id(hand)
-        labels = [guandan._card_label(hand_map[cid]) for cid in action.get("card_ids", [])]
-        self.assertEqual(labels, ["♦️5", "♣️6", "♣️7", "♣️8", "♠️9"])
+        chosen_cards = [hand_map[cid] for cid in action.get("card_ids", [])]
+        chosen_combo = guandan._evaluate_combo(chosen_cards, state["level_rank"], state.get("config", {}))
+        self.assertEqual(chosen_combo.get("type"), "straight")
+        self.assertEqual(sorted(card.get("rank") for card in chosen_cards), [5, 6, 7, 8, 9])
 
     def test_midgame_response_splits_non_wild_level_pair_when_it_preserves_straight_bridge(self):
         players = [
@@ -7456,8 +7547,10 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
 
         action = guandan.GuandanGame.bot_move(state, "bot3")
         self.assertEqual(action.get("type"), "play")
-        chosen_labels = [guandan._card_label(hand_map[cid]) for cid in action.get("card_ids", [])]
-        self.assertEqual(chosen_labels, ["♠️2", "♦️2"])
+        chosen_cards = [hand_map[cid] for cid in action.get("card_ids", [])]
+        self.assertEqual(len(chosen_cards), 2)
+        self.assertTrue(all(card.get("rank") == 2 for card in chosen_cards))
+        self.assertTrue(all(not guandan._is_wild(card, state["level_rank"]) for card in chosen_cards))
 
     def test_history_backed_stall_hand_prefers_low_bomb_over_passing_pair_twos(self):
         players = [

@@ -1,5 +1,6 @@
 import copy
 import functools
+import itertools
 import math
 import random
 import sys
@@ -46,6 +47,7 @@ DEFAULT_CONFIG = {
     "bot_determinize_samples": 3,
     "bot_rollout_heuristic_depth": 2,
     "bot_rollout_candidate_limit": 6,
+    "bot_action_materializations": 3,
     "bot_endgame_threshold": 24,
     "bot_minimax_depth": 5,
     "bot_minimax_width": 8,
@@ -1010,6 +1012,199 @@ def _dedupe_card_sets(options: List[List[int]]) -> List[List[int]]:
     return unique
 
 
+def _materialization_residual_signature(
+    hand: List[Dict], selected_ids: List[int], level_rank: int
+) -> Tuple[Tuple[int, str, str, bool, int], ...]:
+    """Describe the strategically relevant remainder, ignoring deck-copy ids."""
+    selected = set(selected_ids)
+    counts: Dict[Tuple[int, str, str, bool], int] = {}
+    for card in hand:
+        if card["id"] in selected:
+            continue
+        key = (
+            int(card["rank"]) if card.get("rank") is not None else -1,
+            str(card.get("suit") or ""),
+            str(card.get("joker") or ""),
+            _is_wild(card, level_rank),
+        )
+        counts[key] = counts.get(key, 0) + 1
+    return tuple(sorted((*key, count) for key, count in counts.items()))
+
+
+def _materialization_residual_score(
+    hand: List[Dict], selected_ids: List[int], level_rank: int
+) -> float:
+    """Cheaply rank physical realizations of the same logical combination."""
+    selected = set(selected_ids)
+    remaining = [card for card in hand if card["id"] not in selected]
+    info = _hand_info(remaining, level_rank)
+    rank_counts = {rank: len(cards) for rank, cards in info["normals_by_rank"].items()}
+    wild_count = len(info["wild_cards"])
+
+    score = wild_count * 8.0
+    score += len(info["jokers_big"]) * 3.0 + len(info["jokers_small"]) * 2.2
+    for count in rank_counts.values():
+        if count >= 4:
+            score += 8.0 + (count - 4) * 1.4
+        elif count == 3:
+            score += 4.2
+        elif count == 2:
+            score += 2.0
+        else:
+            score -= 0.15
+
+    for seq, _high_value in STRAIGHT_SEQUENCES:
+        missing = sum(1 for rank in seq if rank_counts.get(rank, 0) <= 0)
+        if missing <= wild_count:
+            score += 4.0 - missing * 0.45
+        pair_missing = sum(max(0, 2 - rank_counts.get(rank, 0)) for rank in seq[-3:])
+        if pair_missing <= wild_count:
+            score += 2.2 - pair_missing * 0.3
+
+    for start in range(2, 14):
+        triple_missing = sum(max(0, 3 - rank_counts.get(rank, 0)) for rank in (start, start + 1))
+        if start + 1 <= 14 and triple_missing <= wild_count:
+            score += 2.5 - triple_missing * 0.35
+
+    for suit_map in info["normals_by_suit"].values():
+        for seq, _high_value in STRAIGHT_SEQUENCES:
+            coverage = sum(1 for rank in seq if suit_map.get(rank))
+            if coverage >= 3:
+                score += (coverage - 2) * (coverage - 2) * 0.9
+            missing = sum(1 for rank in seq if not suit_map.get(rank))
+            if missing <= wild_count:
+                score += 6.0 - missing * 0.6
+    return score
+
+
+def _select_materialization_variants(
+    hand: List[Dict],
+    level_rank: int,
+    candidates: List[List[int]],
+    limit: int,
+    detailed: bool = True,
+) -> List[List[int]]:
+    limit = max(1, int(limit))
+    best_by_remainder: Dict[Tuple, Tuple[float, Tuple[int, ...], List[int]]] = {}
+    for cards in _dedupe_card_sets(candidates):
+        ordered = tuple(sorted(cards))
+        signature = _materialization_residual_signature(hand, cards, level_rank)
+        if detailed:
+            score = _materialization_residual_score(hand, cards, level_rank)
+        else:
+            selected = set(cards)
+            rank_counts: Dict[int, int] = {}
+            suit_rank_counts: Dict[Tuple[str, int], int] = {}
+            wild_count = 0
+            for card in hand:
+                if card["id"] in selected:
+                    continue
+                if _is_wild(card, level_rank):
+                    wild_count += 1
+                    continue
+                rank = card.get("rank")
+                if rank is None:
+                    continue
+                rank_counts[rank] = rank_counts.get(rank, 0) + 1
+                suit_key = (str(card.get("suit") or ""), rank)
+                suit_rank_counts[suit_key] = suit_rank_counts.get(suit_key, 0) + 1
+            score = wild_count * 8.0
+            score += sum(min(count, 4) ** 2 for count in rank_counts.values()) * 0.4
+            score += len(suit_rank_counts) * 0.6
+        entry = (score, ordered, cards)
+        existing = best_by_remainder.get(signature)
+        if existing is None or (entry[0], tuple(-cid for cid in entry[1])) > (
+            existing[0],
+            tuple(-cid for cid in existing[1]),
+        ):
+            best_by_remainder[signature] = entry
+    ordered_entries = sorted(
+        best_by_remainder.values(),
+        key=lambda item: (-item[0], item[1]),
+    )
+    return [list(entry[2]) for entry in ordered_entries[:limit]]
+
+
+def _materialize_rank_requirements(
+    hand: List[Dict],
+    level_rank: int,
+    requirements: List[Tuple[int, int]],
+    limit: int = 1,
+) -> List[List[int]]:
+    """Keep a bounded set of residual-hand-distinct physical realizations."""
+    info = _hand_info(hand, level_rank)
+    wilds = list(info["wild_cards"])
+    legacy_selected: List[int] = []
+    for rank, count in requirements:
+        normals = list(info["normals_by_rank"].get(rank, []))
+        take_normal = min(len(normals), count)
+        legacy_selected.extend(normals[:take_normal])
+        missing = count - take_normal
+        available_wilds = [card_id for card_id in wilds if card_id not in legacy_selected]
+        if missing > len(available_wilds):
+            return []
+        legacy_selected.extend(available_wilds[:missing])
+    if int(limit) <= 1:
+        return [legacy_selected]
+    beams: List[List[int]] = [[]]
+    beam_limit = max(8, min(32, int(limit) * 4))
+    hand_map = _map_hand_by_id(hand)
+    for rank, count in requirements:
+        normals = list(info["normals_by_rank"].get(rank, []))
+        take_normal = min(len(normals), count)
+        missing = count - take_normal
+        if missing > len(wilds):
+            return []
+        all_normal_choices = list(itertools.combinations(normals, take_normal)) if take_normal else [()]
+        normal_choices_by_shape: Dict[Tuple[str, ...], Tuple[int, ...]] = {}
+        for choice in all_normal_choices:
+            suit_shape = tuple(sorted(str(hand_map[card_id].get("suit") or "") for card_id in choice))
+            normal_choices_by_shape.setdefault(suit_shape, choice)
+        normal_choices = list(normal_choices_by_shape.values())
+        legacy_normal = tuple(normals[:take_normal])
+        normal_choices.sort(
+            key=lambda choice: (
+                sum(
+                    1
+                    for suit in {str(hand_map[card_id].get("suit") or "") for card_id in choice}
+                    if sum(1 for card_id in normals if str(hand_map[card_id].get("suit") or "") == suit)
+                    <= sum(1 for card_id in choice if str(hand_map[card_id].get("suit") or "") == suit)
+                ),
+                tuple(choice),
+            )
+        )
+        normal_choice_limit = max(4, min(8, int(limit) * 2))
+        normal_choices = normal_choices[:normal_choice_limit]
+        if legacy_normal not in normal_choices:
+            normal_choices = [legacy_normal] + normal_choices[: normal_choice_limit - 1]
+        expanded: List[List[int]] = []
+        for partial in beams:
+            used = set(partial)
+            available_wilds = [card_id for card_id in wilds if card_id not in used]
+            if missing > len(available_wilds):
+                continue
+            wild_choices = list(itertools.combinations(available_wilds, missing)) if missing else [()]
+            for normal_choice in normal_choices:
+                if any(card_id in used for card_id in normal_choice):
+                    continue
+                for wild_choice in wild_choices:
+                    expanded.append(partial + list(normal_choice) + list(wild_choice))
+        if not expanded:
+            return []
+        beams = _select_materialization_variants(
+            hand,
+            level_rank,
+            expanded,
+            beam_limit,
+            detailed=False,
+        )
+    ranked = _select_materialization_variants(hand, level_rank, beams, limit)
+    legacy_key = _cards_key(legacy_selected)
+    if all(_cards_key(cards) != legacy_key for cards in ranked):
+        ranked = [legacy_selected] + ranked[: max(0, int(limit) - 1)]
+    return ranked[: max(1, int(limit))]
+
+
 def _list_single_options(hand: List[Dict], level_rank: int, threshold: int) -> List[List[int]]:
     candidates = []
     for card in hand:
@@ -1021,7 +1216,7 @@ def _list_single_options(hand: List[Dict], level_rank: int, threshold: int) -> L
 
 
 def _list_rank_group_options(
-    hand: List[Dict], level_rank: int, threshold: int, size: int
+    hand: List[Dict], level_rank: int, threshold: int, size: int, materialization_limit: int = 1
 ) -> List[List[int]]:
     info = _hand_info(hand, level_rank)
     strength = _rank_strength(level_rank)
@@ -1029,9 +1224,14 @@ def _list_rank_group_options(
     for rank in _ranks_sorted_by_strength(level_rank, ascending=True):
         if strength[rank] <= threshold:
             continue
-        built = _build_of_rank(rank, size, info)
-        if built:
-            options.append(built[0])
+        options.extend(
+            _materialize_rank_requirements(
+                hand,
+                level_rank,
+                [(rank, size)],
+                materialization_limit,
+            )
+        )
     if size == 2:
         if len(info["jokers_big"]) >= 2 and 100 > threshold:
             options.append(info["jokers_big"][:2])
@@ -1040,86 +1240,135 @@ def _list_rank_group_options(
     return _dedupe_card_sets(options)
 
 
-def _list_full_house_options(hand: List[Dict], level_rank: int, threshold: int) -> List[List[int]]:
+def _list_full_house_options(
+    hand: List[Dict], level_rank: int, threshold: int, materialization_limit: int = 1
+) -> List[List[int]]:
     strength = _rank_strength(level_rank)
     base_info = _hand_info(hand, level_rank)
     options: List[List[int]] = []
     for triple_rank in _ranks_sorted_by_strength(level_rank, ascending=True):
         if strength[triple_rank] <= threshold:
             continue
-        built = _build_of_rank(triple_rank, 3, base_info)
-        if not built:
-            continue
-        triple_cards, info = built
-        for pair_cards in _list_pair_choices(info, exclude_rank=triple_rank, level_rank=level_rank):
-            options.append(triple_cards + pair_cards)
+        for pair_rank in _ranks_sorted_by_strength(level_rank, ascending=True):
+            if pair_rank == triple_rank:
+                continue
+            options.extend(
+                _materialize_rank_requirements(
+                    hand,
+                    level_rank,
+                    [(triple_rank, 3), (pair_rank, 2)],
+                    materialization_limit,
+                )
+            )
+        triple_variants = _materialize_rank_requirements(
+            hand,
+            level_rank,
+            [(triple_rank, 3)],
+            materialization_limit,
+        )
+        for joker_key in ("jokers_small", "jokers_big"):
+            joker_cards = list(base_info.get(joker_key, []))
+            if len(joker_cards) < 2:
+                continue
+            combined = [cards + joker_cards[:2] for cards in triple_variants]
+            options.extend(
+                _select_materialization_variants(
+                    hand,
+                    level_rank,
+                    combined,
+                    materialization_limit,
+                )
+            )
     return _dedupe_card_sets(options)
 
 
-def _list_straight_options(hand: List[Dict], level_rank: int, threshold: int) -> List[List[int]]:
-    info = _hand_info(hand, level_rank)
+def _list_straight_options(
+    hand: List[Dict], level_rank: int, threshold: int, materialization_limit: int = 1
+) -> List[List[int]]:
     options: List[List[int]] = []
+    hand_map = _map_hand_by_id(hand)
     for seq, high_value in STRAIGHT_SEQUENCES:
         if high_value <= threshold:
             continue
-        cards: List[int] = []
-        wilds = list(info["wild_cards"])
-        needed = 0
-        for rank in seq:
-            normals = list(info["normals_by_rank"].get(rank, []))
-            if normals:
-                cards.append(normals[0])
-            else:
-                needed += 1
-        if needed <= len(wilds):
-            cards.extend(wilds[:needed])
-            options.append(cards)
+        generation_limit = (
+            1
+            if materialization_limit <= 1
+            else max(materialization_limit, min(8, materialization_limit * 2))
+        )
+        variants = _materialize_rank_requirements(
+            hand,
+            level_rank,
+            [(rank, 1) for rank in seq],
+            generation_limit,
+        )
+        straight_variants: List[List[int]] = []
+        for cards in variants:
+            combo = _evaluate_combo([hand_map[cid] for cid in cards], level_rank, {})
+            if combo and combo.get("type") == "straight":
+                straight_variants.append(cards)
+        if materialization_limit <= 1 and not straight_variants:
+            fallback_variants = _materialize_rank_requirements(
+                hand,
+                level_rank,
+                [(rank, 1) for rank in seq],
+                2,
+            )
+            for cards in fallback_variants:
+                combo = _evaluate_combo([hand_map[cid] for cid in cards], level_rank, {})
+                if combo and combo.get("type") == "straight":
+                    straight_variants.append(cards)
+                    break
+        if materialization_limit <= 1:
+            options.extend(straight_variants[:1])
+        else:
+            options.extend(
+                _select_materialization_variants(
+                    hand,
+                    level_rank,
+                    straight_variants,
+                    materialization_limit,
+                )
+            )
     return _dedupe_card_sets(options)
 
 
-def _list_three_pairs_options(hand: List[Dict], level_rank: int, threshold: int) -> List[List[int]]:
-    info = _hand_info(hand, level_rank)
+def _list_three_pairs_options(
+    hand: List[Dict], level_rank: int, threshold: int, materialization_limit: int = 1
+) -> List[List[int]]:
     options: List[List[int]] = []
     for start in range(2, 14):
         high_value = start + 2
         if high_value <= threshold or start + 2 > 14:
             continue
         seq = [start, start + 1, start + 2]
-        cards: List[int] = []
-        wilds = list(info["wild_cards"])
-        needed = 0
-        for rank in seq:
-            normals = list(info["normals_by_rank"].get(rank, []))
-            take = normals[:2]
-            cards.extend(take)
-            missing = 2 - len(take)
-            needed += missing
-        if needed <= len(wilds):
-            cards.extend(wilds[:needed])
-            options.append(cards)
+        options.extend(
+            _materialize_rank_requirements(
+                hand,
+                level_rank,
+                [(rank, 2) for rank in seq],
+                materialization_limit,
+            )
+        )
     return _dedupe_card_sets(options)
 
 
-def _list_steel_plate_options(hand: List[Dict], level_rank: int, threshold: int) -> List[List[int]]:
-    info = _hand_info(hand, level_rank)
+def _list_steel_plate_options(
+    hand: List[Dict], level_rank: int, threshold: int, materialization_limit: int = 1
+) -> List[List[int]]:
     options: List[List[int]] = []
     for start in range(2, 14):
         high_value = start + 1
         if high_value <= threshold or start + 1 > 14:
             continue
         seq = [start, start + 1]
-        cards: List[int] = []
-        wilds = list(info["wild_cards"])
-        needed = 0
-        for rank in seq:
-            normals = list(info["normals_by_rank"].get(rank, []))
-            take = normals[:3]
-            cards.extend(take)
-            missing = 3 - len(take)
-            needed += missing
-        if needed <= len(wilds):
-            cards.extend(wilds[:needed])
-            options.append(cards)
+        options.extend(
+            _materialize_rank_requirements(
+                hand,
+                level_rank,
+                [(rank, 3) for rank in seq],
+                materialization_limit,
+            )
+        )
     return _dedupe_card_sets(options)
 
 
@@ -1136,6 +1385,10 @@ def _list_hint_options(state: Dict, player_id: str) -> List[List[int]]:
     current_trick = state.get("current_trick")
     level_rank = state["level_rank"]
     config = state.get("config", {})
+    materialization_limit = max(
+        1,
+        min(4, int(config.get("bot_action_materializations", 3))),
+    )
     eval_cache = state.get("_ai_eval_cache")
     option_cache = None
     cache_key = None
@@ -1168,6 +1421,7 @@ def _list_hint_options(state: Dict, player_id: str) -> List[List[int]]:
             current_combo.get("high_value"),
             bool(current_combo.get("uses_wild")),
             bool(config.get("hard_bomb_beats_soft")),
+            materialization_limit,
         )
         cached = option_cache.get(cache_key)
         if cached is not None:
@@ -1181,26 +1435,26 @@ def _list_hint_options(state: Dict, player_id: str) -> List[List[int]]:
         if combo_type == "single":
             options = _list_single_options(hand, level_rank, threshold)
         elif combo_type == "pair":
-            options = _list_rank_group_options(hand, level_rank, threshold, 2)
+            options = _list_rank_group_options(hand, level_rank, threshold, 2, materialization_limit)
         elif combo_type == "three":
-            options = _list_rank_group_options(hand, level_rank, threshold, 3)
+            options = _list_rank_group_options(hand, level_rank, threshold, 3, materialization_limit)
         elif combo_type == "full_house":
-            options = _list_full_house_options(hand, level_rank, threshold)
+            options = _list_full_house_options(hand, level_rank, threshold, materialization_limit)
         elif combo_type == "straight":
-            options = _list_straight_options(hand, level_rank, high_threshold)
+            options = _list_straight_options(hand, level_rank, high_threshold, materialization_limit)
         elif combo_type == "three_pairs":
-            options = _list_three_pairs_options(hand, level_rank, high_threshold)
+            options = _list_three_pairs_options(hand, level_rank, high_threshold, materialization_limit)
         elif combo_type == "steel_plate":
-            options = _list_steel_plate_options(hand, level_rank, high_threshold)
+            options = _list_steel_plate_options(hand, level_rank, high_threshold, materialization_limit)
         options += _list_bomb_options(hand, level_rank, combo, config)
     else:
         options.extend(_list_single_options(hand, level_rank, 0))
-        options.extend(_list_rank_group_options(hand, level_rank, 0, 2))
-        options.extend(_list_rank_group_options(hand, level_rank, 0, 3))
-        options.extend(_list_full_house_options(hand, level_rank, 0))
-        options.extend(_list_straight_options(hand, level_rank, 0))
-        options.extend(_list_three_pairs_options(hand, level_rank, 0))
-        options.extend(_list_steel_plate_options(hand, level_rank, 0))
+        options.extend(_list_rank_group_options(hand, level_rank, 0, 2, materialization_limit))
+        options.extend(_list_rank_group_options(hand, level_rank, 0, 3, materialization_limit))
+        options.extend(_list_full_house_options(hand, level_rank, 0, materialization_limit))
+        options.extend(_list_straight_options(hand, level_rank, 0, materialization_limit))
+        options.extend(_list_three_pairs_options(hand, level_rank, 0, materialization_limit))
+        options.extend(_list_steel_plate_options(hand, level_rank, 0, materialization_limit))
         options.extend(_list_bomb_options(hand, level_rank, None, config))
     options = _dedupe_card_sets(options)
     if option_cache is not None and cache_key is not None:
