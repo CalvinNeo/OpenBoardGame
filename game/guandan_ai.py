@@ -1999,6 +1999,33 @@ def _rank_lead_options(
         default=None,
     )
 
+    # These were historically hard pruning rules. Keep their strategic intent as
+    # priors, but leave at least one representative of every family available to
+    # finalist scoring/search for unusual endgames.
+    softly_ranked: List[Tuple[float, str, List[int]]] = []
+    for score, combo_type, cards in scored:
+        penalty = 0.0
+        if _should_prune_wasteful_lead_bomb(
+            state,
+            player_id,
+            cards,
+            combo_type,
+            score,
+            best_non_bomb_score,
+            best_multi_non_bomb_score,
+        ):
+            penalty += 18.0
+        if _should_prune_wasteful_control_break(
+            state, player_id, cards, combo_type, score, best_safe_score
+        ):
+            penalty += 12.0
+        if combo_type == "single" and _should_prune_weak_lead_single(
+            state, player_id, cards, score, best_non_single_score
+        ):
+            penalty += 10.0
+        softly_ranked.append((score - penalty, combo_type, cards))
+    scored = softly_ranked
+
     best_by_type: Dict[str, Tuple[float, str, List[int]]] = {}
     for entry in scored:
         score, combo_type, _ = entry
@@ -2009,44 +2036,12 @@ def _rank_lead_options(
     ranked: List[List[int]] = []
     seen = set()
     for score, combo_type, cards in sorted(best_by_type.values(), key=lambda item: item[0], reverse=True):
-        if _should_prune_wasteful_lead_bomb(
-            state,
-            player_id,
-            cards,
-            combo_type,
-            score,
-            best_non_bomb_score,
-            best_multi_non_bomb_score,
-        ):
-            continue
-        if _should_prune_wasteful_control_break(state, player_id, cards, combo_type, score, best_safe_score):
-            continue
-        if combo_type == "single" and _should_prune_weak_lead_single(
-            state, player_id, cards, score, best_non_single_score
-        ):
-            continue
         key = _cards_key(cards)
         if key in seen:
             continue
         seen.add(key)
         ranked.append(cards)
     for score, combo_type, cards in sorted(scored, key=lambda item: item[0], reverse=True):
-        if _should_prune_wasteful_lead_bomb(
-            state,
-            player_id,
-            cards,
-            combo_type,
-            score,
-            best_non_bomb_score,
-            best_multi_non_bomb_score,
-        ):
-            continue
-        if _should_prune_wasteful_control_break(state, player_id, cards, combo_type, score, best_safe_score):
-            continue
-        if combo_type == "single" and _should_prune_weak_lead_single(
-            state, player_id, cards, score, best_non_single_score
-        ):
-            continue
         key = _cards_key(cards)
         if key in seen:
             continue
@@ -2599,19 +2594,23 @@ def _rank_response_options(state: Dict, player_id: str, options: List[List[int]]
         return options
 
     scored = []
+    soft_penalties: Dict[Tuple[int, ...], float] = {}
     for cards, combo, uses_special in entries:
+        soft_penalty = 0.0
         if (
             combo["type"] == "full_house"
             and uses_special
             and leader_left >= 12
             and has_natural_full_house
         ):
-            continue
+            soft_penalty += 12.0
+            soft_penalties[_cards_key(cards)] = soft_penalty
         natural_alt = uses_special and natural_by_type.get(combo["type"], False)
-        cost = _response_material_cost(state, player_id, cards, combo, natural_alt)
+        cost = _response_material_cost(state, player_id, cards, combo, natural_alt) + soft_penalty
         scored.append((cards, combo, cost))
 
     filtered = []
+    deferred = []
     for cards, combo, cost in scored:
         dominated = False
         tolerance = _response_value_tolerance(combo["type"])
@@ -2623,10 +2622,27 @@ def _rank_response_options(state: Dict, player_id: str, options: List[List[int]]
             if other_value <= value + tolerance and other_cost <= cost - 2.25:
                 dominated = True
                 break
-        if not dominated:
+        if dominated:
+            soft_penalties[_cards_key(cards)] = max(soft_penalties.get(_cards_key(cards), 0.0), 10.0)
+            deferred.append((cards, combo, cost + 10.0))
+        else:
             filtered.append((cards, combo, cost))
 
+    if soft_penalties:
+        state.setdefault("_ai_eval_cache", {}).setdefault("response_soft_penalties", {}).update(
+            {(player_id, key): penalty for key, penalty in soft_penalties.items()}
+        )
+
     filtered.sort(
+        key=lambda item: (
+            item[2],
+            _combo_value(item[1]),
+            -_CORE._materialization_residual_score(hand, item[0], level_rank),
+            len(item[0]),
+            _cards_key(item[0]),
+        )
+    )
+    deferred.sort(
         key=lambda item: (
             item[2],
             _combo_value(item[1]),
@@ -2672,7 +2688,7 @@ def _rank_response_options(state: Dict, player_id: str, options: List[List[int]]
     primary: List[Tuple[List[int], Dict, float]] = []
     variants: List[Tuple[List[int], Dict, float]] = []
     seen_material_groups = set()
-    for entry in filtered:
+    for entry in filtered + deferred:
         key = material_group_key(entry[0], entry[1])
         if key in seen_material_groups:
             variants.append(entry)
@@ -2680,6 +2696,12 @@ def _rank_response_options(state: Dict, player_id: str, options: List[List[int]]
         seen_material_groups.add(key)
         primary.append(entry)
     return [cards for cards, _, _ in primary + variants]
+
+
+def _response_soft_pruning_penalty(state: Dict, player_id: str, cards: List[int]) -> float:
+    cache = state.get("_ai_eval_cache") or {}
+    penalties = cache.get("response_soft_penalties") or {}
+    return float(penalties.get((player_id, _cards_key(cards)), 0.0))
 
 
 def _best_response_play_score(state: Dict, player_id: str, depth: int, non_bomb_only: bool = True) -> Optional[float]:
@@ -8308,6 +8330,48 @@ def _candidate_actions(state: Dict, player_id: str, limit: int) -> List[Dict]:
     return actions
 
 
+def _mcts_root_candidate_subset(
+    state: Dict,
+    player_id: str,
+    actions: List[Dict],
+    play_limit: int,
+) -> List[Dict]:
+    """Keep action-family coverage before filling the bounded root width."""
+    play_limit = max(1, play_limit)
+    play_actions = [action for action in actions if action.get("type") == "play"]
+    other_actions = [action for action in actions if action.get("type") != "play"]
+    if len(play_actions) <= play_limit:
+        return play_actions + other_actions
+
+    selected: List[Dict] = []
+    selected_keys = set()
+    seen_families = set()
+    for action in play_actions:
+        combo = _action_combo(state, player_id, action) or {}
+        combo_type = combo.get("type")
+        family = (
+            combo_type,
+            _bomb_tier(combo) if combo_type in BOMB_TYPES else None,
+            combo.get("size") if combo_type in BOMB_TYPES else None,
+        )
+        if family in seen_families:
+            continue
+        seen_families.add(family)
+        selected.append(action)
+        selected_keys.add(_mcts_action_key(action))
+        if len(selected) >= play_limit:
+            break
+    for action in play_actions:
+        if len(selected) >= play_limit:
+            break
+        key = _mcts_action_key(action)
+        if key in selected_keys:
+            continue
+        selected.append(action)
+        selected_keys.add(key)
+    return selected + other_actions
+
+
 def _should_use_mcts(state: Dict, bot_id: str, width: int) -> bool:
     legal = GuandanGame.get_legal_actions(state, bot_id)
     if "play" not in legal:
@@ -8318,8 +8382,10 @@ def _should_use_mcts(state: Dict, bot_id: str, width: int) -> bool:
     if _teammate_lead_context(state, bot_id):
         return False
 
-    actions = _candidate_actions(state, bot_id, width)
+    expanded_width = max(width + 4, width * 2)
+    actions = _candidate_actions(state, bot_id, expanded_width)
     actions = _filter_overbomb_actions(state, bot_id, actions)
+    actions = _mcts_root_candidate_subset(state, bot_id, actions, width)
     play_actions = [action for action in actions if action.get("type") == "play"]
     has_pass = any(action.get("type") == "pass" for action in actions)
     if not play_actions:
@@ -8702,6 +8768,9 @@ def _clone_search_state(state: Dict, preserve_eval_cache: bool = False) -> Dict:
         value = state.get(key)
         if isinstance(value, list):
             cloned[key] = list(value)
+    known_card_owners = state.get("known_card_owners")
+    if isinstance(known_card_owners, dict):
+        cloned["known_card_owners"] = dict(known_card_owners)
     memories = state.get("round_memories")
     if isinstance(memories, list):
         cloned["round_memories"] = _clone_round_memories_for_search(memories)
@@ -8734,22 +8803,43 @@ def _determinize_state(state: Dict, perspective_id: str, rng: random.Random) -> 
     if not targets:
         return det
 
-    sample_count = max(1, int(det.get("config", {}).get("bot_determinize_samples", 3)))
-    best_assignment = None
-    best_penalty = None
+    target_counts = dict(targets)
+    locked_assignment: Dict[str, List[Dict]] = {pid: [] for pid, _count in targets}
+    remaining_unknown = set(unknown_ids)
+    for raw_cid, owner_id in (det.get("known_card_owners") or {}).items():
+        try:
+            cid = int(raw_cid)
+        except (TypeError, ValueError):
+            continue
+        if owner_id not in target_counts or cid not in remaining_unknown:
+            continue
+        if len(locked_assignment[owner_id]) >= target_counts[owner_id]:
+            continue
+        card = id_to_card.get(cid)
+        if card is None:
+            continue
+        locked_assignment[owner_id].append(card)
+        remaining_unknown.remove(cid)
+
+    sample_count = max(1, int(det.get("config", {}).get("bot_determinize_samples", 5)))
+    proposals: List[Tuple[Dict[str, List[Dict]], float]] = []
     for _ in range(sample_count):
-        sample_unknown = list(unknown_ids)
+        sample_unknown = sorted(remaining_unknown)
         rng.shuffle(sample_unknown)
         idx = 0
-        assignment: Dict[str, List[Dict]] = {}
+        assignment: Dict[str, List[Dict]] = {
+            pid: list(cards)
+            for pid, cards in locked_assignment.items()
+        }
         failed = False
         for pid, count in targets:
-            assigned = sample_unknown[idx : idx + count]
-            idx += count
-            if len(assigned) < count:
+            need = max(0, count - len(assignment[pid]))
+            assigned = sample_unknown[idx : idx + need]
+            idx += need
+            if len(assigned) < need:
                 failed = True
                 break
-            assignment[pid] = [id_to_card[cid] for cid in assigned]
+            assignment[pid].extend(id_to_card[cid] for cid in assigned)
         if failed:
             continue
         penalty = 0.0
@@ -8758,15 +8848,35 @@ def _determinize_state(state: Dict, perspective_id: str, rng: random.Random) -> 
             penalty += _revealed_rank_cap_penalty_for_hand(det, pid, cards)
             penalty += _public_action_line_penalty_for_hand(det, pid, cards)
             penalty -= _public_action_sequence_consistency_bonus(det, pid, cards)
-        if best_penalty is None or penalty < best_penalty:
-            best_penalty = penalty
-            best_assignment = assignment
-            if penalty <= 0.001:
+        proposals.append((assignment, penalty))
+
+    if not proposals:
+        return det
+
+    # Treat public-history signals as a likelihood, not a hard oracle. Sampling
+    # from the finite posterior keeps plausible alternative worlds alive while
+    # still strongly preferring assignments consistent with passes and revealed
+    # action lines. A non-positive temperature remains available for deterministic
+    # diagnostics.
+    temperature = float(det.get("config", {}).get("bot_determinize_temperature", 1.25))
+    if temperature <= 0.0 or len(proposals) == 1:
+        chosen_assignment = min(proposals, key=lambda item: item[1])[0]
+    else:
+        min_penalty = min(penalty for _assignment, penalty in proposals)
+        weights = [
+            math.exp(-min(40.0, max(0.0, penalty - min_penalty) / max(0.05, temperature)))
+            for _assignment, penalty in proposals
+        ]
+        draw = rng.random() * sum(weights)
+        chosen_assignment = proposals[-1][0]
+        cumulative = 0.0
+        for (assignment, _penalty), weight in zip(proposals, weights):
+            cumulative += weight
+            if draw <= cumulative:
+                chosen_assignment = assignment
                 break
 
-    if best_assignment is None:
-        return det
-    for pid, cards in best_assignment.items():
+    for pid, cards in chosen_assignment.items():
         det["players"][pid]["hand"] = cards
     return det
 
@@ -9412,6 +9522,8 @@ def _mcts_high_single_bomb_scores(
 def _mcts_finalize_scores(
     candidates: List[Dict],
     samples: Dict[Tuple, Dict[str, float]],
+    paired_samples: Dict[Tuple, Dict[str, float]],
+    reference_key: Tuple,
     heuristic_values: Dict[Tuple, float],
     heuristic_center: float,
     heuristic_scale: float,
@@ -9420,6 +9532,7 @@ def _mcts_finalize_scores(
     effective_depth: int,
     effective_tree_ply: int,
     effective_reply_width: int,
+    confidence_z: float,
 ) -> List[Tuple[Dict, float, int, Dict[str, float]]]:
     scored: List[Tuple[Dict, float, int, Dict[str, float]]] = []
     for action in candidates:
@@ -9428,6 +9541,24 @@ def _mcts_finalize_scores(
         count = int(sample.get("count", 0))
         heuristic = heuristic_values.get(key, 0.0)
         heuristic_norm = (heuristic - heuristic_center) / heuristic_scale
+        paired = paired_samples.get(key, {})
+        paired_count = int(paired.get("count", 0))
+        if paired_count > 0:
+            paired_avg = paired.get("total", 0.0) / paired_count
+            paired_variance = 0.0
+            if paired_count >= 2:
+                paired_variance = (
+                    paired.get("total_sq", 0.0)
+                    - paired_count * paired_avg * paired_avg
+                ) / (paired_count - 1)
+            paired_std = math.sqrt(max(0.0, paired_variance))
+            paired_stderr = paired_std / math.sqrt(paired_count)
+            paired_radius = confidence_z * paired_stderr if paired_count >= 2 else 1e9
+        else:
+            paired_avg = 0.0
+            paired_std = 0.0
+            paired_stderr = 0.0
+            paired_radius = 0.0 if key == reference_key else 1e9
         if count <= 0:
             avg = heuristic
             std = 0.0
@@ -9455,6 +9586,13 @@ def _mcts_finalize_scores(
             "max": max_val,
             "heuristic": heuristic,
             "heuristic_norm": heuristic_norm,
+            "paired_delta": paired_avg,
+            "paired_std": paired_std,
+            "paired_stderr": paired_stderr,
+            "paired_lcb": paired_avg - paired_radius,
+            "paired_ucb": paired_avg + paired_radius,
+            "paired_count": paired_count,
+            "paired_reference": 1.0 if key == reference_key else 0.0,
             "depth": effective_depth if count > 0 else 0,
             "tree_ply": effective_tree_ply if count > 0 else 0,
             "reply_width": max(1, effective_reply_width) if count > 0 else 1,
@@ -9481,8 +9619,10 @@ def _mcts_score_actions(
     legal = GuandanGame.get_legal_actions(state, bot_id)
     if "play" not in legal:
         return []
-    candidates = _CORE._candidate_actions(state, bot_id, width)
+    expanded_width = max(width + 4, width * 2)
+    candidates = _CORE._candidate_actions(state, bot_id, expanded_width)
     candidates = _CORE._filter_overbomb_actions(state, bot_id, candidates)
+    candidates = _mcts_root_candidate_subset(state, bot_id, candidates, width)
     if not candidates:
         return []
     _report_progress_scaled(
@@ -9498,7 +9638,16 @@ def _mcts_score_actions(
     heuristic_values: Dict[Tuple, float] = {}
     for action in candidates:
         key = _mcts_action_key(action)
-        heuristic_values[key] = _CORE._mcts_root_heuristic_value(state, bot_id, action, depth)
+        cards = action.get("card_ids") or []
+        if (
+            action.get("type") == "play"
+            and _overbomb_soft_pruning_penalty(state, bot_id, cards) > 0.0
+        ):
+            # Deferred bombs stay searchable, but they should not consume the
+            # root's detailed-scoring budget before ordinary responses finish.
+            heuristic_values[key] = _quick_candidate_score(state, bot_id, cards)
+        else:
+            heuristic_values[key] = _CORE._mcts_root_heuristic_value(state, bot_id, action, depth)
     effective_sims, effective_depth, effective_tree_ply, effective_reply_width = _CORE._mcts_budget(
         state,
         sims,
@@ -9578,6 +9727,17 @@ def _mcts_score_actions(
         for action in candidates
     }
     cfg = state.get("config", {})
+    reference_action = max(
+        candidates,
+        key=lambda action: heuristic_values.get(_mcts_action_key(action), -999.0),
+    )
+    reference_key = _mcts_action_key(reference_action)
+    paired_samples: Dict[Tuple, Dict[str, float]] = {
+        _mcts_action_key(action): {"count": 0, "total": 0.0, "total_sq": 0.0}
+        for action in candidates
+    }
+    confidence_z = max(0.0, float(cfg.get("bot_mcts_confidence_z", 1.64)))
+    confidence_min_pairs = max(2, int(cfg.get("bot_mcts_confidence_min_pairs", 3)))
     min_rounds = max(1, int(cfg.get("bot_mcts_early_stop_min_rounds", 4)))
     stable_rounds_needed = max(1, int(cfg.get("bot_mcts_early_stop_stable_rounds", 2)))
     early_stop_gap = float(cfg.get("bot_mcts_early_stop_gap", 7.5))
@@ -9601,6 +9761,7 @@ def _mcts_score_actions(
         # action against the same particle reduces variance and avoids rebuilding
         # the hidden hands once per action.
         particle = _CORE._determinize_state(state, bot_id, rng)
+        round_values: Dict[Tuple, float] = {}
         for action in active_candidates:
             if attempted_visits >= total_visits_target:
                 break
@@ -9619,16 +9780,7 @@ def _mcts_score_actions(
                 max(1, effective_reply_width),
                 leaf_rollout_depth,
             )
-            sample = samples[key]
-            sample["count"] += 1
-            sample["total"] += value
-            sample["total_sq"] += value * value
-            if value > 0:
-                sample["wins"] += 1
-            if sample["min"] is None or value < sample["min"]:
-                sample["min"] = value
-            if sample["max"] is None or value > sample["max"]:
-                sample["max"] = value
+            round_values[key] = value
             if attempted_visits == total_visits_target or attempted_visits % report_stride == 0:
                 _report_progress_scaled(
                     progress_callback,
@@ -9638,10 +9790,31 @@ def _mcts_score_actions(
                     min(0.96, 0.14 + 0.8 * (attempted_visits / total_visits_target)),
                     f"Running MCTS {attempted_visits}/{total_visits_target}",
                 )
+        active_keys_for_round = {_mcts_action_key(action) for action in active_candidates}
+        reference_value = round_values.get(reference_key)
+        if reference_value is not None and active_keys_for_round.issubset(round_values):
+            for key, value in round_values.items():
+                sample = samples[key]
+                sample["count"] += 1
+                sample["total"] += value
+                sample["total_sq"] += value * value
+                if value > 0:
+                    sample["wins"] += 1
+                if sample["min"] is None or value < sample["min"]:
+                    sample["min"] = value
+                if sample["max"] is None or value > sample["max"]:
+                    sample["max"] = value
+                delta = value - reference_value
+                paired = paired_samples[key]
+                paired["count"] += 1
+                paired["total"] += delta
+                paired["total_sq"] += delta * delta
         round_idx += 1
         final_scored = _mcts_finalize_scores(
             candidates,
             samples,
+            paired_samples,
+            reference_key,
             heuristic_values,
             heuristic_center,
             heuristic_scale,
@@ -9650,14 +9823,30 @@ def _mcts_score_actions(
             effective_depth,
             effective_tree_ply,
             effective_reply_width,
+            confidence_z,
         )
         active_keys = {_mcts_action_key(action) for action in active_candidates}
         active_scored = [item for item in final_scored if _mcts_action_key(item[0]) in active_keys]
         if round_idx < min_rounds or len(active_scored) < 2:
             continue
-        top_key = _mcts_action_key(active_scored[0][0])
-        gap = active_scored[0][1] - active_scored[1][1]
-        if gap >= early_stop_gap:
+        def paired_bounds(item: Tuple[Dict, float, int, Dict[str, float]]) -> Tuple[float, float, float]:
+            stats = item[3]
+            prior = stats.get("heuristic_norm", 0.0) * heuristic_weight
+            center = stats.get("paired_delta", 0.0) + prior
+            radius = max(0.0, stats.get("paired_ucb", 0.0) - stats.get("paired_delta", 0.0))
+            return center, center - radius, center + radius
+
+        confidence_ranked = sorted(active_scored, key=lambda item: paired_bounds(item)[0], reverse=True)
+        top_key = _mcts_action_key(confidence_ranked[0][0])
+        _top_center, top_lcb, _top_ucb = paired_bounds(confidence_ranked[0])
+        runner_ucb = max(paired_bounds(item)[2] for item in confidence_ranked[1:])
+        confidence_gap = top_lcb - runner_ucb
+        enough_pairs = all(
+            item[3].get("paired_count", 0) >= confidence_min_pairs
+            for item in confidence_ranked
+            if _mcts_action_key(item[0]) != reference_key
+        )
+        if enough_pairs and confidence_gap >= early_stop_gap:
             if top_key == previous_top_key:
                 stable_rounds += 1
             else:
@@ -9673,23 +9862,62 @@ def _mcts_score_actions(
             and round_idx >= next_halving_round
             and attempted_visits < total_visits_target
         ):
-            keep_count = max(2, math.ceil(len(active_candidates) / 2))
-            active_candidates = [item[0] for item in active_scored[:keep_count]]
+            if enough_pairs:
+                viable = [
+                    item
+                    for item in confidence_ranked
+                    if paired_bounds(item)[2] >= top_lcb
+                ]
+                if len(viable) < len(active_candidates):
+                    survivor_keys = {_mcts_action_key(item[0]) for item in viable}
+                    survivor_keys.add(reference_key)
+                    keep_count = max(2, math.ceil(len(active_candidates) / 2))
+                    if len(survivor_keys) < keep_count:
+                        for item in confidence_ranked:
+                            survivor_keys.add(_mcts_action_key(item[0]))
+                            if len(survivor_keys) >= keep_count:
+                                break
+                    active_candidates = [
+                        item[0]
+                        for item in confidence_ranked
+                        if _mcts_action_key(item[0]) in survivor_keys
+                    ]
             next_halving_round += halving_min_rounds
         if deadline is not None and time.perf_counter() >= deadline:
             break
     if final_scored:
         active_keys = {_mcts_action_key(action) for action in active_candidates}
-        final_scored.sort(
-            key=lambda item: (_mcts_action_key(item[0]) in active_keys, item[1]),
-            reverse=True,
+        confidence_ready = all(
+            item[3].get("paired_count", 0) >= confidence_min_pairs
+            for item in final_scored
+            if _mcts_action_key(item[0]) in active_keys
+            and _mcts_action_key(item[0]) != reference_key
         )
+        if confidence_ready:
+            final_scored.sort(
+                key=lambda item: (_mcts_action_key(item[0]) in active_keys, item[1]),
+                reverse=True,
+            )
+        else:
+            # One noisy hidden world is not enough evidence to overturn the
+            # root heuristic. Keep collecting complete pairs when time permits;
+            # on deadline, fall back to the fixed reference action.
+            final_scored.sort(
+                key=lambda item: (
+                    _mcts_action_key(item[0]) == reference_key,
+                    _mcts_action_key(item[0]) in active_keys,
+                    item[1],
+                ),
+                reverse=True,
+            )
         _report_progress_scaled(progress_callback, "mcts", progress_start, progress_end, 1.0, "MCTS finalized")
         return final_scored
     _report_progress_scaled(progress_callback, "mcts", progress_start, progress_end, 1.0, "MCTS finalized")
     return _mcts_finalize_scores(
         candidates,
         samples,
+        paired_samples,
+        reference_key,
         heuristic_values,
         heuristic_center,
         heuristic_scale,
@@ -9698,6 +9926,7 @@ def _mcts_score_actions(
         effective_depth,
         effective_tree_ply,
         effective_reply_width,
+        confidence_z,
     )
 
 
@@ -10238,6 +10467,12 @@ def _compute_bot_score_components(
         clean_single_bonus = _cheap_clean_single_takeover_bonus(state, bot_id, cards, combo)
         if clean_single_bonus > 0.001:
             components["cheap_clean_single_takeover"] = clean_single_bonus
+        soft_pruning_penalty = _response_soft_pruning_penalty(state, bot_id, cards)
+        if soft_pruning_penalty > 0.001:
+            components["soft_candidate_prior"] = -soft_pruning_penalty
+        overbomb_penalty = _overbomb_soft_pruning_penalty(state, bot_id, cards)
+        if overbomb_penalty > 0.001:
+            components["soft_overbomb_prior"] = -overbomb_penalty
     if not remaining:
         components["finish_bonus"] = 100.0
     if combo["type"] in BOMB_TYPES:
@@ -10836,22 +11071,21 @@ def _filter_overbomb_options(state: Dict, player_id: str, options: List[List[int
     leader_left = len(state["players"].get(leader, {}).get("hand", [])) if leader else 99
     current_combo = current_trick.get("combo") or {}
     pressure_bombs = _short_enemy_pressure_bomb_options(state, player_id)
-    filtered: List[List[int]] = []
-    bombs: List[List[int]] = []
-    has_non_bomb = False
+    ordinary: List[List[int]] = []
+    bombs: List[Tuple[List[int], Dict, int, bool]] = []
     has_structurally_clean_non_bomb = False
+    pressure_keys = {tuple(sorted(cards)) for cards in pressure_bombs}
     for cards in options:
         combo_cards = [hand_map[cid] for cid in cards if cid in hand_map]
         combo = _evaluate_combo(combo_cards, level_rank, config)
         if combo and combo["type"] in BOMB_TYPES:
-            if len(cards) == len(hand):
-                filtered.append(cards)
-            else:
-                bombs.append(cards)
+            finish_push = len(cards) == len(hand)
+            priority = 0 if finish_push or tuple(sorted(cards)) in pressure_keys else 3
+            natural = not _cards_use_special_material(combo_cards, level_rank)
+            bombs.append((cards, combo, priority, natural))
         else:
-            filtered.append(cards)
+            ordinary.append(cards)
             if combo:
-                has_non_bomb = True
                 fragment_penalty = _group_fragment_penalty(hand, cards, level_rank, combo)
                 control_break = _control_group_break_penalty(hand, cards, level_rank)
                 shape_score = _shape_transition_score(hand, cards, level_rank)
@@ -10861,52 +11095,66 @@ def _filter_overbomb_options(state: Dict, player_id: str, options: List[List[int
                     and shape_score > -4.0
                 ):
                     has_structurally_clean_non_bomb = True
+    if not bombs:
+        return ordinary
+
+    ranked_bombs: List[Tuple[List[int], Dict, int, bool]] = []
+    for cards, combo, priority, natural in bombs:
+        if priority > 0 and _critical_pair_three_bomb_bonus(state, player_id, cards, combo) > 0.0:
+            priority = 0
+        if priority > 0 and _should_keep_structural_upgrade_bomb(
+            state, player_id, cards, non_bomb_options=ordinary
+        ):
+            priority = 1
+        if (
+            priority > 0
+            and current_combo.get("type") == "straight"
+            and combo.get("type") == "straight_flush"
+            and natural
+        ):
+            priority = 1
+        ranked_bombs.append((cards, combo, priority, natural))
+    ranked_bombs.sort(
+        key=lambda item: (
+            item[2],
+            0 if item[3] else 1,
+            _bomb_tier(item[1]),
+            _combo_numeric_value(item[1]),
+            len(item[0]),
+            _cards_key(item[0]),
+        )
+    )
+
+    # Keep one representative per bomb class/tier ahead of deferred variants.
+    # The ordinary response remains the default prior, but bombs are no longer
+    # made unreachable before heuristic/MCTS scoring.
+    representatives: List[List[int]] = []
+    deferred: List[List[int]] = []
+    seen_families = set()
+    for cards, combo, _priority, _natural in ranked_bombs:
+        family = (combo.get("type"), _bomb_tier(combo), combo.get("size"))
+        if family in seen_families:
+            deferred.append(cards)
+            continue
+        seen_families.add(family)
+        representatives.append(cards)
+
+    if ordinary and has_structurally_clean_non_bomb:
+        penalties = state.setdefault("_ai_eval_cache", {}).setdefault("overbomb_soft_penalties", {})
+        for cards, _combo, priority, _natural in ranked_bombs:
+            if priority >= 3:
+                penalties[(player_id, _cards_key(cards))] = 18.0
+
+    if not ordinary:
+        return representatives + deferred
     if (
         pressure_bombs
         and leader_left <= 4
         and current_combo.get("type") in ("full_house", "straight", "three_pairs", "steel_plate")
+        and not has_structurally_clean_non_bomb
     ):
-        if not has_non_bomb:
-            return pressure_bombs
-        if has_structurally_clean_non_bomb:
-            return filtered + [cards for cards in pressure_bombs if tuple(cards) not in {tuple(item) for item in filtered}]
-    if has_non_bomb and has_structurally_clean_non_bomb:
-        upgrade_bombs = [
-            cards
-            for cards in bombs
-            if _should_keep_structural_upgrade_bomb(state, player_id, cards, non_bomb_options=filtered)
-        ]
-        if not upgrade_bombs:
-            return filtered
-        if current_combo.get("type") == "straight":
-            natural_straight_flushes = []
-            for cards in upgrade_bombs:
-                play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
-                combo = _evaluate_combo(play_cards, level_rank, config)
-                if combo and combo.get("type") == "straight_flush" and not combo.get("uses_wild"):
-                    natural_straight_flushes.append(cards)
-            if natural_straight_flushes:
-                return filtered + natural_straight_flushes
-        minimal_upgrade = min(
-            upgrade_bombs,
-            key=lambda cards: (
-                len(cards),
-                _CORE._cards_key(cards),
-            ),
-        )
-        return filtered + [minimal_upgrade]
-    if bombs:
-        minimal = None
-        candidates = _find_bomb_candidates(hand, level_rank)
-        if candidates:
-            minimal = candidates[0]["cards"]
-        if minimal:
-            full_hand = [card["id"] for card in hand]
-            keep = [full_hand] if full_hand in bombs and full_hand != minimal else []
-            if has_non_bomb:
-                return filtered + [minimal] + keep
-            return [minimal] + keep
-    return filtered + bombs
+        return representatives + ordinary + deferred
+    return ordinary[:1] + representatives + ordinary[1:] + deferred
 
 
 def _filter_overbomb_actions(state: Dict, player_id: str, actions: List[Dict]) -> List[Dict]:
@@ -10917,18 +11165,23 @@ def _filter_overbomb_actions(state: Dict, player_id: str, actions: List[Dict]) -
         return actions
     options = [action.get("card_ids", []) for action in play_actions]
     filtered_options = _filter_overbomb_options(state, player_id, options)
-    if len(filtered_options) == len(options):
-        return actions
-    allowed = {tuple(option) for option in filtered_options}
-    filtered: List[Dict] = []
-    for action in actions:
-        if action.get("type") != "play":
-            filtered.append(action)
-            continue
-        card_ids = tuple(action.get("card_ids", []))
-        if card_ids in allowed:
-            filtered.append(action)
-    return filtered
+    by_cards = {
+        tuple(action.get("card_ids", [])): action
+        for action in play_actions
+    }
+    ordered = [
+        by_cards[tuple(option)]
+        for option in filtered_options
+        if tuple(option) in by_cards
+    ]
+    ordered.extend(action for action in actions if action.get("type") != "play")
+    return ordered
+
+
+def _overbomb_soft_pruning_penalty(state: Dict, player_id: str, cards: List[int]) -> float:
+    cache = state.get("_ai_eval_cache") or {}
+    penalties = cache.get("overbomb_soft_penalties") or {}
+    return float(penalties.get((player_id, _cards_key(cards)), 0.0))
 
 
 def _quick_candidate_score(state: Dict, player_id: str, cards: Optional[List[int]]) -> float:
@@ -11073,6 +11326,9 @@ def _quick_candidate_score(state: Dict, player_id: str, cards: Optional[List[int
         # Mirror the full evaluator's short-enemy pressure rule after material
         # costs so a hard deadline cannot turn a forced takeover into a pass.
         score = max(score, 15.0)
+    critical_bomb_prior = _critical_pair_three_bomb_bonus(state, player_id, cards, combo)
+    if critical_bomb_prior > 0.0:
+        score += critical_bomb_prior
     if teammate_can_retake and (combo.get("type") == current_type or combo.get("type") in BOMB_TYPES):
         score -= 24.0
     if leader and _team_of(state, leader) != _team_of(state, player_id):
@@ -11108,6 +11364,8 @@ def _quick_candidate_score(state: Dict, player_id: str, cards: Optional[List[int
         score += 12.5
     if combo.get("type") == "single":
         score += _next_opponent_one_card_block_bonus(state, player_id, cards, combo)
+    score -= _response_soft_pruning_penalty(state, player_id, cards)
+    score -= _overbomb_soft_pruning_penalty(state, player_id, cards)
     return score
 
 

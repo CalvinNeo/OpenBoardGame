@@ -554,7 +554,8 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         filtered = guandan._filter_overbomb_options(state, "bot", options)
         filtered_types = [self._combo_type(state, cards) for cards in filtered]
         self.assertIn("single", filtered_types)
-        self.assertNotIn("bomb", filtered_types)
+        self.assertIn("bomb", filtered_types)
+        self.assertLess(filtered_types.index("single"), filtered_types.index("bomb"))
 
     def test_filter_overbomb_options_keeps_bomb_when_all_responses_break_structure(self):
         players = [
@@ -1069,15 +1070,25 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
 
         self.assertIn(tuple(sorted(["♦️9", "♦️9", "♠️9", "♥️4", "♦️4"])), play_label_sets)
 
-    def test_filter_overbomb_actions_removes_bomb_plays(self):
+    def test_filter_overbomb_actions_keeps_bomb_as_deferred_candidate(self):
         state, _ = self._make_state()
         actions = guandan._candidate_actions(state, "bot", 20)
         filtered = guandan._filter_overbomb_actions(state, "bot", actions)
         play_actions = [action for action in filtered if action.get("type") == "play"]
         self.assertTrue(play_actions)
-        for action in play_actions:
-            combo_type = self._combo_type(state, action.get("card_ids", []))
-            self.assertNotEqual(combo_type, "bomb")
+        combo_types = [self._combo_type(state, action.get("card_ids", [])) for action in play_actions]
+        self.assertIn("single", combo_types)
+        self.assertIn("bomb", combo_types)
+        self.assertLess(combo_types.index("single"), combo_types.index("bomb"))
+        root_subset = guandan._guandan_ai.call(
+            guandan, "_mcts_root_candidate_subset", state, "bot", filtered, 2
+        )
+        root_types = [
+            self._combo_type(state, action.get("card_ids", []))
+            for action in root_subset
+            if action.get("type") == "play"
+        ]
+        self.assertEqual(root_types, ["single", "bomb"])
 
     def test_determinize_state_prefers_assignments_consistent_with_pass_limits(self):
         players = [
@@ -1090,6 +1101,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         state["phase"] = "playing"
         state["current_turn"] = "bot"
         state["config"]["bot_determinize_samples"] = 4
+        state["config"]["bot_determinize_temperature"] = 0.0
 
         deck = guandan._full_deck()
         bot_card = next(card for card in deck if guandan._card_label(card) == "♣️5")
@@ -1117,6 +1129,115 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
 
         self.assertEqual(opp_labels, ["♣️3"])
         self.assertEqual(opp2_labels, ["♠️A"])
+
+    def test_determinize_temperature_keeps_plausible_alternative_worlds(self):
+        players = [
+            {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
+            {"player_id": "opp", "name": "Opp", "seat": 1, "is_bot": False},
+            {"player_id": "mate", "name": "Mate", "seat": 2, "is_bot": False},
+            {"player_id": "opp2", "name": "Opp2", "seat": 3, "is_bot": False},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["current_turn"] = "bot"
+        state["config"]["bot_determinize_samples"] = 12
+        state["config"]["bot_determinize_temperature"] = 10.0
+
+        deck = guandan._full_deck()
+        bot_card = next(card for card in deck if guandan._card_label(card) == "♣️5")
+        low_single = next(card for card in deck if guandan._card_label(card) == "♣️3")
+        high_single = next(card for card in deck if guandan._card_label(card) == "♠️A")
+        state["players"]["bot"]["hand"] = [bot_card]
+        state["players"]["opp"]["hand"] = [low_single]
+        state["players"]["mate"]["hand"] = []
+        state["players"]["opp2"]["hand"] = [high_single]
+        state["seen_cards"] = [
+            card["id"]
+            for card in deck
+            if card["id"] not in {low_single["id"], high_single["id"], bot_card["id"]}
+        ]
+        state["pass_limits"] = {
+            "opp": {"single": guandan._single_order_value(low_single, state["level_rank"])},
+        }
+
+        rng = random.Random(7)
+        observed = set()
+        for _ in range(60):
+            det = guandan._determinize_state(state, "bot", rng)
+            observed.add(det["players"]["opp"]["hand"][0]["id"])
+
+        self.assertEqual(observed, {low_single["id"], high_single["id"]})
+
+    def test_determinize_state_locks_publicly_known_card_owner(self):
+        players = [
+            {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
+            {"player_id": "opp", "name": "Opp", "seat": 1, "is_bot": False},
+            {"player_id": "mate", "name": "Mate", "seat": 2, "is_bot": False},
+            {"player_id": "opp2", "name": "Opp2", "seat": 3, "is_bot": False},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        self.assertEqual(
+            state["known_card_owners"].get(state["visible_card_id"]),
+            state["current_turn"],
+        )
+        state["phase"] = "playing"
+        state["current_turn"] = "bot"
+
+        deck = guandan._full_deck()
+        bot_card, locked_card, filler_a, filler_b = deck[:4]
+        state["players"]["bot"]["hand"] = [bot_card]
+        state["players"]["opp"]["hand"] = [filler_a]
+        state["players"]["mate"]["hand"] = [filler_b]
+        state["players"]["opp2"]["hand"] = [locked_card]
+        state["seen_cards"] = [
+            card["id"]
+            for card in deck
+            if card["id"] not in {bot_card["id"], locked_card["id"], filler_a["id"], filler_b["id"]}
+        ]
+        state["known_card_owners"] = {locked_card["id"]: "opp2"}
+
+        for seed in range(8):
+            det = guandan._determinize_state(state, "bot", random.Random(seed))
+            self.assertIn(locked_card["id"], {card["id"] for card in det["players"]["opp2"]["hand"]})
+
+        guandan._record_seen_cards(state, [locked_card["id"]])
+        self.assertNotIn(locked_card["id"], state["known_card_owners"])
+
+    def test_tribute_and_return_cards_update_public_owner_locks(self):
+        players = [
+            {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
+            {"player_id": "opp", "name": "Opp", "seat": 1, "is_bot": False},
+            {"player_id": "mate", "name": "Mate", "seat": 2, "is_bot": False},
+            {"player_id": "opp2", "name": "Opp2", "seat": 3, "is_bot": False},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        deck = guandan._full_deck()
+        tribute_card = next(card for card in deck if card.get("joker") == "big")
+        return_card = next(card for card in deck if card.get("rank") == 3 and card.get("suit") == "clubs")
+        state["players"]["opp"]["hand"] = [tribute_card]
+        state["players"]["bot"]["hand"] = [return_card]
+        state["tribute"] = {
+            "type": "single",
+            "stage": "tribute",
+            "payers": ["opp"],
+            "receivers": ["bot"],
+            "tribute_cards": {},
+            "return_cards": {},
+            "assignments": {},
+        }
+        state["phase"] = "tribute"
+
+        _events, err = guandan.GuandanGame.apply_action(
+            state, "opp", {"type": "tribute_select", "card_id": tribute_card["id"]}
+        )
+        self.assertIsNone(err)
+        self.assertEqual(state["known_card_owners"].get(tribute_card["id"]), "bot")
+
+        _events, err = guandan.GuandanGame.apply_action(
+            state, "bot", {"type": "return_select", "card_id": return_card["id"]}
+        )
+        self.assertIsNone(err)
+        self.assertEqual(state["known_card_owners"].get(return_card["id"]), "opp")
 
     def test_public_revealed_rank_caps_reduce_same_rank_reply_probability(self):
         players = [
@@ -2153,7 +2274,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         chosen = guandan._bot_select_play(state, "bot", depth=3)
         self.assertEqual(chosen, [big["id"]])
 
-    def test_lead_candidates_prune_early_bomb_when_strong_shapes_exist(self):
+    def test_lead_candidates_defer_early_bomb_when_strong_shapes_exist(self):
         players = [
             {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
             {"player_id": "opp", "name": "Opp", "seat": 1, "is_bot": False},
@@ -2205,7 +2326,8 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         actions = guandan._candidate_actions(state, "bot", 6)
         play_actions = [action for action in actions if action.get("type") == "play"]
         play_types = [self._combo_type(state, action.get("card_ids", [])) for action in play_actions]
-        self.assertNotIn("bomb", play_types)
+        self.assertIn("bomb", play_types)
+        self.assertNotEqual(play_types[0], "bomb")
 
         real_random = random.Random
         with mock.patch.object(guandan.random, "Random", side_effect=lambda *args, **kwargs: real_random(0)):
@@ -3621,7 +3743,8 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
 
         def fake_tree_value(target_state, _bot_id, _ply, _width, _rollout_depth, alpha=-1e9, beta=1e9):
             del _bot_id, _ply, _width, _rollout_depth, alpha, beta
-            return {11: 9.0, 22: 6.0, 33: 2.0, 44: 0.0}[target_state["branch"][0]]
+            common_world_noise = 100.0 if target_state["particle"] % 2 else -100.0
+            return common_world_noise + {11: 9.0, 22: 6.0, 33: 2.0, 44: 0.0}[target_state["branch"][0]]
 
         with mock.patch.object(guandan, "_candidate_actions", return_value=actions):
             with mock.patch.object(guandan, "_filter_overbomb_actions", side_effect=lambda _s, _p, acts: acts):
@@ -3650,6 +3773,13 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         counts = {tuple(action["card_ids"]): count for action, _score, count, _stats in scored}
         self.assertGreater(counts[(11,)], counts[(33,)])
         self.assertGreater(counts[(22,)], counts[(44,)])
+        stats = {tuple(action["card_ids"]): item_stats for action, _score, _count, item_stats in scored}
+        self.assertEqual(stats[(11,)]["paired_delta"], 0.0)
+        self.assertEqual(stats[(22,)]["paired_delta"], -3.0)
+        self.assertEqual(stats[(33,)]["paired_delta"], -7.0)
+        self.assertEqual(stats[(44,)]["paired_delta"], -9.0)
+        self.assertAlmostEqual(stats[(22,)]["paired_std"], 0.0)
+        self.assertGreater(stats[(22,)]["std"], 50.0)
         deepcopy_mock.assert_not_called()
 
     def test_mcts_gate_uses_heuristic_score_gap(self):
@@ -3970,7 +4100,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertIsNotNone(next_action)
         self.assertEqual(next_action.get("type"), "pass")
 
-    def test_minimal_bomb_used_when_only_bombs_available(self):
+    def test_minimal_bomb_ranked_first_when_only_bombs_available(self):
         players = [
             {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
             {"player_id": "opp", "name": "Opp", "seat": 1, "is_bot": False},
@@ -4003,7 +4133,8 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
 
         options = guandan._list_hint_options(state, "bot")
         filtered = guandan._filter_overbomb_options(state, "bot", options)
-        self.assertEqual(filtered, [[card["id"] for card in threes]])
+        self.assertEqual(filtered[0], [card["id"] for card in threes])
+        self.assertIn([card["id"] for card in kings], filtered)
 
     def test_heart_level_single_not_higher(self):
         deck = guandan._full_deck()
@@ -4945,7 +5076,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         )
         self.assertEqual(combo["type"], "full_house")
 
-    def test_lead_candidates_prune_weak_low_single_that_breaks_pair(self):
+    def test_lead_candidates_defer_weak_low_single_that_breaks_pair(self):
         players = [
             {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
             {"player_id": "opp", "name": "Opp", "seat": 1, "is_bot": False},
@@ -4990,6 +5121,15 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             idx += 9
 
         hand_map = guandan._map_hand_by_id(hand)
+        ranked_options = guandan._rank_lead_options(
+            state,
+            "bot",
+            guandan._list_hint_options(state, "bot"),
+        )
+        ranked_labels = [
+            [guandan._card_label(hand_map[cid]) for cid in cards]
+            for cards in ranked_options
+        ]
         actions = guandan._candidate_actions(state, "bot", 10)
         play_labels = []
         for action in actions:
@@ -4997,9 +5137,10 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
                 continue
             play_labels.append([guandan._card_label(hand_map[cid]) for cid in action.get("card_ids", [])])
 
-        self.assertNotIn(["♥️4"], play_labels)
-        self.assertNotIn(["♦️4"], play_labels)
         self.assertIn(["♦️4", "♥️4"], play_labels)
+        low_single_positions = [idx for idx, labels in enumerate(ranked_labels) if labels in (["♥️4"], ["♦️4"])]
+        self.assertTrue(low_single_positions)
+        self.assertLess(ranked_labels.index(["♦️4", "♥️4"]), min(low_single_positions))
 
     def test_shape_transition_penalizes_breaking_pair_for_single(self):
         deck = guandan._full_deck()
@@ -6774,6 +6915,9 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             {"player_id": "bot4", "name": "Bot 4", "seat": 3, "is_bot": True},
         ]
         state = guandan.GuandanGame.init_game({}, players)
+        # This synthetic fixture replaces every dealt hand below, so the real
+        # round's public visible-card ownership no longer applies.
+        state["known_card_owners"] = {}
         state["phase"] = "playing"
         state["round_number"] = 1
         state["dealer_team"] = "A"
@@ -6813,9 +6957,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             if action.get("type") == "play"
         ]
         self.assertIn(["♣️Q"], play_labels)
-        self.assertNotIn(["♥️4"], play_labels)
-        self.assertNotIn(["♠️5"], play_labels)
-        self.assertNotIn(["♦️7"], play_labels)
+        self.assertTrue(any(labels in play_labels for labels in (["♥️4"], ["♠️5"], ["♦️7"])))
 
         real_random = random.Random
         with mock.patch.object(guandan.random, "Random", side_effect=lambda *args, **kwargs: real_random(0)):

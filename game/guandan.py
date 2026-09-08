@@ -36,6 +36,8 @@ DEFAULT_CONFIG = {
     "bot_mcts_early_stop_gap": 7.5,
     "bot_mcts_early_stop_stable_rounds": 2,
     "bot_mcts_successive_halving_min_rounds": 4,
+    "bot_mcts_confidence_z": 1.64,
+    "bot_mcts_confidence_min_pairs": 3,
     "bot_mcts_gate_score_gap": 10.0,
     "bot_mcts_ambiguity_score_gap": 2.0,
     "bot_mcts_obvious_response_margin": 2.25,
@@ -44,7 +46,8 @@ DEFAULT_CONFIG = {
     "bot_mcts_critical_sims_scale": 0.96,
     "bot_mcts_ambiguous_sims_scale": 0.86,
     "bot_mcts_confident_sims_scale": 0.58,
-    "bot_determinize_samples": 3,
+    "bot_determinize_samples": 5,
+    "bot_determinize_temperature": 1.25,
     "bot_rollout_heuristic_depth": 2,
     "bot_rollout_candidate_limit": 6,
     "bot_action_materializations": 3,
@@ -1674,11 +1677,13 @@ def _deal_round(state: Dict, first_round: bool, start_player: Optional[str]) -> 
     state["visible_card_id"] = visible_card_id
     state["pass_limits"] = {}
     state["seen_cards"] = []
+    state["known_card_owners"] = {}
     state["bot_explain"] = {}
     if first_round and visible_card_id is not None:
         for pid, hand in hands.items():
             if any(card["id"] == visible_card_id for card in hand):
                 start_player = pid
+                state["known_card_owners"][visible_card_id] = pid
                 break
     if start_player is None:
         start_player = state["turn_order"][0]
@@ -1754,6 +1759,10 @@ def _record_seen_cards(state: Dict, card_ids: List[int]) -> None:
     for cid in card_ids:
         seen.add(cid)
     state["seen_cards"] = list(seen)
+    known_owners = state.get("known_card_owners")
+    if isinstance(known_owners, dict):
+        for cid in card_ids:
+            known_owners.pop(cid, None)
 
 
 def _record_pass_limit(state: Dict, player_id: str, combo: Dict) -> None:
@@ -2046,7 +2055,9 @@ class GuandanGame:
                         receiver = tribute["receivers"][0]
                         payer = tribute["payers"][0]
                         tribute["assignments"][receiver] = payer
-                        state["players"][receiver]["hand"].append(tribute["tribute_cards"][payer])
+                        transferred = tribute["tribute_cards"][payer]
+                        state["players"][receiver]["hand"].append(transferred)
+                        state.setdefault("known_card_owners", {})[transferred["id"]] = receiver
                     else:
                         payers = tribute["payers"]
                         cards = [(pid, tribute["tribute_cards"][pid]) for pid in payers]
@@ -2060,6 +2071,9 @@ class GuandanGame:
                         tribute["assignments"][second] = cards[1][0]
                         state["players"][head]["hand"].append(cards[0][1])
                         state["players"][second]["hand"].append(cards[1][1])
+                        known_owners = state.setdefault("known_card_owners", {})
+                        known_owners[cards[0][1]["id"]] = head
+                        known_owners[cards[1][1]["id"]] = second
                     tribute["stage"] = "return"
                 _set_round_tribute_memory(state, _snapshot_tribute_memory(tribute, state["level_rank"]))
                 return events, None
@@ -2086,6 +2100,7 @@ class GuandanGame:
                 payer = tribute.get("assignments", {}).get(player_id)
                 if payer:
                     state["players"][payer]["hand"].append(card)
+                    state.setdefault("known_card_owners", {})[card["id"]] = payer
                 if len(tribute["return_cards"]) == len(tribute.get("receivers", [])):
                     leader = _tribute_leader(tribute, state["level_rank"])
                     tribute_memory = _snapshot_tribute_memory(tribute, state["level_rank"])
