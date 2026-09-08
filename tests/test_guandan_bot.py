@@ -7,6 +7,28 @@ from game import guandan
 
 
 class GuandanBotBombAvoidanceTests(unittest.TestCase):
+    def _assert_consistent_card_zones(self, state):
+        hand_owners = {}
+        for player_id, player in state["players"].items():
+            for card in player["hand"]:
+                card_id = card["id"]
+                self.assertNotIn(
+                    card_id,
+                    hand_owners,
+                    f"card {card_id} is in both {hand_owners.get(card_id)} and {player_id} hands",
+                )
+                hand_owners[card_id] = player_id
+
+        public_card_ids = set(state.get("seen_cards") or [])
+        current_trick = state.get("current_trick") or {}
+        public_card_ids.update(current_trick.get("cards") or [])
+        for cards in (state.get("trick_plays") or {}).values():
+            if isinstance(cards, list):
+                public_card_ids.update(card["id"] for card in cards)
+
+        overlap = set(hand_owners) & public_card_ids
+        self.assertFalse(overlap, f"public cards still present in player hands: {sorted(overlap)}")
+
     def _pick_labels(self, deck, labels):
         picked = []
         for label in labels:
@@ -31,20 +53,25 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         state["config"]["bot_mode"] = "heuristic"
 
         deck = guandan._full_deck()
-        low = next(card for card in deck if guandan._card_label(card) == "♣️5")
-        high = next(card for card in deck if guandan._card_label(card) == "♣️7")
-        lead = next(card for card in deck if guandan._card_label(card) == "♣️6")
+        low, high, lead = self._pick_labels(deck, ["♣️5", "♣️7", "♣️6"])
+        opp_card, mate_card, opp2_card = deck[:3]
 
         state["players"]["bot"]["hand"] = [low, high]
-        state["players"]["opp"]["hand"] = [lead]
-        state["players"]["mate"]["hand"] = []
-        state["players"]["opp2"]["hand"] = []
+        state["players"]["opp"]["hand"] = [opp_card]
+        state["players"]["mate"]["hand"] = [mate_card]
+        state["players"]["opp2"]["hand"] = [opp2_card]
         combo = guandan._evaluate_combo([lead], state["level_rank"], state.get("config", {}))
         state["current_trick"] = {
             "player_id": "opp",
             "cards": [lead["id"]],
             "combo": combo,
         }
+        state["pass_count"] = 2
+        state["trick_plays"] = {"opp": [lead], "mate": "pass", "opp2": "pass"}
+        state["seen_cards"] = [lead["id"]]
+        state["visible_card_id"] = None
+        state["known_card_owners"] = {}
+        self._assert_consistent_card_zones(state)
         return state, low, high
 
     def _make_state(self):
@@ -1213,9 +1240,15 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         state = guandan.GuandanGame.init_game({}, players)
         deck = guandan._full_deck()
         tribute_card = next(card for card in deck if card.get("joker") == "big")
+        deck.remove(tribute_card)
         return_card = next(card for card in deck if card.get("rank") == 3 and card.get("suit") == "clubs")
+        deck.remove(return_card)
         state["players"]["opp"]["hand"] = [tribute_card]
         state["players"]["bot"]["hand"] = [return_card]
+        state["players"]["mate"]["hand"] = [deck.pop()]
+        state["players"]["opp2"]["hand"] = [deck.pop()]
+        state["visible_card_id"] = None
+        state["known_card_owners"] = {}
         state["tribute"] = {
             "type": "single",
             "stage": "tribute",
@@ -1226,6 +1259,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             "assignments": {},
         }
         state["phase"] = "tribute"
+        self._assert_consistent_card_zones(state)
 
         _events, err = guandan.GuandanGame.apply_action(
             state, "opp", {"type": "tribute_select", "card_id": tribute_card["id"]}
@@ -1238,6 +1272,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         )
         self.assertIsNone(err)
         self.assertEqual(state["known_card_owners"].get(return_card["id"]), "opp")
+        self._assert_consistent_card_zones(state)
 
     def test_public_revealed_rank_caps_reduce_same_rank_reply_probability(self):
         players = [
@@ -4543,20 +4578,24 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
                 "♥️3",
             ]
         ]
+        prior_card = pick_label("♦️Q")
+        lead_card = pick_label("♥️K")
         state["players"]["bot4"]["hand"] = hand
         for pid, count in (("calvin", 20), ("bot2", 26), ("zhu", 27)):
             state["players"][pid]["hand"] = deck[:count]
             del deck[:count]
 
-        full_deck = guandan._full_deck()
-        lead_card = next(card for card in full_deck if guandan._card_label(card) == "♥️K")
-        prior_card = next(card for card in full_deck if guandan._card_label(card) == "♦️Q")
         state["current_trick"] = {
             "player_id": "bot2",
             "cards": [lead_card["id"]],
             "combo": guandan._evaluate_combo([lead_card], state["level_rank"], state.get("config", {})),
         }
-        state["trick_plays"] = {"calvin": [prior_card], "bot2": [lead_card], "zhu": []}
+        state["pass_count"] = 1
+        state["trick_plays"] = {"calvin": [prior_card], "bot2": [lead_card], "zhu": "pass"}
+        state["seen_cards"] = [prior_card["id"], lead_card["id"]]
+        state["visible_card_id"] = None
+        state["known_card_owners"] = {}
+        self._assert_consistent_card_zones(state)
 
         pass_score = guandan._bot_score_components(state, "bot4", None, depth=2)
         big_joker = next(card["id"] for card in hand if guandan._card_label(card) == "🃏B")
@@ -4884,13 +4923,19 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         ]
         zhu_hand = deck[:15]
 
-        state["players"]["bot2"]["hand"] = bot_hand
-        state["players"]["bot3"]["hand"] = bot3_hand
-        state["players"]["calvin"]["hand"] = calvin_hand
-        state["players"]["zhu"]["hand"] = zhu_hand
-
         teammate_three = [card for card in bot3_hand if guandan._card_label(card) in ("♠️4", "♥️4", "♣️4")]
         enemy_three = [card for card in calvin_hand if guandan._card_label(card) in ("♥️6", "♣️6", "♦️6")]
+        teammate_three_ids = {card["id"] for card in teammate_three}
+        enemy_three_ids = {card["id"] for card in enemy_three}
+        state["players"]["bot2"]["hand"] = bot_hand
+        state["players"]["bot3"]["hand"] = [
+            card for card in bot3_hand if card["id"] not in teammate_three_ids
+        ]
+        state["players"]["calvin"]["hand"] = [
+            card for card in calvin_hand if card["id"] not in enemy_three_ids
+        ]
+        state["players"]["zhu"]["hand"] = zhu_hand
+
         current_combo = guandan._evaluate_combo(enemy_three, state["level_rank"], state.get("config", {}))
         state["current_trick"] = {
             "player_id": "calvin",
@@ -4901,6 +4946,10 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             "bot3": teammate_three,
             "calvin": enemy_three,
         }
+        state["seen_cards"] = [card["id"] for card in teammate_three + enemy_three]
+        state["visible_card_id"] = None
+        state["known_card_owners"] = {}
+        self._assert_consistent_card_zones(state)
 
         bomb_ids = [card["id"] for card in bot_hand if guandan._card_label(card) in ("♣️J", "♥️J", "♦️J", "♠️J")]
         pass_components = guandan._bot_score_components(state, "bot2", None, depth=4)
@@ -4959,13 +5008,6 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
                 "♠️8", "♥️8", "♠️4", "♥️4",
             ]
         ]
-        zhu_hand = deck[:13]
-
-        state["players"]["bot2"]["hand"] = bot_hand
-        state["players"]["bot3"]["hand"] = bot3_remaining
-        state["players"]["calvin"]["hand"] = calvin_remaining
-        state["players"]["zhu"]["hand"] = zhu_hand
-
         teammate_full_house = [
             pick_label(label)
             for label in ("♠️3", "♦️3", "♣️3", "♠️7", "♥️7")
@@ -4974,6 +5016,13 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             pick_label(label)
             for label in ("♠️5", "♥️5", "♣️5", "♠️6", "♥️6")
         ]
+        zhu_hand = deck[:13]
+
+        state["players"]["bot2"]["hand"] = bot_hand
+        state["players"]["bot3"]["hand"] = bot3_remaining
+        state["players"]["calvin"]["hand"] = calvin_remaining
+        state["players"]["zhu"]["hand"] = zhu_hand
+
         current_combo = guandan._evaluate_combo(enemy_full_house, state["level_rank"], state.get("config", {}))
         state["current_trick"] = {
             "player_id": "calvin",
@@ -4984,6 +5033,10 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             "bot3": teammate_full_house,
             "calvin": enemy_full_house,
         }
+        state["seen_cards"] = [card["id"] for card in teammate_full_house + enemy_full_house]
+        state["visible_card_id"] = None
+        state["known_card_owners"] = {}
+        self._assert_consistent_card_zones(state)
 
         high_full_house_ids = [
             next(card["id"] for card in bot_hand if guandan._card_label(card) == label)
