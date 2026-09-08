@@ -91,7 +91,7 @@ function clearTargetSelection() {
   }
 }
 
-function isActionAvailable(actionType) {
+function isCaboActionAvailable(actionType) {
   if (!currentCaboView || !Array.isArray(currentCaboView.legal_actions)) {
     return false;
   }
@@ -139,7 +139,7 @@ function updateActionButtons() {
     return;
   }
   Object.entries(actionButtons).forEach(([actionType, button]) => {
-    const allowed = isActionAvailable(actionType);
+    const allowed = isCaboActionAvailable(actionType);
     const inactiveReason = actionType === "initial_peek" ? getInitialPeekInactiveReason() : "";
     if (allowed) {
       button.classList.add("action-allowed");
