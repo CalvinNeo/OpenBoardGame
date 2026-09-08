@@ -2431,6 +2431,44 @@ def _next_active_after(state: Dict, player_id: str) -> Optional[str]:
     return None
 
 
+def _must_contest_short_enemy_as_last_defender(state: Dict, player_id: str) -> bool:
+    """Return whether passing would concede a clearly dangerous short-hand lead."""
+    current_trick = state.get("current_trick")
+    if not current_trick:
+        return False
+
+    leader = current_trick.get("player_id")
+    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+        return False
+
+    active = [
+        pid
+        for pid in state.get("turn_order", [])
+        if not state["players"].get(pid, {}).get("finished")
+    ]
+    if player_id not in active or leader not in active:
+        return False
+
+    passes_needed = max(1, len(active) - 1)
+    if int(state.get("pass_count", 0)) < passes_needed - 1:
+        return False
+
+    leader_left = len(state["players"].get(leader, {}).get("hand", []))
+    combo_type = (current_trick.get("combo") or {}).get("type")
+    if combo_type in BOMB_TYPES:
+        return leader_left <= 8
+    if leader_left <= 5:
+        return True
+
+    opposing_teammate_finished = any(
+        pid != leader
+        and _team_of(state, pid) == _team_of(state, leader)
+        and state["players"].get(pid, {}).get("finished")
+        for pid in state.get("turn_order", [])
+    )
+    return leader_left <= 6 and opposing_teammate_finished
+
+
 def _lead_short_next_opponent_penalty(state: Dict, player_id: str, cards: List[int]) -> float:
     if not cards or state.get("current_trick"):
         return 0.0
@@ -2560,6 +2598,42 @@ def _lead_short_escape_window_penalty(
 
         penalty = max(penalty, base * certainty)
     return penalty
+
+
+def _lead_short_enemy_lock_bonus(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+) -> float:
+    """Reward a covered high-pair lead against the last short opponent."""
+    if state.get("current_trick") or not cards or combo.get("type") != "pair":
+        return 0.0
+    if combo.get("rank_value", 0) < PREMIUM_SINGLE_VALUE_MIN:
+        return 0.0
+
+    opponents = [
+        pid
+        for pid in state.get("turn_order", [])
+        if _team_of(state, pid) != _team_of(state, player_id)
+    ]
+    active_opponents = [
+        pid for pid in opponents if not state["players"][pid].get("finished")
+    ]
+    if len(active_opponents) != 1:
+        return 0.0
+    opponent_left = len(state["players"][active_opponents[0]].get("hand", []))
+    if opponent_left <= 0 or opponent_left > 7:
+        return 0.0
+    if not any(state["players"][pid].get("finished") for pid in opponents):
+        return 0.0
+
+    hand = state["players"][player_id]["hand"]
+    remaining = _remove_cards(hand, cards)
+    if not _find_bomb_candidates(remaining, state["level_rank"]):
+        return 0.0
+
+    return 13.0 + max(0.0, 7 - opponent_left) * 0.8
 
 
 def _single_lead_finish_window_penalty(state: Dict, bot_id: str) -> float:
@@ -8179,6 +8253,12 @@ def _should_accept_mcts_override(
         return True
     if _mcts_action_key(heuristic_action) == _mcts_action_key(mcts_action):
         return True
+    if (
+        heuristic_action.get("type") == "play"
+        and mcts_action.get("type") == "pass"
+        and _must_contest_short_enemy_as_last_defender(state, bot_id)
+    ):
+        return False
 
     cfg = state.get("config", {})
     override_margin = float(cfg.get("bot_mcts_override_margin", 5.5))
@@ -9655,6 +9735,9 @@ def _compute_bot_score_components(
         short_escape_penalty = _lead_short_escape_window_penalty(state, bot_id, cards, combo)
         if short_escape_penalty > 0.001:
             components["deny_short_runout_window"] = -short_escape_penalty
+        short_enemy_lock = _lead_short_enemy_lock_bonus(state, bot_id, cards, combo)
+        if short_enemy_lock > 0.001:
+            components["lead_short_enemy_lock"] = short_enemy_lock
         overlap_low_single_bonus = _lead_overlap_run_low_single_bonus(state, bot_id, hand, cards, level_rank)
         if abs(overlap_low_single_bonus) > 0.001:
             components["overlap_run_low_single"] = overlap_low_single_bonus
@@ -10250,10 +10333,15 @@ def _bot_select_play(
         return None
     current_trick = state.get("current_trick")
     candidates: List[Optional[List[int]]] = options[:]
-    if current_trick and "pass" in legal:
+    if (
+        current_trick
+        and "pass" in legal
+        and not _must_contest_short_enemy_as_last_defender(state, bot_id)
+    ):
         candidates.append(None)
-    # The incumbent is refined in a deterministic order. Always include pass in
-    # the first batch when it is legal so an expired budget cannot force a play.
+    # Refine the incumbent in a deterministic order. When the tactical guard
+    # permits a pass, include it in the first batch so an expired budget cannot
+    # force a play.
     ordered_candidates = list(candidates)
     if None in ordered_candidates and ordered_candidates[0] is not None:
         ordered_candidates.remove(None)
