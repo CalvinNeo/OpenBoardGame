@@ -9427,6 +9427,83 @@ def _cheap_clean_single_takeover_bonus(
     return bonus
 
 
+def _big_joker_single_takeover_bonus(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Optional[Dict] = None,
+) -> float:
+    """Value a guaranteed high-single takeover once the teammate is out of lane."""
+    current_trick = state.get("current_trick")
+    if not current_trick or len(cards) != 1:
+        return 0.0
+    leader = current_trick.get("player_id")
+    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+        return 0.0
+
+    current_combo = current_trick.get("combo") or {}
+    if (
+        current_combo.get("type") != "single"
+        or current_combo.get("rank_value", 0) < HIGH_CONTROL_SINGLE_VALUE_MIN
+    ):
+        return 0.0
+
+    hand = state["players"].get(player_id, {}).get("hand", [])
+    hand_map = _map_hand_by_id(hand)
+    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+    if len(play_cards) != 1 or play_cards[0].get("joker") != "big":
+        return 0.0
+    if combo is None:
+        combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
+    if not combo or combo.get("type") != "single":
+        return 0.0
+
+    teammate = _teammate_of(state, player_id)
+    teammate_passed = bool(
+        teammate and (state.get("trick_plays") or {}).get(teammate) == "pass"
+    )
+    leader_left = len(state["players"].get(leader, {}).get("hand", []))
+    if not teammate_passed and leader_left > 10:
+        return 0.0
+
+    bonus = 8.0
+    if teammate_passed:
+        bonus += 7.0
+    if leader_left <= 10:
+        bonus += 4.0
+    if current_combo.get("rank_value", 0) >= TOP_SINGLE_VALUE_MIN:
+        bonus += 3.0
+    return bonus
+
+
+def _enemy_double_down_closeout_pressure(state: Dict, player_id: str) -> float:
+    """Return urgency when an enemy winner's teammate is close to finishing."""
+    current_trick = state.get("current_trick")
+    if not current_trick:
+        return 0.0
+    leader = current_trick.get("player_id")
+    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+        return 0.0
+
+    leader_team = _team_of(state, leader)
+    has_finished_teammate = any(
+        pid != leader
+        and _team_of(state, pid) == leader_team
+        and state["players"].get(pid, {}).get("finished")
+        and (state["players"].get(pid, {}).get("finish_rank") or 99) <= 2
+        for pid in state.get("turn_order", [])
+    )
+    leader_left = len(state["players"].get(leader, {}).get("hand", []))
+    if not has_finished_teammate or leader_left > 10:
+        return 0.0
+
+    pressure = 24.0 + max(0, 10 - leader_left) * 1.2
+    current_type = (current_trick.get("combo") or {}).get("type")
+    if current_type in ("full_house", "straight", "three_pairs", "steel_plate"):
+        pressure += 4.0
+    return pressure
+
+
 def _strategic_enemy_pass_bonus(state: Dict, player_id: str) -> float:
     """Reward conserving material against a non-threatening long enemy hand."""
     current_trick = state.get("current_trick")
@@ -9437,6 +9514,8 @@ def _strategic_enemy_pass_bonus(state: Dict, player_id: str) -> float:
         return 0.0
     leader_left = len(state["players"].get(leader, {}).get("hand", []))
     if leader_left <= 5 or _must_contest_short_enemy_as_last_defender(state, player_id):
+        return 0.0
+    if _enemy_double_down_closeout_pressure(state, player_id) > 0.0:
         return 0.0
 
     hand = state["players"].get(player_id, {}).get("hand", [])
@@ -9523,6 +9602,11 @@ def _strategic_enemy_pass_bonus(state: Dict, player_id: str) -> float:
                 # A loose small joker can be the cheapest way to retake the
                 # lead when every natural single damages a control group.
                 return 0.0
+        if _big_joker_single_takeover_bonus(state, player_id, cards, combo) > 0.0:
+            # Once our teammate has passed, a big joker is the only natural
+            # guaranteed takeover of a level card or small joker. Do not let
+            # the generic material-conservation reward make Pass the incumbent.
+            return 0.0
         all_special = all_special and uses_special
         all_bombs = all_bombs and combo_type in BOMB_TYPES
         response_costs.append(
@@ -9609,6 +9693,10 @@ def _shared_pass_tactical_components(state: Dict, player_id: str) -> Dict[str, f
         components["pass_short_enemy_prior"] = -12.0
     elif leader_left <= 5:
         components["pass_short_enemy_prior"] = -5.0
+
+    double_down_pressure = _enemy_double_down_closeout_pressure(state, player_id)
+    if double_down_pressure > 0.001:
+        components["pass_enemy_double_down_threat"] = -double_down_pressure
 
     strategic_pass = _strategic_enemy_pass_bonus(state, player_id)
     if strategic_pass > 0.001:
@@ -9700,6 +9788,56 @@ def _mcts_obvious_response_scores(
     if pass_action and top_heuristic < pass_heuristic + cfg.get("bot_mcts_obvious_response_margin", 2.25):
         return None
     return _mcts_fast_path_scores(candidates, heuristic_values, top_action, "obvious_response_fast_path")
+
+
+def _mcts_high_single_joker_scores(
+    state: Dict,
+    bot_id: str,
+    candidates: List[Dict],
+    heuristic_values: Dict[Tuple, float],
+) -> Optional[List[Tuple[Dict, float, int, Dict[str, float]]]]:
+    """Skip rollouts when the tactical big-joker takeover is already decisive."""
+    current_combo = (state.get("current_trick") or {}).get("combo") or {}
+    if (
+        current_combo.get("type") != "single"
+        or current_combo.get("rank_value", 0) < HIGH_CONTROL_SINGLE_VALUE_MIN
+    ):
+        return None
+
+    qualified: List[Dict] = []
+    for action in candidates:
+        if action.get("type") != "play":
+            continue
+        cards = action.get("card_ids") or []
+        action_combo = _action_combo(state, bot_id, action)
+        if _big_joker_single_takeover_bonus(state, bot_id, cards, action_combo) > 0.0:
+            qualified.append(action)
+    if not qualified:
+        return None
+
+    top_action = max(
+        qualified,
+        key=lambda action: heuristic_values.get(_mcts_action_key(action), -999.0),
+    )
+    pass_action = next(
+        (action for action in candidates if action.get("type") == "pass"),
+        None,
+    )
+    top_score = heuristic_values.get(_mcts_action_key(top_action), -999.0)
+    pass_score = (
+        heuristic_values.get(_mcts_action_key(pass_action), -999.0)
+        if pass_action
+        else -999.0
+    )
+    margin = float(state.get("config", {}).get("bot_mcts_joker_takeover_margin", 4.0))
+    if pass_action and top_score < pass_score + margin:
+        return None
+    return _mcts_fast_path_scores(
+        candidates,
+        heuristic_values,
+        top_action,
+        "high_single_joker_fast_path",
+    )
 
 
 def _mcts_high_single_bomb_scores(
@@ -9898,11 +10036,39 @@ def _mcts_score_actions(
     )
 
     heuristic_weight = 3.8 if state.get("current_trick") and len(candidates) <= 2 else 2.2
+    heuristic_depth = max(
+        1,
+        int(state.get("config", {}).get("bot_search_depth", depth)),
+    )
+    cached_finalists = (
+        _get_cached_heuristic_scored_candidates(state, bot_id, heuristic_depth) or []
+    )
+    cached_heuristic_values = {
+        _mcts_action_key(
+            {"type": "pass"}
+            if cards is None
+            else {"type": "play", "card_ids": cards}
+        ): score
+        for cards, score, _components in cached_finalists
+    }
     heuristic_values: Dict[Tuple, float] = {}
     for action in candidates:
         key = _mcts_action_key(action)
         cards = action.get("card_ids") or []
-        if (
+        if key in cached_heuristic_values:
+            # The preceding heuristic stage already paid for this finalist.
+            # Reuse the value so the small MCTS budget is spent on rollouts.
+            heuristic_values[key] = cached_heuristic_values[key]
+        elif deadline is not None and cached_finalists:
+            # Unscored root alternatives only need an ordering prior. A full
+            # decomposition here can consume the entire MCTS window before its
+            # first determinization.
+            heuristic_values[key] = _quick_candidate_score(
+                state,
+                bot_id,
+                cards if action.get("type") == "play" else None,
+            )
+        elif (
             action.get("type") == "play"
             and _overbomb_soft_pruning_penalty(state, bot_id, cards) > 0.0
         ):
@@ -9955,6 +10121,23 @@ def _mcts_score_actions(
         _report_progress_scaled(progress_callback, "mcts", progress_start, progress_end, 1.0, "Fast-path obvious response")
         store_status("fast_path")
         return obvious_scores
+    high_single_joker_scores = _mcts_high_single_joker_scores(
+        state,
+        bot_id,
+        candidates,
+        heuristic_values,
+    )
+    if high_single_joker_scores:
+        _report_progress_scaled(
+            progress_callback,
+            "mcts",
+            progress_start,
+            progress_end,
+            1.0,
+            "Fast-path high-single takeover",
+        )
+        store_status("fast_path")
+        return high_single_joker_scores
     high_single_bomb_scores = _CORE._mcts_high_single_bomb_scores(state, bot_id, candidates, heuristic_values)
     if high_single_bomb_scores:
         _report_progress_scaled(progress_callback, "mcts", progress_start, progress_end, 1.0, "Fast-path bomb decision")
@@ -11835,6 +12018,19 @@ def _shared_response_tactical_components(
     if cheap_bomb > 0.001:
         components["cheap_bomb_takeover"] = cheap_bomb
 
+    big_joker_takeover = _big_joker_single_takeover_bonus(
+        state,
+        player_id,
+        cards,
+        combo,
+    )
+    if big_joker_takeover > 0.001:
+        components["big_joker_takeover"] = big_joker_takeover
+
+    double_down_pressure = _enemy_double_down_closeout_pressure(state, player_id)
+    if double_down_pressure > 0.001:
+        components["deny_enemy_double_down"] = double_down_pressure * 0.75
+
     safe_overtake = _teammate_safe_overtake_profile(state, player_id, cards, combo)
     if safe_overtake.get("qualified") and safe_overtake.get("bonus", 0.0) > 0.001:
         components["safe_teammate_overtake"] = safe_overtake["bonus"]
@@ -11989,6 +12185,25 @@ def _bot_select_play(
     options = _filter_overbomb_options(state, bot_id, options)
     if not options:
         return None
+    config = state.get("config", {})
+    deep_limit = max(
+        4,
+        int(config.get("bot_heuristic_deep_candidate_limit", 10)),
+    )
+    bounded_response = bool(
+        deadline is not None
+        and not is_lead
+        and len(hand)
+        >= max(1, int(config.get("bot_heuristic_bounded_hand_threshold", 24)))
+        and len(options) >= deep_limit
+    )
+    if bounded_response:
+        options = _shortlist_scoring_options(
+            state,
+            bot_id,
+            options,
+            deep_limit,
+        )
     current_trick = state.get("current_trick")
     candidates: List[Optional[List[int]]] = options[:]
     if (
@@ -12029,7 +12244,6 @@ def _bot_select_play(
         # position-aware quick score instead of a static card-type hierarchy.
         remaining_candidates.sort(key=quick_score, reverse=True)
     ordered_candidates.extend(remaining_candidates)
-    config = state.get("config", {})
     target_key = (
         "bot_heuristic_min_lead_deep_candidates"
         if is_lead
@@ -12039,6 +12253,9 @@ def _bot_select_play(
     detailed_minimum = min(
         len(ordered_candidates),
         max(1, int(config.get(target_key, target_default))),
+    )
+    detailed_target = (
+        detailed_minimum if bounded_response else len(ordered_candidates)
     )
     eval_cache = state.setdefault("_ai_eval_cache", {})
     soft_deadline = eval_cache.get("heuristic_soft_deadline", deadline)
@@ -12072,7 +12289,7 @@ def _bot_select_play(
             bot_id,
             cand,
             depth,
-            bounded=False,
+            bounded=bounded_response,
         )
         candidate_durations.append(time.perf_counter() - started_at)
         if components.get("anytime_partial"):
@@ -12086,6 +12303,10 @@ def _bot_select_play(
             deadline_limited = True
             break
         scored.append((cand, components.get("total", -999.0), components))
+        if len(scored) >= detailed_target:
+            if detailed_target < len(ordered_candidates):
+                stop_reason = "target_reached"
+            break
     detailed_evaluated = len(scored)
     if not scored:
         incumbent_quick_score = quick_score(incumbent)
@@ -12110,8 +12331,8 @@ def _bot_select_play(
     eval_cache["heuristic_anytime"] = {
         "evaluated": detailed_evaluated,
         "total": len(ordered_candidates),
-        "interrupted": detailed_evaluated < len(ordered_candidates),
-        "target": len(ordered_candidates),
+        "interrupted": detailed_evaluated < detailed_target,
+        "target": detailed_target,
         "minimum": detailed_minimum,
         "stop_reason": stop_reason,
         "deadline_limited": deadline_limited,

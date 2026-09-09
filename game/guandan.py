@@ -58,6 +58,8 @@ DEFAULT_CONFIG = {
     "bot_lead_prescore_min_hand": 12,
     "bot_lead_prescore_min_options": 24,
     "bot_lead_prescore_limit": 16,
+    "bot_heuristic_deep_candidate_limit": 10,
+    "bot_heuristic_bounded_hand_threshold": 24,
     "bot_heuristic_min_deep_candidates": 3,
     "bot_heuristic_min_lead_deep_candidates": 3,
     "bot_heuristic_min_lead_rank_candidates": 16,

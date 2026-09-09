@@ -75,6 +75,52 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self._assert_consistent_card_zones(state)
         return state, low, high
 
+    def _make_high_single_big_joker_state(self):
+        players = [
+            {"player_id": "calvin", "name": "Calvin", "seat": 0, "is_bot": False},
+            {"player_id": "bot", "name": "Bot 3", "seat": 1, "is_bot": True},
+            {"player_id": "leader", "name": "Leader", "seat": 2, "is_bot": False},
+            {"player_id": "mate", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["current_turn"] = "bot"
+        state["config"]["bot_mode"] = "auto"
+
+        deck = guandan._full_deck()
+        state["players"]["bot"]["hand"] = self._pick_labels(
+            deck,
+            [
+                "🃏B", "🃏B", "♠️2", "♥️2", "♣️K", "♦️Q", "♦️J",
+                "♣️10", "♠️10", "♣️10", "♦️10", "♥️9", "♦️8", "♥️8",
+                "♥️7", "♣️7", "♥️6", "♠️5", "♥️5", "♣️5", "♦️5",
+                "♣️4", "♥️4", "♦️4", "♠️3", "♥️3", "♦️3",
+            ],
+        )
+        lead = self._pick_labels(deck, ["🃏S"])[0]
+        for player_id, count in (("leader", 15), ("mate", 20), ("calvin", 27)):
+            state["players"][player_id]["hand"] = deck[:count]
+            del deck[:count]
+
+        combo = guandan._evaluate_combo([lead], state["level_rank"], state["config"])
+        state["current_trick"] = {
+            "player_id": "leader",
+            "cards": [lead["id"]],
+            "combo": combo,
+        }
+        state["trick_plays"] = {
+            "calvin": "pass",
+            "bot": "pass",
+            "leader": [lead],
+            "mate": "pass",
+        }
+        state["pass_count"] = 3
+        state["seen_cards"] = [lead["id"]]
+        state["known_card_owners"] = {}
+        state["round_memories"] = []
+        self._assert_consistent_card_zones(state)
+        return state
+
     def _make_state(self):
         players = [
             {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
@@ -2385,6 +2431,8 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
     def test_heuristic_future_deadline_refines_quick_incumbent(self):
         state, _big = self._make_state()
         state["config"]["bot_heuristic_min_deep_candidates"] = 3
+        state["config"]["bot_heuristic_deep_candidate_limit"] = 4
+        state["config"]["bot_heuristic_bounded_hand_threshold"] = 1
         options = [[11], [22], [33], [44]]
 
         def quick_score(_state, _bot_id, cards):
@@ -2411,19 +2459,21 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
                                 )
 
         self.assertEqual(chosen, [22])
-        self.assertEqual(score.call_count, 5)
+        self.assertEqual(score.call_count, 3)
         meta = state["_ai_eval_cache"]["heuristic_anytime"]
-        self.assertEqual(meta["evaluated"], 5)
-        self.assertEqual(meta["target"], 5)
+        self.assertEqual(meta["evaluated"], 3)
+        self.assertEqual(meta["target"], 3)
         self.assertEqual(meta["minimum"], 3)
         self.assertEqual(meta["total"], 5)
         self.assertFalse(meta["interrupted"])
         self.assertFalse(meta["deadline_limited"])
-        self.assertEqual(meta["stop_reason"], "candidates_exhausted")
+        self.assertEqual(meta["stop_reason"], "target_reached")
 
     def test_heuristic_soft_deadline_finishes_minimum_comparison_within_hard_limit(self):
         state, _big = self._make_state()
         state["config"]["bot_heuristic_min_deep_candidates"] = 3
+        state["config"]["bot_heuristic_deep_candidate_limit"] = 4
+        state["config"]["bot_heuristic_bounded_hand_threshold"] = 1
         state["_ai_eval_cache"] = {"heuristic_soft_deadline": 100.0}
         options = [[11], [22], [33], [44]]
         clock = [99.0]
@@ -2449,7 +2499,8 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         meta = state["_ai_eval_cache"]["heuristic_anytime"]
         self.assertEqual(meta["evaluated"], 3)
         self.assertEqual(meta["minimum"], 3)
-        self.assertEqual(meta["stop_reason"], "soft_deadline")
+        self.assertEqual(meta["stop_reason"], "target_reached")
+        self.assertFalse(meta["deadline_limited"])
         self.assertTrue(meta["soft_deadline_reached"])
         self.assertFalse(meta["hard_deadline_reached"])
 
@@ -2486,6 +2537,89 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertTrue(meta["interrupted"])
         self.assertTrue(meta["deadline_limited"])
         self.assertEqual(meta["stop_reason"], "partial_candidate")
+
+    def test_high_single_big_joker_takeover_finishes_before_hard_deadline(self):
+        state = self._make_high_single_big_joker_state()
+
+        action = guandan.GuandanGame.bot_move(state, "bot")
+
+        self.assertEqual(action.get("type"), "play")
+        played = next(
+            card
+            for card in state["players"]["bot"]["hand"]
+            if card["id"] == action["card_ids"][0]
+        )
+        self.assertEqual(played.get("joker"), "big")
+        explain = state["bot_explain"]["bot"]
+        self.assertEqual(explain["method_details"].get("heuristic_candidates_evaluated"), 3)
+        self.assertEqual(explain["method_details"].get("heuristic_candidates_target"), 3)
+        self.assertLessEqual(explain["method_details"].get("heuristic_candidates_total"), 11)
+        self.assertEqual(explain["method_details"].get("mcts_stop_reason"), "fast_path")
+        self.assertFalse(explain["timing"].get("hard_deadline_reached"))
+        self.assertTrue(explain["top"])
+
+    def test_enemy_double_down_threat_uses_available_bomb(self):
+        players = [
+            {"player_id": "leader", "name": "Leader", "seat": 0, "is_bot": False},
+            {"player_id": "bot", "name": "Bot 3", "seat": 1, "is_bot": True},
+            {"player_id": "winner", "name": "Winner", "seat": 2, "is_bot": False},
+            {"player_id": "mate", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["current_turn"] = "bot"
+        state["config"]["bot_mode"] = "heuristic"
+        deck = guandan._full_deck()
+        state["players"]["bot"]["hand"] = self._pick_labels(
+            deck,
+            [
+                "♥️A", "♦️A", "♣️K", "♦️Q", "♣️J", "♦️J",
+                "♠️J", "♠️10", "♥️10", "♥️10", "♠️10", "♣️6",
+            ],
+        )
+        lead = self._pick_labels(
+            deck,
+            ["♠️Q", "♠️Q", "♥️Q", "♣️10", "♦️10"],
+        )
+        state["players"]["leader"]["hand"] = deck[:10]
+        del deck[:10]
+        state["players"]["winner"]["hand"] = []
+        state["players"]["winner"]["finished"] = True
+        state["players"]["winner"]["finish_rank"] = 1
+        state["players"]["mate"]["hand"] = deck[:13]
+        state["finish_order"] = ["winner"]
+        state["current_trick"] = {
+            "player_id": "leader",
+            "cards": [card["id"] for card in lead],
+            "combo": guandan._evaluate_combo(
+                lead,
+                state["level_rank"],
+                state["config"],
+            ),
+        }
+        state["trick_plays"] = {"leader": lead}
+        state["seen_cards"] = [card["id"] for card in lead]
+        state["known_card_owners"] = {}
+        state["round_memories"] = []
+        self._assert_consistent_card_zones(state)
+
+        action = guandan.GuandanGame.bot_move(state, "bot")
+
+        self.assertEqual(action.get("type"), "play")
+        hand_map = {card["id"]: card for card in state["players"]["bot"]["hand"]}
+        combo = guandan._evaluate_combo(
+            [hand_map[card_id] for card_id in action["card_ids"]],
+            state["level_rank"],
+            state["config"],
+        )
+        self.assertEqual(combo.get("type"), "bomb")
+        self.assertGreater(
+            state["bot_explain"]["bot"]["chosen"]["components"].get(
+                "deny_enemy_double_down",
+                0.0,
+            ),
+            0.0,
+        )
 
     def test_search_clone_isolated_from_root_state(self):
         players = [
