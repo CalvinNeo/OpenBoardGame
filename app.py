@@ -476,9 +476,9 @@ def _bot_status_payload(room: Room) -> Dict:
     if room.game_type == "guandan" and room.game_state:
         config = room.game_state.get("config", {}) if isinstance(room.game_state, dict) else {}
         try:
-            think_budget_ms = int(config.get("bot_think_time_ms", 320))
+            think_budget_ms = int(config.get("bot_think_time_ms", 2000))
         except (TypeError, ValueError):
-            think_budget_ms = 320
+            think_budget_ms = 2000
         bot_status["think_budget_ms"] = max(40, think_budget_ms)
     if bot_status["running"]:
         bot_status["progress"] = max(0.0, min(0.99, float(room.bot_progress or 0.0)))

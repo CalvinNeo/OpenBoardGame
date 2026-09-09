@@ -632,7 +632,7 @@ function getGuandanBotProgressValue() {
     return Math.max(0.0, Math.min(0.99, status.progress));
   }
   const startedAt = Number(status.started_at_ms || 0);
-  const thinkBudget = Math.max(40, Number(status.think_budget_ms || 320));
+  const thinkBudget = Math.max(40, Number(status.think_budget_ms || 2000));
   if (!startedAt) {
     return 0.08;
   }

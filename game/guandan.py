@@ -64,7 +64,7 @@ DEFAULT_CONFIG = {
     "bot_heuristic_min_lead_rank_candidates": 16,
     "bot_heuristic_time_check_batch": 2,
     "bot_heuristic_detailed_weight": 0.15,
-    "bot_think_time_ms": 320,
+    "bot_think_time_ms": 2000,
     "bot_mcts_time_ms": 220,
     "bot_minimax_time_ms": 180,
 }
@@ -2380,7 +2380,7 @@ class GuandanGame:
         bot_mode = str(config.get("bot_mode", DEFAULT_CONFIG["bot_mode"]) or DEFAULT_CONFIG["bot_mode"]).strip().lower()
         if bot_mode not in {"auto", "heuristic", "nn"}:
             bot_mode = DEFAULT_CONFIG["bot_mode"]
-        think_budget_ms = max(40, int(config.get("bot_think_time_ms", 320)))
+        think_budget_ms = max(40, int(config.get("bot_think_time_ms", 2000)))
         decision_deadline = decision_started_at + think_budget_ms / 1000.0
         search_deadline = decision_deadline
         heuristic_deadline = search_deadline if bot_mode in {"auto", "heuristic"} else None

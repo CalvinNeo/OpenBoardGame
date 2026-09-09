@@ -2518,7 +2518,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             0.0,
         )
         explain = state.get("bot_explain", {}).get("bot3", {})
-        self.assertEqual(explain.get("method"), "heuristic")
+        self.assertEqual(explain.get("method"), "mcts")
         self.assertEqual(explain.get("chosen", {}).get("cards"), chosen_labels)
 
     def test_bot_move_skips_mcts_on_lead_position(self):
@@ -3483,7 +3483,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertEqual(history[0].get("card_ids"), [big["id"]])
         self.assertEqual(history[0].get("explain", {}).get("chosen", {}).get("cards"), ["🃏B"])
         timing = history[0].get("explain", {}).get("timing", {})
-        self.assertEqual(timing.get("budget_ms"), 320.0)
+        self.assertEqual(timing.get("budget_ms"), 2000.0)
         self.assertIsInstance(timing.get("total_ms"), float)
         self.assertGreaterEqual(timing.get("total_ms"), 0.0)
         self.assertIn("heuristic", timing.get("stages_ms", {}))
