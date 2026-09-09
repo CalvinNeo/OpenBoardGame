@@ -1513,40 +1513,79 @@ def _candidate_remaining_strength(features: Dict, level_rank: int) -> float:
     return float(cached)
 
 
+def _lead_shared_opening_commitment_penalty(
+    state: Dict,
+    player_id: str,
+    combo: Dict,
+) -> float:
+    """Fast, canonical guard against spending a high full house too early."""
+    if state.get("current_trick") or combo.get("type") != "full_house":
+        return 0.0
+    if combo.get("rank_value", 0) < 58:
+        return 0.0
+
+    hand = state["players"][player_id]["hand"]
+    active_counts = [
+        len(state["players"][pid].get("hand", []))
+        for pid in state.get("turn_order", [])
+        if not state["players"][pid].get("finished")
+    ]
+    if len(hand) < 18 or not active_counts or min(active_counts) < 18:
+        return 0.0
+    # In a deep opening, the high triple is re-entry material. This inexpensive
+    # prior keeps lower groups in the detailed finalist set; the slower opening
+    # commitment evaluator then decides how strongly to preserve it.
+    return 8.0
+
+
+def _lead_shared_pair_run_break_penalty(
+    features: Dict,
+    combo: Dict,
+    level_rank: int,
+) -> float:
+    """Protect a clean three-pair run in both anytime and detailed scoring."""
+    if combo.get("type") != "pair" or combo.get("uses_wild"):
+        return 0.0
+    pair_rank = next(
+        (
+            card.get("rank")
+            for card in features["play_cards"]
+            if not _is_joker(card) and not _is_wild(card, level_rank)
+        ),
+        None,
+    )
+    if pair_rank is None:
+        return 0.0
+    pair_ranks = {
+        rank
+        for rank, count in features["before_counts"].items()
+        if count == 2
+    }
+    for start in range(pair_rank - 2, pair_rank + 1):
+        if all(rank in pair_ranks for rank in (start, start + 1, start + 2)):
+            return 4.2
+    return 0.0
+
+
 def _compute_lead_option_score(state: Dict, player_id: str, cards: List[int]) -> float:
     features = _candidate_features(state, player_id, cards)
     hand = features["hand"]
-    play_cards = features["play_cards"]
     combo = features["combo"]
     if not combo:
         return -999.0
     if len(cards) == len(hand):
         return 1000.0
 
-    base_by_type = {
-        "straight": 9.2,
-        "three_pairs": 8.8,
-        "steel_plate": 8.6,
-        "full_house": 8.1,
-        "three": 5.4,
-        "pair": 4.0,
-        "single": 2.0,
-        "bomb": -8.0,
-        "straight_flush": -10.0,
-        "heavenly": -12.0,
-    }
-    base = base_by_type.get(combo["type"], 10.0)
+    # Detailed lead scoring extends the exact same inexpensive core used by
+    # anytime ordering.  Keep strategic refinements below; do not mirror them
+    # back into the quick scorer as hand-written approximations.
+    score = _compute_lead_cheap_option_score(state, player_id, cards, combo=combo)
     remaining = features["remaining"]
     remaining_strength = _candidate_remaining_strength(features, state["level_rank"])
     structure_delta = _candidate_hand_strength(features, state["level_rank"]) - remaining_strength
 
-    score = base
-    score += len(cards) * 0.12
     score -= structure_delta * 1.35
     score += remaining_strength * 0.16
-    score += features["shape_score"] * 1.25
-    score -= features["fragment_penalty"] * 1.2
-    score -= features["control_break"] * 1.0
     score -= _lead_low_single_trap_penalty(hand, cards, state["level_rank"])
     score -= _lead_short_next_opponent_penalty(state, player_id, cards)
     score -= _lead_short_escape_window_penalty(state, player_id, cards, combo)
@@ -1570,37 +1609,18 @@ def _compute_lead_option_score(state: Dict, player_id: str, cards: List[int]) ->
     score -= _lead_opening_commitment_penalty(state, player_id, cards, combo)
 
     if combo["type"] == "single":
-        score -= _single_order_value(play_cards[0], state["level_rank"]) * 0.12
         score -= _lead_single_break_penalty(hand, cards, state["level_rank"])
         score += _lead_low_single_escape_bonus(hand, cards, state["level_rank"])
         score -= _lead_single_initiative_penalty(state, player_id, cards, combo)
-    else:
-        score -= _combo_value(combo) * 0.015
 
-    if combo["type"] in BOMB_TYPES:
-        score -= 18.0 + _bomb_tier(combo) * 2.4
-
-    if remaining and _can_play_all(remaining, state["level_rank"], state.get("config", {}), None):
+    # The shared core performs this cheap check for short tails.  Detailed mode
+    # additionally checks long residual hands, where enumeration costs more.
+    if (
+        remaining
+        and len(remaining) > 8
+        and _can_play_all(remaining, state["level_rank"], state.get("config", {}), None)
+    ):
         score += 7.5
-    elif len(remaining) <= 2 and combo["type"] != "single":
-        score += 2.0
-
-    teammate = _teammate_of(state, player_id)
-    partner_left = len(state["players"][teammate]["hand"]) if teammate else 99
-    active_opponents = [
-        pid
-        for pid in state["turn_order"]
-        if _team_of(state, pid) != _team_of(state, player_id) and not state["players"][pid]["finished"]
-    ]
-    opp_left = (
-        min(len(state["players"][pid]["hand"]) for pid in active_opponents)
-        if active_opponents
-        else 0
-    )
-    if opp_left <= 2 and combo["type"] != "single":
-        score += 2.5
-    if partner_left <= 3 and combo["type"] in ("pair", "three", "full_house", "straight", "three_pairs", "steel_plate"):
-        score += 1.5
     return score
 
 
@@ -1689,56 +1709,14 @@ def _compute_lead_cheap_option_score(
             score -= 2.2 + (rank_count - 2) * 1.1
         elif value < LOW_SINGLE_VALUE_MAX:
             score += min(2.8, (LOW_SINGLE_VALUE_MAX - value) * 0.22)
-        natural_bomb_ranks = sum(1 for count in features["before_counts"].values() if count >= 4)
-        has_retained_control = any(
-            other["id"] != card["id"]
-            and (
-                _is_joker(other)
-                or (
-                    not _is_wild(other, state["level_rank"])
-                    and _single_order_value(other, state["level_rank"])
-                    >= _point_order_value(13, state["level_rank"])
-                )
-            )
-            for other in hand
-        )
-        if (
-            14 <= len(hand) <= 22
-            and rank_count == 1
-            and value <= _point_order_value(10, state["level_rank"])
-            and natural_bomb_ranks >= 2
-            and has_retained_control
-        ):
-            # Cheap approximation of the detailed control-probe rule: when two
-            # natural bombs provide re-entry, shed the isolated modest single.
-            score += 16.5
     else:
         score -= _combo_value(combo) * 0.015
-        if combo["type"] == "pair" and not combo.get("uses_wild"):
-            pair_rank = next(
-                (
-                    card.get("rank")
-                    for card in play_cards
-                    if not _is_joker(card) and not _is_wild(card, state["level_rank"])
-                ),
-                None,
-            )
-            pair_ranks = {
-                rank
-                for rank, count in features["before_counts"].items()
-                if count >= 2
-            }
-            if pair_rank is not None:
-                for start in range(pair_rank - 2, pair_rank + 1):
-                    if all(
-                        rank in pair_ranks and features["before_counts"].get(rank) == 2
-                        for rank in (start, start + 1, start + 2)
-                    ):
-                        score -= 4.2
-                        break
 
     if combo["type"] in BOMB_TYPES:
         score -= 18.0 + _bomb_tier(combo) * 2.4
+
+    score -= _lead_shared_pair_run_break_penalty(features, combo, state["level_rank"])
+    score -= _lead_shared_opening_commitment_penalty(state, player_id, combo)
 
     active_count = sum(
         1
@@ -1755,12 +1733,6 @@ def _compute_lead_cheap_option_score(
         # valuable: it is harder for the single remaining opposing seat to
         # overtake. Keep this linear and based only on the already-known combo.
         score += _combo_numeric_value(combo) * 0.08
-
-    if combo["type"] == "full_house" and combo.get("rank_value", 0) >= 58:
-        # High trips are valuable re-entry material. A conservative anytime
-        # incumbent should not commit them before the detailed scorer can compare
-        # lighter leads.
-        score -= 8.0
 
     remaining = features["remaining"]
     if remaining and len(remaining) <= 8 and _can_play_all(
@@ -1789,44 +1761,6 @@ def _compute_lead_cheap_option_score(
         score += 2.5
     if partner_left <= 3 and combo["type"] in ("pair", "three", "full_house", "straight", "three_pairs", "steel_plate"):
         score += 1.5
-    if combo["type"] == "single" and len(hand) <= 18 and active_count >= 4 and opp_left > 3:
-        card = play_cards[0]
-        rank = card.get("rank")
-        pair_like_ranks = sum(1 for count in features["before_counts"].values() if count >= 2)
-        has_control_single = any(
-            _is_joker(other)
-            or (
-                not _is_wild(other, state["level_rank"])
-                and features["before_counts"].get(other.get("rank"), 0) == 1
-                and _single_order_value(other, state["level_rank"]) >= HIGH_CONTROL_SINGLE_VALUE_MIN
-            )
-            for other in hand
-            if other["id"] != card["id"]
-        )
-        if (
-            rank is not None
-            and features["before_counts"].get(rank, 0) == 1
-            and _single_order_value(card, state["level_rank"]) < LOW_SINGLE_VALUE_MAX
-            and pair_like_ranks >= 4
-            and has_control_single
-        ):
-            score += 15.0
-    if combo["type"] == "three_pairs" and active_count >= 4 and opp_left > 3:
-        played_ranks = {
-            card.get("rank")
-            for card in play_cards
-            if not _is_joker(card) and not _is_wild(card, state["level_rank"])
-        }
-        clean_pair_run = (
-            len(played_ranks) == 3
-            and all(features["before_counts"].get(rank, 0) == 2 for rank in played_ranks)
-        )
-        has_low_single_escape = any(
-            count == 1 and _point_order_value(rank, state["level_rank"]) < LOW_SINGLE_VALUE_MAX
-            for rank, count in features["before_counts"].items()
-        )
-        if clean_pair_run and has_low_single_escape:
-            score -= 12.0
     return score
 
 
@@ -9628,6 +9562,61 @@ def _strategic_enemy_pass_bonus(state: Dict, player_id: str) -> float:
     return max(0.0, min(16.0, bonus))
 
 
+def _shared_pass_tactical_components(state: Dict, player_id: str) -> Dict[str, float]:
+    """Cheap pass policy shared by anytime ordering and detailed scoring."""
+    current_trick = state.get("current_trick")
+    if not current_trick:
+        return {}
+
+    cache = state.setdefault("_ai_eval_cache", {}).setdefault(
+        "shared_pass_tactical_components",
+        {},
+    )
+    cache_key = (
+        player_id,
+        tuple(
+            sorted(
+                card["id"]
+                for card in state["players"].get(player_id, {}).get("hand", [])
+            )
+        ),
+        current_trick.get("player_id"),
+        tuple(current_trick.get("cards") or ()),
+        tuple(
+            (pid, len(state["players"].get(pid, {}).get("hand", [])))
+            for pid in state.get("turn_order", [])
+        ),
+    )
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return dict(cached)
+
+    teammate = _teammate_of(state, player_id)
+    leader = current_trick.get("player_id")
+    components: Dict[str, float] = {}
+    if leader == teammate:
+        protect = _teammate_protect_bonus(state, player_id)
+        if protect > 0.001:
+            components["protect_teammate"] = protect
+        cache[cache_key] = dict(components)
+        return components
+    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+        cache[cache_key] = dict(components)
+        return components
+
+    leader_left = len(state["players"].get(leader, {}).get("hand", []))
+    if leader_left <= 2:
+        components["pass_short_enemy_prior"] = -12.0
+    elif leader_left <= 5:
+        components["pass_short_enemy_prior"] = -5.0
+
+    strategic_pass = _strategic_enemy_pass_bonus(state, player_id)
+    if strategic_pass > 0.001:
+        components["strategic_enemy_pass"] = strategic_pass
+    cache[cache_key] = dict(components)
+    return components
+
+
 def _mcts_fast_path_scores(
     candidates: List[Dict],
     heuristic_values: Dict[Tuple, float],
@@ -10702,14 +10691,17 @@ def _compute_bot_score_components(
     teammate = _teammate_of(state, bot_id)
     if not cards:
         components: Dict[str, float] = _hand_state_value_components(state, bot_id, hand)
+        components.update(_shared_pass_tactical_components(state, bot_id))
         remaining_budget = _deadline_remaining()
         if remaining_budget is not None and remaining_budget <= 0.08:
             components["anytime_partial"] = 1.0
             components["total"] = sum(components.values())
             return components
-        if current_trick and teammate == current_trick.get("player_id"):
-            components["protect_teammate"] = _teammate_protect_bonus(state, bot_id)
-        elif current_trick and _team_of(state, current_trick.get("player_id")) != _team_of(state, bot_id):
+        if (
+            current_trick
+            and teammate != current_trick.get("player_id")
+            and _team_of(state, current_trick.get("player_id")) != _team_of(state, bot_id)
+        ):
             response_score = _best_response_play_score(state, bot_id, max(2, depth), non_bomb_only=True)
             teammate_control = _teammate_future_control_probability(state, bot_id)
             combo_type = (current_trick.get("combo") or {}).get("type")
@@ -10805,7 +10797,6 @@ def _compute_bot_score_components(
                         components["cheap_bomb_pass_penalty"] = -(4.5 - rank_pressure * 1.2)
                     elif rank_pressure >= 4.0:
                         components["preserve_premium_bomb"] = (rank_pressure - 3.5) * 2.0
-            strategic_pass = _strategic_enemy_pass_bonus(state, bot_id)
             tactical_pass_alarms = (
                 "pass_structure_concession",
                 "pass_closeout_threat",
@@ -10821,8 +10812,8 @@ def _compute_bot_score_components(
             has_tactical_pass_alarm = has_tactical_pass_alarm or (
                 components.get("pass_lane_concession", 0.0) <= -4.0
             )
-            if strategic_pass > 0.001 and not has_tactical_pass_alarm:
-                components["strategic_enemy_pass"] = strategic_pass
+            if has_tactical_pass_alarm:
+                components.pop("strategic_enemy_pass", None)
         components["total"] = sum(components.values())
         return components
 
@@ -10900,22 +10891,16 @@ def _compute_bot_score_components(
         clean_single_bonus = _cheap_clean_single_takeover_bonus(state, bot_id, cards, combo)
         if clean_single_bonus > 0.001:
             components["cheap_clean_single_takeover"] = clean_single_bonus
-        teammate_play = (state.get("trick_plays") or {}).get(teammate) if teammate else None
-        teammate_can_retake_for_relay = bool(
-            teammate_play
-            and teammate_play != "pass"
-            and _teammate_can_retake_current_lane(state, bot_id)
-        )
-        clean_single_relay = _quick_clean_single_relay_bonus(
+        shared_response = _shared_response_tactical_components(
             state,
             bot_id,
             cards,
             combo,
             features,
-            teammate_can_retake_for_relay,
         )
+        components.update(shared_response)
+        clean_single_relay = shared_response.get("clean_single_relay", 0.0)
         if clean_single_relay > 0.001:
-            components["clean_single_relay"] = clean_single_relay
             # The relay guard already checks physical residual quality and only
             # allows a cheap single when our teammate can keep the lane. Avoid
             # charging the same temporary split again through the generic shape
@@ -10927,12 +10912,6 @@ def _compute_bot_score_components(
                     relay_relief -= component_value
             if relay_relief > 0.001:
                 components["clean_single_relay_shape_relief"] = relay_relief
-        soft_pruning_penalty = _response_soft_pruning_penalty(state, bot_id, cards)
-        if soft_pruning_penalty > 0.001:
-            components["soft_candidate_prior"] = -soft_pruning_penalty
-        overbomb_penalty = _overbomb_soft_pruning_penalty(state, bot_id, cards)
-        if overbomb_penalty > 0.001:
-            components["soft_overbomb_prior"] = -overbomb_penalty
     if not remaining:
         components["finish_bonus"] = 100.0
     if combo["type"] in BOMB_TYPES:
@@ -10951,9 +10930,6 @@ def _compute_bot_score_components(
             )
             if empty_bomb_penalty > 0.001:
                 components["lead_empty_bomb"] = -empty_bomb_penalty * 1.12
-        critical_bonus = _critical_pair_three_bomb_bonus(state, bot_id, cards, combo)
-        if critical_bonus > 0:
-            components["critical_bomb_takeover"] = critical_bonus
         if current_trick and (current_trick.get("combo") or {}).get("type") == "single":
             current_rank = current_trick.get("combo", {}).get("rank_value", 0)
             if current_rank >= 90:
@@ -10962,10 +10938,7 @@ def _compute_bot_score_components(
                     rank_pressure = max(0.0, combo.get("rank_value", low_bomb_anchor) - low_bomb_anchor)
                 else:
                     rank_pressure = 6.0 + _bomb_tier(combo) * 1.5
-                minimal = _minimal_bomb_response(hand, level_rank, current_trick.get("combo", {}), config)
-                if minimal is not None and tuple(sorted(minimal)) == tuple(sorted(cards)) and rank_pressure <= 2.5:
-                    components["cheap_bomb_takeover"] = 4.5 - rank_pressure * 1.2
-                elif rank_pressure >= 4.0:
+                if rank_pressure >= 4.0:
                     components["premium_bomb_spend_penalty"] = -(rank_pressure - 3.5) * 2.0
     if combo.get("uses_wild"):
         components["wild_penalty"] = -2.0
@@ -11028,9 +11001,6 @@ def _compute_bot_score_components(
             overtrick_penalty *= 0.15
         if overtrick_penalty > 0:
             components["avoid_overtrick"] = -overtrick_penalty
-        safe_overtake = _teammate_safe_overtake_profile(state, bot_id, cards, combo)
-        if safe_overtake.get("qualified") and safe_overtake.get("bonus", 0.0) > 0.001:
-            components["safe_teammate_overtake"] = safe_overtake["bonus"]
     elif current_trick and _team_of(state, current_trick.get("player_id")) != _team_of(state, bot_id):
         teammate_can_retake_lane = _teammate_can_retake_current_lane(state, bot_id)
         seize = _takeover_opportunity_score(state, bot_id, cards)
@@ -11039,9 +11009,6 @@ def _compute_bot_score_components(
         teammate_lane_bonus = _response_teammate_lane_bonus(state, bot_id, cards, combo)
         if teammate_lane_bonus > 0.001:
             components["protect_teammate_lane"] = teammate_lane_bonus
-        teammate_lane_deference = _teammate_lane_deference_penalty(state, bot_id, cards, combo)
-        if teammate_lane_deference > 0.001 and clean_single_relay <= 0.001:
-            components["defer_teammate_lane"] = -teammate_lane_deference
         leader_left = len(state["players"].get(current_trick.get("player_id"), {}).get("hand", []))
         if combo.get("type") == (current_trick.get("combo") or {}).get("type") and combo.get("type") not in BOMB_TYPES:
             natural_takeover = 0.0
@@ -11094,9 +11061,6 @@ def _compute_bot_score_components(
         closeout_block = _opponent_one_card_closeout_bonus(state, bot_id, cards, combo)
         if closeout_block > 0.001:
             components["block_closeout"] = closeout_block
-        next_closeout_block = _next_opponent_one_card_block_bonus(state, bot_id, cards, combo)
-        if next_closeout_block > 0.001:
-            components["block_next_closeout"] = next_closeout_block
 
     if not current_trick:
         # Lead ranking has already populated the per-decision cache, so the
@@ -11667,7 +11631,7 @@ def _overbomb_soft_pruning_penalty(state: Dict, player_id: str, cards: List[int]
     return float(penalties.get((player_id, _cards_key(cards)), 0.0))
 
 
-def _quick_clean_single_relay_bonus(
+def _shared_clean_single_relay_bonus(
     state: Dict,
     player_id: str,
     cards: List[int],
@@ -11766,19 +11730,138 @@ def _quick_clean_single_relay_bonus(
     return 0.0
 
 
+def _shared_cheap_bomb_takeover_bonus(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+) -> float:
+    """Return the canonical low-bomb takeover value for both score tiers."""
+    current_trick = state.get("current_trick")
+    current_combo = (current_trick or {}).get("combo") or {}
+    if (
+        not current_trick
+        or combo.get("type") not in BOMB_TYPES
+        or current_combo.get("type") != "single"
+        or current_combo.get("rank_value", 0) < TOP_SINGLE_VALUE_MIN
+    ):
+        return 0.0
+
+    hand = state["players"].get(player_id, {}).get("hand", [])
+    minimal = _minimal_bomb_response(
+        hand,
+        state["level_rank"],
+        current_combo,
+        state.get("config", {}),
+    )
+    if minimal is None or tuple(sorted(minimal)) != tuple(sorted(cards)):
+        return 0.0
+
+    low_bomb_anchor = _point_order_value(3, state["level_rank"])
+    if combo.get("type") == "bomb":
+        rank_pressure = max(0.0, combo.get("rank_value", low_bomb_anchor) - low_bomb_anchor)
+    else:
+        rank_pressure = 6.0 + _bomb_tier(combo) * 1.5
+    if rank_pressure > 2.5:
+        return 0.0
+    return 4.5 - rank_pressure * 1.2
+
+
+def _shared_response_tactical_components(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+    features: Dict,
+) -> Dict[str, float]:
+    """Tactical response rules used unchanged by quick and detailed scoring."""
+    current_trick = state.get("current_trick") or {}
+    current_combo = current_trick.get("combo") or {}
+    cache = state.setdefault("_ai_eval_cache", {}).setdefault(
+        "shared_response_tactical_components",
+        {},
+    )
+    cache_key = (
+        player_id,
+        tuple(sorted(card["id"] for card in features.get("hand", []))),
+        current_trick.get("player_id"),
+        current_combo.get("type"),
+        current_combo.get("rank_value"),
+        current_combo.get("high_value"),
+        tuple(current_trick.get("cards") or ()),
+        _cards_key(cards),
+    )
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return dict(cached)
+
+    components: Dict[str, float] = {}
+    teammate = _teammate_of(state, player_id)
+    teammate_play = (state.get("trick_plays") or {}).get(teammate) if teammate else None
+    teammate_can_retake = False
+    if teammate_play and teammate_play != "pass":
+        retake_cache = state.setdefault("_ai_eval_cache", {}).setdefault(
+            "teammate_retake_lane",
+            {},
+        )
+        retake_key = (
+            player_id,
+            tuple(current_trick.get("cards") or []),
+            tuple(
+                card["id"]
+                for card in state["players"].get(teammate, {}).get("hand", [])
+            ),
+        )
+        if retake_key not in retake_cache:
+            retake_cache[retake_key] = _teammate_can_retake_current_lane(state, player_id)
+        teammate_can_retake = bool(retake_cache[retake_key])
+
+    relay = _shared_clean_single_relay_bonus(
+        state,
+        player_id,
+        cards,
+        combo,
+        features,
+        teammate_can_retake,
+    )
+    if relay > 0.001:
+        components["clean_single_relay"] = relay
+
+    critical_bomb = _critical_pair_three_bomb_bonus(state, player_id, cards, combo)
+    if critical_bomb > 0.001:
+        components["critical_bomb_takeover"] = critical_bomb
+
+    cheap_bomb = _shared_cheap_bomb_takeover_bonus(state, player_id, cards, combo)
+    if cheap_bomb > 0.001:
+        components["cheap_bomb_takeover"] = cheap_bomb
+
+    safe_overtake = _teammate_safe_overtake_profile(state, player_id, cards, combo)
+    if safe_overtake.get("qualified") and safe_overtake.get("bonus", 0.0) > 0.001:
+        components["safe_teammate_overtake"] = safe_overtake["bonus"]
+
+    lane_deference = _teammate_lane_deference_penalty(state, player_id, cards, combo)
+    if lane_deference > 0.001 and relay <= 0.001:
+        components["defer_teammate_lane"] = -lane_deference
+
+    next_closeout = _next_opponent_one_card_block_bonus(state, player_id, cards, combo)
+    if next_closeout > 0.001:
+        components["block_next_closeout"] = next_closeout
+
+    soft_pruning = _response_soft_pruning_penalty(state, player_id, cards)
+    if soft_pruning > 0.001 and relay <= 0.001:
+        components["soft_candidate_prior"] = -soft_pruning
+    overbomb = _overbomb_soft_pruning_penalty(state, player_id, cards)
+    if overbomb > 0.001:
+        components["soft_overbomb_prior"] = -overbomb
+
+    cache[cache_key] = dict(components)
+    return components
+
+
 def _quick_candidate_score(state: Dict, player_id: str, cards: Optional[List[int]]) -> float:
     current_trick = state.get("current_trick")
     if not cards:
-        if current_trick and current_trick.get("player_id") == _teammate_of(state, player_id):
-            return 20.0
-        leader = current_trick.get("player_id") if current_trick else None
-        leader_left = len(state["players"].get(leader, {}).get("hand", [])) if leader else 99
-        strategic_pass = _strategic_enemy_pass_bonus(state, player_id)
-        if leader_left <= 2:
-            return -12.0
-        if leader_left <= 5:
-            return -5.0
-        return strategic_pass
+        return sum(_shared_pass_tactical_components(state, player_id).values())
 
     features = _candidate_features(state, player_id, cards)
     hand = features["hand"]
@@ -11804,92 +11887,7 @@ def _quick_candidate_score(state: Dict, player_id: str, cards: Optional[List[int
         "heavenly": -16.0,
     }
     score = base_by_type.get(combo.get("type"), 0.0)
-    current_type = (current_trick.get("combo") or {}).get("type") if current_trick else None
-    leader = current_trick.get("player_id")
-    leader_left = len(state["players"].get(leader, {}).get("hand", [])) if leader else 99
     special_material = _cards_use_special_material(play_cards, state["level_rank"])
-    teammate = _teammate_of(state, player_id)
-    teammate_play = (state.get("trick_plays") or {}).get(teammate) if teammate else None
-    teammate_can_retake = False
-    if teammate_play and teammate_play != "pass":
-        eval_cache = state.setdefault("_ai_eval_cache", {})
-        retake_cache = eval_cache.setdefault("teammate_retake_lane", {})
-        retake_key = (
-            player_id,
-            tuple(current_trick.get("cards") or []),
-            tuple(card["id"] for card in state["players"].get(teammate, {}).get("hand", [])),
-        )
-        if retake_key not in retake_cache:
-            retake_cache[retake_key] = _teammate_can_retake_current_lane(state, player_id)
-        teammate_can_retake = bool(retake_cache[retake_key])
-    used_natural_level = sum(
-        1
-        for card in play_cards
-        if not _is_joker(card)
-        and not _is_wild(card, state["level_rank"])
-        and card.get("rank") == state["level_rank"]
-    )
-    level_split_prior = (
-        combo.get("type") in ("pair", "three")
-        and used_natural_level > 0
-        and features["before_counts"].get(state["level_rank"], 0) >= 3
-        and features["after_counts"].get(state["level_rank"], 0) >= 1
-    )
-    safe_teammate_overtake_prior = False
-    if (
-        leader == _teammate_of(state, player_id)
-        and combo.get("type") == current_type
-        and current_type in ("straight", "three_pairs", "steel_plate")
-        and combo.get("high_value", 0) >= 14
-        and not special_material
-    ):
-        public_actions = sum(
-            1
-            for round_entry in state.get("round_memories", []) or []
-            for trick in round_entry.get("tricks", []) or []
-            for action in trick.get("actions", []) or []
-            if action.get("type") in ("play", "pass")
-        )
-        seen_count = len(state.get("seen_cards", []) or []) + len(current_trick.get("cards") or [])
-        visibility = min(1.0, 0.18 + seen_count * 0.028 + public_actions * 0.06)
-        safe_teammate_overtake_prior = visibility >= 0.58
-    structured_history_pressure = 0.0
-    if combo.get("type") in BOMB_TYPES and leader:
-        structured_history_pressure = _structured_enemy_history_pressure(
-            state,
-            leader,
-            current_trick.get("combo") or {},
-        )
-    short_enemy_bomb_prior = (
-        combo.get("type") in BOMB_TYPES
-        and current_type in ("full_house", "straight", "three_pairs", "steel_plate")
-        and leader
-        and _team_of(state, leader) != _team_of(state, player_id)
-        and leader_left <= 6
-        and (leader_left <= 4 or len(hand) - len(cards) <= 4)
-        and (
-            not special_material
-            or (leader_left <= 4 and structured_history_pressure >= 0.5)
-        )
-    )
-    if (
-        combo.get("type") == "straight_flush"
-        and current_type == "straight"
-        and not combo.get("uses_wild")
-    ):
-        # A natural straight-flush response can be a structural upgrade rather
-        # than a wasteful emergency bomb; keep it competitive in the anytime prior.
-        score = 11.5
-    if (
-        combo.get("type") == "bomb"
-        and current_type == "single"
-        and (current_trick.get("combo") or {}).get("rank_value", 0) >= 90
-        and not combo.get("uses_wild")
-        and combo.get("rank_value", 99) <= _point_order_value(7, state["level_rank"])
-    ):
-        # A low natural bomb is a sound takeover against a joker lead and must
-        # remain the anytime incumbent even if MCTS gets no completed rollout.
-        score = 12.0
     score += len(cards) * 0.35
     score -= _combo_numeric_value(combo) * 0.02
     score -= features["fragment_penalty"] * 1.4
@@ -11905,62 +11903,14 @@ def _quick_candidate_score(state: Dict, player_id: str, cards: Optional[List[int
             score -= 10.0
         if len(hand) >= 24:
             score -= 5.0
-    if short_enemy_bomb_prior:
-        # Mirror the full evaluator's short-enemy pressure rule after material
-        # costs so a hard deadline cannot turn a forced takeover into a pass.
-        score = max(score, 15.0)
-    critical_bomb_prior = _critical_pair_three_bomb_bonus(state, player_id, cards, combo)
-    if critical_bomb_prior > 0.0:
-        score += critical_bomb_prior
-    clean_single_relay = _quick_clean_single_relay_bonus(
+    shared_response = _shared_response_tactical_components(
         state,
         player_id,
         cards,
         combo,
         features,
-        teammate_can_retake,
     )
-    if teammate_can_retake and (combo.get("type") == current_type or combo.get("type") in BOMB_TYPES):
-        if clean_single_relay <= 0.0:
-            score -= 24.0
-    if clean_single_relay > 0.0:
-        score += clean_single_relay
-    if leader and _team_of(state, leader) != _team_of(state, player_id):
-        if leader_left <= 2:
-            score += 8.0
-    if (
-        combo.get("type") == "bomb"
-        and current_type in ("pair", "three")
-        and not special_material
-        and combo.get("rank_value", 99) <= _point_order_value(7, state["level_rank"])
-        and _combo_numeric_value(current_trick.get("combo") or {})
-        >= _point_order_value(14, state["level_rank"])
-    ):
-        prior_passes = sum(
-            1
-            for round_entry in state.get("round_memories", []) or []
-            for trick in round_entry.get("tricks", []) or []
-            for action in trick.get("actions", []) or []
-            if action.get("player_id") == player_id and action.get("type") == "pass"
-        )
-        if prior_passes >= 2:
-            # Repeated public stalls are enough evidence to spend the cheapest
-            # natural bomb against a top rank and reset into our grouped tail.
-            score = max(score, 7.0)
-    if safe_teammate_overtake_prior:
-        # A natural top-end sequence cannot be overcalled by the same family;
-        # once enough public material is known, taking the lane is preferable.
-        score = max(score, 26.0)
-    if level_split_prior:
-        # Non-heart level cards are premium but inflexible in bulk. Spending a
-        # pair while retaining one control single often unlocks the rest of the
-        # hand, so keep that line alive in the deadline-safe policy.
-        score += 12.5
-    if combo.get("type") == "single":
-        score += _next_opponent_one_card_block_bonus(state, player_id, cards, combo)
-    if clean_single_relay <= 0.0:
-        score -= _response_soft_pruning_penalty(state, player_id, cards)
-    score -= _overbomb_soft_pruning_penalty(state, player_id, cards)
+    score += sum(shared_response.values())
     return score
 
 

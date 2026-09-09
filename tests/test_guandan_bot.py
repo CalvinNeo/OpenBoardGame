@@ -2185,6 +2185,94 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
 
         self.assertIsInstance(score, float)
 
+    def test_detailed_lead_score_extends_the_exact_cheap_core(self):
+        state, big = self._make_state()
+        state["current_trick"] = None
+        cards = [big["id"]]
+
+        with mock.patch("game.guandan_ai._compute_lead_cheap_option_score", return_value=10.0):
+            first = guandan._guandan_ai.call(
+                guandan,
+                "_compute_lead_option_score",
+                state,
+                "bot",
+                cards,
+            )
+        with mock.patch("game.guandan_ai._compute_lead_cheap_option_score", return_value=17.25):
+            second = guandan._guandan_ai.call(
+                guandan,
+                "_compute_lead_option_score",
+                state,
+                "bot",
+                cards,
+            )
+
+        self.assertAlmostEqual(second - first, 7.25)
+
+    def test_quick_and_detailed_response_consume_same_tactical_components(self):
+        state, _low, high = self._make_single_response_state()
+        cards = [high["id"]]
+
+        with mock.patch(
+            "game.guandan_ai._shared_response_tactical_components",
+            return_value={},
+        ):
+            quick_without_shared = guandan._guandan_ai.call(
+                guandan,
+                "_quick_candidate_score",
+                state,
+                "bot",
+                cards,
+            )
+        with mock.patch(
+            "game.guandan_ai._shared_response_tactical_components",
+            return_value={"shared_probe": 13.5},
+        ):
+            quick_with_shared = guandan._guandan_ai.call(
+                guandan,
+                "_quick_candidate_score",
+                state,
+                "bot",
+                cards,
+            )
+            detailed = guandan._guandan_ai.call(
+                guandan,
+                "_compute_bot_score_components",
+                state,
+                "bot",
+                cards,
+                3,
+            )
+
+        self.assertAlmostEqual(quick_with_shared - quick_without_shared, 13.5)
+        self.assertEqual(detailed["shared_probe"], 13.5)
+
+    def test_quick_and_detailed_pass_consume_same_tactical_components(self):
+        state, _low, _high = self._make_single_response_state()
+
+        with mock.patch(
+            "game.guandan_ai._shared_pass_tactical_components",
+            return_value={"shared_probe": 6.0},
+        ):
+            quick = guandan._guandan_ai.call(
+                guandan,
+                "_quick_candidate_score",
+                state,
+                "bot",
+                None,
+            )
+            detailed = guandan._guandan_ai.call(
+                guandan,
+                "_compute_bot_score_components",
+                state,
+                "bot",
+                None,
+                3,
+            )
+
+        self.assertEqual(quick, 6.0)
+        self.assertEqual(detailed["shared_probe"], 6.0)
+
     def test_deadline_lead_ranking_skips_detailed_prescore(self):
         state, _big = self._make_state()
         state["current_trick"] = None
