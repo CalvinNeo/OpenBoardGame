@@ -2259,6 +2259,73 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             {"evaluated": 0, "total": 5, "interrupted": True},
         )
 
+    def test_heuristic_future_deadline_refines_quick_incumbent(self):
+        state, _big = self._make_state()
+        state["config"]["bot_heuristic_min_deep_candidates"] = 3
+        options = [[11], [22], [33], [44]]
+
+        def quick_score(_state, _bot_id, cards):
+            if cards is None:
+                return -10.0
+            return {11: 10.0, 22: 9.0, 33: 8.0, 44: 7.0}[cards[0]]
+
+        def detailed_score(_state, _bot_id, cards, _depth):
+            if cards is None:
+                return {"total": -5.0}
+            return {"total": 100.0 if cards == [22] else float(cards[0])}
+
+        with mock.patch("game.guandan_ai._can_play_all", return_value=False):
+            with mock.patch("game.guandan_ai._list_hint_options", return_value=options):
+                with mock.patch("game.guandan_ai._rank_response_options", side_effect=lambda _s, _p, items: items):
+                    with mock.patch("game.guandan_ai._filter_overbomb_options", side_effect=lambda _s, _p, items: items):
+                        with mock.patch("game.guandan_ai._quick_candidate_score", side_effect=quick_score):
+                            with mock.patch("game.guandan_ai._bot_score_components", side_effect=detailed_score) as score:
+                                chosen = guandan._bot_select_play(
+                                    state,
+                                    "bot",
+                                    depth=3,
+                                    deadline=10**12,
+                                )
+
+        self.assertEqual(chosen, [22])
+        self.assertEqual(score.call_count, 3)
+        self.assertEqual(
+            state["_ai_eval_cache"]["heuristic_anytime"],
+            {"evaluated": 3, "total": 5, "interrupted": True},
+        )
+
+    def test_heuristic_discards_partial_finalist_but_keeps_completed_prefix(self):
+        state, _big = self._make_state()
+        state["config"]["bot_heuristic_min_deep_candidates"] = 3
+        options = [[11], [22]]
+
+        def quick_score(_state, _bot_id, cards):
+            return -10.0 if cards is None else float(100 - cards[0])
+
+        def detailed_score(_state, _bot_id, cards, _depth):
+            if cards == [11]:
+                return {"total": 12.0}
+            return {"anytime_partial": 1.0, "total": 999.0}
+
+        with mock.patch("game.guandan_ai._can_play_all", return_value=False):
+            with mock.patch("game.guandan_ai._list_hint_options", return_value=options):
+                with mock.patch("game.guandan_ai._rank_response_options", side_effect=lambda _s, _p, items: items):
+                    with mock.patch("game.guandan_ai._filter_overbomb_options", side_effect=lambda _s, _p, items: items):
+                        with mock.patch("game.guandan_ai._quick_candidate_score", side_effect=quick_score):
+                            with mock.patch("game.guandan_ai._bot_score_components", side_effect=detailed_score):
+                                chosen = guandan._bot_select_play(
+                                    state,
+                                    "bot",
+                                    depth=3,
+                                    deadline=10**12,
+                                )
+
+        self.assertEqual(chosen, [11])
+        self.assertEqual(
+            state["_ai_eval_cache"]["heuristic_anytime"],
+            {"evaluated": 1, "total": 3, "interrupted": True},
+        )
+
     def test_search_clone_isolated_from_root_state(self):
         players = [
             {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},

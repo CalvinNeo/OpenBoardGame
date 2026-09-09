@@ -76,6 +76,11 @@ def _deadline_remaining(explicit: Optional[float] = None) -> Optional[float]:
     return deadline - time.perf_counter()
 
 
+def _bounded_finalist_scoring() -> bool:
+    """Return whether detailed scoring must use deadline-safe approximations."""
+    return bool(getattr(_CORE_LOCAL, "bounded_finalist_scoring", False))
+
+
 def _proxy(name: str):
     def wrapped(*args, **kwargs):
         core = _get_core()
@@ -1491,18 +1496,20 @@ def _candidate_features(
 
 
 def _candidate_hand_strength(features: Dict, level_rank: int) -> float:
-    cached = features.get("hand_strength")
+    cache_key = "hand_strength_bounded" if _bounded_finalist_scoring() else "hand_strength"
+    cached = features.get(cache_key)
     if cached is None:
         cached = _hand_strength_score(features["hand"], level_rank)
-        features["hand_strength"] = cached
+        features[cache_key] = cached
     return float(cached)
 
 
 def _candidate_remaining_strength(features: Dict, level_rank: int) -> float:
-    cached = features.get("remaining_strength")
+    cache_key = "remaining_strength_bounded" if _bounded_finalist_scoring() else "remaining_strength"
+    cached = features.get(cache_key)
     if cached is None:
         cached = _hand_strength_score(features["remaining"], level_rank)
-        features["remaining_strength"] = cached
+        features[cache_key] = cached
     return float(cached)
 
 
@@ -1612,6 +1619,7 @@ def _lead_option_score(state: Dict, player_id: str, cards: List[int]) -> float:
         )
         cache_key = (
             player_id,
+            _bounded_finalist_scoring(),
             state["level_rank"],
             state.get("round_number"),
             state.get("current_turn"),
@@ -5415,6 +5423,17 @@ def _opening_safe_group_leads(
     level_rank = state["level_rank"]
     hand_map = _map_hand_by_id(hand)
     exclude_key = tuple(sorted(exclude_cards or []))
+    eval_cache = state.setdefault("_ai_eval_cache", {})
+    result_cache = eval_cache.setdefault("opening_safe_group_leads", {})
+    cache_key = (
+        player_id,
+        level_rank,
+        tuple(sorted(card["id"] for card in hand)),
+        exclude_key,
+    )
+    cached = result_cache.get(cache_key)
+    if cached is not None:
+        return [(list(cards), dict(combo)) for cards, combo in cached]
     options: List[Tuple[List[int], Dict]] = []
     for size, max_value in ((2, LOW_SINGLE_VALUE_MAX), (3, 56)):
         for cards in _list_rank_group_options(hand, level_rank, 0, size):
@@ -5433,6 +5452,7 @@ def _opening_safe_group_leads(
             if _control_group_break_penalty(hand, cards, level_rank) > 1.2:
                 continue
             options.append((cards, combo))
+    result_cache[cache_key] = [(list(cards), dict(combo)) for cards, combo in options]
     return options
 
 
@@ -5445,6 +5465,17 @@ def _opening_safe_structured_leads(
     level_rank = state["level_rank"]
     hand_map = _map_hand_by_id(hand)
     exclude_key = tuple(sorted(exclude_cards or []))
+    eval_cache = state.setdefault("_ai_eval_cache", {})
+    result_cache = eval_cache.setdefault("opening_safe_structured_leads", {})
+    cache_key = (
+        player_id,
+        level_rank,
+        tuple(sorted(card["id"] for card in hand)),
+        exclude_key,
+    )
+    cached = result_cache.get(cache_key)
+    if cached is not None:
+        return [(list(cards), dict(combo)) for cards, combo in cached]
     options: List[Tuple[List[int], Dict]] = []
     specs = (
         (_list_straight_options, "straight", 10),
@@ -5468,6 +5499,7 @@ def _opening_safe_structured_leads(
             if _control_group_break_penalty(hand, cards, level_rank) > 2.6:
                 continue
             options.append((cards, combo))
+    result_cache[cache_key] = [(list(cards), dict(combo)) for cards, combo in options]
     return options
 
 
@@ -7480,6 +7512,9 @@ def _hand_decomposition_summary(hand: List[Dict], level_rank: int) -> Dict[str, 
     if not hand:
         return _empty_hand_decomposition_summary()
 
+    if _bounded_finalist_scoring():
+        return _fast_hand_decomposition_summary(hand, level_rank)
+
     if _deadline_expired():
         return _fast_hand_decomposition_summary(hand, level_rank)
 
@@ -7627,6 +7662,8 @@ def _global_hand_decomposition_summary(hand: List[Dict], level_rank: int) -> Dic
     """Bounded diversified search used only while scoring finalist actions."""
     if not hand:
         return _empty_hand_decomposition_summary()
+    if _bounded_finalist_scoring():
+        return _fast_hand_decomposition_summary(hand, level_rank)
     if _deadline_expired():
         return _fast_hand_decomposition_summary(hand, level_rank)
 
@@ -7865,10 +7902,12 @@ def _hand_structure_metrics(hand: List[Dict], level_rank: int) -> Dict[str, floa
             "decomp_special_turns": 0.0,
         }
 
+    bounded = _bounded_finalist_scoring()
     cache_key = _hand_decomposition_cache_key(hand, level_rank)
-    cached = _HAND_STRUCTURE_CACHE.get(cache_key)
-    if cached is not None:
-        return _copy_hand_structure_metrics(cached)
+    if not bounded:
+        cached = _HAND_STRUCTURE_CACHE.get(cache_key)
+        if cached is not None:
+            return _copy_hand_structure_metrics(cached)
 
     info = _hand_info(hand, level_rank)
     strength = _rank_strength(level_rank)
@@ -7974,19 +8013,22 @@ def _hand_structure_metrics(hand: List[Dict], level_rank: int) -> Dict[str, floa
         "decomp_bomb_turns": float(decomp.get("bomb_turns", 0.0)),
         "decomp_special_turns": float(decomp.get("special_material_turns", 0.0)),
     }
-    if len(_HAND_STRUCTURE_CACHE) >= _HAND_STRUCTURE_CACHE_LIMIT:
-        _HAND_STRUCTURE_CACHE.clear()
-    _HAND_STRUCTURE_CACHE[cache_key] = _copy_hand_structure_metrics(metrics)
+    if not bounded:
+        if len(_HAND_STRUCTURE_CACHE) >= _HAND_STRUCTURE_CACHE_LIMIT:
+            _HAND_STRUCTURE_CACHE.clear()
+        _HAND_STRUCTURE_CACHE[cache_key] = _copy_hand_structure_metrics(metrics)
     return metrics
 
 
 def _hand_strength_score(hand: List[Dict], level_rank: int) -> float:
     if not hand:
         return 0.0
+    bounded = _bounded_finalist_scoring()
     cache_key = _hand_decomposition_cache_key(hand, level_rank)
-    cached = _HAND_STRENGTH_CACHE.get(cache_key)
-    if cached is not None:
-        return cached
+    if not bounded:
+        cached = _HAND_STRENGTH_CACHE.get(cache_key)
+        if cached is not None:
+            return cached
     metrics = _hand_structure_metrics(hand, level_rank)
 
     score = 0.0
@@ -8027,19 +8069,22 @@ def _hand_strength_score(hand: List[Dict], level_rank: int) -> float:
     score += min(2.6, metrics["decomp_grouped_cards"] * 0.07)
     score += metrics["decomp_bomb_turns"] * 0.32
     score -= metrics["decomp_special_turns"] * 0.18
-    if len(_HAND_STRENGTH_CACHE) >= _HAND_STRENGTH_CACHE_LIMIT:
-        _HAND_STRENGTH_CACHE.clear()
-    _HAND_STRENGTH_CACHE[cache_key] = score
+    if not bounded:
+        if len(_HAND_STRENGTH_CACHE) >= _HAND_STRENGTH_CACHE_LIMIT:
+            _HAND_STRENGTH_CACHE.clear()
+        _HAND_STRENGTH_CACHE[cache_key] = score
     return score
 
 
 def _estimated_turns_to_finish(hand: List[Dict], level_rank: int) -> float:
     if not hand:
         return 0.0
+    bounded = _bounded_finalist_scoring()
     cache_key = _hand_decomposition_cache_key(hand, level_rank)
-    cached = _HAND_TURNS_CACHE.get(cache_key)
-    if cached is not None:
-        return cached
+    if not bounded:
+        cached = _HAND_TURNS_CACHE.get(cache_key)
+        if cached is not None:
+            return cached
     metrics = _hand_structure_metrics(hand, level_rank)
     turns = float(len(hand))
     turns -= metrics["turn_savings"]
@@ -8053,9 +8098,10 @@ def _estimated_turns_to_finish(hand: List[Dict], level_rank: int) -> float:
         decomp_turns += metrics["decomp_special_turns"] * 0.08
         turns = min(turns, decomp_turns)
     result = max(1.0, turns)
-    if len(_HAND_TURNS_CACHE) >= _HAND_TURNS_CACHE_LIMIT:
-        _HAND_TURNS_CACHE.clear()
-    _HAND_TURNS_CACHE[cache_key] = result
+    if not bounded:
+        if len(_HAND_TURNS_CACHE) >= _HAND_TURNS_CACHE_LIMIT:
+            _HAND_TURNS_CACHE.clear()
+        _HAND_TURNS_CACHE[cache_key] = result
     return result
 
 
@@ -10441,6 +10487,7 @@ def _bot_component_cache_key(
     return (
         bot_id,
         depth,
+        _bounded_finalist_scoring(),
         state.get("round_number"),
         state.get("phase"),
         state.get("current_turn"),
@@ -10925,6 +10972,27 @@ def _bot_score_components(
     components = _compute_bot_score_components(state, bot_id, cards, depth)
     component_cache[cache_key] = dict(components)
     return components
+
+
+def _bot_finalist_score_components(
+    state: Dict,
+    bot_id: str,
+    cards: Optional[List[int]],
+    depth: int,
+    bounded: bool,
+) -> Dict[str, float]:
+    """Score one finalist without letting its decomposition consume the turn."""
+    had_mode = hasattr(_CORE_LOCAL, "bounded_finalist_scoring")
+    previous_mode = getattr(_CORE_LOCAL, "bounded_finalist_scoring", False)
+    if bounded:
+        _CORE_LOCAL.bounded_finalist_scoring = True
+    try:
+        return _bot_score_components(state, bot_id, cards, depth)
+    finally:
+        if had_mode:
+            _CORE_LOCAL.bounded_finalist_scoring = previous_mode
+        elif hasattr(_CORE_LOCAL, "bounded_finalist_scoring"):
+            delattr(_CORE_LOCAL, "bounded_finalist_scoring")
 
 
 def _bot_score_play(state: Dict, bot_id: str, cards: Optional[List[int]], depth: int) -> float:
@@ -11814,20 +11882,90 @@ def _bot_select_play(
                 return (tier, -_quick_candidate_score(state, bot_id, cand))
 
             remaining_candidates.sort(key=counterfactual_priority)
+    elif current_trick:
+        # A response decision is incomplete unless the detailed stage compares
+        # its best play with passing. Schedule pass immediately after the cheap
+        # incumbent, then use the quick score to spend the remaining finalist
+        # budget on the most plausible alternatives first.
+        if None in remaining_candidates:
+            remaining_candidates.remove(None)
+            ordered_candidates.append(None)
+        remaining_candidates.sort(
+            key=lambda cand: _quick_candidate_score(state, bot_id, cand),
+            reverse=True,
+        )
     ordered_candidates.extend(remaining_candidates)
-    scored = []
-    # Detailed scoring contains strategic counterfactuals that cannot all be
-    # interrupted safely inside one candidate. With a wall-clock deadline, the
-    # bounded prescore itself is the anytime policy; detailed/global scoring
-    # remains available to no-deadline callers and MCTS finalist evaluation.
-    if deadline is None:
-        for cand in ordered_candidates:
-            components = _bot_score_components(state, bot_id, cand, depth)
-            scored.append((cand, components.get("total", -999.0), components))
+    config = state.get("config", {})
+    target_key = (
+        "bot_heuristic_min_lead_deep_candidates"
+        if is_lead
+        else "bot_heuristic_min_deep_candidates"
+    )
+    target_default = 3
+    detailed_target = min(
+        len(ordered_candidates),
+        max(1, int(config.get(target_key, target_default))),
+    )
+    scored: List[Tuple[Optional[List[int]], float, Dict[str, float]]] = []
+    candidate_durations: List[float] = []
+    for cand in ordered_candidates:
+        if deadline is not None:
+            remaining_budget = deadline - time.perf_counter()
+            # The detailed scorer itself switches to a partial result below
+            # roughly 80ms. Do not start work that cannot produce a comparable
+            # score. After the first finalist, also reserve the observed cost of
+            # another evaluation so a slow candidate cannot overrun the turn.
+            required_budget = 0.09
+            if candidate_durations:
+                required_budget = max(
+                    required_budget,
+                    max(candidate_durations) * 1.25 + 0.01,
+                )
+            if remaining_budget <= required_budget:
+                break
+
+        started_at = time.perf_counter()
+        components = _bot_finalist_score_components(
+            state,
+            bot_id,
+            cand,
+            depth,
+            bounded=deadline is not None,
+        )
+        candidate_durations.append(time.perf_counter() - started_at)
+        if components.get("anytime_partial"):
+            # A partial component vector is not on the same scale as a completed
+            # one. Retain the completed prefix (or the cheap incumbent below)
+            # instead of allowing an unfinished candidate to win accidentally.
+            break
+        if deadline is not None:
+            # The quick policy contains deadline-safe tactical guards that are not
+            # all reproduced by the residual-hand evaluator. Treat detailed
+            # scoring as a bounded correction to that policy instead of replacing
+            # it with a differently scaled objective.
+            quick_score = _quick_candidate_score(state, bot_id, cand)
+            detailed_weight = max(
+                0.0,
+                float(config.get("bot_heuristic_detailed_weight", 0.15)),
+            )
+            weighted_components = {
+                key: value * detailed_weight
+                for key, value in components.items()
+                if key != "total"
+            }
+            detailed_residual = (
+                components.get("total", 0.0)
+                - sum(value for key, value in components.items() if key != "total")
+            ) * detailed_weight
+            if abs(detailed_residual) > 0.001:
+                weighted_components["anytime_detailed_residual"] = detailed_residual
+            weighted_components["anytime_quick_score"] = quick_score
+            weighted_components["total"] = sum(weighted_components.values())
+            components = weighted_components
+        scored.append((cand, components.get("total", -999.0), components))
+        if deadline is not None and len(scored) >= detailed_target:
+            break
     detailed_evaluated = len(scored)
-    if any(components.get("anytime_partial") for _cand, _score, components in scored):
-        scored = []
-        detailed_evaluated = 0
     if not scored:
         quick_score = _quick_candidate_score(state, bot_id, incumbent)
         scored.append(
