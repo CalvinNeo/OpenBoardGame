@@ -9493,6 +9493,141 @@ def _cheap_clean_single_takeover_bonus(
     return bonus
 
 
+def _strategic_enemy_pass_bonus(state: Dict, player_id: str) -> float:
+    """Reward conserving material against a non-threatening long enemy hand."""
+    current_trick = state.get("current_trick")
+    if not current_trick:
+        return 0.0
+    leader = current_trick.get("player_id")
+    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+        return 0.0
+    leader_left = len(state["players"].get(leader, {}).get("hand", []))
+    if leader_left <= 5 or _must_contest_short_enemy_as_last_defender(state, player_id):
+        return 0.0
+
+    hand = state["players"].get(player_id, {}).get("hand", [])
+    if len(hand) <= 3:
+        return 0.0
+    hand_map = _map_hand_by_id(hand)
+    current_combo = current_trick.get("combo") or {}
+    current_type = current_combo.get("type") or ""
+    if leader_left <= 8 and current_type in (
+        "full_house",
+        "straight",
+        "three_pairs",
+        "steel_plate",
+        *BOMB_TYPES,
+    ):
+        # Five or six cards may be a whole hand, while a bomb can preserve the
+        # lead through the next exchange. Treat these as closeout threats even
+        # though the opponent technically has more than five cards left.
+        return 0.0
+    options = _filter_overbomb_options(
+        state,
+        player_id,
+        _rank_response_options(state, player_id, _list_hint_options(state, player_id)),
+    )
+    if not options:
+        return 0.0
+
+    response_costs: List[float] = []
+    all_special = True
+    all_bombs = True
+    for cards in options:
+        play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+        combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
+        if not combo:
+            continue
+        if len(cards) == len(hand):
+            return 0.0
+        combo_type = combo.get("type") or ""
+        uses_special = _cards_use_special_material(play_cards, state["level_rank"])
+        material_cost = _response_material_cost(state, player_id, cards, combo)
+        fragment_penalty = _group_fragment_penalty(hand, cards, state["level_rank"], combo)
+        control_break = _control_group_break_penalty(hand, cards, state["level_rank"])
+        shape_loss = max(0.0, -_shape_transition_score(hand, cards, state["level_rank"]))
+        clean_takeover = (
+            combo_type == current_type
+            and combo_type not in BOMB_TYPES
+            and not uses_special
+            and material_cost <= 3.2
+            and fragment_penalty <= 1.2
+            and control_break <= 1.0
+            and shape_loss <= 1.2
+        )
+        if clean_takeover:
+            # A cheap natural takeover both sheds cards and wins tempo; a long
+            # enemy hand alone is not a reason to decline it.
+            return 0.0
+        natural_structure_takeover = (
+            combo_type == current_type
+            and combo_type in ("full_house", "straight", "three_pairs", "steel_plate")
+            and len(cards) >= 5
+            and not uses_special
+            and fragment_penalty <= 5.0
+            and control_break <= 4.0
+            and shape_loss <= 5.0
+        )
+        if natural_structure_takeover:
+            # A natural multi-card response is itself efficient shedding. Do
+            # not classify it like breaking a pair for one marginal card.
+            return 0.0
+        if (
+            current_type == "single"
+            and combo_type == "single"
+            and len(play_cards) == 1
+            and play_cards[0].get("joker") == "small"
+        ):
+            natural_alt = _has_natural_same_type_response(state, player_id, combo_type, cards)
+            if _small_joker_single_retake_relief(
+                state,
+                player_id,
+                cards,
+                combo,
+                natural_alt,
+            ) >= 6.0:
+                # A loose small joker can be the cheapest way to retake the
+                # lead when every natural single damages a control group.
+                return 0.0
+        all_special = all_special and uses_special
+        all_bombs = all_bombs and combo_type in BOMB_TYPES
+        response_costs.append(
+            material_cost
+            + fragment_penalty * 0.55
+            + control_break * 0.65
+            + shape_loss * 0.45
+            + (5.0 if uses_special else 0.0)
+            + (7.0 + _bomb_tier(combo) * 1.5 if combo_type in BOMB_TYPES else 0.0)
+        )
+
+    if not response_costs:
+        return 0.0
+    cheapest_cost = min(response_costs)
+    if cheapest_cost < 4.0 and not all_special and not all_bombs:
+        return 0.0
+
+    bonus = 1.0
+    if leader_left >= 12:
+        bonus += 3.0
+    elif leader_left >= 9:
+        bonus += 2.0
+    elif leader_left >= 7:
+        bonus += 1.0
+    bonus += min(8.0, max(0.0, cheapest_cost - 3.0) * 0.72)
+    if all_special:
+        bonus += 3.5
+    if all_bombs:
+        bonus += 5.0
+    bonus += _teammate_backstop_confidence(state, player_id, current_combo) * 5.0
+
+    # Near our own finish, tempo is worth more than preserving medium material.
+    if len(hand) <= 5:
+        bonus *= 0.35
+    elif len(hand) <= 7:
+        bonus *= 0.7
+    return max(0.0, min(16.0, bonus))
+
+
 def _mcts_fast_path_scores(
     candidates: List[Dict],
     heuristic_values: Dict[Tuple, float],
@@ -10670,6 +10805,24 @@ def _compute_bot_score_components(
                         components["cheap_bomb_pass_penalty"] = -(4.5 - rank_pressure * 1.2)
                     elif rank_pressure >= 4.0:
                         components["preserve_premium_bomb"] = (rank_pressure - 3.5) * 2.0
+            strategic_pass = _strategic_enemy_pass_bonus(state, bot_id)
+            tactical_pass_alarms = (
+                "pass_structure_concession",
+                "pass_closeout_threat",
+                "critical_bomb_pass_penalty",
+                "pass_short_enemy_defer_risk",
+                "pass_best_bomb_gap",
+                "pass_stall_shape_risk",
+                "cheap_bomb_pass_penalty",
+            )
+            has_tactical_pass_alarm = any(
+                components.get(name, 0.0) < -0.001 for name in tactical_pass_alarms
+            )
+            has_tactical_pass_alarm = has_tactical_pass_alarm or (
+                components.get("pass_lane_concession", 0.0) <= -4.0
+            )
+            if strategic_pass > 0.001 and not has_tactical_pass_alarm:
+                components["strategic_enemy_pass"] = strategic_pass
         components["total"] = sum(components.values())
         return components
 
@@ -10871,6 +11024,8 @@ def _compute_bot_score_components(
             combo,
             len(remaining),
         )
+        if clean_single_relay > 0.001:
+            overtrick_penalty *= 0.15
         if overtrick_penalty > 0:
             components["avoid_overtrick"] = -overtrick_penalty
         safe_overtake = _teammate_safe_overtake_profile(state, bot_id, cards, combo)
@@ -11578,11 +11733,29 @@ def _quick_clean_single_relay_bonus(
     leader = current_trick.get("player_id")
     if leader == teammate:
         teammate_left = len(state["players"].get(teammate, {}).get("hand", [])) if teammate else 99
-        if teammate_left <= 1 or len(hand) > 3:
+        next_player = _next_active_after(state, player_id)
+        next_enemy_left = (
+            len(state["players"].get(next_player, {}).get("hand", []))
+            if next_player and _team_of(state, next_player) != _team_of(state, player_id)
+            else 99
+        )
+        low_lead_ceiling = _point_order_value(8, state["level_rank"])
+        low_reply_ceiling = _point_order_value(9, state["level_rank"])
+        if (
+            teammate_left <= 1
+            or current_value > low_lead_ceiling
+            or card_value > low_reply_ceiling
+            or margin > 2
+            or rank_count != 1
+            or residual_loss > 2.5
+            or next_enemy_left <= 5
+        ):
             return 0.0
-        bonus = 15.5 + max(0.0, 4 - len(hand)) * 2.0
-        if len(hand) <= 8:
-            bonus += 2.5
+        bonus = 7.0 + max(0.0, 3 - margin) * 0.8
+        if len(hand) <= 3:
+            bonus += 8.0
+        elif len(hand) <= 7:
+            bonus += 2.0
         return bonus
 
     if teammate_can_retake and leader and _team_of(state, leader) != _team_of(state, player_id):
@@ -11600,11 +11773,12 @@ def _quick_candidate_score(state: Dict, player_id: str, cards: Optional[List[int
             return 20.0
         leader = current_trick.get("player_id") if current_trick else None
         leader_left = len(state["players"].get(leader, {}).get("hand", [])) if leader else 99
+        strategic_pass = _strategic_enemy_pass_bonus(state, player_id)
         if leader_left <= 2:
             return -12.0
         if leader_left <= 5:
             return -5.0
-        return 0.0
+        return strategic_pass
 
     features = _candidate_features(state, player_id, cards)
     hand = features["hand"]

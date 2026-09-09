@@ -4413,6 +4413,79 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
 
         self.assertGreater(play_score, pass_score)
 
+    def test_long_enemy_lead_prefers_strategic_pass_when_every_reply_breaks_pairs(self):
+        players = [
+            {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
+            {"player_id": "opp", "name": "Opp", "seat": 1, "is_bot": False},
+            {"player_id": "mate", "name": "Mate", "seat": 2, "is_bot": False},
+            {"player_id": "opp2", "name": "Opp 2", "seat": 3, "is_bot": False},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["current_turn"] = "bot"
+        state["config"]["bot_mode"] = "heuristic"
+        deck = guandan._full_deck()
+        lead = self._pick_labels(deck, ["♦️7"])[0]
+        state["players"]["bot"]["hand"] = self._pick_labels(
+            deck,
+            ["♠️8", "♥️8", "♠️10", "♥️10", "♠️Q", "♥️Q", "♠️3", "♥️3"],
+        )
+        state["players"]["opp2"]["hand"] = deck[:10]
+        del deck[:10]
+        state["players"]["opp"]["hand"] = deck[:10]
+        del deck[:10]
+        state["players"]["mate"]["hand"] = deck[:10]
+        state["current_trick"] = {
+            "player_id": "opp2",
+            "cards": [lead["id"]],
+            "combo": guandan._evaluate_combo(
+                [lead], state["level_rank"], state.get("config", {})
+            ),
+        }
+        state["trick_plays"] = {"opp2": [lead]}
+
+        pass_components = guandan._bot_score_components(state, "bot", None, depth=4)
+        self.assertGreater(pass_components.get("strategic_enemy_pass", 0.0), 0.0)
+        action = guandan.GuandanGame.bot_move(state, "bot")
+        self.assertEqual(action.get("type"), "pass")
+
+    def test_long_enemy_lead_still_takes_clean_low_cost_single(self):
+        players = [
+            {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
+            {"player_id": "opp", "name": "Opp", "seat": 1, "is_bot": False},
+            {"player_id": "mate", "name": "Mate", "seat": 2, "is_bot": False},
+            {"player_id": "opp2", "name": "Opp 2", "seat": 3, "is_bot": False},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["current_turn"] = "bot"
+        state["config"]["bot_mode"] = "heuristic"
+        deck = guandan._full_deck()
+        lead = self._pick_labels(deck, ["♦️7"])[0]
+        clean_eight = self._pick_labels(deck, ["♠️8"])[0]
+        state["players"]["bot"]["hand"] = [clean_eight] + self._pick_labels(
+            deck,
+            ["♠️10", "♥️10", "♠️Q", "♥️Q", "♠️3", "♥️3"],
+        )
+        state["players"]["opp2"]["hand"] = deck[:10]
+        del deck[:10]
+        state["players"]["opp"]["hand"] = deck[:10]
+        del deck[:10]
+        state["players"]["mate"]["hand"] = deck[:10]
+        state["current_trick"] = {
+            "player_id": "opp2",
+            "cards": [lead["id"]],
+            "combo": guandan._evaluate_combo(
+                [lead], state["level_rank"], state.get("config", {})
+            ),
+        }
+        state["trick_plays"] = {"opp2": [lead]}
+
+        pass_components = guandan._bot_score_components(state, "bot", None, depth=4)
+        self.assertNotIn("strategic_enemy_pass", pass_components)
+        action = guandan.GuandanGame.bot_move(state, "bot")
+        self.assertEqual(action, {"type": "play", "card_ids": [clean_eight["id"]]})
+
     def test_heuristic_low_single_response_prefers_clean_singleton_over_split_pair(self):
         players = [
             {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
@@ -4663,6 +4736,113 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         play_score = guandan._bot_score_play(state, "bot", [five["id"]], depth=3)
 
         self.assertGreater(pass_score, play_score)
+
+    def test_low_teammate_single_allows_clean_one_step_relay(self):
+        players = [
+            {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
+            {"player_id": "opp", "name": "Opp", "seat": 1, "is_bot": False},
+            {"player_id": "mate", "name": "Mate", "seat": 2, "is_bot": False},
+            {"player_id": "opp2", "name": "Opp 2", "seat": 3, "is_bot": False},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["current_turn"] = "bot"
+        state["config"]["bot_mode"] = "heuristic"
+        deck = guandan._full_deck()
+        teammate_seven = self._pick_labels(deck, ["♦️7"])[0]
+        clean_eight = self._pick_labels(deck, ["♠️8"])[0]
+        state["players"]["bot"]["hand"] = [clean_eight] + self._pick_labels(
+            deck,
+            ["♠️10", "♥️10", "♠️Q", "♥️Q", "♠️3", "♥️3"],
+        )
+        state["players"]["opp"]["hand"] = deck[:8]
+        del deck[:8]
+        state["players"]["mate"]["hand"] = deck[:8]
+        del deck[:8]
+        state["players"]["opp2"]["hand"] = deck[:8]
+        state["current_trick"] = {
+            "player_id": "mate",
+            "cards": [teammate_seven["id"]],
+            "combo": guandan._evaluate_combo(
+                [teammate_seven], state["level_rank"], state.get("config", {})
+            ),
+        }
+        state["trick_plays"] = {"mate": [teammate_seven], "opp2": "pass"}
+        state["pass_count"] = 1
+
+        action = guandan.GuandanGame.bot_move(state, "bot")
+        self.assertEqual(action, {"type": "play", "card_ids": [clean_eight["id"]]})
+
+    def test_low_teammate_single_does_not_justify_large_jump(self):
+        players = [
+            {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
+            {"player_id": "opp", "name": "Opp", "seat": 1, "is_bot": False},
+            {"player_id": "mate", "name": "Mate", "seat": 2, "is_bot": False},
+            {"player_id": "opp2", "name": "Opp 2", "seat": 3, "is_bot": False},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["current_turn"] = "bot"
+        state["config"]["bot_mode"] = "heuristic"
+        deck = guandan._full_deck()
+        teammate_seven = self._pick_labels(deck, ["♦️7"])[0]
+        state["players"]["bot"]["hand"] = self._pick_labels(
+            deck,
+            ["♠️J", "♠️Q", "♥️Q", "♠️3", "♥️3"],
+        )
+        state["players"]["opp"]["hand"] = deck[:8]
+        del deck[:8]
+        state["players"]["mate"]["hand"] = deck[:8]
+        del deck[:8]
+        state["players"]["opp2"]["hand"] = deck[:8]
+        state["current_trick"] = {
+            "player_id": "mate",
+            "cards": [teammate_seven["id"]],
+            "combo": guandan._evaluate_combo(
+                [teammate_seven], state["level_rank"], state.get("config", {})
+            ),
+        }
+        state["trick_plays"] = {"mate": [teammate_seven], "opp2": "pass"}
+        state["pass_count"] = 1
+
+        action = guandan.GuandanGame.bot_move(state, "bot")
+        self.assertEqual(action.get("type"), "pass")
+
+    def test_high_teammate_single_does_not_allow_even_one_step_relay(self):
+        players = [
+            {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
+            {"player_id": "opp", "name": "Opp", "seat": 1, "is_bot": False},
+            {"player_id": "mate", "name": "Mate", "seat": 2, "is_bot": False},
+            {"player_id": "opp2", "name": "Opp 2", "seat": 3, "is_bot": False},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["current_turn"] = "bot"
+        state["config"]["bot_mode"] = "heuristic"
+        deck = guandan._full_deck()
+        teammate_ten = self._pick_labels(deck, ["♦️10"])[0]
+        clean_jack = self._pick_labels(deck, ["♠️J"])[0]
+        state["players"]["bot"]["hand"] = [clean_jack] + self._pick_labels(
+            deck,
+            ["♠️Q", "♥️Q", "♠️3", "♥️3"],
+        )
+        state["players"]["opp"]["hand"] = deck[:8]
+        del deck[:8]
+        state["players"]["mate"]["hand"] = deck[:8]
+        del deck[:8]
+        state["players"]["opp2"]["hand"] = deck[:8]
+        state["current_trick"] = {
+            "player_id": "mate",
+            "cards": [teammate_ten["id"]],
+            "combo": guandan._evaluate_combo(
+                [teammate_ten], state["level_rank"], state.get("config", {})
+            ),
+        }
+        state["trick_plays"] = {"mate": [teammate_ten], "opp2": "pass"}
+        state["pass_count"] = 1
+
+        action = guandan.GuandanGame.bot_move(state, "bot")
+        self.assertEqual(action.get("type"), "pass")
 
     def test_strong_teammate_pair_not_overtricked_by_split_ace_bomb(self):
         players = [
@@ -8641,7 +8821,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         state["config"]["bot_mode"] = "heuristic"
 
         deck = guandan._full_deck()
-        teammate_lead = self._pick_labels(deck, ["♦️5"])[0]
+        teammate_lead = self._pick_labels(deck, ["♦️8"])[0]
         state["players"]["bot"]["hand"] = self._pick_labels(deck, ["♣️9", "♣️10"])
         state["players"]["mate"]["hand"] = self._pick_labels(
             deck,
