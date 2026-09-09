@@ -2254,10 +2254,12 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
 
         self.assertIn(chosen, options)
         score.assert_not_called()
-        self.assertEqual(
-            state["_ai_eval_cache"]["heuristic_anytime"],
-            {"evaluated": 0, "total": 5, "interrupted": True},
-        )
+        meta = state["_ai_eval_cache"]["heuristic_anytime"]
+        self.assertEqual(meta["evaluated"], 0)
+        self.assertEqual(meta["total"], 5)
+        self.assertTrue(meta["interrupted"])
+        self.assertTrue(meta["deadline_limited"])
+        self.assertEqual(meta["stop_reason"], "deadline_guard")
 
     def test_heuristic_future_deadline_refines_quick_incumbent(self):
         state, _big = self._make_state()
@@ -2289,10 +2291,13 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
 
         self.assertEqual(chosen, [22])
         self.assertEqual(score.call_count, 3)
-        self.assertEqual(
-            state["_ai_eval_cache"]["heuristic_anytime"],
-            {"evaluated": 3, "total": 5, "interrupted": True},
-        )
+        meta = state["_ai_eval_cache"]["heuristic_anytime"]
+        self.assertEqual(meta["evaluated"], 3)
+        self.assertEqual(meta["target"], 3)
+        self.assertEqual(meta["total"], 5)
+        self.assertTrue(meta["interrupted"])
+        self.assertFalse(meta["deadline_limited"])
+        self.assertEqual(meta["stop_reason"], "target_reached")
 
     def test_heuristic_discards_partial_finalist_but_keeps_completed_prefix(self):
         state, _big = self._make_state()
@@ -2321,10 +2326,12 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
                                 )
 
         self.assertEqual(chosen, [11])
-        self.assertEqual(
-            state["_ai_eval_cache"]["heuristic_anytime"],
-            {"evaluated": 1, "total": 3, "interrupted": True},
-        )
+        meta = state["_ai_eval_cache"]["heuristic_anytime"]
+        self.assertEqual(meta["evaluated"], 1)
+        self.assertEqual(meta["total"], 3)
+        self.assertTrue(meta["interrupted"])
+        self.assertTrue(meta["deadline_limited"])
+        self.assertEqual(meta["stop_reason"], "partial_candidate")
 
     def test_search_clone_isolated_from_root_state(self):
         players = [
@@ -3475,12 +3482,58 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertEqual(history[0].get("action_type"), "play")
         self.assertEqual(history[0].get("card_ids"), [big["id"]])
         self.assertEqual(history[0].get("explain", {}).get("chosen", {}).get("cards"), ["🃏B"])
+        timing = history[0].get("explain", {}).get("timing", {})
+        self.assertEqual(timing.get("budget_ms"), 320.0)
+        self.assertIsInstance(timing.get("total_ms"), float)
+        self.assertGreaterEqual(timing.get("total_ms"), 0.0)
+        self.assertIn("heuristic", timing.get("stages_ms", {}))
+        self.assertIn("finalize", timing.get("stages_ms", {}))
+        self.assertFalse(timing.get("fallback_used"))
 
         view = guandan.GuandanGame.get_public_view(state, "bot")
         public_history = view.get("bot_explain_history", {}).get("bot", [])
         self.assertEqual(len(public_history), 1)
         self.assertEqual(public_history[0].get("action_type"), "play")
         self.assertEqual(public_history[0].get("explain", {}).get("chosen", {}).get("cards"), ["🃏B"])
+        self.assertEqual(
+            public_history[0].get("explain", {}).get("timing", {}).get("total_ms"),
+            timing.get("total_ms"),
+        )
+
+    def test_bot_explain_marks_deadline_fallback_from_detailed_heuristic(self):
+        state, big = self._make_state()
+        state["config"]["bot_mode"] = "heuristic"
+        heuristic_action = {"type": "play", "card_ids": [big["id"]]}
+
+        def deadline_limited_heuristic(current, _bot_id, _depth, deadline=None):
+            self.assertIsNotNone(deadline)
+            current.setdefault("_ai_eval_cache", {})["heuristic_anytime"] = {
+                "evaluated": 0,
+                "target": 3,
+                "total": 5,
+                "interrupted": True,
+                "stop_reason": "deadline_guard",
+                "deadline_limited": True,
+                "candidate_ms": [],
+            }
+            return heuristic_action
+
+        with mock.patch.object(guandan, "_heuristic_best_action", side_effect=deadline_limited_heuristic):
+            action = guandan.GuandanGame.bot_move(state, "bot")
+
+        self.assertEqual(action, heuristic_action)
+        explain = state.get("bot_explain", {}).get("bot", {})
+        timing = explain.get("timing", {})
+        self.assertTrue(timing.get("deadline_limited"))
+        self.assertTrue(timing.get("fallback_used"))
+        self.assertEqual(len(timing.get("fallback_events", [])), 1)
+        event = timing["fallback_events"][0]
+        self.assertEqual(event.get("stage"), "heuristic")
+        self.assertEqual(event.get("to"), "quick heuristic incumbent")
+        self.assertEqual(
+            explain.get("method_details", {}).get("heuristic_stop_reason"),
+            "deadline_guard",
+        )
 
     def test_mcts_explain_includes_mcts_score(self):
         state, big = self._make_state()
@@ -3717,6 +3770,10 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertEqual(picked, action_a)
         self.assertEqual(scored[0][0], action_a)
         reply_tree.assert_not_called()
+        status = state.get("_ai_eval_cache", {}).get("mcts_anytime", {})
+        self.assertTrue(status.get("deadline_limited"))
+        self.assertTrue(status.get("fallback_to_reference"))
+        self.assertEqual(status.get("stop_reason"), "deadline")
 
     def test_mcts_obvious_low_single_response_skips_rollout(self):
         players = [

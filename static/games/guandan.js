@@ -974,6 +974,51 @@ function formatGuandanBotComponentsText(components) {
   return entries.length ? entries.join(", ") : "-";
 }
 
+const GUANDAN_BOT_STAGE_LABELS = {
+  heuristic: "Heuristic",
+  nn: "NN",
+  minimax: "MiniMax",
+  mcts: "MCTS",
+  finalize: "Finalize",
+};
+
+function formatGuandanBotDuration(value) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "-";
+  if (value >= 100) return `${Math.round(value)} ms`;
+  return `${Math.round(value * 10) / 10} ms`;
+}
+
+function buildGuandanBotTimingHtml(timing) {
+  if (!timing || typeof timing.total_ms !== "number") return "";
+  const stages = timing.stages_ms && typeof timing.stages_ms === "object" ? timing.stages_ms : {};
+  const stageItems = Object.entries(stages)
+    .filter(([, value]) => typeof value === "number" && Number.isFinite(value))
+    .map(([name, value]) => {
+      const label = GUANDAN_BOT_STAGE_LABELS[name] || name;
+      return `<span>${label} ${formatGuandanBotDuration(value)}</span>`;
+    })
+    .join("");
+  const overBudget = typeof timing.over_budget_ms === "number" && timing.over_budget_ms > 0.05;
+  const tone = overBudget ? "is-over-budget" : timing.deadline_limited ? "is-warning" : "is-ok";
+  const budget = typeof timing.budget_ms === "number" ? formatGuandanBotDuration(timing.budget_ms) : "-";
+  const overText = overBudget ? ` · Over by ${formatGuandanBotDuration(timing.over_budget_ms)}` : "";
+  const events = Array.isArray(timing.fallback_events) ? timing.fallback_events : [];
+  const fallbackHtml = events
+    .map((event) => {
+      const route = event && event.from && event.to ? `${event.from} → ${event.to}` : "Deadline fallback";
+      const reason = event && event.reason ? event.reason : "The allotted time was exhausted.";
+      return `<div class="guandan-bot-timeout-warning"><strong>⚠️ Deadline fallback:</strong> ${route}<div>${reason}</div></div>`;
+    })
+    .join("");
+  return `
+    <div class="guandan-bot-timing-card ${tone}">
+      <div><strong>⏱️ Actual:</strong> ${formatGuandanBotDuration(timing.total_ms)} / ${budget}${overText}</div>
+      ${stageItems ? `<div class="guandan-bot-timing-stages">${stageItems}</div>` : ""}
+    </div>
+    ${fallbackHtml}
+  `;
+}
+
 function getGuandanPlayerName(view, playerId) {
   if (!view || !Array.isArray(view.players)) return playerId || "-";
   const player = view.players.find((entry) => entry.player_id === playerId);
@@ -1094,6 +1139,7 @@ function buildGuandanBotExplainClipboardText(playerId, explain) {
   const trickPlays = Array.isArray(context.trick_plays) ? context.trick_plays : [];
   const top = Array.isArray(explain.top) ? explain.top : [];
   const methodDetails = explain.method_details || {};
+  const timing = explain.timing || {};
   const playerLine = players
     .map((player) => {
       const tags = [];
@@ -1140,6 +1186,20 @@ function buildGuandanBotExplainClipboardText(playerId, explain) {
   if (typeof methodDetails.risk_lambda === "number") {
     detailBits.push(`risk=${methodDetails.risk_lambda}`);
   }
+  const timingBits = [];
+  if (typeof timing.total_ms === "number") {
+    timingBits.push(`actual=${formatGuandanBotDuration(timing.total_ms)}`);
+  }
+  if (typeof timing.budget_ms === "number") {
+    timingBits.push(`budget=${formatGuandanBotDuration(timing.budget_ms)}`);
+  }
+  const stageTimingText = Object.entries(timing.stages_ms || {})
+    .filter(([, value]) => typeof value === "number" && Number.isFinite(value))
+    .map(([stage, value]) => `${stage}=${formatGuandanBotDuration(value)}`)
+    .join(" ");
+  const fallbackText = (Array.isArray(timing.fallback_events) ? timing.fallback_events : [])
+    .map((event) => `${event.from || "search"}->${event.to || "fallback"}: ${event.reason || "deadline reached"}`)
+    .join(" | ");
   const trickSummary = context.current_trick
     ? `${context.current_trick.type || "-"}:${getGuandanPlayerName(context, context.current_trick.player_id)}:${getGuandanCurrentTrickCards(context)}`
     : "-";
@@ -1147,6 +1207,8 @@ function buildGuandanBotExplainClipboardText(playerId, explain) {
   return [
     "guandan_bot_review",
     `bot=${getGuandanPlayerName(context, playerId)} method=${explain.method || "heuristic"} ${detailBits.join(" ")}`.trim(),
+    `timing=${timingBits.join(" ") || "-"}${stageTimingText ? ` stages(${stageTimingText})` : ""}`,
+    `deadline_fallback=${fallbackText || "none"}`,
     `phase=${context.phase || "-"} round=${context.round_number ?? "-"} dealer=${context.dealer_team ?? "-"} level=${context.level_rank ?? "-"} turn=${getGuandanPlayerName(context, context.current_turn)}`,
     `trick=${trickSummary}`,
     `target=${targetSummary}`,
@@ -1223,6 +1285,7 @@ function showGuandanBotExplain(playerId, historyIndex = null) {
   const chosenCards = Array.isArray(chosen.cards) ? chosen.cards.join(" ") : "-";
   const chosenScore = typeof chosen.score === "number" ? Math.round(chosen.score * 10) / 10 : "-";
   const chosenComponents = formatGuandanBotComponents(chosen.components);
+  const timingHtml = buildGuandanBotTimingHtml(explain.timing || null);
   const targetSummary = getGuandanBotExplainTargetText(context);
   const hand = Array.isArray(explain.hand) ? explain.hand : [];
   const handItems = hand.map((card) => `<span class="guandan-bot-hand-card">${card}</span>`).join("");
@@ -1280,6 +1343,21 @@ function showGuandanBotExplain(playerId, historyIndex = null) {
   if (methodDetails && typeof methodDetails.candidates === "number") {
     detailParts.push(`Candidates ${methodDetails.candidates}`);
   }
+  if (methodDetails && typeof methodDetails.heuristic_candidates_total === "number") {
+    detailParts.push(
+      `Heuristic detailed ${methodDetails.heuristic_candidates_evaluated || 0}/${methodDetails.heuristic_candidates_target || methodDetails.heuristic_candidates_total}`
+    );
+  }
+  if (methodDetails && typeof methodDetails.minimax_candidates_total === "number") {
+    detailParts.push(
+      `MiniMax roots ${methodDetails.minimax_candidates_evaluated || 0}/${methodDetails.minimax_candidates_total}`
+    );
+  }
+  if (methodDetails && typeof methodDetails.mcts_rollouts_target === "number") {
+    detailParts.push(
+      `MCTS rollouts ${methodDetails.mcts_rollouts_attempted || 0}/${methodDetails.mcts_rollouts_target}`
+    );
+  }
   const detailLine = detailParts.length ? `<div class="hint">${detailParts.join(" · ")}</div>` : "";
   const contextLine = contextBits.length ? `<div class="hint">${contextBits.join(" · ")}</div>` : "";
   const mctsLine =
@@ -1291,6 +1369,7 @@ function showGuandanBotExplain(playerId, historyIndex = null) {
     <div><strong>Method:</strong> ${method}</div>
     ${contextLine}
     ${detailLine}
+    ${timingHtml}
     ${mctsLine}
     ${handBlock}
     <div><strong>Target:</strong> ${targetSummary}</div>

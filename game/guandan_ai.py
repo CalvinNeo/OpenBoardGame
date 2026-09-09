@@ -9755,14 +9755,31 @@ def _mcts_score_actions(
     progress_start: float = 0.0,
     progress_end: float = 1.0,
 ) -> List[Tuple[Dict, float, int, Dict[str, float]]]:
+    def store_status(
+        stop_reason: str,
+        attempted: int = 0,
+        target: int = 0,
+        deadline_limited: bool = False,
+        fallback_to_reference: bool = False,
+    ) -> None:
+        state.setdefault("_ai_eval_cache", {})["mcts_anytime"] = {
+            "attempted": attempted,
+            "target": target,
+            "stop_reason": stop_reason,
+            "deadline_limited": deadline_limited,
+            "fallback_to_reference": fallback_to_reference,
+        }
+
     legal = GuandanGame.get_legal_actions(state, bot_id)
     if "play" not in legal:
+        store_status("unavailable")
         return []
     expanded_width = max(width + 4, width * 2)
     candidates = _CORE._candidate_actions(state, bot_id, expanded_width)
     candidates = _CORE._filter_overbomb_actions(state, bot_id, candidates)
     candidates = _mcts_root_candidate_subset(state, bot_id, candidates, width)
     if not candidates:
+        store_status("no_candidates")
         return []
     _report_progress_scaled(
         progress_callback,
@@ -9804,6 +9821,7 @@ def _mcts_score_actions(
         only = candidates[0]
         heuristic = heuristic_values[_mcts_action_key(only)]
         _report_progress_scaled(progress_callback, "mcts", progress_start, progress_end, 1.0, "Single forced candidate")
+        store_status("single_candidate")
         return [
             (
                 only,
@@ -9828,10 +9846,12 @@ def _mcts_score_actions(
     obvious_scores = _CORE._mcts_obvious_response_scores(state, bot_id, candidates, heuristic_values)
     if obvious_scores:
         _report_progress_scaled(progress_callback, "mcts", progress_start, progress_end, 1.0, "Fast-path obvious response")
+        store_status("fast_path")
         return obvious_scores
     high_single_bomb_scores = _CORE._mcts_high_single_bomb_scores(state, bot_id, candidates, heuristic_values)
     if high_single_bomb_scores:
         _report_progress_scaled(progress_callback, "mcts", progress_start, progress_end, 1.0, "Fast-path bomb decision")
+        store_status("fast_path")
         return high_single_bomb_scores
 
     current_combo = (state.get("current_trick") or {}).get("combo") or {}
@@ -9893,8 +9913,11 @@ def _mcts_score_actions(
     )
     next_halving_round = halving_min_rounds
     round_idx = 0
+    deadline_limited = False
+    confidence_stopped = False
     while attempted_visits < total_visits_target and active_candidates:
         if deadline is not None and time.perf_counter() >= deadline:
+            deadline_limited = True
             break
         # One determinization is one root-world particle. Comparing every active
         # action against the same particle reduces variance and avoids rebuilding
@@ -9905,6 +9928,7 @@ def _mcts_score_actions(
             if attempted_visits >= total_visits_target:
                 break
             if deadline is not None and time.perf_counter() >= deadline:
+                deadline_limited = True
                 break
             attempted_visits += 1
             key = _mcts_action_key(action)
@@ -9992,6 +10016,7 @@ def _mcts_score_actions(
                 stable_rounds = 1
                 previous_top_key = top_key
             if stable_rounds >= stable_rounds_needed:
+                confidence_stopped = True
                 break
         else:
             previous_top_key = top_key
@@ -10023,7 +10048,10 @@ def _mcts_score_actions(
                     ]
             next_halving_round += halving_min_rounds
         if deadline is not None and time.perf_counter() >= deadline:
+            deadline_limited = True
             break
+    if deadline is not None and time.perf_counter() >= deadline:
+        deadline_limited = True
     if final_scored:
         active_keys = {_mcts_action_key(action) for action in active_candidates}
         confidence_ready = all(
@@ -10049,9 +10077,29 @@ def _mcts_score_actions(
                 ),
                 reverse=True,
             )
+        if deadline_limited:
+            stop_reason = "deadline"
+        elif confidence_stopped:
+            stop_reason = "confidence"
+        else:
+            stop_reason = "completed"
+        store_status(
+            stop_reason,
+            attempted_visits,
+            total_visits_target,
+            deadline_limited,
+            deadline_limited and not confidence_ready,
+        )
         _report_progress_scaled(progress_callback, "mcts", progress_start, progress_end, 1.0, "MCTS finalized")
         return final_scored
     _report_progress_scaled(progress_callback, "mcts", progress_start, progress_end, 1.0, "MCTS finalized")
+    store_status(
+        "deadline" if deadline_limited else "completed",
+        attempted_visits,
+        total_visits_target,
+        deadline_limited,
+        deadline_limited,
+    )
     return _mcts_finalize_scores(
         candidates,
         samples,
@@ -10283,12 +10331,28 @@ def _minimax_pick_action(
     progress_end: float = 1.0,
 ) -> Optional[Dict]:
     """Return the selected full action so pass is distinct from no result."""
+    def store_status(
+        stop_reason: str,
+        evaluated: int = 0,
+        total: int = 0,
+        deadline_limited: bool = False,
+    ) -> None:
+        state.setdefault("_ai_eval_cache", {})["minimax_anytime"] = {
+            "evaluated": evaluated,
+            "total": total,
+            "stop_reason": stop_reason,
+            "deadline_limited": deadline_limited,
+            "used_initial_incumbent": deadline_limited and evaluated == 0,
+        }
+
     legal = GuandanGame.get_legal_actions(state, bot_id)
     if "play" not in legal:
+        store_status("unavailable")
         return None
     actions = _CORE._candidate_actions(state, bot_id, width)
     actions = _CORE._filter_overbomb_actions(state, bot_id, actions)
     if not actions:
+        store_status("no_candidates")
         return None
     forced_relay = _forced_endgame_control_relay_action(state, bot_id, actions)
     if forced_relay is not None:
@@ -10300,6 +10364,7 @@ def _minimax_pick_action(
             1.0,
             "Minimax found a forced control relay",
         )
+        store_status("forced_relay", 1, 1)
         return dict(forced_relay)
     actions = sorted(
         actions,
@@ -10346,14 +10411,18 @@ def _minimax_pick_action(
                     best_action = fallback_singles[0][1]
     best_value = -1e9
     root_scored: List[Tuple[Dict, float]] = []
+    deadline_limited = False
     for index, action in enumerate(actions, start=1):
         if deadline is not None and time.perf_counter() >= deadline:
+            deadline_limited = True
             break
         nxt = copy.deepcopy(state)
         _, err = GuandanGame.apply_action(nxt, bot_id, action)
         if err:
             continue
         value = _minimax_value(nxt, bot_id, depth - 1, -1e9, 1e9, width, deadline=deadline)
+        if deadline is not None and time.perf_counter() >= deadline:
+            deadline_limited = True
         value -= _minimax_root_lead_single_penalty(state, bot_id, action)
         root_scored.append((action, value))
         if value > best_value:
@@ -10443,6 +10512,12 @@ def _minimax_pick_action(
                         else:
                             non_single_choices.sort(key=lambda item: item[0], reverse=True)
                             best_action = non_single_choices[0][1]
+    store_status(
+        "deadline" if deadline_limited else "completed",
+        len(root_scored),
+        total_actions,
+        deadline_limited,
+    )
     _report_progress_scaled(progress_callback, "minimax", progress_start, progress_end, 1.0, "Minimax finalized")
     return dict(best_action) if best_action else None
 
@@ -11908,6 +11983,8 @@ def _bot_select_play(
     )
     scored: List[Tuple[Optional[List[int]], float, Dict[str, float]]] = []
     candidate_durations: List[float] = []
+    stop_reason = "candidates_exhausted"
+    deadline_limited = False
     for cand in ordered_candidates:
         if deadline is not None:
             remaining_budget = deadline - time.perf_counter()
@@ -11922,6 +11999,8 @@ def _bot_select_play(
                     max(candidate_durations) * 1.25 + 0.01,
                 )
             if remaining_budget <= required_budget:
+                stop_reason = "deadline_guard"
+                deadline_limited = True
                 break
 
         started_at = time.perf_counter()
@@ -11937,6 +12016,8 @@ def _bot_select_play(
             # A partial component vector is not on the same scale as a completed
             # one. Retain the completed prefix (or the cheap incumbent below)
             # instead of allowing an unfinished candidate to win accidentally.
+            stop_reason = "partial_candidate"
+            deadline_limited = True
             break
         if deadline is not None:
             # The quick policy contains deadline-safe tactical guards that are not
@@ -11964,6 +12045,7 @@ def _bot_select_play(
             components = weighted_components
         scored.append((cand, components.get("total", -999.0), components))
         if deadline is not None and len(scored) >= detailed_target:
+            stop_reason = "target_reached"
             break
     detailed_evaluated = len(scored)
     if not scored:
@@ -11991,6 +12073,10 @@ def _bot_select_play(
         "evaluated": detailed_evaluated,
         "total": len(ordered_candidates),
         "interrupted": detailed_evaluated < len(ordered_candidates),
+        "target": detailed_target,
+        "stop_reason": stop_reason,
+        "deadline_limited": deadline_limited,
+        "candidate_ms": [round(duration * 1000.0, 3) for duration in candidate_durations],
     }
     _store_heuristic_scored_candidates(state, bot_id, depth, scored)
     scored.sort(key=lambda item: item[1], reverse=True)
@@ -12060,6 +12146,7 @@ def _build_bot_explain(
     method_scores: Optional[List[Tuple[Dict, float, int, Dict[str, float]]]] = None,
     method_meta: Optional[Dict] = None,
     chosen_action_type: str = "play",
+    timing_meta: Optional[Dict] = None,
 ) -> Dict:
     hand = state["players"][bot_id]["hand"]
     hand_map = _map_hand_by_id(hand)
@@ -12132,6 +12219,7 @@ def _build_bot_explain(
             "method": method,
             "score_model": "nn",
             "method_details": method_meta or {},
+            "timing": timing_meta or {},
             "chosen": {
                 "cards": label_action(chosen_action_type, chosen_cards),
                 "score": chosen_score if chosen_score is not None else -999.0,
@@ -12204,6 +12292,7 @@ def _build_bot_explain(
             "method": method,
             "score_model": "mcts",
             "method_details": method_meta or {},
+            "timing": timing_meta or {},
             "chosen": {
                 "cards": label_action(chosen_action_type, chosen_cards),
                 "score": chosen_score if chosen_score is not None else -999.0,
@@ -12272,6 +12361,8 @@ def _build_bot_explain(
     return {
         "method": method,
         "score_model": "heuristic",
+        "method_details": method_meta or {},
+        "timing": timing_meta or {},
         "chosen": {
             "cards": label_action(chosen_action_type, chosen_cards),
             "score": chosen_comps.get("total", -999.0),

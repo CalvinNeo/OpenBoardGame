@@ -2374,16 +2374,34 @@ class GuandanGame:
         if "play" not in legal and "pass" in legal:
             return {"type": "pass"}
 
+        decision_started_at = time.perf_counter()
         config = state.get("config", {})
         state["_ai_eval_cache"] = {}
         bot_mode = str(config.get("bot_mode", DEFAULT_CONFIG["bot_mode"]) or DEFAULT_CONFIG["bot_mode"]).strip().lower()
         if bot_mode not in {"auto", "heuristic", "nn"}:
             bot_mode = DEFAULT_CONFIG["bot_mode"]
         think_budget_ms = max(40, int(config.get("bot_think_time_ms", 320)))
-        decision_deadline = time.perf_counter() + think_budget_ms / 1000.0
+        decision_deadline = decision_started_at + think_budget_ms / 1000.0
         search_deadline = decision_deadline
         heuristic_deadline = search_deadline if bot_mode in {"auto", "heuristic"} else None
         current_combo = (state.get("current_trick") or {}).get("combo") or {}
+        stage_timings_ms: Dict[str, float] = {}
+        deadline_events: List[Dict[str, str]] = []
+
+        def _record_stage(stage: str, started_at: float) -> None:
+            elapsed_ms = max(0.0, (time.perf_counter() - started_at) * 1000.0)
+            stage_timings_ms[stage] = round(stage_timings_ms.get(stage, 0.0) + elapsed_ms, 3)
+
+        def _record_deadline_event(stage: str, source: str, target: str, reason: str) -> None:
+            deadline_events.append(
+                {
+                    "stage": stage,
+                    "from": source,
+                    "to": target,
+                    "reason": reason,
+                }
+            )
+
         try:
             def _progress(stage: str, progress: float, detail: Optional[str] = None) -> None:
                 if not callable(progress_callback):
@@ -2396,7 +2414,21 @@ class GuandanGame:
             search_width = config.get("bot_minimax_width", 6)
             mcts_width = max(2, int(config.get("bot_mcts_root_width", min(search_width, 5))))
             _progress("heuristic", 0.06, "Evaluating heuristic baseline")
+            heuristic_started_at = time.perf_counter()
             heuristic_action = _heuristic_best_action(state, bot_id, depth, deadline=heuristic_deadline)
+            _record_stage("heuristic", heuristic_started_at)
+            heuristic_status = copy.deepcopy(
+                state.get("_ai_eval_cache", {}).get("heuristic_anytime") or {}
+            )
+            if heuristic_status.get("deadline_limited"):
+                evaluated = int(heuristic_status.get("evaluated", 0) or 0)
+                target = "quick heuristic incumbent" if evaluated == 0 else "bounded heuristic finalists"
+                _record_deadline_event(
+                    "heuristic",
+                    "full detailed heuristic",
+                    target,
+                    "Detailed candidate scoring stopped because the remaining decision budget was too small.",
+                )
             _progress("heuristic", 0.18, "Heuristic baseline ready")
 
             def _action_key(action: Optional[Dict]) -> Tuple:
@@ -2453,8 +2485,13 @@ class GuandanGame:
             method = "heuristic"
             method_scores = None
             method_meta = None
+            minimax_status: Dict = {}
+            mcts_status: Dict = {}
+            mcts_attempted = False
             if bot_mode == "nn":
+                nn_started_at = time.perf_counter()
                 nn_action, nn_scores, nn_meta = _nn_pick_action(state, bot_id, progress_callback=_progress)
+                _record_stage("nn", nn_started_at)
                 if nn_action is not None:
                     decided = True
                     method = "nn"
@@ -2473,6 +2510,7 @@ class GuandanGame:
                     if deadline <= time.perf_counter():
                         deadline = time.perf_counter() + minimax_budget_ms / 1000.0
                     _progress("minimax", 0.22, "Determinizing endgame state")
+                    minimax_started_at = time.perf_counter()
                     det = _determinize_state(state, bot_id, random.Random())
                     minimax_action = _minimax_pick_action(
                         det,
@@ -2483,6 +2521,10 @@ class GuandanGame:
                         progress_callback=_progress,
                         progress_start=0.26,
                         progress_end=0.9,
+                    )
+                    _record_stage("minimax", minimax_started_at)
+                    minimax_status = copy.deepcopy(
+                        det.get("_ai_eval_cache", {}).get("minimax_anytime") or {}
                     )
                     if minimax_action is not None:
                         decided = True
@@ -2506,9 +2548,11 @@ class GuandanGame:
                     )
                     and _should_use_mcts(state, bot_id, mcts_width)
                 ):
+                    mcts_attempted = True
                     mcts_budget_ms = max(25, int(config.get("bot_mcts_time_ms", default_mcts_budget_ms)))
                     deadline = min(search_deadline, time.perf_counter() + mcts_budget_ms / 1000.0)
                     _progress("mcts", 0.22, "Preparing MCTS search")
+                    mcts_started_at = time.perf_counter()
                     mcts_action, mcts_scores = _mcts_pick_action(
                         state,
                         bot_id,
@@ -2522,6 +2566,10 @@ class GuandanGame:
                         progress_callback=_progress,
                         progress_start=0.26,
                         progress_end=0.9,
+                    )
+                    _record_stage("mcts", mcts_started_at)
+                    mcts_status = copy.deepcopy(
+                        state.get("_ai_eval_cache", {}).get("mcts_anytime") or {}
                     )
                     has_real_search = any(count > 0 for _, _, count, _ in (mcts_scores or []))
                     has_fast_path = any((stats or {}).get("fast_path") for _, _, _, stats in (mcts_scores or []))
@@ -2554,6 +2602,40 @@ class GuandanGame:
                         else:
                             chosen = []
                             chosen_action_type = "pass"
+                if minimax_status.get("deadline_limited"):
+                    target = "partial minimax result" if decided and method == "minimax" else "heuristic baseline"
+                    if minimax_status.get("used_initial_incumbent"):
+                        target = "quick minimax incumbent" if decided and method == "minimax" else "heuristic baseline"
+                    _record_deadline_event(
+                        "minimax",
+                        "full minimax search",
+                        target,
+                        "Minimax reached its deadline before completing all root candidates.",
+                    )
+                if mcts_status.get("deadline_limited"):
+                    if method != "mcts" or mcts_status.get("fallback_to_reference"):
+                        target = "heuristic reference"
+                    else:
+                        target = "partial MCTS result"
+                    _record_deadline_event(
+                        "mcts",
+                        "full MCTS search",
+                        target,
+                        "MCTS reached its deadline before completing the requested rollouts.",
+                    )
+                elif (
+                    not decided
+                    and not mcts_attempted
+                    and total_left > endgame_threshold
+                    and state.get("current_trick")
+                    and time.perf_counter() >= search_deadline
+                ):
+                    _record_deadline_event(
+                        "mcts",
+                        "auto search stage",
+                        "heuristic baseline",
+                        "The total decision deadline was reached before the MCTS stage could run.",
+                    )
             if not decided:
                 if heuristic_action and heuristic_action.get("type") == "play":
                     chosen = heuristic_action.get("card_ids") or []
@@ -2566,6 +2648,7 @@ class GuandanGame:
                     chosen_action_type = "pass"
                     method = "heuristic"
             if decided:
+                finalize_started_at = time.perf_counter()
                 _progress("finalizing", 0.94, "Legalizing chosen action")
                 selected_action = {"type": "pass"} if chosen_action_type == "pass" else {"type": "play", "card_ids": chosen or []}
                 legal_action, illegal_err = _legalize_action(selected_action)
@@ -2579,6 +2662,39 @@ class GuandanGame:
                     method_meta = None
                 chosen_action_type = legal_action.get("type", chosen_action_type or "play")
                 chosen = list(legal_action.get("card_ids") or [])
+                explain_method_meta = copy.deepcopy(method_meta or {})
+                if heuristic_status:
+                    explain_method_meta.update(
+                        {
+                            "heuristic_candidates_evaluated": heuristic_status.get("evaluated", 0),
+                            "heuristic_candidates_target": heuristic_status.get("target", 0),
+                            "heuristic_candidates_total": heuristic_status.get("total", 0),
+                            "heuristic_stop_reason": heuristic_status.get("stop_reason"),
+                        }
+                    )
+                if minimax_status:
+                    explain_method_meta.update(
+                        {
+                            "minimax_candidates_evaluated": minimax_status.get("evaluated", 0),
+                            "minimax_candidates_total": minimax_status.get("total", 0),
+                            "minimax_stop_reason": minimax_status.get("stop_reason"),
+                        }
+                    )
+                if mcts_status:
+                    explain_method_meta.update(
+                        {
+                            "mcts_rollouts_attempted": mcts_status.get("attempted", 0),
+                            "mcts_rollouts_target": mcts_status.get("target", 0),
+                            "mcts_stop_reason": mcts_status.get("stop_reason"),
+                        }
+                    )
+                timing_meta = {
+                    "budget_ms": float(think_budget_ms),
+                    "stages_ms": stage_timings_ms,
+                    "deadline_limited": bool(deadline_events),
+                    "fallback_used": bool(deadline_events),
+                    "fallback_events": deadline_events,
+                }
                 _progress("finalizing", 0.97, "Building bot explanation")
                 explain = _build_bot_explain(
                     state,
@@ -2587,9 +2703,22 @@ class GuandanGame:
                     method,
                     depth,
                     method_scores if method in ("mcts", "nn") else None,
-                    method_meta if method in ("mcts", "nn") else None,
+                    explain_method_meta,
                     chosen_action_type or "play",
+                    timing_meta,
                 )
+                _record_stage("finalize", finalize_started_at)
+                total_ms = max(0.0, (time.perf_counter() - decision_started_at) * 1000.0)
+                timing_meta.update(
+                    {
+                        "total_ms": round(total_ms, 3),
+                        "over_budget_ms": round(max(0.0, total_ms - think_budget_ms), 3),
+                        "deadline_reached": bool(
+                            deadline_events or time.perf_counter() >= decision_deadline
+                        ),
+                    }
+                )
+                explain["timing"] = copy.deepcopy(timing_meta)
                 state.setdefault("bot_explain", {})[bot_id] = explain
                 _append_bot_explain_history(
                     state,

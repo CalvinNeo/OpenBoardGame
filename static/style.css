@@ -8670,6 +8670,48 @@ body.guandan-explain-mode button.has-explanation:hover {
   color: #374151;
 }
 
+#guandanBotExplainContent .guandan-bot-timing-card {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  background: #f0fdf4;
+  color: #166534;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+#guandanBotExplainContent .guandan-bot-timing-card.is-warning {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+#guandanBotExplainContent .guandan-bot-timing-card.is-over-budget {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+#guandanBotExplainContent .guandan-bot-timing-stages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 4px;
+  color: inherit;
+}
+
+#guandanBotExplainContent .guandan-bot-timeout-warning {
+  margin: 6px 0;
+  padding: 8px 10px;
+  border-left: 3px solid #f59e0b;
+  border-radius: 4px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 #guandanBotExplainContent .guandan-bot-hand-row {
   margin: 6px 0 4px;
 }
