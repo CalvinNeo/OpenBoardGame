@@ -1,5 +1,6 @@
 import copy
 import random
+import time
 import unittest
 from unittest import mock
 
@@ -1961,14 +1962,21 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
 
         def fake_heuristic(_state, _bot_id, _depth, deadline=None):
             captured["deadline"] = deadline
+            captured["soft_deadline"] = _state.get("_ai_eval_cache", {}).get(
+                "heuristic_soft_deadline"
+            )
             return {"type": "play", "card_ids": [big["id"]]}
 
+        started_at = time.perf_counter()
         with mock.patch.object(guandan, "_heuristic_best_action", side_effect=fake_heuristic):
             with mock.patch.object(guandan, "_should_use_mcts", return_value=False):
                 action = guandan.GuandanGame.bot_move(state, "bot")
 
         self.assertEqual(action, {"type": "play", "card_ids": [big["id"]]})
         self.assertIsInstance(captured.get("deadline"), float)
+        self.assertIsInstance(captured.get("soft_deadline"), float)
+        self.assertAlmostEqual(captured["soft_deadline"] - started_at, 2.0, delta=0.1)
+        self.assertAlmostEqual(captured["deadline"] - started_at, 3.0, delta=0.1)
 
     def test_lead_option_score_is_reused_within_one_decision(self):
         state, _big = self._make_state()
@@ -2192,6 +2200,31 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertEqual({tuple(cards) for cards in ranked}, {tuple(cards) for cards in options})
         detailed.assert_not_called()
 
+    def test_deadline_lead_ranking_uses_position_score_not_static_type_order(self):
+        state, _big = self._make_state()
+        state["current_trick"] = None
+        state["_ai_eval_cache"] = {}
+        deck = guandan._full_deck()
+        state["players"]["bot"]["hand"] = self._pick_labels(
+            deck,
+            ["♠️3", "♥️3", "♣️4", "♦️5", "♠️6", "♥️7"],
+        )
+        options = guandan._list_hint_options(state, "bot")
+
+        def cheap_score(_state, _player_id, _cards, combo=None):
+            return 100.0 if (combo or {}).get("type") == "straight" else 1.0
+
+        with mock.patch("game.guandan_ai._lead_cheap_option_score", side_effect=cheap_score):
+            ranked = guandan._rank_lead_options(state, "bot", options, deadline=10**12)
+
+        hand_map = guandan._map_hand_by_id(state["players"]["bot"]["hand"])
+        first_combo = guandan._evaluate_combo(
+            [hand_map[card_id] for card_id in ranked[0]],
+            state["level_rank"],
+            state.get("config", {}),
+        )
+        self.assertEqual(first_combo.get("type"), "straight")
+
     def test_top_k_straight_materializations_keep_distinct_remainders(self):
         deck = guandan._full_deck()
         hand = self._pick_labels(
@@ -2259,7 +2292,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertEqual(meta["total"], 5)
         self.assertTrue(meta["interrupted"])
         self.assertTrue(meta["deadline_limited"])
-        self.assertEqual(meta["stop_reason"], "deadline_guard")
+        self.assertEqual(meta["stop_reason"], "hard_deadline")
 
     def test_heuristic_future_deadline_refines_quick_incumbent(self):
         state, _big = self._make_state()
@@ -2290,14 +2323,47 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
                                 )
 
         self.assertEqual(chosen, [22])
-        self.assertEqual(score.call_count, 3)
+        self.assertEqual(score.call_count, 5)
+        meta = state["_ai_eval_cache"]["heuristic_anytime"]
+        self.assertEqual(meta["evaluated"], 5)
+        self.assertEqual(meta["target"], 5)
+        self.assertEqual(meta["minimum"], 3)
+        self.assertEqual(meta["total"], 5)
+        self.assertFalse(meta["interrupted"])
+        self.assertFalse(meta["deadline_limited"])
+        self.assertEqual(meta["stop_reason"], "candidates_exhausted")
+
+    def test_heuristic_soft_deadline_finishes_minimum_comparison_within_hard_limit(self):
+        state, _big = self._make_state()
+        state["config"]["bot_heuristic_min_deep_candidates"] = 3
+        state["_ai_eval_cache"] = {"heuristic_soft_deadline": 100.0}
+        options = [[11], [22], [33], [44]]
+        clock = [99.0]
+
+        def detailed_score(_state, _bot_id, cards, _depth):
+            clock[0] += 0.6
+            return {"total": -5.0 if cards is None else float(cards[0])}
+
+        with mock.patch("game.guandan_ai.time.perf_counter", side_effect=lambda: clock[0]):
+            with mock.patch("game.guandan_ai._can_play_all", return_value=False):
+                with mock.patch("game.guandan_ai._list_hint_options", return_value=options):
+                    with mock.patch("game.guandan_ai._rank_response_options", side_effect=lambda _s, _p, items: items):
+                        with mock.patch("game.guandan_ai._filter_overbomb_options", side_effect=lambda _s, _p, items: items):
+                            with mock.patch("game.guandan_ai._bot_score_components", side_effect=detailed_score):
+                                chosen = guandan._bot_select_play(
+                                    state,
+                                    "bot",
+                                    depth=3,
+                                    deadline=101.0,
+                                )
+
+        self.assertIsNotNone(chosen)
         meta = state["_ai_eval_cache"]["heuristic_anytime"]
         self.assertEqual(meta["evaluated"], 3)
-        self.assertEqual(meta["target"], 3)
-        self.assertEqual(meta["total"], 5)
-        self.assertTrue(meta["interrupted"])
-        self.assertFalse(meta["deadline_limited"])
-        self.assertEqual(meta["stop_reason"], "target_reached")
+        self.assertEqual(meta["minimum"], 3)
+        self.assertEqual(meta["stop_reason"], "soft_deadline")
+        self.assertTrue(meta["soft_deadline_reached"])
+        self.assertFalse(meta["hard_deadline_reached"])
 
     def test_heuristic_discards_partial_finalist_but_keeps_completed_prefix(self):
         state, _big = self._make_state()
@@ -3484,6 +3550,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertEqual(history[0].get("explain", {}).get("chosen", {}).get("cards"), ["🃏B"])
         timing = history[0].get("explain", {}).get("timing", {})
         self.assertEqual(timing.get("budget_ms"), 2000.0)
+        self.assertEqual(timing.get("hard_budget_ms"), 3000.0)
         self.assertIsInstance(timing.get("total_ms"), float)
         self.assertGreaterEqual(timing.get("total_ms"), 0.0)
         self.assertIn("heuristic", timing.get("stages_ms", {}))
@@ -3509,11 +3576,14 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             self.assertIsNotNone(deadline)
             current.setdefault("_ai_eval_cache", {})["heuristic_anytime"] = {
                 "evaluated": 0,
-                "target": 3,
+                "target": 5,
+                "minimum": 3,
                 "total": 5,
                 "interrupted": True,
-                "stop_reason": "deadline_guard",
+                "stop_reason": "hard_deadline",
                 "deadline_limited": True,
+                "soft_deadline_reached": True,
+                "hard_deadline_reached": True,
                 "candidate_ms": [],
             }
             return heuristic_action
@@ -3532,7 +3602,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertEqual(event.get("to"), "quick heuristic incumbent")
         self.assertEqual(
             explain.get("method_details", {}).get("heuristic_stop_reason"),
-            "deadline_guard",
+            "hard_deadline",
         )
 
     def test_mcts_explain_includes_mcts_score(self):

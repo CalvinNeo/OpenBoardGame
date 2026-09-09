@@ -58,13 +58,12 @@ DEFAULT_CONFIG = {
     "bot_lead_prescore_min_hand": 12,
     "bot_lead_prescore_min_options": 24,
     "bot_lead_prescore_limit": 16,
-    "bot_heuristic_deep_candidate_limit": 10,
     "bot_heuristic_min_deep_candidates": 3,
     "bot_heuristic_min_lead_deep_candidates": 3,
     "bot_heuristic_min_lead_rank_candidates": 16,
     "bot_heuristic_time_check_batch": 2,
-    "bot_heuristic_detailed_weight": 0.15,
     "bot_think_time_ms": 2000,
+    "bot_think_overrun_ratio": 0.5,
     "bot_mcts_time_ms": 220,
     "bot_minimax_time_ms": 180,
 }
@@ -2382,11 +2381,22 @@ class GuandanGame:
             bot_mode = DEFAULT_CONFIG["bot_mode"]
         think_budget_ms = max(40, int(config.get("bot_think_time_ms", 2000)))
         decision_deadline = decision_started_at + think_budget_ms / 1000.0
-        search_deadline = decision_deadline
+        try:
+            overrun_ratio = float(
+                config.get("bot_think_overrun_ratio", DEFAULT_CONFIG["bot_think_overrun_ratio"])
+            )
+        except (TypeError, ValueError):
+            overrun_ratio = float(DEFAULT_CONFIG["bot_think_overrun_ratio"])
+        overrun_ratio = max(0.0, min(1.0, overrun_ratio))
+        hard_budget_ms = think_budget_ms * (1.0 + overrun_ratio)
+        hard_decision_deadline = decision_started_at + hard_budget_ms / 1000.0
+        search_deadline = hard_decision_deadline
         heuristic_deadline = search_deadline if bot_mode in {"auto", "heuristic"} else None
         current_combo = (state.get("current_trick") or {}).get("combo") or {}
         stage_timings_ms: Dict[str, float] = {}
         deadline_events: List[Dict[str, str]] = []
+        state["_ai_eval_cache"]["heuristic_soft_deadline"] = decision_deadline
+        state["_ai_eval_cache"]["decision_hard_deadline"] = hard_decision_deadline
 
         def _record_stage(stage: str, started_at: float) -> None:
             elapsed_ms = max(0.0, (time.perf_counter() - started_at) * 1000.0)
@@ -2422,12 +2432,12 @@ class GuandanGame:
             )
             if heuristic_status.get("deadline_limited"):
                 evaluated = int(heuristic_status.get("evaluated", 0) or 0)
-                target = "quick heuristic incumbent" if evaluated == 0 else "bounded heuristic finalists"
+                target = "quick heuristic incumbent" if evaluated == 0 else "best completed heuristic result"
                 _record_deadline_event(
                     "heuristic",
-                    "full detailed heuristic",
+                    "exhaustive heuristic scoring",
                     target,
-                    "Detailed candidate scoring stopped because the remaining decision budget was too small.",
+                    "The soft decision budget was used; no new candidate was started, and the best completed result was kept.",
                 )
             _progress("heuristic", 0.18, "Heuristic baseline ready")
 
@@ -2507,8 +2517,6 @@ class GuandanGame:
                 if total_left <= endgame_threshold:
                     minimax_budget_ms = max(25, int(config.get("bot_minimax_time_ms", default_minimax_budget_ms)))
                     deadline = min(search_deadline, time.perf_counter() + minimax_budget_ms / 1000.0)
-                    if deadline <= time.perf_counter():
-                        deadline = time.perf_counter() + minimax_budget_ms / 1000.0
                     _progress("minimax", 0.22, "Determinizing endgame state")
                     minimax_started_at = time.perf_counter()
                     det = _determinize_state(state, bot_id, random.Random())
@@ -2668,8 +2676,15 @@ class GuandanGame:
                         {
                             "heuristic_candidates_evaluated": heuristic_status.get("evaluated", 0),
                             "heuristic_candidates_target": heuristic_status.get("target", 0),
+                            "heuristic_candidates_minimum": heuristic_status.get("minimum", 0),
                             "heuristic_candidates_total": heuristic_status.get("total", 0),
                             "heuristic_stop_reason": heuristic_status.get("stop_reason"),
+                            "heuristic_soft_deadline_reached": heuristic_status.get(
+                                "soft_deadline_reached", False
+                            ),
+                            "heuristic_hard_deadline_reached": heuristic_status.get(
+                                "hard_deadline_reached", False
+                            ),
                         }
                     )
                 if minimax_status:
@@ -2690,6 +2705,7 @@ class GuandanGame:
                     )
                 timing_meta = {
                     "budget_ms": float(think_budget_ms),
+                    "hard_budget_ms": round(float(hard_budget_ms), 3),
                     "stages_ms": stage_timings_ms,
                     "deadline_limited": bool(deadline_events),
                     "fallback_used": bool(deadline_events),
@@ -2715,6 +2731,9 @@ class GuandanGame:
                         "over_budget_ms": round(max(0.0, total_ms - think_budget_ms), 3),
                         "deadline_reached": bool(
                             deadline_events or time.perf_counter() >= decision_deadline
+                        ),
+                        "hard_deadline_reached": bool(
+                            time.perf_counter() >= hard_decision_deadline
                         ),
                     }
                 )

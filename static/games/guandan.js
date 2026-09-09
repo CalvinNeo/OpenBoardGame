@@ -999,8 +999,13 @@ function buildGuandanBotTimingHtml(timing) {
     })
     .join("");
   const overBudget = typeof timing.over_budget_ms === "number" && timing.over_budget_ms > 0.05;
-  const tone = overBudget ? "is-over-budget" : timing.deadline_limited ? "is-warning" : "is-ok";
+  const hardExceeded = Boolean(timing.hard_deadline_reached);
+  const tone = hardExceeded ? "is-over-budget" : timing.deadline_limited || overBudget ? "is-warning" : "is-ok";
   const budget = typeof timing.budget_ms === "number" ? formatGuandanBotDuration(timing.budget_ms) : "-";
+  const hardBudget = typeof timing.hard_budget_ms === "number"
+    ? formatGuandanBotDuration(timing.hard_budget_ms)
+    : null;
+  const hardText = hardBudget ? ` · Hard limit ${hardBudget}` : "";
   const overText = overBudget ? ` · Over by ${formatGuandanBotDuration(timing.over_budget_ms)}` : "";
   const events = Array.isArray(timing.fallback_events) ? timing.fallback_events : [];
   const fallbackHtml = events
@@ -1012,7 +1017,7 @@ function buildGuandanBotTimingHtml(timing) {
     .join("");
   return `
     <div class="guandan-bot-timing-card ${tone}">
-      <div><strong>⏱️ Actual:</strong> ${formatGuandanBotDuration(timing.total_ms)} / ${budget}${overText}</div>
+      <div><strong>⏱️ Actual:</strong> ${formatGuandanBotDuration(timing.total_ms)} / ${budget}${hardText}${overText}</div>
       ${stageItems ? `<div class="guandan-bot-timing-stages">${stageItems}</div>` : ""}
     </div>
     ${fallbackHtml}

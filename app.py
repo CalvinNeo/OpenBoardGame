@@ -479,7 +479,14 @@ def _bot_status_payload(room: Room) -> Dict:
             think_budget_ms = int(config.get("bot_think_time_ms", 2000))
         except (TypeError, ValueError):
             think_budget_ms = 2000
-        bot_status["think_budget_ms"] = max(40, think_budget_ms)
+        think_budget_ms = max(40, think_budget_ms)
+        try:
+            overrun_ratio = float(config.get("bot_think_overrun_ratio", 0.5))
+        except (TypeError, ValueError):
+            overrun_ratio = 0.5
+        overrun_ratio = max(0.0, min(1.0, overrun_ratio))
+        bot_status["think_budget_ms"] = think_budget_ms
+        bot_status["think_hard_budget_ms"] = round(think_budget_ms * (1.0 + overrun_ratio), 3)
     if bot_status["running"]:
         bot_status["progress"] = max(0.0, min(0.99, float(room.bot_progress or 0.0)))
         bot_status["stage"] = room.bot_stage

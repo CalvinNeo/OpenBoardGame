@@ -1959,28 +1959,10 @@ def _rank_lead_options(
         for group_key, entries in grouped.items()
     }
     if deadline is not None:
-        # Under a wall-clock budget, prescoring stops here. Give the anytime
-        # selector one cheap representative from several action families.
-        active_count = sum(
-            1
-            for pid in state.get("turn_order", [])
-            if not state["players"][pid].get("finished")
-        )
-        if active_count <= 3:
-            family_order = {"straight": 0, "pair": 1, "single": 2}
-        else:
-            family_order = {"pair": 0, "single": 1, "straight": 2}
-        family_order.update(
-            {
-                "full_house": 3,
-                "three": 4,
-                "three_pairs": 5,
-                "steel_plate": 6,
-                "bomb": 7,
-                "straight_flush": 8,
-                "heavenly": 9,
-            }
-        )
+        # Under a wall-clock budget, keep one representative from every action
+        # family near the front, but rank those representatives by the position
+        # itself. A static type order used to leak into the anytime result when
+        # the detailed scorer stopped early.
         best_by_type: Dict[str, Tuple[float, str, List[int], Dict]] = {}
         for entries in grouped.values():
             for entry in entries:
@@ -1989,7 +1971,8 @@ def _rank_lead_options(
                     best_by_type[entry[1]] = entry
         ordered_entries = sorted(
             best_by_type.values(),
-            key=lambda item: (family_order.get(item[1], 20), -item[0]),
+            key=lambda item: item[0],
+            reverse=True,
         )
         selected_keys = {_cards_key(entry[2]) for entry in ordered_entries}
         remaining_entries = sorted(
@@ -10698,6 +10681,7 @@ def _compute_bot_score_components(
 
     remaining = features["remaining"]
     components: Dict[str, float] = _hand_state_value_components(state, bot_id, remaining)
+    clean_single_relay = 0.0
     remaining_budget = _deadline_remaining()
     if remaining_budget is not None and remaining_budget <= 0.08:
         components["anytime_partial"] = 1.0
@@ -10763,6 +10747,33 @@ def _compute_bot_score_components(
         clean_single_bonus = _cheap_clean_single_takeover_bonus(state, bot_id, cards, combo)
         if clean_single_bonus > 0.001:
             components["cheap_clean_single_takeover"] = clean_single_bonus
+        teammate_play = (state.get("trick_plays") or {}).get(teammate) if teammate else None
+        teammate_can_retake_for_relay = bool(
+            teammate_play
+            and teammate_play != "pass"
+            and _teammate_can_retake_current_lane(state, bot_id)
+        )
+        clean_single_relay = _quick_clean_single_relay_bonus(
+            state,
+            bot_id,
+            cards,
+            combo,
+            features,
+            teammate_can_retake_for_relay,
+        )
+        if clean_single_relay > 0.001:
+            components["clean_single_relay"] = clean_single_relay
+            # The relay guard already checks physical residual quality and only
+            # allows a cheap single when our teammate can keep the lane. Avoid
+            # charging the same temporary split again through the generic shape
+            # and material terms.
+            relay_relief = 0.0
+            for component_name in ("shape_value", "plan_alignment", "response_material"):
+                component_value = components.get(component_name, 0.0)
+                if component_value < 0.0:
+                    relay_relief -= component_value
+            if relay_relief > 0.001:
+                components["clean_single_relay_shape_relief"] = relay_relief
         soft_pruning_penalty = _response_soft_pruning_penalty(state, bot_id, cards)
         if soft_pruning_penalty > 0.001:
             components["soft_candidate_prior"] = -soft_pruning_penalty
@@ -10874,7 +10885,7 @@ def _compute_bot_score_components(
         if teammate_lane_bonus > 0.001:
             components["protect_teammate_lane"] = teammate_lane_bonus
         teammate_lane_deference = _teammate_lane_deference_penalty(state, bot_id, cards, combo)
-        if teammate_lane_deference > 0.001:
+        if teammate_lane_deference > 0.001 and clean_single_relay <= 0.001:
             components["defer_teammate_lane"] = -teammate_lane_deference
         leader_left = len(state["players"].get(current_trick.get("player_id"), {}).get("hand", []))
         if combo.get("type") == (current_trick.get("combo") or {}).get("type") and combo.get("type") not in BOMB_TYPES:
@@ -11567,7 +11578,7 @@ def _quick_clean_single_relay_bonus(
     leader = current_trick.get("player_id")
     if leader == teammate:
         teammate_left = len(state["players"].get(teammate, {}).get("hand", [])) if teammate else 99
-        if teammate_left <= 1:
+        if teammate_left <= 1 or len(hand) > 3:
             return 0.0
         bonus = 15.5 + max(0.0, 4 - len(hand)) * 2.0
         if len(hand) <= 8:
@@ -11836,7 +11847,6 @@ def _bot_select_play(
     if hand and _can_play_all(hand, state["level_rank"], state.get("config", {}), current_combo):
         return [card["id"] for card in hand]
     options = _list_hint_options(state, bot_id)
-    deep_limit = max(4, int(state.get("config", {}).get("bot_heuristic_deep_candidate_limit", 10)))
     is_lead = not bool(current_trick)
     current_trick = state.get("current_trick")
     if current_trick and current_trick["combo"]["type"] in ("bomb", "straight_flush", "heavenly"):
@@ -11853,10 +11863,6 @@ def _bot_select_play(
     else:
         options = _rank_lead_options(state, bot_id, options, deadline=deadline)
     options = _filter_overbomb_options(state, bot_id, options)
-    if is_lead:
-        options = options[:deep_limit]
-    else:
-        options = _shortlist_scoring_options(state, bot_id, options, deep_limit)
     if not options:
         return None
     current_trick = state.get("current_trick")
@@ -11870,94 +11876,18 @@ def _bot_select_play(
     # Establish a legal, cheap incumbent before detailed scoring. This makes the
     # selector genuinely anytime: an expired budget still returns a deliberate
     # play/pass choice rather than forcing another expensive minimum batch.
-    if is_lead:
-        active_count = sum(
-            1
-            for pid in state.get("turn_order", [])
-            if not state["players"][pid].get("finished")
-        )
-        if active_count <= 3:
-            incumbent = candidates[0]
-        else:
-            safe_incumbents = []
-            for cand in candidates:
-                if not cand:
-                    continue
-                candidate_features = _candidate_features(state, bot_id, cand)
-                combo_type = (candidate_features.get("combo") or {}).get("type")
-                natural_steel_plate = (
-                    combo_type == "steel_plate"
-                    and not _cards_use_special_material(
-                        candidate_features.get("play_cards", []),
-                        state["level_rank"],
-                    )
-                )
-                natural_short_full_house = (
-                    combo_type == "full_house"
-                    and (
-                        len(hand) <= 18
-                        or 52 <= _combo_numeric_value(candidate_features.get("combo") or {}) <= 55
-                    )
-                    and not _cards_use_special_material(
-                        candidate_features.get("play_cards", []),
-                        state["level_rank"],
-                    )
-                )
-                if (
-                    combo_type in ("single", "pair")
-                    or (combo_type == "three_pairs" and len(hand) <= 24)
-                    or natural_steel_plate
-                    or natural_short_full_house
-                ):
-                    safe_incumbents.append(cand)
-            incumbent = max(
-                safe_incumbents or candidates,
-                key=lambda cand: _quick_candidate_score(state, bot_id, cand),
-            )
-    else:
-        incumbent = max(candidates, key=lambda cand: _quick_candidate_score(state, bot_id, cand))
+    quick_scores: Dict[Optional[Tuple[int, ...]], float] = {}
+
+    def quick_score(cand: Optional[List[int]]) -> float:
+        key = None if cand is None else _cards_key(cand)
+        if key not in quick_scores:
+            quick_scores[key] = _quick_candidate_score(state, bot_id, cand)
+        return quick_scores[key]
+
+    incumbent = max(candidates, key=quick_score)
     ordered_candidates = [incumbent]
     remaining_candidates = [cand for cand in candidates if cand != incumbent]
-    if is_lead and incumbent:
-        incumbent_features = _candidate_features(state, bot_id, incumbent)
-        incumbent_combo = incumbent_features.get("combo") or {}
-        incumbent_type = incumbent_combo.get("type")
-        if incumbent_type in ("full_house", "three_pairs", "steel_plate"):
-            incumbent_uses_special = _cards_use_special_material(
-                incumbent_features.get("play_cards", []),
-                state["level_rank"],
-            )
-
-            def counterfactual_priority(cand: Optional[List[int]]) -> Tuple[int, float]:
-                if not cand:
-                    return (9, 0.0)
-                candidate_features = _candidate_features(state, bot_id, cand)
-                candidate_combo = candidate_features.get("combo") or {}
-                candidate_type = candidate_combo.get("type")
-                candidate_uses_special = _cards_use_special_material(
-                    candidate_features.get("play_cards", []),
-                    state["level_rank"],
-                )
-                low_natural_compound = (
-                    incumbent_uses_special
-                    and not candidate_uses_special
-                    and candidate_type in ("full_house", "three_pairs", "steel_plate")
-                    and 52 <= _combo_numeric_value(candidate_combo) <= 55
-                )
-                if low_natural_compound:
-                    tier = 0
-                elif candidate_type == "pair":
-                    tier = 0
-                elif candidate_type == "single":
-                    tier = 1
-                elif candidate_type == "three":
-                    tier = 2
-                else:
-                    tier = 3
-                return (tier, -_quick_candidate_score(state, bot_id, cand))
-
-            remaining_candidates.sort(key=counterfactual_priority)
-    elif current_trick:
+    if current_trick:
         # A response decision is incomplete unless the detailed stage compares
         # its best play with passing. Schedule pass immediately after the cheap
         # incumbent, then use the quick score to spend the remaining finalist
@@ -11966,9 +11896,14 @@ def _bot_select_play(
             remaining_candidates.remove(None)
             ordered_candidates.append(None)
         remaining_candidates.sort(
-            key=lambda cand: _quick_candidate_score(state, bot_id, cand),
+            key=quick_score,
             reverse=True,
         )
+    else:
+        # The candidate generator already retains representatives from different
+        # action families. From this point onward, spend time according to the
+        # position-aware quick score instead of a static card-type hierarchy.
+        remaining_candidates.sort(key=quick_score, reverse=True)
     ordered_candidates.extend(remaining_candidates)
     config = state.get("config", {})
     target_key = (
@@ -11977,84 +11912,64 @@ def _bot_select_play(
         else "bot_heuristic_min_deep_candidates"
     )
     target_default = 3
-    detailed_target = min(
+    detailed_minimum = min(
         len(ordered_candidates),
         max(1, int(config.get(target_key, target_default))),
     )
+    eval_cache = state.setdefault("_ai_eval_cache", {})
+    soft_deadline = eval_cache.get("heuristic_soft_deadline", deadline)
+    hard_deadline = _current_deadline(deadline)
     scored: List[Tuple[Optional[List[int]], float, Dict[str, float]]] = []
     candidate_durations: List[float] = []
     stop_reason = "candidates_exhausted"
     deadline_limited = False
     for cand in ordered_candidates:
-        if deadline is not None:
-            remaining_budget = deadline - time.perf_counter()
-            # The detailed scorer itself switches to a partial result below
-            # roughly 80ms. Do not start work that cannot produce a comparable
-            # score. After the first finalist, also reserve the observed cost of
-            # another evaluation so a slow candidate cannot overrun the turn.
-            required_budget = 0.09
-            if candidate_durations:
-                required_budget = max(
-                    required_budget,
-                    max(candidate_durations) * 1.25 + 0.01,
-                )
-            if remaining_budget <= required_budget:
-                stop_reason = "deadline_guard"
-                deadline_limited = True
-                break
+        now = time.perf_counter()
+        if hard_deadline is not None and now >= hard_deadline:
+            stop_reason = "hard_deadline"
+            deadline_limited = True
+            break
+        if (
+            soft_deadline is not None
+            and now >= soft_deadline
+            and len(scored) >= detailed_minimum
+        ):
+            stop_reason = "soft_deadline"
+            deadline_limited = True
+            break
+        if hard_deadline is not None and hard_deadline - now <= 0.01:
+            stop_reason = "hard_deadline_guard"
+            deadline_limited = True
+            break
 
-        started_at = time.perf_counter()
+        started_at = now
         components = _bot_finalist_score_components(
             state,
             bot_id,
             cand,
             depth,
-            bounded=deadline is not None,
+            bounded=False,
         )
         candidate_durations.append(time.perf_counter() - started_at)
         if components.get("anytime_partial"):
             # A partial component vector is not on the same scale as a completed
             # one. Retain the completed prefix (or the cheap incumbent below)
             # instead of allowing an unfinished candidate to win accidentally.
-            stop_reason = "partial_candidate"
+            if hard_deadline is not None and time.perf_counter() >= hard_deadline:
+                stop_reason = "hard_deadline"
+            else:
+                stop_reason = "partial_candidate"
             deadline_limited = True
             break
-        if deadline is not None:
-            # The quick policy contains deadline-safe tactical guards that are not
-            # all reproduced by the residual-hand evaluator. Treat detailed
-            # scoring as a bounded correction to that policy instead of replacing
-            # it with a differently scaled objective.
-            quick_score = _quick_candidate_score(state, bot_id, cand)
-            detailed_weight = max(
-                0.0,
-                float(config.get("bot_heuristic_detailed_weight", 0.15)),
-            )
-            weighted_components = {
-                key: value * detailed_weight
-                for key, value in components.items()
-                if key != "total"
-            }
-            detailed_residual = (
-                components.get("total", 0.0)
-                - sum(value for key, value in components.items() if key != "total")
-            ) * detailed_weight
-            if abs(detailed_residual) > 0.001:
-                weighted_components["anytime_detailed_residual"] = detailed_residual
-            weighted_components["anytime_quick_score"] = quick_score
-            weighted_components["total"] = sum(weighted_components.values())
-            components = weighted_components
         scored.append((cand, components.get("total", -999.0), components))
-        if deadline is not None and len(scored) >= detailed_target:
-            stop_reason = "target_reached"
-            break
     detailed_evaluated = len(scored)
     if not scored:
-        quick_score = _quick_candidate_score(state, bot_id, incumbent)
+        incumbent_quick_score = quick_score(incumbent)
         scored.append(
             (
                 incumbent,
-                quick_score,
-                {"anytime_quick_score": quick_score, "total": quick_score},
+                incumbent_quick_score,
+                {"anytime_quick_score": incumbent_quick_score, "total": incumbent_quick_score},
             )
         )
     elif is_lead and detailed_evaluated < len(ordered_candidates):
@@ -12068,14 +11983,20 @@ def _bot_select_play(
             components["total"] = score + 3.0
             scored[scored_index] = (cand, score + 3.0, components)
             break
-    eval_cache = state.setdefault("_ai_eval_cache", {})
     eval_cache["heuristic_anytime"] = {
         "evaluated": detailed_evaluated,
         "total": len(ordered_candidates),
         "interrupted": detailed_evaluated < len(ordered_candidates),
-        "target": detailed_target,
+        "target": len(ordered_candidates),
+        "minimum": detailed_minimum,
         "stop_reason": stop_reason,
         "deadline_limited": deadline_limited,
+        "soft_deadline_reached": bool(
+            soft_deadline is not None and time.perf_counter() >= soft_deadline
+        ),
+        "hard_deadline_reached": bool(
+            hard_deadline is not None and time.perf_counter() >= hard_deadline
+        ),
         "candidate_ms": [round(duration * 1000.0, 3) for duration in candidate_durations],
     }
     _store_heuristic_scored_candidates(state, bot_id, depth, scored)
