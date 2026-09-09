@@ -2473,7 +2473,7 @@ class GuandanGame:
                         deadline = time.perf_counter() + minimax_budget_ms / 1000.0
                     _progress("minimax", 0.22, "Determinizing endgame state")
                     det = _determinize_state(state, bot_id, random.Random())
-                    chosen = _minimax_pick_action(
+                    minimax_action = _minimax_pick_action(
                         det,
                         bot_id,
                         config.get("bot_minimax_depth", 4),
@@ -2483,10 +2483,15 @@ class GuandanGame:
                         progress_start=0.26,
                         progress_end=0.9,
                     )
-                    if chosen:
+                    if minimax_action is not None:
                         decided = True
-                        chosen_action_type = "play"
                         method = "minimax"
+                        if minimax_action.get("type") == "play":
+                            chosen = list(minimax_action.get("card_ids") or [])
+                            chosen_action_type = "play"
+                        else:
+                            chosen = []
+                            chosen_action_type = "pass"
                 if (
                     not decided
                     and total_left > endgame_threshold

@@ -7021,6 +7021,68 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         chosen_labels = [guandan._card_label(card) for card in chosen_cards]
         self.assertEqual(chosen_labels, ["♣️Q"])
 
+    def test_save_c276d4_minimax_timeout_passes_teammate_bomb(self):
+        players = [
+            {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
+            {"player_id": "bot3", "name": "Bot 3", "seat": 1, "is_bot": True},
+            {"player_id": "zhu", "name": "zhu", "seat": 2, "is_bot": False},
+            {"player_id": "bot4", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["round_number"] = 1
+        state["dealer_team"] = "B"
+        state["level_rank"] = 2
+        state["current_turn"] = "bot3"
+        state["finish_order"] = ["zhu"]
+        state["players"]["zhu"]["hand"] = []
+        state["players"]["zhu"]["finished"] = True
+        state["players"]["zhu"]["finish_rank"] = 1
+        state["visible_card_id"] = None
+        state["known_card_owners"] = {}
+
+        deck = guandan._full_deck()
+        bot3_hand = self._pick_labels(deck, ["♥️2", "♦️7", "♣️7", "♦️7", "♣️7"])
+        bot4_bomb = self._pick_labels(deck, ["♦️5", "♣️5", "♦️5", "♥️5"])
+        state["players"]["bot3"]["hand"] = bot3_hand
+        state["players"]["bot4"]["hand"] = self._pick_labels(
+            deck,
+            ["♣️J", "♥️J", "♦️J", "♣️J", "♦️10", "♣️4"],
+        )
+        state["players"]["calvin"]["hand"] = self._pick_labels(
+            deck,
+            ["♥️Q", "♣️Q", "♣️Q", "♠️Q", "♦️Q", "♥️Q", "♦️2", "♦️6", "♠️6", "♥️9", "♦️9"],
+        )
+        state["current_trick"] = {
+            "player_id": "bot4",
+            "cards": [card["id"] for card in bot4_bomb],
+            "combo": guandan._evaluate_combo(bot4_bomb, state["level_rank"], state.get("config", {})),
+        }
+        state["pass_count"] = 1
+        state["trick_plays"] = {"bot4": bot4_bomb, "calvin": "pass"}
+        state["seen_cards"] = [card["id"] for card in bot4_bomb]
+        self._assert_consistent_card_zones(state)
+
+        actions = guandan._candidate_actions(state, "bot3", 8)
+        self.assertEqual({action["type"] for action in actions}, {"play", "pass"})
+
+        # c276d4 reached this root with almost no budget left. A timed-out
+        # search must retain the cheap incumbent (pass), not the first play.
+        action = guandan._minimax_pick_action(state, "bot3", depth=5, width=8, deadline=0.0)
+        self.assertEqual(action, {"type": "pass"})
+
+    def test_bot_move_accepts_minimax_pass_as_a_search_result(self):
+        state, _low, _high = self._make_single_response_state()
+        state["config"]["bot_mode"] = "auto"
+        state["config"]["bot_endgame_threshold"] = 999
+
+        with mock.patch.object(guandan, "_determinize_state", side_effect=lambda current, *_args: current):
+            with mock.patch.object(guandan, "_minimax_pick_action", return_value={"type": "pass"}):
+                action = guandan.GuandanGame.bot_move(state, "bot")
+
+        self.assertEqual(action, {"type": "pass"})
+        self.assertEqual(state["bot_explain"]["bot"]["method"], "minimax")
+
     def test_endgame_response_blocks_one_card_opponent_with_big_joker(self):
         players = [
             {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
@@ -7260,7 +7322,8 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         hand_map = guandan._map_hand_by_id(state["players"]["bot4"]["hand"])
         chosen = guandan._minimax_pick_action(state, "bot4", depth=5, width=8, deadline=None)
         self.assertIsNotNone(chosen)
-        chosen_labels = [guandan._card_label(hand_map[cid]) for cid in chosen]
+        self.assertEqual(chosen.get("type"), "play")
+        chosen_labels = [guandan._card_label(hand_map[cid]) for cid in chosen.get("card_ids", [])]
         self.assertNotEqual(chosen_labels, ["♥️4"])
 
     def test_round_end_waits_for_all_players_to_ready(self):

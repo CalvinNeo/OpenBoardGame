@@ -10235,7 +10235,8 @@ def _minimax_pick_action(
     progress_callback: Optional[Callable[[str, float, Optional[str]], None]] = None,
     progress_start: float = 0.0,
     progress_end: float = 1.0,
-) -> Optional[List[int]]:
+) -> Optional[Dict]:
+    """Return the selected full action so pass is distinct from no result."""
     legal = GuandanGame.get_legal_actions(state, bot_id)
     if "play" not in legal:
         return None
@@ -10253,12 +10254,16 @@ def _minimax_pick_action(
             1.0,
             "Minimax found a forced control relay",
         )
-        return list(forced_relay.get("card_ids") or [])
+        return dict(forced_relay)
     actions = sorted(
         actions,
         key=lambda action: (
             _minimax_root_lead_single_penalty(state, bot_id, action),
-            0 if action.get("type") == "play" else 1,
+            -_quick_candidate_score(
+                state,
+                bot_id,
+                action.get("card_ids") if action.get("type") == "play" else None,
+            ),
         ),
     )
     total_actions = max(1, len(actions))
@@ -10392,11 +10397,8 @@ def _minimax_pick_action(
                         else:
                             non_single_choices.sort(key=lambda item: item[0], reverse=True)
                             best_action = non_single_choices[0][1]
-    if best_action and best_action.get("type") == "play":
-        _report_progress_scaled(progress_callback, "minimax", progress_start, progress_end, 1.0, "Minimax finalized")
-        return best_action.get("card_ids")
     _report_progress_scaled(progress_callback, "minimax", progress_start, progress_end, 1.0, "Minimax finalized")
-    return None
+    return dict(best_action) if best_action else None
 
 
 def _minimal_bomb_response(
