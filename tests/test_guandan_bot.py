@@ -7113,6 +7113,95 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         chosen_labels = [guandan._card_label(hand_map[cid]) for cid in action.get("card_ids", [])]
         self.assertNotEqual(chosen_labels, ["♣️5"])
 
+    def test_save_e812cc_endgame_leads_small_joker_before_pair(self):
+        players = [
+            {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
+            {"player_id": "bot3", "name": "Bot 3", "seat": 1, "is_bot": True},
+            {"player_id": "zhu", "name": "zhu", "seat": 2, "is_bot": False},
+            {"player_id": "bot4", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["round_number"] = 1
+        state["dealer_team"] = "A"
+        state["level_rank"] = 2
+        state["current_turn"] = "bot3"
+        state["current_trick"] = None
+        state["pass_count"] = 0
+        state["trick_plays"] = {}
+        state["finish_order"] = ["zhu"]
+        state["players"]["zhu"]["hand"] = []
+        state["players"]["zhu"]["finished"] = True
+        state["players"]["zhu"]["finish_rank"] = 1
+        state["config"]["bot_mode"] = "auto"
+        state["config"]["bot_endgame_threshold"] = 24
+        state["config"]["bot_minimax_depth"] = 5
+        state["config"]["bot_minimax_width"] = 8
+        state["config"]["bot_minimax_time_ms"] = 180
+        state["visible_card_id"] = None
+        state["known_card_owners"] = {}
+
+        deck = guandan._full_deck()
+        bot3_hand = self._pick_labels(deck, ["🃏S", "♣️3", "♣️3"])
+        calvin_hand = self._pick_labels(deck, ["♦️Q", "♦️Q"])
+        bot4_hand = self._pick_labels(deck, ["🃏B", "♦️K", "♣️Q", "♠️6"])
+        state["players"]["bot3"]["hand"] = bot3_hand
+        state["players"]["calvin"]["hand"] = calvin_hand
+        state["players"]["bot4"]["hand"] = bot4_hand
+        state["seen_cards"] = [card["id"] for card in deck]
+
+        # An older, uninformative pass against a big joker currently masks the
+        # decisive latest pass against the level card in the scalar pass limit.
+        state["pass_limits"] = {
+            "calvin": {"single": 100, "pair": 60},
+            "bot3": {"single": 100, "pair": 55},
+            "bot4": {"single": 70, "pair": 60},
+        }
+        state["round_memories"] = [
+            {
+                "round_number": 1,
+                "tricks": [
+                    {
+                        "index": 11,
+                        "leader_id": "calvin",
+                        "winner_id": "bot3",
+                        "status": "completed",
+                        "actions": [
+                            {
+                                "player_id": "calvin",
+                                "type": "play",
+                                "combo_type": "single",
+                                "cards": [
+                                    {"label": "♦️A", "rank": 14, "suit": "diamonds", "joker": None}
+                                ],
+                                "hand_count_after": 2,
+                            },
+                            {
+                                "player_id": "bot3",
+                                "type": "play",
+                                "combo_type": "single",
+                                "cards": [
+                                    {"label": "♦️2", "rank": 2, "suit": "diamonds", "joker": None}
+                                ],
+                                "hand_count_after": 3,
+                            },
+                            {"player_id": "bot4", "type": "pass"},
+                            {"player_id": "calvin", "type": "pass"},
+                        ],
+                    }
+                ],
+            }
+        ]
+
+        hand_map = guandan._map_hand_by_id(bot3_hand)
+        real_random = random.Random
+        with mock.patch.object(guandan.random, "Random", side_effect=lambda *args, **kwargs: real_random(0)):
+            action = guandan.GuandanGame.bot_move(state, "bot3")
+
+        self.assertEqual(action.get("type"), "play")
+        chosen_labels = [guandan._card_label(hand_map[cid]) for cid in action.get("card_ids", [])]
+        self.assertEqual(chosen_labels, ["🃏S"])
+
     def test_minimax_stops_at_round_end_instead_of_searching_next_round(self):
         players = [
             {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},

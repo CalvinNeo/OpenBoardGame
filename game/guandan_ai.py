@@ -895,6 +895,71 @@ def _public_card_single_value(card: Dict, level_rank: int) -> int:
     return _point_order_value(rank, level_rank)
 
 
+def _latest_public_single_pass_observation(state: Dict, player_id: str) -> Optional[Dict]:
+    """Recover the latest single-card pass with its public endgame context."""
+    round_entries = state.get("round_memories") or []
+    round_entry = round_entries[-1] if round_entries else None
+    if not round_entry:
+        return None
+
+    actions = [
+        action
+        for trick in round_entry.get("tricks", []) or []
+        for action in trick.get("actions", []) or []
+    ]
+    if not actions:
+        return None
+
+    hand_counts = {
+        pid: len(pdata.get("hand", []))
+        + sum(
+            len(action.get("cards") or [])
+            for action in actions
+            if action.get("player_id") == pid and action.get("type") == "play"
+        )
+        for pid, pdata in state.get("players", {}).items()
+    }
+    latest = None
+    action_index = 0
+    for trick in round_entry.get("tricks", []) or []:
+        leader_id = None
+        combo_type = None
+        combo_value = None
+        for action in trick.get("actions", []) or []:
+            actor = action.get("player_id")
+            action_type = action.get("type")
+            if action_type == "play":
+                cards = action.get("cards") or []
+                hand_counts[actor] = hand_counts.get(actor, 0) - len(cards)
+                if action.get("hand_count_after") is not None:
+                    hand_counts[actor] = int(action.get("hand_count_after"))
+                leader_id = actor
+                combo_type = action.get("combo_type")
+                combo_value = None
+                if combo_type == "single":
+                    combo_value = max(
+                        (_public_card_single_value(card, state["level_rank"]) for card in cards),
+                        default=None,
+                    )
+            elif (
+                action_type == "pass"
+                and actor == player_id
+                and combo_type == "single"
+                and combo_value is not None
+            ):
+                latest = {
+                    "value": combo_value,
+                    "hand_count": hand_counts.get(player_id, len(state["players"][player_id].get("hand", []))),
+                    "leader_id": leader_id,
+                    "action_index": action_index,
+                }
+            action_index += 1
+
+    if latest is not None:
+        latest["actions_since"] = max(0, action_index - latest["action_index"] - 1)
+    return latest
+
+
 def _teammate_public_history_profile(state: Dict, player_id: str) -> Dict[str, float]:
     teammate = _teammate_of(state, player_id)
     profile = {
@@ -8472,21 +8537,49 @@ def _max_combo_value_for_hand(hand: List[Dict], level_rank: int, combo_type: str
 
 def _pass_limit_penalty_for_hand(state: Dict, player_id: str, hand: List[Dict]) -> float:
     limits = state.get("pass_limits", {}).get(player_id, {})
-    if not limits:
-        return 0.0
     level_rank = state["level_rank"]
     config = state.get("config", {})
-    penalty = 0.0
+    penalties_by_type: Dict[str, float] = {}
     for combo_type, limit in limits.items():
         max_value = _max_combo_value_for_hand(hand, level_rank, combo_type, config)
         if max_value is None or max_value <= limit:
             continue
         gap = max_value - limit
         if combo_type in ("single", "pair", "three"):
-            penalty += 1.2 + min(4.0, gap * 0.14)
+            penalties_by_type[combo_type] = 1.2 + min(4.0, gap * 0.14)
         else:
-            penalty += 1.8 + min(5.0, gap * 0.22)
-    return penalty
+            penalties_by_type[combo_type] = 1.8 + min(5.0, gap * 0.22)
+
+    # A scalar maximum pass limit intentionally stays conservative, but it can
+    # erase a much stronger recent signal. In particular, an old forced pass on
+    # a big joker (100) says nothing about ownership, while a two-card opponent
+    # passing on a level single shortly before the decision is highly diagnostic.
+    observation = _latest_public_single_pass_observation(state, player_id)
+    if observation:
+        leader_id = observation.get("leader_id")
+        value = observation.get("value")
+        max_value = _max_combo_value_for_hand(hand, level_rank, "single", config)
+        leader_is_opponent = (
+            leader_id
+            and _team_of(state, leader_id) != _team_of(state, player_id)
+        )
+        if max_value is not None and value is not None and max_value > value and leader_is_opponent:
+            gap = max_value - value
+            recent_penalty = 1.2 + min(4.0, gap * 0.14)
+            hand_count = int(observation.get("hand_count") or 99)
+            actions_since = int(observation.get("actions_since") or 0)
+            if hand_count <= 2 and actions_since <= 4:
+                recent_penalty += 8.0
+                finish_order = state.get("finish_order") or []
+                if finish_order and _team_of(state, finish_order[0]) == _team_of(state, player_id):
+                    recent_penalty += 2.0
+            elif hand_count <= 4 and actions_since <= 8:
+                recent_penalty += 3.0
+            penalties_by_type["single"] = max(
+                penalties_by_type.get("single", 0.0),
+                recent_penalty,
+            )
+    return sum(penalties_by_type.values())
 
 
 def _revealed_rank_cap_penalty_for_hand(state: Dict, player_id: str, hand: List[Dict]) -> float:
@@ -10065,6 +10158,74 @@ def _minimax_root_lead_single_penalty(state: Dict, bot_id: str, action: Dict) ->
     return max(0.0, penalty)
 
 
+def _forced_endgame_control_relay_action(
+    state: Dict,
+    bot_id: str,
+    actions: List[Dict],
+) -> Optional[Dict]:
+    """Use a public pass to lock the lead before shedding a one-combo tail."""
+    if state.get("current_trick"):
+        return None
+    hand = state["players"].get(bot_id, {}).get("hand", [])
+    if not 2 <= len(hand) <= 6:
+        return None
+
+    opponents = [
+        pid
+        for pid in state.get("turn_order", [])
+        if pid != bot_id
+        and not state["players"][pid].get("finished")
+        and _team_of(state, pid) != _team_of(state, bot_id)
+    ]
+    if len(opponents) != 1:
+        return None
+    opponent_id = opponents[0]
+    if len(state["players"][opponent_id].get("hand", [])) > 2:
+        return None
+
+    finish_order = state.get("finish_order") or []
+    if not finish_order or _team_of(state, finish_order[0]) != _team_of(state, opponent_id):
+        return None
+
+    observation = _latest_public_single_pass_observation(state, opponent_id)
+    if not observation:
+        return None
+    leader_id = observation.get("leader_id")
+    if not leader_id or _team_of(state, leader_id) != _team_of(state, bot_id):
+        return None
+    if int(observation.get("hand_count") or 99) > 2:
+        return None
+    if int(observation.get("actions_since") or 0) > 4:
+        return None
+
+    hand_map = _map_hand_by_id(hand)
+    candidates: List[Tuple[int, Dict]] = []
+    for action in actions:
+        if action.get("type") != "play":
+            continue
+        card_ids = action.get("card_ids") or []
+        play_cards = [hand_map[cid] for cid in card_ids if cid in hand_map]
+        combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
+        if not combo or combo.get("type") != "single":
+            continue
+        value = int(combo.get("rank_value") or 0)
+        if value < PREMIUM_SINGLE_VALUE_MIN or value <= int(observation.get("value") or 0):
+            continue
+        remaining = _remove_cards(hand, card_ids)
+        if not remaining or not _can_play_all(
+            remaining,
+            state["level_rank"],
+            state.get("config", {}),
+            None,
+        ):
+            continue
+        candidates.append((value, action))
+    if not candidates:
+        return None
+    candidates.sort(key=lambda item: item[0])
+    return candidates[0][1]
+
+
 def _minimax_pick_action(
     state: Dict,
     bot_id: str,
@@ -10082,6 +10243,17 @@ def _minimax_pick_action(
     actions = _CORE._filter_overbomb_actions(state, bot_id, actions)
     if not actions:
         return None
+    forced_relay = _forced_endgame_control_relay_action(state, bot_id, actions)
+    if forced_relay is not None:
+        _report_progress_scaled(
+            progress_callback,
+            "minimax",
+            progress_start,
+            progress_end,
+            1.0,
+            "Minimax found a forced control relay",
+        )
+        return list(forced_relay.get("card_ids") or [])
     actions = sorted(
         actions,
         key=lambda action: (
