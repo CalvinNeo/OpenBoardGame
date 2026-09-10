@@ -7160,6 +7160,75 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         chosen_labels = sorted(guandan._card_label(hand_map[cid]) for cid in action.get("card_ids", []))
         self.assertEqual(chosen_labels, sorted(["♠️J", "♥️J", "♦️J", "♣️J"]))
 
+    def test_bomb_response_keeps_seven_kind_closeout_from_save_2ba8a4(self):
+        players = [
+            {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
+            {"player_id": "bot2", "name": "Bot 2", "seat": 1, "is_bot": True},
+            {"player_id": "bot3", "name": "Bot 3", "seat": 2, "is_bot": True},
+            {"player_id": "bot4", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["round_number"] = 1
+        state["dealer_team"] = "B"
+        state["level_rank"] = 2
+        state["current_turn"] = "bot3"
+        state["config"]["bot_mode"] = "heuristic"
+        state["config"]["bot_endgame_threshold"] = 0
+
+        deck = guandan._full_deck()
+        bot3_hand = self._pick_labels(
+            deck,
+            [
+                "♠️2", "♣️2", "♥️2",
+                "♣️9", "♠️9", "♥️9", "♦️9", "♣️9", "♠️9", "♥️9",
+                "♠️6", "♥️6",
+            ],
+        )
+        trick_cards = self._pick_labels(deck, ["♦️J", "♣️J", "♠️J", "♥️J"])
+        state["players"]["bot3"]["hand"] = bot3_hand
+        for player_id, count in (("bot2", 3), ("calvin", 9), ("bot4", 15)):
+            state["players"][player_id]["hand"] = deck[:count]
+            del deck[:count]
+        state["current_trick"] = {
+            "player_id": "bot2",
+            "cards": [card["id"] for card in trick_cards],
+            "combo": guandan._evaluate_combo(
+                trick_cards,
+                state["level_rank"],
+                state.get("config", {}),
+            ),
+        }
+        state["trick_plays"] = {"bot2": trick_cards}
+        state["seen_cards"] = [card["id"] for card in deck[:20]]
+        state["known_card_owners"] = {}
+        state["round_memories"] = []
+        self._assert_consistent_card_zones(state)
+
+        actions = guandan._candidate_actions(state, "bot3", 8)
+        hand_map = guandan._map_hand_by_id(bot3_hand)
+        bomb_sizes = {
+            len(action.get("card_ids", []))
+            for action in actions
+            if action.get("type") == "play"
+            and guandan._evaluate_combo(
+                [hand_map[cid] for cid in action.get("card_ids", [])],
+                state["level_rank"],
+                state.get("config", {}),
+            ).get("type") == "bomb"
+        }
+        self.assertEqual(bomb_sizes, {5, 7})
+
+        chosen = guandan._bot_select_play(state, "bot3", depth=4)
+        self.assertIsNotNone(chosen)
+        chosen_combo = guandan._evaluate_combo(
+            [hand_map[cid] for cid in chosen],
+            state["level_rank"],
+            state.get("config", {}),
+        )
+        self.assertEqual(chosen_combo.get("type"), "bomb")
+        self.assertEqual(chosen_combo.get("size"), 7)
+
     def test_full_house_response_preserves_wild_bomb_upgrade(self):
         players = [
             {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
@@ -7995,6 +8064,62 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         # search must retain the cheap incumbent (pass), not the first play.
         action = guandan._minimax_pick_action(state, "bot3", depth=5, width=8, deadline=0.0)
         self.assertEqual(action, {"type": "pass"})
+
+    def test_minimax_keeps_grouped_lead_against_one_card_opponent(self):
+        players = [
+            {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
+            {"player_id": "bot2", "name": "Bot 2", "seat": 1, "is_bot": True},
+            {"player_id": "bot3", "name": "Bot 3", "seat": 2, "is_bot": True},
+            {"player_id": "bot4", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["round_number"] = 1
+        state["dealer_team"] = "B"
+        state["level_rank"] = 2
+        state["current_turn"] = "bot4"
+        state["current_trick"] = None
+        state["finish_order"] = ["bot3"]
+        state["players"]["bot3"]["hand"] = []
+        state["players"]["bot3"]["finished"] = True
+        state["players"]["bot3"]["finish_rank"] = 1
+
+        deck = guandan._full_deck()
+        bot4_hand = self._pick_labels(
+            deck,
+            ["♣️K", "♣️K", "♣️7", "♦️7", "♦️6", "♣️6", "♦️J"],
+        )
+        state["players"]["bot4"]["hand"] = bot4_hand
+        state["players"]["calvin"]["hand"] = self._pick_labels(deck, ["♣️J"])
+        state["players"]["bot2"]["hand"] = self._pick_labels(deck, ["♥️6", "♦️6", "♣️6"])
+        state["known_card_owners"] = {}
+        state["round_memories"] = []
+        self._assert_consistent_card_zones(state)
+
+        actions = guandan._candidate_actions(state, "bot4", 8)
+        hand_map = guandan._map_hand_by_id(bot4_hand)
+        pair_six = next(
+            action
+            for action in actions
+            if action.get("type") == "play"
+            and sorted(guandan._card_label(hand_map[cid])[-1] for cid in action["card_ids"]) == ["6", "6"]
+        )
+
+        with mock.patch("game.guandan_ai._minimax_value", return_value=0.0):
+            chosen = guandan._minimax_pick_action(state, "bot4", depth=5, width=8, deadline=None)
+        chosen_cards = [hand_map[cid] for cid in chosen.get("card_ids", [])]
+        chosen_combo = guandan._evaluate_combo(chosen_cards, state["level_rank"], state.get("config", {}))
+        self.assertEqual(chosen_combo.get("type"), "pair")
+
+        timed_out = guandan._minimax_pick_action(
+            state,
+            "bot4",
+            depth=5,
+            width=8,
+            deadline=0.0,
+            incumbent_action=pair_six,
+        )
+        self.assertEqual(timed_out, pair_six)
 
     def test_bot_move_accepts_minimax_pass_as_a_search_result(self):
         state, _low, _high = self._make_single_response_state()

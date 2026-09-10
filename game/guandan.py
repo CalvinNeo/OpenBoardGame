@@ -2537,6 +2537,7 @@ class GuandanGame:
                         config.get("bot_minimax_depth", 4),
                         search_width,
                         deadline=deadline,
+                        incumbent_action=heuristic_action,
                         progress_callback=_progress,
                         progress_start=0.26,
                         progress_end=0.9,

@@ -8369,15 +8369,10 @@ def _candidate_actions(state: Dict, player_id: str, limit: int) -> List[Dict]:
             if play_all not in options:
                 options = [play_all] + options
         current_trick = state.get("current_trick")
-        if current_trick and current_trick["combo"]["type"] in ("bomb", "straight_flush", "heavenly"):
-            minimal = _minimal_bomb_response(
-                state["players"][player_id]["hand"],
-                state["level_rank"],
-                current_trick["combo"],
-                state.get("config", {}),
-            )
-            if minimal:
-                options = [minimal]
+        if current_trick and current_trick["combo"]["type"] in BOMB_TYPES:
+            bomb_frontier = _bomb_response_frontier(state, player_id)
+            if bomb_frontier:
+                options = bomb_frontier
         elif current_trick:
             options = _rank_response_options(state, player_id, options)
         else:
@@ -10750,6 +10745,7 @@ def _minimax_value(
     maximize = _team_of(state, actor) == _team_of(state, bot_id)
     if maximize:
         value = -1e9
+        evaluated_child = False
         for action in actions:
             if deadline is not None and time.perf_counter() >= deadline:
                 break
@@ -10757,12 +10753,14 @@ def _minimax_value(
             _, err = GuandanGame.apply_action(nxt, actor, action)
             if err:
                 continue
+            evaluated_child = True
             value = max(value, _minimax_value(nxt, bot_id, depth - 1, alpha, beta, width, deadline=deadline))
             alpha = max(alpha, value)
             if beta <= alpha:
                 break
-        return value
+        return value if evaluated_child else _evaluate_state_for_bot(state, bot_id)
     value = 1e9
+    evaluated_child = False
     for action in actions:
         if deadline is not None and time.perf_counter() >= deadline:
             break
@@ -10770,11 +10768,12 @@ def _minimax_value(
         _, err = GuandanGame.apply_action(nxt, actor, action)
         if err:
             continue
+        evaluated_child = True
         value = min(value, _minimax_value(nxt, bot_id, depth - 1, alpha, beta, width, deadline=deadline))
         beta = min(beta, value)
         if beta <= alpha:
             break
-    return value
+    return value if evaluated_child else _evaluate_state_for_bot(state, bot_id)
 
 
 def _minimax_root_lead_single_penalty(state: Dict, bot_id: str, action: Dict) -> float:
@@ -10828,6 +10827,22 @@ def _minimax_root_lead_single_penalty(state: Dict, bot_id: str, action: Dict) ->
         if rem_summary.get("group_turns", 0.0) > 0.0:
             penalty += min(10.0, 4.0 + rem_summary.get("group_turns", 0.0) * 2.6)
     return max(0.0, penalty)
+
+
+def _minimax_clean_grouped_lead(state: Dict, bot_id: str, action: Optional[Dict]) -> bool:
+    if state.get("current_trick") or not action or action.get("type") != "play":
+        return False
+    hand = state["players"].get(bot_id, {}).get("hand", [])
+    hand_map = _map_hand_by_id(hand)
+    card_ids = action.get("card_ids", [])
+    play_cards = [hand_map[cid] for cid in card_ids if cid in hand_map]
+    combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
+    if not combo or combo.get("type") == "single" or combo.get("type") in BOMB_TYPES:
+        return False
+    return (
+        _group_fragment_penalty(hand, card_ids, state["level_rank"], combo) <= 0.75
+        and _control_group_break_penalty(hand, card_ids, state["level_rank"]) <= 0.75
+    )
 
 
 def _forced_endgame_control_relay_action(
@@ -10904,6 +10919,7 @@ def _minimax_pick_action(
     depth: int,
     width: int,
     deadline: Optional[float] = None,
+    incumbent_action: Optional[Dict] = None,
     progress_callback: Optional[Callable[[str, float, Optional[str]], None]] = None,
     progress_start: float = 0.0,
     progress_end: float = 1.0,
@@ -10929,6 +10945,8 @@ def _minimax_pick_action(
         return None
     if deadline is not None and time.perf_counter() >= deadline:
         store_status("deadline", 0, 0, True)
+        if incumbent_action:
+            return dict(incumbent_action)
         if state.get("current_trick") and "pass" in legal:
             return {"type": "pass"}
         return None
@@ -10939,6 +10957,8 @@ def _minimax_pick_action(
         return None
     if deadline is not None and time.perf_counter() >= deadline:
         store_status("deadline", 0, len(actions), True)
+        if incumbent_action:
+            return dict(incumbent_action)
         if state.get("current_trick") and "pass" in legal:
             return {"type": "pass"}
         return dict(actions[0])
@@ -10974,8 +10994,12 @@ def _minimax_pick_action(
         0.05,
         f"Preparing minimax with {total_actions} root candidates",
     )
-    best_action = actions[0]
-    if not state.get("current_trick"):
+    best_action = dict(incumbent_action) if incumbent_action else actions[0]
+    if not state.get("current_trick") and not _minimax_clean_grouped_lead(
+        state,
+        bot_id,
+        incumbent_action,
+    ):
         next_pid = _next_active_after(state, bot_id)
         if next_pid and _team_of(state, next_pid) != _team_of(state, bot_id):
             next_hand = state["players"].get(next_pid, {}).get("hand", [])
@@ -11011,6 +11035,9 @@ def _minimax_pick_action(
         value = _minimax_value(nxt, bot_id, depth - 1, -1e9, 1e9, width, deadline=deadline)
         if deadline is not None and time.perf_counter() >= deadline:
             deadline_limited = True
+            # A value returned from an interrupted subtree is not comparable to
+            # a fully searched root. Keep the heuristic/last complete incumbent.
+            break
         value -= _minimax_root_lead_single_penalty(state, bot_id, action)
         root_scored.append((action, value))
         if value > best_value:
@@ -11037,6 +11064,9 @@ def _minimax_pick_action(
                 single_choices: List[Tuple[int, float, Dict]] = []
                 ordinary_single_choices: List[Tuple[int, float, Dict]] = []
                 non_single_choices: List[Tuple[float, Dict]] = []
+                clean_non_single_choices: List[Tuple[float, Dict]] = []
+                if _minimax_clean_grouped_lead(state, bot_id, incumbent_action):
+                    clean_non_single_choices.append((best_value, incumbent_action))
                 for action, value in root_scored:
                     if action.get("type") != "play":
                         continue
@@ -11046,6 +11076,8 @@ def _minimax_pick_action(
                         continue
                     if combo.get("type") != "single":
                         non_single_choices.append((value, action))
+                        if _minimax_clean_grouped_lead(state, bot_id, action):
+                            clean_non_single_choices.append((value, action))
                         continue
                     if _cards_use_special_material(play_cards, state["level_rank"]):
                         continue
@@ -11070,11 +11102,16 @@ def _minimax_pick_action(
                     ):
                         continue
                     rank_value = combo.get("rank_value", 0)
-                    fallback_entry = (rank_value, fallback_single_value, action)
+                    fallback_value = (
+                        _quick_candidate_score(state, bot_id, action.get("card_ids"))
+                        if deadline_limited
+                        else fallback_single_value
+                    )
+                    fallback_entry = (rank_value, fallback_value, action)
                     ordinary_single_choices.append(fallback_entry)
                     if rank_value >= next_max:
                         single_choices.append(fallback_entry)
-                if single_choices:
+                if single_choices and not clean_non_single_choices:
                     best_single_value = max(value for _, value, _ in single_choices)
                     safe_margin = 4.0
                     viable = [entry for entry in single_choices if entry[1] >= best_single_value - safe_margin]
@@ -11126,6 +11163,121 @@ def _minimal_bomb_response(
         if _compare_combos(current_combo, combo, level_rank, config):
             return cand["cards"]
     return None
+
+
+def _bomb_response_frontier(
+    state: Dict,
+    player_id: str,
+    limit: int = 3,
+) -> List[List[int]]:
+    """Keep the cheapest overbomb plus structurally better closeout variants."""
+    current_trick = state.get("current_trick") or {}
+    current_combo = current_trick.get("combo") or {}
+    if current_combo.get("type") not in BOMB_TYPES:
+        return []
+
+    hand = state["players"].get(player_id, {}).get("hand", [])
+    if not hand:
+        return []
+    level_rank = state["level_rank"]
+    config = state.get("config", {})
+    minimal = _minimal_bomb_response(hand, level_rank, current_combo, config)
+    if minimal is None:
+        return []
+
+    # Large hands should retain the existing conservative behavior. Structural
+    # overbombs matter most when either side is already close to going out.
+    leader = current_trick.get("player_id")
+    leader_left = len(state["players"].get(leader, {}).get("hand", [])) if leader else 99
+    if len(hand) > 16 and leader_left > 4:
+        return [minimal]
+
+    legal_options = _list_bomb_options(hand, level_rank, current_combo, config)
+    if not legal_options:
+        return [minimal]
+
+    minimal_key = _cards_key(minimal)
+    records: List[Tuple[List[int], Dict, List[Dict], float, bool]] = []
+    hand_map = _map_hand_by_id(hand)
+    seen = set()
+    for cards in legal_options:
+        key = _cards_key(cards)
+        if key in seen:
+            continue
+        seen.add(key)
+        play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+        combo = _evaluate_combo(play_cards, level_rank, config)
+        if not combo or combo.get("type") not in BOMB_TYPES:
+            continue
+        remaining = _remove_cards(hand, cards)
+        finishes_next = bool(remaining) and _can_play_all(remaining, level_rank, config, None)
+        remaining_turns = (
+            0.0
+            if not remaining
+            else 1.0
+            if finishes_next
+            else _hand_decomposition_summary(remaining, level_rank).get(
+                "turns",
+                float(len(remaining)),
+            )
+        )
+        records.append((cards, combo, remaining, remaining_turns, finishes_next))
+
+    if not records:
+        return [minimal]
+    minimal_record = next(
+        (record for record in records if _cards_key(record[0]) == minimal_key),
+        None,
+    )
+    if minimal_record is None:
+        return [minimal]
+
+    selected = [minimal]
+    selected_keys = {minimal_key}
+    minimal_turns = minimal_record[3]
+    minimal_finishes_next = minimal_record[4]
+    upgrades = []
+    for record in records:
+        cards, combo, remaining, remaining_turns, finishes_next = record
+        key = _cards_key(cards)
+        if key in selected_keys:
+            continue
+        immediate_finish = not remaining
+        improves_closeout = finishes_next and not minimal_finishes_next
+        improves_turns = remaining_turns <= minimal_turns - 0.75
+        if not (immediate_finish or improves_closeout or improves_turns):
+            continue
+        upgrades.append(
+            (
+                cards,
+                combo,
+                remaining,
+                remaining_turns,
+                finishes_next,
+                immediate_finish,
+            )
+        )
+
+    upgrades.sort(
+        key=lambda item: (
+            not item[5],
+            not item[4],
+            item[3],
+            _bomb_tier(item[1]),
+            _combo_numeric_value(item[1]),
+            len(item[0]),
+            _cards_key(item[0]),
+        )
+    )
+    for cards, _combo, _remaining, _turns, _finishes_next, _immediate in upgrades:
+        key = _cards_key(cards)
+        if key in selected_keys:
+            continue
+        selected.append(cards)
+        selected_keys.add(key)
+        if len(selected) >= max(2, limit):
+            break
+    return selected
 
 
 def _bot_component_cache_key(
@@ -12531,15 +12683,10 @@ def _bot_select_play(
         and current_type in {"full_house", "straight", "three_pairs", "steel_plate"}
     )
     state.setdefault("_ai_eval_cache", {})["bounded_response_ranking"] = bounded_response_ranking
-    if current_trick and current_trick["combo"]["type"] in ("bomb", "straight_flush", "heavenly"):
-        minimal = _minimal_bomb_response(
-            state["players"][bot_id]["hand"],
-            state["level_rank"],
-            current_trick["combo"],
-            state.get("config", {}),
-        )
-        if minimal:
-            options = [minimal]
+    if current_trick and current_trick["combo"]["type"] in BOMB_TYPES:
+        bomb_frontier = _bomb_response_frontier(state, bot_id)
+        if bomb_frontier:
+            options = bomb_frontier
     elif current_trick:
         options = _rank_response_options(state, bot_id, options)
     else:
@@ -12933,14 +13080,9 @@ def _build_bot_explain(
             if play_all not in options:
                 options = [play_all] + options
         if current_trick and current_trick["combo"]["type"] in BOMB_TYPES:
-            minimal = _minimal_bomb_response(
-                hand,
-                state["level_rank"],
-                current_trick["combo"],
-                state.get("config", {}),
-            )
-            if minimal:
-                options = [minimal]
+            bomb_frontier = _bomb_response_frontier(state, bot_id)
+            if bomb_frontier:
+                options = bomb_frontier
         elif current_trick:
             options = _rank_response_options(state, bot_id, options)
         else:
