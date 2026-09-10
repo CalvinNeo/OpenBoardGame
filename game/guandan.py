@@ -51,6 +51,8 @@ DEFAULT_CONFIG = {
     "bot_rollout_heuristic_depth": 2,
     "bot_rollout_candidate_limit": 6,
     "bot_action_materializations": 3,
+    "bot_determinize_short_budget_threshold_ms": 350,
+    "bot_determinize_short_budget_samples": 2,
     "bot_endgame_threshold": 24,
     "bot_minimax_depth": 5,
     "bot_minimax_width": 8,
@@ -61,6 +63,7 @@ DEFAULT_CONFIG = {
     "bot_heuristic_deep_candidate_limit": 10,
     "bot_heuristic_bounded_hand_threshold": 24,
     "bot_heuristic_single_bounded_hand_threshold": 18,
+    "bot_heuristic_compound_bounded_hand_threshold": 23,
     "bot_heuristic_runner_bounded_hand_threshold": 18,
     "bot_heuristic_min_deep_candidates": 3,
     "bot_heuristic_min_lead_deep_candidates": 3,
@@ -70,8 +73,8 @@ DEFAULT_CONFIG = {
     "bot_think_overrun_ratio": 0.5,
     "bot_mcts_time_ms": 220,
     "bot_mcts_short_budget_threshold_ms": 350,
-    "bot_mcts_short_budget_depth": 2,
-    "bot_mcts_short_budget_tree_ply": 1,
+    "bot_mcts_short_budget_depth": 1,
+    "bot_mcts_short_budget_tree_ply": 0,
     "bot_mcts_short_budget_reply_width": 1,
     "bot_minimax_time_ms": 180,
 }
@@ -2527,7 +2530,7 @@ class GuandanGame:
                     deadline = min(search_deadline, time.perf_counter() + minimax_budget_ms / 1000.0)
                     _progress("minimax", 0.22, "Determinizing endgame state")
                     minimax_started_at = time.perf_counter()
-                    det = _determinize_state(state, bot_id, random.Random())
+                    det = _determinize_state(state, bot_id, random.Random(), deadline)
                     minimax_action = _minimax_pick_action(
                         det,
                         bot_id,
@@ -2592,13 +2595,19 @@ class GuandanGame:
                     if not has_real_search and not has_fast_path:
                         mcts_action = None
                         mcts_scores = None
-                    if mcts_action is not None and _should_accept_mcts_override(
-                        state,
-                        bot_id,
-                        heuristic_action,
-                        mcts_action,
-                        depth,
-                    ):
+                    mcts_accepted = False
+                    if mcts_action is not None:
+                        mcts_guard_started_at = time.perf_counter()
+                        mcts_accepted = _should_accept_mcts_override(
+                            state,
+                            bot_id,
+                            heuristic_action,
+                            mcts_action,
+                            depth,
+                            deadline=search_deadline,
+                        )
+                        _record_stage("mcts_guard", mcts_guard_started_at)
+                    if mcts_action is not None and mcts_accepted:
                         decided = True
                         method = "mcts"
                         method_scores = mcts_scores

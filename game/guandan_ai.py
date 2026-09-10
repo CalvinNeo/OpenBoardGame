@@ -2569,6 +2569,11 @@ def _rank_response_options(state: Dict, player_id: str, options: List[List[int]]
     has_natural_full_house = False
     leader = current_trick.get("player_id")
     leader_left = len(state["players"].get(leader, {}).get("hand", [])) if leader else 99
+    eval_cache = state.setdefault("_ai_eval_cache", {})
+    remaining_budget = _deadline_remaining()
+    bounded_ranking = bool(eval_cache.get("bounded_response_ranking")) or (
+        remaining_budget is not None and remaining_budget <= 0.35
+    )
     for cards in _dedupe_card_sets(options):
         play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
         combo = _evaluate_combo(play_cards, level_rank, config)
@@ -2596,7 +2601,14 @@ def _rank_response_options(state: Dict, player_id: str, options: List[List[int]]
             soft_penalty += 12.0
             soft_penalties[_cards_key(cards)] = soft_penalty
         natural_alt = uses_special and natural_by_type.get(combo["type"], False)
-        cost = _response_material_cost(state, player_id, cards, combo, natural_alt) + soft_penalty
+        if bounded_ranking:
+            # Full material-cost ranking decomposes the whole hand once per
+            # response. Under a turn deadline that can consume the budget before
+            # finalist scoring starts. The quick scorer retains the same tactical
+            # pass/play rules and structural-break signals without that search.
+            cost = -_quick_candidate_score(state, player_id, cards) + soft_penalty
+        else:
+            cost = _response_material_cost(state, player_id, cards, combo, natural_alt) + soft_penalty
         scored.append((cards, combo, cost))
 
     filtered = []
@@ -8875,7 +8887,12 @@ def _clone_search_state(state: Dict, preserve_eval_cache: bool = False) -> Dict:
     return cloned
 
 
-def _determinize_state(state: Dict, perspective_id: str, rng: random.Random) -> Dict:
+def _determinize_state(
+    state: Dict,
+    perspective_id: str,
+    rng: random.Random,
+    deadline: Optional[float] = None,
+) -> Dict:
     det = _clone_search_state(state, preserve_eval_cache=True)
     full = _full_deck()
     id_to_card = {card["id"]: card for card in full}
@@ -8893,6 +8910,8 @@ def _determinize_state(state: Dict, perspective_id: str, rng: random.Random) -> 
         if pid != perspective_id
     ]
     if not targets:
+        return det
+    if _deadline_expired(deadline):
         return det
 
     target_counts = dict(targets)
@@ -8913,9 +8932,26 @@ def _determinize_state(state: Dict, perspective_id: str, rng: random.Random) -> 
         locked_assignment[owner_id].append(card)
         remaining_unknown.remove(cid)
 
-    sample_count = max(1, int(det.get("config", {}).get("bot_determinize_samples", 5)))
+    config = det.get("config", {})
+    sample_count = max(1, int(config.get("bot_determinize_samples", 5)))
+    remaining_budget = _deadline_remaining(deadline)
+    short_budget_threshold_ms = max(
+        25.0,
+        float(config.get("bot_determinize_short_budget_threshold_ms", 350)),
+    )
+    short_budget = bool(
+        remaining_budget is not None
+        and remaining_budget * 1000.0 <= short_budget_threshold_ms
+    )
+    if short_budget:
+        sample_count = min(
+            sample_count,
+            max(1, int(config.get("bot_determinize_short_budget_samples", 2))),
+        )
     proposals: List[Tuple[Dict[str, List[Dict]], float]] = []
     for _ in range(sample_count):
+        if proposals and _deadline_expired(deadline):
+            break
         sample_unknown = sorted(remaining_unknown)
         rng.shuffle(sample_unknown)
         idx = 0
@@ -8939,7 +8975,11 @@ def _determinize_state(state: Dict, perspective_id: str, rng: random.Random) -> 
             penalty += _pass_limit_penalty_for_hand(det, pid, cards)
             penalty += _revealed_rank_cap_penalty_for_hand(det, pid, cards)
             penalty += _public_action_line_penalty_for_hand(det, pid, cards)
-            penalty -= _public_action_sequence_consistency_bonus(det, pid, cards)
+            if not short_budget:
+                # Sequence consistency performs a full decomposition for each
+                # player/proposal. Keep it for longer searches, while the short
+                # MCTS/minimax path retains the cheaper public pass/rank evidence.
+                penalty -= _public_action_sequence_consistency_bonus(det, pid, cards)
         proposals.append((assignment, penalty))
 
     if not proposals:
@@ -9053,6 +9093,7 @@ def _should_accept_mcts_override(
     heuristic_action: Optional[Dict],
     mcts_action: Optional[Dict],
     depth: int,
+    deadline: Optional[float] = None,
 ) -> bool:
     if not mcts_action:
         return False
@@ -9070,10 +9111,59 @@ def _should_accept_mcts_override(
     cfg = state.get("config", {})
     override_margin = float(cfg.get("bot_mcts_override_margin", 5.5))
     structure_margin = float(cfg.get("bot_mcts_structure_guard_margin", 2.5))
-    heuristic_score = _mcts_root_heuristic_value(state, bot_id, heuristic_action, depth)
-    mcts_score = _mcts_root_heuristic_value(state, bot_id, mcts_action, depth)
+    cached_finalists = _get_cached_heuristic_scored_candidates(state, bot_id, depth) or []
+    cached_values = {
+        _mcts_action_key(
+            {"type": "pass"}
+            if cards is None
+            else {"type": "play", "card_ids": cards}
+        ): score
+        for cards, score, _components in cached_finalists
+    }
+
+    def guard_score(action: Dict) -> float:
+        key = _mcts_action_key(action)
+        if key in cached_values:
+            return cached_values[key]
+        if deadline is not None:
+            return _quick_candidate_score(
+                state,
+                bot_id,
+                action.get("card_ids") if action.get("type") == "play" else None,
+            )
+        return _mcts_root_heuristic_value(state, bot_id, action, depth)
+
+    heuristic_score = guard_score(heuristic_action)
+    mcts_score = guard_score(mcts_action)
     if heuristic_score >= mcts_score + override_margin:
         return False
+
+    if mcts_action.get("type") == "play":
+        mcts_cards = mcts_action.get("card_ids", []) or []
+        mcts_features = _candidate_features(state, bot_id, mcts_cards)
+        mcts_combo = mcts_features.get("combo") or {}
+        mcts_uses_special = _cards_use_special_material(
+            mcts_features.get("play_cards") or [],
+            state["level_rank"],
+        )
+        heuristic_uses_special = False
+        if heuristic_action.get("type") == "play":
+            heuristic_cards = heuristic_action.get("card_ids", []) or []
+            heuristic_features = _candidate_features(state, bot_id, heuristic_cards)
+            heuristic_uses_special = _cards_use_special_material(
+                heuristic_features.get("play_cards") or [],
+                state["level_rank"],
+            )
+        if (
+            mcts_uses_special
+            and not heuristic_uses_special
+            and mcts_combo.get("type") not in BOMB_TYPES
+            and heuristic_score >= mcts_score - structure_margin
+        ):
+            # A very short search tends to overvalue immediate control.
+            # Do not spend a wildcard/joker against a structurally safer heuristic
+            # pass/play unless its root heuristic advantage is also meaningful.
+            return False
 
     if heuristic_action.get("type") == "play" and mcts_action.get("type") == "pass":
         current_trick = state.get("current_trick")
@@ -10262,6 +10352,7 @@ def _mcts_score_actions(
         store_status("fast_path")
         return high_single_bomb_scores
 
+    short_budget_search = False
     if deadline is not None:
         remaining_ms = max(0.0, (deadline - time.perf_counter()) * 1000.0)
         short_budget_threshold_ms = max(
@@ -10274,11 +10365,12 @@ def _mcts_score_actions(
             ),
         )
         if 0.0 < remaining_ms <= short_budget_threshold_ms:
+            short_budget_search = True
             effective_depth = min(
                 effective_depth,
                 max(
-                    1,
-                    int(state.get("config", {}).get("bot_mcts_short_budget_depth", 2)),
+                    0,
+                    int(state.get("config", {}).get("bot_mcts_short_budget_depth", 1)),
                 ),
             )
             effective_tree_ply = min(
@@ -10288,7 +10380,7 @@ def _mcts_score_actions(
                     int(
                         state.get("config", {}).get(
                             "bot_mcts_short_budget_tree_ply",
-                            1,
+                            0,
                         )
                     ),
                 ),
@@ -10374,8 +10466,11 @@ def _mcts_score_actions(
         # One determinization is one root-world particle. Comparing every active
         # action against the same particle reduces variance and avoids rebuilding
         # the hidden hands once per action.
-        particle = _CORE._determinize_state(state, bot_id, rng)
+        particle = _CORE._determinize_state(state, bot_id, rng, deadline)
         round_values: Dict[Tuple, float] = {}
+        bootstrap_round = short_budget_search and completed_rounds == 0
+        round_tree_ply = 0 if bootstrap_round else effective_tree_ply
+        round_rollout_depth = 0 if bootstrap_round else leaf_rollout_depth
         for action in active_candidates:
             if attempted_visits >= total_visits_target:
                 break
@@ -10391,9 +10486,9 @@ def _mcts_score_actions(
             value = _CORE._mcts_reply_tree_value(
                 det,
                 bot_id,
-                effective_tree_ply,
+                round_tree_ply,
                 max(1, effective_reply_width),
-                leaf_rollout_depth,
+                round_rollout_depth,
             )
             round_values[key] = value
             if attempted_visits == total_visits_target or attempted_visits % report_stride == 0:
@@ -10620,6 +10715,8 @@ def _minimax_value(
     if actor is None:
         return _evaluate_state_for_bot(state, bot_id)
     actions = _CORE._candidate_actions(state, actor, width)
+    if deadline is not None and time.perf_counter() >= deadline:
+        return _evaluate_state_for_bot(state, bot_id)
     if not actions:
         return _evaluate_state_for_bot(state, bot_id)
     maximize = _team_of(state, actor) == _team_of(state, bot_id)
@@ -10802,11 +10899,21 @@ def _minimax_pick_action(
     if "play" not in legal:
         store_status("unavailable")
         return None
+    if deadline is not None and time.perf_counter() >= deadline:
+        store_status("deadline", 0, 0, True)
+        if state.get("current_trick") and "pass" in legal:
+            return {"type": "pass"}
+        return None
     actions = _CORE._candidate_actions(state, bot_id, width)
     actions = _CORE._filter_overbomb_actions(state, bot_id, actions)
     if not actions:
         store_status("no_candidates")
         return None
+    if deadline is not None and time.perf_counter() >= deadline:
+        store_status("deadline", 0, len(actions), True)
+        if state.get("current_trick") and "pass" in legal:
+            return {"type": "pass"}
+        return dict(actions[0])
     forced_relay = _forced_endgame_control_relay_action(state, bot_id, actions)
     if forced_relay is not None:
         _report_progress_scaled(
@@ -12331,7 +12438,71 @@ def _bot_select_play(
         return [card["id"] for card in hand]
     options = _list_hint_options(state, bot_id)
     is_lead = not bool(current_trick)
-    current_trick = state.get("current_trick")
+    config = state.get("config", {})
+    deep_limit = max(
+        4,
+        int(config.get("bot_heuristic_deep_candidate_limit", 10)),
+    )
+    current_type = (current_trick or {}).get("combo", {}).get("type")
+    bounded_hand_threshold = max(
+        1,
+        int(config.get("bot_heuristic_bounded_hand_threshold", 24)),
+    )
+    single_bounded_hand_threshold = max(
+        1,
+        int(config.get("bot_heuristic_single_bounded_hand_threshold", 18)),
+    )
+    compound_bounded_hand_threshold = max(
+        1,
+        int(config.get("bot_heuristic_compound_bounded_hand_threshold", 23)),
+    )
+    runner_bounded_hand_threshold = max(
+        1,
+        int(config.get("bot_heuristic_runner_bounded_hand_threshold", 18)),
+    )
+    teammate = _teammate_of(state, bot_id)
+    teammate_finished = bool(
+        teammate and state["players"].get(teammate, {}).get("finished")
+    )
+    compound_response_types = {
+        "pair",
+        "three",
+        "full_house",
+        "straight",
+        "three_pairs",
+        "steel_plate",
+        "bomb",
+        "straight_flush",
+        "heavenly",
+    }
+    bounded_response = bool(
+        deadline is not None
+        and not is_lead
+        and (
+            len(hand) >= bounded_hand_threshold
+            or (
+                current_type == "single"
+                and len(hand) >= single_bounded_hand_threshold
+            )
+            or (
+                current_type in compound_response_types
+                and len(hand) >= compound_bounded_hand_threshold
+            )
+            or (
+                teammate_finished
+                and len(hand) >= runner_bounded_hand_threshold
+            )
+        )
+    )
+    # Response ranking happens before finalist scoring, so it must share the
+    # same bounded-mode decision. Otherwise a full-hand decomposition can spend
+    # the entire turn while merely ordering the candidates.
+    bounded_response_ranking = bool(
+        bounded_response
+        and len(hand) >= bounded_hand_threshold
+        and current_type in {"full_house", "straight", "three_pairs", "steel_plate"}
+    )
+    state.setdefault("_ai_eval_cache", {})["bounded_response_ranking"] = bounded_response_ranking
     if current_trick and current_trick["combo"]["type"] in ("bomb", "straight_flush", "heavenly"):
         minimal = _minimal_bomb_response(
             state["players"][bot_id]["hand"],
@@ -12348,44 +12519,6 @@ def _bot_select_play(
     options = _filter_overbomb_options(state, bot_id, options)
     if not options:
         return None
-    config = state.get("config", {})
-    deep_limit = max(
-        4,
-        int(config.get("bot_heuristic_deep_candidate_limit", 10)),
-    )
-    current_type = (current_trick or {}).get("combo", {}).get("type")
-    bounded_hand_threshold = max(
-        1,
-        int(config.get("bot_heuristic_bounded_hand_threshold", 24)),
-    )
-    single_bounded_hand_threshold = max(
-        1,
-        int(config.get("bot_heuristic_single_bounded_hand_threshold", 18)),
-    )
-    runner_bounded_hand_threshold = max(
-        1,
-        int(config.get("bot_heuristic_runner_bounded_hand_threshold", 18)),
-    )
-    teammate = _teammate_of(state, bot_id)
-    teammate_finished = bool(
-        teammate and state["players"].get(teammate, {}).get("finished")
-    )
-    bounded_response = bool(
-        deadline is not None
-        and not is_lead
-        and len(options) >= deep_limit
-        and (
-            len(hand) >= bounded_hand_threshold
-            or (
-                current_type == "single"
-                and len(hand) >= single_bounded_hand_threshold
-            )
-            or (
-                teammate_finished
-                and len(hand) >= runner_bounded_hand_threshold
-            )
-        )
-    )
     if bounded_response:
         options = _shortlist_scoring_options(
             state,
