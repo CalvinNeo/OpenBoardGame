@@ -2641,7 +2641,7 @@ class GuandanGame:
                     if method != "mcts" or mcts_status.get("fallback_to_reference"):
                         target = "heuristic reference"
                     else:
-                        target = "partial MCTS result"
+                        target = "best completed MCTS result"
                     _record_deadline_event(
                         "mcts",
                         "full MCTS search",
@@ -2719,6 +2719,9 @@ class GuandanGame:
                             "mcts_rollouts_target": mcts_status.get("target", 0),
                             "mcts_candidates": mcts_status.get("candidates", 0),
                             "mcts_completed_rounds": mcts_status.get("completed_rounds", 0),
+                            "mcts_completed_depth": mcts_status.get("completed_depth"),
+                            "mcts_target_depth": mcts_status.get("target_depth"),
+                            "mcts_interrupted_depth": mcts_status.get("interrupted_depth"),
                             "mcts_stop_reason": mcts_status.get("stop_reason"),
                         }
                     )

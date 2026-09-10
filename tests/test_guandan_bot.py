@@ -4193,6 +4193,12 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         }
         counters = {(11,): 0, (22,): 0}
 
+        # Isolate risk adjustment at one depth; iterative layers deliberately
+        # keep separate sample populations.
+        budget_patch = mock.patch.object(guandan, "_mcts_budget", return_value=(8, 0, 0, 2))
+        budget_patch.start()
+        self.addCleanup(budget_patch.stop)
+
         def fake_apply_action(target_state, _player_id, action):
             target_state["branch"] = tuple(action.get("card_ids", []))
             return [], None
@@ -4299,7 +4305,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertTrue(status.get("fallback_to_reference"))
         self.assertEqual(status.get("stop_reason"), "deadline")
 
-    def test_short_mcts_bootstraps_root_then_runs_one_step(self):
+    def test_short_mcts_finishes_shared_root_panel_then_runs_one_step(self):
         state, big = self._make_state()
         bomb = [
             card["id"]
@@ -4353,7 +4359,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
                 "_filter_overbomb_actions",
                 side_effect=AssertionError("cached finalists were already filtered"),
             ):
-                with mock.patch.object(guandan, "_mcts_budget", return_value=(6, 8, 3, 4)):
+                with mock.patch.object(guandan, "_mcts_budget", return_value=(18, 8, 3, 4)):
                     with mock.patch.object(guandan, "_mcts_obvious_response_scores", return_value=None):
                         with mock.patch("game.guandan_ai._mcts_high_single_joker_scores", return_value=None):
                             with mock.patch.object(guandan, "_mcts_high_single_bomb_scores", return_value=None):
@@ -4381,13 +4387,14 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
                                             )
 
         self.assertEqual([item[0] for item in scored], actions)
-        self.assertTrue(all(item[2] == 2 for item in scored))
-        self.assertEqual(tree_calls[:3], [(0, 1, 0)] * 3)
-        self.assertEqual(tree_calls[3:], [(0, 1, 1)] * 3)
+        self.assertTrue(all(item[2] == 3 for item in scored))
+        self.assertEqual(tree_calls[:9], [(0, 1, 0)] * 9)
+        self.assertEqual(tree_calls[9:], [(0, 1, 1)] * 9)
         status = state["_ai_eval_cache"]["mcts_anytime"]
         self.assertEqual(status["candidates"], 3)
-        self.assertEqual(status["attempted"], 6)
-        self.assertEqual(status["completed_rounds"], 2)
+        self.assertEqual(status["attempted"], 18)
+        self.assertEqual(status["completed_rounds"], 3)
+        self.assertEqual(status["completed_depth"], 1)
 
     def test_mcts_obvious_low_single_response_skips_rollout(self):
         players = [
@@ -4524,7 +4531,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
                 with mock.patch.object(guandan, "_mcts_root_heuristic_value", return_value=0.0):
                     with mock.patch.object(guandan, "_mcts_obvious_response_scores", return_value=None):
                         with mock.patch.object(guandan, "_mcts_high_single_bomb_scores", return_value=None):
-                            with mock.patch.object(guandan, "_mcts_budget", return_value=(24, 4, 1, 2)):
+                            with mock.patch.object(guandan, "_mcts_budget", return_value=(24, 0, 0, 2)):
                                 with mock.patch.object(guandan, "_determinize_state", side_effect=fake_determinize):
                                     with mock.patch.object(guandan.GuandanGame, "apply_action", side_effect=fake_apply_action):
                                         with mock.patch.object(guandan, "_mcts_reply_tree_value", side_effect=fake_tree_value) as reply_tree:

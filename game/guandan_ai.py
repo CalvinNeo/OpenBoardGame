@@ -9255,20 +9255,44 @@ def _rollout_policy_action(state: Dict, player_id: str) -> Optional[Dict]:
     return None
 
 
+class _MctsSearchInterrupted(Exception):
+    """The current root comparison did not finish within its deadline."""
+
+
+def _mcts_check_deadline() -> None:
+    if _deadline_expired():
+        raise _MctsSearchInterrupted
+
+
+def _mcts_leaf_value(state: Dict, bot_id: str) -> float:
+    _mcts_check_deadline()
+    value = _evaluate_state_for_bot(state, bot_id)
+    # Evaluation itself may exhaust the budget and use approximate components.
+    # Such a value must not be published as a completed search result.
+    _mcts_check_deadline()
+    return value
+
+
 def _rollout_value(state: Dict, bot_id: str, depth: int) -> float:
     steps = 0
-    while steps < depth and not state.get("game_over") and not _deadline_expired():
+    while (
+        steps < depth
+        and not state.get("game_over")
+        and state.get("phase", "playing") == "playing"
+    ):
+        _mcts_check_deadline()
         actor = _next_actor(state)
         if actor is None:
             break
         action = _rollout_policy_action(state, actor)
+        _mcts_check_deadline()
         if not action:
             break
         _, err = GuandanGame.apply_action(state, actor, action)
         if err:
             break
         steps += 1
-    return _evaluate_state_for_bot(state, bot_id)
+    return _mcts_leaf_value(state, bot_id)
 
 
 def _mcts_reply_tree_value(
@@ -9280,52 +9304,51 @@ def _mcts_reply_tree_value(
     alpha: float = -1e9,
     beta: float = 1e9,
 ) -> float:
-    if _deadline_expired():
-        return _evaluate_state_for_bot(state, bot_id)
-    if state.get("game_over"):
-        return _evaluate_state_for_bot(state, bot_id)
+    _mcts_check_deadline()
+    if state.get("game_over") or state.get("phase", "playing") != "playing":
+        return _mcts_leaf_value(state, bot_id)
     actor = _next_actor(state)
     if actor is None:
-        return _evaluate_state_for_bot(state, bot_id)
+        return _mcts_leaf_value(state, bot_id)
     if ply <= 0:
         return _rollout_value(state, bot_id, rollout_depth)
 
     actions = _CORE._candidate_actions(state, actor, width)
     actions = _CORE._filter_overbomb_actions(state, actor, actions)
+    _mcts_check_deadline()
     if not actions:
         return _rollout_value(state, bot_id, rollout_depth)
 
     maximize = _team_of(state, actor) == _team_of(state, bot_id)
     ordered_children: List[Tuple[float, Dict]] = []
     for action in actions:
-        if _deadline_expired():
-            break
+        _mcts_check_deadline()
         nxt = _clone_search_state(state)
         _, err = GuandanGame.apply_action(nxt, actor, action)
         if err:
             continue
-        ordered_children.append((_evaluate_state_for_bot(nxt, bot_id), nxt))
+        ordered_children.append((_mcts_leaf_value(nxt, bot_id), nxt))
     if not ordered_children:
         return _rollout_value(state, bot_id, rollout_depth)
 
     ordered_children.sort(key=lambda item: item[0], reverse=maximize)
     if maximize:
-        value = ordered_children[0][0]
+        value = -math.inf
         for _, nxt in ordered_children:
-            if _deadline_expired():
-                break
+            _mcts_check_deadline()
             child_value = _CORE._mcts_reply_tree_value(nxt, bot_id, ply - 1, width, rollout_depth, alpha, beta)
+            _mcts_check_deadline()
             value = max(value, child_value)
             alpha = max(alpha, value)
             if beta <= alpha:
                 break
         return value
 
-    value = ordered_children[0][0]
+    value = math.inf
     for _, nxt in ordered_children:
-        if _deadline_expired():
-            break
+        _mcts_check_deadline()
         child_value = _CORE._mcts_reply_tree_value(nxt, bot_id, ply - 1, width, rollout_depth, alpha, beta)
+        _mcts_check_deadline()
         value = min(value, child_value)
         beta = min(beta, value)
         if beta <= alpha:
@@ -10352,7 +10375,6 @@ def _mcts_score_actions(
         store_status("fast_path")
         return high_single_bomb_scores
 
-    short_budget_search = False
     if deadline is not None:
         remaining_ms = max(0.0, (deadline - time.perf_counter()) * 1000.0)
         short_budget_threshold_ms = max(
@@ -10365,7 +10387,6 @@ def _mcts_score_actions(
             ),
         )
         if 0.0 < remaining_ms <= short_budget_threshold_ms:
-            short_budget_search = True
             effective_depth = min(
                 effective_depth,
                 max(
@@ -10423,246 +10444,253 @@ def _mcts_score_actions(
 
     rng = random.Random()
     sims_per = max(1, effective_sims // max(1, len(candidates)))
+    effective_depth = max(0, effective_depth)
     effective_tree_ply = max(0, min(effective_tree_ply, effective_depth))
-    leaf_rollout_depth = max(0, effective_depth - effective_tree_ply)
-    samples: Dict[Tuple, Dict[str, float]] = {
-        _mcts_action_key(action): {"count": 0, "total": 0.0, "total_sq": 0.0, "wins": 0.0, "min": None, "max": None}
-        for action in candidates
-    }
     cfg = state.get("config", {})
     reference_action = max(
         candidates,
         key=lambda action: heuristic_values.get(_mcts_action_key(action), -999.0),
     )
     reference_key = _mcts_action_key(reference_action)
-    paired_samples: Dict[Tuple, Dict[str, float]] = {
-        _mcts_action_key(action): {"count": 0, "total": 0.0, "total_sq": 0.0}
-        for action in candidates
-    }
     confidence_z = max(0.0, float(cfg.get("bot_mcts_confidence_z", 1.64)))
     confidence_min_pairs = max(2, int(cfg.get("bot_mcts_confidence_min_pairs", 3)))
     min_rounds = max(1, int(cfg.get("bot_mcts_early_stop_min_rounds", 4)))
     stable_rounds_needed = max(1, int(cfg.get("bot_mcts_early_stop_stable_rounds", 2)))
     early_stop_gap = float(cfg.get("bot_mcts_early_stop_gap", 7.5))
-    stable_rounds = 0
-    previous_top_key = None
-    final_scored: List[Tuple[Dict, float, int, Dict[str, float]]] = []
-    total_visits_target = max(1, sims_per * max(1, len(candidates)))
+    halving_min_rounds = max(
+        2, int(cfg.get("bot_mcts_successive_halving_min_rounds", min_rounds))
+    )
+    total_visits_target = max(1, sims_per * len(candidates))
     attempted_visits = 0
     report_stride = max(1, total_visits_target // 24)
-    active_candidates = list(candidates)
-    halving_min_rounds = max(
-        2,
-        int(cfg.get("bot_mcts_successive_halving_min_rounds", min_rounds)),
-    )
-    next_halving_round = halving_min_rounds
-    round_idx = 0
+    # Reuse this small panel at every depth. A deeper result only replaces the
+    # checkpoint after ALL root actions have finished on the SAME worlds.
+    panel_size = min(sims_per, confidence_min_pairs)
+    particles: List[Dict] = []
+    published_scored: List[Tuple[Dict, float, int, Dict[str, float]]] = []
+    published_active_keys = {_mcts_action_key(action) for action in candidates}
+    completed_depth: Optional[int] = None
+    interrupted_depth: Optional[int] = None
+    stop_reason = "completed"
     deadline_limited = False
-    confidence_stopped = False
-    while attempted_visits < total_visits_target and active_candidates:
-        if deadline is not None and time.perf_counter() >= deadline:
-            deadline_limited = True
-            break
-        # One determinization is one root-world particle. Comparing every active
-        # action against the same particle reduces variance and avoids rebuilding
-        # the hidden hands once per action.
-        particle = _CORE._determinize_state(state, bot_id, rng, deadline)
-        round_values: Dict[Tuple, float] = {}
-        bootstrap_round = short_budget_search and completed_rounds == 0
-        round_tree_ply = 0 if bootstrap_round else effective_tree_ply
-        round_rollout_depth = 0 if bootstrap_round else leaf_rollout_depth
-        for action in active_candidates:
-            if attempted_visits >= total_visits_target:
-                break
-            if deadline is not None and time.perf_counter() >= deadline:
+
+    def empty_samples() -> Tuple[Dict, Dict]:
+        samples = {
+            _mcts_action_key(action): {
+                "count": 0, "total": 0.0, "total_sq": 0.0,
+                "wins": 0.0, "min": None, "max": None,
+            }
+            for action in candidates
+        }
+        paired = {
+            _mcts_action_key(action): {"count": 0, "total": 0.0, "total_sq": 0.0}
+            for action in candidates
+        }
+        return samples, paired
+
+    def paired_bounds(item: Tuple[Dict, float, int, Dict[str, float]]) -> Tuple[float, float, float]:
+        stats = item[3]
+        prior = stats.get("heuristic_norm", 0.0) * heuristic_weight
+        center = stats.get("paired_delta", 0.0) + prior
+        radius = max(0.0, stats.get("paired_ucb", 0.0) - stats.get("paired_delta", 0.0))
+        return center, center - radius, center + radius
+
+    for search_depth in range(effective_depth + 1):
+        # Never mix shallow estimates into a deeper layer's sample statistics.
+        samples, paired_samples = empty_samples()
+        active_candidates = list(candidates)
+        round_idx = 0
+        stable_rounds = 0
+        previous_top_key = None
+        next_halving_round = halving_min_rounds
+        round_tree_ply = min(effective_tree_ply, search_depth)
+        round_rollout_depth = search_depth - round_tree_ply
+        final_depth = search_depth == effective_depth
+
+        # Intermediate layers use the fixed panel. Only at the target depth do
+        # we spend spare visits on additional worlds and successive halving.
+        while final_depth or round_idx < panel_size:
+            if _deadline_expired(deadline):
+                stop_reason = "deadline"
                 deadline_limited = True
+                interrupted_depth = search_depth
                 break
-            attempted_visits += 1
-            key = _mcts_action_key(action)
-            det = _clone_search_state(particle)
-            _, err = GuandanGame.apply_action(det, bot_id, action)
-            if err:
-                continue
-            value = _CORE._mcts_reply_tree_value(
-                det,
-                bot_id,
-                round_tree_ply,
-                max(1, effective_reply_width),
-                round_rollout_depth,
-            )
-            round_values[key] = value
-            if attempted_visits == total_visits_target or attempted_visits % report_stride == 0:
-                _report_progress_scaled(
-                    progress_callback,
-                    "mcts",
-                    progress_start,
-                    progress_end,
-                    min(0.96, 0.14 + 0.8 * (attempted_visits / total_visits_target)),
-                    f"Running MCTS {attempted_visits}/{total_visits_target}",
-                )
-        active_keys_for_round = {_mcts_action_key(action) for action in active_candidates}
-        reference_value = round_values.get(reference_key)
-        if reference_value is not None and active_keys_for_round.issubset(round_values):
+            if total_visits_target - attempted_visits < len(active_candidates):
+                stop_reason = "visit_budget"
+                interrupted_depth = search_depth
+                break
+
+            if round_idx < len(particles):
+                particle = particles[round_idx]
+            else:
+                particle = _CORE._determinize_state(state, bot_id, rng, deadline)
+                if round_idx < panel_size:
+                    particles.append(particle)
+            round_values: Dict[Tuple, float] = {}
+            try:
+                for action in active_candidates:
+                    # Explicit checks also cover callers/mocks without a bound
+                    # thread-local deadline, and work that crosses the deadline.
+                    if _deadline_expired(deadline):
+                        raise _MctsSearchInterrupted
+                    attempted_visits += 1
+                    key = _mcts_action_key(action)
+                    det = _clone_search_state(particle)
+                    _, err = GuandanGame.apply_action(det, bot_id, action)
+                    if err:
+                        stop_reason = "invalid_candidate"
+                        interrupted_depth = search_depth
+                        break
+                    value = _CORE._mcts_reply_tree_value(
+                        det, bot_id, round_tree_ply,
+                        max(1, effective_reply_width), round_rollout_depth,
+                    )
+                    if _deadline_expired(deadline):
+                        raise _MctsSearchInterrupted
+                    round_values[key] = value
+                    if attempted_visits % report_stride == 0:
+                        _report_progress_scaled(
+                            progress_callback, "mcts", progress_start, progress_end,
+                            min(0.96, 0.14 + 0.8 * attempted_visits / total_visits_target),
+                            f"MCTS depth {search_depth}: {attempted_visits}/{total_visits_target}",
+                        )
+            except _MctsSearchInterrupted:
+                stop_reason = "deadline"
+                deadline_limited = True
+                interrupted_depth = search_depth
+                break
+            if stop_reason == "invalid_candidate":
+                break
+
+            # Commit only complete, paired root comparisons (including pass).
+            reference_value = round_values[reference_key]
             for key, value in round_values.items():
                 sample = samples[key]
                 sample["count"] += 1
                 sample["total"] += value
                 sample["total_sq"] += value * value
-                if value > 0:
-                    sample["wins"] += 1
-                if sample["min"] is None or value < sample["min"]:
-                    sample["min"] = value
-                if sample["max"] is None or value > sample["max"]:
-                    sample["max"] = value
+                sample["wins"] += float(value > 0)
+                sample["min"] = value if sample["min"] is None else min(sample["min"], value)
+                sample["max"] = value if sample["max"] is None else max(sample["max"], value)
                 delta = value - reference_value
                 paired = paired_samples[key]
                 paired["count"] += 1
                 paired["total"] += delta
                 paired["total_sq"] += delta * delta
-            completed_rounds += 1
-        round_idx += 1
-        final_scored = _mcts_finalize_scores(
-            candidates,
-            samples,
-            paired_samples,
-            reference_key,
-            heuristic_values,
-            heuristic_center,
-            heuristic_scale,
-            heuristic_weight,
-            risk_lambda,
-            effective_depth,
-            effective_tree_ply,
-            effective_reply_width,
-            confidence_z,
-        )
-        active_keys = {_mcts_action_key(action) for action in active_candidates}
-        active_scored = [item for item in final_scored if _mcts_action_key(item[0]) in active_keys]
-        if round_idx < min_rounds or len(active_scored) < 2:
-            continue
-        def paired_bounds(item: Tuple[Dict, float, int, Dict[str, float]]) -> Tuple[float, float, float]:
-            stats = item[3]
-            prior = stats.get("heuristic_norm", 0.0) * heuristic_weight
-            center = stats.get("paired_delta", 0.0) + prior
-            radius = max(0.0, stats.get("paired_ucb", 0.0) - stats.get("paired_delta", 0.0))
-            return center, center - radius, center + radius
+            round_idx += 1
 
-        confidence_ranked = sorted(active_scored, key=lambda item: paired_bounds(item)[0], reverse=True)
-        top_key = _mcts_action_key(confidence_ranked[0][0])
-        _top_center, top_lcb, _top_ucb = paired_bounds(confidence_ranked[0])
-        runner_ucb = max(paired_bounds(item)[2] for item in confidence_ranked[1:])
-        confidence_gap = top_lcb - runner_ucb
-        enough_pairs = all(
-            item[3].get("paired_count", 0) >= confidence_min_pairs
-            for item in confidence_ranked
-            if _mcts_action_key(item[0]) != reference_key
-        )
-        if enough_pairs and confidence_gap >= early_stop_gap:
-            if top_key == previous_top_key:
-                stable_rounds += 1
-            else:
-                stable_rounds = 1
+            # At depth zero a complete world is already a useful fallback.
+            # Deeper layers must finish the entire panel before publication.
+            if search_depth > 0 and round_idx < panel_size:
+                continue
+            final_scored = _mcts_finalize_scores(
+                candidates, samples, paired_samples, reference_key,
+                heuristic_values, heuristic_center, heuristic_scale, heuristic_weight,
+                risk_lambda, search_depth, round_tree_ply, effective_reply_width, confidence_z,
+            )
+            active_keys = {_mcts_action_key(action) for action in active_candidates}
+            published_scored = final_scored
+            published_active_keys = active_keys
+            completed_depth = search_depth
+            completed_rounds = round_idx
+
+            # A shallow ranking must not permanently remove an action that
+            # could become best after an opponent's reply is examined.
+            if not final_depth or round_idx < min_rounds:
+                continue
+            active_scored = [
+                item for item in final_scored if _mcts_action_key(item[0]) in active_keys
+            ]
+            if len(active_scored) < 2:
+                continue
+            confidence_ranked = sorted(
+                active_scored, key=lambda item: paired_bounds(item)[0], reverse=True
+            )
+            top_key = _mcts_action_key(confidence_ranked[0][0])
+            _center, top_lcb, _ucb = paired_bounds(confidence_ranked[0])
+            runner_ucb = max(paired_bounds(item)[2] for item in confidence_ranked[1:])
+            enough_pairs = all(
+                item[3].get("paired_count", 0) >= confidence_min_pairs
+                for item in confidence_ranked
+                if _mcts_action_key(item[0]) != reference_key
+            )
+            if enough_pairs and top_lcb - runner_ucb >= early_stop_gap:
+                stable_rounds = stable_rounds + 1 if top_key == previous_top_key else 1
                 previous_top_key = top_key
-            if stable_rounds >= stable_rounds_needed:
-                confidence_stopped = True
-                break
-        else:
-            previous_top_key = top_key
-            stable_rounds = 0
-        if (
-            len(active_candidates) > 2
-            and round_idx >= next_halving_round
-            and attempted_visits < total_visits_target
-        ):
-            if enough_pairs:
-                viable = [
-                    item
-                    for item in confidence_ranked
-                    if paired_bounds(item)[2] >= top_lcb
-                ]
-                if len(viable) < len(active_candidates):
-                    survivor_keys = {_mcts_action_key(item[0]) for item in viable}
-                    survivor_keys.add(reference_key)
-                    keep_count = max(2, math.ceil(len(active_candidates) / 2))
-                    if len(survivor_keys) < keep_count:
+                if stable_rounds >= stable_rounds_needed:
+                    stop_reason = "confidence"
+                    break
+            else:
+                previous_top_key = top_key
+                stable_rounds = 0
+
+            if (
+                len(active_candidates) > 2
+                and round_idx >= next_halving_round
+                and attempted_visits < total_visits_target
+            ):
+                if enough_pairs:
+                    viable = [
+                        item for item in confidence_ranked if paired_bounds(item)[2] >= top_lcb
+                    ]
+                    if len(viable) < len(active_candidates):
+                        survivor_keys = {_mcts_action_key(item[0]) for item in viable}
+                        survivor_keys.add(reference_key)
+                        keep_count = max(2, math.ceil(len(active_candidates) / 2))
                         for item in confidence_ranked:
-                            survivor_keys.add(_mcts_action_key(item[0]))
                             if len(survivor_keys) >= keep_count:
                                 break
-                    active_candidates = [
-                        item[0]
-                        for item in confidence_ranked
-                        if _mcts_action_key(item[0]) in survivor_keys
-                    ]
-            next_halving_round += halving_min_rounds
-        if deadline is not None and time.perf_counter() >= deadline:
-            deadline_limited = True
+                            survivor_keys.add(_mcts_action_key(item[0]))
+                        active_candidates = [
+                            item[0] for item in confidence_ranked
+                            if _mcts_action_key(item[0]) in survivor_keys
+                        ]
+                        published_active_keys = survivor_keys
+                next_halving_round += halving_min_rounds
+
+        if stop_reason != "completed":
             break
-    if deadline is not None and time.perf_counter() >= deadline:
-        deadline_limited = True
-    if final_scored:
-        active_keys = {_mcts_action_key(action) for action in active_candidates}
-        confidence_ready = all(
-            item[3].get("paired_count", 0) >= confidence_min_pairs
-            for item in final_scored
-            if _mcts_action_key(item[0]) in active_keys
-            and _mcts_action_key(item[0]) != reference_key
+
+    if not published_scored:
+        samples, paired_samples = empty_samples()
+        published_scored = _mcts_finalize_scores(
+            candidates, samples, paired_samples, reference_key,
+            heuristic_values, heuristic_center, heuristic_scale, heuristic_weight,
+            risk_lambda, 0, 0, effective_reply_width, confidence_z,
         )
-        if confidence_ready:
-            final_scored.sort(
-                key=lambda item: (_mcts_action_key(item[0]) in active_keys, item[1]),
-                reverse=True,
-            )
-        else:
-            # One noisy hidden world is not enough evidence to overturn the
-            # root heuristic. Keep collecting complete pairs when time permits;
-            # on deadline, fall back to the fixed reference action.
-            final_scored.sort(
-                key=lambda item: (
-                    _mcts_action_key(item[0]) == reference_key,
-                    _mcts_action_key(item[0]) in active_keys,
-                    item[1],
-                ),
-                reverse=True,
-            )
-        if deadline_limited:
-            stop_reason = "deadline"
-        elif confidence_stopped:
-            stop_reason = "confidence"
-        else:
-            stop_reason = "completed"
-        store_status(
-            stop_reason,
-            attempted_visits,
-            total_visits_target,
-            deadline_limited,
-            deadline_limited and not confidence_ready,
+    confidence_ready = completed_depth is not None and all(
+        item[3].get("paired_count", 0) >= confidence_min_pairs
+        for item in published_scored
+        if _mcts_action_key(item[0]) in published_active_keys
+        and _mcts_action_key(item[0]) != reference_key
+    )
+    if confidence_ready:
+        published_scored.sort(
+            key=lambda item: (_mcts_action_key(item[0]) in published_active_keys, item[1]),
+            reverse=True,
         )
-        _report_progress_scaled(progress_callback, "mcts", progress_start, progress_end, 1.0, "MCTS finalized")
-        return final_scored
-    _report_progress_scaled(progress_callback, "mcts", progress_start, progress_end, 1.0, "MCTS finalized")
+    else:
+        # Completion at one depth is not evidence from multiple hidden worlds.
+        # Preserve the existing minimum-pairs guard even for a complete layer.
+        published_scored.sort(
+            key=lambda item: (
+                _mcts_action_key(item[0]) == reference_key,
+                _mcts_action_key(item[0]) in published_active_keys,
+                item[1],
+            ),
+            reverse=True,
+        )
     store_status(
-        "deadline" if deadline_limited else "completed",
-        attempted_visits,
-        total_visits_target,
-        deadline_limited,
-        deadline_limited,
+        stop_reason, attempted_visits, total_visits_target,
+        deadline_limited, not confidence_ready,
     )
-    return _mcts_finalize_scores(
-        candidates,
-        samples,
-        paired_samples,
-        reference_key,
-        heuristic_values,
-        heuristic_center,
-        heuristic_scale,
-        heuristic_weight,
-        risk_lambda,
-        effective_depth,
-        effective_tree_ply,
-        effective_reply_width,
-        confidence_z,
-    )
+    state["_ai_eval_cache"]["mcts_anytime"].update({
+        "completed_depth": completed_depth,
+        "target_depth": effective_depth,
+        "interrupted_depth": interrupted_depth,
+    })
+    _report_progress_scaled(progress_callback, "mcts", progress_start, progress_end, 1.0, "MCTS finalized")
+    return published_scored
 
 
 def _mcts_pick_action(
