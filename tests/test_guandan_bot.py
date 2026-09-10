@@ -150,6 +150,60 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         }
         return state, big
 
+    def _make_teammate_overcalled_single_state(self):
+        """Recreate Bot 3's first bad Pass from the reviewed 2a4711 save."""
+        players = [
+            {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
+            {"player_id": "enemy", "name": "Bot 2", "seat": 1, "is_bot": True},
+            {"player_id": "bot", "name": "Bot 3", "seat": 2, "is_bot": True},
+            {"player_id": "enemy2", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["current_turn"] = "bot"
+        state["level_rank"] = 2
+        state["config"]["bot_mode"] = "auto"
+
+        deck = guandan._full_deck()
+        state["players"]["bot"]["hand"] = self._pick_labels(
+            deck,
+            [
+                "🃏S", "♠️2", "♥️2", "♦️A", "♣️K",
+                "♣️J", "♦️J", "♥️J", "♠️J", "♥️J",
+                "♣️10", "♣️10", "♣️9", "♠️9",
+                "♣️8", "♦️8", "♠️8", "♠️8",
+                "♣️7", "♦️7", "♣️7", "♣️4",
+            ],
+        )
+        teammate_play = self._pick_labels(deck, ["♠️5"])
+        enemy_play = self._pick_labels(deck, ["♦️10"])
+        state["players"]["calvin"]["hand"] = deck[:22]
+        state["players"]["enemy"]["hand"] = deck[22:48]
+        state["players"]["enemy2"]["hand"] = deck[48:65]
+        state["current_trick"] = {
+            "player_id": "enemy",
+            "cards": [card["id"] for card in enemy_play],
+            "combo": guandan._evaluate_combo(
+                enemy_play,
+                state["level_rank"],
+                state.get("config", {}),
+            ),
+        }
+        state["trick_plays"] = {
+            "calvin": teammate_play,
+            "enemy": enemy_play,
+        }
+        state["pass_count"] = 0
+        state["seen_cards"] = [
+            teammate_play[0]["id"],
+            enemy_play[0]["id"],
+            *(card["id"] for card in deck[65:]),
+        ]
+        state["known_card_owners"] = {}
+        state["round_memories"] = []
+        self._assert_consistent_card_zones(state)
+        return state
+
     def _make_empty_lead_bomb_state(self):
         players = [
             {"player_id": "p1", "name": "帅逼", "seat": 0, "is_bot": False},
@@ -2538,6 +2592,108 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertTrue(meta["deadline_limited"])
         self.assertEqual(meta["stop_reason"], "partial_candidate")
 
+    def test_bot_overcalls_enemy_after_teammate_single_and_compares_candidates(self):
+        state = self._make_teammate_overcalled_single_state()
+
+        action = guandan.GuandanGame.bot_move(state, "bot")
+
+        self.assertEqual(action.get("type"), "play")
+        hand_map = guandan._map_hand_by_id(state["players"]["bot"]["hand"])
+        self.assertIn(
+            [guandan._card_label(hand_map[card_id]) for card_id in action["card_ids"]],
+            [["♣️K"], ["♦️A"]],
+        )
+        explain = state["bot_explain"]["bot"]
+        self.assertGreaterEqual(
+            explain["method_details"].get("heuristic_candidates_evaluated", 0),
+            3,
+        )
+        self.assertGreaterEqual(len(explain.get("top") or []), 3)
+        pass_entry = next(
+            item for item in explain["top"] if item.get("cards") == ["Pass"]
+        )
+        self.assertLess(
+            pass_entry["score"],
+            max(item["score"] for item in explain["top"] if item is not pass_entry),
+        )
+
+    def test_finished_teammate_disables_future_handoff_pass_bonus(self):
+        state = self._make_teammate_overcalled_single_state()
+        state["players"]["calvin"]["hand"] = []
+        state["players"]["calvin"]["finished"] = True
+        state["players"]["calvin"]["finish_rank"] = 1
+        state["finish_order"] = ["calvin"]
+
+        with mock.patch(
+            "game.guandan_ai._filter_overbomb_options",
+            side_effect=AssertionError(
+                "a finished teammate must short-circuit future-handoff scoring"
+            ),
+        ):
+            bonus = guandan._guandan_ai.call(
+                guandan,
+                "_strategic_enemy_pass_bonus",
+                state,
+                "bot",
+            )
+
+        self.assertEqual(bonus, 0.0)
+
+    def test_finished_teammate_uses_bounded_multi_candidate_scoring(self):
+        state = self._make_teammate_overcalled_single_state()
+        state["players"]["calvin"]["hand"] = []
+        state["players"]["calvin"]["finished"] = True
+        state["players"]["calvin"]["finish_rank"] = 1
+        state["finish_order"] = ["calvin"]
+        state["current_trick"]["combo"] = {
+            "type": "pair",
+            "size": 2,
+            "rank_value": 20,
+        }
+        state["config"]["bot_heuristic_bounded_hand_threshold"] = 99
+        state["config"]["bot_heuristic_single_bounded_hand_threshold"] = 99
+        options = [[card_id] for card_id in range(100, 112)]
+
+        def detailed_score(_state, _bot_id, cards, _depth):
+            return {"total": -5.0 if cards is None else float(cards[0])}
+
+        with mock.patch("game.guandan_ai._can_play_all", return_value=False):
+            with mock.patch("game.guandan_ai._list_hint_options", return_value=options):
+                with mock.patch(
+                    "game.guandan_ai._rank_response_options",
+                    side_effect=lambda _s, _p, items: items,
+                ):
+                    with mock.patch(
+                        "game.guandan_ai._filter_overbomb_options",
+                        side_effect=lambda _s, _p, items: items,
+                    ):
+                        with mock.patch(
+                            "game.guandan_ai._shortlist_scoring_options",
+                            side_effect=lambda _s, _p, items, limit: items[:limit],
+                        ):
+                            with mock.patch(
+                                "game.guandan_ai._quick_candidate_score",
+                                side_effect=lambda _s, _p, cards: (
+                                    -5.0 if cards is None else float(cards[0])
+                                ),
+                            ):
+                                with mock.patch(
+                                    "game.guandan_ai._bot_score_components",
+                                    side_effect=detailed_score,
+                                ) as score:
+                                    guandan._bot_select_play(
+                                        state,
+                                        "bot",
+                                        depth=3,
+                                        deadline=10**12,
+                                    )
+
+        self.assertEqual(score.call_count, 3)
+        meta = state["_ai_eval_cache"]["heuristic_anytime"]
+        self.assertEqual(meta["evaluated"], 3)
+        self.assertEqual(meta["target"], 3)
+        self.assertEqual(meta["total"], 11)
+
     def test_high_single_big_joker_takeover_finishes_before_hard_deadline(self):
         state = self._make_high_single_big_joker_state()
 
@@ -4066,6 +4222,92 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertTrue(status.get("deadline_limited"))
         self.assertTrue(status.get("fallback_to_reference"))
         self.assertEqual(status.get("stop_reason"), "deadline")
+
+    def test_short_mcts_reuses_heuristic_finalists_and_completes_one_round(self):
+        state, big = self._make_state()
+        bomb = [
+            card["id"]
+            for card in state["players"]["bot"]["hand"]
+            if card.get("rank") == 9
+        ]
+        actions = [
+            {"type": "play", "card_ids": [big["id"]]},
+            {"type": "play", "card_ids": bomb},
+            {"type": "pass"},
+        ]
+        guandan._guandan_ai.call(
+            guandan,
+            "_store_heuristic_scored_candidates",
+            state,
+            "bot",
+            state["config"]["bot_search_depth"],
+            [
+                ([big["id"]], 12.0, {}),
+                (bomb, 8.0, {}),
+                (None, 3.0, {}),
+            ],
+        )
+
+        def fake_apply_action(target_state, _player_id, action):
+            target_state["branch"] = guandan._mcts_action_key(action)
+            return [], None
+
+        def fake_tree_value(
+            target_state,
+            _bot_id,
+            ply,
+            width,
+            rollout_depth,
+            alpha=-1e9,
+            beta=1e9,
+        ):
+            del target_state, _bot_id, alpha, beta
+            self.assertEqual((ply, width, rollout_depth), (1, 1, 1))
+            return 1.0
+
+        with mock.patch.object(
+            guandan,
+            "_candidate_actions",
+            side_effect=AssertionError("cached heuristic finalists must be reused"),
+        ):
+            with mock.patch.object(
+                guandan,
+                "_filter_overbomb_actions",
+                side_effect=AssertionError("cached finalists were already filtered"),
+            ):
+                with mock.patch.object(guandan, "_mcts_budget", return_value=(3, 8, 3, 4)):
+                    with mock.patch.object(guandan, "_mcts_obvious_response_scores", return_value=None):
+                        with mock.patch("game.guandan_ai._mcts_high_single_joker_scores", return_value=None):
+                            with mock.patch.object(guandan, "_mcts_high_single_bomb_scores", return_value=None):
+                                with mock.patch.object(guandan, "_determinize_state", return_value={}):
+                                    with mock.patch.object(
+                                        guandan.GuandanGame,
+                                        "apply_action",
+                                        side_effect=fake_apply_action,
+                                    ):
+                                        with mock.patch.object(
+                                            guandan,
+                                            "_mcts_reply_tree_value",
+                                            side_effect=fake_tree_value,
+                                        ):
+                                            _picked, scored = guandan._mcts_pick_action(
+                                                state,
+                                                "bot",
+                                                sims=80,
+                                                depth=8,
+                                                width=4,
+                                                tree_ply=3,
+                                                reply_width=4,
+                                                risk_lambda=0.28,
+                                                deadline=time.perf_counter() + 0.2,
+                                            )
+
+        self.assertEqual([item[0] for item in scored], actions)
+        self.assertTrue(all(item[2] == 1 for item in scored))
+        status = state["_ai_eval_cache"]["mcts_anytime"]
+        self.assertEqual(status["candidates"], 3)
+        self.assertEqual(status["attempted"], 3)
+        self.assertEqual(status["completed_rounds"], 1)
 
     def test_mcts_obvious_low_single_response_skips_rollout(self):
         players = [

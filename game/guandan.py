@@ -60,6 +60,8 @@ DEFAULT_CONFIG = {
     "bot_lead_prescore_limit": 16,
     "bot_heuristic_deep_candidate_limit": 10,
     "bot_heuristic_bounded_hand_threshold": 24,
+    "bot_heuristic_single_bounded_hand_threshold": 18,
+    "bot_heuristic_runner_bounded_hand_threshold": 18,
     "bot_heuristic_min_deep_candidates": 3,
     "bot_heuristic_min_lead_deep_candidates": 3,
     "bot_heuristic_min_lead_rank_candidates": 16,
@@ -67,6 +69,10 @@ DEFAULT_CONFIG = {
     "bot_think_time_ms": 2000,
     "bot_think_overrun_ratio": 0.5,
     "bot_mcts_time_ms": 220,
+    "bot_mcts_short_budget_threshold_ms": 350,
+    "bot_mcts_short_budget_depth": 2,
+    "bot_mcts_short_budget_tree_ply": 1,
+    "bot_mcts_short_budget_reply_width": 1,
     "bot_minimax_time_ms": 180,
 }
 
@@ -2702,6 +2708,8 @@ class GuandanGame:
                         {
                             "mcts_rollouts_attempted": mcts_status.get("attempted", 0),
                             "mcts_rollouts_target": mcts_status.get("target", 0),
+                            "mcts_candidates": mcts_status.get("candidates", 0),
+                            "mcts_completed_rounds": mcts_status.get("completed_rounds", 0),
                             "mcts_stop_reason": mcts_status.get("stop_reason"),
                         }
                     )
