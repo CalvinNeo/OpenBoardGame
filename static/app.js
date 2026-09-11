@@ -1,5 +1,6 @@
 
 const fangNiaoPanel = document.getElementById("fangNiaoPanel");
+const arkNovaPanel = document.getElementById("arkNovaPanel");
 const carcassonnePanel = document.getElementById("carcassonnePanel");
 const azulPanel = document.getElementById("azulPanel");
 const goldRushConfigBox = document.getElementById("goldRushConfigBox");
@@ -70,6 +71,7 @@ const wanderingTowersPanel = document.getElementById("wanderingTowersPanel");
 const skyePanel = document.getElementById("skyePanel");
 
 function setGamePanelVisibility(gameType) {
+  const showArkNova = gameType === "ark_nova";
   const showCabo = gameType === "cabo";
   const showGuandan = gameType === "guandan";
   const showFlip7 = gameType === "flip7";
@@ -132,6 +134,12 @@ function setGamePanelVisibility(gameType) {
   const showCarcassonne = gameType === "carcassonne";
   const showAzul = gameType === "azul";
   const showFangNiao = gameType === "fang_niao";
+  if (arkNovaPanel) {
+    arkNovaPanel.classList.toggle("hidden", !showArkNova);
+  }
+  if (typeof showArkNovaHeaderActions === "function") {
+    showArkNovaHeaderActions(showArkNova);
+  }
   caboPanel.classList.toggle("hidden", !showCabo);
   if (guandanPanel) {
     guandanPanel.classList.toggle("hidden", !showGuandan);
@@ -529,6 +537,10 @@ function logGameEvents(data) {
 
 function renderGameState(data) {
   const gameType = data.game_type || (currentRoomState && currentRoomState.game_type);
+  if (gameType === "ark_nova") {
+    renderArkNovaGameState(data);
+    return;
+  }
   if (gameType === "cabo") {
     renderCaboGameState(data);
     return;

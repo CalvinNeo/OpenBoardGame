@@ -479,6 +479,7 @@ const GAME_WEIGHT = {
   abraca_what: 1.64,
   age_of_war: 1.15,
   aidixit: 1.1924453280318092,
+  ark_nova: 3.80,
   azul: 1.78,
   blokus: 1.73,
   blitz_sketch: 1.0,
@@ -489,6 +490,7 @@ const GAME_WEIGHT = {
   cyber_pictures: 1.0340909090909092,
   decrypto: 1.82,
   draw_guess: 1.0698602794411178,
+  dumb_questions: 1.00,
   fang_niao: 1.3142857142857143,
   flip7: 1.028056112224449,
   gold_rush: 1.1839080459770115,
@@ -513,7 +515,6 @@ const GAME_WEIGHT = {
   wandering_towers: 1.59,
   yahtzee: 1.17,
   fake_artist: 1.09,
-  forest_shuffle: 2.13,
   manila: 2.04,
   impression_flower: 1.00,
   isle_of_skye: 2.25,
@@ -524,16 +525,17 @@ const GAME_WEIGHT = {
   patchwork: 1.60,
   scout: 1.39,
   davinci_code: 1.48,
-  gizmos: 2.05,
   lost_code: 2.38,
   criminal_dance: 1.16,
   wavelength: 1.11,
+  word_decode: null,
   guandan: 2.33,
   acquire: 2.49,
   ra: 2.31,
+  rebel_princess: 1.86,
   in_a_grove: 1.42,
   celestia: 1.32,
-  witches_brew: 1.87,
+  witchs_brew: 1.87,
   century_spice_road: 1.80,
   high_society: 1.48,
   felix: 1.40,
@@ -546,7 +548,10 @@ function getGameWeight(gameId) {
 
 function formatGameWeight(gameId) {
   const weight = getGameWeight(gameId);
-  return Number.isFinite(weight) ? weight.toFixed(2) : "?";
+  if (Number.isFinite(weight)) {
+    return weight.toFixed(2);
+  }
+  return Object.prototype.hasOwnProperty.call(GAME_WEIGHT, gameId) ? "N/A" : "?";
 }
 
 function getGameSortKey() {

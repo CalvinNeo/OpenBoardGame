@@ -47,6 +47,7 @@ let carcMeepleOptionSet = new Set();
 let carcRotation = 0;
 let carcPendingType = null;
 let carcResizeFrame = null;
+let carcLastTouchSelectionAt = 0;
 
 function clearCarcassonneState() {
   currentCarcassonneView = null;
@@ -233,11 +234,15 @@ function loadCarcassonneTemplates() {
     .then((resp) => (resp.ok ? resp.json() : null))
     .then((data) => {
       carcTemplateData = prepareCarcassonneTemplates(data);
+      if (!carcTemplateData) {
+        carcTemplatePromise = null;
+      }
       return carcTemplateData;
     })
     .catch((err) => {
       console.warn("Failed to load Carcassonne templates", err);
       carcTemplateData = null;
+      carcTemplatePromise = null;
       return null;
     });
   return carcTemplatePromise;
@@ -630,9 +635,12 @@ function applyCarcassonneHighlight(feature, nodesByTile, kind) {
       if (!image) {
         return;
       }
-      const overlay = document.createElement("div");
+      const overlay = document.createElement("img");
       overlay.className = `carc-highlight-shape ${kind === "selected" ? "carc-selected-shape" : "carc-hover-shape"}`;
-      overlay.style.backgroundImage = `url(${image})`;
+      overlay.alt = "";
+      overlay.draggable = false;
+      overlay.setAttribute("aria-hidden", "true");
+      overlay.src = image;
       cell.appendChild(overlay);
     });
     newSet.add(key);
@@ -763,15 +771,43 @@ function selectCarcassonneMeeple(view, feature, segment, worldX, worldY) {
     log("That feature is not available for meeple placement.");
     return;
   }
-  const nodes = collectCarcassonneConnectedNodes(view, worldX, worldY, feature, segment);
-  applyCarcassonneHighlight(feature, nodes, "selected");
   carcSelectedMeeple = { feature, segment, x: worldX, y: worldY };
+  clearCarcassonneHighlight("hover");
   updateCarcassonneMeepleSelectionLabel(view);
   updateCarcassonneControls(view);
+  if (carcTemplateData) {
+    renderCarcassonneSelectedHighlight(view);
+    return;
+  }
+  loadCarcassonneTemplates().then((data) => {
+    if (data && currentCarcassonneView) {
+      renderCarcassonneSelectedHighlight(currentCarcassonneView);
+    }
+  });
+}
+
+function renderCarcassonneSelectedHighlight(view) {
+  if (!view || !carcTemplateData || !carcSelectedMeeple) {
+    return false;
+  }
+  const last = view.last_placed;
+  if (!last || carcSelectedMeeple.x !== last.x || carcSelectedMeeple.y !== last.y) {
+    clearCarcassonneHighlight("selected");
+    return false;
+  }
+  const nodes = collectCarcassonneConnectedNodes(
+    view,
+    carcSelectedMeeple.x,
+    carcSelectedMeeple.y,
+    carcSelectedMeeple.feature,
+    carcSelectedMeeple.segment,
+  );
+  applyCarcassonneHighlight(carcSelectedMeeple.feature, nodes, "selected");
+  return carcSelectedTiles.size > 0;
 }
 
 function handleCarcassonneMeepleSelect(event) {
-  if (!currentCarcassonneView || !carcTemplateData) {
+  if (!currentCarcassonneView) {
     return;
   }
   const actions = Array.isArray(currentCarcassonneView.legal_actions)
@@ -805,12 +841,32 @@ function handleCarcassonneMeepleSelect(event) {
   }
   const tileType = cell.dataset.tileType;
   const rotation = Number(cell.dataset.rotation || 0);
-  const featureInfo = getCarcassonneHoverFeature(tileType, rotation, localX, localY);
-  if (!featureInfo) {
-    log("No feature found at that point.");
+  const selectAtPoint = () => {
+    const view = currentCarcassonneView;
+    const activeLast = view && view.last_placed;
+    const activeActions = view && Array.isArray(view.legal_actions) ? view.legal_actions : [];
+    if (!view || !activeLast || !activeActions.includes("place_meeple")) {
+      return;
+    }
+    if (worldX !== activeLast.x || worldY !== activeLast.y) {
+      return;
+    }
+    const featureInfo = getCarcassonneHoverFeature(tileType, rotation, localX, localY);
+    if (!featureInfo) {
+      log("No feature found at that point.");
+      return;
+    }
+    selectCarcassonneMeeple(view, featureInfo.feature, featureInfo.segment, worldX, worldY);
+  };
+  if (carcTemplateData) {
+    selectAtPoint();
     return;
   }
-  selectCarcassonneMeeple(currentCarcassonneView, featureInfo.feature, featureInfo.segment, worldX, worldY);
+  loadCarcassonneTemplates().then((data) => {
+    if (data) {
+      selectAtPoint();
+    }
+  });
 }
 
 function getCarcassonneLegalSet(view, rotation) {
@@ -918,14 +974,7 @@ function renderCarcassonneBoard(view) {
   if (carcSelectedMeeple && carcTemplateData) {
     const last = view.last_placed;
     if (last && carcSelectedMeeple.x === last.x && carcSelectedMeeple.y === last.y) {
-      const nodes = collectCarcassonneConnectedNodes(
-        view,
-        carcSelectedMeeple.x,
-        carcSelectedMeeple.y,
-        carcSelectedMeeple.feature,
-        carcSelectedMeeple.segment,
-      );
-      applyCarcassonneHighlight(carcSelectedMeeple.feature, nodes, "selected");
+      renderCarcassonneSelectedHighlight(view);
     } else {
       clearCarcassonneSelection();
     }
@@ -1220,7 +1269,19 @@ if (carcSkipMeepleBtn) {
 if (carcBoard) {
   carcBoard.addEventListener("mousemove", handleCarcassonneHover);
   carcBoard.addEventListener("mouseleave", () => clearCarcassonneHighlight("hover"));
-  carcBoard.addEventListener("click", handleCarcassonneMeepleSelect);
+  carcBoard.addEventListener("pointerup", (event) => {
+    if (event.pointerType !== "touch" && event.pointerType !== "pen") {
+      return;
+    }
+    carcLastTouchSelectionAt = Date.now();
+    handleCarcassonneMeepleSelect(event);
+  });
+  carcBoard.addEventListener("click", (event) => {
+    if (Date.now() - carcLastTouchSelectionAt < 600) {
+      return;
+    }
+    handleCarcassonneMeepleSelect(event);
+  });
 }
 
 window.addEventListener("resize", () => {

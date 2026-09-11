@@ -2,6 +2,7 @@ from game.acquire import AcquireGame
 from game.abraca_what import AbracaWhatGame
 from game.ai_dixit import AiDixitGame
 from game.age_of_war import AgeOfWarGame
+from game.ark_nova import ArkNovaGame
 from game.azul import AzulGame
 from game.cabo import CaboGame
 from game.cat_in_box import CatInBoxGame
@@ -2651,6 +2652,194 @@ FOREST_SHUFFLE_CONFIG_SCHEMA = {
     "additionalProperties": False,
 }
 
+ARK_NOVA_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "keep_initial_cards"},
+                "card_ids": {
+                    "type": "array",
+                    "items": {"type": "string", "pattern": "^[1-5][0-9]{2}$"},
+                    "minItems": 4,
+                    "maxItems": 4,
+                    "uniqueItems": True,
+                },
+            },
+            "required": ["type", "card_ids"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "cards"},
+                "mode": {"type": "string", "enum": ["draw", "snap"]},
+                "x_tokens": {"type": "integer", "minimum": 0, "maximum": 5},
+                "display_card_id": {"type": "string", "pattern": "^[1-5][0-9]{2}$"},
+                "market_card_ids": {
+                    "type": "array",
+                    "items": {"type": "string", "pattern": "^[1-5][0-9]{2}$"},
+                    "maxItems": 4,
+                    "uniqueItems": True,
+                },
+                "discard_ids": {
+                    "type": "array",
+                    "items": {"type": "string", "pattern": "^[1-5][0-9]{2}$"},
+                    "maxItems": 4,
+                    "uniqueItems": True,
+                },
+            },
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "build"},
+                "x_tokens": {"type": "integer", "minimum": 0, "maximum": 5},
+                "buildings": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 5,
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "building_type": {"type": "string", "minLength": 1, "maxLength": 80},
+                            "building_id": {"type": "string", "minLength": 1, "maxLength": 80},
+                            "size": {"type": "integer", "minimum": 1, "maximum": 5},
+                            "cells": {
+                                "type": "array",
+                                "items": {"type": "string", "pattern": "^[A-I][1-7]$"},
+                                "minItems": 1,
+                                "maxItems": 5,
+                                "uniqueItems": True,
+                            },
+                        },
+                        "required": ["building_type", "cells"],
+                        "additionalProperties": False,
+                    },
+                },
+            },
+            "required": ["type", "buildings"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "animals"},
+                "x_tokens": {"type": "integer", "minimum": 0, "maximum": 5},
+                "plays": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 2,
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "card_id": {"type": "string", "pattern": "^4[0-9]{2}$"},
+                            "enclosure_id": {"type": "string", "minLength": 1, "maxLength": 80},
+                            "source": {"type": "string", "enum": ["hand", "display"]},
+                        },
+                        "required": ["card_id", "enclosure_id"],
+                        "additionalProperties": False,
+                    },
+                },
+            },
+            "required": ["type", "plays"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "association"},
+                "x_tokens": {"type": "integer", "minimum": 0, "maximum": 5},
+                "tasks": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 4,
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "task": {
+                                "type": "string",
+                                "enum": [
+                                    "reputation",
+                                    "gain_2_reputation",
+                                    "partner_zoo",
+                                    "take_partner_zoo",
+                                    "university",
+                                    "take_university",
+                                    "support_project",
+                                    "support_conservation_project",
+                                ],
+                            },
+                            "continent": {"type": "string", "enum": ["africa", "americas", "asia", "australia", "europe"]},
+                            "university_id": {"type": "string", "minLength": 1, "maxLength": 80},
+                            "project_id": {"type": "string", "pattern": "^1[0-3][0-9]$"},
+                            "project_card_id": {"type": "string", "pattern": "^1[0-3][0-9]$"},
+                            "slot": {"type": "integer", "minimum": 1, "maximum": 3},
+                            "slot_position": {"type": "integer", "minimum": 1, "maximum": 3},
+                            "release_animal_id": {"type": "string", "pattern": "^4[0-9]{2}$"},
+                            "animal_id": {"type": "string", "pattern": "^4[0-9]{2}$"},
+                            "reward_id": {"type": "string", "minLength": 1, "maxLength": 80},
+                        },
+                        "required": ["task"],
+                        "additionalProperties": False,
+                    },
+                },
+                "donate": {"oneOf": [{"type": "boolean"}, {"type": "integer", "minimum": 2, "maximum": 12}]},
+            },
+            "required": ["type", "tasks"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "sponsors"},
+                "mode": {"type": "string", "enum": ["play", "break"]},
+                "x_tokens": {"type": "integer", "minimum": 0, "maximum": 5},
+                "card_ids": {
+                    "type": "array",
+                    "items": {"type": "string", "pattern": "^2[0-6][0-9]$"},
+                    "maxItems": 6,
+                    "uniqueItems": True,
+                },
+                "unique_building_placements": {"type": "object"},
+            },
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "gain_x"},
+                "action_card": {"type": "string", "enum": ["cards", "build", "animals", "association", "sponsors"]},
+            },
+            "required": ["type", "action_card"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "resolve_choice"},
+                "choice_id": {"type": "string", "minLength": 1, "maxLength": 160},
+                "selection": {},
+            },
+            "required": ["type", "choice_id", "selection"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+ARK_NOVA_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "seed": {"oneOf": [{"type": "integer"}, {"type": "string", "minLength": 1, "maxLength": 80}]},
+        "map_id": {"const": "map0"},
+    },
+    "additionalProperties": False,
+}
+
 MANILA_ACTION_SCHEMA = {
     "type": "object",
     "oneOf": [
@@ -4041,6 +4230,21 @@ register_game(
         module=ForestShuffleGame,
         serialize=ForestShuffleGame.serialize,
         deserialize=ForestShuffleGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=ArkNovaGame.game_id,
+        name="Ark Nova",
+        min_players=ArkNovaGame.min_players,
+        max_players=ArkNovaGame.max_players,
+        turn_mode="turn",
+        action_schema=ARK_NOVA_ACTION_SCHEMA,
+        config_schema=ARK_NOVA_CONFIG_SCHEMA,
+        module=ArkNovaGame,
+        serialize=ArkNovaGame.serialize,
+        deserialize=ArkNovaGame.deserialize,
     )
 )
 

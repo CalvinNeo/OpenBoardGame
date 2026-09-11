@@ -8267,21 +8267,42 @@ body.gang-explain-mode select.has-explanation:hover {
   box-shadow: 0 2px 5px rgba(2, 21, 16, 0.34);
 }
 
+.carc-cell > .carc-tile {
+  position: relative;
+  z-index: 1;
+}
+
 .carc-cell.carc-last-placed {
   box-shadow:
     0 0 0 3px #f6d26d,
     0 0 18px rgba(246, 210, 109, 0.52);
 }
 
+#carcassonnePanel.carc-can-place-meeple .carc-cell.carc-last-placed {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.carc-cell.occupied.carc-selected {
+  border-color: #d9fffa;
+  box-shadow:
+    inset 0 0 0 3px rgba(255, 255, 255, 0.94),
+    0 0 0 5px #16b8ad,
+    0 0 24px rgba(22, 184, 173, 0.76);
+}
+
 .carc-highlight-shape {
   position: absolute;
   inset: 0;
-  z-index: 3;
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
+  z-index: 4;
+  width: 100%;
+  height: 100%;
+  display: block;
   filter: drop-shadow(0 0 4px rgba(15, 23, 42, 0.35));
   mix-blend-mode: multiply;
+  object-fit: fill;
   pointer-events: none;
+  -webkit-user-drag: none;
 }
 
 .carc-highlight-shape.carc-hover-shape {
@@ -8289,8 +8310,11 @@ body.gang-explain-mode select.has-explanation:hover {
 }
 
 .carc-highlight-shape.carc-selected-shape {
-  opacity: 0.95;
-  filter: drop-shadow(0 0 7px rgba(15, 23, 42, 0.48));
+  opacity: 1;
+  filter:
+    drop-shadow(0 0 2px rgba(255, 255, 255, 0.96))
+    drop-shadow(0 0 7px rgba(12, 89, 91, 0.72));
+  mix-blend-mode: normal;
 }
 
 .carc-board-hint {

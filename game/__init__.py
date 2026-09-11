@@ -1,6 +1,7 @@
 from game.acquire import AcquireGame
 from game.abraca_what import AbracaWhatGame
 from game.age_of_war import AgeOfWarGame
+from game.ark_nova import ArkNovaGame
 from game.azul import AzulGame
 from game.ai_dixit import AiDixitGame
 from game.blokus import BlokusGame
@@ -64,6 +65,7 @@ __all__ = [
     "AbracaWhatGame",
     "AcquireGame",
     "AgeOfWarGame",
+    "ArkNovaGame",
     "AzulGame",
     "AiDixitGame",
     "BlokusGame",
