@@ -1,0 +1,791 @@
+[
+  {
+    "id": "sponsor-243",
+    "name_zh": "狐獴窝",
+    "money_cost": 0,
+    "is_enclosure": false,
+    "placement": {
+      "adjacent_to": {
+        "water": 0,
+        "rock": 1
+      },
+      "minimum_border_spaces": 0,
+      "may_ignore_existing_building_adjacency": false,
+      "usual_building_rules_apply": true,
+      "build_II_required_on_marked_map_spaces": true
+    },
+    "footprint": {
+      "grid": "hex_axial",
+      "orientation": "flat_top",
+      "anchor_cell": {
+        "q": 0,
+        "r": 0
+      },
+      "cells": [
+        {
+          "q": 0,
+          "r": 0
+        },
+        {
+          "q": -1,
+          "r": 1
+        },
+        {
+          "q": 1,
+          "r": 0
+        }
+      ],
+      "cell_count": 3,
+      "allowed_rotation_steps": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "degrees_per_rotation_step": 60,
+      "clockwise_rotation": "(q,r)->(-r,q+r)",
+      "reflection_allowed": false,
+      "source": "printed_card_diagram_cross_checked_with_steam_workshop_component"
+    }
+  },
+  {
+    "id": "sponsor-244",
+    "name_zh": "企鹅馆",
+    "money_cost": 0,
+    "is_enclosure": false,
+    "placement": {
+      "adjacent_to": {
+        "water": 1,
+        "rock": 0
+      },
+      "minimum_border_spaces": 0,
+      "may_ignore_existing_building_adjacency": false,
+      "usual_building_rules_apply": true,
+      "build_II_required_on_marked_map_spaces": true
+    },
+    "footprint": {
+      "grid": "hex_axial",
+      "orientation": "flat_top",
+      "anchor_cell": {
+        "q": 0,
+        "r": 0
+      },
+      "cells": [
+        {
+          "q": 0,
+          "r": 0
+        },
+        {
+          "q": -1,
+          "r": 0
+        },
+        {
+          "q": 1,
+          "r": -1
+        },
+        {
+          "q": 1,
+          "r": 0
+        }
+      ],
+      "cell_count": 4,
+      "allowed_rotation_steps": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "degrees_per_rotation_step": 60,
+      "clockwise_rotation": "(q,r)->(-r,q+r)",
+      "reflection_allowed": false,
+      "source": "printed_card_diagram_cross_checked_with_steam_workshop_component"
+    }
+  },
+  {
+    "id": "sponsor-245",
+    "name_zh": "水族馆",
+    "money_cost": 0,
+    "is_enclosure": false,
+    "placement": {
+      "adjacent_to": {
+        "water": 2,
+        "rock": 0
+      },
+      "minimum_border_spaces": 0,
+      "may_ignore_existing_building_adjacency": false,
+      "usual_building_rules_apply": true,
+      "build_II_required_on_marked_map_spaces": true
+    },
+    "footprint": {
+      "grid": "hex_axial",
+      "orientation": "flat_top",
+      "anchor_cell": {
+        "q": 0,
+        "r": 0
+      },
+      "cells": [
+        {
+          "q": 0,
+          "r": 0
+        },
+        {
+          "q": -1,
+          "r": 1
+        },
+        {
+          "q": 1,
+          "r": 0
+        },
+        {
+          "q": 1,
+          "r": 1
+        }
+      ],
+      "cell_count": 4,
+      "allowed_rotation_steps": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "degrees_per_rotation_step": 60,
+      "clockwise_rotation": "(q,r)->(-r,q+r)",
+      "reflection_allowed": false,
+      "source": "printed_card_diagram_cross_checked_with_steam_workshop_component"
+    }
+  },
+  {
+    "id": "sponsor-246",
+    "name_zh": "空中索道",
+    "money_cost": 0,
+    "is_enclosure": false,
+    "placement": {
+      "adjacent_to": {
+        "water": 0,
+        "rock": 2
+      },
+      "minimum_border_spaces": 0,
+      "may_ignore_existing_building_adjacency": false,
+      "usual_building_rules_apply": true,
+      "build_II_required_on_marked_map_spaces": true
+    },
+    "footprint": {
+      "grid": "hex_axial",
+      "orientation": "flat_top",
+      "anchor_cell": {
+        "q": 0,
+        "r": 0
+      },
+      "cells": [
+        {
+          "q": 0,
+          "r": 0
+        },
+        {
+          "q": 1,
+          "r": -1
+        },
+        {
+          "q": -1,
+          "r": 1
+        },
+        {
+          "q": -2,
+          "r": 2
+        }
+      ],
+      "cell_count": 4,
+      "allowed_rotation_steps": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "degrees_per_rotation_step": 60,
+      "clockwise_rotation": "(q,r)->(-r,q+r)",
+      "reflection_allowed": false,
+      "source": "printed_card_diagram_cross_checked_with_steam_workshop_component"
+    }
+  },
+  {
+    "id": "sponsor-247",
+    "name_zh": "狒狒栖息岩",
+    "money_cost": 0,
+    "is_enclosure": false,
+    "placement": {
+      "adjacent_to": {
+        "water": 0,
+        "rock": 1
+      },
+      "minimum_border_spaces": 0,
+      "may_ignore_existing_building_adjacency": false,
+      "usual_building_rules_apply": true,
+      "build_II_required_on_marked_map_spaces": true
+    },
+    "footprint": {
+      "grid": "hex_axial",
+      "orientation": "flat_top",
+      "anchor_cell": {
+        "q": 0,
+        "r": 0
+      },
+      "cells": [
+        {
+          "q": 0,
+          "r": 0
+        },
+        {
+          "q": -1,
+          "r": 0
+        },
+        {
+          "q": 1,
+          "r": 0
+        },
+        {
+          "q": 0,
+          "r": 1
+        }
+      ],
+      "cell_count": 4,
+      "allowed_rotation_steps": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "degrees_per_rotation_step": 60,
+      "clockwise_rotation": "(q,r)->(-r,q+r)",
+      "reflection_allowed": false,
+      "source": "printed_card_diagram_cross_checked_with_steam_workshop_component"
+    }
+  },
+  {
+    "id": "sponsor-248",
+    "name_zh": "猕猴园",
+    "money_cost": 0,
+    "is_enclosure": false,
+    "placement": {
+      "adjacent_to": {
+        "water": 0,
+        "rock": 0
+      },
+      "minimum_border_spaces": 0,
+      "may_ignore_existing_building_adjacency": false,
+      "usual_building_rules_apply": true,
+      "build_II_required_on_marked_map_spaces": true
+    },
+    "footprint": {
+      "grid": "hex_axial",
+      "orientation": "flat_top",
+      "anchor_cell": {
+        "q": 0,
+        "r": 0
+      },
+      "cells": [
+        {
+          "q": 0,
+          "r": 0
+        },
+        {
+          "q": -1,
+          "r": 0
+        },
+        {
+          "q": -2,
+          "r": 1
+        },
+        {
+          "q": 1,
+          "r": 0
+        }
+      ],
+      "cell_count": 4,
+      "allowed_rotation_steps": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "degrees_per_rotation_step": 60,
+      "clockwise_rotation": "(q,r)->(-r,q+r)",
+      "reflection_allowed": false,
+      "source": "printed_card_diagram_cross_checked_with_steam_workshop_component"
+    }
+  },
+  {
+    "id": "sponsor-249",
+    "name_zh": "猫头鹰棚屋",
+    "money_cost": 0,
+    "is_enclosure": false,
+    "placement": {
+      "adjacent_to": {
+        "water": 0,
+        "rock": 0
+      },
+      "minimum_border_spaces": 0,
+      "may_ignore_existing_building_adjacency": false,
+      "usual_building_rules_apply": true,
+      "build_II_required_on_marked_map_spaces": true
+    },
+    "footprint": {
+      "grid": "hex_axial",
+      "orientation": "flat_top",
+      "anchor_cell": {
+        "q": 0,
+        "r": 0
+      },
+      "cells": [
+        {
+          "q": 0,
+          "r": 0
+        },
+        {
+          "q": -1,
+          "r": 0
+        },
+        {
+          "q": 1,
+          "r": 0
+        }
+      ],
+      "cell_count": 3,
+      "allowed_rotation_steps": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "degrees_per_rotation_step": 60,
+      "clockwise_rotation": "(q,r)->(-r,q+r)",
+      "reflection_allowed": false,
+      "source": "printed_card_diagram_cross_checked_with_steam_workshop_component"
+    }
+  },
+  {
+    "id": "sponsor-250",
+    "name_zh": "海龟水族箱",
+    "money_cost": 0,
+    "is_enclosure": false,
+    "placement": {
+      "adjacent_to": {
+        "water": 1,
+        "rock": 0
+      },
+      "minimum_border_spaces": 0,
+      "may_ignore_existing_building_adjacency": false,
+      "usual_building_rules_apply": true,
+      "build_II_required_on_marked_map_spaces": true
+    },
+    "footprint": {
+      "grid": "hex_axial",
+      "orientation": "flat_top",
+      "anchor_cell": {
+        "q": 0,
+        "r": 0
+      },
+      "cells": [
+        {
+          "q": 0,
+          "r": 0
+        },
+        {
+          "q": -1,
+          "r": 0
+        },
+        {
+          "q": 1,
+          "r": -1
+        },
+        {
+          "q": 0,
+          "r": 1
+        }
+      ],
+      "cell_count": 4,
+      "allowed_rotation_steps": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "degrees_per_rotation_step": 60,
+      "clockwise_rotation": "(q,r)->(-r,q+r)",
+      "reflection_allowed": false,
+      "source": "printed_card_diagram_cross_checked_with_steam_workshop_component"
+    }
+  },
+  {
+    "id": "sponsor-251",
+    "name_zh": "北极熊展",
+    "money_cost": 0,
+    "is_enclosure": false,
+    "placement": {
+      "adjacent_to": {
+        "water": 1,
+        "rock": 0
+      },
+      "minimum_border_spaces": 0,
+      "may_ignore_existing_building_adjacency": false,
+      "usual_building_rules_apply": true,
+      "build_II_required_on_marked_map_spaces": true
+    },
+    "footprint": {
+      "grid": "hex_axial",
+      "orientation": "flat_top",
+      "anchor_cell": {
+        "q": 0,
+        "r": 0
+      },
+      "cells": [
+        {
+          "q": 0,
+          "r": 0
+        },
+        {
+          "q": -1,
+          "r": 1
+        },
+        {
+          "q": 1,
+          "r": 0
+        },
+        {
+          "q": 2,
+          "r": -1
+        }
+      ],
+      "cell_count": 4,
+      "allowed_rotation_steps": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "degrees_per_rotation_step": 60,
+      "clockwise_rotation": "(q,r)->(-r,q+r)",
+      "reflection_allowed": false,
+      "source": "printed_card_diagram_cross_checked_with_steam_workshop_component"
+    }
+  },
+  {
+    "id": "sponsor-252",
+    "name_zh": "斑鬣狗围场",
+    "money_cost": 0,
+    "is_enclosure": false,
+    "placement": {
+      "adjacent_to": {
+        "water": 0,
+        "rock": 1
+      },
+      "minimum_border_spaces": 0,
+      "may_ignore_existing_building_adjacency": false,
+      "usual_building_rules_apply": true,
+      "build_II_required_on_marked_map_spaces": true
+    },
+    "footprint": {
+      "grid": "hex_axial",
+      "orientation": "flat_top",
+      "anchor_cell": {
+        "q": 0,
+        "r": 0
+      },
+      "cells": [
+        {
+          "q": 0,
+          "r": 0
+        },
+        {
+          "q": -1,
+          "r": 0
+        },
+        {
+          "q": 1,
+          "r": -1
+        },
+        {
+          "q": 2,
+          "r": -2
+        }
+      ],
+      "cell_count": 4,
+      "allowed_rotation_steps": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "degrees_per_rotation_step": 60,
+      "clockwise_rotation": "(q,r)->(-r,q+r)",
+      "reflection_allowed": false,
+      "source": "printed_card_diagram_cross_checked_with_steam_workshop_component"
+    }
+  },
+  {
+    "id": "sponsor-253",
+    "name_zh": "霍加狓棚厩",
+    "money_cost": 0,
+    "is_enclosure": false,
+    "placement": {
+      "adjacent_to": {
+        "water": 0,
+        "rock": 0
+      },
+      "minimum_border_spaces": 0,
+      "may_ignore_existing_building_adjacency": false,
+      "usual_building_rules_apply": true,
+      "build_II_required_on_marked_map_spaces": true
+    },
+    "footprint": {
+      "grid": "hex_axial",
+      "orientation": "flat_top",
+      "anchor_cell": {
+        "q": 0,
+        "r": 0
+      },
+      "cells": [
+        {
+          "q": 0,
+          "r": 0
+        },
+        {
+          "q": -2,
+          "r": 1
+        },
+        {
+          "q": -1,
+          "r": 1
+        },
+        {
+          "q": 1,
+          "r": 0
+        }
+      ],
+      "cell_count": 4,
+      "allowed_rotation_steps": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "degrees_per_rotation_step": 60,
+      "clockwise_rotation": "(q,r)->(-r,q+r)",
+      "reflection_allowed": false,
+      "source": "printed_card_diagram_cross_checked_with_steam_workshop_component"
+    }
+  },
+  {
+    "id": "sponsor-254",
+    "name_zh": "动物园课外学校",
+    "money_cost": 0,
+    "is_enclosure": false,
+    "placement": {
+      "adjacent_to": {
+        "water": 0,
+        "rock": 0
+      },
+      "minimum_border_spaces": 2,
+      "may_ignore_existing_building_adjacency": false,
+      "usual_building_rules_apply": true,
+      "build_II_required_on_marked_map_spaces": true
+    },
+    "footprint": {
+      "grid": "hex_axial",
+      "orientation": "flat_top",
+      "anchor_cell": {
+        "q": 0,
+        "r": 0
+      },
+      "cells": [
+        {
+          "q": 0,
+          "r": 0
+        },
+        {
+          "q": -1,
+          "r": 0
+        },
+        {
+          "q": 1,
+          "r": -1
+        }
+      ],
+      "cell_count": 3,
+      "allowed_rotation_steps": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "degrees_per_rotation_step": 60,
+      "clockwise_rotation": "(q,r)->(-r,q+r)",
+      "reflection_allowed": false,
+      "source": "printed_card_diagram_cross_checked_with_steam_workshop_component"
+    }
+  },
+  {
+    "id": "sponsor-255",
+    "name_zh": "儿童游乐园",
+    "money_cost": 0,
+    "is_enclosure": false,
+    "placement": {
+      "adjacent_to": {
+        "water": 0,
+        "rock": 1
+      },
+      "minimum_border_spaces": 0,
+      "may_ignore_existing_building_adjacency": false,
+      "usual_building_rules_apply": true,
+      "build_II_required_on_marked_map_spaces": true
+    },
+    "footprint": {
+      "grid": "hex_axial",
+      "orientation": "flat_top",
+      "anchor_cell": {
+        "q": 0,
+        "r": 0
+      },
+      "cells": [
+        {
+          "q": 0,
+          "r": 0
+        },
+        {
+          "q": 1,
+          "r": 0
+        }
+      ],
+      "cell_count": 2,
+      "allowed_rotation_steps": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "degrees_per_rotation_step": 60,
+      "clockwise_rotation": "(q,r)->(-r,q+r)",
+      "reflection_allowed": false,
+      "source": "printed_card_diagram_cross_checked_with_steam_workshop_component"
+    }
+  },
+  {
+    "id": "sponsor-256",
+    "name_zh": "水上乐园",
+    "money_cost": 0,
+    "is_enclosure": false,
+    "placement": {
+      "adjacent_to": {
+        "water": 1,
+        "rock": 0
+      },
+      "minimum_border_spaces": 0,
+      "may_ignore_existing_building_adjacency": false,
+      "usual_building_rules_apply": true,
+      "build_II_required_on_marked_map_spaces": true
+    },
+    "footprint": {
+      "grid": "hex_axial",
+      "orientation": "flat_top",
+      "anchor_cell": {
+        "q": 0,
+        "r": 0
+      },
+      "cells": [
+        {
+          "q": 0,
+          "r": 0
+        },
+        {
+          "q": 1,
+          "r": 0
+        }
+      ],
+      "cell_count": 2,
+      "allowed_rotation_steps": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "degrees_per_rotation_step": 60,
+      "clockwise_rotation": "(q,r)->(-r,q+r)",
+      "reflection_allowed": false,
+      "source": "printed_card_diagram_cross_checked_with_steam_workshop_component"
+    }
+  },
+  {
+    "id": "sponsor-257",
+    "name_zh": "园区边门",
+    "money_cost": 0,
+    "is_enclosure": false,
+    "placement": {
+      "adjacent_to": {
+        "water": 0,
+        "rock": 0
+      },
+      "minimum_border_spaces": 2,
+      "may_ignore_existing_building_adjacency": true,
+      "usual_building_rules_apply": true,
+      "build_II_required_on_marked_map_spaces": true
+    },
+    "footprint": {
+      "grid": "hex_axial",
+      "orientation": "flat_top",
+      "anchor_cell": {
+        "q": 0,
+        "r": 0
+      },
+      "cells": [
+        {
+          "q": 0,
+          "r": 0
+        },
+        {
+          "q": 1,
+          "r": 0
+        }
+      ],
+      "cell_count": 2,
+      "allowed_rotation_steps": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "degrees_per_rotation_step": 60,
+      "clockwise_rotation": "(q,r)->(-r,q+r)",
+      "reflection_allowed": false,
+      "source": "printed_card_diagram_cross_checked_with_steam_workshop_component"
+    }
+  }
+]

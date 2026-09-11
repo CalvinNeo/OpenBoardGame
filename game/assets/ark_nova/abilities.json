@@ -1,0 +1,496 @@
+{
+  "sprint": {
+    "name_zh": "疾跑",
+    "name_en": "Sprint",
+    "timing": "immediate",
+    "cascade": "draw_cards",
+    "parameters": [
+      "draw_count"
+    ],
+    "rules_zh": "从牌库抽取N张牌。",
+    "edge_cases_zh": []
+  },
+  "pack": {
+    "name_zh": "群居",
+    "name_en": "Pack",
+    "timing": "immediate",
+    "cascade": "scaling_reward",
+    "parameters": [],
+    "rules_zh": "按自己动物园中的食肉类图标数，每个获得1吸引力；本牌图标也计入。",
+    "edge_cases_zh": []
+  },
+  "hunter": {
+    "name_zh": "狩猎",
+    "name_en": "Hunter",
+    "timing": "immediate",
+    "cascade": "reveal_and_choose",
+    "parameters": [
+      "reveal_count"
+    ],
+    "rules_zh": "展示牌库顶N张牌，至多保留其中1张动物牌，其余弃掉。",
+    "edge_cases_zh": [
+      "若没有动物牌，全部弃掉。"
+    ]
+  },
+  "clever": {
+    "name_zh": "机灵",
+    "name_en": "Clever",
+    "timing": "after_action",
+    "cascade": "reposition_action",
+    "parameters": [],
+    "rules_zh": "完成整个动物行动后，可将任意1张行动牌移到槽位1。",
+    "edge_cases_zh": []
+  },
+  "boost_association": {
+    "name_zh": "推动：协会",
+    "name_en": "Boost: Association",
+    "timing": "after_action",
+    "cascade": "reposition_action",
+    "parameters": [],
+    "rules_zh": "完成动物行动后，可将协会行动牌移到槽位1或5。",
+    "edge_cases_zh": []
+  },
+  "boost_building": {
+    "name_zh": "推动：建造",
+    "name_en": "Boost: Build",
+    "timing": "after_action",
+    "cascade": "reposition_action",
+    "parameters": [],
+    "rules_zh": "完成动物行动后，可将建造行动牌移到槽位1或5。",
+    "edge_cases_zh": []
+  },
+  "boost_cards": {
+    "name_zh": "推动：卡牌",
+    "name_en": "Boost: Cards",
+    "timing": "after_action",
+    "cascade": "reposition_action",
+    "parameters": [],
+    "rules_zh": "完成动物行动后，可将卡牌行动牌移到槽位1或5。",
+    "edge_cases_zh": []
+  },
+  "boost_sponsors": {
+    "name_zh": "推动：赞助商",
+    "name_en": "Boost: Sponsors",
+    "timing": "after_action",
+    "cascade": "reposition_action",
+    "parameters": [],
+    "rules_zh": "完成动物行动后，可将赞助商行动牌移到槽位1或5。",
+    "edge_cases_zh": []
+  },
+  "boost_animal": {
+    "name_zh": "推动：动物",
+    "name_en": "Boost: Animals",
+    "timing": "after_action",
+    "cascade": "reposition_action",
+    "parameters": [],
+    "rules_zh": "完成动物行动后，可将动物行动牌移到槽位1或5。",
+    "edge_cases_zh": []
+  },
+  "action_association": {
+    "name_zh": "行动：协会",
+    "name_en": "Action: Association",
+    "timing": "after_action",
+    "cascade": "extra_specific_action",
+    "parameters": [],
+    "rules_zh": "完成动物行动后，按协会牌当前槽位、升级面和修正正常执行一次协会行动。",
+    "edge_cases_zh": [
+      "必须执行指定行动，不能改做获得X标记的替代行动。"
+    ]
+  },
+  "action_building": {
+    "name_zh": "行动：建造",
+    "name_en": "Action: Build",
+    "timing": "after_action",
+    "cascade": "extra_specific_action",
+    "parameters": [],
+    "rules_zh": "完成动物行动后，按建造牌当前槽位、升级面和修正正常执行一次建造行动。",
+    "edge_cases_zh": [
+      "必须执行指定行动，不能改做获得X标记的替代行动。"
+    ]
+  },
+  "action_cards": {
+    "name_zh": "行动：卡牌",
+    "name_en": "Action: Cards",
+    "timing": "after_action",
+    "cascade": "extra_specific_action",
+    "parameters": [],
+    "rules_zh": "完成动物行动后，按卡牌牌当前槽位、升级面和修正正常执行一次卡牌行动。",
+    "edge_cases_zh": [
+      "必须执行指定行动，不能改做获得X标记的替代行动。"
+    ]
+  },
+  "action_sponsors": {
+    "name_zh": "行动：赞助商",
+    "name_en": "Action: Sponsors",
+    "timing": "after_action",
+    "cascade": "extra_specific_action",
+    "parameters": [],
+    "rules_zh": "完成动物行动后，按赞助商牌当前槽位、升级面和修正正常执行一次赞助商行动。",
+    "edge_cases_zh": [
+      "必须执行指定行动，不能改做获得X标记的替代行动。"
+    ]
+  },
+  "inventive": {
+    "name_zh": "创造力",
+    "name_en": "Inventive",
+    "timing": "immediate",
+    "cascade": "gain_x_tokens",
+    "parameters": [
+      "x_tokens"
+    ],
+    "rules_zh": "获得N枚X标记，上限仍为5。",
+    "edge_cases_zh": []
+  },
+  "inventive_bear": {
+    "name_zh": "创造力：熊",
+    "name_en": "Inventive: Bear",
+    "timing": "immediate",
+    "cascade": "scaling_reward",
+    "parameters": [],
+    "rules_zh": "按所有动物园中的熊类图标获得X标记，最多3枚。",
+    "edge_cases_zh": []
+  },
+  "inventive_primate": {
+    "name_zh": "创造力：灵长类",
+    "name_en": "Inventive: Primates",
+    "timing": "immediate",
+    "cascade": "threshold_reward",
+    "parameters": [],
+    "rules_zh": "自己有1/3/5个灵长类图标时，分别获得1/2/3枚X标记。",
+    "edge_cases_zh": []
+  },
+  "full_throated": {
+    "name_zh": "呼唤",
+    "name_en": "Full-throated",
+    "timing": "immediate",
+    "cascade": "hire_worker",
+    "parameters": [],
+    "rules_zh": "从个人板最低的协会事务员储存位雇佣1名事务员。",
+    "edge_cases_zh": [
+      "若已全部雇佣则无效果。"
+    ]
+  },
+  "jumping": {
+    "name_zh": "跳跃",
+    "name_en": "Jumping",
+    "timing": "immediate",
+    "cascade": "advance_break",
+    "parameters": [
+      "break_steps",
+      "money"
+    ],
+    "rules_zh": "将休息标记推进N格并获得N金币。",
+    "edge_cases_zh": [
+      "若到达最后一格，先得1枚X标记，回合结束后再结算休息。"
+    ]
+  },
+  "multiplier_association": {
+    "name_zh": "双重：协会",
+    "name_en": "Multiplier: Association",
+    "timing": "immediate",
+    "cascade": "future_multi_action",
+    "parameters": [],
+    "rules_zh": "在协会行动牌上放1枚双倍标记；下次执行时，每枚标记都让该行动以相同强度多执行一次。",
+    "edge_cases_zh": [
+      "多枚双倍标记可以叠加。",
+      "X标记只增强其中一次子行动；全部子行动完成后才处理“行动后”效果和休息。",
+      "使用后或下次休息时归还。"
+    ]
+  },
+  "multiplier_building": {
+    "name_zh": "双重：建造",
+    "name_en": "Multiplier: Build",
+    "timing": "immediate",
+    "cascade": "future_multi_action",
+    "parameters": [],
+    "rules_zh": "在建造行动牌上放1枚双倍标记；下次执行时，每枚标记都让该行动以相同强度多执行一次。",
+    "edge_cases_zh": [
+      "多枚双倍标记可以叠加。",
+      "X标记只增强其中一次子行动；全部子行动完成后才处理“行动后”效果和休息。",
+      "使用后或下次休息时归还。"
+    ]
+  },
+  "multiplier_cards": {
+    "name_zh": "双重：卡牌",
+    "name_en": "Multiplier: Cards",
+    "timing": "immediate",
+    "cascade": "future_multi_action",
+    "parameters": [],
+    "rules_zh": "在卡牌行动牌上放1枚双倍标记；下次执行时，每枚标记都让该行动以相同强度多执行一次。",
+    "edge_cases_zh": [
+      "多枚双倍标记可以叠加。",
+      "X标记只增强其中一次子行动；全部子行动完成后才处理“行动后”效果和休息。",
+      "使用后或下次休息时归还。"
+    ]
+  },
+  "multiplier_sponsors": {
+    "name_zh": "双重：赞助商",
+    "name_en": "Multiplier: Sponsors",
+    "timing": "immediate",
+    "cascade": "future_multi_action",
+    "parameters": [],
+    "rules_zh": "在赞助商行动牌上放1枚双倍标记；下次执行时，每枚标记都让该行动以相同强度多执行一次。",
+    "edge_cases_zh": [
+      "多枚双倍标记可以叠加。",
+      "X标记只增强其中一次子行动；全部子行动完成后才处理“行动后”效果和休息。",
+      "使用后或下次休息时归还。"
+    ]
+  },
+  "iconic_animal": {
+    "name_zh": "标志性动物",
+    "name_en": "Iconic Animal",
+    "timing": "immediate",
+    "cascade": "global_scaling_reward",
+    "parameters": [
+      "continent",
+      "maximum_appeal"
+    ],
+    "rules_zh": "按所有动物园中指定大洲图标的总数获得吸引力，最多8。",
+    "edge_cases_zh": []
+  },
+  "sun_bathing": {
+    "name_zh": "日光浴",
+    "name_en": "Sunbathing",
+    "timing": "immediate",
+    "cascade": "discard_for_money",
+    "parameters": [
+      "maximum_cards",
+      "money_per_card"
+    ],
+    "rules_zh": "最多卖出N张手牌，每张获得4金币并置入弃牌堆。",
+    "edge_cases_zh": []
+  },
+  "pouch": {
+    "name_zh": "育儿袋",
+    "name_en": "Pouch",
+    "timing": "immediate",
+    "cascade": "tuck_cards",
+    "parameters": [
+      "maximum_cards"
+    ],
+    "rules_zh": "最多把N张手牌压在本牌下，每张获得2吸引力。",
+    "edge_cases_zh": [
+      "压在牌下的牌不再有任何功能；放归该动物时一并弃掉且不失去这部分吸引力。"
+    ]
+  },
+  "resistance": {
+    "name_zh": "抵抗",
+    "name_en": "Resistance",
+    "timing": "immediate",
+    "cascade": "gain_final_scoring_card",
+    "parameters": [],
+    "rules_zh": "抽2张终局计分牌，保留1张、弃1张。",
+    "edge_cases_zh": [
+      "达到10保育时可从自己所有终局计分牌中任选1张弃掉；终局结算其余全部。"
+    ]
+  },
+  "assertion": {
+    "name_zh": "执着",
+    "name_en": "Assertion",
+    "timing": "immediate",
+    "cascade": "fetch_base_project",
+    "parameters": [],
+    "rules_zh": "从未使用的基础保育项目中任选1张加入手牌，之后可按通常规则打到协会板上方。",
+    "edge_cases_zh": []
+  },
+  "digging": {
+    "name_zh": "刨挖",
+    "name_en": "Digging",
+    "timing": "immediate",
+    "cascade": "repeatable_choice",
+    "parameters": [
+      "maximum_repetitions"
+    ],
+    "rules_zh": "依次选择最多N次：弃展示区1张并立刻补牌，或弃手牌1张后从牌库抽1张。",
+    "edge_cases_zh": []
+  },
+  "sponsor_magnet": {
+    "name_zh": "招商",
+    "name_en": "Sponsor Magnet",
+    "timing": "immediate",
+    "cascade": "take_display_cards",
+    "parameters": [],
+    "rules_zh": "把展示区内全部赞助商牌加入手牌；忽略声望范围，回合结束时再补展示区。",
+    "edge_cases_zh": []
+  },
+  "flock_animal": {
+    "name_zh": "群集动物",
+    "name_en": "Flock Animal",
+    "timing": "during_placement",
+    "cascade": "shared_enclosure",
+    "parameters": [
+      "minimum_host_enclosure_size"
+    ],
+    "rules_zh": "可与已在园内、所需围栏尺寸至少为N的食草动物共享其已占用围栏；否则仍可正常占用围栏。",
+    "edge_cases_zh": [
+      "同一只食草动物可承载多只群集动物。"
+    ]
+  },
+  "venom": {
+    "name_zh": "毒液",
+    "name_en": "Venom",
+    "timing": "immediate",
+    "cascade": "opponent_action_debuff",
+    "parameters": [
+      "tokens_per_target"
+    ],
+    "rules_zh": "每名吸引力至少5且在你之前的玩家获得N枚毒液标记，依次放到其最低且未放毒液的行动牌上。",
+    "edge_cases_zh": [
+      "同一行动牌不能有两枚毒液。",
+      "使用中毒行动时移除其毒液；若回合结束仍未移除任何毒液，须支付2金币。",
+      "把中毒行动牌用于获得X标记的替代行动也会移除毒液（已持有5枚X而无法执行时除外）。",
+      "休息时移除全部毒液。"
+    ]
+  },
+  "dominance": {
+    "name_zh": "支配",
+    "name_en": "Dominance",
+    "timing": "immediate",
+    "cascade": "fetch_specific_base_project",
+    "parameters": [
+      "project_tag"
+    ],
+    "rules_zh": "若指定动物类目的基础保育项目未在游戏中，将它加入手牌。",
+    "edge_cases_zh": []
+  },
+  "pilfering_1": {
+    "name_zh": "偷窃1",
+    "name_en": "Pilfering 1",
+    "timing": "immediate",
+    "cascade": "opponent_choice_loss",
+    "parameters": [],
+    "rules_zh": "吸引力最高且至少为5的目标选择：给你5金币，或让你随机拿其1张手牌。",
+    "edge_cases_zh": [
+      "并列目标由你选择；目标缺少一种资源时只能给另一种。"
+    ]
+  },
+  "pilfering_2": {
+    "name_zh": "偷窃2",
+    "name_en": "Pilfering 2",
+    "timing": "immediate",
+    "cascade": "opponent_choice_loss_twice",
+    "parameters": [],
+    "rules_zh": "依次对吸引力最高的玩家和保育最高的玩家各结算一次偷窃；保育目标须至少有1保育。",
+    "edge_cases_zh": [
+      "若两次命中同一玩家，也要依次结算；该玩家第二次可以改选另一种损失。"
+    ]
+  },
+  "snapping_1": {
+    "name_zh": "捕捉1",
+    "name_en": "Snapping 1",
+    "timing": "immediate",
+    "cascade": "take_display_card",
+    "parameters": [],
+    "rules_zh": "从展示区任选1张牌加入手牌，忽略声望范围；回合结束时补展示区。",
+    "edge_cases_zh": []
+  },
+  "snapping_2": {
+    "name_zh": "捕捉2",
+    "name_en": "Snapping 2",
+    "timing": "immediate",
+    "cascade": "take_display_card_twice",
+    "parameters": [],
+    "rules_zh": "依次从展示区任选1张牌两次；可选择在两次之间补牌。",
+    "edge_cases_zh": []
+  },
+  "constriction": {
+    "name_zh": "缠绕",
+    "name_en": "Constriction",
+    "timing": "immediate",
+    "cascade": "opponent_action_debuff",
+    "parameters": [],
+    "rules_zh": "每名至少有5吸引力的玩家，每有一条计分轨领先你便获得1枚缠绕，放到其最高且未放缠绕的行动牌上；该牌本次强度-2。",
+    "edge_cases_zh": [
+      "结算顺序可放在本动物印刷吸引力之前或之后。",
+      "同一行动牌不能有两枚缠绕；双倍行动的每个子行动都减2。",
+      "缠绕牌到槽位1/2时可能变成-1/0，须用足够X标记升到至少1，或改做获得X标记的替代行动。",
+      "行动结算后移除该标记；休息时移除所有剩余标记。"
+    ]
+  },
+  "hypnosis": {
+    "name_zh": "催眠",
+    "name_en": "Hypnosis",
+    "timing": "after_action",
+    "cascade": "borrow_opponent_action",
+    "parameters": [],
+    "rules_zh": "完成动物行动后，选择吸引力最高且至少为5的玩家槽位1、2或3的一张行动牌，按该玩家的升级面执行并把该牌移到槽位1。",
+    "edge_cases_zh": [
+      "可用自己的X标记；目标牌上的毒液/缠绕生效。",
+      "不能使用双倍标记。",
+      "独特建筑能否覆盖个人板的建造II格，仍看自己的建造牌是否升级。",
+      "若目标是自己则无效。"
+    ]
+  },
+  "scavenging": {
+    "name_zh": "食腐",
+    "name_en": "Scavenging",
+    "timing": "immediate",
+    "cascade": "draw_from_discard",
+    "parameters": [
+      "draw_count"
+    ],
+    "rules_zh": "将弃牌堆面朝下洗匀，随机抽N张，保留1张并弃掉其余。",
+    "edge_cases_zh": []
+  },
+  "posturing": {
+    "name_zh": "姿态",
+    "name_en": "Posturing",
+    "timing": "immediate",
+    "cascade": "free_build",
+    "parameters": [
+      "maximum_buildings"
+    ],
+    "rules_zh": "最多N次免费放置1个贩售亭或休憩亭，仍遵守通常放置规则。",
+    "edge_cases_zh": []
+  },
+  "perception_2": {
+    "name_zh": "洞察力2",
+    "name_en": "Perception 2",
+    "timing": "immediate",
+    "cascade": "draw_and_keep",
+    "parameters": [],
+    "rules_zh": "从牌库抽2张，保留1张并弃1张。",
+    "edge_cases_zh": []
+  },
+  "perception_4": {
+    "name_zh": "洞察力4",
+    "name_en": "Perception 4",
+    "timing": "immediate",
+    "cascade": "draw_and_keep",
+    "parameters": [],
+    "rules_zh": "从牌库抽4张，保留2张并弃2张。",
+    "edge_cases_zh": []
+  },
+  "determination": {
+    "name_zh": "果断",
+    "name_en": "Determination",
+    "timing": "after_action",
+    "cascade": "extra_any_action",
+    "parameters": [],
+    "rules_zh": "完成动物行动后，任选另一张行动牌正常执行一次，并按通常规则移动。",
+    "edge_cases_zh": [
+      "与指定的“行动：X”不同，果断允许选择获得X标记的替代行动。"
+    ]
+  },
+  "peacocking": {
+    "name_zh": "炫耀",
+    "name_en": "Peacocking",
+    "timing": "immediate",
+    "cascade": "free_special_enclosure",
+    "parameters": [],
+    "rules_zh": "如可能，免费放置大型鸟舍；无需建造行动II，但仍遵守放置规则。",
+    "edge_cases_zh": []
+  },
+  "petting_zoo_animal": {
+    "name_zh": "萌宠动物",
+    "name_en": "Petting Zoo Animal",
+    "timing": "immediate",
+    "cascade": "scaling_reward",
+    "parameters": [],
+    "rules_zh": "按自己园内萌宠类图标总数，每个获得3吸引力；因此第1/2/3只分别令总收益增加3/6/9。",
+    "edge_cases_zh": [
+      "只能拥有1座萌宠馆，因此通常最多容纳3只。",
+      "萌宠动物也算小型动物。"
+    ]
+  }
+}

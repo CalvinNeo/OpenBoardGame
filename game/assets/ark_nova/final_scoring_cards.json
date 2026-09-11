@@ -1,0 +1,545 @@
+[
+  {
+    "id": "001",
+    "card_type": "final_scoring",
+    "name": {
+      "zh": "大型动物公园",
+      "en": "Large Animal Zoo"
+    },
+    "timing": "endgame",
+    "description_zh": "根据你动物园里的 大型动物 ， 获得 {ConservationPoint} 。",
+    "scoring_steps": [
+      {
+        "requirement": 1,
+        "reward": {
+          "conservation": 1
+        },
+        "raw_zh": "1 -> 保育1"
+      },
+      {
+        "requirement": 2,
+        "reward": {
+          "conservation": 2
+        },
+        "raw_zh": "2 -> 保育2"
+      },
+      {
+        "requirement": 3,
+        "reward": {
+          "conservation": 3
+        },
+        "raw_zh": "3 -> 保育3"
+      },
+      {
+        "requirement": 4,
+        "reward": {
+          "conservation": 4
+        },
+        "raw_zh": "4 -> 保育4"
+      }
+    ],
+    "scoring_rule": {
+      "kind": "metric_ladder",
+      "metric": "large_animal_count",
+      "definition_zh": "大型动物指需要尺寸4或5普通围栏的动物；特殊围栏里的动物不计。"
+    },
+    "maximum_conservation": 4,
+    "source_line": 266
+  },
+  {
+    "id": "002",
+    "card_type": "final_scoring",
+    "name": {
+      "zh": "小型动物公园",
+      "en": "Small Animal Zoo"
+    },
+    "timing": "endgame",
+    "description_zh": "根据你动物园里的 小型动物 ， 获得 {ConservationPoint} 。",
+    "scoring_steps": [
+      {
+        "requirement": 3,
+        "reward": {
+          "conservation": 1
+        },
+        "raw_zh": "3 -> 保育1"
+      },
+      {
+        "requirement": 6,
+        "reward": {
+          "conservation": 2
+        },
+        "raw_zh": "6 -> 保育2"
+      },
+      {
+        "requirement": 8,
+        "reward": {
+          "conservation": 3
+        },
+        "raw_zh": "8 -> 保育3"
+      },
+      {
+        "requirement": 10,
+        "reward": {
+          "conservation": 4
+        },
+        "raw_zh": "10 -> 保育4"
+      }
+    ],
+    "scoring_rule": {
+      "kind": "metric_ladder",
+      "metric": "small_animal_count",
+      "definition_zh": "小型动物指需要尺寸1或2围栏的动物；宠物动物均视为小型动物。"
+    },
+    "maximum_conservation": 4,
+    "source_line": 267
+  },
+  {
+    "id": "003",
+    "card_type": "final_scoring",
+    "name": {
+      "zh": "科研动物园",
+      "en": "Research Zoo"
+    },
+    "timing": "endgame",
+    "description_zh": "根据你动物园里的 研究 图标， 获得 {ConservationPoint} 。",
+    "scoring_steps": [
+      {
+        "requirement": 3,
+        "reward": {
+          "conservation": 1
+        },
+        "raw_zh": "3 -> 保育1"
+      },
+      {
+        "requirement": 4,
+        "reward": {
+          "conservation": 2
+        },
+        "raw_zh": "4 -> 保育2"
+      },
+      {
+        "requirement": 5,
+        "reward": {
+          "conservation": 3
+        },
+        "raw_zh": "5 -> 保育3"
+      },
+      {
+        "requirement": 7,
+        "reward": {
+          "conservation": 4
+        },
+        "raw_zh": "7 -> 保育4"
+      }
+    ],
+    "scoring_rule": {
+      "kind": "metric_ladder",
+      "metric": "science_icon_count",
+      "definition_zh": "计算自己动物园中的研究图标。"
+    },
+    "maximum_conservation": 4,
+    "source_line": 268
+  },
+  {
+    "id": "004",
+    "card_type": "final_scoring",
+    "name": {
+      "zh": "主题建筑动物园",
+      "en": "Architectural Zoo"
+    },
+    "timing": "endgame",
+    "description_zh": "根据你动物园里的 建筑物 ， 获得 {ConservationPoint} 。",
+    "scoring_steps": [
+      {
+        "requirement": "与 所有的水域格相连 ，获得 {ConservationPoint-1} 。",
+        "reward": {
+          "conservation": 1
+        },
+        "raw_zh": "与 所有的水域格相连 ，获得 {ConservationPoint-1} 。 -> 保育1"
+      },
+      {
+        "requirement": "与 所有的岩石格相连 ，获得 {ConservationPoint-1} 。",
+        "reward": {
+          "conservation": 1
+        },
+        "raw_zh": "与 所有的岩石格相连 ，获得 {ConservationPoint-1} 。 -> 保育1"
+      },
+      {
+        "requirement": "覆盖 所有的边界格 ，获得 {ConservationPoint-1} 。",
+        "reward": {
+          "conservation": 1
+        },
+        "raw_zh": "覆盖 所有的边界格 ，获得 {ConservationPoint-1} 。 -> 保育1"
+      },
+      {
+        "requirement": "完全覆盖 动物园地图 ，获得 {ConservationPoint-1} 。",
+        "reward": {
+          "conservation": 1
+        },
+        "raw_zh": "完全覆盖 动物园地图 ，获得 {ConservationPoint-1} 。 -> 保育1"
+      }
+    ],
+    "scoring_rule": {
+      "kind": "independent_conditions",
+      "conditions": [
+        {
+          "id": "all_water_spaces_connected",
+          "reward": {
+            "conservation": 1
+          },
+          "rule_zh": "地图上的每个水域格都至少邻接一个已覆盖的可建造格。"
+        },
+        {
+          "id": "all_rock_spaces_connected",
+          "reward": {
+            "conservation": 1
+          },
+          "rule_zh": "地图上的每个岩石格都至少邻接一个已覆盖的可建造格。"
+        },
+        {
+          "id": "all_buildable_border_spaces_covered",
+          "reward": {
+            "conservation": 1
+          },
+          "rule_zh": "地图边界上的所有可建造格均已覆盖。"
+        },
+        {
+          "id": "all_buildable_spaces_covered",
+          "reward": {
+            "conservation": 1
+          },
+          "rule_zh": "地图上的所有可建造格均已覆盖。"
+        }
+      ],
+      "building_spaces_exclude": [
+        "water",
+        "rock"
+      ],
+      "connected_means": "orthogonally_adjacent_hex",
+      "score_each_condition_once": true
+    },
+    "maximum_conservation": 4,
+    "source_line": 269
+  },
+  {
+    "id": "005",
+    "card_type": "final_scoring",
+    "name": {
+      "zh": "公益保护动物园",
+      "en": "Conservation Zoo"
+    },
+    "timing": "endgame",
+    "description_zh": "根据你 支持的保护项目 ， 获得 {ConservationPoint} 。",
+    "scoring_steps": [
+      {
+        "requirement": 2,
+        "reward": {
+          "conservation": 1
+        },
+        "raw_zh": "2 -> 保育1"
+      },
+      {
+        "requirement": 3,
+        "reward": {
+          "conservation": 2
+        },
+        "raw_zh": "3 -> 保育2"
+      },
+      {
+        "requirement": 4,
+        "reward": {
+          "conservation": 3
+        },
+        "raw_zh": "4 -> 保育3"
+      },
+      {
+        "requirement": 5,
+        "reward": {
+          "conservation": 4
+        },
+        "raw_zh": "5 -> 保育4"
+      }
+    ],
+    "scoring_rule": {
+      "kind": "metric_ladder",
+      "metric": "supported_conservation_project_count",
+      "definition_zh": "计算自己已支持的保育项目数量。"
+    },
+    "maximum_conservation": 4,
+    "source_line": 270
+  },
+  {
+    "id": "006",
+    "card_type": "final_scoring",
+    "name": {
+      "zh": "自然动物园",
+      "en": "Naturalists Zoo"
+    },
+    "timing": "endgame",
+    "description_zh": "根据你动物园里 空置的可建造 六角格 ，获得 {ConservationPoint} 。",
+    "scoring_steps": [
+      {
+        "requirement": 6,
+        "reward": {
+          "conservation": 1
+        },
+        "raw_zh": "6 -> 保育1"
+      },
+      {
+        "requirement": 12,
+        "reward": {
+          "conservation": 2
+        },
+        "raw_zh": "12 -> 保育2"
+      },
+      {
+        "requirement": 18,
+        "reward": {
+          "conservation": 3
+        },
+        "raw_zh": "18 -> 保育3"
+      },
+      {
+        "requirement": 24,
+        "reward": {
+          "conservation": 4
+        },
+        "raw_zh": "24 -> 保育4"
+      }
+    ],
+    "scoring_rule": {
+      "kind": "metric_ladder",
+      "metric": "empty_buildable_hex_count",
+      "definition_zh": "计算未被覆盖的可建造格；即使尚未升级建造行动牌，标有建造II限制的格也计入。",
+      "include_build_ii_restricted_spaces": true
+    },
+    "maximum_conservation": 4,
+    "source_line": 271
+  },
+  {
+    "id": "007",
+    "card_type": "final_scoring",
+    "name": {
+      "zh": "人气动物园",
+      "en": "Favorite Zoo"
+    },
+    "timing": "endgame",
+    "description_zh": "根据你动物园的 声望 ， 获得 {ConservationPoint} 。",
+    "scoring_steps": [
+      {
+        "requirement": 6,
+        "reward": {
+          "conservation": 1
+        },
+        "raw_zh": "6 -> 保育1"
+      },
+      {
+        "requirement": 9,
+        "reward": {
+          "conservation": 2
+        },
+        "raw_zh": "9 -> 保育2"
+      },
+      {
+        "requirement": 12,
+        "reward": {
+          "conservation": 3
+        },
+        "raw_zh": "12 -> 保育3"
+      },
+      {
+        "requirement": 15,
+        "reward": {
+          "conservation": 4
+        },
+        "raw_zh": "15 -> 保育4"
+      }
+    ],
+    "scoring_rule": {
+      "kind": "metric_ladder",
+      "metric": "reputation",
+      "definition_zh": "读取自己当前的声望值。"
+    },
+    "maximum_conservation": 4,
+    "source_line": 272
+  },
+  {
+    "id": "008",
+    "card_type": "final_scoring",
+    "name": {
+      "zh": "慈善动物园",
+      "en": "Sponsored Zoo"
+    },
+    "timing": "endgame",
+    "description_zh": "根据你动物园的 赞助商卡牌 ， 获得 {ConservationPoint} 。",
+    "scoring_steps": [
+      {
+        "requirement": 3,
+        "reward": {
+          "conservation": 1
+        },
+        "raw_zh": "3 -> 保育1"
+      },
+      {
+        "requirement": 5,
+        "reward": {
+          "conservation": 2
+        },
+        "raw_zh": "5 -> 保育2"
+      },
+      {
+        "requirement": 7,
+        "reward": {
+          "conservation": 3
+        },
+        "raw_zh": "7 -> 保育3"
+      },
+      {
+        "requirement": 9,
+        "reward": {
+          "conservation": 4
+        },
+        "raw_zh": "9 -> 保育4"
+      }
+    ],
+    "scoring_rule": {
+      "kind": "metric_ladder",
+      "metric": "sponsor_card_count",
+      "definition_zh": "计算自己已打出的赞助商牌数量。"
+    },
+    "maximum_conservation": 4,
+    "source_line": 273
+  },
+  {
+    "id": "009",
+    "card_type": "final_scoring",
+    "name": {
+      "zh": "综合物种动物园",
+      "en": "Diverse Species Zoo"
+    },
+    "timing": "endgame",
+    "description_zh": "比较你与右手边玩家的动物类目图标数量。",
+    "scoring_steps": [
+      {
+        "requirement": "你每有一种 动物类目 图标多于你右手边的玩家，获得 {ConservationPoint-1} ，最多 {ConservationPoint-4} 。",
+        "reward": {
+          "conservation": 1
+        },
+        "raw_zh": "你每有一种 动物类目 图标多于你右手边的玩家，获得 {ConservationPoint-1} ，最多 {ConservationPoint-4} 。 -> 保育1"
+      }
+    ],
+    "scoring_rule": {
+      "kind": "compare_right_hand_neighbor",
+      "metrics": [
+        "bird",
+        "herbivore",
+        "predator",
+        "primate",
+        "reptile"
+      ],
+      "comparison": "strictly_greater",
+      "reward_per_won_metric": {
+        "conservation": 1
+      },
+      "maximum_conservation": 4,
+      "ties_score": false,
+      "definition_zh": "分别比较五种动物类别图标；每种严格多于右手边玩家时得1保育，最多4保育。"
+    },
+    "maximum_conservation": 4,
+    "source_line": 274
+  },
+  {
+    "id": "010",
+    "card_type": "final_scoring",
+    "name": {
+      "zh": "岩石公园",
+      "en": "Climbing Park"
+    },
+    "timing": "endgame",
+    "description_zh": "根据你动物园的 岩石 图标， 获得 {ConservationPoint} 。",
+    "scoring_steps": [
+      {
+        "requirement": 1,
+        "reward": {
+          "conservation": 1
+        },
+        "raw_zh": "1 -> 保育1"
+      },
+      {
+        "requirement": 3,
+        "reward": {
+          "conservation": 2
+        },
+        "raw_zh": "3 -> 保育2"
+      },
+      {
+        "requirement": 5,
+        "reward": {
+          "conservation": 3
+        },
+        "raw_zh": "5 -> 保育3"
+      },
+      {
+        "requirement": 6,
+        "reward": {
+          "conservation": 4
+        },
+        "raw_zh": "6 -> 保育4"
+      }
+    ],
+    "scoring_rule": {
+      "kind": "metric_ladder",
+      "metric": "rock_icon_count",
+      "definition_zh": "计算自己动物园中的岩石图标。"
+    },
+    "maximum_conservation": 4,
+    "source_line": 275
+  },
+  {
+    "id": "011",
+    "card_type": "final_scoring",
+    "name": {
+      "zh": "水生态公园",
+      "en": "Aquatic Park"
+    },
+    "timing": "endgame",
+    "description_zh": "根据你动物园的 水域 图标， 获得 {ConservationPoint} 。",
+    "scoring_steps": [
+      {
+        "requirement": 2,
+        "reward": {
+          "conservation": 1
+        },
+        "raw_zh": "2 -> 保育1"
+      },
+      {
+        "requirement": 4,
+        "reward": {
+          "conservation": 2
+        },
+        "raw_zh": "4 -> 保育2"
+      },
+      {
+        "requirement": 6,
+        "reward": {
+          "conservation": 3
+        },
+        "raw_zh": "6 -> 保育3"
+      },
+      {
+        "requirement": 7,
+        "reward": {
+          "conservation": 4
+        },
+        "raw_zh": "7 -> 保育4"
+      }
+    ],
+    "scoring_rule": {
+      "kind": "metric_ladder",
+      "metric": "water_icon_count",
+      "definition_zh": "计算自己动物园中的水域图标。"
+    },
+    "maximum_conservation": 4,
+    "source_line": 276
+  }
+]

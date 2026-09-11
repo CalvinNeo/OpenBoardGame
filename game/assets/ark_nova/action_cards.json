@@ -1,0 +1,222 @@
+[
+  {
+    "id": "cards",
+    "name_zh": "卡牌",
+    "name_en": "Cards",
+    "common": {
+      "break_steps_before_resolution": 2,
+      "hand_limit_checked_during_break_only": true
+    },
+    "sides": {
+      "I": {
+        "level": 1,
+        "summary_zh": "先推进休息2格。强度1–5依次抽/弃：1/1、1/0、2/1、2/0、3/1；强度5可改为精准拿牌。",
+        "draw_discard_by_strength": {
+          "1": {
+            "draw": 1,
+            "discard": 1
+          },
+          "2": {
+            "draw": 1,
+            "discard": 0
+          },
+          "3": {
+            "draw": 2,
+            "discard": 1
+          },
+          "4": {
+            "draw": 2,
+            "discard": 0
+          },
+          "5": {
+            "draw": 3,
+            "discard": 1
+          }
+        },
+        "snap_at_strength": [
+          5
+        ],
+        "draw_sources": [
+          "deck"
+        ]
+      },
+      "II": {
+        "level": 2,
+        "summary_zh": "先推进休息2格。强度1–5依次抽/弃：1/0、2/1、2/0、3/1、4/1；强度3–5可精准拿牌；可从声望范围抽牌并可越过声望9。",
+        "draw_discard_by_strength": {
+          "1": {
+            "draw": 1,
+            "discard": 0
+          },
+          "2": {
+            "draw": 2,
+            "discard": 1
+          },
+          "3": {
+            "draw": 2,
+            "discard": 0
+          },
+          "4": {
+            "draw": 3,
+            "discard": 1
+          },
+          "5": {
+            "draw": 4,
+            "discard": 1
+          }
+        },
+        "snap_at_strength": [
+          3,
+          4,
+          5
+        ],
+        "draw_sources": [
+          "deck",
+          "display_within_reputation_range"
+        ],
+        "allows_reputation_above_9": true
+      }
+    },
+    "snap_rule_zh": "拿取展示区任意1张牌；无需在声望范围内，回合结束时再补展示区。"
+  },
+  {
+    "id": "build",
+    "name_zh": "建造",
+    "name_en": "Build",
+    "common": {
+      "money_per_hex": 2,
+      "must_follow_adjacency_rules": true
+    },
+    "sides": {
+      "I": {
+        "level": 1,
+        "summary_zh": "建造恰好1个建筑，面积不超过行动强度，每格2金币；可建标准围栏、贩售亭、休憩亭和萌宠馆。",
+        "building_count": 1,
+        "maximum_total_hexes": "action_strength",
+        "allowed": [
+          "standard_enclosure",
+          "kiosk",
+          "pavilion",
+          "petting_zoo"
+        ]
+      },
+      "II": {
+        "level": 2,
+        "summary_zh": "建造一个或多个不同建筑，总面积不超过行动强度，每格2金币；新增可建大型鸟舍和爬虫馆。",
+        "building_count": "one_or_more_different_buildings",
+        "maximum_total_hexes": "action_strength",
+        "allowed": [
+          "standard_enclosure",
+          "kiosk",
+          "pavilion",
+          "petting_zoo",
+          "reptile_house",
+          "large_bird_aviary"
+        ]
+      }
+    }
+  },
+  {
+    "id": "animals",
+    "name_zh": "动物",
+    "name_en": "Animals",
+    "common": {
+      "resolve_each_animal_fully_in_play_order": true,
+      "partner_zoo_discount_per_matching_continent_icon": 3
+    },
+    "sides": {
+      "I": {
+        "level": 1,
+        "summary_zh": "只能从手牌打动物；强度1–5最多打0、1、1、1、2张。",
+        "maximum_cards_by_strength": {
+          "1": 0,
+          "2": 1,
+          "3": 1,
+          "4": 1,
+          "5": 2
+        },
+        "sources": [
+          "hand"
+        ]
+      },
+      "II": {
+        "level": 2,
+        "summary_zh": "可从手牌或声望范围打动物，展示牌额付文件夹金币；强度1–5最多打1、1、2、2、2张；强度5先得1声望。",
+        "maximum_cards_by_strength": {
+          "1": 1,
+          "2": 1,
+          "3": 2,
+          "4": 2,
+          "5": 2
+        },
+        "sources": [
+          "hand",
+          "display_within_reputation_range"
+        ],
+        "display_surcharge": "folder_number",
+        "strength_5_bonus": {
+          "reputation": 1
+        }
+      }
+    }
+  },
+  {
+    "id": "association",
+    "name_zh": "协会",
+    "name_en": "Association",
+    "common": {
+      "task_strengths": {
+        "gain_2_reputation": 2,
+        "take_partner_zoo": 3,
+        "take_university": 4,
+        "support_conservation_project": 5
+      },
+      "workers_for_repeated_same_task": "1 worker normally; 2 if one of your workers is already there; unavailable if three are already there"
+    },
+    "sides": {
+      "I": {
+        "level": 1,
+        "summary_zh": "执行恰好1项协会任务，任务强度不超过行动强度。",
+        "tasks": "exactly_one",
+        "maximum_total_strength": "action_strength"
+      },
+      "II": {
+        "level": 2,
+        "summary_zh": "执行一项或多项不同任务，总强度不超过行动强度；至少执行1项任务后可捐赠1次；可从声望范围打保育项目并支付文件夹金币。",
+        "tasks": "one_or_more_different_tasks",
+        "maximum_total_strength": "action_strength",
+        "may_donate_once_after_at_least_one_task": true,
+        "donation": "pay the smallest visible donation amount; after all finite spaces are used, pay 12",
+        "may_play_project_from_display": true,
+        "display_surcharge": "folder_number"
+      }
+    }
+  },
+  {
+    "id": "sponsors",
+    "name_zh": "赞助商",
+    "name_en": "Sponsors",
+    "common": {
+      "base_money_cost": 0
+    },
+    "sides": {
+      "I": {
+        "level": 1,
+        "summary_zh": "从手牌打恰好1张强度不超过X的赞助商；或推进休息X格并得X金币。",
+        "play": "exactly_one_sponsor_from_hand_with_strength_at_most_action_strength",
+        "alternative": "advance_break_by_X_and_gain_X_money"
+      },
+      "II": {
+        "level": 2,
+        "summary_zh": "从手牌/声望范围打一张或多张赞助商，总强度不超过X+1，展示牌额付文件夹金币；或推进休息X格并得2X金币。",
+        "play": "one_or_more_sponsors_with_total_strength_at_most_action_strength_plus_1",
+        "sources": [
+          "hand",
+          "display_within_reputation_range"
+        ],
+        "display_surcharge": "folder_number",
+        "alternative": "advance_break_by_X_and_gain_2X_money"
+      }
+    }
+  }
+]

@@ -1,0 +1,4921 @@
+[
+  {
+    "id": "201",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "科学实验室",
+      "en": "SCIENCE LAB"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 5,
+      "base_money_cost": 0,
+      "conditions": [
+        {
+          "kind": "action_upgrade",
+          "action": "sponsors",
+          "minimum_level": 2
+        }
+      ],
+      "minimum_action_level_from_card_condition": 2,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "science",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "201-glossary-1",
+        "timing": "immediate",
+        "kind": "take_card",
+        "cascade": "none",
+        "text_zh": "打出时，从牌库抽1张，或拿取声望范围内的1张展示牌。",
+        "source": "official_glossary"
+      },
+      {
+        "id": "201-printed-1",
+        "timing": "income",
+        "kind": "card_flow",
+        "cascade": "none",
+        "text_zh": "收入： 从牌库或声望范围内拿取1张卡牌。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "201-printed-2",
+        "timing": "endgame",
+        "kind": "rule_text",
+        "cascade": "none",
+        "text_zh": "3/6个研究图标，获得 {ConservationPoint-1} / {ConservationPoint-2} 。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "income",
+      "endgame"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度5",
+      "conditions_zh": "赞助商行动II",
+      "icons_zh": "科研",
+      "effect_zh": "收入： 从牌库或声望范围内拿取1张卡牌。；3/6个研究图标，获得 {ConservationPoint-1} / {ConservationPoint-2} 。"
+    },
+    "source_line": 166
+  },
+  {
+    "id": "202",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "发言人",
+      "en": "SPOKESPERSON"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 5,
+      "base_money_cost": 0,
+      "conditions": [
+        {
+          "kind": "tag_count",
+          "tag": "science",
+          "minimum": 1
+        }
+      ],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "science",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "202-printed-1",
+        "timing": "passive",
+        "kind": "trigger_or_rule_modifier",
+        "cascade": "none",
+        "text_zh": "每次你在 你的动物园 中打出研究图标时，获得 {Reputation-1} 。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "passive"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度5",
+      "conditions_zh": "科研",
+      "icons_zh": "科研",
+      "effect_zh": "每次你在 你的动物园 中打出研究图标时，获得 {Reputation-1} 。"
+    },
+    "source_line": 167
+  },
+  {
+    "id": "203",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "兽医",
+      "en": "VETERINARIAN"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 4,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "science",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "203-glossary-1",
+        "timing": "immediate",
+        "kind": "money_by_universities",
+        "cascade": "none",
+        "text_zh": "拥有1/2/3所大学时，获得2/5/10金币。",
+        "source": "official_glossary"
+      },
+      {
+        "id": "203-printed-1",
+        "timing": "passive",
+        "kind": "conservation",
+        "cascade": "none",
+        "text_zh": "支持保护项目，仅需 {Slot-4} 。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "203-glossary-2",
+        "timing": "endgame",
+        "kind": "conservation_threshold",
+        "cascade": "none",
+        "text_zh": "拥有3所大学时，获得1保育。",
+        "source": "official_glossary"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "passive",
+      "endgame"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度4",
+      "conditions_zh": "无",
+      "icons_zh": "科研",
+      "effect_zh": "支持保护项目，仅需 {Slot-4} 。"
+    },
+    "source_line": 168
+  },
+  {
+    "id": "204",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "科学博物馆",
+      "en": "SCIENCE MUSEUM"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 4,
+      "base_money_cost": 0,
+      "conditions": [
+        {
+          "kind": "tag_count",
+          "tag": "science",
+          "minimum": 4
+        }
+      ],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "science",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "204-glossary-1",
+        "timing": "immediate",
+        "kind": "money_per_icon",
+        "cascade": "none",
+        "text_zh": "自己每个科研图标获得2金币。",
+        "source": "official_glossary"
+      },
+      {
+        "id": "204-printed-1",
+        "timing": "passive",
+        "kind": "trigger_or_rule_modifier",
+        "cascade": "none",
+        "text_zh": "每次你在 你的动物园 中打出研究图标时，获得 {ConservationPoint-1} 。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "passive"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度4",
+      "conditions_zh": "科研×4",
+      "icons_zh": "科研",
+      "effect_zh": "每次你在 你的动物园 中打出研究图标时，获得 {ConservationPoint-1} 。"
+    },
+    "source_line": 169
+  },
+  {
+    "id": "205",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "大猩猩野外研究",
+      "en": "GORILLA FIELD RESEARCH"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 3,
+      "base_money_cost": 0,
+      "conditions": [
+        {
+          "kind": "tag_count",
+          "tag": "science",
+          "minimum": 3
+        }
+      ],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "science",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 1,
+      "reputation": 2
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [],
+    "timing_summary": [],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度3",
+      "conditions_zh": "科研×3",
+      "icons_zh": "科研",
+      "effect_zh": "无"
+    },
+    "source_line": 170
+  },
+  {
+    "id": "206",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "医学突破",
+      "en": "MEDICAL BREAKTHROUGH"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 5,
+      "base_money_cost": 0,
+      "conditions": [
+        {
+          "kind": "tag_count",
+          "tag": "science",
+          "minimum": 4
+        }
+      ],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "science",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "206-glossary-1",
+        "timing": "immediate",
+        "kind": "appeal_per_supported_project",
+        "cascade": "none",
+        "text_zh": "每个已支持的保育项目获得2吸引力。",
+        "source": "official_glossary"
+      },
+      {
+        "id": "206-printed-1",
+        "timing": "income",
+        "kind": "rule_text",
+        "cascade": "none",
+        "text_zh": "收入： 获得 {ConservationPoint-1} 。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "income"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度5",
+      "conditions_zh": "科研×4",
+      "icons_zh": "科研",
+      "effect_zh": "收入： 获得 {ConservationPoint-1} 。"
+    },
+    "source_line": 171
+  },
+  {
+    "id": "207",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "基础研究",
+      "en": "BASIC RESEARCH"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 4,
+      "base_money_cost": 0,
+      "conditions": [
+        {
+          "kind": "action_upgrade",
+          "action": "sponsors",
+          "minimum_level": 2
+        },
+        {
+          "kind": "track_threshold",
+          "track": "appeal",
+          "operator": "<=",
+          "value": 25
+        }
+      ],
+      "minimum_action_level_from_card_condition": 2,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "science",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "207-printed-1",
+        "timing": "immediate",
+        "kind": "money",
+        "cascade": "none",
+        "text_zh": "每有2个不同的大洲和/或动物类目图标，获得 {ConservationPoint-1} 。你以此方式每获得 {ConservationPoint-1} , 每位其他玩家获得 {Money-2} 。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度4",
+      "conditions_zh": "赞助商行动II、吸引力不高于25",
+      "icons_zh": "科研",
+      "effect_zh": "每有2个不同的大洲和/或动物类目图标，获得 {ConservationPoint-1} 。你以此方式每获得 {ConservationPoint-1} , 每位其他玩家获得 {Money-2} 。"
+    },
+    "source_line": 172
+  },
+  {
+    "id": "208",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "科学图书馆",
+      "en": "SCIENCE LIBRARY"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 4,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "science",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "208-glossary-1",
+        "timing": "immediate",
+        "kind": "appeal_per_icon",
+        "cascade": "none",
+        "text_zh": "自己每个科研图标获得1吸引力。",
+        "source": "official_glossary"
+      },
+      {
+        "id": "208-printed-1",
+        "timing": "passive",
+        "kind": "money",
+        "cascade": "none",
+        "text_zh": "每次 任何动物园 中打出研究图标时， 获得 {Money-2} 。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "208-printed-2",
+        "timing": "endgame",
+        "kind": "rule_text",
+        "cascade": "none",
+        "text_zh": "5个不同的动物类目图标，获得 {ConservationPoint-1} 。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "passive",
+      "endgame"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度4",
+      "conditions_zh": "无",
+      "icons_zh": "科研",
+      "effect_zh": "每次 任何动物园 中打出研究图标时， 获得 {Money-2} 。；5个不同的动物类目图标，获得 {ConservationPoint-1} 。"
+    },
+    "source_line": 173
+  },
+  {
+    "id": "209",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "技术研究所",
+      "en": "TECHNOLOGY INSTITUTE"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 5,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "science",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "209-glossary-1",
+        "timing": "immediate",
+        "kind": "gain_x_token",
+        "cascade": "none",
+        "text_zh": "打出时获得1枚X标记。",
+        "source": "official_glossary"
+      },
+      {
+        "id": "209-printed-1",
+        "timing": "income",
+        "kind": "x_token",
+        "cascade": "none",
+        "text_zh": "收入： 获得1枚 {XToken} 标记。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "209-glossary-2",
+        "timing": "endgame",
+        "kind": "conservation_threshold",
+        "cascade": "none",
+        "text_zh": "拥有3所大学时，获得1保育。",
+        "source": "official_glossary"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "income",
+      "endgame"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度5",
+      "conditions_zh": "无",
+      "icons_zh": "科研",
+      "effect_zh": "收入： 获得1枚 {XToken} 标记。"
+    },
+    "source_line": 174
+  },
+  {
+    "id": "210",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "美洲专家",
+      "en": "EXPERT ON THE AMERICAS"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 4,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "americas",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "210-glossary-1",
+        "timing": "immediate",
+        "kind": "appeal_per_icon",
+        "cascade": "none",
+        "text_zh": "自己每个美洲图标获得1吸引力。",
+        "source": "official_glossary"
+      },
+      {
+        "id": "210-printed-1",
+        "timing": "passive",
+        "kind": "build_or_placement",
+        "cascade": "free_build",
+        "text_zh": "每次你在 你的动物园 中打出美洲图标时，你可以免费建造一个贩售亭。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "210-glossary-2",
+        "timing": "endgame",
+        "kind": "conservation_threshold",
+        "cascade": "none",
+        "text_zh": "拥有至少5个贩售亭时，获得1保育。",
+        "source": "official_glossary"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "passive",
+      "endgame"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度4",
+      "conditions_zh": "无",
+      "icons_zh": "美洲",
+      "effect_zh": "每次你在 你的动物园 中打出美洲图标时，你可以免费建造一个贩售亭。"
+    },
+    "source_line": 175
+  },
+  {
+    "id": "211",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "欧洲专家",
+      "en": "EXPERT ON EUROPE"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 5,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "europe",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "211-glossary-1",
+        "timing": "immediate",
+        "kind": "appeal_per_icon",
+        "cascade": "none",
+        "text_zh": "自己每个欧洲图标获得1吸引力。",
+        "source": "official_glossary"
+      },
+      {
+        "id": "211-printed-1",
+        "timing": "passive",
+        "kind": "build_or_placement",
+        "cascade": "free_build",
+        "text_zh": "每次你在 你的动物园 中打出欧洲图标时，你可以免费建造1个1格饲养区。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "211-glossary-2",
+        "timing": "endgame",
+        "kind": "conservation_threshold",
+        "cascade": "none",
+        "text_zh": "拥有至少5个已占用的1格标准围栏时，获得1保育。",
+        "source": "official_glossary"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "passive",
+      "endgame"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度5",
+      "conditions_zh": "无",
+      "icons_zh": "欧洲",
+      "effect_zh": "每次你在 你的动物园 中打出欧洲图标时，你可以免费建造1个1格饲养区。"
+    },
+    "source_line": 176
+  },
+  {
+    "id": "212",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "澳洲专家",
+      "en": "EXPERT ON AUSTRALIA"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 5,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "australia",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "212-glossary-1",
+        "timing": "immediate",
+        "kind": "appeal_per_icon",
+        "cascade": "none",
+        "text_zh": "自己每个澳洲图标获得1吸引力。",
+        "source": "official_glossary"
+      },
+      {
+        "id": "212-printed-1",
+        "timing": "passive",
+        "kind": "card_flow",
+        "cascade": "none",
+        "text_zh": "每次你在 你的动物园 中打出澳洲图标时，你可以从你的手牌中放置1张卡牌到本卡牌下方，以获得 {Appeal-2} (育儿袋 1)。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "passive"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度5",
+      "conditions_zh": "无",
+      "icons_zh": "澳洲",
+      "effect_zh": "每次你在 你的动物园 中打出澳洲图标时，你可以从你的手牌中放置1张卡牌到本卡牌下方，以获得 {Appeal-2} (育儿袋 1)。"
+    },
+    "source_line": 177
+  },
+  {
+    "id": "213",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "亚洲专家",
+      "en": "EXPERT ON ASIA"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 5,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "asia",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "213-glossary-1",
+        "timing": "immediate",
+        "kind": "appeal_per_icon",
+        "cascade": "none",
+        "text_zh": "自己每个亚洲图标获得1吸引力。",
+        "source": "official_glossary"
+      },
+      {
+        "id": "213-printed-1",
+        "timing": "passive",
+        "kind": "build_or_placement",
+        "cascade": "free_build",
+        "text_zh": "每次你在 你的动物园 中打出亚洲图标时，你可以免费建造1个休憩亭。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "passive"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度5",
+      "conditions_zh": "无",
+      "icons_zh": "亚洲",
+      "effect_zh": "每次你在 你的动物园 中打出亚洲图标时，你可以免费建造1个休憩亭。"
+    },
+    "source_line": 178
+  },
+  {
+    "id": "214",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "非洲专家",
+      "en": "EXPERT ON AFRICA"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 4,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "africa",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "214-glossary-1",
+        "timing": "immediate",
+        "kind": "appeal_per_icon",
+        "cascade": "none",
+        "text_zh": "自己每个非洲图标获得1吸引力。",
+        "source": "official_glossary"
+      },
+      {
+        "id": "214-printed-1",
+        "timing": "passive",
+        "kind": "build_or_placement",
+        "cascade": "reposition_action",
+        "text_zh": "每次你在 你的动物园 中打出非洲图标时，在你当前行动完成后，你可以将任意一张行动卡牌放置到 {Slot-1} (机灵)。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "214-glossary-2",
+        "timing": "endgame",
+        "kind": "appeal_per_x_token",
+        "cascade": "none",
+        "text_zh": "终局时，每枚持有的X标记获得1吸引力。",
+        "source": "official_glossary"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "passive",
+      "endgame"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度4",
+      "conditions_zh": "无",
+      "icons_zh": "非洲",
+      "effect_zh": "每次你在 你的动物园 中打出非洲图标时，在你当前行动完成后，你可以将任意一张行动卡牌放置到 {Slot-1} (机灵)。"
+    },
+    "source_line": 179
+  },
+  {
+    "id": "215",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "全球繁育计划",
+      "en": "BREEDING COOPERATION"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 4,
+      "base_money_cost": 0,
+      "conditions": [
+        {
+          "kind": "partner_zoo",
+          "minimum": 2
+        }
+      ],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "215-printed-1",
+        "timing": "setup_and_passive",
+        "kind": "card_flow",
+        "cascade": "none",
+        "text_zh": "打出本卡牌时，在本卡牌上放置2个玩家标记。当支持 基础 保护项目时，你可以弃除本卡牌上的1个标记(仅限1个)以代表任一图标。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "215-printed-2",
+        "timing": "endgame",
+        "kind": "conservation",
+        "cascade": "none",
+        "text_zh": "支持了5个保护项目，获得 {ConservationPoint-1} 。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "setup_and_passive",
+      "endgame"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度4",
+      "conditions_zh": "合作动物园×2",
+      "icons_zh": "无",
+      "effect_zh": "打出本卡牌时，在本卡牌上放置2个玩家标记。当支持 基础 保护项目时，你可以弃除本卡牌上的1个标记(仅限1个)以代表任一图标。；支持了5个保护项目，获得 {ConservationPoint-1} 。"
+    },
+    "source_line": 180
+  },
+  {
+    "id": "216",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "优秀的协调员",
+      "en": "TALENTED COMMUNICATOR"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 5,
+      "base_money_cost": 0,
+      "conditions": [
+        {
+          "kind": "action_upgrade",
+          "action": "sponsors",
+          "minimum_level": 2
+        }
+      ],
+      "minimum_action_level_from_card_condition": 2,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "216-printed-1",
+        "timing": "immediate",
+        "kind": "rule_text",
+        "cascade": "none",
+        "text_zh": "雇佣1个协会事务员(呼唤)。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "216-glossary-1",
+        "timing": "endgame",
+        "kind": "conservation_threshold",
+        "cascade": "none",
+        "text_zh": "声望至少9时，获得1保育。",
+        "source": "official_glossary"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "endgame"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度5",
+      "conditions_zh": "赞助商行动II",
+      "icons_zh": "无",
+      "effect_zh": "雇佣1个协会事务员(呼唤)。"
+    },
+    "source_line": 181
+  },
+  {
+    "id": "217",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "工程师",
+      "en": "ENGINEER"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 4,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "217-printed-1",
+        "timing": "passive",
+        "kind": "build_or_placement",
+        "cascade": "extra_build",
+        "text_zh": "每当你使用“建造”行动 {BuildActionCard} 建造至少1个建筑时，你可以多建造 1个相同类型 的建筑(特殊饲养区除外)，按正常费用支付。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "217-glossary-1",
+        "timing": "endgame",
+        "kind": "appeal_threshold",
+        "cascade": "none",
+        "text_zh": "地图除水域、岩石外全部覆盖时，获得5吸引力。",
+        "source": "official_glossary"
+      }
+    ],
+    "timing_summary": [
+      "passive",
+      "endgame"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度4",
+      "conditions_zh": "无",
+      "icons_zh": "无",
+      "effect_zh": "每当你使用“建造”行动 {BuildActionCard} 建造至少1个建筑时，你可以多建造 1个相同类型 的建筑(特殊饲养区除外)，按正常费用支付。"
+    },
+    "source_line": 182
+  },
+  {
+    "id": "218",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "育种计划",
+      "en": "BREEDING PROGRAM"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 4,
+      "base_money_cost": 0,
+      "conditions": [
+        {
+          "kind": "tag_count",
+          "tag": "science",
+          "minimum": 2
+        }
+      ],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "218-printed-1",
+        "timing": "setup_and_passive",
+        "kind": "card_flow",
+        "cascade": "none",
+        "text_zh": "打出本卡牌时，在本卡牌上放置2个玩家标记。当支持 基础 保护项目时，你可以弃除本卡牌上的1个标记(仅限1个)以代表任一图标。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "218-printed-2",
+        "timing": "endgame",
+        "kind": "conservation",
+        "cascade": "none",
+        "text_zh": "支持5个保护项目，获得 {ConservationPoint-1} 。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "setup_and_passive",
+      "endgame"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度4",
+      "conditions_zh": "科研×2",
+      "icons_zh": "无",
+      "effect_zh": "打出本卡牌时，在本卡牌上放置2个玩家标记。当支持 基础 保护项目时，你可以弃除本卡牌上的1个标记(仅限1个)以代表任一图标。；支持5个保护项目，获得 {ConservationPoint-1} 。"
+    },
+    "source_line": 183
+  },
+  {
+    "id": "219",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "综合研究员",
+      "en": "DIVERSITY RESEARCHER"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 5,
+      "base_money_cost": 0,
+      "conditions": [
+        {
+          "kind": "action_upgrade",
+          "action": "sponsors",
+          "minimum_level": 2
+        }
+      ],
+      "minimum_action_level_from_card_condition": 2,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "science",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "219-printed-2",
+        "timing": "immediate",
+        "kind": "money",
+        "cascade": "none",
+        "text_zh": "每个水域和岩石的需求，获得 {Money-2} 。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "219-printed-1",
+        "timing": "passive",
+        "kind": "trigger_or_rule_modifier",
+        "cascade": "none",
+        "text_zh": "你可以覆盖水域和岩石格。忽略所有水域和岩石的需求。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "219-glossary-1",
+        "timing": "endgame",
+        "kind": "appeal_per_pair",
+        "cascade": "none",
+        "text_zh": "每组1个水域图标加1个岩石图标获得2吸引力，最多计算3组。",
+        "source": "official_glossary"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "passive",
+      "endgame"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度5",
+      "conditions_zh": "赞助商行动II",
+      "icons_zh": "科研",
+      "effect_zh": "你可以覆盖水域和岩石格。忽略所有水域和岩石的需求。；每个水域和岩石的需求，获得 {Money-2} 。"
+    },
+    "source_line": 184
+  },
+  {
+    "id": "220",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "联邦资助金",
+      "en": "FEDERAL GRANTS"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 4,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "science",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "220-glossary-1",
+        "timing": "immediate",
+        "kind": "gain_money",
+        "cascade": "none",
+        "text_zh": "打出时获得3金币。",
+        "source": "official_glossary"
+      },
+      {
+        "id": "220-printed-1",
+        "timing": "income",
+        "kind": "money",
+        "cascade": "none",
+        "text_zh": "收入： 获得 {Money-3} 。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "220-glossary-2",
+        "timing": "endgame",
+        "kind": "conservation_threshold",
+        "cascade": "none",
+        "text_zh": "声望至少9时，获得1保育。",
+        "source": "official_glossary"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "income",
+      "endgame"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度4",
+      "conditions_zh": "无",
+      "icons_zh": "科研",
+      "effect_zh": "收入： 获得 {Money-3} 。"
+    },
+    "source_line": 185
+  },
+  {
+    "id": "221",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "考古学家",
+      "en": "ARCHEOLOGIST"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 4,
+      "base_money_cost": 0,
+      "conditions": [
+        {
+          "kind": "tag_count",
+          "tag": "science",
+          "minimum": 1
+        }
+      ],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "science",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "221-printed-1",
+        "timing": "passive",
+        "kind": "trigger_or_rule_modifier",
+        "cascade": "placement_bonus",
+        "text_zh": "每次你获得你动物园边界格的放置奖励时，你免费获得你动物园中另一个未覆盖的放置奖励。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "221-glossary-1",
+        "timing": "endgame",
+        "kind": "conservation_threshold",
+        "cascade": "none",
+        "text_zh": "覆盖所有边界格（不含水域、岩石）时，获得1保育。",
+        "source": "official_glossary"
+      }
+    ],
+    "timing_summary": [
+      "passive",
+      "endgame"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度4",
+      "conditions_zh": "科研",
+      "icons_zh": "科研",
+      "effect_zh": "每次你获得你动物园边界格的放置奖励时，你免费获得你动物园中另一个未覆盖的放置奖励。"
+    },
+    "source_line": 186
+  },
+  {
+    "id": "222",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "发布专利",
+      "en": "RELEASE OF PATENTS"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 5,
+      "base_money_cost": 0,
+      "conditions": [
+        {
+          "kind": "track_threshold",
+          "track": "appeal",
+          "operator": "<=",
+          "value": 25
+        }
+      ],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "222-printed-1",
+        "timing": "immediate",
+        "kind": "money",
+        "cascade": "none",
+        "text_zh": "你的动物园里每个研究图标，获得 {ConservationPoint-1} (最多3)。你以此方式每获得 {ConservationPoint-1} ，每位其他玩家获得 {Money-2} 。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度5",
+      "conditions_zh": "吸引力不高于25",
+      "icons_zh": "无",
+      "effect_zh": "你的动物园里每个研究图标，获得 {ConservationPoint-1} (最多3)。你以此方式每获得 {ConservationPoint-1} ，每位其他玩家获得 {Money-2} 。"
+    },
+    "source_line": 187
+  },
+  {
+    "id": "223",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "科研机构",
+      "en": "SCIENCE INSTITUTE"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 3,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "science",
+        "count": 2
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [],
+    "timing_summary": [],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度3",
+      "conditions_zh": "无",
+      "icons_zh": "科研×2",
+      "effect_zh": "无"
+    },
+    "source_line": 188
+  },
+  {
+    "id": "224",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "迁徙记录",
+      "en": "MIGRATION RECORDING"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 4,
+      "base_money_cost": 0,
+      "conditions": [
+        {
+          "kind": "tag_count",
+          "tag": "science",
+          "minimum": 1
+        }
+      ],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "science",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "224-glossary-1",
+        "timing": "immediate",
+        "kind": "gain_x_token",
+        "cascade": "none",
+        "text_zh": "打出时获得1枚X标记。",
+        "source": "official_glossary"
+      },
+      {
+        "id": "224-printed-1",
+        "timing": "passive",
+        "kind": "conservation",
+        "cascade": "none",
+        "text_zh": "每当你支持 放归野外 的保护项目时，额外获得 {ConservationPoint-1} 。 你可以多次支持每一个 放归野外 的保护项目。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "passive"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度4",
+      "conditions_zh": "科研",
+      "icons_zh": "科研",
+      "effect_zh": "每当你支持 放归野外 的保护项目时，额外获得 {ConservationPoint-1} 。 你可以多次支持每一个 放归野外 的保护项目。"
+    },
+    "source_line": 189
+  },
+  {
+    "id": "225",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "检疫实验室",
+      "en": "QUARANTINE LAB"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 3,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "science",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "225-glossary-1",
+        "timing": "immediate",
+        "kind": "gain_x_token",
+        "cascade": "none",
+        "text_zh": "打出时获得1枚X标记。",
+        "source": "official_glossary"
+      },
+      {
+        "id": "225-printed-1",
+        "timing": "passive",
+        "kind": "trigger_or_rule_modifier",
+        "cascade": "none",
+        "text_zh": "毒液、缠绕、催眠 和 偷窃 的效果，对你无效。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "225-printed-2",
+        "timing": "endgame",
+        "kind": "rule_text",
+        "cascade": "none",
+        "text_zh": "5个不同的大洲图标，获得 {ConservationPoint-1} 。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "passive",
+      "endgame"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度3",
+      "conditions_zh": "无",
+      "icons_zh": "科研",
+      "effect_zh": "毒液、缠绕、催眠 和 偷窃 的效果，对你无效。；5个不同的大洲图标，获得 {ConservationPoint-1} 。"
+    },
+    "source_line": 190
+  },
+  {
+    "id": "226",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "海外研究所",
+      "en": "FOREIGN INSTITUTE"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 6,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "science",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 2
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "226-printed-1",
+        "timing": "endgame",
+        "kind": "rule_text",
+        "cascade": "none",
+        "text_zh": "5个不同的大洲图标，获得 {ConservationPoint-1} 。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "endgame"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度6",
+      "conditions_zh": "无",
+      "icons_zh": "科研",
+      "effect_zh": "5个不同的大洲图标，获得 {ConservationPoint-1} 。"
+    },
+    "source_line": 191
+  },
+  {
+    "id": "227",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "世界动物园协会特别任务",
+      "en": "WAZA SPECIAL ASSIGNMENT"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 6,
+      "base_money_cost": 0,
+      "conditions": [
+        {
+          "kind": "track_threshold",
+          "track": "reputation",
+          "operator": ">=",
+          "value": 6
+        }
+      ],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "227-printed-1",
+        "timing": "immediate",
+        "kind": "card_flow",
+        "cascade": "none",
+        "text_zh": "选择并标记本卡牌上的 {SizeAnimal-2} 或 {SizeAnimal-4} 。从牌库中逐一展示卡牌，将第一张所选择类型的动物卡牌加入你的手牌，然后将其余的卡牌塞入牌库 底部 。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "227-printed-2",
+        "timing": "passive",
+        "kind": "appeal",
+        "cascade": "none",
+        "text_zh": "你不能再打出未放标记的类型。每当你打出小型或大型动物时，你获得 {Appeal-2} 或 {Appeal-4} 。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "passive"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度6",
+      "conditions_zh": "声望至少6",
+      "icons_zh": "无",
+      "effect_zh": "选择并标记本卡牌上的 {SizeAnimal-2} 或 {SizeAnimal-4} 。从牌库中逐一展示卡牌，将第一张所选择类型的动物卡牌加入你的手牌，然后将其余的卡牌塞入牌库 底部 。；你不能再打出未放标记的类型。每当你打出小型或大型动物时，你获得 {Appeal-2} 或 {Appeal-4} 。"
+    },
+    "source_line": 192
+  },
+  {
+    "id": "228",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "世界动物园协会小型动物计划",
+      "en": "WAZA SMALL ANIMAL PROGRAM"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 5,
+      "base_money_cost": 0,
+      "conditions": [
+        {
+          "kind": "track_threshold",
+          "track": "reputation",
+          "operator": ">=",
+          "value": 3
+        }
+      ],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "228-glossary-1",
+        "timing": "immediate",
+        "kind": "money_per_small_animal",
+        "cascade": "none",
+        "text_zh": "自己每只小型动物获得2金币。",
+        "source": "official_glossary"
+      },
+      {
+        "id": "228-printed-1",
+        "timing": "passive",
+        "kind": "action_modifier",
+        "cascade": "play_animal",
+        "text_zh": "每次你在“动物”行动 {AnimalActionCard} 中， 仅仅 打出 小型动物 时，你可以从你的手牌中按正常费用再打出1个小型动物。随后，从展示区拿取1个小型动物(如果有)。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "passive"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度5",
+      "conditions_zh": "声望至少3",
+      "icons_zh": "无",
+      "effect_zh": "每次你在“动物”行动 {AnimalActionCard} 中， 仅仅 打出 小型动物 时，你可以从你的手牌中按正常费用再打出1个小型动物。随后，从展示区拿取1个小型动物(如果有)。"
+    },
+    "source_line": 193
+  },
+  {
+    "id": "229",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "小型动物专家",
+      "en": "EXPERT IN SMALL ANIMALS"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 5,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "229-glossary-1",
+        "timing": "immediate",
+        "kind": "appeal_per_small_animal",
+        "cascade": "none",
+        "text_zh": "自己每只小型动物获得1吸引力。",
+        "source": "official_glossary"
+      },
+      {
+        "id": "229-printed-1",
+        "timing": "passive",
+        "kind": "discount",
+        "cascade": "none",
+        "text_zh": "你打出小型动物的费用减 {Money-3} 。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "passive"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度5",
+      "conditions_zh": "无",
+      "icons_zh": "无",
+      "effect_zh": "你打出小型动物的费用减 {Money-3} 。"
+    },
+    "source_line": 194
+  },
+  {
+    "id": "230",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "大型动物专家",
+      "en": "EXPERT IN LARGE ANIMALS"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 4,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "230-glossary-1",
+        "timing": "immediate",
+        "kind": "appeal_per_large_animal",
+        "cascade": "none",
+        "text_zh": "自己每只大型动物获得2吸引力。",
+        "source": "official_glossary"
+      },
+      {
+        "id": "230-printed-1",
+        "timing": "passive",
+        "kind": "discount",
+        "cascade": "none",
+        "text_zh": "你打出大型动物的费用减 {Money-4} 。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "passive"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度4",
+      "conditions_zh": "无",
+      "icons_zh": "无",
+      "effect_zh": "你打出大型动物的费用减 {Money-4} 。"
+    },
+    "source_line": 195
+  },
+  {
+    "id": "231",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "灵长类资助计划",
+      "en": "SPONSORSHIP: PRIMATES"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 3,
+      "base_money_cost": 0,
+      "conditions": [
+        {
+          "kind": "tag_count",
+          "tag": "primate",
+          "minimum": 1
+        }
+      ],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "231-glossary-1",
+        "timing": "immediate",
+        "kind": "appeal_per_icon",
+        "cascade": "none",
+        "text_zh": "自己每个灵长类图标获得1吸引力。",
+        "source": "official_glossary"
+      },
+      {
+        "id": "231-printed-1",
+        "timing": "income",
+        "kind": "money",
+        "cascade": "none",
+        "text_zh": "收入： 你的动物园里有1/3/5个灵长类图标，获得 {Money-3} / {Money-6} / {Money-9} 。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "income"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度3",
+      "conditions_zh": "灵长类",
+      "icons_zh": "无",
+      "effect_zh": "收入： 你的动物园里有1/3/5个灵长类图标，获得 {Money-3} / {Money-6} / {Money-9} 。"
+    },
+    "source_line": 196
+  },
+  {
+    "id": "232",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "爬行类资助计划",
+      "en": "SPONSORSHIP: REPTILES"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 3,
+      "base_money_cost": 0,
+      "conditions": [
+        {
+          "kind": "tag_count",
+          "tag": "reptile",
+          "minimum": 1
+        }
+      ],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "232-glossary-1",
+        "timing": "immediate",
+        "kind": "appeal_per_icon",
+        "cascade": "none",
+        "text_zh": "自己每个爬行类图标获得1吸引力。",
+        "source": "official_glossary"
+      },
+      {
+        "id": "232-printed-1",
+        "timing": "income",
+        "kind": "money",
+        "cascade": "none",
+        "text_zh": "收入： 你的动物园里有1/3/5个爬行类图标，获得 {Money-3} / {Money-6} / {Money-9} 。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "income"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度3",
+      "conditions_zh": "爬行类",
+      "icons_zh": "无",
+      "effect_zh": "收入： 你的动物园里有1/3/5个爬行类图标，获得 {Money-3} / {Money-6} / {Money-9} 。"
+    },
+    "source_line": 197
+  },
+  {
+    "id": "233",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "秃鹫资助计划",
+      "en": "SPONSORSHIP: VULTURES"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 3,
+      "base_money_cost": 0,
+      "conditions": [
+        {
+          "kind": "tag_count",
+          "tag": "bird",
+          "minimum": 1
+        }
+      ],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "233-glossary-1",
+        "timing": "immediate",
+        "kind": "appeal_per_icon",
+        "cascade": "none",
+        "text_zh": "自己每个鸟类图标获得1吸引力。",
+        "source": "official_glossary"
+      },
+      {
+        "id": "233-printed-1",
+        "timing": "income",
+        "kind": "money",
+        "cascade": "none",
+        "text_zh": "收入： 你的动物园里有1/3/5个鸟类图标，获得 {Money-3} / {Money-6} / {Money-9} 。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "income"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度3",
+      "conditions_zh": "鸟类",
+      "icons_zh": "无",
+      "effect_zh": "收入： 你的动物园里有1/3/5个鸟类图标，获得 {Money-3} / {Money-6} / {Money-9} 。"
+    },
+    "source_line": 198
+  },
+  {
+    "id": "234",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "狮子资助计划",
+      "en": "SPONSORSHIP: LIONS"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 3,
+      "base_money_cost": 0,
+      "conditions": [
+        {
+          "kind": "tag_count",
+          "tag": "predator",
+          "minimum": 1
+        }
+      ],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "234-glossary-1",
+        "timing": "immediate",
+        "kind": "appeal_per_icon",
+        "cascade": "none",
+        "text_zh": "自己每个食肉类图标获得1吸引力。",
+        "source": "official_glossary"
+      },
+      {
+        "id": "234-printed-1",
+        "timing": "income",
+        "kind": "money",
+        "cascade": "none",
+        "text_zh": "收入： 你的动物园里有1/3/5个食肉类图标，获得 {Money-3} / {Money-6} / {Money-9} 。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "income"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度3",
+      "conditions_zh": "食肉类",
+      "icons_zh": "无",
+      "effect_zh": "收入： 你的动物园里有1/3/5个食肉类图标，获得 {Money-3} / {Money-6} / {Money-9} 。"
+    },
+    "source_line": 199
+  },
+  {
+    "id": "235",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "大象资助计划",
+      "en": "SPONSORSHIP: ELEPHANTS"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 3,
+      "base_money_cost": 0,
+      "conditions": [
+        {
+          "kind": "tag_count",
+          "tag": "herbivore",
+          "minimum": 1
+        }
+      ],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "235-glossary-1",
+        "timing": "immediate",
+        "kind": "appeal_per_icon",
+        "cascade": "none",
+        "text_zh": "自己每个食草类图标获得1吸引力。",
+        "source": "official_glossary"
+      },
+      {
+        "id": "235-printed-1",
+        "timing": "income",
+        "kind": "money",
+        "cascade": "none",
+        "text_zh": "收入： 你的动物园里有1/3/5个食草类图标，获得 {Money-3} / {Money-6} / {Money-9} 。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "income"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度3",
+      "conditions_zh": "食草类",
+      "icons_zh": "无",
+      "effect_zh": "收入： 你的动物园里有1/3/5个食草类图标，获得 {Money-3} / {Money-6} / {Money-9} 。"
+    },
+    "source_line": 200
+  },
+  {
+    "id": "236",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "灵长类动物学家",
+      "en": "PRIMATOLOGIST"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 4,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "primate",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "236-printed-1",
+        "timing": "passive",
+        "kind": "money",
+        "cascade": "none",
+        "text_zh": "每次 任何动物园 中打出灵长类图标时，获得 {Money-3} 。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "passive"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度4",
+      "conditions_zh": "无",
+      "icons_zh": "灵长类",
+      "effect_zh": "每次 任何动物园 中打出灵长类图标时，获得 {Money-3} 。"
+    },
+    "source_line": 201
+  },
+  {
+    "id": "237",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "爬行类动物学家",
+      "en": "HERPETOLOGIST"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 4,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "reptile",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "237-printed-1",
+        "timing": "passive",
+        "kind": "money",
+        "cascade": "none",
+        "text_zh": "每次 任何动物园 中打出爬行类图标时，获得 {Money-3} 。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "passive"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度4",
+      "conditions_zh": "无",
+      "icons_zh": "爬行类",
+      "effect_zh": "每次 任何动物园 中打出爬行类图标时，获得 {Money-3} 。"
+    },
+    "source_line": 202
+  },
+  {
+    "id": "238",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "鸟类学家",
+      "en": "ORNITHOLOGIST"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 4,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "bird",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "238-printed-1",
+        "timing": "passive",
+        "kind": "money",
+        "cascade": "none",
+        "text_zh": "每次 任何动物园 中打出鸟类图标时，获得 {Money-3} 。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "passive"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度4",
+      "conditions_zh": "无",
+      "icons_zh": "鸟类",
+      "effect_zh": "每次 任何动物园 中打出鸟类图标时，获得 {Money-3} 。"
+    },
+    "source_line": 203
+  },
+  {
+    "id": "239",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "食肉动物专家",
+      "en": "EXPERT IN PREDATORS"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 4,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "predator",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "239-printed-1",
+        "timing": "passive",
+        "kind": "money",
+        "cascade": "none",
+        "text_zh": "每次 任何动物园 中打出食肉类图标时，获得 {Money-3} 。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "passive"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度4",
+      "conditions_zh": "无",
+      "icons_zh": "食肉类",
+      "effect_zh": "每次 任何动物园 中打出食肉类图标时，获得 {Money-3} 。"
+    },
+    "source_line": 204
+  },
+  {
+    "id": "240",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "食草动物专家",
+      "en": "EXPERT IN HERBIVORES"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 4,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "herbivore",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "240-printed-1",
+        "timing": "passive",
+        "kind": "money",
+        "cascade": "none",
+        "text_zh": "每次 任何动物园 中打出食草类图标时，获得 {Money-3} 。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "passive"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度4",
+      "conditions_zh": "无",
+      "icons_zh": "食草类",
+      "effect_zh": "每次 任何动物园 中打出食草类图标时，获得 {Money-3} 。"
+    },
+    "source_line": 205
+  },
+  {
+    "id": "241",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "水文学家",
+      "en": "HYDROLOGIST"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 5,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "water",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "241-glossary-1",
+        "timing": "immediate",
+        "kind": "appeal_per_icon",
+        "cascade": "none",
+        "text_zh": "自己每个水域图标获得1吸引力。",
+        "source": "official_glossary"
+      },
+      {
+        "id": "241-printed-1",
+        "timing": "passive",
+        "kind": "money",
+        "cascade": "none",
+        "text_zh": "你每覆盖一个与水域相邻的六角格， 获得 {Money-1} 。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "241-printed-2",
+        "timing": "endgame",
+        "kind": "rule_text",
+        "cascade": "none",
+        "text_zh": "如果所有的水域格都已相连，获得 {ConservationPoint-1} 。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "passive",
+      "endgame"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度5，水域相邻1",
+      "conditions_zh": "无",
+      "icons_zh": "水域",
+      "effect_zh": "你每覆盖一个与水域相邻的六角格， 获得 {Money-1} 。；如果所有的水域格都已相连，获得 {ConservationPoint-1} 。"
+    },
+    "source_line": 206
+  },
+  {
+    "id": "242",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "地质学家",
+      "en": "GEOLOGIST"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 5,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "rock",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "242-glossary-1",
+        "timing": "immediate",
+        "kind": "appeal_per_icon_pair",
+        "cascade": "none",
+        "text_zh": "自己每2个岩石图标获得3吸引力。",
+        "source": "official_glossary"
+      },
+      {
+        "id": "242-printed-1",
+        "timing": "passive",
+        "kind": "money",
+        "cascade": "none",
+        "text_zh": "你每覆盖一个与岩石相邻的六角格， 获得 {Money-1} 。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "242-printed-2",
+        "timing": "endgame",
+        "kind": "rule_text",
+        "cascade": "none",
+        "text_zh": "如果所有的岩石格都已相连，获得 {ConservationPoint-1} 。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "passive",
+      "endgame"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度5，岩石相邻1",
+      "conditions_zh": "无",
+      "icons_zh": "岩石",
+      "effect_zh": "你每覆盖一个与岩石相邻的六角格， 获得 {Money-1} 。；如果所有的岩石格都已相连，获得 {ConservationPoint-1} 。"
+    },
+    "source_line": 207
+  },
+  {
+    "id": "243",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "狐獴窝",
+      "en": "MEERKAT DEN"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 5,
+      "base_money_cost": 0,
+      "conditions": [
+        {
+          "kind": "track_threshold",
+          "track": "reputation",
+          "operator": ">=",
+          "value": 3
+        }
+      ],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "herbivore",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "243-printed-2",
+        "timing": "immediate",
+        "kind": "build_or_placement",
+        "cascade": "none",
+        "text_zh": "放置到至少相邻1个岩石格的位置。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "243-printed-1",
+        "timing": "passive",
+        "kind": "appeal",
+        "cascade": "none",
+        "text_zh": "每次你在 你的动物园 中打出食草类图标时，获得 {Appeal-2} 。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "243-glossary-1",
+        "timing": "endgame",
+        "kind": "conservation_threshold",
+        "cascade": "none",
+        "text_zh": "至少6个食草类图标时，获得1保育。",
+        "source": "official_glossary"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "passive",
+      "endgame"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度5，岩石相邻1",
+      "conditions_zh": "声望至少3",
+      "icons_zh": "食草类",
+      "effect_zh": "每次你在 你的动物园 中打出食草类图标时，获得 {Appeal-2} 。；放置到至少相邻1个岩石格的位置。"
+    },
+    "source_line": 208,
+    "unique_building": {
+      "id": "sponsor-243",
+      "name_zh": "狐獴窝",
+      "money_cost": 0,
+      "is_enclosure": false,
+      "placement": {
+        "adjacent_to": {
+          "water": 0,
+          "rock": 1
+        },
+        "minimum_border_spaces": 0,
+        "may_ignore_existing_building_adjacency": false,
+        "usual_building_rules_apply": true,
+        "build_II_required_on_marked_map_spaces": true
+      },
+      "footprint": {
+        "grid": "hex_axial",
+        "orientation": "flat_top",
+        "anchor_cell": {
+          "q": 0,
+          "r": 0
+        },
+        "cells": [
+          {
+            "q": 0,
+            "r": 0
+          },
+          {
+            "q": -1,
+            "r": 1
+          },
+          {
+            "q": 1,
+            "r": 0
+          }
+        ],
+        "cell_count": 3,
+        "allowed_rotation_steps": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "degrees_per_rotation_step": 60,
+        "clockwise_rotation": "(q,r)->(-r,q+r)",
+        "reflection_allowed": false,
+        "source": "printed_card_diagram_cross_checked_with_steam_workshop_component"
+      }
+    }
+  },
+  {
+    "id": "244",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "企鹅馆",
+      "en": "PENGUIN POOL"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 5,
+      "base_money_cost": 0,
+      "conditions": [
+        {
+          "kind": "track_threshold",
+          "track": "reputation",
+          "operator": ">=",
+          "value": 3
+        }
+      ],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "bird",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "244-printed-2",
+        "timing": "immediate",
+        "kind": "build_or_placement",
+        "cascade": "none",
+        "text_zh": "放置到至少相邻1个水域格的位置。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "244-printed-1",
+        "timing": "passive",
+        "kind": "appeal",
+        "cascade": "none",
+        "text_zh": "每次你在 你的动物园 中打出鸟类图标时，获得 {Appeal-2} 。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "244-glossary-1",
+        "timing": "endgame",
+        "kind": "conservation_threshold",
+        "cascade": "none",
+        "text_zh": "至少6个鸟类图标时，获得1保育。",
+        "source": "official_glossary"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "passive",
+      "endgame"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度5，水域相邻1",
+      "conditions_zh": "声望至少3",
+      "icons_zh": "鸟类",
+      "effect_zh": "每次你在 你的动物园 中打出鸟类图标时，获得 {Appeal-2} 。；放置到至少相邻1个水域格的位置。"
+    },
+    "source_line": 209,
+    "unique_building": {
+      "id": "sponsor-244",
+      "name_zh": "企鹅馆",
+      "money_cost": 0,
+      "is_enclosure": false,
+      "placement": {
+        "adjacent_to": {
+          "water": 1,
+          "rock": 0
+        },
+        "minimum_border_spaces": 0,
+        "may_ignore_existing_building_adjacency": false,
+        "usual_building_rules_apply": true,
+        "build_II_required_on_marked_map_spaces": true
+      },
+      "footprint": {
+        "grid": "hex_axial",
+        "orientation": "flat_top",
+        "anchor_cell": {
+          "q": 0,
+          "r": 0
+        },
+        "cells": [
+          {
+            "q": 0,
+            "r": 0
+          },
+          {
+            "q": -1,
+            "r": 0
+          },
+          {
+            "q": 1,
+            "r": -1
+          },
+          {
+            "q": 1,
+            "r": 0
+          }
+        ],
+        "cell_count": 4,
+        "allowed_rotation_steps": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "degrees_per_rotation_step": 60,
+        "clockwise_rotation": "(q,r)->(-r,q+r)",
+        "reflection_allowed": false,
+        "source": "printed_card_diagram_cross_checked_with_steam_workshop_component"
+      }
+    }
+  },
+  {
+    "id": "245",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "水族馆",
+      "en": "AQUARIUM"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 5,
+      "base_money_cost": 0,
+      "conditions": [
+        {
+          "kind": "track_threshold",
+          "track": "reputation",
+          "operator": ">=",
+          "value": 3
+        }
+      ],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "245-printed-2",
+        "timing": "immediate",
+        "kind": "build_or_placement",
+        "cascade": "none",
+        "text_zh": "放置到至少相邻2个水域格的位置。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "245-printed-1",
+        "timing": "passive",
+        "kind": "appeal",
+        "cascade": "none",
+        "text_zh": "每次你在 你的动物园 中打出水域图标时，获得 {Appeal-2} 。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "245-glossary-1",
+        "timing": "endgame",
+        "kind": "conservation_threshold",
+        "cascade": "none",
+        "text_zh": "至少6个水域图标时，获得1保育。",
+        "source": "official_glossary"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "passive",
+      "endgame"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度5，水域相邻2",
+      "conditions_zh": "声望至少3",
+      "icons_zh": "无",
+      "effect_zh": "每次你在 你的动物园 中打出水域图标时，获得 {Appeal-2} 。；放置到至少相邻2个水域格的位置。"
+    },
+    "source_line": 210,
+    "unique_building": {
+      "id": "sponsor-245",
+      "name_zh": "水族馆",
+      "money_cost": 0,
+      "is_enclosure": false,
+      "placement": {
+        "adjacent_to": {
+          "water": 2,
+          "rock": 0
+        },
+        "minimum_border_spaces": 0,
+        "may_ignore_existing_building_adjacency": false,
+        "usual_building_rules_apply": true,
+        "build_II_required_on_marked_map_spaces": true
+      },
+      "footprint": {
+        "grid": "hex_axial",
+        "orientation": "flat_top",
+        "anchor_cell": {
+          "q": 0,
+          "r": 0
+        },
+        "cells": [
+          {
+            "q": 0,
+            "r": 0
+          },
+          {
+            "q": -1,
+            "r": 1
+          },
+          {
+            "q": 1,
+            "r": 0
+          },
+          {
+            "q": 1,
+            "r": 1
+          }
+        ],
+        "cell_count": 4,
+        "allowed_rotation_steps": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "degrees_per_rotation_step": 60,
+        "clockwise_rotation": "(q,r)->(-r,q+r)",
+        "reflection_allowed": false,
+        "source": "printed_card_diagram_cross_checked_with_steam_workshop_component"
+      }
+    }
+  },
+  {
+    "id": "246",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "空中索道",
+      "en": "CABLE CAR"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 6,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "246-printed-2",
+        "timing": "immediate",
+        "kind": "build_or_placement",
+        "cascade": "none",
+        "text_zh": "放置到至少相邻2个岩石格的位置。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "246-printed-1",
+        "timing": "passive",
+        "kind": "appeal",
+        "cascade": "none",
+        "text_zh": "每次你在 你的动物园 中打出岩石图标时，获得 {Appeal-2} 。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "246-glossary-1",
+        "timing": "endgame",
+        "kind": "conservation_threshold",
+        "cascade": "none",
+        "text_zh": "至少6个岩石图标时，获得1保育。",
+        "source": "official_glossary"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "passive",
+      "endgame"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度6，岩石相邻2",
+      "conditions_zh": "无",
+      "icons_zh": "无",
+      "effect_zh": "每次你在 你的动物园 中打出岩石图标时，获得 {Appeal-2} 。；放置到至少相邻2个岩石格的位置。"
+    },
+    "source_line": 211,
+    "unique_building": {
+      "id": "sponsor-246",
+      "name_zh": "空中索道",
+      "money_cost": 0,
+      "is_enclosure": false,
+      "placement": {
+        "adjacent_to": {
+          "water": 0,
+          "rock": 2
+        },
+        "minimum_border_spaces": 0,
+        "may_ignore_existing_building_adjacency": false,
+        "usual_building_rules_apply": true,
+        "build_II_required_on_marked_map_spaces": true
+      },
+      "footprint": {
+        "grid": "hex_axial",
+        "orientation": "flat_top",
+        "anchor_cell": {
+          "q": 0,
+          "r": 0
+        },
+        "cells": [
+          {
+            "q": 0,
+            "r": 0
+          },
+          {
+            "q": 1,
+            "r": -1
+          },
+          {
+            "q": -1,
+            "r": 1
+          },
+          {
+            "q": -2,
+            "r": 2
+          }
+        ],
+        "cell_count": 4,
+        "allowed_rotation_steps": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "degrees_per_rotation_step": 60,
+        "clockwise_rotation": "(q,r)->(-r,q+r)",
+        "reflection_allowed": false,
+        "source": "printed_card_diagram_cross_checked_with_steam_workshop_component"
+      }
+    }
+  },
+  {
+    "id": "247",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "狒狒栖息岩",
+      "en": "BABOON ROCK"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 6,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "primate",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "247-printed-2",
+        "timing": "immediate",
+        "kind": "build_or_placement",
+        "cascade": "none",
+        "text_zh": "放置到至少相邻1个岩石格的位置。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "247-printed-1",
+        "timing": "passive",
+        "kind": "appeal",
+        "cascade": "none",
+        "text_zh": "每次你在 你的动物园 中打出灵长类图标时，获得 {Appeal-2} 。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "247-glossary-1",
+        "timing": "endgame",
+        "kind": "conservation_threshold",
+        "cascade": "none",
+        "text_zh": "至少6个灵长类图标时，获得1保育。",
+        "source": "official_glossary"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "passive",
+      "endgame"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度6，岩石相邻1",
+      "conditions_zh": "无",
+      "icons_zh": "灵长类",
+      "effect_zh": "每次你在 你的动物园 中打出灵长类图标时，获得 {Appeal-2} 。；放置到至少相邻1个岩石格的位置。"
+    },
+    "source_line": 212,
+    "unique_building": {
+      "id": "sponsor-247",
+      "name_zh": "狒狒栖息岩",
+      "money_cost": 0,
+      "is_enclosure": false,
+      "placement": {
+        "adjacent_to": {
+          "water": 0,
+          "rock": 1
+        },
+        "minimum_border_spaces": 0,
+        "may_ignore_existing_building_adjacency": false,
+        "usual_building_rules_apply": true,
+        "build_II_required_on_marked_map_spaces": true
+      },
+      "footprint": {
+        "grid": "hex_axial",
+        "orientation": "flat_top",
+        "anchor_cell": {
+          "q": 0,
+          "r": 0
+        },
+        "cells": [
+          {
+            "q": 0,
+            "r": 0
+          },
+          {
+            "q": -1,
+            "r": 0
+          },
+          {
+            "q": 1,
+            "r": 0
+          },
+          {
+            "q": 0,
+            "r": 1
+          }
+        ],
+        "cell_count": 4,
+        "allowed_rotation_steps": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "degrees_per_rotation_step": 60,
+        "clockwise_rotation": "(q,r)->(-r,q+r)",
+        "reflection_allowed": false,
+        "source": "printed_card_diagram_cross_checked_with_steam_workshop_component"
+      }
+    }
+  },
+  {
+    "id": "248",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "猕猴园",
+      "en": "RHESUS MONKEY PARK"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 5,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "primate",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "248-unique-building",
+        "timing": "immediate",
+        "kind": "build_or_placement",
+        "cascade": "free_build",
+        "text_zh": "免费放置“猕猴园”独特建筑，并遵守通常建筑放置规则。",
+        "source": "official_glossary"
+      },
+      {
+        "id": "248-printed-1",
+        "timing": "passive",
+        "kind": "x_token",
+        "cascade": "none",
+        "text_zh": "每次你在 你的动物园 中打出灵长类图标时，获得 1个 {XToken} 标记。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "passive"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度5",
+      "conditions_zh": "无",
+      "icons_zh": "灵长类",
+      "effect_zh": "每次你在 你的动物园 中打出灵长类图标时，获得 1个 {XToken} 标记。"
+    },
+    "source_line": 213,
+    "unique_building": {
+      "id": "sponsor-248",
+      "name_zh": "猕猴园",
+      "money_cost": 0,
+      "is_enclosure": false,
+      "placement": {
+        "adjacent_to": {
+          "water": 0,
+          "rock": 0
+        },
+        "minimum_border_spaces": 0,
+        "may_ignore_existing_building_adjacency": false,
+        "usual_building_rules_apply": true,
+        "build_II_required_on_marked_map_spaces": true
+      },
+      "footprint": {
+        "grid": "hex_axial",
+        "orientation": "flat_top",
+        "anchor_cell": {
+          "q": 0,
+          "r": 0
+        },
+        "cells": [
+          {
+            "q": 0,
+            "r": 0
+          },
+          {
+            "q": -1,
+            "r": 0
+          },
+          {
+            "q": -2,
+            "r": 1
+          },
+          {
+            "q": 1,
+            "r": 0
+          }
+        ],
+        "cell_count": 4,
+        "allowed_rotation_steps": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "degrees_per_rotation_step": 60,
+        "clockwise_rotation": "(q,r)->(-r,q+r)",
+        "reflection_allowed": false,
+        "source": "printed_card_diagram_cross_checked_with_steam_workshop_component"
+      }
+    }
+  },
+  {
+    "id": "249",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "猫头鹰棚屋",
+      "en": "BARRED OWL HUT"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 6,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "bird",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "249-unique-building",
+        "timing": "immediate",
+        "kind": "build_or_placement",
+        "cascade": "free_build",
+        "text_zh": "免费放置“猫头鹰棚屋”独特建筑，并遵守通常建筑放置规则。",
+        "source": "official_glossary"
+      },
+      {
+        "id": "249-printed-1",
+        "timing": "passive",
+        "kind": "card_flow",
+        "cascade": "none",
+        "text_zh": "每次你在 你的动物园 中打出鸟类图标时，从牌库中抓取2张卡牌。保留1张并弃除另一张(洞察力 2)。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "passive"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度6",
+      "conditions_zh": "无",
+      "icons_zh": "鸟类",
+      "effect_zh": "每次你在 你的动物园 中打出鸟类图标时，从牌库中抓取2张卡牌。保留1张并弃除另一张(洞察力 2)。"
+    },
+    "source_line": 214,
+    "unique_building": {
+      "id": "sponsor-249",
+      "name_zh": "猫头鹰棚屋",
+      "money_cost": 0,
+      "is_enclosure": false,
+      "placement": {
+        "adjacent_to": {
+          "water": 0,
+          "rock": 0
+        },
+        "minimum_border_spaces": 0,
+        "may_ignore_existing_building_adjacency": false,
+        "usual_building_rules_apply": true,
+        "build_II_required_on_marked_map_spaces": true
+      },
+      "footprint": {
+        "grid": "hex_axial",
+        "orientation": "flat_top",
+        "anchor_cell": {
+          "q": 0,
+          "r": 0
+        },
+        "cells": [
+          {
+            "q": 0,
+            "r": 0
+          },
+          {
+            "q": -1,
+            "r": 0
+          },
+          {
+            "q": 1,
+            "r": 0
+          }
+        ],
+        "cell_count": 3,
+        "allowed_rotation_steps": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "degrees_per_rotation_step": 60,
+        "clockwise_rotation": "(q,r)->(-r,q+r)",
+        "reflection_allowed": false,
+        "source": "printed_card_diagram_cross_checked_with_steam_workshop_component"
+      }
+    }
+  },
+  {
+    "id": "250",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "海龟水族箱",
+      "en": "SEA TURTLE TANK"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 5,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "reptile",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "250-unique-building",
+        "timing": "immediate",
+        "kind": "build_or_placement",
+        "cascade": "free_build",
+        "text_zh": "免费放置“海龟水族箱”独特建筑，并遵守通常建筑放置规则。",
+        "source": "official_glossary"
+      },
+      {
+        "id": "250-printed-1",
+        "timing": "passive",
+        "kind": "card_flow",
+        "cascade": "none",
+        "text_zh": "每次你在 你的动物园 中打出爬行类图标时，你可以从你的手牌中卖出最多2张卡牌，每张卡牌 {Money-4} (日光浴 2)。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "passive"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度5，水域相邻1",
+      "conditions_zh": "无",
+      "icons_zh": "爬行类",
+      "effect_zh": "每次你在 你的动物园 中打出爬行类图标时，你可以从你的手牌中卖出最多2张卡牌，每张卡牌 {Money-4} (日光浴 2)。"
+    },
+    "source_line": 215,
+    "unique_building": {
+      "id": "sponsor-250",
+      "name_zh": "海龟水族箱",
+      "money_cost": 0,
+      "is_enclosure": false,
+      "placement": {
+        "adjacent_to": {
+          "water": 1,
+          "rock": 0
+        },
+        "minimum_border_spaces": 0,
+        "may_ignore_existing_building_adjacency": false,
+        "usual_building_rules_apply": true,
+        "build_II_required_on_marked_map_spaces": true
+      },
+      "footprint": {
+        "grid": "hex_axial",
+        "orientation": "flat_top",
+        "anchor_cell": {
+          "q": 0,
+          "r": 0
+        },
+        "cells": [
+          {
+            "q": 0,
+            "r": 0
+          },
+          {
+            "q": -1,
+            "r": 0
+          },
+          {
+            "q": 1,
+            "r": -1
+          },
+          {
+            "q": 0,
+            "r": 1
+          }
+        ],
+        "cell_count": 4,
+        "allowed_rotation_steps": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "degrees_per_rotation_step": 60,
+        "clockwise_rotation": "(q,r)->(-r,q+r)",
+        "reflection_allowed": false,
+        "source": "printed_card_diagram_cross_checked_with_steam_workshop_component"
+      }
+    }
+  },
+  {
+    "id": "251",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "北极熊展",
+      "en": "POLAR BEAR EXHIBIT"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 5,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "bear",
+        "count": 1
+      },
+      {
+        "tag": "predator",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "251-printed-2",
+        "timing": "immediate",
+        "kind": "build_or_placement",
+        "cascade": "none",
+        "text_zh": "放置到至少相邻1个水域格的位置。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "251-printed-1",
+        "timing": "passive",
+        "kind": "appeal",
+        "cascade": "none",
+        "text_zh": "每次 任何动物园 中打出熊类图标时，获得 {Appeal-2} 。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "251-printed-3",
+        "timing": "endgame",
+        "kind": "conservation",
+        "cascade": "none",
+        "text_zh": "终局时，熊类图标3–5个获得保育1，6个或更多获得保育2。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "passive",
+      "endgame"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度5，水域相邻1",
+      "conditions_zh": "无",
+      "icons_zh": "熊类、食肉类",
+      "effect_zh": "每次 任何动物园 中打出熊类图标时，获得 {Appeal-2} 。；放置到至少相邻1个水域格的位置。；终局时，熊类图标3–5个获得保育1，6个或更多获得保育2。"
+    },
+    "source_line": 216,
+    "unique_building": {
+      "id": "sponsor-251",
+      "name_zh": "北极熊展",
+      "money_cost": 0,
+      "is_enclosure": false,
+      "placement": {
+        "adjacent_to": {
+          "water": 1,
+          "rock": 0
+        },
+        "minimum_border_spaces": 0,
+        "may_ignore_existing_building_adjacency": false,
+        "usual_building_rules_apply": true,
+        "build_II_required_on_marked_map_spaces": true
+      },
+      "footprint": {
+        "grid": "hex_axial",
+        "orientation": "flat_top",
+        "anchor_cell": {
+          "q": 0,
+          "r": 0
+        },
+        "cells": [
+          {
+            "q": 0,
+            "r": 0
+          },
+          {
+            "q": -1,
+            "r": 1
+          },
+          {
+            "q": 1,
+            "r": 0
+          },
+          {
+            "q": 2,
+            "r": -1
+          }
+        ],
+        "cell_count": 4,
+        "allowed_rotation_steps": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "degrees_per_rotation_step": 60,
+        "clockwise_rotation": "(q,r)->(-r,q+r)",
+        "reflection_allowed": false,
+        "source": "printed_card_diagram_cross_checked_with_steam_workshop_component"
+      }
+    }
+  },
+  {
+    "id": "252",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "斑鬣狗围场",
+      "en": "SPOTTED HYENA COMPOUND"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 5,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "predator",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "252-unique-building",
+        "timing": "immediate",
+        "kind": "build_or_placement",
+        "cascade": "free_build",
+        "text_zh": "免费放置“斑鬣狗围场”独特建筑，并遵守通常建筑放置规则。",
+        "source": "official_glossary"
+      },
+      {
+        "id": "252-printed-1",
+        "timing": "passive",
+        "kind": "card_flow",
+        "cascade": "none",
+        "text_zh": "每次你在 你的动物园 中打出食肉类图标时，展示牌库顶端的X张卡牌。将1张动物卡牌加入你的手牌。弃除其余的卡牌。(X=你动物园里食肉类图标的数量)(狩猎X)。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "passive"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度5，岩石相邻1",
+      "conditions_zh": "无",
+      "icons_zh": "食肉类",
+      "effect_zh": "每次你在 你的动物园 中打出食肉类图标时，展示牌库顶端的X张卡牌。将1张动物卡牌加入你的手牌。弃除其余的卡牌。(X=你动物园里食肉类图标的数量)(狩猎X)。"
+    },
+    "source_line": 217,
+    "unique_building": {
+      "id": "sponsor-252",
+      "name_zh": "斑鬣狗围场",
+      "money_cost": 0,
+      "is_enclosure": false,
+      "placement": {
+        "adjacent_to": {
+          "water": 0,
+          "rock": 1
+        },
+        "minimum_border_spaces": 0,
+        "may_ignore_existing_building_adjacency": false,
+        "usual_building_rules_apply": true,
+        "build_II_required_on_marked_map_spaces": true
+      },
+      "footprint": {
+        "grid": "hex_axial",
+        "orientation": "flat_top",
+        "anchor_cell": {
+          "q": 0,
+          "r": 0
+        },
+        "cells": [
+          {
+            "q": 0,
+            "r": 0
+          },
+          {
+            "q": -1,
+            "r": 0
+          },
+          {
+            "q": 1,
+            "r": -1
+          },
+          {
+            "q": 2,
+            "r": -2
+          }
+        ],
+        "cell_count": 4,
+        "allowed_rotation_steps": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "degrees_per_rotation_step": 60,
+        "clockwise_rotation": "(q,r)->(-r,q+r)",
+        "reflection_allowed": false,
+        "source": "printed_card_diagram_cross_checked_with_steam_workshop_component"
+      }
+    }
+  },
+  {
+    "id": "253",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "霍加狓棚厩",
+      "en": "OKAPI STABLE"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 6,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "herbivore",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "253-unique-building",
+        "timing": "immediate",
+        "kind": "build_or_placement",
+        "cascade": "free_build",
+        "text_zh": "免费放置“霍加狓棚厩”独特建筑，并遵守通常建筑放置规则。",
+        "source": "official_glossary"
+      },
+      {
+        "id": "253-printed-1",
+        "timing": "setup_and_passive",
+        "kind": "card_flow",
+        "cascade": "play_sponsor",
+        "text_zh": "打出本卡牌时，在本卡牌上放置 3个玩家标记 。每次你在 你的动物园 中打出食草类图标时，你可以移除本卡牌上的1个标记并支付 {Money-X} ，以打出一张赞助商卡牌( {Money-X} = {Slot-X} )。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "setup_and_passive"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度6",
+      "conditions_zh": "无",
+      "icons_zh": "食草类",
+      "effect_zh": "打出本卡牌时，在本卡牌上放置 3个玩家标记 。每次你在 你的动物园 中打出食草类图标时，你可以移除本卡牌上的1个标记并支付 {Money-X} ，以打出一张赞助商卡牌( {Money-X} = {Slot-X} )。"
+    },
+    "source_line": 218,
+    "unique_building": {
+      "id": "sponsor-253",
+      "name_zh": "霍加狓棚厩",
+      "money_cost": 0,
+      "is_enclosure": false,
+      "placement": {
+        "adjacent_to": {
+          "water": 0,
+          "rock": 0
+        },
+        "minimum_border_spaces": 0,
+        "may_ignore_existing_building_adjacency": false,
+        "usual_building_rules_apply": true,
+        "build_II_required_on_marked_map_spaces": true
+      },
+      "footprint": {
+        "grid": "hex_axial",
+        "orientation": "flat_top",
+        "anchor_cell": {
+          "q": 0,
+          "r": 0
+        },
+        "cells": [
+          {
+            "q": 0,
+            "r": 0
+          },
+          {
+            "q": -2,
+            "r": 1
+          },
+          {
+            "q": -1,
+            "r": 1
+          },
+          {
+            "q": 1,
+            "r": 0
+          }
+        ],
+        "cell_count": 4,
+        "allowed_rotation_steps": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "degrees_per_rotation_step": 60,
+        "clockwise_rotation": "(q,r)->(-r,q+r)",
+        "reflection_allowed": false,
+        "source": "printed_card_diagram_cross_checked_with_steam_workshop_component"
+      }
+    }
+  },
+  {
+    "id": "254",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "动物园课外学校",
+      "en": "ZOO SCHOOL"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 5,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 1,
+      "reputation": 1
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "254-printed-1",
+        "timing": "immediate",
+        "kind": "build_or_placement",
+        "cascade": "none",
+        "text_zh": "放置到至少2个边界格的位置。从牌库或声望范围内拿取1张卡牌。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度5",
+      "conditions_zh": "无",
+      "icons_zh": "无",
+      "effect_zh": "放置到至少2个边界格的位置。从牌库或声望范围内拿取1张卡牌。"
+    },
+    "source_line": 219,
+    "unique_building": {
+      "id": "sponsor-254",
+      "name_zh": "动物园课外学校",
+      "money_cost": 0,
+      "is_enclosure": false,
+      "placement": {
+        "adjacent_to": {
+          "water": 0,
+          "rock": 0
+        },
+        "minimum_border_spaces": 2,
+        "may_ignore_existing_building_adjacency": false,
+        "usual_building_rules_apply": true,
+        "build_II_required_on_marked_map_spaces": true
+      },
+      "footprint": {
+        "grid": "hex_axial",
+        "orientation": "flat_top",
+        "anchor_cell": {
+          "q": 0,
+          "r": 0
+        },
+        "cells": [
+          {
+            "q": 0,
+            "r": 0
+          },
+          {
+            "q": -1,
+            "r": 0
+          },
+          {
+            "q": 1,
+            "r": -1
+          }
+        ],
+        "cell_count": 3,
+        "allowed_rotation_steps": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "degrees_per_rotation_step": 60,
+        "clockwise_rotation": "(q,r)->(-r,q+r)",
+        "reflection_allowed": false,
+        "source": "printed_card_diagram_cross_checked_with_steam_workshop_component"
+      }
+    }
+  },
+  {
+    "id": "255",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "儿童游乐园",
+      "en": "ADVENTURE PLAYGROUND"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 3,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [],
+    "printed_rewards": {
+      "appeal": 4,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "255-printed-1",
+        "timing": "immediate",
+        "kind": "build_or_placement",
+        "cascade": "none",
+        "text_zh": "放置到至少相邻1个岩石格的位置。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度3，岩石相邻1",
+      "conditions_zh": "无",
+      "icons_zh": "无",
+      "effect_zh": "放置到至少相邻1个岩石格的位置。"
+    },
+    "source_line": 220,
+    "unique_building": {
+      "id": "sponsor-255",
+      "name_zh": "儿童游乐园",
+      "money_cost": 0,
+      "is_enclosure": false,
+      "placement": {
+        "adjacent_to": {
+          "water": 0,
+          "rock": 1
+        },
+        "minimum_border_spaces": 0,
+        "may_ignore_existing_building_adjacency": false,
+        "usual_building_rules_apply": true,
+        "build_II_required_on_marked_map_spaces": true
+      },
+      "footprint": {
+        "grid": "hex_axial",
+        "orientation": "flat_top",
+        "anchor_cell": {
+          "q": 0,
+          "r": 0
+        },
+        "cells": [
+          {
+            "q": 0,
+            "r": 0
+          },
+          {
+            "q": 1,
+            "r": 0
+          }
+        ],
+        "cell_count": 2,
+        "allowed_rotation_steps": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "degrees_per_rotation_step": 60,
+        "clockwise_rotation": "(q,r)->(-r,q+r)",
+        "reflection_allowed": false,
+        "source": "printed_card_diagram_cross_checked_with_steam_workshop_component"
+      }
+    }
+  },
+  {
+    "id": "256",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "水上乐园",
+      "en": "WATER PLAYGROUND"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 3,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [],
+    "printed_rewards": {
+      "appeal": 4,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "256-printed-1",
+        "timing": "immediate",
+        "kind": "build_or_placement",
+        "cascade": "none",
+        "text_zh": "放置到至少相邻1个水域格的位置。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度3，水域相邻1",
+      "conditions_zh": "无",
+      "icons_zh": "无",
+      "effect_zh": "放置到至少相邻1个水域格的位置。"
+    },
+    "source_line": 221,
+    "unique_building": {
+      "id": "sponsor-256",
+      "name_zh": "水上乐园",
+      "money_cost": 0,
+      "is_enclosure": false,
+      "placement": {
+        "adjacent_to": {
+          "water": 1,
+          "rock": 0
+        },
+        "minimum_border_spaces": 0,
+        "may_ignore_existing_building_adjacency": false,
+        "usual_building_rules_apply": true,
+        "build_II_required_on_marked_map_spaces": true
+      },
+      "footprint": {
+        "grid": "hex_axial",
+        "orientation": "flat_top",
+        "anchor_cell": {
+          "q": 0,
+          "r": 0
+        },
+        "cells": [
+          {
+            "q": 0,
+            "r": 0
+          },
+          {
+            "q": 1,
+            "r": 0
+          }
+        ],
+        "cell_count": 2,
+        "allowed_rotation_steps": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "degrees_per_rotation_step": 60,
+        "clockwise_rotation": "(q,r)->(-r,q+r)",
+        "reflection_allowed": false,
+        "source": "printed_card_diagram_cross_checked_with_steam_workshop_component"
+      }
+    }
+  },
+  {
+    "id": "257",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "园区边门",
+      "en": "SIDE ENTRANCE"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 3,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "257-printed-1",
+        "timing": "immediate",
+        "kind": "build_or_placement",
+        "cascade": "none",
+        "text_zh": "放置到2个边界格的位置。不必与其他建筑相邻。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "257-printed-2",
+        "timing": "income",
+        "kind": "build_or_placement",
+        "cascade": "none",
+        "text_zh": "收入： 每个相邻“园区边门”的建筑(闲置的标准饲养区除外)，获得 {Money-2} 。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "257-printed-3",
+        "timing": "endgame",
+        "kind": "appeal",
+        "cascade": "none",
+        "text_zh": "终局时若地图除水域和岩石外全部覆盖，获得吸引力5。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "income",
+      "endgame"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度3",
+      "conditions_zh": "无",
+      "icons_zh": "无",
+      "effect_zh": "放置到2个边界格的位置。不必与其他建筑相邻。；收入： 每个相邻“园区边门”的建筑(闲置的标准饲养区除外)，获得 {Money-2} 。；终局时若地图除水域和岩石外全部覆盖，获得吸引力5。"
+    },
+    "source_line": 222,
+    "unique_building": {
+      "id": "sponsor-257",
+      "name_zh": "园区边门",
+      "money_cost": 0,
+      "is_enclosure": false,
+      "placement": {
+        "adjacent_to": {
+          "water": 0,
+          "rock": 0
+        },
+        "minimum_border_spaces": 2,
+        "may_ignore_existing_building_adjacency": true,
+        "usual_building_rules_apply": true,
+        "build_II_required_on_marked_map_spaces": true
+      },
+      "footprint": {
+        "grid": "hex_axial",
+        "orientation": "flat_top",
+        "anchor_cell": {
+          "q": 0,
+          "r": 0
+        },
+        "cells": [
+          {
+            "q": 0,
+            "r": 0
+          },
+          {
+            "q": 1,
+            "r": 0
+          }
+        ],
+        "cell_count": 2,
+        "allowed_rotation_steps": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "degrees_per_rotation_step": 60,
+        "clockwise_rotation": "(q,r)->(-r,q+r)",
+        "reflection_allowed": false,
+        "source": "printed_card_diagram_cross_checked_with_steam_workshop_component"
+      }
+    }
+  },
+  {
+    "id": "258",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "本地海鸟",
+      "en": "NATIVE SEABIRDS"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 5,
+      "base_money_cost": 0,
+      "conditions": [
+        {
+          "kind": "track_threshold",
+          "track": "appeal",
+          "operator": "<=",
+          "value": 25
+        }
+      ],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "bird",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "258-printed-1",
+        "timing": "immediate",
+        "kind": "appeal",
+        "cascade": "none",
+        "text_zh": "每个相连的水域格，获得 {Appeal-1} 。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "258-printed-2",
+        "timing": "endgame",
+        "kind": "rule_text",
+        "cascade": "none",
+        "text_zh": "每2个孤立的水域格，获得 {ConservationPoint-1} 。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "endgame"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度5",
+      "conditions_zh": "吸引力不高于25",
+      "icons_zh": "鸟类",
+      "effect_zh": "每个相连的水域格，获得 {Appeal-1} 。；每2个孤立的水域格，获得 {ConservationPoint-1} 。"
+    },
+    "source_line": 223
+  },
+  {
+    "id": "259",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "本地蜥蜴",
+      "en": "NATIVE LIZARDS"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 5,
+      "base_money_cost": 0,
+      "conditions": [
+        {
+          "kind": "track_threshold",
+          "track": "appeal",
+          "operator": "<=",
+          "value": 25
+        }
+      ],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "reptile",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "259-printed-1",
+        "timing": "immediate",
+        "kind": "appeal",
+        "cascade": "none",
+        "text_zh": "每个相连的岩石格，获得 {Appeal-1} 。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "259-printed-2",
+        "timing": "endgame",
+        "kind": "rule_text",
+        "cascade": "none",
+        "text_zh": "每2个孤立的岩石格，获得 {ConservationPoint-1} 。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "endgame"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度5",
+      "conditions_zh": "吸引力不高于25",
+      "icons_zh": "爬行类",
+      "effect_zh": "每个相连的岩石格，获得 {Appeal-1} 。；每2个孤立的岩石格，获得 {ConservationPoint-1} 。"
+    },
+    "source_line": 224
+  },
+  {
+    "id": "260",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "本地农牧动物",
+      "en": "NATIVE FARM ANIMALS"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 5,
+      "base_money_cost": 0,
+      "conditions": [
+        {
+          "kind": "track_threshold",
+          "track": "appeal",
+          "operator": "<=",
+          "value": 25
+        }
+      ],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "herbivore",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "260-printed-1",
+        "timing": "immediate",
+        "kind": "appeal",
+        "cascade": "none",
+        "text_zh": "每个相连的没有建筑的边界格，获得 {Appeal-1} 。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "260-printed-2",
+        "timing": "endgame",
+        "kind": "build_or_placement",
+        "cascade": "none",
+        "text_zh": "每一组由6个没有建筑的可建造六角格连成的区域，获得 {ConservationPoint-1} 。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "endgame"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度5",
+      "conditions_zh": "吸引力不高于25",
+      "icons_zh": "食草类",
+      "effect_zh": "每个相连的没有建筑的边界格，获得 {Appeal-1} 。；每一组由6个没有建筑的可建造六角格连成的区域，获得 {ConservationPoint-1} 。"
+    },
+    "source_line": 225
+  },
+  {
+    "id": "261",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "导游学校参观",
+      "en": "GUIDED SCHOOL TOURS"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 3,
+      "base_money_cost": 0,
+      "conditions": [],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [],
+    "printed_rewards": {
+      "appeal": 1,
+      "conservation": 1,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "261-printed-1",
+        "timing": "endgame",
+        "kind": "rule_text",
+        "cascade": "none",
+        "text_zh": "5个不同的动物类目图标，获得 {ConservationPoint-1} 。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "endgame"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度3",
+      "conditions_zh": "无",
+      "icons_zh": "无",
+      "effect_zh": "5个不同的动物类目图标，获得 {ConservationPoint-1} 。"
+    },
+    "source_line": 226
+  },
+  {
+    "id": "262",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "探险家",
+      "en": "EXPLORER"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 5,
+      "base_money_cost": 0,
+      "conditions": [
+        {
+          "kind": "action_upgrade",
+          "action": "sponsors",
+          "minimum_level": 2
+        }
+      ],
+      "minimum_action_level_from_card_condition": 2,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "262-printed-2",
+        "timing": "immediate",
+        "kind": "money",
+        "cascade": "none",
+        "text_zh": "你的动物园里每个不同的大洲和动物类目图标，获得 {Money-2} 。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "262-printed-1",
+        "timing": "passive",
+        "kind": "money",
+        "cascade": "none",
+        "text_zh": "每次你获得还未在 你动物园 里出现的大洲或动物类目图标时，获得 {Appeal-1} 和 {Money-2} 。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "passive"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度5",
+      "conditions_zh": "赞助商行动II",
+      "icons_zh": "无",
+      "effect_zh": "每次你获得还未在 你动物园 里出现的大洲或动物类目图标时，获得 {Appeal-1} 和 {Money-2} 。；你的动物园里每个不同的大洲和动物类目图标，获得 {Money-2} 。"
+    },
+    "source_line": 227
+  },
+  {
+    "id": "263",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "世界动物园协会大型动物计划",
+      "en": "WAZA LARGE ANIMAL PROGRAM"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 5,
+      "base_money_cost": 0,
+      "conditions": [
+        {
+          "kind": "action_upgrade",
+          "action": "sponsors",
+          "minimum_level": 2
+        },
+        {
+          "kind": "track_threshold",
+          "track": "reputation",
+          "operator": ">=",
+          "value": 6
+        }
+      ],
+      "minimum_action_level_from_card_condition": 2,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "263-printed-2",
+        "timing": "immediate",
+        "kind": "build_or_placement",
+        "cascade": "free_build",
+        "text_zh": "你可以免费放置1个5格饲养区。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "263-printed-1",
+        "timing": "passive",
+        "kind": "trigger_or_rule_modifier",
+        "cascade": "none",
+        "text_zh": "如果你打出大型动物，你可以忽略1个由你选择的条件。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "passive"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度5",
+      "conditions_zh": "赞助商行动II、声望至少6",
+      "icons_zh": "无",
+      "effect_zh": "如果你打出大型动物，你可以忽略1个由你选择的条件。；你可以免费放置1个5格饲养区。"
+    },
+    "source_line": 228
+  },
+  {
+    "id": "264",
+    "card_type": "sponsor",
+    "name": {
+      "zh": "自由放养的新世界猴",
+      "en": "FREE-RANGE NEW WORLD MONKEYS"
+    },
+    "play": {
+      "action": "sponsors",
+      "strength_required": 5,
+      "base_money_cost": 0,
+      "conditions": [
+        {
+          "kind": "track_threshold",
+          "track": "appeal",
+          "operator": "<=",
+          "value": 25
+        }
+      ],
+      "minimum_action_level_from_card_condition": 1,
+      "hand_source": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "icons": [
+      {
+        "tag": "primate",
+        "count": 1
+      }
+    ],
+    "printed_rewards": {
+      "appeal": 0,
+      "conservation": 0,
+      "reputation": 0
+    },
+    "printed_reward_timing": "immediate",
+    "effects": [
+      {
+        "id": "264-printed-1",
+        "timing": "immediate",
+        "kind": "appeal",
+        "cascade": "none",
+        "text_zh": "每个相连的具有放置奖励的六角格， 获得 {Appeal-1} 。",
+        "source": "localized_card_text"
+      },
+      {
+        "id": "264-printed-2",
+        "timing": "endgame",
+        "kind": "rule_text",
+        "cascade": "none",
+        "text_zh": "每2个孤立的具有放置奖励的六角格， 获得 {ConservationPoint-1} 。",
+        "source": "localized_card_text"
+      }
+    ],
+    "timing_summary": [
+      "immediate",
+      "endgame"
+    ],
+    "counts_own_icons_for_own_effects": true,
+    "raw": {
+      "strength_zh": "强度5",
+      "conditions_zh": "吸引力不高于25",
+      "icons_zh": "灵长类",
+      "effect_zh": "每个相连的具有放置奖励的六角格， 获得 {Appeal-1} 。；每2个孤立的具有放置奖励的六角格， 获得 {ConservationPoint-1} 。"
+    },
+    "source_line": 229
+  }
+]

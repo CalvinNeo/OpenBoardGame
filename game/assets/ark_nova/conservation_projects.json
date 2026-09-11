@@ -1,0 +1,2108 @@
+[
+  {
+    "id": "101",
+    "card_type": "conservation_project",
+    "name": {
+      "zh": "物种多元化",
+      "en": "SPECIES DIVERSITY"
+    },
+    "project_type": "base",
+    "deck_group": "base_setup",
+    "metric": "any_animal_category",
+    "play": {
+      "action": "association",
+      "association_task_strength": 5,
+      "may_support_from_hand": false,
+      "must_support_immediately_when_played": false,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "support_slots": [
+      {
+        "position": 1,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "any_animal_category",
+          "value": 5
+        },
+        "reward": {
+          "conservation": 5
+        },
+        "raw_zh": "5 -> 保育+5（任意动物类目）"
+      },
+      {
+        "position": 2,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "any_animal_category",
+          "value": 4
+        },
+        "reward": {
+          "conservation": 3
+        },
+        "raw_zh": "4 -> 保育+3（任意动物类目）"
+      },
+      {
+        "position": 3,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "any_animal_category",
+          "value": 3
+        },
+        "reward": {
+          "conservation": 2
+        },
+        "raw_zh": "3 -> 保育+2（任意动物类目）"
+      }
+    ],
+    "new_project_bonus": {},
+    "description_zh": "你的动物园里需要有不同的 动物类目 图标。",
+    "source_line": 232
+  },
+  {
+    "id": "102",
+    "card_type": "conservation_project",
+    "name": {
+      "zh": "起源地多元化",
+      "en": "HABITAT DIVERSITY"
+    },
+    "project_type": "base",
+    "deck_group": "base_setup",
+    "metric": "any_continent",
+    "play": {
+      "action": "association",
+      "association_task_strength": 5,
+      "may_support_from_hand": false,
+      "must_support_immediately_when_played": false,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "support_slots": [
+      {
+        "position": 1,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "any_continent",
+          "value": 5
+        },
+        "reward": {
+          "conservation": 5
+        },
+        "raw_zh": "5 -> 保育+5（任意大洲）"
+      },
+      {
+        "position": 2,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "any_continent",
+          "value": 4
+        },
+        "reward": {
+          "conservation": 3
+        },
+        "raw_zh": "4 -> 保育+3（任意大洲）"
+      },
+      {
+        "position": 3,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "any_continent",
+          "value": 3
+        },
+        "reward": {
+          "conservation": 2
+        },
+        "raw_zh": "3 -> 保育+2（任意大洲）"
+      }
+    ],
+    "new_project_bonus": {},
+    "description_zh": "你的动物园里需要有不同的 大洲 图标。",
+    "source_line": 233
+  },
+  {
+    "id": "103",
+    "card_type": "conservation_project",
+    "name": {
+      "zh": "非洲",
+      "en": "AFRICA"
+    },
+    "project_type": "base",
+    "deck_group": "base_setup",
+    "metric": "africa",
+    "play": {
+      "action": "association",
+      "association_task_strength": 5,
+      "may_support_from_hand": false,
+      "must_support_immediately_when_played": false,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "support_slots": [
+      {
+        "position": 1,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "africa",
+          "value": 5
+        },
+        "reward": {
+          "conservation": 5
+        },
+        "raw_zh": "5 -> 保育+5（非洲）"
+      },
+      {
+        "position": 2,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "africa",
+          "value": 4
+        },
+        "reward": {
+          "conservation": 3
+        },
+        "raw_zh": "4 -> 保育+3（非洲）"
+      },
+      {
+        "position": 3,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "africa",
+          "value": 2
+        },
+        "reward": {
+          "conservation": 2
+        },
+        "raw_zh": "2 -> 保育+2（非洲）"
+      }
+    ],
+    "new_project_bonus": {},
+    "description_zh": "你的动物园里需要有 非洲 图标。",
+    "source_line": 234
+  },
+  {
+    "id": "104",
+    "card_type": "conservation_project",
+    "name": {
+      "zh": "美洲",
+      "en": "AMERICAS"
+    },
+    "project_type": "base",
+    "deck_group": "base_setup",
+    "metric": "americas",
+    "play": {
+      "action": "association",
+      "association_task_strength": 5,
+      "may_support_from_hand": false,
+      "must_support_immediately_when_played": false,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "support_slots": [
+      {
+        "position": 1,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "americas",
+          "value": 5
+        },
+        "reward": {
+          "conservation": 5
+        },
+        "raw_zh": "5 -> 保育+5（美洲）"
+      },
+      {
+        "position": 2,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "americas",
+          "value": 4
+        },
+        "reward": {
+          "conservation": 3
+        },
+        "raw_zh": "4 -> 保育+3（美洲）"
+      },
+      {
+        "position": 3,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "americas",
+          "value": 2
+        },
+        "reward": {
+          "conservation": 2
+        },
+        "raw_zh": "2 -> 保育+2（美洲）"
+      }
+    ],
+    "new_project_bonus": {},
+    "description_zh": "你的动物园里需要有 美洲 图标。",
+    "source_line": 235
+  },
+  {
+    "id": "105",
+    "card_type": "conservation_project",
+    "name": {
+      "zh": "澳洲",
+      "en": "AUSTRALIA"
+    },
+    "project_type": "base",
+    "deck_group": "base_setup",
+    "metric": "australia",
+    "play": {
+      "action": "association",
+      "association_task_strength": 5,
+      "may_support_from_hand": false,
+      "must_support_immediately_when_played": false,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "support_slots": [
+      {
+        "position": 1,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "australia",
+          "value": 5
+        },
+        "reward": {
+          "conservation": 5
+        },
+        "raw_zh": "5 -> 保育+5（澳洲）"
+      },
+      {
+        "position": 2,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "australia",
+          "value": 4
+        },
+        "reward": {
+          "conservation": 4
+        },
+        "raw_zh": "4 -> 保育+4（澳洲）"
+      },
+      {
+        "position": 3,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "australia",
+          "value": 2
+        },
+        "reward": {
+          "conservation": 2
+        },
+        "raw_zh": "2 -> 保育+2（澳洲）"
+      }
+    ],
+    "new_project_bonus": {},
+    "description_zh": "你的动物园里需要有 澳洲 图标。",
+    "source_line": 236
+  },
+  {
+    "id": "106",
+    "card_type": "conservation_project",
+    "name": {
+      "zh": "亚洲",
+      "en": "ASIA"
+    },
+    "project_type": "base",
+    "deck_group": "base_setup",
+    "metric": "asia",
+    "play": {
+      "action": "association",
+      "association_task_strength": 5,
+      "may_support_from_hand": false,
+      "must_support_immediately_when_played": false,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "support_slots": [
+      {
+        "position": 1,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "asia",
+          "value": 5
+        },
+        "reward": {
+          "conservation": 5
+        },
+        "raw_zh": "5 -> 保育+5（亚洲）"
+      },
+      {
+        "position": 2,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "asia",
+          "value": 4
+        },
+        "reward": {
+          "conservation": 3
+        },
+        "raw_zh": "4 -> 保育+3（亚洲）"
+      },
+      {
+        "position": 3,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "asia",
+          "value": 2
+        },
+        "reward": {
+          "conservation": 2
+        },
+        "raw_zh": "2 -> 保育+2（亚洲）"
+      }
+    ],
+    "new_project_bonus": {},
+    "description_zh": "你的动物园里需要有 亚洲 图标。",
+    "source_line": 237
+  },
+  {
+    "id": "107",
+    "card_type": "conservation_project",
+    "name": {
+      "zh": "欧洲",
+      "en": "EUROPE"
+    },
+    "project_type": "base",
+    "deck_group": "base_setup",
+    "metric": "europe",
+    "play": {
+      "action": "association",
+      "association_task_strength": 5,
+      "may_support_from_hand": false,
+      "must_support_immediately_when_played": false,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "support_slots": [
+      {
+        "position": 1,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "europe",
+          "value": 5
+        },
+        "reward": {
+          "conservation": 5
+        },
+        "raw_zh": "5 -> 保育+5（欧洲）"
+      },
+      {
+        "position": 2,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "europe",
+          "value": 4
+        },
+        "reward": {
+          "conservation": 4
+        },
+        "raw_zh": "4 -> 保育+4（欧洲）"
+      },
+      {
+        "position": 3,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "europe",
+          "value": 2
+        },
+        "reward": {
+          "conservation": 2
+        },
+        "raw_zh": "2 -> 保育+2（欧洲）"
+      }
+    ],
+    "new_project_bonus": {},
+    "description_zh": "你的动物园里需要有 欧洲 图标。",
+    "source_line": 238
+  },
+  {
+    "id": "108",
+    "card_type": "conservation_project",
+    "name": {
+      "zh": "灵长类",
+      "en": "PRIMATES"
+    },
+    "project_type": "base",
+    "deck_group": "base_setup",
+    "metric": "primate",
+    "play": {
+      "action": "association",
+      "association_task_strength": 5,
+      "may_support_from_hand": false,
+      "must_support_immediately_when_played": false,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "support_slots": [
+      {
+        "position": 1,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "primate",
+          "value": 5
+        },
+        "reward": {
+          "conservation": 5
+        },
+        "raw_zh": "5 -> 保育+5（灵长类）"
+      },
+      {
+        "position": 2,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "primate",
+          "value": 4
+        },
+        "reward": {
+          "conservation": 4
+        },
+        "raw_zh": "4 -> 保育+4（灵长类）"
+      },
+      {
+        "position": 3,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "primate",
+          "value": 2
+        },
+        "reward": {
+          "conservation": 2
+        },
+        "raw_zh": "2 -> 保育+2（灵长类）"
+      }
+    ],
+    "new_project_bonus": {},
+    "description_zh": "你的动物园里需要有 灵长类 图标。",
+    "source_line": 239
+  },
+  {
+    "id": "109",
+    "card_type": "conservation_project",
+    "name": {
+      "zh": "爬行类",
+      "en": "REPTILES"
+    },
+    "project_type": "base",
+    "deck_group": "base_setup",
+    "metric": "reptile",
+    "play": {
+      "action": "association",
+      "association_task_strength": 5,
+      "may_support_from_hand": false,
+      "must_support_immediately_when_played": false,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "support_slots": [
+      {
+        "position": 1,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "reptile",
+          "value": 5
+        },
+        "reward": {
+          "conservation": 5
+        },
+        "raw_zh": "5 -> 保育+5（爬行类）"
+      },
+      {
+        "position": 2,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "reptile",
+          "value": 4
+        },
+        "reward": {
+          "conservation": 4
+        },
+        "raw_zh": "4 -> 保育+4（爬行类）"
+      },
+      {
+        "position": 3,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "reptile",
+          "value": 2
+        },
+        "reward": {
+          "conservation": 2
+        },
+        "raw_zh": "2 -> 保育+2（爬行类）"
+      }
+    ],
+    "new_project_bonus": {},
+    "description_zh": "你的动物园里需要有 爬行类 图标。",
+    "source_line": 240
+  },
+  {
+    "id": "110",
+    "card_type": "conservation_project",
+    "name": {
+      "zh": "食肉类",
+      "en": "PREDATORS"
+    },
+    "project_type": "base",
+    "deck_group": "base_setup",
+    "metric": "predator",
+    "play": {
+      "action": "association",
+      "association_task_strength": 5,
+      "may_support_from_hand": false,
+      "must_support_immediately_when_played": false,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "support_slots": [
+      {
+        "position": 1,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "predator",
+          "value": 5
+        },
+        "reward": {
+          "conservation": 5
+        },
+        "raw_zh": "5 -> 保育+5（食肉类）"
+      },
+      {
+        "position": 2,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "predator",
+          "value": 4
+        },
+        "reward": {
+          "conservation": 4
+        },
+        "raw_zh": "4 -> 保育+4（食肉类）"
+      },
+      {
+        "position": 3,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "predator",
+          "value": 2
+        },
+        "reward": {
+          "conservation": 2
+        },
+        "raw_zh": "2 -> 保育+2（食肉类）"
+      }
+    ],
+    "new_project_bonus": {},
+    "description_zh": "你的动物园里需要有 食肉类 图标。",
+    "source_line": 241
+  },
+  {
+    "id": "111",
+    "card_type": "conservation_project",
+    "name": {
+      "zh": "食草类",
+      "en": "HERBIVORES"
+    },
+    "project_type": "base",
+    "deck_group": "base_setup",
+    "metric": "herbivore",
+    "play": {
+      "action": "association",
+      "association_task_strength": 5,
+      "may_support_from_hand": false,
+      "must_support_immediately_when_played": false,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "support_slots": [
+      {
+        "position": 1,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "herbivore",
+          "value": 5
+        },
+        "reward": {
+          "conservation": 5
+        },
+        "raw_zh": "5 -> 保育+5（食草类）"
+      },
+      {
+        "position": 2,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "herbivore",
+          "value": 4
+        },
+        "reward": {
+          "conservation": 4
+        },
+        "raw_zh": "4 -> 保育+4（食草类）"
+      },
+      {
+        "position": 3,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "herbivore",
+          "value": 2
+        },
+        "reward": {
+          "conservation": 2
+        },
+        "raw_zh": "2 -> 保育+2（食草类）"
+      }
+    ],
+    "new_project_bonus": {},
+    "description_zh": "你的动物园里需要有 食草类 图标。",
+    "source_line": 242
+  },
+  {
+    "id": "112",
+    "card_type": "conservation_project",
+    "name": {
+      "zh": "鸟类",
+      "en": "BIRDS"
+    },
+    "project_type": "base",
+    "deck_group": "base_setup",
+    "metric": "bird",
+    "play": {
+      "action": "association",
+      "association_task_strength": 5,
+      "may_support_from_hand": false,
+      "must_support_immediately_when_played": false,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "support_slots": [
+      {
+        "position": 1,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "bird",
+          "value": 5
+        },
+        "reward": {
+          "conservation": 5
+        },
+        "raw_zh": "5 -> 保育+5（鸟类）"
+      },
+      {
+        "position": 2,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "bird",
+          "value": 4
+        },
+        "reward": {
+          "conservation": 4
+        },
+        "raw_zh": "4 -> 保育+4（鸟类）"
+      },
+      {
+        "position": 3,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "bird",
+          "value": 2
+        },
+        "reward": {
+          "conservation": 2
+        },
+        "raw_zh": "2 -> 保育+2（鸟类）"
+      }
+    ],
+    "new_project_bonus": {},
+    "description_zh": "你的动物园里需要有 鸟类 图标。",
+    "source_line": 243
+  },
+  {
+    "id": "113",
+    "card_type": "conservation_project",
+    "name": {
+      "zh": "巴伐利亚森林国家公园",
+      "en": "BAVARIAN FOREST NATIONAL PARK"
+    },
+    "project_type": "release",
+    "deck_group": "zoo_deck",
+    "metric": "europe",
+    "play": {
+      "action": "association",
+      "association_task_strength": 5,
+      "may_support_from_hand": true,
+      "must_support_immediately_when_played": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "support_slots": [
+      {
+        "position": 1,
+        "requirement": {
+          "kind": "released_animal_enclosure_size",
+          "value": 5
+        },
+        "reward": {
+          "conservation": 5
+        },
+        "raw_zh": "围栏尺寸5 -> 保育+5"
+      },
+      {
+        "position": 2,
+        "requirement": {
+          "kind": "released_animal_enclosure_size",
+          "value": 4
+        },
+        "reward": {
+          "conservation": 4
+        },
+        "raw_zh": "围栏尺寸4 -> 保育+4"
+      },
+      {
+        "position": 3,
+        "requirement": {
+          "kind": "released_animal_enclosure_size",
+          "value": 3
+        },
+        "reward": {
+          "conservation": 3
+        },
+        "raw_zh": "围栏尺寸3 -> 保育+3"
+      }
+    ],
+    "new_project_bonus": {
+      "reputation": 1
+    },
+    "description_zh": "将1个具有 欧洲 图标的动物 放归 野外；必须选择与奖励格所示尺寸完全相同的已占用围栏。",
+    "source_line": 244,
+    "release_rules": {
+      "animal_must_have_tag": "europe",
+      "reward_slot_requires_exact_printed_enclosure_size": true,
+      "lose_only_printed_appeal": true,
+      "remove_animal_icons_and_card": true,
+      "flip_smallest_possible_occupied_matching_enclosure": true,
+      "special_enclosure": "remove the printed number of player tokens; only fall back to a standard enclosure if impossible",
+      "newly_played_project_grants_reputation": 1
+    }
+  },
+  {
+    "id": "114",
+    "card_type": "conservation_project",
+    "name": {
+      "zh": "优胜美地国家公园",
+      "en": "YOSEMITE NATIONAL PARK"
+    },
+    "project_type": "release",
+    "deck_group": "zoo_deck",
+    "metric": "americas",
+    "play": {
+      "action": "association",
+      "association_task_strength": 5,
+      "may_support_from_hand": true,
+      "must_support_immediately_when_played": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "support_slots": [
+      {
+        "position": 1,
+        "requirement": {
+          "kind": "released_animal_enclosure_size",
+          "value": 5
+        },
+        "reward": {
+          "conservation": 5
+        },
+        "raw_zh": "围栏尺寸5 -> 保育+5"
+      },
+      {
+        "position": 2,
+        "requirement": {
+          "kind": "released_animal_enclosure_size",
+          "value": 4
+        },
+        "reward": {
+          "conservation": 4
+        },
+        "raw_zh": "围栏尺寸4 -> 保育+4"
+      },
+      {
+        "position": 3,
+        "requirement": {
+          "kind": "released_animal_enclosure_size",
+          "value": 3
+        },
+        "reward": {
+          "conservation": 3
+        },
+        "raw_zh": "围栏尺寸3 -> 保育+3"
+      }
+    ],
+    "new_project_bonus": {
+      "reputation": 1
+    },
+    "description_zh": "将1个具有 美洲 图标的动物 放归 野外；必须选择与奖励格所示尺寸完全相同的已占用围栏。",
+    "source_line": 245,
+    "release_rules": {
+      "animal_must_have_tag": "americas",
+      "reward_slot_requires_exact_printed_enclosure_size": true,
+      "lose_only_printed_appeal": true,
+      "remove_animal_icons_and_card": true,
+      "flip_smallest_possible_occupied_matching_enclosure": true,
+      "special_enclosure": "remove the printed number of player tokens; only fall back to a standard enclosure if impossible",
+      "newly_played_project_grants_reputation": 1
+    }
+  },
+  {
+    "id": "115",
+    "card_type": "conservation_project",
+    "name": {
+      "zh": "安通国家公园",
+      "en": "ANGTHONG NATIONAL PARK"
+    },
+    "project_type": "release",
+    "deck_group": "zoo_deck",
+    "metric": "asia",
+    "play": {
+      "action": "association",
+      "association_task_strength": 5,
+      "may_support_from_hand": true,
+      "must_support_immediately_when_played": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "support_slots": [
+      {
+        "position": 1,
+        "requirement": {
+          "kind": "released_animal_enclosure_size",
+          "value": 5
+        },
+        "reward": {
+          "conservation": 5
+        },
+        "raw_zh": "围栏尺寸5 -> 保育+5"
+      },
+      {
+        "position": 2,
+        "requirement": {
+          "kind": "released_animal_enclosure_size",
+          "value": 4
+        },
+        "reward": {
+          "conservation": 4
+        },
+        "raw_zh": "围栏尺寸4 -> 保育+4"
+      },
+      {
+        "position": 3,
+        "requirement": {
+          "kind": "released_animal_enclosure_size",
+          "value": 3
+        },
+        "reward": {
+          "conservation": 3
+        },
+        "raw_zh": "围栏尺寸3 -> 保育+3"
+      }
+    ],
+    "new_project_bonus": {
+      "reputation": 1
+    },
+    "description_zh": "将1个具有 亚洲 图标的动物 放归 野外；必须选择与奖励格所示尺寸完全相同的已占用围栏。",
+    "source_line": 246,
+    "release_rules": {
+      "animal_must_have_tag": "asia",
+      "reward_slot_requires_exact_printed_enclosure_size": true,
+      "lose_only_printed_appeal": true,
+      "remove_animal_icons_and_card": true,
+      "flip_smallest_possible_occupied_matching_enclosure": true,
+      "special_enclosure": "remove the printed number of player tokens; only fall back to a standard enclosure if impossible",
+      "newly_played_project_grants_reputation": 1
+    }
+  },
+  {
+    "id": "116",
+    "card_type": "conservation_project",
+    "name": {
+      "zh": "塞伦盖蒂国家公园",
+      "en": "SERENGETI NATIONAL PARK"
+    },
+    "project_type": "release",
+    "deck_group": "zoo_deck",
+    "metric": "africa",
+    "play": {
+      "action": "association",
+      "association_task_strength": 5,
+      "may_support_from_hand": true,
+      "must_support_immediately_when_played": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "support_slots": [
+      {
+        "position": 1,
+        "requirement": {
+          "kind": "released_animal_enclosure_size",
+          "value": 5
+        },
+        "reward": {
+          "conservation": 5
+        },
+        "raw_zh": "围栏尺寸5 -> 保育+5"
+      },
+      {
+        "position": 2,
+        "requirement": {
+          "kind": "released_animal_enclosure_size",
+          "value": 4
+        },
+        "reward": {
+          "conservation": 4
+        },
+        "raw_zh": "围栏尺寸4 -> 保育+4"
+      },
+      {
+        "position": 3,
+        "requirement": {
+          "kind": "released_animal_enclosure_size",
+          "value": 3
+        },
+        "reward": {
+          "conservation": 3
+        },
+        "raw_zh": "围栏尺寸3 -> 保育+3"
+      }
+    ],
+    "new_project_bonus": {
+      "reputation": 1
+    },
+    "description_zh": "将1个具有 非洲 图标的动物 放归 野外；必须选择与奖励格所示尺寸完全相同的已占用围栏。",
+    "source_line": 247,
+    "release_rules": {
+      "animal_must_have_tag": "africa",
+      "reward_slot_requires_exact_printed_enclosure_size": true,
+      "lose_only_printed_appeal": true,
+      "remove_animal_icons_and_card": true,
+      "flip_smallest_possible_occupied_matching_enclosure": true,
+      "special_enclosure": "remove the printed number of player tokens; only fall back to a standard enclosure if impossible",
+      "newly_played_project_grants_reputation": 1
+    }
+  },
+  {
+    "id": "117",
+    "card_type": "conservation_project",
+    "name": {
+      "zh": "蓝山国家公园",
+      "en": "BLUE MOUNTAINS NATIONAL PARK"
+    },
+    "project_type": "release",
+    "deck_group": "zoo_deck",
+    "metric": "australia",
+    "play": {
+      "action": "association",
+      "association_task_strength": 5,
+      "may_support_from_hand": true,
+      "must_support_immediately_when_played": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "support_slots": [
+      {
+        "position": 1,
+        "requirement": {
+          "kind": "released_animal_enclosure_size",
+          "value": 5
+        },
+        "reward": {
+          "conservation": 5
+        },
+        "raw_zh": "围栏尺寸5 -> 保育+5"
+      },
+      {
+        "position": 2,
+        "requirement": {
+          "kind": "released_animal_enclosure_size",
+          "value": 4
+        },
+        "reward": {
+          "conservation": 4
+        },
+        "raw_zh": "围栏尺寸4 -> 保育+4"
+      },
+      {
+        "position": 3,
+        "requirement": {
+          "kind": "released_animal_enclosure_size",
+          "value": 3
+        },
+        "reward": {
+          "conservation": 3
+        },
+        "raw_zh": "围栏尺寸3 -> 保育+3"
+      }
+    ],
+    "new_project_bonus": {
+      "reputation": 1
+    },
+    "description_zh": "将1个具有 澳洲 图标的动物 放归 野外；必须选择与奖励格所示尺寸完全相同的已占用围栏。",
+    "source_line": 248,
+    "release_rules": {
+      "animal_must_have_tag": "australia",
+      "reward_slot_requires_exact_printed_enclosure_size": true,
+      "lose_only_printed_appeal": true,
+      "remove_animal_icons_and_card": true,
+      "flip_smallest_possible_occupied_matching_enclosure": true,
+      "special_enclosure": "remove the printed number of player tokens; only fall back to a standard enclosure if impossible",
+      "newly_played_project_grants_reputation": 1
+    }
+  },
+  {
+    "id": "118",
+    "card_type": "conservation_project",
+    "name": {
+      "zh": "热带大草原",
+      "en": "SAVANNA"
+    },
+    "project_type": "release",
+    "deck_group": "zoo_deck",
+    "metric": "predator",
+    "play": {
+      "action": "association",
+      "association_task_strength": 5,
+      "may_support_from_hand": true,
+      "must_support_immediately_when_played": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "support_slots": [
+      {
+        "position": 1,
+        "requirement": {
+          "kind": "released_animal_enclosure_size",
+          "value": 5
+        },
+        "reward": {
+          "conservation": 5
+        },
+        "raw_zh": "围栏尺寸5 -> 保育+5"
+      },
+      {
+        "position": 2,
+        "requirement": {
+          "kind": "released_animal_enclosure_size",
+          "value": 4
+        },
+        "reward": {
+          "conservation": 4
+        },
+        "raw_zh": "围栏尺寸4 -> 保育+4"
+      },
+      {
+        "position": 3,
+        "requirement": {
+          "kind": "released_animal_enclosure_size",
+          "value": 3
+        },
+        "reward": {
+          "conservation": 3
+        },
+        "raw_zh": "围栏尺寸3 -> 保育+3"
+      }
+    ],
+    "new_project_bonus": {
+      "reputation": 1
+    },
+    "description_zh": "将1个 食肉类 动物 放归 野外；必须选择与奖励格所示尺寸完全相同的已占用围栏。",
+    "source_line": 249,
+    "release_rules": {
+      "animal_must_have_tag": "predator",
+      "reward_slot_requires_exact_printed_enclosure_size": true,
+      "lose_only_printed_appeal": true,
+      "remove_animal_icons_and_card": true,
+      "flip_smallest_possible_occupied_matching_enclosure": true,
+      "special_enclosure": "remove the printed number of player tokens; only fall back to a standard enclosure if impossible",
+      "newly_played_project_grants_reputation": 1
+    }
+  },
+  {
+    "id": "119",
+    "card_type": "conservation_project",
+    "name": {
+      "zh": "低矮山脉",
+      "en": "LOW MOUNTAIN RANGE"
+    },
+    "project_type": "release",
+    "deck_group": "zoo_deck",
+    "metric": "bird",
+    "play": {
+      "action": "association",
+      "association_task_strength": 5,
+      "may_support_from_hand": true,
+      "must_support_immediately_when_played": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "support_slots": [
+      {
+        "position": 1,
+        "requirement": {
+          "kind": "released_animal_enclosure_size",
+          "value": 5
+        },
+        "reward": {
+          "conservation": 5
+        },
+        "raw_zh": "围栏尺寸5 -> 保育+5"
+      },
+      {
+        "position": 2,
+        "requirement": {
+          "kind": "released_animal_enclosure_size",
+          "value": 4
+        },
+        "reward": {
+          "conservation": 4
+        },
+        "raw_zh": "围栏尺寸4 -> 保育+4"
+      },
+      {
+        "position": 3,
+        "requirement": {
+          "kind": "released_animal_enclosure_size",
+          "value": 3
+        },
+        "reward": {
+          "conservation": 3
+        },
+        "raw_zh": "围栏尺寸3 -> 保育+3"
+      }
+    ],
+    "new_project_bonus": {
+      "reputation": 1
+    },
+    "description_zh": "将1个 鸟类 动物 放归 野外；必须选择与奖励格所示尺寸完全相同的已占用围栏。",
+    "source_line": 250,
+    "release_rules": {
+      "animal_must_have_tag": "bird",
+      "reward_slot_requires_exact_printed_enclosure_size": true,
+      "lose_only_printed_appeal": true,
+      "remove_animal_icons_and_card": true,
+      "flip_smallest_possible_occupied_matching_enclosure": true,
+      "special_enclosure": "remove the printed number of player tokens; only fall back to a standard enclosure if impossible",
+      "newly_played_project_grants_reputation": 1
+    }
+  },
+  {
+    "id": "120",
+    "card_type": "conservation_project",
+    "name": {
+      "zh": "竹林",
+      "en": "BAMBOO FOREST"
+    },
+    "project_type": "release",
+    "deck_group": "zoo_deck",
+    "metric": "herbivore",
+    "play": {
+      "action": "association",
+      "association_task_strength": 5,
+      "may_support_from_hand": true,
+      "must_support_immediately_when_played": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "support_slots": [
+      {
+        "position": 1,
+        "requirement": {
+          "kind": "released_animal_enclosure_size",
+          "value": 5
+        },
+        "reward": {
+          "conservation": 5
+        },
+        "raw_zh": "围栏尺寸5 -> 保育+5"
+      },
+      {
+        "position": 2,
+        "requirement": {
+          "kind": "released_animal_enclosure_size",
+          "value": 4
+        },
+        "reward": {
+          "conservation": 4
+        },
+        "raw_zh": "围栏尺寸4 -> 保育+4"
+      },
+      {
+        "position": 3,
+        "requirement": {
+          "kind": "released_animal_enclosure_size",
+          "value": 3
+        },
+        "reward": {
+          "conservation": 3
+        },
+        "raw_zh": "围栏尺寸3 -> 保育+3"
+      }
+    ],
+    "new_project_bonus": {
+      "reputation": 1
+    },
+    "description_zh": "将1个 食草类 动物 放归 野外；必须选择与奖励格所示尺寸完全相同的已占用围栏。",
+    "source_line": 251,
+    "release_rules": {
+      "animal_must_have_tag": "herbivore",
+      "reward_slot_requires_exact_printed_enclosure_size": true,
+      "lose_only_printed_appeal": true,
+      "remove_animal_icons_and_card": true,
+      "flip_smallest_possible_occupied_matching_enclosure": true,
+      "special_enclosure": "remove the printed number of player tokens; only fall back to a standard enclosure if impossible",
+      "newly_played_project_grants_reputation": 1
+    }
+  },
+  {
+    "id": "121",
+    "card_type": "conservation_project",
+    "name": {
+      "zh": "海蚀洞",
+      "en": "SEA CAVE"
+    },
+    "project_type": "release",
+    "deck_group": "zoo_deck",
+    "metric": "reptile",
+    "play": {
+      "action": "association",
+      "association_task_strength": 5,
+      "may_support_from_hand": true,
+      "must_support_immediately_when_played": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "support_slots": [
+      {
+        "position": 1,
+        "requirement": {
+          "kind": "released_animal_enclosure_size",
+          "value": 5
+        },
+        "reward": {
+          "conservation": 5
+        },
+        "raw_zh": "围栏尺寸5 -> 保育+5"
+      },
+      {
+        "position": 2,
+        "requirement": {
+          "kind": "released_animal_enclosure_size",
+          "value": 4
+        },
+        "reward": {
+          "conservation": 4
+        },
+        "raw_zh": "围栏尺寸4 -> 保育+4"
+      },
+      {
+        "position": 3,
+        "requirement": {
+          "kind": "released_animal_enclosure_size",
+          "value": 3
+        },
+        "reward": {
+          "conservation": 3
+        },
+        "raw_zh": "围栏尺寸3 -> 保育+3"
+      }
+    ],
+    "new_project_bonus": {
+      "reputation": 1
+    },
+    "description_zh": "将1个 爬行类 动物 放归 野外；必须选择与奖励格所示尺寸完全相同的已占用围栏。",
+    "source_line": 252,
+    "release_rules": {
+      "animal_must_have_tag": "reptile",
+      "reward_slot_requires_exact_printed_enclosure_size": true,
+      "lose_only_printed_appeal": true,
+      "remove_animal_icons_and_card": true,
+      "flip_smallest_possible_occupied_matching_enclosure": true,
+      "special_enclosure": "remove the printed number of player tokens; only fall back to a standard enclosure if impossible",
+      "newly_played_project_grants_reputation": 1
+    }
+  },
+  {
+    "id": "122",
+    "card_type": "conservation_project",
+    "name": {
+      "zh": "丛林",
+      "en": "JUNGLE"
+    },
+    "project_type": "release",
+    "deck_group": "zoo_deck",
+    "metric": "primate",
+    "play": {
+      "action": "association",
+      "association_task_strength": 5,
+      "may_support_from_hand": true,
+      "must_support_immediately_when_played": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "support_slots": [
+      {
+        "position": 1,
+        "requirement": {
+          "kind": "released_animal_enclosure_size",
+          "value": 5
+        },
+        "reward": {
+          "conservation": 5
+        },
+        "raw_zh": "围栏尺寸5 -> 保育+5"
+      },
+      {
+        "position": 2,
+        "requirement": {
+          "kind": "released_animal_enclosure_size",
+          "value": 4
+        },
+        "reward": {
+          "conservation": 4
+        },
+        "raw_zh": "围栏尺寸4 -> 保育+4"
+      },
+      {
+        "position": 3,
+        "requirement": {
+          "kind": "released_animal_enclosure_size",
+          "value": 3
+        },
+        "reward": {
+          "conservation": 3
+        },
+        "raw_zh": "围栏尺寸3 -> 保育+3"
+      }
+    ],
+    "new_project_bonus": {
+      "reputation": 1
+    },
+    "description_zh": "将1个 灵长类 动物 放归 野外；必须选择与奖励格所示尺寸完全相同的已占用围栏。",
+    "source_line": 253,
+    "release_rules": {
+      "animal_must_have_tag": "primate",
+      "reward_slot_requires_exact_printed_enclosure_size": true,
+      "lose_only_printed_appeal": true,
+      "remove_animal_icons_and_card": true,
+      "flip_smallest_possible_occupied_matching_enclosure": true,
+      "special_enclosure": "remove the printed number of player tokens; only fall back to a standard enclosure if impossible",
+      "newly_played_project_grants_reputation": 1
+    }
+  },
+  {
+    "id": "123",
+    "card_type": "conservation_project",
+    "name": {
+      "zh": "鸟类动物繁育计划",
+      "en": "BIRD BREEDING PROGRAM"
+    },
+    "project_type": "breeding",
+    "deck_group": "zoo_deck",
+    "metric": "bird",
+    "play": {
+      "action": "association",
+      "association_task_strength": 5,
+      "may_support_from_hand": true,
+      "must_support_immediately_when_played": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "support_slots": [
+      {
+        "position": 1,
+        "requirement": {
+          "kind": "breeding_match"
+        },
+        "reward": {
+          "conservation": 2,
+          "reputation": 2
+        },
+        "raw_zh": "满足繁育条件 -> 保育+2、声望+2"
+      },
+      {
+        "position": 2,
+        "requirement": {
+          "kind": "breeding_match"
+        },
+        "reward": {
+          "conservation": 1,
+          "reputation": 2
+        },
+        "raw_zh": "满足繁育条件 -> 保育+1、声望+2"
+      },
+      {
+        "position": 3,
+        "requirement": {
+          "kind": "breeding_match"
+        },
+        "reward": {
+          "conservation": 2
+        },
+        "raw_zh": "满足繁育条件 -> 保育+2"
+      }
+    ],
+    "new_project_bonus": {},
+    "description_zh": "需要1个 鸟类 动物和与其任一大洲图标相同的 合作动物园；满足条件后可选择任一尚未占用的奖励格。",
+    "source_line": 254,
+    "breeding_rules": {
+      "animal_must_have_tag": "bird",
+      "requires_partner_zoo_matching_one_of_that_animals_continents": true,
+      "same_eligibility_for_all_slots": true,
+      "choose_any_unoccupied_reward_slot": true
+    }
+  },
+  {
+    "id": "124",
+    "card_type": "conservation_project",
+    "name": {
+      "zh": "食肉类动物繁育计划",
+      "en": "PREDATOR BREEDING PROGRAM"
+    },
+    "project_type": "breeding",
+    "deck_group": "zoo_deck",
+    "metric": "predator",
+    "play": {
+      "action": "association",
+      "association_task_strength": 5,
+      "may_support_from_hand": true,
+      "must_support_immediately_when_played": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "support_slots": [
+      {
+        "position": 1,
+        "requirement": {
+          "kind": "breeding_match"
+        },
+        "reward": {
+          "conservation": 2,
+          "reputation": 2
+        },
+        "raw_zh": "满足繁育条件 -> 保育+2、声望+2"
+      },
+      {
+        "position": 2,
+        "requirement": {
+          "kind": "breeding_match"
+        },
+        "reward": {
+          "conservation": 1,
+          "reputation": 2
+        },
+        "raw_zh": "满足繁育条件 -> 保育+1、声望+2"
+      },
+      {
+        "position": 3,
+        "requirement": {
+          "kind": "breeding_match"
+        },
+        "reward": {
+          "conservation": 2
+        },
+        "raw_zh": "满足繁育条件 -> 保育+2"
+      }
+    ],
+    "new_project_bonus": {},
+    "description_zh": "需要1个 食肉类 动物和与其任一大洲图标相同的 合作动物园；满足条件后可选择任一尚未占用的奖励格。",
+    "source_line": 255,
+    "breeding_rules": {
+      "animal_must_have_tag": "predator",
+      "requires_partner_zoo_matching_one_of_that_animals_continents": true,
+      "same_eligibility_for_all_slots": true,
+      "choose_any_unoccupied_reward_slot": true
+    }
+  },
+  {
+    "id": "125",
+    "card_type": "conservation_project",
+    "name": {
+      "zh": "爬行类动物繁育计划",
+      "en": "REPTILE BREEDING PROGRAM"
+    },
+    "project_type": "breeding",
+    "deck_group": "zoo_deck",
+    "metric": "reptile",
+    "play": {
+      "action": "association",
+      "association_task_strength": 5,
+      "may_support_from_hand": true,
+      "must_support_immediately_when_played": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "support_slots": [
+      {
+        "position": 1,
+        "requirement": {
+          "kind": "breeding_match"
+        },
+        "reward": {
+          "conservation": 2,
+          "reputation": 2
+        },
+        "raw_zh": "满足繁育条件 -> 保育+2、声望+2"
+      },
+      {
+        "position": 2,
+        "requirement": {
+          "kind": "breeding_match"
+        },
+        "reward": {
+          "conservation": 1,
+          "reputation": 2
+        },
+        "raw_zh": "满足繁育条件 -> 保育+1、声望+2"
+      },
+      {
+        "position": 3,
+        "requirement": {
+          "kind": "breeding_match"
+        },
+        "reward": {
+          "conservation": 2
+        },
+        "raw_zh": "满足繁育条件 -> 保育+2"
+      }
+    ],
+    "new_project_bonus": {},
+    "description_zh": "需要1个 爬行类 动物和与其任一大洲图标相同的 合作动物园；满足条件后可选择任一尚未占用的奖励格。",
+    "source_line": 256,
+    "breeding_rules": {
+      "animal_must_have_tag": "reptile",
+      "requires_partner_zoo_matching_one_of_that_animals_continents": true,
+      "same_eligibility_for_all_slots": true,
+      "choose_any_unoccupied_reward_slot": true
+    }
+  },
+  {
+    "id": "126",
+    "card_type": "conservation_project",
+    "name": {
+      "zh": "食草类动物繁育计划",
+      "en": "HERBIVORE BREEDING PROGRAM"
+    },
+    "project_type": "breeding",
+    "deck_group": "zoo_deck",
+    "metric": "herbivore",
+    "play": {
+      "action": "association",
+      "association_task_strength": 5,
+      "may_support_from_hand": true,
+      "must_support_immediately_when_played": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "support_slots": [
+      {
+        "position": 1,
+        "requirement": {
+          "kind": "breeding_match"
+        },
+        "reward": {
+          "conservation": 2,
+          "reputation": 2
+        },
+        "raw_zh": "满足繁育条件 -> 保育+2、声望+2"
+      },
+      {
+        "position": 2,
+        "requirement": {
+          "kind": "breeding_match"
+        },
+        "reward": {
+          "conservation": 1,
+          "reputation": 2
+        },
+        "raw_zh": "满足繁育条件 -> 保育+1、声望+2"
+      },
+      {
+        "position": 3,
+        "requirement": {
+          "kind": "breeding_match"
+        },
+        "reward": {
+          "conservation": 2
+        },
+        "raw_zh": "满足繁育条件 -> 保育+2"
+      }
+    ],
+    "new_project_bonus": {},
+    "description_zh": "需要1个 食草类 动物和与其任一大洲图标相同的 合作动物园；满足条件后可选择任一尚未占用的奖励格。",
+    "source_line": 257,
+    "breeding_rules": {
+      "animal_must_have_tag": "herbivore",
+      "requires_partner_zoo_matching_one_of_that_animals_continents": true,
+      "same_eligibility_for_all_slots": true,
+      "choose_any_unoccupied_reward_slot": true
+    }
+  },
+  {
+    "id": "127",
+    "card_type": "conservation_project",
+    "name": {
+      "zh": "灵长类动物繁育计划",
+      "en": "PRIMATE BREEDING PROGRAM"
+    },
+    "project_type": "breeding",
+    "deck_group": "zoo_deck",
+    "metric": "primate",
+    "play": {
+      "action": "association",
+      "association_task_strength": 5,
+      "may_support_from_hand": true,
+      "must_support_immediately_when_played": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "support_slots": [
+      {
+        "position": 1,
+        "requirement": {
+          "kind": "breeding_match"
+        },
+        "reward": {
+          "conservation": 2,
+          "reputation": 2
+        },
+        "raw_zh": "满足繁育条件 -> 保育+2、声望+2"
+      },
+      {
+        "position": 2,
+        "requirement": {
+          "kind": "breeding_match"
+        },
+        "reward": {
+          "conservation": 1,
+          "reputation": 2
+        },
+        "raw_zh": "满足繁育条件 -> 保育+1、声望+2"
+      },
+      {
+        "position": 3,
+        "requirement": {
+          "kind": "breeding_match"
+        },
+        "reward": {
+          "conservation": 2
+        },
+        "raw_zh": "满足繁育条件 -> 保育+2"
+      }
+    ],
+    "new_project_bonus": {},
+    "description_zh": "需要1个 灵长类 动物和与其任一大洲图标相同的 合作动物园；满足条件后可选择任一尚未占用的奖励格。",
+    "source_line": 258,
+    "breeding_rules": {
+      "animal_must_have_tag": "primate",
+      "requires_partner_zoo_matching_one_of_that_animals_continents": true,
+      "same_eligibility_for_all_slots": true,
+      "choose_any_unoccupied_reward_slot": true
+    }
+  },
+  {
+    "id": "128",
+    "card_type": "conservation_project",
+    "name": {
+      "zh": "水生态",
+      "en": "AQUATIC"
+    },
+    "project_type": "standard",
+    "deck_group": "zoo_deck",
+    "metric": "water",
+    "play": {
+      "action": "association",
+      "association_task_strength": 5,
+      "may_support_from_hand": true,
+      "must_support_immediately_when_played": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "support_slots": [
+      {
+        "position": 1,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "water",
+          "value": 5
+        },
+        "reward": {
+          "conservation": 4
+        },
+        "raw_zh": "5 -> 保育+4（水域）"
+      },
+      {
+        "position": 2,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "water",
+          "value": 4
+        },
+        "reward": {
+          "conservation": 3
+        },
+        "raw_zh": "4 -> 保育+3（水域）"
+      },
+      {
+        "position": 3,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "water",
+          "value": 2
+        },
+        "reward": {
+          "conservation": 2
+        },
+        "raw_zh": "2 -> 保育+2（水域）"
+      }
+    ],
+    "new_project_bonus": {},
+    "description_zh": "你的动物园里需要有 水域 图标。",
+    "source_line": 259
+  },
+  {
+    "id": "129",
+    "card_type": "conservation_project",
+    "name": {
+      "zh": "地质学",
+      "en": "GEOLOGICAL"
+    },
+    "project_type": "standard",
+    "deck_group": "zoo_deck",
+    "metric": "rock",
+    "play": {
+      "action": "association",
+      "association_task_strength": 5,
+      "may_support_from_hand": true,
+      "must_support_immediately_when_played": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "support_slots": [
+      {
+        "position": 1,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "rock",
+          "value": 5
+        },
+        "reward": {
+          "conservation": 4
+        },
+        "raw_zh": "5 -> 保育+4（岩石）"
+      },
+      {
+        "position": 2,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "rock",
+          "value": 4
+        },
+        "reward": {
+          "conservation": 3
+        },
+        "raw_zh": "4 -> 保育+3（岩石）"
+      },
+      {
+        "position": 3,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "rock",
+          "value": 2
+        },
+        "reward": {
+          "conservation": 2
+        },
+        "raw_zh": "2 -> 保育+2（岩石）"
+      }
+    ],
+    "new_project_bonus": {},
+    "description_zh": "你的动物园里需要有 岩石 图标。",
+    "source_line": 260
+  },
+  {
+    "id": "130",
+    "card_type": "conservation_project",
+    "name": {
+      "zh": "小型动物",
+      "en": "SMALL ANIMALS"
+    },
+    "project_type": "standard",
+    "deck_group": "zoo_deck",
+    "metric": "small_animal",
+    "play": {
+      "action": "association",
+      "association_task_strength": 5,
+      "may_support_from_hand": true,
+      "must_support_immediately_when_played": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "support_slots": [
+      {
+        "position": 1,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "small_animal",
+          "value": 8
+        },
+        "reward": {
+          "conservation": 4
+        },
+        "raw_zh": "8 -> 保育+4（小型动物）"
+      },
+      {
+        "position": 2,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "small_animal",
+          "value": 5
+        },
+        "reward": {
+          "conservation": 3
+        },
+        "raw_zh": "5 -> 保育+3（小型动物）"
+      },
+      {
+        "position": 3,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "small_animal",
+          "value": 2
+        },
+        "reward": {
+          "conservation": 2
+        },
+        "raw_zh": "2 -> 保育+2（小型动物）"
+      }
+    ],
+    "new_project_bonus": {},
+    "description_zh": "你的动物园里需要有 小型动物 。",
+    "source_line": 261
+  },
+  {
+    "id": "131",
+    "card_type": "conservation_project",
+    "name": {
+      "zh": "大型动物",
+      "en": "LARGE ANIMALS"
+    },
+    "project_type": "standard",
+    "deck_group": "zoo_deck",
+    "metric": "large_animal",
+    "play": {
+      "action": "association",
+      "association_task_strength": 5,
+      "may_support_from_hand": true,
+      "must_support_immediately_when_played": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "support_slots": [
+      {
+        "position": 1,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "large_animal",
+          "value": 4
+        },
+        "reward": {
+          "conservation": 4
+        },
+        "raw_zh": "4 -> 保育+4（大型动物）"
+      },
+      {
+        "position": 2,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "large_animal",
+          "value": 3
+        },
+        "reward": {
+          "conservation": 3
+        },
+        "raw_zh": "3 -> 保育+3（大型动物）"
+      },
+      {
+        "position": 3,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "large_animal",
+          "value": 2
+        },
+        "reward": {
+          "conservation": 2
+        },
+        "raw_zh": "2 -> 保育+2（大型动物）"
+      }
+    ],
+    "new_project_bonus": {},
+    "description_zh": "你的动物园里需要有 大型动物 。",
+    "source_line": 262
+  },
+  {
+    "id": "132",
+    "card_type": "conservation_project",
+    "name": {
+      "zh": "科研",
+      "en": "RESEARCH"
+    },
+    "project_type": "standard",
+    "deck_group": "zoo_deck",
+    "metric": "science",
+    "play": {
+      "action": "association",
+      "association_task_strength": 5,
+      "may_support_from_hand": true,
+      "must_support_immediately_when_played": true,
+      "display_source": {
+        "requires_action_level": 2,
+        "within_reputation_range": true,
+        "surcharge": "folder_number"
+      }
+    },
+    "support_slots": [
+      {
+        "position": 1,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "science",
+          "value": 5
+        },
+        "reward": {
+          "conservation": 4
+        },
+        "raw_zh": "5 -> 保育+4（科研）"
+      },
+      {
+        "position": 2,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "science",
+          "value": 4
+        },
+        "reward": {
+          "conservation": 3
+        },
+        "raw_zh": "4 -> 保育+3（科研）"
+      },
+      {
+        "position": 3,
+        "requirement": {
+          "kind": "metric_count",
+          "metric": "science",
+          "value": 2
+        },
+        "reward": {
+          "conservation": 2
+        },
+        "raw_zh": "2 -> 保育+2（科研）"
+      }
+    ],
+    "new_project_bonus": {},
+    "description_zh": "你的动物园里需要有 科研 图标。",
+    "source_line": 263
+  }
+]
