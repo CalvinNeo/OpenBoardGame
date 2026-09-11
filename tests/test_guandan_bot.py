@@ -121,6 +121,77 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self._assert_consistent_card_zones(state)
         return state
 
+    def _make_big_joker_after_teammate_overcall_state(self):
+        players = [
+            {"player_id": "leader", "name": "Calvin", "seat": 0, "is_bot": False},
+            {"player_id": "bot", "name": "Bot 2", "seat": 1, "is_bot": True},
+            {"player_id": "opp2", "name": "Opp 2", "seat": 2, "is_bot": False},
+            {"player_id": "mate", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["current_turn"] = "bot"
+        state["level_rank"] = 2
+        state["config"]["bot_mode"] = "auto"
+        state["config"]["bot_endgame_threshold"] = 0
+
+        deck = guandan._full_deck()
+        state["players"]["bot"]["hand"] = self._pick_labels(
+            deck,
+            [
+                "🃏B",
+                "♦️A", "♦️A", "♠️A",
+                "♠️K", "♦️K",
+                "♠️J", "♥️J", "♣️J", "♦️J",
+                "♦️10", "♥️10", "♦️10", "♣️10",
+                "♣️9", "♦️8", "♣️8", "♦️5", "♣️5",
+                "♣️4", "♠️4", "♦️4",
+            ],
+        )
+        teammate_play = self._pick_labels(deck, ["♠️K"])
+        enemy_play = self._pick_labels(deck, ["♦️2"])
+        state["players"]["mate"]["hand"] = self._pick_labels(
+            deck,
+            [
+                "♣️2",
+                "♥️A", "♣️A", "♥️A",
+                "♠️Q", "♦️Q", "♥️Q",
+                "♦️J", "♣️J",
+                "♠️10", "♠️10",
+                "♥️9", "♠️9", "♠️9",
+                "♦️7", "♠️7", "♠️7", "♣️7",
+                "♦️6", "♥️6", "♣️6", "♠️6",
+                "♥️5", "♦️4", "♣️3", "♥️3",
+            ],
+        )
+        for player_id, count in (("leader", 16), ("opp2", 16)):
+            state["players"][player_id]["hand"] = deck[:count]
+            del deck[:count]
+
+        state["current_trick"] = {
+            "player_id": "leader",
+            "cards": [enemy_play[0]["id"]],
+            "combo": guandan._evaluate_combo(
+                enemy_play,
+                state["level_rank"],
+                state.get("config", {}),
+            ),
+        }
+        state["trick_plays"] = {
+            "mate": teammate_play,
+            "leader": enemy_play,
+        }
+        state["pass_count"] = 0
+        state["seen_cards"] = [
+            teammate_play[0]["id"],
+            enemy_play[0]["id"],
+            *(card["id"] for card in deck),
+        ]
+        state["known_card_owners"] = {}
+        state["round_memories"] = []
+        self._assert_consistent_card_zones(state)
+        return state
+
     def _make_state(self):
         players = [
             {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
@@ -2790,6 +2861,28 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertFalse(explain["timing"].get("hard_deadline_reached"))
         self.assertTrue(explain["top"])
 
+    def test_big_joker_retakes_level_single_after_enemy_overcalls_teammate(self):
+        state = self._make_big_joker_after_teammate_overcall_state()
+        big_joker = next(
+            card
+            for card in state["players"]["bot"]["hand"]
+            if card.get("joker") == "big"
+        )
+
+        takeover_bonus = guandan._guandan_ai.call(
+            guandan,
+            "_big_joker_single_takeover_bonus",
+            state,
+            "bot",
+            [big_joker["id"]],
+        )
+        action = guandan.GuandanGame.bot_move(state, "bot")
+
+        self.assertGreater(takeover_bonus, 0.0)
+        self.assertEqual(action, {"type": "play", "card_ids": [big_joker["id"]]})
+        explain = state["bot_explain"]["bot"]
+        self.assertEqual(explain["method_details"].get("mcts_stop_reason"), "fast_path")
+
     def test_enemy_double_down_threat_uses_available_bomb(self):
         players = [
             {"player_id": "leader", "name": "Leader", "seat": 0, "is_bot": False},
@@ -5036,6 +5129,61 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertNotIn("strategic_enemy_pass", pass_components)
         action = guandan.GuandanGame.bot_move(state, "bot")
         self.assertEqual(action, {"type": "play", "card_ids": [clean_eight["id"]]})
+
+    def test_long_enemy_straight_uses_natural_five_card_takeover_without_breaking_bomb(self):
+        state = self._make_deep_structured_response_state(
+            ["♠️2", "♣️3", "♥️4", "♣️5", "♠️6"],
+            [
+                "♣️2",
+                "♥️A", "♣️A", "♥️A",
+                "♠️K",
+                "♠️Q", "♦️Q", "♥️Q",
+                "♦️J", "♣️J",
+                "♠️10", "♠️10",
+                "♥️9", "♠️9", "♠️9",
+                "♦️7", "♠️7", "♠️7", "♣️7",
+                "♦️6", "♥️6", "♣️6", "♠️6",
+                "♥️5", "♦️4", "♣️3", "♥️3",
+            ],
+            leader_left=22,
+            teammate_left=27,
+            opp2_left=27,
+        )
+        state["config"]["bot_mode"] = "auto"
+
+        hand = state["players"]["bot2"]["hand"]
+        pass_components = guandan._bot_score_components(state, "bot2", None, depth=4)
+        action = guandan.GuandanGame.bot_move(state, "bot2")
+        chosen = [
+            card
+            for card in hand
+            if card["id"] in action.get("card_ids", [])
+        ]
+        combo = guandan._evaluate_combo(
+            chosen,
+            state["level_rank"],
+            state.get("config", {}),
+        )
+
+        self.assertNotIn("strategic_enemy_pass", pass_components)
+        self.assertEqual(action.get("type"), "play")
+        self.assertEqual(combo.get("type"), "straight")
+        self.assertEqual(sorted(card.get("rank") for card in chosen), [9, 10, 11, 12, 13])
+        chosen_components = guandan._bot_score_components(
+            state,
+            "bot2",
+            action.get("card_ids", []),
+            depth=4,
+        )
+        self.assertGreater(chosen_components.get("natural_structure_takeover", 0.0), 0.0)
+        self.assertGreater(
+            chosen_components.get("natural_structure_duplicate_relief", 0.0),
+            0.0,
+        )
+        self.assertEqual(
+            state["bot_explain"]["bot2"]["method_details"].get("mcts_stop_reason"),
+            "fast_path",
+        )
 
     def test_heuristic_low_single_response_prefers_clean_singleton_over_split_pair(self):
         players = [

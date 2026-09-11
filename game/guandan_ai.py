@@ -9603,15 +9603,30 @@ def _big_joker_single_takeover_bonus(
         return 0.0
 
     teammate = _teammate_of(state, player_id)
-    teammate_passed = bool(
-        teammate and (state.get("trick_plays") or {}).get(teammate) == "pass"
-    )
+    teammate_play = (state.get("trick_plays") or {}).get(teammate) if teammate else None
+    teammate_out_of_lane = teammate_play == "pass"
+    if isinstance(teammate_play, list) and teammate_play:
+        teammate_combo = _evaluate_combo(
+            teammate_play,
+            state["level_rank"],
+            state.get("config", {}),
+        )
+        teammate_out_of_lane = bool(
+            teammate_combo
+            and teammate_combo.get("type") == "single"
+            and _compare_combos(
+                teammate_combo,
+                current_combo,
+                state["level_rank"],
+                state.get("config", {}),
+            )
+        )
     leader_left = len(state["players"].get(leader, {}).get("hand", []))
-    if not teammate_passed and leader_left > 10:
+    if not teammate_out_of_lane and leader_left > 10:
         return 0.0
 
     bonus = 8.0
-    if teammate_passed:
+    if teammate_out_of_lane:
         bonus += 7.0
     if leader_left <= 10:
         bonus += 4.0
@@ -9699,6 +9714,81 @@ def _enemy_overcall_teammate_single_pass_penalty(
     return penalty
 
 
+def _natural_structure_takeover_profile(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Optional[Dict] = None,
+    features: Optional[Dict] = None,
+) -> Dict[str, float]:
+    """Recognize an efficient natural multi-card response without hiding real bomb damage."""
+    current_trick = state.get("current_trick")
+    if not current_trick or not cards:
+        return {"qualified": 0.0}
+    leader = current_trick.get("player_id")
+    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+        return {"qualified": 0.0}
+
+    if features is None:
+        features = _candidate_features(state, player_id, cards, combo=combo)
+    combo = combo or features.get("combo") or {}
+    current_combo = current_trick.get("combo") or {}
+    combo_type = combo.get("type") or ""
+    if (
+        combo_type != current_combo.get("type")
+        or combo_type not in ("full_house", "straight", "three_pairs", "steel_plate")
+        or len(cards) < 5
+    ):
+        return {"qualified": 0.0}
+
+    play_cards = features.get("play_cards") or []
+    if _cards_use_special_material(play_cards, state["level_rank"]):
+        return {"qualified": 0.0}
+
+    hand = features.get("hand") or state["players"][player_id].get("hand", [])
+    if combo_type == "straight":
+        hand_map = _map_hand_by_id(hand)
+        for candidate in _find_bomb_candidates(hand, state["level_rank"]):
+            if candidate.get("type") != "straight_flush":
+                continue
+            upgrade_cards = candidate.get("cards") or []
+            upgrade_play_cards = [
+                hand_map[cid] for cid in upgrade_cards if cid in hand_map
+            ]
+            upgrade_combo = _evaluate_combo(
+                upgrade_play_cards,
+                state["level_rank"],
+                state.get("config", {}),
+            )
+            if (
+                upgrade_combo
+                and _straight_flush_structural_upgrade_bonus(
+                    state,
+                    player_id,
+                    upgrade_cards,
+                    upgrade_combo,
+                )
+                > 0.001
+            ):
+                return {"qualified": 0.0}
+    bomb_break = _bomb_structure_break_penalty(
+        hand,
+        cards,
+        state["level_rank"],
+        combo,
+    )
+    fragment_penalty = float(features.get("fragment_penalty", 0.0))
+    control_break = float(features.get("control_break", 0.0))
+    if bomb_break > 0.001 or fragment_penalty > 8.0 or control_break > 4.0:
+        return {"qualified": 0.0}
+
+    return {
+        "qualified": 1.0,
+        "fragment_penalty": fragment_penalty,
+        "control_break": control_break,
+    }
+
+
 def _strategic_enemy_pass_bonus(state: Dict, player_id: str) -> float:
     """Reward conserving material against a non-threatening long enemy hand."""
     current_trick = state.get("current_trick")
@@ -9772,16 +9862,13 @@ def _strategic_enemy_pass_bonus(state: Dict, player_id: str) -> float:
             # A cheap natural takeover both sheds cards and wins tempo; a long
             # enemy hand alone is not a reason to decline it.
             return 0.0
-        natural_structure_takeover = (
-            combo_type == current_type
-            and combo_type in ("full_house", "straight", "three_pairs", "steel_plate")
-            and len(cards) >= 5
-            and not uses_special
-            and fragment_penalty <= 5.0
-            and control_break <= 4.0
-            and shape_loss <= 5.0
+        natural_structure_takeover = _natural_structure_takeover_profile(
+            state,
+            player_id,
+            cards,
+            combo=combo,
         )
-        if natural_structure_takeover:
+        if natural_structure_takeover.get("qualified"):
             # A natural multi-card response is itself efficient shedding. Do
             # not classify it like breaking a pair for one marginal card.
             return 0.0
@@ -10054,6 +10141,56 @@ def _mcts_high_single_joker_scores(
         heuristic_values,
         top_action,
         "high_single_joker_fast_path",
+    )
+
+
+def _mcts_natural_structure_takeover_scores(
+    state: Dict,
+    bot_id: str,
+    candidates: List[Dict],
+    heuristic_values: Dict[Tuple, float],
+) -> Optional[List[Tuple[Dict, float, int, Dict[str, float]]]]:
+    """Keep a clearly superior natural shed from being reversed by a tiny rollout sample."""
+    qualified: List[Dict] = []
+    for action in candidates:
+        if action.get("type") != "play":
+            continue
+        cards = action.get("card_ids") or []
+        combo = _action_combo(state, bot_id, action)
+        if _natural_structure_takeover_profile(
+            state,
+            bot_id,
+            cards,
+            combo=combo,
+        ).get("qualified"):
+            qualified.append(action)
+    if not qualified:
+        return None
+
+    top_action = max(
+        qualified,
+        key=lambda action: heuristic_values.get(_mcts_action_key(action), -999.0),
+    )
+    pass_action = next(
+        (action for action in candidates if action.get("type") == "pass"),
+        None,
+    )
+    top_score = heuristic_values.get(_mcts_action_key(top_action), -999.0)
+    pass_score = (
+        heuristic_values.get(_mcts_action_key(pass_action), -999.0)
+        if pass_action
+        else -999.0
+    )
+    margin = float(
+        state.get("config", {}).get("bot_mcts_natural_structure_margin", 1.5)
+    )
+    if pass_action and top_score < pass_score + margin:
+        return None
+    return _mcts_fast_path_scores(
+        candidates,
+        heuristic_values,
+        top_action,
+        "natural_structure_fast_path",
     )
 
 
@@ -10347,6 +10484,23 @@ def _mcts_score_actions(
         _report_progress_scaled(progress_callback, "mcts", progress_start, progress_end, 1.0, "Fast-path obvious response")
         store_status("fast_path")
         return obvious_scores
+    natural_structure_scores = _mcts_natural_structure_takeover_scores(
+        state,
+        bot_id,
+        candidates,
+        heuristic_values,
+    )
+    if natural_structure_scores:
+        _report_progress_scaled(
+            progress_callback,
+            "mcts",
+            progress_start,
+            progress_end,
+            1.0,
+            "Fast-path natural structure takeover",
+        )
+        store_status("fast_path")
+        return natural_structure_scores
     high_single_joker_scores = _mcts_high_single_joker_scores(
         state,
         bot_id,
@@ -11532,6 +11686,23 @@ def _compute_bot_score_components(
             features,
         )
         components.update(shared_response)
+        if shared_response.get("natural_structure_takeover", 0.0) > 0.001:
+            # The residual hand value already prices the groups left after this
+            # response. Do not charge the same temporary breakup again through
+            # every local structure term, or a natural five-card shed can rank
+            # far below Pass even when no bomb or special material is spent.
+            structure_relief = 0.0
+            for component_name in (
+                "shape_value",
+                "plan_alignment",
+                "control_break_penalty",
+                "response_material",
+            ):
+                component_value = components.get(component_name, 0.0)
+                if component_value < 0.0:
+                    structure_relief -= component_value
+            if structure_relief > 0.001:
+                components["natural_structure_duplicate_relief"] = structure_relief
         clean_single_relay = shared_response.get("clean_single_relay", 0.0)
         if clean_single_relay > 0.001:
             # The relay guard already checks physical residual quality and only
@@ -12476,6 +12647,16 @@ def _shared_response_tactical_components(
     )
     if big_joker_takeover > 0.001:
         components["big_joker_takeover"] = big_joker_takeover
+
+    natural_structure = _natural_structure_takeover_profile(
+        state,
+        player_id,
+        cards,
+        combo=combo,
+        features=features,
+    )
+    if natural_structure.get("qualified"):
+        components["natural_structure_takeover"] = float(len(cards))
 
     double_down_pressure = _enemy_double_down_closeout_pressure(state, player_id)
     if double_down_pressure > 0.001:
