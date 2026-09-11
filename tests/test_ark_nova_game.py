@@ -246,6 +246,25 @@ class ArkNovaGameTests(unittest.TestCase):
         view = ArkNovaGame.get_public_view(state, "p1")
         self.assertEqual(len(view["bonus_tokens"]["5"]), 2)
 
+    def test_forced_extra_action_rejects_x_tokens_when_disallowed(self) -> None:
+        state = self.make_state()
+        state["players"]["p1"]["x_tokens"] = 2
+        state["forced_action"] = {
+            "player_id": "p1",
+            "action": "cards",
+            "strength": 3,
+            "move_after": False,
+            "allow_x_alternative": False,
+        }
+        before = copy.deepcopy(state)
+        _, error = ArkNovaGame.apply_action(
+            state,
+            "p1",
+            {"type": "cards", "mode": "draw", "x_tokens": 1},
+        )
+        self.assertIn("cannot modify", error or "")
+        self.assertEqual(state, before)
+
     def test_bot_can_complete_setup_and_choose_an_action(self) -> None:
         state = ArkNovaGame.init_game(
             {"seed": 3},
