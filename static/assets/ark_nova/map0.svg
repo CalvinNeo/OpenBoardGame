@@ -1,0 +1,639 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1340 830" role="img" aria-labelledby="ark-nova-map0-title ark-nova-map0-desc">
+  <title id="ark-nova-map0-title">Ark Nova — Zoo Map 0</title>
+  <desc id="ark-nova-map0-desc">An original vector reconstruction of Zoo Map 0 with 58 addressable hexes, terrain, placement bonuses, Build II restrictions, conservation rewards, and five Action-card slots.</desc>
+  <defs>
+    <style>
+      text { font-family: Inter, Avenir Next, Avenir, "Segoe UI", sans-serif; }
+      .ark-nova-map0-heading { fill:#2d383c; font-size:28px; font-weight:850; letter-spacing:2px; }
+      .ark-nova-map0-subheading { fill:#33443d; font-size:14px; font-weight:800; letter-spacing:1.4px; }
+      .ark-nova-map0-caption { fill:#5b665f; font-size:11px; font-weight:650; }
+      .ark-nova-map0-small { fill:#53615a; font-size:10px; font-weight:650; }
+      .ark-nova-map0-icon-number { fill:#fffdf2; font-size:19px; font-weight:900; text-anchor:middle; dominant-baseline:middle; }
+      .ark-nova-map0-action-one { fill:#242a2d; font-size:18px; font-weight:900; text-anchor:middle; dominant-baseline:middle; }
+      .ark-nova-map0-ii { fill:#713258; font-size:14px; font-weight:950; text-anchor:middle; }
+      .ark-nova-map0-hex { stroke:#f8f0cf; stroke-width:2.2; vector-effect:non-scaling-stroke; transition:stroke .12s,opacity .12s; }
+      .ark-nova-map0-cell { cursor:pointer; }
+      .ark-nova-map0-cell:hover .ark-nova-map0-hex, .ark-nova-map0-cell.is-valid .ark-nova-map0-hex { stroke:#fff; stroke-width:5; }
+      .ark-nova-map0-cell.is-selected .ark-nova-map0-hex { stroke:#ff8c42; stroke-width:6; }
+      .ark-nova-map0-cell.is-covered { opacity:.5; }
+      .ark-nova-map0-debug-label { display:none; fill:#24322d; font-size:9px; font-weight:850; text-anchor:middle; dominant-baseline:middle; pointer-events:none; }
+      .ark-nova-map0-show-debug .ark-nova-map0-debug-label { display:block; }
+      .ark-nova-map0-slot-number { fill:#fff7df; font-size:23px; font-weight:900; text-anchor:middle; dominant-baseline:middle; }
+    </style>
+    <pattern id="ark-nova-map0-grass" width="24" height="24" patternUnits="userSpaceOnUse">
+      <rect width="24" height="24" fill="#47744d"/>
+      <circle cx="5" cy="7" r="1.2" fill="#6f965e"/><circle cx="18" cy="16" r="1" fill="#355f42"/>
+    </pattern>
+    <pattern id="ark-nova-map0-land" width="22" height="22" patternUnits="userSpaceOnUse">
+      <rect width="22" height="22" fill="#dfcf9c"/>
+      <circle cx="5" cy="6" r="1.3" fill="#b9b66d"/><circle cx="16" cy="15" r="1.7" fill="#c8be7e"/>
+    </pattern>
+    <pattern id="ark-nova-map0-water" width="28" height="20" patternUnits="userSpaceOnUse">
+      <rect width="28" height="20" fill="#4da5c9"/>
+      <path d="M-4 8q7-6 14 0t14 0 14 0" fill="none" stroke="#9bd7e6" stroke-width="2" opacity=".75"/>
+    </pattern>
+    <pattern id="ark-nova-map0-rock" width="24" height="24" patternUnits="userSpaceOnUse">
+      <rect width="24" height="24" fill="#8b8790"/>
+      <path d="M0 19L8 5l8 9 8-6v16H0z" fill="#696d74" opacity=".72"/>
+    </pattern>
+    <path id="ark-nova-map0-bonus-badge" d="M0-29L27-9 17 24H-17L-27-9Z" fill="#f1d252" stroke="#3e4944" stroke-width="3"/>
+  </defs>
+  <rect width="1340" height="830" fill="#e8e3d5"/>
+  <rect x="232" y="28" width="718" height="632" rx="22" fill="url(#ark-nova-map0-grass)" stroke="#274b38" stroke-width="5"/>
+  <g id="ark-nova-map0-grid" aria-label="Zoo building grid">
+    <g id="ark-nova-map0-cell-A1" class="ark-nova-map0-cell ark-nova-map0-terrain-water" role="button" tabindex="0" data-cell-id="A1" data-terrain="water" data-buildable="false" data-border="true" data-neighbors="A2,B1,B2" aria-label="A1: water, not buildable">
+      <title>A1: water, not buildable</title>
+      <polygon class="ark-nova-map0-hex" points="348,145 324,186.569 276,186.569 252,145 276,103.431 324,103.431" fill="url(#ark-nova-map0-water)"/>
+      <path d="M275 149q13-11 26 0t26 0" fill="none" stroke="#d4f2f5" stroke-width="3" opacity=".9"/>
+      <text x="300" y="145" class="ark-nova-map0-debug-label">A1</text>
+    </g>
+    <g id="ark-nova-map0-cell-A2" class="ark-nova-map0-cell ark-nova-map0-terrain-water" role="button" tabindex="0" data-cell-id="A2" data-terrain="water" data-buildable="false" data-border="true" data-neighbors="A1,A3,B2,B3" aria-label="A2: water, not buildable">
+      <title>A2: water, not buildable</title>
+      <polygon class="ark-nova-map0-hex" points="348,228.138 324,269.707 276,269.707 252,228.138 276,186.569 324,186.569" fill="url(#ark-nova-map0-water)"/>
+      <path d="M275 232.138q13-11 26 0t26 0" fill="none" stroke="#d4f2f5" stroke-width="3" opacity=".9"/>
+      <text x="300" y="228.138" class="ark-nova-map0-debug-label">A2</text>
+    </g>
+    <g id="ark-nova-map0-cell-A3" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="A3" data-terrain="land" data-buildable="true" data-border="true" data-neighbors="A2,A4,B3,B4" aria-label="A3: land">
+      <title>A3: land</title>
+      <polygon class="ark-nova-map0-hex" points="348,311.277 324,352.846 276,352.846 252,311.277 276,269.708 324,269.708" fill="url(#ark-nova-map0-land)"/>
+      <text x="300" y="311.277" class="ark-nova-map0-debug-label">A3</text>
+    </g>
+    <g id="ark-nova-map0-cell-A4" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="A4" data-terrain="land" data-buildable="true" data-border="true" data-neighbors="A3,A5,B4,B5" aria-label="A4: land">
+      <title>A4: land</title>
+      <polygon class="ark-nova-map0-hex" points="348,394.415 324,435.984 276,435.984 252,394.415 276,352.846 324,352.846" fill="url(#ark-nova-map0-land)"/>
+      <text x="300" y="394.415" class="ark-nova-map0-debug-label">A4</text>
+    </g>
+    <g id="ark-nova-map0-cell-A5" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="A5" data-terrain="land" data-buildable="true" data-border="true" data-neighbors="A4,A6,B5,B6" data-bonus-type="appeal" aria-label="A5: land, placement bonus: Gain 2 appeal">
+      <title>A5: land, placement bonus: Gain 2 appeal</title>
+      <polygon class="ark-nova-map0-hex" points="348,477.554 324,519.123 276,519.123 252,477.554 276,435.985 324,435.985" fill="url(#ark-nova-map0-land)"/>
+      <g class="ark-nova-map0-bonus" transform="translate(300 477.554) scale(1)">
+        <use href="#ark-nova-map0-bonus-badge"/>
+        <path d="M-16-17h32v8c-5 1-5 9 0 10v8h-32V1c5-1 5-9 0-10z" fill="#e8816d" stroke="#2d3033" stroke-width="3"/>
+        <text x="0" y="2" class="ark-nova-map0-icon-number">2</text>
+      </g>
+      <text x="300" y="477.554" class="ark-nova-map0-debug-label">A5</text>
+    </g>
+    <g id="ark-nova-map0-cell-A6" class="ark-nova-map0-cell ark-nova-map0-terrain-rock" role="button" tabindex="0" data-cell-id="A6" data-terrain="rock" data-buildable="false" data-border="true" data-neighbors="A5,B6,B7" aria-label="A6: rock, not buildable">
+      <title>A6: rock, not buildable</title>
+      <polygon class="ark-nova-map0-hex" points="348,560.692 324,602.261 276,602.261 252,560.692 276,519.123 324,519.123" fill="url(#ark-nova-map0-rock)"/>
+      <path d="M272 582.692l15-35 14 18 12-25 19 42z" fill="#62666c" stroke="#bcb8bf" stroke-width="2"/>
+      <text x="300" y="560.692" class="ark-nova-map0-debug-label">A6</text>
+    </g>
+    <g id="ark-nova-map0-cell-B1" class="ark-nova-map0-cell ark-nova-map0-terrain-water" role="button" tabindex="0" data-cell-id="B1" data-terrain="water" data-buildable="false" data-border="true" data-neighbors="A1,B2,C1" aria-label="B1: water, not buildable">
+      <title>B1: water, not buildable</title>
+      <polygon class="ark-nova-map0-hex" points="420,103.431 396,145 348,145 324,103.431 348,61.862 396,61.862" fill="url(#ark-nova-map0-water)"/>
+      <path d="M347 107.431q13-11 26 0t26 0" fill="none" stroke="#d4f2f5" stroke-width="3" opacity=".9"/>
+      <text x="372" y="103.431" class="ark-nova-map0-debug-label">B1</text>
+    </g>
+    <g id="ark-nova-map0-cell-B2" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="B2" data-terrain="land" data-buildable="true" data-border="false" data-neighbors="A1,A2,B1,B3,C1,C2" data-bonus-type="card" aria-label="B2: land, placement bonus: Take 1 card within reputation range, or draw 1 from the deck">
+      <title>B2: land, placement bonus: Take 1 card within reputation range, or draw 1 from the deck</title>
+      <polygon class="ark-nova-map0-hex" points="420,186.569 396,228.138 348,228.138 324,186.569 348,145 396,145" fill="url(#ark-nova-map0-land)"/>
+      <g class="ark-nova-map0-bonus" transform="translate(372 186.569) scale(1)">
+        <use href="#ark-nova-map0-bonus-badge"/>
+        <rect x="-13" y="-17" width="25" height="31" rx="3" fill="#f7f2df" stroke="#272b2f" stroke-width="3"/>
+        <path d="M-8 -10h15M-8 -5h15" stroke="#7f8790" stroke-width="2"/>
+        <path d="M-7 2h14l-7 9z" fill="#272b2f"/>
+      </g>
+      <text x="372" y="186.569" class="ark-nova-map0-debug-label">B2</text>
+    </g>
+    <g id="ark-nova-map0-cell-B3" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="B3" data-terrain="land" data-buildable="true" data-border="false" data-neighbors="A2,A3,B2,B4,C2,C3" aria-label="B3: land">
+      <title>B3: land</title>
+      <polygon class="ark-nova-map0-hex" points="420,269.708 396,311.277 348,311.277 324,269.708 348,228.139 396,228.139" fill="url(#ark-nova-map0-land)"/>
+      <text x="372" y="269.708" class="ark-nova-map0-debug-label">B3</text>
+    </g>
+    <g id="ark-nova-map0-cell-B4" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="B4" data-terrain="land" data-buildable="true" data-border="false" data-neighbors="A3,A4,B3,B5,C3,C4" aria-label="B4: land">
+      <title>B4: land</title>
+      <polygon class="ark-nova-map0-hex" points="420,352.846 396,394.415 348,394.415 324,352.846 348,311.277 396,311.277" fill="url(#ark-nova-map0-land)"/>
+      <text x="372" y="352.846" class="ark-nova-map0-debug-label">B4</text>
+    </g>
+    <g id="ark-nova-map0-cell-B5" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="B5" data-terrain="land" data-buildable="true" data-border="false" data-neighbors="A4,A5,B4,B6,C4,C5" aria-label="B5: land">
+      <title>B5: land</title>
+      <polygon class="ark-nova-map0-hex" points="420,435.985 396,477.554 348,477.554 324,435.985 348,394.416 396,394.416" fill="url(#ark-nova-map0-land)"/>
+      <text x="372" y="435.985" class="ark-nova-map0-debug-label">B5</text>
+    </g>
+    <g id="ark-nova-map0-cell-B6" class="ark-nova-map0-cell ark-nova-map0-terrain-water" role="button" tabindex="0" data-cell-id="B6" data-terrain="water" data-buildable="false" data-border="false" data-neighbors="A5,A6,B5,B7,C5,C6" aria-label="B6: water, not buildable">
+      <title>B6: water, not buildable</title>
+      <polygon class="ark-nova-map0-hex" points="420,519.123 396,560.692 348,560.692 324,519.123 348,477.554 396,477.554" fill="url(#ark-nova-map0-water)"/>
+      <path d="M347 523.123q13-11 26 0t26 0" fill="none" stroke="#d4f2f5" stroke-width="3" opacity=".9"/>
+      <text x="372" y="519.123" class="ark-nova-map0-debug-label">B6</text>
+    </g>
+    <g id="ark-nova-map0-cell-B7" class="ark-nova-map0-cell ark-nova-map0-terrain-rock" role="button" tabindex="0" data-cell-id="B7" data-terrain="rock" data-buildable="false" data-border="true" data-neighbors="A6,B6,C6" aria-label="B7: rock, not buildable">
+      <title>B7: rock, not buildable</title>
+      <polygon class="ark-nova-map0-hex" points="420,602.261 396,643.83 348,643.83 324,602.261 348,560.692 396,560.692" fill="url(#ark-nova-map0-rock)"/>
+      <path d="M344 624.261l15-35 14 18 12-25 19 42z" fill="#62666c" stroke="#bcb8bf" stroke-width="2"/>
+      <text x="372" y="602.261" class="ark-nova-map0-debug-label">B7</text>
+    </g>
+    <g id="ark-nova-map0-cell-C1" class="ark-nova-map0-cell ark-nova-map0-terrain-rock" role="button" tabindex="0" data-cell-id="C1" data-terrain="rock" data-buildable="false" data-border="true" data-neighbors="B1,B2,C2,D1,D2" aria-label="C1: rock, not buildable">
+      <title>C1: rock, not buildable</title>
+      <polygon class="ark-nova-map0-hex" points="492,145 468,186.569 420,186.569 396,145 420,103.431 468,103.431" fill="url(#ark-nova-map0-rock)"/>
+      <path d="M416 167l15-35 14 18 12-25 19 42z" fill="#62666c" stroke="#bcb8bf" stroke-width="2"/>
+      <text x="444" y="145" class="ark-nova-map0-debug-label">C1</text>
+    </g>
+    <g id="ark-nova-map0-cell-C2" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="C2" data-terrain="land" data-buildable="true" data-border="false" data-neighbors="B2,B3,C1,C3,D2,D3" aria-label="C2: land">
+      <title>C2: land</title>
+      <polygon class="ark-nova-map0-hex" points="492,228.138 468,269.707 420,269.707 396,228.138 420,186.569 468,186.569" fill="url(#ark-nova-map0-land)"/>
+      <text x="444" y="228.138" class="ark-nova-map0-debug-label">C2</text>
+    </g>
+    <g id="ark-nova-map0-cell-C3" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="C3" data-terrain="land" data-buildable="true" data-border="false" data-neighbors="B3,B4,C2,C4,D3,D4" data-bonus-type="card" aria-label="C3: land, placement bonus: Take 1 card within reputation range, or draw 1 from the deck">
+      <title>C3: land, placement bonus: Take 1 card within reputation range, or draw 1 from the deck</title>
+      <polygon class="ark-nova-map0-hex" points="492,311.277 468,352.846 420,352.846 396,311.277 420,269.708 468,269.708" fill="url(#ark-nova-map0-land)"/>
+      <g class="ark-nova-map0-bonus" transform="translate(444 311.277) scale(1)">
+        <use href="#ark-nova-map0-bonus-badge"/>
+        <rect x="-13" y="-17" width="25" height="31" rx="3" fill="#f7f2df" stroke="#272b2f" stroke-width="3"/>
+        <path d="M-8 -10h15M-8 -5h15" stroke="#7f8790" stroke-width="2"/>
+        <path d="M-7 2h14l-7 9z" fill="#272b2f"/>
+      </g>
+      <text x="444" y="311.277" class="ark-nova-map0-debug-label">C3</text>
+    </g>
+    <g id="ark-nova-map0-cell-C4" class="ark-nova-map0-cell ark-nova-map0-terrain-water" role="button" tabindex="0" data-cell-id="C4" data-terrain="water" data-buildable="false" data-border="false" data-neighbors="B4,B5,C3,C5,D4,D5" aria-label="C4: water, not buildable">
+      <title>C4: water, not buildable</title>
+      <polygon class="ark-nova-map0-hex" points="492,394.415 468,435.984 420,435.984 396,394.415 420,352.846 468,352.846" fill="url(#ark-nova-map0-water)"/>
+      <path d="M419 398.415q13-11 26 0t26 0" fill="none" stroke="#d4f2f5" stroke-width="3" opacity=".9"/>
+      <text x="444" y="394.415" class="ark-nova-map0-debug-label">C4</text>
+    </g>
+    <g id="ark-nova-map0-cell-C5" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="C5" data-terrain="land" data-buildable="true" data-border="false" data-neighbors="B5,B6,C4,C6,D5,D6" aria-label="C5: land">
+      <title>C5: land</title>
+      <polygon class="ark-nova-map0-hex" points="492,477.554 468,519.123 420,519.123 396,477.554 420,435.985 468,435.985" fill="url(#ark-nova-map0-land)"/>
+      <text x="444" y="477.554" class="ark-nova-map0-debug-label">C5</text>
+    </g>
+    <g id="ark-nova-map0-cell-C6" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="C6" data-terrain="land" data-buildable="true" data-border="true" data-neighbors="B6,B7,C5,D6,D7" aria-label="C6: land">
+      <title>C6: land</title>
+      <polygon class="ark-nova-map0-hex" points="492,560.692 468,602.261 420,602.261 396,560.692 420,519.123 468,519.123" fill="url(#ark-nova-map0-land)"/>
+      <text x="444" y="560.692" class="ark-nova-map0-debug-label">C6</text>
+    </g>
+    <g id="ark-nova-map0-cell-D1" class="ark-nova-map0-cell ark-nova-map0-terrain-water" role="button" tabindex="0" data-cell-id="D1" data-terrain="water" data-buildable="false" data-border="true" data-neighbors="C1,D2,E1" aria-label="D1: water, not buildable">
+      <title>D1: water, not buildable</title>
+      <polygon class="ark-nova-map0-hex" points="564,103.431 540,145 492,145 468,103.431 492,61.862 540,61.862" fill="url(#ark-nova-map0-water)"/>
+      <path d="M491 107.431q13-11 26 0t26 0" fill="none" stroke="#d4f2f5" stroke-width="3" opacity=".9"/>
+      <text x="516" y="103.431" class="ark-nova-map0-debug-label">D1</text>
+    </g>
+    <g id="ark-nova-map0-cell-D2" class="ark-nova-map0-cell ark-nova-map0-terrain-rock" role="button" tabindex="0" data-cell-id="D2" data-terrain="rock" data-buildable="false" data-border="false" data-neighbors="C1,C2,D1,D3,E1,E2" aria-label="D2: rock, not buildable">
+      <title>D2: rock, not buildable</title>
+      <polygon class="ark-nova-map0-hex" points="564,186.569 540,228.138 492,228.138 468,186.569 492,145 540,145" fill="url(#ark-nova-map0-rock)"/>
+      <path d="M488 208.569l15-35 14 18 12-25 19 42z" fill="#62666c" stroke="#bcb8bf" stroke-width="2"/>
+      <text x="516" y="186.569" class="ark-nova-map0-debug-label">D2</text>
+    </g>
+    <g id="ark-nova-map0-cell-D3" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="D3" data-terrain="land" data-buildable="true" data-border="false" data-neighbors="C2,C3,D2,D4,E2,E3" aria-label="D3: land">
+      <title>D3: land</title>
+      <polygon class="ark-nova-map0-hex" points="564,269.708 540,311.277 492,311.277 468,269.708 492,228.139 540,228.139" fill="url(#ark-nova-map0-land)"/>
+      <text x="516" y="269.708" class="ark-nova-map0-debug-label">D3</text>
+    </g>
+    <g id="ark-nova-map0-cell-D4" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="D4" data-terrain="land" data-buildable="true" data-border="false" data-neighbors="C3,C4,D3,D5,E3,E4" aria-label="D4: land">
+      <title>D4: land</title>
+      <polygon class="ark-nova-map0-hex" points="564,352.846 540,394.415 492,394.415 468,352.846 492,311.277 540,311.277" fill="url(#ark-nova-map0-land)"/>
+      <text x="516" y="352.846" class="ark-nova-map0-debug-label">D4</text>
+    </g>
+    <g id="ark-nova-map0-cell-D5" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="D5" data-terrain="land" data-buildable="true" data-border="false" data-neighbors="C4,C5,D4,D6,E4,E5" data-bonus-type="x_token" aria-label="D5: land, placement bonus: Gain 1 X-token">
+      <title>D5: land, placement bonus: Gain 1 X-token</title>
+      <polygon class="ark-nova-map0-hex" points="564,435.985 540,477.554 492,477.554 468,435.985 492,394.416 540,394.416" fill="url(#ark-nova-map0-land)"/>
+      <g class="ark-nova-map0-bonus" transform="translate(516 435.985) scale(1)">
+        <use href="#ark-nova-map0-bonus-badge"/>
+        <path d="M-17-15l8-5L0-10 9-20l8 5L8 0l9 15-8 5L0 10l-9 10-8-5 9-15z" fill="#252a2e"/>
+        <circle cx="-10" cy="-9" r="2" fill="#f5f0dd"/><circle cx="10" cy="-9" r="2" fill="#f5f0dd"/>
+        <circle cx="-10" cy="9" r="2" fill="#f5f0dd"/><circle cx="10" cy="9" r="2" fill="#f5f0dd"/>
+      </g>
+      <text x="516" y="435.985" class="ark-nova-map0-debug-label">D5</text>
+    </g>
+    <g id="ark-nova-map0-cell-D6" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="D6" data-terrain="land" data-buildable="true" data-border="false" data-neighbors="C5,C6,D5,D7,E5,E6" aria-label="D6: land">
+      <title>D6: land</title>
+      <polygon class="ark-nova-map0-hex" points="564,519.123 540,560.692 492,560.692 468,519.123 492,477.554 540,477.554" fill="url(#ark-nova-map0-land)"/>
+      <text x="516" y="519.123" class="ark-nova-map0-debug-label">D6</text>
+    </g>
+    <g id="ark-nova-map0-cell-D7" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="D7" data-terrain="land" data-buildable="true" data-border="true" data-neighbors="C6,D6,E6" data-bonus-type="card" aria-label="D7: land, placement bonus: Take 1 card within reputation range, or draw 1 from the deck">
+      <title>D7: land, placement bonus: Take 1 card within reputation range, or draw 1 from the deck</title>
+      <polygon class="ark-nova-map0-hex" points="564,602.261 540,643.83 492,643.83 468,602.261 492,560.692 540,560.692" fill="url(#ark-nova-map0-land)"/>
+      <g class="ark-nova-map0-bonus" transform="translate(516 602.261) scale(1)">
+        <use href="#ark-nova-map0-bonus-badge"/>
+        <rect x="-13" y="-17" width="25" height="31" rx="3" fill="#f7f2df" stroke="#272b2f" stroke-width="3"/>
+        <path d="M-8 -10h15M-8 -5h15" stroke="#7f8790" stroke-width="2"/>
+        <path d="M-7 2h14l-7 9z" fill="#272b2f"/>
+      </g>
+      <text x="516" y="602.261" class="ark-nova-map0-debug-label">D7</text>
+    </g>
+    <g id="ark-nova-map0-cell-E1" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="E1" data-terrain="land" data-buildable="true" data-border="true" data-neighbors="D1,D2,E2,F1,F2" data-bonus-type="x_token" aria-label="E1: land, placement bonus: Gain 1 X-token">
+      <title>E1: land, placement bonus: Gain 1 X-token</title>
+      <polygon class="ark-nova-map0-hex" points="636,145 612,186.569 564,186.569 540,145 564,103.431 612,103.431" fill="url(#ark-nova-map0-land)"/>
+      <g class="ark-nova-map0-bonus" transform="translate(588 145) scale(1)">
+        <use href="#ark-nova-map0-bonus-badge"/>
+        <path d="M-17-15l8-5L0-10 9-20l8 5L8 0l9 15-8 5L0 10l-9 10-8-5 9-15z" fill="#252a2e"/>
+        <circle cx="-10" cy="-9" r="2" fill="#f5f0dd"/><circle cx="10" cy="-9" r="2" fill="#f5f0dd"/>
+        <circle cx="-10" cy="9" r="2" fill="#f5f0dd"/><circle cx="10" cy="9" r="2" fill="#f5f0dd"/>
+      </g>
+      <text x="588" y="145" class="ark-nova-map0-debug-label">E1</text>
+    </g>
+    <g id="ark-nova-map0-cell-E2" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="E2" data-terrain="land" data-buildable="true" data-border="false" data-neighbors="D2,D3,E1,E3,F2,F3" aria-label="E2: land">
+      <title>E2: land</title>
+      <polygon class="ark-nova-map0-hex" points="636,228.138 612,269.707 564,269.707 540,228.138 564,186.569 612,186.569" fill="url(#ark-nova-map0-land)"/>
+      <text x="588" y="228.138" class="ark-nova-map0-debug-label">E2</text>
+    </g>
+    <g id="ark-nova-map0-cell-E3" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="E3" data-terrain="land" data-buildable="true" data-border="false" data-neighbors="D3,D4,E2,E4,F3,F4" data-bonus-type="money" aria-label="E3: land, placement bonus: Gain 10 money">
+      <title>E3: land, placement bonus: Gain 10 money</title>
+      <polygon class="ark-nova-map0-hex" points="636,311.277 612,352.846 564,352.846 540,311.277 564,269.708 612,269.708" fill="url(#ark-nova-map0-land)"/>
+      <g class="ark-nova-map0-bonus" transform="translate(588 311.277) scale(1)">
+        <use href="#ark-nova-map0-bonus-badge"/>
+        <rect x="-19" y="-16" width="38" height="32" rx="9" fill="#4b5860" stroke="#eef4f2" stroke-width="3"/>
+        <text x="0" y="2" class="ark-nova-map0-icon-number">10</text>
+      </g>
+      <text x="588" y="311.277" class="ark-nova-map0-debug-label">E3</text>
+    </g>
+    <g id="ark-nova-map0-cell-E4" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="E4" data-terrain="land" data-buildable="true" data-border="false" data-neighbors="D4,D5,E3,E5,F4,F5" aria-label="E4: land">
+      <title>E4: land</title>
+      <polygon class="ark-nova-map0-hex" points="636,394.415 612,435.984 564,435.984 540,394.415 564,352.846 612,352.846" fill="url(#ark-nova-map0-land)"/>
+      <text x="588" y="394.415" class="ark-nova-map0-debug-label">E4</text>
+    </g>
+    <g id="ark-nova-map0-cell-E5" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="E5" data-terrain="land" data-buildable="true" data-border="false" data-neighbors="D5,D6,E4,E6,F5,F6" aria-label="E5: land">
+      <title>E5: land</title>
+      <polygon class="ark-nova-map0-hex" points="636,477.554 612,519.123 564,519.123 540,477.554 564,435.985 612,435.985" fill="url(#ark-nova-map0-land)"/>
+      <text x="588" y="477.554" class="ark-nova-map0-debug-label">E5</text>
+    </g>
+    <g id="ark-nova-map0-cell-E6" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="E6" data-terrain="land" data-buildable="true" data-border="true" data-neighbors="D6,D7,E5,F6,F7" aria-label="E6: land">
+      <title>E6: land</title>
+      <polygon class="ark-nova-map0-hex" points="636,560.692 612,602.261 564,602.261 540,560.692 564,519.123 612,519.123" fill="url(#ark-nova-map0-land)"/>
+      <text x="588" y="560.692" class="ark-nova-map0-debug-label">E6</text>
+    </g>
+    <g id="ark-nova-map0-cell-F1" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="F1" data-terrain="land" data-buildable="true" data-border="true" data-neighbors="E1,F2,G1" aria-label="F1: land">
+      <title>F1: land</title>
+      <polygon class="ark-nova-map0-hex" points="708,103.431 684,145 636,145 612,103.431 636,61.862 684,61.862" fill="url(#ark-nova-map0-land)"/>
+      <text x="660" y="103.431" class="ark-nova-map0-debug-label">F1</text>
+    </g>
+    <g id="ark-nova-map0-cell-F2" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="F2" data-terrain="land" data-buildable="true" data-border="false" data-neighbors="E1,E2,F1,F3,G1,G2" aria-label="F2: land">
+      <title>F2: land</title>
+      <polygon class="ark-nova-map0-hex" points="708,186.569 684,228.138 636,228.138 612,186.569 636,145 684,145" fill="url(#ark-nova-map0-land)"/>
+      <text x="660" y="186.569" class="ark-nova-map0-debug-label">F2</text>
+    </g>
+    <g id="ark-nova-map0-cell-F3" class="ark-nova-map0-cell ark-nova-map0-terrain-water" role="button" tabindex="0" data-cell-id="F3" data-terrain="water" data-buildable="false" data-border="false" data-neighbors="E2,E3,F2,F4,G2,G3" aria-label="F3: water, not buildable">
+      <title>F3: water, not buildable</title>
+      <polygon class="ark-nova-map0-hex" points="708,269.708 684,311.277 636,311.277 612,269.708 636,228.139 684,228.139" fill="url(#ark-nova-map0-water)"/>
+      <path d="M635 273.708q13-11 26 0t26 0" fill="none" stroke="#d4f2f5" stroke-width="3" opacity=".9"/>
+      <text x="660" y="269.708" class="ark-nova-map0-debug-label">F3</text>
+    </g>
+    <g id="ark-nova-map0-cell-F4" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="F4" data-terrain="land" data-buildable="true" data-border="false" data-neighbors="E3,E4,F3,F5,G3,G4" data-bonus-type="action_to_slot" aria-label="F4: land, placement bonus: After finishing, move any Action card to slot 1">
+      <title>F4: land, placement bonus: After finishing, move any Action card to slot 1</title>
+      <polygon class="ark-nova-map0-hex" points="708,352.846 684,394.415 636,394.415 612,352.846 636,311.277 684,311.277" fill="url(#ark-nova-map0-land)"/>
+      <g class="ark-nova-map0-bonus" transform="translate(660 352.846) scale(1)">
+        <use href="#ark-nova-map0-bonus-badge"/>
+        <rect x="-17" y="-19" width="34" height="39" rx="6" fill="#f8f5e8" stroke="#262a2d" stroke-width="3"/>
+        <path d="M-14 6h14v11h-14z" fill="#19a8d6"/><path d="M0 6h14v11H0z" fill="#c02c86"/>
+        <text x="-4" y="-5" class="ark-nova-map0-action-one">1</text>
+        <path d="M4-13h10v8M14-13L7-7" fill="none" stroke="#262a2d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <text x="660" y="352.846" class="ark-nova-map0-debug-label">F4</text>
+    </g>
+    <g id="ark-nova-map0-cell-F5" class="ark-nova-map0-cell ark-nova-map0-terrain-rock" role="button" tabindex="0" data-cell-id="F5" data-terrain="rock" data-buildable="false" data-border="false" data-neighbors="E4,E5,F4,F6,G4,G5" aria-label="F5: rock, not buildable">
+      <title>F5: rock, not buildable</title>
+      <polygon class="ark-nova-map0-hex" points="708,435.985 684,477.554 636,477.554 612,435.985 636,394.416 684,394.416" fill="url(#ark-nova-map0-rock)"/>
+      <path d="M632 457.985l15-35 14 18 12-25 19 42z" fill="#62666c" stroke="#bcb8bf" stroke-width="2"/>
+      <text x="660" y="435.985" class="ark-nova-map0-debug-label">F5</text>
+    </g>
+    <g id="ark-nova-map0-cell-F6" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="F6" data-terrain="land" data-buildable="true" data-border="false" data-neighbors="E5,E6,F5,F7,G5,G6" data-bonus-type="x_token" aria-label="F6: land, placement bonus: Gain 1 X-token">
+      <title>F6: land, placement bonus: Gain 1 X-token</title>
+      <polygon class="ark-nova-map0-hex" points="708,519.123 684,560.692 636,560.692 612,519.123 636,477.554 684,477.554" fill="url(#ark-nova-map0-land)"/>
+      <g class="ark-nova-map0-bonus" transform="translate(660 519.123) scale(1)">
+        <use href="#ark-nova-map0-bonus-badge"/>
+        <path d="M-17-15l8-5L0-10 9-20l8 5L8 0l9 15-8 5L0 10l-9 10-8-5 9-15z" fill="#252a2e"/>
+        <circle cx="-10" cy="-9" r="2" fill="#f5f0dd"/><circle cx="10" cy="-9" r="2" fill="#f5f0dd"/>
+        <circle cx="-10" cy="9" r="2" fill="#f5f0dd"/><circle cx="10" cy="9" r="2" fill="#f5f0dd"/>
+      </g>
+      <text x="660" y="519.123" class="ark-nova-map0-debug-label">F6</text>
+    </g>
+    <g id="ark-nova-map0-cell-F7" class="ark-nova-map0-cell ark-nova-map0-terrain-rock" role="button" tabindex="0" data-cell-id="F7" data-terrain="rock" data-buildable="false" data-border="true" data-neighbors="E6,F6,G6" aria-label="F7: rock, not buildable">
+      <title>F7: rock, not buildable</title>
+      <polygon class="ark-nova-map0-hex" points="708,602.261 684,643.83 636,643.83 612,602.261 636,560.692 684,560.692" fill="url(#ark-nova-map0-rock)"/>
+      <path d="M632 624.261l15-35 14 18 12-25 19 42z" fill="#62666c" stroke="#bcb8bf" stroke-width="2"/>
+      <text x="660" y="602.261" class="ark-nova-map0-debug-label">F7</text>
+    </g>
+    <g id="ark-nova-map0-cell-G1" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="G1" data-terrain="land" data-buildable="true" data-border="true" data-neighbors="F1,F2,G2,H1,H2" aria-label="G1: land">
+      <title>G1: land</title>
+      <polygon class="ark-nova-map0-hex" points="780,145 756,186.569 708,186.569 684,145 708,103.431 756,103.431" fill="url(#ark-nova-map0-land)"/>
+      <text x="732" y="145" class="ark-nova-map0-debug-label">G1</text>
+    </g>
+    <g id="ark-nova-map0-cell-G2" class="ark-nova-map0-cell ark-nova-map0-terrain-rock" role="button" tabindex="0" data-cell-id="G2" data-terrain="rock" data-buildable="false" data-border="false" data-neighbors="F2,F3,G1,G3,H2,H3" aria-label="G2: rock, not buildable">
+      <title>G2: rock, not buildable</title>
+      <polygon class="ark-nova-map0-hex" points="780,228.138 756,269.707 708,269.707 684,228.138 708,186.569 756,186.569" fill="url(#ark-nova-map0-rock)"/>
+      <path d="M704 250.138l15-35 14 18 12-25 19 42z" fill="#62666c" stroke="#bcb8bf" stroke-width="2"/>
+      <text x="732" y="228.138" class="ark-nova-map0-debug-label">G2</text>
+    </g>
+    <g id="ark-nova-map0-cell-G3" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="G3" data-terrain="land" data-buildable="true" data-border="false" data-neighbors="F3,F4,G2,G4,H3,H4" data-build-requirement="build_action_upgraded" aria-label="G3: land, requires the Build action upgraded to side II">
+      <title>G3: land, requires the Build action upgraded to side II</title>
+      <polygon class="ark-nova-map0-hex" points="780,311.277 756,352.846 708,352.846 684,311.277 708,269.708 756,269.708" fill="url(#ark-nova-map0-land)"/>
+      <g class="ark-nova-map0-build-ii" transform="translate(732 311.277)">
+        <path d="M-48 0L0-41.57L0 41.57Z" fill="#d96045" fill-opacity=".9"/>
+        <circle cx="-8" cy="0" r="24" fill="#f5eee4" stroke="#713258" stroke-width="4"/>
+        <path d="M-20-9h13L3 1l-6 6-10-10h-7z" fill="#293136"/>
+        <text x="-2" y="18" class="ark-nova-map0-ii">II</text>
+      </g>
+      <text x="732" y="311.277" class="ark-nova-map0-debug-label">G3</text>
+    </g>
+    <g id="ark-nova-map0-cell-G4" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="G4" data-terrain="land" data-buildable="true" data-border="false" data-neighbors="F4,F5,G3,G5,H4,H5" aria-label="G4: land">
+      <title>G4: land</title>
+      <polygon class="ark-nova-map0-hex" points="780,394.415 756,435.984 708,435.984 684,394.415 708,352.846 756,352.846" fill="url(#ark-nova-map0-land)"/>
+      <text x="732" y="394.415" class="ark-nova-map0-debug-label">G4</text>
+    </g>
+    <g id="ark-nova-map0-cell-G5" class="ark-nova-map0-cell ark-nova-map0-terrain-rock" role="button" tabindex="0" data-cell-id="G5" data-terrain="rock" data-buildable="false" data-border="false" data-neighbors="F5,F6,G4,G6,H5,H6" aria-label="G5: rock, not buildable">
+      <title>G5: rock, not buildable</title>
+      <polygon class="ark-nova-map0-hex" points="780,477.554 756,519.123 708,519.123 684,477.554 708,435.985 756,435.985" fill="url(#ark-nova-map0-rock)"/>
+      <path d="M704 499.554l15-35 14 18 12-25 19 42z" fill="#62666c" stroke="#bcb8bf" stroke-width="2"/>
+      <text x="732" y="477.554" class="ark-nova-map0-debug-label">G5</text>
+    </g>
+    <g id="ark-nova-map0-cell-G6" class="ark-nova-map0-cell ark-nova-map0-terrain-rock" role="button" tabindex="0" data-cell-id="G6" data-terrain="rock" data-buildable="false" data-border="true" data-neighbors="F6,F7,G5,H6,H7" aria-label="G6: rock, not buildable">
+      <title>G6: rock, not buildable</title>
+      <polygon class="ark-nova-map0-hex" points="780,560.692 756,602.261 708,602.261 684,560.692 708,519.123 756,519.123" fill="url(#ark-nova-map0-rock)"/>
+      <path d="M704 582.692l15-35 14 18 12-25 19 42z" fill="#62666c" stroke="#bcb8bf" stroke-width="2"/>
+      <text x="732" y="560.692" class="ark-nova-map0-debug-label">G6</text>
+    </g>
+    <g id="ark-nova-map0-cell-H1" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="H1" data-terrain="land" data-buildable="true" data-border="true" data-neighbors="G1,H2,I1" aria-label="H1: land">
+      <title>H1: land</title>
+      <polygon class="ark-nova-map0-hex" points="852,103.431 828,145 780,145 756,103.431 780,61.862 828,61.862" fill="url(#ark-nova-map0-land)"/>
+      <text x="804" y="103.431" class="ark-nova-map0-debug-label">H1</text>
+    </g>
+    <g id="ark-nova-map0-cell-H2" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="H2" data-terrain="land" data-buildable="true" data-border="false" data-neighbors="G1,G2,H1,H3,I1,I2" data-bonus-type="money" aria-label="H2: land, placement bonus: Gain 5 money">
+      <title>H2: land, placement bonus: Gain 5 money</title>
+      <polygon class="ark-nova-map0-hex" points="852,186.569 828,228.138 780,228.138 756,186.569 780,145 828,145" fill="url(#ark-nova-map0-land)"/>
+      <g class="ark-nova-map0-bonus" transform="translate(804 186.569) scale(1)">
+        <use href="#ark-nova-map0-bonus-badge"/>
+        <rect x="-19" y="-16" width="38" height="32" rx="9" fill="#4b5860" stroke="#eef4f2" stroke-width="3"/>
+        <text x="0" y="2" class="ark-nova-map0-icon-number">5</text>
+      </g>
+      <text x="804" y="186.569" class="ark-nova-map0-debug-label">H2</text>
+    </g>
+    <g id="ark-nova-map0-cell-H3" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="H3" data-terrain="land" data-buildable="true" data-border="false" data-neighbors="G2,G3,H2,H4,I2,I3" data-build-requirement="build_action_upgraded" aria-label="H3: land, requires the Build action upgraded to side II">
+      <title>H3: land, requires the Build action upgraded to side II</title>
+      <polygon class="ark-nova-map0-hex" points="852,269.708 828,311.277 780,311.277 756,269.708 780,228.139 828,228.139" fill="url(#ark-nova-map0-land)"/>
+      <g class="ark-nova-map0-build-ii" transform="translate(804 269.708)">
+        <path d="M-48 0L0-41.57L0 41.57Z" fill="#d96045" fill-opacity=".9"/>
+        <circle cx="-8" cy="0" r="24" fill="#f5eee4" stroke="#713258" stroke-width="4"/>
+        <path d="M-20-9h13L3 1l-6 6-10-10h-7z" fill="#293136"/>
+        <text x="-2" y="18" class="ark-nova-map0-ii">II</text>
+      </g>
+      <text x="804" y="269.708" class="ark-nova-map0-debug-label">H3</text>
+    </g>
+    <g id="ark-nova-map0-cell-H4" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="H4" data-terrain="land" data-buildable="true" data-border="false" data-neighbors="G3,G4,H3,H5,I3,I4" aria-label="H4: land">
+      <title>H4: land</title>
+      <polygon class="ark-nova-map0-hex" points="852,352.846 828,394.415 780,394.415 756,352.846 780,311.277 828,311.277" fill="url(#ark-nova-map0-land)"/>
+      <text x="804" y="352.846" class="ark-nova-map0-debug-label">H4</text>
+    </g>
+    <g id="ark-nova-map0-cell-H5" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="H5" data-terrain="land" data-buildable="true" data-border="false" data-neighbors="G4,G5,H4,H6,I4,I5" aria-label="H5: land">
+      <title>H5: land</title>
+      <polygon class="ark-nova-map0-hex" points="852,435.985 828,477.554 780,477.554 756,435.985 780,394.416 828,394.416" fill="url(#ark-nova-map0-land)"/>
+      <text x="804" y="435.985" class="ark-nova-map0-debug-label">H5</text>
+    </g>
+    <g id="ark-nova-map0-cell-H6" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="H6" data-terrain="land" data-buildable="true" data-border="false" data-neighbors="G5,G6,H5,H7,I5,I6" data-bonus-type="appeal" aria-label="H6: land, placement bonus: Gain 2 appeal">
+      <title>H6: land, placement bonus: Gain 2 appeal</title>
+      <polygon class="ark-nova-map0-hex" points="852,519.123 828,560.692 780,560.692 756,519.123 780,477.554 828,477.554" fill="url(#ark-nova-map0-land)"/>
+      <g class="ark-nova-map0-bonus" transform="translate(804 519.123) scale(1)">
+        <use href="#ark-nova-map0-bonus-badge"/>
+        <path d="M-16-17h32v8c-5 1-5 9 0 10v8h-32V1c5-1 5-9 0-10z" fill="#e8816d" stroke="#2d3033" stroke-width="3"/>
+        <text x="0" y="2" class="ark-nova-map0-icon-number">2</text>
+      </g>
+      <text x="804" y="519.123" class="ark-nova-map0-debug-label">H6</text>
+    </g>
+    <g id="ark-nova-map0-cell-H7" class="ark-nova-map0-cell ark-nova-map0-terrain-water" role="button" tabindex="0" data-cell-id="H7" data-terrain="water" data-buildable="false" data-border="true" data-neighbors="G6,H6,I6" aria-label="H7: water, not buildable">
+      <title>H7: water, not buildable</title>
+      <polygon class="ark-nova-map0-hex" points="852,602.261 828,643.83 780,643.83 756,602.261 780,560.692 828,560.692" fill="url(#ark-nova-map0-water)"/>
+      <path d="M779 606.261q13-11 26 0t26 0" fill="none" stroke="#d4f2f5" stroke-width="3" opacity=".9"/>
+      <text x="804" y="602.261" class="ark-nova-map0-debug-label">H7</text>
+    </g>
+    <g id="ark-nova-map0-cell-I1" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="I1" data-terrain="land" data-buildable="true" data-border="true" data-neighbors="H1,H2,I2" aria-label="I1: land">
+      <title>I1: land</title>
+      <polygon class="ark-nova-map0-hex" points="924,145 900,186.569 852,186.569 828,145 852,103.431 900,103.431" fill="url(#ark-nova-map0-land)"/>
+      <text x="876" y="145" class="ark-nova-map0-debug-label">I1</text>
+    </g>
+    <g id="ark-nova-map0-cell-I2" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="I2" data-terrain="land" data-buildable="true" data-border="true" data-neighbors="H2,H3,I1,I3" aria-label="I2: land">
+      <title>I2: land</title>
+      <polygon class="ark-nova-map0-hex" points="924,228.138 900,269.707 852,269.707 828,228.138 852,186.569 900,186.569" fill="url(#ark-nova-map0-land)"/>
+      <text x="876" y="228.138" class="ark-nova-map0-debug-label">I2</text>
+    </g>
+    <g id="ark-nova-map0-cell-I3" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="I3" data-terrain="land" data-buildable="true" data-border="true" data-neighbors="H3,H4,I2,I4" aria-label="I3: land">
+      <title>I3: land</title>
+      <polygon class="ark-nova-map0-hex" points="924,311.277 900,352.846 852,352.846 828,311.277 852,269.708 900,269.708" fill="url(#ark-nova-map0-land)"/>
+      <text x="876" y="311.277" class="ark-nova-map0-debug-label">I3</text>
+    </g>
+    <g id="ark-nova-map0-cell-I4" class="ark-nova-map0-cell ark-nova-map0-terrain-land" role="button" tabindex="0" data-cell-id="I4" data-terrain="land" data-buildable="true" data-border="true" data-neighbors="H4,H5,I3,I5" data-bonus-type="money" aria-label="I4: land, placement bonus: Gain 5 money">
+      <title>I4: land, placement bonus: Gain 5 money</title>
+      <polygon class="ark-nova-map0-hex" points="924,394.415 900,435.984 852,435.984 828,394.415 852,352.846 900,352.846" fill="url(#ark-nova-map0-land)"/>
+      <g class="ark-nova-map0-bonus" transform="translate(876 394.415) scale(1)">
+        <use href="#ark-nova-map0-bonus-badge"/>
+        <rect x="-19" y="-16" width="38" height="32" rx="9" fill="#4b5860" stroke="#eef4f2" stroke-width="3"/>
+        <text x="0" y="2" class="ark-nova-map0-icon-number">5</text>
+      </g>
+      <text x="876" y="394.415" class="ark-nova-map0-debug-label">I4</text>
+    </g>
+    <g id="ark-nova-map0-cell-I5" class="ark-nova-map0-cell ark-nova-map0-terrain-water" role="button" tabindex="0" data-cell-id="I5" data-terrain="water" data-buildable="false" data-border="true" data-neighbors="H5,H6,I4,I6" aria-label="I5: water, not buildable">
+      <title>I5: water, not buildable</title>
+      <polygon class="ark-nova-map0-hex" points="924,477.554 900,519.123 852,519.123 828,477.554 852,435.985 900,435.985" fill="url(#ark-nova-map0-water)"/>
+      <path d="M851 481.554q13-11 26 0t26 0" fill="none" stroke="#d4f2f5" stroke-width="3" opacity=".9"/>
+      <text x="876" y="477.554" class="ark-nova-map0-debug-label">I5</text>
+    </g>
+    <g id="ark-nova-map0-cell-I6" class="ark-nova-map0-cell ark-nova-map0-terrain-water" role="button" tabindex="0" data-cell-id="I6" data-terrain="water" data-buildable="false" data-border="true" data-neighbors="H6,H7,I5" aria-label="I6: water, not buildable">
+      <title>I6: water, not buildable</title>
+      <polygon class="ark-nova-map0-hex" points="924,560.692 900,602.261 852,602.261 828,560.692 852,519.123 900,519.123" fill="url(#ark-nova-map0-water)"/>
+      <path d="M851 564.692q13-11 26 0t26 0" fill="none" stroke="#d4f2f5" stroke-width="3" opacity=".9"/>
+      <text x="876" y="560.692" class="ark-nova-map0-debug-label">I6</text>
+    </g>
+  </g>
+  <g id="ark-nova-map0-conservation-rewards" aria-label="Conservation project rewards">
+    <rect x="18" y="28" width="196" height="632" rx="22" fill="#f2f0e9" stroke="#455c55" stroke-width="4"/>
+    <text x="36" y="60" class="ark-nova-map0-subheading">CONSERVATION</text>
+    <text x="36" y="78" class="ark-nova-map0-small">Uncover one reward per project</text>
+    <g id="ark-nova-map0-reward-card_income" data-reward-id="card_income" data-timing="immediate_and_each_break">
+      <title>Take 1 card within reputation range, or draw 1 card from the deck — Immediate + each break</title>
+      <rect x="34" y="93" width="155" height="56" rx="12" fill="#9670a5" stroke="#384640" stroke-width="2.5"/>
+      <circle cx="57" cy="121" r="16" fill="#e9e5d9" stroke="#53645d" stroke-width="2"/>
+      <path d="M49 121h16M57 113v16" stroke="#9aa39d" stroke-width="2"/>
+      <g class="ark-nova-map0-bonus" transform="translate(102 121) scale(0.76)">
+        <use href="#ark-nova-map0-bonus-badge"/>
+        <rect x="-13" y="-17" width="25" height="31" rx="3" fill="#f7f2df" stroke="#272b2f" stroke-width="3"/>
+        <path d="M-8 -10h15M-8 -5h15" stroke="#7f8790" stroke-width="2"/>
+        <path d="M-7 2h14l-7 9z" fill="#272b2f"/>
+      </g>
+      <text x="143" y="119" class="ark-nova-map0-caption" text-anchor="middle">CARD</text>
+      <text x="174" y="138" class="ark-nova-map0-caption" text-anchor="middle">↻</text>
+    </g>
+    <g id="ark-nova-map0-reward-enclosure_2_income" data-reward-id="enclosure_2_income" data-timing="immediate_and_each_break">
+      <title>Build a size-2 standard enclosure for free — Immediate + each break</title>
+      <rect x="34" y="168" width="155" height="56" rx="12" fill="#9670a5" stroke="#384640" stroke-width="2.5"/>
+      <circle cx="57" cy="196" r="16" fill="#e9e5d9" stroke="#53645d" stroke-width="2"/>
+      <path d="M49 196h16M57 188v16" stroke="#9aa39d" stroke-width="2"/>
+      <g transform="translate(102 196)">
+        <path d="M-20 0l10-17h20L20 0 10 17h-20z" fill="#8a6332" stroke="#f8f1d9" stroke-width="2"/>
+        <text x="0" y="2" class="ark-nova-map0-icon-number">2</text>
+      </g>
+      <text x="143" y="194" class="ark-nova-map0-caption" text-anchor="middle">SIZE 2</text>
+      <text x="174" y="213" class="ark-nova-map0-caption" text-anchor="middle">↻</text>
+    </g>
+    <g id="ark-nova-map0-reward-money_5_income" data-reward-id="money_5_income" data-timing="immediate_and_each_break">
+      <title>Gain 5 money — Immediate + each break</title>
+      <rect x="34" y="243" width="155" height="56" rx="12" fill="#9670a5" stroke="#384640" stroke-width="2.5"/>
+      <circle cx="57" cy="271" r="16" fill="#e9e5d9" stroke="#53645d" stroke-width="2"/>
+      <path d="M49 271h16M57 263v16" stroke="#9aa39d" stroke-width="2"/>
+      <g class="ark-nova-map0-bonus" transform="translate(102 271) scale(0.76)">
+        <use href="#ark-nova-map0-bonus-badge"/>
+        <rect x="-19" y="-16" width="38" height="32" rx="9" fill="#4b5860" stroke="#eef4f2" stroke-width="3"/>
+        <text x="0" y="2" class="ark-nova-map0-icon-number">5</text>
+      </g>
+      <text x="143" y="269" class="ark-nova-map0-caption" text-anchor="middle">$5</text>
+      <text x="174" y="288" class="ark-nova-map0-caption" text-anchor="middle">↻</text>
+    </g>
+    <g id="ark-nova-map0-reward-conservation_1_income" data-reward-id="conservation_1_income" data-timing="immediate_and_each_break">
+      <title>Gain 1 conservation point — Immediate + each break</title>
+      <rect x="34" y="318" width="155" height="56" rx="12" fill="#9670a5" stroke="#384640" stroke-width="2.5"/>
+      <circle cx="57" cy="346" r="16" fill="#e9e5d9" stroke="#53645d" stroke-width="2"/>
+      <path d="M49 346h16M57 338v16" stroke="#9aa39d" stroke-width="2"/>
+      <g transform="translate(102 346)">
+        <path d="M0-21l20 7v14c0 13-9 21-20 26-11-5-20-13-20-26v-14z" fill="#b7db9b" stroke="#35683e" stroke-width="3"/>
+        <text x="0" y="2" class="ark-nova-map0-icon-number">1</text>
+      </g>
+      <text x="143" y="344" class="ark-nova-map0-caption" text-anchor="middle">1 CP</text>
+      <text x="174" y="363" class="ark-nova-map0-caption" text-anchor="middle">↻</text>
+    </g>
+    <g id="ark-nova-map0-reward-association_worker" data-reward-id="association_worker" data-timing="immediate_once">
+      <title>Gain 1 association worker — Immediate once</title>
+      <rect x="34" y="393" width="155" height="56" rx="12" fill="#f1d252" stroke="#384640" stroke-width="2.5"/>
+      <circle cx="57" cy="421" r="16" fill="#e9e5d9" stroke="#53645d" stroke-width="2"/>
+      <path d="M49 421h16M57 413v16" stroke="#9aa39d" stroke-width="2"/>
+      <g transform="translate(102 421)">
+        <circle cx="0" cy="-10" r="9" fill="#26292b"/>
+        <path d="M-17 18c1-15 7-22 17-22s16 7 17 22z" fill="#26292b"/>
+        <path d="M-18 7h12M-12 1v12" stroke="#f7f2df" stroke-width="4"/>
+      </g>
+      <text x="143" y="419" class="ark-nova-map0-caption" text-anchor="middle">WORKER</text>
+      <text x="174" y="438" class="ark-nova-map0-caption" text-anchor="middle">⚡</text>
+    </g>
+    <g id="ark-nova-map0-reward-money_12" data-reward-id="money_12" data-timing="immediate_once">
+      <title>Gain 12 money — Immediate once</title>
+      <rect x="34" y="468" width="155" height="56" rx="12" fill="#f1d252" stroke="#384640" stroke-width="2.5"/>
+      <circle cx="57" cy="496" r="16" fill="#e9e5d9" stroke="#53645d" stroke-width="2"/>
+      <path d="M49 496h16M57 488v16" stroke="#9aa39d" stroke-width="2"/>
+      <g class="ark-nova-map0-bonus" transform="translate(102 496) scale(0.76)">
+        <use href="#ark-nova-map0-bonus-badge"/>
+        <rect x="-19" y="-16" width="38" height="32" rx="9" fill="#4b5860" stroke="#eef4f2" stroke-width="3"/>
+        <text x="0" y="2" class="ark-nova-map0-icon-number">12</text>
+      </g>
+      <text x="143" y="494" class="ark-nova-map0-caption" text-anchor="middle">$12</text>
+      <text x="174" y="513" class="ark-nova-map0-caption" text-anchor="middle">⚡</text>
+    </g>
+    <g id="ark-nova-map0-reward-x_token_3" data-reward-id="x_token_3" data-timing="immediate_once">
+      <title>Gain 3 X-tokens — Immediate once</title>
+      <rect x="34" y="543" width="155" height="56" rx="12" fill="#f1d252" stroke="#384640" stroke-width="2.5"/>
+      <circle cx="57" cy="571" r="16" fill="#e9e5d9" stroke="#53645d" stroke-width="2"/>
+      <path d="M49 571h16M57 563v16" stroke="#9aa39d" stroke-width="2"/>
+      <g class="ark-nova-map0-bonus" transform="translate(102 571) scale(0.76)">
+        <use href="#ark-nova-map0-bonus-badge"/>
+        <path d="M-17-15l8-5L0-10 9-20l8 5L8 0l9 15-8 5L0 10l-9 10-8-5 9-15z" fill="#252a2e"/>
+        <circle cx="-10" cy="-9" r="2" fill="#f5f0dd"/><circle cx="10" cy="-9" r="2" fill="#f5f0dd"/>
+        <circle cx="-10" cy="9" r="2" fill="#f5f0dd"/><circle cx="10" cy="9" r="2" fill="#f5f0dd"/>
+      </g>
+      <text x="143" y="569" class="ark-nova-map0-caption" text-anchor="middle">3 X</text>
+      <text x="174" y="588" class="ark-nova-map0-caption" text-anchor="middle">⚡</text>
+    </g>
+  </g>
+  <g id="ark-nova-map0-info" aria-label="Map information">
+    <rect x="970" y="28" width="352" height="632" rx="22" fill="#f6f3e9" stroke="#455c55" stroke-width="4"/>
+    <text x="994" y="62" class="ark-nova-map0-heading">MAP 0</text>
+    <text x="1110" y="58" class="ark-nova-map0-small">INTERMEDIATE</text>
+    <text x="1110" y="72" class="ark-nova-map0-small">IDENTICAL FOR ALL PLAYERS</text>
+    <rect x="994" y="88" width="304" height="83" rx="14" fill="#d7e6cd" stroke="#54745a" stroke-width="2"/>
+    <text x="1012" y="111" class="ark-nova-map0-caption">COMPLETE THE ZOO MAP</text>
+    <path d="M1042 122h25l12 21-12 21h-25l-12-21z" fill="#e8816d" stroke="#384640" stroke-width="2"/>
+    <text x="1054" y="145" class="ark-nova-map0-icon-number">7</text>
+    <text x="1094" y="138" class="ark-nova-map0-caption">appeal</text>
+    <text x="1094" y="155" class="ark-nova-map0-small">cover all 39 land spaces</text>
+    <text x="994" y="203" class="ark-nova-map0-subheading">PLACEMENT BONUSES</text>
+      <g class="ark-nova-map0-bonus" transform="translate(1020 242) scale(0.64)">
+        <use href="#ark-nova-map0-bonus-badge"/>
+        <rect x="-13" y="-17" width="25" height="31" rx="3" fill="#f7f2df" stroke="#272b2f" stroke-width="3"/>
+        <path d="M-8 -10h15M-8 -5h15" stroke="#7f8790" stroke-width="2"/>
+        <path d="M-7 2h14l-7 9z" fill="#272b2f"/>
+      </g>
+    <text x="1046" y="245" class="ark-nova-map0-small">Take 1 card</text>
+      <g class="ark-nova-map0-bonus" transform="translate(1174 242) scale(0.64)">
+        <use href="#ark-nova-map0-bonus-badge"/>
+        <rect x="-19" y="-16" width="38" height="32" rx="9" fill="#4b5860" stroke="#eef4f2" stroke-width="3"/>
+        <text x="0" y="2" class="ark-nova-map0-icon-number">5</text>
+      </g>
+    <text x="1200" y="245" class="ark-nova-map0-small">Gain money</text>
+      <g class="ark-nova-map0-bonus" transform="translate(1020 311) scale(0.64)">
+        <use href="#ark-nova-map0-bonus-badge"/>
+        <path d="M-17-15l8-5L0-10 9-20l8 5L8 0l9 15-8 5L0 10l-9 10-8-5 9-15z" fill="#252a2e"/>
+        <circle cx="-10" cy="-9" r="2" fill="#f5f0dd"/><circle cx="10" cy="-9" r="2" fill="#f5f0dd"/>
+        <circle cx="-10" cy="9" r="2" fill="#f5f0dd"/><circle cx="10" cy="9" r="2" fill="#f5f0dd"/>
+      </g>
+    <text x="1046" y="314" class="ark-nova-map0-small">Gain X-token</text>
+      <g class="ark-nova-map0-bonus" transform="translate(1174 311) scale(0.64)">
+        <use href="#ark-nova-map0-bonus-badge"/>
+        <path d="M-16-17h32v8c-5 1-5 9 0 10v8h-32V1c5-1 5-9 0-10z" fill="#e8816d" stroke="#2d3033" stroke-width="3"/>
+        <text x="0" y="2" class="ark-nova-map0-icon-number">2</text>
+      </g>
+    <text x="1200" y="314" class="ark-nova-map0-small">Gain appeal</text>
+      <g class="ark-nova-map0-bonus" transform="translate(1020 380) scale(0.64)">
+        <use href="#ark-nova-map0-bonus-badge"/>
+        <rect x="-17" y="-19" width="34" height="39" rx="6" fill="#f8f5e8" stroke="#262a2d" stroke-width="3"/>
+        <path d="M-14 6h14v11h-14z" fill="#19a8d6"/><path d="M0 6h14v11H0z" fill="#c02c86"/>
+        <text x="-4" y="-5" class="ark-nova-map0-action-one">1</text>
+        <path d="M4-13h10v8M14-13L7-7" fill="none" stroke="#262a2d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+    <text x="1046" y="383" class="ark-nova-map0-small">Action to slot 1</text>
+    <text x="994" y="455" class="ark-nova-map0-subheading">BUILDING CONDITIONS</text>
+    <g transform="translate(1024 498) scale(.7)">
+      <g class="ark-nova-map0-build-ii" transform="translate(0 0)">
+        <path d="M-48 0L0-41.57L0 41.57Z" fill="#d96045" fill-opacity=".9"/>
+        <circle cx="-8" cy="0" r="24" fill="#f5eee4" stroke="#713258" stroke-width="4"/>
+        <path d="M-20-9h13L3 1l-6 6-10-10h-7z" fill="#293136"/>
+        <text x="-2" y="18" class="ark-nova-map0-ii">II</text>
+      </g>
+    </g>
+    <text x="1066" y="493" class="ark-nova-map0-caption">Build action side II required</text>
+    <text x="1066" y="510" class="ark-nova-map0-small">G3 and H3 only</text>
+    <polygon points="1004,557 1031,557 1045,580 1031,603 1004,603 990,580" fill="url(#ark-nova-map0-water)" stroke="#f8f0cf" stroke-width="2"/>
+    <text x="1058" y="577" class="ark-nova-map0-caption">Water · not buildable</text>
+    <text x="1058" y="594" class="ark-nova-map0-small">counts for adjacency</text>
+    <polygon points="1165,557 1192,557 1206,580 1192,603 1165,603 1151,580" fill="url(#ark-nova-map0-rock)" stroke="#f8f0cf" stroke-width="2"/>
+    <text x="1219" y="577" class="ark-nova-map0-caption">Rock</text>
+    <text x="1219" y="594" class="ark-nova-map0-small">not buildable</text>
+    <text x="994" y="632" class="ark-nova-map0-small">58 hexes · 39 land · 10 water · 9 rock · 12 bonuses</text>
+  </g>
+  <g id="ark-nova-map0-action-slots" aria-label="Action card slots">
+    <text x="244" y="697" class="ark-nova-map0-subheading">ACTION STRENGTH</text>
+    <g id="ark-nova-map0-action-slot-1" data-action-slot="1">
+      <path d="M244 716h130l8 92H236z" fill="#704a35" stroke="#382f2a" stroke-width="3"/>
+      <rect x="291" y="700" width="40" height="35" rx="6" fill="#30373a"/>
+      <text x="311" y="719" class="ark-nova-map0-slot-number">1</text>
+      <text x="309" y="773" class="ark-nova-map0-caption" fill="#f3e8d1" text-anchor="middle">ACTION CARD</text>
+    </g>
+    <g id="ark-nova-map0-action-slot-2" data-action-slot="2">
+      <path d="M386 716h130l8 92H378z" fill="#704a35" stroke="#382f2a" stroke-width="3"/>
+      <rect x="433" y="700" width="40" height="35" rx="6" fill="#30373a"/>
+      <text x="453" y="719" class="ark-nova-map0-slot-number">2</text>
+      <text x="451" y="773" class="ark-nova-map0-caption" fill="#f3e8d1" text-anchor="middle">ACTION CARD</text>
+    </g>
+    <g id="ark-nova-map0-action-slot-3" data-action-slot="3">
+      <path d="M528 716h130l8 92H520z" fill="#704a35" stroke="#382f2a" stroke-width="3"/>
+      <rect x="575" y="700" width="40" height="35" rx="6" fill="#30373a"/>
+      <text x="595" y="719" class="ark-nova-map0-slot-number">3</text>
+      <text x="593" y="773" class="ark-nova-map0-caption" fill="#f3e8d1" text-anchor="middle">ACTION CARD</text>
+    </g>
+    <g id="ark-nova-map0-action-slot-4" data-action-slot="4">
+      <path d="M670 716h130l8 92H662z" fill="#704a35" stroke="#382f2a" stroke-width="3"/>
+      <rect x="717" y="700" width="40" height="35" rx="6" fill="#30373a"/>
+      <text x="737" y="719" class="ark-nova-map0-slot-number">4</text>
+      <text x="735" y="773" class="ark-nova-map0-caption" fill="#f3e8d1" text-anchor="middle">ACTION CARD</text>
+    </g>
+    <g id="ark-nova-map0-action-slot-5" data-action-slot="5">
+      <path d="M812 716h130l8 92H804z" fill="#704a35" stroke="#382f2a" stroke-width="3"/>
+      <rect x="859" y="700" width="40" height="35" rx="6" fill="#30373a"/>
+      <text x="879" y="719" class="ark-nova-map0-slot-number">5</text>
+      <text x="877" y="773" class="ark-nova-map0-caption" fill="#f3e8d1" text-anchor="middle">ACTION CARD</text>
+    </g>
+  </g>
+  <g aria-label="X-token capacity">
+    <rect x="970" y="686" width="352" height="122" rx="18" fill="#dce8f2" stroke="#536b79" stroke-width="3"/>
+    <text x="994" y="719" class="ark-nova-map0-subheading">X-TOKEN STORAGE</text>
+    <text x="994" y="744" class="ark-nova-map0-caption">Maximum 5</text>
+    <g transform="translate(1168 748)">
+      <path d="M-17-15l8-5L0-10 9-20l8 5L8 0l9 15-8 5L0 10l-9 10-8-5 9-15z" fill="#252a2e"/>
+      <circle cx="-10" cy="-9" r="2" fill="#f5f0dd"/><circle cx="10" cy="-9" r="2" fill="#f5f0dd"/><circle cx="-10" cy="9" r="2" fill="#f5f0dd"/><circle cx="10" cy="9" r="2" fill="#f5f0dd"/>
+    </g>
+    <text x="1204" y="755" class="ark-nova-map0-heading">× 5</text>
+    <text x="994" y="788" class="ark-nova-map0-small">Cell IDs and rules are embedded as data-* attributes.</text>
+  </g>
+</svg>

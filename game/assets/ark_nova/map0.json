@@ -1,0 +1,1691 @@
+{
+  "schema_version": 1,
+  "id": "map0",
+  "name": "Map 0",
+  "recommended_level": "intermediate",
+  "view_box": {
+    "width": 1340,
+    "height": 830
+  },
+  "layout": {
+    "radius": 48,
+    "origin": {
+      "x": 300,
+      "y": 145
+    },
+    "column_lengths": [
+      6,
+      7,
+      6,
+      7,
+      6,
+      7,
+      6,
+      7,
+      6
+    ],
+    "orientation": "flat_top",
+    "odd_columns_shift": "up",
+    "x_step": 72,
+    "y_step": 83.138
+  },
+  "terrain": {
+    "water": [
+      "A1",
+      "A2",
+      "B1",
+      "B6",
+      "C4",
+      "D1",
+      "F3",
+      "H7",
+      "I5",
+      "I6"
+    ],
+    "rock": [
+      "A6",
+      "B7",
+      "C1",
+      "D2",
+      "F5",
+      "F7",
+      "G2",
+      "G5",
+      "G6"
+    ]
+  },
+  "placement_bonuses": [
+    {
+      "cell": "B2",
+      "type": "card",
+      "amount": 1,
+      "selection": "reputation_range_or_deck"
+    },
+    {
+      "cell": "E1",
+      "type": "x_token",
+      "amount": 1
+    },
+    {
+      "cell": "H2",
+      "type": "money",
+      "amount": 5
+    },
+    {
+      "cell": "C3",
+      "type": "card",
+      "amount": 1,
+      "selection": "reputation_range_or_deck"
+    },
+    {
+      "cell": "E3",
+      "type": "money",
+      "amount": 10
+    },
+    {
+      "cell": "F4",
+      "type": "action_to_slot",
+      "slot": 1,
+      "resolve": "after_finishing_current_action"
+    },
+    {
+      "cell": "D5",
+      "type": "x_token",
+      "amount": 1
+    },
+    {
+      "cell": "I4",
+      "type": "money",
+      "amount": 5
+    },
+    {
+      "cell": "A5",
+      "type": "appeal",
+      "amount": 2
+    },
+    {
+      "cell": "F6",
+      "type": "x_token",
+      "amount": 1
+    },
+    {
+      "cell": "H6",
+      "type": "appeal",
+      "amount": 2
+    },
+    {
+      "cell": "D7",
+      "type": "card",
+      "amount": 1,
+      "selection": "reputation_range_or_deck"
+    }
+  ],
+  "build_ii_cells": [
+    "G3",
+    "H3"
+  ],
+  "conservation_rewards": [
+    {
+      "id": "card_income",
+      "type": "card",
+      "amount": 1,
+      "selection": "reputation_range_or_deck",
+      "timing": "immediate_and_each_break",
+      "short_label": "CARD",
+      "label": "Take 1 card within reputation range, or draw 1 card from the deck"
+    },
+    {
+      "id": "enclosure_2_income",
+      "type": "free_enclosure",
+      "size": 2,
+      "timing": "immediate_and_each_break",
+      "short_label": "SIZE 2",
+      "label": "Build a size-2 standard enclosure for free"
+    },
+    {
+      "id": "money_5_income",
+      "type": "money",
+      "amount": 5,
+      "timing": "immediate_and_each_break",
+      "short_label": "$5",
+      "label": "Gain 5 money"
+    },
+    {
+      "id": "conservation_1_income",
+      "type": "conservation",
+      "amount": 1,
+      "timing": "immediate_and_each_break",
+      "short_label": "1 CP",
+      "label": "Gain 1 conservation point"
+    },
+    {
+      "id": "association_worker",
+      "type": "association_worker",
+      "amount": 1,
+      "timing": "immediate_once",
+      "short_label": "WORKER",
+      "label": "Gain 1 association worker"
+    },
+    {
+      "id": "money_12",
+      "type": "money",
+      "amount": 12,
+      "timing": "immediate_once",
+      "short_label": "$12",
+      "label": "Gain 12 money"
+    },
+    {
+      "id": "x_token_3",
+      "type": "x_token",
+      "amount": 3,
+      "timing": "immediate_once",
+      "short_label": "3 X",
+      "label": "Gain 3 X-tokens"
+    }
+  ],
+  "completion_bonus": {
+    "type": "appeal",
+    "amount": 7,
+    "condition": "all_buildable_spaces_covered"
+  },
+  "x_token_limit": 5,
+  "expected_counts": {
+    "total": 58,
+    "buildable": 39,
+    "land": 39,
+    "water": 10,
+    "rock": 9,
+    "placement_bonuses": 12,
+    "build_ii": 2
+  },
+  "expected_bonus_counts": {
+    "card": 3,
+    "money": 3,
+    "x_token": 3,
+    "appeal": 2,
+    "action_to_slot": 1
+  },
+  "source_notes": [
+    {
+      "kind": "visual_reference",
+      "title": "Steam Workshop: Ark Nova",
+      "url": "https://steamcommunity.com/sharedfiles/filedetails/?id=2630864749",
+      "note": "Used only to identify the Map 0 layout; the shipped SVG is an original vector drawing and embeds no Workshop raster assets."
+    },
+    {
+      "kind": "visual_cross_check",
+      "title": "Steam Workshop: Ark Nova with Marine Worlds expansion (scripted)",
+      "url": "https://steamcommunity.com/sharedfiles/filedetails/?id=2953525089",
+      "note": "The later mod points to a clearer final-edition Map 0 scan used for cell-by-cell comparison."
+    },
+    {
+      "kind": "rules_reference",
+      "title": "Official Ark Nova Rulebook",
+      "url": "https://capstone-games.com/cdn/shop/files/Ark-Nova-Rulebook.pdf",
+      "note": "Used to verify terrain, placement-bonus, Build II, conservation-reward, and completion-bonus rules."
+    },
+    {
+      "kind": "icon_reference",
+      "title": "Official Ark Nova Icon Overview",
+      "url": "https://cdn.shopify.com/s/files/1/0947/3907/1278/files/Ark-Nova-Icon-Overview.pdf",
+      "note": "Used to disambiguate the card, appeal, X-token, timing, and action-slot symbols."
+    }
+  ],
+  "cells": [
+    {
+      "id": "A1",
+      "column": "A",
+      "column_index": 0,
+      "row": 1,
+      "axial": {
+        "q": 0,
+        "r": 0
+      },
+      "center": {
+        "x": 300,
+        "y": 145
+      },
+      "terrain": "water",
+      "buildable": false,
+      "neighbors": [
+        "A2",
+        "B1",
+        "B2"
+      ],
+      "border": true
+    },
+    {
+      "id": "A2",
+      "column": "A",
+      "column_index": 0,
+      "row": 2,
+      "axial": {
+        "q": 0,
+        "r": 1
+      },
+      "center": {
+        "x": 300,
+        "y": 228.138
+      },
+      "terrain": "water",
+      "buildable": false,
+      "neighbors": [
+        "A1",
+        "A3",
+        "B2",
+        "B3"
+      ],
+      "border": true
+    },
+    {
+      "id": "A3",
+      "column": "A",
+      "column_index": 0,
+      "row": 3,
+      "axial": {
+        "q": 0,
+        "r": 2
+      },
+      "center": {
+        "x": 300,
+        "y": 311.277
+      },
+      "terrain": "land",
+      "buildable": true,
+      "neighbors": [
+        "A2",
+        "A4",
+        "B3",
+        "B4"
+      ],
+      "border": true
+    },
+    {
+      "id": "A4",
+      "column": "A",
+      "column_index": 0,
+      "row": 4,
+      "axial": {
+        "q": 0,
+        "r": 3
+      },
+      "center": {
+        "x": 300,
+        "y": 394.415
+      },
+      "terrain": "land",
+      "buildable": true,
+      "neighbors": [
+        "A3",
+        "A5",
+        "B4",
+        "B5"
+      ],
+      "border": true
+    },
+    {
+      "id": "A5",
+      "column": "A",
+      "column_index": 0,
+      "row": 5,
+      "axial": {
+        "q": 0,
+        "r": 4
+      },
+      "center": {
+        "x": 300,
+        "y": 477.554
+      },
+      "terrain": "land",
+      "buildable": true,
+      "placement_bonus": {
+        "type": "appeal",
+        "amount": 2
+      },
+      "neighbors": [
+        "A4",
+        "A6",
+        "B5",
+        "B6"
+      ],
+      "border": true
+    },
+    {
+      "id": "A6",
+      "column": "A",
+      "column_index": 0,
+      "row": 6,
+      "axial": {
+        "q": 0,
+        "r": 5
+      },
+      "center": {
+        "x": 300,
+        "y": 560.692
+      },
+      "terrain": "rock",
+      "buildable": false,
+      "neighbors": [
+        "A5",
+        "B6",
+        "B7"
+      ],
+      "border": true
+    },
+    {
+      "id": "B1",
+      "column": "B",
+      "column_index": 1,
+      "row": 1,
+      "axial": {
+        "q": 1,
+        "r": -1
+      },
+      "center": {
+        "x": 372,
+        "y": 103.431
+      },
+      "terrain": "water",
+      "buildable": false,
+      "neighbors": [
+        "A1",
+        "B2",
+        "C1"
+      ],
+      "border": true
+    },
+    {
+      "id": "B2",
+      "column": "B",
+      "column_index": 1,
+      "row": 2,
+      "axial": {
+        "q": 1,
+        "r": 0
+      },
+      "center": {
+        "x": 372,
+        "y": 186.569
+      },
+      "terrain": "land",
+      "buildable": true,
+      "placement_bonus": {
+        "type": "card",
+        "amount": 1,
+        "selection": "reputation_range_or_deck"
+      },
+      "neighbors": [
+        "A1",
+        "A2",
+        "B1",
+        "B3",
+        "C1",
+        "C2"
+      ],
+      "border": false
+    },
+    {
+      "id": "B3",
+      "column": "B",
+      "column_index": 1,
+      "row": 3,
+      "axial": {
+        "q": 1,
+        "r": 1
+      },
+      "center": {
+        "x": 372,
+        "y": 269.708
+      },
+      "terrain": "land",
+      "buildable": true,
+      "neighbors": [
+        "A2",
+        "A3",
+        "B2",
+        "B4",
+        "C2",
+        "C3"
+      ],
+      "border": false
+    },
+    {
+      "id": "B4",
+      "column": "B",
+      "column_index": 1,
+      "row": 4,
+      "axial": {
+        "q": 1,
+        "r": 2
+      },
+      "center": {
+        "x": 372,
+        "y": 352.846
+      },
+      "terrain": "land",
+      "buildable": true,
+      "neighbors": [
+        "A3",
+        "A4",
+        "B3",
+        "B5",
+        "C3",
+        "C4"
+      ],
+      "border": false
+    },
+    {
+      "id": "B5",
+      "column": "B",
+      "column_index": 1,
+      "row": 5,
+      "axial": {
+        "q": 1,
+        "r": 3
+      },
+      "center": {
+        "x": 372,
+        "y": 435.985
+      },
+      "terrain": "land",
+      "buildable": true,
+      "neighbors": [
+        "A4",
+        "A5",
+        "B4",
+        "B6",
+        "C4",
+        "C5"
+      ],
+      "border": false
+    },
+    {
+      "id": "B6",
+      "column": "B",
+      "column_index": 1,
+      "row": 6,
+      "axial": {
+        "q": 1,
+        "r": 4
+      },
+      "center": {
+        "x": 372,
+        "y": 519.123
+      },
+      "terrain": "water",
+      "buildable": false,
+      "neighbors": [
+        "A5",
+        "A6",
+        "B5",
+        "B7",
+        "C5",
+        "C6"
+      ],
+      "border": false
+    },
+    {
+      "id": "B7",
+      "column": "B",
+      "column_index": 1,
+      "row": 7,
+      "axial": {
+        "q": 1,
+        "r": 5
+      },
+      "center": {
+        "x": 372,
+        "y": 602.261
+      },
+      "terrain": "rock",
+      "buildable": false,
+      "neighbors": [
+        "A6",
+        "B6",
+        "C6"
+      ],
+      "border": true
+    },
+    {
+      "id": "C1",
+      "column": "C",
+      "column_index": 2,
+      "row": 1,
+      "axial": {
+        "q": 2,
+        "r": -1
+      },
+      "center": {
+        "x": 444,
+        "y": 145
+      },
+      "terrain": "rock",
+      "buildable": false,
+      "neighbors": [
+        "B1",
+        "B2",
+        "C2",
+        "D1",
+        "D2"
+      ],
+      "border": true
+    },
+    {
+      "id": "C2",
+      "column": "C",
+      "column_index": 2,
+      "row": 2,
+      "axial": {
+        "q": 2,
+        "r": 0
+      },
+      "center": {
+        "x": 444,
+        "y": 228.138
+      },
+      "terrain": "land",
+      "buildable": true,
+      "neighbors": [
+        "B2",
+        "B3",
+        "C1",
+        "C3",
+        "D2",
+        "D3"
+      ],
+      "border": false
+    },
+    {
+      "id": "C3",
+      "column": "C",
+      "column_index": 2,
+      "row": 3,
+      "axial": {
+        "q": 2,
+        "r": 1
+      },
+      "center": {
+        "x": 444,
+        "y": 311.277
+      },
+      "terrain": "land",
+      "buildable": true,
+      "placement_bonus": {
+        "type": "card",
+        "amount": 1,
+        "selection": "reputation_range_or_deck"
+      },
+      "neighbors": [
+        "B3",
+        "B4",
+        "C2",
+        "C4",
+        "D3",
+        "D4"
+      ],
+      "border": false
+    },
+    {
+      "id": "C4",
+      "column": "C",
+      "column_index": 2,
+      "row": 4,
+      "axial": {
+        "q": 2,
+        "r": 2
+      },
+      "center": {
+        "x": 444,
+        "y": 394.415
+      },
+      "terrain": "water",
+      "buildable": false,
+      "neighbors": [
+        "B4",
+        "B5",
+        "C3",
+        "C5",
+        "D4",
+        "D5"
+      ],
+      "border": false
+    },
+    {
+      "id": "C5",
+      "column": "C",
+      "column_index": 2,
+      "row": 5,
+      "axial": {
+        "q": 2,
+        "r": 3
+      },
+      "center": {
+        "x": 444,
+        "y": 477.554
+      },
+      "terrain": "land",
+      "buildable": true,
+      "neighbors": [
+        "B5",
+        "B6",
+        "C4",
+        "C6",
+        "D5",
+        "D6"
+      ],
+      "border": false
+    },
+    {
+      "id": "C6",
+      "column": "C",
+      "column_index": 2,
+      "row": 6,
+      "axial": {
+        "q": 2,
+        "r": 4
+      },
+      "center": {
+        "x": 444,
+        "y": 560.692
+      },
+      "terrain": "land",
+      "buildable": true,
+      "neighbors": [
+        "B6",
+        "B7",
+        "C5",
+        "D6",
+        "D7"
+      ],
+      "border": true
+    },
+    {
+      "id": "D1",
+      "column": "D",
+      "column_index": 3,
+      "row": 1,
+      "axial": {
+        "q": 3,
+        "r": -2
+      },
+      "center": {
+        "x": 516,
+        "y": 103.431
+      },
+      "terrain": "water",
+      "buildable": false,
+      "neighbors": [
+        "C1",
+        "D2",
+        "E1"
+      ],
+      "border": true
+    },
+    {
+      "id": "D2",
+      "column": "D",
+      "column_index": 3,
+      "row": 2,
+      "axial": {
+        "q": 3,
+        "r": -1
+      },
+      "center": {
+        "x": 516,
+        "y": 186.569
+      },
+      "terrain": "rock",
+      "buildable": false,
+      "neighbors": [
+        "C1",
+        "C2",
+        "D1",
+        "D3",
+        "E1",
+        "E2"
+      ],
+      "border": false
+    },
+    {
+      "id": "D3",
+      "column": "D",
+      "column_index": 3,
+      "row": 3,
+      "axial": {
+        "q": 3,
+        "r": 0
+      },
+      "center": {
+        "x": 516,
+        "y": 269.708
+      },
+      "terrain": "land",
+      "buildable": true,
+      "neighbors": [
+        "C2",
+        "C3",
+        "D2",
+        "D4",
+        "E2",
+        "E3"
+      ],
+      "border": false
+    },
+    {
+      "id": "D4",
+      "column": "D",
+      "column_index": 3,
+      "row": 4,
+      "axial": {
+        "q": 3,
+        "r": 1
+      },
+      "center": {
+        "x": 516,
+        "y": 352.846
+      },
+      "terrain": "land",
+      "buildable": true,
+      "neighbors": [
+        "C3",
+        "C4",
+        "D3",
+        "D5",
+        "E3",
+        "E4"
+      ],
+      "border": false
+    },
+    {
+      "id": "D5",
+      "column": "D",
+      "column_index": 3,
+      "row": 5,
+      "axial": {
+        "q": 3,
+        "r": 2
+      },
+      "center": {
+        "x": 516,
+        "y": 435.985
+      },
+      "terrain": "land",
+      "buildable": true,
+      "placement_bonus": {
+        "type": "x_token",
+        "amount": 1
+      },
+      "neighbors": [
+        "C4",
+        "C5",
+        "D4",
+        "D6",
+        "E4",
+        "E5"
+      ],
+      "border": false
+    },
+    {
+      "id": "D6",
+      "column": "D",
+      "column_index": 3,
+      "row": 6,
+      "axial": {
+        "q": 3,
+        "r": 3
+      },
+      "center": {
+        "x": 516,
+        "y": 519.123
+      },
+      "terrain": "land",
+      "buildable": true,
+      "neighbors": [
+        "C5",
+        "C6",
+        "D5",
+        "D7",
+        "E5",
+        "E6"
+      ],
+      "border": false
+    },
+    {
+      "id": "D7",
+      "column": "D",
+      "column_index": 3,
+      "row": 7,
+      "axial": {
+        "q": 3,
+        "r": 4
+      },
+      "center": {
+        "x": 516,
+        "y": 602.261
+      },
+      "terrain": "land",
+      "buildable": true,
+      "placement_bonus": {
+        "type": "card",
+        "amount": 1,
+        "selection": "reputation_range_or_deck"
+      },
+      "neighbors": [
+        "C6",
+        "D6",
+        "E6"
+      ],
+      "border": true
+    },
+    {
+      "id": "E1",
+      "column": "E",
+      "column_index": 4,
+      "row": 1,
+      "axial": {
+        "q": 4,
+        "r": -2
+      },
+      "center": {
+        "x": 588,
+        "y": 145
+      },
+      "terrain": "land",
+      "buildable": true,
+      "placement_bonus": {
+        "type": "x_token",
+        "amount": 1
+      },
+      "neighbors": [
+        "D1",
+        "D2",
+        "E2",
+        "F1",
+        "F2"
+      ],
+      "border": true
+    },
+    {
+      "id": "E2",
+      "column": "E",
+      "column_index": 4,
+      "row": 2,
+      "axial": {
+        "q": 4,
+        "r": -1
+      },
+      "center": {
+        "x": 588,
+        "y": 228.138
+      },
+      "terrain": "land",
+      "buildable": true,
+      "neighbors": [
+        "D2",
+        "D3",
+        "E1",
+        "E3",
+        "F2",
+        "F3"
+      ],
+      "border": false
+    },
+    {
+      "id": "E3",
+      "column": "E",
+      "column_index": 4,
+      "row": 3,
+      "axial": {
+        "q": 4,
+        "r": 0
+      },
+      "center": {
+        "x": 588,
+        "y": 311.277
+      },
+      "terrain": "land",
+      "buildable": true,
+      "placement_bonus": {
+        "type": "money",
+        "amount": 10
+      },
+      "neighbors": [
+        "D3",
+        "D4",
+        "E2",
+        "E4",
+        "F3",
+        "F4"
+      ],
+      "border": false
+    },
+    {
+      "id": "E4",
+      "column": "E",
+      "column_index": 4,
+      "row": 4,
+      "axial": {
+        "q": 4,
+        "r": 1
+      },
+      "center": {
+        "x": 588,
+        "y": 394.415
+      },
+      "terrain": "land",
+      "buildable": true,
+      "neighbors": [
+        "D4",
+        "D5",
+        "E3",
+        "E5",
+        "F4",
+        "F5"
+      ],
+      "border": false
+    },
+    {
+      "id": "E5",
+      "column": "E",
+      "column_index": 4,
+      "row": 5,
+      "axial": {
+        "q": 4,
+        "r": 2
+      },
+      "center": {
+        "x": 588,
+        "y": 477.554
+      },
+      "terrain": "land",
+      "buildable": true,
+      "neighbors": [
+        "D5",
+        "D6",
+        "E4",
+        "E6",
+        "F5",
+        "F6"
+      ],
+      "border": false
+    },
+    {
+      "id": "E6",
+      "column": "E",
+      "column_index": 4,
+      "row": 6,
+      "axial": {
+        "q": 4,
+        "r": 3
+      },
+      "center": {
+        "x": 588,
+        "y": 560.692
+      },
+      "terrain": "land",
+      "buildable": true,
+      "neighbors": [
+        "D6",
+        "D7",
+        "E5",
+        "F6",
+        "F7"
+      ],
+      "border": true
+    },
+    {
+      "id": "F1",
+      "column": "F",
+      "column_index": 5,
+      "row": 1,
+      "axial": {
+        "q": 5,
+        "r": -3
+      },
+      "center": {
+        "x": 660,
+        "y": 103.431
+      },
+      "terrain": "land",
+      "buildable": true,
+      "neighbors": [
+        "E1",
+        "F2",
+        "G1"
+      ],
+      "border": true
+    },
+    {
+      "id": "F2",
+      "column": "F",
+      "column_index": 5,
+      "row": 2,
+      "axial": {
+        "q": 5,
+        "r": -2
+      },
+      "center": {
+        "x": 660,
+        "y": 186.569
+      },
+      "terrain": "land",
+      "buildable": true,
+      "neighbors": [
+        "E1",
+        "E2",
+        "F1",
+        "F3",
+        "G1",
+        "G2"
+      ],
+      "border": false
+    },
+    {
+      "id": "F3",
+      "column": "F",
+      "column_index": 5,
+      "row": 3,
+      "axial": {
+        "q": 5,
+        "r": -1
+      },
+      "center": {
+        "x": 660,
+        "y": 269.708
+      },
+      "terrain": "water",
+      "buildable": false,
+      "neighbors": [
+        "E2",
+        "E3",
+        "F2",
+        "F4",
+        "G2",
+        "G3"
+      ],
+      "border": false
+    },
+    {
+      "id": "F4",
+      "column": "F",
+      "column_index": 5,
+      "row": 4,
+      "axial": {
+        "q": 5,
+        "r": 0
+      },
+      "center": {
+        "x": 660,
+        "y": 352.846
+      },
+      "terrain": "land",
+      "buildable": true,
+      "placement_bonus": {
+        "type": "action_to_slot",
+        "slot": 1,
+        "resolve": "after_finishing_current_action"
+      },
+      "neighbors": [
+        "E3",
+        "E4",
+        "F3",
+        "F5",
+        "G3",
+        "G4"
+      ],
+      "border": false
+    },
+    {
+      "id": "F5",
+      "column": "F",
+      "column_index": 5,
+      "row": 5,
+      "axial": {
+        "q": 5,
+        "r": 1
+      },
+      "center": {
+        "x": 660,
+        "y": 435.985
+      },
+      "terrain": "rock",
+      "buildable": false,
+      "neighbors": [
+        "E4",
+        "E5",
+        "F4",
+        "F6",
+        "G4",
+        "G5"
+      ],
+      "border": false
+    },
+    {
+      "id": "F6",
+      "column": "F",
+      "column_index": 5,
+      "row": 6,
+      "axial": {
+        "q": 5,
+        "r": 2
+      },
+      "center": {
+        "x": 660,
+        "y": 519.123
+      },
+      "terrain": "land",
+      "buildable": true,
+      "placement_bonus": {
+        "type": "x_token",
+        "amount": 1
+      },
+      "neighbors": [
+        "E5",
+        "E6",
+        "F5",
+        "F7",
+        "G5",
+        "G6"
+      ],
+      "border": false
+    },
+    {
+      "id": "F7",
+      "column": "F",
+      "column_index": 5,
+      "row": 7,
+      "axial": {
+        "q": 5,
+        "r": 3
+      },
+      "center": {
+        "x": 660,
+        "y": 602.261
+      },
+      "terrain": "rock",
+      "buildable": false,
+      "neighbors": [
+        "E6",
+        "F6",
+        "G6"
+      ],
+      "border": true
+    },
+    {
+      "id": "G1",
+      "column": "G",
+      "column_index": 6,
+      "row": 1,
+      "axial": {
+        "q": 6,
+        "r": -3
+      },
+      "center": {
+        "x": 732,
+        "y": 145
+      },
+      "terrain": "land",
+      "buildable": true,
+      "neighbors": [
+        "F1",
+        "F2",
+        "G2",
+        "H1",
+        "H2"
+      ],
+      "border": true
+    },
+    {
+      "id": "G2",
+      "column": "G",
+      "column_index": 6,
+      "row": 2,
+      "axial": {
+        "q": 6,
+        "r": -2
+      },
+      "center": {
+        "x": 732,
+        "y": 228.138
+      },
+      "terrain": "rock",
+      "buildable": false,
+      "neighbors": [
+        "F2",
+        "F3",
+        "G1",
+        "G3",
+        "H2",
+        "H3"
+      ],
+      "border": false
+    },
+    {
+      "id": "G3",
+      "column": "G",
+      "column_index": 6,
+      "row": 3,
+      "axial": {
+        "q": 6,
+        "r": -1
+      },
+      "center": {
+        "x": 732,
+        "y": 311.277
+      },
+      "terrain": "land",
+      "buildable": true,
+      "build_requirement": "build_action_upgraded",
+      "neighbors": [
+        "F3",
+        "F4",
+        "G2",
+        "G4",
+        "H3",
+        "H4"
+      ],
+      "border": false
+    },
+    {
+      "id": "G4",
+      "column": "G",
+      "column_index": 6,
+      "row": 4,
+      "axial": {
+        "q": 6,
+        "r": 0
+      },
+      "center": {
+        "x": 732,
+        "y": 394.415
+      },
+      "terrain": "land",
+      "buildable": true,
+      "neighbors": [
+        "F4",
+        "F5",
+        "G3",
+        "G5",
+        "H4",
+        "H5"
+      ],
+      "border": false
+    },
+    {
+      "id": "G5",
+      "column": "G",
+      "column_index": 6,
+      "row": 5,
+      "axial": {
+        "q": 6,
+        "r": 1
+      },
+      "center": {
+        "x": 732,
+        "y": 477.554
+      },
+      "terrain": "rock",
+      "buildable": false,
+      "neighbors": [
+        "F5",
+        "F6",
+        "G4",
+        "G6",
+        "H5",
+        "H6"
+      ],
+      "border": false
+    },
+    {
+      "id": "G6",
+      "column": "G",
+      "column_index": 6,
+      "row": 6,
+      "axial": {
+        "q": 6,
+        "r": 2
+      },
+      "center": {
+        "x": 732,
+        "y": 560.692
+      },
+      "terrain": "rock",
+      "buildable": false,
+      "neighbors": [
+        "F6",
+        "F7",
+        "G5",
+        "H6",
+        "H7"
+      ],
+      "border": true
+    },
+    {
+      "id": "H1",
+      "column": "H",
+      "column_index": 7,
+      "row": 1,
+      "axial": {
+        "q": 7,
+        "r": -4
+      },
+      "center": {
+        "x": 804,
+        "y": 103.431
+      },
+      "terrain": "land",
+      "buildable": true,
+      "neighbors": [
+        "G1",
+        "H2",
+        "I1"
+      ],
+      "border": true
+    },
+    {
+      "id": "H2",
+      "column": "H",
+      "column_index": 7,
+      "row": 2,
+      "axial": {
+        "q": 7,
+        "r": -3
+      },
+      "center": {
+        "x": 804,
+        "y": 186.569
+      },
+      "terrain": "land",
+      "buildable": true,
+      "placement_bonus": {
+        "type": "money",
+        "amount": 5
+      },
+      "neighbors": [
+        "G1",
+        "G2",
+        "H1",
+        "H3",
+        "I1",
+        "I2"
+      ],
+      "border": false
+    },
+    {
+      "id": "H3",
+      "column": "H",
+      "column_index": 7,
+      "row": 3,
+      "axial": {
+        "q": 7,
+        "r": -2
+      },
+      "center": {
+        "x": 804,
+        "y": 269.708
+      },
+      "terrain": "land",
+      "buildable": true,
+      "build_requirement": "build_action_upgraded",
+      "neighbors": [
+        "G2",
+        "G3",
+        "H2",
+        "H4",
+        "I2",
+        "I3"
+      ],
+      "border": false
+    },
+    {
+      "id": "H4",
+      "column": "H",
+      "column_index": 7,
+      "row": 4,
+      "axial": {
+        "q": 7,
+        "r": -1
+      },
+      "center": {
+        "x": 804,
+        "y": 352.846
+      },
+      "terrain": "land",
+      "buildable": true,
+      "neighbors": [
+        "G3",
+        "G4",
+        "H3",
+        "H5",
+        "I3",
+        "I4"
+      ],
+      "border": false
+    },
+    {
+      "id": "H5",
+      "column": "H",
+      "column_index": 7,
+      "row": 5,
+      "axial": {
+        "q": 7,
+        "r": 0
+      },
+      "center": {
+        "x": 804,
+        "y": 435.985
+      },
+      "terrain": "land",
+      "buildable": true,
+      "neighbors": [
+        "G4",
+        "G5",
+        "H4",
+        "H6",
+        "I4",
+        "I5"
+      ],
+      "border": false
+    },
+    {
+      "id": "H6",
+      "column": "H",
+      "column_index": 7,
+      "row": 6,
+      "axial": {
+        "q": 7,
+        "r": 1
+      },
+      "center": {
+        "x": 804,
+        "y": 519.123
+      },
+      "terrain": "land",
+      "buildable": true,
+      "placement_bonus": {
+        "type": "appeal",
+        "amount": 2
+      },
+      "neighbors": [
+        "G5",
+        "G6",
+        "H5",
+        "H7",
+        "I5",
+        "I6"
+      ],
+      "border": false
+    },
+    {
+      "id": "H7",
+      "column": "H",
+      "column_index": 7,
+      "row": 7,
+      "axial": {
+        "q": 7,
+        "r": 2
+      },
+      "center": {
+        "x": 804,
+        "y": 602.261
+      },
+      "terrain": "water",
+      "buildable": false,
+      "neighbors": [
+        "G6",
+        "H6",
+        "I6"
+      ],
+      "border": true
+    },
+    {
+      "id": "I1",
+      "column": "I",
+      "column_index": 8,
+      "row": 1,
+      "axial": {
+        "q": 8,
+        "r": -4
+      },
+      "center": {
+        "x": 876,
+        "y": 145
+      },
+      "terrain": "land",
+      "buildable": true,
+      "neighbors": [
+        "H1",
+        "H2",
+        "I2"
+      ],
+      "border": true
+    },
+    {
+      "id": "I2",
+      "column": "I",
+      "column_index": 8,
+      "row": 2,
+      "axial": {
+        "q": 8,
+        "r": -3
+      },
+      "center": {
+        "x": 876,
+        "y": 228.138
+      },
+      "terrain": "land",
+      "buildable": true,
+      "neighbors": [
+        "H2",
+        "H3",
+        "I1",
+        "I3"
+      ],
+      "border": true
+    },
+    {
+      "id": "I3",
+      "column": "I",
+      "column_index": 8,
+      "row": 3,
+      "axial": {
+        "q": 8,
+        "r": -2
+      },
+      "center": {
+        "x": 876,
+        "y": 311.277
+      },
+      "terrain": "land",
+      "buildable": true,
+      "neighbors": [
+        "H3",
+        "H4",
+        "I2",
+        "I4"
+      ],
+      "border": true
+    },
+    {
+      "id": "I4",
+      "column": "I",
+      "column_index": 8,
+      "row": 4,
+      "axial": {
+        "q": 8,
+        "r": -1
+      },
+      "center": {
+        "x": 876,
+        "y": 394.415
+      },
+      "terrain": "land",
+      "buildable": true,
+      "placement_bonus": {
+        "type": "money",
+        "amount": 5
+      },
+      "neighbors": [
+        "H4",
+        "H5",
+        "I3",
+        "I5"
+      ],
+      "border": true
+    },
+    {
+      "id": "I5",
+      "column": "I",
+      "column_index": 8,
+      "row": 5,
+      "axial": {
+        "q": 8,
+        "r": 0
+      },
+      "center": {
+        "x": 876,
+        "y": 477.554
+      },
+      "terrain": "water",
+      "buildable": false,
+      "neighbors": [
+        "H5",
+        "H6",
+        "I4",
+        "I6"
+      ],
+      "border": true
+    },
+    {
+      "id": "I6",
+      "column": "I",
+      "column_index": 8,
+      "row": 6,
+      "axial": {
+        "q": 8,
+        "r": 1
+      },
+      "center": {
+        "x": 876,
+        "y": 560.692
+      },
+      "terrain": "water",
+      "buildable": false,
+      "neighbors": [
+        "H6",
+        "H7",
+        "I5"
+      ],
+      "border": true
+    }
+  ],
+  "counts": {
+    "total": 58,
+    "buildable": 39,
+    "land": 39,
+    "water": 10,
+    "rock": 9,
+    "placement_bonuses": 12,
+    "build_ii": 2
+  }
+}

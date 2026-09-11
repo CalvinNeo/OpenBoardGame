@@ -1,0 +1,220 @@
+{
+  "schema_version": 1,
+  "id": "map0",
+  "name": "Map 0",
+  "recommended_level": "intermediate",
+  "view_box": {
+    "width": 1340,
+    "height": 830
+  },
+  "layout": {
+    "radius": 48,
+    "origin": {
+      "x": 300,
+      "y": 145
+    },
+    "column_lengths": [6, 7, 6, 7, 6, 7, 6, 7, 6]
+  },
+  "terrain": {
+    "water": [
+      "A1",
+      "A2",
+      "B1",
+      "B6",
+      "C4",
+      "D1",
+      "F3",
+      "H7",
+      "I5",
+      "I6"
+    ],
+    "rock": [
+      "A6",
+      "B7",
+      "C1",
+      "D2",
+      "F5",
+      "F7",
+      "G2",
+      "G5",
+      "G6"
+    ]
+  },
+  "placement_bonuses": [
+    {
+      "cell": "B2",
+      "type": "card",
+      "amount": 1,
+      "selection": "reputation_range_or_deck"
+    },
+    {
+      "cell": "E1",
+      "type": "x_token",
+      "amount": 1
+    },
+    {
+      "cell": "H2",
+      "type": "money",
+      "amount": 5
+    },
+    {
+      "cell": "C3",
+      "type": "card",
+      "amount": 1,
+      "selection": "reputation_range_or_deck"
+    },
+    {
+      "cell": "E3",
+      "type": "money",
+      "amount": 10
+    },
+    {
+      "cell": "F4",
+      "type": "action_to_slot",
+      "slot": 1,
+      "resolve": "after_finishing_current_action"
+    },
+    {
+      "cell": "D5",
+      "type": "x_token",
+      "amount": 1
+    },
+    {
+      "cell": "I4",
+      "type": "money",
+      "amount": 5
+    },
+    {
+      "cell": "A5",
+      "type": "appeal",
+      "amount": 2
+    },
+    {
+      "cell": "F6",
+      "type": "x_token",
+      "amount": 1
+    },
+    {
+      "cell": "H6",
+      "type": "appeal",
+      "amount": 2
+    },
+    {
+      "cell": "D7",
+      "type": "card",
+      "amount": 1,
+      "selection": "reputation_range_or_deck"
+    }
+  ],
+  "build_ii_cells": [
+    "G3",
+    "H3"
+  ],
+  "conservation_rewards": [
+    {
+      "id": "card_income",
+      "type": "card",
+      "amount": 1,
+      "selection": "reputation_range_or_deck",
+      "timing": "immediate_and_each_break",
+      "short_label": "CARD",
+      "label": "Take 1 card within reputation range, or draw 1 card from the deck"
+    },
+    {
+      "id": "enclosure_2_income",
+      "type": "free_enclosure",
+      "size": 2,
+      "timing": "immediate_and_each_break",
+      "short_label": "SIZE 2",
+      "label": "Build a size-2 standard enclosure for free"
+    },
+    {
+      "id": "money_5_income",
+      "type": "money",
+      "amount": 5,
+      "timing": "immediate_and_each_break",
+      "short_label": "$5",
+      "label": "Gain 5 money"
+    },
+    {
+      "id": "conservation_1_income",
+      "type": "conservation",
+      "amount": 1,
+      "timing": "immediate_and_each_break",
+      "short_label": "1 CP",
+      "label": "Gain 1 conservation point"
+    },
+    {
+      "id": "association_worker",
+      "type": "association_worker",
+      "amount": 1,
+      "timing": "immediate_once",
+      "short_label": "WORKER",
+      "label": "Gain 1 association worker"
+    },
+    {
+      "id": "money_12",
+      "type": "money",
+      "amount": 12,
+      "timing": "immediate_once",
+      "short_label": "$12",
+      "label": "Gain 12 money"
+    },
+    {
+      "id": "x_token_3",
+      "type": "x_token",
+      "amount": 3,
+      "timing": "immediate_once",
+      "short_label": "3 X",
+      "label": "Gain 3 X-tokens"
+    }
+  ],
+  "completion_bonus": {
+    "type": "appeal",
+    "amount": 7,
+    "condition": "all_buildable_spaces_covered"
+  },
+  "x_token_limit": 5,
+  "expected_counts": {
+    "total": 58,
+    "buildable": 39,
+    "land": 39,
+    "water": 10,
+    "rock": 9,
+    "placement_bonuses": 12,
+    "build_ii": 2
+  },
+  "expected_bonus_counts": {
+    "card": 3,
+    "money": 3,
+    "x_token": 3,
+    "appeal": 2,
+    "action_to_slot": 1
+  },
+  "source_notes": [
+    {
+      "kind": "visual_reference",
+      "title": "Steam Workshop: Ark Nova",
+      "url": "https://steamcommunity.com/sharedfiles/filedetails/?id=2630864749",
+      "note": "Used only to identify the Map 0 layout; the shipped SVG is an original vector drawing and embeds no Workshop raster assets."
+    },
+    {
+      "kind": "visual_cross_check",
+      "title": "Steam Workshop: Ark Nova with Marine Worlds expansion (scripted)",
+      "url": "https://steamcommunity.com/sharedfiles/filedetails/?id=2953525089",
+      "note": "The later mod points to a clearer final-edition Map 0 scan used for cell-by-cell comparison."
+    },
+    {
+      "kind": "rules_reference",
+      "title": "Official Ark Nova Rulebook",
+      "url": "https://capstone-games.com/cdn/shop/files/Ark-Nova-Rulebook.pdf",
+      "note": "Used to verify terrain, placement-bonus, Build II, conservation-reward, and completion-bonus rules."
+    },
+    {
+      "kind": "icon_reference",
+      "title": "Official Ark Nova Icon Overview",
+      "url": "https://cdn.shopify.com/s/files/1/0947/3907/1278/files/Ark-Nova-Icon-Overview.pdf",
+      "note": "Used to disambiguate the card, appeal, X-token, timing, and action-slot symbols."
+    }
+  ]
+}
