@@ -1086,11 +1086,14 @@ function updateRoomControlsDock() {
   if (!roomControlsPanel) {
     return;
   }
+  const isCollapsed = roomControlsPanel.classList.contains("collapsed");
   const shouldDock =
     roomControlsDockQuery.matches &&
     roomControlsPanel.classList.contains("compact") &&
-    roomControlsPanel.classList.contains("collapsed");
+    isCollapsed;
+  const shouldCloseDesktopDrawer = !roomControlsDockQuery.matches && isCollapsed;
   document.body.classList.toggle("room-controls-docked", shouldDock);
+  document.body.classList.toggle("room-controls-drawer-closed", shouldCloseDesktopDrawer);
   if (shouldDock) {
     const height = roomControlsPanel.getBoundingClientRect().height;
     document.documentElement.style.setProperty("--room-controls-bar-height", `${height}px`);
@@ -1901,6 +1904,8 @@ document.querySelectorAll(".collapse-btn").forEach((btn) => {
     btn.textContent = collapsed ? "Show" : "Hide";
     btn.setAttribute("aria-expanded", (!collapsed).toString());
     if (panel.id === "roomControlsPanel") {
+      btn.setAttribute("aria-label", collapsed ? "Open Room Controls" : "Hide Room Controls");
+      btn.title = collapsed ? "Open Room Controls" : "Hide Room Controls";
       roomControlsAutoCollapsed = false;
       updateRoomControlsDock();
     }
