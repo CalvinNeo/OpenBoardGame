@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css?v=app_v22" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v24" />
   <link rel="stylesheet" href="/static/ark_nova.css?v=app_v6" />
 </head>
 <body>
@@ -2438,9 +2438,13 @@
                 <div class="tacta-hand-heading">
                   <div>
                     <strong>Your playable cards</strong>
-                    <span>Only the two ends of your deck are visible. Middle cards stay hidden.</span>
+                    <span>Match identical edge outlines. Dot counts never need to match.</span>
                   </div>
                   <span id="tactaDeckCountLabel" class="tacta-deck-count" aria-live="polite">- cards remaining</span>
+                </div>
+                <div class="tacta-card-legend" aria-label="Card symbol guide">
+                  <span><b class="tacta-outline-mark" aria-hidden="true">△ □ ▭</b> edge outlines match</span>
+                  <span><b class="tacta-dot-mark" aria-hidden="true">●</b> dots are score only</span>
                 </div>
                 <div class="tacta-outer-cards">
                   <button id="tactaTopCardBtn" class="tacta-outer-card" type="button">Top card</button>
@@ -5503,7 +5507,7 @@
   <script src="/static/games/kobayakawa.js?v=app_v4"></script>
   <script src="/static/games/high_society.js?v=app_v1"></script>
   <script src="/static/games/felix.js?v=app_v1"></script>
-  <script src="/static/games/tacta.js?v=app_v4"></script>
+  <script src="/static/games/tacta.js?v=app_v7"></script>
   <script src="/static/games/subtext.js?v=app_v1"></script>
   <script src="/static/games/tucano.js?v=app_v1"></script>
   <script src="/static/games/witchs_brew.js?v=app_v1"></script>

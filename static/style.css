@@ -20152,6 +20152,33 @@ body.tucano-explain-mode .has-explanation {
   white-space: nowrap;
 }
 
+.tacta-card-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  color: #c9dbe7;
+  font-size: 0.74rem;
+}
+
+.tacta-card-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tacta-card-legend b {
+  min-width: 18px;
+  color: #8ed7ff;
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+}
+
+.tacta-card-legend .tacta-dot-mark,
+.tacta-outer-card-score {
+  color: #ffe36b;
+}
+
 .tacta-outer-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
@@ -20220,6 +20247,11 @@ body.tucano-explain-mode .has-explanation {
 .tacta-outer-card-details strong {
   color: #ffffff;
   font-size: 1.12rem;
+}
+
+.tacta-outer-card-score {
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .tacta-outer-card-face {

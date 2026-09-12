@@ -85,7 +85,7 @@ const TACTA_HELP_HTML = `
   <ol>
     <li>Choose only the top or bottom card of your shuffled deck.</li>
     <li>Use either mirrored face.</li>
-    <li>Cover one exposed triangle, square, or rectangle with an identical shape. The server snaps the card to every legal angle.</li>
+    <li>Cover one exposed triangle, square, or rectangle with an identical outline. Dots are scoring markers only: a dotted shape may cover a blank one, and vice versa.</li>
     <li>The new card may overlap only the one target card. Touching a second card along an edge is allowed, but positive-area overlap is not.</li>
   </ol>
   <p>If neither outer card has any connected placement, isolated slots appear around the layout. Only then may you start a separate group.</p>
@@ -607,12 +607,16 @@ function renderTactaOuterCard(view, deckEnd, button, canChoose) {
   details.className = "tacta-outer-card-details";
   const identity = document.createElement("strong");
   identity.textContent = `${TACTA_SUIT_SYMBOLS[card.suit] || ""} ${card.value}`.trim();
+  const score = document.createElement("span");
+  score.className = "tacta-outer-card-score";
+  score.textContent = `● ${card.value} pts`;
+  score.setAttribute("aria-label", `${card.value} scoring dot${card.value === 1 ? "" : "s"} total`);
   const owner = document.createElement("span");
   owner.textContent = `${card.owner_color} card`;
   const faceLabel = document.createElement("span");
   faceLabel.className = "tacta-outer-card-face";
   faceLabel.textContent = `${face} face${selected ? " selected" : ""}`;
-  details.append(identity, owner, faceLabel);
+  details.append(identity, score, owner, faceLabel);
   button.append(position, cardSvg, details);
 }
 

@@ -99,6 +99,35 @@ class TactaGameTests(unittest.TestCase):
         self.assertEqual(len(state["placed_cards"]), 2)
         self.assertEqual(sum(state["live_scores"].values()), TEMPLATES[angled[0]["template_id"]]["value"])
 
+    def test_dot_counts_do_not_participate_in_shape_matching(self):
+        state = TactaGame.init_game({"seed": 7}, players())
+        player_id = state["current_turn"]
+        candidates = enumerate_legal_placements(state, player_id)
+        dotted_candidate = next(
+            candidate
+            for candidate in candidates
+            if next(
+                connector
+                for connector in _template_connectors(candidate["template_id"], candidate["face"])
+                if connector["connector_id"] == candidate["source_connector_id"]
+            )["dots"]
+            > 0
+        )
+        source = next(
+            connector
+            for connector in _template_connectors(dotted_candidate["template_id"], dotted_candidate["face"])
+            if connector["connector_id"] == dotted_candidate["source_connector_id"]
+        )
+        target_card = next(card for card in state["placed_cards"] if card["card_id"] == dotted_candidate["target_card_id"])
+        target = next(
+            connector
+            for connector in _template_connectors(target_card["template_id"], target_card["face"])
+            if connector["connector_id"] == dotted_candidate["target_connector_id"]
+        )
+        self.assertEqual(source["shape_id"], target["shape_id"])
+        self.assertGreater(source["dots"], 0)
+        self.assertEqual(target["dots"], 0)
+
     def test_public_view_only_reveals_viewers_deck_ends(self):
         state = TactaGame.init_game({"seed": "privacy"}, players(2))
         view = TactaGame.get_public_view(state, "p0")
