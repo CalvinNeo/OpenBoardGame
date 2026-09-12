@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 import unittest
 from pathlib import Path
@@ -56,6 +58,16 @@ class ArkNovaIntegrationTests(unittest.TestCase):
         self.assertIn('data-arkn-pending-card-index=', script)
         self.assertIn("Choose directly from your cards below.", script)
 
+    def test_conservation_project_cards_show_all_support_tiers(self) -> None:
+        script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")
+        stylesheet = (ROOT / "static" / "ark_nova.css").read_text(encoding="utf-8")
+        self.assertIn("function arkNovaProjectSupportMarkup", script)
+        self.assertIn('class="arkn-project-slot is-${state}"', script)
+        self.assertIn("arkNovaProjectRewardMarkup(slot.reward)", script)
+        self.assertIn("arkNovaProjectSlotOptionLabel(selectedProject, slot)", script)
+        self.assertIn(".arkn-project-support", stylesheet)
+        self.assertIn(".arkn-project-slot.is-eligible", stylesheet)
+
     def test_card_illustrations_are_wired_to_every_card_type(self) -> None:
         script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")
         stylesheet = (ROOT / "static" / "ark_nova.css").read_text(encoding="utf-8")
@@ -73,6 +85,35 @@ class ArkNovaIntegrationTests(unittest.TestCase):
         self.assertIn('type === "final_scoring"', script)
         self.assertIn("aspect-ratio: 16 / 9", stylesheet)
         self.assertIn('detail ? "arkn-detail-art" : "arkn-card-art"', script)
+
+    def test_every_ark_nova_card_has_a_unique_illustration(self) -> None:
+        script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")
+        card_data = json.loads(
+            (ROOT / "game" / "assets" / "ark_nova" / "cards.json").read_text(encoding="utf-8")
+        )
+        cards = [
+            *card_data["animal_cards"],
+            *card_data["sponsor_cards"],
+            *card_data["conservation_projects"],
+            *card_data["final_scoring_cards"],
+        ]
+        expected_ids = {str(card["id"]) for card in cards}
+        art_dir = ROOT / "static" / "assets" / "ark_nova" / "card_art" / "cards"
+        actual_ids = {path.stem for path in art_dir.glob("*.webp")}
+
+        self.assertEqual(len(cards), 235)
+        self.assertEqual(actual_ids, expected_ids)
+        content_hashes = set()
+        for card_id in expected_ids:
+            path = art_dir / f"{card_id}.webp"
+            self.assertGreater(path.stat().st_size, 5_000, path)
+            content_hashes.add(hashlib.sha256(path.read_bytes()).digest())
+        self.assertEqual(len(content_hashes), len(cards))
+        self.assertIn(
+            "`${ARK_NOVA_CARD_ART_BASE}/cards/${encodeURIComponent(id)}.webp`",
+            script,
+        )
+        self.assertIn('document.addEventListener("error", arkNovaHandleCardArtError, true)', script)
 
     def test_registry_accepts_actions_emitted_by_the_frontend(self) -> None:
         definition = get_game("ark_nova")

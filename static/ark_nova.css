@@ -345,6 +345,10 @@
 #arkNovaPanel .arkn-card-conservation_project { --arkn-card-accent: #239782; }
 #arkNovaPanel .arkn-card-final_scoring { --arkn-card-accent: #805ca8; }
 
+#arkNovaPanel .arkn-card-conservation_project {
+  flex-basis: 184px;
+}
+
 #arkNovaPanel .arkn-card.is-selectable:hover,
 #arkNovaPanel .arkn-card.is-selectable:focus-within {
   box-shadow: 0 11px 25px rgba(0, 0, 0, 0.38), 0 0 0 2px rgba(255, 255, 255, 0.55);
@@ -499,6 +503,224 @@
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 4;
+}
+
+#arkNovaPanel .arkn-project-support,
+#arkNovaModal .arkn-project-support {
+  border-radius: 8px;
+  display: grid;
+  gap: 3px;
+  padding: 5px;
+}
+
+#arkNovaPanel .arkn-project-support {
+  background: rgba(23, 112, 91, 0.09);
+  border: 1px solid rgba(23, 112, 91, 0.22);
+}
+
+#arkNovaPanel .arkn-project-support-title,
+#arkNovaModal .arkn-project-support-title {
+  font-size: 0.55rem;
+  font-weight: 950;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+#arkNovaPanel .arkn-project-support-title {
+  color: #176853;
+}
+
+#arkNovaPanel .arkn-project-slot,
+#arkNovaModal .arkn-project-slot {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  display: grid;
+  gap: 1px 4px;
+  grid-template-columns: 18px minmax(54px, 1fr) 8px auto;
+  min-width: 0;
+  padding: 3px 4px;
+}
+
+#arkNovaPanel .arkn-project-slot {
+  background: rgba(255, 255, 255, 0.53);
+  color: #253a31;
+}
+
+#arkNovaPanel .arkn-project-slot-position,
+#arkNovaModal .arkn-project-slot-position {
+  align-items: center;
+  border-radius: 50%;
+  display: flex;
+  font-size: 0.55rem;
+  font-weight: 950;
+  height: 18px;
+  justify-content: center;
+  width: 18px;
+}
+
+#arkNovaPanel .arkn-project-slot-position {
+  background: #237d68;
+  color: #fff;
+}
+
+#arkNovaPanel .arkn-project-requirement,
+#arkNovaModal .arkn-project-requirement {
+  align-items: baseline;
+  display: flex;
+  gap: 2px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+#arkNovaPanel .arkn-project-requirement > span,
+#arkNovaModal .arkn-project-requirement > span {
+  font-size: 0.68rem;
+}
+
+#arkNovaPanel .arkn-project-requirement > b,
+#arkNovaModal .arkn-project-requirement > b {
+  font-size: 0.66rem;
+  font-weight: 950;
+}
+
+#arkNovaPanel .arkn-project-requirement > small,
+#arkNovaModal .arkn-project-requirement > small {
+  font-size: 0.49rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#arkNovaPanel .arkn-project-arrow,
+#arkNovaModal .arkn-project-arrow {
+  font-size: 0.57rem;
+  opacity: 0.55;
+}
+
+#arkNovaPanel .arkn-project-reward,
+#arkNovaModal .arkn-project-reward {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  justify-content: flex-end;
+}
+
+#arkNovaPanel .arkn-project-reward > span,
+#arkNovaModal .arkn-project-reward > span,
+#arkNovaPanel .arkn-project-new-bonus > span:not(:first-child),
+#arkNovaModal .arkn-project-new-bonus > span:not(:first-child) {
+  align-items: center;
+  display: inline-flex;
+  font-size: 0.59rem;
+  font-weight: 850;
+  gap: 1px;
+  white-space: nowrap;
+}
+
+#arkNovaPanel .arkn-project-reward b,
+#arkNovaModal .arkn-project-reward b,
+#arkNovaPanel .arkn-project-new-bonus b,
+#arkNovaModal .arkn-project-new-bonus b {
+  font-size: inherit;
+}
+
+#arkNovaPanel .arkn-project-slot-state,
+#arkNovaModal .arkn-project-slot-state {
+  font-size: 0.46rem;
+  grid-column: 2 / -1;
+  line-height: 1.1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#arkNovaPanel .arkn-project-slot.is-eligible {
+  background: rgba(112, 209, 138, 0.2);
+  border-color: rgba(31, 125, 79, 0.48);
+}
+
+#arkNovaPanel .arkn-project-slot.is-eligible .arkn-project-slot-state {
+  color: #176b43;
+  font-weight: 850;
+}
+
+#arkNovaPanel .arkn-project-slot.is-unmet .arkn-project-slot-state {
+  color: #806942;
+}
+
+#arkNovaPanel .arkn-project-slot.is-occupied,
+#arkNovaPanel .arkn-project-slot.is-blocked {
+  filter: grayscale(0.5);
+  opacity: 0.63;
+}
+
+#arkNovaPanel .arkn-project-new-bonus,
+#arkNovaModal .arkn-project-new-bonus {
+  align-items: center;
+  border-top: 1px dashed currentColor;
+  display: flex;
+  gap: 4px;
+  justify-content: space-between;
+  margin-top: 2px;
+  padding: 4px 2px 0;
+}
+
+#arkNovaPanel .arkn-project-new-bonus > span:first-child,
+#arkNovaModal .arkn-project-new-bonus > span:first-child {
+  font-size: 0.49rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+#arkNovaModal .arkn-project-support.is-detail {
+  background: rgba(93, 210, 222, 0.07);
+  border: 1px solid rgba(93, 210, 222, 0.23);
+  gap: 6px;
+  padding: 9px;
+}
+
+#arkNovaModal .arkn-project-support-title {
+  color: #7be0d3;
+  font-size: 0.68rem;
+}
+
+#arkNovaModal .arkn-project-slot {
+  background: rgba(255, 255, 255, 0.055);
+  color: #d8e8de;
+  gap: 2px 7px;
+  grid-template-columns: 24px minmax(110px, 1fr) 12px auto;
+  padding: 6px 7px;
+}
+
+#arkNovaModal .arkn-project-slot-position {
+  background: #2d947d;
+  color: #fff;
+  font-size: 0.65rem;
+  height: 24px;
+  width: 24px;
+}
+
+#arkNovaModal .arkn-project-requirement > span,
+#arkNovaModal .arkn-project-requirement > b,
+#arkNovaModal .arkn-project-reward > span {
+  font-size: 0.73rem;
+}
+
+#arkNovaModal .arkn-project-requirement > small,
+#arkNovaModal .arkn-project-slot-state,
+#arkNovaModal .arkn-project-new-bonus > span:first-child {
+  color: #9fb7aa;
+  font-size: 0.61rem;
+}
+
+#arkNovaModal .arkn-project-slot.is-eligible {
+  border-color: rgba(112, 209, 138, 0.48);
+}
+
+#arkNovaModal .arkn-project-slot.is-occupied,
+#arkNovaModal .arkn-project-slot.is-blocked {
+  opacity: 0.6;
 }
 
 #arkNovaPanel .arkn-card-info {
@@ -1830,6 +2052,10 @@
 
   #arkNovaPanel .arkn-card {
     flex-basis: min(42vw, 132px);
+  }
+
+  #arkNovaPanel .arkn-card-conservation_project {
+    flex-basis: min(72vw, 184px);
   }
 
   #arkNovaPanel .arkn-card-row {

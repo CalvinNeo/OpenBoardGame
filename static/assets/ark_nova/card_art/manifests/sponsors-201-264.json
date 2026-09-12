@@ -1,0 +1,532 @@
+{
+  "schema_version": 1,
+  "set": "ark_nova_sponsor_cards_201_264",
+  "source_cards": "game/assets/ark_nova/cards.json",
+  "generation": {
+    "tool": "built-in image_gen",
+    "mode": "generate",
+    "invocation_policy": "Every final card image was created with its own separate built-in ImageGen call. No CLI, multi-image n parameter, source artwork, or reference image was used.",
+    "originality": "Original compositions only; no imitation of Ark Nova or any other board-game artwork.",
+    "style": "Contemporary cut-paper collage mixed with matte gouache, bold rounded geometric shapes, subtle handmade paper grain, and clean layered edges.",
+    "composition": "16:9 landscape, one clear focal subject, important content inside the central 80%, thumbnail-readable.",
+    "palette": "Forest green, muted coral, ochre, cream, teal, with restrained dark accents.",
+    "global_constraints": "No text, letters, numbers, logos, trademarks, emblems, badges, patches, watermark, card border, card frame, UI, icons, labels, recognizable celebrities, copied poses, or pre-existing tabletop-game composition.",
+    "production_output": "Each accepted source was converted to 512x288 RGB WebP, quality 84, filename equal to card ID."
+  },
+  "prompt_template": "Use case: stylized-concept\nAsset type: original browser board-game card illustration, sponsor card {id}\nPrimary request: {name_en}; depict {scene}.\nScene/backdrop: {backdrop}\nStyle/medium: entirely original contemporary cut-paper collage mixed with matte gouache; bold rounded geometric shapes; subtle handmade paper grain; clean layered edges; visual identity distinct from all existing board games.\nComposition/framing: 16:9 landscape; one clear focal subject; important subject matter inside the central 80%; medium-wide crop; safe for center-cropping and small card display.\nLighting/mood: warm, optimistic natural light; thoughtful conservation mood.\nColor palette: forest green, muted coral, ochre, cream, teal, with restrained dark accents.\nConstraints: create a new original composition from scratch; no reference images; no recognizable celebrity; no text, letters, numbers, logos, trademarks, watermark, card border, card frame, UI, icons, labels, or copied poses.\nAvoid: imitating Ark Nova or any other board-game artwork; existing tabletop-game composition; photorealism; clutter; tiny disconnected details.",
+  "cards": [
+    {
+      "id": "201",
+      "name_en": "SCIENCE LAB",
+      "scene": "a bright conservation science laboratory with a central microscope, leaf samples, specimen jars, and a researcher in a lab coat carefully comparing two plant slides",
+      "backdrop": "a compact zoo-conservation setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/201.webp"
+    },
+    {
+      "id": "202",
+      "name_en": "SPOKESPERSON",
+      "scene": "an original non-famous conservation spokesperson at a small podium using expressive hand gestures, with simplified wildlife silhouettes and attentive community members behind",
+      "backdrop": "a compact zoo-conservation setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/202.webp"
+    },
+    {
+      "id": "203",
+      "name_en": "VETERINARIAN",
+      "scene": "an original non-famous zoo veterinarian gently examining a calm small antelope on a padded clinic table, with a stethoscope and tidy medical cabinet",
+      "backdrop": "a compact zoo-conservation setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/203.webp"
+    },
+    {
+      "id": "204",
+      "name_en": "SCIENCE MUSEUM",
+      "scene": "a welcoming natural-history science museum gallery centered on a suspended animal skeleton, interactive ecology exhibits, and curious visitors",
+      "backdrop": "a compact zoo-conservation setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/204.webp"
+    },
+    {
+      "id": "205",
+      "name_en": "GORILLA FIELD RESEARCH",
+      "scene": "a field primatologist quietly observing a gorilla family from a respectful distance in a lush forest clearing, recording behavior in a notebook",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/205.webp"
+    },
+    {
+      "id": "206",
+      "name_en": "MEDICAL BREAKTHROUGH",
+      "scene": "a diverse wildlife medicine research team gathered around a glowing microscope slide and safe vaccine vial, sharing a quiet moment of discovery in a clean laboratory",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/206.webp"
+    },
+    {
+      "id": "207",
+      "name_en": "BASIC RESEARCH",
+      "scene": "a young ecology researcher at a workbench arranging leaves, feathers, stones, and harmless specimen trays into clear comparative groups",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/207.webp"
+    },
+    {
+      "id": "208",
+      "name_en": "SCIENCE LIBRARY",
+      "scene": "a serene research library with a central scientist opening a large wildlife field guide, surrounded by curved wooden shelves, pressed leaves, and small specimen models",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/208.webp"
+    },
+    {
+      "id": "209",
+      "name_en": "TECHNOLOGY INSTITUTE",
+      "scene": "two conservation engineers calibrating a solar-powered wildlife tracking collar and compact field sensor on a clean workshop bench",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/209.webp"
+    },
+    {
+      "id": "210",
+      "name_en": "EXPERT ON THE AMERICAS",
+      "scene": "an original field ecologist studying a toucan and capybara beside a broad tropical wetland, with distant rainforest and mountains suggesting the Americas",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/210.webp"
+    },
+    {
+      "id": "211",
+      "name_en": "EXPERT ON EUROPE",
+      "scene": "an original European wildlife specialist observing a lynx and red deer in a temperate alpine meadow with limestone hills and oak woodland",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/211.webp"
+    },
+    {
+      "id": "212",
+      "name_en": "EXPERT ON AUSTRALIA",
+      "scene": "an original wildlife ecologist gently observing a kangaroo with a joey among eucalyptus trees and ochre grassland",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/212.webp"
+    },
+    {
+      "id": "213",
+      "name_en": "EXPERT ON ASIA",
+      "scene": "an original Asian wildlife specialist observing a red panda and crane in a misty bamboo-and-maple mountain habitat",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/213.webp"
+    },
+    {
+      "id": "214",
+      "name_en": "EXPERT ON AFRICA",
+      "scene": "an original African wildlife specialist mapping animal movement while elephants and meerkats cross a sunlit savanna near acacia trees",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/214.webp"
+    },
+    {
+      "id": "215",
+      "name_en": "BREEDING COOPERATION",
+      "scene": "two conservation teams cooperatively tending an incubator with two large endangered-bird eggs, exchanging careful hand signals across the nursery bench",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/215.webp"
+    },
+    {
+      "id": "216",
+      "name_en": "TALENTED COMMUNICATOR",
+      "scene": "an original non-famous zoo educator speaking vividly to a semicircle of staff and community visitors, using warm open gestures beside a habitat overlook",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/216.webp"
+    },
+    {
+      "id": "217",
+      "name_en": "ENGINEER",
+      "scene": "an original zoo engineer assembling a modular timber-and-glass animal shelter, checking a blank plan while a second habitat module rises behind",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/217.webp"
+    },
+    {
+      "id": "218",
+      "name_en": "BREEDING PROGRAM",
+      "scene": "a wildlife biologist quietly monitoring a bonded pair of rare cranes tending their nest in a spacious wetland breeding enclosure",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/218.webp"
+    },
+    {
+      "id": "219",
+      "name_en": "DIVERSITY RESEARCHER",
+      "scene": "an ecology researcher kneeling where a clear stream meets a rocky habitat, comparing water samples, stones, moss, and animal tracks",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/219.webp"
+    },
+    {
+      "id": "220",
+      "name_en": "FEDERAL GRANTS",
+      "scene": "a public conservation partnership funding practical zoo work, centered on a civic official and ranger handing over a crate of field sensors, saplings, and veterinary supplies",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/220.webp"
+    },
+    {
+      "id": "221",
+      "name_en": "ARCHEOLOGIST",
+      "scene": "a zoo archaeologist at the outer edge of a wildlife park carefully uncovering old stone foundations and a small fossil fragment with a hand trowel",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/221.webp"
+    },
+    {
+      "id": "222",
+      "name_en": "RELEASE OF PATENTS",
+      "scene": "two conservation researchers in completely plain solid-color clothing freely sharing an open, unbranded wildlife-tracking device kit on a bare wooden workbench; the device is simple and entirely blank, with no screen, marks, emblems, patches, papers, or signage",
+      "backdrop": "a compact zoo-conservation, education, or field setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "accepted_call_note": "A separate replacement call was accepted after rejecting an earlier version with badge-like decoration.",
+      "output": "../cards/222.webp"
+    },
+    {
+      "id": "223",
+      "name_en": "SCIENCE INSTITUTE",
+      "scene": "a modern conservation science institute combining a low timber laboratory, glass greenhouse, field station, and researchers carrying specimen cases",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/223.webp"
+    },
+    {
+      "id": "224",
+      "name_en": "MIGRATION RECORDING",
+      "scene": "a migration researcher beside a reed wetland recording a sweeping flock of birds with binoculars, antenna receiver, and compact tracking equipment",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/224.webp"
+    },
+    {
+      "id": "225",
+      "name_en": "QUARANTINE LAB",
+      "scene": "a calm biosecure wildlife quarantine laboratory where a protected veterinarian examines a healthy lizard through a glass observation enclosure",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/225.webp"
+    },
+    {
+      "id": "226",
+      "name_en": "FOREIGN INSTITUTE",
+      "scene": "an international conservation institute courtyard where diverse scientists compare wildlife samples around a sculptural globe and a living tree",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/226.webp"
+    },
+    {
+      "id": "227",
+      "name_en": "WAZA SPECIAL ASSIGNMENT",
+      "scene": "a wildlife-program coordinator thoughtfully choosing between two neighboring habitat projects, one designed for a tiny meerkat and one for a large elephant",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/227.webp"
+    },
+    {
+      "id": "228",
+      "name_en": "WAZA SMALL ANIMAL PROGRAM",
+      "scene": "a compact small-animal conservation nursery where keepers care for a fennec fox, red panda, and tiny tortoise in adjoining naturalistic habitats",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/228.webp"
+    },
+    {
+      "id": "229",
+      "name_en": "EXPERT IN SMALL ANIMALS",
+      "scene": "an original small-animal specialist gently weighing a pygmy rabbit in a shallow basket, with compact natural habitats for a fennec fox and tiny tortoise behind",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/229.webp"
+    },
+    {
+      "id": "230",
+      "name_en": "EXPERT IN LARGE ANIMALS",
+      "scene": "an original large-animal specialist checking an elephant's foot beside a spacious habitat, with a rhinoceros resting in the middle distance",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/230.webp"
+    },
+    {
+      "id": "231",
+      "name_en": "SPONSORSHIP: PRIMATES",
+      "scene": "a cooperative conservation sponsor and keeper opening a newly planted primate island while an orangutan and small monkeys explore ropes and branches",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/231.webp"
+    },
+    {
+      "id": "232",
+      "name_en": "SPONSORSHIP: REPTILES",
+      "scene": "a conservation sponsor and herpetology keeper inspecting a spacious reptile habitat with a giant tortoise, crocodilian pool, and sunning lizard",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/232.webp"
+    },
+    {
+      "id": "233",
+      "name_en": "SPONSORSHIP: VULTURES",
+      "scene": "a conservation sponsor and bird keeper overlooking a high rocky aviary where several vultures circle and perch in sunlight",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/233.webp"
+    },
+    {
+      "id": "234",
+      "name_en": "SPONSORSHIP: LIONS",
+      "scene": "a conservation partnership visiting a broad lion habitat at golden hour, with a relaxed pride beside tall grass and a discreet field station",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/234.webp"
+    },
+    {
+      "id": "235",
+      "name_en": "SPONSORSHIP: ELEPHANTS",
+      "scene": "a community conservation group completing a shaded watering station while an elephant family approaches across a green savanna",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/235.webp"
+    },
+    {
+      "id": "236",
+      "name_en": "PRIMATOLOGIST",
+      "scene": "an original non-famous primatologist observing playful long-tailed monkeys in a forest canopy, taking notes from a quiet platform",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/236.webp"
+    },
+    {
+      "id": "237",
+      "name_en": "HERPETOLOGIST",
+      "scene": "an original herpetologist gently examining a monitor lizard beside a sunlit natural habitat, with a tortoise and harmless snake visible nearby",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/237.webp"
+    },
+    {
+      "id": "238",
+      "name_en": "ORNITHOLOGIST",
+      "scene": "an original ornithologist carefully measuring a calm small bird before release, with binoculars and a thriving reed wetland behind",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/238.webp"
+    },
+    {
+      "id": "239",
+      "name_en": "EXPERT IN PREDATORS",
+      "scene": "an original predator specialist quietly observing a big cat and spotted hyena from a sheltered research overlook at dusk",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/239.webp"
+    },
+    {
+      "id": "240",
+      "name_en": "EXPERT IN HERBIVORES",
+      "scene": "an original herbivore specialist studying the feeding patterns of antelope, giraffe, and zebra in a spacious grassland habitat",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/240.webp"
+    },
+    {
+      "id": "241",
+      "name_en": "HYDROLOGIST",
+      "scene": "a field hydrologist placing sensors where several clear zoo streams and ponds connect, tracing the water flow through reeds and stones",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/241.webp"
+    },
+    {
+      "id": "242",
+      "name_en": "GEOLOGIST",
+      "scene": "a conservation geologist comparing layered rock samples beside dramatic boulders and a safe cliff habitat within a wildlife park",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/242.webp"
+    },
+    {
+      "id": "243",
+      "name_en": "MEERKAT DEN",
+      "scene": "a beautifully landscaped rocky meerkat den with tunnels, warm sunning ledges, and an alert meerkat family gathered near the center",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/243.webp"
+    },
+    {
+      "id": "244",
+      "name_en": "PENGUIN POOL",
+      "scene": "a naturalistic penguin pool with curved rock ledges, clear teal water, and a lively group of penguins swimming and diving",
+      "backdrop": "a compact zoo-conservation or field-research setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/244.webp"
+    },
+    {
+      "id": "245",
+      "name_en": "AQUARIUM",
+      "scene": "an immersive conservation aquarium centered on a vast curved teal tank where rays, schooling fish, and a reef shark glide above a few awed visitors",
+      "backdrop": "a compact zoo-conservation or habitat setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/245.webp"
+    },
+    {
+      "id": "246",
+      "name_en": "CABLE CAR",
+      "scene": "a small unbranded cable car carrying zoo visitors across a dramatic rocky gorge between two green habitat ridges",
+      "backdrop": "a compact zoo-conservation or habitat setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/246.webp"
+    },
+    {
+      "id": "247",
+      "name_en": "BABOON ROCK",
+      "scene": "a tall sun-warmed naturalistic rock formation where a lively baboon troop climbs, rests, and watches from layered ledges",
+      "backdrop": "a compact zoo-conservation or habitat setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/247.webp"
+    },
+    {
+      "id": "248",
+      "name_en": "RHESUS MONKEY PARK",
+      "scene": "a spacious leafy rhesus macaque park with rope bridges, timber climbing frames, and a social troop exploring together",
+      "backdrop": "a compact zoo-conservation or habitat setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/248.webp"
+    },
+    {
+      "id": "249",
+      "name_en": "BARRED OWL HUT",
+      "scene": "a quiet woodland owl hut built from weathered timber, centered on a barred owl perched near a round sheltered opening at twilight",
+      "backdrop": "a compact zoo-conservation or habitat setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/249.webp"
+    },
+    {
+      "id": "250",
+      "name_en": "SEA TURTLE TANK",
+      "scene": "a luminous sea-turtle conservation tank with two green sea turtles gliding through clear water above seagrass and rounded reef rocks",
+      "backdrop": "a compact zoo-conservation or habitat setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/250.webp"
+    },
+    {
+      "id": "251",
+      "name_en": "POLAR BEAR EXHIBIT",
+      "scene": "a cool naturalistic polar-bear exhibit with a powerful bear stepping from pale rocks into a deep blue pool, shaded by ice-like stone",
+      "backdrop": "a compact zoo-conservation or habitat setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/251.webp"
+    },
+    {
+      "id": "252",
+      "name_en": "SPOTTED HYENA COMPOUND",
+      "scene": "a spacious spotted-hyena compound with an earthen den, tall grass, and a curious family group interacting near the center",
+      "backdrop": "a compact zoo-conservation or habitat setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/252.webp"
+    },
+    {
+      "id": "253",
+      "name_en": "OKAPI STABLE",
+      "scene": "a peaceful okapi stable built from warm timber and lush forest plants, with a keeper offering leafy browse to an alert okapi",
+      "backdrop": "a compact zoo-conservation, education, or habitat setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/253.webp"
+    },
+    {
+      "id": "254",
+      "name_en": "ZOO SCHOOL",
+      "scene": "a bright open-air zoo school where a friendly educator helps children examine feathers, leaves, a turtle shell replica, and binoculars at a central table",
+      "backdrop": "a compact zoo-conservation, education, or habitat setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/254.webp"
+    },
+    {
+      "id": "255",
+      "name_en": "ADVENTURE PLAYGROUND",
+      "scene": "a nature-inspired adventure playground beside a rocky zoo ridge, with children safely climbing timber towers, rope bridges, and a gentle slide",
+      "backdrop": "a compact zoo-conservation, education, or habitat setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/255.webp"
+    },
+    {
+      "id": "256",
+      "name_en": "WATER PLAYGROUND",
+      "scene": "a joyful nature-inspired water playground with shallow streams, stepping stones, hand pumps, and children exploring splashes beside lush reeds",
+      "backdrop": "a compact zoo-conservation, education, or habitat setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/256.webp"
+    },
+    {
+      "id": "257",
+      "name_en": "SIDE ENTRANCE",
+      "scene": "a welcoming secondary zoo entrance tucked into the park boundary, with a curved timber gate, shaded path, bicycle rack, and native planting, entirely unmarked",
+      "backdrop": "a compact zoo-conservation, education, or habitat setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/257.webp"
+    },
+    {
+      "id": "258",
+      "name_en": "NATIVE SEABIRDS",
+      "scene": "a thriving colony of native seabirds nesting on low islands among several connected coastal ponds, with a few birds flying toward a separate quiet inlet",
+      "backdrop": "a compact zoo-conservation, education, or habitat setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/258.webp"
+    },
+    {
+      "id": "259",
+      "name_en": "NATIVE LIZARDS",
+      "scene": "native lizards basking across a connected series of sunlit rock gardens, with a few separate boulders and sparse dryland plants",
+      "backdrop": "a compact zoo-conservation, education, or habitat setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/259.webp"
+    },
+    {
+      "id": "260",
+      "name_en": "NATIVE FARM ANIMALS",
+      "scene": "a free-range heritage farm meadow along the zoo boundary where sheep, goats, chickens, and a small donkey graze among open grass and simple timber shelters",
+      "backdrop": "a compact zoo-conservation, education, or habitat setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/260.webp"
+    },
+    {
+      "id": "261",
+      "name_en": "GUIDED SCHOOL TOURS",
+      "scene": "a warm zoo guide leading a small school group along a habitat trail, helping children use binoculars to spot several different animal groups",
+      "backdrop": "a compact zoo-conservation, education, or field setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/261.webp"
+    },
+    {
+      "id": "262",
+      "name_en": "EXPLORER",
+      "scene": "an original conservation explorer crossing a shallow river between forest, grassland, and rocky habitats, observing diverse wildlife with a field notebook and binoculars",
+      "backdrop": "a compact zoo-conservation, education, or field setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/262.webp"
+    },
+    {
+      "id": "263",
+      "name_en": "WAZA LARGE ANIMAL PROGRAM",
+      "scene": "a large-animal conservation program opening a vast new habitat where keepers prepare a broad shelter and watering area for an elephant, rhinoceros, and giraffe",
+      "backdrop": "a compact zoo-conservation, education, or field setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/263.webp"
+    },
+    {
+      "id": "264",
+      "name_en": "FREE-RANGE NEW WORLD MONKEYS",
+      "scene": "a lively troop of capuchin and squirrel monkeys moving freely through connected tree canopies and natural rope crossings above a lush zoo path",
+      "backdrop": "a compact zoo-conservation, education, or field setting that reads immediately at thumbnail size.",
+      "independent_imagegen_call": true,
+      "output": "../cards/264.webp"
+    }
+  ]
+}

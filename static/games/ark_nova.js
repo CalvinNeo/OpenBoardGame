@@ -59,6 +59,26 @@
     rock: ["🪨", "Rock"],
   };
 
+  const ARK_NOVA_PROJECT_METRICS = {
+    any_animal_category: ["🐾", "动物类目"],
+    any_continent: ["🌍", "不同大洲"],
+    africa: ["🌍", "非洲"],
+    americas: ["🌎", "美洲"],
+    asia: ["🌏", "亚洲"],
+    australia: ["🦘", "澳洲"],
+    europe: ["🏰", "欧洲"],
+    predator: ["🐾", "猎食类"],
+    herbivore: ["🦌", "食草类"],
+    bird: ["🪶", "鸟类"],
+    reptile: ["🦎", "爬行类"],
+    primate: ["🐒", "灵长类"],
+    water: ["💧", "水域"],
+    rock: ["🪨", "岩石"],
+    small_animal: ["🐁", "小型动物"],
+    large_animal: ["🐘", "大型动物"],
+    science: ["🔬", "研究"],
+  };
+
   const ARK_NOVA_EXPLANATIONS = {
     action_card: "Choose one Action card. Its slot plus committed X-tokens determines the action strength. After the action, it moves to slot 1.",
     x_tokens: "Spend X-tokens before an action to increase its strength, up to strength 5.",
@@ -248,10 +268,20 @@
   }
 
   function arkNovaCardArtMarkup(card, detail = false) {
+    const id = arkNovaCardId(card);
     const key = arkNovaCardArtKey(card);
-    const source = ARK_NOVA_CARD_ART[key] || ARK_NOVA_CARD_ART.conservation;
+    const fallback = ARK_NOVA_CARD_ART[key] || ARK_NOVA_CARD_ART.conservation;
+    const source = id ? `${ARK_NOVA_CARD_ART_BASE}/cards/${encodeURIComponent(id)}.webp` : fallback;
     const className = detail ? "arkn-detail-art" : "arkn-card-art";
-    return `<span class="${className}" aria-hidden="true"><img src="${source}" alt="" loading="lazy" decoding="async" draggable="false"></span>`;
+    return `<span class="${className}" aria-hidden="true"><img src="${source}" data-arkn-card-art-fallback="${fallback}" alt="" loading="lazy" decoding="async" draggable="false"></span>`;
+  }
+
+  function arkNovaHandleCardArtError(event) {
+    const image = event.target;
+    if (!(image instanceof HTMLImageElement) || !image.matches("img[data-arkn-card-art-fallback]")) return;
+    const fallback = image.dataset.arknCardArtFallback;
+    image.removeAttribute("data-arkn-card-art-fallback");
+    if (fallback) image.src = fallback;
   }
 
   function arkNovaPlayers(view = arkNovaView) {
@@ -582,6 +612,79 @@
     return chunks.join("");
   }
 
+  function arkNovaProjectMetric(card, requirement = {}) {
+    const key = String(requirement.metric || arkNovaCardObject(card).metric || "");
+    return ARK_NOVA_PROJECT_METRICS[key] || ["◆", arkNovaTitle(key || requirement.kind || "requirement")];
+  }
+
+  function arkNovaProjectRequirementMarkup(card, slot) {
+    const requirement = slot && slot.requirement || {};
+    const [icon, label] = arkNovaProjectMetric(card, requirement);
+    if (requirement.kind === "released_animal_enclosure_size") {
+      return `<span aria-hidden="true">⬡</span><b>${arkNovaEscape(requirement.value)}</b><small>围栏</small>`;
+    }
+    if (requirement.kind === "breeding_match") {
+      return `<span aria-hidden="true">✓</span><b>符合</b><small>繁育条件</small>`;
+    }
+    return `<span aria-hidden="true">${icon}</span><b>${arkNovaEscape(requirement.value ?? "✓")}</b><small>${arkNovaEscape(label)}</small>`;
+  }
+
+  function arkNovaProjectRewardMarkup(reward) {
+    const icons = {
+      conservation: ["🌿", "Conservation"],
+      reputation: ["🎓", "Reputation"],
+      appeal: ["🎟", "Appeal"],
+      money: ["💰", "Money"],
+      x_tokens: ["✕", "X-tokens"],
+      workers: ["♟", "Workers"],
+    };
+    return Object.entries(reward || {}).filter(([, amount]) => arkNovaNumber(amount) !== 0).map(([key, amount]) => {
+      const [icon, label] = icons[key] || ["◆", arkNovaTitle(key)];
+      return `<span title="${arkNovaEscape(label)}">${icon}<b>+${arkNovaEscape(amount)}</b></span>`;
+    }).join("") || `<span title="No printed reward">—</span>`;
+  }
+
+  function arkNovaProjectSupportMarkup(rawCard, options = {}) {
+    const card = arkNovaCardObject(rawCard);
+    const slots = arkNovaAsArray(card.support_slots);
+    if (!slots.length) return "";
+    const occupied = new Map(arkNovaAsArray(card.occupied_slots).map((slot) => [Number(slot.position ?? slot.slot), slot]));
+    const blocked = new Set(arkNovaAsArray(card.blocked_slots).map(Number));
+    const hasEligibility = Array.isArray(card.eligible_slots);
+    const eligible = new Set(arkNovaAsArray(card.eligible_slots).map(Number));
+    const rows = slots.map((slot) => {
+      const position = Number(slot.position ?? slot.slot);
+      const occupant = occupied.get(position);
+      const player = occupant && arkNovaPlayers().find((candidate) => arkNovaPlayerId(candidate) === String(occupant.player_id ?? occupant.player));
+      const state = occupant ? "occupied" : blocked.has(position) ? "blocked" : hasEligibility && eligible.has(position) ? "eligible" : hasEligibility ? "unmet" : "open";
+      const stateLabel = occupant ? `Taken by ${player ? arkNovaPlayerName(player) : occupant.player_name || "player"}` : state === "blocked" ? "Blocked" : state === "eligible" ? "Eligible now" : state === "unmet" ? "Requirement not met" : "Open";
+      return `<div class="arkn-project-slot is-${state}" title="${arkNovaEscape(slot.raw_zh || stateLabel)}">
+        <span class="arkn-project-slot-position" aria-label="Support tier ${position}">${position}</span>
+        <span class="arkn-project-requirement">${arkNovaProjectRequirementMarkup(card, slot)}</span>
+        <span class="arkn-project-arrow" aria-hidden="true">→</span>
+        <span class="arkn-project-reward">${arkNovaProjectRewardMarkup(slot.reward)}</span>
+        <small class="arkn-project-slot-state">${arkNovaEscape(stateLabel)}</small>
+      </div>`;
+    }).join("");
+    const bonus = Object.keys(card.new_project_bonus || {}).length
+      ? `<div class="arkn-project-new-bonus"><span>New project</span>${arkNovaProjectRewardMarkup(card.new_project_bonus)}</div>`
+      : "";
+    return `<div class="arkn-project-support ${options.detail ? "is-detail" : ""}" aria-label="Three project support tiers"><strong class="arkn-project-support-title">Support rewards</strong>${rows}${bonus}</div>`;
+  }
+
+  function arkNovaProjectSlotOptionLabel(card, slot) {
+    const requirement = slot && slot.requirement || {};
+    const metric = arkNovaProjectMetric(card, requirement)[1];
+    const requirementText = requirement.kind === "released_animal_enclosure_size"
+      ? `围栏 ${requirement.value}`
+      : requirement.kind === "breeding_match" ? "繁育条件" : `${requirement.value ?? "✓"} ${metric}`;
+    const rewardText = Object.entries(slot && slot.reward || {}).map(([key, amount]) => {
+      const icon = { conservation: "🌿", reputation: "🎓", appeal: "🎟", money: "💰", x_tokens: "✕" }[key] || arkNovaTitle(key);
+      return `${icon} +${amount}`;
+    }).join(" ");
+    return `${slot.position} · ${requirementText} → ${rewardText}`;
+  }
+
   function arkNovaCardMarkup(rawCard, options = {}) {
     const card = arkNovaCardObject(rawCard);
     const id = arkNovaCardId(card);
@@ -596,6 +699,7 @@
     const strength = card.play && (card.play.minimum_action_strength ?? card.play.strength ?? card.play.minimum_action_level_from_card_condition);
     const size = card.animal_size ?? card.size;
     const icons = arkNovaAsArray(card.icons).map(arkNovaIconMarkup).join("");
+    const projectSupport = type === "conservation_project" ? arkNovaProjectSupportMarkup(card) : "";
     const englishName = arkNovaCardEnglishName(card);
     const classes = ["arkn-card", `arkn-card-${arkNovaEscape(type)}`, selected ? "is-selected" : "", selectable ? "is-selectable" : ""].filter(Boolean).join(" ");
     const folder = options.folder != null ? `<span class="arkn-folder" title="Display folder ${options.folder}">${options.folder}</span>` : "";
@@ -623,6 +727,7 @@
             ${arkNovaRewardMarkup(card)}
           </span>
           <span class="arkn-card-icons">${icons}</span>
+          ${projectSupport}
           <span class="arkn-card-text">${arkNovaEscape(arkNovaCardSummary(card))}</span>
         </button>
         <button type="button" class="arkn-card-info" data-arkn-card-info="${arkNovaEscape(id)}" data-arkn-explain="card_info" aria-label="View ${arkNovaEscape(arkNovaCardName(card))} details">i</button>
@@ -652,6 +757,7 @@
     const html = `
       <article class="arkn-detail-card arkn-detail-${arkNovaEscape(arkNovaCardType(card))}">
         <div class="arkn-detail-heading"><span>#${arkNovaEscape(arkNovaCardId(card))}</span><strong>${arkNovaEscape(arkNovaCardName(card))}</strong><em>${arkNovaEscape(arkNovaCardEnglishName(card))}</em></div>
+        ${arkNovaCardType(card) === "conservation_project" ? arkNovaProjectSupportMarkup(card, { detail: true }) : ""}
         ${arkNovaCardArtMarkup(card, true)}
         <div class="arkn-detail-icons">${icons}${arkNovaRewardMarkup(card)}</div>
         <p>${arkNovaEscape(arkNovaCardSummary(card))}</p>
@@ -737,11 +843,16 @@
     const supply = view.association_supply || view.association || {};
     const projectMarkup = projects.length ? projects.map((entry) => {
       const card = arkNovaCardObject(entry);
-      const supporters = arkNovaAsArray(entry.supporters || entry.support || entry.slots).map((slot) => {
+      const occupiedSlots = arkNovaAsArray(card.occupied_slots || entry.supporters || entry.support || entry.slots);
+      const blockedSlots = new Set(arkNovaAsArray(card.blocked_slots).map(Number));
+      const supporters = occupiedSlots.map((slot) => {
         const player = arkNovaPlayers(view).find((candidate) => arkNovaPlayerId(candidate) === String(slot.player_id ?? slot.player ?? ""));
-        return `<span>${arkNovaEscape(player ? arkNovaPlayerName(player) : slot.player_name || slot.player_id || "Open")} · ${arkNovaEscape(slot.slot ?? slot.position ?? "")}</span>`;
+        return `<span>${arkNovaEscape(player ? arkNovaPlayerName(player) : slot.player_name || slot.player_id || "Taken")} · tier ${arkNovaEscape(slot.slot ?? slot.position ?? "")}</span>`;
       }).join("");
-      return `<div class="arkn-project-card">${arkNovaCardMarkup(card, { selectable: arkNovaUi.selectedAction === "association" && arkNovaIsMyTurn(view), zone: "project" })}<div class="arkn-supporters">${supporters || "<span>Open support slots</span>"}</div></div>`;
+      const totalSlots = arkNovaAsArray(card.support_slots).length;
+      const openSlots = Math.max(0, totalSlots - occupiedSlots.length - blockedSlots.size);
+      const status = `${supporters}${blockedSlots.size ? `<span>${blockedSlots.size} blocked</span>` : ""}${openSlots ? `<span>${openSlots} open</span>` : ""}`;
+      return `<div class="arkn-project-card">${arkNovaCardMarkup(card, { selectable: arkNovaUi.selectedAction === "association" && arkNovaIsMyTurn(view), zone: "project" })}<div class="arkn-supporters">${status || "<span>All support tiers taken</span>"}</div></div>`;
     }).join("") : `<div class="arkn-empty">No conservation projects are visible.</div>`;
     container.innerHTML = `
       <div class="arkn-project-row">${projectMarkup}</div>
@@ -1204,10 +1315,20 @@
       : supply.universities;
     if (draft.task === "partner_zoo") return `<label><span>Continent</span><select id="arkNovaAssociationContinent">${partnerZoos.map((continent) => `<option value="${arkNovaEscape(continent)}" ${draft.continent === continent ? "selected" : ""}>${arkNovaEscape(arkNovaTitle(continent))}</option>`).join("")}</select></label>`;
     if (draft.task === "university") return `<label><span>University</span><select id="arkNovaAssociationUniversity"><option value="">Choose university</option>${arkNovaSupplyOptions(universities, ["university_reputation", "university_science", "university_hand_limit"])}</select></label>`;
-    if (draft.task === "support_project") return `<label><span>Project</span><select id="arkNovaAssociationProject"><option value="">Choose project</option>${arkNovaProjects(view).map((entry) => {
-      const card = arkNovaCardObject(entry);
-      return `<option value="${arkNovaEscape(arkNovaCardId(card))}" ${String(draft.project_id) === arkNovaCardId(card) ? "selected" : ""}>${arkNovaEscape(arkNovaCardName(card))}</option>`;
-    }).join("")}</select></label><label><span>Support slot</span><select id="arkNovaAssociationSlot">${[1, 2, 3].map((slot) => `<option value="${slot}" ${Number(draft.slot) === slot ? "selected" : ""}>${slot}</option>`).join("")}</select></label>`;
+    if (draft.task === "support_project") {
+      const projects = arkNovaProjects(view).map(arkNovaCardObject);
+      const selectedProject = projects.find((card) => arkNovaCardId(card) === String(draft.project_id));
+      const slots = selectedProject ? arkNovaAsArray(selectedProject.support_slots) : [1, 2, 3].map((position) => ({ position, reward: {} }));
+      const occupied = new Set(arkNovaAsArray(selectedProject && selectedProject.occupied_slots).map((slot) => Number(slot.position ?? slot.slot)));
+      const blocked = new Set(arkNovaAsArray(selectedProject && selectedProject.blocked_slots).map(Number));
+      const slotOptions = slots.map((slot) => {
+        const position = Number(slot.position ?? slot.slot);
+        const suffix = occupied.has(position) ? " · taken" : blocked.has(position) ? " · blocked" : "";
+        const label = selectedProject ? arkNovaProjectSlotOptionLabel(selectedProject, slot) : String(position);
+        return `<option value="${position}" ${Number(draft.slot) === position ? "selected" : ""}>${arkNovaEscape(label + suffix)}</option>`;
+      }).join("");
+      return `<label><span>Project</span><select id="arkNovaAssociationProject"><option value="">Choose project</option>${projects.map((card) => `<option value="${arkNovaEscape(arkNovaCardId(card))}" ${String(draft.project_id) === arkNovaCardId(card) ? "selected" : ""}>${arkNovaEscape(arkNovaCardName(card))}</option>`).join("")}</select></label><label><span>Support tier</span><select id="arkNovaAssociationSlot">${slotOptions}</select></label>`;
+    }
     return `<div class="arkn-fixed-field"><span>Task reward</span><b>🎓 +2 reputation</b></div>`;
   }
 
@@ -1829,6 +1950,7 @@
 
   document.addEventListener("pointerdown", arkNovaHandleExplainPointer, true);
   document.addEventListener("click", arkNovaHandleExplainClick, true);
+  document.addEventListener("error", arkNovaHandleCardArtError, true);
   document.addEventListener("keydown", arkNovaHandleKeydown);
   arkNovaEnsureShell();
 })();

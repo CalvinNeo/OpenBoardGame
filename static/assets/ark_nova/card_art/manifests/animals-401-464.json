@@ -1,0 +1,469 @@
+{
+  "generator": "OpenAI built-in ImageGen",
+  "use_case": "stylized-concept",
+  "source_data": "../../../../../game/assets/ark_nova/cards.json",
+  "originality_note": "Generated without source or reference images. The prompts explicitly reject imitation of Ark Nova and other board-game artwork.",
+  "output": {
+    "directory": "../cards",
+    "filename_pattern": "<card-id>.webp",
+    "format": "WebP",
+    "width": 512,
+    "height": 288,
+    "aspect_ratio": "16:9",
+    "color_mode": "RGB",
+    "quality": 84,
+    "resize": "center crop with Lanczos resampling"
+  },
+  "prompt_assembly": "The final prompt for each card is shared_prompt followed by that card's prompt_detail.",
+  "shared_prompt": "Use case: stylized-concept\nAsset type: original 16:9 landscape animal-card thumbnail for an open-source browser board game\nStyle/medium: contemporary cut-paper collage mixed with matte gouache; layered rounded paper shapes, subtle tactile paper grain, crisp thumbnail-readable silhouette, polished editorial wildlife illustration; use an original visual identity and composition, not the artwork or composition of Ark Nova or any existing board game\nComposition/framing: single clearly identifiable animal as the dominant subject, full or nearly full body, centered within the middle 80% of a wide horizontal frame; unobstructed face and species-defining anatomy; simple layered habitat with shallow depth; edge-safe for later 16:9 crop\nColor palette: natural species colors supported by forest green, coral, ochre, cream, and teal accents\nConstraints: biologically recognizable species; no text, letters, numbers, logos, watermark, card frame, UI, icons, captions, signage, human-made props, or extra decorative border; no copied poses or recognizable board-game composition",
+  "cards": [
+    {
+      "id": "401",
+      "name": "CHEETAH",
+      "continent": "africa",
+      "category": "predator",
+      "prompt_detail": "Scene/backdrop: sunlit East African savanna with low golden grass and sparse flat-topped acacias\nSubject: an adult cheetah, very slender long-legged build, small rounded head, black tear marks, dense small black spots, long tail with dark rings; alert in a relaxed walking pose\nLighting/mood: warm clear morning light, agile and calm"
+    },
+    {
+      "id": "402",
+      "name": "LION",
+      "continent": "africa",
+      "category": "predator",
+      "prompt_detail": "Scene/backdrop: open African grassland with ochre earth and distant acacia silhouettes\nSubject: an adult male African lion with a broad tawny face, full dark-gold mane, muscular tawny body, and black tail tuft; standing in quiet profile with head turned toward viewer\nLighting/mood: low golden-hour light, dignified and watchful"
+    },
+    {
+      "id": "403",
+      "name": "LEOPARD",
+      "continent": "africa",
+      "category": "predator",
+      "prompt_detail": "Scene/backdrop: green African woodland edge with a low twisting tree branch and dappled leaves\nSubject: an adult African leopard with golden coat, distinct black rosettes, muscular compact body, rounded ears, and long tail; poised along the branch, all key markings visible\nLighting/mood: filtered late-afternoon light, stealthy and composed"
+    },
+    {
+      "id": "404",
+      "name": "CARACAL",
+      "continent": "africa",
+      "category": "predator",
+      "prompt_detail": "Scene/backdrop: dry African scrubland with rust-colored rocks, pale grasses, and sparse thorn bushes\nSubject: an adult caracal, slim reddish-tan wild cat with very long black ear tufts, black-backed pointed ears, pale chin, and long legs; standing alert on a low rock\nLighting/mood: clean desert dawn light, focused and elegant"
+    },
+    {
+      "id": "405",
+      "name": "FENNEC FOX",
+      "continent": "africa",
+      "category": "predator",
+      "prompt_detail": "Scene/backdrop: sweeping Sahara sand dunes with a few pale desert grasses and small stones\nSubject: an adult fennec fox, tiny cream-colored body, enormous upright ears, delicate narrow muzzle, dark eyes, and fluffy black-tipped tail; pausing lightly on a dune crest\nLighting/mood: soft apricot sunrise, curious and airy"
+    },
+    {
+      "id": "406",
+      "name": "SIBERIAN TIGER",
+      "continent": "asia",
+      "category": "predator",
+      "prompt_detail": "Scene/backdrop: snowy Siberian taiga with birch trunks, dark conifers, and powder snow\nSubject: a very large Siberian tiger with thick pale-orange winter coat, widely spaced dark stripes, broad head, white cheeks, and heavy paws; walking steadily through shallow snow\nLighting/mood: cool blue winter daylight with warm ochre highlights, powerful and serene"
+    },
+    {
+      "id": "407",
+      "name": "SUMATRAN TIGER",
+      "continent": "asia",
+      "category": "predator",
+      "prompt_detail": "Scene/backdrop: dense Sumatran rainforest with broad wet leaves, ferns, moss, and warm shafts of light\nSubject: an adult Sumatran tiger, compact and relatively small, deep burnt-orange coat, dense narrow black stripes, prominent cheek ruff, and long striped tail; stepping over a mossy root\nLighting/mood: humid filtered forest light, alert and elusive"
+    },
+    {
+      "id": "408",
+      "name": "SLOTH BEAR",
+      "continent": "asia",
+      "category": "predator,bear",
+      "prompt_detail": "Scene/backdrop: dry deciduous Indian forest with a broken termite mound, sal leaves, and dusty ground\nSubject: an adult sloth bear with shaggy black fur, pale V-shaped chest mark, long mobile pale muzzle, small ears hidden in fur, and inward-turning front paws with long claws; sniffing beside the mound\nLighting/mood: warm late-afternoon shade, inquisitive and rugged"
+    },
+    {
+      "id": "409",
+      "name": "SUN BEAR",
+      "continent": "asia",
+      "category": "predator,bear",
+      "prompt_detail": "Scene/backdrop: lush Southeast Asian rainforest with vines and a low angled tree trunk\nSubject: an adult sun bear, the smallest bear, sleek short black fur, broad golden-orange crescent on chest, short rounded ears, pale tan muzzle, and long curved claws; braced naturally on the trunk with chest marking visible\nLighting/mood: rich filtered green light, nimble and lively"
+    },
+    {
+      "id": "410",
+      "name": "YELLOW-THROATED MARTEN",
+      "continent": "asia",
+      "category": "predator",
+      "prompt_detail": "Scene/backdrop: misty Himalayan broadleaf forest with mossy branches and amber fallen leaves\nSubject: an adult yellow-throated marten, long low agile body, rich golden-yellow throat and chest, dark chocolate head and legs, warm brown back, and long bushy tail; bounding along a fallen log\nLighting/mood: cool forest morning with warm animal accents, energetic and bright"
+    },
+    {
+      "id": "411",
+      "name": "GRIZZLY BEAR",
+      "continent": "americas",
+      "category": "predator,bear",
+      "prompt_detail": "Scene/backdrop: Rocky Mountain river valley with conifer forest, rounded boulders, and a clear stream\nSubject: an adult grizzly bear, massive brown body, prominent shoulder hump, dished face, small rounded ears, and silver-tipped guard hairs; standing four-square beside the water\nLighting/mood: crisp mountain morning, imposing but calm"
+    },
+    {
+      "id": "412",
+      "name": "JAGUAR",
+      "continent": "americas",
+      "category": "predator",
+      "prompt_detail": "Scene/backdrop: lush South American rainforest riverbank with emerald leaves, exposed roots, and dark water\nSubject: an adult jaguar, stocky muscular golden cat with large black rosettes containing central spots, broad powerful head, short sturdy legs, and thick tail; stepping onto a low root\nLighting/mood: humid dappled sunlight, confident and mysterious"
+    },
+    {
+      "id": "413",
+      "name": "COUGAR",
+      "continent": "americas",
+      "category": "predator",
+      "prompt_detail": "Scene/backdrop: rugged North American foothill forest with granite ledges, pines, and dry sage\nSubject: an adult cougar, large unspotted tawny cat with small rounded head, pale muzzle, powerful hindquarters, and exceptionally long thick tail with dark tip; descending a low ledge\nLighting/mood: clear amber evening light, quiet and athletic"
+    },
+    {
+      "id": "414",
+      "name": "SOUTH AMERICAN COATI",
+      "continent": "americas",
+      "category": "predator,bear",
+      "prompt_detail": "Scene/backdrop: warm South American woodland floor with broad leaves, roots, and scattered fruit\nSubject: an adult South American coati, reddish-brown body, elongated flexible pale snout, dark facial mask, small rounded ears, sturdy claws, and very long upright tail with bold pale and dark rings; walking with tail clearly visible\nLighting/mood: lively dappled daylight, curious and social"
+    },
+    {
+      "id": "415",
+      "name": "RACCOON",
+      "continent": "americas",
+      "category": "predator,bear",
+      "prompt_detail": "Scene/backdrop: temperate North American creek bank with smooth stones, ferns, and maple leaves\nSubject: an adult raccoon with grizzled gray coat, unmistakable black eye mask edged in white, nimble dark paws, and thick tail with alternating dark rings; standing beside shallow water\nLighting/mood: soft moonlit blue-green dusk with warm reflected highlights, inquisitive and calm"
+    },
+    {
+      "id": "416",
+      "name": "EURASIAN BROWN BEAR",
+      "continent": "europe",
+      "category": "predator,bear",
+      "prompt_detail": "Scene/backdrop: European mixed woodland clearing with beech trunks, mushrooms, moss, and autumn leaves\nSubject: an adult Eurasian brown bear, large shaggy medium-brown body, broad skull, long snout, rounded ears, and strong shoulders without an exaggerated grizzly hump; ambling through the clearing\nLighting/mood: mellow overcast autumn light, grounded and peaceful"
+    },
+    {
+      "id": "417",
+      "name": "WOLF",
+      "continent": "europe",
+      "category": "predator",
+      "prompt_detail": "Scene/backdrop: European conifer-and-birch forest edge with pale snow patches and blue distant hills\nSubject: an adult gray wolf, lean long-legged canine with grizzled gray-tan coat, narrow chest, broad paws, pointed ears, amber eyes, and bushy tail held low; standing alert in three-quarter view\nLighting/mood: crisp cool dawn, attentive and wild"
+    },
+    {
+      "id": "418",
+      "name": "EURASIAN LYNX",
+      "continent": "europe",
+      "category": "predator",
+      "prompt_detail": "Scene/backdrop: northern European boreal forest with mossy boulders, spruce trunks, and soft snow\nSubject: an adult Eurasian lynx, tall heavy wild cat with long black ear tufts, broad pale cheek ruff, spotted tawny-gray coat, oversized furry paws, and very short black-tipped tail; stepping onto a mossy rock\nLighting/mood: soft winter light, watchful and poised"
+    },
+    {
+      "id": "419",
+      "name": "EUROPEAN BADGER",
+      "continent": "europe",
+      "category": "predator",
+      "prompt_detail": "Scene/backdrop: European oak woodland at a burrow entrance with leaf litter and woodland bluebells\nSubject: an adult European badger, low stocky body with coarse gray back, black underside and legs, small ears, and striking lengthwise black-and-white facial stripes; walking toward the viewer at a slight angle\nLighting/mood: gentle early-evening woodland light, sturdy and purposeful"
+    },
+    {
+      "id": "420",
+      "name": "STOAT",
+      "continent": "europe",
+      "category": "predator",
+      "prompt_detail": "Scene/backdrop: snowy European upland meadow with twiggy shrubs and a few exposed brown grasses\nSubject: an adult stoat in white winter coat, exceptionally slender elongated body, small rounded ears, bright dark eyes, and long tail ending in an unmistakable black tip; bounding above shallow snow\nLighting/mood: bright cool winter daylight with cream and coral accents, swift and playful"
+    },
+    {
+      "id": "421",
+      "name": "NEW ZEALAND FUR SEAL",
+      "continent": "australia",
+      "category": "predator",
+      "prompt_detail": "Scene/backdrop: rugged New Zealand subantarctic coast with charcoal volcanic rocks, white surf, and wind-bent coastal grass\nSubject: an adult New Zealand fur seal, streamlined dark charcoal-brown body, pointed doglike muzzle, long pale whiskers, small external ear flaps, and strong front flippers; resting upright on a rock with the whole silhouette visible\nLighting/mood: cool ocean daylight, resilient and alert"
+    },
+    {
+      "id": "422",
+      "name": "AUSTRALIAN SEA LION",
+      "continent": "australia",
+      "category": "predator",
+      "prompt_detail": "Scene/backdrop: sunny southern Australian limestone shore with turquoise water and pale sand\nSubject: an adult Australian sea lion, robust seal with warm tawny-brown coat, broad chest, rounded head, short muzzle, visible external ear flaps, and long front flippers; sitting upright at the waterline\nLighting/mood: bright clean coastal light, calm and confident"
+    },
+    {
+      "id": "423",
+      "name": "NEW ZEALAND SEA LION",
+      "continent": "australia",
+      "category": "predator",
+      "prompt_detail": "Scene/backdrop: remote New Zealand sandy beach backed by flax plants and low ochre dunes\nSubject: an adult male New Zealand sea lion, very large heavy body, dark chocolate-brown coat, thick neck and coarse mane-like fur around the shoulders, broad blunt muzzle, and visible external ears; moving across damp sand\nLighting/mood: soft cloudy coastal light, formidable and grounded"
+    },
+    {
+      "id": "424",
+      "name": "AUSTRALIAN DINGO",
+      "continent": "australia",
+      "category": "predator",
+      "prompt_detail": "Scene/backdrop: Australian red-center grassland with ochre rocks, spinifex tufts, and distant blue ridges\nSubject: an adult Australian dingo, lean medium canine with sandy ginger coat, pale chest and paws, wedge-shaped head, large upright triangular ears, almond eyes, and bushy tail; standing alert in profile\nLighting/mood: clear warm dawn light, independent and watchful"
+    },
+    {
+      "id": "425",
+      "name": "TASMANIAN DEVIL",
+      "continent": "australia",
+      "category": "predator",
+      "prompt_detail": "Scene/backdrop: Tasmanian eucalyptus woodland floor with dark logs, tree ferns, and cool moss\nSubject: an adult Tasmanian devil, compact muscular black marsupial with oversized head, rounded pink-edged ears, broad jaws, short tail, and a bold white chest band; striding low to the ground\nLighting/mood: moody blue-green dusk with warm accents, intense but natural"
+    },
+    {
+      "id": "426",
+      "name": "AFRICAN BUSH ELEPHANT",
+      "continent": "africa",
+      "category": "herbivore",
+      "prompt_detail": "Scene/backdrop: broad African savanna with a shallow waterhole, golden grass, and distant acacias\nSubject: an adult African bush elephant, immense gray body, exceptionally large fan-shaped ears, long curved ivory tusks, wrinkled skin, long trunk, and sturdy legs; walking calmly beside the water\nLighting/mood: expansive golden morning light, majestic and gentle"
+    },
+    {
+      "id": "427",
+      "name": "WHITE RHINOCEROS",
+      "continent": "africa",
+      "category": "herbivore",
+      "prompt_detail": "Scene/backdrop: dry southern African grassland with low thorn scrub and ochre dust\nSubject: an adult white rhinoceros, massive pale-gray body, pronounced shoulder hump, broad square grazing lip, tiny ears, and two horns with a long front horn; standing in clear side view\nLighting/mood: bright late-afternoon light, monumental and calm"
+    },
+    {
+      "id": "428",
+      "name": "GIRAFFE",
+      "continent": "africa",
+      "category": "herbivore",
+      "prompt_detail": "Scene/backdrop: East African acacia woodland with layered golden grasses and low distant hills\nSubject: an adult giraffe, exceptionally long neck and legs, tan coat with irregular chestnut patches, small hornlike ossicones, dark tufted tail, and gentle face; bending slightly toward acacia leaves while the complete body remains visible\nLighting/mood: luminous warm daylight, graceful and serene"
+    },
+    {
+      "id": "429",
+      "name": "GREVY'S ZEBRA",
+      "continent": "africa",
+      "category": "herbivore",
+      "prompt_detail": "Scene/backdrop: arid East African grassland with pale scrub, ochre soil, and distant dry hills\nSubject: an adult Grevy's zebra with very narrow closely spaced black-and-white stripes, mostly white belly, large rounded ears, tall lean body, and white muzzle bordered in dark gray; standing in clear side view\nLighting/mood: crisp highland morning light, elegant and alert"
+    },
+    {
+      "id": "430",
+      "name": "PYGMY HIPPOPOTAMUS",
+      "continent": "africa",
+      "category": "herbivore",
+      "prompt_detail": "Scene/backdrop: shaded West African rainforest stream with glossy leaves, muddy bank, and tangled roots\nSubject: an adult pygmy hippopotamus, small compact glossy dark-brown body, relatively narrow head, rounded back, short sturdy legs, and small ears; stepping from shallow water with moist skin highlights\nLighting/mood: soft humid green light, shy and gentle"
+    },
+    {
+      "id": "431",
+      "name": "ASIAN ELEPHANT",
+      "continent": "asia",
+      "category": "herbivore",
+      "prompt_detail": "Scene/backdrop: Asian monsoon forest clearing with bamboo, broad leaves, and a shallow forest pool\nSubject: an adult Asian elephant with gray wrinkled skin, smaller rounded ears than an African elephant, twin-domed forehead, long trunk, arched back, and compact body; calmly reaching toward water\nLighting/mood: filtered warm daylight, thoughtful and serene"
+    },
+    {
+      "id": "432",
+      "name": "INDIAN RHINOCEROS",
+      "continent": "asia",
+      "category": "herbivore",
+      "prompt_detail": "Scene/backdrop: tall elephant-grass wetland in northern India with muddy ground and distant sal forest\nSubject: an adult Indian rhinoceros, huge gray body covered in deep armor-like skin folds and rounded bumps, one stout nasal horn, small ears, and heavy shoulders; standing in shallow marsh water\nLighting/mood: hazy golden morning, ancient and powerful"
+    },
+    {
+      "id": "433",
+      "name": "GIANT PANDA",
+      "continent": "asia",
+      "category": "herbivore,bear",
+      "prompt_detail": "Scene/backdrop: misty Chinese mountain bamboo forest with layered green canes and mossy stones\nSubject: an adult giant panda with unmistakable creamy-white body, black ears, black eye patches, black shoulders and legs, rounded head, and stout build; seated naturally holding fresh bamboo leaves\nLighting/mood: soft diffuse mountain light, peaceful and endearing"
+    },
+    {
+      "id": "434",
+      "name": "RED PANDA",
+      "continent": "asia",
+      "category": "herbivore,bear",
+      "prompt_detail": "Scene/backdrop: cool Himalayan temperate forest with mossy branches, rhododendron leaves, and distant blue-green slopes\nSubject: an adult red panda, small russet mammal with white facial mask, pointed ears, dark belly and legs, and exceptionally long fluffy tail with alternating pale and red rings; walking along a broad branch\nLighting/mood: gentle misty dawn, nimble and charming"
+    },
+    {
+      "id": "435",
+      "name": "MALAYAN TAPIR",
+      "continent": "asia",
+      "category": "herbivore",
+      "prompt_detail": "Scene/backdrop: dense Southeast Asian lowland rainforest with giant leaves, ferns, and a small muddy pool\nSubject: an adult Malayan tapir, robust animal with flexible short trunk, black head and legs, large clean cream-white saddle across back and sides, rounded ears with white rims, and short tail; stepping through undergrowth\nLighting/mood: rich dappled forest light, unusual and calm"
+    },
+    {
+      "id": "436",
+      "name": "AMERICAN BISON",
+      "continent": "americas",
+      "category": "herbivore",
+      "prompt_detail": "Scene/backdrop: sweeping North American prairie with golden grasses, sage, and broad blue sky\nSubject: an adult American bison, enormous dark shaggy forequarters, high shoulder hump, broad low head, curved short horns, woolly beard, and slimmer brown hindquarters; standing broadside into the wind\nLighting/mood: dramatic warm late-day light, iconic and steadfast"
+    },
+    {
+      "id": "437",
+      "name": "MUSKOX",
+      "continent": "americas",
+      "category": "herbivore",
+      "prompt_detail": "Scene/backdrop: windswept North American Arctic tundra with pale grasses, granite outcrops, patches of snow, and distant blue mountains\nSubject: an adult muskox, stocky low body draped in extremely long dark-brown shaggy hair, pale saddle, short sturdy legs, broad horn bases meeting across the forehead, and horns curving downward then upward; standing against the wind\nLighting/mood: cool luminous Arctic daylight, hardy and ancient"
+    },
+    {
+      "id": "438",
+      "name": "REINDEER",
+      "continent": "americas",
+      "category": "herbivore",
+      "prompt_detail": "Scene/backdrop: North American subarctic tundra in early autumn with russet dwarf shrubs, lichen, and a pale distant lake\nSubject: an adult reindeer or caribou, medium deer with broad branching antlers, thick gray-brown coat, pale neck mane, large splayed hooves, and compact muzzle; walking in clear profile\nLighting/mood: low amber northern light, migratory and resilient"
+    },
+    {
+      "id": "439",
+      "name": "LAMA",
+      "continent": "americas",
+      "category": "herbivore",
+      "prompt_detail": "Scene/backdrop: high Andean puna grassland with terraced ochre hills and snowcapped peaks far behind\nSubject: an adult llama, tall slender domesticated camelid with long neck, banana-shaped upright ears, woolly cream-and-caramel coat, long legs, and delicate split upper lip; standing proudly in profile\nLighting/mood: clear high-altitude morning, bright and composed"
+    },
+    {
+      "id": "440",
+      "name": "MOUNTAIN TAPIR",
+      "continent": "americas",
+      "category": "herbivore",
+      "prompt_detail": "Scene/backdrop: misty Andean cloud forest with giant leaves, mossy stones, ferns, and steep green slopes\nSubject: an adult mountain tapir, compact dark charcoal-brown tapir with dense woolly coat, flexible short trunk, rounded white-edged ears, distinct pale lips, and short sturdy legs; moving through wet vegetation\nLighting/mood: cool silver mist, rare and secretive"
+    },
+    {
+      "id": "441",
+      "name": "EUROPEAN BISON",
+      "continent": "europe",
+      "category": "herbivore",
+      "prompt_detail": "Scene/backdrop: primeval central European forest with ancient oaks, sunlit glade, ferns, and fallen branches\nSubject: an adult European bison or wisent, huge deep-brown bovine with high shoulders, shaggy neck and beard, relatively lean hindquarters, short upward-curving horns, and long tail; stepping into the glade\nLighting/mood: warm shafts of forest light, powerful and reserved"
+    },
+    {
+      "id": "442",
+      "name": "MOOSE",
+      "continent": "europe",
+      "category": "herbivore",
+      "prompt_detail": "Scene/backdrop: northern European wetland edge with willow shrubs, reeds, dark water, and birch forest\nSubject: an adult bull moose, towering dark-brown deer with very long legs, massive broad palmate antlers, long drooping muzzle, throat bell, and high shoulders; standing knee-deep near the water\nLighting/mood: cool autumn dawn, immense and tranquil"
+    },
+    {
+      "id": "443",
+      "name": "RED DEER",
+      "continent": "europe",
+      "category": "herbivore",
+      "prompt_detail": "Scene/backdrop: European woodland meadow in autumn with russet bracken, oak trees, and soft hills\nSubject: an adult red deer stag, rich reddish-brown coat, pale rump patch, strong neck, and large many-tined branching antlers; standing in proud three-quarter profile\nLighting/mood: mellow golden mist, noble and alert"
+    },
+    {
+      "id": "444",
+      "name": "ALPINE IBEX",
+      "continent": "europe",
+      "category": "herbivore",
+      "prompt_detail": "Scene/backdrop: steep European Alpine ledge with pale limestone, alpine flowers, and snow peaks beyond\nSubject: an adult male Alpine ibex, sturdy tawny-gray mountain goat with short beard, cloven hooves, and spectacular very long backward-curving horns marked by heavy transverse ridges; balanced naturally on rock\nLighting/mood: crisp clear mountain sunrise, sure-footed and bold"
+    },
+    {
+      "id": "445",
+      "name": "CRESTED PORCUPINE",
+      "continent": "europe",
+      "category": "herbivore",
+      "prompt_detail": "Scene/backdrop: rocky Mediterranean woodland scrub with pale stones, olive-green bushes, and dry grasses\nSubject: an adult crested porcupine, stocky dark body with short legs, blunt muzzle, dramatic raised crest, and an unmistakable mantle of very long black-and-white banded quills; walking in clear side view\nLighting/mood: warm dusk light, defensive yet calm"
+    },
+    {
+      "id": "446",
+      "name": "DUGONG",
+      "continent": "australia",
+      "category": "herbivore",
+      "prompt_detail": "Scene/backdrop: shallow tropical Australian bay with sunlit turquoise water, waving seagrass, pale sand, and soft coral silhouettes far behind\nSubject: an adult dugong underwater, large smooth gray-brown marine mammal with rounded body, downturned bristled muzzle grazing seagrass, paddle-like foreflippers, and a broad whale-like fluked tail; whole silhouette visible\nLighting/mood: tranquil filtered aqua light, gentle and buoyant"
+    },
+    {
+      "id": "447",
+      "name": "RED KANGAROO",
+      "continent": "australia",
+      "category": "herbivore",
+      "prompt_detail": "Scene/backdrop: open Australian outback plain with red earth, spinifex grass, and distant mauve ranges\nSubject: an adult male red kangaroo, very tall muscular rust-red marsupial with small head, long upright ears, huge hind feet, powerful haunches, compact forearms, and extremely long balancing tail; standing upright in a natural resting pose\nLighting/mood: warm clear sunrise, strong and expansive"
+    },
+    {
+      "id": "448",
+      "name": "KOALA",
+      "continent": "australia",
+      "category": "herbivore,bear",
+      "prompt_detail": "Scene/backdrop: Australian eucalyptus woodland canopy with silver-green leaves and layered cream bark\nSubject: an adult koala, compact gray marsupial with fluffy round ears, large black oval nose, pale chest, strong curved claws, and no visible tail; securely hugging a broad eucalyptus branch while looking outward\nLighting/mood: soft bright morning light, restful and endearing"
+    },
+    {
+      "id": "449",
+      "name": "PLATYPUS",
+      "continent": "australia",
+      "category": "herbivore",
+      "prompt_detail": "Scene/backdrop: clear Australian forest creek with smooth stones, water plants, and fern-lined banks\nSubject: an adult platypus, low sleek brown monotreme with broad flat ducklike bill, tiny eyes, dense waterproof fur, webbed feet, and wide flat beaver-like tail; swimming at the surface with key anatomy visible\nLighting/mood: sparkling cool daylight, curious and unusual"
+    },
+    {
+      "id": "450",
+      "name": "COMMON WOMBAT",
+      "continent": "australia",
+      "category": "herbivore",
+      "prompt_detail": "Scene/backdrop: Australian eucalyptus grassland at a round burrow entrance with sandy soil and tussocks\nSubject: an adult common wombat, stout barrel-shaped brown marsupial with broad blunt face, small rounded ears, very short sturdy legs, strong digging claws, and nearly invisible tail; standing squarely near the burrow\nLighting/mood: mellow afternoon light, sturdy and amiable"
+    },
+    {
+      "id": "451",
+      "name": "PROBOSCIS MONKEY",
+      "continent": "asia",
+      "category": "primate",
+      "prompt_detail": "Scene/backdrop: Bornean mangrove forest beside a calm muddy river with tangled roots and broad leaves\nSubject: an adult male proboscis monkey, large reddish-brown primate with unmistakably long pendulous nose, pale orange shoulders, gray limbs, pot belly, long tail, and dark hands; seated naturally on a low branch in full view\nLighting/mood: humid golden-green light, contemplative and distinctive"
+    },
+    {
+      "id": "452",
+      "name": "SENEGAL BUSHBABY",
+      "continent": "africa",
+      "category": "primate",
+      "prompt_detail": "Scene/backdrop: moonlit West African dry woodland with a twisting branch, sparse leaves, and deep teal night sky\nSubject: an adult Senegal bushbaby, tiny gray-brown nocturnal primate with enormous amber eyes, very large mobile rounded ears, small pointed muzzle, grasping hands and feet, and long furry tail; crouched alert on the branch\nLighting/mood: gentle moon glow with warm ochre highlights, bright-eyed and delicate"
+    },
+    {
+      "id": "453",
+      "name": "COLLARED MANGABEY",
+      "continent": "africa",
+      "category": "primate",
+      "prompt_detail": "Scene/backdrop: lush West African rainforest edge with broad leaves, vines, and a low sunlit branch\nSubject: an adult collared mangabey, slender gray primate with long limbs and very long tail, dark bare face, white eyelids, chestnut-red crown, and distinct white collar and cheek whiskers; walking on all fours along the branch\nLighting/mood: warm dappled forest light, social and alert"
+    },
+    {
+      "id": "454",
+      "name": "RING-TAILED LEMUR",
+      "continent": "africa",
+      "category": "primate",
+      "prompt_detail": "Scene/backdrop: dry Madagascar spiny forest with ochre rocks, low succulent shrubs, and pale blue sky\nSubject: an adult ring-tailed lemur, gray-bodied primate with white belly, white face marked by black eye patches, pointed muzzle, and exceptionally long tail with bold alternating black-and-white rings; standing on a rock with tail arched fully visible\nLighting/mood: bright clear morning, animated and curious"
+    },
+    {
+      "id": "455",
+      "name": "MANTLED GUEREZA",
+      "continent": "africa",
+      "category": "primate",
+      "prompt_detail": "Scene/backdrop: misty East African highland forest with deep green canopy, moss, and hanging vines\nSubject: an adult mantled guereza, black colobus monkey with black face framed by white whiskers, dramatic long white mantle flowing down both sides, no thumbs visible, and very long black tail ending in a large white tuft; seated upright on a branch\nLighting/mood: filtered silver-green light, elegant and composed"
+    },
+    {
+      "id": "456",
+      "name": "BARBARY MACAQUE",
+      "continent": "africa",
+      "category": "primate",
+      "prompt_detail": "Scene/backdrop: rocky North African Atlas cedar forest with limestone ledges and russet leaf litter\nSubject: an adult Barbary macaque, sturdy golden-brown monkey with pale pinkish face, thick winter fur, short limbs, and naturally absent visible tail; sitting on a stone in clear three-quarter view\nLighting/mood: cool mountain morning with warm ochre accents, thoughtful and hardy"
+    },
+    {
+      "id": "457",
+      "name": "MANDRILL",
+      "continent": "africa",
+      "category": "primate",
+      "prompt_detail": "Scene/backdrop: dense Central African rainforest floor with giant roots, broad leaves, and shafts of green light\nSubject: an adult male mandrill, powerful stocky primate with olive-brown coat, golden beard, bright red central muzzle, vivid blue ridges along both sides of the nose, and deep-set amber eyes; standing in a dignified three-quarter pose\nLighting/mood: saturated yet natural filtered light, commanding and vivid"
+    },
+    {
+      "id": "458",
+      "name": "JAPANESE MACAQUE",
+      "continent": "asia",
+      "category": "primate",
+      "prompt_detail": "Scene/backdrop: snow-covered Japanese mountain forest with bare maple branches, dark rocks, and drifting steam\nSubject: an adult Japanese macaque, compact monkey with very thick shaggy gray-brown winter coat, bare pink-red face, short tail, and dexterous dark hands; seated upright beside warm water with full silhouette visible\nLighting/mood: soft snowy daylight and gentle steam, resilient and contemplative"
+    },
+    {
+      "id": "459",
+      "name": "RED-SHANKED DOUC",
+      "continent": "asia",
+      "category": "primate",
+      "prompt_detail": "Scene/backdrop: lush Southeast Asian rainforest canopy with layered leaves, vines, and a broad pale branch\nSubject: an adult red-shanked douc langur, extremely colorful slender primate with gray body, black cap and forearms, white hands, rich maroon-red lower legs, long white tail, orange-gold face, and white cheek whiskers; poised sideways on the branch\nLighting/mood: luminous green forest light, refined and jewel-like"
+    },
+    {
+      "id": "460",
+      "name": "DUSKY-LEAF MONKEY",
+      "continent": "asia",
+      "category": "primate",
+      "prompt_detail": "Scene/backdrop: Malaysian limestone rainforest with glossy leaves, pale rock, and cool turquoise shadows\nSubject: an adult dusky leaf monkey, slim dark charcoal-gray primate with long tail, distinctive white rings around the eyes like spectacles, pale mouth patch, small crest, and black hands; crouched lightly on a branch with face clear\nLighting/mood: cool dappled morning light, quiet and observant"
+    },
+    {
+      "id": "461",
+      "name": "HORSFIELD'S TARSIER",
+      "continent": "asia",
+      "category": "primate",
+      "prompt_detail": "Scene/backdrop: moonlit Sumatran lowland rainforest understory with a slim vertical sapling, broad leaves, and deep teal shadows\nSubject: an adult Horsfield's tarsier, very small nocturnal primate with enormous round amber eyes, huge thin rounded ears, short velvety gray-brown fur, elongated ankle bones, extremely long delicate fingers gripping the sapling, and a long mostly bare tail ending in a tuft; whole body visible\nLighting/mood: soft moon glow with warm highlights, uncanny and delicate"
+    },
+    {
+      "id": "462",
+      "name": "NORTHERN PLAINS GRAY LANGUR",
+      "continent": "asia",
+      "category": "primate",
+      "prompt_detail": "Scene/backdrop: dry northern Indian woodland with pale rock, banyan roots, dusty green leaves, and distant grassland\nSubject: an adult northern plains gray langur, tall slender pale silver-gray monkey with stark black hairless face, black ears and hands, very long limbs, and extraordinarily long curved tail; seated upright on a low rock with the tail fully visible\nLighting/mood: warm clear morning light, calm and watchful"
+    },
+    {
+      "id": "463",
+      "name": "PANAMANIAN WHITE-FACED CAPUCHIN",
+      "continent": "americas",
+      "category": "primate",
+      "prompt_detail": "Scene/backdrop: lush Panamanian tropical forest canopy with vines, heliconia leaves, and a pale branch\nSubject: an adult Panamanian white-faced capuchin, agile small primate with black body and limbs, creamy-white face, throat and shoulders, dark cap, expressive dark eyes, dexterous hands, and long prehensile tail curled around the branch; full silhouette visible\nLighting/mood: bright dappled rainforest light, clever and lively"
+    },
+    {
+      "id": "464",
+      "name": "BROWN SPIDER MONKEY",
+      "continent": "americas",
+      "category": "primate",
+      "prompt_detail": "Scene/backdrop: high South American rainforest canopy with layered emerald leaves, hanging vines, and distant mist\nSubject: an adult brown spider monkey, lanky dark-brown primate with tiny head, extremely long slender arms and legs, reduced thumbs, and an exceptionally long muscular prehensile tail supporting it from a branch; suspended naturally with face and anatomy clear\nLighting/mood: luminous filtered morning light, acrobatic and free"
+    }
+  ]
+}

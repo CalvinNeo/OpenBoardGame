@@ -4,11 +4,13 @@ These images are original generated assets for OpenBoardGame. No source images o
 
 All production files are cropped to 512 x 288 pixels (16:9), encoded as WebP, and displayed through a fixed 16:9 frame in both compact cards and the card-detail dialog.
 
+The `cards/` directory contains one distinct illustration for each of the 235 implemented cards. Files use the stable card ID (`cards/401.webp`, for example), so cards never share their primary artwork. The 13 images in this directory are category fallbacks used only if an individual card asset cannot be loaded. Prompt records are stored in `manifests/`.
+
 ## Shared prompt
 
 Built-in ImageGen was asked for a small card illustration for an original browser board game, using contemporary cut-paper collage mixed with matte gouache, bold rounded geometric shapes, subtle paper grain, a clean thumbnail-readable silhouette, and a forest-green/coral/ochre/cream/teal palette. Every prompt explicitly required an entirely original composition and visual identity, no imitation of Ark Nova or another board game's artwork, and no text, logos, card borders, UI, watermarks, or copied poses.
 
-## Subject prompts
+## Fallback subject prompts
 
 - `predator.webp`: alert generic big cat on a savanna ridge.
 - `herbivore.webp`: peaceful antelope grazing in open grassland.
