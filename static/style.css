@@ -1059,6 +1059,34 @@ h1 {
   margin: 0;
 }
 
+.game-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.game-reconnect-btn {
+  min-height: 32px;
+  padding: 5px 10px;
+  border: 1px solid #2563eb;
+  border-radius: 6px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.game-reconnect-btn:hover:not(:disabled) {
+  background: #dbeafe;
+}
+
+.game-reconnect-btn:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.28);
+  outline-offset: 2px;
+}
+
 .panel-body {
   display: block;
 }

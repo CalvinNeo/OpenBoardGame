@@ -505,6 +505,39 @@
   -webkit-line-clamp: 4;
 }
 
+#arkNovaPanel .arkn-inline-token,
+#arkNovaModal .arkn-inline-token {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(28, 65, 48, 0.2);
+  border-radius: 999px;
+  display: inline-flex;
+  gap: 2px;
+  line-height: 1;
+  margin: 0 1px;
+  padding: 2px 4px;
+  vertical-align: 0.02em;
+  white-space: nowrap;
+}
+
+#arkNovaPanel .arkn-inline-token b,
+#arkNovaModal .arkn-inline-token b {
+  font-size: 0.88em;
+  font-weight: 950;
+}
+
+#arkNovaModal .arkn-inline-token {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+#arkNovaPanel .arkn-inline-token-money,
+#arkNovaModal .arkn-inline-token-money { background: rgba(246, 196, 73, 0.24); border-color: rgba(159, 111, 9, 0.35); }
+#arkNovaPanel .arkn-inline-token-appeal,
+#arkNovaModal .arkn-inline-token-appeal { background: rgba(217, 125, 171, 0.2); border-color: rgba(165, 62, 116, 0.32); }
+#arkNovaPanel .arkn-inline-token-conservation-point,
+#arkNovaModal .arkn-inline-token-conservation-point { background: rgba(76, 176, 110, 0.2); border-color: rgba(35, 117, 64, 0.32); }
+
 #arkNovaPanel .arkn-project-support,
 #arkNovaModal .arkn-project-support {
   border-radius: 8px;
@@ -875,6 +908,11 @@
   box-shadow: inset 0 0 18px color-mix(in srgb, var(--arkn-player) 15%, transparent);
 }
 
+#arkNovaPanel .arkn-player.is-viewed {
+  outline: 2px solid color-mix(in srgb, var(--arkn-player) 82%, white);
+  outline-offset: 1px;
+}
+
 #arkNovaPanel .arkn-player-name {
   align-items: center;
   display: flex;
@@ -926,6 +964,27 @@
 }
 
 #arkNovaPanel .arkn-player-resources b { color: var(--arkn-ink); }
+
+#arkNovaPanel button.arkn-view-zoo {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.055);
+  border-color: rgba(255, 255, 255, 0.13);
+  display: flex;
+  gap: 5px;
+  justify-content: center;
+  margin-top: 7px;
+  min-height: 28px;
+  padding: 4px 7px;
+  width: 100%;
+}
+
+#arkNovaPanel button.arkn-view-zoo:disabled {
+  background: color-mix(in srgb, var(--arkn-player) 20%, transparent);
+  border-color: color-mix(in srgb, var(--arkn-player) 50%, transparent);
+  color: var(--arkn-ink);
+  cursor: default;
+  opacity: 1;
+}
 
 #arkNovaPanel .arkn-workspace {
   align-items: start;
@@ -1091,6 +1150,51 @@
 
 #arkNovaPanel .arkn-building-chip b { font-size: 0.66rem; }
 #arkNovaPanel .arkn-building-chip small { color: var(--arkn-muted); font-size: 0.58rem; }
+
+#arkNovaPanel .arkn-viewed-zoo-cards {
+  background: rgba(2, 15, 10, 0.26);
+  border-top: 1px solid var(--arkn-line);
+}
+
+#arkNovaPanel .arkn-viewed-zoo-cards:empty {
+  display: none;
+}
+
+#arkNovaPanel .arkn-viewed-zoo-heading {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  padding: 9px 12px 3px;
+}
+
+#arkNovaPanel .arkn-viewed-zoo-heading strong {
+  font-size: 0.72rem;
+}
+
+#arkNovaPanel .arkn-viewed-zoo-heading > span {
+  color: var(--arkn-muted);
+  font-size: 0.62rem;
+}
+
+#arkNovaPanel .arkn-viewed-zoo-assets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 5px 12px 0;
+}
+
+#arkNovaPanel .arkn-viewed-zoo-assets > span {
+  background: rgba(112, 209, 138, 0.1);
+  border: 1px solid rgba(112, 209, 138, 0.22);
+  border-radius: 999px;
+  color: #d4e8dc;
+  font-size: 0.62rem;
+  padding: 3px 7px;
+}
+
+#arkNovaPanel .arkn-viewed-zoo-cards > .arkn-card-row {
+  padding-top: 8px;
+}
 
 #arkNovaPanel .arkn-action-rack {
   align-items: end;

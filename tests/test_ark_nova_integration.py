@@ -68,6 +68,36 @@ class ArkNovaIntegrationTests(unittest.TestCase):
         self.assertIn(".arkn-project-support", stylesheet)
         self.assertIn(".arkn-project-slot.is-eligible", stylesheet)
 
+    def test_players_can_inspect_every_public_zoo(self) -> None:
+        script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")
+        stylesheet = (ROOT / "static" / "ark_nova.css").read_text(encoding="utf-8")
+        self.assertIn("function arkNovaViewedPlayer", script)
+        self.assertIn('data-arkn-view-zoo="${arkNovaEscape(id)}"', script)
+        self.assertIn('id="arkNovaViewedZooCards"', script)
+        self.assertIn("arkNovaBuildings(viewedPlayer)", script)
+        self.assertIn("viewedPlayer.played_animals", script)
+        self.assertIn("viewedPlayer.played_sponsors", script)
+        self.assertIn(".arkn-player.is-viewed", stylesheet)
+
+    def test_card_placeholders_render_as_emoji_tokens(self) -> None:
+        script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")
+        stylesheet = (ROOT / "static" / "ark_nova.css").read_text(encoding="utf-8")
+        self.assertIn('Money: ["💰", "Money"]', script)
+        self.assertIn('Appeal: ["🎟", "Appeal"]', script)
+        self.assertIn('ConservationPoint: ["🌿", "Conservation point"]', script)
+        self.assertIn("function arkNovaRichText", script)
+        self.assertIn("arkNovaRichText(arkNovaCardSummary(card))", script)
+        self.assertIn(".arkn-inline-token", stylesheet)
+
+    def test_building_picker_uses_fixed_polyhex_pieces(self) -> None:
+        script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")
+        for size in range(1, 6):
+            self.assertIn(f"standard_enclosure_{size}:", script)
+        self.assertIn("function arkNovaFootprintAt", script)
+        self.assertIn("function arkNovaPlacementAtAnchor", script)
+        self.assertIn("arkNovaUi.buildCells = placement.cells", script)
+        self.assertIn("Choose one anchor hex on Map 0", script)
+
     def test_card_illustrations_are_wired_to_every_card_type(self) -> None:
         script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")
         stylesheet = (ROOT / "static" / "ark_nova.css").read_text(encoding="utf-8")

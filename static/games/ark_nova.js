@@ -39,6 +39,41 @@
     large_bird_aviary: { name: "Large bird aviary", icon: "🪶", size: 5, color: "#6aaed6" },
   };
 
+  // Printed enclosure pieces are fixed polyhexes. The first coordinate is the
+  // anchor selected on Map 0; pieces may rotate, but are never reflected.
+  const ARK_NOVA_BUILDING_FOOTPRINTS = Object.freeze({
+    standard_enclosure_1: [[0, 0]],
+    standard_enclosure_2: [[0, 0], [1, 0]],
+    standard_enclosure_3: [[0, 0], [1, 0], [0, 1]],
+    standard_enclosure_4: [[0, 0], [1, 0], [0, 1], [1, 1]],
+    standard_enclosure_5: [[0, 0], [1, 0], [2, 0], [0, 1], [1, 1]],
+    kiosk: [[0, 0]],
+    pavilion: [[0, 0]],
+    petting_zoo: [[0, 0], [1, 0], [0, 1]],
+    reptile_house: [[0, 0], [1, 0], [2, 0], [0, 1], [1, 1]],
+    large_bird_aviary: [[0, 0], [1, 0], [2, 0], [1, -1], [1, 1]],
+  });
+
+  const ARK_NOVA_INLINE_TOKENS = Object.freeze({
+    ActionCard: ["⚡", "Action card"],
+    AnimalActionCard: ["🐾", "Animals action card"],
+    Appeal: ["🎟", "Appeal"],
+    AssociationActionCard: ["🤝", "Association action card"],
+    BuildActionCard: ["🔨", "Build action card"],
+    CardsActionCard: ["🗂️", "Cards action card"],
+    ConservationPoint: ["🌿", "Conservation point"],
+    HerbivoreTag: ["🦌", "Herbivore tag"],
+    LargeBirdAviary: ["🪶", "Large bird aviary"],
+    Money: ["💰", "Money"],
+    MultiplierToken: ["✳️", "Multiplier token"],
+    Reputation: ["🎓", "Reputation"],
+    Size: ["⬡", "Enclosure size"],
+    SizeAnimal: ["🐾", "Animal size"],
+    Slot: ["⚡", "Action slot"],
+    SponsorsActionCard: ["🏛️", "Sponsors action card"],
+    XToken: ["✕", "X-token"],
+  });
+
   const ARK_NOVA_ICON_LABELS = {
     africa: ["🌍", "Africa"],
     americas: ["🌎", "Americas"],
@@ -84,8 +119,8 @@
     x_tokens: "Spend X-tokens before an action to increase its strength, up to strength 5.",
     cards_draw: "Use the Cards action to draw from the deck. The number drawn and discarded depends on action strength and upgrade side.",
     cards_snap: "Snap takes one card from any display folder. It is only available at the strengths printed on your Cards action.",
-    build_type: "Choose the building type, then select its complete footprint on Map 0. The server validates adjacency, terrain, cost, and upgrade restrictions.",
-    rotate_footprint: "Rotate the selected hex footprint 60° clockwise around the first selected cell.",
+    build_type: "Choose the printed building piece, then select one anchor hex on Map 0. Its fixed footprint appears automatically.",
+    rotate_footprint: "Rotate the fixed building piece clockwise around its selected anchor, skipping orientations that do not fit.",
     queue_building: "Add the selected footprint to this action. Upgraded Build may contain multiple different buildings within total strength.",
     confirm_build: "Submit every queued building, committed X-tokens, and exact Map 0 cell IDs.",
     animal_card: "Select an Animal card from your hand, or from the display when your upgraded action and reputation allow it.",
@@ -106,12 +141,12 @@
       <section><h4>Goal</h4><p>Build a modern zoo. Raise <strong>🎟 Appeal</strong> and <strong>🌿 Conservation</strong>; when the two scoring markers meet or cross, the end game begins.</p></section>
       <section><h4>Your turn</h4><p>Choose exactly one Action card. Its slot is its base strength. You may add X-tokens, then the used card moves to slot 1 and the crossed cards shift right.</p></section>
       <section><h4>🗂️ Cards</h4><p>Advance Break, then draw cards. At sufficient strength you can Snap one card from any display folder.</p></section>
-      <section><h4>🔨 Build</h4><p>Buildings cost 2 money per hex. The first touches an edge; later buildings touch your zoo. Water, rock, occupied spaces, kiosk distance, and Build II spaces restrict placement.</p></section>
+      <section><h4>🔨 Build</h4><p>Buildings cost 2 money per hex. Choose an anchor hex to place the selected fixed piece, then rotate it if needed. The first touches an edge; later buildings touch your zoo. Water, rock, occupied spaces, kiosk distance, and Build II spaces restrict placement.</p></section>
       <section><h4>🐾 Animals</h4><p>Pay the card cost and place each animal into a suitable empty enclosure. Check card requirements, habitat size, and water or rock adjacency before playing.</p></section>
       <section><h4>🤝 Association</h4><p>Use active workers for reputation, partner zoos, universities, and conservation projects. Upgraded Association can combine different tasks and donate once.</p></section>
       <section><h4>🏛️ Sponsors</h4><p>Play Sponsor cards within the available strength, or advance Break and gain money. Sponsors can have immediate, ongoing, income, and end-game effects.</p></section>
       <section><h4>Break</h4><p>When the Break marker reaches its limit, finish the current action, reduce hands to their limits, refresh the display and association board, return workers, and collect income.</p></section>
-      <section><h4>Map 0</h4><p>Select a building and click its full hex footprint. Orange outlines are your current footprint; colored hexes are occupied. Click empty surrounding space or press Esc to cancel a draft.</p></section>
+      <section><h4>Map 0</h4><p>Select a building and click one anchor hex; the complete printed footprint is placed automatically. Orange outlines are your current footprint; colored hexes are occupied. Choose another zoo above to inspect its public board.</p></section>
       <section><h4>Explain mode</h4><p>Choose <strong>Explain</strong>, then select any dashed control—even a disabled one—to learn what it does. Esc exits the mode.</p></section>
     </div>`;
 
@@ -120,9 +155,9 @@
       <section><h4>Complete Map 0</h4><p>Cover all 39 buildable land hexes to gain <strong>7 appeal</strong>. Water and rock normally cannot be covered, but they count for adjacency.</p></section>
       <section><h4>Placement bonuses</h4><p>Bonus hexes can grant a card, money, an X-token, appeal, or move an Action card to slot 1 after the current action finishes.</p></section>
       <section><h4>Build II spaces</h4><p>The marked G3 and H3 hexes require the Build action upgraded to side II.</p></section>
-      <section><h4>Conservation rewards</h4><p>The reward strip to the left belongs to your zoo board. Purple rewards repeat at each Break; yellow rewards resolve once.</p></section>
-      <section><h4>Map controls</h4><p>Select a building in Plan action, then click its complete connected footprint. Orange outlines show the current draft; occupied hexes use the building color.</p></section>
-      <section><h4>X-token storage</h4><p>Your current supply is shown beside the Map info button and in your player summary. You may store up to 5 X-tokens.</p></section>
+      <section><h4>Conservation rewards</h4><p>The reward strip to the left belongs to the selected zoo board. Purple rewards repeat at each Break; yellow rewards resolve once.</p></section>
+      <section><h4>Map controls</h4><p>Select a building in Plan action, then choose one anchor hex for its fixed printed footprint. Orange outlines show the current draft; occupied hexes use the building color.</p></section>
+      <section><h4>X-token storage</h4><p>The selected zoo's current supply is shown beside the Map info button and in its player summary. A zoo may store up to 5 X-tokens.</p></section>
       <div class="arkn-map-info-legend" aria-label="Map 0 terrain legend">
         <span><i class="arkn-legend-land"></i>Buildable land</span>
         <span><i class="arkn-legend-water"></i>Water</span>
@@ -149,12 +184,14 @@
     buildType: "standard_enclosure",
     buildSize: 1,
     buildCells: [],
+    buildRotation: 0,
     buildQueue: [],
     animalEnclosures: new Map(),
     associationDraft: { task: "reputation", continent: "africa", university_id: "", project_id: "", slot: 3, project_card_id: "", release_animal_id: "" },
     associationQueue: [],
     donate: false,
     pendingSelection: new Set(),
+    viewedPlayerId: null,
   };
 
   function arkNovaEscape(value) {
@@ -164,6 +201,27 @@
       .replaceAll(">", "&gt;")
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#039;");
+  }
+
+  function arkNovaRichText(value) {
+    const source = String(value ?? "");
+    const tokenPattern = /\{([A-Za-z][A-Za-z0-9]*)(?:-([^{}]+))?\}/g;
+    let cursor = 0;
+    let output = "";
+    for (const match of source.matchAll(tokenPattern)) {
+      output += arkNovaEscape(source.slice(cursor, match.index));
+      const [icon, label] = ARK_NOVA_INLINE_TOKENS[match[1]] || [];
+      if (!icon) {
+        output += arkNovaEscape(match[0]);
+      } else {
+        const amount = match[2] || "";
+        const title = amount ? `${label}: ${amount}` : label;
+        const className = match[1].replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
+        output += `<span class="arkn-inline-token arkn-inline-token-${className}" title="${arkNovaEscape(title)}"><span aria-hidden="true">${icon}</span>${amount ? `<b>${arkNovaEscape(amount)}</b>` : ""}<span class="sr-only">${arkNovaEscape(title)}</span></span>`;
+      }
+      cursor = match.index + match[0].length;
+    }
+    return output + arkNovaEscape(source.slice(cursor));
   }
 
   function arkNovaAsArray(value) {
@@ -297,6 +355,18 @@
     const yourId = String(view.you ?? view.player_id ?? "");
     return arkNovaPlayers(view).find((player) => arkNovaPlayerId(player) === yourId)
       || (view.you_player && typeof view.you_player === "object" ? view.you_player : null);
+  }
+
+  function arkNovaViewedPlayer(view = arkNovaView) {
+    const players = arkNovaPlayers(view);
+    const selected = players.find((player) => arkNovaPlayerId(player) === String(arkNovaUi.viewedPlayerId || ""));
+    return selected || arkNovaYou(view) || players[0] || null;
+  }
+
+  function arkNovaViewingOwnZoo(view = arkNovaView) {
+    const viewed = arkNovaViewedPlayer(view);
+    const you = arkNovaYou(view);
+    return !!viewed && !!you && arkNovaPlayerId(viewed) === arkNovaPlayerId(you);
   }
 
   function arkNovaPlayerName(player) {
@@ -451,6 +521,7 @@
               <div id="arkNovaMapLoading" class="arkn-map-loading">Loading Map 0…</div>
             </div>
             <div id="arkNovaBuildings" class="arkn-building-list"></div>
+            <div id="arkNovaViewedZooCards" class="arkn-viewed-zoo-cards"></div>
           </section>
           <aside class="arkn-command-column">
             <section class="arkn-surface arkn-actions-surface" aria-labelledby="arkNovaActionsTitle">
@@ -728,7 +799,7 @@
           </span>
           <span class="arkn-card-icons">${icons}</span>
           ${projectSupport}
-          <span class="arkn-card-text">${arkNovaEscape(arkNovaCardSummary(card))}</span>
+          <span class="arkn-card-text">${arkNovaRichText(arkNovaCardSummary(card))}</span>
         </button>
         <button type="button" class="arkn-card-info" data-arkn-card-info="${arkNovaEscape(id)}" data-arkn-explain="card_info" aria-label="View ${arkNovaEscape(arkNovaCardName(card))} details">i</button>
       </article>`;
@@ -741,7 +812,7 @@
       if (Array.isArray(value)) rendered = value.map((item) => typeof item === "object" ? (item.text_zh || item.name_zh || item.ability || item.tag || JSON.stringify(item)) : item).join(" · ");
       else if (typeof value === "object") rendered = JSON.stringify(value);
       else rendered = String(value);
-      return `<dt>${arkNovaEscape(arkNovaTitle(key))}</dt><dd>${arkNovaEscape(rendered)}</dd>`;
+      return `<dt>${arkNovaEscape(arkNovaTitle(key))}</dt><dd>${arkNovaRichText(rendered)}</dd>`;
     }).join("");
   }
 
@@ -753,14 +824,14 @@
     }
     const icons = arkNovaAsArray(card.icons).map(arkNovaIconMarkup).join("");
     const abilityRows = [...arkNovaAsArray(card.abilities), ...arkNovaAsArray(card.effects)].map((ability) => `
-      <li><strong>${arkNovaEscape(ability.name_zh || arkNovaTitle(ability.ability || ability.kind || ability.timing))}</strong><span>${arkNovaEscape(ability.text_zh || ability.description_zh || "")}</span></li>`).join("");
+      <li><strong>${arkNovaEscape(ability.name_zh || arkNovaTitle(ability.ability || ability.kind || ability.timing))}</strong><span>${arkNovaRichText(ability.text_zh || ability.description_zh || "")}</span></li>`).join("");
     const html = `
       <article class="arkn-detail-card arkn-detail-${arkNovaEscape(arkNovaCardType(card))}">
         <div class="arkn-detail-heading"><span>#${arkNovaEscape(arkNovaCardId(card))}</span><strong>${arkNovaEscape(arkNovaCardName(card))}</strong><em>${arkNovaEscape(arkNovaCardEnglishName(card))}</em></div>
         ${arkNovaCardType(card) === "conservation_project" ? arkNovaProjectSupportMarkup(card, { detail: true }) : ""}
         ${arkNovaCardArtMarkup(card, true)}
         <div class="arkn-detail-icons">${icons}${arkNovaRewardMarkup(card)}</div>
-        <p>${arkNovaEscape(arkNovaCardSummary(card))}</p>
+        <p>${arkNovaRichText(arkNovaCardSummary(card))}</p>
         ${abilityRows ? `<h4>Abilities & effects</h4><ul class="arkn-effect-list">${abilityRows}</ul>` : ""}
         <dl class="arkn-detail-list">
           ${arkNovaDetailRows(card.play)}
@@ -868,10 +939,12 @@
     if (!container) return;
     const currentId = arkNovaCurrentPlayerId(view);
     const youId = String(view.you ?? view.player_id ?? "");
+    const viewedId = arkNovaPlayerId(arkNovaViewedPlayer(view));
     container.innerHTML = arkNovaPlayers(view).map((player, index) => {
       const id = arkNovaPlayerId(player);
       const finalScore = view.scores && (view.scores[id] ?? view.scores[arkNovaPlayerName(player)]);
-      return `<article class="arkn-player ${id === currentId ? "is-current" : ""} ${id === youId ? "is-you" : ""}" style="--arkn-player:${arkNovaPlayerColor(index)}">
+      const viewed = id === viewedId;
+      return `<article class="arkn-player ${id === currentId ? "is-current" : ""} ${id === youId ? "is-you" : ""} ${viewed ? "is-viewed" : ""}" style="--arkn-player:${arkNovaPlayerColor(index)}">
         <div class="arkn-player-name"><i></i><strong>${arkNovaEscape(arkNovaPlayerName(player))}</strong>${id === youId ? "<small>You</small>" : ""}${id === currentId ? "<span>Active</span>" : ""}</div>
         <div class="arkn-player-resources">
           <span title="Money">💰 <b>${arkNovaResource(player, "money")}</b></span>
@@ -883,6 +956,7 @@
           <span title="Cards in hand">🂠 <b>${arkNovaNumber(player.hand_count ?? (player.hand && player.hand.length))}</b></span>
           ${finalScore != null ? `<span title="Final score">🏁 <b>${arkNovaEscape(finalScore)}</b></span>` : ""}
         </div>
+        <button type="button" class="arkn-view-zoo" data-arkn-view-zoo="${arkNovaEscape(id)}" aria-pressed="${viewed}" ${viewed ? "disabled" : ""}><span aria-hidden="true">🗺️</span>${viewed ? "Viewing zoo" : id === youId ? "View your zoo" : "View zoo"}</button>
       </article>`;
     }).join("") || `<div class="arkn-empty">Waiting for players.</div>`;
     const current = arkNovaPlayers(view).find((player) => arkNovaPlayerId(player) === currentId);
@@ -983,19 +1057,57 @@
   function arkNovaRenderBuildings(view) {
     const container = document.getElementById("arkNovaBuildings");
     const xStorage = document.getElementById("arkNovaMapXStorage");
+    const cardsContainer = document.getElementById("arkNovaViewedZooCards");
+    const title = document.getElementById("arkNovaMapTitle");
+    const mapObject = document.getElementById("arkNovaMapObject");
     if (!container) return;
-    const buildings = arkNovaBuildings(arkNovaYou(view));
+    const viewedPlayer = arkNovaViewedPlayer(view);
+    const viewingOwnZoo = arkNovaViewingOwnZoo(view);
+    const playerName = arkNovaPlayerName(viewedPlayer);
+    const buildings = arkNovaBuildings(viewedPlayer);
+    if (title) title.textContent = viewingOwnZoo ? "Your zoo · Map 0" : `${playerName}'s zoo · Map 0`;
+    if (mapObject) mapObject.setAttribute("aria-label", `${playerName}'s Map 0 zoo board`);
     if (xStorage) {
       const mapDefinition = view.map_definition || view.map || {};
       const limit = Math.max(1, arkNovaNumber(mapDefinition.x_token_limit, 5));
-      xStorage.innerHTML = `<span aria-hidden="true">✕</span><small>X-tokens</small><b>${arkNovaResource(arkNovaYou(view), "x_tokens")} / ${limit}</b>`;
+      xStorage.innerHTML = `<span aria-hidden="true">✕</span><small>${viewingOwnZoo ? "X-tokens" : `${arkNovaEscape(playerName)}'s X`}</small><b>${arkNovaResource(viewedPlayer, "x_tokens")} / ${limit}</b>`;
     }
     container.innerHTML = buildings.length ? buildings.map((building) => {
       const type = arkNovaBuildingType(building);
       const meta = ARK_NOVA_BUILDINGS[type] || { name: arkNovaTitle(type), icon: "⬡" };
-      const animal = building.animal || building.animal_id || building.occupant;
-      return `<span class="arkn-building-chip"><b>${meta.icon} ${arkNovaEscape(meta.name)}</b><small>${arkNovaBuildingCells(building).join(", ") || `${building.size || "?"} hex`}${animal ? ` · 🐾 #${arkNovaEscape(animal)}` : ""}</small></span>`;
-    }).join("") : `<div class="arkn-empty arkn-empty-inline">No buildings yet. Your first building must touch the zoo edge.</div>`;
+      const rawOccupants = building.occupied_by || building.animals || building.animal || building.animal_id || building.occupant;
+      const occupants = (Array.isArray(rawOccupants) ? rawOccupants : rawOccupants == null ? [] : [rawOccupants]).map(String);
+      const animalNames = occupants.map((id) => {
+        const card = arkNovaCardLookup.get(id);
+        return card ? arkNovaCardName(card) : `#${id}`;
+      });
+      return `<span class="arkn-building-chip"><b>${meta.icon} ${arkNovaEscape(meta.name)}</b><small>${arkNovaBuildingCells(building).join(", ") || `${building.size || "?"} hex`}${animalNames.length ? ` · 🐾 ${arkNovaEscape(animalNames.join(", "))}` : ""}</small></span>`;
+    }).join("") : `<div class="arkn-empty arkn-empty-inline">${viewingOwnZoo ? "No buildings yet. Your first building must touch the zoo edge." : "No buildings in this zoo yet."}</div>`;
+
+    if (!cardsContainer) return;
+    if (viewingOwnZoo || !viewedPlayer) {
+      cardsContainer.innerHTML = "";
+      return;
+    }
+    const publicCards = [
+      ...arkNovaAsArray(viewedPlayer.played_animals).map((card) => ({ card, zone: "Animals" })),
+      ...arkNovaAsArray(viewedPlayer.played_sponsors).map((card) => ({ card, zone: "Sponsors" })),
+    ];
+    const partnerZoos = arkNovaAsArray(viewedPlayer.partner_zoos).map((continent) => {
+      const meta = ARK_NOVA_ICON_LABELS[String(continent).toLowerCase()] || ["🌍", arkNovaTitle(continent)];
+      return `<span title="Partner zoo">${meta[0]} ${arkNovaEscape(meta[1])}</span>`;
+    });
+    const universities = arkNovaAsArray(viewedPlayer.universities).map((university) => `<span title="University">🏫 ${arkNovaEscape(arkNovaTitle(university))}</span>`);
+    const supportedProjects = arkNovaAsArray(viewedPlayer.supported_projects).map((support) => {
+      const projectId = String(support && (support.project_id || support.id) || support || "");
+      const project = arkNovaProjects(view).map(arkNovaCardObject).find((card) => arkNovaCardId(card) === projectId);
+      const tier = support && typeof support === "object" ? support.position ?? support.slot : null;
+      return `<span title="Supported conservation project">🌿 ${arkNovaEscape(project ? arkNovaCardName(project) : `#${projectId}`)}${tier != null ? ` · ${arkNovaEscape(tier)}` : ""}</span>`;
+    });
+    const publicAssets = [...partnerZoos, ...universities, ...supportedProjects];
+    cardsContainer.innerHTML = `<div class="arkn-viewed-zoo-heading"><strong>${arkNovaEscape(playerName)}'s public zoo</strong><span>${publicCards.length} played card${publicCards.length === 1 ? "" : "s"}</span></div>
+      ${publicAssets.length ? `<div class="arkn-viewed-zoo-assets">${publicAssets.join("")}</div>` : ""}
+      <div class="arkn-card-row arkn-card-row-played">${publicCards.length ? publicCards.map((entry) => `<div class="arkn-played-card"><span>${entry.zone}</span>${arkNovaCardMarkup(entry.card)}</div>`).join("") : `<div class="arkn-empty">No public cards played yet.</div>`}</div>`;
   }
 
   function arkNovaMapCellType(cellId) {
@@ -1004,20 +1116,25 @@
     return cell && cell.dataset;
   }
 
-  function arkNovaOccupiedCells(view = arkNovaView) {
+  function arkNovaOccupiedCells(view = arkNovaView, player = arkNovaYou(view), includeDraft = true) {
     const occupied = new Map();
-    arkNovaBuildings(arkNovaYou(view)).forEach((building) => {
+    arkNovaBuildings(player).forEach((building) => {
       arkNovaBuildingCells(building).forEach((cell) => occupied.set(cell, building));
     });
-    arkNovaUi.buildQueue.forEach((building, index) => {
-      building.cells.forEach((cell) => occupied.set(cell, { ...building, id: `draft-${index}` }));
-    });
+    if (includeDraft) {
+      arkNovaUi.buildQueue.forEach((building, index) => {
+        building.cells.forEach((cell) => occupied.set(cell, { ...building, id: `draft-${index}` }));
+      });
+    }
     return occupied;
   }
 
   function arkNovaPendingMapChoice(view = arkNovaView) {
     const pending = view && (view.pending_choice || view.pending);
     if (!pending) return null;
+    const owner = pending.player_id;
+    const viewer = view && (view.you ?? view.player_id);
+    if (owner != null && viewer != null && String(owner) !== String(viewer)) return null;
     const type = String(pending.type || pending.kind || pending.choice_type || "");
     return ["place_free_enclosure", "place_unique_building"].includes(type) ? pending : null;
   }
@@ -1040,6 +1157,81 @@
       ?? footprintSize,
       1,
     ));
+  }
+
+  function arkNovaFootprintSource(view = arkNovaView) {
+    const pending = arkNovaPendingMapChoice(view);
+    if (pending) {
+      const footprint = pending.footprint
+        || (pending.building && pending.building.footprint)
+        || (pending.unique_building && pending.unique_building.footprint);
+      const rawCells = Array.isArray(footprint) ? footprint : arkNovaAsArray(footprint && footprint.cells);
+      if (rawCells.length) {
+        const rawAnchor = !Array.isArray(footprint) && footprint.anchor_cell || { q: 0, r: 0 };
+        const anchorQ = arkNovaNumber(rawAnchor.q, 0);
+        const anchorR = arkNovaNumber(rawAnchor.r, 0);
+        const offsets = rawCells.map((cell) => {
+          if (Array.isArray(cell)) return [arkNovaNumber(cell[0]) - anchorQ, arkNovaNumber(cell[1]) - anchorR];
+          return [arkNovaNumber(cell && cell.q) - anchorQ, arkNovaNumber(cell && cell.r) - anchorR];
+        });
+        const anchored = offsets.find(([q, r]) => q === 0 && r === 0);
+        return {
+          offsets: anchored ? [[0, 0], ...offsets.filter(([q, r]) => q !== 0 || r !== 0)] : offsets,
+          rotations: arkNovaAsArray(!Array.isArray(footprint) && footprint.allowed_rotation_steps).map(Number).filter(Number.isInteger),
+        };
+      }
+      const size = arkNovaPendingMapSize(pending);
+      return { offsets: ARK_NOVA_BUILDING_FOOTPRINTS[`standard_enclosure_${size}`] || [[0, 0]], rotations: [] };
+    }
+    const meta = ARK_NOVA_BUILDINGS[arkNovaUi.buildType] || ARK_NOVA_BUILDINGS.standard_enclosure;
+    const key = meta.variable ? `standard_enclosure_${arkNovaUi.buildSize}` : arkNovaUi.buildType;
+    return { offsets: ARK_NOVA_BUILDING_FOOTPRINTS[key] || [[0, 0]], rotations: [] };
+  }
+
+  function arkNovaFootprintOffsets(view = arkNovaView) {
+    return arkNovaFootprintSource(view).offsets;
+  }
+
+  function arkNovaAllowedFootprintRotations(view = arkNovaView) {
+    const rotations = arkNovaFootprintSource(view).rotations;
+    return rotations.length ? [...new Set(rotations.map((step) => ((step % 6) + 6) % 6))] : [0, 1, 2, 3, 4, 5];
+  }
+
+  function arkNovaRotateOffset(offset, steps) {
+    let [q, r] = offset;
+    for (let index = 0; index < steps % 6; index += 1) [q, r] = [-r, q + r];
+    return [q, r];
+  }
+
+  function arkNovaFootprintAt(anchorCellId, rotation = arkNovaUi.buildRotation, view = arkNovaView) {
+    const anchor = arkNovaCellToAxial(anchorCellId);
+    if (!anchor) return null;
+    const cells = arkNovaFootprintOffsets(view).map((offset) => {
+      const [q, r] = arkNovaRotateOffset(offset, rotation);
+      return arkNovaAxialToCell(anchor.q + q, anchor.r + r);
+    });
+    if (cells.some((cellId) => !cellId) || new Set(cells).size !== cells.length) return null;
+    return cells;
+  }
+
+  function arkNovaFootprintFits(cells, view = arkNovaView) {
+    if (!cells || !cells.length) return false;
+    const occupied = arkNovaOccupiedCells(view, arkNovaYou(view), true);
+    return cells.every((cellId) => {
+      const data = arkNovaMapCellType(cellId);
+      return !!data && data.buildable === "true" && !occupied.has(cellId);
+    });
+  }
+
+  function arkNovaPlacementAtAnchor(anchorCellId, view = arkNovaView, startRotation = arkNovaUi.buildRotation) {
+    const allowed = arkNovaAllowedFootprintRotations(view);
+    const startIndex = Math.max(0, allowed.indexOf(((startRotation % 6) + 6) % 6));
+    for (let offset = 0; offset < allowed.length; offset += 1) {
+      const rotation = allowed[(startIndex + offset) % allowed.length];
+      const cells = arkNovaFootprintAt(anchorCellId, rotation, view);
+      if (arkNovaFootprintFits(cells, view)) return { cells, rotation };
+    }
+    return null;
   }
 
   function arkNovaOnMapLoad(event) {
@@ -1066,10 +1258,12 @@
 
   function arkNovaApplyMapState() {
     if (!arkNovaMapDocument || !arkNovaView) return;
-    const occupied = arkNovaOccupiedCells(arkNovaView);
-    const drafting = (arkNovaUi.selectedAction === "build" && arkNovaCan("build")) || !!arkNovaPendingMapChoice();
-    const selected = new Set(arkNovaUi.buildCells);
-    const queuedCells = new Set(arkNovaUi.buildQueue.flatMap((building) => building.cells));
+    const viewedPlayer = arkNovaViewedPlayer(arkNovaView);
+    const viewingOwnZoo = arkNovaViewingOwnZoo(arkNovaView);
+    const occupied = arkNovaOccupiedCells(arkNovaView, viewedPlayer, viewingOwnZoo);
+    const drafting = viewingOwnZoo && ((arkNovaUi.selectedAction === "build" && arkNovaCan("build")) || !!arkNovaPendingMapChoice());
+    const selected = new Set(viewingOwnZoo ? arkNovaUi.buildCells : []);
+    const queuedCells = new Set(viewingOwnZoo ? arkNovaUi.buildQueue.flatMap((building) => building.cells) : []);
     arkNovaMapDocument.querySelectorAll("[data-cell-id]").forEach((cell) => {
       const id = cell.dataset.cellId;
       const polygon = cell.querySelector(".ark-nova-map0-hex");
@@ -1087,7 +1281,7 @@
           polygon.setAttribute("fill", meta.color);
           polygon.setAttribute("fill-opacity", queuedCells.has(id) ? ".68" : ".9");
         }
-      } else if (drafting && cell.dataset.buildable === "true") {
+      } else if (drafting && cell.dataset.buildable === "true" && arkNovaPlacementAtAnchor(id, arkNovaView)) {
         cell.classList.add("is-valid");
       }
       if (selected.has(id)) cell.classList.add("is-selected");
@@ -1098,24 +1292,21 @@
     const pendingMap = arkNovaPendingMapChoice();
     const normalBuild = arkNovaUi.selectedAction === "build" && arkNovaCan("build");
     if (arkNovaExplainMode || (!pendingMap && !normalBuild)) return;
-    const data = arkNovaMapCellType(cellId);
-    if (!data || data.buildable !== "true") {
-      arkNovaToast("That Map 0 hex cannot be built on.");
+    if (!arkNovaViewingOwnZoo()) {
+      arkNovaToast("Return to your zoo to place buildings.");
       return;
     }
-    if (arkNovaOccupiedCells().has(cellId) && !arkNovaUi.buildCells.includes(cellId)) {
-      arkNovaToast("That hex is already occupied.");
-      return;
-    }
-    const index = arkNovaUi.buildCells.indexOf(cellId);
-    if (index >= 0) arkNovaUi.buildCells.splice(index, 1);
-    else {
-      const limit = pendingMap ? arkNovaPendingMapSize(pendingMap) : Infinity;
-      if (arkNovaUi.buildCells.length >= limit) {
-        arkNovaToast(`Select exactly ${limit} footprint hex${limit === 1 ? "" : "es"}.`);
+    if (arkNovaUi.buildCells.includes(cellId)) {
+      arkNovaUi.buildCells = [];
+      arkNovaUi.buildRotation = 0;
+    } else {
+      const placement = arkNovaPlacementAtAnchor(cellId);
+      if (!placement) {
+        arkNovaToast("The fixed building piece does not fit at that anchor.");
         return;
       }
-      arkNovaUi.buildCells.push(cellId);
+      arkNovaUi.buildCells = placement.cells;
+      arkNovaUi.buildRotation = placement.rotation;
     }
     arkNovaApplyMapState();
     arkNovaRenderComposer(arkNovaView);
@@ -1139,27 +1330,25 @@
   }
 
   function arkNovaRotateFootprint() {
-    if (arkNovaUi.buildCells.length < 2) {
-      arkNovaToast("Select at least two hexes to rotate a footprint.");
+    if (arkNovaFootprintOffsets().length < 2 || !arkNovaUi.buildCells.length) {
+      arkNovaToast("Select an anchor for a multi-hex building first.");
       return;
     }
-    const pivot = arkNovaCellToAxial(arkNovaUi.buildCells[0]);
-    const rotated = arkNovaUi.buildCells.map((cellId) => {
-      const cell = arkNovaCellToAxial(cellId);
-      if (!cell || !pivot) return null;
-      const q = cell.q - pivot.q;
-      const r = cell.r - pivot.r;
-      return arkNovaAxialToCell(pivot.q + q + r, pivot.r - q);
-    });
-    const occupied = arkNovaOccupiedCells();
-    if (rotated.some((id) => !id || !arkNovaMapCellType(id) || arkNovaMapCellType(id).buildable !== "true" || occupied.has(id))) {
-      arkNovaToast("The rotated footprint does not fit on the board.");
+    const allowed = arkNovaAllowedFootprintRotations();
+    const current = ((arkNovaUi.buildRotation % 6) + 6) % 6;
+    const currentIndex = Math.max(0, allowed.indexOf(current));
+    for (let offset = 1; offset <= allowed.length; offset += 1) {
+      const rotation = allowed[(currentIndex + offset) % allowed.length];
+      const rotated = arkNovaFootprintAt(arkNovaUi.buildCells[0], rotation);
+      if (!arkNovaFootprintFits(rotated) || rotated.join("|") === arkNovaUi.buildCells.join("|")) continue;
+      arkNovaUi.buildCells = rotated;
+      arkNovaUi.buildRotation = rotation;
+      arkNovaApplyMapState();
+      arkNovaRenderComposer(arkNovaView);
+      if (arkNovaPendingMapChoice()) arkNovaRenderPending(arkNovaView);
       return;
     }
-    arkNovaUi.buildCells = rotated;
-    arkNovaApplyMapState();
-    arkNovaRenderComposer(arkNovaView);
-    if (arkNovaPendingMapChoice()) arkNovaRenderPending(arkNovaView);
+    arkNovaToast("No other legal orientation fits at this anchor.");
   }
 
   function arkNovaChoiceOptions(pending) {
@@ -1260,16 +1449,16 @@
 
   function arkNovaRenderBuildComposer(view) {
     const meta = ARK_NOVA_BUILDINGS[arkNovaUi.buildType] || ARK_NOVA_BUILDINGS.standard_enclosure;
-    const required = meta.variable ? Math.max(1, arkNovaUi.buildSize) : meta.size;
+    const required = arkNovaFootprintOffsets(view).length;
     const footprintReady = arkNovaUi.buildCells.length === required;
     return `${arkNovaXControl(view)}
       <div class="arkn-form-grid">
         <label data-arkn-explain="build_type"><span>Building</span><select id="arkNovaBuildType">${Object.entries(ARK_NOVA_BUILDINGS).map(([id, definition]) => `<option value="${id}" ${id === arkNovaUi.buildType ? "selected" : ""}>${definition.icon} ${arkNovaEscape(definition.name)}</option>`).join("")}</select></label>
-        ${meta.variable ? `<label><span>Size</span><select id="arkNovaBuildSize">${[1, 2, 3, 4, 5].map((size) => `<option value="${size}" ${size === arkNovaUi.buildSize ? "selected" : ""}>${size} hex${size === 1 ? "" : "es"}</option>`).join("")}</select></label>` : `<div class="arkn-fixed-field"><span>Footprint</span><b>${required} hexes</b></div>`}
+        ${meta.variable ? `<label><span>Fixed piece</span><select id="arkNovaBuildSize">${[1, 2, 3, 4, 5].map((size) => `<option value="${size}" ${size === arkNovaUi.buildSize ? "selected" : ""}>⬡ Size ${size}</option>`).join("")}</select></label>` : `<div class="arkn-fixed-field"><span>Fixed footprint</span><b>⬡ ${required} hex${required === 1 ? "" : "es"}</b></div>`}
       </div>
-      <div class="arkn-map-draft"><span><b>Selected footprint</b><small>${arkNovaUi.buildCells.length} / ${required} hexes</small></span><output>${arkNovaUi.buildCells.join(" · ") || "Select hexes on Map 0"}</output></div>
+      <div class="arkn-map-draft"><span><b>Fixed footprint</b><small>${arkNovaUi.buildCells.length} / ${required} hexes · rotation ${arkNovaUi.buildRotation * 60}°</small></span><output>${arkNovaUi.buildCells.join(" · ") || "Choose one anchor hex on Map 0"}</output></div>
       <div class="arkn-inline-actions">
-        <button type="button" data-arkn-command="rotate-build" data-arkn-explain="rotate_footprint" ${arkNovaUi.buildCells.length < 2 ? "disabled" : ""}>↻ Rotate</button>
+        <button type="button" data-arkn-command="rotate-build" data-arkn-explain="rotate_footprint" ${required < 2 || !arkNovaUi.buildCells.length ? "disabled" : ""}>↻ Rotate</button>
         <button type="button" data-arkn-command="queue-build" data-arkn-explain="queue_building" ${footprintReady ? "" : "disabled"}>Add building</button>
         <button type="button" class="arkn-quiet" data-arkn-command="undo-build" data-arkn-explain="undo" ${arkNovaUi.buildQueue.length ? "" : "disabled"}>Undo queued</button>
       </div>
@@ -1449,12 +1638,12 @@
     const pendingMap = arkNovaPendingMapChoice(view);
     if (pendingMap) {
       arkNovaPendingOptions = [];
-      const required = arkNovaPendingMapSize(pendingMap);
+      const required = arkNovaFootprintOffsets(view).length;
       const ready = arkNovaUi.buildCells.length === required;
       container.innerHTML = `<section class="arkn-pending arkn-surface" aria-labelledby="arkNovaPendingTitle">
-        <div class="arkn-pending-copy"><span>⬡</span><div><h3 id="arkNovaPendingTitle">${arkNovaEscape(pending.prompt || (String(pending.type).includes("unique") ? "Place unique building" : "Place free enclosure"))}</h3><p>Select the complete footprint directly on Map 0. ${arkNovaEscape(pending.detail || pending.description || "Terrain, occupancy, adjacency, and shape are validated when confirmed.")}</p></div></div>
-        <div class="arkn-map-draft"><span><b>Selected footprint</b><small>${arkNovaUi.buildCells.length} / ${required} hexes</small></span><output>${arkNovaUi.buildCells.join(" · ") || "Select hexes on Map 0"}</output></div>
-        <div class="arkn-pending-actions"><button type="button" data-arkn-command="rotate-build" data-arkn-explain="rotate_footprint" ${arkNovaUi.buildCells.length < 2 ? "disabled" : ""}>↻ Rotate</button><button type="button" class="arkn-confirm" data-arkn-command="resolve-choice" data-arkn-explain="pending_choice" ${ready && arkNovaCan("resolve_choice") ? "" : "disabled"}>Confirm footprint</button>${pending.allow_skip ? `<button type="button" data-arkn-command="skip-choice">Skip</button>` : ""}</div>
+        <div class="arkn-pending-copy"><span>⬡</span><div><h3 id="arkNovaPendingTitle">${arkNovaEscape(pending.prompt || (String(pending.type).includes("unique") ? "Place unique building" : "Place free enclosure"))}</h3><p>Choose one anchor hex; the fixed piece appears automatically. ${arkNovaEscape(pending.detail || pending.description || "Terrain, occupancy, adjacency, and shape are validated when confirmed.")}</p></div></div>
+        <div class="arkn-map-draft"><span><b>Fixed footprint</b><small>${arkNovaUi.buildCells.length} / ${required} hexes · rotation ${arkNovaUi.buildRotation * 60}°</small></span><output>${arkNovaUi.buildCells.join(" · ") || "Choose one anchor hex on Map 0"}</output></div>
+        <div class="arkn-pending-actions"><button type="button" data-arkn-command="rotate-build" data-arkn-explain="rotate_footprint" ${required < 2 || !arkNovaUi.buildCells.length ? "disabled" : ""}>↻ Rotate</button><button type="button" class="arkn-confirm" data-arkn-command="resolve-choice" data-arkn-explain="pending_choice" ${ready && arkNovaCan("resolve_choice") ? "" : "disabled"}>Confirm footprint</button>${pending.allow_skip ? `<button type="button" data-arkn-command="skip-choice">Skip</button>` : ""}</div>
       </section>`;
       return;
     }
@@ -1529,6 +1718,7 @@
     arkNovaUi.actionMode = "draw";
     arkNovaUi.selectedCards.clear();
     arkNovaUi.buildCells = [];
+    arkNovaUi.buildRotation = 0;
     arkNovaUi.buildQueue = [];
     arkNovaUi.animalEnclosures.clear();
     arkNovaUi.associationQueue = [];
@@ -1541,6 +1731,11 @@
     const key = arkNovaContextKey(view);
     if (arkNovaLastContextKey && key !== arkNovaLastContextKey) arkNovaResetDraft();
     arkNovaLastContextKey = key;
+    const players = arkNovaPlayers(view);
+    const playerIds = new Set(players.map(arkNovaPlayerId));
+    const youId = String(view.you ?? view.player_id ?? "");
+    if (!arkNovaUi.viewedPlayerId || !playerIds.has(String(arkNovaUi.viewedPlayerId))) arkNovaUi.viewedPlayerId = youId || arkNovaPlayerId(players[0]);
+    if (arkNovaPendingMapChoice(view)) arkNovaUi.viewedPlayerId = youId;
     const handIds = new Set(arkNovaHand(view).map(arkNovaCardId));
     const displayIds = new Set(arkNovaDisplay(view).map(arkNovaCardId));
     [...arkNovaUi.selectedCards].forEach((id) => {
@@ -1577,7 +1772,9 @@
     if (!arkNovaView) return;
     arkNovaRenderDisplay(arkNovaView);
     arkNovaRenderProjects(arkNovaView);
+    arkNovaRenderPlayers(arkNovaView);
     arkNovaRenderActions(arkNovaView);
+    arkNovaRenderBuildings(arkNovaView);
     arkNovaRenderHand(arkNovaView);
     arkNovaRenderComposer(arkNovaView);
     arkNovaApplyMapState();
@@ -1641,6 +1838,7 @@
     if (arkNovaUi.buildCells.length !== size) return;
     arkNovaUi.buildQueue.push({ building_type: arkNovaUi.buildType, ...(meta.variable ? { size } : {}), cells: [...arkNovaUi.buildCells] });
     arkNovaUi.buildCells = [];
+    arkNovaUi.buildRotation = 0;
     arkNovaRerenderInteractive();
   }
 
@@ -1757,6 +1955,16 @@
     if (!target || arkNovaExplainMode) return;
     const info = target.closest("[data-arkn-card-info]");
     if (info) return arkNovaShowCardDetail(info.dataset.arknCardInfo);
+    const zooButton = target.closest("[data-arkn-view-zoo]");
+    if (zooButton) {
+      arkNovaUi.viewedPlayerId = zooButton.dataset.arknViewZoo;
+      arkNovaUi.buildCells = [];
+      arkNovaUi.buildRotation = 0;
+      arkNovaRenderPlayers(arkNovaView);
+      arkNovaRenderBuildings(arkNovaView);
+      arkNovaApplyMapState();
+      return;
+    }
     const pendingCard = target.closest("[data-arkn-pending-card-index]");
     if (pendingCard) return arkNovaTogglePendingChoiceIndex(Number(pendingCard.dataset.arknPendingCardIndex));
     const actionCard = target.closest("[data-arkn-action-card]");
@@ -1766,6 +1974,7 @@
         arkNovaResetDraft();
         arkNovaUi.selectedAction = id;
         arkNovaUi.actionMode = id === "sponsors" ? "play" : "draw";
+        if (id === "build") arkNovaUi.viewedPlayerId = String(arkNovaView.you ?? arkNovaView.player_id ?? "");
       } else arkNovaResetDraft();
       return arkNovaRerenderInteractive();
     }
@@ -1787,6 +1996,7 @@
     if (!target.closest("button, input, select, label, .arkn-card, .arkn-map-frame")) {
       arkNovaUi.selectedCards.clear();
       arkNovaUi.buildCells = [];
+      arkNovaUi.buildRotation = 0;
       arkNovaUi.pendingSelection.clear();
       arkNovaRerenderInteractive();
       arkNovaRenderPending(arkNovaView);
@@ -1801,9 +2011,11 @@
       const meta = ARK_NOVA_BUILDINGS[target.value];
       if (meta && !meta.variable) arkNovaUi.buildSize = meta.size;
       arkNovaUi.buildCells = [];
+      arkNovaUi.buildRotation = 0;
     } else if (target.id === "arkNovaBuildSize") {
       arkNovaUi.buildSize = arkNovaNumber(target.value, 1);
       arkNovaUi.buildCells = [];
+      arkNovaUi.buildRotation = 0;
     } else if (target.dataset.arknEnclosureFor) {
       arkNovaUi.animalEnclosures.set(target.dataset.arknEnclosureFor, target.value);
     } else if (target.id === "arkNovaAssociationTask") {
@@ -1897,6 +2109,7 @@
     }
     arkNovaUi.selectedCards.clear();
     arkNovaUi.buildCells = [];
+    arkNovaUi.buildRotation = 0;
     arkNovaUi.pendingSelection.clear();
     arkNovaRerenderInteractive();
     if (arkNovaView) arkNovaRenderPending(arkNovaView);
@@ -1909,11 +2122,12 @@
     arkNovaEventLog = [];
     arkNovaEventKeys.clear();
     arkNovaCardLookup.clear();
+    arkNovaUi.viewedPlayerId = null;
     arkNovaResetDraft();
     arkNovaExitExplainMode();
     arkNovaCloseModal();
     const panel = arkNovaEnsureShell();
-    panel.querySelectorAll("#arkNovaStatus, #arkNovaPending, #arkNovaTracks, #arkNovaDisplay, #arkNovaProjects, #arkNovaPlayers, #arkNovaActionCards, #arkNovaComposer, #arkNovaBuildings, #arkNovaHandChoice, #arkNovaHand, #arkNovaPlayed, #arkNovaLog").forEach((node) => { node.innerHTML = ""; });
+    panel.querySelectorAll("#arkNovaStatus, #arkNovaPending, #arkNovaTracks, #arkNovaDisplay, #arkNovaProjects, #arkNovaPlayers, #arkNovaActionCards, #arkNovaComposer, #arkNovaBuildings, #arkNovaViewedZooCards, #arkNovaHandChoice, #arkNovaHand, #arkNovaPlayed, #arkNovaLog").forEach((node) => { node.innerHTML = ""; });
     arkNovaApplyMapState();
   }
 

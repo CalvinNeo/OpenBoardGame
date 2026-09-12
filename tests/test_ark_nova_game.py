@@ -7,9 +7,11 @@ from game.ark_nova import (
     ACTION_IDS,
     ANIMAL_CARDS,
     ArkNovaGame,
+    BUILDING_FOOTPRINTS,
     MAP_REWARDS,
     SPONSOR_CARDS,
     _find_placement,
+    _matches_footprint,
     _place_building,
     _target_appeal,
 )
@@ -101,7 +103,26 @@ class ArkNovaGameTests(unittest.TestCase):
         self.assertNotIn("hand", encoded_other)
         self.assertNotIn("final_cards", encoded_other)
         self.assertEqual(encoded_other["hand_count"], 4)
+        self.assertIn("map", encoded_other)
+        self.assertIn("buildings", encoded_other["map"])
+        self.assertIn("played_animals", encoded_other)
+        self.assertIn("played_sponsors", encoded_other)
         self.assertTrue(all(card and "name" in card for card in view["display"]))
+
+    def test_standard_enclosures_use_their_printed_fixed_shapes(self) -> None:
+        matching_cells = {
+            1: ["A1"],
+            2: ["A1", "B2"],
+            3: ["A1", "A2", "B2"],
+            4: ["A1", "A2", "B2", "B3"],
+            5: ["A1", "A2", "B2", "B3", "C2"],
+        }
+        for size, cells in matching_cells.items():
+            with self.subTest(size=size):
+                footprint = BUILDING_FOOTPRINTS[f"standard_enclosure_{size}"]
+                self.assertTrue(_matches_footprint(cells, footprint))
+                if size >= 3:
+                    self.assertFalse(_matches_footprint([f"A{row}" for row in range(1, size + 1)], footprint))
 
     def test_x_alternative_reorders_action_cards(self) -> None:
         state = self.make_state()

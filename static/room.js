@@ -66,9 +66,11 @@ const seatClaimList = document.getElementById("seatClaimList");
 const seatClaimEmpty = document.getElementById("seatClaimEmpty");
 const roomControlsPanel = document.getElementById("roomControlsPanel");
 const roomControlsToggleBtn = document.getElementById("roomControlsToggleBtn");
+const gameReconnectBtn = document.getElementById("gameReconnectBtn");
 
 const ROOM_AUTH_KEY = "openboardgame:room_auth";
 const NAME_STORAGE_KEY = "openboardgame:name";
+const LAST_ROOM_ID_KEY = "openboardgame:last_room_id";
 
 function loadStoredName() {
   try {
@@ -128,6 +130,8 @@ function setRoomAuth(roomId, auth) {
   if (auth.name) {
     saveStoredName(auth.name);
   }
+  localStorage.setItem(LAST_ROOM_ID_KEY, roomId);
+  updateGameReconnectButton();
 }
 
 function getRoomAuth(roomId) {
@@ -145,6 +149,35 @@ function clearRoomAuth(roomId) {
 
 function clearAllRoomAuth() {
   localStorage.removeItem(ROOM_AUTH_KEY);
+  localStorage.removeItem(LAST_ROOM_ID_KEY);
+  updateGameReconnectButton();
+}
+
+function getQuickReconnectRoomId() {
+  if (roomId) {
+    return roomId;
+  }
+  const authMap = loadRoomAuthMap();
+  const storedRoomId = localStorage.getItem(LAST_ROOM_ID_KEY);
+  if (storedRoomId && authMap[storedRoomId]) {
+    return storedRoomId;
+  }
+  const savedRoomIds = Object.keys(authMap);
+  return savedRoomIds.length ? savedRoomIds[savedRoomIds.length - 1] : null;
+}
+
+function updateGameReconnectButton() {
+  if (!gameReconnectBtn) {
+    return;
+  }
+  const reconnectRoomId = getQuickReconnectRoomId();
+  const auth = reconnectRoomId ? getRoomAuth(reconnectRoomId) : null;
+  const canReconnect = Boolean(auth && auth.player_id && auth.reconnect_token);
+  gameReconnectBtn.disabled = !canReconnect;
+  gameReconnectBtn.title = canReconnect
+    ? `Reconnect to room ${reconnectRoomId}`
+    : "No saved reconnect information";
+  gameReconnectBtn.setAttribute("aria-label", gameReconnectBtn.title);
 }
 
 function log(message) {
@@ -1539,6 +1572,7 @@ function resetRoomState() {
   createRoomPending = false;
   setCreateGameRowVisible(false);
   updateRoomControlsForStatus(null);
+  updateGameReconnectButton();
 }
 
 socket.on("connect", () => {
@@ -1671,6 +1705,7 @@ socket.on("game:bot_progress", (data) => {
 // UI actions
 
 hydrateNameInput();
+updateGameReconnectButton();
 if (nameInput) {
   nameInput.addEventListener("input", () => {
     saveStoredName(nameInput.value);
@@ -1680,6 +1715,14 @@ if (nameInput) {
 if (logoutBtn) {
   logoutBtn.addEventListener("click", () => {
     performLogout();
+  });
+}
+
+if (gameReconnectBtn) {
+  gameReconnectBtn.addEventListener("click", () => {
+    const reconnectRoomId = getQuickReconnectRoomId();
+    const auth = reconnectRoomId ? getRoomAuth(reconnectRoomId) : null;
+    attemptReconnect(reconnectRoomId, auth);
   });
 }
 
