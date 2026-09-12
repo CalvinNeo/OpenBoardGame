@@ -128,6 +128,17 @@ const RA_TILE_META = {
   earthquake: ["💥", "Earthquake"],
 };
 
+const RA_TILE_GROUP_LABELS = {
+  ra: "Auction",
+  god: "Divine",
+  gold: "Treasure",
+  pharaoh: "Dynasty",
+  river: "River",
+  civilization: "Civilization",
+  monument: "Monument",
+  disaster: "Disaster",
+};
+
 const RA_EPOCH_DISCARD_KINDS = new Set([
   "god",
   "gold",
@@ -152,6 +163,12 @@ function raTileLabel(tile) {
     disaster: "Disaster",
   }[(tile && tile.group) || ""];
   return `${meta[0]} ${meta[1]}${groupLabel ? ` (${groupLabel})` : ""}`;
+}
+
+function raTileClassToken(value) {
+  return String(value || "unknown")
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-");
 }
 
 function raFindPlayer(view, playerId) {
@@ -350,12 +367,36 @@ function updateRaButtons() {
 
 function makeRaTile(tile, options = {}) {
   const chip = document.createElement("button");
+  const group = raTileClassToken(tile && tile.group);
+  const kind = raTileClassToken(tile && tile.kind);
+  const meta = RA_TILE_META[tile && tile.kind] || ["■", (tile && tile.label) || "Tile"];
   chip.type = "button";
-  chip.className = `ra-tile ra-tile-${(tile && tile.group) || "unknown"}`;
-  chip.textContent = raTileLabel(tile);
-  chip.title = (tile && tile.label) || "";
+  chip.className = `ra-tile ra-tile-${group} ra-kind-${kind}`;
+  chip.dataset.raTileGroup = group;
+  chip.dataset.raTileKind = kind;
+  chip.title = raTileLabel(tile);
+  chip.setAttribute("aria-label", raTileLabel(tile));
+
+  const glyph = document.createElement("span");
+  glyph.className = "ra-tile-glyph";
+  glyph.setAttribute("aria-hidden", "true");
+  glyph.textContent = meta[0];
+
+  const copy = document.createElement("span");
+  copy.className = "ra-tile-copy";
+  const name = document.createElement("span");
+  name.className = "ra-tile-name";
+  name.textContent = meta[1];
+  const family = document.createElement("span");
+  family.className = "ra-tile-family";
+  family.textContent = RA_TILE_GROUP_LABELS[group] || "Tile";
+  copy.append(name, family);
+  chip.append(glyph, copy);
   if (options.selected) {
     chip.classList.add("selected");
+  }
+  if (options.clickable) {
+    chip.setAttribute("aria-pressed", String(Boolean(options.selected)));
   }
   if (options.explainKey) {
     chip.dataset.raExplainKey = options.explainKey;

@@ -1,0 +1,89 @@
+{
+  "catalog_version": 1,
+  "catalog_status": "original-compatible-set",
+  "card_size": {"width": 100, "height": 150},
+  "shapes": {
+    "triangle_32": {"kind": "triangle"},
+    "square_30": {"kind": "square"},
+    "rectangle_25x50": {"kind": "rectangle"}
+  },
+  "slots": {
+    "tri_tl": {
+      "shape_id": "triangle_32",
+      "polygon": [[0, 0], [32, 0], [0, 32]],
+      "dot_positions": [[9, 9], [20, 7], [7, 20]]
+    },
+    "tri_tr": {
+      "shape_id": "triangle_32",
+      "polygon": [[68, 0], [100, 0], [100, 32]],
+      "dot_positions": [[91, 9], [80, 7], [93, 20]]
+    },
+    "tri_br": {
+      "shape_id": "triangle_32",
+      "polygon": [[100, 118], [100, 150], [68, 150]],
+      "dot_positions": [[91, 141], [93, 130], [80, 143]]
+    },
+    "tri_bl": {
+      "shape_id": "triangle_32",
+      "polygon": [[32, 150], [0, 150], [0, 118]],
+      "dot_positions": [[9, 141], [20, 143], [7, 130]]
+    },
+    "square_top": {
+      "shape_id": "square_30",
+      "polygon": [[35, 0], [65, 0], [65, 30], [35, 30]],
+      "dot_positions": [[43, 8], [57, 8], [43, 22], [57, 22]]
+    },
+    "square_bottom": {
+      "shape_id": "square_30",
+      "polygon": [[35, 120], [65, 120], [65, 150], [35, 150]],
+      "dot_positions": [[43, 128], [57, 128], [43, 142], [57, 142]]
+    },
+    "rect_left": {
+      "shape_id": "rectangle_25x50",
+      "polygon": [[0, 50], [25, 50], [25, 100], [0, 100]],
+      "dot_positions": [[8, 60], [17, 70], [8, 82], [17, 92]]
+    },
+    "rect_right": {
+      "shape_id": "rectangle_25x50",
+      "polygon": [[75, 50], [100, 50], [100, 100], [75, 100]],
+      "dot_positions": [[92, 60], [83, 70], [92, 82], [83, 92]]
+    }
+  },
+  "templates": [
+    {"template_id": "circle_1", "suit": "circle", "value": 1, "connectors": [{"slot": "tri_tl", "dots": 1}, {"slot": "square_bottom", "dots": 0}, {"slot": "rect_right", "dots": 0}]},
+    {"template_id": "circle_2", "suit": "circle", "value": 2, "connectors": [{"slot": "tri_br", "dots": 2}, {"slot": "square_top", "dots": 0}, {"slot": "rect_left", "dots": 0}]},
+    {"template_id": "circle_3", "suit": "circle", "value": 3, "connectors": [{"slot": "square_top", "dots": 2}, {"slot": "tri_bl", "dots": 1}, {"slot": "rect_right", "dots": 0}]},
+    {"template_id": "circle_4", "suit": "circle", "value": 4, "connectors": [{"slot": "rect_left", "dots": 4}, {"slot": "tri_tr", "dots": 0}, {"slot": "square_bottom", "dots": 0}]},
+    {"template_id": "circle_5", "suit": "circle", "value": 5, "connectors": [{"slot": "square_bottom", "dots": 3}, {"slot": "tri_tl", "dots": 2}, {"slot": "rect_right", "dots": 0}]},
+    {"template_id": "circle_6", "suit": "circle", "value": 6, "connectors": [{"slot": "rect_right", "dots": 4}, {"slot": "tri_bl", "dots": 2}, {"slot": "square_top", "dots": 0}]},
+
+    {"template_id": "square_1", "suit": "square", "value": 1, "connectors": [{"slot": "square_top", "dots": 1}, {"slot": "tri_br", "dots": 0}, {"slot": "rect_left", "dots": 0}]},
+    {"template_id": "square_2", "suit": "square", "value": 2, "connectors": [{"slot": "square_bottom", "dots": 2}, {"slot": "tri_tr", "dots": 0}, {"slot": "rect_right", "dots": 0}]},
+    {"template_id": "square_3", "suit": "square", "value": 3, "connectors": [{"slot": "tri_tl", "dots": 3}, {"slot": "square_bottom", "dots": 0}, {"slot": "rect_right", "dots": 0}]},
+    {"template_id": "square_4", "suit": "square", "value": 4, "connectors": [{"slot": "square_top", "dots": 4}, {"slot": "tri_bl", "dots": 0}, {"slot": "rect_left", "dots": 0}]},
+    {"template_id": "square_5", "suit": "square", "value": 5, "connectors": [{"slot": "rect_left", "dots": 3}, {"slot": "tri_tr", "dots": 2}, {"slot": "square_bottom", "dots": 0}]},
+    {"template_id": "square_6", "suit": "square", "value": 6, "connectors": [{"slot": "tri_br", "dots": 3}, {"slot": "rect_right", "dots": 3}, {"slot": "square_top", "dots": 0}]},
+
+    {"template_id": "triangle_1", "suit": "triangle", "value": 1, "connectors": [{"slot": "rect_left", "dots": 1}, {"slot": "tri_tr", "dots": 0}, {"slot": "square_bottom", "dots": 0}]},
+    {"template_id": "triangle_2", "suit": "triangle", "value": 2, "connectors": [{"slot": "tri_bl", "dots": 2}, {"slot": "square_top", "dots": 0}, {"slot": "rect_right", "dots": 0}]},
+    {"template_id": "triangle_3", "suit": "triangle", "value": 3, "connectors": [{"slot": "rect_right", "dots": 3}, {"slot": "tri_tl", "dots": 0}, {"slot": "square_bottom", "dots": 0}]},
+    {"template_id": "triangle_4", "suit": "triangle", "value": 4, "connectors": [{"slot": "tri_tr", "dots": 3}, {"slot": "square_top", "dots": 1}, {"slot": "rect_left", "dots": 0}]},
+    {"template_id": "triangle_5", "suit": "triangle", "value": 5, "connectors": [{"slot": "square_top", "dots": 3}, {"slot": "tri_br", "dots": 2}, {"slot": "rect_left", "dots": 0}]},
+    {"template_id": "triangle_6", "suit": "triangle", "value": 6, "connectors": [{"slot": "square_bottom", "dots": 4}, {"slot": "tri_tl", "dots": 2}, {"slot": "rect_right", "dots": 0}]}
+  ],
+  "starting_card": {
+    "template_id": "start",
+    "suit": "start",
+    "value": 0,
+    "connectors": [
+      {"slot": "tri_tl", "dots": 0},
+      {"slot": "tri_tr", "dots": 0},
+      {"slot": "tri_br", "dots": 0},
+      {"slot": "tri_bl", "dots": 0},
+      {"slot": "square_top", "dots": 0},
+      {"slot": "square_bottom", "dots": 0},
+      {"slot": "rect_left", "dots": 0},
+      {"slot": "rect_right", "dots": 0}
+    ]
+  }
+}

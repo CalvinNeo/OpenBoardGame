@@ -4,8 +4,8 @@
   "name": "Map 0",
   "recommended_level": "intermediate",
   "view_box": {
-    "width": 1340,
-    "height": 830
+    "width": 968,
+    "height": 680
   },
   "layout": {
     "radius": 48,

@@ -97,6 +97,13 @@ class ArkNovaMap0Test(unittest.TestCase):
         self.assertNotIn("<image", svg)
         self.assertNotIn("steamusercontent", svg.lower())
 
+    def test_svg_is_compact_and_omits_duplicate_ui(self):
+        svg = SVG_PATH.read_text(encoding="utf-8")
+        self.assertIn('viewBox="0 0 968 680"', svg)
+        self.assertNotIn('id="ark-nova-map0-info"', svg)
+        self.assertNotIn('id="ark-nova-map0-action-slots"', svg)
+        self.assertNotIn("X-TOKEN STORAGE", svg)
+
 
 if __name__ == "__main__":
     unittest.main()

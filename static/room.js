@@ -1324,6 +1324,9 @@ function resetRoomState() {
   roomStatus.textContent = "-";
   gameTypeLabel.textContent = "-";
   playersList.innerHTML = "";
+  if (typeof clearArkNovaState === "function") {
+    clearArkNovaState();
+  }
   clearCaboState();
   clearFlip7State();
   clearYahtzeeState();

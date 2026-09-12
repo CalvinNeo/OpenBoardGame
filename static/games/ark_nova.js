@@ -2,7 +2,7 @@
   "use strict";
 
   const ARK_NOVA_GAME_TYPE = "ark_nova";
-  const ARK_NOVA_MAP_URL = "/static/assets/ark_nova/map0.svg";
+  const ARK_NOVA_MAP_URL = "/static/assets/ark_nova/map0.svg?v=map0_v2";
   const ARK_NOVA_PLAYER_COLORS = ["#f59e0b", "#38bdf8", "#f472b6", "#a3e635"];
   const ARK_NOVA_CONTINENTS = ["africa", "americas", "asia", "australia", "europe"];
 
@@ -77,6 +77,22 @@
       <section><h4>Break</h4><p>When the Break marker reaches its limit, finish the current action, reduce hands to their limits, refresh the display and association board, return workers, and collect income.</p></section>
       <section><h4>Map 0</h4><p>Select a building and click its full hex footprint. Orange outlines are your current footprint; colored hexes are occupied. Click empty surrounding space or press Esc to cancel a draft.</p></section>
       <section><h4>Explain mode</h4><p>Choose <strong>Explain</strong>, then select any dashed control—even a disabled one—to learn what it does. Esc exits the mode.</p></section>
+    </div>`;
+
+  const ARK_NOVA_MAP_INFO_HTML = `
+    <div class="arkn-map-info-grid">
+      <section><h4>Complete Map 0</h4><p>Cover all 39 buildable land hexes to gain <strong>7 appeal</strong>. Water and rock normally cannot be covered, but they count for adjacency.</p></section>
+      <section><h4>Placement bonuses</h4><p>Bonus hexes can grant a card, money, an X-token, appeal, or move an Action card to slot 1 after the current action finishes.</p></section>
+      <section><h4>Build II spaces</h4><p>The marked G3 and H3 hexes require the Build action upgraded to side II.</p></section>
+      <section><h4>Conservation rewards</h4><p>The reward strip to the left belongs to your zoo board. Purple rewards repeat at each Break; yellow rewards resolve once.</p></section>
+      <section><h4>Map controls</h4><p>Select a building in Plan action, then click its complete connected footprint. Orange outlines show the current draft; occupied hexes use the building color.</p></section>
+      <section><h4>X-token storage</h4><p>Your current supply is shown beside the Map info button and in your player summary. You may store up to 5 X-tokens.</p></section>
+      <div class="arkn-map-info-legend" aria-label="Map 0 terrain legend">
+        <span><i class="arkn-legend-land"></i>Buildable land</span>
+        <span><i class="arkn-legend-water"></i>Water</span>
+        <span><i class="arkn-legend-rock"></i>Rock</span>
+        <span><i class="arkn-legend-choice"></i>Selected footprint</span>
+      </div>
     </div>`;
 
   let arkNovaCurrentData = null;
@@ -240,13 +256,24 @@
     return new Set();
   }
 
+  function arkNovaHasLegalActionsField(view = arkNovaView) {
+    return !!view && (
+      Object.hasOwn(view, "legal_actions")
+      || Object.hasOwn(view, "available_actions")
+      || Object.hasOwn(view, "actions")
+    );
+  }
+
   function arkNovaCan(actionType, view = arkNovaView) {
     if (!view || view.game_over) return false;
     const pending = view.pending_choice || view.pending;
     if (pending && actionType !== "resolve_choice" && actionType !== "keep_initial_cards") return false;
     const legal = arkNovaLegalTypes(view);
-    if (legal.size) return legal.has(actionType);
-    if (actionType === "resolve_choice") return !!pending;
+    if (arkNovaHasLegalActionsField(view)) return legal.has(actionType);
+    if (actionType === "resolve_choice") {
+      const owner = pending && pending.player_id;
+      return !!pending && (!owner || String(owner) === String(view.you ?? view.player_id ?? ""));
+    }
     return arkNovaIsMyTurn(view);
   }
 
@@ -311,7 +338,10 @@
           <section class="arkn-surface arkn-zoo-surface" aria-labelledby="arkNovaMapTitle">
             <div class="arkn-section-heading">
               <h3 id="arkNovaMapTitle">Your zoo · Map 0</h3>
-              <div id="arkNovaMapLegend" class="arkn-map-legend"></div>
+              <div class="arkn-map-tools">
+                <span id="arkNovaMapXStorage" class="arkn-map-x-storage" data-arkn-explain="x_tokens" title="Stored X-tokens"></span>
+                <button type="button" class="arkn-map-info-button" data-arkn-command="map-info" data-arkn-explain-bypass aria-label="Show Map 0 information">ⓘ Map info</button>
+              </div>
             </div>
             <div class="arkn-map-frame">
               <object id="arkNovaMapObject" class="arkn-map-object" type="image/svg+xml" data="${ARK_NOVA_MAP_URL}" aria-label="Interactive Map 0 zoo board"></object>
@@ -333,6 +363,7 @@
         <div class="arkn-lower-grid">
           <section class="arkn-surface arkn-cards-surface" aria-labelledby="arkNovaHandTitle">
             <div class="arkn-section-heading"><h3 id="arkNovaHandTitle">Your cards</h3><span id="arkNovaHandCount" class="arkn-kicker"></span></div>
+            <div id="arkNovaHandChoice"></div>
             <div id="arkNovaHand" class="arkn-card-row arkn-card-row-hand"></div>
             <div class="arkn-played-heading">Played cards</div>
             <div id="arkNovaPlayed" class="arkn-card-row arkn-card-row-played"></div>
@@ -482,8 +513,12 @@
     const card = arkNovaCardObject(rawCard);
     const id = arkNovaCardId(card);
     const type = arkNovaCardType(card);
-    const selected = arkNovaUi.selectedCards.has(id);
-    const selectable = !!options.selectable;
+    const pendingChoiceIndex = Number.isInteger(options.pendingChoiceIndex) ? options.pendingChoiceIndex : null;
+    const selected = pendingChoiceIndex == null
+      ? arkNovaUi.selectedCards.has(id)
+      : arkNovaUi.pendingSelection.has(pendingChoiceIndex);
+    const selectable = !!options.selectable || pendingChoiceIndex != null;
+    const isHandCard = options.zone === "hand";
     const cost = card.play && card.play.base_money_cost != null ? card.play.base_money_cost : card.base_money_cost;
     const strength = card.play && (card.play.minimum_action_strength ?? card.play.strength ?? card.play.minimum_action_level_from_card_condition);
     const size = card.animal_size ?? card.size;
@@ -493,10 +528,17 @@
     const folder = options.folder != null ? `<span class="arkn-folder" title="Display folder ${options.folder}">${options.folder}</span>` : "";
     const hidden = !id && card.hidden;
     if (hidden) return `<div class="arkn-card arkn-card-back" aria-label="Hidden card"><span>ARK</span><b>NOVA</b></div>`;
+    const mainInteraction = pendingChoiceIndex != null
+      ? `data-arkn-pending-card-index="${pendingChoiceIndex}" data-arkn-explain="pending_choice" aria-pressed="${selected}"`
+      : selectable
+        ? `data-arkn-card-select data-zone="${arkNovaEscape(options.zone || "")}" data-arkn-explain="${type === "animal" ? "animal_card" : type === "sponsor" ? "sponsor_card" : "card_info"}" aria-pressed="${selected}"`
+      : isHandCard
+        ? `disabled aria-label="${arkNovaEscape(arkNovaCardName(card))}. Use the information button for card details."`
+        : `data-arkn-card-info="${arkNovaEscape(id)}" data-arkn-explain="card_info"`;
     return `
       <article class="${classes}" data-card-id="${arkNovaEscape(id)}" data-card-type="${arkNovaEscape(type)}">
         ${folder}
-        <button type="button" class="arkn-card-main" ${selectable ? `data-arkn-card-select data-zone="${arkNovaEscape(options.zone || "")}" data-arkn-explain="${type === "animal" ? "animal_card" : type === "sponsor" ? "sponsor_card" : "card_info"}"` : `data-arkn-card-info="${arkNovaEscape(id)}" data-arkn-explain="card_info"`} aria-pressed="${selected}">
+        <button type="button" class="arkn-card-main" ${mainInteraction}>
           <span class="arkn-card-topline"><span class="arkn-card-id">#${arkNovaEscape(id || "—")}</span><span class="arkn-card-kind">${arkNovaEscape(arkNovaTitle(type))}</span></span>
           <strong class="arkn-card-name">${arkNovaEscape(arkNovaCardName(card))}</strong>
           ${englishName && englishName !== arkNovaCardName(card) ? `<span class="arkn-card-en">${arkNovaEscape(englishName)}</span>` : ""}
@@ -754,10 +796,14 @@
 
   function arkNovaRenderBuildings(view) {
     const container = document.getElementById("arkNovaBuildings");
-    const legend = document.getElementById("arkNovaMapLegend");
-    if (!container || !legend) return;
+    const xStorage = document.getElementById("arkNovaMapXStorage");
+    if (!container) return;
     const buildings = arkNovaBuildings(arkNovaYou(view));
-    legend.innerHTML = `<span><i class="arkn-legend-land"></i>Buildable</span><span><i class="arkn-legend-water"></i>Water</span><span><i class="arkn-legend-rock"></i>Rock</span><span><i class="arkn-legend-choice"></i>Draft</span>`;
+    if (xStorage) {
+      const mapDefinition = view.map_definition || view.map || {};
+      const limit = Math.max(1, arkNovaNumber(mapDefinition.x_token_limit, 5));
+      xStorage.innerHTML = `<span aria-hidden="true">✕</span><small>X-tokens</small><b>${arkNovaResource(arkNovaYou(view), "x_tokens")} / ${limit}</b>`;
+    }
     container.innerHTML = buildings.length ? buildings.map((building) => {
       const type = arkNovaBuildingType(building);
       const meta = ARK_NOVA_BUILDINGS[type] || { name: arkNovaTitle(type), icon: "⬡" };
@@ -930,16 +976,51 @@
     if (arkNovaPendingMapChoice()) arkNovaRenderPending(arkNovaView);
   }
 
+  function arkNovaChoiceOptions(pending) {
+    return arkNovaAsArray(pending && (pending.options || pending.choices || pending.allowed_values || pending.card_ids || pending.candidates));
+  }
+
+  function arkNovaHandDiscardChoice(view = arkNovaView) {
+    const pending = view && (view.pending_choice || view.pending);
+    if (!pending || String(pending.type || pending.kind || "").toLowerCase() !== "discard_cards") return null;
+    const owner = pending.player_id;
+    const viewer = view && (view.you ?? view.player_id);
+    if (owner != null && viewer != null && String(owner) !== String(viewer)) return null;
+    const handIds = new Set(arkNovaHand(view).map(arkNovaCardId));
+    const options = arkNovaChoiceOptions(pending);
+    if (!options.length || options.some((option) => !handIds.has(String(arkNovaPendingOptionValue(option))))) return null;
+    return pending;
+  }
+
   function arkNovaRenderHand(view) {
     const handNode = document.getElementById("arkNovaHand");
+    const choiceNode = document.getElementById("arkNovaHandChoice");
     const playedNode = document.getElementById("arkNovaPlayed");
-    if (!handNode || !playedNode) return;
+    if (!handNode || !choiceNode || !playedNode) return;
     const hand = arkNovaHand(view);
     const selectedAction = arkNovaUi.selectedAction;
     const phase = String(view.phase || "");
     const setup = phase.includes("keep") || arkNovaCan("keep_initial_cards");
-    const selectable = setup || (["animals", "sponsors", "association"].includes(selectedAction) && arkNovaIsMyTurn(view) && !view.pending_choice);
-    handNode.innerHTML = hand.length ? hand.map((card) => arkNovaCardMarkup(card, { selectable, zone: "hand" })).join("") : `<div class="arkn-empty">Your hand is empty.</div>`;
+    const discardChoice = arkNovaHandDiscardChoice(view);
+    const selectable = !discardChoice && (setup || (["animals", "sponsors", "association"].includes(selectedAction) && arkNovaIsMyTurn(view) && !view.pending_choice));
+    const discardOptions = discardChoice ? arkNovaChoiceOptions(discardChoice) : [];
+    const optionIndexByCard = new Map(discardOptions.map((option, index) => [String(arkNovaPendingOptionValue(option)), index]));
+    handNode.innerHTML = hand.length ? hand.map((card) => {
+      const cardId = arkNovaCardId(card);
+      const pendingChoiceIndex = optionIndexByCard.has(cardId) ? optionIndexByCard.get(cardId) : null;
+      return arkNovaCardMarkup(card, { selectable, zone: "hand", pendingChoiceIndex });
+    }).join("") : `<div class="arkn-empty">Your hand is empty.</div>`;
+    if (discardChoice) {
+      const { minimum, maximum } = arkNovaPendingBounds(discardChoice);
+      const selectedCount = arkNovaUi.pendingSelection.size;
+      const valid = selectedCount >= minimum && selectedCount <= maximum;
+      const target = minimum === maximum ? String(minimum) : `${minimum}–${maximum}`;
+      choiceNode.innerHTML = `<div class="arkn-hand-choice" role="group" aria-labelledby="arkNovaHandChoiceTitle">
+        <div><strong id="arkNovaHandChoiceTitle">${arkNovaEscape(discardChoice.prompt || `Discard ${target} card(s)`)}</strong><small>Choose directly from your cards below. Use <i>i</i> only to inspect details.</small></div>
+        <output aria-live="polite"><b>${selectedCount}</b> / ${target} selected</output>
+        <div class="arkn-hand-choice-actions"><button type="button" class="arkn-confirm" data-arkn-command="resolve-choice" data-arkn-explain="pending_choice" ${valid && arkNovaCan("resolve_choice") ? "" : "disabled"}>Discard selected</button>${discardChoice.allow_skip || minimum === 0 ? `<button type="button" data-arkn-command="skip-choice">Skip</button>` : ""}</div>
+      </div>`;
+    } else choiceNode.innerHTML = "";
     const you = arkNovaYou(view) || {};
     const played = [
       ...arkNovaAsArray(you.played_animals).map((card) => ({ card, zone: "Animals" })),
@@ -1040,8 +1121,14 @@
   function arkNovaAssociationFields(view) {
     const draft = arkNovaUi.associationDraft;
     const supply = view.association_supply || view.association || {};
-    if (draft.task === "partner_zoo") return `<label><span>Continent</span><select id="arkNovaAssociationContinent">${ARK_NOVA_CONTINENTS.map((continent) => `<option value="${continent}" ${draft.continent === continent ? "selected" : ""}>${arkNovaEscape(arkNovaTitle(continent))}</option>`).join("")}</select></label>`;
-    if (draft.task === "university") return `<label><span>University</span><select id="arkNovaAssociationUniversity"><option value="">Choose university</option>${arkNovaSupplyOptions(supply.universities, ["reputation_2", "science_and_reputation", "hand_limit_5"])}</select></label>`;
+    const partnerZoos = arkNovaAsArray(supply.available_partner_zoos).length
+      ? arkNovaAsArray(supply.available_partner_zoos)
+      : ARK_NOVA_CONTINENTS;
+    const universities = arkNovaAsArray(supply.available_universities).length
+      ? supply.available_universities
+      : supply.universities;
+    if (draft.task === "partner_zoo") return `<label><span>Continent</span><select id="arkNovaAssociationContinent">${partnerZoos.map((continent) => `<option value="${arkNovaEscape(continent)}" ${draft.continent === continent ? "selected" : ""}>${arkNovaEscape(arkNovaTitle(continent))}</option>`).join("")}</select></label>`;
+    if (draft.task === "university") return `<label><span>University</span><select id="arkNovaAssociationUniversity"><option value="">Choose university</option>${arkNovaSupplyOptions(universities, ["university_reputation", "university_science", "university_hand_limit"])}</select></label>`;
     if (draft.task === "support_project") return `<label><span>Project</span><select id="arkNovaAssociationProject"><option value="">Choose project</option>${arkNovaProjects(view).map((entry) => {
       const card = arkNovaCardObject(entry);
       return `<option value="${arkNovaEscape(arkNovaCardId(card))}" ${String(draft.project_id) === arkNovaCardId(card) ? "selected" : ""}>${arkNovaEscape(arkNovaCardName(card))}</option>`;
@@ -1096,6 +1183,10 @@
     const phase = String(view.phase || "");
     if (phase.includes("keep") || arkNovaCan("keep_initial_cards")) {
       container.innerHTML = arkNovaRenderSetupComposer(view);
+      return;
+    }
+    if (phase === "setup") {
+      container.innerHTML = `<div class="arkn-waiting"><span>🂠</span><strong>Waiting for opening hands</strong><p>Every zoo must keep four cards before the first action begins.</p></div>`;
       return;
     }
     if (view.game_over) {
@@ -1171,7 +1262,11 @@
       </section>`;
       return;
     }
-    arkNovaPendingOptions = arkNovaAsArray(pending.options || pending.choices || pending.allowed_values || pending.card_ids || pending.candidates);
+    arkNovaPendingOptions = arkNovaChoiceOptions(pending);
+    if (arkNovaHandDiscardChoice(view)) {
+      container.innerHTML = "";
+      return;
+    }
     const { minimum, maximum } = arkNovaPendingBounds(pending);
     const selectedCount = arkNovaUi.pendingSelection.size;
     const valid = selectedCount >= minimum && selectedCount <= maximum;
@@ -1260,7 +1355,7 @@
   function arkNovaRenderAll(data) {
     const panel = arkNovaEnsureShell();
     const view = data && (data.view || data.state || data.game) || data;
-    if (!view || typeof view !== "object") return;
+    if (!view || typeof view !== "object") throw new Error("Ark Nova game view is missing");
     arkNovaCurrentData = data;
     arkNovaView = view;
     arkNovaIndexCards(view);
@@ -1426,6 +1521,7 @@
 
   function arkNovaHandleCommand(command) {
     if (!arkNovaView) return;
+    if (command === "map-info") return arkNovaOpenModal("Map 0 information", ARK_NOVA_MAP_INFO_HTML, "map-info");
     if (command === "x-minus") arkNovaUi.xTokens = Math.max(0, arkNovaUi.xTokens - 1);
     else if (command === "x-plus") arkNovaUi.xTokens += 1;
     else if (command === "rotate-build") return arkNovaRotateFootprint();
@@ -1445,11 +1541,28 @@
     arkNovaRerenderInteractive();
   }
 
+  function arkNovaTogglePendingChoiceIndex(index) {
+    const pending = arkNovaView && (arkNovaView.pending_choice || arkNovaView.pending);
+    if (!pending || !Number.isInteger(index)) return;
+    arkNovaPendingOptions = arkNovaChoiceOptions(pending);
+    if (index < 0 || index >= arkNovaPendingOptions.length) return;
+    const { maximum } = arkNovaPendingBounds(pending);
+    if (arkNovaUi.pendingSelection.has(index)) arkNovaUi.pendingSelection.delete(index);
+    else {
+      if (maximum === 1) arkNovaUi.pendingSelection.clear();
+      if (arkNovaUi.pendingSelection.size < maximum) arkNovaUi.pendingSelection.add(index);
+    }
+    arkNovaRenderPending(arkNovaView);
+    arkNovaRenderHand(arkNovaView);
+  }
+
   function arkNovaHandlePanelClick(event) {
     const target = event.target instanceof Element ? event.target : null;
     if (!target || arkNovaExplainMode) return;
     const info = target.closest("[data-arkn-card-info]");
     if (info) return arkNovaShowCardDetail(info.dataset.arknCardInfo);
+    const pendingCard = target.closest("[data-arkn-pending-card-index]");
+    if (pendingCard) return arkNovaTogglePendingChoiceIndex(Number(pendingCard.dataset.arknPendingCardIndex));
     const actionCard = target.closest("[data-arkn-action-card]");
     if (actionCard) {
       const id = actionCard.dataset.arknActionCard;
@@ -1472,17 +1585,7 @@
       return arkNovaRerenderInteractive();
     }
     const choice = target.closest("[data-arkn-choice-index]");
-    if (choice) {
-      const index = Number(choice.dataset.arknChoiceIndex);
-      const pending = arkNovaView && (arkNovaView.pending_choice || arkNovaView.pending);
-      const { maximum } = arkNovaPendingBounds(pending || {});
-      if (arkNovaUi.pendingSelection.has(index)) arkNovaUi.pendingSelection.delete(index);
-      else {
-        if (maximum === 1) arkNovaUi.pendingSelection.clear();
-        if (arkNovaUi.pendingSelection.size < maximum) arkNovaUi.pendingSelection.add(index);
-      }
-      return arkNovaRenderPending(arkNovaView);
-    }
+    if (choice) return arkNovaTogglePendingChoiceIndex(Number(choice.dataset.arknChoiceIndex));
     const command = target.closest("[data-arkn-command]");
     if (command) return arkNovaHandleCommand(command.dataset.arknCommand);
     if (!target.closest("button, input, select, label, .arkn-card, .arkn-map-frame")) {
@@ -1614,7 +1717,7 @@
     arkNovaExitExplainMode();
     arkNovaCloseModal();
     const panel = arkNovaEnsureShell();
-    panel.querySelectorAll("#arkNovaStatus, #arkNovaPending, #arkNovaTracks, #arkNovaDisplay, #arkNovaProjects, #arkNovaPlayers, #arkNovaActionCards, #arkNovaComposer, #arkNovaBuildings, #arkNovaHand, #arkNovaPlayed, #arkNovaLog").forEach((node) => { node.innerHTML = ""; });
+    panel.querySelectorAll("#arkNovaStatus, #arkNovaPending, #arkNovaTracks, #arkNovaDisplay, #arkNovaProjects, #arkNovaPlayers, #arkNovaActionCards, #arkNovaComposer, #arkNovaBuildings, #arkNovaHandChoice, #arkNovaHand, #arkNovaPlayed, #arkNovaLog").forEach((node) => { node.innerHTML = ""; });
     arkNovaApplyMapState();
   }
 
@@ -1626,8 +1729,22 @@
   }
 
   function renderArkNovaGameState(data) {
-    arkNovaRenderAll(data);
+    const panel = arkNovaEnsureShell();
+    panel.classList.remove("hidden");
     showArkNovaHeaderActions(true);
+    try {
+      arkNovaRenderAll(data);
+    } catch (error) {
+      console.error("Ark Nova frontend render failed", error);
+      const status = document.getElementById("arkNovaStatus");
+      const composer = document.getElementById("arkNovaComposer");
+      if (status) {
+        status.innerHTML = `<div class="arkn-brand"><span class="arkn-brand-mark" aria-hidden="true">AN</span><span><strong>Ark Nova</strong><small>Map 0</small></span></div><div class="arkn-status-chips"><span class="arkn-status-chip arkn-status-over"><b>View unavailable</b></span></div>`;
+      }
+      if (composer) {
+        composer.innerHTML = `<div class="arkn-waiting"><span>!</span><strong>The latest game view could not be displayed</strong><p>Wait for the next update or refresh this page. Your confirmed game state is safe on the server.</p></div>`;
+      }
+    }
   }
 
   window.clearArkNovaState = clearArkNovaState;

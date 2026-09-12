@@ -300,11 +300,10 @@ def render_svg(config: dict[str, Any]) -> str:
     lines = [
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" role="img" aria-labelledby="ark-nova-map0-title ark-nova-map0-desc">',
         '  <title id="ark-nova-map0-title">Ark Nova — Zoo Map 0</title>',
-        '  <desc id="ark-nova-map0-desc">An original vector reconstruction of Zoo Map 0 with 58 addressable hexes, terrain, placement bonuses, Build II restrictions, conservation rewards, and five Action-card slots.</desc>',
+        '  <desc id="ark-nova-map0-desc">An original compact vector reconstruction of Zoo Map 0 with 58 addressable hexes, terrain, placement bonuses, Build II restrictions, and conservation rewards.</desc>',
         "  <defs>",
         "    <style>",
         '      text { font-family: Inter, Avenir Next, Avenir, "Segoe UI", sans-serif; }',
-        '      .ark-nova-map0-heading { fill:#2d383c; font-size:28px; font-weight:850; letter-spacing:2px; }',
         '      .ark-nova-map0-subheading { fill:#33443d; font-size:14px; font-weight:800; letter-spacing:1.4px; }',
         '      .ark-nova-map0-caption { fill:#5b665f; font-size:11px; font-weight:650; }',
         '      .ark-nova-map0-small { fill:#53615a; font-size:10px; font-weight:650; }',
@@ -318,7 +317,6 @@ def render_svg(config: dict[str, Any]) -> str:
         '      .ark-nova-map0-cell.is-covered { opacity:.5; }',
         '      .ark-nova-map0-debug-label { display:none; fill:#24322d; font-size:9px; font-weight:850; text-anchor:middle; dominant-baseline:middle; pointer-events:none; }',
         '      .ark-nova-map0-show-debug .ark-nova-map0-debug-label { display:block; }',
-        '      .ark-nova-map0-slot-number { fill:#fff7df; font-size:23px; font-weight:900; text-anchor:middle; dominant-baseline:middle; }',
         "    </style>",
         '    <pattern id="ark-nova-map0-grass" width="24" height="24" patternUnits="userSpaceOnUse">',
         '      <rect width="24" height="24" fill="#47744d"/>',
@@ -514,6 +512,13 @@ def render_svg(config: dict[str, Any]) -> str:
             "</svg>",
         ]
     )
+    # The browser already renders Action cards and X-token storage as live UI.
+    # Keep the embedded board focused on the interactive zoo area; Map rules are
+    # available from the adjacent Info button instead of occupying board space.
+    reference_panel_start = lines.index(
+        '  <g id="ark-nova-map0-info" aria-label="Map information">'
+    )
+    lines[reference_panel_start:] = ["</svg>"]
     return "\n".join(lines) + "\n"
 
 

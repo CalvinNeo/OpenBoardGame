@@ -185,6 +185,9 @@ def _recompute_tags(player: MutableMapping[str, Any]) -> None:
         card = ANIMAL_CARDS.get(card_id)
         if card:
             tags.update(_card_icons(card))
+            adjacency = card.get("placement", {}).get("adjacent_to", {})
+            for terrain in ("water", "rock"):
+                tags[terrain] += int(adjacency.get(terrain, 0))
     for card_id in player.get("played_sponsors", []):
         card = SPONSOR_CARDS.get(card_id)
         if card:
@@ -210,8 +213,11 @@ def _condition_met(player: Mapping[str, Any], condition: Mapping[str, Any]) -> b
     if kind == "partner_zoo":
         return len(player.get("partner_zoos", [])) >= int(condition.get("minimum", 1))
     if kind == "action_upgrade":
-        action = player.get("action_cards", {}).get(condition.get("action"), {})
-        return (2 if action.get("upgraded") else 1) >= int(condition.get("minimum_level", 2))
+        action_id = str(condition.get("action", ""))
+        return (
+            action_id in player.get("action_cards", {})
+            and _action_level(player, action_id) >= int(condition.get("minimum_level", 2))
+        )
     if kind == "track_threshold":
         actual = _track_value(player, str(condition.get("track")))
         expected = int(condition.get("value", 0))
@@ -220,8 +226,49 @@ def _condition_met(player: Mapping[str, Any], condition: Mapping[str, Any]) -> b
     return False
 
 
-def _card_conditions_met(player: Mapping[str, Any], card: Mapping[str, Any]) -> bool:
-    return all(_condition_met(player, condition) for condition in card.get("play", {}).get("conditions", []))
+def _active_rules(player: Mapping[str, Any], rule_name: str) -> List[Mapping[str, Any]]:
+    """Return registered passive rules without coupling core to effect ids."""
+
+    active = player.get("active_effects", {})
+    if not isinstance(active, Mapping):
+        return []
+    return [
+        rule for rule in active.values()
+        if isinstance(rule, Mapping)
+        and (rule.get("modifier") == rule_name or rule.get("type") == rule_name)
+    ]
+
+
+def _has_active_rule(player: Mapping[str, Any], rule_name: str) -> bool:
+    return bool(_active_rules(player, rule_name))
+
+
+def _animal_size_class(card: Mapping[str, Any]) -> str:
+    option_types = {str(option.get("type")) for option in card.get("enclosure_options", [])}
+    if "petting_zoo" in option_types:
+        return "small"
+    size = int(card.get("animal_size", 0) or 0)
+    if not size:
+        standard = next(
+            (option for option in card.get("enclosure_options", []) if option.get("type") == "standard"),
+            {},
+        )
+        size = int(standard.get("required_spaces", 0) or 0)
+    if size in (1, 2):
+        return "small"
+    if size in (4, 5):
+        return "large"
+    return "medium"
+
+
+def _card_conditions_met(
+    player: Mapping[str, Any], card: Mapping[str, Any], *, ignore_count: int = 0
+) -> bool:
+    failed = sum(
+        1 for condition in card.get("play", {}).get("conditions", [])
+        if not _condition_met(player, condition)
+    )
+    return failed <= max(0, int(ignore_count))
 
 
 def _action_slot(player: Mapping[str, Any], action_id: str) -> int:
@@ -229,6 +276,9 @@ def _action_slot(player: Mapping[str, Any], action_id: str) -> int:
 
 
 def _action_level(player: Mapping[str, Any], action_id: str) -> int:
+    override = player.get("_action_level_overrides", {})
+    if isinstance(override, Mapping) and action_id in override:
+        return int(override[action_id])
     return 2 if player["action_cards"][action_id].get("upgraded") else 1
 
 
@@ -237,8 +287,17 @@ def _action_strength(
 ) -> int:
     forced = state.get("forced_action")
     if isinstance(forced, Mapping) and forced.get("player_id") == player_id and forced.get("action") == action_id:
-        return int(forced.get("strength") or _action_slot(state["players"][player_id], action_id))
-    return _action_slot(state["players"][player_id], action_id) + x_tokens
+        owner_id = str(forced.get("action_card_owner", player_id))
+        owner = state["players"].get(owner_id, state["players"][player_id])
+        entry = owner["action_cards"][action_id]
+        base = int(forced.get("strength") or _action_slot(owner, action_id))
+        strength = base + (x_tokens if forced.get("allow_x_alternative", False) else 0)
+    else:
+        entry = state["players"][player_id]["action_cards"][action_id]
+        strength = _action_slot(state["players"][player_id], action_id) + x_tokens
+    if int(entry.get("constriction_tokens", 0)):
+        strength -= 2
+    return strength
 
 
 def _validate_x_tokens(player: Mapping[str, Any], value: Any) -> Tuple[Optional[int], Optional[str]]:
@@ -337,6 +396,8 @@ def _new_player_state(seat: int, rng: random.Random) -> Dict[str, Any]:
         "universities": [],
         "hand_limit": 3,
         "tags": {},
+        "active_effects": {},
+        "card_tokens": {},
         "final_card_discarded": False,
         "milestones_resolved": [],
     }
@@ -520,7 +581,12 @@ def _validate_building_placement(
         return "duplicate building cell"
     if any(cell_id not in MAP_CELLS for cell_id in cell_ids):
         return "unknown map cell"
-    if any(not MAP_CELLS[cell_id].get("buildable") for cell_id in cell_ids):
+    may_cover_terrain = _has_active_rule(player, "ignore_water_rock_rules")
+    if any(
+        not MAP_CELLS[cell_id].get("buildable")
+        and not (may_cover_terrain and MAP_CELLS[cell_id].get("terrain") in {"water", "rock"})
+        for cell_id in cell_ids
+    ):
         return "building must use buildable land"
     if any(cell_id in zoo_map["occupancy"] for cell_id in cell_ids):
         return "map cell occupied"
@@ -551,7 +617,7 @@ def _validate_building_placement(
             return "building cells do not match the component footprint"
 
     if any(MAP_CELLS[cell_id].get("build_requirement") == "build_action_upgraded" for cell_id in cell_ids):
-        if not player["action_cards"]["build"].get("upgraded"):
+        if _action_level(player, "build") < 2:
             return "Build II is required for a marked space"
 
     placement_rules = (unique or {}).get("placement", {})
@@ -576,9 +642,10 @@ def _validate_building_placement(
         if int(footprint.get("cell_count", size)) != size:
             return "unique building footprint size mismatch"
         adjacent = placement_rules.get("adjacent_to", {})
-        for terrain in ("water", "rock"):
-            if _adjacent_terrain(cell_ids, terrain) < int(adjacent.get(terrain, 0)):
-                return f"unique building needs more adjacent {terrain}"
+        if not may_cover_terrain:
+            for terrain in ("water", "rock"):
+                if _adjacent_terrain(cell_ids, terrain) < int(adjacent.get(terrain, 0)):
+                    return f"unique building needs more adjacent {terrain}"
         if _border_space_count(cell_ids) < int(placement_rules.get("minimum_border_spaces", 0)):
             return "unique building needs more border spaces"
 
@@ -591,7 +658,8 @@ def _validate_building_placement(
 
 
 def _apply_placement_bonus(
-    state: MutableMapping[str, Any], player_id: str, cell_id: str, events: List[Dict[str, Any]]
+    state: MutableMapping[str, Any], player_id: str, cell_id: str, events: List[Dict[str, Any]],
+    *, allow_archaeologist: bool = True,
 ) -> None:
     player = _player(state, player_id)
     zoo_map = player["map"]
@@ -621,6 +689,35 @@ def _apply_placement_bonus(
             "prompt": "Move an Action card to slot 1", "options": _choice_options(options), "min": 1, "max": 1,
         })
     events.append(_event("placement_bonus", player_id=player_id, cell_id=cell_id, bonus=copy.deepcopy(bonus)))
+    if (
+        allow_archaeologist
+        and MAP_CELLS[cell_id].get("border")
+        and _has_active_rule(player, "duplicate_border_placement_bonus")
+    ):
+        available = [
+            other_id for other_id, other in MAP_CELLS.items()
+            if other.get("placement_bonus") and other_id not in zoo_map["claimed_bonuses"]
+        ]
+        if available:
+            _queue_choice(state, {
+                "choice_id": f"archaeologist-{player_id}-{cell_id}-{len(state.get('pending_queue', []))}",
+                "type": "claim_placement_bonus", "player_id": player_id,
+                "prompt": "Choose an additional uncovered placement bonus",
+                "options": _choice_options(available), "min": 1, "max": 1,
+            })
+
+
+def _queue_unique_follow_up(
+    state: MutableMapping[str, Any], player_id: str, card_id: Optional[str]
+) -> None:
+    if str(card_id or "") != "254":
+        return
+    key = f"{player_id}:254:take_card"
+    resolved = state.setdefault("resolved_follow_ups", [])
+    if key in resolved:
+        return
+    resolved.append(key)
+    _queue_take_card_choice(state, player_id, "zoo-school")
 
 
 def _place_building(
@@ -664,7 +761,23 @@ def _place_building(
         player["building_supply"][building_type] -= 1
     for cell_id in cells:
         _apply_placement_bonus(state, player_id, cell_id, events)
-    if len(zoo_map["occupancy"]) == int(MAP0["counts"]["buildable"]) and not zoo_map.get("completed"):
+    terrain_refs: List[Dict[str, Any]] = []
+    for cell_id in cells:
+        for terrain in ("water", "rock"):
+            if any(
+                MAP_CELLS[neighbor].get("terrain") == terrain
+                and neighbor not in zoo_map["occupancy"]
+                for neighbor in MAP_CELLS[cell_id]["neighbors"]
+            ):
+                for sponsor_id in player.get("played_sponsors", []):
+                    terrain_refs.extend(_sponsor_effect_refs(
+                        player_id, SPONSOR_CARDS[sponsor_id], "passive",
+                        {"trigger": "hex_covered_adjacent_to", "terrain": terrain},
+                    ))
+    state.setdefault("effect_queue", []).extend(terrain_refs)
+    _queue_unique_follow_up(state, player_id, building.get("unique_card_id"))
+    buildable_land = {cell_id for cell_id, cell in MAP_CELLS.items() if cell.get("buildable")}
+    if buildable_land.issubset(zoo_map["occupancy"]) and not zoo_map.get("completed"):
         zoo_map["completed"] = True
         _apply_rewards(state, player_id, MAP0["completion_bonus"], events, "map_completion")
     _update_derived_metrics(player)
@@ -704,10 +817,11 @@ def _enclosure_for_animal(
             return building, option, "standard enclosure is too small"
     elif int(building.get("used_capacity", 0)) + required > int(building.get("capacity", 0)):
         return building, option, "special enclosure has insufficient capacity"
-    adjacency = card.get("placement", {}).get("adjacent_to", {})
-    for terrain in ("water", "rock"):
-        if _adjacent_terrain(building["cells"], terrain) < int(adjacency.get(terrain, 0)):
-            return building, option, f"enclosure needs more adjacent {terrain}"
+    if not _has_active_rule(player, "ignore_water_rock_rules"):
+        adjacency = card.get("placement", {}).get("adjacent_to", {})
+        for terrain in ("water", "rock"):
+            if _adjacent_terrain(building["cells"], terrain) < int(adjacency.get(terrain, 0)):
+                return building, option, f"enclosure needs more adjacent {terrain}"
     return building, option, None
 
 
@@ -716,6 +830,10 @@ def _animal_cost(player: Mapping[str, Any], card: Mapping[str, Any]) -> int:
     icons = _card_icons(card)
     for continent in player.get("partner_zoos", []):
         cost -= 3 * int(icons.get(continent, 0))
+    size_class = _animal_size_class(card)
+    for rule in _active_rules(player, "animal_discount"):
+        if rule.get("size") == size_class:
+            cost -= int(rule.get("money", 0))
     return max(0, cost)
 
 
@@ -751,13 +869,13 @@ def _occupied_project_positions(state: Mapping[str, Any], project_id: str) -> Se
 
 def _project_requirement_met(
     state: Mapping[str, Any], player_id: str, project: Mapping[str, Any], slot: Mapping[str, Any],
-    release_animal_id: Optional[str] = None,
+    release_animal_id: Optional[str] = None, wild_icons: int = 0,
 ) -> bool:
     player = state["players"][player_id]
     requirement = slot.get("requirement", {})
     kind = requirement.get("kind")
     if kind == "metric_count":
-        return _metric_count(player, str(requirement.get("metric"))) >= int(requirement.get("value", 0))
+        return _metric_count(player, str(requirement.get("metric"))) + int(wild_icons) >= int(requirement.get("value", 0))
     if kind == "released_animal_enclosure_size":
         if not release_animal_id:
             return False
@@ -877,6 +995,144 @@ def _deep_update(target: MutableMapping[str, Any], updates: Mapping[str, Any]) -
             target[key] = copy.deepcopy(value)
 
 
+def _attack_family(attack: str) -> str:
+    return "pilfering" if str(attack).startswith("pilfering") else str(attack)
+
+
+def _attack_immune(player: Mapping[str, Any], attack: str) -> bool:
+    family = _attack_family(attack)
+    return any(family in set(rule.get("attacks", [])) for rule in _active_rules(player, "attack_immunity"))
+
+
+def _add_action_token(player: MutableMapping[str, Any], token: str, count: int, *, lowest: bool) -> List[str]:
+    ordered = sorted(
+        player["action_cards"], key=lambda action_id: _action_slot(player, action_id), reverse=not lowest
+    )
+    affected: List[str] = []
+    key = f"{token}_tokens"
+    for action_id in ordered:
+        if len(affected) >= count:
+            break
+        entry = player["action_cards"][action_id]
+        if int(entry.get(key, 0)):
+            continue
+        entry[key] = 1
+        affected.append(action_id)
+    return affected
+
+
+def _attack_assignments(effect_event: Mapping[str, Any]) -> List[Mapping[str, Any]]:
+    return [item for item in effect_event.get("assignments", []) if isinstance(item, Mapping)]
+
+
+def _selected_attack_target(
+    candidates: Sequence[str], assignments: Sequence[Mapping[str, Any]], criterion: Optional[str] = None
+) -> Optional[str]:
+    for assignment in assignments:
+        if criterion and assignment.get("criterion") not in {None, criterion}:
+            continue
+        target = str(assignment.get("target_player_id", assignment.get("player_id", "")))
+        if target in candidates:
+            return target
+    return sorted(candidates)[0] if candidates else None
+
+
+def _ranked_attack_targets(
+    state: Mapping[str, Any], source_player_id: str, track: str, attack: str, *, minimum: int = 0
+) -> List[str]:
+    ranked = [source_player_id]
+    ranked.extend(
+        player_id for player_id in _ordered_player_ids(state)
+        if player_id != source_player_id and not _attack_immune(state["players"][player_id], attack)
+    )
+    if not ranked:
+        return []
+    top = max(int(state["players"][player_id].get(track, 0)) for player_id in ranked)
+    if top < minimum:
+        return []
+    return [
+        player_id for player_id in ranked
+        if int(state["players"][player_id].get(track, 0)) == top
+    ]
+
+
+def _queue_pilfer_choice(
+    state: MutableMapping[str, Any], attacker_id: str, victim_id: str, criterion: str
+) -> None:
+    victim = _player(state, victim_id)
+    options: List[Dict[str, Any]] = []
+    if int(victim.get("money", 0)) >= 5 or not victim.get("hand"):
+        options.append({"value": "money", "label": "Give 5 money"})
+    if victim.get("hand") and int(victim.get("money", 0)) < 5:
+        options.append({"value": "card", "label": "Give a random hand card"})
+    elif victim.get("hand"):
+        options.append({"value": "card", "label": "Give a random hand card"})
+    _queue_choice(state, {
+        "choice_id": f"pilfer-{attacker_id}-{victim_id}-{criterion}-{len(state.get('pending_queue', []))}",
+        "type": "pilfering", "player_id": victim_id, "attacker_id": attacker_id,
+        "criterion": criterion, "prompt": "Choose what the pilfering player takes",
+        "options": options, "min": 1, "max": 1,
+    })
+
+
+def _consume_attack_event(
+    state: MutableMapping[str, Any], effect_event: Mapping[str, Any], events: List[Dict[str, Any]]
+) -> None:
+    attack = str(effect_event.get("attack", ""))
+    source_player_id = str(effect_event.get("player_id", ""))
+    if source_player_id not in state.get("players", {}):
+        return
+    source = _player(state, source_player_id)
+    assignments = _attack_assignments(effect_event)
+    if attack == "venom":
+        amount = int(effect_event.get("parameters", {}).get("tokens_per_target", 1))
+        for target_id in _ordered_player_ids(state):
+            target = _player(state, target_id)
+            if (
+                target_id == source_player_id or int(target.get("appeal", 0)) < 5
+                or int(target.get("appeal", 0)) <= int(source.get("appeal", 0))
+                or _attack_immune(target, attack)
+            ):
+                continue
+            affected = _add_action_token(target, "venom", amount, lowest=True)
+            events.append(_event("attack_tokens", player_id=target_id, attack=attack, action_cards=affected))
+    elif attack == "constriction":
+        for target_id in _ordered_player_ids(state):
+            target = _player(state, target_id)
+            if target_id == source_player_id or int(target.get("appeal", 0)) < 5 or _attack_immune(target, attack):
+                continue
+            amount = int(int(target.get("appeal", 0)) > int(source.get("appeal", 0)))
+            amount += int(int(target.get("conservation", 0)) > int(source.get("conservation", 0)))
+            affected = _add_action_token(target, "constriction", amount, lowest=False)
+            if affected:
+                events.append(_event("attack_tokens", player_id=target_id, attack=attack, action_cards=affected))
+    elif attack == "hypnosis":
+        ranked = _ranked_attack_targets(state, source_player_id, "appeal", attack, minimum=5)
+        candidates = [player_id for player_id in ranked if player_id != source_player_id]
+        target_id = _selected_attack_target(candidates, assignments)
+        if target_id:
+            target = _player(state, target_id)
+            action_ids = [
+                action_id for action_id in ACTION_IDS if _action_slot(target, action_id) <= 3
+            ]
+            _queue_choice(state, {
+                "choice_id": f"hypnosis-{source_player_id}-{target_id}", "type": "hypnosis_action",
+                "player_id": source_player_id, "target_player_id": target_id,
+                "prompt": "Choose one of the target zoo's Action cards in slots 1-3",
+                "options": _choice_options(action_ids), "min": 1, "max": 1,
+            })
+    elif attack in {"pilfering_1", "pilfering_2"}:
+        criteria = [("appeal", 5)]
+        if attack == "pilfering_2":
+            criteria.append(("conservation", 1))
+        for criterion, minimum in criteria:
+            ranked = _ranked_attack_targets(state, source_player_id, criterion, attack, minimum=minimum)
+            candidates = [player_id for player_id in ranked if player_id != source_player_id]
+            target_id = _selected_attack_target(candidates, assignments, criterion)
+            if target_id:
+                _queue_pilfer_choice(state, source_player_id, target_id, criterion)
+
+
 def _dispatch_effect(
     state: MutableMapping[str, Any], effect_ref: Mapping[str, Any], choice: Any = None
 ) -> Dict[str, Any]:
@@ -963,22 +1219,61 @@ def _consume_effect_events(
                 "allow_x_alternative": bool(effect_event.get("allow_x_alternative", False)),
             })
         elif kind == "attack_resolution_requested":
-            for assignment in effect_event.get("assignments", []):
-                if not isinstance(assignment, Mapping):
-                    continue
-                target_id = assignment.get("target_player_id", assignment.get("player_id"))
-                if target_id in state["players"]:
-                    _player(state, str(target_id)).setdefault("attacks_received", []).append({
-                        "attack": effect_event.get("attack"), "source_player_id": player_id,
-                        **copy.deepcopy(dict(assignment)),
-                    })
+            _consume_attack_event(state, effect_event, events)
+        elif kind == "digging_requested" and player_id in state["players"]:
+            player = _player(state, player_id)
+            for raw_operation in effect_event.get("operations", []):
+                operation = raw_operation if isinstance(raw_operation, str) else raw_operation.get("operation")
+                card_id = None if isinstance(raw_operation, str) else str(raw_operation.get("card_id", ""))
+                if operation == "discard_display":
+                    if card_id not in state.get("display", []):
+                        raise ValueError("invalid Digging display card")
+                    _remove_display_card(state, card_id)
+                    state["discard"].append(card_id)
+                    _refill_display(state)
+                    state["display_dirty"] = False
+                elif operation == "cycle_hand":
+                    if card_id not in player.get("hand", []):
+                        raise ValueError("invalid Digging hand card")
+                    player["hand"].remove(card_id)
+                    state["discard"].append(card_id)
+                    drawn = _draw(state)
+                    if drawn:
+                        player["hand"].append(drawn)
+                elif operation not in {"stop", None}:
+                    raise ValueError("invalid Digging operation")
+        elif kind == "follow_up_effect_requested" and player_id in state["players"]:
+            if effect_event.get("effect") == "take_card":
+                _queue_unique_follow_up(state, player_id, "254")
+        elif kind == "display_cards_taken" and effect_event.get("refill_after_action"):
+            state["display_dirty"] = True
         events.append(copy.deepcopy(dict(effect_event)))
 
 
 def _run_effect_queue(state: MutableMapping[str, Any], events: List[Dict[str, Any]]) -> None:
     while state.get("effect_queue") and state.get("pending_choice") is None:
         effect_ref = state["effect_queue"].pop(0)
+        break_before = int(state.get("break_position", 0))
+        effect_player_id = str(effect_ref.get("player_id", ""))
+        x_before = (
+            int(_player(state, effect_player_id).get("x_tokens", 0))
+            if effect_player_id in state.get("players", {}) else 0
+        )
         result = _dispatch_effect(state, effect_ref)
+        break_events = [event for event in result["events"] if event.get("type") == "break_advanced"]
+        if break_events:
+            limit = int(state.get("break_limit", 999))
+            raw_position = int(state.get("break_position", break_before))
+            state["break_position"] = min(limit, raw_position)
+            if break_before < limit <= raw_position and effect_player_id in state.get("players", {}):
+                # Jumping's registry grants the Break-trigger X immediately; core
+                # grants it once at Break resolution, so remove the duplicate here.
+                _player(state, effect_player_id)["x_tokens"] = x_before
+                state["break_due"] = True
+                state.setdefault("break_triggered_by", effect_player_id)
+            for event in break_events:
+                event["value"] = int(state["break_position"])
+                event["steps"] = int(state["break_position"]) - break_before
         _consume_effect_events(state, result["events"], events)
         if result["state_updates"]:
             _deep_update(state, result["state_updates"])
@@ -989,6 +1284,15 @@ def _run_effect_queue(state: MutableMapping[str, Any], events: List[Dict[str, An
         if pending:
             if is_dataclass(pending):
                 pending = asdict(pending)
+            if (
+                pending.get("kind") == "resolve_attack"
+                and effect_ref.get("ability_id") in {"venom", "constriction"}
+            ):
+                automatic = _dispatch_effect(state, effect_ref, {"assignments": []})
+                _consume_effect_events(state, automatic["events"], events)
+                if automatic["state_updates"]:
+                    _deep_update(state, automatic["state_updates"])
+                continue
             pending = _normalize_pending_choice(dict(pending), effect_ref)
             pending["player_id"] = str(effect_ref["player_id"])
             _queue_choice(state, pending)
@@ -1281,6 +1585,10 @@ def _advance_after_turn(state: MutableMapping[str, Any], player_id: str, events:
         extra = queued_extra.pop(0)
         _set_current_player(state, str(extra["player_id"]))
         state["forced_action"] = copy.deepcopy(extra)
+        if extra.get("action_level"):
+            _player(state, str(extra["player_id"])).setdefault("_action_level_overrides", {})[
+                str(extra["action"])
+            ] = int(extra["action_level"])
         state["phase"] = "action"
         events.append(_event("extra_action", **copy.deepcopy(extra)))
         return
@@ -1322,10 +1630,49 @@ def _resume_if_clear(state: MutableMapping[str, Any], events: List[Dict[str, Any
                 state["phase"] = "action"
             return
         stage = deferred.get("stage")
+        if stage == "repeat_action":
+            multiplier = state.get("multiplier_action")
+            if not isinstance(multiplier, Mapping):
+                raise ValueError("missing Multiplier action state")
+            player_id = str(multiplier["player_id"])
+            action_id = str(multiplier["action"])
+            state["deferred_turn_end"] = None
+            _set_current_player(state, player_id)
+            state["forced_action"] = {
+                "player_id": player_id, "action": action_id,
+                "strength": int(multiplier["base_strength"]), "move_after": False,
+                "allow_x_alternative": True, "from_multiplier": True,
+            }
+            state["phase"] = "action"
+            events.append(_event(
+                "multiplier_repeat", player_id=player_id, action_card=action_id,
+                remaining=int(multiplier.get("remaining", 0)) + 1,
+            ))
+            return
         if stage == "finish_action":
             if state.get("display_dirty"):
                 _refill_display(state)
                 state["display_dirty"] = False
+            if state.get("queued_extra_actions"):
+                player_id = str(deferred["player_id"])
+                state["deferred_turn_end"] = None
+                _advance_after_turn(state, player_id, events)
+                return
+            turn_player_id = str(deferred["player_id"])
+            turn_player = _player(state, turn_player_id)
+            has_venom = any(
+                int(card.get("venom_tokens", 0))
+                for card in turn_player.get("action_cards", {}).values()
+            )
+            if (
+                has_venom and not state.get("turn_venom_removed")
+                and not _attack_immune(turn_player, "venom")
+            ):
+                if int(turn_player.get("money", 0)) < 2:
+                    raise ValueError("this action cannot pay the Venom penalty")
+                turn_player["money"] -= 2
+                events.append(_event("venom_penalty", player_id=turn_player_id, money=2))
+            state.pop("turn_venom_removed", None)
             deferred["stage"] = "after_break"
             if state.get("break_due"):
                 _resolve_break(state, events)
@@ -1354,14 +1701,50 @@ def _defer_turn_end(
     player["x_tokens"] -= x_tokens
     forced = state.get("forced_action")
     is_forced = isinstance(forced, Mapping) and forced.get("player_id") == player_id and forced.get("action") == action_id
-    if is_forced and not forced.get("move_after"):
-        old_slot = _action_slot(player, action_id)
+    action_card_owner_id = str(forced.get("action_card_owner", player_id)) if is_forced else player_id
+    action_card_owner = _player(state, action_card_owner_id)
+    multiplier = state.get("multiplier_action")
+    is_multiplier = (
+        isinstance(multiplier, MutableMapping)
+        and multiplier.get("player_id") == player_id
+        and multiplier.get("action") == action_id
+    )
+    repeats_remaining = int(multiplier.get("remaining", 0)) if is_multiplier else 0
+    if repeats_remaining > 0:
+        old_slot = _action_slot(action_card_owner, action_id)
+        multiplier["remaining"] = repeats_remaining - 1
+        stage = "repeat_action"
+    elif is_forced and not forced.get("move_after") and not is_multiplier:
+        old_slot = _action_slot(action_card_owner, action_id)
+        stage = "finish_action"
     else:
-        old_slot = _use_action_card(player, action_id)
+        old_slot = _use_action_card(action_card_owner, action_id)
+        stage = "finish_action"
+    used_entry = action_card_owner["action_cards"][action_id]
+    if stage == "finish_action":
+        if int(used_entry.pop("venom_tokens", 0)):
+            state["turn_venom_removed"] = True
+        used_entry.pop("constriction_tokens", None)
+        if is_multiplier:
+            used_entry["multiplier_tokens"] = max(
+                0,
+                int(used_entry.get("multiplier_tokens", 0)) - int(multiplier.get("tokens_used", 0)),
+            )
+            if not used_entry["multiplier_tokens"]:
+                used_entry.pop("multiplier_tokens", None)
+            state.pop("multiplier_action", None)
     if is_forced:
         state.pop("forced_action", None)
-    state["deferred_turn_end"] = {"stage": "finish_action", "player_id": player_id, "action_card": action_id}
-    events.append(_event("action_card", player_id=player_id, action_card=action_id, from_slot=old_slot, x_tokens=x_tokens))
+    overrides = player.get("_action_level_overrides")
+    if isinstance(overrides, MutableMapping):
+        overrides.pop(action_id, None)
+        if not overrides:
+            player.pop("_action_level_overrides", None)
+    state["deferred_turn_end"] = {"stage": stage, "player_id": player_id, "action_card": action_id}
+    events.append(_event(
+        "action_card", player_id=player_id, action_card=action_id, from_slot=old_slot,
+        x_tokens=x_tokens, repeated=stage == "repeat_action",
+    ))
     if resume:
         _resume_if_clear(state, events)
 
@@ -1375,6 +1758,8 @@ def _perform_cards_action(
         return error
     assert x_tokens is not None
     strength = _action_strength(state, player_id, "cards", x_tokens)
+    if strength < 1:
+        return "Constriction leaves this action below strength 1"
     table_strength = min(5, strength)
     level = _action_level(player, "cards")
     face = ACTION_DEFS["cards"]["sides"]["II" if level == 2 else "I"]
@@ -1452,22 +1837,46 @@ def _perform_build_action(
         return error
     assert x_tokens is not None
     strength = _action_strength(state, player_id, "build", x_tokens)
+    if strength < 1:
+        return "Constriction leaves this action below strength 1"
     level = _action_level(player, "build")
     specs = action.get("buildings")
     if not isinstance(specs, list) or not specs or not all(isinstance(value, Mapping) for value in specs):
         return "Build requires one or more buildings"
-    if level == 1 and len(specs) != 1:
-        return "Build I constructs exactly one building"
     building_types = [str(spec.get("building_type", "")) for spec in specs]
-    if level == 2 and len(set(building_types)) != len(building_types):
-        return "Build II buildings must be different types"
+    engineer = _has_active_rule(player, "extra_same_building")
+    extra_index: Optional[int] = None
+    if level == 1:
+        if len(specs) == 2 and engineer:
+            first_signature = (building_types[0], _building_size(specs[0]))
+            second_signature = (building_types[1], _building_size(specs[1]))
+            if first_signature != second_signature or building_types[1] in SPECIAL_ENCLOSURES:
+                return "Engineer must copy the same non-special building"
+            extra_index = 1
+        elif len(specs) != 1:
+            return "Build I constructs exactly one building"
+    else:
+        counts = Counter(building_types)
+        repeated = [kind for kind, count in counts.items() if count > 1]
+        if repeated:
+            if not engineer or len(repeated) != 1 or counts[repeated[0]] != 2:
+                return "Build II buildings must be different types"
+            kind = repeated[0]
+            indices = [index for index, value in enumerate(building_types) if value == kind]
+            if kind in SPECIAL_ENCLOSURES or _building_size(specs[indices[0]]) != _building_size(specs[indices[1]]):
+                return "Engineer must copy the same non-special building"
+            extra_index = indices[1]
     side = ACTION_DEFS["build"]["sides"]["II" if level == 2 else "I"]
     allowed = set(side["allowed"])
     if any(building_type not in allowed for building_type in building_types):
         return "building type is not available on this Build side"
-    total_size = sum(_building_size(spec) for spec in specs)
-    if total_size > strength:
+    strength_size = sum(
+        _building_size(spec) for index, spec in enumerate(specs)
+        if index != extra_index
+    )
+    if strength_size > strength:
         return "buildings exceed action strength"
+    total_size = sum(_building_size(spec) for spec in specs)
     cost = total_size * int(ACTION_DEFS["build"]["common"]["money_per_hex"])
     if player["money"] < cost:
         return "not enough money"
@@ -1507,6 +1916,8 @@ def _perform_animals_action(
         return error
     assert x_tokens is not None
     strength = _action_strength(state, player_id, "animals", x_tokens)
+    if strength < 1:
+        return "Constriction leaves this action below strength 1"
     table_strength = min(5, strength)
     level = _action_level(player, "animals")
     face = ACTION_DEFS["animals"]["sides"]["II" if level == 2 else "I"]
@@ -1520,17 +1931,31 @@ def _perform_animals_action(
         _apply_rewards(state, player_id, face.get("strength_5_bonus", {}), events, "animals_II_strength_5")
 
     effect_refs: List[Dict[str, Any]] = []
+    after_action_refs: List[Dict[str, Any]] = []
+    played_size_classes: List[str] = []
     for play in plays:
         card_id = str(play.get("card_id", ""))
         card = ANIMAL_CARDS.get(card_id)
         if not card:
             return "unknown animal card"
+        size_class = _animal_size_class(card)
+        played_size_classes.append(size_class)
+        chosen_size_rules = _active_rules(player, "chosen_animal_size")
+        if chosen_size_rules:
+            chosen_size = str(chosen_size_rules[-1].get("size", ""))
+            if size_class in {"small", "large"} and size_class != chosen_size:
+                return "WAZA Special Assignment forbids this animal size"
         source, surcharge, source_error = _source_for_card(state, player_id, card_id, play.get("source"))
         if source_error:
             return source_error
         if source == "display" and level != 2:
             return "Animals II is required to play from the display"
-        if not _card_conditions_met(player, card):
+        ignore_conditions = (
+            1
+            if size_class == "large" and _has_active_rule(player, "large_animal_ignore_condition")
+            else 0
+        )
+        if not _card_conditions_met(player, card, ignore_count=ignore_conditions):
             return "animal card conditions are not met"
         building, option, enclosure_error = _enclosure_for_animal(player, card, str(play.get("enclosure_id", "")))
         if enclosure_error:
@@ -1555,15 +1980,204 @@ def _perform_animals_action(
         _recompute_tags(player)
         _update_derived_metrics(player)
         _apply_rewards(state, player_id, card.get("printed_rewards", {}), events, f"animal:{card_id}")
-        effect_refs.extend(_animal_effect_refs(player_id, card, strength))
+        if chosen_size_rules and size_class == str(chosen_size_rules[-1].get("size", "")):
+            _apply_rewards(
+                state,
+                player_id,
+                {"appeal": int(chosen_size_rules[-1].get("appeal", 0))},
+                events,
+                f"waza_special_assignment:{card_id}",
+            )
+        animal_refs = _animal_effect_refs(player_id, card, strength)
+        effect_refs.extend(ref for ref in animal_refs if ref.get("timing") != "after_action")
+        after_action_refs.extend(ref for ref in animal_refs if ref.get("timing") == "after_action")
         effect_refs.extend(_all_passive_sponsor_refs(state, player_id, card))
+        _queue_okapi_trigger(state, player_id, card)
         events.append(_event(
             "animal", player_id=player_id, card_id=card_id, enclosure_id=building["id"],
             source=source, cost=cost,
         ))
+    program_choice = None
+    if played_size_classes and all(value == "small" for value in played_size_classes):
+        program_choice = _small_animal_program_choice(state, player_id)
     _defer_turn_end(state, player_id, "animals", x_tokens, events, resume=False)
+    if state.get("multiplier_action"):
+        state.setdefault("deferred_after_action_effects", []).extend(after_action_refs)
+    else:
+        after_action_refs = list(state.pop("deferred_after_action_effects", [])) + after_action_refs
+        effect_refs.extend(after_action_refs)
+    if state.get("multiplier_action"):
+        if program_choice:
+            state.setdefault("deferred_multiplier_choices", []).append(program_choice)
+    else:
+        deferred_choices = list(state.pop("deferred_multiplier_choices", []))
+        if program_choice:
+            deferred_choices.append(program_choice)
+        state.setdefault("pending_queue", []).extend(deferred_choices)
     _enqueue_card_effects(state, effect_refs, events)
     _resume_if_clear(state, events)
+    return None
+
+
+def _small_animal_program_choice(
+    state: Mapping[str, Any], player_id: str
+) -> Optional[Dict[str, Any]]:
+    player = state["players"][player_id]
+    if not _has_active_rule(player, "small_animal_action_chain"):
+        return None
+    options: List[Dict[str, Any]] = [{"value": "skip", "label": "Do not play an extra small animal"}]
+    for card_id in player.get("hand", []):
+        card = ANIMAL_CARDS.get(card_id)
+        if not card or _animal_size_class(card) != "small" or not _card_conditions_met(player, card):
+            continue
+        if _animal_cost(player, card) > int(player.get("money", 0)):
+            continue
+        for building in player["map"].get("buildings", []):
+            _, _, error = _enclosure_for_animal(player, card, str(building["id"]))
+            if error is None:
+                options.append({
+                    "value": {"card_id": card_id, "enclosure_id": building["id"]},
+                    "label": f"{card.get('name', {}).get('zh', card_id)} → {building['id']}",
+                })
+    return {
+        "choice_id": f"small-animal-program-{player_id}", "type": "small_animal_program",
+        "player_id": player_id, "prompt": "Optionally play one extra small animal",
+        "options": options, "min": 1, "max": 1,
+    }
+
+
+def _queue_small_display_choice(state: MutableMapping[str, Any], player_id: str) -> None:
+    available = [
+        card_id for card_id in state.get("display", [])
+        if card_id and card_id in ANIMAL_CARDS and _animal_size_class(ANIMAL_CARDS[card_id]) == "small"
+    ]
+    if not available:
+        return
+    _queue_choice(state, {
+        "choice_id": f"small-display-{player_id}", "type": "take_small_display",
+        "player_id": player_id, "prompt": "Take one small animal from the display",
+        "options": _choice_options(available), "min": 1, "max": 1,
+    })
+
+
+def _okapi_sponsor_options(state: Mapping[str, Any], player_id: str) -> List[str]:
+    player = state["players"][player_id]
+    options = []
+    for card_id in player.get("hand", []):
+        card = SPONSOR_CARDS.get(card_id)
+        if not card or not _card_conditions_met(player, card):
+            continue
+        if int(card.get("play", {}).get("strength_required", 0)) > int(player.get("money", 0)):
+            continue
+        unique = card.get("unique_building")
+        if unique and _find_placement(
+            state, player_id, str(unique["id"]), int(unique.get("footprint", {}).get("cell_count", 0)), unique
+        ) is None:
+            continue
+        options.append(card_id)
+    return options
+
+
+def _queue_okapi_trigger(
+    state: MutableMapping[str, Any], player_id: str, trigger_card: Mapping[str, Any]
+) -> None:
+    player = _player(state, player_id)
+    icon_count = int(_card_icons(trigger_card).get("herbivore", 0))
+    tokens = int(player.get("card_tokens", {}).get("253", 0))
+    if not icon_count or not tokens or not _has_active_rule(player, "okapi_sponsor_chain"):
+        return
+    sponsors = _okapi_sponsor_options(state, player_id)
+    if not sponsors:
+        return
+    options = [{"value": "skip", "label": "Do not use an Okapi Stable token"}]
+    options.extend({
+        "value": card_id,
+        "label": f"{SPONSOR_CARDS[card_id].get('name', {}).get('zh', card_id)} "
+        f"({SPONSOR_CARDS[card_id]['play']['strength_required']} money)",
+    } for card_id in sponsors)
+    state.setdefault("pending_queue", []).append({
+        "choice_id": f"okapi-{player_id}-{len(state.get('pending_queue', []))}",
+        "type": "okapi_sponsor", "player_id": player_id,
+        "remaining": min(icon_count, tokens), "prompt": "Optionally use Okapi Stable",
+        "options": options, "min": 1, "max": 1,
+    })
+
+
+def _play_okapi_sponsor(
+    state: MutableMapping[str, Any], player_id: str, card_id: str, events: List[Dict[str, Any]]
+) -> Optional[str]:
+    player = _player(state, player_id)
+    if card_id not in _okapi_sponsor_options(state, player_id):
+        return "sponsor is not legal for Okapi Stable"
+    card = SPONSOR_CARDS[card_id]
+    cost = int(card["play"]["strength_required"])
+    player["money"] -= cost
+    player["hand"].remove(card_id)
+    player["played_sponsors"].append(card_id)
+    if card_id == "253":
+        player.setdefault("card_tokens", {}).setdefault("253", 3)
+        player.setdefault("active_effects", {}).setdefault("253-printed-1", {
+            "op": "setup_tokens", "count": 3, "modifier": "okapi_sponsor_chain", "card_id": "253",
+        })
+    _recompute_tags(player)
+    _update_derived_metrics(player)
+    _apply_rewards(state, player_id, card.get("printed_rewards", {}), events, f"sponsor:{card_id}")
+    unique = card.get("unique_building")
+    if unique:
+        _unique_building_choice(state, player_id, card)
+    refs = []
+    refs.extend(_sponsor_effect_refs(player_id, card, "immediate"))
+    refs.extend(_sponsor_effect_refs(player_id, card, "setup_and_passive"))
+    refs.extend(_sponsor_effect_refs(player_id, card, "passive", {"register_only": True}))
+    refs.extend(_all_passive_sponsor_refs(state, player_id, card))
+    _queue_okapi_trigger(state, player_id, card)
+    events.append(_event("sponsor", player_id=player_id, card_id=card_id, source="okapi", cost=cost))
+    _enqueue_card_effects(state, refs, events)
+    return None
+
+
+def _play_program_animal(
+    state: MutableMapping[str, Any], player_id: str, value: Mapping[str, Any], events: List[Dict[str, Any]]
+) -> Optional[str]:
+    player = _player(state, player_id)
+    card_id = str(value.get("card_id", ""))
+    card = ANIMAL_CARDS.get(card_id)
+    if not card or card_id not in player.get("hand", []) or _animal_size_class(card) != "small":
+        return "invalid WAZA small-animal choice"
+    if not _card_conditions_met(player, card):
+        return "extra animal conditions are not met"
+    building, option, error = _enclosure_for_animal(player, card, str(value.get("enclosure_id", "")))
+    if error:
+        return error
+    assert building is not None and option is not None
+    cost = _animal_cost(player, card)
+    if int(player.get("money", 0)) < cost:
+        return "not enough money for extra animal"
+    player["money"] -= cost
+    player["hand"].remove(card_id)
+    required = int(option.get("required_spaces", 0))
+    building["occupied_by"].append(card_id)
+    building["used_capacity"] = int(building.get("used_capacity", 0)) + required
+    player["played_animals"].append(card_id)
+    player["animal_records"].append({
+        "card_id": card_id, "enclosure_id": building["id"], "enclosure_type": building["building_type"],
+        "enclosure_size": int(building["size"]), "capacity_used": required,
+    })
+    _recompute_tags(player)
+    _update_derived_metrics(player)
+    _apply_rewards(state, player_id, card.get("printed_rewards", {}), events, f"animal:{card_id}")
+    chosen = _active_rules(player, "chosen_animal_size")
+    if chosen and chosen[-1].get("size") == "small":
+        _apply_rewards(
+            state, player_id, {"appeal": int(chosen[-1].get("appeal", 0))},
+            events, f"waza_special_assignment:{card_id}",
+        )
+    refs = _animal_effect_refs(player_id, card, 0) + _all_passive_sponsor_refs(state, player_id, card)
+    events.append(_event(
+        "animal", player_id=player_id, card_id=card_id, enclosure_id=building["id"],
+        source="waza_small_animal_program", cost=cost,
+    ))
+    _enqueue_card_effects(state, refs, events)
     return None
 
 
@@ -1589,6 +2203,8 @@ def _perform_sponsors_action(
         return error
     assert x_tokens is not None
     strength = _action_strength(state, player_id, "sponsors", x_tokens)
+    if strength < 1:
+        return "Constriction leaves this action below strength 1"
     level = _action_level(player, "sponsors")
     mode = action.get("mode", "play")
     if mode == "break":
@@ -1643,6 +2259,11 @@ def _perform_sponsors_action(
         else:
             _remove_display_card(state, card["id"])
         player["played_sponsors"].append(card["id"])
+        if card["id"] == "253":
+            player.setdefault("card_tokens", {}).setdefault("253", 3)
+            player.setdefault("active_effects", {}).setdefault("253-printed-1", {
+                "op": "setup_tokens", "count": 3, "modifier": "okapi_sponsor_chain", "card_id": "253",
+            })
         _recompute_tags(player)
         _update_derived_metrics(player)
         _apply_rewards(state, player_id, card.get("printed_rewards", {}), events, f" sponsor:{card['id']}")
@@ -1667,6 +2288,7 @@ def _perform_sponsors_action(
         # receive future icon-play broadcasts through _passive_sponsor_refs.
         refs.extend(_sponsor_effect_refs(player_id, card, "passive", {"register_only": True}))
         refs.extend(_all_passive_sponsor_refs(state, player_id, card))
+        _queue_okapi_trigger(state, player_id, card)
         events.append(_event("sponsor", player_id=player_id, card_id=card["id"], source=source, surcharge=surcharge))
     _defer_turn_end(state, player_id, "sponsors", x_tokens, events, resume=False)
     _enqueue_card_effects(state, refs, events)
@@ -1765,16 +2387,47 @@ def _support_project(
     project = PROJECT_CARDS.get(project_id)
     if not project:
         return "unknown conservation project"
-    if any(item.get("project_id", item.get("card_id")) == project_id for item in player["supported_projects"]):
+    already_supported = any(
+        item.get("project_id", item.get("card_id")) == project_id
+        for item in player["supported_projects"]
+    )
+    repeat_release = (
+        project.get("project_type") == "release"
+        and _has_active_rule(player, "release_project_bonus")
+    )
+    if already_supported and not repeat_release:
         return "you already supported this project"
     occupied = _occupied_project_positions(state, project_id)
     requested_slot = task.get("slot", task.get("slot_position"))
     release_animal_id = task.get("release_animal_id", task.get("animal_id"))
+    wild_token_card_id = str(task.get("wild_token_card_id", "") or "")
+    wild_icons = 0
+    if wild_token_card_id:
+        if project.get("project_type") != "base":
+            return "wild project token only applies to base projects"
+        rule = next(
+            (
+                value for value in _active_rules(player, "base_project_wild_icon")
+                if str(value.get("card_id", "")) == wild_token_card_id
+            ),
+            None,
+        )
+        if rule is None or int(player.get("card_tokens", {}).get(wild_token_card_id, 0)) <= 0:
+            return "base-project wild token is unavailable"
+        if any(
+            item.get("card_id") == wild_token_card_id and item.get("project_id") == project_id
+            for item in player.get("wild_project_uses", [])
+        ):
+            return "this card cannot spend two wild tokens on the same project"
+        wild_icons = 1
     eligible = [
         slot for slot in project["support_slots"]
         if int(slot["position"]) not in occupied
         and not _project_slot_blocked(state, project_id, int(slot["position"]))
-        and _project_requirement_met(state, player_id, project, slot, str(release_animal_id) if release_animal_id else None)
+        and _project_requirement_met(
+            state, player_id, project, slot,
+            str(release_animal_id) if release_animal_id else None, wild_icons,
+        )
     ]
     if requested_slot is None:
         if not eligible:
@@ -1791,6 +2444,9 @@ def _support_project(
             return "release project requires an animal"
         _remove_released_animal(state, player_id, str(release_animal_id), events)
     rewards = dict(slot.get("reward", {}))
+    if project.get("project_type") == "release":
+        for rule in _active_rules(player, "release_project_bonus"):
+            rewards["conservation"] = int(rewards.get("conservation", 0)) + int(rule.get("conservation", 0))
     if newly_added:
         for key, amount in project.get("new_project_bonus", {}).items():
             rewards[key] = int(rewards.get(key, 0)) + int(amount)
@@ -1798,6 +2454,11 @@ def _support_project(
         "position": int(slot["position"]), "player_id": player_id,
     })
     player["supported_projects"].append({"project_id": project_id, "position": int(slot["position"])})
+    if wild_token_card_id:
+        player["card_tokens"][wild_token_card_id] -= 1
+        player.setdefault("wild_project_uses", []).append({
+            "card_id": wild_token_card_id, "project_id": project_id,
+        })
     _update_derived_metrics(player)
     _apply_rewards(state, player_id, rewards, events, f"project:{project_id}")
     reward_id = task.get("reward_id")
@@ -1827,6 +2488,8 @@ def _perform_association_action(
         return error
     assert x_tokens is not None
     strength = _action_strength(state, player_id, "association", x_tokens)
+    if strength < 1:
+        return "Constriction leaves this action below strength 1"
     level = _action_level(player, "association")
     tasks = action.get("tasks")
     if not isinstance(tasks, list) or not tasks or not all(isinstance(value, Mapping) for value in tasks):
@@ -1848,6 +2511,10 @@ def _perform_association_action(
         return "unknown association task"
     if len(set(task_names)) != len(task_names):
         return "Association II tasks must be different"
+    project_strength = 5
+    for rule in _active_rules(player, "project_task_strength"):
+        project_strength = min(project_strength, int(rule.get("value", 5)))
+    task_strengths["support_project"] = project_strength
     if sum(task_strengths[name] for name in task_names) > strength:
         return "association tasks exceed action strength"
     worker_costs = [_association_worker_cost(player, name) for name in task_names]
@@ -1945,6 +2612,23 @@ def _effect_choice_payload(pending: Mapping[str, Any], selection: Any) -> Dict[s
             payload["placements"] = [placement]
         elif kind == "resolve_attack" and "assignments" not in payload:
             payload["assignments"] = list(selection.get("assignments", []))
+    elif kind == "place_free_building" and isinstance(selection, list):
+        payload["placements"] = [dict(value) for value in selection if isinstance(value, Mapping)]
+    if kind == "resolve_attack" and "assignments" not in payload:
+        assignments = []
+        for identifier in ids:
+            option = next(
+                (
+                    item for item in options
+                    if str(item.get("id", item.get("value", ""))) == identifier
+                ),
+                {},
+            )
+            assignments.append({
+                "target_player_id": str(option.get("target_player_id", identifier)),
+                **({"criterion": option["criterion"]} if option.get("criterion") else {}),
+            })
+        payload["assignments"] = assignments
     return payload
 
 
@@ -1998,6 +2682,28 @@ def _apply_bonus_token(
     return None
 
 
+def _queue_digging_operation(
+    state: MutableMapping[str, Any], player_id: str, remaining: int
+) -> None:
+    options = [{"value": "stop", "label": "Stop digging"}]
+    if any(state.get("display", [])):
+        options.insert(0, {"value": "discard_display", "label": "Discard and refill a display card"})
+    if state["players"][player_id].get("hand"):
+        options.insert(0, {"value": "cycle_hand", "label": "Discard a hand card and draw one"})
+    _queue_choice(state, {
+        "choice_id": f"digging-{player_id}-{remaining}", "type": "digging_operation",
+        "player_id": player_id, "remaining": int(remaining),
+        "prompt": f"Choose a digging operation ({remaining} remaining)",
+        "options": options, "min": 1, "max": 1,
+    })
+
+
+def _selected_choice_value(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return value.get("value", value.get("id", value.get("card_id")))
+    return value
+
+
 def _resolve_choice(
     state: MutableMapping[str, Any], player_id: str, action: Mapping[str, Any], events: List[Dict[str, Any]]
 ) -> Optional[str]:
@@ -2017,7 +2723,138 @@ def _resolve_choice(
     choice_type = str(pending.get("type", pending.get("kind", "")))
     player = _player(state, player_id)
 
-    if pending.get("_effect_ref"):
+    if choice_type in {"digging", "digging_operation"}:
+        operation = str(_selected_choice_value(selected[0]))
+        remaining = int(pending.get("remaining", 0))
+        state["pending_choice"] = None
+        if operation == "stop":
+            events.append(_event("digging_stop", player_id=player_id))
+        elif operation in {"discard_display", "cycle_hand"}:
+            values = (
+                [card_id for card_id in state.get("display", []) if card_id]
+                if operation == "discard_display" else list(player.get("hand", []))
+            )
+            _queue_choice(state, {
+                "choice_id": f"digging-card-{player_id}-{remaining}", "type": "digging_card",
+                "player_id": player_id, "remaining": remaining, "operation": operation,
+                "prompt": "Choose the card for Digging", "options": _choice_options(values),
+                "min": 1, "max": 1,
+            })
+        else:
+            return "invalid digging operation"
+    elif choice_type == "digging_card":
+        card_id = str(_selected_choice_value(selected[0]))
+        operation = str(pending.get("operation", ""))
+        if operation == "discard_display":
+            if card_id not in state.get("display", []):
+                return "Digging card is no longer in the display"
+            _remove_display_card(state, card_id)
+            state["discard"].append(card_id)
+            _refill_display(state)
+            state["display_dirty"] = False
+        elif operation == "cycle_hand":
+            if card_id not in player.get("hand", []):
+                return "Digging card is no longer in hand"
+            player["hand"].remove(card_id)
+            state["discard"].append(card_id)
+            drawn = _draw(state)
+            if drawn:
+                player["hand"].append(drawn)
+        else:
+            return "invalid digging operation"
+        state["pending_choice"] = None
+        remaining = int(pending.get("remaining", 1)) - 1
+        events.append(_event("digging", player_id=player_id, operation=operation, card_id=card_id))
+        if remaining > 0:
+            _queue_digging_operation(state, player_id, remaining)
+    elif choice_type == "pilfering":
+        choice = str(_selected_choice_value(selected[0]))
+        attacker_id = str(pending.get("attacker_id", ""))
+        if attacker_id not in state["players"]:
+            return "unknown pilfering player"
+        attacker = _player(state, attacker_id)
+        if choice == "money":
+            if player.get("hand") and int(player.get("money", 0)) < 5:
+                return "must give a random card when unable to pay 5 money"
+            amount = min(5, int(player.get("money", 0)))
+            player["money"] -= amount
+            attacker["money"] += amount
+            card_id = None
+        elif choice == "card":
+            if not player.get("hand"):
+                return "no hand card available for pilfering"
+            counter = int(state.get("effect_random_counter", 0)) + 1
+            state["effect_random_counter"] = counter
+            rng = random.Random(f"{state.get('rng_seed')}:{counter}:pilfering")
+            card_id = rng.choice(list(player["hand"]))
+            player["hand"].remove(card_id)
+            attacker["hand"].append(card_id)
+            amount = 0
+        else:
+            return "invalid pilfering choice"
+        state["pending_choice"] = None
+        events.append(_event(
+            "pilfering", player_id=attacker_id, target_player_id=player_id,
+            money=amount, card_id=card_id, criterion=pending.get("criterion"),
+        ))
+    elif choice_type == "hypnosis_action":
+        action_id = str(_selected_choice_value(selected[0]))
+        target_id = str(pending.get("target_player_id", ""))
+        if target_id not in state["players"]:
+            return "unknown hypnosis target"
+        target = _player(state, target_id)
+        if action_id not in target["action_cards"] or _action_slot(target, action_id) > 3:
+            return "hypnosis must use a target Action card in slots 1-3"
+        state.setdefault("queued_extra_actions", []).insert(0, {
+            "player_id": player_id, "action": action_id,
+            "strength": _action_slot(target, action_id), "move_after": True,
+            "allow_x_alternative": True, "action_card_owner": target_id,
+            "action_level": _action_level(target, action_id), "hypnosis": True,
+        })
+        state["pending_choice"] = None
+        events.append(_event(
+            "hypnosis", player_id=player_id, target_player_id=target_id, action_card=action_id,
+        ))
+    elif choice_type == "small_animal_program":
+        value = selected[0]
+        if isinstance(value, Mapping) and "value" in value:
+            value = value["value"]
+        state["pending_choice"] = None
+        if value != "skip":
+            if not isinstance(value, Mapping):
+                return "invalid WAZA small-animal choice"
+            error = _play_program_animal(state, player_id, value, events)
+            if error:
+                return error
+        _queue_small_display_choice(state, player_id)
+    elif choice_type == "take_small_display":
+        card_id = str(_selected_choice_value(selected[0]))
+        if (
+            card_id not in state.get("display", []) or card_id not in ANIMAL_CARDS
+            or _animal_size_class(ANIMAL_CARDS[card_id]) != "small"
+        ):
+            return "small animal is no longer available in the display"
+        _remove_display_card(state, card_id)
+        player["hand"].append(card_id)
+        state["pending_choice"] = None
+        events.append(_event("small_animal_taken", player_id=player_id, card_id=card_id))
+    elif choice_type == "okapi_sponsor":
+        card_id = str(_selected_choice_value(selected[0]))
+        remaining = int(pending.get("remaining", 1)) - 1
+        state["pending_choice"] = None
+        if card_id != "skip":
+            tokens = int(player.get("card_tokens", {}).get("253", 0))
+            if tokens <= 0:
+                return "no Okapi Stable token remains"
+            player["card_tokens"]["253"] = tokens - 1
+            error = _play_okapi_sponsor(state, player_id, card_id, events)
+            if error:
+                return error
+        if remaining > 0:
+            _queue_okapi_trigger(
+                state, player_id, {"icons": [{"tag": "herbivore", "count": remaining}]},
+            )
+    elif pending.get("_effect_ref"):
         payload = _effect_choice_payload(pending, selection)
         result = _dispatch_effect(state, pending["_effect_ref"], payload)
         _consume_effect_events(state, result["events"], events)
@@ -2153,6 +2990,16 @@ def _resolve_choice(
         except ValueError as exc:
             return str(exc)
         state["pending_choice"] = None
+    elif choice_type == "claim_placement_bonus":
+        cell_id = str(selected[0])
+        if (
+            cell_id not in MAP_CELLS
+            or not MAP_CELLS[cell_id].get("placement_bonus")
+            or cell_id in player["map"]["claimed_bonuses"]
+        ):
+            return "placement bonus is no longer available"
+        _apply_placement_bonus(state, player_id, cell_id, events, allow_archaeologist=False)
+        state["pending_choice"] = None
     else:
         return "unsupported pending choice"
     _resume_if_clear(state, events)
@@ -2174,6 +3021,16 @@ def _normalize_pending_choice(pending: Mapping[str, Any], effect_ref: Mapping[st
         item.setdefault("label", str(item.get("name", item.get("card_id", item.get("id", item.get("value", "Option"))))))
         options.append(item)
     value["options"] = options
+    metadata = value.get("metadata", {})
+    if isinstance(metadata, Mapping):
+        for key in (
+            "size", "building_type", "building", "maximum_buildings",
+            "normal_placement_rules", "after",
+        ):
+            if key in metadata and key not in value:
+                value[key] = copy.deepcopy(metadata[key])
+        if value.get("type") == "digging":
+            value["remaining"] = int(metadata.get("maximum_repetitions", 0))
     value["_effect_ref"] = copy.deepcopy(dict(effect_ref))
     return value
 
@@ -2182,15 +3039,91 @@ def _update_derived_metrics(player: MutableMapping[str, Any]) -> None:
     occupancy = player["map"]["occupancy"]
     buildable = {cell_id for cell_id, cell in MAP_CELLS.items() if cell.get("buildable")}
     border_buildable = {cell_id for cell_id in buildable if MAP_CELLS[cell_id].get("border")}
+    empty_buildable = buildable - set(occupancy)
+    connected_empty_border = sum(
+        1 for cell_id in border_buildable - set(occupancy)
+        if any(neighbor in occupancy for neighbor in MAP_CELLS[cell_id]["neighbors"])
+    )
+    unseen = set(empty_buildable)
+    empty_six_hex_regions = 0
+    while unseen:
+        component = {unseen.pop()}
+        frontier = list(component)
+        while frontier:
+            cell_id = frontier.pop()
+            for neighbor in MAP_CELLS[cell_id]["neighbors"]:
+                if neighbor in unseen:
+                    unseen.remove(neighbor)
+                    component.add(neighbor)
+                    frontier.append(neighbor)
+        empty_six_hex_regions += len(component) // 6
+    side_entrance = next(
+        (
+            building for building in player["map"].get("buildings", [])
+            if building.get("unique_card_id") == "257" or building.get("id") == "sponsor-257"
+        ),
+        None,
+    )
+    side_entrance_adjacent: Set[str] = set()
+    if side_entrance:
+        by_id = {building["id"]: building for building in player["map"].get("buildings", [])}
+        side_entrance_adjacent = {
+            occupancy[neighbor]
+            for cell_id in side_entrance.get("cells", [])
+            for neighbor in MAP_CELLS[cell_id]["neighbors"]
+            if neighbor in occupancy and occupancy[neighbor] != side_entrance["id"]
+            and not (
+                by_id[occupancy[neighbor]].get("building_type") == "standard_enclosure"
+                and not by_id[occupancy[neighbor]].get("occupied_by")
+            )
+        }
+    terrain_metrics: Dict[str, int] = {}
+    for terrain in ("water", "rock"):
+        remaining = {
+            cell_id for cell_id, cell in MAP_CELLS.items()
+            if cell.get("terrain") == terrain and cell_id not in occupancy
+        }
+        connected = {
+            cell_id for cell_id in remaining
+            if any(neighbor in occupancy for neighbor in MAP_CELLS[cell_id]["neighbors"])
+        }
+        terrain_metrics[f"connected_{terrain}_hex_count"] = len(connected)
+        terrain_metrics[f"isolated_{terrain}_hex_count"] = len(remaining - connected)
+    bonus_cells = {
+        cell_id for cell_id, cell in MAP_CELLS.items() if cell.get("placement_bonus")
+    } - set(occupancy)
+    connected_bonus = {
+        cell_id for cell_id in bonus_cells
+        if any(neighbor in occupancy for neighbor in MAP_CELLS[cell_id]["neighbors"])
+    }
+    buildings = list(player["map"].get("buildings", []))
+    building_metrics = {
+        "kiosk_count": sum(building.get("building_type") == "kiosk" for building in buildings),
+        "occupied_size_1_enclosure_count": sum(
+            building.get("building_type") == "standard_enclosure"
+            and int(building.get("size", 0)) == 1
+            and bool(building.get("occupied_by"))
+            for building in buildings
+        ),
+        "connected_bonus_hex_count": len(connected_bonus),
+        "isolated_bonus_hex_count": len(bonus_cells - connected_bonus),
+    }
     conditions = {
-        "all_water_spaces_connected": all(any(neighbor in occupancy for neighbor in MAP_CELLS[cell_id]["neighbors"]) for cell_id in MAP0["terrain"]["water"]),
-        "all_rock_spaces_connected": all(any(neighbor in occupancy for neighbor in MAP_CELLS[cell_id]["neighbors"]) for cell_id in MAP0["terrain"]["rock"]),
+        "all_water_spaces_connected": terrain_metrics["isolated_water_hex_count"] == 0,
+        "all_rock_spaces_connected": terrain_metrics["isolated_rock_hex_count"] == 0,
         "all_buildable_border_spaces_covered": border_buildable.issubset(occupancy),
         "all_buildable_spaces_covered": buildable.issubset(occupancy),
     }
     player["map"]["conditions"] = conditions
-    player["map"]["empty_buildable_hex_count"] = len(buildable - set(occupancy))
-    player["map"]["metrics"] = {"empty_buildable_hex_count": len(buildable - set(occupancy))}
+    player["map"]["empty_buildable_hex_count"] = len(empty_buildable)
+    player["map"]["metrics"] = {
+        "empty_buildable_hex_count": len(empty_buildable),
+        "connected_empty_border_hex_count": connected_empty_border,
+        "empty_six_hex_regions": empty_six_hex_regions,
+        "side_entrance_adjacent_building_count": len(side_entrance_adjacent),
+        **terrain_metrics,
+        **building_metrics,
+    }
     player["metrics"] = {
         "large_animal_count": _metric_count(player, "large_animal"),
         "small_animal_count": _metric_count(player, "small_animal"),
@@ -2199,7 +3132,12 @@ def _update_derived_metrics(player: MutableMapping[str, Any]) -> None:
         "sponsor_card_count": len(player.get("played_sponsors", [])),
         "rock_icon_count": int(player.get("tags", {}).get("rock", 0)),
         "water_icon_count": int(player.get("tags", {}).get("water", 0)),
-        "empty_buildable_hex_count": len(buildable - set(occupancy)),
+        "empty_buildable_hex_count": len(empty_buildable),
+        "connected_empty_border_hex_count": connected_empty_border,
+        "empty_six_hex_regions": empty_six_hex_regions,
+        "side_entrance_adjacent_building_count": len(side_entrance_adjacent),
+        **terrain_metrics,
+        **building_metrics,
     }
 
 
@@ -2466,6 +3404,27 @@ class ArkNovaGame:
                     and int(action.get("x_tokens", 0) or 0) != 0
                 ):
                     return [], "X-tokens cannot modify this granted extra action"
+                if action_type in ACTION_IDS and not isinstance(forced, Mapping):
+                    entry = candidate["players"][player_id]["action_cards"][action_type]
+                    available_multiplier = int(entry.get("multiplier_tokens", 0))
+                    requested_multiplier = action.get("use_multiplier_tokens", action.get("use_multiplier"))
+                    if requested_multiplier is None:
+                        requested_multiplier = available_multiplier
+                    elif isinstance(requested_multiplier, bool):
+                        requested_multiplier = available_multiplier if requested_multiplier else 0
+                    if (
+                        not isinstance(requested_multiplier, int)
+                        or isinstance(requested_multiplier, bool)
+                        or requested_multiplier < 0
+                        or requested_multiplier > available_multiplier
+                    ):
+                        return [], "invalid Multiplier token count"
+                    if requested_multiplier:
+                        candidate["multiplier_action"] = {
+                            "player_id": player_id, "action": action_type,
+                            "base_strength": _action_slot(candidate["players"][player_id], action_type),
+                            "remaining": requested_multiplier, "tokens_used": requested_multiplier,
+                        }
                 if action_type == "cards":
                     error = _perform_cards_action(candidate, player_id, action, events)
                 elif action_type == "build":
@@ -2483,7 +3442,25 @@ class ArkNovaGame:
                         return [], "choose an Action card for the X-token action"
                     if player["x_tokens"] >= MAX_X_TOKENS:
                         return [], "X-token limit reached"
-                    gained = _gain_x(player, 1)
+                    entry = player["action_cards"][action_id]
+                    available_multiplier = int(entry.get("multiplier_tokens", 0))
+                    requested_multiplier = action.get("use_multiplier_tokens", action.get("use_multiplier"))
+                    if requested_multiplier is None:
+                        requested_multiplier = available_multiplier
+                    elif isinstance(requested_multiplier, bool):
+                        requested_multiplier = available_multiplier if requested_multiplier else 0
+                    if (
+                        not isinstance(requested_multiplier, int) or isinstance(requested_multiplier, bool)
+                        or requested_multiplier < 0 or requested_multiplier > available_multiplier
+                    ):
+                        return [], "invalid Multiplier token count"
+                    gained = _gain_x(player, 1 + requested_multiplier)
+                    if requested_multiplier:
+                        remaining = available_multiplier - requested_multiplier
+                        if remaining:
+                            entry["multiplier_tokens"] = remaining
+                        else:
+                            entry.pop("multiplier_tokens", None)
                     events.append(_event("gain_x", player_id=player_id, amount=gained))
                     _defer_turn_end(candidate, player_id, action_id, 0, events)
                     error = None
