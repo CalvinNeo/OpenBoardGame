@@ -20109,9 +20109,8 @@ body.tucano-explain-mode .has-explanation {
 }
 
 .tacta-action-dock {
-  position: sticky;
-  bottom: 8px;
-  z-index: 8;
+  position: relative;
+  z-index: 2;
   display: grid;
   gap: 9px;
   padding: 11px;
@@ -20122,15 +20121,119 @@ body.tucano-explain-mode .has-explanation {
   backdrop-filter: blur(8px);
 }
 
+.tacta-hand-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tacta-hand-heading > div {
+  display: grid;
+  gap: 2px;
+}
+
+.tacta-hand-heading strong {
+  font-size: 0.96rem;
+}
+
+.tacta-hand-heading > div > span {
+  color: #afc4d5;
+  font-size: 0.78rem;
+}
+
+.tacta-deck-count {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border: 1px solid rgba(142, 215, 255, 0.35);
+  border-radius: 999px;
+  color: #cfeeff;
+  font-size: 0.76rem;
+  white-space: nowrap;
+}
+
+.tacta-outer-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  align-items: stretch;
+}
+
 .tacta-outer-card {
-  flex: 1 1 210px;
-  min-height: 44px;
+  display: grid;
+  grid-template-columns: 66px minmax(0, 1fr);
+  grid-template-rows: auto 96px;
+  grid-template-areas:
+    "position position"
+    "card details";
+  gap: 6px 10px;
+  min-width: 0;
+  min-height: 132px;
+  padding: 8px 10px;
+  overflow: hidden;
   border-left: 5px solid var(--tacta-card-color, #dce5f2);
+  background: linear-gradient(145deg, rgba(40, 58, 74, 0.98), rgba(20, 31, 43, 0.98));
+  color: #eaf4fb;
   text-align: left;
+  transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+}
+
+.tacta-outer-card:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+.tacta-panel .tacta-outer-card:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.tacta-outer-card-position {
+  grid-area: position;
+  color: #c9dbe7;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.tacta-hand-card-svg {
+  grid-area: card;
+  width: 64px;
+  height: 96px;
+  border-radius: 5px;
+  filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.38));
+}
+
+.tacta-outer-card-details {
+  grid-area: details;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 5px;
+  color: #b9cbd8;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  text-transform: capitalize;
+}
+
+.tacta-outer-card-details strong {
+  color: #ffffff;
+  font-size: 1.12rem;
+}
+
+.tacta-outer-card-face {
+  padding: 3px 6px;
+  border: 1px solid rgba(185, 211, 232, 0.25);
+  border-radius: 999px;
+  background: rgba(4, 11, 18, 0.35);
+  color: #d9e9f3;
+  font-size: 0.64rem;
 }
 
 .tacta-outer-card.is-selected {
-  box-shadow: 0 0 0 2px var(--tacta-card-color, #dce5f2);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--tacta-card-color, #dce5f2) 24%, #283a4a), #14202c);
+  box-shadow: 0 0 0 2px var(--tacta-card-color, #dce5f2), 0 6px 18px rgba(0, 0, 0, 0.28);
 }
 
 .tacta-placement-status {
@@ -20225,8 +20328,17 @@ body.tucano-explain-mode .has-explanation {
   }
 
   .tacta-action-dock {
-    bottom: 4px;
     padding: 8px;
+  }
+
+  .tacta-hand-heading {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .tacta-deck-count {
+    align-self: flex-start;
   }
 
   .tacta-placement-controls {

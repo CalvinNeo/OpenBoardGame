@@ -37,6 +37,7 @@ const tactaSabotageChoices = document.getElementById("tactaSabotageChoices");
 const tactaSabotageButtons = document.getElementById("tactaSabotageButtons");
 const tactaPlayers = document.getElementById("tactaPlayers");
 const tactaBoardSvg = document.getElementById("tactaBoardSvg");
+const tactaDeckCountLabel = document.getElementById("tactaDeckCountLabel");
 const tactaTopCardBtn = document.getElementById("tactaTopCardBtn");
 const tactaBottomCardBtn = document.getElementById("tactaBottomCardBtn");
 const tactaPlacementStatus = document.getElementById("tactaPlacementStatus");
@@ -541,6 +542,7 @@ function selectTactaOuterCard(deckEnd) {
   tactaSelectedFace = "front";
   tactaCandidateIndex = 0;
   tactaIsolatedIndex = 0;
+  renderTactaOuterCards(currentTactaView);
   renderTactaBoard(currentTactaView);
   updateTactaPlacementControls();
 }
@@ -551,33 +553,80 @@ function clearTactaPlacementSelection() {
   tactaCandidateIndex = 0;
   tactaIsolatedIndex = 0;
   if (currentTactaView) {
+    renderTactaOuterCards(currentTactaView);
     renderTactaBoard(currentTactaView);
     updateTactaPlacementControls();
   }
 }
 
+function renderTactaOuterCard(view, deckEnd, button, canChoose) {
+  if (!button) {
+    return;
+  }
+  const card = tactaOuterCard(view, deckEnd);
+  const selected = tactaSelectedDeckEnd === deckEnd;
+  const positionLabel = deckEnd === "top" ? "Top" : "Bottom";
+  button.classList.toggle("hidden", !card);
+  button.classList.toggle("is-selected", selected);
+  button.setAttribute("aria-pressed", selected.toString());
+  button.disabled = !card || !canChoose;
+  button.replaceChildren();
+  if (!card) {
+    button.textContent = `${positionLabel} card`;
+    return;
+  }
+
+  const color = TACTA_COLOR_VALUES[card.owner_color] || "#dce5f2";
+  const face = selected ? tactaSelectedFace : "front";
+  const cardWidth = Number((view.card_size || {}).width || 100);
+  const cardHeight = Number((view.card_size || {}).height || 150);
+  button.style.setProperty("--tacta-card-color", color);
+  button.setAttribute(
+    "aria-label",
+    `${positionLabel} of deck: ${card.suit} ${card.value}, ${card.owner_color}, ${face} face${canChoose ? ". Select this card." : ". Available on your turn."}`
+  );
+
+  const position = document.createElement("span");
+  position.className = "tacta-outer-card-position";
+  position.textContent = `${positionLabel} of deck`;
+
+  const cardSvg = tactaCreateSvgNode("svg", {
+    class: "tacta-hand-card-svg",
+    viewBox: `0 0 ${cardWidth} ${cardHeight}`,
+    preserveAspectRatio: "xMidYMid meet",
+    "aria-hidden": "true",
+    focusable: "false",
+  });
+  appendTactaCard(
+    cardSvg,
+    view,
+    { ...card, face, matrix: [1, 0, 0, 1, 0, 0], covered_connectors: {} }
+  );
+
+  const details = document.createElement("span");
+  details.className = "tacta-outer-card-details";
+  const identity = document.createElement("strong");
+  identity.textContent = `${TACTA_SUIT_SYMBOLS[card.suit] || ""} ${card.value}`.trim();
+  const owner = document.createElement("span");
+  owner.textContent = `${card.owner_color} card`;
+  const faceLabel = document.createElement("span");
+  faceLabel.className = "tacta-outer-card-face";
+  faceLabel.textContent = `${face} face${selected ? " selected" : ""}`;
+  details.append(identity, owner, faceLabel);
+  button.append(position, cardSvg, details);
+}
+
 function renderTactaOuterCards(view) {
   const canChoose = tactaActionAvailable("place_card") || tactaActionAvailable("place_isolated");
+  const viewer = (view.players || []).find((player) => player.player_id === view.you);
+  if (tactaDeckCountLabel) {
+    const count = Number(viewer ? viewer.deck_count : (view.outer_cards || []).length);
+    tactaDeckCountLabel.textContent = `${count} card${count === 1 ? "" : "s"} remaining`;
+  }
   [
     ["top", tactaTopCardBtn],
     ["bottom", tactaBottomCardBtn],
-  ].forEach(([deckEnd, button]) => {
-    if (!button) {
-      return;
-    }
-    const card = tactaOuterCard(view, deckEnd);
-    button.classList.toggle("hidden", !card);
-    button.classList.toggle("is-selected", tactaSelectedDeckEnd === deckEnd);
-    button.setAttribute("aria-pressed", (tactaSelectedDeckEnd === deckEnd).toString());
-    button.disabled = !card || !canChoose;
-    if (!card) {
-      button.textContent = deckEnd === "top" ? "Top card" : "Bottom card";
-      return;
-    }
-    const color = TACTA_COLOR_VALUES[card.owner_color] || "#dce5f2";
-    button.style.setProperty("--tacta-card-color", color);
-    button.textContent = `${deckEnd === "top" ? "Top" : "Bottom"} · ${TACTA_SUIT_SYMBOLS[card.suit] || ""} ${card.value} · ${card.owner_color}`;
-  });
+  ].forEach(([deckEnd, button]) => renderTactaOuterCard(view, deckEnd, button, canChoose));
 }
 
 function updateTactaPlacementControls() {
@@ -816,6 +865,7 @@ if (tactaFlipBtn) {
     if (!tactaSelectedDeckEnd) return;
     tactaSelectedFace = tactaSelectedFace === "front" ? "back" : "front";
     tactaCandidateIndex = 0;
+    renderTactaOuterCards(currentTactaView);
     renderTactaBoard(currentTactaView);
     updateTactaPlacementControls();
   });

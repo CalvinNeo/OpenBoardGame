@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css?v=app_v21" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v22" />
   <link rel="stylesheet" href="/static/ark_nova.css?v=app_v6" />
 </head>
 <body>
@@ -2434,11 +2434,14 @@
 
               <div id="tactaPlayers" class="tacta-players"></div>
 
-              <div class="tacta-board-shell">
-                <svg id="tactaBoardSvg" class="tacta-board" role="img" aria-label="TACTA card layout"></svg>
-              </div>
-
               <section class="tacta-action-dock" aria-label="Placement controls">
+                <div class="tacta-hand-heading">
+                  <div>
+                    <strong>Your playable cards</strong>
+                    <span>Only the two ends of your deck are visible. Middle cards stay hidden.</span>
+                  </div>
+                  <span id="tactaDeckCountLabel" class="tacta-deck-count" aria-live="polite">- cards remaining</span>
+                </div>
                 <div class="tacta-outer-cards">
                   <button id="tactaTopCardBtn" class="tacta-outer-card" type="button">Top card</button>
                   <button id="tactaBottomCardBtn" class="tacta-outer-card" type="button">Bottom card</button>
@@ -2452,6 +2455,10 @@
                   <button id="tactaCancelBtn" type="button">Cancel</button>
                 </div>
               </section>
+
+              <div class="tacta-board-shell">
+                <svg id="tactaBoardSvg" class="tacta-board" role="img" aria-label="TACTA card layout"></svg>
+              </div>
             </div>
 
             <div id="tucanoPanel" class="hidden tucano-panel">
@@ -5496,7 +5503,7 @@
   <script src="/static/games/kobayakawa.js?v=app_v4"></script>
   <script src="/static/games/high_society.js?v=app_v1"></script>
   <script src="/static/games/felix.js?v=app_v1"></script>
-  <script src="/static/games/tacta.js?v=app_v3"></script>
+  <script src="/static/games/tacta.js?v=app_v4"></script>
   <script src="/static/games/subtext.js?v=app_v1"></script>
   <script src="/static/games/tucano.js?v=app_v1"></script>
   <script src="/static/games/witchs_brew.js?v=app_v1"></script>
