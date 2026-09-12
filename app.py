@@ -494,6 +494,12 @@ def _bot_status_payload(room: Room) -> Dict:
     return bot_status
 
 
+def _public_bot_action(game_type: str, action: Dict) -> Dict:
+    if game_type == "subtext":
+        return {"type": action.get("type")}
+    return action
+
+
 async def _emit_bot_progress(room: Room) -> None:
     payload = {
         "room_id": room.room_id,
@@ -1088,7 +1094,7 @@ async def _maybe_run_bots(room: Room) -> None:
                     "payload": {
                         "player_id": bot_player.player_id,
                         "name": bot_player.name,
-                        "action": action_payload,
+                        "action": _public_bot_action(room.game_type, action_payload),
                     },
                 }
                 events = [bot_event] + events

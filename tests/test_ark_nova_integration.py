@@ -56,6 +56,24 @@ class ArkNovaIntegrationTests(unittest.TestCase):
         self.assertIn('data-arkn-pending-card-index=', script)
         self.assertIn("Choose directly from your cards below.", script)
 
+    def test_card_illustrations_are_wired_to_every_card_type(self) -> None:
+        script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")
+        stylesheet = (ROOT / "static" / "ark_nova.css").read_text(encoding="utf-8")
+        art_dir = ROOT / "static" / "assets" / "ark_nova" / "card_art"
+        expected = {
+            "predator", "herbivore", "primate", "bird", "reptile", "bear", "petting",
+            "science", "habitat", "partnership", "education", "conservation", "scoring",
+        }
+        for name in expected:
+            path = art_dir / f"{name}.webp"
+            self.assertTrue(path.is_file(), path)
+            self.assertGreater(path.stat().st_size, 10_000, path)
+            self.assertIn(f"/{name}.webp", script)
+        self.assertIn('type === "conservation_project"', script)
+        self.assertIn('type === "final_scoring"', script)
+        self.assertIn("aspect-ratio: 16 / 9", stylesheet)
+        self.assertIn('detail ? "arkn-detail-art" : "arkn-card-art"', script)
+
     def test_registry_accepts_actions_emitted_by_the_frontend(self) -> None:
         definition = get_game("ark_nova")
         self.assertIsNotNone(definition)

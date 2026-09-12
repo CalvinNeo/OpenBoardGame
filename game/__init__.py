@@ -47,9 +47,11 @@ from game.six_nimmt import SixNimmtGame
 from game.splendor import SplendorGame
 from game.splendor_pokemon import PokemonSplendorGame
 from game.skull import SkullGame
+from game.subtext import SubtextGame
 from game.the_gang import TheGangGame
 from game.texas_holdem import TexasHoldemGame
 from game.tagiron import TagironGame
+from game.tacta import TactaGame
 from game.things_in_rings import ThingsInRingsGame
 from game.turing_machine import TuringMachineGame
 from game.trekking_history import TrekkingHistoryGame
@@ -110,9 +112,11 @@ __all__ = [
     "SplendorGame",
     "PokemonSplendorGame",
     "SkullGame",
+    "SubtextGame",
     "TheGangGame",
     "TexasHoldemGame",
     "TagironGame",
+    "TactaGame",
     "ThingsInRingsGame",
     "TuringMachineGame",
     "TrekkingHistoryGame",

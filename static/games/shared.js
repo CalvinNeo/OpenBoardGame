@@ -176,6 +176,16 @@ function emitRoomStart() {
     };
   } else if (currentGameType === "guandan") {
     payload.config = typeof getGuandanRoomConfig === "function" ? getGuandanRoomConfig() : {};
+  } else if (currentGameType === "tacta") {
+    const tactaConfig = typeof getTactaRoomConfig === "function" ? getTactaRoomConfig() : { mode: "standard" };
+    if (!tactaConfig) {
+      return;
+    }
+    payload.config = tactaConfig;
+  } else if (currentGameType === "subtext") {
+    payload.config = typeof getSubtextRoomConfig === "function"
+      ? getSubtextRoomConfig()
+      : { word_column: 1 };
   }
   socket.emit("room:start", payload);
 }
@@ -267,6 +277,12 @@ function renderRoomState(state) {
     if (typeof clearWitchsBrewState === "function") {
       clearWitchsBrewState();
     }
+    if (typeof clearTactaState === "function") {
+      clearTactaState();
+    }
+    if (typeof clearSubtextState === "function") {
+      clearSubtextState();
+    }
     if (typeof clearCenturyState === "function") {
       clearCenturyState();
     }
@@ -314,6 +330,12 @@ function renderRoomState(state) {
   }
   if (typeof updateGuandanConfigRow === "function") {
     updateGuandanConfigRow();
+  }
+  if (typeof updateTactaConfigRow === "function") {
+    updateTactaConfigRow();
+  }
+  if (typeof updateSubtextConfigRow === "function") {
+    updateSubtextConfigRow();
   }
   updateAutoSaveRow();
   updateReopenButton();

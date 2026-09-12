@@ -5,6 +5,22 @@
   const ARK_NOVA_MAP_URL = "/static/assets/ark_nova/map0.svg?v=map0_v2";
   const ARK_NOVA_PLAYER_COLORS = ["#f59e0b", "#38bdf8", "#f472b6", "#a3e635"];
   const ARK_NOVA_CONTINENTS = ["africa", "americas", "asia", "australia", "europe"];
+  const ARK_NOVA_CARD_ART_BASE = "/static/assets/ark_nova/card_art";
+  const ARK_NOVA_CARD_ART = Object.freeze({
+    predator: `${ARK_NOVA_CARD_ART_BASE}/predator.webp`,
+    herbivore: `${ARK_NOVA_CARD_ART_BASE}/herbivore.webp`,
+    primate: `${ARK_NOVA_CARD_ART_BASE}/primate.webp`,
+    bird: `${ARK_NOVA_CARD_ART_BASE}/bird.webp`,
+    reptile: `${ARK_NOVA_CARD_ART_BASE}/reptile.webp`,
+    bear: `${ARK_NOVA_CARD_ART_BASE}/bear.webp`,
+    petting: `${ARK_NOVA_CARD_ART_BASE}/petting.webp`,
+    science: `${ARK_NOVA_CARD_ART_BASE}/science.webp`,
+    habitat: `${ARK_NOVA_CARD_ART_BASE}/habitat.webp`,
+    partnership: `${ARK_NOVA_CARD_ART_BASE}/partnership.webp`,
+    education: `${ARK_NOVA_CARD_ART_BASE}/education.webp`,
+    conservation: `${ARK_NOVA_CARD_ART_BASE}/conservation.webp`,
+    scoring: `${ARK_NOVA_CARD_ART_BASE}/scoring.webp`,
+  });
 
   const ARK_NOVA_ACTIONS = {
     cards: { name: "Cards", icon: "🗂️", color: "cyan", description: "Advance Break, then draw cards or Snap one card from the display." },
@@ -179,6 +195,63 @@
     if (value === "sponsor") return "sponsor";
     if (value === "animal") return "animal";
     return String(value);
+  }
+
+  function arkNovaCardIconTags(card) {
+    return new Set(arkNovaAsArray(arkNovaCardObject(card).icons).map((icon) => {
+      const value = typeof icon === "string" ? icon : icon && (icon.tag || icon.type || icon.icon);
+      return String(value || "").toLowerCase();
+    }).filter(Boolean));
+  }
+
+  function arkNovaCardArtKey(rawCard) {
+    const card = arkNovaCardObject(rawCard);
+    const type = arkNovaCardType(card);
+    const tags = arkNovaCardIconTags(card);
+    const searchable = `${arkNovaCardName(card)} ${arkNovaCardEnglishName(card)}`.toLowerCase();
+    const animalPriorities = [
+      ["petting_zoo_animal", "petting"],
+      ["petting_zoo", "petting"],
+      ["bear", "bear"],
+      ["primate", "primate"],
+      ["reptile", "reptile"],
+      ["bird", "bird"],
+      ["predator", "predator"],
+      ["herbivore", "herbivore"],
+    ];
+    if (type === "animal") {
+      const matched = animalPriorities.find(([tag]) => tags.has(tag));
+      return matched ? matched[1] : "conservation";
+    }
+    if (type === "conservation_project") {
+      if (/primate/.test(searchable)) return "primate";
+      if (/reptile/.test(searchable)) return "reptile";
+      if (/bird/.test(searchable)) return "bird";
+      if (/predator/.test(searchable)) return "predator";
+      if (/herbivore|large animal/.test(searchable)) return "herbivore";
+      if (/small animal/.test(searchable)) return "petting";
+      if (/research/.test(searchable)) return "science";
+      return "conservation";
+    }
+    if (type === "final_scoring") return "scoring";
+    if (type !== "sponsor") return "conservation";
+
+    const animalMatch = animalPriorities.find(([tag]) => tags.has(tag));
+    if (animalMatch) return animalMatch[1];
+    if (
+      tags.has("science")
+      || /science|research|laboratory|lab\b|institute|technology|medical|patent|veterinarian|hydrologist|geologist|archeologist/.test(searchable)
+    ) return "science";
+    if (/school|playground|guided|tour|spokesperson|communicator|explorer/.test(searchable)) return "education";
+    if (/park|pool|aquarium|cable car|den|rock|hut|tank|exhibit|compound|stable|entrance/.test(searchable)) return "habitat";
+    return "partnership";
+  }
+
+  function arkNovaCardArtMarkup(card, detail = false) {
+    const key = arkNovaCardArtKey(card);
+    const source = ARK_NOVA_CARD_ART[key] || ARK_NOVA_CARD_ART.conservation;
+    const className = detail ? "arkn-detail-art" : "arkn-card-art";
+    return `<span class="${className}" aria-hidden="true"><img src="${source}" alt="" loading="lazy" decoding="async" draggable="false"></span>`;
   }
 
   function arkNovaPlayers(view = arkNovaView) {
@@ -542,6 +615,7 @@
           <span class="arkn-card-topline"><span class="arkn-card-id">#${arkNovaEscape(id || "—")}</span><span class="arkn-card-kind">${arkNovaEscape(arkNovaTitle(type))}</span></span>
           <strong class="arkn-card-name">${arkNovaEscape(arkNovaCardName(card))}</strong>
           ${englishName && englishName !== arkNovaCardName(card) ? `<span class="arkn-card-en">${arkNovaEscape(englishName)}</span>` : ""}
+          ${arkNovaCardArtMarkup(card)}
           <span class="arkn-card-stats">
             ${cost != null ? `<span title="Money cost">💰 ${arkNovaEscape(cost)}</span>` : ""}
             ${strength != null ? `<span title="Required strength">⚡ ${arkNovaEscape(strength)}</span>` : ""}
@@ -578,6 +652,7 @@
     const html = `
       <article class="arkn-detail-card arkn-detail-${arkNovaEscape(arkNovaCardType(card))}">
         <div class="arkn-detail-heading"><span>#${arkNovaEscape(arkNovaCardId(card))}</span><strong>${arkNovaEscape(arkNovaCardName(card))}</strong><em>${arkNovaEscape(arkNovaCardEnglishName(card))}</em></div>
+        ${arkNovaCardArtMarkup(card, true)}
         <div class="arkn-detail-icons">${icons}${arkNovaRewardMarkup(card)}</div>
         <p>${arkNovaEscape(arkNovaCardSummary(card))}</p>
         ${abilityRows ? `<h4>Abilities & effects</h4><ul class="arkn-effect-list">${abilityRows}</ul>` : ""}

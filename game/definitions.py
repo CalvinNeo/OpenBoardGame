@@ -53,12 +53,14 @@ from game.blokus import BlokusGame
 from game.blitz_sketch import BlitzSketchGame
 from game.carcassonne import CarcassonneGame
 from game.skull import SkullGame
+from game.subtext import SubtextGame
 from game.trekking_history import TrekkingHistoryGame
 from game.texas_holdem import TexasHoldemGame
 from game.wavelength import WavelengthGame
 from game.word_decode import WordDecodeGame
 from game.wandering_towers import WanderingTowersGame
 from game.tagiron import TagironGame
+from game.tacta import TactaGame
 from game.turing_machine import TuringMachineGame
 from game.tucano import TucanoGame
 from game.witchs_brew import WitchsBrewGame
@@ -199,6 +201,149 @@ FELIX_ACTION_SCHEMA = {
 
 FELIX_CONFIG_SCHEMA = {
     "type": "object",
+    "additionalProperties": False,
+}
+
+TACTA_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "place_card"},
+                "deck_end": {"type": "string", "enum": ["top", "bottom"]},
+                "face": {"type": "string", "enum": ["front", "back"]},
+                "source_connector_id": {"type": "string", "pattern": "^c[0-9]+$"},
+                "target_card_id": {"type": "string", "minLength": 3, "maxLength": 80},
+                "target_connector_id": {"type": "string", "pattern": "^c[0-9]+$"},
+                "symmetry_index": {"type": "integer", "minimum": 0, "maximum": 23},
+                "board_revision": {"type": "integer", "minimum": 0},
+            },
+            "required": [
+                "type",
+                "deck_end",
+                "face",
+                "source_connector_id",
+                "target_card_id",
+                "target_connector_id",
+                "symmetry_index",
+                "board_revision",
+            ],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "place_isolated"},
+                "deck_end": {"type": "string", "enum": ["top", "bottom"]},
+                "face": {"type": "string", "enum": ["front", "back"]},
+                "isolated_slot_id": {"type": "string", "pattern": "^iso_[0-9]+_[0-9]+$"},
+                "board_revision": {"type": "integer", "minimum": 0},
+            },
+            "required": ["type", "deck_end", "face", "isolated_slot_id", "board_revision"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "choose_pass_suit"},
+                "suit": {"type": "string", "enum": ["circle", "square", "triangle"]},
+            },
+            "required": ["type", "suit"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "next_round"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+TACTA_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "mode": {"type": "string", "enum": ["standard", "quick", "limited_space", "sabotage"]},
+        "active_suits": {
+            "type": "array",
+            "items": {"type": "string", "enum": ["circle", "square", "triangle"]},
+            "minItems": 1,
+            "maxItems": 3,
+            "uniqueItems": True,
+        },
+        "seed": {
+            "oneOf": [
+                {"type": "integer"},
+                {"type": "string", "minLength": 1, "maxLength": 80},
+            ]
+        },
+    },
+    "additionalProperties": False,
+}
+
+SUBTEXT_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "submit_drawing"},
+                "drawing": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 100,
+                    "items": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 300,
+                        "items": {
+                            "type": "array",
+                            "minItems": 2,
+                            "maxItems": 2,
+                            "items": {"type": "number", "minimum": 0, "maximum": 1},
+                        },
+                    },
+                },
+            },
+            "required": ["type", "drawing"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "submit_guess"},
+                "slot_id": {"type": "string", "pattern": "^[A-G]$"},
+            },
+            "required": ["type", "slot_id"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "next_round"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "play_again"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+SUBTEXT_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "word_column": {"type": "integer", "minimum": 1, "maximum": 5},
+        "seed": {
+            "oneOf": [
+                {"type": "integer"},
+                {"type": "string", "minLength": 1, "maxLength": 80},
+            ]
+        },
+    },
     "additionalProperties": False,
 }
 
@@ -4395,5 +4540,35 @@ register_game(
         module=FelixGame,
         serialize=FelixGame.serialize,
         deserialize=FelixGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=TactaGame.game_id,
+        name="TACTA",
+        min_players=TactaGame.min_players,
+        max_players=TactaGame.max_players,
+        turn_mode="turn",
+        action_schema=TACTA_ACTION_SCHEMA,
+        config_schema=TACTA_CONFIG_SCHEMA,
+        module=TactaGame,
+        serialize=TactaGame.serialize,
+        deserialize=TactaGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=SubtextGame.game_id,
+        name="Subtext",
+        min_players=SubtextGame.min_players,
+        max_players=SubtextGame.max_players,
+        turn_mode="simultaneous",
+        action_schema=SUBTEXT_ACTION_SCHEMA,
+        config_schema=SUBTEXT_CONFIG_SCHEMA,
+        module=SubtextGame,
+        serialize=SubtextGame.serialize,
+        deserialize=SubtextGame.deserialize,
     )
 )

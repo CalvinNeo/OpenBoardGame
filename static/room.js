@@ -539,6 +539,8 @@ const GAME_WEIGHT = {
   century_spice_road: 1.80,
   high_society: 1.48,
   felix: 1.40,
+  tacta: 1.34,
+  subtext: 1.29,
 };
 
 function getGameWeight(gameId) {
@@ -1366,6 +1368,12 @@ function resetRoomState() {
   if (typeof clearTuringMachineState === "function") {
     clearTuringMachineState();
   }
+  if (typeof clearTactaState === "function") {
+    clearTactaState();
+  }
+  if (typeof clearSubtextState === "function") {
+    clearSubtextState();
+  }
   clearTexasHoldemState();
   clearSixNimmtState();
   clearHalliState();
@@ -1420,6 +1428,12 @@ function resetRoomState() {
   }
   if (typeof updateGuandanConfigRow === "function") {
     updateGuandanConfigRow();
+  }
+  if (typeof updateTactaConfigRow === "function") {
+    updateTactaConfigRow();
+  }
+  if (typeof updateSubtextConfigRow === "function") {
+    updateSubtextConfigRow();
   }
   updateAutoSaveRow();
   updateReopenButton();

@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css?v=app_v20" />
-  <link rel="stylesheet" href="/static/ark_nova.css?v=app_v4" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v21" />
+  <link rel="stylesheet" href="/static/ark_nova.css?v=app_v5" />
 </head>
 <body>
   <section id="logPanel" class="log-panel hidden" aria-hidden="true">
@@ -220,6 +220,48 @@
       <div class="modal-body">
         <div id="felixExplainContent"></div>
       </div>
+    </div>
+  </section>
+
+  <section id="tactaHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content tacta-help-modal">
+      <div class="modal-header">
+        <h2>TACTA - Game Rules</h2>
+        <button id="tactaHelpCloseBtn" type="button">Close</button>
+      </div>
+      <div id="tactaHelpContent" class="modal-body tacta-help-content"></div>
+    </div>
+  </section>
+
+  <section id="tactaExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="tactaExplainCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="tactaExplainContent"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="subtextHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content subtext-modal-content">
+      <div class="modal-header">
+        <h2>Subtext Help</h2>
+        <button id="subtextHelpCloseBtn" type="button">Close</button>
+      </div>
+      <div id="subtextHelpContent" class="modal-body subtext-help-content"></div>
+    </div>
+  </section>
+
+  <section id="subtextExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content subtext-modal-content">
+      <div class="modal-header">
+        <h2>Subtext Explain</h2>
+        <button id="subtextExplainCloseBtn" type="button">Close</button>
+      </div>
+      <div id="subtextExplainContent" class="modal-body"></div>
     </div>
   </section>
 
@@ -1067,6 +1109,8 @@
                     <option value="kobayakawa">Kobayakawa</option>
                     <option value="high_society">High Society</option>
                     <option value="felix">Felix: The Cat in the Sack</option>
+                    <option value="tacta">TACTA</option>
+                    <option value="subtext">Subtext</option>
                     <option value="tucano">Tucano</option>
                     <option value="witchs_brew">Witch's Brew</option>
                     <option value="ra">Ra</option>
@@ -1484,6 +1528,39 @@
                       <input id="criminalDanceScoringToggle" type="checkbox" checked />
                     </div>
                   </div>
+                  <div class="game-config-card hidden" id="tactaConfigBox" aria-hidden="true">
+                    <div class="game-config-title">TACTA</div>
+                    <div class="row compact-row">
+                      <label for="tactaModeSelect">Mode</label>
+                      <select id="tactaModeSelect">
+                        <option value="standard" selected>Standard · all suits</option>
+                        <option value="quick">Quick Round</option>
+                        <option value="limited_space">Limited Space · 3 rounds</option>
+                        <option value="sabotage">Sabotage</option>
+                      </select>
+                    </div>
+                    <fieldset id="tactaSuitFieldset" class="tacta-suit-fieldset hidden">
+                      <legend>Active suits</legend>
+                      <label><input class="tacta-suit-toggle" type="checkbox" value="circle" checked /> ○ Circle</label>
+                      <label><input class="tacta-suit-toggle" type="checkbox" value="square" checked /> □ Square</label>
+                      <label><input class="tacta-suit-toggle" type="checkbox" value="triangle" /> △ Triangle</label>
+                    </fieldset>
+                    <div id="tactaConfigHint" class="hint">Each player uses all 18 cards.</div>
+                  </div>
+                  <div class="game-config-card hidden" id="subtextConfigBox" aria-hidden="true">
+                    <div class="game-config-title">Subtext</div>
+                    <div class="row compact-row">
+                      <label for="subtextWordColumnSelect">Word Set</label>
+                      <select id="subtextWordColumnSelect">
+                        <option value="1" selected>I · Intro</option>
+                        <option value="2">II · Easy</option>
+                        <option value="3">III · Standard</option>
+                        <option value="4">IV · Hard</option>
+                        <option value="5">V · Expert</option>
+                      </select>
+                    </div>
+                    <div class="hint">The selected difficulty stays fixed for the whole game.</div>
+                  </div>
                 </div>
                 <div class="row hidden toggle-row" id="autoSaveRow">
                   <label for="autoSaveToggle">Auto Save</label>
@@ -1654,6 +1731,10 @@
             <div class="panel-header-actions" id="highSocietyHeaderActions" style="display: none;">
               <button id="highSocietyHelpBtn" type="button">Help</button>
               <button id="highSocietyExplainBtn" type="button">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="subtextHeaderActions" style="display: none;">
+              <button id="subtextHelpBtn" class="subtext-header-btn" type="button">Help</button>
+              <button id="subtextExplainBtn" class="subtext-header-btn" type="button">Explain</button>
             </div>
           </div>
           <div class="panel-body">
@@ -2321,6 +2402,56 @@
 
               <h3>Players</h3>
               <div id="felixPlayers" class="felix-players"></div>
+            </div>
+
+            <div id="tactaPanel" class="hidden tacta-panel">
+              <div class="tacta-topbar">
+                <div>
+                  <h2>TACTA</h2>
+                  <div class="tacta-subtitle">
+                    <span id="tactaModeLabel">Standard</span> · Round <span id="tactaRoundLabel">1</span>
+                    · <span id="tactaPhaseLabel">-</span> · Turn <span id="tactaTurnLabel">-</span>
+                  </div>
+                </div>
+                <div id="tactaHeaderActions" class="tacta-header-actions">
+                  <button id="tactaFitBtn" type="button">Fit Board</button>
+                  <button id="tactaHelpBtn" type="button">Help</button>
+                  <button id="tactaExplainBtn" type="button">Explain</button>
+                </div>
+              </div>
+
+              <div id="tactaNotice" class="round-notice hidden" aria-hidden="true">
+                <div id="tactaNoticeTitle" class="round-notice-title">Round Summary</div>
+                <div id="tactaNoticeBody" class="round-notice-body"></div>
+                <button id="tactaNextRoundBtn" type="button">Next Round</button>
+              </div>
+
+              <div id="tactaSabotageChoices" class="tacta-sabotage hidden" aria-hidden="true">
+                <strong>Choose one suit to pass left</strong>
+                <span>Your choice locks immediately and stays secret until everyone chooses.</span>
+                <div id="tactaSabotageButtons" class="tacta-sabotage-buttons"></div>
+              </div>
+
+              <div id="tactaPlayers" class="tacta-players"></div>
+
+              <div class="tacta-board-shell">
+                <svg id="tactaBoardSvg" class="tacta-board" role="img" aria-label="TACTA card layout"></svg>
+              </div>
+
+              <section class="tacta-action-dock" aria-label="Placement controls">
+                <div class="tacta-outer-cards">
+                  <button id="tactaTopCardBtn" class="tacta-outer-card" type="button">Top card</button>
+                  <button id="tactaBottomCardBtn" class="tacta-outer-card" type="button">Bottom card</button>
+                </div>
+                <div id="tactaPlacementStatus" class="tacta-placement-status">Choose an outer card.</div>
+                <div class="tacta-placement-controls">
+                  <button id="tactaPreviousBtn" type="button" aria-label="Previous placement">Previous</button>
+                  <button id="tactaNextBtn" type="button" aria-label="Next placement">Next</button>
+                  <button id="tactaFlipBtn" type="button">Flip</button>
+                  <button id="tactaPlaceBtn" type="button">Place Card</button>
+                  <button id="tactaCancelBtn" type="button">Cancel</button>
+                </div>
+              </section>
             </div>
 
             <div id="tucanoPanel" class="hidden tucano-panel">
@@ -3943,6 +4074,113 @@
               <div id="fakeArtistPlayers"></div>
             </div>
 
+            <div id="subtextPanel" class="hidden subtext-panel">
+              <div class="subtext-hero">
+                <div>
+                  <div class="subtext-kicker">DRAW · CONNECT · DISCOVER</div>
+                  <h3>Subtext <span>画外之意</span></h3>
+                </div>
+                <div class="subtext-round-badge">Round <strong id="subtextRound">-</strong>/<span id="subtextTotalRounds">-</span></div>
+              </div>
+
+              <div class="subtext-summary-grid">
+                <div class="subtext-summary-card">
+                  <span>Phase</span>
+                  <strong id="subtextPhase">-</strong>
+                </div>
+                <div class="subtext-summary-card">
+                  <span>Dealer</span>
+                  <strong id="subtextDealer">-</strong>
+                </div>
+                <div class="subtext-summary-card">
+                  <span>Progress</span>
+                  <strong id="subtextProgress">-</strong>
+                </div>
+              </div>
+
+              <div id="subtextStatus" class="subtext-status" role="status" aria-live="polite">
+                <span class="subtext-status-icon">✏️</span>
+                <div>
+                  <strong>Your Next Step</strong>
+                  <div id="subtextStatusBody">Waiting for game state…</div>
+                </div>
+              </div>
+
+              <div id="subtextWordCard" class="subtext-word-card hidden">
+                <span>Your secret word</span>
+                <strong id="subtextYourWord">-</strong>
+                <small>Draw an indirect visual clue. Do not write letters or numbers.</small>
+              </div>
+
+              <section id="subtextDrawingArea" class="subtext-stage-card hidden">
+                <div class="subtext-stage-heading">
+                  <div>
+                    <span class="subtext-step-pill">1</span>
+                    <strong>Draw your clue</strong>
+                  </div>
+                  <span id="subtextDrawingCounter" class="subtext-progress-pill">0/0 ready</span>
+                </div>
+                <div class="subtext-canvas-shell">
+                  <canvas id="subtextCanvas" width="640" height="480" aria-label="Subtext drawing canvas"></canvas>
+                </div>
+                <div class="subtext-drawing-warning">🤫 No letters, numbers, or discussion about your word.</div>
+                <div class="row actions subtext-action-row">
+                  <button id="subtextUndoBtn" type="button">↶ Undo</button>
+                  <button id="subtextResetBtn" type="button">Reset Canvas</button>
+                  <button id="subtextSubmitDrawingBtn" class="subtext-primary-btn" type="button">Submit Drawing</button>
+                </div>
+              </section>
+
+              <section id="subtextGuessingArea" class="subtext-stage-card hidden">
+                <div class="subtext-stage-heading">
+                  <div>
+                    <span class="subtext-step-pill">2</span>
+                    <strong>Find the matching clue</strong>
+                  </div>
+                  <span id="subtextGuessCounter" class="subtext-progress-pill">0/0 voted</span>
+                </div>
+                <p class="subtext-stage-copy">Compare every anonymous drawing with the Dealer's drawing. Select one card, then lock your secret guess.</p>
+                <div class="subtext-dealer-drawing">
+                  <div class="subtext-drawing-label"><span>🎨 Dealer</span><strong id="subtextDealerDrawingName">-</strong></div>
+                  <canvas id="subtextDealerCanvas" width="640" height="480" aria-label="Dealer drawing"></canvas>
+                </div>
+                <div id="subtextCandidateGrid" class="subtext-candidate-grid" aria-label="Anonymous candidate drawings"></div>
+                <div class="row actions subtext-action-row subtext-guess-actions">
+                  <span id="subtextSelectedGuess" class="subtext-selection-label">No drawing selected</span>
+                  <button id="subtextSubmitGuessBtn" class="subtext-primary-btn" type="button">Submit Guess</button>
+                </div>
+                <div class="hint">Click the space around the cards or press Esc to cancel an unlocked selection.</div>
+              </section>
+
+              <section id="subtextResultArea" class="subtext-stage-card hidden">
+                <div id="subtextResultBanner" class="subtext-result-banner"></div>
+                <div id="subtextResultDrawings" class="subtext-result-grid"></div>
+                <div class="subtext-table-wrap">
+                  <table class="subtext-score-table">
+                    <thead>
+                      <tr><th>Player</th><th>Guess</th><th>Correct</th><th>Round</th><th>Total</th></tr>
+                    </thead>
+                    <tbody id="subtextResultTableBody"></tbody>
+                  </table>
+                </div>
+                <div id="subtextNextRoundRow" class="subtext-next-row">
+                  <span id="subtextReadyStatus">Ready 0/0</span>
+                  <button id="subtextNextRoundBtn" class="subtext-primary-btn" type="button">Next Round</button>
+                </div>
+                <div id="subtextGameOverActions" class="subtext-next-row hidden">
+                  <span id="subtextWinnerText">-</span>
+                  <button id="subtextPlayAgainBtn" class="subtext-primary-btn" type="button">Play Again</button>
+                </div>
+              </section>
+
+              <section class="subtext-stage-card subtext-scoreboard-card">
+                <div class="subtext-stage-heading">
+                  <strong>🏆 Scoreboard</strong>
+                </div>
+                <div id="subtextPlayers" class="subtext-player-grid"></div>
+              </section>
+            </div>
+
             <div id="thingsInRingsPanel" class="hidden">
               <div class="row">
                 <div>Phase: <span id="thingsInRingsPhase">-</span></div>
@@ -5199,7 +5437,7 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js"></script>
-  <script src="/static/games/shared.js?v=app_v7"></script>
+  <script src="/static/games/shared.js?v=app_v9"></script>
   <script src="/static/games/blokus.js?v=app_v4"></script>
   <script src="/static/games/carcassonne.js?v=app_v6"></script>
   <script src="/static/games/azul.js?v=app_v4"></script>
@@ -5258,12 +5496,14 @@
   <script src="/static/games/kobayakawa.js?v=app_v4"></script>
   <script src="/static/games/high_society.js?v=app_v1"></script>
   <script src="/static/games/felix.js?v=app_v1"></script>
+  <script src="/static/games/tacta.js?v=app_v3"></script>
+  <script src="/static/games/subtext.js?v=app_v1"></script>
   <script src="/static/games/tucano.js?v=app_v1"></script>
   <script src="/static/games/witchs_brew.js?v=app_v1"></script>
   <script src="/static/games/ra.js?v=app_v6"></script>
   <script src="/static/games/scout.js?v=app_v4"></script>
-  <script src="/static/games/ark_nova.js?v=app_v7"></script>
-  <script src="/static/app.js?v=app_v9"></script>
-  <script src="/static/room.js?v=app_v12"></script>
+  <script src="/static/games/ark_nova.js?v=app_v8"></script>
+  <script src="/static/app.js?v=app_v11"></script>
+  <script src="/static/room.js?v=app_v14"></script>
 </body>
 </html>
