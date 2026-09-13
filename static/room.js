@@ -1541,7 +1541,7 @@ function resetRoomState() {
     turingMachineModeSelect.value = "simple";
   }
   if (turingMachineSourceSelect) {
-    turingMachineSourceSelect.value = "preset";
+    turingMachineSourceSelect.value = "random";
   }
   if (turingMachineDifficultySelect) {
     turingMachineDifficultySelect.value = "standard";

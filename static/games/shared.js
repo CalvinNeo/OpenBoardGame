@@ -142,7 +142,7 @@ function emitRoomStart() {
     payload.config = { ring_count: ringCount, ring_types: ringTypes };
   } else if (currentGameType === "turing_machine") {
     const mode = turingMachineModeSelect ? turingMachineModeSelect.value || "simple" : "simple";
-    const scenarioSource = turingMachineSourceSelect ? turingMachineSourceSelect.value || "preset" : "preset";
+    const scenarioSource = turingMachineSourceSelect ? turingMachineSourceSelect.value || "random" : "random";
     const difficulty = turingMachineDifficultySelect ? turingMachineDifficultySelect.value || "standard" : "standard";
     const presetId = turingMachinePresetSelect ? turingMachinePresetSelect.value || "relay-standard-01" : "relay-standard-01";
     const seed = turingMachineSeedInput ? (turingMachineSeedInput.value || "").trim() : "";

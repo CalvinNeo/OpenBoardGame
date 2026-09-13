@@ -27,7 +27,7 @@ ALL_CODES: Tuple[Code, ...] = tuple(
 
 DEFAULT_CONFIG: Dict = {
     "mode": "simple",
-    "scenario_source": "preset",
+    "scenario_source": "random",
     "difficulty": "standard",
     "preset_id": "relay-standard-01",
     "seed": "",

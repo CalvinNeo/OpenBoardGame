@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css?v=app_v38" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v39" />
   <link rel="stylesheet" href="/static/ark_nova.css?v=app_v18" />
 </head>
 <body>
@@ -1458,8 +1458,8 @@
                     <div class="row" id="turingMachineSourceRow">
                       <label for="turingMachineSourceSelect">Scenario</label>
                       <select id="turingMachineSourceSelect">
-                        <option value="preset" selected>Preset</option>
-                        <option value="random">Random Seed</option>
+                        <option value="preset">Preset</option>
+                        <option value="random" selected>Random Seed</option>
                       </select>
                     </div>
                     <div class="row" id="turingMachineDifficultyRow">
@@ -3439,14 +3439,36 @@
                   <div id="turingMachineCriteria" class="tm-verifier-grid"></div>
                 </section>
 
-                <section class="tm-section">
-                  <div class="tm-section-title">Manual Notes</div>
-                  <div id="turingMachineNotes" class="tm-notes-board"></div>
+                <section class="tm-section tm-collapsible-panel" id="turingMachineClueHistoryPanel">
+                  <button
+                    id="turingMachineClueHistoryToggle"
+                    class="tm-section-title tm-section-toggle"
+                    type="button"
+                    aria-expanded="false"
+                    aria-controls="turingMachineClueHistoryContent"
+                  >
+                    <span>Your Verifier History</span>
+                    <span class="tm-section-toggle-icon" aria-hidden="true">⌄</span>
+                  </button>
+                  <div id="turingMachineClueHistoryContent" class="tm-collapsible-content hidden" aria-hidden="true">
+                    <div id="turingMachineClueHistory" class="tm-history-list"></div>
+                  </div>
                 </section>
 
-                <section class="tm-section">
-                  <div class="tm-section-title">Your Verifier History</div>
-                  <div id="turingMachineClueHistory" class="tm-history-list"></div>
+                <section class="tm-section tm-collapsible-panel" id="turingMachineNotesPanel">
+                  <button
+                    id="turingMachineNotesToggle"
+                    class="tm-section-title tm-section-toggle"
+                    type="button"
+                    aria-expanded="false"
+                    aria-controls="turingMachineNotesContent"
+                  >
+                    <span>Manual Notes</span>
+                    <span class="tm-section-toggle-icon" aria-hidden="true">⌄</span>
+                  </button>
+                  <div id="turingMachineNotesContent" class="tm-collapsible-content hidden" aria-hidden="true">
+                    <div id="turingMachineNotes" class="tm-notes-board"></div>
+                  </div>
                 </section>
 
                 <section class="tm-section">
@@ -3459,7 +3481,7 @@
                   <div id="turingMachinePlayers" class="tm-player-grid"></div>
                 </section>
 
-                <section class="tm-section tm-deduction-panel hidden" id="turingMachineDeductionPanel" aria-hidden="true">
+                <section class="tm-section tm-collapsible-panel tm-deduction-panel hidden" id="turingMachineDeductionPanel" aria-hidden="true">
                   <button
                     id="turingMachineDeductionToggle"
                     class="tm-section-title tm-section-toggle"
@@ -3473,7 +3495,7 @@
                       <span class="tm-section-toggle-icon" aria-hidden="true">⌄</span>
                     </span>
                   </button>
-                  <div id="turingMachineDeductionContent" class="tm-deduction-content hidden" aria-hidden="true">
+                  <div id="turingMachineDeductionContent" class="tm-collapsible-content tm-deduction-content hidden" aria-hidden="true">
                     <div id="turingMachineCandidateGrid" class="tm-candidate-grid"></div>
                     <div id="turingMachineDigitStats" class="tm-stats-grid"></div>
                     <div id="turingMachineVariantStats" class="tm-stats-grid"></div>
@@ -5551,7 +5573,7 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js"></script>
-  <script src="/static/games/shared.js?v=app_v9"></script>
+  <script src="/static/games/shared.js?v=app_v10"></script>
   <script src="/static/games/blokus.js?v=app_v4"></script>
   <script src="/static/games/carcassonne.js?v=app_v6"></script>
   <script src="/static/games/azul.js?v=app_v4"></script>
@@ -5596,7 +5618,7 @@
   <script src="/static/games/davinci_code.js?v=app_v4"></script>
   <script src="/static/games/lost_code.js?v=app_v4"></script>
   <script src="/static/games/criminal_dance.js?v=app_v4"></script>
-  <script src="/static/games/turing_machine.js?v=app_v5"></script>
+  <script src="/static/games/turing_machine.js?v=app_v6"></script>
   <script src="/static/games/halli_galli.js?v=app_v4"></script>
   <script src="/static/games/texas_holdem.js?v=app_v4"></script>
   <script src="/static/games/yahtzee.js?v=app_v4"></script>
@@ -5618,6 +5640,6 @@
   <script src="/static/games/scout.js?v=app_v4"></script>
   <script src="/static/games/ark_nova.js?v=app_v20"></script>
   <script src="/static/app.js?v=app_v11"></script>
-  <script src="/static/room.js?v=app_v20"></script>
+  <script src="/static/room.js?v=app_v21"></script>
 </body>
 </html>

@@ -904,11 +904,11 @@ body.subtext-explain-mode button.has-explanation {
   transition: transform 160ms ease;
 }
 
-.tm-deduction-panel.is-expanded .tm-section-toggle-icon {
+.tm-collapsible-panel.is-expanded .tm-section-toggle-icon {
   transform: rotate(180deg);
 }
 
-.tm-deduction-content {
+.tm-collapsible-content {
   padding-top: 12px;
   border-top: 1px solid rgba(122, 88, 42, 0.18);
 }
@@ -939,6 +939,31 @@ body.subtext-explain-mode button.has-explanation {
   color: #614924;
   font-size: 0.92rem;
   font-weight: 600;
+}
+
+.tm-verifier-note-select {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 7px 34px 7px 10px;
+  border: 1px solid #ceb387;
+  border-radius: 10px;
+  background: #fffaf1;
+  color: #665538;
+  font-size: 0.9rem;
+  text-overflow: ellipsis;
+}
+
+.tm-verifier-note-select.has-selection {
+  border-color: #6d9b7d;
+  background: #eef8f1;
+  color: #194f34;
+  font-weight: 700;
+}
+
+.tm-verifier-note-select:focus-visible {
+  outline: 3px solid rgba(143, 29, 29, 0.2);
+  outline-offset: 2px;
 }
 
 .tm-note-chip-row {
@@ -1135,7 +1160,7 @@ body.turing-machine-explain-mode [data-turing-machine-explain].has-explanation:h
     grid-template-columns: 1fr;
   }
 
-  .tm-section-toggle {
+  .tm-deduction-panel .tm-section-toggle {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;

@@ -16,6 +16,11 @@ def _players(count: int):
 
 
 class TuringMachineGameTests(unittest.TestCase):
+    def test_default_scenario_source_is_random(self):
+        state = TuringMachineGame.init_game({}, _players(1))
+
+        self.assertEqual(state["scenario"]["source"], "random")
+
     def test_preset_scenarios_are_unique(self):
         cases = [
             {"preset_id": "calibration-easy-01", "expected_cards": 4},

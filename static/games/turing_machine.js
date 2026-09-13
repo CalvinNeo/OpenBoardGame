@@ -36,6 +36,8 @@ let currentTuringMachineView = null;
 let turingMachineDraftCode = [1, 1, 1];
 let turingMachineExplainMode = false;
 let turingMachineDeductionExpanded = false;
+let turingMachineClueHistoryExpanded = false;
+let turingMachineNotesExpanded = false;
 
 const turingMachineConfigBox = document.getElementById("turingMachineConfigBox");
 const turingMachineModeSelect = document.getElementById("turingMachineModeSelect");
@@ -81,7 +83,13 @@ const turingMachineCandidateCount = document.getElementById("turingMachineCandid
 const turingMachineCandidateGrid = document.getElementById("turingMachineCandidateGrid");
 const turingMachineDigitStats = document.getElementById("turingMachineDigitStats");
 const turingMachineVariantStats = document.getElementById("turingMachineVariantStats");
+const turingMachineNotesPanel = document.getElementById("turingMachineNotesPanel");
+const turingMachineNotesToggle = document.getElementById("turingMachineNotesToggle");
+const turingMachineNotesContent = document.getElementById("turingMachineNotesContent");
 const turingMachineNotes = document.getElementById("turingMachineNotes");
+const turingMachineClueHistoryPanel = document.getElementById("turingMachineClueHistoryPanel");
+const turingMachineClueHistoryToggle = document.getElementById("turingMachineClueHistoryToggle");
+const turingMachineClueHistoryContent = document.getElementById("turingMachineClueHistoryContent");
 const turingMachineClueHistory = document.getElementById("turingMachineClueHistory");
 const turingMachineGuessHistory = document.getElementById("turingMachineGuessHistory");
 const turingMachinePublicLog = document.getElementById("turingMachinePublicLog");
@@ -157,8 +165,12 @@ const TURING_MACHINE_DYNAMIC_EXPLANATIONS = {
     description: "Run the current round code against that verifier. Each round allows at most 3 different verifier checks.",
   },
   note_chip: {
-    name: "Manual Note",
-    description: "Click to cycle the note mark: unknown, exclude, keep, confirm. Notes are personal and saved to the room state.",
+    name: "Digit Note",
+    description: "Click to cycle a digit mark: unknown, exclude, keep, confirm. Notes are personal and saved to the room state.",
+  },
+  verifier_note_select: {
+    name: "Verifier Note",
+    description: "Choose Uncertain or the full verifier option you currently believe is correct. This note is personal and can be changed at any time.",
   },
 };
 
@@ -183,18 +195,48 @@ function turingMachineVariantText(card, variant) {
   return description || label || "—";
 }
 
+function setTuringMachineCollapsibleExpanded(panel, toggle, content, expanded) {
+  const isExpanded = !!expanded;
+  if (panel) {
+    panel.classList.toggle("is-expanded", isExpanded);
+  }
+  if (toggle) {
+    toggle.setAttribute("aria-expanded", isExpanded.toString());
+  }
+  if (content) {
+    content.classList.toggle("hidden", !isExpanded);
+    content.setAttribute("aria-hidden", (!isExpanded).toString());
+  }
+}
+
 function setTuringMachineDeductionExpanded(expanded) {
   turingMachineDeductionExpanded = !!expanded;
-  if (turingMachineDeductionPanel) {
-    turingMachineDeductionPanel.classList.toggle("is-expanded", turingMachineDeductionExpanded);
-  }
-  if (turingMachineDeductionToggle) {
-    turingMachineDeductionToggle.setAttribute("aria-expanded", turingMachineDeductionExpanded.toString());
-  }
-  if (turingMachineDeductionContent) {
-    turingMachineDeductionContent.classList.toggle("hidden", !turingMachineDeductionExpanded);
-    turingMachineDeductionContent.setAttribute("aria-hidden", (!turingMachineDeductionExpanded).toString());
-  }
+  setTuringMachineCollapsibleExpanded(
+    turingMachineDeductionPanel,
+    turingMachineDeductionToggle,
+    turingMachineDeductionContent,
+    turingMachineDeductionExpanded,
+  );
+}
+
+function setTuringMachineClueHistoryExpanded(expanded) {
+  turingMachineClueHistoryExpanded = !!expanded;
+  setTuringMachineCollapsibleExpanded(
+    turingMachineClueHistoryPanel,
+    turingMachineClueHistoryToggle,
+    turingMachineClueHistoryContent,
+    turingMachineClueHistoryExpanded,
+  );
+}
+
+function setTuringMachineNotesExpanded(expanded) {
+  turingMachineNotesExpanded = !!expanded;
+  setTuringMachineCollapsibleExpanded(
+    turingMachineNotesPanel,
+    turingMachineNotesToggle,
+    turingMachineNotesContent,
+    turingMachineNotesExpanded,
+  );
 }
 
 function turingMachineCloneNotes(notes) {
@@ -228,7 +270,7 @@ function populateTuringMachinePresetSelect() {
 }
 
 function updateTuringMachineConfigRowsFromSource() {
-  const source = turingMachineSourceSelect ? turingMachineSourceSelect.value || "preset" : "preset";
+  const source = turingMachineSourceSelect ? turingMachineSourceSelect.value || "random" : "random";
   const showPreset = source === "preset";
   const showSeed = source === "random";
   if (turingMachinePresetRow) {
@@ -257,6 +299,8 @@ function clearTuringMachineState() {
   currentTuringMachineView = null;
   turingMachineDraftCode = [1, 1, 1];
   setTuringMachineDeductionExpanded(false);
+  setTuringMachineClueHistoryExpanded(false);
+  setTuringMachineNotesExpanded(false);
   if (turingMachinePhaseLabel) turingMachinePhaseLabel.textContent = "-";
   if (turingMachineRoundLabel) turingMachineRoundLabel.textContent = "-";
   if (turingMachineModeLabel) turingMachineModeLabel.textContent = "-";
@@ -565,33 +609,63 @@ function renderTuringMachineNotes(view) {
   const cards = Array.isArray(view.criteria_cards) ? view.criteria_cards : [];
   cards.forEach((card) => {
     const row = document.createElement("div");
-    row.className = "tm-note-row";
-    const label = document.createElement("div");
+    row.className = "tm-note-row tm-verifier-note-row";
+    const label = document.createElement("label");
     label.className = "tm-note-label";
     label.textContent = `Verifier ${card.slot}`;
+    const selectId = `turingMachineVerifierNote${card.slot}`;
+    label.htmlFor = selectId;
     row.appendChild(label);
 
-    const marksWrap = document.createElement("div");
-    marksWrap.className = "tm-note-chip-row";
-    const marks = Array.isArray(variantMarks[card.slot]) ? variantMarks[card.slot] : (card.variants || []).map(() => "unknown");
-    marks.forEach((mark, index) => {
-      const variant = (card.variants || [])[index];
-      if (!variant) {
-        return;
+    const variants = Array.isArray(card.variants) ? card.variants : [];
+    const marks = Array.isArray(variantMarks[card.slot]) ? variantMarks[card.slot] : variants.map(() => "unknown");
+    let selectedIndex = marks.findIndex((mark) => mark === "confirm");
+    if (selectedIndex < 0) {
+      const possibleIndexes = marks
+        .map((mark, index) => (mark === "keep" ? index : -1))
+        .filter((index) => index >= 0);
+      if (possibleIndexes.length === 1) {
+        [selectedIndex] = possibleIndexes;
       }
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = `tm-note-chip is-${mark}`;
-      btn.dataset.turingMachineExplain = "note_chip";
-      btn.textContent = `${variant.variant_id} ${TURING_MACHINE_NOTE_LABELS[mark] || "·"}`;
-      btn.addEventListener("click", () => {
-        const nextNotes = turingMachineCloneNotes(notes);
-        nextNotes.variant_marks[card.slot][index] = turingMachineNextMark(mark);
-        sendAction({ type: "update_notes", notes: nextNotes });
-      });
-      marksWrap.appendChild(btn);
+    }
+
+    const select = document.createElement("select");
+    select.id = selectId;
+    select.className = "tm-verifier-note-select";
+    select.dataset.turingMachineExplain = "verifier_note_select";
+    select.setAttribute("aria-label", `Verifier ${card.slot} note`);
+
+    const uncertainOption = document.createElement("option");
+    uncertainOption.value = "";
+    uncertainOption.textContent = "Uncertain";
+    select.appendChild(uncertainOption);
+
+    variants.forEach((variant, index) => {
+      const option = document.createElement("option");
+      option.value = String(index);
+      const description = String(variant.description || variant.label || "—").trim();
+      option.textContent = `${variant.variant_id} · ${description}`;
+      select.appendChild(option);
     });
-    row.appendChild(marksWrap);
+
+    select.value = selectedIndex >= 0 && selectedIndex < variants.length ? String(selectedIndex) : "";
+    select.classList.toggle("has-selection", select.value !== "");
+    select.addEventListener("change", () => {
+      const nextNotes = turingMachineCloneNotes(notes);
+      if (!nextNotes.variant_marks || typeof nextNotes.variant_marks !== "object") {
+        nextNotes.variant_marks = {};
+      }
+      const nextIndex = Number.parseInt(select.value, 10);
+      const hasSelection = Number.isInteger(nextIndex) && nextIndex >= 0 && nextIndex < variants.length;
+      nextNotes.variant_marks[card.slot] = variants.map((_, index) => {
+        if (!hasSelection) {
+          return "unknown";
+        }
+        return index === nextIndex ? "confirm" : "exclude";
+      });
+      sendAction({ type: "update_notes", notes: nextNotes });
+    });
+    row.appendChild(select);
     variantSection.appendChild(row);
   });
   turingMachineNotes.appendChild(variantSection);
@@ -932,6 +1006,18 @@ if (turingMachineDeductionToggle) {
   });
 }
 
+if (turingMachineClueHistoryToggle) {
+  turingMachineClueHistoryToggle.addEventListener("click", () => {
+    setTuringMachineClueHistoryExpanded(!turingMachineClueHistoryExpanded);
+  });
+}
+
+if (turingMachineNotesToggle) {
+  turingMachineNotesToggle.addEventListener("click", () => {
+    setTuringMachineNotesExpanded(!turingMachineNotesExpanded);
+  });
+}
+
 if (turingMachineHelpBtn) {
   turingMachineHelpBtn.addEventListener("click", showTuringMachineHelpModal);
 }
@@ -1000,6 +1086,8 @@ document.addEventListener("keydown", (event) => {
 populateTuringMachinePresetSelect();
 updateTuringMachineConfigRowsFromSource();
 setTuringMachineDeductionExpanded(false);
+setTuringMachineClueHistoryExpanded(false);
+setTuringMachineNotesExpanded(false);
 
 window.updateTuringMachineConfigRow = updateTuringMachineConfigRow;
 window.updateTuringMachineConfigRowsFromSource = updateTuringMachineConfigRowsFromSource;
