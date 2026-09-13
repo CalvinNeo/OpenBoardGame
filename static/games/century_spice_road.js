@@ -600,29 +600,55 @@ function renderCenturyPlayForm(view, card, sourceButton = null) {
     }, false, "century-primary-action"));
   } else if (card.type === "trade") {
     const maxTimes = maxCenturyTradeTimes(you, card);
-    const label = document.createElement("label");
-    label.className = "century-inline century-repeat-control";
-    const input = centuryNumberInput(Math.min(1, maxTimes), 0, maxTimes);
-    label.append(`Repeat recipe (0-${maxTimes})`);
-    label.appendChild(input);
-    label.append("times");
-    form.appendChild(label);
+    let selectedTimes = maxTimes > 0 ? 1 : 0;
+    const chooser = document.createElement("div");
+    chooser.className = "century-repeat-control";
+    chooser.innerHTML = `
+      <div class="century-repeat-heading">
+        <strong>How many times?</strong>
+        <span>Maximum ${maxTimes}</span>
+      </div>
+    `;
+    const options = document.createElement("div");
+    options.className = "century-repeat-options";
+    options.setAttribute("role", "group");
+    options.setAttribute("aria-label", `Choose recipe repetitions, maximum ${maxTimes}`);
+    chooser.appendChild(options);
     const total = document.createElement("div");
     total.className = "century-trade-total";
+    total.setAttribute("aria-live", "polite");
+    const playButton = centuryButton("Play", () => {
+      if (selectedTimes > 0) sendAction({ type: "play", card_id: card.id, times: selectedTimes });
+    }, maxTimes <= 0, "century-primary-action");
     const refreshTradeTotal = () => {
-      const times = Math.max(0, Math.min(maxTimes, Number(input.value || 0)));
+      options.querySelectorAll("button[data-century-times]").forEach((button) => {
+        const isSelected = Number(button.dataset.centuryTimes) === selectedTimes;
+        button.classList.toggle("is-selected", isSelected);
+        button.setAttribute("aria-pressed", String(isSelected));
+      });
+      playButton.textContent = selectedTimes > 0 ? `Play ${selectedTimes} ${selectedTimes === 1 ? "time" : "times"}` : "Cannot play";
       total.innerHTML = `
-        <span><small>TOTAL GIVE</small>${centurySpiceMarkup(centuryScaleSpices(card.cost, times))}</span>
-        <span class="century-total-arrow" aria-hidden="true"></span>
-        <span><small>TOTAL GET</small>${centurySpiceMarkup(centuryScaleSpices(card.gain, times))}</span>
+        ${selectedTimes > 0 ? `
+          <span><small>TOTAL GIVE</small>${centurySpiceMarkup(centuryScaleSpices(card.cost, selectedTimes))}</span>
+          <span class="century-total-arrow" aria-hidden="true"></span>
+          <span><small>TOTAL GET</small>${centurySpiceMarkup(centuryScaleSpices(card.gain, selectedTimes))}</span>
+        ` : '<div class="century-trade-unavailable">Not enough spices to use this recipe.</div>'}
       `;
     };
-    input.addEventListener("input", refreshTradeTotal);
+    for (let times = 1; times <= maxTimes; times += 1) {
+      const option = centuryButton("", () => {
+        selectedTimes = times;
+        refreshTradeTotal();
+      }, false, "century-repeat-option");
+      option.dataset.centuryTimes = String(times);
+      option.innerHTML = `<strong>${times}</strong><span>${times === 1 ? "time" : "times"}</span>`;
+      option.setAttribute("aria-label", `Use recipe ${times} ${times === 1 ? "time" : "times"}`);
+      options.appendChild(option);
+    }
+    form.appendChild(chooser);
     refreshTradeTotal();
     form.appendChild(total);
-    form.appendChild(centuryButton("Play", () => {
-      sendAction({ type: "play", card_id: card.id, times: Number(input.value || 0) });
-    }, false, "century-primary-action"));
+    form.appendChild(playButton);
   } else {
     form.appendChild(centuryButton("Play", () => sendAction({ type: "play", card_id: card.id }), false, "century-primary-action"));
   }

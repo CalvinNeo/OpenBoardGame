@@ -24219,11 +24219,79 @@ button.century-card.is-selected {
 }
 
 .century-repeat-control {
+  display: grid;
   grid-column: 1;
+  gap: 8px;
   align-self: center;
   color: #554c42;
   font-size: 11px;
   font-weight: 750;
+}
+
+.century-repeat-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.century-repeat-heading > strong {
+  color: #334f55;
+  font-size: 12px;
+}
+
+.century-repeat-heading > span {
+  padding: 4px 7px;
+  border: 1px solid #b9d1d4;
+  border-radius: 999px;
+  background: #edf7f7;
+  color: #32636b;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+}
+
+.century-repeat-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(74px, 1fr));
+  gap: 7px;
+}
+
+.century-repeat-option {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: baseline;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 10px;
+  border-color: #aac6ca;
+  background: #f4fbfb;
+  color: #285c65;
+}
+
+.century-repeat-option > strong {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.century-repeat-option > span {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.century-repeat-option:hover,
+.century-repeat-option:focus-visible {
+  border-color: #357d87;
+  background: #eaf7f7;
+}
+
+.century-repeat-option.is-selected {
+  border-color: #246c7b;
+  outline: 2px solid rgba(36, 108, 123, 0.2);
+  background: #246c7b;
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(36, 108, 123, 0.18);
 }
 
 .century-number {
@@ -24259,6 +24327,18 @@ button.century-card.is-selected {
   font-size: 8px;
   font-weight: 900;
   letter-spacing: 0.1em;
+}
+
+.century-trade-unavailable {
+  grid-column: 1 / -1;
+  padding: 11px;
+  border: 1px solid #e2c3bc;
+  border-radius: 8px;
+  background: #fff2ef;
+  color: #8b3f34;
+  font-size: 11px;
+  font-weight: 750;
+  text-align: center;
 }
 
 .century-primary-action {
