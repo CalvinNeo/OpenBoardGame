@@ -71,11 +71,11 @@ function centuryPlayerName(view, playerId) {
 
 function centuryEscapeHtml(value) {
   return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function centurySpicePlainText(counts, includeZeros = false) {
@@ -234,6 +234,7 @@ function showCenturyExplanationFromNode(node) {
     ${details.length ? `<ul>${details.map((item) => `<li>${item}</li>`).join("")}</ul>` : ""}
   `;
   setModalVisible(centuryExplainModal, true);
+  setCenturyExplainMode(false);
 }
 
 function updateCenturyExplainClasses() {
@@ -243,19 +244,24 @@ function updateCenturyExplainClasses() {
   });
 }
 
-function toggleCenturyExplainMode() {
-  centuryExplainMode = !centuryExplainMode;
+function setCenturyExplainMode(enabled) {
+  centuryExplainMode = Boolean(enabled);
   document.body.classList.toggle("century-explain-mode", centuryExplainMode);
-  if (centuryExplainBtn) centuryExplainBtn.classList.toggle("active", centuryExplainMode);
+  if (centuryExplainBtn) {
+    centuryExplainBtn.classList.toggle("active", centuryExplainMode);
+    centuryExplainBtn.setAttribute("aria-pressed", String(centuryExplainMode));
+  }
   updateCenturyExplainClasses();
+}
+
+function toggleCenturyExplainMode() {
+  setCenturyExplainMode(!centuryExplainMode);
 }
 
 function showCenturyHeaderActions(show) {
   if (centuryHeaderActions) centuryHeaderActions.style.display = show ? "flex" : "none";
   if (!show) {
-    centuryExplainMode = false;
-    document.body.classList.remove("century-explain-mode");
-    if (centuryExplainBtn) centuryExplainBtn.classList.remove("active");
+    setCenturyExplainMode(false);
     if (centuryHelpModal) setModalVisible(centuryHelpModal, false);
     if (centuryExplainModal) setModalVisible(centuryExplainModal, false);
   }
@@ -263,9 +269,7 @@ function showCenturyHeaderActions(show) {
 
 function clearCenturyState() {
   currentCenturyView = null;
-  centuryExplainMode = false;
-  document.body.classList.remove("century-explain-mode");
-  if (centuryExplainBtn) centuryExplainBtn.classList.remove("active");
+  setCenturyExplainMode(false);
   if (centuryPhase) centuryPhase.textContent = "-";
   if (centuryTurn) centuryTurn.textContent = "-";
   if (centuryDecks) centuryDecks.textContent = "-";
@@ -350,7 +354,8 @@ function renderCenturyMerchantMarket(view) {
         </span>
       </div>
     `;
-    button.setAttribute("aria-label", `${centuryMerchantPlainText(card)}. ${index === 0 ? "Free to acquire" : `Costs ${index} spices to acquire`}.`);
+    const acquireCostLabel = index === 0 ? "Free to acquire" : `Costs ${index} ${index === 1 ? "spice" : "spices"} to acquire`;
+    button.setAttribute("aria-label", `${centuryMerchantPlainText(card)}. ${acquireCostLabel}.`);
     button.disabled = !centuryCan(view, "acquire");
     button.addEventListener("click", () => renderCenturyAcquireForm(view, index));
     centuryExplain(button, "Merchant Card", "Acquire this card into your hand. Cards farther right cost more spices.", [
@@ -488,7 +493,7 @@ function renderCenturyPlayForm(view, card) {
           <strong>Planned upgrades</strong>
           <span>${upgrades.length} / ${Number(card.upgrade_steps || 0)} steps</span>
         </div>
-        <div class="century-planned-steps">${steps || '<span class="century-empty-value">Choose a conversion below. You may use fewer than the maximum.</span>'}</div>
+        <div class="century-planned-steps">${steps || '<span class="century-empty-value">Choose a conversion above. You may use fewer than the maximum.</span>'}</div>
         <div class="century-upgrade-preview"><span>Caravan after plan</span>${centurySpiceMarkup(preview, true)}</div>
       `;
       wrap.querySelectorAll("button[data-upgrade-color]").forEach((button) => {
@@ -558,12 +563,13 @@ function renderCenturyAcquireForm(view, index) {
   const slot = (view.merchant_market || [])[index];
   centuryActions.innerHTML = "";
   const form = document.createElement("div");
-  form.className = "century-action-form";
+  form.className = "century-action-form century-action-form--acquire";
   form.innerHTML = `
     <div class="century-action-title">
       <span>ACQUIRE SLOT ${index + 1}</span>
       <strong>${slot && slot.card ? centuryMerchantPlainText(slot.card) : "Merchant card"}</strong>
     </div>
+    ${slot && slot.card ? `<div class="century-action-card ${centuryCardTypeClass(slot.card)}">${centuryMerchantCardMarkup(slot.card)}</div>` : ""}
   `;
   const selects = [];
   if (index > 0) {
@@ -596,8 +602,13 @@ function renderCenturyDiscardForm(view) {
   const you = centurySelf(view);
   centuryActions.innerHTML = "";
   const form = document.createElement("div");
-  form.className = "century-action-form";
-  form.innerHTML = `<div class="century-action-title">Discard ${view.discard_needed} spice</div>`;
+  form.className = "century-action-form century-action-form--compact";
+  form.innerHTML = `
+    <div class="century-action-title">
+      <span>CARAVAN LIMIT</span>
+      <strong>Discard ${view.discard_needed} spice</strong>
+    </div>
+  `;
   const inputs = {};
   const wrap = document.createElement("div");
   wrap.className = "century-pay-grid";
@@ -684,12 +695,39 @@ if (centuryExplainModalCloseBtn) {
   centuryExplainModalCloseBtn.addEventListener("click", () => setModalVisible(centuryExplainModal, false));
 }
 if (centuryPanel) {
-  centuryPanel.addEventListener("click", (event) => {
+  centuryPanel.addEventListener("pointerdown", (event) => {
     if (!centuryExplainMode) return;
     const target = event.target && event.target.closest ? event.target.closest("[data-century-explain]") : null;
-    if (!target || target === centuryExplainBtn || target === centuryHelpBtn) return;
+    if (!target || !target.matches("button:disabled, input:disabled, select:disabled, textarea:disabled")) return;
     event.preventDefault();
     event.stopPropagation();
     showCenturyExplanationFromNode(target);
   }, true);
+
+  centuryPanel.addEventListener("click", (event) => {
+    if (!centuryExplainMode) return;
+    const target = event.target && event.target.closest ? event.target.closest("[data-century-explain]") : null;
+    const control = event.target && event.target.closest ? event.target.closest("button, input, select, textarea, a") : null;
+    if (control === centuryExplainBtn || control === centuryHelpBtn) return;
+    if (!target && !control) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (target) showCenturyExplanationFromNode(target);
+  }, true);
 }
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape" || !centuryPanel || centuryPanel.classList.contains("hidden")) return;
+  let handled = false;
+  if (centuryExplainMode) {
+    setCenturyExplainMode(false);
+    handled = true;
+  }
+  [centuryHelpModal, centuryExplainModal].forEach((modal) => {
+    if (modal && !modal.classList.contains("hidden")) {
+      setModalVisible(modal, false);
+      handled = true;
+    }
+  });
+  if (handled) event.preventDefault();
+});
