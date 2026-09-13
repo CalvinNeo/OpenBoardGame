@@ -35,6 +35,7 @@ const TURING_MACHINE_DIFFICULTY_NAMES = {
 let currentTuringMachineView = null;
 let turingMachineDraftCode = [1, 1, 1];
 let turingMachineExplainMode = false;
+let turingMachineDeductionExpanded = false;
 
 const turingMachineConfigBox = document.getElementById("turingMachineConfigBox");
 const turingMachineModeSelect = document.getElementById("turingMachineModeSelect");
@@ -74,6 +75,8 @@ const turingMachineGiveUpBtn = document.getElementById("turingMachineGiveUpBtn")
 const turingMachineCurrentTests = document.getElementById("turingMachineCurrentTests");
 const turingMachineCriteria = document.getElementById("turingMachineCriteria");
 const turingMachineDeductionPanel = document.getElementById("turingMachineDeductionPanel");
+const turingMachineDeductionToggle = document.getElementById("turingMachineDeductionToggle");
+const turingMachineDeductionContent = document.getElementById("turingMachineDeductionContent");
 const turingMachineCandidateCount = document.getElementById("turingMachineCandidateCount");
 const turingMachineCandidateGrid = document.getElementById("turingMachineCandidateGrid");
 const turingMachineDigitStats = document.getElementById("turingMachineDigitStats");
@@ -170,6 +173,30 @@ function turingMachineCodeLabel(code) {
   return `🟨${code[0]} · 🟦${code[1]} · 🟣${code[2]}`;
 }
 
+function turingMachineVariantText(card, variant) {
+  const label = String((variant || {}).label || "").trim();
+  const description = String((variant || {}).description || "").trim();
+  const hasSharedContext = !!String((card || {}).prompt || (card || {}).title || "").trim();
+  if (hasSharedContext && label && label.length <= 32) {
+    return label;
+  }
+  return description || label || "—";
+}
+
+function setTuringMachineDeductionExpanded(expanded) {
+  turingMachineDeductionExpanded = !!expanded;
+  if (turingMachineDeductionPanel) {
+    turingMachineDeductionPanel.classList.toggle("is-expanded", turingMachineDeductionExpanded);
+  }
+  if (turingMachineDeductionToggle) {
+    turingMachineDeductionToggle.setAttribute("aria-expanded", turingMachineDeductionExpanded.toString());
+  }
+  if (turingMachineDeductionContent) {
+    turingMachineDeductionContent.classList.toggle("hidden", !turingMachineDeductionExpanded);
+    turingMachineDeductionContent.setAttribute("aria-hidden", (!turingMachineDeductionExpanded).toString());
+  }
+}
+
 function turingMachineCloneNotes(notes) {
   return JSON.parse(JSON.stringify(notes || {}));
 }
@@ -229,6 +256,7 @@ function updateTuringMachineConfigRow() {
 function clearTuringMachineState() {
   currentTuringMachineView = null;
   turingMachineDraftCode = [1, 1, 1];
+  setTuringMachineDeductionExpanded(false);
   if (turingMachinePhaseLabel) turingMachinePhaseLabel.textContent = "-";
   if (turingMachineRoundLabel) turingMachineRoundLabel.textContent = "-";
   if (turingMachineModeLabel) turingMachineModeLabel.textContent = "-";
@@ -352,11 +380,26 @@ function renderTuringMachineCriteria(view) {
 
     const variantList = document.createElement("div");
     variantList.className = "tm-verifier-variants";
+    variantList.setAttribute("role", "list");
     const variants = Array.isArray(card.variants) ? card.variants : [];
     variants.forEach((variant) => {
       const row = document.createElement("div");
       row.className = "tm-verifier-variant";
-      row.textContent = `${variant.variant_id}. ${variant.description}`;
+      row.setAttribute("role", "listitem");
+      const compactText = turingMachineVariantText(card, variant);
+      const description = String(variant.description || "").trim();
+      row.setAttribute("aria-label", `${variant.variant_id}: ${description || compactText}`);
+      if (description && description !== compactText) {
+        row.title = description;
+      }
+      const variantId = document.createElement("span");
+      variantId.className = "tm-verifier-variant-id";
+      variantId.textContent = variant.variant_id;
+      row.appendChild(variantId);
+      const variantLabel = document.createElement("span");
+      variantLabel.className = "tm-verifier-variant-label";
+      variantLabel.textContent = compactText;
+      row.appendChild(variantLabel);
       variantList.appendChild(row);
     });
     wrap.appendChild(variantList);
@@ -389,7 +432,7 @@ function renderTuringMachineCriteria(view) {
 }
 
 function renderTuringMachineDeduction(view) {
-  if (!turingMachineDeductionPanel || !turingMachineCandidateCount || !turingMachineCandidateGrid || !turingMachineDigitStats || !turingMachineVariantStats) {
+  if (!turingMachineDeductionPanel || !turingMachineDeductionContent || !turingMachineCandidateCount || !turingMachineCandidateGrid || !turingMachineDigitStats || !turingMachineVariantStats) {
     return;
   }
   const deduction = view.deduction;
@@ -397,12 +440,15 @@ function renderTuringMachineDeduction(view) {
   turingMachineDeductionPanel.classList.toggle("hidden", !show);
   turingMachineDeductionPanel.setAttribute("aria-hidden", (!show).toString());
   if (!show) {
+    setTuringMachineDeductionExpanded(false);
     turingMachineCandidateCount.textContent = "-";
     turingMachineCandidateGrid.innerHTML = "";
     turingMachineDigitStats.innerHTML = "";
     turingMachineVariantStats.innerHTML = "";
     return;
   }
+
+  setTuringMachineDeductionExpanded(turingMachineDeductionExpanded);
 
   turingMachineCandidateCount.textContent = String(deduction.candidate_count ?? 0);
   turingMachineCandidateGrid.innerHTML = "";
@@ -564,11 +610,46 @@ function renderTuringMachineClueHistory(view) {
     turingMachineClueHistory.appendChild(empty);
     return;
   }
+  const groups = [];
+  const groupsByRoundCode = new Map();
   clues.forEach((clue) => {
-    const row = document.createElement("div");
-    row.className = `tm-history-row ${clue.result ? "is-pass" : "is-fail"}`;
-    row.textContent = `R${clue.round} · ${clue.slot} · ${turingMachineCodeLabel(clue.proposal)} · ${clue.result ? "✔" : "✖"}`;
-    turingMachineClueHistory.appendChild(row);
+    const round = clue.round ?? "?";
+    const code = turingMachineCodeLabel(clue.proposal);
+    const key = `${round}|${code}`;
+    if (!groupsByRoundCode.has(key)) {
+      const group = { round, code, clues: [] };
+      groupsByRoundCode.set(key, group);
+      groups.push(group);
+    }
+    groupsByRoundCode.get(key).clues.push(clue);
+  });
+
+  groups.forEach((group) => {
+    const wrap = document.createElement("section");
+    wrap.className = "tm-history-group";
+
+    const header = document.createElement("div");
+    header.className = "tm-history-group-header";
+    const roundLabel = document.createElement("span");
+    roundLabel.className = "tm-history-round";
+    roundLabel.textContent = `Round ${group.round}`;
+    header.appendChild(roundLabel);
+    const codeLabel = document.createElement("span");
+    codeLabel.className = "tm-history-code";
+    codeLabel.textContent = group.code;
+    header.appendChild(codeLabel);
+    wrap.appendChild(header);
+
+    const checks = document.createElement("div");
+    checks.className = "tm-history-checks";
+    group.clues.forEach((clue) => {
+      const check = document.createElement("div");
+      check.className = `tm-history-check ${clue.result ? "is-pass" : "is-fail"}`;
+      check.textContent = `Verifier ${clue.slot} ${clue.result ? "✔" : "✖"}`;
+      checks.appendChild(check);
+    });
+    wrap.appendChild(checks);
+    turingMachineClueHistory.appendChild(wrap);
   });
 }
 
@@ -845,6 +926,12 @@ if (turingMachineGiveUpBtn) {
   });
 }
 
+if (turingMachineDeductionToggle) {
+  turingMachineDeductionToggle.addEventListener("click", () => {
+    setTuringMachineDeductionExpanded(!turingMachineDeductionExpanded);
+  });
+}
+
 if (turingMachineHelpBtn) {
   turingMachineHelpBtn.addEventListener("click", showTuringMachineHelpModal);
 }
@@ -912,6 +999,7 @@ document.addEventListener("keydown", (event) => {
 
 populateTuringMachinePresetSelect();
 updateTuringMachineConfigRowsFromSource();
+setTuringMachineDeductionExpanded(false);
 
 window.updateTuringMachineConfigRow = updateTuringMachineConfigRow;
 window.updateTuringMachineConfigRowsFromSource = updateTuringMachineConfigRowsFromSource;

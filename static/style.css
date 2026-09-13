@@ -655,9 +655,17 @@ body.subtext-explain-mode button.has-explanation {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
-.tm-action-row {
+#turingMachinePanel .tm-action-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  flex-wrap: wrap;
+  width: 100%;
+}
+
+#turingMachinePanel .tm-action-row button {
+  width: 100%;
+  min-width: 0;
+  margin-right: 0;
 }
 
 .tm-current-tests {
@@ -733,17 +741,41 @@ body.subtext-explain-mode button.has-explanation {
 }
 
 .tm-verifier-variants {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
 .tm-verifier-variant {
-  padding: 7px 9px;
-  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 5px 9px 5px 6px;
+  border: 1px solid rgba(122, 88, 42, 0.12);
+  border-radius: 999px;
   background: rgba(255, 249, 238, 0.88);
   color: #4f3c1d;
   font-size: 0.91rem;
   line-height: 1.35;
+}
+
+.tm-verifier-variant-id {
+  display: inline-grid;
+  flex: 0 0 auto;
+  width: 23px;
+  height: 23px;
+  place-items: center;
+  border-radius: 50%;
+  background: #8f1d1d;
+  color: #fff7ea;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.tm-verifier-variant-label {
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .tm-verifier-footer {
@@ -821,6 +853,66 @@ body.subtext-explain-mode button.has-explanation {
   color: #8a1f1f;
 }
 
+.tm-deduction-panel {
+  padding-top: 12px;
+}
+
+.tm-section-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 42px;
+  padding: 4px 2px;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tm-section-toggle:hover,
+.tm-section-toggle:focus-visible {
+  color: #8f1d1d;
+}
+
+.tm-section-toggle:focus-visible {
+  border-radius: 8px;
+  outline: 3px solid rgba(143, 29, 29, 0.24);
+  outline-offset: 2px;
+}
+
+.tm-section-toggle-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #6f5a34;
+  font-family: Arial, sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.tm-section-toggle-icon {
+  display: inline-block;
+  margin-left: 4px;
+  color: #8f1d1d;
+  font-size: 1.2rem;
+  line-height: 1;
+  transition: transform 160ms ease;
+}
+
+.tm-deduction-panel.is-expanded .tm-section-toggle-icon {
+  transform: rotate(180deg);
+}
+
+.tm-deduction-content {
+  padding-top: 12px;
+  border-top: 1px solid rgba(122, 88, 42, 0.18);
+}
+
 .tm-notes-board {
   display: grid;
   gap: 14px;
@@ -893,6 +985,66 @@ body.subtext-explain-mode button.has-explanation {
   color: #4c3919;
   font-size: 0.92rem;
   line-height: 1.35;
+}
+
+.tm-history-group {
+  overflow: hidden;
+  border: 1px solid rgba(122, 88, 42, 0.2);
+  border-radius: 14px;
+  background: rgba(255, 250, 242, 0.82);
+}
+
+.tm-history-group-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  border-bottom: 1px solid rgba(122, 88, 42, 0.14);
+  background: rgba(237, 213, 174, 0.48);
+}
+
+.tm-history-round {
+  flex: 0 0 auto;
+  color: #8f1d1d;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tm-history-code {
+  color: #4c3919;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.tm-history-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 10px 11px;
+}
+
+.tm-history-check {
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.64);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.tm-history-check.is-pass {
+  color: #12663f;
+}
+
+.tm-history-check.is-fail {
+  color: #8a1f1f;
+}
+
+#turingMachinePublicLog {
+  max-height: 280px;
+  padding-right: 4px;
+  overflow-y: auto;
 }
 
 .tm-player-card {
@@ -981,6 +1133,18 @@ body.turing-machine-explain-mode [data-turing-machine-explain].has-explanation:h
 
   .tm-note-row {
     grid-template-columns: 1fr;
+  }
+
+  .tm-section-toggle {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tm-section-toggle-icon {
+    transition: none;
   }
 }
 

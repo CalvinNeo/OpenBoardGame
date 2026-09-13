@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css?v=app_v37" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v38" />
   <link rel="stylesheet" href="/static/ark_nova.css?v=app_v18" />
 </head>
 <body>
@@ -3439,16 +3439,6 @@
                   <div id="turingMachineCriteria" class="tm-verifier-grid"></div>
                 </section>
 
-                <section class="tm-section hidden" id="turingMachineDeductionPanel" aria-hidden="true">
-                  <div class="tm-section-title">Auto Deduction</div>
-                  <div class="row">
-                    <div>Candidate Codes: <span id="turingMachineCandidateCount">-</span></div>
-                  </div>
-                  <div id="turingMachineCandidateGrid" class="tm-candidate-grid"></div>
-                  <div id="turingMachineDigitStats" class="tm-stats-grid"></div>
-                  <div id="turingMachineVariantStats" class="tm-stats-grid"></div>
-                </section>
-
                 <section class="tm-section">
                   <div class="tm-section-title">Manual Notes</div>
                   <div id="turingMachineNotes" class="tm-notes-board"></div>
@@ -3465,13 +3455,34 @@
                 </section>
 
                 <section class="tm-section">
-                  <div class="tm-section-title">Public Log</div>
-                  <div id="turingMachinePublicLog" class="tm-history-list"></div>
+                  <div class="tm-section-title">Players</div>
+                  <div id="turingMachinePlayers" class="tm-player-grid"></div>
+                </section>
+
+                <section class="tm-section tm-deduction-panel hidden" id="turingMachineDeductionPanel" aria-hidden="true">
+                  <button
+                    id="turingMachineDeductionToggle"
+                    class="tm-section-title tm-section-toggle"
+                    type="button"
+                    aria-expanded="false"
+                    aria-controls="turingMachineDeductionContent"
+                  >
+                    <span>Auto Deduction</span>
+                    <span class="tm-section-toggle-meta">
+                      Candidate Codes: <strong id="turingMachineCandidateCount">-</strong>
+                      <span class="tm-section-toggle-icon" aria-hidden="true">⌄</span>
+                    </span>
+                  </button>
+                  <div id="turingMachineDeductionContent" class="tm-deduction-content hidden" aria-hidden="true">
+                    <div id="turingMachineCandidateGrid" class="tm-candidate-grid"></div>
+                    <div id="turingMachineDigitStats" class="tm-stats-grid"></div>
+                    <div id="turingMachineVariantStats" class="tm-stats-grid"></div>
+                  </div>
                 </section>
 
                 <section class="tm-section">
-                  <div class="tm-section-title">Players</div>
-                  <div id="turingMachinePlayers" class="tm-player-grid"></div>
+                  <div class="tm-section-title">Public Log</div>
+                  <div id="turingMachinePublicLog" class="tm-history-list"></div>
                 </section>
               </div>
             </div>
@@ -5585,7 +5596,7 @@
   <script src="/static/games/davinci_code.js?v=app_v4"></script>
   <script src="/static/games/lost_code.js?v=app_v4"></script>
   <script src="/static/games/criminal_dance.js?v=app_v4"></script>
-  <script src="/static/games/turing_machine.js?v=app_v4"></script>
+  <script src="/static/games/turing_machine.js?v=app_v5"></script>
   <script src="/static/games/halli_galli.js?v=app_v4"></script>
   <script src="/static/games/texas_holdem.js?v=app_v4"></script>
   <script src="/static/games/yahtzee.js?v=app_v4"></script>
