@@ -239,6 +239,29 @@ class RoomSessionTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn((sid_owner, new_room_id), app.sio.entered)
         self.assertIn((sid_bob, new_room_id), app.sio.entered)
 
+    async def test_reopen_turing_random_scenario_uses_new_seed(self):
+        sid_owner = "sid-owner"
+        room_id = await self._create_room(sid_owner, "Alice", game_type="turing_machine")
+        room = app.ROOMS[room_id]
+        room.status = "in_game"
+        room.game_state = {
+            "config": {
+                "mode": "simple",
+                "scenario_source": "random",
+                "difficulty": "standard",
+                "preset_id": "",
+                "seed": "previous-seed",
+            }
+        }
+
+        await app.on_room_reopen(sid_owner, {})
+
+        new_room_id = app.SESSIONS[sid_owner]["room_id"]
+        new_config = app.ROOMS[new_room_id].game_state["config"]
+        self.assertEqual(new_config["scenario_source"], "random")
+        self.assertEqual(len(new_config["seed"]), 8)
+        self.assertNotEqual(new_config["seed"], "previous-seed")
+
     async def test_auto_save_allows_in_game_enable(self):
         sid = "sid-owner"
         room_id = await self._create_room(sid, "Alice")

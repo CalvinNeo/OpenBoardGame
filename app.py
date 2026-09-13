@@ -1564,6 +1564,8 @@ async def on_room_reopen(sid, data=None):
         return
     raw_config = room.game_state.get("config") if isinstance(room.game_state, dict) else None
     config = dict(raw_config) if isinstance(raw_config, dict) else {}
+    if room.game_type == "turing_machine" and config.get("scenario_source") == "random":
+        config["seed"] = ""
     ordered_players = sorted(room.players, key=lambda p: p.seat)
     players_meta = [
         {
