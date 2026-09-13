@@ -1837,6 +1837,22 @@
   overflow-wrap: anywhere;
 }
 
+#arkNovaPanel .arkn-map-draft.is-invalid {
+  background: rgba(199, 68, 68, 0.1);
+  border-color: rgba(255, 107, 107, 0.54);
+}
+
+#arkNovaPanel .arkn-map-draft.is-invalid output,
+#arkNovaPanel .arkn-map-draft > em {
+  color: #ffb4b4;
+}
+
+#arkNovaPanel .arkn-map-draft > em {
+  font-size: 0.62rem;
+  font-style: normal;
+  line-height: 1.4;
+}
+
 #arkNovaPanel .arkn-inline-actions,
 #arkNovaPanel .arkn-composer-footer,
 #arkNovaPanel .arkn-pending-actions {
@@ -1913,6 +1929,18 @@
 
 #arkNovaPanel .arkn-plan-list b { font-size: 0.68rem; }
 #arkNovaPanel .arkn-plan-list small { color: var(--arkn-muted); font-size: 0.61rem; overflow-wrap: anywhere; }
+
+#arkNovaPanel .arkn-plan-list li.is-invalid {
+  background: rgba(199, 68, 68, 0.1);
+  border-left-color: #ff6b6b;
+}
+
+#arkNovaPanel .arkn-plan-list small em {
+  color: #ffb4b4;
+  display: block;
+  font-style: normal;
+  margin-top: 2px;
+}
 
 #arkNovaPanel .arkn-animal-plan {
   display: grid;
@@ -2182,6 +2210,18 @@
 
 #arkNovaPanel .arkn-pending h3 { color: #fff4ce; font-size: 0.9rem; margin: 0 0 2px; }
 #arkNovaPanel .arkn-pending p { color: #d6c8a6; font-size: 0.68rem; line-height: 1.4; margin: 0; }
+
+#arkNovaPanel .arkn-pending-building-picker {
+  display: grid;
+  gap: 4px;
+  max-width: 320px;
+}
+
+#arkNovaPanel .arkn-pending-building-picker > span {
+  color: #d6c8a6;
+  font-size: 0.64rem;
+  font-weight: 750;
+}
 
 #arkNovaPanel .arkn-choice-options {
   display: grid;

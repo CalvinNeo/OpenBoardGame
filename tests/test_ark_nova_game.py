@@ -278,6 +278,62 @@ class ArkNovaGameTests(unittest.TestCase):
         self.assertIn("223", state["players"]["p1"]["played_sponsors"])
         self.assertEqual(state["players"]["p1"]["tags"]["science"], 2)
 
+    def test_expert_on_americas_free_kiosk_choice_can_skip_or_place(self) -> None:
+        state = self.make_state()
+        self.add_hand_card(state, "p1", "210")
+        self.set_slot(state, "p1", "sponsors", 4)
+        _, error = ArkNovaGame.apply_action(
+            state, "p1", {"type": "sponsors", "mode": "play", "card_ids": ["210"]},
+        )
+        self.assertIsNone(error)
+        pending = state.get("pending_choice")
+        self.assertIsNotNone(pending)
+        self.assertEqual(pending["type"], "place_free_building")
+        self.assertEqual(pending["min"], 0)
+        self.assertTrue(pending["allow_skip"])
+
+        events, error = ArkNovaGame.apply_action(
+            state,
+            "p1",
+            {"type": "resolve_choice", "choice_id": pending["choice_id"], "selection": None},
+        )
+        self.assertIsNone(error)
+        self.assertIsNone(state.get("pending_choice"))
+        self.assertEqual(state["current_player"], "p2")
+        self.assertFalse(any(
+            building["building_type"] == "kiosk"
+            for building in state["players"]["p1"]["map"]["buildings"]
+        ))
+        self.assertTrue(any(event["type"] == "optional_effect_skipped" for event in events))
+
+        state = self.make_state()
+        self.add_hand_card(state, "p1", "210")
+        self.set_slot(state, "p1", "sponsors", 4)
+        _, error = ArkNovaGame.apply_action(
+            state, "p1", {"type": "sponsors", "mode": "play", "card_ids": ["210"]},
+        )
+        self.assertIsNone(error)
+        pending = state["pending_choice"]
+        # A kiosk is a one-hex building and follows the same initial placement
+        # geometry as a size-1 enclosure.
+        cells = _find_placement(state, "p1", "standard_enclosure", 1)
+        self.assertIsNotNone(cells)
+        _, error = ArkNovaGame.apply_action(
+            state,
+            "p1",
+            {
+                "type": "resolve_choice",
+                "choice_id": pending["choice_id"],
+                "selection": {"cells": cells},
+            },
+        )
+        self.assertIsNone(error)
+        kiosk = next(
+            building for building in state["players"]["p1"]["map"]["buildings"]
+            if building["building_type"] == "kiosk"
+        )
+        self.assertEqual(kiosk["cells"], cells)
+
     def test_effect_layer_executes_animal_ability(self) -> None:
         state = self.make_state()
         player = state["players"]["p1"]

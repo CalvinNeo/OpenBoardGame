@@ -141,7 +141,7 @@
     cards_draw: "Use the Cards action to draw from the deck. The number drawn and discarded depends on action strength and upgrade side.",
     cards_snap: "Snap takes one card from any display folder. It is only available at the strengths printed on your Cards action.",
     build_type: "Choose the printed building piece, then select one anchor hex on Map 0. Its fixed footprint appears automatically.",
-    rotate_footprint: "Rotate the fixed building piece clockwise around its selected anchor, skipping orientations that do not fit.",
+    rotate_footprint: "Rotate the fixed building piece clockwise around its selected anchor. Every orientation can be previewed; an invalid one is rejected only when you confirm it.",
     queue_building: "Add the selected footprint to this action. Upgraded Build may contain multiple different buildings within total strength.",
     confirm_build: "Submit every queued building, committed X-tokens, and exact Map 0 cell IDs.",
     animal_card: "Select an Animal card from your hand, or from the display when your upgraded action and reputation allow it.",
@@ -205,9 +205,12 @@
     selectedBuildingId: null,
     buildType: "standard_enclosure",
     buildSize: 1,
+    buildAnchor: null,
     buildCells: [],
+    buildOutside: 0,
     buildRotation: 0,
     buildQueue: [],
+    pendingBuildingType: null,
     animalEnclosures: new Map(),
     associationDraft: { task: "reputation", continent: "africa", university_id: "", project_id: "", slot: 3, project_card_id: "", release_animal_id: "" },
     associationQueue: [],
@@ -1341,6 +1344,12 @@
         stroke: #fff3a4 !important;
         stroke-width: 7 !important;
       }
+      .ark-nova-map0-cell.is-invalid-draft .ark-nova-map0-hex {
+        filter: drop-shadow(0 0 4px rgba(229, 93, 93, .84));
+        stroke: #ff6b6b !important;
+        stroke-dasharray: 8 4;
+        stroke-width: 7 !important;
+      }
       .ark-nova-map0-cell.is-covered { opacity: 1; }
       .ark-nova-map0-cell.is-valid { cursor: crosshair; }
       .arkn-runtime-building-label { pointer-events: none; }
@@ -1366,6 +1375,10 @@
         stroke-width: 2.5;
       }
       .arkn-runtime-building-label.is-draft { opacity: .78; }
+      .arkn-runtime-building-label.is-invalid rect {
+        fill: #792e2e;
+        stroke: #ffb4b4;
+      }
     `;
     (arkNovaMapDocument.querySelector("defs") || arkNovaMapDocument.documentElement).appendChild(style);
   }
@@ -1415,6 +1428,7 @@
       const text = arkNovaMapDocument.createElementNS("http://www.w3.org/2000/svg", "text");
       text.setAttribute("y", "3.5");
       text.textContent = label;
+      if (building.invalid_reason) group.classList.add("is-invalid");
       group.append(title, badge, text);
       layer.appendChild(group);
     });
@@ -1440,7 +1454,25 @@
     const viewer = view && (view.you ?? view.player_id);
     if (owner != null && viewer != null && String(owner) !== String(viewer)) return null;
     const type = String(pending.type || pending.kind || pending.choice_type || "");
-    return ["place_free_enclosure", "place_unique_building"].includes(type) ? pending : null;
+    return ["place_free_enclosure", "place_free_building", "place_unique_building"].includes(type) ? pending : null;
+  }
+
+  function arkNovaPendingBuildingTypes(pending = arkNovaPendingMapChoice()) {
+    if (!pending || String(pending.type || pending.kind || "") !== "place_free_building") return [];
+    const direct = pending.building_type || (pending.building && (pending.building.building_type || pending.building.type));
+    const values = [
+      ...(direct ? [direct] : []),
+      ...arkNovaChoiceOptions(pending).map((option) => option && typeof option === "object"
+        ? option.building_type || option.type || option.value || option.id
+        : option),
+    ].map(String).filter((type) => !!ARK_NOVA_BUILDINGS[type]);
+    return [...new Set(values)];
+  }
+
+  function arkNovaPendingBuildingType(pending = arkNovaPendingMapChoice()) {
+    const types = arkNovaPendingBuildingTypes(pending);
+    if (types.includes(String(arkNovaUi.pendingBuildingType || ""))) return String(arkNovaUi.pendingBuildingType);
+    return types[0] || "standard_enclosure";
   }
 
   function arkNovaPendingMapSize(pending) {
@@ -1485,7 +1517,12 @@
         };
       }
       const size = arkNovaPendingMapSize(pending);
-      return { offsets: ARK_NOVA_BUILDING_FOOTPRINTS[`standard_enclosure_${size}`] || [[0, 0]], rotations: [] };
+      const pendingType = String(pending.type || pending.kind || "") === "place_free_building"
+        ? arkNovaPendingBuildingType(pending)
+        : "standard_enclosure";
+      const meta = ARK_NOVA_BUILDINGS[pendingType] || ARK_NOVA_BUILDINGS.standard_enclosure;
+      const key = meta.variable ? `standard_enclosure_${size}` : pendingType;
+      return { offsets: ARK_NOVA_BUILDING_FOOTPRINTS[key] || [[0, 0]], rotations: [] };
     }
     const meta = ARK_NOVA_BUILDINGS[arkNovaUi.buildType] || ARK_NOVA_BUILDINGS.standard_enclosure;
     const key = meta.variable ? `standard_enclosure_${arkNovaUi.buildSize}` : arkNovaUi.buildType;
@@ -1508,14 +1545,49 @@
   }
 
   function arkNovaFootprintAt(anchorCellId, rotation = arkNovaUi.buildRotation, view = arkNovaView) {
+    const preview = arkNovaFootprintPreviewAt(anchorCellId, rotation, view);
+    if (preview.outside || preview.duplicates || preview.cells.length !== arkNovaFootprintOffsets(view).length) return null;
+    return preview.cells;
+  }
+
+  function arkNovaFootprintPreviewAt(anchorCellId, rotation = arkNovaUi.buildRotation, view = arkNovaView) {
     const anchor = arkNovaCellToAxial(anchorCellId);
-    if (!anchor) return null;
-    const cells = arkNovaFootprintOffsets(view).map((offset) => {
+    if (!anchor) return { cells: [], outside: 0, duplicates: 0 };
+    const cells = [];
+    const seen = new Set();
+    let outside = 0;
+    let duplicates = 0;
+    arkNovaFootprintOffsets(view).forEach((offset) => {
       const [q, r] = arkNovaRotateOffset(offset, rotation);
-      return arkNovaAxialToCell(anchor.q + q, anchor.r + r);
+      const cellId = arkNovaAxialToCell(anchor.q + q, anchor.r + r);
+      if (!cellId) outside += 1;
+      else if (seen.has(cellId)) duplicates += 1;
+      else {
+        seen.add(cellId);
+        cells.push(cellId);
+      }
     });
-    if (cells.some((cellId) => !cellId) || new Set(cells).size !== cells.length) return null;
-    return cells;
+    return { cells, outside, duplicates };
+  }
+
+  function arkNovaBuildPreviewIssue(view = arkNovaView, cells = arkNovaUi.buildCells, outside = arkNovaUi.buildOutside) {
+    const required = arkNovaFootprintOffsets(view).length;
+    if (!arkNovaUi.buildAnchor) return "Choose one anchor hex on Map 0.";
+    if (outside) return `This orientation extends ${outside} hex${outside === 1 ? "" : "es"} outside Map 0.`;
+    if (cells.length !== required) return `This orientation needs ${required} different map hexes.`;
+    const unavailable = cells.find((cellId) => {
+      const data = arkNovaMapCellType(cellId);
+      return !data || data.buildable !== "true";
+    });
+    if (unavailable) return `${unavailable} is water, rock, or otherwise unavailable for this building.`;
+    const occupied = arkNovaOccupiedCells(view, arkNovaYou(view), true);
+    const blocked = cells.find((cellId) => occupied.has(cellId));
+    if (blocked) return `${blocked} is already occupied.`;
+    const needsBuildTwo = cells.find((cellId) => arkNovaMapCellType(cellId)?.buildRequirement === "build_action_upgraded");
+    if (needsBuildTwo && arkNovaUi.selectedAction === "build" && !arkNovaActionUpgraded("build", view)) {
+      return `${needsBuildTwo} requires Build (II).`;
+    }
+    return "";
   }
 
   function arkNovaFootprintFits(cells, view = arkNovaView) {
@@ -1536,6 +1608,15 @@
       if (arkNovaFootprintFits(cells, view)) return { cells, rotation };
     }
     return null;
+  }
+
+  function arkNovaSetBuildPreview(anchorCellId, rotation = arkNovaUi.buildRotation, view = arkNovaView) {
+    const normalizedRotation = ((rotation % 6) + 6) % 6;
+    const preview = arkNovaFootprintPreviewAt(anchorCellId, normalizedRotation, view);
+    arkNovaUi.buildAnchor = String(anchorCellId || "") || null;
+    arkNovaUi.buildCells = preview.cells;
+    arkNovaUi.buildOutside = preview.outside + preview.duplicates;
+    arkNovaUi.buildRotation = normalizedRotation;
   }
 
   function arkNovaOnMapLoad(event) {
@@ -1564,7 +1645,7 @@
   function arkNovaUpdateMapRotateButton(drafting) {
     const button = document.getElementById("arkNovaMapRotateButton");
     if (!button) return;
-    const canRotate = !!drafting && arkNovaUi.buildCells.length > 1 && arkNovaFootprintOffsets().length > 1;
+    const canRotate = !!drafting && !!arkNovaUi.buildAnchor && arkNovaFootprintOffsets().length > 1;
     button.classList.toggle("is-visible", canRotate);
     button.disabled = !canRotate;
     button.setAttribute("aria-hidden", String(!canRotate));
@@ -1585,11 +1666,12 @@
     if (!arkNovaMapDocument) return;
     arkNovaEnsureMapRuntimeStyle();
     const selected = new Set(viewingOwnZoo ? arkNovaUi.buildCells : []);
+    const invalidPreview = viewingOwnZoo && !!arkNovaUi.buildAnchor && !!arkNovaBuildPreviewIssue(arkNovaView);
     const queuedCells = new Set(viewingOwnZoo ? arkNovaUi.buildQueue.flatMap((building) => building.cells) : []);
     arkNovaMapDocument.querySelectorAll("[data-cell-id]").forEach((cell) => {
       const id = cell.dataset.cellId;
       const polygon = cell.querySelector(".ark-nova-map0-hex");
-      cell.classList.remove("is-valid", "is-selected", "is-covered", "is-building-highlight");
+      cell.classList.remove("is-valid", "is-selected", "is-covered", "is-building-highlight", "is-invalid-draft");
       if (!cell.dataset.arkNovaBaseAriaLabel) cell.dataset.arkNovaBaseAriaLabel = cell.getAttribute("aria-label") || id;
       cell.setAttribute("aria-label", cell.dataset.arkNovaBaseAriaLabel);
       if (polygon) {
@@ -1605,14 +1687,18 @@
         const occupants = arkNovaAsArray(building.occupied_by || building.animals).length;
         cell.setAttribute("aria-label", `${cell.dataset.arkNovaBaseAriaLabel}; ${arkNovaBuildingName(building)}${occupants ? `; ${occupants} animal${occupants === 1 ? "" : "s"}` : ""}`);
         if (buildingId && buildingId === String(arkNovaUi.selectedBuildingId || "")) cell.classList.add("is-building-highlight");
+        if (building.invalid_reason) cell.classList.add("is-invalid-draft");
         if (polygon) {
           polygon.setAttribute("fill", meta.color);
           polygon.setAttribute("fill-opacity", queuedCells.has(id) ? ".68" : ".9");
         }
-      } else if (drafting && cell.dataset.buildable === "true" && arkNovaPlacementAtAnchor(id, arkNovaView)) {
+      } else if (drafting && cell.dataset.buildable === "true") {
         cell.classList.add("is-valid");
       }
-      if (selected.has(id)) cell.classList.add("is-selected");
+      if (selected.has(id)) {
+        cell.classList.add("is-selected");
+        if (invalidPreview) cell.classList.add("is-invalid-draft");
+      }
     });
     arkNovaRenderMapBuildingLabels(occupied);
   }
@@ -1669,17 +1755,14 @@
       arkNovaToast("Return to your zoo to place buildings.");
       return;
     }
-    if (arkNovaUi.buildCells.includes(cellId)) {
+    if (String(arkNovaUi.buildAnchor || "") === String(cellId)) {
+      arkNovaUi.buildAnchor = null;
       arkNovaUi.buildCells = [];
+      arkNovaUi.buildOutside = 0;
       arkNovaUi.buildRotation = 0;
     } else {
       const placement = arkNovaPlacementAtAnchor(cellId);
-      if (!placement) {
-        arkNovaToast("The fixed building piece does not fit at that anchor.");
-        return;
-      }
-      arkNovaUi.buildCells = placement.cells;
-      arkNovaUi.buildRotation = placement.rotation;
+      arkNovaSetBuildPreview(cellId, placement ? placement.rotation : arkNovaUi.buildRotation);
       arkNovaUi.selectedBuildingId = null;
     }
     arkNovaApplyMapState();
@@ -1704,25 +1787,18 @@
   }
 
   function arkNovaRotateFootprint() {
-    if (arkNovaFootprintOffsets().length < 2 || !arkNovaUi.buildCells.length) {
+    if (arkNovaFootprintOffsets().length < 2 || !arkNovaUi.buildAnchor) {
       arkNovaToast("Select an anchor for a multi-hex building first.");
       return;
     }
     const allowed = arkNovaAllowedFootprintRotations();
     const current = ((arkNovaUi.buildRotation % 6) + 6) % 6;
     const currentIndex = Math.max(0, allowed.indexOf(current));
-    for (let offset = 1; offset <= allowed.length; offset += 1) {
-      const rotation = allowed[(currentIndex + offset) % allowed.length];
-      const rotated = arkNovaFootprintAt(arkNovaUi.buildCells[0], rotation);
-      if (!arkNovaFootprintFits(rotated) || rotated.join("|") === arkNovaUi.buildCells.join("|")) continue;
-      arkNovaUi.buildCells = rotated;
-      arkNovaUi.buildRotation = rotation;
-      arkNovaApplyMapState();
-      arkNovaRenderComposer(arkNovaView);
-      if (arkNovaPendingMapChoice()) arkNovaRenderPending(arkNovaView);
-      return;
-    }
-    arkNovaToast("No other legal orientation fits at this anchor.");
+    const rotation = allowed[(currentIndex + 1) % allowed.length];
+    arkNovaSetBuildPreview(arkNovaUi.buildAnchor, rotation);
+    arkNovaApplyMapState();
+    arkNovaRenderComposer(arkNovaView);
+    if (arkNovaPendingMapChoice()) arkNovaRenderPending(arkNovaView);
   }
 
   function arkNovaChoiceOptions(pending) {
@@ -1811,11 +1887,22 @@
     return [...arkNovaSelectedCardObjects("hand"), ...arkNovaSelectedCardObjects("display")].filter((card) => arkNovaCardType(card) === type);
   }
 
+  function arkNovaBuildDraftMarkup(view = arkNovaView) {
+    const required = arkNovaFootprintOffsets(view).length;
+    const issue = arkNovaUi.buildAnchor ? arkNovaBuildPreviewIssue(view) : "";
+    const outsideLabel = arkNovaUi.buildOutside ? ` · ${arkNovaUi.buildOutside} outside map` : "";
+    const selectedLabel = arkNovaUi.buildCells.join(" · ");
+    const footprintLabel = selectedLabel
+      ? `${selectedLabel}${outsideLabel}`
+      : arkNovaUi.buildAnchor ? `Anchor ${arkNovaUi.buildAnchor}${outsideLabel}` : "Choose one anchor hex on Map 0";
+    return `<div class="arkn-map-draft ${issue ? "is-invalid" : ""}"><span><b>Fixed footprint</b><small>${arkNovaUi.buildCells.length} / ${required} map hexes${outsideLabel} · rotation ${arkNovaUi.buildRotation * 60}°</small></span><output>${arkNovaEscape(footprintLabel)}</output>${issue ? `<em>⚠ ${arkNovaEscape(issue)} You may keep rotating or add it to the plan; confirmation will reject it until fixed.</em>` : ""}</div>`;
+  }
+
   function arkNovaBuildingQueueMarkup() {
     if (!arkNovaUi.buildQueue.length) return `<div class="arkn-empty arkn-empty-inline">No buildings queued.</div>`;
     return `<ol class="arkn-plan-list">${arkNovaUi.buildQueue.map((building) => {
       const meta = ARK_NOVA_BUILDINGS[building.building_type] || { name: arkNovaTitle(building.building_type), icon: "⬡" };
-      return `<li><span>${meta.icon}</span><b>${arkNovaEscape(meta.name)}</b><small>${building.cells.join(", ")}</small></li>`;
+      return `<li class="${building.invalid_reason ? "is-invalid" : ""}"><span>${meta.icon}</span><b>${arkNovaEscape(meta.name)}</b><small>${arkNovaEscape(building.cells.join(", ") || "Outside Map 0")}${building.invalid_reason ? `<em>⚠ ${arkNovaEscape(building.invalid_reason)}</em>` : ""}</small></li>`;
     }).join("")}</ol>`;
   }
 
@@ -1835,15 +1922,15 @@
   function arkNovaRenderBuildComposer(view) {
     const meta = ARK_NOVA_BUILDINGS[arkNovaUi.buildType] || ARK_NOVA_BUILDINGS.standard_enclosure;
     const required = arkNovaFootprintOffsets(view).length;
-    const footprintReady = arkNovaUi.buildCells.length === required;
+    const footprintReady = !!arkNovaUi.buildAnchor;
     return `${arkNovaXControl(view)}
       <div class="arkn-form-grid">
         <label data-arkn-explain="build_type"><span>Building</span><select id="arkNovaBuildType">${Object.entries(ARK_NOVA_BUILDINGS).map(([id, definition]) => `<option value="${id}" ${id === arkNovaUi.buildType ? "selected" : ""}>${definition.icon} ${arkNovaEscape(definition.name)}</option>`).join("")}</select></label>
         ${meta.variable ? `<label><span>Fixed piece</span><select id="arkNovaBuildSize">${[1, 2, 3, 4, 5].map((size) => `<option value="${size}" ${size === arkNovaUi.buildSize ? "selected" : ""}>⬡ Size ${size}</option>`).join("")}</select></label>` : `<div class="arkn-fixed-field"><span>Fixed footprint</span><b>⬡ ${required} hex${required === 1 ? "" : "es"}</b></div>`}
       </div>
-      <div class="arkn-map-draft"><span><b>Fixed footprint</b><small>${arkNovaUi.buildCells.length} / ${required} hexes · rotation ${arkNovaUi.buildRotation * 60}°</small></span><output>${arkNovaUi.buildCells.join(" · ") || "Choose one anchor hex on Map 0"}</output></div>
+      ${arkNovaBuildDraftMarkup(view)}
       <div class="arkn-inline-actions">
-        <button type="button" class="arkn-composer-rotate" data-arkn-command="rotate-build" data-arkn-explain="rotate_footprint" ${required < 2 || !arkNovaUi.buildCells.length ? "disabled" : ""}>↻ Rotate</button>
+        <button type="button" class="arkn-composer-rotate" data-arkn-command="rotate-build" data-arkn-explain="rotate_footprint" ${required < 2 || !arkNovaUi.buildAnchor ? "disabled" : ""}>↻ Rotate</button>
         <button type="button" data-arkn-command="queue-build" data-arkn-explain="queue_building" ${footprintReady ? "" : "disabled"}>Add building</button>
         <button type="button" class="arkn-quiet" data-arkn-command="undo-build" data-arkn-explain="undo" ${arkNovaUi.buildQueue.length ? "" : "disabled"}>Undo queued</button>
       </div>
@@ -2048,7 +2135,10 @@
   function arkNovaIncompletePlanReason(actionType) {
     if (actionType === "cards") return "Choose one display card before confirming Snap.";
     if (actionType === "build") {
-      if (arkNovaUi.buildCells.length) return "Click “Add building” to add the highlighted footprint to your plan.";
+      if (arkNovaUi.buildAnchor) {
+        const issue = arkNovaBuildPreviewIssue();
+        return issue ? `${issue} Keep rotating, or add it and fix it before final confirmation.` : "Click “Add building” to add the highlighted footprint to your plan.";
+      }
       return "Choose a building, then click a highlighted Map 0 hex to place it.";
     }
     if (actionType === "animals") {
@@ -2159,11 +2249,27 @@
     if (pendingMap) {
       arkNovaPendingOptions = [];
       const required = arkNovaFootprintOffsets(view).length;
-      const ready = arkNovaUi.buildCells.length === required;
+      const ready = !!arkNovaUi.buildAnchor;
+      const pendingType = String(pending.type || pending.kind || "");
+      const buildingTypes = arkNovaPendingBuildingTypes(pending);
+      const buildingType = pendingType === "place_free_building" ? arkNovaPendingBuildingType(pending) : "";
+      const buildingMeta = ARK_NOVA_BUILDINGS[buildingType];
+      const buildingPicker = buildingTypes.length > 1
+        ? `<label class="arkn-pending-building-picker"><span>Free building</span><select id="arkNovaPendingBuildingType">${buildingTypes.map((type) => `<option value="${arkNovaEscape(type)}" ${type === buildingType ? "selected" : ""}>${arkNovaEscape(ARK_NOVA_BUILDINGS[type].name)}</option>`).join("")}</select></label>`
+        : buildingMeta ? `<div class="arkn-fixed-field"><span>Free building</span><b>${buildingMeta.icon} ${arkNovaEscape(buildingMeta.name)}</b></div>` : "";
+      const fallbackTitle = pendingType === "place_unique_building"
+        ? "Place unique building"
+        : pendingType === "place_free_building"
+          ? `Place free ${buildingMeta ? buildingMeta.name : "building"}`
+          : "Place free enclosure";
+      const confirmLabel = pendingType === "place_free_building" && buildingMeta
+        ? `Build free ${buildingMeta.name}`
+        : "Confirm footprint";
       container.innerHTML = `<section class="arkn-pending arkn-surface" aria-labelledby="arkNovaPendingTitle">
-        <div class="arkn-pending-copy"><span>⬡</span><div><h3 id="arkNovaPendingTitle">${arkNovaEscape(pending.prompt || (String(pending.type).includes("unique") ? "Place unique building" : "Place free enclosure"))}</h3><p>Choose one anchor hex; the fixed piece appears automatically. ${arkNovaEscape(pending.detail || pending.description || "Terrain, occupancy, adjacency, and shape are validated when confirmed.")}</p></div></div>
-        <div class="arkn-map-draft"><span><b>Fixed footprint</b><small>${arkNovaUi.buildCells.length} / ${required} hexes · rotation ${arkNovaUi.buildRotation * 60}°</small></span><output>${arkNovaUi.buildCells.join(" · ") || "Choose one anchor hex on Map 0"}</output></div>
-        <div class="arkn-pending-actions"><button type="button" class="arkn-composer-rotate" data-arkn-command="rotate-build" data-arkn-explain="rotate_footprint" ${required < 2 || !arkNovaUi.buildCells.length ? "disabled" : ""}>↻ Rotate</button><button type="button" class="arkn-confirm" data-arkn-command="resolve-choice" data-arkn-explain="pending_choice" ${ready && arkNovaCan("resolve_choice") ? "" : "disabled"}>Confirm footprint</button>${pending.allow_skip ? `<button type="button" data-arkn-command="skip-choice">Skip</button>` : ""}</div>
+        <div class="arkn-pending-copy"><span>⬡</span><div><h3 id="arkNovaPendingTitle">${arkNovaEscape(pending.prompt || fallbackTitle)}</h3><p>Choose one anchor hex on Map 0; the fixed piece appears automatically. ${arkNovaEscape(pending.detail || pending.description || "Terrain, occupancy, adjacency, and shape are validated when confirmed.")}</p></div></div>
+        ${buildingPicker}
+        ${arkNovaBuildDraftMarkup(view)}
+        <div class="arkn-pending-actions"><button type="button" class="arkn-composer-rotate" data-arkn-command="rotate-build" data-arkn-explain="rotate_footprint" ${required < 2 || !arkNovaUi.buildAnchor ? "disabled" : ""}>↻ Rotate</button><button type="button" class="arkn-confirm" data-arkn-command="resolve-choice" data-arkn-explain="pending_choice" ${ready && arkNovaCan("resolve_choice") ? "" : "disabled"}>${arkNovaEscape(confirmLabel)}</button>${pending.allow_skip ? `<button type="button" data-arkn-command="skip-choice">Skip</button>` : ""}</div>
       </section>`;
       return;
     }
@@ -2267,9 +2373,12 @@
     arkNovaUi.actionMode = "draw";
     arkNovaUi.selectedCards.clear();
     arkNovaUi.selectedBuildingId = null;
+    arkNovaUi.buildAnchor = null;
     arkNovaUi.buildCells = [];
+    arkNovaUi.buildOutside = 0;
     arkNovaUi.buildRotation = 0;
     arkNovaUi.buildQueue = [];
+    arkNovaUi.pendingBuildingType = null;
     arkNovaUi.animalEnclosures.clear();
     arkNovaUi.associationQueue = [];
     arkNovaUi.donate = false;
@@ -2390,11 +2499,25 @@
   function arkNovaQueueBuilding() {
     const meta = ARK_NOVA_BUILDINGS[arkNovaUi.buildType] || ARK_NOVA_BUILDINGS.standard_enclosure;
     const size = meta.variable ? arkNovaUi.buildSize : meta.size;
-    if (arkNovaUi.buildCells.length !== size) return;
-    arkNovaUi.buildQueue.push({ building_type: arkNovaUi.buildType, ...(meta.variable ? { size } : {}), cells: [...arkNovaUi.buildCells] });
+    if (!arkNovaUi.buildAnchor) return;
+    const invalidReason = arkNovaBuildPreviewIssue();
+    arkNovaUi.buildQueue.push({
+      building_type: arkNovaUi.buildType,
+      ...(meta.variable ? { size } : {}),
+      cells: [...arkNovaUi.buildCells],
+      ...(invalidReason ? { invalid_reason: invalidReason } : {}),
+    });
+    arkNovaUi.buildAnchor = null;
     arkNovaUi.buildCells = [];
+    arkNovaUi.buildOutside = 0;
     arkNovaUi.buildRotation = 0;
     arkNovaRerenderInteractive();
+  }
+
+  function arkNovaBuildQueueIssue() {
+    const invalidIndex = arkNovaUi.buildQueue.findIndex((building) => !!building.invalid_reason);
+    if (invalidIndex < 0) return "";
+    return `Building ${invalidIndex + 1} cannot be confirmed: ${arkNovaUi.buildQueue[invalidIndex].invalid_reason}`;
   }
 
   function arkNovaQueueAssociation() {
@@ -2433,7 +2556,16 @@
       }
     } else if (type === "build") {
       if (!arkNovaUi.buildQueue.length) return;
-      action = { type, x_tokens, buildings: arkNovaUi.buildQueue.map((building) => ({ ...building, cells: [...building.cells] })) };
+      const issue = arkNovaBuildQueueIssue();
+      if (issue) {
+        arkNovaToast(issue);
+        return;
+      }
+      action = {
+        type,
+        x_tokens,
+        buildings: arkNovaUi.buildQueue.map(({ invalid_reason: _invalidReason, ...building }) => ({ ...building, cells: [...building.cells] })),
+      };
     } else if (type === "animals") {
       const animals = arkNovaSelectedCardsForType("animal");
       if (!animals.length || animals.some((card) => !arkNovaUi.animalEnclosures.get(arkNovaCardId(card)))) return;
@@ -2459,12 +2591,23 @@
     if (!pending) return;
     const pendingMap = arkNovaPendingMapChoice();
     if (!skip && pendingMap) {
-      arkNovaSend({ type: "resolve_choice", choice_id: pending.choice_id || pending.id || pending.type, selection: { cells: [...arkNovaUi.buildCells] } });
+      const issue = arkNovaBuildPreviewIssue();
+      if (issue) {
+        arkNovaToast(`This footprint cannot be confirmed: ${issue}`);
+        return;
+      }
+      const pendingType = String(pending.type || pending.kind || "");
+      const selection = {
+        ...(pendingType === "place_free_building" ? { building_type: arkNovaPendingBuildingType(pending) } : {}),
+        cells: [...arkNovaUi.buildCells],
+      };
+      arkNovaSend({ type: "resolve_choice", choice_id: pending.choice_id || pending.id || pending.type, selection });
       return;
     }
     const values = [...arkNovaUi.pendingSelection].sort((a, b) => a - b).map((index) => arkNovaPendingOptionValue(arkNovaPendingOptions[index]));
     const { maximum } = arkNovaPendingBounds(pending);
-    const selection = skip ? null : maximum === 1 ? values[0] : values;
+    const pendingType = String(pending.type || pending.kind || "");
+    const selection = skip && pendingType === "place_free_building" ? { skip: true } : skip ? null : maximum === 1 ? values[0] : values;
     arkNovaSend({ type: "resolve_choice", choice_id: pending.choice_id || pending.id || pending.type, selection });
   }
 
@@ -2514,7 +2657,9 @@
     if (zooButton) {
       arkNovaUi.viewedPlayerId = zooButton.dataset.arknViewZoo;
       arkNovaUi.selectedBuildingId = null;
+      arkNovaUi.buildAnchor = null;
       arkNovaUi.buildCells = [];
+      arkNovaUi.buildOutside = 0;
       arkNovaUi.buildRotation = 0;
       arkNovaRenderPlayers(arkNovaView);
       arkNovaRenderBuildings(arkNovaView);
@@ -2559,7 +2704,9 @@
     if (!target.closest("button, input, select, label, .arkn-card, .arkn-map-frame")) {
       arkNovaUi.selectedCards.clear();
       arkNovaUi.selectedBuildingId = null;
+      arkNovaUi.buildAnchor = null;
       arkNovaUi.buildCells = [];
+      arkNovaUi.buildOutside = 0;
       arkNovaUi.buildRotation = 0;
       arkNovaUi.pendingSelection.clear();
       arkNovaRerenderInteractive();
@@ -2575,12 +2722,22 @@
       arkNovaUi.selectedBuildingId = null;
       const meta = ARK_NOVA_BUILDINGS[target.value];
       if (meta && !meta.variable) arkNovaUi.buildSize = meta.size;
+      arkNovaUi.buildAnchor = null;
       arkNovaUi.buildCells = [];
+      arkNovaUi.buildOutside = 0;
       arkNovaUi.buildRotation = 0;
     } else if (target.id === "arkNovaBuildSize") {
       arkNovaUi.buildSize = arkNovaNumber(target.value, 1);
       arkNovaUi.selectedBuildingId = null;
+      arkNovaUi.buildAnchor = null;
       arkNovaUi.buildCells = [];
+      arkNovaUi.buildOutside = 0;
+      arkNovaUi.buildRotation = 0;
+    } else if (target.id === "arkNovaPendingBuildingType") {
+      arkNovaUi.pendingBuildingType = target.value;
+      arkNovaUi.buildAnchor = null;
+      arkNovaUi.buildCells = [];
+      arkNovaUi.buildOutside = 0;
       arkNovaUi.buildRotation = 0;
     } else if (target.dataset.arknEnclosureFor) {
       arkNovaUi.animalEnclosures.set(target.dataset.arknEnclosureFor, target.value);
@@ -2599,6 +2756,7 @@
       arkNovaUi.donate = target.checked;
     }
     arkNovaRerenderInteractive();
+    if (arkNovaPendingMapChoice()) arkNovaRenderPending(arkNovaView);
   }
 
   function arkNovaToggleExplainMode() {
@@ -2676,7 +2834,9 @@
     }
     arkNovaUi.selectedCards.clear();
     arkNovaUi.selectedBuildingId = null;
+    arkNovaUi.buildAnchor = null;
     arkNovaUi.buildCells = [];
+    arkNovaUi.buildOutside = 0;
     arkNovaUi.buildRotation = 0;
     arkNovaUi.pendingSelection.clear();
     arkNovaRerenderInteractive();

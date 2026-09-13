@@ -984,6 +984,20 @@ def _execute_trigger(
         return execute_ability(ability, context, params, choice)
     if spec.get("free_build"):
         building = str(spec["free_build"])
+        if choice is not None:
+            if choice.get("skip"):
+                return _done(_event("optional_effect_skipped", context.player_id, source=effect_id))
+            placement = choice.get("placement", choice)
+            if not isinstance(placement, Mapping):
+                raise ValueError("free-building placement must be a mapping")
+            return _done(_event(
+                "free_build_requested",
+                context.player_id,
+                source=effect_id,
+                building_type=building,
+                placement=dict(placement),
+                normal_placement_rules=True,
+            ))
         return _pending(context, effect_id, "place_free_building", "放置免费建筑", [{"id": building, "building_type": building}], 0, 1, True, {"normal_placement_rules": True})
     count = max(1, int(context.metadata.get("count", event_tags.count(tag) if tag else 1)))
     return _grant(context, effect_id, **{key: int(value) * count for key, value in spec.get("reward", {}).items()})

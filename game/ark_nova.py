@@ -2592,6 +2592,15 @@ def _as_selected_list(selection: Any) -> List[Any]:
 def _effect_choice_payload(pending: Mapping[str, Any], selection: Any) -> Dict[str, Any]:
     payload: Dict[str, Any] = {"selection": selection}
     selected = _as_selected_list(selection)
+    if (
+        not selected
+        and int(pending.get("min", pending.get("minimum", 1))) == 0
+        and bool(pending.get("allow_skip", pending.get("optional", False)))
+    ):
+        # The browser represents Skip as an empty selection.  Effect handlers
+        # use an explicit flag so they can distinguish an optional skip from a
+        # malformed placement payload.
+        payload["skip"] = True
     ids = []
     for value in selected:
         if isinstance(value, Mapping):

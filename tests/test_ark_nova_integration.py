@@ -156,7 +156,7 @@ class ArkNovaIntegrationTests(unittest.TestCase):
             self.assertIn(f"standard_enclosure_{size}:", script)
         self.assertIn("function arkNovaFootprintAt", script)
         self.assertIn("function arkNovaPlacementAtAnchor", script)
-        self.assertIn("arkNovaUi.buildCells = placement.cells", script)
+        self.assertIn("arkNovaSetBuildPreview(cellId, placement ? placement.rotation", script)
         self.assertIn("Choose one anchor hex on Map 0", script)
         self.assertIn("petting_zoo: [[0, 0], [0, -1], [1, -2]]", script)
         self.assertIn("reptile_house: [[0, 0], [0, -1], [1, -1], [2, -2], [2, -1]]", script)
@@ -184,7 +184,7 @@ class ArkNovaIntegrationTests(unittest.TestCase):
         self.assertIn('class="arkn-submit-reason" role="status"', script)
         self.assertIn('aria-describedby="${reasonId}"', script)
         self.assertIn(".arkn-submit-reason", stylesheet)
-        self.assertIn('gameType === "ark_nova"', room_script)
+        self.assertIn('currentGameType === "ark_nova"', room_script)
         self.assertIn("window.showArkNovaError(data.message)", room_script)
 
     def test_animal_map_assignment_validates_enclosure_before_saving(self) -> None:
@@ -214,6 +214,19 @@ class ArkNovaIntegrationTests(unittest.TestCase):
         self.assertIn('eventType === "ark_nova:placement_bonus"', script)
         self.assertIn("arkNovaToast(arkNovaPlacementBonusText(payload))", script)
 
+    def test_optional_free_building_uses_map_and_can_be_skipped(self) -> None:
+        script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")
+        self.assertIn('"place_free_enclosure", "place_free_building", "place_unique_building"', script)
+        self.assertIn("function arkNovaPendingBuildingType", script)
+        self.assertIn('{ building_type: arkNovaPendingBuildingType(pending) }', script)
+        self.assertIn('pendingType === "place_free_building" ? { skip: true }', script)
+        self.assertIn("Choose one anchor hex on Map 0", script)
+
+    def test_server_errors_use_the_active_game_type(self) -> None:
+        script = (ROOT / "static" / "room.js").read_text(encoding="utf-8")
+        self.assertIn('if (currentGameType === "ark_nova"', script)
+        self.assertNotIn('if (gameType === "ark_nova"', script)
+
     def test_mobile_map_has_contextual_rotate_control(self) -> None:
         script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")
         stylesheet = (ROOT / "static" / "ark_nova.css").read_text(encoding="utf-8")
@@ -223,6 +236,18 @@ class ArkNovaIntegrationTests(unittest.TestCase):
         self.assertIn('button.classList.toggle("is-visible", canRotate)', script)
         self.assertIn("button.arkn-map-rotate-fab.is-visible", stylesheet)
         self.assertIn("button.arkn-composer-rotate", stylesheet)
+
+    def test_rotation_previews_every_orientation_and_rejects_only_on_confirmation(self) -> None:
+        script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")
+        stylesheet = (ROOT / "static" / "ark_nova.css").read_text(encoding="utf-8")
+        self.assertIn("function arkNovaFootprintPreviewAt", script)
+        self.assertIn("const rotation = allowed[(currentIndex + 1) % allowed.length]", script)
+        self.assertNotIn("No other legal orientation fits at this anchor", script)
+        self.assertIn("invalid_reason: invalidReason", script)
+        self.assertIn("function arkNovaBuildQueueIssue", script)
+        self.assertIn("cannot be confirmed", script)
+        self.assertIn("is-invalid-draft", script)
+        self.assertIn(".arkn-map-draft.is-invalid", stylesheet)
 
     def test_card_illustrations_are_wired_to_every_card_type(self) -> None:
         script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")
