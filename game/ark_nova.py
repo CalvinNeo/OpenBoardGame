@@ -86,10 +86,11 @@ BUILDING_SUPPLY = {
     "pavilion": 34,
 }
 UNIVERSITIES = (
-    {"id": "university_science", "science": 2},
-    {"id": "university_reputation", "science": 1, "reputation": 1},
-    {"id": "university_hand_limit", "science": 1, "hand_limit": 5},
+    {"id": "university_science", "name": "Research university", "science": 2},
+    {"id": "university_reputation", "name": "Reputation university", "science": 1, "reputation": 1},
+    {"id": "university_hand_limit", "name": "Hand-limit university", "science": 1, "hand_limit": 5},
 )
+UNIVERSITY_COPIES_PER_TYPE = 4
 BONUS_TOKEN_DEFS: Dict[str, Dict[str, Any]] = {
     "reputation_2": {"label": "Gain 2 reputation", "kind": "reputation", "amount": 2},
     "money_10": {"label": "Gain 10 money", "kind": "money", "amount": 10},
@@ -2327,6 +2328,12 @@ def _take_university(
         return "unknown university"
     if university_id in player["universities"]:
         return "university already owned"
+    claimed = sum(
+        university_id in candidate.get("universities", [])
+        for candidate in state.get("players", {}).values()
+    )
+    if claimed >= UNIVERSITY_COPIES_PER_TYPE:
+        return "university is no longer available"
     if len(player["universities"]) >= 3:
         return "all university spaces are occupied"
     player["universities"].append(university_id)
@@ -3478,12 +3485,33 @@ class ArkNovaGame:
     def get_public_view(state: Dict, viewer_id: str) -> Dict:
         viewer = state.get("players", {}).get(viewer_id)
         association_supply = copy.deepcopy(state.get("association_supply", {}))
+        university_claims = {
+            item["id"]: [
+                player_id for player_id, player in state.get("players", {}).items()
+                if item["id"] in player.get("universities", [])
+            ]
+            for item in UNIVERSITIES
+        }
+        association_supply["university_options"] = [
+            {
+                **copy.deepcopy(item),
+                "available": (
+                    len(university_claims[item["id"]]) < UNIVERSITY_COPIES_PER_TYPE
+                    and bool(viewer)
+                    and item["id"] not in viewer.get("universities", [])
+                ),
+                "owned_by_you": bool(viewer and item["id"] in viewer.get("universities", [])),
+                "remaining": max(0, UNIVERSITY_COPIES_PER_TYPE - len(university_claims[item["id"]])),
+                "total": UNIVERSITY_COPIES_PER_TYPE,
+            }
+            for item in UNIVERSITIES
+        ]
         if viewer:
             association_supply["available_partner_zoos"] = [
                 continent for continent in CONTINENTS if continent not in viewer.get("partner_zoos", [])
             ]
             association_supply["available_universities"] = [
-                item["id"] for item in UNIVERSITIES if item["id"] not in viewer.get("universities", [])
+                option["id"] for option in association_supply["university_options"] if option["available"]
             ]
         display = []
         for index, card_id in enumerate(state.get("display", [])):

@@ -316,7 +316,7 @@
 #arkNovaPanel .arkn-card-row {
   align-items: stretch;
   display: flex;
-  gap: 9px;
+  gap: 11px;
   min-width: 0;
   overflow-x: auto;
   overscroll-behavior-inline: contain;
@@ -332,8 +332,8 @@
   border-radius: 11px;
   box-shadow: 0 8px 17px rgba(0, 0, 0, 0.28);
   color: #1a2822;
-  flex: 0 0 138px;
-  min-height: 268px;
+  flex: 0 0 176px;
+  min-height: 300px;
   overflow: hidden;
   position: relative;
   scroll-snap-align: start;
@@ -346,7 +346,7 @@
 #arkNovaPanel .arkn-card-final_scoring { --arkn-card-accent: #805ca8; }
 
 #arkNovaPanel .arkn-card-conservation_project {
-  flex-basis: 184px;
+  flex-basis: 218px;
 }
 
 #arkNovaPanel .arkn-card.is-selectable:hover,
@@ -394,8 +394,8 @@
   gap: 5px;
   height: 100%;
   margin: 0;
-  min-height: 268px;
-  padding: 8px 8px 28px;
+  min-height: 300px;
+  padding: 9px 9px 30px;
   text-align: left;
   width: 100%;
 }
@@ -422,7 +422,7 @@
 }
 
 #arkNovaPanel .arkn-card-kind {
-  max-width: 78px;
+  max-width: 112px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -431,7 +431,7 @@
 #arkNovaPanel .arkn-card-name {
   color: #15271f;
   display: -webkit-box;
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   font-weight: 900;
   line-height: 1.2;
   min-height: 1.9em;
@@ -442,7 +442,7 @@
 
 #arkNovaPanel .arkn-card-en {
   color: #657269;
-  font-size: 0.57rem;
+  font-size: 0.59rem;
   font-weight: 750;
   letter-spacing: 0.03em;
   overflow: hidden;
@@ -466,7 +466,7 @@
   border-radius: 7px;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
   flex: 0 0 auto;
-  max-width: 160px;
+  max-width: 100%;
   width: 100%;
 }
 
@@ -483,7 +483,7 @@
 #arkNovaModal .arkn-card-facts {
   display: grid;
   gap: 4px;
-  grid-template-columns: minmax(0, 1.35fr) minmax(45px, 0.65fr);
+  grid-template-columns: minmax(0, 1.25fr) minmax(62px, 0.75fr);
 }
 
 #arkNovaPanel .arkn-card-facts.is-single,
@@ -503,18 +503,20 @@
 }
 
 #arkNovaPanel .arkn-card-fact-group.is-requirement {
-  background: rgba(61, 111, 142, 0.11);
-  border-color: rgba(42, 91, 121, 0.28);
+  background: rgba(72, 139, 180, 0.16);
+  border-color: rgba(42, 91, 121, 0.38);
+  box-shadow: inset 0 2px rgba(53, 116, 154, 0.34);
 }
 
 #arkNovaPanel .arkn-card-fact-group.is-reward {
-  background: rgba(48, 139, 85, 0.12);
-  border-color: rgba(32, 119, 68, 0.3);
+  background: rgba(56, 153, 90, 0.17);
+  border-color: rgba(32, 119, 68, 0.4);
+  box-shadow: inset 0 2px rgba(38, 132, 71, 0.36);
 }
 
 #arkNovaPanel .arkn-card-fact-label,
 #arkNovaModal .arkn-card-fact-label {
-  font-size: 0.46rem;
+  font-size: 0.5rem;
   font-weight: 950;
   letter-spacing: 0.055em;
   line-height: 1;
@@ -658,7 +660,7 @@
 #arkNovaPanel .arkn-card-text {
   color: #394b42;
   display: -webkit-box;
-  font-size: 0.63rem;
+  font-size: 0.66rem;
   line-height: 1.35;
   overflow: hidden;
   -webkit-box-orient: vertical;
@@ -989,7 +991,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 3px;
-  max-width: 142px;
+  max-width: 218px;
 }
 
 #arkNovaPanel .arkn-supporters span {
@@ -1041,6 +1043,37 @@
 #arkNovaPanel .arkn-supply-chip.is-empty {
   filter: grayscale(1);
   opacity: 0.48;
+}
+
+#arkNovaPanel .arkn-association-supply .arkn-university-supply {
+  display: grid;
+  gap: 5px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+#arkNovaPanel .arkn-university-supply-card {
+  background: rgba(109, 167, 245, 0.13);
+  border: 1px solid rgba(109, 167, 245, 0.3);
+  border-radius: 8px;
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 6px;
+}
+
+#arkNovaPanel .arkn-university-supply-card > b {
+  color: #e6f1ff;
+  font-size: 0.61rem;
+}
+
+#arkNovaPanel .arkn-university-supply-card > small {
+  color: var(--arkn-muted);
+  font-size: 0.53rem;
+}
+
+#arkNovaPanel .arkn-university-supply-card.is-unavailable {
+  filter: grayscale(0.7);
+  opacity: 0.52;
 }
 
 #arkNovaPanel .arkn-player-strip-surface {
@@ -1601,6 +1634,100 @@
   min-width: 0;
 }
 
+#arkNovaPanel .arkn-university-picker {
+  border: 1px solid var(--arkn-line);
+  border-radius: 10px;
+  grid-column: 1 / -1;
+  margin: 0;
+  min-width: 0;
+  padding: 8px;
+}
+
+#arkNovaPanel .arkn-university-picker legend {
+  color: var(--arkn-ink);
+  font-size: 0.68rem;
+  font-weight: 850;
+  padding: 0 4px;
+}
+
+#arkNovaPanel .arkn-university-picker legend small {
+  color: var(--arkn-muted);
+  font-size: 0.55rem;
+  font-weight: 650;
+  margin-left: 4px;
+}
+
+#arkNovaPanel .arkn-university-options {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+#arkNovaPanel .arkn-form-grid .arkn-university-option {
+  align-items: start;
+  background: rgba(2, 13, 9, 0.48);
+  border: 1px solid var(--arkn-line);
+  border-radius: 8px;
+  cursor: pointer;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: 15px minmax(0, 1fr);
+  min-height: 72px;
+  padding: 7px;
+}
+
+#arkNovaPanel .arkn-university-option input {
+  accent-color: var(--arkn-gold);
+  margin: 2px 0 0;
+}
+
+#arkNovaPanel .arkn-university-option > span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+#arkNovaPanel .arkn-university-option > span > b {
+  color: var(--arkn-ink);
+  font-size: 0.64rem;
+  line-height: 1.2;
+}
+
+#arkNovaPanel .arkn-university-option > span > small {
+  color: var(--arkn-muted);
+  font-size: 0.53rem;
+}
+
+#arkNovaPanel .arkn-university-option.is-selected {
+  background: rgba(241, 181, 69, 0.17);
+  border-color: rgba(241, 181, 69, 0.72);
+  box-shadow: 0 0 0 2px rgba(241, 181, 69, 0.18);
+}
+
+#arkNovaPanel .arkn-university-option.is-unavailable {
+  cursor: not-allowed;
+  filter: grayscale(0.8);
+  opacity: 0.48;
+}
+
+#arkNovaPanel .arkn-university-rewards {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+#arkNovaPanel .arkn-university-rewards > span {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 5px;
+  display: inline-flex;
+  font-size: 0.59rem;
+  gap: 2px;
+  padding: 2px 4px;
+}
+
 #arkNovaPanel .arkn-form-grid label > span,
 #arkNovaPanel .arkn-fixed-field > span {
   color: var(--arkn-muted);
@@ -1848,12 +1975,12 @@
 }
 
 #arkNovaPanel .arkn-card-row-played .arkn-card {
-  flex-basis: 112px;
-  min-height: 156px;
+  flex-basis: 156px;
+  min-height: 230px;
 }
 
 #arkNovaPanel .arkn-card-row-played .arkn-card-main {
-  min-height: 156px;
+  min-height: 230px;
 }
 
 #arkNovaPanel .arkn-played-card {
@@ -2363,6 +2490,10 @@
     grid-template-columns: 1fr;
   }
 
+  #arkNovaPanel .arkn-association-supply .arkn-university-supply {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   #arkNovaPanel .arkn-event-log {
     max-height: 260px;
   }
@@ -2408,11 +2539,11 @@
   #arkNovaPanel .arkn-track-name b { font-size: 0.68rem; }
 
   #arkNovaPanel .arkn-card {
-    flex-basis: min(42vw, 132px);
+    flex-basis: min(72vw, 156px);
   }
 
   #arkNovaPanel .arkn-card-conservation_project {
-    flex-basis: min(72vw, 184px);
+    flex-basis: min(78vw, 210px);
   }
 
   #arkNovaPanel .arkn-card-row {
@@ -2446,6 +2577,11 @@
 
   #arkNovaPanel .arkn-form-grid,
   #arkNovaPanel .arkn-animal-plan label {
+    grid-template-columns: 1fr;
+  }
+
+  #arkNovaPanel .arkn-university-options,
+  #arkNovaPanel .arkn-association-supply .arkn-university-supply {
     grid-template-columns: 1fr;
   }
 

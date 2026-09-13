@@ -131,6 +131,25 @@ class ArkNovaIntegrationTests(unittest.TestCase):
         self.assertNotIn('australia: ["🦘", "Australia"]', script)
         self.assertNotIn('europe: ["🏰", "Europe"]', script)
 
+    def test_university_picker_shows_rewards_and_availability(self) -> None:
+        script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")
+        stylesheet = (ROOT / "static" / "ark_nova.css").read_text(encoding="utf-8")
+        self.assertIn("function arkNovaUniversityPickerMarkup", script)
+        self.assertIn('name="arkNovaUniversity"', script)
+        self.assertIn("option.available === false", script)
+        self.assertIn("arkNovaUniversityRewardsMarkup", script)
+        self.assertIn(".arkn-university-option.is-selected", stylesheet)
+        self.assertIn(".arkn-university-option.is-unavailable", stylesheet)
+
+    def test_card_layout_is_wide_and_marks_level_two_cards(self) -> None:
+        script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")
+        stylesheet = (ROOT / "static" / "ark_nova.css").read_text(encoding="utf-8")
+        self.assertIn("function arkNovaCardKindLabel", script)
+        self.assertIn('level >= 2 ? " (II)" : ""', script)
+        self.assertIn("arkNovaCardKindLabel(card)", script)
+        self.assertIn("flex: 0 0 176px", stylesheet)
+        self.assertIn("flex-basis: min(72vw, 156px)", stylesheet)
+
     def test_building_picker_uses_fixed_polyhex_pieces(self) -> None:
         script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")
         for size in range(1, 6):

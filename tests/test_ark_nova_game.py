@@ -184,6 +184,34 @@ class ArkNovaGameTests(unittest.TestCase):
             self.assertIsNone(error)
             self.assertIn("africa", state["players"][player_id]["partner_zoos"])
 
+    def test_university_options_expose_rewards_and_live_availability(self) -> None:
+        state = self.make_state()
+        view = ArkNovaGame.get_public_view(state, "p1")
+        options = {item["id"]: item for item in view["association_supply"]["university_options"]}
+        self.assertEqual(options["university_science"]["science"], 2)
+        self.assertEqual(options["university_reputation"]["reputation"], 1)
+        self.assertEqual(options["university_hand_limit"]["hand_limit"], 5)
+        self.assertTrue(all(item["available"] for item in options.values()))
+
+        self.set_slot(state, "p1", "association", 4)
+        _, error = ArkNovaGame.apply_action(
+            state, "p1",
+            {"type": "association", "tasks": [{"task": "university", "university_id": "university_science"}]},
+        )
+        self.assertIsNone(error)
+        p1_option = next(
+            item for item in ArkNovaGame.get_public_view(state, "p1")["association_supply"]["university_options"]
+            if item["id"] == "university_science"
+        )
+        self.assertTrue(p1_option["owned_by_you"])
+        self.assertFalse(p1_option["available"])
+        self.assertEqual(p1_option["remaining"], 3)
+        p2_option = next(
+            item for item in ArkNovaGame.get_public_view(state, "p2")["association_supply"]["university_options"]
+            if item["id"] == "university_science"
+        )
+        self.assertTrue(p2_option["available"])
+
     def test_two_player_first_donation_costs_two(self) -> None:
         state = self.make_state()
         player = state["players"]["p1"]

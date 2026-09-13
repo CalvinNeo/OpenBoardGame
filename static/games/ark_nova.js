@@ -54,6 +54,12 @@
     large_bird_aviary: { name: "Large Bird Aviary", short: "Aviary", icon: "🪶" },
   };
 
+  const ARK_NOVA_UNIVERSITIES = Object.freeze({
+    university_science: { name: "Research university", science: 2 },
+    university_reputation: { name: "Reputation university", science: 1, reputation: 1 },
+    university_hand_limit: { name: "Hand-limit university", science: 1, hand_limit: 5 },
+  });
+
   // Printed enclosure pieces are fixed polyhexes. The first coordinate is the
   // anchor selected on Map 0; pieces may rotate, but are never reflected.
   const ARK_NOVA_BUILDING_FOOTPRINTS = Object.freeze({
@@ -288,6 +294,22 @@
     if (value === "sponsor") return "sponsor";
     if (value === "animal") return "animal";
     return String(value);
+  }
+
+  function arkNovaCardLevel(card) {
+    const normalized = arkNovaCardObject(card);
+    const play = normalized.play || {};
+    const printedLevel = arkNovaNumber(play.minimum_action_level_from_card_condition, 1);
+    const conditionLevel = arkNovaAsArray(play.conditions)
+      .filter((condition) => condition && condition.kind === "action_upgrade")
+      .reduce((level, condition) => Math.max(level, arkNovaNumber(condition.minimum_level, 2)), 1);
+    return Math.max(printedLevel, conditionLevel);
+  }
+
+  function arkNovaCardKindLabel(card) {
+    const type = arkNovaCardType(card);
+    const level = ["animal", "sponsor"].includes(type) ? arkNovaCardLevel(card) : 1;
+    return `${arkNovaTitle(type)}${level >= 2 ? " (II)" : ""}`;
   }
 
   function arkNovaCardIconTags(card) {
@@ -933,7 +955,7 @@
       <article class="${classes}" data-card-id="${arkNovaEscape(id)}" data-card-type="${arkNovaEscape(type)}">
         ${folder}
         <button type="button" class="arkn-card-main" ${mainInteraction}>
-          <span class="arkn-card-topline"><span class="arkn-card-id">#${arkNovaEscape(id || "—")}</span><span class="arkn-card-kind">${arkNovaEscape(arkNovaTitle(type))}</span></span>
+          <span class="arkn-card-topline"><span class="arkn-card-id">#${arkNovaEscape(id || "—")}</span><span class="arkn-card-kind">${arkNovaEscape(arkNovaCardKindLabel(card))}</span></span>
           <strong class="arkn-card-name">${arkNovaEscape(arkNovaCardName(card))}</strong>
           ${englishName && englishName !== arkNovaCardName(card) ? `<span class="arkn-card-en">${arkNovaEscape(englishName)}</span>` : ""}
           ${arkNovaCardArtMarkup(card)}
@@ -968,10 +990,10 @@
       <li><strong>${arkNovaEscape(ability.name_zh || arkNovaTitle(ability.ability || ability.kind || ability.timing))}</strong><span>${arkNovaRichText(ability.text_zh || ability.description_zh || "")}</span></li>`).join("");
     const html = `
       <article class="arkn-detail-card arkn-detail-${arkNovaEscape(arkNovaCardType(card))}">
-        <div class="arkn-detail-heading"><span>#${arkNovaEscape(arkNovaCardId(card))}</span><strong>${arkNovaEscape(arkNovaCardName(card))}</strong><em>${arkNovaEscape(arkNovaCardEnglishName(card))}</em></div>
+        <div class="arkn-detail-heading"><span>#${arkNovaEscape(arkNovaCardId(card))} · ${arkNovaEscape(arkNovaCardKindLabel(card))}</span><strong>${arkNovaEscape(arkNovaCardName(card))}</strong><em>${arkNovaEscape(arkNovaCardEnglishName(card))}</em></div>
         ${arkNovaCardType(card) === "conservation_project" ? arkNovaProjectSupportMarkup(card, { detail: true }) : ""}
-        ${arkNovaCardArtMarkup(card, true)}
         ${arkNovaCardFactsMarkup(card, { detail: true })}
+        ${arkNovaCardArtMarkup(card, true)}
         <div class="arkn-detail-icons"><strong>Card tags</strong>${icons || `<span>—</span>`}</div>
         <p>${arkNovaRichText(arkNovaCardSummary(card))}</p>
         ${abilityRows ? `<h4>Abilities & effects</h4><ul class="arkn-effect-list">${abilityRows}</ul>` : ""}
@@ -1071,7 +1093,7 @@
       <div class="arkn-project-row">${projectMarkup}</div>
       <div class="arkn-association-supply">
         <div><b>Partner zoos</b><div>${arkNovaSupplyItems(supply.partner_zoos || supply.partnerZoos, "Partner zoos")}</div></div>
-        <div><b>Universities</b><div>${arkNovaSupplyItems(supply.universities, "Universities")}</div></div>
+        <div><b>Universities</b>${arkNovaUniversitySupplyMarkup(view)}</div>
         <div><b>Donations</b><div>${arkNovaSupplyItems(supply.donations || supply.donation_slots, "Donations")}</div></div>
       </div>`;
   }
@@ -1651,17 +1673,70 @@
     }).join("");
   }
 
+  function arkNovaUniversityOption(rawOption) {
+    const raw = rawOption && typeof rawOption === "object" ? rawOption : { id: rawOption };
+    const id = String(raw.id || raw.type || "");
+    return { id, ...(ARK_NOVA_UNIVERSITIES[id] || {}), ...raw };
+  }
+
+  function arkNovaUniversityOptions(view) {
+    const supply = view && (view.association_supply || view.association) || {};
+    const detailed = arkNovaAsArray(supply.university_options);
+    if (detailed.length) return detailed.map(arkNovaUniversityOption);
+    const rawUniversities = arkNovaAsArray(supply.universities);
+    const ids = rawUniversities.length ? rawUniversities : Object.keys(ARK_NOVA_UNIVERSITIES);
+    const hasAvailability = Object.prototype.hasOwnProperty.call(supply, "available_universities");
+    const available = new Set(arkNovaAsArray(supply.available_universities).map(String));
+    return ids.map(arkNovaUniversityOption).map((option) => ({
+      ...option,
+      available: hasAvailability ? available.has(option.id) : option.available !== false,
+    }));
+  }
+
+  function arkNovaUniversityRewardsMarkup(rawOption) {
+    const option = arkNovaUniversityOption(rawOption);
+    const rewards = [];
+    if (option.science) rewards.push(`<span title="Science icons">🔬<b>×${arkNovaEscape(option.science)}</b></span>`);
+    if (option.reputation) rewards.push(`<span title="Reputation">🎓<b>+${arkNovaEscape(option.reputation)}</b></span>`);
+    if (option.hand_limit) rewards.push(`<span title="Hand limit">🂠<b>${arkNovaEscape(option.hand_limit)}</b></span>`);
+    return rewards.join("");
+  }
+
+  function arkNovaUniversityStatus(option) {
+    if (option.owned_by_you) return "Already taken by you";
+    if (option.available === false) return "Unavailable";
+    if (option.remaining != null && option.total != null) return `${option.remaining} / ${option.total} tokens left`;
+    return "Available now";
+  }
+
+  function arkNovaUniversityPickerMarkup(view) {
+    const options = arkNovaUniversityOptions(view);
+    const availableCount = options.filter((option) => option.available !== false).length;
+    return `<fieldset class="arkn-university-picker">
+      <legend>Choose a university <small>${availableCount} available to you</small></legend>
+      <div class="arkn-university-options">${options.map((option) => {
+        const selected = arkNovaUi.associationDraft.university_id === option.id;
+        const unavailable = option.available === false;
+        return `<label class="arkn-university-option ${selected ? "is-selected" : ""} ${unavailable ? "is-unavailable" : ""}">
+          <input type="radio" name="arkNovaUniversity" value="${arkNovaEscape(option.id)}" ${selected ? "checked" : ""} ${unavailable ? "disabled" : ""}>
+          <span><b>${arkNovaEscape(option.name || arkNovaTitle(option.id))}</b><span class="arkn-university-rewards">${arkNovaUniversityRewardsMarkup(option)}</span><small>${arkNovaEscape(arkNovaUniversityStatus(option))}</small></span>
+        </label>`;
+      }).join("")}</div>
+    </fieldset>`;
+  }
+
+  function arkNovaUniversitySupplyMarkup(view) {
+    return `<div class="arkn-university-supply">${arkNovaUniversityOptions(view).map((option) => `<span class="arkn-university-supply-card ${option.available === false ? "is-unavailable" : ""}"><b>${arkNovaEscape(option.name || arkNovaTitle(option.id))}</b><span class="arkn-university-rewards">${arkNovaUniversityRewardsMarkup(option)}</span><small>${arkNovaEscape(arkNovaUniversityStatus(option))}</small></span>`).join("")}</div>`;
+  }
+
   function arkNovaAssociationFields(view) {
     const draft = arkNovaUi.associationDraft;
     const supply = view.association_supply || view.association || {};
     const partnerZoos = arkNovaAsArray(supply.available_partner_zoos).length
       ? arkNovaAsArray(supply.available_partner_zoos)
       : ARK_NOVA_CONTINENTS;
-    const universities = arkNovaAsArray(supply.available_universities).length
-      ? supply.available_universities
-      : supply.universities;
     if (draft.task === "partner_zoo") return `<label><span>Continent</span><select id="arkNovaAssociationContinent">${partnerZoos.map((continent) => `<option value="${arkNovaEscape(continent)}" ${draft.continent === continent ? "selected" : ""}>${arkNovaEscape(arkNovaTitle(continent))}</option>`).join("")}</select></label>`;
-    if (draft.task === "university") return `<label><span>University</span><select id="arkNovaAssociationUniversity"><option value="">Choose university</option>${arkNovaSupplyOptions(universities, ["university_reputation", "university_science", "university_hand_limit"])}</select></label>`;
+    if (draft.task === "university") return arkNovaUniversityPickerMarkup(view);
     if (draft.task === "support_project") {
       const projects = arkNovaProjects(view).map(arkNovaCardObject);
       const selectedProject = projects.find((card) => arkNovaCardId(card) === String(draft.project_id));
@@ -1681,7 +1756,11 @@
 
   function arkNovaAssociationQueueMarkup() {
     if (!arkNovaUi.associationQueue.length) return `<div class="arkn-empty arkn-empty-inline">No association tasks queued.</div>`;
-    return `<ol class="arkn-plan-list">${arkNovaUi.associationQueue.map((task) => `<li><span>♟</span><b>${arkNovaEscape(arkNovaTitle(task.task))}</b><small>${arkNovaEscape(task.continent || task.university_id || task.project_id || "")}</small></li>`).join("")}</ol>`;
+    return `<ol class="arkn-plan-list">${arkNovaUi.associationQueue.map((task) => {
+      const university = task.university_id && arkNovaUniversityOption(task.university_id);
+      const detail = university ? university.name : task.continent || task.project_id || "";
+      return `<li><span>♟</span><b>${arkNovaEscape(arkNovaTitle(task.task))}</b><small>${arkNovaEscape(detail)}</small></li>`;
+    }).join("")}</ol>`;
   }
 
   function arkNovaRenderAssociationComposer(view) {
@@ -2180,7 +2259,7 @@
       arkNovaUi.associationDraft.task = target.value;
     } else if (target.id === "arkNovaAssociationContinent") {
       arkNovaUi.associationDraft.continent = target.value;
-    } else if (target.id === "arkNovaAssociationUniversity") {
+    } else if (target.name === "arkNovaUniversity") {
       arkNovaUi.associationDraft.university_id = target.value;
     } else if (target.id === "arkNovaAssociationProject") {
       arkNovaUi.associationDraft.project_id = target.value;
