@@ -661,27 +661,43 @@ function renderGameList(games) {
   }
   gameListEl.innerHTML = "";
   if (!games || !games.length) {
+    gameListEl.classList.add("hidden");
     gameListEmpty.classList.remove("hidden");
     return;
   }
+  gameListEl.classList.remove("hidden");
   gameListEmpty.classList.add("hidden");
   games.forEach((g) => {
-    const item = document.createElement("div");
+    const item = document.createElement("button");
     item.className = "game-item";
+    item.type = "button";
     item.dataset.gameId = g.game_id;
     const weightLabel = formatGameWeight(g.game_id);
-    item.title = `BGG Weight: ${weightLabel}`;
+    const playerLabel =
+      g.min_players === g.max_players
+        ? `${g.min_players} ${g.min_players === 1 ? "player" : "players"}`
+        : `${g.min_players}-${g.max_players} players`;
+    item.title = `${g.name} · BGG Weight: ${weightLabel} · ${playerLabel}`;
+    item.setAttribute("aria-label", item.title);
     const nameEl = document.createElement("span");
     nameEl.className = "game-item-name";
-    nameEl.textContent = `${g.name} (${weightLabel})`;
+    nameEl.textContent = g.name;
+    const metaEl = document.createElement("span");
+    metaEl.className = "game-item-meta";
+    const weightEl = document.createElement("span");
+    weightEl.className = "game-item-weight";
+    weightEl.textContent = `⚖️ ${weightLabel}`;
+    weightEl.setAttribute("aria-hidden", "true");
     const playersEl = document.createElement("span");
     playersEl.className = "game-item-players";
-    playersEl.textContent =
-      g.min_players === g.max_players
-        ? `${g.min_players} players`
-        : `${g.min_players}-${g.max_players} players`;
+    playersEl.textContent = `👥 ${
+      g.min_players === g.max_players ? g.min_players : `${g.min_players}-${g.max_players}`
+    }`;
+    playersEl.setAttribute("aria-hidden", "true");
+    metaEl.appendChild(weightEl);
+    metaEl.appendChild(playersEl);
     item.appendChild(nameEl);
-    item.appendChild(playersEl);
+    item.appendChild(metaEl);
     item.addEventListener("click", () => {
       selectGameFromModal(g.game_id);
     });
@@ -1820,6 +1836,22 @@ if (createRoomModal) {
     }
   });
 }
+
+document.addEventListener("keydown", (event) => {
+  if (
+    event.key !== "Escape" ||
+    !createRoomModal ||
+    createRoomModal.classList.contains("hidden")
+  ) {
+    return;
+  }
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  closeCreateRoomModal();
+  if (createBtn) {
+    createBtn.focus();
+  }
+}, true);
 
 document.getElementById("readyBtn").addEventListener("click", () => {
   let nextReady = true;

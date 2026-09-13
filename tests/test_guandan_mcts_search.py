@@ -186,6 +186,82 @@ class GuandanMctsLayerTests(unittest.TestCase):
         self.assertEqual(status["target_depth"], 0)
 
 
+class GuandanMinimaxAnytimeTests(unittest.TestCase):
+    def test_timeout_keeps_last_complete_depth_and_uses_compact_clone(self):
+        state = {
+            "phase": "playing",
+            "current_trick": {"player_id": "opp"},
+            "_ai_eval_cache": {},
+        }
+        action_a = {"type": "play", "card_ids": [11]}
+        action_b = {"type": "play", "card_ids": [22]}
+        actions = [action_a, action_b]
+        clock = [0.0]
+
+        def apply_action(target, _bot_id, action):
+            target["branch"] = action["card_ids"][0]
+            return [], None
+
+        def minimax_value(target, _bot_id, depth, *_args, **_kwargs):
+            if depth == 0:
+                return 1.0 if target["branch"] == 11 else 5.0
+            clock[0] = 11.0
+            return 1000.0
+
+        with ExitStack() as stack:
+            stack.enter_context(mock.patch.object(
+                guandan.GuandanGame,
+                "get_legal_actions",
+                return_value=["play", "pass"],
+            ))
+            stack.enter_context(mock.patch.object(
+                guandan, "_candidate_actions", return_value=actions
+            ))
+            stack.enter_context(mock.patch.object(
+                guandan,
+                "_filter_overbomb_actions",
+                side_effect=lambda _state, _player_id, items: items,
+            ))
+            stack.enter_context(mock.patch.object(
+                guandan_ai, "_forced_endgame_control_relay_action", return_value=None
+            ))
+            stack.enter_context(mock.patch.object(
+                guandan_ai, "_quick_candidate_score", return_value=0.0
+            ))
+            stack.enter_context(mock.patch.object(
+                guandan.GuandanGame, "apply_action", side_effect=apply_action
+            ))
+            stack.enter_context(mock.patch.object(
+                guandan_ai, "_minimax_value", side_effect=minimax_value
+            ))
+            deepcopy_mock = stack.enter_context(mock.patch.object(
+                guandan_ai.copy,
+                "deepcopy",
+                side_effect=AssertionError("minimax should use the compact search clone"),
+            ))
+            stack.enter_context(mock.patch.object(
+                guandan_ai.time, "perf_counter", side_effect=lambda: clock[0]
+            ))
+            chosen = guandan._minimax_pick_action(
+                state,
+                "bot",
+                depth=3,
+                width=2,
+                deadline=10.0,
+            )
+
+        self.assertEqual(chosen, action_b)
+        status = state["_ai_eval_cache"]["minimax_anytime"]
+        self.assertEqual(status["completed_depth"], 1)
+        self.assertEqual(status["interrupted_depth"], 2)
+        self.assertEqual(status["target_depth"], 3)
+        self.assertEqual(status["evaluated"], 2)
+        self.assertEqual(status["attempted"], 3)
+        self.assertTrue(status["deadline_limited"])
+        self.assertFalse(status["used_initial_incumbent"])
+        deepcopy_mock.assert_not_called()
+
+
 class GuandanMctsSubtreeTests(unittest.TestCase):
     def test_pruned_subtree_matches_exhaustive_minimax(self):
         rng = random.Random(19)

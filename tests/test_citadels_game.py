@@ -371,6 +371,92 @@ class CitadelsGameTests(unittest.TestCase):
         self.assertEqual(action["type"], "use_assassin")
         self.assertNotEqual(action["target_rank"], 7)
 
+    def test_round_recap_reveals_roles_and_waits_for_every_player(self):
+        state = CitadelsGame.init_game({}, _players(2))
+        state["phase"] = "turn"
+        state["active_turn"] = None
+        state["players"]["p1"]["chosen_ranks"] = [1, 4]
+        state["players"]["p1"]["revealed_ranks"] = [1, 4]
+        state["players"]["p2"]["chosen_ranks"] = [2, 7]
+        state["players"]["p2"]["revealed_ranks"] = [2]
+        state["killed_rank"] = 7
+        state["round_actions"] = {
+            "p1": [{"type": "ability", "text": "Assassinated 建筑师.", "role_rank": 1}],
+            "p2": [{"type": "income", "text": "Took 🪙 2 income.", "role_rank": 2}],
+        }
+
+        _finish_round(state)
+
+        self.assertEqual(state["phase"], "round_end")
+        self.assertEqual(state["round"], 1)
+        summary = state["last_round_summary"]
+        self.assertEqual(summary["round"], 1)
+        p2_summary = next(row for row in summary["players"] if row["player_id"] == "p2")
+        architect = next(role for role in p2_summary["roles"] if role["rank"] == 7)
+        self.assertTrue(architect["assassinated"])
+        self.assertFalse(architect["acted"])
+        self.assertEqual(CitadelsGame.get_legal_actions(state, "p1"), ["next_round"])
+        self.assertEqual(CitadelsGame.get_legal_actions(state, "p2"), ["next_round"])
+
+        events, error = CitadelsGame.apply_action(state, "p1", {"type": "next_round"})
+        self.assertIsNone(error)
+        self.assertEqual(state["phase"], "round_end")
+        self.assertEqual([event["type"] for event in events], ["citadels:next_round_ready"])
+        self.assertEqual(CitadelsGame.get_legal_actions(state, "p1"), [])
+
+        events, error = CitadelsGame.apply_action(state, "p2", {"type": "next_round"})
+        self.assertIsNone(error)
+        self.assertEqual(state["phase"], "draft")
+        self.assertEqual(state["round"], 2)
+        self.assertIsNone(state["last_round_summary"])
+        self.assertEqual(
+            [event["type"] for event in events],
+            ["citadels:next_round_ready", "citadels:next_round"],
+        )
+
+    def test_final_round_keeps_role_and_score_recap(self):
+        state = CitadelsGame.init_game({"winning_city_size": 7}, _players(2))
+        state["phase"] = "turn"
+        state["active_turn"] = None
+        state["players"]["p1"]["chosen_ranks"] = [4]
+        state["players"]["p1"]["revealed_ranks"] = [4]
+        state["players"]["p2"]["chosen_ranks"] = [7]
+        state["players"]["p2"]["revealed_ranks"] = [7]
+        state["players"]["p1"]["city"] = [
+            {
+                "id": f"final_{index}",
+                "name_cn": f"District {index}",
+                "name_en": f"District {index}",
+                "color": ["blue", "green", "yellow", "red", "purple", "blue", "green"][index],
+                "cost": 2,
+                "text": "",
+                "score_bonus": 0,
+                "protect_from_warlord": False,
+                "counts_as_any_color": False,
+            }
+            for index in range(7)
+        ]
+        state["first_completed_city_player_id"] = "p1"
+
+        _finish_round(state)
+
+        self.assertEqual(state["phase"], "game_over")
+        self.assertTrue(state["game_over"])
+        self.assertTrue(state["last_round_summary"]["is_final_round"])
+        self.assertIn("p1", state["last_round_summary"]["scores"])
+        self.assertEqual(state["last_round_summary"]["winner_ids"], state["winner_ids"])
+
+    def test_bot_confirms_round_recap(self):
+        players = _players(2)
+        players[1]["is_bot"] = True
+        state = CitadelsGame.init_game({}, players)
+        state["phase"] = "round_end"
+        state["next_round_ready"] = []
+
+        action = CitadelsGame.bot_move(state, "p2")
+
+        self.assertEqual(action, {"type": "next_round", "delay_ms": 450})
+
 
 if __name__ == "__main__":
     unittest.main()

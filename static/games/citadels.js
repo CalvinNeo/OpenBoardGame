@@ -16,6 +16,14 @@ const citadelsActions = document.getElementById("citadelsActions");
 const citadelsHand = document.getElementById("citadelsHand");
 const citadelsPlayers = document.getElementById("citadelsPlayers");
 const citadelsLog = document.getElementById("citadelsLog");
+const citadelsRoundSummary = document.getElementById("citadelsRoundSummary");
+const citadelsSummaryTitle = document.getElementById("citadelsSummaryTitle");
+const citadelsSummarySubtitle = document.getElementById("citadelsSummarySubtitle");
+const citadelsSummaryStatus = document.getElementById("citadelsSummaryStatus");
+const citadelsSummaryHighlights = document.getElementById("citadelsSummaryHighlights");
+const citadelsSummaryPlayers = document.getElementById("citadelsSummaryPlayers");
+const citadelsSummaryReadyList = document.getElementById("citadelsSummaryReadyList");
+const citadelsNextRoundBtn = document.getElementById("citadelsNextRoundBtn");
 const citadelsHelpBtn = document.getElementById("citadelsHelpBtn");
 const citadelsExplainBtn = document.getElementById("citadelsExplainBtn");
 const citadelsHelpModal = document.getElementById("citadelsHelpModal");
@@ -53,6 +61,58 @@ function citadelsStepLabel(step) {
   if (step === "choose_draw") return "Keep 1 card";
   if (step === "main") return "Main actions";
   return step || "-";
+}
+
+function citadelsPhaseText(phase) {
+  if (phase === "draft") return "Draft";
+  if (phase === "turn") return "Role Turns";
+  if (phase === "round_end") return "Round Recap";
+  if (phase === "game_over") return "Game Over";
+  return phase || "-";
+}
+
+function citadelsRoleEmoji(rank) {
+  const icons = {
+    1: "🗡️",
+    2: "🥷",
+    3: "🎩",
+    4: "👑",
+    5: "⛪",
+    6: "💰",
+    7: "🏗️",
+    8: "⚔️",
+    9: "👸",
+  };
+  return icons[Number(rank)] || "🎭";
+}
+
+function citadelsActionEmoji(actionType) {
+  const icons = {
+    income: "🪙",
+    draw: "🃏",
+    tax: "💰",
+    build: "🏗️",
+    ability: "✨",
+    bonus: "🎁",
+    crown: "👑",
+    targeted: "💥",
+    end_turn: "✓",
+  };
+  return icons[actionType] || "•";
+}
+
+function citadelsFindSummaryRole(summary, rank) {
+  const wantedRank = Number(rank);
+  for (const player of summary?.players || []) {
+    const role = (player.roles || []).find((entry) => Number(entry.rank) === wantedRank);
+    if (role) return role;
+  }
+  return (summary?.unassigned_roles || []).find((entry) => Number(entry.rank) === wantedRank) || null;
+}
+
+function citadelsSummaryRoleLabel(summary, rank) {
+  const role = citadelsFindSummaryRole(summary, rank);
+  return role ? `${citadelsRoleEmoji(role.rank)} ${role.rank}. ${role.name_cn}` : "-";
 }
 
 function getCitadelsSelfPlayer(view) {
@@ -98,6 +158,13 @@ function clearCitadelsState() {
   if (citadelsHand) citadelsHand.innerHTML = "";
   if (citadelsPlayers) citadelsPlayers.innerHTML = "";
   if (citadelsLog) citadelsLog.innerHTML = "";
+  if (citadelsRoundSummary) {
+    citadelsRoundSummary.classList.add("hidden");
+    citadelsRoundSummary.setAttribute("aria-hidden", "true");
+  }
+  if (citadelsSummaryHighlights) citadelsSummaryHighlights.innerHTML = "";
+  if (citadelsSummaryPlayers) citadelsSummaryPlayers.innerHTML = "";
+  if (citadelsSummaryReadyList) citadelsSummaryReadyList.innerHTML = "";
   closeCitadelsHelpModal();
   closeCitadelsExplainModal();
 }
@@ -196,6 +263,11 @@ function renderCitadelsBanner(view) {
     citadelsBannerBody.textContent = `Draft phase. ${name} is choosing a role.`;
     return;
   }
+  if (view.phase === "round_end") {
+    const progress = view.next_round_progress || {};
+    citadelsBannerBody.textContent = `Round ${view.round} complete. Review every role and action below · ${progress.done || 0}/${progress.total || 0} ready.`;
+    return;
+  }
   const role = view.current_turn_role;
   const currentPlayer = view.current_turn_player ? findPlayerName(view, view.current_turn_player) : "-";
   if (role) {
@@ -203,6 +275,219 @@ function renderCitadelsBanner(view) {
     return;
   }
   citadelsBannerBody.textContent = "Waiting for the next role.";
+}
+
+function citadelsCreateSummaryHighlight(icon, label, value, wide = false) {
+  const item = document.createElement("div");
+  item.className = "citadels-summary-highlight";
+  if (wide) item.classList.add("wide");
+  const iconNode = document.createElement("span");
+  iconNode.className = "citadels-summary-highlight-icon";
+  iconNode.textContent = icon;
+  const copy = document.createElement("div");
+  const labelNode = document.createElement("div");
+  labelNode.className = "citadels-summary-highlight-label";
+  labelNode.textContent = label;
+  const valueNode = document.createElement("div");
+  valueNode.className = "citadels-summary-highlight-value";
+  valueNode.textContent = value;
+  copy.append(labelNode, valueNode);
+  item.append(iconNode, copy);
+  return item;
+}
+
+function citadelsBuildSummaryRoleBadge(role) {
+  const badge = document.createElement("span");
+  badge.className = "citadels-summary-role";
+  if (role.assassinated) badge.classList.add("assassinated");
+  else if (role.acted) badge.classList.add("acted");
+  else badge.classList.add("skipped");
+  if (role.robbed) badge.classList.add("robbed");
+
+  let status = role.assassinated ? "assassinated" : role.acted ? "acted" : "did not act";
+  if (role.robbed) status += " · robbed";
+  badge.textContent = `${citadelsRoleEmoji(role.rank)} ${role.rank}. ${role.name_cn} · ${status}`;
+  badge.title = role.name_en || role.name_cn || "Role";
+  return badge;
+}
+
+function citadelsBuildSummaryPlayer(view, summary, player, readyPlayers) {
+  const card = document.createElement("article");
+  card.className = "citadels-summary-player";
+  if (player.player_id === view.you) card.classList.add("self");
+  if ((summary.winner_ids || view.winner_ids || []).includes(player.player_id)) card.classList.add("winner");
+
+  const header = document.createElement("div");
+  header.className = "citadels-summary-player-header";
+  const identity = document.createElement("div");
+  identity.className = "citadels-summary-player-name";
+  identity.textContent = player.name || findPlayerName(view, player.player_id);
+  if (player.is_bot) {
+    const bot = document.createElement("span");
+    bot.className = "citadels-summary-bot";
+    bot.textContent = "BOT";
+    identity.appendChild(bot);
+  }
+  header.appendChild(identity);
+  if (view.phase === "round_end") {
+    const readiness = document.createElement("span");
+    readiness.className = "citadels-summary-player-ready";
+    const isReady = readyPlayers.has(player.player_id);
+    readiness.classList.toggle("ready", isReady);
+    readiness.textContent = isReady ? "✅ Ready" : "⏳ Reviewing";
+    header.appendChild(readiness);
+  }
+
+  const roles = document.createElement("div");
+  roles.className = "citadels-summary-role-list";
+  (player.roles || []).forEach((role) => roles.appendChild(citadelsBuildSummaryRoleBadge(role)));
+  if (!roles.children.length) {
+    const emptyRole = document.createElement("span");
+    emptyRole.className = "citadels-summary-role skipped";
+    emptyRole.textContent = "No assigned role";
+    roles.appendChild(emptyRole);
+  }
+
+  const stats = document.createElement("div");
+  stats.className = "citadels-summary-player-stats";
+  [
+    `🪙 ${player.gold}`,
+    `🏙️ ${player.city_count} districts`,
+    `⭐ ${player.city_value} city value`,
+    `🃏 ${player.hand_count} cards`,
+  ].forEach((value) => {
+    const stat = document.createElement("span");
+    stat.textContent = value;
+    stats.appendChild(stat);
+  });
+
+  const scores = summary.scores || view.scores || {};
+  const score = scores[player.player_id];
+  if (score) {
+    const totalScore = document.createElement("div");
+    totalScore.className = "citadels-summary-score";
+    totalScore.textContent = `🏆 ${score.total_score} points`;
+    totalScore.title = `Districts ${score.base_score} + colors ${score.full_color_bonus} + completion ${score.completion_bonus} + special ${score.district_bonus}`;
+    stats.appendChild(totalScore);
+  }
+
+  const actionHeading = document.createElement("div");
+  actionHeading.className = "citadels-summary-action-heading";
+  actionHeading.textContent = "What they did";
+  const actions = document.createElement("div");
+  actions.className = "citadels-summary-actions";
+  const playerActions = Array.isArray(player.actions) ? player.actions : [];
+  if (!playerActions.length) {
+    const empty = document.createElement("div");
+    empty.className = "citadels-summary-action empty";
+    empty.textContent = "No completed public actions.";
+    actions.appendChild(empty);
+  } else {
+    playerActions.forEach((action) => {
+      const row = document.createElement("div");
+      row.className = "citadels-summary-action";
+      const icon = document.createElement("span");
+      icon.className = "citadels-summary-action-icon";
+      icon.textContent = citadelsActionEmoji(action.type);
+      const text = document.createElement("span");
+      text.textContent = action.text || "Action completed.";
+      row.append(icon, text);
+      actions.appendChild(row);
+    });
+  }
+
+  card.append(header, roles, stats, actionHeading, actions);
+  return card;
+}
+
+function renderCitadelsRoundSummary(view) {
+  if (!citadelsRoundSummary) return;
+  const summary = view?.last_round_summary;
+  const show = Boolean(summary) && (view.phase === "round_end" || view.game_over);
+  citadelsRoundSummary.classList.toggle("hidden", !show);
+  citadelsRoundSummary.setAttribute("aria-hidden", String(!show));
+  if (!show) return;
+
+  const isFinal = Boolean(view.game_over || summary.is_final_round);
+  const readyPlayers = new Set(view.next_round_ready_player_ids || []);
+  const progress = view.next_round_progress || { done: readyPlayers.size, total: (view.players || []).length };
+  if (citadelsSummaryTitle) {
+    citadelsSummaryTitle.textContent = isFinal ? `Final Round · ${summary.round}` : `Round ${summary.round} Complete`;
+  }
+  if (citadelsSummarySubtitle) {
+    citadelsSummarySubtitle.textContent = isFinal
+      ? "Every identity is revealed. The final scoring breakdown is included below."
+      : "Every identity is revealed. The next draft starts after everyone confirms.";
+  }
+  if (citadelsSummaryStatus) {
+    citadelsSummaryStatus.textContent = isFinal ? "Final Scores" : `${progress.done || 0}/${progress.total || 0} Ready`;
+    citadelsSummaryStatus.classList.toggle("final", isFinal);
+  }
+
+  if (citadelsSummaryHighlights) {
+    citadelsSummaryHighlights.innerHTML = "";
+    if (summary.killed_rank) {
+      citadelsSummaryHighlights.appendChild(
+        citadelsCreateSummaryHighlight("🗡️", "Assassinated", citadelsSummaryRoleLabel(summary, summary.killed_rank)),
+      );
+    }
+    if (summary.robbed_rank) {
+      citadelsSummaryHighlights.appendChild(
+        citadelsCreateSummaryHighlight("🥷", "Theft Target", citadelsSummaryRoleLabel(summary, summary.robbed_rank)),
+      );
+    }
+    if (summary.crown_holder) {
+      citadelsSummaryHighlights.appendChild(
+        citadelsCreateSummaryHighlight("👑", "Next Crown", findPlayerName(view, summary.crown_holder)),
+      );
+    }
+    if (summary.first_completed_city_player_id) {
+      citadelsSummaryHighlights.appendChild(
+        citadelsCreateSummaryHighlight("🏁", "First Complete City", findPlayerName(view, summary.first_completed_city_player_id)),
+      );
+    }
+    const unassigned = (summary.unassigned_roles || []).map(
+      (role) => `${citadelsRoleEmoji(role.rank)} ${role.rank}. ${role.name_cn}`,
+    );
+    if (unassigned.length) {
+      citadelsSummaryHighlights.appendChild(
+        citadelsCreateSummaryHighlight("🎭", "Not In Play", unassigned.join(" · "), true),
+      );
+    }
+  }
+
+  if (citadelsSummaryPlayers) {
+    citadelsSummaryPlayers.innerHTML = "";
+    (summary.players || []).forEach((player) => {
+      citadelsSummaryPlayers.appendChild(citadelsBuildSummaryPlayer(view, summary, player, readyPlayers));
+    });
+  }
+
+  if (citadelsSummaryReadyList) {
+    citadelsSummaryReadyList.innerHTML = "";
+    if (isFinal) {
+      const winnerNames = (summary.winner_ids || view.winner_ids || [])
+        .map((playerId) => findPlayerName(view, playerId))
+        .join(", ");
+      citadelsSummaryReadyList.textContent = winnerNames ? `🏆 Winner: ${winnerNames}` : "Final scoring complete.";
+    } else {
+      (view.players || []).forEach((player) => {
+        const item = document.createElement("span");
+        const isReady = readyPlayers.has(player.player_id);
+        item.className = `citadels-summary-ready-chip${isReady ? " ready" : ""}`;
+        item.textContent = `${isReady ? "✅" : "⏳"} ${player.name}`;
+        citadelsSummaryReadyList.appendChild(item);
+      });
+    }
+  }
+
+  if (citadelsNextRoundBtn) {
+    const canContinue = (view.legal_actions || []).includes("next_round");
+    const alreadyReady = readyPlayers.has(view.you);
+    citadelsNextRoundBtn.classList.toggle("hidden", isFinal);
+    citadelsNextRoundBtn.disabled = !canContinue;
+    citadelsNextRoundBtn.textContent = canContinue ? "Next Round" : alreadyReady ? "Ready ✓" : "Waiting for Players…";
+  }
 }
 
 function renderCitadelsYourRoles(view) {
@@ -386,17 +671,21 @@ function renderCitadelsActions(view) {
   }
 }
 
-function buildCitadelsDistrictCard(card) {
+function buildCitadelsDistrictCard(card, compact = false) {
   const node = document.createElement("div");
   node.className = `citadels-card citadels-color-${card.color}`;
+  if (compact) {
+    node.classList.add("citadels-city-card");
+    node.title = [card.name_en, card.text].filter(Boolean).join(" · ");
+  }
   const title = document.createElement("div");
   title.className = "citadels-card-title";
   title.textContent = `${citadelsColorEmoji(card.color)} ${card.name_cn}`;
   const cost = document.createElement("div");
   cost.className = "citadels-card-meta";
-  cost.textContent = `🪙 ${card.cost} · ${card.name_en}`;
+  cost.textContent = compact ? `🪙 ${card.cost}` : `🪙 ${card.cost} · ${card.name_en}`;
   node.append(title, cost);
-  if (card.text) {
+  if (card.text && !compact) {
     const text = document.createElement("div");
     text.className = "citadels-card-text";
     text.textContent = card.text;
@@ -508,7 +797,7 @@ function renderCitadelsPlayers(view) {
     const city = document.createElement("div");
     city.className = "citadels-city-grid";
     (player.city || []).forEach((district) => {
-      const districtNode = buildCitadelsDistrictCard(district);
+      const districtNode = buildCitadelsDistrictCard(district, true);
       const destroyTarget = destroyTargets.get(`${player.player_id}:${district.id}`);
       if (legal.has("destroy_district") && destroyTarget) {
         const actionRow = document.createElement("div");
@@ -569,7 +858,7 @@ function renderCitadelsGameState(data) {
     setGamePanelVisibility("citadels");
   }
 
-  if (citadelsPhaseLabel) citadelsPhaseLabel.textContent = view.phase || "-";
+  if (citadelsPhaseLabel) citadelsPhaseLabel.textContent = citadelsPhaseText(view.phase);
   if (citadelsRoundLabel) citadelsRoundLabel.textContent = view.round ?? "-";
   if (citadelsModeLabel) citadelsModeLabel.textContent = view.character_mode === "queen9" ? "8+Queen" : "Classic 8";
   if (citadelsCrownHolderLabel) citadelsCrownHolderLabel.textContent = view.crown_holder_name || "-";
@@ -585,6 +874,7 @@ function renderCitadelsGameState(data) {
   }
 
   renderCitadelsBanner(view);
+  renderCitadelsRoundSummary(view);
   renderCitadelsYourRoles(view);
   renderCitadelsActions(view);
   renderCitadelsHand(view);
@@ -606,6 +896,13 @@ if (citadelsHelpModalCloseBtn) {
 
 if (citadelsExplainModalCloseBtn) {
   citadelsExplainModalCloseBtn.addEventListener("click", closeCitadelsExplainModal);
+}
+
+if (citadelsNextRoundBtn) {
+  citadelsNextRoundBtn.addEventListener("click", () => {
+    if (!currentCitadelsView || !(currentCitadelsView.legal_actions || []).includes("next_round")) return;
+    sendAction({ type: "next_round" });
+  });
 }
 
 document.addEventListener("keydown", (event) => {

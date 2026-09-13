@@ -224,6 +224,29 @@ def _log(state: Dict, message: str) -> None:
         del public_log[:-60]
 
 
+def _record_round_action(
+    state: Dict,
+    player_id: str,
+    action_type: str,
+    text: str,
+    role_rank: Optional[int] = None,
+) -> None:
+    """Keep a structured, public recap without exposing a player's current hand."""
+    if player_id not in state.get("players", {}):
+        return
+    actions_by_player = state.setdefault("round_actions", {})
+    player_actions = actions_by_player.setdefault(player_id, [])
+    entry = {
+        "type": action_type,
+        "text": text,
+    }
+    if isinstance(role_rank, int):
+        entry["role_rank"] = role_rank
+    player_actions.append(entry)
+    if len(player_actions) > 40:
+        del player_actions[:-40]
+
+
 def _get_character_mode(player_count: int) -> str:
     return DRAFT_CONFIG[int(player_count)]["character_set"]
 
@@ -296,6 +319,9 @@ def _start_round(state: Dict) -> None:
         state["players"][pid]["chosen_ranks"] = []
         state["players"][pid]["revealed_ranks"] = []
 
+    state["round_actions"] = {pid: [] for pid in order}
+    state["last_round_summary"] = None
+    state["next_round_ready"] = []
     state["phase"] = "draft"
     state["character_mode"] = character_mode
     state["max_rank"] = max_rank
@@ -354,9 +380,17 @@ def _trigger_queen_bonus_if_needed(state: Dict, player_id: str) -> None:
     if state.get("killed_rank") == 4:
         state["queen_deferred_player_id"] = player_id
         _log(state, "皇后与国王相邻，但国王已被刺杀，3 金将在回合结束时结算。")
+        _record_round_action(
+            state,
+            player_id,
+            "bonus",
+            "Queen bonus was deferred because the King was assassinated.",
+            9,
+        )
         return
     state["players"][player_id]["gold"] += 3
     _log(state, f"{state['player_meta'][player_id]['name']} 的皇后因紧邻国王获得 3 金。")
+    _record_round_action(state, player_id, "bonus", "Gained 🪙 3 for sitting next to the King.", 9)
 
 
 def _start_role_turn(state: Dict, player_id: str, rank: int) -> None:
@@ -374,6 +408,20 @@ def _start_role_turn(state: Dict, player_id: str, rank: int) -> None:
                 thief_name = state["player_meta"][thief_player_id]["name"]
                 victim_name = state["player_meta"][player_id]["name"]
                 _log(state, f"盗贼从 {victim_name} 处偷走了 {amount} 金，交给 {thief_name}。")
+                _record_round_action(
+                    state,
+                    thief_player_id,
+                    "ability",
+                    f"Stole 🪙 {amount} from {victim_name}.",
+                    2,
+                )
+                _record_round_action(
+                    state,
+                    player_id,
+                    "targeted",
+                    f"Lost 🪙 {amount} to {thief_name}'s Thief.",
+                    rank,
+                )
 
     state["active_turn"] = {
         "player_id": player_id,
@@ -402,11 +450,19 @@ def _apply_post_income_bonuses(state: Dict, player_id: str, rank: int) -> None:
     if rank == 6:
         state["players"][player_id]["gold"] += 1
         _log(state, f"{state['player_meta'][player_id]['name']} 的商人额外获得 1 金。")
+        _record_round_action(state, player_id, "bonus", "Merchant gained an extra 🪙 1.", rank)
     if rank == 7:
         cards = _draw_cards(state, 2)
         state["players"][player_id]["hand"].extend(cards)
         if cards:
             _log(state, f"{state['player_meta'][player_id]['name']} 的建筑师额外抽了 {len(cards)} 张牌。")
+            _record_round_action(
+                state,
+                player_id,
+                "draw",
+                f"Architect drew {len(cards)} extra district card(s).",
+                rank,
+            )
 
 
 def _resolve_income_choice(state: Dict, choice: str) -> Optional[str]:
@@ -418,6 +474,7 @@ def _resolve_income_choice(state: Dict, choice: str) -> Optional[str]:
     if choice == "gold":
         state["players"][player_id]["gold"] += 2
         _log(state, f"{state['player_meta'][player_id]['name']} 选择拿 2 金。")
+        _record_round_action(state, player_id, "income", "Took 🪙 2 income.", rank)
         _apply_post_income_bonuses(state, player_id, rank)
         active_turn["step"] = "main"
         return None
@@ -427,12 +484,14 @@ def _resolve_income_choice(state: Dict, choice: str) -> Optional[str]:
     cards = _draw_cards(state, 2)
     if not cards:
         _log(state, f"{state['player_meta'][player_id]['name']} 选择摸牌，但牌库为空。")
+        _record_round_action(state, player_id, "draw", "Tried to draw districts, but the deck was empty.", rank)
         _apply_post_income_bonuses(state, player_id, rank)
         active_turn["step"] = "main"
         return None
     if len(cards) == 1:
         state["players"][player_id]["hand"].extend(cards)
         _log(state, f"{state['player_meta'][player_id]['name']} 抽到 1 张牌并直接收入手牌。")
+        _record_round_action(state, player_id, "draw", "Drew the final district card.", rank)
         _apply_post_income_bonuses(state, player_id, rank)
         active_turn["step"] = "main"
         return None
@@ -440,6 +499,7 @@ def _resolve_income_choice(state: Dict, choice: str) -> Optional[str]:
     active_turn["step"] = "choose_draw"
     active_turn["draw_offer"] = cards
     _log(state, f"{state['player_meta'][player_id]['name']} 需要从 2 张牌中留 1 张。")
+    _record_round_action(state, player_id, "draw", "Drew 2 district cards and chose 1 to keep.", rank)
     return None
 
 
@@ -458,8 +518,81 @@ def _resolve_draw_pick(state: Dict, card_id: str) -> Optional[str]:
     active_turn["draw_offer"] = []
     active_turn["step"] = "main"
     _log(state, f"{state['player_meta'][player_id]['name']} 留下了 {chosen['name_cn']}。")
+    _record_round_action(
+        state,
+        player_id,
+        "draw",
+        f"Kept {chosen['name_cn']} from the district draw.",
+        active_turn["rank"],
+    )
     _apply_post_income_bonuses(state, player_id, active_turn["rank"])
     return None
+
+
+def _round_role_summary(state: Dict, rank: int, acted_ranks: Optional[List[int]] = None) -> Dict:
+    definition = CHARACTER_DEFINITIONS.get(rank, {})
+    acted = rank in (acted_ranks or [])
+    return {
+        "rank": rank,
+        "name_cn": definition.get("name_cn") or f"角色{rank}",
+        "name_en": definition.get("name_en") or f"Role {rank}",
+        "acted": acted,
+        "assassinated": state.get("killed_rank") == rank,
+        "robbed": state.get("robbed_rank") == rank,
+    }
+
+
+def _build_round_summary(state: Dict) -> Dict:
+    actions_by_player = state.get("round_actions") or {}
+    players: List[Dict] = []
+    assigned_ranks = set()
+    for player_id in state["turn_order"]:
+        player = state["players"][player_id]
+        chosen_ranks = sorted(int(rank) for rank in player.get("chosen_ranks", []))
+        assigned_ranks.update(chosen_ranks)
+        players.append(
+            {
+                "player_id": player_id,
+                "name": state["player_meta"][player_id]["name"],
+                "is_bot": bool(state["player_meta"][player_id].get("is_bot")),
+                "roles": [
+                    _round_role_summary(state, rank, player.get("revealed_ranks", []))
+                    for rank in chosen_ranks
+                ],
+                "actions": [dict(entry) for entry in actions_by_player.get(player_id, [])],
+                "gold": int(player["gold"]),
+                "hand_count": len(player["hand"]),
+                "city_count": len(player["city"]),
+                "city_value": sum(int(card["cost"]) for card in player["city"]),
+            }
+        )
+
+    draft_state = state.get("draft_state") or {}
+    face_up_removed = set(draft_state.get("face_up_removed", []))
+    hidden_removed = set(draft_state.get("hidden_removed", []))
+    unassigned_roles = []
+    for rank in range(1, int(state.get("max_rank", 8)) + 1):
+        if rank in assigned_ranks:
+            continue
+        role = _round_role_summary(state, rank)
+        if rank in face_up_removed:
+            role["removal"] = "face_up"
+        elif rank in hidden_removed:
+            role["removal"] = "face_down"
+        else:
+            role["removal"] = "not_chosen"
+        unassigned_roles.append(role)
+
+    return {
+        "round": int(state.get("round", 1)),
+        "players": players,
+        "unassigned_roles": unassigned_roles,
+        "killed_rank": state.get("killed_rank"),
+        "robbed_rank": state.get("robbed_rank"),
+        "crown_holder": state.get("crown_holder"),
+        "first_completed_city_player_id": state.get("first_completed_city_player_id"),
+        "is_final_round": bool(state.get("first_completed_city_player_id")),
+    }
 
 
 def _begin_scoring(state: Dict) -> None:
@@ -517,18 +650,40 @@ def _finish_round(state: Dict) -> None:
         if king_owner and king_owner in _seat_neighbors(state["turn_order"], deferred_player):
             state["players"][deferred_player]["gold"] += 3
             _log(state, f"{state['player_meta'][deferred_player]['name']} 的皇后在回合结束时补发 3 金。")
+            _record_round_action(
+                state,
+                deferred_player,
+                "bonus",
+                "Received the deferred Queen bonus of 🪙 3.",
+                9,
+            )
         state["queen_deferred_player_id"] = None
 
     king_owner = _get_rank_owner(state, 4)
     if king_owner:
         state["crown_holder"] = king_owner
         _log(state, f"{state['player_meta'][king_owner]['name']} 获得了下轮皇冠。")
+        _record_round_action(state, king_owner, "crown", "Secured the crown for the next round.", 4)
+
+    state["active_turn"] = None
+    state["next_round_ready"] = []
+    state["last_round_summary"] = _build_round_summary(state)
 
     if state.get("first_completed_city_player_id"):
         _begin_scoring(state)
+        state["last_round_summary"]["scores"] = {
+            player_id: dict(score)
+            for player_id, score in state.get("scores", {}).items()
+        }
+        state["last_round_summary"]["winner_ids"] = list(state.get("winner_ids", []))
         return
 
-    state["round"] += 1
+    state["phase"] = "round_end"
+    _log(state, f"Round {state['round']} complete. Waiting for every player to continue.")
+
+
+def _start_next_round(state: Dict) -> None:
+    state["round"] = int(state.get("round", 1)) + 1
     _start_round(state)
 
 
@@ -591,6 +746,13 @@ def _resolve_build(state: Dict, card_id: str) -> Optional[str]:
     player["city"].append(card)
     active_turn["builds_used"] += 1
     _log(state, f"{state['player_meta'][player_id]['name']} 建造了 {card['name_cn']}。")
+    _record_round_action(
+        state,
+        player_id,
+        "build",
+        f"Built {card['name_cn']} for 🪙 {card['cost']}.",
+        active_turn["rank"],
+    )
     if state.get("first_completed_city_player_id") is None and _player_has_completed_city(state, player_id):
         state["first_completed_city_player_id"] = player_id
         _log(state, f"{state['player_meta'][player_id]['name']} 率先完成城市。")
@@ -614,6 +776,13 @@ def _resolve_collect_tax(state: Dict) -> Optional[str]:
         state,
         f"{state['player_meta'][player_id]['name']} 以 {_role_name(rank)} 收取了 {amount} 金税收。",
     )
+    _record_round_action(
+        state,
+        player_id,
+        "tax",
+        f"Collected 🪙 {amount} tax as {_role_name(rank)}.",
+        rank,
+    )
     return None
 
 
@@ -630,6 +799,13 @@ def _resolve_assassin(state: Dict, target_rank: int) -> Optional[str]:
     state["killed_rank"] = target_rank
     active_turn["ability_used"] = True
     _log(state, f"刺客宣布暗杀 {_role_name(target_rank)}。")
+    _record_round_action(
+        state,
+        active_turn["player_id"],
+        "ability",
+        f"Assassinated {_role_name(target_rank)}.",
+        1,
+    )
     return None
 
 
@@ -649,6 +825,13 @@ def _resolve_thief(state: Dict, target_rank: int) -> Optional[str]:
     state["thief_player_id"] = active_turn["player_id"]
     active_turn["ability_used"] = True
     _log(state, f"盗贼宣布偷窃 {_role_name(target_rank)}。")
+    _record_round_action(
+        state,
+        active_turn["player_id"],
+        "ability",
+        f"Targeted {_role_name(target_rank)} for theft.",
+        2,
+    )
     return None
 
 
@@ -669,6 +852,13 @@ def _resolve_magician_swap(state: Dict, target_player_id: str) -> Optional[str]:
     _log(
         state,
         f"{state['player_meta'][player_id]['name']} 与 {state['player_meta'][target_player_id]['name']} 交换了手牌。",
+    )
+    _record_round_action(
+        state,
+        player_id,
+        "ability",
+        f"Swapped hands with {state['player_meta'][target_player_id]['name']}.",
+        3,
     )
     return None
 
@@ -695,6 +885,13 @@ def _resolve_magician_redraw(state: Dict, card_ids: List[str]) -> Optional[str]:
     _log(
         state,
         f"{state['player_meta'][player_id]['name']} 以魔术师重抽了 {len(redraw_cards)} 张牌。",
+    )
+    _record_round_action(
+        state,
+        player_id,
+        "ability",
+        f"Redrew {len(redraw_cards)} district card(s) as Magician.",
+        3,
     )
     return None
 
@@ -759,6 +956,19 @@ def _resolve_warlord_destroy(state: Dict, target_player_id: str, district_id: st
         f"{state['player_meta'][player_id]['name']} 用军阀摧毁了 "
         f"{state['player_meta'][target_player_id]['name']} 的 {district['name_cn']}。",
     )
+    _record_round_action(
+        state,
+        player_id,
+        "ability",
+        f"Destroyed {state['player_meta'][target_player_id]['name']}'s {district['name_cn']} for 🪙 {destroy_cost}.",
+        8,
+    )
+    _record_round_action(
+        state,
+        target_player_id,
+        "targeted",
+        f"Lost {district['name_cn']} to the Warlord.",
+    )
     return None
 
 
@@ -791,24 +1001,28 @@ def _apply_draft_pick(state: Dict, player_id: str, rank: int) -> Optional[str]:
 
 def _summarize_players_for_view(state: Dict, viewer_id: str) -> List[Dict]:
     players_view: List[Dict] = []
+    reveal_round_roles = state.get("phase") in ("round_end", "game_over")
+    ready_players = set(state.get("next_round_ready", []))
     for pid in state["turn_order"]:
         player = state["players"][pid]
         meta = state["player_meta"][pid]
-        revealed_ranks = sorted(player["revealed_ranks"])
-        hidden_role_count = max(0, len(player["chosen_ranks"]) - len(revealed_ranks))
+        acted_ranks = sorted(player["revealed_ranks"])
+        visible_ranks = sorted(player["chosen_ranks"]) if reveal_round_roles else acted_ranks
+        hidden_role_count = 0 if reveal_round_roles else max(0, len(player["chosen_ranks"]) - len(acted_ranks))
         players_view.append(
             {
                 "player_id": pid,
                 "name": meta["name"],
                 "seat": meta["seat"],
+                "is_bot": bool(meta.get("is_bot")),
                 "gold": player["gold"],
                 "hand_count": len(player["hand"]),
                 "city_count": len(player["city"]),
                 "city": [_district_summary(card) for card in player["city"]],
-                "revealed_roles": [{"rank": rank, "name_cn": _role_name(rank)} for rank in revealed_ranks],
+                "revealed_roles": [{"rank": rank, "name_cn": _role_name(rank)} for rank in visible_ranks],
                 "hidden_role_count": hidden_role_count if pid != viewer_id else 0,
                 "your_hidden_roles": [
-                    {"rank": rank, "name_cn": _role_name(rank), "revealed": rank in revealed_ranks}
+                    {"rank": rank, "name_cn": _role_name(rank), "revealed": rank in acted_ranks}
                     for rank in player["chosen_ranks"]
                 ]
                 if pid == viewer_id
@@ -816,6 +1030,7 @@ def _summarize_players_for_view(state: Dict, viewer_id: str) -> List[Dict]:
                 "has_crown": pid == state.get("crown_holder"),
                 "completed_city": _player_has_completed_city(state, pid),
                 "score": state.get("scores", {}).get(pid, {}).get("total_score"),
+                "round_ready": pid in ready_players,
             }
         )
     return players_view
@@ -1412,6 +1627,9 @@ class CitadelsGame:
             "scores": {},
             "winner_ids": [],
             "public_log": [],
+            "round_actions": {pid: [] for pid in player_ids},
+            "last_round_summary": None,
+            "next_round_ready": [],
             "destroyed_districts": [],
             "game_over": False,
         }
@@ -1424,6 +1642,10 @@ class CitadelsGame:
             return []
         if player_id not in state.get("players", {}):
             return []
+        if state.get("phase") == "round_end":
+            if player_id in set(state.get("next_round_ready", [])):
+                return []
+            return ["next_round"]
         if state.get("phase") == "draft":
             draft_state = state.get("draft_state", {})
             if draft_state.get("current_player") == player_id:
@@ -1476,6 +1698,29 @@ class CitadelsGame:
         action_type = action.get("type")
         error: Optional[str] = None
 
+        if state.get("phase") == "round_end":
+            if action_type != "next_round":
+                return [], "only next_round allowed"
+            ready_players = state.setdefault("next_round_ready", [])
+            if player_id in ready_players:
+                return [], "already ready"
+            ready_players.append(player_id)
+            events = [
+                {
+                    "type": "citadels:next_round_ready",
+                    "payload": {"player_id": player_id},
+                }
+            ]
+            if all(pid in ready_players for pid in state["turn_order"]):
+                _start_next_round(state)
+                events.append(
+                    {
+                        "type": "citadels:next_round",
+                        "payload": {"round": state["round"]},
+                    }
+                )
+            return events, None
+
         if state.get("phase") == "draft":
             if action_type != "draft_character":
                 return [], "invalid draft action"
@@ -1527,6 +1772,13 @@ class CitadelsGame:
         elif action_type == "end_turn":
             if active_turn.get("step") != "main":
                 return [], "turn not ready to end"
+            _record_round_action(
+                state,
+                player_id,
+                "end_turn",
+                f"Ended the {_role_name(int(active_turn['rank']))} turn.",
+                int(active_turn["rank"]),
+            )
             _finish_active_turn(state)
         else:
             return [], "invalid action"
@@ -1585,7 +1837,13 @@ class CitadelsGame:
             .get(state.get("first_completed_city_player_id"), {})
             .get("name"),
             "winning_city_size": state["config"]["winning_city_size"],
-            "recent_log": list(state.get("public_log", [])[-15:]),
+            "recent_log": list(state.get("public_log", [])[-40:]),
+            "last_round_summary": state.get("last_round_summary"),
+            "next_round_ready_player_ids": list(state.get("next_round_ready", [])),
+            "next_round_progress": {
+                "done": len(state.get("next_round_ready", [])),
+                "total": len(state.get("turn_order", [])),
+            },
             "scores": state.get("scores", {}),
             "winner_ids": list(state.get("winner_ids", [])),
             "game_over": bool(state.get("game_over")),
@@ -1598,6 +1856,11 @@ class CitadelsGame:
             return None
         if bot_id not in state.get("players", {}):
             return None
+
+        if state.get("phase") == "round_end":
+            if bot_id in set(state.get("next_round_ready", [])):
+                return None
+            return {"type": "next_round", "delay_ms": 450}
 
         if state.get("phase") == "draft":
             draft_state = state.get("draft_state") or {}

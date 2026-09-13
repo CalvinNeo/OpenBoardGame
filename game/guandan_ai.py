@@ -6067,9 +6067,11 @@ def _lead_lighter_shape_preservation_penalty(
                 alt_score = _lead_cheap_option_score(state, player_id, option, alt_combo)
                 if alt_score + 4.6 < current_score:
                     continue
+                # Shedding one extra card is not worth opening with a control
+                # pair when a clean full house leaves that pair intact.
                 best_penalty = max(
                     best_penalty,
-                    6.2 + min(4.2, max(0.0, alt_score + 4.6 - current_score) * 0.8),
+                    10.8 + min(4.2, max(0.0, alt_score + 4.6 - current_score) * 0.8),
                 )
                 break
     return best_penalty
@@ -7481,24 +7483,11 @@ def _hand_decomposition_summary(hand: List[Dict], level_rank: int) -> Dict[str, 
             )
         )
         if not structured_large_hand:
-            summary = _empty_hand_decomposition_summary()
-            summary["turns"] = float(len(hand))
-            summary["singles"] = float(sum(1 for count in counts.values() if count == 1))
-            summary["low_singles"] = float(
-                sum(
-                    1
-                    for rank, count in counts.items()
-                    if count == 1 and _point_order_value(rank, level_rank) < LOW_SINGLE_VALUE_MAX
-                )
-            )
-            summary["control_singles"] = float(
-                sum(
-                    1
-                    for rank, count in counts.items()
-                    if count == 1 and _point_order_value(rank, level_rank) >= CONTROL_SINGLE_VALUE_MIN
-                )
-            )
-            return summary
+            # Keep the large-hand shortcut on the same scale as the detailed
+            # decomposition.  Returning an otherwise empty summary here made a
+            # 23-card hand look like 23 independent turns, while removing one
+            # card could suddenly reveal a five- or six-turn plan.
+            return _fast_hand_decomposition_summary(hand, level_rank)
 
     cache_key = _hand_decomposition_cache_key(hand, level_rank)
     cached = _HAND_DECOMP_CACHE.get(cache_key)
@@ -8426,6 +8415,20 @@ def _mcts_root_candidate_subset(
     return selected + other_actions
 
 
+def _merge_action_candidates(*groups: List[Dict]) -> List[Dict]:
+    """Merge ordered candidate reservoirs without losing Pass or new families."""
+    merged: List[Dict] = []
+    seen = set()
+    for group in groups:
+        for action in group:
+            key = _mcts_action_key(action)
+            if key in seen:
+                continue
+            seen.add(key)
+            merged.append(action)
+    return merged
+
+
 def _should_use_mcts(state: Dict, bot_id: str, width: int) -> bool:
     legal = GuandanGame.get_legal_actions(state, bot_id)
     if "play" not in legal:
@@ -8441,12 +8444,14 @@ def _should_use_mcts(state: Dict, bot_id: str, width: int) -> bool:
         bot_id,
         max(1, int(state.get("config", {}).get("bot_search_depth", 4))),
     )
-    if cached:
-        actions = _actions_from_cached_heuristic_scores(cached)
-    else:
-        expanded_width = max(width + 4, width * 2)
-        actions = _candidate_actions(state, bot_id, expanded_width)
-        actions = _filter_overbomb_actions(state, bot_id, actions)
+    cached_actions = _actions_from_cached_heuristic_scores(cached or [])
+    expanded_width = max(width + 4, width * 2)
+    expanded_actions = _candidate_actions(state, bot_id, expanded_width)
+    expanded_actions = _filter_overbomb_actions(state, bot_id, expanded_actions)
+    # Completed heuristic finalists are a strong ordering prior, not an
+    # irreversible pruning decision.  Keep a cheap fresh reservoir so MCTS can
+    # still recover an action family whose detailed heuristic score timed out.
+    actions = _merge_action_candidates(cached_actions, expanded_actions)
     actions = _mcts_root_candidate_subset(state, bot_id, actions, width)
     play_actions = [action for action in actions if action.get("type") == "play"]
     has_pass = any(action.get("type") == "pass" for action in actions)
@@ -9115,6 +9120,14 @@ def _should_accept_mcts_override(
         ): score
         for cards, score, _components in cached_finalists
     }
+    cached_components = {
+        _mcts_action_key(
+            {"type": "pass"}
+            if cards is None
+            else {"type": "play", "card_ids": cards}
+        ): components
+        for cards, _score, components in cached_finalists
+    }
 
     def guard_score(action: Dict) -> float:
         key = _mcts_action_key(action)
@@ -9164,6 +9177,12 @@ def _should_accept_mcts_override(
         current_trick = state.get("current_trick")
         leader = current_trick.get("player_id") if current_trick else None
         if leader is not None and _team_of(state, leader) != _team_of(state, bot_id):
+            pass_components = cached_components.get(_mcts_action_key(mcts_action), {})
+            if pass_components.get("pass_lane_concession", 0.0) <= -4.0:
+                # A sampled continuation can make Pass look locally attractive,
+                # but it must not erase a public seat-order fact: an opponent
+                # acts before our teammate and can seize the lane first.
+                return False
             if heuristic_score >= mcts_score + structure_margin:
                 return False
         return True
@@ -9243,7 +9262,15 @@ def _rollout_policy_action(state: Dict, player_id: str) -> Optional[Dict]:
             if leader == _teammate_of(state, player_id):
                 return {"type": "pass"}
         if options:
-            best_cards = max(options, key=lambda cards: _quick_candidate_score(state, player_id, cards))
+            scored_options = [
+                (_quick_candidate_score(state, player_id, cards), cards)
+                for cards in options
+            ]
+            best_score, best_cards = max(scored_options, key=lambda item: item[0])
+            if current_trick and "pass" in legal:
+                pass_score = _quick_candidate_score(state, player_id, None)
+                if pass_score >= best_score:
+                    return {"type": "pass"}
             return {"type": "play", "card_ids": best_cards}
     if "pass" in legal:
         return {"type": "pass"}
@@ -10385,12 +10412,11 @@ def _mcts_score_actions(
     cached_finalists = (
         _get_cached_heuristic_scored_candidates(state, bot_id, heuristic_depth) or []
     )
-    if cached_finalists:
-        candidates = _actions_from_cached_heuristic_scores(cached_finalists)
-    else:
-        expanded_width = max(width + 4, width * 2)
-        candidates = _CORE._candidate_actions(state, bot_id, expanded_width)
-        candidates = _CORE._filter_overbomb_actions(state, bot_id, candidates)
+    cached_actions = _actions_from_cached_heuristic_scores(cached_finalists)
+    expanded_width = max(width + 4, width * 2)
+    expanded_actions = _CORE._candidate_actions(state, bot_id, expanded_width)
+    expanded_actions = _CORE._filter_overbomb_actions(state, bot_id, expanded_actions)
+    candidates = _merge_action_candidates(cached_actions, expanded_actions)
     candidates = _mcts_root_candidate_subset(state, bot_id, candidates, width)
     root_candidate_count = len(candidates)
     if not candidates:
@@ -10903,7 +10929,7 @@ def _minimax_value(
         for action in actions:
             if deadline is not None and time.perf_counter() >= deadline:
                 break
-            nxt = copy.deepcopy(state)
+            nxt = _clone_search_state(state)
             _, err = GuandanGame.apply_action(nxt, actor, action)
             if err:
                 continue
@@ -10918,7 +10944,7 @@ def _minimax_value(
     for action in actions:
         if deadline is not None and time.perf_counter() >= deadline:
             break
-        nxt = copy.deepcopy(state)
+        nxt = _clone_search_state(state)
         _, err = GuandanGame.apply_action(nxt, actor, action)
         if err:
             continue
@@ -11079,18 +11105,27 @@ def _minimax_pick_action(
     progress_end: float = 1.0,
 ) -> Optional[Dict]:
     """Return the selected full action so pass is distinct from no result."""
+    target_depth = max(1, int(depth))
+
     def store_status(
         stop_reason: str,
         evaluated: int = 0,
         total: int = 0,
         deadline_limited: bool = False,
+        completed_depth: Optional[int] = None,
+        interrupted_depth: Optional[int] = None,
+        attempted: int = 0,
     ) -> None:
         state.setdefault("_ai_eval_cache", {})["minimax_anytime"] = {
             "evaluated": evaluated,
             "total": total,
             "stop_reason": stop_reason,
             "deadline_limited": deadline_limited,
-            "used_initial_incumbent": deadline_limited and evaluated == 0,
+            "used_initial_incumbent": deadline_limited and completed_depth is None,
+            "completed_depth": completed_depth,
+            "target_depth": target_depth,
+            "interrupted_depth": interrupted_depth,
+            "attempted": attempted,
         }
 
     legal = GuandanGame.get_legal_actions(state, bot_id)
@@ -11178,33 +11213,56 @@ def _minimax_pick_action(
     best_value = -1e9
     root_scored: List[Tuple[Dict, float]] = []
     deadline_limited = False
-    for index, action in enumerate(actions, start=1):
-        if deadline is not None and time.perf_counter() >= deadline:
+    completed_depth: Optional[int] = None
+    interrupted_depth: Optional[int] = None
+    attempted_root_evals = 0
+    # Publish only complete root panels. Iterative deepening guarantees that a
+    # short budget still returns a comparable shallow result instead of a
+    # score from whichever deep root happened to be visited first.
+    for search_depth in range(1, target_depth + 1):
+        layer_scored: List[Tuple[Dict, float]] = []
+        layer_interrupted = False
+        for index, action in enumerate(actions, start=1):
+            if deadline is not None and time.perf_counter() >= deadline:
+                layer_interrupted = True
+                break
+            nxt = _clone_search_state(state, preserve_eval_cache=True)
+            _, err = GuandanGame.apply_action(nxt, bot_id, action)
+            if err:
+                continue
+            attempted_root_evals += 1
+            value = _minimax_value(
+                nxt,
+                bot_id,
+                search_depth - 1,
+                -1e9,
+                1e9,
+                width,
+                deadline=deadline,
+            )
+            if deadline is not None and time.perf_counter() >= deadline:
+                layer_interrupted = True
+                break
+            value -= _minimax_root_lead_single_penalty(state, bot_id, action)
+            layer_scored.append((action, value))
+            layer_progress = ((search_depth - 1) + index / total_actions) / target_depth
+            _report_progress_scaled(
+                progress_callback,
+                "minimax",
+                progress_start,
+                progress_end,
+                min(0.98, 0.08 + 0.9 * layer_progress),
+                f"Evaluating minimax depth {search_depth}/{target_depth}, root {index}/{total_actions}",
+            )
+        if layer_interrupted:
             deadline_limited = True
+            interrupted_depth = search_depth
             break
-        nxt = copy.deepcopy(state)
-        _, err = GuandanGame.apply_action(nxt, bot_id, action)
-        if err:
-            continue
-        value = _minimax_value(nxt, bot_id, depth - 1, -1e9, 1e9, width, deadline=deadline)
-        if deadline is not None and time.perf_counter() >= deadline:
-            deadline_limited = True
-            # A value returned from an interrupted subtree is not comparable to
-            # a fully searched root. Keep the heuristic/last complete incumbent.
+        if not layer_scored:
             break
-        value -= _minimax_root_lead_single_penalty(state, bot_id, action)
-        root_scored.append((action, value))
-        if value > best_value:
-            best_value = value
-            best_action = action
-        _report_progress_scaled(
-            progress_callback,
-            "minimax",
-            progress_start,
-            progress_end,
-            min(0.98, 0.08 + 0.9 * (index / total_actions)),
-            f"Evaluating minimax root {index}/{total_actions}",
-        )
+        root_scored = layer_scored
+        best_action, best_value = max(layer_scored, key=lambda item: item[1])
+        completed_depth = search_depth
     if best_action and not state.get("current_trick"):
         next_pid = _next_active_after(state, bot_id)
         if next_pid and _team_of(state, next_pid) != _team_of(state, bot_id):
@@ -11296,6 +11354,9 @@ def _minimax_pick_action(
         len(root_scored),
         total_actions,
         deadline_limited,
+        completed_depth,
+        interrupted_depth,
+        attempted_root_evals,
     )
     _report_progress_scaled(progress_callback, "minimax", progress_start, progress_end, 1.0, "Minimax finalized")
     return dict(best_action) if best_action else None

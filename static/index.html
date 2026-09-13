@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css?v=app_v27" />
-  <link rel="stylesheet" href="/static/ark_nova.css?v=app_v17" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v29" />
+  <link rel="stylesheet" href="/static/ark_nova.css?v=app_v18" />
 </head>
 <body>
   <section id="logPanel" class="log-panel hidden" aria-hidden="true">
@@ -44,41 +44,56 @@
     </div>
   </section>
 
-  <section id="createRoomModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true">
+  <section id="createRoomModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="createRoomModalTitle">
     <div class="modal-content create-room-modal">
       <div class="modal-header">
-        <h2>Select Game</h2>
+        <h2 id="createRoomModalTitle">Select Game</h2>
         <button id="createRoomModalCloseBtn" type="button">Close</button>
       </div>
       <div class="modal-body">
-        <div class="create-room-filters">
-          <input id="gameSearchInput" type="text" placeholder="Search games..." />
-          <select id="playerCountFilter">
-            <option value="">All player counts</option>
-            <option value="1">1 player</option>
-            <option value="2">2 players</option>
-            <option value="3">3 players</option>
-            <option value="4">4 players</option>
-            <option value="5">5 players</option>
-            <option value="6">6 players</option>
-            <option value="7">7 players</option>
-            <option value="8">8 players</option>
-            <option value="9">9 players</option>
-            <option value="10">10 players</option>
-          </select>
+        <div class="create-room-controls">
+          <div class="game-search-control">
+            <label class="visually-hidden" for="gameSearchInput">Search games</label>
+            <span class="game-search-icon" aria-hidden="true">🔎</span>
+            <input
+              id="gameSearchInput"
+              type="search"
+              placeholder="Search games..."
+              autocomplete="off"
+              autocapitalize="none"
+              spellcheck="false"
+              enterkeyhint="search"
+            />
+          </div>
+          <div class="create-room-filter-control">
+            <label for="playerCountFilter">Players</label>
+            <select id="playerCountFilter">
+              <option value="">Any number</option>
+              <option value="1">1 player</option>
+              <option value="2">2 players</option>
+              <option value="3">3 players</option>
+              <option value="4">4 players</option>
+              <option value="5">5 players</option>
+              <option value="6">6 players</option>
+              <option value="7">7 players</option>
+              <option value="8">8 players</option>
+              <option value="9">9 players</option>
+              <option value="10">10 players</option>
+            </select>
+          </div>
+          <div class="create-room-filter-control">
+            <label for="gameSortSelect">Sort</label>
+            <select id="gameSortSelect">
+              <option value="alpha" selected>Alphabet</option>
+              <option value="dev_order">Development Order</option>
+              <option value="difficulty_asc">Weight Asc</option>
+              <option value="difficulty_desc">Weight Desc</option>
+            </select>
+          </div>
         </div>
-        <div class="row create-room-sort">
-          <label for="gameSortSelect">Sort By</label>
-          <select id="gameSortSelect">
-            <option value="alpha" selected>Alphabet</option>
-            <option value="dev_order">Development Order</option>
-            <option value="difficulty_asc">Weight Asc</option>
-            <option value="difficulty_desc">Weight Desc</option>
-          </select>
-        </div>
-        <div id="gameListCount" class="hint game-list-count">Showing 0 games</div>
+        <div id="gameListCount" class="hint game-list-count" role="status" aria-live="polite">Showing 0 games</div>
         <div id="gameList" class="game-list"></div>
-        <div id="gameListEmpty" class="hint hidden">No games match your filters.</div>
+        <div id="gameListEmpty" class="hint game-list-empty hidden" role="status">🎲 No games match your filters.</div>
       </div>
     </div>
   </section>
@@ -3235,6 +3250,23 @@
                 <div id="citadelsBannerBody" class="round-notice-body">-</div>
               </div>
 
+              <section id="citadelsRoundSummary" class="citadels-round-summary hidden" aria-hidden="true">
+                <div class="citadels-summary-header">
+                  <div>
+                    <div class="citadels-summary-eyebrow">Round Recap</div>
+                    <h3 id="citadelsSummaryTitle">Round Complete</h3>
+                    <p id="citadelsSummarySubtitle">Every role is revealed. Review what happened before continuing.</p>
+                  </div>
+                  <div id="citadelsSummaryStatus" class="citadels-summary-status">0/0 Ready</div>
+                </div>
+                <div id="citadelsSummaryHighlights" class="citadels-summary-highlights"></div>
+                <div id="citadelsSummaryPlayers" class="citadels-summary-players"></div>
+                <div class="citadels-summary-footer">
+                  <div id="citadelsSummaryReadyList" class="citadels-summary-ready-list"></div>
+                  <button id="citadelsNextRoundBtn" class="citadels-next-round-btn" type="button">Next Round</button>
+                </div>
+              </section>
+
               <div class="citadels-layout">
                 <div class="citadels-column">
                   <h3>Your Roles</h3>
@@ -3245,16 +3277,21 @@
 
                   <h3>Your Hand</h3>
                   <div id="citadelsHand" class="citadels-card-grid"></div>
-
-                  <h3>Recent Log</h3>
-                  <div id="citadelsLog" class="citadels-log"></div>
                 </div>
 
                 <div class="citadels-column">
                   <h3>Players</h3>
-                  <div id="citadelsPlayers"></div>
+                  <div id="citadelsPlayers" class="citadels-players"></div>
                 </div>
               </div>
+
+              <section class="citadels-log-section">
+                <div class="citadels-section-heading">
+                  <h3>Recent Log</h3>
+                  <span>Newest first</span>
+                </div>
+                <div id="citadelsLog" class="citadels-log" tabindex="0" aria-label="Recent game log"></div>
+              </section>
             </div>
 
             <div id="tagironPanel" class="hidden">
@@ -5492,7 +5529,7 @@
   <script src="/static/games/perfect_mismatch.js?v=app_v4"></script>
   <script src="/static/games/coyote.js?v=app_v4"></script>
   <script src="/static/games/in_a_grove.js?v=app_v2"></script>
-  <script src="/static/games/citadels.js?v=app_v4"></script>
+  <script src="/static/games/citadels.js?v=app_v5"></script>
   <script src="/static/games/tagiron.js?v=app_v4"></script>
   <script src="/static/games/davinci_code.js?v=app_v4"></script>
   <script src="/static/games/lost_code.js?v=app_v4"></script>
@@ -5519,6 +5556,6 @@
   <script src="/static/games/scout.js?v=app_v4"></script>
   <script src="/static/games/ark_nova.js?v=app_v20"></script>
   <script src="/static/app.js?v=app_v11"></script>
-  <script src="/static/room.js?v=app_v19"></script>
+  <script src="/static/room.js?v=app_v20"></script>
 </body>
 </html>

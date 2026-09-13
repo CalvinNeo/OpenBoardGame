@@ -71,6 +71,9 @@ DEFAULT_CONFIG = {
     "bot_heuristic_time_check_batch": 2,
     "bot_think_time_ms": 2000,
     "bot_think_overrun_ratio": 0.5,
+    "bot_search_use_remaining_budget": True,
+    "bot_search_finalize_reserve_ms": 35,
+    "bot_endgame_search_reserve_ratio": 0.5,
     "bot_mcts_time_ms": 220,
     "bot_mcts_short_budget_threshold_ms": 350,
     "bot_mcts_short_budget_depth": 1,
@@ -2403,10 +2406,28 @@ class GuandanGame:
         hard_decision_deadline = decision_started_at + hard_budget_ms / 1000.0
         search_deadline = hard_decision_deadline
         heuristic_deadline = search_deadline if bot_mode in {"auto", "heuristic"} else None
+        total_left = sum(len(state["players"][pid]["hand"]) for pid in state["turn_order"])
+        endgame_threshold = max(0, int(config.get("bot_endgame_threshold", 18)))
+        heuristic_soft_deadline = decision_deadline
+        if bot_mode == "auto" and total_left <= endgame_threshold:
+            try:
+                search_reserve_ratio = float(
+                    config.get(
+                        "bot_endgame_search_reserve_ratio",
+                        DEFAULT_CONFIG["bot_endgame_search_reserve_ratio"],
+                    )
+                )
+            except (TypeError, ValueError):
+                search_reserve_ratio = float(DEFAULT_CONFIG["bot_endgame_search_reserve_ratio"])
+            search_reserve_ratio = max(0.0, min(0.9, search_reserve_ratio))
+            heuristic_soft_deadline = min(
+                heuristic_soft_deadline,
+                decision_deadline - think_budget_ms * search_reserve_ratio / 1000.0,
+            )
         current_combo = (state.get("current_trick") or {}).get("combo") or {}
         stage_timings_ms: Dict[str, float] = {}
         deadline_events: List[Dict[str, str]] = []
-        state["_ai_eval_cache"]["heuristic_soft_deadline"] = decision_deadline
+        state["_ai_eval_cache"]["heuristic_soft_deadline"] = heuristic_soft_deadline
         state["_ai_eval_cache"]["decision_hard_deadline"] = hard_decision_deadline
 
         def _record_stage(stage: str, started_at: float) -> None:
@@ -2423,14 +2444,39 @@ class GuandanGame:
                 }
             )
 
+        def _adaptive_search_budget_ms(configured_ms: int) -> int:
+            now = time.perf_counter()
+            reserve_ms = max(
+                0,
+                int(
+                    config.get(
+                        "bot_search_finalize_reserve_ms",
+                        DEFAULT_CONFIG["bot_search_finalize_reserve_ms"],
+                    )
+                ),
+            )
+            hard_remaining_ms = max(
+                0.0,
+                (hard_decision_deadline - now) * 1000.0 - reserve_ms,
+            )
+            target_ms = float(max(0, configured_ms))
+            if config.get(
+                "bot_search_use_remaining_budget",
+                DEFAULT_CONFIG["bot_search_use_remaining_budget"],
+            ):
+                soft_remaining_ms = max(
+                    0.0,
+                    (decision_deadline - now) * 1000.0 - reserve_ms,
+                )
+                target_ms = max(target_ms, soft_remaining_ms)
+            return max(0, int(min(target_ms, hard_remaining_ms)))
+
         try:
             def _progress(stage: str, progress: float, detail: Optional[str] = None) -> None:
                 if not callable(progress_callback):
                     return
                 progress_callback(stage, max(0.0, min(0.99, float(progress))), detail)
 
-            total_left = sum(len(state["players"][pid]["hand"]) for pid in state["turn_order"])
-            endgame_threshold = config.get("bot_endgame_threshold", 18)
             depth = config.get("bot_search_depth", 2)
             search_width = config.get("bot_minimax_width", 6)
             mcts_width = max(2, int(config.get("bot_mcts_root_width", min(search_width, 5))))
@@ -2508,6 +2554,8 @@ class GuandanGame:
             method_meta = None
             minimax_status: Dict = {}
             mcts_status: Dict = {}
+            minimax_budget_ms: Optional[int] = None
+            mcts_budget_ms: Optional[int] = None
             mcts_attempted = False
             if bot_mode == "nn":
                 nn_started_at = time.perf_counter()
@@ -2526,7 +2574,11 @@ class GuandanGame:
                         chosen_action_type = "pass"
             elif bot_mode == "auto":
                 if total_left <= endgame_threshold:
-                    minimax_budget_ms = max(25, int(config.get("bot_minimax_time_ms", default_minimax_budget_ms)))
+                    configured_minimax_budget_ms = max(
+                        25,
+                        int(config.get("bot_minimax_time_ms", default_minimax_budget_ms)),
+                    )
+                    minimax_budget_ms = _adaptive_search_budget_ms(configured_minimax_budget_ms)
                     deadline = min(search_deadline, time.perf_counter() + minimax_budget_ms / 1000.0)
                     _progress("minimax", 0.22, "Determinizing endgame state")
                     minimax_started_at = time.perf_counter()
@@ -2569,7 +2621,11 @@ class GuandanGame:
                     and _should_use_mcts(state, bot_id, mcts_width)
                 ):
                     mcts_attempted = True
-                    mcts_budget_ms = max(25, int(config.get("bot_mcts_time_ms", default_mcts_budget_ms)))
+                    configured_mcts_budget_ms = max(
+                        25,
+                        int(config.get("bot_mcts_time_ms", default_mcts_budget_ms)),
+                    )
+                    mcts_budget_ms = _adaptive_search_budget_ms(configured_mcts_budget_ms)
                     deadline = min(search_deadline, time.perf_counter() + mcts_budget_ms / 1000.0)
                     _progress("mcts", 0.22, "Preparing MCTS search")
                     mcts_started_at = time.perf_counter()
@@ -2629,7 +2685,7 @@ class GuandanGame:
                             chosen = []
                             chosen_action_type = "pass"
                 if minimax_status.get("deadline_limited"):
-                    target = "partial minimax result" if decided and method == "minimax" else "heuristic baseline"
+                    target = "last completed minimax depth" if decided and method == "minimax" else "heuristic baseline"
                     if minimax_status.get("used_initial_incumbent"):
                         target = "quick minimax incumbent" if decided and method == "minimax" else "heuristic baseline"
                     _record_deadline_event(
@@ -2710,6 +2766,11 @@ class GuandanGame:
                         {
                             "minimax_candidates_evaluated": minimax_status.get("evaluated", 0),
                             "minimax_candidates_total": minimax_status.get("total", 0),
+                            "minimax_root_evaluations_attempted": minimax_status.get("attempted", 0),
+                            "minimax_completed_depth": minimax_status.get("completed_depth"),
+                            "minimax_target_depth": minimax_status.get("target_depth"),
+                            "minimax_interrupted_depth": minimax_status.get("interrupted_depth"),
+                            "minimax_budget_ms": minimax_budget_ms,
                             "minimax_stop_reason": minimax_status.get("stop_reason"),
                         }
                     )
@@ -2723,6 +2784,7 @@ class GuandanGame:
                             "mcts_completed_depth": mcts_status.get("completed_depth"),
                             "mcts_target_depth": mcts_status.get("target_depth"),
                             "mcts_interrupted_depth": mcts_status.get("interrupted_depth"),
+                            "mcts_budget_ms": mcts_budget_ms,
                             "mcts_stop_reason": mcts_status.get("stop_reason"),
                         }
                     )

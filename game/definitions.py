@@ -3154,6 +3154,12 @@ CITADELS_ACTION_SCHEMA = {
     "oneOf": [
         {
             "type": "object",
+            "properties": {"type": {"const": "next_round"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
             "properties": {
                 "type": {"const": "draft_character"},
                 "rank": {"type": "integer", "minimum": 1, "maximum": 9},
