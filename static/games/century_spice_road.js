@@ -278,7 +278,11 @@ function clearCenturyState() {
   if (centuryPointMarket) centuryPointMarket.innerHTML = "";
   if (centuryMerchantMarket) centuryMerchantMarket.innerHTML = "";
   if (centuryYou) centuryYou.innerHTML = "";
-  if (centuryActions) centuryActions.innerHTML = "";
+  if (centuryActions) {
+    centuryActions.innerHTML = "";
+    centuryActions.hidden = true;
+    centuryActions.classList.remove("is-open", "is-required");
+  }
   if (centuryPlayers) centuryPlayers.innerHTML = "";
   if (centuryHelpModal) setModalVisible(centuryHelpModal, false);
   if (centuryExplainModal) setModalVisible(centuryExplainModal, false);
@@ -302,6 +306,53 @@ function centuryNumberInput(value, min, max) {
   input.value = String(value);
   input.className = "century-number";
   return input;
+}
+
+function centuryClearActionSelection() {
+  if (!centuryPanel) return;
+  centuryPanel.querySelectorAll('[aria-controls="centuryActions"]').forEach((node) => {
+    node.classList.remove("is-selected");
+    node.setAttribute("aria-expanded", "false");
+  });
+}
+
+function centuryCloseActionDrawer() {
+  centuryClearActionSelection();
+  if (!centuryActions) return;
+  centuryActions.innerHTML = "";
+  centuryActions.hidden = true;
+  centuryActions.classList.remove("is-open", "is-required");
+  centuryActions.style.removeProperty("--century-drawer-pointer-x");
+}
+
+function centuryOpenActionDrawer(form, sourceButton = null, required = false) {
+  if (!centuryActions || !form) return;
+  centuryClearActionSelection();
+  centuryActions.replaceChildren(form);
+  centuryActions.hidden = false;
+  centuryActions.classList.add("is-open");
+  centuryActions.classList.toggle("is-required", required);
+  if (sourceButton) {
+    sourceButton.classList.add("is-selected");
+    sourceButton.setAttribute("aria-expanded", "true");
+    window.requestAnimationFrame(() => {
+      const sourceBounds = sourceButton.getBoundingClientRect();
+      const drawerBounds = centuryActions.getBoundingClientRect();
+      const pointerX = sourceBounds.left + sourceBounds.width / 2 - drawerBounds.left;
+      const clampedPointerX = Math.max(24, Math.min(drawerBounds.width - 24, pointerX));
+      centuryActions.style.setProperty("--century-drawer-pointer-x", `${clampedPointerX}px`);
+      const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      centuryActions.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "nearest" });
+    });
+  }
+}
+
+function centuryAddActionDrawerClose(form) {
+  const title = form && form.querySelector(".century-action-title");
+  if (!title) return;
+  const closeButton = centuryButton("Close", centuryCloseActionDrawer, false, "century-drawer-close");
+  closeButton.setAttribute("aria-label", "Close selected action");
+  title.appendChild(closeButton);
 }
 
 function renderCenturyPointMarket(view) {
@@ -356,8 +407,10 @@ function renderCenturyMerchantMarket(view) {
     `;
     const acquireCostLabel = index === 0 ? "Free to acquire" : `Costs ${index} ${index === 1 ? "spice" : "spices"} to acquire`;
     button.setAttribute("aria-label", `${centuryMerchantPlainText(card)}. ${acquireCostLabel}.`);
+    button.setAttribute("aria-controls", "centuryActions");
+    button.setAttribute("aria-expanded", "false");
     button.disabled = !centuryCan(view, "acquire");
-    button.addEventListener("click", () => renderCenturyAcquireForm(view, index));
+    button.addEventListener("click", () => renderCenturyAcquireForm(view, index, button));
     centuryExplain(button, "Merchant Card", "Acquire this card into your hand. Cards farther right cost more spices.", [
       `Acquire cost: ${index === 0 ? "Free" : `${index} total spice placed on cards to the left.`}`,
       `Effect: ${centuryMerchantPlainText(card)}`,
@@ -391,11 +444,28 @@ function renderCenturyYou(view) {
     <div class="century-spice-key" aria-label="Spice value order">
       <span>LOW</span>${centuryUpgradeTrackMarkup()}<span>HIGH</span>
     </div>
-    <h4>Hand</h4>
+    <div class="century-hand-heading">
+      <h4>Hand</h4>
+      <div class="century-hand-tools"></div>
+    </div>
     <div class="century-card-row century-hand"></div>
+    <div class="century-hand-action-slot"></div>
     <h4>Played</h4>
     <div class="century-card-row century-played"></div>
   `;
+  const actionSlot = centuryYou.querySelector(".century-hand-action-slot");
+  centuryCloseActionDrawer();
+  if (actionSlot && centuryActions) actionSlot.appendChild(centuryActions);
+
+  const handTools = centuryYou.querySelector(".century-hand-tools");
+  const restButton = centuryButton("Rest", () => sendAction({ type: "rest" }), !centuryCan(view, "rest"), "century-rest-button");
+  restButton.title = "Return all played merchant cards to your hand";
+  centuryExplain(restButton, "Rest", "Return all played merchant cards to your hand.", [
+    "Rest uses your whole turn.",
+    "It becomes available after at least one merchant card has been played.",
+  ]);
+  if (handTools) handTools.appendChild(restButton);
+
   const hand = centuryYou.querySelector(".century-hand");
   (you.hand || []).forEach((card) => {
     const button = document.createElement("button");
@@ -403,8 +473,10 @@ function renderCenturyYou(view) {
     button.className = `century-card century-hand-card ${centuryCardTypeClass(card)}`;
     button.innerHTML = centuryMerchantCardMarkup(card);
     button.setAttribute("aria-label", centuryMerchantPlainText(card));
+    button.setAttribute("aria-controls", "centuryActions");
+    button.setAttribute("aria-expanded", "false");
     button.disabled = !centuryCan(view, "play");
-    button.addEventListener("click", () => renderCenturyPlayForm(view, card));
+    button.addEventListener("click", () => renderCenturyPlayForm(view, card, button));
     centuryExplain(button, "Hand Card", "Play one merchant card as your turn action.", [`Effect: ${centuryMerchantPlainText(card)}`]);
     hand.appendChild(button);
   });
@@ -456,19 +528,18 @@ function maxCenturyTradeTimes(player, card) {
   return maxTimes === Infinity ? 0 : maxTimes;
 }
 
-function renderCenturyPlayForm(view, card) {
+function renderCenturyPlayForm(view, card, sourceButton = null) {
   const you = centurySelf(view);
-  centuryActions.innerHTML = "";
   const form = document.createElement("div");
-  form.className = "century-action-form";
   const cardMeta = CENTURY_CARD_META[card.type] || CENTURY_CARD_META.trade;
+  form.className = `century-action-form century-action-form--drawer century-action-form--${cardMeta.className}`;
   form.innerHTML = `
     <div class="century-action-title">
       <span>PLAY ${cardMeta.label}</span>
       <strong>${centuryMerchantPlainText(card)}</strong>
     </div>
-    <div class="century-action-card ${centuryCardTypeClass(card)}">${centuryMerchantCardMarkup(card)}</div>
   `;
+  centuryAddActionDrawerClose(form);
   if (card.type === "upgrade") {
     const wrap = document.createElement("div");
     wrap.className = "century-upgrade-choices";
@@ -519,7 +590,7 @@ function renderCenturyPlayForm(view, card) {
       button.dataset.upgradeColor = color;
       wrap.appendChild(button);
     });
-    const resetBtn = centuryButton("Start over", () => renderCenturyPlayForm(view, card), false, "century-secondary-action");
+    const resetBtn = centuryButton("Start over", () => renderCenturyPlayForm(view, card, sourceButton), false, "century-secondary-action");
     wrap.appendChild(resetBtn);
     form.appendChild(wrap);
     form.appendChild(sequenceLabel);
@@ -555,22 +626,22 @@ function renderCenturyPlayForm(view, card) {
   } else {
     form.appendChild(centuryButton("Play", () => sendAction({ type: "play", card_id: card.id }), false, "century-primary-action"));
   }
-  centuryActions.appendChild(form);
+  centuryOpenActionDrawer(form, sourceButton);
 }
 
-function renderCenturyAcquireForm(view, index) {
+function renderCenturyAcquireForm(view, index, sourceButton = null) {
   const you = centurySelf(view);
   const slot = (view.merchant_market || [])[index];
-  centuryActions.innerHTML = "";
   const form = document.createElement("div");
-  form.className = "century-action-form century-action-form--acquire";
+  const cardMeta = CENTURY_CARD_META[(slot && slot.card && slot.card.type) || "trade"] || CENTURY_CARD_META.trade;
+  form.className = `century-action-form century-action-form--drawer century-action-form--acquire century-action-form--${cardMeta.className}`;
   form.innerHTML = `
     <div class="century-action-title">
       <span>ACQUIRE SLOT ${index + 1}</span>
       <strong>${slot && slot.card ? centuryMerchantPlainText(slot.card) : "Merchant card"}</strong>
     </div>
-    ${slot && slot.card ? `<div class="century-action-card ${centuryCardTypeClass(slot.card)}">${centuryMerchantCardMarkup(slot.card)}</div>` : ""}
   `;
+  centuryAddActionDrawerClose(form);
   const selects = [];
   if (index > 0) {
     const wrap = document.createElement("div");
@@ -595,14 +666,13 @@ function renderCenturyAcquireForm(view, index) {
   form.appendChild(centuryButton("Acquire", () => {
     sendAction({ type: "acquire", index, payments: selects.map((select) => select.value) });
   }, false, "century-primary-action"));
-  centuryActions.appendChild(form);
+  centuryOpenActionDrawer(form, sourceButton);
 }
 
 function renderCenturyDiscardForm(view) {
   const you = centurySelf(view);
-  centuryActions.innerHTML = "";
   const form = document.createElement("div");
-  form.className = "century-action-form century-action-form--compact";
+  form.className = "century-action-form century-action-form--drawer century-action-form--compact century-action-form--limit";
   form.innerHTML = `
     <div class="century-action-title">
       <span>CARAVAN LIMIT</span>
@@ -628,7 +698,7 @@ function renderCenturyDiscardForm(view) {
     });
     sendAction({ type: "discard", spices });
   }, false, "century-primary-action"));
-  centuryActions.appendChild(form);
+  centuryOpenActionDrawer(form, null, true);
 }
 
 function renderCenturyDefaultActions(view) {
@@ -636,18 +706,7 @@ function renderCenturyDefaultActions(view) {
     renderCenturyDiscardForm(view);
     return;
   }
-  centuryActions.innerHTML = "";
-  if (centuryCan(view, "rest")) {
-    const restBtn = centuryButton("Rest", () => sendAction({ type: "rest" }));
-    centuryExplain(restBtn, "Rest", "Return all played merchant cards to your hand.");
-    centuryActions.appendChild(restBtn);
-  }
-  if (!centuryActions.children.length) {
-    const hint = document.createElement("div");
-    hint.className = "hint";
-    hint.textContent = view.current_turn === view.you ? "Choose a card or market slot above." : "Waiting for another player.";
-    centuryActions.appendChild(hint);
-  }
+  centuryCloseActionDrawer();
 }
 
 function renderCenturyGameState(payload) {

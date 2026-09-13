@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css?v=app_v35" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v37" />
   <link rel="stylesheet" href="/static/ark_nova.css?v=app_v18" />
 </head>
 <body>
@@ -1674,8 +1674,8 @@
               <button id="forestShuffleExplainBtn" class="forest-shuffle-header-btn" type="button">Explain</button>
             </div>
             <div class="panel-header-actions" id="patchworkHeaderActions" style="display: none;">
-              <button id="patchworkHelpBtn" class="patchwork-header-btn" type="button">Help</button>
-              <button id="patchworkExplainBtn" class="patchwork-header-btn" type="button">Explain</button>
+              <button id="patchworkHelpBtn" class="patchwork-header-btn" type="button" aria-label="Patchwork help"><span aria-hidden="true">?</span><span class="patchwork-header-label">Help</span></button>
+              <button id="patchworkExplainBtn" class="patchwork-header-btn" type="button" aria-label="Explain Patchwork interface"><span aria-hidden="true">i</span><span class="patchwork-header-label">Explain</span></button>
             </div>
             <div class="panel-header-actions" id="acquireHeaderActions" style="display: none;">
               <button id="acquireHelpBtn" class="acquire-header-btn" type="button">Help</button>
@@ -4674,8 +4674,7 @@
               <h3>Your Caravan</h3>
               <div id="centuryYou" class="century-player-card"></div>
 
-              <h3>Actions</h3>
-              <div id="centuryActions" class="century-actions"></div>
+              <div id="centuryActions" class="century-actions" role="region" aria-label="Selected action" aria-live="polite" hidden></div>
 
               <h3>Players</h3>
               <div id="centuryPlayers" class="century-player-list"></div>
@@ -5127,14 +5126,14 @@
             </div>
 
             <div id="patchworkPanel" class="hidden">
-              <div class="row">
-                <div>Current Turn: <span id="patchworkTurn">-</span></div>
-                <div>Selected Patch: <span id="patchworkSelectedPatch">-</span></div>
-                <div>Rotation: <span id="patchworkRotation">0°</span></div>
-                <div>Flip: <span id="patchworkFlip">No</span></div>
-                <div>Anchor: <span id="patchworkAnchor">-</span></div>
+              <div class="row patchwork-status-row">
+                <div class="patchwork-status-primary">Current Turn: <span id="patchworkTurn">-</span></div>
+                <div class="patchwork-status-detail">Selected Patch: <span id="patchworkSelectedPatch">-</span></div>
+                <div class="patchwork-status-detail">Rotation: <span id="patchworkRotation">0°</span></div>
+                <div class="patchwork-status-detail">Flip: <span id="patchworkFlip">No</span></div>
+                <div class="patchwork-status-detail">Anchor: <span id="patchworkAnchor">-</span></div>
               </div>
-              <div class="row">
+              <div class="row patchwork-end-status-row">
                 <div>Special 7x7: <span id="patchworkSpecialTile">-</span></div>
                 <div>First to Finish: <span id="patchworkFirstFinish">-</span></div>
                 <div>Winner: <span id="patchworkWinner">-</span></div>
@@ -5145,9 +5144,18 @@
               </div>
               <div class="patchwork-ring-shell">
                 <div class="patchwork-ring-legend-row">
+                  <div class="patchwork-market-heading">
+                    <strong>Patch Market 🧩</strong>
+                    <span>First 3 are available</span>
+                  </div>
                   <div id="patchworkMarketLegend" class="patchwork-market-legend"></div>
+                  <button id="patchworkAdvanceBtn" class="patchwork-advance-btn" type="button" data-patchwork-explain="patchworkAdvanceBtn">
+                    <span>⏩ Advance</span>
+                    <span id="patchworkAdvanceGain" class="patchwork-advance-gain"></span>
+                  </button>
                   <div class="patchwork-market-loop-note">Clockwise market flow around the center</div>
                 </div>
+                <div id="patchworkMarketMobile" class="patchwork-market-mobile" aria-label="Patch market"></div>
                 <div class="patchwork-ring-top">
                   <div id="patchworkMarketTop" class="patchwork-market-side top"></div>
                 </div>
@@ -5167,16 +5175,15 @@
                         </div>
                       </div>
                       <div class="patchwork-column patchwork-center-column">
-                        <h3>Your Quilt 🪡</h3>
+                        <div class="patchwork-board-heading">
+                          <h3>Your Quilt 🪡</h3>
+                          <div id="patchworkTransformActions" class="patchwork-transform-actions" aria-label="Patch orientation" hidden>
+                            <button id="patchworkRotateBtn" type="button" data-patchwork-explain="patchworkRotateBtn" aria-label="Rotate patch clockwise">↻ <span>Rotate</span></button>
+                            <button id="patchworkFlipBtn" type="button" data-patchwork-explain="patchworkFlipBtn" aria-label="Flip patch horizontally">⇆ <span>Flip</span></button>
+                          </div>
+                        </div>
                         <div class="patchwork-board-shell">
                           <div id="patchworkYourBoard" class="patchwork-board"></div>
-                        </div>
-                        <div class="row actions patchwork-actions">
-                          <button id="patchworkRotateLeftBtn" type="button" data-patchwork-explain="patchworkRotateLeftBtn">Rotate Left</button>
-                          <button id="patchworkRotateRightBtn" type="button" data-patchwork-explain="patchworkRotateRightBtn">Rotate Right</button>
-                          <button id="patchworkFlipBtn" type="button" data-patchwork-explain="patchworkFlipBtn">Flip</button>
-                          <button id="patchworkAdvanceBtn" type="button" data-patchwork-explain="patchworkAdvanceBtn">Advance + Buttons</button>
-                          <button id="patchworkBuyBtn" type="button" data-patchwork-explain="patchworkBuyBtn">Buy Selected Patch</button>
                         </div>
                         <div id="patchworkSelectionHint" class="hint">Select one of the first three patches, then click your board.</div>
                       </div>
@@ -5544,7 +5551,7 @@
   <script src="/static/games/things_in_rings.js?v=app_v4"></script>
   <script src="/static/games/impression_flower.js?v=app_v4"></script>
   <script src="/static/games/gizmos.js?v=app_v4"></script>
-  <script src="/static/games/century_spice_road.js?v=app_v4"></script>
+  <script src="/static/games/century_spice_road.js?v=app_v5"></script>
   <script src="/static/games/splendor.js?v=app_v4"></script>
   <script src="/static/games/splendor_pokemon.js?v=app_v6"></script>
   <script src="/static/games/project_l.js?v=app_v4"></script>
@@ -5559,7 +5566,7 @@
   <script src="/static/games/cat_in_box.js?v=app_v4"></script>
   <script src="/static/games/point_salad.js?v=app_v4"></script>
   <script src="/static/games/forest_shuffle.js?v=app_v4"></script>
-  <script src="/static/games/patchwork.js?v=app_v4"></script>
+  <script src="/static/games/patchwork.js?v=app_v5"></script>
   <script src="/static/games/isle_of_skye.js?v=app_v4"></script>
   <script src="/static/games/six_nimmt.js?v=app_v4"></script>
   <script src="/static/games/skull.js?v=app_v4"></script>

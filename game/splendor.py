@@ -1,6 +1,7 @@
 import random
 from typing import Dict, List, Optional, Tuple
 
+from game.splendor_ai import SplendorAiRules, choose_splendor_discard, choose_splendor_main_action
 from game.splendor_data import COLORS, NOBLES, TIER_DECKS, TOKEN_COLORS
 
 DEFAULT_CONFIG = {
@@ -78,6 +79,22 @@ def _can_afford(required: Dict[str, int], tokens: Dict[str, int]) -> bool:
     return int(tokens.get("gold", 0)) >= gold_needed
 
 
+def _ai_required_cost(card: Dict, bonuses: Dict[str, int]) -> Tuple[Dict[str, int], int]:
+    return _required_cost(card, bonuses), 0
+
+
+SPLENDOR_AI_RULES = SplendorAiRules(
+    regular_colors=tuple(COLORS),
+    wild_color="gold",
+    market_tiers=("tier1", "tier2", "tier3"),
+    reservable_tiers=("tier1", "tier2", "tier3"),
+    owned_cards_key="purchased",
+    tier_values={"tier1": 1.0, "tier2": 2.0, "tier3": 3.0},
+    allow_partial_distinct_take=False,
+    required_cost=_ai_required_cost,
+)
+
+
 def _auto_payment(required: Dict[str, int], tokens: Dict[str, int]) -> Optional[Dict[str, int]]:
     payment = {}
     total = 0
@@ -90,25 +107,6 @@ def _auto_payment(required: Dict[str, int], tokens: Dict[str, int]) -> Optional[
         return None
     payment["gold"] = remaining
     return payment
-
-
-def _auto_discard_for_gain(tokens: Dict[str, int], gain: Dict[str, int]) -> Optional[Dict[str, int]]:
-    total = _total_tokens(tokens) + sum(int(gain.get(color, 0)) for color in TOKEN_COLORS)
-    excess = total - 10
-    if excess <= 0:
-        return None
-    available = {color: int(tokens.get(color, 0)) + int(gain.get(color, 0)) for color in TOKEN_COLORS}
-    discard = {color: 0 for color in TOKEN_COLORS}
-    remaining = excess
-    ordered = sorted(TOKEN_COLORS, key=lambda c: available.get(c, 0), reverse=True)
-    for color in ordered:
-        if remaining <= 0:
-            break
-        amount = min(available.get(color, 0), remaining)
-        if amount > 0:
-            discard[color] = amount
-            remaining -= amount
-    return discard
 
 
 def _normalize_payment(payment: Optional[Dict]) -> Dict[str, int]:
@@ -633,26 +631,11 @@ class SplendorGame:
         phase = state.get("phase")
         player = state["players"][bot_id]
 
-        if phase == "discard_tokens":
-            excess = _total_tokens(player["tokens"]) - 10
-            if excess <= 0:
-                return None
-            discard = {color: 0 for color in TOKEN_COLORS}
-            ordered = sorted(TOKEN_COLORS, key=lambda c: player["tokens"].get(c, 0), reverse=True)
-            remaining = excess
-            for color in ordered:
-                if remaining <= 0:
-                    break
-                available = player["tokens"].get(color, 0)
-                if available <= 0:
-                    continue
-                take = min(available, remaining)
-                discard[color] = take
-                remaining -= take
-            return {"type": "discard_tokens", "tokens": discard}
+        if phase == "discard_tokens" or _total_tokens(player["tokens"]) > 10:
+            return choose_splendor_discard(state, bot_id, SPLENDOR_AI_RULES)
 
         if phase == "choose_noble":
-            choices = state.get("pending_nobles", [])
+            choices = sorted(state.get("pending_nobles", []))
             if not choices:
                 return None
             return {"type": "choose_noble", "noble_id": choices[0]}
@@ -660,69 +643,8 @@ class SplendorGame:
         if phase != "turn":
             return None
 
-        bonuses = _player_bonus(player)
-        affordable_market = []
-        for tier, cards in state["market"].items():
-            for idx, card in enumerate(cards):
-                if _can_afford(_required_cost(card, bonuses), player["tokens"]):
-                    affordable_market.append((card, tier, idx))
-
-        affordable_reserved = []
-        for idx, card in enumerate(player["reserved"]):
-            if _can_afford(_required_cost(card, bonuses), player["tokens"]):
-                affordable_reserved.append((card, idx))
-
-        if affordable_market or affordable_reserved:
-            best = None
-            if affordable_market:
-                best = max(affordable_market, key=lambda item: (item[0]["points"], item[0]["tier"]))
-                return {"type": "buy_market", "tier": best[1], "index": best[2]}
-            best = max(affordable_reserved, key=lambda item: (item[0]["points"], item[0]["tier"]))
-            return {"type": "buy_reserved", "reserved_index": best[1]}
-
-        if len(player["reserved"]) < 3:
-            for tier in ["tier3", "tier2", "tier1"]:
-                if state["market"][tier]:
-                    gain = {color: 0 for color in TOKEN_COLORS}
-                    if state["tokens_supply"].get("gold", 0) > 0:
-                        gain["gold"] = 1
-                    discard = _auto_discard_for_gain(player["tokens"], gain)
-                    action = {"type": "reserve_market", "tier": tier, "index": 0}
-                    if discard:
-                        action["discard"] = discard
-                    return action
-            for tier in ["tier3", "tier2", "tier1"]:
-                if state["decks"][tier]:
-                    gain = {color: 0 for color in TOKEN_COLORS}
-                    if state["tokens_supply"].get("gold", 0) > 0:
-                        gain["gold"] = 1
-                    discard = _auto_discard_for_gain(player["tokens"], gain)
-                    action = {"type": "reserve_deck", "tier": tier}
-                    if discard:
-                        action["discard"] = discard
-                    return action
-
-        available = [color for color in COLORS if state["tokens_supply"].get(color, 0) > 0]
-        if len(available) >= 3:
-            pick = sorted(available, key=lambda c: state["tokens_supply"].get(c, 0), reverse=True)[:3]
-            gain = {color: 0 for color in TOKEN_COLORS}
-            for color in pick:
-                gain[color] += 1
-            discard = _auto_discard_for_gain(player["tokens"], gain)
-            action = {"type": "take_tokens", "colors": pick}
-            if discard:
-                action["discard"] = discard
-            return action
-        for color in COLORS:
-            if state["tokens_supply"].get(color, 0) >= 4:
-                gain = {token: 0 for token in TOKEN_COLORS}
-                gain[color] = 2
-                discard = _auto_discard_for_gain(player["tokens"], gain)
-                action = {"type": "take_tokens_same", "color": color}
-                if discard:
-                    action["discard"] = discard
-                return action
-        return None
+        legal_actions = SplendorGame.get_legal_actions(state, bot_id)
+        return choose_splendor_main_action(state, bot_id, legal_actions, SPLENDOR_AI_RULES)
 
     @staticmethod
     def serialize(state: Dict) -> Dict:

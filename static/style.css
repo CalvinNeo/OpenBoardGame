@@ -17301,15 +17301,62 @@ body.tagiron-explain-mode button.has-explanation:hover {
 .patchwork-ring-legend-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.patchwork-market-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  color: #0f172a;
+}
+
+.patchwork-market-heading strong {
+  font-size: 14px;
+}
+
+.patchwork-market-heading span {
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 600;
 }
 
 .patchwork-market-legend {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.patchwork-advance-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 6px 11px;
+  margin-left: auto;
+  border: 1px solid #1d4ed8;
+  border-radius: 999px;
+  color: #1e3a8a;
+  background: #eff6ff;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.patchwork-advance-btn:hover:not(:disabled),
+.patchwork-advance-btn:focus-visible {
+  background: #dbeafe;
+}
+
+.patchwork-advance-gain {
+  color: #92400e;
+  white-space: nowrap;
+}
+
+.patchwork-market-mobile {
+  display: none;
 }
 
 .patchwork-order-badge {
@@ -17510,15 +17557,38 @@ body.tagiron-explain-mode button.has-explanation:hover {
 
 .patchwork-market-card {
   width: 84px;
+  min-height: 116px;
   border: 1px solid #d8dee9;
   border-radius: 12px;
   background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
-  padding: 8px 6px 6px;
+  position: relative;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.patchwork-market-card-hitarea {
   display: flex;
   flex-direction: column;
   gap: 5px;
-  position: relative;
+  width: 100%;
+  min-height: 114px;
+  padding: 8px 6px 6px;
+  border: 0;
+  border-radius: inherit;
+  color: inherit;
+  background: transparent;
+  text-align: left;
   cursor: pointer;
+}
+
+.patchwork-market-card-hitarea:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.patchwork-market-card-hitarea:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.38);
+  outline-offset: -3px;
 }
 
 .patchwork-market-card.selectable {
@@ -17532,6 +17602,64 @@ body.tagiron-explain-mode button.has-explanation:hover {
 
 .patchwork-market-card.upcoming {
   opacity: 0.78;
+}
+
+.patchwork-market-choice {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  gap: 5px;
+  align-items: stretch;
+  padding: 9px 7px 7px;
+  border-radius: inherit;
+  background: rgba(240, 253, 250, 0.94);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+
+.patchwork-market-choice-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #134e4a;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.patchwork-market-choice button {
+  width: 100%;
+  min-height: 31px;
+  padding: 4px 5px;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.patchwork-market-buy {
+  border: 1px solid #047857;
+  color: #fff;
+  background: #059669;
+}
+
+.patchwork-market-buy:hover:not(:disabled),
+.patchwork-market-buy:focus-visible {
+  background: #047857;
+}
+
+.patchwork-market-cancel {
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.patchwork-market-cancel:hover,
+.patchwork-market-cancel:focus-visible {
+  background: #fff;
 }
 
 .patchwork-market-order {
@@ -17572,12 +17700,41 @@ body.tagiron-explain-mode button.has-explanation:hover {
   word-break: break-all;
 }
 
-.patchwork-actions {
-  margin-top: 2px;
+.patchwork-board-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
-.patchwork-actions button {
-  flex: 1 1 140px;
+.patchwork-transform-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.patchwork-transform-actions[hidden] {
+  display: none;
+}
+
+.patchwork-transform-actions button {
+  min-height: 32px;
+  padding: 4px 9px;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  color: #334155;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.patchwork-transform-actions button:hover:not(:disabled),
+.patchwork-transform-actions button:focus-visible,
+.patchwork-transform-actions button.active {
+  border-color: #0f766e;
+  color: #115e59;
+  background: #ccfbf1;
 }
 
 .patchwork-board-shell {
@@ -17762,6 +17919,10 @@ body.tagiron-explain-mode button.has-explanation:hover {
 }
 
 .patchwork-header-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   background: transparent;
   border: 1px solid #d6d3d1;
   color: #7c2d12;
@@ -17769,6 +17930,17 @@ body.tagiron-explain-mode button.has-explanation:hover {
   border-radius: 999px;
   cursor: pointer;
   font-weight: 600;
+}
+
+.patchwork-header-btn > span:first-child {
+  display: inline-grid;
+  width: 17px;
+  height: 17px;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 11px;
+  line-height: 1;
 }
 
 .patchwork-header-btn:hover {
@@ -17866,6 +18038,11 @@ body.patchwork-explain-mode [data-patchwork-explain].has-explanation {
 
   .patchwork-market-card {
     width: 74px;
+    min-height: 104px;
+  }
+
+  .patchwork-market-card-hitarea {
+    min-height: 102px;
     padding: 7px 5px 5px;
     gap: 4px;
   }
@@ -17978,138 +18155,185 @@ body.patchwork-explain-mode [data-patchwork-explain].has-explanation {
 }
 
 @media (max-width: 760px) {
-  #patchworkPanel > .row {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 4px 10px;
-    margin-bottom: 6px;
+  #patchworkHeaderActions {
+    gap: 4px;
   }
 
-  #patchworkPanel > .row > div {
+  .patchwork-header-btn {
+    width: 32px;
+    min-height: 32px;
+    padding: 4px;
+  }
+
+  .patchwork-header-label {
+    display: none;
+  }
+
+  #patchworkPanel {
     min-width: 0;
-    font-size: 13px;
+  }
+
+  #patchworkPanel > .patchwork-status-row {
+    display: flex;
+    margin-bottom: 5px;
+  }
+
+  #patchworkPanel > .patchwork-status-row > div {
+    font-size: 12px;
+  }
+
+  .patchwork-status-primary {
+    padding: 4px 9px;
+    border: 1px solid #fed7aa;
+    border-radius: 999px;
+    color: #7c2d12;
+    background: #fff7ed;
+    font-weight: 700;
+  }
+
+  .patchwork-status-detail,
+  #patchworkPanel > .patchwork-end-status-row {
+    display: none;
+  }
+
+  #patchworkPanel .round-notice {
+    padding: 7px 9px;
+    margin-bottom: 7px;
   }
 
   .patchwork-ring-shell {
-    gap: 8px;
+    gap: 7px;
   }
 
   .patchwork-ring-legend-row {
-    order: 3;
-    align-items: flex-start;
-    gap: 6px;
+    order: 1;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 7px;
   }
 
-  .patchwork-market-legend {
-    gap: 6px;
+  .patchwork-market-heading {
+    min-width: 0;
   }
 
-  .patchwork-order-badge {
-    padding: 3px 8px;
+  .patchwork-market-heading strong {
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .patchwork-market-heading span {
+    font-size: 9px;
+  }
+
+  .patchwork-market-legend,
+  .patchwork-market-loop-note {
+    display: none;
+  }
+
+  .patchwork-advance-btn {
+    flex: 0 0 auto;
+    min-height: 34px;
+    padding: 5px 9px;
+    margin-left: auto;
     font-size: 11px;
   }
 
-  .patchwork-market-loop-note {
-    display: none;
+  .patchwork-market-mobile {
+    display: flex;
+    order: 2;
+    gap: 7px;
+    width: 100%;
+    max-width: 100%;
+    padding: 3px 3px 7px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-padding-inline: 3px;
+    scroll-snap-type: x proximity;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .patchwork-market-mobile .patchwork-market-card {
+    scroll-snap-align: start;
   }
 
   .patchwork-ring-top,
   .patchwork-ring-bottom,
   .patchwork-ring-left,
   .patchwork-ring-right {
-    display: block;
-  }
-
-  .patchwork-market-side.top,
-  .patchwork-market-side.bottom,
-  .patchwork-market-side.left,
-  .patchwork-market-side.right {
-    display: flex;
-    flex-wrap: nowrap;
-    justify-content: flex-start;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding-bottom: 2px;
-    -webkit-overflow-scrolling: touch;
+    display: none;
   }
 
   .patchwork-ring-middle {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .patchwork-ring-core {
-    order: 1;
-  }
-
-  .patchwork-ring-top {
-    order: 2;
-  }
-
-  .patchwork-ring-left {
-    order: 4;
-  }
-
-  .patchwork-ring-right {
-    order: 5;
-  }
-
-  .patchwork-ring-bottom {
-    order: 6;
+    display: block;
+    order: 3;
   }
 
   .patchwork-layout {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-  }
-
-  .patchwork-support-row {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    gap: 8px;
   }
 
   .patchwork-center-column {
     order: 1;
+    width: 100%;
+  }
+
+  .patchwork-support-row {
+    display: block;
+    order: 2;
+    width: 100%;
   }
 
   .patchwork-info-column {
-    order: 2;
+    order: 3;
+    align-items: center;
   }
 
   .patchwork-preview-column {
-    order: 3;
+    display: none;
   }
 
-  .patchwork-players-column {
-    order: 4;
+  .patchwork-board-heading {
+    min-height: 32px;
+  }
+
+  .patchwork-transform-actions button {
+    min-height: 32px;
+    padding: 4px 8px;
+    font-size: 11px;
   }
 
   .patchwork-board {
-    --patchwork-cell: 24px;
+    --patchwork-cell: clamp(25px, 7.2vw, 30px);
     gap: 2px;
-    padding: 5px;
+    padding: 4px;
   }
 
   .patchwork-board.compact {
-    --patchwork-cell: 16px;
+    --patchwork-cell: clamp(20px, 6vw, 25px);
+    gap: 2px;
+    padding: 4px;
   }
 
-  .patchwork-actions button {
-    flex: 1 1 calc(50% - 6px);
-    min-height: 38px;
+  .patchwork-board-cell {
+    border-radius: 5px;
   }
 
   .patchwork-market-card {
-    width: 78px;
-    flex: 0 0 auto;
-    padding: 7px 5px 5px;
+    width: 82px;
+    min-height: 108px;
+  }
+
+  .patchwork-market-card-hitarea {
+    min-height: 106px;
+    padding: 6px 5px 5px;
+    gap: 3px;
   }
 
   .patchwork-market-image {
-    height: 42px;
+    height: 40px;
   }
 
   .patchwork-market-meta,
@@ -18117,44 +18341,69 @@ body.patchwork-explain-mode [data-patchwork-explain].has-explanation {
     font-size: 9px;
   }
 
+  .patchwork-market-choice {
+    gap: 4px;
+    padding: 7px 6px 6px;
+  }
+
+  .patchwork-market-choice button {
+    min-height: 30px;
+  }
+
   .patchwork-track-card,
-  .patchwork-preview,
   .patchwork-player-card,
   .patchwork-board-shell {
-    border-radius: 12px;
-  }
-
-  .patchwork-track-card,
-  .patchwork-preview,
-  .patchwork-player-card {
-    padding: 10px;
+    border-radius: 11px;
   }
 
   .patchwork-board-shell {
-    padding: 8px;
+    padding: 6px;
+  }
+
+  .patchwork-info-column > h3 {
+    width: min(230px, 100%);
+  }
+
+  .patchwork-track-card {
+    width: min(230px, 100%);
+    padding: 6px;
+  }
+
+  .patchwork-track-chip {
+    width: 21px;
+    height: 21px;
+    font-size: 10px;
+  }
+
+  .patchwork-track-chip::after {
+    top: 22px;
+    font-size: 8px;
+  }
+
+  .patchwork-players {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .patchwork-player-card {
+    min-width: 0;
+    padding: 7px;
   }
 
   .patchwork-player-stats {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 4px 8px;
-    font-size: 12px;
+    gap: 3px 5px;
+    font-size: 11px;
   }
 
-  .patchwork-player-name,
-  .patchwork-preview-title {
+  .patchwork-player-name {
+    overflow: hidden;
     margin-bottom: 4px;
-  }
-
-  .patchwork-preview-showcase {
-    padding: 10px;
-    gap: 8px;
-  }
-
-  .patchwork-preview-image {
-    min-height: 110px;
-    max-height: 110px;
-    padding: 6px;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .patchwork-mini-grid {
@@ -18163,7 +18412,11 @@ body.patchwork-explain-mode [data-patchwork-explain].has-explanation {
   }
 
   #patchworkSelectionHint {
-    font-size: 12px;
+    min-height: 15px;
+    margin-top: -1px;
+    font-size: 11px;
+    line-height: 1.25;
+    text-align: center;
   }
 }
 
@@ -22757,7 +23010,8 @@ body.witchs-brew-explain-mode .has-explanation {
 }
 
 #centurySpiceRoadPanel > h3,
-#centuryYou > h4 {
+#centuryYou > h4,
+.century-hand-heading > h4 {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -22770,7 +23024,8 @@ body.witchs-brew-explain-mode .has-explanation {
 }
 
 #centurySpiceRoadPanel > h3::after,
-#centuryYou > h4::after {
+#centuryYou > h4::after,
+.century-hand-heading > h4::after {
   flex: 1;
   height: 1px;
   background: linear-gradient(90deg, rgba(122, 91, 53, 0.35), transparent);
@@ -22812,7 +23067,6 @@ body.witchs-brew-explain-mode .has-explanation {
 }
 
 .century-header-actions,
-.century-actions,
 .century-pay-grid {
   display: flex;
   flex-wrap: wrap;
@@ -23365,8 +23619,107 @@ button.century-card:disabled {
   color: #38414d;
 }
 
+.century-hand-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 20px 0 9px;
+}
+
+.century-hand-heading > h4 {
+  flex: 1;
+  margin: 0;
+}
+
+.century-hand-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.century-rest-button {
+  min-width: 86px;
+  min-height: 34px;
+  padding: 6px 15px;
+  border-color: #a9906f;
+  background: linear-gradient(180deg, #fffdf8, #f1e8d9);
+  color: #5a4630;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+}
+
+.century-rest-button:hover:not(:disabled),
+.century-rest-button:focus-visible {
+  border-color: #7e6140;
+  background: #fffaf0;
+}
+
+.century-rest-button:disabled {
+  filter: grayscale(0.45);
+  opacity: 0.48;
+}
+
 .century-hand-card {
   min-height: 136px;
+}
+
+button.century-card.is-selected {
+  border-color: var(--century-card-accent);
+  outline: 3px solid rgba(255, 253, 247, 0.95);
+  transform: translateY(-3px);
+  box-shadow: 0 0 0 5px var(--century-card-accent), 0 11px 22px rgba(65, 46, 24, 0.16);
+}
+
+.century-hand-action-slot {
+  min-width: 0;
+}
+
+.century-actions {
+  position: relative;
+  display: block;
+  width: 100%;
+  margin-top: 13px;
+}
+
+.century-actions[hidden] {
+  display: none;
+}
+
+.century-actions.is-open {
+  animation: century-action-drawer-in 160ms ease-out both;
+}
+
+.century-actions.is-open::before {
+  position: absolute;
+  z-index: 1;
+  top: -7px;
+  left: calc(var(--century-drawer-pointer-x, 35px) - 7px);
+  width: 13px;
+  height: 13px;
+  border-top: 1px solid #bca889;
+  border-left: 1px solid #bca889;
+  background: #fffaf1;
+  transform: rotate(45deg);
+  content: "";
+}
+
+@keyframes century-action-drawer-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .century-actions.is-open {
+    animation: none;
+  }
 }
 
 .century-played-card {
@@ -23507,15 +23860,32 @@ button.century-card:disabled {
 
 .century-action-form {
   display: grid;
-  grid-template-columns: minmax(190px, 0.58fr) minmax(260px, 1.42fr);
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
-  gap: 10px 14px;
+  gap: 11px;
   width: 100%;
-  padding: 13px;
+  padding: 14px;
   border: 1px solid #cfbea5;
+  border-top: 3px solid #8b7353;
   border-radius: 12px;
-  background: rgba(255, 253, 248, 0.92);
-  box-shadow: 0 4px 14px rgba(67, 48, 26, 0.07);
+  background: linear-gradient(145deg, #fffaf1, #fffdf8);
+  box-shadow: 0 8px 20px rgba(67, 48, 26, 0.1);
+}
+
+.century-action-form--produce {
+  border-top-color: #b86f17;
+}
+
+.century-action-form--convert {
+  border-top-color: #246c7b;
+}
+
+.century-action-form--upgrade {
+  border-top-color: #7650a2;
+}
+
+.century-action-form--limit {
+  border-top-color: #b14537;
 }
 
 .century-action-form--compact {
@@ -23530,10 +23900,12 @@ button.century-card:disabled {
 .century-action-title {
   display: grid;
   grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 2px;
 }
 
 .century-action-title > span {
+  grid-column: 1;
   color: #8a755c;
   font-size: 9px;
   font-weight: 900;
@@ -23541,20 +23913,35 @@ button.century-card:disabled {
 }
 
 .century-action-title > strong {
+  grid-column: 1;
   color: #3e3023;
   font-size: 14px;
 }
 
+.century-drawer-close {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  align-self: center;
+  min-width: 64px;
+  min-height: 31px;
+  padding: 5px 10px;
+  border-color: #d1c3af;
+  background: #f5eee3;
+  color: #6c5c48;
+  font-size: 10px;
+  font-weight: 750;
+}
+
 .century-action-card {
   grid-column: 1;
-  grid-row: span 3;
+  grid-row: auto;
   padding: 10px 10px 10px 14px;
 }
 
 .century-upgrade-choices,
 .century-pay-grid {
   display: flex;
-  grid-column: 2;
+  grid-column: 1;
   flex-wrap: wrap;
   align-items: stretch;
   gap: 7px;
@@ -23594,7 +23981,7 @@ button.century-card:disabled {
 
 .century-selection-label {
   display: grid;
-  grid-column: 2;
+  grid-column: 1;
   gap: 8px;
   padding: 9px;
   border: 1px solid #d9cde5;
@@ -23643,7 +24030,7 @@ button.century-card:disabled {
 }
 
 .century-repeat-control {
-  grid-column: 2;
+  grid-column: 1;
   align-self: center;
   color: #554c42;
   font-size: 11px;
@@ -23659,7 +24046,7 @@ button.century-card:disabled {
 
 .century-trade-total {
   display: grid;
-  grid-column: 2;
+  grid-column: 1;
   grid-template-columns: minmax(0, 1fr) 20px minmax(0, 1fr);
   gap: 7px;
   align-items: stretch;
@@ -23686,7 +24073,9 @@ button.century-card:disabled {
 }
 
 .century-primary-action {
-  grid-column: 2;
+  grid-column: 1;
+  justify-self: end;
+  min-width: 140px;
   min-height: 37px;
   border-color: #1f6d5f;
   background: linear-gradient(180deg, #318978, #216c5e);
@@ -23752,16 +24141,10 @@ body.century-explain-mode .has-explanation {
     white-space: nowrap;
   }
 
-  .century-header-actions,
-  .century-actions {
+  .century-header-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     width: 100%;
-  }
-
-  .century-actions .century-action-form,
-  .century-actions .hint {
-    grid-column: 1 / -1;
   }
 
   .century-card-row {
@@ -23791,7 +24174,6 @@ body.century-explain-mode .has-explanation {
   }
 
   .century-action-form {
-    grid-template-columns: 1fr;
     padding: 10px;
   }
 
@@ -23824,5 +24206,9 @@ body.century-explain-mode .has-explanation {
 
   .century-coin-name {
     display: none;
+  }
+
+  .century-primary-action {
+    width: 100%;
   }
 }
