@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css?v=app_v33" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v34" />
   <link rel="stylesheet" href="/static/ark_nova.css?v=app_v18" />
 </head>
 <body>
@@ -4690,73 +4690,90 @@
                 <div class="pokemon-status-item"><span>Winner</span><strong id="pokemonSplendorWinner">-</strong></div>
               </div>
 
-              <h3>Token Supply</h3>
-              <div id="pokemonSplendorSupply" class="splendor-token-row pokemon-supply"></div>
+              <div class="pokemon-splendor-workspace">
+                <aside class="pokemon-command-column" aria-label="Your turn controls">
+                  <section class="pokemon-supply-panel">
+                    <h3 class="pokemon-section-heading">Token Supply</h3>
+                    <div id="pokemonSplendorSupply" class="splendor-token-row pokemon-supply"></div>
+                  </section>
 
-              <div id="pokemonSplendorPrompt" class="pokemon-turn-prompt" role="status" aria-live="polite">
-                Waiting for the game state.
+                  <div id="pokemonSplendorPrompt" class="pokemon-turn-prompt" role="status" aria-live="polite">
+                    Waiting for the game state.
+                  </div>
+
+                  <section class="pokemon-action-console" aria-label="Turn controls">
+                    <div class="pokemon-action-console-title">
+                      <span>Current choice</span>
+                      <strong>Select a card or take tokens</strong>
+                    </div>
+                    <div class="pokemon-selection-summary">
+                      <div><span>Market</span><strong id="pokemonSplendorSelectedMarket">-</strong></div>
+                      <div><span>Reserved</span><strong id="pokemonSplendorSelectedReserved">-</strong></div>
+                      <div><span>Evolution base</span><strong id="pokemonSplendorSelectedBase">-</strong></div>
+                    </div>
+                    <div id="pokemonSplendorDiscardSelectionRow" class="pokemon-discard-row hidden">
+                      <span>Discard selection</span>
+                      <div id="pokemonSplendorDiscardSelection" class="splendor-token-selection"></div>
+                    </div>
+                    <div id="pokemonSplendorDiscardHint" class="splendor-discard-hint hidden"></div>
+
+                    <div class="pokemon-actions">
+                      <button id="pokemonSplendorTakeTokensBtn" class="pokemon-action-primary" type="button">Take Tokens</button>
+                      <button id="pokemonSplendorReserveDeckBtn" type="button">Reserve from Deck</button>
+                      <button id="pokemonSplendorBuyMarketBtn" class="pokemon-action-primary" type="button">Catch Selected</button>
+                      <button id="pokemonSplendorReserveMarketBtn" type="button">Reserve Selected</button>
+                      <button id="pokemonSplendorBuyReservedBtn" class="pokemon-action-primary" type="button">Catch Reserved</button>
+                      <button id="pokemonSplendorEvolveBtn" class="pokemon-action-primary" type="button">Evolve</button>
+                      <button id="pokemonSplendorSkipEvolveBtn" type="button">Skip Evolution</button>
+                      <button id="pokemonSplendorDiscardBtn" class="pokemon-action-primary" type="button">Discard Tokens</button>
+                    </div>
+                  </section>
+                </aside>
+
+                <section class="pokemon-market-column" aria-label="Pokemon market">
+                  <h3 class="pokemon-section-heading">Market</h3>
+                  <div class="splendor-market pokemon-market">
+                    <div class="pokemon-market-specials">
+                      <div class="splendor-tier pokemon-tier-section pokemon-tier-legendary">
+                        <div class="tier-label">Legendary</div>
+                        <div id="pokemonSplendorMarketLegendary" class="splendor-cards"></div>
+                      </div>
+                      <div class="splendor-tier pokemon-tier-section pokemon-tier-rare">
+                        <div class="tier-label">Rare</div>
+                        <div id="pokemonSplendorMarketRare" class="splendor-cards"></div>
+                      </div>
+                    </div>
+                    <div class="splendor-tier pokemon-tier-section pokemon-tier-lv3">
+                      <div class="tier-label">LV3</div>
+                      <div id="pokemonSplendorMarketLv3" class="splendor-cards"></div>
+                    </div>
+                    <div class="splendor-tier pokemon-tier-section pokemon-tier-lv2">
+                      <div class="tier-label">LV2</div>
+                      <div id="pokemonSplendorMarketLv2" class="splendor-cards"></div>
+                    </div>
+                    <div class="splendor-tier pokemon-tier-section pokemon-tier-lv1">
+                      <div class="tier-label">LV1</div>
+                      <div id="pokemonSplendorMarketLv1" class="splendor-cards"></div>
+                    </div>
+                  </div>
+                </section>
               </div>
 
-              <section class="pokemon-action-console" aria-label="Turn controls">
-                <div class="pokemon-action-console-title">
-                  <span>Current choice</span>
-                  <strong>Select a card or take tokens</strong>
-                </div>
-                <div class="pokemon-selection-summary">
-                  <div><span>Market</span><strong id="pokemonSplendorSelectedMarket">-</strong></div>
-                  <div><span>Reserved</span><strong id="pokemonSplendorSelectedReserved">-</strong></div>
-                  <div><span>Evolution base</span><strong id="pokemonSplendorSelectedBase">-</strong></div>
-                </div>
-                <div id="pokemonSplendorDiscardSelectionRow" class="pokemon-discard-row hidden">
-                  <span>Discard selection</span>
-                  <div id="pokemonSplendorDiscardSelection" class="splendor-token-selection"></div>
-                </div>
-                <div id="pokemonSplendorDiscardHint" class="splendor-discard-hint hidden"></div>
+              <div class="pokemon-personal-grid">
+                <section class="pokemon-personal-section">
+                  <h3 class="pokemon-section-heading">Your Reserved</h3>
+                  <div id="pokemonSplendorReserved" class="splendor-cards"></div>
+                </section>
+                <section class="pokemon-personal-section">
+                  <h3 class="pokemon-section-heading">Your Captured</h3>
+                  <div id="pokemonSplendorCaptured" class="splendor-cards"></div>
+                </section>
+              </div>
 
-                <div class="pokemon-actions">
-                  <button id="pokemonSplendorTakeTokensBtn" class="pokemon-action-primary" type="button">Take Tokens</button>
-                  <button id="pokemonSplendorReserveDeckBtn" type="button">Reserve from Deck</button>
-                  <button id="pokemonSplendorBuyMarketBtn" class="pokemon-action-primary" type="button">Catch Selected</button>
-                  <button id="pokemonSplendorReserveMarketBtn" type="button">Reserve Selected</button>
-                  <button id="pokemonSplendorBuyReservedBtn" class="pokemon-action-primary" type="button">Catch Reserved</button>
-                  <button id="pokemonSplendorEvolveBtn" class="pokemon-action-primary" type="button">Evolve</button>
-                  <button id="pokemonSplendorSkipEvolveBtn" type="button">Skip Evolution</button>
-                  <button id="pokemonSplendorDiscardBtn" class="pokemon-action-primary" type="button">Discard Tokens</button>
-                </div>
+              <section class="pokemon-players-section">
+                <h3 class="pokemon-section-heading">Players</h3>
+                <div id="pokemonSplendorPlayers"></div>
               </section>
-
-              <h3>Market</h3>
-              <div class="splendor-market pokemon-market">
-                <div class="splendor-tier pokemon-tier-section pokemon-tier-legendary">
-                  <div class="tier-label">Legendary</div>
-                  <div id="pokemonSplendorMarketLegendary" class="splendor-cards"></div>
-                </div>
-                <div class="splendor-tier pokemon-tier-section pokemon-tier-rare">
-                  <div class="tier-label">Rare</div>
-                  <div id="pokemonSplendorMarketRare" class="splendor-cards"></div>
-                </div>
-                <div class="splendor-tier pokemon-tier-section pokemon-tier-lv3">
-                  <div class="tier-label">LV3</div>
-                  <div id="pokemonSplendorMarketLv3" class="splendor-cards"></div>
-                </div>
-                <div class="splendor-tier pokemon-tier-section pokemon-tier-lv2">
-                  <div class="tier-label">LV2</div>
-                  <div id="pokemonSplendorMarketLv2" class="splendor-cards"></div>
-                </div>
-                <div class="splendor-tier pokemon-tier-section pokemon-tier-lv1">
-                  <div class="tier-label">LV1</div>
-                  <div id="pokemonSplendorMarketLv1" class="splendor-cards"></div>
-                </div>
-              </div>
-
-              <h3>Your Reserved</h3>
-              <div id="pokemonSplendorReserved" class="splendor-cards"></div>
-
-              <h3>Your Captured</h3>
-              <div id="pokemonSplendorCaptured" class="splendor-cards"></div>
-
-              <h3>Players</h3>
-              <div id="pokemonSplendorPlayers"></div>
             </div>
 
             <div id="pointSaladPanel" class="hidden">
@@ -5529,7 +5546,7 @@
   <script src="/static/games/gizmos.js?v=app_v4"></script>
   <script src="/static/games/century_spice_road.js?v=app_v3"></script>
   <script src="/static/games/splendor.js?v=app_v4"></script>
-  <script src="/static/games/splendor_pokemon.js?v=app_v5"></script>
+  <script src="/static/games/splendor_pokemon.js?v=app_v6"></script>
   <script src="/static/games/project_l.js?v=app_v4"></script>
   <script src="/static/games/decrypto.js?v=app_v4"></script>
   <script src="/static/games/wavelength.js?v=app_v4"></script>

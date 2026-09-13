@@ -1268,6 +1268,246 @@ def _finalize_game(state: Dict) -> None:
     state["current_turn"] = None
 
 
+def _bot_feature_winners(meeples: List[Dict]) -> List[str]:
+    counts: Dict[str, int] = {}
+    for meeple in meeples:
+        player_id = meeple.get("player_id")
+        if player_id:
+            counts[player_id] = counts.get(player_id, 0) + 1
+    if not counts:
+        return []
+    max_count = max(counts.values())
+    return [player_id for player_id, count in counts.items() if count == max_count]
+
+
+def _bot_ownership_value(meeples: List[Dict], player_id: str) -> float:
+    winners = _bot_feature_winners(meeples)
+    if not winners:
+        return 0.0
+    if player_id not in winners:
+        return -0.9
+    if len(winners) == 1:
+        return 1.0
+    return 0.35
+
+
+def _bot_field_city_counts(state: Dict, coord: Tuple[int, int], segment: int) -> Tuple[int, int, int]:
+    field = _collect_field(state, coord, segment, {})
+    completed: Set[Tuple[Tuple[int, int, int], ...]] = set()
+    incomplete: Set[Tuple[Tuple[int, int, int], ...]] = set()
+    for x, y, field_segment in field["nodes"]:
+        tile = state["board"].get(_coord_key(x, y))
+        if not tile:
+            continue
+        tmpl = _get_template(tile["type"], tile["rotation"])
+        if field_segment < 0 or field_segment >= len(tmpl.field_segments):
+            continue
+        for city_segment in tmpl.field_segments[field_segment].adjacent_cities:
+            city = _collect_feature(state, (x, y), "city", city_segment)
+            city_key = tuple(sorted(city["nodes"]))
+            if not city_key:
+                continue
+            if city["open_edges"] == 0:
+                completed.add(city_key)
+            else:
+                incomplete.add(city_key)
+    incomplete.difference_update(completed)
+    return len(completed), len(incomplete), len(field["tiles"])
+
+
+def _bot_meeple_option_value(state: Dict, player_id: str, coord: Tuple[int, int], option: Dict) -> float:
+    feature = option["feature"]
+    segment = option.get("segment")
+    returns_now = False
+
+    if feature in {"city", "road"} and isinstance(segment, int):
+        component = _collect_feature(state, coord, feature, segment)
+        tile_count = len(component["tiles"])
+        open_edges = int(component["open_edges"])
+        returns_now = open_edges == 0
+        if feature == "city":
+            base_points = tile_count + int(component["shields"])
+            if returns_now:
+                value = base_points * 2.0 * 4.0 + 3.0
+            else:
+                value = (
+                    base_points * 1.0
+                    + base_points * 0.9 / max(1, open_edges)
+                    + int(component["shields"]) * 0.4
+                    - max(0, open_edges - 2) * 0.35
+                )
+        else:
+            if returns_now:
+                value = tile_count * 3.6 + 2.5
+            else:
+                value = (
+                    tile_count * 0.8
+                    + 1.1 / max(1, open_edges)
+                    - max(0, open_edges - 2) * 0.25
+                )
+    elif feature == "monastery":
+        tile_count = _bot_monastery_tile_count(state, coord)
+        returns_now = tile_count >= 9
+        if returns_now:
+            value = tile_count * 3.6 + 2.5
+        else:
+            value = 1.2 + tile_count * 0.55 + (tile_count / 9.0) ** 2 * 2.0
+    elif feature == "field" and isinstance(segment, int):
+        completed, incomplete, field_tiles = _bot_field_city_counts(state, coord, segment)
+        remaining_ratio = min(1.0, len(state.get("tile_bag", [])) / max(1, len(TILE_DECK)))
+        urgency = 0.7 + (1.0 - remaining_ratio) * 0.65
+        value = (
+            completed * 3.0 * 1.1
+            + incomplete * 0.65
+            + min(field_tiles, 12) * 0.08
+        ) * urgency
+        if completed == 0 and incomplete < 2:
+            value -= 1.35
+    else:
+        return -1000.0
+
+    if not returns_now:
+        meeples = int(state["players"][player_id].get("meeples", 0))
+        reserve_cost = {
+            7: 0.25,
+            6: 0.35,
+            5: 0.55,
+            4: 0.85,
+            3: 1.35,
+            2: 2.2,
+            1: 4.0,
+        }.get(meeples, 5.0)
+        future_turn_factor = min(1.0, 0.35 + len(state.get("tile_bag", [])) / 24.0)
+        value -= reserve_cost * future_turn_factor
+        if feature == "field":
+            value -= 0.9 * future_turn_factor
+    return value
+
+
+def _bot_best_meeple_choice(
+    state: Dict,
+    player_id: str,
+    coord: Tuple[int, int],
+) -> Tuple[Dict, float]:
+    best_action: Dict = {"type": "skip_meeple"}
+    best_value = 0.85
+    for option in _build_meeple_options(state, coord, player_id):
+        value = _bot_meeple_option_value(state, player_id, coord, option)
+        if value <= best_value:
+            continue
+        best_value = value
+        best_action = {
+            "type": "place_meeple",
+            "feature": option["feature"],
+            "segment": option.get("segment"),
+        }
+    if best_action["type"] == "skip_meeple":
+        return best_action, 0.0
+    return best_action, best_value
+
+
+def _bot_monastery_tile_count(state: Dict, coord: Tuple[int, int]) -> int:
+    count = 0
+    board = state.get("board", {})
+    for dx in (-1, 0, 1):
+        for dy in (-1, 0, 1):
+            if _coord_key(coord[0] + dx, coord[1] + dy) in board:
+                count += 1
+    return count
+
+
+def _bot_placed_tile_value(state: Dict, player_id: str, coord: Tuple[int, int]) -> float:
+    board = state["board"]
+    tile = board[_coord_key(*coord)]
+    tmpl = _get_template(tile["type"], tile["rotation"])
+    value = 0.0
+
+    orthogonal_neighbors = 0
+    diagonal_neighbors = 0
+    for dx, dy in SIDE_DELTAS.values():
+        if _coord_key(coord[0] + dx, coord[1] + dy) in board:
+            orthogonal_neighbors += 1
+    for dx in (-1, 1):
+        for dy in (-1, 1):
+            if _coord_key(coord[0] + dx, coord[1] + dy) in board:
+                diagonal_neighbors += 1
+    value += max(0, orthogonal_neighbors - 1) * 0.35 + diagonal_neighbors * 0.08
+
+    visited_roads: Set[Tuple[int, int, int]] = set()
+    for segment in range(len(tmpl.road_segments)):
+        node = (coord[0], coord[1], segment)
+        if node in visited_roads:
+            continue
+        component = _collect_feature(state, coord, "road", segment)
+        visited_roads.update(component["nodes"])
+        ownership = _bot_ownership_value(component["meeples"], player_id)
+        if not ownership:
+            continue
+        if component["open_edges"] == 0:
+            value += ownership * (len(component["tiles"]) * 3.4 + 1.0)
+        else:
+            value += ownership * (0.85 + 0.65 / max(1, component["open_edges"]))
+
+    visited_cities: Set[Tuple[int, int, int]] = set()
+    for segment in range(len(tmpl.city_segments)):
+        node = (coord[0], coord[1], segment)
+        if node in visited_cities:
+            continue
+        component = _collect_feature(state, coord, "city", segment)
+        visited_cities.update(component["nodes"])
+        ownership = _bot_ownership_value(component["meeples"], player_id)
+        if not ownership:
+            continue
+        added_value = 1.0 + (1.0 if tmpl.city_segments[segment].has_shield else 0.0)
+        if component["open_edges"] == 0:
+            points = len(component["tiles"]) * 2 + int(component["shields"]) * 2
+            value += ownership * (points * 3.4 + 1.0)
+        else:
+            value += ownership * (added_value + 0.75 / max(1, component["open_edges"]))
+
+    # A tile also advances every occupied monastery in its surrounding square.
+    for dx in (-1, 0, 1):
+        for dy in (-1, 0, 1):
+            monastery_coord = (coord[0] + dx, coord[1] + dy)
+            monastery_tile = board.get(_coord_key(*monastery_coord))
+            if not monastery_tile:
+                continue
+            monastery_template = _get_template(monastery_tile["type"], monastery_tile["rotation"])
+            meeple = monastery_tile.get("meeple")
+            if not monastery_template.has_monastery or not meeple or meeple.get("feature") != "monastery":
+                continue
+            ownership = 1.0 if meeple.get("player_id") == player_id else -0.9
+            count = _bot_monastery_tile_count(state, monastery_coord)
+            value += ownership * (count * 3.4 + 1.0 if count >= 9 else 0.9)
+
+    _, meeple_value = _bot_best_meeple_choice(state, player_id, coord)
+    value += meeple_value
+    return value
+
+
+def _bot_tile_action_value(state: Dict, player_id: str, action: Dict) -> Optional[float]:
+    tile = state.get("pending_tile")
+    if not tile:
+        return None
+    x = int(action["x"])
+    y = int(action["y"])
+    rotation = int(action["rotation"])
+    if not _is_valid_placement(state["board"], tile["type"], rotation, x, y):
+        return None
+
+    key = _coord_key(x, y)
+    state["board"][key] = {
+        "id": tile["id"],
+        "type": tile["type"],
+        "rotation": rotation,
+        "meeple": None,
+    }
+    try:
+        return _bot_placed_tile_value(state, player_id, (x, y))
+    finally:
+        state["board"].pop(key, None)
+
+
 def get_carcassonne_template_payload() -> Dict:
     global TEMPLATE_PUBLIC_CACHE
     if TEMPLATE_PUBLIC_CACHE is not None:
@@ -1564,14 +1804,28 @@ class CarcassonneGame:
             if not tile:
                 return None
             legal = _find_legal_positions(state["board"], tile["type"])
+            best_action: Optional[Dict] = None
+            best_value: Optional[float] = None
             for rotation in (0, 90, 180, 270):
-                positions = legal.get(rotation) or []
-                if positions:
-                    x, y = positions[0]
-                    return {"type": "place_tile", "x": x, "y": y, "rotation": rotation}
-            return None
+                positions = sorted(
+                    legal.get(rotation) or [],
+                    key=lambda coord: (abs(coord[0]) + abs(coord[1]), coord[1], coord[0]),
+                )
+                for x, y in positions:
+                    action = {"type": "place_tile", "x": x, "y": y, "rotation": rotation}
+                    value = _bot_tile_action_value(state, bot_id, action)
+                    if value is None:
+                        continue
+                    if best_value is None or value > best_value:
+                        best_action = action
+                        best_value = value
+            return best_action
         if phase == "place_meeple":
-            return {"type": "skip_meeple"}
+            last = state.get("last_placed")
+            if not last:
+                return None
+            action, _ = _bot_best_meeple_choice(state, bot_id, (last["x"], last["y"]))
+            return action
         return None
 
     @staticmethod

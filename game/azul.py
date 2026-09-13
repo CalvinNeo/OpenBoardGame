@@ -1,3 +1,4 @@
+import copy
 import random
 from typing import Dict, List, Optional, Tuple
 
@@ -225,6 +226,224 @@ def _apply_end_game_bonuses(state: Dict) -> None:
     state["winner"] = candidates
 
 
+def _bot_candidate_actions(state: Dict, player_id: str) -> List[Dict]:
+    actions: List[Dict] = []
+    for source_index, factory in enumerate(state.get("factories", [])):
+        for color in sorted(set(factory)):
+            for row in range(5):
+                placeable, _ = _is_row_placeable(state, player_id, color, row)
+                if placeable:
+                    actions.append(
+                        {
+                            "type": "take_tiles",
+                            "source": "factory",
+                            "source_index": source_index,
+                            "color": color,
+                            "target_row": row,
+                        }
+                    )
+            actions.append(
+                {
+                    "type": "take_tiles",
+                    "source": "factory",
+                    "source_index": source_index,
+                    "color": color,
+                    "target_row": -1,
+                }
+            )
+
+    for color in sorted(set(state.get("center", []))):
+        for row in range(5):
+            placeable, _ = _is_row_placeable(state, player_id, color, row)
+            if placeable:
+                actions.append(
+                    {
+                        "type": "take_tiles",
+                        "source": "center",
+                        "color": color,
+                        "target_row": row,
+                    }
+                )
+        actions.append(
+            {
+                "type": "take_tiles",
+                "source": "center",
+                "color": color,
+                "target_row": -1,
+            }
+        )
+    return actions
+
+
+def _bot_taken_count(state: Dict, action: Dict) -> int:
+    color = action["color"]
+    if action["source"] == "center":
+        return state.get("center", []).count(color)
+    source_index = int(action.get("source_index", -1))
+    factories = state.get("factories", [])
+    if source_index < 0 or source_index >= len(factories):
+        return 0
+    return factories[source_index].count(color)
+
+
+def _bot_projected_player_value(state: Dict, player_id: str) -> float:
+    pdata = state["players"][player_id]
+    wall = [list(row) for row in pdata["wall"]]
+    guaranteed_points = 0
+
+    for row, line in enumerate(pdata["pattern_lines"]):
+        capacity = row + 1
+        if len(line["tiles"]) != capacity or not line.get("color"):
+            continue
+        col = _wall_col_for_color(row, line["color"])
+        if col is None or wall[row][col]:
+            continue
+        wall[row][col] = True
+        guaranteed_points += _score_placement(wall, row, col)
+
+    floor_count = min(len(pdata.get("floor", [])), len(FLOOR_PENALTIES))
+    floor_penalty = sum(FLOOR_PENALTIES[:floor_count])
+    projected_score = max(0, int(pdata.get("score", 0)) + guaranteed_points + floor_penalty)
+    value = projected_score * 4.0
+
+    # A floor tile still wastes a draft even when the score cannot fall below zero.
+    value += floor_penalty * 0.65
+    if pdata.get("has_first_player_token"):
+        value += 0.75
+
+    for row, line in enumerate(pdata["pattern_lines"]):
+        capacity = row + 1
+        count = len(line["tiles"])
+        if not count or count == capacity:
+            continue
+        completion = count / capacity
+        value += count * 0.62 + completion * completion * 1.25
+
+    # Value end-game bonus progress without treating a nearly complete set as
+    # already scored.  Cubing the ratio makes the fourth/fifth wall tile matter.
+    for row in range(5):
+        count = sum(1 for occupied in wall[row] if occupied)
+        value += 2.0 * (count / 5.0) ** 3
+    for col in range(5):
+        count = sum(1 for row in range(5) if wall[row][col])
+        value += 7.0 * (count / 5.0) ** 3
+    for color in COLORS:
+        count = 0
+        for row in range(5):
+            col = _wall_col_for_color(row, color)
+            if col is not None and wall[row][col]:
+                count += 1
+        value += 10.0 * (count / 5.0) ** 3
+
+    return value
+
+
+def _bot_offer_value(state: Dict, player_id: str, color: str, count: int, token_cost: bool) -> float:
+    if count <= 0:
+        return 0.0
+    pdata = state["players"][player_id]
+    best = -count * 1.1
+    for row in range(5):
+        placeable, _ = _is_row_placeable(state, player_id, color, row)
+        if not placeable:
+            continue
+        line = pdata["pattern_lines"][row]
+        capacity = row + 1
+        free = capacity - len(line["tiles"])
+        placed = min(free, count)
+        overflow = count - placed
+        value = placed * 0.55 - overflow * 1.0
+        if len(line["tiles"]) + placed == capacity:
+            col = _wall_col_for_color(row, color)
+            if col is not None:
+                projected_wall = [list(wall_row) for wall_row in pdata["wall"]]
+                projected_wall[row][col] = True
+                value += _score_placement(projected_wall, row, col) * 2.0 + 1.25
+        best = max(best, value)
+    if token_cost:
+        best -= 0.55
+    return best
+
+
+def _bot_best_market_offer(state: Dict, player_id: str) -> float:
+    if player_id not in state.get("players", {}):
+        return 0.0
+    best = 0.0
+    for factory in state.get("factories", []):
+        for color in set(factory):
+            best = max(best, _bot_offer_value(state, player_id, color, factory.count(color), False))
+    center = state.get("center", [])
+    for color in set(center):
+        best = max(
+            best,
+            _bot_offer_value(
+                state,
+                player_id,
+                color,
+                center.count(color),
+                bool(state.get("first_player_token_in_center")),
+            ),
+        )
+    return best
+
+
+def _bot_state_value(state: Dict, player_id: str) -> float:
+    own_value = _bot_projected_player_value(state, player_id)
+    opponent_values = [
+        _bot_projected_player_value(state, opponent_id)
+        for opponent_id in state.get("turn_order", [])
+        if opponent_id != player_id
+    ]
+    value = own_value - max(opponent_values, default=0.0) * 0.18
+
+    if state.get("game_over"):
+        if player_id in state.get("winner", []):
+            value += 100_000.0
+        else:
+            value -= 100_000.0
+        return value
+
+    next_player = state.get("current_turn")
+    if next_player == player_id:
+        value += _bot_best_market_offer(state, player_id) * 0.22
+    elif next_player in state.get("players", {}):
+        value -= _bot_best_market_offer(state, next_player) * 0.42
+    return value
+
+
+def _bot_action_value(state: Dict, player_id: str, action: Dict) -> Optional[float]:
+    taken_count = _bot_taken_count(state, action)
+    target_row = int(action.get("target_row", -1))
+    placed_count = 0
+    completed_line = False
+    if target_row >= 0:
+        line = state["players"][player_id]["pattern_lines"][target_row]
+        free = target_row + 1 - len(line["tiles"])
+        placed_count = min(free, taken_count)
+        completed_line = len(line["tiles"]) + placed_count == target_row + 1
+
+    simulated = copy.deepcopy(state)
+    random_state = random.getstate()
+    try:
+        _, error = AzulGame.apply_action(simulated, player_id, action)
+    finally:
+        # Recycling the discard can shuffle during a simulated round end.  Bot
+        # deliberation must not change the real game's random stream.
+        random.setstate(random_state)
+    if error:
+        return None
+
+    value = _bot_state_value(simulated, player_id)
+    overflow = taken_count - placed_count
+    if target_row < 0:
+        value -= taken_count * 0.8
+    elif overflow > 0:
+        value -= overflow * 0.35
+    if completed_line:
+        value += 0.35
+    return value
+
+
 class AzulGame:
     game_id = "azul"
     min_players = 2
@@ -437,61 +656,16 @@ class AzulGame:
         if bot_id != state.get("current_turn"):
             return None
 
-        moves: List[Dict] = []
-        for idx, factory in enumerate(state.get("factories", [])):
-            if not factory:
+        best_action: Optional[Dict] = None
+        best_value: Optional[float] = None
+        for action in _bot_candidate_actions(state, bot_id):
+            value = _bot_action_value(state, bot_id, action)
+            if value is None:
                 continue
-            colors = sorted({tile for tile in factory})
-            for color in colors:
-                for row in range(5):
-                    ok, _ = _is_row_placeable(state, bot_id, color, row)
-                    if ok:
-                        moves.append(
-                            {
-                                "type": "take_tiles",
-                                "source": "factory",
-                                "source_index": idx,
-                                "color": color,
-                                "target_row": row,
-                            }
-                        )
-                moves.append(
-                    {
-                        "type": "take_tiles",
-                        "source": "factory",
-                        "source_index": idx,
-                        "color": color,
-                        "target_row": -1,
-                    }
-                )
-
-        center = state.get("center", [])
-        if center:
-            colors = sorted({tile for tile in center})
-            for color in colors:
-                for row in range(5):
-                    ok, _ = _is_row_placeable(state, bot_id, color, row)
-                    if ok:
-                        moves.append(
-                            {
-                                "type": "take_tiles",
-                                "source": "center",
-                                "color": color,
-                                "target_row": row,
-                            }
-                        )
-                moves.append(
-                    {
-                        "type": "take_tiles",
-                        "source": "center",
-                        "color": color,
-                        "target_row": -1,
-                    }
-                )
-
-        if not moves:
-            return None
-        return random.choice(moves)
+            if best_value is None or value > best_value:
+                best_action = action
+                best_value = value
+        return best_action
 
     @staticmethod
     def serialize(state: Dict) -> Dict:
