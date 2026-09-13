@@ -222,6 +222,21 @@ class ArkNovaIntegrationTests(unittest.TestCase):
         self.assertIn('pendingType === "place_free_building" ? { skip: true }', script)
         self.assertIn("Choose one anchor hex on Map 0", script)
 
+    def test_pending_choice_is_integrated_into_plan_action(self) -> None:
+        script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")
+        stylesheet = (ROOT / "static" / "ark_nova.css").read_text(encoding="utf-8")
+        heading = script.index('id="arkNovaComposerTitle"')
+        pending = script.index('id="arkNovaPending"', heading)
+        composer = script.index('id="arkNovaComposer"', pending)
+        self.assertLess(heading, pending)
+        self.assertLess(pending, composer)
+        self.assertEqual(script.count('id="arkNovaPending"'), 1)
+        self.assertNotIn('class="arkn-pending arkn-surface"', script)
+        self.assertIn('composerSurface.classList.toggle("has-pending", !!pending)', script)
+        self.assertIn('container.innerHTML = arkNovaHandDiscardChoice(view)', script)
+        self.assertIn("#arkNovaPanel #arkNovaComposer:empty", stylesheet)
+        self.assertIn(".arkn-composer-surface.has-pending", stylesheet)
+
     def test_server_errors_use_the_active_game_type(self) -> None:
         script = (ROOT / "static" / "room.js").read_text(encoding="utf-8")
         self.assertIn('if (currentGameType === "ark_nova"', script)

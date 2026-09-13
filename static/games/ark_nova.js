@@ -529,7 +529,6 @@
       panel.dataset.arkNovaMounted = "true";
       panel.innerHTML = `
         <div id="arkNovaStatus" class="arkn-status" aria-live="polite"></div>
-        <div id="arkNovaPending" class="arkn-pending-wrap"></div>
         <div class="arkn-public-board">
           <section class="arkn-surface arkn-tracks-surface" aria-labelledby="arkNovaTracksTitle">
             <div class="arkn-section-heading"><h3 id="arkNovaTracksTitle">Public tracks</h3><span id="arkNovaBreakStatus" class="arkn-kicker"></span></div>
@@ -571,7 +570,8 @@
               <div id="arkNovaActionCards" class="arkn-action-rack"></div>
             </section>
             <section class="arkn-surface arkn-composer-surface" aria-labelledby="arkNovaComposerTitle">
-              <div class="arkn-section-heading"><h3 id="arkNovaComposerTitle">Plan action</h3><span class="arkn-kicker">Server validated</span></div>
+              <div class="arkn-section-heading"><h3 id="arkNovaComposerTitle">Plan action</h3><span id="arkNovaComposerStatus" class="arkn-kicker">Server validated</span></div>
+              <div id="arkNovaPending" class="arkn-pending-wrap"></div>
               <div id="arkNovaComposer"></div>
             </section>
           </aside>
@@ -2194,7 +2194,9 @@
       return;
     }
     if (view.pending_choice || view.pending) {
-      container.innerHTML = `<div class="arkn-waiting"><span>✦</span><strong>Resolve the highlighted choice</strong><p>Other actions are paused until this effect is complete.</p></div>`;
+      container.innerHTML = arkNovaHandDiscardChoice(view)
+        ? `<div class="arkn-waiting arkn-waiting-compact"><span>🂠</span><strong>Choose from Your cards</strong><p>Select the required cards below, then confirm there.</p></div>`
+        : "";
       return;
     }
     if (!arkNovaIsMyTurn(view)) {
@@ -2239,6 +2241,13 @@
     const container = document.getElementById("arkNovaPending");
     if (!container) return;
     const pending = view.pending_choice || view.pending;
+    const composerSurface = container.closest(".arkn-composer-surface");
+    const composerStatus = document.getElementById("arkNovaComposerStatus");
+    const handDiscardChoice = pending ? arkNovaHandDiscardChoice(view) : null;
+    if (composerSurface) composerSurface.classList.toggle("has-pending", !!pending);
+    if (composerStatus) composerStatus.textContent = pending
+      ? handDiscardChoice ? "Choose in Your cards" : "Choice required"
+      : "Server validated";
     if (!pending) {
       container.innerHTML = "";
       arkNovaPendingOptions = [];
@@ -2265,7 +2274,7 @@
       const confirmLabel = pendingType === "place_free_building" && buildingMeta
         ? `Build free ${buildingMeta.name}`
         : "Confirm footprint";
-      container.innerHTML = `<section class="arkn-pending arkn-surface" aria-labelledby="arkNovaPendingTitle">
+      container.innerHTML = `<section class="arkn-pending" aria-labelledby="arkNovaPendingTitle">
         <div class="arkn-pending-copy"><span>⬡</span><div><h3 id="arkNovaPendingTitle">${arkNovaEscape(pending.prompt || fallbackTitle)}</h3><p>Choose one anchor hex on Map 0; the fixed piece appears automatically. ${arkNovaEscape(pending.detail || pending.description || "Terrain, occupancy, adjacency, and shape are validated when confirmed.")}</p></div></div>
         ${buildingPicker}
         ${arkNovaBuildDraftMarkup(view)}
@@ -2274,7 +2283,7 @@
       return;
     }
     arkNovaPendingOptions = arkNovaChoiceOptions(pending);
-    if (arkNovaHandDiscardChoice(view)) {
+    if (handDiscardChoice) {
       container.innerHTML = "";
       return;
     }
@@ -2286,7 +2295,7 @@
       const disabled = option && typeof option === "object" && option.disabled;
       return `<button type="button" class="arkn-choice-option ${selected ? "is-selected" : ""}" data-arkn-choice-index="${index}" data-arkn-explain="pending_choice" aria-pressed="${selected}" ${disabled ? "disabled" : ""}><strong>${arkNovaEscape(arkNovaPendingOptionLabel(option))}</strong>${option && option.detail ? `<small>${arkNovaEscape(option.detail)}</small>` : ""}</button>`;
     }).join("") : `<div class="arkn-empty arkn-empty-inline">Waiting for available options…</div>`;
-    container.innerHTML = `<section class="arkn-pending arkn-surface" aria-labelledby="arkNovaPendingTitle">
+    container.innerHTML = `<section class="arkn-pending" aria-labelledby="arkNovaPendingTitle">
       <div class="arkn-pending-copy"><span>✦</span><div><h3 id="arkNovaPendingTitle">${arkNovaEscape(pending.prompt || pending.label || arkNovaTitle(pending.type || "Resolve choice"))}</h3><p>Select ${minimum === maximum ? minimum : `${minimum}–${maximum}`} option${maximum === 1 ? "" : "s"}. ${arkNovaEscape(pending.detail || pending.description || "This effect must resolve before play continues.")}</p></div></div>
       <div class="arkn-choice-options">${optionMarkup}</div>
       <div class="arkn-pending-actions"><button type="button" class="arkn-confirm" data-arkn-command="resolve-choice" data-arkn-explain="pending_choice" ${valid && arkNovaCan("resolve_choice") ? "" : "disabled"}>Confirm choice</button>${pending.allow_skip || minimum === 0 ? `<button type="button" data-arkn-command="skip-choice">Skip</button>` : ""}</div>
