@@ -1123,7 +1123,7 @@ function updateRoomControlsForStatus(status) {
   }
   const isInGame = status === "in_game";
   roomControlsPanel.classList.toggle("compact", isInGame);
-  if (isInGame && roomControlsDockQuery.matches && !roomControlsGameActive) {
+  if (isInGame && !roomControlsGameActive) {
     const wasCollapsed = roomControlsPanel.classList.contains("collapsed");
     if (!wasCollapsed) {
       setRoomControlsCollapsed(true, { auto: true });
