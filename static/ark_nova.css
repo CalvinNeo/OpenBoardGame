@@ -361,6 +361,27 @@
   transform: translateY(-4px);
 }
 
+#arkNovaPanel #arkNovaHand .arkn-card.is-selectable:not(.is-selected):hover,
+#arkNovaPanel #arkNovaHand .arkn-card.is-selectable:not(.is-selected):focus-within {
+  border-color: #ffe0a3;
+  box-shadow: 0 8px 17px rgba(0, 0, 0, 0.28), 0 0 0 2px rgba(255, 224, 163, 0.7);
+  transform: none;
+}
+
+#arkNovaPanel #arkNovaHand .arkn-card-main:hover:not(:disabled) {
+  background: transparent;
+  border-color: transparent;
+}
+
+#arkNovaPanel #arkNovaHand .arkn-card.is-selected,
+#arkNovaPanel #arkNovaHand .arkn-card.is-selected:hover,
+#arkNovaPanel #arkNovaHand .arkn-card.is-selected:focus-within {
+  background: linear-gradient(160deg, #fff0ce, #e9b56f);
+  border-color: #ff9f45;
+  box-shadow: 0 0 0 3px rgba(255, 159, 69, 0.55), 0 12px 24px rgba(0, 0, 0, 0.36);
+  transform: translateY(-3px);
+}
+
 #arkNovaPanel .arkn-card-main {
   align-items: stretch;
   background: transparent;
@@ -1613,8 +1634,14 @@
 #arkNovaPanel .arkn-lower-grid {
   display: grid;
   gap: 16px;
-  grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.5fr);
+  grid-template-areas:
+    "cards"
+    "log";
+  grid-template-columns: minmax(0, 1fr);
 }
+
+#arkNovaPanel .arkn-cards-surface { grid-area: cards; }
+#arkNovaPanel .arkn-log-surface { grid-area: log; }
 
 #arkNovaPanel .arkn-hand-choice {
   align-items: center;

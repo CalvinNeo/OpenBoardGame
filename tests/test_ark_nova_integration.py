@@ -51,6 +51,19 @@ class ArkNovaIntegrationTests(unittest.TestCase):
         self.assertIn("Use the information button for card details.", script)
         self.assertIn('class="arkn-card-info" data-arkn-card-info=', script)
 
+    def test_hand_hover_and_selected_states_are_visually_distinct(self) -> None:
+        stylesheet = (ROOT / "static" / "ark_nova.css").read_text(encoding="utf-8")
+        self.assertIn("#arkNovaHand .arkn-card.is-selectable:not(.is-selected):hover", stylesheet)
+        self.assertIn("#arkNovaHand .arkn-card-main:hover:not(:disabled)", stylesheet)
+        self.assertIn("#arkNovaHand .arkn-card.is-selected", stylesheet)
+        self.assertIn("background: linear-gradient(160deg, #fff0ce, #e9b56f);", stylesheet)
+
+    def test_hand_occupies_a_full_row_above_the_event_log(self) -> None:
+        stylesheet = (ROOT / "static" / "ark_nova.css").read_text(encoding="utf-8")
+        self.assertIn('grid-template-areas:\n    "cards"\n    "log";', stylesheet)
+        self.assertIn(".arkn-cards-surface { grid-area: cards; }", stylesheet)
+        self.assertIn(".arkn-log-surface { grid-area: log; }", stylesheet)
+
     def test_discard_choices_are_made_from_the_hand(self) -> None:
         script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")
         self.assertIn('!== "discard_cards"', script)
