@@ -1028,6 +1028,10 @@
   z-index: -1;
 }
 
+#arkNovaPanel button.arkn-map-rotate-fab {
+  display: none;
+}
+
 #arkNovaPanel .arkn-map-tools {
   align-items: center;
   display: flex;
@@ -2104,6 +2108,44 @@
 
   #arkNovaPanel .arkn-map-frame {
     min-height: 0;
+  }
+
+  #arkNovaPanel button.arkn-map-rotate-fab.is-visible {
+    align-items: center;
+    backdrop-filter: blur(8px);
+    background: linear-gradient(145deg, rgba(255, 246, 222, 0.97), rgba(241, 169, 61, 0.96));
+    border: 2px solid rgba(79, 45, 15, 0.72);
+    border-radius: 999px;
+    bottom: 12px;
+    box-shadow: 0 7px 20px rgba(20, 25, 21, 0.36), 0 1px 0 rgba(255, 255, 255, 0.55) inset;
+    color: #35200e;
+    display: flex;
+    gap: 6px;
+    min-height: 48px;
+    padding: 8px 14px;
+    position: absolute;
+    right: 12px;
+    touch-action: manipulation;
+    transition: filter 120ms ease, transform 120ms ease;
+    z-index: 4;
+  }
+
+  #arkNovaPanel button.arkn-map-rotate-fab.is-visible > span {
+    font-size: 1.35rem;
+    line-height: 1;
+  }
+
+  #arkNovaPanel button.arkn-map-rotate-fab.is-visible > b {
+    font-size: 0.78rem;
+  }
+
+  #arkNovaPanel button.arkn-map-rotate-fab.is-visible:active {
+    filter: brightness(0.95);
+    transform: scale(0.96);
+  }
+
+  #arkNovaPanel button.arkn-composer-rotate {
+    display: none;
   }
 
   #arkNovaPanel .arkn-association-supply {

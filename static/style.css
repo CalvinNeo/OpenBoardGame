@@ -3959,6 +3959,51 @@ body.log-open {
   cursor: default;
 }
 
+.cabo-choice-hint {
+  margin: 8px 0 12px;
+  padding: 9px 11px;
+  border: 1px solid #7c3aed;
+  border-radius: 6px;
+  background: #f5f3ff;
+  color: #4c1d95;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+#caboPanel .slot.cabo-choice-selectable {
+  border-color: #7c3aed;
+  background: #f5f3ff;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.16);
+}
+
+#caboPanel .slot.cabo-choice-selectable:hover {
+  background: #ede9fe;
+  transform: translateY(-1px);
+}
+
+#caboPanel .slot.cabo-choice-selectable.selected {
+  border-color: #6d28d9;
+  background: #ddd6fe;
+  box-shadow: 0 0 0 2px rgba(109, 40, 217, 0.28);
+}
+
+#caboPanel .player-slot.target-selectable {
+  border-color: #7c3aed;
+  background: #f5f3ff;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.16);
+}
+
+#caboPanel .player-slot.target-selectable:hover {
+  background: #ede9fe;
+  transform: translateY(-1px);
+}
+
+#caboPanel .player-slot.target-selected {
+  border-color: #6d28d9;
+  background: #ddd6fe;
+  box-shadow: 0 0 0 2px rgba(109, 40, 217, 0.28);
+}
+
 .slot.selected {
   border-color: #1f6feb;
   background: #eaf2ff;

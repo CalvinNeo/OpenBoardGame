@@ -519,6 +519,7 @@
             <div class="arkn-map-frame">
               <object id="arkNovaMapObject" class="arkn-map-object" type="image/svg+xml" data="${ARK_NOVA_MAP_URL}" aria-label="Interactive Map 0 zoo board"></object>
               <div id="arkNovaMapLoading" class="arkn-map-loading">Loading Map 0…</div>
+              <button id="arkNovaMapRotateButton" class="arkn-map-rotate-fab" type="button" data-arkn-command="rotate-build" data-arkn-explain="rotate_footprint" aria-label="Rotate selected building" aria-hidden="true" disabled><span aria-hidden="true">↻</span><b>Rotate</b></button>
             </div>
             <div id="arkNovaBuildings" class="arkn-building-list"></div>
             <div id="arkNovaViewedZooCards" class="arkn-viewed-zoo-cards"></div>
@@ -1256,12 +1257,26 @@
     arkNovaApplyMapState();
   }
 
+  function arkNovaUpdateMapRotateButton(drafting) {
+    const button = document.getElementById("arkNovaMapRotateButton");
+    if (!button) return;
+    const canRotate = !!drafting && arkNovaUi.buildCells.length > 1 && arkNovaFootprintOffsets().length > 1;
+    button.classList.toggle("is-visible", canRotate);
+    button.disabled = !canRotate;
+    button.setAttribute("aria-hidden", String(!canRotate));
+  }
+
   function arkNovaApplyMapState() {
-    if (!arkNovaMapDocument || !arkNovaView) return;
+    if (!arkNovaView) {
+      arkNovaUpdateMapRotateButton(false);
+      return;
+    }
     const viewedPlayer = arkNovaViewedPlayer(arkNovaView);
     const viewingOwnZoo = arkNovaViewingOwnZoo(arkNovaView);
     const occupied = arkNovaOccupiedCells(arkNovaView, viewedPlayer, viewingOwnZoo);
     const drafting = viewingOwnZoo && ((arkNovaUi.selectedAction === "build" && arkNovaCan("build")) || !!arkNovaPendingMapChoice());
+    arkNovaUpdateMapRotateButton(drafting);
+    if (!arkNovaMapDocument) return;
     const selected = new Set(viewingOwnZoo ? arkNovaUi.buildCells : []);
     const queuedCells = new Set(viewingOwnZoo ? arkNovaUi.buildQueue.flatMap((building) => building.cells) : []);
     arkNovaMapDocument.querySelectorAll("[data-cell-id]").forEach((cell) => {
@@ -1458,7 +1473,7 @@
       </div>
       <div class="arkn-map-draft"><span><b>Fixed footprint</b><small>${arkNovaUi.buildCells.length} / ${required} hexes · rotation ${arkNovaUi.buildRotation * 60}°</small></span><output>${arkNovaUi.buildCells.join(" · ") || "Choose one anchor hex on Map 0"}</output></div>
       <div class="arkn-inline-actions">
-        <button type="button" data-arkn-command="rotate-build" data-arkn-explain="rotate_footprint" ${required < 2 || !arkNovaUi.buildCells.length ? "disabled" : ""}>↻ Rotate</button>
+        <button type="button" class="arkn-composer-rotate" data-arkn-command="rotate-build" data-arkn-explain="rotate_footprint" ${required < 2 || !arkNovaUi.buildCells.length ? "disabled" : ""}>↻ Rotate</button>
         <button type="button" data-arkn-command="queue-build" data-arkn-explain="queue_building" ${footprintReady ? "" : "disabled"}>Add building</button>
         <button type="button" class="arkn-quiet" data-arkn-command="undo-build" data-arkn-explain="undo" ${arkNovaUi.buildQueue.length ? "" : "disabled"}>Undo queued</button>
       </div>
@@ -1643,7 +1658,7 @@
       container.innerHTML = `<section class="arkn-pending arkn-surface" aria-labelledby="arkNovaPendingTitle">
         <div class="arkn-pending-copy"><span>⬡</span><div><h3 id="arkNovaPendingTitle">${arkNovaEscape(pending.prompt || (String(pending.type).includes("unique") ? "Place unique building" : "Place free enclosure"))}</h3><p>Choose one anchor hex; the fixed piece appears automatically. ${arkNovaEscape(pending.detail || pending.description || "Terrain, occupancy, adjacency, and shape are validated when confirmed.")}</p></div></div>
         <div class="arkn-map-draft"><span><b>Fixed footprint</b><small>${arkNovaUi.buildCells.length} / ${required} hexes · rotation ${arkNovaUi.buildRotation * 60}°</small></span><output>${arkNovaUi.buildCells.join(" · ") || "Choose one anchor hex on Map 0"}</output></div>
-        <div class="arkn-pending-actions"><button type="button" data-arkn-command="rotate-build" data-arkn-explain="rotate_footprint" ${required < 2 || !arkNovaUi.buildCells.length ? "disabled" : ""}>↻ Rotate</button><button type="button" class="arkn-confirm" data-arkn-command="resolve-choice" data-arkn-explain="pending_choice" ${ready && arkNovaCan("resolve_choice") ? "" : "disabled"}>Confirm footprint</button>${pending.allow_skip ? `<button type="button" data-arkn-command="skip-choice">Skip</button>` : ""}</div>
+        <div class="arkn-pending-actions"><button type="button" class="arkn-composer-rotate" data-arkn-command="rotate-build" data-arkn-explain="rotate_footprint" ${required < 2 || !arkNovaUi.buildCells.length ? "disabled" : ""}>↻ Rotate</button><button type="button" class="arkn-confirm" data-arkn-command="resolve-choice" data-arkn-explain="pending_choice" ${ready && arkNovaCan("resolve_choice") ? "" : "disabled"}>Confirm footprint</button>${pending.allow_skip ? `<button type="button" data-arkn-command="skip-choice">Skip</button>` : ""}</div>
       </section>`;
       return;
     }

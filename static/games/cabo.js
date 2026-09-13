@@ -7,6 +7,7 @@ const lastDrawn = document.getElementById("lastDrawn");
 const caboBy = document.getElementById("caboBy");
 const caboLeft = document.getElementById("caboLeft");
 const pendingChoice = document.getElementById("pendingChoice");
+const caboChoiceHint = document.getElementById("caboChoiceHint");
 
 const handSlots = document.getElementById("handSlots");
 const selectedSlotsLabel = document.getElementById("selectedSlots");
@@ -31,6 +32,59 @@ const clearSelectionBtn = document.getElementById("clearSelection");
 let currentCaboView = null;
 let selectedSlots = [];
 let selectedTarget = null;
+
+const caboChoiceByValue = Object.freeze({
+  7: "peek",
+  8: "peek",
+  9: "spy",
+  10: "spy",
+  11: "swap",
+  12: "swap",
+});
+
+function getCaboActiveChoiceType(view = currentCaboView) {
+  if (!view) {
+    return null;
+  }
+  const canUseChoice =
+    Array.isArray(view.legal_actions) && view.legal_actions.includes("use_choice_action");
+  if (!canUseChoice) {
+    return null;
+  }
+  if (view.pending_choice && view.pending_choice.type) {
+    return view.pending_choice.type;
+  }
+  if (view.phase === "drawn") {
+    return caboChoiceByValue[view.last_drawn] || null;
+  }
+  return null;
+}
+
+function updateCaboChoicePrompt() {
+  const choiceType = getCaboActiveChoiceType();
+  const buttonLabels = {
+    peek: "Peek at Selected Card",
+    spy: "Spy on Selected Card",
+    swap: "Swap Selected Cards",
+  };
+  actionButtons.use_choice_action.textContent = buttonLabels[choiceType] || "Use Choice";
+
+  if (!caboChoiceHint) {
+    return;
+  }
+  const discardNote =
+    currentCaboView && currentCaboView.phase === "drawn"
+      ? "The drawn card will be discarded automatically."
+      : "The choice card has already been discarded.";
+  const promptByType = {
+    peek: `Peek is ready: select one of your cards, then use Peek. ${discardNote}`,
+    spy: `Spy is ready: select one highlighted opponent card, then use Spy. ${discardNote}`,
+    swap: `Swap is ready: select one of your cards and one highlighted opponent card, then use Swap. ${discardNote}`,
+  };
+  const prompt = promptByType[choiceType] || "";
+  caboChoiceHint.textContent = prompt;
+  caboChoiceHint.classList.toggle("hidden", !prompt);
+}
 
 function getInitialPeekInactiveReason() {
   if (!currentCaboView) {
@@ -113,10 +167,8 @@ function isCaboActionAvailable(actionType) {
     return selectedSlots.length >= 1;
   }
   if (actionType === "use_choice_action") {
-    if (!currentCaboView.pending_choice) {
-      return false;
-    }
-    const choiceType = currentCaboView.pending_choice.type;
+    const choiceType = getCaboActiveChoiceType();
+    if (!choiceType) return false;
     if (choiceType === "peek") {
       return selectedSlots.length >= 1;
     }
@@ -131,6 +183,7 @@ function isCaboActionAvailable(actionType) {
 }
 
 function updateActionButtons() {
+  updateCaboChoicePrompt();
   if (currentGameType !== "cabo") {
     Object.values(actionButtons).forEach((button) => {
       button.classList.remove("action-allowed");
@@ -168,6 +221,8 @@ function clearSelection() {
 function renderHand(view) {
   handSlots.innerHTML = "";
   const you = view.players.find((p) => p.player_id === view.you);
+  const activeChoiceType = getCaboActiveChoiceType(view);
+  const needsOwnChoiceCard = activeChoiceType === "peek" || activeChoiceType === "swap";
   if (!you) {
     handSlots.textContent = "-";
     return;
@@ -176,6 +231,11 @@ function renderHand(view) {
     const div = document.createElement("div");
     div.className = "slot";
     if (slot.empty) div.classList.add("empty");
+    if (needsOwnChoiceCard && !slot.empty) {
+      div.classList.add("cabo-choice-selectable");
+      div.title =
+        activeChoiceType === "peek" ? "Select this card to peek" : "Select this card to swap";
+    }
     div.dataset.slot = idx;
     let label = "?";
     if (slot.empty) {
@@ -193,7 +253,16 @@ function renderHand(view) {
         selectedSlots = selectedSlots.filter((s) => s !== idx);
         div.classList.remove("selected");
       } else {
-        if (currentCaboView && currentCaboView.phase === "initial_peek" && selectedSlots.length >= 2) {
+        if (needsOwnChoiceCard && selectedSlots.length >= 1) {
+          selectedSlots = [];
+          handSlots.querySelectorAll(".slot.selected").forEach((slotElement) => {
+            slotElement.classList.remove("selected");
+          });
+        } else if (
+          currentCaboView &&
+          currentCaboView.phase === "initial_peek" &&
+          selectedSlots.length >= 2
+        ) {
           selectedSlots = selectedSlots.slice(-1);
           handSlots.querySelectorAll(".slot.selected").forEach((slotElement) => {
             const slotIndex = Number(slotElement.dataset.slot);
@@ -212,9 +281,8 @@ function renderHand(view) {
 
 function renderGamePlayers(view) {
   gamePlayers.innerHTML = "";
-  const canSelectTarget =
-    view.pending_choice &&
-    (view.pending_choice.type === "spy" || view.pending_choice.type === "swap");
+  const activeChoiceType = getCaboActiveChoiceType(view);
+  const canSelectTarget = activeChoiceType === "spy" || activeChoiceType === "swap";
   view.players.forEach((p) => {
     const card = document.createElement("div");
     card.className = "player-card";
@@ -282,12 +350,15 @@ function renderGamePlayers(view) {
       }
       if (isSelectableTarget) {
         slotEl.classList.add("target-selectable");
+        slotEl.title =
+          activeChoiceType === "spy" ? "Select this card to spy" : "Select this card to swap";
         slotEl.addEventListener("click", () => {
           const isSameTarget =
             selectedTarget &&
             selectedTarget.playerId === p.player_id &&
             selectedTarget.slot === idx;
           selectedTarget = isSameTarget ? null : { playerId: p.player_id, slot: idx };
+          updateTargetSelection();
           updateActionButtons();
           renderGamePlayers(view);
         });
@@ -366,6 +437,10 @@ function clearCaboState() {
   caboBy.textContent = "-";
   caboLeft.textContent = "-";
   pendingChoice.textContent = "-";
+  if (caboChoiceHint) {
+    caboChoiceHint.textContent = "";
+    caboChoiceHint.classList.add("hidden");
+  }
   handSlots.innerHTML = "";
   if (selectedSlotsLabel) {
     selectedSlotsLabel.textContent = "-";
@@ -387,9 +462,8 @@ function renderCaboGameState(data) {
     currentGameType = "cabo";
     setGamePanelVisibility("cabo");
   }
-  const needsTarget =
-    view.pending_choice &&
-    (view.pending_choice.type === "spy" || view.pending_choice.type === "swap");
+  const activeChoiceType = getCaboActiveChoiceType(view);
+  const needsTarget = activeChoiceType === "spy" || activeChoiceType === "swap";
   if (!needsTarget) {
     selectedTarget = null;
   } else if (selectedTarget) {
@@ -412,15 +486,7 @@ function renderCaboGameState(data) {
   if (view.last_drawn === null || view.last_drawn === undefined) {
     lastDrawn.textContent = "-";
   } else {
-    const choiceMap = {
-      7: "peek",
-      8: "peek",
-      9: "spy",
-      10: "spy",
-      11: "swap",
-      12: "swap",
-    };
-    const choice = choiceMap[view.last_drawn];
+    const choice = caboChoiceByValue[view.last_drawn];
     lastDrawn.textContent = choice ? `${view.last_drawn} (${choice})` : String(view.last_drawn);
   }
   const caboCaller = view.players.find((p) => p.player_id === view.cabo_called_by);
@@ -517,11 +583,11 @@ if (actionButtons.next_round) {
 
 if (actionButtons.use_choice_action) {
   actionButtons.use_choice_action.addEventListener("click", () => {
-    if (!currentCaboView || !currentCaboView.pending_choice) {
-      log("No pending choice");
+    const choiceType = getCaboActiveChoiceType();
+    if (!choiceType) {
+      log("No choice action is available");
       return;
     }
-    const choiceType = currentCaboView.pending_choice.type;
     if (choiceType === "peek") {
       if (!selectedSlots.length) {
         log("Select one of your slots to peek");

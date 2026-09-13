@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css?v=app_v26" />
-  <link rel="stylesheet" href="/static/ark_nova.css?v=app_v7" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v27" />
+  <link rel="stylesheet" href="/static/ark_nova.css?v=app_v8" />
 </head>
 <body>
   <section id="logPanel" class="log-panel hidden" aria-hidden="true">
@@ -1757,6 +1757,7 @@
               <div class="row">
                 <div>Pending Choice: <span id="pendingChoice">-</span></div>
               </div>
+              <p id="caboChoiceHint" class="cabo-choice-hint hidden" aria-live="polite"></p>
 
               <div class="row cabo-hand-header">
                 <h3>Your Hand</h3>
@@ -1781,7 +1782,7 @@
                 <button id="drawDeckBtn">Draw Deck</button>
                 <button id="replaceBtn">Replace / Match</button>
                 <button id="callCaboBtn">Call Cabo</button>
-                <button id="choiceBtn">Resolve Choice</button>
+                <button id="choiceBtn">Use Choice</button>
                 <button id="nextRoundBtn">Next Round</button>
               </div>
 
@@ -5483,7 +5484,7 @@
   <script src="/static/games/skull.js?v=app_v4"></script>
   <script src="/static/games/rebel_princess.js?v=app_v1"></script>
   <script src="/static/games/guandan.js?v=app_v10"></script>
-  <script src="/static/games/cabo.js?v=app_v7"></script>
+  <script src="/static/games/cabo.js?v=app_v8"></script>
   <script src="/static/games/flip7.js?v=app_v4"></script>
   <script src="/static/games/acquire.js?v=app_v1"></script>
   <script src="/static/games/abraca_what.js?v=app_v4"></script>
@@ -5516,7 +5517,7 @@
   <script src="/static/games/witchs_brew.js?v=app_v1"></script>
   <script src="/static/games/ra.js?v=app_v6"></script>
   <script src="/static/games/scout.js?v=app_v4"></script>
-  <script src="/static/games/ark_nova.js?v=app_v11"></script>
+  <script src="/static/games/ark_nova.js?v=app_v12"></script>
   <script src="/static/app.js?v=app_v11"></script>
   <script src="/static/room.js?v=app_v16"></script>
 </body>

@@ -98,6 +98,16 @@ class ArkNovaIntegrationTests(unittest.TestCase):
         self.assertIn("arkNovaUi.buildCells = placement.cells", script)
         self.assertIn("Choose one anchor hex on Map 0", script)
 
+    def test_mobile_map_has_contextual_rotate_control(self) -> None:
+        script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")
+        stylesheet = (ROOT / "static" / "ark_nova.css").read_text(encoding="utf-8")
+        self.assertIn('id="arkNovaMapRotateButton"', script)
+        self.assertIn('class="arkn-composer-rotate"', script)
+        self.assertIn("function arkNovaUpdateMapRotateButton", script)
+        self.assertIn('button.classList.toggle("is-visible", canRotate)', script)
+        self.assertIn("button.arkn-map-rotate-fab.is-visible", stylesheet)
+        self.assertIn("button.arkn-composer-rotate", stylesheet)
+
     def test_card_illustrations_are_wired_to_every_card_type(self) -> None:
         script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")
         stylesheet = (ROOT / "static" / "ark_nova.css").read_text(encoding="utf-8")

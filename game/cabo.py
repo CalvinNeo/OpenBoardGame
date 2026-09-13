@@ -77,6 +77,66 @@ def _add_card_to_hand(state: Dict, player_id: str, card: Dict) -> int:
     return slot
 
 
+def _apply_choice_effect(
+    state: Dict, player_id: str, choice_type: str, target: Dict
+) -> Optional[str]:
+    if not isinstance(target, dict):
+        return "invalid target"
+
+    if choice_type == "peek":
+        slot = target.get("slot")
+        hand = state["players"][player_id]["hand"]
+        if not isinstance(slot, int) or slot < 0 or slot >= len(hand):
+            return "invalid slot"
+        if hand[slot] is None:
+            return "slot empty"
+        state["knowledge"][player_id][player_id][slot] = True
+        return None
+
+    if choice_type == "spy":
+        target_id = target.get("player_id")
+        slot = target.get("slot")
+        if not isinstance(target_id, str) or target_id not in state["players"]:
+            return "invalid target player"
+        if target_id == player_id:
+            return "must spy another player"
+        target_hand = state["players"][target_id]["hand"]
+        if not isinstance(slot, int) or slot < 0 or slot >= len(target_hand):
+            return "invalid slot"
+        if target_hand[slot] is None:
+            return "slot empty"
+        state["knowledge"][player_id][target_id][slot] = True
+        return None
+
+    if choice_type == "swap":
+        target_id = target.get("player_id")
+        slot = target.get("slot")
+        self_slot = target.get("self_slot")
+        if not isinstance(target_id, str) or target_id not in state["players"]:
+            return "invalid target player"
+        if target_id == player_id:
+            return "must swap with another player"
+        target_hand = state["players"][target_id]["hand"]
+        if not isinstance(slot, int) or slot < 0 or slot >= len(target_hand):
+            return "invalid slot"
+        self_hand = state["players"][player_id]["hand"]
+        if not isinstance(self_slot, int) or self_slot < 0 or self_slot >= len(self_hand):
+            return "invalid self_slot"
+        if target_hand[slot] is None:
+            return "slot empty"
+        if self_hand[self_slot] is None:
+            return "self slot empty"
+        self_hand[self_slot], target_hand[slot] = (
+            target_hand[slot],
+            self_hand[self_slot],
+        )
+        _clear_slot_knowledge(state, player_id, self_slot)
+        _clear_slot_knowledge(state, target_id, slot)
+        return None
+
+    return "unknown choice type"
+
+
 def _deck_reshuffle_if_needed(state: Dict) -> bool:
     if state["deck"]:
         return True
@@ -268,7 +328,11 @@ class CaboGame:
                 actions = [a for a in actions if a != "draw_discard"]
             return actions
         if phase == "drawn":
-            return ["replace_card", "discard_drawn", "attempt_match"]
+            actions = ["replace_card", "discard_drawn", "attempt_match"]
+            drawn = state.get("last_drawn")
+            if drawn and drawn.get("choice"):
+                actions.append("use_choice_action")
+            return actions
         if phase == "choice_pending":
             return ["use_choice_action"]
         return []
@@ -366,6 +430,28 @@ class CaboGame:
             return [], "invalid action for phase"
 
         if phase == "drawn":
+            if action_type == "use_choice_action":
+                drawn = state["last_drawn"]
+                if drawn is None:
+                    return [], "no drawn card"
+                choice = drawn.get("choice")
+                if not choice:
+                    return [], "drawn card has no choice action"
+                choice_type = action.get("choice_type")
+                if choice_type != choice:
+                    return [], "choice type mismatch"
+                choice_error = _apply_choice_effect(
+                    state, player_id, choice_type, action.get("target", {})
+                )
+                if choice_error:
+                    return [], choice_error
+                state["discard"].append(drawn)
+                state["last_drawn"] = None
+                summary = _advance_turn(state, player_id)
+                if summary:
+                    events.append({"type": "game:round_end", "payload": summary})
+                return events, None
+
             if action_type == "replace_card":
                 slot = action.get("slot")
                 hand = state["players"][player_id]["hand"]
@@ -447,48 +533,11 @@ class CaboGame:
             choice_type = action.get("choice_type")
             if choice_type != pending.get("type"):
                 return [], "choice type mismatch"
-            target = action.get("target", {})
-            if choice_type == "peek":
-                slot = target.get("slot")
-                hand = state["players"][player_id]["hand"]
-                if not isinstance(slot, int) or slot < 0 or slot >= len(hand):
-                    return [], "invalid slot"
-                state["knowledge"][player_id][player_id][slot] = True
-            elif choice_type == "spy":
-                target_id = target.get("player_id")
-                slot = target.get("slot")
-                if target_id not in state["players"]:
-                    return [], "invalid target player"
-                target_hand = state["players"][target_id]["hand"]
-                if not isinstance(slot, int) or slot < 0 or slot >= len(target_hand):
-                    return [], "invalid slot"
-                if target_hand[slot] is None:
-                    return [], "slot empty"
-                state["knowledge"][player_id][target_id][slot] = True
-            elif choice_type == "swap":
-                target_id = target.get("player_id")
-                slot = target.get("slot")
-                self_slot = target.get("self_slot")
-                if target_id not in state["players"]:
-                    return [], "invalid target player"
-                target_hand = state["players"][target_id]["hand"]
-                if not isinstance(slot, int) or slot < 0 or slot >= len(target_hand):
-                    return [], "invalid slot"
-                self_hand = state["players"][player_id]["hand"]
-                if not isinstance(self_slot, int) or self_slot < 0 or self_slot >= len(self_hand):
-                    return [], "invalid self_slot"
-                if target_hand[slot] is None:
-                    return [], "slot empty"
-                if self_hand[self_slot] is None:
-                    return [], "self slot empty"
-                self_hand[self_slot], target_hand[slot] = (
-                    target_hand[slot],
-                    self_hand[self_slot],
-                )
-                _clear_slot_knowledge(state, player_id, self_slot)
-                _clear_slot_knowledge(state, target_id, slot)
-            else:
-                return [], "unknown choice type"
+            choice_error = _apply_choice_effect(
+                state, player_id, choice_type, action.get("target", {})
+            )
+            if choice_error:
+                return [], choice_error
 
             state["phase"] = "turn"
             state["pending_choice"] = None
