@@ -884,6 +884,234 @@ def _handle_effect_resolution(state: Dict, player_id: str, effect_item: Dict) ->
     _advance_after_resolution(state)
 
 
+def _bot_effect_value(player: Dict, effect: Optional[Dict]) -> float:
+    if not effect:
+        return 0.0
+    kind = effect.get("kind")
+    amount = int(effect.get("amount", 1))
+    if kind == "draw_random":
+        return amount * 1.4
+    if kind == "pick_energy":
+        return amount * 1.8
+    if kind == "gain_vp":
+        return amount * 4.0
+    if kind in {"perform_file", "perform_research"}:
+        return 2.5
+    if kind == "free_build_level1":
+        return 5.0
+    if kind == "upgrade_storage":
+        return amount * (2.5 if int(player.get("storage_limit", 0)) < 8 else 1.0)
+    if kind == "upgrade_file":
+        return amount * 1.8
+    if kind == "upgrade_research":
+        return amount * 1.6
+    if kind in {"upgrade_disable_file", "upgrade_disable_research"}:
+        return -1.0
+    if kind in {"discount_level2", "discount_archive", "discount_research"}:
+        return amount * 3.0
+    if kind == "extra_score_storage":
+        return max(2.0, len(player.get("storage", [])) * 0.8)
+    if kind == "extra_score_tokens":
+        return max(2.0, int(player.get("vp_tokens_total", 0)) * 0.8)
+    if kind in {
+        "convert_specific_to_any",
+        "convert_any_to_any",
+        "convert_specific_to_double",
+        "convert_specific_up_to_two_to_any",
+        "convert_each_specific_to_double",
+    }:
+        return 2.4
+    return 0.0
+
+
+def _bot_card_value(player: Dict, card_id: str) -> float:
+    card = _card_def(card_id)
+    effect_value = _bot_effect_value(player, card.get("effect"))
+    if card.get("trigger"):
+        effect_value *= 1.55
+    elif not card.get("immediate_on_build") and card.get("panel") != "upgrade":
+        effect_value *= 1.2
+    return (
+        int(card.get("vp", 0)) * 5.0
+        + int(card.get("level", 0)) * 0.4
+        + effect_value
+    )
+
+
+def _bot_energy_gap(player: Dict, card_id: str, source: str) -> int:
+    card = _card_def(card_id)
+    cost = int(card.get("cost", 0))
+    if int(card.get("level", 0)) == 2:
+        cost -= int(player.get("discounts", {}).get("level2", 0))
+    if source == "archive":
+        cost -= int(player.get("discounts", {}).get("archive", 0))
+    if source == "research":
+        cost -= int(player.get("discounts", {}).get("research", 0))
+    cost = max(0, cost)
+    storage = Counter(player.get("storage", []))
+    if card.get("energy_type") == "generic":
+        return max(0, cost - sum(storage.values()))
+    return max(0, cost - int(storage.get(card.get("energy_type"), 0)))
+
+
+def _bot_trigger_value(state: Dict, player_id: str, action_meta: Dict) -> float:
+    player = state["players"][player_id]
+    used = set(state.get("used_gizmos_this_turn", []))
+    value = 0.0
+    for card_id in player.get("active", []):
+        if card_id in used:
+            continue
+        card = _card_def(card_id)
+        trigger = card.get("trigger")
+        if trigger and _trigger_matches(trigger, action_meta):
+            value += _bot_effect_value(player, card.get("effect"))
+    return value
+
+
+def _bot_build_score(state: Dict, player_id: str, card_id: str, source: str) -> float:
+    player = state["players"][player_id]
+    plan = _best_build_plan(state, player, card_id, source)
+    if not plan:
+        return float("-inf")
+    card = _card_def(card_id)
+    action_meta = {
+        "kind": "build",
+        "card_id": card_id,
+        "level": int(card.get("level", 0)),
+        "source": source,
+        "built_energy_types": _build_energy_types(card_id),
+    }
+    return (
+        _bot_card_value(player, card_id)
+        + _bot_trigger_value(state, player_id, action_meta) * 1.5
+        - int(plan.get("final_cost", 0)) * 0.35
+        + (0.6 if source == "archive" else 0.0)
+    )
+
+
+def _bot_best_build_action(state: Dict, player_id: str) -> Optional[Dict]:
+    player = state["players"][player_id]
+    options: List[Tuple[float, Dict]] = []
+    for cards in state.get("display", {}).values():
+        for card_id in cards:
+            if card_id and _best_build_plan(state, player, card_id, "display"):
+                options.append(
+                    (
+                        _bot_build_score(state, player_id, card_id, "display"),
+                        {"type": "build_display", "card_id": card_id},
+                    )
+                )
+    for card_id in player.get("archive", []):
+        if _best_build_plan(state, player, card_id, "archive"):
+            options.append(
+                (
+                    _bot_build_score(state, player_id, card_id, "archive"),
+                    {"type": "build_archive", "card_id": card_id},
+                )
+            )
+    return max(options, key=lambda item: item[0])[1] if options else None
+
+
+def _bot_pick_color(state: Dict, player_id: str, allowed_colors: Optional[List[str]] = None) -> Optional[str]:
+    player = state["players"][player_id]
+    allowed = set(allowed_colors or list(ENERGY_TYPES))
+    colors = [color for color in ENERGY_TYPES if color in allowed and color in state.get("energy_row", [])]
+    if not colors:
+        return None
+
+    target_cards: List[Tuple[str, str]] = []
+    for cards in state.get("display", {}).values():
+        target_cards.extend((card_id, "display") for card_id in cards if card_id)
+    target_cards.extend((card_id, "archive") for card_id in player.get("archive", []))
+
+    def color_score(color: str) -> float:
+        projected = dict(player)
+        projected["storage"] = list(player.get("storage", [])) + [color]
+        improvement = 0.0
+        for card_id, source in target_cards:
+            before = _bot_energy_gap(player, card_id, source)
+            after = _bot_energy_gap(projected, card_id, source)
+            if after < before:
+                improvement += (before - after) * (1.5 + _bot_card_value(player, card_id) * 0.08)
+            if after == 0 and before > 0:
+                improvement += _bot_card_value(player, card_id) * 0.12
+        trigger_value = _bot_trigger_value(
+            state,
+            player_id,
+            {"kind": "pick", "color": color},
+        )
+        return improvement + trigger_value * 1.6 - player.get("storage", []).count(color) * 0.05
+
+    return max(colors, key=lambda color: (color_score(color), -ENERGY_TYPES.index(color)))
+
+
+def _bot_best_file_action(state: Dict, player_id: str) -> Optional[Dict]:
+    player = state["players"][player_id]
+    if not player.get("can_file", True) or len(player.get("archive", [])) >= int(player.get("file_limit", 0)):
+        return None
+    options: List[Tuple[float, str]] = []
+    for cards in state.get("display", {}).values():
+        for card_id in cards:
+            if not card_id:
+                continue
+            gap = _bot_energy_gap(player, card_id, "archive")
+            score = _bot_card_value(player, card_id) - gap * 2.2
+            options.append((score, card_id))
+    if not options:
+        return None
+    _, card_id = max(options, key=lambda item: item[0])
+    return {"type": "file_display", "card_id": card_id}
+
+
+def _bot_research_level(state: Dict, player_id: str) -> Optional[int]:
+    player = state["players"][player_id]
+    if not player.get("can_research", True):
+        return None
+    storage_count = len(player.get("storage", []))
+    preferred = 3 if storage_count >= 5 else 2 if storage_count >= 3 else 1
+    available = [level for level in (1, 2, 3) if state.get("decks", {}).get(str(level))]
+    if not available:
+        return None
+    return min(available, key=lambda level: (abs(level - preferred), -level))
+
+
+def _bot_research_action(state: Dict, player_id: str) -> Dict:
+    player = state["players"][player_id]
+    context = state.get("research_context") or {}
+    drawn = list(context.get("drawn", []))
+    buildable = [
+        card_id
+        for card_id in drawn
+        if _best_build_plan(state, player, card_id, "research")
+    ]
+    if buildable:
+        card_id = max(
+            buildable,
+            key=lambda candidate: _bot_build_score(state, player_id, candidate, "research"),
+        )
+        return {
+            "type": "resolve_research",
+            "choice": "build",
+            "card_id": card_id,
+            "return_order": [candidate for candidate in drawn if candidate != card_id],
+        }
+    if player.get("can_file", True) and len(player.get("archive", [])) < int(player.get("file_limit", 0)) and drawn:
+        card_id = max(
+            drawn,
+            key=lambda candidate: (
+                _bot_card_value(player, candidate)
+                - _bot_energy_gap(player, candidate, "archive") * 2.2
+            ),
+        )
+        return {
+            "type": "resolve_research",
+            "choice": "file",
+            "card_id": card_id,
+            "return_order": [candidate for candidate in drawn if candidate != card_id],
+        }
+    return {"type": "resolve_research", "choice": "none", "return_order": drawn}
+
+
 class GizmosGame:
     game_id = "gizmos"
     min_players = 2
@@ -1209,88 +1437,76 @@ class GizmosGame:
         phase = state.get("phase")
 
         if phase == "choose_effect":
-            for item in state.get("pending_effects", []):
-                if _effect_is_resolvable(state, bot_id, item):
-                    return {"type": "resolve_effect", "effect_id": item["effect_id"]}
+            resolvable = [
+                item
+                for item in state.get("pending_effects", [])
+                if _effect_is_resolvable(state, bot_id, item)
+            ]
+            if resolvable:
+                best = max(
+                    resolvable,
+                    key=lambda item: _bot_effect_value(player, item.get("effect")),
+                )
+                return {"type": "resolve_effect", "effect_id": best["effect_id"]}
             return {"type": "pass_effects"}
 
         if phase == "bonus_action":
             context = state.get("bonus_context") or {}
             kind = context.get("kind")
             if kind == "pick":
-                allowed = set(context.get("allowed_colors") or list(ENERGY_TYPES))
-                for color in state["energy_row"]:
-                    if color in allowed:
-                        return {"type": "pick_energy", "color": color}
-                return None
+                color = _bot_pick_color(state, bot_id, context.get("allowed_colors"))
+                return {"type": "pick_energy", "color": color} if color else None
             if kind == "file":
-                for cards in state["display"].values():
-                    for card_id in cards:
-                        if card_id:
-                            return {"type": "file_display", "card_id": card_id}
-                return None
+                return _bot_best_file_action(state, bot_id)
             if kind == "research":
-                for level in (3, 2, 1):
-                    if state["decks"][str(level)]:
-                        return {"type": "research", "level": level}
-                return None
+                level = _bot_research_level(state, bot_id)
+                return {"type": "research", "level": level} if level else None
             if kind == "build_free_level1":
+                options: List[Tuple[float, Dict]] = []
                 for cards in state["display"].values():
                     for card_id in cards:
                         if card_id and _card_level(card_id) == 1:
-                            return {"type": "build_display", "card_id": card_id}
+                            options.append(
+                                (_bot_card_value(player, card_id), {"type": "build_display", "card_id": card_id})
+                            )
                 for card_id in player["archive"]:
                     if _card_level(card_id) == 1:
-                        return {"type": "build_archive", "card_id": card_id}
-                return None
+                        options.append(
+                            (_bot_card_value(player, card_id) + 0.5, {"type": "build_archive", "card_id": card_id})
+                        )
+                return max(options, key=lambda item: item[0])[1] if options else None
             return None
 
         if phase == "research":
-            context = state.get("research_context") or {}
-            drawn = list(context.get("drawn", []))
-            buildable = [card_id for card_id in drawn if _best_build_plan(state, player, card_id, "research")]
-            if buildable:
-                best = max(buildable, key=lambda cid: (_card_def(cid)["vp"], _card_level(cid)))
-                remaining = [card_id for card_id in drawn if card_id != best]
-                return {"type": "resolve_research", "choice": "build", "card_id": best, "return_order": remaining}
-            if player.get("can_file", True) and len(player["archive"]) < int(player["file_limit"]) and drawn:
-                remaining = [card_id for card_id in drawn[1:]]
-                return {"type": "resolve_research", "choice": "file", "card_id": drawn[0], "return_order": remaining}
-            return {"type": "resolve_research", "choice": "none", "return_order": drawn}
+            return _bot_research_action(state, bot_id)
 
         if phase != "action":
             return None
 
-        affordable_display = []
-        for cards in state["display"].values():
-            for card_id in cards:
-                if card_id and _best_build_plan(state, player, card_id, "display"):
-                    affordable_display.append(card_id)
-        affordable_archive = [card_id for card_id in player["archive"] if _best_build_plan(state, player, card_id, "archive")]
+        build_action = _bot_best_build_action(state, bot_id)
+        if build_action:
+            return build_action
 
-        if affordable_display:
-            best = max(affordable_display, key=lambda cid: (_card_def(cid)["vp"], _card_level(cid)))
-            return {"type": "build_display", "card_id": best}
-        if affordable_archive:
-            best = max(affordable_archive, key=lambda cid: (_card_def(cid)["vp"], _card_level(cid)))
-            return {"type": "build_archive", "card_id": best}
+        file_action = _bot_best_file_action(state, bot_id)
+        if file_action:
+            card_id = file_action["card_id"]
+            if _bot_energy_gap(player, card_id, "archive") <= max(
+                2,
+                int(player.get("storage_limit", 0)) - len(player.get("storage", [])),
+            ):
+                return file_action
 
-        if player.get("can_file", True) and len(player["archive"]) < int(player["file_limit"]):
-            for level in ("3", "2", "1"):
-                for card_id in state["display"][level]:
-                    if card_id:
-                        return {"type": "file_display", "card_id": card_id}
-
-        if player.get("can_research", True):
-            for level in (3, 2, 1):
-                if state["decks"][str(level)]:
-                    return {"type": "research", "level": level}
-
-        if len(player["storage"]) < int(player["storage_limit"]):
-            for color in state["energy_row"]:
+        if len(player.get("storage", [])) < int(player.get("storage_limit", 0)):
+            color = _bot_pick_color(state, bot_id)
+            if color:
                 return {"type": "pick_energy", "color": color}
 
-        return {"type": "pass_turn"}
+        level = _bot_research_level(state, bot_id)
+        if level:
+            return {"type": "research", "level": level}
+
+        legal = GizmosGame.get_legal_actions(state, bot_id)
+        return {"type": "pass_turn"} if "pass_turn" in legal else None
 
     @staticmethod
     def serialize(state: Dict) -> Dict:

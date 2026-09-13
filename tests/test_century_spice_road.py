@@ -112,6 +112,58 @@ class CenturySpiceRoadTests(unittest.TestCase):
         self.assertEqual(state["current_turn"], "p2")
         self.assertEqual(sum(state["players"]["p1"]["spices"].values()), 10)
 
+    def test_bot_uses_productive_upgrades_instead_of_zero_value_plays(self):
+        state = CenturySpiceRoadGame.init_game({"seed": 1}, _players())
+        state["players"]["p1"]["spices"] = {"yellow": 2, "red": 0, "green": 0, "brown": 0}
+        state["players"]["p1"]["hand"] = [
+            {
+                "id": "test_upgrade",
+                "type": "upgrade",
+                "cost": {},
+                "gain": {},
+                "upgrade_steps": 2,
+            }
+        ]
+        state["point_market"] = [
+            {
+                "id": "test_goal",
+                "points": 10,
+                "cost": {"yellow": 0, "red": 1, "green": 1, "brown": 0},
+            }
+        ]
+
+        action = CenturySpiceRoadGame.bot_move(state, "p1")
+
+        self.assertEqual(action["type"], "play")
+        self.assertEqual(action["card_id"], "test_upgrade")
+        self.assertTrue(action["upgrades"])
+
+    def test_bots_finish_a_full_game_without_trade_cycles(self):
+        players = [
+            {
+                "player_id": f"p{index + 1}",
+                "name": f"Bot {index + 1}",
+                "seat": index,
+                "is_bot": True,
+            }
+            for index in range(2)
+        ]
+        state = CenturySpiceRoadGame.init_game({"seed": 3}, players)
+
+        for _ in range(400):
+            if state.get("game_over"):
+                break
+            actor = state["current_turn"]
+            action = CenturySpiceRoadGame.bot_move(state, actor)
+            self.assertIsNotNone(action)
+            if action.get("type") == "play" and "times" in action:
+                self.assertGreaterEqual(action["times"], 1)
+            _, error = CenturySpiceRoadGame.apply_action(state, actor, action)
+            self.assertIsNone(error)
+
+        self.assertTrue(state["game_over"])
+        self.assertTrue(state["winner"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -79,6 +79,41 @@ class PatchworkGameTests(unittest.TestCase):
         self.assertEqual(state["current_turn"], "p2")
         self.assertTrue(any(evt["type"] == "patchwork:place_leather" for evt in events))
 
+    def test_bot_places_leather_to_complete_seven_by_seven_area(self):
+        state = PatchworkGame.init_game({"seed": 9}, self._players())
+        board = [[f"filled_{x}_{y}" for x in range(9)] for y in range(9)]
+        board[3][3] = None
+        board[8][8] = None
+        state["players"]["p1"]["quilt_board"] = board
+        state["pending_special_patch"] = {
+            "player_id": "p1",
+            "remaining_target": 1,
+            "position": 1,
+        }
+
+        action = PatchworkGame.bot_move(state, "p1")
+
+        self.assertEqual(action, {"type": "place_bonus_patch", "x": 3, "y": 3})
+
+    def test_bots_finish_a_full_game(self):
+        players = [
+            {"player_id": "p1", "name": "Bot 1", "seat": 0, "is_bot": True},
+            {"player_id": "p2", "name": "Bot 2", "seat": 1, "is_bot": True},
+        ]
+        state = PatchworkGame.init_game({"seed": 4}, players)
+
+        for _ in range(100):
+            if state.get("game_over"):
+                break
+            actor = state["current_turn"]
+            action = PatchworkGame.bot_move(state, actor)
+            self.assertIsNotNone(action)
+            _, error = PatchworkGame.apply_action(state, actor, action)
+            self.assertIsNone(error)
+
+        self.assertTrue(state["game_over"])
+        self.assertTrue(state["winner"])
+
     def test_final_tie_uses_first_to_finish(self):
         state = PatchworkGame.init_game({"seed": 1}, self._players())
         for player_id in ("p1", "p2"):

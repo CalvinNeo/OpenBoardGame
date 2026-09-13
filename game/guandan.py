@@ -2264,13 +2264,41 @@ class GuandanGame:
         trick_view = None
         if state.get("current_trick"):
             combo = state["current_trick"]["combo"]
+            trick_player_id = state["current_trick"]["player_id"]
+            trick_player_meta = state["player_meta"].get(trick_player_id, {})
+            played_cards = state.get("trick_plays", {}).get(trick_player_id)
+            card_labels = []
+            if isinstance(played_cards, list):
+                card_labels = [
+                    _card_label(card)
+                    for card in played_cards
+                    if isinstance(card, dict)
+                ]
+            if not card_labels:
+                deck_by_id = {card["id"]: card for card in _full_deck()}
+                card_labels = [
+                    _card_label(deck_by_id[card_id])
+                    for card_id in state["current_trick"].get("cards", [])
+                    if card_id in deck_by_id
+                ]
+            if trick_player_id == viewer_id:
+                relation_to_you = "you"
+            elif viewer_id not in state.get("player_teams", {}):
+                relation_to_you = "player"
+            elif _team_of(state, trick_player_id) == _team_of(state, viewer_id):
+                relation_to_you = "teammate"
+            else:
+                relation_to_you = "opponent"
             trick_view = {
-                "player_id": state["current_trick"]["player_id"],
+                "player_id": trick_player_id,
+                "player_name": trick_player_meta.get("name") or trick_player_id,
+                "relation_to_you": relation_to_you,
                 "type": combo["type"],
                 "size": combo["size"],
                 "rank_value": combo.get("rank_value"),
                 "high_value": combo.get("high_value"),
                 "cards": state["current_trick"]["cards"],
+                "card_labels": card_labels,
             }
 
         trick_plays_view = []

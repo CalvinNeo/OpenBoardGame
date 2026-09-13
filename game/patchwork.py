@@ -1,3 +1,4 @@
+import copy
 import json
 import random
 from pathlib import Path
@@ -307,6 +308,222 @@ def _selectable_patch_ids(state: Dict) -> List[str]:
     return [circle[(start + offset) % len(circle)] for offset in range(count)]
 
 
+def _bot_legal_patch_actions(board: List[List[Optional[str]]], patch_id: str) -> List[Dict]:
+    actions: List[Dict] = []
+    seen_shapes = set()
+    cells = [tuple(cell) for cell in PATCHES_BY_ID[patch_id]["cells"]]
+    for rotation in ROTATIONS:
+        for flip in (False, True):
+            shape = _transform_shape(cells, rotation, flip)
+            if shape in seen_shapes:
+                continue
+            seen_shapes.add(shape)
+            width = max(x for x, _ in shape) + 1
+            height = max(y for _, y in shape) + 1
+            for y in range(BOARD_SIZE - height + 1):
+                for x in range(BOARD_SIZE - width + 1):
+                    if _can_place_cells(board, _placement_cells(shape, x, y)):
+                        actions.append(
+                            {
+                                "type": "buy_patch",
+                                "patch_id": patch_id,
+                                "rotation": rotation,
+                                "flip": flip,
+                                "x": x,
+                                "y": y,
+                            }
+                        )
+    return actions
+
+
+def _bot_empty_region_penalty(board: List[List[Optional[str]]]) -> float:
+    visited = set()
+    penalty = 0.0
+    for start_y in range(BOARD_SIZE):
+        for start_x in range(BOARD_SIZE):
+            if board[start_y][start_x] is not None or (start_x, start_y) in visited:
+                continue
+            stack = [(start_x, start_y)]
+            visited.add((start_x, start_y))
+            size = 0
+            touches_edge = False
+            while stack:
+                x, y = stack.pop()
+                size += 1
+                if x in {0, BOARD_SIZE - 1} or y in {0, BOARD_SIZE - 1}:
+                    touches_edge = True
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    nx, ny = x + dx, y + dy
+                    if nx < 0 or nx >= BOARD_SIZE or ny < 0 or ny >= BOARD_SIZE:
+                        continue
+                    if board[ny][nx] is not None or (nx, ny) in visited:
+                        continue
+                    visited.add((nx, ny))
+                    stack.append((nx, ny))
+            if not touches_edge:
+                penalty += min(size, 8) * 0.8
+            elif size <= 3:
+                penalty += (4 - size) * 0.25
+    return penalty
+
+
+def _bot_board_quality(board: List[List[Optional[str]]]) -> float:
+    occupied = [
+        (x, y)
+        for y, row in enumerate(board)
+        for x, value in enumerate(row)
+        if value is not None
+    ]
+    if not occupied:
+        return 0.0
+
+    adjacency = 0
+    for x, y in occupied:
+        if x + 1 < BOARD_SIZE and board[y][x + 1] is not None:
+            adjacency += 1
+        if y + 1 < BOARD_SIZE and board[y + 1][x] is not None:
+            adjacency += 1
+
+    min_x = min(x for x, _ in occupied)
+    max_x = max(x for x, _ in occupied)
+    min_y = min(y for _, y in occupied)
+    max_y = max(y for _, y in occupied)
+    bounding_waste = (max_x - min_x + 1) * (max_y - min_y + 1) - len(occupied)
+
+    best_seven = 0
+    for top in range(BOARD_SIZE - 6):
+        for left in range(BOARD_SIZE - 6):
+            filled = sum(
+                1
+                for y in range(top, top + 7)
+                for x in range(left, left + 7)
+                if board[y][x] is not None
+            )
+            best_seven = max(best_seven, filled)
+
+    return (
+        adjacency * 0.08
+        + best_seven * 0.10
+        - bounding_waste * 0.06
+        - _bot_empty_region_penalty(board)
+    )
+
+
+def _bot_placement_quality(
+    board: List[List[Optional[str]]],
+    action: Dict,
+    special_tile_available: bool,
+) -> float:
+    patch_id = action["patch_id"]
+    shape = _transform_shape(
+        [tuple(cell) for cell in PATCHES_BY_ID[patch_id]["cells"]],
+        int(action["rotation"]),
+        bool(action["flip"]),
+    )
+    projected = [list(row) for row in board]
+    _write_patch(
+        projected,
+        _placement_cells(shape, int(action["x"]), int(action["y"])),
+        patch_id,
+    )
+    value = _bot_board_quality(projected)
+    if special_tile_available and _check_special_tile(projected):
+        value += SPECIAL_TILE_BONUS
+    return value
+
+
+def _bot_remaining_income_count(position: int) -> int:
+    return sum(1 for marker in BUTTON_MARKERS if marker > position)
+
+
+def _bot_player_value(state: Dict, player_id: str) -> float:
+    player = state["players"][player_id]
+    position = int(player.get("time_position", 0))
+    projected_buttons = int(player.get("buttons", 0)) + int(
+        player.get("button_income", 0)
+    ) * _bot_remaining_income_count(position)
+    return (
+        projected_buttons
+        - _board_empty_count(player["quilt_board"]) * 2.0
+        + (SPECIAL_TILE_BONUS if player.get("has_special_tile") else 0)
+        + _bot_board_quality(player["quilt_board"])
+        + max(0, END_POSITION - position) * 0.03
+    )
+
+
+def _bot_market_opportunity(state: Dict, player_id: str) -> float:
+    player = state["players"][player_id]
+    remaining_income = _bot_remaining_income_count(int(player.get("time_position", 0)))
+    values = []
+    for patch_id in _selectable_patch_ids(state):
+        patch = PATCHES_BY_ID[patch_id]
+        if int(player.get("buttons", 0)) < int(patch["cost_buttons"]):
+            continue
+        if not _find_legal_placement(player["quilt_board"], patch_id):
+            continue
+        values.append(
+            int(patch["cell_count"]) * 2.0
+            - int(patch["cost_buttons"])
+            + int(patch["income_buttons"]) * remaining_income
+            - int(patch["cost_time"]) * 0.25
+        )
+    return max(values) if values else 0.0
+
+
+def _bot_state_value(state: Dict, player_id: str) -> float:
+    if state.get("game_over"):
+        return 1_000_000.0 if player_id in state.get("winner", []) else -1_000_000.0
+    opponents = [candidate for candidate in state.get("players", {}) if candidate != player_id]
+    opponent_value = max((_bot_player_value(state, candidate) for candidate in opponents), default=0.0)
+    value = _bot_player_value(state, player_id) - opponent_value * 0.30
+    current = state.get("current_turn")
+    if current == player_id:
+        value += _bot_market_opportunity(state, player_id) * 0.10
+    elif current in state.get("players", {}):
+        value -= _bot_market_opportunity(state, current) * 0.12
+    return value
+
+
+def _bot_best_bonus_action(state: Dict, player_id: str) -> Optional[Dict]:
+    player = state["players"].get(player_id)
+    if not player:
+        return None
+    board = player["quilt_board"]
+    best_action: Optional[Dict] = None
+    best_value: Optional[float] = None
+    for y in range(BOARD_SIZE):
+        for x in range(BOARD_SIZE):
+            if board[y][x] is not None:
+                continue
+            projected = [list(row) for row in board]
+            projected[y][x] = "bot_leather"
+            value = _bot_board_quality(projected)
+            if state.get("special_tile_available", True) and _check_special_tile(projected):
+                value += SPECIAL_TILE_BONUS
+            if best_value is None or value > best_value:
+                best_value = value
+                best_action = {"type": "place_bonus_patch", "x": x, "y": y}
+    return best_action
+
+
+def _bot_action_value(state: Dict, player_id: str, action: Dict) -> Optional[float]:
+    simulated = copy.deepcopy(state)
+    _, error = PatchworkGame.apply_action(simulated, player_id, action)
+    if error:
+        return None
+    while (
+        not simulated.get("game_over")
+        and (simulated.get("pending_special_patch") or {}).get("player_id") == player_id
+    ):
+        bonus_action = _bot_best_bonus_action(simulated, player_id)
+        if not bonus_action:
+            break
+        _, error = PatchworkGame.apply_action(simulated, player_id, bonus_action)
+        if error:
+            return None
+    return _bot_state_value(simulated, player_id)
+
+
 class PatchworkGame:
     game_id = "patchwork"
     min_players = 2
@@ -605,25 +822,38 @@ class PatchworkGame:
         if pending:
             if pending["player_id"] != bot_id:
                 return None
-            board = state["players"][bot_id]["quilt_board"]
-            for y in range(BOARD_SIZE):
-                for x in range(BOARD_SIZE):
-                    if board[y][x] is None:
-                        return {"type": "place_bonus_patch", "x": x, "y": y}
-            return None
+            return _bot_best_bonus_action(state, bot_id)
 
         if bot_id != state.get("current_turn"):
             return None
 
         player_state = state["players"][bot_id]
+        candidates: List[Dict] = [{"type": "advance"}]
         for patch_id in _selectable_patch_ids(state):
             patch = PATCHES_BY_ID[patch_id]
             if player_state["buttons"] < patch["cost_buttons"]:
                 continue
-            placement = _find_legal_placement(player_state["quilt_board"], patch_id)
-            if placement:
-                return {"type": "buy_patch", "patch_id": patch_id, **placement}
-        return {"type": "advance"}
+            placements = _bot_legal_patch_actions(player_state["quilt_board"], patch_id)
+            placements.sort(
+                key=lambda action: _bot_placement_quality(
+                    player_state["quilt_board"],
+                    action,
+                    bool(state.get("special_tile_available", True)),
+                ),
+                reverse=True,
+            )
+            candidates.extend(placements[:12])
+
+        best_action: Optional[Dict] = None
+        best_value: Optional[float] = None
+        for action in candidates:
+            value = _bot_action_value(state, bot_id, action)
+            if value is None:
+                continue
+            if best_value is None or value > best_value:
+                best_action = action
+                best_value = value
+        return best_action
 
     @staticmethod
     def serialize(state: Dict) -> Dict:

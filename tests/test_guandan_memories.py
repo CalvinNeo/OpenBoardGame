@@ -107,6 +107,27 @@ class GuandanMemoriesTests(unittest.TestCase):
         self.assertEqual(trick["actions"][-1]["type"], "pass")
         self.assertNotIn("initial_hands", round_entry)
 
+    def test_public_view_describes_the_combo_to_beat_for_each_viewer(self):
+        state = guandan.GuandanGame.init_game({}, self._make_players())
+        state["current_turn"] = "p1"
+        played_card = state["players"]["p1"]["hand"][0]
+
+        _, error = guandan.GuandanGame.apply_action(
+            state,
+            "p1",
+            {"type": "play", "card_ids": [played_card["id"]]},
+        )
+
+        self.assertIsNone(error)
+        owner_view = guandan.GuandanGame.get_public_view(state, "p1")["current_trick"]
+        teammate_view = guandan.GuandanGame.get_public_view(state, "p3")["current_trick"]
+        opponent_view = guandan.GuandanGame.get_public_view(state, "p2")["current_trick"]
+        self.assertEqual(owner_view["player_name"], "Alice")
+        self.assertEqual(owner_view["card_labels"], [guandan._card_label(played_card)])
+        self.assertEqual(owner_view["relation_to_you"], "you")
+        self.assertEqual(teammate_view["relation_to_you"], "teammate")
+        self.assertEqual(opponent_view["relation_to_you"], "opponent")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -11,11 +11,13 @@ const pokemonSplendorTokenModal = document.getElementById("pokemonSplendorTokenM
 const pokemonSplendorTokenModalCloseBtn = document.getElementById("pokemonSplendorTokenModalCloseBtn");
 const pokemonSplendorTokenPool = document.getElementById("pokemonSplendorTokenPool");
 const pokemonSplendorTokenPicked = document.getElementById("pokemonSplendorTokenPicked");
+const pokemonSplendorTokenHint = document.getElementById("pokemonSplendorTokenHint");
 const pokemonSplendorDiscardSelectionModalRow = document.getElementById("pokemonSplendorDiscardSelectionModalRow");
 const pokemonSplendorDiscardSelectionModal = document.getElementById("pokemonSplendorDiscardSelectionModal");
 const pokemonSplendorDiscardHintModal = document.getElementById("pokemonSplendorDiscardHintModal");
 
 const pokemonSplendorPanel = document.getElementById("pokemonSplendorPanel");
+const pokemonSplendorPrompt = document.getElementById("pokemonSplendorPrompt");
 const pokemonSplendorPhaseLabel = document.getElementById("pokemonSplendorPhase");
 const pokemonSplendorTurnLabel = document.getElementById("pokemonSplendorTurn");
 const pokemonSplendorFinalRoundLabel = document.getElementById("pokemonSplendorFinalRound");
@@ -65,14 +67,45 @@ const pokemonSplendorColorLabels = {
   pink: "Pink",
   purple: "Master",
 };
-const pokemonSplendorColorEmoji = {
-  red: "🔴",
-  blue: "🔵",
-  yellow: "🟡",
-  green: "🟢",
-  pink: "🩷",
-  purple: "🟣",
+const pokemonSplendorTierLabels = {
+  lv1: "LV1",
+  lv2: "LV2",
+  lv3: "LV3",
+  rare: "Rare",
+  legendary: "Legendary",
 };
+
+function createPokemonSplendorColorDot(color) {
+  const dot = document.createElement("span");
+  dot.className = `pokemon-color-dot pokemon-color-${color}`;
+  dot.setAttribute("aria-hidden", "true");
+  return dot;
+}
+
+function appendPokemonSplendorColorValue(container, color, value, options = {}) {
+  container.appendChild(createPokemonSplendorColorDot(color));
+  const text = document.createElement("span");
+  const label = pokemonSplendorColorLabels[color] || color;
+  text.textContent = options.includeLabel ? `${label}: ${value}` : String(value);
+  container.appendChild(text);
+  container.setAttribute("aria-label", `${label}: ${value}`);
+}
+
+function pokemonSplendorCardDisplayName(card, bilingual = false) {
+  if (!card) {
+    return "-";
+  }
+  const nameEn = card.name_en || card.name || card.id || "Pokemon";
+  const nameZh = card.name && card.name !== card.name_en ? card.name : "";
+  if (bilingual && nameZh) {
+    return `${nameZh} (${nameEn})`;
+  }
+  return nameZh || nameEn;
+}
+
+function pokemonSplendorTierLabel(tier) {
+  return pokemonSplendorTierLabels[tier] || tier || "";
+}
 
 const POKEMON_SPLENDOR_HELP_TEXT = `
   <h3>Goal</h3>
@@ -220,6 +253,10 @@ function clearPokemonSplendorState() {
   if (pokemonSplendorWinnerLabel) {
     pokemonSplendorWinnerLabel.textContent = "-";
   }
+  if (pokemonSplendorPrompt) {
+    pokemonSplendorPrompt.textContent = "Waiting for the game state.";
+    pokemonSplendorPrompt.dataset.tone = "neutral";
+  }
   if (pokemonSplendorSupply) {
     pokemonSplendorSupply.innerHTML = "";
   }
@@ -253,19 +290,18 @@ function clearPokemonSplendorState() {
 
 function updatePokemonSplendorSelectionLabels() {
   if (pokemonSplendorSelectedMarketLabel) {
-    if (pokemonSplendorSelectedMarket) {
-      pokemonSplendorSelectedMarketLabel.textContent = `${pokemonSplendorSelectedMarket.tier}:${pokemonSplendorSelectedMarket.index + 1}`;
-    } else {
-      pokemonSplendorSelectedMarketLabel.textContent = "-";
-    }
+    const card = getPokemonSplendorSelectedMarketCard(currentPokemonSplendorView);
+    pokemonSplendorSelectedMarketLabel.textContent = card
+      ? `${pokemonSplendorCardDisplayName(card)} · ${pokemonSplendorTierLabel(card.tier)}`
+      : "-";
   }
   if (pokemonSplendorSelectedReservedLabel) {
-    pokemonSplendorSelectedReservedLabel.textContent =
-      pokemonSplendorSelectedReserved !== null ? `${pokemonSplendorSelectedReserved + 1}` : "-";
+    const card = getPokemonSplendorSelectedReservedCard(currentPokemonSplendorView);
+    pokemonSplendorSelectedReservedLabel.textContent = card ? pokemonSplendorCardDisplayName(card) : "-";
   }
   if (pokemonSplendorSelectedBaseLabel) {
     const baseCard = findPokemonSplendorCapturedById(currentPokemonSplendorView, pokemonSplendorSelectedBase);
-    pokemonSplendorSelectedBaseLabel.textContent = baseCard ? baseCard.name_en || baseCard.name || baseCard.id : "-";
+    pokemonSplendorSelectedBaseLabel.textContent = baseCard ? pokemonSplendorCardDisplayName(baseCard) : "-";
   }
 }
 
@@ -423,7 +459,12 @@ function getPokemonSplendorPendingDiscardRequirement(view) {
     const gain = pokemonSplendorTokenGainForAction(view, "reserve_market");
     return pokemonSplendorDiscardRequirement(view, gain);
   }
-  if (view.legal_actions && view.legal_actions.includes("reserve_deck")) {
+  if (
+    view.legal_actions &&
+    view.legal_actions.includes("reserve_deck") &&
+    pokemonSplendorReserveMenu &&
+    !pokemonSplendorReserveMenu.classList.contains("hidden")
+  ) {
     const gain = pokemonSplendorTokenGainForAction(view, "reserve_deck");
     return pokemonSplendorDiscardRequirement(view, gain);
   }
@@ -480,6 +521,12 @@ function clearPokemonSplendorSelection() {
   updatePokemonSplendorActionButtons();
   closePokemonSplendorTokenModal();
   closePokemonSplendorReserveMenu();
+  if (currentPokemonSplendorView) {
+    renderPokemonSplendorMarket(currentPokemonSplendorView);
+    renderPokemonSplendorReserved(currentPokemonSplendorView);
+    renderPokemonSplendorCaptured(currentPokemonSplendorView);
+  }
+  updatePokemonSplendorPrompt(currentPokemonSplendorView);
 }
 
 function ensurePokemonSplendorReserveMenu() {
@@ -500,8 +547,9 @@ function ensurePokemonSplendorReserveMenu() {
     btn.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
-      sendPokemonSplendorReserveDeck(tier);
-      closePokemonSplendorReserveMenu();
+      if (sendPokemonSplendorReserveDeck(tier)) {
+        closePokemonSplendorReserveMenu();
+      }
     });
     menu.appendChild(btn);
   });
@@ -530,6 +578,8 @@ function showPokemonSplendorReserveMenu(anchor) {
   }
   menu.style.left = `${left}px`;
   menu.style.top = `${top}px`;
+  updatePokemonSplendorDiscardHint(currentPokemonSplendorView);
+  updatePokemonSplendorPrompt(currentPokemonSplendorView);
 }
 
 function closePokemonSplendorReserveMenu() {
@@ -537,22 +587,24 @@ function closePokemonSplendorReserveMenu() {
     return;
   }
   pokemonSplendorReserveMenu.classList.add("hidden");
+  updatePokemonSplendorDiscardHint(currentPokemonSplendorView);
+  updatePokemonSplendorPrompt(currentPokemonSplendorView);
 }
 
 function sendPokemonSplendorReserveDeck(tier) {
   const view = currentPokemonSplendorView;
   if (!view) {
-    return;
+    return false;
   }
   const legal = view.legal_actions || [];
   if (!legal.includes("reserve_deck")) {
     log("Reserve deck is not available");
-    return;
+    return false;
   }
   const discard = pokemonSplendorDiscardPayloadForAction(view, "reserve_deck");
   if (discard === null && (getPokemonSplendorPendingDiscardRequirement(view) || {}).excess > 0) {
     log("Select discard tokens to stay at 10");
-    return;
+    return false;
   }
   const action = { type: "reserve_deck", tier };
   if (discard) {
@@ -560,6 +612,7 @@ function sendPokemonSplendorReserveDeck(tier) {
   }
   sendAction(action);
   clearPokemonSplendorSelection();
+  return true;
 }
 
 function adjustPokemonSplendorTokenSelection(color, delta) {
@@ -573,12 +626,21 @@ function adjustPokemonSplendorTokenSelection(color, delta) {
 }
 
 function adjustPokemonSplendorDiscardSelection(color, delta) {
-  if (!pokemonSplendorDiscardSelection[color]) {
-    pokemonSplendorDiscardSelection[color] = 0;
+  const requirement = getPokemonSplendorPendingDiscardRequirement(currentPokemonSplendorView);
+  if (!requirement || requirement.excess <= 0) {
+    return;
   }
-  pokemonSplendorDiscardSelection[color] = Math.max(0, pokemonSplendorDiscardSelection[color] + delta);
+  const player = findPokemonSplendorPlayer(currentPokemonSplendorView, currentPokemonSplendorView.you);
+  const held = (player && player.tokens && player.tokens[color]) || 0;
+  const gained = (requirement.gain && requirement.gain[color]) || 0;
+  const available = held + gained;
+  const current = pokemonSplendorDiscardSelection[color] || 0;
+  const selectedElsewhere = pokemonSplendorDiscardSelectionTotal() - current;
+  const maxForColor = Math.min(available, Math.max(0, requirement.excess - selectedElsewhere));
+  pokemonSplendorDiscardSelection[color] = Math.min(maxForColor, Math.max(0, current + delta));
   renderPokemonSplendorDiscardSelection();
   updatePokemonSplendorActionButtons();
+  updatePokemonSplendorPrompt(currentPokemonSplendorView);
 }
 
 function openPokemonSplendorTokenModal() {
@@ -664,7 +726,8 @@ function renderPokemonSplendorTokenModal(view) {
     btn.type = "button";
     btn.className = `pokemon-token-btn gem-${color}`;
     const remaining = pokemonSplendorTokenRemaining(view, color);
-    btn.textContent = `${pokemonSplendorColorEmoji[color]} ${remaining}`;
+    appendPokemonSplendorColorValue(btn, color, remaining, { includeLabel: true });
+    btn.title = `Add ${pokemonSplendorColorLabels[color]} token`;
     btn.disabled = !pokemonSplendorCanAddToken(view, color);
     btn.addEventListener("click", () => {
       if (!pokemonSplendorCanAddToken(view, color)) {
@@ -683,7 +746,12 @@ function renderPokemonSplendorTokenModal(view) {
       const chip = document.createElement("button");
       chip.type = "button";
       chip.className = `pokemon-token-chip gem-${color}`;
-      chip.textContent = pokemonSplendorColorEmoji[color];
+      chip.appendChild(createPokemonSplendorColorDot(color));
+      const removeText = document.createElement("span");
+      removeText.textContent = pokemonSplendorColorLabels[color];
+      chip.appendChild(removeText);
+      chip.setAttribute("aria-label", `Remove ${pokemonSplendorColorLabels[color]} token`);
+      chip.title = "Click to remove";
       chip.addEventListener("click", () => {
         adjustPokemonSplendorTokenSelection(color, -1);
       });
@@ -695,6 +763,24 @@ function renderPokemonSplendorTokenModal(view) {
     empty.className = "pokemon-token-empty";
     empty.textContent = "None";
     pokemonSplendorTokenPicked.appendChild(empty);
+  }
+
+  if (pokemonSplendorTokenHint) {
+    const canTakeDifferent = Boolean(pokemonSplendorTokenGainForAction(view, "take_tokens"));
+    const canTakePair = Boolean(pokemonSplendorTokenGainForAction(view, "take_tokens_same"));
+    if (canTakeDifferent) {
+      pokemonSplendorTokenHint.textContent = "Ready: take the selected different colors.";
+      pokemonSplendorTokenHint.dataset.state = "ready";
+    } else if (canTakePair) {
+      pokemonSplendorTokenHint.textContent = "Ready: take two tokens of this color.";
+      pokemonSplendorTokenHint.dataset.state = "ready";
+    } else if (pickedCount) {
+      pokemonSplendorTokenHint.textContent = "Keep picking, or click a picked token to remove it.";
+      pokemonSplendorTokenHint.dataset.state = "picking";
+    } else {
+      pokemonSplendorTokenHint.textContent = "Pick three different colors, or pick the same color twice.";
+      pokemonSplendorTokenHint.dataset.state = "picking";
+    }
   }
 
   updatePokemonSplendorTokenConfirmButtons(view);
@@ -725,37 +811,42 @@ function renderPokemonSplendorDiscardSelectionInto(container) {
   pokemonSplendorColors.forEach((color) => {
     const wrapper = document.createElement("div");
     wrapper.className = `token-picker gem-${color}`;
-    wrapper.addEventListener("click", (event) => {
-      if (event.shiftKey || event.altKey) {
-        adjustPokemonSplendorDiscardSelection(color, -1);
-        return;
-      }
-      const rect = wrapper.getBoundingClientRect();
-      const midpoint = rect.left + rect.width / 2;
-      if (event.clientX < midpoint) {
-        adjustPokemonSplendorDiscardSelection(color, -1);
-      } else {
-        adjustPokemonSplendorDiscardSelection(color, 1);
-      }
-    });
-    wrapper.addEventListener("contextmenu", (event) => {
-      event.preventDefault();
-      adjustPokemonSplendorDiscardSelection(color, -1);
-    });
+    const requirement = getPokemonSplendorPendingDiscardRequirement(currentPokemonSplendorView);
+    const player = currentPokemonSplendorView
+      ? findPokemonSplendorPlayer(currentPokemonSplendorView, currentPokemonSplendorView.you)
+      : null;
+    const held = (player && player.tokens && player.tokens[color]) || 0;
+    const gained = (requirement && requirement.gain && requirement.gain[color]) || 0;
+    const available = held + gained;
+    const selected = pokemonSplendorDiscardSelection[color] || 0;
+    const selectedTotal = pokemonSplendorDiscardSelectionTotal();
     const label = document.createElement("span");
-    label.textContent = `${pokemonSplendorColorEmoji[color]} ${pokemonSplendorColorLabels[color]}`;
+    label.className = "pokemon-discard-label";
+    label.appendChild(createPokemonSplendorColorDot(color));
+    const labelText = document.createElement("span");
+    labelText.textContent = pokemonSplendorColorLabels[color];
+    label.appendChild(labelText);
     const minus = document.createElement("button");
     minus.type = "button";
-    minus.textContent = "-";
+    minus.textContent = "−";
+    minus.setAttribute("aria-label", `Discard one fewer ${pokemonSplendorColorLabels[color]} token`);
+    minus.disabled = selected <= 0;
     minus.addEventListener("click", (event) => {
       event.stopPropagation();
       adjustPokemonSplendorDiscardSelection(color, -1);
     });
     const count = document.createElement("span");
-    count.textContent = pokemonSplendorDiscardSelection[color] || 0;
+    count.className = "pokemon-discard-count";
+    count.textContent = `${selected} / ${available}`;
     const plus = document.createElement("button");
     plus.type = "button";
     plus.textContent = "+";
+    plus.setAttribute("aria-label", `Discard one more ${pokemonSplendorColorLabels[color]} token`);
+    plus.disabled =
+      !requirement ||
+      requirement.excess <= 0 ||
+      selected >= available ||
+      selectedTotal >= requirement.excess;
     plus.addEventListener("click", (event) => {
       event.stopPropagation();
       adjustPokemonSplendorDiscardSelection(color, 1);
@@ -778,7 +869,7 @@ function createPokemonSplendorCostRow(cost) {
     }
     const chip = document.createElement("div");
     chip.className = `cost-chip gem-${color}`;
-    chip.textContent = `${pokemonSplendorColorEmoji[color]} ${value}`;
+    appendPokemonSplendorColorValue(chip, color, value);
     costRow.appendChild(chip);
   });
   if (!costRow.childNodes.length) {
@@ -793,16 +884,28 @@ function createPokemonSplendorCostRow(cost) {
 function createPokemonSplendorRequirements(requirements) {
   const entries = Object.entries(requirements || {}).filter(([, value]) => value > 0);
   if (!entries.length) {
-    return "";
+    return null;
   }
-  return entries
-    .map(([color, value]) => `${pokemonSplendorColorEmoji[color] || ""}${value}`)
-    .join(" ");
+  const row = document.createElement("div");
+  row.className = "pokemon-card-requirements";
+  const label = document.createElement("span");
+  label.textContent = "Needs";
+  row.appendChild(label);
+  entries.forEach(([color, value]) => {
+    const chip = document.createElement("span");
+    chip.className = `pokemon-requirement-chip gem-${color}`;
+    appendPokemonSplendorColorValue(chip, color, value);
+    row.appendChild(chip);
+  });
+  return row;
 }
 
 function createPokemonSplendorCard(card, selected, options = {}) {
-  const wrapper = document.createElement("button");
-  wrapper.type = "button";
+  const interactive = Boolean(card) && options.interactive !== false;
+  const wrapper = document.createElement(interactive ? "button" : "article");
+  if (interactive) {
+    wrapper.type = "button";
+  }
   wrapper.className = "splendor-card pokemon-card";
   if (options.compact) {
     wrapper.classList.add("compact");
@@ -814,35 +917,98 @@ function createPokemonSplendorCard(card, selected, options = {}) {
     wrapper.classList.add("affordable");
   }
   if (!card) {
-    wrapper.textContent = "-";
-    wrapper.disabled = true;
+    wrapper.textContent = "No cards";
+    wrapper.setAttribute("aria-label", "No cards available");
     return wrapper;
   }
+
+  const tier = card.tier || options.tier;
+  if (pokemonSplendorTierLabels[tier]) {
+    wrapper.classList.add(`pokemon-card-tier-${tier}`);
+  }
+  if (interactive) {
+    wrapper.setAttribute("aria-pressed", selected ? "true" : "false");
+  }
+  if (options.disabled) {
+    wrapper.classList.add("pokemon-card-disabled");
+    wrapper.setAttribute("aria-disabled", "true");
+    if (interactive) {
+      wrapper.disabled = true;
+    }
+  }
+
+  const heading = document.createElement("div");
+  heading.className = "pokemon-card-heading";
 
   const title = document.createElement("div");
   title.className = "card-title";
   const nameEn = card.name_en || card.name || card.id;
   const nameZh = card.name && card.name !== card.name_en ? card.name : "";
-  title.textContent = nameZh ? `${nameZh} (${nameEn})` : nameEn;
-  wrapper.appendChild(title);
+  const primaryName = document.createElement("strong");
+  primaryName.textContent = nameZh || nameEn;
+  title.appendChild(primaryName);
+  if (nameZh) {
+    const secondaryName = document.createElement("span");
+    secondaryName.textContent = nameEn;
+    title.appendChild(secondaryName);
+  }
+  heading.appendChild(title);
+
+  const tierBadge = document.createElement("span");
+  tierBadge.className = "pokemon-card-tier-badge";
+  tierBadge.textContent = card.tier_label || pokemonSplendorTierLabel(tier);
+  heading.appendChild(tierBadge);
+  wrapper.appendChild(heading);
 
   const meta = document.createElement("div");
   meta.className = "card-meta";
-  const tierLabel = card.tier_label || card.tier || "";
   const points = typeof card.points === "number" ? card.points : 0;
-  const bonus = card.bonus ? `${pokemonSplendorColorEmoji[card.bonus]} ${pokemonSplendorColorLabels[card.bonus]}` : "-";
-  meta.textContent = `${tierLabel} | VP ${points} | Bonus ${bonus}`;
+  const pointsEl = document.createElement("span");
+  pointsEl.className = "pokemon-card-points";
+  pointsEl.textContent = `VP ${points}`;
+  meta.appendChild(pointsEl);
+  if (card.bonus) {
+    const bonusEl = document.createElement("span");
+    bonusEl.className = `pokemon-card-bonus gem-${card.bonus}`;
+    appendPokemonSplendorColorValue(bonusEl, card.bonus, "Bonus", { includeLabel: false });
+    bonusEl.querySelector("span:last-child").textContent = "Bonus";
+    bonusEl.setAttribute("aria-label", `${pokemonSplendorColorLabels[card.bonus]} bonus`);
+    meta.appendChild(bonusEl);
+  }
+  if (card.affordable) {
+    const affordable = document.createElement("span");
+    affordable.className = "pokemon-card-affordable-label";
+    affordable.textContent = "Catchable";
+    meta.appendChild(affordable);
+  }
   wrapper.appendChild(meta);
 
   if (card.evolution && card.evolution.targets && card.evolution.targets.length) {
     const evo = document.createElement("div");
     evo.className = "pokemon-card-evo";
-    const req = createPokemonSplendorRequirements(card.evolution.requirements);
-    evo.textContent = `Evo → ${card.evolution.targets.join(" / ")}${req ? ` | Need ${req}` : ""}`;
+    const evoLabel = document.createElement("span");
+    evoLabel.className = "pokemon-card-evo-label";
+    evoLabel.textContent = "Evolves to";
+    evo.appendChild(evoLabel);
+    const targets = document.createElement("span");
+    targets.className = "pokemon-card-evo-targets";
+    const targetsZh = Array.isArray(card.evolution.targets_zh) ? card.evolution.targets_zh : [];
+    targets.textContent = card.evolution.targets
+      .map((target, index) => (targetsZh[index] ? `${targetsZh[index]} (${target})` : target))
+      .join(" / ");
+    evo.appendChild(targets);
+    const requirements = createPokemonSplendorRequirements(card.evolution.requirements);
+    if (requirements) {
+      evo.appendChild(requirements);
+    }
     wrapper.appendChild(evo);
   }
 
   wrapper.appendChild(createPokemonSplendorCostRow(card.cost || {}));
+  wrapper.setAttribute(
+    "aria-label",
+    `${pokemonSplendorCardDisplayName(card, true)}, ${card.tier_label || pokemonSplendorTierLabel(tier)}, ${points} victory points`
+  );
   return wrapper;
 }
 
@@ -855,7 +1021,7 @@ function renderPokemonSplendorSupply(view) {
     const token = document.createElement("div");
     token.className = `splendor-token gem-${color}`;
     const count = view.tokens_supply ? view.tokens_supply[color] : 0;
-    token.textContent = `${pokemonSplendorColorEmoji[color]} ${pokemonSplendorColorLabels[color]}: ${count}`;
+    appendPokemonSplendorColorValue(token, color, count, { includeLabel: true });
     pokemonSplendorSupply.appendChild(token);
   });
 }
@@ -875,7 +1041,7 @@ function renderPokemonSplendorMarket(view) {
     container.innerHTML = "";
     const cards = (view.market && view.market[tier]) || [];
     if (!cards.length) {
-      const empty = createPokemonSplendorCard(null, false, { compact: false });
+      const empty = createPokemonSplendorCard(null, false, { compact: false, interactive: false });
       empty.classList.add("pokemon-card-empty");
       container.appendChild(empty);
       return;
@@ -883,16 +1049,45 @@ function renderPokemonSplendorMarket(view) {
     cards.forEach((card, index) => {
       const selected =
         pokemonSplendorSelectedMarket && pokemonSplendorSelectedMarket.tier === tier && pokemonSplendorSelectedMarket.index === index;
-      const cardEl = createPokemonSplendorCard(card, selected);
+      const legal = view.legal_actions || [];
+      const isYourTurn = view.current_turn === view.you;
+      const evolutionMode = isYourTurn && view.phase === "evolution" && legal.includes("skip_evolution");
+      const turnMode = isYourTurn && view.phase === "turn";
+      const targetOptions = pokemonSplendorEvolutionOptionsForTarget(view, "market", tier, index);
+      const interactive = turnMode || (evolutionMode && targetOptions.length > 0);
+      const cardEl = createPokemonSplendorCard(card, selected, { interactive });
       cardEl.classList.add("pokemon-market-card");
+      if (evolutionMode && targetOptions.length) {
+        cardEl.classList.add("pokemon-evolution-target-option");
+        if (pokemonSplendorSelectedBase && targetOptions.some((option) => option.base_id === pokemonSplendorSelectedBase)) {
+          cardEl.classList.add("pokemon-evolution-target-match");
+        }
+      } else if (evolutionMode) {
+        cardEl.classList.add("pokemon-card-unavailable");
+      }
+      if (!interactive) {
+        container.appendChild(cardEl);
+        return;
+      }
       cardEl.addEventListener("click", () => {
-        pokemonSplendorSelectedMarket = { tier, index };
+        const wasSelected =
+          pokemonSplendorSelectedMarket &&
+          pokemonSplendorSelectedMarket.tier === tier &&
+          pokemonSplendorSelectedMarket.index === index;
+        pokemonSplendorSelectedMarket = wasSelected ? null : { tier, index, cardId: card.id };
         pokemonSplendorSelectedReserved = null;
-        updatePokemonSplendorSelectionLabels();
-        renderPokemonSplendorMarket(view);
-        renderPokemonSplendorReserved(view);
-        updatePokemonSplendorDiscardHint(view);
-        updatePokemonSplendorActionButtons();
+        resetPokemonSplendorDiscardSelection();
+        if (!wasSelected && evolutionMode) {
+          const selectedBaseOption = targetOptions.find((option) => option.base_id === pokemonSplendorSelectedBase);
+          if (selectedBaseOption) {
+            pokemonSplendorSelectedBase = selectedBaseOption.base_id;
+          } else if (targetOptions.length === 1) {
+            pokemonSplendorSelectedBase = targetOptions[0].base_id;
+          } else {
+            pokemonSplendorSelectedBase = null;
+          }
+        }
+        refreshPokemonSplendorSelectionUI(view);
       });
       container.appendChild(cardEl);
     });
@@ -907,21 +1102,47 @@ function renderPokemonSplendorReserved(view) {
   const cards = view.your_reserved || [];
   cards.forEach((card, index) => {
     const selected = pokemonSplendorSelectedReserved === index;
-    const cardEl = createPokemonSplendorCard(card, selected);
+    const legal = view.legal_actions || [];
+    const isYourTurn = view.current_turn === view.you;
+    const evolutionMode = isYourTurn && view.phase === "evolution" && legal.includes("skip_evolution");
+    const turnMode = isYourTurn && view.phase === "turn";
+    const targetOptions = pokemonSplendorEvolutionOptionsForTarget(view, "reserved", null, index);
+    const interactive = turnMode || (evolutionMode && targetOptions.length > 0);
+    const cardEl = createPokemonSplendorCard(card, selected, { interactive });
     cardEl.classList.add("pokemon-reserved-card");
+    if (evolutionMode && targetOptions.length) {
+      cardEl.classList.add("pokemon-evolution-target-option");
+      if (pokemonSplendorSelectedBase && targetOptions.some((option) => option.base_id === pokemonSplendorSelectedBase)) {
+        cardEl.classList.add("pokemon-evolution-target-match");
+      }
+    } else if (evolutionMode) {
+      cardEl.classList.add("pokemon-card-unavailable");
+    }
+    if (!interactive) {
+      pokemonSplendorReserved.appendChild(cardEl);
+      return;
+    }
     cardEl.addEventListener("click", () => {
-      pokemonSplendorSelectedReserved = index;
+      const wasSelected = pokemonSplendorSelectedReserved === index;
+      pokemonSplendorSelectedReserved = wasSelected ? null : index;
       pokemonSplendorSelectedMarket = null;
-      updatePokemonSplendorSelectionLabels();
-      renderPokemonSplendorMarket(view);
-      renderPokemonSplendorReserved(view);
-      updatePokemonSplendorDiscardHint(view);
-      updatePokemonSplendorActionButtons();
+      resetPokemonSplendorDiscardSelection();
+      if (!wasSelected && evolutionMode) {
+        const selectedBaseOption = targetOptions.find((option) => option.base_id === pokemonSplendorSelectedBase);
+        if (selectedBaseOption) {
+          pokemonSplendorSelectedBase = selectedBaseOption.base_id;
+        } else if (targetOptions.length === 1) {
+          pokemonSplendorSelectedBase = targetOptions[0].base_id;
+        } else {
+          pokemonSplendorSelectedBase = null;
+        }
+      }
+      refreshPokemonSplendorSelectionUI(view);
     });
     pokemonSplendorReserved.appendChild(cardEl);
   });
   if (!cards.length) {
-    const empty = createPokemonSplendorCard(null, false, { compact: false });
+    const empty = createPokemonSplendorCard(null, false, { compact: false, interactive: false });
     empty.classList.add("pokemon-card-empty");
     pokemonSplendorReserved.appendChild(empty);
   }
@@ -936,21 +1157,58 @@ function renderPokemonSplendorCaptured(view) {
   const cards = player ? player.captured || [] : [];
   cards.forEach((card) => {
     const selected = pokemonSplendorSelectedBase === card.id;
-    const cardEl = createPokemonSplendorCard(card, selected, { compact: true });
+    const legal = view.legal_actions || [];
+    const evolutionMode =
+      view.current_turn === view.you && view.phase === "evolution" && legal.includes("skip_evolution");
+    const evolutionOptions = pokemonSplendorEvolutionOptionsForBase(view, card.id);
+    const interactive = evolutionMode && evolutionOptions.length > 0;
+    const cardEl = createPokemonSplendorCard(card, selected, { compact: true, interactive });
     cardEl.classList.add("pokemon-captured-card");
+    if (interactive) {
+      cardEl.classList.add("pokemon-evolution-base-option");
+    } else if (evolutionMode) {
+      cardEl.classList.add("pokemon-card-unavailable");
+    }
+    if (!interactive) {
+      pokemonSplendorCaptured.appendChild(cardEl);
+      return;
+    }
     cardEl.addEventListener("click", () => {
-      pokemonSplendorSelectedBase = card.id;
-      updatePokemonSplendorSelectionLabels();
-      renderPokemonSplendorCaptured(view);
-      updatePokemonSplendorActionButtons();
+      const wasSelected = pokemonSplendorSelectedBase === card.id;
+      if (wasSelected) {
+        pokemonSplendorSelectedBase = null;
+        pokemonSplendorSelectedMarket = null;
+        pokemonSplendorSelectedReserved = null;
+      } else {
+        pokemonSplendorSelectedBase = card.id;
+        if (!findPokemonSplendorEvolutionOption(view)) {
+          pokemonSplendorSelectedMarket = null;
+          pokemonSplendorSelectedReserved = null;
+        }
+        if (evolutionOptions.length === 1 && !findPokemonSplendorEvolutionOption(view)) {
+          selectPokemonSplendorEvolutionOption(evolutionOptions[0], view);
+        }
+      }
+      refreshPokemonSplendorSelectionUI(view);
     });
     pokemonSplendorCaptured.appendChild(cardEl);
   });
   if (!cards.length) {
-    const empty = createPokemonSplendorCard(null, false, { compact: true });
+    const empty = createPokemonSplendorCard(null, false, { compact: true, interactive: false });
     empty.classList.add("pokemon-card-empty");
     pokemonSplendorCaptured.appendChild(empty);
   }
+}
+
+function refreshPokemonSplendorSelectionUI(view) {
+  renderPokemonSplendorMarket(view);
+  renderPokemonSplendorReserved(view);
+  renderPokemonSplendorCaptured(view);
+  updatePokemonSplendorSelectionLabels();
+  renderPokemonSplendorDiscardSelection();
+  updatePokemonSplendorDiscardHint(view);
+  updatePokemonSplendorActionButtons();
+  updatePokemonSplendorPrompt(view);
 }
 
 function renderPokemonSplendorPlayers(view) {
@@ -970,8 +1228,13 @@ function renderPokemonSplendorPlayers(view) {
     const name = document.createElement("div");
     name.className = "player-name";
     const youTag = player.player_id === view.you ? " (you)" : "";
-    const kantoTag = player.player_id === view.starting_player ? " ★" : "";
-    name.textContent = `${player.name || player.player_id}${youTag}${kantoTag}`;
+    name.textContent = `${player.name || player.player_id}${youTag}`;
+    if (player.player_id === view.starting_player) {
+      const kantoTag = document.createElement("span");
+      kantoTag.className = "pokemon-first-player-badge";
+      kantoTag.textContent = "Kanto";
+      name.appendChild(kantoTag);
+    }
     const score = document.createElement("div");
     score.className = "badge";
     score.textContent = `Score ${player.score}`;
@@ -985,15 +1248,21 @@ function renderPokemonSplendorPlayers(view) {
       const token = document.createElement("div");
       token.className = `splendor-token gem-${color}`;
       const count = (player.tokens && player.tokens[color]) || 0;
-      token.textContent = `${pokemonSplendorColorEmoji[color]}${count}`;
+      appendPokemonSplendorColorValue(token, color, count);
       tokensLine.appendChild(token);
     });
 
     const bonusLine = document.createElement("div");
-    const bonuses = pokemonSplendorBaseColors
-      .map((color) => `${pokemonSplendorColorEmoji[color]}${(player.bonuses && player.bonuses[color]) || 0}`)
-      .join(" ");
-    bonusLine.textContent = `Bonuses: ${bonuses}`;
+    bonusLine.className = "pokemon-player-bonuses";
+    const bonusesLabel = document.createElement("span");
+    bonusesLabel.textContent = "Bonuses";
+    bonusLine.appendChild(bonusesLabel);
+    pokemonSplendorBaseColors.forEach((color) => {
+      const bonus = document.createElement("span");
+      bonus.className = `pokemon-player-bonus gem-${color}`;
+      appendPokemonSplendorColorValue(bonus, color, (player.bonuses && player.bonuses[color]) || 0);
+      bonusLine.appendChild(bonus);
+    });
 
     const countsLine = document.createElement("div");
     countsLine.textContent = `Reserved: ${player.reserved_count} | Captured: ${player.captured_count} | Evolved: ${
@@ -1018,7 +1287,7 @@ function renderPokemonSplendorPlayers(view) {
     const capturedCards = Array.isArray(player.captured) ? player.captured : [];
     if (capturedCards.length) {
       capturedCards.forEach((cardData) => {
-        const cardEl = createPokemonSplendorCard(cardData, false, { compact: true });
+        const cardEl = createPokemonSplendorCard(cardData, false, { compact: true, interactive: false });
         capturedList.appendChild(cardEl);
       });
     } else {
@@ -1070,7 +1339,11 @@ function getPokemonSplendorSelectedMarketCard(view) {
     return null;
   }
   const cards = view.market[pokemonSplendorSelectedMarket.tier] || [];
-  return cards[pokemonSplendorSelectedMarket.index] || null;
+  const card = cards[pokemonSplendorSelectedMarket.index] || null;
+  if (card && pokemonSplendorSelectedMarket.cardId && card.id !== pokemonSplendorSelectedMarket.cardId) {
+    return null;
+  }
+  return card;
 }
 
 function getPokemonSplendorSelectedReservedCard(view) {
@@ -1079,6 +1352,83 @@ function getPokemonSplendorSelectedReservedCard(view) {
   }
   const cards = view.your_reserved || [];
   return cards[pokemonSplendorSelectedReserved] || null;
+}
+
+function pokemonSplendorEvolutionOptionsForBase(view, baseId) {
+  if (!view || !baseId || !Array.isArray(view.evolution_options)) {
+    return [];
+  }
+  return view.evolution_options.filter((option) => option.base_id === baseId);
+}
+
+function pokemonSplendorEvolutionOptionsForTarget(view, source, tier, index) {
+  if (!view || !Array.isArray(view.evolution_options)) {
+    return [];
+  }
+  return view.evolution_options.filter((option) => {
+    if (option.source !== source) {
+      return false;
+    }
+    if (source === "market") {
+      return option.tier === tier && option.index === index;
+    }
+    return option.reserved_index === index;
+  });
+}
+
+function selectPokemonSplendorEvolutionOption(option, view) {
+  if (!option || !view) {
+    return;
+  }
+  pokemonSplendorSelectedBase = option.base_id;
+  if (option.source === "market") {
+    const card = ((view.market && view.market[option.tier]) || [])[option.index];
+    pokemonSplendorSelectedMarket = {
+      tier: option.tier,
+      index: option.index,
+      cardId: card ? card.id : option.target_id,
+    };
+    pokemonSplendorSelectedReserved = null;
+  } else {
+    pokemonSplendorSelectedReserved = option.reserved_index;
+    pokemonSplendorSelectedMarket = null;
+  }
+}
+
+function reconcilePokemonSplendorSelections(view) {
+  if (!view) {
+    return;
+  }
+  if (pokemonSplendorSelectedMarket && !getPokemonSplendorSelectedMarketCard(view)) {
+    pokemonSplendorSelectedMarket = null;
+  }
+  if (pokemonSplendorSelectedReserved !== null && !getPokemonSplendorSelectedReservedCard(view)) {
+    pokemonSplendorSelectedReserved = null;
+  }
+  if (pokemonSplendorSelectedBase && !findPokemonSplendorCapturedById(view, pokemonSplendorSelectedBase)) {
+    pokemonSplendorSelectedBase = null;
+  }
+  if (view.phase !== "evolution") {
+    pokemonSplendorSelectedBase = null;
+    return;
+  }
+  if (pokemonSplendorSelectedMarket) {
+    const options = pokemonSplendorEvolutionOptionsForTarget(
+      view,
+      "market",
+      pokemonSplendorSelectedMarket.tier,
+      pokemonSplendorSelectedMarket.index
+    );
+    if (!options.length || (pokemonSplendorSelectedBase && !options.some((option) => option.base_id === pokemonSplendorSelectedBase))) {
+      pokemonSplendorSelectedMarket = null;
+    }
+  }
+  if (pokemonSplendorSelectedReserved !== null) {
+    const options = pokemonSplendorEvolutionOptionsForTarget(view, "reserved", null, pokemonSplendorSelectedReserved);
+    if (!options.length || (pokemonSplendorSelectedBase && !options.some((option) => option.base_id === pokemonSplendorSelectedBase))) {
+      pokemonSplendorSelectedReserved = null;
+    }
+  }
 }
 
 function findPokemonSplendorEvolutionOption(view) {
@@ -1117,9 +1467,30 @@ function updatePokemonSplendorActionButtons() {
   const legal = (view && view.legal_actions) || [];
   const selectedMarketCard = getPokemonSplendorSelectedMarketCard(view);
   const selectedReservedCard = getPokemonSplendorSelectedReservedCard(view);
+  const isYourTurn = Boolean(view && view.current_turn === view.you && !view.game_over);
+  const showTurnActions = isYourTurn && view.phase === "turn";
+  const showEvolutionActions = isYourTurn && view.phase === "evolution";
+  const showDiscardAction = isYourTurn && view.phase === "discard_tokens";
+
+  [pokemonSplendorTakeTokensBtn, pokemonSplendorReserveDeckBtn, pokemonSplendorBuyMarketBtn, pokemonSplendorReserveMarketBtn, pokemonSplendorBuyReservedBtn].forEach(
+    (button) => {
+      if (button) {
+        button.classList.toggle("hidden", !showTurnActions);
+      }
+    }
+  );
+  [pokemonSplendorEvolveBtn, pokemonSplendorSkipEvolveBtn].forEach((button) => {
+    if (button) {
+      button.classList.toggle("hidden", !showEvolutionActions);
+    }
+  });
+  if (pokemonSplendorDiscardBtn) {
+    pokemonSplendorDiscardBtn.classList.toggle("hidden", !showDiscardAction);
+  }
 
   if (pokemonSplendorTakeTokensBtn) {
     pokemonSplendorTakeTokensBtn.disabled = !legal.includes("take_tokens") && !legal.includes("take_tokens_same");
+    pokemonSplendorTakeTokensBtn.title = pokemonSplendorTakeTokensBtn.disabled ? "Token taking is not available." : "Choose tokens.";
   }
   if (
     !legal.includes("take_tokens") &&
@@ -1135,9 +1506,18 @@ function updatePokemonSplendorActionButtons() {
       pokemonSplendorSelectedMarket &&
       ["lv1", "lv2", "lv3"].includes(pokemonSplendorSelectedMarket.tier);
     pokemonSplendorReserveMarketBtn.disabled = !canReserveMarket;
+    pokemonSplendorReserveMarketBtn.textContent = selectedMarketCard
+      ? `Reserve ${pokemonSplendorCardDisplayName(selectedMarketCard)}`
+      : "Reserve Selected";
+    pokemonSplendorReserveMarketBtn.title = canReserveMarket
+      ? "Reserve this market Pokemon and take a Master token if available."
+      : "Select an LV1, LV2, or LV3 market Pokemon first.";
   }
   if (pokemonSplendorReserveDeckBtn) {
     pokemonSplendorReserveDeckBtn.disabled = !legal.includes("reserve_deck");
+    pokemonSplendorReserveDeckBtn.title = pokemonSplendorReserveDeckBtn.disabled
+      ? "You cannot reserve from a deck now."
+      : "Choose an LV1, LV2, or LV3 deck.";
   }
   if (!legal.includes("reserve_deck")) {
     closePokemonSplendorReserveMenu();
@@ -1145,14 +1525,35 @@ function updatePokemonSplendorActionButtons() {
   if (pokemonSplendorBuyMarketBtn) {
     pokemonSplendorBuyMarketBtn.disabled =
       !legal.includes("buy_market") || !selectedMarketCard || !selectedMarketCard.affordable;
+    pokemonSplendorBuyMarketBtn.textContent = selectedMarketCard
+      ? `Catch ${pokemonSplendorCardDisplayName(selectedMarketCard)}`
+      : "Catch Selected";
+    pokemonSplendorBuyMarketBtn.title = pokemonSplendorBuyMarketBtn.disabled
+      ? "Select a market Pokemon you can afford."
+      : "Catch the selected market Pokemon.";
   }
   if (pokemonSplendorBuyReservedBtn) {
     pokemonSplendorBuyReservedBtn.disabled =
       !legal.includes("buy_reserved") || !selectedReservedCard || !selectedReservedCard.affordable;
+    pokemonSplendorBuyReservedBtn.textContent = selectedReservedCard
+      ? `Catch ${pokemonSplendorCardDisplayName(selectedReservedCard)}`
+      : "Catch Reserved";
+    pokemonSplendorBuyReservedBtn.title = pokemonSplendorBuyReservedBtn.disabled
+      ? "Select a reserved Pokemon you can afford."
+      : "Catch the selected reserved Pokemon.";
   }
   if (pokemonSplendorEvolveBtn) {
     const evolveOption = findPokemonSplendorEvolutionOption(view);
     pokemonSplendorEvolveBtn.disabled = !legal.includes("evolve") || !evolveOption;
+    const baseCard = findPokemonSplendorCapturedById(view, pokemonSplendorSelectedBase);
+    const targetCard = selectedMarketCard || selectedReservedCard;
+    pokemonSplendorEvolveBtn.textContent =
+      evolveOption && baseCard && targetCard
+        ? `Evolve ${pokemonSplendorCardDisplayName(baseCard)} → ${pokemonSplendorCardDisplayName(targetCard)}`
+        : "Evolve";
+    pokemonSplendorEvolveBtn.title = pokemonSplendorEvolveBtn.disabled
+      ? "Choose a highlighted base and evolution target."
+      : "Confirm this evolution.";
   }
   if (pokemonSplendorSkipEvolveBtn) {
     pokemonSplendorSkipEvolveBtn.disabled = !legal.includes("skip_evolution");
@@ -1162,6 +1563,80 @@ function updatePokemonSplendorActionButtons() {
     const validSelection = pokemonSplendorIsDiscardSelectionValid(requirement);
     pokemonSplendorDiscardBtn.disabled = !legal.includes("discard_tokens") || !validSelection;
   }
+}
+
+function updatePokemonSplendorPrompt(view) {
+  if (!pokemonSplendorPrompt) {
+    return;
+  }
+  let message = "Waiting for the game state.";
+  let tone = "neutral";
+  const currentPlayer = view ? findPokemonSplendorPlayer(view, view.current_turn) : null;
+  const currentName = currentPlayer ? currentPlayer.name || currentPlayer.player_id : "the current player";
+
+  if (!view) {
+    // Keep the default waiting message.
+  } else if (view.game_over) {
+    const winnerNames = (view.winner || []).map((playerId) => {
+      const player = findPokemonSplendorPlayer(view, playerId);
+      return player ? player.name || player.player_id : playerId;
+    });
+    message = winnerNames.length ? `Game over. Winner: ${winnerNames.join(", ")}.` : "Game over.";
+    tone = "done";
+  } else if (view.current_turn !== view.you) {
+    message = `Waiting for ${currentName}. You can review the market while they play.`;
+    tone = "waiting";
+  } else if (view.phase === "discard_tokens") {
+    const requirement = getPokemonSplendorPendingDiscardRequirement(view);
+    const excess = requirement ? requirement.excess : 0;
+    const selected = pokemonSplendorDiscardSelectionTotal();
+    message = `Choose ${excess} token${excess === 1 ? "" : "s"} to return (${selected}/${excess} selected).`;
+    tone = selected === excess && excess > 0 ? "ready" : "warning";
+  } else if (view.phase === "evolution") {
+    const baseCard = findPokemonSplendorCapturedById(view, pokemonSplendorSelectedBase);
+    const targetCard = getPokemonSplendorSelectedMarketCard(view) || getPokemonSplendorSelectedReservedCard(view);
+    const option = findPokemonSplendorEvolutionOption(view);
+    if (option && baseCard && targetCard) {
+      message = `${pokemonSplendorCardDisplayName(baseCard)} → ${pokemonSplendorCardDisplayName(targetCard)} is ready. Confirm or skip evolution.`;
+      tone = "ready";
+    } else if (baseCard) {
+      message = `${pokemonSplendorCardDisplayName(baseCard)} selected. Choose a highlighted evolution target.`;
+      tone = "action";
+    } else if (targetCard) {
+      message = `${pokemonSplendorCardDisplayName(targetCard)} selected. Choose a highlighted base Pokemon.`;
+      tone = "action";
+    } else {
+      message = "Evolution is available. Choose a highlighted captured Pokemon and its highlighted target, or skip.";
+      tone = "action";
+    }
+  } else {
+    const marketCard = getPokemonSplendorSelectedMarketCard(view);
+    const reservedCard = getPokemonSplendorSelectedReservedCard(view);
+    if (marketCard) {
+      const actions = [];
+      if (marketCard.affordable) {
+        actions.push("catch it");
+      }
+      if (["lv1", "lv2", "lv3"].includes(marketCard.tier) && (view.legal_actions || []).includes("reserve_market")) {
+        actions.push("reserve it");
+      }
+      message = actions.length
+        ? `${pokemonSplendorCardDisplayName(marketCard)} selected — ${actions.join(" or ")}.`
+        : `${pokemonSplendorCardDisplayName(marketCard)} selected, but it cannot be caught or reserved now.`;
+      tone = actions.length ? "ready" : "warning";
+    } else if (reservedCard) {
+      message = reservedCard.affordable
+        ? `${pokemonSplendorCardDisplayName(reservedCard)} selected — ready to catch.`
+        : `${pokemonSplendorCardDisplayName(reservedCard)} selected, but you cannot afford it yet.`;
+      tone = reservedCard.affordable ? "ready" : "warning";
+    } else {
+      message = "Choose one action: take tokens, select a Pokemon to catch or reserve, or reserve from a deck.";
+      tone = "action";
+    }
+  }
+
+  pokemonSplendorPrompt.textContent = message;
+  pokemonSplendorPrompt.dataset.tone = tone;
 }
 
 function renderPokemonSplendorGameState(data) {
@@ -1175,8 +1650,16 @@ function renderPokemonSplendorGameState(data) {
     return;
   }
 
+  reconcilePokemonSplendorSelections(view);
+
   if (pokemonSplendorPhaseLabel) {
-    pokemonSplendorPhaseLabel.textContent = view.phase || "-";
+    const phaseLabels = {
+      turn: "Main action",
+      evolution: "Evolution",
+      discard_tokens: "Discard",
+      game_over: "Game over",
+    };
+    pokemonSplendorPhaseLabel.textContent = phaseLabels[view.phase] || view.phase || "-";
   }
   if (pokemonSplendorTurnLabel) {
     const currentPlayer = findPokemonSplendorPlayer(view, view.current_turn);
@@ -1211,6 +1694,7 @@ function renderPokemonSplendorGameState(data) {
   renderPokemonSplendorDiscardSelection();
   updatePokemonSplendorDiscardHint(view);
   updatePokemonSplendorActionButtons();
+  updatePokemonSplendorPrompt(view);
   if (pokemonSplendorExplainMode) {
     updatePokemonSplendorExplainModeClasses(true);
   }
@@ -1222,7 +1706,8 @@ if (pokemonSplendorPanel) {
       pokemonSplendorReserveMenu &&
       !pokemonSplendorReserveMenu.classList.contains("hidden") &&
       !event.target.closest(".pokemon-reserve-menu") &&
-      !event.target.closest("#pokemonSplendorReserveDeckBtn")
+      !event.target.closest("#pokemonSplendorReserveDeckBtn") &&
+      !event.target.closest(".pokemon-discard-row")
     ) {
       closePokemonSplendorReserveMenu();
     }
@@ -1235,7 +1720,6 @@ if (pokemonSplendorPanel) {
       event.target.closest(".pokemon-reserved-card") ||
       event.target.closest(".pokemon-captured-card") ||
       event.target.closest(".token-picker") ||
-      event.target.closest(".player-card") ||
       event.target.closest(".splendor-card")
     ) {
       return;
@@ -1558,6 +2042,14 @@ if (pokemonSplendorHelpModalCloseBtn) {
   pokemonSplendorHelpModalCloseBtn.addEventListener("click", closePokemonSplendorHelpModal);
 }
 
+if (pokemonSplendorHelpModal) {
+  pokemonSplendorHelpModal.addEventListener("click", (event) => {
+    if (event.target === pokemonSplendorHelpModal) {
+      closePokemonSplendorHelpModal();
+    }
+  });
+}
+
 if (pokemonSplendorExplainBtn) {
   pokemonSplendorExplainBtn.addEventListener("click", () => {
     if (pokemonSplendorExplainMode) {
@@ -1570,6 +2062,14 @@ if (pokemonSplendorExplainBtn) {
 
 if (pokemonSplendorExplainModalCloseBtn) {
   pokemonSplendorExplainModalCloseBtn.addEventListener("click", closePokemonSplendorExplainModal);
+}
+
+if (pokemonSplendorExplainModal) {
+  pokemonSplendorExplainModal.addEventListener("click", (event) => {
+    if (event.target === pokemonSplendorExplainModal) {
+      closePokemonSplendorExplainModal();
+    }
+  });
 }
 
 if (pokemonSplendorTokenModalCloseBtn) {
@@ -1648,6 +2148,9 @@ document.addEventListener("pointerdown", (event) => {
   if (event.target.closest("#pokemonSplendorReserveDeckBtn")) {
     return;
   }
+  if (event.target.closest(".pokemon-discard-row")) {
+    return;
+  }
   closePokemonSplendorReserveMenu();
 });
 
@@ -1655,13 +2158,31 @@ document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") {
     return;
   }
+  let handled = false;
   if (pokemonSplendorReserveMenu && !pokemonSplendorReserveMenu.classList.contains("hidden")) {
     closePokemonSplendorReserveMenu();
+    handled = true;
   }
   if (pokemonSplendorTokenModal && !pokemonSplendorTokenModal.classList.contains("hidden")) {
     closePokemonSplendorTokenModal();
+    handled = true;
+  }
+  if (pokemonSplendorHelpModal && !pokemonSplendorHelpModal.classList.contains("hidden")) {
+    closePokemonSplendorHelpModal();
+    handled = true;
+  }
+  if (pokemonSplendorExplainModal && !pokemonSplendorExplainModal.classList.contains("hidden")) {
+    closePokemonSplendorExplainModal();
+    handled = true;
   }
   if (pokemonSplendorExplainMode) {
     exitPokemonSplendorExplainMode();
+    handled = true;
+  }
+  if (
+    !handled &&
+    (pokemonSplendorSelectedMarket || pokemonSplendorSelectedReserved !== null || pokemonSplendorSelectedBase)
+  ) {
+    clearPokemonSplendorSelection();
   }
 });

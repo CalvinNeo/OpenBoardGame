@@ -121,6 +121,39 @@ class GizmosGameTests(unittest.TestCase):
         self.assertIn("l1_build_red_pick_1", source_ids)
         self.assertIn("l3_generic_1", source_ids)
 
+    def test_bot_collects_energy_before_unproductive_research(self):
+        state = GizmosGame.init_game({"seed": 1}, _players())
+        self.assertEqual(state["players"]["p1"]["storage"], [])
+
+        action = GizmosGame.bot_move(state, "p1")
+
+        self.assertEqual(action["type"], "pick_energy")
+        self.assertIn(action["color"], state["energy_row"])
+
+    def test_bots_finish_a_full_game(self):
+        players = [
+            {
+                "player_id": f"p{index + 1}",
+                "name": f"Bot {index + 1}",
+                "seat": index,
+                "is_bot": True,
+            }
+            for index in range(2)
+        ]
+        state = GizmosGame.init_game({"seed": 2}, players)
+
+        for _ in range(300):
+            if state.get("game_over"):
+                break
+            actor = state["current_turn"]
+            action = GizmosGame.bot_move(state, actor)
+            self.assertIsNotNone(action)
+            _, error = GizmosGame.apply_action(state, actor, action)
+            self.assertIsNone(error)
+
+        self.assertTrue(state["game_over"])
+        self.assertTrue(state["winner"])
+
 
 if __name__ == "__main__":
     unittest.main()

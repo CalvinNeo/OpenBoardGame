@@ -35,6 +35,7 @@ def _clone_card(card: Dict) -> Dict:
         "bonus": card.get("bonus"),
         "cost": dict(card.get("cost", {})),
         "evolution_targets": list(card.get("evolution_targets", [])),
+        "evolution_targets_zh": list(card.get("evolution_targets_zh", [])),
         "evolution_requirements": dict(card.get("evolution_requirements", {})),
     }
 
@@ -668,6 +669,7 @@ class PokemonSplendorGame:
                 "cost": dict(card.get("cost", {})),
                 "evolution": {
                     "targets": list(card.get("evolution_targets", [])),
+                    "targets_zh": list(card.get("evolution_targets_zh", [])),
                     "requirements": dict(card.get("evolution_requirements", {})),
                 },
             }

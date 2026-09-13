@@ -61,6 +61,14 @@ def _load_cards() -> Dict[str, List[Dict]]:
         else:
             targets = []
 
+        targets_zh_raw = evolution.get("target_zh")
+        if isinstance(targets_zh_raw, list):
+            targets_zh = [t for t in targets_zh_raw if isinstance(t, str)]
+        elif isinstance(targets_zh_raw, str):
+            targets_zh = [targets_zh_raw]
+        else:
+            targets_zh = []
+
         requirements_raw = evolution.get("requirements") or {}
         requirements: Dict[str, int] = {}
         for color, value in requirements_raw.items():
@@ -78,6 +86,7 @@ def _load_cards() -> Dict[str, List[Dict]]:
             "bonus": bonus,
             "cost": cost,
             "evolution_targets": targets,
+            "evolution_targets_zh": targets_zh,
             "evolution_requirements": requirements,
         }
         decks[tier_key].append(card)

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css?v=app_v31" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v33" />
   <link rel="stylesheet" href="/static/ark_nova.css?v=app_v18" />
 </head>
 <body>
@@ -982,6 +982,9 @@
         <button id="pokemonSplendorTokenModalCloseBtn" type="button">Close</button>
       </div>
       <div class="modal-body">
+        <p id="pokemonSplendorTokenHint" class="pokemon-token-hint" role="status">
+          Pick three different colors, or pick the same color twice.
+        </p>
         <div class="pokemon-token-section">
           <div class="pokemon-token-section-title">Available</div>
           <div id="pokemonSplendorTokenPool" class="pokemon-token-pool"></div>
@@ -1815,9 +1818,27 @@
                 <div>Dealer Team: <span id="guandanDealer">-</span></div>
                 <div>Level: <span id="guandanLevel">-</span></div>
               </div>
-              <div class="row">
-                <div>Current Trick: <span id="guandanTrick">-</span></div>
-              </div>
+              <section
+                id="guandanBeatTarget"
+                class="guandan-beat-target is-open"
+                aria-label="Target to beat"
+                aria-live="polite"
+              >
+                <div class="guandan-beat-target-head">
+                  <span class="guandan-beat-eyebrow">Target to Beat</span>
+                  <span id="guandanBeatRelation" class="guandan-relation-badge">Open trick</span>
+                </div>
+                <div class="guandan-beat-main">
+                  <div class="guandan-beat-copy">
+                    <strong id="guandanBeatTitle" class="guandan-beat-title">Lead any valid combo</strong>
+                    <span id="guandanBeatOwner" class="guandan-beat-owner">No cards are on the table.</span>
+                  </div>
+                  <div id="guandanBeatCards" class="guandan-beat-cards" aria-label="No target cards">
+                    <span class="guandan-beat-empty">Any combo</span>
+                  </div>
+                </div>
+                <div id="guandanBeatHint" class="guandan-beat-hint">The lead player can play any valid combo.</div>
+              </section>
               <div class="row">
                 <div>Tribute: <span id="guandanTribute">-</span></div>
               </div>
@@ -4660,66 +4681,72 @@
               <div id="centuryPlayers" class="century-player-list"></div>
             </div>
 
-            <div id="pokemonSplendorPanel" class="hidden">
-              <div class="row">
-                <div>Phase: <span id="pokemonSplendorPhase">-</span></div>
-                <div>Current Turn: <span id="pokemonSplendorTurn">-</span></div>
-                <div>Final Round: <span id="pokemonSplendorFinalRound">-</span></div>
-              </div>
-              <div class="row">
-                <div>Kanto Token: <span id="pokemonSplendorStart">-</span></div>
-                <div>Winner: <span id="pokemonSplendorWinner">-</span></div>
+            <div id="pokemonSplendorPanel" class="pokemon-splendor-panel hidden">
+              <div class="pokemon-splendor-status" aria-label="Game status">
+                <div class="pokemon-status-item"><span>Phase</span><strong id="pokemonSplendorPhase">-</strong></div>
+                <div class="pokemon-status-item"><span>Current Turn</span><strong id="pokemonSplendorTurn">-</strong></div>
+                <div class="pokemon-status-item"><span>Final Round</span><strong id="pokemonSplendorFinalRound">-</strong></div>
+                <div class="pokemon-status-item"><span>Kanto Token</span><strong id="pokemonSplendorStart">-</strong></div>
+                <div class="pokemon-status-item"><span>Winner</span><strong id="pokemonSplendorWinner">-</strong></div>
               </div>
 
               <h3>Token Supply</h3>
-              <div id="pokemonSplendorSupply" class="splendor-token-row"></div>
+              <div id="pokemonSplendorSupply" class="splendor-token-row pokemon-supply"></div>
+
+              <div id="pokemonSplendorPrompt" class="pokemon-turn-prompt" role="status" aria-live="polite">
+                Waiting for the game state.
+              </div>
+
+              <section class="pokemon-action-console" aria-label="Turn controls">
+                <div class="pokemon-action-console-title">
+                  <span>Current choice</span>
+                  <strong>Select a card or take tokens</strong>
+                </div>
+                <div class="pokemon-selection-summary">
+                  <div><span>Market</span><strong id="pokemonSplendorSelectedMarket">-</strong></div>
+                  <div><span>Reserved</span><strong id="pokemonSplendorSelectedReserved">-</strong></div>
+                  <div><span>Evolution base</span><strong id="pokemonSplendorSelectedBase">-</strong></div>
+                </div>
+                <div id="pokemonSplendorDiscardSelectionRow" class="pokemon-discard-row hidden">
+                  <span>Discard selection</span>
+                  <div id="pokemonSplendorDiscardSelection" class="splendor-token-selection"></div>
+                </div>
+                <div id="pokemonSplendorDiscardHint" class="splendor-discard-hint hidden"></div>
+
+                <div class="pokemon-actions">
+                  <button id="pokemonSplendorTakeTokensBtn" class="pokemon-action-primary" type="button">Take Tokens</button>
+                  <button id="pokemonSplendorReserveDeckBtn" type="button">Reserve from Deck</button>
+                  <button id="pokemonSplendorBuyMarketBtn" class="pokemon-action-primary" type="button">Catch Selected</button>
+                  <button id="pokemonSplendorReserveMarketBtn" type="button">Reserve Selected</button>
+                  <button id="pokemonSplendorBuyReservedBtn" class="pokemon-action-primary" type="button">Catch Reserved</button>
+                  <button id="pokemonSplendorEvolveBtn" class="pokemon-action-primary" type="button">Evolve</button>
+                  <button id="pokemonSplendorSkipEvolveBtn" type="button">Skip Evolution</button>
+                  <button id="pokemonSplendorDiscardBtn" class="pokemon-action-primary" type="button">Discard Tokens</button>
+                </div>
+              </section>
 
               <h3>Market</h3>
-              <div class="splendor-market">
-                <div class="splendor-tier">
+              <div class="splendor-market pokemon-market">
+                <div class="splendor-tier pokemon-tier-section pokemon-tier-legendary">
                   <div class="tier-label">Legendary</div>
                   <div id="pokemonSplendorMarketLegendary" class="splendor-cards"></div>
                 </div>
-                <div class="splendor-tier">
+                <div class="splendor-tier pokemon-tier-section pokemon-tier-rare">
                   <div class="tier-label">Rare</div>
                   <div id="pokemonSplendorMarketRare" class="splendor-cards"></div>
                 </div>
-                <div class="splendor-tier">
+                <div class="splendor-tier pokemon-tier-section pokemon-tier-lv3">
                   <div class="tier-label">LV3</div>
                   <div id="pokemonSplendorMarketLv3" class="splendor-cards"></div>
                 </div>
-                <div class="splendor-tier">
+                <div class="splendor-tier pokemon-tier-section pokemon-tier-lv2">
                   <div class="tier-label">LV2</div>
                   <div id="pokemonSplendorMarketLv2" class="splendor-cards"></div>
                 </div>
-                <div class="splendor-tier">
+                <div class="splendor-tier pokemon-tier-section pokemon-tier-lv1">
                   <div class="tier-label">LV1</div>
                   <div id="pokemonSplendorMarketLv1" class="splendor-cards"></div>
                 </div>
-              </div>
-
-              <h3>Your Selection</h3>
-              <div class="row">
-                <div>Market: <span id="pokemonSplendorSelectedMarket">-</span></div>
-                <div>Reserved: <span id="pokemonSplendorSelectedReserved">-</span></div>
-                <div>Base: <span id="pokemonSplendorSelectedBase">-</span></div>
-              </div>
-              <div id="pokemonSplendorDiscardSelectionRow" class="row hidden">
-                <div>Discard Selection</div>
-                <div id="pokemonSplendorDiscardSelection" class="splendor-token-selection"></div>
-              </div>
-              <div id="pokemonSplendorDiscardHint" class="splendor-discard-hint hidden"></div>
-
-              <h3>Actions</h3>
-              <div class="row actions">
-                <button id="pokemonSplendorTakeTokensBtn" type="button">Take Tokens</button>
-                <button id="pokemonSplendorReserveMarketBtn" type="button">Reserve Market</button>
-                <button id="pokemonSplendorReserveDeckBtn" type="button">Reserve Deck</button>
-                <button id="pokemonSplendorBuyMarketBtn" type="button">Catch Market</button>
-                <button id="pokemonSplendorBuyReservedBtn" type="button">Catch Reserved</button>
-                <button id="pokemonSplendorEvolveBtn" type="button">Evolve</button>
-                <button id="pokemonSplendorSkipEvolveBtn" type="button">Skip Evolution</button>
-                <button id="pokemonSplendorDiscardBtn" type="button">Discard Tokens</button>
               </div>
 
               <h3>Your Reserved</h3>
@@ -5502,7 +5529,7 @@
   <script src="/static/games/gizmos.js?v=app_v4"></script>
   <script src="/static/games/century_spice_road.js?v=app_v3"></script>
   <script src="/static/games/splendor.js?v=app_v4"></script>
-  <script src="/static/games/splendor_pokemon.js?v=app_v4"></script>
+  <script src="/static/games/splendor_pokemon.js?v=app_v5"></script>
   <script src="/static/games/project_l.js?v=app_v4"></script>
   <script src="/static/games/decrypto.js?v=app_v4"></script>
   <script src="/static/games/wavelength.js?v=app_v4"></script>
@@ -5520,7 +5547,7 @@
   <script src="/static/games/six_nimmt.js?v=app_v4"></script>
   <script src="/static/games/skull.js?v=app_v4"></script>
   <script src="/static/games/rebel_princess.js?v=app_v1"></script>
-  <script src="/static/games/guandan.js?v=app_v10"></script>
+  <script src="/static/games/guandan.js?v=app_v11"></script>
   <script src="/static/games/cabo.js?v=app_v8"></script>
   <script src="/static/games/flip7.js?v=app_v4"></script>
   <script src="/static/games/acquire.js?v=app_v1"></script>

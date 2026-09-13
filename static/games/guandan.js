@@ -27,7 +27,12 @@ const guandanRoundLabel = document.getElementById("guandanRound");
 const guandanTurnLabel = document.getElementById("guandanTurn");
 const guandanDealerLabel = document.getElementById("guandanDealer");
 const guandanLevelLabel = document.getElementById("guandanLevel");
-const guandanTrickLabel = document.getElementById("guandanTrick");
+const guandanBeatTargetEl = document.getElementById("guandanBeatTarget");
+const guandanBeatRelationEl = document.getElementById("guandanBeatRelation");
+const guandanBeatTitleEl = document.getElementById("guandanBeatTitle");
+const guandanBeatOwnerEl = document.getElementById("guandanBeatOwner");
+const guandanBeatCardsEl = document.getElementById("guandanBeatCards");
+const guandanBeatHintEl = document.getElementById("guandanBeatHint");
 const guandanTrickPlaysLabel = document.getElementById("guandanTrickPlays");
 const guandanTributeLabel = document.getElementById("guandanTribute");
 const guandanHandEl = document.getElementById("guandanHand");
@@ -199,6 +204,7 @@ function clearGuandanState() {
   if (guandanPlayersEl) {
     guandanPlayersEl.textContent = "-";
   }
+  renderGuandanBeatTarget(null);
 }
 
 function updateGuandanSelected() {
@@ -530,18 +536,189 @@ function renderGuandanPlayers(view) {
   });
 }
 
-function renderGuandanTrick(view) {
-  if (!guandanTrickLabel) return;
-  if (!view.current_trick) {
-    guandanTrickLabel.textContent = "-";
+const GUANDAN_COMBO_LABELS = {
+  single: "Single",
+  pair: "Pair",
+  three: "Triple",
+  full_house: "Full House",
+  straight: "Straight",
+  three_pairs: "Three Consecutive Pairs",
+  steel_plate: "Steel Plate",
+  bomb: "Bomb",
+  straight_flush: "Straight Flush",
+  heavenly: "Heavenly Bomb",
+};
+
+function getGuandanComboLabel(trick) {
+  if (!trick) return "Combo";
+  if (trick.type === "bomb" && Number.isFinite(Number(trick.size))) {
+    return `${trick.size}-Card Bomb`;
+  }
+  return GUANDAN_COMBO_LABELS[trick.type] || trick.type || "Combo";
+}
+
+function getGuandanTrickCardLabels(view) {
+  if (!view || !view.current_trick) return [];
+  if (Array.isArray(view.current_trick.card_labels) && view.current_trick.card_labels.length) {
+    return view.current_trick.card_labels;
+  }
+  if (Array.isArray(view.trick_plays)) {
+    const entry = view.trick_plays.find(
+      (play) => play && play.player_id === view.current_trick.player_id
+    );
+    if (entry && Array.isArray(entry.cards)) {
+      return entry.cards.filter((card) => card && card !== "Pass");
+    }
+  }
+  return [];
+}
+
+function getGuandanTrickRelation(view, playerId) {
+  const serverRelation = view && view.current_trick ? view.current_trick.relation_to_you : null;
+  if (["you", "teammate", "opponent"].includes(serverRelation)) {
+    return serverRelation;
+  }
+  if (!view || !Array.isArray(view.players)) return "player";
+  if (playerId === view.you) return "you";
+  const you = view.players.find((player) => player.player_id === view.you);
+  const owner = view.players.find((player) => player.player_id === playerId);
+  if (!you || !owner || !you.team || !owner.team) return "player";
+  return you.team === owner.team ? "teammate" : "opponent";
+}
+
+function getGuandanTrickPlayer(view, playerId) {
+  if (!view || !Array.isArray(view.players)) return null;
+  return view.players.find((player) => player.player_id === playerId) || null;
+}
+
+function setGuandanBeatTargetTone(tone) {
+  if (!guandanBeatTargetEl) return;
+  ["is-open", "is-you", "is-teammate", "is-opponent"].forEach((className) => {
+    guandanBeatTargetEl.classList.toggle(className, className === `is-${tone}`);
+  });
+}
+
+function renderGuandanBeatTarget(view) {
+  if (
+    !guandanBeatTargetEl ||
+    !guandanBeatRelationEl ||
+    !guandanBeatTitleEl ||
+    !guandanBeatOwnerEl ||
+    !guandanBeatCardsEl ||
+    !guandanBeatHintEl
+  ) {
     return;
   }
-  const trick = view.current_trick;
-  const owner = Array.isArray(view.players)
-    ? view.players.find((p) => p.player_id === trick.player_id)
-    : null;
-  const ownerName = owner ? owner.name : trick.player_id;
-  guandanTrickLabel.textContent = `${trick.type} by ${ownerName} (size ${trick.size})`;
+
+  const trick = view && view.current_trick;
+  if (!trick) {
+    setGuandanBeatTargetTone("open");
+    guandanBeatRelationEl.textContent = "Open trick";
+    guandanBeatTargetEl.setAttribute("aria-label", "No active target to beat");
+    guandanBeatCardsEl.innerHTML = "";
+    const empty = document.createElement("span");
+    empty.className = "guandan-beat-empty";
+    empty.textContent = "Any combo";
+    guandanBeatCardsEl.appendChild(empty);
+    guandanBeatCardsEl.setAttribute("aria-label", "No target cards");
+
+    if (!view) {
+      guandanBeatTitleEl.textContent = "Lead any valid combo";
+      guandanBeatOwnerEl.textContent = "No cards are on the table.";
+      guandanBeatHintEl.textContent = "The lead player can play any valid combo.";
+      return;
+    }
+
+    if (view.phase === "round_end") {
+      guandanBeatRelationEl.textContent = "Round over";
+      guandanBeatTitleEl.textContent = "Round complete";
+      guandanBeatOwnerEl.textContent = "There is no active target.";
+      guandanBeatHintEl.textContent = "Review the table, then get ready for the next round.";
+      return;
+    }
+    if (view.game_over || view.phase === "game_over") {
+      guandanBeatRelationEl.textContent = "Game over";
+      guandanBeatTitleEl.textContent = "Game complete";
+      guandanBeatOwnerEl.textContent = "There is no active target.";
+      guandanBeatHintEl.textContent = "The final result is ready.";
+      return;
+    }
+    if (view.phase === "tribute") {
+      guandanBeatRelationEl.textContent = "Tribute";
+      guandanBeatTitleEl.textContent = "Tribute in progress";
+      guandanBeatOwnerEl.textContent = "Play resumes after the exchange.";
+      guandanBeatHintEl.textContent = "Complete the required tribute or return action.";
+      return;
+    }
+
+    const leader = getGuandanTrickPlayer(view, view.current_turn);
+    const leaderName = leader ? leader.name || leader.player_id : view.current_turn;
+    guandanBeatTitleEl.textContent = "Lead any valid combo";
+    guandanBeatOwnerEl.textContent = "No cards are on the table.";
+    guandanBeatHintEl.textContent =
+      view.current_turn === view.you
+        ? "You have the lead — play any valid combo."
+        : `${leaderName || "The current player"} has the lead.`;
+    return;
+  }
+
+  const owner = getGuandanTrickPlayer(view, trick.player_id);
+  const ownerName =
+    trick.player_name ||
+    (owner ? owner.name || owner.player_id : trick.player_id) ||
+    "Unknown player";
+  const relation = getGuandanTrickRelation(view, trick.player_id);
+  const relationLabels = {
+    you: "You",
+    teammate: "Teammate",
+    opponent: "Opponent",
+    player: "Player",
+  };
+  const relationDescriptions = {
+    you: "you",
+    teammate: "your teammate",
+    opponent: "your opponent",
+    player: "another player",
+  };
+  const comboLabel = getGuandanComboLabel(trick);
+  const size = Number(trick.size);
+  const sizeLabel = Number.isFinite(size) ? `${size} ${size === 1 ? "card" : "cards"}` : "";
+  const cardLabels = getGuandanTrickCardLabels(view);
+
+  setGuandanBeatTargetTone(relation);
+  guandanBeatRelationEl.textContent = relationLabels[relation];
+  guandanBeatTitleEl.textContent = sizeLabel ? `${comboLabel} · ${sizeLabel}` : comboLabel;
+  guandanBeatOwnerEl.textContent =
+    relation === "you" ? "Played by you." : `Played by ${ownerName}, ${relationDescriptions[relation]}.`;
+  guandanBeatCardsEl.innerHTML = "";
+  if (cardLabels.length) {
+    cardLabels.forEach((label) => {
+      const card = document.createElement("span");
+      card.className = "guandan-beat-card";
+      if (label.startsWith("♥️") || label.startsWith("♦️")) card.classList.add("is-red");
+      if (label.startsWith("🃏")) card.classList.add("is-joker");
+      card.textContent = label;
+      guandanBeatCardsEl.appendChild(card);
+    });
+    guandanBeatCardsEl.setAttribute("aria-label", `Target cards: ${cardLabels.join(" ")}`);
+  } else {
+    const empty = document.createElement("span");
+    empty.className = "guandan-beat-empty";
+    empty.textContent = comboLabel;
+    guandanBeatCardsEl.appendChild(empty);
+    guandanBeatCardsEl.setAttribute("aria-label", `Target combination: ${comboLabel}`);
+  }
+
+  const current = getGuandanTrickPlayer(view, view.current_turn);
+  const currentName = current ? current.name || current.player_id : view.current_turn;
+  guandanBeatHintEl.textContent =
+    view.current_turn === view.you
+      ? `Your turn — play a legal combination that beats this ${comboLabel}, or pass.`
+      : `${currentName || "The current player"} is deciding whether to beat it.`;
+  guandanBeatTargetEl.setAttribute(
+    "aria-label",
+    `${comboLabel} to beat, played by ${ownerName}, ${relationDescriptions[relation]}`
+  );
 }
 
 function renderGuandanTrickPlays(view) {
@@ -737,7 +914,7 @@ function renderGuandanGameState(data) {
   }
   if (guandanDealerLabel) guandanDealerLabel.textContent = view.dealer_team || "-";
   if (guandanLevelLabel) guandanLevelLabel.textContent = view.level_rank || "-";
-  renderGuandanTrick(view);
+  renderGuandanBeatTarget(view);
   renderGuandanTrickPlays(view);
   renderGuandanTribute(view);
   renderGuandanHand(view);

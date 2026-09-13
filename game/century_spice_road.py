@@ -211,6 +211,205 @@ def _check_end_trigger(state: Dict, player_id: str) -> None:
         state["final_player"] = _previous_player(state, state["first_player"])
 
 
+BOT_SPICE_VALUES = {color: index + 1 for index, color in enumerate(SPICE_TYPES)}
+
+
+def _bot_spice_value(spices: Dict[str, int]) -> float:
+    return float(
+        sum(int(spices.get(color, 0)) * BOT_SPICE_VALUES[color] for color in SPICE_TYPES)
+    )
+
+
+def _bot_point_gap(spices: Dict[str, int], cost: Dict[str, int]) -> float:
+    return float(
+        sum(
+            max(0, int(cost.get(color, 0)) - int(spices.get(color, 0)))
+            * BOT_SPICE_VALUES[color]
+            for color in SPICE_TYPES
+        )
+    )
+
+
+def _bot_inventory_value(state: Dict, spices: Dict[str, int]) -> float:
+    value = _bot_spice_value(spices) * 0.35
+    goals = []
+    for index, card in enumerate(state.get("point_market", [])):
+        coin_value = 3 if index == 0 and state.get("gold_remaining", 0) else 0
+        if index == 1 and state.get("silver_remaining", 0):
+            coin_value = 1
+        goals.append(
+            int(card.get("points", 0)) * 1.8
+            + coin_value
+            - _bot_point_gap(spices, card.get("cost", {})) * 1.35
+        )
+    if goals:
+        value += max(goals)
+    return value
+
+
+def _bot_merchant_value(card: Dict) -> float:
+    card_type = card.get("type")
+    if card_type == "spice":
+        return _bot_spice_value(card.get("gain", {}))
+    if card_type == "upgrade":
+        return float(int(card.get("upgrade_steps", 0)) * 1.7)
+    if card_type == "trade":
+        gain_value = _bot_spice_value(card.get("gain", {}))
+        cost_value = _bot_spice_value(card.get("cost", {}))
+        return max(0.5, gain_value - cost_value + 1.0)
+    return 0.0
+
+
+def _bot_state_value(state: Dict, player_id: str) -> float:
+    player = state["players"][player_id]
+    if state.get("game_over"):
+        return 1_000_000.0 if player_id in state.get("winner", []) else -1_000_000.0
+    engine_cards = list(player.get("hand", [])) + list(player.get("played_cards", []))
+    claimed_value = sum(int(card.get("points", 0)) for card in player.get("claimed_points", []))
+    claimed_value += int(player.get("gold", 0)) * 3 + int(player.get("silver", 0))
+    return (
+        claimed_value * 20.0
+        + len(player.get("claimed_points", [])) * 12.0
+        + _bot_inventory_value(state, player.get("spices", {})) * 3.0
+        + sum(_bot_merchant_value(card) for card in engine_cards) * 0.3
+        - max(0, len(engine_cards) - 7) * 3.0
+    )
+
+
+def _bot_choose_spice_removal(state: Dict, spices: Dict[str, int], amount: int) -> List[str]:
+    remaining = _normalize_counts(spices)
+    removed: List[str] = []
+    for _ in range(max(0, amount)):
+        choices = [color for color in SPICE_TYPES if remaining.get(color, 0) > 0]
+        if not choices:
+            break
+        color = max(
+            choices,
+            key=lambda candidate: (
+                _bot_inventory_value(
+                    state,
+                    {
+                        key: value - (1 if key == candidate else 0)
+                        for key, value in remaining.items()
+                    },
+                ),
+                -BOT_SPICE_VALUES[candidate],
+            ),
+        )
+        remaining[color] -= 1
+        removed.append(color)
+    return removed
+
+
+def _bot_discard_action(state: Dict, player_id: str) -> Dict:
+    player = state["players"][player_id]
+    removed = _bot_choose_spice_removal(
+        state,
+        player.get("spices", {}),
+        int(state.get("discard_needed", 0)),
+    )
+    counts = _blank_spices()
+    for color in removed:
+        counts[color] += 1
+    return {"type": "discard", "spices": counts}
+
+
+def _bot_upgrade_sequences(spices: Dict[str, int], steps: int) -> List[List[str]]:
+    sequences: List[List[str]] = []
+
+    def visit(current: Dict[str, int], remaining: int, sequence: List[str]) -> None:
+        if sequence:
+            sequences.append(list(sequence))
+        if remaining <= 0:
+            return
+        for index, color in enumerate(SPICE_TYPES[:-1]):
+            if int(current.get(color, 0)) <= 0:
+                continue
+            upgraded = dict(current)
+            upgraded[color] -= 1
+            upgraded[SPICE_TYPES[index + 1]] += 1
+            visit(upgraded, remaining - 1, sequence + [color])
+
+    visit(_normalize_counts(spices), max(0, int(steps)), [])
+    unique: List[List[str]] = []
+    seen = set()
+    for sequence in sequences:
+        key = tuple(sequence)
+        if key not in seen:
+            seen.add(key)
+            unique.append(sequence)
+    return unique
+
+
+def _bot_max_trade_times(spices: Dict[str, int], cost: Dict[str, int]) -> int:
+    limits = [
+        int(spices.get(color, 0)) // int(cost.get(color, 0))
+        for color in SPICE_TYPES
+        if int(cost.get(color, 0)) > 0
+    ]
+    return min(limits) if limits else 0
+
+
+def _bot_candidate_actions(state: Dict, player_id: str) -> List[Dict]:
+    player = state["players"][player_id]
+    spices = player.get("spices", {})
+    candidates: List[Dict] = []
+
+    for index, card in enumerate(state.get("point_market", [])):
+        if _can_pay(spices, card.get("cost", {})):
+            candidates.append({"type": "claim", "index": index})
+
+    for card in player.get("hand", []):
+        card_type = card.get("type")
+        if card_type == "spice":
+            candidates.append({"type": "play", "card_id": card["id"]})
+        elif card_type == "trade":
+            max_times = _bot_max_trade_times(spices, card.get("cost", {}))
+            for times in range(1, max_times + 1):
+                candidates.append({"type": "play", "card_id": card["id"], "times": times})
+        elif card_type == "upgrade":
+            for upgrades in _bot_upgrade_sequences(spices, int(card.get("upgrade_steps", 0))):
+                candidates.append({"type": "play", "card_id": card["id"], "upgrades": upgrades})
+
+    if player.get("played_cards"):
+        candidates.append({"type": "rest"})
+
+    engine_count = len(player.get("hand", [])) + len(player.get("played_cards", []))
+    if engine_count < 7:
+        total_spices = _total_spices(spices)
+        for index, _slot in enumerate(state.get("merchant_market", [])):
+            if index > total_spices:
+                break
+            payments = _bot_choose_spice_removal(state, spices, index)
+            if len(payments) == index:
+                candidates.append({"type": "acquire", "index": index, "payments": payments})
+    return candidates
+
+
+def _bot_action_value(state: Dict, player_id: str, action: Dict) -> Optional[float]:
+    simulated = copy.deepcopy(state)
+    _, error = CenturySpiceRoadGame.apply_action(simulated, player_id, action)
+    if error:
+        return None
+    if simulated.get("phase") == "discard" and simulated.get("discard_player") == player_id:
+        _, error = CenturySpiceRoadGame.apply_action(
+            simulated,
+            player_id,
+            _bot_discard_action(simulated, player_id),
+        )
+        if error:
+            return None
+    value = _bot_state_value(simulated, player_id)
+    action_type = action.get("type")
+    if action_type == "claim":
+        value += 12.0
+    elif action_type == "rest":
+        value -= 0.75
+    elif action_type == "acquire":
+        value -= 0.35 * int(action.get("index", 0))
+    return value
+
+
 class CenturySpiceRoadGame:
     game_id = "century_spice_road"
     min_players = 2
@@ -511,26 +710,20 @@ class CenturySpiceRoadGame:
         if not player:
             return None
         if state.get("phase") == "discard":
-            discard = _blank_spices()
-            needed = int(state.get("discard_needed", 0))
-            for color in SPICE_TYPES:
-                take = min(needed, int(player["spices"].get(color, 0)))
-                discard[color] = take
-                needed -= take
-                if needed <= 0:
-                    break
-            return {"type": "discard", "spices": discard}
-        for i, card in enumerate(state.get("point_market", [])):
-            if _can_pay(player["spices"], card.get("cost", {})):
-                return {"type": "claim", "index": i}
-        if player.get("hand"):
-            card = player["hand"][0]
-            if card.get("type") == "trade":
-                return {"type": "play", "card_id": card["id"], "times": 1 if _can_pay(player["spices"], card.get("cost", {})) else 0}
-            return {"type": "play", "card_id": card["id"], "upgrades": []}
-        if player.get("played_cards"):
-            return {"type": "rest"}
-        return {"type": "acquire", "index": 0, "payments": []}
+            return _bot_discard_action(state, bot_id)
+        if state.get("phase") != "turn":
+            return None
+
+        best_action: Optional[Dict] = None
+        best_value: Optional[float] = None
+        for action in _bot_candidate_actions(state, bot_id):
+            value = _bot_action_value(state, bot_id, action)
+            if value is None:
+                continue
+            if best_value is None or value > best_value:
+                best_action = action
+                best_value = value
+        return best_action
 
     @staticmethod
     def serialize(state: Dict) -> Dict:
