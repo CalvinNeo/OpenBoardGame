@@ -202,6 +202,24 @@ def _teammate_future_control_probability(state: Dict, player_id: str) -> float:
     if threshold != HIGH_CONTROL_SINGLE_VALUE_MIN:
         return 0.0
 
+    return _teammate_single_response_probability(state, player_id, threshold)
+
+
+def _teammate_single_response_probability(
+    state: Dict,
+    player_id: str,
+    threshold: float,
+) -> float:
+    """Estimate a teammate's public-information chance to beat a single."""
+    current_trick = state.get("current_trick")
+    teammate = _teammate_of(state, player_id)
+    if not current_trick or not teammate:
+        return 0.0
+    if state["players"][teammate]["finished"]:
+        return 0.0
+    if teammate in (state.get("trick_plays") or {}):
+        return 0.0
+
     level_rank = state["level_rank"]
     known_ids = set(state.get("seen_cards", []) or [])
     known_ids.update(card["id"] for card in state["players"].get(player_id, {}).get("hand", []))
@@ -2767,6 +2785,84 @@ def _next_active_after(state: Dict, player_id: str) -> Optional[str]:
     return None
 
 
+def _immediate_teammate_backstop_confidence(
+    state: Dict,
+    player_id: str,
+    combo: Optional[Dict] = None,
+) -> float:
+    """Return backstop confidence only when the teammate acts before an enemy."""
+    teammate = _teammate_of(state, player_id)
+    if not teammate or _next_active_after(state, player_id) != teammate:
+        return 0.0
+
+    trick_combo = combo or (state.get("current_trick") or {}).get("combo") or {}
+    confidence = _teammate_backstop_confidence(state, player_id, trick_combo)
+    if trick_combo.get("type") != "single":
+        return confidence
+
+    threshold = float(trick_combo.get("rank_value", 0))
+    if threshold < CONTROL_SINGLE_VALUE_MIN:
+        return confidence
+    response_probability = _teammate_single_response_probability(
+        state,
+        player_id,
+        threshold,
+    )
+    public_single_confidence = min(0.78, 0.08 + response_probability * 0.7)
+    return max(confidence, public_single_confidence)
+
+
+def _next_opponent_closeout_pressure(state: Dict, player_id: str) -> float:
+    """Return urgency when the next actor can shed its whole hand on this lane."""
+    current_trick = state.get("current_trick")
+    if not current_trick:
+        return 0.0
+    leader = current_trick.get("player_id")
+    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+        return 0.0
+
+    next_pid = _next_active_after(state, player_id)
+    if not next_pid or _team_of(state, next_pid) == _team_of(state, player_id):
+        return 0.0
+
+    current_combo = current_trick.get("combo") or {}
+    combo_type = current_combo.get("type") or ""
+    combo_size = int(current_combo.get("size") or len(current_trick.get("cards") or []))
+    if combo_size <= 0:
+        return 0.0
+    next_left = len(state["players"].get(next_pid, {}).get("hand", []))
+    if next_left != combo_size:
+        return 0.0
+
+    pressure = {
+        "single": 30.0,
+        "pair": 34.0,
+        "three": 32.0,
+        "full_house": 28.0,
+        "straight": 28.0,
+        "three_pairs": 29.0,
+        "steel_plate": 29.0,
+        "bomb": 25.0,
+        "straight_flush": 25.0,
+        "heavenly": 25.0,
+    }.get(combo_type, 26.0)
+    if not state.get("finish_order"):
+        pressure += 5.0
+    if next_left <= 2:
+        pressure += 2.0
+
+    next_team = _team_of(state, next_pid)
+    if any(
+        pid != next_pid
+        and _team_of(state, pid) == next_team
+        and state["players"].get(pid, {}).get("finished")
+        and (state["players"].get(pid, {}).get("finish_rank") or 99) <= 2
+        for pid in state.get("turn_order", [])
+    ):
+        pressure += 7.0
+    return min(45.0, pressure)
+
+
 def _must_contest_short_enemy_as_last_defender(state: Dict, player_id: str) -> bool:
     """Return whether passing would concede a clearly dangerous short-hand lead."""
     current_trick = state.get("current_trick")
@@ -3164,32 +3260,21 @@ def _opponent_one_card_closeout_bonus(
     return max(8.0, bonus)
 
 
-def _next_opponent_one_card_block_bonus(
+def _next_opponent_closeout_block_bonus(
     state: Dict,
     player_id: str,
     cards: List[int],
     combo: Dict,
 ) -> float:
     current_trick = state.get("current_trick")
-    if not current_trick or combo.get("type") != "single" or len(cards) != 1:
+    if not current_trick or not cards:
         return 0.0
 
-    leader = current_trick.get("player_id")
-    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
-        return 0.0
-
-    next_pid = _next_active_after(state, player_id)
-    if not next_pid or _team_of(state, next_pid) == _team_of(state, player_id):
-        return 0.0
-
-    next_left = len(state["players"].get(next_pid, {}).get("hand", []))
-    if next_left > 1:
+    pressure = _next_opponent_closeout_pressure(state, player_id)
+    if pressure <= 0.0:
         return 0.0
 
     current_combo = current_trick.get("combo") or {}
-    if current_combo.get("type") != "single":
-        return 0.0
-
     level_rank = state["level_rank"]
     config = state.get("config", {})
     if not _compare_combos(current_combo, combo, level_rank, config):
@@ -3198,17 +3283,25 @@ def _next_opponent_one_card_block_bonus(
     hand = state["players"][player_id]["hand"]
     hand_map = _map_hand_by_id(hand)
     play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
-    if len(play_cards) != 1:
+    if len(play_cards) != len(cards):
         return 0.0
 
-    chosen_value = combo.get("rank_value", 0)
-    current_value = current_combo.get("rank_value", 0)
-    margin = max(0.0, float(chosen_value - current_value))
-    bonus = 2.5 + min(8.0, margin * 0.85)
-    if chosen_value >= 58:
-        bonus += 4.0
-    if chosen_value >= 70:
-        bonus += 1.8
+    combo_type = combo.get("type") or ""
+    current_type = current_combo.get("type") or ""
+    if combo_type == current_type:
+        chosen_value = _combo_numeric_value(combo)
+        current_value = _combo_numeric_value(current_combo)
+        margin = max(0.0, float(chosen_value - current_value))
+        bonus = pressure * 0.55 + min(10.0, margin * 0.9)
+        if combo_type == "single" and chosen_value >= 58:
+            bonus += 4.0
+        if combo_type == "single" and chosen_value >= 70:
+            bonus += 1.8
+    elif combo_type in BOMB_TYPES:
+        bonus = pressure * 0.38 - _bomb_tier(combo) * 0.8
+    else:
+        return 0.0
+
     if _cards_use_special_material(play_cards, level_rank):
         bonus -= 2.5
     return max(0.0, bonus)
@@ -3525,6 +3618,39 @@ def _lead_low_single_escape_bonus(hand: List[Dict], cards: List[int], level_rank
     return bonus
 
 
+def _lead_single_control_stock_scale(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+) -> float:
+    """Avoid repeatedly treating one bomb as unlimited cover for weak singles."""
+    if state.get("current_trick") or combo.get("type") != "single" or len(cards) != 1:
+        return 1.0
+
+    hand = state["players"][player_id]["hand"]
+    if len(hand) < 14:
+        return 1.0
+    level_rank = state["level_rank"]
+    hand_map = _map_hand_by_id(hand)
+    card = hand_map.get(cards[0])
+    if not card or _is_joker(card) or _is_wild(card, level_rank):
+        return 1.0
+    if _rank_count_map(hand, level_rank).get(card.get("rank"), 0) != 1:
+        return 1.0
+    if combo.get("rank_value", 0) > _point_order_value(10, level_rank):
+        return 1.0
+
+    before = _hand_decomposition_summary(hand, level_rank)
+    if before.get("bomb_turns", 0.0) >= 1.5:
+        return 1.0
+    if before.get("group_turns", 0.0) < 3.0:
+        return 1.0
+    if before.get("grouped_cards", 0.0) < max(8.0, float(len(hand) - 3)):
+        return 1.0
+    return 0.12
+
+
 def _lead_control_probe_bonus(
     state: Dict,
     player_id: str,
@@ -3585,7 +3711,12 @@ def _lead_control_probe_bonus(
         bonus += 1.4
     if len(single_values) >= 2 and single_values[1] >= HIGH_CONTROL_SINGLE_VALUE_MIN:
         bonus += 1.2
-    return bonus
+    return bonus * _lead_single_control_stock_scale(
+        state,
+        player_id,
+        cards,
+        combo,
+    )
 
 
 def _lead_low_single_trap_penalty(hand: List[Dict], cards: List[int], level_rank: int) -> float:
@@ -5051,6 +5182,13 @@ def _lead_retake_control_bonus(
         "steel_plate": 0.0,
     }.get(combo_type, 0.0)
     bonus *= type_scale
+    if combo_type == "single":
+        bonus *= _lead_single_control_stock_scale(
+            state,
+            player_id,
+            cards,
+            combo or {},
+        )
     escape_penalty = _lead_short_escape_window_penalty(state, player_id, cards, combo)
     if escape_penalty > 0.001:
         bonus *= 0.08
@@ -8460,6 +8598,7 @@ def _should_use_mcts(state: Dict, bot_id: str, width: int) -> bool:
 
     current_combo = current_trick.get("combo") or {}
     combo_type = current_combo.get("type")
+    immediate_closeout = _next_opponent_closeout_pressure(state, bot_id) > 0.0
     if combo_type in BOMB_TYPES:
         return True
 
@@ -8484,8 +8623,16 @@ def _should_use_mcts(state: Dict, bot_id: str, width: int) -> bool:
         heuristic_gap = ordered_scores[0] - ordered_scores[1]
         confidence_gap = float(state.get("config", {}).get("bot_mcts_gate_score_gap", 10.0))
         critical_high_single = combo_type == "single" and current_combo.get("rank_value", 0) >= 70
-        if heuristic_gap >= confidence_gap and not root_has_bomb_response and not critical_high_single:
+        if (
+            heuristic_gap >= confidence_gap
+            and not root_has_bomb_response
+            and not critical_high_single
+            and not immediate_closeout
+        ):
             return False
+
+    if immediate_closeout:
+        return True
 
     base_decision = False
     if len(play_actions) >= 5 and not has_bomb_response and combo_type != "single":
@@ -9104,7 +9251,10 @@ def _should_accept_mcts_override(
     if (
         heuristic_action.get("type") == "play"
         and mcts_action.get("type") == "pass"
-        and _must_contest_short_enemy_as_last_defender(state, bot_id)
+        and (
+            _must_contest_short_enemy_as_last_defender(state, bot_id)
+            or _next_opponent_closeout_pressure(state, bot_id) > 0.0
+        )
     ):
         return False
 
@@ -9143,7 +9293,23 @@ def _should_accept_mcts_override(
 
     heuristic_score = guard_score(heuristic_action)
     mcts_score = guard_score(mcts_action)
-    if heuristic_score >= mcts_score + override_margin:
+    urgent_natural_block = False
+    if heuristic_action.get("type") == "pass" and mcts_action.get("type") == "play":
+        mcts_cards = mcts_action.get("card_ids", []) or []
+        mcts_combo = _action_combo(state, bot_id, mcts_action) or {}
+        current_combo = (state.get("current_trick") or {}).get("combo") or {}
+        urgent_natural_block = (
+            mcts_combo.get("type") == current_combo.get("type")
+            and mcts_combo.get("type") not in BOMB_TYPES
+            and _next_opponent_closeout_block_bonus(
+                state,
+                bot_id,
+                mcts_cards,
+                mcts_combo,
+            )
+            > 0.0
+        )
+    if not urgent_natural_block and heuristic_score >= mcts_score + override_margin:
         return False
 
     if mcts_action.get("type") == "play":
@@ -9442,6 +9608,7 @@ def _mcts_budget(
         combo_type in BOMB_TYPES
         or (combo_type == "single" and current_combo.get("rank_value", 0) >= HIGH_CONTROL_SINGLE_VALUE_MIN)
         or (leader_is_enemy and leader_left <= 2)
+        or (actor_id in state.get("players", {}) and _next_opponent_closeout_pressure(state, actor_id) > 0.0)
         or (has_pass and has_bomb_response)
     )
 
@@ -9827,6 +9994,8 @@ def _strategic_enemy_pass_bonus(state: Dict, player_id: str) -> float:
     leader_left = len(state["players"].get(leader, {}).get("hand", []))
     if leader_left <= 5 or _must_contest_short_enemy_as_last_defender(state, player_id):
         return 0.0
+    if _next_opponent_closeout_pressure(state, player_id) > 0.0:
+        return 0.0
     if _enemy_double_down_closeout_pressure(state, player_id) > 0.0:
         return 0.0
     teammate = _teammate_of(state, player_id)
@@ -10023,7 +10192,17 @@ def _shared_pass_tactical_components(state: Dict, player_id: str) -> Dict[str, f
 
     double_down_pressure = _enemy_double_down_closeout_pressure(state, player_id)
     if double_down_pressure > 0.001:
-        components["pass_enemy_double_down_threat"] = -double_down_pressure
+        immediate_backstop = _immediate_teammate_backstop_confidence(
+            state,
+            player_id,
+            current_trick.get("combo") or {},
+        )
+        effective_pressure = double_down_pressure * max(0.18, 1.0 - immediate_backstop)
+        components["pass_enemy_double_down_threat"] = -effective_pressure
+
+    next_closeout_pressure = _next_opponent_closeout_pressure(state, player_id)
+    if next_closeout_pressure > 0.001:
+        components["pass_next_enemy_closeout"] = -next_closeout_pressure
 
     overcall_penalty = _enemy_overcall_teammate_single_pass_penalty(state, player_id)
     if overcall_penalty > 0.001:
@@ -12655,6 +12834,14 @@ def _shared_response_tactical_components(
         current_combo.get("high_value"),
         tuple(current_trick.get("cards") or ()),
         _cards_key(cards),
+        tuple(
+            (
+                pid,
+                len(state["players"].get(pid, {}).get("hand", [])),
+                bool(state["players"].get(pid, {}).get("finished")),
+            )
+            for pid in state.get("turn_order", [])
+        ),
     )
     cached = cache.get(cache_key)
     if cached is not None:
@@ -12721,7 +12908,13 @@ def _shared_response_tactical_components(
 
     double_down_pressure = _enemy_double_down_closeout_pressure(state, player_id)
     if double_down_pressure > 0.001:
-        components["deny_enemy_double_down"] = double_down_pressure * 0.75
+        immediate_backstop = _immediate_teammate_backstop_confidence(
+            state,
+            player_id,
+            current_combo,
+        )
+        effective_pressure = double_down_pressure * max(0.18, 1.0 - immediate_backstop)
+        components["deny_enemy_double_down"] = effective_pressure * 0.75
 
     safe_overtake = _teammate_safe_overtake_profile(state, player_id, cards, combo)
     if safe_overtake.get("qualified") and safe_overtake.get("bonus", 0.0) > 0.001:
@@ -12731,7 +12924,7 @@ def _shared_response_tactical_components(
     if lane_deference > 0.001 and relay <= 0.001:
         components["defer_teammate_lane"] = -lane_deference
 
-    next_closeout = _next_opponent_one_card_block_bonus(state, player_id, cards, combo)
+    next_closeout = _next_opponent_closeout_block_bonus(state, player_id, cards, combo)
     if next_closeout > 0.001:
         components["block_next_closeout"] = next_closeout
 

@@ -390,7 +390,7 @@ def _trigger_queen_bonus_if_needed(state: Dict, player_id: str) -> None:
         return
     state["players"][player_id]["gold"] += 3
     _log(state, f"{state['player_meta'][player_id]['name']} 的皇后因紧邻国王获得 3 金。")
-    _record_round_action(state, player_id, "bonus", "Gained 🪙 3 for sitting next to the King.", 9)
+    _record_round_action(state, player_id, "bonus", "Gained 💰 3 for sitting next to the King.", 9)
 
 
 def _start_role_turn(state: Dict, player_id: str, rank: int) -> None:
@@ -412,14 +412,14 @@ def _start_role_turn(state: Dict, player_id: str, rank: int) -> None:
                     state,
                     thief_player_id,
                     "ability",
-                    f"Stole 🪙 {amount} from {victim_name}.",
+                    f"Stole 💰 {amount} from {victim_name}.",
                     2,
                 )
                 _record_round_action(
                     state,
                     player_id,
                     "targeted",
-                    f"Lost 🪙 {amount} to {thief_name}'s Thief.",
+                    f"Lost 💰 {amount} to {thief_name}'s Thief.",
                     rank,
                 )
 
@@ -450,7 +450,7 @@ def _apply_post_income_bonuses(state: Dict, player_id: str, rank: int) -> None:
     if rank == 6:
         state["players"][player_id]["gold"] += 1
         _log(state, f"{state['player_meta'][player_id]['name']} 的商人额外获得 1 金。")
-        _record_round_action(state, player_id, "bonus", "Merchant gained an extra 🪙 1.", rank)
+        _record_round_action(state, player_id, "bonus", "Merchant gained an extra 💰 1.", rank)
     if rank == 7:
         cards = _draw_cards(state, 2)
         state["players"][player_id]["hand"].extend(cards)
@@ -474,7 +474,7 @@ def _resolve_income_choice(state: Dict, choice: str) -> Optional[str]:
     if choice == "gold":
         state["players"][player_id]["gold"] += 2
         _log(state, f"{state['player_meta'][player_id]['name']} 选择拿 2 金。")
-        _record_round_action(state, player_id, "income", "Took 🪙 2 income.", rank)
+        _record_round_action(state, player_id, "income", "Took 💰 2 income.", rank)
         _apply_post_income_bonuses(state, player_id, rank)
         active_turn["step"] = "main"
         return None
@@ -654,7 +654,7 @@ def _finish_round(state: Dict) -> None:
                 state,
                 deferred_player,
                 "bonus",
-                "Received the deferred Queen bonus of 🪙 3.",
+                "Received the deferred Queen bonus of 💰 3.",
                 9,
             )
         state["queen_deferred_player_id"] = None
@@ -750,7 +750,7 @@ def _resolve_build(state: Dict, card_id: str) -> Optional[str]:
         state,
         player_id,
         "build",
-        f"Built {card['name_cn']} for 🪙 {card['cost']}.",
+        f"Built {card['name_cn']} for 💰 {card['cost']}.",
         active_turn["rank"],
     )
     if state.get("first_completed_city_player_id") is None and _player_has_completed_city(state, player_id):
@@ -780,7 +780,7 @@ def _resolve_collect_tax(state: Dict) -> Optional[str]:
         state,
         player_id,
         "tax",
-        f"Collected 🪙 {amount} tax as {_role_name(rank)}.",
+        f"Collected 💰 {amount} tax as {_role_name(rank)}.",
         rank,
     )
     return None
@@ -960,7 +960,7 @@ def _resolve_warlord_destroy(state: Dict, target_player_id: str, district_id: st
         state,
         player_id,
         "ability",
-        f"Destroyed {state['player_meta'][target_player_id]['name']}'s {district['name_cn']} for 🪙 {destroy_cost}.",
+        f"Destroyed {state['player_meta'][target_player_id]['name']}'s {district['name_cn']} for 💰 {destroy_cost}.",
         8,
     )
     _record_round_action(

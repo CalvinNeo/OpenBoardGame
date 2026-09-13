@@ -4647,8 +4647,51 @@ body.log-open {
 }
 
 .citadels-card-title {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
   font-weight: 800;
   color: #0f172a;
+}
+
+.citadels-card-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.citadels-color-dot {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 10px;
+  border: 1px solid rgba(15, 23, 42, 0.2);
+  border-radius: 50%;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.55);
+}
+
+.citadels-color-dot-yellow {
+  background: #f59e0b;
+}
+
+.citadels-color-dot-blue {
+  background: #2563eb;
+}
+
+.citadels-color-dot-green {
+  background: #16a34a;
+}
+
+.citadels-color-dot-red {
+  background: #dc2626;
+}
+
+.citadels-color-dot-purple {
+  background: #7c3aed;
+}
+
+.citadels-color-dot-unknown {
+  background: #94a3b8;
 }
 
 .citadels-card-meta {
@@ -4680,7 +4723,9 @@ body.log-open {
   overflow: hidden;
   font-size: 11px;
   line-height: 1.25;
-  text-overflow: ellipsis;
+}
+
+.citadels-city-card .citadels-card-name {
   white-space: nowrap;
 }
 
@@ -4866,12 +4911,17 @@ body.log-open {
 
 @media (max-width: 600px) {
   #citadelsPanel > .row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 5px;
+    align-items: stretch;
   }
 
   #citadelsPanel > .row > div {
+    min-width: 0;
     padding: 3px 7px;
     font-size: 10px;
+    overflow-wrap: anywhere;
   }
 
   .citadels-round-summary {

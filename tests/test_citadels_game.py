@@ -382,7 +382,7 @@ class CitadelsGameTests(unittest.TestCase):
         state["killed_rank"] = 7
         state["round_actions"] = {
             "p1": [{"type": "ability", "text": "Assassinated 建筑师.", "role_rank": 1}],
-            "p2": [{"type": "income", "text": "Took 🪙 2 income.", "role_rank": 2}],
+            "p2": [{"type": "income", "text": "Took 💰 2 income.", "role_rank": 2}],
         }
 
         _finish_round(state)

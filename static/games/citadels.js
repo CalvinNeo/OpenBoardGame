@@ -42,13 +42,13 @@ const CITADELS_HELP_TEXT = `
   </div>
 `;
 
-function citadelsColorEmoji(color) {
-  if (color === "yellow") return "🟨";
-  if (color === "blue") return "🟦";
-  if (color === "green") return "🟩";
-  if (color === "red") return "🟥";
-  if (color === "purple") return "🟪";
-  return "⬜";
+function citadelsBuildColorDot(color) {
+  const dot = document.createElement("span");
+  const safeColor = ["yellow", "blue", "green", "red", "purple"].includes(color) ? color : "unknown";
+  dot.className = `citadels-color-dot citadels-color-dot-${safeColor}`;
+  dot.setAttribute("aria-label", `${safeColor} district`);
+  dot.title = `${safeColor} district`;
+  return dot;
 }
 
 function citadelsRoleLabel(role) {
@@ -73,14 +73,14 @@ function citadelsPhaseText(phase) {
 
 function citadelsRoleEmoji(rank) {
   const icons = {
-    1: "🗡️",
-    2: "🥷",
+    1: "💀",
+    2: "🔑",
     3: "🎩",
     4: "👑",
     5: "⛪",
     6: "💰",
-    7: "🏗️",
-    8: "⚔️",
+    7: "🏠",
+    8: "⚔",
     9: "👸",
   };
   return icons[Number(rank)] || "🎭";
@@ -88,10 +88,10 @@ function citadelsRoleEmoji(rank) {
 
 function citadelsActionEmoji(actionType) {
   const icons = {
-    income: "🪙",
+    income: "💰",
     draw: "🃏",
     tax: "💰",
-    build: "🏗️",
+    build: "🏠",
     ability: "✨",
     bonus: "🎁",
     crown: "👑",
@@ -195,7 +195,7 @@ function closeCitadelsHelpModal() {
 
 function buildCitadelsExplainHtml(view) {
   const lines = [
-    ["Take 2 Gold", "Gain 🪙 2 and move directly to the main action window."],
+    ["Take 2 Gold", "Gain 💰 2 and move directly to the main action window."],
     ["Draw 2 Keep 1", "Draw 2 district cards, keep 1, and put the other on the bottom of the deck."],
     ["Collect Tax", "Take gold for districts that match your role color. Each role can tax only once per turn."],
     ["Build", "Pay the card cost and move that district into your city. Architect can build up to 3."],
@@ -351,8 +351,8 @@ function citadelsBuildSummaryPlayer(view, summary, player, readyPlayers) {
   const stats = document.createElement("div");
   stats.className = "citadels-summary-player-stats";
   [
-    `🪙 ${player.gold}`,
-    `🏙️ ${player.city_count} districts`,
+    `💰 ${player.gold}`,
+    `🏠 ${player.city_count} districts`,
     `⭐ ${player.city_value} city value`,
     `🃏 ${player.hand_count} cards`,
   ].forEach((value) => {
@@ -428,12 +428,12 @@ function renderCitadelsRoundSummary(view) {
     citadelsSummaryHighlights.innerHTML = "";
     if (summary.killed_rank) {
       citadelsSummaryHighlights.appendChild(
-        citadelsCreateSummaryHighlight("🗡️", "Assassinated", citadelsSummaryRoleLabel(summary, summary.killed_rank)),
+        citadelsCreateSummaryHighlight("💀", "Assassinated", citadelsSummaryRoleLabel(summary, summary.killed_rank)),
       );
     }
     if (summary.robbed_rank) {
       citadelsSummaryHighlights.appendChild(
-        citadelsCreateSummaryHighlight("🥷", "Theft Target", citadelsSummaryRoleLabel(summary, summary.robbed_rank)),
+        citadelsCreateSummaryHighlight("🔑", "Theft Target", citadelsSummaryRoleLabel(summary, summary.robbed_rank)),
       );
     }
     if (summary.crown_holder) {
@@ -680,10 +680,13 @@ function buildCitadelsDistrictCard(card, compact = false) {
   }
   const title = document.createElement("div");
   title.className = "citadels-card-title";
-  title.textContent = `${citadelsColorEmoji(card.color)} ${card.name_cn}`;
+  const name = document.createElement("span");
+  name.className = "citadels-card-name";
+  name.textContent = card.name_cn;
+  title.append(citadelsBuildColorDot(card.color), name);
   const cost = document.createElement("div");
   cost.className = "citadels-card-meta";
-  cost.textContent = compact ? `🪙 ${card.cost}` : `🪙 ${card.cost} · ${card.name_en}`;
+  cost.textContent = compact ? `💰 ${card.cost}` : `💰 ${card.cost} · ${card.name_en}`;
   node.append(title, cost);
   if (card.text && !compact) {
     const text = document.createElement("div");
@@ -764,7 +767,7 @@ function renderCitadelsPlayers(view) {
 
     const meta = document.createElement("div");
     meta.className = "citadels-player-meta";
-    meta.textContent = `🪙 ${player.gold} · hand ${player.hand_count} · city ${player.city_count}`;
+    meta.textContent = `💰 ${player.gold} · hand ${player.hand_count} · city ${player.city_count}`;
     if (view.game_over && Number.isFinite(player.score)) {
       meta.textContent += ` · score ${player.score}`;
     }
