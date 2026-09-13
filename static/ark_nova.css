@@ -984,26 +984,55 @@
 
 #arkNovaPanel .arkn-project-row {
   display: flex;
-  gap: 12px;
+  gap: 9px;
   overflow-x: auto;
-  padding: 12px 14px;
+  padding: 10px 12px 12px;
 }
 
 #arkNovaPanel .arkn-project-card {
   display: grid;
-  flex: 0 0 auto;
-  gap: 5px;
-  grid-template-columns: auto;
+  flex: 0 0 196px;
+  gap: 4px;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  width: 196px;
 }
 
-#arkNovaPanel .arkn-project-card .arkn-card { min-height: 218px; }
-#arkNovaPanel .arkn-project-card .arkn-card-main { min-height: 218px; }
+#arkNovaPanel .arkn-project-card .arkn-card {
+  flex: 0 0 196px;
+  min-height: 248px;
+  min-width: 0;
+  width: 196px;
+}
+
+#arkNovaPanel .arkn-project-card .arkn-card-main {
+  gap: 3px;
+  min-height: 248px;
+  padding: 7px 7px 27px;
+}
+
+#arkNovaPanel .arkn-project-card .arkn-card-art {
+  aspect-ratio: auto;
+  height: 54px;
+}
+
+#arkNovaPanel .arkn-project-card .arkn-card-text {
+  display: none;
+}
+
+#arkNovaPanel .arkn-project-card .arkn-project-support {
+  min-width: 0;
+}
+
+#arkNovaPanel .arkn-project-card .arkn-project-slot {
+  grid-template-columns: 18px minmax(0, 1fr) 8px auto;
+}
 
 #arkNovaPanel .arkn-supporters {
   display: flex;
   flex-wrap: wrap;
   gap: 3px;
-  max-width: 218px;
+  max-width: 196px;
 }
 
 #arkNovaPanel .arkn-supporters span {
@@ -2111,12 +2140,62 @@
 }
 
 #arkNovaPanel .arkn-card-row-played .arkn-card {
-  flex-basis: 156px;
-  min-height: 230px;
+  flex: 0 0 128px;
+  min-height: 174px;
+  min-width: 0;
+  width: 128px;
 }
 
 #arkNovaPanel .arkn-card-row-played .arkn-card-main {
-  min-height: 230px;
+  gap: 3px;
+  min-height: 174px;
+  padding: 7px 7px 27px;
+}
+
+#arkNovaPanel .arkn-card-row-played {
+  gap: 8px;
+  padding: 8px 12px 10px;
+}
+
+#arkNovaPanel .arkn-card-row-played .arkn-card-name {
+  font-size: 0.72rem;
+}
+
+#arkNovaPanel .arkn-card-row-played .arkn-card-en {
+  font-size: 0.52rem;
+}
+
+#arkNovaPanel .arkn-card-row-played .arkn-card-art {
+  aspect-ratio: auto;
+  height: 44px;
+}
+
+#arkNovaPanel .arkn-card-row-played .arkn-card-facts,
+#arkNovaPanel .arkn-card-row-played .arkn-project-support {
+  display: none;
+}
+
+#arkNovaPanel .arkn-card-row-played .arkn-card-text {
+  font-size: 0.56rem;
+  line-height: 1.25;
+  -webkit-line-clamp: 3;
+}
+
+#arkNovaPanel .arkn-card-row-played .arkn-card-icons {
+  gap: 2px;
+  min-height: 15px;
+}
+
+#arkNovaPanel .arkn-card-row-played .arkn-icon-chip,
+#arkNovaPanel .arkn-card-row-played .arkn-continent-chip {
+  font-size: 0.58rem;
+  min-height: 15px;
+  padding-block: 0;
+}
+
+#arkNovaPanel #arkNovaPlayed .arkn-empty {
+  min-height: 42px;
+  padding: 8px 12px;
 }
 
 #arkNovaPanel .arkn-played-card {
@@ -2567,6 +2646,24 @@
   }
 }
 
+@media (min-width: 1181px) {
+  #arkNovaPanel #arkNovaProjects {
+    align-items: stretch;
+    display: grid;
+    grid-template-columns: minmax(620px, 1.35fr) minmax(360px, 0.65fr);
+  }
+
+  #arkNovaPanel .arkn-project-row {
+    align-items: flex-start;
+  }
+
+  #arkNovaPanel .arkn-association-supply {
+    border-left: 1px solid var(--arkn-line);
+    border-top: 0;
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @media (max-width: 820px) {
   #arkNovaPanel.arkn-shell { gap: 11px; padding: 0; }
 
@@ -2634,7 +2731,24 @@
   }
 
   #arkNovaPanel .arkn-association-supply {
-    grid-template-columns: 1fr;
+    gap: 8px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 9px 10px 11px;
+  }
+
+  #arkNovaPanel .arkn-association-supply > div:nth-child(1) {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  #arkNovaPanel .arkn-association-supply > div:nth-child(2) {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  #arkNovaPanel .arkn-association-supply > div:nth-child(3) {
+    grid-column: 2;
+    grid-row: 2;
   }
 
   #arkNovaPanel .arkn-association-supply .arkn-university-supply {
@@ -2693,6 +2807,12 @@
     flex-basis: min(78vw, 210px);
   }
 
+  #arkNovaPanel .arkn-project-card,
+  #arkNovaPanel .arkn-project-card .arkn-card {
+    flex-basis: 184px;
+    width: 184px;
+  }
+
   #arkNovaPanel .arkn-card-row {
     padding: 10px;
   }
@@ -2727,8 +2847,7 @@
     grid-template-columns: 1fr;
   }
 
-  #arkNovaPanel .arkn-university-options,
-  #arkNovaPanel .arkn-association-supply .arkn-university-supply {
+  #arkNovaPanel .arkn-university-options {
     grid-template-columns: 1fr;
   }
 

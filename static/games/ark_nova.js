@@ -1070,12 +1070,20 @@
     container.innerHTML = cards.length ? cards.map((card, index) => arkNovaCardMarkup(card, { selectable, zone: "display", folder: index + 1 })).join("") : `<div class="arkn-empty">The display is empty.</div>`;
   }
 
+  function arkNovaSupplyItemLabel(value) {
+    const text = String(value ?? "");
+    const donation = text.match(/^donation[-_](\d+)(?:[-_](?:left|right))?$/i);
+    if (donation) return `💰 ${donation[1]}`;
+    if (["africa", "americas", "asia", "australia", "europe"].includes(text.toLowerCase())) return arkNovaTitle(text);
+    return text;
+  }
+
   function arkNovaSupplyItems(raw, fallbackLabel) {
     if (!raw) return `<span class="arkn-supply-chip is-empty">${fallbackLabel}: —</span>`;
     if (Array.isArray(raw)) return raw.map((item) => {
       const value = typeof item === "object" ? (item.name || item.id || item.type || JSON.stringify(item)) : item;
       const available = typeof item !== "object" || item.available !== false;
-      return `<span class="arkn-supply-chip ${available ? "" : "is-empty"}">${arkNovaEscape(value)}</span>`;
+      return `<span class="arkn-supply-chip ${available ? "" : "is-empty"}">${arkNovaEscape(arkNovaSupplyItemLabel(value))}</span>`;
     }).join("");
     if (typeof raw === "object") return Object.entries(raw).map(([key, value]) => `<span class="arkn-supply-chip ${arkNovaNumber(value, value ? 1 : 0) ? "" : "is-empty"}">${arkNovaEscape(arkNovaTitle(key))} <b>${arkNovaEscape(typeof value === "object" ? value.count ?? "" : value)}</b></span>`).join("");
     return `<span class="arkn-supply-chip">${arkNovaEscape(raw)}</span>`;
