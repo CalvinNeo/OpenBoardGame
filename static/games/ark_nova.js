@@ -5,6 +5,14 @@
   const ARK_NOVA_MAP_URL = "/static/assets/ark_nova/map0.svg?v=map0_v2";
   const ARK_NOVA_PLAYER_COLORS = ["#f59e0b", "#38bdf8", "#f472b6", "#a3e635"];
   const ARK_NOVA_CONTINENTS = ["africa", "americas", "asia", "australia", "europe"];
+  const ARK_NOVA_CONTINENT_META = Object.freeze({
+    africa: { name: "Africa", className: "is-africa" },
+    americas: { name: "Americas", className: "is-americas" },
+    asia: { name: "Asia", className: "is-asia" },
+    australia: { name: "Australia", className: "is-australia" },
+    europe: { name: "Europe", className: "is-europe" },
+    any_continent: { name: "Continents", className: "is-any-continent" },
+  });
   const ARK_NOVA_CARD_ART_BASE = "/static/assets/ark_nova/card_art";
   const ARK_NOVA_CARD_ART = Object.freeze({
     predator: `${ARK_NOVA_CARD_ART_BASE}/predator.webp`,
@@ -37,6 +45,13 @@
     petting_zoo: { name: "Petting zoo", icon: "🐐", size: 3, color: "#7bbf6a" },
     reptile_house: { name: "Reptile house", icon: "🦎", size: 5, color: "#46a987" },
     large_bird_aviary: { name: "Large bird aviary", icon: "🪶", size: 5, color: "#6aaed6" },
+  };
+
+  const ARK_NOVA_ENCLOSURE_OPTIONS = {
+    standard: { name: "Standard enclosure", short: "Std", icon: "⬡" },
+    petting_zoo: { name: "Petting Zoo", short: "Petting", icon: "🐐" },
+    reptile_house: { name: "Reptile House", short: "Reptile", icon: "🦎" },
+    large_bird_aviary: { name: "Large Bird Aviary", short: "Aviary", icon: "🪶" },
   };
 
   // Printed enclosure pieces are fixed polyhexes. The first coordinate is the
@@ -75,12 +90,12 @@
   });
 
   const ARK_NOVA_ICON_LABELS = {
-    africa: ["🌍", "Africa"],
-    americas: ["🌎", "Americas"],
-    america: ["🌎", "Americas"],
-    asia: ["🌏", "Asia"],
-    australia: ["🦘", "Australia"],
-    europe: ["🏰", "Europe"],
+    africa: ["", "Africa"],
+    americas: ["", "Americas"],
+    america: ["", "Americas"],
+    asia: ["", "Asia"],
+    australia: ["", "Australia"],
+    europe: ["", "Europe"],
     predator: ["🐾", "Predator"],
     herbivore: ["🦌", "Herbivore"],
     bird: ["🪶", "Bird"],
@@ -96,12 +111,12 @@
 
   const ARK_NOVA_PROJECT_METRICS = {
     any_animal_category: ["🐾", "动物类目"],
-    any_continent: ["🌍", "不同大洲"],
-    africa: ["🌍", "非洲"],
-    americas: ["🌎", "美洲"],
-    asia: ["🌏", "亚洲"],
-    australia: ["🦘", "澳洲"],
-    europe: ["🏰", "欧洲"],
+    any_continent: ["", "不同大洲"],
+    africa: ["", "非洲"],
+    americas: ["", "美洲"],
+    asia: ["", "亚洲"],
+    australia: ["", "澳洲"],
+    europe: ["", "欧洲"],
     predator: ["🐾", "猎食类"],
     herbivore: ["🦌", "食草类"],
     bird: ["🪶", "鸟类"],
@@ -656,8 +671,27 @@
     if (!tag) return "";
     const count = typeof rawIcon === "object" ? arkNovaNumber(rawIcon.count, 1) : 1;
     const normalized = String(tag).toLowerCase();
+    if (arkNovaContinentMeta(normalized)) return arkNovaContinentChipMarkup(normalized, count);
     const meta = ARK_NOVA_ICON_LABELS[normalized] || ["◆", arkNovaTitle(normalized)];
     return `<span class="arkn-icon-chip" title="${arkNovaEscape(meta[1])}"><span aria-hidden="true">${meta[0]}</span>${count > 1 ? `<b>×${count}</b>` : ""}<span class="sr-only">${arkNovaEscape(meta[1])}</span></span>`;
+  }
+
+  function arkNovaContinentMeta(rawContinent) {
+    const normalized = String(rawContinent || "").toLowerCase();
+    const key = normalized === "america" ? "americas" : normalized;
+    const meta = ARK_NOVA_CONTINENT_META[key];
+    return meta ? { ...meta, key } : null;
+  }
+
+  function arkNovaContinentChipMarkup(rawContinent, count = 1, options = {}) {
+    const meta = arkNovaContinentMeta(rawContinent);
+    if (!meta) return "";
+    const amount = Math.max(1, arkNovaNumber(count, 1));
+    const className = ["arkn-continent-chip", meta.className, options.className || ""].filter(Boolean).join(" ");
+    const prefix = options.prefix ? `${arkNovaEscape(options.prefix)} ` : "";
+    const countMarkup = amount > 1 || options.alwaysShowCount ? `<b aria-hidden="true">×${amount}</b>` : "";
+    const ariaLabel = options.ariaLabel || `${meta.name}${amount > 1 || options.alwaysShowCount ? `, ${amount} icons` : ""}`;
+    return `<span class="${className}" title="${arkNovaEscape(ariaLabel)}" aria-label="${arkNovaEscape(ariaLabel)}">${prefix}<span aria-hidden="true">${arkNovaEscape(meta.name)}</span>${countMarkup}</span>`;
   }
 
   function arkNovaCardSummary(card) {
@@ -671,6 +705,100 @@
     return normalized.text_zh || normalized.summary_zh || "Card details available during play.";
   }
 
+  function arkNovaCardFactChip(icon, value, label, options = {}) {
+    const className = ["arkn-card-fact-chip", options.className || ""].filter(Boolean).join(" ");
+    const caption = options.caption ? `<small aria-hidden="true">${arkNovaEscape(options.caption)}</small>` : "";
+    const displayedValue = value == null || value === "" ? "" : `<b aria-hidden="true">${arkNovaEscape(value)}</b>`;
+    return `<span class="${className}" title="${arkNovaEscape(label)}" aria-label="${arkNovaEscape(label)}"><span aria-hidden="true">${arkNovaEscape(icon)}</span>${displayedValue}${caption}</span>`;
+  }
+
+  function arkNovaCardConditionMarkup(rawCondition) {
+    const condition = rawCondition && typeof rawCondition === "object" ? rawCondition : {};
+    const kind = String(condition.kind || "");
+    if (kind === "tag_count") {
+      const tag = String(condition.tag || "requirement").toLowerCase();
+      const [icon, label] = ARK_NOVA_ICON_LABELS[tag] || ["◆", arkNovaTitle(tag)];
+      const minimum = Math.max(1, arkNovaNumber(condition.minimum, 1));
+      if (arkNovaContinentMeta(tag)) {
+        return arkNovaContinentChipMarkup(tag, minimum, {
+          alwaysShowCount: true,
+          className: "arkn-card-fact-chip is-condition",
+          ariaLabel: `Requires ${minimum} ${label} icon${minimum === 1 ? "" : "s"}`,
+        });
+      }
+      return arkNovaCardFactChip(icon, `×${minimum}`, `Requires ${minimum} ${label} icon${minimum === 1 ? "" : "s"}`, { className: "is-condition" });
+    }
+    if (kind === "partner_zoo") {
+      const minimum = Math.max(1, arkNovaNumber(condition.minimum, 1));
+      return arkNovaCardFactChip("🤝", `×${minimum}`, `Requires ${minimum} partner zoo${minimum === 1 ? "" : "s"}`, { className: "is-condition" });
+    }
+    if (kind === "action_upgrade") {
+      const action = String(condition.action || "action");
+      const actionMeta = ARK_NOVA_ACTIONS[action] || { icon: "⚡", name: arkNovaTitle(action) };
+      const level = Math.max(2, arkNovaNumber(condition.minimum_level, 2));
+      return arkNovaCardFactChip(actionMeta.icon, level === 2 ? "II" : level, `${actionMeta.name} action level ${level} required`, { className: "is-condition" });
+    }
+    if (kind === "track_threshold") {
+      const track = String(condition.track || "track");
+      const trackMeta = {
+        appeal: ["🎟", "Appeal"],
+        conservation: ["🌿", "Conservation"],
+        reputation: ["🎓", "Reputation"],
+      }[track] || ["◆", arkNovaTitle(track)];
+      const operator = { ">=": "≥", "<=": "≤", "==": "=" }[condition.operator] || String(condition.operator || "≥");
+      const threshold = condition.value ?? condition.minimum ?? 0;
+      return arkNovaCardFactChip(trackMeta[0], `${operator}${threshold}`, `Requires ${trackMeta[1]} ${operator} ${threshold}`, { className: "is-condition" });
+    }
+    return kind ? arkNovaCardFactChip("◆", "", arkNovaTitle(kind), { className: "is-condition" }) : "";
+  }
+
+  function arkNovaCardEnclosureMarkup(card) {
+    const normalized = arkNovaCardObject(card);
+    let options = arkNovaAsArray(normalized.enclosure_options);
+    if (!options.length && normalized.animal_size != null) options = [{ type: "standard", required_spaces: normalized.animal_size }];
+    if (!options.length) return "";
+    const choices = options.map((option) => {
+      const type = String(option.type || "standard");
+      const meta = ARK_NOVA_ENCLOSURE_OPTIONS[type] || { name: arkNovaTitle(type), short: arkNovaTitle(type), icon: "⬡" };
+      const spaces = Math.max(0, arkNovaNumber(option.required_spaces));
+      const label = type === "standard"
+        ? `Standard enclosure of size ${spaces} or larger`
+        : `${meta.name} option using ${spaces} space${spaces === 1 ? "" : "s"}`;
+      return arkNovaCardFactChip(meta.icon, spaces, label, {
+        caption: meta.short,
+        className: `is-enclosure ${type === "standard" ? "is-standard" : "is-special"}`,
+      });
+    });
+    return `<span class="arkn-card-enclosure-options" aria-label="Enclosure options">${choices.map((choice, index) => `${index ? `<em>or</em>` : ""}${choice}`).join("")}</span>`;
+  }
+
+  function arkNovaCardRequirementsMarkup(card) {
+    const normalized = arkNovaCardObject(card);
+    const type = arkNovaCardType(normalized);
+    if (!["animal", "sponsor"].includes(type)) return "";
+    const play = normalized.play || {};
+    const requirements = [];
+    if (type === "animal") requirements.push(arkNovaCardEnclosureMarkup(normalized));
+    if (type === "sponsor" && play.strength_required != null) {
+      requirements.push(arkNovaCardFactChip("⚡", play.strength_required, `Requires Sponsors strength ${play.strength_required}`, { className: "is-strength" }));
+    }
+    const baseCost = arkNovaNumber(play.base_money_cost);
+    if (baseCost > 0) requirements.push(arkNovaCardFactChip("💰", baseCost, `Costs ${baseCost} money`, { className: "is-cost" }));
+    const uniqueBuilding = normalized.unique_building || {};
+    const footprintSize = uniqueBuilding.footprint && uniqueBuilding.footprint.cell_count;
+    if (footprintSize != null) requirements.push(arkNovaCardFactChip("🧩", footprintSize, `Unique building uses ${footprintSize} map hexes`, { className: "is-placement" }));
+    const placement = type === "animal" ? normalized.placement || {} : uniqueBuilding.placement || {};
+    const adjacency = placement.adjacent_to || {};
+    for (const [terrain, icon, label] of [["water", "💧", "water"], ["rock", "🪨", "rock"]]) {
+      const amount = Math.max(0, arkNovaNumber(adjacency[terrain]));
+      if (amount) requirements.push(arkNovaCardFactChip(icon, `×${amount}`, `Enclosure must be adjacent to ${amount} ${label} space${amount === 1 ? "" : "s"}`, { className: "is-placement" }));
+    }
+    const borderSpaces = Math.max(0, arkNovaNumber(placement.minimum_border_spaces));
+    if (borderSpaces) requirements.push(arkNovaCardFactChip("↔", `×${borderSpaces}`, `Building must touch ${borderSpaces} zoo border spaces`, { className: "is-placement" }));
+    requirements.push(...arkNovaAsArray(play.conditions).map(arkNovaCardConditionMarkup));
+    return requirements.filter(Boolean).join("");
+  }
+
   function arkNovaRewardMarkup(card) {
     const normalized = arkNovaCardObject(card);
     const reward = normalized.printed_rewards || normalized.rewards || {};
@@ -678,10 +806,21 @@
     const appeal = arkNovaNumber(reward.appeal ?? normalized.appeal);
     const conservation = arkNovaNumber(reward.conservation ?? normalized.conservation);
     const reputation = arkNovaNumber(reward.reputation ?? normalized.reputation);
-    if (appeal) chunks.push(`<span title="Appeal">🎟 ${appeal}</span>`);
-    if (conservation) chunks.push(`<span title="Conservation">🌿 ${conservation}</span>`);
-    if (reputation) chunks.push(`<span title="Reputation">🎓 ${reputation}</span>`);
+    if (appeal) chunks.push(arkNovaCardFactChip("🎟", `+${appeal}`, `Gain ${appeal} Appeal`, { className: "is-reward" }));
+    if (conservation) chunks.push(arkNovaCardFactChip("🌿", `+${conservation}`, `Gain ${conservation} Conservation`, { className: "is-reward" }));
+    if (reputation) chunks.push(arkNovaCardFactChip("🎓", `+${reputation}`, `Gain ${reputation} Reputation`, { className: "is-reward" }));
     return chunks.join("");
+  }
+
+  function arkNovaCardFactsMarkup(card, options = {}) {
+    const requirements = arkNovaCardRequirementsMarkup(card);
+    const rewards = arkNovaRewardMarkup(card);
+    if (!requirements && !rewards) return "";
+    const single = !requirements || !rewards;
+    return `<span class="arkn-card-facts ${single ? "is-single" : ""} ${options.detail ? "is-detail" : ""}">
+      ${requirements ? `<span class="arkn-card-fact-group is-requirement"><small class="arkn-card-fact-label">Requirements</small><span class="arkn-card-fact-values">${requirements}</span></span>` : ""}
+      ${rewards ? `<span class="arkn-card-fact-group is-reward"><small class="arkn-card-fact-label">Rewards</small><span class="arkn-card-fact-values">${rewards}</span></span>` : ""}
+    </span>`;
   }
 
   function arkNovaProjectMetric(card, requirement = {}) {
@@ -691,6 +830,15 @@
 
   function arkNovaProjectRequirementMarkup(card, slot) {
     const requirement = slot && slot.requirement || {};
+    const metricKey = String(requirement.metric || arkNovaCardObject(card).metric || "").toLowerCase();
+    if (arkNovaContinentMeta(metricKey)) {
+      const amount = requirement.value ?? "✓";
+      return arkNovaContinentChipMarkup(metricKey, amount === "✓" ? 1 : amount, {
+        alwaysShowCount: amount !== "✓",
+        className: "arkn-project-continent",
+        ariaLabel: `${amount} ${arkNovaProjectMetric(card, requirement)[1]}`,
+      });
+    }
     const [icon, label] = arkNovaProjectMetric(card, requirement);
     if (requirement.kind === "released_animal_enclosure_size") {
       return `<span aria-hidden="true">⬡</span><b>${arkNovaEscape(requirement.value)}</b><small>围栏</small>`;
@@ -767,9 +915,6 @@
       : arkNovaUi.pendingSelection.has(pendingChoiceIndex);
     const selectable = !!options.selectable || pendingChoiceIndex != null;
     const isHandCard = options.zone === "hand";
-    const cost = card.play && card.play.base_money_cost != null ? card.play.base_money_cost : card.base_money_cost;
-    const strength = card.play && (card.play.minimum_action_strength ?? card.play.strength ?? card.play.minimum_action_level_from_card_condition);
-    const size = card.animal_size ?? card.size;
     const icons = arkNovaAsArray(card.icons).map(arkNovaIconMarkup).join("");
     const projectSupport = type === "conservation_project" ? arkNovaProjectSupportMarkup(card) : "";
     const englishName = arkNovaCardEnglishName(card);
@@ -792,12 +937,7 @@
           <strong class="arkn-card-name">${arkNovaEscape(arkNovaCardName(card))}</strong>
           ${englishName && englishName !== arkNovaCardName(card) ? `<span class="arkn-card-en">${arkNovaEscape(englishName)}</span>` : ""}
           ${arkNovaCardArtMarkup(card)}
-          <span class="arkn-card-stats">
-            ${cost != null ? `<span title="Money cost">💰 ${arkNovaEscape(cost)}</span>` : ""}
-            ${strength != null ? `<span title="Required strength">⚡ ${arkNovaEscape(strength)}</span>` : ""}
-            ${size != null ? `<span title="Enclosure size">⬡ ${arkNovaEscape(size)}</span>` : ""}
-            ${arkNovaRewardMarkup(card)}
-          </span>
+          ${arkNovaCardFactsMarkup(card)}
           <span class="arkn-card-icons">${icons}</span>
           ${projectSupport}
           <span class="arkn-card-text">${arkNovaRichText(arkNovaCardSummary(card))}</span>
@@ -831,7 +971,8 @@
         <div class="arkn-detail-heading"><span>#${arkNovaEscape(arkNovaCardId(card))}</span><strong>${arkNovaEscape(arkNovaCardName(card))}</strong><em>${arkNovaEscape(arkNovaCardEnglishName(card))}</em></div>
         ${arkNovaCardType(card) === "conservation_project" ? arkNovaProjectSupportMarkup(card, { detail: true }) : ""}
         ${arkNovaCardArtMarkup(card, true)}
-        <div class="arkn-detail-icons">${icons}${arkNovaRewardMarkup(card)}</div>
+        ${arkNovaCardFactsMarkup(card, { detail: true })}
+        <div class="arkn-detail-icons"><strong>Card tags</strong>${icons || `<span>—</span>`}</div>
         <p>${arkNovaRichText(arkNovaCardSummary(card))}</p>
         ${abilityRows ? `<h4>Abilities & effects</h4><ul class="arkn-effect-list">${abilityRows}</ul>` : ""}
         <dl class="arkn-detail-list">
@@ -1095,8 +1236,10 @@
       ...arkNovaAsArray(viewedPlayer.played_sponsors).map((card) => ({ card, zone: "Sponsors" })),
     ];
     const partnerZoos = arkNovaAsArray(viewedPlayer.partner_zoos).map((continent) => {
-      const meta = ARK_NOVA_ICON_LABELS[String(continent).toLowerCase()] || ["🌍", arkNovaTitle(continent)];
-      return `<span title="Partner zoo">${meta[0]} ${arkNovaEscape(meta[1])}</span>`;
+      const meta = arkNovaContinentMeta(continent);
+      return meta
+        ? arkNovaContinentChipMarkup(continent, 1, { className: "arkn-partner-continent", prefix: "Partner ·", ariaLabel: `${meta.name} partner zoo` })
+        : `<span title="Partner zoo">${arkNovaEscape(arkNovaTitle(continent))}</span>`;
     });
     const universities = arkNovaAsArray(viewedPlayer.universities).map((university) => `<span title="University">🏫 ${arkNovaEscape(arkNovaTitle(university))}</span>`);
     const supportedProjects = arkNovaAsArray(viewedPlayer.supported_projects).map((support) => {

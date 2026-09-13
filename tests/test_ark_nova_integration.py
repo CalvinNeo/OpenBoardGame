@@ -102,6 +102,35 @@ class ArkNovaIntegrationTests(unittest.TestCase):
         self.assertIn("arkNovaRichText(arkNovaCardSummary(card))", script)
         self.assertIn(".arkn-inline-token", stylesheet)
 
+    def test_card_requirements_and_rewards_have_separate_regions(self) -> None:
+        script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")
+        stylesheet = (ROOT / "static" / "ark_nova.css").read_text(encoding="utf-8")
+        self.assertIn("function arkNovaCardRequirementsMarkup", script)
+        self.assertIn("function arkNovaCardFactsMarkup", script)
+        self.assertIn('class="arkn-card-fact-group is-requirement"', script)
+        self.assertIn('class="arkn-card-fact-group is-reward"', script)
+        self.assertIn("play.strength_required", script)
+        self.assertIn(".arkn-card-fact-group.is-requirement", stylesheet)
+        self.assertIn(".arkn-card-fact-group.is-reward", stylesheet)
+
+    def test_animal_cards_show_special_enclosure_alternatives(self) -> None:
+        script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")
+        self.assertIn('reptile_house: { name: "Reptile House"', script)
+        self.assertIn('large_bird_aviary: { name: "Large Bird Aviary"', script)
+        self.assertIn("arkNovaAsArray(normalized.enclosure_options)", script)
+        self.assertIn('class="arkn-card-enclosure-options"', script)
+        self.assertIn('className: `is-enclosure ${type === "standard" ? "is-standard" : "is-special"}`', script)
+
+    def test_continents_use_original_color_text_chips(self) -> None:
+        script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")
+        stylesheet = (ROOT / "static" / "ark_nova.css").read_text(encoding="utf-8")
+        self.assertIn("function arkNovaContinentChipMarkup", script)
+        self.assertIn('australia: { name: "Australia", className: "is-australia" }', script)
+        self.assertIn(".arkn-continent-chip.is-australia", stylesheet)
+        self.assertIn("background: #c95151", stylesheet)
+        self.assertNotIn('australia: ["🦘", "Australia"]', script)
+        self.assertNotIn('europe: ["🏰", "Europe"]', script)
+
     def test_building_picker_uses_fixed_polyhex_pieces(self) -> None:
         script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")
         for size in range(1, 6):

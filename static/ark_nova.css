@@ -479,20 +479,114 @@
   width: 100%;
 }
 
-#arkNovaPanel .arkn-card-stats {
+#arkNovaPanel .arkn-card-facts,
+#arkNovaModal .arkn-card-facts {
+  display: grid;
+  gap: 4px;
+  grid-template-columns: minmax(0, 1.35fr) minmax(45px, 0.65fr);
+}
+
+#arkNovaPanel .arkn-card-facts.is-single,
+#arkNovaModal .arkn-card-facts.is-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+#arkNovaPanel .arkn-card-fact-group,
+#arkNovaModal .arkn-card-fact-group {
+  align-content: start;
+  border: 1px solid;
+  border-radius: 7px;
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 4px;
+}
+
+#arkNovaPanel .arkn-card-fact-group.is-requirement {
+  background: rgba(61, 111, 142, 0.11);
+  border-color: rgba(42, 91, 121, 0.28);
+}
+
+#arkNovaPanel .arkn-card-fact-group.is-reward {
+  background: rgba(48, 139, 85, 0.12);
+  border-color: rgba(32, 119, 68, 0.3);
+}
+
+#arkNovaPanel .arkn-card-fact-label,
+#arkNovaModal .arkn-card-fact-label {
+  font-size: 0.46rem;
+  font-weight: 950;
+  letter-spacing: 0.055em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+#arkNovaPanel .arkn-card-fact-group.is-requirement .arkn-card-fact-label { color: #315f79; }
+#arkNovaPanel .arkn-card-fact-group.is-reward .arkn-card-fact-label { color: #277344; }
+
+#arkNovaPanel .arkn-card-fact-values,
+#arkNovaModal .arkn-card-fact-values {
   align-items: center;
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 2px;
+  min-width: 0;
 }
 
-#arkNovaPanel .arkn-card-stats > span,
-#arkNovaPanel .arkn-detail-icons > span {
-  background: rgba(20, 49, 37, 0.09);
+#arkNovaPanel .arkn-card-fact-chip,
+#arkNovaModal .arkn-card-fact-chip {
+  align-items: center;
+  border: 1px solid;
   border-radius: 5px;
-  font-size: 0.61rem;
+  display: inline-flex;
+  font-size: 0.58rem;
   font-weight: 850;
-  padding: 2px 4px;
+  gap: 2px;
+  line-height: 1;
+  min-height: 18px;
+  padding: 2px 3px;
+  white-space: nowrap;
+}
+
+#arkNovaPanel .arkn-card-fact-chip {
+  background: rgba(255, 255, 255, 0.62);
+  border-color: rgba(28, 65, 48, 0.19);
+}
+
+#arkNovaPanel .arkn-card-fact-chip.is-special {
+  background: rgba(73, 161, 126, 0.18);
+  border-color: rgba(35, 117, 86, 0.34);
+}
+
+#arkNovaPanel .arkn-card-fact-chip.is-reward {
+  background: rgba(255, 250, 218, 0.76);
+  border-color: rgba(98, 134, 48, 0.3);
+}
+
+#arkNovaPanel .arkn-card-fact-chip small,
+#arkNovaModal .arkn-card-fact-chip small {
+  font-size: 0.43rem;
+  font-weight: 800;
+  opacity: 0.76;
+}
+
+#arkNovaPanel .arkn-card-enclosure-options,
+#arkNovaModal .arkn-card-enclosure-options {
+  align-items: center;
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  gap: 2px;
+  min-width: 0;
+}
+
+#arkNovaPanel .arkn-card-enclosure-options em,
+#arkNovaModal .arkn-card-enclosure-options em {
+  font-size: 0.43rem;
+  font-style: normal;
+  font-weight: 850;
+  opacity: 0.66;
+  text-transform: uppercase;
 }
 
 #arkNovaPanel .arkn-card-icons {
@@ -515,6 +609,51 @@
 }
 
 #arkNovaPanel .arkn-icon-chip b { font-size: 0.55rem; }
+
+#arkNovaPanel .arkn-continent-chip,
+#arkNovaModal .arkn-continent-chip {
+  align-items: center;
+  border: 1px solid rgba(17, 31, 24, 0.24);
+  border-radius: 5px;
+  display: inline-flex;
+  font-size: 0.51rem;
+  font-weight: 950;
+  gap: 3px;
+  letter-spacing: 0.025em;
+  line-height: 1;
+  min-height: 18px;
+  padding: 2px 5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+#arkNovaPanel .arkn-continent-chip b,
+#arkNovaModal .arkn-continent-chip b {
+  font-size: inherit;
+  font-weight: 950;
+}
+
+#arkNovaPanel .arkn-continent-chip.is-africa,
+#arkNovaModal .arkn-continent-chip.is-africa { background: #e3bd43; border-color: #b58d16; color: #2f2608; }
+#arkNovaPanel .arkn-continent-chip.is-americas,
+#arkNovaModal .arkn-continent-chip.is-americas { background: #d98232; border-color: #a75a19; color: #2e1706; }
+#arkNovaPanel .arkn-continent-chip.is-asia,
+#arkNovaModal .arkn-continent-chip.is-asia { background: #55965e; border-color: #387143; color: #fff; }
+#arkNovaPanel .arkn-continent-chip.is-australia,
+#arkNovaModal .arkn-continent-chip.is-australia { background: #c95151; border-color: #963434; color: #fff; }
+#arkNovaPanel .arkn-continent-chip.is-europe,
+#arkNovaModal .arkn-continent-chip.is-europe { background: #4e82b1; border-color: #32638d; color: #fff; }
+#arkNovaPanel .arkn-continent-chip.is-any-continent,
+#arkNovaModal .arkn-continent-chip.is-any-continent {
+  background: linear-gradient(100deg, #e3bd43 0 20%, #d98232 20% 40%, #55965e 40% 60%, #c95151 60% 80%, #4e82b1 80% 100%);
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
+}
+
+#arkNovaPanel .arkn-card-fact-chip.arkn-continent-chip,
+#arkNovaModal .arkn-card-fact-chip.arkn-continent-chip {
+  padding-inline: 5px;
+}
 
 #arkNovaPanel .arkn-card-text {
   color: #394b42;
@@ -2032,9 +2171,48 @@
 #arkNovaModal .arkn-detail-heading em { color: #9fb7aa; font-size: 0.75rem; font-style: normal; text-transform: uppercase; }
 
 #arkNovaModal .arkn-detail-icons {
+  align-items: center;
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
+}
+
+#arkNovaModal .arkn-detail-icons > strong {
+  color: #9fb7aa;
+  flex-basis: 100%;
+  font-size: 0.65rem;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+#arkNovaModal .arkn-card-facts {
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+#arkNovaModal .arkn-card-fact-group {
+  padding: 8px;
+}
+
+#arkNovaModal .arkn-card-fact-group.is-requirement {
+  background: rgba(93, 183, 230, 0.08);
+  border-color: rgba(93, 183, 230, 0.25);
+}
+
+#arkNovaModal .arkn-card-fact-group.is-reward {
+  background: rgba(112, 209, 138, 0.09);
+  border-color: rgba(112, 209, 138, 0.28);
+}
+
+#arkNovaModal .arkn-card-fact-label { color: #bcd4c7; font-size: 0.64rem; }
+
+#arkNovaModal .arkn-card-fact-chip {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #edf7f0;
+  font-size: 0.72rem;
+  min-height: 25px;
+  padding: 4px 6px;
 }
 
 #arkNovaModal .arkn-detail-icons .arkn-icon-chip {
@@ -2043,6 +2221,12 @@
   border-radius: 999px;
   display: inline-flex;
   padding: 3px 6px;
+}
+
+#arkNovaModal .arkn-detail-icons .arkn-continent-chip {
+  font-size: 0.68rem;
+  min-height: 25px;
+  padding: 4px 7px;
 }
 
 #arkNovaModal .arkn-detail-card > p {
