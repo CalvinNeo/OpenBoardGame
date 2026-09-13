@@ -70,9 +70,9 @@
     standard_enclosure_5: [[0, 0], [1, 0], [2, 0], [0, 1], [1, 1]],
     kiosk: [[0, 0]],
     pavilion: [[0, 0]],
-    petting_zoo: [[0, 0], [1, 0], [0, 1]],
-    reptile_house: [[0, 0], [1, 0], [2, 0], [0, 1], [1, 1]],
-    large_bird_aviary: [[0, 0], [1, 0], [2, 0], [1, -1], [1, 1]],
+    petting_zoo: [[0, 0], [0, -1], [1, -2]],
+    reptile_house: [[0, 0], [0, -1], [1, -1], [2, -2], [2, -1]],
+    large_bird_aviary: [[0, 0], [0, -1], [1, -2], [1, -1], [2, -1]],
   });
 
   const ARK_NOVA_INLINE_TOKENS = Object.freeze({
@@ -202,6 +202,7 @@
     xTokens: 0,
     actionMode: "draw",
     selectedCards: new Set(),
+    selectedBuildingId: null,
     buildType: "standard_enclosure",
     buildSize: 1,
     buildCells: [],
@@ -588,6 +589,8 @@
         <div id="arkNovaToast" class="arkn-toast" role="status" aria-live="polite"></div>`;
       panel.addEventListener("click", arkNovaHandlePanelClick);
       panel.addEventListener("change", arkNovaHandlePanelChange);
+      const hand = panel.querySelector("#arkNovaHand");
+      if (hand) hand.addEventListener("wheel", arkNovaHandleHandWheel, { passive: false });
       const mapObject = panel.querySelector("#arkNovaMapObject");
       if (mapObject) mapObject.addEventListener("load", arkNovaOnMapLoad);
     }
@@ -664,6 +667,10 @@
     toast.classList.add("is-visible");
     window.clearTimeout(arkNovaToast.timeout);
     arkNovaToast.timeout = window.setTimeout(() => toast.classList.remove("is-visible"), 2400);
+  }
+
+  function showArkNovaError(message) {
+    arkNovaToast(String(message || "That action could not be completed."));
   }
 
   function arkNovaPlayerColor(index) {
@@ -1211,11 +1218,44 @@
     return arkNovaAsArray(building && (building.cells || building.hexes || building.occupied_cells)).map(String);
   }
 
+  function arkNovaBuildingId(building) {
+    return String(building && (building.id || building.building_id) || "");
+  }
+
+  function arkNovaBuildingMeta(building) {
+    const type = arkNovaBuildingType(building);
+    return ARK_NOVA_BUILDINGS[type] || { name: arkNovaTitle(type), icon: "⬡", color: "#7e8c85" };
+  }
+
+  function arkNovaBuildingIsEnclosure(building) {
+    const type = arkNovaBuildingType(building);
+    return type.includes("enclosure") || ["petting_zoo", "reptile_house", "large_bird_aviary"].includes(type);
+  }
+
+  function arkNovaBuildingSize(building) {
+    return Math.max(1, arkNovaNumber(building && building.size, arkNovaBuildingCells(building).length || 1));
+  }
+
+  function arkNovaBuildingName(building) {
+    const meta = arkNovaBuildingMeta(building);
+    return arkNovaBuildingType(building) === "standard_enclosure"
+      ? `${meta.name} · Size ${arkNovaBuildingSize(building)}`
+      : meta.name;
+  }
+
+  function arkNovaBuildingMapLabel(building) {
+    const type = arkNovaBuildingType(building);
+    if (type === "standard_enclosure") return `STD ${arkNovaBuildingSize(building)}`;
+    if (type === "petting_zoo") return "PETTING";
+    if (type === "reptile_house") return "REPTILE";
+    if (type === "large_bird_aviary") return "AVIARY";
+    if (type === "kiosk") return "KIOSK";
+    if (type === "pavilion") return "PAVILION";
+    return arkNovaBuildingMeta(building).name.toUpperCase().slice(0, 11);
+  }
+
   function arkNovaEnclosures(view = arkNovaView) {
-    return arkNovaBuildings(arkNovaYou(view)).filter((building) => {
-      const type = arkNovaBuildingType(building);
-      return type.includes("enclosure") || ["petting_zoo", "reptile_house", "large_bird_aviary"].includes(type);
-    });
+    return arkNovaBuildings(arkNovaYou(view)).filter(arkNovaBuildingIsEnclosure);
   }
 
   function arkNovaRenderBuildings(view) {
@@ -1237,15 +1277,24 @@
       xStorage.innerHTML = `<span aria-hidden="true">✕</span><small>${viewingOwnZoo ? "X-tokens" : `${arkNovaEscape(playerName)}'s X`}</small><b>${arkNovaResource(viewedPlayer, "x_tokens")} / ${limit}</b>`;
     }
     container.innerHTML = buildings.length ? buildings.map((building) => {
-      const type = arkNovaBuildingType(building);
-      const meta = ARK_NOVA_BUILDINGS[type] || { name: arkNovaTitle(type), icon: "⬡" };
+      const id = arkNovaBuildingId(building);
+      const meta = arkNovaBuildingMeta(building);
       const rawOccupants = building.occupied_by || building.animals || building.animal || building.animal_id || building.occupant;
       const occupants = (Array.isArray(rawOccupants) ? rawOccupants : rawOccupants == null ? [] : [rawOccupants]).map(String);
       const animalNames = occupants.map((id) => {
         const card = arkNovaCardLookup.get(id);
         return card ? arkNovaCardName(card) : `#${id}`;
       });
-      return `<span class="arkn-building-chip"><b>${meta.icon} ${arkNovaEscape(meta.name)}</b><small>${arkNovaBuildingCells(building).join(", ") || `${building.size || "?"} hex`}${animalNames.length ? ` · 🐾 ${arkNovaEscape(animalNames.join(", "))}` : ""}</small></span>`;
+      const cells = arkNovaBuildingCells(building);
+      const size = arkNovaBuildingSize(building);
+      const usedCapacity = Math.max(0, arkNovaNumber(building.used_capacity, occupants.length));
+      const selected = id && id === String(arkNovaUi.selectedBuildingId || "");
+      const status = arkNovaBuildingIsEnclosure(building)
+        ? `${usedCapacity} / ${size} capacity${animalNames.length ? ` · 🐾 ${animalNames.join(", ")}` : " · empty"}`
+        : `${cells.length || size} hex${(cells.length || size) === 1 ? "" : "es"}`;
+      return `<button type="button" class="arkn-building-chip ${selected ? "is-selected" : ""}" data-arkn-building-id="${arkNovaEscape(id)}" aria-pressed="${selected}" title="Highlight ${arkNovaEscape(arkNovaBuildingName(building))} on Map 0" style="--arkn-building-color:${arkNovaEscape(meta.color || "#7e8c85")}">
+        <i aria-hidden="true">${meta.icon}</i><span><b>${arkNovaEscape(arkNovaBuildingName(building))}</b><small>${arkNovaEscape(status)}</small><em>${arkNovaEscape(cells.join(" · "))}</em></span>
+      </button>`;
     }).join("") : `<div class="arkn-empty arkn-empty-inline">${viewingOwnZoo ? "No buildings yet. Your first building must touch the zoo edge." : "No buildings in this zoo yet."}</div>`;
 
     if (!cardsContainer) return;
@@ -1280,6 +1329,95 @@
     if (!arkNovaMapDocument) return null;
     const cell = arkNovaMapDocument.querySelector(`[data-cell-id="${CSS.escape(String(cellId))}"]`);
     return cell && cell.dataset;
+  }
+
+  function arkNovaEnsureMapRuntimeStyle() {
+    if (!arkNovaMapDocument || arkNovaMapDocument.querySelector("[data-arkn-runtime-style]")) return;
+    const style = arkNovaMapDocument.createElementNS("http://www.w3.org/2000/svg", "style");
+    style.dataset.arknRuntimeStyle = "true";
+    style.textContent = `
+      .ark-nova-map0-cell.is-building-highlight .ark-nova-map0-hex {
+        filter: drop-shadow(0 0 5px rgba(255, 245, 178, .96));
+        stroke: #fff3a4 !important;
+        stroke-width: 7 !important;
+      }
+      .ark-nova-map0-cell.is-covered { opacity: 1; }
+      .ark-nova-map0-cell.is-valid { cursor: crosshair; }
+      .arkn-runtime-building-label { pointer-events: none; }
+      .arkn-runtime-building-label rect {
+        fill: rgba(13, 32, 25, .91);
+        stroke: rgba(255, 255, 255, .82);
+        stroke-width: 1.5;
+        vector-effect: non-scaling-stroke;
+      }
+      .arkn-runtime-building-label text {
+        fill: #fffdf2;
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: .45px;
+        paint-order: stroke;
+        stroke: rgba(10, 25, 19, .7);
+        stroke-width: 1px;
+        text-anchor: middle;
+      }
+      .arkn-runtime-building-label.is-selected rect {
+        fill: #7c4c13;
+        stroke: #fff3a4;
+        stroke-width: 2.5;
+      }
+      .arkn-runtime-building-label.is-draft { opacity: .78; }
+    `;
+    (arkNovaMapDocument.querySelector("defs") || arkNovaMapDocument.documentElement).appendChild(style);
+  }
+
+  function arkNovaMapCellCenter(cellId) {
+    if (!arkNovaMapDocument) return null;
+    const cell = arkNovaMapDocument.querySelector(`[data-cell-id="${CSS.escape(String(cellId))}"]`);
+    const polygon = cell && cell.querySelector(".ark-nova-map0-hex");
+    if (!polygon || typeof polygon.getBBox !== "function") return null;
+    try {
+      const box = polygon.getBBox();
+      return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  function arkNovaRenderMapBuildingLabels(occupied) {
+    if (!arkNovaMapDocument) return;
+    arkNovaMapDocument.querySelectorAll("[data-arkn-runtime-building-label]").forEach((label) => label.remove());
+    const layer = arkNovaMapDocument.querySelector("#ark-nova-map0-grid") || arkNovaMapDocument.documentElement;
+    const buildings = new Map();
+    occupied.forEach((building) => {
+      const id = arkNovaBuildingId(building);
+      if (id && !buildings.has(id)) buildings.set(id, building);
+    });
+    buildings.forEach((building, id) => {
+      const centers = arkNovaBuildingCells(building).map(arkNovaMapCellCenter).filter(Boolean);
+      if (!centers.length) return;
+      const x = centers.reduce((sum, center) => sum + center.x, 0) / centers.length;
+      const y = centers.reduce((sum, center) => sum + center.y, 0) / centers.length;
+      const label = arkNovaBuildingMapLabel(building);
+      const width = Math.max(42, Math.min(88, label.length * 6.2 + 16));
+      const selected = id === String(arkNovaUi.selectedBuildingId || "");
+      const group = arkNovaMapDocument.createElementNS("http://www.w3.org/2000/svg", "g");
+      group.dataset.arknRuntimeBuildingLabel = id;
+      group.setAttribute("class", `arkn-runtime-building-label${selected ? " is-selected" : ""}${id.startsWith("draft-") ? " is-draft" : ""}`);
+      group.setAttribute("transform", `translate(${x} ${y})`);
+      const title = arkNovaMapDocument.createElementNS("http://www.w3.org/2000/svg", "title");
+      title.textContent = `${arkNovaBuildingName(building)} · ${arkNovaBuildingCells(building).join(", ")}`;
+      const badge = arkNovaMapDocument.createElementNS("http://www.w3.org/2000/svg", "rect");
+      badge.setAttribute("x", String(-width / 2));
+      badge.setAttribute("y", "-10");
+      badge.setAttribute("width", String(width));
+      badge.setAttribute("height", "20");
+      badge.setAttribute("rx", "7");
+      const text = arkNovaMapDocument.createElementNS("http://www.w3.org/2000/svg", "text");
+      text.setAttribute("y", "3.5");
+      text.textContent = label;
+      group.append(title, badge, text);
+      layer.appendChild(group);
+    });
   }
 
   function arkNovaOccupiedCells(view = arkNovaView, player = arkNovaYou(view), includeDraft = true) {
@@ -1410,6 +1548,7 @@
     const loading = document.getElementById("arkNovaMapLoading");
     if (loading) loading.classList.toggle("hidden", !!arkNovaMapDocument);
     if (!arkNovaMapDocument) return;
+    arkNovaEnsureMapRuntimeStyle();
     arkNovaMapDocument.querySelectorAll("[data-cell-id]").forEach((cell) => {
       cell.addEventListener("click", () => arkNovaHandleMapCell(cell.dataset.cellId));
       cell.addEventListener("keydown", (keyEvent) => {
@@ -1440,14 +1579,19 @@
     const viewingOwnZoo = arkNovaViewingOwnZoo(arkNovaView);
     const occupied = arkNovaOccupiedCells(arkNovaView, viewedPlayer, viewingOwnZoo);
     const drafting = viewingOwnZoo && ((arkNovaUi.selectedAction === "build" && arkNovaCan("build")) || !!arkNovaPendingMapChoice());
+    const mapFrame = document.querySelector("#arkNovaPanel .arkn-map-frame");
+    if (mapFrame) mapFrame.classList.toggle("is-placement-mode", drafting);
     arkNovaUpdateMapRotateButton(drafting);
     if (!arkNovaMapDocument) return;
+    arkNovaEnsureMapRuntimeStyle();
     const selected = new Set(viewingOwnZoo ? arkNovaUi.buildCells : []);
     const queuedCells = new Set(viewingOwnZoo ? arkNovaUi.buildQueue.flatMap((building) => building.cells) : []);
     arkNovaMapDocument.querySelectorAll("[data-cell-id]").forEach((cell) => {
       const id = cell.dataset.cellId;
       const polygon = cell.querySelector(".ark-nova-map0-hex");
-      cell.classList.remove("is-valid", "is-selected", "is-covered");
+      cell.classList.remove("is-valid", "is-selected", "is-covered", "is-building-highlight");
+      if (!cell.dataset.arkNovaBaseAriaLabel) cell.dataset.arkNovaBaseAriaLabel = cell.getAttribute("aria-label") || id;
+      cell.setAttribute("aria-label", cell.dataset.arkNovaBaseAriaLabel);
       if (polygon) {
         if (!polygon.dataset.arkNovaFill) polygon.dataset.arkNovaFill = polygon.getAttribute("fill") || "";
         polygon.setAttribute("fill", polygon.dataset.arkNovaFill);
@@ -1456,7 +1600,11 @@
       if (occupied.has(id)) {
         cell.classList.add("is-covered");
         const building = occupied.get(id);
-        const meta = ARK_NOVA_BUILDINGS[arkNovaBuildingType(building)] || { color: "#7e8c85" };
+        const meta = arkNovaBuildingMeta(building);
+        const buildingId = arkNovaBuildingId(building);
+        const occupants = arkNovaAsArray(building.occupied_by || building.animals).length;
+        cell.setAttribute("aria-label", `${cell.dataset.arkNovaBaseAriaLabel}; ${arkNovaBuildingName(building)}${occupants ? `; ${occupants} animal${occupants === 1 ? "" : "s"}` : ""}`);
+        if (buildingId && buildingId === String(arkNovaUi.selectedBuildingId || "")) cell.classList.add("is-building-highlight");
         if (polygon) {
           polygon.setAttribute("fill", meta.color);
           polygon.setAttribute("fill-opacity", queuedCells.has(id) ? ".68" : ".9");
@@ -1466,12 +1614,57 @@
       }
       if (selected.has(id)) cell.classList.add("is-selected");
     });
+    arkNovaRenderMapBuildingLabels(occupied);
+  }
+
+  function arkNovaSelectBuilding(building) {
+    if (!building || !arkNovaView) return;
+    const id = arkNovaBuildingId(building);
+    if (!id) return;
+    const animals = arkNovaSelectedCardsForType("animal");
+    const assigningAnimal = arkNovaViewingOwnZoo() && arkNovaUi.selectedAction === "animals" && animals.length === 1;
+    arkNovaUi.selectedBuildingId = assigningAnimal || String(arkNovaUi.selectedBuildingId || "") !== id ? id : null;
+    if (arkNovaViewingOwnZoo() && arkNovaUi.selectedAction === "animals") {
+      if (!arkNovaBuildingIsEnclosure(building)) {
+        arkNovaToast(`${arkNovaBuildingName(building)} cannot house animals.`);
+      } else if (!animals.length) {
+        arkNovaToast("Select one Animal card, then click an enclosure on the map.");
+      } else if (animals.length > 1) {
+        arkNovaToast("Select one Animal card at a time to assign it from the map.");
+      } else {
+        const animal = animals[0];
+        const issue = arkNovaAnimalEnclosureIssue(animal, building);
+        if (issue) arkNovaToast(issue);
+        else {
+          arkNovaUi.animalEnclosures.set(arkNovaCardId(animal), id);
+          arkNovaToast(`${arkNovaCardName(animal)} assigned to ${arkNovaBuildingName(building)}.`);
+        }
+      }
+    }
+    arkNovaRenderBuildings(arkNovaView);
+    arkNovaRenderComposer(arkNovaView);
+    arkNovaApplyMapState();
   }
 
   function arkNovaHandleMapCell(cellId) {
+    if (arkNovaExplainMode) return;
+    const viewedPlayer = arkNovaViewedPlayer(arkNovaView);
+    const occupied = arkNovaOccupiedCells(arkNovaView, viewedPlayer, arkNovaViewingOwnZoo()).get(String(cellId));
+    if (occupied) {
+      arkNovaSelectBuilding(occupied);
+      return;
+    }
     const pendingMap = arkNovaPendingMapChoice();
     const normalBuild = arkNovaUi.selectedAction === "build" && arkNovaCan("build");
-    if (arkNovaExplainMode || (!pendingMap && !normalBuild)) return;
+    if (!pendingMap && !normalBuild) {
+      if (arkNovaUi.selectedAction === "build") arkNovaToast(arkNovaActionUnavailableReason("build"));
+      else if (arkNovaUi.selectedBuildingId) {
+        arkNovaUi.selectedBuildingId = null;
+        arkNovaRenderBuildings(arkNovaView);
+        arkNovaApplyMapState();
+      }
+      return;
+    }
     if (!arkNovaViewingOwnZoo()) {
       arkNovaToast("Return to your zoo to place buildings.");
       return;
@@ -1487,6 +1680,7 @@
       }
       arkNovaUi.buildCells = placement.cells;
       arkNovaUi.buildRotation = placement.rotation;
+      arkNovaUi.selectedBuildingId = null;
     }
     arkNovaApplyMapState();
     arkNovaRenderComposer(arkNovaView);
@@ -1587,6 +1781,17 @@
     if (count) count.textContent = `${hand.length} card${hand.length === 1 ? "" : "s"}`;
   }
 
+  function arkNovaHandleHandWheel(event) {
+    const hand = event.currentTarget;
+    if (!(hand instanceof HTMLElement) || window.matchMedia("(max-width: 820px)").matches) return;
+    if (hand.scrollWidth <= hand.clientWidth || Math.abs(event.deltaX) >= Math.abs(event.deltaY) || !event.deltaY) return;
+    const maximum = hand.scrollWidth - hand.clientWidth;
+    const canMove = event.deltaY < 0 ? hand.scrollLeft > 0 : hand.scrollLeft < maximum - 1;
+    if (!canMove) return;
+    event.preventDefault();
+    hand.scrollLeft = Math.max(0, Math.min(maximum, hand.scrollLeft + event.deltaY));
+  }
+
   function arkNovaXControl(view) {
     const available = arkNovaResource(arkNovaYou(view), "x_tokens");
     const maximum = Math.max(0, Math.min(available, 5 - arkNovaBaseStrength(view)));
@@ -1646,6 +1851,41 @@
       ${arkNovaComposerFooter("build", arkNovaUi.buildQueue.length > 0, "Build queued plan", "confirm_build")}`;
   }
 
+  function arkNovaAnimalEnclosureIssue(card, building) {
+    if (!building) return "Choose an enclosure.";
+    const type = arkNovaBuildingType(building);
+    const optionType = type === "standard_enclosure" ? "standard" : type;
+    const option = arkNovaAsArray(arkNovaCardObject(card).enclosure_options).find((entry) => entry && entry.type === optionType);
+    if (!option) return `${arkNovaCardName(card)} cannot use ${arkNovaBuildingName(building)}.`;
+    const required = Math.max(0, arkNovaNumber(option.required_spaces));
+    const rawOccupants = building.occupied_by || building.animals || [];
+    const occupants = Array.isArray(rawOccupants) ? rawOccupants : rawOccupants ? [rawOccupants] : [];
+    if (type === "standard_enclosure") {
+      const canFlock = arkNovaAsArray(arkNovaCardObject(card).abilities).some((ability) => ability && ability.ability === "flock_animal");
+      if (occupants.length && !canFlock) return `${arkNovaBuildingName(building)} is already occupied.`;
+      if (arkNovaBuildingSize(building) < required) return `${arkNovaBuildingName(building)} is too small; ${arkNovaCardName(card)} needs size ${required}.`;
+    } else {
+      const capacity = Math.max(0, arkNovaNumber(building.capacity, arkNovaBuildingSize(building)));
+      const used = Math.max(0, arkNovaNumber(building.used_capacity));
+      if (used + required > capacity) return `${arkNovaBuildingName(building)} needs ${required} free capacity, but only ${Math.max(0, capacity - used)} remains.`;
+    }
+    return "";
+  }
+
+  function arkNovaAnimalPlanIssue(view = arkNovaView) {
+    const animals = arkNovaSelectedCardsForType("animal");
+    if (!animals.length) return "Select at least one Animal card.";
+    const enclosures = new Map(arkNovaEnclosures(view).map((building) => [arkNovaBuildingId(building), building]));
+    for (const card of animals) {
+      if (arkNovaCardObject(card).conditions_met === false) return `${arkNovaCardName(card)}'s card requirements are not met.`;
+      const enclosureId = String(arkNovaUi.animalEnclosures.get(arkNovaCardId(card)) || "");
+      if (!enclosureId) return `Choose an enclosure for ${arkNovaCardName(card)} from the map or the selector.`;
+      const issue = arkNovaAnimalEnclosureIssue(card, enclosures.get(enclosureId));
+      if (issue) return issue;
+    }
+    return "";
+  }
+
   function arkNovaAnimalPlanMarkup(view) {
     const animals = arkNovaSelectedCardsForType("animal");
     const enclosures = arkNovaEnclosures(view);
@@ -1653,13 +1893,16 @@
     return `<div class="arkn-animal-plan">${animals.map((card) => {
       const id = arkNovaCardId(card);
       const selectedEnclosure = arkNovaUi.animalEnclosures.get(id) || "";
-      return `<label data-arkn-explain="animal_enclosure"><span><b>🐾 ${arkNovaEscape(arkNovaCardName(card))}</b><small>#${arkNovaEscape(id)}</small></span><select data-arkn-enclosure-for="${arkNovaEscape(id)}"><option value="">Choose enclosure</option>${enclosures.map((building) => `<option value="${arkNovaEscape(building.id)}" ${String(building.id) === selectedEnclosure ? "selected" : ""}>${arkNovaEscape(arkNovaTitle(arkNovaBuildingType(building)))} · ${arkNovaBuildingCells(building).join(", ")}</option>`).join("")}</select></label>`;
+      return `<label data-arkn-explain="animal_enclosure"><span><b>🐾 ${arkNovaEscape(arkNovaCardName(card))}</b><small>#${arkNovaEscape(id)}</small></span><select data-arkn-enclosure-for="${arkNovaEscape(id)}"><option value="">Choose enclosure</option>${enclosures.map((building) => {
+        const buildingId = arkNovaBuildingId(building);
+        return `<option value="${arkNovaEscape(buildingId)}" ${buildingId === selectedEnclosure ? "selected" : ""}>${arkNovaEscape(arkNovaBuildingName(building))} · ${arkNovaBuildingCells(building).join(", ")}</option>`;
+      }).join("")}</select></label>`;
     }).join("")}</div>`;
   }
 
   function arkNovaRenderAnimalsComposer(view) {
     const animals = arkNovaSelectedCardsForType("animal");
-    const ready = animals.length > 0 && animals.every((card) => arkNovaUi.animalEnclosures.get(arkNovaCardId(card)));
+    const ready = animals.length > 0 && !arkNovaAnimalPlanIssue(view);
     return `${arkNovaXControl(view)}<p class="arkn-composer-help">Select Animal cards, then assign each one to an enclosure.</p>${arkNovaAnimalPlanMarkup(view)}${arkNovaComposerFooter("animals", ready)}`;
   }
 
@@ -1784,13 +2027,53 @@
       ${arkNovaComposerFooter("sponsors", arkNovaUi.actionMode === "break" || sponsors.length > 0)}`;
   }
 
+  function arkNovaActionUnavailableReason(actionType, view = arkNovaView) {
+    if (!view) return "The latest game state is not available yet.";
+    const serverAvailability = view.action_availability && view.action_availability[actionType];
+    if (serverAvailability && serverAvailability.available === false && serverAvailability.reason) return String(serverAvailability.reason);
+    if (view.game_over) return "The game is over, so no further actions can be submitted.";
+    const pending = view.pending_choice || view.pending;
+    if (pending) return `Resolve “${pending.prompt || arkNovaTitle(pending.type || "pending choice")}” first.`;
+    if (!arkNovaIsMyTurn(view)) return "Wait for your turn before submitting this action.";
+    if (arkNovaHasLegalActionsField(view) && !arkNovaLegalTypes(view).has(actionType)) {
+      const player = arkNovaYou(view);
+      if (actionType === "build" && arkNovaResource(player, "money") < 2) return "You need at least 💰2 to build.";
+      if (actionType === "animals" && !arkNovaHand(view).some((card) => arkNovaCardType(card) === "animal")) return "You do not have an Animal card that can start this action.";
+      if (actionType === "association" && arkNovaResource(player, "workers") < 1) return "You need an available association worker.";
+      return `${ARK_NOVA_ACTIONS[actionType]?.name || arkNovaTitle(actionType)} is not legal in the current game state.`;
+    }
+    return "This action is not available right now.";
+  }
+
+  function arkNovaIncompletePlanReason(actionType) {
+    if (actionType === "cards") return "Choose one display card before confirming Snap.";
+    if (actionType === "build") {
+      if (arkNovaUi.buildCells.length) return "Click “Add building” to add the highlighted footprint to your plan.";
+      return "Choose a building, then click a highlighted Map 0 hex to place it.";
+    }
+    if (actionType === "animals") {
+      return arkNovaAnimalPlanIssue() || "Finish the animal plan before submitting.";
+    }
+    if (actionType === "association") {
+      const draft = arkNovaUi.associationDraft;
+      if (draft.task === "university" && !draft.university_id) return "Choose a university, then click “Add task”.";
+      if (draft.task === "support_project" && !draft.project_id) return "Choose a conservation project, then click “Add task”.";
+      return "Choose a task and click “Add task” before confirming.";
+    }
+    if (actionType === "sponsors") return "Select at least one Sponsor card, or choose Break for money.";
+    return "Complete the action plan before confirming.";
+  }
+
   function arkNovaComposerFooter(actionType, ready, label, explanation = "confirm_action") {
     const action = ARK_NOVA_ACTIONS[actionType] || {};
     const canSubmit = ready && arkNovaCan(actionType);
     const gainX = arkNovaCan("gain_x");
+    const reason = canSubmit ? "" : arkNovaCan(actionType) ? arkNovaIncompletePlanReason(actionType) : arkNovaActionUnavailableReason(actionType);
+    const reasonId = `arkNova-${actionType}-submit-reason`;
     return `<div class="arkn-composer-footer">
-      <button type="button" class="arkn-confirm" data-arkn-command="submit-action" data-arkn-explain="${explanation}" ${canSubmit ? "" : "disabled"}>${arkNovaEscape(label || `Confirm ${action.name || arkNovaTitle(actionType)}`)}</button>
+      <button type="button" class="arkn-confirm" data-arkn-command="submit-action" data-arkn-explain="${explanation}" ${canSubmit ? "" : `disabled aria-describedby="${reasonId}" title="${arkNovaEscape(reason)}"`}>${arkNovaEscape(label || `Confirm ${action.name || arkNovaTitle(actionType)}`)}</button>
       <button type="button" class="arkn-gain-x" data-arkn-command="gain-x" data-arkn-explain="gain_x" ${gainX ? "" : "disabled"}>✕ Take X instead</button>
+      ${reason ? `<p id="${reasonId}" class="arkn-submit-reason" role="status"><span aria-hidden="true">ⓘ</span>${arkNovaEscape(reason)}</p>` : ""}
     </div>`;
   }
 
@@ -1904,12 +2187,35 @@
     </section>`;
   }
 
+  function arkNovaPlacementBonusText(payload) {
+    const bonus = payload && payload.bonus || {};
+    const amount = Math.max(1, arkNovaNumber(bonus.amount, 1));
+    const reward = {
+      money: `+💰${amount}`,
+      x_token: `+✕${amount}`,
+      appeal: `+🎟${amount}`,
+      card: `Choose ${amount} card${amount === 1 ? "" : "s"}`,
+      action_to_slot: "Move an Action card to slot 1",
+    }[bonus.type] || bonus.label || arkNovaTitle(bonus.type || "reward");
+    return `Map ${payload && payload.cell_id || "?"} · ${reward}`;
+  }
+
+  function arkNovaEventActor(payload) {
+    const playerId = String(payload && payload.player_id || "");
+    const player = arkNovaPlayers(arkNovaView).find((entry) => arkNovaPlayerId(entry) === playerId);
+    return player ? arkNovaPlayerName(player) : "";
+  }
+
   function arkNovaEventText(event) {
     if (typeof event === "string") return event;
     if (!event || typeof event !== "object") return "Game updated";
     const payload = event.payload || event.data || {};
-    const actor = event.player_name || payload.name || payload.player_name || "";
-    const type = event.message || event.text || event.type || event.event || "Game updated";
+    const actor = event.player_name || payload.name || payload.player_name || arkNovaEventActor(payload);
+    const eventType = event.type || event.event || "";
+    if (eventType === "ark_nova:placement_bonus" || eventType === "placement_bonus") {
+      return [actor, arkNovaPlacementBonusText(payload)].filter(Boolean).join(" · ");
+    }
+    const type = event.message || event.text || eventType || "Game updated";
     const action = payload.action && (payload.action.type || payload.action.action);
     return [actor, arkNovaTitle(action || type)].filter(Boolean).join(" · ");
   }
@@ -1922,6 +2228,12 @@
       if (arkNovaEventKeys.has(key)) return;
       arkNovaEventKeys.add(key);
       arkNovaEventLog.push({ text: arkNovaEventText(event), time: event && (event.time || event.timestamp) });
+      const payload = event && (event.payload || event.data) || {};
+      const eventType = event && (event.type || event.event);
+      if (
+        (eventType === "ark_nova:placement_bonus" || eventType === "placement_bonus")
+        && String(payload.player_id || "") === String(view && (view.you ?? view.player_id) || "")
+      ) arkNovaToast(arkNovaPlacementBonusText(payload));
     });
     if (arkNovaEventLog.length > 100) arkNovaEventLog = arkNovaEventLog.slice(-100);
     if (arkNovaEventKeys.size > 300) arkNovaEventKeys = new Set(events.map((event) => {
@@ -1954,6 +2266,7 @@
     arkNovaUi.xTokens = 0;
     arkNovaUi.actionMode = "draw";
     arkNovaUi.selectedCards.clear();
+    arkNovaUi.selectedBuildingId = null;
     arkNovaUi.buildCells = [];
     arkNovaUi.buildRotation = 0;
     arkNovaUi.buildQueue = [];
@@ -1973,6 +2286,11 @@
     const youId = String(view.you ?? view.player_id ?? "");
     if (!arkNovaUi.viewedPlayerId || !playerIds.has(String(arkNovaUi.viewedPlayerId))) arkNovaUi.viewedPlayerId = youId || arkNovaPlayerId(players[0]);
     if (arkNovaPendingMapChoice(view)) arkNovaUi.viewedPlayerId = youId;
+    const visibleBuildingIds = new Set([
+      ...arkNovaBuildings(arkNovaViewedPlayer(view)).map(arkNovaBuildingId),
+      ...arkNovaUi.buildQueue.map((_building, index) => `draft-${index}`),
+    ]);
+    if (arkNovaUi.selectedBuildingId && !visibleBuildingIds.has(String(arkNovaUi.selectedBuildingId))) arkNovaUi.selectedBuildingId = null;
     const handIds = new Set(arkNovaHand(view).map(arkNovaCardId));
     const displayIds = new Set(arkNovaDisplay(view).map(arkNovaCardId));
     [...arkNovaUi.selectedCards].forEach((id) => {
@@ -2195,11 +2513,19 @@
     const zooButton = target.closest("[data-arkn-view-zoo]");
     if (zooButton) {
       arkNovaUi.viewedPlayerId = zooButton.dataset.arknViewZoo;
+      arkNovaUi.selectedBuildingId = null;
       arkNovaUi.buildCells = [];
       arkNovaUi.buildRotation = 0;
       arkNovaRenderPlayers(arkNovaView);
       arkNovaRenderBuildings(arkNovaView);
       arkNovaApplyMapState();
+      return;
+    }
+    const buildingButton = target.closest("[data-arkn-building-id]");
+    if (buildingButton) {
+      const viewedPlayer = arkNovaViewedPlayer(arkNovaView);
+      const building = arkNovaBuildings(viewedPlayer).find((entry) => arkNovaBuildingId(entry) === buildingButton.dataset.arknBuildingId);
+      if (building) arkNovaSelectBuilding(building);
       return;
     }
     const pendingCard = target.closest("[data-arkn-pending-card-index]");
@@ -2232,6 +2558,7 @@
     if (command) return arkNovaHandleCommand(command.dataset.arknCommand);
     if (!target.closest("button, input, select, label, .arkn-card, .arkn-map-frame")) {
       arkNovaUi.selectedCards.clear();
+      arkNovaUi.selectedBuildingId = null;
       arkNovaUi.buildCells = [];
       arkNovaUi.buildRotation = 0;
       arkNovaUi.pendingSelection.clear();
@@ -2245,16 +2572,19 @@
     if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) return;
     if (target.id === "arkNovaBuildType") {
       arkNovaUi.buildType = target.value;
+      arkNovaUi.selectedBuildingId = null;
       const meta = ARK_NOVA_BUILDINGS[target.value];
       if (meta && !meta.variable) arkNovaUi.buildSize = meta.size;
       arkNovaUi.buildCells = [];
       arkNovaUi.buildRotation = 0;
     } else if (target.id === "arkNovaBuildSize") {
       arkNovaUi.buildSize = arkNovaNumber(target.value, 1);
+      arkNovaUi.selectedBuildingId = null;
       arkNovaUi.buildCells = [];
       arkNovaUi.buildRotation = 0;
     } else if (target.dataset.arknEnclosureFor) {
       arkNovaUi.animalEnclosures.set(target.dataset.arknEnclosureFor, target.value);
+      arkNovaUi.selectedBuildingId = target.value || null;
     } else if (target.id === "arkNovaAssociationTask") {
       arkNovaUi.associationDraft.task = target.value;
     } else if (target.id === "arkNovaAssociationContinent") {
@@ -2345,6 +2675,7 @@
       return;
     }
     arkNovaUi.selectedCards.clear();
+    arkNovaUi.selectedBuildingId = null;
     arkNovaUi.buildCells = [];
     arkNovaUi.buildRotation = 0;
     arkNovaUi.pendingSelection.clear();
@@ -2396,6 +2727,7 @@
 
   window.clearArkNovaState = clearArkNovaState;
   window.showArkNovaHeaderActions = showArkNovaHeaderActions;
+  window.showArkNovaError = showArkNovaError;
   window.renderArkNovaGameState = renderArkNovaGameState;
   window.ensureArkNovaPanel = arkNovaEnsureShell;
 

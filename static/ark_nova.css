@@ -325,6 +325,18 @@
   scroll-snap-type: x proximity;
 }
 
+@media (min-width: 821px) {
+  #arkNovaPanel #arkNovaHand {
+    cursor: grab;
+    scrollbar-gutter: stable;
+  }
+
+  #arkNovaPanel #arkNovaHand .arkn-card,
+  #arkNovaPanel #arkNovaHand button {
+    cursor: pointer;
+  }
+}
+
 #arkNovaPanel .arkn-card {
   --arkn-card-accent: #7e9488;
   background: linear-gradient(160deg, #f8f3e6, #e4dac4);
@@ -1203,6 +1215,28 @@
   position: relative;
 }
 
+#arkNovaPanel .arkn-map-frame.is-placement-mode {
+  box-shadow: inset 0 0 0 3px rgba(255, 159, 69, 0.78);
+}
+
+#arkNovaPanel .arkn-map-frame.is-placement-mode::after {
+  background: rgba(22, 42, 32, 0.9);
+  border: 1px solid rgba(255, 224, 163, 0.8);
+  border-radius: 999px;
+  bottom: 10px;
+  color: #fff0c7;
+  content: "Click a highlighted hex to place";
+  font-size: 0.63rem;
+  font-weight: 850;
+  left: 50%;
+  padding: 5px 10px;
+  pointer-events: none;
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  z-index: 3;
+}
+
 #arkNovaPanel .arkn-map-object {
   border: 0;
   display: block;
@@ -1336,17 +1370,52 @@
   padding: 9px 12px;
 }
 
-#arkNovaPanel .arkn-building-chip {
+#arkNovaPanel button.arkn-building-chip {
+  align-items: center;
   background: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--arkn-line);
+  border: 1px solid color-mix(in srgb, var(--arkn-building-color) 66%, white 12%);
+  border-left: 5px solid var(--arkn-building-color);
   border-radius: 7px;
-  display: grid;
-  gap: 1px;
-  padding: 5px 7px;
+  display: flex;
+  gap: 7px;
+  min-height: 43px;
+  padding: 5px 8px 5px 6px;
+  text-align: left;
 }
 
-#arkNovaPanel .arkn-building-chip b { font-size: 0.66rem; }
-#arkNovaPanel .arkn-building-chip small { color: var(--arkn-muted); font-size: 0.58rem; }
+#arkNovaPanel button.arkn-building-chip:hover,
+#arkNovaPanel button.arkn-building-chip:focus-visible {
+  background: color-mix(in srgb, var(--arkn-building-color) 22%, #173229);
+  border-color: #fff3a4;
+}
+
+#arkNovaPanel button.arkn-building-chip.is-selected {
+  background: color-mix(in srgb, var(--arkn-building-color) 34%, #173229);
+  border-color: #fff3a4;
+  box-shadow: 0 0 0 2px rgba(255, 243, 164, 0.35);
+}
+
+#arkNovaPanel .arkn-building-chip > i {
+  align-items: center;
+  background: color-mix(in srgb, var(--arkn-building-color) 74%, #f8f0cf);
+  border-radius: 50%;
+  display: flex;
+  flex: 0 0 27px;
+  font-size: 0.83rem;
+  font-style: normal;
+  height: 27px;
+  justify-content: center;
+}
+
+#arkNovaPanel .arkn-building-chip > span {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+#arkNovaPanel .arkn-building-chip b { color: var(--arkn-ink); font-size: 0.66rem; }
+#arkNovaPanel .arkn-building-chip small { color: #c2d5c9; font-size: 0.58rem; }
+#arkNovaPanel .arkn-building-chip em { color: var(--arkn-muted); font-size: 0.53rem; font-style: normal; }
 
 #arkNovaPanel .arkn-viewed-zoo-cards {
   background: rgba(2, 15, 10, 0.26);
@@ -1779,6 +1848,27 @@
 #arkNovaPanel .arkn-inline-actions > button,
 #arkNovaPanel .arkn-composer-footer > button {
   flex: 1 1 110px;
+}
+
+#arkNovaPanel .arkn-submit-reason {
+  align-items: flex-start;
+  background: rgba(242, 189, 85, 0.09);
+  border: 1px solid rgba(242, 189, 85, 0.28);
+  border-radius: 8px;
+  color: #efd9a7;
+  display: flex;
+  flex: 1 0 100%;
+  font-size: 0.63rem;
+  gap: 6px;
+  line-height: 1.4;
+  margin: 0;
+  padding: 6px 8px;
+}
+
+#arkNovaPanel .arkn-submit-reason > span {
+  color: var(--arkn-gold);
+  flex: 0 0 auto;
+  font-weight: 900;
 }
 
 #arkNovaPanel button.arkn-quiet {

@@ -124,6 +124,23 @@ class ArkNovaGameTests(unittest.TestCase):
                 if size >= 3:
                     self.assertFalse(_matches_footprint([f"A{row}" for row in range(1, size + 1)], footprint))
 
+    def test_special_enclosures_use_their_printed_fixed_shapes(self) -> None:
+        self.assertEqual(
+            BUILDING_FOOTPRINTS["petting_zoo"],
+            {(0, 0), (0, -1), (1, -2)},
+        )
+        self.assertEqual(
+            BUILDING_FOOTPRINTS["reptile_house"],
+            {(0, 0), (0, -1), (1, -1), (2, -2), (2, -1)},
+        )
+        self.assertEqual(
+            BUILDING_FOOTPRINTS["large_bird_aviary"],
+            {(0, 0), (0, -1), (1, -2), (1, -1), (2, -1)},
+        )
+        # The former compact/diamond approximations are not rotations of the
+        # actual special enclosure components.
+        self.assertFalse(_matches_footprint(["A1", "A2", "B2"], BUILDING_FOOTPRINTS["petting_zoo"]))
+
     def test_x_alternative_reorders_action_cards(self) -> None:
         state = self.make_state()
         self.set_slot(state, "p1", "build", 4)
@@ -268,7 +285,16 @@ class ArkNovaGameTests(unittest.TestCase):
         enclosure = _place_building(
             state, "p1", {"building_type": "standard_enclosure", "size": 5, "cells": cells}, [], free=True,
         )
+        if state.get("pending_choice"):
+            self.assertEqual(state["pending_choice"]["type"], "take_card")
+            _, error = ArkNovaGame.apply_action(
+                state,
+                "p1",
+                {"type": "resolve_choice", "selection": "deck"},
+            )
+            self.assertIsNone(error)
         self.add_hand_card(state, "p1", "401")
+        player = state["players"]["p1"]
         self.set_slot(state, "p1", "animals", 2)
         player["money"] = 50
         hand_before = len(player["hand"])
@@ -294,6 +320,71 @@ class ArkNovaGameTests(unittest.TestCase):
         self.assertEqual(len(state["bonus_tokens"]["8"]), 2)
         view = ArkNovaGame.get_public_view(state, "p1")
         self.assertEqual(len(view["bonus_tokens"]["5"]), 2)
+
+    def test_covering_map_bonus_applies_money_x_appeal_and_card_choice(self) -> None:
+        cases = (
+            ("I4", "money", 5),
+            ("E1", "x_tokens", 1),
+            ("A5", "appeal", 2),
+        )
+        for cell_id, resource, amount in cases:
+            with self.subTest(cell_id=cell_id):
+                state = self.make_state()
+                player = state["players"]["p1"]
+                before = int(player[resource])
+                events = []
+                _place_building(
+                    state,
+                    "p1",
+                    {"building_type": "standard_enclosure", "size": 1, "cells": [cell_id]},
+                    events,
+                    free=True,
+                )
+                self.assertEqual(player[resource], before + amount)
+                self.assertIn(cell_id, player["map"]["claimed_bonuses"])
+                self.assertTrue(any(event["type"] == "ark_nova:placement_bonus" for event in events))
+
+        state = self.make_state()
+        player = state["players"]["p1"]
+        hand_before = len(player["hand"])
+        events = []
+        _place_building(
+            state,
+            "p1",
+            {"building_type": "standard_enclosure", "size": 1, "cells": ["D7"]},
+            events,
+            free=True,
+        )
+        pending = state.get("pending_choice")
+        self.assertIsNotNone(pending)
+        self.assertEqual(pending["type"], "take_card")
+        self.assertIn("deck", [option["value"] for option in pending["options"]])
+        _, error = ArkNovaGame.apply_action(
+            state,
+            "p1",
+            {"type": "resolve_choice", "choice_id": pending["choice_id"], "selection": "deck"},
+        )
+        self.assertIsNone(error)
+        self.assertEqual(len(state["players"]["p1"]["hand"]), hand_before + 1)
+        self.assertIn("D7", state["players"]["p1"]["map"]["claimed_bonuses"])
+
+    def test_public_view_explains_unavailable_actions(self) -> None:
+        state = self.make_state()
+        player = state["players"]["p1"]
+        player["money"] = 0
+        player["x_tokens"] = 5
+        view = ArkNovaGame.get_public_view(state, "p1")
+        self.assertFalse(view["action_availability"]["build"]["available"])
+        self.assertEqual(
+            view["action_availability"]["build"]["reason"],
+            "You need at least 💰2 to build.",
+        )
+        self.assertEqual(
+            view["action_availability"]["gain_x"]["reason"],
+            "Your ✕-token storage is full.",
+        )
+        self.assertTrue(view["action_availability"]["cards"]["available"])
+        self.assertIsNone(view["action_availability"]["cards"]["reason"])
 
     def test_forced_extra_action_rejects_x_tokens_when_disallowed(self) -> None:
         state = self.make_state()

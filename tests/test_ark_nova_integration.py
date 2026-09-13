@@ -158,6 +158,61 @@ class ArkNovaIntegrationTests(unittest.TestCase):
         self.assertIn("function arkNovaPlacementAtAnchor", script)
         self.assertIn("arkNovaUi.buildCells = placement.cells", script)
         self.assertIn("Choose one anchor hex on Map 0", script)
+        self.assertIn("petting_zoo: [[0, 0], [0, -1], [1, -2]]", script)
+        self.assertIn("reptile_house: [[0, 0], [0, -1], [1, -1], [2, -2], [2, -1]]", script)
+        self.assertIn("large_bird_aviary: [[0, 0], [0, -1], [1, -2], [1, -1], [2, -1]]", script)
+
+    def test_map_and_building_list_select_and_highlight_buildings(self) -> None:
+        script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")
+        stylesheet = (ROOT / "static" / "ark_nova.css").read_text(encoding="utf-8")
+        self.assertIn('cell.addEventListener("click", () => arkNovaHandleMapCell', script)
+        self.assertIn('data-arkn-building-id="${arkNovaEscape(id)}"', script)
+        self.assertIn("function arkNovaSelectBuilding", script)
+        self.assertIn('cell.classList.add("is-building-highlight")', script)
+        self.assertIn("function arkNovaRenderMapBuildingLabels", script)
+        self.assertIn('return `STD ${arkNovaBuildingSize(building)}`', script)
+        self.assertIn(".arkn-building-chip.is-selected", stylesheet)
+        self.assertIn(".is-building-highlight .ark-nova-map0-hex", script)
+
+    def test_action_composer_explains_why_submit_is_disabled(self) -> None:
+        script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")
+        stylesheet = (ROOT / "static" / "ark_nova.css").read_text(encoding="utf-8")
+        room_script = (ROOT / "static" / "room.js").read_text(encoding="utf-8")
+        self.assertIn("function arkNovaActionUnavailableReason", script)
+        self.assertIn("function arkNovaIncompletePlanReason", script)
+        self.assertIn("view.action_availability && view.action_availability[actionType]", script)
+        self.assertIn('class="arkn-submit-reason" role="status"', script)
+        self.assertIn('aria-describedby="${reasonId}"', script)
+        self.assertIn(".arkn-submit-reason", stylesheet)
+        self.assertIn('gameType === "ark_nova"', room_script)
+        self.assertIn("window.showArkNovaError(data.message)", room_script)
+
+    def test_animal_map_assignment_validates_enclosure_before_saving(self) -> None:
+        script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")
+        issue_check = script.index("const issue = arkNovaAnimalEnclosureIssue(animal, building);")
+        assignment = script.index("arkNovaUi.animalEnclosures.set(arkNovaCardId(animal), id);", issue_check)
+        self.assertLess(issue_check, assignment)
+        self.assertIn("if (issue) arkNovaToast(issue);", script[issue_check:assignment])
+        self.assertIn("arkNovaBuildingName(building)", script)
+        self.assertIn("window.showArkNovaError = showArkNovaError", script)
+
+    def test_desktop_hand_maps_vertical_wheel_to_horizontal_scroll(self) -> None:
+        script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")
+        stylesheet = (ROOT / "static" / "ark_nova.css").read_text(encoding="utf-8")
+        self.assertIn('hand.addEventListener("wheel", arkNovaHandleHandWheel, { passive: false })', script)
+        self.assertIn("function arkNovaHandleHandWheel", script)
+        self.assertIn("hand.scrollLeft + event.deltaY", script)
+        self.assertIn("@media (min-width: 821px)", stylesheet)
+        self.assertIn("#arkNovaPanel #arkNovaHand", stylesheet)
+
+    def test_map_placement_bonus_log_names_the_reward(self) -> None:
+        script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")
+        self.assertIn("function arkNovaPlacementBonusText", script)
+        self.assertIn('money: `+💰${amount}`', script)
+        self.assertIn('appeal: `+🎟${amount}`', script)
+        self.assertIn('card: `Choose ${amount} card', script)
+        self.assertIn('eventType === "ark_nova:placement_bonus"', script)
+        self.assertIn("arkNovaToast(arkNovaPlacementBonusText(payload))", script)
 
     def test_mobile_map_has_contextual_rotate_control(self) -> None:
         script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")

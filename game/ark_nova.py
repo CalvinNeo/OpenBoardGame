@@ -71,9 +71,9 @@ BUILDING_FOOTPRINTS: Dict[str, Set[Tuple[int, int]]] = {
     "standard_enclosure_3": {(0, 0), (1, 0), (0, 1)},
     "standard_enclosure_4": {(0, 0), (1, 0), (0, 1), (1, 1)},
     "standard_enclosure_5": {(0, 0), (1, 0), (2, 0), (0, 1), (1, 1)},
-    "petting_zoo": {(0, 0), (1, 0), (0, 1)},
-    "reptile_house": {(0, 0), (1, 0), (2, 0), (0, 1), (1, 1)},
-    "large_bird_aviary": {(0, 0), (1, 0), (2, 0), (1, -1), (1, 1)},
+    "petting_zoo": {(0, 0), (0, -1), (1, -2)},
+    "reptile_house": {(0, 0), (0, -1), (1, -1), (2, -2), (2, -1)},
+    "large_bird_aviary": {(0, 0), (0, -1), (1, -2), (1, -1), (2, -1)},
 }
 SPECIAL_ENCLOSURES = {"petting_zoo", "reptile_house", "large_bird_aviary"}
 BUILDING_SUPPLY = {
@@ -679,10 +679,10 @@ def _apply_placement_bonus(
     elif bonus_type == "appeal":
         _apply_rewards(state, player_id, {"appeal": amount}, events, f"map:{cell_id}")
     elif bonus_type == "card":
-        for _ in range(amount):
-            card_id = _draw(state)
-            if card_id:
-                player["hand"].append(card_id)
+        # Map 0's card icon is a choice, not a blind top-deck draw: the player
+        # may take from the deck or from any display folder in reputation range.
+        for index in range(amount):
+            _queue_take_card_choice(state, player_id, f"map-{cell_id}-{index + 1}")
     elif bonus_type == "action_to_slot":
         options = sorted(player["action_cards"], key=lambda value: _action_slot(player, value))
         _queue_choice(state, {
@@ -3223,6 +3223,79 @@ def _find_placement(
     return None
 
 
+def _public_action_availability(
+    state: Mapping[str, Any], player_id: str, legal_actions: Sequence[str]
+) -> Dict[str, Dict[str, Any]]:
+    """Describe why a top-level action is disabled in the current public view.
+
+    The client can validate draft-specific details (selected cards, cells, and
+    tasks) as they are entered.  These reasons cover the server-owned gates so
+    a disabled action never has to be presented without an explanation.
+    """
+    legal = set(legal_actions)
+    action_types = (*ACTION_IDS, "gain_x", "keep_initial_cards", "resolve_choice")
+    player = state.get("players", {}).get(player_id)
+    pending = state.get("pending_choice")
+
+    def global_reason(action_type: str) -> Optional[str]:
+        if action_type in legal:
+            return None
+        if state.get("game_over"):
+            return "The game is over."
+        if player is None:
+            return "This player is not part of the game."
+        if player_id in state.get("setup_pending", []):
+            return "Choose exactly four starting cards first."
+        if state.get("setup_pending"):
+            return "Waiting for all players to choose their starting cards."
+        if pending:
+            if pending.get("player_id") == player_id:
+                return "Resolve the pending choice before taking another action."
+            return "Waiting for another player to resolve a pending choice."
+        if state.get("current_player") != player_id:
+            return "It is not your turn."
+        if state.get("phase") != "action":
+            return "The game is not accepting an action right now."
+        forced = state.get("forced_action")
+        if isinstance(forced, Mapping):
+            required = str(forced.get("action", "the granted"))
+            return f"You must perform the granted {required} action."
+        return None
+
+    result: Dict[str, Dict[str, Any]] = {}
+    for action_type in action_types:
+        reason = global_reason(action_type)
+        if reason is None and action_type not in legal and player is not None:
+            if action_type == "build":
+                if int(player.get("money", 0)) < 2:
+                    reason = "You need at least 💰2 to build."
+                else:
+                    reason = "There is no legal space for a size-1 building."
+            elif action_type == "animals":
+                level = _action_level(player, "animals")
+                face = ACTION_DEFS["animals"]["sides"]["II" if level == 2 else "I"]
+                strength = min(5, _action_slot(player, "animals"))
+                if int(face["maximum_cards_by_strength"][str(strength)]) < 1:
+                    reason = "This Animals card needs more action strength."
+                else:
+                    reason = "No Animal card is currently available to play."
+            elif action_type == "association":
+                if int(player.get("available_workers", 0)) < 1:
+                    reason = "No association worker is available."
+                else:
+                    reason = "Association needs at least action strength 2."
+            elif action_type == "gain_x":
+                reason = "Your ✕-token storage is full."
+            elif action_type == "keep_initial_cards":
+                reason = "Your starting hand has already been chosen."
+            elif action_type == "resolve_choice":
+                reason = "There is no pending choice for you."
+            else:
+                reason = f"{action_type.title()} cannot be used right now."
+        result[action_type] = {"available": action_type in legal, "reason": reason}
+    return result
+
+
 class ArkNovaGame:
     game_id = "ark_nova"
     min_players = 2
@@ -3484,6 +3557,7 @@ class ArkNovaGame:
     @staticmethod
     def get_public_view(state: Dict, viewer_id: str) -> Dict:
         viewer = state.get("players", {}).get(viewer_id)
+        legal_actions = ArkNovaGame.get_legal_actions(state, viewer_id)
         association_supply = copy.deepcopy(state.get("association_supply", {}))
         university_claims = {
             item["id"]: [
@@ -3582,7 +3656,8 @@ class ArkNovaGame:
             "your_hand": [_card_with_context(card_id, viewer) for card_id in (viewer or {}).get("hand", [])],
             "your_final_cards": [_full_card(card_id) for card_id in (viewer or {}).get("final_cards", [])],
             "pending_choice": _public_choice(state.get("pending_choice"), viewer_id),
-            "legal_actions": ArkNovaGame.get_legal_actions(state, viewer_id),
+            "legal_actions": legal_actions,
+            "action_availability": _public_action_availability(state, viewer_id, legal_actions),
             "action_definitions": copy.deepcopy(CARD_DATA["action_cards"]),
             "map_definition": copy.deepcopy(MAP0),
             "final_round": copy.deepcopy(state.get("final_round", {})),

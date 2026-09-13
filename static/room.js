@@ -1602,6 +1602,9 @@ socket.on("system:info", (data) => {
 
 socket.on("system:error", (data) => {
   log(`Error: ${data.message}`);
+  if (gameType === "ark_nova" && typeof window.showArkNovaError === "function") {
+    window.showArkNovaError(data.message);
+  }
 });
 
 socket.on("room:state", (state) => {
