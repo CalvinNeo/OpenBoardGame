@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css?v=app_v48" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v49" />
   <link rel="stylesheet" href="/static/ark_nova.css?v=app_v21" />
 </head>
 <body>
@@ -51,6 +51,7 @@
         <button id="createRoomModalCloseBtn" type="button">Close</button>
       </div>
       <div class="modal-body">
+        <div id="createRoomGameStep" class="create-room-step">
         <div class="create-room-controls">
           <div class="game-search-control">
             <label class="visually-hidden" for="gameSearchInput">Search games</label>
@@ -94,6 +95,27 @@
         <div id="gameListCount" class="hint game-list-count" role="status" aria-live="polite">Showing 0 games</div>
         <div id="gameList" class="game-list"></div>
         <div id="gameListEmpty" class="hint game-list-empty hidden" role="status">🎲 No games match your filters.</div>
+        </div>
+        <div id="forestShuffleLanguageStep" class="forest-shuffle-language-step hidden" aria-hidden="true">
+          <button id="forestShuffleLanguageBackBtn" class="create-room-back-btn" type="button">← Back to games</button>
+          <div class="forest-shuffle-language-hero">
+            <span class="forest-shuffle-language-icon" aria-hidden="true">🌲</span>
+            <div>
+              <h3>Choose game language</h3>
+              <p id="forestShuffleLanguageHint">Card names, actions, rules, and explanations will use this language.</p>
+            </div>
+          </div>
+          <div class="forest-shuffle-language-options" role="group" aria-labelledby="forestShuffleLanguageHint">
+            <button id="forestShuffleEnglishBtn" class="forest-shuffle-language-option" type="button">
+              <span class="forest-shuffle-language-flag" aria-hidden="true">🌎</span>
+              <span><strong>English</strong><small>English cards and rules</small></span>
+            </button>
+            <button id="forestShuffleChineseBtn" class="forest-shuffle-language-option" type="button">
+              <span class="forest-shuffle-language-flag" aria-hidden="true">🌏</span>
+              <span><strong>中文</strong><small>中文牌名与规则</small></span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </section>

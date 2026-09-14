@@ -195,6 +195,7 @@ class Player:
 class Room:
     room_id: str
     game_type: str = "cabo"
+    game_config: Dict = field(default_factory=dict)
     status: str = "lobby"
     players: List[Player] = field(default_factory=list)
     state_version: int = 0
@@ -386,6 +387,7 @@ async def _emit_room_state(room: Room) -> None:
         "room_id": room.room_id,
         "status": room.status,
         "game_type": room.game_type,
+        "game_config": dict(room.game_config),
         "auto_save": room.auto_save,
         "source_room_id": room.source_room_id,
         "players": [
@@ -1171,6 +1173,12 @@ async def on_room_create(sid, data):
         available = ", ".join(g.game_id for g in list_games())
         await _send_error(sid, f"unknown game_type (available: {available})")
         return
+    raw_config = (data or {}).get("config")
+    game_config = raw_config if raw_config is not None else {}
+    config_error = _validate_schema_payload(game_config, game_def.config_schema, "config")
+    if config_error:
+        await _send_error(sid, config_error)
+        return
     await _leave_session(sid)
     room_id = _generate_room_id()
     player_id = uuid.uuid4().hex
@@ -1185,7 +1193,12 @@ async def on_room_create(sid, data):
         reconnect_token=reconnect_token,
         last_seen=time.time(),
     )
-    room = Room(room_id=room_id, game_type=game_def.game_id, players=[player])
+    room = Room(
+        room_id=room_id,
+        game_type=game_def.game_id,
+        game_config=dict(game_config),
+        players=[player],
+    )
     ROOMS[room_id] = room
     SESSIONS[sid] = {"room_id": room_id, "player_id": player_id}
     await sio.enter_room(sid, room_id)
@@ -1518,11 +1531,15 @@ async def on_room_start(sid, data):
         for p in room.players
     ]
     raw_config = (data or {}).get("config")
-    config = raw_config if isinstance(raw_config, dict) else {}
-    if room.status == "game_over" and not config and isinstance(room.game_state, dict):
+    submitted_config = raw_config if isinstance(raw_config, dict) else {}
+    config = dict(room.game_config)
+    config.update(submitted_config)
+    if room.status == "game_over" and not submitted_config and isinstance(room.game_state, dict):
         previous_config = room.game_state.get("config")
         if isinstance(previous_config, dict):
-            config = previous_config
+            config = dict(previous_config)
+    if room.game_type == "forest_shuffle" and "language" in room.game_config:
+        config["language"] = room.game_config["language"]
     raw_skip_validation = (data or {}).get("skip_validation")
     skip_validation = raw_skip_validation if isinstance(raw_skip_validation, bool) else False
     room.schema_validation_enabled = not skip_validation
@@ -1610,6 +1627,7 @@ async def on_room_reopen(sid, data=None):
     new_room = Room(
         room_id=room_id,
         game_type=room.game_type,
+        game_config=dict(config),
         status="in_game",
         players=players,
         state_version=1,
@@ -1711,6 +1729,7 @@ async def on_room_load(sid, data):
     room = Room(
         room_id=room_id,
         game_type=game_type,
+        game_config=dict(game_state.get("config") or {}),
         status=status,
         players=players,
         state_version=state_version,

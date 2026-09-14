@@ -1244,6 +1244,10 @@ class ForestShuffleGame:
 
     @staticmethod
     def init_game(config: Dict, players: List[Dict]) -> Dict:
+        config = dict(config or {})
+        language = config.get("language", "en")
+        if language not in {"en", "zh"}:
+            raise ValueError("language must be 'en' or 'zh'")
         seed = config.get("seed")
         rng = random.Random(seed if seed is not None else random.randrange(1 << 30))
         player_order = _find_player_order(players)
@@ -1251,6 +1255,7 @@ class ForestShuffleGame:
         state = {
             "game_id": ForestShuffleGame.game_id,
             "config": {
+                "language": language,
                 "seed": seed,
                 "opening_mulligan_if_no_tree": bool(config.get("opening_mulligan_if_no_tree", False)),
             },
@@ -1398,6 +1403,7 @@ class ForestShuffleGame:
         pending = state.get("pending_action")
         return {
             "game_id": ForestShuffleGame.game_id,
+            "language": state.get("config", {}).get("language", "en"),
             "you": viewer_id,
             "current_turn": state.get("current_turn"),
             "turn_number": state.get("turn_number", 1),

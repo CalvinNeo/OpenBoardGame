@@ -2791,6 +2791,7 @@ FOREST_SHUFFLE_ACTION_SCHEMA = {
 FOREST_SHUFFLE_CONFIG_SCHEMA = {
     "type": "object",
     "properties": {
+        "language": {"type": "string", "enum": ["en", "zh"]},
         "opening_mulligan_if_no_tree": {"type": "boolean"},
         "seed": {"type": ["integer", "string"]},
     },
