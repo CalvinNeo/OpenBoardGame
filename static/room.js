@@ -10,6 +10,8 @@ const ACTION_LOG_MAX = 500;
 const ACTION_LOG_TRUNCATE_AT = 500;
 let roomControlsGameActive = false;
 let roomControlsAutoCollapsed = false;
+let roomControlsExplainButton = null;
+let roomControlsExplainAnchor = null;
 let createRoomPending = false;
 let pendingReadyAfterJoin = false;
 let pendingReadyRoomId = null;
@@ -74,6 +76,7 @@ const seatClaimList = document.getElementById("seatClaimList");
 const seatClaimEmpty = document.getElementById("seatClaimEmpty");
 const roomControlsPanel = document.getElementById("roomControlsPanel");
 const roomControlsToggleBtn = document.getElementById("roomControlsToggleBtn");
+const mobileExplainSlot = document.getElementById("mobileExplainSlot");
 const gameReconnectBtn = document.getElementById("gameReconnectBtn");
 
 const ROOM_AUTH_KEY = "openboardgame:room_auth";
@@ -1171,6 +1174,63 @@ function updateRoomControlsDock() {
   }
 }
 
+function restoreRoomControlsExplainButton() {
+  if (!roomControlsExplainButton) {
+    return;
+  }
+  roomControlsExplainButton.classList.remove("room-controls-mobile-explain");
+  if (roomControlsExplainAnchor && roomControlsExplainAnchor.parentNode) {
+    roomControlsExplainAnchor.parentNode.insertBefore(roomControlsExplainButton, roomControlsExplainAnchor);
+    roomControlsExplainAnchor.remove();
+  } else {
+    roomControlsExplainButton.remove();
+  }
+  roomControlsExplainButton = null;
+  roomControlsExplainAnchor = null;
+}
+
+function roomControlsExplainSourceIsVisible() {
+  if (!roomControlsExplainButton || !roomControlsExplainAnchor) {
+    return false;
+  }
+  const sourceContainer = roomControlsExplainAnchor.parentElement;
+  return (
+    sourceContainer &&
+    sourceContainer.getClientRects().length > 0 &&
+    !roomControlsExplainButton.hidden &&
+    !roomControlsExplainButton.classList.contains("hidden")
+  );
+}
+
+function syncRoomControlsExplainButton() {
+  if (!mobileExplainSlot || !roomControlsDockQuery.matches) {
+    restoreRoomControlsExplainButton();
+    updateRoomControlsDock();
+    return;
+  }
+  if (roomControlsExplainSourceIsVisible()) {
+    updateRoomControlsDock();
+    return;
+  }
+
+  restoreRoomControlsExplainButton();
+  const explainButton = Array.from(
+    document.querySelectorAll('.game-panel button[id$="ExplainBtn"]')
+  ).find((button) => (
+    !button.hidden &&
+    !button.classList.contains("hidden") &&
+    button.getClientRects().length > 0
+  ));
+  if (explainButton && explainButton.parentNode) {
+    roomControlsExplainAnchor = document.createComment("mobile Explain button anchor");
+    explainButton.parentNode.insertBefore(roomControlsExplainAnchor, explainButton);
+    explainButton.classList.add("room-controls-mobile-explain");
+    mobileExplainSlot.appendChild(explainButton);
+    roomControlsExplainButton = explainButton;
+  }
+  updateRoomControlsDock();
+}
+
 function setRoomControlsCollapsed(collapsed, { auto = false } = {}) {
   if (!roomControlsPanel) {
     return;
@@ -2030,9 +2090,7 @@ document.querySelectorAll(".collapse-btn").forEach((btn) => {
   });
 });
 
-window.addEventListener("resize", () => {
-  updateRoomControlsDock();
-});
+window.addEventListener("resize", syncRoomControlsExplainButton);
 
 if (logCloseBtn) {
   logCloseBtn.addEventListener("click", () => {

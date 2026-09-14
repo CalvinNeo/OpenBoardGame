@@ -137,6 +137,40 @@ def _apply_choice_effect(
     return "unknown choice type"
 
 
+def _occupied_slots(hand: List[Optional[Dict]]) -> List[int]:
+    return [slot for slot, card in enumerate(hand) if card is not None]
+
+
+def _choice_targets(state: Dict, player_id: str, choice_type: str) -> List[Dict]:
+    players = state.get("players", {})
+    player = players.get(player_id)
+    if not player:
+        return []
+
+    own_slots = _occupied_slots(player.get("hand", []))
+    if choice_type == "peek":
+        return [{"slot": slot} for slot in own_slots]
+
+    opponent_slots = [
+        (target_id, slot)
+        for target_id, target in players.items()
+        if target_id != player_id
+        for slot in _occupied_slots(target.get("hand", []))
+    ]
+    if choice_type == "spy":
+        return [
+            {"player_id": target_id, "slot": slot}
+            for target_id, slot in opponent_slots
+        ]
+    if choice_type == "swap":
+        return [
+            {"player_id": target_id, "slot": slot, "self_slot": self_slot}
+            for target_id, slot in opponent_slots
+            for self_slot in own_slots
+        ]
+    return []
+
+
 def _deck_reshuffle_if_needed(state: Dict) -> bool:
     if state["deck"]:
         return True
@@ -324,17 +358,29 @@ class CaboGame:
             actions = ["draw_deck", "draw_discard", "call_cabo"]
             if state["cabo_called_by"]:
                 actions = [a for a in actions if a != "call_cabo"]
-            if not state["discard"]:
+            if not state["deck"] and len(state["discard"]) <= 1:
+                actions = [a for a in actions if a != "draw_deck"]
+            if not state["discard"] or not _occupied_slots(state["players"][player_id]["hand"]):
                 actions = [a for a in actions if a != "draw_discard"]
             return actions
         if phase == "drawn":
-            actions = ["replace_card", "discard_drawn", "attempt_match"]
+            if not state.get("last_drawn"):
+                return []
+            occupied = _occupied_slots(state["players"][player_id]["hand"])
+            actions = ["discard_drawn"]
+            if occupied:
+                actions.insert(0, "replace_card")
+            if len(occupied) >= 2:
+                actions.append("attempt_match")
             drawn = state.get("last_drawn")
-            if drawn and drawn.get("choice"):
+            if drawn and _choice_targets(state, player_id, drawn.get("choice")):
                 actions.append("use_choice_action")
             return actions
         if phase == "choice_pending":
-            return ["use_choice_action"]
+            pending = state.get("pending_choice") or {}
+            if _choice_targets(state, player_id, pending.get("type")):
+                return ["use_choice_action"]
+            return []
         return []
 
     @staticmethod
@@ -479,7 +525,7 @@ class CaboGame:
                 state["discard"].append(drawn)
                 state["last_drawn"] = None
                 choice = drawn.get("choice")
-                if choice:
+                if choice and _choice_targets(state, player_id, choice):
                     state["phase"] = "choice_pending"
                     state["pending_choice"] = {"type": choice}
                     return events, None
@@ -612,7 +658,10 @@ class CaboGame:
     def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
         if state["phase"] == "initial_peek":
             if not state["players"][bot_id]["initial_peek_done"]:
-                slots = random.sample([0, 1, 2, 3], 2)
+                available_slots = _occupied_slots(state["players"][bot_id]["hand"])
+                if len(available_slots) < 2:
+                    return None
+                slots = random.sample(available_slots, 2)
                 return {"type": "initial_peek", "slots": slots}
             return None
 
@@ -626,14 +675,15 @@ class CaboGame:
 
         phase = state["phase"]
         if phase == "turn":
-            options = ["draw_deck", "draw_discard"]
-            if not state["discard"]:
-                options = ["draw_deck"]
+            legal = CaboGame.get_legal_actions(state, bot_id)
+            options = [action for action in ("draw_deck", "draw_discard") if action in legal]
+            if not options:
+                return {"type": "call_cabo"} if "call_cabo" in legal else None
             choice = random.choice(options)
             if choice == "draw_discard":
-                slots = [i for i, c in enumerate(state["players"][bot_id]["hand"]) if c is not None]
+                slots = _occupied_slots(state["players"][bot_id]["hand"])
                 if not slots:
-                    return {"type": "draw_deck"}
+                    return {"type": "call_cabo"} if "call_cabo" in legal else None
                 return {"type": "draw_discard", "slot": random.choice(slots)}
             return {"type": "draw_deck"}
 
@@ -664,32 +714,14 @@ class CaboGame:
             if not pending:
                 return None
             choice = pending["type"]
-            if choice == "peek":
-                return {"type": "use_choice_action", "choice_type": "peek", "target": {"slot": random.randint(0, 3)}}
-            if choice == "spy":
-                others = [pid for pid in state["players"] if pid != bot_id]
-                if not others:
-                    return {"type": "use_choice_action", "choice_type": "peek", "target": {"slot": random.randint(0, 3)}}
-                target_id = random.choice(others)
-                return {
-                    "type": "use_choice_action",
-                    "choice_type": "spy",
-                    "target": {"player_id": target_id, "slot": random.randint(0, 3)},
-                }
-            if choice == "swap":
-                others = [pid for pid in state["players"] if pid != bot_id]
-                if not others:
-                    return {"type": "use_choice_action", "choice_type": "peek", "target": {"slot": random.randint(0, 3)}}
-                target_id = random.choice(others)
-                return {
-                    "type": "use_choice_action",
-                    "choice_type": "swap",
-                    "target": {
-                        "player_id": target_id,
-                        "slot": random.randint(0, 3),
-                        "self_slot": random.randint(0, 3),
-                    },
-                }
+            targets = _choice_targets(state, bot_id, choice)
+            if not targets:
+                return None
+            return {
+                "type": "use_choice_action",
+                "choice_type": choice,
+                "target": random.choice(targets),
+            }
 
         return None
 

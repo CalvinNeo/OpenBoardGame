@@ -212,6 +212,55 @@ class CaboGameTests(unittest.TestCase):
 
         self.assertEqual(action, {"type": "next_round", "delay_ms": 300})
 
+    def test_bot_choice_actions_only_target_occupied_slots(self):
+        cases = [
+            (
+                "peek",
+                [_card(1), None, None, None],
+                [None, None, None, _card(2)],
+                {"slot": 3},
+            ),
+            (
+                "spy",
+                [None, None, _card(1), None],
+                [None, None, None, _card(2)],
+                {"player_id": "p1", "slot": 2},
+            ),
+            (
+                "swap",
+                [None, _card(1), None, None],
+                [None, None, None, _card(2)],
+                {"player_id": "p1", "slot": 1, "self_slot": 3},
+            ),
+        ]
+        for choice, opponent_hand, bot_hand, expected_target in cases:
+            with self.subTest(choice=choice):
+                self.state["phase"] = "choice_pending"
+                self.state["current_turn"] = "p2"
+                self.state["pending_choice"] = {"type": choice}
+                self.state["players"]["p1"]["hand"] = opponent_hand
+                self.state["players"]["p2"]["hand"] = bot_hand
+
+                action = CaboGame.bot_move(self.state, "p2")
+
+                self.assertEqual(action["choice_type"], choice)
+                self.assertEqual(action["target"], expected_target)
+                _, error = CaboGame.apply_action(self.state, "p2", action)
+                self.assertIsNone(error)
+
+    def test_discarded_choice_without_a_target_is_skipped(self):
+        self.state["phase"] = "drawn"
+        self.state["current_turn"] = "p2"
+        self.state["players"]["p2"]["hand"] = [None, None, None, None]
+        self.state["last_drawn"] = {"value": 7, "choice": "peek"}
+
+        _, error = CaboGame.apply_action(self.state, "p2", {"type": "discard_drawn"})
+
+        self.assertIsNone(error)
+        self.assertEqual(self.state["phase"], "turn")
+        self.assertEqual(self.state["current_turn"], "p1")
+        self.assertIsNone(self.state["pending_choice"])
+
 
 if __name__ == "__main__":
     unittest.main()

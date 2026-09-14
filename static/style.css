@@ -1243,6 +1243,11 @@ h1 {
   gap: 8px;
 }
 
+.room-controls-title-short,
+.mobile-explain-slot {
+  display: none;
+}
+
 .panel-header h2,
 .panel-header h3 {
   margin: 0;
@@ -7740,6 +7745,41 @@ button.splendor-card {
 
   body.room-controls-docked .container {
     padding-top: calc(12px + var(--room-controls-bar-height, 0px));
+  }
+
+  .room-controls-title-full {
+    display: none;
+  }
+
+  .room-controls-title-short {
+    display: inline;
+  }
+
+  #mobileExplainSlot:not(:empty) {
+    display: flex;
+  }
+
+  #roomControlsPanel #mobileExplainSlot > button {
+    width: auto;
+    min-height: 0;
+    margin: 0;
+    padding: 2px 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: transparent;
+    color: inherit;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: normal;
+    white-space: nowrap;
+  }
+
+  #roomControlsPanel #mobileExplainSlot > button.active,
+  #roomControlsPanel #mobileExplainSlot > button[aria-pressed="true"] {
+    border-color: #60a5fa;
+    background: #dbeafe;
+    color: #1d4ed8;
   }
 
   .game-panel {

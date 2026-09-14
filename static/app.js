@@ -466,6 +466,9 @@ function setGamePanelVisibility(gameType) {
     showFangNiaoHeaderActions(showFangNiao);
   }
   document.body.classList.toggle("trekking-active", showTrekking);
+  if (typeof syncRoomControlsExplainButton === "function") {
+    syncRoomControlsExplainButton();
+  }
 }
 
 function roomHasBots() {
