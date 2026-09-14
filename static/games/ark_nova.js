@@ -161,6 +161,50 @@
     <div class="arkn-help-grid">
       <section><h4>Goal</h4><p>Build a modern zoo. Raise <strong>🎟 Appeal</strong> and <strong>🌿 Conservation</strong>; when the two scoring markers meet or cross, the end game begins.</p></section>
       <section><h4>Your turn</h4><p>Choose exactly one Action card. Its slot is its base strength. You may add X-tokens, then the used card moves to slot 1 and the crossed cards shift right.</p></section>
+      <section class="arkn-help-icon-guide">
+        <h4>Icon guide</h4>
+        <p class="arkn-help-icon-intro">The same symbol can have a related meaning in more than one place. Its card, track, or map context tells you which one applies.</p>
+        <div class="arkn-help-icon-groups">
+          <div class="arkn-help-icon-group">
+            <h5>Actions &amp; counters</h5>
+            <div class="arkn-help-icon-item is-key"><span aria-hidden="true">⚡</span><p><strong>Action card, slot &amp; strength</strong>⚡ alone means any Action card. ⚡1–⚡5 means that Action slot, whose number is the card's base strength. On a Sponsor card requirement, the number beside ⚡ is the minimum Sponsors strength required.</p></div>
+            <div class="arkn-help-icon-item"><span aria-hidden="true">✕</span><p><strong>X-token</strong>Spend before acting for +1 strength each, up to strength 5. “Take X instead” gains one without performing the action.</p></div>
+            <div class="arkn-help-icon-item"><span aria-hidden="true">✳️</span><p><strong>Multiplier token</strong>Stored on a specific Action card; when used, it lets that action resolve one additional time.</p></div>
+            <div class="arkn-help-icon-item"><span aria-hidden="true">♟</span><p><strong>Association worker</strong>Commit workers to Association tasks. Committed workers return at each Break.</p></div>
+            <div class="arkn-help-icon-item is-wide-symbols"><span aria-hidden="true">🗂️ 🔨 🐾 🤝 🏛️</span><p><strong>Action cards</strong>Cards, Build, Animals, Association, and Sponsors, in that order. <b>II</b> marks an upgraded action.</p></div>
+          </div>
+          <div class="arkn-help-icon-group">
+            <h5>Tracks &amp; economy</h5>
+            <div class="arkn-help-icon-item"><span aria-hidden="true">💰</span><p><strong>Money</strong>Pay for cards, buildings, and donations. A + means money gained; a bare number is normally a cost.</p></div>
+            <div class="arkn-help-icon-item"><span aria-hidden="true">🎟</span><p><strong>Appeal</strong>Your zoo's popularity track. It determines Break income and helps trigger the end game.</p></div>
+            <div class="arkn-help-icon-item"><span aria-hidden="true">🌿</span><p><strong>Conservation</strong>Conservation points, usually earned from projects; this track combines with Appeal for end-game scoring.</p></div>
+            <div class="arkn-help-icon-item"><span aria-hidden="true">🎓</span><p><strong>Reputation</strong>Controls how far along the card display you may reach and grants printed track rewards.</p></div>
+            <div class="arkn-help-icon-item"><span aria-hidden="true">🔬</span><p><strong>Science</strong>A permanent tag supplied by played cards and universities; card and project requirements may count it.</p></div>
+          </div>
+          <div class="arkn-help-icon-group">
+            <h5>Animal &amp; continent tags</h5>
+            <div class="arkn-help-icon-item is-wide-symbols"><span aria-hidden="true">🐾 🦌 🪶 🦎 🐒 🐻 🐐</span><p><strong>Animal tags</strong>Predator, Herbivore, Bird, Reptile, Primate, Bear, and Petting-zoo animal. These are counted by card and conservation-project requirements.</p></div>
+            <div class="arkn-help-icon-item is-continent-guide"><span aria-hidden="true">
+              <i class="arkn-continent-chip is-africa">Africa</i>
+              <i class="arkn-continent-chip is-americas">Americas</i>
+              <i class="arkn-continent-chip is-asia">Asia</i>
+              <i class="arkn-continent-chip is-australia">Australia</i>
+              <i class="arkn-continent-chip is-europe">Europe</i>
+            </span><p><strong>Continent tags</strong>The colored name is an animal's continent. Projects count them; a matching partner zoo discounts that animal by 3 money.</p></div>
+          </div>
+          <div class="arkn-help-icon-group">
+            <h5>Map, enclosures &amp; requirements</h5>
+            <div class="arkn-help-icon-item"><span aria-hidden="true">⬡</span><p><strong>Enclosure size</strong>The number is the required enclosure capacity or the number of map hexes in a piece.</p></div>
+            <div class="arkn-help-icon-item"><span aria-hidden="true">💧</span><p><strong>Water adjacency</strong>The occupied enclosure or unique building must touch the shown number of water spaces.</p></div>
+            <div class="arkn-help-icon-item"><span aria-hidden="true">🪨</span><p><strong>Rock adjacency</strong>The occupied enclosure or unique building must touch the shown number of rock spaces.</p></div>
+            <div class="arkn-help-icon-item"><span aria-hidden="true">↔</span><p><strong>Zoo-border adjacency</strong>The unique building must touch the shown number of border spaces.</p></div>
+            <div class="arkn-help-icon-item"><span aria-hidden="true">🧩</span><p><strong>Unique-building footprint</strong>The number shows how many Map 0 hexes that Sponsor building occupies.</p></div>
+            <div class="arkn-help-icon-item is-wide-symbols"><span aria-hidden="true">💰 🎪 🐐 🦎 🪶</span><p><strong>Building picker</strong>Kiosk, Pavilion, Petting zoo, Reptile house, and Large bird aviary. Here the surrounding building label—not the shared emoji alone—sets the meaning.</p></div>
+            <div class="arkn-help-icon-item is-wide-symbols"><span aria-hidden="true">🤝 🌍 🏫</span><p><strong>Association items</strong>A partner-zoo requirement, a partner-zoo choice, and a university.</p></div>
+          </div>
+        </div>
+        <p class="arkn-help-notation"><strong>Reading numbers:</strong> <b>+2</b> means gain 2; <b>×2</b> means two matching icons or spaces; <b>≥2</b> is a minimum track value; a number without + on a cost or requirement is what you must pay or meet; <b>or</b> means either enclosure option is legal.</p>
+      </section>
       <section><h4>🗂️ Cards</h4><p>Advance Break, then draw cards. At sufficient strength you can Snap one card from any display folder.</p></section>
       <section><h4>🔨 Build</h4><p>Buildings cost 2 money per hex. Choose an anchor hex to place the selected fixed piece, then rotate it if needed. The first touches an edge; later buildings touch your zoo. Water, rock, occupied spaces, kiosk distance, and Build II spaces restrict placement.</p></section>
       <section><h4>🐾 Animals</h4><p>Pay the card cost and place each animal into a suitable empty enclosure. Check card requirements, habitat size, and water or rock adjacency before playing.</p></section>
@@ -189,6 +233,7 @@
 
   let arkNovaCurrentData = null;
   let arkNovaView = null;
+  let arkNovaSessionKey = "";
   let arkNovaLastContextKey = "";
   let arkNovaExplainMode = false;
   let arkNovaMapDocument = null;
@@ -2449,6 +2494,13 @@
     arkNovaApplyMapState();
   }
 
+  function arkNovaSyncSession(data) {
+    const nextSessionKey = String(data && data.room_id || "");
+    if (!nextSessionKey) return;
+    if (arkNovaSessionKey && nextSessionKey !== arkNovaSessionKey) clearArkNovaState();
+    arkNovaSessionKey = nextSessionKey;
+  }
+
   function arkNovaRerenderInteractive() {
     if (!arkNovaView) return;
     arkNovaRenderDisplay(arkNovaView);
@@ -2863,6 +2915,7 @@
   function clearArkNovaState() {
     arkNovaCurrentData = null;
     arkNovaView = null;
+    arkNovaSessionKey = "";
     arkNovaLastContextKey = "";
     arkNovaEventLog = [];
     arkNovaEventKeys.clear();
@@ -2884,6 +2937,7 @@
   }
 
   function renderArkNovaGameState(data) {
+    arkNovaSyncSession(data);
     const panel = arkNovaEnsureShell();
     panel.classList.remove("hidden");
     showArkNovaHeaderActions(true);

@@ -45,6 +45,13 @@ class ArkNovaIntegrationTests(unittest.TestCase):
         self.assertIn('id="arkNovaMapXStorage"', script)
         self.assertTrue((ROOT / "static" / "assets" / "ark_nova" / "map0.svg").is_file())
 
+    def test_ark_nova_frontend_resets_session_state_between_rooms(self) -> None:
+        script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")
+
+        self.assertIn('const nextSessionKey = String(data && data.room_id || "");', script)
+        self.assertIn("nextSessionKey !== arkNovaSessionKey", script)
+        self.assertIn("arkNovaSyncSession(data);", script)
+
     def test_hand_card_body_never_opens_details(self) -> None:
         script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")
         self.assertIn('const isHandCard = options.zone === "hand";', script)
@@ -101,6 +108,33 @@ class ArkNovaIntegrationTests(unittest.TestCase):
         self.assertIn("function arkNovaRichText", script)
         self.assertIn("arkNovaRichText(arkNovaCardSummary(card))", script)
         self.assertIn(".arkn-inline-token", stylesheet)
+
+    def test_help_explains_every_game_icon_family(self) -> None:
+        script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")
+        stylesheet = (ROOT / "static" / "ark_nova.css").read_text(encoding="utf-8")
+
+        self.assertIn('<h4>Icon guide</h4>', script)
+        for label in (
+            "Action card, slot &amp; strength",
+            "X-token",
+            "Multiplier token",
+            "Association worker",
+            "Action cards",
+            "Tracks &amp; economy",
+            "Animal tags",
+            "Continent tags",
+            "Enclosure size",
+            "Water adjacency",
+            "Rock adjacency",
+            "Zoo-border adjacency",
+            "Unique-building footprint",
+            "Building picker",
+            "Association items",
+            "Reading numbers",
+        ):
+            self.assertIn(label, script)
+        self.assertIn(".arkn-help-icon-guide", stylesheet)
+        self.assertIn(".arkn-help-icon-groups", stylesheet)
 
     def test_card_requirements_and_rewards_have_separate_regions(self) -> None:
         script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")

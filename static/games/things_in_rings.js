@@ -1449,7 +1449,7 @@ if (thingsInRingsZoneModalCloseBtn) {
 }
 
 window.addEventListener("resize", () => {
-  if (currentGameType !== "things_in_rings" || !currentThingsInRingsView) {
+  if (!currentThingsInRingsView || currentGameType !== "things_in_rings") {
     return;
   }
   renderThingsInRingsBoard(currentThingsInRingsView);
