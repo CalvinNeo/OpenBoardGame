@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css?v=app_v42" />
-  <link rel="stylesheet" href="/static/ark_nova.css?v=app_v19" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v48" />
+  <link rel="stylesheet" href="/static/ark_nova.css?v=app_v21" />
 </head>
 <body>
   <section id="logPanel" class="log-panel hidden" aria-hidden="true">
@@ -156,6 +156,28 @@
       </div>
       <div class="modal-body">
         <div id="projectLExplainContent"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="blokusHelpModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="blokusHelpModalTitle">
+    <div class="modal-content blokus-help-modal">
+      <div class="modal-header">
+        <h2 id="blokusHelpModalTitle">Blokus - Game Rules</h2>
+        <button id="blokusHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body blokus-help-content"></div>
+    </div>
+  </section>
+
+  <section id="blokusExplainModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="blokusExplainModalTitle">
+    <div class="modal-content blokus-explain-modal">
+      <div class="modal-header">
+        <h2 id="blokusExplainModalTitle">Button Explanation</h2>
+        <button id="blokusExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="blokusExplainContent"></div>
       </div>
     </div>
   </section>
@@ -1612,6 +1634,10 @@
             <div class="panel-header-actions" id="projectLHeaderActions" style="display: none;">
               <button id="projectLHelpBtn" class="project-l-header-btn" type="button">Help</button>
               <button id="projectLExplainBtn" class="project-l-header-btn" type="button">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="blokusHeaderActions" style="display: none;">
+              <button id="blokusHelpBtn" class="blokus-header-btn" type="button">Help</button>
+              <button id="blokusExplainBtn" class="blokus-header-btn" type="button" aria-pressed="false">Explain</button>
             </div>
             <div class="panel-header-actions" id="manilaHeaderActions" style="display: none;">
               <button id="manilaHelpBtn" class="manila-header-btn" type="button">Help</button>
@@ -5064,52 +5090,66 @@
               </div>
               <div class="row">
                 <div>Selected Piece: <span id="blokusSelectedPiece">-</span></div>
-                <div>Origin (top-left): <span id="blokusOrigin">-</span></div>
+                <div>Position: <span id="blokusOrigin">-</span></div>
               </div>
               <div class="row">
                 <button id="blokusGiveUpBtn">Give Up</button>
               </div>
               <div class="row">
-                <div class="hint">Tap the board to set the origin cell, or drag to position the piece.</div>
+                <div class="hint">Select a piece, then tap or drag it on the board. Transform controls stay outside the board.</div>
               </div>
 
               <div class="blokus-layout">
                 <div>
                   <h3>Board</h3>
                   <div class="blokus-board-wrapper">
-                    <div id="blokusBoard" class="blokus-board"></div>
+                    <div class="blokus-board-stage">
+                      <div id="blokusBoard" class="blokus-board"></div>
+                      <div id="blokusPivot" class="blokus-piece-pivot hidden" aria-hidden="true"></div>
+                    </div>
                     <div id="blokusBoardControls" class="blokus-board-controls hidden">
-                      <button id="blokusRotateLeftBtn" type="button" class="blokus-control-btn" title="Rotate left" aria-label="Rotate left">
-                        ↺
-                      </button>
-                      <button id="blokusRotateRightBtn" type="button" class="blokus-control-btn" title="Rotate right" aria-label="Rotate right">
-                        ↻
-                      </button>
-                      <button id="blokusFlipBtn" type="button" class="blokus-control-btn" title="Flip piece" aria-label="Flip piece">
-                        Flip
-                      </button>
-                      <span class="blokus-control-break" aria-hidden="true"></span>
-                      <div class="blokus-nudge-grid" aria-label="Nudge controls">
-                        <button id="blokusNudgeUpBtn" type="button" class="blokus-control-btn blokus-nudge-btn blokus-nudge-up" title="Nudge up" aria-label="Nudge up">
-                          &uarr;
+                      <div class="blokus-transform-controls" role="group" aria-label="Rotate and flip piece">
+                        <button id="blokusRotateLeftBtn" type="button" class="blokus-control-btn" title="Rotate 90° left (Q)" aria-label="Rotate 90 degrees left" aria-keyshortcuts="Q">
+                          <span class="blokus-control-icon" aria-hidden="true">↺</span>
+                          <span class="blokus-control-text">Left</span>
                         </button>
-                        <button id="blokusNudgeLeftBtn" type="button" class="blokus-control-btn blokus-nudge-btn blokus-nudge-left" title="Nudge left" aria-label="Nudge left">
-                          &larr;
+                        <button id="blokusFlipBtn" type="button" class="blokus-control-btn" title="Flip piece (F)" aria-label="Flip piece" aria-keyshortcuts="F">
+                          <span class="blokus-control-icon" aria-hidden="true">⇋</span>
+                          <span class="blokus-control-text">Flip</span>
                         </button>
-                        <button id="blokusNudgeRightBtn" type="button" class="blokus-control-btn blokus-nudge-btn blokus-nudge-right" title="Nudge right" aria-label="Nudge right">
-                          &rarr;
-                        </button>
-                        <button id="blokusNudgeDownBtn" type="button" class="blokus-control-btn blokus-nudge-btn blokus-nudge-down" title="Nudge down" aria-label="Nudge down">
-                          &darr;
+                        <button id="blokusRotateRightBtn" type="button" class="blokus-control-btn" title="Rotate 90° right (E)" aria-label="Rotate 90 degrees right" aria-keyshortcuts="E">
+                          <span class="blokus-control-icon" aria-hidden="true">↻</span>
+                          <span class="blokus-control-text">Right</span>
                         </button>
                       </div>
+                      <button id="blokusPlaceBtn" type="button" class="blokus-place-control" title="Place piece (Enter)" aria-keyshortcuts="Enter">
+                        Place Piece
+                      </button>
+                      <div class="blokus-nudge-section">
+                        <span class="blokus-control-label">Move</span>
+                        <div class="blokus-nudge-grid" role="group" aria-label="Move piece one cell">
+                          <button id="blokusNudgeUpBtn" type="button" class="blokus-control-btn blokus-nudge-btn blokus-nudge-up" title="Move up (Arrow Up)" aria-label="Move up one cell" aria-keyshortcuts="ArrowUp">
+                          &uarr;
+                          </button>
+                          <button id="blokusNudgeLeftBtn" type="button" class="blokus-control-btn blokus-nudge-btn blokus-nudge-left" title="Move left (Arrow Left)" aria-label="Move left one cell" aria-keyshortcuts="ArrowLeft">
+                          &larr;
+                          </button>
+                          <span class="blokus-nudge-center" aria-hidden="true">◎</span>
+                          <button id="blokusNudgeRightBtn" type="button" class="blokus-control-btn blokus-nudge-btn blokus-nudge-right" title="Move right (Arrow Right)" aria-label="Move right one cell" aria-keyshortcuts="ArrowRight">
+                          &rarr;
+                          </button>
+                          <button id="blokusNudgeDownBtn" type="button" class="blokus-control-btn blokus-nudge-btn blokus-nudge-down" title="Move down (Arrow Down)" aria-label="Move down one cell" aria-keyshortcuts="ArrowDown">
+                          &darr;
+                          </button>
+                        </div>
+                      </div>
+                      <div class="blokus-controls-hint">Drag · arrows move · Q/E rotate · F flip</div>
                     </div>
                   </div>
                 </div>
                 <div class="blokus-pieces-column">
                   <div class="blokus-pieces-header">
                     <h3>Pieces</h3>
-                    <button id="blokusPlaceBtn">Place Piece</button>
                   </div>
                   <div id="blokusPieces" class="blokus-pieces"></div>
                 </div>
@@ -5611,7 +5651,7 @@
 
   <script src="/static/vendor/socket.io.min.js"></script>
   <script src="/static/games/shared.js?v=app_v10"></script>
-  <script src="/static/games/blokus.js?v=app_v4"></script>
+  <script src="/static/games/blokus.js?v=app_v6"></script>
   <script src="/static/games/carcassonne.js?v=app_v6"></script>
   <script src="/static/games/azul.js?v=app_v4"></script>
   <script src="/static/games/draw_guess.js?v=app_v4"></script>
@@ -5676,7 +5716,7 @@
   <script src="/static/games/ra.js?v=app_v6"></script>
   <script src="/static/games/scout.js?v=app_v4"></script>
   <script src="/static/games/ark_nova.js?v=app_v22"></script>
-  <script src="/static/app.js?v=app_v11"></script>
+  <script src="/static/app.js?v=app_v12"></script>
   <script src="/static/room.js?v=app_v21"></script>
 </body>
 </html>

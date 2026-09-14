@@ -6,6 +6,7 @@ const blokusOriginLabel = document.getElementById("blokusOrigin");
 const blokusPlaceBtn = document.getElementById("blokusPlaceBtn");
 const blokusGiveUpBtn = document.getElementById("blokusGiveUpBtn");
 const blokusBoardControls = document.getElementById("blokusBoardControls");
+const blokusPivot = document.getElementById("blokusPivot");
 const blokusRotateLeftBtn = document.getElementById("blokusRotateLeftBtn");
 const blokusRotateRightBtn = document.getElementById("blokusRotateRightBtn");
 const blokusFlipBtn = document.getElementById("blokusFlipBtn");
@@ -16,6 +17,14 @@ const blokusNudgeRightBtn = document.getElementById("blokusNudgeRightBtn");
 const blokusBoard = document.getElementById("blokusBoard");
 const blokusPieces = document.getElementById("blokusPieces");
 const blokusPlayers = document.getElementById("blokusPlayers");
+const blokusHeaderActions = document.getElementById("blokusHeaderActions");
+const blokusHelpBtn = document.getElementById("blokusHelpBtn");
+const blokusExplainBtn = document.getElementById("blokusExplainBtn");
+const blokusHelpModal = document.getElementById("blokusHelpModal");
+const blokusHelpModalCloseBtn = document.getElementById("blokusHelpModalCloseBtn");
+const blokusExplainModal = document.getElementById("blokusExplainModal");
+const blokusExplainModalCloseBtn = document.getElementById("blokusExplainModalCloseBtn");
+const blokusExplainContent = document.getElementById("blokusExplainContent");
 
 let currentBlokusView = null;
 
@@ -24,6 +33,8 @@ let blokusSelectedOrigin = null;
 let blokusRotation = 0;
 let blokusFlip = false;
 let blokusDragState = null;
+let blokusExplainMode = false;
+let blokusExplainSuppressNextClick = false;
 
 const BLOKUS_DRAG_THRESHOLD = 6;
 const BLOKUS_ADJACENT_OFFSETS = [
@@ -38,14 +49,74 @@ const BLOKUS_DIAGONAL_OFFSETS = [
   [-1, 1],
   [-1, -1],
 ];
+const BLOKUS_HELP_TEXT = `
+  <h3>Goal</h3>
+  <p>Cover as much of the 20 × 20 board as possible with your color: 🔵 blue, 🟡 yellow, 🔴 red, or 🟢 green.</p>
+  <h3>Placement rules</h3>
+  <ul>
+    <li>Your first piece must cover your color's starting corner.</li>
+    <li>Later pieces must touch at least one of your pieces corner-to-corner.</li>
+    <li>Your own pieces may not share an edge. Pieces of other colors may touch in any direction.</li>
+    <li>Pieces may be rotated or flipped before placement.</li>
+  </ul>
+  <h3>Controls</h3>
+  <ul>
+    <li>Select a piece, then tap or drag on the board to position it.</li>
+    <li>Use the arrow pad or keyboard arrow keys for one-cell adjustments.</li>
+    <li>Use ↺ / ↻ or Q / E to rotate, ⇋ or F to flip, and Enter to place.</li>
+    <li>The crosshair marks the selected piece's center of gravity, which stays as stable as the grid allows while transforming.</li>
+  </ul>
+  <h3>End and scoring</h3>
+  <p>When no player can continue, each unplayed square is worth −1 point. Playing every piece earns +15; finishing with the single-square piece earns another +5. Highest score wins.</p>
+`;
+const BLOKUS_BUTTON_EXPLANATIONS = {
+  blokusRotateLeftBtn: {
+    name: "Rotate Left ↺",
+    description: "Rotate the selected piece 90° counterclockwise around its center of gravity. Shortcut: Q."
+  },
+  blokusFlipBtn: {
+    name: "Flip ⇋",
+    description: "Mirror the selected piece horizontally around its center of gravity. Shortcut: F."
+  },
+  blokusRotateRightBtn: {
+    name: "Rotate Right ↻",
+    description: "Rotate the selected piece 90° clockwise around its center of gravity. Shortcut: E."
+  },
+  blokusNudgeUpBtn: {
+    name: "Move Up ↑",
+    description: "Move the selected piece up by one board cell. Shortcut: Arrow Up."
+  },
+  blokusNudgeLeftBtn: {
+    name: "Move Left ←",
+    description: "Move the selected piece left by one board cell. Shortcut: Arrow Left."
+  },
+  blokusNudgeDownBtn: {
+    name: "Move Down ↓",
+    description: "Move the selected piece down by one board cell. Shortcut: Arrow Down."
+  },
+  blokusNudgeRightBtn: {
+    name: "Move Right →",
+    description: "Move the selected piece right by one board cell. Shortcut: Arrow Right."
+  },
+  blokusPlaceBtn: {
+    name: "Place Piece",
+    description: "Confirm the previewed placement. The button is enabled only when a piece and position are selected on your turn. Shortcut: Enter."
+  },
+  blokusGiveUpBtn: {
+    name: "Give Up",
+    description: "Permanently stop taking turns for the rest of this game. Use this only when you do not want to make another move."
+  }
+};
 
 function clearBlokusState() {
+  exitBlokusExplainMode();
   currentBlokusView = null;
   blokusSelectedPieceId = null;
   blokusSelectedOrigin = null;
   blokusRotation = 0;
   blokusFlip = false;
   blokusDragState = null;
+  updateBlokusTransformButtonState();
   if (blokusStatusLabel) {
     blokusStatusLabel.textContent = "-";
   }
@@ -64,8 +135,11 @@ function clearBlokusState() {
   }
   if (blokusBoardControls) {
     blokusBoardControls.classList.add("hidden");
-    blokusBoardControls.style.left = "";
-    blokusBoardControls.style.top = "";
+  }
+  if (blokusPivot) {
+    blokusPivot.classList.add("hidden");
+    blokusPivot.style.left = "";
+    blokusPivot.style.top = "";
   }
   if (blokusBoard) {
     blokusBoard.classList.remove("dragging");
@@ -375,15 +449,15 @@ function getBlokusGridPoint(point, metrics) {
   };
 }
 
-function getBlokusSelectedPiecePlacement(view) {
-  if (!view || !blokusSelectedPieceId || !view.piece_defs) {
+function getBlokusPiecePlacement(view, pieceId, rotation, flip) {
+  if (!view || !pieceId || !view.piece_defs) {
     return null;
   }
-  const def = view.piece_defs[blokusSelectedPieceId];
+  const def = view.piece_defs[pieceId];
   if (!def || !Array.isArray(def.cells) || !def.cells.length) {
     return null;
   }
-  const coords = transformBlokusCells(def.cells, blokusRotation, blokusFlip);
+  const coords = transformBlokusCells(def.cells, rotation, flip);
   if (!coords.length) {
     return null;
   }
@@ -396,6 +470,7 @@ function getBlokusSelectedPiecePlacement(view) {
   const maxX = Math.max(...coords.map(([x]) => x));
   const maxY = Math.max(...coords.map(([, y]) => y));
   return {
+    coords,
     width: maxX + 1,
     height: maxY + 1,
     anchorX: sumX / coords.length,
@@ -403,8 +478,65 @@ function getBlokusSelectedPiecePlacement(view) {
   };
 }
 
+function getBlokusSelectedPiecePlacement(view) {
+  return getBlokusPiecePlacement(
+    view,
+    blokusSelectedPieceId,
+    blokusRotation,
+    blokusFlip,
+  );
+}
+
 function clampBlokusValue(value, min, max) {
   return Math.min(Math.max(value, min), max);
+}
+
+function updateBlokusTransformButtonState() {
+  if (!blokusFlipBtn) {
+    return;
+  }
+  blokusFlipBtn.setAttribute("aria-pressed", String(blokusFlip));
+  blokusFlipBtn.classList.toggle("tool-active", blokusFlip);
+}
+
+function transformBlokusSelection(rotation, flip) {
+  const nextRotation = ((rotation % 360) + 360) % 360;
+  const nextFlip = !!flip;
+  const currentPlacement = getBlokusSelectedPiecePlacement(currentBlokusView);
+  const nextPlacement = getBlokusPiecePlacement(
+    currentBlokusView,
+    blokusSelectedPieceId,
+    nextRotation,
+    nextFlip,
+  );
+
+  blokusRotation = nextRotation;
+  blokusFlip = nextFlip;
+  updateBlokusTransformButtonState();
+
+  if (blokusSelectedOrigin && currentPlacement && nextPlacement) {
+    const centerX = blokusSelectedOrigin.x + currentPlacement.anchorX;
+    const centerY = blokusSelectedOrigin.y + currentPlacement.anchorY;
+    const size = currentBlokusView.board_size || 20;
+    const maxX = Math.max(0, size - nextPlacement.width);
+    const maxY = Math.max(0, size - nextPlacement.height);
+    const nextX = clampBlokusValue(
+      Math.round(centerX - nextPlacement.anchorX),
+      0,
+      maxX,
+    );
+    const nextY = clampBlokusValue(
+      Math.round(centerY - nextPlacement.anchorY),
+      0,
+      maxY,
+    );
+    setBlokusOrigin(nextX, nextY, true);
+    return;
+  }
+  if (currentBlokusView) {
+    renderBlokusBoard(currentBlokusView);
+  }
+  updateBlokusActionButton();
 }
 
 function getBlokusOriginFromPoint(point, alignToCenter) {
@@ -432,43 +564,32 @@ function getBlokusOriginFromPoint(point, alignToCenter) {
   };
 }
 
-function positionBlokusControls(bounds, boardSize) {
-  if (!blokusBoardControls || !blokusBoard) {
+function updateBlokusControlsVisibility(bounds) {
+  if (!blokusBoardControls) {
     return;
   }
   if (!bounds) {
     blokusBoardControls.classList.add("hidden");
-    blokusBoardControls.style.left = "";
-    blokusBoardControls.style.top = "";
+    return;
+  }
+  blokusBoardControls.classList.remove("hidden");
+}
+
+function positionBlokusPivot(center) {
+  if (!blokusPivot) {
+    return;
+  }
+  if (!center) {
+    blokusPivot.classList.add("hidden");
+    blokusPivot.style.left = "";
+    blokusPivot.style.top = "";
     return;
   }
   const { cell, gap, pad } = getBlokusBoardMetrics();
   const span = cell + gap;
-  const pieceLeft = pad + bounds.minX * span;
-  const pieceTop = pad + bounds.minY * span;
-  const pieceRight = pad + (bounds.maxX + 1) * span - gap;
-  const boardWidth = pad * 2 + boardSize * span - gap;
-  const boardHeight = pad * 2 + boardSize * span - gap;
-
-  blokusBoardControls.classList.remove("hidden");
-  const controlsWidth = blokusBoardControls.offsetWidth || 90;
-  const controlsHeight = blokusBoardControls.offsetHeight || 28;
-
-  let left = pieceRight + 6;
-  if (left + controlsWidth > boardWidth) {
-    left = pieceLeft - controlsWidth - 6;
-  }
-  if (left < 0) {
-    left = 0;
-  }
-
-  let top = pieceTop;
-  if (top + controlsHeight > boardHeight) {
-    top = Math.max(0, boardHeight - controlsHeight);
-  }
-
-  blokusBoardControls.style.left = `${left}px`;
-  blokusBoardControls.style.top = `${top}px`;
+  blokusPivot.style.left = `${pad + center.x * span + cell / 2}px`;
+  blokusPivot.style.top = `${pad + center.y * span + cell / 2}px`;
+  blokusPivot.classList.remove("hidden");
 }
 
 function updateBlokusActionButton() {
@@ -503,8 +624,63 @@ function nudgeBlokusOrigin(dx, dy) {
   setBlokusOrigin(nextX, nextY);
 }
 
+function handleBlokusKeyboardControls(event) {
+  if (
+    !currentBlokusView
+    || blokusExplainMode
+    || typeof currentGameType === "undefined"
+    || currentGameType !== "blokus"
+    || !blokusSelectedPieceId
+    || !blokusSelectedOrigin
+    || !blokusBoardControls
+    || blokusBoardControls.classList.contains("hidden")
+    || event.metaKey
+    || event.ctrlKey
+    || event.altKey
+  ) {
+    return;
+  }
+  const target = event.target;
+  const tagName = target && target.tagName ? target.tagName.toLowerCase() : "";
+  if (
+    tagName === "input"
+    || tagName === "textarea"
+    || tagName === "select"
+    || (target && target.isContentEditable)
+  ) {
+    return;
+  }
+
+  const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+  if (key === "ArrowUp") {
+    nudgeBlokusOrigin(0, -1);
+  } else if (key === "ArrowLeft") {
+    nudgeBlokusOrigin(-1, 0);
+  } else if (key === "ArrowDown") {
+    nudgeBlokusOrigin(0, 1);
+  } else if (key === "ArrowRight") {
+    nudgeBlokusOrigin(1, 0);
+  } else if (key === "q") {
+    transformBlokusSelection(blokusRotation - 90, blokusFlip);
+  } else if (key === "e") {
+    transformBlokusSelection(blokusRotation + 90, blokusFlip);
+  } else if (key === "f") {
+    transformBlokusSelection(blokusRotation, !blokusFlip);
+  } else if (
+    key === "Enter"
+    && tagName !== "button"
+    && blokusPlaceBtn
+    && !blokusPlaceBtn.disabled
+  ) {
+    blokusPlaceBtn.click();
+  } else {
+    return;
+  }
+  event.preventDefault();
+}
+
 function handleBlokusPointerDown(event) {
-  if (!currentBlokusView || currentBlokusView.game_over || !blokusBoard) {
+  if (!currentBlokusView || currentBlokusView.game_over || !blokusBoard || blokusExplainMode) {
     return;
   }
   if (event.button !== undefined && event.button !== 0) {
@@ -695,18 +871,21 @@ function renderBlokusBoard(view) {
   if (!blokusBoard) {
     return;
   }
+  updateBlokusTransformButtonState();
   const size = view.board_size || 20;
   const board = Array.isArray(view.board) ? view.board : [];
   let ghostCells = null;
   let ghostColor = null;
   let ghostBounds = null;
+  let ghostCenter = null;
   const canPlace = Array.isArray(view.legal_actions)
     && view.legal_actions.includes("place_piece");
   if (canPlace && blokusSelectedPieceId && blokusSelectedOrigin && view.piece_defs) {
     const def = view.piece_defs[blokusSelectedPieceId];
     if (def && Array.isArray(def.cells)) {
-      const coords = transformBlokusCells(def.cells, blokusRotation, blokusFlip);
-      if (coords.length) {
+      const placement = getBlokusSelectedPiecePlacement(view);
+      if (placement && placement.coords.length) {
+        const { coords } = placement;
         ghostCells = new Set();
         const maxDx = Math.max(...coords.map(([x]) => x));
         const maxDy = Math.max(...coords.map(([, y]) => y));
@@ -715,6 +894,10 @@ function renderBlokusBoard(view) {
           minY: blokusSelectedOrigin.y,
           maxX: blokusSelectedOrigin.x + maxDx,
           maxY: blokusSelectedOrigin.y + maxDy,
+        };
+        ghostCenter = {
+          x: blokusSelectedOrigin.x + placement.anchorX,
+          y: blokusSelectedOrigin.y + placement.anchorY,
         };
         coords.forEach(([dx, dy]) => {
           const x = blokusSelectedOrigin.x + dx;
@@ -752,7 +935,8 @@ function renderBlokusBoard(view) {
     }
   }
   blokusBoard.appendChild(fragment);
-  positionBlokusControls(ghostBounds, size);
+  updateBlokusControlsVisibility(ghostBounds);
+  positionBlokusPivot(ghostCenter);
 }
 
 function renderBlokusPlayers(view) {
@@ -832,6 +1016,109 @@ function renderBlokusPlayers(view) {
   });
 }
 
+function showBlokusHeaderActions(show) {
+  if (blokusHeaderActions) {
+    blokusHeaderActions.style.display = show ? "flex" : "none";
+  }
+  if (!show) {
+    exitBlokusExplainMode();
+  }
+}
+
+function showBlokusHelpModal() {
+  if (!blokusHelpModal) {
+    return;
+  }
+  const content = blokusHelpModal.querySelector(".blokus-help-content");
+  if (content) {
+    content.innerHTML = BLOKUS_HELP_TEXT;
+  }
+  setModalVisible(blokusHelpModal, true);
+}
+
+function closeBlokusHelpModal() {
+  if (blokusHelpModal) {
+    setModalVisible(blokusHelpModal, false);
+  }
+}
+
+function updateBlokusExplainModeClasses(enabled) {
+  Object.keys(BLOKUS_BUTTON_EXPLANATIONS).forEach((buttonId) => {
+    const button = document.getElementById(buttonId);
+    if (button) {
+      button.classList.toggle("has-explanation", enabled);
+    }
+  });
+}
+
+function findBlokusButtonAtPoint(x, y) {
+  for (const buttonId of Object.keys(BLOKUS_BUTTON_EXPLANATIONS)) {
+    const button = document.getElementById(buttonId);
+    if (!button) {
+      continue;
+    }
+    const rect = button.getBoundingClientRect();
+    if (
+      rect.width > 0
+      && rect.height > 0
+      && x >= rect.left
+      && x <= rect.right
+      && y >= rect.top
+      && y <= rect.bottom
+    ) {
+      return buttonId;
+    }
+  }
+  return null;
+}
+
+function toggleBlokusExplainMode() {
+  blokusExplainMode = !blokusExplainMode;
+  document.body.classList.toggle("blokus-explain-mode", blokusExplainMode);
+  updateBlokusExplainModeClasses(blokusExplainMode);
+  if (blokusExplainBtn) {
+    blokusExplainBtn.classList.toggle("active", blokusExplainMode);
+    blokusExplainBtn.setAttribute("aria-pressed", blokusExplainMode ? "true" : "false");
+  }
+  if (blokusExplainMode) {
+    blokusDragState = null;
+    if (blokusBoard) {
+      blokusBoard.classList.remove("dragging");
+    }
+  }
+}
+
+function exitBlokusExplainMode() {
+  if (!blokusExplainMode) {
+    return;
+  }
+  blokusExplainMode = false;
+  document.body.classList.remove("blokus-explain-mode");
+  updateBlokusExplainModeClasses(false);
+  if (blokusExplainBtn) {
+    blokusExplainBtn.classList.remove("active");
+    blokusExplainBtn.setAttribute("aria-pressed", "false");
+  }
+}
+
+function showBlokusButtonExplanation(buttonId) {
+  const explanation = BLOKUS_BUTTON_EXPLANATIONS[buttonId];
+  if (!explanation || !blokusExplainContent || !blokusExplainModal) {
+    return;
+  }
+  blokusExplainContent.innerHTML = `
+    <h4>${explanation.name}</h4>
+    <p>${explanation.description}</p>
+  `;
+  setModalVisible(blokusExplainModal, true);
+}
+
+function closeBlokusExplainModal() {
+  if (blokusExplainModal) {
+    setModalVisible(blokusExplainModal, false);
+  }
+}
+
 function renderBlokusGameState(data) {
   const view = data.view;
   currentBlokusView = view;
@@ -867,31 +1154,19 @@ function renderBlokusGameState(data) {
 
 if (blokusRotateLeftBtn) {
   blokusRotateLeftBtn.addEventListener("click", () => {
-    blokusRotation = (blokusRotation + 270) % 360;
-    if (currentBlokusView) {
-      renderBlokusBoard(currentBlokusView);
-    }
-    updateBlokusActionButton();
+    transformBlokusSelection(blokusRotation - 90, blokusFlip);
   });
 }
 
 if (blokusRotateRightBtn) {
   blokusRotateRightBtn.addEventListener("click", () => {
-    blokusRotation = (blokusRotation + 90) % 360;
-    if (currentBlokusView) {
-      renderBlokusBoard(currentBlokusView);
-    }
-    updateBlokusActionButton();
+    transformBlokusSelection(blokusRotation + 90, blokusFlip);
   });
 }
 
 if (blokusFlipBtn) {
   blokusFlipBtn.addEventListener("click", () => {
-    blokusFlip = !blokusFlip;
-    if (currentBlokusView) {
-      renderBlokusBoard(currentBlokusView);
-    }
-    updateBlokusActionButton();
+    transformBlokusSelection(blokusRotation, !blokusFlip);
   });
 }
 
@@ -928,6 +1203,7 @@ if (blokusBoard) {
 
 document.addEventListener("pointerup", handleBlokusPointerUp);
 document.addEventListener("pointercancel", handleBlokusPointerUp);
+document.addEventListener("keydown", handleBlokusKeyboardControls);
 
 if (blokusPlaceBtn) {
   blokusPlaceBtn.addEventListener("click", () => {
@@ -978,3 +1254,109 @@ if (blokusGiveUpBtn) {
     updateBlokusActionButton();
   });
 }
+
+if (blokusHelpBtn) {
+  blokusHelpBtn.addEventListener("click", () => {
+    exitBlokusExplainMode();
+    showBlokusHelpModal();
+  });
+}
+
+if (blokusExplainBtn) {
+  blokusExplainBtn.addEventListener("click", toggleBlokusExplainMode);
+}
+
+if (blokusHelpModalCloseBtn) {
+  blokusHelpModalCloseBtn.addEventListener("click", closeBlokusHelpModal);
+}
+
+if (blokusExplainModalCloseBtn) {
+  blokusExplainModalCloseBtn.addEventListener("click", closeBlokusExplainModal);
+}
+
+document.addEventListener("pointerdown", (event) => {
+  if (!blokusExplainMode) {
+    return;
+  }
+
+  const buttonId = findBlokusButtonAtPoint(event.clientX, event.clientY);
+  if (buttonId) {
+    event.preventDefault();
+    event.stopPropagation();
+    blokusExplainSuppressNextClick = true;
+    window.setTimeout(() => {
+      blokusExplainSuppressNextClick = false;
+    }, 0);
+    showBlokusButtonExplanation(buttonId);
+    exitBlokusExplainMode();
+    return;
+  }
+
+  const button = event.target.closest("button");
+  if (
+    !button
+    || button === blokusHelpBtn
+    || button === blokusExplainBtn
+    || button === blokusHelpModalCloseBtn
+    || button === blokusExplainModalCloseBtn
+  ) {
+    return;
+  }
+  event.preventDefault();
+  event.stopPropagation();
+}, true);
+
+document.addEventListener("click", (event) => {
+  if (blokusExplainSuppressNextClick) {
+    blokusExplainSuppressNextClick = false;
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
+  if (!blokusExplainMode) {
+    return;
+  }
+  const button = event.target.closest("button");
+  if (
+    !button
+    || button === blokusHelpBtn
+    || button === blokusExplainBtn
+    || button === blokusHelpModalCloseBtn
+    || button === blokusExplainModalCloseBtn
+  ) {
+    return;
+  }
+  event.preventDefault();
+  event.stopPropagation();
+}, true);
+
+[blokusHelpModal, blokusExplainModal].forEach((modal) => {
+  if (!modal) {
+    return;
+  }
+  modal.addEventListener("click", (event) => {
+    if (event.target !== modal) {
+      return;
+    }
+    if (modal === blokusHelpModal) {
+      closeBlokusHelpModal();
+    } else {
+      closeBlokusExplainModal();
+    }
+  });
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") {
+    return;
+  }
+  const helpOpen = blokusHelpModal && !blokusHelpModal.classList.contains("hidden");
+  const explanationOpen = blokusExplainModal && !blokusExplainModal.classList.contains("hidden");
+  if (!blokusExplainMode && !helpOpen && !explanationOpen) {
+    return;
+  }
+  event.preventDefault();
+  exitBlokusExplainMode();
+  closeBlokusHelpModal();
+  closeBlokusExplainModal();
+});

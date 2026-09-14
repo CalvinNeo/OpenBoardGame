@@ -182,7 +182,10 @@ class ArkNovaIntegrationTests(unittest.TestCase):
         self.assertIn('level >= 2 ? " (II)" : ""', script)
         self.assertIn("arkNovaCardKindLabel(card)", script)
         self.assertIn("flex: 0 0 176px", stylesheet)
-        self.assertIn("flex-basis: min(72vw, 156px)", stylesheet)
+        self.assertIn("flex-basis: min(82vw, 210px)", stylesheet)
+        self.assertIn("flex-basis: min(78vw, 196px)", stylesheet)
+        self.assertIn(".arkn-card-facts:not(.is-single)", stylesheet)
+        self.assertIn("grid-template-columns: minmax(0, 1fr);", stylesheet)
 
     def test_building_picker_uses_fixed_polyhex_pieces(self) -> None:
         script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")

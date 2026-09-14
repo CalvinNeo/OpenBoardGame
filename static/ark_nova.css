@@ -2905,17 +2905,21 @@
   #arkNovaPanel .arkn-track-name b { font-size: 0.68rem; }
 
   #arkNovaPanel .arkn-card {
-    flex-basis: min(72vw, 156px);
+    flex-basis: min(82vw, 210px);
   }
 
   #arkNovaPanel .arkn-card-conservation_project {
-    flex-basis: min(78vw, 210px);
+    flex-basis: min(78vw, 196px);
+  }
+
+  #arkNovaPanel .arkn-card-facts:not(.is-single) {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   #arkNovaPanel .arkn-project-card,
   #arkNovaPanel .arkn-project-card .arkn-card {
-    flex-basis: 184px;
-    width: 184px;
+    flex-basis: min(78vw, 196px);
+    width: min(78vw, 196px);
   }
 
   #arkNovaPanel .arkn-card-row {

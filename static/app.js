@@ -423,6 +423,9 @@ function setGamePanelVisibility(gameType) {
   if (blokusPanel) {
     blokusPanel.classList.toggle("hidden", !showBlokus);
   }
+  if (typeof showBlokusHeaderActions === "function") {
+    showBlokusHeaderActions(showBlokus);
+  }
   if (patchworkPanel) {
     patchworkPanel.classList.toggle("hidden", !showPatchwork);
   }
