@@ -27,6 +27,16 @@ ICON_STYLE = {
     "scroll": {"fill": "#f4e1b5", "text": "📜"},
 }
 
+SCROLL_LABELS = {
+    "per_2_sheep": "2🐑",
+    "per_2_whisky_tiles": "2🥃",
+    "per_2_ships": "2⛵",
+    "per_cattle": "🐂",
+    "per_broch": "🗼",
+    "per_farm": "🏠",
+    "per_lighthouse": "💡",
+}
+
 EDGE_POLYGONS = {
     "N": "0,0 100,0 68,42 32,42",
     "E": "100,0 100,100 58,68 58,32",
@@ -121,6 +131,42 @@ def _icon_layout(tile_def: Dict) -> List[Tuple[Dict, int, int]]:
     return placed
 
 
+def _region_connector_svg(tile_def: Dict) -> List[str]:
+    """Render topology that edge wedges alone cannot communicate.
+
+    Adjacent wedges already overlap at the corners. Opposite-edge joins need a
+    center band, while a printed region with no outer edge needs an island.
+    These shapes are deliberately schematic: game semantics stay legible
+    without copying the commercial tile artwork.
+    """
+
+    parts: List[str] = []
+    internal_index = 0
+    for region in tile_def.get("regions", []):
+        terrain = region["terrain"]
+        style = TERRAIN_STYLE[terrain]
+        edges = frozenset(region.get("edges", []))
+        if not edges:
+            offset = (internal_index % 3 - 1) * 5
+            internal_index += 1
+            parts.append(
+                f'<ellipse cx="{50 + offset}" cy="50" rx="20" ry="16" '
+                f'fill="{style["fill"]}" stroke="{style["stroke"]}" stroke-width="1.5"/>'
+            )
+            continue
+        if "N" in edges and "S" in edges and "E" not in edges and "W" not in edges:
+            parts.append(
+                f'<rect x="38" y="28" width="24" height="44" rx="12" '
+                f'fill="{style["fill"]}" stroke="{style["stroke"]}" stroke-width="1.5"/>'
+            )
+        if "E" in edges and "W" in edges and "N" not in edges and "S" not in edges:
+            parts.append(
+                f'<rect x="28" y="38" width="44" height="24" rx="12" '
+                f'fill="{style["fill"]}" stroke="{style["stroke"]}" stroke-width="1.5"/>'
+            )
+    return parts
+
+
 def _tile_svg(tile_id: str, tile_def: Dict) -> str:
     majority = _terrain_majority(tile_def)
     majority_style = TERRAIN_STYLE[majority]
@@ -135,6 +181,8 @@ def _tile_svg(tile_id: str, tile_def: Dict) -> str:
         parts.append(
             f'<polygon points="{EDGE_POLYGONS[edge]}" fill="{style["fill"]}" stroke="{style["stroke"]}" stroke-width="1.5"/>'
         )
+
+    parts.extend(_region_connector_svg(tile_def))
 
     road_exits = tile_def.get("road_exits", [])
     bridge_exits = set(tile_def.get("bridge_exits", []))
@@ -157,6 +205,16 @@ def _tile_svg(tile_id: str, tile_def: Dict) -> str:
             f'<text x="{cx}" y="{cy + 3}" text-anchor="middle" font-family="Verdana, sans-serif" '
             f'font-size="7" font-weight="700" fill="#111111">{_esc(label)}</text>'
         )
+        if icon["type"] == "scroll" and icon.get("scroll_type") in SCROLL_LABELS:
+            scroll_label = SCROLL_LABELS[icon["scroll_type"]]
+            parts.append(
+                f'<rect x="{cx - 10}" y="{cy + 8}" width="20" height="9" rx="3" '
+                'fill="#fff7df" stroke="#7c5c2d" stroke-width="0.8"/>'
+            )
+            parts.append(
+                f'<text x="{cx}" y="{cy + 14.5}" text-anchor="middle" font-family="Verdana, sans-serif" '
+                f'font-size="5" font-weight="700" fill="#4a351a">{_esc(scroll_label)}</text>'
+            )
 
     tile_no = tile_def.get("tile_no")
     if tile_no is not None:
@@ -169,7 +227,29 @@ def _tile_svg(tile_id: str, tile_def: Dict) -> str:
     return "\n".join(parts) + "\n"
 
 
+def _definition_summary(tile_def: Dict) -> str:
+    edges = " · ".join(
+        f"{edge} {tile_def['edges'][edge]}"
+        for edge in ("N", "E", "S", "W")
+    )
+    roads = "".join(tile_def.get("road_exits", [])) or "none"
+    regions = "; ".join(
+        f"{region['terrain']}:{''.join(region.get('edges', [])) or 'internal'}"
+        for region in tile_def.get("regions", [])
+    )
+    icons = ", ".join(
+        (
+            f"{icon['type']}×{icon.get('count', 1)}"
+            + (f" ({icon['scroll_type']})" if icon.get("scroll_type") else "")
+        )
+        for icon in tile_def.get("icons", [])
+    ) or "none"
+    return f"Edges: {edges} | Roads: {roads} | Regions: {regions} | Icons: {icons}"
+
+
 def _build_review_html(rows: List[Dict]) -> str:
+    has_sources = any(row["source_rel"] for row in rows)
+    source_header = "<th>Source</th>" if has_sources else ""
     parts = [
         "<!doctype html>",
         "<html lang='en'>",
@@ -185,22 +265,35 @@ def _build_review_html(rows: List[Dict]) -> str:
         "    th, td { border: 1px solid #d8ccb8; padding: 10px; vertical-align: top; }",
         "    th { background: #efe4cf; text-align: left; }",
         "    .name { font-weight: 700; min-width: 220px; }",
+        "    .name small { display: block; margin-top: 4px; color: #64748b; font-family: ui-monospace, monospace; font-weight: 400; }",
+        "    .definition { min-width: 360px; color: #334155; font: 13px/1.5 ui-monospace, monospace; }",
         "    img { width: 180px; height: 180px; object-fit: contain; background: #f4ead9; border-radius: 8px; display: block; }",
         "  </style>",
         "</head>",
         "<body>",
         "  <h1>Skye Tile SVG Review</h1>",
-        "  <p>Compare the curated source art with the generated semantic SVG for each tile. Blue marks ocean, green marks grassland, gray marks mountain; roads are split into ordinary roads and bridges.</p>",
+        "  <p>Review each canonical definition beside its generated semantic SVG. Blue marks ocean, green marks grassland, gray marks mountain; roads are split into ordinary roads and bridges. Source art is shown only when a locally approved copy is available.</p>",
         "  <table>",
-        "    <thead><tr><th>Tile</th><th>Source</th><th>SVG</th></tr></thead>",
+        f"    <thead><tr><th>Tile</th>{source_header}<th>Definition</th><th>SVG</th></tr></thead>",
         "    <tbody>",
     ]
     for row in rows:
+        source_cell = (
+            f'<td><img src="{_esc(row["source_rel"])}" alt="source"></td>'
+            if has_sources and row["source_rel"]
+            else ("<td>-</td>" if has_sources else "")
+        )
         parts.extend(
             [
                 "      <tr>",
-                f"        <td class='name'>{_esc(row['tile_id'])}</td>",
-                f"        <td>{'<img src=\"' + _esc(row['source_rel']) + '\" alt=\"source\">' if row['source_rel'] else '-'}</td>",
+                f"        <td class='name'>{_esc(row['display_name'])}<small>{_esc(row['tile_id'])}</small></td>",
+            ]
+        )
+        if source_cell:
+            parts.append(f"        {source_cell}")
+        parts.extend(
+            [
+                f"        <td class='definition'>{_esc(row['definition'])}</td>",
                 f"        <td><img src='{_esc(row['svg_rel'])}' alt='svg'></td>",
                 "      </tr>",
             ]
@@ -233,7 +326,9 @@ def main() -> None:
         review_rows.append(
             {
                 "tile_id": tile_id,
+                "display_name": tile_def.get("display_name", tile_id),
                 "source_rel": source_rel,
+                "definition": _definition_summary(tile_def),
                 "svg_rel": svg_path.relative_to(REVIEW_PATH.parent).as_posix(),
             }
         )

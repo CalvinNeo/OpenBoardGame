@@ -3,6 +3,7 @@ let skyeSelectedBuildTileId = null;
 let skyeSelectedRotation = 0;
 let skyePricingDraft = null;
 let skyeExplainMode = false;
+let skyeViewedPlayerId = null;
 
 const skyeHeaderActions = document.getElementById("skyeHeaderActions");
 const skyeHelpBtn = document.getElementById("skyeHelpBtn");
@@ -29,8 +30,10 @@ const skyeRotateLeftBtn = document.getElementById("skyeRotateLeftBtn");
 const skyeRotateRightBtn = document.getElementById("skyeRotateRightBtn");
 const skyeReturnSelectedBtn = document.getElementById("skyeReturnSelectedBtn");
 const skyeFinishBuildBtn = document.getElementById("skyeFinishBuildBtn");
+const skyeReadyNextRoundBtn = document.getElementById("skyeReadyNextRoundBtn");
 
 const skyeBoard = document.getElementById("skyeBoard");
+const skyeBoardTitle = document.getElementById("skyeBoardTitle");
 const skyePhaseTitle = document.getElementById("skyePhaseTitle");
 const skyePhasePanel = document.getElementById("skyePhasePanel");
 const skyeScoringTiles = document.getElementById("skyeScoringTiles");
@@ -61,6 +64,7 @@ const SKYE_PHASE_LABELS = {
   price_secret: "Pricing",
   buy: "Buying",
   build: "Building",
+  round_review: "Round Review",
   ended: "Finished",
 };
 
@@ -70,7 +74,7 @@ function skyeSvgTileUrl(tileId) {
 
 const SKYE_HELP_TEXT = `
   <h3>Goal</h3>
-  <p>Build the highest-scoring clan territory after 6 rounds. Each round uses a different mix of scoring tiles, then final scoring adds scroll points and 1 VP per 5 gold.</p>
+  <p>Build the highest-scoring clan territory after 6 rounds (5 rounds with 5 players). Each round uses a different mix of scoring tiles, then final scoring adds scroll points and 1 VP per 5 gold.</p>
 
   <h3>Round Flow</h3>
   <ul>
@@ -79,6 +83,7 @@ const SKYE_HELP_TEXT = `
     <li><strong>Buying</strong>: in turn order, each player may buy 1 tile from another player or pass.</li>
     <li><strong>Building</strong>: place every tile you gained this round into your territory. Illegal leftovers return to the bag.</li>
     <li><strong>Scoring</strong>: the highlighted round scoring tiles are resolved automatically.</li>
+    <li><strong>Review</strong>: the game pauses after scoring until every player clicks Next Round.</li>
   </ul>
 
   <h3>Placement Rules</h3>
@@ -86,7 +91,7 @@ const SKYE_HELP_TEXT = `
     <li>New tiles must touch your existing territory orthogonally.</li>
     <li>Adjacent terrain edges must match exactly.</li>
     <li>Roads and bridges do not need to connect for placement, but they matter for income and some scoring tiles.</li>
-    <li>The tile faces are generated as semantic SVGs from the current Skye tile draft, but the per-tile data still needs validation against the source art.</li>
+    <li>The tile faces are generated as semantic SVGs from a manually transcribed catalog of all 73 base-game landscape tiles.</li>
   </ul>
 
   <h3>Tile Icon Legend</h3>
@@ -123,9 +128,13 @@ const SKYE_EXPLANATIONS = {
     name: "Finish Build",
     description: "Confirm you are done building this round. This only works when your build queue is empty.",
   },
+  skyeReadyNextRoundBtn: {
+    name: "Next Round",
+    description: "Confirm that you have reviewed this round's scoring. Play resumes after every player is ready.",
+  },
   skyeBoard: {
-    name: "Your Territory",
-    description: "Click a highlighted empty cell to place the selected tile with its current rotation.",
+    name: "Territory",
+    description: "Use a player card to inspect any territory. On your own territory, click a highlighted empty cell to place the selected tile.",
   },
   skyePhaseCard: {
     name: "Phase Card",
@@ -141,7 +150,7 @@ const SKYE_EXPLANATIONS = {
   },
   skyePlayers: {
     name: "Players",
-    description: "Each player card shows score, total gold, available gold after reserved prices, and build status.",
+    description: "Click a player card to inspect their territory. Gold behind another player's screen stays hidden until the game ends.",
   },
 };
 
@@ -150,6 +159,7 @@ function clearSkyeState() {
   skyeSelectedBuildTileId = null;
   skyeSelectedRotation = 0;
   skyePricingDraft = null;
+  skyeViewedPlayerId = null;
   if (skyeRoundLabel) skyeRoundLabel.textContent = "-";
   if (skyePhaseLabel) skyePhaseLabel.textContent = "-";
   if (skyeTurnLabel) skyeTurnLabel.textContent = "-";
@@ -161,6 +171,7 @@ function clearSkyeState() {
     skyeSelectionHint.textContent = "Select a build tile, rotate it if needed, then click a highlighted empty cell on your territory.";
   }
   if (skyePhaseTitle) skyePhaseTitle.textContent = "Phase";
+  if (skyeBoardTitle) skyeBoardTitle.textContent = "Your Territory 🏞️";
   if (skyePhasePanel) skyePhasePanel.innerHTML = "";
   if (skyeScoringTiles) skyeScoringTiles.innerHTML = "";
   if (skyeBuildQueue) skyeBuildQueue.innerHTML = "";
@@ -180,6 +191,20 @@ function skyePlayerById(view, playerId) {
 
 function skyeYou(view) {
   return skyePlayerById(view, view.you);
+}
+
+function skyeViewedPlayer(view) {
+  const selected = skyePlayerById(view, skyeViewedPlayerId);
+  if (selected) {
+    return selected;
+  }
+  const fallback = skyeYou(view) || (view.players || [])[0] || null;
+  skyeViewedPlayerId = fallback ? fallback.player_id : null;
+  return fallback;
+}
+
+function skyeHasLegalAction(view, actionType) {
+  return !!(view && Array.isArray(view.legal_actions) && view.legal_actions.includes(actionType));
 }
 
 function skyeRotateEdge(edge, turns) {
@@ -282,7 +307,7 @@ function createSkyeTileCard(view, tileId, options = {}) {
 
   const title = document.createElement("div");
   title.className = "skye-tile-title";
-  title.textContent = options.label || tileId;
+  title.textContent = options.label || view?.tile_defs?.[tileId]?.display_name || tileId;
   card.appendChild(title);
 
   if (Number.isInteger(options.price)) {
@@ -483,22 +508,39 @@ function renderSkyeScoringTilesPanel(view) {
   });
 }
 
+function skyePrivateNumber(value) {
+  return Number.isFinite(value) ? String(value) : "Hidden";
+}
+
 function renderSkyePlayersPanel(view) {
   if (!skyePlayers) return;
   skyePlayers.innerHTML = "";
+  const viewedPlayer = skyeViewedPlayer(view);
+  const readySet = new Set(view.ready_player_ids || []);
   (view.players || []).forEach((player) => {
-    const card = document.createElement("div");
+    const card = document.createElement("button");
+    card.type = "button";
     const isTurn = view.current_turn === player.player_id;
     const isYou = view.you === player.player_id;
-    card.className = `skye-player-card${isTurn ? " current-turn" : ""}${isYou ? " you" : ""}`;
+    const isViewed = viewedPlayer && viewedPlayer.player_id === player.player_id;
+    card.className = `skye-player-card${isTurn ? " current-turn" : ""}${isYou ? " you" : ""}${isViewed ? " viewing" : ""}`;
+    card.setAttribute("aria-pressed", isViewed ? "true" : "false");
+    card.title = `View ${player.name || player.player_id}'s territory`;
     const buildSummary = view.phase === "build"
       ? (player.build_done ? "Done" : `${(player.build_queue || []).length} left`)
       : "-";
+    const roundStatus = view.phase === "round_review"
+      ? (readySet.has(player.player_id) ? "✅ Ready" : "⏳ Reviewing")
+      : `Build ${buildSummary}`;
     card.innerHTML = `
       <div class="skye-player-name">${player.name || player.player_id}${isYou ? " · You" : ""}</div>
-      <div class="skye-player-meta">⭐ ${player.score} · 💰 ${player.gold} · 👜 ${player.available_gold}</div>
-      <div class="skye-player-meta">🔒 ${player.reserved_gold} · 🧱 ${player.territory_size} · Build ${buildSummary}</div>
+      <div class="skye-player-meta">⭐ ${player.score} · 💰 ${skyePrivateNumber(player.gold)} · 👜 ${skyePrivateNumber(player.available_gold)}</div>
+      <div class="skye-player-meta">🔒 ${skyePrivateNumber(player.reserved_gold)} · 🧱 ${player.territory_size} · ${roundStatus}</div>
     `;
+    card.addEventListener("click", () => {
+      skyeViewedPlayerId = player.player_id;
+      renderSkyeGameState({ view: currentSkyeView });
+    });
     skyePlayers.appendChild(card);
   });
 }
@@ -551,20 +593,19 @@ function renderSkyePricingPanel(view) {
     return;
   }
   skyeEnsurePricingDraft(view);
-  if (me.pricing_submitted) {
-    const reserved = me.reserved_gold || 0;
-    skyePhasePanel.innerHTML = `<div class="hint">Prices locked. Waiting for the other players to finish. Reserved gold: 💰 ${reserved}</div>`;
-    return;
-  }
 
   const info = document.createElement("div");
   info.className = "skye-phase-info";
-  const reservedPreview = skyePricingDraft
-    ? (me.drawn_tile_ids || [])
-        .filter((tileId) => tileId !== skyePricingDraft.discardTileId)
-        .reduce((total, tileId) => total + (Number.parseInt(skyePricingDraft.prices[tileId], 10) || 0), 0)
-    : 0;
-  info.textContent = `Your gold: 💰 ${me.gold}. Reserve preview: ${reservedPreview}.`;
+  if (me.pricing_submitted) {
+    info.textContent = `Prices locked. Waiting for the other players. Reserved gold: 💰 ${me.reserved_gold || 0}.`;
+  } else {
+    const reservedPreview = skyePricingDraft
+      ? (me.drawn_tile_ids || [])
+          .filter((tileId) => tileId !== skyePricingDraft.discardTileId)
+          .reduce((total, tileId) => total + (Number.parseInt(skyePricingDraft.prices[tileId], 10) || 0), 0)
+      : 0;
+    info.textContent = `Your gold: 💰 ${me.gold}. Reserve preview: ${reservedPreview}.`;
+  }
   skyePhasePanel.appendChild(info);
 
   const tiles = document.createElement("div");
@@ -572,54 +613,85 @@ function renderSkyePricingPanel(view) {
   (me.drawn_tile_ids || []).forEach((tileId) => {
     const wrapper = document.createElement("div");
     wrapper.className = "skye-phase-tile";
-    const card = createSkyeTileCard(view, tileId);
-    wrapper.appendChild(card);
+    const lockedPrice = me.pricing_submitted ? me.prices?.[tileId] : null;
+    const cardLabel = me.pricing_submitted && me.discard_tile_id === tileId ? "Discard (private)" : null;
+    wrapper.appendChild(createSkyeTileCard(view, tileId, { label: cardLabel, price: lockedPrice }));
 
-    const controls = document.createElement("div");
-    controls.className = "skye-pricing-controls";
+    if (!me.pricing_submitted) {
+      const controls = document.createElement("div");
+      controls.className = "skye-pricing-controls";
 
-    const discardLabel = document.createElement("label");
-    discardLabel.className = "skye-discard-label";
-    const discardInput = document.createElement("input");
-    discardInput.type = "radio";
-    discardInput.name = "skyeDiscardTile";
-    discardInput.checked = skyePricingDraft && skyePricingDraft.discardTileId === tileId;
-    discardInput.addEventListener("change", () => {
-      skyeUpdateDraftForDiscard(view, tileId);
-      renderSkyeGameState({ view: currentSkyeView });
-    });
-    discardLabel.appendChild(discardInput);
-    discardLabel.appendChild(document.createTextNode("Discard"));
-    controls.appendChild(discardLabel);
-
-    if (!skyePricingDraft || skyePricingDraft.discardTileId !== tileId) {
-      const priceLabel = document.createElement("label");
-      priceLabel.className = "skye-price-select";
-      priceLabel.textContent = "Price";
-      const select = document.createElement("select");
-      const maxPrice = Math.max(me.gold || 5, 10);
-      for (let price = 1; price <= maxPrice; price += 1) {
-        const option = document.createElement("option");
-        option.value = String(price);
-        option.textContent = String(price);
-        if (Number.parseInt(skyePricingDraft.prices[tileId], 10) === price) {
-          option.selected = true;
-        }
-        select.appendChild(option);
-      }
-      select.addEventListener("change", () => {
-        skyePricingDraft.prices[tileId] = Number.parseInt(select.value, 10) || 1;
-        updateSkyeActionButtons();
-        renderSkyePricingPanel(currentSkyeView);
+      const discardLabel = document.createElement("label");
+      discardLabel.className = "skye-discard-label";
+      const discardInput = document.createElement("input");
+      discardInput.type = "radio";
+      discardInput.name = "skyeDiscardTile";
+      discardInput.checked = skyePricingDraft && skyePricingDraft.discardTileId === tileId;
+      discardInput.addEventListener("change", () => {
+        skyeUpdateDraftForDiscard(view, tileId);
+        renderSkyeGameState({ view: currentSkyeView });
       });
-      priceLabel.appendChild(select);
-      controls.appendChild(priceLabel);
-    }
+      discardLabel.appendChild(discardInput);
+      discardLabel.appendChild(document.createTextNode("Discard"));
+      controls.appendChild(discardLabel);
 
-    wrapper.appendChild(controls);
+      if (!skyePricingDraft || skyePricingDraft.discardTileId !== tileId) {
+        const priceLabel = document.createElement("label");
+        priceLabel.className = "skye-price-select";
+        priceLabel.textContent = "Price";
+        const select = document.createElement("select");
+        const maxPrice = Math.max(me.gold || 5, 10);
+        for (let price = 1; price <= maxPrice; price += 1) {
+          const option = document.createElement("option");
+          option.value = String(price);
+          option.textContent = String(price);
+          if (Number.parseInt(skyePricingDraft.prices[tileId], 10) === price) {
+            option.selected = true;
+          }
+          select.appendChild(option);
+        }
+        select.addEventListener("change", () => {
+          skyePricingDraft.prices[tileId] = Number.parseInt(select.value, 10) || 1;
+          updateSkyeActionButtons();
+          renderSkyePricingPanel(currentSkyeView);
+        });
+        priceLabel.appendChild(select);
+        controls.appendChild(priceLabel);
+      }
+
+      wrapper.appendChild(controls);
+    }
     tiles.appendChild(wrapper);
   });
   skyePhasePanel.appendChild(tiles);
+
+  const publicDraws = (view.players || []).filter(
+    (player) => player.player_id !== view.you && Array.isArray(player.drawn_tile_ids) && player.drawn_tile_ids.length,
+  );
+  if (publicDraws.length) {
+    const heading = document.createElement("h4");
+    heading.className = "skye-public-draws-heading";
+    heading.textContent = "Other Players' Face-up Draws 👀";
+    skyePhasePanel.appendChild(heading);
+    const groups = document.createElement("div");
+    groups.className = "skye-public-draw-groups";
+    publicDraws.forEach((player) => {
+      const group = document.createElement("section");
+      group.className = "skye-public-draw-group";
+      const label = document.createElement("div");
+      label.className = "skye-market-title";
+      label.textContent = player.name || player.player_id;
+      group.appendChild(label);
+      const list = document.createElement("div");
+      list.className = "skye-tile-list skye-public-draw-list";
+      player.drawn_tile_ids.forEach((tileId) => {
+        list.appendChild(createSkyeTileCard(view, tileId, { compact: true }));
+      });
+      group.appendChild(list);
+      groups.appendChild(group);
+    });
+    skyePhasePanel.appendChild(groups);
+  }
 }
 
 function renderSkyeBuyPanel(view) {
@@ -690,9 +762,18 @@ function renderSkyeBuildPhasePanel(view) {
     info.textContent = "Choose a tile from your build queue, then place it on a highlighted cell.";
   } else {
     const legalPlacement = skyeFindAnyLegalPlacement(view, me, selected);
-    info.textContent = legalPlacement
-      ? `Selected ${selected} at ${skyeSelectedRotation}°. Legal cells are highlighted on your board.`
-      : `Selected ${selected} has no legal placement right now.`;
+    const anotherTileCanBePlaced = (me.build_queue || []).some(
+      (tileId) => tileId !== selected && skyeFindAnyLegalPlacement(view, me, tileId),
+    );
+    if (legalPlacement && legalPlacement.rotation === skyeSelectedRotation) {
+      info.textContent = `Selected ${selected} at ${skyeSelectedRotation}°. Legal cells are highlighted on your board.`;
+    } else if (legalPlacement) {
+      info.textContent = `Selected ${selected} can be placed after rotation. Try ${legalPlacement.rotation}°.`;
+    } else if (anotherTileCanBePlaced) {
+      info.textContent = `Selected ${selected} cannot be placed yet. Place another queued tile first.`;
+    } else {
+      info.textContent = `No queued tile can be placed. Return ${selected} to the bag.`;
+    }
   }
   skyePhasePanel.appendChild(info);
 
@@ -702,6 +783,39 @@ function renderSkyeBuildPhasePanel(view) {
     previewCard.appendChild(createSkyeTileCard(view, selected, { rotation: skyeSelectedRotation, selected: true }));
     skyePhasePanel.appendChild(previewCard);
   }
+}
+
+function renderSkyeRoundReviewPanel(view) {
+  if (!skyePhasePanel || !skyePhaseTitle) return;
+  const finalRound = view.round >= view.round_limit;
+  skyePhaseTitle.textContent = finalRound ? "Final Round Review 🧾" : `Round ${view.round} Review 🧾`;
+  skyePhasePanel.innerHTML = "";
+  const readySet = new Set(view.ready_player_ids || []);
+  const meReady = readySet.has(view.you);
+
+  const info = document.createElement("div");
+  info.className = "skye-phase-info";
+  if (meReady) {
+    info.textContent = finalRound
+      ? "You are ready. Final scoring starts after everyone confirms."
+      : "You are ready. The next round starts after everyone confirms.";
+  } else {
+    info.textContent = finalRound
+      ? "Review the round scores, then confirm to reveal final scoring."
+      : "Review the round scores, then click Next Round.";
+  }
+  skyePhasePanel.appendChild(info);
+
+  const readyList = document.createElement("div");
+  readyList.className = "skye-ready-list";
+  (view.players || []).forEach((player) => {
+    const row = document.createElement("div");
+    const ready = readySet.has(player.player_id);
+    row.className = `skye-ready-row${ready ? " ready" : ""}`;
+    row.textContent = `${ready ? "✅" : "⏳"} ${player.name || player.player_id} · ${ready ? "Ready" : "Reviewing"}`;
+    readyList.appendChild(row);
+  });
+  skyePhasePanel.appendChild(readyList);
 }
 
 function renderSkyeEndPanel(view) {
@@ -738,6 +852,10 @@ function renderSkyePhase(view) {
   }
   if (view.phase === "build") {
     renderSkyeBuildPhasePanel(view);
+    return;
+  }
+  if (view.phase === "round_review") {
+    renderSkyeRoundReviewPanel(view);
     return;
   }
   renderSkyeEndPanel(view);
@@ -782,17 +900,24 @@ function renderSkyeBoardPanel(view) {
   if (!skyeBoard) return;
   skyeBoard.innerHTML = "";
   const me = skyeYou(view);
-  const territory = me && Array.isArray(me.territory) ? me.territory : [];
+  const viewedPlayer = skyeViewedPlayer(view);
+  const isOwnTerritory = !!(viewedPlayer && viewedPlayer.player_id === view.you);
+  if (skyeBoardTitle) {
+    const playerName = viewedPlayer ? (viewedPlayer.name || viewedPlayer.player_id) : "Territory";
+    skyeBoardTitle.textContent = isOwnTerritory ? "Your Territory 🏞️" : `${playerName}'s Territory 🏞️`;
+  }
+  const territory = viewedPlayer && Array.isArray(viewedPlayer.territory) ? viewedPlayer.territory : [];
   if (!territory.length) {
     return;
   }
 
   const xs = territory.map((tile) => tile.x);
   const ys = territory.map((tile) => tile.y);
-  const minX = Math.min(...xs) - 2;
-  const maxX = Math.max(...xs) + 2;
-  const minY = Math.min(...ys) - 2;
-  const maxY = Math.max(...ys) + 2;
+  const boardMargin = isOwnTerritory && view.phase === "build" ? 2 : 1;
+  const minX = Math.min(...xs) - boardMargin;
+  const maxX = Math.max(...xs) + boardMargin;
+  const minY = Math.min(...ys) - boardMargin;
+  const maxY = Math.max(...ys) + boardMargin;
   const columns = maxX - minX + 1;
   skyeBoard.style.gridTemplateColumns = `repeat(${columns}, minmax(78px, 1fr))`;
 
@@ -814,6 +939,7 @@ function renderSkyeBoardPanel(view) {
         cell.classList.add("empty");
         const canPlace = (
           view.phase === "build" &&
+          isOwnTerritory &&
           me &&
           !me.build_done &&
           skyeSelectedTileIsQueued(view) &&
@@ -850,12 +976,12 @@ function updateSkyeActionButtons() {
   if (skyeSubmitPricingBtn) {
     const visible = phase === "price_secret";
     skyeSubmitPricingBtn.classList.toggle("hidden", !visible);
-    skyeSubmitPricingBtn.disabled = !visible || !skyeCanSubmitPricing(view);
+    skyeSubmitPricingBtn.disabled = !visible || !skyeHasLegalAction(view, "submit_prices") || !skyeCanSubmitPricing(view);
   }
   if (skyePassBuyBtn) {
     const visible = phase === "buy";
     skyePassBuyBtn.classList.toggle("hidden", !visible);
-    skyePassBuyBtn.disabled = !visible || !view || view.current_turn !== view.you;
+    skyePassBuyBtn.disabled = !visible || !skyeHasLegalAction(view, "pass_buy");
   }
   const buildVisible = phase === "build";
   [skyeRotateLeftBtn, skyeRotateRightBtn, skyeReturnSelectedBtn, skyeFinishBuildBtn].forEach((button) => {
@@ -870,11 +996,20 @@ function updateSkyeActionButtons() {
     skyeRotateRightBtn.disabled = !buildVisible || !skyeSelectedTileIsQueued(view);
   }
   if (skyeReturnSelectedBtn) {
-    skyeReturnSelectedBtn.disabled = !buildVisible || !skyeSelectedTileIsQueued(view);
+    skyeReturnSelectedBtn.disabled = (
+      !buildVisible ||
+      !skyeSelectedTileIsQueued(view) ||
+      !skyeHasLegalAction(view, "return_tile")
+    );
   }
   if (skyeFinishBuildBtn) {
-    const queue = me && Array.isArray(me.build_queue) ? me.build_queue : [];
-    skyeFinishBuildBtn.disabled = !buildVisible || !me || me.build_done || queue.length > 0;
+    skyeFinishBuildBtn.disabled = !buildVisible || !me || !skyeHasLegalAction(view, "finish_build");
+  }
+  if (skyeReadyNextRoundBtn) {
+    const reviewVisible = phase === "round_review";
+    skyeReadyNextRoundBtn.classList.toggle("hidden", !reviewVisible);
+    skyeReadyNextRoundBtn.textContent = view && view.round >= view.round_limit ? "Finish Game" : "Next Round";
+    skyeReadyNextRoundBtn.disabled = !reviewVisible || !skyeHasLegalAction(view, "ready_next_round");
   }
 }
 
@@ -896,6 +1031,7 @@ function renderSkyeGameState(data) {
   renderSkyeRoundRecap(view);
 
   const me = skyeYou(view);
+  const viewedPlayer = skyeViewedPlayer(view);
   if (skyeSelectionHint) {
     if (view.phase === "price_secret") {
       skyeSelectionHint.textContent = me && me.pricing_submitted
@@ -906,13 +1042,19 @@ function renderSkyeGameState(data) {
         ? "Buy 1 tile from another player or pass."
         : `Waiting for ${skyePlayerById(view, view.current_turn)?.name || view.current_turn} to buy.`;
     } else if (view.phase === "build") {
-      if (me && me.build_done) {
+      if (viewedPlayer && viewedPlayer.player_id !== view.you) {
+        skyeSelectionHint.textContent = `Inspecting ${viewedPlayer.name || viewedPlayer.player_id}'s territory. Select your player card to resume building.`;
+      } else if (me && me.build_done) {
         skyeSelectionHint.textContent = "You are done building this round.";
       } else if (skyeSelectedTileIsQueued(view)) {
         skyeSelectionHint.textContent = "Click a highlighted empty cell on your territory to place the selected tile.";
       } else {
         skyeSelectionHint.textContent = "Select a build tile, rotate it if needed, then click a highlighted empty cell on your territory.";
       }
+    } else if (view.phase === "round_review") {
+      skyeSelectionHint.textContent = skyeHasLegalAction(view, "ready_next_round")
+        ? "Review the scoring and territories, then confirm when you are ready."
+        : "Ready. Waiting for the other players to finish reviewing.";
     } else {
       skyeSelectionHint.textContent = "The game is finished.";
     }
@@ -1055,6 +1197,12 @@ if (skyeReturnSelectedBtn) {
 if (skyeFinishBuildBtn) {
   skyeFinishBuildBtn.addEventListener("click", () => {
     sendAction({ type: "finish_build" });
+  });
+}
+
+if (skyeReadyNextRoundBtn) {
+  skyeReadyNextRoundBtn.addEventListener("click", () => {
+    sendAction({ type: "ready_next_round" });
   });
 }
 

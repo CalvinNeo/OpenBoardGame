@@ -15,8 +15,7 @@ EDGE_DELTAS = {
 }
 OPPOSITE_EDGE = {"N": "S", "E": "W", "S": "N", "W": "E"}
 ROTATIONS = (0, 90, 180, 270)
-ROUND_LIMIT = 6
-ROUND_TRACK = {
+STANDARD_ROUND_TRACK = {
     1: {"active_slots": ["A"], "catchup_bonus": 0},
     2: {"active_slots": ["B"], "catchup_bonus": 0},
     3: {"active_slots": ["A", "C"], "catchup_bonus": 1},
@@ -24,9 +23,21 @@ ROUND_TRACK = {
     5: {"active_slots": ["A", "C", "D"], "catchup_bonus": 3},
     6: {"active_slots": ["B", "C", "D"], "catchup_bonus": 4},
 }
+FIVE_PLAYER_ROUND_TRACK = {
+    1: {"active_slots": ["A"], "catchup_bonus": 0},
+    2: {"active_slots": ["B", "D"], "catchup_bonus": 0},
+    3: {"active_slots": ["A", "C"], "catchup_bonus": 1},
+    4: {"active_slots": ["B", "C", "D"], "catchup_bonus": 2},
+    5: {"active_slots": ["A", "B", "C", "D"], "catchup_bonus": 3},
+}
+ROUND_TRACKS = {
+    "standard": STANDARD_ROUND_TRACK,
+    "five_player": FIVE_PLAYER_ROUND_TRACK,
+}
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CURATED_TILE_MANIFEST_PATH = REPO_ROOT / "assets" / "skye" / "tile_manifest_draft.json"
+TILE_DEFINITIONS_PATH = REPO_ROOT / "assets" / "skye" / "tile_definitions.json"
 
 TERRAIN_CODE = {
     "P": "pasture",
@@ -165,77 +176,23 @@ START_TILE_DEF = {
     ],
 }
 
-TILE_TEMPLATES = {
-    "general": [
-        {"edges": "PPPP", "road_exits": []},
-        {"edges": "PPPM", "road_exits": ["N"]},
-        {"edges": "PPMM", "road_exits": ["N", "E"]},
-        {"edges": "PMPM", "road_exits": ["N", "S"]},
-        {"edges": "PPWW", "road_exits": ["E", "S"]},
-        {"edges": "PWPW", "road_exits": ["N", "E"]},
-        {"edges": "PMWW", "road_exits": ["W"]},
-        {"edges": "PMMP", "road_exits": ["N", "E", "S"]},
-    ],
-    "broch": [
-        {"edges": "MMMP", "road_exits": ["S"]},
-        {"edges": "MMPP", "road_exits": ["E"]},
-        {"edges": "MMPW", "road_exits": ["N", "E"]},
-        {"edges": "MMPM", "road_exits": ["N", "S"]},
-        {"edges": "MMMW", "road_exits": []},
-    ],
-    "broch_pair": [
-        {"edges": "MMMM", "road_exits": []},
-        {"edges": "MMMP", "road_exits": ["N", "S"]},
-        {"edges": "MMPM", "road_exits": ["E"]},
-    ],
-    "lighthouse": [
-        {"edges": "WPPP", "road_exits": ["S"]},
-        {"edges": "WWPP", "road_exits": ["S", "W"]},
-        {"edges": "WPWP", "road_exits": ["N", "E"]},
-        {"edges": "WPPM", "road_exits": ["E"]},
-        {"edges": "WWPM", "road_exits": ["N"]},
-    ],
-    "ship": [
-        {"edges": "WWPP", "road_exits": ["N", "E"]},
-        {"edges": "WPWP", "road_exits": ["N", "S"]},
-        {"edges": "WWWP", "road_exits": []},
-        {"edges": "WWPM", "road_exits": ["E"]},
-        {"edges": "WPWM", "road_exits": ["N", "W"]},
-        {"edges": "WWMM", "road_exits": ["S"]},
-    ],
-}
-
-GENERAL_ICON_PROFILES = [
-    {"sheep": 1},
-    {"cattle": 1},
-    {"sheep": 2},
-    {"cattle": 1, "whisky": 1},
-    {"sheep": 1, "cattle": 1},
-    {"farm": 1},
-    {"farm": 1, "sheep": 1},
-    {"farm": 1, "cattle": 1},
-    {"whisky": 1, "sheep": 1},
-    {"whisky": 1, "cattle": 1},
-    {"scroll": 1},
-    {"scroll": 1, "sheep": 1},
-    {"scroll": 1, "cattle": 1},
-    {"farm": 1, "whisky": 1},
-]
-
-SPECIAL_ICON_PROFILES = [
-    {},
-    {"sheep": 1},
-    {"cattle": 1},
-    {"whisky": 1},
-    {"farm": 1},
-    {"scroll": 1},
-    {"sheep": 1, "whisky": 1},
-    {"cattle": 1, "scroll": 1},
-]
-
-
 def _ordered_player_ids(state: Dict) -> List[str]:
     return sorted(state["player_meta"].keys(), key=lambda player_id: state["player_meta"][player_id].get("seat", 0))
+
+
+def _round_track_key_for_player_count(player_count: int) -> str:
+    return "five_player" if player_count == 5 else "standard"
+
+
+def _round_track(state: Dict) -> Dict[int, Dict]:
+    key = state.get("round_track_key")
+    if key not in ROUND_TRACKS:
+        key = _round_track_key_for_player_count(len(state.get("players", {})))
+    return ROUND_TRACKS[key]
+
+
+def _round_limit(state: Dict) -> int:
+    return len(_round_track(state))
 
 
 def _player_name(state: Dict, player_id: str) -> str:
@@ -258,193 +215,220 @@ def _pattern_to_edges(pattern: str) -> Dict[str, str]:
 
 
 def _derive_bridge_exits(edges: Dict[str, str], road_exits: List[str]) -> List[str]:
-    # In the current draft, roads that terminate on water edges are rendered as bridges.
+    # A road arm that reaches a water edge must be rendered as a bridge.
     return [edge for edge in road_exits if edges.get(edge) == "water"]
 
 
-def _build_regions_from_edges(edges: Dict[str, str]) -> Tuple[List[Dict], Dict[str, str], DefaultDict[str, List[str]]]:
-    terrains = [edges[edge] for edge in EDGE_ORDER]
-    if len(set(terrains)) == 1:
-        region_id = "r0"
-        region = {"id": region_id, "terrain": terrains[0], "edges": list(EDGE_ORDER)}
-        return [region], {edge: region_id for edge in EDGE_ORDER}, defaultdict(list, {terrains[0]: [region_id]})
+def _build_catalog_regions(
+    edges: Dict[str, str],
+    joined_edges: List[str],
+    internal_terrain_codes: List[str],
+) -> Tuple[List[Dict], Dict[str, str], DefaultDict[str, List[str]], Dict[str, str]]:
+    """Build exact terrain components from the reviewed tile catalog.
 
-    start_index = 0
-    for index in range(len(EDGE_ORDER)):
-        if terrains[index] != terrains[index - 1]:
-            start_index = index
-            break
+    Adjacent equal edges are connected by default. ``joined_edges`` records the
+    less obvious cases where equal terrain on opposite edges continues through
+    the middle of the printed tile. ``internal_terrain_codes`` records printed
+    areas that do not touch any outer edge.
+    """
 
+    parents = {edge: edge for edge in EDGE_ORDER}
+
+    def find(edge: str) -> str:
+        while parents[edge] != edge:
+            parents[edge] = parents[parents[edge]]
+            edge = parents[edge]
+        return edge
+
+    def union(first: str, second: str) -> None:
+        first_root = find(first)
+        second_root = find(second)
+        if first_root != second_root:
+            parents[second_root] = first_root
+
+    for index, edge in enumerate(EDGE_ORDER):
+        next_edge = EDGE_ORDER[(index + 1) % len(EDGE_ORDER)]
+        if edges[edge] == edges[next_edge]:
+            union(edge, next_edge)
+
+    for joined in joined_edges:
+        join_members = list(joined)
+        if len(join_members) < 2 or any(edge not in EDGE_ORDER for edge in join_members):
+            raise ValueError(f"invalid joined edge declaration: {joined}")
+        terrain = edges[join_members[0]]
+        if any(edges[edge] != terrain for edge in join_members[1:]):
+            raise ValueError(f"joined edges must have matching terrain: {joined}")
+        for edge in join_members[1:]:
+            union(join_members[0], edge)
+
+    grouped_edges: DefaultDict[str, List[str]] = defaultdict(list)
+    for edge in EDGE_ORDER:
+        grouped_edges[find(edge)].append(edge)
+
+    groups = sorted(grouped_edges.values(), key=lambda group: min(EDGE_ORDER.index(edge) for edge in group))
     regions: List[Dict] = []
     edge_to_region: Dict[str, str] = {}
     terrain_to_regions: DefaultDict[str, List[str]] = defaultdict(list)
+    for group in groups:
+        region_id = f"r{len(regions)}"
+        terrain = edges[group[0]]
+        regions.append({"id": region_id, "terrain": terrain, "edges": list(group)})
+        terrain_to_regions[terrain].append(region_id)
+        for edge in group:
+            edge_to_region[edge] = region_id
 
-    current_terrain = terrains[start_index]
-    current_edges = [EDGE_ORDER[start_index]]
-    region_index = 0
+    internal_region_ids: Dict[str, str] = {}
+    internal_counts: DefaultDict[str, int] = defaultdict(int)
+    for terrain_code in internal_terrain_codes:
+        if terrain_code not in TERRAIN_CODE:
+            raise ValueError(f"invalid internal terrain code: {terrain_code}")
+        terrain = TERRAIN_CODE[terrain_code]
+        index = internal_counts[terrain_code]
+        internal_counts[terrain_code] += 1
+        region_id = f"r{len(regions)}"
+        regions.append({"id": region_id, "terrain": terrain, "edges": []})
+        terrain_to_regions[terrain].append(region_id)
+        internal_region_ids[f"{terrain_code}{index}"] = region_id
 
-    for step in range(1, len(EDGE_ORDER)):
-        edge_index = (start_index + step) % len(EDGE_ORDER)
-        terrain = terrains[edge_index]
-        edge = EDGE_ORDER[edge_index]
-        if terrain == current_terrain:
-            current_edges.append(edge)
-            continue
-        region_id = f"r{region_index}"
-        region = {"id": region_id, "terrain": current_terrain, "edges": list(current_edges)}
-        regions.append(region)
-        terrain_to_regions[current_terrain].append(region_id)
-        for edge_name in current_edges:
-            edge_to_region[edge_name] = region_id
-        region_index += 1
-        current_terrain = terrain
-        current_edges = [edge]
-
-    region_id = f"r{region_index}"
-    region = {"id": region_id, "terrain": current_terrain, "edges": list(current_edges)}
-    regions.append(region)
-    terrain_to_regions[current_terrain].append(region_id)
-    for edge_name in current_edges:
-        edge_to_region[edge_name] = region_id
-    return regions, edge_to_region, terrain_to_regions
+    return regions, edge_to_region, terrain_to_regions, internal_region_ids
 
 
-def _tile_seed(code_parts: List[int]) -> int:
-    total = 0
-    for index, part in enumerate(code_parts):
-        total += (index + 3) * (part + 1)
-    return total
-
-
-def _choose_region_id(tile_def: Dict, terrain: Optional[str], seed: int) -> str:
-    if terrain:
-        region_ids = tile_def["terrain_to_regions"].get(terrain, [])
-        if region_ids:
-            return region_ids[seed % len(region_ids)]
-    return tile_def["regions"][seed % len(tile_def["regions"])]["id"]
-
-
-def _add_icon(
-    icons: List[Dict],
-    *,
-    icon_id: str,
-    icon_type: str,
-    count: int,
-    tile_def: Dict,
-    seed: int,
-    terrain: Optional[str] = None,
-    scroll_type: Optional[str] = None,
-    adjacent_region_ids: Optional[List[str]] = None,
-) -> None:
-    if count <= 0:
-        return
-    icon = {
-        "id": icon_id,
-        "type": icon_type,
-        "count": count,
-        "region_id": _choose_region_id(tile_def, terrain, seed),
+def _catalog_icons(
+    tile_id: str,
+    icon_specs: List[Dict],
+    regions: List[Dict],
+    edge_to_region: Dict[str, str],
+    terrain_to_regions: DefaultDict[str, List[str]],
+    internal_region_ids: Dict[str, str],
+) -> List[Dict]:
+    regions_by_id = {region["id"]: region for region in regions}
+    preferred_terrain = {
+        "broch": "mountain",
+        "farm": "pasture",
+        "sheep": "pasture",
+        "cattle": "pasture",
+        "ship": "water",
+        "lighthouse": "water",
     }
-    if scroll_type:
-        icon["scroll_type"] = scroll_type
-    if adjacent_region_ids:
-        icon["adjacent_region_ids"] = list(adjacent_region_ids)
-    icons.append(icon)
-
-
-def _derive_icon_profile(entry: Dict, tile_def: Dict) -> List[Dict]:
-    group = entry["group"]
-    seed = _tile_seed(entry["inferred_code_parts"])
     icons: List[Dict] = []
+    type_counts: DefaultDict[str, int] = defaultdict(int)
+    for spec in icon_specs:
+        icon_type = spec.get("type")
+        count = spec.get("count", 1)
+        if icon_type not in ICON_LABELS or not isinstance(count, int) or count <= 0:
+            raise ValueError(f"invalid icon for {tile_id}")
 
-    water_region_ids = list(tile_def["terrain_to_regions"].get("water", []))
-    pasture_region_ids = list(tile_def["terrain_to_regions"].get("pasture", []))
-    mountain_region_ids = list(tile_def["terrain_to_regions"].get("mountain", []))
+        if "edge" in spec:
+            target_edge = spec["edge"]
+            if target_edge not in edge_to_region:
+                raise ValueError(f"invalid icon edge for {tile_id}: {target_edge}")
+            region_id = edge_to_region[target_edge]
+        elif "internal" in spec:
+            internal_key = spec["internal"]
+            if internal_key not in internal_region_ids:
+                raise ValueError(f"invalid internal icon region for {tile_id}: {internal_key}")
+            region_id = internal_region_ids[internal_key]
+        else:
+            terrain = preferred_terrain.get(icon_type)
+            candidates = terrain_to_regions.get(terrain, []) if terrain else []
+            if len(candidates) != 1:
+                raise ValueError(f"icon region must be explicit for {tile_id}: {icon_type}")
+            region_id = candidates[0]
 
-    if group == "broch":
-        _add_icon(icons, icon_id="broch_0", icon_type="broch", count=1, tile_def=tile_def, seed=seed, terrain="mountain")
-        profile = SPECIAL_ICON_PROFILES[seed % len(SPECIAL_ICON_PROFILES)]
-    elif group == "broch_pair":
-        _add_icon(icons, icon_id="broch_0", icon_type="broch", count=2, tile_def=tile_def, seed=seed, terrain="mountain")
-        profile = SPECIAL_ICON_PROFILES[(seed + 2) % len(SPECIAL_ICON_PROFILES)]
-    elif group == "lighthouse":
-        target_terrain = "pasture" if pasture_region_ids else None
-        _add_icon(
-            icons,
-            icon_id="lighthouse_0",
-            icon_type="lighthouse",
-            count=1,
-            tile_def=tile_def,
-            seed=seed,
-            terrain=target_terrain,
-            adjacent_region_ids=water_region_ids,
-        )
-        profile = SPECIAL_ICON_PROFILES[(seed + 1) % len(SPECIAL_ICON_PROFILES)]
-    elif group == "ship":
-        ship_count = 1 + (1 if (seed % 6 == 0) else 0)
-        _add_icon(icons, icon_id="ship_0", icon_type="ship", count=ship_count, tile_def=tile_def, seed=seed, terrain="water")
-        profile = SPECIAL_ICON_PROFILES[(seed + 3) % len(SPECIAL_ICON_PROFILES)]
-    else:
-        profile = GENERAL_ICON_PROFILES[seed % len(GENERAL_ICON_PROFILES)]
+        expected_terrain = preferred_terrain.get(icon_type)
+        actual_terrain = regions_by_id[region_id]["terrain"]
+        if expected_terrain and actual_terrain != expected_terrain:
+            raise ValueError(
+                f"{icon_type} on {tile_id} must be in {expected_terrain}, got {actual_terrain}"
+            )
 
-    if profile.get("farm"):
-        _add_icon(icons, icon_id="farm_0", icon_type="farm", count=profile["farm"], tile_def=tile_def, seed=seed + 7, terrain="pasture")
-    if profile.get("sheep"):
-        _add_icon(icons, icon_id="sheep_0", icon_type="sheep", count=profile["sheep"], tile_def=tile_def, seed=seed + 11, terrain="pasture")
-    if profile.get("cattle"):
-        _add_icon(icons, icon_id="cattle_0", icon_type="cattle", count=profile["cattle"], tile_def=tile_def, seed=seed + 13, terrain="pasture")
-    if profile.get("whisky"):
-        terrain = "pasture" if pasture_region_ids else "mountain" if mountain_region_ids else None
-        _add_icon(icons, icon_id="whisky_0", icon_type="whisky", count=1, tile_def=tile_def, seed=seed + 17, terrain=terrain)
-    if profile.get("scroll"):
-        terrain_preferences = ("pasture", "mountain", "water")
-        chosen_terrain = None
-        for terrain_name in terrain_preferences:
-            if tile_def["terrain_to_regions"].get(terrain_name):
-                chosen_terrain = terrain_name
-                break
-        scroll_type = SCROLL_TYPES[seed % len(SCROLL_TYPES)]
-        _add_icon(
-            icons,
-            icon_id="scroll_0",
-            icon_type="scroll",
-            count=1,
-            tile_def=tile_def,
-            seed=seed + 19,
-            terrain=chosen_terrain,
-            scroll_type=scroll_type,
-        )
+        icon_index = type_counts[icon_type]
+        type_counts[icon_type] += 1
+        icon = {
+            "id": f"{icon_type}_{icon_index}",
+            "type": icon_type,
+            "count": count,
+            "region_id": region_id,
+        }
+        if icon_type == "scroll":
+            scroll_type = spec.get("scroll_type")
+            if scroll_type not in SCROLL_TYPES:
+                raise ValueError(f"invalid scroll type for {tile_id}")
+            icon["scroll_type"] = scroll_type
+        if icon_type == "lighthouse":
+            icon["adjacent_region_ids"] = [region_id]
+        icons.append(icon)
     return icons
 
 
 def _load_tile_definitions() -> Dict[str, Dict]:
     manifest = json.loads(CURATED_TILE_MANIFEST_PATH.read_text(encoding="utf-8"))
+    catalog = json.loads(TILE_DEFINITIONS_PATH.read_text(encoding="utf-8"))
+    if catalog.get("schema_version") != 1:
+        raise ValueError("unsupported Isle of Skye tile catalog schema")
+
+    manifest_by_id = {entry["tile_id"]: entry for entry in manifest}
+    catalog_entries = catalog.get("tiles", [])
+    catalog_ids = [entry.get("tile_id") for entry in catalog_entries]
+    catalog_numbers = [entry.get("tile_no") for entry in catalog_entries]
+    if len(catalog_entries) != 73 or len(set(catalog_ids)) != 73:
+        raise ValueError("Isle of Skye tile catalog must contain 73 unique landscape tiles")
+    if (
+        any(not isinstance(number, int) for number in catalog_numbers)
+        or sorted(catalog_numbers) != list(range(1, 74))
+    ):
+        raise ValueError("Isle of Skye tile catalog must use each tile number from 1 to 73")
+    if set(catalog_ids) != set(manifest_by_id):
+        raise ValueError("Isle of Skye tile catalog does not match the source manifest")
+
     tile_defs: Dict[str, Dict] = {
         START_TILE_DEF["id"]: START_TILE_DEF,
     }
 
-    for entry in manifest:
-        group = entry["group"]
-        code_parts = entry["inferred_code_parts"]
-        template_pool = TILE_TEMPLATES[group]
-        seed = _tile_seed(code_parts)
-        template = template_pool[seed % len(template_pool)]
-        edges = _pattern_to_edges(template["edges"])
-        regions, edge_to_region, terrain_to_regions = _build_regions_from_edges(edges)
+    for entry in catalog_entries:
+        tile_id = entry["tile_id"]
+        source_entry = manifest_by_id[tile_id]
+        edge_pattern = entry.get("edges", "")
+        if len(edge_pattern) != len(EDGE_ORDER) or any(code not in TERRAIN_CODE for code in edge_pattern):
+            raise ValueError(f"invalid terrain edge pattern for {tile_id}")
+        edges = _pattern_to_edges(edge_pattern)
+        regions, edge_to_region, terrain_to_regions, internal_region_ids = _build_catalog_regions(
+            edges,
+            entry.get("joins", []),
+            entry.get("internal", []),
+        )
+
+        road_exits = list(entry.get("roads", ""))
+        if len(set(road_exits)) != len(road_exits) or any(edge not in EDGE_ORDER for edge in road_exits):
+            raise ValueError(f"invalid road exits for {tile_id}")
+        road_kind = entry.get("road_kind", "road")
+        if road_kind not in ("road", "bridge"):
+            raise ValueError(f"invalid road kind for {tile_id}")
+
         tile_def = {
-            "id": entry["tile_id"],
-            "group": group,
-            "display_name": entry["tile_id"].replace("-", " "),
-            "source_tile_id": entry["tile_id"],
+            "id": tile_id,
+            "group": source_entry["group"],
+            "display_name": f"Landscape {entry['tile_no']:02d}",
+            "source_tile_id": tile_id,
             "tile_no": entry["tile_no"],
             "edges": edges,
             "regions": regions,
             "edge_to_region": edge_to_region,
             "terrain_to_regions": dict(terrain_to_regions),
-            "road_exits": list(template["road_exits"]),
-            "bridge_exits": _derive_bridge_exits(edges, list(template["road_exits"])),
+            "road_exits": road_exits,
+            "road_kind": road_kind,
+            "bridge_exits": list(road_exits) if road_kind == "bridge" else _derive_bridge_exits(edges, road_exits),
             "icons": [],
+            "catalog_status": catalog.get("catalog_status", "unknown"),
         }
-        tile_def["icons"] = _derive_icon_profile(entry, tile_def)
+        tile_def["icons"] = _catalog_icons(
+            tile_id,
+            entry.get("icons", []),
+            regions,
+            edge_to_region,
+            terrain_to_regions,
+            internal_region_ids,
+        )
         tile_defs[tile_def["id"]] = tile_def
     return tile_defs
 
@@ -532,11 +516,20 @@ def _draw_tile(state: Dict) -> str:
     return bag.pop()
 
 
+def _shuffle_bag(state: Dict) -> None:
+    """Shuffle with state-held inputs so saved games remain deterministic."""
+
+    shuffle_counter = int(state.get("shuffle_counter", 0))
+    shuffle_seed = f"isle-of-skye:{state.get('rng_seed')}:{shuffle_counter}"
+    random.Random(shuffle_seed).shuffle(state["bag"])
+    state["shuffle_counter"] = shuffle_counter + 1
+
+
 def _income_breakdown_for_player(state: Dict, player_id: str) -> Dict:
     player_state = state["players"][player_id]
     territory_analysis = _analyze_territory(player_state)
     connected_whisky_tiles = len(territory_analysis["connected_whisky_tiles"])
-    round_meta = ROUND_TRACK[state["round"]]
+    round_meta = _round_track(state)[state["round"]]
     players_ahead = 0
     if round_meta["catchup_bonus"] > 0:
         my_score = player_state["score"]
@@ -557,7 +550,7 @@ def _income_breakdown_for_player(state: Dict, player_id: str) -> Dict:
 
 def _start_round(state: Dict, events: List[Dict]) -> None:
     next_round = state["round"] + 1
-    if next_round > ROUND_LIMIT:
+    if next_round > _round_limit(state):
         _finalize_game(state, events)
         return
 
@@ -567,6 +560,7 @@ def _start_round(state: Dict, events: List[Dict]) -> None:
     state["buy_index"] = 0
     state["current_turn"] = None
     state["last_income"] = {}
+    state["ready_player_ids"] = []
 
     for player_id in _ordered_player_ids(state):
         player_state = state["players"][player_id]
@@ -581,7 +575,7 @@ def _start_round(state: Dict, events: List[Dict]) -> None:
             "type": "isle_of_skye:round_start",
             "payload": {
                 "round": state["round"],
-                "active_slots": ROUND_TRACK[state["round"]]["active_slots"],
+                "active_slots": _round_track(state)[state["round"]]["active_slots"],
                 "start_player_id": state["buy_order"][0],
             },
         }
@@ -607,6 +601,8 @@ def _reveal_prices_if_ready(state: Dict, events: List[Dict]) -> None:
         for tile_id, price in round_state["prices"].items():
             sale_tiles.append(_tile_sale_entry(tile_id, price))
         round_state["sale_tiles"] = sale_tiles
+
+    _shuffle_bag(state)
 
     state["phase"] = "buy"
     state["current_turn"] = state["buy_order"][state["buy_index"]]
@@ -692,6 +688,13 @@ def _find_legal_placement(player_state: Dict, tile_id: str) -> Optional[Dict]:
                 if _placement_error(player_state, tile_id, x, y, rotation) is None:
                     return {"x": x, "y": y, "rotation": rotation}
     return None
+
+
+def _build_queue_has_legal_placement(player_state: Dict) -> bool:
+    return any(
+        _find_legal_placement(player_state, tile_id) is not None
+        for tile_id in player_state["round"].get("build_queue", [])
+    )
 
 
 def _line_score(occupied_coords: Set[Tuple[int, int]], axis: str) -> int:
@@ -1089,7 +1092,7 @@ def _score_scoring_tile(state: Dict, scoring_tile_id: str, analyses: Dict[str, D
 
 def _apply_round_scoring(state: Dict, events: List[Dict]) -> None:
     analyses = {player_id: _analyze_territory(player_state) for player_id, player_state in state["players"].items()}
-    round_meta = ROUND_TRACK[state["round"]]
+    round_meta = _round_track(state)[state["round"]]
     active_slots = round_meta["active_slots"]
     details: Dict[str, List[Dict]] = {player_id: [] for player_id in state["players"]}
 
@@ -1169,8 +1172,9 @@ def _finalize_game(state: Dict, events: List[Dict]) -> None:
     if len(tied) == 1:
         winner = tied
     else:
-        best_gold = max(state["players"][player_id]["gold"] for player_id in tied)
-        winner = [player_id for player_id in tied if state["players"][player_id]["gold"] == best_gold]
+        leftover_gold = {player_id: state["players"][player_id]["gold"] % 5 for player_id in tied}
+        best_leftover_gold = max(leftover_gold.values())
+        winner = [player_id for player_id in tied if leftover_gold[player_id] == best_leftover_gold]
 
     state["phase"] = "ended"
     state["game_over"] = True
@@ -1195,12 +1199,42 @@ def _maybe_finish_build_phase(state: Dict, events: List[Dict]) -> None:
         return
 
     _apply_round_scoring(state, events)
-    if state["round"] >= ROUND_LIMIT:
-        _finalize_game(state, events)
-        return
+    state["phase"] = "round_review"
+    state["current_turn"] = None
+    state["ready_player_ids"] = []
+    events.append(
+        {
+            "type": "isle_of_skye:round_review",
+            "payload": {
+                "round": state["round"],
+                "final_round": state["round"] >= _round_limit(state),
+            },
+        }
+    )
 
-    state["start_player_index"] = (state["start_player_index"] + 1) % len(_ordered_player_ids(state))
-    _start_round(state, events)
+
+def _ready_for_next_round(state: Dict, player_id: str, events: List[Dict]) -> Optional[str]:
+    if state["phase"] != "round_review":
+        return "invalid phase"
+    ready_player_ids = state.setdefault("ready_player_ids", [])
+    if player_id in ready_player_ids:
+        return "already ready"
+    ready_player_ids.append(player_id)
+    events.append(
+        {
+            "type": "isle_of_skye:ready_next_round",
+            "payload": {"player_id": player_id, "round": state["round"]},
+        }
+    )
+    if set(ready_player_ids) != set(state["players"]):
+        return None
+
+    if state["round"] >= _round_limit(state):
+        _finalize_game(state, events)
+    else:
+        state["start_player_index"] = (state["start_player_index"] + 1) % len(_ordered_player_ids(state))
+        _start_round(state, events)
+    return None
 
 
 def _serialize_tile_defs() -> Dict[str, Dict]:
@@ -1210,11 +1244,14 @@ def _serialize_tile_defs() -> Dict[str, Dict]:
             "id": tile_def["id"],
             "group": tile_def["group"],
             "display_name": tile_def["display_name"],
+            "tile_no": tile_def.get("tile_no"),
             "edges": dict(tile_def["edges"]),
             "road_exits": list(tile_def["road_exits"]),
+            "road_kind": tile_def.get("road_kind", "road"),
             "bridge_exits": list(tile_def.get("bridge_exits", [])),
             "regions": [dict(region) for region in tile_def["regions"]],
             "icons": [dict(icon) for icon in tile_def["icons"]],
+            "catalog_status": tile_def.get("catalog_status", "built_in"),
         }
     return serializable_defs
 
@@ -1225,17 +1262,18 @@ SERIALIZED_TILE_DEFS = _serialize_tile_defs()
 class IsleOfSkyeGame:
     game_id = "isle_of_skye"
     min_players = 2
-    max_players = 4
+    max_players = 5
 
     @staticmethod
     def init_game(config: Optional[Dict], players: List[Dict]) -> Dict:
         if len(players) < IsleOfSkyeGame.min_players or len(players) > IsleOfSkyeGame.max_players:
-            raise ValueError("Isle of Skye supports 2-4 players in this implementation")
+            raise ValueError("Isle of Skye supports 2-5 players")
 
         ordered_players = sorted(players, key=lambda player: player.get("seat", 0))
         player_meta = {player["player_id"]: player for player in ordered_players}
-        seed = (config or {}).get("seed")
-        rng = random.Random(seed)
+        configured_seed = (config or {}).get("seed")
+        rng_seed = configured_seed if configured_seed is not None else random.SystemRandom().randrange(1 << 63)
+        rng = random.Random(rng_seed)
 
         scoring_tile_ids = [tile["id"] for tile in SCORING_TILE_DEFS]
         rng.shuffle(scoring_tile_ids)
@@ -1274,6 +1312,9 @@ class IsleOfSkyeGame:
             "round": 0,
             "phase": "setup",
             "bag": bag,
+            "rng_seed": rng_seed,
+            "shuffle_counter": 0,
+            "round_track_key": _round_track_key_for_player_count(len(ordered_players)),
             "start_player_index": 0,
             "buy_order": [],
             "buy_index": 0,
@@ -1284,6 +1325,7 @@ class IsleOfSkyeGame:
             "last_income": {},
             "last_scoring": None,
             "final_scoring": None,
+            "ready_player_ids": [],
         }
 
         events: List[Dict] = []
@@ -1309,10 +1351,17 @@ class IsleOfSkyeGame:
                 return []
             actions = []
             if player_state["round"]["build_queue"]:
-                actions.extend(["place_tile", "return_tile"])
+                if _build_queue_has_legal_placement(player_state):
+                    actions.append("place_tile")
+                else:
+                    actions.append("return_tile")
             else:
                 actions.append("finish_build")
             return actions
+        if phase == "round_review":
+            if player_id in state.get("ready_player_ids", []):
+                return []
+            return ["ready_next_round"]
         return []
 
     @staticmethod
@@ -1326,6 +1375,12 @@ class IsleOfSkyeGame:
         phase = state["phase"]
         action_type = action.get("type")
         events: List[Dict] = []
+
+        if phase == "round_review":
+            if action_type != "ready_next_round":
+                return [], "invalid action"
+            error = _ready_for_next_round(state, player_id, events)
+            return ([] if error else events), error
 
         if phase == "price_secret":
             if action_type != "submit_prices":
@@ -1444,8 +1499,11 @@ class IsleOfSkyeGame:
             if action_type == "return_tile":
                 if _find_legal_placement(player_state, tile_id) is not None:
                     return [], "tile still has a legal placement"
+                if _build_queue_has_legal_placement(player_state):
+                    return [], "place another queued tile before returning an unplaceable tile"
                 round_state["build_queue"] = [queued_tile_id for queued_tile_id in round_state["build_queue"] if queued_tile_id != tile_id]
                 state["bag"].append(tile_id)
+                _shuffle_bag(state)
                 if not round_state["build_queue"]:
                     round_state["build_done"] = True
                 events.append({"type": "isle_of_skye:return_tile", "payload": {"player_id": player_id, "tile_id": tile_id}})
@@ -1496,14 +1554,15 @@ class IsleOfSkyeGame:
         for player_id in _ordered_player_ids(state):
             player_state = state["players"][player_id]
             round_state = player_state["round"]
+            can_view_private_money = player_id == viewer_id or phase == "ended"
             player_view = {
                 "player_id": player_id,
                 "name": _player_name(state, player_id),
                 "seat": state["player_meta"][player_id].get("seat"),
                 "is_bot": state["player_meta"][player_id].get("is_bot", False),
-                "gold": player_state["gold"],
-                "available_gold": _available_gold(player_state),
-                "reserved_gold": round_state["reserved_gold"],
+                "gold": player_state["gold"] if can_view_private_money else None,
+                "available_gold": _available_gold(player_state) if can_view_private_money else None,
+                "reserved_gold": round_state["reserved_gold"] if can_view_private_money else None,
                 "score": player_state["score"],
                 "territory": [dict(tile) for tile in player_state["territory"]],
                 "territory_size": len(player_state["territory"]),
@@ -1513,16 +1572,19 @@ class IsleOfSkyeGame:
                 "build_queue": list(round_state["build_queue"]),
                 "build_done": round_state["build_done"],
             }
-            if player_id == viewer_id and phase == "price_secret":
+            if phase == "price_secret":
                 player_view["drawn_tile_ids"] = list(round_state["drawn_tile_ids"])
+            else:
+                player_view["drawn_tile_ids"] = []
+
+            if player_id == viewer_id and phase == "price_secret":
                 player_view["discard_tile_id"] = round_state["discard_tile_id"]
                 player_view["prices"] = dict(round_state["prices"])
             else:
-                player_view["drawn_tile_ids"] = []
                 player_view["discard_tile_id"] = None
                 player_view["prices"] = {}
 
-            if phase in ("buy", "build", "ended"):
+            if phase in ("buy", "build", "round_review", "ended"):
                 player_view["sale_tiles"] = [dict(tile) for tile in round_state["sale_tiles"]]
             else:
                 player_view["sale_tiles"] = []
@@ -1531,12 +1593,13 @@ class IsleOfSkyeGame:
         start_player_id = None
         if state.get("buy_order"):
             start_player_id = state["buy_order"][0]
+        round_track = _round_track(state)
         return {
             "game_id": IsleOfSkyeGame.game_id,
             "you": viewer_id,
             "phase": phase,
             "round": state["round"],
-            "round_limit": ROUND_LIMIT,
+            "round_limit": _round_limit(state),
             "current_turn": state.get("current_turn"),
             "start_player_id": start_player_id,
             "buy_order": list(state.get("buy_order", [])),
@@ -1545,18 +1608,19 @@ class IsleOfSkyeGame:
                 slot: dict(SCORING_TILE_MAP[tile_id])
                 for slot, tile_id in state["scoring_slots"].items()
             },
-            "active_scoring_slots": list(ROUND_TRACK[state["round"]]["active_slots"]) if state["round"] in ROUND_TRACK else [],
-            "round_track": ROUND_TRACK,
+            "active_scoring_slots": list(round_track[state["round"]]["active_slots"]) if state["round"] in round_track else [],
+            "round_track": round_track,
             "players": players_view,
             "tile_defs": SERIALIZED_TILE_DEFS,
             "bag_count": len(state["bag"]),
             "last_income": dict(state.get("last_income", {})),
             "last_scoring": state.get("last_scoring"),
             "final_scoring": state.get("final_scoring"),
+            "ready_player_ids": list(state.get("ready_player_ids", [])),
             "legal_actions": IsleOfSkyeGame.get_legal_actions(state, viewer_id),
             "game_over": state.get("game_over", False),
             "winner": list(state.get("winner", [])),
-            "implementation_note": "Tile faces are now generated as semantic SVGs from the current Skye draft, but the exact per-tile data still needs validation against the source art.",
+            "implementation_note": "Tile catalog: 73/73 semantic definitions loaded · manual visual review v2.",
         }
 
     @staticmethod
@@ -1612,6 +1676,9 @@ class IsleOfSkyeGame:
                     return {"type": "place_tile", "tile_id": tile_id, **placement, "delay_ms": 250}
             return {"type": "return_tile", "tile_id": player_state["round"]["build_queue"][0], "delay_ms": 200}
 
+        if phase == "round_review" and bot_id not in state.get("ready_player_ids", []):
+            return {"type": "ready_next_round", "delay_ms": 250}
+
         return None
 
     @staticmethod
@@ -1620,4 +1687,14 @@ class IsleOfSkyeGame:
 
     @staticmethod
     def deserialize(payload: Dict) -> Dict:
+        # Older rooms predate the canonical catalog, deterministic re-shuffles,
+        # five-player track, and round-review acknowledgement state. Keeping the
+        # migration here lets those rooms continue without weakening new saves.
+        payload.setdefault(
+            "round_track_key",
+            _round_track_key_for_player_count(len(payload.get("players", {}))),
+        )
+        payload.setdefault("rng_seed", payload.get("config", {}).get("seed", 0))
+        payload.setdefault("shuffle_counter", 0)
+        payload.setdefault("ready_player_ids", [])
         return payload

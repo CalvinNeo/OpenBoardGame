@@ -2711,6 +2711,12 @@ ISLE_OF_SKYE_ACTION_SCHEMA = {
             "required": ["type"],
             "additionalProperties": False,
         },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "ready_next_round"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
     ],
 }
 
