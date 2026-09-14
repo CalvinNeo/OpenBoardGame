@@ -1726,10 +1726,11 @@ async def on_room_load(sid, data):
         state_version = int(payload.get("state_version") or 0)
     except (TypeError, ValueError):
         state_version = 0
+    saved_config = game_state.get("config")
     room = Room(
         room_id=room_id,
         game_type=game_type,
-        game_config=dict(game_state.get("config") or {}),
+        game_config=dict(saved_config) if isinstance(saved_config, dict) else {},
         status=status,
         players=players,
         state_version=state_version,

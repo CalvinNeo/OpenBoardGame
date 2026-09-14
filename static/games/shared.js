@@ -201,6 +201,17 @@ function renderRoomState(state) {
   roomIdLabel.textContent = state.room_id;
   roomStatus.textContent = state.status;
   gameTypeLabel.textContent = state.game_type || "-";
+  const showForestShuffleLanguage = state.game_type === "forest_shuffle";
+  if (forestShuffleRoomLanguageRow) {
+    forestShuffleRoomLanguageRow.classList.toggle("hidden", !showForestShuffleLanguage);
+  }
+  if (forestShuffleRoomLanguage) {
+    const language = state.game_config && state.game_config.language === "zh" ? "zh" : "en";
+    forestShuffleRoomLanguage.textContent = language === "zh" ? "中文" : "English";
+    if (typeof setForestShuffleLanguage === "function") {
+      setForestShuffleLanguage(language);
+    }
+  }
   updateRoomControlsForStatus(state.status);
   if (previousGame !== currentGameType) {
     clearSelection();

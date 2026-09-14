@@ -4156,6 +4156,119 @@ body.log-open {
   flex-direction: column;
 }
 
+.create-room-step {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.forest-shuffle-language-step {
+  display: flex;
+  min-height: 300px;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.create-room-back-btn {
+  align-self: flex-start;
+  min-height: 36px;
+  padding: 6px 10px;
+  border-color: transparent;
+  background: transparent;
+  color: #37634a;
+  box-shadow: none;
+}
+
+.create-room-back-btn:hover {
+  border-color: #cfe2d5;
+  background: #eef7f0;
+}
+
+.forest-shuffle-language-hero {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 18px;
+  border: 1px solid #c9ddcd;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #edf7ef 0%, #f8f4e7 100%);
+  color: #294b35;
+}
+
+.forest-shuffle-language-icon {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: #d9eadb;
+  font-size: 30px;
+}
+
+.forest-shuffle-language-hero h3,
+.forest-shuffle-language-hero p {
+  margin: 0;
+}
+
+.forest-shuffle-language-hero p {
+  margin-top: 4px;
+  color: #5c6f61;
+  line-height: 1.45;
+}
+
+.forest-shuffle-language-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.forest-shuffle-language-option {
+  display: flex;
+  min-width: 0;
+  min-height: 96px;
+  gap: 12px;
+  align-items: center;
+  padding: 16px;
+  border: 1px solid #ccd9cf;
+  border-radius: 14px;
+  background: #fff;
+  color: #24372a;
+  text-align: left;
+}
+
+.forest-shuffle-language-option:hover,
+.forest-shuffle-language-option:focus-visible {
+  border-color: #4f8a61;
+  background: #f1f8f2;
+}
+
+.forest-shuffle-language-option:focus-visible {
+  outline: 3px solid rgba(79, 138, 97, 0.2);
+  outline-offset: 1px;
+}
+
+.forest-shuffle-language-flag {
+  font-size: 28px;
+}
+
+.forest-shuffle-language-option strong,
+.forest-shuffle-language-option small {
+  display: block;
+}
+
+.forest-shuffle-language-option strong {
+  font-size: 17px;
+}
+
+.forest-shuffle-language-option small {
+  margin-top: 4px;
+  color: #69766d;
+  line-height: 1.3;
+}
+
 .create-room-controls {
   display: grid;
   grid-template-columns: minmax(180px, 1fr) 150px 170px;
@@ -4351,6 +4464,10 @@ body.log-open {
     overflow: hidden;
   }
 
+  .forest-shuffle-language-step {
+    min-height: 0;
+  }
+
   .create-room-controls {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 9px;
@@ -4373,6 +4490,16 @@ body.log-open {
 
   .game-item-meta {
     max-width: 116px;
+  }
+}
+
+@media (max-width: 440px) {
+  .forest-shuffle-language-options {
+    grid-template-columns: 1fr;
+  }
+
+  .forest-shuffle-language-option {
+    min-height: 82px;
   }
 }
 

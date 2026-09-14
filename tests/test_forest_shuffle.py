@@ -28,6 +28,15 @@ class ForestShuffleGameTests(unittest.TestCase):
         self.assertEqual(state["current_turn"], "p1")
         self.assertEqual(state["winter_count"], 0)
 
+    def test_language_is_normalized_into_state_and_public_view(self):
+        state = ForestShuffleGame.init_game({"seed": 7, "language": "zh"}, self._players())
+
+        self.assertEqual(state["config"]["language"], "zh")
+        self.assertEqual(ForestShuffleGame.get_public_view(state, "p1")["language"], "zh")
+
+        with self.assertRaisesRegex(ValueError, "language"):
+            ForestShuffleGame.init_game({"language": "fr"}, self._players())
+
     def test_playing_tree_reveals_card_to_clearing(self):
         state = self._fresh_state()
         state["current_turn"] = "p1"

@@ -33,8 +33,11 @@ class RoomSessionTests(unittest.IsolatedAsyncioTestCase):
         app.ROOMS.clear()
         app.SESSIONS.clear()
 
-    async def _create_room(self, sid, name, game_type="cabo"):
-        await app.on_room_create(sid, {"name": name, "game_type": game_type})
+    async def _create_room(self, sid, name, game_type="cabo", config=None):
+        payload = {"name": name, "game_type": game_type}
+        if config is not None:
+            payload["config"] = config
+        await app.on_room_create(sid, payload)
         return app.SESSIONS[sid]["room_id"]
 
     async def test_create_cleans_previous_lobby_session(self):
@@ -79,6 +82,41 @@ class RoomSessionTests(unittest.IsolatedAsyncioTestCase):
         room_state_events = [event for event in app.sio.emits if event["event"] == "room:state"]
         self.assertTrue(room_state_events)
         self.assertTrue(room_state_events[-1]["payload"]["players"][0]["ready"])
+
+    async def test_forest_shuffle_creation_language_is_kept_when_game_starts(self):
+        sid_owner = "sid-owner"
+        room_id = await self._create_room(
+            sid_owner,
+            "Alice",
+            game_type="forest_shuffle",
+            config={"language": "zh"},
+        )
+        sid_bob = "sid-bob"
+        await app.on_room_join(sid_bob, {"room_id": room_id, "name": "Bob"})
+        for player in app.ROOMS[room_id].players:
+            player.ready = True
+
+        await app.on_room_start(sid_owner, {"config": {"language": "en"}})
+
+        room = app.ROOMS[room_id]
+        self.assertEqual(room.game_config, {"language": "zh"})
+        self.assertEqual(room.game_state["config"]["language"], "zh")
+        room_state = next(
+            event for event in reversed(app.sio.emits) if event["event"] == "room:state"
+        )
+        self.assertEqual(room_state["payload"]["game_config"]["language"], "zh")
+
+    async def test_forest_shuffle_creation_rejects_unknown_language(self):
+        sid = "sid-1"
+
+        await app.on_room_create(
+            sid,
+            {"name": "Alice", "game_type": "forest_shuffle", "config": {"language": "fr"}},
+        )
+
+        self.assertNotIn(sid, app.SESSIONS)
+        error = next(event for event in reversed(app.sio.emits) if event["event"] == "system:error")
+        self.assertIn("language", error["payload"]["message"])
 
     async def test_reconnect_cleans_previous_session(self):
         sid_old = "sid-old"

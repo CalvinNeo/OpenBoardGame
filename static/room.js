@@ -51,13 +51,21 @@ const loadList = document.getElementById("loadList");
 const loadEmpty = document.getElementById("loadEmpty");
 const loadAutoSaveToggle = document.getElementById("loadAutoSaveToggle");
 const createRoomModal = document.getElementById("createRoomModal");
+const createRoomModalTitle = document.getElementById("createRoomModalTitle");
 const createRoomModalCloseBtn = document.getElementById("createRoomModalCloseBtn");
+const createRoomGameStep = document.getElementById("createRoomGameStep");
 const gameSearchInput = document.getElementById("gameSearchInput");
 const playerCountFilter = document.getElementById("playerCountFilter");
 const gameSortSelect = document.getElementById("gameSortSelect");
 const gameListCount = document.getElementById("gameListCount");
 const gameListEl = document.getElementById("gameList");
 const gameListEmpty = document.getElementById("gameListEmpty");
+const forestShuffleLanguageStep = document.getElementById("forestShuffleLanguageStep");
+const forestShuffleLanguageBackBtn = document.getElementById("forestShuffleLanguageBackBtn");
+const forestShuffleEnglishBtn = document.getElementById("forestShuffleEnglishBtn");
+const forestShuffleChineseBtn = document.getElementById("forestShuffleChineseBtn");
+const forestShuffleRoomLanguageRow = document.getElementById("forestShuffleRoomLanguageRow");
+const forestShuffleRoomLanguage = document.getElementById("forestShuffleRoomLanguage");
 const seatClaimModal = document.getElementById("seatClaimModal");
 const seatClaimCloseBtn = document.getElementById("seatClaimCloseBtn");
 const seatClaimNameHint = document.getElementById("seatClaimNameHint");
@@ -714,7 +722,7 @@ function updateGameListCount(count) {
   gameListCount.textContent = `Showing ${safeCount} ${label}`;
 }
 
-function selectGameFromModal(gameId) {
+function createRoomForGame(gameId, config = null) {
   const name = getPlayerName();
   if (!name) {
     log("Name required");
@@ -725,7 +733,50 @@ function selectGameFromModal(gameId) {
     return;
   }
   closeCreateRoomModal();
-  socket.emit("room:create", { name, game_type: gameId });
+  const payload = { name, game_type: gameId };
+  if (config && typeof config === "object") {
+    payload.config = config;
+  }
+  socket.emit("room:create", payload);
+}
+
+function showCreateRoomGameStep() {
+  if (createRoomModalTitle) {
+    createRoomModalTitle.textContent = "Select Game";
+  }
+  if (createRoomGameStep) {
+    createRoomGameStep.classList.remove("hidden");
+    createRoomGameStep.setAttribute("aria-hidden", "false");
+  }
+  if (forestShuffleLanguageStep) {
+    forestShuffleLanguageStep.classList.add("hidden");
+    forestShuffleLanguageStep.setAttribute("aria-hidden", "true");
+  }
+}
+
+function showForestShuffleLanguageStep() {
+  if (createRoomModalTitle) {
+    createRoomModalTitle.textContent = "Forest Shuffle";
+  }
+  if (createRoomGameStep) {
+    createRoomGameStep.classList.add("hidden");
+    createRoomGameStep.setAttribute("aria-hidden", "true");
+  }
+  if (forestShuffleLanguageStep) {
+    forestShuffleLanguageStep.classList.remove("hidden");
+    forestShuffleLanguageStep.setAttribute("aria-hidden", "false");
+  }
+  if (forestShuffleEnglishBtn) {
+    forestShuffleEnglishBtn.focus();
+  }
+}
+
+function selectGameFromModal(gameId) {
+  if (gameId === "forest_shuffle" && forestShuffleLanguageStep) {
+    showForestShuffleLanguageStep();
+    return;
+  }
+  createRoomForGame(gameId);
 }
 
 async function applyGameFilters() {
@@ -752,6 +803,7 @@ async function openCreateRoomModal() {
   if (gameSortSelect) {
     gameSortSelect.value = "alpha";
   }
+  showCreateRoomGameStep();
   setModalVisible(createRoomModal, true);
   await applyGameFilters();
 }
@@ -759,6 +811,7 @@ async function openCreateRoomModal() {
 function closeCreateRoomModal() {
   createRoomPending = false;
   setModalVisible(createRoomModal, false);
+  showCreateRoomGameStep();
 }
 
 function openSeatClaimModal(roomId, sourceRoomId) {
@@ -1377,6 +1430,12 @@ function resetRoomState() {
   roomIdLabel.textContent = "-";
   roomStatus.textContent = "-";
   gameTypeLabel.textContent = "-";
+  if (forestShuffleRoomLanguageRow) {
+    forestShuffleRoomLanguageRow.classList.add("hidden");
+  }
+  if (forestShuffleRoomLanguage) {
+    forestShuffleRoomLanguage.textContent = "-";
+  }
   playersList.innerHTML = "";
   if (typeof clearArkNovaState === "function") {
     clearArkNovaState();
@@ -1802,6 +1861,30 @@ if (loadModalCloseBtn) {
 if (createRoomModalCloseBtn) {
   createRoomModalCloseBtn.addEventListener("click", () => {
     closeCreateRoomModal();
+  });
+}
+
+if (forestShuffleLanguageBackBtn) {
+  forestShuffleLanguageBackBtn.addEventListener("click", () => {
+    showCreateRoomGameStep();
+    const forestShuffleItem = gameListEl
+      ? gameListEl.querySelector('[data-game-id="forest_shuffle"]')
+      : null;
+    if (forestShuffleItem) {
+      forestShuffleItem.focus();
+    }
+  });
+}
+
+if (forestShuffleEnglishBtn) {
+  forestShuffleEnglishBtn.addEventListener("click", () => {
+    createRoomForGame("forest_shuffle", { language: "en" });
+  });
+}
+
+if (forestShuffleChineseBtn) {
+  forestShuffleChineseBtn.addEventListener("click", () => {
+    createRoomForGame("forest_shuffle", { language: "zh" });
   });
 }
 

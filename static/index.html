@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css?v=app_v49" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v50" />
   <link rel="stylesheet" href="/static/ark_nova.css?v=app_v21" />
 </head>
 <body>
@@ -52,49 +52,49 @@
       </div>
       <div class="modal-body">
         <div id="createRoomGameStep" class="create-room-step">
-        <div class="create-room-controls">
-          <div class="game-search-control">
-            <label class="visually-hidden" for="gameSearchInput">Search games</label>
-            <span class="game-search-icon" aria-hidden="true">🔎</span>
-            <input
-              id="gameSearchInput"
-              type="search"
-              placeholder="Search games..."
-              autocomplete="off"
-              autocapitalize="none"
-              spellcheck="false"
-              enterkeyhint="search"
-            />
+          <div class="create-room-controls">
+            <div class="game-search-control">
+              <label class="visually-hidden" for="gameSearchInput">Search games</label>
+              <span class="game-search-icon" aria-hidden="true">🔎</span>
+              <input
+                id="gameSearchInput"
+                type="search"
+                placeholder="Search games..."
+                autocomplete="off"
+                autocapitalize="none"
+                spellcheck="false"
+                enterkeyhint="search"
+              />
+            </div>
+            <div class="create-room-filter-control">
+              <label for="playerCountFilter">Players</label>
+              <select id="playerCountFilter">
+                <option value="">Any number</option>
+                <option value="1">1 player</option>
+                <option value="2">2 players</option>
+                <option value="3">3 players</option>
+                <option value="4">4 players</option>
+                <option value="5">5 players</option>
+                <option value="6">6 players</option>
+                <option value="7">7 players</option>
+                <option value="8">8 players</option>
+                <option value="9">9 players</option>
+                <option value="10">10 players</option>
+              </select>
+            </div>
+            <div class="create-room-filter-control">
+              <label for="gameSortSelect">Sort</label>
+              <select id="gameSortSelect">
+                <option value="alpha" selected>Alphabet</option>
+                <option value="dev_order">Development Order</option>
+                <option value="difficulty_asc">Weight Asc</option>
+                <option value="difficulty_desc">Weight Desc</option>
+              </select>
+            </div>
           </div>
-          <div class="create-room-filter-control">
-            <label for="playerCountFilter">Players</label>
-            <select id="playerCountFilter">
-              <option value="">Any number</option>
-              <option value="1">1 player</option>
-              <option value="2">2 players</option>
-              <option value="3">3 players</option>
-              <option value="4">4 players</option>
-              <option value="5">5 players</option>
-              <option value="6">6 players</option>
-              <option value="7">7 players</option>
-              <option value="8">8 players</option>
-              <option value="9">9 players</option>
-              <option value="10">10 players</option>
-            </select>
-          </div>
-          <div class="create-room-filter-control">
-            <label for="gameSortSelect">Sort</label>
-            <select id="gameSortSelect">
-              <option value="alpha" selected>Alphabet</option>
-              <option value="dev_order">Development Order</option>
-              <option value="difficulty_asc">Weight Asc</option>
-              <option value="difficulty_desc">Weight Desc</option>
-            </select>
-          </div>
-        </div>
-        <div id="gameListCount" class="hint game-list-count" role="status" aria-live="polite">Showing 0 games</div>
-        <div id="gameList" class="game-list"></div>
-        <div id="gameListEmpty" class="hint game-list-empty hidden" role="status">🎲 No games match your filters.</div>
+          <div id="gameListCount" class="hint game-list-count" role="status" aria-live="polite">Showing 0 games</div>
+          <div id="gameList" class="game-list"></div>
+          <div id="gameListEmpty" class="hint game-list-empty hidden" role="status">🎲 No games match your filters.</div>
         </div>
         <div id="forestShuffleLanguageStep" class="forest-shuffle-language-step hidden" aria-hidden="true">
           <button id="forestShuffleLanguageBackBtn" class="create-room-back-btn" type="button">← Back to games</button>
@@ -666,7 +666,7 @@
   <section id="forestShuffleHelpModal" class="modal hidden" aria-hidden="true">
     <div class="modal-content forest-shuffle-help-modal">
       <div class="modal-header">
-        <h2>Forest Shuffle - Game Rules</h2>
+        <h2 id="forestShuffleHelpTitle">Forest Shuffle - Game Rules</h2>
         <button id="forestShuffleHelpModalCloseBtn" type="button">Close</button>
       </div>
       <div class="modal-body forest-shuffle-help-content" id="forestShuffleHelpContent"></div>
@@ -676,7 +676,7 @@
   <section id="forestShuffleExplainModal" class="modal hidden" aria-hidden="true">
     <div class="modal-content forest-shuffle-explain-modal">
       <div class="modal-header">
-        <h2>Button Explanation</h2>
+        <h2 id="forestShuffleExplainTitle">Button Explanation</h2>
         <button id="forestShuffleExplainModalCloseBtn" type="button">Close</button>
       </div>
       <div class="modal-body">
@@ -1241,6 +1241,7 @@
                   <div>Room ID: <span id="roomIdLabel">-</span></div>
                   <div>Status: <span id="roomStatus">-</span></div>
                   <div>Game: <span id="gameTypeLabel">-</span></div>
+                  <div id="forestShuffleRoomLanguageRow" class="hidden">Language: <span id="forestShuffleRoomLanguage">-</span></div>
                 </div>
                 <div class="game-configs" id="gameConfigSection">
                   <div class="game-config-card hidden" id="drawGuessConfigBox" aria-hidden="true">
@@ -4928,17 +4929,17 @@
 
             <div id="forestShufflePanel" class="hidden forest-shuffle-panel">
               <div class="row">
-                <div>Current Turn: <span id="forestShuffleTurn">-</span></div>
-                <div>Winter: <span id="forestShuffleWinter">-</span></div>
-                <div>Deck: <span id="forestShuffleDeck">-</span></div>
-                <div>Winner: <span id="forestShuffleWinner">-</span></div>
+                <div><span id="forestShuffleCurrentTurnText">Current Turn</span>: <span id="forestShuffleTurn">-</span></div>
+                <div><span id="forestShuffleWinterText">Winter</span>: <span id="forestShuffleWinter">-</span></div>
+                <div><span id="forestShuffleDeckText">Deck</span>: <span id="forestShuffleDeck">-</span></div>
+                <div><span id="forestShuffleWinnerText">Winner</span>: <span id="forestShuffleWinner">-</span></div>
               </div>
               <div id="forestShuffleStatus" class="forest-shuffle-status" data-forest-shuffle-explain="status">-</div>
               <div id="forestShuffleNotes" class="forest-shuffle-notes"></div>
 
               <div class="forest-shuffle-layout">
                 <section class="forest-shuffle-shell" data-forest-shuffle-explain="action">
-                  <div class="forest-shuffle-section-title">Action Console</div>
+                  <div id="forestShuffleActionTitle" class="forest-shuffle-section-title">Action Console</div>
                   <div id="forestShuffleActionHint" class="hint">-</div>
                   <div id="forestShuffleDrawSources" class="forest-shuffle-draw-sources"></div>
                   <div class="row actions forest-shuffle-action-row">
@@ -4954,15 +4955,15 @@
                 </section>
 
                 <section class="forest-shuffle-shell" data-forest-shuffle-explain="clearing">
-                  <div class="forest-shuffle-section-title">Clearing</div>
+                  <div id="forestShuffleClearingTitle" class="forest-shuffle-section-title">Clearing</div>
                   <div id="forestShuffleClearing" class="forest-shuffle-card-grid"></div>
                 </section>
               </div>
 
-              <h3>Your Hand</h3>
+              <h3 id="forestShuffleHandTitle">Your Hand</h3>
               <div id="forestShuffleHand" class="forest-shuffle-card-grid" data-forest-shuffle-explain="hand"></div>
 
-              <h3>Players</h3>
+              <h3 id="forestShufflePlayersTitle">Players</h3>
               <div id="forestShufflePlayers" class="forest-shuffle-player-grid" data-forest-shuffle-explain="players"></div>
             </div>
 
@@ -5672,7 +5673,7 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js"></script>
-  <script src="/static/games/shared.js?v=app_v10"></script>
+  <script src="/static/games/shared.js?v=app_v11"></script>
   <script src="/static/games/blokus.js?v=app_v6"></script>
   <script src="/static/games/carcassonne.js?v=app_v6"></script>
   <script src="/static/games/azul.js?v=app_v4"></script>
@@ -5697,7 +5698,7 @@
   <script src="/static/games/gang.js?v=app_v4"></script>
   <script src="/static/games/cat_in_box.js?v=app_v4"></script>
   <script src="/static/games/point_salad.js?v=app_v4"></script>
-  <script src="/static/games/forest_shuffle.js?v=app_v4"></script>
+  <script src="/static/games/forest_shuffle.js?v=app_v5"></script>
   <script src="/static/games/patchwork.js?v=app_v5"></script>
   <script src="/static/games/isle_of_skye.js?v=app_v4"></script>
   <script src="/static/games/six_nimmt.js?v=app_v4"></script>
@@ -5739,6 +5740,6 @@
   <script src="/static/games/scout.js?v=app_v4"></script>
   <script src="/static/games/ark_nova.js?v=app_v22"></script>
   <script src="/static/app.js?v=app_v12"></script>
-  <script src="/static/room.js?v=app_v21"></script>
+  <script src="/static/room.js?v=app_v22"></script>
 </body>
 </html>
