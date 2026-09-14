@@ -6,7 +6,7 @@ import random
 from collections import Counter
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional, Sequence, Set, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Mapping, MutableMapping, Optional, Sequence, Set, Tuple
 
 
 ASSET_DIR = Path(__file__).resolve().parent / "assets" / "ark_nova"
@@ -3675,60 +3675,21 @@ class ArkNovaGame:
         }
 
     @staticmethod
-    def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
-        legal = ArkNovaGame.get_legal_actions(state, bot_id)
-        if not legal:
-            return None
-        if "keep_initial_cards" in legal:
-            return {"type": "keep_initial_cards", "card_ids": list(state["players"][bot_id]["hand"][:4])}
-        if "resolve_choice" in legal:
-            pending = state["pending_choice"]
-            choice_type = pending.get("type", pending.get("kind"))
-            if choice_type in {"place_free_enclosure", "place_unique_building"}:
-                if choice_type == "place_unique_building":
-                    card = SPONSOR_CARDS.get(str(pending.get("card_id", "")))
-                    unique = card and card.get("unique_building")
-                    cells = _find_placement(state, bot_id, unique["id"], int(unique["footprint"]["cell_count"]), unique) if unique else None
-                else:
-                    size = int(pending.get("size", 2))
-                    cells = _find_placement(state, bot_id, "standard_enclosure", size)
-                if cells:
-                    return {"type": "resolve_choice", "choice_id": pending.get("choice_id"), "selection": {"cells": cells}}
-            options = pending.get("options", [])
-            minimum = int(pending.get("min", pending.get("minimum", 1)))
-            if minimum == 0 and pending.get("allow_skip", pending.get("optional")):
-                selection: Any = []
-            elif options:
-                values = [item.get("value", item.get("id")) for item in options[:minimum or 1]]
-                selection = values if (minimum or 1) > 1 else values[0]
-            else:
-                return None
-            return {"type": "resolve_choice", "choice_id": pending.get("choice_id"), "selection": selection}
+    def bot_move(
+        state: Dict,
+        bot_id: str,
+        *,
+        progress_callback: Optional[Callable[[str, float, Optional[str]], None]] = None,
+    ) -> Optional[Dict]:
+        # Imported lazily so the AI can use this module's validation helpers as
+        # its legality oracle without creating an import cycle at startup.
+        from game.ark_nova_ai import choose_ark_nova_action
 
-        player = state["players"][bot_id]
-        if "build" in legal:
-            strength = _action_slot(player, "build")
-            for size in range(min(5, strength), 0, -1):
-                cells = _find_placement(state, bot_id, "standard_enclosure", size)
-                if cells and player["money"] >= size * 2:
-                    return {"type": "build", "buildings": [{"building_type": "standard_enclosure", "size": size, "cells": cells}]}
-        if "sponsors" in legal:
-            strength = _action_slot(player, "sponsors") + (1 if _action_level(player, "sponsors") == 2 else 0)
-            card_id = next(
-                (card_id for card_id in player["hand"] if card_id in SPONSOR_CARDS
-                 and int(SPONSOR_CARDS[card_id]["play"]["strength_required"]) <= strength
-                 and _card_conditions_met(player, SPONSOR_CARDS[card_id])),
-                None,
-            )
-            if card_id and not SPONSOR_CARDS[card_id].get("unique_building"):
-                return {"type": "sponsors", "mode": "play", "card_ids": [card_id]}
-            return {"type": "sponsors", "mode": "break"}
-        if "cards" in legal:
-            return {"type": "cards", "mode": "draw"}
-        if "gain_x" in legal:
-            weakest = min(ACTION_IDS, key=lambda value: _action_slot(player, value))
-            return {"type": "gain_x", "action_card": weakest}
-        return None
+        return choose_ark_nova_action(
+            state,
+            bot_id,
+            progress_callback=progress_callback,
+        )
 
     @staticmethod
     def serialize(state: Dict) -> Dict:

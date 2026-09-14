@@ -50,7 +50,7 @@ const CENTURY_HELP_HTML = `
 
   <h3>Important</h3>
   <ul>
-    <li>Your caravan holds 10 spices. If you exceed 10, you must discard down before the next turn.</li>
+    <li>Your caravan holds 10 spices. If you exceed 10, choose exactly 10 spices to keep before the next turn.</li>
     <li>In 2-3 player games, the end triggers at 6 point cards. In 4-5 player games, it triggers at 5.</li>
     <li>Final score is point cards + Gold coins x3 + Silver coins x1 + every non-yellow spice.</li>
   </ul>
@@ -296,16 +296,6 @@ function centuryButton(text, onClick, disabled = false, className = "") {
   if (className) button.className = className;
   button.addEventListener("click", onClick);
   return button;
-}
-
-function centuryNumberInput(value, min, max) {
-  const input = document.createElement("input");
-  input.type = "number";
-  input.min = String(min);
-  input.max = String(max);
-  input.value = String(value);
-  input.className = "century-number";
-  return input;
 }
 
 function centuryClearActionSelection() {
@@ -697,33 +687,110 @@ function renderCenturyAcquireForm(view, index, sourceButton = null) {
 
 function renderCenturyDiscardForm(view) {
   const you = centurySelf(view);
+  const spices = { ...(you.spices || {}) };
+  const totalSpices = CENTURY_SPICE_ORDER.reduce((total, color) => total + Number(spices[color] || 0), 0);
+  const keepTarget = Math.max(0, totalSpices - Number(view.discard_needed || 0));
+  const keptPieces = new Set();
   const form = document.createElement("div");
-  form.className = "century-action-form century-action-form--drawer century-action-form--compact century-action-form--limit";
+  form.className = "century-action-form century-action-form--drawer century-action-form--compact century-action-form--limit century-action-form--keep";
   form.innerHTML = `
     <div class="century-action-title">
       <span>CARAVAN LIMIT</span>
-      <strong>Discard ${view.discard_needed} spice</strong>
+      <strong>Choose ${keepTarget} spices to keep</strong>
     </div>
   `;
-  const inputs = {};
-  const wrap = document.createElement("div");
-  wrap.className = "century-pay-grid";
+
+  const status = document.createElement("div");
+  status.className = "century-keep-status";
+  status.setAttribute("aria-live", "polite");
+  form.appendChild(status);
+
+  const board = document.createElement("div");
+  board.className = "century-keep-board";
   CENTURY_SPICE_ORDER.forEach((color) => {
-    const label = document.createElement("label");
-    const input = centuryNumberInput(0, 0, Number((you.spices || {})[color] || 0));
-    inputs[color] = input;
-    label.innerHTML = `${centurySpiceGemMarkup(color)}<span>${CENTURY_SPICE_META[color].name}</span>`;
-    label.appendChild(input);
-    wrap.appendChild(label);
+    const amount = Number(spices[color] || 0);
+    const group = document.createElement("section");
+    group.className = `century-keep-group century-keep-group--${color}`;
+    group.setAttribute("aria-label", `${CENTURY_SPICE_META[color].name} spices`);
+    group.innerHTML = `
+      <div class="century-keep-group-heading">
+        <span>${centurySpiceGemMarkup(color)}<strong>${CENTURY_SPICE_META[color].name}</strong></span>
+        <small>${amount} available</small>
+      </div>
+      <div class="century-keep-pieces"></div>
+    `;
+    const pieces = group.querySelector(".century-keep-pieces");
+    for (let index = 0; index < amount; index += 1) {
+      const key = `${color}-${index}`;
+      const button = centuryButton("", () => {
+        if (keptPieces.has(key)) {
+          keptPieces.delete(key);
+        } else if (keptPieces.size < keepTarget) {
+          keptPieces.add(key);
+        }
+        refreshKeepSelection();
+      }, false, "century-keep-spice");
+      button.dataset.centuryKeepKey = key;
+      button.dataset.centuryKeepColor = color;
+      button.innerHTML = centurySpiceGemMarkup(color, "century-spice-gem--keep");
+      button.setAttribute("aria-label", `Keep ${CENTURY_SPICE_META[color].name} spice ${index + 1} of ${amount}`);
+      button.setAttribute("aria-pressed", "false");
+      pieces.appendChild(button);
+    }
+    board.appendChild(group);
   });
-  form.appendChild(wrap);
-  form.appendChild(centuryButton("Discard", () => {
-    const spices = {};
+  form.appendChild(board);
+
+  const controls = document.createElement("div");
+  controls.className = "century-keep-controls";
+  const clearButton = centuryButton("Clear selection", () => {
+    keptPieces.clear();
+    refreshKeepSelection();
+  }, true, "century-secondary-action");
+  const confirmButton = centuryButton(`Keep these ${keepTarget}`, () => {
+    const discard = {};
     CENTURY_SPICE_ORDER.forEach((color) => {
-      spices[color] = Number(inputs[color].value || 0);
+      const keptCount = Array.from(keptPieces).filter((key) => key.startsWith(`${color}-`)).length;
+      discard[color] = Number(spices[color] || 0) - keptCount;
     });
-    sendAction({ type: "discard", spices });
-  }, false, "century-primary-action"));
+    sendAction({ type: "discard", spices: discard });
+  }, true, "century-primary-action");
+  controls.appendChild(clearButton);
+  controls.appendChild(confirmButton);
+  form.appendChild(controls);
+
+  function refreshKeepSelection() {
+    const selectedCount = keptPieces.size;
+    const selectionComplete = selectedCount === keepTarget;
+    board.querySelectorAll("button[data-century-keep-key]").forEach((button) => {
+      const isKept = keptPieces.has(button.dataset.centuryKeepKey);
+      button.classList.toggle("is-selected", isKept);
+      button.setAttribute("aria-pressed", String(isKept));
+      button.disabled = !isKept && selectedCount >= keepTarget;
+    });
+    clearButton.disabled = selectedCount === 0;
+    confirmButton.disabled = !selectionComplete;
+    confirmButton.textContent = selectionComplete ? `Keep these ${keepTarget}` : `Select ${keepTarget - selectedCount} more`;
+
+    if (selectionComplete) {
+      const discard = {};
+      CENTURY_SPICE_ORDER.forEach((color) => {
+        const keptCount = Array.from(keptPieces).filter((key) => key.startsWith(`${color}-`)).length;
+        discard[color] = Number(spices[color] || 0) - keptCount;
+      });
+      status.innerHTML = `
+        <div class="century-keep-progress is-complete"><strong>${selectedCount} / ${keepTarget}</strong><span>kept</span></div>
+        <div class="century-discard-preview"><span>WILL DISCARD</span>${centurySpiceMarkup(discard)}</div>
+      `;
+    } else {
+      status.innerHTML = `
+        <div class="century-keep-progress"><strong>${selectedCount} / ${keepTarget}</strong><span>kept</span></div>
+        <p>Click the individual spices you want to keep in your caravan.</p>
+      `;
+    }
+  }
+
+  refreshKeepSelection();
   centuryOpenActionDrawer(form, null, true);
 }
 
@@ -749,7 +816,10 @@ function renderCenturyGameState(payload) {
     if (view.game_over) {
       centuryPrompt.textContent = `Game over. Winner: ${(view.winner || []).map((pid) => centuryPlayerName(view, pid)).join(", ") || "-"}`;
     } else if (view.phase === "discard") {
-      centuryPrompt.textContent = `${centuryPlayerName(view, view.discard_player)} must discard ${view.discard_needed} spice.`;
+      const discardPlayer = (view.players || []).find((player) => player.player_id === view.discard_player);
+      const totalSpices = CENTURY_SPICE_ORDER.reduce((total, color) => total + Number((discardPlayer && discardPlayer.spices && discardPlayer.spices[color]) || 0), 0);
+      const keepTarget = Math.max(0, totalSpices - Number(view.discard_needed || 0));
+      centuryPrompt.textContent = `${centuryPlayerName(view, view.discard_player)} must choose ${keepTarget} spices to keep.`;
     } else if (view.end_triggered) {
       centuryPrompt.textContent = `Final round is active. Last player: ${centuryPlayerName(view, view.final_player)}.`;
     } else {

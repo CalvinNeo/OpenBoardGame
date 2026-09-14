@@ -338,6 +338,18 @@ function updateGuandanButtons() {
   }
 }
 
+function applyGuandanCardVisualClasses(element, card) {
+  if (!element) return;
+  const label = typeof card === "string" ? card : card && card.label;
+  const safeLabel = label || "";
+  if (safeLabel.startsWith("♥️") || safeLabel.startsWith("♦️")) {
+    element.classList.add("guandan-card-red");
+  }
+  if ((card && typeof card === "object" && card.joker) || safeLabel.startsWith("🃏")) {
+    element.classList.add("guandan-card-joker");
+  }
+}
+
 function renderGuandanHand(view) {
   if (!guandanHandEl) return;
   guandanHandEl.innerHTML = "";
@@ -364,6 +376,7 @@ function renderGuandanHand(view) {
       const div = document.createElement("div");
       div.className = "slot";
       if (card.is_wild) div.classList.add("wild-card");
+      applyGuandanCardVisualClasses(div, card);
       if (guandanSelected.includes(card.id)) div.classList.add("selected");
       div.textContent = card.label;
       div.addEventListener("click", () => {
@@ -436,6 +449,7 @@ function renderGuandanHand(view) {
       const div = document.createElement("div");
       div.className = "slot";
       if (card.is_wild) div.classList.add("wild-card");
+      applyGuandanCardVisualClasses(div, card);
       if (guandanSelected.includes(card.id)) div.classList.add("selected");
       div.textContent = card.label;
       div.addEventListener("click", () => {
@@ -498,6 +512,7 @@ function renderGuandanPile(view) {
       const div = document.createElement("div");
       div.className = "slot";
       if (card.is_wild) div.classList.add("wild-card");
+      applyGuandanCardVisualClasses(div, card);
       if (guandanSelected.includes(card.id)) div.classList.add("selected");
       div.textContent = card.label;
       div.addEventListener("click", () => {
@@ -527,11 +542,66 @@ function renderGuandanPlayers(view) {
     return;
   }
   view.players.forEach((player) => {
+    const relation = getGuandanTrickRelation(view, player.player_id);
+    const isCurrent = player.player_id === view.current_turn;
+    const playerName = player.name || player.player_id || "Player";
+    const teamName = player.team || "-";
+    const handCount = player.hand_count ?? "-";
     const div = document.createElement("div");
-    div.className = "guandan-player";
-    const turnTag = player.player_id === view.current_turn ? " (turn)" : "";
-    const finishedTag = player.finished ? ` #${player.finish_rank}` : "";
-    div.textContent = `${player.name} [${player.team}] cards:${player.hand_count}${finishedTag}${turnTag}`;
+    div.className = `guandan-player guandan-player-card is-${relation}`;
+    if (isCurrent) div.classList.add("is-current");
+    if (player.finished) div.classList.add("is-finished");
+
+    const top = document.createElement("div");
+    top.className = "guandan-player-card-top";
+    const name = document.createElement("strong");
+    name.className = "guandan-player-card-name";
+    name.textContent = playerName;
+    top.appendChild(name);
+
+    const tags = document.createElement("span");
+    tags.className = "guandan-player-tags";
+    if (player.is_bot) {
+      const botTag = document.createElement("span");
+      botTag.className = "guandan-player-tag";
+      botTag.textContent = "BOT";
+      tags.appendChild(botTag);
+    }
+    if (isCurrent) {
+      const turnTag = document.createElement("span");
+      turnTag.className = "guandan-player-tag guandan-player-tag--turn";
+      turnTag.textContent = "TURN";
+      tags.appendChild(turnTag);
+    }
+    top.appendChild(tags);
+
+    const meta = document.createElement("div");
+    meta.className = "guandan-player-card-meta";
+    const team = document.createElement("span");
+    team.className = "guandan-team-chip";
+    team.textContent = `Team ${teamName}`;
+    meta.appendChild(team);
+
+    const cards = document.createElement("span");
+    cards.className = "guandan-card-count";
+    cards.textContent = `♠ ${handCount} ${handCount === 1 ? "card" : "cards"}`;
+    meta.appendChild(cards);
+
+    if (player.finished) {
+      const rank = document.createElement("span");
+      rank.className = "guandan-finish-chip";
+      rank.textContent = `Finished #${player.finish_rank || "-"}`;
+      meta.appendChild(rank);
+    }
+
+    div.appendChild(top);
+    div.appendChild(meta);
+    div.setAttribute(
+      "aria-label",
+      `${playerName}, Team ${teamName}, ${handCount} cards${isCurrent ? ", current turn" : ""}${
+        player.finished ? `, finished ${player.finish_rank || ""}` : ""
+      }`
+    );
     guandanPlayersEl.appendChild(div);
   });
 }
@@ -695,6 +765,7 @@ function renderGuandanBeatTarget(view) {
     cardLabels.forEach((label) => {
       const card = document.createElement("span");
       card.className = "guandan-beat-card";
+      applyGuandanCardVisualClasses(card, label);
       if (label.startsWith("♥️") || label.startsWith("♦️")) card.classList.add("is-red");
       if (label.startsWith("🃏")) card.classList.add("is-joker");
       card.textContent = label;
@@ -743,7 +814,10 @@ function renderGuandanTrickPlays(view) {
       const explain = botExplain[player.player_id];
       const history = Array.isArray(botExplainHistory[player.player_id]) ? botExplainHistory[player.player_id] : [];
       const hasExplain = !!explain || history.length > 0;
-      const rowClass = player.player_id === view.current_turn ? "guandan-current-turn-row" : "";
+      const relation = getGuandanTrickRelation(view, player.player_id);
+      const rowClasses = ["guandan-trick-player-row", `is-${relation}`];
+      if (player.player_id === view.current_turn) rowClasses.push("guandan-current-turn-row");
+      if (player.finished) rowClasses.push("is-finished");
       let playerCell = player.name || player.player_id;
       if (player.is_bot && hasExplain) {
         playerCell = `<button type="button" class="guandan-bot-explain-btn" data-player="${player.player_id}">${playerCell}</button>`;
@@ -760,7 +834,7 @@ function renderGuandanTrickPlays(view) {
         trickCell = `<button type="button" class="guandan-bot-explain-btn" data-player="${player.player_id}">${cards}</button>`;
       }
       return `
-        <tr class="${rowClass}">
+        <tr class="${rowClasses.join(" ")}">
           <td>${playerCellContent}</td>
           <td>${player.hand_count ?? "-"}</td>
           <td>${trickCell}</td>
@@ -1856,7 +1930,15 @@ document.addEventListener("click", (e) => {
 }, true);
 
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && guandanExplainMode) {
-    exitGuandanExplainMode();
+  if (e.key !== "Escape") return;
+  if (guandanExplainMode) exitGuandanExplainMode();
+  if (guandanHelpModal && !guandanHelpModal.classList.contains("hidden")) {
+    closeGuandanHelpModal();
+  }
+  if (guandanExplainModal && !guandanExplainModal.classList.contains("hidden")) {
+    closeGuandanExplainModal();
+  }
+  if (guandanBotExplainModal && !guandanBotExplainModal.classList.contains("hidden")) {
+    setModalVisible(guandanBotExplainModal, false);
   }
 });
