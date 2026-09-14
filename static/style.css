@@ -13146,6 +13146,10 @@ body.point-salad-explain-mode button.has-explanation:hover {
   gap: 10px;
 }
 
+#forestShuffleClearing {
+  grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr));
+}
+
 .forest-shuffle-action-row {
   margin-top: 10px;
 }
@@ -13155,6 +13159,16 @@ body.point-salad-explain-mode button.has-explanation:hover {
   margin-top: 10px;
   font-size: 13px;
   color: #5a4a2d;
+}
+
+.forest-shuffle-draw-hint {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 7px 9px;
+  border-radius: 9px;
+  background: rgba(255, 253, 248, 0.72);
+  color: #695533;
+  font-size: 12px;
 }
 
 .forest-shuffle-card {
@@ -13178,7 +13192,42 @@ body.point-salad-explain-mode button.has-explanation:hover {
   box-shadow: 0 0 0 2px rgba(47, 122, 72, 0.18), 0 8px 18px rgba(55, 41, 17, 0.08);
 }
 
+.forest-shuffle-card.selectable {
+  cursor: pointer;
+  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.forest-shuffle-card.selectable:hover {
+  border-color: #7aa86f;
+  box-shadow: 0 8px 20px rgba(55, 41, 17, 0.14);
+  transform: translateY(-1px);
+}
+
+.forest-shuffle-card.selectable:focus-visible {
+  outline: 3px solid rgba(47, 122, 72, 0.28);
+  outline-offset: 2px;
+}
+
+.forest-shuffle-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .forest-shuffle-card-title {
+  min-width: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.forest-shuffle-card-selection-badge {
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #dff2dd;
+  color: #245d38;
+  font-size: 11px;
   font-weight: 700;
 }
 

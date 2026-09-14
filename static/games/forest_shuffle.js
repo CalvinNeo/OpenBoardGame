@@ -66,9 +66,12 @@ const FOREST_SHUFFLE_COPY = {
     playAsSapling: "Play As Sapling",
     gameOver: "Game over. Score previews are final.",
     chooseAction: "Choose one action: draw two cards, or play one card from hand.",
+    drawFromClearing: "Select face-up cards directly in the Clearing below.",
+    selected: "Selected",
     resolvePending: "Resolve the current pending effect.",
     raccoonHint: "Raccoon: mark any remaining hand cards to tuck under your cave, then confirm.",
-    noCardSelected: "No card selected.",
+    noCardSelected: "No action selected.",
+    drawSelection: "Draw selection",
     card: "Card",
     half: "Half",
     payments: "Payments",
@@ -94,7 +97,7 @@ const FOREST_SHUFFLE_COPY = {
       <p>This build uses synthetic split-card pairings and approximate tree-symbol distribution. The turn flow and card scoring are implemented, but exact physical deck pairing is not final.</p>
       <h3>Turn</h3>
       <ul>
-        <li><strong>Draw Two Cards</strong>: select up to two sources from the deck and/or the clearing.</li>
+        <li><strong>Draw Two Cards</strong>: choose deck draws in the Action Console and select face-up cards directly in the Clearing.</li>
         <li><strong>Play One Card</strong>: choose a hand card, select payment cards, and if needed click a tree slot to place it.</li>
       </ul>
       <h3>Placement</h3>
@@ -115,8 +118,8 @@ const FOREST_SHUFFLE_COPY = {
     `,
     explanations: {
       status: { name: "Status", description: "Shows whose turn it is, how close winter is, and whether the game has ended." },
-      action: { name: "Action Console", description: "Use this area to assemble a draw action, finish a pending effect, or submit the currently selected play." },
-      clearing: { name: "Clearing", description: "Paid cards and revealed tree cards go here. You can also take clearing cards when choosing the draw action." },
+      action: { name: "Action Console", description: "Choose deck draws here, then confirm a draw action or submit the currently selected play. Face-up draw choices are selected directly in the Clearing." },
+      clearing: { name: "Clearing", description: "Paid and revealed cards go here with their full cost, symbols, sides, and tags. On your turn, click a card here to include it in your draw action." },
       hand: { name: "Your Hand", description: "Choose a card half to play, toggle payment cards, or mark cards for the Raccoon cave effect." },
       players: { name: "Players", description: "Each player card shows public forest state, cave count, score preview, and the tree-slot layout. Click one of your tree slots after selecting a split card." },
       forestShuffleDrawBtn: { name: "Draw Selected", description: "Confirm the selected deck and clearing sources for your draw action." },
@@ -144,9 +147,12 @@ const FOREST_SHUFFLE_COPY = {
     playAsSapling: "作为树苗打出",
     gameOver: "游戏结束，显示的分数为最终分数。",
     chooseAction: "选择一个行动：抽两张牌，或从手牌打出一张牌。",
+    drawFromClearing: "如需抽取明牌，请直接在下方林间空地中选择。",
+    selected: "已选择",
     resolvePending: "请处理当前待结算效果。",
     raccoonHint: "浣熊：标记任意剩余手牌放入洞穴，然后确认。",
-    noCardSelected: "尚未选择卡牌。",
+    noCardSelected: "尚未选择行动。",
+    drawSelection: "抽牌选择",
     card: "卡牌",
     half: "半边",
     payments: "支付牌数",
@@ -172,7 +178,7 @@ const FOREST_SHUFFLE_COPY = {
       <p>当前版本使用合成的双边牌组合和近似的树木符号分布。回合流程与卡牌计分已实现，但实体牌组中的准确配对仍未完成。</p>
       <h3>你的回合</h3>
       <ul>
-        <li><strong>抽两张牌</strong>：从牌库和／或林间空地选择至多两个来源。</li>
+        <li><strong>抽两张牌</strong>：在行动区选择从牌库抽取的数量，并直接在林间空地中选择明牌。</li>
         <li><strong>打出一张牌</strong>：选择一张手牌和支付牌；如果需要，再点击树木上的对应位置。</li>
       </ul>
       <h3>放置规则</h3>
@@ -193,8 +199,8 @@ const FOREST_SHUFFLE_COPY = {
     `,
     explanations: {
       status: { name: "状态", description: "显示当前轮到谁、冬季进度，以及游戏是否已经结束。" },
-      action: { name: "行动区", description: "在这里组合抽牌行动、结束待处理效果，或提交当前选定的出牌。" },
-      clearing: { name: "林间空地", description: "用于支付的牌和翻开的树木牌会进入这里。选择抽牌行动时也可以拿取空地中的牌。" },
+      action: { name: "行动区", description: "在这里选择从牌库抽取的数量，然后确认抽牌行动或提交当前选定的出牌。要抽取的明牌可直接在林间空地中选择。" },
+      clearing: { name: "林间空地", description: "用于支付和翻开的卡牌会进入这里，并显示完整费用、符号、方向和类型。轮到你时，点击卡牌即可将其加入抽牌行动。" },
       hand: { name: "你的手牌", description: "选择要打出的卡牌半边、切换支付牌，或为浣熊效果标记要放入洞穴的牌。" },
       players: { name: "玩家", description: "每位玩家的区域会显示公开森林、洞穴牌数、预览分数和树木位置。选择双边牌后，点击自己树木上的对应位置。" },
       forestShuffleDrawBtn: { name: "抽取所选", description: "确认本次抽牌行动选中的牌库与林间空地来源。" },
@@ -551,11 +557,19 @@ function forestShufflePendingHint(view) {
 
 function forestShuffleSelectionText(view) {
   const copy = forestShuffleText(view);
+  const parts = [];
+  const requiredDraws = forestShuffleRequiredDrawCount(view);
+  const selectedDraws = forestShuffleDeckDrawCount + forestShuffleSelectedClearingIds.size;
+  if (selectedDraws > 0) {
+    parts.push(
+      `${copy.drawSelection}: ${selectedDraws}/${requiredDraws} (${copy.deck} ×${forestShuffleDeckDrawCount}, ${copy.clearing} ×${forestShuffleSelectedClearingIds.size})`
+    );
+  }
   const card = forestShuffleSelectedCard(view);
   if (!card) {
-    return copy.noCardSelected;
+    return parts.length ? parts.join(" | ") : copy.noCardSelected;
   }
-  const parts = [`${copy.card}: ${forestShuffleCardName(card, view)}`];
+  parts.push(`${copy.card}: ${forestShuffleCardName(card, view)}`);
   if (card.kind === "split") {
     const half = forestShuffleSelectedHalf(view);
     parts.push(
@@ -598,6 +612,110 @@ function forestShuffleCardButton(text, onClick, selected = false) {
   return btn;
 }
 
+function forestShuffleCreateCardNode(view, card, options = {}) {
+  const copy = forestShuffleText(view);
+  const node = document.createElement("article");
+  node.className = "forest-shuffle-card";
+  if (options.compact) {
+    node.classList.add("compact");
+  }
+  if (options.selected) {
+    node.classList.add("selected");
+  }
+  if (options.explainKey) {
+    node.dataset.forestShuffleExplain = options.explainKey;
+  }
+
+  const header = document.createElement("div");
+  header.className = "forest-shuffle-card-header";
+  const title = document.createElement("div");
+  title.className = "forest-shuffle-card-title";
+  title.textContent = forestShuffleCardName(card, view);
+  header.appendChild(title);
+  if (options.selected && options.showSelectionBadge) {
+    const badge = document.createElement("span");
+    badge.className = "forest-shuffle-card-selection-badge";
+    badge.textContent = `✓ ${copy.selected}`;
+    header.appendChild(badge);
+  }
+  node.appendChild(header);
+
+  if (card.kind === "tree") {
+    const meta = document.createElement("div");
+    meta.className = "forest-shuffle-card-meta";
+    meta.textContent = `🌳 ${copy.tree} | ${copy.cost} ${card.cost}`;
+    node.appendChild(meta);
+
+    const symbolRow = document.createElement("div");
+    symbolRow.className = "forest-shuffle-symbol-row";
+    symbolRow.appendChild(forestShuffleSymbolChip(card.tree_species));
+    node.appendChild(symbolRow);
+    node.appendChild(forestShuffleTagRow(["tree"]));
+  } else if (card.kind === "split" && Array.isArray(card.halves)) {
+    const meta = document.createElement("div");
+    meta.className = "forest-shuffle-card-meta";
+    const orientation = card.orientation === "top_bottom" ? copy.splitVertical : copy.splitHorizontal;
+    const paymentSymbols = (card.payment_symbols || [])
+      .map((symbol) => forestShuffleSpeciesName(symbol, symbol, view))
+      .join(", ");
+    meta.textContent = `${orientation} | ${copy.payment} ${paymentSymbols || "-"}`;
+    node.appendChild(meta);
+
+    card.halves.forEach((half, halfIndex) => {
+      const halfNode = document.createElement("div");
+      halfNode.className = "forest-shuffle-half";
+      const line = document.createElement("div");
+      line.className = "forest-shuffle-half-title";
+      line.textContent = `${forestShuffleSideLabel(half.slot, view)} · ${forestShuffleSpeciesName(
+        half.species,
+        half.name,
+        view
+      )} · ${copy.cost} ${half.cost}`;
+      halfNode.appendChild(line);
+      const symbolRow = document.createElement("div");
+      symbolRow.className = "forest-shuffle-symbol-row";
+      symbolRow.appendChild(forestShuffleSymbolChip(half.symbol));
+      halfNode.appendChild(symbolRow);
+      halfNode.appendChild(forestShuffleTagRow(half.tags));
+      if (typeof options.renderHalfAction === "function") {
+        const action = options.renderHalfAction(half, halfIndex);
+        if (action) {
+          halfNode.appendChild(action);
+        }
+      }
+      node.appendChild(halfNode);
+    });
+  }
+
+  if (typeof options.onActivate === "function") {
+    const activate = () => {
+      if (forestShuffleExplainMode && options.explainKey) {
+        showForestShuffleExplanation(options.explainKey);
+        exitForestShuffleExplainMode();
+        return;
+      }
+      options.onActivate(card);
+    };
+    node.classList.add("selectable");
+    node.tabIndex = 0;
+    node.setAttribute("role", "button");
+    node.setAttribute("aria-pressed", options.selected ? "true" : "false");
+    node.setAttribute("aria-label", options.activationLabel || forestShuffleCardName(card, view));
+    node.addEventListener("click", (event) => {
+      if (!event.target.closest("button")) {
+        activate();
+      }
+    });
+    node.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        activate();
+      }
+    });
+  }
+  return node;
+}
+
 function forestShuffleRenderHand(view) {
   if (!forestShuffleHand) {
     return;
@@ -607,52 +725,9 @@ function forestShuffleRenderHand(view) {
   const pending = forestShufflePending(view);
   const yourTurn = forestShuffleIsYourTurn(view) || !!pending;
   forestShuffleCurrentHand(view).forEach((card) => {
-    const node = document.createElement("article");
-    node.className = "forest-shuffle-card";
-    if (card.id === forestShuffleSelectedCardId) {
-      node.classList.add("selected");
-    }
-
-    const title = document.createElement("div");
-    title.className = "forest-shuffle-card-title";
-    title.textContent = forestShuffleCardName(card, view);
-    node.appendChild(title);
-
-    const meta = document.createElement("div");
-    meta.className = "forest-shuffle-card-meta";
-    if (card.kind === "tree") {
-      meta.textContent = `🌳 ${copy.tree} | ${copy.cost} ${card.cost}`;
-    } else {
-      const orientation = card.orientation === "top_bottom" ? copy.splitVertical : copy.splitHorizontal;
-      const paymentSymbols = (card.payment_symbols || [])
-        .map((symbol) => forestShuffleSpeciesName(symbol, symbol, view))
-        .join(", ");
-      meta.textContent = `${orientation} | ${copy.payment} ${paymentSymbols}`;
-    }
-    node.appendChild(meta);
-
-    if (card.kind === "tree") {
-      const symbolRow = document.createElement("div");
-      symbolRow.className = "forest-shuffle-symbol-row";
-      symbolRow.appendChild(forestShuffleSymbolChip(card.tree_species));
-      node.appendChild(symbolRow);
-    } else {
-      card.halves.forEach((half, halfIndex) => {
-        const halfNode = document.createElement("div");
-        halfNode.className = "forest-shuffle-half";
-        const line = document.createElement("div");
-        line.className = "forest-shuffle-half-title";
-        line.textContent = `${forestShuffleSideLabel(half.slot, view)} · ${forestShuffleSpeciesName(
-          half.species,
-          half.name,
-          view
-        )} · ${copy.cost} ${half.cost}`;
-        halfNode.appendChild(line);
-        const line2 = document.createElement("div");
-        line2.className = "forest-shuffle-symbol-row";
-        line2.appendChild(forestShuffleSymbolChip(half.symbol));
-        halfNode.appendChild(line2);
-        halfNode.appendChild(forestShuffleTagRow(half.tags));
+    const node = forestShuffleCreateCardNode(view, card, {
+      selected: card.id === forestShuffleSelectedCardId,
+      renderHalfAction: (half, halfIndex) => {
         if (yourTurn && pending?.type !== "raccoon") {
           const canUse = forestShufflePendingAllowsCard(view, card, half);
           const btn = forestShuffleCardButton(
@@ -673,11 +748,11 @@ function forestShuffleRenderHand(view) {
             forestShuffleSelectedCardId === card.id && forestShuffleSelectedHalfIndex === halfIndex
           );
           btn.disabled = !canUse;
-          halfNode.appendChild(btn);
+          return btn;
         }
-        node.appendChild(halfNode);
-      });
-    }
+        return null;
+      },
+    });
 
     if (pending?.type === "raccoon") {
       const toggle = forestShuffleCardButton(
@@ -768,25 +843,10 @@ function forestShuffleRenderDrawSources(view) {
   });
   forestShuffleDrawSources.appendChild(deckBox);
 
-  (view.clearing || []).forEach((card) => {
-    const node = document.createElement("button");
-    node.type = "button";
-    node.className = "forest-shuffle-source-card";
-    if (forestShuffleSelectedClearingIds.has(card.id)) {
-      node.classList.add("selected");
-    }
-    node.disabled = !yourTurn || !!pending || required <= 0;
-    node.textContent = forestShuffleCardName(card, view);
-    node.addEventListener("click", () => {
-      if (forestShuffleSelectedClearingIds.has(card.id)) {
-        forestShuffleSelectedClearingIds.delete(card.id);
-      } else if (forestShuffleDeckDrawCount + forestShuffleSelectedClearingIds.size < required) {
-        forestShuffleSelectedClearingIds.add(card.id);
-      }
-      renderForestShuffleGameState({ view });
-    });
-    forestShuffleDrawSources.appendChild(node);
-  });
+  const clearingHint = document.createElement("p");
+  clearingHint.className = "forest-shuffle-draw-hint";
+  clearingHint.textContent = copy.drawFromClearing;
+  forestShuffleDrawSources.appendChild(clearingHint);
 }
 
 function forestShuffleTreeSlot(view, player, tree, side, interactive) {
@@ -925,31 +985,32 @@ function forestShuffleRenderClearing(view) {
     return;
   }
   forestShuffleClearing.innerHTML = "";
+  const pending = forestShufflePending(view);
+  const yourTurn = forestShuffleIsYourTurn(view);
+  const required = forestShuffleRequiredDrawCount(view);
+  const canChooseCards = yourTurn && !pending && required > 0;
   (view.clearing || []).forEach((card) => {
-    const node = document.createElement("article");
-    node.className = "forest-shuffle-card compact";
-    node.dataset.forestShuffleExplain = "clearing";
-    const title = document.createElement("div");
-    title.className = "forest-shuffle-card-title";
-    title.textContent = forestShuffleCardName(card, view);
-    node.appendChild(title);
-    if (card.kind === "tree") {
-      const symbolRow = document.createElement("div");
-      symbolRow.className = "forest-shuffle-symbol-row";
-      symbolRow.appendChild(forestShuffleSymbolChip(card.tree_species));
-      node.appendChild(symbolRow);
-    } else if (Array.isArray(card.halves)) {
-      card.halves.forEach((half) => {
-        const line = document.createElement("div");
-        line.className = "forest-shuffle-half-mini";
-        line.textContent = `${forestShuffleSideLabel(half.slot, view)} ${forestShuffleSpeciesName(
-          half.species,
-          half.name,
-          view
-        )}`;
-        node.appendChild(line);
-      });
-    }
+    const selected = forestShuffleSelectedClearingIds.has(card.id);
+    const drawCount = forestShuffleDeckDrawCount + forestShuffleSelectedClearingIds.size;
+    const canActivate = canChooseCards && (selected || drawCount < required);
+    const node = forestShuffleCreateCardNode(view, card, {
+      compact: true,
+      selected,
+      showSelectionBadge: true,
+      explainKey: "clearing",
+      activationLabel: `${forestShuffleText(view).select} ${forestShuffleCardName(card, view)}`,
+      onActivate: canActivate
+        ? () => {
+            if (forestShuffleSelectedClearingIds.has(card.id)) {
+              forestShuffleSelectedClearingIds.delete(card.id);
+            } else {
+              forestShuffleSelectedClearingIds.add(card.id);
+            }
+            renderForestShuffleGameState({ view });
+          }
+        : null,
+    });
+    node.classList.add("forest-shuffle-clearing-card");
     forestShuffleClearing.appendChild(node);
   });
 }
