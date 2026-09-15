@@ -6,6 +6,7 @@ import time
 from typing import Callable, Dict, List, Optional, Tuple
 
 BOMB_TYPES = ("bomb", "straight_flush", "heavenly")
+STRUCTURED_RUNOUT_TYPES = ("full_house", "straight", "three_pairs", "steel_plate")
 
 # Shared single-card strength bands used throughout Guandan heuristics.
 LOW_SINGLE_VALUE_MAX = 58
@@ -425,7 +426,8 @@ def _short_enemy_defer_bomb_risk_penalty(state: Dict, player_id: str) -> float:
         return 0.0
 
     leader_left = len(state["players"].get(leader, {}).get("hand", []))
-    if leader_left > 6:
+    runout_pressure = _structured_enemy_runout_pressure(state, leader, combo)
+    if leader_left > 6 and runout_pressure <= 0.0:
         return 0.0
 
     minimal_bomb = _minimal_bomb_response(
@@ -474,6 +476,8 @@ def _short_enemy_defer_bomb_risk_penalty(state: Dict, player_id: str) -> float:
     history_pressure = _structured_enemy_history_pressure(state, leader, combo)
     if history_pressure > 0.0:
         base += history_pressure
+    if runout_pressure > 0.0:
+        base += runout_pressure * 0.9
     if leader_left <= 2 and combo_type in ("full_house", "straight", "three_pairs", "steel_plate"):
         base += 8.0
     elif leader_left <= 2 and combo_type in ("pair", "three"):
@@ -539,7 +543,8 @@ def _short_enemy_bomb_takeover_bonus(
         teammate_backstop = _teammate_backstop_confidence(state, player_id, current_combo)
         return base * max(0.45, 1.0 - teammate_backstop)
 
-    if leader_left > 6:
+    runout_pressure = _structured_enemy_runout_pressure(state, leader, current_combo)
+    if leader_left > 6 and runout_pressure <= 0.0:
         return 0.0
 
     if current_type not in ("single", "pair", "three", "full_house", "straight", "three_pairs", "steel_plate"):
@@ -633,6 +638,8 @@ def _short_enemy_bomb_takeover_bonus(
     history_pressure = _structured_enemy_history_pressure(state, leader, current_combo)
     if history_pressure > 0.0:
         base += history_pressure * 0.9
+    if runout_pressure > 0.0:
+        base += runout_pressure
 
     minimal = _minimal_bomb_response(
         state["players"][player_id]["hand"],
@@ -1177,6 +1184,77 @@ def _structured_enemy_history_pressure(state: Dict, leader_id: str, combo: Dict)
     if profile.get("last_hand_after", 99.0) <= 5:
         pressure += 0.6
     return pressure * min(1.0, 0.45 + confidence * 0.55)
+
+
+def _structured_enemy_runout_pressure(state: Dict, leader_id: str, combo: Dict) -> float:
+    """Measure a trailing streak of public multi-card sheds by the current leader."""
+    combo_type = combo.get("type") or ""
+    if combo_type not in STRUCTURED_RUNOUT_TYPES or not leader_id:
+        return 0.0
+
+    leader_left = len(state["players"].get(leader_id, {}).get("hand", []))
+    if leader_left > 12:
+        return 0.0
+
+    actions: List[Dict] = []
+    round_entries = state.get("round_memories") or []
+    round_entry = round_entries[-1] if round_entries else None
+    if round_entry:
+        for trick in round_entry.get("tricks", []) or []:
+            for action in trick.get("actions", []) or []:
+                if action.get("player_id") == leader_id:
+                    actions.append(action)
+
+    current_size = int(
+        combo.get("size")
+        or len((state.get("current_trick") or {}).get("cards") or [])
+    )
+    latest = actions[-1] if actions else None
+    latest_matches_current = bool(
+        latest
+        and latest.get("type") == "play"
+        and latest.get("combo_type") == combo_type
+        and int(latest.get("combo_size") or len(latest.get("cards") or []))
+        == current_size
+        and (
+            latest.get("hand_count_after") is None
+            or int(latest.get("hand_count_after")) == leader_left
+        )
+    )
+    if not latest_matches_current:
+        actions.append(
+            {
+                "player_id": leader_id,
+                "type": "play",
+                "combo_type": combo_type,
+                "combo_size": current_size,
+                "hand_count_after": leader_left,
+            }
+        )
+
+    streak = 0
+    cards_shed = 0
+    for action in reversed(actions):
+        if (
+            action.get("type") != "play"
+            or action.get("combo_type") not in STRUCTURED_RUNOUT_TYPES
+        ):
+            break
+        size = int(action.get("combo_size") or len(action.get("cards") or []))
+        if size < 5:
+            break
+        streak += 1
+        cards_shed += size
+
+    if streak < 2 or cards_shed < 10:
+        return 0.0
+
+    pressure = (streak - 1) * 2.0 + max(0, cards_shed - 5) * 0.45
+    if leader_left <= 8:
+        pressure += 5.0 + max(0, 8 - leader_left) * 1.2
+    elif leader_left <= 10:
+        pressure += 2.5
+    return min(18.0, pressure)
 
 
 def _public_revealed_rank_caps_for_target(state: Dict, target_id: str) -> Dict[int, int]:
@@ -2863,8 +2941,8 @@ def _next_opponent_closeout_pressure(state: Dict, player_id: str) -> float:
     return min(45.0, pressure)
 
 
-def _must_contest_short_enemy_as_last_defender(state: Dict, player_id: str) -> bool:
-    """Return whether passing would concede a clearly dangerous short-hand lead."""
+def _is_last_defender_against_enemy(state: Dict, player_id: str) -> bool:
+    """Return whether this is the final response before an enemy keeps the lead."""
     current_trick = state.get("current_trick")
     if not current_trick:
         return False
@@ -2882,8 +2960,16 @@ def _must_contest_short_enemy_as_last_defender(state: Dict, player_id: str) -> b
         return False
 
     passes_needed = max(1, len(active) - 1)
-    if int(state.get("pass_count", 0)) < passes_needed - 1:
+    return int(state.get("pass_count", 0)) >= passes_needed - 1
+
+
+def _must_contest_short_enemy_as_last_defender(state: Dict, player_id: str) -> bool:
+    """Return whether passing would concede a clearly dangerous short-hand lead."""
+    if not _is_last_defender_against_enemy(state, player_id):
         return False
+
+    current_trick = state.get("current_trick") or {}
+    leader = current_trick.get("player_id")
 
     leader_left = len(state["players"].get(leader, {}).get("hand", []))
     combo_type = (current_trick.get("combo") or {}).get("type")
@@ -2899,6 +2985,68 @@ def _must_contest_short_enemy_as_last_defender(state: Dict, player_id: str) -> b
         for pid in state.get("turn_order", [])
     )
     return leader_left <= 6 and opposing_teammate_finished
+
+
+def _remaining_bomb_cover_tier(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+) -> int:
+    hand = state["players"].get(player_id, {}).get("hand", [])
+    if not hand:
+        return 0
+    level_rank = state["level_rank"]
+    remaining = _remove_cards(hand, cards)
+    return max(
+        (
+            int(candidate.get("tier", 0))
+            for candidate in _find_bomb_candidates(remaining, level_rank)
+        ),
+        default=0,
+    )
+
+
+def _has_layered_bomb_response(state: Dict, player_id: str) -> bool:
+    """Return whether one bomb can answer now while another remains available."""
+    current_trick = state.get("current_trick")
+    if not current_trick:
+        return False
+    hand = state["players"].get(player_id, {}).get("hand", [])
+    if not hand:
+        return False
+    level_rank = state["level_rank"]
+    current_combo = current_trick.get("combo") or {}
+    for cards in _list_bomb_options(
+        hand,
+        level_rank,
+        current_combo,
+        state.get("config", {}),
+    ):
+        if _remaining_bomb_cover_tier(state, player_id, cards) > 0:
+            return True
+    return False
+
+
+def _must_contest_structured_enemy_runout(state: Dict, player_id: str) -> bool:
+    """Stop a repeated multi-card run before the ordinary short-hand gates fire."""
+    current_trick = state.get("current_trick")
+    if not current_trick:
+        return False
+    leader = current_trick.get("player_id")
+    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+        return False
+    combo = current_trick.get("combo") or {}
+    if combo.get("type") not in STRUCTURED_RUNOUT_TYPES:
+        return False
+    leader_left = len(state["players"].get(leader, {}).get("hand", []))
+    runout_pressure = _structured_enemy_runout_pressure(state, leader, combo)
+    if leader_left <= 8 and runout_pressure >= 9.0:
+        return True
+    if leader_left > 12 or runout_pressure < 4.0:
+        return False
+    if _has_natural_same_type_response(state, player_id, combo.get("type") or "", []):
+        return False
+    return _has_layered_bomb_response(state, player_id)
 
 
 def _lead_short_next_opponent_penalty(state: Dict, player_id: str, cards: List[int]) -> float:
@@ -9257,6 +9405,7 @@ def _should_accept_mcts_override(
         and mcts_action.get("type") == "pass"
         and (
             _must_contest_short_enemy_as_last_defender(state, bot_id)
+            or _must_contest_structured_enemy_runout(state, bot_id)
             or _next_opponent_closeout_pressure(state, bot_id) > 0.0
         )
     ):
@@ -9833,6 +9982,63 @@ def _big_joker_single_takeover_bonus(
     return bonus
 
 
+def _last_defender_level_single_joker_takeover_bonus(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Optional[Dict] = None,
+) -> float:
+    """Value the cheapest joker takeover before an enemy level single wins the trick."""
+    current_trick = state.get("current_trick")
+    if not current_trick or len(cards) != 1:
+        return 0.0
+    leader = current_trick.get("player_id")
+    if leader is None or _team_of(state, leader) == _team_of(state, player_id):
+        return 0.0
+    current_combo = current_trick.get("combo") or {}
+    if (
+        current_combo.get("type") != "single"
+        or current_combo.get("rank_value", 0) != HIGH_CONTROL_SINGLE_VALUE_MIN
+        or not _is_last_defender_against_enemy(state, player_id)
+    ):
+        return 0.0
+
+    hand = state["players"].get(player_id, {}).get("hand", [])
+    hand_map = _map_hand_by_id(hand)
+    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+    if len(play_cards) != 1 or play_cards[0].get("joker") not in ("small", "big"):
+        return 0.0
+    if combo is None:
+        combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
+    if not combo or combo.get("type") != "single":
+        return 0.0
+    if combo.get("rank_value", 0) <= current_combo.get("rank_value", 0):
+        return 0.0
+
+    bonus = 12.0 if play_cards[0].get("joker") == "small" else 10.0
+    leader_left = len(state["players"].get(leader, {}).get("hand", []))
+    if leader_left <= 12:
+        bonus += 2.0
+    if leader_left <= 6:
+        bonus += 2.0
+    return bonus
+
+
+def _last_defender_level_single_joker_pass_penalty(state: Dict, player_id: str) -> float:
+    hand = state["players"].get(player_id, {}).get("hand", [])
+    for card in hand:
+        if card.get("joker") not in ("small", "big"):
+            continue
+        bonus = _last_defender_level_single_joker_takeover_bonus(
+            state,
+            player_id,
+            [card["id"]],
+        )
+        if bonus > 0.0:
+            return min(12.0, bonus)
+    return 0.0
+
+
 def _enemy_double_down_closeout_pressure(state: Dict, player_id: str) -> float:
     """Return urgency when an enemy winner's teammate is close to finishing."""
     current_trick = state.get("current_trick")
@@ -9997,6 +10203,14 @@ def _strategic_enemy_pass_bonus(state: Dict, player_id: str) -> float:
         return 0.0
     leader_left = len(state["players"].get(leader, {}).get("hand", []))
     if leader_left <= 5 or _must_contest_short_enemy_as_last_defender(state, player_id):
+        return 0.0
+    if _last_defender_level_single_joker_pass_penalty(state, player_id) > 0.0:
+        return 0.0
+    if _structured_enemy_runout_pressure(
+        state,
+        leader,
+        current_trick.get("combo") or {},
+    ) > 0.0:
         return 0.0
     if _next_opponent_closeout_pressure(state, player_id) > 0.0:
         return 0.0
@@ -10194,6 +10408,10 @@ def _shared_pass_tactical_components(state: Dict, player_id: str) -> Dict[str, f
     elif leader_left <= 5:
         components["pass_short_enemy_prior"] = -5.0
 
+    joker_concession = _last_defender_level_single_joker_pass_penalty(state, player_id)
+    if joker_concession > 0.001:
+        components["pass_last_defender_joker"] = -joker_concession
+
     double_down_pressure = _enemy_double_down_closeout_pressure(state, player_id)
     if double_down_pressure > 0.001:
         immediate_backstop = _immediate_teammate_backstop_confidence(
@@ -10318,14 +10536,36 @@ def _mcts_high_single_joker_scores(
     ):
         return None
 
+    last_defender_qualified: List[Dict] = []
     qualified: List[Dict] = []
     for action in candidates:
         if action.get("type") != "play":
             continue
         cards = action.get("card_ids") or []
         action_combo = _action_combo(state, bot_id, action)
+        if _last_defender_level_single_joker_takeover_bonus(
+            state,
+            bot_id,
+            cards,
+            action_combo,
+        ) > 0.0:
+            last_defender_qualified.append(action)
         if _big_joker_single_takeover_bonus(state, bot_id, cards, action_combo) > 0.0:
             qualified.append(action)
+    if last_defender_qualified:
+        top_action = min(
+            last_defender_qualified,
+            key=lambda action: (
+                (_action_combo(state, bot_id, action) or {}).get("rank_value", 999),
+                -heuristic_values.get(_mcts_action_key(action), -999.0),
+            ),
+        )
+        return _mcts_fast_path_scores(
+            candidates,
+            heuristic_values,
+            top_action,
+            "last_defender_joker_fast_path",
+        )
     if not qualified:
         return None
 
@@ -10401,6 +10641,43 @@ def _mcts_natural_structure_takeover_scores(
         heuristic_values,
         top_action,
         "natural_structure_fast_path",
+    )
+
+
+def _mcts_structured_runout_bomb_scores(
+    state: Dict,
+    bot_id: str,
+    candidates: List[Dict],
+    heuristic_values: Dict[Tuple, float],
+) -> Optional[List[Tuple[Dict, float, int, Dict[str, float]]]]:
+    """Use the best retained bomb when a repeated structure streak is closing out."""
+    if not _must_contest_structured_enemy_runout(state, bot_id):
+        return None
+
+    bomb_actions = [
+        action
+        for action in candidates
+        if action.get("type") == "play"
+        and (_action_combo(state, bot_id, action) or {}).get("type") in BOMB_TYPES
+    ]
+    if not bomb_actions:
+        return None
+    top_action = max(
+        bomb_actions,
+        key=lambda action: (
+            _remaining_bomb_cover_tier(
+                state,
+                bot_id,
+                action.get("card_ids") or [],
+            ),
+            heuristic_values.get(_mcts_action_key(action), -999.0),
+        ),
+    )
+    return _mcts_fast_path_scores(
+        candidates,
+        heuristic_values,
+        top_action,
+        "structured_runout_bomb_fast_path",
     )
 
 
@@ -10687,6 +10964,24 @@ def _mcts_score_actions(
                 },
             )
         ]
+
+    structured_runout_scores = _mcts_structured_runout_bomb_scores(
+        state,
+        bot_id,
+        candidates,
+        heuristic_values,
+    )
+    if structured_runout_scores:
+        _report_progress_scaled(
+            progress_callback,
+            "mcts",
+            progress_start,
+            progress_end,
+            1.0,
+            "Fast-path structured runout block",
+        )
+        store_status("fast_path")
+        return structured_runout_scores
 
     obvious_scores = _CORE._mcts_obvious_response_scores(state, bot_id, candidates, heuristic_values)
     if obvious_scores:
@@ -12046,6 +12341,7 @@ def _compute_bot_score_components(
             tactical_pass_alarms = (
                 "pass_structure_concession",
                 "pass_closeout_threat",
+                "pass_last_defender_joker",
                 "critical_bomb_pass_penalty",
                 "pass_short_enemy_defer_risk",
                 "pass_best_bomb_gap",
@@ -12669,9 +12965,10 @@ def _short_enemy_pressure_bomb_options(state: Dict, player_id: str) -> List[List
     if leader is None or _team_of(state, leader) == _team_of(state, player_id):
         return []
     leader_left = len(state["players"].get(leader, {}).get("hand", []))
-    if leader_left > 4:
-        return []
     if current_combo.get("type") not in ("full_house", "straight", "three_pairs", "steel_plate"):
+        return []
+    runout_pressure = _structured_enemy_runout_pressure(state, leader, current_combo)
+    if leader_left > 4 and runout_pressure <= 0.0:
         return []
 
     hand = state["players"].get(player_id, {}).get("hand", [])
@@ -12824,10 +13121,20 @@ def _filter_overbomb_options(state: Dict, player_id: str, options: List[List[int
         ):
             priority = 1
         ranked_bombs.append((cards, combo, priority, natural))
+    preserve_cover = _must_contest_structured_enemy_runout(state, player_id)
+    reserve_tiers = (
+        {
+            _cards_key(cards): _remaining_bomb_cover_tier(state, player_id, cards)
+            for cards, _combo, _priority, _natural in ranked_bombs
+        }
+        if preserve_cover
+        else {}
+    )
     ranked_bombs.sort(
         key=lambda item: (
             item[2],
             0 if item[3] else 1,
+            -reserve_tiers.get(_cards_key(item[0]), 0),
             _bomb_tier(item[1]),
             _combo_numeric_value(item[1]),
             len(item[0]),
@@ -12859,7 +13166,10 @@ def _filter_overbomb_options(state: Dict, player_id: str, options: List[List[int
         return representatives + deferred
     if (
         pressure_bombs
-        and leader_left <= 4
+        and (
+            leader_left <= 4
+            or _must_contest_structured_enemy_runout(state, player_id)
+        )
         and current_combo.get("type") in ("full_house", "straight", "three_pairs", "steel_plate")
         and not has_structurally_clean_non_bomb
     ):
@@ -13115,6 +13425,29 @@ def _shared_response_tactical_components(
     if big_joker_takeover > 0.001:
         components["big_joker_takeover"] = big_joker_takeover
 
+    last_defender_joker = _last_defender_level_single_joker_takeover_bonus(
+        state,
+        player_id,
+        cards,
+        combo,
+    )
+    if last_defender_joker > 0.001:
+        components["last_defender_joker_takeover"] = last_defender_joker
+
+    leader = current_trick.get("player_id")
+    if (
+        combo.get("type") in BOMB_TYPES
+        and leader
+        and _team_of(state, leader) != _team_of(state, player_id)
+    ):
+        runout_pressure = _structured_enemy_runout_pressure(
+            state,
+            leader,
+            current_combo,
+        )
+        if runout_pressure > 0.001:
+            components["structured_runout_bomb_takeover"] = runout_pressure
+
     natural_structure = _natural_structure_takeover_profile(
         state,
         player_id,
@@ -13361,6 +13694,7 @@ def _bot_select_play(
         current_trick
         and "pass" in legal
         and not _must_contest_short_enemy_as_last_defender(state, bot_id)
+        and not _must_contest_structured_enemy_runout(state, bot_id)
     ):
         candidates.append(None)
     # Establish a legal, cheap incumbent before detailed scoring. This makes the

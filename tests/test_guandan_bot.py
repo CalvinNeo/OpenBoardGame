@@ -2297,7 +2297,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             with mock.patch.object(
                 guandan,
                 "_determinize_state",
-                side_effect=lambda current, *_args: current,
+                side_effect=lambda current, *_args, **_kwargs: current,
             ):
                 with mock.patch.object(guandan, "_minimax_pick_action", side_effect=fake_minimax):
                     action = guandan.GuandanGame.bot_move(state, "bot")
@@ -8727,7 +8727,11 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         state["config"]["bot_mode"] = "auto"
         state["config"]["bot_endgame_threshold"] = 999
 
-        with mock.patch.object(guandan, "_determinize_state", side_effect=lambda current, *_args: current):
+        with mock.patch.object(
+            guandan,
+            "_determinize_state",
+            side_effect=lambda current, *_args, **_kwargs: current,
+        ):
             with mock.patch.object(guandan, "_minimax_pick_action", return_value={"type": "pass"}):
                 action = guandan.GuandanGame.bot_move(state, "bot")
 
@@ -10286,3 +10290,224 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         hand_map = guandan._map_hand_by_id(state["players"]["bot"]["hand"])
         chosen_labels = [guandan._card_label(hand_map[cid]) for cid in action.get("card_ids", [])]
         self.assertEqual(chosen_labels, ["♣️9"])
+
+    def test_save_f620e9_last_defender_uses_small_joker_over_level_two(self):
+        players = [
+            {"player_id": "ccc", "name": "ccc", "seat": 0, "is_bot": False},
+            {"player_id": "bot2", "name": "Bot 2", "seat": 1, "is_bot": True},
+            {"player_id": "z", "name": "z", "seat": 2, "is_bot": False},
+            {"player_id": "bot4", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["current_turn"] = "bot2"
+        state["level_rank"] = 2
+        state["config"]["bot_mode"] = "auto"
+        state["config"]["bot_endgame_threshold"] = 0
+
+        deck = guandan._full_deck()
+        lead = self._pick_labels(deck, ["♠️2"])[0]
+        prior_play = self._pick_labels(deck, ["♣️10"])[0]
+        bot_hand = self._pick_labels(
+            deck,
+            [
+                "🃏S", "♣️2", "♦️2", "♦️2", "♥️A", "♣️A", "♥️A", "♣️K",
+                "♦️K", "♥️K", "♠️J", "♥️10", "♥️9", "♣️8", "♥️7", "♣️7",
+                "♥️7", "♥️5", "♣️5", "♣️4", "♥️4", "♥️4", "♦️3",
+            ],
+        )
+        state["players"]["bot2"]["hand"] = bot_hand
+        for player_id, count in (("ccc", 23), ("z", 22), ("bot4", 23)):
+            state["players"][player_id]["hand"] = deck[:count]
+            del deck[:count]
+
+        state["current_trick"] = {
+            "player_id": "z",
+            "cards": [lead["id"]],
+            "combo": guandan._evaluate_combo(
+                [lead],
+                state["level_rank"],
+                state.get("config", {}),
+            ),
+        }
+        state["trick_plays"] = {
+            "ccc": "pass",
+            "bot2": [prior_play],
+            "z": [lead],
+            "bot4": "pass",
+        }
+        state["pass_count"] = 2
+        state["seen_cards"] = [lead["id"], prior_play["id"]]
+        state["known_card_owners"] = {}
+        state["round_memories"] = []
+        self._assert_consistent_card_zones(state)
+
+        small_joker = next(card for card in bot_hand if card.get("joker") == "small")
+        takeover_bonus = guandan._guandan_ai.call(
+            guandan,
+            "_last_defender_level_single_joker_takeover_bonus",
+            state,
+            "bot2",
+            [small_joker["id"]],
+        )
+        pass_components = guandan._bot_score_components(state, "bot2", None, depth=4)
+
+        self.assertGreater(takeover_bonus, 0.0)
+        self.assertIn("pass_last_defender_joker", pass_components)
+
+        action = guandan.GuandanGame.bot_move(state, "bot2")
+
+        self.assertEqual(action, {"type": "play", "card_ids": [small_joker["id"]]})
+        explain = state["bot_explain"]["bot2"]
+        self.assertEqual(explain["method_details"].get("mcts_stop_reason"), "fast_path")
+        self.assertFalse(explain["timing"].get("hard_deadline_reached"))
+
+    def test_save_f620e9_bombs_third_straight_before_enemy_reaches_six_cards(self):
+        players = [
+            {"player_id": "ccc", "name": "ccc", "seat": 0, "is_bot": False},
+            {"player_id": "bot2", "name": "Bot 2", "seat": 1, "is_bot": True},
+            {"player_id": "z", "name": "z", "seat": 2, "is_bot": False},
+            {"player_id": "bot4", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["current_turn"] = "bot4"
+        state["level_rank"] = 2
+        state["config"]["bot_mode"] = "auto"
+        state["config"]["bot_endgame_threshold"] = 0
+
+        deck = guandan._full_deck()
+        trick_cards = self._pick_labels(
+            deck,
+            ["♥️9", "♠️10", "♥️J", "♦️Q", "♠️K"],
+        )
+        bot_hand = self._pick_labels(
+            deck,
+            [
+                "🃏B", "♥️2", "♠️2", "♣️2", "♠️A", "♥️K", "♣️K", "♣️Q",
+                "♣️J", "♦️J", "♣️9", "♦️8", "♥️8", "♠️8", "♦️8", "♦️7",
+                "♣️6", "♥️6", "♦️6", "♠️6", "♦️6", "♦️4", "♠️4",
+            ],
+        )
+        state["players"]["bot4"]["hand"] = bot_hand
+        for player_id, count in (("bot2", 18), ("ccc", 23), ("z", 7)):
+            state["players"][player_id]["hand"] = deck[:count]
+            del deck[:count]
+
+        current_combo = guandan._evaluate_combo(
+            trick_cards,
+            state["level_rank"],
+            state.get("config", {}),
+        )
+        state["current_trick"] = {
+            "player_id": "z",
+            "cards": [card["id"] for card in trick_cards],
+            "combo": current_combo,
+        }
+        state["trick_plays"] = {"z": trick_cards}
+        state["pass_count"] = 0
+        state["seen_cards"] = [card["id"] for card in trick_cards]
+        state["known_card_owners"] = {}
+
+        def straight_memory(hand_count_after):
+            return {
+                "player_id": "z",
+                "type": "play",
+                "combo_type": "straight",
+                "combo_size": 5,
+                "cards": [{} for _ in range(5)],
+                "hand_count_after": hand_count_after,
+            }
+
+        state["round_memories"] = [
+            {
+                "round_number": 1,
+                "tricks": [
+                    {"actions": [straight_memory(17)]},
+                    {"actions": [straight_memory(12)]},
+                    {"actions": [straight_memory(7)]},
+                ],
+            }
+        ]
+        self._assert_consistent_card_zones(state)
+
+        runout_pressure = guandan._guandan_ai.call(
+            guandan,
+            "_structured_enemy_runout_pressure",
+            state,
+            "z",
+            current_combo,
+        )
+        self.assertGreaterEqual(runout_pressure, 9.0)
+        self.assertTrue(
+            guandan._guandan_ai.call(
+                guandan,
+                "_must_contest_structured_enemy_runout",
+                state,
+                "bot4",
+            )
+        )
+
+        two_straights = copy.deepcopy(state)
+        transferred = two_straights["players"]["ccc"]["hand"][:5]
+        del two_straights["players"]["ccc"]["hand"][:5]
+        two_straights["players"]["z"]["hand"].extend(transferred)
+        two_straights["round_memories"][0]["tricks"] = two_straights["round_memories"][0]["tricks"][:2]
+        two_straights["_ai_eval_cache"] = {}
+        self.assertTrue(
+            guandan._guandan_ai.call(
+                guandan,
+                "_must_contest_structured_enemy_runout",
+                two_straights,
+                "bot4",
+            )
+        )
+        early_action = guandan.GuandanGame.bot_move(two_straights, "bot4")
+        early_hand_map = guandan._map_hand_by_id(bot_hand)
+        early_cards = [early_hand_map[cid] for cid in early_action.get("card_ids", [])]
+        early_combo = guandan._evaluate_combo(
+            early_cards,
+            two_straights["level_rank"],
+            two_straights.get("config", {}),
+        )
+        self.assertIn(early_combo.get("type"), guandan.BOMB_TYPES)
+        self.assertGreater(
+            guandan._guandan_ai.call(
+                guandan,
+                "_remaining_bomb_cover_tier",
+                two_straights,
+                "bot4",
+                early_action.get("card_ids", []),
+            ),
+            0,
+        )
+
+        no_history = copy.deepcopy(state)
+        no_history["round_memories"] = []
+        no_history["_ai_eval_cache"] = {}
+        self.assertEqual(
+            guandan._guandan_ai.call(
+                guandan,
+                "_structured_enemy_runout_pressure",
+                no_history,
+                "z",
+                current_combo,
+            ),
+            0.0,
+        )
+
+        action = guandan.GuandanGame.bot_move(state, "bot4")
+
+        self.assertEqual(action.get("type"), "play")
+        hand_map = guandan._map_hand_by_id(bot_hand)
+        chosen_cards = [hand_map[cid] for cid in action.get("card_ids", [])]
+        chosen_combo = guandan._evaluate_combo(
+            chosen_cards,
+            state["level_rank"],
+            state.get("config", {}),
+        )
+        self.assertIn(chosen_combo.get("type"), guandan.BOMB_TYPES)
+        self.assertFalse(any(guandan._is_wild(card, state["level_rank"]) for card in chosen_cards))
+        explain = state["bot_explain"]["bot4"]
+        self.assertEqual(explain["method_details"].get("mcts_stop_reason"), "fast_path")
+        self.assertFalse(explain["timing"].get("hard_deadline_reached"))
