@@ -2341,12 +2341,23 @@ class GuandanGame:
 
         hint_options = _list_hint_options(state, viewer_id)
         hint_cards = _suggest_hint_cards(state, viewer_id) or []
-        sf_candidates = []
+        sf_candidates_by_key = {}
         if viewer_id in state["players"]:
             hand = state["players"][viewer_id]["hand"]
             for high_value, cards in _find_straight_flush_candidates(hand, level_rank):
                 key = "-".join(str(cid) for cid in sorted(cards))
-                sf_candidates.append({"key": key, "high_value": high_value, "cards": [c for c in cards]})
+                candidate = {
+                    "key": key,
+                    "high_value": high_value,
+                    "cards": [c for c in cards],
+                }
+                existing = sf_candidates_by_key.get(key)
+                if existing is None or high_value > existing["high_value"]:
+                    sf_candidates_by_key[key] = candidate
+        sf_candidates = sorted(
+            sf_candidates_by_key.values(),
+            key=lambda candidate: (candidate["high_value"], candidate["key"]),
+        )
 
         return {
             "game_id": GuandanGame.game_id,

@@ -2,7 +2,7 @@ let currentGuandanView = null;
 let guandanSelected = [];
 let guandanExplainMode = false;
 let guandanPiles = [];
-let guandanLastSfKey = null;
+let guandanSfCursor = null;
 let guandanHandLayout = "cascade";
 let guandanCascadeLayoutFrame = null;
 let guandanBotExplainPlayerId = null;
@@ -185,7 +185,7 @@ function clearGuandanState() {
   stopGuandanBotProgressTimer();
   guandanSelected = [];
   guandanPiles = [];
-  guandanLastSfKey = null;
+  guandanSfCursor = null;
   guandanHandLayout = "cascade";
   if (guandanCascadeSelect) {
     guandanCascadeSelect.value = guandanHandLayout;
@@ -261,6 +261,44 @@ function layoutGuandanCascade() {
 
 function guandanOptionKey(cards) {
   return [...cards].sort((a, b) => a - b).join("-");
+}
+
+function getGuandanSfEntryKey(entry) {
+  if (entry && entry.key) return entry.key;
+  return guandanOptionKey(entry && Array.isArray(entry.cards) ? entry.cards : []);
+}
+
+function getGuandanSfListKey(candidates) {
+  return JSON.stringify(
+    candidates.map((entry) => [getGuandanSfEntryKey(entry), entry.high_value ?? null])
+  );
+}
+
+function getGuandanNextSfCursor(candidates, selectedKey, previousCursor) {
+  if (!Array.isArray(candidates) || !candidates.length) return null;
+  const listKey = getGuandanSfListKey(candidates);
+  const cursorIsCurrent = Boolean(
+    previousCursor
+      && previousCursor.listKey === listKey
+      && previousCursor.index >= 0
+      && previousCursor.index < candidates.length
+      && getGuandanSfEntryKey(candidates[previousCursor.index]) === previousCursor.key
+  );
+  let currentIndex = -1;
+  if (cursorIsCurrent && (!selectedKey || selectedKey === previousCursor.key)) {
+    currentIndex = previousCursor.index;
+  } else if (selectedKey) {
+    currentIndex = candidates.findIndex((entry) => getGuandanSfEntryKey(entry) === selectedKey);
+  }
+  if (currentIndex < 0 && cursorIsCurrent) {
+    currentIndex = previousCursor.index;
+  }
+  const index = (currentIndex + 1) % candidates.length;
+  return {
+    listKey,
+    index,
+    key: getGuandanSfEntryKey(candidates[index]),
+  };
 }
 
 function getGuandanHintOptions(view) {
@@ -1781,20 +1819,10 @@ if (guandanFindSfBtn) {
     if (!currentGuandanView) return;
     const list = Array.isArray(currentGuandanView.sf_candidates) ? currentGuandanView.sf_candidates : [];
     if (!list.length) return;
-    let idx = 0;
     const selectedKey = guandanSelected.length ? guandanOptionKey(guandanSelected) : "";
-    let found = -1;
-    if (selectedKey) {
-      found = list.findIndex((entry) => entry.key === selectedKey);
-    }
-    if (found < 0 && guandanLastSfKey) {
-      found = list.findIndex((entry) => entry.key === guandanLastSfKey);
-    }
-    if (found >= 0) {
-      idx = (found + 1) % list.length;
-    }
-    const chosen = list[idx];
-    guandanLastSfKey = chosen.key;
+    guandanSfCursor = getGuandanNextSfCursor(list, selectedKey, guandanSfCursor);
+    if (!guandanSfCursor) return;
+    const chosen = list[guandanSfCursor.index];
     applyGuandanSelection(chosen.cards || []);
   });
 }
