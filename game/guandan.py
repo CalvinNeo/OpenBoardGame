@@ -53,9 +53,15 @@ DEFAULT_CONFIG = {
     "bot_action_materializations": 3,
     "bot_determinize_short_budget_threshold_ms": 350,
     "bot_determinize_short_budget_samples": 2,
+    "bot_determinize_sequence_action_limit": 4,
     "bot_endgame_threshold": 24,
     "bot_minimax_depth": 5,
     "bot_minimax_width": 8,
+    "bot_minimax_particles": 3,
+    "bot_minimax_risk_lambda": 0.12,
+    "bot_minimax_short_budget_particles": 1,
+    "bot_endgame_closeout_min_hold": 0.55,
+    "bot_endgame_closeout_min_gain": 0.04,
     "bot_lead_prescore_enabled": True,
     "bot_lead_prescore_min_hand": 12,
     "bot_lead_prescore_min_options": 24,
@@ -1519,6 +1525,7 @@ _AI_EXPORTED_FUNCS = (
     "_mcts_score_actions",
     "_mcts_pick_action",
     "_minimax_value",
+    "_public_endgame_closeout_action",
     "_minimax_pick_action",
     "_lead_low_single_escape_bonus",
     "_lead_low_single_trap_penalty",
@@ -2619,24 +2626,64 @@ class GuandanGame:
                     )
                     minimax_budget_ms = _adaptive_search_budget_ms(configured_minimax_budget_ms)
                     deadline = min(search_deadline, time.perf_counter() + minimax_budget_ms / 1000.0)
-                    _progress("minimax", 0.22, "Determinizing endgame state")
                     minimax_started_at = time.perf_counter()
-                    det = _determinize_state(state, bot_id, random.Random(), deadline)
-                    minimax_action = _minimax_pick_action(
-                        det,
-                        bot_id,
-                        config.get("bot_minimax_depth", 4),
-                        search_width,
-                        deadline=deadline,
-                        incumbent_action=heuristic_action,
-                        progress_callback=_progress,
-                        progress_start=0.26,
-                        progress_end=0.9,
-                    )
+                    public_closeout = None
+                    closeout_actions: List[Dict] = []
+                    bot_hand = state["players"].get(bot_id, {}).get("hand", [])
+                    if not state.get("current_trick") and 2 <= len(bot_hand) <= 6:
+                        _progress("minimax", 0.22, "Checking public endgame closeouts")
+                        closeout_actions = _filter_overbomb_actions(
+                            state,
+                            bot_id,
+                            _candidate_actions(state, bot_id, max(12, search_width)),
+                        )
+                        public_closeout = _public_endgame_closeout_action(
+                            state,
+                            bot_id,
+                            closeout_actions,
+                        )
+                    if public_closeout is not None:
+                        minimax_action, hold_probability, runner_probability = public_closeout
+                        minimax_status = {
+                            "evaluated": 1,
+                            "total": len(closeout_actions),
+                            "stop_reason": "public_closeout",
+                            "deadline_limited": False,
+                            "used_initial_incumbent": False,
+                            "completed_depth": None,
+                            "target_depth": config.get("bot_minimax_depth", 4),
+                            "interrupted_depth": None,
+                            "attempted": 0,
+                            "particles": 0,
+                            "aggregation": "public_probability",
+                            "closeout_hold_probability": hold_probability,
+                            "closeout_runner_probability": runner_probability,
+                        }
+                        _progress("minimax", 0.9, "Public closeout selected")
+                    else:
+                        _progress("minimax", 0.24, "Building hidden-card endgame worlds")
+                        det = _determinize_state(
+                            state,
+                            bot_id,
+                            random.Random(),
+                            deadline=deadline,
+                        )
+                        minimax_action = _minimax_pick_action(
+                            det,
+                            bot_id,
+                            config.get("bot_minimax_depth", 4),
+                            search_width,
+                            deadline=deadline,
+                            incumbent_action=heuristic_action,
+                            progress_callback=_progress,
+                            progress_start=0.28,
+                            progress_end=0.9,
+                            public_state=state,
+                        )
+                        minimax_status = copy.deepcopy(
+                            det.get("_ai_eval_cache", {}).get("minimax_anytime") or {}
+                        )
                     _record_stage("minimax", minimax_started_at)
-                    minimax_status = copy.deepcopy(
-                        det.get("_ai_eval_cache", {}).get("minimax_anytime") or {}
-                    )
                     if minimax_action is not None:
                         decided = True
                         method = "minimax"
@@ -2809,6 +2856,14 @@ class GuandanGame:
                             "minimax_completed_depth": minimax_status.get("completed_depth"),
                             "minimax_target_depth": minimax_status.get("target_depth"),
                             "minimax_interrupted_depth": minimax_status.get("interrupted_depth"),
+                            "minimax_particles": minimax_status.get("particles", 1),
+                            "minimax_aggregation": minimax_status.get("aggregation"),
+                            "minimax_closeout_hold_probability": minimax_status.get(
+                                "closeout_hold_probability"
+                            ),
+                            "minimax_closeout_runner_probability": minimax_status.get(
+                                "closeout_runner_probability"
+                            ),
                             "minimax_budget_ms": minimax_budget_ms,
                             "minimax_stop_reason": minimax_status.get("stop_reason"),
                         }

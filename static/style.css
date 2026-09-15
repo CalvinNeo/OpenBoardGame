@@ -21293,8 +21293,8 @@ body.gizmos-explain-mode .gizmos-player-card.has-explanation:hover {
 
 .skye-layout {
   display: grid;
-  grid-template-columns: minmax(380px, 1.35fr) minmax(520px, 1.25fr);
-  gap: 16px;
+  grid-template-columns: minmax(360px, 1.15fr) minmax(0, 1fr);
+  gap: 22px;
   align-items: start;
 }
 
@@ -21302,24 +21302,35 @@ body.gizmos-explain-mode .gizmos-player-card.has-explanation:hover {
   min-width: 0;
 }
 
+.skye-column > h3,
+.skye-phase-card > h3 {
+  margin: 0 0 9px;
+}
+
 .skye-phase-card {
-  background: #f8fafc;
-  border: 1px solid #dbe4ee;
-  border-radius: 16px;
-  padding: 14px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
 }
 
 .skye-right-column {
   display: grid;
-  gap: 16px;
+  gap: 20px;
 }
 
 .skye-right-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(220px, 1fr));
-  gap: 16px;
+  gap: 18px;
   align-items: start;
+}
+
+.skye-right-grid > .skye-phase-card {
+  border-top: 1px solid #dbe4ee;
+  padding-top: 12px;
 }
 
 .skye-right-grid > :last-child {
@@ -21327,7 +21338,7 @@ body.gizmos-explain-mode .gizmos-player-card.has-explanation:hover {
 }
 
 .skye-shared-action-card .skye-tile-list {
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
 }
 
 .skye-shared-action-card {
@@ -21335,7 +21346,7 @@ body.gizmos-explain-mode .gizmos-player-card.has-explanation:hover {
 }
 
 .skye-pricing-tile-list {
-  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
 }
 
 .skye-build-queue-section {
@@ -21351,24 +21362,26 @@ body.gizmos-explain-mode .gizmos-player-card.has-explanation:hover {
 }
 
 .skye-board {
+  --skye-board-tile-min: 88px;
   display: grid;
-  gap: 8px;
+  gap: 3px;
   align-content: start;
   overflow: auto;
-  padding: 8px;
+  max-width: 100%;
+  padding: 4px;
   min-height: 420px;
   background:
     linear-gradient(180deg, rgba(246, 246, 235, 0.92), rgba(234, 237, 228, 0.92)),
     radial-gradient(circle at top left, rgba(191, 219, 179, 0.45), transparent 45%);
   border: 1px solid #d6d3c7;
-  border-radius: 18px;
+  border-radius: 12px;
 }
 
 .skye-board-cell {
   min-height: 88px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.6);
-  border: 1px dashed rgba(148, 163, 184, 0.45);
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid transparent;
   position: relative;
   display: flex;
   align-items: center;
@@ -21382,7 +21395,7 @@ body.gizmos-explain-mode .gizmos-player-card.has-explanation:hover {
 }
 
 .skye-board-cell.empty {
-  background: rgba(255, 255, 255, 0.28);
+  background: transparent;
 }
 
 .skye-board-cell.legal {
@@ -21400,6 +21413,11 @@ body.gizmos-explain-mode .gizmos-player-card.has-explanation:hover {
 .skye-cell-coord {
   font-size: 11px;
   color: #64748b;
+  opacity: 0;
+}
+
+.skye-board-cell.legal .skye-cell-coord {
+  opacity: 0.8;
 }
 
 .skye-global-actions {
@@ -21409,12 +21427,12 @@ body.gizmos-explain-mode .gizmos-player-card.has-explanation:hover {
 .skye-tile-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .skye-market-groups {
   display: grid;
-  gap: 14px;
+  gap: 18px;
 }
 
 .skye-players,
@@ -21425,7 +21443,7 @@ body.gizmos-explain-mode .gizmos-player-card.has-explanation:hover {
 
 .skye-market-group {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .skye-market-title,
@@ -21445,24 +21463,24 @@ body.gizmos-explain-mode .gizmos-player-card.has-explanation:hover {
   color: #475569;
 }
 
-.skye-tile-card,
-.skye-market-entry,
 .skye-final-card,
 .skye-recap-card,
-.skye-player-card,
-.skye-phase-tile {
+.skye-player-card {
   position: relative;
   border: 1px solid #d7dde8;
-  border-radius: 16px;
+  border-radius: 12px;
   background: linear-gradient(180deg, #ffffff, #f8fafc);
   padding: 10px;
-  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.05);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.045);
 }
 
 .skye-market-entry,
 .skye-phase-tile {
+  position: relative;
   display: grid;
-  gap: 10px;
+  gap: 8px;
+  min-width: 0;
+  align-content: start;
 }
 
 .skye-player-card.current-turn {
@@ -21510,18 +21528,19 @@ button.skye-player-card {
 .skye-public-draw-group,
 .skye-ready-list {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .skye-public-draw-group {
-  padding: 10px;
-  border: 1px solid #dbe4ee;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.7);
+  padding: 10px 0 0;
+  border: 0;
+  border-top: 1px solid #e2e8f0;
+  border-radius: 0;
+  background: transparent;
 }
 
-.skye-public-draw-list {
-  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+.skye-shared-action-card .skye-public-draw-list {
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
 }
 
 .skye-ready-list {
@@ -21545,40 +21564,75 @@ button.skye-player-card {
 }
 
 .skye-tile-card {
-  display: grid;
-  gap: 8px;
+  position: relative;
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 0;
+  box-shadow: 0 3px 9px rgba(15, 23, 42, 0.08);
+  cursor: default;
+}
+
+#skyeBuildQueue .skye-tile-card {
   cursor: pointer;
 }
 
 .skye-tile-card.compact {
-  padding: 8px;
+  padding: 0;
 }
 
 .skye-tile-card.selected {
   border-color: #ca8a04;
-  box-shadow: 0 12px 24px rgba(202, 138, 4, 0.22);
-  transform: translateY(-1px);
+  box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.34), 0 8px 18px rgba(202, 138, 4, 0.18);
 }
 
 .skye-tile-card.on-board {
   cursor: default;
-  padding: 4px;
-  border-radius: 12px;
+  padding: 0;
+  border-radius: 6px;
   box-shadow: none;
 }
 
-.skye-tile-title,
 .skye-scoring-name {
   font-size: 13px;
   font-weight: 700;
   color: #1f2937;
 }
 
+.skye-tile-title {
+  position: absolute;
+  z-index: 2;
+  display: none;
+  top: 7px;
+  left: 7px;
+  max-width: calc(100% - 14px);
+  overflow: hidden;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #1f2937;
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(3px);
+}
+
+.skye-tile-card.has-status-label .skye-tile-title {
+  display: block;
+}
+
 .skye-price-badge,
 .skye-scoring-slot {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  z-index: 3;
+  top: 7px;
+  right: 7px;
   font-size: 12px;
   font-weight: 700;
   background: #fef3c7;
@@ -21595,35 +21649,53 @@ button.skye-player-card {
 
 .skye-tile {
   position: relative;
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
-  min-height: 112px;
-  border-radius: 16px;
-  background: linear-gradient(180deg, #ffffff, #f3f4f6);
-  border: 1px solid #e2e8f0;
-  overflow: hidden;
+  display: block;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
 }
 
 .skye-tile.compact {
-  min-height: 78px;
+  min-height: 0;
 }
 
 .skye-tile-art {
-  min-height: 84px;
-  margin: 8px;
-  border-radius: 12px;
+  position: relative;
+  width: 100%;
+  min-height: 0;
+  aspect-ratio: 1 / 1;
+  margin: 0;
+  border-radius: 0;
   background-color: #eef2f7;
   background-position: center;
   background-repeat: no-repeat;
-  background-size: contain;
+  background-size: cover;
   transform-origin: center;
-  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.3);
+  box-shadow: none;
+}
+
+.skye-tile-hotspots {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.skye-tile-icon-hotspot {
+  position: absolute;
+  z-index: 4;
+  width: 20%;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
 }
 
 .skye-tile.compact .skye-tile-art {
-  min-height: 58px;
-  margin: 6px;
-  border-radius: 10px;
+  min-height: 0;
+  margin: 0;
+  border-radius: 0;
 }
 
 .skye-board-tile {
@@ -21637,7 +21709,7 @@ button.skye-player-card {
   height: 100%;
   min-height: 0;
   margin: 0;
-  border-radius: 12px;
+  border-radius: 5px;
   background-size: cover;
 }
 
@@ -21682,8 +21754,13 @@ button.skye-player-card {
 }
 
 .skye-tile-icons {
-  font-size: 14px;
-  line-height: 1.35;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 8px;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.25;
   color: #111827;
 }
 
@@ -21692,9 +21769,39 @@ button.skye-player-card {
 }
 
 .skye-tile-meta {
-  padding: 0 10px 8px;
-  text-align: center;
-  font-size: 11px;
+  display: grid;
+  gap: 4px;
+  min-height: 47px;
+  padding: 6px 7px 7px;
+  border-top: 1px solid rgba(203, 213, 225, 0.8);
+  background: #f8fafc;
+  text-align: left;
+  font-size: 10px;
+}
+
+.skye-tile-topology {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+  min-width: 0;
+  color: #64748b;
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.skye-tile-symbol,
+.skye-tile-route,
+.skye-tile-terrain {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.skye-tile-no-symbols {
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 500;
 }
 
 .skye-tile-roads {
@@ -21755,6 +21862,26 @@ body.skye-explain-mode .has-explanation {
   outline-offset: 3px;
 }
 
+body.skye-explain-mode .skye-tile-art.has-explanation {
+  outline-offset: -5px;
+}
+
+body.skye-explain-mode .skye-tile-icon-hotspot.has-explanation {
+  background: rgba(204, 251, 241, 0.32);
+  outline: 2px dashed #0f766e;
+  outline-offset: 1px;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.82);
+  pointer-events: auto;
+}
+
+body.skye-explain-mode .skye-tile-symbol.has-explanation,
+body.skye-explain-mode .skye-tile-route.has-explanation,
+body.skye-explain-mode .skye-tile-terrain.has-explanation {
+  background: #ccfbf1;
+  outline-width: 1px;
+  outline-offset: 1px;
+}
+
 .skye-header-btn.active {
   background: #0f766e;
   color: #ffffff;
@@ -21774,19 +21901,21 @@ body.skye-explain-mode .has-explanation {
   }
 
   .skye-board {
+    --skye-board-tile-min: 80px;
     min-height: 360px;
   }
 
   .skye-pricing-tile-list {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
   }
 }
 
 @media (max-width: 640px) {
   .skye-board {
+    --skye-board-tile-min: 72px;
     min-height: 300px;
-    padding: 6px;
-    gap: 6px;
+    padding: 3px;
+    gap: 2px;
   }
 
   .skye-board-cell {
@@ -21795,6 +21924,10 @@ body.skye-explain-mode .has-explanation {
 
   .skye-tile-list {
     grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  }
+
+  .skye-pricing-tile-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .skye-global-actions {

@@ -8866,60 +8866,68 @@ def _public_action_sequence_consistency_bonus(state: Dict, player_id: str, hand:
     future_cards: List[Dict] = []
     next_synth_id = -1
     bonus = 0.0
+    scored_actions = 0
+    score_limit = max(
+        1,
+        int(state.get("config", {}).get("bot_determinize_sequence_action_limit", 4)),
+    )
     # Reconstruct the hand before each public action by adding back all later played cards.
     for action in reversed(actions):
-        pre_hand = list(hand) + future_cards
         cards = action.get("cards") or []
         if not cards:
             continue
 
-        chosen_ids = []
-        used_pre = set()
-        matched = True
-        for target in cards:
-            found = None
-            for idx, card in enumerate(pre_hand):
-                if idx in used_pre:
-                    continue
-                if (
-                    card.get("rank") == target.get("rank")
-                    and card.get("suit") == target.get("suit")
-                    and card.get("joker") == target.get("joker")
-                ):
-                    found = card
-                    used_pre.add(idx)
-                    break
-            if found is None:
-                matched = False
-                break
-            chosen_ids.append(found["id"])
-        if not matched:
-            for card in cards:
-                cloned = dict(card)
-                cloned["id"] = next_synth_id
-                next_synth_id -= 1
-                future_cards.append(cloned)
-            continue
-
+        # ``hand`` is the candidate hand at the current frontier, so the cards
+        # from this action have already left it. Restore the current action
+        # before evaluating that historical choice; matching it against the
+        # post-action hand made every non-empty action silently miss.
+        restored_cards: List[Dict] = []
+        for card in cards:
+            cloned = dict(card)
+            cloned["id"] = next_synth_id
+            next_synth_id -= 1
+            restored_cards.append(cloned)
+        pre_hand = list(hand) + future_cards + restored_cards
+        chosen_ids = [card["id"] for card in restored_cards]
         post_hand = _remove_cards(pre_hand, chosen_ids)
         combo_type = action.get("combo_type") or ""
-        hand_after = int(action.get("hand_count_after") or 99)
-        post_summary = _hand_decomposition_summary(post_hand, level_rank) if post_hand else _empty_hand_decomposition_summary()
+        raw_hand_after = action.get("hand_count_after")
+        hand_after = int(raw_hand_after) if raw_hand_after is not None else 99
+        single_value = (
+            max((_public_card_single_value(card, level_rank) for card in cards), default=0)
+            if combo_type == "single" and hand_after <= 8
+            else None
+        )
+        should_score = (
+            (single_value is not None and single_value < 60)
+            or (combo_type in BOMB_TYPES and hand_after <= 10)
+            or combo_type in ("pair", "three", "full_house")
+        )
+        if not should_score or scored_actions >= score_limit:
+            future_cards.extend(restored_cards)
+            continue
+        if _deadline_expired():
+            break
 
-        if combo_type == "single" and hand_after <= 8 and cards:
-            value = max((_public_card_single_value(card, level_rank) for card in cards), default=0)
-            if value < 60:
-                group_turns = post_summary.get("group_turns", 0.0)
-                bonus += min(1.8, group_turns * 0.35)
-                if post_summary.get("top_combo_size", 0.0) >= 3.0:
-                    bonus += 0.45
-                if post_summary.get("plan_types", ()) and (post_summary.get("plan_types") or (None,))[0] in (
-                    "three",
-                    "full_house",
-                    "three_pairs",
-                    "steel_plate",
-                ):
-                    bonus += 0.55
+        post_summary = (
+            _hand_decomposition_summary(post_hand, level_rank)
+            if post_hand
+            else _empty_hand_decomposition_summary()
+        )
+        scored_actions += 1
+
+        if single_value is not None and single_value < 60:
+            group_turns = post_summary.get("group_turns", 0.0)
+            bonus += min(1.8, group_turns * 0.35)
+            if post_summary.get("top_combo_size", 0.0) >= 3.0:
+                bonus += 0.45
+            if post_summary.get("plan_types", ()) and (post_summary.get("plan_types") or (None,))[0] in (
+                "three",
+                "full_house",
+                "three_pairs",
+                "steel_plate",
+            ):
+                bonus += 0.55
         elif combo_type in BOMB_TYPES and hand_after <= 10:
             group_turns = post_summary.get("group_turns", 0.0)
             if group_turns > 0.0:
@@ -8931,11 +8939,7 @@ def _public_action_sequence_consistency_bonus(state: Dict, player_id: str, hand:
             if post_summary.get("group_turns", 0.0) > 0.0:
                 bonus += 0.15
 
-        for card in cards:
-            cloned = dict(card)
-            cloned["id"] = next_synth_id
-            next_synth_id -= 1
-            future_cards.append(cloned)
+        future_cards.extend(restored_cards)
     return min(3.0, bonus)
 
 
@@ -11204,6 +11208,120 @@ def _minimax_clean_grouped_lead(state: Dict, bot_id: str, action: Optional[Dict]
     )
 
 
+def _public_endgame_closeout_action(
+    state: Dict,
+    bot_id: str,
+    actions: List[Dict],
+) -> Optional[Tuple[Dict, float, float]]:
+    """Pick the safest public-information lead that regains a one-combo finish."""
+    if state.get("current_trick"):
+        return None
+    hand = state["players"].get(bot_id, {}).get("hand", [])
+    if not 2 <= len(hand) <= 6:
+        return None
+
+    opponents = [
+        pid
+        for pid in state.get("turn_order", [])
+        if pid != bot_id
+        and not state["players"][pid].get("finished")
+        and _team_of(state, pid) != _team_of(state, bot_id)
+    ]
+    if not opponents:
+        return None
+    # This override is intentionally narrow: it is for the point where an
+    # opponent can go out immediately and winning the current trick lets us
+    # shed the entire residual hand on the next lead.
+    if min(len(state["players"][pid].get("hand", [])) for pid in opponents) > 3:
+        return None
+
+    unknown_total, rank_counts, wild_count, joker_counts = _lead_unknown_pool_profile(
+        state,
+        bot_id,
+    )
+    if unknown_total <= 0:
+        return None
+
+    level_rank = state["level_rank"]
+    config = state.get("config", {})
+    hand_map = _map_hand_by_id(hand)
+    routes: Dict[Tuple, Tuple[Dict, float, float]] = {}
+    for action in actions:
+        if action.get("type") != "play":
+            continue
+        card_ids = action.get("card_ids") or []
+        play_cards = [hand_map[cid] for cid in card_ids if cid in hand_map]
+        combo = _evaluate_combo(play_cards, level_rank, config)
+        if not combo:
+            continue
+        remaining = _remove_cards(hand, card_ids)
+        if not remaining or not _can_play_all(remaining, level_rank, config, None):
+            continue
+        remaining_combo = _evaluate_combo(remaining, level_rank, config)
+        if not remaining_combo:
+            continue
+
+        reply_probabilities: List[float] = []
+        for opponent_id in opponents:
+            if combo.get("type") in BOMB_TYPES:
+                reply_probability = _opponent_overbomb_reply_probability(
+                    state,
+                    opponent_id,
+                    combo,
+                    unknown_total,
+                    rank_counts,
+                    joker_counts,
+                )
+            else:
+                same_type_probability = _opponent_same_type_reply_probability(
+                    state,
+                    opponent_id,
+                    combo,
+                    unknown_total,
+                    rank_counts,
+                    wild_count,
+                )
+                bomb_probability = _opponent_bomb_reply_probability(
+                    state,
+                    opponent_id,
+                    combo,
+                    unknown_total,
+                    rank_counts,
+                    joker_counts,
+                )
+                reply_probability = 1.0 - (
+                    (1.0 - same_type_probability) * (1.0 - bomb_probability)
+                )
+            reply_probabilities.append(reply_probability)
+
+        hold_probability = 1.0 - _aggregate_event_probability(reply_probabilities)
+        recovery_value = _control_card_score(remaining, level_rank)
+        route_key = (
+            combo.get("type"),
+            _combo_numeric_value(combo),
+            remaining_combo.get("type"),
+            _combo_numeric_value(remaining_combo),
+        )
+        previous = routes.get(route_key)
+        if previous is None or recovery_value > previous[2]:
+            routes[route_key] = (action, hold_probability, recovery_value)
+
+    candidates = list(routes.values())
+    if len(candidates) < 2:
+        return None
+    candidates.sort(key=lambda item: (item[1], item[2]), reverse=True)
+    best_action, best_hold, _best_recovery = candidates[0]
+    runner_hold = candidates[1][1]
+    min_hold = max(
+        0.0,
+        min(1.0, float(config.get("bot_endgame_closeout_min_hold", 0.55))),
+    )
+    min_gain = max(0.0, float(config.get("bot_endgame_closeout_min_gain", 0.04)))
+    if best_hold < min_hold or best_hold - runner_hold < min_gain:
+        return None
+    return best_action, best_hold, runner_hold
+
+
 def _forced_endgame_control_relay_action(
     state: Dict,
     bot_id: str,
@@ -11282,9 +11400,12 @@ def _minimax_pick_action(
     progress_callback: Optional[Callable[[str, float, Optional[str]], None]] = None,
     progress_start: float = 0.0,
     progress_end: float = 1.0,
+    public_state: Optional[Dict] = None,
 ) -> Optional[Dict]:
-    """Return the selected full action so pass is distinct from no result."""
+    """Return an action, aggregating paired endgame worlds when public state is supplied."""
     target_depth = max(1, int(depth))
+    particle_count_used = 1
+    aggregation = "single_world"
 
     def store_status(
         stop_reason: str,
@@ -11295,7 +11416,7 @@ def _minimax_pick_action(
         interrupted_depth: Optional[int] = None,
         attempted: int = 0,
     ) -> None:
-        state.setdefault("_ai_eval_cache", {})["minimax_anytime"] = {
+        status = {
             "evaluated": evaluated,
             "total": total,
             "stop_reason": stop_reason,
@@ -11305,7 +11426,14 @@ def _minimax_pick_action(
             "target_depth": target_depth,
             "interrupted_depth": interrupted_depth,
             "attempted": attempted,
+            "particles": particle_count_used,
+            "aggregation": aggregation,
         }
+        closeout_meta = state.get("_ai_eval_cache", {}).get("public_closeout")
+        if isinstance(closeout_meta, dict):
+            status["closeout_hold_probability"] = closeout_meta.get("hold_probability")
+            status["closeout_runner_probability"] = closeout_meta.get("runner_probability")
+        state.setdefault("_ai_eval_cache", {})["minimax_anytime"] = status
 
     legal = GuandanGame.get_legal_actions(state, bot_id)
     if "play" not in legal:
@@ -11330,6 +11458,23 @@ def _minimax_pick_action(
         if state.get("current_trick") and "pass" in legal:
             return {"type": "pass"}
         return dict(actions[0])
+    closeout = _public_endgame_closeout_action(public_state or state, bot_id, actions)
+    if closeout is not None:
+        closeout_action, hold_probability, runner_probability = closeout
+        state.setdefault("_ai_eval_cache", {})["public_closeout"] = {
+            "hold_probability": hold_probability,
+            "runner_probability": runner_probability,
+        }
+        _report_progress_scaled(
+            progress_callback,
+            "minimax",
+            progress_start,
+            progress_end,
+            1.0,
+            "Minimax found the safest one-combo closeout",
+        )
+        store_status("public_closeout", 1, len(actions))
+        return dict(closeout_action)
     forced_relay = _forced_endgame_control_relay_action(state, bot_id, actions)
     if forced_relay is not None:
         _report_progress_scaled(
@@ -11353,6 +11498,31 @@ def _minimax_pick_action(
             ),
         ),
     )
+    search_states = [state]
+    if public_state is not None:
+        public_config = public_state.get("config", {})
+        target_particles = max(1, int(public_config.get("bot_minimax_particles", 3)))
+        remaining_budget = _deadline_remaining(deadline)
+        short_budget_threshold_ms = max(
+            25.0,
+            float(public_config.get("bot_determinize_short_budget_threshold_ms", 350)),
+        )
+        if (
+            remaining_budget is not None
+            and remaining_budget * 1000.0 <= short_budget_threshold_ms
+        ):
+            target_particles = min(
+                target_particles,
+                max(1, int(public_config.get("bot_minimax_short_budget_particles", 1))),
+            )
+        particle_rng = random.Random()
+        while len(search_states) < target_particles and not _deadline_expired(deadline):
+            search_states.append(
+                _CORE._determinize_state(public_state, bot_id, particle_rng, deadline)
+            )
+        particle_count_used = len(search_states)
+        if particle_count_used > 1:
+            aggregation = "paired_mean_minus_std"
     total_actions = max(1, len(actions))
     _report_progress_scaled(
         progress_callback,
@@ -11360,7 +11530,10 @@ def _minimax_pick_action(
         progress_start,
         progress_end,
         0.05,
-        f"Preparing minimax with {total_actions} root candidates",
+        (
+            f"Preparing minimax with {total_actions} root candidates "
+            f"across {particle_count_used} hidden-card world(s)"
+        ),
     )
     best_action = dict(incumbent_action) if incumbent_action else actions[0]
     if not state.get("current_trick") and not _minimax_clean_grouped_lead(
@@ -11395,48 +11568,94 @@ def _minimax_pick_action(
     completed_depth: Optional[int] = None
     interrupted_depth: Optional[int] = None
     attempted_root_evals = 0
-    # Publish only complete root panels. Iterative deepening guarantees that a
-    # short budget still returns a comparable shallow result instead of a
-    # score from whichever deep root happened to be visited first.
+    # Publish only complete root panels. Every root action is evaluated on the
+    # same particle set, so hidden-card world noise cannot favor whichever
+    # action happened to receive an easier determinization.
+    risk_lambda = (
+        max(
+            0.0,
+            float(
+                (public_state or state)
+                .get("config", {})
+                .get("bot_minimax_risk_lambda", 0.12)
+            ),
+        )
+        if particle_count_used > 1
+        else 0.0
+    )
     for search_depth in range(1, target_depth + 1):
-        layer_scored: List[Tuple[Dict, float]] = []
+        layer_values: List[List[float]] = [[] for _action in actions]
         layer_interrupted = False
-        for index, action in enumerate(actions, start=1):
-            if deadline is not None and time.perf_counter() >= deadline:
-                layer_interrupted = True
+        for particle_index, particle in enumerate(search_states, start=1):
+            for action_index, action in enumerate(actions, start=1):
+                if deadline is not None and time.perf_counter() >= deadline:
+                    layer_interrupted = True
+                    break
+                nxt = _clone_search_state(particle, preserve_eval_cache=True)
+                _, err = GuandanGame.apply_action(nxt, bot_id, action)
+                if err:
+                    continue
+                attempted_root_evals += 1
+                value = _minimax_value(
+                    nxt,
+                    bot_id,
+                    search_depth - 1,
+                    -1e9,
+                    1e9,
+                    width,
+                    deadline=deadline,
+                )
+                if deadline is not None and time.perf_counter() >= deadline:
+                    layer_interrupted = True
+                    break
+                layer_values[action_index - 1].append(value)
+                completed_in_layer = (
+                    (particle_index - 1) * total_actions + action_index
+                )
+                layer_progress = (
+                    (search_depth - 1)
+                    + completed_in_layer / (total_actions * particle_count_used)
+                ) / target_depth
+                _report_progress_scaled(
+                    progress_callback,
+                    "minimax",
+                    progress_start,
+                    progress_end,
+                    min(0.98, 0.08 + 0.9 * layer_progress),
+                    (
+                        f"Evaluating minimax depth {search_depth}/{target_depth}, "
+                        f"world {particle_index}/{particle_count_used}, "
+                        f"root {action_index}/{total_actions}"
+                    ),
+                )
+            if layer_interrupted:
                 break
-            nxt = _clone_search_state(state, preserve_eval_cache=True)
-            _, err = GuandanGame.apply_action(nxt, bot_id, action)
-            if err:
-                continue
-            attempted_root_evals += 1
-            value = _minimax_value(
-                nxt,
-                bot_id,
-                search_depth - 1,
-                -1e9,
-                1e9,
-                width,
-                deadline=deadline,
-            )
-            if deadline is not None and time.perf_counter() >= deadline:
-                layer_interrupted = True
-                break
-            value -= _minimax_root_lead_single_penalty(state, bot_id, action)
-            layer_scored.append((action, value))
-            layer_progress = ((search_depth - 1) + index / total_actions) / target_depth
-            _report_progress_scaled(
-                progress_callback,
-                "minimax",
-                progress_start,
-                progress_end,
-                min(0.98, 0.08 + 0.9 * layer_progress),
-                f"Evaluating minimax depth {search_depth}/{target_depth}, root {index}/{total_actions}",
-            )
         if layer_interrupted:
             deadline_limited = True
             interrupted_depth = search_depth
             break
+        if any(len(values) != particle_count_used for values in layer_values):
+            break
+
+        reference_values = layer_values[0]
+        layer_scored: List[Tuple[Dict, float]] = []
+        for action, values in zip(actions, layer_values):
+            mean_value = sum(values) / particle_count_used
+            paired_deltas = [
+                value - reference
+                for value, reference in zip(values, reference_values)
+            ]
+            mean_delta = sum(paired_deltas) / particle_count_used
+            variance = sum(
+                (delta - mean_delta) ** 2 for delta in paired_deltas
+            ) / particle_count_used
+            aggregate_value = mean_value - risk_lambda * math.sqrt(max(0.0, variance))
+            aggregate_value -= _minimax_root_lead_single_penalty(
+                public_state or state,
+                bot_id,
+                action,
+            )
+            layer_scored.append((action, aggregate_value))
         if not layer_scored:
             break
         root_scored = layer_scored

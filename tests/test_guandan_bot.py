@@ -1391,6 +1391,54 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertEqual(pass_penalty.call_count, 6)
         sequence_bonus.assert_not_called()
 
+    def test_public_action_sequence_reconstructs_the_current_historical_play(self):
+        players = [
+            {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
+            {"player_id": "opp", "name": "Opp", "seat": 1, "is_bot": False},
+            {"player_id": "mate", "name": "Mate", "seat": 2, "is_bot": False},
+            {"player_id": "opp2", "name": "Opp2", "seat": 3, "is_bot": False},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        deck = guandan._full_deck()
+        candidate_hand = self._pick_labels(deck, ["♠️K", "♥️K"])
+        state["round_memories"] = [
+            {
+                "round_number": 1,
+                "tricks": [
+                    {
+                        "index": 1,
+                        "actions": [
+                            {
+                                "player_id": "opp",
+                                "type": "play",
+                                "combo_type": "single",
+                                "cards": [
+                                    {
+                                        "label": "♠️3",
+                                        "rank": 3,
+                                        "suit": "spades",
+                                        "joker": None,
+                                    }
+                                ],
+                                "hand_count_after": 2,
+                            }
+                        ],
+                    }
+                ],
+            }
+        ]
+
+        bonus = guandan._guandan_ai.call(
+            guandan,
+            "_public_action_sequence_consistency_bonus",
+            state,
+            "opp",
+            candidate_hand,
+        )
+
+        self.assertGreater(bonus, 0.0)
+
     def test_determinize_state_locks_publicly_known_card_owner(self):
         players = [
             {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
@@ -8686,6 +8734,78 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertEqual(action, {"type": "pass"})
         self.assertEqual(state["bot_explain"]["bot"]["method"], "minimax")
 
+    def test_minimax_aggregates_every_root_over_the_same_hidden_card_worlds(self):
+        state, low, high = self._make_single_response_state()
+        state["config"]["bot_minimax_particles"] = 3
+        state["config"]["bot_minimax_risk_lambda"] = 0.0
+        state["particle"] = 0
+        action_a = {"type": "play", "card_ids": [low["id"]]}
+        action_b = {"type": "play", "card_ids": [high["id"]]}
+        particle_counter = [0]
+        branches_by_particle = {}
+
+        def fake_determinize(current, _bot_id, _rng, *_args):
+            particle_counter[0] += 1
+            particle = guandan._clone_search_state(current)
+            particle["particle"] = particle_counter[0]
+            return particle
+
+        def fake_apply_action(target_state, _bot_id, action):
+            branch = tuple(action.get("card_ids", []))
+            target_state["branch"] = branch
+            branches_by_particle.setdefault(target_state["particle"], set()).add(branch)
+            return [], None
+
+        def fake_minimax_value(target_state, *_args, **_kwargs):
+            branch = target_state["branch"]
+            if target_state["particle"] == 0:
+                return 10.0 if branch == tuple(action_a["card_ids"]) else 0.0
+            return 0.0 if branch == tuple(action_a["card_ids"]) else 8.0
+
+        with mock.patch.object(guandan.GuandanGame, "get_legal_actions", return_value=["play"]):
+            with mock.patch.object(guandan, "_candidate_actions", return_value=[action_a, action_b]):
+                with mock.patch.object(
+                    guandan,
+                    "_filter_overbomb_actions",
+                    side_effect=lambda _state, _player_id, actions: actions,
+                ):
+                    with mock.patch("game.guandan_ai._quick_candidate_score", return_value=0.0):
+                        with mock.patch.object(
+                            guandan,
+                            "_determinize_state",
+                            side_effect=fake_determinize,
+                        ) as determinize:
+                            with mock.patch.object(
+                                guandan.GuandanGame,
+                                "apply_action",
+                                side_effect=fake_apply_action,
+                            ):
+                                with mock.patch(
+                                    "game.guandan_ai._minimax_value",
+                                    side_effect=fake_minimax_value,
+                                ):
+                                    chosen = guandan._minimax_pick_action(
+                                        state,
+                                        "bot",
+                                        depth=1,
+                                        width=2,
+                                        public_state=state,
+                                    )
+
+        self.assertEqual(chosen, action_b)
+        self.assertEqual(determinize.call_count, 2)
+        self.assertEqual(
+            branches_by_particle,
+            {
+                0: {tuple(action_a["card_ids"]), tuple(action_b["card_ids"])},
+                1: {tuple(action_a["card_ids"]), tuple(action_b["card_ids"])},
+                2: {tuple(action_a["card_ids"]), tuple(action_b["card_ids"])},
+            },
+        )
+        status = state["_ai_eval_cache"]["minimax_anytime"]
+        self.assertEqual(status["particles"], 3)
+        self.assertEqual(status["aggregation"], "paired_mean_minus_std")
+
     def test_endgame_response_blocks_one_card_opponent_with_big_joker(self):
         players = [
             {"player_id": "bot", "name": "Bot", "seat": 0, "is_bot": True},
@@ -8777,6 +8897,97 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertEqual(action.get("type"), "play")
         chosen_labels = [guandan._card_label(hand_map[cid]) for cid in action.get("card_ids", [])]
         self.assertNotEqual(chosen_labels, ["♣️5"])
+
+    def test_save_c296e5_endgame_uses_wild_with_jack_for_safer_closeout(self):
+        players = [
+            {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
+            {"player_id": "bot2", "name": "Bot 2", "seat": 1, "is_bot": True},
+            {"player_id": "zhu", "name": "zhu", "seat": 2, "is_bot": False},
+            {"player_id": "bot4", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["round_number"] = 1
+        state["dealer_team"] = "A"
+        state["level_rank"] = 2
+        state["current_turn"] = "bot4"
+        state["current_trick"] = None
+        state["pass_count"] = 0
+        state["trick_plays"] = {}
+        state["finish_order"] = []
+        state["config"]["bot_mode"] = "auto"
+        state["config"]["bot_endgame_threshold"] = 24
+        state["config"]["bot_minimax_depth"] = 5
+        state["config"]["bot_minimax_width"] = 8
+        state["visible_card_id"] = None
+        state["known_card_owners"] = {}
+        state["pass_limits"] = {
+            "calvin": {"full_house": 60, "single": 59, "pair": 90},
+            "bot2": {"single": 100, "full_house": 60, "pair": 90},
+            "zhu": {"single": 100, "full_house": 51, "pair": 90},
+            "bot4": {"single": 100, "full_house": 59},
+        }
+        state["round_memories"] = []
+
+        deck = guandan._full_deck()
+        bot4_hand = self._pick_labels(deck, ["♥️2", "♣️J", "♠️3"])
+        state["players"]["bot4"]["hand"] = bot4_hand
+        state["players"]["calvin"]["hand"] = self._pick_labels(
+            deck,
+            ["♠️K", "♥️K"],
+        )
+        state["players"]["bot2"]["hand"] = self._pick_labels(
+            deck,
+            [
+                "♣️4",
+                "♦️Q",
+                "♣️5",
+                "♥️5",
+                "♦️3",
+                "♠️4",
+                "♣️3",
+                "♣️3",
+                "♦️4",
+                "♠️K",
+            ],
+        )
+        state["players"]["zhu"]["hand"] = self._pick_labels(deck, ["♦️7"])
+        state["seen_cards"] = [card["id"] for card in deck]
+        self._assert_consistent_card_zones(state)
+
+        hand_map = guandan._map_hand_by_id(bot4_hand)
+        with mock.patch.object(
+            guandan,
+            "_determinize_state",
+            side_effect=AssertionError("public closeout should run before determinization"),
+        ):
+            action = guandan.GuandanGame.bot_move(state, "bot4")
+
+        self.assertEqual(action.get("type"), "play")
+        chosen_cards = [hand_map[cid] for cid in action.get("card_ids", [])]
+        chosen_combo = guandan._evaluate_combo(
+            chosen_cards,
+            state["level_rank"],
+            state.get("config", {}),
+        )
+        self.assertEqual(chosen_combo.get("type"), "pair")
+        self.assertEqual(
+            chosen_combo.get("rank_value"),
+            guandan._point_order_value(11, state["level_rank"]),
+        )
+        self.assertCountEqual(
+            [guandan._card_label(card) for card in chosen_cards],
+            ["♥️2", "♣️J"],
+        )
+        self.assertEqual(
+            state["bot_explain"]["bot4"]["method_details"].get("minimax_stop_reason"),
+            "public_closeout",
+        )
+        details = state["bot_explain"]["bot4"]["method_details"]
+        self.assertGreater(
+            details["minimax_closeout_hold_probability"],
+            details["minimax_closeout_runner_probability"],
+        )
 
     def test_save_e812cc_endgame_leads_small_joker_before_pair(self):
         players = [

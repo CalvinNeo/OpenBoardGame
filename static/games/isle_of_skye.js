@@ -4,6 +4,7 @@ let skyeSelectedRotation = 0;
 let skyePricingDraft = null;
 let skyeExplainMode = false;
 let skyeViewedPlayerId = null;
+let skyeSuppressedClick = null;
 
 const skyeHeaderActions = document.getElementById("skyeHeaderActions");
 const skyeHelpBtn = document.getElementById("skyeHelpBtn");
@@ -43,21 +44,31 @@ const skyePlayers = document.getElementById("skyePlayers");
 const skyeRoundRecap = document.getElementById("skyeRoundRecap");
 
 const SKYE_TERRAIN_META = {
-  pasture: { label: "Grassland", emoji: "🌿", className: "pasture" },
-  mountain: { label: "Mountain", emoji: "⛰️", className: "mountain" },
-  water: { label: "Ocean", emoji: "🌊", className: "water" },
+  pasture: { label: "Grassland", emoji: "🌿", className: "pasture", explanationId: "skyeTerrainPasture" },
+  mountain: { label: "Mountain", emoji: "⛰️", className: "mountain", explanationId: "skyeTerrainMountain" },
+  water: { label: "Ocean", emoji: "🌊", className: "water", explanationId: "skyeTerrainWater" },
 };
 
 const SKYE_ICON_META = {
-  castle: { emoji: "🏰", label: "Castle" },
-  whisky: { emoji: "🥃", label: "Whisky" },
-  sheep: { emoji: "🐑", label: "Sheep" },
-  cattle: { emoji: "🐂", label: "Cattle" },
-  ship: { emoji: "⛵", label: "Ship" },
-  broch: { emoji: "🗼", label: "Broch" },
-  farm: { emoji: "🏠", label: "Farm" },
-  lighthouse: { emoji: "💡", label: "Lighthouse" },
-  scroll: { emoji: "📜", label: "Scroll" },
+  castle: { emoji: "🏰", label: "Castle", explanationId: "skyeIconCastle" },
+  whisky: { emoji: "🥃", label: "Whisky", explanationId: "skyeIconWhisky" },
+  sheep: { emoji: "🐑", label: "Sheep", explanationId: "skyeIconSheep" },
+  cattle: { emoji: "🐂", label: "Cattle", explanationId: "skyeIconCattle" },
+  ship: { emoji: "⛵", label: "Ship", explanationId: "skyeIconShip" },
+  broch: { emoji: "🗼", label: "Broch", explanationId: "skyeIconBroch" },
+  farm: { emoji: "🏠", label: "Farm", explanationId: "skyeIconFarm" },
+  lighthouse: { emoji: "💡", label: "Lighthouse", explanationId: "skyeIconLighthouse" },
+  scroll: { emoji: "📜", label: "Scroll", explanationId: "skyeIconScroll" },
+};
+
+const SKYE_SCROLL_META = {
+  per_2_sheep: { label: "2 🐑", explanationId: "skyeScrollPerTwoSheep" },
+  per_2_whisky_tiles: { label: "2 🥃", explanationId: "skyeScrollPerTwoWhisky" },
+  per_2_ships: { label: "2 ⛵", explanationId: "skyeScrollPerTwoShips" },
+  per_cattle: { label: "🐂", explanationId: "skyeScrollPerCattle" },
+  per_broch: { label: "🗼", explanationId: "skyeScrollPerBroch" },
+  per_farm: { label: "🏠", explanationId: "skyeScrollPerFarm" },
+  per_lighthouse: { label: "💡", explanationId: "skyeScrollPerLighthouse" },
 };
 
 const SKYE_PHASE_LABELS = {
@@ -152,6 +163,90 @@ const SKYE_EXPLANATIONS = {
     name: "Players",
     description: "Click a player card to inspect their territory. Gold behind another player's screen stays hidden until the game ends.",
   },
+  skyeIconCastle: {
+    name: "Castle 🏰",
+    description: "Your starting tile. It provides 5 gold each round and is the origin used when a rule checks whether roads are connected to your castle.",
+  },
+  skyeIconWhisky: {
+    name: "Whisky 🥃",
+    description: "Each tile with whisky that is connected to your castle by roads provides 1 extra gold each round. Whisky can also be used by scoring tiles and scrolls.",
+  },
+  skyeIconSheep: {
+    name: "Sheep 🐑",
+    description: "A scoring animal. Count every sheep shown, including multipliers such as ×2, when a scoring tile or scroll asks for sheep.",
+  },
+  skyeIconCattle: {
+    name: "Cattle 🐂",
+    description: "A scoring animal. Cattle may score near farms, when connected to the castle by roads, or through a cattle scroll.",
+  },
+  skyeIconShip: {
+    name: "Ship ⛵",
+    description: "A water feature used by ship scoring tiles and scrolls. The printed multiplier tells you how many ships this tile contains.",
+  },
+  skyeIconBroch: {
+    name: "Broch 🗼",
+    description: "A mountain building used by broch scoring, building sets, and broch scrolls.",
+  },
+  skyeIconFarm: {
+    name: "Farm 🏠",
+    description: "A grassland building. Farms can score nearby sheep and cattle, complete building sets, and count for farm scrolls.",
+  },
+  skyeIconLighthouse: {
+    name: "Lighthouse 💡",
+    description: "A coastal building. Lighthouses can score water areas containing ships, complete building sets, and count for lighthouse scrolls.",
+  },
+  skyeIconScroll: {
+    name: "Scroll 📜",
+    description: "Scrolls score at the end of the game. A scroll scores twice if the terrain area containing it is completed.",
+  },
+  skyeTerrainPasture: {
+    name: "Grassland 🌿",
+    description: "A grassland edge may touch only another grassland edge. Closing every open edge completes that grassland area.",
+  },
+  skyeTerrainMountain: {
+    name: "Mountain ⛰️",
+    description: "A mountain edge may touch only another mountain edge. Completed mountain areas can score and can double a scroll inside them.",
+  },
+  skyeTerrainWater: {
+    name: "Water 🌊",
+    description: "A water edge may touch only another water edge. Completed water areas can score and can double a scroll inside them.",
+  },
+  skyeRoad: {
+    name: "Road 🛣️",
+    description: "Roads do not have to match when placing tiles. A continuous road to the castle matters for whisky income and some scoring tiles.",
+  },
+  skyeBridge: {
+    name: "Bridge 🌉",
+    description: "A bridge carries a road across water. It follows the same road-connectivity rules and does not have to match when placing tiles.",
+  },
+  skyeScrollPerTwoSheep: {
+    name: "Sheep Scroll 📜 🐑",
+    description: "Scores 1 point per 2 sheep in your territory at game end, doubled if this scroll's terrain area is completed.",
+  },
+  skyeScrollPerTwoWhisky: {
+    name: "Whisky Scroll 📜 🥃",
+    description: "Scores 1 point per 2 tiles containing whisky at game end, doubled if this scroll's terrain area is completed.",
+  },
+  skyeScrollPerTwoShips: {
+    name: "Ship Scroll 📜 ⛵",
+    description: "Scores 1 point per 2 ships in your territory at game end, doubled if this scroll's terrain area is completed.",
+  },
+  skyeScrollPerCattle: {
+    name: "Cattle Scroll 📜 🐂",
+    description: "Scores 1 point per cattle in your territory at game end, doubled if this scroll's terrain area is completed.",
+  },
+  skyeScrollPerBroch: {
+    name: "Broch Scroll 📜 🗼",
+    description: "Scores 1 point per broch in your territory at game end, doubled if this scroll's terrain area is completed.",
+  },
+  skyeScrollPerFarm: {
+    name: "Farm Scroll 📜 🏠",
+    description: "Scores 1 point per farm in your territory at game end, doubled if this scroll's terrain area is completed.",
+  },
+  skyeScrollPerLighthouse: {
+    name: "Lighthouse Scroll 📜 💡",
+    description: "Scores 1 point per lighthouse in your territory at game end, doubled if this scroll's terrain area is completed.",
+  },
 };
 
 function clearSkyeState() {
@@ -160,6 +255,7 @@ function clearSkyeState() {
   skyeSelectedRotation = 0;
   skyePricingDraft = null;
   skyeViewedPlayerId = null;
+  skyeSuppressedClick = null;
   if (skyeRoundLabel) skyeRoundLabel.textContent = "-";
   if (skyePhaseLabel) skyePhaseLabel.textContent = "-";
   if (skyeTurnLabel) skyeTurnLabel.textContent = "-";
@@ -180,6 +276,7 @@ function clearSkyeState() {
   if (skyeBoard) {
     skyeBoard.innerHTML = "";
     skyeBoard.style.gridTemplateColumns = "";
+    skyeBoard.classList.remove("is-placement-mode");
   }
   if (skyeRoundRecap) skyeRoundRecap.innerHTML = "";
   updateSkyeActionButtons();
@@ -234,18 +331,13 @@ function skyeRotatedTileDef(view, tileId, rotation) {
 }
 
 function skyeIconSummary(icons) {
-  const parts = [];
-  (icons || []).forEach((icon) => {
+  return (icons || []).map((icon) => {
     const meta = SKYE_ICON_META[icon.type];
-    if (!meta) return;
-    const count = Number.isInteger(icon.count) && icon.count > 1 ? `×${icon.count}` : "";
-    let suffix = "";
-    if (icon.type === "scroll" && icon.scroll_type) {
-      suffix = icon.scroll_type.replace("per_", "").replaceAll("_", " ");
-    }
-    parts.push(`${meta.emoji}${count}${suffix ? ` ${suffix}` : ""}`);
-  });
-  return parts.join(" ");
+    if (!meta) return "";
+    const count = Number.isInteger(icon.count) && icon.count > 1 ? ` ×${icon.count}` : "";
+    const scrollMeta = icon.type === "scroll" ? SKYE_SCROLL_META[icon.scroll_type] : null;
+    return `${meta.label}${count}${scrollMeta ? ` (${scrollMeta.label})` : ""}`;
+  }).filter(Boolean).join(", ");
 }
 
 function skyeRoadSummary(tileDef) {
@@ -263,6 +355,166 @@ function skyeRoadSummary(tileDef) {
   return parts.join(" / ");
 }
 
+function skyeCreateExplainToken(text, explanationId, label, className) {
+  const token = document.createElement("span");
+  token.className = className;
+  token.textContent = text;
+  token.title = label;
+  token.setAttribute("aria-label", label);
+  if (explanationId) {
+    token.setAttribute("data-skye-explain", explanationId);
+  }
+  return token;
+}
+
+function skyeExplanationIdForIcon(icon) {
+  const iconMeta = SKYE_ICON_META[icon.type];
+  const scrollMeta = icon.type === "scroll" ? SKYE_SCROLL_META[icon.scroll_type] : null;
+  return scrollMeta ? scrollMeta.explanationId : iconMeta?.explanationId;
+}
+
+function skyeIconAccessibleLabel(icon) {
+  const iconMeta = SKYE_ICON_META[icon.type];
+  if (!iconMeta) return icon.type || "Tile symbol";
+  const count = Number.isInteger(icon.count) && icon.count > 1 ? ` ×${icon.count}` : "";
+  const scrollMeta = icon.type === "scroll" ? SKYE_SCROLL_META[icon.scroll_type] : null;
+  return scrollMeta ? `${iconMeta.label}: scores per ${scrollMeta.label}` : `${iconMeta.label}${count}`;
+}
+
+function skyeRegionAnchor(tileDef, regionId) {
+  const region = (tileDef.regions || []).find((entry) => entry.id === regionId);
+  if (!region) return [50, 50];
+  const edgeKey = ["N", "E", "S", "W"].filter((edge) => (region.edges || []).includes(edge)).join("");
+  const anchors = {
+    N: [50, 20],
+    E: [80, 50],
+    S: [50, 80],
+    W: [20, 50],
+    NE: [68, 30],
+    ES: [70, 68],
+    SW: [32, 70],
+    NW: [30, 32],
+    NS: [50, 50],
+    EW: [50, 50],
+    NES: [62, 50],
+    ESW: [50, 62],
+    NSW: [38, 50],
+    NEW: [50, 38],
+    NESW: [50, 50],
+  };
+  return anchors[edgeKey] || [50, 50];
+}
+
+function skyeIconHotspotLayout(tileDef) {
+  const groups = new Map();
+  (tileDef.icons || []).forEach((icon) => {
+    const anchor = skyeRegionAnchor(tileDef, icon.region_id);
+    const key = anchor.join(",");
+    if (!groups.has(key)) {
+      groups.set(key, { anchor, icons: [] });
+    }
+    groups.get(key).icons.push(icon);
+  });
+
+  const layout = [];
+  const offsets = [[-10, -10], [10, -10], [-10, 10], [10, 10]];
+  groups.forEach(({ anchor, icons }) => {
+    if (icons.length === 1) {
+      layout.push({ icon: icons[0], x: anchor[0], y: anchor[1] });
+      return;
+    }
+    icons.forEach((icon, index) => {
+      const [dx, dy] = offsets[index] || [0, 0];
+      layout.push({ icon, x: anchor[0] + dx, y: anchor[1] + dy });
+    });
+  });
+  return layout;
+}
+
+function skyeAddIconHotspots(art, tileDef) {
+  const layer = document.createElement("div");
+  layer.className = "skye-tile-hotspots";
+  skyeIconHotspotLayout(tileDef).forEach(({ icon, x, y }) => {
+    const hotspot = document.createElement("span");
+    hotspot.className = "skye-tile-icon-hotspot";
+    hotspot.style.left = `${x}%`;
+    hotspot.style.top = `${y}%`;
+    hotspot.setAttribute("data-skye-explain", skyeExplanationIdForIcon(icon));
+    hotspot.setAttribute("aria-label", skyeIconAccessibleLabel(icon));
+    hotspot.title = skyeIconAccessibleLabel(icon);
+    layer.appendChild(hotspot);
+  });
+  art.appendChild(layer);
+}
+
+function skyeCreateTileMeta(tileDef) {
+  const meta = document.createElement("div");
+  meta.className = "skye-tile-meta";
+
+  const symbols = document.createElement("div");
+  symbols.className = "skye-tile-icons";
+  (tileDef.icons || []).forEach((icon) => {
+    const iconMeta = SKYE_ICON_META[icon.type];
+    if (!iconMeta) return;
+    const count = Number.isInteger(icon.count) && icon.count > 1 ? `×${icon.count}` : "";
+    const scrollMeta = icon.type === "scroll" ? SKYE_SCROLL_META[icon.scroll_type] : null;
+    symbols.appendChild(skyeCreateExplainToken(
+      `${iconMeta.emoji}${count}${scrollMeta ? ` ${scrollMeta.label}` : ""}`,
+      skyeExplanationIdForIcon(icon),
+      skyeIconAccessibleLabel(icon),
+      "skye-tile-symbol",
+    ));
+  });
+  if (!symbols.childNodes.length) {
+    const empty = document.createElement("span");
+    empty.className = "skye-tile-no-symbols";
+    empty.textContent = "No symbols";
+    symbols.appendChild(empty);
+  }
+  meta.appendChild(symbols);
+
+  const topology = document.createElement("div");
+  topology.className = "skye-tile-topology";
+  const bridgeSet = new Set(Array.isArray(tileDef.bridge_exits) ? tileDef.bridge_exits : []);
+  const roadExits = Array.isArray(tileDef.road_exits) ? tileDef.road_exits : [];
+  const normalRoads = roadExits.filter((edge) => !bridgeSet.has(edge));
+  const bridges = roadExits.filter((edge) => bridgeSet.has(edge));
+  if (normalRoads.length) {
+    topology.appendChild(skyeCreateExplainToken(
+      `🛣️${normalRoads.join("")}`,
+      "skyeRoad",
+      `Road exits: ${normalRoads.join(", ")}`,
+      "skye-tile-route",
+    ));
+  }
+  if (bridges.length) {
+    topology.appendChild(skyeCreateExplainToken(
+      `🌉${bridges.join("")}`,
+      "skyeBridge",
+      `Bridge exits: ${bridges.join(", ")}`,
+      "skye-tile-route",
+    ));
+  }
+  const directionNames = { N: "North", E: "East", S: "South", W: "West" };
+  ["N", "E", "S", "W"].forEach((edge) => {
+    const terrain = SKYE_TERRAIN_META[tileDef.edges[edge]];
+    if (!terrain) return;
+    topology.appendChild(skyeCreateExplainToken(
+      `${edge}${terrain.emoji}`,
+      terrain.explanationId,
+      `${directionNames[edge]} edge: ${terrain.label}`,
+      "skye-tile-terrain",
+    ));
+  });
+  meta.appendChild(topology);
+  meta.setAttribute("aria-label", [
+    skyeIconSummary(tileDef.icons) || "No feature symbols",
+    skyeRoadSummary(tileDef),
+    `Edges: ${["N", "E", "S", "W"].map((edge) => `${edge} ${SKYE_TERRAIN_META[tileDef.edges[edge]]?.label || "unknown"}`).join(", ")}`,
+  ].filter(Boolean).join(". "));
+  return meta;
+}
+
 function createSkyeTileFace(view, tileId, rotation, compact = false, showMeta = true) {
   const tileDef = skyeRotatedTileDef(view, tileId, rotation);
   if (!tileDef) {
@@ -275,23 +527,17 @@ function createSkyeTileFace(view, tileId, rotation, compact = false, showMeta = 
   const tile = document.createElement("div");
   tile.className = `skye-tile${compact ? " compact" : ""}`;
   tile.title = tileDef.display_name || tileId;
-  const iconSummary = skyeIconSummary(tileDef.icons);
-  const roadSummary = skyeRoadSummary(tileDef);
   const art = document.createElement("div");
   art.className = "skye-tile-art";
   art.style.backgroundImage = `url(${skyeSvgTileUrl(tileId)})`;
   art.style.transform = `rotate(${rotation}deg)`;
+  art.setAttribute("data-skye-explain", `skyeTile|${tileId}|${rotation}`);
+  art.setAttribute("aria-label", `${tileDef.display_name || tileId}. ${skyeIconSummary(tileDef.icons) || "No feature symbols"}.`);
+  skyeAddIconHotspots(art, tileDef);
   tile.appendChild(art);
 
   if (showMeta) {
-    const meta = document.createElement("div");
-    meta.className = "skye-tile-meta";
-    meta.textContent = [
-      iconSummary || "·",
-      roadSummary,
-      `N${SKYE_TERRAIN_META[tileDef.edges.N].emoji} E${SKYE_TERRAIN_META[tileDef.edges.E].emoji} S${SKYE_TERRAIN_META[tileDef.edges.S].emoji} W${SKYE_TERRAIN_META[tileDef.edges.W].emoji}`,
-    ].filter(Boolean).join(" · ");
-    tile.appendChild(meta);
+    tile.appendChild(skyeCreateTileMeta(tileDef));
   }
 
   return tile;
@@ -308,9 +554,13 @@ function createSkyeTileCard(view, tileId, options = {}) {
   const title = document.createElement("div");
   title.className = "skye-tile-title";
   title.textContent = options.label || view?.tile_defs?.[tileId]?.display_name || tileId;
+  if (options.label) {
+    card.classList.add("has-status-label");
+  }
   card.appendChild(title);
 
   if (Number.isInteger(options.price)) {
+    card.classList.add("has-price");
     const badge = document.createElement("div");
     badge.className = "skye-price-badge";
     badge.textContent = `💰 ${options.price}`;
@@ -338,6 +588,9 @@ function createSkyeBoardTile(view, tileId, rotation) {
   art.className = "skye-tile-art skye-board-tile-art";
   art.style.backgroundImage = `url(${skyeSvgTileUrl(tileId)})`;
   art.style.transform = `rotate(${rotation}deg)`;
+  art.setAttribute("data-skye-explain", `skyeTile|${tileId}|${rotation}`);
+  art.setAttribute("aria-label", `${tileDef.display_name || tileId}. ${skyeIconSummary(tileDef.icons) || "No feature symbols"}.`);
+  skyeAddIconHotspots(art, tileDef);
   tile.appendChild(art);
 
   return tile;
@@ -776,13 +1029,6 @@ function renderSkyeBuildPhasePanel(view) {
     }
   }
   skyePhasePanel.appendChild(info);
-
-  if (selected) {
-    const previewCard = document.createElement("div");
-    previewCard.className = "skye-selected-preview";
-    previewCard.appendChild(createSkyeTileCard(view, selected, { rotation: skyeSelectedRotation, selected: true }));
-    skyePhasePanel.appendChild(previewCard);
-  }
 }
 
 function renderSkyeRoundReviewPanel(view) {
@@ -907,19 +1153,20 @@ function renderSkyeBoardPanel(view) {
     skyeBoardTitle.textContent = isOwnTerritory ? "Your Territory 🏞️" : `${playerName}'s Territory 🏞️`;
   }
   const territory = viewedPlayer && Array.isArray(viewedPlayer.territory) ? viewedPlayer.territory : [];
+  skyeBoard.classList.toggle("is-placement-mode", isOwnTerritory && view.phase === "build");
   if (!territory.length) {
     return;
   }
 
   const xs = territory.map((tile) => tile.x);
   const ys = territory.map((tile) => tile.y);
-  const boardMargin = isOwnTerritory && view.phase === "build" ? 2 : 1;
+  const boardMargin = 1;
   const minX = Math.min(...xs) - boardMargin;
   const maxX = Math.max(...xs) + boardMargin;
   const minY = Math.min(...ys) - boardMargin;
   const maxY = Math.max(...ys) + boardMargin;
   const columns = maxX - minX + 1;
-  skyeBoard.style.gridTemplateColumns = `repeat(${columns}, minmax(78px, 1fr))`;
+  skyeBoard.style.gridTemplateColumns = `repeat(${columns}, minmax(var(--skye-board-tile-min, 88px), 1fr))`;
 
   const territoryMap = new Map();
   territory.forEach((tile) => {
@@ -1098,7 +1345,15 @@ function updateSkyeExplainModeClasses(enabled) {
 }
 
 function findSkyeExplainTargetAtPoint(x, y) {
-  const explainable = Array.from(document.querySelectorAll("[data-skye-explain]"));
+  if (typeof document.elementsFromPoint === "function") {
+    const directTarget = document.elementsFromPoint(x, y)
+      .map((element) => element.closest && element.closest("[data-skye-explain]"))
+      .find(Boolean);
+    if (directTarget) {
+      return directTarget.getAttribute("data-skye-explain");
+    }
+  }
+  const explainable = Array.from(document.querySelectorAll("[data-skye-explain]")).reverse();
   for (const element of explainable) {
     const rect = element.getBoundingClientRect();
     if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
@@ -1129,15 +1384,40 @@ function exitSkyeExplainMode() {
   }
 }
 
+function skyeTileExplanation(explanationId) {
+  if (!explanationId.startsWith("skyeTile|")) {
+    return null;
+  }
+  const [, tileId, rotationText] = explanationId.split("|");
+  const rotation = Number.parseInt(rotationText, 10) || 0;
+  const tileDef = skyeRotatedTileDef(currentSkyeView, tileId, rotation);
+  if (!tileDef) {
+    return null;
+  }
+  const features = skyeIconSummary(tileDef.icons) || "no feature symbols";
+  const routes = skyeRoadSummary(tileDef) || "no roads";
+  const edges = ["N", "E", "S", "W"].map((edge) => {
+    const terrain = SKYE_TERRAIN_META[tileDef.edges[edge]];
+    return `${edge} ${terrain ? `${terrain.emoji} ${terrain.label}` : "unknown"}`;
+  }).join(", ");
+  return {
+    name: `${tileDef.display_name || tileId} · Tile Contents`,
+    description: `Features: ${features}. Routes: ${routes}. Edges: ${edges}. Select an individual symbol below the tile in Explain mode for its rule meaning.`,
+  };
+}
+
 function showSkyeExplanation(explanationId) {
-  const explanation = SKYE_EXPLANATIONS[explanationId];
+  const explanation = SKYE_EXPLANATIONS[explanationId] || skyeTileExplanation(explanationId);
   if (!explanation || !skyeExplainContent || !skyeExplainModal) {
     return;
   }
-  skyeExplainContent.innerHTML = `
-    <h4>${explanation.name}</h4>
-    <p>${explanation.description}</p>
-  `;
+  skyeExplainContent.innerHTML = "";
+  const title = document.createElement("h4");
+  title.textContent = explanation.name;
+  const description = document.createElement("p");
+  description.textContent = explanation.description;
+  skyeExplainContent.appendChild(title);
+  skyeExplainContent.appendChild(description);
   setModalVisible(skyeExplainModal, true);
 }
 
@@ -1240,7 +1520,8 @@ if (skyeExplainModal) {
 
 if (skyeBoard) {
   skyeBoard.addEventListener("click", (event) => {
-    if (event.target === skyeBoard) {
+    const emptyCell = event.target.closest(".skye-board-cell.empty");
+    if (event.target === skyeBoard || (emptyCell && !emptyCell.classList.contains("legal"))) {
       skyeSelectedBuildTileId = null;
       skyeSelectedRotation = 0;
       renderSkyeGameState({ view: currentSkyeView });
@@ -1254,6 +1535,17 @@ document.addEventListener("pointerdown", (event) => {
   if (explanationId) {
     event.preventDefault();
     event.stopPropagation();
+    const suppressedClick = {
+      x: event.clientX,
+      y: event.clientY,
+      expiresAt: performance.now() + 1000,
+    };
+    skyeSuppressedClick = suppressedClick;
+    window.setTimeout(() => {
+      if (skyeSuppressedClick === suppressedClick) {
+        skyeSuppressedClick = null;
+      }
+    }, 1000);
     showSkyeExplanation(explanationId);
     exitSkyeExplainMode();
     return;
@@ -1269,7 +1561,25 @@ document.addEventListener("pointerdown", (event) => {
 }, true);
 
 document.addEventListener("click", (event) => {
+  const suppressesPointerClick = skyeSuppressedClick
+    && performance.now() <= skyeSuppressedClick.expiresAt
+    && Math.abs(event.clientX - skyeSuppressedClick.x) <= 8
+    && Math.abs(event.clientY - skyeSuppressedClick.y) <= 8;
+  skyeSuppressedClick = null;
+  if (suppressesPointerClick) {
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
   if (!skyeExplainMode) return;
+  const explainTarget = event.target.closest("[data-skye-explain]");
+  if (explainTarget) {
+    event.preventDefault();
+    event.stopPropagation();
+    showSkyeExplanation(explainTarget.getAttribute("data-skye-explain"));
+    exitSkyeExplainMode();
+    return;
+  }
   const button = event.target.closest("button");
   if (!button) return;
   if (button === skyeExplainBtn || button === skyeHelpBtn) return;
