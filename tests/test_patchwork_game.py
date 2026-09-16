@@ -17,6 +17,60 @@ class PatchworkGameTests(unittest.TestCase):
         self.assertEqual(len(state["patch_circle"]), 33)
         self.assertTrue(state["special_tile_available"])
 
+    def test_patch_catalog_matches_audited_size_cost_time_and_income(self):
+        expected = {
+            "patch_01": (6, 0, 3, 1),
+            "patch_02": (5, 2, 3, 1),
+            "patch_03": (6, 4, 2, 0),
+            "patch_04": (8, 5, 3, 1),
+            "patch_05": (6, 10, 5, 3),
+            "patch_06": (6, 8, 6, 3),
+            "patch_07": (6, 7, 4, 2),
+            "patch_08": (3, 2, 2, 0),
+            "patch_09": (6, 1, 5, 1),
+            "patch_10": (4, 2, 2, 0),
+            "patch_11": (4, 4, 2, 1),
+            "patch_12": (2, 2, 1, 0),
+            "patch_13": (6, 3, 6, 2),
+            "patch_14": (5, 3, 4, 1),
+            "patch_15": (4, 7, 6, 3),
+            "patch_16": (6, 2, 1, 0),
+            "patch_17": (5, 2, 2, 0),
+            "patch_18": (5, 5, 4, 2),
+            "patch_19": (7, 1, 4, 1),
+            "patch_20": (3, 1, 3, 0),
+            "patch_21": (4, 4, 6, 2),
+            "patch_22": (5, 10, 3, 2),
+            "patch_23": (3, 3, 1, 0),
+            "patch_24": (4, 3, 3, 1),
+            "patch_25": (5, 5, 5, 2),
+            "patch_26": (6, 1, 2, 0),
+            "patch_27": (5, 7, 1, 1),
+            "patch_28": (7, 2, 3, 0),
+            "patch_29": (5, 10, 4, 3),
+            "patch_30": (6, 7, 2, 2),
+            "patch_31": (4, 3, 2, 1),
+            "patch_32": (4, 6, 5, 2),
+            "patch_33": (5, 1, 2, 0),
+        }
+        actual = {
+            patch_id: (
+                patch["cell_count"],
+                patch["cost_buttons"],
+                patch["cost_time"],
+                patch["income_buttons"],
+            )
+            for patch_id, patch in PATCHES_BY_ID.items()
+        }
+        self.assertEqual(actual, expected)
+
+        for patch_id, patch in PATCHES_BY_ID.items():
+            cells = [tuple(cell) for cell in patch["cells"]]
+            with self.subTest(patch_id=patch_id):
+                self.assertEqual(patch["cell_count"], len(set(cells)))
+                self.assertEqual(patch["width"], max(x for x, _ in cells) + 1)
+                self.assertEqual(patch["height"], max(y for _, y in cells) + 1)
+
     def test_advance_grants_buttons_and_turn_passes(self):
         state = PatchworkGame.init_game({"seed": 7}, self._players())
         state["players"]["p1"]["time_position"] = 0

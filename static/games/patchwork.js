@@ -56,6 +56,9 @@ const patchworkPlayers = document.getElementById("patchworkPlayers");
 const patchworkPreview = document.getElementById("patchworkPreview");
 const patchworkYourBoard = document.getElementById("patchworkYourBoard");
 const patchworkSelectionHint = document.getElementById("patchworkSelectionHint");
+const patchworkPlacementActions = document.getElementById("patchworkPlacementActions");
+const patchworkPlacementStatus = document.getElementById("patchworkPlacementStatus");
+const patchworkConfirmBuyBtn = document.getElementById("patchworkConfirmBuyBtn");
 const patchworkTransformActions = document.getElementById("patchworkTransformActions");
 const patchworkRotateBtn = document.getElementById("patchworkRotateBtn");
 const patchworkFlipBtn = document.getElementById("patchworkFlipBtn");
@@ -87,8 +90,9 @@ const PATCHWORK_HELP_TEXT = `
   <ul>
     <li>Select one of the first three market patches.</li>
     <li>Use the compact rotate / flip controls beside your quilt to set its orientation.</li>
-    <li>Click your quilt to choose the top-left anchor, then tap <strong>Buy</strong> on the selected market patch.</li>
-    <li>Tap <strong>Cancel</strong>, press Esc, or click open space to clear your selection.</li>
+    <li>Click any quilt square to preview the patch there, even when it overlaps or extends past the board.</li>
+    <li>Use <strong>Confirm Purchase</strong> below the quilt once the complete patch is on empty squares and you can afford it.</li>
+    <li>Press Esc or click open space to clear your selection.</li>
     <li>When a leather patch is pending, click any empty square on your quilt to place it.</li>
   </ul>
 `;
@@ -100,11 +104,11 @@ const PATCHWORK_EXPLANATIONS = {
   },
   marketCard: {
     name: "Patch Market",
-    description: "The first three cards are buyable. Select one to reveal Buy and Cancel directly on that patch; the rest show the upcoming circle order.",
+    description: "The first three cards are selectable. Cost, time, income, and exact square footprint are shown on every patch; the rest show the upcoming circle order.",
   },
   yourBoard: {
     name: "Your Quilt Board",
-    description: "Click to choose the top-left anchor for the selected patch preview. During a leather bonus, click any empty square to place the 1x1 tile.",
+    description: "Click to choose the top-left anchor for the selected patch preview. Invalid previews stay visible in red but cannot be confirmed. During a leather bonus, click any empty square to place the 1x1 tile.",
   },
   preview: {
     name: "Preview",
@@ -116,7 +120,7 @@ const PATCHWORK_EXPLANATIONS = {
     details: [
       "🔘 Buttons: current currency and final positive points.",
       "⏳ Time: current position on the time track.",
-      "🪙 Income: buttons gained whenever crossing a button marker.",
+      "Income 🔘: buttons gained whenever crossing a button marker.",
       "⬜ Empty: unfilled quilt squares, each worth -2 at the end.",
       "⭐ Special: 7 if the player claimed the 7x7 bonus, otherwise 0.",
       "🏁 Score: current score preview after buttons, bonus, and empty-space penalty.",
@@ -129,6 +133,10 @@ const PATCHWORK_EXPLANATIONS = {
   patchworkFlipBtn: {
     name: "Flip",
     description: "Mirror the selected patch horizontally before placement.",
+  },
+  patchworkConfirmBuyBtn: {
+    name: "Confirm Purchase",
+    description: "Pay for the selected patch only when its full red-or-green preview fits on empty quilt squares. Invalid previews remain visible but this button stays disabled.",
   },
   patchworkAdvanceBtn: {
     name: "Advance + Buttons",
@@ -182,6 +190,8 @@ function clearPatchworkState() {
   if (patchworkSelectionHint) {
     patchworkSelectionHint.textContent = "Select one of the first three patches, then click your board.";
   }
+  if (patchworkPlacementActions) patchworkPlacementActions.hidden = true;
+  if (patchworkPlacementStatus) patchworkPlacementStatus.textContent = "";
   if (patchworkNotice) {
     patchworkNotice.classList.add("hidden");
     patchworkNotice.setAttribute("aria-hidden", "true");
@@ -285,11 +295,15 @@ function patchworkSelectedAffordable(view) {
 }
 
 function patchworkCanBuySelected(view) {
-  const legal = view && Array.isArray(view.legal_actions) ? new Set(view.legal_actions) : new Set();
+  const selectable = view && Array.isArray(view.selectable_patches)
+    ? new Set(view.selectable_patches)
+    : new Set();
   return !!(
     view &&
+    !view.game_over &&
     !view.pending_special_patch &&
-    legal.has("buy_patch") &&
+    view.current_turn === view.you &&
+    selectable.has(patchworkSelectedPatchId) &&
     patchworkSelectedAffordable(view) &&
     patchworkHasSelectionPlacement(view)
   );
@@ -379,15 +393,24 @@ function patchworkBuildMiniGrid(cells, extraClass) {
   return wrapper;
 }
 
-function patchworkBuildPreviewShape(cells, key) {
+function patchworkCellDimensions(cells) {
+  if (!Array.isArray(cells) || cells.length === 0) {
+    return { width: 0, height: 0 };
+  }
+  return {
+    width: cells.reduce((max, [x]) => Math.max(max, x), 0) + 1,
+    height: cells.reduce((max, [, y]) => Math.max(max, y), 0) + 1,
+  };
+}
+
+function patchworkBuildPreviewShape(cells, key, fixedCellSize = null, balanceMass = false) {
   const wrapper = document.createElement("div");
   wrapper.className = "patchwork-preview-shape";
   if (!cells || !cells.length) {
     return wrapper;
   }
-  const width = cells.reduce((max, [x]) => Math.max(max, x), 0) + 1;
-  const height = cells.reduce((max, [, y]) => Math.max(max, y), 0) + 1;
-  const cellSize = Math.max(18, Math.min(34, Math.floor(Math.min(176 / width, 136 / height))));
+  const { width, height } = patchworkCellDimensions(cells);
+  const cellSize = fixedCellSize || Math.max(18, Math.min(34, Math.floor(Math.min(176 / width, 136 / height))));
   const palette = patchworkPreviewPaletteForKey(key);
   wrapper.style.setProperty("--patchwork-preview-cols", String(width));
   wrapper.style.setProperty("--patchwork-preview-rows", String(height));
@@ -396,6 +419,13 @@ function patchworkBuildPreviewShape(cells, key) {
   wrapper.style.setProperty("--patchwork-preview-fill-bottom", palette.fillBottom);
   wrapper.style.setProperty("--patchwork-preview-border", palette.border);
   wrapper.style.setProperty("--patchwork-preview-glow", palette.glow);
+  if (balanceMass) {
+    const centerX = cells.reduce((sum, [x]) => sum + x + 0.5, 0) / cells.length;
+    const centerY = cells.reduce((sum, [, y]) => sum + y + 0.5, 0) / cells.length;
+    const offsetX = ((width / 2) - centerX) * cellSize;
+    const offsetY = ((height / 2) - centerY) * cellSize;
+    wrapper.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+  }
   cells.forEach(([x, y]) => {
     const cell = document.createElement("div");
     cell.className = "patchwork-preview-shape-cell";
@@ -404,6 +434,23 @@ function patchworkBuildPreviewShape(cells, key) {
     wrapper.appendChild(cell);
   });
   return wrapper;
+}
+
+function patchworkBuildIncomePips(count) {
+  const pips = document.createElement("div");
+  pips.className = "patchwork-income-pips";
+  pips.setAttribute("aria-hidden", "true");
+  for (let index = 0; index < Number(count || 0); index += 1) {
+    const pip = document.createElement("span");
+    pip.className = "patchwork-income-pip";
+    pips.appendChild(pip);
+  }
+  return pips;
+}
+
+function patchworkPatchLabel(patchId) {
+  const match = String(patchId || "").match(/(\d+)$/);
+  return match ? `Patch ${Number.parseInt(match[1], 10)}` : String(patchId || "Patch");
 }
 
 function patchworkSyncSelection(view) {
@@ -423,22 +470,6 @@ function patchworkSyncSelection(view) {
   const selectable = new Set(view.selectable_patches || []);
   if (!selectable.has(patchworkSelectedPatchId)) {
     patchworkClearSelection();
-    return;
-  }
-  if (patchworkAnchor && !patchworkHasSelectionPlacement(view)) {
-    const you = patchworkYou(view);
-    if (
-      !you ||
-      !patchworkCanPlace(
-        view,
-        you.quilt_board || [],
-        patchworkSelectedCells(view),
-        patchworkAnchor.x,
-        patchworkAnchor.y,
-      )
-    ) {
-      patchworkAnchor = null;
-    }
   }
 }
 
@@ -507,7 +538,7 @@ function showPatchworkQuiltModal(view, player) {
     const score = view.scores && Object.prototype.hasOwnProperty.call(view.scores, player.player_id)
       ? view.scores[player.player_id]
       : player.score_preview;
-    patchworkQuiltModalMeta.textContent = `🔘 ${player.buttons}  ·  ⏳ ${player.time_position}  ·  🪙 ${player.button_income}  ·  ⬜ ${player.empty_spaces}  ·  Score ${score}`;
+    patchworkQuiltModalMeta.textContent = `Buttons 🔘 ${player.buttons}  ·  Time ⏳ ${player.time_position}  ·  Income 🔘 ${player.button_income}  ·  Empty ⬜ ${player.empty_spaces}  ·  Score ${score}`;
   }
   renderPatchworkBoard(patchworkQuiltModalBoard, view, player, false);
   setModalVisible(patchworkQuiltModal, true);
@@ -555,7 +586,7 @@ function renderPatchworkSummary(view) {
     patchworkTurnLabel.textContent = patchworkPlayerName(view, view.current_turn);
   }
   if (patchworkSelectedPatchLabel) {
-    patchworkSelectedPatchLabel.textContent = selectedDef ? patchworkSelectedPatchId : "-";
+    patchworkSelectedPatchLabel.textContent = selectedDef ? patchworkPatchLabel(patchworkSelectedPatchId) : "-";
   }
   if (patchworkRotationLabel) {
     patchworkRotationLabel.textContent = `${patchworkRotation}°`;
@@ -814,7 +845,6 @@ function patchworkBuildTrackPositions(view) {
 
 function patchworkMarketSelectionStatus(view, def) {
   const you = patchworkYou(view);
-  const legal = new Set(view.legal_actions || []);
   if (view.game_over) {
     return "Game finished";
   }
@@ -824,16 +854,13 @@ function patchworkMarketSelectionStatus(view, def) {
   if (you.buttons < def.cost_buttons) {
     return `Need ${def.cost_buttons - you.buttons} more 🔘`;
   }
-  if (!legal.has("buy_patch")) {
-    return "No valid placement";
-  }
   if (!patchworkAnchor) {
-    return "Place it on your quilt";
+    return "Click any square to preview it";
   }
   if (!patchworkHasSelectionPlacement(view)) {
-    return "Choose another square";
+    return "Does not fit — adjust before confirming";
   }
-  return "Placement ready";
+  return `Fits · Pay ${def.cost_buttons} 🔘 · Gain ${def.income_buttons} income`;
 }
 
 function patchworkBuildMarketCard(view, entry, selectable, you) {
@@ -863,32 +890,36 @@ function patchworkBuildMarketCard(view, entry, selectable, you) {
     `${def.id}: ${def.cost_buttons} buttons, ${def.cost_time} time, ${def.income_buttons} income${isSelectable ? ". Select patch" : ". Upcoming patch"}`,
   );
 
+  const header = document.createElement("div");
+  header.className = "patchwork-market-card-header";
+
+  const label = document.createElement("div");
+  label.className = "patchwork-market-label";
+  label.textContent = patchworkPatchLabel(def.id);
+
   const order = document.createElement("div");
   order.className = "patchwork-market-order";
   order.textContent = entry.offset < 3 ? `#${entry.offset + 1}` : `+${entry.offset}`;
+  header.appendChild(label);
+  header.appendChild(order);
 
-  const image = document.createElement("img");
+  const image = document.createElement("div");
   image.className = "patchwork-market-image";
-  image.src = def.svg_url;
-  image.alt = "";
+  image.appendChild(patchworkBuildPreviewShape(def.cells || [], def.id, 11, true));
+  image.appendChild(patchworkBuildIncomePips(def.income_buttons));
 
   const meta = document.createElement("div");
   meta.className = "patchwork-market-meta";
   meta.innerHTML = `
-    <span>🔘 ${def.cost_buttons}</span>
-    <span>⏳ ${def.cost_time}</span>
-    <span>🪙 ${def.income_buttons}</span>
-    <span>◼︎ ${def.cell_count}</span>
+    <span title="Button cost">Cost <b>${def.cost_buttons}</b></span>
+    <span title="Time cost">Time <b>${def.cost_time}</b></span>
+    <span title="Button income">Income <b>${def.income_buttons}</b></span>
+    <span title="Covered squares">Squares <b>${def.cell_count}</b></span>
   `;
 
-  const label = document.createElement("div");
-  label.className = "patchwork-market-label";
-  label.textContent = def.id;
-
-  selectButton.appendChild(order);
+  selectButton.appendChild(header);
   selectButton.appendChild(image);
   selectButton.appendChild(meta);
-  selectButton.appendChild(label);
   selectButton.addEventListener("click", () => {
     if (!isSelectable || view.pending_special_patch) {
       return;
@@ -901,52 +932,14 @@ function patchworkBuildMarketCard(view, entry, selectable, you) {
   });
   card.appendChild(selectButton);
 
-  if (isSelected) {
-    const overlay = document.createElement("div");
-    overlay.className = "patchwork-market-choice";
-    overlay.setAttribute("role", "group");
-    overlay.setAttribute("aria-label", `${def.id} purchase controls`);
-
-    const status = document.createElement("div");
-    status.className = "patchwork-market-choice-status";
-    status.textContent = patchworkMarketSelectionStatus(view, def);
-
-    const buyButton = document.createElement("button");
-    buyButton.type = "button";
-    buyButton.className = "patchwork-market-buy";
-    buyButton.textContent = "Buy";
-    buyButton.disabled = !patchworkCanBuySelected(view);
-    buyButton.addEventListener("click", patchworkSubmitSelectedPurchase);
-
-    const cancelButton = document.createElement("button");
-    cancelButton.type = "button";
-    cancelButton.className = "patchwork-market-cancel";
-    cancelButton.textContent = "Cancel";
-    cancelButton.addEventListener("click", () => {
-      patchworkClearSelection();
-      renderPatchworkGameState({ view });
-    });
-
-    overlay.appendChild(status);
-    overlay.appendChild(buyButton);
-    overlay.appendChild(cancelButton);
-    card.appendChild(overlay);
-  }
-
   return card;
 }
 
 function renderPatchworkMarket(view) {
-  const sides = {
-    top: patchworkMarketTop,
-    right: patchworkMarketRight,
-    bottom: patchworkMarketBottom,
-    left: patchworkMarketLeft,
-  };
-  if (!view || (Object.values(sides).every((node) => !node) && !patchworkMarketMobile)) {
+  if (!view || !patchworkMarketMobile) {
     return;
   }
-  [...Object.values(sides), patchworkMarketMobile].forEach((node) => {
+  [patchworkMarketTop, patchworkMarketRight, patchworkMarketBottom, patchworkMarketLeft, patchworkMarketMobile].forEach((node) => {
     if (node) {
       node.innerHTML = "";
     }
@@ -969,45 +962,11 @@ function renderPatchworkMarket(view) {
     });
   }
 
-  if (patchworkMarketMobile) {
-    entries.forEach((entry) => {
-      const card = patchworkBuildMarketCard(view, entry, selectable, you);
-      if (card) {
-        patchworkMarketMobile.appendChild(card);
-      }
-    });
-  }
-
-  const weights = [0.31, 0.19, 0.31, 0.19];
-  const sideNames = ["top", "right", "bottom", "left"];
-  const counts = weights.map((weight) => Math.floor(entries.length * weight));
-  let assigned = counts.reduce((sum, value) => sum + value, 0);
-  let cursor = 0;
-  while (assigned < entries.length) {
-    counts[cursor % counts.length] += 1;
-    assigned += 1;
-    cursor += 1;
-  }
-
-  let offset = 0;
-  const chunks = {};
-  sideNames.forEach((sideName, index) => {
-    chunks[sideName] = entries.slice(offset, offset + counts[index]);
-    offset += counts[index];
-  });
-
-  sideNames.forEach((sideName) => {
-    const sideNode = sides[sideName];
-    if (!sideNode) {
-      return;
+  entries.forEach((entry) => {
+    const card = patchworkBuildMarketCard(view, entry, selectable, you);
+    if (card) {
+      patchworkMarketMobile.appendChild(card);
     }
-    sideNode.dataset.side = sideName;
-    (chunks[sideName] || []).forEach((entry) => {
-      const card = patchworkBuildMarketCard(view, entry, selectable, you);
-      if (card) {
-        sideNode.appendChild(card);
-      }
-    });
   });
 }
 
@@ -1049,21 +1008,25 @@ function renderPatchworkPreview(view) {
     return;
   }
 
+  const transformedCells = patchworkSelectedCells(view);
+  const dimensions = patchworkCellDimensions(transformedCells);
   const showcase = document.createElement("div");
   showcase.className = "patchwork-preview-showcase";
   showcase.innerHTML = `
-    <div class="patchwork-preview-title">${def.id}</div>
+    <div class="patchwork-preview-title">${patchworkPatchLabel(def.id)}</div>
     <div class="patchwork-preview-image" aria-label="${def.id} preview"></div>
     <div class="patchwork-preview-meta">
-      <span>🔘 ${def.cost_buttons}</span>
-      <span>⏳ ${def.cost_time}</span>
-      <span>🪙 ${def.income_buttons}</span>
+      <span>Cost <strong>${def.cost_buttons}</strong> 🔘</span>
+      <span>Time <strong>${def.cost_time}</strong> ⏳</span>
+      <span>Income <strong>${def.income_buttons}</strong> 🔘</span>
+      <span>${dimensions.width}×${dimensions.height} · ${def.cell_count} squares</span>
       <span>Anchor ${patchworkAnchor ? `${patchworkAnchor.x}, ${patchworkAnchor.y}` : "-"}</span>
     </div>
   `;
   const art = showcase.querySelector(".patchwork-preview-image");
   if (art) {
-    art.appendChild(patchworkBuildPreviewShape(patchworkSelectedCells(view), def.id));
+    art.appendChild(patchworkBuildPreviewShape(transformedCells, def.id));
+    art.appendChild(patchworkBuildIncomePips(def.income_buttons));
   }
   patchworkPreview.appendChild(showcase);
 }
@@ -1165,7 +1128,7 @@ function renderPatchworkPlayers(view) {
       <div class="patchwork-player-stats">
         <span>🔘 ${player.buttons}</span>
         <span>⏳ ${player.time_position}</span>
-        <span>🪙 ${player.button_income}</span>
+        <span>Income 🔘 ${player.button_income}</span>
         <span>⬜ ${player.empty_spaces}</span>
         <span>⭐ ${player.has_special_tile ? "7" : "0"}</span>
         <span>🏁 ${score}</span>
@@ -1187,6 +1150,7 @@ function updatePatchworkActionButtons() {
   const view = currentPatchworkView;
   const legal = view && Array.isArray(view.legal_actions) ? new Set(view.legal_actions) : new Set();
   const hasPatch = !!(view && patchworkSelectedPatchId && patchworkSelectedDef(view));
+  const selectedDef = hasPatch ? patchworkSelectedDef(view) : null;
 
   if (patchworkTransformActions) {
     patchworkTransformActions.hidden = !hasPatch || !!(view && view.pending_special_patch);
@@ -1206,6 +1170,22 @@ function updatePatchworkActionButtons() {
     if (patchworkAdvanceGain) {
       patchworkAdvanceGain.textContent = gain > 0 ? `+🔘 ${gain}` : "";
     }
+  }
+  if (patchworkPlacementActions) {
+    patchworkPlacementActions.hidden = !hasPatch || !!(view && view.pending_special_patch);
+    patchworkPlacementActions.classList.toggle("valid", hasPatch && patchworkCanBuySelected(view));
+    patchworkPlacementActions.classList.toggle(
+      "invalid",
+      hasPatch && !!patchworkAnchor && !patchworkHasSelectionPlacement(view),
+    );
+  }
+  if (patchworkPlacementStatus) {
+    patchworkPlacementStatus.textContent = hasPatch && selectedDef
+      ? patchworkMarketSelectionStatus(view, selectedDef)
+      : "";
+  }
+  if (patchworkConfirmBuyBtn) {
+    patchworkConfirmBuyBtn.disabled = !hasPatch || !patchworkCanBuySelected(view);
   }
 }
 
@@ -1229,11 +1209,11 @@ function renderPatchworkGameState(data) {
     if (view.pending_special_patch) {
       patchworkSelectionHint.textContent = "Bonus patch pending: click an empty square on your quilt.";
     } else if (patchworkSelectedPatchId && patchworkAnchor && !patchworkHasSelectionPlacement(view)) {
-      patchworkSelectionHint.textContent = "Current anchor is invalid for this orientation.";
+      patchworkSelectionHint.textContent = "Preview stays here, but the complete patch must cover only empty quilt squares.";
     } else if (patchworkSelectedPatchId && patchworkAnchor) {
-      patchworkSelectionHint.textContent = "Placement ready. Tap Buy on the selected patch.";
+      patchworkSelectionHint.textContent = "This placement fits. Confirm the purchase below.";
     } else if (patchworkSelectedPatchId) {
-      patchworkSelectionHint.textContent = "Now click your quilt to choose the patch anchor.";
+      patchworkSelectionHint.textContent = "Click any quilt square to preview, even if the patch will not fit there.";
     } else {
       patchworkSelectionHint.textContent = "Select one of the first three patches, then click your board.";
     }
@@ -1262,6 +1242,10 @@ if (patchworkFlipBtn) {
     patchworkFlip = !patchworkFlip;
     renderPatchworkGameState({ view: currentPatchworkView });
   });
+}
+
+if (patchworkConfirmBuyBtn) {
+  patchworkConfirmBuyBtn.addEventListener("click", patchworkSubmitSelectedPurchase);
 }
 
 if (patchworkAdvanceBtn) {

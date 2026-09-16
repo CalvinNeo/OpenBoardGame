@@ -10,6 +10,8 @@
   let bombBustersPendingAction = false;
   let bombBustersPendingTimer = null;
   let bombBustersExplainMode = false;
+  let bombBustersPopoverAnchorWireId = null;
+  let bombBustersPopoverFrame = null;
 
   const bombBustersPanelEl = document.getElementById("bombBustersPanel");
   const bombBustersHeaderActionsEl = document.getElementById("bombBustersHeaderActions");
@@ -49,6 +51,10 @@
   const bombBustersReadyListEl = document.getElementById("bombBustersReadyList");
   const bombBustersContinueBtnEl = document.getElementById("bombBustersContinueBtn");
   const bombBustersLiveRegionEl = document.getElementById("bombBustersLiveRegion");
+  const bombBustersWirePopoverEl = document.getElementById("bombBustersWirePopover");
+  const bombBustersWirePopoverTextEl = document.getElementById("bombBustersWirePopoverText");
+  const bombBustersWirePopoverConfirmBtnEl = document.getElementById("bombBustersWirePopoverConfirmBtn");
+  const bombBustersWirePopoverCancelBtnEl = document.getElementById("bombBustersWirePopoverCancelBtn");
 
   const BOMB_BUSTERS_EXPLANATIONS = {
     own_wire: {
@@ -130,7 +136,7 @@
       <p>The mission succeeds when no uncut wires remain. It fails on a RED cut or when the detonator reaches zero. Final faces remain visible until every human chooses Next Bomb or Retry Mission.</p>
       <h3>Digital Notes</h3>
       <p>Seats increase clockwise. The first Captain is selected by the server, then the Captain moves one seat after every success or retry. Wires are dealt around the rack order and every rack is sorted separately. Cut wires remain in place; attached Info tokens return to the supply when their wire is cut.</p>
-      <p>The mistake limit equals the number of players. The server derives every declaration from the acting player's selected wire, validates all Solo sets again, and keeps teammate faces and random setup data private. Clicking blank board space or pressing Esc cancels an unsubmitted selection.</p>
+      <p>The mistake limit equals the number of players. The server derives every declaration from the acting player's selected wire, validates all Solo sets again, and keeps teammate faces and random setup data private. On phones, a wire action is confirmed in the floating card above the selected wire. Clicking blank board space or pressing Esc cancels an unsubmitted selection.</p>
     </div>
   `;
 
@@ -198,7 +204,184 @@
     bombBustersSelectedTargetWireIds = [];
     bombBustersSelectedSoloWireIds = [];
     bombBustersActionMode = "duo";
+    bombBustersPopoverAnchorWireId = null;
     if (render && bombBustersView) bombBustersRenderInteractive(bombBustersView);
+  }
+
+  function bombBustersUsesWirePopover() {
+    return window.matchMedia
+      ? window.matchMedia("(max-width: 620px)").matches
+      : window.innerWidth <= 620;
+  }
+
+  function bombBustersSelectedAction(view) {
+    if (!view || bombBustersPendingAction) return null;
+    if (
+      view.phase === "initial_info" &&
+      bombBustersHasAction("place_initial_info") &&
+      bombBustersSelectedOwnWireId
+    ) {
+      return {
+        action: {type: "place_initial_info", wire_id: bombBustersSelectedOwnWireId},
+        explainKey: "share",
+        label: "Share initial clue",
+      };
+    }
+    if (
+      view.phase === "awaiting_detector_choice" &&
+      bombBustersHasAction("resolve_detector_choice") &&
+      bombBustersSelectedTargetWireIds.length === 1
+    ) {
+      return {
+        action: {type: "resolve_detector_choice", wire_id: bombBustersSelectedTargetWireIds[0]},
+        explainKey: "resolve",
+        label: "Confirm detector choice",
+      };
+    }
+    if (view.phase !== "playing" || view.current_turn !== view.you) return null;
+    if (
+      bombBustersActionMode === "detector" &&
+      bombBustersHasAction("double_detector_cut") &&
+      bombBustersSelectedOwnWireId &&
+      bombBustersSelectedTargetWireIds.length === 2
+    ) {
+      return {
+        action: {
+          type: "double_detector_cut",
+          own_wire_id: bombBustersSelectedOwnWireId,
+          target_wire_ids: [...bombBustersSelectedTargetWireIds],
+        },
+        explainKey: "detector_confirm",
+        label: "Confirm detector cut",
+      };
+    }
+    if (
+      bombBustersActionMode === "solo" &&
+      bombBustersHasAction("solo_cut") &&
+      [2, 4].includes(bombBustersSelectedSoloWireIds.length)
+    ) {
+      return {
+        action: {type: "solo_cut", wire_ids: [...bombBustersSelectedSoloWireIds]},
+        explainKey: "solo",
+        label: "Confirm Solo Cut",
+      };
+    }
+    if (
+      bombBustersActionMode === "duo" &&
+      bombBustersHasAction("dual_cut") &&
+      bombBustersSelectedOwnWireId &&
+      bombBustersSelectedTargetWireIds.length === 1
+    ) {
+      return {
+        action: {
+          type: "dual_cut",
+          own_wire_id: bombBustersSelectedOwnWireId,
+          target_wire_id: bombBustersSelectedTargetWireIds[0],
+        },
+        explainKey: "duo",
+        label: "Confirm Duo Cut",
+      };
+    }
+    return null;
+  }
+
+  function bombBustersHideWirePopover() {
+    if (bombBustersPopoverFrame) {
+      window.cancelAnimationFrame(bombBustersPopoverFrame);
+      bombBustersPopoverFrame = null;
+    }
+    if (!bombBustersWirePopoverEl) return;
+    bombBustersWirePopoverEl.classList.remove("is-open");
+    bombBustersWirePopoverEl.setAttribute("aria-hidden", "true");
+    bombBustersWirePopoverEl.style.removeProperty("left");
+    bombBustersWirePopoverEl.style.removeProperty("top");
+    bombBustersWirePopoverEl.style.removeProperty("visibility");
+  }
+
+  function bombBustersPositionWirePopover() {
+    bombBustersPopoverFrame = null;
+    if (
+      !bombBustersUsesWirePopover() ||
+      !bombBustersWirePopoverEl ||
+      !bombBustersWirePopoverEl.classList.contains("is-open") ||
+      !bombBustersPopoverAnchorWireId ||
+      !bombBustersPanelEl
+    ) return;
+    const anchor = Array.from(
+      bombBustersPanelEl.querySelectorAll(".bomb-busters-wire-button[data-wire-id]")
+    ).find((button) => button.dataset.wireId === bombBustersPopoverAnchorWireId);
+    if (!anchor) {
+      bombBustersHideWirePopover();
+      return;
+    }
+    const anchorRect = anchor.getBoundingClientRect();
+    if (anchorRect.bottom <= 0 || anchorRect.top >= window.innerHeight) {
+      bombBustersWirePopoverEl.style.visibility = "hidden";
+      return;
+    }
+    const popoverRect = bombBustersWirePopoverEl.getBoundingClientRect();
+    const viewportWidth = document.documentElement.clientWidth;
+    const edge = 8;
+    const gap = 10;
+    let placement = "above";
+    let top = anchorRect.top - popoverRect.height - gap;
+    if (top < edge) {
+      placement = "below";
+      top = Math.min(window.innerHeight - popoverRect.height - edge, anchorRect.bottom + gap);
+    }
+    const idealLeft = anchorRect.left + anchorRect.width / 2 - popoverRect.width / 2;
+    const left = Math.max(edge, Math.min(viewportWidth - popoverRect.width - edge, idealLeft));
+    const arrowLeft = Math.max(14, Math.min(popoverRect.width - 14, anchorRect.left + anchorRect.width / 2 - left));
+    bombBustersWirePopoverEl.dataset.placement = placement;
+    bombBustersWirePopoverEl.style.left = `${Math.round(left)}px`;
+    bombBustersWirePopoverEl.style.top = `${Math.max(edge, Math.round(top))}px`;
+    bombBustersWirePopoverEl.style.setProperty("--bomb-busters-popover-arrow-left", `${Math.round(arrowLeft)}px`);
+    bombBustersWirePopoverEl.style.visibility = "visible";
+  }
+
+  function bombBustersScheduleWirePopoverPosition() {
+    if (!bombBustersWirePopoverEl || !bombBustersWirePopoverEl.classList.contains("is-open")) return;
+    if (bombBustersPopoverFrame) window.cancelAnimationFrame(bombBustersPopoverFrame);
+    bombBustersPopoverFrame = window.requestAnimationFrame(bombBustersPositionWirePopover);
+  }
+
+  function bombBustersRenderWirePopover(view) {
+    const hasSelection = Boolean(
+      bombBustersSelectedOwnWireId ||
+      bombBustersSelectedTargetWireIds.length ||
+      bombBustersSelectedSoloWireIds.length
+    );
+    if (
+      !bombBustersUsesWirePopover() ||
+      !bombBustersWirePopoverEl ||
+      !bombBustersPopoverAnchorWireId ||
+      !hasSelection ||
+      view.phase === "mission_result"
+    ) {
+      bombBustersHideWirePopover();
+      return;
+    }
+    const selection = bombBustersSelectedAction(view);
+    if (bombBustersWirePopoverTextEl) {
+      bombBustersWirePopoverTextEl.textContent = bombBustersActionSummaryEl && bombBustersActionSummaryEl.textContent
+        ? bombBustersActionSummaryEl.textContent
+        : "Complete your wire selection.";
+    }
+    if (bombBustersWirePopoverConfirmBtnEl) {
+      bombBustersWirePopoverConfirmBtnEl.disabled = !selection;
+      bombBustersWirePopoverConfirmBtnEl.dataset.bombBustersExplain = selection
+        ? selection.explainKey
+        : bombBustersActionMode === "detector" ? "detector_confirm" : "duo";
+      bombBustersWirePopoverConfirmBtnEl.setAttribute(
+        "aria-label",
+        selection ? selection.label : "Confirm unavailable until the selection is complete"
+      );
+    }
+    bombBustersWirePopoverEl.classList.add("is-open");
+    bombBustersWirePopoverEl.setAttribute("aria-hidden", "false");
+    bombBustersWirePopoverEl.style.visibility = "hidden";
+    bombBustersRefreshExplainTargets();
+    bombBustersScheduleWirePopoverPosition();
   }
 
   function bombBustersDispatch(action) {
@@ -306,6 +489,9 @@
     } else {
       bombBustersSelectedTargetWireIds = bombBustersSelectedTargetWireIds[0] === wire.wire_id ? [] : [wire.wire_id];
     }
+    bombBustersPopoverAnchorWireId = bombBustersSelectedTargetWireIds.length
+      ? bombBustersSelectedTargetWireIds[bombBustersSelectedTargetWireIds.length - 1]
+      : bombBustersSelectedOwnWireId || bombBustersSelectedSoloWireIds[0] || null;
     bombBustersRenderInteractive(bombBustersView);
   }
 
@@ -539,6 +725,7 @@
         bombBustersSelectedOwnWireId = null;
         bombBustersSelectedTargetWireIds = [];
         bombBustersSelectedSoloWireIds = [...wireIds];
+        bombBustersPopoverAnchorWireId = wireIds[0] || null;
         bombBustersRenderInteractive(view);
       });
       bombBustersSoloOptionsEl.appendChild(button);
@@ -692,6 +879,7 @@
     bombBustersRenderSoloOptions(view);
     bombBustersRenderActions(view);
     bombBustersRenderResult(view);
+    bombBustersRenderWirePopover(view);
     bombBustersRefreshExplainTargets();
   }
 
@@ -769,6 +957,7 @@
     if (bombBustersPendingTimer) window.clearTimeout(bombBustersPendingTimer);
     bombBustersPendingTimer = null;
     bombBustersResetSelection(false);
+    bombBustersHideWirePopover();
     bombBustersSetExplainMode(false);
     bombBustersSetModal(bombBustersHelpModalEl, false);
     bombBustersSetModal(bombBustersExplainModalEl, false);
@@ -884,6 +1073,21 @@
       bombBustersDispatch({type: "continue_mission"});
     });
   }
+  if (bombBustersWirePopoverConfirmBtnEl) {
+    bombBustersWirePopoverConfirmBtnEl.addEventListener("click", () => {
+      const selection = bombBustersSelectedAction(bombBustersView);
+      if (!selection) return;
+      bombBustersDispatch(selection.action);
+    });
+  }
+  if (bombBustersWirePopoverCancelBtnEl) {
+    bombBustersWirePopoverCancelBtnEl.addEventListener("click", () => bombBustersResetSelection(true));
+  }
+
+  window.addEventListener("resize", () => {
+    if (bombBustersView) bombBustersRenderWirePopover(bombBustersView);
+  });
+  window.addEventListener("scroll", bombBustersScheduleWirePopoverPosition, {capture: true, passive: true});
 
   document.addEventListener(
     "click",
@@ -939,7 +1143,7 @@
     ) return;
     const hasSelection = bombBustersSelectedOwnWireId || bombBustersSelectedTargetWireIds.length || bombBustersSelectedSoloWireIds.length;
     if (!hasSelection) return;
-    if (event.target.closest("button, .bomb-busters-wire-slot")) return;
+    if (event.target.closest("button, .bomb-busters-wire-slot, .bomb-busters-wire-popover")) return;
     bombBustersResetSelection(true);
   });
 

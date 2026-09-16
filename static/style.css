@@ -20145,7 +20145,8 @@ body.tagiron-explain-mode button.has-explanation:hover {
 .patchwork-ring-shell {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 8px;
+  min-width: 0;
 }
 
 .patchwork-ring-legend-row {
@@ -20206,7 +20207,17 @@ body.tagiron-explain-mode button.has-explanation:hover {
 }
 
 .patchwork-market-mobile {
-  display: none;
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  max-width: 100%;
+  padding: 4px 4px 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-padding-inline: 4px;
+  scroll-snap-type: x proximity;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .patchwork-order-badge {
@@ -20230,25 +20241,21 @@ body.tagiron-explain-mode button.has-explanation:hover {
 
 .patchwork-ring-top,
 .patchwork-ring-bottom {
-  display: block;
+  display: none;
 }
 
 .patchwork-ring-bottom {
-  margin-top: -45px;
+  margin-top: 0;
 }
 
 .patchwork-ring-middle {
-  display: grid;
-  grid-template-columns: minmax(90px, 104px) minmax(0, 1fr) minmax(90px, 104px);
-  gap: 6px;
-  align-items: stretch;
+  display: block;
+  min-width: 0;
 }
 
 .patchwork-ring-left,
 .patchwork-ring-right {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
+  display: none;
 }
 
 .patchwork-ring-core {
@@ -20289,11 +20296,12 @@ body.tagiron-explain-mode button.has-explanation:hover {
 }
 
 .patchwork-support-row {
-  grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: minmax(220px, 0.7fr) minmax(280px, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
   align-items: start;
+  width: 100%;
+  margin-top: 2px;
 }
 
 #patchworkPanel h3 {
@@ -20406,22 +20414,24 @@ body.tagiron-explain-mode button.has-explanation:hover {
 }
 
 .patchwork-market-card {
-  width: 84px;
-  min-height: 116px;
+  width: 112px;
+  min-height: 142px;
   border: 1px solid #d8dee9;
   border-radius: 12px;
   background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
   position: relative;
   overflow: hidden;
   flex: 0 0 auto;
+  scroll-snap-align: start;
 }
 
 .patchwork-market-card-hitarea {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: 18px 64px auto;
+  align-content: start;
   gap: 5px;
   width: 100%;
-  min-height: 114px;
+  min-height: 140px;
   padding: 8px 6px 6px;
   border: 0;
   border-radius: inherit;
@@ -20448,74 +20458,23 @@ body.tagiron-explain-mode button.has-explanation:hover {
 .patchwork-market-card.selected {
   border-color: #0f766e;
   box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.18);
+  background: linear-gradient(180deg, #f0fdfa 0%, #f8fafc 100%);
 }
 
 .patchwork-market-card.upcoming {
   opacity: 0.78;
 }
 
-.patchwork-market-choice {
-  position: absolute;
-  z-index: 3;
-  inset: 0;
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto auto;
-  gap: 5px;
-  align-items: stretch;
-  padding: 9px 7px 7px;
-  border-radius: inherit;
-  background: rgba(240, 253, 250, 0.94);
-  -webkit-backdrop-filter: blur(3px);
-  backdrop-filter: blur(3px);
-}
-
-.patchwork-market-choice-status {
+.patchwork-market-card-header {
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: #134e4a;
-  font-size: 10px;
-  font-weight: 800;
-  line-height: 1.25;
-  text-align: center;
-}
-
-.patchwork-market-choice button {
-  width: 100%;
-  min-height: 31px;
-  padding: 4px 5px;
-  border-radius: 7px;
-  font-size: 11px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.patchwork-market-buy {
-  border: 1px solid #047857;
-  color: #fff;
-  background: #059669;
-}
-
-.patchwork-market-buy:hover:not(:disabled),
-.patchwork-market-buy:focus-visible {
-  background: #047857;
-}
-
-.patchwork-market-cancel {
-  border: 1px solid #cbd5e1;
-  color: #475569;
-  background: rgba(255, 255, 255, 0.9);
-}
-
-.patchwork-market-cancel:hover,
-.patchwork-market-cancel:focus-visible {
-  background: #fff;
+  justify-content: space-between;
+  gap: 4px;
+  min-width: 0;
 }
 
 .patchwork-market-order {
-  position: absolute;
-  right: 6px;
-  top: 5px;
+  flex: 0 0 auto;
   padding: 1px 6px;
   border-radius: 999px;
   font-size: 10px;
@@ -20525,29 +20484,45 @@ body.tagiron-explain-mode button.has-explanation:hover {
 }
 
 .patchwork-market-image {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
-  height: 50px;
-  object-fit: contain;
+  height: 64px;
   border-radius: 8px;
   background: #fff7ed;
   border: 1px solid #fde7cf;
-  padding: 4px;
+  padding: 5px;
+}
+
+.patchwork-market-image .patchwork-preview-shape-cell {
+  border-radius: 3px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 .patchwork-market-meta {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 2px 4px;
-  font-size: 10px;
+  font-size: 9px;
   color: #334155;
 }
 
+.patchwork-market-meta span {
+  white-space: nowrap;
+}
+
 .patchwork-market-label {
+  min-width: 0;
+  overflow: hidden;
   font-weight: 700;
   color: #0f172a;
   font-size: 10px;
   line-height: 1.2;
-  word-break: break-all;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .patchwork-board-heading {
@@ -20650,6 +20625,73 @@ body.tagiron-explain-mode button.has-explanation:hover {
   border-color: #d97706;
 }
 
+.patchwork-placement-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 48px;
+  padding: 8px 9px 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.patchwork-placement-actions[hidden] {
+  display: none;
+}
+
+.patchwork-placement-actions.valid {
+  border-color: #6ee7b7;
+  background: #ecfdf5;
+}
+
+.patchwork-placement-actions.invalid {
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+.patchwork-placement-status {
+  min-width: 0;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.patchwork-placement-actions.valid .patchwork-placement-status {
+  color: #065f46;
+}
+
+.patchwork-placement-actions.invalid .patchwork-placement-status {
+  color: #991b1b;
+}
+
+.patchwork-confirm-buy {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 6px 11px;
+  border: 1px solid #047857;
+  border-radius: 9px;
+  color: #fff;
+  background: #059669;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.patchwork-confirm-buy:hover:not(:disabled),
+.patchwork-confirm-buy:focus-visible {
+  background: #047857;
+}
+
+.patchwork-confirm-buy:disabled {
+  border-color: #cbd5e1;
+  color: #94a3b8;
+  background: #e2e8f0;
+  cursor: not-allowed;
+}
+
 .patchwork-players {
   display: flex;
   flex-direction: column;
@@ -20710,6 +20752,7 @@ body.tagiron-explain-mode button.has-explanation:hover {
 }
 
 .patchwork-preview-image {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -20721,6 +20764,39 @@ body.tagiron-explain-mode button.has-explanation:hover {
   padding: 8px;
   box-sizing: border-box;
   margin-bottom: 8px;
+}
+
+.patchwork-income-pips {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  display: flex;
+  gap: 3px;
+  pointer-events: none;
+}
+
+.patchwork-income-pip {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #075985;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 36% 36%, #e0f2fe 0 18%, transparent 20%),
+    radial-gradient(circle at 66% 66%, #0c4a6e 0 13%, transparent 15%),
+    #38bdf8;
+  box-shadow: 0 2px 4px rgba(12, 74, 110, 0.22);
+}
+
+.patchwork-market-image .patchwork-income-pips {
+  top: 4px;
+  right: 4px;
+  gap: 2px;
+}
+
+.patchwork-market-image .patchwork-income-pip {
+  width: 10px;
+  height: 10px;
+  border-width: 1px;
 }
 
 .patchwork-preview-shape {
@@ -20858,19 +20934,14 @@ body.patchwork-explain-mode [data-patchwork-explain].has-explanation {
 }
 
 @media (max-width: 1520px) and (min-width: 1261px) {
-  .patchwork-ring-middle {
-    grid-template-columns: minmax(78px, 88px) minmax(0, 1fr) minmax(78px, 88px);
-    gap: 4px;
-  }
-
   .patchwork-layout {
     grid-template-columns: minmax(330px, 1fr) minmax(330px, 0.98fr);
     gap: 8px 10px;
   }
 
   .patchwork-support-row {
-    grid-template-columns: minmax(210px, 0.72fr) minmax(250px, 0.92fr);
-    gap: 10px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
   }
 
   .patchwork-track-card,
@@ -20887,18 +20958,18 @@ body.patchwork-explain-mode [data-patchwork-explain].has-explanation {
   }
 
   .patchwork-market-card {
-    width: 74px;
-    min-height: 104px;
+    width: 106px;
+    min-height: 136px;
   }
 
   .patchwork-market-card-hitarea {
-    min-height: 102px;
+    min-height: 134px;
     padding: 7px 5px 5px;
     gap: 4px;
   }
 
   .patchwork-market-image {
-    height: 42px;
+    height: 58px;
     padding: 3px;
   }
 
@@ -20938,20 +21009,16 @@ body.patchwork-explain-mode [data-patchwork-explain].has-explanation {
 }
 
 @media (max-width: 1380px) and (min-width: 1261px) {
-  .patchwork-ring-middle {
-    grid-template-columns: minmax(72px, 80px) minmax(0, 1fr) minmax(72px, 80px);
-  }
-
   .patchwork-layout {
     grid-template-columns: minmax(300px, 1fr) minmax(300px, 0.96fr);
   }
 
   .patchwork-market-card {
-    width: 68px;
+    width: 102px;
   }
 
   .patchwork-market-image {
-    height: 38px;
+    height: 56px;
   }
 
   .patchwork-board {
@@ -20968,31 +21035,8 @@ body.patchwork-explain-mode [data-patchwork-explain].has-explanation {
     margin-top: 0;
   }
 
-  .patchwork-ring-middle {
-    grid-template-columns: 1fr;
-  }
-
-  .patchwork-ring-left,
-  .patchwork-ring-right {
-    flex-direction: row;
-    justify-content: flex-start;
-    overflow-x: auto;
-  }
-
-  .patchwork-market-side.left,
-  .patchwork-market-side.right {
-    flex-direction: row;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-  }
-
   .patchwork-layout {
     grid-template-columns: repeat(2, minmax(280px, 1fr));
-  }
-
-  .patchwork-center-column,
-  .patchwork-support-row {
-    grid-column: 1 / -1;
   }
 
   .patchwork-board {
@@ -21000,7 +21044,7 @@ body.patchwork-explain-mode [data-patchwork-explain].has-explanation {
   }
 
   .patchwork-support-row {
-    grid-template-columns: repeat(2, minmax(240px, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -21172,18 +21216,18 @@ body.patchwork-explain-mode [data-patchwork-explain].has-explanation {
   }
 
   .patchwork-market-card {
-    width: 82px;
-    min-height: 108px;
+    width: 104px;
+    min-height: 134px;
   }
 
   .patchwork-market-card-hitarea {
-    min-height: 106px;
+    min-height: 132px;
     padding: 6px 5px 5px;
     gap: 3px;
   }
 
   .patchwork-market-image {
-    height: 40px;
+    height: 56px;
   }
 
   .patchwork-market-meta,
@@ -21191,13 +21235,20 @@ body.patchwork-explain-mode [data-patchwork-explain].has-explanation {
     font-size: 9px;
   }
 
-  .patchwork-market-choice {
-    gap: 4px;
-    padding: 7px 6px 6px;
+  .patchwork-placement-actions {
+    gap: 7px;
+    min-height: 44px;
+    padding: 7px 7px 7px 9px;
   }
 
-  .patchwork-market-choice button {
-    min-height: 30px;
+  .patchwork-placement-status {
+    font-size: 11px;
+  }
+
+  .patchwork-confirm-buy {
+    min-height: 32px;
+    padding: 5px 8px;
+    font-size: 11px;
   }
 
   .patchwork-track-card,
@@ -28103,6 +28154,82 @@ body.century-explain-mode .has-explanation {
   background: rgba(15, 30, 51, 0.55);
 }
 
+.bomb-busters-wire-popover {
+  --bomb-busters-popover-arrow-left: 50%;
+  position: fixed;
+  z-index: 80;
+  display: none;
+  width: min(248px, calc(100vw - 16px));
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(94, 234, 212, 0.72);
+  border-radius: 12px;
+  background: linear-gradient(145deg, rgba(7, 28, 47, 0.98), rgba(10, 45, 61, 0.98));
+  box-shadow: 0 14px 34px rgba(2, 8, 23, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.bomb-busters-wire-popover::after {
+  position: absolute;
+  left: var(--bomb-busters-popover-arrow-left);
+  width: 12px;
+  height: 12px;
+  border-right: 1px solid rgba(94, 234, 212, 0.72);
+  border-bottom: 1px solid rgba(94, 234, 212, 0.72);
+  background: #0a2d3d;
+  content: "";
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.bomb-busters-wire-popover[data-placement="above"]::after {
+  bottom: -7px;
+}
+
+.bomb-busters-wire-popover[data-placement="below"]::after {
+  top: -7px;
+  transform: translateX(-50%) rotate(225deg);
+}
+
+.bomb-busters-wire-popover p {
+  margin: 0;
+  color: #dffcf8;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.bomb-busters-wire-popover-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.bomb-busters-wire-popover-actions button {
+  min-height: 42px;
+  padding: 7px 9px;
+  border: 1px solid rgba(148, 180, 216, 0.42);
+  border-radius: 8px;
+  background: rgba(30, 41, 59, 0.88);
+  color: #e5eef9;
+  font-size: 12px;
+  font-weight: 850;
+  touch-action: manipulation;
+}
+
+#bombBustersWirePopoverConfirmBtn {
+  border-color: rgba(94, 234, 212, 0.7);
+  background: linear-gradient(180deg, rgba(13, 148, 136, 0.94), rgba(15, 118, 110, 0.96));
+  color: #ecfeff;
+}
+
+#bombBustersWirePopoverConfirmBtn:disabled {
+  opacity: 0.42;
+}
+
+#bombBustersWirePopoverCancelBtn {
+  border-color: rgba(148, 163, 184, 0.38);
+  background: rgba(30, 41, 59, 0.92);
+}
+
 .bomb-busters-action-dock {
   display: grid;
   gap: 9px;
@@ -28267,6 +28394,10 @@ body.bomb-busters-explain-mode [data-bomb-busters-explain].has-explanation {
 }
 
 @media (max-width: 620px) {
+  .bomb-busters-wire-popover.is-open {
+    display: grid;
+  }
+
   .bomb-busters-panel {
     gap: 10px;
     padding: 10px;

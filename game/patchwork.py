@@ -37,6 +37,64 @@ def _normalize(coords: List[Coord]) -> Shape:
     return tuple(normalized)
 
 
+def _validate_patch_catalog() -> None:
+    expected_count = int(ASSETS.get("meta", {}).get("canonical_patch_count", 33))
+    if len(PATCH_DEFS) != expected_count:
+        raise ValueError(f"expected {expected_count} Patchwork patches, got {len(PATCH_DEFS)}")
+    if len(PATCHES_BY_ID) != len(PATCH_DEFS):
+        raise ValueError("duplicate Patchwork patch id")
+
+    for patch in PATCH_DEFS:
+        patch_id = patch.get("id", "unknown")
+        cells = [tuple(cell) for cell in patch.get("cells", [])]
+        if not cells or any(
+            len(cell) != 2
+            or not isinstance(cell[0], int)
+            or not isinstance(cell[1], int)
+            or cell[0] < 0
+            or cell[1] < 0
+            for cell in cells
+        ):
+            raise ValueError(f"invalid cells for {patch_id}")
+        if len(set(cells)) != len(cells):
+            raise ValueError(f"duplicate cell for {patch_id}")
+        if min(x for x, _ in cells) != 0 or min(y for _, y in cells) != 0:
+            raise ValueError(f"unnormalized cells for {patch_id}")
+
+        width = max(x for x, _ in cells) + 1
+        height = max(y for _, y in cells) + 1
+        if int(patch.get("width", -1)) != width or int(patch.get("height", -1)) != height:
+            raise ValueError(f"footprint dimensions do not match cells for {patch_id}")
+        if int(patch.get("cell_count", -1)) != len(cells):
+            raise ValueError(f"cell count does not match cells for {patch_id}")
+
+        remaining = set(cells)
+        connected = {remaining.pop()}
+        while remaining:
+            adjoining = {
+                cell
+                for cell in remaining
+                if any(abs(cell[0] - seen[0]) + abs(cell[1] - seen[1]) == 1 for seen in connected)
+            }
+            if not adjoining:
+                raise ValueError(f"disconnected footprint for {patch_id}")
+            connected.update(adjoining)
+            remaining.difference_update(adjoining)
+
+        for field in ("cost_buttons", "cost_time", "income_buttons"):
+            value = patch.get(field)
+            if not isinstance(value, int) or value < 0:
+                raise ValueError(f"invalid {field} for {patch_id}")
+        if patch["cost_time"] == 0:
+            raise ValueError(f"invalid zero time cost for {patch_id}")
+
+    if SMALLEST_PATCH_ID not in PATCHES_BY_ID:
+        raise ValueError("smallest Patchwork patch is missing")
+
+
+_validate_patch_catalog()
+
+
 def _rotate(coords: List[Coord]) -> List[Coord]:
     return [(y, -x) for x, y in coords]
 

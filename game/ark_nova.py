@@ -49,7 +49,19 @@ MAP_REWARDS: Dict[str, Dict[str, Any]] = {
 
 ACTION_IDS = ("cards", "build", "animals", "association", "sponsors")
 CONTINENTS = ("africa", "americas", "asia", "australia", "europe")
-ANIMAL_CATEGORIES = ("bird", "herbivore", "predator", "primate", "reptile")
+ANIMAL_CATEGORIES = (
+    "bird", "herbivore", "predator", "primate", "reptile", "bear", "petting_zoo_animal",
+)
+REPEATED_PASSIVE_EFFECT_TAGS = {
+    "210-printed-1": "americas",
+    "211-printed-1": "europe",
+    "212-printed-1": "australia",
+    "213-printed-1": "asia",
+    "214-printed-1": "africa",
+    "249-printed-1": "bird",
+    "250-printed-1": "reptile",
+    "252-printed-1": "predator",
+}
 BREAK_LIMITS = {2: 15, 3: 12, 4: 10}
 DONATION_COSTS = (2, 5, 7, 10, 12)
 MAX_APPEAL = 113
@@ -87,10 +99,9 @@ BUILDING_SUPPLY = {
 }
 UNIVERSITIES = (
     {"id": "university_science", "name": "Research university", "science": 2},
-    {"id": "university_reputation", "name": "Reputation university", "science": 1, "reputation": 1},
+    {"id": "university_reputation", "name": "Reputation university", "science": 1, "reputation": 2},
     {"id": "university_hand_limit", "name": "Hand-limit university", "science": 1, "hand_limit": 5},
 )
-UNIVERSITY_COPIES_PER_TYPE = 4
 BONUS_TOKEN_DEFS: Dict[str, Dict[str, Any]] = {
     "reputation_2": {"label": "Gain 2 reputation", "kind": "reputation", "amount": 2},
     "money_10": {"label": "Gain 10 money", "kind": "money", "amount": 10},
@@ -180,19 +191,28 @@ def _card_icons(card: Mapping[str, Any]) -> Counter:
     return Counter({item["tag"]: int(item.get("count", 1)) for item in card.get("icons", [])})
 
 
+def _card_zoo_icons(card: Mapping[str, Any]) -> Counter:
+    """Icons contributed by a card, including printed water/rock requirements."""
+
+    icons = _card_icons(card)
+    adjacency = card.get("placement", {}).get("adjacent_to", {})
+    if card.get("unique_building"):
+        adjacency = card.get("unique_building", {}).get("placement", {}).get("adjacent_to", {})
+    for terrain in ("water", "rock"):
+        icons[terrain] += int(adjacency.get(terrain, 0))
+    return icons
+
+
 def _recompute_tags(player: MutableMapping[str, Any]) -> None:
     tags: Counter = Counter()
     for card_id in player.get("played_animals", []):
         card = ANIMAL_CARDS.get(card_id)
         if card:
-            tags.update(_card_icons(card))
-            adjacency = card.get("placement", {}).get("adjacent_to", {})
-            for terrain in ("water", "rock"):
-                tags[terrain] += int(adjacency.get(terrain, 0))
+            tags.update(_card_zoo_icons(card))
     for card_id in player.get("played_sponsors", []):
         card = SPONSOR_CARDS.get(card_id)
         if card:
-            tags.update(_card_icons(card))
+            tags.update(_card_zoo_icons(card))
     for continent in player.get("partner_zoos", []):
         tags[continent] += 1
     for university_id in player.get("universities", []):
@@ -260,6 +280,16 @@ def _animal_size_class(card: Mapping[str, Any]) -> str:
     if size in (4, 5):
         return "large"
     return "medium"
+
+
+def _printed_standard_enclosure_size(card: Mapping[str, Any]) -> int:
+    """Return the enclosure size printed for the card's standard option."""
+
+    option = next(
+        (item for item in card.get("enclosure_options", []) if item.get("type") == "standard"),
+        None,
+    )
+    return int(option.get("required_spaces", 0)) if option else 0
 
 
 def _card_conditions_met(
@@ -885,8 +915,11 @@ def _project_requirement_met(
             return False
         card = ANIMAL_CARDS[release_animal_id]
         tag = project.get("release_rules", {}).get("animal_must_have_tag")
+        printed_size = int(
+            record.get("printed_enclosure_size", _printed_standard_enclosure_size(card))
+        )
         return (
-            int(record.get("enclosure_size", 0)) == int(requirement.get("value", 0))
+            printed_size == int(requirement.get("value", 0))
             and int(_card_icons(card).get(tag, 0)) > 0
         )
     if kind == "breeding_match":
@@ -1330,6 +1363,7 @@ def _sponsor_effect_refs(
             continue
         refs.append({
             "type": "sponsor", "effect_index": index, "player_id": player_id, "card_id": card["id"],
+            "effect_id": effect["id"],
             "timing": effect.get("timing", "immediate"), "action": "sponsors",
             "metadata": {"card": copy.deepcopy(card), **copy.deepcopy(dict(metadata or {}))},
         })
@@ -1351,14 +1385,33 @@ def _all_passive_sponsor_refs(
     state: Mapping[str, Any], source_player_id: str, trigger_card: Mapping[str, Any]
 ) -> List[Dict[str, Any]]:
     refs: List[Dict[str, Any]] = []
+    trigger_icons = _card_zoo_icons(trigger_card)
+    source_tags = state["players"][source_player_id].get("tags", {})
+    new_unique_tags = [
+        tag for tag in (*ANIMAL_CATEGORIES, *CONTINENTS)
+        if int(trigger_icons.get(tag, 0)) > 0
+        and int(source_tags.get(tag, 0)) == int(trigger_icons.get(tag, 0))
+    ]
+    trigger_tags = [
+        tag for tag, count in trigger_icons.items() for _ in range(int(count))
+    ]
     for owner_id in _ordered_player_ids(state):
         for sponsor_id in state["players"][owner_id].get("played_sponsors", []):
-            refs.extend(_sponsor_effect_refs(
+            sponsor_refs = _sponsor_effect_refs(
                 owner_id,
                 SPONSOR_CARDS[sponsor_id],
                 "passive",
-                {"trigger_card": copy.deepcopy(trigger_card), "source_player_id": source_player_id},
-            ))
+                {
+                    "trigger_card": copy.deepcopy(trigger_card),
+                    "source_player_id": source_player_id,
+                    "tags": trigger_tags,
+                    "new_unique_tags": new_unique_tags,
+                },
+            )
+            for ref in sponsor_refs:
+                repeat_tag = REPEATED_PASSIVE_EFFECT_TAGS.get(str(ref.get("effect_id", "")))
+                repeat_count = max(1, int(trigger_icons.get(repeat_tag, 0))) if repeat_tag else 1
+                refs.extend(copy.deepcopy(ref) for _ in range(repeat_count))
     return refs
 
 
@@ -1418,8 +1471,11 @@ def _resolve_break(state: MutableMapping[str, Any], events: List[Dict[str, Any]]
             for token_key in ("multiplier_tokens", "venom_tokens", "constriction_tokens", "hypnosis_tokens"):
                 action_card.pop(token_key, None)
 
-    # Tiles already taken from the shared Association board stay unavailable;
-    # only workers return during a Break.
+    # Refill the shared Association-board display. Players keep previously
+    # acquired tiles, but one of every type is available again after a Break.
+    association_supply = state.setdefault("association_supply", {})
+    association_supply["partner_zoos"] = list(CONTINENTS)
+    association_supply["universities"] = [item["id"] for item in UNIVERSITIES]
     trigger_player = state.pop("break_triggered_by", None)
     if trigger_player in state["players"]:
         gained = _gain_x(_player(state, trigger_player), 1)
@@ -1976,7 +2032,9 @@ def _perform_animals_action(
         player["played_animals"].append(card_id)
         player["animal_records"].append({
             "card_id": card_id, "enclosure_id": building["id"], "enclosure_type": building["building_type"],
-            "enclosure_size": int(building["size"]), "capacity_used": required,
+            "enclosure_size": int(building["size"]),
+            "printed_enclosure_size": _printed_standard_enclosure_size(card),
+            "capacity_used": required,
         })
         _recompute_tags(player)
         _update_derived_metrics(player)
@@ -2162,7 +2220,9 @@ def _play_program_animal(
     player["played_animals"].append(card_id)
     player["animal_records"].append({
         "card_id": card_id, "enclosure_id": building["id"], "enclosure_type": building["building_type"],
-        "enclosure_size": int(building["size"]), "capacity_used": required,
+        "enclosure_size": int(building["size"]),
+        "printed_enclosure_size": _printed_standard_enclosure_size(card),
+        "capacity_used": required,
     })
     _recompute_tags(player)
     _update_derived_metrics(player)
@@ -2310,10 +2370,14 @@ def _take_partner_zoo(
         return "unknown partner zoo continent"
     if continent in player["partner_zoos"]:
         return "partner zoo already owned"
+    supply = state.setdefault("association_supply", {}).setdefault("partner_zoos", [])
+    if continent not in supply:
+        return "partner zoo is not on the Association board"
     limit = 4 if _action_level(player, "association") == 2 else 2
     if len(player["partner_zoos"]) >= limit:
         return "Association II is required for more partner zoos"
     player["partner_zoos"].append(continent)
+    supply.remove(continent)
     _recompute_tags(player)
     events.append(_event("partner_zoo", player_id=player_id, continent=continent))
     return None
@@ -2328,15 +2392,13 @@ def _take_university(
         return "unknown university"
     if university_id in player["universities"]:
         return "university already owned"
-    claimed = sum(
-        university_id in candidate.get("universities", [])
-        for candidate in state.get("players", {}).values()
-    )
-    if claimed >= UNIVERSITY_COPIES_PER_TYPE:
-        return "university is no longer available"
+    supply = state.setdefault("association_supply", {}).setdefault("universities", [])
+    if university_id not in supply:
+        return "university is not on the Association board"
     if len(player["universities"]) >= 3:
         return "all university spaces are occupied"
     player["universities"].append(university_id)
+    supply.remove(university_id)
     if university.get("hand_limit"):
         player["hand_limit"] = max(int(player["hand_limit"]), int(university["hand_limit"]))
     _apply_rewards(state, player_id, {"reputation": university.get("reputation", 0)}, events, university_id)
@@ -3568,30 +3630,24 @@ class ArkNovaGame:
         viewer = state.get("players", {}).get(viewer_id)
         legal_actions = ArkNovaGame.get_legal_actions(state, viewer_id)
         association_supply = copy.deepcopy(state.get("association_supply", {}))
-        university_claims = {
-            item["id"]: [
-                player_id for player_id, player in state.get("players", {}).items()
-                if item["id"] in player.get("universities", [])
-            ]
-            for item in UNIVERSITIES
-        }
+        universities_on_board = set(association_supply.get("universities", []))
         association_supply["university_options"] = [
             {
                 **copy.deepcopy(item),
                 "available": (
-                    len(university_claims[item["id"]]) < UNIVERSITY_COPIES_PER_TYPE
+                    item["id"] in universities_on_board
                     and bool(viewer)
                     and item["id"] not in viewer.get("universities", [])
                 ),
                 "owned_by_you": bool(viewer and item["id"] in viewer.get("universities", [])),
-                "remaining": max(0, UNIVERSITY_COPIES_PER_TYPE - len(university_claims[item["id"]])),
-                "total": UNIVERSITY_COPIES_PER_TYPE,
+                "on_board": item["id"] in universities_on_board,
             }
             for item in UNIVERSITIES
         ]
         if viewer:
             association_supply["available_partner_zoos"] = [
-                continent for continent in CONTINENTS if continent not in viewer.get("partner_zoos", [])
+                continent for continent in association_supply.get("partner_zoos", [])
+                if continent not in viewer.get("partner_zoos", [])
             ]
             association_supply["available_universities"] = [
                 option["id"] for option in association_supply["university_options"] if option["available"]

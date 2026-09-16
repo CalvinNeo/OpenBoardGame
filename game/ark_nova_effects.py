@@ -39,7 +39,9 @@ FINAL_BY_ID = {card["id"]: card for card in FINAL_SCORING_CARDS}
 ACTION_CARD_REGISTRY = {card["id"]: card for card in ACTION_CARDS}
 MAP_CELL_BY_ID = {cell["id"]: cell for cell in MAP0["cells"]}
 
-ANIMAL_TAGS = ("bird", "herbivore", "predator", "primate", "reptile")
+ANIMAL_TAGS = (
+    "bird", "herbivore", "predator", "primate", "reptile", "bear", "petting_zoo_animal",
+)
 CONTINENT_TAGS = ("africa", "americas", "asia", "australia", "europe")
 ACTION_IDS = ("cards", "build", "animals", "association", "sponsors")
 TRACK_KEYS = ("money", "appeal", "conservation", "reputation", "x_tokens")
@@ -178,8 +180,12 @@ def _count_tag(context: EffectContext, tag: str, player_id: Optional[str] = None
     for key in ("played_animals", "played_sponsors"):
         for card_id in _played_ids(context, player_id, key):
             total += sum(int(icon.get("count", 0)) for icon in _icons_for_card(card_id) if icon.get("tag") == tag)
-            if key == "played_animals" and tag in {"water", "rock"}:
-                total += int(ANIMAL_BY_ID.get(card_id, {}).get("placement", {}).get("adjacent_to", {}).get(tag, 0))
+            if tag in {"water", "rock"}:
+                if key == "played_animals":
+                    placement = ANIMAL_BY_ID.get(card_id, {}).get("placement", {})
+                else:
+                    placement = SPONSOR_BY_ID.get(card_id, {}).get("unique_building", {}).get("placement", {})
+                total += int(placement.get("adjacent_to", {}).get(tag, 0))
     return total
 
 
@@ -531,9 +537,9 @@ def _reveal_and_keep(
             "keep_revealed_cards",
             "选择要保留的牌",
             [{"id": _card_id(card), "card_id": _card_id(card)} for card in eligible],
-            0 if animals_only else maximum,
             maximum,
-            animals_only,
+            maximum,
+            False,
             {"candidates": revealed},
         )
     if len(selected) > maximum or any(card_id not in {_card_id(card) for card in eligible} for card_id in selected):
@@ -640,7 +646,7 @@ def execute_ability(
         steps = int(parameters.get("break_steps", 0))
         before = int(context.state.get("break_position", 0))
         limit = int(context.state.get("break_limit", 99))
-        context.state["break_position"] = before + steps
+        context.state["break_position"] = min(limit, before + steps)
         reached_break = before < limit <= int(context.state["break_position"])
         if reached_break:
             context.state["break_due"] = True
@@ -957,11 +963,16 @@ def _execute_trigger(
     if isinstance(trigger_card, Mapping):
         for icon in trigger_card.get("icons", []):
             inferred_tags.extend([str(icon.get("tag"))] * int(icon.get("count", 1)))
-        if not trigger and spec.get("trigger") in {"own_icon_played", "any_icon_played"}:
+        if not trigger and spec.get("trigger") in {
+            "own_icon_played", "any_icon_played", "new_unique_icon",
+        }:
             trigger = spec.get("trigger")
     if not trigger:
         return _register_rule(context, effect_id, spec)
     if trigger != spec.get("trigger"):
+        return _done()
+    source_player_id = str(context.metadata.get("source_player_id", context.player_id))
+    if trigger in {"own_icon_played", "new_unique_icon"} and source_player_id != context.player_id:
         return _done()
     tag = spec.get("tag")
     event_tags = context.metadata.get("tags", inferred_tags or [context.metadata.get("tag")])
@@ -969,8 +980,19 @@ def _execute_trigger(
         event_tags = [event_tags]
     if tag and tag not in event_tags:
         return _done()
-    tags = spec.get("tags")
-    if tags and context.metadata.get("tag") not in tags:
+    count = max(1, int(context.metadata.get("count", event_tags.count(tag) if tag else 1)))
+    tags = set(spec.get("tags", []))
+    if trigger == "new_unique_icon":
+        new_tags = context.metadata.get("new_unique_tags", [])
+        if not isinstance(new_tags, Sequence) or isinstance(new_tags, str):
+            new_tags = [new_tags]
+        matching_tags = tags.intersection(str(value) for value in new_tags)
+        if not matching_tags:
+            return _done()
+        # Each newly introduced category/continent triggers once. A double icon
+        # of the same kind is still only one new icon type.
+        count = len(matching_tags)
+    elif tags and not tags.intersection(str(value) for value in event_tags):
         return _done()
     terrain = spec.get("terrain")
     if terrain and context.metadata.get("terrain") != terrain:
@@ -999,7 +1021,6 @@ def _execute_trigger(
                 normal_placement_rules=True,
             ))
         return _pending(context, effect_id, "place_free_building", "放置免费建筑", [{"id": building, "building_type": building}], 0, 1, True, {"normal_placement_rules": True})
-    count = max(1, int(context.metadata.get("count", event_tags.count(tag) if tag else 1)))
     return _grant(context, effect_id, **{key: int(value) * count for key, value in spec.get("reward", {}).items()})
 
 
@@ -1047,12 +1068,14 @@ def _custom_sponsor(
                 selected_card = card
                 break
             revealed.append(card)
-        if isinstance(deck, list) and revealed:
-            # The cards passed over are tucked under the bottom of the deck.
-            deck[0:0] = reversed(revealed)
+        if revealed:
+            _discard(context, revealed)
         if selected_card is not None:
             _player(context).setdefault("hand", []).append(selected_card)
-            return _done(_event("animal_fetched", context.player_id, card_id=_card_id(selected_card), size=value, source=effect_id, cards_moved_to_bottom=len(revealed)))
+            return _done(_event(
+                "animal_fetched", context.player_id, card_id=_card_id(selected_card), size=value,
+                source=effect_id, cards_discarded=len(revealed),
+            ))
         return _done(_event("effect_no_target", context.player_id, source=effect_id))
     raise RuntimeError(f"unknown sponsor custom rule: {rule}")
 
@@ -1217,7 +1240,18 @@ def _record_card_id(record: Mapping[str, Any]) -> str:
 
 
 def _record_enclosure_size(context: EffectContext, record: Mapping[str, Any]) -> int:
-    for key in ("enclosure_size", "occupied_enclosure_size", "printed_enclosure_size"):
+    if "printed_enclosure_size" in record:
+        return int(record["printed_enclosure_size"])
+    card = ANIMAL_BY_ID.get(_record_card_id(record), {})
+    standard = next(
+        (option for option in card.get("enclosure_options", []) if option.get("type") == "standard"),
+        None,
+    )
+    if standard is not None:
+        return int(standard.get("required_spaces", 0))
+    if card:
+        return 0
+    for key in ("enclosure_size", "occupied_enclosure_size"):
         if key in record:
             return int(record[key])
     building = _building_by_id(context, record.get("enclosure_id"))
@@ -1235,8 +1269,8 @@ def _release_candidates(context: EffectContext, project: Mapping[str, Any], requ
         if not card:
             continue
         tags = {icon["tag"] for icon in card.get("icons", [])}
-        # Release reward slots use the exact printed size of the occupied
-        # enclosure, not a minimum animal-size comparison.
+        # Release reward slots use the animal card's exact printed standard-
+        # enclosure requirement, even when it occupies a special enclosure.
         if metric not in tags or _record_enclosure_size(context, record) != required_size:
             continue
         candidates.append(card_id)
