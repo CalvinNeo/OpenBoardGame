@@ -413,6 +413,15 @@ class ArkNovaProjectAndScoringTests(unittest.TestCase):
         self.assertEqual(len(effects.FINAL_BY_ID["009"]["scoring_rule"]["metrics"]), 7)
         self.assertEqual(effects.score_final_card("009", context(state, "009", "endgame")), 4)
 
+    def test_biodiverse_zoo_compares_the_previous_clockwise_seat(self) -> None:
+        state = game_state()
+        state["players"]["p3"] = player_state()
+        state["turn_order"] = ["p1", "p2", "p3"]
+        state["players"]["p1"]["tags"] = {"bear": 1}
+        state["players"]["p2"]["tags"] = {"bear": 0}
+        state["players"]["p3"]["tags"] = {"bear": 2}
+        self.assertEqual(effects.score_final_card("009", context(state, "009", "endgame")), 0)
+
     def test_action_card_faces_are_available_without_text_interpretation(self) -> None:
         animals = effects.get_action_rule("animals", "II", 5)
         self.assertEqual(animals["maximum_cards_by_strength"]["5"], 2)

@@ -109,7 +109,7 @@
     primate: ["🐒", "Primate"],
     bear: ["🐻", "Bear"],
     petting_zoo: ["🐐", "Petting zoo animal"],
-    science: ["🔬", "Science"],
+    science: ["🔬", "Research"],
     research: ["🔬", "Research"],
     water: ["💧", "Water"],
     rock: ["🪨", "Rock"],
@@ -2093,7 +2093,7 @@
   function arkNovaUniversityRewardsMarkup(rawOption) {
     const option = arkNovaUniversityOption(rawOption);
     const rewards = [];
-    if (option.science) rewards.push(`<span title="Science icons">🔬<b>×${arkNovaEscape(option.science)}</b></span>`);
+    if (option.science) rewards.push(`<span title="Research icons (microscope)">🔬<b>×${arkNovaEscape(option.science)}</b></span>`);
     if (option.reputation) rewards.push(`<span title="Reputation">🎓<b>+${arkNovaEscape(option.reputation)}</b></span>`);
     if (option.hand_limit) rewards.push(`<span title="Hand limit">🂠<b>${arkNovaEscape(option.hand_limit)}</b></span>`);
     return rewards.join("");

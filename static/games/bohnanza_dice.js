@@ -442,8 +442,14 @@
     if (offer) {
       const name = bohnanzaDicePlayerName(view, offer.player_id);
       const isYou = offer.player_id === view.you;
+      const activeName = bohnanzaDicePlayerName(view, view.active_player_id);
+      const resumesAnotherTurn = view.decision_origin === "after_roll" && offer.player_id !== view.active_player_id;
       if (bohnanzaDiceHarvestPrompt) {
-        bohnanzaDiceHarvestPrompt.textContent = `${isYou ? "You have" : `${name} has`} ${offer.completed_count} completed orders worth ${offer.reward} ${offer.reward === 1 ? "coin" : "coins"}.`;
+        const offerText = `${isYou ? "You have" : `${name} has`} ${offer.completed_count} completed orders worth ${offer.reward} ${offer.reward === 1 ? "coin" : "coins"}.`;
+        const resumeText = resumesAnotherTurn
+          ? ` These dice belong to ${activeName}'s turn. Keep Growing returns control to ${activeName}; it does not roll dice itself.`
+          : " Keep Growing does not roll dice.";
+        bohnanzaDiceHarvestPrompt.textContent = `${offerText}${resumeText}`;
       }
       if (bohnanzaDiceHarvestBtn) {
         bohnanzaDiceHarvestBtn.textContent = `Harvest ${offer.reward} ${offer.reward === 1 ? "Coin" : "Coins"}`;
@@ -467,8 +473,9 @@
         : "Game over. Final cards and scores remain on the table.";
     } else if (head) {
       const name = bohnanzaDicePlayerName(view, head);
+      const resumesAnotherTurn = view.decision_origin === "after_roll" && head !== view.active_player_id;
       bohnanzaDiceStatus.textContent = head === view.you
-        ? `${view.phase === "final_harvest" ? "Final decision" : "Harvest decision"} — collect now or keep growing.`
+        ? `${view.phase === "final_harvest" ? "Final decision" : "Harvest decision"} — collect now or keep growing.${resumesAnotherTurn ? ` ${activeName}'s turn resumes afterward.` : ""}`
         : `Waiting for ${name}'s ${view.phase === "final_harvest" ? "final " : ""}harvest decision.`;
     } else if (view.phase === "await_roll") {
       const dice = Array.isArray(view.dice) ? view.dice : [];

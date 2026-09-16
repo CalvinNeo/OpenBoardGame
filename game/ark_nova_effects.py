@@ -1543,7 +1543,9 @@ def score_final_card(card_id: str, context: EffectContext, player_id: Optional[s
             return 0
         neighbor_id = context.metadata.get("right_hand_player_id")
         if neighbor_id not in _players(context.state):
-            neighbor_id = order[(order.index(pid) + 1) % len(order)]
+            # Turn order proceeds clockwise; the player physically to the
+            # right is therefore the previous seat in that order.
+            neighbor_id = order[(order.index(pid) - 1) % len(order)]
         wins = sum(_metric(context, metric, pid) > _metric(context, metric, str(neighbor_id)) for metric in rule["metrics"])
         return min(int(rule["maximum_conservation"]), wins * int(rule["reward_per_won_metric"]["conservation"]))
     raise ValueError(f"unknown final scoring rule: {kind}")

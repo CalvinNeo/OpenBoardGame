@@ -200,8 +200,9 @@ class BohnanzaDiceTurnFlowTests(unittest.TestCase):
         save_id = state["current_roll_die_ids"][0]
         roll_sequence_before_save = state["roll_sequence"]
         rng_counter_before_save = state["rng_counter"]
-        _, error = BohnanzaDiceGame.apply_action(state, active, {"type": "save_dice", "die_ids": [save_id]})
+        events, error = BohnanzaDiceGame.apply_action(state, active, {"type": "save_dice", "die_ids": [save_id]})
         self.assertIsNone(error)
+        self.assertEqual([event["type"] for event in events], ["bohnanza_dice:dice_saved"])
         self.assertEqual(next(die for die in state["dice"] if die["id"] == save_id)["zone"], "bean_field")
         self.assertEqual(state["phase"], "await_roll")
         self.assertEqual(state["roll_sequence"], roll_sequence_before_save)
@@ -296,8 +297,9 @@ class BohnanzaDiceHarvestAndEndGameTests(unittest.TestCase):
         roll_sequence_before = state["roll_sequence"]
         roll_count_before = state["roll_count_this_turn"]
         rng_counter_before = state["rng_counter"]
-        _, error = BohnanzaDiceGame.apply_action(state, "p1", {"type": "keep_growing"})
+        events, error = BohnanzaDiceGame.apply_action(state, "p1", {"type": "keep_growing"})
         self.assertIsNone(error)
+        self.assertEqual([event["type"] for event in events], ["bohnanza_dice:keep_growing"])
         self.assertEqual(state["phase"], "after_roll")
         self.assertEqual(state["players"]["p1"], before_player)
         self.assertEqual(state["dice"], dice_before)
