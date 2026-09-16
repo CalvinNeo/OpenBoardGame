@@ -29575,9 +29575,9 @@ button.bohnanza-dice-die:disabled {
 
 .bohnanza-dice-order-row.is-complete {
   color: #254a31;
-  border: 2px solid #438b4d;
-  background: rgba(124, 190, 104, 0.28);
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.62), 0 0 0 2px rgba(67, 139, 77, 0.13);
+  border: 3px solid #2f873e;
+  background: rgba(116, 196, 98, 0.36);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.72), 0 0 0 2px rgba(47, 135, 62, 0.22);
 }
 
 .bohnanza-dice-order-row.is-next {
@@ -29914,12 +29914,6 @@ body.bohnanza-dice-explain-mode button[data-bohnanza-dice-explain].has-explanati
   opacity: 1;
 }
 
-@media (max-width: 720px) {
-  .bohnanza-dice-field-card .bohnanza-dice-eyebrow {
-    display: none;
-  }
-}
-
 @media (max-width: 900px) {
   .bohnanza-dice-workspace {
     grid-template-columns: minmax(0, 1fr);
@@ -30062,6 +30056,205 @@ body.bohnanza-dice-explain-mode button[data-bohnanza-dice-explain].has-explanati
 
   .bohnanza-dice-rule-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .bohnanza-dice-panel {
+    gap: 6px;
+    padding: 7px;
+    border-radius: 13px;
+  }
+
+  .bohnanza-dice-topbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .bohnanza-dice-brand {
+    gap: 0;
+  }
+
+  .bohnanza-dice-brand-mark,
+  .bohnanza-dice-brand .bohnanza-dice-eyebrow {
+    display: none;
+  }
+
+  .bohnanza-dice-brand h2 {
+    overflow: hidden;
+    font-size: 16px;
+    line-height: 1.1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .bohnanza-dice-meta {
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    gap: 3px;
+    width: auto;
+  }
+
+  .bohnanza-dice-meta > span {
+    flex: 0 1 auto;
+    min-height: 25px;
+    padding: 3px 5px;
+    font-size: 8px;
+  }
+
+  .bohnanza-dice-meta > span:first-child {
+    display: none;
+  }
+
+  .bohnanza-dice-status {
+    padding: 6px 8px;
+    border-left-width: 3px;
+    border-radius: 8px;
+    font-size: 11px;
+    line-height: 1.25;
+  }
+
+  .bohnanza-dice-workspace {
+    display: block;
+  }
+
+  .bohnanza-dice-field-card {
+    display: none;
+  }
+
+  .bohnanza-dice-dice-card,
+  .bohnanza-dice-player-section,
+  .bohnanza-dice-activity-card {
+    gap: 6px;
+    padding: 7px;
+    border-radius: 11px;
+  }
+
+  .bohnanza-dice-dice-card .bohnanza-dice-eyebrow {
+    display: none;
+  }
+
+  .bohnanza-dice-section-heading {
+    align-items: center;
+    gap: 6px;
+  }
+
+  .bohnanza-dice-section-heading h3 {
+    font-size: 15px;
+  }
+
+  .bohnanza-dice-repeat-badge {
+    padding: 3px 6px;
+    font-size: 9px !important;
+  }
+
+  .bohnanza-dice-tray {
+    gap: 4px;
+    min-height: 60px;
+    padding: 4px;
+    border-radius: 9px;
+  }
+
+  button.bohnanza-dice-die,
+  .bohnanza-dice-empty-slot {
+    min-height: 50px;
+    padding: 3px 1px;
+    border-radius: 9px;
+  }
+
+  .bohnanza-dice-empty-message {
+    min-height: 50px;
+    padding: 4px;
+    font-size: 10px;
+  }
+
+  .bohnanza-dice-die .bohnanza-dice-bean {
+    min-width: 29px;
+    min-height: 29px;
+    padding: 2px;
+  }
+
+  .bohnanza-dice-die .bohnanza-dice-bean-emoji {
+    font-size: 13px;
+  }
+
+  .bohnanza-dice-die .bohnanza-dice-bean-key {
+    font-size: 7px;
+  }
+
+  .bohnanza-dice-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .bohnanza-dice-actions button:first-child {
+    grid-column: auto;
+  }
+
+  .bohnanza-dice-actions button,
+  .bohnanza-dice-harvest-actions button {
+    min-height: 44px;
+    padding: 5px 3px;
+    font-size: 11px;
+  }
+
+  .bohnanza-dice-harvest-dock {
+    gap: 6px;
+    padding: 8px;
+    border-radius: 11px;
+  }
+
+  .bohnanza-dice-harvest-dock .bohnanza-dice-eyebrow {
+    display: none;
+  }
+
+  .bohnanza-dice-harvest-dock h3 {
+    font-size: 14px;
+  }
+
+  .bohnanza-dice-harvest-dock p {
+    margin-top: 2px;
+    font-size: 10px;
+    line-height: 1.25;
+  }
+
+  .bohnanza-dice-player {
+    gap: 3px;
+    padding: 8px;
+  }
+
+  .bohnanza-dice-player.is-self {
+    order: -2;
+  }
+
+  .bohnanza-dice-player.is-active:not(.is-self) {
+    order: -1;
+  }
+
+  .bohnanza-dice-player-badges {
+    gap: 3px;
+    margin-top: 1px;
+  }
+
+  .bohnanza-dice-badge {
+    min-height: 18px;
+    padding: 2px 5px;
+  }
+
+  .bohnanza-dice-score {
+    flex-basis: 40px;
+    width: 40px;
+    height: 36px;
+  }
+
+  .bohnanza-dice-score strong {
+    font-size: 14px;
+  }
+
+  .bohnanza-dice-score span {
+    font-size: 6px;
   }
 }
 
