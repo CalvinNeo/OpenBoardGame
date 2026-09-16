@@ -41,7 +41,7 @@
     "scoring_rule": {
       "kind": "metric_ladder",
       "metric": "large_animal_count",
-      "definition_zh": "大型动物指需要尺寸4或5普通围栏的动物；特殊围栏里的动物不计。"
+      "definition_zh": "大型动物按卡牌上印刷的标准围栏需求判断：尺寸4或5；实际放入特殊围栏仍然计数。"
     },
     "maximum_conservation": 4,
     "source_line": 266

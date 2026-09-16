@@ -1,6 +1,7 @@
 let currentRaView = null;
 let selectedRaAuctionTiles = new Set();
 let selectedRaDisasterTiles = new Set();
+let currentRaDisasterKey = null;
 let raExplainMode = false;
 let raSuppressNextClick = false;
 
@@ -47,7 +48,8 @@ const RA_HELP_HTML = `
     <p>Ra is played across 3 epochs. On your turn, draw a tile, spend God tiles to take auction tiles, or invoke Ra to start an auction.</p>
     <p>☀️ Ra tiles advance the Ra track and force an auction. If the Ra track fills, the epoch ends immediately and auction tiles are discarded.</p>
     <p>In an auction, each player gets one chance to pass or bid one ready sun disk higher than the current bid. The winner takes all auction tiles and swaps the bid disk with the center disk, which comes back spent.</p>
-    <p>Disasters force the winner to discard up to 2 matching tiles. Epoch scoring pauses until every player clicks Next Round.</p>
+    <p>Disasters force the winner to discard up to 2 matching tiles: War → Pharaohs, Drought → Rivers, Funeral → Civilizations, and Earthquake → Monuments. The disaster panel shows only legal targets and suggests a low-loss set.</p>
+    <p>Epoch scoring pauses until every player clicks Next Round.</p>
   </div>
 `;
 
@@ -100,6 +102,11 @@ const RA_DYNAMIC_EXPLANATIONS = {
     description:
       "Select this tile as a discard target for the pending disaster. War hits Pharaohs, Drought hits rivers, Funeral hits civilizations, and Earthquake hits monuments.",
   },
+  disasterSuggestion: {
+    name: "Select Suggestion",
+    description:
+      "Select the shown low-loss discard set. The suggestion protects your current scoring patterns, but future draws can still change the best strategy.",
+  },
 };
 
 const RA_TILE_META = {
@@ -150,6 +157,29 @@ const RA_EPOCH_DISCARD_KINDS = new Set([
   "art",
 ]);
 
+const RA_DISASTER_TARGET_KINDS = {
+  war: new Set(["pharaoh"]),
+  drought: new Set(["nile", "flood"]),
+  funeral: new Set(["astronomy", "agriculture", "writing", "religion", "art"]),
+  earthquake: new Set([
+    "fortress",
+    "obelisk",
+    "palace",
+    "pyramid",
+    "sphinx",
+    "statue",
+    "temple",
+    "step_pyramid",
+  ]),
+};
+
+const RA_DISASTER_TARGET_LABELS = {
+  war: "Pharaoh",
+  drought: "River",
+  funeral: "Civilization",
+  earthquake: "Monument",
+};
+
 function raTileLabel(tile) {
   const meta = RA_TILE_META[tile && tile.kind] || ["■", (tile && tile.label) || "Tile"];
   const groupLabel = {
@@ -191,6 +221,91 @@ function raYourPlayer() {
   return raFindPlayer(currentRaView, currentRaView.you);
 }
 
+function raDisasterKey(view) {
+  const pending = view && view.pending_disaster;
+  if (!pending || view.phase !== "disaster") {
+    return null;
+  }
+  const disasters = (pending.disasters || []).map((tile) => tile.id || tile.kind).join(",");
+  return `${pending.player_id || "-"}|${disasters}|${JSON.stringify(pending.requirements || {})}`;
+}
+
+function raFallbackDisasterGuide(view) {
+  const pending = view && view.pending_disaster;
+  const player = view ? raFindPlayer(view, pending && pending.player_id) : null;
+  if (!pending || !player) {
+    return null;
+  }
+  const groups = Object.entries(pending.requirements || {})
+    .filter(([, count]) => Number(count) > 0)
+    .map(([disaster, count]) => {
+      const targets = RA_DISASTER_TARGET_KINDS[disaster] || new Set();
+      const eligible = (player.tiles || []).filter((tile) => targets.has(tile.kind));
+      const required = Number(count) || 0;
+      return {
+        disaster,
+        required,
+        target_label: RA_DISASTER_TARGET_LABELS[disaster] || "matching",
+        target_kinds: Array.from(targets),
+        eligible_tile_ids: eligible.map((tile) => tile.id),
+        recommended_tile_ids: eligible.slice(0, required).map((tile) => tile.id),
+        recommendation: "Select the required number of affected tiles.",
+        alternative_count: 0,
+      };
+    });
+  return {
+    required_total: groups.reduce((total, group) => total + group.required, 0),
+    eligible_tile_ids: groups.flatMap((group) => group.eligible_tile_ids),
+    recommended_tile_ids: groups.flatMap((group) => group.recommended_tile_ids),
+    groups,
+  };
+}
+
+function raDisasterGuide(view) {
+  const pending = view && view.pending_disaster;
+  if (!pending) {
+    return null;
+  }
+  const guide = pending.guide;
+  if (guide && Array.isArray(guide.groups)) {
+    return guide;
+  }
+  return raFallbackDisasterGuide(view);
+}
+
+function raDisasterSelectionStatus(view) {
+  const guide = raDisasterGuide(view);
+  if (!guide || !Array.isArray(guide.groups) || !guide.groups.length) {
+    return { valid: false, selected: 0, required: 0, groups: [] };
+  }
+  const eligible = new Set(guide.eligible_tile_ids || []);
+  const groupStatuses = guide.groups.map((group) => {
+    const groupIds = new Set(group.eligible_tile_ids || []);
+    const selected = Array.from(selectedRaDisasterTiles).filter((tileId) => groupIds.has(tileId)).length;
+    return { group, selected, required: Number(group.required) || 0 };
+  });
+  const selected = Array.from(selectedRaDisasterTiles).filter((tileId) => eligible.has(tileId)).length;
+  const required = Number(guide.required_total) || groupStatuses.reduce((total, item) => total + item.required, 0);
+  const containsOnlyEligible = Array.from(selectedRaDisasterTiles).every((tileId) => eligible.has(tileId));
+  return {
+    valid:
+      containsOnlyEligible &&
+      selected === required &&
+      groupStatuses.every((item) => item.selected === item.required),
+    selected,
+    required,
+    groups: groupStatuses,
+  };
+}
+
+function raSyncDisasterSelection(view) {
+  const nextKey = raDisasterKey(view);
+  if (nextKey !== currentRaDisasterKey) {
+    selectedRaDisasterTiles.clear();
+    currentRaDisasterKey = nextKey;
+  }
+}
+
 function clearRaSelections() {
   selectedRaAuctionTiles.clear();
   selectedRaDisasterTiles.clear();
@@ -198,6 +313,7 @@ function clearRaSelections() {
 
 function clearRaState() {
   currentRaView = null;
+  currentRaDisasterKey = null;
   clearRaSelections();
   exitRaExplainMode();
   [
@@ -354,13 +470,20 @@ function updateRaButtons() {
     raPlayGodBtn.classList.toggle("action-allowed", allowed);
   }
   if (raResolveDisasterBtn) {
-    const allowed = raLegal("resolve_disaster");
+    const status = raDisasterSelectionStatus(currentRaView);
+    const allowed = raLegal("resolve_disaster") && status.valid;
     raResolveDisasterBtn.disabled = !allowed;
     raResolveDisasterBtn.classList.toggle("action-allowed", allowed);
+    raResolveDisasterBtn.textContent = status.required
+      ? `Discard ${status.selected} / ${status.required}`
+      : "Resolve Disaster";
   }
   if (raSelectionLabel) {
     const auction = selectedRaAuctionTiles.size ? `${selectedRaAuctionTiles.size} auction tile(s)` : "";
-    const disaster = selectedRaDisasterTiles.size ? `${selectedRaDisasterTiles.size} discard tile(s)` : "";
+    const disasterStatus = raDisasterSelectionStatus(currentRaView);
+    const disaster = disasterStatus.required
+      ? `${disasterStatus.selected}/${disasterStatus.required} discard tile(s)`
+      : "";
     raSelectionLabel.textContent = `Selected: ${[auction, disaster].filter(Boolean).join(" · ") || "-"}`;
   }
 }
@@ -392,8 +515,20 @@ function makeRaTile(tile, options = {}) {
   family.textContent = RA_TILE_GROUP_LABELS[group] || "Tile";
   copy.append(name, family);
   chip.append(glyph, copy);
+  if (options.badge) {
+    const badge = document.createElement("span");
+    badge.className = "ra-tile-badge";
+    badge.textContent = options.badge;
+    chip.appendChild(badge);
+  }
   if (options.selected) {
     chip.classList.add("selected");
+  }
+  if (options.recommended) {
+    chip.classList.add("recommended");
+  }
+  if (options.locked) {
+    chip.classList.add("choice-locked");
   }
   if (options.clickable) {
     chip.setAttribute("aria-pressed", String(Boolean(options.selected)));
@@ -512,31 +647,133 @@ function renderRaDisaster(view) {
   const visible = view.phase === "disaster" && pending && pending.player_id === view.you;
   raDisasterBox.classList.toggle("hidden", !visible);
   raDisasterBox.setAttribute("aria-hidden", (!visible).toString());
+  raDisasterInfo.innerHTML = "";
   raDisasterChoices.innerHTML = "";
   if (!visible) {
     return;
   }
-  const requirements = pending.requirements || {};
-  const requirementText = Object.entries(requirements)
-    .map(([kind, count]) => `${RA_TILE_META[kind] ? RA_TILE_META[kind][1] : kind}: ${count}`)
-    .join(" · ");
-  raDisasterInfo.textContent = `Choose exact discard targets · ${requirementText}`;
+  const guide = raDisasterGuide(view);
   const you = raYourPlayer();
-  (you && you.tiles ? you.tiles : []).forEach((tile) => {
-    const chip = makeRaTile(tile, {
-      clickable: true,
-      explainKey: "disasterTile",
-      selected: selectedRaDisasterTiles.has(tile.id),
-      onClick: () => {
-        if (selectedRaDisasterTiles.has(tile.id)) {
-          selectedRaDisasterTiles.delete(tile.id);
-        } else {
-          selectedRaDisasterTiles.add(tile.id);
-        }
-        renderRaGameState({ view: currentRaView, events: [] });
-      },
+  if (!guide || !you) {
+    raDisasterInfo.textContent = "Choose the exact number of matching discard targets.";
+    return;
+  }
+
+  const tilesById = new Map((you.tiles || []).map((tile) => [tile.id, tile]));
+  const status = raDisasterSelectionStatus(view);
+  const intro = document.createElement("div");
+  intro.className = "ra-disaster-intro";
+  intro.textContent = "Only affected tiles are shown. Choose the exact amount, or use the low-loss suggestion.";
+  raDisasterInfo.appendChild(intro);
+
+  (guide.groups || []).forEach((group, index) => {
+    const groupStatus = status.groups[index] || {
+      selected: 0,
+      required: Number(group.required) || 0,
+    };
+    const disasterMeta = RA_TILE_META[group.disaster] || ["⚠️", group.disaster || "Disaster"];
+    const guideCard = document.createElement("div");
+    guideCard.className = "ra-disaster-guide-card";
+
+    const heading = document.createElement("div");
+    heading.className = "ra-disaster-guide-heading";
+    const title = document.createElement("strong");
+    title.textContent = `${disasterMeta[0]} ${disasterMeta[1]}`;
+    const progress = document.createElement("span");
+    progress.className = "ra-disaster-progress";
+    progress.classList.toggle("complete", groupStatus.selected === groupStatus.required);
+    progress.setAttribute("aria-live", "polite");
+    progress.textContent = `${groupStatus.selected} / ${groupStatus.required} selected`;
+    heading.append(title, progress);
+
+    const rule = document.createElement("div");
+    rule.className = "ra-disaster-rule";
+    const targetLabel = group.target_label || RA_DISASTER_TARGET_LABELS[group.disaster] || "matching";
+    rule.textContent = `Discard ${groupStatus.required} ${targetLabel} tile${groupStatus.required === 1 ? "" : "s"}.`;
+    guideCard.append(heading, rule);
+
+    const recommendationIds = group.recommended_tile_ids || [];
+    const recommendationNames = recommendationIds
+      .map((tileId) => tilesById.get(tileId))
+      .filter(Boolean)
+      .map((tile) => (RA_TILE_META[tile.kind] || ["■", tile.label || "Tile"])[1]);
+    if (recommendationNames.length) {
+      const recommendation = document.createElement("div");
+      recommendation.className = "ra-disaster-recommendation";
+      const alternatives = Number(group.alternative_count) || 0;
+      recommendation.textContent = `💡 Suggested: ${recommendationNames.join(" + ")}. ${group.recommendation || "This is a low-loss choice for your current collection."}${
+        alternatives ? ` ${alternatives} other type-pair${alternatives === 1 ? "" : "s"} tie.` : ""
+      }`;
+      guideCard.appendChild(recommendation);
+    }
+    raDisasterInfo.appendChild(guideCard);
+  });
+
+  const suggestedIds = (guide.recommended_tile_ids || []).filter((tileId) => tilesById.has(tileId));
+  if (suggestedIds.length === status.required && status.required > 0) {
+    const suggestionRow = document.createElement("div");
+    suggestionRow.className = "ra-disaster-suggestion-row";
+    const suggestionButton = document.createElement("button");
+    suggestionButton.type = "button";
+    suggestionButton.className = "ra-disaster-suggestion-btn";
+    suggestionButton.dataset.raExplainKey = "disasterSuggestion";
+    const suggestionSelected =
+      selectedRaDisasterTiles.size === suggestedIds.length &&
+      suggestedIds.every((tileId) => selectedRaDisasterTiles.has(tileId));
+    suggestionButton.textContent = suggestionSelected ? "✓ Suggestion selected" : "✨ Select suggestion";
+    suggestionButton.classList.toggle("has-explanation", raExplainMode);
+    suggestionButton.addEventListener("click", () => {
+      selectedRaDisasterTiles.clear();
+      suggestedIds.forEach((tileId) => selectedRaDisasterTiles.add(tileId));
+      renderRaGameState({ view: currentRaView, events: [] });
     });
-    raDisasterChoices.appendChild(chip);
+    suggestionRow.appendChild(suggestionButton);
+    raDisasterInfo.appendChild(suggestionRow);
+  }
+
+  (guide.groups || []).forEach((group, index) => {
+    const groupStatus = status.groups[index] || {
+      selected: 0,
+      required: Number(group.required) || 0,
+    };
+    const targetLabel = group.target_label || RA_DISASTER_TARGET_LABELS[group.disaster] || "Affected";
+    const choiceGroup = document.createElement("div");
+    choiceGroup.className = "ra-disaster-choice-group";
+    const choiceTitle = document.createElement("div");
+    choiceTitle.className = "ra-disaster-choice-title";
+    choiceTitle.textContent = `Affected ${targetLabel} tiles`;
+    const choiceList = document.createElement("div");
+    choiceList.className = "ra-disaster-choice-list";
+    const recommended = new Set(group.recommended_tile_ids || []);
+
+    (group.eligible_tile_ids || []).forEach((tileId) => {
+      const tile = tilesById.get(tileId);
+      if (!tile) {
+        return;
+      }
+      const selected = selectedRaDisasterTiles.has(tile.id);
+      const locked = !selected && groupStatus.selected >= groupStatus.required;
+      const suggested = recommended.has(tile.id);
+      const chip = makeRaTile(tile, {
+        clickable: !locked,
+        explainKey: "disasterTile",
+        selected,
+        recommended: suggested,
+        locked,
+        badge: suggested ? "Suggested" : "",
+        onClick: () => {
+          if (selectedRaDisasterTiles.has(tile.id)) {
+            selectedRaDisasterTiles.delete(tile.id);
+          } else {
+            selectedRaDisasterTiles.add(tile.id);
+          }
+          renderRaGameState({ view: currentRaView, events: [] });
+        },
+      });
+      choiceList.appendChild(chip);
+    });
+    choiceGroup.append(choiceTitle, choiceList);
+    raDisasterChoices.appendChild(choiceGroup);
   });
 }
 
@@ -674,6 +911,7 @@ function renderRaPlayers(view) {
 function renderRaGameState(data) {
   const view = data.view;
   currentRaView = view;
+  raSyncDisasterSelection(view);
   if (currentGameType !== "ra") {
     currentGameType = "ra";
     setGamePanelVisibility("ra");

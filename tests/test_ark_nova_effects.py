@@ -159,6 +159,28 @@ class ArkNovaAnimalAbilityTests(unittest.TestCase):
         result = effects.execute_ability("hunter", context(state, "403"), {"reveal_count": 2})
         self.assertEqual(result.pending_choice["minimum"], 1)
         self.assertFalse(result.pending_choice["optional"])
+        resumed_context = context(state, "403", pending_choice=result.pending_choice)
+        with self.assertRaises(ValueError):
+            effects.execute_ability(
+                "hunter", resumed_context, {"reveal_count": 2}, {"selected_ids": []},
+            )
+
+    def test_granted_actions_move_normally_and_allow_x_tokens(self) -> None:
+        state = game_state()
+        specific = effects.execute_ability("action_cards", context(state, "401", "after_action"))
+        self.assertTrue(specific.events[0]["move_after"])
+        self.assertTrue(specific.events[0]["allow_x_alternative"])
+
+        pending = effects.execute_ability("determination", context(state, "505", "after_action"))
+        option_ids = {option["id"] for option in pending.pending_choice["options"]}
+        self.assertIn("animals", option_ids)
+        self.assertIn("gain_x", option_ids)
+        resolved = effects.execute_ability(
+            "determination", context(state, "505", "after_action"),
+            choice={"selected_ids": ["animals"]},
+        )
+        self.assertTrue(resolved.events[0]["move_after"])
+        self.assertTrue(resolved.events[0]["allow_x_alternative"])
 
     def test_free_build_and_attacks_resolve_to_structured_core_commands(self) -> None:
         state = game_state()
@@ -201,6 +223,19 @@ class ArkNovaSponsorEffectTests(unittest.TestCase):
         )
         self.assertEqual(state["players"]["p1"]["reputation"], 2)
         self.assertEqual(triggered.events[0]["amount"], 2)
+
+    def test_science_lab_only_offers_cards_in_reputation_range(self) -> None:
+        state = game_state()
+        state["deck"] = ["405"]
+        state["display"] = ["401", "402", "403", "404", "406", "407"]
+        result = effects.execute_sponsor_effect("201", "201-glossary-1", context(state, "201"))
+        option_ids = {option["id"] for option in result.pending_choice["options"]}
+        self.assertEqual(option_ids, {"deck", "display:401"})
+        with self.assertRaises(ValueError):
+            effects.execute_sponsor_effect(
+                "201", "201-glossary-1", context(state, "201"),
+                {"selected_ids": ["display:407"]},
+            )
 
     def test_no_text_sponsor_still_executes_printed_rewards(self) -> None:
         state = game_state()
@@ -399,6 +434,13 @@ class ArkNovaProjectAndScoringTests(unittest.TestCase):
         player = state["players"]["p1"]
         player["played_animals"] = ["401", "402"]
         self.assertEqual(effects.score_final_card("001", context(state, "001", "endgame")), 2)
+
+        player["played_animals"] = ["469"]
+        player["animal_records"] = [{
+            "card_id": "469", "enclosure_id": "reptile-house-1",
+            "enclosure_type": "reptile_house",
+        }]
+        self.assertEqual(effects.score_final_card("001", context(state, "001", "endgame")), 1)
 
         player["map"]["conditions"] = {
             "all_water_spaces_connected": True,

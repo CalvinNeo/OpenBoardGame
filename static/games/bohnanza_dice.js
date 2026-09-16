@@ -132,7 +132,7 @@
       <p>Once per turn, before saving, the active player may repeat the entire current roll. Previously saved dice stay in the field. A turn cannot end early.</p>
       <h3>Orders</h3>
       <p>Complete orders from <strong>Order 1 at the bottom</strong> upward and stop at the first one that does not match. On each row, every bean tile separated by <strong>+</strong> needs a different die. A <strong>ONE OF</strong> tile needs one die showing any bean inside that tile. When two complete branches are separated by <strong>OR</strong>, either whole branch works. The same result can then advance several consecutive orders.</p>
-      <p>The status badge says <strong>NEXT</strong>, <strong>LATER</strong>, <strong>DONE</strong>, or <strong>PREVIEW</strong>. The 🎲5 percentage is the exact chance that a fresh roll of all five dice matches that row by itself; it is reference information, not a score.</p>
+      <p>The status badge says <strong>NEXT</strong>, <strong>LATER</strong>, <strong>DONE</strong>, or <strong>PRE</strong>. The 🎲5 percentage is the exact chance that a fresh roll of all five dice matches that row by itself; it is reference information, not a score.</p>
       <h3>Harvesting</h3>
       <p>At 3 / 4 / 5 completed orders, you may harvest 1 / 2 / 3 coins. Your current card becomes the first coin; extra reward cards come from the deck. The cover becomes current, a new cover is drawn, and the new card immediately checks the dice context when the rules allow it.</p>
       <p>Choose <strong>Keep Growing</strong> to retain progress and skip only the current checkpoint. It never triggers a roll. Harvest choices pause the dice flow and resolve in seat order, so network speed never decides who can use a roll.</p>
@@ -219,6 +219,22 @@
       .join(" OR ");
   }
 
+  function bohnanzaDiceOrderShortText(order) {
+    return (order.alternatives || [])
+      .map((alternative) =>
+        (alternative.slots || [])
+          .map((slot) => {
+            const allowed = Array.isArray(slot && slot.allowed) ? slot.allowed : [];
+            const labels = allowed.map((beanId) => (BOHNANZA_DICE_BEANS[beanId] || {}).label || beanId);
+            if (allowed.length === Object.keys(BOHNANZA_DICE_BEANS).length) return "Any Bean";
+            if (labels.length === 1) return labels[0];
+            return `(${labels.join(" / ")})`;
+          })
+          .join(" + ")
+      )
+      .join(" OR ");
+  }
+
   function bohnanzaDiceOrderVisual(order) {
     const visual = document.createElement("div");
     visual.className = "bohnanza-dice-order-visual";
@@ -273,7 +289,7 @@
     if (kind === "cover") {
       return {
         key: "preview",
-        label: "PREVIEW",
+        label: "PRE",
         detail: "This row belongs to the cover card. It cannot gain progress until this card becomes current after a harvest.",
       };
     }
@@ -292,10 +308,17 @@
 
   function bohnanzaDiceOrderExplanation(order, index, state) {
     const percent = Number(order.first_roll_percent);
+    const hasChoices = (order.alternatives || []).some((alternative) =>
+      (alternative.slots || []).some((slot) => Array.isArray(slot.allowed) && slot.allowed.length > 1)
+    );
+    const hasBranches = (order.alternatives || []).length > 1;
+    const symbols = ["Each + uses a different die."];
+    if (hasChoices) symbols.push("/ means one listed face.");
+    if (hasBranches) symbols.push("OR means either complete group.");
     const chance = Number.isFinite(percent)
-      ? `A fresh roll of all five dice matches this row about ${percent.toFixed(percent < 10 ? 1 : 0)}% of the time.`
-      : "No fresh-roll probability is available for this row.";
-    return `${state.detail} To complete Order ${index + 1}, match ${bohnanzaDiceOrderText(order)}. Every part joined by plus needs a different die. Complete either whole branch around OR. ${chance} After a row succeeds, the same dice result may check the next order.`;
+      ? `🎲5 ${percent.toFixed(percent < 10 ? 1 : 0)}% is the chance on a fresh five-die roll.`
+      : "Fresh-roll chance unavailable.";
+    return `${state.detail} Need: ${bohnanzaDiceOrderShortText(order)}. ${symbols.join(" ")} ${chance} The same result may continue to the next order.`;
   }
 
   function bohnanzaDiceCard(card, completedCount, kind) {

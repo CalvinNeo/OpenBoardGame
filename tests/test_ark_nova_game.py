@@ -11,6 +11,7 @@ from game.ark_nova import (
     MAP_REWARDS,
     SPONSOR_CARDS,
     _all_passive_sponsor_refs,
+    _enqueue_card_effects,
     _enclosure_for_animal,
     _find_placement,
     _matches_footprint,
@@ -270,6 +271,94 @@ class ArkNovaGameTests(unittest.TestCase):
         self.assertEqual(player["reputation"], before_reputation + 2)
         self.assertEqual(player["tags"]["science"], 1)
 
+    def test_association_tiles_trigger_icons_and_second_tiles_upgrade_an_action(self) -> None:
+        state = self.make_state()
+        player = state["players"]["p1"]
+        player["played_sponsors"] = ["202"]
+        self.set_slot(state, "p1", "association", 4)
+        _, error = ArkNovaGame.apply_action(
+            state,
+            "p1",
+            {
+                "type": "association",
+                "tasks": [{"task": "university", "university_id": "university_science"}],
+            },
+        )
+        self.assertIsNone(error)
+        self.assertEqual(state["players"]["p1"]["tags"]["science"], 3)
+        self.assertEqual(state["players"]["p1"]["reputation"], 2)
+
+        state = self.make_state()
+        player = state["players"]["p1"]
+        player["universities"] = ["university_hand_limit"]
+        state["association_supply"]["universities"].remove("university_hand_limit")
+        self.set_slot(state, "p1", "association", 4)
+        _, error = ArkNovaGame.apply_action(
+            state,
+            "p1",
+            {
+                "type": "association",
+                "tasks": [{"task": "university", "university_id": "university_science"}],
+            },
+        )
+        self.assertIsNone(error)
+        pending = state["pending_choice"]
+        self.assertEqual(pending["type"], "upgrade_action")
+        _, error = ArkNovaGame.apply_action(
+            state,
+            "p1",
+            {"type": "resolve_choice", "choice_id": pending["choice_id"], "selection": "cards"},
+        )
+        self.assertIsNone(error)
+        self.assertTrue(state["players"]["p1"]["action_cards"]["cards"]["upgraded"])
+
+        state = self.make_state()
+        player = state["players"]["p1"]
+        player["partner_zoos"] = ["africa"]
+        state["association_supply"]["partner_zoos"].remove("africa")
+        self.set_slot(state, "p1", "association", 3)
+        _, error = ArkNovaGame.apply_action(
+            state,
+            "p1",
+            {"type": "association", "tasks": [{"task": "partner_zoo", "continent": "asia"}]},
+        )
+        self.assertIsNone(error)
+        self.assertEqual(state["pending_choice"]["type"], "upgrade_action")
+
+    def test_reputation_track_gate_and_overflow_are_applied_to_university_rewards(self) -> None:
+        state = self.make_state()
+        player = state["players"]["p1"]
+        player["reputation"] = 9
+        self.set_slot(state, "p1", "association", 4)
+        _, error = ArkNovaGame.apply_action(
+            state,
+            "p1",
+            {
+                "type": "association",
+                "tasks": [{"task": "university", "university_id": "university_reputation"}],
+            },
+        )
+        self.assertIsNone(error)
+        self.assertEqual(state["players"]["p1"]["reputation"], 9)
+
+        state = self.make_state()
+        player = state["players"]["p1"]
+        player["action_cards"]["cards"]["upgraded"] = True
+        player["reputation"] = 15
+        before_appeal = player["appeal"]
+        self.set_slot(state, "p1", "association", 4)
+        _, error = ArkNovaGame.apply_action(
+            state,
+            "p1",
+            {
+                "type": "association",
+                "tasks": [{"task": "university", "university_id": "university_reputation"}],
+            },
+        )
+        self.assertIsNone(error)
+        self.assertEqual(state["players"]["p1"]["reputation"], 15)
+        self.assertEqual(state["players"]["p1"]["appeal"], before_appeal + 2)
+
     def test_two_player_first_donation_costs_two(self) -> None:
         state = self.make_state()
         player = state["players"]["p1"]
@@ -350,6 +439,7 @@ class ArkNovaGameTests(unittest.TestCase):
             "enclosure_size": 5,
             "capacity_used": 2,
         })
+        player["tucked_cards"] = {"490": ["202"]}
         player["map"]["buildings"].append({
             "id": "reptile-house-1",
             "building_type": "reptile_house",
@@ -381,6 +471,29 @@ class ArkNovaGameTests(unittest.TestCase):
         self.assertNotIn("490", player["played_animals"])
         self.assertEqual(player["map"]["buildings"][0]["used_capacity"], 0)
         self.assertEqual(player["supported_projects"][-1]["position"], 3)
+        self.assertIn("202", state["discard"])
+
+    def test_snapping_two_refills_between_the_two_mandatory_choices(self) -> None:
+        state = self.make_state()
+        state["display"] = ["401", "402", "403", "404", "405", "406"]
+        state["deck"] = ["407"]
+        events = []
+        _enqueue_card_effects(state, [{
+            "type": "ability", "ability_id": "snapping_2", "player_id": "p1",
+            "card_id": "469", "timing": "immediate", "params": {}, "action": "animals",
+            "metadata": {},
+        }], events)
+        first = state["pending_choice"]
+        self.assertEqual((first["min"], first["max"]), (1, 1))
+        _, error = ArkNovaGame.apply_action(
+            state,
+            "p1",
+            {"type": "resolve_choice", "choice_id": first["choice_id"], "selection": "401"},
+        )
+        self.assertIsNone(error)
+        second = state["pending_choice"]
+        self.assertEqual((second["min"], second["max"]), (1, 1))
+        self.assertIn("407", [option["value"] for option in second["options"]])
 
     def test_double_predator_icon_queues_spotted_hyena_twice(self) -> None:
         state = self.make_state()

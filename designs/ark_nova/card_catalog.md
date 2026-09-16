@@ -27,7 +27,7 @@
 |---|---|---|---|---|---|
 | `sprint` | 疾跑 / Sprint | immediate | draw_cards | 从牌库抽取N张牌。 | — |
 | `pack` | 群居 / Pack | immediate | scaling_reward | 按自己动物园中的食肉类图标数，每个获得1吸引力；本牌图标也计入。 | — |
-| `hunter` | 狩猎 / Hunter | immediate | reveal_and_choose | 展示牌库顶N张牌，至多保留其中1张动物牌，其余弃掉。 | 若没有动物牌，全部弃掉。 |
+| `hunter` | 狩猎 / Hunter | immediate | reveal_and_choose | 展示牌库顶N张牌；若其中有动物牌，必须保留1张动物牌，其余弃掉。 | 若没有动物牌，全部弃掉。 |
 | `clever` | 机灵 / Clever | after_action | reposition_action | 完成整个动物行动后，可将任意1张行动牌移到槽位1。 | — |
 | `boost_association` | 推动：协会 / Boost: Association | after_action | reposition_action | 完成动物行动后，可将协会行动牌移到槽位1或5。 | — |
 | `boost_building` | 推动：建造 / Boost: Build | after_action | reposition_action | 完成动物行动后，可将建造行动牌移到槽位1或5。 | — |
@@ -67,7 +67,7 @@
 | `posturing` | 姿态 / Posturing | immediate | free_build | 最多N次免费放置1个贩售亭或休憩亭，仍遵守通常放置规则。 | — |
 | `perception_2` | 洞察力2 / Perception 2 | immediate | draw_and_keep | 从牌库抽2张，保留1张并弃1张。 | — |
 | `perception_4` | 洞察力4 / Perception 4 | immediate | draw_and_keep | 从牌库抽4张，保留2张并弃2张。 | — |
-| `determination` | 果断 / Determination | after_action | extra_any_action | 完成动物行动后，任选另一张行动牌正常执行一次，并按通常规则移动。 | 与指定的“行动：X”不同，果断允许选择获得X标记的替代行动。 |
+| `determination` | 果断 / Determination | after_action | extra_any_action | 完成动物行动后，任选一个行动正常执行一次，并按通常规则移动；也可以执行获得X标记行动。 | 可以再次选择动物行动；与指定的“行动：X”不同，果断也允许选择获得X标记行动。 |
 | `peacocking` | 炫耀 / Peacocking | immediate | free_special_enclosure | 如可能，免费放置大型鸟舍；无需建造行动II，但仍遵守放置规则。 | — |
 | `petting_zoo_animal` | 萌宠动物 / Petting Zoo Animal | immediate | scaling_reward | 按自己园内萌宠类图标总数，每个获得3吸引力；因此第1/2/3只分别令总收益增加3/6/9。 | 只能拥有1座萌宠馆，因此通常最多容纳3只。；萌宠动物也算小型动物。 |
 
@@ -311,16 +311,16 @@
 | 110 | 食肉类<br>PREDATORS | base / predator | 5 -> 保育+5（食肉类）；4 -> 保育+4（食肉类）；2 -> 保育+2（食肉类） | — |
 | 111 | 食草类<br>HERBIVORES | base / herbivore | 5 -> 保育+5（食草类）；4 -> 保育+4（食草类）；2 -> 保育+2（食草类） | — |
 | 112 | 鸟类<br>BIRDS | base / bird | 5 -> 保育+5（鸟类）；4 -> 保育+4（鸟类）；2 -> 保育+2（鸟类） | — |
-| 113 | 巴伐利亚森林国家公园<br>BAVARIAN FOREST NATIONAL PARK | release / europe | 围栏尺寸5 -> 保育+5；围栏尺寸4 -> 保育+4；围栏尺寸3 -> 保育+3 | reputation +1；放归动物的已占用围栏尺寸须与奖励格完全相同 |
-| 114 | 优胜美地国家公园<br>YOSEMITE NATIONAL PARK | release / americas | 围栏尺寸5 -> 保育+5；围栏尺寸4 -> 保育+4；围栏尺寸3 -> 保育+3 | reputation +1；放归动物的已占用围栏尺寸须与奖励格完全相同 |
-| 115 | 安通国家公园<br>ANGTHONG NATIONAL PARK | release / asia | 围栏尺寸5 -> 保育+5；围栏尺寸4 -> 保育+4；围栏尺寸3 -> 保育+3 | reputation +1；放归动物的已占用围栏尺寸须与奖励格完全相同 |
-| 116 | 塞伦盖蒂国家公园<br>SERENGETI NATIONAL PARK | release / africa | 围栏尺寸5 -> 保育+5；围栏尺寸4 -> 保育+4；围栏尺寸3 -> 保育+3 | reputation +1；放归动物的已占用围栏尺寸须与奖励格完全相同 |
-| 117 | 蓝山国家公园<br>BLUE MOUNTAINS NATIONAL PARK | release / australia | 围栏尺寸5 -> 保育+5；围栏尺寸4 -> 保育+4；围栏尺寸3 -> 保育+3 | reputation +1；放归动物的已占用围栏尺寸须与奖励格完全相同 |
-| 118 | 热带大草原<br>SAVANNA | release / predator | 围栏尺寸5 -> 保育+5；围栏尺寸4 -> 保育+4；围栏尺寸3 -> 保育+3 | reputation +1；放归动物的已占用围栏尺寸须与奖励格完全相同 |
-| 119 | 低矮山脉<br>LOW MOUNTAIN RANGE | release / bird | 围栏尺寸5 -> 保育+5；围栏尺寸4 -> 保育+4；围栏尺寸3 -> 保育+3 | reputation +1；放归动物的已占用围栏尺寸须与奖励格完全相同 |
-| 120 | 竹林<br>BAMBOO FOREST | release / herbivore | 围栏尺寸5 -> 保育+5；围栏尺寸4 -> 保育+4；围栏尺寸3 -> 保育+3 | reputation +1；放归动物的已占用围栏尺寸须与奖励格完全相同 |
-| 121 | 海蚀洞<br>SEA CAVE | release / reptile | 围栏尺寸5 -> 保育+5；围栏尺寸4 -> 保育+4；围栏尺寸3 -> 保育+3 | reputation +1；放归动物的已占用围栏尺寸须与奖励格完全相同 |
-| 122 | 丛林<br>JUNGLE | release / primate | 围栏尺寸5 -> 保育+5；围栏尺寸4 -> 保育+4；围栏尺寸3 -> 保育+3 | reputation +1；放归动物的已占用围栏尺寸须与奖励格完全相同 |
+| 113 | 巴伐利亚森林国家公园<br>BAVARIAN FOREST NATIONAL PARK | release / europe | 围栏尺寸5 -> 保育+5；围栏尺寸4 -> 保育+4；围栏尺寸3 -> 保育+3 | reputation +1；放归动物卡上印刷的标准围栏尺寸须与奖励格完全相同 |
+| 114 | 优胜美地国家公园<br>YOSEMITE NATIONAL PARK | release / americas | 围栏尺寸5 -> 保育+5；围栏尺寸4 -> 保育+4；围栏尺寸3 -> 保育+3 | reputation +1；放归动物卡上印刷的标准围栏尺寸须与奖励格完全相同 |
+| 115 | 安通国家公园<br>ANGTHONG NATIONAL PARK | release / asia | 围栏尺寸5 -> 保育+5；围栏尺寸4 -> 保育+4；围栏尺寸3 -> 保育+3 | reputation +1；放归动物卡上印刷的标准围栏尺寸须与奖励格完全相同 |
+| 116 | 塞伦盖蒂国家公园<br>SERENGETI NATIONAL PARK | release / africa | 围栏尺寸5 -> 保育+5；围栏尺寸4 -> 保育+4；围栏尺寸3 -> 保育+3 | reputation +1；放归动物卡上印刷的标准围栏尺寸须与奖励格完全相同 |
+| 117 | 蓝山国家公园<br>BLUE MOUNTAINS NATIONAL PARK | release / australia | 围栏尺寸5 -> 保育+5；围栏尺寸4 -> 保育+4；围栏尺寸3 -> 保育+3 | reputation +1；放归动物卡上印刷的标准围栏尺寸须与奖励格完全相同 |
+| 118 | 热带大草原<br>SAVANNA | release / predator | 围栏尺寸5 -> 保育+5；围栏尺寸4 -> 保育+4；围栏尺寸3 -> 保育+3 | reputation +1；放归动物卡上印刷的标准围栏尺寸须与奖励格完全相同 |
+| 119 | 低矮山脉<br>LOW MOUNTAIN RANGE | release / bird | 围栏尺寸5 -> 保育+5；围栏尺寸4 -> 保育+4；围栏尺寸3 -> 保育+3 | reputation +1；放归动物卡上印刷的标准围栏尺寸须与奖励格完全相同 |
+| 120 | 竹林<br>BAMBOO FOREST | release / herbivore | 围栏尺寸5 -> 保育+5；围栏尺寸4 -> 保育+4；围栏尺寸3 -> 保育+3 | reputation +1；放归动物卡上印刷的标准围栏尺寸须与奖励格完全相同 |
+| 121 | 海蚀洞<br>SEA CAVE | release / reptile | 围栏尺寸5 -> 保育+5；围栏尺寸4 -> 保育+4；围栏尺寸3 -> 保育+3 | reputation +1；放归动物卡上印刷的标准围栏尺寸须与奖励格完全相同 |
+| 122 | 丛林<br>JUNGLE | release / primate | 围栏尺寸5 -> 保育+5；围栏尺寸4 -> 保育+4；围栏尺寸3 -> 保育+3 | reputation +1；放归动物卡上印刷的标准围栏尺寸须与奖励格完全相同 |
 | 123 | 鸟类动物繁育计划<br>BIRD BREEDING PROGRAM | breeding / bird | 满足繁育条件 -> 保育+2、声望+2；满足繁育条件 -> 保育+1、声望+2；满足繁育条件 -> 保育+2 | —；动物标签匹配且有与其大洲相同的合作动物园 |
 | 124 | 食肉类动物繁育计划<br>PREDATOR BREEDING PROGRAM | breeding / predator | 满足繁育条件 -> 保育+2、声望+2；满足繁育条件 -> 保育+1、声望+2；满足繁育条件 -> 保育+2 | —；动物标签匹配且有与其大洲相同的合作动物园 |
 | 125 | 爬行类动物繁育计划<br>REPTILE BREEDING PROGRAM | breeding / reptile | 满足繁育条件 -> 保育+2、声望+2；满足繁育条件 -> 保育+1、声望+2；满足繁育条件 -> 保育+2 | —；动物标签匹配且有与其大洲相同的合作动物园 |

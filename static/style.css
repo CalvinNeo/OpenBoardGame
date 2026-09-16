@@ -3631,6 +3631,14 @@ body.dumb-questions-explain-mode .has-explanation {
 }
 
 @media (max-width: 640px) {
+  #sixNimmtPanel > .row {
+    flex-direction: row;
+    align-items: center;
+    gap: 4px 12px;
+    margin-bottom: 4px;
+    font-size: 13px;
+  }
+
   #sixNimmtPanel > h3 {
     margin: 10px 0 5px;
     font-size: 16px;
@@ -3695,6 +3703,32 @@ body.dumb-questions-explain-mode .has-explanation {
 
   #sixNimmtPanel .six-nimmt-card-danger {
     font-size: 14px;
+  }
+
+  #sixNimmtPanel .six-nimmt-hand {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+
+  #sixNimmtPanel .six-nimmt-hand .six-nimmt-card {
+    width: 100%;
+    min-width: 0;
+    height: 46px;
+    min-height: 46px;
+    padding: 3px 1px;
+  }
+
+  #sixNimmtPanel .six-nimmt-hand .six-nimmt-card-value {
+    font-size: 14px;
+    line-height: 1.05;
+  }
+
+  #sixNimmtPanel .six-nimmt-hand .six-nimmt-card-bulls {
+    gap: 0;
+    font-size: 10px;
+    line-height: 1;
   }
 }
 
