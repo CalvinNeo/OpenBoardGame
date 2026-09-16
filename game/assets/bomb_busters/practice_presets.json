@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "presets": [
+    {
+      "id": "short_practice",
+      "name": "Short Practice",
+      "description": "BLUE 1–6 only. No yellow or red wires.",
+      "blue_min": 1,
+      "blue_max": 6,
+      "copies_per_blue": 4,
+      "yellow_count": 0,
+      "red_count": 0,
+      "shared_equipment": false
+    },
+    {
+      "id": "standard_practice",
+      "name": "Standard Practice",
+      "description": "The full BLUE set with two yellow wires and one red wire.",
+      "blue_min": 1,
+      "blue_max": 12,
+      "copies_per_blue": 4,
+      "yellow_count": 2,
+      "red_count": 1,
+      "shared_equipment": false
+    },
+    {
+      "id": "high_risk_practice",
+      "name": "High Risk Practice",
+      "description": "The full BLUE set with four yellow wires and three red wires.",
+      "blue_min": 1,
+      "blue_max": 12,
+      "copies_per_blue": 4,
+      "yellow_count": 4,
+      "red_count": 3,
+      "shared_equipment": false
+    }
+  ]
+}

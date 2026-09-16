@@ -64,5 +64,7 @@
   "ark_nova": 63,
   "subtext": 64,
   "tacta": 65,
-  "hot_streak": 66
+  "hot_streak": 66,
+  "poison": 67,
+  "bomb_busters": 68
 }

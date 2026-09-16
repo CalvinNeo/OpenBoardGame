@@ -28,6 +28,10 @@ const celestiaPanel = document.getElementById("celestiaPanel");
 const ageOfWarPanel = document.getElementById("ageOfWarPanel");
 const kobayakawaPanel = document.getElementById("kobayakawaPanel");
 const highSocietyPanel = document.getElementById("highSocietyPanel");
+const poisonPanel = document.getElementById("poisonPanel");
+const bombBustersPanel = document.getElementById("bombBustersPanel");
+const bombBustersConfigBox = document.getElementById("bombBustersConfigBox");
+const bombBustersPresetSelect = document.getElementById("bombBustersPresetSelect");
 const felixPanel = document.getElementById("felixPanel");
 const tactaPanel = document.getElementById("tactaPanel");
 const subtextPanel = document.getElementById("subtextPanel");
@@ -91,6 +95,8 @@ function setGamePanelVisibility(gameType) {
   const showWanderingTowers = gameType === "wandering_towers";
   const showKobayakawa = gameType === "kobayakawa";
   const showHighSociety = gameType === "high_society";
+  const showPoison = gameType === "poison";
+  const showBombBusters = gameType === "bomb_busters";
   const showFelix = gameType === "felix";
   const showTacta = gameType === "tacta";
   const showSubtext = gameType === "subtext";
@@ -221,6 +227,18 @@ function setGamePanelVisibility(gameType) {
   }
   if (typeof showHighSocietyHeaderActions === "function") {
     showHighSocietyHeaderActions(showHighSociety);
+  }
+  if (poisonPanel) {
+    poisonPanel.classList.toggle("hidden", !showPoison);
+  }
+  if (typeof showPoisonHeaderActions === "function") {
+    showPoisonHeaderActions(showPoison);
+  }
+  if (bombBustersPanel) {
+    bombBustersPanel.classList.toggle("hidden", !showBombBusters);
+  }
+  if (typeof showBombBustersHeaderActions === "function") {
+    showBombBustersHeaderActions(showBombBusters);
   }
   if (felixPanel) {
     felixPanel.classList.toggle("hidden", !showFelix);
@@ -500,6 +518,14 @@ function updateGoldRushConfigRow() {
   }
 }
 
+function updateBombBustersConfigRow() {
+  const showRow = currentRoomState && currentGameType === "bomb_busters" && currentRoomState.status === "lobby";
+  if (bombBustersConfigBox) {
+    bombBustersConfigBox.classList.toggle("hidden", !showRow);
+    bombBustersConfigBox.setAttribute("aria-hidden", (!showRow).toString());
+  }
+}
+
 function updateCitadelsConfigRow() {
   const showRow = currentRoomState && currentGameType === "citadels" && currentRoomState.status === "lobby";
   if (citadelsConfigBox) {
@@ -633,6 +659,14 @@ function renderGameState(data) {
   }
   if (gameType === "high_society") {
     renderHighSocietyGameState(data);
+    return;
+  }
+  if (gameType === "poison") {
+    renderPoisonGameState(data);
+    return;
+  }
+  if (gameType === "bomb_busters") {
+    renderBombBustersGameState(data);
     return;
   }
   if (gameType === "felix") {

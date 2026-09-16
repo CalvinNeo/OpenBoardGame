@@ -51,6 +51,18 @@ class RoomSessionTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn(room_id_first, app.ROOMS)
         self.assertEqual(app.SESSIONS[sid]["room_id"], room_id_second)
 
+    async def test_bomb_busters_bot_action_is_sanitized(self):
+        action = {
+            "type": "dual_cut",
+            "own_wire_id": "w-secret-own-slot",
+            "target_wire_id": "w-public-target",
+        }
+
+        public_action = app._public_bot_action("bomb_busters", action)
+
+        self.assertEqual(public_action, {"type": "dual_cut"})
+        self.assertNotIn("own_wire_id", public_action)
+
     async def test_join_cleans_previous_lobby_session(self):
         sid_owner = "sid-owner"
         room_id_a = await self._create_room(sid_owner, "Alice")

@@ -9,6 +9,7 @@ SerializeFn = Callable[[Dict], Dict]
 class GameDefinition:
     game_id: str
     name: str
+    name_zh: str
     min_players: int
     max_players: int
     turn_mode: str

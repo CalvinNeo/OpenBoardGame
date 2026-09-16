@@ -77,6 +77,11 @@ function emitRoomStart() {
   } else if (currentGameType === "gold_rush") {
     const mode = goldRushModeSelect ? goldRushModeSelect.value || "hand" : "hand";
     payload.config = { mode };
+  } else if (currentGameType === "bomb_busters") {
+    const practicePreset = bombBustersPresetSelect
+      ? bombBustersPresetSelect.value || "standard_practice"
+      : "standard_practice";
+    payload.config = { practice_preset: practicePreset };
   } else if (currentGameType === "citadels") {
     const rawSize = citadelsWinningCitySizeSelect ? Number.parseInt(citadelsWinningCitySizeSelect.value, 10) : NaN;
     const winningCitySize = rawSize === 7 ? 7 : 8;
@@ -294,6 +299,9 @@ function renderRoomState(state) {
     if (typeof clearSubtextState === "function") {
       clearSubtextState();
     }
+    if (typeof clearBombBustersState === "function") {
+      clearBombBustersState();
+    }
     if (typeof clearCenturyState === "function") {
       clearCenturyState();
     }
@@ -315,6 +323,7 @@ function renderRoomState(state) {
   updateAidixitDeckRow();
   updateHalliConfigRow();
   updateGoldRushConfigRow();
+  updateBombBustersConfigRow();
   updateCitadelsConfigRow();
   updateHanabiConfigRow();
   updateTexasHoldemConfigRow();

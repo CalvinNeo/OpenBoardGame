@@ -508,11 +508,13 @@ async function fetchGameList() {
 }
 
 function filterGames(games, searchText, playerCount) {
+  const normalizedSearch = searchText.toLowerCase();
   return games.filter((g) => {
     const matchesSearch =
       !searchText ||
-      g.name.toLowerCase().includes(searchText.toLowerCase()) ||
-      g.game_id.toLowerCase().includes(searchText.toLowerCase());
+      g.name.toLowerCase().includes(normalizedSearch) ||
+      (g.name_zh || "").toLowerCase().includes(normalizedSearch) ||
+      g.game_id.toLowerCase().includes(normalizedSearch);
     const matchesPlayers =
       !playerCount || (g.min_players <= playerCount && playerCount <= g.max_players);
     return matchesSearch && matchesPlayers;
@@ -583,6 +585,8 @@ const GAME_WEIGHT = {
   witchs_brew: 1.87,
   century_spice_road: 1.80,
   high_society: 1.48,
+  poison: 1.19,
+  bomb_busters: 2.01,
   felix: 1.40,
   tacta: 1.34,
   subtext: 1.29,
@@ -689,11 +693,23 @@ function renderGameList(games) {
       g.min_players === g.max_players
         ? `${g.min_players} ${g.min_players === 1 ? "player" : "players"}`
         : `${g.min_players}-${g.max_players} players`;
-    item.title = `${g.name} · BGG Weight: ${weightLabel} · ${playerLabel}`;
+    const chineseName = typeof g.name_zh === "string" ? g.name_zh.trim() : "";
+    const displayName = chineseName && chineseName !== g.name ? `${g.name} · ${chineseName}` : g.name;
+    item.title = `${displayName} · BGG Weight: ${weightLabel} · ${playerLabel}`;
     item.setAttribute("aria-label", item.title);
     const nameEl = document.createElement("span");
     nameEl.className = "game-item-name";
-    nameEl.textContent = g.name;
+    const englishNameEl = document.createElement("span");
+    englishNameEl.className = "game-item-name-en";
+    englishNameEl.textContent = g.name;
+    nameEl.appendChild(englishNameEl);
+    if (chineseName && chineseName !== g.name) {
+      const chineseNameEl = document.createElement("span");
+      chineseNameEl.className = "game-item-name-zh";
+      chineseNameEl.lang = "zh-CN";
+      chineseNameEl.textContent = chineseName;
+      nameEl.appendChild(chineseNameEl);
+    }
     const metaEl = document.createElement("span");
     metaEl.className = "game-item-meta";
     const weightEl = document.createElement("span");
@@ -1506,6 +1522,12 @@ function resetRoomState() {
   if (typeof clearHotStreakState === "function") {
     clearHotStreakState();
   }
+  if (typeof clearPoisonState === "function") {
+    clearPoisonState();
+  }
+  if (typeof clearBombBustersState === "function") {
+    clearBombBustersState();
+  }
   clearYahtzeeState();
   if (typeof clearAcquireState === "function") {
     clearAcquireState();
@@ -1583,6 +1605,7 @@ function resetRoomState() {
   updateAidixitDeckRow();
   updateHalliConfigRow();
   updateGoldRushConfigRow();
+  updateBombBustersConfigRow();
   updateHanabiConfigRow();
   updateTexasHoldemConfigRow();
   updateMismatchConfigRow();
@@ -1641,6 +1664,9 @@ function resetRoomState() {
   }
   if (goldRushModeSelect) {
     goldRushModeSelect.value = "hand";
+  }
+  if (bombBustersPresetSelect) {
+    bombBustersPresetSelect.value = "standard_practice";
   }
   if (hanabiFinalRoundToggle) {
     hanabiFinalRoundToggle.checked = false;

@@ -4,6 +4,7 @@ from game.ai_dixit import AiDixitGame
 from game.age_of_war import AgeOfWarGame
 from game.ark_nova import ArkNovaGame
 from game.azul import AzulGame
+from game.bomb_busters import BombBustersGame
 from game.cabo import CaboGame
 from game.cat_in_box import CatInBoxGame
 from game.celestia import CelestiaGame
@@ -39,6 +40,7 @@ from game.manila import ManilaGame
 from game.patchwork import PatchworkGame
 from game.perfect_mismatch import PerfectMismatchGame
 from game.point_salad import PointSaladGame
+from game.poison import PoisonGame
 from game.project_l import ProjectLGame
 from game.ra import RaGame
 from game.rebel_princess import RebelPrincessGame
@@ -170,6 +172,145 @@ HIGH_SOCIETY_ACTION_SCHEMA = {
 
 HIGH_SOCIETY_CONFIG_SCHEMA = {
     "type": "object",
+    "additionalProperties": False,
+}
+
+POISON_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "play_card"},
+                "card_id": {
+                    "type": "string",
+                    "pattern": r"^poison-(?:(?:red|blue|purple)-(?:1|2|4|5|7)|toxic-4)-\d{2}$",
+                    "maxLength": 32,
+                },
+                "cauldron_index": {"type": "integer", "minimum": 0, "maximum": 2},
+            },
+            "required": ["type", "card_id", "cauldron_index"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "next_round"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "play_again"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+POISON_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "seed": {
+            "oneOf": [
+                {"type": "integer"},
+                {"type": "string", "minLength": 1, "maxLength": 80},
+            ]
+        }
+    },
+    "additionalProperties": False,
+}
+
+BOMB_BUSTERS_WIRE_ID_SCHEMA = {
+    "type": "string",
+    "pattern": r"^w-[0-9a-f]{16}$",
+    "maxLength": 18,
+}
+
+BOMB_BUSTERS_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "place_initial_info"},
+                "wire_id": BOMB_BUSTERS_WIRE_ID_SCHEMA,
+            },
+            "required": ["type", "wire_id"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "dual_cut"},
+                "own_wire_id": BOMB_BUSTERS_WIRE_ID_SCHEMA,
+                "target_wire_id": BOMB_BUSTERS_WIRE_ID_SCHEMA,
+            },
+            "required": ["type", "own_wire_id", "target_wire_id"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "double_detector_cut"},
+                "own_wire_id": BOMB_BUSTERS_WIRE_ID_SCHEMA,
+                "target_wire_ids": {
+                    "type": "array",
+                    "items": BOMB_BUSTERS_WIRE_ID_SCHEMA,
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "uniqueItems": True,
+                },
+            },
+            "required": ["type", "own_wire_id", "target_wire_ids"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "resolve_detector_choice"},
+                "wire_id": BOMB_BUSTERS_WIRE_ID_SCHEMA,
+            },
+            "required": ["type", "wire_id"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "solo_cut"},
+                "wire_ids": {
+                    "type": "array",
+                    "items": BOMB_BUSTERS_WIRE_ID_SCHEMA,
+                    "minItems": 2,
+                    "maxItems": 4,
+                    "uniqueItems": True,
+                },
+            },
+            "required": ["type", "wire_ids"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "reveal_red_wires"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "continue_mission"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+BOMB_BUSTERS_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "practice_preset": {
+            "type": "string",
+            "enum": ["short_practice", "standard_practice", "high_risk_practice"],
+        }
+    },
     "additionalProperties": False,
 }
 
@@ -3678,6 +3819,7 @@ register_game(
     GameDefinition(
         game_id=CaboGame.game_id,
         name="Cabo",
+        name_zh="卡波",
         min_players=CaboGame.min_players,
         max_players=CaboGame.max_players,
         turn_mode="turn",
@@ -3693,6 +3835,7 @@ register_game(
     GameDefinition(
         game_id=GuandanGame.game_id,
         name="Guandan",
+        name_zh="掼蛋",
         min_players=GuandanGame.min_players,
         max_players=GuandanGame.max_players,
         turn_mode="turn",
@@ -3708,6 +3851,7 @@ register_game(
     GameDefinition(
         game_id=TexasHoldemGame.game_id,
         name="Texas Hold'em",
+        name_zh="德州扑克",
         min_players=TexasHoldemGame.min_players,
         max_players=TexasHoldemGame.max_players,
         turn_mode="turn",
@@ -3723,6 +3867,7 @@ register_game(
     GameDefinition(
         game_id=CoyoteGame.game_id,
         name="Coyote",
+        name_zh="猜狐狸",
         min_players=CoyoteGame.min_players,
         max_players=CoyoteGame.max_players,
         turn_mode="turn",
@@ -3738,6 +3883,7 @@ register_game(
     GameDefinition(
         game_id=InAGroveGame.game_id,
         name="In a Grove",
+        name_zh="竹林之中",
         min_players=InAGroveGame.min_players,
         max_players=InAGroveGame.max_players,
         turn_mode="turn",
@@ -3753,6 +3899,7 @@ register_game(
     GameDefinition(
         game_id=TagironGame.game_id,
         name="Tagiron",
+        name_zh="逻辑对决",
         min_players=TagironGame.min_players,
         max_players=TagironGame.max_players,
         turn_mode="turn",
@@ -3768,6 +3915,7 @@ register_game(
     GameDefinition(
         game_id=TuringMachineGame.game_id,
         name="Turing Machine",
+        name_zh="图灵机",
         min_players=TuringMachineGame.min_players,
         max_players=TuringMachineGame.max_players,
         turn_mode="simultaneous",
@@ -3783,6 +3931,7 @@ register_game(
     GameDefinition(
         game_id=DaVinciCodeGame.game_id,
         name="Da Vinci Code",
+        name_zh="达芬奇密码",
         min_players=DaVinciCodeGame.min_players,
         max_players=DaVinciCodeGame.max_players,
         turn_mode="turn",
@@ -3798,6 +3947,7 @@ register_game(
     GameDefinition(
         game_id=SixNimmtGame.game_id,
         name="6 nimmt!",
+        name_zh="谁是牛头王",
         min_players=SixNimmtGame.min_players,
         max_players=SixNimmtGame.max_players,
         turn_mode="simultaneous",
@@ -3813,6 +3963,7 @@ register_game(
     GameDefinition(
         game_id=GizmosGame.game_id,
         name="Gizmos",
+        name_zh="巧妙装置",
         min_players=GizmosGame.min_players,
         max_players=GizmosGame.max_players,
         turn_mode="turn",
@@ -3828,6 +3979,7 @@ register_game(
     GameDefinition(
         game_id=SplendorGame.game_id,
         name="Splendor",
+        name_zh="璀璨宝石",
         min_players=SplendorGame.min_players,
         max_players=SplendorGame.max_players,
         turn_mode="turn",
@@ -3843,6 +3995,7 @@ register_game(
     GameDefinition(
         game_id=PokemonSplendorGame.game_id,
         name="Splendor: Pokemon",
+        name_zh="璀璨宝石：宝可梦",
         min_players=PokemonSplendorGame.min_players,
         max_players=PokemonSplendorGame.max_players,
         turn_mode="turn",
@@ -3858,6 +4011,7 @@ register_game(
     GameDefinition(
         game_id=PointSaladGame.game_id,
         name="Point Salad",
+        name_zh="得分沙拉",
         min_players=PointSaladGame.min_players,
         max_players=PointSaladGame.max_players,
         turn_mode="turn",
@@ -3873,6 +4027,7 @@ register_game(
     GameDefinition(
         game_id=AbracaWhatGame.game_id,
         name="Abraca What",
+        name_zh="出包魔法师",
         min_players=AbracaWhatGame.min_players,
         max_players=AbracaWhatGame.max_players,
         turn_mode="turn",
@@ -3888,6 +4043,7 @@ register_game(
     GameDefinition(
         game_id=SkullGame.game_id,
         name="Skull",
+        name_zh="骷髅牌",
         min_players=SkullGame.min_players,
         max_players=SkullGame.max_players,
         turn_mode="turn",
@@ -3903,6 +4059,7 @@ register_game(
     GameDefinition(
         game_id=CatInBoxGame.game_id,
         name="Cat in the Box",
+        name_zh="盒中猫",
         min_players=CatInBoxGame.min_players,
         max_players=CatInBoxGame.max_players,
         turn_mode="turn",
@@ -3918,6 +4075,7 @@ register_game(
     GameDefinition(
         game_id=DrawGuessGame.game_id,
         name="Draw & Guess",
+        name_zh="你画我猜",
         min_players=DrawGuessGame.min_players,
         max_players=DrawGuessGame.max_players,
         turn_mode="simultaneous",
@@ -3933,6 +4091,7 @@ register_game(
     GameDefinition(
         game_id=BlitzSketchGame.game_id,
         name="Blitz Sketch",
+        name_zh="极速画猜",
         min_players=BlitzSketchGame.min_players,
         max_players=BlitzSketchGame.max_players,
         turn_mode="simultaneous",
@@ -3948,6 +4107,7 @@ register_game(
     GameDefinition(
         game_id=FakeArtistGame.game_id,
         name="A Fake Artist Goes to New York",
+        name_zh="伪装艺术",
         min_players=FakeArtistGame.min_players,
         max_players=FakeArtistGame.max_players,
         turn_mode="turn",
@@ -3963,6 +4123,7 @@ register_game(
     GameDefinition(
         game_id=ThingsInRingsGame.game_id,
         name="Things in Rings",
+        name_zh="环中物语",
         min_players=ThingsInRingsGame.min_players,
         max_players=ThingsInRingsGame.max_players,
         turn_mode="turn",
@@ -3978,6 +4139,7 @@ register_game(
     GameDefinition(
         game_id=CyberPicturesGame.game_id,
         name="Cyber Pictures",
+        name_zh="赛博猜图",
         min_players=CyberPicturesGame.min_players,
         max_players=CyberPicturesGame.max_players,
         turn_mode="simultaneous",
@@ -3993,6 +4155,7 @@ register_game(
     GameDefinition(
         game_id=DecryptoGame.game_id,
         name="Decrypto",
+        name_zh="截码战",
         min_players=DecryptoGame.min_players,
         max_players=DecryptoGame.max_players,
         turn_mode="simultaneous",
@@ -4008,6 +4171,7 @@ register_game(
     GameDefinition(
         game_id=WordDecodeGame.game_id,
         name="猜字解底",
+        name_zh="猜字解底",
         min_players=WordDecodeGame.min_players,
         max_players=WordDecodeGame.max_players,
         turn_mode="simultaneous",
@@ -4023,6 +4187,7 @@ register_game(
     GameDefinition(
         game_id=ImpressionFlowerGame.game_id,
         name="Impression Flower",
+        name_zh="印象花语",
         min_players=ImpressionFlowerGame.min_players,
         max_players=ImpressionFlowerGame.max_players,
         turn_mode="simultaneous",
@@ -4038,6 +4203,7 @@ register_game(
     GameDefinition(
         game_id=BlokusGame.game_id,
         name="Blokus",
+        name_zh="角斗士棋",
         min_players=BlokusGame.min_players,
         max_players=BlokusGame.max_players,
         turn_mode="turn",
@@ -4053,6 +4219,7 @@ register_game(
     GameDefinition(
         game_id=ProjectLGame.game_id,
         name="Project L",
+        name_zh="L计划",
         min_players=ProjectLGame.min_players,
         max_players=ProjectLGame.max_players,
         turn_mode="turn",
@@ -4068,6 +4235,7 @@ register_game(
     GameDefinition(
         game_id=AiDixitGame.game_id,
         name="AI Dixit",
+        name_zh="AI 画物语",
         min_players=AiDixitGame.min_players,
         max_players=AiDixitGame.max_players,
         turn_mode="simultaneous",
@@ -4083,6 +4251,7 @@ register_game(
     GameDefinition(
         game_id=Flip7Game.game_id,
         name="Flip7flash",
+        name_zh="翻转七",
         min_players=Flip7Game.min_players,
         max_players=Flip7Game.max_players,
         turn_mode="turn",
@@ -4098,6 +4267,7 @@ register_game(
     GameDefinition(
         game_id=YahtzeeGame.game_id,
         name="Yahtzee",
+        name_zh="快艇骰子",
         min_players=YahtzeeGame.min_players,
         max_players=YahtzeeGame.max_players,
         turn_mode="turn",
@@ -4113,6 +4283,7 @@ register_game(
     GameDefinition(
         game_id=IstanbulGame.game_id,
         name="Istanbul",
+        name_zh="伊斯坦堡",
         min_players=IstanbulGame.min_players,
         max_players=IstanbulGame.max_players,
         turn_mode="turn",
@@ -4128,6 +4299,7 @@ register_game(
     GameDefinition(
         game_id=GoldRushGame.game_id,
         name="Gold Rush",
+        name_zh="淘金热",
         min_players=GoldRushGame.min_players,
         max_players=GoldRushGame.max_players,
         turn_mode="turn",
@@ -4143,6 +4315,7 @@ register_game(
     GameDefinition(
         game_id=IncanGoldGame.game_id,
         name="Incan Gold",
+        name_zh="印加宝藏",
         min_players=IncanGoldGame.min_players,
         max_players=IncanGoldGame.max_players,
         turn_mode="simultaneous",
@@ -4158,6 +4331,7 @@ register_game(
     GameDefinition(
         game_id=CelestiaGame.game_id,
         name="Celestia",
+        name_zh="空中之城",
         min_players=CelestiaGame.min_players,
         max_players=CelestiaGame.max_players,
         turn_mode="turn",
@@ -4173,6 +4347,7 @@ register_game(
     GameDefinition(
         game_id=AgeOfWarGame.game_id,
         name="Age of War",
+        name_zh="战国时代",
         min_players=AgeOfWarGame.min_players,
         max_players=AgeOfWarGame.max_players,
         turn_mode="turn",
@@ -4188,6 +4363,7 @@ register_game(
     GameDefinition(
         game_id=KobayakawaGame.game_id,
         name="Kobayakawa",
+        name_zh="小早川",
         min_players=KobayakawaGame.min_players,
         max_players=KobayakawaGame.max_players,
         turn_mode="turn",
@@ -4203,6 +4379,7 @@ register_game(
     GameDefinition(
         game_id=TucanoGame.game_id,
         name="Tucano",
+        name_zh="巨嘴鸟",
         min_players=TucanoGame.min_players,
         max_players=TucanoGame.max_players,
         turn_mode="turn",
@@ -4218,6 +4395,7 @@ register_game(
     GameDefinition(
         game_id=WitchsBrewGame.game_id,
         name="Witch's Brew",
+        name_zh="女巫的佳酿",
         min_players=WitchsBrewGame.min_players,
         max_players=WitchsBrewGame.max_players,
         turn_mode="turn",
@@ -4233,6 +4411,7 @@ register_game(
     GameDefinition(
         game_id=RaGame.game_id,
         name="Ra",
+        name_zh="太阳神",
         min_players=RaGame.min_players,
         max_players=RaGame.max_players,
         turn_mode="turn",
@@ -4248,6 +4427,7 @@ register_game(
     GameDefinition(
         game_id=RebelPrincessGame.game_id,
         name="Rebel Princess",
+        name_zh="叛逆公主",
         min_players=RebelPrincessGame.min_players,
         max_players=RebelPrincessGame.max_players,
         turn_mode="turn",
@@ -4263,6 +4443,7 @@ register_game(
     GameDefinition(
         game_id=ScoutGame.game_id,
         name="Scout",
+        name_zh="马戏星探",
         min_players=ScoutGame.min_players,
         max_players=ScoutGame.max_players,
         turn_mode="turn",
@@ -4278,6 +4459,7 @@ register_game(
     GameDefinition(
         game_id=HalliGalliGame.game_id,
         name="Halli Galli",
+        name_zh="德国心脏病",
         min_players=HalliGalliGame.min_players,
         max_players=HalliGalliGame.max_players,
         turn_mode="turn",
@@ -4293,6 +4475,7 @@ register_game(
     GameDefinition(
         game_id=PerfectMismatchGame.game_id,
         name="Perfect Mismatch",
+        name_zh="绝妙误解",
         min_players=PerfectMismatchGame.min_players,
         max_players=PerfectMismatchGame.max_players,
         turn_mode="simultaneous",
@@ -4308,6 +4491,7 @@ register_game(
     GameDefinition(
         game_id=HanabiGame.game_id,
         name="Hanabi",
+        name_zh="花火",
         min_players=HanabiGame.min_players,
         max_players=HanabiGame.max_players,
         turn_mode="turn",
@@ -4323,6 +4507,7 @@ register_game(
     GameDefinition(
         game_id=TheGangGame.game_id,
         name="The Gang",
+        name_zh="纸牌帮",
         min_players=TheGangGame.min_players,
         max_players=TheGangGame.max_players,
         turn_mode="simultaneous",
@@ -4337,6 +4522,7 @@ register_game(
     GameDefinition(
         game_id=FangNiaoGame.game_id,
         name="Square Bird",
+        name_zh="方鸟",
         min_players=FangNiaoGame.min_players,
         max_players=FangNiaoGame.max_players,
         turn_mode="turn",
@@ -4352,6 +4538,7 @@ register_game(
     GameDefinition(
         game_id=CarcassonneGame.game_id,
         name="Carcassonne",
+        name_zh="卡卡颂",
         min_players=CarcassonneGame.min_players,
         max_players=CarcassonneGame.max_players,
         turn_mode="turn",
@@ -4367,6 +4554,7 @@ register_game(
     GameDefinition(
         game_id=AzulGame.game_id,
         name="Azul",
+        name_zh="花砖物语",
         min_players=AzulGame.min_players,
         max_players=AzulGame.max_players,
         turn_mode="turn",
@@ -4382,6 +4570,7 @@ register_game(
     GameDefinition(
         game_id=TrekkingHistoryGame.game_id,
         name="Trekking through History",
+        name_zh="历史奇旅",
         min_players=TrekkingHistoryGame.min_players,
         max_players=TrekkingHistoryGame.max_players,
         turn_mode="turn",
@@ -4397,6 +4586,7 @@ register_game(
     GameDefinition(
         game_id=WanderingTowersGame.game_id,
         name="Wandering Towers",
+        name_zh="巫师飞塔",
         min_players=WanderingTowersGame.min_players,
         max_players=WanderingTowersGame.max_players,
         turn_mode="turn",
@@ -4412,6 +4602,7 @@ register_game(
     GameDefinition(
         game_id=PatchworkGame.game_id,
         name="Patchwork",
+        name_zh="拼布艺术",
         min_players=PatchworkGame.min_players,
         max_players=PatchworkGame.max_players,
         turn_mode="turn",
@@ -4427,6 +4618,7 @@ register_game(
     GameDefinition(
         game_id=IsleOfSkyeGame.game_id,
         name="Isle of Skye",
+        name_zh="斯凯岛",
         min_players=IsleOfSkyeGame.min_players,
         max_players=IsleOfSkyeGame.max_players,
         turn_mode="turn",
@@ -4442,6 +4634,7 @@ register_game(
     GameDefinition(
         game_id=ForestShuffleGame.game_id,
         name="Forest Shuffle",
+        name_zh="森森不息",
         min_players=ForestShuffleGame.min_players,
         max_players=ForestShuffleGame.max_players,
         turn_mode="turn",
@@ -4457,6 +4650,7 @@ register_game(
     GameDefinition(
         game_id=ArkNovaGame.game_id,
         name="Ark Nova",
+        name_zh="方舟动物园",
         min_players=ArkNovaGame.min_players,
         max_players=ArkNovaGame.max_players,
         turn_mode="turn",
@@ -4472,6 +4666,7 @@ register_game(
     GameDefinition(
         game_id=ManilaGame.game_id,
         name="Manila",
+        name_zh="马尼拉",
         min_players=ManilaGame.min_players,
         max_players=ManilaGame.max_players,
         turn_mode="turn",
@@ -4487,6 +4682,7 @@ register_game(
     GameDefinition(
         game_id=CitadelsGame.game_id,
         name="Citadels",
+        name_zh="富饶之城",
         min_players=CitadelsGame.min_players,
         max_players=CitadelsGame.max_players,
         turn_mode="turn",
@@ -4502,6 +4698,7 @@ register_game(
     GameDefinition(
         game_id=CenturySpiceRoadGame.game_id,
         name="Century: Spice Road",
+        name_zh="香料之路",
         min_players=CenturySpiceRoadGame.min_players,
         max_players=CenturySpiceRoadGame.max_players,
         turn_mode="turn",
@@ -4517,6 +4714,7 @@ register_game(
     GameDefinition(
         game_id=LostCodeGame.game_id,
         name="The Lost Code",
+        name_zh="迷失代码",
         min_players=LostCodeGame.min_players,
         max_players=LostCodeGame.max_players,
         turn_mode="turn",
@@ -4532,6 +4730,7 @@ register_game(
     GameDefinition(
         game_id=CriminalDanceGame.game_id,
         name="Criminal Dance",
+        name_zh="犯人在跳舞",
         min_players=CriminalDanceGame.min_players,
         max_players=CriminalDanceGame.max_players,
         turn_mode="turn",
@@ -4547,6 +4746,7 @@ register_game(
     GameDefinition(
         game_id=WavelengthGame.game_id,
         name="Wavelength",
+        name_zh="电波同步",
         min_players=WavelengthGame.min_players,
         max_players=WavelengthGame.max_players,
         turn_mode="simultaneous",
@@ -4562,6 +4762,7 @@ register_game(
     GameDefinition(
         game_id=AcquireGame.game_id,
         name="Acquire",
+        name_zh="并购",
         min_players=AcquireGame.min_players,
         max_players=AcquireGame.max_players,
         turn_mode="turn",
@@ -4577,6 +4778,7 @@ register_game(
     GameDefinition(
         game_id=DumbQuestionsGame.game_id,
         name="Dumb Questions to Ask Your Friends",
+        name_zh="问非所答",
         min_players=DumbQuestionsGame.min_players,
         max_players=DumbQuestionsGame.max_players,
         turn_mode="simultaneous",
@@ -4592,6 +4794,7 @@ register_game(
     GameDefinition(
         game_id=HighSocietyGame.game_id,
         name="High Society",
+        name_zh="上流社会",
         min_players=HighSocietyGame.min_players,
         max_players=HighSocietyGame.max_players,
         turn_mode="turn",
@@ -4607,6 +4810,7 @@ register_game(
     GameDefinition(
         game_id=FelixGame.game_id,
         name="Felix: The Cat in the Sack",
+        name_zh="袋中菲力猫",
         min_players=FelixGame.min_players,
         max_players=FelixGame.max_players,
         turn_mode="turn",
@@ -4622,6 +4826,7 @@ register_game(
     GameDefinition(
         game_id=TactaGame.game_id,
         name="TACTA",
+        name_zh="塔克塔",
         min_players=TactaGame.min_players,
         max_players=TactaGame.max_players,
         turn_mode="turn",
@@ -4637,6 +4842,7 @@ register_game(
     GameDefinition(
         game_id=SubtextGame.game_id,
         name="Subtext",
+        name_zh="画外之意",
         min_players=SubtextGame.min_players,
         max_players=SubtextGame.max_players,
         turn_mode="simultaneous",
@@ -4652,6 +4858,7 @@ register_game(
     GameDefinition(
         game_id=HotStreakGame.game_id,
         name="Hot Streak",
+        name_zh="火热连胜",
         min_players=HotStreakGame.min_players,
         max_players=HotStreakGame.max_players,
         turn_mode="turn",
@@ -4660,5 +4867,37 @@ register_game(
         module=HotStreakGame,
         serialize=HotStreakGame.serialize,
         deserialize=HotStreakGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=PoisonGame.game_id,
+        name="Poison",
+        name_zh="毒药",
+        min_players=PoisonGame.min_players,
+        max_players=PoisonGame.max_players,
+        turn_mode="turn",
+        action_schema=POISON_ACTION_SCHEMA,
+        config_schema=POISON_CONFIG_SCHEMA,
+        module=PoisonGame,
+        serialize=PoisonGame.serialize,
+        deserialize=PoisonGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=BombBustersGame.game_id,
+        name="Bomb Busters",
+        name_zh="炸弹克星",
+        min_players=BombBustersGame.min_players,
+        max_players=BombBustersGame.max_players,
+        turn_mode="turn",
+        action_schema=BOMB_BUSTERS_ACTION_SCHEMA,
+        config_schema=BOMB_BUSTERS_CONFIG_SCHEMA,
+        module=BombBustersGame,
+        serialize=BombBustersGame.serialize,
+        deserialize=BombBustersGame.deserialize,
     )
 )

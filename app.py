@@ -84,6 +84,7 @@ async def api_list_games():
         {
             "game_id": g.game_id,
             "name": g.name,
+            "name_zh": g.name_zh,
             "min_players": g.min_players,
             "max_players": g.max_players,
             "dev_order": GAME_DEV_ORDER.get(g.game_id),
@@ -497,7 +498,7 @@ def _bot_status_payload(room: Room) -> Dict:
 
 
 def _public_bot_action(game_type: str, action: Dict) -> Dict:
-    if game_type == "subtext":
+    if game_type in ("subtext", "bomb_busters"):
         return {"type": action.get("type")}
     return action
 

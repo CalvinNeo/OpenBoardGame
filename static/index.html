@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css?v=app_v55" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v58" />
   <link rel="stylesheet" href="/static/ark_nova.css?v=app_v21" />
 </head>
 <body>
@@ -257,6 +257,46 @@
       <div class="modal-body">
         <div id="highSocietyExplainContent"></div>
       </div>
+    </div>
+  </section>
+
+  <section id="poisonHelpModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="poisonHelpModalTitle">
+    <div class="modal-content poison-modal-content">
+      <div class="modal-header">
+        <h2 id="poisonHelpModalTitle">Poison - Game Rules</h2>
+        <button id="poisonHelpCloseBtn" type="button">Close</button>
+      </div>
+      <div id="poisonHelpContent" class="modal-body poison-help-content"></div>
+    </div>
+  </section>
+
+  <section id="poisonExplainModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="poisonExplainModalTitle">
+    <div class="modal-content poison-modal-content poison-explain-modal-content">
+      <div class="modal-header">
+        <h2 id="poisonExplainModalTitle">Button Explanation</h2>
+        <button id="poisonExplainCloseBtn" type="button">Close</button>
+      </div>
+      <div id="poisonExplainContent" class="modal-body"></div>
+    </div>
+  </section>
+
+  <section id="bombBustersHelpModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="bombBustersHelpModalTitle">
+    <div class="modal-content bomb-busters-modal-content">
+      <div class="modal-header">
+        <h2 id="bombBustersHelpModalTitle">Bomb Busters - Game Rules</h2>
+        <button id="bombBustersHelpCloseBtn" type="button">Close</button>
+      </div>
+      <div id="bombBustersHelpContent" class="modal-body bomb-busters-help-content"></div>
+    </div>
+  </section>
+
+  <section id="bombBustersExplainModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="bombBustersExplainModalTitle">
+    <div class="modal-content bomb-busters-modal-content bomb-busters-explain-content">
+      <div class="modal-header">
+        <h2 id="bombBustersExplainModalTitle">Control Explanation</h2>
+        <button id="bombBustersExplainCloseBtn" type="button">Close</button>
+      </div>
+      <div id="bombBustersExplainContent" class="modal-body"></div>
     </div>
   </section>
 
@@ -1175,6 +1215,8 @@
                     <option value="celestia">Celestia</option>
                     <option value="kobayakawa">Kobayakawa</option>
                     <option value="high_society">High Society</option>
+                    <option value="poison">Poison</option>
+                    <option value="bomb_busters">Bomb Busters</option>
                     <option value="felix">Felix: The Cat in the Sack</option>
                     <option value="tacta">TACTA</option>
                     <option value="subtext">Subtext</option>
@@ -1629,6 +1671,18 @@
                     </div>
                     <div class="hint">The selected difficulty stays fixed for the whole game.</div>
                   </div>
+                  <div class="game-config-card hidden" id="bombBustersConfigBox" aria-hidden="true">
+                    <div class="game-config-title">Bomb Busters · Core Practice</div>
+                    <div class="row compact-row">
+                      <label for="bombBustersPresetSelect">Practice Setup</label>
+                      <select id="bombBustersPresetSelect">
+                        <option value="short_practice">Short Practice</option>
+                        <option value="standard_practice" selected>Standard Practice</option>
+                        <option value="high_risk_practice">High Risk Practice</option>
+                      </select>
+                    </div>
+                    <div class="hint">Original practice setups. Shared equipment is not included.</div>
+                  </div>
                 </div>
                 <div class="row hidden toggle-row" id="autoSaveRow">
                   <label for="autoSaveToggle">Auto Save</label>
@@ -1806,6 +1860,14 @@
             <div class="panel-header-actions" id="highSocietyHeaderActions" style="display: none;">
               <button id="highSocietyHelpBtn" type="button">Help</button>
               <button id="highSocietyExplainBtn" type="button">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="poisonHeaderActions" style="display: none;">
+              <button id="poisonHelpBtn" class="poison-header-btn" type="button">Help</button>
+              <button id="poisonExplainBtn" class="poison-header-btn" type="button" aria-pressed="false">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="bombBustersHeaderActions" style="display: none;">
+              <button id="bombBustersHelpBtn" class="bomb-busters-header-btn" type="button">Help</button>
+              <button id="bombBustersExplainBtn" class="bomb-busters-header-btn" type="button" aria-pressed="false">Explain</button>
             </div>
             <div class="panel-header-actions" id="subtextHeaderActions" style="display: none;">
               <button id="subtextHelpBtn" class="subtext-header-btn" type="button">Help</button>
@@ -2547,6 +2609,147 @@
 
               <h3>Players</h3>
               <div id="highSocietyPlayers" class="high-society-players"></div>
+            </div>
+
+            <div id="poisonPanel" class="hidden poison-panel">
+              <div class="poison-topbar">
+                <div>
+                  <h2><span aria-hidden="true">☠️</span> Poison</h2>
+                  <div class="poison-subtitle">
+                    Round <span id="poisonRoundLabel">-</span>/<span id="poisonTotalRoundsLabel">-</span>
+                  </div>
+                </div>
+                <div class="poison-turn-meta">
+                  <span>Dealer <strong id="poisonDealerLabel">-</strong></span>
+                  <span>Turn <strong id="poisonTurnLabel">-</strong></span>
+                </div>
+              </div>
+
+              <div id="poisonStatus" class="poison-status" role="status" aria-live="polite">Waiting for game state…</div>
+
+              <section class="poison-player-section" aria-labelledby="poisonPlayersHeading">
+                <h3 id="poisonPlayersHeading">Players</h3>
+                <div id="poisonPlayers" class="poison-players"></div>
+              </section>
+
+              <section class="poison-board" aria-labelledby="poisonCauldronsHeading">
+                <div class="poison-section-heading">
+                  <h3 id="poisonCauldronsHeading">Cauldrons</h3>
+                  <span>Safe through 13</span>
+                </div>
+                <div id="poisonCauldrons" class="poison-cauldrons"></div>
+              </section>
+
+              <section class="poison-hand-section" aria-labelledby="poisonHandHeading">
+                <div class="poison-section-heading">
+                  <h3 id="poisonHandHeading">Your Hand</h3>
+                  <span id="poisonHandCount">0 cards</span>
+                </div>
+                <div id="poisonHand" class="poison-hand"></div>
+              </section>
+
+              <section id="poisonSummary" class="poison-summary hidden" aria-live="polite">
+                <div class="poison-summary-heading">
+                  <div>
+                    <span class="poison-eyebrow">Round review</span>
+                    <h3 id="poisonSummaryTitle">Round Summary</h3>
+                  </div>
+                  <div id="poisonSummaryStatus" class="poison-ready-status">-</div>
+                </div>
+                <div id="poisonSummaryPlayers" class="poison-summary-players"></div>
+                <div class="poison-summary-actions">
+                  <button id="poisonNextRoundBtn" type="button">Next Round</button>
+                  <button id="poisonPlayAgainBtn" class="hidden" type="button">Play Again</button>
+                </div>
+              </section>
+
+              <section class="poison-activity" aria-labelledby="poisonActivityHeading">
+                <h3 id="poisonActivityHeading">Latest Activity</h3>
+                <div id="poisonLog" class="poison-log" tabindex="0">No actions yet.</div>
+              </section>
+            </div>
+
+            <div id="bombBustersPanel" class="hidden bomb-busters-panel">
+              <div class="bomb-busters-topbar">
+                <div class="bomb-busters-title-block">
+                  <span class="bomb-busters-eyebrow">Core Practice · Original Practice</span>
+                  <h2><span aria-hidden="true">💣</span> Bomb Busters</h2>
+                  <div class="bomb-busters-subtitle">
+                    <span id="bombBustersPresetLabel">Standard Practice</span>
+                    <span>· Bomb <span id="bombBustersMissionLabel">1</span></span>
+                    <span>· Shared Equipment: Off</span>
+                  </div>
+                </div>
+                <div class="bomb-busters-turn-card">
+                  <span id="bombBustersCaptainLabel">🧭 Captain -</span>
+                  <strong id="bombBustersTurnLabel">Waiting…</strong>
+                </div>
+              </div>
+
+              <div id="bombBustersStatus" class="bomb-busters-status" role="status" aria-live="polite">Waiting for game state…</div>
+
+              <div class="bomb-busters-instruments">
+                <section id="bombBustersDetonator" class="bomb-busters-detonator" data-bomb-busters-explain="detonator" aria-label="Detonator status"></section>
+                <section class="bomb-busters-markers" aria-labelledby="bombBustersMarkersHeading">
+                  <h3 id="bombBustersMarkersHeading">Public Markers</h3>
+                  <div id="bombBustersMarkers"></div>
+                </section>
+              </div>
+
+              <div class="bomb-busters-layout">
+                <section class="bomb-busters-racks-section" aria-labelledby="bombBustersRacksHeading">
+                  <div class="bomb-busters-section-heading">
+                    <h3 id="bombBustersRacksHeading">Team Racks</h3>
+                    <span>Slots stay fixed after every cut.</span>
+                  </div>
+                  <div id="bombBustersRacks" class="bomb-busters-racks"></div>
+                </section>
+
+                <aside class="bomb-busters-side">
+                  <section class="bomb-busters-validation-card" data-bomb-busters-explain="validation">
+                    <h3>✅ Validation</h3>
+                    <div id="bombBustersValidation" class="bomb-busters-validation"></div>
+                  </section>
+                  <section class="bomb-busters-detector-card">
+                    <h3>🔎 Your Double Detector</h3>
+                    <div id="bombBustersDetectorStatus">Ready</div>
+                  </section>
+                  <section class="bomb-busters-activity-card" aria-labelledby="bombBustersActivityHeading">
+                    <h3 id="bombBustersActivityHeading">Team Activity</h3>
+                    <div id="bombBustersActivity" class="bomb-busters-activity" tabindex="0">No actions yet.</div>
+                  </section>
+                </aside>
+              </div>
+
+              <section id="bombBustersActionDock" class="bomb-busters-action-dock" aria-labelledby="bombBustersActionsHeading">
+                <div class="bomb-busters-section-heading">
+                  <h3 id="bombBustersActionsHeading">Your Action</h3>
+                  <span id="bombBustersActionMode">Duo Cut</span>
+                </div>
+                <div id="bombBustersActionSummary" class="bomb-busters-action-summary">Choose one of your BLUE or YELLOW wires.</div>
+                <div id="bombBustersSoloOptions" class="bomb-busters-solo-options"></div>
+                <div class="bomb-busters-actions">
+                  <button id="bombBustersShareClueBtn" type="button">Share Clue</button>
+                  <button id="bombBustersConfirmDuoBtn" type="button">Confirm Duo Cut</button>
+                  <button id="bombBustersDetectorBtn" type="button">Use Double Detector</button>
+                  <button id="bombBustersConfirmDetectorBtn" type="button">Confirm Detector Cut</button>
+                  <button id="bombBustersConfirmSoloBtn" type="button">Confirm Solo Cut</button>
+                  <button id="bombBustersResolveBtn" type="button">Confirm Choice</button>
+                  <button id="bombBustersSecureRedBtn" type="button">🛡️ Secure Red Wires</button>
+                </div>
+              </section>
+
+              <section id="bombBustersResult" class="bomb-busters-result hidden" aria-live="polite">
+                <div>
+                  <span class="bomb-busters-eyebrow">Mission review</span>
+                  <h3 id="bombBustersResultTitle">Mission Defused</h3>
+                  <p id="bombBustersResultDetail"></p>
+                </div>
+                <div id="bombBustersReadyList" class="bomb-busters-ready-list"></div>
+                <button id="bombBustersContinueBtn" type="button">Next Bomb</button>
+              </section>
+
+              <div id="bombBustersLiveRegion" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
             </div>
 
             <div id="felixPanel" class="hidden felix-panel">
@@ -5779,7 +5982,7 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js"></script>
-  <script src="/static/games/shared.js?v=app_v11"></script>
+  <script src="/static/games/shared.js?v=app_v12"></script>
   <script src="/static/games/blokus.js?v=app_v6"></script>
   <script src="/static/games/carcassonne.js?v=app_v6"></script>
   <script src="/static/games/azul.js?v=app_v4"></script>
@@ -5838,6 +6041,8 @@
   <script src="/static/games/manila.js?v=app_v4"></script>
   <script src="/static/games/kobayakawa.js?v=app_v4"></script>
   <script src="/static/games/high_society.js?v=app_v1"></script>
+  <script src="/static/games/poison.js?v=app_v1"></script>
+  <script src="/static/games/bomb_busters.js?v=app_v1"></script>
   <script src="/static/games/felix.js?v=app_v1"></script>
   <script src="/static/games/tacta.js?v=app_v7"></script>
   <script src="/static/games/subtext.js?v=app_v1"></script>
@@ -5846,7 +6051,7 @@
   <script src="/static/games/ra.js?v=app_v6"></script>
   <script src="/static/games/scout.js?v=app_v4"></script>
   <script src="/static/games/ark_nova.js?v=app_v22"></script>
-  <script src="/static/app.js?v=app_v14"></script>
-  <script src="/static/room.js?v=app_v24"></script>
+  <script src="/static/app.js?v=app_v16"></script>
+  <script src="/static/room.js?v=app_v27"></script>
 </body>
 </html>

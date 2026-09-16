@@ -6,6 +6,7 @@ from game.azul import AzulGame
 from game.ai_dixit import AiDixitGame
 from game.blokus import BlokusGame
 from game.blitz_sketch import BlitzSketchGame
+from game.bomb_busters import BombBustersGame
 from game.carcassonne import CarcassonneGame
 from game.cabo import CaboGame
 from game.celestia import CelestiaGame
@@ -38,6 +39,7 @@ from game.manila import ManilaGame
 from game.patchwork import PatchworkGame
 from game.perfect_mismatch import PerfectMismatchGame
 from game.point_salad import PointSaladGame
+from game.poison import PoisonGame
 from game.project_l import ProjectLGame
 from game.ra import RaGame
 from game.rebel_princess import RebelPrincessGame
@@ -72,6 +74,7 @@ __all__ = [
     "AiDixitGame",
     "BlokusGame",
     "BlitzSketchGame",
+    "BombBustersGame",
     "CarcassonneGame",
     "CaboGame",
     "CelestiaGame",
@@ -104,6 +107,7 @@ __all__ = [
     "PatchworkGame",
     "PerfectMismatchGame",
     "PointSaladGame",
+    "PoisonGame",
     "ProjectLGame",
     "RaGame",
     "RebelPrincessGame",
