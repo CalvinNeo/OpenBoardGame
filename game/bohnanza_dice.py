@@ -29,6 +29,7 @@ DIE_SPECS = (
 )
 TOTAL_CARD_COUNT = 55
 WINNING_SCORE = 10
+TURN_FLOW_VERSION = 2
 CATALOG_PATH = Path(__file__).with_name("assets") / "bohnanza_dice_cards.json"
 
 
@@ -790,6 +791,7 @@ class BohnanzaDiceGame:
             offer = {"player_id": head, "completed_count": completed, "reward": completed - 2, "final": state.get("phase") == "final_harvest"}
         return {
             "game_id": BohnanzaDiceGame.game_id,
+            "turn_flow_version": TURN_FLOW_VERSION,
             "you": viewer_id,
             "catalog": copy.deepcopy(CATALOG),
             "phase": state.get("phase"),

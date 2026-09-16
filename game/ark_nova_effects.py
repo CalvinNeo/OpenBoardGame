@@ -1306,8 +1306,17 @@ def _record_enclosure_size(context: EffectContext, record: Mapping[str, Any]) ->
     return 0
 
 
-def _release_candidates(context: EffectContext, project: Mapping[str, Any], required_size: int) -> List[str]:
+def _release_size_bounds(requirement: Mapping[str, Any]) -> Tuple[int, int]:
+    minimum = int(requirement.get("minimum", requirement.get("value", 0)))
+    maximum = int(requirement.get("maximum", requirement.get("value", minimum)))
+    return minimum, maximum
+
+
+def _release_candidates(
+    context: EffectContext, project: Mapping[str, Any], requirement: Mapping[str, Any],
+) -> List[str]:
     metric = str(project["metric"])
+    minimum_size, maximum_size = _release_size_bounds(requirement)
     candidates = []
     for record in _animal_records(context):
         card_id = _record_card_id(record)
@@ -1315,9 +1324,11 @@ def _release_candidates(context: EffectContext, project: Mapping[str, Any], requ
         if not card:
             continue
         tags = {icon["tag"] for icon in card.get("icons", [])}
-        # Release reward slots use the animal card's exact printed standard-
-        # enclosure requirement, even when it occupies a special enclosure.
-        if metric not in tags or _record_enclosure_size(context, record) != required_size:
+        # Release reward slots use the range containing the animal card's
+        # printed standard-enclosure requirement, even when it occupies a
+        # special enclosure: 4-5, exactly 3, or 1-2.
+        printed_size = _record_enclosure_size(context, record)
+        if metric not in tags or not minimum_size <= printed_size <= maximum_size:
             continue
         candidates.append(card_id)
     return candidates
@@ -1443,8 +1454,9 @@ def evaluate_conservation_project(
             candidates = []
             eligible = value >= int(requirement["value"])
         elif requirement["kind"] == "released_animal_enclosure_size":
-            candidates = _release_candidates(context, project, int(requirement["value"]))
-            value = int(requirement["value"]) if candidates else 0
+            candidates = _release_candidates(context, project, requirement)
+            _, maximum_size = _release_size_bounds(requirement)
+            value = maximum_size if candidates else 0
             eligible = bool(candidates)
         elif requirement["kind"] == "breeding_match":
             candidates = _breeding_candidates(context, project)

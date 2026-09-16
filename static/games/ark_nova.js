@@ -905,6 +905,13 @@
     return ARK_NOVA_PROJECT_METRICS[key] || ["◆", arkNovaTitle(key || requirement.kind || "requirement")];
   }
 
+  function arkNovaReleaseSizeLabel(requirement = {}) {
+    const minimum = requirement.minimum ?? requirement.value;
+    const maximum = requirement.maximum ?? requirement.value ?? minimum;
+    if (minimum == null) return "—";
+    return Number(minimum) === Number(maximum) ? String(minimum) : `${minimum}–${maximum}`;
+  }
+
   function arkNovaProjectRequirementMarkup(card, slot) {
     const requirement = slot && slot.requirement || {};
     const metricKey = String(requirement.metric || arkNovaCardObject(card).metric || "").toLowerCase();
@@ -918,7 +925,7 @@
     }
     const [icon, label] = arkNovaProjectMetric(card, requirement);
     if (requirement.kind === "released_animal_enclosure_size") {
-      return `<span aria-hidden="true">⬡</span><b>${arkNovaEscape(requirement.value)}</b><small>卡面标准围栏</small>`;
+      return `<span aria-hidden="true">⬡</span><b>${arkNovaEscape(arkNovaReleaseSizeLabel(requirement))}</b><small>卡面标准围栏</small>`;
     }
     if (requirement.kind === "breeding_match") {
       return `<span aria-hidden="true">✓</span><b>符合</b><small>繁育条件</small>`;
@@ -973,7 +980,7 @@
     const requirement = slot && slot.requirement || {};
     const metric = arkNovaProjectMetric(card, requirement)[1];
     const requirementText = requirement.kind === "released_animal_enclosure_size"
-      ? `卡面标准围栏 ${requirement.value}`
+      ? `卡面标准围栏 ${arkNovaReleaseSizeLabel(requirement)}`
       : requirement.kind === "breeding_match" ? "繁育条件" : `${requirement.value ?? "✓"} ${metric}`;
     const rewardText = Object.entries(slot && slot.reward || {}).map(([key, amount]) => {
       const icon = { conservation: "🌿", reputation: "🎓", appeal: "🎟", money: "💰", x_tokens: "✕" }[key] || arkNovaTitle(key);

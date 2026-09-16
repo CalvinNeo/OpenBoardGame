@@ -22,6 +22,7 @@
   const bohnanzaDicePhaseLabel = document.getElementById("bohnanzaDicePhaseLabel");
   const bohnanzaDiceDeckLabel = document.getElementById("bohnanzaDiceDeckLabel");
   const bohnanzaDiceStatus = document.getElementById("bohnanzaDiceStatus");
+  const bohnanzaDiceRollHeading = document.getElementById("bohnanzaDiceRollHeading");
   const bohnanzaDiceRepeatBadge = document.getElementById("bohnanzaDiceRepeatBadge");
   const bohnanzaDiceCurrentDice = document.getElementById("bohnanzaDiceCurrentDice");
   const bohnanzaDiceFieldDice = document.getElementById("bohnanzaDiceFieldDice");
@@ -43,13 +44,15 @@
   const bohnanzaDiceLiveRegion = document.getElementById("bohnanzaDiceLiveRegion");
 
   const BOHNANZA_DICE_BEANS = {
-    garden: { emoji: "🌱", short: "GA", label: "Garden Bean" },
-    red: { emoji: "🔥", short: "RE", label: "Red Bean" },
-    soy: { emoji: "🫘", short: "SO", label: "Soy Bean" },
-    green: { emoji: "🥬", short: "GR", label: "Green Bean" },
-    stink: { emoji: "💨", short: "ST", label: "Stink Bean" },
-    blue: { emoji: "💧", short: "BL", label: "Blue Bean" },
+    garden: { emoji: "🌱", short: "GA", label: "Garden Bean", dieTemplate: "dark" },
+    red: { emoji: "🔥", short: "RE", label: "Red Bean", dieTemplate: "light" },
+    soy: { emoji: "🫘", short: "SO", label: "Soy Bean", dieTemplate: "dark" },
+    green: { emoji: "🥬", short: "GR", label: "Green Bean", dieTemplate: "light" },
+    stink: { emoji: "💨", short: "ST", label: "Stink Bean", dieTemplate: "both" },
+    blue: { emoji: "💧", short: "BL", label: "Blue Bean", dieTemplate: "both" },
   };
+
+  const BOHNANZA_DICE_TURN_FLOW_VERSION = 2;
 
   const BOHNANZA_DICE_PHASES = {
     await_roll: "Awaiting roll",
@@ -78,8 +81,8 @@
       body: "Lock every selected die into the field. This never rolls for you: if dice remain in the cup, press Roll when you are ready. You must select at least one.",
     },
     repeat: {
-      title: "Repeat This Roll",
-      body: "Once per turn, reroll every die in the current roll. Dice already saved in the field stay unchanged, and other players may use the new result again.",
+      title: "Reroll Fresh Dice",
+      body: "Once per turn, reroll all dice in the Current Roll together. You cannot keep part of that fresh result. Bean Field dice stay unchanged, and the other players check the new result again.",
     },
     harvest: {
       title: "Harvest",
@@ -166,11 +169,17 @@
   }
 
   function bohnanzaDiceHasAction(actionType) {
+    const needsCurrentTurnFlow = ["roll", "save_dice", "repeat_roll", "harvest", "keep_growing"].includes(actionType);
     return Boolean(
       bohnanzaDiceView &&
+        (!needsCurrentTurnFlow || Number(bohnanzaDiceView.turn_flow_version || 0) >= BOHNANZA_DICE_TURN_FLOW_VERSION) &&
         Array.isArray(bohnanzaDiceView.legal_actions) &&
         bohnanzaDiceView.legal_actions.includes(actionType)
     );
+  }
+
+  function bohnanzaDiceHasCurrentTurnFlow(view = bohnanzaDiceView) {
+    return Boolean(view && Number(view.turn_flow_version || 0) >= BOHNANZA_DICE_TURN_FLOW_VERSION);
   }
 
   function bohnanzaDiceDispatch(action) {
@@ -186,12 +195,14 @@
     if (bohnanzaDiceView) bohnanzaDiceRenderInteractive(bohnanzaDiceView);
   }
 
-  function bohnanzaDiceBeanToken(beanId, compact = false) {
+  function bohnanzaDiceBeanToken(beanId, compact = false, showDieTemplate = false) {
     const meta = BOHNANZA_DICE_BEANS[beanId] || { emoji: "?", short: "?", label: beanId || "Unknown bean" };
     const token = document.createElement("span");
     token.className = `bohnanza-dice-bean bean-${beanId}${compact ? " is-compact" : ""}`;
-    token.title = meta.label;
-    token.setAttribute("aria-label", meta.label);
+    if (showDieTemplate && meta.dieTemplate) token.classList.add(`is-die-${meta.dieTemplate}`);
+    const dieLabel = meta.dieTemplate === "dark" ? "dark dice only" : meta.dieTemplate === "light" ? "light dice only" : "dark or light dice";
+    token.title = showDieTemplate ? `${meta.label} · ${dieLabel}` : meta.label;
+    token.setAttribute("aria-label", showDieTemplate ? `${meta.label}, ${dieLabel}` : meta.label);
 
     const emoji = document.createElement("span");
     emoji.className = "bohnanza-dice-bean-emoji";
@@ -235,6 +246,24 @@
       .join(" OR ");
   }
 
+  function bohnanzaDiceOrderDieText(order) {
+    const beanIds = [];
+    (order.alternatives || []).forEach((alternative) => {
+      (alternative.slots || []).forEach((slot) => {
+        (slot.allowed || []).forEach((beanId) => {
+          if (!beanIds.includes(beanId) && BOHNANZA_DICE_BEANS[beanId]) beanIds.push(beanId);
+        });
+      });
+    });
+    return beanIds
+      .map((beanId) => {
+        const meta = BOHNANZA_DICE_BEANS[beanId];
+        const dieKey = meta.dieTemplate === "dark" ? "D" : meta.dieTemplate === "light" ? "L" : "D/L";
+        return `${meta.short} ${dieKey}`;
+      })
+      .join(" · ");
+  }
+
   function bohnanzaDiceOrderVisual(order) {
     const visual = document.createElement("div");
     visual.className = "bohnanza-dice-order-visual";
@@ -276,7 +305,7 @@
             slash.textContent = "/";
             slotEl.appendChild(slash);
           }
-          slotEl.appendChild(bohnanzaDiceBeanToken(beanId, true));
+          slotEl.appendChild(bohnanzaDiceBeanToken(beanId, true, true));
         });
         group.appendChild(slotEl);
       });
@@ -318,20 +347,35 @@
     const chance = Number.isFinite(percent)
       ? `🎲5 ${percent.toFixed(percent < 10 ? 1 : 0)}% is the chance on a fresh five-die roll.`
       : "Fresh-roll chance unavailable.";
-    return `${state.detail} Need: ${bohnanzaDiceOrderShortText(order)}. ${symbols.join(" ")} ${chance} The same result may continue to the next order.`;
+    const dieTypes = bohnanzaDiceOrderDieText(order);
+    return `${state.detail} Need: ${bohnanzaDiceOrderShortText(order)}. ${dieTypes ? `Dice: ${dieTypes}. ` : ""}${symbols.join(" ")} ${chance} The same result may continue to the next order.`;
   }
 
-  function bohnanzaDiceCard(card, completedCount, kind) {
+  function bohnanzaDiceCard(card, completedCount, kind, checkContext = "preview") {
     const article = document.createElement("article");
     article.className = `bohnanza-dice-harvest-card is-${kind}`;
 
     const header = document.createElement("header");
     header.dataset.bohnanzaDiceExplain = "card";
+    const contextLabel = checkContext === "roll" ? "ROLL" : checkContext === "field" ? "FIELD×5" : "PRE";
+    const contextExplanation = checkContext === "roll"
+      ? "This card checks each fresh Current Roll while another player is rolling. Dice already saved in the Bean Field do not count."
+      : checkContext === "field"
+      ? "This is the roller's card. It checks once, after all five dice are saved in the Bean Field; the intermediate Current Roll does not advance it."
+      : "This cover card is a preview. It does not check dice until it becomes the current card.";
+    header.dataset.bohnanzaDiceExplainTitle = `${kind === "current" ? "Current" : "Cover"} Card · ${contextLabel}`;
+    header.dataset.bohnanzaDiceExplainBody = `${contextExplanation} Dark-backed bean tiles occur only on dark dice, light-backed tiles only on light dice, and split tiles occur on either type.`;
     const label = document.createElement("strong");
     label.textContent = kind === "current" ? "Current card" : "Cover card";
+    const headerMeta = document.createElement("span");
+    headerMeta.className = "bohnanza-dice-card-meta";
+    const context = document.createElement("b");
+    context.className = `bohnanza-dice-card-context is-${checkContext}`;
+    context.textContent = contextLabel;
     const cardKey = document.createElement("span");
     cardKey.textContent = card && card.id ? `#${String(card.id).slice(-3)}` : "-";
-    header.append(label, cardKey);
+    headerMeta.append(context, cardKey);
+    header.append(label, headerMeta);
 
     const orders = document.createElement("ol");
     orders.className = "bohnanza-dice-orders";
@@ -347,7 +391,7 @@
         row.dataset.bohnanzaDiceExplain = "order";
         row.dataset.bohnanzaDiceExplainTitle = `Order ${index + 1} · ${state.label}`;
         row.dataset.bohnanzaDiceExplainBody = bohnanzaDiceOrderExplanation(order, index, state);
-        row.setAttribute("aria-label", `Order ${index + 1}, ${state.label}. Match ${bohnanzaDiceOrderText(order)}.`);
+        row.setAttribute("aria-label", `Order ${index + 1}, ${state.label}. Match ${bohnanzaDiceOrderText(order)}. Dice types: ${bohnanzaDiceOrderDieText(order)}.`);
 
         const level = document.createElement("span");
         level.className = "bohnanza-dice-order-level";
@@ -420,9 +464,10 @@
 
       const cardPair = document.createElement("div");
       cardPair.className = "bohnanza-dice-card-pair";
+      const currentContext = player.player_id === view.active_player_id ? "field" : "roll";
       cardPair.append(
-        bohnanzaDiceCard(player.top_card || {}, Number(player.completed_count || 0), "current"),
-        bohnanzaDiceCard(player.cover_card || {}, 0, "cover")
+        bohnanzaDiceCard(player.top_card || {}, Number(player.completed_count || 0), "current", currentContext),
+        bohnanzaDiceCard(player.cover_card || {}, 0, "cover", "preview")
       );
 
       const footer = document.createElement("div");
@@ -525,9 +570,10 @@
     }
     if (bohnanzaDiceRepeatBtn) {
       bohnanzaDiceRepeatBtn.disabled = !bohnanzaDiceHasAction("repeat_roll") || bohnanzaDicePending;
+      bohnanzaDiceRepeatBtn.textContent = currentCount ? `Reroll All ${currentCount}` : "Reroll Fresh Dice";
     }
     if (bohnanzaDiceRepeatBadge) {
-      bohnanzaDiceRepeatBadge.textContent = view.repeat_used ? "Repeat used" : "Repeat ready";
+      bohnanzaDiceRepeatBadge.textContent = view.repeat_used ? "Reroll used" : "Reroll 1×";
       bohnanzaDiceRepeatBadge.classList.toggle("is-used", Boolean(view.repeat_used));
     }
 
@@ -539,11 +585,10 @@
       const activeName = bohnanzaDicePlayerName(view, view.active_player_id);
       const resumesAnotherTurn = view.decision_origin === "after_roll" && offer.player_id !== view.active_player_id;
       if (bohnanzaDiceHarvestPrompt) {
-        const offerText = `${isYou ? "You have" : `${name} has`} ${offer.completed_count} completed orders worth ${offer.reward} ${offer.reward === 1 ? "coin" : "coins"}.`;
-        const resumeText = resumesAnotherTurn
-          ? ` These dice belong to ${activeName}'s turn. Keep Growing returns control to ${activeName}; it does not roll dice itself.`
-          : " Keep Growing does not roll dice.";
-        bohnanzaDiceHarvestPrompt.textContent = `${offerText}${resumeText}`;
+        const checkKey = view.decision_origin === "after_roll" ? `ROLL · ${activeName}` : view.decision_origin === "turn_end" ? "FIELD×5" : "FINAL";
+        const activePlayer = bohnanzaDicePlayer(view, view.active_player_id);
+        const resumeText = resumesAnotherTurn ? ` · ${activePlayer && activePlayer.is_bot ? "BOT" : activeName} CONTINUES` : "";
+        bohnanzaDiceHarvestPrompt.textContent = `${isYou ? "YOU" : name} · ${offer.completed_count}/5 · ${offer.reward} ${offer.reward === 1 ? "COIN" : "COINS"} · ${checkKey}${resumeText}`;
       }
       if (bohnanzaDiceHarvestBtn) {
         bohnanzaDiceHarvestBtn.textContent = `Harvest ${offer.reward} ${offer.reward === 1 ? "Coin" : "Coins"}`;
@@ -560,7 +605,9 @@
     if (!bohnanzaDiceStatus) return;
     const activeName = bohnanzaDicePlayerName(view, view.active_player_id);
     const head = (view.harvest_queue || [])[0];
-    if (view.game_over) {
+    if (!view.game_over && !bohnanzaDiceHasCurrentTurnFlow(view)) {
+      bohnanzaDiceStatus.textContent = "Server restart required · manual Roll / Save flow is not loaded.";
+    } else if (view.game_over) {
       const winners = (view.winner_ids || []).map((id) => bohnanzaDicePlayerName(view, id));
       bohnanzaDiceStatus.textContent = winners.length
         ? `🏆 ${winners.join(" & ")} ${winners.length === 1 ? "wins" : "win"}. Final cards and scores remain on the table.`
@@ -568,9 +615,10 @@
     } else if (head) {
       const name = bohnanzaDicePlayerName(view, head);
       const resumesAnotherTurn = view.decision_origin === "after_roll" && head !== view.active_player_id;
+      const context = view.decision_origin === "after_roll" ? `ROLL · ${activeName}` : view.decision_origin === "turn_end" ? "FIELD×5" : "FINAL";
       bohnanzaDiceStatus.textContent = head === view.you
-        ? `${view.phase === "final_harvest" ? "Final decision" : "Harvest decision"} — collect now or keep growing.${resumesAnotherTurn ? ` ${activeName}'s turn resumes afterward.` : ""}`
-        : `Waiting for ${name}'s ${view.phase === "final_harvest" ? "final " : ""}harvest decision.`;
+        ? `${view.phase === "final_harvest" ? "Final decision" : "Harvest decision"} · ${context}${resumesAnotherTurn ? ` · ${activeName} continues` : ""}`
+        : `Waiting for ${name}'s ${view.phase === "final_harvest" ? "final " : ""}harvest decision${(view.harvest_queue || []).includes(view.you) ? " · your choice is queued" : ""}.`;
     } else if (view.phase === "await_roll") {
       const dice = Array.isArray(view.dice) ? view.dice : [];
       const cupCount = dice.filter((die) => die.zone === "cup").length;
@@ -732,6 +780,10 @@
       setGamePanelVisibility("bohnanza_dice");
     }
     if (bohnanzaDiceTurnLabel) bohnanzaDiceTurnLabel.textContent = bohnanzaDicePlayerName(view, view.active_player_id);
+    if (bohnanzaDiceRollHeading) {
+      const activeName = bohnanzaDicePlayerName(view, view.active_player_id);
+      bohnanzaDiceRollHeading.textContent = view.active_player_id === view.you ? "Your Current Roll" : `${activeName}'s Current Roll`;
+    }
     if (bohnanzaDicePhaseLabel) bohnanzaDicePhaseLabel.textContent = BOHNANZA_DICE_PHASES[view.phase] || view.phase || "-";
     if (bohnanzaDiceDeckLabel) bohnanzaDiceDeckLabel.textContent = String(Number(view.draw_deck_count || 0));
     bohnanzaDiceRenderPlayers(view);

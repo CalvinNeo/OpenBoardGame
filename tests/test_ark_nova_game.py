@@ -460,7 +460,7 @@ class ArkNovaGameTests(unittest.TestCase):
                 "tasks": [{
                     "task": "support_project",
                     "project_id": "121",
-                    "slot": 3,
+                    "slot": 2,
                     "release_animal_id": "490",
                     "reward_id": "money_12",
                 }],
@@ -470,7 +470,7 @@ class ArkNovaGameTests(unittest.TestCase):
         player = state["players"]["p1"]
         self.assertNotIn("490", player["played_animals"])
         self.assertEqual(player["map"]["buildings"][0]["used_capacity"], 0)
-        self.assertEqual(player["supported_projects"][-1]["position"], 3)
+        self.assertEqual(player["supported_projects"][-1]["position"], 2)
         self.assertIn("202", state["discard"])
 
     def test_snapping_two_refills_between_the_two_mandatory_choices(self) -> None:

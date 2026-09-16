@@ -922,6 +922,14 @@ def _occupied_project_positions(state: Mapping[str, Any], project_id: str) -> Se
     return {int(item["position"]) for item in state.get("project_slots", {}).get(project_id, [])}
 
 
+def _release_requirement_matches_printed_size(
+    requirement: Mapping[str, Any], printed_size: int,
+) -> bool:
+    minimum = int(requirement.get("minimum", requirement.get("value", 0)))
+    maximum = int(requirement.get("maximum", requirement.get("value", minimum)))
+    return minimum <= printed_size <= maximum
+
+
 def _project_requirement_met(
     state: Mapping[str, Any], player_id: str, project: Mapping[str, Any], slot: Mapping[str, Any],
     release_animal_id: Optional[str] = None, wild_icons: int = 0,
@@ -943,7 +951,7 @@ def _project_requirement_met(
             record.get("printed_enclosure_size", _printed_standard_enclosure_size(card))
         )
         return (
-            printed_size == int(requirement.get("value", 0))
+            _release_requirement_matches_printed_size(requirement, printed_size)
             and int(_card_icons(card).get(tag, 0)) > 0
         )
     if kind == "breeding_match":

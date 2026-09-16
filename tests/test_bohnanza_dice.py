@@ -9,6 +9,7 @@ from game.bohnanza_dice import (
     DIE_TEMPLATES,
     EXPECTED_CARD_IDS,
     ORDER_LIBRARY,
+    TURN_FLOW_VERSION,
     BohnanzaDiceGame,
     _advance_player_orders,
     _assert_card_conservation,
@@ -158,6 +159,7 @@ class BohnanzaDiceSetupAndPrivacyTests(unittest.TestCase):
         self.assertNotIn("rng_counter", view)
         self.assertNotIn("draw_deck", view)
         self.assertEqual(view["draw_deck_count"], 51)
+        self.assertEqual(view["turn_flow_version"], TURN_FLOW_VERSION)
         self.assertEqual(len(view["players"][0]["top_card"]["orders_bottom_to_top"]), 5)
         self.assertEqual(view["catalog"]["catalog_status"], "original-compatible")
 
@@ -285,27 +287,44 @@ class BohnanzaDiceHarvestAndEndGameTests(unittest.TestCase):
         self.assertEqual(len(state["draw_deck"]), deck_before - 2)
         _assert_card_conservation(state)
 
+    def test_nonactive_player_can_harvest_during_another_players_roll(self):
+        state = BohnanzaDiceGame.init_game({"seed": "off-turn-harvest"}, make_players(2))
+        active = state["active_player_id"]
+        nonactive = next(player_id for player_id in state["turn_order"] if player_id != active)
+        state["players"][nonactive]["completed_count"] = 3
+
+        _, error = BohnanzaDiceGame.apply_action(state, active, {"type": "roll"})
+
+        self.assertIsNone(error)
+        self.assertEqual(state["active_player_id"], active)
+        self.assertEqual(state["harvest_queue"][0], nonactive)
+        self.assertEqual(BohnanzaDiceGame.get_legal_actions(state, nonactive), ["harvest", "keep_growing"])
+        self.assertEqual(BohnanzaDiceGame.get_legal_actions(state, active), [])
+
     def test_keep_growing_only_skips_the_current_checkpoint(self):
         state = BohnanzaDiceGame.init_game({"seed": "keep"}, make_players(2))
         active = state["active_player_id"]
+        decider = next(player_id for player_id in state["turn_order"] if player_id != active)
         _, error = BohnanzaDiceGame.apply_action(state, active, {"type": "roll"})
         self.assertIsNone(error)
         settle_harvest_queue(state)
-        self._open_checkpoint(state, "p1", completed=3)
-        before_player = copy.deepcopy(state["players"]["p1"])
+        self._open_checkpoint(state, decider, completed=3)
+        before_player = copy.deepcopy(state["players"][decider])
         dice_before = copy.deepcopy(state["dice"])
         roll_sequence_before = state["roll_sequence"]
         roll_count_before = state["roll_count_this_turn"]
         rng_counter_before = state["rng_counter"]
-        events, error = BohnanzaDiceGame.apply_action(state, "p1", {"type": "keep_growing"})
+        events, error = BohnanzaDiceGame.apply_action(state, decider, {"type": "keep_growing"})
         self.assertIsNone(error)
         self.assertEqual([event["type"] for event in events], ["bohnanza_dice:keep_growing"])
         self.assertEqual(state["phase"], "after_roll")
-        self.assertEqual(state["players"]["p1"], before_player)
+        self.assertEqual(state["players"][decider], before_player)
         self.assertEqual(state["dice"], dice_before)
         self.assertEqual(state["roll_sequence"], roll_sequence_before)
         self.assertEqual(state["roll_count_this_turn"], roll_count_before)
         self.assertEqual(state["rng_counter"], rng_counter_before)
+        self.assertIn("save_dice", BohnanzaDiceGame.get_legal_actions(state, active))
+        self.assertEqual(BohnanzaDiceGame.get_legal_actions(state, decider), [])
 
     def test_deck_shortage_recycles_five_coin_cards_without_losing_cards(self):
         state = BohnanzaDiceGame.init_game({"seed": "recycle"}, make_players(2))

@@ -485,8 +485,15 @@ def parse_sponsor_cards(lines: list[tuple[int, str]]) -> list[dict[str, object]]
 
 def parse_project_requirement(raw: str, metric: str) -> dict[str, int | str]:
     requirement = strip_markup(raw)
-    if match := re.fullmatch(r"围栏尺寸(\d+)", requirement):
-        return {"kind": "released_animal_enclosure_size", "value": int(match.group(1))}
+    if match := re.fullmatch(r"围栏尺寸(\d+)(?:-(\d+))?", requirement):
+        minimum = int(match.group(1))
+        maximum = int(match.group(2) or minimum)
+        return {
+            "kind": "released_animal_enclosure_size",
+            "minimum": minimum,
+            "maximum": maximum,
+            "label": str(minimum) if minimum == maximum else f"{minimum}-{maximum}",
+        }
     if requirement == "满足繁育条件":
         return {"kind": "breeding_match"}
     if requirement.isdigit():
@@ -547,7 +554,7 @@ def parse_conservation_projects(lines: list[tuple[int, str]]) -> list[dict[str, 
         if project_type == "release":
             project["release_rules"] = {
                 "animal_must_have_tag": metric,
-                "reward_slot_requires_exact_printed_enclosure_size": True,
+                "reward_slot_uses_printed_enclosure_size_band": True,
                 "lose_only_printed_appeal": True,
                 "remove_animal_icons_and_card": True,
                 "flip_smallest_possible_occupied_matching_enclosure": True,
@@ -761,7 +768,7 @@ def write_catalog(
         slots = "；".join(slot["raw_zh"] for slot in card["support_slots"])
         special = reward_text(card["new_project_bonus"])
         if card["project_type"] == "release":
-            special += "；放归动物卡上印刷的标准围栏尺寸须与奖励格完全相同"
+            special += "；按放归动物卡上印刷的标准围栏尺寸选择对应区间"
         elif card["project_type"] == "breeding":
             special += "；动物标签匹配且有与其大洲相同的合作动物园"
         lines.append(

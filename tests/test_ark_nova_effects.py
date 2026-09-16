@@ -416,7 +416,7 @@ class ArkNovaProjectAndScoringTests(unittest.TestCase):
         )
         self.assertEqual(
             effects.evaluate_conservation_project("121", context(sea_cave, "121"))["eligible_slots"],
-            [3],
+            [2],
         )
 
     def test_breeding_requires_matching_animal_and_partner_zoo(self) -> None:

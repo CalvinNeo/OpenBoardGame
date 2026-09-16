@@ -155,7 +155,14 @@ class ArkNovaCardDataTests(unittest.TestCase):
             card = self.project_by_id[str(value)]
             self.assertEqual(card["project_type"], "release")
             self.assertEqual(
-                [slot["requirement"]["value"] for slot in card["support_slots"]],
+                [
+                    (slot["requirement"]["minimum"], slot["requirement"]["maximum"])
+                    for slot in card["support_slots"]
+                ],
+                [(4, 5), (3, 3), (1, 2)],
+            )
+            self.assertEqual(
+                [slot["reward"]["conservation"] for slot in card["support_slots"]],
                 [5, 4, 3],
             )
             self.assertEqual(card["new_project_bonus"], {"reputation": 1})

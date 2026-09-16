@@ -781,44 +781,50 @@
         "position": 1,
         "requirement": {
           "kind": "released_animal_enclosure_size",
-          "value": 5
+          "minimum": 4,
+          "maximum": 5,
+          "label": "4-5"
         },
         "reward": {
           "conservation": 5
         },
-        "raw_zh": "围栏尺寸5 -> 保育+5"
+        "raw_zh": "围栏尺寸4-5 -> 保育+5"
       },
       {
         "position": 2,
         "requirement": {
           "kind": "released_animal_enclosure_size",
-          "value": 4
+          "minimum": 3,
+          "maximum": 3,
+          "label": "3"
         },
         "reward": {
           "conservation": 4
         },
-        "raw_zh": "围栏尺寸4 -> 保育+4"
+        "raw_zh": "围栏尺寸3 -> 保育+4"
       },
       {
         "position": 3,
         "requirement": {
           "kind": "released_animal_enclosure_size",
-          "value": 3
+          "minimum": 1,
+          "maximum": 2,
+          "label": "1-2"
         },
         "reward": {
           "conservation": 3
         },
-        "raw_zh": "围栏尺寸3 -> 保育+3"
+        "raw_zh": "围栏尺寸1-2 -> 保育+3"
       }
     ],
     "new_project_bonus": {
       "reputation": 1
     },
-    "description_zh": "将1个具有 欧洲 图标的动物 放归 野外；动物卡上印刷的标准围栏尺寸必须与奖励格所示尺寸完全相同。",
+    "description_zh": "将1个具有 欧洲 图标的动物 放归 野外；按动物卡上印刷的标准围栏尺寸选择包含该尺寸的奖励格。",
     "source_line": 244,
     "release_rules": {
       "animal_must_have_tag": "europe",
-      "reward_slot_requires_exact_printed_enclosure_size": true,
+      "reward_slot_uses_printed_enclosure_size_band": true,
       "lose_only_printed_appeal": true,
       "remove_animal_icons_and_card": true,
       "flip_smallest_possible_occupied_matching_enclosure": true,
@@ -852,44 +858,50 @@
         "position": 1,
         "requirement": {
           "kind": "released_animal_enclosure_size",
-          "value": 5
+          "minimum": 4,
+          "maximum": 5,
+          "label": "4-5"
         },
         "reward": {
           "conservation": 5
         },
-        "raw_zh": "围栏尺寸5 -> 保育+5"
+        "raw_zh": "围栏尺寸4-5 -> 保育+5"
       },
       {
         "position": 2,
         "requirement": {
           "kind": "released_animal_enclosure_size",
-          "value": 4
+          "minimum": 3,
+          "maximum": 3,
+          "label": "3"
         },
         "reward": {
           "conservation": 4
         },
-        "raw_zh": "围栏尺寸4 -> 保育+4"
+        "raw_zh": "围栏尺寸3 -> 保育+4"
       },
       {
         "position": 3,
         "requirement": {
           "kind": "released_animal_enclosure_size",
-          "value": 3
+          "minimum": 1,
+          "maximum": 2,
+          "label": "1-2"
         },
         "reward": {
           "conservation": 3
         },
-        "raw_zh": "围栏尺寸3 -> 保育+3"
+        "raw_zh": "围栏尺寸1-2 -> 保育+3"
       }
     ],
     "new_project_bonus": {
       "reputation": 1
     },
-    "description_zh": "将1个具有 美洲 图标的动物 放归 野外；动物卡上印刷的标准围栏尺寸必须与奖励格所示尺寸完全相同。",
+    "description_zh": "将1个具有 美洲 图标的动物 放归 野外；按动物卡上印刷的标准围栏尺寸选择包含该尺寸的奖励格。",
     "source_line": 245,
     "release_rules": {
       "animal_must_have_tag": "americas",
-      "reward_slot_requires_exact_printed_enclosure_size": true,
+      "reward_slot_uses_printed_enclosure_size_band": true,
       "lose_only_printed_appeal": true,
       "remove_animal_icons_and_card": true,
       "flip_smallest_possible_occupied_matching_enclosure": true,
@@ -923,44 +935,50 @@
         "position": 1,
         "requirement": {
           "kind": "released_animal_enclosure_size",
-          "value": 5
+          "minimum": 4,
+          "maximum": 5,
+          "label": "4-5"
         },
         "reward": {
           "conservation": 5
         },
-        "raw_zh": "围栏尺寸5 -> 保育+5"
+        "raw_zh": "围栏尺寸4-5 -> 保育+5"
       },
       {
         "position": 2,
         "requirement": {
           "kind": "released_animal_enclosure_size",
-          "value": 4
+          "minimum": 3,
+          "maximum": 3,
+          "label": "3"
         },
         "reward": {
           "conservation": 4
         },
-        "raw_zh": "围栏尺寸4 -> 保育+4"
+        "raw_zh": "围栏尺寸3 -> 保育+4"
       },
       {
         "position": 3,
         "requirement": {
           "kind": "released_animal_enclosure_size",
-          "value": 3
+          "minimum": 1,
+          "maximum": 2,
+          "label": "1-2"
         },
         "reward": {
           "conservation": 3
         },
-        "raw_zh": "围栏尺寸3 -> 保育+3"
+        "raw_zh": "围栏尺寸1-2 -> 保育+3"
       }
     ],
     "new_project_bonus": {
       "reputation": 1
     },
-    "description_zh": "将1个具有 亚洲 图标的动物 放归 野外；动物卡上印刷的标准围栏尺寸必须与奖励格所示尺寸完全相同。",
+    "description_zh": "将1个具有 亚洲 图标的动物 放归 野外；按动物卡上印刷的标准围栏尺寸选择包含该尺寸的奖励格。",
     "source_line": 246,
     "release_rules": {
       "animal_must_have_tag": "asia",
-      "reward_slot_requires_exact_printed_enclosure_size": true,
+      "reward_slot_uses_printed_enclosure_size_band": true,
       "lose_only_printed_appeal": true,
       "remove_animal_icons_and_card": true,
       "flip_smallest_possible_occupied_matching_enclosure": true,
@@ -994,44 +1012,50 @@
         "position": 1,
         "requirement": {
           "kind": "released_animal_enclosure_size",
-          "value": 5
+          "minimum": 4,
+          "maximum": 5,
+          "label": "4-5"
         },
         "reward": {
           "conservation": 5
         },
-        "raw_zh": "围栏尺寸5 -> 保育+5"
+        "raw_zh": "围栏尺寸4-5 -> 保育+5"
       },
       {
         "position": 2,
         "requirement": {
           "kind": "released_animal_enclosure_size",
-          "value": 4
+          "minimum": 3,
+          "maximum": 3,
+          "label": "3"
         },
         "reward": {
           "conservation": 4
         },
-        "raw_zh": "围栏尺寸4 -> 保育+4"
+        "raw_zh": "围栏尺寸3 -> 保育+4"
       },
       {
         "position": 3,
         "requirement": {
           "kind": "released_animal_enclosure_size",
-          "value": 3
+          "minimum": 1,
+          "maximum": 2,
+          "label": "1-2"
         },
         "reward": {
           "conservation": 3
         },
-        "raw_zh": "围栏尺寸3 -> 保育+3"
+        "raw_zh": "围栏尺寸1-2 -> 保育+3"
       }
     ],
     "new_project_bonus": {
       "reputation": 1
     },
-    "description_zh": "将1个具有 非洲 图标的动物 放归 野外；动物卡上印刷的标准围栏尺寸必须与奖励格所示尺寸完全相同。",
+    "description_zh": "将1个具有 非洲 图标的动物 放归 野外；按动物卡上印刷的标准围栏尺寸选择包含该尺寸的奖励格。",
     "source_line": 247,
     "release_rules": {
       "animal_must_have_tag": "africa",
-      "reward_slot_requires_exact_printed_enclosure_size": true,
+      "reward_slot_uses_printed_enclosure_size_band": true,
       "lose_only_printed_appeal": true,
       "remove_animal_icons_and_card": true,
       "flip_smallest_possible_occupied_matching_enclosure": true,
@@ -1065,44 +1089,50 @@
         "position": 1,
         "requirement": {
           "kind": "released_animal_enclosure_size",
-          "value": 5
+          "minimum": 4,
+          "maximum": 5,
+          "label": "4-5"
         },
         "reward": {
           "conservation": 5
         },
-        "raw_zh": "围栏尺寸5 -> 保育+5"
+        "raw_zh": "围栏尺寸4-5 -> 保育+5"
       },
       {
         "position": 2,
         "requirement": {
           "kind": "released_animal_enclosure_size",
-          "value": 4
+          "minimum": 3,
+          "maximum": 3,
+          "label": "3"
         },
         "reward": {
           "conservation": 4
         },
-        "raw_zh": "围栏尺寸4 -> 保育+4"
+        "raw_zh": "围栏尺寸3 -> 保育+4"
       },
       {
         "position": 3,
         "requirement": {
           "kind": "released_animal_enclosure_size",
-          "value": 3
+          "minimum": 1,
+          "maximum": 2,
+          "label": "1-2"
         },
         "reward": {
           "conservation": 3
         },
-        "raw_zh": "围栏尺寸3 -> 保育+3"
+        "raw_zh": "围栏尺寸1-2 -> 保育+3"
       }
     ],
     "new_project_bonus": {
       "reputation": 1
     },
-    "description_zh": "将1个具有 澳洲 图标的动物 放归 野外；动物卡上印刷的标准围栏尺寸必须与奖励格所示尺寸完全相同。",
+    "description_zh": "将1个具有 澳洲 图标的动物 放归 野外；按动物卡上印刷的标准围栏尺寸选择包含该尺寸的奖励格。",
     "source_line": 248,
     "release_rules": {
       "animal_must_have_tag": "australia",
-      "reward_slot_requires_exact_printed_enclosure_size": true,
+      "reward_slot_uses_printed_enclosure_size_band": true,
       "lose_only_printed_appeal": true,
       "remove_animal_icons_and_card": true,
       "flip_smallest_possible_occupied_matching_enclosure": true,
@@ -1136,44 +1166,50 @@
         "position": 1,
         "requirement": {
           "kind": "released_animal_enclosure_size",
-          "value": 5
+          "minimum": 4,
+          "maximum": 5,
+          "label": "4-5"
         },
         "reward": {
           "conservation": 5
         },
-        "raw_zh": "围栏尺寸5 -> 保育+5"
+        "raw_zh": "围栏尺寸4-5 -> 保育+5"
       },
       {
         "position": 2,
         "requirement": {
           "kind": "released_animal_enclosure_size",
-          "value": 4
+          "minimum": 3,
+          "maximum": 3,
+          "label": "3"
         },
         "reward": {
           "conservation": 4
         },
-        "raw_zh": "围栏尺寸4 -> 保育+4"
+        "raw_zh": "围栏尺寸3 -> 保育+4"
       },
       {
         "position": 3,
         "requirement": {
           "kind": "released_animal_enclosure_size",
-          "value": 3
+          "minimum": 1,
+          "maximum": 2,
+          "label": "1-2"
         },
         "reward": {
           "conservation": 3
         },
-        "raw_zh": "围栏尺寸3 -> 保育+3"
+        "raw_zh": "围栏尺寸1-2 -> 保育+3"
       }
     ],
     "new_project_bonus": {
       "reputation": 1
     },
-    "description_zh": "将1个 食肉类 动物 放归 野外；动物卡上印刷的标准围栏尺寸必须与奖励格所示尺寸完全相同。",
+    "description_zh": "将1个 食肉类 动物 放归 野外；按动物卡上印刷的标准围栏尺寸选择包含该尺寸的奖励格。",
     "source_line": 249,
     "release_rules": {
       "animal_must_have_tag": "predator",
-      "reward_slot_requires_exact_printed_enclosure_size": true,
+      "reward_slot_uses_printed_enclosure_size_band": true,
       "lose_only_printed_appeal": true,
       "remove_animal_icons_and_card": true,
       "flip_smallest_possible_occupied_matching_enclosure": true,
@@ -1207,44 +1243,50 @@
         "position": 1,
         "requirement": {
           "kind": "released_animal_enclosure_size",
-          "value": 5
+          "minimum": 4,
+          "maximum": 5,
+          "label": "4-5"
         },
         "reward": {
           "conservation": 5
         },
-        "raw_zh": "围栏尺寸5 -> 保育+5"
+        "raw_zh": "围栏尺寸4-5 -> 保育+5"
       },
       {
         "position": 2,
         "requirement": {
           "kind": "released_animal_enclosure_size",
-          "value": 4
+          "minimum": 3,
+          "maximum": 3,
+          "label": "3"
         },
         "reward": {
           "conservation": 4
         },
-        "raw_zh": "围栏尺寸4 -> 保育+4"
+        "raw_zh": "围栏尺寸3 -> 保育+4"
       },
       {
         "position": 3,
         "requirement": {
           "kind": "released_animal_enclosure_size",
-          "value": 3
+          "minimum": 1,
+          "maximum": 2,
+          "label": "1-2"
         },
         "reward": {
           "conservation": 3
         },
-        "raw_zh": "围栏尺寸3 -> 保育+3"
+        "raw_zh": "围栏尺寸1-2 -> 保育+3"
       }
     ],
     "new_project_bonus": {
       "reputation": 1
     },
-    "description_zh": "将1个 鸟类 动物 放归 野外；动物卡上印刷的标准围栏尺寸必须与奖励格所示尺寸完全相同。",
+    "description_zh": "将1个 鸟类 动物 放归 野外；按动物卡上印刷的标准围栏尺寸选择包含该尺寸的奖励格。",
     "source_line": 250,
     "release_rules": {
       "animal_must_have_tag": "bird",
-      "reward_slot_requires_exact_printed_enclosure_size": true,
+      "reward_slot_uses_printed_enclosure_size_band": true,
       "lose_only_printed_appeal": true,
       "remove_animal_icons_and_card": true,
       "flip_smallest_possible_occupied_matching_enclosure": true,
@@ -1278,44 +1320,50 @@
         "position": 1,
         "requirement": {
           "kind": "released_animal_enclosure_size",
-          "value": 5
+          "minimum": 4,
+          "maximum": 5,
+          "label": "4-5"
         },
         "reward": {
           "conservation": 5
         },
-        "raw_zh": "围栏尺寸5 -> 保育+5"
+        "raw_zh": "围栏尺寸4-5 -> 保育+5"
       },
       {
         "position": 2,
         "requirement": {
           "kind": "released_animal_enclosure_size",
-          "value": 4
+          "minimum": 3,
+          "maximum": 3,
+          "label": "3"
         },
         "reward": {
           "conservation": 4
         },
-        "raw_zh": "围栏尺寸4 -> 保育+4"
+        "raw_zh": "围栏尺寸3 -> 保育+4"
       },
       {
         "position": 3,
         "requirement": {
           "kind": "released_animal_enclosure_size",
-          "value": 3
+          "minimum": 1,
+          "maximum": 2,
+          "label": "1-2"
         },
         "reward": {
           "conservation": 3
         },
-        "raw_zh": "围栏尺寸3 -> 保育+3"
+        "raw_zh": "围栏尺寸1-2 -> 保育+3"
       }
     ],
     "new_project_bonus": {
       "reputation": 1
     },
-    "description_zh": "将1个 食草类 动物 放归 野外；动物卡上印刷的标准围栏尺寸必须与奖励格所示尺寸完全相同。",
+    "description_zh": "将1个 食草类 动物 放归 野外；按动物卡上印刷的标准围栏尺寸选择包含该尺寸的奖励格。",
     "source_line": 251,
     "release_rules": {
       "animal_must_have_tag": "herbivore",
-      "reward_slot_requires_exact_printed_enclosure_size": true,
+      "reward_slot_uses_printed_enclosure_size_band": true,
       "lose_only_printed_appeal": true,
       "remove_animal_icons_and_card": true,
       "flip_smallest_possible_occupied_matching_enclosure": true,
@@ -1349,44 +1397,50 @@
         "position": 1,
         "requirement": {
           "kind": "released_animal_enclosure_size",
-          "value": 5
+          "minimum": 4,
+          "maximum": 5,
+          "label": "4-5"
         },
         "reward": {
           "conservation": 5
         },
-        "raw_zh": "围栏尺寸5 -> 保育+5"
+        "raw_zh": "围栏尺寸4-5 -> 保育+5"
       },
       {
         "position": 2,
         "requirement": {
           "kind": "released_animal_enclosure_size",
-          "value": 4
+          "minimum": 3,
+          "maximum": 3,
+          "label": "3"
         },
         "reward": {
           "conservation": 4
         },
-        "raw_zh": "围栏尺寸4 -> 保育+4"
+        "raw_zh": "围栏尺寸3 -> 保育+4"
       },
       {
         "position": 3,
         "requirement": {
           "kind": "released_animal_enclosure_size",
-          "value": 3
+          "minimum": 1,
+          "maximum": 2,
+          "label": "1-2"
         },
         "reward": {
           "conservation": 3
         },
-        "raw_zh": "围栏尺寸3 -> 保育+3"
+        "raw_zh": "围栏尺寸1-2 -> 保育+3"
       }
     ],
     "new_project_bonus": {
       "reputation": 1
     },
-    "description_zh": "将1个 爬行类 动物 放归 野外；动物卡上印刷的标准围栏尺寸必须与奖励格所示尺寸完全相同。",
+    "description_zh": "将1个 爬行类 动物 放归 野外；按动物卡上印刷的标准围栏尺寸选择包含该尺寸的奖励格。",
     "source_line": 252,
     "release_rules": {
       "animal_must_have_tag": "reptile",
-      "reward_slot_requires_exact_printed_enclosure_size": true,
+      "reward_slot_uses_printed_enclosure_size_band": true,
       "lose_only_printed_appeal": true,
       "remove_animal_icons_and_card": true,
       "flip_smallest_possible_occupied_matching_enclosure": true,
@@ -1420,44 +1474,50 @@
         "position": 1,
         "requirement": {
           "kind": "released_animal_enclosure_size",
-          "value": 5
+          "minimum": 4,
+          "maximum": 5,
+          "label": "4-5"
         },
         "reward": {
           "conservation": 5
         },
-        "raw_zh": "围栏尺寸5 -> 保育+5"
+        "raw_zh": "围栏尺寸4-5 -> 保育+5"
       },
       {
         "position": 2,
         "requirement": {
           "kind": "released_animal_enclosure_size",
-          "value": 4
+          "minimum": 3,
+          "maximum": 3,
+          "label": "3"
         },
         "reward": {
           "conservation": 4
         },
-        "raw_zh": "围栏尺寸4 -> 保育+4"
+        "raw_zh": "围栏尺寸3 -> 保育+4"
       },
       {
         "position": 3,
         "requirement": {
           "kind": "released_animal_enclosure_size",
-          "value": 3
+          "minimum": 1,
+          "maximum": 2,
+          "label": "1-2"
         },
         "reward": {
           "conservation": 3
         },
-        "raw_zh": "围栏尺寸3 -> 保育+3"
+        "raw_zh": "围栏尺寸1-2 -> 保育+3"
       }
     ],
     "new_project_bonus": {
       "reputation": 1
     },
-    "description_zh": "将1个 灵长类 动物 放归 野外；动物卡上印刷的标准围栏尺寸必须与奖励格所示尺寸完全相同。",
+    "description_zh": "将1个 灵长类 动物 放归 野外；按动物卡上印刷的标准围栏尺寸选择包含该尺寸的奖励格。",
     "source_line": 253,
     "release_rules": {
       "animal_must_have_tag": "primate",
-      "reward_slot_requires_exact_printed_enclosure_size": true,
+      "reward_slot_uses_printed_enclosure_size_band": true,
       "lose_only_printed_appeal": true,
       "remove_animal_icons_and_card": true,
       "flip_smallest_possible_occupied_matching_enclosure": true,

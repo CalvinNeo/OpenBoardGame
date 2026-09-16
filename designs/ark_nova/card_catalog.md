@@ -311,16 +311,16 @@
 | 110 | 食肉类<br>PREDATORS | base / predator | 5 -> 保育+5（食肉类）；4 -> 保育+4（食肉类）；2 -> 保育+2（食肉类） | — |
 | 111 | 食草类<br>HERBIVORES | base / herbivore | 5 -> 保育+5（食草类）；4 -> 保育+4（食草类）；2 -> 保育+2（食草类） | — |
 | 112 | 鸟类<br>BIRDS | base / bird | 5 -> 保育+5（鸟类）；4 -> 保育+4（鸟类）；2 -> 保育+2（鸟类） | — |
-| 113 | 巴伐利亚森林国家公园<br>BAVARIAN FOREST NATIONAL PARK | release / europe | 围栏尺寸5 -> 保育+5；围栏尺寸4 -> 保育+4；围栏尺寸3 -> 保育+3 | reputation +1；放归动物卡上印刷的标准围栏尺寸须与奖励格完全相同 |
-| 114 | 优胜美地国家公园<br>YOSEMITE NATIONAL PARK | release / americas | 围栏尺寸5 -> 保育+5；围栏尺寸4 -> 保育+4；围栏尺寸3 -> 保育+3 | reputation +1；放归动物卡上印刷的标准围栏尺寸须与奖励格完全相同 |
-| 115 | 安通国家公园<br>ANGTHONG NATIONAL PARK | release / asia | 围栏尺寸5 -> 保育+5；围栏尺寸4 -> 保育+4；围栏尺寸3 -> 保育+3 | reputation +1；放归动物卡上印刷的标准围栏尺寸须与奖励格完全相同 |
-| 116 | 塞伦盖蒂国家公园<br>SERENGETI NATIONAL PARK | release / africa | 围栏尺寸5 -> 保育+5；围栏尺寸4 -> 保育+4；围栏尺寸3 -> 保育+3 | reputation +1；放归动物卡上印刷的标准围栏尺寸须与奖励格完全相同 |
-| 117 | 蓝山国家公园<br>BLUE MOUNTAINS NATIONAL PARK | release / australia | 围栏尺寸5 -> 保育+5；围栏尺寸4 -> 保育+4；围栏尺寸3 -> 保育+3 | reputation +1；放归动物卡上印刷的标准围栏尺寸须与奖励格完全相同 |
-| 118 | 热带大草原<br>SAVANNA | release / predator | 围栏尺寸5 -> 保育+5；围栏尺寸4 -> 保育+4；围栏尺寸3 -> 保育+3 | reputation +1；放归动物卡上印刷的标准围栏尺寸须与奖励格完全相同 |
-| 119 | 低矮山脉<br>LOW MOUNTAIN RANGE | release / bird | 围栏尺寸5 -> 保育+5；围栏尺寸4 -> 保育+4；围栏尺寸3 -> 保育+3 | reputation +1；放归动物卡上印刷的标准围栏尺寸须与奖励格完全相同 |
-| 120 | 竹林<br>BAMBOO FOREST | release / herbivore | 围栏尺寸5 -> 保育+5；围栏尺寸4 -> 保育+4；围栏尺寸3 -> 保育+3 | reputation +1；放归动物卡上印刷的标准围栏尺寸须与奖励格完全相同 |
-| 121 | 海蚀洞<br>SEA CAVE | release / reptile | 围栏尺寸5 -> 保育+5；围栏尺寸4 -> 保育+4；围栏尺寸3 -> 保育+3 | reputation +1；放归动物卡上印刷的标准围栏尺寸须与奖励格完全相同 |
-| 122 | 丛林<br>JUNGLE | release / primate | 围栏尺寸5 -> 保育+5；围栏尺寸4 -> 保育+4；围栏尺寸3 -> 保育+3 | reputation +1；放归动物卡上印刷的标准围栏尺寸须与奖励格完全相同 |
+| 113 | 巴伐利亚森林国家公园<br>BAVARIAN FOREST NATIONAL PARK | release / europe | 围栏尺寸4-5 -> 保育+5；围栏尺寸3 -> 保育+4；围栏尺寸1-2 -> 保育+3 | reputation +1；按放归动物卡上印刷的标准围栏尺寸选择对应区间 |
+| 114 | 优胜美地国家公园<br>YOSEMITE NATIONAL PARK | release / americas | 围栏尺寸4-5 -> 保育+5；围栏尺寸3 -> 保育+4；围栏尺寸1-2 -> 保育+3 | reputation +1；按放归动物卡上印刷的标准围栏尺寸选择对应区间 |
+| 115 | 安通国家公园<br>ANGTHONG NATIONAL PARK | release / asia | 围栏尺寸4-5 -> 保育+5；围栏尺寸3 -> 保育+4；围栏尺寸1-2 -> 保育+3 | reputation +1；按放归动物卡上印刷的标准围栏尺寸选择对应区间 |
+| 116 | 塞伦盖蒂国家公园<br>SERENGETI NATIONAL PARK | release / africa | 围栏尺寸4-5 -> 保育+5；围栏尺寸3 -> 保育+4；围栏尺寸1-2 -> 保育+3 | reputation +1；按放归动物卡上印刷的标准围栏尺寸选择对应区间 |
+| 117 | 蓝山国家公园<br>BLUE MOUNTAINS NATIONAL PARK | release / australia | 围栏尺寸4-5 -> 保育+5；围栏尺寸3 -> 保育+4；围栏尺寸1-2 -> 保育+3 | reputation +1；按放归动物卡上印刷的标准围栏尺寸选择对应区间 |
+| 118 | 热带大草原<br>SAVANNA | release / predator | 围栏尺寸4-5 -> 保育+5；围栏尺寸3 -> 保育+4；围栏尺寸1-2 -> 保育+3 | reputation +1；按放归动物卡上印刷的标准围栏尺寸选择对应区间 |
+| 119 | 低矮山脉<br>LOW MOUNTAIN RANGE | release / bird | 围栏尺寸4-5 -> 保育+5；围栏尺寸3 -> 保育+4；围栏尺寸1-2 -> 保育+3 | reputation +1；按放归动物卡上印刷的标准围栏尺寸选择对应区间 |
+| 120 | 竹林<br>BAMBOO FOREST | release / herbivore | 围栏尺寸4-5 -> 保育+5；围栏尺寸3 -> 保育+4；围栏尺寸1-2 -> 保育+3 | reputation +1；按放归动物卡上印刷的标准围栏尺寸选择对应区间 |
+| 121 | 海蚀洞<br>SEA CAVE | release / reptile | 围栏尺寸4-5 -> 保育+5；围栏尺寸3 -> 保育+4；围栏尺寸1-2 -> 保育+3 | reputation +1；按放归动物卡上印刷的标准围栏尺寸选择对应区间 |
+| 122 | 丛林<br>JUNGLE | release / primate | 围栏尺寸4-5 -> 保育+5；围栏尺寸3 -> 保育+4；围栏尺寸1-2 -> 保育+3 | reputation +1；按放归动物卡上印刷的标准围栏尺寸选择对应区间 |
 | 123 | 鸟类动物繁育计划<br>BIRD BREEDING PROGRAM | breeding / bird | 满足繁育条件 -> 保育+2、声望+2；满足繁育条件 -> 保育+1、声望+2；满足繁育条件 -> 保育+2 | —；动物标签匹配且有与其大洲相同的合作动物园 |
 | 124 | 食肉类动物繁育计划<br>PREDATOR BREEDING PROGRAM | breeding / predator | 满足繁育条件 -> 保育+2、声望+2；满足繁育条件 -> 保育+1、声望+2；满足繁育条件 -> 保育+2 | —；动物标签匹配且有与其大洲相同的合作动物园 |
 | 125 | 爬行类动物繁育计划<br>REPTILE BREEDING PROGRAM | breeding / reptile | 满足繁育条件 -> 保育+2、声望+2；满足繁育条件 -> 保育+1、声望+2；满足繁育条件 -> 保育+2 | —；动物标签匹配且有与其大洲相同的合作动物园 |
