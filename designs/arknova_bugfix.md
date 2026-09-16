@@ -6,6 +6,8 @@
 
 本文汇总 2026-09-12 至 2026-09-13 期间，围绕《方舟动物园》（Ark Nova）首次可玩版本及后续实际操作反馈完成的修复。重点记录玩家能直接观察到的问题、对应修复和验证结果，不作为完整规则说明书或全部卡牌效果审计报告。
 
+> 本文是历史 UI/交互修复记录。2026-09-17 完成的基础版规则与全牌库复审，以 [`designs/ark_nova/rule_audit.md`](ark_nova/rule_audit.md) 为准。
+
 涉及的主要提交：
 
 | 提交 | 主要内容 |
@@ -223,12 +225,12 @@
 
 - 后端为三种大学补齐稳定名称和奖励数据：
   - Research university：`🔬×2`
-  - Reputation university：`🔬×1`、`🎓+1`
+  - Reputation university：`🔬×1`、`🎓+2`
   - Hand-limit university：`🔬×1`、手牌上限 `5`
-- public view 为每种大学返回 `available`、`owned_by_you`、`remaining` 和 `total`。
-- 按四人上限为每种大学维护 4 枚供应，并在领取时进行服务端库存校验。
+- 三种大学各只有一块，组成所有玩家共享的协会版块供应；取得后移出版块，并在下一次休息时补回。
+- public view 为每种大学返回 `available`、`owned_by_you` 和 `on_board`，服务端在领取时再次校验该板块仍在场。
 - 前端改为三张可选择的单选卡，而不是没有解释的普通下拉框。
-- 每张选项显示奖励、`N / 4 tokens left`、不可用或“你已拿取”状态；不可用项禁选。
+- 每张选项显示正确奖励、`Available`、`Taken until next Break` 或“你已拿取”状态；不可用项禁选。
 - 选中的大学会保持高亮，并以可读名称进入 Association 任务队列。
 
 ### 16. 卡牌太窄，文字与信息块拥挤甚至重叠
@@ -290,7 +292,7 @@
 2. 从 8 张起手牌中保留 4 张；
 3. 选择 Association 行动；
 4. 切换到 Take university；
-5. 确认三种大学均显示奖励和 `4 / 4 tokens left`；
+5. 确认三块大学均显示正确奖励及共享版块可用状态；
 6. 选择 Reputation university，加入任务队列并确认行动；
 7. 确认领取后界面显示 `Already taken by you`；
 8. 在 390×844 手机视口检查大学选项与加宽后的手牌，未观察到卡牌重叠。

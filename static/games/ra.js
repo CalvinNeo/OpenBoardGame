@@ -702,7 +702,7 @@ function renderRaDisaster(view) {
       recommendation.className = "ra-disaster-recommendation";
       const alternatives = Number(group.alternative_count) || 0;
       recommendation.textContent = `💡 Suggested: ${recommendationNames.join(" + ")}. ${group.recommendation || "This is a low-loss choice for your current collection."}${
-        alternatives ? ` ${alternatives} other type-pair${alternatives === 1 ? "" : "s"} tie.` : ""
+        alternatives ? ` ${alternatives} other option${alternatives === 1 ? "" : "s"} tie.` : ""
       }`;
       guideCard.appendChild(recommendation);
     }
