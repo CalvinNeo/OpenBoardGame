@@ -643,7 +643,9 @@ class BohnanzaDiceGame:
         if player_id != state.get("active_player_id"):
             return []
         if phase == "await_roll":
-            return ["roll"]
+            has_cup_dice = any(die.get("zone") == "cup" for die in state.get("dice", []))
+            has_current_roll = any(die.get("zone") == "current_roll" for die in state.get("dice", []))
+            return ["roll"] if has_cup_dice and not has_current_roll else []
         if phase == "after_roll":
             actions = ["save_dice"]
             if not state.get("repeat_used") and state.get("current_roll_die_ids"):
@@ -664,9 +666,13 @@ class BohnanzaDiceGame:
         events: List[Dict] = []
 
         if action_type == "roll":
-            if any(die.get("zone") != "cup" for die in state.get("dice", [])):
-                return [], "all five dice must be in the cup"
-            _resolve_roll(state, events, "turn_start")
+            cup_dice = [die for die in state.get("dice", []) if die.get("zone") == "cup"]
+            if not cup_dice:
+                return [], "there are no dice in the cup"
+            if any(die.get("zone") == "current_roll" for die in state.get("dice", [])):
+                return [], "save the current roll before rolling again"
+            reason = "turn_start" if int(state.get("roll_count_this_turn", 0)) == 0 else "after_save"
+            _resolve_roll(state, events, reason)
 
         elif action_type == "repeat_roll":
             current = [die for die in state["dice"] if die.get("zone") == "current_roll"]
@@ -700,6 +706,7 @@ class BohnanzaDiceGame:
                 elif die.get("zone") == "current_roll":
                     die["zone"] = "cup"
                     die["face"] = None
+            state["current_roll_id"] = None
             state["current_roll_die_ids"] = []
             _record(
                 state,
@@ -709,7 +716,7 @@ class BohnanzaDiceGame:
                 f"{player_id} saved {len(die_ids)} dice in the bean field.",
             )
             if any(die.get("zone") == "cup" for die in state["dice"]):
-                _resolve_roll(state, events, "after_save")
+                state["phase"] = "await_roll"
             else:
                 _finish_active_turn(state, events)
 

@@ -559,12 +559,14 @@ FINAL_SCORING_RULES = {
     },
     "009": {
         "kind": "compare_right_hand_neighbor",
-        "metrics": ["bird", "herbivore", "predator", "primate", "reptile"],
+        "metrics": [
+            "bird", "herbivore", "predator", "primate", "reptile", "bear", "petting_zoo_animal",
+        ],
         "comparison": "strictly_greater",
         "reward_per_won_metric": {"conservation": 1},
         "maximum_conservation": 4,
         "ties_score": False,
-        "definition_zh": "分别比较五种动物类别图标；每种严格多于右手边玩家时得1保育，最多4保育。",
+        "definition_zh": "分别比较七种动物类别图标（包括熊类和萌宠动物）；每种严格多于右手边玩家时得1保育，最多4保育。",
     },
     "010": {
         "kind": "metric_ladder",

@@ -153,6 +153,13 @@ class ArkNovaAnimalAbilityTests(unittest.TestCase):
         self.assertEqual(state["players"]["p1"]["hand"], ["403"])
         self.assertEqual(state["discard"], ["204", "402"])
 
+    def test_hunter_requires_an_animal_to_be_kept_when_one_is_revealed(self) -> None:
+        state = game_state()
+        state["deck"] = ["201", "401"]
+        result = effects.execute_ability("hunter", context(state, "403"), {"reveal_count": 2})
+        self.assertEqual(result.pending_choice["minimum"], 1)
+        self.assertFalse(result.pending_choice["optional"])
+
     def test_free_build_and_attacks_resolve_to_structured_core_commands(self) -> None:
         state = game_state()
         pending = effects.execute_ability("posturing", context(state, "501"), {"maximum_buildings": 2})
@@ -217,6 +224,73 @@ class ArkNovaSponsorEffectTests(unittest.TestCase):
         self.assertTrue(result.completed)
         self.assertEqual(result.events[0]["type"], "unique_build_requested")
 
+    def test_own_zoo_triggers_ignore_other_zoos_but_any_zoo_triggers_do_not(self) -> None:
+        state = game_state()
+        effects.execute_sponsor_effect(
+            "202",
+            "202-printed-1",
+            context(
+                state,
+                "202",
+                "passive",
+                trigger_card=effects.SPONSOR_BY_ID["223"],
+                source_player_id="p2",
+            ),
+        )
+        self.assertEqual(state["players"]["p1"]["reputation"], 0)
+
+        effects.execute_sponsor_effect(
+            "208",
+            "208-printed-1",
+            context(
+                state,
+                "208",
+                "passive",
+                trigger_card=effects.SPONSOR_BY_ID["223"],
+                source_player_id="p2",
+            ),
+        )
+        self.assertEqual(state["players"]["p1"]["money"], 24)
+
+    def test_explorer_counts_bear_petting_and_each_new_icon_type_once(self) -> None:
+        state = game_state()
+        result = effects.execute_sponsor_effect(
+            "262",
+            "262-printed-1",
+            context(
+                state,
+                "262",
+                "passive",
+                trigger_card=effects.ANIMAL_BY_ID["408"],
+                source_player_id="p1",
+                new_unique_tags=["bear", "bear", "asia"],
+            ),
+        )
+        self.assertEqual(state["players"]["p1"]["appeal"], 2)
+        self.assertEqual(state["players"]["p1"]["money"], 24)
+        self.assertEqual(result.events[0]["amount"], 2)
+
+    def test_waza_special_assignment_discards_passed_over_cards(self) -> None:
+        state = game_state()
+        state["deck"] = ["526", "201", "401"]
+        result = effects.execute_sponsor_effect(
+            "227",
+            "227-printed-1",
+            context(state, "227"),
+            {"size": "small"},
+        )
+        self.assertEqual(state["players"]["p1"]["hand"], ["526"])
+        self.assertEqual(state["discard"], ["401", "201"])
+        self.assertEqual(state["deck"], [])
+        self.assertEqual(result.events[0]["cards_discarded"], 2)
+
+    def test_unique_building_requirements_count_as_water_and_rock_icons(self) -> None:
+        state = game_state()
+        state["players"]["p1"]["played_sponsors"] = ["245", "246"]
+        self.assertEqual(effects._metric(context(state), "water"), 2)
+        self.assertEqual(effects._metric(context(state), "rock"), 2)
+        self.assertEqual(effects._metric(context(state), "water_and_rock_requirements"), 4)
+
 
 class ArkNovaProjectAndScoringTests(unittest.TestCase):
     def test_base_project_uses_typed_metric_and_blocked_slots(self) -> None:
@@ -231,7 +305,7 @@ class ArkNovaProjectAndScoringTests(unittest.TestCase):
         evaluation = effects.evaluate_conservation_project("101", context(state, "101"))
         self.assertEqual(evaluation["eligible_slots"], [3])
 
-    def test_release_requires_exact_occupied_enclosure_size(self) -> None:
+    def test_release_requires_exact_printed_standard_enclosure_size(self) -> None:
         state = game_state()
         player = state["players"]["p1"]
         player.update(
@@ -274,8 +348,8 @@ class ArkNovaProjectAndScoringTests(unittest.TestCase):
         self.assertEqual(state["discard"], ["202"])
         self.assertTrue(any(event["type"] == "animal_released" for event in result.events))
 
-        wrong_size = game_state()
-        wrong_size["players"]["p1"].update(
+        different_tile_size = game_state()
+        different_tile_size["players"]["p1"].update(
             {
                 "played_animals": ["401"],
                 "animal_records": [
@@ -285,8 +359,29 @@ class ArkNovaProjectAndScoringTests(unittest.TestCase):
             }
         )
         self.assertEqual(
-            effects.evaluate_conservation_project("116", context(wrong_size, "116"))["eligible_slots"],
-            [2],
+            effects.evaluate_conservation_project("116", context(different_tile_size, "116"))["eligible_slots"],
+            [1],
+        )
+
+        sea_cave = game_state()
+        sea_cave["players"]["p1"].update(
+            {
+                "played_animals": ["490"],
+                "animal_records": [
+                    {
+                        "card_id": "490",
+                        "enclosure_id": "reptile-house-1",
+                        "enclosure_type": "reptile_house",
+                        "enclosure_size": 5,
+                        "capacity_used": 2,
+                    }
+                ],
+                "tags": {"reptile": 1, "australia": 1},
+            }
+        )
+        self.assertEqual(
+            effects.evaluate_conservation_project("121", context(sea_cave, "121"))["eligible_slots"],
+            [3],
         )
 
     def test_breeding_requires_matching_animal_and_partner_zoo(self) -> None:
@@ -315,6 +410,7 @@ class ArkNovaProjectAndScoringTests(unittest.TestCase):
 
         player["tags"] = {tag: 2 for tag in effects.ANIMAL_TAGS}
         state["players"]["p2"]["tags"] = {tag: 1 for tag in effects.ANIMAL_TAGS}
+        self.assertEqual(len(effects.FINAL_BY_ID["009"]["scoring_rule"]["metrics"]), 7)
         self.assertEqual(effects.score_final_card("009", context(state, "009", "endgame")), 4)
 
     def test_action_card_faces_are_available_without_text_interpretation(self) -> None:

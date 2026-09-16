@@ -746,6 +746,9 @@ def _association_task_options(state: Mapping[str, Any], player_id: str) -> Dict[
     }
     partner_limit = 4 if rules._action_level(player, "association") == 2 else 2
     if len(player.get("partner_zoos", [])) < partner_limit:
+        partner_zoo_supply = set(
+            state.get("association_supply", {}).get("partner_zoos", rules.CONTINENTS)
+        )
         wanted = Counter()
         for card_id in player.get("hand", []):
             card = rules.ANIMAL_CARDS.get(str(card_id), {})
@@ -761,13 +764,13 @@ def _association_task_options(state: Mapping[str, Any], player_id: str) -> Dict[
                 "_value": 3.0 + 0.5 * wanted[continent],
             }
             for continent in rules.CONTINENTS
-            if continent not in player.get("partner_zoos", [])
+            if continent in partner_zoo_supply and continent not in player.get("partner_zoos", [])
         ]
     if len(player.get("universities", [])) < 3:
-        claims = Counter(
-            university_id
-            for other in state.get("players", {}).values()
-            for university_id in other.get("universities", [])
+        university_supply = set(
+            state.get("association_supply", {}).get(
+                "universities", [university["id"] for university in rules.UNIVERSITIES],
+            )
         )
         university_values = {
             "university_science": 4.2,
@@ -783,7 +786,7 @@ def _association_task_options(state: Mapping[str, Any], player_id: str) -> Dict[
             }
             for university in rules.UNIVERSITIES
             if university["id"] not in player.get("universities", [])
-            and claims[university["id"]] < rules.UNIVERSITY_COPIES_PER_TYPE
+            and university["id"] in university_supply
         ]
     project_strength = 5
     for effect in rules._active_rules(player, "project_task_strength"):

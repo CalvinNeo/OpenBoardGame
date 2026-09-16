@@ -1750,7 +1750,7 @@
         "timing": "immediate",
         "kind": "card_flow",
         "cascade": "none",
-        "text_zh": "选择并标记本卡牌上的 {SizeAnimal-2} 或 {SizeAnimal-4} 。从牌库中逐一展示卡牌，将第一张所选择类型的动物卡牌加入你的手牌，然后将其余的卡牌塞入牌库 底部 。",
+        "text_zh": "选择并标记本卡牌上的 {SizeAnimal-2} 或 {SizeAnimal-4} 。从牌库中逐一展示卡牌，将第一张所选择类型的动物卡牌加入你的手牌，然后将其余展示牌放入 弃牌堆 。",
         "source": "localized_card_text"
       },
       {
@@ -1771,7 +1771,7 @@
       "strength_zh": "强度6",
       "conditions_zh": "声望至少6",
       "icons_zh": "无",
-      "effect_zh": "选择并标记本卡牌上的 {SizeAnimal-2} 或 {SizeAnimal-4} 。从牌库中逐一展示卡牌，将第一张所选择类型的动物卡牌加入你的手牌，然后将其余的卡牌塞入牌库 底部 。；你不能再打出未放标记的类型。每当你打出小型或大型动物时，你获得 {Appeal-2} 或 {Appeal-4} 。"
+      "effect_zh": "选择并标记本卡牌上的 {SizeAnimal-2} 或 {SizeAnimal-4} 。从牌库中逐一展示卡牌，将第一张所选择类型的动物卡牌加入你的手牌，然后将其余展示牌放入 弃牌堆 。；你不能再打出未放标记的类型。每当你打出小型或大型动物时，你获得 {Appeal-2} 或 {Appeal-4} 。"
     },
     "source_line": 192
   },

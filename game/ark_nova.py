@@ -823,6 +823,20 @@ def _enclosure_for_animal(
     if not building:
         return None, None, "unknown enclosure"
     building_type = building["building_type"]
+    occupants = list(building.get("occupied_by", []))
+    flock = next(
+        (ability for ability in card.get("abilities", []) if ability.get("ability") == "flock_animal"),
+        None,
+    )
+    if occupants and flock:
+        minimum_host = int((flock or {}).get("parameters", {}).get("minimum_host_enclosure_size", 99))
+        eligible_host = any(
+            _card_icons(ANIMAL_CARDS.get(host_id, {})).get("herbivore", 0)
+            and _printed_standard_enclosure_size(ANIMAL_CARDS.get(host_id, {})) >= minimum_host
+            for host_id in occupants
+        )
+        if eligible_host:
+            return building, {"type": "flock_share", "required_spaces": 0, "shared_enclosure": True}, None
     option_type = "standard" if building_type == "standard_enclosure" else building_type
     options = [item for item in card.get("enclosure_options", []) if item.get("type") == option_type]
     if not options:
@@ -830,20 +844,8 @@ def _enclosure_for_animal(
     option = options[0]
     required = int(option.get("required_spaces", 0))
     if building_type == "standard_enclosure":
-        if building.get("occupied_by"):
-            flock = next(
-                (ability for ability in card.get("abilities", []) if ability.get("ability") == "flock_animal"),
-                None,
-            )
-            host_has_herbivore = any(
-                _card_icons(ANIMAL_CARDS.get(host_id, {})).get("herbivore", 0)
-                for host_id in building.get("occupied_by", [])
-            )
-            minimum_host = int((flock or {}).get("parameters", {}).get("minimum_host_enclosure_size", 99))
-            if not flock or not host_has_herbivore or int(building.get("size", 0)) < minimum_host:
-                return building, option, "standard enclosure is occupied"
-            option = {**option, "required_spaces": 0, "shared_enclosure": True}
-            required = 0
+        if occupants:
+            return building, option, "standard enclosure is occupied"
         if int(building.get("size", 0)) < required:
             return building, option, "standard enclosure is too small"
     elif int(building.get("used_capacity", 0)) + required > int(building.get("capacity", 0)):

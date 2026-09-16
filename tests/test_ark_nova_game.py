@@ -10,9 +10,12 @@ from game.ark_nova import (
     BUILDING_FOOTPRINTS,
     MAP_REWARDS,
     SPONSOR_CARDS,
+    _all_passive_sponsor_refs,
+    _enclosure_for_animal,
     _find_placement,
     _matches_footprint,
     _place_building,
+    _resolve_break,
     _target_appeal,
 )
 
@@ -189,24 +192,34 @@ class ArkNovaGameTests(unittest.TestCase):
         self.assertEqual(state["players"]["p1"]["x_tokens"], 1)
         self.assertEqual(state["players"]["p1"]["available_workers"], 1)
 
-    def test_both_players_can_take_the_same_partner_zoo_type(self) -> None:
+    def test_partner_zoo_supply_is_shared_until_the_next_break(self) -> None:
         state = self.make_state()
-        for player_id in ("p1", "p2"):
-            self.set_turn(state, player_id)
-            self.set_slot(state, player_id, "association", 3)
-            _, error = ArkNovaGame.apply_action(
-                state, player_id,
-                {"type": "association", "tasks": [{"task": "partner_zoo", "continent": "africa"}]},
-            )
-            self.assertIsNone(error)
-            self.assertIn("africa", state["players"][player_id]["partner_zoos"])
+        self.set_slot(state, "p1", "association", 3)
+        _, error = ArkNovaGame.apply_action(
+            state, "p1",
+            {"type": "association", "tasks": [{"task": "partner_zoo", "continent": "africa"}]},
+        )
+        self.assertIsNone(error)
+        self.assertNotIn("africa", state["association_supply"]["partner_zoos"])
+
+        self.set_slot(state, "p2", "association", 3)
+        _, error = ArkNovaGame.apply_action(
+            state, "p2",
+            {"type": "association", "tasks": [{"task": "partner_zoo", "continent": "africa"}]},
+        )
+        self.assertEqual(error, "partner zoo is not on the Association board")
+
+        for player in state["players"].values():
+            player["hand"] = player["hand"][:3]
+        _resolve_break(state, [])
+        self.assertIn("africa", state["association_supply"]["partner_zoos"])
 
     def test_university_options_expose_rewards_and_live_availability(self) -> None:
         state = self.make_state()
         view = ArkNovaGame.get_public_view(state, "p1")
         options = {item["id"]: item for item in view["association_supply"]["university_options"]}
         self.assertEqual(options["university_science"]["science"], 2)
-        self.assertEqual(options["university_reputation"]["reputation"], 1)
+        self.assertEqual(options["university_reputation"]["reputation"], 2)
         self.assertEqual(options["university_hand_limit"]["hand_limit"], 5)
         self.assertTrue(all(item["available"] for item in options.values()))
 
@@ -222,12 +235,40 @@ class ArkNovaGameTests(unittest.TestCase):
         )
         self.assertTrue(p1_option["owned_by_you"])
         self.assertFalse(p1_option["available"])
-        self.assertEqual(p1_option["remaining"], 3)
+        self.assertFalse(p1_option["on_board"])
+        p2_option = next(
+            item for item in ArkNovaGame.get_public_view(state, "p2")["association_supply"]["university_options"]
+            if item["id"] == "university_science"
+        )
+        self.assertFalse(p2_option["available"])
+
+        for player in state["players"].values():
+            player["hand"] = player["hand"][:3]
+        _resolve_break(state, [])
         p2_option = next(
             item for item in ArkNovaGame.get_public_view(state, "p2")["association_supply"]["university_options"]
             if item["id"] == "university_science"
         )
         self.assertTrue(p2_option["available"])
+        self.assertTrue(p2_option["on_board"])
+
+    def test_reputation_university_grants_one_research_icon_and_two_reputation(self) -> None:
+        state = self.make_state()
+        player = state["players"]["p1"]
+        self.set_slot(state, "p1", "association", 4)
+        before_reputation = player["reputation"]
+        _, error = ArkNovaGame.apply_action(
+            state,
+            "p1",
+            {
+                "type": "association",
+                "tasks": [{"task": "university", "university_id": "university_reputation"}],
+            },
+        )
+        self.assertIsNone(error)
+        player = state["players"]["p1"]
+        self.assertEqual(player["reputation"], before_reputation + 2)
+        self.assertEqual(player["tags"]["science"], 1)
 
     def test_two_player_first_donation_costs_two(self) -> None:
         state = self.make_state()
@@ -266,6 +307,113 @@ class ArkNovaGameTests(unittest.TestCase):
         self.assertIn("495", player["played_animals"])
         self.assertEqual(enclosure["occupied_by"], ["495"])
         self.assertEqual(player["appeal"], before_appeal + ANIMAL_CARDS["495"]["printed_rewards"]["appeal"])
+
+    def test_card_526_plays_into_the_petting_zoo(self) -> None:
+        state = self.make_state()
+        player = state["players"]["p1"]
+        cells = _find_placement(state, "p1", "petting_zoo", 3)
+        self.assertIsNotNone(cells)
+        petting_zoo = _place_building(
+            state,
+            "p1",
+            {"building_type": "petting_zoo", "size": 3, "cells": cells},
+            [],
+            free=True,
+        )
+        self.add_hand_card(state, "p1", "526")
+        self.set_slot(state, "p1", "animals", 2)
+        _, error = ArkNovaGame.apply_action(
+            state,
+            "p1",
+            {"type": "animals", "plays": [{"card_id": "526", "enclosure_id": petting_zoo["id"]}]},
+        )
+        self.assertIsNone(error)
+        player = state["players"]["p1"]
+        petting_zoo = next(
+            building for building in player["map"]["buildings"] if building["id"] == petting_zoo["id"]
+        )
+        self.assertEqual(petting_zoo["occupied_by"], ["526"])
+        self.assertEqual(petting_zoo["used_capacity"], 1)
+        record = next(item for item in player["animal_records"] if item["card_id"] == "526")
+        self.assertEqual(record["printed_enclosure_size"], 0)
+
+    def test_sea_cave_uses_printed_size_for_a_reptile_in_the_reptile_house(self) -> None:
+        state = self.make_state()
+        player = state["players"]["p1"]
+        self.add_hand_card(state, "p1", "490")
+        player["hand"].remove("490")
+        player["played_animals"].append("490")
+        player["animal_records"].append({
+            "card_id": "490",
+            "enclosure_id": "reptile-house-1",
+            "enclosure_type": "reptile_house",
+            "enclosure_size": 5,
+            "capacity_used": 2,
+        })
+        player["map"]["buildings"].append({
+            "id": "reptile-house-1",
+            "building_type": "reptile_house",
+            "size": 5,
+            "cells": [],
+            "capacity": 5,
+            "used_capacity": 2,
+            "occupied_by": ["490"],
+        })
+        state["projects"].append("121")
+        state["project_slots"]["121"] = []
+        self.set_slot(state, "p1", "association", 5)
+        _, error = ArkNovaGame.apply_action(
+            state,
+            "p1",
+            {
+                "type": "association",
+                "tasks": [{
+                    "task": "support_project",
+                    "project_id": "121",
+                    "slot": 3,
+                    "release_animal_id": "490",
+                    "reward_id": "money_12",
+                }],
+            },
+        )
+        self.assertIsNone(error)
+        player = state["players"]["p1"]
+        self.assertNotIn("490", player["played_animals"])
+        self.assertEqual(player["map"]["buildings"][0]["used_capacity"], 0)
+        self.assertEqual(player["supported_projects"][-1]["position"], 3)
+
+    def test_double_predator_icon_queues_spotted_hyena_twice(self) -> None:
+        state = self.make_state()
+        state["players"]["p1"]["played_sponsors"] = ["252"]
+        refs = [
+            ref for ref in _all_passive_sponsor_refs(state, "p1", ANIMAL_CARDS["401"])
+            if ref.get("effect_id") == "252-printed-1"
+        ]
+        self.assertEqual(len(refs), 2)
+
+    def test_flock_uses_the_host_animals_printed_size_not_the_tile_size(self) -> None:
+        state = self.make_state()
+        player = state["players"]["p1"]
+        building = {
+            "id": "oversized-enclosure",
+            "building_type": "standard_enclosure",
+            "size": 5,
+            "cells": [],
+            "capacity": 5,
+            "used_capacity": 2,
+            "occupied_by": ["429"],
+        }
+        player["map"]["buildings"] = [building]
+        player["played_animals"] = ["429"]
+
+        _, _, error = _enclosure_for_animal(player, ANIMAL_CARDS["442"], building["id"])
+        self.assertEqual(error, "standard enclosure is occupied")
+
+        building["occupied_by"] = ["441"]
+        player["played_animals"] = ["441"]
+        _, option, error = _enclosure_for_animal(player, ANIMAL_CARDS["442"], building["id"])
+        self.assertIsNone(error)
+        self.assertEqual(option["required_spaces"], 0)
 
     def test_sponsor_card_updates_icons_without_text_parsing(self) -> None:
         state = self.make_state()

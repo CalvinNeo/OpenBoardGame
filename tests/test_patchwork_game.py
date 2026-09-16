@@ -87,6 +87,22 @@ class PatchworkGameTests(unittest.TestCase):
         self.assertEqual(state["current_turn"], "p2")
         self.assertTrue(any(evt["type"] == "patchwork:advance" for evt in events))
 
+    def test_market_still_exposes_first_three_when_no_patch_fits(self):
+        state = PatchworkGame.init_game({"seed": 12}, self._players())
+        actor = state["current_turn"]
+        state["players"][actor]["quilt_board"] = [
+            ["filled" for _ in range(9)]
+            for _ in range(9)
+        ]
+
+        view = PatchworkGame.get_public_view(state, actor)
+
+        self.assertEqual(
+            view["selectable_patches"],
+            [entry["patch_id"] for entry in view["patch_circle"][:3]],
+        )
+        self.assertEqual(view["legal_actions"], ["advance"])
+
     def test_bot_buy_patch_places_cells_and_removes_market_patch(self):
         state = PatchworkGame.init_game({"seed": 3}, self._players())
         actor = state["current_turn"]

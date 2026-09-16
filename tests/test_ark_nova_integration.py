@@ -85,6 +85,7 @@ class ArkNovaIntegrationTests(unittest.TestCase):
         self.assertIn('class="arkn-project-slot is-${state}"', script)
         self.assertIn("arkNovaProjectRewardMarkup(slot.reward)", script)
         self.assertIn("arkNovaProjectSlotOptionLabel(selectedProject, slot)", script)
+        self.assertIn("卡面标准围栏", script)
         self.assertIn(".arkn-project-support", stylesheet)
         self.assertIn(".arkn-project-slot.is-eligible", stylesheet)
 
@@ -154,6 +155,9 @@ class ArkNovaIntegrationTests(unittest.TestCase):
         self.assertIn("arkNovaAsArray(normalized.enclosure_options)", script)
         self.assertIn('class="arkn-card-enclosure-options"', script)
         self.assertIn('className: `is-enclosure ${type === "standard" ? "is-standard" : "is-special"}`', script)
+        self.assertIn("compatibleEnclosures = enclosures.filter", script)
+        self.assertIn("No compatible enclosure available", script)
+        self.assertIn("printedSize >= minimumHostSize", script)
 
     def test_continents_use_original_color_text_chips(self) -> None:
         script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")
@@ -172,6 +176,9 @@ class ArkNovaIntegrationTests(unittest.TestCase):
         self.assertIn('name="arkNovaUniversity"', script)
         self.assertIn("option.available === false", script)
         self.assertIn("arkNovaUniversityRewardsMarkup", script)
+        self.assertIn('science: 1, reputation: 2', script)
+        self.assertIn("Taken until the next Break", script)
+        self.assertIn("Available on the Association board", script)
         self.assertIn(".arkn-university-option.is-selected", stylesheet)
         self.assertIn(".arkn-university-option.is-unavailable", stylesheet)
 

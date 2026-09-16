@@ -294,29 +294,42 @@ def _metric(context: EffectContext, metric: str, player_id: Optional[str] = None
         )
     if metric == "connected_bonus_hex_count":
         occupied = set((map_state or {}).get("occupancy", {})) if isinstance(map_state, Mapping) else set()
-        bonus_cells = {str(bonus.get("cell", bonus.get("cell_id"))) for bonus in MAP0.get("placement_bonuses", [])}
-        return len(occupied.intersection(bonus_cells))
+        bonus_cells = {
+            str(cell["id"]) for cell in MAP0["cells"]
+            if cell.get("placement_bonus") and cell["id"] not in occupied
+        }
+        return sum(
+            any(neighbor in occupied for neighbor in MAP_CELL_BY_ID[cell_id].get("neighbors", []))
+            for cell_id in bonus_cells
+        )
     if metric == "isolated_bonus_hex_count":
         occupied = set((map_state or {}).get("occupancy", {})) if isinstance(map_state, Mapping) else set()
-        bonus_cells = {str(bonus.get("cell", bonus.get("cell_id"))) for bonus in MAP0.get("placement_bonuses", [])}
-        return len(bonus_cells - occupied)
+        bonus_cells = {
+            str(cell["id"]) for cell in MAP0["cells"]
+            if cell.get("placement_bonus") and cell["id"] not in occupied
+        }
+        return sum(
+            not any(neighbor in occupied for neighbor in MAP_CELL_BY_ID[cell_id].get("neighbors", []))
+            for cell_id in bonus_cells
+        )
     if metric == "water_and_rock_requirements":
-        total = 0
-        for card_id in _played_ids(context, player_id):
-            adjacent = ANIMAL_BY_ID.get(card_id, {}).get("placement", {}).get("adjacent_to", {})
-            total += int(adjacent.get("water", 0) > 0) + int(adjacent.get("rock", 0) > 0)
-        return total
+        return _count_tag(context, "water", player_id) + _count_tag(context, "rock", player_id)
     if metric.endswith("_count") and isinstance(map_state, Mapping):
         buildings = map_state.get("buildings", [])
         values = buildings.values() if isinstance(buildings, Mapping) else buildings if isinstance(buildings, Sequence) else []
         if metric == "kiosk_count":
-            return sum(isinstance(building, Mapping) and building.get("type") == "kiosk" for building in values)
+            return sum(
+                isinstance(building, Mapping)
+                and building.get("building_type", building.get("type")) == "kiosk"
+                for building in values
+            )
         if metric == "occupied_size_1_enclosure_count":
             return sum(
                 isinstance(building, Mapping)
-                and building.get("type") in {"standard_enclosure", "standard_enclosure_1"}
+                and building.get("building_type", building.get("type"))
+                in {"standard_enclosure", "standard_enclosure_1"}
                 and int(building.get("size", building.get("cell_count", 1))) == 1
-                and bool(building.get("occupied", building.get("animal_ids")))
+                and bool(building.get("occupied", building.get("occupied_by", building.get("animal_ids"))))
                 for building in values
             )
     return 0

@@ -11717,7 +11717,7 @@
           "timing": "immediate",
           "kind": "card_flow",
           "cascade": "none",
-          "text_zh": "选择并标记本卡牌上的 {SizeAnimal-2} 或 {SizeAnimal-4} 。从牌库中逐一展示卡牌，将第一张所选择类型的动物卡牌加入你的手牌，然后将其余的卡牌塞入牌库 底部 。",
+          "text_zh": "选择并标记本卡牌上的 {SizeAnimal-2} 或 {SizeAnimal-4} 。从牌库中逐一展示卡牌，将第一张所选择类型的动物卡牌加入你的手牌，然后将其余展示牌放入 弃牌堆 。",
           "source": "localized_card_text"
         },
         {
@@ -11738,7 +11738,7 @@
         "strength_zh": "强度6",
         "conditions_zh": "声望至少6",
         "icons_zh": "无",
-        "effect_zh": "选择并标记本卡牌上的 {SizeAnimal-2} 或 {SizeAnimal-4} 。从牌库中逐一展示卡牌，将第一张所选择类型的动物卡牌加入你的手牌，然后将其余的卡牌塞入牌库 底部 。；你不能再打出未放标记的类型。每当你打出小型或大型动物时，你获得 {Appeal-2} 或 {Appeal-4} 。"
+        "effect_zh": "选择并标记本卡牌上的 {SizeAnimal-2} 或 {SizeAnimal-4} 。从牌库中逐一展示卡牌，将第一张所选择类型的动物卡牌加入你的手牌，然后将其余展示牌放入 弃牌堆 。；你不能再打出未放标记的类型。每当你打出小型或大型动物时，你获得 {Appeal-2} 或 {Appeal-4} 。"
       },
       "source_line": 192
     },
@@ -16493,7 +16493,7 @@
       "new_project_bonus": {
         "reputation": 1
       },
-      "description_zh": "将1个具有 欧洲 图标的动物 放归 野外；必须选择与奖励格所示尺寸完全相同的已占用围栏。",
+      "description_zh": "将1个具有 欧洲 图标的动物 放归 野外；动物卡上印刷的标准围栏尺寸必须与奖励格所示尺寸完全相同。",
       "source_line": 244,
       "release_rules": {
         "animal_must_have_tag": "europe",
@@ -16564,7 +16564,7 @@
       "new_project_bonus": {
         "reputation": 1
       },
-      "description_zh": "将1个具有 美洲 图标的动物 放归 野外；必须选择与奖励格所示尺寸完全相同的已占用围栏。",
+      "description_zh": "将1个具有 美洲 图标的动物 放归 野外；动物卡上印刷的标准围栏尺寸必须与奖励格所示尺寸完全相同。",
       "source_line": 245,
       "release_rules": {
         "animal_must_have_tag": "americas",
@@ -16635,7 +16635,7 @@
       "new_project_bonus": {
         "reputation": 1
       },
-      "description_zh": "将1个具有 亚洲 图标的动物 放归 野外；必须选择与奖励格所示尺寸完全相同的已占用围栏。",
+      "description_zh": "将1个具有 亚洲 图标的动物 放归 野外；动物卡上印刷的标准围栏尺寸必须与奖励格所示尺寸完全相同。",
       "source_line": 246,
       "release_rules": {
         "animal_must_have_tag": "asia",
@@ -16706,7 +16706,7 @@
       "new_project_bonus": {
         "reputation": 1
       },
-      "description_zh": "将1个具有 非洲 图标的动物 放归 野外；必须选择与奖励格所示尺寸完全相同的已占用围栏。",
+      "description_zh": "将1个具有 非洲 图标的动物 放归 野外；动物卡上印刷的标准围栏尺寸必须与奖励格所示尺寸完全相同。",
       "source_line": 247,
       "release_rules": {
         "animal_must_have_tag": "africa",
@@ -16777,7 +16777,7 @@
       "new_project_bonus": {
         "reputation": 1
       },
-      "description_zh": "将1个具有 澳洲 图标的动物 放归 野外；必须选择与奖励格所示尺寸完全相同的已占用围栏。",
+      "description_zh": "将1个具有 澳洲 图标的动物 放归 野外；动物卡上印刷的标准围栏尺寸必须与奖励格所示尺寸完全相同。",
       "source_line": 248,
       "release_rules": {
         "animal_must_have_tag": "australia",
@@ -16848,7 +16848,7 @@
       "new_project_bonus": {
         "reputation": 1
       },
-      "description_zh": "将1个 食肉类 动物 放归 野外；必须选择与奖励格所示尺寸完全相同的已占用围栏。",
+      "description_zh": "将1个 食肉类 动物 放归 野外；动物卡上印刷的标准围栏尺寸必须与奖励格所示尺寸完全相同。",
       "source_line": 249,
       "release_rules": {
         "animal_must_have_tag": "predator",
@@ -16919,7 +16919,7 @@
       "new_project_bonus": {
         "reputation": 1
       },
-      "description_zh": "将1个 鸟类 动物 放归 野外；必须选择与奖励格所示尺寸完全相同的已占用围栏。",
+      "description_zh": "将1个 鸟类 动物 放归 野外；动物卡上印刷的标准围栏尺寸必须与奖励格所示尺寸完全相同。",
       "source_line": 250,
       "release_rules": {
         "animal_must_have_tag": "bird",
@@ -16990,7 +16990,7 @@
       "new_project_bonus": {
         "reputation": 1
       },
-      "description_zh": "将1个 食草类 动物 放归 野外；必须选择与奖励格所示尺寸完全相同的已占用围栏。",
+      "description_zh": "将1个 食草类 动物 放归 野外；动物卡上印刷的标准围栏尺寸必须与奖励格所示尺寸完全相同。",
       "source_line": 251,
       "release_rules": {
         "animal_must_have_tag": "herbivore",
@@ -17061,7 +17061,7 @@
       "new_project_bonus": {
         "reputation": 1
       },
-      "description_zh": "将1个 爬行类 动物 放归 野外；必须选择与奖励格所示尺寸完全相同的已占用围栏。",
+      "description_zh": "将1个 爬行类 动物 放归 野外；动物卡上印刷的标准围栏尺寸必须与奖励格所示尺寸完全相同。",
       "source_line": 252,
       "release_rules": {
         "animal_must_have_tag": "reptile",
@@ -17132,7 +17132,7 @@
       "new_project_bonus": {
         "reputation": 1
       },
-      "description_zh": "将1个 灵长类 动物 放归 野外；必须选择与奖励格所示尺寸完全相同的已占用围栏。",
+      "description_zh": "将1个 灵长类 动物 放归 野外；动物卡上印刷的标准围栏尺寸必须与奖励格所示尺寸完全相同。",
       "source_line": 253,
       "release_rules": {
         "animal_must_have_tag": "primate",
@@ -18222,7 +18222,9 @@
           "herbivore",
           "predator",
           "primate",
-          "reptile"
+          "reptile",
+          "bear",
+          "petting_zoo_animal"
         ],
         "comparison": "strictly_greater",
         "reward_per_won_metric": {
@@ -18230,7 +18232,7 @@
         },
         "maximum_conservation": 4,
         "ties_score": false,
-        "definition_zh": "分别比较五种动物类别图标；每种严格多于右手边玩家时得1保育，最多4保育。"
+        "definition_zh": "分别比较七种动物类别图标（包括熊类和萌宠动物）；每种严格多于右手边玩家时得1保育，最多4保育。"
       },
       "maximum_conservation": 4,
       "source_line": 274

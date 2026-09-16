@@ -234,7 +234,7 @@
 | 224 | 迁徙记录<br>MIGRATION RECORDING | 4 | science≥1 | science×1；— | immediate：打出时获得1枚X标记。<br>passive：每当你支持 放归野外 的保护项目时，额外获得 {ConservationPoint-1} 。 你可以多次支持每一个 放归野外 的保护项目。 |
 | 225 | 检疫实验室<br>QUARANTINE LAB | 3 | 无 | science×1；— | immediate：打出时获得1枚X标记。<br>passive：毒液、缠绕、催眠 和 偷窃 的效果，对你无效。<br>endgame：5个不同的大洲图标，获得 {ConservationPoint-1} 。 |
 | 226 | 海外研究所<br>FOREIGN INSTITUTE | 6 | 无 | science×1；reputation +2 | endgame：5个不同的大洲图标，获得 {ConservationPoint-1} 。 |
-| 227 | 世界动物园协会特别任务<br>WAZA SPECIAL ASSIGNMENT | 6 | reputation>=6 | —；— | immediate：选择并标记本卡牌上的 {SizeAnimal-2} 或 {SizeAnimal-4} 。从牌库中逐一展示卡牌，将第一张所选择类型的动物卡牌加入你的手牌，然后将其余的卡牌塞入牌库 底部 。<br>passive：你不能再打出未放标记的类型。每当你打出小型或大型动物时，你获得 {Appeal-2} 或 {Appeal-4} 。 |
+| 227 | 世界动物园协会特别任务<br>WAZA SPECIAL ASSIGNMENT | 6 | reputation>=6 | —；— | immediate：选择并标记本卡牌上的 {SizeAnimal-2} 或 {SizeAnimal-4} 。从牌库中逐一展示卡牌，将第一张所选择类型的动物卡牌加入你的手牌，然后将其余展示牌放入 弃牌堆 。<br>passive：你不能再打出未放标记的类型。每当你打出小型或大型动物时，你获得 {Appeal-2} 或 {Appeal-4} 。 |
 | 228 | 世界动物园协会小型动物计划<br>WAZA SMALL ANIMAL PROGRAM | 5 | reputation>=3 | —；— | immediate：自己每只小型动物获得2金币。<br>passive：每次你在“动物”行动 {AnimalActionCard} 中， 仅仅 打出 小型动物 时，你可以从你的手牌中按正常费用再打出1个小型动物。随后，从展示区拿取1个小型动物(如果有)。 |
 | 229 | 小型动物专家<br>EXPERT IN SMALL ANIMALS | 5 | 无 | —；— | immediate：自己每只小型动物获得1吸引力。<br>passive：你打出小型动物的费用减 {Money-3} 。 |
 | 230 | 大型动物专家<br>EXPERT IN LARGE ANIMALS | 4 | 无 | —；— | immediate：自己每只大型动物获得2吸引力。<br>passive：你打出大型动物的费用减 {Money-4} 。 |

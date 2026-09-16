@@ -93,6 +93,12 @@ class ArkNovaCardDataTests(unittest.TestCase):
             self.sponsor_by_id["261"]["printed_rewards"],
             {"appeal": 1, "conservation": 1, "reputation": 0},
         )
+        self.assertEqual(
+            self.animal_by_id["526"]["enclosure_options"],
+            [{"type": "petting_zoo", "required_spaces": 1}],
+        )
+        self.assertIn("弃牌堆", self.sponsor_by_id["227"]["raw"]["effect_zh"])
+        self.assertNotIn("牌库 底部", self.sponsor_by_id["227"]["raw"]["effect_zh"])
 
     def test_all_unique_building_sponsors_have_placement_data(self) -> None:
         expected_cells = {
@@ -154,6 +160,7 @@ class ArkNovaCardDataTests(unittest.TestCase):
             )
             self.assertEqual(card["new_project_bonus"], {"reputation": 1})
             self.assertTrue(card["play"]["must_support_immediately_when_played"])
+            self.assertIn("动物卡上印刷的标准围栏尺寸", card["description_zh"])
         for value in range(123, 128):
             card = self.project_by_id[str(value)]
             self.assertEqual(card["project_type"], "breeding")
@@ -170,6 +177,7 @@ class ArkNovaCardDataTests(unittest.TestCase):
         self.assertNotIn("?", encoded)
         self.assertEqual(self.project_by_id["131"]["metric"], "large_animal")
         self.assertEqual(self.project_by_id["132"]["metric"], "science")
+        self.assertEqual(self.project_by_id["121"]["metric"], "reptile")
 
     def test_action_card_faces_are_complete(self) -> None:
         actions = {card["id"]: card for card in self.document["action_cards"]}
@@ -203,7 +211,9 @@ class ArkNovaCardDataTests(unittest.TestCase):
         diverse = self.final_by_id["009"]["scoring_rule"]
         self.assertEqual(diverse["comparison"], "strictly_greater")
         self.assertFalse(diverse["ties_score"])
-        self.assertEqual(len(diverse["metrics"]), 5)
+        self.assertEqual(len(diverse["metrics"]), 7)
+        self.assertIn("bear", diverse["metrics"])
+        self.assertIn("petting_zoo_animal", diverse["metrics"])
 
 
 if __name__ == "__main__":

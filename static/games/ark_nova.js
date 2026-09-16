@@ -56,7 +56,7 @@
 
   const ARK_NOVA_UNIVERSITIES = Object.freeze({
     university_science: { name: "Research university", science: 2 },
-    university_reputation: { name: "Reputation university", science: 1, reputation: 1 },
+    university_reputation: { name: "Reputation university", science: 1, reputation: 2 },
     university_hand_limit: { name: "Hand-limit university", science: 1, hand_limit: 5 },
   });
 
@@ -178,8 +178,8 @@
             <div class="arkn-help-icon-item"><span aria-hidden="true">💰</span><p><strong>Money</strong>Pay for cards, buildings, and donations. A + means money gained; a bare number is normally a cost.</p></div>
             <div class="arkn-help-icon-item"><span aria-hidden="true">🎟</span><p><strong>Appeal</strong>Your zoo's popularity track. It determines Break income and helps trigger the end game.</p></div>
             <div class="arkn-help-icon-item"><span aria-hidden="true">🌿</span><p><strong>Conservation</strong>Conservation points, usually earned from projects; this track combines with Appeal for end-game scoring.</p></div>
-            <div class="arkn-help-icon-item"><span aria-hidden="true">🎓</span><p><strong>Reputation</strong>Controls how far along the card display you may reach and grants printed track rewards.</p></div>
-            <div class="arkn-help-icon-item"><span aria-hidden="true">🔬</span><p><strong>Science</strong>A permanent tag supplied by played cards and universities; card and project requirements may count it.</p></div>
+            <div class="arkn-help-icon-item"><span aria-hidden="true">🎓</span><p><strong>Reputation (cap)</strong>Controls how far along the card display you may reach and grants printed track rewards.</p></div>
+            <div class="arkn-help-icon-item"><span aria-hidden="true">🔬</span><p><strong>Research icon (microscope)</strong>A permanent icon supplied by played cards and universities; card and project requirements may count it.</p></div>
           </div>
           <div class="arkn-help-icon-group">
             <h5>Animal &amp; continent tags</h5>
@@ -194,7 +194,7 @@
           </div>
           <div class="arkn-help-icon-group">
             <h5>Map, enclosures &amp; requirements</h5>
-            <div class="arkn-help-icon-item"><span aria-hidden="true">⬡</span><p><strong>Enclosure size</strong>The number is the required enclosure capacity or the number of map hexes in a piece.</p></div>
+            <div class="arkn-help-icon-item"><span aria-hidden="true">⬡</span><p><strong>Enclosure size</strong>The number is the required enclosure capacity or the number of map hexes in a piece. Release projects compare the animal card's printed standard-enclosure size, not the tile it currently occupies.</p></div>
             <div class="arkn-help-icon-item"><span aria-hidden="true">💧</span><p><strong>Water adjacency</strong>The occupied enclosure or unique building must touch the shown number of water spaces.</p></div>
             <div class="arkn-help-icon-item"><span aria-hidden="true">🪨</span><p><strong>Rock adjacency</strong>The occupied enclosure or unique building must touch the shown number of rock spaces.</p></div>
             <div class="arkn-help-icon-item"><span aria-hidden="true">↔</span><p><strong>Zoo-border adjacency</strong>The unique building must touch the shown number of border spaces.</p></div>
@@ -918,7 +918,7 @@
     }
     const [icon, label] = arkNovaProjectMetric(card, requirement);
     if (requirement.kind === "released_animal_enclosure_size") {
-      return `<span aria-hidden="true">⬡</span><b>${arkNovaEscape(requirement.value)}</b><small>围栏</small>`;
+      return `<span aria-hidden="true">⬡</span><b>${arkNovaEscape(requirement.value)}</b><small>卡面标准围栏</small>`;
     }
     if (requirement.kind === "breeding_match") {
       return `<span aria-hidden="true">✓</span><b>符合</b><small>繁育条件</small>`;
@@ -973,7 +973,7 @@
     const requirement = slot && slot.requirement || {};
     const metric = arkNovaProjectMetric(card, requirement)[1];
     const requirementText = requirement.kind === "released_animal_enclosure_size"
-      ? `围栏 ${requirement.value}`
+      ? `卡面标准围栏 ${requirement.value}`
       : requirement.kind === "breeding_match" ? "繁育条件" : `${requirement.value ?? "✓"} ${metric}`;
     const rewardText = Object.entries(slot && slot.reward || {}).map(([key, amount]) => {
       const icon = { conservation: "🌿", reputation: "🎓", appeal: "🎟", money: "💰", x_tokens: "✕" }[key] || arkNovaTitle(key);
@@ -1993,16 +1993,28 @@
 
   function arkNovaAnimalEnclosureIssue(card, building) {
     if (!building) return "Choose an enclosure.";
+    const normalizedCard = arkNovaCardObject(card);
     const type = arkNovaBuildingType(building);
-    const optionType = type === "standard_enclosure" ? "standard" : type;
-    const option = arkNovaAsArray(arkNovaCardObject(card).enclosure_options).find((entry) => entry && entry.type === optionType);
-    if (!option) return `${arkNovaCardName(card)} cannot use ${arkNovaBuildingName(building)}.`;
-    const required = Math.max(0, arkNovaNumber(option.required_spaces));
     const rawOccupants = building.occupied_by || building.animals || [];
     const occupants = Array.isArray(rawOccupants) ? rawOccupants : rawOccupants ? [rawOccupants] : [];
+    const flock = arkNovaAsArray(normalizedCard.abilities).find((ability) => ability && ability.ability === "flock_animal");
+    if (occupants.length && flock) {
+      const minimumHostSize = Math.max(0, arkNovaNumber(flock.parameters && flock.parameters.minimum_host_enclosure_size, 99));
+      const eligibleHost = occupants.some((occupant) => {
+        const host = arkNovaCardObject(occupant);
+        const printedSize = arkNovaAsArray(host.enclosure_options)
+          .filter((option) => option && option.type === "standard")
+          .reduce((size, option) => Math.max(size, arkNovaNumber(option.required_spaces)), 0);
+        return arkNovaCardIconTags(host).has("herbivore") && printedSize >= minimumHostSize;
+      });
+      if (eligibleHost) return "";
+    }
+    const optionType = type === "standard_enclosure" ? "standard" : type;
+    const option = arkNovaAsArray(normalizedCard.enclosure_options).find((entry) => entry && entry.type === optionType);
+    if (!option) return `${arkNovaCardName(card)} cannot use ${arkNovaBuildingName(building)}.`;
+    const required = Math.max(0, arkNovaNumber(option.required_spaces));
     if (type === "standard_enclosure") {
-      const canFlock = arkNovaAsArray(arkNovaCardObject(card).abilities).some((ability) => ability && ability.ability === "flock_animal");
-      if (occupants.length && !canFlock) return `${arkNovaBuildingName(building)} is already occupied.`;
+      if (occupants.length) return `${arkNovaBuildingName(building)} has no eligible herbivore host for this flock animal.`;
       if (arkNovaBuildingSize(building) < required) return `${arkNovaBuildingName(building)} is too small; ${arkNovaCardName(card)} needs size ${required}.`;
     } else {
       const capacity = Math.max(0, arkNovaNumber(building.capacity, arkNovaBuildingSize(building)));
@@ -2033,7 +2045,9 @@
     return `<div class="arkn-animal-plan">${animals.map((card) => {
       const id = arkNovaCardId(card);
       const selectedEnclosure = arkNovaUi.animalEnclosures.get(id) || "";
-      return `<label data-arkn-explain="animal_enclosure"><span><b>🐾 ${arkNovaEscape(arkNovaCardName(card))}</b><small>#${arkNovaEscape(id)}</small></span><select data-arkn-enclosure-for="${arkNovaEscape(id)}"><option value="">Choose enclosure</option>${enclosures.map((building) => {
+      const compatibleEnclosures = enclosures.filter((building) => !arkNovaAnimalEnclosureIssue(card, building));
+      const emptyOption = compatibleEnclosures.length ? "Choose compatible enclosure" : "No compatible enclosure available";
+      return `<label data-arkn-explain="animal_enclosure"><span><b>🐾 ${arkNovaEscape(arkNovaCardName(card))}</b><small>#${arkNovaEscape(id)}</small></span><select data-arkn-enclosure-for="${arkNovaEscape(id)}"><option value="">${emptyOption}</option>${compatibleEnclosures.map((building) => {
         const buildingId = arkNovaBuildingId(building);
         return `<option value="${arkNovaEscape(buildingId)}" ${buildingId === selectedEnclosure ? "selected" : ""}>${arkNovaEscape(arkNovaBuildingName(building))} · ${arkNovaBuildingCells(building).join(", ")}</option>`;
       }).join("")}</select></label>`;
@@ -2087,9 +2101,8 @@
 
   function arkNovaUniversityStatus(option) {
     if (option.owned_by_you) return "Already taken by you";
-    if (option.available === false) return "Unavailable";
-    if (option.remaining != null && option.total != null) return `${option.remaining} / ${option.total} tokens left`;
-    return "Available now";
+    if (option.on_board === false || option.available === false) return "Taken until the next Break";
+    return "Available on the Association board";
   }
 
   function arkNovaUniversityPickerMarkup(view) {
@@ -2115,10 +2128,11 @@
   function arkNovaAssociationFields(view) {
     const draft = arkNovaUi.associationDraft;
     const supply = view.association_supply || view.association || {};
-    const partnerZoos = arkNovaAsArray(supply.available_partner_zoos).length
+    const hasPartnerZooAvailability = Object.prototype.hasOwnProperty.call(supply, "available_partner_zoos");
+    const partnerZoos = hasPartnerZooAvailability
       ? arkNovaAsArray(supply.available_partner_zoos)
       : ARK_NOVA_CONTINENTS;
-    if (draft.task === "partner_zoo") return `<label><span>Continent</span><select id="arkNovaAssociationContinent">${partnerZoos.map((continent) => `<option value="${arkNovaEscape(continent)}" ${draft.continent === continent ? "selected" : ""}>${arkNovaEscape(arkNovaTitle(continent))}</option>`).join("")}</select></label>`;
+    if (draft.task === "partner_zoo") return `<label><span>Continent</span><select id="arkNovaAssociationContinent">${partnerZoos.length ? partnerZoos.map((continent) => `<option value="${arkNovaEscape(continent)}" ${draft.continent === continent ? "selected" : ""}>${arkNovaEscape(arkNovaTitle(continent))}</option>`).join("") : '<option value="" disabled>No partner zoo is on the board</option>'}</select></label>`;
     if (draft.task === "university") return arkNovaUniversityPickerMarkup(view);
     if (draft.task === "support_project") {
       const projects = arkNovaProjects(view).map(arkNovaCardObject);

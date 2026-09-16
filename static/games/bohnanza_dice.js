@@ -71,11 +71,11 @@
     },
     roll: {
       title: "Roll Dice",
-      body: "Start your turn by rolling all five dice. Later rolls happen automatically after you save at least one die.",
+      body: "Roll every die currently in the cup. Start with all five; after saving dice, press Roll again yourself for the remaining dice.",
     },
     save: {
       title: "Save Selected",
-      body: "Lock every selected die into the field and automatically reroll all remaining dice. You must select at least one.",
+      body: "Lock every selected die into the field. This never rolls for you: if dice remain in the cup, press Roll when you are ready. You must select at least one.",
     },
     repeat: {
       title: "Repeat This Roll",
@@ -87,7 +87,7 @@
     },
     keep: {
       title: "Keep Growing",
-      body: "Skip harvesting at this checkpoint and keep your progress. During the final harvest this instead finishes your game without collecting these orders.",
+      body: "Skip harvesting at this checkpoint and keep your progress. This never rolls dice; play resumes exactly where the harvest decision paused. During the final harvest this instead finishes your game without collecting these orders.",
     },
     card: {
       title: "Harvest Card",
@@ -122,7 +122,7 @@
       <ol>
         <li>Roll every die not already saved in the bean field.</li>
         <li>Other players automatically check their current card using <em>only that fresh roll</em>.</li>
-        <li>After all harvest choices are settled, save at least one die. Every unsaved die rerolls automatically.</li>
+        <li>After all harvest choices are settled, save at least one die. If any dice remain, press Roll to roll them yourself.</li>
         <li>Once all five dice are saved, check your own card with the complete bean field and pass the turn.</li>
       </ol>
       <p>Once per turn, before saving, the active player may repeat the entire current roll. Previously saved dice stay in the field. A turn cannot end early.</p>
@@ -130,7 +130,7 @@
       <p>Complete orders from the bottom upward and stop at the first one that does not match. A row may offer whole alternatives marked OR. Within one alternative, every slot needs a distinct die. Dice are not spent between rows, so the same result can advance several orders in sequence.</p>
       <h3>Harvesting</h3>
       <p>At 3 / 4 / 5 completed orders, you may harvest 1 / 2 / 3 coins. Your current card becomes the first coin; extra reward cards come from the deck. The cover becomes current, a new cover is drawn, and the new card immediately checks the dice context when the rules allow it.</p>
-      <p>Choose <strong>Keep Growing</strong> to retain progress and skip only the current checkpoint. Harvest choices pause the dice flow and resolve in seat order, so network speed never decides who can use a roll.</p>
+      <p>Choose <strong>Keep Growing</strong> to retain progress and skip only the current checkpoint. It never triggers a roll. Harvest choices pause the dice flow and resolve in seat order, so network speed never decides who can use a roll.</p>
       <h3>Final Harvest</h3>
       <p>After any harvest reaches 10 coins, the current roll is banked into the field and the active player receives their final full-field check. Every eligible player then gets one final harvest decision. Highest score wins; ties share the win.</p>
       <h3>Digital Notes</h3>
@@ -393,7 +393,10 @@
       else {
         const empty = document.createElement("div");
         empty.className = "bohnanza-dice-empty-message";
-        empty.textContent = view.phase === "await_roll" ? "The dice are ready in the cup." : "No fresh dice are waiting.";
+        const cupCount = dice.filter((die) => die.zone === "cup").length;
+        empty.textContent = view.phase === "await_roll"
+          ? `${cupCount} ${cupCount === 1 ? "die is" : "dice are"} ready in the cup.`
+          : "No fresh dice are waiting.";
         bohnanzaDiceCurrentDice.appendChild(empty);
       }
     }
@@ -409,13 +412,20 @@
   }
 
   function bohnanzaDiceRenderActions(view) {
+    const dice = Array.isArray(view.dice) ? view.dice : [];
+    const cupCount = dice.filter((die) => die.zone === "cup").length;
+    const currentCount = dice.filter((die) => die.zone === "current_roll").length;
     if (bohnanzaDiceRollBtn) {
       bohnanzaDiceRollBtn.disabled = !bohnanzaDiceHasAction("roll") || bohnanzaDicePending;
-      bohnanzaDiceRollBtn.textContent = "Roll 5 Dice";
+      bohnanzaDiceRollBtn.textContent = cupCount
+        ? `Roll ${cupCount} ${cupCount === 1 ? "Die" : "Dice"}`
+        : "Roll Dice";
     }
     if (bohnanzaDiceSaveBtn) {
       bohnanzaDiceSaveBtn.disabled = !bohnanzaDiceHasAction("save_dice") || !bohnanzaDiceSelectedIds.size || bohnanzaDicePending;
-      bohnanzaDiceSaveBtn.textContent = bohnanzaDiceSelectedIds.size
+      bohnanzaDiceSaveBtn.textContent = bohnanzaDiceSelectedIds.size && bohnanzaDiceSelectedIds.size === currentCount
+        ? "Save & Finish"
+        : bohnanzaDiceSelectedIds.size
         ? `Save ${bohnanzaDiceSelectedIds.size} ${bohnanzaDiceSelectedIds.size === 1 ? "Die" : "Dice"}`
         : "Save Selected";
     }
@@ -461,9 +471,14 @@
         ? `${view.phase === "final_harvest" ? "Final decision" : "Harvest decision"} — collect now or keep growing.`
         : `Waiting for ${name}'s ${view.phase === "final_harvest" ? "final " : ""}harvest decision.`;
     } else if (view.phase === "await_roll") {
+      const dice = Array.isArray(view.dice) ? view.dice : [];
+      const cupCount = dice.filter((die) => die.zone === "cup").length;
+      const fieldCount = dice.filter((die) => die.zone === "bean_field").length;
       bohnanzaDiceStatus.textContent = view.active_player_id === view.you
-        ? "Your turn — roll all five dice."
-        : `Waiting for ${activeName} to roll.`;
+        ? fieldCount
+          ? `Your turn continues — roll the remaining ${cupCount} ${cupCount === 1 ? "die" : "dice"} when you are ready.`
+          : "Your turn — roll all five dice."
+        : `Waiting for ${activeName} to roll ${fieldCount ? `the remaining ${cupCount}` : "all five"} ${cupCount === 1 ? "die" : "dice"}.`;
     } else if (view.phase === "after_roll") {
       bohnanzaDiceStatus.textContent = view.active_player_id === view.you
         ? "Select at least one fresh die to save. Tap open space to clear your selection."
