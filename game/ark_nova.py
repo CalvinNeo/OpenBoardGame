@@ -363,8 +363,26 @@ def _apply_rewards(
         if not amount:
             continue
         old_value = int(player.get(key, 0))
-        player[key] = _clamp(old_value + amount, 0, maximum)
+        raw_value = old_value + amount
+        overflow_appeal = 0
+        if key == "reputation" and amount > 0:
+            # The Reputation track stops at 9 until Cards has been upgraded.
+            # Once the player can reach 15, every excess reputation becomes
+            # appeal instead of being lost.
+            reputation_cap = MAX_REPUTATION if _action_level(player, "cards") == 2 else 9
+            player[key] = _clamp(raw_value, 0, reputation_cap)
+            if reputation_cap == MAX_REPUTATION:
+                overflow_appeal = max(0, raw_value - MAX_REPUTATION)
+        else:
+            player[key] = _clamp(raw_value, 0, maximum)
         events.append(_event("track", player_id=player_id, track=key, amount=player[key] - old_value, source=source))
+        if overflow_appeal:
+            old_appeal = int(player.get("appeal", 0))
+            player["appeal"] = _clamp(old_appeal + overflow_appeal, 0, MAX_APPEAL)
+            events.append(_event(
+                "track", player_id=player_id, track="appeal",
+                amount=int(player["appeal"]) - old_appeal, source=f"{source}:reputation_overflow",
+            ))
         if key == "conservation" and player[key] > old_value:
             _queue_conservation_milestones(state, player_id, old_value, int(player[key]))
 
@@ -879,12 +897,16 @@ def _metric_count(player: Mapping[str, Any], metric: str) -> int:
     if metric in {"water", "rock"}:
         return int(tags.get(metric, 0))
     if metric == "small_animal":
-        return sum(1 for card_id in player.get("played_animals", []) if ANIMAL_CARDS[card_id].get("animal_size", 0) <= 2)
+        return sum(
+            _animal_size_class(ANIMAL_CARDS[card_id]) == "small"
+            for card_id in player.get("played_animals", [])
+            if card_id in ANIMAL_CARDS
+        )
     if metric == "large_animal":
         return sum(
-            1 for record in player.get("animal_records", [])
-            if record.get("enclosure_type") == "standard_enclosure"
-            and ANIMAL_CARDS[record["card_id"]].get("animal_size", 0) >= 4
+            _animal_size_class(ANIMAL_CARDS[card_id]) == "large"
+            for card_id in player.get("played_animals", [])
+            if card_id in ANIMAL_CARDS
         )
     return int(tags.get(metric, 0))
 
@@ -949,6 +971,13 @@ def _remove_released_animal(
     building["used_capacity"] = max(0, int(building.get("used_capacity", 0)) - int(record.get("capacity_used", 0)))
     player["animal_records"].remove(record)
     player["played_animals"].remove(card_id)
+    tucked = player.get("tucked_cards", {}).pop(card_id, [])
+    if tucked:
+        state["discard"].extend(tucked)
+        events.append(_event(
+            "tucked_cards_discarded", player_id=player_id, card_id=card_id,
+            tucked_card_ids=list(tucked),
+        ))
     printed_appeal = int(ANIMAL_CARDS[card_id].get("printed_rewards", {}).get("appeal", 0))
     player["appeal"] = max(0, int(player["appeal"]) - printed_appeal)
     state["discard"].append(card_id)
@@ -1222,7 +1251,25 @@ def _consume_effect_events(
             elif track == "appeal":
                 player["appeal"] = _clamp(int(player.get("appeal", 0)), 0, MAX_APPEAL)
             elif track == "reputation":
-                player["reputation"] = _clamp(int(player.get("reputation", 0)), 0, MAX_REPUTATION)
+                raw_value = int(player.get("reputation", 0))
+                raw_amount = int(effect_event.get("amount", 0))
+                old_value = raw_value - raw_amount
+                reputation_cap = MAX_REPUTATION if _action_level(player, "cards") == 2 else 9
+                player["reputation"] = _clamp(raw_value, 0, reputation_cap)
+                overflow = max(0, raw_value - MAX_REPUTATION) if reputation_cap == MAX_REPUTATION else 0
+                if overflow:
+                    old_appeal = int(player.get("appeal", 0))
+                    player["appeal"] = _clamp(old_appeal + overflow, 0, MAX_APPEAL)
+                    events.append(_event(
+                        "track", player_id=player_id, track="appeal",
+                        amount=int(player["appeal"]) - old_appeal,
+                        source=f"{effect_event.get('source', 'effect')}:reputation_overflow",
+                    ))
+                effect_event = {
+                    **dict(effect_event),
+                    "amount": int(player["reputation"]) - old_value,
+                    "value": int(player["reputation"]),
+                }
         elif kind == "action_reposition_requested" and player_id in state["players"]:
             _reposition_action_card(_player(state, player_id), str(effect_event.get("action", "")), int(effect_event.get("slot", 0)))
         elif kind == "free_build_requested" and player_id in state["players"]:
@@ -1281,8 +1328,12 @@ def _consume_effect_events(
         elif kind == "follow_up_effect_requested" and player_id in state["players"]:
             if effect_event.get("effect") == "take_card":
                 _queue_unique_follow_up(state, player_id, "254")
-        elif kind == "display_cards_taken" and effect_event.get("refill_after_action"):
-            state["display_dirty"] = True
+        elif kind == "display_cards_taken":
+            if effect_event.get("refill_immediately"):
+                _refill_display(state)
+                state["display_dirty"] = False
+            elif effect_event.get("refill_after_action"):
+                state["display_dirty"] = True
         events.append(copy.deepcopy(dict(effect_event)))
 
 
@@ -2317,6 +2368,16 @@ def _perform_sponsors_action(
     if supplied_placements is not None and not isinstance(supplied_placements, Mapping):
         return "invalid unique building placements"
     for card, (source, surcharge) in zip(typed_cards, sources):
+        unique = card.get("unique_building")
+        placement = supplied_placements.get(card["id"]) if unique and isinstance(supplied_placements, Mapping) else None
+        if unique and not placement and _find_placement(
+            state,
+            player_id,
+            str(unique["id"]),
+            int(unique.get("footprint", {}).get("cell_count", 0)),
+            unique,
+        ) is None:
+            return "unique building has no legal placement"
         if source == "hand":
             player["hand"].remove(card["id"])
         else:
@@ -2330,8 +2391,6 @@ def _perform_sponsors_action(
         _recompute_tags(player)
         _update_derived_metrics(player)
         _apply_rewards(state, player_id, card.get("printed_rewards", {}), events, f" sponsor:{card['id']}")
-        unique = card.get("unique_building")
-        placement = supplied_placements.get(card["id"]) if unique and isinstance(supplied_placements, Mapping) else None
         if unique and placement:
             if not isinstance(placement, Mapping):
                 return "invalid unique building placement"
@@ -2364,6 +2423,44 @@ def _association_worker_cost(player: Mapping[str, Any], task: str) -> int:
     return used + 1
 
 
+def _queue_association_tile_upgrade(
+    state: MutableMapping[str, Any], player_id: str, source: str
+) -> None:
+    """Grant the printed upgrade under the second tile space on Map 0."""
+
+    player = _player(state, player_id)
+    available = [
+        action_id for action_id in ACTION_IDS
+        if not player["action_cards"][action_id].get("upgraded")
+    ]
+    if not available:
+        return
+    _queue_choice(state, {
+        "choice_id": f"association-{source}-upgrade-{player_id}",
+        "type": "upgrade_action", "player_id": player_id,
+        "prompt": "Upgrade an Action card for your second Association tile",
+        "options": _choice_options(available), "min": 1, "max": 1,
+    })
+
+
+def _queue_association_tile_icon_effects(
+    state: MutableMapping[str, Any], player_id: str, tile_id: str, icons: Mapping[str, int]
+) -> None:
+    """Broadcast icons gained from partner zoos and universities."""
+
+    trigger_tile = {
+        "id": tile_id,
+        "card_type": "association_tile",
+        "icons": [
+            {"tag": tag, "count": int(count)}
+            for tag, count in icons.items() if int(count) > 0
+        ],
+    }
+    state.setdefault("effect_queue", []).extend(
+        _all_passive_sponsor_refs(state, player_id, trigger_tile)
+    )
+
+
 def _take_partner_zoo(
     state: MutableMapping[str, Any], player_id: str, continent: str, events: List[Dict[str, Any]]
 ) -> Optional[str]:
@@ -2381,6 +2478,9 @@ def _take_partner_zoo(
     player["partner_zoos"].append(continent)
     supply.remove(continent)
     _recompute_tags(player)
+    _queue_association_tile_icon_effects(state, player_id, f"partner_zoo:{continent}", {continent: 1})
+    if len(player["partner_zoos"]) == 2:
+        _queue_association_tile_upgrade(state, player_id, "partner-zoo")
     events.append(_event("partner_zoo", player_id=player_id, continent=continent))
     return None
 
@@ -2405,6 +2505,11 @@ def _take_university(
         player["hand_limit"] = max(int(player["hand_limit"]), int(university["hand_limit"]))
     _apply_rewards(state, player_id, {"reputation": university.get("reputation", 0)}, events, university_id)
     _recompute_tags(player)
+    _queue_association_tile_icon_effects(
+        state, player_id, university_id, {"science": int(university.get("science", 0))},
+    )
+    if len(player["universities"]) == 2:
+        _queue_association_tile_upgrade(state, player_id, "university")
     events.append(_event("university", player_id=player_id, university_id=university_id))
     return None
 
@@ -2946,6 +3051,12 @@ def _resolve_choice(
             if is_dataclass(next_pending):
                 next_pending = asdict(next_pending)
             value = copy.deepcopy(dict(next_pending))
+            metadata = value.get("metadata", {})
+            if isinstance(metadata, Mapping) and metadata.get("refresh_display"):
+                value["options"] = [
+                    {"id": str(card_id), "card_id": str(card_id)}
+                    for card_id in state.get("display", []) if card_id
+                ]
             value["_effect_ref"] = copy.deepcopy(pending["_effect_ref"])
             _queue_choice(state, _normalize_pending_choice(value, pending["_effect_ref"]))
     elif choice_type == "discard_cards":
@@ -3002,6 +3113,7 @@ def _resolve_choice(
         state["pending_choice"] = None
     elif choice_type == "take_card":
         value = str(selected[0])
+        took_display_card = False
         if value == "deck":
             card_id = _draw(state)
             if card_id:
@@ -3012,9 +3124,13 @@ def _resolve_choice(
                 return "display card is outside your reputation range"
             _remove_display_card(state, card_id)
             player["hand"].append(card_id)
+            took_display_card = True
         else:
             return "invalid card source"
         state["pending_choice"] = None
+        if took_display_card and str(pending.get("source", "")).startswith("break-"):
+            _refill_display(state)
+            state["display_dirty"] = False
     elif choice_type in {"place_multiplier", "upgrade_action"}:
         action_id = str(selected[0])
         if action_id not in player["action_cards"]:

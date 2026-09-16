@@ -1,5 +1,6 @@
 import random
 from collections import Counter
+from itertools import combinations
 from typing import Dict, List, Optional, Tuple
 
 
@@ -19,6 +20,12 @@ DISASTER_TARGETS = {
     "drought": {"nile", "flood"},
     "funeral": set(CIVILIZATIONS),
     "earthquake": set(MONUMENTS),
+}
+DISASTER_TARGET_LABELS = {
+    "war": "Pharaoh",
+    "drought": "River",
+    "funeral": "Civilization",
+    "earthquake": "Monument",
 }
 SUN_DISKS = {
     3: [[2, 5, 8, 13], [3, 6, 9, 14], [4, 7, 10, 15]],
@@ -99,6 +106,37 @@ def _current_bid(auction: Dict) -> int:
     return max([0] + [int(value) for value in bids.values()])
 
 
+def _river_score(counts: Counter) -> int:
+    if counts["flood"] <= 0:
+        return 0
+    return counts["flood"] + counts["nile"]
+
+
+def _civilization_score(counts: Counter) -> int:
+    civilization_types = sum(1 for kind in CIVILIZATIONS if counts[kind] > 0)
+    if civilization_types == 0:
+        return -5
+    if civilization_types >= 3:
+        return {3: 5, 4: 10, 5: 15}[civilization_types]
+    return 0
+
+
+def _monument_score(counts: Counter) -> int:
+    monument_types = sum(1 for kind in MONUMENTS if counts[kind] > 0)
+    if 1 <= monument_types <= 6:
+        score = monument_types
+    elif monument_types == 7:
+        score = 10
+    elif monument_types == 8:
+        score = 15
+    else:
+        score = 0
+    for kind in MONUMENTS:
+        if counts[kind] >= 3:
+            score += {3: 5, 4: 10}.get(counts[kind], 15)
+    return score
+
+
 def _start_auction(state: Dict, initiator: str, forced: bool) -> None:
     order = state.get("turn_order", [])
     start = _next_player_id(state, initiator)
@@ -153,16 +191,8 @@ def _calculate_epoch_scores(state: Dict) -> Tuple[Dict[str, int], Dict[str, List
         if c["gold"]:
             add_detail(pid, "Gold", c["gold"] * 3)
 
-        if c["flood"] > 0:
-            add_detail(pid, "River", c["flood"] + c["nile"])
-
-        civ_types = sum(1 for kind in CIVILIZATIONS if c[kind] > 0)
-        civ_score = 0
-        if civ_types == 0:
-            civ_score = -5
-        elif civ_types >= 3:
-            civ_score = {3: 5, 4: 10, 5: 15}[civ_types]
-        add_detail(pid, "Civilization", civ_score)
+        add_detail(pid, "River", _river_score(c))
+        add_detail(pid, "Civilization", _civilization_score(c))
 
     pharaoh_values = {pid: counts[pid]["pharaoh"] for pid in player_ids}
     if len(set(pharaoh_values.values())) > 1:
@@ -178,18 +208,7 @@ def _calculate_epoch_scores(state: Dict) -> Tuple[Dict[str, int], Dict[str, List
         disk_sums = {}
         for pid in player_ids:
             c = counts[pid]
-            monument_types = sum(1 for kind in MONUMENTS if c[kind] > 0)
-            monument_score = 0
-            if 1 <= monument_types <= 6:
-                monument_score += monument_types
-            elif monument_types == 7:
-                monument_score += 10
-            elif monument_types == 8:
-                monument_score += 15
-            for kind in MONUMENTS:
-                if c[kind] >= 3:
-                    monument_score += {3: 5, 4: 10}.get(c[kind], 15)
-            add_detail(pid, "Monuments", monument_score)
+            add_detail(pid, "Monuments", _monument_score(c))
             disk_sums[pid] = sum(int(d["value"]) for d in state["players"][pid].get("sun_disks", []))
         if len(set(disk_sums.values())) > 1:
             high = max(disk_sums.values())
@@ -280,6 +299,119 @@ def _disaster_requirements(tiles: List[Dict], disasters: List[Dict]) -> Dict[str
         available = sum(counts[target] for target in targets)
         requirements[kind] = min(2, available)
     return requirements
+
+
+def _disaster_choice_rank(disaster: str, counts: Counter) -> Tuple[int, ...]:
+    if disaster == "drought":
+        return (_river_score(counts), counts["flood"])
+    if disaster == "funeral":
+        civilization_types = sum(1 for kind in CIVILIZATIONS if counts[kind] > 0)
+        return (_civilization_score(counts), civilization_types)
+    if disaster == "earthquake":
+        monument_types = sum(1 for kind in MONUMENTS if counts[kind] > 0)
+        set_progress = sum(counts[kind] * counts[kind] for kind in MONUMENTS)
+        return (_monument_score(counts), monument_types, set_progress)
+    if disaster == "war":
+        return (counts["pharaoh"],)
+    return (0,)
+
+
+def _disaster_recommendation_reason(disaster: str, counts: Counter) -> str:
+    if disaster == "drought":
+        score = _river_score(counts)
+        if counts["flood"] > 0:
+            return f"Keeps a Flood active and {score} River tile(s) scoring this epoch."
+        return "No possible choice can keep a Flood, so the remaining River tiles score 0 this epoch."
+    if disaster == "funeral":
+        civilization_types = sum(1 for kind in CIVILIZATIONS if counts[kind] > 0)
+        score = _civilization_score(counts)
+        return (
+            f"Keeps {civilization_types} Civilization type(s), "
+            f"worth {score:+d} epoch points with the current set."
+        )
+    if disaster == "earthquake":
+        monument_types = sum(1 for kind in MONUMENTS if counts[kind] > 0)
+        score = _monument_score(counts)
+        return (
+            f"Keeps {monument_types} Monument type(s), worth {score} end-game points "
+            "if the set does not change."
+        )
+    if disaster == "war":
+        return "All Pharaoh tiles are equivalent for this discard."
+    return "This is a valid low-loss discard choice for the current collection."
+
+
+def _build_disaster_guide(state: Dict, player_id: str) -> Optional[Dict]:
+    pending = state.get("pending_disaster") or {}
+    if pending.get("player_id") != player_id:
+        return None
+    pdata = state.get("players", {}).get(player_id) or {}
+    tiles = list(pdata.get("tiles", []))
+    groups = []
+    recommended_ids = []
+    eligible_ids = []
+
+    for disaster, raw_required in (pending.get("requirements") or {}).items():
+        required = max(0, int(raw_required or 0))
+        if required <= 0:
+            continue
+        targets = DISASTER_TARGETS.get(disaster, set())
+        candidates = [tile for tile in tiles if tile.get("kind") in targets]
+        eligible_ids.extend(tile.get("id") for tile in candidates if tile.get("id"))
+
+        scored_choices = []
+        for choice in combinations(candidates, required):
+            discarded = {tile.get("id") for tile in choice}
+            remaining_counts = _count_kinds(
+                [tile for tile in tiles if tile.get("id") not in discarded]
+            )
+            scored_choices.append(
+                (_disaster_choice_rank(disaster, remaining_counts), choice, remaining_counts)
+            )
+
+        if not scored_choices:
+            continue
+        best_rank = max(rank for rank, _, _ in scored_choices)
+        best_choices = [item for item in scored_choices if item[0] == best_rank]
+        _, recommendation, remaining_counts = best_choices[0]
+        choice_ids = [tile.get("id") for tile in recommendation if tile.get("id")]
+        recommended_ids.extend(choice_ids)
+        best_kind_signatures = {
+            tuple(sorted(str(tile.get("kind")) for tile in choice))
+            for _, choice, _ in best_choices
+        }
+        groups.append(
+            {
+                "disaster": disaster,
+                "required": required,
+                "target_label": DISASTER_TARGET_LABELS.get(disaster, "matching"),
+                "target_kinds": sorted(targets),
+                "eligible_tile_ids": [
+                    tile.get("id") for tile in candidates if tile.get("id")
+                ],
+                "recommended_tile_ids": choice_ids,
+                "recommendation": _disaster_recommendation_reason(disaster, remaining_counts),
+                "alternative_count": max(0, len(best_kind_signatures) - 1),
+            }
+        )
+
+    return {
+        "required_total": sum(group["required"] for group in groups),
+        "eligible_tile_ids": list(dict.fromkeys(eligible_ids)),
+        "recommended_tile_ids": list(dict.fromkeys(recommended_ids)),
+        "groups": groups,
+    }
+
+
+def _public_pending_disaster(state: Dict, viewer_id: str) -> Optional[Dict]:
+    pending = state.get("pending_disaster")
+    if not isinstance(pending, dict):
+        return pending
+    public_pending = dict(pending)
+    guide = _build_disaster_guide(state, viewer_id)
+    if guide:
+        public_pending["guide"] = guide
+    return public_pending
 
 
 def _finish_gain_tiles(state: Dict, player_id: str, won_tiles: List[Dict], bid_disk: Optional[int], trigger_player: str) -> None:
@@ -589,7 +721,7 @@ class RaGame:
             "ra_limit": RA_TRACK_LIMIT.get(len(state.get("turn_order", [])), 8),
             "bag_count": len(state.get("bag", [])),
             "auction": state.get("auction"),
-            "pending_disaster": state.get("pending_disaster"),
+            "pending_disaster": _public_pending_disaster(state, viewer_id),
             "players": players,
             "legal_actions": RaGame.get_legal_actions(state, viewer_id),
             "last_epoch_summary": state.get("last_epoch_summary"),

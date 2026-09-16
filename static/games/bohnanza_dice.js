@@ -91,7 +91,11 @@
     },
     card: {
       title: "Harvest Card",
-      body: "Orders are completed from the bottom upward. Every slot in one OR branch needs its own matching die; the same dice may be reused for the next order.",
+      body: "Start with Order 1 at the bottom and work upward without skipping. In a row, every tile separated by + needs a different die. ONE OF means one die may show any bean inside that tile; OR means either complete branch works. The same roll may then be reused to check the next order.",
+    },
+    order: {
+      title: "Order Row",
+      body: "This row is one order. Complete orders from 1 upward. Match every + tile with a different die; ONE OF allows one listed face, while OR separates complete alternative branches.",
     },
     score: {
       title: "Bean Coins",
@@ -127,7 +131,8 @@
       </ol>
       <p>Once per turn, before saving, the active player may repeat the entire current roll. Previously saved dice stay in the field. A turn cannot end early.</p>
       <h3>Orders</h3>
-      <p>Complete orders from the bottom upward and stop at the first one that does not match. A row may offer whole alternatives marked OR. Within one alternative, every slot needs a distinct die. Dice are not spent between rows, so the same result can advance several orders in sequence.</p>
+      <p>Complete orders from <strong>Order 1 at the bottom</strong> upward and stop at the first one that does not match. On each row, every bean tile separated by <strong>+</strong> needs a different die. A <strong>ONE OF</strong> tile needs one die showing any bean inside that tile. When two complete branches are separated by <strong>OR</strong>, either whole branch works. The same result can then advance several consecutive orders.</p>
+      <p>The status badge says <strong>NEXT</strong>, <strong>LATER</strong>, <strong>DONE</strong>, or <strong>PREVIEW</strong>. The 🎲5 percentage is the exact chance that a fresh roll of all five dice matches that row by itself; it is reference information, not a score.</p>
       <h3>Harvesting</h3>
       <p>At 3 / 4 / 5 completed orders, you may harvest 1 / 2 / 3 coins. Your current card becomes the first coin; extra reward cards come from the deck. The cover becomes current, a new cover is drawn, and the new card immediately checks the dice context when the rules allow it.</p>
       <p>Choose <strong>Keep Growing</strong> to retain progress and skip only the current checkpoint. It never triggers a roll. Harvest choices pause the dice flow and resolve in seat order, so network speed never decides who can use a roll.</p>
@@ -199,38 +204,60 @@
     return token;
   }
 
+  function bohnanzaDiceSlotText(slot) {
+    const allowed = Array.isArray(slot && slot.allowed) ? slot.allowed : [];
+    const labels = allowed.map((beanId) => (BOHNANZA_DICE_BEANS[beanId] || {}).label || beanId);
+    if (allowed.length === Object.keys(BOHNANZA_DICE_BEANS).length) return "one die showing any bean";
+    if (labels.length === 1) return `one ${labels[0]} die`;
+    if (!labels.length) return "one matching die";
+    return `one die showing one of ${labels.join(", ")}`;
+  }
+
   function bohnanzaDiceOrderText(order) {
     return (order.alternatives || [])
-      .map((alternative) =>
-        (alternative.slots || [])
-          .map((slot) => (slot.allowed || []).map((beanId) => (BOHNANZA_DICE_BEANS[beanId] || {}).label || beanId).join(" or "))
-          .join(" plus ")
-      )
+      .map((alternative) => (alternative.slots || []).map(bohnanzaDiceSlotText).join(" plus "))
       .join(" OR ");
   }
 
   function bohnanzaDiceOrderVisual(order) {
-    const visual = document.createElement("span");
+    const visual = document.createElement("div");
     visual.className = "bohnanza-dice-order-visual";
-    visual.setAttribute("aria-label", bohnanzaDiceOrderText(order));
+    visual.setAttribute("aria-label", `Match ${bohnanzaDiceOrderText(order)}`);
     (order.alternatives || []).forEach((alternative, alternativeIndex) => {
       if (alternativeIndex) {
         const or = document.createElement("span");
         or.className = "bohnanza-dice-order-or";
         or.textContent = "OR";
+        or.setAttribute("aria-hidden", "true");
         visual.appendChild(or);
       }
       const group = document.createElement("span");
       group.className = "bohnanza-dice-order-group";
-      (alternative.slots || []).forEach((slot) => {
+      group.setAttribute("aria-hidden", "true");
+      (alternative.slots || []).forEach((slot, slotIndex) => {
+        if (slotIndex) {
+          const plus = document.createElement("span");
+          plus.className = "bohnanza-dice-order-plus";
+          plus.textContent = "+";
+          group.appendChild(plus);
+        }
         const slotEl = document.createElement("span");
         slotEl.className = "bohnanza-dice-order-slot";
-        (slot.allowed || []).forEach((beanId, beanIndex) => {
+        const allowed = Array.isArray(slot.allowed) ? slot.allowed : [];
+        if (allowed.length === Object.keys(BOHNANZA_DICE_BEANS).length) {
+          slotEl.classList.add("is-any");
+          slotEl.textContent = "🌈 ANY";
+          group.appendChild(slotEl);
+          return;
+        }
+        if (allowed.length > 1) {
+          slotEl.classList.add("has-choice");
+        }
+        allowed.forEach((beanId, beanIndex) => {
           if (beanIndex) {
             const slash = document.createElement("span");
             slash.className = "bohnanza-dice-slot-or";
             slash.textContent = "/";
-            slash.setAttribute("aria-hidden", "true");
             slotEl.appendChild(slash);
           }
           slotEl.appendChild(bohnanzaDiceBeanToken(beanId, true));
@@ -242,12 +269,41 @@
     return visual;
   }
 
+  function bohnanzaDiceOrderState(kind, index, completedCount) {
+    if (kind === "cover") {
+      return {
+        key: "preview",
+        label: "PREVIEW",
+        detail: "This row belongs to the cover card. It cannot gain progress until this card becomes current after a harvest.",
+      };
+    }
+    if (index < completedCount) {
+      return { key: "complete", label: "DONE", detail: "This order is already complete." };
+    }
+    if (index === completedCount) {
+      return { key: "next", label: "NEXT", detail: "This is the next order that can be completed." };
+    }
+    return {
+      key: "locked",
+      label: "LATER",
+      detail: `Complete Order ${index} and every lower-numbered order before this one can count.`,
+    };
+  }
+
+  function bohnanzaDiceOrderExplanation(order, index, state) {
+    const percent = Number(order.first_roll_percent);
+    const chance = Number.isFinite(percent)
+      ? `A fresh roll of all five dice matches this row about ${percent.toFixed(percent < 10 ? 1 : 0)}% of the time.`
+      : "No fresh-roll probability is available for this row.";
+    return `${state.detail} To complete Order ${index + 1}, match ${bohnanzaDiceOrderText(order)}. Every part joined by plus needs a different die. Complete either whole branch around OR. ${chance} After a row succeeds, the same dice result may check the next order.`;
+  }
+
   function bohnanzaDiceCard(card, completedCount, kind) {
     const article = document.createElement("article");
     article.className = `bohnanza-dice-harvest-card is-${kind}`;
-    article.dataset.bohnanzaDiceExplain = "card";
 
     const header = document.createElement("header");
+    header.dataset.bohnanzaDiceExplain = "card";
     const label = document.createElement("strong");
     label.textContent = kind === "current" ? "Current card" : "Cover card";
     const cardKey = document.createElement("span");
@@ -263,19 +319,34 @@
       .forEach(({ order, index }) => {
         const row = document.createElement("li");
         row.className = "bohnanza-dice-order-row";
-        if (kind === "current" && index < completedCount) row.classList.add("is-complete");
-        if (kind === "current" && index === completedCount) row.classList.add("is-next");
+        const state = bohnanzaDiceOrderState(kind, index, completedCount);
+        row.classList.add(`is-${state.key}`);
+        row.dataset.bohnanzaDiceExplain = "order";
+        row.dataset.bohnanzaDiceExplainTitle = `Order ${index + 1} · ${state.label}`;
+        row.dataset.bohnanzaDiceExplainBody = bohnanzaDiceOrderExplanation(order, index, state);
+        row.setAttribute("aria-label", `Order ${index + 1}, ${state.label}. Match ${bohnanzaDiceOrderText(order)}.`);
 
         const level = document.createElement("span");
         level.className = "bohnanza-dice-order-level";
-        level.textContent = kind === "current" && index < completedCount ? "✓" : String(index + 1);
+        level.textContent = `#${index + 1}`;
         const visual = bohnanzaDiceOrderVisual(order);
+
+        const meta = document.createElement("span");
+        meta.className = "bohnanza-dice-order-meta";
+        const status = document.createElement("span");
+        status.className = `bohnanza-dice-order-status is-${state.key}`;
+        status.textContent = state.label;
         const probability = document.createElement("span");
         probability.className = "bohnanza-dice-order-probability";
         const percent = Number(order.first_roll_percent);
-        probability.textContent = Number.isFinite(percent) ? `${percent.toFixed(percent < 10 ? 1 : 0)}%` : "-";
-        probability.title = "Chance a fresh five-die roll satisfies this order";
-        row.append(level, visual, probability);
+        const probabilityValue = document.createElement("strong");
+        probabilityValue.textContent = Number.isFinite(percent) ? `${percent.toFixed(percent < 10 ? 1 : 0)}%` : "-";
+        const probabilityLabel = document.createElement("span");
+        probabilityLabel.textContent = "🎲5";
+        probability.title = "Chance a fresh roll of all five dice satisfies this order";
+        probability.append(probabilityValue, probabilityLabel);
+        meta.append(status, probability);
+        row.append(level, visual, meta);
         orders.appendChild(row);
       });
 
@@ -586,9 +657,15 @@
     document.querySelectorAll("[data-bohnanza-dice-explain]").forEach((element) => element.classList.add("has-explanation"));
   }
 
-  function bohnanzaDiceShowExplanation(key) {
-    const explanation = BOHNANZA_DICE_EXPLANATIONS[key];
-    if (!explanation || !bohnanzaDiceExplainContent) return;
+  function bohnanzaDiceShowExplanation(key, target = null) {
+    const fallback = BOHNANZA_DICE_EXPLANATIONS[key];
+    const customTitle = target && target.dataset ? target.dataset.bohnanzaDiceExplainTitle : "";
+    const customBody = target && target.dataset ? target.dataset.bohnanzaDiceExplainBody : "";
+    const explanation = {
+      title: customTitle || (fallback && fallback.title),
+      body: customBody || (fallback && fallback.body),
+    };
+    if (!explanation.title || !explanation.body || !bohnanzaDiceExplainContent) return;
     bohnanzaDiceExplainContent.innerHTML = "";
     const title = document.createElement("h3");
     title.textContent = explanation.title;
@@ -699,13 +776,13 @@
     (event) => {
       if (!bohnanzaDiceExplainMode || typeof currentGameType === "undefined" || currentGameType !== "bohnanza_dice") return;
       const button = event.target.closest("button");
-      if (!button) return;
       if ([bohnanzaDiceHelpBtn, bohnanzaDiceExplainBtn, bohnanzaDiceHelpCloseBtn, bohnanzaDiceExplainCloseBtn].includes(button)) return;
+      const target = event.target.closest("[data-bohnanza-dice-explain]");
+      if (!button && (!target || !bohnanzaDicePanel || !bohnanzaDicePanel.contains(target))) return;
       event.preventDefault();
       event.stopPropagation();
-      const target = button.closest("[data-bohnanza-dice-explain]");
       if (target && target.dataset.bohnanzaDiceExplain) {
-        bohnanzaDiceShowExplanation(target.dataset.bohnanzaDiceExplain);
+        bohnanzaDiceShowExplanation(target.dataset.bohnanzaDiceExplain, target);
         bohnanzaDiceSetExplainMode(false);
       }
     },
@@ -720,7 +797,7 @@
       if (!target) return;
       event.preventDefault();
       event.stopPropagation();
-      bohnanzaDiceShowExplanation(target.dataset.bohnanzaDiceExplain);
+      bohnanzaDiceShowExplanation(target.dataset.bohnanzaDiceExplain, target);
       bohnanzaDiceSetExplainMode(false);
     },
     true

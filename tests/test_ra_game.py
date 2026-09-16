@@ -75,6 +75,68 @@ class RaGameTest(unittest.TestCase):
         self.assertEqual(state["phase"], "turn")
         self.assertEqual([tile["id"] for tile in state["players"]["p0"]["tiles"]], ["pharaoh_1"])
 
+    def test_disaster_view_recommends_a_low_loss_monument_pair(self):
+        state = RaGame.init_game({}, players(3))
+        state["phase"] = "disaster"
+        state["current_turn"] = "p0"
+        state["players"]["p0"]["tiles"] = [
+            {"id": "statue_1", "kind": "statue", "group": "monument", "label": "Statue"},
+            {"id": "temple_1", "kind": "temple", "group": "monument", "label": "Temple"},
+            {"id": "fortress_1", "kind": "fortress", "group": "monument", "label": "Fortress"},
+            {"id": "sphinx_1", "kind": "sphinx", "group": "monument", "label": "Sphinx"},
+            {"id": "palace_1", "kind": "palace", "group": "monument", "label": "Palace"},
+            {"id": "palace_2", "kind": "palace", "group": "monument", "label": "Palace"},
+            {"id": "step_1", "kind": "step_pyramid", "group": "monument", "label": "Step Pyramid"},
+            {"id": "obelisk_1", "kind": "obelisk", "group": "monument", "label": "Obelisk"},
+            {"id": "gold_1", "kind": "gold", "group": "gold", "label": "Gold"},
+        ]
+        state["pending_disaster"] = {
+            "player_id": "p0",
+            "disasters": [
+                {"id": "earthquake_1", "kind": "earthquake", "group": "disaster", "label": "Earthquake"}
+            ],
+            "requirements": {"earthquake": 2},
+            "bid_disk": 2,
+            "trigger_player": "p0",
+        }
+
+        pending = RaGame.get_public_view(state, "p0")["pending_disaster"]
+        guide = pending["guide"]
+        group = guide["groups"][0]
+        recommended = set(guide["recommended_tile_ids"])
+
+        self.assertEqual(guide["required_total"], 2)
+        self.assertEqual(group["target_label"], "Monument")
+        self.assertNotIn("gold_1", guide["eligible_tile_ids"])
+        self.assertEqual(len(recommended), 2)
+        self.assertTrue(recommended & {"palace_1", "palace_2"})
+        self.assertIn("Keeps 6 Monument", group["recommendation"])
+        self.assertGreater(group["alternative_count"], 0)
+
+    def test_drought_recommendation_keeps_the_last_flood(self):
+        state = RaGame.init_game({}, players(3))
+        state["phase"] = "disaster"
+        state["current_turn"] = "p0"
+        state["players"]["p0"]["tiles"] = [
+            {"id": "flood_1", "kind": "flood", "group": "river", "label": "Flood"},
+            {"id": "nile_1", "kind": "nile", "group": "river", "label": "Nile"},
+            {"id": "nile_2", "kind": "nile", "group": "river", "label": "Nile"},
+        ]
+        state["pending_disaster"] = {
+            "player_id": "p0",
+            "disasters": [
+                {"id": "drought_1", "kind": "drought", "group": "disaster", "label": "Drought"}
+            ],
+            "requirements": {"drought": 2},
+            "bid_disk": 2,
+            "trigger_player": "p0",
+        }
+
+        guide = RaGame.get_public_view(state, "p0")["pending_disaster"]["guide"]
+
+        self.assertEqual(set(guide["recommended_tile_ids"]), {"nile_1", "nile_2"})
+        self.assertIn("Keeps a Flood active", guide["groups"][0]["recommendation"])
+
     def test_epoch_scoring_pauses_until_all_players_ready(self):
         state = RaGame.init_game({}, players(3))
         state["epoch"] = 1

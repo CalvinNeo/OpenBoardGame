@@ -248,7 +248,7 @@ def _ability(
 ANIMAL_ABILITY_DEFINITIONS = {
     "sprint": _ability("疾跑", "Sprint", "immediate", "draw_cards", "从牌库抽取N张牌。", parameters=["draw_count"]),
     "pack": _ability("群居", "Pack", "immediate", "scaling_reward", "按自己动物园中的食肉类图标数，每个获得1吸引力；本牌图标也计入。"),
-    "hunter": _ability("狩猎", "Hunter", "immediate", "reveal_and_choose", "展示牌库顶N张牌，至多保留其中1张动物牌，其余弃掉。", parameters=["reveal_count"], edge_cases_zh=["若没有动物牌，全部弃掉。"]),
+    "hunter": _ability("狩猎", "Hunter", "immediate", "reveal_and_choose", "展示牌库顶N张牌；若其中有动物牌，必须保留1张动物牌，其余弃掉。", parameters=["reveal_count"], edge_cases_zh=["若没有动物牌，全部弃掉。"]),
     "clever": _ability("机灵", "Clever", "after_action", "reposition_action", "完成整个动物行动后，可将任意1张行动牌移到槽位1。"),
     "boost_association": _ability("推动：协会", "Boost: Association", "after_action", "reposition_action", "完成动物行动后，可将协会行动牌移到槽位1或5。"),
     "boost_building": _ability("推动：建造", "Boost: Build", "after_action", "reposition_action", "完成动物行动后，可将建造行动牌移到槽位1或5。"),
@@ -288,7 +288,7 @@ ANIMAL_ABILITY_DEFINITIONS = {
     "posturing": _ability("姿态", "Posturing", "immediate", "free_build", "最多N次免费放置1个贩售亭或休憩亭，仍遵守通常放置规则。", parameters=["maximum_buildings"]),
     "perception_2": _ability("洞察力2", "Perception 2", "immediate", "draw_and_keep", "从牌库抽2张，保留1张并弃1张。"),
     "perception_4": _ability("洞察力4", "Perception 4", "immediate", "draw_and_keep", "从牌库抽4张，保留2张并弃2张。"),
-    "determination": _ability("果断", "Determination", "after_action", "extra_any_action", "完成动物行动后，任选另一张行动牌正常执行一次，并按通常规则移动。", edge_cases_zh=["与指定的“行动：X”不同，果断允许选择获得X标记的替代行动。"]),
+    "determination": _ability("果断", "Determination", "after_action", "extra_any_action", "完成动物行动后，任选一个行动正常执行一次，并按通常规则移动；也可以执行获得X标记行动。", edge_cases_zh=["可以再次选择动物行动；与指定的“行动：X”不同，果断也允许选择获得X标记行动。"]),
     "peacocking": _ability("炫耀", "Peacocking", "immediate", "free_special_enclosure", "如可能，免费放置大型鸟舍；无需建造行动II，但仍遵守放置规则。"),
     "petting_zoo_animal": _ability("萌宠动物", "Petting Zoo Animal", "immediate", "scaling_reward", "按自己园内萌宠类图标总数，每个获得3吸引力；因此第1/2/3只分别令总收益增加3/6/9。", edge_cases_zh=["只能拥有1座萌宠馆，因此通常最多容纳3只。", "萌宠动物也算小型动物。"]),
 }
@@ -496,7 +496,7 @@ FINAL_SCORING_RULES = {
     "001": {
         "kind": "metric_ladder",
         "metric": "large_animal_count",
-        "definition_zh": "大型动物指需要尺寸4或5普通围栏的动物；特殊围栏里的动物不计。",
+        "definition_zh": "大型动物按卡牌上印刷的标准围栏需求判断：尺寸4或5；实际放入特殊围栏仍然计数。",
     },
     "002": {
         "kind": "metric_ladder",

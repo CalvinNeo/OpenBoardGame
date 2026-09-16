@@ -3631,20 +3631,70 @@ body.dumb-questions-explain-mode .has-explanation {
 }
 
 @media (max-width: 640px) {
-  .six-nimmt-row-header {
-    flex-wrap: wrap;
-    gap: 4px;
+  #sixNimmtPanel > h3 {
+    margin: 10px 0 5px;
+    font-size: 16px;
   }
 
-  .six-nimmt-row-cards {
-    flex-wrap: wrap;
+  #sixNimmtPanel .six-nimmt-rows {
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+
+  #sixNimmtPanel .six-nimmt-row {
+    --six-nimmt-card-height: 42px;
+    display: grid;
+    grid-template-columns: clamp(38px, 12vw, 46px) minmax(0, 1fr);
+    align-items: stretch;
+    gap: 4px;
+    padding: 4px;
+    border-radius: 8px;
+  }
+
+  #sixNimmtPanel .six-nimmt-row-header {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 1px;
+    min-width: 0;
+    margin-bottom: 0;
+    font-size: 10px;
+    line-height: 1.1;
+  }
+
+  #sixNimmtPanel .six-nimmt-row-total {
+    white-space: nowrap;
+  }
+
+  #sixNimmtPanel .six-nimmt-row-cards {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 3px;
+    min-width: 0;
     overflow-x: visible;
   }
 
-  .six-nimmt-row-cards .six-nimmt-card {
-    width: calc((100% - 12px) / 3);
+  #sixNimmtPanel .six-nimmt-row-cards .six-nimmt-card {
+    width: 100%;
     min-width: 0;
-    flex: 0 0 calc((100% - 12px) / 3);
+    padding: 2px 1px;
+    border-radius: 5px;
+  }
+
+  #sixNimmtPanel .six-nimmt-row-cards .six-nimmt-card-value {
+    font-size: 13px;
+    line-height: 1.05;
+  }
+
+  #sixNimmtPanel .six-nimmt-row-cards .six-nimmt-card-bulls {
+    gap: 0;
+    font-size: 8px;
+    line-height: 1;
+  }
+
+  #sixNimmtPanel .six-nimmt-card-danger {
+    font-size: 14px;
   }
 }
 
@@ -29120,7 +29170,7 @@ button.bohnanza-dice-die:disabled {
 .bohnanza-dice-harvest-card {
   display: grid;
   gap: 7px;
-  min-height: 234px;
+  min-height: 276px;
   padding: 9px;
   overflow: hidden;
   border: 1px solid rgba(91, 66, 36, 0.27);
@@ -29154,7 +29204,7 @@ button.bohnanza-dice-die:disabled {
 .bohnanza-dice-orders {
   display: grid;
   align-content: stretch;
-  gap: 4px;
+  gap: 5px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -29162,14 +29212,14 @@ button.bohnanza-dice-die:disabled {
 
 .bohnanza-dice-order-row {
   display: grid;
-  grid-template-columns: 21px minmax(0, 1fr) 35px;
+  grid-template-columns: 30px minmax(0, 1fr) 43px;
   align-items: center;
-  gap: 4px;
-  min-height: 34px;
-  padding: 3px;
-  overflow: hidden;
+  gap: 5px;
+  min-width: 0;
+  min-height: 43px;
+  padding: 4px;
   border: 1px solid rgba(87, 68, 39, 0.11);
-  border-radius: 7px;
+  border-radius: 9px;
   background: rgba(247, 239, 215, 0.65);
 }
 
@@ -29184,64 +29234,167 @@ button.bohnanza-dice-die:disabled {
   box-shadow: inset 3px 0 0 var(--bohnanza-dice-gold);
 }
 
+.bohnanza-dice-order-row.is-locked {
+  background: rgba(244, 239, 226, 0.58);
+}
+
+.bohnanza-dice-order-row.is-preview {
+  background: rgba(237, 235, 222, 0.62);
+}
+
 .bohnanza-dice-order-level {
   display: grid;
-  width: 20px;
-  height: 20px;
+  width: 29px;
+  min-height: 25px;
   place-items: center;
   color: #fff;
-  border-radius: 50%;
+  border-radius: 7px;
   background: #6d624f;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 900;
+  letter-spacing: 0.02em;
 }
 
 .bohnanza-dice-order-row.is-complete .bohnanza-dice-order-level {
   background: #4f7b4e;
 }
 
+.bohnanza-dice-order-row.is-next .bohnanza-dice-order-level {
+  color: #412e0d;
+  background: #e6bd57;
+}
+
 .bohnanza-dice-order-visual {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  overflow: hidden;
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+  min-width: 0;
 }
 
 .bohnanza-dice-order-group {
-  display: flex;
+  display: inline-flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 2px;
+  gap: 2px 3px;
+  max-width: 100%;
+  padding: 2px 3px;
+  border: 1px solid rgba(87, 68, 39, 0.2);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.68);
 }
 
 .bohnanza-dice-order-slot {
   display: inline-flex;
   align-items: center;
-  overflow: hidden;
-  border-radius: 7px;
+  gap: 1px;
+  max-width: 100%;
+  min-height: 22px;
+  padding: 1px;
+  border-radius: 6px;
+}
+
+.bohnanza-dice-order-slot.has-choice {
+  border: 1px dashed rgba(87, 68, 39, 0.36);
+  background: rgba(233, 222, 194, 0.42);
+}
+
+.bohnanza-dice-order-slot.is-any {
+  padding: 3px 5px;
+  color: #4e4639;
+  border: 1px dashed rgba(87, 68, 39, 0.36);
+  background: rgba(233, 222, 194, 0.42);
+  font-size: 7px;
+  font-weight: 950;
+  letter-spacing: 0.04em;
+}
+
+.bohnanza-dice-order-slot .bohnanza-dice-bean.is-compact {
+  min-width: 23px;
+  min-height: 20px;
+  padding: 2px;
+}
+
+.bohnanza-dice-order-slot .bohnanza-dice-bean.is-compact .bohnanza-dice-bean-emoji {
+  display: inline;
+  font-size: 9px;
+}
+
+.bohnanza-dice-order-slot .bohnanza-dice-bean.is-compact .bohnanza-dice-bean-key {
+  font-size: 7px;
 }
 
 .bohnanza-dice-slot-or {
-  margin-inline: -1px;
-  color: #fff;
-  font-size: 7px;
+  color: #5c513f;
+  font-size: 8px;
   font-weight: 900;
-  text-shadow: 0 1px 2px #333;
 }
 
-.bohnanza-dice-order-or {
+.bohnanza-dice-order-plus {
   flex: 0 0 auto;
-  color: var(--bohnanza-dice-brown);
-  font-size: 7px;
+  color: #315c40;
+  font-size: 11px;
   font-weight: 950;
 }
 
+.bohnanza-dice-order-or {
+  justify-self: center;
+  padding: 0 5px;
+  color: var(--bohnanza-dice-brown);
+  border-radius: 999px;
+  background: rgba(220, 174, 69, 0.2);
+  font-size: 6px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+}
+
+.bohnanza-dice-order-meta {
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+  min-width: 0;
+}
+
+.bohnanza-dice-order-status {
+  padding: 2px 4px;
+  color: #6a6255;
+  border: 1px solid rgba(91, 80, 59, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  font-size: 6px;
+  font-weight: 950;
+  letter-spacing: 0.05em;
+}
+
+.bohnanza-dice-order-status.is-complete {
+  color: #285038;
+  border-color: rgba(73, 127, 75, 0.28);
+  background: rgba(109, 158, 87, 0.2);
+}
+
+.bohnanza-dice-order-status.is-next {
+  color: #5f3d08;
+  border-color: rgba(188, 133, 28, 0.34);
+  background: rgba(232, 185, 83, 0.28);
+}
+
 .bohnanza-dice-order-probability {
+  display: grid;
+  justify-items: end;
   color: var(--bohnanza-dice-muted);
-  font-size: 8px;
   font-variant-numeric: tabular-nums;
-  font-weight: 800;
   text-align: right;
+}
+
+.bohnanza-dice-order-probability strong {
+  font-size: 8px;
+  line-height: 1;
+}
+
+.bohnanza-dice-order-probability span {
+  margin-top: 2px;
+  font-size: 6px;
+  font-weight: 850;
+  line-height: 1;
 }
 
 .bohnanza-dice-player-footer {

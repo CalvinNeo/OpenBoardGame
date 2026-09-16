@@ -239,18 +239,6 @@ def _metric(context: EffectContext, metric: str, player_id: Optional[str] = None
     if metric in {"small_animal", "small_animal_count"}:
         return sum(bool(card and _is_small_animal(card)) for card in map(_animal_card, _played_ids(context, player_id)))
     if metric in {"large_animal", "large_animal_count"}:
-        records = player.get("animal_records", [])
-        if isinstance(records, Mapping):
-            records = list(records.values())
-        if isinstance(records, Sequence) and records:
-            total = 0
-            for record in records:
-                if not isinstance(record, Mapping):
-                    continue
-                card = ANIMAL_BY_ID.get(_record_card_id(record))
-                enclosure_type = str(record.get("enclosure_type", "standard_enclosure"))
-                total += bool(card and _is_large_animal(card) and enclosure_type.startswith("standard"))
-            return total
         return sum(bool(card and _is_large_animal(card)) for card in map(_animal_card, _played_ids(context, player_id)))
     if metric in {"science_icon_count", "science"}:
         return _count_tag(context, "science", player_id)
@@ -555,7 +543,7 @@ def _reveal_and_keep(
             False,
             {"candidates": revealed},
         )
-    if len(selected) > maximum or any(card_id not in {_card_id(card) for card in eligible} for card_id in selected):
+    if len(selected) != maximum or any(card_id not in {_card_id(card) for card in eligible} for card_id in selected):
         raise ValueError("invalid revealed-card choice")
     kept = [card for card in revealed if _card_id(card) in selected]
     rejected = [card for card in revealed if _card_id(card) not in selected]
@@ -583,10 +571,23 @@ def _display_choice(
             eligible.append(value)
     if not eligible:
         return _done(_event("effect_no_target", context.player_id, source=effect_ref))
+    pending = _pending_from_context(context)
+    pending_metadata = pending.get("metadata", {}) if isinstance(pending, Mapping) else {}
+    remaining = int(pending_metadata.get("remaining", count)) if isinstance(pending_metadata, Mapping) else count
     selected = _selected_ids(choice)
     if choice is None:
-        return _pending(context, effect_ref, "take_display_cards", "选择展示区卡牌", [{"id": _card_id(card), "card_id": _card_id(card)} for card in eligible], min(1, count), min(count, len(eligible)))
-    if len(selected) > count or any(cid not in {_card_id(card) for card in eligible} for cid in selected):
+        if count > 1:
+            return _pending(
+                context, effect_ref, "take_display_cards", "从展示区拿取一张卡牌",
+                [{"id": _card_id(card), "card_id": _card_id(card)} for card in eligible],
+                1, 1, False, {"remaining": count, "refresh_display": True},
+            )
+        return _pending(
+            context, effect_ref, "take_display_cards", "选择展示区卡牌",
+            [{"id": _card_id(card), "card_id": _card_id(card)} for card in eligible], 1, 1,
+        )
+    maximum = 1 if count > 1 else count
+    if len(selected) != maximum or any(cid not in {_card_id(card) for card in eligible} for cid in selected):
         raise ValueError("invalid display-card choice")
     taken = []
     for card_id in selected:
@@ -594,7 +595,22 @@ def _display_choice(
         display.remove(card)
         taken.append(card)
     _player(context).setdefault("hand", []).extend(taken)
-    return _done(_event("display_cards_taken", context.player_id, card_ids=selected, source=effect_ref, refill_after_action=True))
+    remaining -= len(selected)
+    immediate_refill = context.timing == "income" or remaining > 0
+    event = _event(
+        "display_cards_taken", context.player_id, card_ids=selected, source=effect_ref,
+        refill_immediately=immediate_refill,
+        refill_after_action=not immediate_refill,
+    )
+    if remaining > 0:
+        next_choice = _pending(
+            context, effect_ref, "take_display_cards", "再次从补满后的展示区拿取一张卡牌",
+            [{"id": _card_id(card), "card_id": _card_id(card)} for card in display],
+            1, 1, False, {"remaining": remaining, "refresh_display": True},
+        )
+        next_choice.events.append(event)
+        return next_choice
+    return _done(event)
 
 
 def execute_ability(
@@ -634,15 +650,24 @@ def execute_ability(
     if op == "extra_action":
         action = str(spec["action"])
         strength = int(_player(context).get("action_cards", {}).get(action, {}).get("slot", 0))
-        return _done(_event("extra_action_requested", context.player_id, action=action, strength=strength, source=ref, allow_x_alternative=False))
+        return _done(_event(
+            "extra_action_requested", context.player_id, action=action, strength=strength,
+            source=ref, allow_x_alternative=True, move_after=True,
+        ))
     if op == "extra_any_action":
-        options = [{"id": action, "action": action} for action in ACTION_IDS if action != context.action]
+        options = [
+            {"id": action, "action": action}
+            for action in (*ACTION_IDS, "gain_x")
+        ]
         selected = _selected_ids(choice)
         if choice is None:
             return _pending(context, ref, "extra_action", "选择另一张行动牌执行", options)
         if selected[0] not in {option["id"] for option in options}:
             raise ValueError("invalid extra-action choice")
-        return _done(_event("extra_action_requested", context.player_id, action=selected[0], source=ref, move_after=True))
+        return _done(_event(
+            "extra_action_requested", context.player_id, action=selected[0], source=ref,
+            move_after=True, allow_x_alternative=True,
+        ))
     if op == "gain_x":
         return _grant(context, ref, x_tokens=int(parameters.get("x_tokens", 0)))
     if op == "hire_worker":
@@ -1136,7 +1161,13 @@ def execute_sponsor_effect(
         if "deck" in sources and context.state.get("deck"):
             options.append({"id": "deck", "source": "deck"})
         if "display" in sources:
-            options.extend({"id": f"display:{_card_id(card)}", "source": "display", "card_id": _card_id(card)} for card in context.state.get("display", []))
+            reputation = int(_player(context).get("reputation", 0))
+            display_limit = min(6, max(1, reputation // 2 + 1))
+            accessible = list(context.state.get("display", []))[:display_limit]
+            options.extend(
+                {"id": f"display:{_card_id(card)}", "source": "display", "card_id": _card_id(card)}
+                for card in accessible if card
+            )
         selected = _selected_ids(choice)
         if not options:
             return _done(_event("effect_no_target", context.player_id, source=effect_id))
@@ -1147,6 +1178,8 @@ def execute_sponsor_effect(
         if selected[0] == "deck":
             return _draw_cards(context, 1, effect_id)
         if selected[0].startswith("display:"):
+            if selected[0] not in {str(option["id"]) for option in options}:
+                raise ValueError("display card is outside your reputation range")
             return _display_choice(context, effect_id, 1, {"card_id": selected[0].split(":", 1)[1]})
         raise ValueError("invalid card source")
     if op == "trigger":

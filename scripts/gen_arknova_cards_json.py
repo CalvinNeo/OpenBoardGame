@@ -761,7 +761,7 @@ def write_catalog(
         slots = "；".join(slot["raw_zh"] for slot in card["support_slots"])
         special = reward_text(card["new_project_bonus"])
         if card["project_type"] == "release":
-            special += "；放归动物的已占用围栏尺寸须与奖励格完全相同"
+            special += "；放归动物卡上印刷的标准围栏尺寸须与奖励格完全相同"
         elif card["project_type"] == "breeding":
             special += "；动物标签匹配且有与其大洲相同的合作动物园"
         lines.append(
