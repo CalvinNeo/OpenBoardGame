@@ -16,6 +16,7 @@ const mismatchConfigBox = document.getElementById("mismatchConfigBox");
 const mismatchSliderCount = document.getElementById("mismatchSliderCount");
 const caboPanel = document.getElementById("caboPanel");
 const flip7Panel = document.getElementById("flip7Panel");
+const hotStreakPanel = document.getElementById("hotStreakPanel");
 const yahtzeePanel = document.getElementById("yahtzeePanel");
 const acquirePanel = document.getElementById("acquirePanel");
 const lostCodePanel = document.getElementById("lostCodePanel");
@@ -77,6 +78,7 @@ function setGamePanelVisibility(gameType) {
   const showCabo = gameType === "cabo";
   const showGuandan = gameType === "guandan";
   const showFlip7 = gameType === "flip7";
+  const showHotStreak = gameType === "hot_streak";
   const showYahtzee = gameType === "yahtzee";
   const showAcquire = gameType === "acquire";
   const showLostCode = gameType === "lost_code";
@@ -153,6 +155,12 @@ function setGamePanelVisibility(gameType) {
   }
   if (flip7Panel) {
     flip7Panel.classList.toggle("hidden", !showFlip7);
+  }
+  if (hotStreakPanel) {
+    hotStreakPanel.classList.toggle("hidden", !showHotStreak);
+  }
+  if (typeof showHotStreakHeaderActions === "function") {
+    showHotStreakHeaderActions(showHotStreak);
   }
   if (yahtzeePanel) {
     yahtzeePanel.classList.toggle("hidden", !showYahtzee);
@@ -573,6 +581,10 @@ function renderGameState(data) {
   }
   if (gameType === "flip7") {
     renderFlip7GameState(data);
+    return;
+  }
+  if (gameType === "hot_streak") {
+    renderHotStreakGameState(data);
     return;
   }
   if (gameType === "yahtzee") {

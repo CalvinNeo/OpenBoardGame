@@ -21,6 +21,7 @@ GAME_URLS = {
     "draw_guess": "https://boardgamegeek.com/boardgame/46213/telestrations",
     "aidixit": "https://boardgamegeek.com/boardgame/39856/dixit",
     "flip7": "https://boardgamegeek.com/boardgame/420087/flip-7",
+    "hot_streak": "https://boardgamegeek.com/boardgame/446497/hot-streak",
     "perfect_mismatch": "https://boardgamegeek.com/boardgame/424482/perfect-mismatch",
     "age_of_war": "https://boardgamegeek.com/boardgame/28086/age-of-war",
     "wandering_towers": "https://boardgamegeek.com/boardgame/355483/wandering-towers",

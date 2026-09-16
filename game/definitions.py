@@ -27,6 +27,7 @@ from game.guandan import GuandanGame
 from game.halli_galli import HalliGalliGame
 from game.hanabi import HanabiGame
 from game.high_society import HighSocietyGame
+from game.hot_streak import HotStreakGame
 from game.impression_flower import ImpressionFlowerGame
 from game.incan_gold import IncanGoldGame
 from game.in_a_grove import InAGroveGame
@@ -3612,6 +3613,67 @@ GUANDAN_CONFIG_SCHEMA = {
     "additionalProperties": False,
 }
 
+HOT_STREAK_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "draft_ticket"},
+                "stack_id": {
+                    "type": "string",
+                    "enum": ["blaze", "dash", "ripple", "comet", "yes", "no"],
+                },
+                "mode": {"type": "string", "enum": ["safe", "risky"]},
+                "double_bet_id": {"type": ["string", "null"], "minLength": 1, "maxLength": 160},
+            },
+            "required": ["type", "stack_id", "mode"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "submit_race_cards"},
+                "card_ids": {
+                    "type": "array",
+                    "items": {"type": "string", "minLength": 3, "maxLength": 100},
+                    "minItems": 1,
+                    "maxItems": 2,
+                    "uniqueItems": True,
+                },
+            },
+            "required": ["type", "card_ids"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "advance_race"},
+                "expected_step_index": {"type": "integer", "minimum": 0},
+            },
+            "required": ["type", "expected_step_index"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "next_round"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "play_again"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+HOT_STREAK_CONFIG_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+}
+
 register_game(
     GameDefinition(
         game_id=CaboGame.game_id,
@@ -4583,5 +4645,20 @@ register_game(
         module=SubtextGame,
         serialize=SubtextGame.serialize,
         deserialize=SubtextGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=HotStreakGame.game_id,
+        name="Hot Streak",
+        min_players=HotStreakGame.min_players,
+        max_players=HotStreakGame.max_players,
+        turn_mode="turn",
+        action_schema=HOT_STREAK_ACTION_SCHEMA,
+        config_schema=HOT_STREAK_CONFIG_SCHEMA,
+        module=HotStreakGame,
+        serialize=HotStreakGame.serialize,
+        deserialize=HotStreakGame.deserialize,
     )
 )

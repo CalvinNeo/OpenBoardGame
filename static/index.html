@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css?v=app_v54" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v55" />
   <link rel="stylesheet" href="/static/ark_nova.css?v=app_v21" />
 </head>
 <body>
@@ -1168,6 +1168,7 @@
                     <option value="cabo">Cabo</option>
                     <option value="ark_nova">Ark Nova</option>
                     <option value="flip7">flip7flash</option>
+                    <option value="hot_streak">Hot Streak</option>
                     <option value="yahtzee">Yahtzee</option>
                     <option value="gold_rush">Gold Rush</option>
                     <option value="incan_gold">Incan Gold</option>
@@ -1810,6 +1811,10 @@
               <button id="subtextHelpBtn" class="subtext-header-btn" type="button">Help</button>
               <button id="subtextExplainBtn" class="subtext-header-btn" type="button">Explain</button>
             </div>
+            <div class="panel-header-actions" id="hotStreakHeaderActions" style="display: none;">
+              <button id="hotStreakHelpBtn" class="hot-streak-header-btn" type="button">Help</button>
+              <button id="hotStreakExplainBtn" class="hot-streak-header-btn" type="button" aria-pressed="false">Explain</button>
+            </div>
           </div>
           <div class="panel-body">
             <div id="caboPanel" class="hidden">
@@ -1995,6 +2000,72 @@
               <h3>Last Round</h3>
               <div id="flip7LastRound"></div>
 
+            </div>
+
+            <div id="hotStreakPanel" class="hidden hot-streak-root">
+              <div class="hot-streak-status-bar" aria-label="Race status">
+                <div><span aria-hidden="true">🔥</span> <strong id="hotStreakRaceLabel">Race 1 of 3</strong></div>
+                <div><span aria-hidden="true">🏁</span> <strong id="hotStreakPhaseLabel">Betting</strong></div>
+                <div><span aria-hidden="true">👉</span> <strong id="hotStreakTurnLabel">-</strong></div>
+              </div>
+              <p id="hotStreakDataNotice" class="hot-streak-data-notice">
+                Prototype-compatible data · component values and track coordinates are not verified against a physical second printing.
+              </p>
+
+              <div id="hotStreakPlayers" class="hot-streak-players" aria-label="Players"></div>
+
+              <div class="hot-streak-layout">
+                <section class="hot-streak-race-column" aria-label="Race track">
+                  <div class="hot-streak-track-shell">
+                    <div class="hot-streak-track-caption">
+                      <span>Folded edge</span>
+                      <span>Finish 🏁</span>
+                    </div>
+                    <div id="hotStreakTrack" class="hot-streak-track" role="grid" aria-label="Four lane race track"></div>
+                  </div>
+                  <div id="hotStreakCurrentCard" class="hot-streak-current-card" aria-live="polite">Waiting for the race…</div>
+                  <div id="hotStreakRaceActions" class="hot-streak-action-row">
+                    <button id="hotStreakContinueBtn" class="hidden" type="button" data-hot-streak-explain="continue">Continue Race</button>
+                  </div>
+                </section>
+
+                <aside class="hot-streak-side-column">
+                  <section class="hot-streak-card-panel">
+                    <h3>Side Bet</h3>
+                    <div id="hotStreakSideBet" class="hot-streak-side-bet">-</div>
+                  </section>
+
+                  <section id="hotStreakTicketSection" class="hot-streak-card-panel">
+                    <div class="hot-streak-section-heading">
+                      <h3>Betting Tickets</h3>
+                      <span id="hotStreakDraftProgress" class="hot-streak-mini-status">-</span>
+                    </div>
+                    <div id="hotStreakTickets" class="hot-streak-ticket-grid"></div>
+                  </section>
+
+                  <section id="hotStreakHandSection" class="hot-streak-card-panel">
+                    <div class="hot-streak-section-heading">
+                      <h3>Your Race Cards</h3>
+                      <span id="hotStreakSubmissionProgress" class="hot-streak-mini-status">-</span>
+                    </div>
+                    <p id="hotStreakHandHint" class="hint">Choose a race card.</p>
+                    <div id="hotStreakHand" class="hot-streak-hand"></div>
+                    <button id="hotStreakSubmitBtn" type="button" data-hot-streak-explain="submit">Submit Card</button>
+                  </section>
+
+                  <section id="hotStreakResult" class="hot-streak-card-panel hidden" aria-live="polite"></section>
+
+                  <section class="hot-streak-card-panel hot-streak-log-panel">
+                    <h3>Race Log</h3>
+                    <div id="hotStreakLog" class="hot-streak-log" tabindex="0"></div>
+                  </section>
+                </aside>
+              </div>
+
+              <div class="hot-streak-footer-actions">
+                <button id="hotStreakNextRaceBtn" class="hidden" type="button" data-hot-streak-explain="next">Next Race</button>
+                <button id="hotStreakPlayAgainBtn" class="hidden" type="button" data-hot-streak-explain="again">Play Again</button>
+              </div>
             </div>
 
             <div id="yahtzeePanel" class="hidden">
@@ -5600,6 +5671,36 @@
               </div>
             </div>
 
+            <div id="hotStreakBetModal" class="modal hidden" aria-hidden="true">
+              <div class="modal-content hot-streak-modal-content" role="dialog" aria-modal="true" aria-labelledby="hotStreakBetModalTitle">
+                <div class="modal-header">
+                  <h2 id="hotStreakBetModalTitle">Choose a Ticket</h2>
+                  <button id="hotStreakBetModalCloseBtn" type="button">Close</button>
+                </div>
+                <div id="hotStreakBetModalBody" class="modal-body"></div>
+              </div>
+            </div>
+
+            <div id="hotStreakHelpModal" class="modal hidden" aria-hidden="true">
+              <div class="modal-content hot-streak-modal-content" role="dialog" aria-modal="true" aria-labelledby="hotStreakHelpModalTitle">
+                <div class="modal-header">
+                  <h2 id="hotStreakHelpModalTitle">Hot Streak Help</h2>
+                  <button id="hotStreakHelpModalCloseBtn" type="button">Close</button>
+                </div>
+                <div id="hotStreakHelpContent" class="modal-body hot-streak-help-content"></div>
+              </div>
+            </div>
+
+            <div id="hotStreakExplainModal" class="modal hidden" aria-hidden="true">
+              <div class="modal-content hot-streak-modal-content" role="dialog" aria-modal="true" aria-labelledby="hotStreakExplainModalTitle">
+                <div class="modal-header">
+                  <h2 id="hotStreakExplainModalTitle">Hot Streak Explain</h2>
+                  <button id="hotStreakExplainModalCloseBtn" type="button">Close</button>
+                </div>
+                <div id="hotStreakExplainContent" class="modal-body"></div>
+              </div>
+            </div>
+
             <div id="davinciCodeExplainModal" class="modal davinci-explain-modal hidden" aria-hidden="true">
               <div class="modal-content">
                 <div class="modal-header">
@@ -5712,6 +5813,7 @@
   <script src="/static/games/guandan.js?v=app_v13"></script>
   <script src="/static/games/cabo.js?v=app_v8"></script>
   <script src="/static/games/flip7.js?v=app_v4"></script>
+  <script src="/static/games/hot_streak.js?v=app_v1"></script>
   <script src="/static/games/acquire.js?v=app_v1"></script>
   <script src="/static/games/abraca_what.js?v=app_v4"></script>
   <script src="/static/games/fang_niao.js?v=app_v4"></script>
@@ -5744,7 +5846,7 @@
   <script src="/static/games/ra.js?v=app_v6"></script>
   <script src="/static/games/scout.js?v=app_v4"></script>
   <script src="/static/games/ark_nova.js?v=app_v22"></script>
-  <script src="/static/app.js?v=app_v13"></script>
-  <script src="/static/room.js?v=app_v23"></script>
+  <script src="/static/app.js?v=app_v14"></script>
+  <script src="/static/room.js?v=app_v24"></script>
 </body>
 </html>

@@ -541,6 +541,7 @@ const GAME_WEIGHT = {
   gizmos: 2.05,
   halli_galli: 1.02,
   hanabi: 1.69,
+  hot_streak: 1.23,
   incan_gold: 1.11,
   istanbul: 2.58,
   kobayakawa: 1.2,
@@ -1502,6 +1503,9 @@ function resetRoomState() {
   }
   clearCaboState();
   clearFlip7State();
+  if (typeof clearHotStreakState === "function") {
+    clearHotStreakState();
+  }
   clearYahtzeeState();
   if (typeof clearAcquireState === "function") {
     clearAcquireState();
