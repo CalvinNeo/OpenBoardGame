@@ -4,6 +4,7 @@ from game.ai_dixit import AiDixitGame
 from game.age_of_war import AgeOfWarGame
 from game.ark_nova import ArkNovaGame
 from game.azul import AzulGame
+from game.bohnanza_dice import BohnanzaDiceGame
 from game.bomb_busters import BombBustersGame
 from game.cabo import CaboGame
 from game.cat_in_box import CatInBoxGame
@@ -208,6 +209,70 @@ POISON_ACTION_SCHEMA = {
 }
 
 POISON_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "seed": {
+            "oneOf": [
+                {"type": "integer"},
+                {"type": "string", "minLength": 1, "maxLength": 80},
+            ]
+        }
+    },
+    "additionalProperties": False,
+}
+
+BOHNANZA_DICE_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {"type": {"const": "roll"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "save_dice"},
+                "die_ids": {
+                    "type": "array",
+                    "items": {"type": "string", "pattern": r"^(?:dark-[12]|light-[123])$"},
+                    "minItems": 1,
+                    "maxItems": 5,
+                    "uniqueItems": True,
+                },
+            },
+            "required": ["type", "die_ids"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "repeat_roll"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "harvest"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "keep_growing"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "play_again"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+BOHNANZA_DICE_CONFIG_SCHEMA = {
     "type": "object",
     "properties": {
         "seed": {
@@ -4883,6 +4948,22 @@ register_game(
         module=PoisonGame,
         serialize=PoisonGame.serialize,
         deserialize=PoisonGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=BohnanzaDiceGame.game_id,
+        name="Bohnanza: Das Würfelspiel",
+        name_zh="种豆：骰子游戏",
+        min_players=BohnanzaDiceGame.min_players,
+        max_players=BohnanzaDiceGame.max_players,
+        turn_mode="turn",
+        action_schema=BOHNANZA_DICE_ACTION_SCHEMA,
+        config_schema=BOHNANZA_DICE_CONFIG_SCHEMA,
+        module=BohnanzaDiceGame,
+        serialize=BohnanzaDiceGame.serialize,
+        deserialize=BohnanzaDiceGame.deserialize,
     )
 )
 

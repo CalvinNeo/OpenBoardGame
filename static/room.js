@@ -529,6 +529,7 @@ const GAME_WEIGHT = {
   azul: 1.78,
   blokus: 1.73,
   blitz_sketch: 1.0,
+  bohnanza_dice: 1.17,
   cabo: 1.4,
   carcassonne: 1.89,
   cat_in_box: 2.03,
@@ -1524,6 +1525,9 @@ function resetRoomState() {
   }
   if (typeof clearPoisonState === "function") {
     clearPoisonState();
+  }
+  if (typeof clearBohnanzaDiceState === "function") {
+    clearBohnanzaDiceState();
   }
   if (typeof clearBombBustersState === "function") {
     clearBombBustersState();

@@ -6,6 +6,7 @@ from game.azul import AzulGame
 from game.ai_dixit import AiDixitGame
 from game.blokus import BlokusGame
 from game.blitz_sketch import BlitzSketchGame
+from game.bohnanza_dice import BohnanzaDiceGame
 from game.bomb_busters import BombBustersGame
 from game.carcassonne import CarcassonneGame
 from game.cabo import CaboGame
@@ -74,6 +75,7 @@ __all__ = [
     "AiDixitGame",
     "BlokusGame",
     "BlitzSketchGame",
+    "BohnanzaDiceGame",
     "BombBustersGame",
     "CarcassonneGame",
     "CaboGame",

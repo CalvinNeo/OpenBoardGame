@@ -29,6 +29,7 @@ const ageOfWarPanel = document.getElementById("ageOfWarPanel");
 const kobayakawaPanel = document.getElementById("kobayakawaPanel");
 const highSocietyPanel = document.getElementById("highSocietyPanel");
 const poisonPanel = document.getElementById("poisonPanel");
+const bohnanzaDicePanel = document.getElementById("bohnanzaDicePanel");
 const bombBustersPanel = document.getElementById("bombBustersPanel");
 const bombBustersConfigBox = document.getElementById("bombBustersConfigBox");
 const bombBustersPresetSelect = document.getElementById("bombBustersPresetSelect");
@@ -96,6 +97,7 @@ function setGamePanelVisibility(gameType) {
   const showKobayakawa = gameType === "kobayakawa";
   const showHighSociety = gameType === "high_society";
   const showPoison = gameType === "poison";
+  const showBohnanzaDice = gameType === "bohnanza_dice";
   const showBombBusters = gameType === "bomb_busters";
   const showFelix = gameType === "felix";
   const showTacta = gameType === "tacta";
@@ -233,6 +235,12 @@ function setGamePanelVisibility(gameType) {
   }
   if (typeof showPoisonHeaderActions === "function") {
     showPoisonHeaderActions(showPoison);
+  }
+  if (bohnanzaDicePanel) {
+    bohnanzaDicePanel.classList.toggle("hidden", !showBohnanzaDice);
+  }
+  if (typeof showBohnanzaDiceHeaderActions === "function") {
+    showBohnanzaDiceHeaderActions(showBohnanzaDice);
   }
   if (bombBustersPanel) {
     bombBustersPanel.classList.toggle("hidden", !showBombBusters);
@@ -663,6 +671,10 @@ function renderGameState(data) {
   }
   if (gameType === "poison") {
     renderPoisonGameState(data);
+    return;
+  }
+  if (gameType === "bohnanza_dice") {
+    renderBohnanzaDiceGameState(data);
     return;
   }
   if (gameType === "bomb_busters") {

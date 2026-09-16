@@ -65,6 +65,7 @@
   "subtext": 64,
   "tacta": 65,
   "hot_streak": 66,
-  "poison": 67,
-  "bomb_busters": 68
+  "bohnanza_dice": 67,
+  "bomb_busters": 68,
+  "poison": 69
 }
