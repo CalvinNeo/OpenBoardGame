@@ -5,6 +5,7 @@ let currentRaDisasterKey = null;
 let raExplainMode = false;
 let raSuppressNextClick = false;
 
+const raPanelEl = document.getElementById("raPanel");
 const raPhaseLabel = document.getElementById("raPhase");
 const raEpochLabel = document.getElementById("raEpoch");
 const raTurnLabel = document.getElementById("raTurn");
@@ -316,6 +317,9 @@ function clearRaState() {
   currentRaDisasterKey = null;
   clearRaSelections();
   exitRaExplainMode();
+  if (raPanelEl) {
+    raPanelEl.classList.remove("ra-disaster-focus");
+  }
   [
     raPhaseLabel,
     raEpochLabel,
@@ -912,6 +916,13 @@ function renderRaGameState(data) {
   const view = data.view;
   currentRaView = view;
   raSyncDisasterSelection(view);
+  if (raPanelEl) {
+    const pending = view.pending_disaster;
+    const disasterFocus = Boolean(
+      view.phase === "disaster" && pending && pending.player_id === view.you
+    );
+    raPanelEl.classList.toggle("ra-disaster-focus", disasterFocus);
+  }
   if (currentGameType !== "ra") {
     currentGameType = "ra";
     setGamePanelVisibility("ra");

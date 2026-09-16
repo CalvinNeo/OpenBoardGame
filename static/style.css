@@ -25318,6 +25318,153 @@ body.ra-explain-mode button.has-explanation:hover {
   .ra-auction-slot:nth-child(2n + 1)::before {
     left: 50%;
   }
+
+  #raPanel.ra-disaster-focus > .row:first-child {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 4px 10px;
+    margin-bottom: 4px;
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+
+  #raPanel.ra-disaster-focus > .row:first-child > div:first-child,
+  #raPanel.ra-disaster-focus > .row:first-child > div:nth-child(4),
+  #raPanel.ra-disaster-focus > .row:nth-child(2) {
+    display: none;
+  }
+
+  #raPanel.ra-disaster-focus .ra-layout {
+    display: block;
+  }
+
+  #raPanel.ra-disaster-focus .ra-board {
+    border-radius: 10px;
+    padding: 6px;
+  }
+
+  #raPanel.ra-disaster-focus .ra-side,
+  #raPanel.ra-disaster-focus .ra-board > h3,
+  #raPanel.ra-disaster-focus .ra-track-row,
+  #raPanel.ra-disaster-focus .ra-actions,
+  #raPanel.ra-disaster-focus #raSelectionLabel {
+    display: none;
+  }
+
+  #raPanel.ra-disaster-focus #raDisasterBox {
+    margin-top: 0;
+    border-left-width: 3px;
+    border-radius: 8px;
+    padding: 6px;
+  }
+
+  #raPanel.ra-disaster-focus #raDisasterInfo {
+    margin-bottom: 5px;
+  }
+
+  #raPanel.ra-disaster-focus .ra-disaster-intro,
+  #raPanel.ra-disaster-focus .ra-disaster-rule {
+    display: none;
+  }
+
+  #raPanel.ra-disaster-focus .ra-disaster-guide-card {
+    gap: 3px;
+    border-radius: 7px;
+    padding: 6px;
+  }
+
+  #raPanel.ra-disaster-focus .ra-disaster-guide-heading {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+  }
+
+  #raPanel.ra-disaster-focus .ra-disaster-progress {
+    padding: 2px 6px;
+    font-size: 10px;
+  }
+
+  #raPanel.ra-disaster-focus .ra-disaster-recommendation {
+    padding: 4px 6px;
+    font-size: 10px;
+    line-height: 1.24;
+  }
+
+  #raPanel.ra-disaster-focus .ra-disaster-suggestion-row {
+    margin-top: 5px;
+  }
+
+  #raPanel.ra-disaster-focus .ra-disaster-suggestion-btn {
+    min-height: 32px;
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+
+  #raPanel.ra-disaster-focus .ra-disaster-choices {
+    gap: 4px;
+  }
+
+  #raPanel.ra-disaster-focus .ra-disaster-choice-title {
+    margin-bottom: 3px;
+    font-size: 9px;
+  }
+
+  #raPanel.ra-disaster-focus .ra-disaster-choice-list {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  #raPanel.ra-disaster-focus .ra-disaster-choice-list .ra-tile {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    min-height: 64px;
+    padding: 5px 2px 4px;
+  }
+
+  #raPanel.ra-disaster-focus .ra-disaster-choice-list .ra-tile-glyph {
+    width: 23px;
+    height: 22px;
+    margin-bottom: 2px;
+    font-size: 14px;
+  }
+
+  #raPanel.ra-disaster-focus .ra-disaster-choice-list .ra-tile-name {
+    font-size: 7.5px;
+    line-height: 1.05;
+  }
+
+  #raPanel.ra-disaster-focus .ra-disaster-choice-list .ra-tile-family {
+    display: none;
+  }
+
+  #raPanel.ra-disaster-focus .ra-tile-badge {
+    display: grid;
+    place-items: center;
+    top: 3px;
+    right: 3px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    padding: 0;
+    font-size: 0;
+  }
+
+  #raPanel.ra-disaster-focus .ra-tile-badge::before {
+    content: "★";
+    font-size: 8px;
+    line-height: 1;
+  }
+
+  #raPanel.ra-disaster-focus #raResolveDisasterBtn {
+    width: 100%;
+    min-height: 34px;
+    margin-top: 5px;
+    padding: 5px 8px;
+    font-size: 12px;
+  }
 }
 
 .in-a-grove-header-btn.active {
@@ -29330,7 +29477,7 @@ button.bohnanza-dice-die:disabled {
 }
 
 .bohnanza-dice-score span {
-  font-size: 6px;
+  font-size: 7px;
   font-weight: 900;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -29767,6 +29914,12 @@ body.bohnanza-dice-explain-mode button[data-bohnanza-dice-explain].has-explanati
   opacity: 1;
 }
 
+@media (max-width: 720px) {
+  .bohnanza-dice-field-card .bohnanza-dice-eyebrow {
+    display: none;
+  }
+}
+
 @media (max-width: 900px) {
   .bohnanza-dice-workspace {
     grid-template-columns: minmax(0, 1fr);
@@ -29842,10 +29995,6 @@ body.bohnanza-dice-explain-mode button[data-bohnanza-dice-explain].has-explanati
   .bohnanza-dice-player-section,
   .bohnanza-dice-activity-card {
     padding: 10px;
-  }
-
-  .bohnanza-dice-field-card .bohnanza-dice-eyebrow {
-    display: none;
   }
 
   .bohnanza-dice-tray {
