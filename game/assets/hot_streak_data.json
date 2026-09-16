@@ -1,0 +1,159 @@
+{
+  "catalog_version": "prototype-compatible-v1",
+  "catalog_status": "prototype",
+  "unverified": [
+    "card distribution and effects",
+    "track coordinates",
+    "ticket payouts",
+    "side bet wording"
+  ],
+  "racers": [
+    {
+      "id": "blaze",
+      "name": "Blaze",
+      "icon": "🐻",
+      "color": "orange",
+      "pattern": "stripes",
+      "swerve": "right"
+    },
+    {
+      "id": "dash",
+      "name": "Dash",
+      "icon": "🌭",
+      "color": "coral",
+      "pattern": "dots",
+      "swerve": "right"
+    },
+    {
+      "id": "ripple",
+      "name": "Ripple",
+      "icon": "🐟",
+      "color": "blue",
+      "pattern": "waves",
+      "swerve": "left"
+    },
+    {
+      "id": "comet",
+      "name": "Comet",
+      "icon": "👑",
+      "color": "violet",
+      "pattern": "checks",
+      "swerve": "left"
+    }
+  ],
+  "track": {
+    "lane_count": 4,
+    "start_position": 2,
+    "finish_position": 13,
+    "final_stretch_start": 10,
+    "fold_cutoffs": [3, 6, 9, 12],
+    "star_positions_by_lane": {
+      "0": [0, 4, 8, 12],
+      "1": [0, 3, 7, 11],
+      "2": [0, 5, 9, 12],
+      "3": [0, 4, 8, 11]
+    }
+  },
+  "ticket_stacks": {
+    "blaze": [
+      {"tier": 1, "safe": {"1": 10, "2": 7, "3": 5, "4": 0}, "risky": {"1": 15, "2": 5, "3": 2, "4": 0}},
+      {"tier": 2, "safe": {"1": 7, "2": 5, "3": 3, "4": 0}, "risky": {"1": 11, "2": 3, "3": 1, "4": 0}},
+      {"tier": 3, "safe": {"1": 5, "2": 3, "3": 2, "4": 0}, "risky": {"1": 8, "2": 2, "3": 1, "4": 0}}
+    ],
+    "dash": [
+      {"tier": 1, "safe": {"1": 10, "2": 7, "3": 5, "4": 0}, "risky": {"1": 15, "2": 5, "3": 2, "4": 0}},
+      {"tier": 2, "safe": {"1": 7, "2": 5, "3": 3, "4": 0}, "risky": {"1": 11, "2": 3, "3": 1, "4": 0}},
+      {"tier": 3, "safe": {"1": 5, "2": 3, "3": 2, "4": 0}, "risky": {"1": 8, "2": 2, "3": 1, "4": 0}}
+    ],
+    "ripple": [
+      {"tier": 1, "safe": {"1": 10, "2": 7, "3": 5, "4": 0}, "risky": {"1": 15, "2": 5, "3": 2, "4": 0}},
+      {"tier": 2, "safe": {"1": 7, "2": 5, "3": 3, "4": 0}, "risky": {"1": 11, "2": 3, "3": 1, "4": 0}},
+      {"tier": 3, "safe": {"1": 5, "2": 3, "3": 2, "4": 0}, "risky": {"1": 8, "2": 2, "3": 1, "4": 0}}
+    ],
+    "comet": [
+      {"tier": 1, "safe": {"1": 10, "2": 7, "3": 5, "4": 0}, "risky": {"1": 15, "2": 5, "3": 2, "4": 0}},
+      {"tier": 2, "safe": {"1": 7, "2": 5, "3": 3, "4": 0}, "risky": {"1": 11, "2": 3, "3": 1, "4": 0}},
+      {"tier": 3, "safe": {"1": 5, "2": 3, "3": 2, "4": 0}, "risky": {"1": 8, "2": 2, "3": 1, "4": 0}}
+    ],
+    "yes": [
+      {"tier": 1, "safe": {"correct": 10, "incorrect": 0}, "risky": {"correct": 15, "incorrect": -5}},
+      {"tier": 2, "safe": {"correct": 7, "incorrect": 0}, "risky": {"correct": 12, "incorrect": -5}},
+      {"tier": 3, "safe": {"correct": 5, "incorrect": 0}, "risky": {"correct": 10, "incorrect": -5}}
+    ],
+    "no": [
+      {"tier": 1, "safe": {"correct": 10, "incorrect": 0}, "risky": {"correct": 15, "incorrect": -5}},
+      {"tier": 2, "safe": {"correct": 7, "incorrect": 0}, "risky": {"correct": 12, "incorrect": -5}},
+      {"tier": 3, "safe": {"correct": 5, "incorrect": 0}, "risky": {"correct": 10, "incorrect": -5}}
+    ]
+  },
+  "side_bets": [
+    {"id": "blaze_bottom_two", "label": "Blaze finishes in the bottom two", "predicate": "racer_bottom_two", "racer_id": "blaze", "timing": "race_end"},
+    {"id": "dash_bottom_two", "label": "Dash finishes in the bottom two", "predicate": "racer_bottom_two", "racer_id": "dash", "timing": "race_end"},
+    {"id": "ripple_bottom_two", "label": "Ripple finishes in the bottom two", "predicate": "racer_bottom_two", "racer_id": "ripple", "timing": "race_end"},
+    {"id": "comet_bottom_two", "label": "Comet finishes in the bottom two", "predicate": "racer_bottom_two", "racer_id": "comet", "timing": "race_end"},
+    {"id": "two_fallen", "label": "Two racers are down at the same time", "predicate": "two_fallen", "timing": "latched"},
+    {"id": "two_at_finish", "label": "Two racers stop one space before the finish", "predicate": "two_at_finish", "timing": "latched"},
+    {"id": "any_dq", "label": "At least one racer is disqualified", "predicate": "any_dq", "timing": "latched"},
+    {"id": "fallen_final_stretch", "label": "A fallen racer crawls through the final stretch", "predicate": "fallen_final_stretch", "timing": "latched"},
+    {"id": "empty_stretch_first", "label": "The final stretch is empty when first place is claimed", "predicate": "empty_stretch_first", "timing": "latched"},
+    {"id": "any_out_of_bounds", "label": "A racer leaves the track", "predicate": "any_out_of_bounds", "timing": "latched"},
+    {"id": "shared_space", "label": "Two racers stop together on one space", "predicate": "shared_space", "timing": "latched"},
+    {"id": "any_knockout", "label": "At least one racer is knocked out", "predicate": "any_knockout", "timing": "latched"}
+  ],
+  "card_templates": [
+    {"id": "blaze_start", "target": "blaze", "starting": true, "copies": 1, "label": "Blaze recovers and moves 2", "effects": [{"type": "recover"}, {"type": "move", "distance": 2}]},
+    {"id": "blaze_fall", "target": "blaze", "copies": 1, "label": "Blaze falls", "effects": [{"type": "fall"}]},
+    {"id": "blaze_turn", "target": "blaze", "copies": 1, "label": "Blaze turns around", "effects": [{"type": "turn"}]},
+    {"id": "blaze_move_3", "target": "blaze", "copies": 1, "label": "Blaze moves 3", "effects": [{"type": "move", "distance": 3}]},
+    {"id": "blaze_move_2", "target": "blaze", "copies": 1, "label": "Blaze moves 2", "effects": [{"type": "move", "distance": 2}]},
+    {"id": "blaze_back_2", "target": "blaze", "copies": 1, "label": "Blaze moves back 2", "effects": [{"type": "move", "distance": -2}]},
+    {"id": "blaze_star", "target": "blaze", "copies": 1, "label": "Blaze races to the next star", "effects": [{"type": "star"}]},
+    {"id": "blaze_swerve_1", "target": "blaze", "copies": 1, "label": "Blaze moves 1 and swerves", "effects": [{"type": "move", "distance": 1}, {"type": "swerve"}]},
+    {"id": "blaze_swerve_2", "target": "blaze", "copies": 1, "label": "Blaze moves 2 and swerves", "effects": [{"type": "move", "distance": 2}, {"type": "swerve"}]},
+    {"id": "blaze_swerve_3", "target": "blaze", "copies": 1, "label": "Blaze moves 3 and swerves", "effects": [{"type": "move", "distance": 3}, {"type": "swerve"}]},
+    {"id": "blaze_recover_1", "target": "blaze", "copies": 1, "label": "Blaze recovers and moves 1", "effects": [{"type": "recover"}, {"type": "move", "distance": 1}]},
+
+    {"id": "dash_start", "target": "dash", "starting": true, "copies": 1, "label": "Dash recovers and moves 2", "effects": [{"type": "recover"}, {"type": "move", "distance": 2}]},
+    {"id": "dash_fall", "target": "dash", "copies": 1, "label": "Dash falls", "effects": [{"type": "fall"}]},
+    {"id": "dash_turn", "target": "dash", "copies": 1, "label": "Dash turns around", "effects": [{"type": "turn"}]},
+    {"id": "dash_move_3", "target": "dash", "copies": 1, "label": "Dash moves 3", "effects": [{"type": "move", "distance": 3}]},
+    {"id": "dash_move_2", "target": "dash", "copies": 1, "label": "Dash moves 2", "effects": [{"type": "move", "distance": 2}]},
+    {"id": "dash_back_2", "target": "dash", "copies": 1, "label": "Dash moves back 2", "effects": [{"type": "move", "distance": -2}]},
+    {"id": "dash_star", "target": "dash", "copies": 1, "label": "Dash races to the next star", "effects": [{"type": "star"}]},
+    {"id": "dash_swerve_1", "target": "dash", "copies": 1, "label": "Dash moves 1 and swerves", "effects": [{"type": "move", "distance": 1}, {"type": "swerve"}]},
+    {"id": "dash_swerve_2", "target": "dash", "copies": 1, "label": "Dash moves 2 and swerves", "effects": [{"type": "move", "distance": 2}, {"type": "swerve"}]},
+    {"id": "dash_swerve_3", "target": "dash", "copies": 1, "label": "Dash moves 3 and swerves", "effects": [{"type": "move", "distance": 3}, {"type": "swerve"}]},
+    {"id": "dash_recover_1", "target": "dash", "copies": 1, "label": "Dash recovers and moves 1", "effects": [{"type": "recover"}, {"type": "move", "distance": 1}]},
+
+    {"id": "ripple_start", "target": "ripple", "starting": true, "copies": 1, "label": "Ripple recovers and moves 2", "effects": [{"type": "recover"}, {"type": "move", "distance": 2}]},
+    {"id": "ripple_fall", "target": "ripple", "copies": 1, "label": "Ripple falls", "effects": [{"type": "fall"}]},
+    {"id": "ripple_turn", "target": "ripple", "copies": 1, "label": "Ripple turns around", "effects": [{"type": "turn"}]},
+    {"id": "ripple_move_3", "target": "ripple", "copies": 1, "label": "Ripple moves 3", "effects": [{"type": "move", "distance": 3}]},
+    {"id": "ripple_move_2", "target": "ripple", "copies": 1, "label": "Ripple moves 2", "effects": [{"type": "move", "distance": 2}]},
+    {"id": "ripple_back_2", "target": "ripple", "copies": 1, "label": "Ripple moves back 2", "effects": [{"type": "move", "distance": -2}]},
+    {"id": "ripple_star", "target": "ripple", "copies": 1, "label": "Ripple races to the next star", "effects": [{"type": "star"}]},
+    {"id": "ripple_swerve_1", "target": "ripple", "copies": 1, "label": "Ripple moves 1 and swerves", "effects": [{"type": "move", "distance": 1}, {"type": "swerve"}]},
+    {"id": "ripple_swerve_2", "target": "ripple", "copies": 1, "label": "Ripple moves 2 and swerves", "effects": [{"type": "move", "distance": 2}, {"type": "swerve"}]},
+    {"id": "ripple_swerve_3", "target": "ripple", "copies": 1, "label": "Ripple moves 3 and swerves", "effects": [{"type": "move", "distance": 3}, {"type": "swerve"}]},
+    {"id": "ripple_recover_1", "target": "ripple", "copies": 1, "label": "Ripple recovers and moves 1", "effects": [{"type": "recover"}, {"type": "move", "distance": 1}]},
+
+    {"id": "comet_start", "target": "comet", "starting": true, "copies": 1, "label": "Comet recovers and moves 2", "effects": [{"type": "recover"}, {"type": "move", "distance": 2}]},
+    {"id": "comet_fall", "target": "comet", "copies": 1, "label": "Comet falls", "effects": [{"type": "fall"}]},
+    {"id": "comet_turn", "target": "comet", "copies": 1, "label": "Comet turns around", "effects": [{"type": "turn"}]},
+    {"id": "comet_move_3", "target": "comet", "copies": 1, "label": "Comet moves 3", "effects": [{"type": "move", "distance": 3}]},
+    {"id": "comet_move_2", "target": "comet", "copies": 1, "label": "Comet moves 2", "effects": [{"type": "move", "distance": 2}]},
+    {"id": "comet_back_2", "target": "comet", "copies": 1, "label": "Comet moves back 2", "effects": [{"type": "move", "distance": -2}]},
+    {"id": "comet_star", "target": "comet", "copies": 1, "label": "Comet races to the next star", "effects": [{"type": "star"}]},
+    {"id": "comet_swerve_1", "target": "comet", "copies": 1, "label": "Comet moves 1 and swerves", "effects": [{"type": "move", "distance": 1}, {"type": "swerve"}]},
+    {"id": "comet_swerve_2", "target": "comet", "copies": 1, "label": "Comet moves 2 and swerves", "effects": [{"type": "move", "distance": 2}, {"type": "swerve"}]},
+    {"id": "comet_swerve_3", "target": "comet", "copies": 1, "label": "Comet moves 3 and swerves", "effects": [{"type": "move", "distance": 3}, {"type": "swerve"}]},
+    {"id": "comet_recover_1", "target": "comet", "copies": 1, "label": "Comet recovers and moves 1", "effects": [{"type": "recover"}, {"type": "move", "distance": 1}]},
+
+    {"id": "all_recover_2", "target": "all", "copies": 1, "label": "Everyone recovers and moves 2", "effects": [{"type": "recover"}, {"type": "move", "distance": 2}]},
+    {"id": "all_recover_3", "target": "all", "copies": 1, "label": "Everyone recovers and moves 3", "effects": [{"type": "recover"}, {"type": "move", "distance": 3}]},
+    {"id": "all_move_1", "target": "all", "copies": 2, "label": "Everyone moves 1", "effects": [{"type": "move", "distance": 1}]},
+    {"id": "all_move_2", "target": "all", "copies": 2, "label": "Everyone moves 2", "effects": [{"type": "move", "distance": 2}]},
+    {"id": "all_move_3", "target": "all", "copies": 2, "label": "Everyone moves 3", "effects": [{"type": "move", "distance": 3}]},
+    {"id": "all_back_2", "target": "all", "copies": 1, "label": "Everyone moves back 2", "effects": [{"type": "move", "distance": -2}]}
+  ]
+}
