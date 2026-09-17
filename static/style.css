@@ -7420,6 +7420,23 @@ body.log-open {
   color: #fff;
 }
 
+.game-type-filter-label {
+  display: inline-flex;
+  min-width: 0;
+  gap: 4px;
+  align-items: center;
+}
+
+.game-type-filter-icon {
+  flex: 0 0 auto;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.game-type-filter-text {
+  white-space: nowrap;
+}
+
 .game-type-filter-count {
   display: grid;
   min-width: 18px;
@@ -7624,6 +7641,39 @@ body.log-open {
 
   .game-search-control {
     grid-column: 1 / -1;
+  }
+
+  .create-room-type-filter {
+    gap: 4px;
+  }
+
+  .game-type-filters {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .game-type-filter-chip {
+    justify-content: center;
+    width: 100%;
+    min-width: 0;
+    min-height: 26px;
+    gap: 0;
+    padding: 3px 2px;
+    overflow: hidden;
+    font-size: 10px;
+  }
+
+  .game-type-filter-label {
+    gap: 1px;
+  }
+
+  .game-type-filter-icon {
+    font-size: 8px;
+  }
+
+  .game-type-filter-count {
+    display: none;
   }
 
   .game-list {

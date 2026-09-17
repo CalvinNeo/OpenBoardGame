@@ -585,7 +585,15 @@ function renderGameTypeFilters(games) {
 
     const label = document.createElement("span");
     label.className = "game-type-filter-label";
-    label.textContent = `${tag.emoji || "🏷️"} ${tag.label || tag.id}`;
+    const icon = document.createElement("span");
+    icon.className = "game-type-filter-icon";
+    icon.textContent = tag.emoji || "🏷️";
+    icon.setAttribute("aria-hidden", "true");
+    const labelText = document.createElement("span");
+    labelText.className = "game-type-filter-text";
+    labelText.textContent = tag.label || tag.id;
+    label.appendChild(icon);
+    label.appendChild(labelText);
     const countEl = document.createElement("span");
     countEl.className = "game-type-filter-count";
     countEl.textContent = String(count);
