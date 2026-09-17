@@ -22,12 +22,17 @@ const wanderingFinalRoundLabel = document.getElementById("wanderingFinalRound");
 const wanderingWinnerLabel = document.getElementById("wanderingWinner");
 const wanderingSoloResultLabel = document.getElementById("wanderingSoloResult");
 const wanderingSoloScoreLabel = document.getElementById("wanderingSoloScore");
+const wanderingPendingStatus = document.getElementById("wanderingPendingStatus");
+const wanderingFinalRoundStatus = document.getElementById("wanderingFinalRoundStatus");
+const wanderingWinnerStatus = document.getElementById("wanderingWinnerStatus");
+const wanderingSoloStatus = document.getElementById("wanderingSoloStatus");
 
 const wanderingBoard = document.getElementById("wanderingBoard");
 const wanderingHand = document.getElementById("wanderingHand");
 const wanderingPlayers = document.getElementById("wanderingPlayers");
 const wanderingSelection = document.getElementById("wanderingSelection");
 const wanderingSelectionLabel = document.getElementById("wanderingSelectionLabel");
+const wanderingActionHint = document.getElementById("wanderingActionHint");
 
 const wanderingPlayCardBtn = document.getElementById("wanderingPlayCardBtn");
 const wanderingDiscardBtn = document.getElementById("wanderingDiscardBtn");
@@ -39,7 +44,7 @@ const wanderingSpellTowerBtn = document.getElementById("wanderingSpellTowerBtn")
 
 const WANDERING_ICONS = {
   wizard: String.fromCodePoint(0x1f9d9),
-  tower: String.fromCodePoint(0x1f5fc),
+  tower: "♜",
   shield: String.fromCodePoint(0x1f6e1),
   castle: String.fromCodePoint(0x1f3f0),
   dice: String.fromCodePoint(0x1f3b2),
@@ -204,7 +209,7 @@ function updateWanderingSelectionLabel() {
   if (wanderingSelectedTowerId) {
     parts.push(`Tower ${wanderingSelectedTowerId}`);
   }
-  wanderingSelectionLabel.textContent = parts.join(" | ") || "-";
+  wanderingSelectionLabel.textContent = parts.join(" · ") || "No selection";
 }
 
 function formatWanderingWizardLabel(view, wizardId) {
@@ -219,27 +224,6 @@ function formatWanderingWizardLabel(view, wizardId) {
   const name = owner ? owner.name : wizard.owner_id;
   const pos = Number.isFinite(wizard.position) ? `@${wizard.position}` : "@Ravenskeep";
   return `${name} ${pos}`;
-}
-
-function getSelectedWizardMeta(view) {
-  if (!view || !wanderingSelectedWizardId || !Array.isArray(view.wizards)) {
-    return null;
-  }
-  const wizard = view.wizards.find((w) => w.wizard_id === wanderingSelectedWizardId);
-  if (!wizard || !wizard.visible) {
-    return null;
-  }
-  return { owner_id: wizard.owner_id, position: wizard.position };
-}
-
-function findVisibleWizardId(view, ownerId, position) {
-  if (!view || !Array.isArray(view.wizards)) {
-    return null;
-  }
-  const match = view.wizards.find(
-    (wiz) => wiz.visible && wiz.owner_id === ownerId && wiz.position === position
-  );
-  return match ? match.wizard_id : null;
 }
 
 function getWanderingLegalTargets(view) {
@@ -344,43 +328,89 @@ function renderWanderingBoard(view) {
     return;
   }
   const colorMap = getWanderingColorMap(view);
+  const playerMap = getWanderingPlayerMap(view);
+  const visibleWizardIds = new Set(
+    (view.wizards || []).filter((wizard) => wizard.visible).map((wizard) => wizard.wizard_id)
+  );
+  const pendingTargets = view.pending ? getWanderingLegalTargets(view) : null;
   view.board.forEach((cell) => {
+    const layers = Array.isArray(cell.layers) ? cell.layers : [];
+    const towerCount = layers.filter((layer) => layer.type === "tower").length;
+    const hasRaven = layers.some((layer) => layer.type === "ravenskeep");
     const cellEl = document.createElement("div");
     cellEl.className = "wandering-cell";
+    cellEl.dataset.cellIndex = String(cell.index);
+    cellEl.classList.toggle("has-ravenskeep", hasRaven);
+    cellEl.classList.toggle("is-empty", layers.length === 0);
+    cellEl.setAttribute(
+      "aria-label",
+      `Board space ${cell.index}: ${layers.length} ${layers.length === 1 ? "layer" : "layers"}, ${towerCount} ${towerCount === 1 ? "tower" : "towers"}`
+    );
     if (wanderingExplainMode) {
       cellEl.classList.add("has-explanation");
     }
     const header = document.createElement("div");
     header.className = "wandering-cell-header";
     const index = document.createElement("span");
-    index.textContent = `#${cell.index}`;
-    const hasRaven = Array.isArray(cell.layers)
-      ? cell.layers.some((layer) => layer.type === "ravenskeep")
-      : false;
+    index.className = "wandering-position-number";
+    index.textContent = cell.index;
+    index.title = `Board space ${cell.index}`;
+    const layerCount = document.createElement("span");
+    layerCount.className = "wandering-stack-count";
+    layerCount.title = `${layers.length} stacked ${layers.length === 1 ? "layer" : "layers"} (${towerCount} ${towerCount === 1 ? "tower" : "towers"})`;
+    const layerIcon = document.createElement("span");
+    layerIcon.setAttribute("aria-hidden", "true");
+    layerIcon.textContent = "▥";
+    const layerNumber = document.createElement("strong");
+    layerNumber.textContent = String(layers.length);
+    layerCount.appendChild(layerIcon);
+    layerCount.appendChild(layerNumber);
     const raven = document.createElement("span");
     raven.className = "wandering-raven";
     raven.textContent = hasRaven ? WANDERING_ICONS.castle : "";
+    raven.title = hasRaven ? "Ravenskeep is here" : "";
     header.appendChild(index);
+    header.appendChild(layerCount);
     header.appendChild(raven);
     cellEl.appendChild(header);
 
-  const stack = document.createElement("div");
-  stack.className = "wandering-stack";
-    if (Array.isArray(cell.layers) && cell.layers.length) {
-      const displayLayers = cell.layers.slice().reverse();
-      displayLayers.forEach((layer) => {
-        const layerEl = document.createElement("div");
+    const stack = document.createElement("div");
+    stack.className = "wandering-stack";
+    if (layers.length) {
+      const displayLayers = layers.slice().reverse();
+      displayLayers.forEach((layer, displayIndex) => {
+        const layerEl = document.createElement(layer.type === "tower" ? "button" : "div");
         layerEl.className = "wandering-layer";
+        const sourceDepth = layers.length - displayIndex;
+        const depthLabel = document.createElement("span");
+        depthLabel.className = "wandering-layer-index";
+        depthLabel.textContent = `L${sourceDepth}`;
+        depthLabel.setAttribute("aria-hidden", "true");
         if (layer.type === "tower") {
+          layerEl.type = "button";
           layerEl.classList.add("tower-layer");
+          layerEl.setAttribute("aria-label", `Tower ${layer.tower_id}, layer ${sourceDepth}${layer.has_shield ? ", raven shield" : ""}`);
           if (layer.tower_id === wanderingSelectedTowerId) {
             layerEl.classList.add("selected");
           }
-          layerEl.textContent = `${WANDERING_ICONS.tower} ${layer.tower_id}`;
+          if (pendingTargets) {
+            const legalTarget = pendingTargets.tower.includes(layer.tower_id);
+            layerEl.classList.toggle("legal-target", legalTarget);
+            layerEl.disabled = !legalTarget;
+          }
+          const towerFigure = document.createElement("span");
+          towerFigure.className = "wandering-tower-figure";
+          towerFigure.setAttribute("aria-hidden", "true");
+          const towerId = document.createElement("span");
+          towerId.className = "wandering-tower-id";
+          towerId.textContent = layer.tower_id;
+          layerEl.appendChild(towerFigure);
+          layerEl.appendChild(towerId);
           if (layer.has_shield) {
             const shield = document.createElement("span");
             shield.className = "wandering-shield";
             shield.textContent = WANDERING_ICONS.shield;
+            shield.title = "Raven shield";
             layerEl.appendChild(shield);
           }
           layerEl.addEventListener("click", (e) => {
@@ -396,31 +426,68 @@ function renderWanderingBoard(view) {
             }
             wanderingSelectedTowerId = layer.tower_id;
             wanderingSelectedWizardId = null;
+            wanderingSelectedCardIndex = null;
             updateWanderingSelectionLabel();
             updateWanderingActionButtons();
             renderWanderingBoard(view);
           });
         } else if (layer.type === "ravenskeep") {
           layerEl.classList.add("raven-layer");
-          layerEl.textContent = `${WANDERING_ICONS.castle} Ravenskeep`;
+          const castle = document.createElement("span");
+          castle.className = "wandering-ravenskeep-icon";
+          castle.textContent = WANDERING_ICONS.castle;
+          castle.setAttribute("aria-hidden", "true");
+          const castleName = document.createElement("span");
+          castleName.className = "wandering-ravenskeep-name";
+          castleName.textContent = "Ravenskeep";
+          layerEl.appendChild(castle);
+          layerEl.appendChild(castleName);
+          layerEl.setAttribute("aria-label", `Ravenskeep, layer ${sourceDepth}`);
         } else if (layer.type === "wizards") {
           layerEl.classList.add("wizard-layer");
-          const ownerCounts = {};
+          const ownerWizards = {};
           (layer.wizards || []).forEach((wiz) => {
-            ownerCounts[wiz.owner_id] = (ownerCounts[wiz.owner_id] || 0) + 1;
+            if (!ownerWizards[wiz.owner_id]) {
+              ownerWizards[wiz.owner_id] = [];
+            }
+            ownerWizards[wiz.owner_id].push(wiz);
           });
-          const selectedMeta = getSelectedWizardMeta(view);
-          Object.entries(ownerCounts).forEach(([ownerId, count]) => {
-            const badge = document.createElement("span");
+          Object.entries(ownerWizards).forEach(([ownerId, wizards]) => {
+            const badge = document.createElement("button");
+            badge.type = "button";
             badge.className = "wandering-wizard-chip";
             badge.style.setProperty("--wizard-color", colorMap[ownerId] || "#111");
-            const name = getWanderingPlayerMap(view)[ownerId]?.name || ownerId;
-            badge.textContent = `${WANDERING_ICONS.wizard} ${name} x${count}`;
-            const selected =
-              selectedMeta &&
-              selectedMeta.owner_id === ownerId &&
-              Number.isFinite(selectedMeta.position) &&
-              selectedMeta.position === cell.index;
+            const name = playerMap[ownerId]?.name || ownerId;
+            const wizardId = wizards.find((wizard) => visibleWizardIds.has(wizard.wizard_id))?.wizard_id || null;
+            const isTrapped = !wizardId;
+            const wizardFigure = document.createElement("span");
+            wizardFigure.className = "wandering-wizard-figure";
+            wizardFigure.textContent = WANDERING_ICONS.wizard;
+            wizardFigure.setAttribute("aria-hidden", "true");
+            const wizardName = document.createElement("span");
+            wizardName.className = "wandering-wizard-name";
+            wizardName.textContent = name;
+            const wizardCount = document.createElement("span");
+            wizardCount.className = "wandering-wizard-count";
+            wizardCount.textContent = `×${wizards.length}`;
+            badge.appendChild(wizardFigure);
+            badge.appendChild(wizardName);
+            badge.appendChild(wizardCount);
+            badge.setAttribute(
+              "aria-label",
+              `${name}: ${wizards.length} ${wizards.length === 1 ? "wizard" : "wizards"}, layer ${sourceDepth}${isTrapped ? ", trapped" : ", visible"}`
+            );
+            badge.title = `${name} ×${wizards.length}${isTrapped ? " · trapped under a tower" : " · visible"}`;
+            if (isTrapped) {
+              badge.classList.add("trapped");
+              badge.disabled = true;
+            }
+            if (pendingTargets && wizardId) {
+              const legalTarget = pendingTargets.wizard.includes(wizardId);
+              badge.classList.toggle("legal-target", legalTarget);
+              badge.disabled = !legalTarget;
+            }
+            const selected = wizardId === wanderingSelectedWizardId;
             if (selected) {
               badge.classList.add("selected");
             }
@@ -429,7 +496,6 @@ function renderWanderingBoard(view) {
                 return;
               }
               e.stopPropagation();
-              const wizardId = findVisibleWizardId(view, ownerId, cell.index);
               if (!wizardId) {
                 return;
               }
@@ -441,6 +507,7 @@ function renderWanderingBoard(view) {
               }
               wanderingSelectedWizardId = wizardId;
               wanderingSelectedTowerId = null;
+              wanderingSelectedCardIndex = null;
               updateWanderingSelectionLabel();
               updateWanderingActionButtons();
               renderWanderingBoard(view);
@@ -448,12 +515,14 @@ function renderWanderingBoard(view) {
             layerEl.appendChild(badge);
           });
         }
+        layerEl.appendChild(depthLabel);
         stack.appendChild(layerEl);
       });
     } else {
       const empty = document.createElement("div");
       empty.className = "wandering-layer empty";
-      empty.textContent = "Empty";
+      empty.textContent = "·";
+      empty.setAttribute("aria-label", "Empty space");
       stack.appendChild(empty);
     }
     cellEl.appendChild(stack);
@@ -477,18 +546,51 @@ function renderWanderingHand(view) {
   }
   wanderingHand.innerHTML = "";
   if (!view || !Array.isArray(view.hand) || !view.hand.length) {
-    wanderingHand.textContent = "-";
+    wanderingHand.textContent = "No cards";
     return;
   }
+  const canChooseCard = Array.isArray(view.legal_actions) && view.legal_actions.includes("play_card");
   view.hand.forEach((card, idx) => {
-    const cardEl = document.createElement("div");
+    const cardEl = document.createElement("button");
+    cardEl.type = "button";
     cardEl.className = "wandering-card";
     if (idx === wanderingSelectedCardIndex) {
       cardEl.classList.add("selected");
     }
-    cardEl.textContent = formatWanderingCard(card);
+    cardEl.disabled = !canChooseCard;
+    const target = card.target || "either";
+    const targetIcons =
+      target === "wizard"
+        ? WANDERING_ICONS.wizard
+        : target === "tower"
+          ? WANDERING_ICONS.tower
+          : `${WANDERING_ICONS.wizard}${WANDERING_ICONS.tower}`;
+    const targetName =
+      target === "wizard" ? "wizard" : target === "tower" ? "tower" : "wizard or tower";
+    const movement = card.dice ? `${WANDERING_ICONS.dice}×${card.dice}` : `+${card.value ?? "?"}`;
+    const targetEl = document.createElement("span");
+    targetEl.className = "wandering-card-target";
+    targetEl.textContent = targetIcons;
+    targetEl.setAttribute("aria-hidden", "true");
+    const moveEl = document.createElement("span");
+    moveEl.className = "wandering-card-move";
+    moveEl.textContent = movement;
+    moveEl.setAttribute("aria-hidden", "true");
+    const numberEl = document.createElement("span");
+    numberEl.className = "wandering-card-number";
+    numberEl.textContent = String(idx + 1);
+    numberEl.setAttribute("aria-hidden", "true");
+    cardEl.appendChild(targetEl);
+    cardEl.appendChild(moveEl);
+    cardEl.appendChild(numberEl);
+    cardEl.setAttribute(
+      "aria-label",
+      `Card ${idx + 1}: move ${targetName} ${card.dice ? `by a roll with ${card.dice} ${card.dice === 1 ? "die" : "dice"}` : `${card.value ?? "unknown"} steps`}`
+    );
     cardEl.addEventListener("click", () => {
       wanderingSelectedCardIndex = idx;
+      wanderingSelectedWizardId = null;
+      wanderingSelectedTowerId = null;
       updateWanderingSelectionLabel();
       updateWanderingActionButtons();
       renderWanderingHand(view);
@@ -506,19 +608,41 @@ function renderWanderingPlayers(view) {
     wanderingPlayers.textContent = "-";
     return;
   }
+  const colorMap = getWanderingColorMap(view);
   view.players.forEach((p) => {
     const card = document.createElement("div");
     card.className = "wandering-player-card";
+    card.style.setProperty("--player-color", colorMap[p.player_id] || "#64748b");
     if (p.player_id === view.current_player) {
       card.classList.add("current");
     }
+    if (p.player_id === view.you) {
+      card.classList.add("self");
+    }
+    const marker = document.createElement("span");
+    marker.className = "wandering-wizard-figure wandering-player-marker";
+    marker.style.setProperty("--wizard-color", colorMap[p.player_id] || "#64748b");
+    marker.textContent = WANDERING_ICONS.wizard;
+    marker.setAttribute("aria-hidden", "true");
     const name = document.createElement("div");
-    name.className = "player-name";
+    name.className = "wandering-player-name";
     name.textContent = p.name || p.player_id;
     const meta = document.createElement("div");
-    meta.className = "player-meta";
+    meta.className = "wandering-player-meta";
     const potions = p.potions || { empty: 0, full: 0, spent: 0 };
-    meta.textContent = `hand ${p.hand_count} | wizards ${p.wizards_in_ravenskeep}/${p.wizards_total} | potions E${potions.empty} F${potions.full} S${potions.spent}`;
+    const hand = document.createElement("span");
+    hand.textContent = `🃏 ${p.hand_count}`;
+    hand.title = `${p.hand_count} cards in hand`;
+    const wizards = document.createElement("span");
+    wizards.textContent = `🏰 ${p.wizards_in_ravenskeep}/${p.wizards_total}`;
+    wizards.title = `${p.wizards_in_ravenskeep} of ${p.wizards_total} wizards in Ravenskeep`;
+    const potion = document.createElement("span");
+    potion.textContent = `🧪 ${potions.full} · ○${potions.empty}`;
+    potion.title = `${potions.full} full, ${potions.empty} empty, ${potions.spent} spent potions`;
+    meta.appendChild(hand);
+    meta.appendChild(wizards);
+    meta.appendChild(potion);
+    card.appendChild(marker);
     card.appendChild(name);
     card.appendChild(meta);
     wanderingPlayers.appendChild(card);
@@ -595,45 +719,109 @@ function updateWanderingActionButtons() {
     buttons.forEach((btn) => {
       if (!btn) return;
       btn.classList.remove("action-allowed");
+      btn.classList.remove("is-relevant");
       btn.disabled = true;
     });
+    updateWanderingActionHint();
     return;
   }
+  const legalActions = Array.isArray(currentWanderingView?.legal_actions)
+    ? currentWanderingView.legal_actions
+    : [];
   if (wanderingPlayCardBtn) {
     const allowed = isWanderingActionAvailable("play_card");
     wanderingPlayCardBtn.disabled = !allowed;
     wanderingPlayCardBtn.classList.toggle("action-allowed", allowed);
+    wanderingPlayCardBtn.classList.toggle("is-relevant", legalActions.includes("play_card"));
   }
   if (wanderingDiscardBtn) {
     const allowed = isWanderingActionAvailable("discard_move");
     wanderingDiscardBtn.disabled = !allowed;
     wanderingDiscardBtn.classList.toggle("action-allowed", allowed);
+    wanderingDiscardBtn.classList.toggle("is-relevant", legalActions.includes("discard_move"));
   }
   if (wanderingRerollBtn) {
     const allowed = isWanderingActionAvailable("reroll_dice");
     wanderingRerollBtn.disabled = !allowed;
     wanderingRerollBtn.classList.toggle("action-allowed", allowed);
+    wanderingRerollBtn.classList.toggle("is-relevant", legalActions.includes("reroll_dice"));
   }
   if (wanderingAcceptRollBtn) {
     const allowed = isWanderingActionAvailable("accept_roll");
     wanderingAcceptRollBtn.disabled = !allowed;
     wanderingAcceptRollBtn.classList.toggle("action-allowed", allowed);
+    wanderingAcceptRollBtn.classList.toggle("is-relevant", legalActions.includes("accept_roll"));
   }
   if (wanderingResolveBtn) {
     const allowed = isWanderingActionAvailable("choose_target");
     wanderingResolveBtn.disabled = !allowed;
     wanderingResolveBtn.classList.toggle("action-allowed", allowed);
+    wanderingResolveBtn.classList.toggle("is-relevant", legalActions.includes("choose_target"));
   }
   if (wanderingSpellWizardBtn) {
     const allowed = isWanderingSpellAvailable("move_wizard");
+    const targets = getWanderingSpellTargets(currentWanderingView, "move_wizard");
+    const relevant = legalActions.includes("cast_spell") && targets.wizard.length > 0;
     wanderingSpellWizardBtn.disabled = !allowed;
     wanderingSpellWizardBtn.classList.toggle("action-allowed", allowed);
+    wanderingSpellWizardBtn.classList.toggle("is-relevant", relevant);
   }
   if (wanderingSpellTowerBtn) {
     const allowed = isWanderingSpellAvailable("move_tower");
+    const targets = getWanderingSpellTargets(currentWanderingView, "move_tower");
+    const relevant = legalActions.includes("cast_spell") && targets.tower.length > 0;
     wanderingSpellTowerBtn.disabled = !allowed;
     wanderingSpellTowerBtn.classList.toggle("action-allowed", allowed);
+    wanderingSpellTowerBtn.classList.toggle("is-relevant", relevant);
   }
+  updateWanderingActionHint();
+}
+
+function updateWanderingActionHint() {
+  if (!wanderingActionHint) {
+    return;
+  }
+  const view = currentWanderingView;
+  if (currentGameType !== "wandering_towers" || !view) {
+    wanderingActionHint.textContent = "Waiting for game state…";
+    return;
+  }
+  const playerMap = getWanderingPlayerMap(view);
+  const currentName = playerMap[view.current_player]?.name || view.current_player || "the next player";
+  if (view.game_over) {
+    wanderingActionHint.textContent = "Game over.";
+    return;
+  }
+  if (view.you !== view.current_player) {
+    wanderingActionHint.textContent = `Waiting for ${currentName}.`;
+    return;
+  }
+  if (view.pending) {
+    const legal = getWanderingLegalTargets(view);
+    if (wanderingSelectedWizardId || wanderingSelectedTowerId) {
+      wanderingActionHint.textContent = "Target selected — confirm the move.";
+    } else if (legal.wizard.length || legal.tower.length) {
+      wanderingActionHint.textContent = "Choose a highlighted wizard or tower.";
+    } else if (view.pending.rerolls_left > 0) {
+      wanderingActionHint.textContent = "No legal target — reroll the die.";
+    } else {
+      wanderingActionHint.textContent = "No legal target — keep the roll to continue.";
+    }
+    return;
+  }
+  if (wanderingSelectedCardIndex !== null) {
+    wanderingActionHint.textContent = "Card selected — play it to reveal legal targets.";
+    return;
+  }
+  if (wanderingSelectedTowerId) {
+    wanderingActionHint.textContent = "Tower selected — discard your hand or cast a spell.";
+    return;
+  }
+  if (wanderingSelectedWizardId) {
+    wanderingActionHint.textContent = "Wizard selected — cast a spell if available.";
+    return;
+  }
+  wanderingActionHint.textContent = "Choose a card, or tap a tower for the discard move.";
 }
 
 function renderWanderingTowersGameState(data) {
@@ -658,19 +846,32 @@ function renderWanderingTowersGameState(data) {
   if (wanderingPendingLabel) {
     wanderingPendingLabel.textContent = formatWanderingPending(view);
   }
+  if (wanderingPendingStatus) {
+    wanderingPendingStatus.classList.toggle("hidden", !view.pending);
+  }
   if (wanderingFinalRoundLabel) {
-    wanderingFinalRoundLabel.textContent = view.final_round ? "Yes" : "No";
+    wanderingFinalRoundLabel.textContent = view.final_round ? "Active" : "-";
+  }
+  if (wanderingFinalRoundStatus) {
+    wanderingFinalRoundStatus.classList.toggle("hidden", !view.final_round);
   }
   if (wanderingWinnerLabel) {
     const winners = Array.isArray(view.winner) ? view.winner : [];
     const winnerNames = winners.map((pid) => playerMap[pid]?.name || pid);
     wanderingWinnerLabel.textContent = winnerNames.length ? winnerNames.join(", ") : "-";
+    if (wanderingWinnerStatus) {
+      wanderingWinnerStatus.classList.toggle("hidden", winnerNames.length === 0);
+    }
   }
   if (wanderingSoloResultLabel) {
     wanderingSoloResultLabel.textContent = view.solo_result || "-";
   }
   if (wanderingSoloScoreLabel) {
     wanderingSoloScoreLabel.textContent = Number.isFinite(view.solo_score) ? view.solo_score : "-";
+  }
+  if (wanderingSoloStatus) {
+    const hasSoloResult = Boolean(view.solo_result) || Number.isFinite(view.solo_score);
+    wanderingSoloStatus.classList.toggle("hidden", !hasSoloResult);
   }
 
   if (wanderingSelectedCardIndex !== null) {
@@ -716,6 +917,10 @@ function clearWanderingTowersState() {
   if (wanderingWinnerLabel) wanderingWinnerLabel.textContent = "-";
   if (wanderingSoloResultLabel) wanderingSoloResultLabel.textContent = "-";
   if (wanderingSoloScoreLabel) wanderingSoloScoreLabel.textContent = "-";
+  if (wanderingPendingStatus) wanderingPendingStatus.classList.add("hidden");
+  if (wanderingFinalRoundStatus) wanderingFinalRoundStatus.classList.add("hidden");
+  if (wanderingWinnerStatus) wanderingWinnerStatus.classList.add("hidden");
+  if (wanderingSoloStatus) wanderingSoloStatus.classList.add("hidden");
   if (wanderingBoard) wanderingBoard.textContent = "";
   if (wanderingHand) wanderingHand.textContent = "";
   if (wanderingPlayers) wanderingPlayers.textContent = "";
@@ -820,7 +1025,12 @@ if (wanderingPlayCardBtn) {
     if (!isWanderingActionAvailable("play_card")) {
       return;
     }
-    sendAction({ type: "play_card", card_index: wanderingSelectedCardIndex });
+    const cardIndex = wanderingSelectedCardIndex;
+    wanderingSelectedCardIndex = null;
+    updateWanderingSelectionLabel();
+    updateWanderingActionButtons();
+    renderWanderingHand(currentWanderingView);
+    sendAction({ type: "play_card", card_index: cardIndex });
   });
 }
 
@@ -939,6 +1149,19 @@ document.addEventListener(
   "pointerdown",
   (e) => {
     if (!wanderingExplainMode) return;
+
+    const boardCell = e.target.closest(".wandering-cell");
+    if (boardCell && wanderingBoard?.contains(boardCell)) {
+      const cellIndex = Number(boardCell.dataset.cellIndex);
+      const cell = currentWanderingView?.board?.find((entry) => entry.index === cellIndex);
+      if (cell) {
+        e.preventDefault();
+        e.stopPropagation();
+        showWanderingCellExplanation(currentWanderingView, cell);
+        exitWanderingExplainMode();
+        return;
+      }
+    }
 
     const buttonId = findWanderingButtonAtPoint(e.clientX, e.clientY);
     if (buttonId) {

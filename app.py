@@ -24,6 +24,7 @@ from game.ai_dixit import resolve_card_path as resolve_aidixit_card_path
 from game.carcassonne import get_carcassonne_template_payload
 from game.decrypto import get_decrypto_word_packs
 from game.decrypto_ai import get_bot_strategies
+from game.tags import serialize_game_tags
 
 logger = logging.getLogger("openboardgame")
 sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
@@ -88,6 +89,7 @@ async def api_list_games():
             "min_players": g.min_players,
             "max_players": g.max_players,
             "dev_order": GAME_DEV_ORDER.get(g.game_id),
+            "tags": serialize_game_tags(g.game_id),
         }
         for g in list_games()
     ]

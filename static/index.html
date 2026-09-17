@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css?v=app_v79" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v83" />
   <link rel="stylesheet" href="/static/ark_nova.css?v=app_v21" />
 </head>
 <body>
@@ -90,6 +90,13 @@
                 <option value="difficulty_asc">Weight Asc</option>
                 <option value="difficulty_desc">Weight Desc</option>
               </select>
+            </div>
+            <div class="create-room-type-filter" role="group" aria-labelledby="gameTypeFilterLabel">
+              <div class="create-room-type-filter-heading">
+                <span id="gameTypeFilterLabel">Types</span>
+                <span class="hint">Match any selected</span>
+              </div>
+              <div id="gameTypeFilters" class="game-type-filters"></div>
             </div>
           </div>
           <div id="gameListCount" class="hint game-list-count" role="status" aria-live="polite">Showing 0 games</div>
@@ -2611,48 +2618,94 @@
               <div id="ageOfWarPlayers"></div>
             </div>
 
-            <div id="wanderingTowersPanel" class="hidden">
-              <div class="row">
-                <div>Current Turn: <span id="wanderingTurn">-</span></div>
-                <div>Cards: <span id="wanderingCards">-</span></div>
-                <div>Deck: <span id="wanderingDeck">-</span></div>
-                <div>Discard: <span id="wanderingDiscard">-</span></div>
-              </div>
-              <div class="row">
-                <div>Pending: <span id="wanderingPending">-</span></div>
-                <div>Final Round: <span id="wanderingFinalRound">-</span></div>
-                <div>Winner: <span id="wanderingWinner">-</span></div>
-              </div>
-              <div class="row">
-                <div>Solo Result: <span id="wanderingSoloResult">-</span></div>
-                <div>Solo Score: <span id="wanderingSoloScore">-</span></div>
+            <div id="wanderingTowersPanel" class="hidden wandering-towers-panel">
+              <div class="wandering-status-strip" aria-label="Game status">
+                <div class="wandering-turn-status" title="Current turn">
+                  <span class="wandering-status-label">Turn</span>
+                  <strong id="wanderingTurn">-</strong>
+                </div>
+                <div class="wandering-status-stat" title="Cards played this turn">
+                  <span aria-hidden="true">🃏</span>
+                  <span class="wandering-status-label">Cards</span>
+                  <strong id="wanderingCards">-</strong>
+                </div>
+                <div class="wandering-status-stat" title="Cards left in deck">
+                  <span aria-hidden="true">📥</span>
+                  <span class="wandering-status-label">Deck</span>
+                  <strong id="wanderingDeck">-</strong>
+                </div>
+                <div class="wandering-status-stat" title="Discarded cards">
+                  <span aria-hidden="true">🗑️</span>
+                  <span class="wandering-status-label">Discard</span>
+                  <strong id="wanderingDiscard">-</strong>
+                </div>
+                <div id="wanderingPendingStatus" class="wandering-status-event hidden">
+                  <span class="wandering-status-label">Move</span>
+                  <strong id="wanderingPending">-</strong>
+                </div>
+                <div id="wanderingFinalRoundStatus" class="wandering-status-event hidden">
+                  <span aria-hidden="true">⏳</span>
+                  <span class="wandering-status-label">Final round</span>
+                  <strong id="wanderingFinalRound">-</strong>
+                </div>
+                <div id="wanderingWinnerStatus" class="wandering-status-event hidden">
+                  <span aria-hidden="true">🏆</span>
+                  <span class="wandering-status-label">Winner</span>
+                  <strong id="wanderingWinner">-</strong>
+                </div>
+                <div id="wanderingSoloStatus" class="wandering-status-event hidden">
+                  <span class="wandering-status-label">Solo</span>
+                  <strong><span id="wanderingSoloResult">-</span> · <span id="wanderingSoloScore">-</span></strong>
+                </div>
               </div>
 
-              <h3>Board</h3>
-              <div id="wanderingBoard" class="wandering-board"></div>
+              <section class="wandering-command-center" aria-label="Your turn controls">
+                <div class="wandering-hand-zone">
+                  <div class="wandering-section-heading">
+                    <span>Your hand</span>
+                    <small>Choose a movement card</small>
+                  </div>
+                  <div id="wanderingHand" class="wandering-hand"></div>
+                </div>
 
-              <h3>Your Hand</h3>
-              <div id="wanderingHand" class="wandering-hand"></div>
+                <div class="wandering-action-zone">
+                  <div id="wanderingSelection" class="wandering-selection" title="Tap to clear the selection">
+                    <span class="wandering-selection-mark" aria-hidden="true">◎</span>
+                    <span id="wanderingSelectionLabel">No selection</span>
+                  </div>
+                  <div id="wanderingActionHint" class="wandering-action-hint" role="status">Waiting for game state…</div>
+                  <div class="wandering-actions" aria-label="Actions">
+                    <button id="wanderingPlayCardBtn" type="button"><span aria-hidden="true">▶</span> Play card</button>
+                    <button id="wanderingDiscardBtn" type="button"><span aria-hidden="true">🗑️</span> Discard · Tower +1</button>
+                    <button id="wanderingRerollBtn" type="button"><span aria-hidden="true">🎲</span> Reroll</button>
+                    <button id="wanderingAcceptRollBtn" type="button"><span aria-hidden="true">✓</span> Keep roll</button>
+                    <button id="wanderingResolveBtn" type="button"><span aria-hidden="true">✦</span> Move selected</button>
+                    <button id="wanderingSpellWizardBtn" type="button"><span aria-hidden="true">🧙</span> Wizard +1 <small>2 🧪</small></button>
+                    <button id="wanderingSpellTowerBtn" type="button"><span aria-hidden="true">♜</span> Tower +2 <small>1 🧪</small></button>
+                  </div>
+                </div>
+              </section>
 
-              <h3>Actions</h3>
-              <div class="row actions wandering-actions">
-                <button id="wanderingPlayCardBtn">Play Card</button>
-                <button id="wanderingDiscardBtn">Discard + Move Tower</button>
-                <button id="wanderingRerollBtn">Reroll</button>
-                <button id="wanderingAcceptRollBtn">Accept Roll</button>
-                <button id="wanderingResolveBtn">Resolve Move</button>
+              <div class="wandering-board-heading">
+                <div>
+                  <strong>Clockwise track</strong>
+                  <span class="wandering-track-direction" aria-hidden="true">↻</span>
+                </div>
+                <div class="wandering-board-key" aria-label="Board legend">
+                  <span><i class="wandering-key-wizard" aria-hidden="true"></i> Wizard</span>
+                  <span><i class="wandering-key-tower" aria-hidden="true"></i> Tower</span>
+                  <span><b aria-hidden="true">▥</b> Layers</span>
+                </div>
               </div>
-              <div class="row actions wandering-actions">
-                <button id="wanderingSpellWizardBtn">Spell: Move Wizard 1 (2)</button>
-                <button id="wanderingSpellTowerBtn">Spell: Move Tower 2 (1)</button>
-              </div>
+              <div id="wanderingBoard" class="wandering-board" aria-label="Clockwise board track"></div>
 
-              <div id="wanderingSelection" class="wandering-selection">
-                Selected: <span id="wanderingSelectionLabel">-</span>
-              </div>
-
-              <h3>Players</h3>
-              <div id="wanderingPlayers" class="wandering-players"></div>
+              <section class="wandering-player-zone" aria-label="Players">
+                <div class="wandering-section-heading">
+                  <span>Players</span>
+                  <small>🏰 wizards home · 🧪 full potions</small>
+                </div>
+                <div id="wanderingPlayers" class="wandering-players"></div>
+              </section>
             </div>
 
             <div id="kobayakawaPanel" class="hidden">
@@ -6596,7 +6649,7 @@
   <script src="/static/games/istanbul.js?v=app_v4"></script>
   <script src="/static/games/gold_rush.js?v=app_v4"></script>
   <script src="/static/games/age_of_war.js?v=app_v5"></script>
-  <script src="/static/games/wandering_towers.js?v=app_v4"></script>
+  <script src="/static/games/wandering_towers.js?v=app_v8"></script>
   <script src="/static/games/incan_gold.js?v=app_v4"></script>
   <script src="/static/games/celestia.js?v=app_v2"></script>
   <script src="/static/games/manila.js?v=app_v4"></script>
@@ -6614,6 +6667,6 @@
   <script src="/static/games/scout.js?v=app_v4"></script>
   <script src="/static/games/ark_nova.js?v=app_v22"></script>
   <script src="/static/app.js?v=app_v18"></script>
-  <script src="/static/room.js?v=app_v29"></script>
+  <script src="/static/room.js?v=app_v30"></script>
 </body>
 </html>

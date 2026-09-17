@@ -19,6 +19,7 @@ let cachedGameList = null;
 let currentRoomList = [];
 let pendingSeatClaimRoomId = null;
 let pendingSeatClaimSourceId = null;
+const selectedGameTagIds = new Set();
 const roomControlsDockQuery = window.matchMedia("(max-width: 900px)");
 
 const nameInput = document.getElementById("nameInput");
@@ -59,6 +60,7 @@ const createRoomGameStep = document.getElementById("createRoomGameStep");
 const gameSearchInput = document.getElementById("gameSearchInput");
 const playerCountFilter = document.getElementById("playerCountFilter");
 const gameSortSelect = document.getElementById("gameSortSelect");
+const gameTypeFilters = document.getElementById("gameTypeFilters");
 const gameListCount = document.getElementById("gameListCount");
 const gameListEl = document.getElementById("gameList");
 const gameListEmpty = document.getElementById("gameListEmpty");
@@ -507,18 +509,102 @@ async function fetchGameList() {
   }
 }
 
-function filterGames(games, searchText, playerCount) {
+function getGameTags(game) {
+  return game && Array.isArray(game.tags)
+    ? game.tags.filter((tag) => tag && typeof tag.id === "string")
+    : [];
+}
+
+function filterGames(games, searchText, playerCount, selectedTagIds = []) {
   const normalizedSearch = searchText.toLowerCase();
+  const selectedTags =
+    selectedTagIds instanceof Set ? selectedTagIds : new Set(selectedTagIds || []);
   return games.filter((g) => {
+    const tags = getGameTags(g);
+    const tagSearchText = tags
+      .map((tag) => `${tag.label || ""} ${tag.id}`)
+      .join(" ")
+      .toLowerCase();
     const matchesSearch =
       !searchText ||
       g.name.toLowerCase().includes(normalizedSearch) ||
       (g.name_zh || "").toLowerCase().includes(normalizedSearch) ||
-      g.game_id.toLowerCase().includes(normalizedSearch);
+      g.game_id.toLowerCase().includes(normalizedSearch) ||
+      tagSearchText.includes(normalizedSearch);
     const matchesPlayers =
       !playerCount || (g.min_players <= playerCount && playerCount <= g.max_players);
-    return matchesSearch && matchesPlayers;
+    const matchesType =
+      selectedTags.size === 0 || tags.some((tag) => selectedTags.has(tag.id));
+    return matchesSearch && matchesPlayers && matchesType;
   });
+}
+
+function collectGameTags(games) {
+  const tagsById = new Map();
+  games.forEach((game) => {
+    getGameTags(game).forEach((tag) => {
+      if (!tagsById.has(tag.id)) {
+        tagsById.set(tag.id, tag);
+      }
+    });
+  });
+  return [...tagsById.values()].sort((a, b) => {
+    const aOrder = Number.isFinite(Number(a.order)) ? Number(a.order) : Number.MAX_SAFE_INTEGER;
+    const bOrder = Number.isFinite(Number(b.order)) ? Number(b.order) : Number.MAX_SAFE_INTEGER;
+    return aOrder - bOrder || String(a.label || a.id).localeCompare(String(b.label || b.id));
+  });
+}
+
+function syncGameTypeFilterButtons() {
+  if (!gameTypeFilters) {
+    return;
+  }
+  gameTypeFilters.querySelectorAll(".game-type-filter-chip").forEach((button) => {
+    const isActive = selectedGameTagIds.has(button.dataset.tagId);
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", isActive.toString());
+  });
+}
+
+function renderGameTypeFilters(games) {
+  if (!gameTypeFilters) {
+    return;
+  }
+  gameTypeFilters.innerHTML = "";
+  collectGameTags(games).forEach((tag) => {
+    const count = games.filter((game) => getGameTags(game).some((item) => item.id === tag.id)).length;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "game-type-filter-chip";
+    button.dataset.tagId = tag.id;
+    button.setAttribute("aria-pressed", "false");
+    button.setAttribute("aria-label", `${tag.label || tag.id}, ${count} games`);
+    if (tag.description) {
+      button.title = tag.description;
+    }
+
+    const label = document.createElement("span");
+    label.className = "game-type-filter-label";
+    label.textContent = `${tag.emoji || "🏷️"} ${tag.label || tag.id}`;
+    const countEl = document.createElement("span");
+    countEl.className = "game-type-filter-count";
+    countEl.textContent = String(count);
+    countEl.setAttribute("aria-hidden", "true");
+    button.appendChild(label);
+    button.appendChild(countEl);
+    button.addEventListener("click", () => {
+      if (selectedGameTagIds.has(tag.id)) {
+        selectedGameTagIds.delete(tag.id);
+      } else {
+        selectedGameTagIds.add(tag.id);
+      }
+      syncGameTypeFilterButtons();
+      applyGameFilters();
+    });
+    gameTypeFilters.appendChild(button);
+  });
+  gameTypeFilters.dataset.ready = "true";
+  syncGameTypeFilterButtons();
 }
 
 const GAME_WEIGHT = {
@@ -698,7 +784,11 @@ function renderGameList(games) {
         : `${g.min_players}-${g.max_players} players`;
     const chineseName = typeof g.name_zh === "string" ? g.name_zh.trim() : "";
     const displayName = chineseName && chineseName !== g.name ? `${g.name} · ${chineseName}` : g.name;
-    item.title = `${displayName} · BGG Weight: ${weightLabel} · ${playerLabel}`;
+    const tags = getGameTags(g);
+    const tagLabel = tags.map((tag) => tag.label || tag.id).join(", ");
+    item.title = `${displayName} · BGG Weight: ${weightLabel} · ${playerLabel}${
+      tagLabel ? ` · ${tagLabel}` : ""
+    }`;
     item.setAttribute("aria-label", item.title);
     const nameEl = document.createElement("span");
     nameEl.className = "game-item-name";
@@ -712,6 +802,18 @@ function renderGameList(games) {
       chineseNameEl.lang = "zh-CN";
       chineseNameEl.textContent = chineseName;
       nameEl.appendChild(chineseNameEl);
+    }
+    if (tags.length) {
+      const tagsEl = document.createElement("span");
+      tagsEl.className = "game-item-tags";
+      tagsEl.setAttribute("aria-hidden", "true");
+      tags.forEach((tag) => {
+        const tagEl = document.createElement("span");
+        tagEl.className = "game-item-tag";
+        tagEl.textContent = `${tag.emoji || "🏷️"} ${tag.label || tag.id}`;
+        tagsEl.appendChild(tagEl);
+      });
+      nameEl.appendChild(tagsEl);
     }
     const metaEl = document.createElement("span");
     metaEl.className = "game-item-meta";
@@ -804,9 +906,12 @@ function selectGameFromModal(gameId) {
 
 async function applyGameFilters() {
   const games = await fetchGameList();
+  if (gameTypeFilters && gameTypeFilters.dataset.ready !== "true") {
+    renderGameTypeFilters(games);
+  }
   const searchText = gameSearchInput ? gameSearchInput.value.trim() : "";
   const playerCount = playerCountFilter ? parseInt(playerCountFilter.value, 10) || 0 : 0;
-  const filtered = filterGames(games, searchText, playerCount);
+  const filtered = filterGames(games, searchText, playerCount, selectedGameTagIds);
   const sortKey = getGameSortKey();
   const sorted = sortGames(filtered, sortKey);
   updateGameListCount(sorted.length);
@@ -825,6 +930,11 @@ async function openCreateRoomModal() {
   }
   if (gameSortSelect) {
     gameSortSelect.value = "alpha";
+  }
+  selectedGameTagIds.clear();
+  if (gameTypeFilters) {
+    gameTypeFilters.innerHTML = "";
+    delete gameTypeFilters.dataset.ready;
   }
   showCreateRoomGameStep();
   setModalVisible(createRoomModal, true);
