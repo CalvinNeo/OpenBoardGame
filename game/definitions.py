@@ -3994,6 +3994,7 @@ KRONOLOGIC_ACTION_SCHEMA = {
 KRONOLOGIC_CONFIG_SCHEMA = {
     "type": "object",
     "properties": {
+        "language": {"type": "string", "enum": ["zh", "en"]},
         "case_source": {"type": "string", "enum": ["random", "preset"]},
         "difficulty": {"type": "string", "enum": ["any", "1", "2", "3"]},
         "case_id": {"type": "string", "enum": KRONOLOGIC_CASE_IDS},

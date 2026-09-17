@@ -17,21 +17,21 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 OUTPUT_PATH = ROOT_DIR / "game" / "assets" / "kronologic_cases.json"
 
 CHARACTERS: Tuple[Dict[str, str], ...] = (
-    {"id": "archivist", "name": "Archivist", "emoji": "📚", "code": "AR", "pattern": "lines"},
-    {"id": "conductor", "name": "Conductor", "emoji": "🎼", "code": "CO", "pattern": "diagonal"},
-    {"id": "engineer", "name": "Engineer", "emoji": "🧰", "code": "EN", "pattern": "dots"},
-    {"id": "patron", "name": "Patron", "emoji": "🎩", "code": "PA", "pattern": "diamonds"},
-    {"id": "singer", "name": "Singer", "emoji": "🎤", "code": "SI", "pattern": "waves"},
-    {"id": "courier", "name": "Courier", "emoji": "✉️", "code": "CU", "pattern": "crosshatch"},
+    {"id": "archivist", "name": "Archivist", "name_zh": "档案管理员", "emoji": "📚", "code": "AR", "pattern": "lines"},
+    {"id": "conductor", "name": "Conductor", "name_zh": "指挥家", "emoji": "🎼", "code": "CO", "pattern": "diagonal"},
+    {"id": "engineer", "name": "Engineer", "name_zh": "工程师", "emoji": "🧰", "code": "EN", "pattern": "dots"},
+    {"id": "patron", "name": "Patron", "name_zh": "赞助人", "emoji": "🎩", "code": "PA", "pattern": "diamonds"},
+    {"id": "singer", "name": "Singer", "name_zh": "歌唱家", "emoji": "🎤", "code": "SI", "pattern": "waves"},
+    {"id": "courier", "name": "Courier", "name_zh": "信使", "emoji": "✉️", "code": "CU", "pattern": "crosshatch"},
 )
 
 LOCATIONS: Tuple[Dict[str, str], ...] = (
-    {"id": "grand_hall", "name": "Grand Hall", "emoji": "✨"},
-    {"id": "archive", "name": "Archive", "emoji": "📚"},
-    {"id": "rehearsal", "name": "Rehearsal Room", "emoji": "🎼"},
-    {"id": "backstage", "name": "Backstage", "emoji": "🎭"},
-    {"id": "dressing_room", "name": "Dressing Room", "emoji": "🪞"},
-    {"id": "orchestra_pit", "name": "Orchestra Pit", "emoji": "🎻"},
+    {"id": "grand_hall", "name": "Grand Hall", "name_zh": "大厅", "emoji": "✨"},
+    {"id": "archive", "name": "Archive", "name_zh": "档案室", "emoji": "📚"},
+    {"id": "rehearsal", "name": "Rehearsal Room", "name_zh": "排练室", "emoji": "🎼"},
+    {"id": "backstage", "name": "Backstage", "name_zh": "后台", "emoji": "🎭"},
+    {"id": "dressing_room", "name": "Dressing Room", "name_zh": "化妆间", "emoji": "🪞"},
+    {"id": "orchestra_pit", "name": "Orchestra Pit", "name_zh": "乐池", "emoji": "🎻"},
 )
 
 EDGES: Tuple[Tuple[str, str], ...] = (
@@ -48,7 +48,9 @@ CASE_SPECS: Tuple[Dict, ...] = (
     {
         "case_id": "sealed-score-01",
         "title": "The Missing Cue",
+        "title_zh": "遗失的提示谱",
         "story": "A marked cue sheet changed hands during rehearsal. Find who met the Archivist alone, and identify where and when the exchange happened.",
+        "story_zh": "排练期间，一份带有标记的提示谱被秘密转交。找出与档案管理员单独会面的人，并确定交接的地点和时间。",
         "difficulty": 1,
         "anchor_character_id": "archivist",
         "seed": "openboard-kronologic-missing-cue-v1",
@@ -57,7 +59,9 @@ CASE_SPECS: Tuple[Dict, ...] = (
     {
         "case_id": "sealed-score-02",
         "title": "The Brass Key",
+        "title_zh": "黄铜钥匙",
         "story": "A brass key was passed during the evening. Trace the Courier's only private meeting and identify the recipient, place, and time.",
+        "story_zh": "今晚有人转交了一把黄铜钥匙。追查信使唯一一次单独会面，找出接收者、地点和时间。",
         "difficulty": 1,
         "anchor_character_id": "courier",
         "seed": "openboard-kronologic-brass-key-v1",
@@ -66,7 +70,9 @@ CASE_SPECS: Tuple[Dict, ...] = (
     {
         "case_id": "sealed-score-03",
         "title": "Echoes Backstage",
+        "title_zh": "后台回声",
         "story": "Someone delivered a secret instruction to the Conductor. Determine the person, room, and time of the Conductor's only private meeting.",
+        "story_zh": "有人向指挥家传递了一条秘密指令。确定指挥家唯一一次单独会面的对象、房间和时间。",
         "difficulty": 2,
         "anchor_character_id": "conductor",
         "seed": "openboard-kronologic-echoes-v1",
@@ -75,7 +81,9 @@ CASE_SPECS: Tuple[Dict, ...] = (
     {
         "case_id": "sealed-score-04",
         "title": "The Silent Mechanism",
+        "title_zh": "无声机关",
         "story": "The Engineer quietly demonstrated a hidden mechanism to one person. Work out who attended, in which room, and at what time.",
+        "story_zh": "工程师悄悄向一个人展示了隐藏机关。找出在场者、所在房间和具体时间。",
         "difficulty": 2,
         "anchor_character_id": "engineer",
         "seed": "openboard-kronologic-mechanism-v1",
@@ -84,7 +92,9 @@ CASE_SPECS: Tuple[Dict, ...] = (
     {
         "case_id": "sealed-score-05",
         "title": "The Last Encore",
+        "title_zh": "最后的返场",
         "story": "Before the final encore, the Singer held one private meeting. Identify the visitor, location, and exact time.",
+        "story_zh": "最后一次返场之前，歌唱家进行了一次单独会面。找出来访者、地点和准确时间。",
         "difficulty": 3,
         "anchor_character_id": "singer",
         "seed": "openboard-kronologic-encore-v1",
@@ -172,6 +182,7 @@ def build_catalog() -> Dict:
         "catalog_status": "original-compatible",
         "commercial_scenarios_included": False,
         "content_notice": "Original Case Pack · Not the commercial scenarios",
+        "content_notice_zh": "原创案件包 · 不含商业版案件",
         "characters": list(CHARACTERS),
         "locations": list(LOCATIONS),
         "edges": [list(edge) for edge in EDGES],

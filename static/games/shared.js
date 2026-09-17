@@ -162,6 +162,7 @@ function emitRoomStart() {
     payload.config = typeof getKronologicRoomConfig === "function"
       ? getKronologicRoomConfig()
       : {
+          language: "zh",
           case_source: "random",
           difficulty: "any",
           case_id: "sealed-score-01",

@@ -151,6 +151,22 @@ function formatAgeOfWarClanLabel(castle) {
   return zh || en || castle.clan || "Unknown";
 }
 
+function appendAgeOfWarBilingualLabel(container, primaryValue, secondaryValue, fallback) {
+  const primary = primaryValue ? String(primaryValue).trim() : "";
+  const secondary = secondaryValue ? String(secondaryValue).trim() : "";
+  const primaryLabel = document.createElement("span");
+  primaryLabel.className = "age-of-war-label-primary";
+  primaryLabel.textContent = primary || secondary || fallback;
+  container.appendChild(primaryLabel);
+
+  if (primary && secondary && primary !== secondary) {
+    const secondaryLabel = document.createElement("span");
+    secondaryLabel.className = "age-of-war-label-secondary";
+    secondaryLabel.textContent = ` (${secondary})`;
+    container.appendChild(secondaryLabel);
+  }
+}
+
 function formatAgeOfWarPhase(phase) {
   if (!phase) {
     return "-";
@@ -458,14 +474,28 @@ function buildAgeOfWarCastleCard(castle, options = {}) {
 
   const title = document.createElement("div");
   title.className = "age-of-war-castle-title";
-  title.textContent = formatAgeOfWarCastleLabel(castle);
+  title.title = formatAgeOfWarCastleLabel(castle);
+  appendAgeOfWarBilingualLabel(title, castle.name_zh, castle.name, castle.id || "Unknown");
   card.appendChild(title);
 
   const meta = document.createElement("div");
   meta.className = "age-of-war-castle-meta";
-  const clanLabel = formatAgeOfWarClanLabel(castle);
+  meta.title = formatAgeOfWarClanLabel(castle);
+  const clan = document.createElement("span");
+  clan.className = "age-of-war-castle-clan";
+  appendAgeOfWarBilingualLabel(
+    clan,
+    castle.clan_name_zh,
+    castle.clan_name,
+    castle.clan || "Unknown",
+  );
+  meta.appendChild(clan);
+
   const points = Number.isFinite(castle.points) ? castle.points : "-";
-  meta.textContent = `${clanLabel} · ${points} pts`;
+  const pointsLabel = document.createElement("span");
+  pointsLabel.className = "age-of-war-castle-points";
+  pointsLabel.textContent = `${points} pts`;
+  meta.appendChild(pointsLabel);
   card.appendChild(meta);
 
   const lines = document.createElement("div");
@@ -539,8 +569,10 @@ function renderAgeOfWarPlayers(view) {
   const selectedDefender = view && view.target ? view.target.defender_id : null;
   const canSelect = isAgeOfWarActionAvailable("select_target");
   players.forEach((player) => {
+    const castles = Array.isArray(player.castles) ? player.castles : [];
     const card = document.createElement("div");
     card.className = "player-card age-of-war-player-card";
+    card.classList.toggle("has-castles", castles.length > 0);
     if (player.player_id === view.you) {
       card.classList.add("self");
     }
@@ -570,18 +602,22 @@ function renderAgeOfWarPlayers(view) {
 
     const meta = document.createElement("div");
     meta.className = "age-of-war-player-meta";
-    const castleCount = Array.isArray(player.castles) ? player.castles.length : 0;
+    const castleCount = castles.length;
     meta.textContent = `Castles ${castleCount}`;
     card.appendChild(meta);
 
     const locked = document.createElement("div");
     locked.className = "age-of-war-player-locked";
+    locked.classList.toggle(
+      "is-empty",
+      !Array.isArray(player.locked_clans) || !player.locked_clans.length,
+    );
     locked.textContent = `Locked clans: ${formatAgeOfWarLockedClans(player.locked_clans, clanLookup)}`;
     card.appendChild(locked);
 
     const castlesWrap = document.createElement("div");
     castlesWrap.className = "age-of-war-player-castles";
-    const castles = Array.isArray(player.castles) ? player.castles : [];
+    castlesWrap.classList.toggle("is-empty", !castles.length);
     if (!castles.length) {
       const empty = document.createElement("div");
       empty.className = "age-of-war-empty";

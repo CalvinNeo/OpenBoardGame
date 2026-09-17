@@ -32,9 +32,10 @@ def _players(count, bots=False):
     ]
 
 
-def _state(count=2, case_id="sealed-score-01", bots=False):
+def _state(count=2, case_id="sealed-score-01", bots=False, language="en"):
     return KronologicGame.init_game(
         {
+            "language": language,
             "case_source": "preset",
             "case_id": case_id,
             "difficulty": "any",
@@ -69,6 +70,10 @@ class KronologicCatalogTests(unittest.TestCase):
         self.assertFalse(CATALOG["commercial_scenarios_included"])
         self.assertEqual(len(CASES), 5)
         self.assertEqual(len({case["case_id"] for case in CASES}), 5)
+        self.assertTrue(CATALOG["content_notice_zh"])
+        self.assertTrue(all(item["name_zh"] for item in CATALOG["characters"]))
+        self.assertTrue(all(item["name_zh"] for item in CATALOG["locations"]))
+        self.assertTrue(all(case["title_zh"] and case["story_zh"] for case in CASES))
 
     def test_paths_move_along_the_original_graph(self):
         edges = {tuple(sorted(edge)) for edge in CATALOG["edges"]}
@@ -126,6 +131,7 @@ class KronologicFrontendIntegrationTests(unittest.TestCase):
         for element_id in (
             "kronologicPanel",
             "kronologicConfigBox",
+            "kronologicLanguageSelect",
             "kronologicHeaderActions",
             "kronologicHelpModal",
             "kronologicExplainModal",
@@ -138,6 +144,8 @@ class KronologicFrontendIntegrationTests(unittest.TestCase):
         room = (ROOT / "static" / "room.js").read_text(encoding="utf-8")
         app = (ROOT / "static" / "app.js").read_text(encoding="utf-8")
         self.assertIn('currentGameType === "kronologic"', shared)
+        self.assertIn('language: "zh"', shared)
+        self.assertIn('language: kronologicLanguageSelect', (ROOT / "static" / "games" / "kronologic.js").read_text(encoding="utf-8"))
         self.assertIn("updateKronologicConfigRow();", shared)
         self.assertIn("clearKronologicState();", shared)
         self.assertIn("resetKronologicRoomConfig();", room)
@@ -160,6 +168,34 @@ class KronologicFrontendIntegrationTests(unittest.TestCase):
 
 
 class KronologicGameTests(unittest.TestCase):
+    def test_language_defaults_to_chinese_and_can_use_english(self):
+        chinese_state = KronologicGame.init_game(
+            {
+                "case_source": "preset",
+                "case_id": "sealed-score-01",
+                "difficulty": "any",
+                "seed": "language-test",
+            },
+            _players(1),
+        )
+        chinese_view = KronologicGame.get_public_view(chinese_state, "p1")
+        self.assertEqual(chinese_state["config"]["language"], "zh")
+        self.assertEqual(chinese_view["language"], "zh")
+        self.assertEqual(chinese_view["case"]["title"], chinese_state["case"]["title_zh"])
+        self.assertEqual(chinese_view["characters"][0]["name"], CATALOG["characters"][0]["name_zh"])
+        self.assertEqual(chinese_view["locations"][0]["name"], CATALOG["locations"][0]["name_zh"])
+        self.assertIn("开始调查", chinese_view["public_log"][0]["message"])
+
+        english_state = _state(count=1, language="en")
+        english_view = KronologicGame.get_public_view(english_state, "p1")
+        self.assertEqual(english_view["language"], "en")
+        self.assertEqual(english_view["case"]["title"], english_state["case"]["title"])
+        self.assertEqual(english_view["characters"][0]["name"], CATALOG["characters"][0]["name"])
+        self.assertIn("began", english_view["public_log"][0]["message"])
+
+        with self.assertRaises(ValueError):
+            _state(count=1, language="fr")
+
     def test_non_current_player_cannot_ask(self):
         state = _state()
         _force_active(state, "p1")

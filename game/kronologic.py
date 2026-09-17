@@ -15,6 +15,7 @@ MAX_PUBLIC_LOG = 120
 MAX_PUBLIC_CLUES = 96
 MAX_PRIVATE_CLUES = 96
 NOTE_MARKS = {"unknown", "possible", "excluded", "confirmed"}
+LANGUAGES = {"zh", "en"}
 PHASES = {
     "investigation",
     "clue_review",
@@ -62,6 +63,17 @@ def _validate_catalog(catalog: Dict) -> None:
         raise ValueError("invalid Kronologic character ids")
     if len(location_ids) != 6 or len(set(location_ids)) != 6 or not all(isinstance(value, str) and value for value in location_ids):
         raise ValueError("invalid Kronologic location ids")
+    for item in [*characters, *locations]:
+        if not isinstance(item, dict) or not all(
+            isinstance(item.get(field), str) and item[field].strip()
+            for field in ("name", "name_zh")
+        ):
+            raise ValueError("Kronologic names require English and Chinese text")
+    if not all(
+        isinstance(catalog.get(field), str) and catalog[field].strip()
+        for field in ("content_notice", "content_notice_zh")
+    ):
+        raise ValueError("Kronologic content notices require English and Chinese text")
 
     edge_set = set()
     neighbors = {location_id: set() for location_id in location_ids}
@@ -102,6 +114,11 @@ def _validate_catalog(catalog: Dict) -> None:
             raise ValueError("Kronologic case title is required")
         if not isinstance(case.get("story"), str) or not case["story"].strip():
             raise ValueError("Kronologic case story is required")
+        if not all(
+            isinstance(case.get(field), str) and case[field].strip()
+            for field in ("title_zh", "story_zh")
+        ):
+            raise ValueError("Kronologic cases require Chinese title and story text")
         if case.get("difficulty") not in (1, 2, 3):
             raise ValueError("invalid Kronologic case difficulty")
         anchor_id = case.get("anchor_character_id")
@@ -192,6 +209,10 @@ def _sorted_player_ids(player_meta: Dict[str, Dict], player_ids: Optional[Iterab
 
 def _safe_config(config: Optional[Dict]) -> Dict:
     raw = config if isinstance(config, dict) else {}
+    language = raw.get("language", "zh")
+    if language not in LANGUAGES:
+        raise ValueError("invalid Kronologic language")
+
     source = raw.get("case_source", "random")
     if source not in ("random", "preset"):
         raise ValueError("invalid Kronologic case source")
@@ -213,6 +234,7 @@ def _safe_config(config: Optional[Dict]) -> Dict:
         raise ValueError("Kronologic seed is too long")
 
     return {
+        "language": language,
         "case_source": source,
         "difficulty": raw_difficulty,
         "case_id": case_id,
@@ -289,6 +311,32 @@ def _append_limited(items: List[Dict], value: Dict, limit: int) -> None:
 
 def _player_name(state: Dict, player_id: str) -> str:
     return str(state.get("player_meta", {}).get(player_id, {}).get("name") or player_id)
+
+
+def _language(state: Dict) -> str:
+    language = state.get("config", {}).get("language", "zh")
+    return language if language in LANGUAGES else "zh"
+
+
+def _localized_text(item: Dict, field: str, language: str) -> str:
+    if language == "zh":
+        return str(item.get(f"{field}_zh") or item.get(field) or "")
+    return str(item.get(field) or "")
+
+
+def _localized_item(item: Dict, language: str) -> Dict:
+    result = copy.deepcopy(item)
+    result["name"] = _localized_text(item, "name", language)
+    result.pop("name_zh", None)
+    return result
+
+
+def _localized_character_name(state: Dict, character_id: str) -> str:
+    return _localized_text(CHARACTER_LOOKUP[character_id], "name", _language(state))
+
+
+def _localized_location_name(state: Dict, location_id: str) -> str:
+    return _localized_text(LOCATION_LOOKUP[location_id], "name", _language(state))
 
 
 def _add_log(state: Dict, entry_type: str, message: str, **extra: object) -> None:
@@ -377,20 +425,28 @@ def _start_case(state: Dict, previous_case_id: Optional[str] = None) -> None:
         }
 
     state["active_player_id"] = _select_first_player(state)
+    language = _language(state)
+    case_title = _localized_text(case, "title", language)
+    first_player_name = _player_name(state, state["active_player_id"])
+    message = (
+        f"{case_title}开始调查。{first_player_name}首先行动。"
+        if language == "zh"
+        else f"{case_title} began. {first_player_name} investigates first."
+    )
     _add_log(
         state,
         "case_started",
-        f"{case['title']} began. {_player_name(state, state['active_player_id'])} investigates first.",
+        message,
         case_id=case["case_id"],
         active_player_id=state["active_player_id"],
     )
 
 
-def _public_case(case: Dict) -> Dict:
+def _public_case(case: Dict, language: str) -> Dict:
     return {
         "case_id": case["case_id"],
-        "title": case["title"],
-        "story": case["story"],
+        "title": _localized_text(case, "title", language),
+        "story": _localized_text(case, "story", language),
         "difficulty": int(case["difficulty"]),
         "anchor_character_id": case["anchor_character_id"],
         "solo_thresholds": copy.deepcopy(case["solo_thresholds"]),
@@ -460,9 +516,15 @@ def _finish_game(state: Dict, winner_ids: List[str], failed: bool = False) -> No
         state["solo_rating"] = _solo_rating(state, winner_ids[0])
     if winner_ids:
         names = ", ".join(_player_name(state, player_id) for player_id in winner_ids)
-        _add_log(state, "case_solved", f"Case solved by {names}.", winner_ids=list(winner_ids))
+        message = f"{names}破解了案件。" if _language(state) == "zh" else f"Case solved by {names}."
+        _add_log(state, "case_solved", message, winner_ids=list(winner_ids))
     elif failed:
-        _add_log(state, "case_failed", "Every investigator was eliminated. The case is lost.")
+        message = (
+            "所有调查员均已淘汰，案件失败。"
+            if _language(state) == "zh"
+            else "Every investigator was eliminated. The case is lost."
+        )
+        _add_log(state, "case_failed", message)
 
 
 def _resolve_accusation_if_complete(state: Dict) -> Tuple[List[Dict], bool]:
@@ -504,10 +566,16 @@ def _resolve_accusation_if_complete(state: Dict) -> Tuple[List[Dict], bool]:
 
     for player_id in submitted_ids:
         state["players"][player_id]["status"] = "eliminated"
+        player_name = _player_name(state, player_id)
+        message = (
+            f"{player_name}的推理错误，已被淘汰。"
+            if _language(state) == "zh"
+            else f"{player_name} submitted an incorrect theory and was eliminated."
+        )
         _add_log(
             state,
             "player_eliminated",
-            f"{_player_name(state, player_id)} submitted an incorrect theory and was eliminated.",
+            message,
             player_id=player_id,
         )
     survivors = _active_player_ids(state)
@@ -868,12 +936,18 @@ class KronologicGame:
             _append_limited(state["players"][player_id].setdefault("private_clues", []), private_clue, MAX_PRIVATE_CLUES)
             state["players"][player_id]["question_count"] = int(state["players"][player_id].get("question_count", 0)) + 1
 
-            location_name = LOCATION_LOOKUP[location_id]["name"]
+            location_name = _localized_location_name(state, location_id)
             if query_type == "time":
-                message = f"{_player_name(state, player_id)} learned that {response['count']} people were in {location_name} at Time {time}."
+                if _language(state) == "zh":
+                    message = f"{_player_name(state, player_id)}得知：时段 {time}，{location_name}内共有 {response['count']} 人。"
+                else:
+                    message = f"{_player_name(state, player_id)} learned that {response['count']} people were in {location_name} at Time {time}."
             else:
-                character_name = CHARACTER_LOOKUP[character_id]["name"]
-                message = f"{_player_name(state, player_id)} learned that {character_name} visited {location_name} {response['count']} times."
+                character_name = _localized_character_name(state, character_id)
+                if _language(state) == "zh":
+                    message = f"{_player_name(state, player_id)}得知：{character_name}在{location_name}出现过 {response['count']} 次。"
+                else:
+                    message = f"{_player_name(state, player_id)} learned that {character_name} visited {location_name} {response['count']} times."
             _add_log(state, "question", message, clue_id=clue_id, player_id=player_id)
 
             state["phase"] = "clue_review"
@@ -919,10 +993,16 @@ class KronologicGame:
                 "responses": {player_id: answer},
             }
             state["phase"] = "accusation_collect"
+            player_name = _player_name(state, player_id)
+            message = (
+                f"{player_name}邀请所有人提交推理。"
+                if _language(state) == "zh"
+                else f"{player_name} asked everyone to lock in a theory."
+            )
             _add_log(
                 state,
                 "accusation_started",
-                f"{_player_name(state, player_id)} asked everyone to lock in a theory.",
+                message,
                 player_id=player_id,
             )
             events = [{"type": "kronologic:accusation_started", "payload": {"initiator_id": player_id}}]
@@ -974,6 +1054,7 @@ class KronologicGame:
     @staticmethod
     def get_public_view(state: Dict, viewer_id: str) -> Dict:
         case = state["case"]
+        language = _language(state)
         players_view: List[Dict] = []
         accusation = state.get("accusation") if isinstance(state.get("accusation"), dict) else None
         accusation_responses = accusation.get("responses", {}) if accusation else {}
@@ -1013,11 +1094,12 @@ class KronologicGame:
         return {
             "game_id": KronologicGame.game_id,
             "you": viewer_id,
+            "language": language,
             "catalog_id": CATALOG_ID,
-            "content_notice": CATALOG.get("content_notice"),
-            "case": _public_case(case),
-            "characters": copy.deepcopy(list(CHARACTERS)),
-            "locations": copy.deepcopy(list(LOCATIONS)),
+            "content_notice": _localized_text(CATALOG, "content_notice", language),
+            "case": _public_case(case, language),
+            "characters": [_localized_item(item, language) for item in CHARACTERS],
+            "locations": [_localized_item(item, language) for item in LOCATIONS],
             "edges": [list(edge) for edge in EDGES],
             "phase": state.get("phase"),
             "active_player_id": state.get("active_player_id"),
@@ -1097,5 +1179,6 @@ class KronologicGame:
         if not isinstance(turn_order, list) or not isinstance(players, dict) or set(turn_order) != set(players):
             raise ValueError("invalid Kronologic saved players")
         result = copy.deepcopy(payload)
+        result["config"] = _safe_config(payload.get("config"))
         result["case"] = copy.deepcopy(canonical_case)
         return result
