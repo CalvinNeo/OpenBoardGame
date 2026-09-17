@@ -29534,8 +29534,12 @@ button.bohnanza-dice-die:disabled {
 
 .bohnanza-dice-card-pair {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 0.92fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
+}
+
+.bohnanza-dice-card-pair.is-cover-expanded {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.92fr);
 }
 
 .bohnanza-dice-harvest-card {
@@ -29560,6 +29564,17 @@ button.bohnanza-dice-die:disabled {
     #f4efdf;
 }
 
+.bohnanza-dice-harvest-card.is-cover.is-collapsed {
+  gap: 0;
+  min-height: 0;
+  padding: 0;
+}
+
+.bohnanza-dice-harvest-card.is-cover.is-collapsed > header {
+  min-height: 40px;
+  padding: 5px 9px;
+}
+
 .bohnanza-dice-harvest-card > header {
   color: var(--bohnanza-dice-green);
   font-size: 10px;
@@ -29570,6 +29585,42 @@ button.bohnanza-dice-die:disabled {
 .bohnanza-dice-harvest-card > header span {
   color: var(--bohnanza-dice-muted);
   font-size: 9px;
+}
+
+button.bohnanza-dice-cover-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  width: 100%;
+  min-height: 28px;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+  border: 0;
+  border-radius: 6px;
+  outline-offset: 3px;
+  background: transparent;
+  box-shadow: none;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: left;
+  text-transform: inherit;
+}
+
+button.bohnanza-dice-cover-toggle:hover {
+  color: var(--bohnanza-dice-green);
+  background: rgba(49, 92, 64, 0.07);
+}
+
+.bohnanza-dice-cover-toggle-hint {
+  white-space: nowrap;
+  font-weight: 900;
+}
+
+.bohnanza-dice-orders[hidden] {
+  display: none;
 }
 
 .bohnanza-dice-card-meta {
@@ -30084,6 +30135,10 @@ body.bohnanza-dice-explain-mode button[data-bohnanza-dice-explain].has-explanati
   }
 
   .bohnanza-dice-card-pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .bohnanza-dice-card-pair.is-cover-expanded {
     grid-template-columns: minmax(0, 1fr);
   }
 

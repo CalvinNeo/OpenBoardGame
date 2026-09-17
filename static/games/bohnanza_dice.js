@@ -7,6 +7,7 @@
   let bohnanzaDicePendingTimer = null;
   let bohnanzaDiceExplainMode = false;
   let bohnanzaDiceLastAnnounced = 0;
+  const bohnanzaDiceExpandedCoverIds = new Set();
 
   const bohnanzaDicePanel = document.getElementById("bohnanzaDicePanel");
   const bohnanzaDiceHeaderActions = document.getElementById("bohnanzaDiceHeaderActions");
@@ -351,9 +352,12 @@
     return `${state.detail} Need: ${bohnanzaDiceOrderShortText(order)}. ${dieTypes ? `Dice: ${dieTypes}. ` : ""}${symbols.join(" ")} ${chance} The same result may continue to the next order.`;
   }
 
-  function bohnanzaDiceCard(card, completedCount, kind, checkContext = "preview") {
+  function bohnanzaDiceCard(card, completedCount, kind, checkContext = "preview", coverOwner = null) {
     const article = document.createElement("article");
     article.className = `bohnanza-dice-harvest-card is-${kind}`;
+    const isCollapsibleCover = kind === "cover" && coverOwner;
+    const coverExpanded = Boolean(isCollapsibleCover && bohnanzaDiceExpandedCoverIds.has(coverOwner.id));
+    if (isCollapsibleCover) article.classList.toggle("is-collapsed", !coverExpanded);
 
     const header = document.createElement("header");
     header.dataset.bohnanzaDiceExplain = "card";
@@ -375,10 +379,28 @@
     const cardKey = document.createElement("span");
     cardKey.textContent = card && card.id ? `#${String(card.id).slice(-3)}` : "-";
     headerMeta.append(context, cardKey);
-    header.append(label, headerMeta);
+
+    let coverToggle = null;
+    let coverToggleHint = null;
+    if (isCollapsibleCover) {
+      coverToggle = document.createElement("button");
+      coverToggle.type = "button";
+      coverToggle.className = "bohnanza-dice-cover-toggle";
+      coverToggleHint = document.createElement("span");
+      coverToggleHint.className = "bohnanza-dice-cover-toggle-hint";
+      headerMeta.appendChild(coverToggleHint);
+      coverToggle.append(label, headerMeta);
+      header.appendChild(coverToggle);
+    } else {
+      header.append(label, headerMeta);
+    }
 
     const orders = document.createElement("ol");
     orders.className = "bohnanza-dice-orders";
+    if (isCollapsibleCover) {
+      orders.id = coverOwner.controlId;
+      orders.hidden = !coverExpanded;
+    }
     const source = card && Array.isArray(card.orders_bottom_to_top) ? card.orders_bottom_to_top : [];
     source
       .map((order, index) => ({ order, index }))
@@ -418,6 +440,25 @@
       });
 
     article.append(header, orders);
+    if (isCollapsibleCover) {
+      const syncCoverVisibility = (expanded) => {
+        article.classList.toggle("is-collapsed", !expanded);
+        orders.hidden = !expanded;
+        coverToggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+        coverToggle.setAttribute("aria-controls", coverOwner.controlId);
+        coverToggle.setAttribute("aria-label", `${expanded ? "Hide" : "Show"} ${coverOwner.name}'s cover card`);
+        coverToggleHint.textContent = expanded ? "Hide ▲" : "Show ▼";
+        const pair = article.closest(".bohnanza-dice-card-pair");
+        if (pair) pair.classList.toggle("is-cover-expanded", expanded);
+      };
+      syncCoverVisibility(coverExpanded);
+      coverToggle.addEventListener("click", () => {
+        const expanded = article.classList.contains("is-collapsed");
+        if (expanded) bohnanzaDiceExpandedCoverIds.add(coverOwner.id);
+        else bohnanzaDiceExpandedCoverIds.delete(coverOwner.id);
+        syncCoverVisibility(expanded);
+      });
+    }
     return article;
   }
 
@@ -431,7 +472,7 @@
   function bohnanzaDiceRenderPlayers(view) {
     if (!bohnanzaDicePlayers) return;
     bohnanzaDicePlayers.innerHTML = "";
-    (view.players || []).forEach((player) => {
+    (view.players || []).forEach((player, playerIndex) => {
       const card = document.createElement("article");
       card.className = "bohnanza-dice-player";
       if (player.player_id === view.you) card.classList.add("is-self");
@@ -464,10 +505,15 @@
 
       const cardPair = document.createElement("div");
       cardPair.className = "bohnanza-dice-card-pair";
+      if (bohnanzaDiceExpandedCoverIds.has(player.player_id)) cardPair.classList.add("is-cover-expanded");
       const currentContext = player.player_id === view.active_player_id ? "field" : "roll";
       cardPair.append(
         bohnanzaDiceCard(player.top_card || {}, Number(player.completed_count || 0), "current", currentContext),
-        bohnanzaDiceCard(player.cover_card || {}, 0, "cover", "preview")
+        bohnanzaDiceCard(player.cover_card || {}, 0, "cover", "preview", {
+          id: player.player_id,
+          name: player.name || player.player_id,
+          controlId: `bohnanzaDiceCoverOrders${playerIndex}`,
+        })
       );
 
       const footer = document.createElement("div");
@@ -833,6 +879,7 @@
   function bohnanzaDiceClearState() {
     bohnanzaDiceView = null;
     bohnanzaDiceSelectedIds.clear();
+    bohnanzaDiceExpandedCoverIds.clear();
     bohnanzaDicePending = false;
     bohnanzaDiceLastAnnounced = 0;
     if (bohnanzaDicePendingTimer) window.clearTimeout(bohnanzaDicePendingTimer);
