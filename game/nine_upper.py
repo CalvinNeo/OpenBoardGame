@@ -260,7 +260,7 @@ def _reset_for_play_again(state: Dict) -> None:
     players = [copy.deepcopy(state["player_meta"][player_id]) for player_id in state["turn_order"]]
     seed = state.get("rng_seed")
     game_index = int(state.get("game_index", 1)) + 1
-    fresh = NineUpperGame.init_game({**config, "seed": seed}, players)
+    fresh = NineUpperGame.init_game({**config, "seed": f"{seed}|game-{game_index}"}, players)
     fresh["game_index"] = game_index
     state.clear()
     state.update(fresh)
@@ -579,4 +579,3 @@ class NineUpperGame:
     @staticmethod
     def deserialize(payload: Dict) -> Dict:
         return payload
-

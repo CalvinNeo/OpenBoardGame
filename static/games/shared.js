@@ -312,6 +312,9 @@ function renderRoomState(state) {
     if (typeof clearSubtextState === "function") {
       clearSubtextState();
     }
+    if (typeof clearNineUpperState === "function") {
+      clearNineUpperState();
+    }
     if (typeof clearBombBustersState === "function") {
       clearBombBustersState();
     }

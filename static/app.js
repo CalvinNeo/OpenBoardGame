@@ -59,6 +59,7 @@ const centurySpiceRoadPanel = document.getElementById("centurySpiceRoadPanel");
 const wordDecodePanel = document.getElementById("wordDecodePanel");
 const wavelengthPanel = document.getElementById("wavelengthPanel");
 const dumbQuestionsPanel = document.getElementById("dumbQuestionsPanel");
+const nineUpperPanel = document.getElementById("nineUpperPanel");
 const cyberPicturesPanel = document.getElementById("cyberPicturesPanel");
 const fakeArtistPanel = document.getElementById("fakeArtistPanel");
 const thingsInRingsPanel = document.getElementById("thingsInRingsPanel");
@@ -128,6 +129,7 @@ function setGamePanelVisibility(gameType) {
   const showWordDecode = gameType === "word_decode";
   const showWavelength = gameType === "wavelength";
   const showDumbQuestions = gameType === "dumb_questions";
+  const showNineUpper = gameType === "nine_upper";
   const showDrawGuess = gameType === "draw_guess";
   const showGizmos = gameType === "gizmos";
   const showCenturySpiceRoad = gameType === "century_spice_road";
@@ -413,6 +415,12 @@ function setGamePanelVisibility(gameType) {
   }
   if (dumbQuestionsPanel) {
     dumbQuestionsPanel.classList.toggle("hidden", !showDumbQuestions);
+  }
+  if (nineUpperPanel) {
+    nineUpperPanel.classList.toggle("hidden", !showNineUpper);
+  }
+  if (typeof showNineUpperHeaderActions === "function") {
+    showNineUpperHeaderActions(showNineUpper);
   }
   if (blitzSketchPanel) {
     blitzSketchPanel.classList.toggle("hidden", !showBlitzSketch);
@@ -807,6 +815,10 @@ function renderGameState(data) {
   }
   if (gameType === "dumb_questions") {
     renderDumbQuestionsGameState(data);
+    return;
+  }
+  if (gameType === "nine_upper") {
+    renderNineUpperGameState(data);
     return;
   }
   if (gameType === "draw_guess") {

@@ -538,6 +538,7 @@ const GAME_WEIGHT = {
   decrypto: 1.82,
   draw_guess: 1.0698602794411178,
   dumb_questions: 1.00,
+  nine_upper: null,
   fang_niao: 1.3142857142857143,
   flip7: 1.028056112224449,
   gold_rush: 1.1839080459770115,

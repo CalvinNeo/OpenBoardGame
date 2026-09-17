@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css?v=app_v78" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v79" />
   <link rel="stylesheet" href="/static/ark_nova.css?v=app_v21" />
 </head>
 <body>
@@ -890,6 +890,26 @@
     </div>
   </section>
 
+  <section id="nineUpperHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content nine-upper-modal">
+      <div class="modal-header">
+        <h2>9UPPER · 瞎掰王 Rules</h2>
+        <button id="nineUpperHelpCloseBtn" type="button">Close</button>
+      </div>
+      <div id="nineUpperHelpContent" class="modal-body nine-upper-help-content"></div>
+    </div>
+  </section>
+
+  <section id="nineUpperExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content nine-upper-modal nine-upper-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="nineUpperExplainCloseBtn" type="button">Close</button>
+      </div>
+      <div id="nineUpperExplainContent" class="modal-body"></div>
+    </div>
+  </section>
+
   <section id="wordDecodeHelpModal" class="modal hidden" aria-hidden="true">
     <div class="modal-content word-decode-help-modal">
       <div class="modal-header">
@@ -1298,6 +1318,7 @@
                     <option value="decrypto">Decrypto</option>
                     <option value="wavelength">Wavelength</option>
                     <option value="dumb_questions">Dumb Questions</option>
+                    <option value="nine_upper">9UPPER · 瞎掰王</option>
                     <option value="skull">Skull</option>
                     <option value="rebel_princess">Rebel Princess</option>
                     <option value="cat_in_box">Cat in the Box</option>
@@ -1912,6 +1933,10 @@
             <div class="panel-header-actions" id="dumbQuestionsHeaderActions" style="display: none;">
               <button id="dumbQuestionsHelpBtn" class="dumb-questions-header-btn" type="button">Help</button>
               <button id="dumbQuestionsExplainBtn" class="dumb-questions-header-btn" type="button">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="nineUpperHeaderActions" style="display: none;">
+              <button id="nineUpperHelpBtn" class="nine-upper-header-btn" type="button">Help</button>
+              <button id="nineUpperExplainBtn" class="nine-upper-header-btn" type="button">Explain</button>
             </div>
             <div class="panel-header-actions" id="wordDecodeHeaderActions" style="display: none;">
               <button id="wordDecodeHelpBtn" class="word-decode-header-btn" type="button">Help</button>
@@ -4720,6 +4745,147 @@
               </div>
             </div>
 
+            <div id="nineUpperPanel" class="hidden nine-upper-panel">
+              <div class="nine-upper-hero">
+                <div>
+                  <div class="nine-upper-kicker">TRUTH · BLUFF · DETECT</div>
+                  <h2>9UPPER <span>瞎掰王</span></h2>
+                  <p>One strange term. One truth-teller. A room full of confident nonsense.</p>
+                </div>
+                <div class="nine-upper-round-badge">Round <strong id="nineUpperRound">-</strong>/<span id="nineUpperTotalRounds">-</span></div>
+              </div>
+
+              <div class="nine-upper-summary-grid">
+                <div class="nine-upper-summary-card">
+                  <span>Phase</span>
+                  <strong id="nineUpperPhase">-</strong>
+                </div>
+                <div class="nine-upper-summary-card">
+                  <span>Thinker</span>
+                  <strong id="nineUpperThinker">-</strong>
+                </div>
+                <div class="nine-upper-summary-card">
+                  <span>Stake</span>
+                  <strong id="nineUpperStake">-</strong>
+                </div>
+                <div class="nine-upper-summary-card">
+                  <span>Progress</span>
+                  <strong id="nineUpperProgress">-</strong>
+                </div>
+              </div>
+
+              <div id="nineUpperStatus" class="nine-upper-status" role="status" aria-live="polite">
+                <span id="nineUpperStatusIcon" class="nine-upper-status-icon">🎭</span>
+                <div>
+                  <strong>Your next move</strong>
+                  <div id="nineUpperStatusBody">Waiting for game state…</div>
+                </div>
+              </div>
+
+              <div class="nine-upper-main-grid">
+                <div class="nine-upper-column nine-upper-column--main">
+                  <section id="nineUpperRoleCard" class="nine-upper-role-card">
+                    <div class="nine-upper-role-icon" id="nineUpperRoleIcon">🎭</div>
+                    <div>
+                      <span>Your secret role</span>
+                      <strong id="nineUpperRoleName">-</strong>
+                      <p id="nineUpperRoleCopy">Your role will appear here.</p>
+                    </div>
+                  </section>
+
+                  <section id="nineUpperDifficultyStage" class="nine-upper-stage-card hidden">
+                    <div class="nine-upper-stage-heading">
+                      <div>
+                        <span class="nine-upper-step-pill">1</span>
+                        <strong>Choose the stakes</strong>
+                      </div>
+                      <span>Harder cards are worth more points.</span>
+                    </div>
+                    <div id="nineUpperDifficultyButtons" class="nine-upper-difficulty-grid"></div>
+                  </section>
+
+                  <section id="nineUpperTermStage" class="nine-upper-term-card hidden">
+                    <div class="nine-upper-term-topline">
+                      <span id="nineUpperDifficultyPill">-</span>
+                      <span id="nineUpperCategoryHint">-</span>
+                    </div>
+                    <div id="nineUpperTerm" class="nine-upper-term">-</div>
+                    <div id="nineUpperPronunciation" class="nine-upper-pronunciation"></div>
+                    <div id="nineUpperTruthBox" class="nine-upper-truth-box hidden">
+                      <span>📜 The real explanation — only you can see this</span>
+                      <strong id="nineUpperTruth">-</strong>
+                    </div>
+                  </section>
+
+                  <section id="nineUpperStatementStage" class="nine-upper-stage-card hidden">
+                    <div class="nine-upper-stage-heading">
+                      <div>
+                        <span class="nine-upper-step-pill">2</span>
+                        <strong>Make your case</strong>
+                      </div>
+                      <span id="nineUpperStatementCounter">0/0 ready</span>
+                    </div>
+                    <p id="nineUpperStatementPrompt" class="nine-upper-stage-copy">Explain the term convincingly without revealing your role.</p>
+                    <div id="nineUpperStatementComposer" class="nine-upper-composer">
+                      <textarea id="nineUpperStatementInput" maxlength="280" rows="4" placeholder="Write one confident explanation…"></textarea>
+                      <div class="nine-upper-composer-footer">
+                        <span id="nineUpperCharacterCount">0/280</span>
+                        <button id="nineUpperSubmitStatementBtn" class="nine-upper-primary-btn has-explanation" type="button">Lock Statement</button>
+                      </div>
+                    </div>
+                    <div id="nineUpperLockedStatement" class="nine-upper-locked-statement hidden"></div>
+                  </section>
+
+                  <section id="nineUpperGuessStage" class="nine-upper-stage-card hidden">
+                    <div class="nine-upper-stage-heading">
+                      <div>
+                        <span class="nine-upper-step-pill">3</span>
+                        <strong>Find the truth-teller</strong>
+                      </div>
+                      <span>Discuss, question, then decide.</span>
+                    </div>
+                    <div id="nineUpperStatements" class="nine-upper-statement-grid"></div>
+                    <div class="nine-upper-choice-row">
+                      <span id="nineUpperSelectedChoice">No player selected</span>
+                      <button id="nineUpperChooseBtn" class="nine-upper-primary-btn has-explanation" type="button">Lock Choice</button>
+                    </div>
+                    <div class="hint">Click the space around the cards or press Esc to cancel an unlocked selection.</div>
+                  </section>
+
+                  <section id="nineUpperResultStage" class="nine-upper-stage-card hidden">
+                    <div id="nineUpperResultBanner" class="nine-upper-result-banner"></div>
+                    <div class="nine-upper-answer-reveal">
+                      <span>📖 Real explanation</span>
+                      <strong id="nineUpperResultDefinition">-</strong>
+                    </div>
+                    <div id="nineUpperResultStatements" class="nine-upper-statement-grid"></div>
+                    <div id="nineUpperNextRoundRow" class="nine-upper-next-row">
+                      <span id="nineUpperReadyStatus">Ready 0/0</span>
+                      <button id="nineUpperNextRoundBtn" class="nine-upper-primary-btn has-explanation" type="button">Next Round</button>
+                    </div>
+                    <div id="nineUpperGameOverRow" class="nine-upper-next-row hidden">
+                      <span id="nineUpperWinnerText">-</span>
+                      <button id="nineUpperPlayAgainBtn" class="nine-upper-primary-btn has-explanation" type="button">Play Again</button>
+                    </div>
+                  </section>
+                </div>
+
+                <aside class="nine-upper-column">
+                  <section class="nine-upper-stage-card nine-upper-scoreboard-card">
+                    <div class="nine-upper-stage-heading">
+                      <div><span class="nine-upper-step-pill">🏆</span><strong>Scoreboard</strong></div>
+                    </div>
+                    <div id="nineUpperPlayers" class="nine-upper-player-list"></div>
+                  </section>
+                  <section class="nine-upper-stage-card nine-upper-cheat-sheet">
+                    <strong>Scoring</strong>
+                    <p>✅ Correct: Thinker + Truth-teller score the card value.</p>
+                    <p>🎭 Fooled: the selected Bluffer scores the card value.</p>
+                  </section>
+                </aside>
+              </div>
+            </div>
+
             <div id="wordDecodePanel" class="hidden">
               <div class="row">
                 <div>Phase: <span id="wordDecodePhase">-</span></div>
@@ -6375,7 +6541,7 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js"></script>
-  <script src="/static/games/shared.js?v=app_v14"></script>
+  <script src="/static/games/shared.js?v=app_v15"></script>
   <script src="/static/games/blokus.js?v=app_v6"></script>
   <script src="/static/games/carcassonne.js?v=app_v6"></script>
   <script src="/static/games/azul.js?v=app_v4"></script>
@@ -6393,6 +6559,7 @@
   <script src="/static/games/decrypto.js?v=app_v4"></script>
   <script src="/static/games/wavelength.js?v=app_v4"></script>
   <script src="/static/games/dumb_questions.js?v=app_v1"></script>
+  <script src="/static/games/nine_upper.js?v=app_v1"></script>
   <script src="/static/games/word_decode.js?v=app_v4"></script>
   <script src="/static/games/trekking.js?v=app_v4"></script>
   <script src="/static/games/aidixit.js?v=app_v4"></script>
@@ -6446,7 +6613,7 @@
   <script src="/static/games/ra.js?v=app_v7"></script>
   <script src="/static/games/scout.js?v=app_v4"></script>
   <script src="/static/games/ark_nova.js?v=app_v22"></script>
-  <script src="/static/app.js?v=app_v17"></script>
-  <script src="/static/room.js?v=app_v28"></script>
+  <script src="/static/app.js?v=app_v18"></script>
+  <script src="/static/room.js?v=app_v29"></script>
 </body>
 </html>
