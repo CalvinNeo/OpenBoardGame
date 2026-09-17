@@ -221,6 +221,8 @@ class ArkNovaGameTests(unittest.TestCase):
         options = {item["id"]: item for item in view["association_supply"]["university_options"]}
         self.assertEqual(options["university_science"]["science"], 2)
         self.assertEqual(options["university_reputation"]["reputation"], 2)
+        self.assertEqual(options["university_hand_limit"]["reputation"], 1)
+        self.assertEqual(options["university_hand_limit"].get("science", 0), 0)
         self.assertEqual(options["university_hand_limit"]["hand_limit"], 5)
         self.assertTrue(all(item["available"] for item in options.values()))
 
@@ -270,6 +272,26 @@ class ArkNovaGameTests(unittest.TestCase):
         player = state["players"]["p1"]
         self.assertEqual(player["reputation"], before_reputation + 2)
         self.assertEqual(player["tags"]["science"], 1)
+
+    def test_hand_limit_university_grants_one_reputation_and_no_research_icon(self) -> None:
+        state = self.make_state()
+        player = state["players"]["p1"]
+        before_reputation = player["reputation"]
+        before_science = player.get("tags", {}).get("science", 0)
+        self.set_slot(state, "p1", "association", 4)
+        _, error = ArkNovaGame.apply_action(
+            state,
+            "p1",
+            {
+                "type": "association",
+                "tasks": [{"task": "university", "university_id": "university_hand_limit"}],
+            },
+        )
+        self.assertIsNone(error)
+        player = state["players"]["p1"]
+        self.assertEqual(player["reputation"], before_reputation + 1)
+        self.assertEqual(player["hand_limit"], 5)
+        self.assertEqual(player.get("tags", {}).get("science", 0), before_science)
 
     def test_association_tiles_trigger_icons_and_second_tiles_upgrade_an_action(self) -> None:
         state = self.make_state()

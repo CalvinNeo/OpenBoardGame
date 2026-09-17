@@ -226,7 +226,7 @@
 - 后端为三种大学补齐稳定名称和奖励数据：
   - Research university：`🔬×2`
   - Reputation university：`🔬×1`、`🎓+2`
-  - Hand-limit university：`🔬×1`、手牌上限 `5`
+  - Hand-limit university：`🎓+1`、手牌上限 `5`
 - 三种大学各只有一块，组成所有玩家共享的协会版块供应；取得后移出版块，并在下一次休息时补回。
 - public view 为每种大学返回 `available`、`owned_by_you` 和 `on_board`，服务端在领取时再次校验该板块仍在场。
 - 前端改为三张可选择的单选卡，而不是没有解释的普通下拉框。

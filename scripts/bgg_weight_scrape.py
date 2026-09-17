@@ -34,6 +34,7 @@ GAME_URLS = {
     "witchs_brew": "https://boardgamegeek.com/boardgame/34084/witchs-brew",
     "tacta": "https://boardgamegeek.com/boardgame/401636/tacta",
     "subtext": "https://boardgamegeek.com/boardgame/265684/subtext",
+    "kronologic": "https://boardgamegeek.com/boardgame/402111/kronologic-paris-1920",
     # word_decode is intentionally omitted: BGG has no entry for it as of 2026-09-12.
 }
 

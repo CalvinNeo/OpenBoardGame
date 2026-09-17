@@ -115,6 +115,13 @@ function formatTagironTile(tile) {
   return `${prefix}${number}`;
 }
 
+function setTagironStatusText(element, value) {
+  if (!element) return;
+  const text = String(value ?? "-");
+  element.textContent = text;
+  element.title = text;
+}
+
 function renderTagironYourTiles(view) {
   if (!tagironYourTiles) return;
   tagironYourTiles.innerHTML = "";
@@ -296,7 +303,7 @@ function renderTagironGuessForm(view) {
     filterWrap.className = "tagiron-filter";
 
     const colorRow = document.createElement("div");
-    colorRow.className = "tagiron-filter-row";
+    colorRow.className = "tagiron-filter-row tagiron-filter-colors";
     [
       { key: "red", label: "🔴", className: "tagiron-filter-red" },
       { key: "blue", label: "🔵", className: "tagiron-filter-blue" },
@@ -320,7 +327,7 @@ function renderTagironGuessForm(view) {
     filterWrap.appendChild(colorRow);
 
     const numberRow = document.createElement("div");
-    numberRow.className = "tagiron-filter-row";
+    numberRow.className = "tagiron-filter-row tagiron-filter-numbers";
     for (let n = 0; n <= 9; n += 1) {
       const btn = document.createElement("button");
       btn.type = "button";
@@ -422,7 +429,9 @@ function renderTagironPlayers(view) {
     name.textContent = player.name || player.player_id;
     const meta = document.createElement("div");
     meta.className = "player-meta";
-    meta.textContent = `tiles ${player.tile_count}`;
+    meta.textContent = `×${player.tile_count}`;
+    meta.title = `${player.tile_count} tiles`;
+    meta.setAttribute("aria-label", `${player.tile_count} tiles`);
     card.appendChild(name);
     card.appendChild(meta);
 
@@ -561,20 +570,19 @@ function renderTagironGameState(data) {
   const view = data.view || {};
   currentTagironView = view;
 
-  if (tagironPhaseLabel) tagironPhaseLabel.textContent = view.phase || "-";
-  if (tagironRoundLabel) tagironRoundLabel.textContent = view.round ?? "-";
-  if (tagironTurnLabel) tagironTurnLabel.textContent = findPlayerName(view, view.current_turn) || "-";
-  if (tagironGuessTargetLabel) {
-    const target = view.guess_target || {};
-    const label = target.type === "center" ? "Center" : "Opponent";
-    tagironGuessTargetLabel.textContent = `${label} (${target.count ?? 0})`;
-  }
-  if (tagironCentralCountLabel) tagironCentralCountLabel.textContent = view.central_count ?? 0;
+  setTagironStatusText(tagironPhaseLabel, view.phase || "-");
+  setTagironStatusText(tagironRoundLabel, view.round ?? "-");
+  setTagironStatusText(tagironTurnLabel, findPlayerName(view, view.current_turn) || "-");
+  const target = view.guess_target || {};
+  const targetLabel = target.type === "center" ? "Center" : "Opp.";
+  setTagironStatusText(tagironGuessTargetLabel, `${targetLabel} (${target.count ?? 0})`);
+  setTagironStatusText(tagironCentralCountLabel, view.central_count ?? 0);
   if (tagironWinnersLabel) {
     const winners = Array.isArray(view.winners) ? view.winners : [];
-    tagironWinnersLabel.textContent = winners.length
-      ? winners.map((pid) => findPlayerName(view, pid)).join(", ")
-      : "-";
+    setTagironStatusText(
+      tagironWinnersLabel,
+      winners.length ? winners.map((pid) => findPlayerName(view, pid)).join(", ") : "-",
+    );
   }
 
   renderTagironYourTiles(view);

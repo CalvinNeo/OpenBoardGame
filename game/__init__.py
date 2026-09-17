@@ -35,6 +35,7 @@ from game.in_a_grove import InAGroveGame
 from game.isle_of_skye import IsleOfSkyeGame
 from game.istanbul import IstanbulGame
 from game.kobayakawa import KobayakawaGame
+from game.kronologic import KronologicGame
 from game.lost_code import LostCodeGame
 from game.manila import ManilaGame
 from game.patchwork import PatchworkGame
@@ -104,6 +105,7 @@ __all__ = [
     "IsleOfSkyeGame",
     "IstanbulGame",
     "KobayakawaGame",
+    "KronologicGame",
     "LostCodeGame",
     "ManilaGame",
     "PatchworkGame",

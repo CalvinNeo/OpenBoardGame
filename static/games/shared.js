@@ -158,6 +158,15 @@ function emitRoomStart() {
       preset_id: presetId,
       seed,
     };
+  } else if (currentGameType === "kronologic") {
+    payload.config = typeof getKronologicRoomConfig === "function"
+      ? getKronologicRoomConfig()
+      : {
+          case_source: "random",
+          difficulty: "any",
+          case_id: "sealed-score-01",
+          seed: "",
+        };
   } else if (currentGameType === "davinci_code") {
     const mode = davinciCodeModeSelect ? davinciCodeModeSelect.value || "standard" : "standard";
     payload.config = { mode };
@@ -256,6 +265,9 @@ function renderRoomState(state) {
     if (typeof clearTuringMachineState === "function") {
       clearTuringMachineState();
     }
+    if (typeof clearKronologicState === "function") {
+      clearKronologicState();
+    }
     clearDrawGuessState();
     clearBlitzSketchState();
     clearFakeArtistState();
@@ -338,6 +350,9 @@ function renderRoomState(state) {
   updateThingsInRingsConfigRow();
   if (typeof updateTuringMachineConfigRow === "function") {
     updateTuringMachineConfigRow();
+  }
+  if (typeof updateKronologicConfigRow === "function") {
+    updateKronologicConfigRow();
   }
   if (typeof updateDavinciCodeConfigRow === "function") {
     updateDavinciCodeConfigRow();

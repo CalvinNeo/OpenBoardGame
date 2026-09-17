@@ -498,7 +498,7 @@ def _bot_status_payload(room: Room) -> Dict:
 
 
 def _public_bot_action(game_type: str, action: Dict) -> Dict:
-    if game_type in ("subtext", "bomb_busters"):
+    if game_type in ("subtext", "bomb_busters", "kronologic"):
         return {"type": action.get("type")}
     return action
 

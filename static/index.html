@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css?v=app_v72" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v74" />
   <link rel="stylesheet" href="/static/ark_nova.css?v=app_v21" />
 </head>
 <body>
@@ -956,6 +956,51 @@
     </div>
   </section>
 
+  <section id="kronologicHelpModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="kronologicHelpModalTitle">
+    <div class="modal-content kronologic-modal-content">
+      <div class="modal-header">
+        <h2 id="kronologicHelpModalTitle">Kronologic: Paris 1920 — Game Rules</h2>
+        <button id="kronologicHelpCloseBtn" type="button">Close</button>
+      </div>
+      <div id="kronologicHelpContent" class="modal-body kronologic-help-content"></div>
+    </div>
+  </section>
+
+  <section id="kronologicExplainModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="kronologicExplainModalTitle">
+    <div class="modal-content kronologic-modal-content kronologic-explain-content">
+      <div class="modal-header">
+        <h2 id="kronologicExplainModalTitle">Control Explanation</h2>
+        <button id="kronologicExplainCloseBtn" type="button">Close</button>
+      </div>
+      <div id="kronologicExplainContent" class="modal-body"></div>
+    </div>
+  </section>
+
+  <section id="kronologicAccusationModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="kronologicAccusationTitle">
+    <div class="modal-content kronologic-modal-content kronologic-accusation-modal">
+      <div class="modal-header">
+        <h2 id="kronologicAccusationTitle">Lock In Your Theory</h2>
+        <button id="kronologicAccusationCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <p id="kronologicAccusationPrompt" class="kronologic-modal-prompt"></p>
+        <div class="kronologic-answer-grid">
+          <label for="kronologicAnswerCharacter">Person</label>
+          <select id="kronologicAnswerCharacter"></select>
+          <label for="kronologicAnswerLocation">Place</label>
+          <select id="kronologicAnswerLocation"></select>
+          <label for="kronologicAnswerTime">Time</label>
+          <select id="kronologicAnswerTime"></select>
+        </div>
+        <div id="kronologicAccusationWaiting" class="kronologic-waiting"></div>
+        <div class="row actions kronologic-modal-actions">
+          <button id="kronologicAccusationSubmitBtn" type="button" data-kronologic-explain="accusation-submit">Submit &amp; Invite Others</button>
+          <button id="kronologicAccusationDeclineBtn" type="button" data-kronologic-explain="accusation-decline">Decline</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section id="fakeArtistHelpModal" class="modal hidden" aria-hidden="true">
     <div class="modal-content fake-artist-help-modal">
       <div class="modal-header">
@@ -1265,6 +1310,7 @@
                     <option value="things_in_rings">Things in Rings</option>
                     <option value="davinci_code">Da Vinci Code</option>
                     <option value="turing_machine">Turing Machine</option>
+                    <option value="kronologic">Kronologic: Paris 1920</option>
                     <option value="aidixit">AI Dixit</option>
                     <option value="impression_flower">Impression Flower</option>
                     <option value="splendor">Splendor</option>
@@ -1704,6 +1750,40 @@
                     </div>
                     <div class="hint">Original practice setups. Shared equipment is not included.</div>
                   </div>
+                  <div class="game-config-card hidden" id="kronologicConfigBox" aria-hidden="true">
+                    <div class="game-config-title">Kronologic · Original Case Pack</div>
+                    <div class="row compact-row">
+                      <label for="kronologicSourceSelect">Case Source</label>
+                      <select id="kronologicSourceSelect">
+                        <option value="random" selected>Recommended Random</option>
+                        <option value="preset">Choose Case</option>
+                      </select>
+                    </div>
+                    <div class="row compact-row" id="kronologicDifficultyRow">
+                      <label for="kronologicDifficultySelect">Difficulty</label>
+                      <select id="kronologicDifficultySelect">
+                        <option value="any" selected>Any</option>
+                        <option value="1">★</option>
+                        <option value="2">★★</option>
+                        <option value="3">★★★</option>
+                      </select>
+                    </div>
+                    <div class="row compact-row hidden" id="kronologicCaseRow" aria-hidden="true">
+                      <label for="kronologicCaseSelect">Case</label>
+                      <select id="kronologicCaseSelect">
+                        <option value="sealed-score-01">★ The Missing Cue</option>
+                        <option value="sealed-score-02">★ The Brass Key</option>
+                        <option value="sealed-score-03">★★ Echoes Backstage</option>
+                        <option value="sealed-score-04">★★ The Silent Mechanism</option>
+                        <option value="sealed-score-05">★★★ The Last Encore</option>
+                      </select>
+                    </div>
+                    <div class="row compact-row" id="kronologicSeedRow">
+                      <label for="kronologicSeedInput">Seed</label>
+                      <input id="kronologicSeedInput" type="text" maxlength="80" placeholder="Leave blank for random" />
+                    </div>
+                    <div class="hint">Original compatible cases; commercial scenarios are not included.</div>
+                  </div>
                 </div>
                 <div class="row hidden toggle-row" id="autoSaveRow">
                   <label for="autoSaveToggle">Auto Save</label>
@@ -1853,6 +1933,10 @@
             <div class="panel-header-actions" id="turingMachineHeaderActions" style="display: none;">
               <button id="turingMachineHelpBtn" class="turing-machine-header-btn" type="button">Help</button>
               <button id="turingMachineExplainBtn" class="turing-machine-header-btn" type="button">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="kronologicHeaderActions" style="display: none;">
+              <button id="kronologicHelpBtn" class="kronologic-header-btn" type="button">Help</button>
+              <button id="kronologicExplainBtn" class="kronologic-header-btn" type="button" aria-pressed="false">Explain</button>
             </div>
             <div class="panel-header-actions" id="fakeArtistHeaderActions" style="display: none;">
               <button id="fakeArtistHelpBtn" class="fake-artist-header-btn" type="button">Help</button>
@@ -3804,15 +3888,31 @@
             </div>
 
             <div id="tagironPanel" class="hidden">
-              <div class="row">
-                <div>Phase: <span id="tagironPhase">-</span></div>
-                <div>Round: <span id="tagironRound">-</span></div>
-                <div>Current Turn: <span id="tagironTurn">-</span></div>
-              </div>
-              <div class="row">
-                <div>Guess Target: <span id="tagironGuessTarget">-</span></div>
-                <div>Central Tiles: <span id="tagironCentralCount">-</span></div>
-                <div>Winners: <span id="tagironWinners">-</span></div>
+              <div class="tagiron-status-grid" aria-label="Game status">
+                <div class="tagiron-status-item">
+                  <span class="tagiron-status-label">Phase</span>
+                  <span id="tagironPhase" class="tagiron-status-value">-</span>
+                </div>
+                <div class="tagiron-status-item">
+                  <span class="tagiron-status-label">Round</span>
+                  <span id="tagironRound" class="tagiron-status-value">-</span>
+                </div>
+                <div class="tagiron-status-item">
+                  <span class="tagiron-status-label">Turn</span>
+                  <span id="tagironTurn" class="tagiron-status-value">-</span>
+                </div>
+                <div class="tagiron-status-item">
+                  <span class="tagiron-status-label">Target</span>
+                  <span id="tagironGuessTarget" class="tagiron-status-value">-</span>
+                </div>
+                <div class="tagiron-status-item">
+                  <span class="tagiron-status-label">Center</span>
+                  <span id="tagironCentralCount" class="tagiron-status-value">-</span>
+                </div>
+                <div class="tagiron-status-item">
+                  <span class="tagiron-status-label">Winners</span>
+                  <span id="tagironWinners" class="tagiron-status-value">-</span>
+                </div>
               </div>
 
               <h3>Your Tiles</h3>
@@ -3878,6 +3978,123 @@
                   <div class="davinci-section-title">Public Log</div>
                   <div id="davinciCodeLog" class="davinci-log"></div>
                 </section>
+              </div>
+            </div>
+
+            <div id="kronologicPanel" class="hidden">
+              <div class="kronologic-game-shell">
+                <section class="kronologic-case-card">
+                  <div class="kronologic-case-heading">
+                    <div>
+                      <div id="kronologicContentNotice" class="kronologic-content-notice">Original Case Pack</div>
+                      <h2 id="kronologicCaseTitle">Kronologic</h2>
+                      <p id="kronologicCaseStory"></p>
+                    </div>
+                    <div class="kronologic-case-meta">
+                      <span id="kronologicDifficulty" class="kronologic-badge">—</span>
+                      <span id="kronologicPhase" class="kronologic-badge">—</span>
+                      <span id="kronologicTurn" class="kronologic-badge">Turn —</span>
+                    </div>
+                  </div>
+                  <div id="kronologicStatus" class="kronologic-status" role="status" aria-live="polite">Waiting for case data…</div>
+                </section>
+
+                <div class="kronologic-layout">
+                  <div class="kronologic-main-column">
+                    <section class="kronologic-section">
+                      <div class="kronologic-section-heading">
+                        <h3>Venue Map</h3>
+                        <span>Move through connected rooms every time.</span>
+                      </div>
+                      <div id="kronologicMap" class="kronologic-map" data-kronologic-explain="location"></div>
+                    </section>
+
+                    <section id="kronologicQueryCard" class="kronologic-section kronologic-query-card">
+                      <div class="kronologic-section-heading kronologic-query-heading">
+                        <h3>Ask a Question</h3>
+                        <span>Choose a place, then a time or person.</span>
+                      </div>
+                      <div class="kronologic-query-tabs" role="tablist" aria-label="Question type">
+                        <button id="kronologicTimeModeBtn" type="button" data-kronologic-explain="query-mode" aria-pressed="true">🕒 Time</button>
+                        <button id="kronologicCharacterModeBtn" type="button" data-kronologic-explain="query-mode" aria-pressed="false">🎭 Person</button>
+                      </div>
+                      <div id="kronologicSelector" class="kronologic-selector"></div>
+                      <div id="kronologicQuerySummary" class="kronologic-query-summary">Select a room and a time.</div>
+                      <div class="kronologic-action-grid">
+                        <button id="kronologicAskBtn" type="button" data-kronologic-explain="ask">Ask</button>
+                        <button id="kronologicAccuseBtn" type="button" data-kronologic-explain="accusation">Make Accusation</button>
+                      </div>
+                    </section>
+
+                    <section id="kronologicReviewCard" class="kronologic-section kronologic-review-card hidden" aria-hidden="true">
+                      <div class="kronologic-section-heading">
+                        <h3>Review Pause</h3>
+                        <span>Everyone gets time to update their notes.</span>
+                      </div>
+                      <div id="kronologicReviewMessage" class="kronologic-review-message"></div>
+                      <div id="kronologicReviewWaiting" class="kronologic-waiting"></div>
+                      <button id="kronologicReadyBtn" type="button" data-kronologic-explain="ready">Ready for Next Turn</button>
+                    </section>
+
+                    <section id="kronologicSolutionSection" class="kronologic-section hidden" aria-hidden="true">
+                      <div class="kronologic-section-heading">
+                        <h3>Case Reconstruction</h3>
+                        <span id="kronologicSoloRating"></span>
+                      </div>
+                      <div id="kronologicSolution"></div>
+                      <button id="kronologicPlayAgainBtn" type="button" data-kronologic-explain="play-again">Play Again</button>
+                    </section>
+                  </div>
+
+                  <div class="kronologic-side-column">
+                    <section class="kronologic-section kronologic-latest-clue" data-kronologic-explain="clue-history">
+                      <div class="kronologic-section-heading"><h3>Latest Clue</h3></div>
+                      <div id="kronologicLatestShared" class="kronologic-clue kronologic-clue-shared">No question yet.</div>
+                      <div id="kronologicLatestPrivate" class="kronologic-clue kronologic-clue-private">Your private clue will appear here.</div>
+                    </section>
+
+                    <section class="kronologic-section">
+                      <div class="kronologic-section-heading"><h3>Investigators</h3></div>
+                      <div id="kronologicPlayers" class="kronologic-players"></div>
+                    </section>
+
+                    <section class="kronologic-section kronologic-notebook" data-kronologic-explain="notebook">
+                      <div class="kronologic-section-heading">
+                        <h3>Your Notebook</h3>
+                        <span>Tap a person to cycle · ○ ✕ ★.</span>
+                      </div>
+                      <div id="kronologicNotebookTimes" class="kronologic-time-tabs"></div>
+                      <div id="kronologicNotebook" class="kronologic-notebook-grid"></div>
+                      <details id="kronologicCountNotes" class="kronologic-count-notes">
+                        <summary>Count Notes</summary>
+                        <div class="kronologic-count-mode">
+                          <button id="kronologicCountTimeBtn" type="button" data-kronologic-explain="count-notes">Room totals</button>
+                          <button id="kronologicCountCharacterBtn" type="button" data-kronologic-explain="count-notes">Person visits</button>
+                        </div>
+                        <div id="kronologicCountCharacterPicker" class="kronologic-selector"></div>
+                        <div id="kronologicCountGrid" class="kronologic-count-grid"></div>
+                      </details>
+                    </section>
+
+                    <section class="kronologic-section kronologic-history-section" data-kronologic-explain="clue-history">
+                      <div class="kronologic-history-columns">
+                        <div>
+                          <h3>📣 Public Clues</h3>
+                          <div id="kronologicPublicClues" class="kronologic-history"></div>
+                        </div>
+                        <div>
+                          <h3>🔒 My Private Clues</h3>
+                          <div id="kronologicPrivateClues" class="kronologic-history"></div>
+                        </div>
+                      </div>
+                    </section>
+
+                    <section class="kronologic-section">
+                      <div class="kronologic-section-heading"><h3>Public Log</h3></div>
+                      <div id="kronologicLog" class="kronologic-history"></div>
+                    </section>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -6110,7 +6327,7 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js"></script>
-  <script src="/static/games/shared.js?v=app_v12"></script>
+  <script src="/static/games/shared.js?v=app_v13"></script>
   <script src="/static/games/blokus.js?v=app_v6"></script>
   <script src="/static/games/carcassonne.js?v=app_v6"></script>
   <script src="/static/games/azul.js?v=app_v4"></script>
@@ -6152,11 +6369,12 @@
   <script src="/static/games/coyote.js?v=app_v4"></script>
   <script src="/static/games/in_a_grove.js?v=app_v2"></script>
   <script src="/static/games/citadels.js?v=app_v6"></script>
-  <script src="/static/games/tagiron.js?v=app_v4"></script>
+  <script src="/static/games/tagiron.js?v=app_v5"></script>
   <script src="/static/games/davinci_code.js?v=app_v4"></script>
   <script src="/static/games/lost_code.js?v=app_v4"></script>
   <script src="/static/games/criminal_dance.js?v=app_v4"></script>
   <script src="/static/games/turing_machine.js?v=app_v6"></script>
+  <script src="/static/games/kronologic.js?v=app_v1"></script>
   <script src="/static/games/halli_galli.js?v=app_v4"></script>
   <script src="/static/games/texas_holdem.js?v=app_v4"></script>
   <script src="/static/games/yahtzee.js?v=app_v4"></script>
@@ -6180,7 +6398,7 @@
   <script src="/static/games/ra.js?v=app_v7"></script>
   <script src="/static/games/scout.js?v=app_v4"></script>
   <script src="/static/games/ark_nova.js?v=app_v22"></script>
-  <script src="/static/app.js?v=app_v16"></script>
-  <script src="/static/room.js?v=app_v27"></script>
+  <script src="/static/app.js?v=app_v17"></script>
+  <script src="/static/room.js?v=app_v28"></script>
 </body>
 </html>

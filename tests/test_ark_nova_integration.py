@@ -177,6 +177,8 @@ class ArkNovaIntegrationTests(unittest.TestCase):
         self.assertIn("option.available === false", script)
         self.assertIn("arkNovaUniversityRewardsMarkup", script)
         self.assertIn('science: 1, reputation: 2', script)
+        self.assertIn('reputation: 1, hand_limit: 5', script)
+        self.assertNotIn('university_hand_limit: { name: "Hand-limit university", science:', script)
         self.assertIn("Taken until the next Break", script)
         self.assertIn("Available on the Association board", script)
         self.assertIn(".arkn-university-option.is-selected", stylesheet)

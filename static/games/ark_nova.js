@@ -57,7 +57,7 @@
   const ARK_NOVA_UNIVERSITIES = Object.freeze({
     university_science: { name: "Research university", science: 2 },
     university_reputation: { name: "Reputation university", science: 1, reputation: 2 },
-    university_hand_limit: { name: "Hand-limit university", science: 1, hand_limit: 5 },
+    university_hand_limit: { name: "Hand-limit university", reputation: 1, hand_limit: 5 },
   });
 
   // Printed enclosure pieces are fixed polyhexes. The first coordinate is the

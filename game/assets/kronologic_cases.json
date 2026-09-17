@@ -1,0 +1,420 @@
+{
+  "schema_version": 1,
+  "catalog_id": "original-compatible-v1",
+  "catalog_status": "original-compatible",
+  "commercial_scenarios_included": false,
+  "content_notice": "Original Case Pack · Not the commercial scenarios",
+  "characters": [
+    {
+      "id": "archivist",
+      "name": "Archivist",
+      "emoji": "📚",
+      "code": "AR",
+      "pattern": "lines"
+    },
+    {
+      "id": "conductor",
+      "name": "Conductor",
+      "emoji": "🎼",
+      "code": "CO",
+      "pattern": "diagonal"
+    },
+    {
+      "id": "engineer",
+      "name": "Engineer",
+      "emoji": "🧰",
+      "code": "EN",
+      "pattern": "dots"
+    },
+    {
+      "id": "patron",
+      "name": "Patron",
+      "emoji": "🎩",
+      "code": "PA",
+      "pattern": "diamonds"
+    },
+    {
+      "id": "singer",
+      "name": "Singer",
+      "emoji": "🎤",
+      "code": "SI",
+      "pattern": "waves"
+    },
+    {
+      "id": "courier",
+      "name": "Courier",
+      "emoji": "✉️",
+      "code": "CU",
+      "pattern": "crosshatch"
+    }
+  ],
+  "locations": [
+    {
+      "id": "grand_hall",
+      "name": "Grand Hall",
+      "emoji": "✨"
+    },
+    {
+      "id": "archive",
+      "name": "Archive",
+      "emoji": "📚"
+    },
+    {
+      "id": "rehearsal",
+      "name": "Rehearsal Room",
+      "emoji": "🎼"
+    },
+    {
+      "id": "backstage",
+      "name": "Backstage",
+      "emoji": "🎭"
+    },
+    {
+      "id": "dressing_room",
+      "name": "Dressing Room",
+      "emoji": "🪞"
+    },
+    {
+      "id": "orchestra_pit",
+      "name": "Orchestra Pit",
+      "emoji": "🎻"
+    }
+  ],
+  "edges": [
+    [
+      "grand_hall",
+      "archive"
+    ],
+    [
+      "grand_hall",
+      "rehearsal"
+    ],
+    [
+      "grand_hall",
+      "backstage"
+    ],
+    [
+      "archive",
+      "dressing_room"
+    ],
+    [
+      "rehearsal",
+      "orchestra_pit"
+    ],
+    [
+      "backstage",
+      "dressing_room"
+    ],
+    [
+      "backstage",
+      "orchestra_pit"
+    ]
+  ],
+  "cases": [
+    {
+      "case_id": "sealed-score-01",
+      "title": "The Missing Cue",
+      "story": "A marked cue sheet changed hands during rehearsal. Find who met the Archivist alone, and identify where and when the exchange happened.",
+      "difficulty": 1,
+      "anchor_character_id": "archivist",
+      "solo_thresholds": {
+        "gold_max": 8,
+        "silver_max": 13
+      },
+      "paths": {
+        "archivist": [
+          "archive",
+          "dressing_room",
+          "backstage",
+          "dressing_room",
+          "archive",
+          "dressing_room"
+        ],
+        "conductor": [
+          "dressing_room",
+          "backstage",
+          "grand_hall",
+          "archive",
+          "grand_hall",
+          "rehearsal"
+        ],
+        "engineer": [
+          "grand_hall",
+          "archive",
+          "grand_hall",
+          "rehearsal",
+          "orchestra_pit",
+          "rehearsal"
+        ],
+        "patron": [
+          "rehearsal",
+          "orchestra_pit",
+          "rehearsal",
+          "orchestra_pit",
+          "backstage",
+          "orchestra_pit"
+        ],
+        "singer": [
+          "orchestra_pit",
+          "rehearsal",
+          "orchestra_pit",
+          "backstage",
+          "orchestra_pit",
+          "rehearsal"
+        ],
+        "courier": [
+          "backstage",
+          "orchestra_pit",
+          "backstage",
+          "grand_hall",
+          "rehearsal",
+          "orchestra_pit"
+        ]
+      }
+    },
+    {
+      "case_id": "sealed-score-02",
+      "title": "The Brass Key",
+      "story": "A brass key was passed during the evening. Trace the Courier's only private meeting and identify the recipient, place, and time.",
+      "difficulty": 1,
+      "anchor_character_id": "courier",
+      "solo_thresholds": {
+        "gold_max": 9,
+        "silver_max": 14
+      },
+      "paths": {
+        "archivist": [
+          "archive",
+          "dressing_room",
+          "backstage",
+          "dressing_room",
+          "archive",
+          "dressing_room"
+        ],
+        "conductor": [
+          "dressing_room",
+          "archive",
+          "dressing_room",
+          "archive",
+          "dressing_room",
+          "backstage"
+        ],
+        "engineer": [
+          "orchestra_pit",
+          "rehearsal",
+          "orchestra_pit",
+          "backstage",
+          "dressing_room",
+          "archive"
+        ],
+        "patron": [
+          "backstage",
+          "dressing_room",
+          "archive",
+          "dressing_room",
+          "archive",
+          "dressing_room"
+        ],
+        "singer": [
+          "grand_hall",
+          "archive",
+          "grand_hall",
+          "rehearsal",
+          "grand_hall",
+          "backstage"
+        ],
+        "courier": [
+          "rehearsal",
+          "orchestra_pit",
+          "backstage",
+          "grand_hall",
+          "archive",
+          "dressing_room"
+        ]
+      }
+    },
+    {
+      "case_id": "sealed-score-03",
+      "title": "Echoes Backstage",
+      "story": "Someone delivered a secret instruction to the Conductor. Determine the person, room, and time of the Conductor's only private meeting.",
+      "difficulty": 2,
+      "anchor_character_id": "conductor",
+      "solo_thresholds": {
+        "gold_max": 10,
+        "silver_max": 16
+      },
+      "paths": {
+        "archivist": [
+          "orchestra_pit",
+          "backstage",
+          "dressing_room",
+          "backstage",
+          "orchestra_pit",
+          "backstage"
+        ],
+        "conductor": [
+          "grand_hall",
+          "archive",
+          "grand_hall",
+          "rehearsal",
+          "orchestra_pit",
+          "backstage"
+        ],
+        "engineer": [
+          "rehearsal",
+          "orchestra_pit",
+          "rehearsal",
+          "orchestra_pit",
+          "rehearsal",
+          "grand_hall"
+        ],
+        "patron": [
+          "archive",
+          "grand_hall",
+          "archive",
+          "grand_hall",
+          "backstage",
+          "grand_hall"
+        ],
+        "singer": [
+          "backstage",
+          "grand_hall",
+          "rehearsal",
+          "orchestra_pit",
+          "backstage",
+          "dressing_room"
+        ],
+        "courier": [
+          "dressing_room",
+          "backstage",
+          "dressing_room",
+          "backstage",
+          "orchestra_pit",
+          "rehearsal"
+        ]
+      }
+    },
+    {
+      "case_id": "sealed-score-04",
+      "title": "The Silent Mechanism",
+      "story": "The Engineer quietly demonstrated a hidden mechanism to one person. Work out who attended, in which room, and at what time.",
+      "difficulty": 2,
+      "anchor_character_id": "engineer",
+      "solo_thresholds": {
+        "gold_max": 11,
+        "silver_max": 17
+      },
+      "paths": {
+        "archivist": [
+          "archive",
+          "grand_hall",
+          "rehearsal",
+          "grand_hall",
+          "archive",
+          "grand_hall"
+        ],
+        "conductor": [
+          "backstage",
+          "grand_hall",
+          "backstage",
+          "grand_hall",
+          "backstage",
+          "grand_hall"
+        ],
+        "engineer": [
+          "dressing_room",
+          "backstage",
+          "dressing_room",
+          "archive",
+          "grand_hall",
+          "archive"
+        ],
+        "patron": [
+          "grand_hall",
+          "backstage",
+          "orchestra_pit",
+          "rehearsal",
+          "orchestra_pit",
+          "backstage"
+        ],
+        "singer": [
+          "rehearsal",
+          "grand_hall",
+          "rehearsal",
+          "grand_hall",
+          "archive",
+          "dressing_room"
+        ],
+        "courier": [
+          "orchestra_pit",
+          "rehearsal",
+          "orchestra_pit",
+          "backstage",
+          "dressing_room",
+          "backstage"
+        ]
+      }
+    },
+    {
+      "case_id": "sealed-score-05",
+      "title": "The Last Encore",
+      "story": "Before the final encore, the Singer held one private meeting. Identify the visitor, location, and exact time.",
+      "difficulty": 3,
+      "anchor_character_id": "singer",
+      "solo_thresholds": {
+        "gold_max": 12,
+        "silver_max": 19
+      },
+      "paths": {
+        "archivist": [
+          "dressing_room",
+          "archive",
+          "grand_hall",
+          "archive",
+          "dressing_room",
+          "backstage"
+        ],
+        "conductor": [
+          "rehearsal",
+          "orchestra_pit",
+          "rehearsal",
+          "grand_hall",
+          "rehearsal",
+          "grand_hall"
+        ],
+        "engineer": [
+          "archive",
+          "grand_hall",
+          "rehearsal",
+          "grand_hall",
+          "archive",
+          "dressing_room"
+        ],
+        "patron": [
+          "grand_hall",
+          "archive",
+          "dressing_room",
+          "archive",
+          "grand_hall",
+          "rehearsal"
+        ],
+        "singer": [
+          "backstage",
+          "orchestra_pit",
+          "rehearsal",
+          "orchestra_pit",
+          "backstage",
+          "orchestra_pit"
+        ],
+        "courier": [
+          "orchestra_pit",
+          "rehearsal",
+          "orchestra_pit",
+          "backstage",
+          "dressing_room",
+          "archive"
+        ]
+      }
+    }
+  ]
+}

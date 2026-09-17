@@ -560,6 +560,7 @@ const GAME_WEIGHT = {
   the_gang: 1.58,
   trekking_history: 1.76,
   turing_machine: 2.41,
+  kronologic: 2.05,
   wandering_towers: 1.59,
   yahtzee: 1.17,
   fake_artist: 1.09,
@@ -1569,6 +1570,9 @@ function resetRoomState() {
   if (typeof clearTuringMachineState === "function") {
     clearTuringMachineState();
   }
+  if (typeof clearKronologicState === "function") {
+    clearKronologicState();
+  }
   if (typeof clearTactaState === "function") {
     clearTactaState();
   }
@@ -1621,6 +1625,9 @@ function resetRoomState() {
   updateBlitzSketchConfigRow();
   if (typeof updateTuringMachineConfigRow === "function") {
     updateTuringMachineConfigRow();
+  }
+  if (typeof updateKronologicConfigRow === "function") {
+    updateKronologicConfigRow();
   }
   if (typeof updateLostCodeConfigRow === "function") {
     updateLostCodeConfigRow();
@@ -1740,6 +1747,9 @@ function resetRoomState() {
   }
   if (typeof updateTuringMachineConfigRowsFromSource === "function") {
     updateTuringMachineConfigRowsFromSource();
+  }
+  if (typeof resetKronologicRoomConfig === "function") {
+    resetKronologicRoomConfig();
   }
   createRoomPending = false;
   setCreateGameRowVisible(false);

@@ -10,6 +10,7 @@ from arknova_card_reference import (
     ANIMAL_ABILITY_PATTERNS,
     DATA_CORRECTIONS,
     FINAL_SCORING_RULES,
+    ORIGINAL_BASE_FINAL_SCORING_THRESHOLDS,
     SOURCE_REFERENCES,
     SPONSOR_EFFECT_TIMINGS,
     SPONSOR_EXTRA_EFFECTS,
@@ -814,6 +815,17 @@ def validate_ids(cards: list[dict[str, object]], first: int, last: int) -> None:
         raise ValueError(f"Card IDs differ: expected {first}-{last}, got {actual[:3]}...{actual[-3:]}")
 
 
+def validate_base_final_scoring_thresholds(cards: list[dict[str, object]]) -> None:
+    by_id = {str(card["id"]): card for card in cards}
+    for card_id, expected in ORIGINAL_BASE_FINAL_SCORING_THRESHOLDS.items():
+        actual = [int(step["requirement"]) for step in by_id[card_id]["scoring_steps"]]
+        if actual != expected:
+            raise ValueError(
+                f"Final scoring card {card_id} must use original base-game thresholds "
+                f"{expected}, not Marine Worlds replacement values {actual}"
+            )
+
+
 def main() -> None:
     source_lines = SOURCE_PATH.read_text(encoding="utf-8").splitlines()
     animals = parse_animal_cards(extract_section(source_lines, SECTION_HEADINGS["animal_cards"]))
@@ -827,6 +839,7 @@ def main() -> None:
     validate_ids(sponsors, 201, 264)
     validate_ids(projects, 101, 132)
     validate_ids(final_cards, 1, 11)
+    validate_base_final_scoring_thresholds(final_cards)
 
     summary = {
         "animal_cards": len(animals),

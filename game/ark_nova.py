@@ -100,7 +100,7 @@ BUILDING_SUPPLY = {
 UNIVERSITIES = (
     {"id": "university_science", "name": "Research university", "science": 2},
     {"id": "university_reputation", "name": "Reputation university", "science": 1, "reputation": 2},
-    {"id": "university_hand_limit", "name": "Hand-limit university", "science": 1, "hand_limit": 5},
+    {"id": "university_hand_limit", "name": "Hand-limit university", "reputation": 1, "hand_limit": 5},
 )
 BONUS_TOKEN_DEFS: Dict[str, Dict[str, Any]] = {
     "reputation_2": {"label": "Gain 2 reputation", "kind": "reputation", "amount": 2},
@@ -2513,9 +2513,11 @@ def _take_university(
         player["hand_limit"] = max(int(player["hand_limit"]), int(university["hand_limit"]))
     _apply_rewards(state, player_id, {"reputation": university.get("reputation", 0)}, events, university_id)
     _recompute_tags(player)
-    _queue_association_tile_icon_effects(
-        state, player_id, university_id, {"science": int(university.get("science", 0))},
-    )
+    science_icons = int(university.get("science", 0))
+    if science_icons:
+        _queue_association_tile_icon_effects(
+            state, player_id, university_id, {"science": science_icons},
+        )
     if len(player["universities"]) == 2:
         _queue_association_tile_upgrade(state, player_id, "university")
     events.append(_event("university", player_id=player_id, university_id=university_id))

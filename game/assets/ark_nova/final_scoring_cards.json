@@ -24,18 +24,18 @@
         "raw_zh": "2 -> 保育2"
       },
       {
-        "requirement": 3,
+        "requirement": 4,
         "reward": {
           "conservation": 3
         },
-        "raw_zh": "3 -> 保育3"
+        "raw_zh": "4 -> 保育3"
       },
       {
-        "requirement": 4,
+        "requirement": 5,
         "reward": {
           "conservation": 4
         },
-        "raw_zh": "4 -> 保育4"
+        "raw_zh": "5 -> 保育4"
       }
     ],
     "scoring_rule": {
@@ -125,11 +125,11 @@
         "raw_zh": "5 -> 保育3"
       },
       {
-        "requirement": 7,
+        "requirement": 6,
         "reward": {
           "conservation": 4
         },
-        "raw_zh": "7 -> 保育4"
+        "raw_zh": "6 -> 保育4"
       }
     ],
     "scoring_rule": {
@@ -232,32 +232,32 @@
     "description_zh": "根据你 支持的保护项目 ， 获得 {ConservationPoint} 。",
     "scoring_steps": [
       {
-        "requirement": 2,
+        "requirement": 3,
         "reward": {
           "conservation": 1
         },
-        "raw_zh": "2 -> 保育1"
-      },
-      {
-        "requirement": 3,
-        "reward": {
-          "conservation": 2
-        },
-        "raw_zh": "3 -> 保育2"
+        "raw_zh": "3 -> 保育1"
       },
       {
         "requirement": 4,
         "reward": {
-          "conservation": 3
+          "conservation": 2
         },
-        "raw_zh": "4 -> 保育3"
+        "raw_zh": "4 -> 保育2"
       },
       {
         "requirement": 5,
         "reward": {
+          "conservation": 3
+        },
+        "raw_zh": "5 -> 保育3"
+      },
+      {
+        "requirement": 6,
+        "reward": {
           "conservation": 4
         },
-        "raw_zh": "5 -> 保育4"
+        "raw_zh": "6 -> 保育4"
       }
     ],
     "scoring_rule": {
@@ -381,25 +381,25 @@
         "raw_zh": "3 -> 保育1"
       },
       {
-        "requirement": 5,
+        "requirement": 6,
         "reward": {
           "conservation": 2
         },
-        "raw_zh": "5 -> 保育2"
+        "raw_zh": "6 -> 保育2"
       },
       {
-        "requirement": 7,
+        "requirement": 8,
         "reward": {
           "conservation": 3
         },
-        "raw_zh": "7 -> 保育3"
+        "raw_zh": "8 -> 保育3"
       },
       {
-        "requirement": 9,
+        "requirement": 10,
         "reward": {
           "conservation": 4
         },
-        "raw_zh": "9 -> 保育4"
+        "raw_zh": "10 -> 保育4"
       }
     ],
     "scoring_rule": {
@@ -482,11 +482,11 @@
         "raw_zh": "5 -> 保育3"
       },
       {
-        "requirement": 6,
+        "requirement": 7,
         "reward": {
           "conservation": 4
         },
-        "raw_zh": "6 -> 保育4"
+        "raw_zh": "7 -> 保育4"
       }
     ],
     "scoring_rule": {
@@ -529,11 +529,11 @@
         "raw_zh": "6 -> 保育3"
       },
       {
-        "requirement": 7,
+        "requirement": 8,
         "reward": {
           "conservation": 4
         },
-        "raw_zh": "7 -> 保育4"
+        "raw_zh": "8 -> 保育4"
       }
     ],
     "scoring_rule": {

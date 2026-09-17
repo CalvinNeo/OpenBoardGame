@@ -36,6 +36,7 @@ from game.in_a_grove import InAGroveGame
 from game.isle_of_skye import IsleOfSkyeGame
 from game.istanbul import IstanbulGame
 from game.kobayakawa import KobayakawaGame
+from game.kronologic import KronologicGame
 from game.lost_code import LostCodeGame
 from game.manila import ManilaGame
 from game.patchwork import PatchworkGame
@@ -3880,6 +3881,132 @@ HOT_STREAK_CONFIG_SCHEMA = {
     "additionalProperties": False,
 }
 
+KRONOLOGIC_CHARACTER_IDS = ["archivist", "conductor", "engineer", "patron", "singer", "courier"]
+KRONOLOGIC_LOCATION_IDS = ["grand_hall", "archive", "rehearsal", "backstage", "dressing_room", "orchestra_pit"]
+KRONOLOGIC_CASE_IDS = [
+    "sealed-score-01",
+    "sealed-score-02",
+    "sealed-score-03",
+    "sealed-score-04",
+    "sealed-score-05",
+]
+KRONOLOGIC_ANSWER_PROPERTIES = {
+    "type": {"type": "string"},
+    "character_id": {"type": "string", "enum": KRONOLOGIC_CHARACTER_IDS},
+    "location_id": {"type": "string", "enum": KRONOLOGIC_LOCATION_IDS},
+    "time": {"type": "integer", "minimum": 1, "maximum": 6},
+}
+
+KRONOLOGIC_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "ask"},
+                "query_type": {"const": "time"},
+                "location_id": {"type": "string", "enum": KRONOLOGIC_LOCATION_IDS},
+                "time": {"type": "integer", "minimum": 1, "maximum": 6},
+            },
+            "required": ["type", "query_type", "location_id", "time"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "ask"},
+                "query_type": {"const": "character"},
+                "location_id": {"type": "string", "enum": KRONOLOGIC_LOCATION_IDS},
+                "character_id": {"type": "string", "enum": KRONOLOGIC_CHARACTER_IDS},
+            },
+            "required": ["type", "query_type", "location_id", "character_id"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {**KRONOLOGIC_ANSWER_PROPERTIES, "type": {"const": "start_accusation"}},
+            "required": ["type", "character_id", "location_id", "time"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {**KRONOLOGIC_ANSWER_PROPERTIES, "type": {"const": "join_accusation"}},
+            "required": ["type", "character_id", "location_id", "time"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "decline_accusation"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "ready_next_turn"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "set_note_mark"},
+                "time": {"type": "integer", "minimum": 1, "maximum": 6},
+                "location_id": {"type": "string", "enum": KRONOLOGIC_LOCATION_IDS},
+                "character_id": {"type": "string", "enum": KRONOLOGIC_CHARACTER_IDS},
+                "mark": {"type": "string", "enum": ["unknown", "possible", "excluded", "confirmed"]},
+            },
+            "required": ["type", "time", "location_id", "character_id", "mark"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "set_note_count"},
+                "query_type": {"const": "time"},
+                "location_id": {"type": "string", "enum": KRONOLOGIC_LOCATION_IDS},
+                "time": {"type": "integer", "minimum": 1, "maximum": 6},
+                "count": {"type": ["integer", "null"], "minimum": 0, "maximum": 6},
+            },
+            "required": ["type", "query_type", "location_id", "time", "count"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "set_note_count"},
+                "query_type": {"const": "character"},
+                "location_id": {"type": "string", "enum": KRONOLOGIC_LOCATION_IDS},
+                "character_id": {"type": "string", "enum": KRONOLOGIC_CHARACTER_IDS},
+                "count": {"type": ["integer", "null"], "minimum": 0, "maximum": 6},
+            },
+            "required": ["type", "query_type", "location_id", "character_id", "count"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "play_again"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+KRONOLOGIC_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "case_source": {"type": "string", "enum": ["random", "preset"]},
+        "difficulty": {"type": "string", "enum": ["any", "1", "2", "3"]},
+        "case_id": {"type": "string", "enum": KRONOLOGIC_CASE_IDS},
+        "seed": {
+            "oneOf": [
+                {"type": "integer"},
+                {"type": "string", "maxLength": 80},
+            ]
+        },
+    },
+    "additionalProperties": False,
+}
+
 register_game(
     GameDefinition(
         game_id=CaboGame.game_id,
@@ -4980,5 +5107,21 @@ register_game(
         module=BombBustersGame,
         serialize=BombBustersGame.serialize,
         deserialize=BombBustersGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=KronologicGame.game_id,
+        name="Kronologic: Paris 1920",
+        name_zh="时空神探：巴黎 1920",
+        min_players=KronologicGame.min_players,
+        max_players=KronologicGame.max_players,
+        turn_mode="turn",
+        action_schema=KRONOLOGIC_ACTION_SCHEMA,
+        config_schema=KRONOLOGIC_CONFIG_SCHEMA,
+        module=KronologicGame,
+        serialize=KronologicGame.serialize,
+        deserialize=KronologicGame.deserialize,
     )
 )

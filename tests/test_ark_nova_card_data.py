@@ -194,15 +194,21 @@ class ArkNovaCardDataTests(unittest.TestCase):
         self.assertEqual(actions["animals"]["sides"]["II"]["strength_5_bonus"], {"reputation": 1})
         self.assertEqual(actions["sponsors"]["sides"]["II"]["alternative"], "advance_break_by_X_and_gain_2X_money")
 
-    def test_final_scoring_uses_current_thresholds(self) -> None:
-        self.assertEqual(
-            [step["requirement"] for step in self.final_by_id["001"]["scoring_steps"]],
-            [1, 2, 3, 4],
-        )
-        self.assertEqual(
-            [step["requirement"] for step in self.final_by_id["011"]["scoring_steps"]],
-            [2, 4, 6, 7],
-        )
+    def test_final_scoring_uses_original_base_game_thresholds(self) -> None:
+        expected_thresholds = {
+            "001": [1, 2, 4, 5],
+            "003": [3, 4, 5, 6],
+            "005": [3, 4, 5, 6],
+            "008": [3, 6, 8, 10],
+            "010": [1, 3, 5, 7],
+            "011": [2, 4, 6, 8],
+        }
+        for card_id, thresholds in expected_thresholds.items():
+            self.assertEqual(
+                [step["requirement"] for step in self.final_by_id[card_id]["scoring_steps"]],
+                thresholds,
+                card_id,
+            )
         self.assertIn("右手边玩家", self.final_by_id["009"]["description_zh"])
 
     def test_final_scoring_rules_are_typed(self) -> None:

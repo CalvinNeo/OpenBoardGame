@@ -336,22 +336,28 @@
 
 | ID | 名称 | 类型 / 指标 | 说明 | 计分 |
 |---|---|---|---|---|
-| 001 | 大型动物公园<br>Large Animal Zoo | metric_ladder / large_animal_count | 根据你动物园里的 大型动物 ， 获得 {ConservationPoint} 。 | 1 -> 保育1；2 -> 保育2；3 -> 保育3；4 -> 保育4 |
+| 001 | 大型动物公园<br>Large Animal Zoo | metric_ladder / large_animal_count | 根据你动物园里的 大型动物 ， 获得 {ConservationPoint} 。 | 1 -> 保育1；2 -> 保育2；4 -> 保育3；5 -> 保育4 |
 | 002 | 小型动物公园<br>Small Animal Zoo | metric_ladder / small_animal_count | 根据你动物园里的 小型动物 ， 获得 {ConservationPoint} 。 | 3 -> 保育1；6 -> 保育2；8 -> 保育3；10 -> 保育4 |
-| 003 | 科研动物园<br>Research Zoo | metric_ladder / science_icon_count | 根据你动物园里的 研究 图标， 获得 {ConservationPoint} 。 | 3 -> 保育1；4 -> 保育2；5 -> 保育3；7 -> 保育4 |
+| 003 | 科研动物园<br>Research Zoo | metric_ladder / science_icon_count | 根据你动物园里的 研究 图标， 获得 {ConservationPoint} 。 | 3 -> 保育1；4 -> 保育2；5 -> 保育3；6 -> 保育4 |
 | 004 | 主题建筑动物园<br>Architectural Zoo | independent_conditions / independent_conditions | 根据你动物园里的 建筑物 ， 获得 {ConservationPoint} 。 | 与 所有的水域格相连 ，获得 {ConservationPoint-1} 。 -> 保育1；与 所有的岩石格相连 ，获得 {ConservationPoint-1} 。 -> 保育1；覆盖 所有的边界格 ，获得 {ConservationPoint-1} 。 -> 保育1；完全覆盖 动物园地图 ，获得 {ConservationPoint-1} 。 -> 保育1 |
-| 005 | 公益保护动物园<br>Conservation Zoo | metric_ladder / supported_conservation_project_count | 根据你 支持的保护项目 ， 获得 {ConservationPoint} 。 | 2 -> 保育1；3 -> 保育2；4 -> 保育3；5 -> 保育4 |
+| 005 | 公益保护动物园<br>Conservation Zoo | metric_ladder / supported_conservation_project_count | 根据你 支持的保护项目 ， 获得 {ConservationPoint} 。 | 3 -> 保育1；4 -> 保育2；5 -> 保育3；6 -> 保育4 |
 | 006 | 自然动物园<br>Naturalists Zoo | metric_ladder / empty_buildable_hex_count | 根据你动物园里 空置的可建造 六角格 ，获得 {ConservationPoint} 。 | 6 -> 保育1；12 -> 保育2；18 -> 保育3；24 -> 保育4 |
 | 007 | 人气动物园<br>Favorite Zoo | metric_ladder / reputation | 根据你动物园的 声望 ， 获得 {ConservationPoint} 。 | 6 -> 保育1；9 -> 保育2；12 -> 保育3；15 -> 保育4 |
-| 008 | 慈善动物园<br>Sponsored Zoo | metric_ladder / sponsor_card_count | 根据你动物园的 赞助商卡牌 ， 获得 {ConservationPoint} 。 | 3 -> 保育1；5 -> 保育2；7 -> 保育3；9 -> 保育4 |
+| 008 | 慈善动物园<br>Sponsored Zoo | metric_ladder / sponsor_card_count | 根据你动物园的 赞助商卡牌 ， 获得 {ConservationPoint} 。 | 3 -> 保育1；6 -> 保育2；8 -> 保育3；10 -> 保育4 |
 | 009 | 综合物种动物园<br>Diverse Species Zoo | compare_right_hand_neighbor / compare_right_hand_neighbor | 比较你与右手边玩家的动物类目图标数量。 | 你每有一种 动物类目 图标多于你右手边的玩家，获得 {ConservationPoint-1} ，最多 {ConservationPoint-4} 。 -> 保育1 |
-| 010 | 岩石公园<br>Climbing Park | metric_ladder / rock_icon_count | 根据你动物园的 岩石 图标， 获得 {ConservationPoint} 。 | 1 -> 保育1；3 -> 保育2；5 -> 保育3；6 -> 保育4 |
-| 011 | 水生态公园<br>Aquatic Park | metric_ladder / water_icon_count | 根据你动物园的 水域 图标， 获得 {ConservationPoint} 。 | 2 -> 保育1；4 -> 保育2；6 -> 保育3；7 -> 保育4 |
+| 010 | 岩石公园<br>Climbing Park | metric_ladder / rock_icon_count | 根据你动物园的 岩石 图标， 获得 {ConservationPoint} 。 | 1 -> 保育1；3 -> 保育2；5 -> 保育3；7 -> 保育4 |
+| 011 | 水生态公园<br>Aquatic Park | metric_ladder / water_icon_count | 根据你动物园的 水域 图标， 获得 {ConservationPoint} 。 | 2 -> 保育1；4 -> 保育2；6 -> 保育3；8 -> 保育4 |
 
 ## 已核对的资料差异
 
 | 卡牌 | 字段 | 采用值 | 说明 |
 |---|---|---|---|
+| 001 | `scoring_steps` | `[1,2,4,5]` | 使用原始基础版门槛；不采用《海洋世界》替换卡的1/2/3/4。 |
+| 003 | `scoring_steps` | `[3,4,5,6]` | 使用原始基础版门槛；不采用《海洋世界》替换卡的3/4/5/7。 |
+| 005 | `scoring_steps` | `[3,4,5,6]` | 使用原始基础版门槛；不采用《海洋世界》替换卡的2/3/4/5。 |
+| 008 | `scoring_steps` | `[3,6,8,10]` | 使用原始基础版门槛；不采用《海洋世界》替换卡的3/5/7/9。 |
+| 010 | `scoring_steps` | `[1,3,5,7]` | 使用原始基础版门槛；不采用《海洋世界》替换卡的1/3/5/6。 |
+| 011 | `scoring_steps` | `[2,4,6,8]` | 使用原始基础版门槛；不采用《海洋世界》替换卡的2/4/6/7。 |
 | 463 | `cost` | `11` | 社区元数据曾误记为14；卡面为11。 |
 | 482 | `placement` | `{"water":1,"rock":1}` | 补齐卡面左上角的临水、临岩要求。 |
 | 251 | `placement` | `{"water":1}` | 补齐北极熊展独特建筑的临水要求。 |
@@ -365,6 +371,7 @@
 - [Ark Nova Rulebook](https://capstone-games.com/cdn/shop/files/Ark-Nova-Rulebook.pdf?v=15269496103518830006)：action_cards, play_costs, turn_timing, association_tasks
 - [Ark Nova Glossary](https://cdn.shopify.com/s/files/1/0947/3907/1278/files/Ark-Nova-Glossary.pdf?v=1754428544)：animal_abilities, sponsor_effects, release_projects
 - [Ark Nova FAQ v2](https://cdn.shopify.com/s/files/1/0947/3907/1278/files/Ark-Nova-FAQ-v2.pdf?v=1754428544)：edge_cases, ability_interactions
+- [Ark Nova: Marine Worlds Rulebook](https://capstone-games.com/cdn/shop/files/AN_Exp1_Rules_EN_0-7_low.pdf?v=3049443834535182443)：replacement_card_list, base_game_version_boundary
 - [Next Ark Nova Cards](https://github.com/Ender-Wiggin2019/Next-Ark-Nova-Cards)：card_ids, names, localized_text, metadata_cross_check
 - [Ark Nova Cards Manager](https://github.com/PixelT/ArkNovaCardsManager)：visual_cross_check_only
 - [方舟动物园 Ark Nova (Tabletop Simulator Workshop)](https://steamcommunity.com/sharedfiles/filedetails/?id=3527313436)：unique_building_footprints, component_cross_check

@@ -29,6 +29,13 @@ SOURCE_REFERENCES = [
         "used_for": ["edge_cases", "ability_interactions"],
     },
     {
+        "kind": "official_expansion_rulebook",
+        "title": "Ark Nova: Marine Worlds Rulebook",
+        "url": "https://capstone-games.com/cdn/shop/files/AN_Exp1_Rules_EN_0-7_low.pdf?v=3049443834535182443",
+        "used_for": ["replacement_card_list", "base_game_version_boundary"],
+        "note": "Used only to identify and exclude Marine Worlds replacement values from this base-game dataset.",
+    },
+    {
         "kind": "community_database",
         "title": "Next Ark Nova Cards",
         "url": "https://github.com/Ender-Wiggin2019/Next-Ark-Nova-Cards",
@@ -581,7 +588,27 @@ FINAL_SCORING_RULES = {
 }
 
 
+# Marine Worlds replaces these six numbered cards with rebalanced scoring
+# ladders.  This project intentionally models the original base game, so keep
+# the original printed thresholds explicit and fail card generation if an
+# expansion replacement value is imported by mistake.
+ORIGINAL_BASE_FINAL_SCORING_THRESHOLDS = {
+    "001": [1, 2, 4, 5],
+    "003": [3, 4, 5, 6],
+    "005": [3, 4, 5, 6],
+    "008": [3, 6, 8, 10],
+    "010": [1, 3, 5, 7],
+    "011": [2, 4, 6, 8],
+}
+
+
 DATA_CORRECTIONS = [
+    {"card_id": "001", "field": "scoring_steps", "value": [1, 2, 4, 5], "note_zh": "使用原始基础版门槛；不采用《海洋世界》替换卡的1/2/3/4。"},
+    {"card_id": "003", "field": "scoring_steps", "value": [3, 4, 5, 6], "note_zh": "使用原始基础版门槛；不采用《海洋世界》替换卡的3/4/5/7。"},
+    {"card_id": "005", "field": "scoring_steps", "value": [3, 4, 5, 6], "note_zh": "使用原始基础版门槛；不采用《海洋世界》替换卡的2/3/4/5。"},
+    {"card_id": "008", "field": "scoring_steps", "value": [3, 6, 8, 10], "note_zh": "使用原始基础版门槛；不采用《海洋世界》替换卡的3/5/7/9。"},
+    {"card_id": "010", "field": "scoring_steps", "value": [1, 3, 5, 7], "note_zh": "使用原始基础版门槛；不采用《海洋世界》替换卡的1/3/5/6。"},
+    {"card_id": "011", "field": "scoring_steps", "value": [2, 4, 6, 8], "note_zh": "使用原始基础版门槛；不采用《海洋世界》替换卡的2/4/6/7。"},
     {"card_id": "463", "field": "cost", "value": 11, "note_zh": "社区元数据曾误记为14；卡面为11。"},
     {"card_id": "482", "field": "placement", "value": {"water": 1, "rock": 1}, "note_zh": "补齐卡面左上角的临水、临岩要求。"},
     {"card_id": "251", "field": "placement", "value": {"water": 1}, "note_zh": "补齐北极熊展独特建筑的临水要求。"},

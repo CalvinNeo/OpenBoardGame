@@ -707,6 +707,842 @@ body.poison-explain-mode button.has-explanation[data-poison-explanation]:disable
   }
 }
 
+/* Kronologic: Paris 1920 — original compatible interface */
+#kronologicPanel {
+  --krono-ink: #f7f1df;
+  --krono-muted: #c8c1b4;
+  --krono-night: #11182b;
+  --krono-panel: #1b2440;
+  --krono-panel-soft: #252f4d;
+  --krono-gold: #e8bd63;
+  --krono-wine: #8e3049;
+  --krono-green: #3da77a;
+  --krono-line: rgba(232, 189, 99, 0.42);
+  color: var(--krono-ink);
+  overflow-x: clip;
+  min-width: 0;
+}
+
+#kronologicPanel *,
+#kronologicPanel *::before,
+#kronologicPanel *::after {
+  box-sizing: border-box;
+}
+
+.kronologic-game-shell {
+  min-width: 0;
+  padding: clamp(10px, 2vw, 20px);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 8% 8%, rgba(142, 48, 73, 0.24), transparent 30%),
+    radial-gradient(circle at 92% 20%, rgba(232, 189, 99, 0.12), transparent 28%),
+    linear-gradient(145deg, #10172a, #171f37 58%, #11172a);
+  box-shadow: inset 0 0 0 1px rgba(232, 189, 99, 0.13);
+}
+
+.kronologic-case-card,
+.kronologic-section {
+  min-width: 0;
+  border: 1px solid rgba(232, 189, 99, 0.2);
+  border-radius: 14px;
+  background: linear-gradient(155deg, rgba(38, 48, 78, 0.96), rgba(22, 29, 50, 0.97));
+  box-shadow: 0 10px 24px rgba(3, 7, 18, 0.22);
+}
+
+.kronologic-case-card {
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+.kronologic-case-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  min-width: 0;
+}
+
+.kronologic-case-heading > div:first-child {
+  min-width: 0;
+}
+
+.kronologic-case-heading h2 {
+  margin: 2px 0 4px;
+  color: #fff8e9;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(22px, 4vw, 34px);
+  line-height: 1.05;
+}
+
+.kronologic-case-heading p {
+  max-width: 760px;
+  margin: 0;
+  color: var(--krono-muted);
+  line-height: 1.45;
+}
+
+.kronologic-content-notice {
+  color: var(--krono-gold);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.kronologic-case-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.kronologic-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 9px;
+  border: 1px solid rgba(232, 189, 99, 0.28);
+  border-radius: 999px;
+  background: rgba(9, 14, 27, 0.48);
+  color: var(--krono-gold);
+  font-size: 12px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.kronologic-status {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--krono-gold);
+  border-radius: 5px;
+  background: rgba(9, 14, 27, 0.44);
+  color: #fff;
+  line-height: 1.35;
+}
+
+.kronologic-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.92fr) minmax(360px, 1.28fr);
+  gap: 12px;
+  align-items: start;
+  min-width: 0;
+}
+
+.kronologic-main-column,
+.kronologic-side-column {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.kronologic-section {
+  padding: 12px;
+}
+
+.kronologic-section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  margin-bottom: 10px;
+}
+
+.kronologic-section-heading h3,
+.kronologic-history-columns h3 {
+  margin: 0;
+  color: #fff7e4;
+  font-size: 15px;
+}
+
+.kronologic-section-heading > span {
+  color: var(--krono-muted);
+  font-size: 11px;
+  text-align: right;
+}
+
+.kronologic-map {
+  position: relative;
+  width: 100%;
+  height: clamp(310px, 42vw, 390px);
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(232, 189, 99, 0.2);
+  border-radius: 12px;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+    radial-gradient(circle at center, rgba(142, 48, 73, 0.18), transparent 66%),
+    #11192d;
+  background-size: 24px 24px, 24px 24px, auto, auto;
+}
+
+.kronologic-map-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.kronologic-map-lines line {
+  stroke: var(--krono-gold);
+  stroke-width: 1.35;
+  stroke-dasharray: 2.5 1.5;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.62;
+}
+
+button.kronologic-map-node {
+  position: absolute;
+  z-index: 2;
+  width: min(132px, 31%);
+  min-height: 68px;
+  padding: 7px 6px;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(232, 189, 99, 0.38);
+  border-radius: 12px;
+  background: linear-gradient(155deg, #2b3658, #19213b);
+  color: var(--krono-ink);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+  line-height: 1.12;
+}
+
+button.kronologic-map-node:hover:not(:disabled),
+button.kronologic-map-node:focus-visible,
+button.kronologic-map-node.is-selected {
+  border-color: var(--krono-gold);
+  background: linear-gradient(155deg, #49374b, #252b49);
+  box-shadow: 0 0 0 2px rgba(232, 189, 99, 0.22), 0 8px 20px rgba(0, 0, 0, 0.34);
+}
+
+.kronologic-map-node-name {
+  display: block;
+  font-size: clamp(10px, 1.4vw, 13px);
+  font-weight: 800;
+}
+
+.kronologic-map-starters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px 5px;
+  margin-top: 5px;
+  color: var(--krono-muted);
+  font-size: 11px;
+}
+
+.kronologic-map-starters span {
+  white-space: nowrap;
+}
+
+.kronologic-map-starters small {
+  margin-left: 1px;
+  font-size: 8px;
+}
+
+.kronologic-map-legend {
+  position: absolute;
+  right: 7px;
+  bottom: 5px;
+  z-index: 1;
+  color: rgba(247, 241, 223, 0.62);
+  font-size: 9px;
+}
+
+.kronologic-query-tabs,
+.kronologic-count-mode,
+.kronologic-action-grid,
+.kronologic-modal-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.kronologic-query-tabs button,
+.kronologic-count-mode button,
+.kronologic-selector button,
+.kronologic-time-tabs button {
+  min-width: 0;
+  border-color: rgba(232, 189, 99, 0.24);
+  background: #18213a;
+  color: var(--krono-ink);
+}
+
+.kronologic-query-tabs button.is-active,
+.kronologic-count-mode button.is-active,
+.kronologic-selector button.is-selected,
+.kronologic-time-tabs button.is-selected {
+  border-color: var(--krono-gold);
+  background: #513248;
+  color: #fff7df;
+  box-shadow: inset 0 0 0 1px rgba(232, 189, 99, 0.22);
+}
+
+.kronologic-selector {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  min-width: 0;
+  margin-top: 8px;
+}
+
+.kronologic-selector button {
+  min-height: 40px;
+  padding: 6px 5px;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+}
+
+.kronologic-query-summary {
+  min-width: 0;
+  margin: 9px 0;
+  padding: 8px 10px;
+  border: 1px dashed rgba(232, 189, 99, 0.36);
+  border-radius: 9px;
+  background: rgba(7, 12, 24, 0.4);
+  color: #fff;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.kronologic-action-grid button,
+.kronologic-review-card > button,
+#kronologicPlayAgainBtn,
+.kronologic-modal-actions button {
+  min-height: 42px;
+  border-color: rgba(232, 189, 99, 0.34);
+  background: linear-gradient(145deg, #873349, #62273b);
+  color: #fff9e9;
+  font-weight: 800;
+}
+
+.kronologic-action-grid button:first-child,
+.kronologic-review-card > button,
+#kronologicPlayAgainBtn,
+#kronologicAccusationSubmitBtn {
+  background: linear-gradient(145deg, #b67f34, #8a5b25);
+}
+
+#kronologicPanel button:disabled,
+.kronologic-modal-content button:disabled,
+.kronologic-modal-content select:disabled {
+  opacity: 0.48;
+}
+
+.kronologic-review-card {
+  border-color: rgba(61, 167, 122, 0.46);
+  background: linear-gradient(155deg, rgba(31, 71, 66, 0.96), rgba(20, 42, 48, 0.98));
+}
+
+.kronologic-review-message,
+.kronologic-waiting {
+  margin-bottom: 8px;
+  color: var(--krono-ink);
+  line-height: 1.4;
+}
+
+.kronologic-waiting {
+  color: #f0d696;
+  font-size: 12px;
+}
+
+.kronologic-clue {
+  padding: 9px 10px;
+  border-radius: 9px;
+  line-height: 1.4;
+}
+
+.kronologic-clue + .kronologic-clue {
+  margin-top: 7px;
+}
+
+.kronologic-clue-shared {
+  border: 1px solid rgba(61, 167, 122, 0.35);
+  background: rgba(25, 92, 72, 0.32);
+}
+
+.kronologic-clue-private {
+  border: 1px solid rgba(232, 189, 99, 0.33);
+  background: rgba(115, 75, 24, 0.3);
+}
+
+.kronologic-clue-private.is-withheld {
+  border-color: rgba(166, 172, 190, 0.24);
+  background: rgba(18, 24, 40, 0.42);
+  color: var(--krono-muted);
+}
+
+.kronologic-players {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.kronologic-player-card {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9px;
+  background: rgba(10, 16, 30, 0.42);
+  overflow-wrap: anywhere;
+}
+
+.kronologic-player-card.is-active {
+  border-color: var(--krono-gold);
+}
+
+.kronologic-player-card.is-you {
+  box-shadow: inset 3px 0 0 var(--krono-green);
+}
+
+.kronologic-player-card.status-eliminated {
+  opacity: 0.62;
+  filter: saturate(0.55);
+}
+
+.kronologic-player-card.status-winner {
+  border-color: #71d6a9;
+  background: rgba(36, 109, 79, 0.3);
+}
+
+.kronologic-player-meta {
+  margin-top: 3px;
+  color: var(--krono-muted);
+  font-size: 10px;
+}
+
+.kronologic-time-tabs {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.kronologic-time-tabs button {
+  min-width: 0;
+  min-height: 38px;
+  padding: 5px 2px;
+}
+
+.kronologic-notebook-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  min-width: 0;
+}
+
+.kronologic-note-room {
+  min-width: 0;
+  padding: 7px;
+  border: 1px solid rgba(232, 189, 99, 0.16);
+  border-radius: 9px;
+  background: rgba(8, 13, 26, 0.36);
+}
+
+.kronologic-note-room-title {
+  margin-bottom: 5px;
+  color: #fff2d0;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.kronologic-note-people {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3px;
+}
+
+button.kronologic-note-person {
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-areas: "emoji mark" "code mark";
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 42px;
+  padding: 3px;
+  border-color: rgba(255, 255, 255, 0.1);
+  background-color: #182039;
+  color: var(--krono-ink);
+}
+
+.kronologic-note-person > span { grid-area: emoji; }
+.kronologic-note-person > small { grid-area: code; font-size: 7px; }
+.kronologic-note-person > strong { grid-area: mark; margin-left: 2px; font-size: 15px; }
+
+button.kronologic-note-person.mark-possible {
+  border-color: #76aad7;
+  color: #d7ecff;
+}
+
+button.kronologic-note-person.mark-excluded {
+  border-color: #9f5869;
+  color: #e2a2b0;
+  opacity: 0.73;
+}
+
+button.kronologic-note-person.mark-confirmed {
+  border-color: #63cf9e;
+  color: #b9f3d6;
+  box-shadow: inset 0 0 0 1px rgba(99, 207, 158, 0.24);
+}
+
+#kronologicPanel .pattern-lines { background-image: repeating-linear-gradient(0deg, rgba(255,255,255,.035) 0 1px, transparent 1px 5px); }
+#kronologicPanel .pattern-diagonal { background-image: repeating-linear-gradient(45deg, rgba(255,255,255,.035) 0 1px, transparent 1px 6px); }
+#kronologicPanel .pattern-dots { background-image: radial-gradient(rgba(255,255,255,.06) 1px, transparent 1px); background-size: 6px 6px; }
+#kronologicPanel .pattern-diamonds { background-image: linear-gradient(45deg, rgba(255,255,255,.03) 25%, transparent 25%, transparent 75%, rgba(255,255,255,.03) 75%); background-size: 8px 8px; }
+#kronologicPanel .pattern-waves { background-image: repeating-radial-gradient(circle at 0 50%, rgba(255,255,255,.03) 0 1px, transparent 2px 6px); }
+#kronologicPanel .pattern-crosshatch { background-image: repeating-linear-gradient(45deg, rgba(255,255,255,.025) 0 1px, transparent 1px 6px), repeating-linear-gradient(-45deg, rgba(255,255,255,.025) 0 1px, transparent 1px 6px); }
+
+.kronologic-count-notes {
+  margin-top: 9px;
+  border-top: 1px solid rgba(232, 189, 99, 0.16);
+  padding-top: 8px;
+}
+
+.kronologic-count-notes summary {
+  cursor: pointer;
+  color: var(--krono-gold);
+  font-weight: 750;
+}
+
+.kronologic-count-mode {
+  margin: 8px 0 0;
+}
+
+.kronologic-count-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px 8px;
+  margin-top: 8px;
+}
+
+.kronologic-count-grid label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+  min-width: 0;
+  padding: 5px 6px;
+  border-radius: 7px;
+  background: rgba(7, 12, 24, 0.35);
+  font-size: 10px;
+}
+
+.kronologic-count-grid label > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.kronologic-count-grid small {
+  display: block;
+  color: var(--krono-muted);
+  font-size: 8px;
+}
+
+.kronologic-count-grid select {
+  flex: 0 0 48px;
+  width: 48px;
+  min-width: 48px;
+  padding: 4px;
+}
+
+.kronologic-history-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  min-width: 0;
+}
+
+.kronologic-history-columns > div {
+  min-width: 0;
+}
+
+.kronologic-history-columns h3 {
+  margin-bottom: 6px;
+}
+
+.kronologic-history {
+  max-height: 210px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 3px;
+  scrollbar-width: thin;
+}
+
+.kronologic-history-item,
+.kronologic-log-item {
+  margin-bottom: 5px;
+  padding: 6px 7px;
+  border-radius: 7px;
+  background: rgba(7, 12, 24, 0.38);
+  color: var(--krono-ink);
+  font-size: 11px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.kronologic-history-item.is-private {
+  border-left: 2px solid var(--krono-gold);
+}
+
+.kronologic-history-item small,
+.kronologic-log-item small {
+  color: var(--krono-muted);
+  font-size: 8px;
+}
+
+.kronologic-empty {
+  padding: 8px;
+  color: var(--krono-muted);
+  font-size: 11px;
+  font-style: italic;
+}
+
+.kronologic-answer-card {
+  display: grid;
+  grid-template-columns: auto repeat(3, minmax(0, 1fr));
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  padding: 9px;
+  border: 1px solid rgba(99, 207, 158, 0.36);
+  border-radius: 10px;
+  background: rgba(36, 109, 79, 0.26);
+}
+
+.kronologic-answer-card > span {
+  color: #9de0bf;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.kronologic-answer-card strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.kronologic-paths {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 9px;
+}
+
+.kronologic-path-row {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.kronologic-path-row > div {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 3px;
+  min-width: 0;
+}
+
+.kronologic-path-row span {
+  min-width: 0;
+  padding: 4px 3px;
+  border-radius: 5px;
+  background: rgba(7, 12, 24, 0.38);
+  font-size: 8px;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.kronologic-path-row small {
+  display: block;
+  color: var(--krono-gold);
+  font-size: 7px;
+}
+
+.kronologic-modal-content {
+  width: min(680px, calc(100vw - 24px));
+  max-height: min(88vh, 760px);
+  color: #202334;
+}
+
+.kronologic-help-content {
+  line-height: 1.5;
+}
+
+.kronologic-help-content h3 {
+  margin: 16px 0 5px;
+  color: #743247;
+}
+
+.kronologic-help-content h3:first-child {
+  margin-top: 0;
+}
+
+.kronologic-help-content p,
+.kronologic-help-content ul {
+  margin-top: 4px;
+}
+
+.kronologic-answer-grid {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 9px 10px;
+  margin: 12px 0;
+}
+
+.kronologic-answer-grid label {
+  font-weight: 800;
+}
+
+.kronologic-answer-grid select {
+  min-width: 0;
+  width: 100%;
+}
+
+.kronologic-modal-prompt {
+  line-height: 1.45;
+}
+
+body.kronologic-explain-mode button.has-explanation {
+  cursor: help !important;
+  outline: 2px dashed #f1c45e !important;
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .kronologic-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .kronologic-main-column,
+  .kronologic-side-column {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .kronologic-map {
+    height: 360px;
+  }
+}
+
+@media (max-width: 620px) {
+  .kronologic-game-shell {
+    padding: 8px;
+    border-radius: 12px;
+  }
+
+  .kronologic-case-card,
+  .kronologic-section {
+    padding: 9px;
+    border-radius: 11px;
+  }
+
+  .kronologic-case-heading {
+    display: block;
+  }
+
+  .kronologic-case-meta {
+    justify-content: flex-start;
+    margin-top: 9px;
+  }
+
+  .kronologic-section-heading {
+    display: block;
+  }
+
+  .kronologic-section-heading > span {
+    display: block;
+    margin-top: 2px;
+    text-align: left;
+  }
+
+  .kronologic-map {
+    height: 335px;
+  }
+
+  button.kronologic-map-node {
+    width: 34%;
+    min-height: 64px;
+    padding: 5px 3px;
+  }
+
+  .kronologic-map-node-name {
+    font-size: 9px;
+  }
+
+  .kronologic-map-starters {
+    gap: 1px 3px;
+    font-size: 9px;
+  }
+
+  .kronologic-selector {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kronologic-players,
+  .kronologic-notebook-grid,
+  .kronologic-count-grid,
+  .kronologic-history-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .kronologic-time-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .kronologic-history {
+    max-height: 170px;
+  }
+
+  .kronologic-answer-card {
+    grid-template-columns: minmax(0, 1fr);
+    text-align: left;
+  }
+
+  .kronologic-answer-card strong {
+    text-align: left;
+  }
+
+  .kronologic-path-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .kronologic-path-row > div {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 370px) {
+  .kronologic-map {
+    height: 315px;
+  }
+
+  button.kronologic-map-node {
+    width: 35%;
+  }
+
+  .kronologic-map-node-name {
+    font-size: 8px;
+  }
+
+  .kronologic-note-people {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #kronologicPanel *,
+  #kronologicPanel *::before,
+  #kronologicPanel *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}
+
 @media (max-width: 720px) {
   .poison-topbar {
     align-items: flex-start;
@@ -19974,6 +20810,54 @@ body.manila-explain-mode button.has-explanation:hover {
   }
 }
 
+#tagironPanel {
+  min-width: 0;
+}
+
+#tagironPanel > h3 {
+  margin: 14px 0 7px;
+  line-height: 1.2;
+}
+
+.tagiron-status-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.tagiron-status-item {
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  background: #f8fafc;
+}
+
+.tagiron-status-label,
+.tagiron-status-value {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tagiron-status-label {
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.tagiron-status-value {
+  margin-top: 2px;
+  color: #172033;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
 .tagiron-tiles {
   display: flex;
   flex-wrap: wrap;
@@ -20036,6 +20920,8 @@ body.manila-explain-mode button.has-explanation:hover {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  line-height: 1.35;
 }
 
 .tagiron-shared-tag {
@@ -20052,12 +20938,35 @@ body.manila-explain-mode button.has-explanation:hover {
   gap: 8px;
 }
 
+.tagiron-question-actions button {
+  white-space: nowrap;
+}
+
 .tagiron-guess-form {
   display: flex;
   gap: 12px;
   flex-wrap: nowrap;
   overflow-x: auto;
   padding-bottom: 4px;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tagiron-question-pool,
+.tagiron-guess-form {
+  scrollbar-width: thin;
+  scrollbar-color: #aeb7c5 transparent;
+}
+
+.tagiron-question-pool::-webkit-scrollbar,
+.tagiron-guess-form::-webkit-scrollbar {
+  height: 4px;
+}
+
+.tagiron-question-pool::-webkit-scrollbar-thumb,
+.tagiron-guess-form::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #aeb7c5;
 }
 
 .tagiron-guess-row {
@@ -20126,16 +21035,13 @@ body.manila-explain-mode button.has-explanation:hover {
   color: #2e6b46;
 }
 
-@media (max-width: 900px) {
-  .tagiron-question-pool {
-    grid-template-columns: 1fr;
-  }
-}
-
 .tagiron-log {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  max-height: 260px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .tagiron-log-entry {
@@ -20173,6 +21079,177 @@ body.manila-explain-mode button.has-explanation:hover {
   margin-top: 8px;
   font-weight: 600;
   color: #24304a;
+  grid-column: 1 / -1;
+}
+
+#tagironPlayers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.tagiron-player-card {
+  min-width: 0;
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .tagiron-status-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .tagiron-question-pool {
+    display: grid;
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: 100%;
+    align-items: stretch;
+    gap: 8px;
+    padding: 2px 2px 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-padding-inline: 2px;
+    scroll-snap-type: x mandatory;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tagiron-question-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    min-height: 64px;
+    padding: 8px 10px;
+    scroll-snap-align: start;
+  }
+
+  .tagiron-question-text {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 4px 6px;
+    font-size: 13px;
+  }
+
+  .tagiron-shared-tag {
+    flex: 0 0 auto;
+  }
+
+  .tagiron-question-actions {
+    flex-wrap: nowrap;
+    gap: 4px;
+  }
+
+  .tagiron-question-actions button {
+    min-height: 32px;
+    padding: 5px 8px;
+  }
+
+  .tagiron-tiles {
+    display: grid;
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: 7px;
+  }
+
+  .tagiron-tile {
+    width: auto;
+    min-width: 0;
+    min-height: 56px;
+    gap: 2px;
+  }
+
+  .tagiron-guess-form {
+    gap: 8px;
+    scroll-padding-inline: 1px;
+    scroll-snap-type: x mandatory;
+  }
+
+  .tagiron-guess-row {
+    box-sizing: border-box;
+    min-width: 100%;
+    padding: 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #f8fafc;
+    scroll-snap-align: start;
+  }
+
+  .tagiron-guess-tile {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 32px;
+  }
+
+  .tagiron-filter-row {
+    flex-wrap: nowrap;
+  }
+
+  .tagiron-filter-numbers {
+    gap: 3px;
+  }
+
+  .tagiron-filter-numbers .tagiron-filter-chip {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 27px;
+    padding: 2px 0;
+  }
+
+  .tagiron-filter-colors .tagiron-filter-chip {
+    min-width: 38px;
+    min-height: 28px;
+  }
+
+  #tagironPlayers {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .tagiron-player-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 7px 8px;
+  }
+
+  .tagiron-player-card .player-name,
+  .tagiron-player-card .player-meta {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 480px) {
+  #tagironPanel > h3 {
+    margin: 11px 0 6px;
+    font-size: 16px;
+  }
+
+  .tagiron-status-grid {
+    gap: 5px;
+  }
+
+  .tagiron-status-item {
+    padding: 5px 7px;
+  }
+
+  .tagiron-status-value {
+    font-size: 13px;
+  }
+
+  .tagiron-log {
+    max-height: 180px;
+    gap: 6px;
+  }
+
+  .tagiron-log-entry {
+    padding: 8px 9px;
+  }
 }
 
 /* Tagiron Help/Explain */
