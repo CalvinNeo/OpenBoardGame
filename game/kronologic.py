@@ -69,6 +69,12 @@ def _validate_catalog(catalog: Dict) -> None:
             for field in ("name", "name_zh")
         ):
             raise ValueError("Kronologic names require English and Chinese text")
+    for character in characters:
+        if not all(
+            isinstance(character.get(field), str) and character[field].strip()
+            for field in ("code", "code_zh")
+        ):
+            raise ValueError("Kronologic character codes require English and Chinese text")
     if not all(
         isinstance(catalog.get(field), str) and catalog[field].strip()
         for field in ("content_notice", "content_notice_zh")
@@ -327,7 +333,10 @@ def _localized_text(item: Dict, field: str, language: str) -> str:
 def _localized_item(item: Dict, language: str) -> Dict:
     result = copy.deepcopy(item)
     result["name"] = _localized_text(item, "name", language)
+    if "code" in item:
+        result["code"] = _localized_text(item, "code", language)
     result.pop("name_zh", None)
+    result.pop("code_zh", None)
     return result
 
 

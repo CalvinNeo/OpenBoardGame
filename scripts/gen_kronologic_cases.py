@@ -17,12 +17,12 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 OUTPUT_PATH = ROOT_DIR / "game" / "assets" / "kronologic_cases.json"
 
 CHARACTERS: Tuple[Dict[str, str], ...] = (
-    {"id": "archivist", "name": "Archivist", "name_zh": "档案管理员", "emoji": "📚", "code": "AR", "pattern": "lines"},
-    {"id": "conductor", "name": "Conductor", "name_zh": "指挥家", "emoji": "🎼", "code": "CO", "pattern": "diagonal"},
-    {"id": "engineer", "name": "Engineer", "name_zh": "工程师", "emoji": "🧰", "code": "EN", "pattern": "dots"},
-    {"id": "patron", "name": "Patron", "name_zh": "赞助人", "emoji": "🎩", "code": "PA", "pattern": "diamonds"},
-    {"id": "singer", "name": "Singer", "name_zh": "歌唱家", "emoji": "🎤", "code": "SI", "pattern": "waves"},
-    {"id": "courier", "name": "Courier", "name_zh": "信使", "emoji": "✉️", "code": "CU", "pattern": "crosshatch"},
+    {"id": "archivist", "name": "Archivist", "name_zh": "档案管理员", "emoji": "📚", "code": "AR", "code_zh": "档", "pattern": "lines"},
+    {"id": "conductor", "name": "Conductor", "name_zh": "指挥家", "emoji": "🎼", "code": "CO", "code_zh": "指", "pattern": "diagonal"},
+    {"id": "engineer", "name": "Engineer", "name_zh": "工程师", "emoji": "🧰", "code": "EN", "code_zh": "工", "pattern": "dots"},
+    {"id": "patron", "name": "Patron", "name_zh": "赞助人", "emoji": "🎩", "code": "PA", "code_zh": "赞", "pattern": "diamonds"},
+    {"id": "singer", "name": "Singer", "name_zh": "歌唱家", "emoji": "🎤", "code": "SI", "code_zh": "歌", "pattern": "waves"},
+    {"id": "courier", "name": "Courier", "name_zh": "信使", "emoji": "✉️", "code": "CU", "code_zh": "信", "pattern": "crosshatch"},
 )
 
 LOCATIONS: Tuple[Dict[str, str], ...] = (

@@ -39,6 +39,7 @@ from game.kobayakawa import KobayakawaGame
 from game.kronologic import KronologicGame
 from game.lost_code import LostCodeGame
 from game.manila import ManilaGame
+from game.nine_upper import NineUpperGame
 from game.patchwork import PatchworkGame
 from game.perfect_mismatch import PerfectMismatchGame
 from game.point_salad import PointSaladGame
@@ -2408,6 +2409,65 @@ DUMB_QUESTIONS_CONFIG_SCHEMA = {
     "type": "object",
     "properties": {
         "rounds_per_guesser": {"type": "integer", "minimum": 1, "maximum": 3},
+    },
+    "additionalProperties": False,
+}
+
+NINE_UPPER_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "select_difficulty"},
+                "difficulty": {"type": "integer", "minimum": 1, "maximum": 3},
+            },
+            "required": ["type", "difficulty"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "submit_statement"},
+                "statement": {"type": "string", "minLength": 1, "maxLength": 280},
+            },
+            "required": ["type", "statement"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "choose_honest"},
+                "player_id": {"type": "string", "minLength": 1},
+            },
+            "required": ["type", "player_id"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "next_round"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "play_again"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+NINE_UPPER_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "rounds_per_thinker": {"type": "integer", "minimum": 1, "maximum": 2},
+        "seed": {
+            "oneOf": [
+                {"type": "integer"},
+                {"type": "string", "minLength": 1, "maxLength": 80},
+            ]
+        },
     },
     "additionalProperties": False,
 }
@@ -4980,6 +5040,22 @@ register_game(
         module=DumbQuestionsGame,
         serialize=DumbQuestionsGame.serialize,
         deserialize=DumbQuestionsGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=NineUpperGame.game_id,
+        name="9UPPER",
+        name_zh="瞎掰王",
+        min_players=NineUpperGame.min_players,
+        max_players=NineUpperGame.max_players,
+        turn_mode="simultaneous",
+        action_schema=NINE_UPPER_ACTION_SCHEMA,
+        config_schema=NINE_UPPER_CONFIG_SCHEMA,
+        module=NineUpperGame,
+        serialize=NineUpperGame.serialize,
+        deserialize=NineUpperGame.deserialize,
     )
 )
 

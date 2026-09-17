@@ -38,6 +38,7 @@ from game.kobayakawa import KobayakawaGame
 from game.kronologic import KronologicGame
 from game.lost_code import LostCodeGame
 from game.manila import ManilaGame
+from game.nine_upper import NineUpperGame
 from game.patchwork import PatchworkGame
 from game.perfect_mismatch import PerfectMismatchGame
 from game.point_salad import PointSaladGame
@@ -108,6 +109,7 @@ __all__ = [
     "KronologicGame",
     "LostCodeGame",
     "ManilaGame",
+    "NineUpperGame",
     "PatchworkGame",
     "PerfectMismatchGame",
     "PointSaladGame",

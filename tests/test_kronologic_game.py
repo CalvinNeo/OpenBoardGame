@@ -72,6 +72,10 @@ class KronologicCatalogTests(unittest.TestCase):
         self.assertEqual(len({case["case_id"] for case in CASES}), 5)
         self.assertTrue(CATALOG["content_notice_zh"])
         self.assertTrue(all(item["name_zh"] for item in CATALOG["characters"]))
+        self.assertEqual(
+            [item["code_zh"] for item in CATALOG["characters"]],
+            ["档", "指", "工", "赞", "歌", "信"],
+        )
         self.assertTrue(all(item["name_zh"] for item in CATALOG["locations"]))
         self.assertTrue(all(case["title_zh"] and case["story_zh"] for case in CASES))
 
@@ -183,6 +187,7 @@ class KronologicGameTests(unittest.TestCase):
         self.assertEqual(chinese_view["language"], "zh")
         self.assertEqual(chinese_view["case"]["title"], chinese_state["case"]["title_zh"])
         self.assertEqual(chinese_view["characters"][0]["name"], CATALOG["characters"][0]["name_zh"])
+        self.assertEqual([item["code"] for item in chinese_view["characters"]], ["档", "指", "工", "赞", "歌", "信"])
         self.assertEqual(chinese_view["locations"][0]["name"], CATALOG["locations"][0]["name_zh"])
         self.assertIn("开始调查", chinese_view["public_log"][0]["message"])
 
@@ -191,6 +196,7 @@ class KronologicGameTests(unittest.TestCase):
         self.assertEqual(english_view["language"], "en")
         self.assertEqual(english_view["case"]["title"], english_state["case"]["title"])
         self.assertEqual(english_view["characters"][0]["name"], CATALOG["characters"][0]["name"])
+        self.assertEqual([item["code"] for item in english_view["characters"]], ["AR", "CO", "EN", "PA", "SI", "CU"])
         self.assertIn("began", english_view["public_log"][0]["message"])
 
         with self.assertRaises(ValueError):

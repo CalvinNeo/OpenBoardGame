@@ -27,7 +27,11 @@ const catInBoxTrick = document.getElementById("catInBoxTrick");
 const catInBoxHand = document.getElementById("catInBoxHand");
 const catInBoxSelectedCardLabel = document.getElementById("catInBoxSelectedCard");
 const catInBoxSelectedColorLabel = document.getElementById("catInBoxSelectedColor");
-const catInBoxClearSelectionBtn = document.getElementById("catInBoxClearSelection");
+const catInBoxSelection = catInBoxSelectedCardLabel
+  ? catInBoxSelectedCardLabel.closest(".cat-box-selection")
+  : null;
+const catInBoxControlsTitle = document.getElementById("catInBoxControlsTitle");
+const catInBoxPrompt = document.getElementById("catInBoxPrompt");
 const catInBoxColorButtons = document.getElementById("catInBoxColorButtons");
 const catInBoxColorRedBtn = document.getElementById("catInBoxColorRedBtn");
 const catInBoxColorBlueBtn = document.getElementById("catInBoxColorBlueBtn");
@@ -38,9 +42,13 @@ const catInBoxBid1Btn = document.getElementById("catInBoxBid1Btn");
 const catInBoxBid2Btn = document.getElementById("catInBoxBid2Btn");
 const catInBoxBid3Btn = document.getElementById("catInBoxBid3Btn");
 const catInBoxPlayBtn = document.getElementById("catInBoxPlayBtn");
+const catInBoxActions = document.getElementById("catInBoxActions");
 const catInBoxPlayers = document.getElementById("catInBoxPlayers");
 const catInBoxSummary = document.getElementById("catInBoxSummary");
 const catInBoxSummaryBody = document.getElementById("catInBoxSummaryBody");
+const catInBoxSummarySection = catInBoxSummary
+  ? catInBoxSummary.closest(".cat-box-summary-section")
+  : null;
 
 const catInBoxColorEmoji = {
   red: "🟥",
@@ -85,10 +93,6 @@ const CAT_IN_BOX_HELP_TEXT = `
 `;
 
 const CAT_IN_BOX_BUTTON_EXPLANATIONS = {
-  catInBoxClearSelection: {
-    name: "Clear",
-    description: "Clear your selected card and color.",
-  },
   catInBoxColorRedBtn: {
     name: "Red",
     description: "Choose red as the color for your selected number.",
@@ -137,6 +141,98 @@ function formatCatInBoxColor(color) {
   return emoji ? `${emoji} ${name}` : name;
 }
 
+function formatCatInBoxPhase(phase) {
+  const labels = {
+    discard: "Discard",
+    bidding: "Bidding",
+    trick: "Trick",
+    game_over: "Game Over",
+  };
+  return labels[phase] || phase || "-";
+}
+
+function setCatInBoxPhaseElementVisible(element, visible) {
+  if (!element) {
+    return;
+  }
+  element.classList.toggle("cat-box-phase-hidden", !visible);
+  element.setAttribute("aria-hidden", visible ? "false" : "true");
+}
+
+function updateCatInBoxPhasePresentation(view, legalActions) {
+  if (!catInBoxPanel) {
+    return;
+  }
+  const legal = Array.isArray(legalActions) ? legalActions : [];
+  const phase = view && view.phase ? view.phase : "idle";
+  const canDiscard = legal.includes("discard");
+  const canBid = legal.includes("bid");
+  const canPlay = legal.includes("play_card");
+  const actionCount = canBid ? 3 : canDiscard || canPlay ? 1 : 0;
+
+  catInBoxPanel.dataset.phase = phase;
+  const playerCount = view && Array.isArray(view.players) ? view.players.length : 1;
+  catInBoxPanel.style.setProperty("--cat-box-player-count", String(Math.max(playerCount, 1)));
+  if (catInBoxActions) {
+    catInBoxActions.style.setProperty("--cat-box-action-count", String(Math.max(actionCount, 1)));
+    setCatInBoxPhaseElementVisible(catInBoxActions, actionCount > 0);
+  }
+  setCatInBoxPhaseElementVisible(catInBoxDiscardBtn, canDiscard);
+  setCatInBoxPhaseElementVisible(catInBoxBid1Btn, canBid);
+  setCatInBoxPhaseElementVisible(catInBoxBid2Btn, canBid);
+  setCatInBoxPhaseElementVisible(catInBoxBid3Btn, canBid);
+  setCatInBoxPhaseElementVisible(catInBoxPlayBtn, canPlay);
+  setCatInBoxPhaseElementVisible(catInBoxColorButtons, canPlay);
+
+  if (catInBoxControlsTitle) {
+    if (phase === "discard") {
+      catInBoxControlsTitle.textContent = "Discard";
+    } else if (phase === "bidding") {
+      catInBoxControlsTitle.textContent = "Your Bid";
+    } else if (phase === "game_over") {
+      catInBoxControlsTitle.textContent = "Game Over";
+    } else {
+      catInBoxControlsTitle.textContent = "Your Hand";
+    }
+  }
+
+  if (!catInBoxPrompt) {
+    return;
+  }
+  if (canDiscard) {
+    catInBoxPrompt.textContent = "Choose one number to discard";
+  } else if (canBid) {
+    catInBoxPrompt.textContent = "How many tricks will you win?";
+  } else if (canPlay) {
+    catInBoxPrompt.textContent = "Choose a number, then a color";
+  } else if (phase === "game_over") {
+    catInBoxPrompt.textContent = "Final scores are below";
+  } else if (view && view.current_turn) {
+    catInBoxPrompt.textContent = `Waiting for ${findPlayerName(view, view.current_turn)}`;
+  } else if (view) {
+    catInBoxPrompt.textContent = "Waiting for the other players";
+  } else {
+    catInBoxPrompt.textContent = "Waiting for the game to start";
+  }
+}
+
+function updateCatInBoxStatusVisibility() {
+  if (!catInBoxPanel) {
+    return;
+  }
+  catInBoxPanel.querySelectorAll("[data-cat-box-status]").forEach((item) => {
+    const key = item.dataset.catBoxStatus;
+    let empty = false;
+    if (key === "round") {
+      empty = catInBoxRoundLabel.textContent === "-" && catInBoxRoundsTotalLabel.textContent === "-";
+    } else {
+      const value = item.querySelector("strong");
+      empty = !value || !value.textContent.trim() || value.textContent.trim() === "-";
+    }
+    item.classList.toggle("is-empty", empty);
+  });
+}
+
 function catInBoxSlotEmpty(view, color, value) {
   if (!view || !Array.isArray(view.colors) || !Array.isArray(view.board)) {
     return false;
@@ -177,6 +273,24 @@ function updateCatInBoxSelectionLabels() {
       ? formatCatInBoxColor(catInBoxSelectedColor)
       : "-";
   }
+  if (catInBoxSelection) {
+    catInBoxSelection.classList.toggle(
+      "is-empty",
+      !Number.isInteger(catInBoxSelectedCard) && !catInBoxSelectedColor
+    );
+  }
+  if (catInBoxDiscardBtn) {
+    catInBoxDiscardBtn.textContent = Number.isInteger(catInBoxSelectedCard)
+      ? `Discard ${catInBoxSelectedCard}`
+      : "Discard";
+  }
+  if (catInBoxPlayBtn) {
+    const colorEmoji = catInBoxColorEmoji[catInBoxSelectedColor] || "";
+    catInBoxPlayBtn.textContent =
+      Number.isInteger(catInBoxSelectedCard) && colorEmoji
+        ? `Play ${colorEmoji} ${catInBoxSelectedCard}`
+        : "Play Card";
+  }
 }
 
 function updateCatInBoxColorButtons(view) {
@@ -191,11 +305,9 @@ function updateCatInBoxColorButtons(view) {
       enabled = catInBoxIsSelectionLegal(view, catInBoxSelectedCard, color);
     }
     button.disabled = !enabled;
-    if (catInBoxSelectedColor === color) {
-      button.classList.add("selected");
-    } else {
-      button.classList.remove("selected");
-    }
+    const selected = catInBoxSelectedColor === color;
+    button.classList.toggle("selected", selected);
+    button.setAttribute("aria-pressed", selected ? "true" : "false");
   });
 }
 
@@ -204,19 +316,25 @@ function renderCatInBoxHand(view) {
     return;
   }
   catInBoxHand.innerHTML = "";
+  const legalActions = Array.isArray(view.legal_actions) ? view.legal_actions : [];
+  const canSelectCard = legalActions.includes("discard") || legalActions.includes("play_card");
   if (!Array.isArray(view.hand) || !view.hand.length) {
+    catInBoxHand.style.setProperty("--cat-box-hand-count", "1");
     catInBoxHand.textContent = "-";
     updateCatInBoxSelectionLabels();
     return;
   }
+  catInBoxHand.style.setProperty("--cat-box-hand-count", String(view.hand.length));
   view.hand.forEach((value) => {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "slot";
     btn.textContent = String(value);
-    if (catInBoxSelectedCard === value) {
-      btn.classList.add("selected");
-    }
+    btn.disabled = !canSelectCard;
+    btn.setAttribute("aria-label", `Number ${value}`);
+    const selected = catInBoxSelectedCard === value;
+    btn.classList.toggle("selected", selected);
+    btn.setAttribute("aria-pressed", selected ? "true" : "false");
     btn.addEventListener("click", () => {
       if (catInBoxSelectedCard === value) {
         catInBoxSelectedCard = null;
@@ -259,7 +377,17 @@ function renderCatInBoxBoard(view) {
   colors.forEach((color, rowIndex) => {
     const label = document.createElement("div");
     label.className = "cat-box-row-label";
-    label.textContent = formatCatInBoxColor(color);
+    label.setAttribute("aria-label", formatCatInBoxColor(color));
+    label.title = formatCatInBoxColor(color);
+    const emoji = document.createElement("span");
+    emoji.className = "cat-box-row-emoji";
+    emoji.setAttribute("aria-hidden", "true");
+    emoji.textContent = catInBoxColorEmoji[color] || "";
+    const colorName = document.createElement("span");
+    colorName.className = "cat-box-row-name";
+    colorName.textContent = color.charAt(0).toUpperCase() + color.slice(1);
+    label.appendChild(emoji);
+    label.appendChild(colorName);
     catInBoxBoard.appendChild(label);
     for (let value = 1; value <= maxNumber; value += 1) {
       const cell = document.createElement("button");
@@ -274,6 +402,7 @@ function renderCatInBoxBoard(view) {
       if (occupant) {
         const name = findPlayerName(view, occupant);
         cell.textContent = name ? name.charAt(0).toUpperCase() : "?";
+        cell.setAttribute("aria-label", `${formatCatInBoxColor(color)} ${value}, occupied by ${name}`);
         if (name) {
           cell.title = name;
         }
@@ -281,6 +410,7 @@ function renderCatInBoxBoard(view) {
         cell.disabled = true;
       } else {
         cell.textContent = String(value);
+        cell.setAttribute("aria-label", `${formatCatInBoxColor(color)} ${value}`);
       }
 
       const isLegal =
@@ -295,17 +425,12 @@ function renderCatInBoxBoard(view) {
       if (catInBoxSelectedCard === value && catInBoxSelectedColor === color) {
         cell.classList.add("selected");
       }
-      if (!cell.disabled) {
+      if (!occupant) {
+        cell.disabled = !isLegal;
+      }
+      if (isLegal) {
         cell.addEventListener("click", () => {
-          if (!Number.isInteger(catInBoxSelectedCard)) {
-            log("Select a card first.");
-            return;
-          }
-          if (!catInBoxIsSelectionLegal(view, value, color)) {
-            log("That slot is not legal.");
-            return;
-          }
-          catInBoxSelectedColor = color;
+          catInBoxSelectedColor = catInBoxSelectedColor === color ? null : color;
           updateCatInBoxSelectionLabels();
           updateCatInBoxActionButtons();
           renderCatInBoxBoard(view);
@@ -323,14 +448,23 @@ function renderCatInBoxTrick(view) {
   catInBoxTrick.innerHTML = "";
   const trick = Array.isArray(view.current_trick) ? view.current_trick : [];
   if (!trick.length) {
-    catInBoxTrick.textContent = "-";
+    catInBoxTrick.textContent = "—";
     return;
   }
   trick.forEach((entry) => {
     const card = document.createElement("div");
     card.className = "cat-box-trick-card";
     const name = entry.name || findPlayerName(view, entry.player_id);
-    card.textContent = `${name}: ${formatCatInBoxColor(entry.color)} ${entry.value}`;
+    card.title = `${name}: ${formatCatInBoxColor(entry.color)} ${entry.value}`;
+    card.setAttribute("aria-label", card.title);
+    const player = document.createElement("span");
+    player.className = "cat-box-trick-player";
+    player.textContent = name;
+    const play = document.createElement("strong");
+    play.className = "cat-box-trick-play";
+    play.textContent = `${catInBoxColorEmoji[entry.color] || ""} ${entry.value}`.trim();
+    card.appendChild(player);
+    card.appendChild(play);
     catInBoxTrick.appendChild(card);
   });
 }
@@ -355,13 +489,13 @@ function renderCatInBoxPlayers(view) {
     const meta = document.createElement("div");
     meta.className = "player-meta";
     const bidLabel = Number.isInteger(p.bid) ? p.bid : "-";
-    meta.textContent = `bid ${bidLabel} | tricks ${p.tricks_won ?? 0} | score ${p.score ?? 0}`;
+    meta.textContent = `Bid ${bidLabel} · ${p.tricks_won ?? 0} tricks · ${p.score ?? 0} pts`;
     const voids = Array.isArray(p.void_colors) ? p.void_colors : [];
     if (voids.length) {
       const voidLine = document.createElement("div");
       voidLine.className = "player-meta";
       const voidLabels = voids.map((color) => formatCatInBoxColor(color)).join(" ");
-      voidLine.textContent = `void ${voidLabels}`;
+      voidLine.textContent = `Void ${voidLabels}`;
       card.appendChild(name);
       card.appendChild(meta);
       card.appendChild(voidLine);
@@ -379,9 +513,15 @@ function renderCatInBoxSummary(view) {
   }
   const summary = view.last_round_summary;
   if (!summary) {
+    if (catInBoxSummarySection) {
+      catInBoxSummarySection.classList.add("hidden");
+    }
     catInBoxSummary.classList.add("hidden");
     catInBoxSummaryBody.textContent = "-";
     return;
+  }
+  if (catInBoxSummarySection) {
+    catInBoxSummarySection.classList.remove("hidden");
   }
   catInBoxSummary.classList.remove("hidden");
   while (catInBoxSummaryBody.firstChild) {
@@ -419,6 +559,7 @@ function renderCatInBoxSummary(view) {
 
 function updateCatInBoxActionButtons() {
   if (currentGameType !== "cat_in_box") {
+    updateCatInBoxPhasePresentation(null, []);
     const buttons = [catInBoxDiscardBtn, catInBoxBid1Btn, catInBoxBid2Btn, catInBoxBid3Btn, catInBoxPlayBtn];
     buttons.forEach((button) => {
       if (!button) {
@@ -428,10 +569,12 @@ function updateCatInBoxActionButtons() {
       button.disabled = true;
     });
     updateCatInBoxColorButtons(null);
+    updateCatInBoxSelectionLabels();
     return;
   }
   const view = currentCatInBoxView;
   const legal = view && Array.isArray(view.legal_actions) ? view.legal_actions : [];
+  updateCatInBoxPhasePresentation(view, legal);
   const canDiscard = legal.includes("discard") && Number.isInteger(catInBoxSelectedCard);
   const canBid = legal.includes("bid");
   const canPlay =
@@ -459,6 +602,7 @@ function updateCatInBoxActionButtons() {
     catInBoxPlayBtn.classList.toggle("action-allowed", canPlay);
   }
   updateCatInBoxColorButtons(view);
+  updateCatInBoxSelectionLabels();
 }
 
 function clearCatInBoxState() {
@@ -513,9 +657,13 @@ function clearCatInBoxState() {
   if (catInBoxSummary) {
     catInBoxSummary.classList.add("hidden");
   }
+  if (catInBoxSummarySection) {
+    catInBoxSummarySection.classList.add("hidden");
+  }
   if (catInBoxSummaryBody) {
     catInBoxSummaryBody.textContent = "-";
   }
+  updateCatInBoxStatusVisibility();
   updateCatInBoxActionButtons();
 }
 
@@ -539,7 +687,7 @@ function renderCatInBoxGameState(data) {
   }
 
   if (catInBoxPhaseLabel) {
-    catInBoxPhaseLabel.textContent = view.phase || "-";
+    catInBoxPhaseLabel.textContent = formatCatInBoxPhase(view.phase);
   }
   if (catInBoxRoundLabel) {
     catInBoxRoundLabel.textContent = Number.isInteger(view.round) ? String(view.round) : "-";
@@ -574,6 +722,7 @@ function renderCatInBoxGameState(data) {
     }
   }
 
+  updateCatInBoxStatusVisibility();
   updateCatInBoxSelectionLabels();
   renderCatInBoxBoard(view);
   renderCatInBoxTrick(view);
@@ -584,26 +733,14 @@ function renderCatInBoxGameState(data) {
   logGameEvents(data);
 }
 
-if (catInBoxClearSelectionBtn) {
-  catInBoxClearSelectionBtn.addEventListener("click", () => {
-    catInBoxSelectedCard = null;
-    catInBoxSelectedColor = null;
-    updateCatInBoxSelectionLabels();
-    if (currentCatInBoxView) {
-      renderCatInBoxBoard(currentCatInBoxView);
-      renderCatInBoxHand(currentCatInBoxView);
-    }
-    updateCatInBoxActionButtons();
-  });
-}
-
 if (catInBoxColorButtons) {
   catInBoxColorButtons.addEventListener("click", (event) => {
     const button = event.target.closest("button[data-color]");
     if (!button || button.disabled) {
       return;
     }
-    catInBoxSelectedColor = button.dataset.color || null;
+    const color = button.dataset.color || null;
+    catInBoxSelectedColor = catInBoxSelectedColor === color ? null : color;
     updateCatInBoxSelectionLabels();
     if (currentCatInBoxView) {
       renderCatInBoxBoard(currentCatInBoxView);
@@ -689,6 +826,7 @@ if (catInBoxPlayBtn) {
 let catInBoxExplainMode = false;
 
 function showCatInBoxHeaderActions(show) {
+  document.body.classList.toggle("cat-in-box-active", show);
   if (catInBoxHeaderActions) {
     catInBoxHeaderActions.style.display = show ? "flex" : "none";
   }

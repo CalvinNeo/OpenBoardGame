@@ -1,0 +1,486 @@
+{
+  "terms": [
+    {
+      "id": "rain_shadow",
+      "term": "雨影",
+      "pronunciation": "yǔ yǐng",
+      "category": "地理",
+      "difficulty": 1,
+      "definition": "山脉背风侧因空气越岭前已释放大部分水汽，而形成的相对干燥区域。"
+    },
+    {
+      "id": "whale_fall",
+      "term": "鲸落",
+      "pronunciation": "jīng luò",
+      "category": "生物",
+      "difficulty": 1,
+      "definition": "鲸的遗体沉到海底后，长期为食腐动物和微生物群落提供能量的生态过程。"
+    },
+    {
+      "id": "moonbow",
+      "term": "月虹",
+      "pronunciation": "yuè hóng",
+      "category": "天文",
+      "difficulty": 1,
+      "definition": "月光被空气中的水滴折射、反射和色散后形成的暗淡彩虹。"
+    },
+    {
+      "id": "ice_needle",
+      "term": "冰针",
+      "pronunciation": "bīng zhēn",
+      "category": "地理",
+      "difficulty": 1,
+      "definition": "湿润土壤中的水在地表冻结并向上生长，形成的一束束细长冰晶。"
+    },
+    {
+      "id": "crown_shyness",
+      "term": "树冠羞避",
+      "pronunciation": "shù guān xiū bì",
+      "category": "生物",
+      "difficulty": 1,
+      "definition": "相邻树木的树冠彼此少有接触，在林冠上留下沟状缝隙的现象。"
+    },
+    {
+      "id": "mammatus",
+      "term": "乳状云",
+      "pronunciation": "rǔ zhuàng yún",
+      "category": "气象",
+      "difficulty": 1,
+      "definition": "云底向下垂出一串袋状或乳房状小团块的云体附属特征。"
+    },
+    {
+      "id": "marine_snow",
+      "term": "海洋雪",
+      "pronunciation": "hǎi yáng xuě",
+      "category": "海洋",
+      "difficulty": 1,
+      "definition": "浮游生物残骸、粪粒和黏液等有机颗粒持续从海水上层下沉的现象。"
+    },
+    {
+      "id": "saltation",
+      "term": "跃移",
+      "pronunciation": "yuè yí",
+      "category": "地理",
+      "difficulty": 1,
+      "definition": "沙粒被风短暂抬起后落回地面，再反复弹跳前进的搬运方式。"
+    },
+    {
+      "id": "tidal_locking",
+      "term": "潮汐锁定",
+      "pronunciation": "cháo xī suǒ dìng",
+      "category": "天文",
+      "difficulty": 1,
+      "definition": "天体自转周期与绕行周期同步，使它总以近乎同一面对着伴星的状态。"
+    },
+    {
+      "id": "earthshine",
+      "term": "地照",
+      "pronunciation": "dì zhào",
+      "category": "天文",
+      "difficulty": 1,
+      "definition": "地球反射的阳光照亮月面暗部，使细月旁仍能隐约看见整个月面的现象。"
+    },
+    {
+      "id": "anting",
+      "term": "蚁浴",
+      "pronunciation": "yǐ yù",
+      "category": "生物",
+      "difficulty": 1,
+      "definition": "鸟把蚂蚁擦到羽毛上或让蚂蚁在羽间爬行的一类行为。"
+    },
+    {
+      "id": "autotomy",
+      "term": "自切",
+      "pronunciation": "zì qiē",
+      "category": "生物",
+      "difficulty": 1,
+      "definition": "动物主动舍弃尾、足等身体部位，以逃脱捕食者或摆脱危险的行为。"
+    },
+    {
+      "id": "nuptial_flight",
+      "term": "婚飞",
+      "pronunciation": "hūn fēi",
+      "category": "生物",
+      "difficulty": 1,
+      "definition": "蚂蚁、白蚁等社会性昆虫的有翅繁殖个体成群飞出巢穴交配的活动。"
+    },
+    {
+      "id": "eyespots",
+      "term": "眼斑",
+      "pronunciation": "yǎn bān",
+      "category": "生物",
+      "difficulty": 1,
+      "definition": "动物体表看似眼睛的圆形斑纹，可用于恫吓、误导捕食者或求偶。"
+    },
+    {
+      "id": "turgor",
+      "term": "膨压",
+      "pronunciation": "péng yā",
+      "category": "植物",
+      "difficulty": 1,
+      "definition": "植物细胞吸水后，细胞内容物向细胞壁施加的压力，能帮助组织保持挺立。"
+    },
+    {
+      "id": "gravitropism",
+      "term": "向重性",
+      "pronunciation": "xiàng zhòng xìng",
+      "category": "植物",
+      "difficulty": 1,
+      "definition": "植物器官感受重力方向并产生定向生长的性质，例如根向下、茎向上。"
+    },
+    {
+      "id": "aestivation",
+      "term": "夏眠",
+      "pronunciation": "xià mián",
+      "category": "生物",
+      "difficulty": 1,
+      "definition": "部分动物在炎热或干旱季节降低代谢、进入休眠，以熬过不利环境。"
+    },
+    {
+      "id": "tenon_mortise",
+      "term": "榫卯",
+      "pronunciation": "sǔn mǎo",
+      "category": "建筑",
+      "difficulty": 1,
+      "definition": "用木构件凸出的榫与凹入的卯相互咬合，而不依赖钉子的连接方式。"
+    },
+    {
+      "id": "caisson_ceiling",
+      "term": "藻井",
+      "pronunciation": "zǎo jǐng",
+      "category": "建筑",
+      "difficulty": 1,
+      "definition": "传统建筑室内顶部向上凹进、层层收缩，并常饰有彩画雕刻的构造。"
+    },
+    {
+      "id": "boshan_censer",
+      "term": "博山炉",
+      "pronunciation": "bó shān lú",
+      "category": "器物",
+      "difficulty": 1,
+      "definition": "盛行于汉代、炉盖做成重叠山峦形状的一类香炉，烟会从山间孔隙升起。"
+    },
+
+    {
+      "id": "analemma",
+      "term": "日行迹",
+      "pronunciation": "rì xíng jì",
+      "category": "天文",
+      "difficulty": 2,
+      "definition": "一年中每天在同一时刻记录太阳位置，连起来形成的近似八字形轨迹。"
+    },
+    {
+      "id": "roche_limit",
+      "term": "洛希极限",
+      "pronunciation": "luò xī jí xiàn",
+      "category": "天文",
+      "difficulty": 2,
+      "definition": "卫星靠近大天体时，可能被潮汐力撕裂而无法仅靠自身引力维持完整的临界距离。"
+    },
+    {
+      "id": "mpemba_effect",
+      "term": "彭巴效应",
+      "pronunciation": "péng bā xiào yìng",
+      "category": "物理",
+      "difficulty": 2,
+      "definition": "在特定条件下，初温较高的水反而可能比初温较低的水更快结冰的现象。"
+    },
+    {
+      "id": "leidenfrost_effect",
+      "term": "莱顿弗罗斯特效应",
+      "pronunciation": "lái dùn fú luó sī tè xiào yìng",
+      "category": "物理",
+      "difficulty": 2,
+      "definition": "液滴落在远高于沸点的表面时，被自身蒸气层托起而滑动并延缓蒸发的现象。"
+    },
+    {
+      "id": "von_karman_vortex",
+      "term": "卡门涡街",
+      "pronunciation": "kǎ mén wō jiē",
+      "category": "物理",
+      "difficulty": 2,
+      "definition": "流体绕过物体后，在其下游左右交替脱落并排列成两列的旋涡结构。"
+    },
+    {
+      "id": "marangoni_effect",
+      "term": "马兰戈尼效应",
+      "pronunciation": "mǎ lán gē ní xiào yìng",
+      "category": "物理",
+      "difficulty": 2,
+      "definition": "液体表面张力存在差异时，液体沿界面由低表面张力处流向高表面张力处的现象。"
+    },
+    {
+      "id": "foehn",
+      "term": "焚风",
+      "pronunciation": "fén fēng",
+      "category": "气象",
+      "difficulty": 2,
+      "definition": "湿空气越过山脉后在背风坡下沉增温，形成的干燥而温暖的风。"
+    },
+    {
+      "id": "upwelling",
+      "term": "上升流",
+      "pronunciation": "shàng shēng liú",
+      "category": "海洋",
+      "difficulty": 2,
+      "definition": "深层较冷且富含营养盐的海水，在风或海流作用下涌向表层的运动。"
+    },
+    {
+      "id": "periglacial",
+      "term": "冰缘地貌",
+      "pronunciation": "bīng yuán dì mào",
+      "category": "地理",
+      "difficulty": 2,
+      "definition": "寒冷地区因土壤反复冻融、融冻扰动等作用形成的一组地表形态。"
+    },
+    {
+      "id": "semantic_satiation",
+      "term": "语义饱和",
+      "pronunciation": "yǔ yì bǎo hé",
+      "category": "心理",
+      "difficulty": 2,
+      "definition": "一个词被短时间重复许多次后，听者暂时觉得它陌生、失去意义的体验。"
+    },
+    {
+      "id": "doorway_effect",
+      "term": "门口效应",
+      "pronunciation": "mén kǒu xiào yìng",
+      "category": "心理",
+      "difficulty": 2,
+      "definition": "人在穿过门口、切换环境后，更容易暂时忘记刚才打算做什么的现象。"
+    },
+    {
+      "id": "peak_end_rule",
+      "term": "峰终定律",
+      "pronunciation": "fēng zhōng dìng lǜ",
+      "category": "心理",
+      "difficulty": 2,
+      "definition": "人们回忆一段经历时，整体评价常主要受最强烈时刻和结尾感受影响的规律。"
+    },
+    {
+      "id": "frequency_illusion",
+      "term": "频率错觉",
+      "pronunciation": "pín lǜ cuò jué",
+      "category": "心理",
+      "difficulty": 2,
+      "definition": "刚认识某个事物后，突然觉得它到处出现，仿佛其实际频率骤增的认知偏差。"
+    },
+    {
+      "id": "zeigarnik_effect",
+      "term": "蔡格尼克效应",
+      "pronunciation": "cài gé ní kè xiào yìng",
+      "category": "心理",
+      "difficulty": 2,
+      "definition": "与已经完成的任务相比，人往往更容易记住被打断或尚未完成的任务。"
+    },
+    {
+      "id": "zeugma_chinese",
+      "term": "拈连",
+      "pronunciation": "niān lián",
+      "category": "语言",
+      "difficulty": 2,
+      "definition": "把本来只适用于一个对象的词语顺势用到另一个对象上的修辞方式。"
+    },
+    {
+      "id": "transferred_epithet",
+      "term": "移就",
+      "pronunciation": "yí jiù",
+      "category": "语言",
+      "difficulty": 2,
+      "definition": "把描写甲事物性状的修饰语有意转移到乙事物上的修辞方式。"
+    },
+    {
+      "id": "seme",
+      "term": "义素",
+      "pronunciation": "yì sù",
+      "category": "语言",
+      "difficulty": 2,
+      "definition": "语言学中用于分析词义的最小区别性语义特征。"
+    },
+    {
+      "id": "palace_exam_announcement",
+      "term": "传胪",
+      "pronunciation": "chuán lú",
+      "category": "历史",
+      "difficulty": 2,
+      "definition": "古代殿试之后，由官员依次高声传唱进士名次的典礼。"
+    },
+    {
+      "id": "border_market",
+      "term": "榷场",
+      "pronunciation": "què chǎng",
+      "category": "历史",
+      "difficulty": 2,
+      "definition": "古代在政权交界地区设置、由官方管理和征税的互市贸易场所。"
+    },
+    {
+      "id": "charm_coin",
+      "term": "压胜钱",
+      "pronunciation": "yā shèng qián",
+      "category": "民俗",
+      "difficulty": 2,
+      "definition": "外形常像钱币、但通常不用于流通，而用于祈福、辟邪或纪念的饰物。"
+    },
+
+    {
+      "id": "tilting_vessel",
+      "term": "欹器",
+      "pronunciation": "qī qì",
+      "category": "器物",
+      "difficulty": 3,
+      "definition": "一种空时倾斜、装水适中则端正、装满又会翻倒的古代警示器具。"
+    },
+    {
+      "id": "bili_instrument",
+      "term": "觱篥",
+      "pronunciation": "bì lì",
+      "category": "音乐",
+      "difficulty": 3,
+      "definition": "古代从西域传入中原的一种双簧管乐器，声音高亢，后来也称管子。"
+    },
+    {
+      "id": "fusi_screen",
+      "term": "罘罳",
+      "pronunciation": "fú sī",
+      "category": "建筑",
+      "difficulty": 3,
+      "definition": "古代设在门外或宫殿中的屏障，可遮蔽视线；这个词也曾指捕鸟的网。"
+    },
+    {
+      "id": "sleeve_band",
+      "term": "襻膊",
+      "pronunciation": "pàn bó",
+      "category": "服饰",
+      "difficulty": 3,
+      "definition": "古人做事时用来把宽大衣袖束起、固定在肩背处的一条带子。"
+    },
+    {
+      "id": "dust_ceiling",
+      "term": "承尘",
+      "pronunciation": "chéng chén",
+      "category": "建筑",
+      "difficulty": 3,
+      "definition": "古代室内设在屋梁下方、用来遮挡并承接灰尘的帐幕或顶棚。"
+    },
+    {
+      "id": "travel_screen",
+      "term": "行障",
+      "pronunciation": "xíng zhàng",
+      "category": "器物",
+      "difficulty": 3,
+      "definition": "古代贵族出行或举行仪仗时随行搬动，用于遮蔽视线的屏风或帷幕。"
+    },
+    {
+      "id": "gambiered_silk",
+      "term": "莨绸",
+      "pronunciation": "liáng chóu",
+      "category": "服饰",
+      "difficulty": 3,
+      "definition": "用薯莨汁液多次浸晒、并经河泥处理而成的一种深色丝织物。"
+    },
+    {
+      "id": "ear_cup",
+      "term": "耳杯",
+      "pronunciation": "ěr bēi",
+      "category": "器物",
+      "difficulty": 3,
+      "definition": "战国至汉代常见的椭圆形饮食器，两侧各有一个像耳朵的半月形把手。"
+    },
+    {
+      "id": "tlv_mirror",
+      "term": "规矩镜",
+      "pronunciation": "guī jǔ jìng",
+      "category": "器物",
+      "difficulty": 3,
+      "definition": "汉代流行的一类铜镜，镜背常有近似 T、L、V 形的规则纹样。"
+    },
+    {
+      "id": "royal_ploughing",
+      "term": "藉田",
+      "pronunciation": "jí tián",
+      "category": "礼制",
+      "difficulty": 3,
+      "definition": "古代君主亲自象征性耕作特定田地，以表示重视农业的一种礼仪制度。"
+    },
+    {
+      "id": "xingjuan",
+      "term": "行卷",
+      "pronunciation": "xíng juàn",
+      "category": "历史",
+      "difficulty": 3,
+      "definition": "唐代应试者在科举前把自己的诗文作品送给名人或权贵，以求声誉和推荐的做法。"
+    },
+    {
+      "id": "tally_document",
+      "term": "勘合",
+      "pronunciation": "kān hé",
+      "category": "历史",
+      "difficulty": 3,
+      "definition": "把预先分开的两半凭证相互核对，以验证文书、使者或贸易资格的制度。"
+    },
+    {
+      "id": "open_dispatch",
+      "term": "露布",
+      "pronunciation": "lù bù",
+      "category": "历史",
+      "difficulty": 3,
+      "definition": "古代不加封检、公开传递的文书，后来尤其常指公开发布的捷报。"
+    },
+    {
+      "id": "jimi_system",
+      "term": "羁縻",
+      "pronunciation": "jī mí",
+      "category": "历史",
+      "difficulty": 3,
+      "definition": "古代中央政权保留边疆地方首领地位、借其进行间接治理的一种方式。"
+    },
+    {
+      "id": "carcinisation",
+      "term": "蟹化",
+      "pronunciation": "xiè huà",
+      "category": "生物",
+      "difficulty": 3,
+      "definition": "不同甲壳动物谱系在演化中各自形成扁宽甲壳和折叠腹部等蟹形特征的趋同现象。"
+    },
+    {
+      "id": "kleptoplasty",
+      "term": "盗食质体",
+      "pronunciation": "dào shí zhì tǐ",
+      "category": "生物",
+      "difficulty": 3,
+      "definition": "某些生物吞食藻类后保留其叶绿体，并让这些叶绿体继续进行光合作用的现象。"
+    },
+    {
+      "id": "gynandromorph",
+      "term": "雌雄嵌合",
+      "pronunciation": "cí xióng qiàn hé",
+      "category": "生物",
+      "difficulty": 3,
+      "definition": "同一个体的不同身体区域分别呈现雄性与雌性组织或外部特征的现象。"
+    },
+    {
+      "id": "cryptobiosis",
+      "term": "隐生",
+      "pronunciation": "yǐn shēng",
+      "category": "生物",
+      "difficulty": 3,
+      "definition": "生物在极端环境下把代谢活动降到几乎测不出的程度，条件恢复后又重新活动的状态。"
+    },
+    {
+      "id": "olbers_paradox",
+      "term": "奥伯斯佯谬",
+      "pronunciation": "ào bó sī yáng miù",
+      "category": "天文",
+      "difficulty": 3,
+      "definition": "若宇宙无限、静止且恒星均匀分布，夜空本应处处明亮，但实际却黑暗的表面矛盾。"
+    },
+    {
+      "id": "apophenia",
+      "term": "阿波芬尼亚",
+      "pronunciation": "ā bō fēn ní yà",
+      "category": "心理",
+      "difficulty": 3,
+      "definition": "人在彼此无关或随机的信息之间感知出模式、联系或意义的倾向。"
+    }
+  ]
+}

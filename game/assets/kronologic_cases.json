@@ -12,6 +12,7 @@
       "name_zh": "档案管理员",
       "emoji": "📚",
       "code": "AR",
+      "code_zh": "档",
       "pattern": "lines"
     },
     {
@@ -20,6 +21,7 @@
       "name_zh": "指挥家",
       "emoji": "🎼",
       "code": "CO",
+      "code_zh": "指",
       "pattern": "diagonal"
     },
     {
@@ -28,6 +30,7 @@
       "name_zh": "工程师",
       "emoji": "🧰",
       "code": "EN",
+      "code_zh": "工",
       "pattern": "dots"
     },
     {
@@ -36,6 +39,7 @@
       "name_zh": "赞助人",
       "emoji": "🎩",
       "code": "PA",
+      "code_zh": "赞",
       "pattern": "diamonds"
     },
     {
@@ -44,6 +48,7 @@
       "name_zh": "歌唱家",
       "emoji": "🎤",
       "code": "SI",
+      "code_zh": "歌",
       "pattern": "waves"
     },
     {
@@ -52,6 +57,7 @@
       "name_zh": "信使",
       "emoji": "✉️",
       "code": "CU",
+      "code_zh": "信",
       "pattern": "crosshatch"
     }
   ],

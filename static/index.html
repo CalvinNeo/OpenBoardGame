@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css?v=app_v76" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v78" />
   <link rel="stylesheet" href="/static/ark_nova.css?v=app_v21" />
 </head>
 <body>
@@ -3457,58 +3457,99 @@
               <div id="skullPlayers"></div>
             </div>
 
-            <div id="catInBoxPanel" class="hidden">
-              <div class="row">
-                <div>Phase: <span id="catInBoxPhase">-</span></div>
-                <div>Round: <span id="catInBoxRound">-</span>/<span id="catInBoxRoundsTotal">-</span></div>
-                <div>Current Turn: <span id="catInBoxTurn">-</span></div>
-              </div>
-              <div class="row">
-                <div>Lead: <span id="catInBoxLead">-</span></div>
-                <div>Trump: <span id="catInBoxTrump">-</span></div>
-                <div>Tricks Played: <span id="catInBoxTricksPlayed">-</span></div>
-              </div>
-              <div class="row">
-                <div>Paradox: <span id="catInBoxParadox">-</span></div>
-                <div>Winners: <span id="catInBoxWinners">-</span></div>
-              </div>
-
-              <h3>Research Board</h3>
-              <div id="catInBoxBoard" class="cat-box-board"></div>
-
-              <h3>Current Trick</h3>
-              <div id="catInBoxTrick" class="cat-box-trick"></div>
-
-              <h3>Your Hand</h3>
-              <div id="catInBoxHand" class="hand"></div>
-              <div class="row">
-                <div>Selected Card: <span id="catInBoxSelectedCard">-</span></div>
-                <div>Selected Color: <span id="catInBoxSelectedColor">-</span></div>
-                <button id="catInBoxClearSelection">Clear</button>
-              </div>
-              <div class="row actions cat-box-color-row" id="catInBoxColorButtons">
-                <button id="catInBoxColorRedBtn" type="button" data-color="red">🟥 Red</button>
-                <button id="catInBoxColorBlueBtn" type="button" data-color="blue">🟦 Blue</button>
-                <button id="catInBoxColorYellowBtn" type="button" data-color="yellow">🟨 Yellow</button>
-                <button id="catInBoxColorGreenBtn" type="button" data-color="green">🟩 Green</button>
-              </div>
-
-              <h3>Actions</h3>
-              <div class="row actions">
-                <button id="catInBoxDiscardBtn">Discard</button>
-                <button id="catInBoxBid1Btn">Bid 1</button>
-                <button id="catInBoxBid2Btn">Bid 2</button>
-                <button id="catInBoxBid3Btn">Bid 3</button>
-                <button id="catInBoxPlayBtn">Play Card</button>
+            <div id="catInBoxPanel" class="hidden cat-box-panel" data-phase="idle">
+              <div class="cat-box-status" aria-label="Game status">
+                <div class="cat-box-status-item" data-cat-box-status="phase">
+                  <span class="cat-box-status-label">Phase</span>
+                  <strong id="catInBoxPhase">-</strong>
+                </div>
+                <div class="cat-box-status-item" data-cat-box-status="round">
+                  <span class="cat-box-status-label">Round</span>
+                  <strong><span id="catInBoxRound">-</span>/<span id="catInBoxRoundsTotal">-</span></strong>
+                </div>
+                <div class="cat-box-status-item" data-cat-box-status="turn">
+                  <span class="cat-box-status-label">Turn</span>
+                  <strong id="catInBoxTurn">-</strong>
+                </div>
+                <div class="cat-box-status-item" data-cat-box-status="lead">
+                  <span class="cat-box-status-label">Lead</span>
+                  <strong id="catInBoxLead">-</strong>
+                </div>
+                <div class="cat-box-status-item" data-cat-box-status="trump">
+                  <span class="cat-box-status-label">Trump</span>
+                  <strong id="catInBoxTrump">-</strong>
+                </div>
+                <div class="cat-box-status-item" data-cat-box-status="tricks">
+                  <span class="cat-box-status-label">Tricks</span>
+                  <strong id="catInBoxTricksPlayed">-</strong>
+                </div>
+                <div class="cat-box-status-item cat-box-status-result" data-cat-box-status="paradox">
+                  <span class="cat-box-status-label">Paradox</span>
+                  <strong id="catInBoxParadox">-</strong>
+                </div>
+                <div class="cat-box-status-item cat-box-status-result" data-cat-box-status="winners">
+                  <span class="cat-box-status-label">Winners</span>
+                  <strong id="catInBoxWinners">-</strong>
+                </div>
               </div>
 
-              <h3>Players</h3>
-              <div id="catInBoxPlayers"></div>
+              <section class="cat-box-section cat-box-board-section" aria-labelledby="catInBoxBoardTitle">
+                <div class="cat-box-section-header">
+                  <h3 id="catInBoxBoardTitle">Research</h3>
+                  <span class="cat-box-section-hint">Number × declared color</span>
+                </div>
+                <div id="catInBoxBoard" class="cat-box-board"></div>
+              </section>
 
-              <h3>Round Summary</h3>
-              <div id="catInBoxSummary" class="round-notice hidden">
-                <div class="round-notice-body" id="catInBoxSummaryBody">-</div>
-              </div>
+              <section class="cat-box-section cat-box-trick-section" aria-labelledby="catInBoxTrickTitle">
+                <div class="cat-box-section-header">
+                  <h3 id="catInBoxTrickTitle">Current Trick</h3>
+                </div>
+                <div id="catInBoxTrick" class="cat-box-trick"></div>
+              </section>
+
+              <section class="cat-box-section cat-box-controls" aria-labelledby="catInBoxControlsTitle">
+                <div class="cat-box-section-header cat-box-controls-header">
+                  <div>
+                    <h3 id="catInBoxControlsTitle">Your Hand</h3>
+                    <div id="catInBoxPrompt" class="cat-box-prompt">Waiting for the game to start</div>
+                  </div>
+                  <div class="cat-box-selection" aria-live="polite">
+                    <span class="cat-box-selection-part">Card <strong id="catInBoxSelectedCard">-</strong></span>
+                    <span class="cat-box-selection-part">Color <strong id="catInBoxSelectedColor">-</strong></span>
+                  </div>
+                </div>
+                <div id="catInBoxHand" class="hand cat-box-hand"></div>
+                <div class="row actions cat-box-color-row" id="catInBoxColorButtons" aria-label="Choose a color">
+                  <button id="catInBoxColorRedBtn" type="button" data-color="red" aria-label="Red"><span aria-hidden="true">🟥</span> <span class="cat-box-color-name">Red</span></button>
+                  <button id="catInBoxColorBlueBtn" type="button" data-color="blue" aria-label="Blue"><span aria-hidden="true">🟦</span> <span class="cat-box-color-name">Blue</span></button>
+                  <button id="catInBoxColorYellowBtn" type="button" data-color="yellow" aria-label="Yellow"><span aria-hidden="true">🟨</span> <span class="cat-box-color-name">Yellow</span></button>
+                  <button id="catInBoxColorGreenBtn" type="button" data-color="green" aria-label="Green"><span aria-hidden="true">🟩</span> <span class="cat-box-color-name">Green</span></button>
+                </div>
+                <div class="row actions cat-box-actions" id="catInBoxActions" aria-label="Turn actions">
+                  <button id="catInBoxDiscardBtn">Discard</button>
+                  <button id="catInBoxBid1Btn">Bid 1</button>
+                  <button id="catInBoxBid2Btn">Bid 2</button>
+                  <button id="catInBoxBid3Btn">Bid 3</button>
+                  <button id="catInBoxPlayBtn">Play Card</button>
+                </div>
+              </section>
+
+              <section class="cat-box-section cat-box-players-section" aria-labelledby="catInBoxPlayersTitle">
+                <div class="cat-box-section-header">
+                  <h3 id="catInBoxPlayersTitle">Players</h3>
+                </div>
+                <div id="catInBoxPlayers" class="cat-box-players"></div>
+              </section>
+
+              <section class="cat-box-section cat-box-summary-section hidden" aria-labelledby="catInBoxSummaryTitle">
+                <div class="cat-box-section-header">
+                  <h3 id="catInBoxSummaryTitle">Round Summary</h3>
+                </div>
+                <div id="catInBoxSummary" class="round-notice hidden">
+                  <div class="round-notice-body" id="catInBoxSummaryBody">-</div>
+                </div>
+              </section>
             </div>
 
             <div id="rebelPrincessPanel" class="hidden rebel-princess-panel">
@@ -6357,7 +6398,7 @@
   <script src="/static/games/aidixit.js?v=app_v4"></script>
   <script src="/static/games/hanabi.js?v=app_v4"></script>
   <script src="/static/games/gang.js?v=app_v4"></script>
-  <script src="/static/games/cat_in_box.js?v=app_v4"></script>
+  <script src="/static/games/cat_in_box.js?v=app_v5"></script>
   <script src="/static/games/point_salad.js?v=app_v4"></script>
   <script src="/static/games/forest_shuffle.js?v=app_v6"></script>
   <script src="/static/games/patchwork.js?v=app_v7"></script>
