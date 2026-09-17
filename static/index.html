@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css?v=app_v84" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v86" />
   <link rel="stylesheet" href="/static/ark_nova.css?v=app_v21" />
 </head>
 <body>
@@ -122,6 +122,21 @@
               <span><strong>中文</strong><small>中文牌名与规则</small></span>
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="reopenConfirmModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="reopenConfirmTitle" aria-describedby="reopenConfirmDescription">
+    <div class="modal-content reopen-confirm-modal">
+      <div class="modal-header">
+        <h2 id="reopenConfirmTitle">Reopen game?</h2>
+      </div>
+      <div class="modal-body">
+        <p id="reopenConfirmDescription">This starts a fresh game with the same players and loses all current progress.</p>
+        <div class="reopen-confirm-actions">
+          <button id="reopenConfirmCancelBtn" type="button">Cancel</button>
+          <button id="reopenConfirmBtn" class="reopen-confirm-submit" type="button">Reopen</button>
         </div>
       </div>
     </div>
@@ -2679,7 +2694,6 @@
                     <button id="wanderingDiscardBtn" type="button"><span aria-hidden="true">🗑️</span> Discard · Tower +1</button>
                     <button id="wanderingRerollBtn" type="button"><span aria-hidden="true">🎲</span> Reroll</button>
                     <button id="wanderingAcceptRollBtn" type="button"><span aria-hidden="true">✓</span> Keep roll</button>
-                    <button id="wanderingResolveBtn" type="button"><span aria-hidden="true">✦</span> Move selected</button>
                     <button id="wanderingSpellWizardBtn" type="button"><span aria-hidden="true">🧙</span> Wizard +1 <small>2 🧪</small></button>
                     <button id="wanderingSpellTowerBtn" type="button"><span aria-hidden="true">♜</span> Tower +2 <small>1 🧪</small></button>
                   </div>
@@ -6594,7 +6608,7 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js"></script>
-  <script src="/static/games/shared.js?v=app_v15"></script>
+  <script src="/static/games/shared.js?v=app_v16"></script>
   <script src="/static/games/blokus.js?v=app_v6"></script>
   <script src="/static/games/carcassonne.js?v=app_v6"></script>
   <script src="/static/games/azul.js?v=app_v4"></script>
@@ -6649,7 +6663,7 @@
   <script src="/static/games/istanbul.js?v=app_v4"></script>
   <script src="/static/games/gold_rush.js?v=app_v4"></script>
   <script src="/static/games/age_of_war.js?v=app_v5"></script>
-  <script src="/static/games/wandering_towers.js?v=app_v8"></script>
+  <script src="/static/games/wandering_towers.js?v=app_v9"></script>
   <script src="/static/games/incan_gold.js?v=app_v4"></script>
   <script src="/static/games/celestia.js?v=app_v2"></script>
   <script src="/static/games/manila.js?v=app_v4"></script>
@@ -6667,6 +6681,6 @@
   <script src="/static/games/scout.js?v=app_v4"></script>
   <script src="/static/games/ark_nova.js?v=app_v22"></script>
   <script src="/static/app.js?v=app_v18"></script>
-  <script src="/static/room.js?v=app_v31"></script>
+  <script src="/static/room.js?v=app_v32"></script>
 </body>
 </html>

@@ -1698,6 +1698,7 @@ def _compute_lead_option_score(state: Dict, player_id: str, cards: List[int]) ->
     score += _lead_turn_efficiency_bonus(state, player_id, cards, combo)
     score += _lead_same_type_reentry_bonus(state, player_id, cards, combo)
     score += _lead_teammate_support_bonus(state, player_id, cards, combo)
+    score += _lead_short_enemy_lock_bonus(state, player_id, cards, combo)
     score += _lead_initiative_retention_bonus(state, player_id, cards, combo)
     score += _lead_retake_control_bonus(state, player_id, cards, combo)
     score -= _lead_short_opponent_breakup_penalty(state, player_id, cards, combo)
@@ -2391,6 +2392,7 @@ def _lead_bomb_alternative_profile(
             "best_non_bomb_score": -999.0,
             "best_multi_non_bomb_score": -999.0,
             "best_clean_non_bomb_score": -999.0,
+            "has_short_enemy_lock": 0.0,
             "gap": 0.0,
         }
 
@@ -2401,6 +2403,7 @@ def _lead_bomb_alternative_profile(
             "best_non_bomb_score": -999.0,
             "best_multi_non_bomb_score": -999.0,
             "best_clean_non_bomb_score": -999.0,
+            "has_short_enemy_lock": 0.0,
             "gap": 0.0,
         }
 
@@ -2419,6 +2422,7 @@ def _lead_bomb_alternative_profile(
     best_non_bomb_score = -999.0
     best_multi_non_bomb_score = -999.0
     best_clean_non_bomb_score = -999.0
+    has_short_enemy_lock = False
     has_non_bomb = False
     chosen_key = _cards_key(cards)
     for option in _dedupe_card_sets(options):
@@ -2433,6 +2437,8 @@ def _lead_bomb_alternative_profile(
         best_non_bomb_score = max(best_non_bomb_score, alt_score)
         if len(option) > 1:
             best_multi_non_bomb_score = max(best_multi_non_bomb_score, alt_score)
+        if _lead_short_enemy_lock_bonus(state, player_id, option, alt_combo) > 0.0:
+            has_short_enemy_lock = True
         if (
             not _cards_use_special_material(play_cards, level_rank)
             and _group_fragment_penalty(hand, option, level_rank, alt_combo) <= 2.8
@@ -2446,6 +2452,7 @@ def _lead_bomb_alternative_profile(
             "best_non_bomb_score": -999.0,
             "best_multi_non_bomb_score": -999.0,
             "best_clean_non_bomb_score": -999.0,
+            "has_short_enemy_lock": 0.0,
             "gap": 0.0,
         }
 
@@ -2454,6 +2461,7 @@ def _lead_bomb_alternative_profile(
         "best_non_bomb_score": best_non_bomb_score,
         "best_multi_non_bomb_score": best_multi_non_bomb_score,
         "best_clean_non_bomb_score": best_clean_non_bomb_score,
+        "has_short_enemy_lock": 1.0 if has_short_enemy_lock else 0.0,
         "gap": best_non_bomb_score - bomb_score,
     }
 
@@ -2475,7 +2483,11 @@ def _lead_empty_bomb_penalty(
     remaining = _remove_cards(hand, cards)
     if not remaining:
         return 0.0
-    if _can_play_all(remaining, state["level_rank"], state.get("config", {}), None):
+    profile = alternative_profile or _lead_bomb_alternative_profile(state, player_id, cards, combo)
+    if (
+        _can_play_all(remaining, state["level_rank"], state.get("config", {}), None)
+        and not profile.get("has_short_enemy_lock")
+    ):
         return 0.0
 
     teammate = _teammate_of(state, player_id)
@@ -2490,10 +2502,14 @@ def _lead_empty_bomb_penalty(
         if active_opponents
         else 99
     )
-    if partner_left <= 2 or opp_left <= 2:
+    if partner_left <= 2:
         return 0.0
 
-    profile = alternative_profile or _lead_bomb_alternative_profile(state, player_id, cards, combo)
+    # A short opponent normally justifies spending control to deny a closeout.
+    # Not when a natural multi-card lead already forces that opponent to pass,
+    # hands the lane to our partner, and preserves the bomb for re-entry.
+    if opp_left <= 2 and not profile.get("has_short_enemy_lock"):
+        return 0.0
     if not profile.get("has_non_bomb"):
         return 0.0
 
@@ -3186,8 +3202,49 @@ def _lead_short_enemy_lock_bonus(
     cards: List[int],
     combo: Dict,
 ) -> float:
-    """Reward a covered high-pair lead against the last short opponent."""
-    if state.get("current_trick") or not cards or combo.get("type") != "pair":
+    """Reward a grouped lead that locks out a short enemy while retaining control."""
+    if state.get("current_trick") or not cards or combo.get("type") in BOMB_TYPES:
+        return 0.0
+
+    hand = state["players"][player_id]["hand"]
+    hand_map = _map_hand_by_id(hand)
+    play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
+    if _cards_use_special_material(play_cards, state["level_rank"]):
+        return 0.0
+
+    next_pid = _next_active_after(state, player_id)
+    teammate = _teammate_of(state, player_id)
+    if (
+        next_pid
+        and teammate
+        and _team_of(state, next_pid) != _team_of(state, player_id)
+        and _next_active_after(state, next_pid) == teammate
+    ):
+        next_left = len(state["players"].get(next_pid, {}).get("hand", []))
+        if 0 < next_left <= 2 and len(cards) > next_left:
+            remaining = _remove_cards(hand, cards)
+            if _find_bomb_candidates(remaining, state["level_rank"]):
+                bonus = 7.0
+                bonus += 2.5 if next_left == 1 else 1.0
+                if _can_play_all(
+                    remaining,
+                    state["level_rank"],
+                    state.get("config", {}),
+                    None,
+                ):
+                    bonus += 2.0
+                teammate_hand = state["players"].get(teammate, {}).get("hand", [])
+                teammate_max = _max_combo_value_for_hand(
+                    teammate_hand,
+                    state["level_rank"],
+                    combo.get("type") or "",
+                    state.get("config", {}),
+                )
+                if teammate_max is not None and teammate_max > _combo_numeric_value(combo):
+                    bonus += 2.0
+                return min(13.5, bonus)
+
+    if combo.get("type") != "pair":
         return 0.0
     if combo.get("rank_value", 0) < PREMIUM_SINGLE_VALUE_MIN:
         return 0.0
@@ -3208,7 +3265,6 @@ def _lead_short_enemy_lock_bonus(
     if not any(state["players"][pid].get("finished") for pid in opponents):
         return 0.0
 
-    hand = state["players"][player_id]["hand"]
     remaining = _remove_cards(hand, cards)
     if not _find_bomb_candidates(remaining, state["level_rank"]):
         return 0.0
@@ -3745,7 +3801,7 @@ def _critical_pair_three_bomb_bonus(
 
 
 def _lead_low_single_escape_bonus(hand: List[Dict], cards: List[int], level_rank: int) -> float:
-    if len(cards) != 1 or len(hand) > 6:
+    if len(cards) != 1 or len(hand) > 10:
         return 0.0
     hand_map = _map_hand_by_id(hand)
     card = hand_map.get(cards[0])
@@ -3761,6 +3817,18 @@ def _lead_low_single_escape_bonus(hand: List[Dict], cards: List[int], level_rank
     if value >= LOW_SINGLE_VALUE_MAX:
         return 0.0
     bonus = 3.0 + (LOW_SINGLE_VALUE_MAX - value) * 0.55
+    if len(hand) > 6:
+        remaining = _remove_cards(hand, cards)
+        decomp = _hand_decomposition_summary(remaining, level_rank)
+        has_reentry = _control_card_score(remaining, level_rank) > 0.0
+        if not has_reentry or decomp.get("group_turns", 0.0) < 2.0:
+            return 0.0
+        if decomp.get("grouped_cards", 0.0) < 6.0:
+            return 0.0
+        # In a short, grouped endgame the control card can win the single lane
+        # back after this probe. Clear the stranded low singleton before
+        # spending one of the intact groups and creating an all-single tail.
+        bonus *= 0.9
     if len(hand) <= 5:
         bonus *= 1.2
     return bonus

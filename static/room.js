@@ -19,6 +19,8 @@ let cachedGameList = null;
 let currentRoomList = [];
 let pendingSeatClaimRoomId = null;
 let pendingSeatClaimSourceId = null;
+let pendingReopenRoomId = null;
+let reopenConfirmReturnFocus = null;
 const selectedGameTagIds = new Set();
 const roomControlsDockQuery = window.matchMedia("(max-width: 900px)");
 
@@ -56,6 +58,9 @@ const loadAutoSaveToggle = document.getElementById("loadAutoSaveToggle");
 const createRoomModal = document.getElementById("createRoomModal");
 const createRoomModalTitle = document.getElementById("createRoomModalTitle");
 const createRoomModalCloseBtn = document.getElementById("createRoomModalCloseBtn");
+const reopenConfirmModal = document.getElementById("reopenConfirmModal");
+const reopenConfirmCancelBtn = document.getElementById("reopenConfirmCancelBtn");
+const reopenConfirmBtn = document.getElementById("reopenConfirmBtn");
 const createRoomGameStep = document.getElementById("createRoomGameStep");
 const gameSearchInput = document.getElementById("gameSearchInput");
 const playerCountFilter = document.getElementById("playerCountFilter");
@@ -811,8 +816,9 @@ function renderGameList(games) {
       chineseNameEl.textContent = chineseName;
       nameEl.appendChild(chineseNameEl);
     }
+    let tagsEl = null;
     if (tags.length) {
-      const tagsEl = document.createElement("span");
+      tagsEl = document.createElement("span");
       tagsEl.className = "game-item-tags";
       tagsEl.setAttribute("aria-hidden", "true");
       tags.forEach((tag) => {
@@ -821,7 +827,6 @@ function renderGameList(games) {
         tagEl.textContent = `${tag.emoji || "🏷️"} ${tag.label || tag.id}`;
         tagsEl.appendChild(tagEl);
       });
-      nameEl.appendChild(tagsEl);
     }
     const metaEl = document.createElement("span");
     metaEl.className = "game-item-meta";
@@ -839,6 +844,9 @@ function renderGameList(games) {
     metaEl.appendChild(playersEl);
     item.appendChild(nameEl);
     item.appendChild(metaEl);
+    if (tagsEl) {
+      item.appendChild(tagsEl);
+    }
     item.addEventListener("click", () => {
       selectGameFromModal(g.game_id);
     });
@@ -1292,6 +1300,46 @@ function updateReopenButton() {
   reopenBtn.disabled = !showButton;
 }
 
+function closeReopenConfirmModal(restoreFocus = true) {
+  setModalVisible(reopenConfirmModal, false);
+  const returnFocus = reopenConfirmReturnFocus;
+  pendingReopenRoomId = null;
+  reopenConfirmReturnFocus = null;
+  if (restoreFocus && returnFocus && document.contains(returnFocus)) {
+    returnFocus.focus();
+  }
+}
+
+function openReopenConfirmModal(activeRoomId, returnFocus) {
+  pendingReopenRoomId = activeRoomId;
+  reopenConfirmReturnFocus = returnFocus || reopenBtn;
+  setModalVisible(reopenConfirmModal, true);
+  if (reopenConfirmBtn) {
+    requestAnimationFrame(() => reopenConfirmBtn.focus());
+  }
+}
+
+function emitRoomReopen(activeRoomId) {
+  if (!activeRoomId) {
+    log("Not in a room");
+    return;
+  }
+  socket.emit("room:reopen", { room_id: activeRoomId });
+}
+
+function requestRoomReopen(event) {
+  const activeRoomId = roomId || (currentRoomState && currentRoomState.room_id);
+  if (!activeRoomId || !currentRoomState) {
+    log("Not in a room");
+    return;
+  }
+  if (currentRoomState.status === "game_over") {
+    emitRoomReopen(activeRoomId);
+    return;
+  }
+  openReopenConfirmModal(activeRoomId, event && event.currentTarget);
+}
+
 function updateRoomControlsDock() {
   if (!roomControlsPanel) {
     return;
@@ -1621,6 +1669,7 @@ function renderRoomList(rooms) {
 }
 
 function resetRoomState() {
+  closeReopenConfirmModal(false);
   roomId = null;
   currentRoomState = null;
   currentGameType = null;
@@ -2143,12 +2192,44 @@ if (createRoomModal) {
   });
 }
 
+if (reopenConfirmCancelBtn) {
+  reopenConfirmCancelBtn.addEventListener("click", () => {
+    closeReopenConfirmModal();
+  });
+}
+
+if (reopenConfirmBtn) {
+  reopenConfirmBtn.addEventListener("click", () => {
+    const targetRoomId = pendingReopenRoomId;
+    const activeRoomId = roomId || (currentRoomState && currentRoomState.room_id);
+    closeReopenConfirmModal(false);
+    if (!targetRoomId || targetRoomId !== activeRoomId) {
+      log("Room changed before reopen confirmation");
+      return;
+    }
+    emitRoomReopen(targetRoomId);
+  });
+}
+
+if (reopenConfirmModal) {
+  reopenConfirmModal.addEventListener("click", (event) => {
+    if (event.target === reopenConfirmModal) {
+      closeReopenConfirmModal();
+    }
+  });
+}
+
 document.addEventListener("keydown", (event) => {
-  if (
-    event.key !== "Escape" ||
-    !createRoomModal ||
-    createRoomModal.classList.contains("hidden")
-  ) {
+  if (event.key !== "Escape") {
+    return;
+  }
+  if (reopenConfirmModal && !reopenConfirmModal.classList.contains("hidden")) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    closeReopenConfirmModal();
+    return;
+  }
+  if (!createRoomModal || createRoomModal.classList.contains("hidden")) {
     return;
   }
   event.preventDefault();
@@ -2175,19 +2256,7 @@ document.getElementById("startBtn").addEventListener("click", () => {
 });
 
 if (reopenBtn) {
-  reopenBtn.addEventListener("click", () => {
-    if (!roomId || !currentRoomState) {
-      log("Not in a room");
-      return;
-    }
-    if (currentRoomState.status !== "game_over") {
-      const proceed = window.confirm("Reopen will lose all progress, continue?");
-      if (!proceed) {
-        return;
-      }
-    }
-    socket.emit("room:reopen", { room_id: roomId });
-  });
+  reopenBtn.addEventListener("click", requestRoomReopen);
 }
 
 if (downloadMemoriesBtn) {

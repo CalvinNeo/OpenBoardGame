@@ -312,6 +312,36 @@ class RoomSessionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(new_config["seed"]), 8)
         self.assertNotEqual(new_config["seed"], "previous-seed")
 
+    async def test_reopen_guandan_starts_a_fresh_deal(self):
+        sid_owner = "sid-owner"
+        room_id = await self._create_room(sid_owner, "Alice", game_type="guandan")
+        for index, name in enumerate(("Bob", "Carol", "Dave"), start=2):
+            await app.on_room_join(f"sid-{index}", {"room_id": room_id, "name": name})
+        room = app.ROOMS[room_id]
+        for player in room.players:
+            player.ready = True
+
+        await app.on_room_start(sid_owner, {})
+
+        original_state = room.game_state
+        owner_id = room.players[0].player_id
+        original_state["players"][owner_id]["hand"].pop()
+        original_state["round_number"] = 4
+
+        await app.on_room_reopen(sid_owner, {})
+
+        new_room_id = app.SESSIONS[sid_owner]["room_id"]
+        new_room = app.ROOMS[new_room_id]
+        self.assertNotEqual(new_room_id, room_id)
+        self.assertEqual(new_room.status, "in_game")
+        self.assertEqual(new_room.game_type, "guandan")
+        self.assertIsNot(new_room.game_state, original_state)
+        self.assertEqual(new_room.game_state["phase"], "playing")
+        self.assertEqual(new_room.game_state["round_number"], 1)
+        self.assertEqual(len(new_room.game_state["players"]), 4)
+        for player_state in new_room.game_state["players"].values():
+            self.assertEqual(len(player_state["hand"]), 27)
+
     async def test_auto_save_allows_in_game_enable(self):
         sid = "sid-owner"
         room_id = await self._create_room(sid, "Alice")

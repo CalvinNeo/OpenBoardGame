@@ -38,7 +38,6 @@ const wanderingPlayCardBtn = document.getElementById("wanderingPlayCardBtn");
 const wanderingDiscardBtn = document.getElementById("wanderingDiscardBtn");
 const wanderingRerollBtn = document.getElementById("wanderingRerollBtn");
 const wanderingAcceptRollBtn = document.getElementById("wanderingAcceptRollBtn");
-const wanderingResolveBtn = document.getElementById("wanderingResolveBtn");
 const wanderingSpellWizardBtn = document.getElementById("wanderingSpellWizardBtn");
 const wanderingSpellTowerBtn = document.getElementById("wanderingSpellTowerBtn");
 
@@ -96,10 +95,6 @@ const WANDERING_BUTTON_EXPLANATIONS = {
   wanderingAcceptRollBtn: {
     name: "Accept Roll",
     description: "Accept a roll with no legal targets to fizzle the card.",
-  },
-  wanderingResolveBtn: {
-    name: "Resolve Move",
-    description: "Resolve the pending card by moving the selected wizard or tower.",
   },
   wanderingSpellWizardBtn: {
     name: "Spell: Move Wizard",
@@ -318,6 +313,57 @@ function showWanderingCellExplanation(view, cell) {
   setModalVisible(wanderingTowersExplainModal, true);
 }
 
+function confirmWanderingTarget(targetType, targetId) {
+  if (!isWanderingActionAvailable("choose_target")) {
+    return;
+  }
+  const selectedId =
+    targetType === "wizard" ? wanderingSelectedWizardId : wanderingSelectedTowerId;
+  if (selectedId !== targetId) {
+    return;
+  }
+  clearWanderingSelection();
+  sendAction({
+    type: "choose_target",
+    target_type: targetType,
+    target_id: targetId,
+  });
+}
+
+function createWanderingTargetConfirmation(targetType, targetId, targetLabel) {
+  const overlay = document.createElement("div");
+  overlay.className = "wandering-target-confirmation";
+  overlay.setAttribute("role", "group");
+  overlay.setAttribute("aria-label", `Confirm moving ${targetLabel}`);
+
+  const moveBtn = document.createElement("button");
+  moveBtn.type = "button";
+  moveBtn.className = "wandering-target-confirm wandering-target-move";
+  moveBtn.textContent = "Move";
+  moveBtn.setAttribute("aria-label", `Move ${targetLabel}`);
+  moveBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    confirmWanderingTarget(targetType, targetId);
+  });
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.type = "button";
+  cancelBtn.className = "wandering-target-confirm wandering-target-cancel";
+  cancelBtn.textContent = "Cancel";
+  cancelBtn.setAttribute("aria-label", `Cancel moving ${targetLabel}`);
+  cancelBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    clearWanderingSelection();
+  });
+
+  overlay.addEventListener("click", (e) => e.stopPropagation());
+  overlay.appendChild(moveBtn);
+  overlay.appendChild(cancelBtn);
+  return overlay;
+}
+
 function renderWanderingBoard(view) {
   if (!wanderingBoard) {
     return;
@@ -333,6 +379,8 @@ function renderWanderingBoard(view) {
     (view.wizards || []).filter((wizard) => wizard.visible).map((wizard) => wizard.wizard_id)
   );
   const pendingTargets = view.pending ? getWanderingLegalTargets(view) : null;
+  const canConfirmTarget =
+    Array.isArray(view.legal_actions) && view.legal_actions.includes("choose_target");
   view.board.forEach((cell) => {
     const layers = Array.isArray(cell.layers) ? cell.layers : [];
     const towerCount = layers.filter((layer) => layer.type === "tower").length;
@@ -380,6 +428,7 @@ function renderWanderingBoard(view) {
       const displayLayers = layers.slice().reverse();
       displayLayers.forEach((layer, displayIndex) => {
         const layerEl = document.createElement(layer.type === "tower" ? "button" : "div");
+        let renderedLayer = layerEl;
         layerEl.className = "wandering-layer";
         const sourceDepth = layers.length - displayIndex;
         const depthLabel = document.createElement("span");
@@ -390,7 +439,8 @@ function renderWanderingBoard(view) {
           layerEl.type = "button";
           layerEl.classList.add("tower-layer");
           layerEl.setAttribute("aria-label", `Tower ${layer.tower_id}, layer ${sourceDepth}${layer.has_shield ? ", raven shield" : ""}`);
-          if (layer.tower_id === wanderingSelectedTowerId) {
+          const selected = layer.tower_id === wanderingSelectedTowerId;
+          if (selected) {
             layerEl.classList.add("selected");
           }
           if (pendingTargets) {
@@ -431,6 +481,16 @@ function renderWanderingBoard(view) {
             updateWanderingActionButtons();
             renderWanderingBoard(view);
           });
+          const shell = document.createElement("div");
+          shell.className = "wandering-target-shell wandering-tower-target-shell";
+          shell.appendChild(layerEl);
+          if (selected && canConfirmTarget && pendingTargets?.tower.includes(layer.tower_id)) {
+            shell.classList.add("has-confirmation");
+            shell.appendChild(
+              createWanderingTargetConfirmation("tower", layer.tower_id, `tower ${layer.tower_id}`)
+            );
+          }
+          renderedLayer = shell;
         } else if (layer.type === "ravenskeep") {
           layerEl.classList.add("raven-layer");
           const castle = document.createElement("span");
@@ -487,7 +547,7 @@ function renderWanderingBoard(view) {
               badge.classList.toggle("legal-target", legalTarget);
               badge.disabled = !legalTarget;
             }
-            const selected = wizardId === wanderingSelectedWizardId;
+            const selected = Boolean(wizardId) && wizardId === wanderingSelectedWizardId;
             if (selected) {
               badge.classList.add("selected");
             }
@@ -512,11 +572,20 @@ function renderWanderingBoard(view) {
               updateWanderingActionButtons();
               renderWanderingBoard(view);
             });
-            layerEl.appendChild(badge);
+            const shell = document.createElement("div");
+            shell.className = "wandering-target-shell wandering-wizard-target-shell";
+            shell.appendChild(badge);
+            if (selected && canConfirmTarget && pendingTargets?.wizard.includes(wizardId)) {
+              shell.classList.add("has-confirmation");
+              shell.appendChild(
+                createWanderingTargetConfirmation("wizard", wizardId, `${name}'s wizard`)
+              );
+            }
+            layerEl.appendChild(shell);
           });
         }
         layerEl.appendChild(depthLabel);
-        stack.appendChild(layerEl);
+        stack.appendChild(renderedLayer);
       });
     } else {
       const empty = document.createElement("div");
@@ -537,6 +606,22 @@ function renderWanderingBoard(view) {
     });
 
     wanderingBoard.appendChild(cellEl);
+  });
+  window.requestAnimationFrame(() => {
+    const confirmation = wanderingBoard.querySelector(
+      ".wandering-target-shell.has-confirmation"
+    );
+    const stack = confirmation?.closest(".wandering-stack");
+    if (!confirmation || !stack) {
+      return;
+    }
+    const confirmationRect = confirmation.getBoundingClientRect();
+    const stackRect = stack.getBoundingClientRect();
+    if (confirmationRect.bottom > stackRect.bottom) {
+      stack.scrollTop += confirmationRect.bottom - stackRect.bottom;
+    } else if (confirmationRect.top < stackRect.top) {
+      stack.scrollTop -= stackRect.top - confirmationRect.top;
+    }
   });
 }
 
@@ -711,7 +796,6 @@ function updateWanderingActionButtons() {
     wanderingDiscardBtn,
     wanderingRerollBtn,
     wanderingAcceptRollBtn,
-    wanderingResolveBtn,
     wanderingSpellWizardBtn,
     wanderingSpellTowerBtn,
   ];
@@ -751,12 +835,6 @@ function updateWanderingActionButtons() {
     wanderingAcceptRollBtn.disabled = !allowed;
     wanderingAcceptRollBtn.classList.toggle("action-allowed", allowed);
     wanderingAcceptRollBtn.classList.toggle("is-relevant", legalActions.includes("accept_roll"));
-  }
-  if (wanderingResolveBtn) {
-    const allowed = isWanderingActionAvailable("choose_target");
-    wanderingResolveBtn.disabled = !allowed;
-    wanderingResolveBtn.classList.toggle("action-allowed", allowed);
-    wanderingResolveBtn.classList.toggle("is-relevant", legalActions.includes("choose_target"));
   }
   if (wanderingSpellWizardBtn) {
     const allowed = isWanderingSpellAvailable("move_wizard");
@@ -799,7 +877,7 @@ function updateWanderingActionHint() {
   if (view.pending) {
     const legal = getWanderingLegalTargets(view);
     if (wanderingSelectedWizardId || wanderingSelectedTowerId) {
-      wanderingActionHint.textContent = "Target selected — confirm the move.";
+      wanderingActionHint.textContent = "Target selected — choose Move or Cancel on it.";
     } else if (legal.wizard.length || legal.tower.length) {
       wanderingActionHint.textContent = "Choose a highlighted wizard or tower.";
     } else if (view.pending.rerolls_left > 0) {
@@ -1061,29 +1139,6 @@ if (wanderingAcceptRollBtn) {
   });
 }
 
-if (wanderingResolveBtn) {
-  wanderingResolveBtn.addEventListener("click", () => {
-    if (!isWanderingActionAvailable("choose_target")) {
-      return;
-    }
-    if (wanderingSelectedWizardId) {
-      sendAction({
-        type: "choose_target",
-        target_type: "wizard",
-        target_id: wanderingSelectedWizardId,
-      });
-      return;
-    }
-    if (wanderingSelectedTowerId) {
-      sendAction({
-        type: "choose_target",
-        target_type: "tower",
-        target_id: wanderingSelectedTowerId,
-      });
-    }
-  });
-}
-
 if (wanderingSpellWizardBtn) {
   wanderingSpellWizardBtn.addEventListener("click", () => {
     if (!isWanderingSpellAvailable("move_wizard")) {
@@ -1220,6 +1275,15 @@ document.addEventListener("keydown", (e) => {
     closed = true;
   }
   if (closed) {
+    e.preventDefault();
+    return;
+  }
+  if (
+    wanderingSelectedCardIndex !== null ||
+    wanderingSelectedWizardId ||
+    wanderingSelectedTowerId
+  ) {
+    clearWanderingSelection();
     e.preventDefault();
   }
 });

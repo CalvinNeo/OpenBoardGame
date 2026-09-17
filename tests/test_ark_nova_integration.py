@@ -369,8 +369,12 @@ class ArkNovaIntegrationTests(unittest.TestCase):
                 "x_tokens": 0,
                 "buildings": [{"building_type": "standard_enclosure", "size": 2, "cells": ["A1", "A2"]}],
             },
-            {"type": "animals", "plays": [{"card_id": "401", "enclosure_id": "standard_enclosure-1", "source": "hand"}]},
+            {"type": "animals", "plays": [{"card_id": "525", "enclosure_id": "petting_zoo-1", "source": "hand"}]},
             {"type": "association", "tasks": [{"task": "reputation"}], "donate": False},
+            {
+                "type": "association",
+                "tasks": [{"task": "support_project", "project_id": "121", "slot": 2, "release_animal_id": "525"}],
+            },
             {"type": "sponsors", "mode": "play", "card_ids": ["201"]},
             {"type": "gain_x", "action_card": "build"},
             {"type": "resolve_choice", "choice_id": "choice-1", "selection": {"cells": ["A1"]}},

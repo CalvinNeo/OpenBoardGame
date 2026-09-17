@@ -3156,7 +3156,10 @@ ARK_NOVA_ACTION_SCHEMA = {
                     "items": {
                         "type": "object",
                         "properties": {
-                            "card_id": {"type": "string", "pattern": "^4[0-9]{2}$"},
+                            "card_id": {
+                                "type": "string",
+                                "pattern": "^(?:4[0-9]{2}|5(?:[01][0-9]|2[0-8]))$",
+                            },
                             "enclosure_id": {"type": "string", "minLength": 1, "maxLength": 80},
                             "source": {"type": "string", "enum": ["hand", "display"]},
                         },
@@ -3199,8 +3202,14 @@ ARK_NOVA_ACTION_SCHEMA = {
                             "project_card_id": {"type": "string", "pattern": "^1[0-3][0-9]$"},
                             "slot": {"type": "integer", "minimum": 1, "maximum": 3},
                             "slot_position": {"type": "integer", "minimum": 1, "maximum": 3},
-                            "release_animal_id": {"type": "string", "pattern": "^4[0-9]{2}$"},
-                            "animal_id": {"type": "string", "pattern": "^4[0-9]{2}$"},
+                            "release_animal_id": {
+                                "type": "string",
+                                "pattern": "^(?:4[0-9]{2}|5(?:[01][0-9]|2[0-8]))$",
+                            },
+                            "animal_id": {
+                                "type": "string",
+                                "pattern": "^(?:4[0-9]{2}|5(?:[01][0-9]|2[0-8]))$",
+                            },
                             "reward_id": {"type": "string", "minLength": 1, "maxLength": 80},
                         },
                         "required": ["task"],

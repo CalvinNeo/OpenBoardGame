@@ -448,6 +448,7 @@ function renderRoomState(state) {
       }
     }
   }
+  updateGameReconnectButton();
 }
 
 function findPlayerName(view, playerId) {
