@@ -25292,7 +25292,9 @@ body.ra-explain-mode button.has-explanation:hover {
   }
 
   .ra-track {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(var(--ra-track-count, 10), minmax(0, 1fr));
+    row-gap: 0;
+    padding: 4px 1px 8px;
   }
 
   .ra-auction-track {
@@ -25317,6 +25319,45 @@ body.ra-explain-mode button.has-explanation:hover {
   .ra-slot:nth-child(3n + 1)::before,
   .ra-auction-slot:nth-child(2n + 1)::before {
     left: 50%;
+  }
+
+  .ra-track .ra-slot {
+    min-width: 0;
+    min-height: 44px;
+    padding: 4px 1px;
+  }
+
+  .ra-track .ra-slot::before {
+    left: 0;
+    right: 0;
+    height: 5px;
+  }
+
+  .ra-track .ra-slot:first-child::before {
+    left: 50%;
+  }
+
+  .ra-track .ra-slot:last-child::before {
+    right: 50%;
+  }
+
+  .ra-track .ra-slot-marker {
+    width: clamp(24px, 7.4vw, 29px);
+    height: clamp(24px, 7.4vw, 29px);
+    border-width: 1px;
+    font-size: 9px;
+    box-shadow:
+      inset 0 0 0 2px rgba(255, 247, 205, 0.46),
+      0 2px 4px rgba(83, 51, 16, 0.18);
+  }
+
+  .ra-track .ra-slot.filled .ra-slot-marker {
+    font-size: 14px;
+  }
+
+  .ra-track .ra-slot-label {
+    top: calc(50% + 15px);
+    font-size: 7px;
   }
 
   #raPanel.ra-disaster-focus > .row:first-child {
@@ -29143,6 +29184,14 @@ body.bomb-busters-explain-mode [data-bomb-busters-explain].has-explanation {
   background: rgba(104, 69, 34, 0.12);
 }
 
+.bohnanza-dice-desktop-roll {
+  display: contents;
+}
+
+.bohnanza-dice-mobile-lane {
+  display: none;
+}
+
 button.bohnanza-dice-die {
   display: grid;
   align-content: center;
@@ -30132,7 +30181,7 @@ body.bohnanza-dice-explain-mode button[data-bohnanza-dice-explain].has-explanati
     border-radius: 11px;
   }
 
-  .bohnanza-dice-dice-card .bohnanza-dice-eyebrow {
+  .bohnanza-dice-dice-card .bohnanza-dice-section-heading {
     display: none;
   }
 
@@ -30155,6 +30204,60 @@ body.bohnanza-dice-explain-mode button[data-bohnanza-dice-explain].has-explanati
     min-height: 60px;
     padding: 4px;
     border-radius: 9px;
+  }
+
+  #bohnanzaDiceCurrentDice {
+    display: block;
+  }
+
+  .bohnanza-dice-desktop-roll {
+    display: none;
+  }
+
+  .bohnanza-dice-mobile-lane {
+    display: flex;
+    align-items: stretch;
+    flex-wrap: nowrap;
+    gap: clamp(2px, 1.3vw, 5px);
+    width: 100%;
+  }
+
+  .bohnanza-dice-mobile-lane > .bohnanza-dice-die,
+  .bohnanza-dice-mobile-lane > .bohnanza-dice-empty-slot {
+    flex: 1 1 0;
+    width: 0;
+    min-width: 0;
+    min-height: clamp(46px, 14vw, 54px);
+  }
+
+  .bohnanza-dice-mobile-divider {
+    flex: 0 0 3px;
+    width: 3px;
+    margin: 0 1px;
+    border-radius: 999px;
+    background: #70452e;
+    box-shadow: 1px 0 0 rgba(255, 255, 255, 0.72);
+  }
+
+  button.bohnanza-dice-die.is-mobile-locked {
+    opacity: 1;
+    filter: saturate(0.68);
+    box-shadow: inset 0 0 0 2px rgba(47, 42, 32, 0.3), 0 2px 4px rgba(54, 39, 19, 0.12);
+  }
+
+  button.bohnanza-dice-die.is-mobile-locked::after {
+    display: grid;
+    width: 15px;
+    height: 15px;
+    place-items: center;
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    content: "\1F512";
+    border-radius: 50%;
+    background: rgba(255, 253, 245, 0.9);
+    font-size: 8px;
+    line-height: 1;
   }
 
   button.bohnanza-dice-die,
@@ -30186,7 +30289,7 @@ body.bohnanza-dice-explain-mode button[data-bohnanza-dice-explain].has-explanati
 
   .bohnanza-dice-actions {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 4px;
+    gap: 8px;
   }
 
   .bohnanza-dice-actions button:first-child {

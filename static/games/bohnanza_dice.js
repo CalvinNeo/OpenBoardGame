@@ -516,6 +516,42 @@
     return slot;
   }
 
+  function bohnanzaDiceMobileLane(dice, current, field, selectable) {
+    const lane = document.createElement("div");
+    lane.className = "bohnanza-dice-mobile-lane";
+    lane.setAttribute("aria-label", field.length
+      ? "Turn dice. Locked dice are before the divider; fresh dice are after it."
+      : "Turn dice.");
+
+    field.forEach((die) => {
+      const locked = bohnanzaDiceDie(die, false);
+      locked.classList.add("is-mobile-locked");
+      locked.title = "Locked in the Bean Field";
+      locked.setAttribute("aria-label", `${locked.getAttribute("aria-label")}, locked in the Bean Field`);
+      lane.appendChild(locked);
+    });
+
+    const cup = dice.filter((die) => die.zone === "cup");
+    if (field.length && (current.length || cup.length)) {
+      const divider = document.createElement("span");
+      divider.className = "bohnanza-dice-mobile-divider";
+      divider.setAttribute("aria-hidden", "true");
+      lane.appendChild(divider);
+    }
+
+    current.forEach((die) => {
+      const fresh = bohnanzaDiceDie(die, selectable);
+      fresh.classList.add("is-mobile-fresh");
+      lane.appendChild(fresh);
+    });
+    cup.forEach((die) => {
+      const empty = bohnanzaDiceEmptySlot(`${die.template} die ${die.id}, ready in the cup`);
+      empty.classList.add("is-mobile-cup");
+      lane.appendChild(empty);
+    });
+    return lane;
+  }
+
   function bohnanzaDiceRenderDice(view) {
     const dice = Array.isArray(view.dice) ? view.dice : [];
     const current = dice.filter((die) => die.zone === "current_roll");
@@ -528,7 +564,9 @@
 
     if (bohnanzaDiceCurrentDice) {
       bohnanzaDiceCurrentDice.innerHTML = "";
-      if (current.length) current.forEach((die) => bohnanzaDiceCurrentDice.appendChild(bohnanzaDiceDie(die, selectable)));
+      const desktopRoll = document.createElement("div");
+      desktopRoll.className = "bohnanza-dice-desktop-roll";
+      if (current.length) current.forEach((die) => desktopRoll.appendChild(bohnanzaDiceDie(die, selectable)));
       else {
         const empty = document.createElement("div");
         empty.className = "bohnanza-dice-empty-message";
@@ -536,8 +574,9 @@
         empty.textContent = view.phase === "await_roll"
           ? `${cupCount} ${cupCount === 1 ? "die is" : "dice are"} ready in the cup.`
           : "No fresh dice are waiting.";
-        bohnanzaDiceCurrentDice.appendChild(empty);
+        desktopRoll.appendChild(empty);
       }
+      bohnanzaDiceCurrentDice.append(desktopRoll, bohnanzaDiceMobileLane(dice, current, field, selectable));
     }
 
     if (bohnanzaDiceFieldDice) {
