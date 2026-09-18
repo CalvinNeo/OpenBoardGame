@@ -143,6 +143,48 @@ def _players(state: Mapping[str, Any]) -> MutableMapping[str, MutableMapping[str
     return players  # type: ignore[return-value]
 
 
+def _attack_family(attack: str) -> str:
+    return "pilfering" if attack.startswith("pilfering") else attack
+
+
+def _attack_candidates(
+    context: EffectContext, attack: str, track: str, *, minimum: int = 0,
+) -> List[str]:
+    """Return legal tied leaders, treating Quarantine Lab counters as absent."""
+    players = _players(context.state)
+    order = [
+        str(player_id) for player_id in context.state.get("turn_order", players.keys())
+        if str(player_id) in players
+    ]
+    if context.player_id not in order:
+        order.insert(0, context.player_id)
+    family = _attack_family(attack)
+    ranked = [context.player_id]
+    for player_id in order:
+        if player_id == context.player_id:
+            continue
+        player = players[player_id]
+        active_effects = player.get("active_effects", {})
+        active_rules = active_effects.values() if isinstance(active_effects, Mapping) else []
+        immune = "225" in {
+            _card_id(card_id) for card_id in _sequence(player, "played_sponsors")
+        } or any(
+            isinstance(rule, Mapping)
+            and rule.get("modifier") == "attack_immunity"
+            and family in set(rule.get("attacks", []))
+            for rule in active_rules
+        )
+        if int(player.get("appeal", 0)) >= 5 and not immune:
+            ranked.append(player_id)
+    top = max((int(players[player_id].get(track, 0)) for player_id in ranked), default=minimum - 1)
+    if top < minimum:
+        return []
+    return [
+        player_id for player_id in ranked
+        if player_id != context.player_id and int(players[player_id].get(track, 0)) == top
+    ]
+
+
 def _player(context: EffectContext, player_id: Optional[str] = None) -> MutableMapping[str, Any]:
     pid = player_id or context.player_id
     try:
@@ -152,6 +194,8 @@ def _player(context: EffectContext, player_id: Optional[str] = None) -> MutableM
 
 
 def _card_id(value: Any) -> str:
+    if value is None:
+        return ""
     if isinstance(value, Mapping):
         return str(value.get("id") or value.get("card_id") or "")
     return str(value)
@@ -321,6 +365,15 @@ def _metric(context: EffectContext, metric: str, player_id: Optional[str] = None
                 for building in values
             )
     return 0
+
+
+def _display_range_for_reputation(reputation: int) -> int:
+    value = max(0, min(15, int(reputation)))
+    folder_starts = (0, 2, 4, 7, 10, 13)
+    return next(
+        folder for folder, minimum in reversed(tuple(enumerate(folder_starts, start=1)))
+        if value >= minimum
+    )
 
 
 def _add(context: EffectContext, key: str, amount: int, player_id: Optional[str] = None, source: str = "") -> Dict[str, Any]:
@@ -566,21 +619,41 @@ def _display_choice(
     eligible = []
     for value in display:
         cid = _card_id(value)
+        if not cid:
+            continue
         card = ANIMAL_BY_ID.get(cid) or SPONSOR_BY_ID.get(cid)
         if card_type is None or (card and card.get("card_type") == card_type):
             eligible.append(value)
-    if not eligible:
-        return _done(_event("effect_no_target", context.player_id, source=effect_ref))
     pending = _pending_from_context(context)
     pending_metadata = pending.get("metadata", {}) if isinstance(pending, Mapping) else {}
     remaining = int(pending_metadata.get("remaining", count)) if isinstance(pending_metadata, Mapping) else count
+    stage = str(pending_metadata.get("stage", "take")) if isinstance(pending_metadata, Mapping) else "take"
     selected = _selected_ids(choice)
+
+    if stage == "refill":
+        if len(selected) != 1 or selected[0] not in {"refill", "keep"}:
+            raise ValueError("choose whether to replenish the display")
+        refill = selected[0] == "refill"
+        next_choice = _pending(
+            context, effect_ref, "take_display_cards", "再次从展示区拿取一张卡牌",
+            [{"id": _card_id(card), "card_id": _card_id(card)} for card in eligible],
+            1, 1, False,
+            {"remaining": remaining, "stage": "take", "refresh_display": refill},
+        )
+        if refill:
+            next_choice.events.append(_event(
+                "display_refill_requested", context.player_id, source=effect_ref,
+            ))
+        return next_choice
+
+    if not eligible:
+        return _done(_event("effect_no_target", context.player_id, source=effect_ref))
     if choice is None:
         if count > 1:
             return _pending(
                 context, effect_ref, "take_display_cards", "从展示区拿取一张卡牌",
                 [{"id": _card_id(card), "card_id": _card_id(card)} for card in eligible],
-                1, 1, False, {"remaining": count, "refresh_display": True},
+                1, 1, False, {"remaining": count, "stage": "take"},
             )
         return _pending(
             context, effect_ref, "take_display_cards", "选择展示区卡牌",
@@ -591,22 +664,29 @@ def _display_choice(
         raise ValueError("invalid display-card choice")
     taken = []
     for card_id in selected:
-        card = next(value for value in display if _card_id(value) == card_id)
-        display.remove(card)
+        index = next(index for index, value in enumerate(display) if _card_id(value) == card_id)
+        card = display[index]
+        display[index] = None
         taken.append(card)
     _player(context).setdefault("hand", []).extend(taken)
     remaining -= len(selected)
-    immediate_refill = context.timing == "income" or remaining > 0
+    immediate_refill = context.timing == "income"
     event = _event(
         "display_cards_taken", context.player_id, card_ids=selected, source=effect_ref,
         refill_immediately=immediate_refill,
         refill_after_action=not immediate_refill,
     )
     if remaining > 0:
+        # Snapping 2 is a card-specific exception to the normal end-of-turn
+        # refill rule: after the first card, the player may replenish before
+        # choosing the second card.
         next_choice = _pending(
-            context, effect_ref, "take_display_cards", "再次从补满后的展示区拿取一张卡牌",
-            [{"id": _card_id(card), "card_id": _card_id(card)} for card in display],
-            1, 1, False, {"remaining": remaining, "refresh_display": True},
+            context, effect_ref, "snapping_refill", "是否在第二次捕捉前补满展示区？",
+            [
+                {"id": "refill", "label": "现在补满展示区"},
+                {"id": "keep", "label": "不补牌，继续选择"},
+            ],
+            1, 1, False, {"remaining": remaining, "stage": "refill"},
         )
         next_choice.events.append(event)
         return next_choice
@@ -631,14 +711,15 @@ def execute_ability(
     if op == "draw":
         return _draw_cards(context, int(parameters.get("draw_count", 0)), ref)
     if op == "metric_reward":
-        amount = _metric(context, str(spec["metric"])) * int(spec.get("appeal_per", 0))
+        metric_value = int(parameters.get("metric_value", _metric(context, str(spec["metric"]))))
+        amount = metric_value * int(spec.get("appeal_per", 0))
         return _grant(context, ref, appeal=amount)
     if op == "global_metric_reward":
-        value = _all_tag_count(context, str(spec["metric"]))
+        value = int(parameters.get("metric_value", _all_tag_count(context, str(spec["metric"]))))
         amount = min(value * int(spec.get("x_tokens_per", 1)), int(spec.get("cap", value)))
         return _grant(context, ref, x_tokens=amount)
     if op == "ladder_reward":
-        value = _metric(context, str(spec["metric"]))
+        value = int(parameters.get("metric_value", _metric(context, str(spec["metric"]))))
         amount = max((reward for threshold, reward in spec["ladder"] if value >= threshold), default=0)
         return _grant(context, ref, **{str(spec["track"]): amount})
     if op == "reveal_keep_animal":
@@ -649,6 +730,17 @@ def execute_ability(
         return _move_action(context, ability_id, spec, choice)
     if op == "extra_action":
         action = str(spec["action"])
+        selected = _selected_ids(choice)
+        if choice is None:
+            return _pending(
+                context, ref, "extra_action", f"是否额外执行 {action} 行动？",
+                [{"id": action, "action": action, "label": f"执行 {action} 行动"}],
+                0, 1, True,
+            )
+        if choice.get("skip") or not selected:
+            return _done(_event("optional_effect_skipped", context.player_id, source=ref))
+        if selected[0] != action:
+            raise ValueError("invalid granted extra action")
         strength = int(_player(context).get("action_cards", {}).get(action, {}).get("slot", 0))
         return _done(_event(
             "extra_action_requested", context.player_id, action=action, strength=strength,
@@ -661,7 +753,9 @@ def execute_ability(
         ]
         selected = _selected_ids(choice)
         if choice is None:
-            return _pending(context, ref, "extra_action", "选择另一张行动牌执行", options)
+            return _pending(context, ref, "extra_action", "选择另一张行动牌执行", options, 0, 1, True)
+        if choice.get("skip") or not selected:
+            return _done(_event("optional_effect_skipped", context.player_id, source=ref))
         if selected[0] not in {option["id"] for option in options}:
             raise ValueError("invalid extra-action choice")
         return _done(_event(
@@ -700,7 +794,11 @@ def execute_ability(
         entry["multiplier_tokens"] = int(entry.get("multiplier_tokens", 0)) + 1
         return _done(_event("multiplier_added", context.player_id, action=action, count=entry["multiplier_tokens"], source=ref))
     if op == "iconic":
-        amount = min(_all_tag_count(context, str(parameters.get("continent", ""))), int(parameters.get("maximum_appeal", 8)))
+        metric_value = int(parameters.get(
+            "metric_value",
+            _all_tag_count(context, str(parameters.get("continent", ""))),
+        ))
+        amount = min(metric_value, int(parameters.get("maximum_appeal", 8)))
         return _grant(context, ref, appeal=amount)
     if op == "discard_for_money":
         hand = _player(context).setdefault("hand", [])
@@ -768,7 +866,13 @@ def execute_ability(
         if not projects:
             return _done(_event("effect_no_target", context.player_id, source=ref))
         if choice is None:
-            return _pending(context, ref, "take_base_project", "选择一张未使用的基础保育项目", [{"id": _card_id(card), "card_id": _card_id(card)} for card in projects])
+            return _pending(
+                context, ref, "take_base_project", "选择一张未使用的基础保育项目",
+                [{"id": _card_id(card), "card_id": _card_id(card)} for card in projects],
+                0, 1, True,
+            )
+        if choice.get("skip") or not selected:
+            return _done(_event("optional_effect_skipped", context.player_id, source=ref))
         if len(selected) != 1:
             raise ValueError("exactly one base project must be selected")
         card = next((item for item in projects if _card_id(item) == selected[0]), None)
@@ -780,9 +884,13 @@ def execute_ability(
         return _done(_event("base_project_taken", context.player_id, card_id=selected[0], source=ref))
     if op == "sponsor_magnet":
         display = context.state.setdefault("display", [])
-        sponsors = [card for card in display if _card_id(card) in SPONSOR_BY_ID]
-        for card in sponsors:
-            display.remove(card)
+        sponsor_slots = [
+            (index, card) for index, card in enumerate(display)
+            if _card_id(card) in SPONSOR_BY_ID
+        ]
+        sponsors = [card for _, card in sponsor_slots]
+        for index, _ in sponsor_slots:
+            display[index] = None
         _player(context).setdefault("hand", []).extend(sponsors)
         return _done(_event("display_cards_taken", context.player_id, card_ids=[_card_id(card) for card in sponsors], source=ref, refill_after_action=True))
     if op == "placement_modifier":
@@ -819,17 +927,42 @@ def execute_ability(
         return _done(_event("discard_card_taken", context.player_id, card_id=selected[0], source=ref))
     if op == "free_build":
         maximum = int(parameters.get("maximum_buildings", spec.get("maximum", 1)))
+        pending = _pending_from_context(context)
+        pending_meta = pending.get("metadata", {}) if isinstance(pending, Mapping) else {}
+        remaining = int(pending_meta.get("remaining", maximum)) if isinstance(pending_meta, Mapping) else maximum
         if choice is None:
-            return _pending(context, ref, "place_free_building", "选择免费建筑及放置位置", [{"id": kind, "building_type": kind} for kind in spec["building_types"]], 0, maximum, True, {"maximum_buildings": maximum, "normal_placement_rules": True})
-        placements = choice.get("placements", [])
+            return _pending(
+                context, ref, "place_free_building", "选择一个免费建筑及放置位置",
+                [{"id": kind, "building_type": kind} for kind in spec["building_types"]],
+                0, 1, True,
+                {"remaining": maximum, "maximum_buildings": maximum, "normal_placement_rules": True},
+            )
         if choice.get("skip"):
-            placements = []
-        if not isinstance(placements, list) or len(placements) > maximum:
-            raise ValueError("invalid free-building placements")
+            return _done(_event("optional_effect_skipped", context.player_id, source=ref))
+        placements = choice.get("placements")
+        if placements is None:
+            placement = choice.get("placement", choice)
+            placements = [placement]
+        if not isinstance(placements, list) or len(placements) != 1:
+            raise ValueError("invalid free-building placement")
         allowed = set(spec["building_types"])
         if any(not isinstance(item, Mapping) or item.get("building_type") not in allowed for item in placements):
             raise ValueError("invalid free-building type")
-        return _done(_event("free_build_requested", context.player_id, source=ref, placements=list(placements), normal_placement_rules=True))
+        event = _event(
+            "free_build_requested", context.player_id, source=ref,
+            placements=[dict(placements[0])], normal_placement_rules=True,
+        )
+        remaining -= 1
+        if remaining <= 0:
+            return _done(event)
+        next_choice = _pending(
+            context, ref, "place_free_building", "可以继续放置免费建筑",
+            [{"id": kind, "building_type": kind} for kind in spec["building_types"]],
+            0, 1, True,
+            {"remaining": remaining, "maximum_buildings": remaining, "normal_placement_rules": True},
+        )
+        next_choice.events.append(event)
+        return next_choice
     if op == "digging":
         if choice is None:
             return _pending(context, ref, "digging", "选择弃展示牌或弃手牌后抽牌，可重复执行", [{"id": "discard_display"}, {"id": "cycle_hand"}, {"id": "stop"}], 1, 1, False, {"maximum_repetitions": int(parameters.get("maximum_repetitions", 0))})
@@ -838,13 +971,70 @@ def execute_ability(
             raise ValueError("invalid digging operations")
         return _done(_event("digging_requested", context.player_id, source=ref, operations=list(operations)))
     if op == "attack":
-        targets = [pid for pid in _players(context.state) if pid != context.player_id]
+        attack = str(spec["attack"])
+        if attack in {"venom", "constriction"}:
+            return _done(_event(
+                "attack_resolution_requested", context.player_id, source=ref,
+                attack=attack, assignments=[], parameters=parameters,
+            ))
+
+        criteria = [("appeal", 5)]
+        optional = attack == "hypnosis"
+        if attack == "pilfering_2":
+            criteria.append(("conservation", 0))
+        candidates_by_criterion = [
+            (criterion, _attack_candidates(context, attack, criterion, minimum=minimum))
+            for criterion, minimum in criteria
+        ]
+        candidates_by_criterion = [item for item in candidates_by_criterion if item[1]]
+        if not candidates_by_criterion:
+            return _done(_event("effect_no_target", context.player_id, source=ref))
+
         if choice is None:
-            return _pending(context, ref, "resolve_attack", "结算互动动物能力", [{"id": pid, "target_player_id": pid} for pid in targets], 0, max(1, len(targets)), True, {"attack": spec["attack"], **parameters})
+            combinations: List[List[Dict[str, str]]] = [[]]
+            for criterion, candidates in candidates_by_criterion:
+                combinations = [
+                    [*combination, {"criterion": criterion, "target_player_id": player_id}]
+                    for combination in combinations
+                    for player_id in candidates
+                ]
+            options = []
+            for assignments in combinations:
+                option_id = "|".join(
+                    f"{assignment['criterion']}:{assignment['target_player_id']}"
+                    for assignment in assignments
+                )
+                label = ", ".join(
+                    f"{assignment['criterion'].title()}: {assignment['target_player_id']}"
+                    for assignment in assignments
+                )
+                options.append({
+                    "id": option_id, "label": label, "assignments": assignments,
+                })
+            return _pending(
+                context, ref, "resolve_attack", "选择互动能力影响的动物园",
+                options, 0 if optional else 1, 1, optional,
+                {"attack": attack, **parameters},
+            )
+
         assignments = choice.get("assignments", choice.get("targets", []))
         if not isinstance(assignments, list):
             raise ValueError("attack assignments must be a list")
-        return _done(_event("attack_resolution_requested", context.player_id, source=ref, attack=spec["attack"], assignments=list(assignments), parameters=parameters))
+        if optional and (choice.get("skip") or not assignments):
+            return _done(_event("optional_effect_skipped", context.player_id, source=ref))
+        for criterion, candidates in candidates_by_criterion:
+            matches = [
+                assignment for assignment in assignments
+                if isinstance(assignment, Mapping)
+                and assignment.get("criterion") == criterion
+                and str(assignment.get("target_player_id", assignment.get("player_id", ""))) in candidates
+            ]
+            if len(matches) != 1:
+                raise ValueError(f"choose exactly one legal {criterion} target")
+        return _done(_event(
+            "attack_resolution_requested", context.player_id, source=ref,
+            attack=attack, assignments=list(assignments), parameters=parameters,
+        ))
     raise RuntimeError(f"unimplemented ability opcode: {op}")
 
 
@@ -1162,7 +1352,7 @@ def execute_sponsor_effect(
             options.append({"id": "deck", "source": "deck"})
         if "display" in sources:
             reputation = int(_player(context).get("reputation", 0))
-            display_limit = min(6, max(1, reputation // 2 + 1))
+            display_limit = _display_range_for_reputation(reputation)
             accessible = list(context.state.get("display", []))[:display_limit]
             options.extend(
                 {"id": f"display:{_card_id(card)}", "source": "display", "card_id": _card_id(card)}

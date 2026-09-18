@@ -3424,6 +3424,7 @@ ARK_NOVA_ACTION_SCHEMA = {
                 "type": {"const": "cards"},
                 "mode": {"type": "string", "enum": ["draw", "snap"]},
                 "x_tokens": {"type": "integer", "minimum": 0, "maximum": 5},
+                "use_multiplier_tokens": {"type": "integer", "minimum": 0, "maximum": 8},
                 "display_card_id": {"type": "string", "pattern": "^[1-5][0-9]{2}$"},
                 "market_card_ids": {
                     "type": "array",
@@ -3446,6 +3447,7 @@ ARK_NOVA_ACTION_SCHEMA = {
             "properties": {
                 "type": {"const": "build"},
                 "x_tokens": {"type": "integer", "minimum": 0, "maximum": 5},
+                "use_multiplier_tokens": {"type": "integer", "minimum": 0, "maximum": 8},
                 "buildings": {
                     "type": "array",
                     "minItems": 1,
@@ -3477,6 +3479,8 @@ ARK_NOVA_ACTION_SCHEMA = {
             "properties": {
                 "type": {"const": "animals"},
                 "x_tokens": {"type": "integer", "minimum": 0, "maximum": 5},
+                "use_multiplier_tokens": {"type": "integer", "minimum": 0, "maximum": 8},
+                "gain_reputation": {"type": "boolean"},
                 "plays": {
                     "type": "array",
                     "minItems": 1,
@@ -3504,6 +3508,7 @@ ARK_NOVA_ACTION_SCHEMA = {
             "properties": {
                 "type": {"const": "association"},
                 "x_tokens": {"type": "integer", "minimum": 0, "maximum": 5},
+                "use_multiplier_tokens": {"type": "integer", "minimum": 0, "maximum": 8},
                 "tasks": {
                     "type": "array",
                     "minItems": 1,
@@ -3556,6 +3561,7 @@ ARK_NOVA_ACTION_SCHEMA = {
                 "type": {"const": "sponsors"},
                 "mode": {"type": "string", "enum": ["play", "break"]},
                 "x_tokens": {"type": "integer", "minimum": 0, "maximum": 5},
+                "use_multiplier_tokens": {"type": "integer", "minimum": 0, "maximum": 8},
                 "card_ids": {
                     "type": "array",
                     "items": {"type": "string", "pattern": "^2[0-6][0-9]$"},
@@ -3572,6 +3578,7 @@ ARK_NOVA_ACTION_SCHEMA = {
             "properties": {
                 "type": {"const": "gain_x"},
                 "action_card": {"type": "string", "enum": ["cards", "build", "animals", "association", "sponsors"]},
+                "use_multiplier_tokens": {"type": "integer", "minimum": 0, "maximum": 8},
             },
             "required": ["type", "action_card"],
             "additionalProperties": False,

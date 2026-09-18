@@ -167,7 +167,12 @@ class ArkNovaAnimalAbilityTests(unittest.TestCase):
 
     def test_granted_actions_move_normally_and_allow_x_tokens(self) -> None:
         state = game_state()
-        specific = effects.execute_ability("action_cards", context(state, "401", "after_action"))
+        specific_choice = effects.execute_ability("action_cards", context(state, "401", "after_action"))
+        self.assertTrue(specific_choice.pending_choice["optional"])
+        specific = effects.execute_ability(
+            "action_cards", context(state, "401", "after_action"),
+            choice={"selected_ids": ["cards"]},
+        )
         self.assertTrue(specific.events[0]["move_after"])
         self.assertTrue(specific.events[0]["allow_x_alternative"])
 
@@ -195,14 +200,8 @@ class ArkNovaAnimalAbilityTests(unittest.TestCase):
         self.assertEqual(result.events[0]["type"], "free_build_requested")
 
         attack = effects.execute_ability("venom", context(state, "449"), {"tokens_per_target": 1})
-        self.assertEqual(attack.pending_choice["metadata"]["attack"], "venom")
-        resolved = effects.execute_ability(
-            "venom",
-            context(state, "449"),
-            {"tokens_per_target": 1},
-            {"assignments": [{"target_player_id": "p2", "action": "animals"}]},
-        )
-        self.assertEqual(resolved.events[0]["type"], "attack_resolution_requested")
+        self.assertIsNone(attack.pending_choice)
+        self.assertEqual(attack.events[0]["type"], "attack_resolution_requested")
 
 
 class ArkNovaSponsorEffectTests(unittest.TestCase):

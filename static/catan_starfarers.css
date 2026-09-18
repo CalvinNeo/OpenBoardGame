@@ -602,7 +602,16 @@
 
 .catan-starfarers-setup-step {
   display: grid;
+  min-height: 0;
+  flex: 1 1 auto;
+  align-content: start;
   gap: 14px;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  padding: 2px 6px 12px 2px;
+  scrollbar-color: #6b8194 transparent;
+  scrollbar-gutter: stable;
+  -webkit-overflow-scrolling: touch;
 }
 
 .catan-starfarers-setup-hero {

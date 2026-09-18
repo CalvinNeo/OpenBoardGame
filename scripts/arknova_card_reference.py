@@ -166,11 +166,12 @@ ACTION_CARDS = [
             },
             "II": {
                 "level": 2,
-                "summary_zh": "可从手牌或声望范围打动物，展示牌额付文件夹金币；强度1–5最多打1、1、2、2、2张；强度5先得1声望。",
+                "summary_zh": "可从手牌或声望范围打动物，展示牌额付文件夹金币；强度1–5最多打1、1、2、2、2张；强度5可先得1声望。",
                 "maximum_cards_by_strength": {"1": 1, "2": 1, "3": 2, "4": 2, "5": 2},
                 "sources": ["hand", "display_within_reputation_range"],
                 "display_surcharge": "folder_number",
                 "strength_5_bonus": {"reputation": 1},
+                "strength_5_bonus_optional": True,
             },
         },
     },

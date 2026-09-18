@@ -419,34 +419,35 @@ class ArkNovaGameTests(unittest.TestCase):
         self.assertEqual(enclosure["occupied_by"], ["495"])
         self.assertEqual(player["appeal"], before_appeal + ANIMAL_CARDS["495"]["printed_rewards"]["appeal"])
 
-    def test_card_526_plays_into_the_petting_zoo(self) -> None:
-        state = self.make_state()
-        player = state["players"]["p1"]
-        cells = _find_placement(state, "p1", "petting_zoo", 3)
-        self.assertIsNotNone(cells)
-        petting_zoo = _place_building(
-            state,
-            "p1",
-            {"building_type": "petting_zoo", "size": 3, "cells": cells},
-            [],
-            free=True,
-        )
-        self.add_hand_card(state, "p1", "526")
-        self.set_slot(state, "p1", "animals", 2)
-        _, error = ArkNovaGame.apply_action(
-            state,
-            "p1",
-            {"type": "animals", "plays": [{"card_id": "526", "enclosure_id": petting_zoo["id"]}]},
-        )
-        self.assertIsNone(error)
-        player = state["players"]["p1"]
-        petting_zoo = next(
-            building for building in player["map"]["buildings"] if building["id"] == petting_zoo["id"]
-        )
-        self.assertEqual(petting_zoo["occupied_by"], ["526"])
-        self.assertEqual(petting_zoo["used_capacity"], 1)
-        record = next(item for item in player["animal_records"] if item["card_id"] == "526")
-        self.assertEqual(record["printed_enclosure_size"], 0)
+    def test_cards_525_and_526_play_into_the_petting_zoo(self) -> None:
+        for card_id in ("525", "526"):
+            with self.subTest(card_id=card_id):
+                state = self.make_state()
+                cells = _find_placement(state, "p1", "petting_zoo", 3)
+                self.assertIsNotNone(cells)
+                petting_zoo = _place_building(
+                    state,
+                    "p1",
+                    {"building_type": "petting_zoo", "size": 3, "cells": cells},
+                    [],
+                    free=True,
+                )
+                self.add_hand_card(state, "p1", card_id)
+                self.set_slot(state, "p1", "animals", 2)
+                _, error = ArkNovaGame.apply_action(
+                    state,
+                    "p1",
+                    {"type": "animals", "plays": [{"card_id": card_id, "enclosure_id": petting_zoo["id"]}]},
+                )
+                self.assertIsNone(error)
+                player = state["players"]["p1"]
+                petting_zoo = next(
+                    building for building in player["map"]["buildings"] if building["id"] == petting_zoo["id"]
+                )
+                self.assertEqual(petting_zoo["occupied_by"], [card_id])
+                self.assertEqual(petting_zoo["used_capacity"], 1)
+                record = next(item for item in player["animal_records"] if item["card_id"] == card_id)
+                self.assertEqual(record["printed_enclosure_size"], 0)
 
     def test_sea_cave_uses_printed_size_for_a_reptile_in_the_reptile_house(self) -> None:
         state = self.make_state()
@@ -495,7 +496,7 @@ class ArkNovaGameTests(unittest.TestCase):
         self.assertEqual(player["supported_projects"][-1]["position"], 2)
         self.assertIn("202", state["discard"])
 
-    def test_snapping_two_refills_between_the_two_mandatory_choices(self) -> None:
+    def test_snapping_two_may_refill_between_the_two_mandatory_takes(self) -> None:
         state = self.make_state()
         state["display"] = ["401", "402", "403", "404", "405", "406"]
         state["deck"] = ["407"]
@@ -513,9 +514,21 @@ class ArkNovaGameTests(unittest.TestCase):
             {"type": "resolve_choice", "choice_id": first["choice_id"], "selection": "401"},
         )
         self.assertIsNone(error)
-        second = state["pending_choice"]
-        self.assertEqual((second["min"], second["max"]), (1, 1))
-        self.assertIn("407", [option["value"] for option in second["options"]])
+        refill = state["pending_choice"]
+        self.assertEqual(refill["type"], "snapping_refill")
+        self.assertEqual(
+            {option["value"] for option in refill["options"]},
+            {"refill", "keep"},
+        )
+        _, error = ArkNovaGame.apply_action(
+            state,
+            "p1",
+            {"type": "resolve_choice", "choice_id": refill["choice_id"], "selection": "refill"},
+        )
+        self.assertIsNone(error)
+        second_take = state["pending_choice"]
+        self.assertEqual((second_take["min"], second_take["max"]), (1, 1))
+        self.assertIn("407", [option["value"] for option in second_take["options"]])
 
     def test_double_predator_icon_queues_spotted_hyena_twice(self) -> None:
         state = self.make_state()
