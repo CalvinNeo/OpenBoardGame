@@ -1319,6 +1319,7 @@
                     <option value="yahtzee">Yahtzee</option>
                     <option value="gold_rush">Gold Rush</option>
                     <option value="incan_gold">Incan Gold</option>
+                    <option value="wriggle_roulette">Wriggle Roulette</option>
                     <option value="celestia">Celestia</option>
                     <option value="kobayakawa">Kobayakawa</option>
                     <option value="high_society">High Society</option>
@@ -2031,6 +2032,10 @@
             <div class="panel-header-actions" id="emeraldSkullsHeaderActions" style="display: none;">
               <button id="emeraldSkullsHelpBtn" class="emerald-skulls-header-btn" type="button">Help</button>
               <button id="emeraldSkullsExplainBtn" class="emerald-skulls-header-btn" type="button" aria-pressed="false">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="wriggleRouletteHeaderActions" style="display: none;">
+              <button id="wriggleRouletteHelpBtn" class="wriggle-roulette-header-btn" type="button">Help</button>
+              <button id="wriggleRouletteExplainBtn" class="wriggle-roulette-header-btn" type="button" aria-pressed="false">Explain</button>
             </div>
             <div class="panel-header-actions" id="bombBustersHeaderActions" style="display: none;">
               <button id="bombBustersHelpBtn" class="bomb-busters-header-btn" type="button">Help</button>
@@ -3112,6 +3117,104 @@
               </section>
 
               <div id="emeraldSkullsLiveRegion" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
+            </div>
+
+            <div id="wriggleRoulettePanel" class="hidden wriggle-roulette-panel">
+              <header class="wriggle-roulette-topbar">
+                <div class="wriggle-roulette-brand">
+                  <span class="wriggle-roulette-brand-mark" aria-hidden="true">🌙</span>
+                  <div>
+                    <span class="wriggle-roulette-kicker">Moonlit marsh · secret handfuls</span>
+                    <h2>Wriggle Roulette <small lang="zh-CN">鳗载而归</small></h2>
+                  </div>
+                </div>
+                <div class="wriggle-roulette-meta" aria-label="Round status">
+                  <span>Round <strong id="wriggleRouletteRound">-</strong></span>
+                  <span>Grab <strong id="wriggleRouletteCycle">-</strong></span>
+                  <span>First to <strong>20</strong></span>
+                </div>
+              </header>
+
+              <div id="wriggleRouletteStatus" class="wriggle-roulette-status" role="status" aria-live="polite">Waiting for game state…</div>
+
+              <div class="wriggle-roulette-table-layout">
+                <section class="wriggle-roulette-marsh" aria-labelledby="wriggleRouletteMarshHeading" data-wriggle-roulette-explain="marsh">
+                  <div class="wriggle-roulette-section-heading">
+                    <div>
+                      <span class="wriggle-roulette-kicker">Public table</span>
+                      <h3 id="wriggleRouletteMarshHeading">The Marsh</h3>
+                    </div>
+                    <span id="wriggleRouletteBagPrivacy" class="wriggle-roulette-privacy">Choices hidden</span>
+                  </div>
+                  <div class="wriggle-roulette-marsh-stage">
+                    <div class="wriggle-roulette-bag" data-wriggle-roulette-explain="bag" aria-label="Pieces remaining in the bag">
+                      <span class="wriggle-roulette-bag-icon" aria-hidden="true">👜</span>
+                      <strong id="wriggleRouletteBagCount">68</strong>
+                      <small>pieces in bag</small>
+                    </div>
+                    <div class="wriggle-roulette-snake-track" data-wriggle-roulette-explain="snakes">
+                      <div class="wriggle-roulette-snake-copy">
+                        <span>🐍 Snakes in the center</span>
+                        <strong><span id="wriggleRouletteSnakeCount">0</span> / <span id="wriggleRouletteThreshold">-</span></strong>
+                      </div>
+                      <div id="wriggleRouletteSnakePips" class="wriggle-roulette-snake-pips" aria-label="Snake outbreak meter"></div>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="wriggle-roulette-scoreboard" aria-labelledby="wriggleRoulettePlayersHeading" data-wriggle-roulette-explain="players">
+                  <div class="wriggle-roulette-section-heading">
+                    <div>
+                      <span class="wriggle-roulette-kicker">Public hauls</span>
+                      <h3 id="wriggleRoulettePlayersHeading">Fishers</h3>
+                    </div>
+                    <span>🪱 round eels · ⭐ score</span>
+                  </div>
+                  <div id="wriggleRoulettePlayers" class="wriggle-roulette-players"></div>
+                </section>
+              </div>
+
+              <section id="wriggleRouletteReveal" class="wriggle-roulette-reveal hidden" aria-labelledby="wriggleRouletteRevealHeading" data-wriggle-roulette-explain="reveal">
+                <div class="wriggle-roulette-section-heading">
+                  <div>
+                    <span id="wriggleRouletteRevealKicker" class="wriggle-roulette-kicker">Hands open</span>
+                    <h3 id="wriggleRouletteRevealHeading">Grab Reveal</h3>
+                  </div>
+                  <span id="wriggleRouletteRevealSnakeTotal"></span>
+                </div>
+                <div id="wriggleRouletteRevealResults" class="wriggle-roulette-reveal-results"></div>
+              </section>
+
+              <section id="wriggleRouletteActionDock" class="wriggle-roulette-action-dock" aria-labelledby="wriggleRouletteActionHeading" data-wriggle-roulette-explain="choices">
+                <div class="wriggle-roulette-action-copy">
+                  <span class="wriggle-roulette-kicker">Your secret choice</span>
+                  <h3 id="wriggleRouletteActionHeading">Choose a handful</h3>
+                  <p id="wriggleRouletteActionHint">Only the number is chosen. The pieces stay hidden until everyone has acted.</p>
+                </div>
+                <div id="wriggleRouletteGrabButtons" class="wriggle-roulette-grab-buttons"></div>
+                <button id="wriggleRouletteReviewBtn" class="wriggle-roulette-review-btn hidden" type="button" data-wriggle-roulette-explain="review" disabled>Ready</button>
+              </section>
+
+              <section id="wriggleRouletteRoundResult" class="wriggle-roulette-round-result hidden" aria-labelledby="wriggleRouletteRoundResultHeading" data-wriggle-roulette-explain="round">
+                <div class="wriggle-roulette-section-heading">
+                  <div>
+                    <span class="wriggle-roulette-kicker">Round settlement</span>
+                    <h3 id="wriggleRouletteRoundResultHeading">Haul Count</h3>
+                  </div>
+                  <span id="wriggleRouletteReviewProgress">0 / 0 ready</span>
+                </div>
+                <div id="wriggleRouletteRoundRows" class="wriggle-roulette-round-rows"></div>
+              </section>
+
+              <section class="wriggle-roulette-log-card" aria-labelledby="wriggleRouletteLogHeading" data-wriggle-roulette-explain="log">
+                <div class="wriggle-roulette-section-heading">
+                  <h3 id="wriggleRouletteLogHeading">Marsh Log</h3>
+                  <span>Newest first</span>
+                </div>
+                <div id="wriggleRouletteLog" class="wriggle-roulette-log" tabindex="0">No actions yet.</div>
+              </section>
+
+              <div id="wriggleRouletteLiveRegion" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
             </div>
 
             <div id="bombBustersPanel" class="hidden bomb-busters-panel">
@@ -6707,6 +6810,26 @@
               </div>
             </div>
 
+            <div id="wriggleRouletteHelpModal" class="modal hidden" aria-hidden="true">
+              <div class="modal-content wriggle-roulette-modal-content" role="dialog" aria-modal="true" aria-labelledby="wriggleRouletteHelpModalTitle">
+                <div class="modal-header">
+                  <h2 id="wriggleRouletteHelpModalTitle">Wriggle Roulette Help</h2>
+                  <button id="wriggleRouletteHelpCloseBtn" type="button">Close</button>
+                </div>
+                <div id="wriggleRouletteHelpContent" class="modal-body wriggle-roulette-help-content"></div>
+              </div>
+            </div>
+
+            <div id="wriggleRouletteExplainModal" class="modal hidden" aria-hidden="true">
+              <div class="modal-content wriggle-roulette-modal-content" role="dialog" aria-modal="true" aria-labelledby="wriggleRouletteExplainModalTitle">
+                <div class="modal-header">
+                  <h2 id="wriggleRouletteExplainModalTitle">Wriggle Roulette Explain</h2>
+                  <button id="wriggleRouletteExplainCloseBtn" type="button">Close</button>
+                </div>
+                <div id="wriggleRouletteExplainContent" class="modal-body"></div>
+              </div>
+            </div>
+
             <div id="davinciCodeExplainModal" class="modal davinci-explain-modal hidden" aria-hidden="true">
               <div class="modal-content">
                 <div class="modal-header">
@@ -6849,6 +6972,7 @@
   <script src="/static/games/poison.js?v=app_v1"></script>
   <script src="/static/games/bohnanza_dice.js?v=app_v8"></script>
   <script src="/static/games/emerald_skulls.js?v=app_v1"></script>
+  <script src="/static/games/wriggle_roulette.js?v=app_v1"></script>
   <script src="/static/games/bomb_busters.js?v=app_v2"></script>
   <script src="/static/games/felix.js?v=app_v1"></script>
   <script src="/static/games/tacta.js?v=app_v7"></script>
