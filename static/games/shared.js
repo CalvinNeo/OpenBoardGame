@@ -235,7 +235,22 @@ function renderRoomState(state) {
     const mode = state.game_config && state.game_config.setup_mode
       ? state.game_config.setup_mode
       : "beginner";
-    catanStarfarersRoomSetup.textContent = mode.replaceAll("_", " ");
+    const language = state.game_config && state.game_config.language === "zh" ? "zh" : "en";
+    const setupLabels = {
+      beginner: { en: "beginner", zh: "新手" },
+      strategic: { en: "strategic", zh: "战略" },
+      explorer: { en: "explorer", zh: "探索" },
+      wild_space: { en: "wild space", zh: "未知宇宙" },
+    };
+    catanStarfarersRoomSetup.textContent = setupLabels[mode]
+      ? setupLabels[mode][language]
+      : mode.replaceAll("_", " ");
+    if (catanStarfarersRoomLanguage) {
+      catanStarfarersRoomLanguage.textContent = language === "zh" ? "中文" : "English";
+    }
+    if (typeof setCatanStarfarersLanguage === "function") {
+      setCatanStarfarersLanguage(language);
+    }
   }
   updateRoomControlsForStatus(state.status);
   if (previousGame !== currentGameType) {

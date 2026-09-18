@@ -30,8 +30,12 @@ def move_supply_to_hand(state, player_id, resource, count):
 
 
 class CatanStarfarersGameTests(unittest.TestCase):
-    def make_state(self, mode="beginner", count=3):
-        return _initial_state({"setup_mode": mode}, make_players(count), rng_seed="starfarers-test-seed")
+    def make_state(self, mode="beginner", count=3, language="en"):
+        return _initial_state(
+            {"setup_mode": mode, "language": language},
+            make_players(count),
+            rng_seed="starfarers-test-seed",
+        )
 
     def assert_conserved(self, state):
         _assert_state(state)
@@ -62,6 +66,37 @@ class CatanStarfarersGameTests(unittest.TestCase):
         self.assertNotIn("rng_seed", view)
         self.assertNotIn("removed_sector", view["board"])
         self.assertFalse(any("resource" in player for player in view["players"] if player["player_id"] != "p0"))
+
+    def test_chinese_view_localizes_game_copy_without_changing_ids(self):
+        state = self.make_state(language="zh")
+        view = CatanStarfarersGame.get_public_view(state, "p0")
+
+        self.assertEqual(view["language"], "zh")
+        self.assertEqual(view["setup_mode"], "beginner")
+        self.assertIn("红矮星", {sector.get("name") for sector in view["board"]["sectors"]})
+        self.assertEqual(
+            view["friendship_available"]["diplomats"][0]["name"],
+            "开放货舱",
+        )
+        self.assertIn("新手星域已就绪", view["activity"][0]["message"])
+
+        state["encounter_draw"].remove("encounter-01")
+        state["current_encounter"] = {
+            "id": "encounter-01",
+            "reader_id": "p1",
+            "prompt_read": False,
+            "selected_option_id": None,
+            "result_revealed": False,
+        }
+        state["phase"] = "encounter_reader"
+        encounter = CatanStarfarersGame.get_public_view(state, "p1")["encounter"]
+        self.assertEqual(encounter["title"], "漂流中继器")
+        self.assertIn("寂静的中继器", encounter["prompt"])
+        self.assertEqual(encounter["options"][0]["label"], "花费1燃料进行维修")
+
+    def test_invalid_language_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "language"):
+            self.make_state(language="fr")
 
     def test_normal_production_reaches_trade_build_and_preserves_cards(self):
         state = self.make_state()

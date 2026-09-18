@@ -8,6 +8,7 @@ from game.catan_starfarers_data import (
     RESOURCE_TYPES,
     validate_data,
 )
+from game.catan_starfarers_i18n import ENCOUNTER_ZH, FRIENDSHIP_ZH, SECTOR_ZH
 
 
 class CatanStarfarersDataTests(unittest.TestCase):
@@ -39,6 +40,17 @@ class CatanStarfarersDataTests(unittest.TestCase):
             self.assertIn(first, node_ids)
             self.assertIn(second, node_ids)
             self.assertNotEqual(first, second)
+
+    def test_chinese_copy_covers_every_game_card_and_sector(self):
+        self.assertEqual(set(SECTOR_ZH), {sector["id"] for sector in MAP_GRAPH["sectors"]})
+        self.assertEqual(set(FRIENDSHIP_ZH), {card["id"] for card in FRIENDSHIP_CARDS})
+        self.assertEqual(set(ENCOUNTER_ZH), {card["id"] for card in ENCOUNTERS})
+        for card in ENCOUNTERS:
+            translated = ENCOUNTER_ZH[card["id"]]
+            self.assertEqual(
+                set(translated["options"]),
+                {option["id"] for option in card["options"]},
+            )
 
 
 if __name__ == "__main__":

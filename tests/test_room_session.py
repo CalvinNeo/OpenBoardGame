@@ -87,6 +87,45 @@ class RoomSessionTests(unittest.IsolatedAsyncioTestCase):
             {"type": "choose_encounter"},
         )
 
+    async def test_catan_starfarers_creation_language_is_kept_when_game_starts(self):
+        sid_owner = "sid-owner"
+        room_id = await self._create_room(
+            sid_owner,
+            "Alice",
+            game_type="catan_starfarers",
+            config={"setup_mode": "explorer", "language": "zh"},
+        )
+        await app.on_room_join("sid-bob", {"room_id": room_id, "name": "Bob"})
+        await app.on_room_join("sid-cara", {"room_id": room_id, "name": "Cara"})
+        for player in app.ROOMS[room_id].players:
+            player.ready = True
+
+        await app.on_room_start(
+            sid_owner,
+            {"config": {"setup_mode": "beginner", "language": "en"}},
+        )
+
+        room = app.ROOMS[room_id]
+        self.assertEqual(room.game_config, {"setup_mode": "explorer", "language": "zh"})
+        self.assertEqual(room.game_state["config"], room.game_config)
+        self.assertEqual(room.status, "in_game")
+
+    async def test_catan_starfarers_creation_rejects_unknown_language(self):
+        sid = "sid-1"
+
+        await app.on_room_create(
+            sid,
+            {
+                "name": "Alice",
+                "game_type": "catan_starfarers",
+                "config": {"setup_mode": "beginner", "language": "fr"},
+            },
+        )
+
+        self.assertNotIn(sid, app.SESSIONS)
+        error = next(event for event in reversed(app.sio.emits) if event["event"] == "system:error")
+        self.assertIn("language", error["payload"]["message"])
+
     async def test_join_cleans_previous_lobby_session(self):
         sid_owner = "sid-owner"
         room_id_a = await self._create_room(sid_owner, "Alice")

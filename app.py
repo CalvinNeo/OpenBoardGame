@@ -1555,6 +1555,10 @@ async def on_room_start(sid, data):
             config = dict(previous_config)
     if room.game_type == "forest_shuffle" and "language" in room.game_config:
         config["language"] = room.game_config["language"]
+    if room.game_type == "catan_starfarers":
+        for key in ("setup_mode", "language"):
+            if key in room.game_config:
+                config[key] = room.game_config[key]
     raw_skip_validation = (data or {}).get("skip_validation")
     skip_validation = raw_skip_validation if isinstance(raw_skip_validation, bool) else False
     room.schema_validation_enabled = not skip_validation

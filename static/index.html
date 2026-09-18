@@ -6,7 +6,7 @@
   <title>OpenBoardGame</title>
   <link rel="stylesheet" href="/static/style.css?v=app_v94" />
   <link rel="stylesheet" href="/static/ark_nova.css?v=app_v21" />
-  <link rel="stylesheet" href="/static/catan_starfarers.css?v=app_v2" />
+  <link rel="stylesheet" href="/static/catan_starfarers.css?v=app_v3" />
 </head>
 <body>
   <section id="logPanel" class="log-panel hidden" aria-hidden="true">
@@ -129,15 +129,29 @@
           <div class="catan-starfarers-setup-hero">
             <span aria-hidden="true">🪐</span>
             <div>
-              <h3>Choose frontier setup</h3>
-              <p id="catanStarfarersSetupHint">All setups use the complete 3–4 player base game.</p>
+              <h3>Configure the frontier</h3>
+              <p>Choose the language first, then select a 3–4 player setup.</p>
             </div>
           </div>
+          <div class="catan-starfarers-setup-section">
+            <h4 id="catanStarfarersLanguageHint">1. Choose game language</h4>
+            <div class="catan-starfarers-language-options" role="group" aria-labelledby="catanStarfarersLanguageHint">
+              <button type="button" data-catan-starfarers-language="en" aria-pressed="false">
+                <span aria-hidden="true">🌎</span><strong>English</strong><small>English game text and rules</small>
+              </button>
+              <button type="button" data-catan-starfarers-language="zh" aria-pressed="false">
+                <span aria-hidden="true">🌏</span><strong>中文</strong><small>中文游戏内容与规则</small>
+              </button>
+            </div>
+          </div>
+          <div class="catan-starfarers-setup-section">
+            <h4 id="catanStarfarersSetupHint">2. Choose frontier setup</h4>
           <div class="catan-starfarers-setup-options" role="group" aria-labelledby="catanStarfarersSetupHint">
-            <button type="button" data-catan-starfarers-setup="beginner"><strong>🌟 Beginner</strong><small>Fixed, fully revealed frontier</small></button>
-            <button type="button" data-catan-starfarers-setup="strategic"><strong>🧭 Strategic</strong><small>Visible sectors, hidden production numbers</small></button>
-            <button type="button" data-catan-starfarers-setup="explorer"><strong>🔭 Explorer</strong><small>Discover sectors while flying</small></button>
-            <button type="button" data-catan-starfarers-setup="wild_space"><strong>🌀 Wild Space</strong><small>Shuffled sectors and one unknown omission</small></button>
+              <button type="button" data-catan-starfarers-setup="beginner" disabled title="Choose a language first."><strong>🌟 Beginner</strong><small>Fixed, fully revealed frontier</small></button>
+              <button type="button" data-catan-starfarers-setup="strategic" disabled title="Choose a language first."><strong>🧭 Strategic</strong><small>Visible sectors, hidden production numbers</small></button>
+              <button type="button" data-catan-starfarers-setup="explorer" disabled title="Choose a language first."><strong>🔭 Explorer</strong><small>Discover sectors while flying</small></button>
+              <button type="button" data-catan-starfarers-setup="wild_space" disabled title="Choose a language first."><strong>🌀 Wild Space</strong><small>Shuffled sectors and one unknown omission</small></button>
+            </div>
           </div>
         </div>
       </div>
@@ -1418,7 +1432,7 @@
                   <div>Status: <span id="roomStatus">-</span></div>
                   <div>Game: <span id="gameTypeLabel">-</span></div>
                   <div id="forestShuffleRoomLanguageRow" class="hidden">Language: <span id="forestShuffleRoomLanguage">-</span></div>
-                  <div id="catanStarfarersRoomSetupRow" class="hidden">Setup: <span id="catanStarfarersRoomSetup">-</span></div>
+                  <div id="catanStarfarersRoomSetupRow" class="hidden">Setup: <span id="catanStarfarersRoomSetup">-</span> · Language: <span id="catanStarfarersRoomLanguage">-</span></div>
                 </div>
                 <div class="game-configs" id="gameConfigSection">
                   <div class="game-config-card hidden" id="drawGuessConfigBox" aria-hidden="true">
@@ -3245,14 +3259,14 @@
                 <div class="catan-starfarers-brand">
                   <span class="catan-starfarers-brand-mark" aria-hidden="true">🪐</span>
                   <div>
-                    <span class="catan-starfarers-kicker">Frontier command · 2019 base game</span>
+                    <span id="catanStarfarersBrandKicker" class="catan-starfarers-kicker">Frontier command · 2019 base game</span>
                     <h2>CATAN: Starfarers <small lang="zh-CN">星际卡坦</small></h2>
                   </div>
                 </div>
                 <div class="catan-starfarers-meta" aria-label="Turn status">
-                  <span>Turn <strong id="catanStarfarersTurn">-</strong></span>
-                  <span>Phase <strong id="catanStarfarersPhase">-</strong></span>
-                  <span>Setup <strong id="catanStarfarersSetup">-</strong></span>
+                  <span><span id="catanStarfarersTurnLabel">Turn</span> <strong id="catanStarfarersTurn">-</strong></span>
+                  <span><span id="catanStarfarersPhaseLabel">Phase</span> <strong id="catanStarfarersPhase">-</strong></span>
+                  <span><span id="catanStarfarersSetupLabel">Setup</span> <strong id="catanStarfarersSetup">-</strong></span>
                 </div>
               </header>
 
@@ -3263,7 +3277,7 @@
                 <section class="catan-starfarers-map-card" aria-labelledby="catanStarfarersMapHeading" data-catan-starfarers-explain="map">
                   <div class="catan-starfarers-section-heading">
                     <div>
-                      <span class="catan-starfarers-kicker">Public frontier</span>
+                      <span id="catanStarfarersMapKicker" class="catan-starfarers-kicker">Public frontier</span>
                       <h3 id="catanStarfarersMapHeading">Star Map</h3>
                     </div>
                     <div id="catanStarfarersMothership" class="catan-starfarers-mothership" data-catan-starfarers-explain="mothership">No flight roll</div>
@@ -3277,7 +3291,7 @@
                 <aside class="catan-starfarers-console">
                   <section class="catan-starfarers-hand-card" data-catan-starfarers-explain="resources">
                     <div class="catan-starfarers-section-heading">
-                      <h3>Your Hold</h3>
+                      <h3 id="catanStarfarersHoldHeading">Your Hold</h3>
                       <span id="catanStarfarersReserveCount">Earth Reserve · -</span>
                     </div>
                     <div id="catanStarfarersHand" class="catan-starfarers-resource-strip"></div>
@@ -3286,7 +3300,7 @@
                   <section class="catan-starfarers-action-card" data-catan-starfarers-explain="actions">
                     <div class="catan-starfarers-section-heading">
                       <div>
-                        <span class="catan-starfarers-kicker">Command console</span>
+                        <span id="catanStarfarersActionKicker" class="catan-starfarers-kicker">Command console</span>
                         <h3 id="catanStarfarersActionHeading">Waiting</h3>
                       </div>
                     </div>
@@ -3296,8 +3310,8 @@
 
                   <section class="catan-starfarers-log-card" data-catan-starfarers-explain="log">
                     <div class="catan-starfarers-section-heading">
-                      <h3>Flight Log</h3>
-                      <span>Newest first</span>
+                      <h3 id="catanStarfarersLogHeading">Flight Log</h3>
+                      <span id="catanStarfarersLogOrder">Newest first</span>
                     </div>
                     <div id="catanStarfarersLog" class="catan-starfarers-log" tabindex="0">No actions yet.</div>
                   </section>
@@ -7017,7 +7031,7 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js"></script>
-  <script src="/static/games/shared.js?v=app_v17"></script>
+  <script src="/static/games/shared.js?v=app_v19"></script>
   <script src="/static/games/blokus.js?v=app_v6"></script>
   <script src="/static/games/carcassonne.js?v=app_v6"></script>
   <script src="/static/games/azul.js?v=app_v4"></script>
@@ -7082,7 +7096,7 @@
   <script src="/static/games/bohnanza_dice.js?v=app_v8"></script>
   <script src="/static/games/emerald_skulls.js?v=app_v2"></script>
   <script src="/static/games/wriggle_roulette.js?v=app_v1"></script>
-  <script src="/static/games/catan_starfarers.js?v=app_v2"></script>
+  <script src="/static/games/catan_starfarers.js?v=app_v4"></script>
   <script src="/static/games/bomb_busters.js?v=app_v2"></script>
   <script src="/static/games/felix.js?v=app_v1"></script>
   <script src="/static/games/tacta.js?v=app_v7"></script>
@@ -7093,6 +7107,6 @@
   <script src="/static/games/scout.js?v=app_v4"></script>
   <script src="/static/games/ark_nova.js?v=app_v22"></script>
   <script src="/static/app.js?v=app_v21"></script>
-  <script src="/static/room.js?v=app_v37"></script>
+  <script src="/static/room.js?v=app_v38"></script>
 </body>
 </html>

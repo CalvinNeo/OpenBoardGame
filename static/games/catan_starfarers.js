@@ -2,11 +2,11 @@
   "use strict";
 
   const RESOURCE_META = {
-    ore: { emoji: "🔴⛏️", label: "Ore", color: "#ef5b5b" },
-    fuel: { emoji: "🟠⛽", label: "Fuel", color: "#f59f45" },
-    carbon: { emoji: "🔵💠", label: "Carbon", color: "#50a8e8" },
-    food: { emoji: "🟢🌿", label: "Food", color: "#62c98b" },
-    goods: { emoji: "🟣📦", label: "Goods", color: "#b384df" },
+    ore: { emoji: "🔴⛏️", label: "Ore", labelZh: "矿石", color: "#ef5b5b" },
+    fuel: { emoji: "🟠⛽", label: "Fuel", labelZh: "燃料", color: "#f59f45" },
+    carbon: { emoji: "🔵💠", label: "Carbon", labelZh: "碳素", color: "#50a8e8" },
+    food: { emoji: "🟢🌿", label: "Food", labelZh: "食物", color: "#62c98b" },
+    goods: { emoji: "🟣📦", label: "Goods", labelZh: "货物", color: "#b384df" },
   };
   const RESOURCE_IDS = Object.keys(RESOURCE_META);
   const PLAYER_COLORS = ["#64d8ff", "#ff8b75", "#9fe870", "#d9a4ff"];
@@ -23,12 +23,32 @@
     turn_review: "Turn Review",
     game_over: "Game Over",
   };
+  const PHASE_LABELS_ZH = {
+    production: "生产",
+    seven_discard: "贡税",
+    seven_steal: "贡税",
+    trade_build: "交易与建造",
+    encounter_reader: "遭遇",
+    encounter_choice: "遭遇",
+    encounter_reveal: "遭遇",
+    flight: "飞行",
+    friendship_choice: "友谊",
+    turn_review: "回合检查",
+    game_over: "游戏结束",
+  };
+  const SETUP_LABELS = {
+    beginner: { en: "beginner", zh: "新手" },
+    strategic: { en: "strategic", zh: "战略" },
+    explorer: { en: "explorer", zh: "探索" },
+    wild_space: { en: "wild space", zh: "未知宇宙" },
+  };
 
   let view = null;
   let pending = false;
   let pendingTimer = null;
   let selectedShipId = null;
   let explainMode = false;
+  let preferredLanguage = "en";
   let draftKey = "";
   let discardDraft = blankBundle();
   let offerGiveDraft = blankBundle();
@@ -44,6 +64,10 @@
   const explainCloseBtn = document.getElementById("catanStarfarersExplainCloseBtn");
   const helpContent = document.getElementById("catanStarfarersHelpContent");
   const explainContent = document.getElementById("catanStarfarersExplainContent");
+  const brandKickerEl = document.getElementById("catanStarfarersBrandKicker");
+  const turnLabelEl = document.getElementById("catanStarfarersTurnLabel");
+  const phaseLabelEl = document.getElementById("catanStarfarersPhaseLabel");
+  const setupLabelEl = document.getElementById("catanStarfarersSetupLabel");
   const turnEl = document.getElementById("catanStarfarersTurn");
   const phaseEl = document.getElementById("catanStarfarersPhase");
   const setupEl = document.getElementById("catanStarfarersSetup");
@@ -51,66 +75,194 @@
   const playersEl = document.getElementById("catanStarfarersPlayers");
   const mapEl = document.getElementById("catanStarfarersMap");
   const mapHintEl = document.getElementById("catanStarfarersMapHint");
+  const mapKickerEl = document.getElementById("catanStarfarersMapKicker");
+  const mapHeadingEl = document.getElementById("catanStarfarersMapHeading");
   const mothershipEl = document.getElementById("catanStarfarersMothership");
   const handEl = document.getElementById("catanStarfarersHand");
+  const holdHeadingEl = document.getElementById("catanStarfarersHoldHeading");
   const reserveEl = document.getElementById("catanStarfarersReserveCount");
+  const actionKickerEl = document.getElementById("catanStarfarersActionKicker");
   const actionHeadingEl = document.getElementById("catanStarfarersActionHeading");
   const actionHintEl = document.getElementById("catanStarfarersActionHint");
   const actionsEl = document.getElementById("catanStarfarersActions");
+  const logHeadingEl = document.getElementById("catanStarfarersLogHeading");
+  const logOrderEl = document.getElementById("catanStarfarersLogOrder");
   const logEl = document.getElementById("catanStarfarersLog");
   const liveEl = document.getElementById("catanStarfarersLiveRegion");
+  const helpModalTitleEl = document.getElementById("catanStarfarersHelpModalTitle");
+  const explainModalTitleEl = document.getElementById("catanStarfarersExplainModalTitle");
 
   const EXPLANATIONS = {
-    status: ["Turn Status", "The active captain and current server phase appear here. The server, not the browser, decides every random result and legal transition."],
-    players: ["Captain Boards", "Each board shows public VP, total hand size, physical upgrades, Fame, friendship cards, active status, and review readiness. Exact opponent resources remain private."],
-    map: ["Star Map", "Lines are legal movement edges. Select one of your ships, then choose a glowing adjacent node. Hidden sectors reveal only when reached in Explorer or Wild Space."],
-    mothership: ["Mothership", "Two balls set flight speed: Blue 1, Yellow 2, Red 3. Black triggers an encounter and uses base speed 3. Boosters and Scientist abilities add speed."],
-    resources: ["Your Hold", "Only you see the exact mix in your hold. Opponents see its total size. Resource cards are conserved between player holds, Earth Reserve, and the public supply."],
-    actions: ["Command Console", "Only actions legal in the current phase are enabled. Costs and targets are rechecked by the server when you click."],
-    production: ["Production", "Roll 2d6. Matching Colonies and Spaceports each produce one card. Earth then sends 2 cards at 4–7 VP, 1 at 8–9 VP, and none at 10+ VP."],
-    tribute: ["A Roll of 7", "Players above their hand limit secretly discard half, the active captain steals one random card, other captains draw one reserve card, then the active captain takes normal reserve aid."],
-    trade: ["Trading", "The active captain may open a structured offer, finalize one response, or trade with the public supply. Goods normally trade 2:1; other resources trade 3:1 unless a friendship card improves the rate."],
-    build: ["Build", "Ships launch from one of your Spaceports. Colony Ships carry a Colony; Trade Ships carry a Trade Station. Upgrades improve every ship in your fleet."],
-    ships: ["Ships & Movement", "Each unfinished ship may move up to the displayed speed. Movement is sent one edge at a time so discoveries resolve before the next step."],
-    encounter: ["Encounter Reader", "The captain on the active player's left privately sees the full encounter. They read the prompt, the active player chooses, then the Reader reveals the server-defined result."],
-    friendship: ["Friendship Card", "Establishing a Trade Station grants one remaining card from that civilization. The player with a strict station majority holds its 2 VP Friendship Marker; ties keep the current holder."],
-    review: ["Turn Review", "The board pauses after every flight. Every human and Bot seat must confirm before the next captain begins Production."],
-    log: ["Flight Log", "The log contains only public outcomes. Hidden card types, unrevealed sectors, future random results, and private encounter branches never appear."],
+    en: {
+      status: ["Turn Status", "The active captain and current server phase appear here. The server, not the browser, decides every random result and legal transition."],
+      players: ["Captain Boards", "Each board shows public VP, total hand size, physical upgrades, Fame, friendship cards, active status, and review readiness. Exact opponent resources remain private."],
+      map: ["Star Map", "Lines are legal movement edges. Select one of your ships, then choose a glowing adjacent node. Hidden sectors reveal only when reached in Explorer or Wild Space."],
+      mothership: ["Mothership", "Two balls set flight speed: Blue 1, Yellow 2, Red 3. Black triggers an encounter and uses base speed 3. Boosters and Scientist abilities add speed."],
+      resources: ["Your Hold", "Only you see the exact mix in your hold. Opponents see its total size. Resource cards are conserved between player holds, Earth Reserve, and the public supply."],
+      actions: ["Command Console", "Only actions legal in the current phase are enabled. Costs and targets are rechecked by the server when you click."],
+      production: ["Production", "Roll 2d6. Matching Colonies and Spaceports each produce one card. Earth then sends 2 cards at 4–7 VP, 1 at 8–9 VP, and none at 10+ VP."],
+      tribute: ["A Roll of 7", "Players above their hand limit secretly discard half, the active captain steals one random card, other captains draw one reserve card, then the active captain takes normal reserve aid."],
+      trade: ["Trading", "The active captain may open a structured offer, finalize one response, or trade with the public supply. Goods normally trade 2:1; other resources trade 3:1 unless a friendship card improves the rate."],
+      build: ["Build", "Ships launch from one of your Spaceports. Colony Ships carry a Colony; Trade Ships carry a Trade Station. Upgrades improve every ship in your fleet."],
+      ships: ["Ships & Movement", "Each unfinished ship may move up to the displayed speed. Movement is sent one edge at a time so discoveries resolve before the next step."],
+      encounter: ["Encounter Reader", "The captain on the active player's left privately sees the full encounter. They read the prompt, the active player chooses, then the Reader reveals the server-defined result."],
+      friendship: ["Friendship Card", "Establishing a Trade Station grants one remaining card from that civilization. The player with a strict station majority holds its 2 VP Friendship Marker; ties keep the current holder."],
+      review: ["Turn Review", "The board pauses after every flight. Every human and Bot seat must confirm before the next captain begins Production."],
+      log: ["Flight Log", "The log contains only public outcomes. Hidden card types, unrevealed sectors, future random results, and private encounter branches never appear."],
+    },
+    zh: {
+      status: ["回合状态", "这里显示当前舰长和服务器阶段。所有随机结果与合法流程都由服务器决定，而不是浏览器。"],
+      players: ["舰长面板", "每块面板显示公开分数、手牌总数、实体升级、声望、友谊卡、行动状态和检查进度；对手的具体资源保持私密。"],
+      map: ["星图", "连线代表合法移动路径。先选择自己的一艘飞船，再选择发光的相邻节点。探索或未知宇宙布局中的隐藏星区只会在抵达时揭示。"],
+      mothership: ["母舰", "两颗球决定飞行速度：蓝球1、黄球2、红球3。黑球触发遭遇并提供3点基础速度；推进器和科学家能力可继续加速。"],
+      resources: ["你的货舱", "只有你能看到货舱中的准确资源组合，对手只能看到总数。资源牌始终在玩家货舱、地球后备牌堆和公共供应区之间守恒。"],
+      actions: ["指挥台", "只有当前阶段合法的操作会启用。点击后，服务器还会再次核对费用与目标。"],
+      production: ["生产", "掷两颗六面骰。点数匹配的殖民地和空间港各生产1张牌；随后地球按你的分数提供后备牌：4–7分抽2张，8–9分抽1张，10分以上不抽。"],
+      tribute: ["掷出7", "超过手牌上限的玩家秘密弃掉一半手牌；当前舰长随机拿走一张牌，其他舰长各抽一张后备牌，然后当前舰长照常获得地球援助。"],
+      trade: ["交易", "当前舰长可以发布结构化交易、接受一份回应，或与公共供应区交易。货物通常按2:1交易，其他资源为3:1；友谊卡可改善比例。"],
+      build: ["建造", "飞船从你的空间港启航。殖民船搭载一座殖民地，贸易船搭载一座贸易站；升级会强化整支舰队。"],
+      ships: ["飞船与移动", "每艘尚未完成行动的飞船最多移动显示的速度。移动按每条边逐步提交，以便在继续前结算新发现。"],
+      encounter: ["遭遇朗读者", "当前玩家左侧的舰长会私下看到完整遭遇。他先读出情境，当前玩家作出选择，再由朗读者揭示服务器定义的结果。"],
+      friendship: ["友谊卡", "建立贸易站后，从该文明剩余卡牌中获得一张。拥有严格多数贸易站的玩家持有价值2分的友谊标记；平手时保持原持有者。"],
+      review: ["回合检查", "每次飞行结束后棋盘会暂停。所有真人和机器人座位都确认后，下一位舰长才开始生产阶段。"],
+      log: ["飞行日志", "日志只记录公开结果；隐藏牌型、未揭示星区、未来随机结果以及私密遭遇分支都不会出现。"],
+    },
   };
 
-  const HELP_HTML = `
-    <div class="catan-starfarers-rules">
-      <p><strong>Reach 15 VP during your own turn.</strong> Expand from the Catanian home systems, explore the frontier, meet alien civilizations, and earn Fame.</p>
-      <h3>Turn sequence</h3>
-      <ol>
-        <li><strong>Production:</strong> roll 2d6, resolve matching worlds, then draw from Earth Reserve according to your VP.</li>
-        <li><strong>Trade &amp; Build:</strong> trade with the active captain or supply, build ships and Spaceports, and install upgrades.</li>
-        <li><strong>Flight:</strong> shake the Mothership, resolve a Black-ball encounter, then move each ship up to the shared speed.</li>
-        <li><strong>Turn Review:</strong> all seats inspect the final map and click <em>Next Turn</em>.</li>
-      </ol>
-      <h3>Resources &amp; costs</h3>
-      <table><thead><tr><th>Build</th><th>Cost</th></tr></thead><tbody>
-        <tr><td>🚀 Colony Ship</td><td>1 Ore + 1 Fuel + 1 Carbon + 1 Food</td></tr>
-        <tr><td>🛸 Trade Ship</td><td>1 Ore + 1 Fuel + 2 Goods</td></tr>
-        <tr><td>🛰️ Spaceport</td><td>3 Carbon + 2 Food</td></tr>
-        <tr><td>🚀 Booster</td><td>2 Fuel</td></tr>
-        <tr><td>💥 Cannon</td><td>2 Carbon</td></tr>
-        <tr><td>📦 Freight Pod</td><td>2 Ore</td></tr>
-      </tbody></table>
-      <h3>Production and 7</h3>
-      <p>Every Colony or Spaceport on the rolled number produces one matching resource; a Spaceport does not double production. If the supply cannot satisfy an entire resource type, nobody receives that type. On 7, every player above the limit secretly returns half their cards, then the active captain steals one random card.</p>
-      <h3>Exploration</h3>
-      <p>Entering a hidden sector discovers it. Entering an unexplored system reveals its production number. Pirate bases need effective Cannons; ice worlds need physical Freight Pods. Clearing either grants a permanent 1 VP medal.</p>
-      <h3>Ships and destinations</h3>
-      <p>A Colony Ship may settle an open, cleared system. A Trade Ship may establish a station at an outpost when your physical Freight count is greater than the stations already there. Ships may pass through occupied nodes, but invalid destination types cannot be used to finish a move.</p>
-      <h3>Friendship &amp; scoring</h3>
-      <p>Friendship cards are permanent public abilities. A civilization's Friendship Marker is worth 2 VP. Colonies are 1 VP, Spaceports 2 VP, Trade Stations 1 VP, permanent medals 1 VP, and each pair of Fame pieces 1 VP.</p>
-      <h3>Privacy and digital rulings</h3>
-      <p>The server keeps hands, reserve order, encounters, and hidden sectors private. Movement is submitted edge by edge. A disconnected Reader pauses an encounter until they return. General controls use English; game resources combine color, icon, and text.</p>
-    </div>`;
+  const HELP_HTML = {
+    en: `
+      <div class="catan-starfarers-rules">
+        <p><strong>Reach 15 VP during your own turn.</strong> Expand from the Catanian home systems, explore the frontier, meet alien civilizations, and earn Fame.</p>
+        <h3>Turn sequence</h3>
+        <ol>
+          <li><strong>Production:</strong> roll 2d6, resolve matching worlds, then draw from Earth Reserve according to your VP.</li>
+          <li><strong>Trade &amp; Build:</strong> trade with the active captain or supply, build ships and Spaceports, and install upgrades.</li>
+          <li><strong>Flight:</strong> shake the Mothership, resolve a Black-ball encounter, then move each ship up to the shared speed.</li>
+          <li><strong>Turn Review:</strong> all seats inspect the final map and click <em>Next Turn</em>.</li>
+        </ol>
+        <h3>Resources &amp; costs</h3>
+        <table><thead><tr><th>Build</th><th>Cost</th></tr></thead><tbody>
+          <tr><td>🚀 Colony Ship</td><td>1 Ore + 1 Fuel + 1 Carbon + 1 Food</td></tr>
+          <tr><td>🛸 Trade Ship</td><td>1 Ore + 1 Fuel + 2 Goods</td></tr>
+          <tr><td>🛰️ Spaceport</td><td>3 Carbon + 2 Food</td></tr>
+          <tr><td>🚀 Booster</td><td>2 Fuel</td></tr>
+          <tr><td>💥 Cannon</td><td>2 Carbon</td></tr>
+          <tr><td>📦 Freight Pod</td><td>2 Ore</td></tr>
+        </tbody></table>
+        <h3>Production and 7</h3>
+        <p>Every Colony or Spaceport on the rolled number produces one matching resource; a Spaceport does not double production. If the supply cannot satisfy an entire resource type, nobody receives that type. On 7, every player above the limit secretly returns half their cards, then the active captain steals one random card.</p>
+        <h3>Exploration</h3>
+        <p>Entering a hidden sector discovers it. Entering an unexplored system reveals its production number. Pirate bases need effective Cannons; ice worlds need physical Freight Pods. Clearing either grants a permanent 1 VP medal.</p>
+        <h3>Ships and destinations</h3>
+        <p>A Colony Ship may settle an open, cleared system. A Trade Ship may establish a station at an outpost when your physical Freight count is greater than the stations already there. Ships may pass through occupied nodes, but invalid destination types cannot be used to finish a move.</p>
+        <h3>Friendship &amp; scoring</h3>
+        <p>Friendship cards are permanent public abilities. A civilization's Friendship Marker is worth 2 VP. Colonies are 1 VP, Spaceports 2 VP, Trade Stations 1 VP, permanent medals 1 VP, and each pair of Fame pieces 1 VP.</p>
+        <h3>Privacy and digital rulings</h3>
+        <p>The server keeps hands, reserve order, encounters, and hidden sectors private. Movement is submitted edge by edge. A disconnected Reader pauses an encounter until they return. General controls use English; game resources combine color, icon, and text.</p>
+      </div>`,
+    zh: `
+      <div class="catan-starfarers-rules" lang="zh-CN">
+        <p><strong>在自己的回合中率先达到15分。</strong>从卡坦人的家园星系向外扩张，探索边疆、结识外星文明并积累声望。</p>
+        <h3>回合流程</h3>
+        <ol>
+          <li><strong>生产：</strong>掷两颗六面骰，结算点数匹配的星球，再按分数从地球后备牌堆抽牌。</li>
+          <li><strong>交易与建造：</strong>与当前舰长或供应区交易，建造飞船和空间港，并安装升级。</li>
+          <li><strong>飞行：</strong>摇动母舰，若出现黑球则结算遭遇，然后让每艘飞船在共享速度范围内移动。</li>
+          <li><strong>回合检查：</strong>所有座位查看最终局面并点击“下一回合”。</li>
+        </ol>
+        <h3>资源与费用</h3>
+        <table><thead><tr><th>建造</th><th>费用</th></tr></thead><tbody>
+          <tr><td>🚀 殖民船</td><td>1矿石 + 1燃料 + 1碳素 + 1食物</td></tr>
+          <tr><td>🛸 贸易船</td><td>1矿石 + 1燃料 + 2货物</td></tr>
+          <tr><td>🛰️ 空间港</td><td>3碳素 + 2食物</td></tr>
+          <tr><td>🚀 推进器</td><td>2燃料</td></tr>
+          <tr><td>💥 火炮</td><td>2碳素</td></tr>
+          <tr><td>📦 货舱环</td><td>2矿石</td></tr>
+        </tbody></table>
+        <h3>生产与掷出7</h3>
+        <p>掷出的点数与殖民地或空间港所在星球匹配时，各生产1份对应资源；空间港不会让产量翻倍。若供应区无法满足某一种资源的全部需求，则无人获得该资源。掷出7时，超过上限的玩家秘密归还一半手牌，随后当前舰长随机拿走一张牌。</p>
+        <h3>探索</h3>
+        <p>进入隐藏星区会发现它；进入尚未探索的星系会揭示其生产点数。海盗基地需要足够的有效火炮等级，冰封星球需要实体货舱环。清除任一障碍都会获得一枚永久1分勋章。</p>
+        <h3>飞船与目的地</h3>
+        <p>殖民船可以在开放且障碍已清除的星系建立殖民地。若你的实体货舱环数量大于哨站中已有贸易站数量，贸易船即可建立贸易站。飞船可以穿过被占据的节点，但不能在不匹配的目的地结束移动。</p>
+        <h3>友谊与计分</h3>
+        <p>友谊卡提供永久公开能力。每个文明的友谊标记价值2分。殖民地1分、空间港2分、贸易站1分、永久勋章1分，每两枚声望标记计1分。</p>
+        <h3>隐私与数字版裁定</h3>
+        <p>服务器会隐藏手牌、后备牌顺序、遭遇以及未揭示星区。移动按每条边逐步提交；朗读者掉线时遭遇会暂停，等待其返回。通用导航控件保持英文，游戏资源同时用颜色、图标与文字区分。</p>
+      </div>`,
+  };
 
   function blankBundle() {
     return { ore: 0, fuel: 0, carbon: 0, food: 0, goods: 0 };
+  }
+
+  function currentLanguage() {
+    if (view) return view.language === "zh" ? "zh" : "en";
+    return preferredLanguage === "zh" ? "zh" : "en";
+  }
+
+  function isChinese() {
+    return currentLanguage() === "zh";
+  }
+
+  function localized(english, chinese) {
+    return isChinese() ? chinese : english;
+  }
+
+  function resourceLabel(resource) {
+    const meta = RESOURCE_META[resource] || { label: resource, labelZh: resource };
+    return isChinese() ? meta.labelZh : meta.label;
+  }
+
+  function phaseLabel(phase) {
+    const labels = isChinese() ? PHASE_LABELS_ZH : PHASE_LABELS;
+    return labels[phase] || phase || "-";
+  }
+
+  function setupName(mode) {
+    const labels = SETUP_LABELS[mode];
+    return labels ? labels[currentLanguage()] : String(mode || "beginner").replaceAll("_", " ");
+  }
+
+  function buildingKindLabel(kind) {
+    const labels = {
+      colony: localized("colony", "殖民地"),
+      spaceport: localized("spaceport", "空间港"),
+      trade_station: localized("trade station", "贸易站"),
+    };
+    return labels[kind] || String(kind || "").replaceAll("_", " ");
+  }
+
+  function applyStaticCopy() {
+    if (brandKickerEl) brandKickerEl.textContent = localized("Frontier command · 2019 base game", "边疆指挥部 · 2019基础版");
+    if (turnLabelEl) turnLabelEl.textContent = localized("Turn", "回合");
+    if (phaseLabelEl) phaseLabelEl.textContent = localized("Phase", "阶段");
+    if (setupLabelEl) setupLabelEl.textContent = localized("Setup", "布局");
+    if (mapKickerEl) mapKickerEl.textContent = localized("Public frontier", "公共边疆");
+    if (mapHeadingEl) mapHeadingEl.textContent = localized("Star Map", "星图");
+    if (holdHeadingEl) holdHeadingEl.textContent = localized("Your Hold", "你的货舱");
+    if (actionKickerEl) actionKickerEl.textContent = localized("Command console", "指挥台");
+    if (logHeadingEl) logHeadingEl.textContent = localized("Flight Log", "飞行日志");
+    if (logOrderEl) logOrderEl.textContent = localized("Newest first", "最新在前");
+    if (helpModalTitleEl) helpModalTitleEl.textContent = localized("CATAN: Starfarers Help", "星际卡坦帮助");
+    if (explainModalTitleEl) explainModalTitleEl.textContent = localized("CATAN: Starfarers Explain", "星际卡坦说明");
+    if (helpContent) helpContent.innerHTML = HELP_HTML[currentLanguage()];
+    if (mapEl) mapEl.setAttribute("aria-label", localized("Interactive star map", "可交互星图"));
+    const meta = panel && panel.querySelector(".catan-starfarers-meta");
+    if (meta) meta.setAttribute("aria-label", localized("Turn status", "回合状态"));
+  }
+
+  function setLanguage(language) {
+    preferredLanguage = language === "zh" ? "zh" : "en";
+    applyStaticCopy();
+    if (view) return;
+    if (statusEl) statusEl.textContent = localized("Waiting for game state…", "等待游戏状态…");
+    if (mothershipEl) mothershipEl.textContent = localized("No flight roll", "尚未进行飞行掷球");
+    if (mapHintEl) mapHintEl.textContent = localized("Select one of your ships to plot its next edge.", "选择自己的一艘飞船规划下一段航线。");
+    if (holdHeadingEl) holdHeadingEl.textContent = localized("Your Hold", "你的货舱");
+    if (reserveEl) reserveEl.textContent = localized("Earth Reserve · -", "地球后备牌 · -");
+    if (actionHeadingEl) actionHeadingEl.textContent = localized("Waiting", "等待中");
+    if (logEl) logEl.textContent = localized("No actions yet.", "暂无行动。");
   }
 
   function hasAction(type) {
@@ -151,7 +303,7 @@
   }
 
   function openExplanation(key) {
-    const entry = EXPLANATIONS[key];
+    const entry = EXPLANATIONS[currentLanguage()][key];
     if (!entry || !explainContent) return;
     const heading = document.createElement("h3");
     heading.textContent = entry[0];
@@ -195,7 +347,7 @@
     const values = RESOURCE_IDS
       .filter((resource) => Number(bundle && bundle[resource] || 0) > 0)
       .map((resource) => `${RESOURCE_META[resource].emoji} ${Number(bundle[resource])}`);
-    return values.join(" · ") || "nothing";
+    return values.join(" · ") || localized("nothing", "无");
   }
 
   function formatCost(cost) {
@@ -223,25 +375,33 @@
   function renderStatus() {
     if (!view || !statusEl) return;
     const activeName = playerName(view.active_player_id);
-    let copy = `${activeName} is resolving ${PHASE_LABELS[view.phase] || view.phase}.`;
+    let copy = isChinese()
+      ? `${activeName}正在处理${phaseLabel(view.phase)}阶段。`
+      : `${activeName} is resolving ${phaseLabel(view.phase)}.`;
     statusEl.className = "catan-starfarers-status";
     if (view.game_over) {
-      copy = `${(view.winner_ids || []).map(playerName).join(" & ")} won the frontier.`;
+      copy = isChinese()
+        ? `${(view.winner_ids || []).map(playerName).join("、")}赢得了这片星际边疆。`
+        : `${(view.winner_ids || []).map(playerName).join(" & ")} won the frontier.`;
     } else if (view.phase === "turn_review") {
-      copy = `Flight complete · ${Number(view.review_progress.done || 0)} / ${Number(view.review_progress.total || 0)} seats ready.`;
+      copy = isChinese()
+        ? `飞行结束 · ${Number(view.review_progress.done || 0)} / ${Number(view.review_progress.total || 0)}个座位已准备。`
+        : `Flight complete · ${Number(view.review_progress.done || 0)} / ${Number(view.review_progress.total || 0)} seats ready.`;
     } else if (view.phase === "seven_discard") {
       copy = view.production.pending_discard_count
-        ? `Tribute due: secretly return exactly ${view.production.pending_discard_count} cards.`
-        : "Waiting for every affected captain to pay tribute.";
+        ? (isChinese()
+          ? `需要缴纳贡税：秘密归还恰好${view.production.pending_discard_count}张牌。`
+          : `Tribute due: secretly return exactly ${view.production.pending_discard_count} cards.`)
+        : localized("Waiting for every affected captain to pay tribute.", "等待所有受影响的舰长缴纳贡税。");
       statusEl.classList.add("is-danger");
     } else if (view.active_player_id === view.you) {
-      copy = `Your turn · ${PHASE_LABELS[view.phase] || view.phase}.`;
+      copy = isChinese() ? `你的回合 · ${phaseLabel(view.phase)}。` : `Your turn · ${phaseLabel(view.phase)}.`;
       statusEl.classList.add("is-your-turn");
     }
     statusEl.textContent = copy;
     if (turnEl) turnEl.textContent = String(view.turn_no || "-");
-    if (phaseEl) phaseEl.textContent = PHASE_LABELS[view.phase] || view.phase || "-";
-    if (setupEl) setupEl.textContent = String(view.setup_mode || "beginner").replaceAll("_", " ");
+    if (phaseEl) phaseEl.textContent = phaseLabel(view.phase);
+    if (setupEl) setupEl.textContent = setupName(view.setup_mode);
   }
 
   function renderPlayers() {
@@ -257,7 +417,7 @@
       const heading = document.createElement("div");
       heading.className = "catan-starfarers-player-heading";
       const name = document.createElement("strong");
-      name.textContent = `${item.is_bot ? "🤖 " : ""}${item.name || item.player_id}${item.player_id === view.you ? " · You" : ""}`;
+      name.textContent = `${item.is_bot ? "🤖 " : ""}${item.name || item.player_id}${item.player_id === view.you ? localized(" · You", " · 你") : ""}`;
       name.title = item.name || item.player_id;
       const vp = document.createElement("span");
       vp.textContent = `⭐ ${Number(item.vp || 0)}`;
@@ -265,7 +425,7 @@
 
       const stats = document.createElement("div");
       stats.className = "catan-starfarers-player-stats";
-      stats.innerHTML = `<span>🃏 ${Number(item.hand_count || 0)}</span><span>🏅 ${Number(item.fame_pieces || 0)}</span><span>🎖️ ${(item.permanent_medals || []).length}</span>${item.ready ? "<span>✓ Ready</span>" : ""}`;
+      stats.innerHTML = `<span>🃏 ${Number(item.hand_count || 0)}</span><span>🏅 ${Number(item.fame_pieces || 0)}</span><span>🎖️ ${(item.permanent_medals || []).length}</span>${item.ready ? `<span>✓ ${localized("Ready", "已准备")}</span>` : ""}`;
       const upgrades = document.createElement("div");
       upgrades.className = "catan-starfarers-player-upgrades";
       upgrades.innerHTML = `<span>🚀 ${Number(item.upgrades && item.upgrades.booster || 0)}</span><span>💥 ${Number(item.upgrades && item.upgrades.cannon || 0)}</span><span>📦 ${Number(item.upgrades && item.upgrades.freight || 0)}</span>`;
@@ -287,9 +447,9 @@
   }
 
   function nodeCopy(node, sector) {
-    if (node.kind === "home") return { kind: "home", icon: RESOURCE_META[node.resource].emoji.slice(0, 2), number: node.number, label: "Home" };
+    if (node.kind === "home") return { kind: "home", icon: RESOURCE_META[node.resource].emoji.slice(0, 2), number: node.number, label: localized("Home", "家园") };
     if (!sector) return { kind: node.kind === "space" ? "space" : "void", icon: "·", number: "", label: "" };
-    if (sector.kind === "hidden") return { kind: "hidden", icon: "?", number: "", label: "Unknown" };
+    if (sector.kind === "hidden") return { kind: "hidden", icon: "?", number: "", label: localized("Unknown", "未知") };
     if (sector.kind === "system") {
       const resource = RESOURCE_META[sector.resource] || { emoji: "🪐" };
       const obstacle = sector.obstacle && !sector.obstacle_cleared
@@ -299,7 +459,7 @@
     }
     if (sector.kind === "outpost") return { kind: "outpost", icon: "🤝", number: "", label: sector.name };
     if (sector.kind === "empty") return { kind: "empty", icon: "✦", number: "", label: sector.name };
-    return { kind: "void", icon: "·", number: "", label: "Void" };
+    return { kind: "void", icon: "·", number: "", label: localized("Void", "虚空") };
   }
 
   function renderMap() {
@@ -337,7 +497,9 @@
         class: `catan-starfarers-node is-${copy.kind}${legalTargets.has(node.id) ? " is-target" : ""}`,
         role: legalTargets.has(node.id) ? "button" : "img",
         tabindex: legalTargets.has(node.id) ? "0" : "-1",
-        "aria-label": `${copy.label || "Space node"}${copy.number !== "" ? `, number ${copy.number}` : ""}${legalTargets.has(node.id) ? ", legal movement target" : ""}`,
+        "aria-label": isChinese()
+          ? `${copy.label || "太空节点"}${copy.number !== "" ? `，点数${copy.number}` : ""}${legalTargets.has(node.id) ? "，合法移动目标" : ""}`
+          : `${copy.label || "Space node"}${copy.number !== "" ? `, number ${copy.number}` : ""}${legalTargets.has(node.id) ? ", legal movement target" : ""}`,
         "data-catan-starfarers-explain": "map",
       });
       const radius = copy.kind === "space" ? 8 : copy.kind === "home" ? 24 : 29;
@@ -391,7 +553,7 @@
         shape = svgElement("rect", { x: x - 7, y: y - 7, width: 14, height: 14, rx: 3, fill: playerColor(building.player_id), class: "catan-starfarers-building" });
       }
       const title = svgElement("title");
-      title.textContent = `${playerName(building.player_id)} · ${building.kind.replace("_", " ")}`;
+      title.textContent = `${playerName(building.player_id)} · ${buildingKindLabel(building.kind)}`;
       shape.appendChild(title);
       pieceLayer.appendChild(shape);
     });
@@ -408,13 +570,17 @@
         class: `catan-starfarers-ship${ship.id === selectedShipId ? " is-selected" : ""}`,
         role: "button",
         tabindex: ship.player_id === view.you ? "0" : "-1",
-        "aria-label": `${playerName(ship.player_id)} ${ship.kind} ship${ship.id === selectedShipId ? ", selected" : ""}`,
+        "aria-label": isChinese()
+          ? `${playerName(ship.player_id)}的${ship.kind === "colony" ? "殖民船" : "贸易船"}${ship.id === selectedShipId ? "，已选择" : ""}`
+          : `${playerName(ship.player_id)} ${ship.kind} ship${ship.id === selectedShipId ? ", selected" : ""}`,
         "data-catan-starfarers-explain": "ships",
       });
       group.style.setProperty("--ship-color", playerColor(ship.player_id));
       group.appendChild(svgElement("circle", { cx: x, cy: y, r: 15 }));
       const label = svgElement("text", { x, y: y + 5 });
-      label.textContent = ship.kind === "colony" ? "C" : "T";
+      label.textContent = ship.kind === "colony"
+        ? localized("C", "殖")
+        : localized("T", "贸");
       group.appendChild(label);
       const select = (event) => {
         if (event) event.stopPropagation();
@@ -438,11 +604,13 @@
         const remaining = view.flight && view.flight.movement_remaining
           ? Number(view.flight.movement_remaining[selectedShipId] || 0)
           : 0;
-        mapHintEl.textContent = `${selectedShipId} selected · ${remaining} movement remaining · choose a glowing adjacent node.`;
+        mapHintEl.textContent = isChinese()
+          ? `已选择${selectedShipId} · 剩余${remaining}点移动力 · 请选择发光的相邻节点。`
+          : `${selectedShipId} selected · ${remaining} movement remaining · choose a glowing adjacent node.`;
       } else {
         mapHintEl.textContent = view.phase === "flight"
-          ? "Select one of your ships to plot its next edge. Click blank space to cancel selection."
-          : "The map remains fully inspectable while other phases resolve.";
+          ? localized("Select one of your ships to plot its next edge. Click blank space to cancel selection.", "选择自己的一艘飞船规划下一段航线；点击空白处可取消选择。")
+          : localized("The map remains fully inspectable while other phases resolve.", "其他阶段结算时仍可完整查看星图。");
       }
     }
   }
@@ -451,11 +619,11 @@
     if (!mothershipEl || !view) return;
     const flight = view.flight;
     if (!flight || !Array.isArray(flight.balls)) {
-      mothershipEl.textContent = "No flight roll";
+      mothershipEl.textContent = localized("No flight roll", "尚未进行飞行掷球");
       return;
     }
     const icon = { yellow: "🟡", blue: "🔵", red: "🔴", black: "⚫" };
-    mothershipEl.textContent = `${flight.balls.map((ball) => icon[ball] || ball).join(" + ")} · Speed ${Number(flight.speed || 0)}`;
+    mothershipEl.textContent = `${flight.balls.map((ball) => icon[ball] || ball).join(" + ")} · ${localized("Speed", "速度")} ${Number(flight.speed || 0)}`;
   }
 
   function renderHand() {
@@ -470,11 +638,11 @@
       const count = document.createElement("strong");
       count.textContent = String(Number(view.your_hand && view.your_hand[resource] || 0));
       const label = document.createElement("small");
-      label.textContent = RESOURCE_META[resource].label;
+      label.textContent = resourceLabel(resource);
       item.append(icon, count, label);
       handEl.appendChild(item);
     });
-    if (reserveEl) reserveEl.textContent = `Earth Reserve · ${Number(view.reserve_count || 0)}`;
+    if (reserveEl) reserveEl.textContent = `${localized("Earth Reserve", "地球后备牌")} · ${Number(view.reserve_count || 0)}`;
   }
 
   function addSubheading(text) {
@@ -493,7 +661,7 @@
       row.className = "catan-starfarers-stepper";
       row.dataset.catanStarfarersExplain = explain;
       const label = document.createElement("span");
-      label.textContent = `${RESOURCE_META[resource].emoji} ${RESOURCE_META[resource].label}`;
+      label.textContent = `${RESOURCE_META[resource].emoji} ${resourceLabel(resource)}`;
       const minus = createButton("−", null, { disabled: pending || Number(bundle[resource] || 0) <= 0, explain });
       const output = document.createElement("output");
       output.textContent = String(Number(bundle[resource] || 0));
@@ -517,33 +685,33 @@
   }
 
   function renderProductionActions() {
-    actionHeadingEl.textContent = "Production";
+    actionHeadingEl.textContent = localized("Production", "生产");
     actionHintEl.textContent = hasAction("roll_production")
-      ? "Roll two production dice. Earth Reserve aid follows automatically."
-      : `Waiting for ${playerName(view.active_player_id)} to roll.`;
-    actionsEl.appendChild(createButton("🎲 Roll Production", { type: "roll_production" }, {
+      ? localized("Roll two production dice. Earth Reserve aid follows automatically.", "掷两颗生产骰；随后会自动结算地球后备牌援助。")
+      : (isChinese() ? `等待${playerName(view.active_player_id)}掷骰。` : `Waiting for ${playerName(view.active_player_id)} to roll.`);
+    actionsEl.appendChild(createButton(localized("🎲 Roll Production", "🎲 掷生产骰"), { type: "roll_production" }, {
       className: "is-primary", disabled: !hasAction("roll_production"), explain: "production",
     }));
   }
 
   function renderTributeActions() {
     const needed = Number(view.production.pending_discard_count || 0);
-    actionHeadingEl.textContent = "Tribute on 7";
+    actionHeadingEl.textContent = localized("Tribute on 7", "掷出7：缴纳贡税");
     if (view.phase === "seven_discard") {
       actionHintEl.textContent = needed
-        ? `Return exactly ${needed} cards. Your selection stays private.`
-        : "Waiting for affected captains to finish their private discards.";
+        ? (isChinese() ? `请恰好归还${needed}张牌；你的选择保持私密。` : `Return exactly ${needed} cards. Your selection stays private.`)
+        : localized("Waiting for affected captains to finish their private discards.", "等待受影响的舰长完成秘密弃牌。");
       if (!needed) return;
       addStepperGrid(discardDraft, view.your_hand || blankBundle(), renderActions, "tribute");
       const selected = bundleTotal(discardDraft);
-      actionsEl.appendChild(createButton(`Return ${selected} / ${needed}`, {
+      actionsEl.appendChild(createButton(`${localized("Return", "归还")} ${selected} / ${needed}`, {
         type: "discard_resources", resources: { ...discardDraft },
       }, { className: "is-danger", disabled: !hasAction("discard_resources") || selected !== needed, explain: "tribute" }));
       return;
     }
     actionHintEl.textContent = hasAction("choose_steal_target")
-      ? "Choose one captain; the server takes one of their cards uniformly at random."
-      : "Waiting for the active captain to complete tribute.";
+      ? localized("Choose one captain; the server takes one of their cards uniformly at random.", "选择一位舰长；服务器会从其手牌中等概率随机拿走一张。")
+      : localized("Waiting for the active captain to complete tribute.", "等待当前舰长完成贡税结算。");
     const grid = document.createElement("div");
     grid.className = "catan-starfarers-button-grid";
     (view.production.steal_targets || []).forEach((playerId) => {
@@ -562,33 +730,35 @@
     strong.textContent = label;
     const small = document.createElement("small");
     small.textContent = detail;
-    const button = createButton("Build", action, { disabled, explain: "build" });
+    const button = createButton(localized("Build", "建造"), action, { disabled, explain: "build" });
     card.append(strong, small, button);
     return card;
   }
 
   function renderBuildGrid() {
-    addSubheading("Build");
+    addSubheading(localized("Build", "建造"));
     const grid = document.createElement("div");
     grid.className = "catan-starfarers-build-grid";
     const port = (view.your_spaceports || [])[0];
     const colony = (view.your_colonies || [])[0];
     const shipSupply = view.your_supply || {};
     const upgradeSupply = view.upgrade_supply || {};
-    grid.appendChild(buildCard("🚀 Colony Ship", formatCost(view.build_costs.colony_ship), {
+    grid.appendChild(buildCard(localized("🚀 Colony Ship", "🚀 殖民船"), formatCost(view.build_costs.colony_ship), {
       type: "build_ship", ship_type: "colony", spaceport_id: port && port.id,
     }, !hasAction("build_ship") || !port || !canPay(view.build_costs.colony_ship)
       || Number(shipSupply.transports || 0) < 1 || Number(shipSupply.colonies || 0) < 1));
-    grid.appendChild(buildCard("🛸 Trade Ship", formatCost(view.build_costs.trade_ship), {
+    grid.appendChild(buildCard(localized("🛸 Trade Ship", "🛸 贸易船"), formatCost(view.build_costs.trade_ship), {
       type: "build_ship", ship_type: "trade", spaceport_id: port && port.id,
     }, !hasAction("build_ship") || !port || !canPay(view.build_costs.trade_ship)
       || Number(shipSupply.transports || 0) < 1 || Number(shipSupply.trade_stations || 0) < 1));
-    grid.appendChild(buildCard("🛰️ Spaceport", formatCost(view.build_costs.spaceport), {
+    grid.appendChild(buildCard(localized("🛰️ Spaceport", "🛰️ 空间港"), formatCost(view.build_costs.spaceport), {
       type: "build_spaceport", colony_id: colony && colony.id,
     }, !hasAction("build_spaceport") || !colony || !canPay(view.build_costs.spaceport)
       || Number(shipSupply.shipyards || 0) < 1));
     [
-      ["booster", "🚀 Booster"], ["cannon", "💥 Cannon"], ["freight", "📦 Freight"],
+      ["booster", localized("🚀 Booster", "🚀 推进器")],
+      ["cannon", localized("💥 Cannon", "💥 火炮")],
+      ["freight", localized("📦 Freight", "📦 货舱环")],
     ].forEach(([upgrade, label]) => {
       grid.appendChild(buildCard(label, formatCost(view.build_costs[upgrade]), {
         type: "build_upgrade", upgrade_type: upgrade,
@@ -599,7 +769,7 @@
   }
 
   function renderSupplyTrade() {
-    addSubheading("Supply trade");
+    addSubheading(localized("Supply trade", "供应区交易"));
     const box = document.createElement("div");
     box.className = "catan-starfarers-trade-box";
     box.dataset.catanStarfarersExplain = "trade";
@@ -610,23 +780,25 @@
     RESOURCE_IDS.forEach((resource, index) => {
       const giveOption = document.createElement("option");
       giveOption.value = resource;
-      giveOption.textContent = `${RESOURCE_META[resource].emoji} ${RESOURCE_META[resource].label} ${view.bank_rates[resource]}:1`;
+      giveOption.textContent = `${RESOURCE_META[resource].emoji} ${resourceLabel(resource)} ${view.bank_rates[resource]}:1`;
       give.appendChild(giveOption);
       const receiveOption = document.createElement("option");
       receiveOption.value = resource;
-      receiveOption.textContent = `${RESOURCE_META[resource].emoji} ${RESOURCE_META[resource].label}`;
+      receiveOption.textContent = `${RESOURCE_META[resource].emoji} ${resourceLabel(resource)}`;
       if (index === 1) receiveOption.selected = true;
       receive.appendChild(receiveOption);
     });
-    const trade = createButton("Trade", null, { disabled: true, explain: "trade" });
+    const trade = createButton(localized("Trade", "交易"), null, { disabled: true, explain: "trade" });
     const syncTrade = () => {
       const rate = Number(view.bank_rates[give.value] || 0);
       trade.disabled = pending || !hasAction("trade_with_supply") || give.value === receive.value
         || Number(view.your_hand[give.value] || 0) < rate
         || Number(view.resource_supply[receive.value] || 0) < 1;
       trade.title = trade.disabled
-        ? "Choose different resources and make sure your hold covers the displayed rate."
-        : `Trade ${rate} ${give.value} for 1 ${receive.value}`;
+        ? localized("Choose different resources and make sure your hold covers the displayed rate.", "请选择不同资源，并确认货舱能支付显示的比例。")
+        : (isChinese()
+          ? `用${rate}份${resourceLabel(give.value)}换取1份${resourceLabel(receive.value)}`
+          : `Trade ${rate} ${give.value} for 1 ${receive.value}`);
     };
     trade.addEventListener("click", (event) => {
       event.stopImmediatePropagation();
@@ -643,33 +815,39 @@
 
   function renderOpenOffer() {
     const offer = view.trade && view.trade.offer;
-    addSubheading("Captain trade");
+    addSubheading(localized("Captain trade", "舰长交易"));
     if (offer) {
       const summary = document.createElement("div");
       summary.className = "catan-starfarers-offer";
-      summary.textContent = `${playerName(offer.owner_id)} gives ${formatBundle(offer.give)} · wants ${formatBundle(offer.want)}`;
+      summary.textContent = isChinese()
+        ? `${playerName(offer.owner_id)}给出${formatBundle(offer.give)} · 希望获得${formatBundle(offer.want)}`
+        : `${playerName(offer.owner_id)} gives ${formatBundle(offer.give)} · wants ${formatBundle(offer.want)}`;
       actionsEl.appendChild(summary);
       if (offer.owner_id === view.you) {
         Object.entries(view.trade.responses || {}).forEach(([playerId, response]) => {
           const terms = response.kind === "accept"
-            ? `Accepts terms`
-            : `Gives ${formatBundle(response.give)} · wants ${formatBundle(response.want)}`;
-          actionsEl.appendChild(createButton(`Finalize · ${playerName(playerId)} · ${terms}`, {
+            ? localized("Accepts terms", "接受条件")
+            : (isChinese()
+              ? `给出${formatBundle(response.give)} · 希望获得${formatBundle(response.want)}`
+              : `Gives ${formatBundle(response.give)} · wants ${formatBundle(response.want)}`);
+          actionsEl.appendChild(createButton(`${localized("Finalize", "成交")} · ${playerName(playerId)} · ${terms}`, {
             type: "accept_trade_response", response_player_id: playerId,
           }, { disabled: !hasAction("accept_trade_response"), explain: "trade" }));
         });
-        actionsEl.appendChild(createButton("Cancel Offer", { type: "cancel_trade_offer" }, {
+        actionsEl.appendChild(createButton(localized("Cancel Offer", "取消报价"), { type: "cancel_trade_offer" }, {
           disabled: !hasAction("cancel_trade_offer"), explain: "trade",
         }));
       } else {
-        actionsEl.appendChild(createButton("Accept Terms", { type: "submit_trade_response", response: "accept" }, {
+        actionsEl.appendChild(createButton(localized("Accept Terms", "接受条件"), { type: "submit_trade_response", response: "accept" }, {
           className: "is-primary",
           disabled: !hasAction("submit_trade_response") || !canPay(offer.want),
           explain: "trade",
-          title: canPay(offer.want) ? "Accept the displayed terms." : "Your hold cannot cover the requested resources.",
+          title: canPay(offer.want)
+            ? localized("Accept the displayed terms.", "接受显示的交易条件。")
+            : localized("Your hold cannot cover the requested resources.", "你的货舱无法支付对方要求的资源。"),
         }));
         if (hasAction("withdraw_trade_response")) {
-          actionsEl.appendChild(createButton("Withdraw Response", { type: "withdraw_trade_response" }, { explain: "trade" }));
+          actionsEl.appendChild(createButton(localized("Withdraw Response", "撤回回应"), { type: "withdraw_trade_response" }, { explain: "trade" }));
         }
       }
       return;
@@ -677,60 +855,64 @@
     if (view.active_player_id !== view.you) return;
     const maxGive = { ...view.your_hand };
     const maxWant = { ore: 20, fuel: 20, carbon: 20, food: 20, goods: 20 };
-    addSubheading("You give");
+    addSubheading(localized("You give", "你给出"));
     addStepperGrid(offerGiveDraft, maxGive, renderActions, "trade");
-    addSubheading("You want");
+    addSubheading(localized("You want", "你希望获得"));
     addStepperGrid(offerWantDraft, maxWant, renderActions, "trade");
     const valid = bundleTotal(offerGiveDraft) > 0 && bundleTotal(offerWantDraft) > 0;
-    actionsEl.appendChild(createButton("Open Offer", {
+    actionsEl.appendChild(createButton(localized("Open Offer", "发布报价"), {
       type: "open_trade_offer", give: { ...offerGiveDraft }, want: { ...offerWantDraft },
     }, { disabled: !hasAction("open_trade_offer") || !valid, explain: "trade" }));
   }
 
   function renderTradeBuildActions() {
-    actionHeadingEl.textContent = "Trade & Build";
+    actionHeadingEl.textContent = localized("Trade & Build", "交易与建造");
     if (view.active_player_id !== view.you) {
       actionHintEl.textContent = view.trade && view.trade.offer
-        ? "The active captain opened a structured offer."
-        : `Waiting for ${playerName(view.active_player_id)}. You may respond if an offer opens.`;
+        ? localized("The active captain opened a structured offer.", "当前舰长发布了一项交易报价。")
+        : (isChinese()
+          ? `等待${playerName(view.active_player_id)}行动；若其发布报价，你可以回应。`
+          : `Waiting for ${playerName(view.active_player_id)}. You may respond if an offer opens.`);
       renderOpenOffer();
       return;
     }
-    actionHintEl.textContent = "Build any number of affordable items, trade, then launch Flight.";
+    actionHintEl.textContent = localized("Build any number of affordable items, trade, then launch Flight.", "你可以交易并建造任意数量可支付的项目，然后开始飞行。");
     renderBuildGrid();
     renderSupplyTrade();
     renderOpenOffer();
-    addSubheading("Depart");
-    actionsEl.appendChild(createButton("🪐 Start Flight", { type: "start_flight" }, {
+    addSubheading(localized("Depart", "启航"));
+    actionsEl.appendChild(createButton(localized("🪐 Start Flight", "🪐 开始飞行"), { type: "start_flight" }, {
       className: "is-primary", disabled: !hasAction("start_flight"), explain: "mothership",
     }));
   }
 
   function renderEncounterActions() {
-    actionHeadingEl.textContent = "Encounter";
+    actionHeadingEl.textContent = localized("Encounter", "遭遇");
     const encounter = view.encounter;
     if (!encounter) {
-      actionHintEl.textContent = "Waiting for the encounter signal.";
+      actionHintEl.textContent = localized("Waiting for the encounter signal.", "等待遭遇信号。");
       return;
     }
     const reader = playerName(encounter.reader_id);
     if (view.phase === "encounter_reader") {
       actionHintEl.textContent = encounter.reader_id === view.you
-        ? "You are the Reader. Review the private encounter, then read its public prompt."
-        : `${reader} is privately reading the encounter.`;
-      actionsEl.appendChild(createButton("Read Prompt", { type: "read_encounter_prompt" }, {
+        ? localized("You are the Reader. Review the private encounter, then read its public prompt.", "你是朗读者。请查看私密遭遇内容，然后读出公开情境。")
+        : (isChinese() ? `${reader}正在私下阅读遭遇。` : `${reader} is privately reading the encounter.`);
+      actionsEl.appendChild(createButton(localized("Read Prompt", "读出情境"), { type: "read_encounter_prompt" }, {
         className: "is-primary", disabled: !hasAction("read_encounter_prompt"), explain: "encounter",
       }));
       return;
     }
     const prompt = document.createElement("div");
     prompt.className = "catan-starfarers-offer";
-    prompt.textContent = encounter.prompt || "Encounter prompt pending.";
+    prompt.textContent = encounter.prompt || localized("Encounter prompt pending.", "等待遭遇情境。");
     actionsEl.appendChild(prompt);
     if (view.phase === "encounter_choice") {
       actionHintEl.textContent = view.active_player_id === view.you
-        ? "Choose one available response. The hidden result is revealed by the Reader."
-        : `${playerName(view.active_player_id)} is choosing a response.`;
+        ? localized("Choose one available response. The hidden result is revealed by the Reader.", "选择一个可用回应；隐藏结果将由朗读者揭示。")
+        : (isChinese()
+          ? `${playerName(view.active_player_id)}正在选择回应。`
+          : `${playerName(view.active_player_id)} is choosing a response.`);
       const grid = document.createElement("div");
       grid.className = "catan-starfarers-choice-grid";
       (encounter.options || []).forEach((option) => {
@@ -740,8 +922,10 @@
         const strong = document.createElement("strong");
         strong.textContent = option.label;
         const small = document.createElement("small");
-        small.textContent = option.result || (option.available ? "Requirements met" : "Requirements not met");
-        const choose = createButton("Choose", { type: "choose_encounter", choice: option.id }, {
+        small.textContent = option.result || (option.available
+          ? localized("Requirements met", "满足条件")
+          : localized("Requirements not met", "不满足条件"));
+        const choose = createButton(localized("Choose", "选择"), { type: "choose_encounter", choice: option.id }, {
           disabled: !hasAction("choose_encounter") || !option.available, explain: "encounter",
         });
         card.append(strong, small, choose);
@@ -751,20 +935,22 @@
       return;
     }
     actionHintEl.textContent = encounter.reader_id === view.you
-      ? "Reveal the selected branch and apply its server-defined effects."
-      : `${reader} will reveal the result.`;
-    actionsEl.appendChild(createButton("Reveal Result", { type: "reveal_encounter_result" }, {
+      ? localized("Reveal the selected branch and apply its server-defined effects.", "揭示所选分支，并应用服务器定义的效果。")
+      : (isChinese() ? `${reader}将揭示结果。` : `${reader} will reveal the result.`);
+    actionsEl.appendChild(createButton(localized("Reveal Result", "揭示结果"), { type: "reveal_encounter_result" }, {
       className: "is-primary", disabled: !hasAction("reveal_encounter_result"), explain: "encounter",
     }));
   }
 
   function renderFlightActions() {
-    actionHeadingEl.textContent = "Flight";
+    actionHeadingEl.textContent = localized("Flight", "飞行");
     if (view.active_player_id !== view.you) {
-      actionHintEl.textContent = `${playerName(view.active_player_id)} is plotting ship movement.`;
+      actionHintEl.textContent = isChinese()
+        ? `${playerName(view.active_player_id)}正在规划飞船移动。`
+        : `${playerName(view.active_player_id)} is plotting ship movement.`;
       return;
     }
-    actionHintEl.textContent = "Select a ship on the map, move one edge at a time, then settle or finish it.";
+    actionHintEl.textContent = localized("Select a ship on the map, move one edge at a time, then settle or finish it.", "在星图上选择一艘飞船，每次移动一条边，然后建立设施或结束该船移动。");
     const box = document.createElement("div");
     box.className = "catan-starfarers-flight-box";
     box.dataset.catanStarfarersExplain = "ships";
@@ -773,7 +959,7 @@
     (view.board.ships || []).filter((ship) => ship.player_id === view.you).forEach((ship) => {
       const remaining = Number(view.flight && view.flight.movement_remaining && view.flight.movement_remaining[ship.id] || 0);
       const finished = Boolean(view.flight && (view.flight.finished_ship_ids || []).includes(ship.id));
-      const label = `${ship.kind === "colony" ? "🚀 C" : "🛸 T"} · ${finished ? "Done" : `${remaining} move`}`;
+      const label = `${ship.kind === "colony" ? localized("🚀 C", "🚀 殖") : localized("🛸 T", "🛸 贸")} · ${finished ? localized("Done", "完成") : (isChinese() ? `移动${remaining}` : `${remaining} move`)}`;
       const button = createButton(label, null, { disabled: finished, explain: "ships" });
       button.classList.toggle("is-primary", ship.id === selectedShipId);
       button.addEventListener("click", (event) => {
@@ -790,28 +976,32 @@
     if (selectedShipId) {
       const actionGrid = document.createElement("div");
       actionGrid.className = "catan-starfarers-button-grid";
-      actionGrid.appendChild(createButton("🏠 Establish Colony", { type: "establish_colony", ship_id: selectedShipId }, {
+      actionGrid.appendChild(createButton(localized("🏠 Establish Colony", "🏠 建立殖民地"), { type: "establish_colony", ship_id: selectedShipId }, {
         disabled: !(view.settleable_ship_ids || []).includes(selectedShipId), explain: "ships",
       }));
-      actionGrid.appendChild(createButton("🤝 Establish Station", { type: "establish_trade_station", ship_id: selectedShipId }, {
+      actionGrid.appendChild(createButton(localized("🤝 Establish Station", "🤝 建立贸易站"), { type: "establish_trade_station", ship_id: selectedShipId }, {
         disabled: !(view.stationable_ship_ids || []).includes(selectedShipId), explain: "friendship",
       }));
-      actionGrid.appendChild(createButton("Finish This Ship", { type: "finish_ship_move", ship_id: selectedShipId }, {
+      actionGrid.appendChild(createButton(localized("Finish This Ship", "结束该船移动"), { type: "finish_ship_move", ship_id: selectedShipId }, {
         disabled: !hasAction("finish_ship_move"), explain: "ships",
       }));
       actionsEl.appendChild(actionGrid);
     }
-    actionsEl.appendChild(createButton("End Flight", { type: "end_flight" }, {
+    actionsEl.appendChild(createButton(localized("End Flight", "结束飞行"), { type: "end_flight" }, {
       className: "is-primary", disabled: !hasAction("end_flight"), explain: "review",
     }));
   }
 
   function renderFriendshipActions() {
-    actionHeadingEl.textContent = "Choose Friendship";
+    actionHeadingEl.textContent = localized("Choose Friendship", "选择友谊卡");
     const pendingChoice = view.pending_friendship;
     actionHintEl.textContent = pendingChoice
-      ? `Choose one remaining ${String(pendingChoice.civilization || "").replaceAll("_", " ")} card.`
-      : `Waiting for ${playerName(view.active_player_id)} to choose a friendship card.`;
+      ? (isChinese()
+        ? `从剩余的${pendingChoice.civilization_name || String(pendingChoice.civilization || "")}友谊卡中选择一张。`
+        : `Choose one remaining ${pendingChoice.civilization_name || String(pendingChoice.civilization || "").replaceAll("_", " ")} card.`)
+      : (isChinese()
+        ? `等待${playerName(view.active_player_id)}选择友谊卡。`
+        : `Waiting for ${playerName(view.active_player_id)} to choose a friendship card.`);
     if (!pendingChoice) return;
     const cards = view.friendship_available[pendingChoice.civilization] || [];
     const grid = document.createElement("div");
@@ -824,7 +1014,7 @@
       name.textContent = `🤝 ${card.name}`;
       const detail = document.createElement("small");
       detail.textContent = card.description;
-      const choose = createButton("Choose", { type: "choose_friendship_card", card_id: card.id }, {
+      const choose = createButton(localized("Choose", "选择"), { type: "choose_friendship_card", card_id: card.id }, {
         disabled: !hasAction("choose_friendship_card"), explain: "friendship",
       });
       item.append(name, detail, choose);
@@ -834,18 +1024,29 @@
   }
 
   function renderReviewActions() {
-    actionHeadingEl.textContent = view.game_over ? "Frontier Complete" : "Turn Review";
+    actionHeadingEl.textContent = view.game_over
+      ? localized("Frontier Complete", "边疆征程结束")
+      : localized("Turn Review", "回合检查");
     const summary = document.createElement("div");
     summary.className = "catan-starfarers-offer";
     const lines = view.turn_summary || [];
-    summary.textContent = lines.length ? lines.slice(-5).join(" · ") : "Review the current map and public player boards.";
+    summary.textContent = lines.length
+      ? lines.slice(-5).join(" · ")
+      : localized("Review the current map and public player boards.", "请检查当前星图和公开的玩家面板。");
     actionsEl.appendChild(summary);
     actionHintEl.textContent = view.game_over
-      ? `${(view.winner_ids || []).map(playerName).join(" & ")} reached ${view.winning_vp} VP. Every seat may confirm a rematch.`
-      : `${Number(view.review_progress.done || 0)} / ${Number(view.review_progress.total || 0)} seats ready.`;
+      ? (isChinese()
+        ? `${(view.winner_ids || []).map(playerName).join("、")}达到${view.winning_vp}分；所有座位都可以确认再来一局。`
+        : `${(view.winner_ids || []).map(playerName).join(" & ")} reached ${view.winning_vp} VP. Every seat may confirm a rematch.`)
+      : (isChinese()
+        ? `${Number(view.review_progress.done || 0)} / ${Number(view.review_progress.total || 0)}个座位已准备。`
+        : `${Number(view.review_progress.done || 0)} / ${Number(view.review_progress.total || 0)} seats ready.`);
     const type = view.game_over ? "play_again" : "next_turn";
     const allowed = hasAction(type);
-    actionsEl.appendChild(createButton(allowed ? (view.game_over ? "Play Again" : "Next Turn") : "Ready · Waiting for Others…", { type }, {
+    const buttonLabel = allowed
+      ? (view.game_over ? localized("Play Again", "再来一局") : localized("Next Turn", "下一回合"))
+      : localized("Ready · Waiting for Others…", "已准备 · 等待其他玩家…");
+    actionsEl.appendChild(createButton(buttonLabel, { type }, {
       className: "is-primary", disabled: !allowed, explain: "review",
     }));
   }
@@ -866,8 +1067,8 @@
       case "turn_review":
       case "game_over": renderReviewActions(); break;
       default:
-        actionHeadingEl.textContent = "Waiting";
-        actionHintEl.textContent = "Waiting for the server to advance the game.";
+        actionHeadingEl.textContent = localized("Waiting", "等待中");
+        actionHintEl.textContent = localized("Waiting for the server to advance the game.", "等待服务器推进游戏。");
     }
   }
 
@@ -875,14 +1076,14 @@
     if (!logEl || !view) return;
     const activity = [...(view.activity || [])].reverse();
     if (!activity.length) {
-      logEl.textContent = "No actions yet.";
+      logEl.textContent = localized("No actions yet.", "暂无行动。");
       return;
     }
     logEl.innerHTML = "";
     activity.forEach((item) => {
       const row = document.createElement("div");
       row.className = "catan-starfarers-log-entry";
-      row.textContent = item.message || item.type || "Frontier update";
+      row.textContent = item.message || item.type || localized("Frontier update", "边疆动态");
       logEl.appendChild(row);
     });
   }
@@ -890,11 +1091,13 @@
   function render(payload) {
     view = payload && payload.view ? payload.view : payload;
     if (!view || view.game_id !== "catan_starfarers") return;
+    preferredLanguage = view.language === "zh" ? "zh" : "en";
     pending = false;
     if (pendingTimer) window.clearTimeout(pendingTimer);
     pendingTimer = null;
     resetDraftsIfNeeded(view);
     if (view.phase !== "flight") selectedShipId = null;
+    applyStaticCopy();
     renderStatus();
     renderPlayers();
     renderMothership();
@@ -903,7 +1106,7 @@
     renderActions();
     renderLog();
     if (liveEl) {
-      const announcement = statusEl ? statusEl.textContent : "Game updated";
+      const announcement = statusEl ? statusEl.textContent : localized("Game updated", "游戏已更新");
       if (liveEl.textContent !== announcement) liveEl.textContent = announcement;
     }
   }
@@ -935,8 +1138,11 @@
     if (logEl) logEl.textContent = "No actions yet.";
   }
 
-  if (helpContent) helpContent.innerHTML = HELP_HTML;
-  if (helpBtn) helpBtn.addEventListener("click", () => setModal(helpModal, true));
+  applyStaticCopy();
+  if (helpBtn) helpBtn.addEventListener("click", () => {
+    applyStaticCopy();
+    setModal(helpModal, true);
+  });
   if (helpCloseBtn) helpCloseBtn.addEventListener("click", () => setModal(helpModal, false, helpBtn));
   if (explainBtn) explainBtn.addEventListener("click", () => setExplainMode(!explainMode));
   if (explainCloseBtn) explainCloseBtn.addEventListener("click", () => setModal(explainModal, false, explainBtn));
@@ -998,7 +1204,7 @@
     }
   });
 
-  window.CatanStarfarersUI = { render, showHeaderActions, clear };
+  window.CatanStarfarersUI = { render, showHeaderActions, clear, setLanguage };
 })();
 
 function renderCatanStarfarersGameState(data) {
@@ -1011,4 +1217,8 @@ function showCatanStarfarersHeaderActions(visible) {
 
 function clearCatanStarfarersState() {
   window.CatanStarfarersUI.clear();
+}
+
+function setCatanStarfarersLanguage(language) {
+  window.CatanStarfarersUI.setLanguage(language);
 }

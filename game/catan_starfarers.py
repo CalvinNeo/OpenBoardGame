@@ -19,6 +19,17 @@ from game.catan_starfarers_data import (
     SETUP_MODES,
     UPGRADE_TYPES,
 )
+from game.catan_starfarers_i18n import (
+    BALL_ZH,
+    CIVILIZATION_ZH,
+    ENCOUNTER_ZH,
+    FRIENDSHIP_ZH,
+    RESOURCE_ZH,
+    SECTOR_ZH,
+    SETUP_ZH,
+    SHIP_ZH,
+    UPGRADE_ZH,
+)
 
 
 SCHEMA_VERSION = 1
@@ -79,6 +90,46 @@ def _player_name(state: Dict, player_id: Optional[str]) -> str:
     return str(state.get("player_meta", {}).get(player_id, {}).get("name") or player_id)
 
 
+def _language(state: Dict) -> str:
+    return "zh" if state.get("config", {}).get("language") == "zh" else "en"
+
+
+def _localized(state: Dict, english: str, chinese: str) -> str:
+    return chinese if _language(state) == "zh" else english
+
+
+def _sector_name(state: Dict, sector: Dict) -> str:
+    if _language(state) == "zh":
+        return SECTOR_ZH.get(str(sector.get("id")), str(sector.get("name") or ""))
+    return str(sector.get("name") or "")
+
+
+def _resource_name(state: Dict, resource: str) -> str:
+    return RESOURCE_ZH.get(resource, resource) if _language(state) == "zh" else resource
+
+
+def _friendship_copy(state: Dict, card_id: str) -> Dict[str, str]:
+    card = FRIENDSHIP_BY_ID[card_id]
+    if _language(state) == "zh":
+        translated = FRIENDSHIP_ZH[card_id]
+        return {"name": translated["name"], "description": translated["description"]}
+    return {"name": card["name"], "description": card["description"]}
+
+
+def _encounter_copy(state: Dict, card_id: str) -> Dict:
+    card = ENCOUNTER_BY_ID[card_id]
+    if _language(state) == "zh":
+        return ENCOUNTER_ZH[card_id]
+    return {
+        "title": card["title"],
+        "prompt": card["prompt"],
+        "options": {
+            option["id"]: {"label": option["label"], "result": option["result"]}
+            for option in card["options"]
+        },
+    }
+
+
 def _next_player_id(state: Dict, player_id: str) -> str:
     order = state["turn_order"]
     return order[(order.index(player_id) + 1) % len(order)]
@@ -104,13 +155,22 @@ def _choice(state: Dict, domain: str, values: List):
     return values[_rng(state, domain).randrange(len(values))]
 
 
-def _record(state: Dict, events: List[Dict], event_type: str, message: str, **payload: object) -> None:
+def _record(
+    state: Dict,
+    events: List[Dict],
+    event_type: str,
+    message: str,
+    *,
+    message_zh: Optional[str] = None,
+    **payload: object,
+) -> None:
     sequence = int(state.get("activity_sequence", 0)) + 1
     state["activity_sequence"] = sequence
-    item = {"sequence": sequence, "type": event_type, "message": message, **copy.deepcopy(payload)}
+    localized_message = message_zh if _language(state) == "zh" and message_zh else message
+    item = {"sequence": sequence, "type": event_type, "message": localized_message, **copy.deepcopy(payload)}
     state.setdefault("activity", []).append(item)
     state["activity"] = state["activity"][-120:]
-    state.setdefault("turn_summary", []).append(message)
+    state.setdefault("turn_summary", []).append(localized_message)
     state["turn_summary"] = state["turn_summary"][-30:]
     events.append({"type": f"catan_starfarers:{event_type}", "payload": copy.deepcopy(payload)})
 
@@ -283,12 +343,15 @@ def _initial_state(
     setup_mode = str((config or {}).get("setup_mode") or "beginner")
     if setup_mode not in SETUP_MODES:
         raise ValueError("invalid Starfarers setup mode")
+    language = str((config or {}).get("language") or "en")
+    if language not in {"en", "zh"}:
+        raise ValueError("Starfarers language must be 'en' or 'zh'")
 
     state: Dict = {
         "schema_version": SCHEMA_VERSION,
         "game_id": "catan_starfarers",
         "game_index": int(game_index),
-        "config": {"setup_mode": setup_mode},
+        "config": {"setup_mode": setup_mode, "language": language},
         "rng_seed": rng_seed or secrets.token_hex(32),
         "rng_counters": {},
         "turn_order": player_ids,
@@ -370,6 +433,7 @@ def _initial_state(
         events,
         "game_started",
         f"The {setup_mode.replace('_', ' ')} frontier is ready. {_player_name(state, player_ids[0])} begins.",
+        message_zh=f"{SETUP_ZH[setup_mode]}星域已就绪，{_player_name(state, player_ids[0])}先手。",
         setup_mode=setup_mode,
         starting_player_id=player_ids[0],
     )
@@ -616,6 +680,10 @@ def _start_flight(state: Dict, events: List[Dict]) -> None:
         events,
         "mothership",
         f"{_player_name(state, player_id)} shook {balls[0]} + {balls[1]} for speed {speed}.",
+        message_zh=(
+            f"{_player_name(state, player_id)}摇出{BALL_ZH[balls[0]]} + "
+            f"{BALL_ZH[balls[1]]}，航速为{speed}。"
+        ),
         player_id=player_id,
         balls=list(balls),
         speed=speed,
@@ -707,6 +775,7 @@ def _clear_obstacle_if_possible(state: Dict, player_id: str, node_id: str, event
         events,
         "obstacle_cleared",
         f"{_player_name(state, player_id)} cleared {sector['name']} and secured a permanent medal.",
+        message_zh=f"{_player_name(state, player_id)}清除了{_sector_name(state, sector)}的障碍，并获得一枚永久勋章。",
         player_id=player_id,
         sector_id=sector["id"],
         obstacle=obstacle["kind"],
@@ -726,6 +795,7 @@ def _reveal_node(state: Dict, player_id: str, node_id: str, events: List[Dict]) 
             events,
             "sector_discovered",
             f"{_player_name(state, player_id)} discovered {sector['name']}.",
+            message_zh=f"{_player_name(state, player_id)}发现了{_sector_name(state, sector)}。",
             player_id=player_id,
             sector_id=sector["id"],
             sector_kind=sector["kind"],
@@ -737,6 +807,10 @@ def _reveal_node(state: Dict, player_id: str, node_id: str, events: List[Dict]) 
             events,
             "system_explored",
             f"{sector['name']} now produces {sector['resource'].title()} on {sector['number']}.",
+            message_zh=(
+                f"{_sector_name(state, sector)}现可在掷出{sector['number']}时"
+                f"生产{_resource_name(state, sector['resource'])}。"
+            ),
             player_id=player_id,
             sector_id=sector["id"],
         )
@@ -763,6 +837,7 @@ def _begin_turn_review(state: Dict, events: List[Dict]) -> None:
         events,
         "turn_complete",
         f"{_player_name(state, state['active_player_id'])}'s flight is complete. Review before the next turn.",
+        message_zh=f"{_player_name(state, state['active_player_id'])}的飞行结束。请检查局面后进入下一回合。",
         player_id=state["active_player_id"],
         turn_no=state["turn_no"],
     )
@@ -800,6 +875,7 @@ def _check_win(state: Dict, events: List[Dict]) -> None:
         events,
         "game_over",
         f"{_player_name(state, active)} reached {compute_vp(state, active)} VP and won the frontier.",
+        message_zh=f"{_player_name(state, active)}达到{compute_vp(state, active)}分，赢得了这片星际边疆！",
         winner_id=active,
         vp=compute_vp(state, active),
     )
@@ -833,7 +909,14 @@ def _apply_action_mutating(state: Dict, player_id: str, action: Dict, events: Li
             requirements = _discard_requirements(state)
             state["production"]["pending_discards"] = requirements
             state["phase"] = "seven_discard" if requirements else "seven_steal"
-            _record(state, events, "production_roll", f"{_player_name(state, active)} rolled 7. Tribute is due.", roll=7)
+            _record(
+                state,
+                events,
+                "production_roll",
+                f"{_player_name(state, active)} rolled 7. Tribute is due.",
+                message_zh=f"{_player_name(state, active)}掷出7，开始缴纳贡税。",
+                roll=7,
+            )
             if not requirements:
                 _finish_seven_after_discards(state)
         else:
@@ -845,6 +928,7 @@ def _apply_action_mutating(state: Dict, player_id: str, action: Dict, events: Li
                 events,
                 "production_roll",
                 f"{_player_name(state, active)} rolled {roll}; Earth sent {reserve_count} reserve card(s).",
+                message_zh=f"{_player_name(state, active)}掷出{roll}；地球送来{reserve_count}张后备牌。",
                 roll=roll,
                 awards=awards,
                 reserve_count=reserve_count,
@@ -859,7 +943,15 @@ def _apply_action_mutating(state: Dict, player_id: str, action: Dict, events: Li
             return "not enough resources"
         _return_to_supply(state, player_id, bundle)
         state["production"]["pending_discards"].pop(player_id, None)
-        _record(state, events, "tribute_paid", f"{_player_name(state, player_id)} paid {needed} tribute card(s).", player_id=player_id, count=needed)
+        _record(
+            state,
+            events,
+            "tribute_paid",
+            f"{_player_name(state, player_id)} paid {needed} tribute card(s).",
+            message_zh=f"{_player_name(state, player_id)}缴纳了{needed}张贡税牌。",
+            player_id=player_id,
+            count=needed,
+        )
         if not state["production"]["pending_discards"]:
             _finish_seven_after_discards(state)
 
@@ -874,7 +966,15 @@ def _apply_action_mutating(state: Dict, player_id: str, action: Dict, events: Li
         state["players"][target_id]["hand"][resource] -= 1
         state["players"][player_id]["hand"][resource] += 1
         state["production"]["stolen"] = {"from": target_id, "to": player_id, "resource": resource}
-        _record(state, events, "tribute_stolen", f"{_player_name(state, player_id)} took one random card from {_player_name(state, target_id)}.", player_id=player_id, target_player_id=target_id)
+        _record(
+            state,
+            events,
+            "tribute_stolen",
+            f"{_player_name(state, player_id)} took one random card from {_player_name(state, target_id)}.",
+            message_zh=f"{_player_name(state, player_id)}从{_player_name(state, target_id)}处随机拿走了1张牌。",
+            player_id=player_id,
+            target_player_id=target_id,
+        )
         _finish_seven(state)
 
     elif action_type == "open_trade_offer":
@@ -887,7 +987,16 @@ def _apply_action_mutating(state: Dict, player_id: str, action: Dict, events: Li
         state["trade"]["epoch"] += 1
         state["trade"]["offer"] = {"owner_id": player_id, "give": give, "want": want, "epoch": state["trade"]["epoch"]}
         state["trade"]["responses"] = {}
-        _record(state, events, "trade_opened", f"{_player_name(state, player_id)} opened a trade offer.", player_id=player_id, give=give, want=want)
+        _record(
+            state,
+            events,
+            "trade_opened",
+            f"{_player_name(state, player_id)} opened a trade offer.",
+            message_zh=f"{_player_name(state, player_id)}发起了一项交易。",
+            player_id=player_id,
+            give=give,
+            want=want,
+        )
 
     elif action_type == "submit_trade_response":
         offer = state["trade"]["offer"]
@@ -904,7 +1013,14 @@ def _apply_action_mutating(state: Dict, player_id: str, action: Dict, events: Li
         if not _can_pay(state["players"][player_id]["hand"], give):
             return "not enough resources"
         state["trade"]["responses"][player_id] = {"kind": response_kind, "give": give, "want": want}
-        _record(state, events, "trade_response", f"{_player_name(state, player_id)} responded to the offer.", player_id=player_id)
+        _record(
+            state,
+            events,
+            "trade_response",
+            f"{_player_name(state, player_id)} responded to the offer.",
+            message_zh=f"{_player_name(state, player_id)}回应了交易。",
+            player_id=player_id,
+        )
 
     elif action_type == "withdraw_trade_response":
         state["trade"]["responses"].pop(player_id, None)
@@ -926,7 +1042,15 @@ def _apply_action_mutating(state: Dict, player_id: str, action: Dict, events: Li
             state["players"][player_id]["hand"][resource] += second - first
             state["players"][responder_id]["hand"][resource] += first - second
         _invalidate_trade(state)
-        _record(state, events, "trade_completed", f"{_player_name(state, player_id)} traded with {_player_name(state, responder_id)}.", player_id=player_id, responder_id=responder_id)
+        _record(
+            state,
+            events,
+            "trade_completed",
+            f"{_player_name(state, player_id)} traded with {_player_name(state, responder_id)}.",
+            message_zh=f"{_player_name(state, player_id)}与{_player_name(state, responder_id)}完成了交易。",
+            player_id=player_id,
+            responder_id=responder_id,
+        )
 
     elif action_type == "cancel_trade_offer":
         _invalidate_trade(state)
@@ -948,7 +1072,17 @@ def _apply_action_mutating(state: Dict, player_id: str, action: Dict, events: Li
         if give_resource == "goods" and rate == 1:
             state["players"][player_id]["turn_flags"]["goods_broker_used"] = True
         _invalidate_trade(state)
-        _record(state, events, "supply_trade", f"{_player_name(state, player_id)} traded {rate} {give_resource} for 1 {receive_resource}.", player_id=player_id)
+        _record(
+            state,
+            events,
+            "supply_trade",
+            f"{_player_name(state, player_id)} traded {rate} {give_resource} for 1 {receive_resource}.",
+            message_zh=(
+                f"{_player_name(state, player_id)}用{rate}份{_resource_name(state, give_resource)}"
+                f"换取了1份{_resource_name(state, receive_resource)}。"
+            ),
+            player_id=player_id,
+        )
 
     elif action_type == "build_ship":
         ship_kind = action.get("ship_type")
@@ -973,7 +1107,16 @@ def _apply_action_mutating(state: Dict, player_id: str, action: Dict, events: Li
             state["players"][player_id]["turn_flags"].get("build_count", 0)
         ) + 1
         _invalidate_trade(state)
-        _record(state, events, "ship_built", f"{_player_name(state, player_id)} built a {ship_kind.title()} Ship.", player_id=player_id, ship_id=ship_id, ship_type=ship_kind)
+        _record(
+            state,
+            events,
+            "ship_built",
+            f"{_player_name(state, player_id)} built a {ship_kind.title()} Ship.",
+            message_zh=f"{_player_name(state, player_id)}建造了一艘{SHIP_ZH[ship_kind]}。",
+            player_id=player_id,
+            ship_id=ship_id,
+            ship_type=ship_kind,
+        )
 
     elif action_type == "build_spaceport":
         colony_id = action.get("colony_id")
@@ -991,7 +1134,15 @@ def _apply_action_mutating(state: Dict, player_id: str, action: Dict, events: Li
             state["players"][player_id]["turn_flags"].get("build_count", 0)
         ) + 1
         _invalidate_trade(state)
-        _record(state, events, "spaceport_built", f"{_player_name(state, player_id)} upgraded a Colony to a Spaceport.", player_id=player_id, building_id=colony_id)
+        _record(
+            state,
+            events,
+            "spaceport_built",
+            f"{_player_name(state, player_id)} upgraded a Colony to a Spaceport.",
+            message_zh=f"{_player_name(state, player_id)}将一座殖民地升级为空间港。",
+            player_id=player_id,
+            building_id=colony_id,
+        )
 
     elif action_type == "build_upgrade":
         upgrade = action.get("upgrade_type")
@@ -1008,7 +1159,15 @@ def _apply_action_mutating(state: Dict, player_id: str, action: Dict, events: Li
             state["players"][player_id]["turn_flags"].get("build_count", 0)
         ) + 1
         _invalidate_trade(state)
-        _record(state, events, "upgrade_built", f"{_player_name(state, player_id)} installed a {upgrade.title()}.", player_id=player_id, upgrade_type=upgrade)
+        _record(
+            state,
+            events,
+            "upgrade_built",
+            f"{_player_name(state, player_id)} installed a {upgrade.title()}.",
+            message_zh=f"{_player_name(state, player_id)}安装了{UPGRADE_ZH[upgrade]}。",
+            player_id=player_id,
+            upgrade_type=upgrade,
+        )
 
     elif action_type == "start_flight":
         _invalidate_trade(state)
@@ -1018,7 +1177,15 @@ def _apply_action_mutating(state: Dict, player_id: str, action: Dict, events: Li
         state["current_encounter"]["prompt_read"] = True
         state["phase"] = "encounter_choice"
         card = ENCOUNTER_BY_ID[state["current_encounter"]["id"]]
-        _record(state, events, "encounter_prompt", f"Encounter: {card['prompt']}", encounter_id=card["id"])
+        localized_card = _encounter_copy(state, card["id"])
+        _record(
+            state,
+            events,
+            "encounter_prompt",
+            f"Encounter: {card['prompt']}",
+            message_zh=f"遭遇：{localized_card['prompt']}",
+            encounter_id=card["id"],
+        )
 
     elif action_type == "choose_encounter":
         card = ENCOUNTER_BY_ID[state["current_encounter"]["id"]]
@@ -1037,7 +1204,16 @@ def _apply_action_mutating(state: Dict, player_id: str, action: Dict, events: Li
         _apply_encounter_effects(state, option)
         current["result_revealed"] = True
         state["encounter_discard"].append(current["id"])
-        _record(state, events, "encounter_result", option["result"], encounter_id=card["id"], option_id=option["id"])
+        localized_option = _encounter_copy(state, card["id"])["options"][option["id"]]
+        _record(
+            state,
+            events,
+            "encounter_result",
+            option["result"],
+            message_zh=localized_option["result"],
+            encounter_id=card["id"],
+            option_id=option["id"],
+        )
         state["current_encounter"] = None
         state["phase"] = "flight"
         if _all_flight_ships_done(state):
@@ -1099,7 +1275,16 @@ def _apply_action_mutating(state: Dict, player_id: str, action: Dict, events: Li
             "kind": "colony",
             "node_id": node_id,
         })
-        _record(state, events, "colony_established", f"{_player_name(state, player_id)} established a Colony at {state['board']['sectors'][node_id]['name']}.", player_id=player_id, node_id=node_id)
+        sector = state["board"]["sectors"][node_id]
+        _record(
+            state,
+            events,
+            "colony_established",
+            f"{_player_name(state, player_id)} established a Colony at {sector['name']}.",
+            message_zh=f"{_player_name(state, player_id)}在{_sector_name(state, sector)}建立了一座殖民地。",
+            player_id=player_id,
+            node_id=node_id,
+        )
         if _all_flight_ships_done(state):
             _begin_turn_review(state, events)
 
@@ -1122,7 +1307,15 @@ def _apply_action_mutating(state: Dict, player_id: str, action: Dict, events: Li
         _update_friendship_marker(state, civilization)
         state["pending_friendship"] = {"player_id": player_id, "civilization": civilization}
         state["phase"] = "friendship_choice"
-        _record(state, events, "trade_station_established", f"{_player_name(state, player_id)} established a Trade Station at {sector['name']}.", player_id=player_id, civilization=civilization)
+        _record(
+            state,
+            events,
+            "trade_station_established",
+            f"{_player_name(state, player_id)} established a Trade Station at {sector['name']}.",
+            message_zh=f"{_player_name(state, player_id)}在{_sector_name(state, sector)}建立了一座贸易站。",
+            player_id=player_id,
+            civilization=civilization,
+        )
 
     elif action_type == "choose_friendship_card":
         pending = state["pending_friendship"]
@@ -1135,7 +1328,15 @@ def _apply_action_mutating(state: Dict, player_id: str, action: Dict, events: Li
         _apply_friendship_card(state, player_id, card_id)
         state["pending_friendship"] = None
         state["phase"] = "flight"
-        _record(state, events, "friendship_card", f"{_player_name(state, player_id)} received {FRIENDSHIP_BY_ID[card_id]['name']}.", player_id=player_id, card_id=card_id)
+        _record(
+            state,
+            events,
+            "friendship_card",
+            f"{_player_name(state, player_id)} received {FRIENDSHIP_BY_ID[card_id]['name']}.",
+            message_zh=f"{_player_name(state, player_id)}获得了“{FRIENDSHIP_ZH[card_id]['name']}”友谊卡。",
+            player_id=player_id,
+            card_id=card_id,
+        )
         if _all_flight_ships_done(state):
             _begin_turn_review(state, events)
 
@@ -1148,7 +1349,14 @@ def _apply_action_mutating(state: Dict, player_id: str, action: Dict, events: Li
     elif action_type == "next_turn":
         if player_id not in state["review_ready"]:
             state["review_ready"].append(player_id)
-        _record(state, events, "review_ready", f"{_player_name(state, player_id)} is ready for the next turn.", player_id=player_id)
+        _record(
+            state,
+            events,
+            "review_ready",
+            f"{_player_name(state, player_id)} is ready for the next turn.",
+            message_zh=f"{_player_name(state, player_id)}已准备进入下一回合。",
+            player_id=player_id,
+        )
         if set(state["review_ready"]) >= set(state["review_required"]):
             _start_next_turn(state)
 
@@ -1236,14 +1444,14 @@ def _legal_actions(state: Dict, player_id: str) -> List[str]:
     return []
 
 
-def _public_sector(sector: Dict) -> Dict:
+def _public_sector(state: Dict, sector: Dict) -> Dict:
     if not sector.get("revealed"):
         return {"node_id": sector["node_id"], "kind": "hidden", "revealed": False, "explored": False}
     view = {
         "id": sector["id"],
         "node_id": sector["node_id"],
         "kind": sector["kind"],
-        "name": sector["name"],
+        "name": _sector_name(state, sector),
         "revealed": True,
         "explored": bool(sector.get("explored")),
         "obstacle_cleared": bool(sector.get("obstacle_cleared")),
@@ -1262,12 +1470,13 @@ def _encounter_view(state: Dict, viewer_id: str) -> Optional[Dict]:
     if not current:
         return None
     card = ENCOUNTER_BY_ID[current["id"]]
+    localized_card = _encounter_copy(state, current["id"])
     is_reader = viewer_id == current["reader_id"]
     may_read_prompt = bool(current.get("prompt_read")) or is_reader
     view = {
         "id": current["id"],
-        "title": card["title"] if may_read_prompt else "Unidentified encounter",
-        "prompt": card["prompt"] if may_read_prompt else None,
+        "title": localized_card["title"] if may_read_prompt else _localized(state, "Unidentified encounter", "未知遭遇"),
+        "prompt": localized_card["prompt"] if may_read_prompt else None,
         "reader_id": current["reader_id"],
         "prompt_read": bool(current.get("prompt_read")),
         "selected_option_id": current.get("selected_option_id")
@@ -1278,9 +1487,16 @@ def _encounter_view(state: Dict, viewer_id: str) -> Optional[Dict]:
         view["options"] = [
             {
                 "id": option["id"],
-                "label": option["label"],
+                "label": localized_card["options"][option["id"]]["label"],
                 "available": _option_available(state, state["active_player_id"], option),
-                **({"result": option["result"], "effects": copy.deepcopy(option["effects"])} if is_reader else {}),
+                **(
+                    {
+                        "result": localized_card["options"][option["id"]]["result"],
+                        "effects": copy.deepcopy(option["effects"]),
+                    }
+                    if is_reader
+                    else {}
+                ),
             }
             for option in card["options"]
         ]
@@ -1310,11 +1526,7 @@ def _legal_move_targets(state: Dict, viewer_id: str) -> Dict[str, List[str]]:
 def _friendship_available_view(state: Dict) -> Dict[str, List[Dict]]:
     return {
         civilization: [
-            {
-                "id": card_id,
-                "name": FRIENDSHIP_BY_ID[card_id]["name"],
-                "description": FRIENDSHIP_BY_ID[card_id]["description"],
-            }
+            {"id": card_id, **_friendship_copy(state, card_id)}
             for card_id in card_ids
         ]
         for civilization, card_ids in state["friendship_available"].items()
@@ -1333,6 +1545,8 @@ def _assert_state(state: Dict) -> None:
         raise AssertionError("invalid phase")
     if state.get("config", {}).get("setup_mode") not in SETUP_MODES:
         raise AssertionError("invalid setup mode")
+    if state.get("config", {}).get("language", "en") not in {"en", "zh"}:
+        raise AssertionError("invalid language")
     for resource in RESOURCE_TYPES:
         counts = [int(state["resource_supply"].get(resource, -1))]
         counts.append(sum(1 for card in state.get("reserve_deck", []) if card == resource))
@@ -1471,27 +1685,42 @@ class CatanStarfarersGame:
                 "friendship_cards": [
                     {
                         "id": card_id,
-                        "name": FRIENDSHIP_BY_ID[card_id]["name"],
-                        "description": FRIENDSHIP_BY_ID[card_id]["description"],
+                        **_friendship_copy(state, card_id),
                     }
                     for card_id in player["friendship_cards"]
                 ],
                 "ready": player_id in state.get("review_ready", []),
                 "rematch_ready": player_id in state.get("rematch_ready", []),
             })
-        sectors = [_public_sector(sector) for sector in state["board"]["sectors"].values()]
+        sectors = [_public_sector(state, sector) for sector in state["board"]["sectors"].values()]
         occupied_sector_nodes = {sector["node_id"] for sector in sectors}
         for node in state["board"]["nodes"].values():
             if node.get("kind") == "sector" and node["id"] not in occupied_sector_nodes:
-                sectors.append({"node_id": node["id"], "kind": "void", "name": "Uncharted Void", "revealed": True, "explored": True})
+                sectors.append({
+                    "node_id": node["id"],
+                    "kind": "void",
+                    "name": _localized(state, "Uncharted Void", "未勘测虚空"),
+                    "revealed": True,
+                    "explored": True,
+                })
         legal = _legal_actions(state, viewer_id)
         pending_discard = int(state.get("production", {}).get("pending_discards", {}).get(viewer_id, 0))
         pending_friendship = state.get("pending_friendship")
+        pending_friendship_view = None
+        if pending_friendship and pending_friendship.get("player_id") == viewer_id:
+            pending_friendship_view = copy.deepcopy(pending_friendship)
+            civilization = str(pending_friendship_view.get("civilization") or "")
+            pending_friendship_view["civilization_name"] = (
+                CIVILIZATION_ZH.get(civilization, civilization)
+                if _language(state) == "zh"
+                else civilization.replace("_", " ").title()
+            )
         return {
             "game_id": CatanStarfarersGame.game_id,
             "you": viewer_id,
             "game_index": int(state.get("game_index", 1)),
             "setup_mode": state["config"]["setup_mode"],
+            "language": _language(state),
             "turn_no": int(state["turn_no"]),
             "phase": state["phase"],
             "active_player_id": state["active_player_id"],
@@ -1529,7 +1758,7 @@ class CatanStarfarersGame:
             "trade": copy.deepcopy(state["trade"]),
             "encounter": _encounter_view(state, viewer_id),
             "friendship_available": _friendship_available_view(state),
-            "pending_friendship": copy.deepcopy(pending_friendship) if pending_friendship and pending_friendship.get("player_id") == viewer_id else None,
+            "pending_friendship": pending_friendship_view,
             "friendship_marker_holder": copy.deepcopy(state["friendship_marker_holder"]),
             "review_progress": {
                 "done": len(set(state.get("review_ready", [])) & set(state.get("review_required", []))),

@@ -11,6 +11,8 @@ import json
 from pathlib import Path
 from typing import Dict, List, Tuple
 
+from game.catan_starfarers_i18n import validate_translations
+
 
 ASSET_DIR = Path(__file__).resolve().parent / "assets" / "catan_starfarers"
 RESOURCE_TYPES: Tuple[str, ...] = ("ore", "fuel", "carbon", "food", "goods")
@@ -161,6 +163,11 @@ def validate_data() -> None:
     _validate_map()
     _validate_friendship_cards()
     _validate_encounters()
+    validate_translations(
+        {sector["id"] for sector in MAP_GRAPH["sectors"]},
+        {card["id"] for card in FRIENDSHIP_CARDS},
+        {card["id"]: {option["id"] for option in card["options"]} for card in ENCOUNTERS},
+    )
 
 
 validate_data()

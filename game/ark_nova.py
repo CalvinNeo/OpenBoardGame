@@ -541,6 +541,12 @@ def _rotate_axial(cell: Tuple[int, int]) -> Tuple[int, int]:
     return -r, q + r
 
 
+def _axial_distance(first: Tuple[int, int], second: Tuple[int, int]) -> int:
+    dq = first[0] - second[0]
+    dr = first[1] - second[1]
+    return (abs(dq) + abs(dr) + abs(dq + dr)) // 2
+
+
 def _rotate_shape(shape: Iterable[Tuple[int, int]], steps: int) -> Set[Tuple[int, int]]:
     result = set(shape)
     for _ in range(steps % 6):
@@ -678,13 +684,20 @@ def _validate_building_placement(
         return "first building must touch the map border"
 
     if building_type == "kiosk":
-        kiosks = {
-            cell
+        kiosk_cells = {
+            cell_id
             for building in zoo_map["buildings"] if building["building_type"] == "kiosk"
-            for cell in building["cells"]
+            for cell_id in building["cells"]
         }
-        if any(neighbor in kiosks for cell_id in cell_ids for neighbor in MAP_CELLS[cell_id]["neighbors"]):
-            return "kiosks may not be adjacent"
+        if any(
+            _axial_distance(
+                (int(MAP_CELLS[cell_id]["axial"]["q"]), int(MAP_CELLS[cell_id]["axial"]["r"])),
+                (int(MAP_CELLS[kiosk_id]["axial"]["q"]), int(MAP_CELLS[kiosk_id]["axial"]["r"])),
+            ) < 3
+            for cell_id in cell_ids
+            for kiosk_id in kiosk_cells
+        ):
+            return "kiosks must be at least three spaces apart"
 
     if unique:
         footprint = unique.get("footprint", {})
@@ -698,9 +711,10 @@ def _validate_building_placement(
         if _border_space_count(cell_ids) < int(placement_rules.get("minimum_border_spaces", 0)):
             return "unique building needs more border spaces"
 
-    supply_key = _building_supply_key(building_type, size)
-    if supply_key and int(state.get("building_supply", {}).get(supply_key, 0)) <= 0:
-        return "building supply exhausted"
+    # Standard enclosures, kiosks, and pavilions are not a gameplay limit.
+    # The rulebook explicitly permits a substitute if the shared component
+    # supply runs out.  The three special enclosures remain limited to one of
+    # each per zoo and are therefore checked against the player's supply.
     if building_type in SPECIAL_ENCLOSURES and int(player.get("building_supply", {}).get(building_type, 0)) <= 0:
         return "special enclosure already built"
     return None
@@ -803,10 +817,7 @@ def _place_building(
     zoo_map["buildings"].append(building)
     for cell_id in cells:
         zoo_map["occupancy"][cell_id] = building_id
-    supply_key = _building_supply_key(building_type, size)
-    if supply_key:
-        state["building_supply"][supply_key] -= 1
-    elif building_type in SPECIAL_ENCLOSURES:
+    if building_type in SPECIAL_ENCLOSURES:
         player["building_supply"][building_type] -= 1
     for cell_id in cells:
         _apply_placement_bonus(state, player_id, cell_id, events)
@@ -1994,16 +2005,18 @@ def _perform_build_action(
     )
     if strength_size > strength:
         return "buildings exceed action strength"
-    total_size = sum(_building_size(spec) for spec in specs)
-    cost = total_size * int(ACTION_DEFS["build"]["common"]["money_per_hex"])
-    if player["money"] < cost:
-        return "not enough money"
+    money_per_hex = int(ACTION_DEFS["build"]["common"]["money_per_hex"])
+    cost = 0
     for spec in specs:
         placement_error = _validate_building_placement(state, player_id, spec)
         if placement_error:
             return placement_error
+        building_cost = _building_size(spec) * money_per_hex
+        if int(player["money"]) < building_cost:
+            return "not enough money"
+        player["money"] -= building_cost
+        cost += building_cost
         _place_building(state, player_id, spec, events)
-    player["money"] -= cost
     events.append(_event("build_action", player_id=player_id, strength=strength, cost=cost))
     _defer_turn_end(state, player_id, "build", x_tokens, events)
     return None
@@ -2552,9 +2565,11 @@ def _add_project_to_board(
         removed = dynamic.pop(0)
         if removed in state["projects"]:
             state["projects"].remove(removed)
+        state.setdefault("discard", []).append(removed)
+        state.setdefault("project_slots", {}).pop(removed, None)
     dynamic.append(card_id)
     state["projects"].append(card_id)
-    state["project_slots"].setdefault(card_id, [])
+    state["project_slots"][card_id] = []
     return None
 
 
@@ -2562,6 +2577,14 @@ def _support_project(
     state: MutableMapping[str, Any], player_id: str, task: Mapping[str, Any], events: List[Dict[str, Any]]
 ) -> Optional[str]:
     player = _player(state, player_id)
+    markers_remaining = int(
+        player.get(
+            "conservation_markers_remaining",
+            max(0, 7 - len(player.get("claimed_map_rewards", []))),
+        )
+    )
+    if markers_remaining <= 0:
+        return "no conservation marker remains"
     project_id = str(task.get("project_id") or task.get("project_card_id") or "")
     newly_added = False
     if project_id not in state["projects"]:
@@ -3381,16 +3404,77 @@ def _project_public_view(state: Mapping[str, Any], project_id: str, viewer_id: s
         if item.get("project_id") == project_id
     ]
     if viewer_id in state.get("players", {}):
+        player = state["players"][viewer_id]
+        already_supported = any(
+            item.get("project_id", item.get("card_id")) == project_id
+            for item in player.get("supported_projects", [])
+        )
+        repeat_release = (
+            card.get("project_type") == "release"
+            and _has_active_rule(player, "release_project_bonus")
+        )
+        has_marker = int(
+            player.get(
+                "conservation_markers_remaining",
+                max(0, 7 - len(player.get("claimed_map_rewards", []))),
+            )
+        ) > 0
         eligible = []
+        release_candidates: Dict[str, List[str]] = {}
         for slot in card.get("support_slots", []):
+            position = int(slot["position"])
+            candidates: List[str] = []
+            if slot.get("requirement", {}).get("kind") == "released_animal_enclosure_size":
+                candidates = [
+                    str(record.get("card_id"))
+                    for record in player.get("animal_records", [])
+                    if _project_requirement_met(
+                        state, viewer_id, card, slot, str(record.get("card_id"))
+                    )
+                ]
+                release_candidates[str(position)] = candidates
+                requirement_met = bool(candidates)
+            else:
+                requirement_met = _project_requirement_met(state, viewer_id, card, slot)
             if (
-                int(slot["position"]) not in _occupied_project_positions(state, project_id)
-                and not _project_slot_blocked(state, project_id, int(slot["position"]))
-                and _project_requirement_met(state, viewer_id, card, slot)
+                has_marker
+                and (not already_supported or repeat_release)
+                and position not in _occupied_project_positions(state, project_id)
+                and not _project_slot_blocked(state, project_id, position)
+                and requirement_met
             ):
-                eligible.append(int(slot["position"]))
+                eligible.append(position)
         card["eligible_slots"] = eligible
+        if release_candidates:
+            card["candidate_animal_ids_by_slot"] = release_candidates
     return card
+
+
+def _supportable_project_views(
+    state: Mapping[str, Any], viewer_id: str
+) -> List[Dict[str, Any]]:
+    if viewer_id not in state.get("players", {}):
+        return []
+    player = state["players"][viewer_id]
+    sources: Dict[str, Dict[str, Any]] = {}
+    for project_id in state.get("projects", []):
+        if project_id in PROJECT_CARDS:
+            sources[str(project_id)] = {"source": "board"}
+    for card_id in player.get("hand", []):
+        if card_id in PROJECT_CARDS and PROJECT_CARDS[card_id].get("deck_group") == "zoo_deck":
+            sources.setdefault(str(card_id), {"source": "hand"})
+    if _action_level(player, "association") == 2:
+        for index, card_id in enumerate(state.get("display", [])):
+            if (
+                card_id in PROJECT_CARDS
+                and PROJECT_CARDS[card_id].get("deck_group") == "zoo_deck"
+                and index < _display_range(player)
+            ):
+                sources.setdefault(str(card_id), {"source": "display", "folder": index + 1})
+    return [
+        {**_project_public_view(state, project_id, viewer_id), **source}
+        for project_id, source in sources.items()
+    ]
 
 
 def _find_placement(
@@ -3422,6 +3506,87 @@ def _find_placement(
     return None
 
 
+def _has_affordable_building(
+    state: Mapping[str, Any], player_id: str, strength: int,
+) -> bool:
+    """Return whether the player can legally start a Build action.
+
+    Checking only a size-1 standard enclosure hid otherwise legal Build
+    actions when that exact piece did not fit.  This mirrors the available
+    side of the player's Build card and checks every affordable piece.
+    """
+
+    if strength < 1:
+        return False
+    player = state["players"][player_id]
+    level = _action_level(player, "build")
+    side = ACTION_DEFS["build"]["sides"]["II" if level == 2 else "I"]
+    money_per_hex = int(ACTION_DEFS["build"]["common"]["money_per_hex"])
+    for building_type in side["allowed"]:
+        sizes = range(1, 6) if building_type == "standard_enclosure" else (BUILDING_SIZES[building_type],)
+        for size in sizes:
+            if size > strength or size * money_per_hex > int(player.get("money", 0)):
+                continue
+            if _find_placement(state, player_id, building_type, size):
+                return True
+    return False
+
+
+def _has_playable_animal(
+    state: Mapping[str, Any], player_id: str, strength: int,
+) -> bool:
+    """Return whether at least one animal can actually be played now."""
+
+    if strength < 1:
+        return False
+    player = state["players"][player_id]
+    level = _action_level(player, "animals")
+    face = ACTION_DEFS["animals"]["sides"]["II" if level == 2 else "I"]
+    table_strength = min(5, strength)
+    if int(face["maximum_cards_by_strength"][str(table_strength)]) < 1:
+        return False
+
+    # Animals II gains its strength-5 reputation before selecting/playing a
+    # card, so both requirements and display range must use that new value.
+    prospective = copy.deepcopy(player)
+    if level == 2 and table_strength == 5:
+        reputation_cap = MAX_REPUTATION if _action_level(prospective, "cards") == 2 else 9
+        prospective["reputation"] = min(reputation_cap, int(prospective.get("reputation", 0)) + 1)
+
+    candidates: List[Tuple[str, int]] = [(str(card_id), 0) for card_id in prospective.get("hand", [])]
+    if level == 2:
+        candidates.extend(
+            (str(card_id), index + 1)
+            for index, card_id in enumerate(state.get("display", []))
+            if card_id and index < _display_range(prospective)
+        )
+    chosen_size_rules = _active_rules(prospective, "chosen_animal_size")
+    for card_id, surcharge in candidates:
+        card = ANIMAL_CARDS.get(card_id)
+        if not card:
+            continue
+        size_class = _animal_size_class(card)
+        if chosen_size_rules:
+            chosen_size = str(chosen_size_rules[-1].get("size", ""))
+            if size_class in {"small", "large"} and size_class != chosen_size:
+                continue
+        ignore_conditions = (
+            1
+            if size_class == "large" and _has_active_rule(prospective, "large_animal_ignore_condition")
+            else 0
+        )
+        if not _card_conditions_met(prospective, card, ignore_count=ignore_conditions):
+            continue
+        if _animal_cost(prospective, card) + surcharge > int(prospective.get("money", 0)):
+            continue
+        if any(
+            _enclosure_for_animal(prospective, card, str(building.get("id", "")))[2] is None
+            for building in prospective.get("map", {}).get("buildings", [])
+        ):
+            return True
+    return False
+
+
 def _public_action_availability(
     state: Mapping[str, Any], player_id: str, legal_actions: Sequence[str]
 ) -> Dict[str, Dict[str, Any]]:
@@ -3435,6 +3600,13 @@ def _public_action_availability(
     action_types = (*ACTION_IDS, "gain_x", "keep_initial_cards", "resolve_choice")
     player = state.get("players", {}).get(player_id)
     pending = state.get("pending_choice")
+
+    def maximum_strength(action_type: str) -> int:
+        if player is None or action_type not in ACTION_IDS:
+            return 0
+        return _action_strength(
+            state, player_id, action_type, int(player.get("x_tokens", 0)),
+        )
 
     def global_reason(action_type: str) -> Optional[str]:
         if action_type in legal:
@@ -3466,23 +3638,28 @@ def _public_action_availability(
         reason = global_reason(action_type)
         if reason is None and action_type not in legal and player is not None:
             if action_type == "build":
-                if int(player.get("money", 0)) < 2:
+                if maximum_strength("build") < 1:
+                    reason = "Commit more ✕-tokens to overcome Constriction."
+                elif int(player.get("money", 0)) < 2:
                     reason = "You need at least 💰2 to build."
                 else:
-                    reason = "There is no legal space for a size-1 building."
+                    reason = "No affordable building has a legal placement."
             elif action_type == "animals":
                 level = _action_level(player, "animals")
                 face = ACTION_DEFS["animals"]["sides"]["II" if level == 2 else "I"]
-                strength = min(5, _action_slot(player, "animals"))
-                if int(face["maximum_cards_by_strength"][str(strength)]) < 1:
+                strength = maximum_strength("animals")
+                table_strength = min(5, max(1, strength))
+                if strength < 1 or int(face["maximum_cards_by_strength"][str(table_strength)]) < 1:
                     reason = "This Animals card needs more action strength."
                 else:
-                    reason = "No Animal card is currently available to play."
+                    reason = "No Animal card currently meets its cost, conditions, and enclosure requirements."
             elif action_type == "association":
                 if int(player.get("available_workers", 0)) < 1:
                     reason = "No association worker is available."
                 else:
                     reason = "Association needs at least action strength 2."
+            elif action_type in {"cards", "sponsors"}:
+                reason = "Commit more ✕-tokens to overcome Constriction."
             elif action_type == "gain_x":
                 reason = "Your ✕-token storage is full."
             elif action_type == "keep_initial_cards":
@@ -3606,16 +3783,22 @@ class ArkNovaGame:
         forced = state.get("forced_action")
         if isinstance(forced, Mapping) and forced.get("player_id") == player_id:
             return [str(forced.get("action"))]
-        actions = ["cards"]
-        if player["money"] >= 2 and _find_placement(state, player_id, "standard_enclosure", 1):
+        available_x = int(player.get("x_tokens", 0))
+
+        def maximum_strength(action_id: str) -> int:
+            return _action_strength(state, player_id, action_id, available_x)
+
+        actions = []
+        if maximum_strength("cards") >= 1:
+            actions.append("cards")
+        if _has_affordable_building(state, player_id, maximum_strength("build")):
             actions.append("build")
-        animal_face = ACTION_DEFS["animals"]["sides"]["II" if _action_level(player, "animals") == 2 else "I"]
-        animal_max = int(animal_face["maximum_cards_by_strength"][str(min(5, _action_slot(player, "animals")))])
-        if animal_max and any(card_id in ANIMAL_CARDS for card_id in player["hand"]):
+        if _has_playable_animal(state, player_id, maximum_strength("animals")):
             actions.append("animals")
-        if player["available_workers"] and _action_slot(player, "association") >= 2:
+        if player["available_workers"] and maximum_strength("association") >= 2:
             actions.append("association")
-        actions.append("sponsors")  # Its Break/money alternative is always legal.
+        if maximum_strength("sponsors") >= 1:
+            actions.append("sponsors")
         if player["x_tokens"] < MAX_X_TOKENS:
             actions.append("gain_x")
         return actions
@@ -3827,6 +4010,15 @@ class ArkNovaGame:
                 "association_worker_placements": copy.deepcopy(player["association_worker_placements"]),
                 "partner_zoos": list(player["partner_zoos"]), "universities": list(player["universities"]),
                 "hand_limit": int(player["hand_limit"]), "tags": copy.deepcopy(player["tags"]),
+                "card_tokens": copy.deepcopy(player.get("card_tokens", {})),
+                "wild_project_uses": copy.deepcopy(player.get("wild_project_uses", [])),
+                "conservation_markers_remaining": int(player.get("conservation_markers_remaining", 0)),
+                "association_project_strength": min(
+                    [5] + [
+                        int(rule.get("value", 5))
+                        for rule in _active_rules(player, "project_task_strength")
+                    ]
+                ),
                 "map": copy.deepcopy(player["map"]),
             })
 
@@ -3838,6 +4030,7 @@ class ArkNovaGame:
             "break_count": int(state.get("break_count", 0)), "deck_count": len(state.get("deck", [])),
             "discard_count": len(state.get("discard", [])), "display": display,
             "projects": [_project_public_view(state, project_id, viewer_id) for project_id in state.get("projects", [])],
+            "supportable_projects": _supportable_project_views(state, viewer_id),
             "project_slots": copy.deepcopy(state.get("project_slots", {})),
             "association_supply": association_supply,
             "bonus_tokens": {

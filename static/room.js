@@ -21,6 +21,7 @@ let pendingSeatClaimRoomId = null;
 let pendingSeatClaimSourceId = null;
 let pendingReopenRoomId = null;
 let reopenConfirmReturnFocus = null;
+let catanStarfarersSelectedLanguage = null;
 const selectedGameTagIds = new Set();
 const roomControlsDockQuery = window.matchMedia("(max-width: 900px)");
 
@@ -77,9 +78,11 @@ const forestShuffleRoomLanguageRow = document.getElementById("forestShuffleRoomL
 const forestShuffleRoomLanguage = document.getElementById("forestShuffleRoomLanguage");
 const catanStarfarersSetupStep = document.getElementById("catanStarfarersSetupStep");
 const catanStarfarersSetupBackBtn = document.getElementById("catanStarfarersSetupBackBtn");
+const catanStarfarersLanguageButtons = document.querySelectorAll("[data-catan-starfarers-language]");
 const catanStarfarersSetupButtons = document.querySelectorAll("[data-catan-starfarers-setup]");
 const catanStarfarersRoomSetupRow = document.getElementById("catanStarfarersRoomSetupRow");
 const catanStarfarersRoomSetup = document.getElementById("catanStarfarersRoomSetup");
+const catanStarfarersRoomLanguage = document.getElementById("catanStarfarersRoomLanguage");
 const seatClaimModal = document.getElementById("seatClaimModal");
 const seatClaimCloseBtn = document.getElementById("seatClaimCloseBtn");
 const seatClaimNameHint = document.getElementById("seatClaimNameHint");
@@ -909,6 +912,49 @@ function showForestShuffleLanguageStep() {
   }
 }
 
+function setCatanStarfarersSetupLanguage(language) {
+  const nextLanguage = language === "zh" ? "zh" : language === "en" ? "en" : null;
+  catanStarfarersSelectedLanguage = nextLanguage;
+  catanStarfarersLanguageButtons.forEach((button) => {
+    const selected = Boolean(nextLanguage && button.dataset.catanStarfarersLanguage === nextLanguage);
+    button.classList.toggle("is-selected", selected);
+    button.setAttribute("aria-pressed", selected ? "true" : "false");
+  });
+  const setupCopy = {
+    beginner: {
+      en: ["🌟 Beginner", "Fixed, fully revealed frontier"],
+      zh: ["🌟 新手", "固定且完全公开的边疆"],
+    },
+    strategic: {
+      en: ["🧭 Strategic", "Visible sectors, hidden production numbers"],
+      zh: ["🧭 战略", "星区公开，生产点数隐藏"],
+    },
+    explorer: {
+      en: ["🔭 Explorer", "Discover sectors while flying"],
+      zh: ["🔭 探索", "在飞行途中发现星区"],
+    },
+    wild_space: {
+      en: ["🌀 Wild Space", "Shuffled sectors and one unknown omission"],
+      zh: ["🌀 未知宇宙", "随机星区，并移除一个未知星区"],
+    },
+  };
+  catanStarfarersSetupButtons.forEach((button) => {
+    button.disabled = !nextLanguage;
+    button.title = nextLanguage ? "" : "Choose a language first.";
+    const mode = button.dataset.catanStarfarersSetup || "beginner";
+    const copy = setupCopy[mode] && setupCopy[mode][nextLanguage || "en"];
+    if (!copy) return;
+    const strong = button.querySelector("strong");
+    const small = button.querySelector("small");
+    if (strong) strong.textContent = copy[0];
+    if (small) small.textContent = copy[1];
+  });
+  const setupHint = document.getElementById("catanStarfarersSetupHint");
+  if (setupHint) {
+    setupHint.textContent = nextLanguage === "zh" ? "2. 选择星域布局" : "2. Choose frontier setup";
+  }
+}
+
 function showCatanStarfarersSetupStep() {
   if (createRoomModalTitle) {
     createRoomModalTitle.textContent = "CATAN: Starfarers";
@@ -925,7 +971,8 @@ function showCatanStarfarersSetupStep() {
     catanStarfarersSetupStep.classList.remove("hidden");
     catanStarfarersSetupStep.setAttribute("aria-hidden", "false");
   }
-  const first = catanStarfarersSetupButtons && catanStarfarersSetupButtons[0];
+  setCatanStarfarersSetupLanguage(null);
+  const first = catanStarfarersLanguageButtons && catanStarfarersLanguageButtons[0];
   if (first) first.focus();
 }
 
@@ -1710,6 +1757,9 @@ function resetRoomState() {
   if (catanStarfarersRoomSetup) {
     catanStarfarersRoomSetup.textContent = "-";
   }
+  if (catanStarfarersRoomLanguage) {
+    catanStarfarersRoomLanguage.textContent = "-";
+  }
   playersList.innerHTML = "";
   if (typeof clearArkNovaState === "function") {
     clearArkNovaState();
@@ -2201,10 +2251,22 @@ if (catanStarfarersSetupBackBtn) {
   });
 }
 
+catanStarfarersLanguageButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    setCatanStarfarersSetupLanguage(button.dataset.catanStarfarersLanguage);
+    const firstSetupButton = catanStarfarersSetupButtons && catanStarfarersSetupButtons[0];
+    if (firstSetupButton) firstSetupButton.focus();
+  });
+});
+
 catanStarfarersSetupButtons.forEach((button) => {
   button.addEventListener("click", () => {
+    if (!catanStarfarersSelectedLanguage) return;
     const setupMode = button.dataset.catanStarfarersSetup || "beginner";
-    createRoomForGame("catan_starfarers", { setup_mode: setupMode });
+    createRoomForGame("catan_starfarers", {
+      setup_mode: setupMode,
+      language: catanStarfarersSelectedLanguage,
+    });
   });
 });
 
