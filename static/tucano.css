@@ -1,0 +1,568 @@
+.tucano-panel {
+  --tucano-ink: #234336;
+  --tucano-muted: #5c7265;
+  --tucano-line: #d6e3d6;
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  color: var(--tucano-ink);
+  overflow-wrap: anywhere;
+}
+
+.tucano-panel.hidden,
+.tucano-panel .hidden {
+  display: none;
+}
+
+.tucano-panel :where(section, div, button, span, strong, details, summary) {
+  min-width: 0;
+}
+
+.tucano-panel button {
+  min-height: 44px;
+  margin: 0;
+  border: 1px solid var(--tucano-line);
+  border-radius: 10px;
+  padding: 8px 12px;
+  background: #fff;
+  color: var(--tucano-ink);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  touch-action: manipulation;
+  cursor: pointer;
+}
+
+.tucano-panel button:disabled {
+  background: #edf2ed;
+  color: #657568;
+  opacity: 1;
+  cursor: default;
+}
+
+.tucano-panel button:focus-visible,
+.tucano-panel summary:focus-visible,
+.tucano-card-list:focus-visible {
+  outline: 3px solid #319265;
+  outline-offset: 2px;
+}
+
+.tucano-header,
+.tucano-section-heading,
+.tucano-player-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tucano-header h2 {
+  margin: 0;
+  color: #225b40;
+  font-size: 26px;
+  letter-spacing: -0.7px;
+}
+
+.tucano-subtitle {
+  margin-top: 4px;
+  color: var(--tucano-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.tucano-header-actions,
+.tucano-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tucano-header-actions {
+  flex-shrink: 0;
+}
+
+.tucano-header-actions button.active {
+  background: #e3f2e6;
+  border-color: #318457;
+}
+
+.tucano-status-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) minmax(56px, 0.6fr);
+  gap: 6px;
+}
+
+.tucano-status-grid > div {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  padding: 10px 12px;
+  border: 1px solid var(--tucano-line);
+  border-radius: 10px;
+  background: #f5f8f1;
+  font-size: 14px;
+}
+
+.tucano-status-label {
+  color: var(--tucano-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.tucano-notice,
+.tucano-winner {
+  padding: 10px 12px;
+  border: 1px solid var(--tucano-line);
+  border-radius: 10px;
+  background: #f4f7f3;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.tucano-notice.is-your-turn {
+  background: #eaf5e8;
+  border-color: #9ac294;
+}
+
+.tucano-notice.is-toucan,
+.tucano-winner {
+  background: #fff6dc;
+  border-color: #e6cf89;
+}
+
+.tucano-notice > strong {
+  display: block;
+  margin-bottom: 2px;
+}
+
+.tucano-actions {
+  margin-top: 8px;
+}
+
+.tucano-actions button {
+  flex: 1 1 110px;
+}
+
+.tucano-selection {
+  padding-top: 8px;
+  font-weight: 700;
+}
+
+.tucano-section-heading {
+  flex-wrap: wrap;
+  margin-bottom: 9px;
+}
+
+.tucano-section-heading h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.tucano-section-heading > span {
+  color: var(--tucano-muted);
+  font-size: 11px;
+}
+
+.tucano-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  align-items: stretch;
+}
+
+.tucano-column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid #cbdcc7;
+  border-radius: 12px;
+  background: #f0f5e9;
+}
+
+.tucano-column.is-available {
+  border-color: #a2c697;
+}
+
+.tucano-column-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.tucano-column-count {
+  color: var(--tucano-muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.tucano-card-list {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  gap: 7px;
+  min-height: 112px;
+  max-height: 350px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #9ab49a transparent;
+  border-radius: 8px;
+}
+
+.tucano-card {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  flex: 0 0 auto;
+  gap: 5px;
+  padding: 9px 6px;
+  border: 1px solid #d7dfc6;
+  border-radius: 8px;
+  background: #fffef7;
+  text-align: center;
+}
+
+.tucano-card-icon {
+  font-size: 29px;
+  line-height: 1.2;
+}
+
+.tucano-card-name {
+  max-width: 100%;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.tucano-card-effect {
+  width: 100%;
+  color: var(--tucano-muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.tucano-score-scale {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 3px;
+}
+
+.tucano-score-scale span {
+  min-width: 18px;
+  padding: 2px;
+  border-radius: 3px;
+  background: #edf2e4;
+  font-variant-numeric: tabular-nums;
+}
+
+.tucano-score-scale .is-negative {
+  background: #fbe9df;
+  color: #974430;
+}
+
+.tucano-card-toucan {
+  background: #fff4d5;
+  border-color: #e5c779;
+}
+
+.tucano-card-joker {
+  background: #f2edfc;
+  border-color: #d4c4ec;
+}
+
+.tucano-panel .tucano-column-select {
+  width: 100%;
+  padding: 8px 3px;
+  font-weight: 700;
+}
+
+.tucano-panel .tucano-column-select.action-allowed,
+.tucano-panel .tucano-actions .action-allowed,
+.tucano-panel .tucano-target-btn {
+  background: #2d714e;
+  color: #fff;
+  border-color: #2d714e;
+}
+
+.tucano-players {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 10px;
+}
+
+.tucano-player-card {
+  padding: 10px;
+  border: 1px solid var(--tucano-line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.tucano-player-card.self {
+  background: #f5faf2;
+}
+
+.tucano-player-card.current {
+  border-color: #599363;
+}
+
+.tucano-player-heading {
+  align-items: flex-start;
+}
+
+.tucano-player-name {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.tucano-player-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.tucano-player-badges span {
+  padding: 3px 5px;
+  border-radius: 4px;
+  background: #e6efe1;
+  color: #35603c;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.tucano-player-meta {
+  margin-top: 4px;
+  color: var(--tucano-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.tucano-fruit-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 9px;
+}
+
+.tucano-panel .tucano-fruit-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px;
+  min-width: 49px;
+  font-size: 12px;
+}
+
+.tucano-fruit-icon {
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.tucano-panel .tucano-fruit-chip:disabled {
+  background: #f7f9f4;
+  color: var(--tucano-ink);
+}
+
+.tucano-panel .tucano-fruit-chip.action-allowed {
+  background: #eaf5de;
+  border-color: #77a669;
+}
+
+.tucano-panel .tucano-fruit-chip.selected {
+  border-color: #2d714e;
+  background: #d7ebcc;
+  box-shadow: inset 0 0 0 1px #2d714e;
+}
+
+.tucano-panel .tucano-target-btn {
+  width: 100%;
+  margin-top: 9px;
+}
+
+.tucano-score-details {
+  margin-top: 9px;
+  border-top: 1px solid var(--tucano-line);
+  color: var(--tucano-muted);
+  font-size: 12px;
+}
+
+.tucano-score-details > summary {
+  padding: 10px 0 2px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.tucano-score-breakdown {
+  display: grid;
+  gap: 5px;
+  max-height: 240px;
+  overflow-y: auto;
+  margin-top: 8px;
+  padding-right: 3px;
+}
+
+.tucano-score-row {
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: #f0f4eb;
+  line-height: 1.4;
+}
+
+.tucano-empty {
+  padding: 8px 2px;
+  color: var(--tucano-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.tucano-modal {
+  max-width: 620px;
+  max-height: 85dvh;
+  overflow-wrap: anywhere;
+}
+
+.tucano-modal .modal-header {
+  gap: 10px;
+}
+
+.tucano-modal .modal-header h2 {
+  font-size: 19px;
+}
+
+.tucano-modal .modal-header button {
+  flex-shrink: 0;
+}
+
+.tucano-modal .modal-body {
+  line-height: 1.6;
+}
+
+.tucano-modal .modal-body p:first-child {
+  margin-top: 0;
+}
+
+.tucano-help-fruits {
+  display: grid;
+  gap: 8px;
+}
+
+.tucano-help-fruits p {
+  margin: 0;
+  padding: 8px;
+  background: #f2f6ed;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+body.tucano-explain-mode #tucanoPanel .has-explanation {
+  cursor: help;
+  outline: 2px dashed #34805a;
+  outline-offset: -2px;
+}
+
+@media (hover: hover) {
+  .tucano-panel button:not(:disabled):hover {
+    filter: brightness(0.94);
+  }
+}
+
+@media (max-width: 600px) {
+  .tucano-panel {
+    gap: 12px;
+  }
+
+  .tucano-header h2 {
+    font-size: 23px;
+  }
+
+  .tucano-subtitle {
+    max-width: 175px;
+    font-size: 11px;
+  }
+
+  .tucano-header-actions button {
+    padding: 8px;
+    font-size: 12px;
+  }
+
+  .tucano-status-grid > div {
+    padding: 8px;
+    font-size: 13px;
+  }
+
+  .tucano-columns {
+    gap: 6px;
+  }
+
+  .tucano-column {
+    gap: 6px;
+    padding: 5px;
+    border-radius: 9px;
+  }
+
+  .tucano-column-title {
+    font-size: 12px;
+  }
+
+  .tucano-card-list {
+    max-height: 286px;
+    max-height: min(286px, 42svh);
+    gap: 6px;
+  }
+
+  .tucano-card {
+    padding: 7px 4px;
+  }
+
+  .tucano-players {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .tucano-column-count {
+    font-size: 10px;
+  }
+
+  .tucano-section-heading {
+    gap: 5px;
+  }
+
+  .tucano-section-heading h3 {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 360px) {
+  .tucano-header {
+    flex-wrap: wrap;
+  }
+
+  .tucano-subtitle {
+    max-width: none;
+  }
+
+  .tucano-header-actions {
+    flex: 1 1 auto;
+  }
+
+  .tucano-header-actions button {
+    flex: 1;
+  }
+
+  .tucano-column-title {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

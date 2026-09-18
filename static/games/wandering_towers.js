@@ -332,14 +332,14 @@ function confirmWanderingTarget(targetType, targetId) {
 
 function createWanderingTargetConfirmation(targetType, targetId, targetLabel) {
   const overlay = document.createElement("div");
-  overlay.className = "wandering-target-confirmation";
+  overlay.className = `wandering-target-confirmation wandering-${targetType}-confirmation`;
   overlay.setAttribute("role", "group");
   overlay.setAttribute("aria-label", `Confirm moving ${targetLabel}`);
 
   const moveBtn = document.createElement("button");
   moveBtn.type = "button";
   moveBtn.className = "wandering-target-confirm wandering-target-move";
-  moveBtn.textContent = "Move";
+  moveBtn.textContent = targetType === "wizard" ? "Move Wiz" : "Move";
   moveBtn.setAttribute("aria-label", `Move ${targetLabel}`);
   moveBtn.addEventListener("click", (e) => {
     e.preventDefault();
@@ -385,6 +385,7 @@ function renderWanderingBoard(view) {
     const layers = Array.isArray(cell.layers) ? cell.layers : [];
     const towerCount = layers.filter((layer) => layer.type === "tower").length;
     const hasRaven = layers.some((layer) => layer.type === "ravenskeep");
+    let selectedWizardConfirmation = null;
     const cellEl = document.createElement("div");
     cellEl.className = "wandering-cell";
     cellEl.dataset.cellIndex = String(cell.index);
@@ -576,10 +577,10 @@ function renderWanderingBoard(view) {
             shell.className = "wandering-target-shell wandering-wizard-target-shell";
             shell.appendChild(badge);
             if (selected && canConfirmTarget && pendingTargets?.wizard.includes(wizardId)) {
-              shell.classList.add("has-confirmation");
-              shell.appendChild(
-                createWanderingTargetConfirmation("wizard", wizardId, `${name}'s wizard`)
-              );
+              selectedWizardConfirmation = {
+                targetId: wizardId,
+                targetLabel: `${name}'s wizard`,
+              };
             }
             layerEl.appendChild(shell);
           });
@@ -595,6 +596,16 @@ function renderWanderingBoard(view) {
       stack.appendChild(empty);
     }
     cellEl.appendChild(stack);
+    if (selectedWizardConfirmation) {
+      cellEl.classList.add("has-wizard-confirmation");
+      const confirmation = createWanderingTargetConfirmation(
+        "wizard",
+        selectedWizardConfirmation.targetId,
+        selectedWizardConfirmation.targetLabel
+      );
+      confirmation.classList.add("wandering-cell-confirmation");
+      cellEl.appendChild(confirmation);
+    }
     cellEl.addEventListener("click", (e) => {
       if (!wanderingExplainMode) {
         return;
@@ -876,7 +887,10 @@ function updateWanderingActionHint() {
   }
   if (view.pending) {
     const legal = getWanderingLegalTargets(view);
-    if (wanderingSelectedWizardId || wanderingSelectedTowerId) {
+    if (wanderingSelectedWizardId) {
+      wanderingActionHint.textContent =
+        "Wizard selected — choose Move Wiz or Cancel on its space.";
+    } else if (wanderingSelectedTowerId) {
       wanderingActionHint.textContent = "Target selected — choose Move or Cancel on it.";
     } else if (legal.wizard.length || legal.tower.length) {
       wanderingActionHint.textContent = "Choose a highlighted wizard or tower.";

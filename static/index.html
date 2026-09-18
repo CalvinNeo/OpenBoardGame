@@ -4,9 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css?v=app_v94" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v96" />
   <link rel="stylesheet" href="/static/ark_nova.css?v=app_v21" />
   <link rel="stylesheet" href="/static/catan_starfarers.css?v=app_v4" />
+  <link rel="stylesheet" href="/static/tucano.css?v=app_v2" />
 </head>
 <body>
   <section id="logPanel" class="log-panel hidden" aria-hidden="true">
@@ -624,20 +625,20 @@
     </div>
   </section>
 
-  <section id="inAGroveHelpModal" class="modal hidden" aria-hidden="true">
+  <section id="inAGroveHelpModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="inAGroveHelpTitle">
     <div class="modal-content in-a-grove-help-modal">
       <div class="modal-header">
-        <h2>In a Grove - Game Rules</h2>
+        <h2 id="inAGroveHelpTitle">🎋 In a Grove · How to play</h2>
         <button id="inAGroveHelpModalCloseBtn" type="button">Close</button>
       </div>
       <div class="modal-body" id="inAGroveHelpContent"></div>
     </div>
   </section>
 
-  <section id="inAGroveExplainModal" class="modal hidden" aria-hidden="true">
+  <section id="inAGroveExplainModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="inAGroveExplainTitle">
     <div class="modal-content in-a-grove-explain-modal">
       <div class="modal-header">
-        <h2>Button Explanation</h2>
+        <h2 id="inAGroveExplainTitle">🔎 A closer look</h2>
         <button id="inAGroveExplainModalCloseBtn" type="button">Close</button>
       </div>
       <div class="modal-body" id="inAGroveExplainContent"></div>
@@ -1999,8 +2000,8 @@
               <button id="wordDecodeExplainBtn" class="word-decode-header-btn" type="button">Explain</button>
             </div>
             <div class="panel-header-actions" id="inAGroveHeaderActions" style="display: none;">
-              <button id="inAGroveHelpBtn" class="in-a-grove-header-btn" type="button">Help</button>
-              <button id="inAGroveExplainBtn" class="in-a-grove-header-btn" type="button">Explain</button>
+              <button id="inAGroveHelpBtn" class="in-a-grove-header-btn" type="button">📖 Help</button>
+              <button id="inAGroveExplainBtn" class="in-a-grove-header-btn" type="button" aria-pressed="false">🔎 Explain</button>
             </div>
             <div class="panel-header-actions" id="tagironHeaderActions" style="display: none;">
               <button id="tagironHelpBtn" class="tagiron-header-btn" type="button">Help</button>
@@ -3531,54 +3532,62 @@
             <div id="tucanoPanel" class="hidden tucano-panel">
               <div class="tucano-header">
                 <div>
-                  <h2>Tucano</h2>
-                  <div class="tucano-subtitle">Draft fruit columns, use toucans, protect sets.</div>
+                  <h2>🌴 Tucano</h2>
+                  <div class="tucano-subtitle">A little fruit. A little mischief.</div>
                 </div>
                 <div class="tucano-header-actions">
                   <button id="tucanoHelpBtn" type="button">Help</button>
-                  <button id="tucanoExplainBtn" type="button">Explain</button>
+                  <button id="tucanoExplainBtn" type="button" aria-pressed="false">Explain</button>
                 </div>
               </div>
 
               <div class="tucano-status-grid">
-                <div>Phase: <span id="tucanoPhase">-</span></div>
-                <div>Current Turn: <span id="tucanoTurn">-</span></div>
-                <div>Deck: <span id="tucanoDeck">-</span></div>
-                <div>Winner: <span id="tucanoWinner">-</span></div>
+                <div><span class="tucano-status-label">Phase</span><strong id="tucanoPhase">-</strong></div>
+                <div><span class="tucano-status-label">Current turn</span><strong id="tucanoTurn">-</strong></div>
+                <div><span class="tucano-status-label">🎴 Deck</span><strong id="tucanoDeck">-</strong></div>
+              </div>
+              <div id="tucanoWinner" class="tucano-winner hidden" role="status"></div>
+
+              <div id="tucanoNotice" class="tucano-notice hidden" aria-hidden="true" role="status" aria-live="polite">
+                <strong id="tucanoNoticeTitle">Your turn</strong>
+                <div id="tucanoNoticeBody">-</div>
+                <div id="tucanoActions" class="tucano-actions hidden">
+                  <button id="tucanoFlipBtn" type="button" class="hidden">🛡️ Protect fruit</button>
+                  <button id="tucanoSkipBtn" type="button" class="hidden">Skip</button>
+                </div>
+                <div id="tucanoSelection" class="tucano-selection hidden"></div>
               </div>
 
-              <div id="tucanoNotice" class="round-notice hidden" aria-hidden="true">
-                <div id="tucanoNoticeTitle" class="round-notice-title">Toucan</div>
-                <div id="tucanoNoticeBody" class="round-notice-body">-</div>
-              </div>
+              <section class="tucano-market" aria-labelledby="tucanoMarketTitle">
+                <div class="tucano-section-heading">
+                  <h3 id="tucanoMarketTitle">🍃 Fruit market</h3>
+                  <span>Take one full column</span>
+                </div>
+                <div id="tucanoColumns" class="tucano-columns"></div>
+              </section>
 
-              <h3>Columns</h3>
-              <div id="tucanoColumns" class="tucano-columns"></div>
+              <section aria-labelledby="tucanoPlayersTitle">
+                <div class="tucano-section-heading">
+                  <h3 id="tucanoPlayersTitle">🧺 Collections</h3>
+                  <span>Tap Scores for details</span>
+                </div>
+                <div id="tucanoPlayers" class="tucano-players"></div>
+              </section>
 
-              <h3>Actions</h3>
-              <div class="row actions tucano-actions">
-                <button id="tucanoFlipBtn" type="button">🛡️ Flip</button>
-                <button id="tucanoSkipBtn" type="button">Skip</button>
-              </div>
-              <div id="tucanoSelection" class="tucano-selection">Selected: -</div>
-
-              <h3>Players</h3>
-              <div id="tucanoPlayers" class="tucano-players"></div>
-
-              <section id="tucanoHelpModal" class="modal hidden" aria-hidden="true">
+              <section id="tucanoHelpModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="tucanoHelpTitle">
                 <div class="modal-content tucano-modal">
                   <div class="modal-header">
-                    <h2>Tucano Help</h2>
+                    <h2 id="tucanoHelpTitle">Tucano Help</h2>
                     <button id="tucanoHelpModalCloseBtn" type="button">Close</button>
                   </div>
                   <div id="tucanoHelpContent" class="modal-body"></div>
                 </div>
               </section>
 
-              <section id="tucanoExplainModal" class="modal hidden" aria-hidden="true">
+              <section id="tucanoExplainModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="tucanoExplainTitle">
                 <div class="modal-content tucano-modal">
                   <div class="modal-header">
-                    <h2>Tucano Explain</h2>
+                    <h2 id="tucanoExplainTitle">Tucano Explain</h2>
                     <button id="tucanoExplainModalCloseBtn" type="button">Close</button>
                   </div>
                   <div id="tucanoExplainContent" class="modal-body"></div>
@@ -4261,52 +4270,58 @@
             </div>
 
             <div id="inAGrovePanel" class="hidden">
-              <div class="row">
-                <div>Phase: <span id="inAGrovePhase">-</span></div>
-                <div>Round: <span id="inAGroveRound">-</span></div>
-                <div>Current Turn: <span id="inAGroveTurn">-</span></div>
+              <div class="in-a-grove-topbar">
+                <div class="in-a-grove-brand">
+                  <span class="in-a-grove-brand-mark" aria-hidden="true">🎋</span>
+                  <div><h3>In a Grove</h3><p>A small scene. A tangled truth.</p></div>
+                </div>
+                <div class="in-a-grove-round-badge">Round <strong id="inAGroveRound">-</strong></div>
               </div>
-              <div class="row">
-                <div>First Player: <span id="inAGroveFirstPlayer">-</span></div>
-                <div>Blocked Suspect: <span id="inAGroveBlocked">-</span></div>
-                <div>Winner: <span id="inAGroveWinner">-</span></div>
+              <div class="in-a-grove-status" id="inAGroveStatus" role="status" aria-live="polite">
+                <span id="inAGrovePhase" class="in-a-grove-phase">Waiting</span>
+                <strong id="inAGroveTurn">Waiting for players</strong>
               </div>
-
+              <div id="inAGroveWinnerBanner" class="in-a-grove-winner hidden">🏆 <strong id="inAGroveWinner"></strong></div>
+              <div id="inAGroveExplainNotice" class="in-a-grove-explain-notice hidden" role="status">🔎 Select a highlighted control to learn about it. Press Esc to exit.</div>
               <div class="in-a-grove-layout">
-                <section class="in-a-grove-side">
-                  <h3>Your Alibis</h3>
-                  <div id="inAGroveYourTiles" class="in-a-grove-alibis"></div>
-
-                  <h3>Public Info</h3>
-                  <div class="in-a-grove-public-card">
-                    <div>Public Alibi: <span id="inAGrovePublicAlibi">-</span></div>
-                    <div>Victim: <span id="inAGroveVictim">-</span></div>
+                <section class="in-a-grove-evidence" aria-labelledby="inAGroveEvidenceTitle">
+                  <div class="in-a-grove-section-heading">
+                    <h4 id="inAGroveEvidenceTitle">🪪 Your alibis</h4><span>Known innocents · private</span>
                   </div>
-
-                  <div class="row actions in-a-grove-actions">
-                    <button id="inAGrovePeekBtn">Peek Selected</button>
-                    <button id="inAGroveSwapBtn">Swap with Victim</button>
-                    <button id="inAGroveSkipSwapBtn">Skip Swap</button>
-                    <button id="inAGroveBetBtn">Place Bet</button>
-                    <button id="inAGroveNextRoundBtn">Next Round</button>
-                    <button id="inAGrovePlayAgainBtn">Start New Game</button>
+                  <div class="in-a-grove-evidence-row">
+                    <div id="inAGroveYourTiles" class="in-a-grove-alibis"></div>
+                    <div id="inAGrovePublicAlibiCard" class="in-a-grove-public-card hidden"><span>🪪 Public alibi</span><strong id="inAGrovePublicAlibi">-</strong></div>
+                    <div class="in-a-grove-public-card"><span>🍂 Victim</span><strong id="inAGroveVictim">Hidden</strong></div>
                   </div>
                 </section>
-
-                <section class="in-a-grove-main">
-                  <h3>Suspects</h3>
-                  <div id="inAGroveTable" class="in-a-grove-table">
-                    <div id="inAGroveSuspects" class="in-a-grove-suspects"></div>
+                <section id="inAGroveTable" class="in-a-grove-table" aria-labelledby="inAGroveSceneTitle">
+                  <div class="in-a-grove-section-heading">
+                    <h4 id="inAGroveSceneTitle">The crime scene</h4><span>🎌 First: <strong id="inAGroveFirstPlayer">-</strong></span>
                   </div>
-
-                  <div id="inAGroveRoundSummary" class="round-notice hidden">
-                    <div class="round-notice-title">Last Round</div>
-                    <div id="inAGroveRoundSummaryBody" class="round-notice-body">-</div>
+                  <div class="in-a-grove-scene-meta"><span>🚫 No peeking: <strong id="inAGroveBlocked">None</strong></span><span id="inAGroveSelectionCount">Choose 2 to inspect</span></div>
+                  <div id="inAGroveSuspects" class="in-a-grove-suspects" role="group" aria-label="Three suspects"></div>
+                  <div class="in-a-grove-action-dock">
+                    <p id="inAGroveActionHint" role="status" aria-live="polite">Waiting for the next move.</p>
+                    <div class="in-a-grove-actions">
+                      <button id="inAGrovePeekBtn" type="button" disabled>🔎 Inspect 2</button>
+                      <button id="inAGroveSwapBtn" type="button" class="hidden" disabled>🔄 Swap with victim</button>
+                      <button id="inAGroveSkipSwapBtn" type="button" class="in-a-grove-secondary hidden" disabled>Keep scene</button>
+                      <button id="inAGroveBetBtn" type="button" class="hidden" disabled>🎯 Accuse suspect</button>
+                      <button id="inAGroveNextRoundBtn" type="button" class="hidden" disabled>Next Round →</button>
+                      <button id="inAGrovePlayAgainBtn" type="button" class="hidden" disabled>↻ Start New Game</button>
+                    </div>
                   </div>
-
-                  <h3>Players</h3>
+                  <div class="in-a-grove-rule-strip"><span>🔺 Highest number is guilty</span><span>5 present? 🔻 Lowest instead</span><span>✕ Always innocent</span></div>
+                </section>
+                <section class="in-a-grove-scoreboard" aria-labelledby="inAGrovePlayersTitle">
+                  <div class="in-a-grove-section-heading"><h4 id="inAGrovePlayersTitle">Detectives</h4><span>Fewest penalties wins</span></div>
                   <div id="inAGrovePlayers" class="in-a-grove-players"></div>
+                  <p class="in-a-grove-score-legend">🎯 Chips left · ⚠️ Penalties<br>8 penalties or 0 chips ends the game.</p>
                 </section>
+                <details id="inAGroveRoundSummary" class="in-a-grove-summary hidden">
+                  <summary id="inAGroveSummaryTitle">Round results</summary>
+                  <div id="inAGroveRoundSummaryBody" class="in-a-grove-summary-body" tabindex="0" aria-label="Round results"></div>
+                </details>
               </div>
             </div>
 
@@ -7072,7 +7087,7 @@
   <script src="/static/games/fang_niao.js?v=app_v4"></script>
   <script src="/static/games/perfect_mismatch.js?v=app_v4"></script>
   <script src="/static/games/coyote.js?v=app_v4"></script>
-  <script src="/static/games/in_a_grove.js?v=app_v2"></script>
+  <script src="/static/games/in_a_grove.js?v=app_v3"></script>
   <script src="/static/games/citadels.js?v=app_v6"></script>
   <script src="/static/games/tagiron.js?v=app_v5"></script>
   <script src="/static/games/davinci_code.js?v=app_v4"></script>
@@ -7086,7 +7101,7 @@
   <script src="/static/games/istanbul.js?v=app_v4"></script>
   <script src="/static/games/gold_rush.js?v=app_v4"></script>
   <script src="/static/games/age_of_war.js?v=app_v5"></script>
-  <script src="/static/games/wandering_towers.js?v=app_v9"></script>
+  <script src="/static/games/wandering_towers.js?v=app_v10"></script>
   <script src="/static/games/incan_gold.js?v=app_v4"></script>
   <script src="/static/games/celestia.js?v=app_v2"></script>
   <script src="/static/games/manila.js?v=app_v4"></script>
@@ -7101,7 +7116,7 @@
   <script src="/static/games/felix.js?v=app_v1"></script>
   <script src="/static/games/tacta.js?v=app_v7"></script>
   <script src="/static/games/subtext.js?v=app_v1"></script>
-  <script src="/static/games/tucano.js?v=app_v1"></script>
+  <script src="/static/games/tucano.js?v=app_v2"></script>
   <script src="/static/games/witchs_brew.js?v=app_v1"></script>
   <script src="/static/games/ra.js?v=app_v7"></script>
   <script src="/static/games/scout.js?v=app_v4"></script>
