@@ -59,6 +59,7 @@ from game.splendor_pokemon import PokemonSplendorGame
 from game.blokus import BlokusGame
 from game.blitz_sketch import BlitzSketchGame
 from game.carcassonne import CarcassonneGame
+from game.catan_starfarers import CatanStarfarersGame
 from game.skull import SkullGame
 from game.subtext import SubtextGame
 from game.trekking_history import TrekkingHistoryGame
@@ -435,6 +436,175 @@ WRIGGLE_ROULETTE_ACTION_SCHEMA = {
 
 WRIGGLE_ROULETTE_CONFIG_SCHEMA = {
     "type": "object",
+    "additionalProperties": False,
+}
+
+CATAN_STARFARERS_RESOURCE_BUNDLE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        resource: {"type": "integer", "minimum": 0, "maximum": 20}
+        for resource in ("ore", "fuel", "carbon", "food", "goods")
+    },
+    "additionalProperties": False,
+}
+
+CATAN_STARFARERS_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "enum": [
+                        "roll_production",
+                        "cancel_trade_offer",
+                        "start_flight",
+                        "read_encounter_prompt",
+                        "reveal_encounter_result",
+                        "end_flight",
+                        "next_turn",
+                        "play_again",
+                        "withdraw_trade_response",
+                    ]
+                }
+            },
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "discard_resources"},
+                "resources": CATAN_STARFARERS_RESOURCE_BUNDLE_SCHEMA,
+            },
+            "required": ["type", "resources"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "choose_steal_target"},
+                "target_player_id": {"type": "string", "minLength": 1, "maxLength": 80},
+            },
+            "required": ["type", "target_player_id"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "open_trade_offer"},
+                "give": CATAN_STARFARERS_RESOURCE_BUNDLE_SCHEMA,
+                "want": CATAN_STARFARERS_RESOURCE_BUNDLE_SCHEMA,
+            },
+            "required": ["type", "give", "want"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "submit_trade_response"},
+                "response": {"type": "string", "enum": ["accept", "counter"]},
+                "give": CATAN_STARFARERS_RESOURCE_BUNDLE_SCHEMA,
+                "want": CATAN_STARFARERS_RESOURCE_BUNDLE_SCHEMA,
+            },
+            "required": ["type", "response"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "accept_trade_response"},
+                "response_player_id": {"type": "string", "minLength": 1, "maxLength": 80},
+            },
+            "required": ["type", "response_player_id"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "trade_with_supply"},
+                "give_resource": {"type": "string", "enum": ["ore", "fuel", "carbon", "food", "goods"]},
+                "receive_resource": {"type": "string", "enum": ["ore", "fuel", "carbon", "food", "goods"]},
+            },
+            "required": ["type", "give_resource", "receive_resource"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "build_ship"},
+                "ship_type": {"type": "string", "enum": ["colony", "trade"]},
+                "spaceport_id": {"type": "string", "minLength": 1, "maxLength": 160},
+            },
+            "required": ["type", "ship_type", "spaceport_id"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "build_spaceport"},
+                "colony_id": {"type": "string", "minLength": 1, "maxLength": 160},
+            },
+            "required": ["type", "colony_id"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "build_upgrade"},
+                "upgrade_type": {"type": "string", "enum": ["booster", "cannon", "freight"]},
+            },
+            "required": ["type", "upgrade_type"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "choose_encounter"},
+                "choice": {"type": "string", "minLength": 1, "maxLength": 40},
+            },
+            "required": ["type", "choice"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "move_ship_step"},
+                "ship_id": {"type": "string", "minLength": 1, "maxLength": 160},
+                "node_id": {"type": "string", "minLength": 1, "maxLength": 80},
+            },
+            "required": ["type", "ship_id", "node_id"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"enum": ["finish_ship_move", "establish_colony", "establish_trade_station"]},
+                "ship_id": {"type": "string", "minLength": 1, "maxLength": 160},
+            },
+            "required": ["type", "ship_id"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "choose_friendship_card"},
+                "card_id": {"type": "string", "minLength": 1, "maxLength": 80},
+            },
+            "required": ["type", "card_id"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+CATAN_STARFARERS_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "setup_mode": {
+            "type": "string",
+            "enum": ["beginner", "strategic", "explorer", "wild_space"],
+        }
+    },
     "additionalProperties": False,
 }
 
@@ -5366,6 +5536,22 @@ register_game(
         module=WriggleRouletteGame,
         serialize=WriggleRouletteGame.serialize,
         deserialize=WriggleRouletteGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=CatanStarfarersGame.game_id,
+        name="CATAN: Starfarers",
+        name_zh="星际卡坦",
+        min_players=CatanStarfarersGame.min_players,
+        max_players=CatanStarfarersGame.max_players,
+        turn_mode="turn",
+        action_schema=CATAN_STARFARERS_ACTION_SCHEMA,
+        config_schema=CATAN_STARFARERS_CONFIG_SCHEMA,
+        module=CatanStarfarersGame,
+        serialize=CatanStarfarersGame.serialize,
+        deserialize=CatanStarfarersGame.deserialize,
     )
 )
 

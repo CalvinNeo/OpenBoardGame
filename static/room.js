@@ -75,6 +75,11 @@ const forestShuffleEnglishBtn = document.getElementById("forestShuffleEnglishBtn
 const forestShuffleChineseBtn = document.getElementById("forestShuffleChineseBtn");
 const forestShuffleRoomLanguageRow = document.getElementById("forestShuffleRoomLanguageRow");
 const forestShuffleRoomLanguage = document.getElementById("forestShuffleRoomLanguage");
+const catanStarfarersSetupStep = document.getElementById("catanStarfarersSetupStep");
+const catanStarfarersSetupBackBtn = document.getElementById("catanStarfarersSetupBackBtn");
+const catanStarfarersSetupButtons = document.querySelectorAll("[data-catan-starfarers-setup]");
+const catanStarfarersRoomSetupRow = document.getElementById("catanStarfarersRoomSetupRow");
+const catanStarfarersRoomSetup = document.getElementById("catanStarfarersRoomSetup");
 const seatClaimModal = document.getElementById("seatClaimModal");
 const seatClaimCloseBtn = document.getElementById("seatClaimCloseBtn");
 const seatClaimNameHint = document.getElementById("seatClaimNameHint");
@@ -631,6 +636,7 @@ const GAME_WEIGHT = {
   bohnanza_dice: 1.17,
   emerald_skulls: 1.93,
   wriggle_roulette: 1.00,
+  catan_starfarers: 2.60,
   cabo: 1.4,
   carcassonne: 1.89,
   cat_in_box: 2.03,
@@ -876,6 +882,10 @@ function showCreateRoomGameStep() {
     forestShuffleLanguageStep.classList.add("hidden");
     forestShuffleLanguageStep.setAttribute("aria-hidden", "true");
   }
+  if (catanStarfarersSetupStep) {
+    catanStarfarersSetupStep.classList.add("hidden");
+    catanStarfarersSetupStep.setAttribute("aria-hidden", "true");
+  }
 }
 
 function showForestShuffleLanguageStep() {
@@ -890,14 +900,42 @@ function showForestShuffleLanguageStep() {
     forestShuffleLanguageStep.classList.remove("hidden");
     forestShuffleLanguageStep.setAttribute("aria-hidden", "false");
   }
+  if (catanStarfarersSetupStep) {
+    catanStarfarersSetupStep.classList.add("hidden");
+    catanStarfarersSetupStep.setAttribute("aria-hidden", "true");
+  }
   if (forestShuffleEnglishBtn) {
     forestShuffleEnglishBtn.focus();
   }
 }
 
+function showCatanStarfarersSetupStep() {
+  if (createRoomModalTitle) {
+    createRoomModalTitle.textContent = "CATAN: Starfarers";
+  }
+  if (createRoomGameStep) {
+    createRoomGameStep.classList.add("hidden");
+    createRoomGameStep.setAttribute("aria-hidden", "true");
+  }
+  if (forestShuffleLanguageStep) {
+    forestShuffleLanguageStep.classList.add("hidden");
+    forestShuffleLanguageStep.setAttribute("aria-hidden", "true");
+  }
+  if (catanStarfarersSetupStep) {
+    catanStarfarersSetupStep.classList.remove("hidden");
+    catanStarfarersSetupStep.setAttribute("aria-hidden", "false");
+  }
+  const first = catanStarfarersSetupButtons && catanStarfarersSetupButtons[0];
+  if (first) first.focus();
+}
+
 function selectGameFromModal(gameId) {
   if (gameId === "forest_shuffle" && forestShuffleLanguageStep) {
     showForestShuffleLanguageStep();
+    return;
+  }
+  if (gameId === "catan_starfarers" && catanStarfarersSetupStep) {
+    showCatanStarfarersSetupStep();
     return;
   }
   createRoomForGame(gameId);
@@ -1666,6 +1704,12 @@ function resetRoomState() {
   if (forestShuffleRoomLanguage) {
     forestShuffleRoomLanguage.textContent = "-";
   }
+  if (catanStarfarersRoomSetupRow) {
+    catanStarfarersRoomSetupRow.classList.add("hidden");
+  }
+  if (catanStarfarersRoomSetup) {
+    catanStarfarersRoomSetup.textContent = "-";
+  }
   playersList.innerHTML = "";
   if (typeof clearArkNovaState === "function") {
     clearArkNovaState();
@@ -1683,6 +1727,9 @@ function resetRoomState() {
   }
   if (typeof clearWriggleRouletteState === "function") {
     clearWriggleRouletteState();
+  }
+  if (typeof clearCatanStarfarersState === "function") {
+    clearCatanStarfarersState();
   }
   if (typeof clearBombBustersState === "function") {
     clearBombBustersState();
@@ -2145,6 +2192,21 @@ if (forestShuffleChineseBtn) {
     createRoomForGame("forest_shuffle", { language: "zh" });
   });
 }
+
+if (catanStarfarersSetupBackBtn) {
+  catanStarfarersSetupBackBtn.addEventListener("click", () => {
+    showCreateRoomGameStep();
+    const item = gameListEl ? gameListEl.querySelector('[data-game-id="catan_starfarers"]') : null;
+    if (item) item.focus();
+  });
+}
+
+catanStarfarersSetupButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    const setupMode = button.dataset.catanStarfarersSetup || "beginner";
+    createRoomForGame("catan_starfarers", { setup_mode: setupMode });
+  });
+});
 
 if (gameSearchInput) {
   gameSearchInput.addEventListener("input", () => {

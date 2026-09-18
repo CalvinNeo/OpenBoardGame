@@ -46,6 +46,7 @@ GAME_TAG_IDS: Dict[str, Tuple[str, ...]] = {
     "bomb_busters": ("puzzle", "cooperative"),
     "cabo": ("filler", "puzzle", "bluffing"),
     "carcassonne": ("euro",),
+    "catan_starfarers": ("euro", "ameritrash"),
     "cat_in_box": ("puzzle", "trick_taking"),
     "celestia": ("filler", "push_your_luck", "ameritrash"),
     "century_spice_road": ("euro",),

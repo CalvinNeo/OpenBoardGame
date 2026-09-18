@@ -71,6 +71,22 @@ class RoomSessionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(public_action, {"type": "grab"})
         self.assertNotIn("count", public_action)
 
+    async def test_catan_starfarers_private_bot_actions_are_sanitized(self):
+        discard = {
+            "type": "discard_resources",
+            "resources": {"ore": 2, "fuel": 1},
+        }
+        encounter = {"type": "choose_encounter", "choice": "option_b"}
+
+        self.assertEqual(
+            app._public_bot_action("catan_starfarers", discard),
+            {"type": "discard_resources"},
+        )
+        self.assertEqual(
+            app._public_bot_action("catan_starfarers", encounter),
+            {"type": "choose_encounter"},
+        )
+
     async def test_join_cleans_previous_lobby_session(self):
         sid_owner = "sid-owner"
         room_id_a = await self._create_room(sid_owner, "Alice")

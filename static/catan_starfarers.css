@@ -1,0 +1,746 @@
+.catan-starfarers-panel {
+  --cs-ink: #e9f4ff;
+  --cs-muted: #91a9c1;
+  --cs-deep: #07111f;
+  --cs-panel: rgba(11, 29, 48, 0.94);
+  --cs-line: rgba(128, 190, 231, 0.24);
+  --cs-cyan: #66dcff;
+  --cs-gold: #ffd166;
+  --cs-green: #73e2a7;
+  --cs-danger: #ff7c8b;
+  color: var(--cs-ink);
+  min-width: 0;
+  overflow-x: clip;
+  padding: 14px;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(37, 123, 179, 0.26), transparent 30%),
+    radial-gradient(circle at 82% 38%, rgba(114, 73, 167, 0.18), transparent 32%),
+    linear-gradient(145deg, #07111f 0%, #0a1828 48%, #07111f 100%);
+  box-shadow: inset 0 0 0 1px rgba(150, 210, 245, 0.12);
+}
+
+.catan-starfarers-panel *,
+.catan-starfarers-panel *::before,
+.catan-starfarers-panel *::after {
+  box-sizing: border-box;
+}
+
+.catan-starfarers-topbar,
+.catan-starfarers-section-heading,
+.catan-starfarers-player-heading,
+.catan-starfarers-action-row,
+.catan-starfarers-trade-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.catan-starfarers-topbar {
+  padding: 10px 12px 14px;
+  border-bottom: 1px solid var(--cs-line);
+}
+
+.catan-starfarers-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+
+.catan-starfarers-brand-mark {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  border: 1px solid rgba(102, 220, 255, 0.45);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #3379a9, #14213b 58%, #070e1a 60%);
+  box-shadow: 0 0 24px rgba(102, 220, 255, 0.2);
+  font-size: 25px;
+}
+
+.catan-starfarers-brand h2,
+.catan-starfarers-section-heading h3,
+.catan-starfarers-action-card h3 {
+  margin: 0;
+  color: var(--cs-ink);
+}
+
+.catan-starfarers-brand h2 {
+  font-size: clamp(18px, 2vw, 25px);
+  letter-spacing: 0.02em;
+}
+
+.catan-starfarers-brand h2 small {
+  color: var(--cs-muted);
+  font-size: 0.62em;
+  font-weight: 600;
+}
+
+.catan-starfarers-kicker {
+  display: block;
+  color: var(--cs-cyan);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.catan-starfarers-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.catan-starfarers-meta > span,
+.catan-starfarers-mothership,
+.catan-starfarers-chip {
+  border: 1px solid var(--cs-line);
+  border-radius: 999px;
+  background: rgba(5, 15, 27, 0.7);
+  padding: 6px 10px;
+  color: var(--cs-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.catan-starfarers-meta strong {
+  color: var(--cs-ink);
+  text-transform: capitalize;
+}
+
+.catan-starfarers-status {
+  margin: 12px 0;
+  padding: 10px 13px;
+  border-left: 3px solid var(--cs-cyan);
+  border-radius: 8px;
+  background: rgba(19, 58, 84, 0.56);
+  color: #dff6ff;
+  font-size: 14px;
+}
+
+.catan-starfarers-status.is-your-turn {
+  border-color: var(--cs-gold);
+  background: rgba(91, 67, 23, 0.5);
+}
+
+.catan-starfarers-status.is-danger {
+  border-color: var(--cs-danger);
+  background: rgba(91, 25, 41, 0.5);
+}
+
+.catan-starfarers-players {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.catan-starfarers-player {
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--cs-line);
+  border-left: 4px solid var(--player-color, var(--cs-cyan));
+  border-radius: 11px;
+  background: rgba(7, 19, 33, 0.82);
+}
+
+.catan-starfarers-player.is-active {
+  box-shadow: inset 0 0 0 1px var(--cs-gold), 0 0 18px rgba(255, 209, 102, 0.12);
+}
+
+.catan-starfarers-player.is-you {
+  background: rgba(17, 46, 68, 0.92);
+}
+
+.catan-starfarers-player-heading strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.catan-starfarers-player-heading span {
+  color: var(--cs-gold);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.catan-starfarers-player-stats,
+.catan-starfarers-player-upgrades {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 7px;
+  color: var(--cs-muted);
+  font-size: 11px;
+}
+
+.catan-starfarers-player-upgrades span,
+.catan-starfarers-player-stats span {
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.catan-starfarers-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 10px;
+  min-width: 0;
+}
+
+.catan-starfarers-map-card,
+.catan-starfarers-hand-card,
+.catan-starfarers-action-card,
+.catan-starfarers-log-card {
+  min-width: 0;
+  border: 1px solid var(--cs-line);
+  border-radius: 13px;
+  background: var(--cs-panel);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.catan-starfarers-map-card {
+  padding: 11px;
+}
+
+.catan-starfarers-section-heading {
+  margin-bottom: 8px;
+}
+
+.catan-starfarers-section-heading > span,
+.catan-starfarers-section-heading > div > span:not(.catan-starfarers-kicker) {
+  color: var(--cs-muted);
+  font-size: 11px;
+}
+
+.catan-starfarers-map-wrap {
+  position: relative;
+  height: clamp(440px, 65vh, 700px);
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(102, 220, 255, 0.16);
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(69, 125, 168, 0.18), transparent 3%),
+    radial-gradient(circle at 72% 18%, rgba(164, 95, 203, 0.15), transparent 5%),
+    radial-gradient(circle at 50% 80%, rgba(67, 189, 159, 0.08), transparent 20%),
+    linear-gradient(#07121f, #050b15);
+}
+
+.catan-starfarers-map-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.32;
+  background-image:
+    radial-gradient(circle, #fff 0 1px, transparent 1.5px),
+    radial-gradient(circle, #8fdcff 0 1px, transparent 1.5px);
+  background-position: 17px 25px, 63px 81px;
+  background-size: 87px 103px, 137px 151px;
+}
+
+.catan-starfarers-map {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: manipulation;
+}
+
+.catan-starfarers-edge {
+  stroke: rgba(117, 169, 207, 0.25);
+  stroke-width: 3;
+}
+
+.catan-starfarers-node-hit {
+  fill: transparent;
+  cursor: default;
+}
+
+.catan-starfarers-node-core {
+  fill: #10283d;
+  stroke: #5d8faf;
+  stroke-width: 2;
+}
+
+.catan-starfarers-node.is-space .catan-starfarers-node-core {
+  fill: #162333;
+  r: 8px;
+}
+
+.catan-starfarers-node.is-hidden .catan-starfarers-node-core {
+  fill: #20224a;
+  stroke: #a78bfa;
+  stroke-dasharray: 5 4;
+}
+
+.catan-starfarers-node.is-system .catan-starfarers-node-core {
+  fill: #143d53;
+  stroke: #66dcff;
+}
+
+.catan-starfarers-node.is-outpost .catan-starfarers-node-core {
+  fill: #3c2749;
+  stroke: #d5a6f4;
+}
+
+.catan-starfarers-node.is-empty .catan-starfarers-node-core,
+.catan-starfarers-node.is-void .catan-starfarers-node-core {
+  fill: #111b28;
+  stroke: #50677b;
+}
+
+.catan-starfarers-node.is-target .catan-starfarers-node-core {
+  stroke: var(--cs-gold);
+  stroke-width: 5;
+  filter: drop-shadow(0 0 9px rgba(255, 209, 102, 0.8));
+  cursor: pointer;
+}
+
+.catan-starfarers-node text {
+  fill: #dff6ff;
+  font-family: system-ui, sans-serif;
+  font-size: 17px;
+  font-weight: 800;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.catan-starfarers-node .catan-starfarers-node-label {
+  fill: #92b0c7;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.catan-starfarers-building {
+  stroke: #07111f;
+  stroke-width: 3;
+}
+
+.catan-starfarers-ship {
+  cursor: pointer;
+}
+
+.catan-starfarers-ship circle {
+  fill: var(--ship-color, #66dcff);
+  stroke: #fff;
+  stroke-width: 2;
+}
+
+.catan-starfarers-ship.is-selected circle {
+  stroke: var(--cs-gold);
+  stroke-width: 5;
+  filter: drop-shadow(0 0 8px rgba(255, 209, 102, 0.9));
+}
+
+.catan-starfarers-ship text {
+  fill: #06101b;
+  font-size: 13px;
+  font-weight: 950;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.catan-starfarers-map-hint {
+  min-height: 20px;
+  margin-top: 8px;
+  color: var(--cs-muted);
+  font-size: 12px;
+}
+
+.catan-starfarers-console {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.catan-starfarers-hand-card,
+.catan-starfarers-action-card,
+.catan-starfarers-log-card {
+  padding: 10px;
+}
+
+.catan-starfarers-resource-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.catan-starfarers-resource {
+  min-width: 0;
+  padding: 7px 3px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.035);
+  text-align: center;
+}
+
+.catan-starfarers-resource span,
+.catan-starfarers-resource strong,
+.catan-starfarers-resource small {
+  display: block;
+}
+
+.catan-starfarers-resource strong {
+  margin: 2px 0;
+  font-size: 18px;
+}
+
+.catan-starfarers-resource small {
+  overflow: hidden;
+  color: var(--cs-muted);
+  font-size: 9px;
+  text-overflow: ellipsis;
+}
+
+.catan-starfarers-action-hint {
+  min-height: 32px;
+  margin: 0 0 9px;
+  color: var(--cs-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.catan-starfarers-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.catan-starfarers-actions button,
+.catan-starfarers-header-btn,
+.catan-starfarers-setup-options button {
+  border: 1px solid rgba(102, 220, 255, 0.32);
+  border-radius: 9px;
+  background: linear-gradient(180deg, #1a5975, #123b52);
+  color: #effbff;
+  font-weight: 750;
+}
+
+.catan-starfarers-actions button {
+  min-height: 39px;
+  padding: 8px 10px;
+}
+
+.catan-starfarers-actions button:hover:not(:disabled),
+.catan-starfarers-header-btn:hover:not(:disabled),
+.catan-starfarers-setup-options button:hover:not(:disabled) {
+  border-color: var(--cs-gold);
+  transform: translateY(-1px);
+}
+
+.catan-starfarers-actions button:disabled {
+  opacity: 0.46;
+}
+
+.catan-starfarers-actions .is-primary {
+  border-color: rgba(255, 209, 102, 0.62);
+  background: linear-gradient(180deg, #8b661c, #684912);
+}
+
+.catan-starfarers-actions .is-danger {
+  border-color: rgba(255, 124, 139, 0.55);
+  background: linear-gradient(180deg, #733242, #52202d);
+}
+
+.catan-starfarers-button-grid,
+.catan-starfarers-build-grid,
+.catan-starfarers-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.catan-starfarers-build-card,
+.catan-starfarers-choice-card,
+.catan-starfarers-trade-box,
+.catan-starfarers-flight-box {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--cs-line);
+  border-radius: 9px;
+  background: rgba(5, 15, 27, 0.6);
+}
+
+.catan-starfarers-build-card strong,
+.catan-starfarers-build-card small,
+.catan-starfarers-choice-card strong,
+.catan-starfarers-choice-card small {
+  display: block;
+}
+
+.catan-starfarers-build-card small,
+.catan-starfarers-choice-card small {
+  margin: 3px 0 7px;
+  color: var(--cs-muted);
+  font-size: 10px;
+  line-height: 1.3;
+}
+
+.catan-starfarers-subheading {
+  margin: 4px 0 2px;
+  color: var(--cs-cyan);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.catan-starfarers-stepper-grid {
+  display: grid;
+  gap: 4px;
+}
+
+.catan-starfarers-stepper {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 30px 25px 30px;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+
+.catan-starfarers-stepper > span {
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.catan-starfarers-stepper output {
+  text-align: center;
+  font-weight: 800;
+}
+
+.catan-starfarers-stepper button {
+  min-height: 28px;
+  padding: 2px;
+}
+
+.catan-starfarers-trade-row select {
+  min-width: 0;
+  width: 100%;
+  padding: 7px;
+  border: 1px solid var(--cs-line);
+  border-radius: 7px;
+  background: #0d2135;
+  color: var(--cs-ink);
+}
+
+.catan-starfarers-offer {
+  padding: 7px;
+  border-left: 3px solid #d5a6f4;
+  border-radius: 7px;
+  background: rgba(90, 50, 111, 0.25);
+  color: #e9d5f8;
+  font-size: 11px;
+}
+
+.catan-starfarers-log {
+  max-height: 160px;
+  overflow-y: auto;
+  color: var(--cs-muted);
+  font-size: 11px;
+  line-height: 1.4;
+  scrollbar-color: #35627c transparent;
+}
+
+.catan-starfarers-log-entry {
+  padding: 6px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.055);
+}
+
+.catan-starfarers-log-entry:first-child {
+  border-top: 0;
+}
+
+.catan-starfarers-modal-content {
+  width: min(760px, calc(100vw - 30px));
+  max-height: min(86vh, 820px);
+}
+
+.catan-starfarers-help-content {
+  overflow-y: auto;
+  color: #22374b;
+  line-height: 1.55;
+}
+
+.catan-starfarers-help-content h3 {
+  margin: 18px 0 5px;
+}
+
+.catan-starfarers-help-content table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.catan-starfarers-help-content th,
+.catan-starfarers-help-content td {
+  padding: 6px;
+  border-bottom: 1px solid #d6e1e9;
+  text-align: left;
+}
+
+.catan-starfarers-panel.is-explaining [data-catan-starfarers-explain] {
+  outline: 2px dashed var(--cs-gold) !important;
+  outline-offset: 2px;
+  cursor: help !important;
+}
+
+.catan-starfarers-panel.is-explaining [data-catan-starfarers-explain] * {
+  cursor: help !important;
+}
+
+.catan-starfarers-setup-step {
+  display: grid;
+  gap: 14px;
+}
+
+.catan-starfarers-setup-hero {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 13px;
+  background: linear-gradient(135deg, #0d2840, #241c42);
+  color: #f1f8ff;
+}
+
+.catan-starfarers-setup-hero > span {
+  font-size: 34px;
+}
+
+.catan-starfarers-setup-hero h3,
+.catan-starfarers-setup-hero p {
+  margin: 0;
+}
+
+.catan-starfarers-setup-hero p {
+  margin-top: 3px;
+  color: #b5cbe0;
+}
+
+.catan-starfarers-setup-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.catan-starfarers-setup-options button {
+  display: grid;
+  gap: 3px;
+  min-height: 76px;
+  padding: 12px;
+  text-align: left;
+}
+
+.catan-starfarers-setup-options small {
+  color: #c0d8e9;
+  font-weight: 500;
+}
+
+@media (max-width: 980px) {
+  .catan-starfarers-layout {
+    grid-template-columns: minmax(0, 1fr) 285px;
+  }
+
+  .catan-starfarers-players {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .catan-starfarers-panel {
+    padding: 8px;
+    border-radius: 12px;
+  }
+
+  .catan-starfarers-topbar {
+    align-items: flex-start;
+    padding: 6px 4px 10px;
+  }
+
+  .catan-starfarers-brand-mark {
+    width: 38px;
+    height: 38px;
+    flex-basis: 38px;
+    font-size: 20px;
+  }
+
+  .catan-starfarers-kicker {
+    font-size: 8px;
+  }
+
+  .catan-starfarers-meta {
+    max-width: 43%;
+    gap: 3px;
+  }
+
+  .catan-starfarers-meta > span {
+    padding: 3px 6px;
+    font-size: 9px;
+  }
+
+  .catan-starfarers-players {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .catan-starfarers-player {
+    min-width: 0;
+    padding: 7px 8px;
+  }
+
+  .catan-starfarers-layout {
+    display: block;
+  }
+
+  .catan-starfarers-map-wrap {
+    height: clamp(300px, 47vh, 510px);
+  }
+
+  .catan-starfarers-console {
+    margin-top: 8px;
+  }
+
+  .catan-starfarers-resource-strip {
+    grid-template-columns: repeat(5, minmax(42px, 1fr));
+  }
+
+  .catan-starfarers-button-grid,
+  .catan-starfarers-build-grid,
+  .catan-starfarers-choice-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .catan-starfarers-actions button {
+    min-height: 36px;
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+
+  .catan-starfarers-log {
+    max-height: 130px;
+  }
+
+  .catan-starfarers-setup-options {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .catan-starfarers-panel *,
+  .catan-starfarers-panel *::before,
+  .catan-starfarers-panel *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
+    animation: none !important;
+  }
+}

@@ -6,6 +6,7 @@
   <title>OpenBoardGame</title>
   <link rel="stylesheet" href="/static/style.css?v=app_v94" />
   <link rel="stylesheet" href="/static/ark_nova.css?v=app_v21" />
+  <link rel="stylesheet" href="/static/catan_starfarers.css?v=app_v1" />
 </head>
 <body>
   <section id="logPanel" class="log-panel hidden" aria-hidden="true">
@@ -121,6 +122,22 @@
               <span class="forest-shuffle-language-flag" aria-hidden="true">🌏</span>
               <span><strong>中文</strong><small>中文牌名与规则</small></span>
             </button>
+          </div>
+        </div>
+        <div id="catanStarfarersSetupStep" class="catan-starfarers-setup-step hidden" aria-hidden="true">
+          <button id="catanStarfarersSetupBackBtn" class="create-room-back-btn" type="button">← Back to games</button>
+          <div class="catan-starfarers-setup-hero">
+            <span aria-hidden="true">🪐</span>
+            <div>
+              <h3>Choose frontier setup</h3>
+              <p id="catanStarfarersSetupHint">All setups use the complete 3–4 player base game.</p>
+            </div>
+          </div>
+          <div class="catan-starfarers-setup-options" role="group" aria-labelledby="catanStarfarersSetupHint">
+            <button type="button" data-catan-starfarers-setup="beginner"><strong>🌟 Beginner</strong><small>Fixed, fully revealed frontier</small></button>
+            <button type="button" data-catan-starfarers-setup="strategic"><strong>🧭 Strategic</strong><small>Visible sectors, hidden production numbers</small></button>
+            <button type="button" data-catan-starfarers-setup="explorer"><strong>🔭 Explorer</strong><small>Discover sectors while flying</small></button>
+            <button type="button" data-catan-starfarers-setup="wild_space"><strong>🌀 Wild Space</strong><small>Shuffled sectors and one unknown omission</small></button>
           </div>
         </div>
       </div>
@@ -1320,6 +1337,7 @@
                     <option value="gold_rush">Gold Rush</option>
                     <option value="incan_gold">Incan Gold</option>
                     <option value="wriggle_roulette">Wriggle Roulette</option>
+                    <option value="catan_starfarers">CATAN: Starfarers</option>
                     <option value="celestia">Celestia</option>
                     <option value="kobayakawa">Kobayakawa</option>
                     <option value="high_society">High Society</option>
@@ -1400,6 +1418,7 @@
                   <div>Status: <span id="roomStatus">-</span></div>
                   <div>Game: <span id="gameTypeLabel">-</span></div>
                   <div id="forestShuffleRoomLanguageRow" class="hidden">Language: <span id="forestShuffleRoomLanguage">-</span></div>
+                  <div id="catanStarfarersRoomSetupRow" class="hidden">Setup: <span id="catanStarfarersRoomSetup">-</span></div>
                 </div>
                 <div class="game-configs" id="gameConfigSection">
                   <div class="game-config-card hidden" id="drawGuessConfigBox" aria-hidden="true">
@@ -2036,6 +2055,10 @@
             <div class="panel-header-actions" id="wriggleRouletteHeaderActions" style="display: none;">
               <button id="wriggleRouletteHelpBtn" class="wriggle-roulette-header-btn" type="button">Help</button>
               <button id="wriggleRouletteExplainBtn" class="wriggle-roulette-header-btn" type="button" aria-pressed="false">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="catanStarfarersHeaderActions" style="display: none;">
+              <button id="catanStarfarersHelpBtn" class="catan-starfarers-header-btn" type="button">Help</button>
+              <button id="catanStarfarersExplainBtn" class="catan-starfarers-header-btn" type="button" aria-pressed="false">Explain</button>
             </div>
             <div class="panel-header-actions" id="bombBustersHeaderActions" style="display: none;">
               <button id="bombBustersHelpBtn" class="bomb-busters-header-btn" type="button">Help</button>
@@ -3215,6 +3238,72 @@
               </section>
 
               <div id="wriggleRouletteLiveRegion" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
+            </div>
+
+            <div id="catanStarfarersPanel" class="hidden catan-starfarers-panel">
+              <header class="catan-starfarers-topbar" data-catan-starfarers-explain="status">
+                <div class="catan-starfarers-brand">
+                  <span class="catan-starfarers-brand-mark" aria-hidden="true">🪐</span>
+                  <div>
+                    <span class="catan-starfarers-kicker">Frontier command · 2019 base game</span>
+                    <h2>CATAN: Starfarers <small lang="zh-CN">星际卡坦</small></h2>
+                  </div>
+                </div>
+                <div class="catan-starfarers-meta" aria-label="Turn status">
+                  <span>Turn <strong id="catanStarfarersTurn">-</strong></span>
+                  <span>Phase <strong id="catanStarfarersPhase">-</strong></span>
+                  <span>Setup <strong id="catanStarfarersSetup">-</strong></span>
+                </div>
+              </header>
+
+              <div id="catanStarfarersStatus" class="catan-starfarers-status" role="status" aria-live="polite">Waiting for game state…</div>
+              <div id="catanStarfarersPlayers" class="catan-starfarers-players" data-catan-starfarers-explain="players"></div>
+
+              <div class="catan-starfarers-layout">
+                <section class="catan-starfarers-map-card" aria-labelledby="catanStarfarersMapHeading" data-catan-starfarers-explain="map">
+                  <div class="catan-starfarers-section-heading">
+                    <div>
+                      <span class="catan-starfarers-kicker">Public frontier</span>
+                      <h3 id="catanStarfarersMapHeading">Star Map</h3>
+                    </div>
+                    <div id="catanStarfarersMothership" class="catan-starfarers-mothership" data-catan-starfarers-explain="mothership">No flight roll</div>
+                  </div>
+                  <div class="catan-starfarers-map-wrap">
+                    <svg id="catanStarfarersMap" class="catan-starfarers-map" viewBox="0 0 1000 650" role="img" aria-label="Interactive star map"></svg>
+                  </div>
+                  <div id="catanStarfarersMapHint" class="catan-starfarers-map-hint">Select one of your ships to plot its next edge.</div>
+                </section>
+
+                <aside class="catan-starfarers-console">
+                  <section class="catan-starfarers-hand-card" data-catan-starfarers-explain="resources">
+                    <div class="catan-starfarers-section-heading">
+                      <h3>Your Hold</h3>
+                      <span id="catanStarfarersReserveCount">Earth Reserve · -</span>
+                    </div>
+                    <div id="catanStarfarersHand" class="catan-starfarers-resource-strip"></div>
+                  </section>
+
+                  <section class="catan-starfarers-action-card" data-catan-starfarers-explain="actions">
+                    <div class="catan-starfarers-section-heading">
+                      <div>
+                        <span class="catan-starfarers-kicker">Command console</span>
+                        <h3 id="catanStarfarersActionHeading">Waiting</h3>
+                      </div>
+                    </div>
+                    <p id="catanStarfarersActionHint" class="catan-starfarers-action-hint"></p>
+                    <div id="catanStarfarersActions" class="catan-starfarers-actions"></div>
+                  </section>
+
+                  <section class="catan-starfarers-log-card" data-catan-starfarers-explain="log">
+                    <div class="catan-starfarers-section-heading">
+                      <h3>Flight Log</h3>
+                      <span>Newest first</span>
+                    </div>
+                    <div id="catanStarfarersLog" class="catan-starfarers-log" tabindex="0">No actions yet.</div>
+                  </section>
+                </aside>
+              </div>
+              <div id="catanStarfarersLiveRegion" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
             </div>
 
             <div id="bombBustersPanel" class="hidden bomb-busters-panel">
@@ -6830,6 +6919,26 @@
               </div>
             </div>
 
+            <div id="catanStarfarersHelpModal" class="modal hidden" aria-hidden="true">
+              <div class="modal-content catan-starfarers-modal-content" role="dialog" aria-modal="true" aria-labelledby="catanStarfarersHelpModalTitle">
+                <div class="modal-header">
+                  <h2 id="catanStarfarersHelpModalTitle">CATAN: Starfarers Help</h2>
+                  <button id="catanStarfarersHelpCloseBtn" type="button">Close</button>
+                </div>
+                <div id="catanStarfarersHelpContent" class="modal-body catan-starfarers-help-content"></div>
+              </div>
+            </div>
+
+            <div id="catanStarfarersExplainModal" class="modal hidden" aria-hidden="true">
+              <div class="modal-content catan-starfarers-modal-content" role="dialog" aria-modal="true" aria-labelledby="catanStarfarersExplainModalTitle">
+                <div class="modal-header">
+                  <h2 id="catanStarfarersExplainModalTitle">CATAN: Starfarers Explain</h2>
+                  <button id="catanStarfarersExplainCloseBtn" type="button">Close</button>
+                </div>
+                <div id="catanStarfarersExplainContent" class="modal-body"></div>
+              </div>
+            </div>
+
             <div id="davinciCodeExplainModal" class="modal davinci-explain-modal hidden" aria-hidden="true">
               <div class="modal-content">
                 <div class="modal-header">
@@ -6973,6 +7082,7 @@
   <script src="/static/games/bohnanza_dice.js?v=app_v8"></script>
   <script src="/static/games/emerald_skulls.js?v=app_v2"></script>
   <script src="/static/games/wriggle_roulette.js?v=app_v1"></script>
+  <script src="/static/games/catan_starfarers.js?v=app_v1"></script>
   <script src="/static/games/bomb_busters.js?v=app_v2"></script>
   <script src="/static/games/felix.js?v=app_v1"></script>
   <script src="/static/games/tacta.js?v=app_v7"></script>

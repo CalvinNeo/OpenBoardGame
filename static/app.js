@@ -32,6 +32,7 @@ const poisonPanel = document.getElementById("poisonPanel");
 const bohnanzaDicePanel = document.getElementById("bohnanzaDicePanel");
 const emeraldSkullsPanel = document.getElementById("emeraldSkullsPanel");
 const wriggleRoulettePanel = document.getElementById("wriggleRoulettePanel");
+const catanStarfarersPanel = document.getElementById("catanStarfarersPanel");
 const bombBustersPanel = document.getElementById("bombBustersPanel");
 const bombBustersConfigBox = document.getElementById("bombBustersConfigBox");
 const bombBustersPresetSelect = document.getElementById("bombBustersPresetSelect");
@@ -104,6 +105,7 @@ function setGamePanelVisibility(gameType) {
   const showBohnanzaDice = gameType === "bohnanza_dice";
   const showEmeraldSkulls = gameType === "emerald_skulls";
   const showWriggleRoulette = gameType === "wriggle_roulette";
+  const showCatanStarfarers = gameType === "catan_starfarers";
   const showBombBusters = gameType === "bomb_busters";
   const showFelix = gameType === "felix";
   const showTacta = gameType === "tacta";
@@ -261,6 +263,12 @@ function setGamePanelVisibility(gameType) {
   }
   if (typeof showWriggleRouletteHeaderActions === "function") {
     showWriggleRouletteHeaderActions(showWriggleRoulette);
+  }
+  if (catanStarfarersPanel) {
+    catanStarfarersPanel.classList.toggle("hidden", !showCatanStarfarers);
+  }
+  if (typeof showCatanStarfarersHeaderActions === "function") {
+    showCatanStarfarersHeaderActions(showCatanStarfarers);
   }
   if (bombBustersPanel) {
     bombBustersPanel.classList.toggle("hidden", !showBombBusters);
@@ -715,6 +723,10 @@ function renderGameState(data) {
   }
   if (gameType === "wriggle_roulette") {
     renderWriggleRouletteGameState(data);
+    return;
+  }
+  if (gameType === "catan_starfarers") {
+    renderCatanStarfarersGameState(data);
     return;
   }
   if (gameType === "bomb_busters") {

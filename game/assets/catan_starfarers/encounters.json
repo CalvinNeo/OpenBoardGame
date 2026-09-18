@@ -1,0 +1,226 @@
+[
+  {
+    "id": "encounter-01", "title": "Drifting Relay", "prompt": "A silent relay tumbles across your route.",
+    "options": [
+      {"id": "repair", "label": "Spend 1 Fuel to repair it", "requires": {"resources": {"fuel": 1}}, "result": "The relay broadcasts your call sign across the frontier.", "effects": [{"op": "spend", "resource": "fuel", "count": 1}, {"op": "gain_fame", "count": 2}]},
+      {"id": "scan", "label": "Scan it from a distance", "result": "A cargo registry yields one useful shipment.", "effects": [{"op": "gain_resource", "resource": "goods", "count": 1}]}
+    ]
+  },
+  {
+    "id": "encounter-02", "title": "Solar Wake", "prompt": "A fresh solar wake could fling your fleet forward.",
+    "options": [
+      {"id": "ride", "label": "Ride the wake", "result": "The risky slingshot adds two movement to every unfinished ship.", "effects": [{"op": "speed_bonus", "count": 2}]},
+      {"id": "shelter", "label": "Shelter behind the moonlet", "result": "You collect condensed fuel while waiting.", "effects": [{"op": "gain_resource", "resource": "fuel", "count": 1}]}
+    ]
+  },
+  {
+    "id": "encounter-03", "title": "Frontier Festival", "prompt": "A remote station invites your crew to its launch festival.",
+    "options": [
+      {"id": "sponsor", "label": "Spend 1 Goods as a sponsor", "requires": {"resources": {"goods": 1}}, "result": "The station celebrates your generosity.", "effects": [{"op": "spend", "resource": "goods", "count": 1}, {"op": "gain_fame", "count": 2}]},
+      {"id": "visit", "label": "Make a brief visit", "result": "Local growers restock your galley.", "effects": [{"op": "gain_resource", "resource": "food", "count": 1}]}
+    ]
+  },
+  {
+    "id": "encounter-04", "title": "Micrometeor Rain", "prompt": "A glittering micrometeor front closes around the fleet.",
+    "options": [
+      {"id": "push", "label": "Push through at full speed", "result": "You emerge ahead, but loose cargo is damaged.", "effects": [{"op": "speed_bonus", "count": 1}, {"op": "lose_resource", "count": 1}]},
+      {"id": "brace", "label": "Brace and protect the holds", "result": "The careful passage costs time but preserves the cargo.", "effects": []}
+    ]
+  },
+  {
+    "id": "encounter-05", "title": "Abandoned Foundry", "prompt": "An automated foundry still answers basic commands.",
+    "options": [
+      {"id": "restart", "label": "Spend 1 Carbon to restart it", "requires": {"resources": {"carbon": 1}}, "result": "The foundry prints a free booster module.", "effects": [{"op": "spend", "resource": "carbon", "count": 1}, {"op": "free_upgrade", "upgrade": "booster"}]},
+      {"id": "salvage", "label": "Salvage the outer frame", "result": "You recover a cache of ore.", "effects": [{"op": "gain_resource", "resource": "ore", "count": 1}]}
+    ]
+  },
+  {
+    "id": "encounter-06", "title": "Customs Buoy", "prompt": "A customs buoy requests a voluntary cargo declaration.",
+    "options": [
+      {"id": "declare", "label": "Return 1 random resource", "requires": {"hand_count": 1}, "result": "Your exemplary paperwork earns public praise.", "effects": [{"op": "lose_resource", "count": 1}, {"op": "gain_fame", "count": 2}]},
+      {"id": "detour", "label": "Take the long route", "result": "The detour is uneventful.", "effects": []}
+    ]
+  },
+  {
+    "id": "encounter-07", "title": "Carbon Comet", "prompt": "A porous comet carries unusually pure carbon.",
+    "options": [
+      {"id": "mine", "label": "Stop and mine it", "result": "The crew loads two Carbon.", "effects": [{"op": "gain_resource", "resource": "carbon", "count": 2}]},
+      {"id": "chart", "label": "Chart it for other travelers", "result": "The shared chart earns one Fame.", "effects": [{"op": "gain_fame", "count": 1}]}
+    ]
+  },
+  {
+    "id": "encounter-08", "title": "Distress Beacon", "prompt": "A damaged survey craft broadcasts a distress call.",
+    "options": [
+      {"id": "tow", "label": "Spend 1 Fuel to tow it home", "requires": {"resources": {"fuel": 1}}, "result": "The rescued crew tells everyone who helped them.", "effects": [{"op": "spend", "resource": "fuel", "count": 1}, {"op": "gain_fame", "count": 2}]},
+      {"id": "supplies", "label": "Leave emergency Food", "requires": {"resources": {"food": 1}}, "result": "The beacon logs your aid.", "effects": [{"op": "spend", "resource": "food", "count": 1}, {"op": "gain_fame", "count": 1}]}
+    ]
+  },
+  {
+    "id": "encounter-09", "title": "Gravity Knot", "prompt": "Space folds into a narrow gravity knot ahead.",
+    "options": [
+      {"id": "thread", "label": "Thread the center", "result": "A precise burn grants three extra movement.", "effects": [{"op": "speed_bonus", "count": 3}]},
+      {"id": "edge", "label": "Skirt the edge", "result": "The fleet stays on its planned course.", "effects": []}
+    ]
+  },
+  {
+    "id": "encounter-10", "title": "Pirate Decoy", "prompt": "A pirate decoy tries to draw your escort away.",
+    "options": [
+      {"id": "challenge", "label": "Challenge the signal", "requires": {"upgrade": {"cannon": 1}}, "result": "Your cannon signature scares off the ambush.", "effects": [{"op": "gain_fame", "count": 2}]},
+      {"id": "withdraw", "label": "Break contact", "result": "One ship must hold position for the rest of this flight.", "effects": [{"op": "lock_ship"}]}
+    ]
+  },
+  {
+    "id": "encounter-11", "title": "Fungal Ark", "prompt": "A living ark offers spores in exchange for provisions.",
+    "options": [
+      {"id": "trade", "label": "Spend 1 Food", "requires": {"resources": {"food": 1}}, "result": "The ark exchanges the food for two Goods.", "effects": [{"op": "spend", "resource": "food", "count": 1}, {"op": "gain_resource", "resource": "goods", "count": 2}]},
+      {"id": "observe", "label": "Observe without docking", "result": "The observation adds one Fame to your record.", "effects": [{"op": "gain_fame", "count": 1}]}
+    ]
+  },
+  {
+    "id": "encounter-12", "title": "Cold Reactor", "prompt": "A dormant reactor can power one last fabrication cycle.",
+    "options": [
+      {"id": "freight", "label": "Print a Freight Pod", "result": "The reactor completes a free freight module.", "effects": [{"op": "free_upgrade", "upgrade": "freight"}]},
+      {"id": "cannon", "label": "Print a Cannon", "result": "The reactor completes a free cannon module.", "effects": [{"op": "free_upgrade", "upgrade": "cannon"}]}
+    ]
+  },
+  {
+    "id": "encounter-13", "title": "Dust Harvest", "prompt": "A mineral-rich dust lane crosses your route.",
+    "options": [
+      {"id": "filter", "label": "Filter the dense core", "result": "The filters collect two Ore.", "effects": [{"op": "gain_resource", "resource": "ore", "count": 2}]},
+      {"id": "fast", "label": "Keep formation", "result": "Your fleet gains one extra movement.", "effects": [{"op": "speed_bonus", "count": 1}]}
+    ]
+  },
+  {
+    "id": "encounter-14", "title": "Nomad Market", "prompt": "Nomad traders open a short-lived market beside your route.",
+    "options": [
+      {"id": "buy", "label": "Spend 1 Ore for supplies", "requires": {"resources": {"ore": 1}}, "result": "The traders hand over one Food and one Fuel.", "effects": [{"op": "spend", "resource": "ore", "count": 1}, {"op": "gain_resource", "resource": "food", "count": 1}, {"op": "gain_resource", "resource": "fuel", "count": 1}]},
+      {"id": "news", "label": "Exchange navigation news", "result": "The nomads add your name to their route map.", "effects": [{"op": "gain_fame", "count": 1}]}
+    ]
+  },
+  {
+    "id": "encounter-15", "title": "Engine Harmonics", "prompt": "A strange resonance rattles every engine mount.",
+    "options": [
+      {"id": "tune", "label": "Spend 1 Fuel to tune the drives", "requires": {"resources": {"fuel": 1}}, "result": "The synchronized drives add two movement.", "effects": [{"op": "spend", "resource": "fuel", "count": 1}, {"op": "speed_bonus", "count": 2}]},
+      {"id": "idle", "label": "Power down briefly", "result": "The vibration passes without damage.", "effects": []}
+    ]
+  },
+  {
+    "id": "encounter-16", "title": "Archive Capsule", "prompt": "A sealed archive capsule requests a new custodian.",
+    "options": [
+      {"id": "open", "label": "Open the archive", "result": "The recovered maps earn two Fame, but fragile cargo is lost.", "effects": [{"op": "gain_fame", "count": 2}, {"op": "lose_resource", "count": 1}]},
+      {"id": "deliver", "label": "Deliver it unopened", "result": "The receiving network grants one Fame.", "effects": [{"op": "gain_fame", "count": 1}]}
+    ]
+  },
+  {
+    "id": "encounter-17", "title": "Ion Squall", "prompt": "An ion squall surges directly across the fleet.",
+    "options": [
+      {"id": "shield", "label": "Spend 1 Carbon on shielding", "requires": {"resources": {"carbon": 1}}, "result": "The improvised shielding preserves speed.", "effects": [{"op": "spend", "resource": "carbon", "count": 1}, {"op": "speed_bonus", "count": 1}]},
+      {"id": "weather", "label": "Weather the squall", "result": "A physical upgrade is shaken loose.", "effects": [{"op": "lose_upgrade"}]}
+    ]
+  },
+  {
+    "id": "encounter-18", "title": "Fuel Bloom", "prompt": "A luminous cloud contains stable fuel droplets.",
+    "options": [
+      {"id": "collect", "label": "Collect the droplets", "result": "The holds receive two Fuel.", "effects": [{"op": "gain_resource", "resource": "fuel", "count": 2}]},
+      {"id": "broadcast", "label": "Broadcast the coordinates", "result": "Sharing the find earns one Fame.", "effects": [{"op": "gain_fame", "count": 1}]}
+    ]
+  },
+  {
+    "id": "encounter-19", "title": "Orbital Kitchen", "prompt": "A famous orbital kitchen needs an urgent delivery.",
+    "options": [
+      {"id": "deliver", "label": "Spend 2 Food", "requires": {"resources": {"food": 2}}, "result": "The grateful chefs award three Fame.", "effects": [{"op": "spend", "resource": "food", "count": 2}, {"op": "gain_fame", "count": 3}]},
+      {"id": "sample", "label": "Trade stories with the staff", "result": "You leave with one Food.", "effects": [{"op": "gain_resource", "resource": "food", "count": 1}]}
+    ]
+  },
+  {
+    "id": "encounter-20", "title": "Magnetic Wreck", "prompt": "A wreck's magnetic field grips nearby metal.",
+    "options": [
+      {"id": "salvage", "label": "Risk a close salvage", "result": "You recover a free cannon, but lose one random resource.", "effects": [{"op": "free_upgrade", "upgrade": "cannon"}, {"op": "lose_resource", "count": 1}]},
+      {"id": "mark", "label": "Mark the hazard", "result": "The safety notice earns one Fame.", "effects": [{"op": "gain_fame", "count": 1}]}
+    ]
+  },
+  {
+    "id": "encounter-21", "title": "Quiet Convoy", "prompt": "A quiet convoy asks to share your navigation corridor.",
+    "options": [
+      {"id": "escort", "label": "Escort the convoy", "result": "The convoy's gratitude becomes two Fame.", "effects": [{"op": "gain_fame", "count": 2}, {"op": "lock_ship"}]},
+      {"id": "coordinates", "label": "Send route coordinates", "result": "The convoy transfers one Goods.", "effects": [{"op": "gain_resource", "resource": "goods", "count": 1}]}
+    ]
+  },
+  {
+    "id": "encounter-22", "title": "Prototype Drive", "prompt": "A research team offers a volatile prototype drive.",
+    "options": [
+      {"id": "test", "label": "Test the prototype", "result": "The drive adds three movement, then consumes one random resource.", "effects": [{"op": "speed_bonus", "count": 3}, {"op": "lose_resource", "count": 1}]},
+      {"id": "decline", "label": "Decline and review the notes", "result": "The notes improve one booster for free.", "effects": [{"op": "free_upgrade", "upgrade": "booster"}]}
+    ]
+  },
+  {
+    "id": "encounter-23", "title": "Comet Monastery", "prompt": "A monastery carved into a comet welcomes travelers.",
+    "options": [
+      {"id": "donate", "label": "Donate 1 Goods", "requires": {"resources": {"goods": 1}}, "result": "The donation is remembered throughout the frontier.", "effects": [{"op": "spend", "resource": "goods", "count": 1}, {"op": "gain_fame", "count": 2}]},
+      {"id": "rest", "label": "Rest with the caretakers", "result": "They refill one Food.", "effects": [{"op": "gain_resource", "resource": "food", "count": 1}]}
+    ]
+  },
+  {
+    "id": "encounter-24", "title": "Ore Moonlet", "prompt": "A tiny moonlet is rich in exposed ore seams.",
+    "options": [
+      {"id": "extract", "label": "Extract two Ore", "result": "The compact mining run fills two holds.", "effects": [{"op": "gain_resource", "resource": "ore", "count": 2}]},
+      {"id": "survey", "label": "Publish a public survey", "result": "The survey earns one Fame.", "effects": [{"op": "gain_fame", "count": 1}]}
+    ]
+  },
+  {
+    "id": "encounter-25", "title": "Signal Garden", "prompt": "A garden of autonomous beacons begins copying your signal.",
+    "options": [
+      {"id": "compose", "label": "Compose a greeting", "result": "The greeting spreads, earning two Fame.", "effects": [{"op": "gain_fame", "count": 2}]},
+      {"id": "harvest", "label": "Harvest an unused cell", "result": "The cell provides one Fuel.", "effects": [{"op": "gain_resource", "resource": "fuel", "count": 1}]}
+    ]
+  },
+  {
+    "id": "encounter-26", "title": "Freight Lottery", "prompt": "A cargo cooperative offers one sealed container.",
+    "options": [
+      {"id": "open", "label": "Open the container", "result": "Inside is a free freight module.", "effects": [{"op": "free_upgrade", "upgrade": "freight"}]},
+      {"id": "resell", "label": "Resell the claim", "result": "The claim brings one Goods.", "effects": [{"op": "gain_resource", "resource": "goods", "count": 1}]}
+    ]
+  },
+  {
+    "id": "encounter-27", "title": "Unstable Gate", "prompt": "An unstable gate flickers between two safe alignments.",
+    "options": [
+      {"id": "enter", "label": "Enter the gate", "result": "The jump adds four movement, but strips one physical upgrade.", "effects": [{"op": "speed_bonus", "count": 4}, {"op": "lose_upgrade"}]},
+      {"id": "bypass", "label": "Bypass the gate", "result": "You preserve the fleet and gather one Carbon.", "effects": [{"op": "gain_resource", "resource": "carbon", "count": 1}]}
+    ]
+  },
+  {
+    "id": "encounter-28", "title": "Frontier Broadcast", "prompt": "A live frontier broadcast asks for a captain's story.",
+    "options": [
+      {"id": "story", "label": "Join the broadcast", "result": "The interview adds one Fame.", "effects": [{"op": "gain_fame", "count": 1}]},
+      {"id": "sponsor", "label": "Sponsor it with 1 Goods", "requires": {"resources": {"goods": 1}}, "result": "The sponsored program adds three Fame.", "effects": [{"op": "spend", "resource": "goods", "count": 1}, {"op": "gain_fame", "count": 3}]}
+    ]
+  },
+  {
+    "id": "encounter-29", "title": "Frozen Antenna", "prompt": "A frozen antenna contains valuable route logs.",
+    "options": [
+      {"id": "thaw", "label": "Spend 1 Fuel to thaw it", "requires": {"resources": {"fuel": 1}}, "result": "The route logs add two movement and one Fame.", "effects": [{"op": "spend", "resource": "fuel", "count": 1}, {"op": "speed_bonus", "count": 2}, {"op": "gain_fame", "count": 1}]},
+      {"id": "leave", "label": "Leave a warning marker", "result": "The warning adds one Fame.", "effects": [{"op": "gain_fame", "count": 1}]}
+    ]
+  },
+  {
+    "id": "encounter-30", "title": "Hull Choir", "prompt": "Resonant crystals make every hull sing in harmony.",
+    "options": [
+      {"id": "record", "label": "Record the resonance", "result": "The recording earns two Fame.", "effects": [{"op": "gain_fame", "count": 2}]},
+      {"id": "collect", "label": "Collect crystal fragments", "result": "The fragments count as one Carbon and one Ore.", "effects": [{"op": "gain_resource", "resource": "carbon", "count": 1}, {"op": "gain_resource", "resource": "ore", "count": 1}]}
+    ]
+  },
+  {
+    "id": "encounter-31", "title": "Emergency Dock", "prompt": "An emergency dock offers one rapid refit before it closes.",
+    "options": [
+      {"id": "booster", "label": "Install a Booster", "result": "The dock installs a free booster.", "effects": [{"op": "free_upgrade", "upgrade": "booster"}]},
+      {"id": "freight", "label": "Install a Freight Pod", "result": "The dock installs a free freight pod.", "effects": [{"op": "free_upgrade", "upgrade": "freight"}]}
+    ]
+  },
+  {
+    "id": "encounter-32", "title": "Last Light", "prompt": "A fading beacon has enough power for one final message.",
+    "options": [
+      {"id": "carry", "label": "Carry its message onward", "result": "The promise earns two Fame but one ship stays to download it.", "effects": [{"op": "gain_fame", "count": 2}, {"op": "lock_ship"}]},
+      {"id": "salvage", "label": "Recover its remaining cell", "result": "The cell provides one Fuel.", "effects": [{"op": "gain_resource", "resource": "fuel", "count": 1}]}
+    ]
+  }
+]

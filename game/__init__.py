@@ -9,6 +9,7 @@ from game.blitz_sketch import BlitzSketchGame
 from game.bohnanza_dice import BohnanzaDiceGame
 from game.bomb_busters import BombBustersGame
 from game.carcassonne import CarcassonneGame
+from game.catan_starfarers import CatanStarfarersGame
 from game.cabo import CaboGame
 from game.celestia import CelestiaGame
 from game.cat_in_box import CatInBoxGame
@@ -82,6 +83,7 @@ __all__ = [
     "BohnanzaDiceGame",
     "BombBustersGame",
     "CarcassonneGame",
+    "CatanStarfarersGame",
     "CaboGame",
     "CelestiaGame",
     "CatInBoxGame",

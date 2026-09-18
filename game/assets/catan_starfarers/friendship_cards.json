@@ -1,0 +1,22 @@
+[
+  {"id": "diplomats-open-hold", "civilization": "diplomats", "name": "Open Hold", "description": "Your tribute hand limit is 12.", "effect": {"hand_limit": 12}},
+  {"id": "diplomats-relief", "civilization": "diplomats", "name": "Relief Charter", "description": "Gain 1 Fame immediately.", "effect": {"immediate_fame": 1}},
+  {"id": "diplomats-envoy", "civilization": "diplomats", "name": "Deep-Space Envoy", "description": "Gain 1 Fame immediately.", "effect": {"immediate_fame": 1}},
+  {"id": "diplomats-concord", "civilization": "diplomats", "name": "Concord", "description": "Gain 1 Fame immediately.", "effect": {"immediate_fame": 1}},
+  {"id": "diplomats-hospitality", "civilization": "diplomats", "name": "Hospitality", "description": "Draw one reserve card immediately.", "effect": {"immediate_reserve": 1}},
+  {"id": "merchants-ore", "civilization": "merchants", "name": "Ore Exchange", "description": "Trade Ore with the supply at 2:1.", "effect": {"bank_rate": {"resource": "ore", "rate": 2}}},
+  {"id": "merchants-fuel", "civilization": "merchants", "name": "Fuel Exchange", "description": "Trade Fuel with the supply at 2:1.", "effect": {"bank_rate": {"resource": "fuel", "rate": 2}}},
+  {"id": "merchants-carbon", "civilization": "merchants", "name": "Carbon Exchange", "description": "Trade Carbon with the supply at 2:1.", "effect": {"bank_rate": {"resource": "carbon", "rate": 2}}},
+  {"id": "merchants-food", "civilization": "merchants", "name": "Food Exchange", "description": "Trade Food with the supply at 2:1.", "effect": {"bank_rate": {"resource": "food", "rate": 2}}},
+  {"id": "merchants-goods", "civilization": "merchants", "name": "Goods Broker", "description": "Your Goods trades are 1:1 once per turn.", "effect": {"goods_once_rate": 1}},
+  {"id": "green-folk-ore", "civilization": "green_folk", "name": "Ore Cultivation", "description": "When you produce Ore, gain 1 extra Ore.", "effect": {"production_bonus": "ore"}},
+  {"id": "green-folk-fuel", "civilization": "green_folk", "name": "Fuel Bloom", "description": "When you produce Fuel, gain 1 extra Fuel.", "effect": {"production_bonus": "fuel"}},
+  {"id": "green-folk-carbon", "civilization": "green_folk", "name": "Carbon Grove", "description": "When you produce Carbon, gain 1 extra Carbon.", "effect": {"production_bonus": "carbon"}},
+  {"id": "green-folk-food", "civilization": "green_folk", "name": "Food Garden", "description": "When you produce Food, gain 1 extra Food.", "effect": {"production_bonus": "food"}},
+  {"id": "green-folk-goods", "civilization": "green_folk", "name": "Living Workshop", "description": "When you produce Goods, gain 1 extra Goods.", "effect": {"production_bonus": "goods"}},
+  {"id": "scientists-cannon-2", "civilization": "scientists", "name": "Pulse Battery", "description": "+2 effective Cannon against pirate bases.", "effect": {"cannon_bonus": 2}},
+  {"id": "scientists-booster-2", "civilization": "scientists", "name": "Fold Lens", "description": "+2 flight speed.", "effect": {"movement_bonus": 2}},
+  {"id": "scientists-hybrid-a", "civilization": "scientists", "name": "Vector Lab", "description": "+1 Cannon and +1 flight speed.", "effect": {"cannon_bonus": 1, "movement_bonus": 1}},
+  {"id": "scientists-hybrid-b", "civilization": "scientists", "name": "Field Lab", "description": "+1 Cannon and +1 flight speed.", "effect": {"cannon_bonus": 1, "movement_bonus": 1}},
+  {"id": "scientists-hybrid-c", "civilization": "scientists", "name": "Orbital Lab", "description": "+1 Cannon and +1 flight speed.", "effect": {"cannon_bonus": 1, "movement_bonus": 1}}
+]

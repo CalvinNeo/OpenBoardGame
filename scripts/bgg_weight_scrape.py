@@ -26,6 +26,7 @@ GAME_URLS = {
     "bohnanza_dice": "https://boardgamegeek.com/boardgame/368093/bohnanza-das-wurfelspiel",
     "emerald_skulls": "https://boardgamegeek.com/boardgame/421762/emerald-skulls",
     "wriggle_roulette": "https://boardgamegeek.com/boardgame/443829/wriggle-roulette",
+    "catan_starfarers": "https://boardgamegeek.com/boardgame/282853/catan-starfarers",
     "bomb_busters": "https://boardgamegeek.com/boardgame/413246/bomb-busters",
     "perfect_mismatch": "https://boardgamegeek.com/boardgame/424482/perfect-mismatch",
     "age_of_war": "https://boardgamegeek.com/boardgame/28086/age-of-war",

@@ -227,6 +227,16 @@ function renderRoomState(state) {
       setForestShuffleLanguage(language);
     }
   }
+  const showCatanStarfarersSetup = state.game_type === "catan_starfarers";
+  if (catanStarfarersRoomSetupRow) {
+    catanStarfarersRoomSetupRow.classList.toggle("hidden", !showCatanStarfarersSetup);
+  }
+  if (catanStarfarersRoomSetup) {
+    const mode = state.game_config && state.game_config.setup_mode
+      ? state.game_config.setup_mode
+      : "beginner";
+    catanStarfarersRoomSetup.textContent = mode.replaceAll("_", " ");
+  }
   updateRoomControlsForStatus(state.status);
   if (previousGame !== currentGameType) {
     clearSelection();
@@ -317,6 +327,9 @@ function renderRoomState(state) {
     }
     if (typeof clearBombBustersState === "function") {
       clearBombBustersState();
+    }
+    if (typeof clearCatanStarfarersState === "function") {
+      clearCatanStarfarersState();
     }
     if (typeof clearCenturyState === "function") {
       clearCenturyState();
