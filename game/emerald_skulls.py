@@ -921,11 +921,28 @@ class EmeraldSkullsGame:
         if state.get("phase") == "after_roll":
             options = _placement_options(state)
             if options:
+                board_counts = {
+                    level: sum(
+                        1
+                        for die in _board_dice(state)
+                        if int(die.get("level", 0)) == level
+                    )
+                    for level in options
+                }
                 level = min(
                     options,
-                    key=lambda value: (-len(options[value]), value),
+                    key=lambda value: (
+                        -min(len(options[value]), LEVEL_CAPACITY[value] - board_counts[value]),
+                        value,
+                    ),
                 )
-                return {"type": "place_dice", "level": level, "die_ids": options[level], "delay_ms": 450}
+                free = LEVEL_CAPACITY[level] - board_counts[level]
+                return {
+                    "type": "place_dice",
+                    "level": level,
+                    "die_ids": options[level][:free],
+                    "delay_ms": 450,
+                }
             if "spend_reroll_cube" in legal:
                 return {"type": "spend_reroll_cube", "delay_ms": 350}
             if "pick_nose" in legal:

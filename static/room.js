@@ -630,6 +630,7 @@ const GAME_WEIGHT = {
   blitz_sketch: 1.0,
   bohnanza_dice: 1.17,
   emerald_skulls: 1.93,
+  wriggle_roulette: 1.00,
   cabo: 1.4,
   carcassonne: 1.89,
   cat_in_box: 2.03,
@@ -1679,6 +1680,9 @@ function resetRoomState() {
   }
   if (typeof clearBohnanzaDiceState === "function") {
     clearBohnanzaDiceState();
+  }
+  if (typeof clearWriggleRouletteState === "function") {
+    clearWriggleRouletteState();
   }
   if (typeof clearBombBustersState === "function") {
     clearBombBustersState();

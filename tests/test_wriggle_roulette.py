@@ -68,7 +68,7 @@ class WriggleRouletteGameTests(unittest.TestCase):
 
     def test_all_hands_reveal_together_and_require_active_humans(self):
         state = _new_state()
-        _set_next_draws(state, ["eel-001", "snake-001", "eel-002"])
+        _set_next_draws(state, ["eel-01", "snake-01", "eel-02"])
         first, _, error = _grab_for_current(state, 2)
         self.assertIsNone(error)
         second, events, error = _grab_for_current(state, 1)
@@ -83,7 +83,7 @@ class WriggleRouletteGameTests(unittest.TestCase):
     def test_zero_banks_eels_and_withdrawn_player_does_not_block_review(self):
         state = _new_state()
         order = list(state["cycle_order"])
-        _set_next_draws(state, ["eel-001", "eel-002"])
+        _set_next_draws(state, ["eel-01", "eel-02"])
         _grab_for_current(state, 1)
         _grab_for_current(state, 1)
         for player_id in order:
@@ -95,7 +95,7 @@ class WriggleRouletteGameTests(unittest.TestCase):
             self.assertIsNone(error)
         withdrawing = state["current_player_id"]
         continuing = next(player_id for player_id in state["turn_order"] if player_id != withdrawing)
-        _set_next_draws(state, ["eel-003"])
+        _set_next_draws(state, ["eel-03"])
         _grab_for_current(state, 0)
         self.assertEqual(state["current_player_id"], continuing)
         _grab_for_current(state, 1)
@@ -110,7 +110,7 @@ class WriggleRouletteGameTests(unittest.TestCase):
         state = _new_state()
         _set_next_draws(
             state,
-            ["snake-001", "snake-002", "snake-003", "snake-004", "snake-005", "snake-006"],
+            ["snake-01", "snake-02", "snake-03", "snake-04", "snake-05", "snake-06"],
         )
         _grab_for_current(state, 3)
         _grab_for_current(state, 3)
@@ -127,13 +127,13 @@ class WriggleRouletteGameTests(unittest.TestCase):
         _set_next_draws(
             state,
             [
-                "snake-001",
-                "snake-002",
-                "snake-003",
-                "snake-004",
-                "snake-005",
-                "snake-006",
-                "eel-001",
+                "snake-01",
+                "snake-02",
+                "snake-03",
+                "snake-04",
+                "snake-05",
+                "snake-06",
+                "eel-01",
             ],
         )
         _grab_for_current(state, 4)
@@ -150,7 +150,7 @@ class WriggleRouletteGameTests(unittest.TestCase):
         state["players"][late]["score"] = 18
         _take_eel_into_round(state, early)
         _take_eel_into_round(state, late)
-        _set_next_draws(state, ["eel-051"])
+        _set_next_draws(state, ["eel-51"])
 
         _grab_for_current(state, 0)
         _grab_for_current(state, 1)
@@ -180,6 +180,50 @@ class WriggleRouletteGameTests(unittest.TestCase):
         )
         self.assertEqual(error, "that grab belongs to an old cycle")
         self.assertEqual(state, before)
+
+    def test_round_review_waits_for_every_human_and_uses_final_actor_as_starter(self):
+        state = _new_state()
+        next_starter = state["cycle_order"][-1]
+        _set_next_draws(
+            state,
+            ["snake-01", "snake-02", "snake-03", "snake-04", "snake-05", "snake-06"],
+        )
+        _grab_for_current(state, 3)
+        _grab_for_current(state, 3)
+        self.assertEqual(state["phase"], "round_review")
+
+        first_ready = state["turn_order"][0]
+        _, error = WriggleRouletteGame.apply_action(
+            state,
+            first_ready,
+            {"type": "next_round", "round_no": 1},
+        )
+        self.assertIsNone(error)
+        self.assertEqual(state["phase"], "round_review")
+        second_ready = state["turn_order"][1]
+        _, error = WriggleRouletteGame.apply_action(
+            state,
+            second_ready,
+            {"type": "next_round", "round_no": 1},
+        )
+        self.assertIsNone(error)
+        self.assertEqual(state["phase"], "choosing")
+        self.assertEqual(state["round_no"], 2)
+        self.assertEqual(state["current_player_id"], next_starter)
+
+    def test_two_bot_game_reaches_a_winner_without_review_deadlock(self):
+        state = _new_state(bots=("p1", "p2"))
+        for _ in range(1000):
+            if state["game_over"]:
+                break
+            bot_id = state["current_player_id"]
+            action = WriggleRouletteGame.bot_move(state, bot_id)
+            self.assertIsNotNone(action)
+            action.pop("delay_ms", None)
+            _, error = WriggleRouletteGame.apply_action(state, bot_id, action)
+            self.assertIsNone(error)
+        self.assertTrue(state["game_over"])
+        self.assertTrue(state["winner_ids"])
 
     def test_bot_choice_uses_public_counts_not_hidden_bag_order(self):
         state = _new_state(bots=("p1", "p2"))

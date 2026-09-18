@@ -127,6 +127,16 @@ class EmeraldSkullsGameTests(unittest.TestCase):
         self.assertIsNotNone(error)
         self.act(state, active, {"type": "place_dice", "level": 4, "die_ids": eyes[:2]})
 
+    def test_bot_limits_placement_to_the_level_capacity(self):
+        state = self.make_state(2, bot_ids=("p1", "p2"))
+        active = self.buy_and_roll(state, 3)
+        self.set_rolled_faces(state, [4, 4, 4])
+        move = EmeraldSkullsGame.bot_move(state, active)
+        self.assertEqual(move["type"], "place_dice")
+        self.assertEqual(move["level"], 4)
+        self.assertEqual(len(move["die_ids"]), 2)
+        self.act(state, active, move)
+
     def test_reroll_cube_adds_a_die_and_nose_pick_keeps_floor(self):
         state = self.make_state()
         active = state["active_player_id"]
@@ -249,6 +259,41 @@ class EmeraldSkullsGameTests(unittest.TestCase):
         self.assertEqual([award["paid"] for award in awards], [5, 3])
         self.assertEqual(state["players"][gamblers[0]]["gears"], 5)
         self.assertEqual(state["players"][gamblers[1]]["gears"], 3)
+
+    def test_all_standard_bet_conditions(self):
+        def winning_bets(result, placements=(), nose_picks=0):
+            state = self.make_state()
+            for die in state["dice"]:
+                die.update({"face": None, "zone": "supply", "level": None})
+            for die, (face, level) in zip(state["dice"], placements):
+                die.update({"face": face, "zone": "board", "level": level})
+            state["result"] = result
+            state["nose_picks"] = nose_picks
+            view = EmeraldSkullsGame.get_public_view(state, state["turn_order"][0])
+            return {bet["bet_id"] for bet in view["betting_options"] if bet["won"]}
+
+        self.assertEqual(winning_bets("bust_out"), {"busted_fowl"})
+        self.assertEqual(
+            winning_bets("bust_out", nose_picks=1),
+            {"pick_bust", "busted_fowl"},
+        )
+        self.assertEqual(winning_bets("chicken_out", [(1, 1)]), {"busted_fowl"})
+        self.assertEqual(winning_bets("gem_out", [(5, 5)]), {"final_jewel"})
+        self.assertEqual(
+            winning_bets("gem_out", [("skull", 5)]),
+            {"mad_nargash", "final_jewel"},
+        )
+        self.assertEqual(
+            winning_bets("run_out", [(1, 1), (2, 2)]),
+            {"grim_grin", "empty_hands"},
+        )
+        self.assertEqual(
+            winning_bets(
+                "double_out",
+                [(1, 1), (1, 1), (2, 2), (3, 3), (4, 4), (4, 4), (5, 5)],
+            ),
+            {"emerald_skull", "final_jewel", "empty_hands", "empty_shiny"},
+        )
 
     def test_supply_exhaustion_ends_immediately(self):
         state = self.make_state(2)

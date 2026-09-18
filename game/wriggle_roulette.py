@@ -21,8 +21,8 @@ def _token_kind(token_id: str) -> str:
 
 
 def _all_tokens() -> List[str]:
-    return [f"eel-{index:03d}" for index in range(1, EEL_COUNT + 1)] + [
-        f"snake-{index:03d}" for index in range(1, SNAKE_COUNT + 1)
+    return [f"eel-{index:02d}" for index in range(1, EEL_COUNT + 1)] + [
+        f"snake-{index:02d}" for index in range(1, SNAKE_COUNT + 1)
     ]
 
 
@@ -304,6 +304,17 @@ def _resolve_cycle(state: Dict, events: List[Dict]) -> None:
             outbreak=True,
             results=copy.deepcopy(result_rows),
         )
+        _record(
+            state,
+            events,
+            "outbreak",
+            f"Every largest hand busted at the {state['outbreak_threshold']}-snake limit.",
+            round_no=state["round_no"],
+            cycle_no=state["cycle_no"],
+            threshold=state["outbreak_threshold"],
+            snake_total=outbreak_snakes,
+            busted_ids=list(busted_ids),
+        )
         _finish_round(state, "outbreak", busted_ids, events)
         return
 
@@ -447,6 +458,14 @@ def _initial_state(players: List[Dict], game_index: int = 1) -> Dict:
     }
     _shuffle_bag(state, _all_tokens())
     _prepare_cycle(state, start_player_id)
+    _record(
+        state,
+        [],
+        "game_started",
+        f"{_player_name(state, start_player_id)} starts the first grab.",
+        game_index=state["game_index"],
+        starting_player_id=start_player_id,
+    )
     _assert_state(state)
     return state
 
@@ -605,12 +624,14 @@ class WriggleRouletteGame:
                 fresh = _initial_state(players, game_index=game_index)
                 state.clear()
                 state.update(fresh)
-                _record(
-                    state,
-                    events,
-                    "game_started",
-                    f"Game {game_index} started.",
-                    game_index=game_index,
+                events.append(
+                    {
+                        "type": "wriggle_roulette:game_started",
+                        "payload": {
+                            "game_index": game_index,
+                            "starting_player_id": state["round_start_player_id"],
+                        },
+                    }
                 )
 
         _assert_state(state)

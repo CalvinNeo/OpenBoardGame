@@ -31,6 +31,7 @@ const highSocietyPanel = document.getElementById("highSocietyPanel");
 const poisonPanel = document.getElementById("poisonPanel");
 const bohnanzaDicePanel = document.getElementById("bohnanzaDicePanel");
 const emeraldSkullsPanel = document.getElementById("emeraldSkullsPanel");
+const wriggleRoulettePanel = document.getElementById("wriggleRoulettePanel");
 const bombBustersPanel = document.getElementById("bombBustersPanel");
 const bombBustersConfigBox = document.getElementById("bombBustersConfigBox");
 const bombBustersPresetSelect = document.getElementById("bombBustersPresetSelect");
@@ -102,6 +103,7 @@ function setGamePanelVisibility(gameType) {
   const showPoison = gameType === "poison";
   const showBohnanzaDice = gameType === "bohnanza_dice";
   const showEmeraldSkulls = gameType === "emerald_skulls";
+  const showWriggleRoulette = gameType === "wriggle_roulette";
   const showBombBusters = gameType === "bomb_busters";
   const showFelix = gameType === "felix";
   const showTacta = gameType === "tacta";
@@ -253,6 +255,12 @@ function setGamePanelVisibility(gameType) {
   }
   if (typeof showEmeraldSkullsHeaderActions === "function") {
     showEmeraldSkullsHeaderActions(showEmeraldSkulls);
+  }
+  if (wriggleRoulettePanel) {
+    wriggleRoulettePanel.classList.toggle("hidden", !showWriggleRoulette);
+  }
+  if (typeof showWriggleRouletteHeaderActions === "function") {
+    showWriggleRouletteHeaderActions(showWriggleRoulette);
   }
   if (bombBustersPanel) {
     bombBustersPanel.classList.toggle("hidden", !showBombBusters);
@@ -703,6 +711,10 @@ function renderGameState(data) {
   }
   if (gameType === "emerald_skulls") {
     renderEmeraldSkullsGameState(data);
+    return;
+  }
+  if (gameType === "wriggle_roulette") {
+    renderWriggleRouletteGameState(data);
     return;
   }
   if (gameType === "bomb_busters") {
