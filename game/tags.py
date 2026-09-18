@@ -57,6 +57,7 @@ GAME_TAG_IDS: Dict[str, Tuple[str, ...]] = {
     "decrypto": ("puzzle", "creative"),
     "draw_guess": ("filler", "creative"),
     "dumb_questions": ("filler", "creative"),
+    "emerald_skulls": ("filler", "push_your_luck", "auction"),
     "fake_artist": ("filler", "bluffing", "creative"),
     "fang_niao": ("filler",),
     "felix": ("filler", "bluffing", "auction"),
@@ -103,6 +104,7 @@ GAME_TAG_IDS: Dict[str, Tuple[str, ...]] = {
     "wandering_towers": ("filler", "euro", "ameritrash"),
     "wavelength": ("filler", "cooperative", "creative"),
     "witchs_brew": ("euro", "bluffing"),
+    "wriggle_roulette": ("filler", "push_your_luck", "bluffing"),
     "word_decode": ("filler", "puzzle", "creative"),
     "yahtzee": ("filler", "push_your_luck"),
 }

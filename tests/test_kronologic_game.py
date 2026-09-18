@@ -140,8 +140,25 @@ class KronologicFrontendIntegrationTests(unittest.TestCase):
             "kronologicHelpModal",
             "kronologicExplainModal",
             "kronologicAccusationModal",
+            "kronologicNotebookDockBtn",
+            "kronologicNotebookBackdrop",
+            "kronologicNotebookSection",
+            "kronologicNotebookCloseBtn",
+            "kronologicClueHistory",
         ):
             self.assertEqual(index.count(f'id="{element_id}"'), 1)
+
+    def test_mobile_notebook_and_bound_clue_history_are_wired(self):
+        index = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
+        script = (ROOT / "static" / "games" / "kronologic.js").read_text(encoding="utf-8")
+        styles = (ROOT / "static" / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn('aria-controls="kronologicNotebookSection"', index)
+        self.assertIn('new Map(privateItems.map((clue) => [String(clue.clue_id), clue]))', script)
+        self.assertIn('kronologicSetNotebookOpen(false)', script)
+        self.assertIn("#kronologicNotebookSection.kronologic-notebook.is-open", styles)
+        self.assertNotIn("kronologicPublicClues", script)
+        self.assertNotIn("kronologicPrivateClues", script)
 
     def test_room_render_and_reset_hooks_are_wired(self):
         shared = (ROOT / "static" / "games" / "shared.js").read_text(encoding="utf-8")

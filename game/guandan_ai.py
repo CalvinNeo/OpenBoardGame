@@ -1707,7 +1707,9 @@ def _compute_lead_option_score(state: Dict, player_id: str, cards: List[int]) ->
 
     if combo["type"] == "single":
         score -= _lead_single_break_penalty(hand, cards, state["level_rank"])
-        score += _lead_low_single_escape_bonus(hand, cards, state["level_rank"])
+        escape_bonus = _lead_low_single_escape_bonus(hand, cards, state["level_rank"])
+        escape_bonus *= _lead_low_single_escape_context_scale(state, player_id, cards, combo)
+        score += escape_bonus
         score -= _lead_single_initiative_penalty(state, player_id, cards, combo)
 
     # The shared core performs this cheap check for short tails.  Detailed mode
@@ -3801,7 +3803,15 @@ def _critical_pair_three_bomb_bonus(
 
 
 def _lead_low_single_escape_bonus(hand: List[Dict], cards: List[int], level_rank: int) -> float:
-    if len(cards) != 1 or len(hand) > 10:
+    """Reward shedding a genuine orphan without making the hand harder to finish.
+
+    This is intentionally based on the shape transition rather than a fixed
+    endgame hand size.  A low singleton is useful to lead when removing it
+    preserves the existing groups and does not increase the projected number
+    of turns.  Hand pressure, grouped-card density, and remaining control then
+    scale the preference instead of acting as brittle on/off requirements.
+    """
+    if len(cards) != 1:
         return 0.0
     hand_map = _map_hand_by_id(hand)
     card = hand_map.get(cards[0])
@@ -3816,22 +3826,58 @@ def _lead_low_single_escape_bonus(hand: List[Dict], cards: List[int], level_rank
     value = _single_order_value(card, level_rank)
     if value >= LOW_SINGLE_VALUE_MAX:
         return 0.0
-    bonus = 3.0 + (LOW_SINGLE_VALUE_MAX - value) * 0.55
-    if len(hand) > 6:
-        remaining = _remove_cards(hand, cards)
-        decomp = _hand_decomposition_summary(remaining, level_rank)
-        has_reentry = _control_card_score(remaining, level_rank) > 0.0
-        if not has_reentry or decomp.get("group_turns", 0.0) < 2.0:
-            return 0.0
-        if decomp.get("grouped_cards", 0.0) < 6.0:
-            return 0.0
-        # In a short, grouped endgame the control card can win the single lane
-        # back after this probe. Clear the stranded low singleton before
-        # spending one of the intact groups and creating an all-single tail.
-        bonus *= 0.9
-    if len(hand) <= 5:
-        bonus *= 1.2
-    return bonus
+
+    remaining = _remove_cards(hand, cards)
+    if not remaining:
+        return 0.0
+
+    before = _hand_decomposition_summary(hand, level_rank)
+    after = _hand_decomposition_summary(remaining, level_rank)
+    projected_turns = after.get("turns", float(len(remaining))) + 1.0
+    if projected_turns > before.get("turns", float(len(hand))) + 0.01:
+        return 0.0
+    if after.get("group_turns", 0.0) + 0.01 < before.get("group_turns", 0.0):
+        return 0.0
+    if after.get("grouped_cards", 0.0) + 0.01 < before.get("grouped_cards", 0.0):
+        return 0.0
+    if after.get("bomb_turns", 0.0) + 0.01 < before.get("bomb_turns", 0.0):
+        return 0.0
+
+    low_single_relief = before.get("low_singles", 0.0) - after.get("low_singles", 0.0)
+    if low_single_relief < 0.5:
+        return 0.0
+
+    # The same structural improvement matters more as the hand gets shorter.
+    # Use a smooth pressure curve so this does not turn into another hand-size
+    # rule: the preference fades naturally in deep hands and becomes material
+    # around the middle-to-late transition.
+    hand_pressure = 1.0 / (1.0 + math.exp((float(len(hand)) - 14.5) * 1.1))
+    grouped_density = after.get("grouped_cards", 0.0) / max(1.0, float(len(remaining)))
+    grouped_density = max(0.0, min(1.0, grouped_density))
+    control_scale = max(0.0, min(1.0, _control_card_score(remaining, level_rank) / 3.0))
+    confidence = min(1.0, 0.55 + grouped_density * 0.30 + control_scale * 0.15)
+
+    rank_urgency = 3.0 + (LOW_SINGLE_VALUE_MAX - value) * 0.55
+    bonus = rank_urgency * confidence
+    bonus += min(1.2, low_single_relief * 0.8)
+    bonus += min(0.9, after.get("group_turns", 0.0) * 0.3)
+    bonus += control_scale * 0.8
+    turn_gain = before.get("turns", float(len(hand))) - projected_turns
+    if turn_gain > 0.0:
+        bonus += min(1.0, turn_gain * 0.6)
+    return min(9.0, bonus * hand_pressure)
+
+
+def _lead_low_single_escape_context_scale(
+    state: Dict,
+    player_id: str,
+    cards: List[int],
+    combo: Dict,
+) -> float:
+    """Let immediate closeout danger override long-term shape cleanup."""
+    tactical_pressure = _lead_short_next_opponent_penalty(state, player_id, cards)
+    tactical_pressure += _lead_short_escape_window_penalty(state, player_id, cards, combo)
+    return max(0.0, min(1.0, 1.0 - tactical_pressure / 18.0))
 
 
 def _lead_single_control_stock_scale(
@@ -12725,6 +12771,7 @@ def _compute_bot_score_components(
         if trap_penalty > 0.001:
             components["low_single_trap"] = -trap_penalty
         escape_bonus = _lead_low_single_escape_bonus(hand, cards, level_rank)
+        escape_bonus *= _lead_low_single_escape_context_scale(state, bot_id, cards, combo)
         if escape_bonus > 0.001:
             components["shed_low_single"] = escape_bonus
         initiative_penalty = _lead_single_initiative_penalty(state, bot_id, cards, combo)

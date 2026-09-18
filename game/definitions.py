@@ -18,6 +18,7 @@ from game.davinci_code import DaVinciCodeGame
 from game.decrypto import DecryptoGame
 from game.dumb_questions import DumbQuestionsGame
 from game.draw_guess import DrawGuessGame
+from game.emerald_skulls import EmeraldSkullsGame
 from game.fang_niao import FangNiaoGame
 from game.fake_artist import FakeArtistGame
 from game.felix import FelixGame
@@ -70,6 +71,7 @@ from game.tacta import TactaGame
 from game.turing_machine import TuringMachineGame
 from game.tucano import TucanoGame
 from game.witchs_brew import WitchsBrewGame
+from game.wriggle_roulette import WriggleRouletteGame
 
 ACQUIRE_ACTION_SCHEMA = {
     "type": "object",
@@ -284,6 +286,155 @@ BOHNANZA_DICE_CONFIG_SCHEMA = {
             ]
         }
     },
+    "additionalProperties": False,
+}
+
+EMERALD_SKULLS_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "buy_dice"},
+                "count": {"type": "integer", "minimum": 3, "maximum": 7},
+            },
+            "required": ["type", "count"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "place_bet"},
+                "bet_id": {
+                    "type": "string",
+                    "enum": [
+                        "pick_bust",
+                        "mad_nargash",
+                        "grim_grin",
+                        "emerald_skull",
+                        "busted_fowl",
+                        "final_jewel",
+                        "empty_hands",
+                        "empty_shiny",
+                    ],
+                },
+            },
+            "required": ["type", "bet_id"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "roll"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "place_dice"},
+                "level": {"type": "integer", "minimum": 1, "maximum": 5},
+                "die_ids": {
+                    "type": "array",
+                    "items": {"type": "string", "pattern": "^die-[1-7]$"},
+                    "minItems": 1,
+                    "maxItems": 7,
+                    "uniqueItems": True,
+                },
+            },
+            "required": ["type", "level", "die_ids"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "spend_reroll_cube"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "pick_nose"},
+                "die_id": {"type": "string", "pattern": "^die-[1-7]$"},
+            },
+            "required": ["type", "die_id"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"enum": ["continue_roll", "chicken_out", "accept_bust", "next_turn", "play_again"]}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "choose_payout"},
+                "option_id": {
+                    "type": "string",
+                    "enum": ["standard", "mad_nargash", "grim_grin", "emerald_skull"],
+                },
+            },
+            "required": ["type", "option_id"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+EMERALD_SKULLS_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "seed": {
+            "oneOf": [
+                {"type": "integer"},
+                {"type": "string", "minLength": 1, "maxLength": 80},
+            ]
+        }
+    },
+    "additionalProperties": False,
+}
+
+WRIGGLE_ROULETTE_ACTION_SCHEMA = {
+    "type": "object",
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "grab"},
+                "count": {"type": "integer", "minimum": 0, "maximum": 6},
+                "cycle_no": {"type": "integer", "minimum": 1},
+            },
+            "required": ["type", "count", "cycle_no"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "ready_reveal"},
+                "cycle_no": {"type": "integer", "minimum": 1},
+            },
+            "required": ["type", "cycle_no"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "next_round"},
+                "round_no": {"type": "integer", "minimum": 1},
+            },
+            "required": ["type", "round_no"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "play_again"}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+WRIGGLE_ROULETTE_CONFIG_SCHEMA = {
+    "type": "object",
     "additionalProperties": False,
 }
 
@@ -2432,6 +2583,12 @@ NINE_UPPER_ACTION_SCHEMA = {
                 "statement": {"type": "string", "minLength": 1, "maxLength": 280},
             },
             "required": ["type", "statement"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "skip_term"}},
+            "required": ["type"],
             "additionalProperties": False,
         },
         {
@@ -5177,6 +5334,38 @@ register_game(
         module=BohnanzaDiceGame,
         serialize=BohnanzaDiceGame.serialize,
         deserialize=BohnanzaDiceGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=EmeraldSkullsGame.game_id,
+        name="Emerald Skulls",
+        name_zh="翡翠骰骨",
+        min_players=EmeraldSkullsGame.min_players,
+        max_players=EmeraldSkullsGame.max_players,
+        turn_mode="turn",
+        action_schema=EMERALD_SKULLS_ACTION_SCHEMA,
+        config_schema=EMERALD_SKULLS_CONFIG_SCHEMA,
+        module=EmeraldSkullsGame,
+        serialize=EmeraldSkullsGame.serialize,
+        deserialize=EmeraldSkullsGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=WriggleRouletteGame.game_id,
+        name="Wriggle Roulette",
+        name_zh="鳗载而归",
+        min_players=WriggleRouletteGame.min_players,
+        max_players=WriggleRouletteGame.max_players,
+        turn_mode="turn",
+        action_schema=WRIGGLE_ROULETTE_ACTION_SCHEMA,
+        config_schema=WRIGGLE_ROULETTE_CONFIG_SCHEMA,
+        module=WriggleRouletteGame,
+        serialize=WriggleRouletteGame.serialize,
+        deserialize=WriggleRouletteGame.deserialize,
     )
 )
 

@@ -629,6 +629,7 @@ const GAME_WEIGHT = {
   blokus: 1.73,
   blitz_sketch: 1.0,
   bohnanza_dice: 1.17,
+  emerald_skulls: 1.93,
   cabo: 1.4,
   carcassonne: 1.89,
   cat_in_box: 2.03,
@@ -797,11 +798,7 @@ function renderGameList(games) {
         : `${g.min_players}-${g.max_players} players`;
     const chineseName = typeof g.name_zh === "string" ? g.name_zh.trim() : "";
     const displayName = chineseName && chineseName !== g.name ? `${g.name} · ${chineseName}` : g.name;
-    const tags = getGameTags(g);
-    const tagLabel = tags.map((tag) => tag.label || tag.id).join(", ");
-    item.title = `${displayName} · BGG Weight: ${weightLabel} · ${playerLabel}${
-      tagLabel ? ` · ${tagLabel}` : ""
-    }`;
+    item.title = `${displayName} · BGG Weight: ${weightLabel} · ${playerLabel}`;
     item.setAttribute("aria-label", item.title);
     const nameEl = document.createElement("span");
     nameEl.className = "game-item-name";
@@ -815,18 +812,6 @@ function renderGameList(games) {
       chineseNameEl.lang = "zh-CN";
       chineseNameEl.textContent = chineseName;
       nameEl.appendChild(chineseNameEl);
-    }
-    let tagsEl = null;
-    if (tags.length) {
-      tagsEl = document.createElement("span");
-      tagsEl.className = "game-item-tags";
-      tagsEl.setAttribute("aria-hidden", "true");
-      tags.forEach((tag) => {
-        const tagEl = document.createElement("span");
-        tagEl.className = "game-item-tag";
-        tagEl.textContent = `${tag.emoji || "🏷️"} ${tag.label || tag.id}`;
-        tagsEl.appendChild(tagEl);
-      });
     }
     const metaEl = document.createElement("span");
     metaEl.className = "game-item-meta";
@@ -844,9 +829,6 @@ function renderGameList(games) {
     metaEl.appendChild(playersEl);
     item.appendChild(nameEl);
     item.appendChild(metaEl);
-    if (tagsEl) {
-      item.appendChild(tagsEl);
-    }
     item.addEventListener("click", () => {
       selectGameFromModal(g.game_id);
     });

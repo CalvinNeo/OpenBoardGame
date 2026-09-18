@@ -20,6 +20,7 @@ from game.davinci_code import DaVinciCodeGame
 from game.decrypto import DecryptoGame
 from game.dumb_questions import DumbQuestionsGame
 from game.draw_guess import DrawGuessGame
+from game.emerald_skulls import EmeraldSkullsGame
 from game.fang_niao import FangNiaoGame
 from game.fake_artist import FakeArtistGame
 from game.flip7 import Flip7Game
@@ -63,6 +64,7 @@ from game.trekking_history import TrekkingHistoryGame
 from game.tucano import TucanoGame
 from game.wavelength import WavelengthGame
 from game.witchs_brew import WitchsBrewGame
+from game.wriggle_roulette import WriggleRouletteGame
 from game.word_decode import WordDecodeGame
 from game.yahtzee import YahtzeeGame
 from game.wandering_towers import WanderingTowersGame
@@ -100,6 +102,7 @@ __all__ = [
     "CyberPicturesGame",
     "DecryptoGame",
     "DumbQuestionsGame",
+    "EmeraldSkullsGame",
     "ImpressionFlowerGame",
     "IncanGoldGame",
     "InAGroveGame",
@@ -133,6 +136,7 @@ __all__ = [
     "TucanoGame",
     "WavelengthGame",
     "WitchsBrewGame",
+    "WriggleRouletteGame",
     "WordDecodeGame",
     "YahtzeeGame",
     "WanderingTowersGame",

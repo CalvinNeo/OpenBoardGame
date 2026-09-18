@@ -33,6 +33,9 @@ const nineUpperDifficultyPill = document.getElementById("nineUpperDifficultyPill
 const nineUpperCategoryHint = document.getElementById("nineUpperCategoryHint");
 const nineUpperTerm = document.getElementById("nineUpperTerm");
 const nineUpperPronunciation = document.getElementById("nineUpperPronunciation");
+const nineUpperSkipRow = document.getElementById("nineUpperSkipRow");
+const nineUpperSkipHint = document.getElementById("nineUpperSkipHint");
+const nineUpperSkipTermBtn = document.getElementById("nineUpperSkipTermBtn");
 const nineUpperTruthBox = document.getElementById("nineUpperTruthBox");
 const nineUpperTruth = document.getElementById("nineUpperTruth");
 const nineUpperStatementStage = document.getElementById("nineUpperStatementStage");
@@ -65,6 +68,7 @@ const NINE_UPPER_HELP_HTML = [
   "<ol>",
   "<li>本轮的<strong>想想</strong>选择难度：1、2、3 分。难度越高，类别提示越少。</li>",
   "<li>系统展示一个陌生词。唯一的<strong>老实人</strong>还能看到真实释义；其他人都是<strong>瞎掰人</strong>，需要编出可信解释。</li>",
+  "<li>若任何人认识这个词，可在所有说法公开前点击 <strong>I Know It — New Word</strong>。系统保留难度与角色、清空已交说法并换词；被跳过的词不会再在本房间出现。</li>",
   "<li>除想想外，每人秘密提交一段说法。全部提交后，说法会连同作者一起公开，大家可以自由讨论和追问。</li>",
   "<li>想想选择一名玩家作为老实人，然后公开角色与真实释义。</li>",
   "</ol>",
@@ -79,6 +83,7 @@ const NINE_UPPER_BUTTON_EXPLANATIONS = {
   nineUpperDifficulty1Btn: "Choose a 1-point term. Everyone sees its exact category.",
   nineUpperDifficulty2Btn: "Choose a 2-point term. Everyone sees three possible categories.",
   nineUpperDifficulty3Btn: "Choose a 3-point term. No category hint is shown.",
+  nineUpperSkipTermBtn: "Retire the current term for this room and draw another at the same difficulty. Roles stay the same and submitted statements are cleared.",
   nineUpperSubmitStatementBtn: "Lock your explanation. It stays hidden until every speaker has submitted.",
   nineUpperChooseBtn: "Confirm the selected speaker as the Truth-teller and reveal the round.",
   nineUpperNextRoundBtn: "Mark yourself ready. The next round starts only after every player confirms.",
@@ -294,6 +299,17 @@ function nineUpperRenderTerm(view) {
       nineUpperCategoryHint.textContent = "🕳️ No category hint";
     }
   }
+  const showSkip = view.phase === "statements";
+  nineUpperSetVisible(nineUpperSkipRow, showSkip);
+  if (nineUpperSkipHint && showSkip) {
+    const retired = Number(view.skipped_term_count) || 0;
+    if (nineUpperCan("skip_term")) {
+      const prefix = retired ? `${retired} word${retired === 1 ? "" : "s"} already retired. ` : "";
+      nineUpperSkipHint.textContent = `${prefix}Retire this one for the room and keep the same roles and difficulty.`;
+    } else {
+      nineUpperSkipHint.textContent = "No replacement remains at this difficulty.";
+    }
+  }
   const showTruth = !!view.your_definition && ["statements", "guessing"].includes(view.phase);
   nineUpperSetVisible(nineUpperTruthBox, showTruth);
   if (nineUpperTruth) nineUpperTruth.textContent = showTruth ? view.your_definition : "-";
@@ -495,6 +511,12 @@ function nineUpperRenderPlayers(view) {
 }
 
 function nineUpperUpdateButtons() {
+  if (nineUpperSkipTermBtn) {
+    nineUpperSkipTermBtn.disabled = !nineUpperCan("skip_term");
+    nineUpperSkipTermBtn.textContent = nineUpperCan("skip_term")
+      ? "🔁 I Know It — New Word"
+      : "No New Word Available";
+  }
   if (nineUpperSubmitStatementBtn) {
     const length = nineUpperStatementInput ? [...nineUpperStatementInput.value.trim()].length : 0;
     nineUpperSubmitStatementBtn.disabled = !nineUpperCan("submit_statement") || length === 0 || length > 280;
@@ -556,6 +578,7 @@ function clearNineUpperState() {
   if (nineUpperPlayers) nineUpperPlayers.innerHTML = "";
   nineUpperSetVisible(nineUpperDifficultyStage, false);
   nineUpperSetVisible(nineUpperTermStage, false);
+  nineUpperSetVisible(nineUpperSkipRow, false);
   nineUpperSetVisible(nineUpperStatementStage, false);
   nineUpperSetVisible(nineUpperGuessStage, false);
   nineUpperSetVisible(nineUpperResultStage, false);
@@ -616,6 +639,12 @@ if (nineUpperExplainCloseBtn) {
 }
 if (nineUpperStatementInput) {
   nineUpperStatementInput.addEventListener("input", nineUpperUpdateCharacterCount);
+}
+if (nineUpperSkipTermBtn) {
+  nineUpperSkipTermBtn.addEventListener("click", () => {
+    if (!nineUpperCan("skip_term") || nineUpperExplainMode) return;
+    sendAction({ type: "skip_term" });
+  });
 }
 if (nineUpperSubmitStatementBtn) {
   nineUpperSubmitStatementBtn.addEventListener("click", () => {
@@ -707,4 +736,3 @@ document.addEventListener("keydown", (event) => {
     nineUpperUpdateButtons();
   }
 });
-

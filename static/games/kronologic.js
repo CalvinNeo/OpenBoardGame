@@ -84,7 +84,7 @@
     },
     "clue-history": {
       title: "Clue History",
-      text: "Shared counts are visible to everyone. Only your own private concrete person or time appears in the private history.",
+      text: "Each shared count stays paired with its private row. Your concrete person or time appears there only when you asked that question; otherwise the row remains locked.",
     },
     "play-again": {
       title: "Play Again",
@@ -134,7 +134,7 @@
     },
     "clue-history": {
       title: "线索记录",
-      text: "公开数量线索对所有人可见；只有你自己获得的具体人物或时段会出现在私密记录中。",
+      text: "每条公开数量线索都与下方的私密行绑定。只有由你提问时，私密行才会显示具体人物或时段；其他人的私密行保持锁定。",
     },
     "play-again": {
       title: "再玩一局",
@@ -180,11 +180,13 @@
       players_title: "Investigators",
       notebook_title: "Your Notebook",
       notebook_hint: "Tap a person to cycle · ○ ✕ ★.",
+      notebook_dock: "Notebook",
+      notebook_hide: "Hide",
       count_notes_title: "Count Notes",
       room_totals: "Room totals",
       person_visits: "Person visits",
-      public_clues_title: "📣 Public Clues",
-      private_clues_title: "🔒 My Private Clues",
+      clue_history_title: "🧩 Clue History",
+      clue_history_hint: "Private details stay attached to their shared clue.",
       public_log_title: "Public Log",
       play_again: "Play Again",
     },
@@ -225,11 +227,13 @@
       players_title: "调查员",
       notebook_title: "你的笔记本",
       notebook_hint: "点击人物可循环切换 · ○ ✕ ★。",
+      notebook_dock: "笔记",
+      notebook_hide: "收起",
       count_notes_title: "数量笔记",
       room_totals: "房间人数",
       person_visits: "人物到访",
-      public_clues_title: "📣 公开线索",
-      private_clues_title: "🔒 我的私密线索",
+      clue_history_title: "🧩 线索历史",
+      clue_history_hint: "私密细节与对应公开线索成对显示。",
       public_log_title: "公开日志",
       play_again: "再玩一局",
     },
@@ -246,6 +250,8 @@
   let kronologicLastFocusedElement = null;
   let kronologicSuppressClickUntil = 0;
   let kronologicSeenAccusationKey = null;
+  let kronologicNotebookOpen = false;
+  let kronologicNotebookReturnFocus = null;
 
   const kronologicPanel = document.getElementById("kronologicPanel");
   const kronologicConfigBox = document.getElementById("kronologicConfigBox");
@@ -300,14 +306,17 @@
   const kronologicLatestShared = document.getElementById("kronologicLatestShared");
   const kronologicLatestPrivate = document.getElementById("kronologicLatestPrivate");
   const kronologicPlayers = document.getElementById("kronologicPlayers");
+  const kronologicNotebookSection = document.getElementById("kronologicNotebookSection");
+  const kronologicNotebookDockBtn = document.getElementById("kronologicNotebookDockBtn");
+  const kronologicNotebookBackdrop = document.getElementById("kronologicNotebookBackdrop");
+  const kronologicNotebookCloseBtn = document.getElementById("kronologicNotebookCloseBtn");
   const kronologicNotebookTimes = document.getElementById("kronologicNotebookTimes");
   const kronologicNotebook = document.getElementById("kronologicNotebook");
   const kronologicCountTimeBtn = document.getElementById("kronologicCountTimeBtn");
   const kronologicCountCharacterBtn = document.getElementById("kronologicCountCharacterBtn");
   const kronologicCountCharacterPicker = document.getElementById("kronologicCountCharacterPicker");
   const kronologicCountGrid = document.getElementById("kronologicCountGrid");
-  const kronologicPublicClues = document.getElementById("kronologicPublicClues");
-  const kronologicPrivateClues = document.getElementById("kronologicPrivateClues");
+  const kronologicClueHistory = document.getElementById("kronologicClueHistory");
   const kronologicLog = document.getElementById("kronologicLog");
   const kronologicSolutionSection = document.getElementById("kronologicSolutionSection");
   const kronologicSoloRating = document.getElementById("kronologicSoloRating");
@@ -332,7 +341,7 @@
     <p>Everyone learns how many times that person visited the room. You privately learn one exact visit time. You may not ask Person + Time directly.</p>
 
     <h3>Shared vs Private</h3>
-    <p>📣 Shared counts appear in every player's history. 🔒 The concrete person or time appears only in the asking player's private history. If the shared count is 0 or 6, no private fact can add information, so the same player receives a bonus turn after review.</p>
+    <p>📣 Shared counts appear in every player's history. Each one keeps its 🔒 private row directly attached; the concrete person or time appears there only for the asking player. If the shared count is 0 or 6, no private fact can add information, so the same player receives a bonus turn after review.</p>
 
     <h3>Ready for Next Turn</h3>
     <p>After every question, the game pauses so everyone can update notes. Every active human investigator must click <strong>Ready for Next Turn</strong>; bots confirm automatically.</p>
@@ -380,7 +389,7 @@
     <p>所有人都会得知该人物到访该房间的次数；你还会私密得知其中一个准确时段。不能直接询问“人物 + 时段”。</p>
 
     <h3>公开与私密线索</h3>
-    <p>📣 公开数量会显示在所有人的记录中。🔒 具体人物或时段只会显示在提问者的私密记录中。若公开数量为 0 或 6，私密信息无法提供额外内容，整理完线索后由同一玩家额外行动一次。</p>
+    <p>📣 公开数量会显示在所有人的记录中，每条公开线索下方都绑定对应的 🔒 私密行；具体人物或时段只对提问者显示。若公开数量为 0 或 6，私密信息无法提供额外内容，整理完线索后由同一玩家额外行动一次。</p>
 
     <h3>准备下一回合</h3>
     <p>每次询问后，游戏会暂停供所有人更新笔记。所有仍在场的真人调查员都点击<strong>准备下一回合</strong>后才会继续；机器人会自动确认。</p>
@@ -516,9 +525,94 @@
     return `${item.emoji || "📍"} ${item.name || locationId}`;
   }
 
+  function kronologicIsMobileNotebook() {
+    if (typeof window.matchMedia === "function") {
+      return window.matchMedia("(max-width: 620px)").matches;
+    }
+    return window.innerWidth <= 620;
+  }
+
+  function kronologicSetNotebookOpen(open, { restoreFocus = true } = {}) {
+    if (!kronologicNotebookSection) return;
+    const wasOpen = kronologicNotebookOpen;
+    const shouldOpen = !!open && kronologicIsMobileNotebook() && !!kronologicView;
+    if (shouldOpen && !wasOpen) {
+      kronologicNotebookReturnFocus = document.activeElement;
+    }
+    kronologicNotebookOpen = shouldOpen;
+    kronologicNotebookSection.classList.toggle("is-open", shouldOpen);
+    kronologicNotebookSection.setAttribute("aria-hidden", String(!shouldOpen));
+    kronologicNotebookSection.setAttribute("aria-label", kronologicCopy("notebook_title"));
+    if (shouldOpen) {
+      kronologicNotebookSection.removeAttribute("inert");
+      kronologicNotebookSection.setAttribute("role", "dialog");
+      kronologicNotebookSection.setAttribute("aria-modal", "true");
+    } else if (kronologicIsMobileNotebook()) {
+      kronologicNotebookSection.setAttribute("inert", "");
+      kronologicNotebookSection.removeAttribute("role");
+      kronologicNotebookSection.removeAttribute("aria-modal");
+    } else {
+      kronologicNotebookSection.removeAttribute("inert");
+      kronologicNotebookSection.removeAttribute("aria-hidden");
+      kronologicNotebookSection.removeAttribute("role");
+      kronologicNotebookSection.removeAttribute("aria-modal");
+    }
+    if (kronologicNotebookDockBtn) {
+      kronologicNotebookDockBtn.setAttribute("aria-expanded", String(shouldOpen));
+      kronologicNotebookDockBtn.classList.toggle("is-open", shouldOpen);
+    }
+    if (kronologicNotebookBackdrop) {
+      kronologicNotebookBackdrop.classList.toggle("hidden", !shouldOpen);
+      kronologicNotebookBackdrop.setAttribute("aria-hidden", String(!shouldOpen));
+    }
+    document.body.classList.toggle("kronologic-notebook-open", shouldOpen);
+    if (shouldOpen && kronologicNotebookCloseBtn) {
+      window.setTimeout(() => kronologicNotebookCloseBtn.focus(), 0);
+    } else if (wasOpen) {
+      const focusTarget = kronologicNotebookReturnFocus;
+      kronologicNotebookReturnFocus = null;
+      if (restoreFocus && focusTarget && typeof focusTarget.focus === "function" && document.contains(focusTarget)) {
+        window.setTimeout(() => focusTarget.focus(), 0);
+      }
+    }
+  }
+
+  function kronologicSyncNotebookDock() {
+    if (!kronologicNotebookSection) return;
+    const mobile = kronologicIsMobileNotebook();
+    const available = mobile && !!kronologicView;
+    if ((!mobile || !kronologicView) && kronologicNotebookOpen) {
+      kronologicSetNotebookOpen(false, { restoreFocus: false });
+    }
+    if (kronologicNotebookDockBtn) {
+      kronologicNotebookDockBtn.classList.toggle("hidden", !available);
+      kronologicNotebookDockBtn.setAttribute("aria-expanded", String(kronologicNotebookOpen));
+    }
+    if (mobile) {
+      kronologicNotebookSection.setAttribute("aria-hidden", String(!kronologicNotebookOpen));
+      if (kronologicNotebookOpen) kronologicNotebookSection.removeAttribute("inert");
+      else kronologicNotebookSection.setAttribute("inert", "");
+    } else {
+      kronologicNotebookSection.classList.remove("is-open");
+      kronologicNotebookSection.removeAttribute("inert");
+      kronologicNotebookSection.removeAttribute("aria-hidden");
+      kronologicNotebookSection.removeAttribute("role");
+      kronologicNotebookSection.removeAttribute("aria-modal");
+      if (kronologicNotebookBackdrop) {
+        kronologicNotebookBackdrop.classList.add("hidden");
+        kronologicNotebookBackdrop.setAttribute("aria-hidden", "true");
+      }
+      document.body.classList.remove("kronologic-notebook-open");
+    }
+  }
+
   function kronologicOpenModal(modal, preferredFocus) {
     if (!modal) return;
-    kronologicLastFocusedElement = document.activeElement;
+    const returnFocus = kronologicNotebookOpen && kronologicNotebookReturnFocus
+      ? kronologicNotebookReturnFocus
+      : document.activeElement;
+    kronologicSetNotebookOpen(false, { restoreFocus: false });
+    kronologicLastFocusedElement = returnFocus;
     modal.classList.remove("hidden");
     modal.setAttribute("aria-hidden", "false");
     const focusTarget = preferredFocus || modal.querySelector("button, select, input, [tabindex]");
@@ -600,6 +694,7 @@
   }
 
   function clearKronologicState() {
+    kronologicSetNotebookOpen(false, { restoreFocus: false });
     kronologicView = null;
     kronologicSelectedLocation = null;
     kronologicSelectedSelector = null;
@@ -616,16 +711,19 @@
     if (kronologicSelector) kronologicSelector.innerHTML = "";
     if (kronologicNotebook) kronologicNotebook.innerHTML = "";
     if (kronologicPlayers) kronologicPlayers.innerHTML = "";
-    if (kronologicPublicClues) kronologicPublicClues.innerHTML = "";
-    if (kronologicPrivateClues) kronologicPrivateClues.innerHTML = "";
+    if (kronologicClueHistory) kronologicClueHistory.innerHTML = "";
     if (kronologicLog) kronologicLog.innerHTML = "";
     kronologicCloseModal(kronologicAccusationModal);
+    kronologicSyncNotebookDock();
   }
 
   function showKronologicHeaderActions(show) {
     if (!kronologicHeaderActions) return;
     kronologicHeaderActions.style.display = show ? "flex" : "none";
-    if (!show) kronologicExitExplainMode();
+    if (!show) {
+      kronologicExitExplainMode();
+      kronologicSetNotebookOpen(false, { restoreFocus: false });
+    }
   }
 
   function kronologicRenderMap() {
@@ -930,13 +1028,58 @@
   function kronologicRenderHistories() {
     if (!kronologicView) return;
     const publicItems = [...(kronologicView.public_clues || [])].reverse();
-    kronologicPublicClues.innerHTML = publicItems.length
-      ? publicItems.map((clue) => `<div class="kronologic-history-item"><small>${kronologicEscape(kronologicPlayer(clue.asked_by).name)} · ${kronologicIsChinese() ? "回合" : "Turn"} ${clue.turn_number}</small><div>${kronologicEscape(kronologicPublicClueText(clue))}${clue.bonus_turn ? " <strong>↻</strong>" : ""}</div></div>`).join("")
-      : `<div class="kronologic-empty">${kronologicIsChinese() ? "暂无公开线索。" : "No shared clues yet."}</div>`;
     const privateItems = [...(kronologicView.your_private_clues || [])].reverse();
-    kronologicPrivateClues.innerHTML = privateItems.length
-      ? privateItems.map((clue) => `<div class="kronologic-history-item is-private"><small>${kronologicEscape(clue.clue_id)}</small><div>${kronologicEscape(kronologicPrivateClueText(clue))}</div></div>`).join("")
-      : `<div class="kronologic-empty">${kronologicIsChinese() ? "暂无私密线索。" : "No private clues yet."}</div>`;
+    const privateByClueId = new Map(privateItems.map((clue) => [String(clue.clue_id), clue]));
+    const publicClueIds = new Set(publicItems.map((clue) => String(clue.clue_id)));
+    const pairedItems = publicItems.map((clue) => {
+      const privateClue = privateByClueId.get(String(clue.clue_id));
+      const askerName = kronologicPlayer(clue.asked_by).name;
+      const privateText = privateClue
+        ? kronologicPrivateClueText(privateClue)
+        : (kronologicIsChinese()
+            ? `🔒 私密细节由${askerName}获得。`
+            : `🔒 The private detail belongs to ${askerName}.`);
+      return `
+        <article class="kronologic-history-item kronologic-clue-pair${privateClue ? " has-private" : ""}">
+          <div class="kronologic-history-item-head">
+            <span>${kronologicEscape(askerName)} · ${kronologicIsChinese() ? "回合" : "Turn"} ${clue.turn_number}</span>
+            <small>#${kronologicEscape(clue.clue_id)}</small>
+          </div>
+          <div class="kronologic-history-shared">
+            <span class="kronologic-history-kind">${kronologicIsChinese() ? "公开" : "Shared"}</span>
+            <span>${kronologicEscape(kronologicPublicClueText(clue))}${clue.bonus_turn ? " <strong>↻</strong>" : ""}</span>
+          </div>
+          <div class="kronologic-history-private${privateClue ? "" : " is-withheld"}">
+            <span class="kronologic-history-kind">${privateClue ? (kronologicIsChinese() ? "仅你可见" : "Private to you") : (kronologicIsChinese() ? "私密" : "Private")}</span>
+            <span>${kronologicEscape(privateText)}</span>
+          </div>
+        </article>
+      `;
+    });
+    privateItems.forEach((clue) => {
+      if (publicClueIds.has(String(clue.clue_id))) return;
+      pairedItems.push(`
+        <article class="kronologic-history-item kronologic-clue-pair has-private">
+          <div class="kronologic-history-item-head">
+            <span>${kronologicIsChinese() ? "较早的询问" : "Earlier question"}</span>
+            <small>#${kronologicEscape(clue.clue_id)}</small>
+          </div>
+          <div class="kronologic-history-shared is-missing">
+            <span class="kronologic-history-kind">${kronologicIsChinese() ? "公开" : "Shared"}</span>
+            <span>${kronologicIsChinese() ? "对应公开线索已移出历史记录。" : "The matching shared clue has rolled out of history."}</span>
+          </div>
+          <div class="kronologic-history-private">
+            <span class="kronologic-history-kind">${kronologicIsChinese() ? "仅你可见" : "Private to you"}</span>
+            <span>${kronologicEscape(kronologicPrivateClueText(clue))}</span>
+          </div>
+        </article>
+      `);
+    });
+    if (kronologicClueHistory) {
+      kronologicClueHistory.innerHTML = pairedItems.length
+        ? pairedItems.join("")
+        : `<div class="kronologic-empty">${kronologicIsChinese() ? "暂无线索。公开与私密细节会成对显示在这里。" : "No clues yet. Shared and private details will appear here as a pair."}</div>`;
+    }
     const logs = [...(kronologicView.public_log || [])].reverse();
     kronologicLog.innerHTML = logs.length
       ? logs.map((entry) => `<div class="kronologic-log-item"><small>#${entry.index}</small> ${kronologicEscape(entry.message)}</div>`).join("")
@@ -1090,6 +1233,7 @@
     }
     kronologicView = view;
     kronologicApplyStaticCopy();
+    kronologicSyncNotebookDock();
     if (!(view.characters || []).some((item) => item.id === kronologicCountCharacter)) {
       kronologicCountCharacter = (view.characters && view.characters[0] && view.characters[0].id) || "archivist";
     }
@@ -1209,6 +1353,15 @@
   }
   if (kronologicHelpBtn) kronologicHelpBtn.addEventListener("click", kronologicShowHelp);
   if (kronologicExplainBtn) kronologicExplainBtn.addEventListener("click", kronologicToggleExplainMode);
+  if (kronologicNotebookDockBtn) {
+    kronologicNotebookDockBtn.addEventListener("click", () => kronologicSetNotebookOpen(true));
+  }
+  if (kronologicNotebookCloseBtn) {
+    kronologicNotebookCloseBtn.addEventListener("click", () => kronologicSetNotebookOpen(false));
+  }
+  if (kronologicNotebookBackdrop) {
+    kronologicNotebookBackdrop.addEventListener("click", () => kronologicSetNotebookOpen(false));
+  }
   if (kronologicHelpCloseBtn) kronologicHelpCloseBtn.addEventListener("click", () => kronologicCloseModal(kronologicHelpModal));
   if (kronologicExplainCloseBtn) kronologicExplainCloseBtn.addEventListener("click", () => kronologicCloseModal(kronologicExplainModal));
   if (kronologicAccusationCloseBtn) kronologicAccusationCloseBtn.addEventListener("click", () => kronologicCloseModal(kronologicAccusationModal));
@@ -1363,7 +1516,7 @@
 
   document.addEventListener("pointerdown", (event) => {
     if (!kronologicExplainMode) return;
-    const exempt = event.target.closest("#kronologicHelpBtn, #kronologicExplainBtn, #kronologicHelpCloseBtn, #kronologicExplainCloseBtn, #kronologicAccusationCloseBtn");
+    const exempt = event.target.closest("#kronologicHelpBtn, #kronologicExplainBtn, #kronologicHelpCloseBtn, #kronologicExplainCloseBtn, #kronologicAccusationCloseBtn, #kronologicNotebookDockBtn, #kronologicNotebookCloseBtn, #kronologicNotebookBackdrop");
     if (exempt) return;
     const button = kronologicFindExplainTargetAtPoint(event.clientX, event.clientY);
     if (!button) return;
@@ -1386,12 +1539,29 @@
     if (!kronologicExplainMode) return;
     const button = event.target.closest("button");
     if (!button) return;
-    if (button === kronologicHelpBtn || button === kronologicExplainBtn || button === kronologicHelpCloseBtn || button === kronologicExplainCloseBtn || button === kronologicAccusationCloseBtn) return;
+    if (button === kronologicHelpBtn || button === kronologicExplainBtn || button === kronologicHelpCloseBtn || button === kronologicExplainCloseBtn || button === kronologicAccusationCloseBtn || button === kronologicNotebookDockBtn || button === kronologicNotebookCloseBtn) return;
     event.preventDefault();
     event.stopPropagation();
   }, true);
 
   document.addEventListener("keydown", (event) => {
+    if (event.key === "Tab" && kronologicNotebookOpen && kronologicNotebookSection) {
+      const focusable = Array.from(kronologicNotebookSection.querySelectorAll("button:not([disabled]), select:not([disabled]), input:not([disabled]), details > summary, [tabindex]:not([tabindex='-1'])"));
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (!first || !last) {
+        event.preventDefault();
+        return;
+      }
+      if (event.shiftKey && (document.activeElement === first || !kronologicNotebookSection.contains(document.activeElement))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+      return;
+    }
     if (event.key !== "Escape") return;
     if (kronologicIsModalOpen(kronologicExplainModal)) {
       kronologicCloseModal(kronologicExplainModal);
@@ -1405,12 +1575,18 @@
       kronologicCloseModal(kronologicAccusationModal);
       return;
     }
+    if (kronologicNotebookOpen) {
+      kronologicSetNotebookOpen(false);
+      return;
+    }
     if (kronologicExplainMode) {
       kronologicExitExplainMode();
       return;
     }
     if (kronologicPanel && !kronologicPanel.classList.contains("hidden")) clearKronologicSelection();
   });
+
+  window.addEventListener("resize", kronologicSyncNotebookDock, { passive: true });
 
   resetKronologicRoomConfig();
 

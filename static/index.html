@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css?v=app_v86" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v90" />
   <link rel="stylesheet" href="/static/ark_nova.css?v=app_v21" />
 </head>
 <body>
@@ -2028,6 +2028,10 @@
               <button id="bohnanzaDiceHelpBtn" class="bohnanza-dice-header-btn" type="button">Help</button>
               <button id="bohnanzaDiceExplainBtn" class="bohnanza-dice-header-btn" type="button" aria-pressed="false">Explain</button>
             </div>
+            <div class="panel-header-actions" id="emeraldSkullsHeaderActions" style="display: none;">
+              <button id="emeraldSkullsHelpBtn" class="emerald-skulls-header-btn" type="button">Help</button>
+              <button id="emeraldSkullsExplainBtn" class="emerald-skulls-header-btn" type="button" aria-pressed="false">Explain</button>
+            </div>
             <div class="panel-header-actions" id="bombBustersHeaderActions" style="display: none;">
               <button id="bombBustersHelpBtn" class="bomb-busters-header-btn" type="button">Help</button>
               <button id="bombBustersExplainBtn" class="bomb-busters-header-btn" type="button" aria-pressed="false">Explain</button>
@@ -2966,6 +2970,148 @@
               </section>
 
               <div id="bohnanzaDiceLiveRegion" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
+            </div>
+
+            <div id="emeraldSkullsPanel" class="hidden emerald-skulls-panel">
+              <header class="emerald-skulls-topbar">
+                <div class="emerald-skulls-brand">
+                  <span class="emerald-skulls-brand-icon" aria-hidden="true">💀</span>
+                  <div>
+                    <span class="emerald-skulls-eyebrow">Kulbak dice table · Standard bets</span>
+                    <h2>Emerald Skulls</h2>
+                  </div>
+                </div>
+                <div class="emerald-skulls-meta" aria-label="Game status">
+                  <span>Turn <strong id="emeraldSkullsTurnLabel">-</strong></span>
+                  <span>Tumbler <strong id="emeraldSkullsTumblerLabel">-</strong></span>
+                  <span>Pot <strong id="emeraldSkullsPotLabel">-</strong> ⚙️</span>
+                </div>
+              </header>
+
+              <div id="emeraldSkullsStatus" class="emerald-skulls-status" role="status" aria-live="polite">Waiting for game state…</div>
+
+              <section class="emerald-skulls-player-section" aria-labelledby="emeraldSkullsPlayersHeading" data-emerald-skulls-explain="players">
+                <div class="emerald-skulls-section-heading">
+                  <h3 id="emeraldSkullsPlayersHeading">Players</h3>
+                  <span>⚙️ Gears · 🟩 Reroll cubes · 🎟️ Bets</span>
+                </div>
+                <div id="emeraldSkullsPlayers" class="emerald-skulls-players"></div>
+              </section>
+
+              <div class="emerald-skulls-workspace">
+                <section class="emerald-skulls-table" aria-labelledby="emeraldSkullsBoardHeading" data-emerald-skulls-explain="board">
+                  <div class="emerald-skulls-section-heading">
+                    <div>
+                      <span class="emerald-skulls-eyebrow">Ascending placement</span>
+                      <h3 id="emeraldSkullsBoardHeading">The Skull</h3>
+                    </div>
+                    <span id="emeraldSkullsFloorLabel" class="emerald-skulls-floor">Floor · 1</span>
+                  </div>
+
+                  <div id="emeraldSkullsBoard" class="emerald-skulls-board" aria-label="Five skull levels">
+                    <button class="emerald-skulls-level is-gem" type="button" data-level="5" data-emerald-skulls-explain="level" disabled>
+                      <span class="emerald-skulls-level-label"><b>5</b><span>💎 Gem</span></span>
+                      <span id="emeraldSkullsLevel5" class="emerald-skulls-level-dice"></span>
+                      <span class="emerald-skulls-place-callout">Place here</span>
+                    </button>
+                    <button class="emerald-skulls-level is-eyes" type="button" data-level="4" data-emerald-skulls-explain="level" disabled>
+                      <span class="emerald-skulls-level-label"><b>4</b><span>👁️ Eyes · max 2</span></span>
+                      <span id="emeraldSkullsLevel4" class="emerald-skulls-level-dice"></span>
+                      <span class="emerald-skulls-place-callout">Place here</span>
+                    </button>
+                    <button class="emerald-skulls-level is-nose" type="button" data-level="3" data-emerald-skulls-explain="level" disabled>
+                      <span class="emerald-skulls-level-label"><b>3</b><span>👃 Nose</span></span>
+                      <span id="emeraldSkullsLevel3" class="emerald-skulls-level-dice"></span>
+                      <span class="emerald-skulls-place-callout">Place here</span>
+                    </button>
+                    <button class="emerald-skulls-level is-upper" type="button" data-level="2" data-emerald-skulls-explain="level" disabled>
+                      <span class="emerald-skulls-level-label"><b>2</b><span>🦷 Upper jaw</span></span>
+                      <span id="emeraldSkullsLevel2" class="emerald-skulls-level-dice"></span>
+                      <span class="emerald-skulls-place-callout">Place here</span>
+                    </button>
+                    <button class="emerald-skulls-level is-lower" type="button" data-level="1" data-emerald-skulls-explain="level" disabled>
+                      <span class="emerald-skulls-level-label"><b>1</b><span>🦷 Lower jaw</span></span>
+                      <span id="emeraldSkullsLevel1" class="emerald-skulls-level-dice"></span>
+                      <span class="emerald-skulls-place-callout">Place here</span>
+                    </button>
+                  </div>
+
+                  <div class="emerald-skulls-roll-zone" data-emerald-skulls-explain="dice">
+                    <div class="emerald-skulls-roll-heading">
+                      <div>
+                        <span class="emerald-skulls-eyebrow">Dice in hand</span>
+                        <h3 id="emeraldSkullsRollHeading">Choose dice</h3>
+                      </div>
+                      <span id="emeraldSkullsDiceCount">0 dice</span>
+                    </div>
+                    <div id="emeraldSkullsDiceTray" class="emerald-skulls-dice-tray" aria-label="Current dice"></div>
+                    <p id="emeraldSkullsSelectionHint" class="emerald-skulls-selection-hint">Select matching dice, then choose a skull level.</p>
+                  </div>
+
+                  <div id="emeraldSkullsBuyDock" class="emerald-skulls-action-dock hidden" data-emerald-skulls-explain="buy">
+                    <div>
+                      <strong>Choose your dice pool</strong>
+                      <span>More dice cost gears now, but can pay much more.</span>
+                    </div>
+                    <div id="emeraldSkullsBuyOptions" class="emerald-skulls-buy-options"></div>
+                  </div>
+
+                  <div id="emeraldSkullsActionDock" class="emerald-skulls-action-dock">
+                    <button id="emeraldSkullsRollBtn" class="is-primary" type="button" data-emerald-skulls-explain="roll" disabled>🎲 Roll Dice</button>
+                    <button id="emeraldSkullsRerollBtn" type="button" data-emerald-skulls-explain="reroll" disabled>🟩 Spend Reroll</button>
+                    <button id="emeraldSkullsPickNoseBtn" type="button" data-emerald-skulls-explain="nose" disabled>👃 Pick a Nose</button>
+                    <button id="emeraldSkullsContinueBtn" class="is-primary" type="button" data-emerald-skulls-explain="continue" disabled>🔥 Press Your Luck</button>
+                    <button id="emeraldSkullsChickenBtn" type="button" data-emerald-skulls-explain="chicken" disabled>🐔 Chicken Out</button>
+                    <button id="emeraldSkullsBustBtn" type="button" data-emerald-skulls-explain="bust" disabled>💥 Accept Bust</button>
+                  </div>
+                </section>
+
+                <section class="emerald-skulls-betting" aria-labelledby="emeraldSkullsBetsHeading" data-emerald-skulls-explain="bets">
+                  <div class="emerald-skulls-section-heading">
+                    <div>
+                      <span class="emerald-skulls-eyebrow">First marker earns the most</span>
+                      <h3 id="emeraldSkullsBetsHeading">Standard Bets</h3>
+                    </div>
+                    <span id="emeraldSkullsMarkersLabel">🎟️ 0 left</span>
+                  </div>
+                  <div id="emeraldSkullsBetCards" class="emerald-skulls-bet-cards"></div>
+                </section>
+              </div>
+
+              <section id="emeraldSkullsPayoutChoice" class="emerald-skulls-payout-choice hidden" aria-labelledby="emeraldSkullsPayoutHeading">
+                <div>
+                  <span class="emerald-skulls-eyebrow">Jackpot unlocked</span>
+                  <h3 id="emeraldSkullsPayoutHeading">Choose one payout</h3>
+                  <p>Take the standard board payout or one achieved jackpot.</p>
+                </div>
+                <div id="emeraldSkullsPayoutOptions" class="emerald-skulls-payout-options"></div>
+              </section>
+
+              <section id="emeraldSkullsResult" class="emerald-skulls-result hidden" aria-live="polite" data-emerald-skulls-explain="result">
+                <div class="emerald-skulls-result-heading">
+                  <div>
+                    <span id="emeraldSkullsResultEyebrow" class="emerald-skulls-eyebrow">Turn review</span>
+                    <h3 id="emeraldSkullsResultTitle">Turn Result</h3>
+                  </div>
+                  <span id="emeraldSkullsReviewProgress" class="emerald-skulls-review-progress">0 / 0 ready</span>
+                </div>
+                <div id="emeraldSkullsResultBody" class="emerald-skulls-result-body"></div>
+                <div id="emeraldSkullsReadyList" class="emerald-skulls-ready-list"></div>
+                <div class="emerald-skulls-result-actions">
+                  <button id="emeraldSkullsNextBtn" class="is-primary" type="button" data-emerald-skulls-explain="next" disabled>Next Turn</button>
+                  <button id="emeraldSkullsPlayAgainBtn" class="is-primary hidden" type="button" data-emerald-skulls-explain="again" disabled>Play Again</button>
+                </div>
+              </section>
+
+              <section class="emerald-skulls-log-card" aria-labelledby="emeraldSkullsLogHeading" data-emerald-skulls-explain="log">
+                <div class="emerald-skulls-section-heading">
+                  <h3 id="emeraldSkullsLogHeading">Game Log</h3>
+                  <span>Newest first</span>
+                </div>
+                <div id="emeraldSkullsLog" class="emerald-skulls-log" tabindex="0">No actions yet.</div>
+              </section>
+
+              <div id="emeraldSkullsLiveRegion" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
             </div>
 
             <div id="bombBustersPanel" class="hidden bomb-busters-panel">
@@ -4122,6 +4268,14 @@
             </div>
 
             <div id="kronologicPanel" class="hidden">
+              <button
+                id="kronologicNotebookDockBtn"
+                class="kronologic-notebook-dock hidden"
+                type="button"
+                aria-controls="kronologicNotebookSection"
+                aria-expanded="false"
+              ><span aria-hidden="true">🗒️</span><span data-kronologic-copy="notebook_dock">笔记</span></button>
+              <div id="kronologicNotebookBackdrop" class="kronologic-notebook-backdrop hidden" aria-hidden="true"></div>
               <div class="kronologic-game-shell">
                 <section class="kronologic-case-card">
                   <div class="kronologic-case-heading">
@@ -4141,7 +4295,7 @@
 
                 <div class="kronologic-layout">
                   <div class="kronologic-main-column">
-                    <section class="kronologic-section">
+                    <section class="kronologic-section kronologic-map-section">
                       <div class="kronologic-section-heading">
                         <h3 data-kronologic-copy="map_title">场所地图</h3>
                         <span data-kronologic-copy="map_hint">每个时段都必须移动到相连的房间。</span>
@@ -4198,10 +4352,11 @@
                       <div id="kronologicPlayers" class="kronologic-players"></div>
                     </section>
 
-                    <section class="kronologic-section kronologic-notebook" data-kronologic-explain="notebook">
-                      <div class="kronologic-section-heading">
+                    <section id="kronologicNotebookSection" class="kronologic-section kronologic-notebook" data-kronologic-explain="notebook">
+                      <div class="kronologic-section-heading kronologic-notebook-heading">
                         <h3 data-kronologic-copy="notebook_title">你的笔记本</h3>
                         <span data-kronologic-copy="notebook_hint">点击人物可循环切换 · ○ ✕ ★。</span>
+                        <button id="kronologicNotebookCloseBtn" class="kronologic-notebook-close" type="button" data-kronologic-copy="notebook_hide">收起</button>
                       </div>
                       <div id="kronologicNotebookTimes" class="kronologic-time-tabs"></div>
                       <div id="kronologicNotebook" class="kronologic-notebook-grid"></div>
@@ -4217,16 +4372,11 @@
                     </section>
 
                     <section class="kronologic-section kronologic-history-section" data-kronologic-explain="clue-history">
-                      <div class="kronologic-history-columns">
-                        <div>
-                          <h3 data-kronologic-copy="public_clues_title">📣 公开线索</h3>
-                          <div id="kronologicPublicClues" class="kronologic-history"></div>
-                        </div>
-                        <div>
-                          <h3 data-kronologic-copy="private_clues_title">🔒 我的私密线索</h3>
-                          <div id="kronologicPrivateClues" class="kronologic-history"></div>
-                        </div>
+                      <div class="kronologic-section-heading">
+                        <h3 data-kronologic-copy="clue_history_title">🧩 线索历史</h3>
+                        <span data-kronologic-copy="clue_history_hint">私密细节与对应公开线索成对显示。</span>
                       </div>
+                      <div id="kronologicClueHistory" class="kronologic-history kronologic-bound-history"></div>
                     </section>
 
                     <section class="kronologic-section">
@@ -4878,6 +5028,13 @@
                     </div>
                     <div id="nineUpperTerm" class="nine-upper-term">-</div>
                     <div id="nineUpperPronunciation" class="nine-upper-pronunciation"></div>
+                    <div id="nineUpperSkipRow" class="nine-upper-skip-row hidden">
+                      <div class="nine-upper-skip-copy">
+                        <strong>Recognize this word?</strong>
+                        <span id="nineUpperSkipHint">Retire it for this room and draw another at the same difficulty.</span>
+                      </div>
+                      <button id="nineUpperSkipTermBtn" class="nine-upper-skip-btn has-explanation" type="button">🔁 I Know It — New Word</button>
+                    </div>
                     <div id="nineUpperTruthBox" class="nine-upper-truth-box hidden">
                       <span>📜 The real explanation — only you can see this</span>
                       <strong id="nineUpperTruth">-</strong>
@@ -6530,6 +6687,26 @@
               </div>
             </div>
 
+            <div id="emeraldSkullsHelpModal" class="modal hidden" aria-hidden="true">
+              <div class="modal-content emerald-skulls-modal-content" role="dialog" aria-modal="true" aria-labelledby="emeraldSkullsHelpModalTitle">
+                <div class="modal-header">
+                  <h2 id="emeraldSkullsHelpModalTitle">Emerald Skulls Help</h2>
+                  <button id="emeraldSkullsHelpCloseBtn" type="button">Close</button>
+                </div>
+                <div id="emeraldSkullsHelpContent" class="modal-body emerald-skulls-help-content"></div>
+              </div>
+            </div>
+
+            <div id="emeraldSkullsExplainModal" class="modal hidden" aria-hidden="true">
+              <div class="modal-content emerald-skulls-modal-content" role="dialog" aria-modal="true" aria-labelledby="emeraldSkullsExplainModalTitle">
+                <div class="modal-header">
+                  <h2 id="emeraldSkullsExplainModalTitle">Emerald Skulls Explain</h2>
+                  <button id="emeraldSkullsExplainCloseBtn" type="button">Close</button>
+                </div>
+                <div id="emeraldSkullsExplainContent" class="modal-body"></div>
+              </div>
+            </div>
+
             <div id="davinciCodeExplainModal" class="modal davinci-explain-modal hidden" aria-hidden="true">
               <div class="modal-content">
                 <div class="modal-header">
@@ -6626,7 +6803,7 @@
   <script src="/static/games/decrypto.js?v=app_v4"></script>
   <script src="/static/games/wavelength.js?v=app_v4"></script>
   <script src="/static/games/dumb_questions.js?v=app_v1"></script>
-  <script src="/static/games/nine_upper.js?v=app_v1"></script>
+  <script src="/static/games/nine_upper.js?v=app_v2"></script>
   <script src="/static/games/word_decode.js?v=app_v4"></script>
   <script src="/static/games/trekking.js?v=app_v4"></script>
   <script src="/static/games/aidixit.js?v=app_v4"></script>
@@ -6656,7 +6833,7 @@
   <script src="/static/games/lost_code.js?v=app_v4"></script>
   <script src="/static/games/criminal_dance.js?v=app_v4"></script>
   <script src="/static/games/turing_machine.js?v=app_v6"></script>
-  <script src="/static/games/kronologic.js?v=app_v2"></script>
+  <script src="/static/games/kronologic.js?v=app_v3"></script>
   <script src="/static/games/halli_galli.js?v=app_v4"></script>
   <script src="/static/games/texas_holdem.js?v=app_v4"></script>
   <script src="/static/games/yahtzee.js?v=app_v4"></script>
@@ -6671,6 +6848,7 @@
   <script src="/static/games/high_society.js?v=app_v1"></script>
   <script src="/static/games/poison.js?v=app_v1"></script>
   <script src="/static/games/bohnanza_dice.js?v=app_v8"></script>
+  <script src="/static/games/emerald_skulls.js?v=app_v1"></script>
   <script src="/static/games/bomb_busters.js?v=app_v2"></script>
   <script src="/static/games/felix.js?v=app_v1"></script>
   <script src="/static/games/tacta.js?v=app_v7"></script>
@@ -6680,7 +6858,7 @@
   <script src="/static/games/ra.js?v=app_v7"></script>
   <script src="/static/games/scout.js?v=app_v4"></script>
   <script src="/static/games/ark_nova.js?v=app_v22"></script>
-  <script src="/static/app.js?v=app_v18"></script>
-  <script src="/static/room.js?v=app_v32"></script>
+  <script src="/static/app.js?v=app_v19"></script>
+  <script src="/static/room.js?v=app_v35"></script>
 </body>
 </html>

@@ -63,6 +63,14 @@ class RoomSessionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(public_action, {"type": "dual_cut"})
         self.assertNotIn("own_wire_id", public_action)
 
+    async def test_wriggle_roulette_bot_grab_is_sanitized(self):
+        action = {"type": "grab", "count": 4, "cycle_no": 7}
+
+        public_action = app._public_bot_action("wriggle_roulette", action)
+
+        self.assertEqual(public_action, {"type": "grab"})
+        self.assertNotIn("count", public_action)
+
     async def test_join_cleans_previous_lobby_session(self):
         sid_owner = "sid-owner"
         room_id_a = await self._create_room(sid_owner, "Alice")

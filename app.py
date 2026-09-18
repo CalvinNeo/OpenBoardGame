@@ -500,7 +500,7 @@ def _bot_status_payload(room: Room) -> Dict:
 
 
 def _public_bot_action(game_type: str, action: Dict) -> Dict:
-    if game_type in ("subtext", "bomb_busters", "kronologic", "nine_upper"):
+    if game_type in ("subtext", "bomb_busters", "kronologic", "nine_upper", "wriggle_roulette"):
         return {"type": action.get("type")}
     return action
 
@@ -993,6 +993,8 @@ async def _maybe_run_bots(room: Room) -> None:
                     break
                 bot_action = None
                 bot_player = None
+                bot_action_state = None
+                bot_action_state_version = None
                 for candidate in room.players:
                     if not candidate.is_bot:
                         continue
@@ -1017,6 +1019,7 @@ async def _maybe_run_bots(room: Room) -> None:
                         room.bot_detail = detail or None
                         loop.call_soon_threadsafe(_schedule_bot_progress_emit, room, loop, False)
 
+                    candidate_state_version = room.state_version
                     try:
                         if room.game_type == "guandan":
                             action = await asyncio.to_thread(
@@ -1047,6 +1050,8 @@ async def _maybe_run_bots(room: Room) -> None:
                     if action:
                         bot_action = action
                         bot_player = candidate
+                        bot_action_state = state
+                        bot_action_state_version = candidate_state_version
                         break
                 if not bot_action or not bot_player:
                     break
@@ -1073,6 +1078,8 @@ async def _maybe_run_bots(room: Room) -> None:
                     state = room.game_state
                     if state.get("game_over"):
                         break
+                if bot_action_state is not room.game_state or room.state_version != bot_action_state_version:
+                    continue
                 try:
                     events, error = game_module.apply_action(state, bot_player.player_id, action_payload)
                 except Exception:

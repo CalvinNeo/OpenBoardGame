@@ -115,28 +115,44 @@ def _answerer_ids(state: Dict) -> List[str]:
 def _build_term_decks(state: Dict) -> None:
     terms = _load_terms()
     state["term_cards"] = {term["id"]: term for term in terms}
+    skipped = set(state.get("skipped_term_ids", []))
     state["term_decks"] = {}
     for difficulty in DIFFICULTY_LABELS:
-        deck = [term["id"] for term in terms if term["difficulty"] == difficulty]
+        deck = [
+            term["id"]
+            for term in terms
+            if term["difficulty"] == difficulty and term["id"] not in skipped
+        ]
         _next_rng(state, f"term-deck-{difficulty}").shuffle(deck)
         state["term_decks"][str(difficulty)] = deck
     state["used_term_ids"] = []
 
 
 def _draw_term(state: Dict, difficulty: int) -> Dict:
-    deck = state.get("term_decks", {}).get(str(difficulty), [])
+    cards = state.get("term_cards", {})
+    skipped = set(state.get("skipped_term_ids", []))
+    deck = [
+        term_id
+        for term_id in state.get("term_decks", {}).get(str(difficulty), [])
+        if term_id not in skipped
+        and term_id in cards
+        and cards[term_id].get("difficulty") == difficulty
+    ]
+    state.setdefault("term_decks", {})[str(difficulty)] = deck
     if not deck:
         used = set(state.get("used_term_ids", []))
         deck = [
             term_id
-            for term_id, term in state.get("term_cards", {}).items()
-            if term.get("difficulty") == difficulty and term_id not in used
+            for term_id, term in cards.items()
+            if term.get("difficulty") == difficulty
+            and term_id not in used
+            and term_id not in skipped
         ]
         if not deck:
             deck = [
                 term_id
-                for term_id, term in state.get("term_cards", {}).items()
-                if term.get("difficulty") == difficulty
+                for term_id, term in cards.items()
+                if term.get("difficulty") == difficulty and term_id not in skipped
             ]
         _next_rng(state, f"term-refill-{difficulty}").shuffle(deck)
         state.setdefault("term_decks", {})[str(difficulty)] = deck
@@ -145,6 +161,19 @@ def _draw_term(state: Dict, difficulty: int) -> Dict:
     term_id = deck.pop()
     state.setdefault("used_term_ids", []).append(term_id)
     return state["term_cards"][term_id]
+
+
+def _can_replace_current_term(state: Dict) -> bool:
+    difficulty = state.get("difficulty")
+    current_term_id = state.get("term_id")
+    if difficulty not in DIFFICULTY_LABELS or not current_term_id:
+        return False
+    unavailable = set(state.get("skipped_term_ids", []))
+    unavailable.add(current_term_id)
+    return any(
+        term_id not in unavailable and term.get("difficulty") == difficulty
+        for term_id, term in state.get("term_cards", {}).items()
+    )
 
 
 def _category_options(state: Dict, category: str, difficulty: int) -> List[str]:
@@ -159,6 +188,16 @@ def _category_options(state: Dict, category: str, difficulty: int) -> List[str]:
     options = [category] + decoys[:2]
     rng.shuffle(options)
     return options
+
+
+def _set_current_term(state: Dict, card: Dict, difficulty: int) -> None:
+    state["difficulty"] = difficulty
+    state["term_id"] = card["id"]
+    state["term"] = card["term"]
+    state["pronunciation"] = card.get("pronunciation")
+    state["category"] = card["category"]
+    state["definition"] = card["definition"]
+    state["category_options"] = _category_options(state, card["category"], difficulty)
 
 
 def _start_round(state: Dict) -> None:
@@ -260,8 +299,13 @@ def _reset_for_play_again(state: Dict) -> None:
     players = [copy.deepcopy(state["player_meta"][player_id]) for player_id in state["turn_order"]]
     seed = state.get("rng_seed")
     game_index = int(state.get("game_index", 1)) + 1
+    skipped_term_ids = list(dict.fromkeys(state.get("skipped_term_ids", [])))
     fresh = NineUpperGame.init_game({**config, "seed": f"{seed}|game-{game_index}"}, players)
     fresh["game_index"] = game_index
+    fresh["skipped_term_ids"] = skipped_term_ids
+    skipped = set(skipped_term_ids)
+    for difficulty, deck in fresh.get("term_decks", {}).items():
+        fresh["term_decks"][difficulty] = [term_id for term_id in deck if term_id not in skipped]
     state.clear()
     state.update(fresh)
 
@@ -343,6 +387,7 @@ class NineUpperGame:
             "category_options": [],
             "definition": None,
             "statements": {},
+            "skipped_term_ids": [],
             "selected_player_id": None,
             "next_round_ready": [],
             "last_round_summary": None,
@@ -367,9 +412,12 @@ class NineUpperGame:
         if phase == "difficulty_selection":
             return ["select_difficulty"] if player_id == state.get("thinker_id") else []
         if phase == "statements":
-            if player_id == state.get("thinker_id") or player_id in state.get("statements", {}):
-                return []
-            return ["submit_statement"]
+            actions = []
+            if player_id != state.get("thinker_id") and player_id not in state.get("statements", {}):
+                actions.append("submit_statement")
+            if _can_replace_current_term(state):
+                actions.append("skip_term")
+            return actions
         if phase == "guessing":
             return ["choose_honest"] if player_id == state.get("thinker_id") else []
         if phase == "round_result" and player_id not in state.get("next_round_ready", []):
@@ -392,18 +440,34 @@ class NineUpperGame:
             if difficulty not in DIFFICULTY_LABELS:
                 return [], "invalid difficulty"
             card = _draw_term(state, difficulty)
-            state["difficulty"] = difficulty
-            state["term_id"] = card["id"]
-            state["term"] = card["term"]
-            state["pronunciation"] = card.get("pronunciation")
-            state["category"] = card["category"]
-            state["definition"] = card["definition"]
-            state["category_options"] = _category_options(state, card["category"], difficulty)
+            _set_current_term(state, card, difficulty)
             state["phase"] = "statements"
             return [
                 {
                     "type": "nine_upper:difficulty_selected",
                     "payload": {"player_id": player_id, "difficulty": difficulty},
+                }
+            ], None
+
+        if action_type == "skip_term":
+            difficulty = int(state["difficulty"])
+            skipped_term_id = state["term_id"]
+            skipped_term = state["term"]
+            skipped = state.setdefault("skipped_term_ids", [])
+            if skipped_term_id not in skipped:
+                skipped.append(skipped_term_id)
+            card = _draw_term(state, difficulty)
+            _set_current_term(state, card, difficulty)
+            state["statements"] = {}
+            state["selected_player_id"] = None
+            return [
+                {
+                    "type": "nine_upper:term_skipped",
+                    "payload": {
+                        "player_id": player_id,
+                        "skipped_term": skipped_term,
+                        "replacement_term": card["term"],
+                    },
                 }
             ], None
 
@@ -536,6 +600,7 @@ class NineUpperGame:
                 "done": len(ready),
                 "total": len(state.get("turn_order", [])),
             },
+            "skipped_term_count": len(state.get("skipped_term_ids", [])),
             "last_round_summary": copy.deepcopy(state.get("last_round_summary")),
             "winner_ids": list(state.get("winner_ids", [])),
             "game_over": bool(state.get("game_over")),
