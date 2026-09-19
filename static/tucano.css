@@ -359,14 +359,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 6px;
-  min-width: 49px;
-  font-size: 12px;
+  gap: 2px;
+  padding: 4px 2px;
+  width: 44px;
+  min-width: 44px;
+  font-size: 11px;
 }
 
 .tucano-fruit-icon {
-  font-size: 20px;
+  font-size: 19px;
   line-height: 1.2;
 }
 
@@ -466,6 +467,32 @@
   font-size: 13px;
 }
 
+@media (min-width: 1100px) {
+  .tucano-panel {
+    grid-template-columns: minmax(0, 1.4fr) minmax(260px, 1fr);
+    align-items: start;
+  }
+
+  .tucano-header,
+  .tucano-status-grid,
+  .tucano-notice,
+  .tucano-winner {
+    grid-column: 1 / -1;
+  }
+
+  .tucano-players {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tucano-market.hidden + section {
+    grid-column: 1 / -1;
+  }
+
+  .tucano-market.hidden + section .tucano-players {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 body.tucano-explain-mode #tucanoPanel .has-explanation {
   cursor: help;
   outline: 2px dashed #34805a;
@@ -475,6 +502,12 @@ body.tucano-explain-mode #tucanoPanel .has-explanation {
 @media (hover: hover) {
   .tucano-panel button:not(:disabled):hover {
     filter: brightness(0.94);
+  }
+}
+
+@media (max-width: 1099px) {
+  .tucano-panel[data-phase="toucan"] .tucano-market {
+    order: 1;
   }
 }
 

@@ -6,6 +6,7 @@ let tucanoModalTrigger = null;
 const tucanoOpenScores = new Set();
 
 const tucanoPhaseLabel = document.getElementById("tucanoPhase");
+const tucanoRoot = document.getElementById("tucanoPanel");
 const tucanoTurnLabel = document.getElementById("tucanoTurn");
 const tucanoDeckLabel = document.getElementById("tucanoDeck");
 const tucanoWinnerLabel = document.getElementById("tucanoWinner");
@@ -13,6 +14,7 @@ const tucanoNotice = document.getElementById("tucanoNotice");
 const tucanoNoticeTitle = document.getElementById("tucanoNoticeTitle");
 const tucanoNoticeBody = document.getElementById("tucanoNoticeBody");
 const tucanoColumns = document.getElementById("tucanoColumns");
+const tucanoMarket = document.querySelector("#tucanoPanel .tucano-market");
 const tucanoPlayers = document.getElementById("tucanoPlayers");
 const tucanoActions = document.getElementById("tucanoActions");
 const tucanoSelectionLabel = document.getElementById("tucanoSelection");
@@ -193,6 +195,9 @@ function clearTucanoState() {
   tucanoExplainMode = false;
   tucanoExplainClickPending = false;
   tucanoOpenScores.clear();
+  if (tucanoRoot) {
+    delete tucanoRoot.dataset.phase;
+  }
   clearTucanoSelection();
   document.body.classList.remove("tucano-explain-mode");
   if (tucanoExplainBtn) {
@@ -206,6 +211,9 @@ function clearTucanoState() {
   });
   if (tucanoColumns) {
     tucanoColumns.innerHTML = "";
+  }
+  if (tucanoMarket) {
+    tucanoMarket.classList.remove("hidden");
   }
   if (tucanoPlayers) {
     tucanoPlayers.innerHTML = "";
@@ -572,6 +580,9 @@ function renderTucanoGameState(data) {
   const view = data.view;
   clearTucanoSelection();
   currentTucanoView = view;
+  if (tucanoRoot) {
+    tucanoRoot.dataset.phase = view.phase || "draft";
+  }
   if (currentGameType !== "tucano") {
     currentGameType = "tucano";
     setGamePanelVisibility("tucano");
@@ -588,6 +599,9 @@ function renderTucanoGameState(data) {
   if (tucanoWinnerLabel) {
     tucanoWinnerLabel.textContent = `🏆 Winner: ${formatTucanoWinner(view)}`;
     tucanoWinnerLabel.classList.toggle("hidden", !view.game_over);
+  }
+  if (tucanoMarket) {
+    tucanoMarket.classList.toggle("hidden", view.game_over);
   }
   renderTucanoNotice(view);
   renderTucanoColumns(view);
@@ -652,6 +666,10 @@ function showTucanoExplanation(element) {
     return;
   }
   const explainId = element.dataset.explainId || element.id;
+  const title = document.getElementById("tucanoExplainTitle");
+  if (title) {
+    title.textContent = element.dataset.explainTitle || "Tucano Explain";
+  }
   const paragraph = document.createElement("p");
   paragraph.textContent = element.dataset.explainText || TUCANO_EXPLAIN[explainId] || "No explanation available.";
   tucanoExplainContent.replaceChildren(paragraph);

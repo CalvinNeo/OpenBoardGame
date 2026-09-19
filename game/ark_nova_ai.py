@@ -179,7 +179,7 @@ def _animal_can_use_building(
         return False
     required = int(options[0].get("required_spaces", 0))
     if building_type == "standard_enclosure":
-        if building.get("occupied_by"):
+        if rules._building_occupied(building):
             return False
         if int(building.get("size", 0)) < required:
             return False
@@ -304,7 +304,7 @@ def _player_value(state: Mapping[str, Any], player_id: str) -> float:
         kind = building.get("building_type")
         if kind in {"standard_enclosure", *rules.SPECIAL_ENCLOSURES}:
             remaining = int(building.get("capacity", 0)) - int(building.get("used_capacity", 0))
-            if kind == "standard_enclosure" and building.get("occupied_by"):
+            if kind == "standard_enclosure" and rules._building_occupied(building):
                 remaining = 0
             value += 0.28 * max(0, remaining)
             matching = [card for card in hand_animals if _animal_can_use_building(player, card, building)]
@@ -533,7 +533,7 @@ def _build_candidates(state: Mapping[str, Any], player_id: str) -> List[Dict[str
             ),
         )[:18]
         for (size_a, spec_a), (size_b, spec_b) in itertools.combinations(top_specs, 2):
-            if spec_a["building_type"] == spec_b["building_type"]:
+            if (spec_a["building_type"], size_a) == (spec_b["building_type"], size_b):
                 continue
             if set(spec_a["cells"]).intersection(spec_b["cells"]):
                 continue
@@ -582,11 +582,12 @@ def _animal_entries(state: Mapping[str, Any], player_id: str) -> List[Dict[str, 
 
 def _animal_plays(state: Mapping[str, Any], player_id: str) -> List[Dict[str, Any]]:
     player = state["players"][player_id]
-    buildings = list(player.get("map", {}).get("buildings", []))
+    buildings = rules._animal_enclosures(player)
     plays: List[Dict[str, Any]] = []
     for entry in _animal_entries(state, player_id):
         card = entry["card"]
-        if not rules._card_conditions_met(player, card):
+        ignore = int(rules._animal_size_class(card) == "large" and rules._has_active_rule(player, "large_animal_ignore_condition"))
+        if not rules._card_conditions_met(player, card, ignore_count=ignore):
             continue
         total_cost = rules._animal_cost(player, card) + int(entry.get("surcharge", 0))
         if total_cost > int(player.get("money", 0)):
@@ -977,6 +978,8 @@ def _main_candidates(
     expanded: List[Dict[str, Any]] = []
     forced = state.get("forced_action")
     for action in actions:
+        if action.get("type") == "animals" or (action.get("type") == "sponsors" and action.get("mode", "play") == "play"):
+            action["continue_action"] = True
         expanded.append(action)
         action_type = str(action.get("type", ""))
         if isinstance(forced, Mapping):
@@ -1219,6 +1222,8 @@ def choose_ark_nova_action(
     before_value = _state_value(state, player_id)
     total = max(1, len(candidates))
     for index, action in enumerate(candidates):
+        if json.dumps(action, sort_keys=True) in state.get("venom_failed_actions", []):
+            continue
         candidate_state = copy.deepcopy(state)
         _, error = rules.ArkNovaGame.apply_action(candidate_state, player_id, action)
         if error is not None:

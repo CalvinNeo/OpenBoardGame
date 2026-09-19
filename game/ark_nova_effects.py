@@ -981,7 +981,7 @@ def execute_ability(
         criteria = [("appeal", 5)]
         optional = attack == "hypnosis"
         if attack == "pilfering_2":
-            criteria.append(("conservation", 0))
+            criteria.append(("conservation", 1))
         candidates_by_criterion = [
             (criterion, _attack_candidates(context, attack, criterion, minimum=minimum))
             for criterion, minimum in criteria
@@ -1539,14 +1539,21 @@ def _breeding_candidates(context: EffectContext, project: Mapping[str, Any]) -> 
     return candidates
 
 
-def _release_animal(context: EffectContext, animal_id: str, project_id: str) -> List[Dict[str, Any]]:
+def _release_animal(context: EffectContext, animal_id: str, project_id: str, enclosure_id: Optional[str] = None) -> List[Dict[str, Any]]:
     player = _player(context)
     record = next((entry for entry in _animal_records(context) if _record_card_id(entry) == animal_id), None)
     if record is None:
         raise ValueError("release requires an animal record with its occupied enclosure")
     card = ANIMAL_BY_ID[animal_id]
-    enclosure_id = record.get("enclosure_id")
+    from game.ark_nova import _detach_animal_record, _empty_animal_space, _release_enclosure_options
+    options = _release_enclosure_options(player, card)
+    enclosure_id = enclosure_id or (str(options[0]["id"]) if options else None)
+    if enclosure_id and enclosure_id not in [str(item["id"]) for item in options]:
+        raise ValueError("invalid release enclosure")
     enclosure_size = _record_enclosure_size(context, record)
+    _detach_animal_record(player, animal_id)
+    if enclosure_id:
+        _empty_animal_space(player, card, enclosure_id)
     played = player.setdefault("played_animals", [])
     played_entry = next((item for item in played if _card_id(item) == animal_id), None)
     if played_entry is None:
@@ -1561,7 +1568,7 @@ def _release_animal(context: EffectContext, animal_id: str, project_id: str) -> 
     elif isinstance(records, list):
         records.remove(record)
 
-    # Released cards leave the zoo and game; they never return to hand/deck.
+    # Keep release history for scoring/debugging; the card itself joins the discard pile.
     player.setdefault("released_animals", []).append({
         "card_id": animal_id,
         "project_id": project_id,
@@ -1582,26 +1589,7 @@ def _release_animal(context: EffectContext, animal_id: str, project_id: str) -> 
     if tucked:
         _discard(context, tucked)
 
-    building = _building_by_id(context, enclosure_id)
-    if building is not None:
-        animal_ids = building.get("occupied_by", building.get("animal_ids"))
-        if isinstance(animal_ids, list):
-            remaining = [value for value in animal_ids if _card_id(value) != animal_id]
-            if "occupied_by" in building:
-                building["occupied_by"] = remaining
-            else:
-                building["animal_ids"] = remaining
-            building["occupied"] = bool(remaining)
-        elif building.get("animal_id") == animal_id:
-            building["animal_id"] = None
-            building["occupied"] = False
-        else:
-            building["occupied"] = False
-        capacity_key = "used_capacity" if "used_capacity" in building else "capacity_used"
-        capacity_used = building.get(capacity_key)
-        if isinstance(capacity_used, int):
-            used = int(record.get("capacity_used", record.get("animal_size", card.get("animal_size", 0))))
-            building[capacity_key] = max(0, capacity_used - used)
+    _discard(context, [animal_id])
     events.append(
         _event(
             "animal_released",
@@ -1701,7 +1689,17 @@ def support_conservation_project(
             raise ValueError("animal is not eligible for this project")
     events: List[Dict[str, Any]] = []
     if project["project_type"] == "release" and chosen_animal is not None:
-        events.extend(_release_animal(context, str(chosen_animal), str(card_id)))
+        from game.ark_nova import _release_enclosure_options
+        options = _release_enclosure_options(_player(context), ANIMAL_BY_ID[str(chosen_animal)])
+        enclosure_id = (choice or {}).get("enclosure_id")
+        if enclosure_id is None and len(options) > 1:
+            return _pending(context, f"project:{card_id}:{selected_slot}", "choose_release_enclosure",
+                            "选择翻回空置面的围栏或移除特殊场馆标记", [
+                                {"id": str(item["id"]), "enclosure_id": str(item["id"]),
+                                 "slot_position": int(selected_slot), "animal_id": str(chosen_animal)}
+                                for item in options
+                            ])
+        events.extend(_release_animal(context, str(chosen_animal), str(card_id), enclosure_id))
     rewards = dict(slot["reward"])
     projects = context.state.setdefault("projects", [])
     project_was_new = str(card_id) not in {_card_id(value) for value in projects}

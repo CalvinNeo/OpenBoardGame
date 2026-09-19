@@ -379,7 +379,7 @@ class ArkNovaProjectAndScoringTests(unittest.TestCase):
         self.assertEqual(player["reputation"], 1)
         self.assertFalse(player["map"]["buildings"][0]["occupied"])
         self.assertEqual(player["map"]["buildings"][0]["used_capacity"], 0)
-        self.assertEqual(state["discard"], ["202"])
+        self.assertEqual(state["discard"], ["202", "401"])
         self.assertTrue(any(event["type"] == "animal_released" for event in result.events))
 
         different_tile_size = game_state()

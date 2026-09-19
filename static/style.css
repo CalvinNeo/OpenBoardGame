@@ -28215,6 +28215,14 @@ body.acquire-explain-mode button.has-explanation {
   color: #685023;
 }
 
+#inAGroveWinner {
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
 .in-a-grove-explain-notice {
   background: #e4edf8;
   color: #294f88;
@@ -28319,6 +28327,21 @@ body.acquire-explain-mode button.has-explanation {
 .in-a-grove-scene-meta {
   color: #c8d6c9;
   font-size: 11px;
+}
+
+.in-a-grove-table .in-a-grove-section-heading > span {
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+#inAGroveFirstPlayer {
+  min-width: 0;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .in-a-grove-scene-meta {
@@ -28429,6 +28452,13 @@ body.acquire-explain-mode button.has-explanation {
   font-size: 10px;
 }
 
+.in-a-grove-unseen {
+  min-height: 13px;
+  color: #765630;
+  font-size: 10px;
+  line-height: 1.3;
+}
+
 .in-a-grove-suspect-status {
   margin-top: auto;
   font-size: 11px;
@@ -28495,7 +28525,7 @@ body.acquire-explain-mode button.has-explanation {
   border-top: 1px solid #bdd6bf33;
 }
 
-#inAGroveActionHint {
+#inAGrovePanel #inAGroveActionHint {
   margin-bottom: 10px;
   font-size: 12px;
   line-height: 1.5;
@@ -28522,16 +28552,6 @@ body.acquire-explain-mode button.has-explanation {
 
 .in-a-grove-actions button:hover:not(:disabled) { background: #f0f4d4; }
 .in-a-grove-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
-
-.in-a-grove-actions .in-a-grove-secondary {
-  border-color: #8da994;
-  color: #edf2dd;
-  background: transparent;
-}
-
-.in-a-grove-actions .in-a-grove-secondary:hover:not(:disabled) {
-  background: #42644e;
-}
 
 .in-a-grove-rule-strip {
   display: flex;

@@ -208,7 +208,7 @@
       </section>
       <section><h4>🗂️ Cards</h4><p>Advance Break, then draw cards. At sufficient strength you can Snap one card from any display folder.</p></section>
       <section><h4>🔨 Build</h4><p>Buildings cost 2 money per hex. Choose an anchor hex to place the selected fixed piece, then rotate it if needed. The first touches an edge; later buildings touch your zoo. Water, rock, occupied spaces, kiosk distance, and Build II spaces restrict placement.</p></section>
-      <section><h4>🐾 Animals</h4><p>Pay the card cost and place each animal into a suitable empty enclosure. Check card requirements, habitat size, and water or rock adjacency before playing.</p></section>
+      <section><h4>🐾 Animals</h4><p>Play one card and fully resolve its effects before choosing the next card. New cards, money, and icons gained can be used later in this action. Choose the order of simultaneous effects; after finishing effects resolve after the Action card moves. Finish ends the action when no further card is wanted.</p></section>
       <section><h4>🤝 Association</h4><p>Use active workers for reputation, partner zoos, universities, and conservation projects. Upgraded Association can combine different tasks and donate once.</p></section>
       <section><h4>🏛️ Sponsors</h4><p>Play Sponsor cards within the available strength, or advance Break and gain money. Sponsors can have immediate, ongoing, income, and end-game effects.</p></section>
       <section><h4>Break</h4><p>When the Break marker reaches its limit, finish the current action, reduce hands to their limits, refresh the display and association board, return workers, and collect income.</p></section>
@@ -1136,7 +1136,7 @@
     const cards = arkNovaDisplay(view);
     const selectedAction = arkNovaUi.selectedAction;
     const selectable = arkNovaIsMyTurn(view) && !view.pending_choice && ["cards", "animals", "sponsors", "association"].includes(selectedAction);
-    container.innerHTML = cards.length ? cards.map((card, index) => arkNovaCardMarkup(card, { selectable, zone: "display", folder: index + 1 })).join("") : `<div class="arkn-empty">The display is empty.</div>`;
+    container.innerHTML = cards.length ? cards.map((card, index) => arkNovaCardMarkup(card || { hidden: true }, { selectable, zone: "display", folder: index + 1 })).join("") : `<div class="arkn-empty">The display is empty.</div>`;
   }
 
   function arkNovaSupplyItemLabel(value) {
@@ -1369,7 +1369,9 @@
   }
 
   function arkNovaEnclosures(view = arkNovaView) {
-    return arkNovaBuildings(arkNovaYou(view)).filter(arkNovaBuildingIsEnclosure);
+    const buildings = arkNovaBuildings(arkNovaYou(view)).filter(arkNovaBuildingIsEnclosure);
+    if ((arkNovaYou(view) || {}).flock_available) buildings.push({ id: "flock", name: "Flock animal (no enclosure)", building_type: "flock", size: 0, cells: [], occupied_by: [] });
+    return buildings;
   }
 
   function arkNovaRenderBuildings(view) {
@@ -1403,7 +1405,9 @@
       const size = arkNovaBuildingSize(building);
       const usedCapacity = Math.max(0, arkNovaNumber(building.used_capacity, occupants.length));
       const selected = id && id === String(arkNovaUi.selectedBuildingId || "");
-      const status = arkNovaBuildingIsEnclosure(building)
+      const status = arkNovaBuildingType(building) === "standard_enclosure"
+        ? `${building.occupied ?? occupants.length > 0 ? "Occupied" : "Empty"} · size ${size}`
+        : arkNovaBuildingIsEnclosure(building)
         ? `${usedCapacity} / ${size} capacity${animalNames.length ? ` · 🐾 ${animalNames.join(", ")}` : " · empty"}`
         : `${cells.length || size} hex${(cells.length || size) === 1 ? "" : "es"}`;
       return `<button type="button" class="arkn-building-chip ${selected ? "is-selected" : ""}" data-arkn-building-id="${arkNovaEscape(id)}" aria-pressed="${selected}" title="Highlight ${arkNovaEscape(arkNovaBuildingName(building))} on Map 0" style="--arkn-building-color:${arkNovaEscape(meta.color || "#7e8c85")}">
@@ -2065,7 +2069,7 @@
       choiceNode.innerHTML = `<div class="arkn-hand-choice" role="group" aria-labelledby="arkNovaHandChoiceTitle">
         <div><strong id="arkNovaHandChoiceTitle">${arkNovaEscape(discardChoice.prompt || `Discard ${target} card(s)`)}</strong><small>Choose directly from your cards below. Use <i>i</i> only to inspect details.</small></div>
         <output aria-live="polite"><b>${selectedCount}</b> / ${target} selected</output>
-        <div class="arkn-hand-choice-actions"><button type="button" class="arkn-confirm" data-arkn-command="resolve-choice" data-arkn-explain="pending_choice" ${valid && arkNovaCan("resolve_choice") ? "" : "disabled"}>Discard selected</button>${discardChoice.allow_skip || minimum === 0 ? `<button type="button" data-arkn-command="skip-choice">Skip</button>` : ""}</div>
+        <div class="arkn-hand-choice-actions"><button type="button" class="arkn-confirm" data-arkn-command="resolve-choice" data-arkn-explain="pending_choice" ${valid && arkNovaCan("resolve_choice") ? "" : "disabled"}>Discard selected</button>${discardChoice.allow_skip || minimum === 0 ? `<button type="button" data-arkn-command="skip-choice" data-arkn-explain="pending_choice">Skip</button>` : ""}</div>
       </div>`;
     } else choiceNode.innerHTML = "";
     const you = arkNovaYou(view) || {};
@@ -2151,17 +2155,17 @@
 
     const byType = new Map();
     arkNovaUi.buildQueue.forEach((building, index) => {
-      const type = arkNovaBuildingType(building);
+      const type = `${arkNovaBuildingType(building)}:${arkNovaBuildingSize(building)}`;
       if (!byType.has(type)) byType.set(type, []);
       byType.get(type).push(index);
     });
     const repeated = [...byType.entries()].filter(([, indices]) => indices.length > 1);
     let engineerCopyIndex = -1;
     if (repeated.length) {
-      if (!engineer || repeated.length !== 1 || repeated[0][1].length !== 2) return "Buildings in one Build II action must have different types.";
+      if (!engineer || repeated.length !== 1 || repeated[0][1].length !== 2) return "Build II requires different building types or enclosure sizes.";
       const [type, indices] = repeated[0];
       const [first, second] = indices.map((index) => arkNovaUi.buildQueue[index]);
-      if (["petting_zoo", "reptile_house", "large_bird_aviary"].includes(type) || arkNovaBuildingSize(first) !== arkNovaBuildingSize(second)) {
+      if (["petting_zoo", "reptile_house", "large_bird_aviary"].includes(arkNovaBuildingType(first)) || arkNovaBuildingSize(first) !== arkNovaBuildingSize(second)) {
         return "Engineer only copies the same non-special building with the same size.";
       }
       engineerCopyIndex = indices[1];
@@ -2336,9 +2340,9 @@
     const rawOccupants = building.occupied_by || building.animals || [];
     const occupants = Array.isArray(rawOccupants) ? rawOccupants : rawOccupants ? [rawOccupants] : [];
     const flock = arkNovaAsArray(normalizedCard.abilities).find((ability) => ability && ability.ability === "flock_animal");
-    if (occupants.length && flock) {
+    if ((occupants.length || building.occupied || arkNovaBuildingId(building) === "flock") && flock) {
       const minimumHostSize = Math.max(0, arkNovaNumber(flock.parameters && flock.parameters.minimum_host_enclosure_size, 99));
-      const eligibleHost = occupants.some((occupant) => {
+      const eligibleHost = arkNovaAsArray((arkNovaYou() || {}).played_animals).some((occupant) => {
         const host = arkNovaCardObject(occupant);
         const printedSize = arkNovaAsArray(host.enclosure_options)
           .filter((option) => option && option.type === "standard")
@@ -2352,7 +2356,7 @@
     if (!option) return `${arkNovaCardName(card)} cannot use ${arkNovaBuildingName(building)}.`;
     const required = Math.max(0, arkNovaNumber(option.required_spaces));
     if (type === "standard_enclosure") {
-      if (occupants.length) return `${arkNovaBuildingName(building)} has no eligible herbivore host for this flock animal.`;
+      if (building.occupied ?? occupants.length > 0) return `${arkNovaBuildingName(building)} is occupied.`;
       if (arkNovaBuildingSize(building) < required) return `${arkNovaBuildingName(building)} is too small; ${arkNovaCardName(card)} needs size ${required}.`;
     } else {
       const capacity = Math.max(0, arkNovaNumber(building.capacity, arkNovaBuildingSize(building)));
@@ -2400,6 +2404,7 @@
         ? 0
         : Math.max(0, arkNovaNumber(option && option.required_spaces));
       enclosure.occupied_by.push(arkNovaCardId(card));
+      if (type === "standard_enclosure") enclosure.occupied = true;
       enclosure.used_capacity += capacityUsed;
     }
     return "";
@@ -2825,7 +2830,7 @@
         <div class="arkn-pending-copy"><span>⬡</span><div><h3 id="arkNovaPendingTitle">${arkNovaEscape(pending.prompt || fallbackTitle)}</h3><p>Choose one anchor hex on Map 0; the fixed piece appears automatically. ${arkNovaEscape(pending.detail || pending.description || "Terrain, occupancy, adjacency, and shape are validated when confirmed.")}</p></div></div>
         ${buildingPicker}
         ${arkNovaBuildDraftMarkup(view)}
-        <div class="arkn-pending-actions"><button type="button" class="arkn-composer-rotate" data-arkn-command="rotate-build" data-arkn-explain="rotate_footprint" ${required < 2 || !arkNovaUi.buildAnchor ? "disabled" : ""}>↻ Rotate</button><button type="button" class="arkn-confirm" data-arkn-command="resolve-choice" data-arkn-explain="pending_choice" ${ready && arkNovaCan("resolve_choice") ? "" : "disabled"}>${arkNovaEscape(confirmLabel)}</button>${pending.allow_skip ? `<button type="button" data-arkn-command="skip-choice">Skip</button>` : ""}</div>
+        <div class="arkn-pending-actions"><button type="button" class="arkn-composer-rotate" data-arkn-command="rotate-build" data-arkn-explain="rotate_footprint" ${required < 2 || !arkNovaUi.buildAnchor ? "disabled" : ""}>↻ Rotate</button><button type="button" class="arkn-confirm" data-arkn-command="resolve-choice" data-arkn-explain="pending_choice" ${ready && arkNovaCan("resolve_choice") ? "" : "disabled"}>${arkNovaEscape(confirmLabel)}</button>${pending.allow_skip ? `<button type="button" data-arkn-command="skip-choice" data-arkn-explain="pending_choice">${["continue_cards", "move_animals"].includes(pending.type) ? "Finish" : "Skip"}</button>` : ""}</div>
       </section>`;
       return;
     }
@@ -2845,7 +2850,7 @@
     container.innerHTML = `<section class="arkn-pending" aria-labelledby="arkNovaPendingTitle">
       <div class="arkn-pending-copy"><span>✦</span><div><h3 id="arkNovaPendingTitle">${arkNovaEscape(pending.prompt || pending.label || arkNovaTitle(pending.type || "Resolve choice"))}</h3><p>Select ${minimum === maximum ? minimum : `${minimum}–${maximum}`} option${maximum === 1 ? "" : "s"}. ${arkNovaEscape(pending.detail || pending.description || "This effect must resolve before play continues.")}</p></div></div>
       <div class="arkn-choice-options">${optionMarkup}</div>
-      <div class="arkn-pending-actions"><button type="button" class="arkn-confirm" data-arkn-command="resolve-choice" data-arkn-explain="pending_choice" ${valid && arkNovaCan("resolve_choice") ? "" : "disabled"}>Confirm choice</button>${pending.allow_skip || minimum === 0 ? `<button type="button" data-arkn-command="skip-choice">Skip</button>` : ""}</div>
+      <div class="arkn-pending-actions"><button type="button" class="arkn-confirm" data-arkn-command="resolve-choice" data-arkn-explain="pending_choice" ${valid && arkNovaCan("resolve_choice") ? "" : "disabled"}>Confirm choice</button>${pending.allow_skip || minimum === 0 ? `<button type="button" data-arkn-command="skip-choice" data-arkn-explain="pending_choice">${["continue_cards", "move_animals"].includes(pending.type) ? "Finish" : "Skip"}</button>` : ""}</div>
     </section>`;
   }
 
@@ -2874,6 +2879,12 @@
     const payload = event.payload || event.data || {};
     const actor = event.player_name || payload.name || payload.player_name || arkNovaEventActor(payload);
     const eventType = event.type || event.event || "";
+    if (eventType === "ark_nova:turn_undone" || eventType === "ark_nova:card_plan_changed") {
+      return [actor, payload.reason].filter(Boolean).join(" · ");
+    }
+    if (eventType === "ark_nova:animal_moved") {
+      return [actor, `Animal #${payload.card_id} moved to ${payload.enclosure_id}`].filter(Boolean).join(" · ");
+    }
     if (eventType === "ark_nova:placement_bonus" || eventType === "placement_bonus") {
       return [actor, arkNovaPlacementBonusText(payload)].filter(Boolean).join(" · ");
     }
@@ -2892,6 +2903,8 @@
       arkNovaEventLog.push({ text: arkNovaEventText(event), time: event && (event.time || event.timestamp) });
       const payload = event && (event.payload || event.data) || {};
       const eventType = event && (event.type || event.event);
+      if (["ark_nova:turn_undone", "ark_nova:card_plan_changed"].includes(eventType)
+        && String(payload.player_id || "") === String(view && view.you || "")) arkNovaToast(payload.reason);
       if (
         (eventType === "ark_nova:placement_bonus" || eventType === "placement_bonus")
         && String(payload.player_id || "") === String(view && (view.you ?? view.player_id) || "")
@@ -3199,6 +3212,7 @@
       action = {
         type, x_tokens, use_multiplier_tokens,
         gain_reputation: arkNovaUi.animalsReputation,
+        continue_action: true,
         plays: animals.map((card) => ({ card_id: arkNovaCardId(card), enclosure_id: arkNovaUi.animalEnclosures.get(arkNovaCardId(card)), source: displayIds.has(arkNovaCardId(card)) ? "display" : "hand" })),
       };
     } else if (type === "association") {
@@ -3210,9 +3224,11 @@
         const sponsors = arkNovaSelectedCardsForType("sponsor");
         if (!sponsors.length) return;
         action.card_ids = sponsors.map(arkNovaCardId);
+        action.continue_action = true;
       }
     }
     if (!action || !arkNovaCan(type)) return;
+    action.choose_effect_order = true;
     arkNovaSend(action);
   }
 

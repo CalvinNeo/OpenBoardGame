@@ -3,10 +3,14 @@ from game.abraca_what import AbracaWhatGame
 from game.ai_dixit import AiDixitGame
 from game.age_of_war import AgeOfWarGame
 from game.ark_nova import ArkNovaGame
+from game.gaia_project import GaiaProjectGame
+from game.gaia_project_data import ACTION_SCHEMA as GAIA_PROJECT_ACTION_SCHEMA, CONFIG_SCHEMA as GAIA_PROJECT_CONFIG_SCHEMA
 from game.azul import AzulGame
 from game.bohnanza_dice import BohnanzaDiceGame
 from game.bomb_busters import BombBustersGame
 from game.cabo import CaboGame
+from game.castles_of_burgundy import CastlesOfBurgundyGame
+from game.castles_of_burgundy_data import ACTION_SCHEMA as BURGUNDY_ACTION_SCHEMA, CONFIG_SCHEMA as BURGUNDY_CONFIG_SCHEMA
 from game.cat_in_box import CatInBoxGame
 from game.celestia import CelestiaGame
 from game.century_spice_road import CenturySpiceRoadGame
@@ -51,6 +55,8 @@ from game.rebel_princess import RebelPrincessGame
 from game.scout import ScoutGame
 from game.six_nimmt import SixNimmtGame
 from game.the_gang import TheGangGame
+from game.take_time import TakeTimeGame
+from game.take_time_data import ACTION_SCHEMA as TAKE_TIME_ACTION_SCHEMA, CONFIG_SCHEMA as TAKE_TIME_CONFIG_SCHEMA
 from game.things_in_rings import ThingsInRingsGame
 from game.yahtzee import YahtzeeGame
 from game.registry import GameDefinition, register_game
@@ -73,6 +79,54 @@ from game.turing_machine import TuringMachineGame
 from game.tucano import TucanoGame
 from game.witchs_brew import WitchsBrewGame
 from game.wriggle_roulette import WriggleRouletteGame
+
+register_game(
+    GameDefinition(
+        game_id=TakeTimeGame.game_id,
+        name="Take Time",
+        name_zh="时序谜局",
+        min_players=TakeTimeGame.min_players,
+        max_players=TakeTimeGame.max_players,
+        turn_mode="turn",
+        action_schema=TAKE_TIME_ACTION_SCHEMA,
+        config_schema=TAKE_TIME_CONFIG_SCHEMA,
+        module=TakeTimeGame,
+        serialize=TakeTimeGame.serialize,
+        deserialize=TakeTimeGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=GaiaProjectGame.game_id,
+        name="Gaia Project",
+        name_zh="盖亚计划",
+        min_players=GaiaProjectGame.min_players,
+        max_players=GaiaProjectGame.max_players,
+        turn_mode="turn",
+        action_schema=GAIA_PROJECT_ACTION_SCHEMA,
+        config_schema=GAIA_PROJECT_CONFIG_SCHEMA,
+        module=GaiaProjectGame,
+        serialize=GaiaProjectGame.serialize,
+        deserialize=GaiaProjectGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=CastlesOfBurgundyGame.game_id,
+        name="The Castles of Burgundy",
+        name_zh="勃艮第城堡",
+        min_players=CastlesOfBurgundyGame.min_players,
+        max_players=CastlesOfBurgundyGame.max_players,
+        turn_mode="turn",
+        action_schema=BURGUNDY_ACTION_SCHEMA,
+        config_schema=BURGUNDY_CONFIG_SCHEMA,
+        module=CastlesOfBurgundyGame,
+        serialize=CastlesOfBurgundyGame.serialize,
+        deserialize=CastlesOfBurgundyGame.deserialize,
+    )
+)
 
 ACQUIRE_ACTION_SCHEMA = {
     "type": "object",
@@ -1030,21 +1084,6 @@ IN_A_GROVE_ACTION_SCHEMA = {
                 },
             },
             "required": ["type", "suspect_indexes"],
-            "additionalProperties": False,
-        },
-        {
-            "type": "object",
-            "properties": {
-                "type": {"const": "swap_with_victim"},
-                "suspect_index": {"type": "integer", "minimum": 0, "maximum": 2},
-            },
-            "required": ["type", "suspect_index"],
-            "additionalProperties": False,
-        },
-        {
-            "type": "object",
-            "properties": {"type": {"const": "skip_swap"}},
-            "required": ["type"],
             "additionalProperties": False,
         },
         {
@@ -3422,6 +3461,7 @@ ARK_NOVA_ACTION_SCHEMA = {
             "type": "object",
             "properties": {
                 "type": {"const": "cards"},
+                "choose_effect_order": {"type": "boolean"},
                 "mode": {"type": "string", "enum": ["draw", "snap"]},
                 "x_tokens": {"type": "integer", "minimum": 0, "maximum": 5},
                 "use_multiplier_tokens": {"type": "integer", "minimum": 0, "maximum": 8},
@@ -3446,6 +3486,7 @@ ARK_NOVA_ACTION_SCHEMA = {
             "type": "object",
             "properties": {
                 "type": {"const": "build"},
+                "choose_effect_order": {"type": "boolean"},
                 "x_tokens": {"type": "integer", "minimum": 0, "maximum": 5},
                 "use_multiplier_tokens": {"type": "integer", "minimum": 0, "maximum": 8},
                 "buildings": {
@@ -3478,6 +3519,8 @@ ARK_NOVA_ACTION_SCHEMA = {
             "type": "object",
             "properties": {
                 "type": {"const": "animals"},
+                "continue_action": {"type": "boolean"},
+                "choose_effect_order": {"type": "boolean"},
                 "x_tokens": {"type": "integer", "minimum": 0, "maximum": 5},
                 "use_multiplier_tokens": {"type": "integer", "minimum": 0, "maximum": 8},
                 "gain_reputation": {"type": "boolean"},
@@ -3507,6 +3550,7 @@ ARK_NOVA_ACTION_SCHEMA = {
             "type": "object",
             "properties": {
                 "type": {"const": "association"},
+                "choose_effect_order": {"type": "boolean"},
                 "x_tokens": {"type": "integer", "minimum": 0, "maximum": 5},
                 "use_multiplier_tokens": {"type": "integer", "minimum": 0, "maximum": 8},
                 "tasks": {
@@ -3559,6 +3603,8 @@ ARK_NOVA_ACTION_SCHEMA = {
             "type": "object",
             "properties": {
                 "type": {"const": "sponsors"},
+                "continue_action": {"type": "boolean"},
+                "choose_effect_order": {"type": "boolean"},
                 "mode": {"type": "string", "enum": ["play", "break"]},
                 "x_tokens": {"type": "integer", "minimum": 0, "maximum": 5},
                 "use_multiplier_tokens": {"type": "integer", "minimum": 0, "maximum": 8},

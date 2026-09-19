@@ -2,646 +2,494 @@ let currentInAGroveView = null;
 let inAGroveExplainMode = false;
 let inAGroveSelectedPeekIndexes = [];
 let inAGroveSelectedTargetIndex = null;
+let inAGroveModalReturnFocus = null;
 
-const inAGrovePanelEl = document.getElementById("inAGrovePanel");
-const inAGroveHeaderActions = document.getElementById("inAGroveHeaderActions");
-const inAGroveHelpBtn = document.getElementById("inAGroveHelpBtn");
-const inAGroveExplainBtn = document.getElementById("inAGroveExplainBtn");
-const inAGroveHelpModal = document.getElementById("inAGroveHelpModal");
-const inAGroveHelpModalCloseBtn = document.getElementById("inAGroveHelpModalCloseBtn");
-const inAGroveExplainModal = document.getElementById("inAGroveExplainModal");
-const inAGroveExplainModalCloseBtn = document.getElementById("inAGroveExplainModalCloseBtn");
-const inAGroveHelpContent = document.getElementById("inAGroveHelpContent");
-const inAGroveExplainContent = document.getElementById("inAGroveExplainContent");
-const inAGrovePhaseLabel = document.getElementById("inAGrovePhase");
-const inAGroveRoundLabel = document.getElementById("inAGroveRound");
-const inAGroveTurnLabel = document.getElementById("inAGroveTurn");
-const inAGroveFirstPlayerLabel = document.getElementById("inAGroveFirstPlayer");
-const inAGroveBlockedLabel = document.getElementById("inAGroveBlocked");
-const inAGroveWinnerLabel = document.getElementById("inAGroveWinner");
-const inAGroveYourTiles = document.getElementById("inAGroveYourTiles");
-const inAGrovePublicAlibi = document.getElementById("inAGrovePublicAlibi");
-const inAGroveTable = document.getElementById("inAGroveTable");
-const inAGroveVictim = document.getElementById("inAGroveVictim");
-const inAGroveSuspects = document.getElementById("inAGroveSuspects");
-const inAGrovePlayers = document.getElementById("inAGrovePlayers");
-const inAGroveRoundSummary = document.getElementById("inAGroveRoundSummary");
-const inAGroveRoundSummaryBody = document.getElementById("inAGroveRoundSummaryBody");
-const inAGrovePeekBtn = document.getElementById("inAGrovePeekBtn");
-const inAGroveSwapBtn = document.getElementById("inAGroveSwapBtn");
-const inAGroveSkipSwapBtn = document.getElementById("inAGroveSkipSwapBtn");
-const inAGroveBetBtn = document.getElementById("inAGroveBetBtn");
-const inAGroveNextRoundBtn = document.getElementById("inAGroveNextRoundBtn");
-const inAGrovePlayAgainBtn = document.getElementById("inAGrovePlayAgainBtn");
+const inAGroveUI = Object.fromEntries([
+    "Panel", "HeaderActions", "HelpBtn", "ExplainBtn", "HelpModal", "HelpModalCloseBtn",
+    "ExplainModal", "ExplainModalCloseBtn", "HelpContent", "ExplainContent", "Phase",
+    "Round", "Turn", "Status", "FirstPlayer", "Blocked", "Winner", "WinnerBanner",
+    "YourTiles", "PublicAlibi", "PublicAlibiCard", "Victim", "Suspects", "Players",
+    "RoundSummary", "RoundSummaryBody", "SummaryTitle", "PeekBtn", "BetBtn", "NextRoundBtn", "PlayAgainBtn", "ActionHint",
+    "SelectionCount", "ExplainNotice",
+].map((name) => [name, document.getElementById("inAGrove" + name)]));
 
-const IN_A_GROVE_HELP_HTML = `
-  <h3>Goal</h3>
-  <p>Finish the game with the fewest penalty chips.</p>
-
-  <h3>Round Flow</h3>
-  <ul>
-    <li>Each player secretly knows two innocent tiles: their own tile and the tile passed from the left.</li>
-    <li>The first player secretly checks 2 suspects, may swap 1 of them with the victim, then places 1 accusation chip.</li>
-    <li>Later players also check 2 suspects, but cannot inspect the suspect blocked by the unseen marker.</li>
-    <li>Everyone places exactly 1 accusation chip each round.</li>
-  </ul>
-
-  <h3>Who Is Guilty</h3>
-  <ul>
-    <li>If the revealed suspects include <strong>5</strong>, the murderer is the <strong>smallest numbered</strong> suspect.</li>
-    <li>Otherwise, the murderer is the <strong>largest numbered</strong> suspect.</li>
-    <li><strong>X</strong> is always innocent.</li>
-  </ul>
-
-  <h3>Scoring</h3>
-  <ul>
-    <li>All chips on the murderer leave the game.</li>
-    <li>For each innocent suspect, the <strong>top chip</strong> owner takes the entire stack as penalties.</li>
-    <li>The next first player is the one who took the most penalties this round.</li>
-    <li>The game ends when someone reaches 8 penalties or runs out of chips in hand.</li>
-  </ul>
-`;
+const IN_A_GROVE_HELP_HTML = [
+    "<h3>🎯 The aim</h3><p>Finish with the fewest penalty chips. Each detective starts with 7 accusation chips.</p>",
+    "<h3>🪪 Follow the evidence</h3><p>At 3–5 players, see your own tile and the tile passed from your right. With 2 players, see only your own tile and one public alibi; do not exchange tiles. The victim stays hidden.</p><p>Use numbers 2–8, plus one X at 4 players or two X tiles at 5 players.</p>",
+    "<h3>🔎 Investigate, then accuse</h3><ul>",
+    "<li>Select two suspects and press <strong>Inspect 2</strong>. The previous detective's accusation blocks that suspect from inspection.</li>",
+    "<li>The first detective marks the suspect they did not inspect. This <strong>unseen marker</strong> stays there; it does not block later detectives. Tiles are never swapped in the revised edition.</li>",
+    "<li>Select any suspect and confirm your accusation. You can accuse the blocked suspect, a hidden suspect, or one with chips already on it.</li>",
+    "<li>Each detective places one chip. New chips go on top. Click a selected card again, click empty space, or press Esc to cancel a selection.</li></ul>",
+    "<h3>⚖️ Find the murderer</h3><p>The highest number is guilty, unless a <strong>5</strong> is among the suspects: then the lowest number is guilty. <strong>X is always innocent.</strong></p>",
+    "<h3>🪙 Settle the case</h3><ul>",
+    "<li>Chips on the murderer leave the game.</li>",
+    "<li>The top chip's owner takes the entire stack on an innocent suspect as penalties.</li>",
+    "<li>Among everyone except the previous first detective, the player with the most total penalties starts next. Ties go clockwise. At 2 players, alternate who starts.</li>",
+    "<li>The game ends at 5 penalties or when accusation chips run out (at most 7 rounds).</li></ul>",
+    "<p>Tied penalties? Fewer penalty chips of your own color ranks higher. If still tied, clockwise order after the final first detective decides.</p>",
+    "<h3>✓ Review together</h3><p>The revealed scene stays on screen until everyone chooses <strong>Next Round</strong>. Bots confirm automatically. The final result also waits for everyone.</p>",
+].join("");
 
 const IN_A_GROVE_BUTTON_EXPLANATIONS = {
-  inAGrovePeekBtn: {
-    name: "Peek Selected",
-    description: "Secretly inspect the 2 selected suspects.",
-    note: "The blocked suspect cannot be chosen.",
-  },
-  inAGroveSwapBtn: {
-    name: "Swap with Victim",
-    description: "As the first player, swap the selected viewed suspect with the hidden victim tile.",
-    note: "After swapping, the new suspect tile stays unknown to you.",
-  },
-  inAGroveSkipSwapBtn: {
-    name: "Skip Swap",
-    description: "Keep the victim where it is and continue to betting.",
-  },
-  inAGroveBetBtn: {
-    name: "Place Bet",
-    description: "Put 1 accusation chip on the selected suspect.",
-    note: "Stacks matter. The last chip on an innocent suspect takes the whole pile.",
-  },
-  inAGroveNextRoundBtn: {
-    name: "Next Round",
-    description: "Confirm that you have finished reviewing the revealed round result.",
-    note: "The next round starts only after every player has clicked this button. Bots confirm immediately.",
-  },
-  inAGrovePlayAgainBtn: {
-    name: "Start New Game",
-    description: "Restart the room with a fresh In a Grove game.",
-  },
+    PeekBtn: {
+        name: "Inspect two suspects",
+        description: "Select two suspects, then confirm to see their identities privately.",
+        note: "A blocked suspect cannot be inspected. Choosing cards alone does not submit a move.",
+    },
+    BetBtn: {
+        name: "Accuse a suspect",
+        description: "Place one of your chips on the selected suspect, on top of any existing chips.",
+        note: "You may accuse any suspect, even the blocked one. If they are innocent, the top chip's owner takes the entire stack as penalties.",
+    },
+    NextRoundBtn: {
+        name: "Next Round",
+        description: "Confirm that you have finished reviewing this round.",
+        note: "Everyone must confirm before the next deal or final ranking. A disabled button means your confirmation is already recorded.",
+    },
+    PlayAgainBtn: {
+        name: "Start a new game",
+        description: "Start a fresh In a Grove game with these players.",
+    },
 };
 
-function showInAGroveHeaderActions(show) {
-  if (inAGroveHeaderActions) {
-    inAGroveHeaderActions.style.display = show ? "flex" : "none";
-  }
-  if (!show) {
-    exitInAGroveExplainMode();
-    if (inAGroveHelpModal) setModalVisible(inAGroveHelpModal, false);
-    if (inAGroveExplainModal) setModalVisible(inAGroveExplainModal, false);
-  }
+function inAGroveElement(tag, className, text) {
+    const element = document.createElement(tag);
+    if (className) element.className = className;
+    if (text !== undefined) element.textContent = text;
+    return element;
 }
 
-function inAGroveHasLegalAction(actionType) {
-  return (
-    currentInAGroveView &&
-    Array.isArray(currentInAGroveView.legal_actions) &&
-    currentInAGroveView.legal_actions.includes(actionType)
-  );
+function inAGroveHasLegalAction(type) {
+    return !!currentInAGroveView && (currentInAGroveView.legal_actions || []).includes(type);
+}
+
+function inAGroveIsRevealed(view) {
+    return view.phase === "round_end" || view.game_over;
+}
+
+function inAGrovePlayerName(view, id) {
+    return (view.players || []).find((player) => player.player_id === id)?.name || id || "—";
+}
+
+function inAGrovePlayerColor(id) {
+    const index = (currentInAGroveView?.players || []).findIndex((player) => player.player_id === id);
+    return ["#ad573e", "#38827e", "#987127", "#6d65a4", "#457ca2"][index] || "#64748b";
 }
 
 function clearInAGroveSelection() {
-  inAGroveSelectedPeekIndexes = [];
-  inAGroveSelectedTargetIndex = null;
+    inAGroveSelectedPeekIndexes = [];
+    inAGroveSelectedTargetIndex = null;
 }
 
-function trySubmitInAGrovePeekSelection() {
-  if (!inAGroveHasLegalAction("peek_suspects")) {
-    return false;
-  }
-  if (inAGroveSelectedPeekIndexes.length !== 2) {
-    return false;
-  }
-  sendAction({ type: "peek_suspects", suspect_indexes: [...inAGroveSelectedPeekIndexes] });
-  return true;
-}
-
-function trySubmitInAGroveBetSelection() {
-  if (!inAGroveHasLegalAction("place_bet")) {
-    return false;
-  }
-  if (!Number.isInteger(inAGroveSelectedTargetIndex)) {
-    return false;
-  }
-  sendAction({ type: "place_bet", suspect_index: inAGroveSelectedTargetIndex });
-  return true;
+function showInAGroveHeaderActions(show) {
+    if (inAGroveUI.HeaderActions) inAGroveUI.HeaderActions.style.display = show ? "flex" : "none";
+    if (!show) {
+        exitInAGroveExplainMode();
+        [inAGroveUI.HelpModal, inAGroveUI.ExplainModal].forEach((modal) => setModalVisible(modal, false));
+    }
 }
 
 function clearInAGroveState() {
-  currentInAGroveView = null;
-  clearInAGroveSelection();
-  if (inAGrovePhaseLabel) inAGrovePhaseLabel.textContent = "-";
-  if (inAGroveRoundLabel) inAGroveRoundLabel.textContent = "-";
-  if (inAGroveTurnLabel) inAGroveTurnLabel.textContent = "-";
-  if (inAGroveFirstPlayerLabel) inAGroveFirstPlayerLabel.textContent = "-";
-  if (inAGroveBlockedLabel) inAGroveBlockedLabel.textContent = "-";
-  if (inAGroveWinnerLabel) inAGroveWinnerLabel.textContent = "-";
-  if (inAGroveYourTiles) inAGroveYourTiles.innerHTML = "";
-  if (inAGrovePublicAlibi) inAGrovePublicAlibi.textContent = "-";
-  if (inAGroveVictim) inAGroveVictim.textContent = "-";
-  if (inAGroveSuspects) inAGroveSuspects.innerHTML = "";
-  if (inAGrovePlayers) inAGrovePlayers.innerHTML = "";
-  if (inAGroveRoundSummary) inAGroveRoundSummary.classList.add("hidden");
-  if (inAGroveRoundSummaryBody) inAGroveRoundSummaryBody.textContent = "-";
-  updateInAGroveActionButtons();
+    currentInAGroveView = null;
+    clearInAGroveSelection();
+    exitInAGroveExplainMode();
+    ["Phase", "Round", "Turn", "FirstPlayer", "Blocked", "Winner"].forEach((key) => {
+        inAGroveUI[key].textContent = "—";
+    });
+    ["YourTiles", "Suspects", "Players", "RoundSummaryBody"].forEach((key) => inAGroveUI[key].replaceChildren());
+    inAGroveUI.RoundSummary.classList.add("hidden");
+    inAGroveUI.WinnerBanner.classList.add("hidden");
+    inAGroveUI.PublicAlibiCard.classList.add("hidden");
+    inAGroveUI.Status.classList.remove("is-your-turn");
+    inAGroveUI.Victim.textContent = "Hidden";
+    updateInAGroveActionButtons();
 }
 
-function inAGrovePlayerColor(playerId) {
-  if (!currentInAGroveView || !Array.isArray(currentInAGroveView.players)) {
-    return "#64748b";
-  }
-  const index = currentInAGroveView.players.findIndex((player) => player.player_id === playerId);
-  const hue = index >= 0 ? (index * 61) % 360 : 210;
-  return `hsl(${hue} 62% 44%)`;
-}
-
-function renderInAGroveYourTiles(view) {
-  if (!inAGroveYourTiles) {
-    return;
-  }
-  inAGroveYourTiles.innerHTML = "";
-  (view.your_tiles || []).forEach((entry) => {
-    const pill = document.createElement("div");
-    pill.className = "in-a-grove-alibi";
-    pill.innerHTML = `<strong>${entry.label}</strong><span>${entry.source}</span>`;
-    inAGroveYourTiles.appendChild(pill);
-  });
-}
-
-function renderInAGroveVictim(view) {
-  if (!inAGroveVictim) {
-    return;
-  }
-  inAGroveVictim.textContent = "🎭 Hidden";
+function renderInAGroveEvidence(view) {
+    inAGroveUI.YourTiles.replaceChildren();
+    (view.your_tiles || []).forEach((entry) => {
+        const alibi = inAGroveElement("div", "in-a-grove-alibi");
+        alibi.append(
+            inAGroveElement("span", "", entry.source === "your tile" ? "Your tile" : "From right"),
+            inAGroveElement("strong", "", entry.label),
+        );
+        inAGroveUI.YourTiles.append(alibi);
+    });
+    inAGroveUI.PublicAlibiCard.classList.toggle("hidden", !view.public_alibi);
+    inAGroveUI.PublicAlibi.textContent = view.public_alibi || "—";
+    inAGroveUI.Victim.textContent = "Hidden";
 }
 
 function buildInAGroveStack(stack) {
-  const wrap = document.createElement("div");
-  wrap.className = "in-a-grove-stack";
-  if (!Array.isArray(stack) || !stack.length) {
-    const empty = document.createElement("div");
-    empty.className = "in-a-grove-chip empty";
-    empty.textContent = "Empty";
-    wrap.appendChild(empty);
-    return wrap;
-  }
-  [...stack].reverse().forEach((playerId, index) => {
-    const chip = document.createElement("div");
-    chip.className = "in-a-grove-chip";
-    if (index === 0) {
-      chip.classList.add("top");
+    const wrap = inAGroveElement("div", "in-a-grove-stack");
+    if (!stack?.length) {
+        wrap.append(inAGroveElement("span", "in-a-grove-chip empty", "No chips"));
+        return wrap;
     }
-    chip.style.setProperty("--chip-color", inAGrovePlayerColor(playerId));
-    chip.textContent = findPlayerName(currentInAGroveView, playerId);
-    wrap.appendChild(chip);
-  });
-  return wrap;
+    wrap.setAttribute("role", "group");
+    wrap.setAttribute("aria-label", "Accusation chips, newest first");
+    if (stack.length > 3) wrap.tabIndex = 0;
+    [...stack].reverse().forEach((id, index) => {
+        const chip = inAGroveElement("div", "in-a-grove-chip" + (index === 0 ? " top" : ""));
+        chip.style.setProperty("--chip-color", inAGrovePlayerColor(id));
+        chip.title = inAGrovePlayerName(currentInAGroveView, id) + (index === 0 ? " · Top chip" : "");
+        chip.append(
+            inAGroveElement("span", "in-a-grove-chip-dot"),
+            inAGroveElement("span", "in-a-grove-chip-name", inAGrovePlayerName(currentInAGroveView, id)),
+        );
+        if (index === 0) chip.append(inAGroveElement("small", "", "TOP"));
+        wrap.append(chip);
+    });
+    return wrap;
+}
+
+function inAGroveCanSelectSuspect(suspect) {
+    if (inAGroveHasLegalAction("peek_suspects")) return !suspect.blocked;
+    return inAGroveHasLegalAction("place_bet");
 }
 
 function renderInAGroveSuspects(view) {
-  if (!inAGroveSuspects) {
-    return;
-  }
-  inAGroveSuspects.innerHTML = "";
-  (view.suspects || []).forEach((suspect) => {
-    const card = document.createElement("button");
-    card.type = "button";
-    card.className = "in-a-grove-suspect";
-    card.dataset.index = String(suspect.index);
-    if (suspect.blocked) {
-      card.classList.add("blocked");
-    }
-    const isPeekSelected = inAGroveSelectedPeekIndexes.includes(suspect.index);
-    const isTargetSelected = inAGroveSelectedTargetIndex === suspect.index;
-    if (isPeekSelected || isTargetSelected) {
-      card.classList.add("selected");
-    }
-    const canPeek = inAGroveHasLegalAction("peek_suspects");
-    const canTarget = inAGroveHasLegalAction("swap_with_victim") || inAGroveHasLegalAction("place_bet");
-    if ((canPeek || canTarget) && !inAGroveExplainMode) {
-      card.classList.add("interactive");
-    }
-    const face = document.createElement("div");
-    face.className = "in-a-grove-suspect-face";
-    face.textContent = suspect.label ? `🎍 ${suspect.label}` : "🎍 Hidden";
-    const status = document.createElement("div");
-    status.className = "in-a-grove-suspect-status";
-    if (currentInAGroveView && currentInAGroveView.phase === "round_end") {
-      const readyCount = (currentInAGroveView.players || []).filter((player) => player.round_ready).length;
-      const totalCount = (currentInAGroveView.players || []).length;
-      status.textContent = `📣 Revealed • ${readyCount}/${totalCount} ready`;
-    } else {
-      status.textContent = suspect.blocked ? "🚫 Unseen marker" : "Open to inspect";
-    }
-    card.append(face, status, buildInAGroveStack(suspect.stack));
-    card.addEventListener("click", () => {
-      if (inAGroveExplainMode) {
-        return;
-      }
-      if (inAGroveHasLegalAction("peek_suspects")) {
-        const idx = inAGroveSelectedPeekIndexes.indexOf(suspect.index);
-        if (idx >= 0) {
-          inAGroveSelectedPeekIndexes.splice(idx, 1);
-        } else if (!suspect.blocked) {
-          if (inAGroveSelectedPeekIndexes.length >= 2) {
-            inAGroveSelectedPeekIndexes.shift();
-          }
-          inAGroveSelectedPeekIndexes.push(suspect.index);
-        }
-        renderInAGroveSuspects(view);
-        updateInAGroveActionButtons();
-        if (trySubmitInAGrovePeekSelection()) {
-          return;
-        }
-      } else if (inAGroveHasLegalAction("swap_with_victim") || inAGroveHasLegalAction("place_bet")) {
-        inAGroveSelectedTargetIndex = inAGroveSelectedTargetIndex === suspect.index ? null : suspect.index;
-        renderInAGroveSuspects(view);
-        updateInAGroveActionButtons();
-        if (inAGroveHasLegalAction("place_bet") && trySubmitInAGroveBetSelection()) {
-          return;
-        }
-      }
-      renderInAGroveSuspects(view);
-      updateInAGroveActionButtons();
+    const focusedId = inAGroveUI.Suspects.contains(document.activeElement) ? document.activeElement.id : null;
+    inAGroveUI.Suspects.replaceChildren();
+    (view.suspects || []).forEach((suspect) => {
+        const column = inAGroveElement("div", "in-a-grove-suspect-column");
+        const card = inAGroveElement("button", "in-a-grove-suspect");
+        const revealed = inAGroveIsRevealed(view);
+        const result = revealed ? view.last_round_summary?.suspects?.find((entry) => entry.index === suspect.index) : null;
+        const selected = inAGroveSelectedPeekIndexes.includes(suspect.index) || inAGroveSelectedTargetIndex === suspect.index;
+        const canSelect = inAGroveCanSelectSuspect(suspect);
+        card.type = "button";
+        card.id = "inAGroveSuspect" + suspect.index;
+        card.dataset.inAGroveExplain = "suspect";
+        card.dataset.index = String(suspect.index);
+        card.disabled = !canSelect;
+        card.setAttribute("aria-pressed", String(selected));
+        card.classList.toggle("selected", selected);
+        card.classList.toggle("blocked", !!suspect.blocked && !revealed);
+        card.classList.toggle("interactive", canSelect);
+        card.classList.toggle("is-murderer", !!result?.is_murderer);
+
+        const label = inAGroveElement("span", "in-a-grove-suspect-label");
+        label.append(
+            inAGroveElement("span", "", "Suspect " + (suspect.index + 1)),
+            inAGroveElement("span", "in-a-grove-selection-mark", selected ? "✓" : "·"),
+        );
+        const face = inAGroveElement("span", "in-a-grove-suspect-face", suspect.label || "?");
+        face.classList.toggle("is-hidden", !suspect.label);
+        const caption = inAGroveElement("span", "in-a-grove-face-caption",
+            revealed ? "Revealed" : suspect.label ? "Only you can see" : "Identity hidden");
+        let status = "Await your turn";
+        if (revealed) status = result?.is_murderer ? "🔴 Murderer" : "🟢 Innocent";
+        else if (view.phase === "peek") status = suspect.blocked ? "🚫 No peeking" : "🔎 Can inspect";
+        else if (view.phase === "bet") status = "🎯 Can accuse";
+        const unseen = inAGroveElement("span", "in-a-grove-unseen", suspect.unseen ? "👁 First skipped" : "");
+        if (!revealed && view.current_turn !== view.you && !suspect.blocked) status = "Await your turn";
+        card.append(label, face, caption, unseen, inAGroveElement("span", "in-a-grove-suspect-status", status));
+        card.setAttribute("aria-label", "Suspect " + (suspect.index + 1) + ", " +
+            (suspect.label ? "value " + suspect.label : "hidden") + ", " + status +
+            (suspect.unseen ? ", not inspected by the first detective" : "") + (selected ? ", selected" : ""));
+        card.addEventListener("click", () => {
+            if (inAGroveExplainMode || !inAGroveCanSelectSuspect(suspect)) return;
+            if (inAGroveHasLegalAction("peek_suspects")) {
+                if (inAGroveSelectedPeekIndexes.includes(suspect.index)) {
+                    inAGroveSelectedPeekIndexes = inAGroveSelectedPeekIndexes.filter((index) => index !== suspect.index);
+                } else {
+                    if (inAGroveSelectedPeekIndexes.length === 2) inAGroveSelectedPeekIndexes.shift();
+                    inAGroveSelectedPeekIndexes.push(suspect.index);
+                }
+            } else {
+                inAGroveSelectedTargetIndex = inAGroveSelectedTargetIndex === suspect.index ? null : suspect.index;
+            }
+            renderInAGroveSuspects(currentInAGroveView);
+            updateInAGroveActionButtons();
+        });
+        column.append(card, buildInAGroveStack(suspect.stack));
+        inAGroveUI.Suspects.append(column);
     });
-    inAGroveSuspects.appendChild(card);
-  });
+    updateInAGroveExplainClasses();
+    if (focusedId) document.getElementById(focusedId)?.focus({ preventScroll: true });
 }
 
 function renderInAGrovePlayers(view) {
-  if (!inAGrovePlayers) {
-    return;
-  }
-  inAGrovePlayers.innerHTML = "";
-  (view.players || []).forEach((player) => {
-    const card = document.createElement("div");
-    card.className = "player-card in-a-grove-player-card";
-    if (player.player_id === view.current_turn) {
-      card.classList.add("current");
+    inAGroveUI.Players.replaceChildren();
+    (view.players || []).forEach((player) => {
+        const card = inAGroveElement("div", "in-a-grove-player-card");
+        card.classList.toggle("current", player.player_id === view.current_turn);
+        card.style.setProperty("--chip-color", inAGrovePlayerColor(player.player_id));
+        const name = inAGroveElement("strong", "", player.name);
+        name.title = player.name;
+        const heading = inAGroveElement("div", "in-a-grove-player-heading");
+        heading.append(inAGroveElement("span", "in-a-grove-player-dot"), name);
+        if (player.player_id === view.you) heading.append(inAGroveElement("span", "in-a-grove-player-tag", "You"));
+        if (player.player_id === view.current_turn) heading.append(inAGroveElement("span", "in-a-grove-player-tag", "← Turn"));
+        const stats = inAGroveElement("div", "in-a-grove-player-stats");
+        const chips = inAGroveElement("span", player.hand_count <= 1 ? "is-danger" : "", "🎯 " + player.hand_count + " left");
+        const penalties = inAGroveElement("span", player.penalty_count >= 4 ? "is-danger" : "", "⚠️ " + player.penalty_count + "/5");
+        penalties.setAttribute("aria-label", player.penalty_count + " penalties, game ends at 5");
+        penalties.title = (player.own_penalty_count || 0) + " in this detective's own color (tiebreaker)";
+        stats.append(chips, penalties);
+        card.append(heading, stats);
+        if (view.phase === "round_end") {
+            card.append(inAGroveElement("div", "in-a-grove-player-ready", player.round_ready ? "✓ Ready" : "◷ Reviewing"));
+        }
+        inAGroveUI.Players.append(card);
+    });
+}
+
+function renderInAGroveSummary(view, previousView) {
+    const summary = view.last_round_summary;
+    inAGroveUI.RoundSummary.classList.toggle("hidden", !summary);
+    if (!summary) return;
+    const revealed = inAGroveIsRevealed(view);
+    if (view.phase !== previousView?.phase || summary.round !== previousView?.last_round_summary?.round) {
+        inAGroveUI.RoundSummary.open = revealed;
     }
-    const name = document.createElement("div");
-    name.className = "player-name";
-    name.textContent = player.name;
-    const stats = document.createElement("div");
-    stats.className = "player-meta";
-    stats.innerHTML = `
-      <div>🎯 Hand chips: <strong>${player.hand_count}</strong></div>
-      <div>⚠️ Penalties: <strong>${player.penalty_count}</strong></div>
-    `;
-    if (view.phase === "round_end") {
-      const ready = document.createElement("div");
-      ready.className = "in-a-grove-player-ready";
-      ready.textContent = player.round_ready ? "✅ Ready" : "⏳ Waiting";
-      stats.appendChild(ready);
+    inAGroveUI.SummaryTitle.textContent = "📋 Round " + summary.round + (revealed ? " · Case closed" : " · Previous results");
+    inAGroveUI.RoundSummaryBody.replaceChildren();
+    const hasFive = summary.suspects.some((entry) => entry.label === "5");
+    inAGroveUI.RoundSummaryBody.append(inAGroveElement("strong", "in-a-grove-verdict",
+        "Suspect " + (summary.murderer_index + 1) + " (" + summary.murderer_label + ") is guilty. " +
+        (hasFive ? "A 5 is present, so the lowest number is guilty." : "No 5: the highest number is guilty.")));
+    (summary.suspects || []).forEach((entry) => {
+        let text = "Suspect " + (entry.index + 1) + " · ";
+        if (entry.is_murderer) text += entry.stack.length + " chip(s) removed from the game.";
+        else if (entry.penalty_receiver) {
+            text += inAGrovePlayerName(view, entry.penalty_receiver) + " takes " + entry.penalty_count + " penalty chip(s).";
+        } else text += "Innocent · no chips.";
+        inAGroveUI.RoundSummaryBody.append(inAGroveElement("div", "in-a-grove-result-row", text));
+    });
+    if (view.game_over && view.final_ranking?.length) {
+        const ranking = inAGroveElement("ol", "in-a-grove-ranking");
+        view.final_ranking.forEach((entry) => ranking.append(inAGroveElement("li", "",
+            inAGrovePlayerName(view, entry.player_id) + " · " + entry.penalty_count + " penalties (" +
+            (entry.own_penalty_count || 0) + " own color)")));
+        inAGroveUI.RoundSummaryBody.append(ranking);
     }
-    card.append(name, stats);
-    inAGrovePlayers.appendChild(card);
-  });
-}
-
-function renderInAGroveSummary(view) {
-  if (!inAGroveRoundSummary || !inAGroveRoundSummaryBody) {
-    return;
-  }
-  const summary = view.last_round_summary;
-  if (!summary) {
-    inAGroveRoundSummary.classList.add("hidden");
-    return;
-  }
-  inAGroveRoundSummary.classList.remove("hidden");
-  const pieces = [];
-  (summary.suspects || []).forEach((entry) => {
-    const title = entry.is_murderer ? `Suspect ${entry.index + 1}: ${entry.label} murderer` : `Suspect ${entry.index + 1}: ${entry.label}`;
-    if (entry.is_murderer) {
-      pieces.push(`${title}, ${entry.stack.length} chip(s) removed`);
-      return;
-    }
-    if (entry.penalty_receiver) {
-      pieces.push(`${title}, ${findPlayerName(view, entry.penalty_receiver)} took ${entry.penalty_count} penalty chip(s)`);
-      return;
-    }
-    pieces.push(`${title}, no chips`);
-  });
-  if (view.game_over && Array.isArray(view.final_ranking) && view.final_ranking.length) {
-    const ranking = view.final_ranking
-      .map((entry, index) => `${index + 1}. ${findPlayerName(view, entry.player_id)} (${entry.penalty_count})`)
-      .join(" | ");
-    pieces.push(`Ranking: ${ranking}`);
-  }
-  inAGroveRoundSummaryBody.textContent = pieces.join(" | ");
-}
-
-function showInAGroveHelpModal() {
-  if (!inAGroveHelpModal || !inAGroveHelpContent) {
-    return;
-  }
-  inAGroveHelpContent.innerHTML = IN_A_GROVE_HELP_HTML;
-  setModalVisible(inAGroveHelpModal, true);
-}
-
-function closeInAGroveHelpModal() {
-  if (inAGroveHelpModal) {
-    setModalVisible(inAGroveHelpModal, false);
-  }
-}
-
-function updateInAGroveExplainClasses(enabled) {
-  Object.keys(IN_A_GROVE_BUTTON_EXPLANATIONS).forEach((buttonId) => {
-    const button = document.getElementById(buttonId);
-    if (!button) {
-      return;
-    }
-    button.classList.toggle("has-explanation", enabled);
-  });
-}
-
-function exitInAGroveExplainMode() {
-  inAGroveExplainMode = false;
-  document.body.classList.remove("in-a-grove-explain-mode");
-  updateInAGroveExplainClasses(false);
-  if (inAGroveExplainBtn) {
-    inAGroveExplainBtn.classList.remove("active");
-  }
-}
-
-function toggleInAGroveExplainMode() {
-  inAGroveExplainMode = !inAGroveExplainMode;
-  document.body.classList.toggle("in-a-grove-explain-mode", inAGroveExplainMode);
-  updateInAGroveExplainClasses(inAGroveExplainMode);
-  if (inAGroveExplainBtn) {
-    inAGroveExplainBtn.classList.toggle("active", inAGroveExplainMode);
-  }
-}
-
-function showInAGroveExplainModal(buttonId) {
-  if (!inAGroveExplainModal || !inAGroveExplainContent) {
-    return;
-  }
-  const info = IN_A_GROVE_BUTTON_EXPLANATIONS[buttonId];
-  if (!info) {
-    return;
-  }
-  const note = info.note ? `<p>${info.note}</p>` : "";
-  inAGroveExplainContent.innerHTML = `<h3>${info.name}</h3><p>${info.description}</p>${note}`;
-  setModalVisible(inAGroveExplainModal, true);
-}
-
-function closeInAGroveExplainModal() {
-  if (inAGroveExplainModal) {
-    setModalVisible(inAGroveExplainModal, false);
-  }
-}
-
-function findInAGroveExplainButtonAtPoint(x, y) {
-  for (const buttonId of Object.keys(IN_A_GROVE_BUTTON_EXPLANATIONS)) {
-    const button = document.getElementById(buttonId);
-    if (!button) {
-      continue;
-    }
-    const rect = button.getBoundingClientRect();
-    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
-      return buttonId;
-    }
-  }
-  return null;
 }
 
 function updateInAGroveActionButtons() {
-  const canPeek = inAGroveHasLegalAction("peek_suspects") && inAGroveSelectedPeekIndexes.length === 2;
-  const canSwap =
-    inAGroveHasLegalAction("swap_with_victim") &&
-    Number.isInteger(inAGroveSelectedTargetIndex) &&
-    Array.isArray(currentInAGroveView && currentInAGroveView.peeked_indexes) &&
-    currentInAGroveView.peeked_indexes.includes(inAGroveSelectedTargetIndex);
-  const canSkipSwap = inAGroveHasLegalAction("skip_swap");
-  const canBet =
-    inAGroveHasLegalAction("place_bet") && Number.isInteger(inAGroveSelectedTargetIndex);
-  const canNextRound = inAGroveHasLegalAction("next_round");
-  if (inAGrovePeekBtn) inAGrovePeekBtn.disabled = !canPeek;
-  if (inAGroveSwapBtn) inAGroveSwapBtn.disabled = !canSwap;
-  if (inAGroveSkipSwapBtn) inAGroveSkipSwapBtn.disabled = !canSkipSwap;
-  if (inAGroveBetBtn) inAGroveBetBtn.disabled = !canBet;
-  if (inAGroveNextRoundBtn) {
-    inAGroveNextRoundBtn.disabled = !canNextRound;
-    if (currentInAGroveView && currentInAGroveView.phase === "round_end") {
-      inAGroveNextRoundBtn.textContent = canNextRound ? "Next Round" : "Waiting...";
-    } else {
-      inAGroveNextRoundBtn.textContent = "Next Round";
+    const view = currentInAGroveView;
+    const phase = view?.phase;
+    const target = inAGroveSelectedTargetIndex;
+    const selected = Number.isInteger(target);
+    const states = [
+        ["PeekBtn", phase === "peek", inAGroveHasLegalAction("peek_suspects") && inAGroveSelectedPeekIndexes.length === 2],
+        ["BetBtn", phase === "bet", inAGroveHasLegalAction("place_bet") && selected],
+        ["NextRoundBtn", phase === "round_end", inAGroveHasLegalAction("next_round")],
+        ["PlayAgainBtn", !!view?.game_over, !!view?.game_over],
+    ];
+    states.forEach(([key, visible, enabled]) => {
+        inAGroveUI[key].classList.toggle("hidden", !visible);
+        inAGroveUI[key].disabled = !enabled;
+    });
+    inAGroveUI.BetBtn.textContent = selected ? "🎯 Accuse suspect " + (target + 1) : "🎯 Accuse suspect";
+    const ready = (view?.players || []).filter((player) => player.round_ready).length;
+    const youReady = view?.players?.find((player) => player.player_id === view.you)?.round_ready;
+    inAGroveUI.NextRoundBtn.textContent = youReady ? "✓ Ready · Waiting" : "Next Round →";
+
+    let hint = "Waiting for the next move.";
+    let count = "3 suspects · 1 murderer";
+    if (view?.game_over) {
+        hint = "The final ranking is below. Fewest penalties wins.";
+        count = "Case closed";
+    } else if (phase === "round_end") {
+        hint = ready + "/" + view.players.length + " ready. Review the revealed scene, then choose Next Round.";
+        count = "All suspects revealed";
+    } else if (view && view.current_turn !== view.you) {
+        hint = inAGrovePlayerName(view, view.current_turn) + " is investigating. Your alibis stay private.";
+    } else if (phase === "peek") {
+        hint = inAGroveSelectedPeekIndexes.length === 2
+            ? "Two suspects selected. Confirm to inspect them privately."
+            : "Select two suspects to inspect. The blocked suspect cannot be viewed.";
+        count = inAGroveSelectedPeekIndexes.length + "/2 selected";
+    } else if (phase === "bet") {
+        hint = selected ? "Confirm your accusation on suspect " + (target + 1) + ". Click away to cancel."
+            : "Select any suspect, then confirm your accusation. The top chip takes the risk.";
+        count = selected ? "Suspect " + (target + 1) + " selected" : "Choose 1 to accuse";
     }
-  }
-  if (inAGrovePlayAgainBtn) {
-    inAGrovePlayAgainBtn.disabled = !(currentInAGroveView && currentInAGroveView.game_over);
-  }
+    inAGroveUI.ActionHint.textContent = hint;
+    inAGroveUI.SelectionCount.textContent = count;
+    updateInAGroveExplainClasses();
 }
 
 function renderInAGroveGameState(data) {
-  const view = data.view;
-  currentInAGroveView = view;
-  if (currentGameType !== "in_a_grove") {
-    currentGameType = "in_a_grove";
-    setGamePanelVisibility("in_a_grove");
-  }
-  if (inAGrovePhaseLabel) inAGrovePhaseLabel.textContent = view.phase || "-";
-  if (inAGroveRoundLabel) inAGroveRoundLabel.textContent = view.round ?? "-";
-  if (inAGroveTurnLabel) inAGroveTurnLabel.textContent = view.current_turn ? findPlayerName(view, view.current_turn) : "-";
-  if (inAGroveFirstPlayerLabel) inAGroveFirstPlayerLabel.textContent = view.first_player ? findPlayerName(view, view.first_player) : "-";
-  if (inAGroveBlockedLabel) {
-    inAGroveBlockedLabel.textContent =
-      Number.isInteger(view.blocked_suspect_index) ? `Suspect ${view.blocked_suspect_index + 1}` : "-";
-  }
-  if (inAGroveWinnerLabel) {
-    const winners = Array.isArray(view.winner_ids) ? view.winner_ids : [];
-    inAGroveWinnerLabel.textContent = winners.length ? winners.map((playerId) => findPlayerName(view, playerId)).join(", ") : "-";
-  }
-  if (inAGrovePublicAlibi) {
-    inAGrovePublicAlibi.textContent = view.public_alibi ? `🪪 ${view.public_alibi}` : "-";
-  }
-
-  if (!inAGroveHasLegalAction("peek_suspects")) {
-    inAGroveSelectedPeekIndexes = [];
-  }
-  if (!(inAGroveHasLegalAction("swap_with_victim") || inAGroveHasLegalAction("place_bet"))) {
-    inAGroveSelectedTargetIndex = null;
-  }
-
-  renderInAGroveYourTiles(view);
-  renderInAGroveVictim(view);
-  renderInAGroveSuspects(view);
-  renderInAGrovePlayers(view);
-  renderInAGroveSummary(view);
-  logGameEvents(data);
-  updateInAGroveActionButtons();
-}
-
-if (inAGrovePeekBtn) {
-  inAGrovePeekBtn.addEventListener("click", () => {
-    if (inAGroveSelectedPeekIndexes.length !== 2) {
-      log("Select 2 suspects first.");
-      return;
+    const view = data.view;
+    const previousView = currentInAGroveView;
+    if (!previousView || ["you", "round", "phase", "current_turn"].some((key) => view[key] !== previousView[key])) {
+        clearInAGroveSelection();
     }
-    trySubmitInAGrovePeekSelection();
-  });
-}
-
-if (inAGroveSwapBtn) {
-  inAGroveSwapBtn.addEventListener("click", () => {
-    if (!Number.isInteger(inAGroveSelectedTargetIndex)) {
-      log("Select 1 viewed suspect to swap.");
-      return;
+    currentInAGroveView = view;
+    if (currentGameType !== "in_a_grove") {
+        currentGameType = "in_a_grove";
+        setGamePanelVisibility("in_a_grove");
     }
-    sendAction({ type: "swap_with_victim", suspect_index: inAGroveSelectedTargetIndex });
-  });
-}
-
-if (inAGroveSkipSwapBtn) {
-  inAGroveSkipSwapBtn.addEventListener("click", () => {
-    sendAction({ type: "skip_swap" });
-  });
-}
-
-if (inAGroveBetBtn) {
-  inAGroveBetBtn.addEventListener("click", () => {
-    if (!Number.isInteger(inAGroveSelectedTargetIndex)) {
-      log("Select a suspect to accuse.");
-      return;
-    }
-    trySubmitInAGroveBetSelection();
-  });
-}
-
-if (inAGrovePlayAgainBtn) {
-  inAGrovePlayAgainBtn.addEventListener("click", () => {
-    emitRoomStart();
-  });
-}
-
-if (inAGroveNextRoundBtn) {
-  inAGroveNextRoundBtn.addEventListener("click", () => {
-    sendAction({ type: "next_round" });
-  });
-}
-
-if (inAGroveHelpBtn) {
-  inAGroveHelpBtn.addEventListener("click", showInAGroveHelpModal);
-}
-
-if (inAGroveExplainBtn) {
-  inAGroveExplainBtn.addEventListener("click", toggleInAGroveExplainMode);
-}
-
-if (inAGroveHelpModalCloseBtn) {
-  inAGroveHelpModalCloseBtn.addEventListener("click", closeInAGroveHelpModal);
-}
-
-if (inAGroveExplainModalCloseBtn) {
-  inAGroveExplainModalCloseBtn.addEventListener("click", closeInAGroveExplainModal);
-}
-
-if (inAGroveHelpModal) {
-  inAGroveHelpModal.addEventListener("click", (event) => {
-    if (event.target === inAGroveHelpModal) {
-      closeInAGroveHelpModal();
-    }
-  });
-}
-
-if (inAGroveExplainModal) {
-  inAGroveExplainModal.addEventListener("click", (event) => {
-    if (event.target === inAGroveExplainModal) {
-      closeInAGroveExplainModal();
-    }
-  });
-}
-
-if (inAGroveTable) {
-  inAGroveTable.addEventListener("click", (event) => {
-    if (inAGroveExplainMode) {
-      return;
-    }
-    if (event.target !== inAGroveTable) {
-      return;
-    }
-    clearInAGroveSelection();
-    if (currentInAGroveView) {
-      renderInAGroveSuspects(currentInAGroveView);
-    }
+    const phases = { peek: "🔎 Inspect", bet: "🎯 Accuse", round_end: "✓ Reveal", game_over: "🏆 Finished" };
+    inAGroveUI.Phase.textContent = phases[view.phase] || "Waiting";
+    inAGroveUI.Round.textContent = view.round ?? "—";
+    inAGroveUI.Turn.textContent = view.game_over ? "The investigation is complete."
+        : view.phase === "round_end" ? "The truth is out. Review together."
+        : view.current_turn === view.you ? "Your turn to investigate"
+        : inAGrovePlayerName(view, view.current_turn) + "'s turn";
+    inAGroveUI.Status.classList.toggle("is-your-turn", view.current_turn === view.you);
+    inAGroveUI.FirstPlayer.textContent = inAGrovePlayerName(view, view.first_player);
+    inAGroveUI.FirstPlayer.title = inAGroveUI.FirstPlayer.textContent;
+    inAGroveUI.Blocked.textContent = Number.isInteger(view.blocked_suspect_index) && !inAGroveIsRevealed(view)
+        ? "Suspect " + (view.blocked_suspect_index + 1) : "None";
+    inAGroveUI.WinnerBanner.classList.toggle("hidden", !view.winner_ids?.length);
+    inAGroveUI.Winner.textContent = (view.winner_ids || []).map((id) => inAGrovePlayerName(view, id)).join(" & ") + " wins!";
+    inAGroveUI.Winner.title = inAGroveUI.Winner.textContent;
+    renderInAGroveEvidence(view);
+    renderInAGroveSuspects(view);
+    renderInAGrovePlayers(view);
+    renderInAGroveSummary(view, previousView);
     updateInAGroveActionButtons();
-  });
+    logGameEvents(data);
 }
 
-document.addEventListener(
-  "click",
-  (event) => {
-    if (!inAGroveExplainMode || currentGameType !== "in_a_grove") {
-      return;
-    }
-    const button = event.target.closest("button");
-    if (!button) {
-      return;
-    }
-    if (
-      button === inAGroveHelpBtn ||
-      button === inAGroveExplainBtn ||
-      button === inAGroveHelpModalCloseBtn ||
-      button === inAGroveExplainModalCloseBtn
-    ) {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    if (IN_A_GROVE_BUTTON_EXPLANATIONS[button.id]) {
-      showInAGroveExplainModal(button.id);
-      exitInAGroveExplainMode();
-    }
-  },
-  true,
-);
+function updateInAGroveExplainClasses() {
+    inAGroveUI.Panel.querySelectorAll("button[data-in-a-grove-explain]").forEach((button) => {
+        button.classList.toggle("has-explanation", inAGroveExplainMode);
+    });
+}
 
-document.addEventListener(
-  "pointerdown",
-  (event) => {
-    if (!inAGroveExplainMode || currentGameType !== "in_a_grove") {
-      return;
+function exitInAGroveExplainMode() {
+    inAGroveExplainMode = false;
+    document.body.classList.remove("in-a-grove-explain-mode");
+    inAGroveUI.ExplainBtn.classList.remove("active");
+    inAGroveUI.ExplainBtn.setAttribute("aria-pressed", "false");
+    inAGroveUI.ExplainNotice.classList.add("hidden");
+    updateInAGroveExplainClasses();
+}
+
+function toggleInAGroveExplainMode() {
+    if (inAGroveExplainMode) {
+        exitInAGroveExplainMode();
+        return;
     }
-    const buttonId = findInAGroveExplainButtonAtPoint(event.clientX, event.clientY);
-    if (!buttonId) {
-      return;
+    inAGroveExplainMode = true;
+    document.body.classList.add("in-a-grove-explain-mode");
+    inAGroveUI.ExplainBtn.classList.add("active");
+    inAGroveUI.ExplainBtn.setAttribute("aria-pressed", "true");
+    inAGroveUI.ExplainNotice.classList.remove("hidden");
+    updateInAGroveExplainClasses();
+}
+
+function showInAGroveModal(key) {
+    inAGroveModalReturnFocus = document.activeElement;
+    setModalVisible(inAGroveUI[key + "Modal"], true);
+    inAGroveUI[key + "ModalCloseBtn"].focus();
+}
+
+function closeInAGroveModal(key) {
+    setModalVisible(inAGroveUI[key + "Modal"], false);
+    if (inAGroveModalReturnFocus?.isConnected && !inAGroveModalReturnFocus.disabled) {
+        inAGroveModalReturnFocus.focus({ preventScroll: true });
     }
-    event.preventDefault();
-    event.stopPropagation();
-    showInAGroveExplainModal(buttonId);
+    inAGroveModalReturnFocus = null;
+}
+
+function showInAGroveExplanation(button) {
+    let info = IN_A_GROVE_BUTTON_EXPLANATIONS[button.dataset.inAGroveExplain];
+    if (button.dataset.inAGroveExplain === "suspect") {
+        const index = Number(button.dataset.index);
+        const suspect = currentInAGroveView?.suspects?.find((entry) => entry.index === index);
+        info = {
+            name: "Suspect " + (index + 1),
+            description: "Select two cards to inspect, or one card to accuse. Confirm with the action below the scene.",
+            note: suspect?.blocked
+                ? "The previous detective accused this suspect, so you cannot inspect them this turn. You may still accuse them. The top chip's owner takes the whole stack if they are innocent."
+                : "Only inspected identities are visible to you before the reveal. First skipped marks the card the first detective did not see; it does not forbid inspecting that card later. The top chip is the newest accusation.",
+        };
+    }
+    if (!info) return;
+    inAGroveUI.ExplainContent.replaceChildren(
+        inAGroveElement("h3", "", info.name),
+        inAGroveElement("p", "", info.description),
+    );
+    if (info.note) inAGroveUI.ExplainContent.append(inAGroveElement("p", "", info.note));
     exitInAGroveExplainMode();
-  },
-  true,
-);
+    showInAGroveModal("Explain");
+}
+
+Object.keys(IN_A_GROVE_BUTTON_EXPLANATIONS).forEach((key) => {
+    inAGroveUI[key].dataset.inAGroveExplain = key;
+});
+
+inAGroveUI.PeekBtn.addEventListener("click", () => {
+    if (!inAGroveHasLegalAction("peek_suspects") || inAGroveSelectedPeekIndexes.length !== 2) return;
+    sendAction({ type: "peek_suspects", suspect_indexes: [...inAGroveSelectedPeekIndexes] });
+});
+inAGroveUI.BetBtn.addEventListener("click", () => {
+    if (!inAGroveHasLegalAction("place_bet") || !Number.isInteger(inAGroveSelectedTargetIndex)) return;
+    sendAction({ type: "place_bet", suspect_index: inAGroveSelectedTargetIndex });
+});
+inAGroveUI.NextRoundBtn.addEventListener("click", () => {
+    if (inAGroveHasLegalAction("next_round")) sendAction({ type: "next_round" });
+});
+inAGroveUI.PlayAgainBtn.addEventListener("click", () => {
+    if (currentInAGroveView?.game_over) emitRoomStart();
+});
+inAGroveUI.HelpBtn.addEventListener("click", () => {
+    exitInAGroveExplainMode();
+    inAGroveUI.HelpContent.innerHTML = IN_A_GROVE_HELP_HTML;
+    showInAGroveModal("Help");
+});
+inAGroveUI.ExplainBtn.addEventListener("click", toggleInAGroveExplainMode);
+
+["Help", "Explain"].forEach((key) => {
+    inAGroveUI[key + "ModalCloseBtn"].addEventListener("click", () => closeInAGroveModal(key));
+    inAGroveUI[key + "Modal"].addEventListener("click", (event) => {
+        if (event.target === inAGroveUI[key + "Modal"]) closeInAGroveModal(key);
+    });
+});
+
+inAGroveUI.Panel.addEventListener("click", (event) => {
+    if (inAGroveExplainMode || event.target.closest("button, a, input, select, textarea, summary, .in-a-grove-stack")) return;
+    if (!inAGroveSelectedPeekIndexes.length && inAGroveSelectedTargetIndex === null) return;
+    clearInAGroveSelection();
+    if (currentInAGroveView) renderInAGroveSuspects(currentInAGroveView);
+    updateInAGroveActionButtons();
+});
+
+document.addEventListener("click", (event) => {
+    if (!inAGroveExplainMode || currentGameType !== "in_a_grove") return;
+    const button = event.target.closest("button");
+    if (!button || [inAGroveUI.HelpBtn, inAGroveUI.ExplainBtn, inAGroveUI.HelpModalCloseBtn, inAGroveUI.ExplainModalCloseBtn].includes(button)) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (button.dataset.inAGroveExplain) showInAGroveExplanation(button);
+}, true);
+
+// Disabled buttons do not dispatch click events, so handle their pointer press.
+document.addEventListener("pointerdown", (event) => {
+    if (!inAGroveExplainMode || currentGameType !== "in_a_grove" || event.target.closest(".modal")) return;
+    const button = [...inAGroveUI.Panel.querySelectorAll("button:disabled[data-in-a-grove-explain]")].find((candidate) => {
+        const rect = candidate.getBoundingClientRect();
+        return rect.width && rect.height && event.clientX >= rect.left && event.clientX <= rect.right &&
+            event.clientY >= rect.top && event.clientY <= rect.bottom;
+    });
+    if (!button) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    showInAGroveExplanation(button);
+}, true);
 
 document.addEventListener("keydown", (event) => {
-  if (event.key !== "Escape") {
-    return;
-  }
-  if (inAGroveExplainMode) {
-    exitInAGroveExplainMode();
-    return;
-  }
-  if (inAGroveHelpModal && !inAGroveHelpModal.classList.contains("hidden")) {
-    closeInAGroveHelpModal();
-    return;
-  }
-  if (inAGroveExplainModal && !inAGroveExplainModal.classList.contains("hidden")) {
-    closeInAGroveExplainModal();
-  }
+    if (currentGameType !== "in_a_grove") return;
+    const modal = ["Help", "Explain"].find((key) => !inAGroveUI[key + "Modal"].classList.contains("hidden"));
+    if (modal && event.key === "Tab") {
+        event.preventDefault();
+        inAGroveUI[modal + "ModalCloseBtn"].focus();
+    }
+    if (event.key !== "Escape") return;
+    if (modal) closeInAGroveModal(modal);
+    else if (inAGroveExplainMode) exitInAGroveExplainMode();
+    else {
+        clearInAGroveSelection();
+        if (currentInAGroveView) renderInAGroveSuspects(currentInAGroveView);
+        updateInAGroveActionButtons();
+    }
 });
 
 window.renderInAGroveGameState = renderInAGroveGameState;

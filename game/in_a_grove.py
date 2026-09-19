@@ -19,8 +19,9 @@ def _ordered_players(players: List[Dict]) -> List[Dict]:
     return sorted(players, key=lambda item: item.get("seat", 0))
 
 
-def _build_tiles() -> List[Dict]:
-    tiles = [dict(spec) for spec in TILE_SPECS]
+def _build_tiles(player_count: int) -> List[Dict]:
+    # Keep every number; add one X at four players and both X tiles at five.
+    tiles = [dict(spec) for spec in TILE_SPECS[:7 + max(0, player_count - 3)]]
     random.shuffle(tiles)
     return tiles
 
@@ -51,7 +52,7 @@ def _valid_suspect_indexes(indexes: object) -> Optional[List[int]]:
         return None
     parsed: List[int] = []
     for value in indexes:
-        if not isinstance(value, int) or value < 0 or value > 2:
+        if type(value) is not int or value < 0 or value > 2:
             return None
         parsed.append(value)
     if len(set(parsed)) != 2:
@@ -72,31 +73,34 @@ def _determine_murderer_index(suspects: List[Dict]) -> int:
     return max(numeric, key=lambda item: item[1])[0]
 
 
-def _pick_next_first_player(state: Dict, penalty_gains: Dict[str, int]) -> str:
+def _pick_next_first_player(state: Dict) -> str:
     turn_order = list(state["turn_order"])
-    current_first = state["first_player"]
-    max_gain = max((int(penalty_gains.get(pid, 0)) for pid in turn_order), default=0)
-    tied = {pid for pid in turn_order if int(penalty_gains.get(pid, 0)) == max_gain}
-    start_idx = turn_order.index(current_first) if current_first in turn_order else -1
-    for offset in range(len(turn_order)):
-        pid = turn_order[(start_idx + offset + 1) % len(turn_order)]
-        if pid in tied:
-            return pid
-    return current_first
+    start_idx = turn_order.index(state["first_player"])
+    candidates = [
+        turn_order[(start_idx + offset) % len(turn_order)]
+        for offset in range(1, len(turn_order))
+    ]
+    # Exclude the previous discoverer, use cumulative penalties, then clockwise order.
+    # With two players this necessarily alternates the starting player.
+    return max(candidates, key=lambda pid: int(state["players"][pid]["penalty_count"]))
 
 
 def _final_ranking(state: Dict) -> List[Dict]:
+    order = state["turn_order"]
+    first_index = order.index(state["first_player"])
     ranked_ids = sorted(
-        state["turn_order"],
+        order,
         key=lambda pid: (
             int(state["players"][pid]["penalty_count"]),
-            state["player_meta"][pid].get("seat", 0),
+            int(state["players"][pid].get("own_penalty_count", 0)),
+            (order.index(pid) - first_index - 1) % len(order),
         ),
     )
     return [
         {
             "player_id": pid,
             "penalty_count": int(state["players"][pid]["penalty_count"]),
+            "own_penalty_count": int(state["players"][pid].get("own_penalty_count", 0)),
         }
         for pid in ranked_ids
     ]
@@ -104,8 +108,7 @@ def _final_ranking(state: Dict) -> List[Dict]:
 
 def _finish_game(state: Dict) -> None:
     ranking = _final_ranking(state)
-    min_penalty = ranking[0]["penalty_count"] if ranking else 0
-    winners = [entry["player_id"] for entry in ranking if entry["penalty_count"] == min_penalty]
+    winners = [ranking[0]["player_id"]] if ranking else []
     state["phase"] = "game_over"
     state["game_over"] = True
     state["winner_ids"] = winners
@@ -137,7 +140,6 @@ def _build_round_summary(state: Dict, murderer_index: int, penalty_gains: Dict[s
         "murderer_index": murderer_index,
         "murderer_label": suspects[murderer_index]["tile"]["label"],
         "suspects": suspect_summaries,
-        "victim_label": state["victim"]["label"],
         "penalty_gains": dict(penalty_gains),
         "hand_counts": {
             pid: int(state["players"][pid]["hand_count"]) for pid in state["turn_order"]
@@ -150,7 +152,7 @@ def _build_round_summary(state: Dict, murderer_index: int, penalty_gains: Dict[s
 
 def _deal_round(state: Dict, first_player: str) -> None:
     player_ids = list(state["turn_order"])
-    tiles = _build_tiles()
+    tiles = _build_tiles(len(player_ids))
     dealt: Dict[str, Dict] = {}
     for player_id in player_ids:
         dealt[player_id] = tiles.pop()
@@ -161,9 +163,11 @@ def _deal_round(state: Dict, first_player: str) -> None:
     removed_tiles = list(tiles)
 
     for player_id in player_ids:
-        left_player = _previous_player_id(player_ids, player_id)
+        source_player = _previous_player_id(player_ids, player_id)
         state["players"][player_id]["own_tile"] = dict(dealt[player_id])
-        state["players"][player_id]["passed_tile"] = dict(dealt[left_player]) if left_player else None
+        state["players"][player_id]["passed_tile"] = (
+            dict(dealt[source_player]) if len(player_ids) > 2 else None
+        )
         state["players"][player_id]["round_ready"] = False
 
     state["round"] = int(state.get("round", 0)) + 1
@@ -171,13 +175,13 @@ def _deal_round(state: Dict, first_player: str) -> None:
     state["first_player"] = first_player
     state["current_turn"] = first_player
     state["blocked_suspect_index"] = None
+    state["unseen_suspect_index"] = None
     state["public_alibi"] = public_alibi
     state["suspects"] = suspects
     state["victim"] = victim
     state["removed_tiles"] = removed_tiles
     state["turn_context"] = {
         "viewed_indexes": [],
-        "can_swap": True,
         "acted_count": 0,
     }
     state["pending_next_first_player"] = None
@@ -197,6 +201,9 @@ def _advance_after_bet(state: Dict) -> None:
             receiver = stack[-1]
             gain = len(stack)
             state["players"][receiver]["penalty_count"] += gain
+            state["players"][receiver]["own_penalty_count"] = (
+                int(state["players"][receiver].get("own_penalty_count", 0)) + stack.count(receiver)
+            )
             penalty_gains[receiver] += gain
 
         state["last_round_summary"] = _build_round_summary(state, murderer_index, penalty_gains)
@@ -205,9 +212,9 @@ def _advance_after_bet(state: Dict) -> None:
             pid for pid in turn_order if int(state["players"][pid]["hand_count"]) <= 0
         ]
         penalty_over = [
-            pid for pid in turn_order if int(state["players"][pid]["penalty_count"]) >= 8
+            pid for pid in turn_order if int(state["players"][pid]["penalty_count"]) >= 5
         ]
-        next_first = _pick_next_first_player(state, penalty_gains)
+        next_first = _pick_next_first_player(state)
         state["phase"] = "round_end"
         state["current_turn"] = None
         state["pending_next_first_player"] = next_first
@@ -221,7 +228,6 @@ def _advance_after_bet(state: Dict) -> None:
     state["current_turn"] = next_player
     state["turn_context"] = {
         "viewed_indexes": [],
-        "can_swap": False,
         "acted_count": acted_count + 1,
     }
 
@@ -240,13 +246,16 @@ class InAGroveGame:
             player_id: {
                 "hand_count": 7,
                 "penalty_count": 0,
+                "own_penalty_count": 0,
                 "own_tile": None,
                 "passed_tile": None,
                 "round_ready": False,
             }
             for player_id in player_ids
         }
-        first_player = random.choice(player_ids)
+        starting_draw = _build_tiles(len(player_ids))
+        starting_values = {pid: starting_draw.pop().get("value") or 0 for pid in player_ids}
+        first_player = max(player_ids, key=lambda pid: starting_values[pid])
         state = {
             "players": state_players,
             "player_meta": player_meta,
@@ -256,11 +265,13 @@ class InAGroveGame:
             "first_player": first_player,
             "current_turn": first_player,
             "blocked_suspect_index": None,
+            "unseen_suspect_index": None,
             "suspects": [],
             "victim": None,
             "public_alibi": None,
             "removed_tiles": [],
-            "turn_context": {"viewed_indexes": [], "can_swap": True, "actor_index": 0},
+            "turn_context": {"viewed_indexes": [], "acted_count": 0},
+            "rules_version": "revised_2021",
             "last_round_summary": None,
             "game_over": False,
             "winner_ids": [],
@@ -285,8 +296,6 @@ class InAGroveGame:
             return []
         if phase == "peek":
             return ["peek_suspects"]
-        if phase == "swap_or_bet":
-            return ["swap_with_victim", "skip_swap"]
         if phase == "bet":
             return ["place_bet"]
         return []
@@ -330,55 +339,17 @@ class InAGroveGame:
             if blocked is not None and blocked in indexes:
                 return [], "cannot inspect blocked suspect"
             state["turn_context"]["viewed_indexes"] = indexes
-            is_first_player = player_id == state.get("first_player")
-            if is_first_player:
-                state["phase"] = "swap_or_bet"
-                state["turn_context"]["can_swap"] = True
-            else:
-                state["phase"] = "bet"
-                state["turn_context"]["can_swap"] = False
+            if player_id == state.get("first_player"):
+                state["unseen_suspect_index"] = next(index for index in range(3) if index not in indexes)
+            state["phase"] = "bet"
             events.append({"type": "in_a_grove:peek", "payload": {"player_id": player_id}})
-            return events, None
-
-        if action_type == "swap_with_victim":
-            if phase != "swap_or_bet":
-                return [], "cannot swap now"
-            suspect_index = action.get("suspect_index")
-            if not isinstance(suspect_index, int) or suspect_index not in (0, 1, 2):
-                return [], "invalid suspect"
-            viewed = list(state["turn_context"].get("viewed_indexes", []))
-            if suspect_index not in viewed:
-                return [], "can only swap a viewed suspect"
-            state["suspects"][suspect_index]["tile"], state["victim"] = (
-                state["victim"],
-                state["suspects"][suspect_index]["tile"],
-            )
-            state["turn_context"]["viewed_indexes"] = [
-                index for index in viewed if index != suspect_index
-            ]
-            state["turn_context"]["can_swap"] = False
-            state["phase"] = "bet"
-            events.append(
-                {
-                    "type": "in_a_grove:swap",
-                    "payload": {"player_id": player_id, "suspect_index": suspect_index},
-                }
-            )
-            return events, None
-
-        if action_type == "skip_swap":
-            if phase != "swap_or_bet":
-                return [], "cannot skip now"
-            state["turn_context"]["can_swap"] = False
-            state["phase"] = "bet"
-            events.append({"type": "in_a_grove:skip_swap", "payload": {"player_id": player_id}})
             return events, None
 
         if action_type == "place_bet":
             if phase != "bet":
                 return [], "cannot bet now"
             suspect_index = action.get("suspect_index")
-            if not isinstance(suspect_index, int) or suspect_index not in (0, 1, 2):
+            if type(suspect_index) is not int or suspect_index not in (0, 1, 2):
                 return [], "invalid suspect"
             if int(state["players"][player_id]["hand_count"]) <= 0:
                 return [], "no accusation chips left"
@@ -392,7 +363,7 @@ class InAGroveGame:
                 }
             )
             _advance_after_bet(state)
-            if state.get("last_round_summary"):
+            if state.get("phase") == "round_end":
                 events.append({"type": "in_a_grove:reveal", "payload": {"round": state["last_round_summary"]["round"]}})
             return events, None
 
@@ -412,6 +383,7 @@ class InAGroveGame:
                     "is_bot": meta.get("is_bot"),
                     "hand_count": pdata["hand_count"],
                     "penalty_count": pdata["penalty_count"],
+                    "own_penalty_count": int(pdata.get("own_penalty_count", 0)),
                     "round_ready": bool(pdata.get("round_ready")),
                 }
             )
@@ -422,6 +394,9 @@ class InAGroveGame:
 
         suspects_view = []
         summary = state.get("last_round_summary")
+        if isinstance(summary, dict):
+            # Older saves included this hidden identity inside their round summary.
+            summary = {key: value for key, value in summary.items() if key != "victim_label"}
         summary_by_index = {}
         if isinstance(summary, dict):
             for entry in summary.get("suspects", []):
@@ -439,6 +414,7 @@ class InAGroveGame:
                     "label": visible_label,
                     "stack": list(suspect.get("stack", [])),
                     "blocked": state.get("blocked_suspect_index") == index,
+                    "unseen": state.get("unseen_suspect_index") == index,
                     "last_round": summary_by_index.get(index),
                 }
             )
@@ -459,6 +435,7 @@ class InAGroveGame:
             "current_turn": state["current_turn"],
             "first_player": state["first_player"],
             "blocked_suspect_index": state.get("blocked_suspect_index"),
+            "unseen_suspect_index": state.get("unseen_suspect_index"),
             "players": players,
             "suspects": suspects_view,
             "victim_hidden": True,
@@ -489,11 +466,6 @@ class InAGroveGame:
                 return None
             random.shuffle(choices)
             return {"type": "peek_suspects", "suspect_indexes": choices[:2]}
-        if "swap_with_victim" in legal or "skip_swap" in legal:
-            viewed = list(state.get("turn_context", {}).get("viewed_indexes", []))
-            if viewed and random.random() < 0.4:
-                return {"type": "swap_with_victim", "suspect_index": random.choice(viewed)}
-            return {"type": "skip_swap"}
         if "place_bet" in legal:
             return {"type": "place_bet", "suspect_index": random.randint(0, 2)}
         return None
@@ -504,4 +476,6 @@ class InAGroveGame:
 
     @staticmethod
     def deserialize(payload: Dict) -> Dict:
+        if payload.get("phase") == "swap_or_bet":
+            payload["phase"] = "bet"
         return payload

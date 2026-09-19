@@ -69,10 +69,10 @@ class ArkNovaGameTests(unittest.TestCase):
         self.assertEqual(len(state["display"]), 6)
         self.assertEqual(len(state["projects"]), 3)
         self.assertEqual(len(state["blocked_project_slots"]), 3)
-        self.assertEqual([slot["cost"] for slot in state["association_supply"]["donation_slots"]], [2, 2, 5, 5, 7, 7, 10, 10])
+        self.assertEqual([slot["cost"] for slot in state["association_supply"]["donation_slots"]], [2, 5, 5, 7, 7, 10, 10])
         self.assertEqual(
             [slot["cost"] for slot in state["association_supply"]["donation_slots"] if slot["blocked"]],
-            [2, 5, 7],
+            [5, 7, 10],
         )
         for player in state["players"].values():
             self.assertEqual(player["action_cards"]["animals"]["slot"], 1)

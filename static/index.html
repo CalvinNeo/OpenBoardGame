@@ -4,10 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css?v=app_v96" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v97" />
   <link rel="stylesheet" href="/static/ark_nova.css?v=app_v21" />
   <link rel="stylesheet" href="/static/catan_starfarers.css?v=app_v4" />
+  <link rel="stylesheet" href="/static/castles_of_burgundy.css?v=1" />
+  <link rel="stylesheet" href="/static/gaia_project.css?v=gaia_v1" />
   <link rel="stylesheet" href="/static/tucano.css?v=app_v2" />
+  <link rel="stylesheet" href="/static/take_time.css?v=1" />
 </head>
 <body>
   <section id="logPanel" class="log-panel hidden" aria-hidden="true">
@@ -1380,6 +1383,7 @@
                     <option value="cat_in_box">Cat in the Box</option>
                     <option value="hanabi">Hanabi</option>
                     <option value="the_gang">The Gang</option>
+                    <option value="take_time">Take Time · 时序谜局</option>
                     <option value="draw_guess">Draw & Guess</option>
                     <option value="blitz_sketch">Blitz Sketch</option>
                     <option value="cyber_pictures">Cyber Pictures</option>
@@ -1610,6 +1614,27 @@
                         <option value="7">7</option>
                       </select>
                     </div>
+                  </div>
+                  <div class="game-config-card hidden" id="takeTimeConfigBox" aria-hidden="true">
+                    <div class="game-config-title">Take Time</div>
+                    <div class="row">
+                      <label for="takeTimeStartClock">Start Clock</label>
+                      <select id="takeTimeStartClock">
+                        <option value="awakening_1">苏醒 · Official 1.1</option>
+                        <option value="open_sky">晴空 · Practice</option>
+                        <option value="sun_and_moon">日月相伴 · Practice</option>
+                        <option value="windows">时光之窗 · Practice</option>
+                        <option value="echoes">回声 · Practice</option>
+                        <option value="first_and_last">始与终 · Practice</option>
+                        <option value="silent_night">静夜 · Practice</option>
+                        <option value="high_tide">潮起 · Practice</option>
+                        <option value="low_tide">潮落 · Practice</option>
+                        <option value="orbit">星轨 · Practice</option>
+                        <option value="pairs">双星 · Practice</option>
+                        <option value="differences">光与影 · Practice</option>
+                      </select>
+                    </div>
+                    <p class="hint">1 official introductory clock + 11 original practice clocks.</p>
                   </div>
                   <div class="game-config-card hidden" id="hanabiConfigBox" aria-hidden="true">
                     <div class="game-config-title">Hanabi</div>
@@ -1903,6 +1928,10 @@
               <button id="projectLHelpBtn" class="project-l-header-btn" type="button">Help</button>
               <button id="projectLExplainBtn" class="project-l-header-btn" type="button">Explain</button>
             </div>
+            <div class="panel-header-actions" id="gaiaProjectHeaderActions" style="display: none;">
+              <button id="gaiaProjectHelpBtn" type="button">Help</button>
+              <button id="gaiaProjectExplainBtn" type="button" aria-pressed="false">Explain</button>
+            </div>
             <div class="panel-header-actions" id="blokusHeaderActions" style="display: none;">
               <button id="blokusHelpBtn" class="blokus-header-btn" type="button">Help</button>
               <button id="blokusExplainBtn" class="blokus-header-btn" type="button" aria-pressed="false">Explain</button>
@@ -2074,6 +2103,10 @@
             <div class="panel-header-actions" id="catanStarfarersHeaderActions" style="display: none;">
               <button id="catanStarfarersHelpBtn" class="catan-starfarers-header-btn" type="button">Help</button>
               <button id="catanStarfarersExplainBtn" class="catan-starfarers-header-btn" type="button" aria-pressed="false">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="takeTimeHeaderActions" style="display: none;">
+              <button id="takeTimeHelpBtn" type="button">Help</button>
+              <button id="takeTimeExplainBtn" type="button" aria-pressed="false">Explain</button>
             </div>
             <div class="panel-header-actions" id="bombBustersHeaderActions" style="display: none;">
               <button id="bombBustersHelpBtn" class="bomb-busters-header-btn" type="button">Help</button>
@@ -2449,6 +2482,7 @@
               <div id="criminalDancePrivate" class="criminal-dance-private-list"></div>
             </div>
 
+            <div id="gaiaProjectPanel" class="hidden gaia-panel"></div>
             <div id="istanbulPanel" class="hidden istanbul-panel">
               <div class="istanbul-top">
                 <div class="istanbul-stat">Phase: <span id="istanbulPhase">-</span></div>
@@ -3321,6 +3355,7 @@
               <div id="catanStarfarersLiveRegion" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
             </div>
 
+            <div id="takeTimePanel" class="hidden"></div>
             <div id="bombBustersPanel" class="hidden bomb-busters-panel">
               <div class="bomb-busters-topbar">
                 <div class="bomb-busters-title-block">
@@ -4304,8 +4339,6 @@
                     <p id="inAGroveActionHint" role="status" aria-live="polite">Waiting for the next move.</p>
                     <div class="in-a-grove-actions">
                       <button id="inAGrovePeekBtn" type="button" disabled>🔎 Inspect 2</button>
-                      <button id="inAGroveSwapBtn" type="button" class="hidden" disabled>🔄 Swap with victim</button>
-                      <button id="inAGroveSkipSwapBtn" type="button" class="in-a-grove-secondary hidden" disabled>Keep scene</button>
                       <button id="inAGroveBetBtn" type="button" class="hidden" disabled>🎯 Accuse suspect</button>
                       <button id="inAGroveNextRoundBtn" type="button" class="hidden" disabled>Next Round →</button>
                       <button id="inAGrovePlayAgainBtn" type="button" class="hidden" disabled>↻ Start New Game</button>
@@ -4316,7 +4349,7 @@
                 <section class="in-a-grove-scoreboard" aria-labelledby="inAGrovePlayersTitle">
                   <div class="in-a-grove-section-heading"><h4 id="inAGrovePlayersTitle">Detectives</h4><span>Fewest penalties wins</span></div>
                   <div id="inAGrovePlayers" class="in-a-grove-players"></div>
-                  <p class="in-a-grove-score-legend">🎯 Chips left · ⚠️ Penalties<br>8 penalties or 0 chips ends the game.</p>
+                  <p class="in-a-grove-score-legend">🎯 Chips left · ⚠️ Penalties<br>5 penalties or 0 chips ends the game.</p>
                 </section>
                 <details id="inAGroveRoundSummary" class="in-a-grove-summary hidden">
                   <summary id="inAGroveSummaryTitle">Round results</summary>
@@ -6046,6 +6079,8 @@
               <div id="gizmosPlayers" class="gizmos-player-list"></div>
             </div>
 
+            <div id="burgundyPanel" class="hidden"></div>
+
             <div id="centurySpiceRoadPanel" class="hidden">
               <div class="century-header">
                 <div class="row">
@@ -7087,7 +7122,7 @@
   <script src="/static/games/fang_niao.js?v=app_v4"></script>
   <script src="/static/games/perfect_mismatch.js?v=app_v4"></script>
   <script src="/static/games/coyote.js?v=app_v4"></script>
-  <script src="/static/games/in_a_grove.js?v=app_v3"></script>
+  <script src="/static/games/in_a_grove.js?v=app_v4"></script>
   <script src="/static/games/citadels.js?v=app_v6"></script>
   <script src="/static/games/tagiron.js?v=app_v5"></script>
   <script src="/static/games/davinci_code.js?v=app_v4"></script>
@@ -7112,6 +7147,14 @@
   <script src="/static/games/emerald_skulls.js?v=app_v2"></script>
   <script src="/static/games/wriggle_roulette.js?v=app_v1"></script>
   <script src="/static/games/catan_starfarers.js?v=app_v4"></script>
+  <dialog id="takeTimeDialog" class="take-time-dialog" aria-labelledby="takeTimeDialogTitle">
+    <div class="take-time-dialog-header">
+      <h2 id="takeTimeDialogTitle">Take Time</h2>
+      <button id="takeTimeDialogClose" type="button">Close</button>
+    </div>
+    <div id="takeTimeDialogBody" class="take-time-dialog-body"></div>
+  </dialog>
+  <script src="/static/games/take_time.js?v=1"></script>
   <script src="/static/games/bomb_busters.js?v=app_v2"></script>
   <script src="/static/games/felix.js?v=app_v1"></script>
   <script src="/static/games/tacta.js?v=app_v7"></script>
@@ -7121,7 +7164,9 @@
   <script src="/static/games/ra.js?v=app_v7"></script>
   <script src="/static/games/scout.js?v=app_v4"></script>
   <script src="/static/games/ark_nova.js?v=app_v22"></script>
-  <script src="/static/app.js?v=app_v21"></script>
-  <script src="/static/room.js?v=app_v38"></script>
+  <script src="/static/games/gaia_project.js?v=gaia_v1"></script>
+  <script src="/static/games/castles_of_burgundy.js?v=1"></script>
+  <script src="/static/app.js?v=app_v23"></script>
+  <script src="/static/room.js?v=app_v39"></script>
 </body>
 </html>

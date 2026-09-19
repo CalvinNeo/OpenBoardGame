@@ -77,6 +77,8 @@ function emitRoomStart() {
   } else if (currentGameType === "gold_rush") {
     const mode = goldRushModeSelect ? goldRushModeSelect.value || "hand" : "hand";
     payload.config = { mode };
+  } else if (currentGameType === "take_time") {
+    payload.config = getTakeTimeConfig();
   } else if (currentGameType === "bomb_busters") {
     const practicePreset = bombBustersPresetSelect
       ? bombBustersPresetSelect.value || "standard_practice"
@@ -340,6 +342,7 @@ function renderRoomState(state) {
     if (typeof clearNineUpperState === "function") {
       clearNineUpperState();
     }
+    if (typeof clearTakeTimeState === "function") clearTakeTimeState();
     if (typeof clearBombBustersState === "function") {
       clearBombBustersState();
     }
@@ -368,6 +371,7 @@ function renderRoomState(state) {
   updateHalliConfigRow();
   updateGoldRushConfigRow();
   updateBombBustersConfigRow();
+  if (typeof updateTakeTimeConfigRow === "function") updateTakeTimeConfigRow();
   updateCitadelsConfigRow();
   updateHanabiConfigRow();
   updateTexasHoldemConfigRow();

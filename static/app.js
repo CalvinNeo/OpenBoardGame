@@ -34,6 +34,7 @@ const emeraldSkullsPanel = document.getElementById("emeraldSkullsPanel");
 const wriggleRoulettePanel = document.getElementById("wriggleRoulettePanel");
 const catanStarfarersPanel = document.getElementById("catanStarfarersPanel");
 const bombBustersPanel = document.getElementById("bombBustersPanel");
+const takeTimePanel = document.getElementById("takeTimePanel");
 const bombBustersConfigBox = document.getElementById("bombBustersConfigBox");
 const bombBustersPresetSelect = document.getElementById("bombBustersPresetSelect");
 const felixPanel = document.getElementById("felixPanel");
@@ -84,6 +85,18 @@ const wanderingTowersPanel = document.getElementById("wanderingTowersPanel");
 const skyePanel = document.getElementById("skyePanel");
 
 function setGamePanelVisibility(gameType) {
+  const showTakeTime = gameType === "take_time";
+  takeTimePanel.classList.toggle("hidden", !showTakeTime);
+  if (typeof showTakeTimeHeaderActions === "function") showTakeTimeHeaderActions(showTakeTime);
+  const burgundyPanel = document.getElementById("burgundyPanel");
+  if (burgundyPanel) burgundyPanel.classList.toggle("hidden", gameType !== "castles_of_burgundy");
+  if (typeof showBurgundyHeaderActions === "function") {
+    showBurgundyHeaderActions(gameType === "castles_of_burgundy");
+  }
+  document.getElementById("gaiaProjectPanel")?.classList.toggle("hidden", gameType !== "gaia_project");
+  if (typeof showGaiaProjectHeaderActions === "function") {
+    showGaiaProjectHeaderActions(gameType === "gaia_project");
+  }
   const showArkNova = gameType === "ark_nova";
   const showCabo = gameType === "cabo";
   const showGuandan = gameType === "guandan";
@@ -641,6 +654,14 @@ function logGameEvents(data) {
 
 function renderGameState(data) {
   const gameType = data.game_type || (currentRoomState && currentRoomState.game_type);
+  if (gameType === "castles_of_burgundy") {
+    renderBurgundyGameState(data);
+    return;
+  }
+  if (gameType === "gaia_project") {
+    renderGaiaProjectGameState(data);
+    return;
+  }
   if (gameType === "ark_nova") {
     renderArkNovaGameState(data);
     return;
@@ -731,6 +752,10 @@ function renderGameState(data) {
   }
   if (gameType === "bomb_busters") {
     renderBombBustersGameState(data);
+    return;
+  }
+  if (gameType === "take_time") {
+    renderTakeTimeGameState(data);
     return;
   }
   if (gameType === "felix") {

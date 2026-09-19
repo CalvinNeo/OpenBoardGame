@@ -1,0 +1,126 @@
+.gaia-panel { --gaia-bg:#0e1929; --gaia-card:#152438; --gaia-line:#2b4058; --gaia-muted:#a5b7ce; --gaia-accent:#81e2c1; min-width:0; padding:18px; color:#eaf1fa; background:var(--gaia-bg); border-radius:16px; font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+.gaia-panel *, .gaia-modal * { box-sizing:border-box; }
+.gaia-panel h2,.gaia-panel h3,.gaia-modal h2,.gaia-modal h3 { color:inherit; margin:0 0 12px; }
+.gaia-panel p { line-height:1.65; margin:9px 0; font-size:13px; overflow-wrap:anywhere; }
+.gaia-title { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:18px; }
+.gaia-title small { color:var(--gaia-accent); font-size:9px; letter-spacing:2px; }
+.gaia-title h2 { margin:6px 0 0; font-size:25px; letter-spacing:2px; }
+.gaia-title h2 span { color:var(--gaia-muted); font-size:11px; font-weight:400; letter-spacing:2px; margin-left:10px; }
+.gaia-status { font-size:12px; color:var(--gaia-muted); text-align:right; }
+.gaia-status span { display:block; font-size:10px; margin-top:4px; }
+.gaia-status.your-turn { color:var(--gaia-accent); }
+.gaia-rounds { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:6px; }
+.gaia-round-tile { border:1px solid var(--gaia-line); padding:9px 10px; border-radius:8px; background:#142136; min-width:0; }
+.gaia-round-tile small { display:block; font-size:9px; color:var(--gaia-muted); letter-spacing:1px; }
+.gaia-round-tile strong { display:block; font-size:11px; margin-top:7px; font-weight:500; }
+.gaia-round-tile.current { border-color:var(--gaia-accent); background:#1b393e; }
+.gaia-round-tile.past { opacity:.5; }
+.gaia-goals { display:flex; flex-wrap:wrap; gap:8px 24px; font-size:11px; color:#d2daed; padding:12px 2px; }
+.gaia-dashboard { display:flex; flex-wrap:wrap; align-items:center; gap:10px 20px; border:1px solid var(--gaia-line); border-radius:10px; padding:12px; margin-bottom:14px; background:#122135; }
+.gaia-dashboard>strong { font-size:12px; }
+.gaia-resources { display:flex; gap:12px; flex-wrap:wrap; font-size:14px; }
+.gaia-resources span { white-space:nowrap; }
+.gaia-power-bowls { display:flex; flex-wrap:wrap; gap:7px; font-size:10px; }
+.gaia-power-bowls>span { border:1px solid #605680; border-radius:6px; padding:4px 7px; background:#29263f; }
+.gaia-power-bowls .gaia-bowl { border-color:#427564; background:#1b3d36; }
+.gaia-power-bowls b { margin-left:3px; }
+.gaia-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(235px,300px); gap:14px; align-items:start; }
+.gaia-workspace,.gaia-controls { min-width:0; }
+.gaia-workspace { background:#101e31; border:1px solid var(--gaia-line); border-radius:12px; overflow:hidden; }
+.gaia-tabs { display:flex; flex-wrap:wrap; border-bottom:1px solid var(--gaia-line); padding:8px; gap:4px; }
+.gaia-panel button { background:#1c3047; color:#e7effa; border:1px solid #3b526d; border-radius:7px; padding:9px 11px; box-shadow:none; font-size:12px; font-family:inherit; line-height:1.45; min-width:0; max-width:100%; cursor:pointer; white-space:normal; overflow-wrap:anywhere; }
+.gaia-panel button:hover:not(:disabled) { background:#2b4660; border-color:#7ebeb9; }
+.gaia-panel button:focus-visible,.gaia-panel [role=button]:focus-visible { outline:2px solid var(--gaia-accent); outline-offset:2px; }
+.gaia-panel button:disabled { opacity:.46; cursor:default; }
+.gaia-tabs button { border-color:transparent; background:transparent; color:var(--gaia-muted); padding:7px 12px; flex:1 1 auto; }
+.gaia-tabs button.active { background:#264242; color:#a6f2d5; }
+.gaia-tab-content { min-width:0; padding:12px; }
+.gaia-map-tools { display:flex; align-items:center; gap:5px; }
+.gaia-map-tools button { padding:4px 10px; min-height:30px; }
+.gaia-map-tools span { font-size:10px; margin-left:auto; color:var(--gaia-muted); }
+.gaia-map-wrap { width:100%; min-width:0; overflow:hidden; border-radius:10px; margin-top:7px; background:radial-gradient(ellipse at 45% 42%,#192c45,#0a1524 75%); }
+#gaiaGalaxy { display:block; width:100%; height:auto; min-height:260px; max-height:62vh; aspect-ratio:1.3; touch-action:pan-y; user-select:none; }
+.gaia-hex { cursor:pointer; }
+.gaia-hex>polygon { fill:#162538; stroke:#32445a; stroke-width:.65; }
+.gaia-hex.available>polygon { stroke:#7697ac; stroke-width:1.5; fill:#1c3544; }
+.gaia-hex:hover>polygon,.gaia-hex:focus>polygon { stroke:#b7f4e0; stroke-width:2; }
+.gaia-hex.selected>polygon { fill:#284d4c; stroke:#a7ffdb; stroke-width:2.5; }
+.gaia-planet { stroke:#ffffff44; stroke-width:1; }
+.gaia-structure { font-size:13px; text-anchor:middle; font-family:system-ui,sans-serif; font-weight:bold; }
+.gaia-seat { font-size:9px; text-anchor:middle; font-weight:800; paint-order:stroke; stroke:#07111e; stroke-width:2px; }
+.gaia-former { font-size:18px; text-anchor:middle; }
+.gaia-sector { font-size:11px; fill:#607a93; text-anchor:middle; pointer-events:none; }
+.gaia-legend { display:flex; justify-content:center; flex-wrap:wrap; gap:6px 12px; margin-top:10px; color:var(--gaia-muted); font-size:9px; }
+.gaia-legend span { display:flex; align-items:center; gap:4px; }
+.gaia-legend i { width:7px; height:7px; border-radius:50%; }
+.gaia-controls { background:#17273b; border:1px solid var(--gaia-line); padding:14px; border-radius:12px; max-height:76vh; overflow-y:auto; scrollbar-width:thin; }
+.gaia-controls h3 { font-size:14px; }
+.gaia-options { display:grid; grid-template-columns:minmax(0,1fr); gap:6px; }
+.gaia-option { display:flex; flex-direction:column; align-items:flex-start; gap:5px; width:100%; text-align:left; margin-bottom:5px; }
+.gaia-option strong { font-size:11px; font-weight:500; }
+.gaia-option small { color:#b9c7da; font-size:10px; display:flex; gap:6px; flex-wrap:wrap; }
+.gaia-option.selected { border-color:var(--gaia-accent); background:#264640; }
+.gaia-action-group { margin:10px 0; border-top:1px solid var(--gaia-line); padding-top:10px; }
+.gaia-panel summary { cursor:pointer; color:#d7e4f5; font-size:12px; padding:5px 0; }
+.gaia-panel summary>span { color:var(--gaia-muted); margin-left:6px; }
+.gaia-action-group .gaia-options { margin-top:9px; }
+.gaia-muted,.gaia-map-hint { color:var(--gaia-muted); font-size:11px; }
+.gaia-planet-info { background:#0d1b2d; padding:10px; border-radius:8px; font-size:12px; margin:10px 0; }
+.gaia-planet-info p { font-size:11px; color:var(--gaia-muted); }
+.gaia-confirm { border:1px solid var(--gaia-accent); padding:12px; border-radius:9px; margin-bottom:14px; background:#1b363b; }
+.gaia-confirm>small { font-size:8px; letter-spacing:1.5px; color:#98eaca; }
+.gaia-confirm h3 { font-size:13px; margin-top:7px; }
+.gaia-confirm-buttons { display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-top:12px; }
+.gaia-confirm-buttons button:first-child { background:#92e1c0; color:#112b2c; border-color:#92e1c0; font-weight:600; }
+.gaia-field { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin:10px 0; font-size:11px; }
+.gaia-panel input,.gaia-panel select { min-width:0; max-width:100%; background:#0e1d30; color:#eaf1fa; border:1px solid #51647e; border-radius:5px; padding:6px; font:inherit; }
+.gaia-field input[type=number] { width:65px; }
+.gaia-field select { flex:1; }
+.gaia-token-payment { min-width:0; border:1px solid #476052; border-radius:6px; padding:8px; margin:10px 0; }
+.gaia-token-payment legend { font-size:10px; }
+.gaia-token-payment>div { display:flex; gap:8px; flex-wrap:wrap; }
+.gaia-token-payment label { display:flex; align-items:center; gap:4px; font-size:10px; }
+.gaia-token-payment input[type=number] { width:48px; }
+.gaia-federation-button { width:100%; margin-top:12px; }
+.gaia-research { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:6px; }
+.gaia-track h3 { font-size:11px; text-align:center; }
+.gaia-level { display:block; width:100%; min-height:88px; margin:5px 0; text-align:left; padding:7px !important; }
+.gaia-level strong { font-size:12px; color:#8edfc0; }
+.gaia-level>span { display:block; min-height:28px; font-size:9px; margin-top:4px; }
+.gaia-level:disabled { opacity:1 !important; background:#172a40; }
+.gaia-markers { display:flex; flex-wrap:wrap; gap:2px; margin-top:5px; }
+.gaia-markers b { color:#071627; width:15px; height:15px; display:grid; place-content:center; border-radius:50%; font-size:9px; }
+.gaia-tech-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-bottom:20px; }
+.gaia-tech { display:flex; flex-direction:column; gap:9px; min-height:104px; border:1px solid var(--gaia-line); padding:11px; border-radius:8px; text-align:left; font-size:11px; background:#1a2b40; }
+.gaia-tech small { color:#a2b8d0; font-size:9px; }
+.gaia-tech span { font-size:10px; line-height:1.6; color:#c8d6e7; }
+.gaia-tech:disabled { opacity:.75 !important; }
+.gaia-tech.advanced { border-color:#5d5084; background:#27253f; }
+.gaia-player-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.gaia-player-card { min-width:0; border:1px solid var(--gaia-line); border-top:3px solid var(--player-color); border-radius:8px; background:#17283d; padding:12px; }
+.gaia-player-card h3 { font-size:12px; display:flex; flex-wrap:wrap; justify-content:space-between; gap:5px; }
+.gaia-player-card .gaia-resources { font-size:12px; gap:7px; }
+.gaia-badges { display:flex; flex-wrap:wrap; gap:6px; font-size:10px; color:#b4c8df; }
+.gaia-owned-tech { display:flex; flex-direction:column; gap:7px; font-size:10px; color:#a4d7d1; }
+.gaia-owned-tech .covered { text-decoration:line-through; color:#71819a; }
+.gaia-results { border:1px solid #7c9170; background:#1d3533; border-radius:10px; padding:14px; margin-bottom:14px; }
+.gaia-results h3 { font-size:18px; }
+.gaia-result-row { display:flex; flex-direction:column; gap:4px; padding:10px 0; border-top:1px solid #486252; font-size:11px; }
+.gaia-result-row strong { display:flex; justify-content:space-between; font-size:14px; }
+.gaia-log { border-top:1px solid var(--gaia-line); padding-top:10px; margin-top:14px; }
+.gaia-log ol { max-height:180px; overflow:auto; padding-left:20px; font-size:11px; line-height:1.8; scrollbar-width:thin; }
+.gaia-log small { color:var(--gaia-muted); }
+.gaia-explaining [data-gaia-explain] { outline:2px dashed #7dcfee; outline-offset:2px; cursor:help !important; }
+.gaia-explaining .gaia-hex { outline:none; }
+.gaia-explaining .gaia-hex>polygon { stroke:#7dcfee; stroke-width:2; stroke-dasharray:3 2; }
+.gaia-modal { position:fixed; inset:0; background:#030913cc; z-index:12000; display:grid; place-items:center; padding:18px; }
+.gaia-dialog { color:#e5edf9; background:#14253a; border:1px solid #506783; width:min(720px,100%); max-height:85vh; border-radius:14px; box-shadow:0 20px 100px #0008; overflow:hidden; font-family:system-ui,sans-serif; }
+.gaia-dialog header { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:16px 20px; border-bottom:1px solid #3a4e67; }
+.gaia-dialog h2 { font-size:17px; margin:0; }
+.gaia-dialog button { background:#294159; color:#f1f7fd; border:1px solid #577086; border-radius:6px; padding:7px 12px; }
+.gaia-dialog-body { max-height:70vh; padding:10px 22px 22px; overflow:auto; font-size:13px; line-height:1.8; }
+.gaia-dialog-body h3 { font-size:14px; margin:18px 0 7px; color:#8be1c0; }
+.gaia-dialog-body a { color:#9adcff; }
+.gaia-dialog-body summary { cursor:pointer; padding:6px 0; }
+@media(max-width:1050px) { .gaia-layout { grid-template-columns:minmax(0,1fr) 240px; } .gaia-panel { padding:12px; } .gaia-research { grid-template-columns:repeat(3,minmax(0,1fr)); } .gaia-player-grid { grid-template-columns:1fr; } }
+@media(max-width:760px) { .gaia-layout { grid-template-columns:minmax(0,1fr); } .gaia-controls { max-height:none; } .gaia-controls>.gaia-options { grid-template-columns:repeat(2,minmax(0,1fr)); } .gaia-options.gaia-faction-options { max-height:340px; overflow:auto; } .gaia-title h2 { font-size:21px; } .gaia-title h2 span { display:block; margin:5px 0 0; font-size:9px; } .gaia-rounds { grid-template-columns:repeat(3,minmax(0,1fr)); } .gaia-round-tile { padding:7px 8px; } .gaia-round-tile strong { font-size:10px; margin-top:3px; } .gaia-dashboard { gap:8px; } .gaia-dashboard>strong { width:100%; } .gaia-tech-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .gaia-tab-content { padding:8px; } #gaiaGalaxy { min-height:250px; max-height:55vh; } .gaia-panel { padding:10px; } .gaia-goals { font-size:10px; gap:6px; } .gaia-map-tools span { font-size:9px; } .gaia-tabs button { padding:7px 5px; font-size:11px; } .gaia-confirm { scroll-margin-top:10px; } .gaia-resources { gap:10px; font-size:13px; } }

@@ -640,6 +640,7 @@ const GAME_WEIGHT = {
   emerald_skulls: 1.93,
   wriggle_roulette: 1.00,
   catan_starfarers: 2.60,
+  castles_of_burgundy: 2.97,
   cabo: 1.4,
   carcassonne: 1.89,
   cat_in_box: 2.03,
@@ -653,6 +654,7 @@ const GAME_WEIGHT = {
   flip7: 1.028056112224449,
   gold_rush: 1.1839080459770115,
   gizmos: 2.05,
+  gaia_project: null,
   halli_galli: 1.02,
   hanabi: 1.69,
   hot_streak: 1.23,
@@ -1781,6 +1783,7 @@ function resetRoomState() {
   if (typeof clearCatanStarfarersState === "function") {
     clearCatanStarfarersState();
   }
+  if (typeof clearTakeTimeState === "function") clearTakeTimeState();
   if (typeof clearBombBustersState === "function") {
     clearBombBustersState();
   }
@@ -1795,6 +1798,9 @@ function resetRoomState() {
     clearCriminalDanceState();
   }
   clearIstanbulState();
+  if (typeof clearGaiaProjectState === "function") {
+    clearGaiaProjectState();
+  }
   clearGoldRushState();
   clearIncanGoldState();
   if (typeof clearCelestiaState === "function") {
@@ -1865,6 +1871,7 @@ function resetRoomState() {
   updateHalliConfigRow();
   updateGoldRushConfigRow();
   updateBombBustersConfigRow();
+  if (typeof updateTakeTimeConfigRow === "function") updateTakeTimeConfigRow();
   updateHanabiConfigRow();
   updateTexasHoldemConfigRow();
   updateMismatchConfigRow();
