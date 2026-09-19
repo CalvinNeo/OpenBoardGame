@@ -113,9 +113,9 @@
         let label = cards.length ? cards.map((card, i) => {
             const direction = view.phase === "pass" ? ` → ${passSlots()[i] || "right"}` : "";
             return `${cardName(card)}${direction}`;
-        }).join(" · ") : "Select a card to begin.";
+        }).join(" · ") : "No card selected";
         if (["pass", "split_hand"].includes(view.phase) && handSelectable()) label = `${cards.length}/${maxCards()} selected${cards.length ? ` · ${label}` : ""}`;
-        if (view.phase === "reveal_suit") label = selectedSuit ? `Reveal ${suitName(selectedSuit)}` : "Choose a suit above.";
+        if (view.phase === "reveal_suit") label = selectedSuit ? `Reveal ${suitName(selectedSuit)}` : "No suit selected";
         if (!handSelectable() && !(view.phase === "reveal_suit" && actions().has("setup_choice"))) label = "";
         text("SelectedCards", label);
         visible("Selection", Boolean(label));
@@ -159,12 +159,7 @@
             wrap.append(button, info);
             hand.append(wrap);
         }
-        if (!view.hand.length) hand.append(element("p", "rebel-empty", view.your_princess ? "No cards left in your hand." : "You are watching this game."));
-        let hint = handSelectable() ? "Tap a card, then confirm below. Tap ⓘ to learn about a card." : "Your cards will become selectable when needed.";
-        if (view.phase === "trick" && actions().has("play_card")) hint = `${view.legal_cards.length} playable · Dimmed cards cannot be played now. Tap their ⓘ to see why.`;
-        if (view.phase === "pass" && handSelectable()) hint = "Select cards in order. Their destinations appear below your hand.";
-        if (view.phase === "split_hand" && handSelectable()) hint = "Selected cards are saved for the second half; you play the others first.";
-        text("HandHint", hint);
+        if (!view.hand.length) hand.append(element("p", "rebel-empty", view.your_princess ? "No cards remaining" : "Spectating"));
         visible("HandSection", !isFinished());
     }
     function renderChoices() {
@@ -172,7 +167,7 @@
         const princess = view.your_princess?.id;
         const suitChoice = (view.phase === "reveal_suit" && legal.has("setup_choice")) || (view.phase === "trick" && princess === "little_mermaid" && powerAvailable());
         visible("SuitField", suitChoice);
-        text("SuitLabel", view.phase === "reveal_suit" ? "Choose a suit to reveal" : "Optional ability: force the opening suit");
+        text("SuitLabel", view.phase === "reveal_suit" ? "Suit to reveal" : "Opening suit");
         get("SuitButtons").replaceChildren();
         if (suitChoice) for (const suit of view.suits || Object.keys(suits)) {
             const button = element("button", selectedSuit === suit ? "selected" : "", suitName(suit));
@@ -219,7 +214,7 @@
         explain(get("SnowWhiteField"), get("SnowWhiteToggle").dataset.rebelExplain);
         explain(get("PeaField"), get("PeaToggle").dataset.rebelExplain);
     }
-    function renderGuide() {
+    function phaseGuidance() {
         const phase = view.phase;
         const legal = actions();
         const mine = legal.has("play_card");
@@ -256,11 +251,14 @@
             detail = me()?.passed ? "Your choice is locked in. Play continues when everyone has submitted." : "Your next step will appear here when it is time to act.";
         }
         if (!me() && !view.game_over) { title = "Watching this game"; detail = "Follow the cards on the table and the players’ scores. Private hands stay hidden."; }
-        text("Phase", phases[phase] || "Rebel Princess");
-        tip(get("Phase"), `${phases[phase] || "Current phase"}: ${detail}`);
+        return { title, detail };
+    }
+    function renderGuide() {
+        const { title, detail } = phaseGuidance();
+        text("Phase", phases[view.phase] || "Rebel Princess");
+        tip(get("Phase"), `${phases[view.phase] || "Current phase"}: ${detail}`);
         text("GuideTitle", title);
-        text("GuideText", detail);
-        get("Guide").classList.toggle("your-turn", legal.size > 0 && !isFinished());
+        get("Guide").classList.toggle("your-turn", actions().size > 0 && !isFinished());
     }
     function renderTable() {
         const table = get("Trick");
@@ -275,23 +273,19 @@
             table.append(card);
         }
         if (view.gift_count) table.append(tip(element("div", "rebel-trick-card", `🎁 ${view.gift_count} gifts`), `Gifts (🎁): ${view.gift_count} hidden cards go to the trick winner, including any proposals (💍).`));
-        if (!table.children.length) table.append(element("p", "rebel-empty", view.phase === "pass" ? "The table is ready. Pass your cards to begin." : `${name(view.leader)} leads the next trick.`));
+        if (!table.children.length) table.append(element("p", "rebel-empty", view.phase === "pass" ? "No cards played" : `${name(view.leader)} leads the next trick.`));
         text("Tricks", `${view.tricks_played || 0} tricks played`);
         tip(get("Tricks"), `Tricks: ${view.tricks_played || 0} completed this round. A trick is a set of cards played around the table; its winner captures those cards.`);
         text("RequiredSuit", view.current_required_suit ? `Follow ${suitName(view.current_required_suit)}` : "Lead any allowed suit");
         tip(get("RequiredSuit"), `Required suit: ${suitName(view.current_required_suit)}. Follow it if possible. The led suit is ${suitName(view.lead_suit)}; the round rule may change what wins.`);
         text("PrinceStatus", view.princes_sneaked_in ? "🤴 Princes may lead" : "🤴 Princes not in yet");
         tip(get("PrinceStatus"), `Princes (🤴): ${view.princes_sneaked_in ? "have entered play and may now lead a trick." : "cannot lead while you hold other suits. They enter when played by someone unable to follow suit; an all-Prince hand may also lead them."}`);
-        text("TrickHint", "This round: everyone plays twice per trick. Led-suit ranks are added together.");
-        visible("TrickHint", view.round_card?.id === "prince_always_rings_twice");
         visible("TableSection", !isFinished() && (view.phase === "trick" || view.current_trick.length > 0 || view.gift_count > 0));
     }
-    function renderPrincess() {
+    function princessTiming() {
         const princess = view.your_princess;
+        if (!princess) return "";
         const used = me()?.princess_used;
-        const power = get("Princess");
-        power.replaceChildren();
-        if (!princess) { power.textContent = "No princess · Spectator"; text("PowerStatus", "Watching"); return; }
         let timing = used ? "Already used this round. It refreshes next round." : "Use once each round.";
         if (!used) {
             const timingById = {
@@ -303,10 +297,19 @@
             };
             timing = timingById[princess.id] || "Use before anyone plays in a trick, even if it is not your turn.";
         }
-        const status = used ? "Used" : (powerAvailable() && view.phase !== "haggle") ? "Available now" : princess.id === "alice" ? "Automatic" : "Once per round";
+        return timing;
+    }
+    function renderPrincess() {
+        const princess = view.your_princess;
+        const used = me()?.princess_used;
+        const power = get("Princess");
+        power.replaceChildren();
+        if (!princess) { power.textContent = "No princess · Spectator"; text("PowerStatus", "Watching"); return; }
+        const timing = princessTiming();
+        const status = used ? "Used" : (powerAvailable() && view.phase !== "haggle") ? "Available now" : princess.id === "alice" ? "Automatic" : "Unused";
         text("PowerStatus", status);
         tip(get("PowerStatus"), `${princess.name}: ${timing}`);
-        power.append(tip(element("strong", "rebel-princess-name", `✨ ${princess.name}`), `${princess.name} (✨): ${princess.summary} Once per round. ${timing}`), element("span", "", princess.summary), element("p", "rebel-power-hint", timing));
+        power.append(tip(element("strong", "rebel-princess-name", `✨ ${princess.name}`), `${princess.name} (✨): ${princess.summary} Once per round. ${timing}`));
     }
     function renderPlayers() {
         get("Players").replaceChildren();
@@ -342,7 +345,7 @@
             body.append(row);
         }
         const ready = view.players.filter(player => player.ready_next).length;
-        text("ReadyStatus", view.game_over ? "All 5 rounds are complete." : `${ready}/${view.players.length} players ready. Everyone must confirm before the next round.`);
+        text("ReadyStatus", view.game_over ? "All 5 rounds are complete." : `${ready}/${view.players.length} players ready`);
         tip(get("ReadyStatus"), view.game_over ? "Game complete: compare total proposals (💍)." : `Ready: ${ready} of ${view.players.length} players have pressed Next Round. Results stay visible until everyone is ready.`);
         visible("NextRoundBtn", !view.game_over && Boolean(me()));
         get("NextRoundBtn").disabled = !actions().has("next_round_ready");
@@ -361,7 +364,7 @@
         visible("SubmitBtn", primaryAvailable);
         text("SubmitBtn", labels[phase] || "Confirm");
         get("SubmitBtn").disabled = !primaryAvailable || !ready;
-        explain(get("SubmitBtn"), `${labels[phase] || "Confirm"}: ${get("GuideText").textContent} ${!ready ? `First select ${phase === "reveal_suit" ? "a suit" : `${maxCards()} card${maxCards() === 1 ? "" : "s"}`}.` : "Confirm your selection to submit this action."}`);
+        explain(get("SubmitBtn"), `${labels[phase] || "Confirm"}: ${phaseGuidance().detail} ${!ready ? `First select ${phase === "reveal_suit" ? "a suit" : `${maxCards()} card${maxCards() === 1 ? "" : "s"}`}.` : "Confirm your selection to submit this action."}`);
         const princess = view.your_princess?.id;
         let powerReady = powerAvailable();
         let powerLabel = `Use ${view.your_princess?.name || "Princess"}`;
@@ -375,7 +378,7 @@
         visible("PrincessBtn", powerAvailable());
         text("PrincessBtn", powerLabel);
         get("PrincessBtn").disabled = !powerReady;
-        explain(get("PrincessBtn"), `${powerLabel}: ${phase === "trick" ? view.your_princess?.summary : get("GuideText").textContent} ${!powerReady ? "Complete the required selections first." : "Confirm to use this effect."}`);
+        explain(get("PrincessBtn"), `${powerLabel}: ${phase === "trick" ? view.your_princess?.summary : phaseGuidance().detail} ${!powerReady ? "Complete the required selections first." : "Confirm to use this effect."}`);
         visible("SkipBtn", legal.has("skip"));
         const skipLabel = phase === "sleeping_beauty_keep" ? "Random Keep" : phase === "scheherazade_decide" ? "Return Drawn Card" : "Skip";
         text("SkipBtn", skipLabel);
@@ -439,7 +442,6 @@
         text("Round", `Round ${view.round} / 5`);
         tip(get("Round"), `Round ${view.round} of 5. Each round has its own rule and resets princess abilities.`);
         text("RoundTitle", view.round_card?.name || "Round rule");
-        text("RoundSummary", roundDescription());
         tip(get("RoundTitle"), `Round rule: ${view.round_card?.name}. ${roundDescription()}`);
         text("PrinceValue", `🤴 ${cardPoints({ suit: "prince" })} 💍`);
         tip(get("PrinceValue"), `Prince (🤴): ${cardPoints({ suit: "prince" })} proposals (💍) when captured.${view.round_card?.id === "bathroom_break" ? " Worth 1 for players who had the lowest total at the round start, and 2 for the others." : view.round_card?.id === "dancing_queens" ? " A Prince paired with a Queen is worth 3 when ranks match, or 2 otherwise." : " Try to avoid taking these cards."}`);
@@ -476,12 +478,13 @@
             <p><strong>Example:</strong> Queen (👑) 3 leads. Queen (👑) 7 beats it. Prince (🤴) 10 does not beat a Queen in a normal Queen-led trick. The winner captures the Prince and gains 1 proposal (💍).</p>
             <h3>3 · Avoid penalty cards</h3><p>Queen (👑), Fairy (🪄) and Pet (🐾) normally score 0. Each Prince (🤴) scores 1. The special Frog (🐸), which is Pet 8, scores 5. These are penalty points; card ranks are separate.</p>
             <p>Princes (🤴) cannot lead while you have other suits until they have entered play. They enter when someone cannot follow suit and plays a Prince. An all-Prince hand may lead Princes.</p>
-            <h3>4 · Read the round rule and your princess</h3><p>The rule at the top can change scoring, passing or what wins a trick. Each princess has one ability per round; its timing appears beside your hand. Alice activates automatically. Enabled cards and controls show what you can do now.</p>
+            <h3>4 · Read the round rule and your princess</h3><p>Each round’s rule can change scoring, passing or what wins a trick. Each princess has one ability per round. Your current rule and ability timing are listed below. Alice activates automatically. Enabled cards and controls show what you can do now.</p>
             <h3>5 · Review together</h3><p>When the hands are empty, compare proposals from this round and your total. Every player must press <strong>Next Round</strong> to continue. After round 5, the lowest total wins. Ties favor more rounds with zero proposals.</p>
-            <h3>Using this screen</h3><p>Select cards, then use the action below your hand to confirm. Tap a selected card again or empty space around your hand to deselect. The separate ⓘ controls explain cards without playing them. Hover or focus badges on desktop; tap them on a touch screen for a 3-second explanation. Use <strong>Explain</strong> to inspect actions, including disabled buttons. Close dialogs with Close or Esc.</p>`;
+            <h3>Using this screen</h3><p>Select cards, then use the action below your hand to confirm. Tap a selected card again or empty space around your hand to deselect. Dimmed cards cannot be selected now; their ⓘ explains why. The separate ⓘ controls explain cards without playing them. Hover or focus badges on desktop; tap them on a touch screen for a 3-second explanation. Use <strong>Explain</strong> to inspect actions, including disabled buttons. Close dialogs with Close or Esc.</p>`;
         if (view) {
+            content.append(element("h3", "", "Current phase"), element("p", "", phaseGuidance().detail));
             content.append(element("h3", "", "Your current round"), element("p", "", `${view.round_card?.name}: ${roundDescription()}`));
-            if (view.your_princess) content.append(element("h3", "", view.your_princess.name), element("p", "", `${view.your_princess.summary} ${get("Princess").querySelector(".rebel-power-hint")?.textContent || ""}`));
+            if (view.your_princess) content.append(element("h3", "", view.your_princess.name), element("p", "", `${view.your_princess.summary} ${princessTiming()}`));
         }
         openDialog("HelpModal");
     }
@@ -497,7 +500,6 @@
     get("TargetSelect").addEventListener("change", updateActions);
     get("TrickCardSelect").addEventListener("change", updateActions);
     get("HelpBtn").addEventListener("click", showHelp);
-    get("QuickHelpBtn").addEventListener("click", showHelp);
     get("ExplainBtn").addEventListener("click", () => setExplain(!explaining));
     panel.querySelectorAll("[data-rebel-close]").forEach(button => button.addEventListener("click", () => button.closest("dialog").close()));
     panel.querySelectorAll("dialog").forEach(dialog => {
@@ -507,7 +509,7 @@
     document.addEventListener("pointerdown", event => {
         suppressClickUntil = 0;
         if (!explaining || event.target.closest("[data-rebel-tip]")) return;
-        if (event.target.closest("#rebelHelpBtn, #rebelExplainBtn, #rebelQuickHelpBtn, dialog")) return;
+        if (event.target.closest("#rebelHelpBtn, #rebelExplainBtn, dialog")) return;
         let target = event.target.closest("[data-rebel-explain]");
         if (!target) target = [...panel.querySelectorAll("[data-rebel-explain]")].find(node => {
             const r = node.getBoundingClientRect(); return r.width && r.height && event.clientX >= r.left && event.clientX <= r.right && event.clientY >= r.top && event.clientY <= r.bottom;
@@ -519,7 +521,7 @@
     }, true);
     document.addEventListener("click", event => {
         if (Date.now() < suppressClickUntil) { suppressClickUntil = 0; event.preventDefault(); event.stopImmediatePropagation(); return; }
-        if (!explaining || event.target.closest("#rebelHelpBtn, #rebelExplainBtn, #rebelQuickHelpBtn, dialog, [data-rebel-tip]")) return;
+        if (!explaining || event.target.closest("#rebelHelpBtn, #rebelExplainBtn, dialog, [data-rebel-tip]")) return;
         event.preventDefault(); event.stopImmediatePropagation();
         const target = event.target.closest("[data-rebel-explain]");
         if (target) showExplanation(target.dataset.rebelExplain);
@@ -527,7 +529,7 @@
     document.addEventListener("keydown", event => {
         if (event.key === "Escape") { setExplain(false); hints.hide(); }
         if (!explaining || !["Enter", " ", "ArrowDown", "ArrowUp", "ArrowLeft", "ArrowRight"].includes(event.key)) return;
-        if (event.target.closest("#rebelHelpBtn, #rebelExplainBtn, #rebelQuickHelpBtn, dialog, [data-rebel-tip]")) return;
+        if (event.target.closest("#rebelHelpBtn, #rebelExplainBtn, dialog, [data-rebel-tip]")) return;
         event.preventDefault(); event.stopImmediatePropagation();
         const target = event.target.closest("[data-rebel-explain]");
         if (target && ["Enter", " "].includes(event.key)) showExplanation(target.dataset.rebelExplain);

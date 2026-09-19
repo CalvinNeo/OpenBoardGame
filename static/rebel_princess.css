@@ -126,7 +126,7 @@
 }
 
 /* Keep these beginner-facing labels visible despite shared icon-only styles. */
-#rebelPrincessPanel :is(#rebelHelpBtn, #rebelExplainBtn, #rebelQuickHelpBtn) {
+#rebelPrincessPanel :is(#rebelHelpBtn, #rebelExplainBtn) {
     width: auto;
     height: auto;
     min-height: 44px;
@@ -136,13 +136,9 @@
     white-space: normal;
 }
 
-#rebelPrincessPanel :is(#rebelHelpBtn, #rebelExplainBtn, #rebelQuickHelpBtn)::before,
-#rebelPrincessPanel :is(#rebelHelpBtn, #rebelExplainBtn, #rebelQuickHelpBtn)::after {
+#rebelPrincessPanel :is(#rebelHelpBtn, #rebelExplainBtn)::before,
+#rebelPrincessPanel :is(#rebelHelpBtn, #rebelExplainBtn)::after {
     content: none;
-}
-
-#rebelPrincessPanel #rebelQuickHelpBtn {
-    width: 100%;
 }
 
 .rebel-goal-strip,
@@ -201,12 +197,6 @@
     font-size: 0.9rem;
 }
 
-.rebel-round-banner p {
-    margin-top: 2px;
-    color: #756271;
-    font-size: 0.78rem;
-}
-
 .rebel-guide {
     display: grid;
     gap: 3px;
@@ -225,11 +215,6 @@
 .rebel-guide > strong {
     font-size: 1rem;
     line-height: 1.35;
-}
-
-.rebel-guide p {
-    color: #706274;
-    font-size: 0.83rem;
 }
 
 .rebel-guide.your-turn {
@@ -331,10 +316,6 @@
     margin-top: 8px;
     color: var(--rebel-muted);
     font-size: 0.78rem;
-}
-
-.rebel-princess-panel #rebelHandHint {
-    margin: -3px 0 10px;
 }
 
 .rebel-hand {
@@ -598,11 +579,6 @@
     line-height: 1.35;
 }
 
-.rebel-power-hint {
-    color: #816756;
-    font-size: 0.74rem;
-}
-
 .rebel-players {
     display: grid;
     gap: 6px;
@@ -672,25 +648,6 @@
 
 .rebel-section[open] > summary {
     margin-bottom: 9px;
-}
-
-.rebel-quick-guide ol {
-    display: grid;
-    gap: 8px;
-    margin: 0 0 11px;
-    padding-left: 20px;
-    color: #746478;
-    font-size: 0.78rem;
-}
-
-.rebel-quick-guide li::marker {
-    color: #a17eac;
-    font-weight: 700;
-}
-
-.rebel-quick-guide button {
-    width: 100%;
-    font-size: 0.78rem;
 }
 
 .rebel-log {
@@ -921,11 +878,6 @@
         font-size: 0.82rem;
     }
 
-    .rebel-round-banner p {
-        font-size: 0.74rem;
-        line-height: 1.4;
-    }
-
     .rebel-guide {
         margin: 9px 0 10px;
         padding: 10px;
@@ -933,10 +885,6 @@
 
     .rebel-guide > strong {
         font-size: 0.95rem;
-    }
-
-    .rebel-guide p {
-        font-size: 0.78rem;
     }
 
     .rebel-layout,

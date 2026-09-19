@@ -16,12 +16,13 @@ const inAGroveUI = Object.fromEntries([
 
 const IN_A_GROVE_HELP_HTML = [
     "<h3>🎯 The aim</h3><p>Finish with the fewest penalty chips. Each detective starts with 7 accusation chips.</p>",
-    "<h3>🪪 Follow the evidence</h3><p>At 3–5 players, see your own tile and the tile passed from your right. With 2 players, see only your own tile and one public alibi; do not exchange tiles. The victim stays hidden.</p><p>Use numbers 2–8, plus one X at 4 players or two X tiles at 5 players.</p>",
+    "<h3>🪪 Follow the evidence</h3><p>At 3–5 players, see your own tile and the tile passed from your right (<strong>From right</strong>). With 2 players, see only your own tile and one public alibi; do not exchange tiles. These alibis stay visible in both inspection modes. The victim stays hidden.</p><p>Use numbers 2–8, plus one X at 4 players or two X tiles at 5 players.</p>",
     "<h3>🔎 Investigate, then accuse</h3><ul>",
-    "<li>The first detective selects two of the three suspects and presses <strong>Inspect 2</strong>.</li>",
-    "<li>Later detectives cannot inspect the previous detective's accusation. With <strong>Inspect 1 of 2</strong> (the default room variant), choose one of the two unblocked suspects and press <strong>Inspect 1</strong>. With <strong>Inspect both</strong> (the standard rule), inspect both unblocked suspects.</li>",
+    "<li>With <strong>Inspect 1 of 2</strong> (the default room variant), every detective inspects one suspect: the first chooses one of all three; later detectives choose one of the two unblocked suspects. Confirm with <strong>Inspect 1 (🔎)</strong>.</li>",
+    "<li>With <strong>Inspect both</strong>, the first detective selects two of the three suspects; later detectives inspect both unblocked suspects. Confirm with <strong>Inspect 2 (🔎)</strong>.</li>",
+    "<li>Later detectives cannot inspect the previous detective's accusation.</li>",
     "<li>After confirming an inspection, you must accuse. You cannot inspect another card this turn.</li>",
-    "<li>The first detective marks the suspect they did not inspect. This <strong>unseen marker</strong> stays there; it does not block later detectives. Tiles are never swapped in the revised edition.</li>",
+    "<li><strong>First skipped (👁)</strong> marks the suspects the first detective did not inspect. These markers stay there; they do not block later detectives. Tiles are never swapped in the revised edition.</li>",
     "<li>Select any suspect and confirm your accusation. You can accuse the blocked suspect, a hidden suspect, or one with chips already on it.</li>",
     "<li>Each detective places one chip. New chips go on top. Click a selected card again, click empty space, or press Esc to cancel a selection.</li></ul>",
     "<h3>⚖️ Find the murderer</h3><p>The highest number is guilty, unless a <strong>5</strong> is among the suspects: then the lowest number is guilty. <strong>X is always innocent.</strong></p>",
@@ -72,10 +73,9 @@ function getInAGroveConfig() {
 }
 
 function updateInAGroveConfigHint() {
-    inAGroveUI.InspectionModeHint.textContent = "First detective: inspect 2 of 3. Later detectives: " +
-        (getInAGroveConfig().inspection_mode === "choose_one"
-            ? "choose 1 of the 2 unblocked suspects."
-            : "inspect both unblocked suspects.");
+    inAGroveUI.InspectionModeHint.textContent = getInAGroveConfig().inspection_mode === "choose_one"
+        ? "First detective: choose 1 of 3. Later detectives: choose 1 of the 2 unblocked suspects."
+        : "First detective: inspect 2 of 3. Later detectives: inspect both unblocked suspects.";
 }
 
 function updateInAGroveConfigRow() {
@@ -341,7 +341,8 @@ function updateInAGroveActionButtons() {
             hint = peekCount === 1 ? "One suspect selected. Confirm to inspect only this card."
                 : "Two suspects selected. Confirm to inspect them privately.";
         } else if (peekCount === 1) {
-            hint = "Choose 1 of the 2 unblocked suspects. You cannot inspect the other card after confirming.";
+            hint = Number.isInteger(view.blocked_suspect_index) ? "Choose 1 of the 2 unblocked suspects to inspect."
+                : "First detective: choose 1 of the 3 suspects to inspect.";
         } else {
             hint = Number.isInteger(view.blocked_suspect_index) ? "Select both unblocked suspects to inspect."
                 : "First detective: select 2 of the 3 suspects to inspect.";
@@ -368,8 +369,8 @@ function renderInAGroveGameState(data) {
     inAGroveUI.InspectionModeSelect.value = inspectionMode;
     updateInAGroveConfigHint();
     inAGroveUI.InspectionRule.textContent = inspectionMode === "choose_one"
-        ? "Later turns: inspect 1 of 2 unblocked suspects."
-        : "Later turns: inspect both unblocked suspects.";
+        ? "Inspect 1 · First: 1 of 3 · Later: 1 of 2"
+        : "Inspect 2 · First: 2 of 3 · Later: both";
     if (currentGameType !== "in_a_grove") {
         currentGameType = "in_a_grove";
         setGamePanelVisibility("in_a_grove");
@@ -444,9 +445,11 @@ function showInAGroveExplanation(button) {
     if (button === inAGroveUI.PeekBtn) {
         info = {
             ...info,
-            name: "Inspect " + inAGrovePeekCount() + " suspect(s)",
+            name: "Inspect " + inAGrovePeekCount() + " (🔎)",
             description: inAGrovePeekCount() === 1
-                ? "Choose one of the two unblocked suspects. Confirm to see only that identity, then proceed to your accusation. You cannot inspect again this turn."
+                ? (Number.isInteger(currentInAGroveView?.blocked_suspect_index)
+                    ? "Choose one of the two unblocked suspects. " : "Choose one of the three suspects. ") +
+                    "Confirm to see only that identity, then proceed to your accusation. You cannot inspect again this turn."
                 : "Select two unblocked suspects, then confirm to see both identities privately.",
         };
     }
@@ -458,7 +461,7 @@ function showInAGroveExplanation(button) {
             description: "Select " + inAGrovePeekCount() + " unblocked card(s) to inspect, or any one card to accuse. Confirm with the action below the scene.",
             note: suspect?.blocked
                 ? "The previous detective accused this suspect, so you cannot inspect them this turn. You may still accuse them. The top chip's owner takes the whole stack if they are innocent."
-                : "Only inspected identities are visible to you before the reveal. First skipped marks the card the first detective did not see; it does not forbid inspecting that card later. The top chip is the newest accusation.",
+                : "Only inspected identities are visible to you before the reveal. First skipped (👁) marks cards the first detective did not see; it does not forbid inspecting those cards later. The top chip is the newest accusation.",
         };
     }
     if (!info) return;
@@ -494,7 +497,7 @@ inAGroveUI.HelpBtn.addEventListener("click", () => {
     inAGroveUI.HelpContent.innerHTML = IN_A_GROVE_HELP_HTML;
     const mode = currentInAGroveView?.config?.inspection_mode || getInAGroveConfig().inspection_mode;
     inAGroveUI.HelpContent.prepend(inAGroveElement("p", "", "Current room: " +
-        (mode === "choose_one" ? "Inspect 1 of 2 — later detectives inspect one card." : "Inspect both — later detectives inspect two cards.")));
+        (mode === "choose_one" ? "Inspect 1 of 2 — every detective inspects one card." : "Inspect both — every detective inspects two cards.")));
     showInAGroveModal("Help");
 });
 inAGroveUI.InspectionModeSelect.addEventListener("change", updateInAGroveConfigHint);

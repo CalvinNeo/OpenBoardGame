@@ -230,6 +230,7 @@ def _record_round_action(
     action_type: str,
     text: str,
     role_rank: Optional[int] = None,
+    emphasis: Optional[List[str]] = None,
 ) -> None:
     """Keep a structured, public recap without exposing a player's current hand."""
     if player_id not in state.get("players", {}):
@@ -242,6 +243,11 @@ def _record_round_action(
     }
     if isinstance(role_rank, int):
         entry["role_rank"] = role_rank
+    emphasized_values = [
+        value for value in (emphasis or []) if isinstance(value, str) and value
+    ]
+    if emphasized_values:
+        entry["emphasis"] = emphasized_values
     player_actions.append(entry)
     if len(player_actions) > 40:
         del player_actions[:-40]
@@ -402,26 +408,34 @@ def _start_role_turn(state: Dict, player_id: str, rank: int) -> None:
         thief_player_id = state.get("thief_player_id")
         if thief_player_id and thief_player_id in state["players"] and thief_player_id != player_id:
             amount = player["gold"]
+            thief_name = state["player_meta"][thief_player_id]["name"]
+            victim_name = state["player_meta"][player_id]["name"]
             if amount > 0:
                 player["gold"] = 0
                 state["players"][thief_player_id]["gold"] += amount
-                thief_name = state["player_meta"][thief_player_id]["name"]
-                victim_name = state["player_meta"][player_id]["name"]
                 _log(state, f"盗贼从 {victim_name} 处偷走了 {amount} 金，交给 {thief_name}。")
-                _record_round_action(
-                    state,
-                    thief_player_id,
-                    "ability",
-                    f"Stole 💰 {amount} from {victim_name}.",
-                    2,
-                )
-                _record_round_action(
-                    state,
-                    player_id,
-                    "targeted",
-                    f"Lost 💰 {amount} to {thief_name}'s Thief.",
-                    rank,
-                )
+                thief_text = f"Stole 💰 {amount} from {victim_name}."
+                victim_text = f"Lost 💰 {amount} to {thief_name}'s Thief."
+            else:
+                _log(state, f"盗贼试图偷窃 {victim_name}，但对方没有金币。")
+                thief_text = f"Tried to steal from {victim_name}, who had no gold."
+                victim_text = f"Was targeted by {thief_name}'s Thief, but had no gold."
+            _record_round_action(
+                state,
+                thief_player_id,
+                "ability",
+                thief_text,
+                2,
+                emphasis=[victim_name],
+            )
+            _record_round_action(
+                state,
+                player_id,
+                "targeted",
+                victim_text,
+                rank,
+                emphasis=[thief_name],
+            )
 
     state["active_turn"] = {
         "player_id": player_id,
@@ -799,13 +813,35 @@ def _resolve_assassin(state: Dict, target_rank: int) -> Optional[str]:
     state["killed_rank"] = target_rank
     active_turn["ability_used"] = True
     _log(state, f"刺客宣布暗杀 {_role_name(target_rank)}。")
-    _record_round_action(
-        state,
-        active_turn["player_id"],
-        "ability",
-        f"Assassinated {_role_name(target_rank)}.",
-        1,
-    )
+    assassin_player_id = active_turn["player_id"]
+    target_player_id = _get_rank_owner(state, target_rank)
+    if target_player_id and target_player_id != assassin_player_id:
+        assassin_name = state["player_meta"][assassin_player_id]["name"]
+        target_name = state["player_meta"][target_player_id]["name"]
+        _record_round_action(
+            state,
+            assassin_player_id,
+            "ability",
+            f"Assassinated {target_name} ({_role_name(target_rank)}).",
+            1,
+            emphasis=[target_name],
+        )
+        _record_round_action(
+            state,
+            target_player_id,
+            "targeted",
+            f"Was assassinated by {assassin_name}'s Assassin.",
+            target_rank,
+            emphasis=[assassin_name],
+        )
+    else:
+        _record_round_action(
+            state,
+            assassin_player_id,
+            "ability",
+            f"Assassinated {_role_name(target_rank)}.",
+            1,
+        )
     return None
 
 
@@ -825,12 +861,21 @@ def _resolve_thief(state: Dict, target_rank: int) -> Optional[str]:
     state["thief_player_id"] = active_turn["player_id"]
     active_turn["ability_used"] = True
     _log(state, f"盗贼宣布偷窃 {_role_name(target_rank)}。")
+    target_player_id = _get_rank_owner(state, target_rank)
+    target_name = None
+    if target_player_id and target_player_id != active_turn["player_id"]:
+        target_name = state["player_meta"][target_player_id]["name"]
     _record_round_action(
         state,
         active_turn["player_id"],
         "ability",
-        f"Targeted {_role_name(target_rank)} for theft.",
+        (
+            f"Targeted {target_name} ({_role_name(target_rank)}) for theft."
+            if target_name
+            else f"Targeted {_role_name(target_rank)} for theft."
+        ),
         2,
+        emphasis=[target_name] if target_name else None,
     )
     return None
 
@@ -853,12 +898,22 @@ def _resolve_magician_swap(state: Dict, target_player_id: str) -> Optional[str]:
         state,
         f"{state['player_meta'][player_id]['name']} 与 {state['player_meta'][target_player_id]['name']} 交换了手牌。",
     )
+    player_name = state["player_meta"][player_id]["name"]
+    target_name = state["player_meta"][target_player_id]["name"]
     _record_round_action(
         state,
         player_id,
         "ability",
-        f"Swapped hands with {state['player_meta'][target_player_id]['name']}.",
+        f"Swapped hands with {target_name}.",
         3,
+        emphasis=[target_name],
+    )
+    _record_round_action(
+        state,
+        target_player_id,
+        "targeted",
+        f"Had their hand swapped by {player_name}'s Magician.",
+        emphasis=[player_name],
     )
     return None
 
@@ -962,12 +1017,22 @@ def _resolve_warlord_destroy(state: Dict, target_player_id: str, district_id: st
         "ability",
         f"Destroyed {state['player_meta'][target_player_id]['name']}'s {district['name_cn']} for 💰 {destroy_cost}.",
         8,
+        emphasis=(
+            [state["player_meta"][target_player_id]["name"]]
+            if target_player_id != player_id
+            else None
+        ),
     )
     _record_round_action(
         state,
         target_player_id,
         "targeted",
-        f"Lost {district['name_cn']} to the Warlord.",
+        f"Lost {district['name_cn']} to {state['player_meta'][player_id]['name']}'s Warlord.",
+        emphasis=(
+            [state["player_meta"][player_id]["name"]]
+            if target_player_id != player_id
+            else None
+        ),
     )
     return None
 

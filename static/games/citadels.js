@@ -23,6 +23,7 @@ const citadelsSummaryStatus = document.getElementById("citadelsSummaryStatus");
 const citadelsSummaryHighlights = document.getElementById("citadelsSummaryHighlights");
 const citadelsSummaryPlayers = document.getElementById("citadelsSummaryPlayers");
 const citadelsSummaryReadyList = document.getElementById("citadelsSummaryReadyList");
+const citadelsSummaryPassBtn = document.getElementById("citadelsSummaryPassBtn");
 const citadelsNextRoundBtn = document.getElementById("citadelsNextRoundBtn");
 const citadelsHelpBtn = document.getElementById("citadelsHelpBtn");
 const citadelsExplainBtn = document.getElementById("citadelsExplainBtn");
@@ -99,6 +100,38 @@ function citadelsActionEmoji(actionType) {
     end_turn: "✓",
   };
   return icons[actionType] || "•";
+}
+
+function citadelsAppendEmphasizedText(container, value, emphasizedValues) {
+  const text = String(value || "Action completed.");
+  const terms = [...new Set((emphasizedValues || []).filter((entry) => typeof entry === "string" && entry))];
+  if (!terms.length) {
+    container.textContent = text;
+    return;
+  }
+
+  let cursor = 0;
+  while (cursor < text.length) {
+    let nextMatch = null;
+    terms.forEach((term) => {
+      const index = text.indexOf(term, cursor);
+      if (index < 0) return;
+      if (!nextMatch || index < nextMatch.index || (index === nextMatch.index && term.length > nextMatch.term.length)) {
+        nextMatch = { index, term };
+      }
+    });
+    if (!nextMatch) {
+      container.appendChild(document.createTextNode(text.slice(cursor)));
+      break;
+    }
+    if (nextMatch.index > cursor) {
+      container.appendChild(document.createTextNode(text.slice(cursor, nextMatch.index)));
+    }
+    const strong = document.createElement("strong");
+    strong.textContent = nextMatch.term;
+    container.appendChild(strong);
+    cursor = nextMatch.index + nextMatch.term.length;
+  }
 }
 
 function citadelsFindSummaryRole(summary, rank) {
@@ -390,7 +423,7 @@ function citadelsBuildSummaryPlayer(view, summary, player, readyPlayers) {
       icon.className = "citadels-summary-action-icon";
       icon.textContent = citadelsActionEmoji(action.type);
       const text = document.createElement("span");
-      text.textContent = action.text || "Action completed.";
+      citadelsAppendEmphasizedText(text, action.text, action.emphasis);
       row.append(icon, text);
       actions.appendChild(row);
     });
@@ -411,6 +444,8 @@ function renderCitadelsRoundSummary(view) {
   const isFinal = Boolean(view.game_over || summary.is_final_round);
   const readyPlayers = new Set(view.next_round_ready_player_ids || []);
   const progress = view.next_round_progress || { done: readyPlayers.size, total: (view.players || []).length };
+  const canContinue = (view.legal_actions || []).includes("next_round");
+  const alreadyReady = readyPlayers.has(view.you);
   if (citadelsSummaryTitle) {
     citadelsSummaryTitle.textContent = isFinal ? `Final Round · ${summary.round}` : `Round ${summary.round} Complete`;
   }
@@ -422,6 +457,11 @@ function renderCitadelsRoundSummary(view) {
   if (citadelsSummaryStatus) {
     citadelsSummaryStatus.textContent = isFinal ? "Final Scores" : `${progress.done || 0}/${progress.total || 0} Ready`;
     citadelsSummaryStatus.classList.toggle("final", isFinal);
+  }
+  if (citadelsSummaryPassBtn) {
+    citadelsSummaryPassBtn.classList.toggle("hidden", isFinal);
+    citadelsSummaryPassBtn.disabled = !canContinue;
+    citadelsSummaryPassBtn.textContent = canContinue ? "Pass" : alreadyReady ? "Passed ✓" : "Waiting…";
   }
 
   if (citadelsSummaryHighlights) {
@@ -482,8 +522,6 @@ function renderCitadelsRoundSummary(view) {
   }
 
   if (citadelsNextRoundBtn) {
-    const canContinue = (view.legal_actions || []).includes("next_round");
-    const alreadyReady = readyPlayers.has(view.you);
     citadelsNextRoundBtn.classList.toggle("hidden", isFinal);
     citadelsNextRoundBtn.disabled = !canContinue;
     citadelsNextRoundBtn.textContent = canContinue ? "Next Round" : alreadyReady ? "Ready ✓" : "Waiting for Players…";
@@ -762,8 +800,10 @@ function renderCitadelsPlayers(view) {
 
     const header = document.createElement("div");
     header.className = "citadels-player-header";
+    const identity = document.createElement("span");
+    identity.className = "citadels-player-name";
     const crown = player.has_crown ? " 👑" : "";
-    header.textContent = `${player.name}${crown}`;
+    identity.textContent = `${player.name}${crown}`;
 
     const meta = document.createElement("div");
     meta.className = "citadels-player-meta";
@@ -784,7 +824,8 @@ function renderCitadelsPlayers(view) {
       roles.textContent = "Roles: -";
     }
 
-    card.append(header, meta, roles);
+    header.append(identity, roles);
+    card.append(header, meta);
 
     if (legal.has("magician_swap") && player.player_id !== view.you) {
       const swapRow = document.createElement("div");
@@ -901,12 +942,14 @@ if (citadelsExplainModalCloseBtn) {
   citadelsExplainModalCloseBtn.addEventListener("click", closeCitadelsExplainModal);
 }
 
-if (citadelsNextRoundBtn) {
-  citadelsNextRoundBtn.addEventListener("click", () => {
-    if (!currentCitadelsView || !(currentCitadelsView.legal_actions || []).includes("next_round")) return;
-    sendAction({ type: "next_round" });
-  });
+function citadelsSubmitNextRound() {
+  if (!currentCitadelsView || !(currentCitadelsView.legal_actions || []).includes("next_round")) return;
+  sendAction({ type: "next_round" });
 }
+
+[citadelsSummaryPassBtn, citadelsNextRoundBtn].forEach((button) => {
+  if (button) button.addEventListener("click", citadelsSubmitNextRound);
+});
 
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;

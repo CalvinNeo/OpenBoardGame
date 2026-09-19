@@ -2821,37 +2821,56 @@ def _response_soft_pruning_penalty(state: Dict, player_id: str, cards: List[int]
     return float(penalties.get((player_id, _cards_key(cards)), 0.0))
 
 
-def _best_response_play_score(state: Dict, player_id: str, depth: int, non_bomb_only: bool = True) -> Optional[float]:
+def _best_complete_option_score(
+    state: Dict, player_id: str, options: List[List[int]], depth: int
+) -> Tuple[Optional[float], bool]:
+    """Return a maximum only when every relevant option finished scoring."""
+    best_score = None
+    for cards in options:
+        if _deadline_expired():
+            return None, False
+        components = _bot_score_components(state, player_id, cards, depth)
+        if components.get("anytime_partial") or _deadline_expired():
+            return None, False
+        score = components.get("total", -999.0)
+        if best_score is None or score > best_score:
+            best_score = score
+    return best_score, True
+
+
+def _best_response_play_score_result(
+    state: Dict, player_id: str, depth: int, non_bomb_only: bool = True
+) -> Tuple[Optional[float], bool]:
+    """Distinguish no eligible response from an incomplete response comparison."""
     current_trick = state.get("current_trick")
     if not current_trick:
-        return None
+        return None, True
     leader = current_trick.get("player_id")
     if leader is None or _team_of(state, leader) == _team_of(state, player_id):
-        return None
+        return None, True
     options = _list_hint_options(state, player_id)
     options = _filter_overbomb_options(state, player_id, options)
     options = _rank_response_options(state, player_id, options)
+    if _deadline_expired():
+        return None, False
     if not options:
-        return None
+        return None, True
 
     hand = state["players"][player_id]["hand"]
     hand_map = _map_hand_by_id(hand)
-    scored: List[Tuple[float, str]] = []
+    eligible: List[List[int]] = []
     for cards in options:
         play_cards = [hand_map[cid] for cid in cards if cid in hand_map]
         combo = _evaluate_combo(play_cards, state["level_rank"], state.get("config", {}))
-        if not combo:
+        if not combo or (non_bomb_only and combo["type"] in BOMB_TYPES):
             continue
-        scored.append((_bot_score_play(state, player_id, cards, depth), combo["type"]))
-    if not scored:
-        return None
+        eligible.append(cards)
+    return _best_complete_option_score(state, player_id, eligible, depth)
 
-    if non_bomb_only:
-        natural = [score for score, combo_type in scored if combo_type not in BOMB_TYPES]
-        if natural:
-            return max(natural)
-        return None
-    return max(score for score, _ in scored)
+
+def _best_response_play_score(state: Dict, player_id: str, depth: int, non_bomb_only: bool = True) -> Optional[float]:
+    score, complete = _best_response_play_score_result(state, player_id, depth, non_bomb_only)
+    return score if complete else None
 
 
 def _hypergeom_hit_probability(total: int, hits: int, draws: int) -> float:
@@ -5068,6 +5087,85 @@ def _short_hand_structured_reply_breakdown(
     return result
 
 
+def _public_pool_supports_same_type_reply(
+    unknown_cards: List[Dict], hand_count: int, level_rank: int, combo: Dict
+) -> bool:
+    """Reject replies that cannot be built from the public pool's material.
+
+    This is a conservative support check, not a probability estimate. It does
+    not use inferred rank caps or materialize physical plays; a positive result
+    may still be impossible because of suits or how cards are distributed.
+    """
+    combo_type = combo.get("type")
+    sizes = {"single": 1, "pair": 2, "three": 3, "full_house": 5,
+             "straight": 5, "three_pairs": 6, "steel_plate": 6}
+    size = sizes.get(combo_type)
+    if size is None:
+        return True
+    if min(hand_count, len(unknown_cards)) < size:
+        return False
+    if combo_type == "single":
+        return any(
+            _single_order_value(card, level_rank) > combo.get("rank_value", 0)
+            for card in unknown_cards
+        )
+
+    counts: Dict[int, int] = {}
+    wild_count = 0
+    jokers = {"small": 0, "big": 0}
+    for card in unknown_cards:
+        if _is_joker(card):
+            jokers[card["joker"]] += 1
+        elif _is_wild(card, level_rank):
+            wild_count += 1
+        else:
+            rank = card.get("rank")
+            counts[rank] = counts.get(rank, 0) + 1
+
+    def deficit(rank: int, need: int) -> int:
+        return max(0, need - counts.get(rank, 0))
+
+    if combo_type in ("pair", "three", "full_house"):
+        threshold = combo.get("rank_value", 0)
+        higher_ranks = [rank for rank in range(2, 15) if _point_order_value(rank, level_rank) > threshold]
+        if combo_type == "pair" and any(
+            count >= 2 and _point_order_value(0, level_rank, joker) > threshold
+            for joker, count in jokers.items()
+        ):
+            return True
+        need = 2 if combo_type == "pair" else 3
+        for rank in higher_ranks:
+            required_wilds = deficit(rank, need)
+            if required_wilds > wild_count:
+                continue
+            if combo_type != "full_house":
+                return True
+            # A joker pair is a legal full-house attachment, but a wildcard
+            # cannot stand in for either joker.
+            if max(jokers.values()) >= 2:
+                return True
+            if any(
+                required_wilds + deficit(pair_rank, 2) <= wild_count
+                for pair_rank in range(2, 15) if pair_rank != rank
+            ):
+                return True
+        return False
+
+    threshold = combo.get("high_value", 0)
+    if combo_type == "straight":
+        sequences = [([14, 2, 3, 4, 5], 5)]
+        sequences.extend((list(range(start, start + 5)), start + 4) for start in range(2, 11))
+        multiplicity = 1
+    else:
+        length, multiplicity = (3, 2) if combo_type == "three_pairs" else (2, 3)
+        sequences = [(list(range(start, start + length)), start + length - 1)
+                     for start in range(2, 16 - length)]
+    return any(
+        high > threshold and sum(deficit(rank, multiplicity) for rank in ranks) <= wild_count
+        for ranks, high in sequences
+    )
+
+
 def _opponent_same_type_reply_probability(
     state: Dict,
     opponent_id: str,
@@ -5091,6 +5189,14 @@ def _opponent_same_type_reply_probability(
         short_reply = _short_hand_structured_reply_breakdown(state, opponent_id, combo, unknown_cards)
         if short_reply is not None:
             return short_reply["same_type"]
+        if combo_type == "single":
+            hits = sum(
+                _single_order_value(card, level_rank) > combo.get("rank_value", 0)
+                for card in unknown_cards
+            )
+            return _hypergeom_hit_probability(len(unknown_cards), hits, hand_count)
+        if not _public_pool_supports_same_type_reply(unknown_cards, hand_count, level_rank, combo):
+            return 0.0
 
     wild_relief = min(0.08, wild_count * 0.025 * min(1.0, hand_count / 18.0))
     rank_prob_cache: Dict[Tuple[int, int], float] = {}
@@ -5110,12 +5216,15 @@ def _opponent_same_type_reply_probability(
 
     if combo_type == "single":
         threshold = combo.get("rank_value", 0)
+        # Profile-only callers do not supply joker counts. Keep their rank-only
+        # estimate, but use single-card ordering (including tied level cards).
         hits = sum(
             count
             for rank, count in rank_counts.items()
-            if _point_order_value(rank, level_rank) > threshold
+            if _single_order_value({"rank": rank}, level_rank) > threshold
         )
-        hits += wild_count
+        if _single_order_value({"rank": level_rank}, level_rank) > threshold:
+            hits += wild_count
         return _hypergeom_hit_probability(unknown_total, hits, hand_count)
 
     if combo_type == "pair":
@@ -8688,6 +8797,10 @@ def _possible_round_value_bounds(state: Dict, bot_id: str) -> Optional[Tuple[flo
     return (min(values), max(values)) if values else None
 
 
+class _IncompleteStateEvaluation(Exception):
+    """A required leaf feature could not finish within the scoring budget."""
+
+
 def _evaluate_state_for_bot(state: Dict, bot_id: str) -> float:
     if state.get("game_over"):
         return 1000.0 if state.get("winner_team") == _team_of(state, bot_id) else -1000.0
@@ -8712,7 +8825,11 @@ def _evaluate_state_for_bot(state: Dict, bot_id: str) -> float:
             else:
                 score -= 2.2
                 if state.get("current_turn") == bot_id:
-                    response_score = _best_response_play_score(state, bot_id, 3, non_bomb_only=True)
+                    response_score, response_complete = _best_response_play_score_result(
+                        state, bot_id, 3, non_bomb_only=True
+                    )
+                    if not response_complete:
+                        raise _IncompleteStateEvaluation
                     if response_score is not None and response_score > 0:
                         score -= min(6.5, response_score * 0.7)
                     else:
@@ -9801,7 +9918,7 @@ def _rollout_policy_action(state: Dict, player_id: str) -> Optional[Dict]:
 
 
 class _MctsSearchInterrupted(Exception):
-    """The current root comparison did not finish within its deadline."""
+    """The current root comparison did not finish within its scoring budget."""
 
 
 def _mcts_check_deadline() -> None:
@@ -9811,7 +9928,11 @@ def _mcts_check_deadline() -> None:
 
 def _mcts_leaf_value(state: Dict, bot_id: str) -> float:
     _mcts_check_deadline()
-    value = _evaluate_state_for_bot(state, bot_id)
+    try:
+        value = _evaluate_state_for_bot(state, bot_id)
+    except _IncompleteStateEvaluation as exc:
+        # A soft scoring cutoff is incomplete even before the hard deadline.
+        raise _MctsSearchInterrupted from exc
     # Evaluation itself may exhaust the budget and use approximate components.
     # Such a value must not be published as a completed search result.
     _mcts_check_deadline()
@@ -11353,8 +11474,14 @@ def _mcts_score_actions(
     def paired_bounds(item: Tuple[Dict, float, int, Dict[str, float]]) -> Tuple[float, float, float]:
         stats = item[3]
         prior = stats.get("heuristic_norm", 0.0) * heuristic_weight
-        center = stats.get("paired_delta", 0.0) + prior
+        # Rank and eliminate with the same risk-adjusted objective used for the
+        # final action. A high mean alone must not discard a safer, better score.
+        center = stats.get("paired_delta", 0.0) + prior - risk_lambda * stats.get("std", 0.0)
         radius = max(0.0, stats.get("paired_ucb", 0.0) - stats.get("paired_delta", 0.0))
+        # Standard deviation is estimated too. Keep an extra empirical risk
+        # margin from paired variation; common world noise still cancels. This
+        # is a conservative search heuristic, not a calibrated risk-utility CI.
+        radius += abs(risk_lambda) * stats.get("paired_std", 0.0)
         return center, center - radius, center + radius
 
     for search_depth in range(effective_depth + 1):
@@ -12105,15 +12232,19 @@ def _minimax_pick_action(
                 if err:
                     continue
                 attempted_root_evals += 1
-                value = _minimax_value(
-                    nxt,
-                    bot_id,
-                    search_depth - 1,
-                    -1e9,
-                    1e9,
-                    width,
-                    deadline=deadline,
-                )
+                try:
+                    value = _minimax_value(
+                        nxt,
+                        bot_id,
+                        search_depth - 1,
+                        -1e9,
+                        1e9,
+                        width,
+                        deadline=deadline,
+                    )
+                except _IncompleteStateEvaluation:
+                    layer_interrupted = True
+                    break
                 if deadline is not None and time.perf_counter() >= deadline:
                     layer_interrupted = True
                     break
@@ -12460,7 +12591,13 @@ def _compute_bot_score_components(
             and teammate != current_trick.get("player_id")
             and _team_of(state, current_trick.get("player_id")) != _team_of(state, bot_id)
         ):
-            response_score = _best_response_play_score(state, bot_id, max(2, depth), non_bomb_only=True)
+            response_score, response_complete = _best_response_play_score_result(
+                state, bot_id, max(2, depth), non_bomb_only=True
+            )
+            if not response_complete:
+                components["anytime_partial"] = 1.0
+                components["total"] = sum(components.values())
+                return components
             teammate_control = _teammate_future_control_probability(state, bot_id)
             combo_type = (current_trick.get("combo") or {}).get("type")
             leader_left = len(state["players"].get(current_trick.get("player_id"), {}).get("hand", []))
@@ -12538,7 +12675,13 @@ def _compute_bot_score_components(
                 short_enemy_defer_risk = _short_enemy_defer_bomb_risk_penalty(state, bot_id)
                 if short_enemy_defer_risk > 0.001:
                     components["pass_short_enemy_defer_risk"] = -short_enemy_defer_risk
-                best_short_enemy_bomb_score = _best_short_enemy_pressure_bomb_score(state, bot_id, depth)
+                best_short_enemy_bomb_score, bomb_complete = _best_short_enemy_pressure_bomb_score_result(
+                    state, bot_id, depth
+                )
+                if not bomb_complete:
+                    components["anytime_partial"] = 1.0
+                    components["total"] = sum(components.values())
+                    return components
                 if best_short_enemy_bomb_score is not None:
                     current_total = sum(components.values())
                     if best_short_enemy_bomb_score > current_total + 0.5:
@@ -12949,10 +13092,14 @@ def _bot_score_components(
     component_cache = eval_cache.setdefault("bot_score_components", {})
     cache_key = _bot_component_cache_key(state, bot_id, cards, depth)
     cached = component_cache.get(cache_key)
-    if cached is not None:
+    if cached is not None and not cached.get("anytime_partial"):
         return dict(cached)
+    component_cache.pop(cache_key, None)
     components = _compute_bot_score_components(state, bot_id, cards, depth)
-    component_cache[cache_key] = dict(components)
+    if _deadline_expired():
+        components["anytime_partial"] = 1.0
+    if not components.get("anytime_partial"):
+        component_cache[cache_key] = dict(components)
     return components
 
 
@@ -13268,13 +13415,18 @@ def _short_enemy_pressure_bomb_options(state: Dict, player_id: str) -> List[List
     return chosen
 
 
+def _best_short_enemy_pressure_bomb_score_result(
+    state: Dict, player_id: str, depth: int
+) -> Tuple[Optional[float], bool]:
+    options = _short_enemy_pressure_bomb_options(state, player_id)
+    if _deadline_expired():
+        return None, False
+    return _best_complete_option_score(state, player_id, options, max(1, depth))
+
+
 def _best_short_enemy_pressure_bomb_score(state: Dict, player_id: str, depth: int) -> Optional[float]:
-    best_score = None
-    for cards in _short_enemy_pressure_bomb_options(state, player_id):
-        score = _bot_score_play(state, player_id, cards, max(1, depth))
-        if best_score is None or score > best_score:
-            best_score = score
-    return best_score
+    score, complete = _best_short_enemy_pressure_bomb_score_result(state, player_id, depth)
+    return score if complete else None
 
 
 def _filter_overbomb_options(state: Dict, player_id: str, options: List[List[int]]) -> List[List[int]]:

@@ -1,4 +1,8 @@
 let currentAgeOfWarView = null;
+let ageOfWarSelectedLine = null;
+let ageOfWarSelectedDice = new Set();
+let ageOfWarSelectionKey = null;
+let ageOfWarHintTimer = null;
 
 const ageOfWarHeaderActions = document.getElementById("ageOfWarHeaderActions");
 const ageOfWarHelpBtn = document.getElementById("ageOfWarHelpBtn");
@@ -17,6 +21,7 @@ const ageOfWarDiceLeftLabel = document.getElementById("ageOfWarDiceLeft");
 const ageOfWarWinnerLabel = document.getElementById("ageOfWarWinner");
 const ageOfWarDice = document.getElementById("ageOfWarDice");
 const ageOfWarRollBtn = document.getElementById("ageOfWarRollBtn");
+const ageOfWarDiscardBtn = document.getElementById("ageOfWarDiscardBtn");
 const ageOfWarPlayAgainBtn = document.getElementById("ageOfWarPlayAgainBtn");
 const ageOfWarTargetLines = document.getElementById("ageOfWarTargetLines");
 const ageOfWarCentral = document.getElementById("ageOfWarCentral");
@@ -30,8 +35,10 @@ const AGE_OF_WAR_HELP_TEXT = `
 <ol>
   <li>Roll all remaining dice, then choose a target castle from the center or an unlocked opponent castle.</li>
   <li>Once you select a target, you must continue the attack against that target for the rest of the turn.</li>
-  <li>Assign dice to fill one battle line. Infantry dice add up to meet or exceed the sum; other types must match exactly.</li>
-  <li>If you cannot or choose not to fill a line, discard one die and reroll the rest.</li>
+  <li>Choose a highlighted battle line to preview a suggested dice combination. Click dice to select or deselect them, then click Place Dice to confirm. The preview uses the fewest dice: for Infantry (⚔️) 3, it prefers one ⚔️3 die over ⚔️1 + ⚔️2.</li>
+  <li>Infantry (⚔️) dice add up to meet or exceed the required sum. Archery (🏹), Cavalry (🐎), and Daimyo (👑) must match the required counts exactly. Only the selected dice are used; reroll the remaining dice next.</li>
+  <li>If you cannot or choose not to fill a line, select exactly one die and click Discard Selected Die, then reroll the rest. Clicking a die only changes your selection.</li>
+  <li>Click empty space or press Esc to cancel the selection.</li>
 </ol>
 
 <h3>Capture</h3>
@@ -52,6 +59,14 @@ const AGE_OF_WAR_BUTTON_EXPLANATIONS = {
   ageOfWarPlayAgainBtn: {
     name: "Play Again",
     description: "Restart the game after it ends.",
+  },
+  ageOfWarDiscardBtn: {
+    name: "Discard Selected Die",
+    description: "Select exactly one die, then discard it and reroll the rest. Clicking a die only selects it; it does not discard it.",
+  },
+  ageOfWarPlaceDiceBtn: {
+    name: "Place Dice",
+    description: "Fill the chosen battle line using exactly the highlighted dice. Click any die to change the suggestion before confirming. Infantry (⚔️) must meet or exceed the total; Archery (🏹), Cavalry (🐎), and Daimyo (👑) must match their counts exactly.",
   },
 };
 
@@ -105,9 +120,68 @@ function formatAgeOfWarDieTitle(code) {
   const parsed = parseAgeOfWarDie(code);
   const typeName = parsed.type.charAt(0).toUpperCase() + parsed.type.slice(1);
   if (parsed.type === "infantry") {
-    return `${typeName} ${parsed.value}`;
+    return `${typeName} (${AGE_OF_WAR_ICONS[parsed.type]}) ${parsed.value}`;
   }
-  return typeName;
+  return `${typeName} (${AGE_OF_WAR_ICONS[parsed.type]})`;
+}
+
+function addAgeOfWarSymbolHint(element, text) {
+  element.title = text;
+  element.setAttribute("aria-label", text);
+  element.addEventListener("pointerdown", (event) => {
+    if (event.pointerType !== "touch" || ageOfWarExplainMode) return;
+    let hint = document.getElementById("ageOfWarSymbolHint");
+    if (!hint) {
+      hint = document.createElement("div");
+      hint.id = "ageOfWarSymbolHint";
+      hint.className = "age-of-war-symbol-hint";
+      hint.setAttribute("role", "status");
+      document.body.appendChild(hint);
+    }
+    hint.textContent = text;
+    hint.hidden = false;
+    clearTimeout(ageOfWarHintTimer);
+    ageOfWarHintTimer = setTimeout(() => { hint.hidden = true; }, 3000);
+  });
+}
+
+function formatAgeOfWarRequirementTitle(req) {
+  const type = req.type || "infantry";
+  const name = type.charAt(0).toUpperCase() + type.slice(1);
+  const amount = type === "infantry" ? `${req.sum}+ total` : `exactly ${req.count ?? 1}`;
+  return `${name} (${AGE_OF_WAR_ICONS[type] || ""}): ${amount}`;
+}
+
+function isAgeOfWarSelectionValid(line) {
+  if (!line || line.filled || !line.can_fill || !ageOfWarSelectedDice.size) return false;
+  const required = { infantry: 0, archery: 0, cavalry: 0, daimyo: 0 };
+  (line.requirements || []).forEach((req) => {
+    required[req.type] += Number(req.type === "infantry" ? req.sum : (req.count ?? 1));
+  });
+  const selected = { infantry: 0, archery: 0, cavalry: 0, daimyo: 0 };
+  for (const index of ageOfWarSelectedDice) {
+    const code = currentAgeOfWarView?.dice_pool?.[index];
+    if (!code) return false;
+    const die = parseAgeOfWarDie(code);
+    selected[die.type] += die.value;
+  }
+  return Object.keys(required).every((type) =>
+    type === "infantry" && required[type] > 0
+      ? selected[type] >= required[type]
+      : selected[type] === required[type]
+  );
+}
+
+function resetAgeOfWarSelection() {
+  ageOfWarSelectedLine = null;
+  ageOfWarSelectedDice.clear();
+}
+
+function refreshAgeOfWarSelection() {
+  renderAgeOfWarDice(currentAgeOfWarView);
+  renderAgeOfWarTargetLines(currentAgeOfWarView);
+  updateAgeOfWarActionButtons();
+  updateAgeOfWarExplainModeClasses(ageOfWarExplainMode);
 }
 
 function formatAgeOfWarRequirement(req) {
@@ -265,6 +339,7 @@ function isAgeOfWarActionAvailable(actionType) {
 function updateAgeOfWarActionButtons() {
   const buttons = [
     { el: ageOfWarRollBtn, allowed: isAgeOfWarActionAvailable("roll") },
+    { el: ageOfWarDiscardBtn, allowed: isAgeOfWarActionAvailable("discard_die") && ageOfWarSelectedDice.size === 1 },
     { el: ageOfWarPlayAgainBtn, allowed: isAgeOfWarActionAvailable("play_again") },
   ];
   buttons.forEach(({ el, allowed }) => {
@@ -287,6 +362,8 @@ function updateAgeOfWarActionButtons() {
 
 function clearAgeOfWarState() {
   currentAgeOfWarView = null;
+  resetAgeOfWarSelection();
+  ageOfWarSelectionKey = null;
   if (ageOfWarPhaseLabel) {
     ageOfWarPhaseLabel.textContent = "-";
   }
@@ -330,34 +407,45 @@ function renderAgeOfWarDice(view) {
     ageOfWarDice.appendChild(empty);
     return;
   }
-  const canDiscard = isAgeOfWarActionAvailable("discard_die");
+  const canSelect = isAgeOfWarActionAvailable("fill_line") || isAgeOfWarActionAvailable("discard_die");
   dicePool.forEach((code, index) => {
     const die = document.createElement("button");
     die.type = "button";
     const parsed = parseAgeOfWarDie(code);
     die.className = `age-of-war-die ${parsed.type}`;
     die.textContent = formatAgeOfWarDieLabel(code);
-    die.title = formatAgeOfWarDieTitle(code);
-    if (canDiscard) {
+    addAgeOfWarSymbolHint(die, formatAgeOfWarDieTitle(code));
+    die.dataset.dieIndex = index;
+    die.classList.toggle("selected", ageOfWarSelectedDice.has(index));
+    die.setAttribute("aria-pressed", String(ageOfWarSelectedDice.has(index)));
+    if (canSelect) {
       die.classList.add("clickable");
       die.addEventListener("click", () => {
         if (ageOfWarExplainMode) {
           return;
         }
-        if (!isAgeOfWarActionAvailable("discard_die")) {
+        if (!isAgeOfWarActionAvailable("fill_line") && !isAgeOfWarActionAvailable("discard_die")) {
           return;
         }
-        sendAction({ type: "discard_die", die_index: index });
+        if (ageOfWarSelectedDice.has(index)) {
+          ageOfWarSelectedDice.delete(index);
+        } else {
+          ageOfWarSelectedDice.add(index);
+        }
+        refreshAgeOfWarSelection();
+        ageOfWarDice.querySelector(`[data-die-index="${index}"]`)?.focus({ preventScroll: true });
       });
     } else {
       die.disabled = true;
     }
     ageOfWarDice.appendChild(die);
   });
-  if (canDiscard) {
+  if (canSelect) {
     const hint = document.createElement("div");
     hint.className = "age-of-war-hint";
-    hint.textContent = "Tip: click a die to discard it.";
+    hint.textContent = ageOfWarSelectedLine === null
+      ? "Choose a battle line to preview dice, or select one die to discard."
+      : "Click dice to change the selection, then confirm with Place Dice.";
     ageOfWarDice.appendChild(hint);
   }
 }
@@ -385,6 +473,9 @@ function renderAgeOfWarTargetLines(view) {
   lines.forEach((line) => {
     const row = document.createElement("div");
     row.className = "age-of-war-line";
+    row.dataset.lineIndex = line.index;
+    const selected = ageOfWarSelectedLine === line.index;
+    row.classList.toggle("selected", selected);
     if (line.filled) {
       row.classList.add("filled");
     }
@@ -394,6 +485,10 @@ function renderAgeOfWarTargetLines(view) {
     const fillable = canFill && line.can_fill && !line.filled;
     if (fillable) {
       row.classList.add("fillable");
+      row.tabIndex = 0;
+      row.setAttribute("role", "button");
+      row.setAttribute("aria-pressed", String(selected));
+      row.setAttribute("aria-label", `Choose battle line ${line.index + 1}: ${(line.requirements || []).map(formatAgeOfWarRequirementTitle).join(", ")}`);
     }
 
     const reqs = document.createElement("div");
@@ -403,6 +498,7 @@ function renderAgeOfWarTargetLines(view) {
       const chip = document.createElement("span");
       chip.className = `age-of-war-req ${formatted.type}`;
       chip.textContent = formatted.text;
+      addAgeOfWarSymbolHint(chip, formatAgeOfWarRequirementTitle(req));
       reqs.appendChild(chip);
     });
     row.appendChild(reqs);
@@ -420,24 +516,76 @@ function renderAgeOfWarTargetLines(view) {
       done.className = "age-of-war-badge filled";
       done.textContent = "Filled";
       badges.appendChild(done);
+    } else if (fillable) {
+      const choose = document.createElement("span");
+      choose.className = "age-of-war-badge";
+      choose.textContent = selected ? "Selected" : "Choose Dice";
+      badges.appendChild(choose);
     }
     if (badges.children.length) {
       row.appendChild(badges);
     }
 
     if (fillable) {
-      row.addEventListener("click", () => {
+      const chooseLine = () => {
         if (ageOfWarExplainMode) {
           return;
         }
         if (!isAgeOfWarActionAvailable("fill_line")) {
           return;
         }
-        sendAction({ type: "fill_line", line_index: line.index });
+        if (ageOfWarSelectedLine !== line.index) {
+          ageOfWarSelectedLine = line.index;
+          ageOfWarSelectedDice = new Set(line.suggested_dice || []);
+          refreshAgeOfWarSelection();
+          ageOfWarTargetLines.querySelector(`[data-line-index="${line.index}"]`)?.focus({ preventScroll: true });
+        }
+      };
+      row.addEventListener("click", chooseLine);
+      row.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          chooseLine();
+        }
       });
     }
 
     ageOfWarTargetLines.appendChild(row);
+    if (selected && fillable) {
+      const preview = document.createElement("div");
+      preview.className = "age-of-war-placement";
+      const summary = document.createElement("div");
+      summary.className = "age-of-war-placement-summary";
+      summary.setAttribute("role", "status");
+      const indices = [...ageOfWarSelectedDice].sort((a, b) => a - b);
+      const diceLabels = indices.map((index) => formatAgeOfWarDieLabel(view.dice_pool[index]));
+      const valid = isAgeOfWarSelectionValid(line);
+      summary.textContent = indices.length
+        ? `Selected: ${diceLabels.join(" + ")} · ${indices.length} ${indices.length === 1 ? "die" : "dice"} · ${view.dice_pool.length - indices.length} left`
+        : "Select the dice you want to use.";
+      preview.appendChild(summary);
+      if (!valid && indices.length) {
+        const warning = document.createElement("div");
+        warning.className = "age-of-war-selection-warning";
+        warning.textContent = "These dice do not match this line. Adjust your selection.";
+        preview.appendChild(warning);
+      }
+      const place = document.createElement("button");
+      place.type = "button";
+      place.id = "ageOfWarPlaceDiceBtn";
+      place.textContent = "Place Dice";
+      place.disabled = !valid;
+      place.classList.toggle("action-allowed", valid);
+      place.addEventListener("click", () => {
+        if (ageOfWarExplainMode || !isAgeOfWarActionAvailable("fill_line") || !isAgeOfWarSelectionValid(line)) return;
+        const dieIndices = [...ageOfWarSelectedDice].sort((a, b) => a - b);
+        sendAction({ type: "fill_line", line_index: line.index, die_indices: dieIndices });
+        resetAgeOfWarSelection();
+        refreshAgeOfWarSelection();
+      });
+      preview.appendChild(place);
+      ageOfWarTargetLines.appendChild(preview);
+    }
   });
 }
 
@@ -455,6 +603,7 @@ function renderAgeOfWarCastleLines(container, battleLines) {
     lineRow.className = "age-of-war-castle-line";
     const parts = (line || []).map((req) => formatAgeOfWarRequirement(req).text);
     lineRow.textContent = parts.join(" + ");
+    addAgeOfWarSymbolHint(lineRow, (line || []).map(formatAgeOfWarRequirementTitle).join("; "));
     container.appendChild(lineRow);
   });
 }
@@ -661,6 +810,14 @@ function renderAgeOfWarPlayers(view) {
 
 function renderAgeOfWarGameState(data) {
   const view = data && data.view ? data.view : data;
+  const selectionKey = JSON.stringify(view && [
+    view.you, view.current_player, view.phase, view.target, view.dice_pool,
+    view.target_lines, view.legal_actions,
+  ]);
+  if (selectionKey !== ageOfWarSelectionKey) {
+    resetAgeOfWarSelection();
+    ageOfWarSelectionKey = selectionKey;
+  }
   currentAgeOfWarView = view;
   if (currentGameType !== "age_of_war") {
     currentGameType = "age_of_war";
@@ -691,6 +848,7 @@ function renderAgeOfWarGameState(data) {
   renderAgeOfWarCentral(view);
   renderAgeOfWarPlayers(view);
   updateAgeOfWarActionButtons();
+  updateAgeOfWarExplainModeClasses(ageOfWarExplainMode);
 }
 
 function showAgeOfWarHeaderActions(show) {
@@ -698,6 +856,9 @@ function showAgeOfWarHeaderActions(show) {
     ageOfWarHeaderActions.style.display = show ? "flex" : "none";
   }
   if (!show) {
+    resetAgeOfWarSelection();
+    const hint = document.getElementById("ageOfWarSymbolHint");
+    if (hint) hint.hidden = true;
     exitAgeOfWarExplainMode();
     closeAgeOfWarHelpModal();
     closeAgeOfWarExplainModal();
@@ -788,6 +949,23 @@ if (ageOfWarRollBtn) {
     sendAction({ type: "roll" });
   });
 }
+
+if (ageOfWarDiscardBtn) {
+  ageOfWarDiscardBtn.addEventListener("click", () => {
+    if (ageOfWarExplainMode || !isAgeOfWarActionAvailable("discard_die") || ageOfWarSelectedDice.size !== 1) return;
+    sendAction({ type: "discard_die", die_index: [...ageOfWarSelectedDice][0] });
+    resetAgeOfWarSelection();
+    refreshAgeOfWarSelection();
+  });
+}
+
+document.addEventListener("click", (event) => {
+  if (currentGameType !== "age_of_war" || ageOfWarExplainMode) return;
+  if (event.target.closest("button, .age-of-war-die, .age-of-war-line, .age-of-war-placement, .modal")) return;
+  if (ageOfWarSelectedLine === null && !ageOfWarSelectedDice.size) return;
+  resetAgeOfWarSelection();
+  refreshAgeOfWarSelection();
+});
 
 if (ageOfWarPlayAgainBtn) {
   ageOfWarPlayAgainBtn.addEventListener("click", () => {
@@ -881,6 +1059,12 @@ document.addEventListener("keydown", (e) => {
     closed = true;
   }
   if (closed) {
+    e.preventDefault();
+    return;
+  }
+  if (currentGameType === "age_of_war" && (ageOfWarSelectedLine !== null || ageOfWarSelectedDice.size)) {
+    resetAgeOfWarSelection();
+    refreshAgeOfWarSelection();
     e.preventDefault();
   }
 });

@@ -102,6 +102,30 @@ def _match_line(dice_pool: List[str], requirements: List[Dict]) -> Optional[List
     return sorted(set(used))
 
 
+def _selected_dice_fill_line(dice_pool: List[str], requirements: List[Dict], indices: List[int]) -> bool:
+    required_counts = {}
+    infantry_sum = None
+    for req in requirements:
+        req_type = req.get("type")
+        if req_type == "infantry":
+            infantry_sum = (infantry_sum or 0) + int(req.get("sum", 0))
+        else:
+            required_counts[req_type] = required_counts.get(req_type, 0) + int(req.get("count", 1))
+
+    selected_counts = {}
+    selected_infantry_sum = 0
+    for index in indices:
+        die_type, value = _decode_die(dice_pool[index])
+        if die_type == "infantry":
+            if infantry_sum is None:
+                return False
+            selected_infantry_sum += value or 0
+        else:
+            selected_counts[die_type] = selected_counts.get(die_type, 0) + 1
+
+    return selected_counts == required_counts and selected_infantry_sum >= (infantry_sum or 0)
+
+
 def _remove_dice(dice_pool: List[str], indices: List[int]) -> None:
     for idx in sorted(indices, reverse=True):
         if 0 <= idx < len(dice_pool):
@@ -195,15 +219,16 @@ def _available_targets(state: Dict, player_id: str) -> Tuple[List[str], List[Tup
     return central, opponent_targets
 
 
-def _target_line_view(state: Dict, line: Dict) -> Dict:
+def _target_line_view(state: Dict, line: Dict, filled: bool) -> Dict:
     requirements = line.get("requirements", [])
-    can_fill = False
-    if state.get("phase") == "assign":
-        can_fill = _match_line(state.get("dice_pool", []), requirements) is not None
+    match = None
+    if state.get("phase") == "assign" and not filled:
+        match = _match_line(state.get("dice_pool", []), requirements)
     return {
         "requirements": requirements,
         "bonus": bool(line.get("bonus")),
-        "can_fill": can_fill,
+        "can_fill": match is not None,
+        "suggested_dice": match if match is not None else [],
     }
 
 
@@ -401,9 +426,23 @@ class AgeOfWarGame:
             if line_index in state.get("filled_lines", []):
                 return [], "line already filled"
             line = target_lines[line_index]
-            match = _match_line(state.get("dice_pool", []), line.get("requirements", []))
-            if match is None:
-                return [], "line not fillable"
+            dice_pool = state.get("dice_pool", [])
+            requirements = line.get("requirements", [])
+            if "die_indices" in action:
+                indices = action["die_indices"]
+                if not isinstance(indices, list) or any(type(index) is not int for index in indices):
+                    return [], "invalid dice selection"
+                if len(set(indices)) != len(indices):
+                    return [], "duplicate dice selection"
+                if any(index < 0 or index >= len(dice_pool) for index in indices):
+                    return [], "die out of range"
+                if not _selected_dice_fill_line(dice_pool, requirements, indices):
+                    return [], "selected dice do not fill line"
+                match = sorted(indices)
+            else:
+                match = _match_line(dice_pool, requirements)
+                if match is None:
+                    return [], "line not fillable"
             _remove_dice(state["dice_pool"], match)
             remaining = len(state["dice_pool"])
             state["dice_pool"] = []
@@ -507,9 +546,10 @@ class AgeOfWarGame:
 
         lines_view = []
         for idx, line in enumerate(state.get("target_lines", [])):
-            line_view = _target_line_view(state, line)
+            filled = idx in state.get("filled_lines", [])
+            line_view = _target_line_view(state, line, filled)
             line_view["index"] = idx
-            line_view["filled"] = idx in state.get("filled_lines", [])
+            line_view["filled"] = filled
             lines_view.append(line_view)
 
         return {

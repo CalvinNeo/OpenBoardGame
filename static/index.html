@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css?v=app_v98" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v99" />
   <link rel="stylesheet" href="/static/ark_nova.css?v=app_v21" />
   <link rel="stylesheet" href="/static/catan_starfarers.css?v=app_v4" />
   <link rel="stylesheet" href="/static/castles_of_burgundy.css?v=2" />
@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="/static/eternal_decks.css?v=1" />
   <link rel="stylesheet" href="/static/ponzi_scheme.css?v=1" />
   <link rel="stylesheet" href="/static/istanbul.css?v=2" />
-  <link rel="stylesheet" href="/static/rebel_princess.css?v=2" />
+  <link rel="stylesheet" href="/static/rebel_princess.css?v=3" />
 </head>
 <body>
   <section id="logPanel" class="log-panel hidden" aria-hidden="true">
@@ -1449,13 +1449,13 @@
                   <div class="game-config-card hidden" id="inAGroveConfigBox" aria-hidden="true">
                     <div class="game-config-title">In a Grove</div>
                     <div class="row">
-                      <label for="inAGroveInspectionModeSelect">Later turns</label>
+                      <label for="inAGroveInspectionModeSelect">Inspection</label>
                       <select id="inAGroveInspectionModeSelect" aria-describedby="inAGroveInspectionModeHint">
                         <option value="choose_one" selected>Inspect 1 of 2</option>
                         <option value="both">Inspect both</option>
                       </select>
                     </div>
-                    <div class="hint" id="inAGroveInspectionModeHint">First detective: inspect 2 of 3. Later detectives: choose 1 of the 2 unblocked suspects.</div>
+                    <div class="hint" id="inAGroveInspectionModeHint">First detective: choose 1 of 3. Later detectives: choose 1 of the 2 unblocked suspects.</div>
                   </div>
                   <div class="game-config-card hidden" id="drawGuessConfigBox" aria-hidden="true">
                     <div class="game-config-title">Draw &amp; Guess</div>
@@ -2744,6 +2744,7 @@
               <div id="ageOfWarDice" class="age-of-war-dice"></div>
               <div class="row actions age-of-war-actions">
                 <button id="ageOfWarRollBtn">Roll Dice</button>
+                <button id="ageOfWarDiscardBtn" type="button" disabled>Discard Selected Die</button>
                 <button id="ageOfWarPlayAgainBtn">Play Again</button>
               </div>
 
@@ -4087,46 +4088,44 @@
 
             <div id="rebelPrincessPanel" class="hidden rebel-princess-panel">
               <header class="rebel-header">
-                <div><span class="rebel-eyebrow">A royal game of dodging proposals</span><h2>Rebel Princess</h2></div>
+                <div><h2>Rebel Princess</h2></div>
                 <div class="rebel-header-actions"><button id="rebelHelpBtn" type="button">Help</button><button id="rebelExplainBtn" type="button" aria-pressed="false">Explain</button></div>
               </header>
               <div class="rebel-goal-strip">
-                <span data-rebel-tip="Proposals (💍) are penalty points. After 5 rounds, the lowest total wins; ties favor more zero-proposal rounds.">💍 Lowest score wins</span>
+                <span data-rebel-tip="Proposals (💍) are penalty points. After 5 rounds, the lowest total wins; ties favor more zero-proposal rounds.">💍 Proposals</span>
                 <span id="rebelPrinceValue"></span><span id="rebelFrogValue"></span>
               </div>
               <div class="rebel-round-banner">
                 <span id="rebelRound" class="rebel-round-badge"></span>
-                <div><strong id="rebelRoundTitle"></strong><p id="rebelRoundSummary"></p></div>
+                <div><strong id="rebelRoundTitle"></strong></div>
               </div>
               <div id="rebelGuide" class="rebel-guide" role="status" aria-live="polite" aria-atomic="true">
-                <span id="rebelPhase" class="rebel-eyebrow"></span><strong id="rebelGuideTitle"></strong><p id="rebelGuideText"></p>
+                <span id="rebelPhase" class="rebel-eyebrow"></span><strong id="rebelGuideTitle"></strong>
               </div>
-              <p id="rebelExplainNotice" class="rebel-explain-notice hidden">Select a highlighted item to learn about it. Press Esc to exit.</p>
+              <p id="rebelExplainNotice" class="rebel-explain-notice hidden">Explain mode</p>
               <div class="rebel-layout">
                 <div class="rebel-play-area">
                   <section id="rebelTableSection" class="rebel-section">
                     <div class="rebel-section-heading"><h3>On the table</h3><span id="rebelTricks" class="rebel-badge"></span></div>
                     <div class="rebel-rule-strip"><span id="rebelRequiredSuit"></span><span id="rebelPrinceStatus"></span></div>
                     <div id="rebelTrick" class="rebel-trick"></div>
-                    <p id="rebelTrickHint" class="rebel-muted"></p>
                   </section>
                   <section id="rebelSummary" class="rebel-section hidden">
-                    <div class="rebel-section-heading"><h3 id="rebelSummaryTitle">Round results</h3><span class="rebel-badge" data-rebel-tip="Proposals (💍) are penalty points. A smaller total score is better.">💍 Lower is better</span></div>
+                    <div class="rebel-section-heading"><h3 id="rebelSummaryTitle">Round results</h3><span class="rebel-badge" data-rebel-tip="Proposals (💍) are penalty points. A smaller total score is better.">💍 Proposals</span></div>
                     <div id="rebelSummaryBody"></div>
                     <p id="rebelReadyStatus" class="rebel-muted"></p>
                     <button id="rebelNextRoundBtn" type="button" class="rebel-primary">Next Round</button>
                   </section>
                   <section id="rebelHandSection" class="rebel-section rebel-hand-section">
                     <div class="rebel-section-heading"><h3>Your hand</h3><span id="rebelHandCount" class="rebel-badge"></span></div>
-                    <p id="rebelHandHint" class="rebel-muted"></p>
                     <div id="rebelHand" class="rebel-hand"></div>
                     <div id="rebelActionPanel" class="rebel-action-panel">
                       <div id="rebelSuitField" class="rebel-field hidden"><span id="rebelSuitLabel">Choose a suit</span><div id="rebelSuitButtons" class="rebel-button-row" role="group" aria-labelledby="rebelSuitLabel"></div></div>
                       <label id="rebelTargetField" class="rebel-field hidden"><span>Choose a player</span><select id="rebelTargetSelect"></select></label>
                       <label id="rebelTrickCardField" class="rebel-field hidden"><span id="rebelTrickCardLabel">Choose a card from the table</span><select id="rebelTrickCardSelect"></select></label>
                       <div id="rebelDrawnCard" class="rebel-drawn-card hidden"></div>
-                      <label id="rebelSnowWhiteField" class="rebel-toggle hidden"><input id="rebelSnowWhiteToggle" type="checkbox" /><span>Snow White: make this card count as 0</span><span class="rebel-info" data-rebel-tip="Snow White: once per round, a card you play with rank 7 or lower can count as rank 0 for winning this trick. Its proposal value does not change." aria-label="About Snow White">ⓘ</span></label>
-                      <label id="rebelPeaField" class="rebel-toggle hidden"><input id="rebelPeaToggle" type="checkbox" /><span>Pea Princess: make later players play above 5</span><span class="rebel-info" data-rebel-tip="The Pea Princess: once per round, players still to play must use a rank above 5 if possible, while following the suit rule." aria-label="About the Pea Princess">ⓘ</span></label>
+                      <label id="rebelSnowWhiteField" class="rebel-toggle hidden"><input id="rebelSnowWhiteToggle" type="checkbox" /><span>Use Snow White</span><span class="rebel-info" data-rebel-tip="Snow White: once per round, a card you play with rank 7 or lower can count as rank 0 for winning this trick. Its proposal value does not change." aria-label="About Snow White">ⓘ</span></label>
+                      <label id="rebelPeaField" class="rebel-toggle hidden"><input id="rebelPeaToggle" type="checkbox" /><span>Use Pea Princess</span><span class="rebel-info" data-rebel-tip="The Pea Princess: once per round, players still to play must use a rank above 5 if possible, while following the suit rule." aria-label="About the Pea Princess">ⓘ</span></label>
                       <div id="rebelSelection" class="rebel-selection-row"><span id="rebelSelectedCards"></span><span class="rebel-info" id="rebelSelectionInfo" aria-label="About your selection">ⓘ</span></div>
                       <div class="rebel-action-buttons"><button id="rebelSubmitBtn" class="rebel-primary" type="button">Select a card</button><button id="rebelPrincessBtn" type="button">Use Princess</button><button id="rebelSkipBtn" type="button">Skip</button></div>
                     </div>
@@ -4135,7 +4134,6 @@
                 <aside class="rebel-sidebar">
                   <section class="rebel-section rebel-princess-section"><div class="rebel-section-heading"><h3>Your princess</h3><span id="rebelPowerStatus" class="rebel-badge"></span></div><div id="rebelPrincess" class="rebel-princess-card"></div></section>
                   <section class="rebel-section"><div class="rebel-section-heading"><h3>Players</h3><span class="rebel-badge" data-rebel-tip="Total proposals (💍) from completed rounds. Points from the current round are added at the round results.">💍 Total score</span></div><div id="rebelPlayers" class="rebel-players"></div></section>
-                  <details class="rebel-section rebel-quick-guide"><summary>New here? Learn in 30 seconds</summary><ol><li><strong>Avoid proposals.</strong> Prince (🤴) usually adds 1; Frog (🐸 8) usually adds 5. Lowest total after 5 rounds wins.</li><li><strong>Pick, then confirm.</strong> Pass the requested cards first. On your turn, select a card and press Play Card.</li><li><strong>Follow suit.</strong> A trick is one set of cards played around the table. Match the required suit if you can. Normally, the highest card of the led suit takes all the cards.</li><li><strong>Check this round’s rule.</strong> It can change what wins or scores. Your princess adds a special ability once per round.</li></ol><button id="rebelQuickHelpBtn" type="button">Full rules &amp; example</button></details>
                   <details class="rebel-section"><summary>Game log</summary><div id="rebelLog" class="rebel-log"></div></details>
                 </aside>
               </div>
@@ -4353,13 +4351,13 @@
                   <div class="in-a-grove-section-heading">
                     <h4 id="inAGroveSceneTitle">The crime scene</h4><span>🎌 First: <strong id="inAGroveFirstPlayer">-</strong></span>
                   </div>
-                  <div class="in-a-grove-scene-meta"><span>🚫 No peeking: <strong id="inAGroveBlocked">None</strong></span><span id="inAGroveSelectionCount">Choose 2 to inspect</span></div>
+                  <div class="in-a-grove-scene-meta"><span>🚫 No peeking: <strong id="inAGroveBlocked">None</strong></span><span id="inAGroveSelectionCount">Choose 1 to inspect</span></div>
                   <p id="inAGroveInspectionRule" class="in-a-grove-inspection-rule"></p>
                   <div id="inAGroveSuspects" class="in-a-grove-suspects" role="group" aria-label="Three suspects"></div>
                   <div class="in-a-grove-action-dock">
                     <p id="inAGroveActionHint" role="status" aria-live="polite">Waiting for the next move.</p>
                     <div class="in-a-grove-actions">
-                      <button id="inAGrovePeekBtn" type="button" disabled>🔎 Inspect 2</button>
+                      <button id="inAGrovePeekBtn" type="button" disabled>🔎 Inspect 1</button>
                       <button id="inAGroveBetBtn" type="button" class="hidden" disabled>🎯 Accuse suspect</button>
                       <button id="inAGroveNextRoundBtn" type="button" class="hidden" disabled>Next Round →</button>
                       <button id="inAGrovePlayAgainBtn" type="button" class="hidden" disabled>↻ Start New Game</button>
@@ -4406,9 +4404,12 @@
 
               <section id="citadelsRoundSummary" class="citadels-round-summary hidden" aria-hidden="true">
                 <div class="citadels-summary-header">
-                  <div>
+                  <div class="citadels-summary-heading">
                     <div class="citadels-summary-eyebrow">Round Recap</div>
-                    <h3 id="citadelsSummaryTitle">Round Complete</h3>
+                    <div class="citadels-summary-title-row">
+                      <h3 id="citadelsSummaryTitle">Round Complete</h3>
+                      <button id="citadelsSummaryPassBtn" class="citadels-summary-pass-btn" type="button">Pass</button>
+                    </div>
                     <p id="citadelsSummarySubtitle">Every role is revealed. Review what happened before continuing.</p>
                   </div>
                   <div id="citadelsSummaryStatus" class="citadels-summary-status">0/0 Ready</div>
@@ -4426,11 +4427,9 @@
                   <h3>Your Roles</h3>
                   <div id="citadelsYourRoles" class="citadels-role-list"></div>
 
-                  <h3>Draft / Turn Actions</h3>
-                  <div id="citadelsActions" class="citadels-actions"></div>
+                  <div id="citadelsActions" class="citadels-actions" aria-label="Available actions"></div>
 
-                  <h3>Your Hand</h3>
-                  <div id="citadelsHand" class="citadels-card-grid"></div>
+                  <div id="citadelsHand" class="citadels-card-grid" aria-label="Your hand"></div>
                 </div>
 
                 <div class="citadels-column">
@@ -7134,7 +7133,7 @@
   <script src="/static/games/six_nimmt.js?v=app_v4"></script>
   <script src="/static/games/skull.js?v=app_v4"></script>
   <script src="/static/games/rebel_princess_hints.js?v=2"></script>
-  <script src="/static/games/rebel_princess.js?v=app_v2"></script>
+  <script src="/static/games/rebel_princess.js?v=app_v3"></script>
   <script src="/static/games/guandan.js?v=app_v13"></script>
   <script src="/static/games/cabo.js?v=app_v8"></script>
   <script src="/static/games/flip7.js?v=app_v4"></script>
@@ -7144,8 +7143,8 @@
   <script src="/static/games/fang_niao.js?v=app_v4"></script>
   <script src="/static/games/perfect_mismatch.js?v=app_v4"></script>
   <script src="/static/games/coyote.js?v=app_v4"></script>
-  <script src="/static/games/in_a_grove.js?v=app_v5"></script>
-  <script src="/static/games/citadels.js?v=app_v6"></script>
+  <script src="/static/games/in_a_grove.js?v=app_v6"></script>
+  <script src="/static/games/citadels.js?v=app_v7"></script>
   <script src="/static/games/tagiron.js?v=app_v5"></script>
   <script src="/static/games/davinci_code.js?v=app_v4"></script>
   <script src="/static/games/lost_code.js?v=app_v4"></script>

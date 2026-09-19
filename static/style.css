@@ -8961,11 +8961,25 @@ body.log-open {
 
 .citadels-summary-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: 18px;
   padding: 18px 20px 14px;
   border-bottom: 1px solid rgba(183, 121, 31, 0.2);
+}
+
+.citadels-summary-heading {
+  min-width: 0;
+  flex: 1 1 240px;
+}
+
+.citadels-summary-title-row {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
 }
 
 .citadels-summary-eyebrow {
@@ -8990,6 +9004,25 @@ body.log-open {
   color: var(--citadels-muted);
   font-size: 13px;
   line-height: 1.45;
+}
+
+#citadelsPanel .citadels-summary-pass-btn {
+  flex: 0 0 auto;
+  border-color: #936716;
+  background: linear-gradient(180deg, #c98d27, #a96f13);
+  padding: 5px 11px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1.2;
+  box-shadow: 0 3px 8px rgba(126, 78, 10, 0.18);
+}
+
+#citadelsPanel .citadels-summary-pass-btn:disabled {
+  border-color: #c7bdac;
+  background: #d8d2c8;
+  box-shadow: none;
+  color: #756f66;
 }
 
 .citadels-summary-status {
@@ -9219,6 +9252,12 @@ body.log-open {
 
 .citadels-summary-action-icon {
   text-align: center;
+}
+
+.citadels-summary-action strong {
+  color: #172033;
+  font-weight: 900;
+  overflow-wrap: anywhere;
 }
 
 .citadels-summary-footer {
@@ -9483,25 +9522,43 @@ body.log-open {
 .citadels-player-card {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
   margin-bottom: 0;
-  padding: 9px;
+  padding: 7px;
 }
 
 .citadels-players {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+  gap: 6px;
 }
 
 .citadels-player-header {
-  font-size: 14px;
-  font-weight: 800;
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
   color: #0f172a;
 }
 
-.citadels-player-meta,
+.citadels-player-name {
+  flex: 0 0 auto;
+  font-size: 14px;
+  font-weight: 800;
+}
+
 .citadels-player-roles {
+  min-width: 0;
+  flex: 1 1 145px;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.citadels-player-meta {
   font-size: 11px;
   line-height: 1.35;
   color: #475569;
@@ -9649,6 +9706,11 @@ body.log-open {
     padding: 13px 12px 10px;
   }
 
+  #citadelsPanel .citadels-summary-pass-btn {
+    padding: 5px 9px;
+    font-size: 10px;
+  }
+
   .citadels-summary-header h3 {
     font-size: 19px;
   }
@@ -9765,7 +9827,7 @@ body.log-open {
   }
 
   .citadels-player-card {
-    padding: 8px;
+    padding: 7px;
   }
 
   .citadels-log {
@@ -12580,6 +12642,35 @@ button.splendor-card {
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
 
+.age-of-war-die.selected {
+  border-color: #1d4ed8;
+  background: #dbeafe;
+  box-shadow: inset 0 -4px 0 #2563eb, 0 0 0 2px #2563eb;
+}
+
+.age-of-war-die:focus-visible,
+.age-of-war-line:focus-visible {
+  outline: 2px solid #1d4ed8;
+  outline-offset: 3px;
+}
+
+.age-of-war-symbol-hint {
+  position: fixed;
+  z-index: 2000;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: #1e293b;
+  color: #fff;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+
 .age-of-war-hint,
 .age-of-war-empty {
   width: 100%;
@@ -12601,12 +12692,50 @@ button.splendor-card {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  min-width: 0;
+  flex-wrap: wrap;
 }
 
 .age-of-war-line.fillable {
   border-color: #2563eb;
   background: #eff6ff;
   cursor: pointer;
+}
+
+.age-of-war-line.selected {
+  border-color: #1d4ed8;
+  box-shadow: inset 3px 0 0 #2563eb;
+}
+
+.age-of-war-placement {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+}
+
+.age-of-war-placement-summary {
+  flex: 1 1 180px;
+  min-width: 0;
+  color: #1e3a8a;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.age-of-war-selection-warning {
+  flex-basis: 100%;
+  color: #92400e;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.age-of-war-placement button {
+  margin: 0;
 }
 
 .age-of-war-line.filled {
@@ -12656,6 +12785,7 @@ button.splendor-card {
 
 .age-of-war-line-badges {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   align-items: center;
 }

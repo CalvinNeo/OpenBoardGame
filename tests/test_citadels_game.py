@@ -5,6 +5,11 @@ from game.citadels import (
     _advance_turn_sequence,
     _finish_round,
     _public_possible_role_holders,
+    _resolve_assassin,
+    _resolve_magician_swap,
+    _resolve_thief,
+    _resolve_warlord_destroy,
+    _start_role_turn,
     _warlord_destroy_targets,
 )
 
@@ -413,6 +418,46 @@ class CitadelsGameTests(unittest.TestCase):
             [event["type"] for event in events],
             ["citadels:next_round_ready", "citadels:next_round"],
         )
+
+    def test_recap_interactions_record_both_players_for_emphasis(self):
+        state = CitadelsGame.init_game({}, _players(2))
+        state["phase"] = "turn"
+        state["players"]["p1"]["chosen_ranks"] = [1, 2, 3, 8]
+        state["players"]["p2"]["chosen_ranks"] = [7]
+
+        state["active_turn"] = {"player_id": "p1", "rank": 1, "step": "main", "ability_used": False}
+        self.assertIsNone(_resolve_assassin(state, 7))
+        self.assertEqual(state["round_actions"]["p1"][-1]["emphasis"], ["Player 2"])
+        self.assertEqual(state["round_actions"]["p2"][-1]["emphasis"], ["Player 1"])
+
+        state["round_actions"] = {"p1": [], "p2": []}
+        state["killed_rank"] = None
+        state["active_turn"] = {"player_id": "p1", "rank": 2, "step": "main", "ability_used": False}
+        self.assertIsNone(_resolve_thief(state, 7))
+        _start_role_turn(state, "p2", 7)
+        self.assertEqual(state["round_actions"]["p1"][-1]["emphasis"], ["Player 2"])
+        self.assertEqual(state["round_actions"]["p2"][-1]["emphasis"], ["Player 1"])
+
+        state["round_actions"] = {"p1": [], "p2": []}
+        state["active_turn"] = {"player_id": "p1", "rank": 3, "step": "main", "ability_used": False}
+        self.assertIsNone(_resolve_magician_swap(state, "p2"))
+        self.assertEqual(state["round_actions"]["p1"][-1]["emphasis"], ["Player 2"])
+        self.assertEqual(state["round_actions"]["p2"][-1]["emphasis"], ["Player 1"])
+
+        state["round_actions"] = {"p1": [], "p2": []}
+        state["players"]["p1"]["gold"] = 5
+        state["players"]["p2"]["city"] = [
+            {
+                "id": "target_district",
+                "name_cn": "兵营",
+                "cost": 3,
+                "protect_from_warlord": False,
+            }
+        ]
+        state["active_turn"] = {"player_id": "p1", "rank": 8, "step": "main", "ability_used": False}
+        self.assertIsNone(_resolve_warlord_destroy(state, "p2", "target_district"))
+        self.assertEqual(state["round_actions"]["p1"][-1]["emphasis"], ["Player 2"])
+        self.assertEqual(state["round_actions"]["p2"][-1]["emphasis"], ["Player 1"])
 
     def test_final_round_keeps_role_and_score_recap(self):
         state = CitadelsGame.init_game({"winning_city_size": 7}, _players(2))

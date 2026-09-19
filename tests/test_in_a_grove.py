@@ -79,7 +79,7 @@ class InAGroveGameTests(unittest.TestCase):
 
     def test_first_player_inspects_then_accuses_without_tampering(self):
         state = InAGroveGame.init_game(
-            None,
+            {"inspection_mode": "both"},
             [
                 {"player_id": "a", "name": "A", "seat": 0},
                 {"player_id": "b", "name": "B", "seat": 1},
@@ -288,13 +288,22 @@ class InAGroveGameTests(unittest.TestCase):
                 self.assertEqual(state["public_alibi"] is not None, count == 2)
 
     def test_multiplayer_alibis_are_passed_clockwise(self):
-        state = self.make_state(4)
-        for index, pid in enumerate(state["turn_order"]):
-            previous = state["turn_order"][(index - 1) % 4]
-            self.assertEqual(state["players"][pid]["passed_tile"], state["players"][previous]["own_tile"])
+        for count in range(3, 6):
+            for mode in ("choose_one", "both"):
+                with self.subTest(players=count, mode=mode):
+                    state = self.make_state(count, mode)
+                    for index, pid in enumerate(state["turn_order"]):
+                        previous = state["turn_order"][(index - 1) % count]
+                        own_tile = state["players"][pid]["own_tile"]
+                        right_tile = state["players"][previous]["own_tile"]
+                        self.assertEqual(state["players"][pid]["passed_tile"], right_tile)
+                        self.assertEqual(InAGroveGame.get_public_view(state, pid)["your_tiles"], [
+                            {"source": "your tile", "label": own_tile["label"]},
+                            {"source": "passed tile", "label": right_tile["label"]},
+                        ])
 
     def test_private_peek_does_not_reveal_to_other_players(self):
-        state = self.make_state()
+        state = self.make_state(inspection_mode="both")
         InAGroveGame.apply_action(state, "a", {"type": "peek_suspects", "suspect_indexes": [0, 2]})
         own = InAGroveGame.get_public_view(state, "a")
         other = InAGroveGame.get_public_view(state, "b")
@@ -305,9 +314,11 @@ class InAGroveGameTests(unittest.TestCase):
 
     def test_unseen_marker_is_independent_of_previous_accusation(self):
         state = self.make_state()
-        InAGroveGame.apply_action(state, "a", {"type": "peek_suspects", "suspect_indexes": [0, 1]})
+        InAGroveGame.apply_action(state, "a", {"type": "peek_suspects", "suspect_indexes": [0]})
         InAGroveGame.apply_action(state, "a", {"type": "place_bet", "suspect_index": 0})
-        self.assertEqual(state["unseen_suspect_index"], 2)
+        self.assertEqual(state["unseen_suspect_indexes"], [1, 2])
+        self.assertIsNone(state["unseen_suspect_index"])
+        self.assertEqual([s["unseen"] for s in InAGroveGame.get_public_view(state, "b")["suspects"]], [False, True, True])
         self.assertEqual(state["blocked_suspect_index"], 0)
         _, error = InAGroveGame.apply_action(state, "b", {"type": "peek_suspects", "suspect_indexes": [0]})
         self.assertEqual(error, "cannot inspect blocked suspect")
@@ -316,16 +327,16 @@ class InAGroveGameTests(unittest.TestCase):
         _, error = InAGroveGame.apply_action(state, "b", {"type": "place_bet", "suspect_index": 0})
         self.assertIsNone(error)
         self.assertEqual(state["suspects"][0]["stack"], ["a", "b"])
-        self.assertEqual(state["unseen_suspect_index"], 2)
+        self.assertEqual(state["unseen_suspect_indexes"], [1, 2])
 
     def test_invalid_peeks_and_out_of_turn_moves_leave_state_unchanged(self):
-        for indexes in ([0], [0, 0], [0, 3], [True, 2], [0.0, 2], ["0", 2]):
+        for indexes in ([], [0, 1], [0, 0], [3], [True], [0.0], ["0"]):
             state = self.make_state()
             before = deepcopy(state)
             _, error = InAGroveGame.apply_action(state, "a", {"type": "peek_suspects", "suspect_indexes": indexes})
             self.assertIsNotNone(error)
             self.assertEqual(state, before)
-        _, error = InAGroveGame.apply_action(state, "b", {"type": "peek_suspects", "suspect_indexes": [0, 1]})
+        _, error = InAGroveGame.apply_action(state, "b", {"type": "peek_suspects", "suspect_indexes": [0]})
         self.assertEqual(error, "not your turn")
 
     def test_settlement_tracks_whole_stack_and_own_color_tiebreaker(self):
@@ -399,7 +410,7 @@ class InAGroveGameTests(unittest.TestCase):
     def test_previous_summary_does_not_emit_another_reveal_mid_round(self):
         state = self.make_state()
         state["last_round_summary"] = {"round": 0}
-        InAGroveGame.apply_action(state, "a", {"type": "peek_suspects", "suspect_indexes": [0, 1]})
+        InAGroveGame.apply_action(state, "a", {"type": "peek_suspects", "suspect_indexes": [0]})
         events, error = InAGroveGame.apply_action(state, "a", {"type": "place_bet", "suspect_index": 0})
         self.assertIsNone(error)
         self.assertNotIn("in_a_grove:reveal", [event["type"] for event in events])
@@ -413,7 +424,7 @@ class InAGroveGameTests(unittest.TestCase):
                 acted = []
                 while state["phase"] != "round_end":
                     pid = state["current_turn"]
-                    expected_count = 2 if pid == state["first_player"] or mode == "both" else 1
+                    expected_count = 2 if mode == "both" else 1
                     indexes = [index for index in range(3) if index != state["blocked_suspect_index"]][:expected_count]
                     _, error = InAGroveGame.apply_action(state, pid, {"type": "peek_suspects", "suspect_indexes": indexes})
                     self.assertIsNone(error)
@@ -430,25 +441,38 @@ class InAGroveGameTests(unittest.TestCase):
             self.assertTrue(state["game_over"])
             self.assertEqual(len(state["winner_ids"]), 1)
 
-    def test_default_mode_keeps_first_detective_at_two_and_later_detectives_at_one(self):
-        state = InAGroveGame.init_game(None, [
-            {"player_id": "a", "name": "A", "seat": 0},
-            {"player_id": "b", "name": "B", "seat": 1},
-        ])
-        first = state["current_turn"]
-        self.assertEqual(state["config"], {"inspection_mode": "choose_one"})
-        self.assertEqual(InAGroveGame.get_public_view(state, first)["peek_count"], 2)
-        before = deepcopy(state)
-        _, error = InAGroveGame.apply_action(state, first, {"type": "peek_suspects", "suspect_indexes": [1]})
-        self.assertIsNotNone(error)
-        self.assertEqual(state, before)
-        InAGroveGame.apply_action(state, first, {"type": "peek_suspects", "suspect_indexes": [0, 1]})
-        InAGroveGame.apply_action(state, first, {"type": "place_bet", "suspect_index": 0})
-        self.assertEqual(InAGroveGame.get_public_view(state, state["current_turn"])["peek_count"], 1)
+    def test_default_mode_first_detective_can_inspect_exactly_one_of_all_three(self):
+        for selected in range(3):
+            with self.subTest(selected=selected):
+                state = InAGroveGame.init_game(None, [
+                    {"player_id": "a", "name": "A", "seat": 0},
+                    {"player_id": "b", "name": "B", "seat": 1},
+                ])
+                first = state["current_turn"]
+                self.assertEqual(state["config"], {"inspection_mode": "choose_one"})
+                self.assertEqual(InAGroveGame.get_public_view(state, first)["peek_count"], 1)
+                self.assertIsNone(state["blocked_suspect_index"])
+                before = deepcopy(state)
+                _, error = InAGroveGame.apply_action(state, first, {"type": "peek_suspects", "suspect_indexes": [0, 1]})
+                self.assertIsNotNone(error)
+                self.assertEqual(state, before)
+                _, error = InAGroveGame.apply_action(state, first, {"type": "peek_suspects", "suspect_indexes": [selected]})
+                self.assertIsNone(error)
+                for viewer in state["turn_order"]:
+                    view = InAGroveGame.get_public_view(state, viewer)
+                    self.assertEqual([s["label"] is not None for s in view["suspects"]],
+                                     [viewer == first and index == selected for index in range(3)])
+                    self.assertEqual(view["unseen_suspect_indexes"], [index for index in range(3) if index != selected])
+                before = deepcopy(state)
+                _, error = InAGroveGame.apply_action(state, first, {"type": "peek_suspects", "suspect_indexes": [(selected + 1) % 3]})
+                self.assertEqual(error, "cannot peek now")
+                self.assertEqual(state, before)
+                InAGroveGame.apply_action(state, first, {"type": "place_bet", "suspect_index": 0})
+                self.assertEqual(InAGroveGame.get_public_view(state, state["current_turn"])["peek_count"], 1)
 
     def test_choose_one_rejects_extra_cards_and_hides_every_unselected_identity(self):
         state = self.make_state()
-        InAGroveGame.apply_action(state, "a", {"type": "peek_suspects", "suspect_indexes": [0, 1]})
+        InAGroveGame.apply_action(state, "a", {"type": "peek_suspects", "suspect_indexes": [0]})
         InAGroveGame.apply_action(state, "a", {"type": "place_bet", "suspect_index": 0})
         for indexes in ([], [1, 2], [0], [True], [1.0], ["1"], [3]):
             before = deepcopy(state)
@@ -470,7 +494,13 @@ class InAGroveGameTests(unittest.TestCase):
 
     def test_both_mode_requires_both_unblocked_cards(self):
         state = self.make_state(inspection_mode="both")
+        before = deepcopy(state)
+        _, error = InAGroveGame.apply_action(state, "a", {"type": "peek_suspects", "suspect_indexes": [0]})
+        self.assertIsNotNone(error)
+        self.assertEqual(state, before)
         InAGroveGame.apply_action(state, "a", {"type": "peek_suspects", "suspect_indexes": [0, 1]})
+        self.assertEqual(state["unseen_suspect_index"], 2)
+        self.assertEqual(state["unseen_suspect_indexes"], [2])
         InAGroveGame.apply_action(state, "a", {"type": "place_bet", "suspect_index": 0})
         for indexes in ([1], [0, 1]):
             before = deepcopy(state)
@@ -490,7 +520,7 @@ class InAGroveGameTests(unittest.TestCase):
                 pid = state["current_turn"]
                 action = InAGroveGame.bot_move(state, pid)
                 self.assertEqual(action["type"], "peek_suspects")
-                self.assertEqual(len(action["suspect_indexes"]), 2 if turn == 0 or mode == "both" else 1)
+                self.assertEqual(len(action["suspect_indexes"]), 2 if mode == "both" else 1)
                 self.assertNotIn(state["blocked_suspect_index"], action["suspect_indexes"])
                 _, error = InAGroveGame.apply_action(state, pid, action)
                 self.assertIsNone(error)
@@ -500,7 +530,7 @@ class InAGroveGameTests(unittest.TestCase):
 
     def test_mode_and_single_private_peek_survive_serialization(self):
         state = self.make_state()
-        InAGroveGame.apply_action(state, "a", {"type": "peek_suspects", "suspect_indexes": [0, 1]})
+        InAGroveGame.apply_action(state, "a", {"type": "peek_suspects", "suspect_indexes": [0]})
         InAGroveGame.apply_action(state, "a", {"type": "place_bet", "suspect_index": 0})
         InAGroveGame.apply_action(state, "b", {"type": "peek_suspects", "suspect_indexes": [2]})
         restored = InAGroveGame.deserialize(deepcopy(InAGroveGame.serialize(state)))
@@ -509,17 +539,51 @@ class InAGroveGameTests(unittest.TestCase):
         self.assertEqual(view["config"]["inspection_mode"], "choose_one")
         self.assertEqual(view["peeked_indexes"], [2])
         self.assertEqual(view["legal_actions"], ["place_bet"])
+        self.assertEqual(view["unseen_suspect_indexes"], [1, 2])
 
     def test_legacy_saves_preserve_two_card_inspection(self):
         state = self.make_state()
         del state["config"]
+        del state["unseen_suspect_indexes"]
+        state["unseen_suspect_index"] = 2
         state["current_turn"] = "b"
         state["blocked_suspect_index"] = 0
         restored = InAGroveGame.deserialize(state)
         self.assertEqual(restored["config"], {"inspection_mode": "both"})
         self.assertEqual(InAGroveGame.get_public_view(restored, "b")["peek_count"], 2)
+        self.assertEqual([s["unseen"] for s in InAGroveGame.get_public_view(restored, "b")["suspects"]], [False, False, True])
         _, error = InAGroveGame.apply_action(restored, "b", {"type": "peek_suspects", "suspect_indexes": [1, 2]})
         self.assertIsNone(error)
+
+    def test_modes_keep_the_same_alibis_accusations_settlement_and_round_progress(self):
+        for count in range(2, 6):
+            with self.subTest(players=count):
+                states = [self.make_state(count, mode) for mode in ("choose_one", "both")]
+                for state in states:
+                    alibis = {pid: InAGroveGame.get_public_view(state, pid)["your_tiles"] for pid in state["turn_order"]}
+                    for turn in range(count):
+                        pid = state["current_turn"]
+                        peek_count = 1 if state["config"]["inspection_mode"] == "choose_one" else 2
+                        indexes = [index for index in range(3) if index != state["blocked_suspect_index"]][:peek_count]
+                        _, error = InAGroveGame.apply_action(state, pid, {"type": "peek_suspects", "suspect_indexes": indexes})
+                        self.assertIsNone(error)
+                        restored = InAGroveGame.deserialize(deepcopy(InAGroveGame.serialize(state)))
+                        for viewer in state["turn_order"]:
+                            self.assertEqual(InAGroveGame.get_public_view(restored, viewer)["your_tiles"], alibis[viewer])
+                        _, error = InAGroveGame.apply_action(state, pid, {"type": "place_bet", "suspect_index": turn % 3})
+                        self.assertIsNone(error)
+                for key in ("players", "suspects", "victim", "public_alibi", "last_round_summary",
+                            "pending_next_first_player", "pending_game_over", "current_turn", "phase"):
+                    self.assertEqual(states[0][key], states[1][key], key)
+                for state in states:
+                    self.assertEqual(state["phase"], "round_end")
+                    with patch("game.in_a_grove.random.shuffle", lambda tiles: None):
+                        for pid in state["turn_order"]:
+                            _, error = InAGroveGame.apply_action(state, pid, {"type": "next_round"})
+                            self.assertIsNone(error)
+                    self.assertEqual(state["unseen_suspect_indexes"], [])
+                for key in ("players", "suspects", "round", "phase", "first_player", "current_turn"):
+                    self.assertEqual(states[0][key], states[1][key], key)
 
     def test_inspection_config_and_action_schemas_accept_both_modes(self):
         config_validator = Draft7Validator(IN_A_GROVE_CONFIG_SCHEMA)

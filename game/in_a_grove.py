@@ -53,8 +53,6 @@ def _inspection_mode(state: Dict) -> str:
 
 
 def _peek_count(state: Dict) -> int:
-    if state.get("current_turn") == state.get("first_player"):
-        return 2
     return 1 if _inspection_mode(state) == "choose_one" else 2
 
 
@@ -187,6 +185,7 @@ def _deal_round(state: Dict, first_player: str) -> None:
     state["current_turn"] = first_player
     state["blocked_suspect_index"] = None
     state["unseen_suspect_index"] = None
+    state["unseen_suspect_indexes"] = []
     state["public_alibi"] = public_alibi
     state["suspects"] = suspects
     state["victim"] = victim
@@ -281,6 +280,7 @@ class InAGroveGame:
             "current_turn": first_player,
             "blocked_suspect_index": None,
             "unseen_suspect_index": None,
+            "unseen_suspect_indexes": [],
             "suspects": [],
             "victim": None,
             "public_alibi": None,
@@ -356,7 +356,9 @@ class InAGroveGame:
                 return [], "cannot inspect blocked suspect"
             state["turn_context"]["viewed_indexes"] = indexes
             if player_id == state.get("first_player"):
-                state["unseen_suspect_index"] = next(index for index in range(3) if index not in indexes)
+                unseen_indexes = [index for index in range(3) if index not in indexes]
+                state["unseen_suspect_indexes"] = unseen_indexes
+                state["unseen_suspect_index"] = unseen_indexes[0] if len(unseen_indexes) == 1 else None
             state["phase"] = "bet"
             events.append({"type": "in_a_grove:peek", "payload": {"player_id": player_id}})
             return events, None
@@ -408,6 +410,11 @@ class InAGroveGame:
         if viewer_id == state.get("current_turn"):
             viewed_indexes = list(state.get("turn_context", {}).get("viewed_indexes", []))
 
+        unseen_indexes = state.get("unseen_suspect_indexes")
+        if unseen_indexes is None:
+            unseen = state.get("unseen_suspect_index")
+            unseen_indexes = [unseen] if unseen is not None else []
+
         suspects_view = []
         summary = state.get("last_round_summary")
         if isinstance(summary, dict):
@@ -430,7 +437,7 @@ class InAGroveGame:
                     "label": visible_label,
                     "stack": list(suspect.get("stack", [])),
                     "blocked": state.get("blocked_suspect_index") == index,
-                    "unseen": state.get("unseen_suspect_index") == index,
+                    "unseen": index in unseen_indexes,
                     "last_round": summary_by_index.get(index),
                 }
             )
@@ -454,6 +461,7 @@ class InAGroveGame:
             "first_player": state["first_player"],
             "blocked_suspect_index": state.get("blocked_suspect_index"),
             "unseen_suspect_index": state.get("unseen_suspect_index"),
+            "unseen_suspect_indexes": list(unseen_indexes),
             "players": players,
             "suspects": suspects_view,
             "victim_hidden": True,

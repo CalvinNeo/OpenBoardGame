@@ -2209,7 +2209,17 @@ AGE_OF_WAR_ACTION_SCHEMA = {
         {"type": "object", "properties": {"type": {"const": "roll"}}, "required": ["type"], "additionalProperties": False},
         {
             "type": "object",
-            "properties": {"type": {"const": "fill_line"}, "line_index": {"type": "integer", "minimum": 0}},
+            "properties": {
+                "type": {"const": "fill_line"},
+                "line_index": {"type": "integer", "minimum": 0},
+                "die_indices": {
+                    "type": "array",
+                    "items": {"type": "integer", "minimum": 0, "maximum": 6},
+                    "minItems": 1,
+                    "maxItems": 7,
+                    "uniqueItems": True,
+                },
+            },
             "required": ["type", "line_index"],
             "additionalProperties": False,
         },
