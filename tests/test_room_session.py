@@ -40,6 +40,51 @@ class RoomSessionTests(unittest.IsolatedAsyncioTestCase):
         await app.on_room_create(sid, payload)
         return app.SESSIONS[sid]["room_id"]
 
+    async def test_cleanup_empty_removes_only_rooms_without_connected_humans(self):
+        active_room_id = await self._create_room("sid-active", "Alice")
+        active_session = dict(app.SESSIONS["sid-active"])
+        offline_player = app.Player("offline", "Bob", 0, None, connected=False)
+        bot_player = app.Player("bot", "Bot", 1, None, is_bot=True)
+        app.ROOMS.update(
+            {
+                "empty": app.Room("empty"),
+                "offline": app.Room("offline", status="game_over", players=[offline_player]),
+                "bots": app.Room("bots", status="in_game", players=[bot_player]),
+                "mixed": app.Room("mixed", status="in_game", players=[offline_player, bot_player]),
+            }
+        )
+        app.sio.emits.clear()
+
+        await app.on_room_cleanup_empty("sid-requester", {})
+
+        self.assertEqual(set(app.ROOMS), {active_room_id})
+        self.assertEqual(app.SESSIONS["sid-active"], active_session)
+        self.assertEqual(
+            app.sio.emits[0],
+            {
+                "event": "room:cleanup_empty_result",
+                "payload": {"ok": True, "deleted_count": 4, "room_ids": ["bots", "empty", "mixed", "offline"]},
+                "to": "sid-requester",
+            },
+        )
+        update = app.sio.emits[1]
+        self.assertEqual(update["event"], "room:list_update")
+        self.assertIsNone(update["to"])
+        self.assertEqual([room["room_id"] for room in update["payload"]["rooms"]], [active_room_id])
+
+    async def test_cleanup_empty_is_safe_when_no_rooms_can_be_deleted(self):
+        room_id = await self._create_room("sid-active", "Alice")
+        app.sio.emits.clear()
+
+        await app.on_room_cleanup_empty("sid-requester")
+
+        self.assertEqual(set(app.ROOMS), {room_id})
+        result = app.sio.emits[0]
+        self.assertEqual(result["event"], "room:cleanup_empty_result")
+        self.assertEqual(result["payload"], {"ok": True, "deleted_count": 0, "room_ids": []})
+        self.assertEqual(result["to"], "sid-requester")
+        self.assertEqual(app.sio.emits[1]["event"], "room:list_update")
+
     async def test_create_cleans_previous_lobby_session(self):
         sid = "sid-1"
         room_id_first = await self._create_room(sid, "Alice")

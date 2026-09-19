@@ -22,13 +22,25 @@ let pendingSeatClaimSourceId = null;
 let pendingReopenRoomId = null;
 let reopenConfirmReturnFocus = null;
 let catanStarfarersSelectedLanguage = null;
+let playerName = "";
+let pendingPlayerNameAction = null;
+let pendingJoinRequest = null;
+const roomEntryReturnFocus = new WeakMap();
 const selectedGameTagIds = new Set();
 const roomControlsDockQuery = window.matchMedia("(max-width: 900px)");
 
 const nameInput = document.getElementById("nameInput");
+const playerNameModal = document.getElementById("playerNameModal");
+const playerNameForm = document.getElementById("playerNameForm");
+const playerNameError = document.getElementById("playerNameError");
+const joinRoomModal = document.getElementById("joinRoomModal");
+const joinRoomForm = document.getElementById("joinRoomForm");
+const roomIdInput = document.getElementById("roomIdInput");
+const joinRoomError = document.getElementById("joinRoomError");
 const connectionInfo = document.getElementById("connectionInfo");
 const roomListEl = document.getElementById("roomList");
 const refreshRoomsBtn = document.getElementById("refreshRoomsBtn");
+const cleanupEmptyRoomsBtn = document.getElementById("cleanupEmptyRoomsBtn");
 const loadBtn = document.getElementById("loadBtn");
 const roomIdLabel = document.getElementById("roomIdLabel");
 const roomStatus = document.getElementById("roomStatus");
@@ -112,21 +124,24 @@ function saveStoredName(name) {
     clearStoredName();
     return;
   }
+  playerName = nextName;
+  updateRoomControlsName();
   localStorage.setItem(NAME_STORAGE_KEY, nextName);
 }
 
 function clearStoredName() {
+  playerName = "";
+  updateRoomControlsName();
   localStorage.removeItem(NAME_STORAGE_KEY);
 }
 
-function hydrateNameInput() {
-  if (!nameInput) {
-    return;
-  }
-  const storedName = loadStoredName();
-  if (storedName && !nameInput.value.trim()) {
-    nameInput.value = storedName;
-  }
+function updateRoomControlsName() {
+  const fullTitle = roomControlsPanel.querySelector(".room-controls-title-full");
+  const shortTitle = roomControlsPanel.querySelector(".room-controls-title-short");
+  fullTitle.textContent = playerName || "Room Controls";
+  shortTitle.textContent = playerName || "RC";
+  fullTitle.title = playerName;
+  shortTitle.title = playerName;
 }
 
 function loadRoomAuthMap() {
@@ -458,6 +473,52 @@ function setModalVisible(modalEl, visible) {
   modalEl.setAttribute("aria-hidden", (!visible).toString());
 }
 
+function openRoomEntryModal(modal, input, error) {
+  roomEntryReturnFocus.set(modal, document.activeElement);
+  error.textContent = "";
+  error.classList.add("hidden");
+  input.removeAttribute("aria-invalid");
+  setModalVisible(modal, true);
+  input.focus();
+  input.select();
+}
+
+function closeRoomEntryModal(modal) {
+  if (modal.classList.contains("hidden")) {
+    return;
+  }
+  setModalVisible(modal, false);
+  if (modal === playerNameModal) {
+    pendingPlayerNameAction = null;
+    nameInput.value = "";
+  }
+  const returnFocus = roomEntryReturnFocus.get(modal);
+  if (returnFocus && returnFocus.isConnected) {
+    returnFocus.focus();
+  }
+  roomEntryReturnFocus.delete(modal);
+}
+
+function requirePlayerName(action, message = "") {
+  if (getPlayerName() && !message) {
+    action();
+    return;
+  }
+  pendingPlayerNameAction = action;
+  nameInput.value = getPlayerName();
+  openRoomEntryModal(playerNameModal, nameInput, playerNameError);
+  if (message) {
+    showRoomEntryError(nameInput, playerNameError, message);
+  }
+}
+
+function showRoomEntryError(input, error, message) {
+  error.textContent = message;
+  error.classList.remove("hidden");
+  input.setAttribute("aria-invalid", "true");
+  input.focus();
+}
+
 function markPendingSeatClaim(roomId, sourceRoomId) {
   pendingSeatClaimRoomId = roomId || null;
   pendingSeatClaimSourceId = sourceRoomId || null;
@@ -476,6 +537,10 @@ function clearPendingSeatClaim(roomId) {
 
 function requestSeatClaim(roomId, sourceRoomId, openImmediately = true) {
   if (!roomId) {
+    return;
+  }
+  if (openImmediately && !getPlayerName()) {
+    requirePlayerName(() => requestSeatClaim(roomId, sourceRoomId, openImmediately));
     return;
   }
   markPendingSeatClaim(roomId, sourceRoomId);
@@ -863,11 +928,8 @@ function updateGameListCount(count) {
 function createRoomForGame(gameId, config = null) {
   const name = getPlayerName();
   if (!name) {
-    log("Name required");
     closeCreateRoomModal();
-    if (nameInput) {
-      nameInput.focus();
-    }
+    requirePlayerName(() => createRoomForGame(gameId, config));
     return;
   }
   closeCreateRoomModal();
@@ -1245,15 +1307,9 @@ function renderSeatList(payload) {
     }
     claimButton.disabled = disabled;
     claimButton.addEventListener("click", () => {
-      const name = getPlayerName();
-      if (!name) {
-        log("Name required");
-        if (nameInput) {
-          nameInput.focus();
-        }
-        return;
-      }
-      socket.emit("room:claim_seat", { room_id: payload.room_id, seat: seat.seat, name });
+      requirePlayerName(() => {
+        socket.emit("room:claim_seat", { room_id: payload.room_id, seat: seat.seat, name: getPlayerName() });
+      });
     });
     actions.appendChild(claimButton);
 
@@ -1270,11 +1326,14 @@ function renderSeatList(payload) {
 }
 
 function performLogout() {
+  pendingJoinRequest = null;
   if (roomId) {
     socket.emit("room:leave", { room_id: roomId });
   }
   closeLoadModal();
   closeSeatClaimModal();
+  closeRoomEntryModal(joinRoomModal);
+  closeRoomEntryModal(playerNameModal);
   clearAllRoomAuth();
   clearStoredName();
   playerId = null;
@@ -1319,7 +1378,7 @@ function setConnectionInfo(message) {
 }
 
 function getPlayerName() {
-  return (nameInput ? nameInput.value : "").trim();
+  return playerName;
 }
 
 function setCreateGameRowVisible(visible) {
@@ -1555,8 +1614,12 @@ function getRoomSummary(roomId) {
 
 function attemptJoinRoom(rid, options = {}) {
   const name = getPlayerName();
-  if (!name || !rid) {
-    log("Name and room ID required");
+  if (!rid) {
+    log("Room ID required");
+    return;
+  }
+  if (!name) {
+    requirePlayerName(() => attemptJoinRoom(rid, options));
     return;
   }
   const summary = getRoomSummary(rid);
@@ -1574,6 +1637,7 @@ function attemptJoinRoom(rid, options = {}) {
     pendingReadyRoomId = null;
   }
   markPendingSeatClaim(rid, null);
+  pendingJoinRequest = { rid, options };
   socket.emit("room:join", { name, room_id: rid });
 }
 
@@ -1592,10 +1656,7 @@ function attemptReconnect(rid, auth) {
 function startCreateRoomFlow() {
   const name = getPlayerName();
   if (!name) {
-    log("Name required");
-    if (nameInput) {
-      nameInput.focus();
-    }
+    requirePlayerName(startCreateRoomFlow);
     return;
   }
   if (createRoomModal) {
@@ -1657,8 +1718,6 @@ function renderRoomList(rooms) {
 
     const actions = document.createElement("div");
     actions.className = "room-item-actions";
-    const joinActions = document.createElement("div");
-    joinActions.className = "room-item-join-actions";
     const auth = getRoomAuth(room.room_id);
     const isLoaded = Boolean(room.source_room_id);
     const canReconnect = auth && auth.player_id && auth.reconnect_token;
@@ -1679,35 +1738,37 @@ function renderRoomList(rooms) {
         attemptJoinRoom(room.room_id);
       }
     });
-    joinActions.appendChild(joinBtn);
+    actions.appendChild(joinBtn);
 
     if (!isLoaded) {
       const joinReadyBtn = document.createElement("button");
       joinReadyBtn.type = "button";
       joinReadyBtn.textContent = "Join Ready";
+      joinReadyBtn.title = "Join room and mark ready";
       joinReadyBtn.disabled = joinDisabled;
       joinReadyBtn.addEventListener("click", () => {
         attemptJoinRoom(room.room_id, { readyAfterJoin: true });
       });
-      joinActions.appendChild(joinReadyBtn);
+      actions.appendChild(joinReadyBtn);
     }
 
     if (canReconnect) {
       const reconnectBtn = document.createElement("button");
       reconnectBtn.type = "button";
-      reconnectBtn.textContent = "Reconnect";
+      reconnectBtn.className = "room-reconnect-btn";
+      reconnectBtn.textContent = "🔄";
+      reconnectBtn.setAttribute("aria-label", "Reconnect to room");
+      reconnectBtn.title = "Reconnect to room";
       reconnectBtn.addEventListener("click", () => {
         attemptReconnect(room.room_id, auth);
       });
-      joinActions.appendChild(reconnectBtn);
+      actions.appendChild(reconnectBtn);
     }
-
-    actions.appendChild(joinActions);
 
     const deleteBtn = document.createElement("button");
     deleteBtn.type = "button";
     deleteBtn.className = "room-delete-btn";
-    deleteBtn.innerHTML = "&#128465;";
+    deleteBtn.textContent = "🗑️";
     deleteBtn.setAttribute("aria-label", "Delete room");
     deleteBtn.title = "Delete room";
     deleteBtn.addEventListener("click", () => {
@@ -2032,7 +2093,8 @@ socket.on("system:info", (data) => {
     playerId = data.player_id;
   }
   if (data.reconnect_token && data.room_id && data.player_id) {
-    const nameValue = data.name || (nameInput ? nameInput.value.trim() : "");
+    pendingJoinRequest = null;
+    const nameValue = data.name || getPlayerName();
     setRoomAuth(data.room_id, {
       player_id: data.player_id,
       reconnect_token: data.reconnect_token,
@@ -2046,6 +2108,20 @@ socket.on("system:info", (data) => {
 });
 
 socket.on("system:error", (data) => {
+  const joinRequest = pendingJoinRequest;
+  pendingJoinRequest = null;
+  if (joinRequest && ["name already in use", "player offline (use reconnect)"].includes(data.message)) {
+    const auth = getRoomAuth(joinRequest.rid);
+    if (data.message === "player offline (use reconnect)" && auth && auth.player_id && auth.reconnect_token) {
+      attemptReconnect(joinRequest.rid, auth);
+    } else {
+      requirePlayerName(
+        () => attemptJoinRoom(joinRequest.rid, joinRequest.options),
+        "That name is already taken in this room. Choose another name.",
+      );
+    }
+  }
+  setConnectionInfo(`Error: ${data.message}`);
   log(`Error: ${data.message}`);
   if (currentGameType === "ark_nova" && typeof window.showArkNovaError === "function") {
     window.showArkNovaError(data.message);
@@ -2132,6 +2208,16 @@ socket.on("room:delete_result", (data) => {
   }
 });
 
+socket.on("room:cleanup_empty_result", (data) => {
+  cleanupEmptyRoomsBtn.disabled = false;
+  const count = data && data.deleted_count;
+  const message = data && data.ok
+    ? (count ? `Cleared ${count} empty room${count === 1 ? "" : "s"}.` : "No empty rooms to clear.")
+    : ((data && data.message) || "Could not clear empty rooms.");
+  setConnectionInfo(message);
+  log(message);
+});
+
 socket.on("game:state", (data) => {
   lastGameStatePayload = data;
   renderGameState(data);
@@ -2155,13 +2241,47 @@ socket.on("game:bot_progress", (data) => {
 
 // UI actions
 
-hydrateNameInput();
+playerName = loadStoredName().trim();
+updateRoomControlsName();
 updateGameReconnectButton();
-if (nameInput) {
-  nameInput.addEventListener("input", () => {
-    saveStoredName(nameInput.value);
+
+playerNameForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const name = nameInput.value.trim();
+  if (!name) {
+    showRoomEntryError(nameInput, playerNameError, "Enter your name to continue.");
+    return;
+  }
+  const action = pendingPlayerNameAction;
+  saveStoredName(name);
+  closeRoomEntryModal(playerNameModal);
+  if (action) {
+    action();
+  }
+});
+
+joinRoomForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const rid = roomIdInput.value.trim().toLowerCase();
+  if (!rid) {
+    showRoomEntryError(roomIdInput, joinRoomError, "Enter a room ID to continue.");
+    return;
+  }
+  closeRoomEntryModal(joinRoomModal);
+  attemptJoinRoom(rid);
+});
+
+[
+  [joinRoomModal, "joinRoomCancelBtn"],
+  [playerNameModal, "playerNameCancelBtn"],
+].forEach(([modal, cancelId]) => {
+  document.getElementById(cancelId).addEventListener("click", () => closeRoomEntryModal(modal));
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) {
+      closeRoomEntryModal(modal);
+    }
   });
-}
+});
 
 if (logoutBtn) {
   logoutBtn.addEventListener("click", () => {
@@ -2192,22 +2312,28 @@ if (gameSelect) {
     if (!gameType) {
       return;
     }
-    const name = getPlayerName();
-    if (!name) {
-      log("Name required");
-      createRoomPending = false;
-      setCreateGameRowVisible(false);
-      return;
-    }
     createRoomPending = false;
     setCreateGameRowVisible(false);
-    socket.emit("room:create", { name, game_type: gameType });
+    createRoomForGame(gameType);
   });
 }
 
 document.getElementById("joinBtn").addEventListener("click", () => {
-  const rid = document.getElementById("roomIdInput").value.trim();
-  attemptJoinRoom(rid);
+  openRoomEntryModal(joinRoomModal, roomIdInput, joinRoomError);
+});
+
+cleanupEmptyRoomsBtn.addEventListener("click", () => {
+  if (!socket.connected) {
+    setConnectionInfo("Connect to the server before clearing rooms.");
+    return;
+  }
+  cleanupEmptyRoomsBtn.disabled = true;
+  socket.emit("room:cleanup_empty", {});
+});
+
+socket.on("disconnect", () => {
+  pendingJoinRequest = null;
+  cleanupEmptyRoomsBtn.disabled = false;
 });
 
 if (refreshRoomsBtn) {
@@ -2345,6 +2471,26 @@ if (reopenConfirmModal) {
 }
 
 document.addEventListener("keydown", (event) => {
+  const entryModal = [playerNameModal, joinRoomModal].find((modal) => !modal.classList.contains("hidden"));
+  if (entryModal) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      closeRoomEntryModal(entryModal);
+    } else if (event.key === "Tab") {
+      const controls = entryModal.querySelectorAll("input, button");
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+    return;
+  }
   if (event.key !== "Escape") {
     return;
   }

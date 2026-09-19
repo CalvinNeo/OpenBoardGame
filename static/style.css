@@ -4681,6 +4681,103 @@ h1 {
   padding-top: 12px;
 }
 
+#roomControlsPanel > .panel-header {
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+
+.room-controls-heading {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#roomControlsPanel .panel-header-actions {
+  flex-shrink: 0;
+  gap: 6px;
+}
+
+#connectionPanel .room-entry-actions {
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+}
+
+#connectionPanel .room-entry-actions button {
+  width: auto;
+  max-width: 100%;
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 13px;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+#connectionInfo {
+  min-width: 0;
+  margin-bottom: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+#connectionInfo:empty {
+  display: none;
+}
+
+#roomControlsPanel .room-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 32px;
+  width: 32px;
+  min-height: 32px;
+  padding: 4px;
+  border: 1px solid #dbe1e8;
+  border-radius: 6px;
+  background: #f8fafc;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+#connectionPanel .room-entry-actions button:hover:not(:disabled),
+#roomControlsPanel .room-icon-btn:hover:not(:disabled) {
+  border-color: #94a3b8;
+  background: #eef2f6;
+}
+
+#roomPanel .room-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3px 12px;
+  margin-bottom: 6px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #475569;
+}
+
+#roomPanel .room-summary > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+#roomPanel .room-summary > div:nth-child(n + 3) {
+  grid-column: 1 / -1;
+}
+
+#roomPanel .room-summary span {
+  color: #1e293b;
+  font-weight: 600;
+}
+
 .room-controls.compact.collapsed {
   padding: 8px 12px;
 }
@@ -5944,8 +6041,14 @@ input, select {
   padding: 2px 0;
 }
 
+#playersList .player-row > :first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 #playersList .player-controls {
   display: flex;
+  flex-shrink: 0;
   gap: 4px;
 }
 
@@ -7972,8 +8075,26 @@ body.log-open {
 .room-item-header {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  gap: 8px;
   font-weight: 600;
   margin-bottom: 4px;
+}
+
+.room-item-header > div,
+.room-item-meta {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.room-item-header > .room-pill {
+  flex-shrink: 0;
+}
+
+.room-item-players .room-pill {
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .room-item-meta {
@@ -7992,22 +8113,38 @@ body.log-open {
 
 .room-item-actions {
   display: flex;
+  align-items: center;
   gap: 6px;
+  min-width: 0;
   margin-top: 6px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
-.room-item-join-actions {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.room-delete-btn {
-  margin-left: auto;
-  padding: 2px 6px;
+.room-item-actions button {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  min-height: 32px;
+  padding: 6px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background: #f8fafc;
+  color: #334155;
   font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.room-item-actions .room-reconnect-btn,
+.room-item-actions .room-delete-btn {
+  flex: 0 0 32px;
+  width: 32px;
+  padding: 4px;
+  font-size: 16px;
   line-height: 1;
+}
+
+.room-item-actions .room-delete-btn {
   background: #fee2e2;
   border-color: #fecaca;
   color: #7f1d1d;
@@ -8076,6 +8213,75 @@ body.log-open {
 .modal-body {
   padding: 12px 16px;
   overflow-y: auto;
+}
+
+.modal-content.room-entry-modal {
+  max-width: 360px;
+}
+
+.room-entry-modal .modal-header {
+  gap: 12px;
+}
+
+.room-entry-modal .modal-header h2 {
+  min-width: 0;
+  font-size: 20px;
+  overflow-wrap: anywhere;
+}
+
+.room-entry-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+.room-entry-form label {
+  font-size: 14px;
+  color: #334155;
+}
+
+.room-entry-form input {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 9px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 16px;
+}
+
+.room-entry-modal-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.room-entry-modal-actions button {
+  min-width: 0;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.room-entry-modal-actions button[type="submit"] {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #fff;
+}
+
+.room-entry-error {
+  margin: 0;
+  color: #b91c1c;
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .reopen-confirm-modal {
@@ -11913,6 +12119,10 @@ button.splendor-card {
     padding: 12px;
   }
 
+  .container > h1 {
+    display: none;
+  }
+
   .layout {
     flex-direction: column;
   }
@@ -11953,6 +12163,62 @@ button.splendor-card {
 
   .room-controls-title-short {
     display: inline;
+  }
+
+  #roomControlsPanel {
+    padding: 10px 12px;
+  }
+
+  #roomControlsPanel .room-controls-heading {
+    font-size: 20px;
+    line-height: 1.2;
+  }
+
+  #roomControlsPanel .room-controls-body {
+    gap: 10px;
+  }
+
+  #roomControlsPanel .room-controls-section + .room-controls-section {
+    padding-top: 8px;
+  }
+
+  #roomControlsPanel .panel-header {
+    margin-bottom: 6px;
+  }
+
+  #roomControlsPanel .room-controls-section > .panel-header {
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  #roomControlsPanel .room-controls-section > .panel-header h3 {
+    margin: 0;
+    font-size: 15px;
+  }
+
+  #roomControlsPanel .collapse-btn,
+  #roomControlsPanel .log-open-btn {
+    width: auto;
+    min-height: 0;
+    padding: 2px 6px;
+    font-size: 12px;
+    line-height: normal;
+    white-space: nowrap;
+  }
+
+  #roomControlsPanel #logoutBtn {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+
+  #roomControlsPanel .room-list {
+    gap: 6px;
+    max-height: 240px;
+    font-size: 13px;
+  }
+
+  #roomControlsPanel.compact.collapsed > .panel-header {
+    margin-bottom: 0;
   }
 
   #mobileExplainSlot:not(:empty) {
@@ -12196,26 +12462,6 @@ button.splendor-card {
 
   .target-slots {
     flex-wrap: wrap;
-  }
-
-  .room-item-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .room-item-actions button {
-    width: 100%;
-  }
-
-  .room-item-join-actions {
-    width: 100%;
-    flex-wrap: nowrap;
-  }
-
-  .room-item-join-actions button {
-    width: auto;
-    flex: 1 1 0;
-    min-width: 0;
   }
 
   .room-actions {

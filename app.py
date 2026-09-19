@@ -1896,6 +1896,19 @@ async def on_room_delete(sid, data):
     await _emit_room_list_update()
 
 
+@sio.on("room:cleanup_empty")
+async def on_room_cleanup_empty(sid, data=None):
+    room_ids = sorted(room.room_id for room in ROOMS.values() if not _room_blocking_players(room))
+    for room_id in room_ids:
+        ROOMS.pop(room_id, None)
+    await sio.emit(
+        "room:cleanup_empty_result",
+        {"ok": True, "deleted_count": len(room_ids), "room_ids": room_ids},
+        to=sid,
+    )
+    await _emit_room_list_update()
+
+
 @sio.on("game:action")
 async def on_game_action(sid, data):
     session = SESSIONS.get(sid)

@@ -42,6 +42,7 @@
     let explaining = false;
     let suppressClickUntil = 0;
     let dialogOrigin = null;
+    let pendingResultsFocus = false;
     const hints = window.createRebelHints({ panel, isExplaining: () => explaining, onExplain: showExplanation });
 
     const text = (id, value) => { get(id).textContent = value; };
@@ -51,7 +52,7 @@
     const name = (id) => (view?.players || []).find(p => p.player_id === id)?.name || "another player";
     const suitName = (suit) => suits[suit] ? `${suits[suit][0]} ${suits[suit][1]}` : "Any suit";
     const cardName = (card) => card ? (card.is_frog ? "🐸 Frog 8" : `${suitName(card.suit)} ${card.rank}`) : "🂠 Hidden card";
-    const isFinished = () => view?.game_over || view?.phase === "round_pause";
+    const isFinished = () => view?.game_over || ["round_pause", "game_over"].includes(view?.phase);
     function element(tag, className, content) {
         const node = document.createElement(tag);
         if (className) node.className = className;
@@ -329,28 +330,95 @@
             get("Players").append(row);
         }
     }
-    function renderSummary() {
+    function resultStandings() {
         const summary = view.last_round_summary;
-        visible("Summary", Boolean(summary) || isFinished());
-        if (!summary) return;
-        text("SummaryTitle", view.game_over ? "Final results" : `Round ${view.round} results`);
+        const rows = view.players.map(player => ({
+            player,
+            roundScore: summary?.round_scores?.[player.player_id] ?? player.round_score ?? 0,
+            total: summary?.total_scores?.[player.player_id] ?? player.score,
+            zeroRounds: player.zero_rounds || 0,
+        })).sort((a, b) => a.total - b.total || b.zeroRounds - a.zeroRounds);
+        rows.forEach((row, index) => {
+            const previous = rows[index - 1];
+            row.rank = previous && row.total === previous.total && row.zeroRounds === previous.zeroRounds ? previous.rank : index + 1;
+        });
+        return rows;
+    }
+    const signedScore = score => score > 0 ? `+${score}` : score < 0 ? `−${Math.abs(score)}` : "0";
+    function resultMetric(label, value, detail, explanation) {
+        const metric = tip(element("div", "rebel-result-metric"), explanation);
+        metric.append(element("span", "", label), element("strong", "", value), element("small", "", detail));
+        return metric;
+    }
+    function renderSummary() {
+        const finished = isFinished();
+        visible("Summary", finished);
+        visible("Guide", !finished);
+        panel.classList.toggle("rebel-show-results", Boolean(finished));
+        if (!finished) return;
+        const summary = view.last_round_summary;
+        const standings = resultStandings();
+        const round = summary?.round ?? view.round;
+        const bestRound = Math.min(...standings.map(row => row.roundScore));
+        const myResult = standings.find(row => row.player.player_id === view.you);
+        text("SummaryTitle", view.game_over ? "Final results" : `Round ${round} complete`);
+        visible("SummaryOutcome", Boolean(view.game_over && view.winners?.length));
+        text("SummaryOutcome", view.winners?.length ? `🏆 ${(view.winners || []).map(name).join(" & ")} ${view.winners.length === 1 ? "wins!" : "win!"}` : "");
+        const personal = get("SummaryPersonal");
+        personal.replaceChildren();
+        visible("SummaryPersonal", Boolean(myResult));
+        if (myResult) {
+            const { roundScore, total, rank } = myResult;
+            const tied = standings.filter(row => row.rank === rank).length > 1;
+            personal.append(
+                resultMetric("This round", signedScore(roundScore), "Proposals 💍", `Your proposals (💍) for round ${round}: ${roundScore}, including the round’s scoring rule.`),
+                resultMetric("Your total", String(total), `${total - roundScore} → ${total} 💍`, `Your total proposals (💍) changed from ${total - roundScore} to ${total}. Lower totals are better.`),
+                resultMetric(view.game_over ? "Final rank" : "Standing", `${tied ? "=" : "#"}${rank}`, `of ${standings.length} players`, `${tied ? "Tied at rank" : "Rank"} ${rank} of ${standings.length}. Players are ranked by lowest total proposals (💍), then most zero-proposal rounds.`),
+            );
+        }
+        text("StandingsTitle", view.game_over ? "Final standings" : "Overall standings");
         const body = get("SummaryBody");
         body.replaceChildren();
-        const header = element("div", "rebel-result-row rebel-result-head");
-        ["Player", "This round", "Total 💍"].forEach(value => header.append(element("span", "", value)));
+        const header = element("div", "rebel-result-head");
+        header.setAttribute("role", "row");
+        ["Rank", "Player", "Round 💍", "Total 💍"].forEach(value => {
+            const cell = element("span", "", value);
+            cell.setAttribute("role", "columnheader");
+            header.append(cell);
+        });
         body.append(header);
-        for (const player of view.players) {
-            const row = element("div", "rebel-result-row");
-            row.append(element("strong", "", `${player.name}${view.winners?.includes(player.player_id) ? " · Winner" : ""}`), badge(String(summary.round_scores?.[player.player_id] ?? 0), "Proposals (💍) gained this round, including the round rule."), badge(String(summary.total_scores?.[player.player_id] ?? player.score), "Total proposals (💍) across completed rounds. Lower is better."));
+        for (const result of standings) {
+            const { player, rank, roundScore, total, zeroRounds } = result;
+            const row = element("div", `rebel-result-row${player.player_id === view.you ? " you" : ""}`);
+            row.dataset.playerId = player.player_id;
+            row.setAttribute("role", "row");
+            const tied = standings.filter(other => other.rank === rank).length > 1;
+            const rankCell = tip(element("strong", "rebel-result-rank", `${tied ? "=" : ""}${rank}`), `Overall rank ${rank}${tied ? " (tied)" : ""}. Lowest total proposals (💍) ranks first; more zero-proposal rounds break a tie.`);
+            const identity = element("div", "rebel-result-player");
+            identity.append(element("strong", "", `${player.name}${player.player_id === view.you ? " · You" : ""}`));
+            if (view.game_over && view.winners?.includes(player.player_id)) identity.append(badge("🏆 Winner", "Winner (🏆): the lowest total proposals (💍), with zero-proposal rounds as the tiebreaker."));
+            if (summary && roundScore === bestRound) identity.append(tip(element("span", "rebel-round-best", "Round best"), `Fewest proposals (💍) this round: ${roundScore}. This is separate from the overall standings.`));
+            if (standings.some(other => other !== result && other.total === total)) identity.append(tip(element("small", "rebel-result-tiebreak", `${zeroRounds} zero rounds`), `Zero-proposal rounds: ${zeroRounds}. More zero-proposal rounds win a tie on total proposals (💍).`));
+            if (!view.game_over) identity.append(element("small", `rebel-result-ready${player.ready_next ? " is-ready" : ""}`, player.ready_next ? "✓ Ready" : "Reviewing"));
+            const roundCell = tip(element("strong", `rebel-round-points${roundScore <= 0 ? " is-good" : ""}`, signedScore(roundScore)), `Round ${round}: ${roundScore} proposals (💍), including its scoring rule.`);
+            const totalCell = tip(element("strong", "rebel-total-points", String(total)), `Total proposals (💍): ${total - roundScore} before this round, ${signedScore(roundScore)} this round, ${total} now.`);
+            [rankCell, identity, roundCell, totalCell].forEach(cell => { cell.setAttribute("role", "cell"); row.append(cell); });
             body.append(row);
         }
         const ready = view.players.filter(player => player.ready_next).length;
-        text("ReadyStatus", view.game_over ? "All 5 rounds are complete." : `${ready}/${view.players.length} players ready`);
+        text("ReadyStatus", view.game_over ? `${round} / 5 rounds complete` : me()?.ready_next ? `Waiting for ${view.players.length - ready} · ${ready}/${view.players.length} ready` : `${ready}/${view.players.length} players ready`);
         tip(get("ReadyStatus"), view.game_over ? "Game complete: compare total proposals (💍)." : `Ready: ${ready} of ${view.players.length} players have pressed Next Round. Results stay visible until everyone is ready.`);
         visible("NextRoundBtn", !view.game_over && Boolean(me()));
         get("NextRoundBtn").disabled = !actions().has("next_round_ready");
         text("NextRoundBtn", me()?.ready_next ? "Ready · Waiting" : "Next Round");
         explain(get("NextRoundBtn"), "Confirm that you have finished reading the results. The next round begins only when every player is ready.");
+    }
+    function focusResults() {
+        if (!pendingResultsFocus || !isFinished() || panel.querySelector("dialog[open]") || !get("Summary").getClientRects().length) return;
+        pendingResultsFocus = false;
+        setExplain(false);
+        get("Summary").focus({ preventScroll: true });
+        get("Summary").scrollIntoView({ block: "start", behavior: "instant" });
     }
     function updateActions() {
         if (!view) return;
@@ -427,6 +495,9 @@
     }
     function render(data) {
         const next = data.view || data;
+        const nextFinished = next.game_over || ["round_pause", "game_over"].includes(next.phase);
+        if (nextFinished && (!isFinished() || view?.round !== next.round || view?.game_over !== next.game_over)) pendingResultsFocus = true;
+        if (!nextFinished) pendingResultsFocus = false;
         const nextContext = JSON.stringify([next.round, next.phase, next.current_turn, next.tricks_played, next.you, next.current_trick?.map(entry => [entry.player_id, entry.card?.id])]);
         if (nextContext !== context) {
             selected = [];
@@ -450,6 +521,7 @@
         renderGuide(); renderTable(); renderChoices(); renderHand(); renderPrincess(); renderPlayers(); renderSummary();
         refreshSelection();
         get("Log").replaceChildren(...(view.log || []).slice(-30).map(line => element("div", "", line)));
+        if (pendingResultsFocus) requestAnimationFrame(focusResults);
     }
     function setExplain(active) {
         explaining = active;
@@ -479,7 +551,7 @@
             <h3>3 · Avoid penalty cards</h3><p>Queen (👑), Fairy (🪄) and Pet (🐾) normally score 0. Each Prince (🤴) scores 1. The special Frog (🐸), which is Pet 8, scores 5. These are penalty points; card ranks are separate.</p>
             <p>Princes (🤴) cannot lead while you have other suits until they have entered play. They enter when someone cannot follow suit and plays a Prince. An all-Prince hand may lead Princes.</p>
             <h3>4 · Read the round rule and your princess</h3><p>Each round’s rule can change scoring, passing or what wins a trick. Each princess has one ability per round. Your current rule and ability timing are listed below. Alice activates automatically. Enabled cards and controls show what you can do now.</p>
-            <h3>5 · Review together</h3><p>When the hands are empty, compare proposals from this round and your total. Every player must press <strong>Next Round</strong> to continue. After round 5, the lowest total wins. Ties favor more rounds with zero proposals.</p>
+            <h3>5 · Review together</h3><p>When the hands are empty, the results show your round proposals (💍), your total before and after scoring, and your overall rank. Positive round scores add proposals; negative scores remove them. <strong>Round best</strong> marks the fewest proposals in that round. Standings are sorted by the lowest total, then the most zero-proposal rounds; an equals sign (=) marks a shared rank. Every player must press <strong>Next Round</strong> to continue. Ready players have a check mark (✓). After round 5, the winner is marked with a trophy (🏆).</p>
             <h3>Using this screen</h3><p>Select cards, then use the action below your hand to confirm. Tap a selected card again or empty space around your hand to deselect. Dimmed cards cannot be selected now; their ⓘ explains why. The separate ⓘ controls explain cards without playing them. Hover or focus badges on desktop; tap them on a touch screen for a 3-second explanation. Use <strong>Explain</strong> to inspect actions, including disabled buttons. Close dialogs with Close or Esc.</p>`;
         if (view) {
             content.append(element("h3", "", "Current phase"), element("p", "", phaseGuidance().detail));
@@ -490,7 +562,7 @@
     }
     function closeDialogs() { panel.querySelectorAll("dialog[open]").forEach(dialog => dialog.close()); }
     function clear() {
-        view = null; selected = []; selectedSuit = null; context = "";
+        view = null; selected = []; selectedSuit = null; context = ""; pendingResultsFocus = false;
         setExplain(false); closeDialogs(); hints.hide();
     }
     get("SubmitBtn").addEventListener("click", primaryAction);
@@ -504,7 +576,7 @@
     panel.querySelectorAll("[data-rebel-close]").forEach(button => button.addEventListener("click", () => button.closest("dialog").close()));
     panel.querySelectorAll("dialog").forEach(dialog => {
         dialog.addEventListener("click", event => { if (event.target === dialog) { const r = dialog.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) dialog.close(); } });
-        dialog.addEventListener("close", () => { if (!panel.closest(".hidden")) dialogOrigin?.focus({ preventScroll: true }); });
+        dialog.addEventListener("close", () => { if (!panel.closest(".hidden")) dialogOrigin?.focus({ preventScroll: true }); if (pendingResultsFocus) requestAnimationFrame(focusResults); });
     });
     document.addEventListener("pointerdown", event => {
         suppressClickUntil = 0;

@@ -674,35 +674,168 @@
     text-align: center;
 }
 
-.rebel-result-row,
-.rebel-result-head {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) repeat(2, minmax(45px, auto));
-    align-items: center;
-    gap: 8px;
-    padding: 9px 5px;
-    border-bottom: 1px solid #eee5ef;
-    font-size: 0.82rem;
+.rebel-show-results .rebel-layout,
+.rebel-show-results .rebel-sidebar {
+    grid-template-columns: minmax(0, 1fr);
 }
 
-.rebel-result-head {
-    color: #8a7591;
+.rebel-show-results :is(.rebel-princess-section, .rebel-players-section, .rebel-goal-strip) {
+    display: none;
+}
+
+.rebel-show-results .rebel-round-banner {
+    margin-bottom: 12px;
+}
+
+.rebel-results {
+    border-color: #cbb4d1;
+    scroll-margin-top: 14px;
+}
+
+.rebel-results > .rebel-section-heading h3 {
+    color: #543560;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: clamp(1.25rem, 3vw, 1.65rem);
+}
+
+.rebel-result-outcome {
+    padding: 4px 0 14px;
+    color: #684674;
+    font-size: 1.12rem;
+    font-weight: 700;
+}
+
+.rebel-result-personal {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0 0 20px;
+}
+
+.rebel-result-metric {
+    display: grid;
+    align-content: start;
+    gap: 4px;
+    min-width: 0;
+    padding: 14px 10px;
+    border-radius: 10px;
+    background: #f4edf6;
+    text-align: center;
+}
+
+.rebel-result-metric > span {
+    color: #705679;
+    font-size: 0.77rem;
+}
+
+.rebel-result-metric > strong {
+    color: #563362;
+    font-size: clamp(1.4rem, 4.5vw, 2rem);
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+}
+
+.rebel-result-metric > small {
+    color: var(--rebel-muted);
     font-size: 0.7rem;
 }
 
-.rebel-result-row > :not(:first-child),
-.rebel-result-head > :not(:first-child) {
+.rebel-standings-title {
+    padding-bottom: 8px;
+}
+
+.rebel-result-row,
+.rebel-result-head {
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr) repeat(2, minmax(55px, 0.25fr));
+    align-items: center;
+    gap: 8px;
+    padding: 12px 8px;
+    border-bottom: 1px solid #eee5ef;
+    font-size: 0.86rem;
+}
+
+.rebel-result-row > *,
+.rebel-result-head > * {
+    min-width: 0;
+}
+
+.rebel-result-head {
+    padding-top: 4px;
+    color: #806c87;
+    font-size: 0.7rem;
+}
+
+.rebel-result-row > :nth-child(n + 3),
+.rebel-result-head > :nth-child(n + 3) {
     text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.rebel-result-rank,
+.rebel-result-head > :first-child {
+    text-align: center;
+}
+
+.rebel-result-rank {
+    color: #806c87;
 }
 
 .rebel-result-row.you {
-    color: #744a85;
-    background: #f8effb;
+    border-radius: 8px;
+    color: #684674;
+    background: #f5ecf8;
+    box-shadow: inset 3px 0 #a276ae;
+}
+
+.rebel-result-player {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 3px 7px;
+}
+
+.rebel-result-player > strong {
+    flex-basis: 100%;
+    min-width: 0;
+}
+
+.rebel-result-player > small,
+.rebel-round-best {
+    font-size: 0.7rem;
+}
+
+.rebel-round-best,
+.rebel-round-points.is-good,
+.rebel-result-ready.is-ready {
+    color: #37684c;
+}
+
+.rebel-result-tiebreak,
+.rebel-result-ready {
+    color: var(--rebel-muted);
+}
+
+.rebel-total-points {
+    font-size: 1.06rem;
+}
+
+.rebel-result-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+#rebelReadyStatus {
+    min-width: 0;
+    font-size: 0.78rem;
 }
 
 #rebelNextRoundBtn {
-    width: 100%;
-    margin-top: 10px;
+    flex: 0 0 auto;
+    min-width: 140px;
 }
 
 .rebel-explain-notice {
@@ -833,6 +966,41 @@
 }
 
 @media (max-width: 600px) {
+    .rebel-result-personal {
+        gap: 5px;
+        margin-bottom: 15px;
+    }
+
+    .rebel-result-metric {
+        padding: 12px 5px;
+    }
+
+    .rebel-result-metric > span,
+    .rebel-result-metric > small {
+        font-size: 0.69rem;
+    }
+
+    .rebel-result-row,
+    .rebel-result-head {
+        grid-template-columns: 25px minmax(0, 1fr) 48px 46px;
+        gap: 5px;
+        padding: 10px 5px;
+        font-size: 0.79rem;
+    }
+
+    .rebel-result-head {
+        font-size: 0.65rem;
+    }
+
+    .rebel-result-footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    #rebelNextRoundBtn {
+        width: 100%;
+    }
+
     .rebel-princess-panel {
         padding: 10px;
         border-radius: 12px;
