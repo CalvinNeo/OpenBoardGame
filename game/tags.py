@@ -89,6 +89,7 @@ GAME_TAG_IDS: Dict[str, Tuple[str, ...]] = {
     "perfect_mismatch": ("filler", "creative"),
     "point_salad": ("filler", "euro"),
     "poison": ("filler", "push_your_luck"),
+    "ponzi_scheme": ("euro", "bluffing"),
     "project_l": ("euro", "abstract"),
     "ra": ("euro", "auction"),
     "rebel_princess": ("trick_taking",),

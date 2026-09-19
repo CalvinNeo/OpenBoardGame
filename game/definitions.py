@@ -49,6 +49,8 @@ from game.patchwork import PatchworkGame
 from game.perfect_mismatch import PerfectMismatchGame
 from game.point_salad import PointSaladGame
 from game.poison import PoisonGame
+from game.ponzi_scheme import PonziSchemeGame
+from game.ponzi_scheme_data import ACTION_SCHEMA as PONZI_SCHEME_ACTION_SCHEMA, CONFIG_SCHEMA as PONZI_SCHEME_CONFIG_SCHEMA
 from game.project_l import ProjectLGame
 from game.ra import RaGame
 from game.rebel_princess import RebelPrincessGame
@@ -81,6 +83,22 @@ from game.turing_machine import TuringMachineGame
 from game.tucano import TucanoGame
 from game.witchs_brew import WitchsBrewGame
 from game.wriggle_roulette import WriggleRouletteGame
+
+register_game(
+    GameDefinition(
+        game_id=PonziSchemeGame.game_id,
+        name="Ponzi Scheme",
+        name_zh="庞氏骗局",
+        min_players=PonziSchemeGame.min_players,
+        max_players=PonziSchemeGame.max_players,
+        turn_mode="turn",
+        action_schema=PONZI_SCHEME_ACTION_SCHEMA,
+        config_schema=PONZI_SCHEME_CONFIG_SCHEMA,
+        module=PonziSchemeGame,
+        serialize=PonziSchemeGame.serialize,
+        deserialize=PonziSchemeGame.deserialize,
+    )
+)
 
 register_game(
     GameDefinition(
@@ -3480,6 +3498,7 @@ ARK_NOVA_ACTION_SCHEMA = {
             "properties": {
                 "type": {"const": "cards"},
                 "choose_effect_order": {"type": "boolean"},
+                "choose_card_sources": {"type": "boolean"},
                 "mode": {"type": "string", "enum": ["draw", "snap"]},
                 "x_tokens": {"type": "integer", "minimum": 0, "maximum": 5},
                 "use_multiplier_tokens": {"type": "integer", "minimum": 0, "maximum": 8},
@@ -3645,6 +3664,12 @@ ARK_NOVA_ACTION_SCHEMA = {
                 "use_multiplier_tokens": {"type": "integer", "minimum": 0, "maximum": 8},
             },
             "required": ["type", "action_card"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {"type": {"const": "skip_extra_action"}},
+            "required": ["type"],
             "additionalProperties": False,
         },
         {

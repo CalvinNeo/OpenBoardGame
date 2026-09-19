@@ -1,5 +1,9 @@
 # Guandan AI Notes
 
+2026-09-19: a paired, source-snapshot benchmark is now available in
+`scripts/benchmark_guandan.py`. See [usage and evaluation limits](guandan_benchmark.md)
+and the [source audit / improvement plan](guandan_ai_review.md) (Chinese).
+
 ## Current Bot Modes
 
 Guandan currently supports three bot modes in Room config:
@@ -283,7 +287,8 @@ The current NN is useful as an experimental path, but it has several clear limit
 - The value target is still coarse.
 - The model input is not yet rich enough to represent card structure naturally.
 - The NN is not yet deeply integrated with MCTS.
-- There is not yet a stable benchmark suite for comparing versions.
+- Source-snapshot paired evaluation is now available; a held-out tactical corpus
+  and a multi-opponent checkpoint league remain future work.
 
 
 ## Recommended Next Steps

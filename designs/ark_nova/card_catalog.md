@@ -62,7 +62,7 @@
 | `snapping_1` | 捕捉1 / Snapping 1 | immediate | take_display_card | 从展示区任选1张牌加入手牌，忽略声望范围；回合结束时补展示区。 | — |
 | `snapping_2` | 捕捉2 / Snapping 2 | immediate | take_display_card_twice | 依次从展示区任选1张牌两次；可选择在两次之间补牌。 | — |
 | `constriction` | 缠绕 / Constriction | immediate | opponent_action_debuff | 每名至少有5吸引力的玩家，每有一条计分轨领先你便获得1枚缠绕，放到其最高且未放缠绕的行动牌上；该牌本次强度-2。 | 结算顺序可放在本动物印刷吸引力之前或之后。；同一行动牌不能有两枚缠绕；双倍行动的每个子行动都减2。；缠绕牌到槽位1/2时可能变成-1/0，须用足够X标记升到至少1，或改做获得X标记的替代行动。；行动结算后移除该标记；休息时移除所有剩余标记。 |
-| `hypnosis` | 催眠 / Hypnosis | after_action | borrow_opponent_action | 完成动物行动后，选择吸引力最高且至少为5的玩家槽位1、2或3的一张行动牌，按该玩家的升级面执行并把该牌移到槽位1。 | 可用自己的X标记；目标牌上的毒液/缠绕生效。；不能使用双倍标记。；独特建筑能否覆盖个人板的建造II格，仍看自己的建造牌是否升级。；若目标是自己则无效。 |
+| `hypnosis` | 催眠 / Hypnosis | immediate | borrow_opponent_action | 选择吸引力最高且至少为5的玩家槽位1、2或3的一张行动牌，立即按该玩家的升级面执行并把该牌移到槽位1，然后继续结算当前动物卡。 | 可在结算本动物的吸引力之前或之后执行。；可用自己的X标记；目标牌上的毒液/缠绕生效。；不能使用双倍标记。；独特建筑能否覆盖个人板的建造II格，仍看自己的建造牌是否升级。；若目标是自己则无效。 |
 | `scavenging` | 食腐 / Scavenging | immediate | draw_from_discard | 将弃牌堆面朝下洗匀，随机抽N张，保留1张并弃掉其余。 | — |
 | `posturing` | 姿态 / Posturing | immediate | free_build | 最多N次免费放置1个贩售亭或休憩亭，仍遵守通常放置规则。 | — |
 | `perception_2` | 洞察力2 / Perception 2 | immediate | draw_and_keep | 从牌库抽2张，保留1张并弃1张。 | — |
@@ -149,7 +149,7 @@
 | 472 | 岩巨蜥<br>ROCK MONITOR | 12 | standard:2 / reptile_house:1；rock≥1 | 无 | reptile×1、africa×1 | appeal +5 | 日光浴[immediate] |
 | 473 | 彩虹飞蜥<br>COMMON AGAMA | 9 | standard:1 / reptile_house:0 | 无 | reptile×1、africa×1 | appeal +3 | 日光浴[immediate] |
 | 474 | 印度蟒<br>INDIAN ROCK PYTHON | 14 | standard:2 / reptile_house:1 | reptile≥2 | reptile×1、asia×1 | appeal +7 | 缠绕[immediate] |
-| 475 | 印度眼镜蛇<br>KING COBRA | 13 | standard:2 / reptile_house:1 | science≥2、animals II | reptile×1、asia×1 | appeal +6 | 催眠[after_action] |
+| 475 | 印度眼镜蛇<br>KING COBRA | 13 | standard:2 / reptile_house:1 | science≥2、animals II | reptile×1、asia×1 | appeal +6 | 催眠[immediate] |
 | 476 | 科莫多巨蜥<br>KOMODO DRAGON | 14 | standard:3 / reptile_house:2 | asia≥2 | reptile×1、asia×1 | appeal +2 | 标志性动物[immediate] |
 | 477 | 高冠变色龙<br>VEILED CHAMELEON | 14 | standard:1 / reptile_house:0 | 无 | reptile×1、asia×1 | appeal +4 | 捕捉1[immediate] |
 | 478 | 长鬣蜥<br>CHINESE WATER DRAGON | 8 | standard:1 / reptile_house:0；water≥1 | 无 | reptile×1、asia×1 | appeal +3 | 日光浴[immediate] |
@@ -159,7 +159,7 @@
 | 482 | 亚马逊森蚺<br>ANACONDA | 13 | standard:2 / reptile_house:1；water≥1, rock≥1 | partner_zoo≥1 | reptile×1、americas×1 | appeal +6 | 缠绕[immediate] |
 | 483 | 红尾蚺<br>BOA CONSTRICTOR | 16 | standard:2 / reptile_house:1 | science≥2 | reptile×1、americas×1 | appeal +7 | 缠绕[immediate] |
 | 484 | 欧洲泽龟<br>EUROPEAN POND TURTLE | 9 | standard:1 / reptile_house:1；water≥1 | 无 | reptile×1、europe×1 | appeal +4 | — |
-| 485 | 极北蝰<br>COMMON EUROPEAN ADDER | 10 | standard:1 / reptile_house:0 | partner_zoo≥1 | reptile×1、europe×1 | appeal +2 | 催眠[after_action] |
+| 485 | 极北蝰<br>COMMON EUROPEAN ADDER | 10 | standard:1 / reptile_house:0 | partner_zoo≥1 | reptile×1、europe×1 | appeal +2 | 催眠[immediate] |
 | 486 | 普通壁蜥<br>COMMON WALL LIZARD | 4 | standard:1 / reptile_house:0；rock≥1 | 无 | reptile×1、europe×1 | appeal +2 | — |
 | 487 | 领纹蛇<br>EUROPEAN GRASS SNAKE | 8 | standard:1 / reptile_house:0；water≥1 | 无 | reptile×1、europe×1 | appeal +3 | 机灵[after_action] |
 | 488 | 蛇蜥<br>SLOW WORM | 4 | standard:1 / reptile_house:0；water≥1 | 无 | reptile×1、europe×1 | appeal +2 | — |
@@ -352,6 +352,8 @@
 
 | 卡牌 | 字段 | 采用值 | 说明 |
 |---|---|---|---|
+| 475 | `abilities.hypnosis` | `"immediate"` | 官方术语表允许在本动物吸引力前后选择催眠；修正规则摘要误写的行动后时机。 |
+| 485 | `abilities.hypnosis` | `"immediate"` | 官方术语表允许在本动物吸引力前后选择催眠；修正规则摘要误写的行动后时机。 |
 | 001 | `scoring_steps` | `[1,2,4,5]` | 使用原始基础版门槛；不采用《海洋世界》替换卡的1/2/3/4。 |
 | 003 | `scoring_steps` | `[3,4,5,6]` | 使用原始基础版门槛；不采用《海洋世界》替换卡的3/4/5/7。 |
 | 005 | `scoring_steps` | `[3,4,5,6]` | 使用原始基础版门槛；不采用《海洋世界》替换卡的2/3/4/5。 |

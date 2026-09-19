@@ -631,6 +631,7 @@ function renderGameTypeFilters(games) {
 }
 
 const GAME_WEIGHT = {
+  ponzi_scheme: 2.44,
   abraca_what: 1.64,
   age_of_war: 1.15,
   aidixit: 1.1924453280318092,
@@ -1787,6 +1788,7 @@ function resetRoomState() {
   }
   if (typeof clearTakeTimeState === "function") clearTakeTimeState();
   if (typeof clearEternalDecksState === "function") clearEternalDecksState();
+  if (typeof clearPonziSchemeState === "function") clearPonziSchemeState();
   if (typeof clearBombBustersState === "function") {
     clearBombBustersState();
   }
@@ -1876,6 +1878,7 @@ function resetRoomState() {
   updateBombBustersConfigRow();
   if (typeof updateTakeTimeConfigRow === "function") updateTakeTimeConfigRow();
   if (typeof updateEternalDecksConfigRow === "function") updateEternalDecksConfigRow();
+  if (typeof updatePonziSchemeConfigRow === "function") updatePonziSchemeConfigRow();
   updateHanabiConfigRow();
   updateTexasHoldemConfigRow();
   updateMismatchConfigRow();

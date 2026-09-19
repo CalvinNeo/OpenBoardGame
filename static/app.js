@@ -85,6 +85,8 @@ const wanderingTowersPanel = document.getElementById("wanderingTowersPanel");
 const skyePanel = document.getElementById("skyePanel");
 
 function setGamePanelVisibility(gameType) {
+  document.getElementById("ponziSchemePanel").classList.toggle("hidden", gameType !== "ponzi_scheme");
+  if (typeof showPonziSchemeHeaderActions === "function") showPonziSchemeHeaderActions(gameType === "ponzi_scheme");
   document.getElementById("eternalDecksPanel").classList.toggle("hidden", gameType !== "eternal_decks");
   if (typeof showEternalDecksHeaderActions === "function") showEternalDecksHeaderActions(gameType === "eternal_decks");
   const showTakeTime = gameType === "take_time";
@@ -762,6 +764,10 @@ function renderGameState(data) {
   }
   if (gameType === "eternal_decks") {
     renderEternalDecksGameState(data);
+    return;
+  }
+  if (gameType === "ponzi_scheme") {
+    renderPonziSchemeGameState(data);
     return;
   }
   if (gameType === "felix") {

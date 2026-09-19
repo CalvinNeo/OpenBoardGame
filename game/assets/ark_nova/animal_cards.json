@@ -5365,17 +5365,17 @@
       {
         "ability": "hypnosis",
         "name_zh": "催眠",
-        "timing": "after_action",
+        "timing": "immediate",
         "cascade": "borrow_opponent_action",
         "parameters": {},
-        "text_zh": "催眠：在当前行动完成后，你可以从具有最高 {Appeal} 玩家的 {Slot-1} 、 {Slot-2} 或 {Slot-3} 槽位中，选择执行1张行动卡牌 {ActionCard} 上的行动。如果是你自己，则无效。"
+        "text_zh": "催眠：你可以从具有最高且至少为5 {Appeal} 玩家的 {Slot-1} 、 {Slot-2} 或 {Slot-3} 槽位中，立即执行1张行动卡牌 {ActionCard} 上的行动，然后继续结算本动物。可以在获得本动物的吸引力之前或之后执行。如果是你自己，则无效。"
       }
     ],
     "raw": {
       "habitat_zh": "尺寸2，标准围栏:爬虫馆(1)",
       "conditions_zh": "科研×2、动物行动II",
       "icons_zh": "爬行类、亚洲",
-      "effect_zh": "催眠：在当前行动完成后，你可以从具有最高 {Appeal} 玩家的 {Slot-1} 、 {Slot-2} 或 {Slot-3} 槽位中，选择执行1张行动卡牌 {ActionCard} 上的行动。如果是你自己，则无效。"
+      "effect_zh": "催眠：你可以从具有最高且至少为5 {Appeal} 玩家的 {Slot-1} 、 {Slot-2} 或 {Slot-3} 槽位中，立即执行1张行动卡牌 {ActionCard} 上的行动，然后继续结算本动物。可以在获得本动物的吸引力之前或之后执行。如果是你自己，则无效。"
     },
     "source_line": 110
   },
@@ -6098,17 +6098,17 @@
       {
         "ability": "hypnosis",
         "name_zh": "催眠",
-        "timing": "after_action",
+        "timing": "immediate",
         "cascade": "borrow_opponent_action",
         "parameters": {},
-        "text_zh": "催眠：在当前行动完成后，你可以从具有最高 {Appeal} 玩家的 {Slot-1} 、 {Slot-2} 或 {Slot-3} 槽位中，选择执行1张行动卡牌 {ActionCard} 上的行动。如果是你自己，则无效。"
+        "text_zh": "催眠：你可以从具有最高且至少为5 {Appeal} 玩家的 {Slot-1} 、 {Slot-2} 或 {Slot-3} 槽位中，立即执行1张行动卡牌 {ActionCard} 上的行动，然后继续结算本动物。可以在获得本动物的吸引力之前或之后执行。如果是你自己，则无效。"
       }
     ],
     "raw": {
       "habitat_zh": "尺寸1，标准围栏:爬虫馆(0)",
       "conditions_zh": "合作动物园",
       "icons_zh": "爬行类、欧洲",
-      "effect_zh": "催眠：在当前行动完成后，你可以从具有最高 {Appeal} 玩家的 {Slot-1} 、 {Slot-2} 或 {Slot-3} 槽位中，选择执行1张行动卡牌 {ActionCard} 上的行动。如果是你自己，则无效。"
+      "effect_zh": "催眠：你可以从具有最高且至少为5 {Appeal} 玩家的 {Slot-1} 、 {Slot-2} 或 {Slot-3} 槽位中，立即执行1张行动卡牌 {ActionCard} 上的行动，然后继续结算本动物。可以在获得本动物的吸引力之前或之后执行。如果是你自己，则无效。"
     },
     "source_line": 120
   },

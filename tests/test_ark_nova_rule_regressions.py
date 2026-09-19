@@ -295,15 +295,14 @@ class ArkNovaRuleRegressions(unittest.TestCase):
         _, _, error = rules._enclosure_for_animal(self.player, rules.ANIMAL_CARDS['419'], larger['id'])
         self.assertEqual(error, 'standard enclosure is occupied')
 
-    def test_release_can_remove_special_tokens_instead_of_a_standard_tile(self):
+    def test_release_must_remove_special_tokens_before_emptying_a_standard_tile(self):
         standard = self.building(3)
         special = self.building(5, 'reptile_house')
         self.zoo_animal('490', standard)
         self.zoo_animal('481', special)
         before_capacity = special['used_capacity']
         rules._remove_released_animal(self.state, 'p1', '490', [])
-        self.assertEqual(self.state['pending_choice']['type'], 'release_enclosure')
-        self.choose(special['id'])
+        self.assertIsNone(self.state['pending_choice'])
         buildings = {b['id']: b for b in self.player['map']['buildings']}
         self.assertTrue(rules._building_occupied(buildings[standard['id']]))
         self.assertEqual(buildings[special['id']]['used_capacity'], before_capacity - 2)
@@ -511,7 +510,7 @@ class ArkNovaRuleRegressions(unittest.TestCase):
         self.assertEqual(self.player['animal_records'][-1]['capacity_used'], 0)
         self.assertEqual(self.player['map']['buildings'], [])
 
-    def test_okapi_can_use_a_newly_drawn_sponsor_and_places_its_building_first(self):
+    def test_okapi_can_use_a_newly_drawn_sponsor_and_order_its_building(self):
         self.hand('201')
         self.player['money'] = 30
         self.player['action_cards']['sponsors']['upgraded'] = True
@@ -528,6 +527,9 @@ class ArkNovaRuleRegressions(unittest.TestCase):
         self.assertEqual(self.state['pending_choice']['type'], 'okapi_sponsor')
         self.assertIn('252', [item['value'] for item in self.state['pending_choice']['options']])
         self.choose('252')
+        self.assertEqual(self.state['pending_choice']['type'], 'effect_order')
+        refs = self.state['pending_choice']['_effects']
+        self.choose(next(i for i, ref in enumerate(refs) if ref.get('operation') == 'unique_building'))
         self.assertEqual(self.state['pending_choice']['type'], 'place_unique_building')
         unique = rules.SPONSOR_CARDS['252']['unique_building']
         cells = rules._find_placement(self.state, 'p1', unique['id'], unique['footprint']['cell_count'], unique)
@@ -535,3 +537,313 @@ class ArkNovaRuleRegressions(unittest.TestCase):
         self.finish_choices()
         self.assertEqual(self.player['card_tokens']['253'], 0)
         self.assertTrue(any(building.get('unique_card_id') == '252' for building in self.player['map']['buildings']))
+
+    def test_determination_gain_x_releases_the_next_players_turn(self):
+        building = self.building(4)
+        self.hand('505')
+        self.player['money'] = 100
+        self.player['action_cards']['animals']['upgraded'] = True
+        self.animal_action([{'card_id': '505', 'enclosure_id': building['id']}])
+        self.choose('gain_x')
+        before = self.player['x_tokens']
+        self.act({'type': 'gain_x', 'action_card': 'cards'})
+        self.assertEqual(self.player['x_tokens'], before + 1)
+        self.assertEqual(self.player['action_cards']['cards']['slot'], 1)
+        self.assertNotIn('forced_action', self.state)
+        self.assertEqual(self.state['current_player'], 'p2')
+        self.act({'type': 'sponsors', 'mode': 'break'}, 'p2')
+
+    def test_impossible_optional_action_can_be_declined_without_moving_a_card(self):
+        building = self.building(2)
+        self.hand('409')
+        self.player['money'] = 100
+        self.player['partner_zoos'] = ['asia']
+        rules._recompute_tags(self.player)
+        self.player['available_workers'] = 0
+        self.animal_action([{'card_id': '409', 'enclosure_id': building['id']}])
+        self.choose('association')
+        cards = copy.deepcopy(self.player['action_cards'])
+        self.assertIn('skip_extra_action', rules.ArkNovaGame.get_legal_actions(self.state, 'p1'))
+        _, error = rules.ArkNovaGame.apply_action(self.state, 'p1', {'type': 'gain_x', 'action_card': 'association'})
+        self.assertIsNotNone(error)
+        self.assertEqual(choose_ark_nova_action(self.state, 'p1'), {'type': 'skip_extra_action'})
+        self.act({'type': 'skip_extra_action'})
+        self.assertEqual(self.player['action_cards'], cards)
+        self.assertEqual(self.state['current_player'], 'p2')
+        _, error = rules.ArkNovaGame.apply_action(self.state, 'p2', {'type': 'skip_extra_action'})
+        self.assertIsNotNone(error)
+
+    def test_multiplier_cannot_be_skipped_like_an_optional_extra(self):
+        self.state['forced_action'] = {'player_id': 'p1', 'action': 'cards', 'from_multiplier': True}
+        self.assertNotIn('skip_extra_action', rules.ArkNovaGame.get_legal_actions(self.state, 'p1'))
+        _, error = rules.ArkNovaGame.apply_action(self.state, 'p1', {'type': 'skip_extra_action'})
+        self.assertIsNotNone(error)
+
+    def test_old_determination_lock_is_cleared_for_the_next_player(self):
+        self.state['current_player'] = 'p2'
+        self.state['forced_action'] = {'player_id': 'p1', 'action': 'gain_x'}
+        self.act({'type': 'sponsors', 'mode': 'break'}, 'p2')
+        self.assertNotIn('forced_action', self.state)
+
+    def test_unused_base_project_is_playable_from_hand_above_the_board(self):
+        project_id = next(cid for cid in self.state['unused_base_projects'] if rules.PROJECT_CARDS[cid]['metric'] == 'reptile')
+        self.hand(project_id)
+        self.player['played_animals'] = ['473', '485']
+        rules._recompute_tags(self.player)
+        self.helper.set_slot(self.state, 'p1', 'association', 5)
+        view = rules.ArkNovaGame.get_public_view(self.state, 'p1')
+        options = view['supportable_projects']
+        self.assertTrue(any(card['id'] == project_id and card['source'] == 'hand' for card in options))
+        self.act({'type': 'association', 'tasks': [{'task': 'support_project', 'project_id': project_id, 'slot': 3}]})
+        self.finish_choices()
+        self.assertIn(project_id, self.state['dynamic_projects'])
+        self.assertNotIn(project_id, self.player['hand'])
+        self.assertFalse(rules._project_public_view(self.state, project_id, 'p1')['is_base_project'])
+
+    def test_wild_tokens_cannot_support_a_base_card_played_above_the_board(self):
+        self.hand('109')
+        if '109' in self.state['projects']:
+            self.state['projects'].remove('109')
+        self.player['played_animals'] = ['473']
+        rules._recompute_tags(self.player)
+        self.player['active_effects']['215'] = {'modifier': 'base_project_wild_icon', 'card_id': '215'}
+        self.player['card_tokens']['215'] = 2
+        self.helper.set_slot(self.state, 'p1', 'association', 5)
+        before = copy.deepcopy(self.state)
+        _, error = rules.ArkNovaGame.apply_action(self.state, 'p1', {
+            'type': 'association', 'tasks': [{'task': 'support_project', 'project_id': '109',
+                                             'slot': 3, 'wild_token_card_id': '215'}]})
+        self.assertIn('original base projects', error)
+        self.assertEqual(self.state, before)
+
+    def test_africa_expert_clever_waits_until_the_animals_card_moves(self):
+        building = self.building(1)
+        self.hand('473')
+        self.player['money'] = 100
+        self.player['played_sponsors'] = ['214']
+        rules._recompute_tags(self.player)
+        self.animal_action([{'card_id': '473', 'enclosure_id': building['id']}])
+        self.choose([])  # Decline Sunbathing.
+        self.assertEqual(self.state['pending_choice']['type'], 'move_action_card')
+        self.assertEqual(self.player['action_cards']['animals']['slot'], 1)
+        self.choose('sponsors:1')
+        self.assertEqual(self.player['action_cards']['animals']['slot'], 2)
+        self.assertEqual(self.player['action_cards']['sponsors']['slot'], 1)
+
+    def test_africa_partner_zoo_clever_also_waits_until_association_moves(self):
+        self.player['played_sponsors'] = ['214']
+        self.helper.set_slot(self.state, 'p1', 'association', 5)
+        self.act({'type': 'association', 'tasks': [{'task': 'partner_zoo', 'continent': 'africa'}]})
+        self.assertEqual(self.state['pending_choice']['type'], 'move_action_card')
+        self.assertEqual(self.player['action_cards']['association']['slot'], 1)
+        self.choose('sponsors:1')
+        self.assertEqual(self.player['action_cards']['association']['slot'], 2)
+
+    def test_zero_token_reptile_release_does_not_empty_a_standard_enclosure(self):
+        standard = self.building(1)
+        self.building(5, 'reptile_house')
+        self.zoo_animal('473', standard)
+        rules._remove_released_animal(self.state, 'p1', '473', [])
+        self.assertTrue(rules._building_occupied(standard))
+        self.assertIsNone(self.state['pending_choice'])
+
+    def test_release_uses_standard_enclosure_if_special_tokens_are_insufficient(self):
+        standard = self.building(3)
+        special = self.building(5, 'reptile_house')
+        self.zoo_animal('490', standard)
+        special['used_capacity'] = 1
+        rules._remove_released_animal(self.state, 'p1', '490', [])
+        self.assertFalse(rules._building_occupied(standard))
+        self.assertEqual(special['used_capacity'], 1)
+
+    def test_display_refills_only_after_the_entire_extra_action_turn(self):
+        first = self.building(5)
+        second = self.building(4)
+        self.hand('441', '505')
+        self.player['money'] = 100
+        self.player['partner_zoos'] = ['asia']
+        self.player['action_cards']['animals']['upgraded'] = True
+        rules._recompute_tags(self.player)
+        self.state['display'] = ['201', '419', '220', '415', '241', '420']
+        self.animal_action([{'card_id': '441', 'enclosure_id': first['id']},
+                            {'card_id': '505', 'enclosure_id': second['id']}])
+        gaps = list(self.state['display'])
+        self.assertIn(None, gaps)
+        self.choose('cards')
+        self.assertEqual(self.state['display'], gaps)
+        self.act({'type': 'cards'})
+        self.finish_choices()
+        self.assertEqual(self.state['current_player'], 'p2')
+        self.assertNotIn(None, self.state['display'])
+
+    def test_zoo_school_can_gain_reputation_before_placing_and_drawing(self):
+        self.hand('254')
+        self.player['reputation'] = 3
+        self.helper.set_slot(self.state, 'p1', 'sponsors', 5)
+        self.act({'type': 'sponsors', 'card_ids': ['254'], 'choose_effect_order': True})
+        self.assertEqual(self.state['pending_choice']['type'], 'effect_order')
+        refs = self.state['pending_choice']['_effects']
+        self.choose(next(i for i, ref in enumerate(refs) if ref.get('rewards', {}).get('reputation')))
+        refs = self.state['pending_choice']['_effects']
+        self.choose(next(i for i, ref in enumerate(refs) if ref.get('operation') == 'unique_building'))
+        unique = rules.SPONSOR_CARDS['254']['unique_building']
+        cells = rules._find_placement(self.state, 'p1', unique['id'], unique['footprint']['cell_count'], unique)
+        self.choose({'cells': cells})
+        self.assertEqual(self.player['reputation'], 4)
+        self.assertEqual(self.state['pending_choice']['type'], 'take_card')
+        self.assertEqual(sum(item['value'].startswith('display:') for item in self.state['pending_choice']['options']), 3)
+        self.finish_choices()
+        self.assertFalse(self.state['pending_unique_buildings'])
+
+    def test_other_builds_cannot_cover_a_pending_unique_building_placement(self):
+        unique = rules.SPONSOR_CARDS['254']['unique_building']
+        cells = rules._find_placement(self.state, 'p1', unique['id'], unique['footprint']['cell_count'], unique)
+        rules._reserve_unique_building(self.state, 'p1', rules.SPONSOR_CARDS['254'], {'cells': cells})
+        cell = next(cell for cell in cells if rules.MAP_CELLS[cell]['border'])
+        error = rules._validate_building_placement(self.state, 'p1', {'building_type': 'pavilion', 'cells': [cell]}, free=True)
+        self.assertIn('pending unique building', error)
+        self.assertIsNotNone(rules._find_placement(self.state, 'p1', unique['id'], len(cells), unique))
+
+    def test_pending_unique_building_keeps_its_last_legal_placement(self):
+        unique = rules.SPONSOR_CARDS['254']['unique_building']
+        cells = rules._find_placement(self.state, 'p1', unique['id'], unique['footprint']['cell_count'], unique)
+        occupied = [cell for cell, definition in rules.MAP_CELLS.items() if definition['buildable'] and cell not in cells]
+        self.player['map']['occupancy'] = {cell: 'existing' for cell in occupied}
+        self.player['map']['buildings'] = [{'id': 'existing', 'building_type': 'standard_enclosure', 'cells': occupied}]
+        rules._reserve_unique_building(self.state, 'p1', rules.SPONSOR_CARDS['254'])
+        self.assertIsNotNone(rules._find_placement(self.state, 'p1', unique['id'], len(cells), unique))
+        self.assertIsNone(rules._find_placement(self.state, 'p1', 'pavilion', 1))
+
+    def start_hypnosis_before_appeal(self, **action_options):
+        building = self.building(1)
+        self.hand('485')
+        self.player['money'] = 100
+        self.player['partner_zoos'] = ['europe']
+        rules._recompute_tags(self.player)
+        self.player['appeal'] = 5
+        self.state['players']['p2']['appeal'] = 6
+        self.animal_action([{'card_id': '485', 'enclosure_id': building['id']}],
+                           choose_effect_order=True, **action_options)
+        refs = self.state['pending_choice']['_effects']
+        self.choose(next(i for i, ref in enumerate(refs) if ref.get('ability_id') == 'hypnosis'))
+        self.assertEqual(self.player['appeal'], 5)
+        self.assertEqual(self.state['pending_choice']['type'], 'resolve_attack')
+        self.choose('appeal:p2')
+
+    def test_hypnosis_executes_a_borrowed_action_before_animal_rewards(self):
+        self.helper.set_slot(self.state, 'p2', 'sponsors', 3)
+        self.state['players']['p2']['action_cards']['sponsors']['upgraded'] = True
+        self.start_hypnosis_before_appeal()
+        self.choose('sponsors')
+        self.assertEqual(self.player['appeal'], 5)
+        self.assertEqual(self.player['action_cards']['animals']['slot'], 5)
+        before = self.player['money']
+        self.act({'type': 'sponsors', 'mode': 'break'})
+        self.assertEqual(self.player['money'], before + 6)
+        self.assertEqual(self.player['appeal'], 7)
+        self.assertEqual(self.state['players']['p2']['action_cards']['sponsors']['slot'], 1)
+        self.assertEqual(self.player['action_cards']['animals']['slot'], 1)
+        self.assertNotIn('suspended_actions', self.state)
+        self.assertNotIn('_action_level_overrides', self.player)
+        self.assertEqual(self.state['current_player'], 'p2')
+
+    def test_declining_borrowed_action_resumes_the_animal_rewards(self):
+        self.helper.set_slot(self.state, 'p2', 'association', 3)
+        self.player['available_workers'] = 0
+        self.start_hypnosis_before_appeal()
+        self.choose('association')
+        before = copy.deepcopy(self.state['players']['p2']['action_cards'])
+        self.act({'type': 'skip_extra_action'})
+        self.assertEqual(self.player['appeal'], 7)
+        self.assertEqual(self.state['players']['p2']['action_cards'], before)
+        self.assertEqual(self.state['current_player'], 'p2')
+
+    def test_borrowed_cards_ii_finishes_its_choices_before_resuming_animals(self):
+        self.helper.set_slot(self.state, 'p2', 'cards', 3)
+        self.state['players']['p2']['action_cards']['cards']['upgraded'] = True
+        self.start_hypnosis_before_appeal()
+        self.choose('cards')
+        self.act({'type': 'cards'})
+        self.assertEqual(self.state['pending_choice']['type'], 'draw_card')
+        self.assertEqual(self.player['appeal'], 5)
+        self.choose('deck')
+        self.assertEqual(self.state['pending_choice']['type'], 'draw_card')
+        self.assertEqual(self.player['appeal'], 5)
+        self.choose('deck')
+        self.assertEqual(self.player['appeal'], 7)
+        self.assertEqual(self.state['players']['p2']['action_cards']['cards']['slot'], 1)
+        self.assertFalse(self.player['action_cards']['cards']['upgraded'])
+        self.assertEqual(self.state['current_player'], 'p2')
+
+    def test_hypnosis_can_be_ordered_after_appeal_and_then_have_no_target(self):
+        building = self.building(1)
+        self.hand('485')
+        self.player['money'] = 100
+        self.player['partner_zoos'] = ['europe']
+        rules._recompute_tags(self.player)
+        self.player['appeal'] = 5
+        self.state['players']['p2']['appeal'] = 6
+        self.animal_action([{'card_id': '485', 'enclosure_id': building['id']}], choose_effect_order=True)
+        refs = self.state['pending_choice']['_effects']
+        self.choose(next(i for i, ref in enumerate(refs) if ref.get('rewards', {}).get('appeal')))
+        self.assertEqual(self.player['appeal'], 7)
+        self.assertIsNone(self.state['pending_choice'])
+        self.assertEqual(self.state['current_player'], 'p2')
+
+    def test_hypnosis_preserves_the_outer_multiplier_repeat(self):
+        self.helper.set_slot(self.state, 'p2', 'sponsors', 3)
+        self.player['action_cards']['animals']['multiplier_tokens'] = 1
+        self.building(1)
+        self.start_hypnosis_before_appeal(use_multiplier_tokens=1)
+        # The second Animals action will have a legal animal and enclosure.
+        self.helper.add_hand_card(self.state, 'p1', '473')
+        self.choose('sponsors')
+        self.act({'type': 'sponsors', 'mode': 'break'})
+        self.assertTrue(self.state['forced_action']['from_multiplier'])
+        self.assertEqual(self.player['action_cards']['animals']['slot'], 5)
+        empty = next(b for b in self.player['map']['buildings'] if not rules._building_occupied(b))
+        self.act({'type': 'animals', 'plays': [{'card_id': '473', 'enclosure_id': empty['id']}]})
+        self.finish_choices()
+        self.assertEqual(self.player['action_cards']['animals']['slot'], 1)
+        self.assertNotIn('multiplier_action', self.state)
+
+    def test_discarded_final_cards_go_to_bottom_of_the_final_deck(self):
+        self.player['conservation'] = 9
+        self.player['milestones_resolved'] = [2, 5, 8]
+        original = list(self.state['final_deck'])
+        rules._apply_rewards(self.state, 'p1', {'conservation': 1}, [], 'test')
+        discarded = []
+        while self.state['pending_choice']:
+            owner = self.state['pending_choice']['player_id']
+            card_id = self.state['players'][owner]['final_cards'][0]
+            discarded.append(card_id)
+            self.choose(card_id)
+        self.assertEqual(self.state['final_deck'], list(reversed(discarded)) + original)
+        self.assertEqual(len(discarded), 2)
+
+    def test_cards_ii_can_mix_sources_after_seeing_each_draw(self):
+        self.hand()
+        self.player['reputation'] = 4
+        self.player['action_cards']['cards']['upgraded'] = True
+        self.helper.set_slot(self.state, 'p1', 'cards', 5)
+        self.state['deck'] = ['419', '415', '420', '201']
+        self.state['display'] = ['473', '485', '409', '441', '505', '214']
+        self.act({'type': 'cards', 'choose_card_sources': True})
+        self.assertEqual(self.player['hand'], [])
+        self.assertEqual(self.player['action_cards']['cards']['slot'], 5)
+        self.choose('display:473')
+        self.assertEqual(self.player['hand'], ['473'])
+        self.choose('deck')
+        self.assertEqual(self.player['hand'], ['473', '201'])
+        self.choose('deck')
+        self.assertEqual(self.player['hand'], ['473', '201', '420'])
+        self.assertNotIn('display:441', [option['value'] for option in self.state['pending_choice']['options']])
+        self.choose('display:409')
+        self.assertEqual(self.state['pending_choice']['type'], 'discard_cards')
+        self.assertEqual(self.player['hand'], ['473', '201', '420', '409'])
+        self.assertEqual(self.state['display'], [None, '485', None, '441', '505', '214'])
+        self.assertEqual(self.player['action_cards']['cards']['slot'], 5)
+        self.choose('201')
+        self.assertEqual(self.player['action_cards']['cards']['slot'], 1)
+        self.assertEqual(self.state['current_player'], 'p2')
+        self.assertNotIn(None, self.state['display'])

@@ -139,7 +139,7 @@
     action_card: "Choose one Action card. Its slot plus committed X-tokens determines the action strength. After the action, it moves to slot 1.",
     x_tokens: "Spend any number of your available X-tokens before an action for +1 strength each. Some action tables stop improving above strength 5, but Build, Association, and Sponsors can use higher totals.",
     multiplier_tokens: "Choose how many multiplier tokens on this Action card to spend. Each one repeats the complete action once; unused tokens remain on the card.",
-    cards_draw: "Use the Cards action to draw from the deck. The number drawn and discarded depends on action strength and upgrade side.",
+    cards_draw: "Draw according to action strength and upgrade side. With Cards II, choose deck or an accessible display card one at a time, looking at each drawn card before deciding the next source.",
     cards_snap: "Snap takes one card from any display folder. It is only available at the strengths printed on your Cards action.",
     build_type: "Choose the printed building piece, then select one anchor hex on Map 0. Its fixed footprint appears automatically.",
     rotate_footprint: "Rotate the fixed building piece clockwise around its selected anchor. Every orientation can be previewed; an invalid one is rejected only when you confirm it.",
@@ -151,6 +151,7 @@
     association_task: "Queue a different Association task. Their total strength may not exceed the action strength; repeated tasks can require extra workers.",
     donation: "After at least one task with upgraded Association, pay the next visible donation amount for 1 conservation point.",
     gain_x: "Take 1 X-token instead of performing the selected Action card, then move that Action card to slot 1.",
+    skip_extra_action: "Decline this optional extra action and continue the turn. No action card moves and no tokens are spent.",
     confirm_action: "Submit the current action plan. Disabled controls can still be inspected while Explain mode is active.",
     card_info: "Open the complete text, requirements, rewards, icons, and abilities available for this card.",
     pending_choice: "Resolve the highlighted effect before continuing. The permitted number of selections is shown above the options.",
@@ -206,7 +207,7 @@
         </div>
         <p class="arkn-help-notation"><strong>Reading numbers:</strong> <b>+2</b> means gain 2; <b>×2</b> means two matching icons or spaces; <b>≥2</b> is a minimum track value; a number without + on a cost or requirement is what you must pay or meet; <b>or</b> means either enclosure option is legal.</p>
       </section>
-      <section><h4>🗂️ Cards</h4><p>Advance Break, then draw cards. At sufficient strength you can Snap one card from any display folder.</p></section>
+      <section><h4>🗂️ Cards</h4><p>Advance Break, then draw cards. Cards II lets you choose the deck or an accessible display card separately for every draw, looking at each card before choosing again. Discard only after all draws; display gaps remain until the whole turn ends. At sufficient strength you can Snap one card from any display folder.</p></section>
       <section><h4>🔨 Build</h4><p>Buildings cost 2 money per hex. Choose an anchor hex to place the selected fixed piece, then rotate it if needed. The first touches an edge; later buildings touch your zoo. Water, rock, occupied spaces, kiosk distance, and Build II spaces restrict placement.</p></section>
       <section><h4>🐾 Animals</h4><p>Play one card and fully resolve its effects before choosing the next card. New cards, money, and icons gained can be used later in this action. Choose the order of simultaneous effects; after finishing effects resolve after the Action card moves. Finish ends the action when no further card is wanted.</p></section>
       <section><h4>🤝 Association</h4><p>Use active workers for reputation, partner zoos, universities, and conservation projects. Upgraded Association can combine different tasks and donate once.</p></section>
@@ -1135,7 +1136,8 @@
     if (!container) return;
     const cards = arkNovaDisplay(view);
     const selectedAction = arkNovaUi.selectedAction;
-    const selectable = arkNovaIsMyTurn(view) && !view.pending_choice && ["cards", "animals", "sponsors", "association"].includes(selectedAction);
+    const selectable = arkNovaIsMyTurn(view) && !view.pending_choice
+      && (["animals", "sponsors", "association"].includes(selectedAction) || (selectedAction === "cards" && arkNovaUi.actionMode === "snap"));
     container.innerHTML = cards.length ? cards.map((card, index) => arkNovaCardMarkup(card || { hidden: true }, { selectable, zone: "display", folder: index + 1 })).join("") : `<div class="arkn-empty">The display is empty.</div>`;
   }
 
@@ -1234,13 +1236,19 @@
   }
 
   function arkNovaActionUpgraded(actionId, view = arkNovaView) {
+    const forced = view && view.forced_action;
+    if (forced && forced.action === actionId && forced.action_level) return forced.action_level === 2;
     const card = arkNovaActionCards(arkNovaYou(view)).find((entry) => arkNovaActionId(entry) === actionId);
     return !!(card && (card.upgraded || card.level === 2 || card.side === "II"));
   }
 
   function arkNovaBaseStrength(view = arkNovaView) {
-    const card = arkNovaSelectedActionCard(view);
-    const printed = Math.max(1, Math.min(5, arkNovaNumber(card && (card.slot ?? card.position ?? card.strength), 1)));
+    const forced = view && view.forced_action;
+    const matches = forced && forced.action === arkNovaUi.selectedAction;
+    const owner = matches && forced.action_card_owner
+      ? arkNovaAsArray(view.players).find((player) => String(player.player_id || player.id) === String(forced.action_card_owner)) : null;
+    const card = owner ? arkNovaActionCards(owner).find((entry) => arkNovaActionId(entry) === arkNovaUi.selectedAction) : arkNovaSelectedActionCard(view);
+    const printed = Math.max(1, Math.min(5, arkNovaNumber(matches && forced.strength || card && (card.slot ?? card.position ?? card.strength), 1)));
     const constricted = arkNovaNumber(card && card.constriction_tokens) > 0;
     return printed - (constricted ? 2 : 0);
   }
@@ -1755,7 +1763,8 @@
       arkNovaMapCellType(cellId)?.buildRequirement === "build_action_upgraded"
       || arkNovaMapCellDefinition(cellId, view)?.build_requirement === "build_action_upgraded"
     ));
-    if (needsBuildTwo && !arkNovaActionUpgraded("build", view)) {
+    const ownBuild = arkNovaActionCards(arkNovaYou(view)).find((entry) => arkNovaActionId(entry) === "build");
+    if (needsBuildTwo && !(ownBuild && (ownBuild.upgraded || ownBuild.level === 2 || ownBuild.side === "II"))) {
       return `${needsBuildTwo} requires Build (II).`;
     }
 
@@ -2291,14 +2300,13 @@
 
   function arkNovaRenderCardsComposer(view) {
     const snapCard = arkNovaSelectedCardObjects("display")[0];
-    const selectedDisplay = arkNovaSelectedCardObjects("display");
     const upgraded = arkNovaActionUpgraded("cards", view);
     return `${arkNovaXControl(view)}${arkNovaMultiplierControl(view)}
       <div class="arkn-segmented" role="group" aria-label="Cards action mode">
         <button type="button" class="${arkNovaUi.actionMode === "draw" ? "is-active" : ""}" data-arkn-mode="draw" data-arkn-explain="cards_draw">Draw</button>
         <button type="button" class="${arkNovaUi.actionMode === "snap" ? "is-active" : ""}" data-arkn-mode="snap" data-arkn-explain="cards_snap">Snap display card</button>
       </div>
-      <div class="arkn-plan-summary">${arkNovaUi.actionMode === "snap" ? (snapCard ? `Snap <b>${arkNovaEscape(arkNovaCardName(snapCard))}</b>` : "Select one display card above.") : selectedDisplay.length ? `Take ${selectedDisplay.map((card) => `<b>${arkNovaEscape(arkNovaCardName(card))}</b>`).join(", ")} from reputation range; draw any remainder from the deck.` : upgraded ? "Optionally select cards in reputation range, or draw from the deck." : "Draw from the deck according to the final action strength."}</div>
+      <div class="arkn-plan-summary">${arkNovaUi.actionMode === "snap" ? (snapCard ? `Snap <b>${arkNovaEscape(arkNovaCardName(snapCard))}</b>` : "Select one display card above.") : upgraded ? "Choose each card's source after starting: deck or a display card in reputation range. See each drawn card before choosing the next." : "Draw from the deck according to the final action strength."}</div>
       ${arkNovaComposerFooter("cards", (arkNovaUi.actionMode !== "snap" || !!snapCard) && !arkNovaCardsPlanIssue(view))}`;
   }
 
@@ -2550,7 +2558,7 @@
   }
 
   function arkNovaWildProjectTokens(view, project) {
-    if (!project || project.project_type !== "base") return [];
+    if (!project || !project.is_base_project) return [];
     const you = arkNovaYou(view) || {};
     const tokens = you.card_tokens || {};
     const used = new Set(arkNovaAsArray(you.wild_project_uses).filter((entry) => (
@@ -2715,6 +2723,7 @@
     return `<div class="arkn-composer-footer">
       <button type="button" class="arkn-confirm" data-arkn-command="submit-action" data-arkn-explain="${explanation}" ${canSubmit ? "" : `disabled aria-describedby="${reasonId}" title="${arkNovaEscape(reason)}"`}>${arkNovaEscape(label || `Confirm ${action.name || arkNovaTitle(actionType)}`)}</button>
       <button type="button" class="arkn-gain-x" data-arkn-command="gain-x" data-arkn-explain="gain_x" ${gainX ? "" : "disabled"}>✕ Take X instead</button>
+      ${arkNovaCan("skip_extra_action") ? '<button type="button" data-arkn-command="skip-extra-action" data-arkn-explain="skip_extra_action">Skip extra action</button>' : ""}
       ${reason ? `<p id="${reasonId}" class="arkn-submit-reason" role="status"><span aria-hidden="true">ⓘ</span>${arkNovaEscape(reason)}</p>` : ""}
     </div>`;
   }
@@ -2756,7 +2765,7 @@
       return;
     }
     if (!arkNovaUi.selectedAction) {
-      container.innerHTML = `<div class="arkn-waiting"><span>⚡</span><strong>Choose an Action card</strong><p>Cards farther to the right are stronger. Select one above to plan the turn.</p></div>`;
+      container.innerHTML = `<div class="arkn-waiting"><span>⚡</span><strong>Choose an Action card</strong><p>Cards farther to the right are stronger. Select one above to plan the turn.</p>${arkNovaCan("skip_extra_action") ? '<button type="button" data-arkn-command="skip-extra-action" data-arkn-explain="skip_extra_action">Skip extra action</button>' : ""}</div>`;
       return;
     }
     const renderers = {
@@ -2767,6 +2776,11 @@
       sponsors: arkNovaRenderSponsorsComposer,
     };
     container.innerHTML = renderers[arkNovaUi.selectedAction] ? renderers[arkNovaUi.selectedAction](view) : `<div class="arkn-empty">This action is not available.</div>`;
+    if (view.forced_action && view.forced_action.hypnosis) {
+      const forced = view.forced_action;
+      const owner = arkNovaPlayers(view).find((player) => arkNovaPlayerId(player) === String(forced.action_card_owner));
+      container.insertAdjacentHTML("afterbegin", `<div class="arkn-plan-summary">Hypnosis: using ${arkNovaEscape(arkNovaPlayerName(owner || {}))}'s ${arkNovaEscape(ARK_NOVA_ACTIONS[forced.action]?.name || forced.action)}, side ${forced.action_level === 2 ? "II" : "I"}. Finish this action to continue resolving your animal.</div>`);
+    }
   }
 
   function arkNovaPendingOptionValue(option) {
@@ -2962,6 +2976,9 @@
     const key = arkNovaContextKey(view);
     if (arkNovaLastContextKey && key !== arkNovaLastContextKey) arkNovaResetDraft();
     arkNovaLastContextKey = key;
+    if (view.forced_action && view.forced_action.action !== "gain_x" && !view.pending_choice && arkNovaIsMyTurn(view)) {
+      arkNovaUi.selectedAction = view.forced_action.action;
+    }
     const players = arkNovaPlayers(view);
     const playerIds = new Set(players.map(arkNovaPlayerId));
     const youId = String(view.you ?? view.player_id ?? "");
@@ -3189,8 +3206,7 @@
         if (!card) return;
         action.display_card_id = arkNovaCardId(card);
       } else {
-        const selectedDisplay = arkNovaSelectedCardObjects("display");
-        if (selectedDisplay.length) action.market_card_ids = selectedDisplay.map(arkNovaCardId);
+        action.choose_card_sources = true;
       }
     } else if (type === "build") {
       if (!arkNovaUi.buildQueue.length) return;
@@ -3276,6 +3292,9 @@
         action_card: arkNovaUi.selectedAction,
         use_multiplier_tokens: arkNovaUi.multiplierTokens,
       });
+      return;
+    } else if (command === "skip-extra-action") {
+      if (arkNovaCan("skip_extra_action")) arkNovaSend({ type: "skip_extra_action" });
       return;
     } else if (command === "keep-cards") {
       if (arkNovaUi.selectedCards.size === 4 && arkNovaCan("keep_initial_cards")) arkNovaSend({ type: "keep_initial_cards", card_ids: [...arkNovaUi.selectedCards] });

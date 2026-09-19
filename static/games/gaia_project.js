@@ -18,13 +18,41 @@
   let mapZoom = 1;
   let mapCenter = null;
   let drag = null;
+  let hintPopup = null;
+  let hintTarget = null;
+  let hintMode = null;
+  let hintTimer = null;
+  let hintHideTimer = null;
+  let hintGesture = null;
+  let consumedHintTap = null;
   const icons = {credits: '💳', ore: '⛏️', knowledge: '🧠', qic: '🟩', vp: '⭐', power: '⚡', tokens: '🟣', charge: '⚡', token_iii: 'Ⅲ', gaiaformers: '🌱'};
-  const resourceNames = {credits: '信用点', ore: '矿石', knowledge: '知识', qic: 'QIC', vp: 'VP', power: '能量', tokens: '能量枚数', charge: '充能', token_iii: 'III 碗能量', gaiaformers: '改造器'};
+  const hintDefinitions = {
+    credits: ['信用点', '用于建造和升级建筑。最多储存 30；终局可计入剩余资源得分。'],
+    ore: ['矿石', '用于建造、升级和地形改造。最多储存 15。'],
+    knowledge: ['知识', '通常支付 4 知识推进一级研究。最多储存 15。'],
+    qic: ['QIC · 量子智能方块', '可延长一次行动的航程、使盖亚星适居，或支付公共 QIC 行动。'],
+    vp: ['胜利点 · VP', '星号旁的数字是分数。通过建设、研究和计分目标得分，终局总分最高者获胜。'],
+    power: ['能量费用', '支付能量行动或资源兑换的费用；从 III 碗消费，使用后回到 I 碗。'],
+    tokens: ['能量枚数', '表示实体能量的数量；获得新能量时放入 I 碗。它与充能次数不同。'],
+    charge: ['充能', '表示移动能量的次数：先 I → II，I 碗空后再 II → III。'],
+    token_iii: ['III 碗能量', '这里按实体能量枚数计算；内华拉人可将其移至盖亚区换取知识。'],
+    gaiaformers: ['盖亚改造器', '用于将紫色超维星转为盖亚星。状态栏数字表示当前可以派出的数量。'],
+    bowl_i: ['I 碗 · 待充能', '普通能量枚数。充能时先从这里移到 II 碗；不能直接消费。'],
+    bowl_ii: ['II 碗 · 充能中', '普通能量枚数。I 碗空后可充至 III 碗；也可燃烧两枚，将其中一枚升至 III。'],
+    bowl_iii: ['III 碗 · 可用能量', '普通能量枚数。可支付能量行动或资源兑换，使用后回到 I 碗；脑石另记。'],
+    gaia_bowl: ['盖亚区 · 暂存能量', '暂存于盖亚区的普通能量，当前不能消费；通常在下轮盖亚阶段返回能量碗。'],
+    brain: ['脑石', '塔克隆人的特殊能量。显示所在能量碗；按一枚移动，在 III 碗消费时值 3 能量。'],
+    green_federation: ['绿色联邦标记', '尚未使用的资格：翻至灰面可获取高级科技或进入研究第 5 级，每次分别消耗一枚。'],
+    gray_federation: ['灰色联邦标记', '不能再用于获取高级科技或进入研究第 5 级；仍计入联邦数量，可重算标记奖励。'],
+    objective: ['终局目标', '终局按此指标排名得分。两人局中的“中立”数字是参与排名的虚拟第三位玩家。'],
+    seat: ['玩家标记', '数字对应玩家席位，颜色对应母星；标记所在格表示该玩家的研究等级。'],
+  };
+  const resourceNames = Object.fromEntries(Object.entries(hintDefinitions).map(([key, value]) => [key, value[0]]));
   const metricNames = {mines: '矿场', labs: '研究所', trading: '交易站', big: '学院／大学', gaia: '盖亚星', federations: '联邦标记', types: '星球种类', sectors: '殖民星区'};
   const phaseNames = {faction: '选择种族', placement: '放置起始建筑', booster: '选择首轮推进器', income: '领取收入', gaia: '盖亚阶段', action: '行动阶段', round_end: '轮末回顾', game_over: '终局'};
   const mainLabels = {academy: '大学行动', bescods: '最低轨道研究', ambas: '交换行星学院', firaks: '降级研究所', ivits: '放置空间站', knowledge_3: '获得 3 知识', knowledge_2: '获得 2 知识', ore_2: '获得 2 矿石', credits_7: '获得 7 信用点', tokens_2: '获得 2 能量', tech: '获取科技', rescore: '重算联邦', diversity: '星球种类计分'};
   const explainText = {
-    map: '点击星球查看它的类型、建筑与当前可执行行动。高亮边框表示有合法行动。地图中的数字是玩家席位；⛏ 矿场、◆ 交易站、⚗ 研究所、♜ 学院、♛ 大学、⬡ 空间站。滚轮不会放大页面，使用 Zoom 按钮放大星图。',
+    map: '点击星球查看它的类型、建筑与当前可执行行动。高亮边框表示有合法行动。地图中的数字是玩家席位；⛏ 矿场、◆ 交易站、⚗ 研究所、♜ 学院、♛ 大学、⬡ 空间站。拖动平移星图，使用 Zoom 按钮缩放。手机在地图内滑动只平移星图，在地图外滑动可滚动页面。',
     research: '研究通常花费 4 知识。2→3 级额外充能 3。5 级需翻一枚绿色联邦标记，每条轨道仅一人可到达。经济／科学 5 级为一次奖励，不再提供 4 级收入。',
     technology: '研究所和大学升级、4 QIC 公共行动、伊塔盖亚能力可获得科技。高级科技需对应轨道 4 级、绿色联邦标记和未覆盖基础科技；获得高级科技与推进到 5 级分别消耗一枚绿色标记。',
     federation: '选择自己的建筑及连接它们的空白太空格。通常力量需达到 7（异星学院为 6），用尽量少的卫星连接；不能与已有联邦接触。每颗卫星弃一枚能量，蜂人改花 1 QIC 并扩张同一联邦。相邻建筑自动纳入。',
@@ -44,7 +72,9 @@
   const defs = () => view.definitions;
   const color = id => { const p = player(id); return p?.faction ? defs().planets[defs().factions[p.faction].home].color : '#98a9c7'; };
   const seat = id => view.players.findIndex(p => p.player_id === id) + 1;
-  const resources = data => Object.entries(data || {}).filter(([k, n]) => icons[k] && typeof n === 'number' && n).map(([k, n]) => `<span title="${esc(resourceNames[k] || k)}">${icons[k] || ''} ${esc(n)}</span>`).join(' ');
+  const hintAttributes = (key, label = '') => `data-gaia-hint-key="${key}" data-gaia-hint="${esc(hintDefinitions[key][1])}" data-gaia-hint-name="${esc(key === 'seat' && label ? label : hintDefinitions[key][0])}" aria-label="${esc(label || hintDefinitions[key][0])}" data-gaia-explain="${esc(hintDefinitions[key].join('：'))}"`;
+  const hint = (key, html, label = '', extraClass = '') => `<span class="gaia-hint-target ${extraClass}" ${hintAttributes(key, label)}>${html}</span>`;
+  const resources = data => Object.entries(data || {}).filter(([k, n]) => icons[k] && typeof n === 'number' && n).map(([k, n]) => hint(k, `${icons[k]} ${esc(n)}`, `${resourceNames[k]} ${n}`)).join(' ');
   const info = kind => `data-gaia-explain="${esc(explainText[kind] || kind)}"`;
   const button = (label, command, extra = '', explanation = '') => `<button type="button" data-gaia-command="${command}" ${extra} ${explanation ? info(explanation) : ''}>${label}</button>`;
   const activeOptions = () => view?.options || [];
@@ -54,9 +84,9 @@
     if (spec.income) parts.push('收入 ' + resources(spec.income));
     if (spec.immediate) parts.push('立即 ' + resources(spec.immediate));
     if (spec.special) parts.push(typeof spec.special === 'string' ? (spec.special === 'range' ? '行动：航程 +3 建矿／盖亚' : '行动：免费改造一步并建矿') : '每轮行动 ' + resources(spec.special));
-    if (spec.passing) parts.push(`放弃：每${metricNames[spec.passing[0]] || spec.passing[0]} +${spec.passing[1]} ⭐`);
-    if (spec.metric) parts.push(`立即：每${metricNames[spec.metric[0]] || spec.metric[0]} +${spec.metric[1]} ${icons[spec.metric[2]]}`);
-    if (spec.event) parts.push(`每次${({mine: '建矿', gaia: '盖亚建矿', research: '科研', trading: '升级交易站'})[spec.event[0]]} +${spec.event[1]} ⭐`);
+    if (spec.passing) parts.push(`放弃：每${metricNames[spec.passing[0]] || spec.passing[0]} +${resources({vp:spec.passing[1]})}`);
+    if (spec.metric) parts.push(`立即：每${metricNames[spec.metric[0]] || spec.metric[0]} +${resources({[spec.metric[2]]:spec.metric[1]})}`);
+    if (spec.event) parts.push(`每次${({mine: '建矿', gaia: '盖亚建矿', research: '科研', trading: '升级交易站'})[spec.event[0]]} +${resources({vp:spec.event[1]})}`);
     if (spec.effect) parts.push(esc(spec.effect));
     return parts.join(' · ');
   };
@@ -74,7 +104,79 @@
     const cost = resources(o.cost);
     return `<button type="button" class="gaia-option${selectedOption === index ? ' selected' : ''}" data-gaia-option="${index}" ${info(o.category)}><strong>${optionLabel(o)}</strong>${cost ? `<small>${cost}</small>` : ''}${(full || description) && description ? `<small>${description}</small>` : ''}</button>`;
   }
+  function hideHint() {
+    clearTimeout(hintTimer);
+    clearTimeout(hintHideTimer);
+    if (hintTarget) {
+      const ids = (hintTarget.getAttribute('aria-describedby') || '').split(' ').filter(id => id && id !== 'gaiaInlineHint');
+      if (ids.length) hintTarget.setAttribute('aria-describedby', ids.join(' '));
+      else hintTarget.removeAttribute('aria-describedby');
+    }
+    hintPopup?.remove();
+    hintPopup = null; hintTarget = null; hintMode = null;
+  }
+  function canShowHint() {
+    return view && !panel.classList.contains('hidden') && !explainMode && !modal && Date.now() >= suppressClickUntil;
+  }
+  function showHint(target, mode) {
+    if (!canShowHint()) return;
+    if (mode === 'tooltip' && hintTarget === target && hintMode === mode) {
+      clearTimeout(hintHideTimer);
+      return;
+    }
+    hideHint();
+    hintTarget = target; hintMode = mode;
+    hintPopup = document.createElement('div');
+    hintPopup.id = 'gaiaInlineHint';
+    hintPopup.className = `gaia-hint-popup gaia-hint-${mode}`;
+    hintPopup.setAttribute('role', mode === 'banner' ? 'status' : 'tooltip');
+    if (mode === 'banner') {
+      hintPopup.setAttribute('aria-live', 'polite');
+      hintPopup.setAttribute('aria-atomic', 'true');
+    }
+    const title = document.createElement('strong');
+    const description = document.createElement('span');
+    title.textContent = target.dataset.gaiaHintName;
+    description.textContent = target.dataset.gaiaHint;
+    hintPopup.append(title, description);
+    document.body.appendChild(hintPopup);
+    const ids = target.getAttribute('aria-describedby');
+    target.setAttribute('aria-describedby', `${ids ? ids + ' ' : ''}gaiaInlineHint`);
+    const anchor = target.getBoundingClientRect();
+    if (mode === 'banner') {
+      // Keep the tapped badge visible, including near the bottom of the screen.
+      if (anchor.bottom > innerHeight - hintPopup.offsetHeight - 24) hintPopup.classList.add('gaia-hint-banner-top');
+      hintTimer = setTimeout(hideHint, 3000);
+    } else {
+      const width = hintPopup.offsetWidth, height = hintPopup.offsetHeight;
+      const left = Math.max(12, Math.min(anchor.left + (anchor.width - width) / 2, innerWidth - width - 12));
+      const top = anchor.bottom + height + 20 <= innerHeight ? anchor.bottom + 8 : Math.max(12, anchor.top - height - 8);
+      hintPopup.style.left = `${left}px`;
+      hintPopup.style.top = `${top}px`;
+      hintPopup.addEventListener('pointerenter', () => clearTimeout(hintHideTimer));
+      hintPopup.addEventListener('pointerleave', scheduleHintHide);
+    }
+  }
+  function scheduleHintHide() {
+    clearTimeout(hintHideTimer);
+    hintHideTimer = setTimeout(() => {
+      if (hintMode === 'tooltip' && !hintPopup?.matches(':hover') && !hintTarget?.matches(':hover, :focus-visible')) hideHint();
+    }, 120);
+  }
+  function prepareHints() {
+    // Badges inside action buttons remain separate tap targets, not nested buttons.
+    panel.querySelectorAll('[data-gaia-hint]').forEach(target => {
+      if (!target.closest('button, [role="button"], a, label, summary')) {
+        target.tabIndex = 0;
+        target.setAttribute('role', 'button');
+      }
+    });
+  }
+  function renderPowerBowls(p) {
+    return `<div class="gaia-power-bowls">${['I','II','III'].map((name, i) => hint(['bowl_i','bowl_ii','bowl_iii'][i], `${name} <b>${p.power[i]}</b>`, `${name} 碗，${p.power[i]} 枚普通能量`)).join('')}${hint('gaia_bowl', `Gaia <b>${p.gaia_power}</b>`, `盖亚区，${p.gaia_power} 枚普通能量`, 'gaia-bowl')}${p.brain !== null ? hint('brain', `🪨 ${['I','II','III','Gaia'][p.brain]}`, `脑石位于 ${['I 碗','II 碗','III 碗','盖亚区'][p.brain]}`) : ''}${hint('gaiaformers', `🌱 ${p.gaiaformers}`, `可用盖亚改造器 ${p.gaiaformers}`)}</div>`;
+  }
   function setExplain(on) {
+    if (on) hideHint();
     explainMode = on;
     panel?.classList.toggle('gaia-explaining', on);
     explainButton?.setAttribute('aria-pressed', String(on));
@@ -84,6 +186,7 @@
     if (previousFocus?.isConnected) previousFocus.focus();
   }
   function openModal(title, html) {
+    hideHint();
     closeModal();
     previousFocus = document.activeElement;
     modal = document.createElement('div');
@@ -133,7 +236,7 @@
       const center = positions.find(p => p.h.id === `${sector}-9`);
       return `<text x="${center.x}" y="${center.y + 4}" class="gaia-sector">${esc(sector.replace('outlined', ''))}</text>`;
     }).join('');
-    return `<div class="gaia-map-tools">${button('−', 'zoom-out', 'aria-label="Zoom out"')}${button('Fit', 'fit')}${button('+', 'zoom-in', 'aria-label="Zoom in"')}<span>${federationMode ? '选择建筑与卫星连接格' : '点击星球 · 放大后可拖动'}</span></div><div class="gaia-map-wrap"><svg id="gaiaGalaxy" viewBox="${cx - w / 2} ${cy - h / 2} ${w} ${h}" aria-label="Gaia Project galaxy" role="group">${hexes}${sectors}</svg></div><div class="gaia-legend">${Object.entries(defs().planets).filter(([id]) => id !== 'lost').map(([, p]) => `<span><i style="background:${p.color}"></i>${esc(p.name)}</span>`).join('')}</div>`;
+    return `<div class="gaia-map-tools">${button('−', 'zoom-out', 'aria-label="Zoom out"')}${button('Fit', 'fit')}${button('+', 'zoom-in', 'aria-label="Zoom in"')}<span>${federationMode ? '选择建筑与卫星连接格' : '点击星球 · 拖动平移'}</span></div><div class="gaia-map-wrap"><svg id="gaiaGalaxy" viewBox="${cx - w / 2} ${cy - h / 2} ${w} ${h}" aria-label="Gaia Project galaxy" role="group">${hexes}${sectors}</svg></div><div class="gaia-legend">${Object.entries(defs().planets).filter(([id]) => id !== 'lost').map(([, p]) => `<span><i style="background:${p.color}"></i>${esc(p.name)}</span>`).join('')}</div>`;
   }
   function renderResearch() {
     const descriptions = {
@@ -144,10 +247,14 @@
       economy: ['—', '收入 2💳 1⚡', '收入 2💳 1⛏ 2⚡', '收入 3💳 1⛏ 3⚡', '收入 4💳 2⛏ 4⚡', '立即 6💳 3⛏ 6⚡'],
       science: ['—', '收入 1🧠', '收入 2🧠', '收入 3🧠', '收入 4🧠', '立即 9🧠'],
     };
+    const describeLevel = (id, level) => descriptions[id][level].replace(/(\d+)(💳|⛏|⚡|🧠| QIC| VP| 能量枚数| 能量| 改造器)/gu, (label, number, symbol) => {
+      const key = {'💳':'credits', '⛏':'ore', '⚡':'charge', '🧠':'knowledge', ' QIC':'qic', ' VP':'vp', ' 能量枚数':'tokens', ' 能量':'tokens', ' 改造器':'gaiaformers'}[symbol];
+      return hint(key, label, `${resourceNames[key]} ${number}`);
+    });
     return `<div class="gaia-research">${Object.entries(defs().tracks).map(([id, name]) => `<section class="gaia-track"><h3>${esc(name)}</h3>${[5,4,3,2,1,0].map(level => {
       const option = activeOptions().findIndex(o => ['research','choose_track'].includes(o.action.type) && o.action.track === id && me()?.research[id] + 1 === level);
-      const markers = view.players.filter(p => p.research[id] === level).map(p => `<b style="background:${color(p.player_id)}" title="${esc(p.name)}">${seat(p.player_id)}</b>`).join('');
-      return `<button type="button" class="gaia-level ${level === 5 ? 'gaia-top-level' : ''}" ${option >= 0 ? `data-gaia-option="${option}"` : 'disabled'} ${info('research')}><strong>${level}${level === 5 ? ' ◈' : ''}</strong><span>${descriptions[id][level]}</span><div class="gaia-markers">${markers}</div></button>`;
+      const markers = view.players.filter(p => p.research[id] === level).map(p => `<b class="gaia-hint-target" style="background:${color(p.player_id)}" ${hintAttributes('seat', `${p.name}，第 ${seat(p.player_id)} 位玩家，${name} ${level} 级`)}>${seat(p.player_id)}</b>`).join('');
+      return `<button type="button" class="gaia-level ${level === 5 ? 'gaia-top-level' : ''}" ${option >= 0 ? `data-gaia-option="${option}"` : 'disabled'} ${info('research')}><strong>${level}${level === 5 ? ' ' + hint('green_federation', '◈') : ''}</strong><span>${describeLevel(id, level)}</span><div class="gaia-markers">${markers}</div></button>`;
     }).join('')}</section>`).join('')}</div><p class="gaia-muted">2 → 3：额外充能 3。第 5 级：翻绿色联邦标记，每轨仅一人。</p>`;
   }
   function renderTechnology() {
@@ -157,21 +264,21 @@
     }).join('')}</div><h3>高级科技</h3><div class="gaia-tech-grid">${Object.entries(view.advanced_market).map(([track, id]) => `<div class="gaia-tech advanced"><small>${esc(defs().tracks[track])} 4+ · 绿色联邦</small><strong>${id ? esc(defs().advanced[id].name) : 'Taken'}</strong><span>${id ? specText(defs().advanced[id]) : '—'}</span></div>`).join('')}</div><p class="gaia-muted">获取高级科技时，在右侧选择要覆盖的基础科技。</p>`;
   }
   function renderPlayers() {
-    return `<div class="gaia-player-grid">${view.players.map(p => `<article class="gaia-player-card" style="--player-color:${color(p.player_id)}"><h3>${seat(p.player_id)} · ${esc(p.name)} ${p.player_id === view.you ? '(You)' : ''} <span>⭐ ${p.vp}</span></h3><p>${p.faction ? esc(defs().factions[p.faction].name) : 'Choosing faction…'}</p><div class="gaia-resources">${resources(p)}</div><p>能量 I ${p.power[0]} · II ${p.power[1]} · III ${p.power[2]} · 盖亚 ${p.gaia_power}${p.brain !== null ? ` · 脑石 ${['I','II','III','Gaia'][p.brain]}` : ''}</p><div class="gaia-badges">${Object.entries(p.counts).map(([k,n]) => `<span>${esc(defs().buildings[k].icon)} ${esc(defs().buildings[k].name)} ${n}</span>`).join('')}</div><details><summary>Income preview</summary>${p.income.map(s => `<p>${esc(s.source)} ${resources(s.gain)}</p>`).join('')}</details><p>推进器：${p.booster ? `${esc(defs().boosters[p.booster].name)} · ${specText(defs().boosters[p.booster])}` : '—'}</p><div class="gaia-owned-tech">${p.techs.map(t => `<span class="${p.covered.includes(t) ? 'covered' : ''}">${esc(defs().techs[t].name)} · ${specText(defs().techs[t])}</span>`).join('')}${p.advanced.map(t => `<span>${esc(defs().advanced[t].name)} · ${specText(defs().advanced[t])}</span>`).join('')}</div><p>联邦：${p.federations.map(f => `${f.green ? '🟢' : '⚪'} ${resources(defs().federations[f.token])}`).join(' / ') || '—'}</p>${p.faction ? `<details><summary>Faction ability</summary><p>${esc(defs().factions[p.faction].ability)}</p><p>学院：${esc(defs().factions[p.faction].institute)}</p></details>` : ''}</article>`).join('')}</div>`;
+    return `<div class="gaia-player-grid">${view.players.map(p => `<article class="gaia-player-card" style="--player-color:${color(p.player_id)}"><h3>${seat(p.player_id)} · ${esc(p.name)} ${p.player_id === view.you ? '(You)' : ''} ${hint('vp', `⭐ ${p.vp}`, `胜利点 ${p.vp}`)}</h3><p>${p.faction ? esc(defs().factions[p.faction].name) : 'Choosing faction…'}</p><div class="gaia-resources">${resources(p)}</div>${renderPowerBowls(p)}<div class="gaia-badges">${Object.entries(p.counts).map(([k,n]) => `<span>${esc(defs().buildings[k].icon)} ${esc(defs().buildings[k].name)} ${n}</span>`).join('')}</div><details><summary>Income preview</summary>${p.income.map(s => `<p>${esc(s.source)} ${resources(s.gain)}</p>`).join('')}</details><p>推进器：${p.booster ? `${esc(defs().boosters[p.booster].name)} · ${specText(defs().boosters[p.booster])}` : '—'}</p><div class="gaia-owned-tech">${p.techs.map(t => `<span class="${p.covered.includes(t) ? 'covered' : ''}">${esc(defs().techs[t].name)} · ${specText(defs().techs[t])}</span>`).join('')}${p.advanced.map(t => `<span>${esc(defs().advanced[t].name)} · ${specText(defs().advanced[t])}</span>`).join('')}</div><p>联邦：${p.federations.map(f => `${hint(f.green ? 'green_federation' : 'gray_federation', f.green ? '🟢' : '⚪')} ${resources(defs().federations[f.token])}`).join(' / ') || '—'}</p>${p.faction ? `<details><summary>Faction ability</summary><p>${esc(defs().factions[p.faction].ability)}</p><p>学院：${esc(defs().factions[p.faction].institute)}</p></details>` : ''}</article>`).join('')}</div>`;
   }
   function renderResults() {
     if (!view.scores) return '';
     const players = [...view.players].sort((a,b) => b.vp - a.vp);
     return `<div class="gaia-results"><h3>🏆 ${view.winner.map(id => esc(player(id)?.name)).join(' · ')}</h3>${players.map(p => {
       const score = view.scores[p.player_id];
-      return `<div class="gaia-result-row"><strong>${esc(p.name)} <b>${score.total} ⭐</b></strong><span>局中 ${score.in_game} · 研究 ${score.research} · 资源 ${score.resources}</span><span>${Object.entries(score.objectives).map(([key,s]) => `${esc(defs().finals[key].name)} ${s.count} → ${s.vp} VP`).join(' / ')}</span></div>`;
+      return `<div class="gaia-result-row"><strong>${esc(p.name)} <b>${hint('vp', `${score.total} ⭐`, `最终胜利点 ${score.total}`)}</b></strong><span>局中 ${score.in_game} · 研究 ${score.research} · 资源 ${score.resources}</span><span>${Object.entries(score.objectives).map(([key,s]) => `${esc(defs().finals[key].name)} ${s.count} → ${s.vp} VP`).join(' / ')}</span></div>`;
     }).join('')}</div>`;
   }
   function renderFederation() {
     const picked = [...federationHexes];
     const selectedStructures = picked.filter(id => view.board[id].buildings[view.you]);
     const satellites = picked.filter(id => !view.board[id].buildings[view.you] && !view.board[id].federations.hasOwnProperty(view.you));
-    return `<h3>🛰️ 联邦连接</h3><p class="gaia-muted">${selectedStructures.length} 个建筑 · ${satellites.length} 个卫星。相邻建筑和蜂人已有联邦会自动纳入；提交时检查最少卫星。</p><label class="gaia-field">Token <select id="gaiaFederationToken">${Object.entries(view.federation_supply).filter(([, n]) => n > 0).map(([id,n]) => `<option value="${id}">${Object.entries(defs().federations[id]).map(([k,v]) => `${icons[k]} ${v}`).join(' ')} (${n})</option>`).join('')}</select></label>${renderTokenPayment(satellites.length)}<div class="gaia-confirm-buttons">${button('Form Federation', 'form-federation', !picked.length ? 'disabled' : '', 'federation')}${button('Cancel', 'cancel')}</div>`;
+    return `<h3>🛰️ 联邦连接</h3><p class="gaia-muted">${selectedStructures.length} 个建筑 · ${satellites.length} 个卫星。相邻建筑和蜂人已有联邦会自动纳入；提交时检查最少卫星。</p><label class="gaia-field">Token <select id="gaiaFederationToken">${Object.entries(view.federation_supply).filter(([, n]) => n > 0).map(([id,n]) => `<option value="${id}">${Object.entries(defs().federations[id]).map(([k,v]) => `${icons[k]} ${resourceNames[k]} ${v}`).join(' ')} (${n})</option>`).join('')}</select></label>${renderTokenPayment(satellites.length)}<div class="gaia-confirm-buttons">${button('Form Federation', 'form-federation', !picked.length ? 'disabled' : '', 'federation')}${button('Cancel', 'cancel')}</div>`;
   }
   function renderTokenPayment(required) {
     const p = me();
@@ -233,14 +340,17 @@
   }
   function render() {
     if (!view || !panel) return;
+    finishMapDrag();
+    if (hintMode === 'tooltip') hideHint();
     const p = me();
     const acting = view.current_turn === view.you;
     const roundTiles = view.round_tiles.map((id,i) => `<div class="gaia-round-tile ${view.round === i+1 ? 'current' : view.round > i+1 ? 'past' : ''}"><small>ROUND ${i+1}</small><strong>${esc(defs().rounds[id].name)}</strong></div>`).join('');
-    const goals = view.final_tiles.map(id => `<span>🏁 ${esc(defs().finals[id].name)}${view.players.length === 2 ? ` · 中立 ${defs().finals[id].neutral}` : ''}</span>`).join('');
+    const goals = view.final_tiles.map(id => `${hint('objective', `🏁 ${esc(defs().finals[id].name)}${view.players.length === 2 ? ` · 中立 ${defs().finals[id].neutral}` : ''}`)}`).join('');
     const tabs = [['galaxy','Galaxy'],['research','Research'],['technology','Technology'],['players','Players']];
     const main = activeTab === 'galaxy' ? renderMap() : activeTab === 'research' ? renderResearch() : activeTab === 'technology' ? renderTechnology() : renderPlayers();
-    panel.innerHTML = `<div class="gaia-title"><div><small>EXPLORE · RESEARCH · CONNECT</small><h2>盖亚计划 <span>GAIA PROJECT</span></h2></div><div class="gaia-status ${acting ? 'your-turn' : ''}">${view.game_over ? 'Final scores' : acting ? 'Your turn' : 'Waiting'} <span>${esc(phaseNames[view.phase])}</span></div></div><div class="gaia-rounds">${roundTiles}</div><div class="gaia-goals">${goals}</div>${p ? `<div class="gaia-dashboard" ${info('player')}><strong style="color:${color(view.you)}">${p.faction ? esc(defs().factions[p.faction].name) : esc(p.name)}</strong><div class="gaia-resources">${resources({credits:p.credits,ore:p.ore,knowledge:p.knowledge,qic:p.qic,vp:p.vp})}</div><div class="gaia-power-bowls"><span>I <b>${p.power[0]}</b></span><span>II <b>${p.power[1]}</b></span><span>III <b>${p.power[2]}</b></span><span class="gaia-bowl">Gaia <b>${p.gaia_power}</b></span>${p.brain !== null ? `<span>🪨 ${['I','II','III','Gaia'][p.brain]}</span>` : ''}<span>🌱 ${p.gaiaformers}</span></div></div>` : ''}${renderResults()}<div class="gaia-layout"><section class="gaia-workspace"><nav class="gaia-tabs" aria-label="Game boards">${tabs.map(([id,label]) => button(label,'tab',`data-gaia-tab="${id}" class="${activeTab === id ? 'active' : ''}" aria-pressed="${activeTab === id}"`,id === 'galaxy' ? 'map' : id === 'players' ? 'player' : id)).join('')}</nav><div class="gaia-tab-content">${main}</div></section><aside class="gaia-controls" aria-label="Actions">${renderControls()}</aside></div><details class="gaia-log"><summary>Game Log <span>${view.log.length}</span></summary><ol>${[...view.log].reverse().map(entry => `<li><small>R${entry.round} ${esc(player(entry.player_id)?.name || '')}</small> ${esc(entry.message)}</li>`).join('')}</ol></details>`;
+    panel.innerHTML = `<div class="gaia-title"><div><small>EXPLORE · RESEARCH · CONNECT</small><h2>盖亚计划 <span>GAIA PROJECT</span></h2></div><div class="gaia-status ${acting ? 'your-turn' : ''}">${view.game_over ? 'Final scores' : acting ? 'Your turn' : 'Waiting'} <span>${esc(phaseNames[view.phase])}</span></div></div><div class="gaia-rounds">${roundTiles}</div><div class="gaia-goals">${goals}</div>${p ? `<div class="gaia-dashboard" ${info('player')}><strong style="color:${color(view.you)}">${p.faction ? esc(defs().factions[p.faction].name) : esc(p.name)}</strong><div class="gaia-resources">${resources({credits:p.credits,ore:p.ore,knowledge:p.knowledge,qic:p.qic,vp:p.vp})}</div>${renderPowerBowls(p)}</div>` : ''}${renderResults()}<div class="gaia-layout"><section class="gaia-workspace"><nav class="gaia-tabs" aria-label="Game boards">${tabs.map(([id,label]) => button(label,'tab',`data-gaia-tab="${id}" class="${activeTab === id ? 'active' : ''}" aria-pressed="${activeTab === id}"`,id === 'galaxy' ? 'map' : id === 'players' ? 'player' : id)).join('')}</nav><div class="gaia-tab-content">${main}</div></section><aside class="gaia-controls" aria-label="Actions">${renderControls()}</aside></div><details class="gaia-log"><summary>Game Log <span>${view.log.length}</span></summary><ol>${[...view.log].reverse().map(entry => `<li><small>R${entry.round} ${esc(player(entry.player_id)?.name || '')}</small> ${esc(entry.message)}</li>`).join('')}</ol></details>`;
     panel.classList.toggle('gaia-explaining', explainMode);
+    prepareHints();
   }
   function cancelSelection() {
     selectedOption = null; selectedHex = null; federationMode = false; federationHexes.clear(); render();
@@ -259,6 +369,60 @@
     // Keep the chosen planet for context until the server advances the state.
     federationMode = false; federationHexes.clear(); render();
   }
+  panel?.addEventListener('pointerover', event => {
+    if (event.pointerType !== 'mouse') return;
+    const target = event.target.closest('[data-gaia-hint]');
+    if (target) showHint(target, 'tooltip');
+  }, true);
+  panel?.addEventListener('pointerout', scheduleHintHide, true);
+  panel?.addEventListener('focusin', event => {
+    const target = event.target.closest('[data-gaia-hint]');
+    if (target?.matches(':focus-visible')) showHint(target, 'tooltip');
+  });
+  panel?.addEventListener('focusout', scheduleHintHide);
+  panel?.addEventListener('pointerdown', event => {
+    const target = event.target.closest('[data-gaia-hint]');
+    hintGesture = target && event.isPrimary && event.button === 0 && event.pointerType !== 'mouse' && canShowHint()
+      ? {target, id:event.pointerId, x:event.clientX, y:event.clientY, moved:false} : null;
+  }, true);
+  panel?.addEventListener('pointermove', event => {
+    if (hintGesture && Math.hypot(event.clientX - hintGesture.x, event.clientY - hintGesture.y) > 10) hintGesture.moved = true;
+  }, true);
+  panel?.addEventListener('pointercancel', () => { hintGesture = null; }, true);
+  panel?.addEventListener('pointerup', event => {
+    const gesture = hintGesture;
+    hintGesture = null;
+    if (!gesture || gesture.moved || gesture.id !== event.pointerId || !canShowHint()) return;
+    if (event.target.closest('[data-gaia-hint]') !== gesture.target) return;
+    showHint(gesture.target, 'banner');
+    consumedHintTap = {target:gesture.target, until:Date.now() + 700};
+    event.preventDefault(); event.stopPropagation();
+  }, true);
+  panel?.addEventListener('click', event => {
+    const target = event.target.closest('[data-gaia-hint]');
+    if (!target || !canShowHint()) return;
+    // Looking up a cost badge must not select its parent action or cancel a selection.
+    event.preventDefault(); event.stopImmediatePropagation();
+    if (consumedHintTap?.target === target && Date.now() < consumedHintTap.until) {
+      consumedHintTap = null;
+      return;
+    }
+    const touch = event.pointerType ? event.pointerType !== 'mouse' : event.detail > 0 && matchMedia('(hover: none) and (pointer: coarse)').matches;
+    showHint(target, touch ? 'banner' : 'tooltip');
+  }, true);
+  panel?.addEventListener('keydown', event => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    const target = event.target.closest('[data-gaia-hint]');
+    if (!target || target.tabIndex !== 0 || !canShowHint()) return;
+    event.preventDefault(); event.stopImmediatePropagation();
+    showHint(target, 'tooltip');
+  }, true);
+  document.addEventListener('pointerdown', event => {
+    if (!event.target.closest('[data-gaia-hint], #gaiaInlineHint')) hideHint();
+  }, true);
+  document.addEventListener('scroll', () => { if (hintMode === 'tooltip') hideHint(); }, true);
+  window.addEventListener('resize', hideHint);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) hideHint(); });
   panel?.addEventListener('click', event => {
     if (drag?.moved) return;
     const optionEl = event.target.closest('[data-gaia-option]');
@@ -302,22 +466,40 @@
       event.preventDefault(); event.target.dispatchEvent(new MouseEvent('click', {bubbles:true}));
     }
   });
+  function finishMapDrag(event) {
+    if (!drag || (event && event.pointerId !== drag.pointerId)) return;
+    const finished = drag;
+    drag = null;
+    if (finished.moved) suppressClickUntil = Date.now() + 200;
+    finished.svg.classList.remove('gaia-panning');
+    if (finished.capture.hasPointerCapture(finished.pointerId)) finished.capture.releasePointerCapture(finished.pointerId);
+  }
   panel?.addEventListener('pointerdown', event => {
     const svg = event.target.closest('#gaiaGalaxy');
-    if (!svg || mapZoom <= 1 || explainMode) return;
+    if (!svg || !event.isPrimary || event.button !== 0 || drag || explainMode) return;
     const box = svg.viewBox.baseVal;
-    drag = {x:event.clientX, y:event.clientY, moved:false, svg, center:[box.x+box.width/2,box.y+box.height/2], scale:box.width/svg.getBoundingClientRect().width};
+    // Account for SVG letterboxing as well as zoom when translating finger movement.
+    const transform = svg.getScreenCTM()?.inverse();
+    if (!transform) return;
+    drag = {x:event.clientX, y:event.clientY, moved:false, svg, center:[box.x+box.width/2,box.y+box.height/2], transform, pointerId:event.pointerId, capture:event.target};
+    drag.capture.setPointerCapture(event.pointerId);
   });
   panel?.addEventListener('pointermove', event => {
-    if (!drag || !event.buttons) return;
+    if (!drag || event.pointerId !== drag.pointerId) return;
     const dx = event.clientX-drag.x, dy = event.clientY-drag.y;
     if (Math.abs(dx)+Math.abs(dy) < 6) return;
     drag.moved = true;
-    mapCenter = [drag.center[0]-dx*drag.scale,drag.center[1]-dy*drag.scale];
+    if (event.cancelable) event.preventDefault();
+    drag.svg.classList.add('gaia-panning');
+    const {a, b, c, d} = drag.transform;
+    mapCenter = [drag.center[0] - dx*a - dy*c, drag.center[1] - dx*b - dy*d];
     const box = drag.svg.viewBox.baseVal;
     drag.svg.setAttribute('viewBox', `${mapCenter[0]-box.width/2} ${mapCenter[1]-box.height/2} ${box.width} ${box.height}`);
-  });
-  document.addEventListener('pointerup', () => { if (drag?.moved) suppressClickUntil = Date.now()+150; drag = null; });
+  }, {passive:false});
+  document.addEventListener('pointerup', finishMapDrag);
+  document.addEventListener('pointercancel', finishMapDrag);
+  panel?.addEventListener('lostpointercapture', finishMapDrag);
+  window.addEventListener('blur', () => finishMapDrag());
   document.addEventListener('pointerdown', event => {
     if (!explainMode || panel.classList.contains('hidden') || modal || event.target.closest('#gaiaProjectHeaderActions')) return;
     let target = event.target.closest('[data-gaia-explain]');
@@ -336,7 +518,10 @@
     }
   }, true);
   document.addEventListener('keydown', event => {
-    if (event.key === 'Escape') { closeModal(); setExplain(false); if (view && !panel.classList.contains('hidden')) cancelSelection(); }
+    if (event.key === 'Escape') {
+      if (hintPopup) { hideHint(); return; }
+      closeModal(); setExplain(false); if (view && !panel.classList.contains('hidden')) cancelSelection();
+    }
     if (event.key === 'Tab' && modal) {
       const focusable=[...modal.querySelectorAll('button,a,summary,input,select')];
       const first=focusable[0], last=focusable[focusable.length-1];
@@ -348,16 +533,17 @@
   explainButton?.addEventListener('click', () => { closeModal(); setExplain(!explainMode); });
   window.showGaiaProjectHeaderActions = show => {
     if (header) header.style.display = show ? 'flex' : 'none';
-    if (!show) { setExplain(false); closeModal(); }
+    if (!show) { finishMapDrag(); hideHint(); setExplain(false); closeModal(); }
   };
   window.clearGaiaProjectState = () => {
+    finishMapDrag(); hideHint(); hintGesture = null; consumedHintTap = null;
     view=null; selectedHex=null; selectedOption=null; viewKey=''; federationMode=false; federationHexes.clear(); activeTab='galaxy'; mapZoom=1; mapCenter=null; setExplain(false); closeModal(); if (panel) panel.innerHTML='';
   };
   window.renderGaiaProjectGameState = data => {
     const next = data.view;
     const key = `${data.room_id}|${data.state_version ?? ''}|${next.round}|${next.phase}|${next.current_turn}|${JSON.stringify(next.pending)}|${next.log.length}|${next.main_done}`;
     if (key !== viewKey) { selectedOption=null; federationMode=false; federationHexes.clear(); }
-    if (viewKey && viewKey.split('|')[0] !== String(data.room_id)) { selectedHex=null; activeTab='galaxy'; mapZoom=1; mapCenter=null; }
+    if (viewKey && viewKey.split('|')[0] !== String(data.room_id)) { hideHint(); selectedHex=null; activeTab='galaxy'; mapZoom=1; mapCenter=null; }
     viewKey=key; view=next;
     if (currentGameType !== 'gaia_project') { currentGameType='gaia_project'; setGamePanelVisibility('gaia_project'); }
     if (view.phase==='faction' && activeTab==='galaxy') activeTab='players';

@@ -45,6 +45,7 @@ from game.patchwork import PatchworkGame
 from game.perfect_mismatch import PerfectMismatchGame
 from game.point_salad import PointSaladGame
 from game.poison import PoisonGame
+from game.ponzi_scheme import PonziSchemeGame
 from game.project_l import ProjectLGame
 from game.ra import RaGame
 from game.rebel_princess import RebelPrincessGame
@@ -119,6 +120,7 @@ __all__ = [
     "PerfectMismatchGame",
     "PointSaladGame",
     "PoisonGame",
+    "PonziSchemeGame",
     "ProjectLGame",
     "RaGame",
     "RebelPrincessGame",

@@ -666,12 +666,8 @@ def _animals_candidates(state: Mapping[str, Any], player_id: str) -> List[Dict[s
 def _project_tasks(state: Mapping[str, Any], player_id: str) -> List[Dict[str, Any]]:
     player = state["players"][player_id]
     project_ids = [str(value) for value in state.get("projects", [])]
+    project_ids.extend(str(card_id) for card_id in player.get("hand", []) if str(card_id) in rules.PROJECT_CARDS)
     if rules._action_level(player, "association") == 2:
-        project_ids.extend(
-            str(card_id)
-            for card_id in player.get("hand", [])
-            if str(card_id) in rules.PROJECT_CARDS
-        )
         project_ids.extend(
             str(card_id)
             for index, card_id in enumerate(state.get("display", []))
@@ -720,7 +716,7 @@ def _project_tasks(state: Mapping[str, Any], player_id: str) -> List[Dict[str, A
                             rules.ANIMAL_CARDS.get(animal_id, {}).get("printed_rewards", {}).get("appeal", 0)
                         )
                     tasks.append(task)
-                if project.get("project_type") == "base":
+                if rules._is_original_base_project(state, project_id):
                     for wild_card_id in wild_cards:
                         if rules._project_requirement_met(
                             state, player_id, project, slot, animal_id, wild_icons=1
@@ -975,6 +971,8 @@ def _main_candidates(
         actions.extend(_sponsors_candidates(state, player_id))
     if "gain_x" in allowed:
         actions.extend(_gain_x_candidates(state, player_id))
+    if "skip_extra_action" in allowed:
+        actions.append({"type": "skip_extra_action"})
     expanded: List[Dict[str, Any]] = []
     forced = state.get("forced_action")
     for action in actions:

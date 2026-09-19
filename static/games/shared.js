@@ -81,6 +81,8 @@ function emitRoomStart() {
     payload.config = getTakeTimeConfig();
   } else if (currentGameType === "eternal_decks") {
     payload.config = getEternalDecksConfig();
+  } else if (currentGameType === "ponzi_scheme") {
+    payload.config = getPonziSchemeConfig();
   } else if (currentGameType === "bomb_busters") {
     const practicePreset = bombBustersPresetSelect
       ? bombBustersPresetSelect.value || "standard_practice"

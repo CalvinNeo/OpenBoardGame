@@ -1082,7 +1082,7 @@ for card_id, tag, building, end_metric in (
     if card_id == "212":
         _sponsor("212-printed-1", "trigger", trigger="own_icon_played", tag=tag, ability="pouch", params={"maximum_cards": 1})
     elif card_id == "214":
-        _sponsor("214-printed-1", "trigger", trigger="own_icon_played", tag=tag, ability="clever", params={})
+        _sponsor("214-printed-1", "trigger", trigger="own_icon_played", tag=tag, ability="clever", params={}, after_action=True)
         _sponsor("214-glossary-2", "metric_reward", metric="x_tokens", reward={"appeal": 1})
     else:
         _sponsor(f"{card_id}-printed-1", "trigger", trigger="own_icon_played", tag=tag, free_build=building)

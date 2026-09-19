@@ -88,6 +88,8 @@ async def api_list_games():
             "name_zh": g.name_zh,
             "min_players": g.min_players,
             "max_players": g.max_players,
+            **({"player_counts": list(g.module.supported_player_counts)}
+               if hasattr(g.module, "supported_player_counts") else {}),
             "dev_order": GAME_DEV_ORDER.get(g.game_id),
             "tags": serialize_game_tags(g.game_id),
         }
@@ -390,7 +392,8 @@ async def _emit_room_state(room: Room) -> None:
         "room_id": room.room_id,
         "status": room.status,
         "game_type": room.game_type,
-        "game_config": dict(room.game_config),
+        "game_config": {key: value for key, value in room.game_config.items()
+                        if room.game_type not in ("take_time", "eternal_decks", "ponzi_scheme") or key != "seed"},
         "auto_save": room.auto_save,
         "source_room_id": room.source_room_id,
         "players": [
@@ -500,7 +503,7 @@ def _bot_status_payload(room: Room) -> Dict:
 
 
 def _public_bot_action(game_type: str, action: Dict) -> Dict:
-    if game_type in ("subtext", "bomb_busters", "kronologic", "nine_upper", "wriggle_roulette", "take_time"):
+    if game_type in ("subtext", "bomb_busters", "kronologic", "nine_upper", "wriggle_roulette", "take_time", "eternal_decks", "ponzi_scheme"):
         return {"type": action.get("type")}
     if game_type == "catan_starfarers" and action.get("type") in {
         "discard_resources",

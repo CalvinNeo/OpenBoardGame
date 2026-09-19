@@ -24,6 +24,17 @@
 .gaia-power-bowls>span { border:1px solid #605680; border-radius:6px; padding:4px 7px; background:#29263f; }
 .gaia-power-bowls .gaia-bowl { border-color:#427564; background:#1b3d36; }
 .gaia-power-bowls b { margin-left:3px; }
+.gaia-panel .gaia-hint-target { cursor:help; border-bottom:1px dotted #87b6c6; border-radius:3px; touch-action:manipulation; }
+.gaia-panel span.gaia-hint-target { display:inline-block; max-width:100%; }
+.gaia-panel .gaia-hint-target:focus-visible { outline:2px solid var(--gaia-accent); outline-offset:3px; }
+.gaia-panel .gaia-hint-target:hover { color:#bcf4e5; }
+.gaia-player-card .gaia-power-bowls { margin:10px 0; }
+.gaia-hint-popup { position:fixed; z-index:12010; box-sizing:border-box; width:max-content; max-width:min(340px,calc(100vw - 24px)); padding:12px 15px; color:#ebf4ff; background:#193349; border:1px solid #77b9b6; border-radius:10px; box-shadow:0 8px 30px #03101c66; font:13px/1.6 system-ui,-apple-system,sans-serif; overflow-wrap:anywhere; }
+.gaia-hint-popup strong { display:block; margin-bottom:4px; color:#a5efce; font-size:13px; }
+.gaia-hint-popup>span { display:block; }
+.gaia-hint-banner { left:50%; bottom:max(16px,env(safe-area-inset-bottom)); transform:translateX(-50%); width:360px; pointer-events:none; }
+.gaia-hint-banner-top { bottom:auto; top:max(16px,env(safe-area-inset-top)); }
+@media(hover:none) and (pointer:coarse) { .gaia-panel .gaia-hint-target { padding:3px 2px; } .gaia-panel .gaia-power-bowls>.gaia-hint-target { padding:6px 7px; } .gaia-markers b.gaia-hint-target { width:24px; height:24px; } }
 .gaia-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(235px,300px); gap:14px; align-items:start; }
 .gaia-workspace,.gaia-controls { min-width:0; }
 .gaia-workspace { background:#101e31; border:1px solid var(--gaia-line); border-radius:12px; overflow:hidden; }
@@ -38,8 +49,9 @@
 .gaia-map-tools { display:flex; align-items:center; gap:5px; }
 .gaia-map-tools button { padding:4px 10px; min-height:30px; }
 .gaia-map-tools span { font-size:10px; margin-left:auto; color:var(--gaia-muted); }
-.gaia-map-wrap { width:100%; min-width:0; overflow:hidden; border-radius:10px; margin-top:7px; background:radial-gradient(ellipse at 45% 42%,#192c45,#0a1524 75%); }
-#gaiaGalaxy { display:block; width:100%; height:auto; min-height:260px; max-height:62vh; aspect-ratio:1.3; touch-action:pan-y; user-select:none; }
+.gaia-map-wrap { width:100%; min-width:0; overflow:hidden; border-radius:10px; margin-top:7px; background:radial-gradient(ellipse at 45% 42%,#192c45,#0a1524 75%); touch-action:none; overscroll-behavior:contain; }
+#gaiaGalaxy { display:block; width:100%; height:auto; min-height:260px; max-height:62vh; aspect-ratio:1.3; touch-action:none; user-select:none; cursor:grab; }
+#gaiaGalaxy.gaia-panning, #gaiaGalaxy.gaia-panning .gaia-hex { cursor:grabbing; }
 .gaia-hex { cursor:pointer; }
 .gaia-hex>polygon { fill:#162538; stroke:#32445a; stroke-width:.65; }
 .gaia-hex.available>polygon { stroke:#7697ac; stroke-width:1.5; fill:#1c3544; }

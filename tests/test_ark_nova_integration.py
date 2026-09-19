@@ -364,6 +364,7 @@ class ArkNovaIntegrationTests(unittest.TestCase):
         examples = [
             {"type": "keep_initial_cards", "card_ids": ["201", "401", "402", "101"]},
             {"type": "cards", "mode": "draw", "x_tokens": 1, "market_card_ids": ["401"]},
+            {"type": "cards", "mode": "draw", "choose_card_sources": True, "choose_effect_order": True},
             {
                 "type": "build",
                 "x_tokens": 0,
@@ -377,6 +378,7 @@ class ArkNovaIntegrationTests(unittest.TestCase):
             },
             {"type": "sponsors", "mode": "play", "card_ids": ["201"]},
             {"type": "gain_x", "action_card": "build"},
+            {"type": "skip_extra_action"},
             {"type": "resolve_choice", "choice_id": "choice-1", "selection": {"cells": ["A1"]}},
         ]
         for action in examples:
