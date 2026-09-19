@@ -59,3 +59,14 @@
 Git 加载改动完成后执行 `python3 -m unittest tests.test_guandan_benchmark`，17 项通过。这里记录的是该次已执行结果；本文本身不改变或代替最终全套测试结果。
 
 另按指定命令完成真实基线 commit 对同 commit 的 greedy 自检：2 对／4 盘，级牌 2、7，seed `730099`，fixed。结果保存在 `.data/guandan_benchmark/commit_68e62ab/git_loader_selfcheck.json`：两对各自的发牌和动作轨迹 hash 完全一致，胜率 50%、净收益 0。它补充验证真实 Guandan 模块的 Git 加载路径；其用途是加载与对称性自检，不能作为 AI 强度提升证据。
+
+## 续跑机制补充：新增四项，不改已有断言
+
+实际验收跑完 28 对后，仓库 HEAD 从 `68e62ab` 变成 `27c9cb2`，但策略源码字节完全相同。原握手额外比较工作区 HEAD，误判版本变化。工作区版本身份应由文件 hash 决定；Git commit 模式仍必须验证固定 commit ID。
+
+新增以下四项后共 21 项全部通过，前述 17 项原样保留：
+
+- `test_worktree_worker_accepts_same_bytes_after_commit_changes_head`：提交工作区使 HEAD 变化，确认文件 hash 不变且 worker 仍接受原预期字节身份。
+- `test_git_worker_still_requires_expected_commit_revision`：Git 模式传错误预期 commit ID 仍须拒绝；真实字节变化的旧拒绝测试也保留。
+- `test_pair_start_preserves_global_deals_and_results_across_split_runs`：真实 greedy 完整跑两对，与按全局索引拆成两个单对运行，全部 records 必须逐项相同，包括 seed、级牌、A/B 运行顺序和动作轨迹。
+- `test_negative_pair_start_is_rejected`：非法负索引必须在运行前拒绝。

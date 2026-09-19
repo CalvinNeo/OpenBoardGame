@@ -676,15 +676,11 @@ def _project_tasks(state: Mapping[str, Any], player_id: str) -> List[Dict[str, A
             and str(card_id) in rules.PROJECT_CARDS
         )
     tasks: List[Dict[str, Any]] = []
-    wild_cards = [
-        str(effect.get("card_id"))
-        for effect in rules._active_rules(player, "base_project_wild_icon")
-        if int(player.get("card_tokens", {}).get(str(effect.get("card_id")), 0)) > 0
-    ]
     for project_id in dict.fromkeys(project_ids):
         project = rules.PROJECT_CARDS.get(project_id)
         if not project:
             continue
+        wild_cards = rules._available_project_wild_tokens(state, player_id, project_id)
         already_supported = any(
             item.get("project_id", item.get("card_id")) == project_id
             for item in player.get("supported_projects", [])
@@ -717,18 +713,18 @@ def _project_tasks(state: Mapping[str, Any], player_id: str) -> List[Dict[str, A
                         )
                     tasks.append(task)
                 if rules._is_original_base_project(state, project_id):
-                    for wild_card_id in wild_cards:
+                    for count in range(1, len(wild_cards) + 1):
                         if rules._project_requirement_met(
-                            state, player_id, project, slot, animal_id, wild_icons=1
+                            state, player_id, project, slot, animal_id, wild_icons=count
                         ):
-                            task = {
-                                "task": "support_project",
-                                "project_id": project_id,
-                                "slot": position,
-                                "wild_token_card_id": wild_card_id,
-                                "_value": 5.0 * int(slot.get("reward", {}).get("conservation", 0)) - 1.0,
-                            }
-                            tasks.append(task)
+                            for selected in itertools.combinations(wild_cards, count):
+                                tasks.append({
+                                    "task": "support_project",
+                                    "project_id": project_id,
+                                    "slot": position,
+                                    "wild_token_card_ids": list(selected),
+                                    "_value": 5.0 * int(slot.get("reward", {}).get("conservation", 0)) - count,
+                                })
     tasks.sort(key=lambda task: (-float(task.get("_value", 0)), _action_key(task)))
     return tasks[:14]
 
@@ -1220,7 +1216,9 @@ def choose_ark_nova_action(
     before_value = _state_value(state, player_id)
     total = max(1, len(candidates))
     for index, action in enumerate(candidates):
-        if json.dumps(action, sort_keys=True) in state.get("venom_failed_actions", []):
+        if json.dumps(action, sort_keys=True) in (
+            state.get("venom_failed_actions", []) + state.get("multiplier_failed_actions", [])
+        ):
             continue
         candidate_state = copy.deepcopy(state)
         _, error = rules.ArkNovaGame.apply_action(candidate_state, player_id, action)

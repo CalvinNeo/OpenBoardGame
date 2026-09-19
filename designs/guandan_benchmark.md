@@ -64,6 +64,8 @@ python3 scripts/benchmark_guandan.py run \
 
 `--candidate-root` / `--baseline-root` 可指定另一个仓库，默认均为当前仓库；ref 相对于对应仓库解析。不传 ref 则使用对应工作区。
 
+`--pair-start N` 可从全局第 N 对开始（0 起算）。它保留原索引对应的 seed、级牌和 A/B 运行顺序，例如 `--pair-start 28 --pairs 2` 对应完整 30 对任务的最后两对。分段报告不会自动合并：合并前必须核对两侧实际源码 hash、规则、配置、信息/时间模式和不重不漏的牌局索引；不能用重新抽牌替换失败牌局。
+
 参数消融使用 `--candidate-config path.json` / `--baseline-config path.json`，内容是已有 `bot_*` 配置项；未知项报错。模式和共享时间预算由命令行指定，不允许在配置文件里悄悄改成不等预算。默认 `wall` + 2000ms，与当前默认思考预算一致；`bot_think_overrun_ratio` 等额外预算设置也会完整写入报告，改变时需作为实验变量说明。需要可复现的固定计算量时使用 `--clock fixed`，并将相同的有限搜索预算配置同时传给两侧。例如：
 
 ```bash
@@ -107,6 +109,8 @@ python3 scripts/benchmark_guandan.py run \
 - `result.trace.jsonl`：使用 `--trace` 时写每步动作、观察 hash、耗时及原有 `bot_explain`。可沿候选评分找退步局面；该文件可能较大。
 
 输出不会覆盖已有文件。失败退出码为 1，正常完成为 0；`inconclusive` 是完成了实验但证据不足，不能当作“通过强度验收”。文件中的源码 hash 才是实际版本身份，git SHA 不足以标识未提交修改。运行中工作区策略或裁判源码变化会使报告失败；Git 基线不受未提交修改或分支移动影响。
+
+工作区源码字节未变、只新增 commit 导致 HEAD 改变时不应失败；工作区握手以来源类型和文件 hash 为准。使用 Git commit 模式时仍额外核对不可变 commit ID。
 
 置信区间以**一对交换对局**为重采样单位，满 30 对且有样本方差时使用 5,000 次 paired percentile bootstrap 的近似 95% 区间。统计采样也固定独立种子，不影响牌局随机流；保留同一对里的相关性，并利用实际方差衡量小幅改进。
 

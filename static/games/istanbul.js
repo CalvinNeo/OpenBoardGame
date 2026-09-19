@@ -681,6 +681,7 @@ function renderIstanbulMosques(view) {
     rubies.textContent = `💎 ${data.rubies ?? 0}`;
     rubies.className = "istanbul-mosque-rubies";
     rubies.dataset.mosque = group.key;
+    rubies.dataset.istanbulTip = `${group.key === "small" ? "小" : "大"}清真寺的红宝石（💎）池：剩余 ${data.rubies ?? 0} 颗。集齐此处两色板块可领取 1 颗，池空后不再奖励。`;
     header.appendChild(title);
     header.appendChild(rubies);
     row.appendChild(header);
@@ -695,6 +696,7 @@ function renderIstanbulMosques(view) {
       const tile = document.createElement("span");
       tile.className = "istanbul-mosque-tile";
       tile.textContent = GOOD_LABELS[color];
+      tile.dataset.istanbulTip = `${GOOD_LABELS[color]} ${ISTANBUL_GOOD_NAMES[color]}清真寺板块：${data[color] ? "可领取，支付 1 件同色货物获得能力" : "已被领取，当前不可用"}。`;
       if (!data[color]) {
         tile.classList.add("taken");
       }
@@ -713,6 +715,7 @@ function renderIstanbulMosques(view) {
         const tile = document.createElement("span");
         tile.className = "istanbul-mosque-tile";
         tile.textContent = GOOD_LABELS[color];
+        tile.dataset.istanbulTip = `${GOOD_LABELS[color]} ${ISTANBUL_GOOD_NAMES[color]}清真寺板块：你${owned[color] ? "已拥有" : "尚未拥有"}。集齐同一座清真寺两色且宝石池未空时，获得 1 颗红宝石（💎）。`;
         if (owned[color]) {
           tile.classList.add("owned");
         } else {
@@ -781,6 +784,7 @@ function renderIstanbulPostOffice(view) {
       items.appendChild(span);
     });
     line.appendChild(items);
+    line.dataset.istanbulTip = `邮局第 ${idx + 1} 行：${idx === current ? "当前激活，下次邮局行动领取这一行" : "当前未激活，需要邮局指示器推进到此行才能领取"}。${items.textContent}；💰 是里拉，🔴 布料、🟢 香料、🟡 水果、🔵 珠宝是货物。`;
     track.appendChild(line);
   });
   istanbulPostOffice.appendChild(track);
@@ -1873,8 +1877,7 @@ function decorateIstanbulHints(view) {
     const meaning = "💰 里拉是钱；💎 红宝石用于获胜；📦 是每色货物容量；👥 是助手；🎴 是奖励卡；🔴 布料、🟢 香料、🟡 水果、🔵 珠宝是货物。";
     const add = (node, text) => { if (node) node.dataset.istanbulTip = text; };
     istanbulGamePanel.querySelectorAll(".istanbul-stat").forEach(node => add(node, `${node.textContent.trim()}。${meaning}移动模式决定可走格数；当前行动者完成本回合后才轮到下一位。`));
-    istanbulGamePanel.querySelectorAll(".istanbul-player-row > div:not(.istanbul-player-name), .istanbul-market-card > div:not(.istanbul-market-title):not(.istanbul-mini-table), .istanbul-mosque-ability, .istanbul-mosque-rubies, .istanbul-post-row, .istanbul-mini-table span").forEach(node => add(node, `${node.textContent.trim()}。${meaning}市场表格表示出售件数对应的里拉收入；邮局高亮行表示当前可领取的资源。`));
-    istanbulGamePanel.querySelectorAll(".istanbul-mosque-tile").forEach(node => add(node, `${node.textContent} 清真寺板块：${node.classList.contains("owned") ? "你已拥有" : node.classList.contains("taken") ? "此项未拥有或已不可领取" : "目前可领取"}。红色可付费召回助手；绿色可付费调整骰子；黄色让家族被送回时得钱；蓝色增加助手。`));
+    istanbulGamePanel.querySelectorAll(".istanbul-player-row > div:not(.istanbul-player-name), .istanbul-market-card > div:not(.istanbul-market-title):not(.istanbul-mini-table), .istanbul-mosque-ability, .istanbul-mini-table span").forEach(node => add(node, `${node.textContent.trim()}。${meaning}市场表格表示出售件数对应的里拉收入；邮局高亮行表示当前可领取的资源。`));
     istanbulGamePanel.querySelectorAll(".istanbul-good-stepper").forEach((row,i) => {
         const color = GOODS[i];
         add(row.querySelector("span"), `${ISTANBUL_GOOD_NAMES[color]}。${ISTANBUL_GOOD_HELP}此行数字为选择出售的件数。`);

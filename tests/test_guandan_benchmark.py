@@ -192,6 +192,33 @@ class GuandanBenchmarkTests(unittest.TestCase):
             self.assertIn("exceeded", report["failure"]["error"])
             self.assertEqual(json.loads(output.read_text())["status"], "failed")
 
+    def test_pair_start_preserves_global_deals_and_results_across_split_runs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            reports = []
+            for name, start, pairs in (("full", 0, 2), ("first", 0, 1), ("second", 1, 1)):
+                args = bench.build_parser().parse_args([
+                    "run", "--candidate", "greedy", "--baseline", "greedy", "--clock", "fixed",
+                    "--levels", "2,7", "--seed", "991", "--pair-start", str(start),
+                    "--pairs", str(pairs), "--output", str(Path(directory) / f"{name}.json"), "--quiet",
+                ])
+                report = bench.run_benchmark(guandan, args)
+                self.assertEqual(report["status"], "completed", report.get("failure"))
+                self.assertEqual(report["pair_start"], start)
+                reports.append(report)
+            full, first, second = reports
+            self.assertEqual(full["records"], first["records"] + second["records"])
+            self.assertEqual([row["pair_index"] for row in second["records"]], [1, 1])
+            self.assertEqual([row["candidate_team"] for row in second["records"]], ["B", "A"])
+            self.assertEqual([row["level"] for row in second["records"]], [7, 7])
+            self.assertEqual(second["records"][0]["deal_seed"], bench.derived_seed(991, "deal", 1))
+
+    def test_negative_pair_start_is_rejected(self):
+        args = bench.build_parser().parse_args([
+            "run", "--pair-start", "-1", "--output", "unused.json",
+        ])
+        with self.assertRaisesRegex(ValueError, "pair-start must be nonnegative"):
+            bench.run_benchmark(guandan, args)
+
 
 class GitPolicySourceTests(unittest.TestCase):
     """Small synthetic Git fixtures: never copy the real baseline source files."""
@@ -269,6 +296,22 @@ class GuandanGame:
         (self.root / "game/guandan_ai.py").write_text('VALUE = "changed-again/"\n')
         with self.assertRaisesRegex(RuntimeError, "source changed before loading"):
             bench.PolicyWorker(self.root, "auto", {}, "fixed", 10, expected_identity=expected)
+
+    def test_worktree_worker_accepts_same_bytes_after_commit_changes_head(self):
+        expected = bench.source_identity(self.root)
+        self.commit()
+        current = bench.source_identity(self.root)
+        self.assertNotEqual(current["revision"], expected["revision"])
+        self.assertEqual(current["files"], expected["files"])
+        with bench.PolicyWorker(self.root, "auto", {}, "fixed", 10, expected_identity=expected) as worker:
+            self.assertEqual(worker.identity, current)
+            self.assertEqual(worker.choose(self.state, "p0", 1)["action"]["fixture_version"],
+                             "new-ai/new-memory")
+
+    def test_git_worker_still_requires_expected_commit_revision(self):
+        expected = {**self.identity, "revision": "0" * 40}
+        with self.assertRaisesRegex(RuntimeError, "source changed before loading"):
+            bench.PolicyWorker(self.root, "auto", {}, "fixed", 10, self.revision, expected)
 
     def test_unresolved_or_invalid_refs_fail_explicitly(self):
         with self.assertRaisesRegex(ValueError, "resolved full commit"):

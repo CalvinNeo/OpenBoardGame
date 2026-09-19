@@ -336,7 +336,9 @@
             else position();
         }, { capture: true, passive: true });
         listen(window, "resize", position, { passive: true });
-        listen(window, "blur", hide);
+        // Only window deactivation dismisses a banner. Capturing element blur
+        // would hide a touch hint when the tap moves focus from another card.
+        listen(window, "blur", hide, false);
         listen(window, "pagehide", hide);
         listen(document, "visibilitychange", () => {
             if (document.hidden) hide();

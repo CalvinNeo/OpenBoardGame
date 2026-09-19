@@ -191,6 +191,15 @@ class ArkNovaGameTests(unittest.TestCase):
         self.assertEqual(state["break_position"], 0)
         self.assertEqual(state["break_count"], 1)
         self.assertEqual(state["players"]["p1"]["x_tokens"], 1)
+        self.assertEqual(state["players"]["p1"]["available_workers"], 0)
+        while state.get("pending_choice"):
+            pending = state["pending_choice"]
+            self.assertEqual(pending["type"], "discard_cards")
+            _, error = ArkNovaGame.apply_action(state, pending["player_id"], {
+                "type": "resolve_choice", "choice_id": pending["choice_id"],
+                "selection": [item["value"] for item in pending["options"][:pending["min"]]],
+            })
+            self.assertIsNone(error)
         self.assertEqual(state["players"]["p1"]["available_workers"], 1)
 
     def test_partner_zoo_supply_is_shared_until_the_next_break(self) -> None:

@@ -21,6 +21,7 @@ from jsonschema import Draft7Validator, ValidationError
 from game import GameDefinition, get_game, list_games
 from game.ai_dixit import list_decks as list_aidixit_decks
 from game.ai_dixit import resolve_card_path as resolve_aidixit_card_path
+from game.ark_nova_events import filter_ark_nova_events
 from game.carcassonne import get_carcassonne_template_payload
 from game.decrypto import get_decrypto_word_packs
 from game.decrypto_ai import get_bot_strategies
@@ -469,7 +470,10 @@ async def _emit_game_state(room: Room, events: Optional[List[Dict]] = None) -> N
             "room_status": room.status,
             "game_type": room.game_type,
             "view": view,
-            "events": events or [],
+            "events": (
+                filter_ark_nova_events(events or [], player.player_id)
+                if room.game_type == "ark_nova" else events or []
+            ),
             "bot_status": bot_status,
         }
         await sio.emit("game:state", payload, to=player.socket_id)
@@ -503,7 +507,7 @@ def _bot_status_payload(room: Room) -> Dict:
 
 
 def _public_bot_action(game_type: str, action: Dict) -> Dict:
-    if game_type in ("subtext", "bomb_busters", "kronologic", "nine_upper", "wriggle_roulette", "take_time", "eternal_decks", "ponzi_scheme"):
+    if game_type in ("subtext", "bomb_busters", "kronologic", "nine_upper", "wriggle_roulette", "take_time", "eternal_decks", "ponzi_scheme", "ark_nova"):
         return {"type": action.get("type")}
     if game_type == "catan_starfarers" and action.get("type") in {
         "discard_resources",
@@ -1114,7 +1118,12 @@ async def _maybe_run_bots(room: Room) -> None:
                     "payload": {
                         "player_id": bot_player.player_id,
                         "name": bot_player.name,
-                        "action": _public_bot_action(room.game_type, action_payload),
+                        # Ark Nova keeps owner details until its per-recipient
+                        # event filter runs in _emit_game_state.
+                        "action": (
+                            action_payload if room.game_type == "ark_nova"
+                            else _public_bot_action(room.game_type, action_payload)
+                        ),
                     },
                 }
                 events = [bot_event] + events

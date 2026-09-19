@@ -308,9 +308,13 @@ class PolicyWorker:
         try:
             ready = self._read()
             self.defaults, self.identity = ready["defaults"], ready["source"]
-            if expected_identity and any(self.identity[key] != expected_identity[key]
-                                         for key in ("files", "kind", "revision")):
-                raise RuntimeError(f"{mode} worker source changed before loading")
+            if expected_identity:
+                # Committing unchanged worktree bytes changes HEAD, not policy identity.
+                keys = ("files", "kind")
+                if expected_identity["kind"] == "git_commit":
+                    keys += ("revision",)
+                if any(self.identity[key] != expected_identity[key] for key in keys):
+                    raise RuntimeError(f"{mode} worker source changed before loading")
         except Exception:
             self.close()
             raise
@@ -510,6 +514,8 @@ def _read_config(path: Optional[Path]) -> Dict:
 def run_benchmark(core, args) -> Dict:
     if args.pairs < 1 or args.think_ms < 40 or args.max_actions < 1 or args.worker_timeout <= 0:
         raise ValueError("pairs/actions/timeout must be positive and think-ms must be >= 40")
+    if args.pair_start < 0:
+        raise ValueError("pair-start must be nonnegative")
     levels = [int(value) for value in args.levels.split(",")]
     if not levels or any(level < 2 or level > 14 for level in levels):
         raise ValueError("levels must be a comma-separated list in 2..14")
@@ -527,7 +533,7 @@ def run_benchmark(core, args) -> Dict:
               "benchmark_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
               "python": sys.version, "platform": platform.platform(), "clock": args.clock,
               "information": args.information, "seed": args.seed, "levels": levels,
-              "requested_pairs": args.pairs, "think_ms": args.think_ms,
+              "requested_pairs": args.pairs, "pair_start": args.pair_start, "think_ms": args.think_ms,
               "max_actions": args.max_actions, "worker_timeout": args.worker_timeout,
               "referee": referee_identity, "policies": {
                   side: {"mode": modes[side], "requested_ref": refs[side],
@@ -544,7 +550,7 @@ def run_benchmark(core, args) -> Dict:
         context = {}
         last_event = None
         try:
-            for index in range(args.pairs):
+            for index in range(args.pair_start, args.pair_start + args.pairs):
                 seed = derived_seed(args.seed, "deal", index)
                 level = levels[index % len(levels)]
                 initial = make_deal(core, seed, level)
@@ -581,7 +587,7 @@ def run_benchmark(core, args) -> Dict:
                     games_file.write(json.dumps(record) + "\n")
                     games_file.flush()
                     if not args.quiet:
-                        print(f"pair {index + 1}/{args.pairs} candidate={team} level={level} "
+                        print(f"pair {index + 1}/{args.pair_start + args.pairs} candidate={team} level={level} "
                               f"net={result['net_points']:+d} actions={result['actions']}", file=sys.stderr)
             # A policy source changed mid-run => do not publish a mixed-version score.
             for side, root in roots.items():
@@ -618,6 +624,8 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--candidate-config", type=Path)
     run.add_argument("--baseline-config", type=Path)
     run.add_argument("--pairs", type=int, default=30)
+    run.add_argument("--pair-start", type=int, default=0,
+                     help="first global pair index (nonnegative), preserving deal seeds and levels")
     run.add_argument("--seed", type=int, default=20260919)
     run.add_argument("--levels", default="2,7,14")
     run.add_argument("--clock", choices=("fixed", "wall"), default="wall")

@@ -670,11 +670,9 @@ def _display_choice(
         taken.append(card)
     _player(context).setdefault("hand", []).extend(taken)
     remaining -= len(selected)
-    immediate_refill = context.timing == "income"
     event = _event(
         "display_cards_taken", context.player_id, card_ids=selected, source=effect_ref,
-        refill_immediately=immediate_refill,
-        refill_after_action=not immediate_refill,
+        refill_after_action=True,
     )
     if remaining > 0:
         # Snapping 2 is a card-specific exception to the normal end-of-turn

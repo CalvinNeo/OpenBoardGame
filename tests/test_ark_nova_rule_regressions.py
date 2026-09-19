@@ -714,9 +714,9 @@ class ArkNovaRuleRegressions(unittest.TestCase):
         self.assertIsNotNone(rules._find_placement(self.state, 'p1', unique['id'], len(cells), unique))
         self.assertIsNone(rules._find_placement(self.state, 'p1', 'pavilion', 1))
 
-    def start_hypnosis_before_appeal(self, **action_options):
+    def start_hypnosis_before_appeal(self, additional_cards=(), **action_options):
         building = self.building(1)
-        self.hand('485')
+        self.hand('485', *additional_cards)
         self.player['money'] = 100
         self.player['partner_zoos'] = ['europe']
         rules._recompute_tags(self.player)
@@ -730,13 +730,13 @@ class ArkNovaRuleRegressions(unittest.TestCase):
         self.assertEqual(self.state['pending_choice']['type'], 'resolve_attack')
         self.choose('appeal:p2')
 
-    def test_hypnosis_executes_a_borrowed_action_before_animal_rewards(self):
+    def test_hypnosis_locks_target_before_appeal_but_executes_after_animals(self):
         self.helper.set_slot(self.state, 'p2', 'sponsors', 3)
         self.state['players']['p2']['action_cards']['sponsors']['upgraded'] = True
         self.start_hypnosis_before_appeal()
         self.choose('sponsors')
-        self.assertEqual(self.player['appeal'], 5)
-        self.assertEqual(self.player['action_cards']['animals']['slot'], 5)
+        self.assertEqual(self.player['appeal'], 7)
+        self.assertEqual(self.player['action_cards']['animals']['slot'], 1)
         before = self.player['money']
         self.act({'type': 'sponsors', 'mode': 'break'})
         self.assertEqual(self.player['money'], before + 6)
@@ -747,7 +747,7 @@ class ArkNovaRuleRegressions(unittest.TestCase):
         self.assertNotIn('_action_level_overrides', self.player)
         self.assertEqual(self.state['current_player'], 'p2')
 
-    def test_declining_borrowed_action_resumes_the_animal_rewards(self):
+    def test_declining_borrowed_action_keeps_completed_animal_rewards(self):
         self.helper.set_slot(self.state, 'p2', 'association', 3)
         self.player['available_workers'] = 0
         self.start_hypnosis_before_appeal()
@@ -758,17 +758,17 @@ class ArkNovaRuleRegressions(unittest.TestCase):
         self.assertEqual(self.state['players']['p2']['action_cards'], before)
         self.assertEqual(self.state['current_player'], 'p2')
 
-    def test_borrowed_cards_ii_finishes_its_choices_before_resuming_animals(self):
+    def test_borrowed_cards_ii_keeps_completed_animal_rewards_during_choices(self):
         self.helper.set_slot(self.state, 'p2', 'cards', 3)
         self.state['players']['p2']['action_cards']['cards']['upgraded'] = True
         self.start_hypnosis_before_appeal()
         self.choose('cards')
         self.act({'type': 'cards'})
         self.assertEqual(self.state['pending_choice']['type'], 'draw_card')
-        self.assertEqual(self.player['appeal'], 5)
+        self.assertEqual(self.player['appeal'], 7)
         self.choose('deck')
         self.assertEqual(self.state['pending_choice']['type'], 'draw_card')
-        self.assertEqual(self.player['appeal'], 5)
+        self.assertEqual(self.player['appeal'], 7)
         self.choose('deck')
         self.assertEqual(self.player['appeal'], 7)
         self.assertEqual(self.state['players']['p2']['action_cards']['cards']['slot'], 1)
@@ -790,22 +790,23 @@ class ArkNovaRuleRegressions(unittest.TestCase):
         self.assertIsNone(self.state['pending_choice'])
         self.assertEqual(self.state['current_player'], 'p2')
 
-    def test_hypnosis_preserves_the_outer_multiplier_repeat(self):
+    def test_hypnosis_waits_for_all_multiplier_repetitions(self):
         self.helper.set_slot(self.state, 'p2', 'sponsors', 3)
         self.player['action_cards']['animals']['multiplier_tokens'] = 1
         self.building(1)
-        self.start_hypnosis_before_appeal(use_multiplier_tokens=1)
-        # The second Animals action will have a legal animal and enclosure.
-        self.helper.add_hand_card(self.state, 'p1', '473')
-        self.choose('sponsors')
-        self.act({'type': 'sponsors', 'mode': 'break'})
+        self.start_hypnosis_before_appeal(additional_cards=('473',), use_multiplier_tokens=1)
         self.assertTrue(self.state['forced_action']['from_multiplier'])
+        self.assertFalse(self.state.get('pending_choice'))
         self.assertEqual(self.player['action_cards']['animals']['slot'], 5)
         empty = next(b for b in self.player['map']['buildings'] if not rules._building_occupied(b))
         self.act({'type': 'animals', 'plays': [{'card_id': '473', 'enclosure_id': empty['id']}]})
-        self.finish_choices()
+        self.choose([])  # Decline Sunbathing before the after-finishing Hypnosis.
         self.assertEqual(self.player['action_cards']['animals']['slot'], 1)
         self.assertNotIn('multiplier_action', self.state)
+        self.assertEqual(self.state['pending_choice']['type'], 'hypnosis_action')
+        self.choose('sponsors')
+        self.act({'type': 'sponsors', 'mode': 'break'})
+        self.assertEqual(self.state['current_player'], 'p2')
 
     def test_discarded_final_cards_go_to_bottom_of_the_final_deck(self):
         self.player['conservation'] = 9

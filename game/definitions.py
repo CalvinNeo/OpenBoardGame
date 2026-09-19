@@ -3628,6 +3628,10 @@ ARK_NOVA_ACTION_SCHEMA = {
                                 "pattern": "^(?:4[0-9]{2}|5(?:[01][0-9]|2[0-8]))$",
                             },
                             "wild_token_card_id": {"type": "string", "enum": ["215", "218"]},
+                            "wild_token_card_ids": {
+                                "type": "array", "maxItems": 2, "uniqueItems": True,
+                                "items": {"type": "string", "enum": ["215", "218"]},
+                            },
                             "reward_id": {"type": "string", "minLength": 1, "maxLength": 80},
                         },
                         "required": ["task"],

@@ -148,7 +148,7 @@
     animal_card: "Select an Animal card from your hand, or from the display when your upgraded action and reputation allow it.",
     animal_enclosure: "Each animal needs an eligible enclosure with sufficient empty capacity and any required water or rock adjacency.",
     sponsor_card: "Select Sponsor cards whose combined strength fits this action. Upgraded Sponsors may also use cards in reputation range.",
-    association_task: "Queue a different Association task. Their total strength may not exceed the action strength; repeated tasks can require extra workers.",
+    association_task: "Queue different Association tasks within the action strength. Tasks resolve in order, so workers (♟) and money (💰) gained earlier can fund later tasks or a donation. Each breeding card can supply one wildcard icon; select both cards to supply two.",
     donation: "After at least one task with upgraded Association, pay the next visible donation amount for 1 conservation point.",
     gain_x: "Take 1 X-token instead of performing the selected Action card, then move that Action card to slot 1.",
     skip_extra_action: "Decline this optional extra action and continue the turn. No action card moves and no tokens are spent.",
@@ -253,7 +253,7 @@
       slot: 3,
       project_card_id: "",
       release_animal_id: "",
-      wild_token_card_id: "",
+      wild_token_card_ids: [],
       reward_id: "",
     };
   }
@@ -1763,8 +1763,7 @@
       arkNovaMapCellType(cellId)?.buildRequirement === "build_action_upgraded"
       || arkNovaMapCellDefinition(cellId, view)?.build_requirement === "build_action_upgraded"
     ));
-    const ownBuild = arkNovaActionCards(arkNovaYou(view)).find((entry) => arkNovaActionId(entry) === "build");
-    if (needsBuildTwo && !(ownBuild && (ownBuild.upgraded || ownBuild.level === 2 || ownBuild.side === "II"))) {
+    if (needsBuildTwo && !arkNovaActionUpgraded("build", view)) {
       return `${needsBuildTwo} requires Build (II).`;
     }
 
@@ -2233,36 +2232,26 @@
       const task = String(placement && placement.task || "");
       placedByTask.set(task, (placedByTask.get(task) || 0) + 1);
     });
-    let availableWorkers = arkNovaResource(you, "workers");
-    let reputation = arkNovaTrack(you, "reputation");
-    let partnerZooCount = arkNovaAsArray(you.partner_zoos).length;
-    for (const task of arkNovaUi.associationQueue) {
+    for (const [index, task] of arkNovaUi.associationQueue.entries()) {
       const cost = (placedByTask.get(task.task) || 0) + 1;
       if (cost > 3) return `${arkNovaTitle(task.task)} is blocked by three of your workers until the next Break.`;
-      if (cost > availableWorkers) return `${arkNovaTitle(task.task)} needs ${cost} association worker${cost === 1 ? "" : "s"}; only ${availableWorkers} are available at that point.`;
-      availableWorkers -= cost;
-      placedByTask.set(task.task, cost);
-      if (task.task === "reputation") {
-        const previous = reputation;
-        reputation = Math.min(arkNovaActionUpgraded("cards", view) ? 15 : 9, reputation + 2);
-        if (previous < 8 && reputation >= 8) availableWorkers += 1;
-      } else if (task.task === "partner_zoo") {
-        partnerZooCount += 1;
-        if (partnerZooCount === 3) availableWorkers += 1;
+      // Later tasks use the resources left after every preceding effect and
+      // choice. The server validates those steps after their rewards resolve.
+      if (index === 0 && cost > arkNovaResource(you, "workers")) {
+        return `${arkNovaTitle(task.task)} needs ${cost} association worker${cost === 1 ? "" : "s"} to begin.`;
+      }
+      if (index === 0 && task.task === "reputation") {
+        const cap = arkNovaActionUpgraded("cards", view) ? 15 : 9;
+        if (arkNovaTrack(you, "reputation") >= cap && (cap === 9 || arkNovaTrack(you, "appeal") >= 113)) {
+          return "This reputation task cannot increase reputation or appeal.";
+        }
+      }
+      if (index === 0 && task.task === "support_project") {
+        const project = arkNovaSupportableProjects(view).find((card) => arkNovaCardId(card) === String(task.project_id));
+        const surcharge = project && project.source === "display" ? Math.max(0, arkNovaNumber(project.folder)) : 0;
+        if (surcharge > arkNovaResource(you, "money")) return `This display project costs 💰${surcharge} before its rewards.`;
       }
     }
-
-    let moneyNeeded = 0;
-    arkNovaUi.associationQueue.filter((task) => task.task === "support_project").forEach((task) => {
-      const project = arkNovaSupportableProjects(view).find((card) => arkNovaCardId(card) === String(task.project_id));
-      if (project && project.source === "display") moneyNeeded += Math.max(0, arkNovaNumber(project.folder));
-    });
-    if (arkNovaUi.donate) {
-      const slots = arkNovaAsArray(view && view.association_supply && view.association_supply.donation_slots)
-        .filter((slot) => slot && !slot.blocked && slot.occupied_by == null);
-      moneyNeeded += slots.length ? Math.min(...slots.map((slot) => arkNovaNumber(slot.cost, 12))) : 12;
-    }
-    if (moneyNeeded > arkNovaResource(you, "money")) return `This plan needs at least 💰${moneyNeeded}; you currently have 💰${arkNovaResource(you, "money")}.`;
     return "";
   }
 
@@ -2571,11 +2560,22 @@
     }));
   }
 
+  function arkNovaAssociationWildIds(task) {
+    return arkNovaAsArray(task.wild_token_card_ids || (task.wild_token_card_id ? [task.wild_token_card_id] : [])).map(String);
+  }
+
+  function arkNovaProjectEligibleSlots(project, task = arkNovaUi.associationDraft) {
+    const count = arkNovaAssociationWildIds(task).length;
+    return project && project.eligible_slots_by_wild_count
+      ? project.eligible_slots_by_wild_count[String(count)] || []
+      : project && project.eligible_slots;
+  }
+
   function arkNovaSetAssociationProject(projectId, view = arkNovaView) {
     const id = String(projectId || "");
     arkNovaUi.associationDraft.project_id = id;
     arkNovaUi.associationDraft.release_animal_id = "";
-    arkNovaUi.associationDraft.wild_token_card_id = "";
+    arkNovaUi.associationDraft.wild_token_card_ids = [];
     arkNovaUi.associationDraft.reward_id = "";
     arkNovaUi.selectedCards.clear();
     if (!id) return;
@@ -2611,8 +2611,9 @@
       const slots = selectedProject ? arkNovaAsArray(selectedProject.support_slots) : [1, 2, 3].map((position) => ({ position, reward: {} }));
       const occupied = new Set(arkNovaAsArray(selectedProject && selectedProject.occupied_slots).map((slot) => Number(slot.position ?? slot.slot)));
       const blocked = new Set(arkNovaAsArray(selectedProject && selectedProject.blocked_slots).map(Number));
-      const eligible = new Set(arkNovaAsArray(selectedProject && selectedProject.eligible_slots).map(Number));
-      const hasEligibility = !!selectedProject && Array.isArray(selectedProject.eligible_slots);
+      const eligibleSlots = arkNovaProjectEligibleSlots(selectedProject, draft);
+      const eligible = new Set(arkNovaAsArray(eligibleSlots).map(Number));
+      const hasEligibility = Array.isArray(eligibleSlots);
       const slotOptions = slots.map((slot) => {
         const position = Number(slot.position ?? slot.slot);
         const requirementUnavailable = hasEligibility && !eligible.has(position);
@@ -2627,7 +2628,7 @@
         : "";
       const wildTokens = arkNovaWildProjectTokens(view, selectedProject);
       const wildField = wildTokens.length
-        ? `<label><span>Wildcard token</span><select id="arkNovaAssociationWildToken"><option value="">Do not spend one</option>${wildTokens.map((token) => `<option value="${arkNovaEscape(token.id)}" ${String(draft.wild_token_card_id) === token.id ? "selected" : ""}>${arkNovaEscape(arkNovaCardName(token.card))} · ${token.count} left</option>`).join("")}</select></label>`
+        ? `<fieldset class="arkn-university-picker"><legend>Wildcard tokens · one per card</legend>${wildTokens.map((token) => `<label class="arkn-check-row"><input type="checkbox" name="arkNovaAssociationWildToken" value="${token.id}" ${arkNovaAssociationWildIds(draft).includes(token.id) ? "checked" : ""}><span><b>${arkNovaEscape(arkNovaCardName(token.card))}</b><small>${token.count} left · spend one for an icon</small></span></label>`).join("")}</fieldset>`
         : "";
       const mapRewards = arkNovaAvailableMapRewards(view);
       const rewardField = `<label><span>Map 0 reward</span><select id="arkNovaAssociationReward"><option value="">Choose an uncovered reward</option>${mapRewards.map((reward) => `<option value="${arkNovaEscape(reward.id)}" ${String(draft.reward_id) === String(reward.id) ? "selected" : ""}>${arkNovaEscape(reward.short_label || reward.label || reward.id)} · ${arkNovaEscape(reward.label || "")}</option>`).join("")}</select></label>`;
@@ -2644,7 +2645,7 @@
       const project = task.project_id && arkNovaSupportableProjects(arkNovaView).find((card) => arkNovaCardId(card) === String(task.project_id));
       const animal = task.release_animal_id && arkNovaCardObject(task.release_animal_id);
       const projectDetail = project
-        ? `${arkNovaCardName(project)} · tier ${task.slot}${task.release_animal_id ? ` · release ${arkNovaCardName(animal)}` : ""}${task.wild_token_card_id ? ` · wildcard #${task.wild_token_card_id}` : ""}${task.reward_id ? ` · reward ${task.reward_id}` : ""}`
+        ? `${arkNovaCardName(project)} · tier ${task.slot}${task.release_animal_id ? ` · release ${arkNovaCardName(animal)}` : ""}${arkNovaAssociationWildIds(task).length ? ` · wildcard #${arkNovaAssociationWildIds(task).join(" + #")}` : ""}${task.reward_id ? ` · reward ${task.reward_id}` : ""}`
         : task.project_id || "";
       const detail = university ? university.name : task.continent || projectDetail;
       return `<li><span>♟</span><b>${arkNovaEscape(arkNovaTitle(task.task))}</b><small>${arkNovaEscape(detail)}</small></li>`;
@@ -3159,7 +3160,8 @@
       const project = arkNovaSupportableProjects(arkNovaView).find((card) => arkNovaCardId(card) === String(arkNovaUi.associationDraft.project_id));
       if (!project) return arkNovaToast("That conservation project is no longer available.");
       const slot = arkNovaNumber(arkNovaUi.associationDraft.slot, 3);
-      if (Array.isArray(project.eligible_slots) && !project.eligible_slots.map(Number).includes(slot)) {
+      const eligibleSlots = arkNovaProjectEligibleSlots(project);
+      if (Array.isArray(eligibleSlots) && !eligibleSlots.map(Number).includes(slot)) {
         return arkNovaToast("You do not currently meet that open project tier.");
       }
       if (project.project_type === "release" && !arkNovaUi.associationDraft.release_animal_id) {
@@ -3168,7 +3170,8 @@
       if (project.project_type === "release" && !arkNovaReleaseCandidates(arkNovaView, project, slot).some((card) => arkNovaCardId(card) === String(arkNovaUi.associationDraft.release_animal_id))) {
         return arkNovaToast("That animal does not meet the selected release tier.");
       }
-      if (arkNovaUi.associationDraft.wild_token_card_id && !arkNovaWildProjectTokens(arkNovaView, project).some((token) => token.id === arkNovaUi.associationDraft.wild_token_card_id)) {
+      const wildIds = arkNovaAssociationWildIds(arkNovaUi.associationDraft);
+      if (wildIds.some((cardId) => !arkNovaWildProjectTokens(arkNovaView, project).some((token) => token.id === cardId))) {
         return arkNovaToast("That wildcard token cannot be used on this project.");
       }
       const rewardId = String(arkNovaUi.associationDraft.reward_id || "");
@@ -3180,7 +3183,7 @@
       draft.reward_id = rewardId;
       if (arkNovaUi.associationDraft.project_card_id) draft.project_card_id = arkNovaUi.associationDraft.project_card_id;
       if (arkNovaUi.associationDraft.release_animal_id) draft.release_animal_id = arkNovaUi.associationDraft.release_animal_id;
-      if (arkNovaUi.associationDraft.wild_token_card_id) draft.wild_token_card_id = arkNovaUi.associationDraft.wild_token_card_id;
+      if (wildIds.length) draft.wild_token_card_ids = wildIds;
     }
     arkNovaUi.associationQueue.push(draft);
     arkNovaRerenderInteractive();
@@ -3426,8 +3429,11 @@
       arkNovaUi.associationDraft.release_animal_id = "";
     } else if (target.id === "arkNovaAssociationReleaseAnimal") {
       arkNovaUi.associationDraft.release_animal_id = target.value;
-    } else if (target.id === "arkNovaAssociationWildToken") {
-      arkNovaUi.associationDraft.wild_token_card_id = target.value;
+    } else if (target.name === "arkNovaAssociationWildToken") {
+      const selected = new Set(arkNovaAssociationWildIds(arkNovaUi.associationDraft));
+      if (target.checked) selected.add(target.value);
+      else selected.delete(target.value);
+      arkNovaUi.associationDraft.wild_token_card_ids = [...selected];
     } else if (target.id === "arkNovaAssociationReward") {
       arkNovaUi.associationDraft.reward_id = target.value;
     } else if (target.id === "arkNovaDonate") {
