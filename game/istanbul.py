@@ -1083,7 +1083,7 @@ def _handle_location_action(state: Dict, player_id: str, action: Dict) -> Option
         return None
 
     if place_type == "warehouse":
-        good = tile.get("good")
+        good = tile.get("good") or WAREHOUSE_GOODS[tile["place_id"]]
         state["players"][player_id]["goods"][good] = state["players"][player_id]["capacity"]
         _enter_encounters(state)
         return None
@@ -1303,7 +1303,7 @@ def _handle_family_action(state: Dict, player_id: str, tile: Dict, action: Dict)
             state["players"][player_id]["assistants_in_stack"] += 1
         return None
     if place_type == "warehouse":
-        good = tile.get("good")
+        good = tile.get("good") or WAREHOUSE_GOODS[tile["place_id"]]
         state["players"][player_id]["goods"][good] = state["players"][player_id]["capacity"]
         return None
     if place_type == "post_office":

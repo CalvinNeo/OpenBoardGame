@@ -28354,6 +28354,36 @@ body.acquire-explain-mode button.has-explanation {
   color: #e2e7b3;
 }
 
+#inAGrovePanel .in-a-grove-inspection-rule {
+  margin-bottom: 10px;
+  color: #c8d6c9;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+#inAGroveConfigBox .row {
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+}
+
+#inAGroveConfigBox label {
+  flex: 0 0 auto;
+  font-size: 12px;
+}
+
+#inAGroveInspectionModeSelect {
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+}
+
+#inAGroveInspectionModeHint {
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+
 .in-a-grove-suspects {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

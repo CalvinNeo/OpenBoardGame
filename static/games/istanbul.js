@@ -1,3 +1,6 @@
+(() => {
+"use strict";
+
 const istanbulGamePanel = document.getElementById("istanbulPanel");
 const istanbulPhaseLabel = document.getElementById("istanbulPhase");
 const istanbulTurnLabel = document.getElementById("istanbulTurn");
@@ -40,218 +43,67 @@ const GOOD_LABELS = {
   blue: "🔵",
 };
 
-const BONUS_LABELS = {
-  BC_GOOD: "Gain 1 Good 🔴/🟢/🟡/🔵",
-  BC_LIRA5: "Take 5 Lira💰",
-  BC_SULTAN_2X: "Sultan Action x2",
-  BC_POST_2X: "Post Office x2",
-  BC_GEM_2X: "Gem Dealer x2",
-  BC_FAMILY_POLICE_REWARD: "Send Family to Police",
-  BC_NO_MOVE: "No Movement",
-  BC_MOVE_3_4: "Move 3-4",
-  BC_RETURN_ASSISTANT: "Return Assistant",
-  BC_SMALL_MARKET_WILD: "Small Market Wild",
+const ISTANBUL_BONUS_INFO = {
+    BC_GOOD: ["🎴 获取货物", "立即选择获得 1 件货物（🔴 布料／🟢 香料／🟡 水果／🔵 珠宝），不能超过容量。"],
+    BC_LIRA5: ["💰 获得 5 里拉", "立即获得 5 里拉。可在移动、助手或地点行动前使用。"],
+    BC_SULTAN_2X: ["💎 宫殿双倍行动", "在 #13 苏丹宫殿行动前使用：连续购买两颗红宝石，每次支付当时的货物费用；只在付得起时进行第二次。"],
+    BC_POST_2X: ["📮 邮局双倍行动", "在 #5 邮局行动前使用：连续领取当前及下一行资源，并推进两行。"],
+    BC_GEM_2X: ["💎 宝石商双倍行动", "在 #14 宝石商行动前使用：连续买两颗红宝石，每颗都需支付当前价格；钱不足则只买一颗。"],
+    BC_FAMILY_POLICE_REWARD: ["👪 家族返回警察局", "家族在外时将其送回警察局，选择 1 张奖励卡或 3 里拉作为奖励。"],
+    BC_NO_MOVE: ["🧭 原地行动", "移动前使用，本回合停在原地。仍需确认移动，再处理助手与地点行动。"],
+    BC_MOVE_3_4: ["🧭 移动 3–4 格", "移动前使用，将本回合移动距离改为 3–4 格。不能回到起点。"],
+    BC_RETURN_ASSISTANT: ["👥 召回助手", "移动前使用，免费将棋盘上自己的 1 名助手召回队伍。"],
+    BC_SMALL_MARKET_WILD: ["🛒 小市场通配", "在 #11 小市场行动前使用，本次可出售任意颜色货物，最多 5 件。"],
 };
+const BONUS_LABELS = Object.fromEntries(Object.entries(ISTANBUL_BONUS_INFO).map(([key, value]) => [key, value[0]]));
 
 const PLAYER_COLORS = ["#d97706", "#0f766e", "#b91c1c", "#2563eb", "#7c3aed"];
 
 const ISTANBUL_HELP_TEXT = `
-<h3>Goal</h3>
-<p>Be the first merchant to collect the required number of Rubies💎 (5 in 3-5 players, 6 in 2 players).</p>
-
-<h3>Turn Flow</h3>
-<ul>
-  <li><strong>Move</strong> 1-2 spaces orthogonally (or use a bonus card to change this).</li>
-  <li><strong>Encounters</strong> with other merchants (pay 2 Lira💰 each, except Fountain).</li>
-  <li><strong>Assistant</strong> drop or pick up to activate the place.</li>
-  <li><strong>Place Action</strong> (market, warehouse, palace, etc.).</li>
-  <li><strong>Encounters</strong> with family, Governor, Smuggler.</li>
-</ul>
-
-<h3>Encounters & NPCs</h3>
-<ul>
-  <li><strong>Governor (G)</strong>: you may take 1 bonus card 🎴 by paying 2💰 or discarding 1🎴. If you take it, the Governor moves to the tile matching a dice roll (🟢 mosque can reroll / +1 for 2💰).</li>
-  <li><strong>Smuggler (S)</strong>: you may take 1 good 🔴/🟢/🟡/🔵 by paying 2💰 or discarding 1🔴/🟢/🟡/🔵. If you take it, the Smuggler moves to the tile matching a dice roll (🟢 mosque can reroll / +1 for 2💰).</li>
-  <li><strong>Family encounter</strong>: if you land on another player's family, choose 1 reward: 1🎴 or 3💰. Their family returns to Police Station. If they own 🟡 mosque tile, they gain +2💰.</li>
-</ul>
-
-<h3>Family & Police Station</h3>
-<ul>
-  <li>Your family starts at the Police Station.</li>
-  <li>If your family is at the Police Station, you may send it to any place and perform that place's action (no encounters). The family stays there afterward.</li>
-  <li>Your family returns to the Police Station when another player meets it and takes the reward, or when you play the “Send Family to Police” bonus card.</li>
-</ul>
-
-<h3>Goods 🔴/🟢/🟡/🔵</h3>
-<p>Goods 🔴/🟢/🟡/🔵 are tracked by color. Use warehouses to fill up to your cart capacity. Trade at markets for Lira💰.</p>
-
-<h3>Rubies💎</h3>
-<ul>
-  <li><strong>Sultan's Palace</strong>: pay goods 🔴/🟢/🟡/🔵 based on the track.</li>
-  <li><strong>Gemstone Dealer</strong>: pay Lira💰 based on the track.</li>
-  <li><strong>Mosques</strong>: collect matching tiles for bonus Ruby💎.</li>
-</ul>
-
-<h3>Bonus Cards 🎴</h3>
-<p>Bonus cards can be played before or after actions (see the card text). Use them to bend the rules and gain tempo.</p>
+<h3>先记住：补货 → 卖货 → 换红宝石</h3>
+<p>你是集市中的商人。收集 💎 红宝石：2 人局目标 6 颗，3–5 人局 5 颗。有人达标后，其余玩家各完成最后一次回合；比较红宝石，平手依次比较里拉、货物总数、奖励卡数量。</p>
+<h3>每回合跟着 3 步走</h3>
+<ol>
+<li><strong>选择地点。</strong>通常沿上下左右走 1–2 格，不能回到起点。轻点高亮地点查看路线、效果和费用，再点 Move 确认。沿途地点不执行行动。</li>
+<li><strong>安排助手。</strong>目的地有自己的助手就收回；没有则放下随行的 1 名助手，然后才可执行地点行动。没有助手可用时会跳过地点行动；去喷泉召回助手。</li>
+<li><strong>执行地点行动。</strong>仓库补货、市场卖货、宝石商买宝石。按提示完成选择；行动及相遇处理结束后自动轮到下一位。</li>
+</ol>
+<h3>第一次可以这样玩</h3>
+<p>先找能到达的布料／香料／水果仓库补货，再看 Markets 的需求，到市场换钱，最后到宝石商买红宝石。货物也能在苏丹宫殿换宝石。先查看目的地当前费用，避免白跑。</p>
+<h3>看懂你的资源</h3>
+<p>💰 里拉是钱；💎 红宝石决定胜负；📦 手推车容量是<strong>每种颜色</strong>货物的上限；👥 是随行助手。🔴 布料、🟢 香料、🟡 水果、🔵 珠宝可以出售或支付。悬停、键盘聚焦或轻点资源徽标可直接查看说明。</p>
+<h3>地图上的人</h3>
+<p>姓名首字代表商人，👥 代表留在该地的助手，👪 代表家族成员。抵达有其他商人的地点，每人支付 2 里拉（喷泉免费）；钱不够则本回合直接结束。助手颜色与主人一致，ⓘ 可查看完整名单。</p>
+<p>行动后遇到别人的家族成员，可选 1 张奖励卡或 3 里拉，将其送回警察局；若对方有黄色清真寺板块，对方另获 2 里拉。遇到 🎩 总督可用 2 里拉或 1 张奖励卡换 1 张卡；遇到 🕵️ 走私者可用 2 里拉或 1 件货物换 1 件货物，也可 Skip。</p>
+<h3>其他获取宝石的方式</h3>
+<p>苏丹宫殿支付指定货物；宝石商支付里拉，价格会逐次上涨。先将手推车容量升到 5 的玩家获得 1 颗宝石。集齐同一座清真寺的两色板块，且该处仍有宝石时，获得 1 颗。</p>
+<h3>特殊地点与奖励卡</h3>
+<p>喷泉可召回助手（不勾选时全部召回）。黑市先选择 1 件基础货物，再掷骰获取蓝色珠宝。茶馆报 3–12：骰子总和达到所报数就获得该数额里拉，否则只得 2 里拉。警察局可派出自己的家族成员去执行另一个地点的行动，不触发相遇。</p>
+<p>奖励卡是可选操作，点卡后再点 Play Bonus。改变移动的卡要在移动前使用，双倍行动卡要在对应地点行动前使用。红色清真寺能力：付 2 里拉召回 1 名助手；绿色：掷骰后付 2 里拉重掷或加 1；黄色：家族被送回时获 2 里拉；蓝色：获得时增加 1 名助手（总数最多 5）。</p>
+<h3>Controls</h3>
+<p>Help 查看规则，Explain 后点控件查看解释（灰色按钮也可以）。ⓘ 只查看说明，不执行行动。点击空白或按 Esc 取消选择；弹窗可用 Close、Esc 或点击背景关闭。手机提示在轻点后显示 3 秒，再次轻点会更新并重新计时。</p>
 `;
 
-const ISTANBUL_BUTTON_EXPLANATIONS = {
-  istanbulMoveBtn: {
-    name: "Move",
-    description: "Send your merchant along the selected path (1-2 steps normally, or 3-4 / 0 with a bonus).",
-    cost: "Movement",
-    costType: "free",
-  },
-  istanbulDropBtn: {
-    name: "Drop Assistant",
-    description: "Leave the bottom assistant at this place to activate the action.",
-    cost: "Assistant",
-    costType: "free",
-  },
-  istanbulPickBtn: {
-    name: "Pick Assistant",
-    description: "Pick up your assistant from this place so they rejoin your stack.",
-    cost: "Assistant",
-    costType: "free",
-  },
-  istanbulSkipBtn: {
-    name: "Skip Assistant",
-    description: "Skip assistant handling at the Fountain if you cannot drop or pick.",
-    cost: "Assistant",
-    costType: "free",
-  },
-  istanbulActionBtn: {
-    name: "Do Place Action",
-    description: "Carry out the action of the current place (market, warehouse, palace, etc.).",
-    cost: "Action",
-    costType: "free",
-  },
-  istanbulBonusPlayBtn: {
-    name: "Play Bonus",
-    description: "Play the selected bonus card. Some cards require extra choices.",
-    cost: "Bonus",
-    costType: "free",
-  },
+const ISTANBUL_PLACES = {
+  1: ["车匠", "升级货车", "支付 7 里拉，将每色货物容量增加 1（最多 5）。首位升到 5 的玩家获得 1 颗红宝石。"],
+  2: ["布料仓库", "补满布料", "免费将红色布料补到手推车容量上限。"],
+  3: ["香料仓库", "补满香料", "免费将绿色香料补到手推车容量上限。"],
+  4: ["水果仓库", "补满水果", "免费将黄色水果补到手推车容量上限。"],
+  5: ["邮局", "领取资源", "免费领取邮局当前一行的钱与货物，然后推进到下一行。"],
+  6: ["商队旅馆", "抽二弃一", "抽 2 张奖励卡，再从手牌中选择 1 张弃掉。"],
+  7: ["喷泉", "召回助手", "免费召回棋盘上的助手；不选择时召回全部。这里不向其他商人付费。"],
+  8: ["黑市", "货物＋骰子", "选择 1 件布料、香料或水果，再掷骰获取蓝色珠宝：7–8 得 1 件，9–10 得 2 件，11–12 得 3 件。"],
+  9: ["茶馆", "掷骰赚钱", "报 3–12，掷骰总和达到所报数字就获得该数额里拉，否则获得 2 里拉。"],
+  10: ["大市场", "卖货赚钱", "出售 1–5 件符合当前需求的货物，按出售件数获得里拉。需求会在交易后更新。"],
+  11: ["小市场", "卖货赚钱", "出售 1–5 件符合当前需求的货物，按出售件数获得里拉。通配奖励卡可放宽颜色限制。"],
+  12: ["警察局", "派出家族", "家族成员在警察局时，可派往其他地点并执行该地点行动，无需助手且不触发相遇。"],
+  13: ["苏丹宫殿", "货物换宝石", "支付当前要求的货物，换取 1 颗红宝石。下一颗的要求会增加。"],
+  14: ["宝石商", "里拉买宝石", "支付当前标价的里拉，购买 1 颗红宝石。下一颗会涨价。"],
+  15: ["小清真寺", "红绿能力", "支付 1 件布料或香料，获得对应的可用板块及能力。集齐两色且宝石池未空时，获得 1 颗红宝石。"],
+  16: ["大清真寺", "黄蓝能力", "支付 1 件水果或珠宝，获得对应的可用板块及能力。集齐两色且宝石池未空时，获得 1 颗红宝石。"],
 };
-
-const ISTANBUL_TILE_EXPLANATIONS = {
-  1: {
-    name: "Wainwright",
-    description: "Pay 7 Lira💰 to increase your cart capacity by 1 (max 5). The first player to reach 5 gains a Ruby💎.",
-    cost: "7 Lira💰",
-    costType: "pay",
-  },
-  2: {
-    name: "Fabric Warehouse",
-    description: "Fill your red goods 🔴 to cart capacity.",
-    cost: "Free",
-    costType: "free",
-  },
-  3: {
-    name: "Spice Warehouse",
-    description: "Fill your green goods 🟢 to cart capacity.",
-    cost: "Free",
-    costType: "free",
-  },
-  4: {
-    name: "Fruit Warehouse",
-    description: "Fill your yellow goods 🟡 to cart capacity.",
-    cost: "Free",
-    costType: "free",
-  },
-  5: {
-    name: "Post Office",
-    description: "Take the resources in the current row, then advance the mail indicator.",
-    cost: "Free",
-    costType: "free",
-  },
-  6: {
-    name: "Caravansary",
-    description: "Draw 2 bonus cards, then discard 1 from your hand.",
-    cost: "Free",
-    costType: "free",
-  },
-  7: {
-    name: "Fountain",
-    description: "Recall any number of your assistants from the board.",
-    cost: "Free",
-    costType: "free",
-  },
-  8: {
-    name: "Black Market",
-    description: "Gain 1🔴/1🟢/1🟡, then roll to gain blue goods 🔵 (7-8:1🔵, 9-10:2🔵, 11-12:3🔵).",
-    cost: "Free",
-    costType: "free",
-  },
-  9: {
-    name: "Tea House",
-    description: "Call 3-12 and roll. If roll >= call, gain that many Lira💰; otherwise gain 2 Lira💰.",
-    cost: "Free",
-    costType: "free",
-  },
-  10: {
-    name: "Large Market",
-    description: "Sell 1-5 goods 🔴/🟢/🟡/🔵 matching the demand tile for Lira💰, then cycle the tile.",
-    cost: "1-5🔴/🟢/🟡/🔵",
-    costType: "pay",
-  },
-  11: {
-    name: "Small Market",
-    description: "Sell 1-5 goods 🔴/🟢/🟡/🔵 matching the demand tile for Lira💰, then cycle the tile.",
-    cost: "1-5🔴/🟢/🟡/🔵",
-    costType: "pay",
-  },
-  12: {
-    name: "Police Station",
-    description: "If your family is here, send them to any place and perform that place's action.",
-    cost: "Free",
-    costType: "free",
-  },
-  13: {
-    name: "Sultan's Palace",
-    description: "Pay the current goods requirement 🔴/🟢/🟡/🔵 to gain a Ruby💎; the requirement increases afterward.",
-    cost: "Goods 🔴/🟢/🟡/🔵",
-    costType: "pay",
-  },
-  14: {
-    name: "Gemstone Dealer",
-    description: "Pay the current Lira💰 cost to gain a Ruby💎; the cost increases afterward.",
-    cost: "Lira💰",
-    costType: "pay",
-  },
-  15: {
-    name: "Small Mosque",
-    description: "Pay 1🔴 or 1🟢 good to take the matching mosque tile (and its power).",
-    cost: "1🔴/1🟢",
-    costType: "pay",
-  },
-  16: {
-    name: "Great Mosque",
-    description: "Pay 1🟡 or 1🔵 good to take the matching mosque tile (and its power).",
-    cost: "1🟡/1🔵",
-    costType: "pay",
-  },
-};
-
-const ISTANBUL_TILE_SUMMARY = {
-  1: "7💰->+1📦",
-  2: "+🔴->📦",
-  3: "+🟢->📦",
-  4: "+🟡->📦",
-  5: "Mail row->📬+1",
-  6: "+2🎴-1🎴",
-  7: "Recall 👥",
-  8: "+1(🔴/🟢/🟡)+🎲🔵",
-  9: "Call X(3-12)=>🎲,✅+X,❎+2",
-  10: "Goto 🛒,🔴🟢🟡🔵=>💰",
-  11: "Goto 🛒,🔴🟢🟡🔵=>💰",
-  12: "👪->Any action",
-  13: "Goods🔴/🟢/🟡/🔵->💎",
-  14: "💰->💎",
-  15: "🔴/🟢->🕌",
-  16: "🟡/🔵->🕌",
-};
+const ISTANBUL_GOOD_NAMES = { red: "布料", green: "香料", yellow: "水果", blue: "珠宝" };
+const ISTANBUL_GOOD_HELP = "货物用于市场出售或支付地点费用，数量单位为件，每种颜色各自受手推车容量限制。";
 
 const ISTANBUL_MOSQUE_ABILITIES = {
   small: [
@@ -270,7 +122,10 @@ let currentIstanbulView = null;
 let istanbulExplainMode = false;
 let istanbulLastPhase = null;
 let istanbulLastTurn = null;
+let istanbulLastMoveMode = null;
 let istanbulActiveOverlay = null;
+let istanbulInspectedPos = null;
+let istanbulHints = null;
 
 const istanbulSelections = {
   path: [],
@@ -350,10 +205,18 @@ function closeIstanbulOverlays() {
 
 function clearIstanbulState() {
   currentIstanbulView = null;
+  istanbulInspectedPos = null;
+  istanbulHints?.hide();
+  exitIstanbulExplainMode();
+  closeIstanbulHelpModal();
+  closeIstanbulExplainModal();
   istanbulLastPhase = null;
   istanbulLastTurn = null;
+  istanbulLastMoveMode = null;
   resetIstanbulSelections();
   closeIstanbulOverlays();
+  document.getElementById("istanbulGuide")?.replaceChildren();
+  document.getElementById("istanbulDestination")?.replaceChildren();
   if (istanbulPhaseLabel) istanbulPhaseLabel.textContent = "-";
   if (istanbulTurnLabel) istanbulTurnLabel.textContent = "-";
   if (istanbulMoveModeLabel) istanbulMoveModeLabel.textContent = "-";
@@ -372,6 +235,7 @@ function clearIstanbulState() {
 }
 
 function showIstanbulHeaderActions(show) {
+  if (!show) { istanbulHints?.hide(); exitIstanbulExplainMode(); closeIstanbulHelpModal(); closeIstanbulExplainModal(); }
   if (istanbulHeaderActions) {
     istanbulHeaderActions.style.display = show ? "flex" : "none";
   }
@@ -379,6 +243,8 @@ function showIstanbulHeaderActions(show) {
 
 function showIstanbulHelpModal() {
   if (!istanbulHelpModal || !istanbulHelpContent) return;
+  istanbulHints?.hide();
+  exitIstanbulExplainMode();
   istanbulHelpContent.innerHTML = ISTANBUL_HELP_TEXT;
   setModalVisible(istanbulHelpModal, true);
 }
@@ -389,38 +255,17 @@ function closeIstanbulHelpModal() {
 }
 
 function updateIstanbulExplainClasses(enabled) {
-  Object.keys(ISTANBUL_BUTTON_EXPLANATIONS).forEach((buttonId) => {
-    const btn = document.getElementById(buttonId);
-    if (btn) {
-      btn.classList.toggle("has-explanation", enabled);
-    }
-  });
-  document.querySelectorAll(".istanbul-tile").forEach((node) => {
-    node.classList.toggle("has-explanation", enabled);
-  });
-  document.querySelectorAll(".istanbul-mosque-rubies").forEach((node) => {
-    node.classList.toggle("has-explanation", enabled);
-  });
-}
-
-function findIstanbulButtonAtPoint(x, y) {
-  for (const buttonId of Object.keys(ISTANBUL_BUTTON_EXPLANATIONS)) {
-    const btn = document.getElementById(buttonId);
-    if (!btn) continue;
-    const rect = btn.getBoundingClientRect();
-    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
-      return buttonId;
-    }
-  }
-  return null;
+    istanbulGamePanel?.querySelectorAll("[data-istanbul-explain], [data-istanbul-tip]").forEach(node => node.classList.toggle("has-explanation", enabled));
 }
 
 function toggleIstanbulExplainMode() {
+  istanbulHints?.hide();
   istanbulExplainMode = !istanbulExplainMode;
   document.body.classList.toggle("istanbul-explain-mode", istanbulExplainMode);
   updateIstanbulExplainClasses(istanbulExplainMode);
   if (istanbulExplainBtn) {
     istanbulExplainBtn.classList.toggle("active", istanbulExplainMode);
+    istanbulExplainBtn.setAttribute("aria-pressed", String(istanbulExplainMode));
   }
 }
 
@@ -431,77 +276,8 @@ function exitIstanbulExplainMode() {
   updateIstanbulExplainClasses(false);
   if (istanbulExplainBtn) {
     istanbulExplainBtn.classList.remove("active");
+    istanbulExplainBtn.setAttribute("aria-pressed", "false");
   }
-}
-
-function showIstanbulButtonExplanation(buttonId) {
-  const explanation = ISTANBUL_BUTTON_EXPLANATIONS[buttonId];
-  if (!explanation || !istanbulExplainContent || !istanbulExplainModal) return;
-  let costClass = "free";
-  if (explanation.costType === "pay") costClass = "pay";
-  if (explanation.costType === "end") costClass = "end";
-  istanbulExplainContent.innerHTML = `
-    <h4>${explanation.name}</h4>
-    <p>${explanation.description}</p>
-    <span class="istanbul-explain-cost ${costClass}">${explanation.cost}</span>
-  `;
-  setModalVisible(istanbulExplainModal, true);
-}
-
-function showIstanbulTileExplanation(placeId, pos) {
-  const explanation = ISTANBUL_TILE_EXPLANATIONS[placeId];
-  if (!explanation || !istanbulExplainContent || !istanbulExplainModal) {
-    return;
-  }
-  const tokenLines = [];
-  const view = currentIstanbulView || {};
-  const players = Array.isArray(view.players) ? view.players : [];
-  players.forEach((player) => {
-    if (player.merchant_pos === pos) {
-      const name = player.name || player.player_id || "Merchant";
-      const label = name.slice(0, 1).toUpperCase();
-      tokenLines.push(`🧿 Merchant: ${name} (${label})`);
-    }
-    if (player.family_pos === pos) {
-      const name = player.name || player.player_id || "Family";
-      tokenLines.push(`👪 Family: ${name} (F)`);
-    }
-  });
-  if (view.npc && view.npc.governor === pos) {
-    tokenLines.push("🟣 Governor (G)");
-  }
-  if (view.npc && view.npc.smuggler === pos) {
-    tokenLines.push("⚫ Smuggler (S)");
-  }
-  const tokensHtml = tokenLines.length
-    ? `<div><strong>Tokens Here</strong><ul>${tokenLines.map((line) => `<li>${line}</li>`).join("")}</ul></div>`
-    : "<div><strong>Tokens Here</strong><div>None</div></div>";
-
-  let costClass = "free";
-  if (explanation.costType === "pay") costClass = "pay";
-  if (explanation.costType === "end") costClass = "end";
-  istanbulExplainContent.innerHTML = `
-    <h4>${explanation.name}</h4>
-    <p>${explanation.description}</p>
-    <span class="istanbul-explain-cost ${costClass}">${explanation.cost}</span>
-    ${tokensHtml}
-  `;
-  setModalVisible(istanbulExplainModal, true);
-}
-
-function showIstanbulMosqueRubyExplanation(groupKey) {
-  if (!istanbulExplainContent || !istanbulExplainModal) return;
-  const view = currentIstanbulView || {};
-  const mosques = view.mosques || {};
-  const count = mosques[groupKey] ? mosques[groupKey].rubies : null;
-  const label = groupKey === "small" ? "Small Mosque" : "Great Mosque";
-  const remaining = Number.isInteger(count) ? count : 0;
-  istanbulExplainContent.innerHTML = `
-    <h4>${label} Bonus Rubies</h4>
-    <p>This pool rewards players who collect both tiles from this mosque. When you own both colors, take 1💎 from here.</p>
-    <span class="istanbul-explain-cost free">Remaining: 💎 ${remaining}</span>
-  `;
-  setModalVisible(istanbulExplainModal, true);
 }
 
 function closeIstanbulExplainModal() {
@@ -558,7 +334,7 @@ function selectionIsViewerTurn(view) {
 function formatGoodsLine(goods) {
   return GOODS.map((color) => {
     const count = goods[color] || 0;
-    return `${count}${GOOD_LABELS[color]}`;
+    return `${GOOD_LABELS[color]}${ISTANBUL_GOOD_NAMES[color]} ${count}`;
   }).join(" ");
 }
 
@@ -588,7 +364,13 @@ function clampMarketGoods(view, required, allowWild) {
 
 function clearSelectionIfNeeded(view) {
   if (!view) return;
+  if (istanbulLastMoveMode !== view.movement_mode) {
+    istanbulSelections.path = [];
+    istanbulInspectedPos = null;
+  }
+  istanbulLastMoveMode = view.movement_mode;
   if (istanbulLastPhase && istanbulLastPhase !== view.phase) {
+    istanbulInspectedPos = null;
     istanbulSelections.path = [];
     istanbulSelections.familyDestination = null;
     istanbulSelections.fountainReturns = new Set();
@@ -628,23 +410,25 @@ function formatSultanCost(cost) {
   const parts = [];
   GOODS.forEach((color) => {
     if (cost[color]) {
-      parts.push(`${cost[color]}${GOOD_LABELS[color]}`);
+      parts.push(`${GOOD_LABELS[color]}${ISTANBUL_GOOD_NAMES[color]} ${cost[color]}`);
     }
   });
   if (cost.any) {
-    parts.push(`${cost.any} any`);
+    parts.push(`任意货物 ${cost.any} 件`);
   }
   return parts.join(" ");
 }
 
 function renderIstanbulGameState(data) {
   const view = data.view || {};
+  const focus = document.activeElement;
+  const focusId = istanbulGamePanel?.contains(focus) ? focus.id : null;
   currentIstanbulView = view;
   clearSelectionIfNeeded(view);
-  if (istanbulPhaseLabel) istanbulPhaseLabel.textContent = view.phase || "-";
+  if (istanbulPhaseLabel) istanbulPhaseLabel.textContent = ({movement:"选择地点", assistant:"安排助手", action:"地点行动", encounters:"处理相遇", game_over:"游戏结束"})[view.phase] || "等待";
   if (istanbulTurnLabel) istanbulTurnLabel.textContent = formatPlayerName(view, view.current_player);
-  if (istanbulMoveModeLabel) istanbulMoveModeLabel.textContent = view.movement_mode || "-";
-  if (istanbulWinTargetLabel) istanbulWinTargetLabel.textContent = view.rubies_to_win || "-";
+  if (istanbulMoveModeLabel) istanbulMoveModeLabel.textContent = ({normal:"1–2 格", long:"3–4 格", stay:"原地"})[view.movement_mode] || "—";
+  if (istanbulWinTargetLabel) istanbulWinTargetLabel.textContent = `💎 ${view.rubies_to_win || "—"}`;
   if (istanbulTurnHint) {
     istanbulTurnHint.textContent = selectionIsViewerTurn(view) ? "Your turn" : "Waiting";
   }
@@ -655,158 +439,120 @@ function renderIstanbulGameState(data) {
   renderIstanbulMosques(view);
   renderIstanbulPostOffice(view);
   renderIstanbulBonus(view);
+  const bonusSummary = istanbulBonusHand?.closest("details")?.querySelector("summary");
+  if (bonusSummary) bonusSummary.textContent = `Bonus Cards (${getViewer(view)?.bonus_hand?.length || 0})`;
   renderIstanbulActionCenter(view);
+  renderIstanbulGuide(view);
+  renderIstanbulDestination(view);
+  decorateIstanbulHints(view);
   updateIstanbulExplainClasses(istanbulExplainMode);
+  if (focusId) document.getElementById(focusId)?.focus({ preventScroll: true });
 }
 
 function renderIstanbulBoard(view) {
   if (!istanbulBoard) return;
-  istanbulBoard.innerHTML = "";
+  istanbulBoard.replaceChildren();
   const viewer = getViewer(view);
-  const board = (view.board || []).slice().sort((a, b) => a.row - b.row || a.col - b.col);
-  const neighbors = buildNeighborMap(view);
-  const path = istanbulSelections.path || [];
-  const familyTarget = istanbulSelections.familyDestination;
-
-  board.forEach((tile) => {
+  const routes = istanbulReachableRoutes(view);
+  const selected = istanbulSelections.path.at(-1);
+  const isMoving = selectionIsViewerTurn(view) && view.phase === "movement" && !view.pending;
+  const police = viewer && getTileByPos(view, viewer.merchant_pos)?.place_id === 12;
+  const isFamily = selectionIsViewerTurn(view) && view.phase === "action" && !view.pending && police && viewer.family_pos === viewer.merchant_pos;
+  const board = [...(view.board || [])].sort((a,b) => a.row-b.row || a.col-b.col);
+  board.forEach(tile => {
+    const shell = document.createElement("div");
+    shell.className = "istanbul-tile-shell";
+    const here = viewer?.merchant_pos === tile.pos;
+    const chosen = selected === tile.pos || istanbulSelections.familyDestination === tile.pos;
+    shell.classList.toggle("current", here);
+    shell.classList.toggle("reachable", isMoving && routes.has(tile.pos));
+    shell.classList.toggle("selected", chosen);
     const tileEl = document.createElement("button");
     tileEl.type = "button";
     tileEl.className = "istanbul-tile";
+    tileEl.id = `istanbulTile${tile.pos}`;
     tileEl.dataset.pos = tile.pos;
     tileEl.dataset.placeId = tile.place_id;
-    if (istanbulExplainMode) {
-      tileEl.classList.add("has-explanation");
-    }
-    if (viewer && viewer.merchant_pos === tile.pos) {
-      tileEl.classList.add("current");
-    }
-    if (path.includes(tile.pos)) {
-      tileEl.classList.add("path-step");
-      const step = document.createElement("div");
-      step.className = "istanbul-step-badge";
-      step.textContent = String(path.indexOf(tile.pos) + 1);
-      tileEl.appendChild(step);
-    }
-    if (familyTarget === tile.pos) {
-      tileEl.classList.add("family-target");
-    }
-
-    const header = document.createElement("div");
+    tileEl.dataset.istanbulExplain = istanbulPlaceInfo(view, tile);
+    tileEl.setAttribute("aria-pressed", String(chosen));
+    tileEl.setAttribute("aria-label", `${istanbulPlaceName(tile)}。${here ? "你的商人在这里。" : ""}${routes.has(tile.pos) && isMoving ? `${routes.get(tile.pos).length} 格可达。` : ""}${ISTANBUL_PLACES[tile.place_id]?.[1] || ""}`);
+    const header = document.createElement("span");
     header.className = "istanbul-tile-header";
-    const idLabel = document.createElement("div");
-    idLabel.textContent = `#${tile.place_id}`;
-    const diceLabel = document.createElement("div");
-    diceLabel.className = "istanbul-tile-dice";
-    diceLabel.textContent = tile.dice ? `🎲 ${tile.dice}` : "";
-    header.appendChild(idLabel);
-    header.appendChild(diceLabel);
-
-    const name = document.createElement("div");
+    header.textContent = `#${tile.place_id} ${here ? "· 你在这" : chosen ? "· 已选" : isMoving && routes.has(tile.pos) ? `· ${routes.get(tile.pos).length} 格` : ""}`;
+    const name = document.createElement("span");
     name.className = "istanbul-tile-name";
-    name.textContent = tile.name || "-";
-
-    const summary = ISTANBUL_TILE_SUMMARY[tile.place_id];
-    let desc = null;
-    if (summary) {
-      desc = document.createElement("div");
-      desc.className = "istanbul-tile-desc";
-      desc.textContent = summary;
-    }
-
-    const tokenRow = document.createElement("div");
-    tokenRow.className = "istanbul-token-row";
-
-    (view.players || []).forEach((player) => {
-      if (player.merchant_pos === tile.pos) {
-        const token = document.createElement("div");
-        token.className = "istanbul-token";
-        const seat = Number.isInteger(player.seat) ? player.seat : 0;
-        token.style.background = PLAYER_COLORS[seat % PLAYER_COLORS.length];
-        const name = player.name || "P";
-        token.textContent = name.slice(0, 1).toUpperCase();
-        token.title = `${name} Merchant`;
-        tokenRow.appendChild(token);
-      }
-      if (player.family_pos === tile.pos) {
-        const fam = document.createElement("div");
-        fam.className = "istanbul-token family";
-        const name = player.name || "F";
-        fam.textContent = "F";
-        fam.title = `${name} Family`;
-        tokenRow.appendChild(fam);
-      }
+    name.textContent = istanbulPlaceName(tile);
+    const desc = document.createElement("span");
+    desc.className = "istanbul-tile-desc";
+    desc.textContent = ISTANBUL_PLACES[tile.place_id]?.[1] || "";
+    let infoSuffix = "";
+    const tokens = document.createElement("span");
+    tokens.className = "istanbul-token-row";
+    [...(view.players || [])].sort((a,b) => Number(b.player_id === view.you) - Number(a.player_id === view.you)).forEach(player => {
+      const append = (text, extra) => {
+        const token = document.createElement("span");
+        token.className = `istanbul-token ${extra}`;
+        token.style.background = PLAYER_COLORS[(player.seat || 0) % PLAYER_COLORS.length];
+        token.textContent = text;
+        tokens.append(token);
+      };
+      if (player.merchant_pos === tile.pos) append(Array.from(player.name || "P")[0], "");
+      if ((player.assistants_on_board || []).includes(tile.pos)) append("👥", "assistant");
+      if (player.family_pos === tile.pos) append("👪", "family");
     });
-
-    if (view.npc && view.npc.governor === tile.pos) {
-      const gov = document.createElement("div");
-      gov.className = "istanbul-token npc";
-      gov.textContent = "G";
-      gov.title = "Governor";
-      tokenRow.appendChild(gov);
+    for (const [npc, icon] of [["governor", "🎩"], ["smuggler", "🕵️"]]) {
+      if (view.npc?.[npc] !== tile.pos) continue;
+      const token = document.createElement("span");
+      token.className = "istanbul-token npc";
+      token.textContent = icon;
+      tokens.append(token);
     }
-    if (view.npc && view.npc.smuggler === tile.pos) {
-      const sm = document.createElement("div");
-      sm.className = "istanbul-token smuggler";
-      sm.textContent = "S";
-      sm.title = "Smuggler";
-      tokenRow.appendChild(sm);
+    if (tokens.children.length > 2) {
+      const extra = tokens.children.length - 1;
+      while (tokens.children.length > 1) tokens.lastChild.remove();
+      const count = document.createElement("span");
+      count.className = "istanbul-token extra";
+      count.textContent = `+${extra}`;
+      tokens.append(count);
+      infoSuffix = `另有 ${extra} 个棋子，ⓘ 查看完整名单。`;
     }
-
-    tileEl.appendChild(header);
-    tileEl.appendChild(name);
-    if (desc) {
-      tileEl.appendChild(desc);
-    }
-    tileEl.appendChild(tokenRow);
-
+    tileEl.append(header, name, desc, tokens);
     tileEl.addEventListener("click", () => {
-      if (!selectionIsViewerTurn(view)) return;
-      if (view.phase === "movement" && view.legal_actions && view.legal_actions.includes("move")) {
-        updatePathSelection(view, tile.pos, neighbors);
-        renderIstanbulGameState({ view });
-        return;
+      istanbulInspectedPos = tile.pos;
+      if (isMoving && routes.has(tile.pos)) {
+        istanbulSelections.path = selected === tile.pos ? [] : routes.get(tile.pos);
+      } else if (isFamily && tile.place_id !== 12) {
+        istanbulSelections.familyDestination = istanbulSelections.familyDestination === tile.pos ? null : tile.pos;
       }
-      const viewer = getViewer(view);
-      const tileInfo = getTileByPos(view, viewer ? viewer.merchant_pos : null);
-      if (view.phase === "action" && tileInfo && tileInfo.place_id === 12 && viewer && viewer.family_pos === tileInfo.pos) {
-        istanbulSelections.familyDestination = tile.pos;
-        renderIstanbulGameState({ view });
-      }
+      renderIstanbulGameState({ view });
     });
-
-    istanbulBoard.appendChild(tileEl);
+    const info = document.createElement("button");
+    info.type = "button";
+    info.className = "istanbul-tile-info";
+    info.id = `istanbulTileInfo${tile.pos}`;
+    info.textContent = "ⓘ";
+    info.dataset.istanbulTip = `${infoSuffix}${istanbulPlaceInfo(view, tile)}`;
+    info.setAttribute("aria-label", `${istanbulPlaceName(tile)}：地点与棋子说明`);
+    shell.append(tileEl, info);
+    istanbulBoard.append(shell);
   });
 }
 
-function updatePathSelection(view, pos, neighbors) {
+function istanbulReachableRoutes(view) {
   const viewer = getViewer(view);
-  if (!viewer) return;
+  const routes = new Map();
+  if (!viewer) return routes;
   const start = viewer.merchant_pos;
-  if (pos === start) return;
-  const path = istanbulSelections.path || [];
   const limits = movementLimits(view.movement_mode || "normal");
-  if (path.length >= limits.max) {
-    return;
+  const neighbors = buildNeighborMap(view);
+  const queue = [{pos: start, path: []}];
+  while (queue.length) {
+    const {pos, path} = queue.shift();
+    if (path.length >= limits.min && (pos !== start || limits.max === 0) && !routes.has(pos)) routes.set(pos, path);
+    if (path.length >= limits.max) continue;
+    for (const next of neighbors.get(pos) || []) queue.push({pos: next, path: [...path, next]});
   }
-  if (path.length === 0) {
-    if (neighbors.get(start).includes(pos)) {
-      istanbulSelections.path = [pos];
-    }
-    return;
-  }
-  const last = path[path.length - 1];
-  if (pos === last) {
-    istanbulSelections.path = path.slice(0, -1);
-    return;
-  }
-  const existingIndex = path.indexOf(pos);
-  if (existingIndex >= 0) {
-    istanbulSelections.path = path.slice(0, existingIndex + 1);
-    return;
-  }
-  if (neighbors.get(last).includes(pos)) {
-    istanbulSelections.path = [...path, pos];
-  }
+  return routes;
 }
 
 function renderIstanbulPlayers(view) {
@@ -842,18 +588,23 @@ function renderIstanbulPlayers(view) {
 
 function renderIstanbulYou(view) {
   if (!istanbulYou) return;
+  istanbulYou.replaceChildren();
   const viewer = getViewer(view);
-  if (!viewer) {
-    istanbulYou.innerHTML = "";
-    return;
-  }
-  const items = [];
-  items.push(`<div class="istanbul-pill">Lira💰 ${viewer.lira}</div>`);
-  items.push(`<div class="istanbul-pill">Rubies💎 ${viewer.rubies}</div>`);
-  items.push(`<div class="istanbul-pill">Cart📦 ${viewer.capacity}</div>`);
-  items.push(`<div class="istanbul-pill">Assistants👥 ${viewer.assistants_in_stack}/${viewer.assistants_on_board.length}</div>`);
-  const goodsLine = `<div>${formatGoodsLine(viewer.goods || {})}</div>`;
-  istanbulYou.innerHTML = items.join("") + goodsLine;
+  if (!viewer) { istanbulYou.textContent = "Spectating"; return; }
+  const badges = [
+    [`💰 ${viewer.lira}`, `里拉：${viewer.lira}。用于购买红宝石、升级货车或支付相遇费用。`],
+    [`💎 ${viewer.rubies}/${view.rubies_to_win}`, `红宝石：已得 ${viewer.rubies} 颗，目标 ${view.rubies_to_win} 颗。有人达标后进入最后一轮，最终数量最多者胜。`],
+    [`📦 ${viewer.capacity}`, `手推车容量：每种颜色最多存放 ${viewer.capacity} 件货物；车匠可付费升级至 5。`],
+    [`👥 ${viewer.assistants_in_stack}`, `随行助手：${viewer.assistants_in_stack} 名；留在棋盘上 ${viewer.assistants_on_board.length} 名。放下或收回一名助手才能执行地点行动；喷泉可召回。`],
+    ...GOODS.map(color => [`${GOOD_LABELS[color]} ${viewer.goods[color] || 0}`, `${ISTANBUL_GOOD_NAMES[color]}：${viewer.goods[color] || 0} 件。${ISTANBUL_GOOD_HELP}`]),
+  ];
+  badges.forEach(([label, tip]) => {
+    const badge = document.createElement("span");
+    badge.className = "istanbul-pill";
+    badge.textContent = label;
+    badge.dataset.istanbulTip = tip;
+    istanbulYou.append(badge);
+  });
 }
 
 function renderIstanbulMarkets(view) {
@@ -1059,7 +810,10 @@ function renderIstanbulBonus(view) {
     title.className = "istanbul-bonus-title";
     title.textContent = BONUS_LABELS[card.kind] || card.kind;
     const text = document.createElement("div");
-    text.textContent = card.text || "";
+    text.textContent = ISTANBUL_BONUS_INFO[card.kind]?.[1] || card.text || "";
+    button.dataset.istanbulExplain = `${title.textContent}。${text.textContent}`;
+    button.id = `istanbulBonusCard${card.uid}`;
+    button.setAttribute("aria-pressed", String(istanbulSelections.bonusCardId === card.uid));
     button.appendChild(title);
     button.appendChild(text);
     button.addEventListener("click", () => {
@@ -1082,8 +836,12 @@ function renderIstanbulActionCenter(view) {
     istanbulPathHint.textContent = "";
   }
 
+  if (view.game_over || view.phase === "game_over") {
+    istanbulActionHint.textContent = `游戏结束 · ${(view.winner || []).map(id => formatPlayerName(view, id)).join("、")} 获胜`;
+    return;
+  }
   if (!selectionIsViewerTurn(view)) {
-    istanbulActionHint.textContent = "Waiting for other players.";
+    istanbulActionHint.textContent = `等待 ${formatPlayerName(view, view.current_player)} 完成本回合。`;
     return;
   }
 
@@ -1116,7 +874,7 @@ function renderIstanbulActionCenter(view) {
 function renderPendingAction(view, pending) {
   const type = pending.type;
   if (type === "reward") {
-    istanbulActionHint.textContent = "Family captured. Choose a reward.";
+    istanbulActionHint.textContent = "遇到家族成员，请选择一项奖励。";
     const row = document.createElement("div");
     row.className = "istanbul-control-row";
     const cardBtn = buildButton("Take Bonus", "istanbulRewardCardBtn", () => {
@@ -1131,7 +889,7 @@ function renderPendingAction(view, pending) {
     return;
   }
   if (type === "governor") {
-    istanbulActionHint.textContent = "Governor: draw a bonus card?";
+    istanbulActionHint.textContent = "🎩 总督：选择支付方式，换取 1 张奖励卡，或 Skip。";
     const viewer = getViewer(view);
     const hasCards = viewer && viewer.bonus_hand && viewer.bonus_hand.length;
     const row = document.createElement("div");
@@ -1169,6 +927,7 @@ function renderPendingAction(view, pending) {
       }
       renderIstanbulGameState({ view });
     });
+    paymentSelect.setAttribute("aria-label", "总督交易支付方式");
     paymentRow.appendChild(paymentSelect);
     if (paymentMode === "card") {
       const discardSelect = buildBonusSelect(
@@ -1184,7 +943,7 @@ function renderPendingAction(view, pending) {
     return;
   }
   if (type === "smuggler") {
-    istanbulActionHint.textContent = "Smuggler: gain a good 🔴/🟢/🟡/🔵?";
+    istanbulActionHint.textContent = "🕵️ 走私者：先选择获得什么，再选择如何支付。";
     const row = document.createElement("div");
     row.className = "istanbul-control-row";
     const takeBtn = buildButton("Take 1🔴/🟢/🟡/🔵", "istanbulSmugglerTakeBtn", () => {
@@ -1209,7 +968,7 @@ function renderPendingAction(view, pending) {
     });
     const paySelect = document.createElement("select");
     paySelect.innerHTML = "<option value=\"lira\">Pay 2 Lira💰</option><option value=\"good\">Pay 1🔴/🟢/🟡/🔵</option>";
-    paySelect.value = istanbulSelections.smugglerPayment === "good" ? "good" : "lira";
+    paySelect.value = istanbulSelections.smugglerPayment === "lira" ? "lira" : "good";
     paySelect.addEventListener("change", () => {
       if (paySelect.value === "lira") {
         istanbulSelections.smugglerPayment = "lira";
@@ -1218,8 +977,15 @@ function renderPendingAction(view, pending) {
       }
       renderIstanbulGameState({ view });
     });
-    opts.appendChild(goodSelect);
-    opts.appendChild(paySelect);
+    goodSelect.setAttribute("aria-label", "走私者交易：想获得的货物");
+    paySelect.setAttribute("aria-label", "走私者交易：支付方式");
+    const gainLabel = document.createElement("label");
+    gainLabel.textContent = "获得 ";
+    gainLabel.append(goodSelect);
+    const payLabel = document.createElement("label");
+    payLabel.textContent = "支付 ";
+    payLabel.append(paySelect);
+    opts.append(gainLabel, payLabel);
     if (istanbulSelections.smugglerPayment !== "lira") {
       const payGood = buildGoodSelect(
         istanbulSelections.smugglerPayment,
@@ -1228,13 +994,17 @@ function renderPendingAction(view, pending) {
         },
         false
       );
-      opts.appendChild(payGood);
+      payGood.setAttribute("aria-label", "走私者交易：用哪种货物支付");
+      const payGoodLabel = document.createElement("label");
+      payGoodLabel.textContent = "用货物 ";
+      payGoodLabel.append(payGood);
+      opts.append(payGoodLabel);
     }
     istanbulActionControls.appendChild(opts);
     return;
   }
   if (type === "dice") {
-    istanbulActionHint.textContent = `Dice roll: ${pending.roll}`;
+    istanbulActionHint.textContent = `骰子总和：🎲 ${pending.roll}`;
     const row = document.createElement("div");
     row.className = "istanbul-control-row";
     const acceptBtn = buildButton("Accept", "istanbulDiceAcceptBtn", () => {
@@ -1262,7 +1032,7 @@ function renderPendingAction(view, pending) {
     return;
   }
   if (type === "caravan_discard") {
-    istanbulActionHint.textContent = "Discard a bonus card.";
+    istanbulActionHint.textContent = "选择要弃掉的 1 张奖励卡。";
     const select = buildBonusSelect(
       view,
       (value) => {
@@ -1280,22 +1050,26 @@ function renderPendingAction(view, pending) {
 }
 
 function renderMovementControls(view) {
-  istanbulActionHint.textContent = "Select a path by clicking tiles.";
   const mode = view.movement_mode || "normal";
-  if (mode === "stay" && istanbulSelections.path.length) {
-    istanbulSelections.path = [];
-  }
+  if (mode === "stay") istanbulSelections.path = [];
   const steps = istanbulSelections.path.length;
   const limits = movementLimits(mode);
-  const isValid = steps >= limits.min && steps <= limits.max;
+  const dest = getTileByPos(view, istanbulSelections.path.at(-1));
+  istanbulActionHint.textContent = mode === "stay" ? "原地行动奖励已生效，确认后安排助手。" : dest ? `目的地：${istanbulPlaceName(dest)}。确认后才移动商人。` : `轻点高亮地点，自动规划 ${limits.min}–${limits.max} 格路线，再确认移动。`;
   if (istanbulPathHint) {
-    const pathText = steps ? istanbulSelections.path.join(" → ") : "-";
-    istanbulPathHint.textContent = `Path: ${pathText}`;
+    const viewer = getViewer(view);
+    const path = [viewer?.merchant_pos, ...istanbulSelections.path].map(pos => istanbulPlaceName(getTileByPos(view, pos)));
+    istanbulPathHint.textContent = steps ? `路线：${path.join(" → ")}（${steps} 格）` : "棋盘按上下左右相邻；ⓘ 查看地点详情。";
   }
-  const moveBtn = buildButton("Move", "istanbulMoveBtn", () => {
-    sendAction({ type: "move", path: istanbulSelections.path });
-  }, "primary", !isValid);
-  istanbulActionControls.appendChild(moveBtn);
+  const viewer = getViewer(view);
+  const destination = dest || (mode === "stay" ? getTileByPos(view, viewer?.merchant_pos) : null);
+  const problem = istanbulActionProblem(view, destination);
+  const canUseWild = destination?.place_id === 11 && viewer?.bonus_hand?.some(card => card.kind === "BC_SMALL_MARKET_WILD") && GOODS.some(color => viewer.goods[color] > 0);
+  const cannotAct = problem && !canUseWild && !problem.startsWith("没有可用助手") && !problem.includes("直接结束回合");
+  const valid = steps >= limits.min && steps <= limits.max && !cannotAct;
+  if (canUseWild && problem) appendActionNote("当前货物不符合需求；抵达后先使用小市场通配奖励卡，再卖货。");
+  if (cannotAct) appendActionNote(`${problem} 请先补充资源或选择其他地点。`);
+  istanbulActionControls.append(buildButton(dest ? `Move · ${istanbulPlaceName(dest)}` : mode === "stay" ? "Confirm · 原地行动" : "Move · 先选地点", "istanbulMoveBtn", () => sendAction({type: "move", path: [...istanbulSelections.path]}), "primary", !valid));
   renderBonusPlay(view);
   renderRedMosqueQuick(view);
 }
@@ -1309,14 +1083,14 @@ function renderAssistantControls(view) {
   const canDrop = inStack > 0 && !hasHere;
   const canPick = hasHere;
   const isFountain = getTileByPos(view, location)?.place_id === 7;
-  istanbulActionHint.textContent = isFountain ? "You are at the Fountain." : "Manage your assistant.";
+  istanbulActionHint.textContent = hasHere ? "这里有你的助手：收回后即可执行地点行动。" : isFountain && !canDrop ? "这里是喷泉：无需助手也能召回队伍。" : "留下一名随行助手，换取本地点的一次行动；以后回来可把助手收回。";
 
   const row = document.createElement("div");
   row.className = "istanbul-control-row";
-  row.appendChild(buildButton("Drop Assistant", "istanbulDropBtn", () => sendAction({ type: "assistant", mode: "drop" }), "primary", !canDrop));
-  row.appendChild(buildButton("Pick Assistant", "istanbulPickBtn", () => sendAction({ type: "assistant", mode: "pickup" }), "secondary", !canPick));
+  row.appendChild(buildButton("放下助手 · 执行地点", "istanbulDropBtn", () => sendAction({ type: "assistant", mode: "drop" }), "primary", !canDrop));
+  row.appendChild(buildButton("收回助手 · 执行地点", "istanbulPickBtn", () => sendAction({ type: "assistant", mode: "pickup" }), "secondary", !canPick));
   if (isFountain) {
-    row.appendChild(buildButton("Skip", "istanbulSkipBtn", () => sendAction({ type: "assistant", mode: "none" }), "ghost", !( !canDrop && !canPick )));
+    row.appendChild(buildButton("Skip", "istanbulSkipBtn", () => sendAction({ type: "assistant", mode: "none" }), "ghost", false));
   }
   istanbulActionControls.appendChild(row);
   renderBonusPlay(view);
@@ -1329,7 +1103,7 @@ function renderPlaceActionControls(view) {
   const tile = getTileByPos(view, viewer.merchant_pos);
   if (!tile) return;
   const placeType = tile.type;
-  istanbulActionHint.textContent = tile.name || "Place action";
+  istanbulActionHint.textContent = `当前位置：${istanbulPlaceName(tile)}，请选择本次行动。`;
 
   if (placeType === "wainwright") {
     const canPay = viewer.lira >= 7 && viewer.capacity < 5;
@@ -1339,16 +1113,16 @@ function renderPlaceActionControls(view) {
       if (viewer.capacity >= 5) reasons.push("Cart📦 already at max (5).");
       appendActionNote(reasons.join(" "));
     }
-    const btn = buildButton("Upgrade Cart📦 (7 Lira💰)", "istanbulActionBtn", () => sendAction({ type: "location_action" }), "primary", !canPay);
+    const btn = buildButton("📦 升级货车 · 7 里拉", "istanbulActionBtn", () => sendAction({ type: "location_action" }), "primary", !canPay);
     istanbulActionControls.appendChild(btn);
   } else if (placeType === "warehouse") {
-    const btn = buildButton("Fill to Capacity", "istanbulActionBtn", () => sendAction({ type: "location_action" }), "primary");
+    const btn = buildButton("补满本色货物", "istanbulActionBtn", () => sendAction({ type: "location_action" }), "primary");
     istanbulActionControls.appendChild(btn);
   } else if (placeType === "post_office") {
-    const btn = buildButton("Collect Mail", "istanbulActionBtn", () => sendAction({ type: "location_action" }), "primary");
+    const btn = buildButton("领取邮局资源", "istanbulActionBtn", () => sendAction({ type: "location_action" }), "primary");
     istanbulActionControls.appendChild(btn);
   } else if (placeType === "caravansary") {
-    const btn = buildButton("Draw 2 Bonus Cards", "istanbulActionBtn", () => sendAction({ type: "location_action" }), "primary");
+    const btn = buildButton("抽 2 张奖励卡", "istanbulActionBtn", () => sendAction({ type: "location_action" }), "primary");
     istanbulActionControls.appendChild(btn);
   } else if (placeType === "fountain") {
     renderFountainControls(view, false);
@@ -1367,7 +1141,7 @@ function renderPlaceActionControls(view) {
       const costText = formatSultanCost(cost);
       appendActionNote(costText ? `Need ${costText} to buy a Ruby💎.` : "Not enough goods to buy a Ruby💎.");
     }
-    const btn = buildButton("Buy Ruby💎", "istanbulActionBtn", () => sendAction({ type: "location_action" }), "primary");
+    const btn = buildButton("💎 购买红宝石", "istanbulActionBtn", () => sendAction({ type: "location_action" }), "primary", !canPaySultanCost(viewer.goods, cost));
     istanbulActionControls.appendChild(btn);
   } else if (placeType === "gemstone_dealer") {
     const idx = Number.isInteger(view.gem_index) ? view.gem_index : 0;
@@ -1375,7 +1149,7 @@ function renderPlaceActionControls(view) {
     if (Number.isInteger(cost) && viewer.lira < cost) {
       appendActionNote(`Need ${cost} Lira💰 to buy a Ruby💎.`);
     }
-    const btn = buildButton("Buy Ruby💎", "istanbulActionBtn", () => sendAction({ type: "location_action" }), "primary");
+    const btn = buildButton("💎 购买红宝石", "istanbulActionBtn", () => sendAction({ type: "location_action" }), "primary", !Number.isInteger(cost) || viewer.lira < cost);
     istanbulActionControls.appendChild(btn);
   } else if (placeType === "small_mosque" || placeType === "great_mosque") {
     renderMosqueControls(view, placeType, false);
@@ -1395,18 +1169,18 @@ function renderPoliceControls(view) {
   if (!policeTile) return;
   if (viewer.family_pos !== policeTile.pos) {
     const note = document.createElement("div");
-    note.textContent = "Family is not at the Police Station.";
+    note.textContent = "家族成员不在警察局，本次无法派出。";
     istanbulActionControls.appendChild(note);
-    renderBonusPlay(view);
+    istanbulActionControls.appendChild(buildButton("Continue", "istanbulPoliceContinueBtn", () => sendAction({type: "location_action"})));
     return;
   }
-  istanbulActionHint.textContent = "Select a destination tile for your family.";
+  istanbulActionHint.textContent = "点选家族成员要去的地点，再确认派出。";
   const dest = istanbulSelections.familyDestination;
   const destTile = dest !== null ? getTileByPos(view, dest) : null;
   const row = document.createElement("div");
   row.className = "istanbul-control-row";
   const label = document.createElement("div");
-  label.textContent = destTile ? `Destination: ${destTile.name}` : "Destination: none";
+  label.textContent = destTile ? `目的地：${istanbulPlaceName(destTile)}` : "先在棋盘选择目的地";
   row.appendChild(label);
   istanbulActionControls.appendChild(row);
 
@@ -1415,7 +1189,7 @@ function renderPoliceControls(view) {
     const sendBtn = buildButton("Send Family", "istanbulFamilySendBtn", () => {
       const payload = buildFamilyPayload(destTile);
       sendAction(payload);
-    }, "primary");
+    }, "primary", Boolean(istanbulActionProblem(view, destTile, true)) || ((destTile.place_id === 10 || destTile.place_id === 11) && !GOODS.some(c => istanbulSelections.marketGoods[c] > 0)) || ((destTile.place_id === 15 || destTile.place_id === 16) && !istanbulSelections.mosqueColor));
     istanbulActionControls.appendChild(sendBtn);
   }
 }
@@ -1457,7 +1231,7 @@ function renderFountainControls(view, isFamily) {
   if (!viewer) return;
   const assistants = viewer.assistants_on_board || [];
   const info = document.createElement("div");
-  info.textContent = isFamily ? "Choose assistants to recall (blank = all)." : "Recall any assistants.";
+  info.textContent = "点选要召回的助手；不选时召回全部。";
   istanbulActionControls.appendChild(info);
   if (assistants.length) {
     const row = document.createElement("div");
@@ -1484,7 +1258,7 @@ function renderFountainControls(view, isFamily) {
     istanbulActionControls.appendChild(row);
   }
   if (!isFamily) {
-    const btn = buildButton("Recall Assistants👥", "istanbulActionBtn", () => {
+    const btn = buildButton("👥 召回助手", "istanbulActionBtn", () => {
       const payload = { type: "location_action" };
       if (istanbulSelections.fountainReturns.size) {
         payload.return_assistants = Array.from(istanbulSelections.fountainReturns);
@@ -1503,7 +1277,7 @@ function renderBlackMarketControls(view, isFamily) {
   }, true));
   istanbulActionControls.appendChild(row);
   if (!isFamily) {
-    const btn = buildButton("Trade Goods 🔴/🟢/🟡/🔵", "istanbulActionBtn", () => {
+    const btn = buildButton("领取货物并掷骰", "istanbulActionBtn", () => {
       sendAction({ type: "location_action", good: istanbulSelections.blackGood });
     }, "primary");
     istanbulActionControls.appendChild(btn);
@@ -1515,6 +1289,7 @@ function renderTeaHouseControls(view, isFamily) {
   row.className = "istanbul-control-row";
   const input = document.createElement("input");
   input.type = "number";
+  input.setAttribute("aria-label", "茶馆报数，3 到 12");
   input.min = "3";
   input.max = "12";
   input.value = istanbulSelections.teaTarget;
@@ -1524,10 +1299,13 @@ function renderTeaHouseControls(view, isFamily) {
       istanbulSelections.teaTarget = Math.max(3, Math.min(12, value));
     }
   });
-  row.appendChild(input);
+  const teaLabel = document.createElement("label");
+  teaLabel.textContent = "报数（3–12） ";
+  teaLabel.append(input);
+  row.appendChild(teaLabel);
   istanbulActionControls.appendChild(row);
   if (!isFamily) {
-    const btn = buildButton("Gamble", "istanbulActionBtn", () => {
+    const btn = buildButton("掷骰 · 赚取里拉", "istanbulActionBtn", () => {
       sendAction({ type: "location_action", target: istanbulSelections.teaTarget });
     }, "primary");
     istanbulActionControls.appendChild(btn);
@@ -1544,6 +1322,7 @@ function renderMarketControls(view, placeType, isFamily) {
 
   const demandLine = document.createElement("div");
   demandLine.textContent = `Demand: ${formatGoodsLine(demand)}`;
+  demandLine.dataset.istanbulTip = `市场需求：${formatGoodsLine(demand)}。每色出售数量不能超过需求和持有量，每次最多出售 5 件。`;
   istanbulActionControls.appendChild(demandLine);
   if (allowWild) {
     const wild = document.createElement("div");
@@ -1555,7 +1334,7 @@ function renderMarketControls(view, placeType, isFamily) {
     const row = document.createElement("div");
     row.className = "istanbul-good-stepper";
     const label = document.createElement("span");
-    label.textContent = GOOD_LABELS[color];
+    label.textContent = `${GOOD_LABELS[color]} ${ISTANBUL_GOOD_NAMES[color]}`;
     const minus = document.createElement("button");
     minus.type = "button";
     minus.className = "istanbul-good-btn";
@@ -1591,7 +1370,8 @@ function renderMarketControls(view, placeType, isFamily) {
   if (revenueTable) {
     const payout = revenueTable[total] || 0;
     const summary = document.createElement("div");
-    summary.textContent = `Selected: ${total} goods 🔴/🟢/🟡/🔵 => ${payout} Lira💰`;
+    summary.textContent = `出售 ${total} 件货物 → 获得 💰 ${payout} 里拉`;
+    summary.dataset.istanbulTip = `本次选中 ${total} 件货物，按市场售价将获得 ${payout} 里拉。每次最多出售 5 件。`;
     istanbulActionControls.appendChild(summary);
   }
   if (!isFamily) {
@@ -1610,7 +1390,7 @@ function renderMarketControls(view, placeType, isFamily) {
         appendActionNote("Select goods to sell.");
       }
     }
-    const sellBtn = buildButton("Sell Goods 🔴/🟢/🟡/🔵", "istanbulActionBtn", () => {
+    const sellBtn = buildButton("卖出所选货物", "istanbulActionBtn", () => {
       sendAction({ type: "location_action", goods: { ...istanbulSelections.marketGoods } });
     }, "primary", total <= 0 || total > 5);
     istanbulActionControls.appendChild(sellBtn);
@@ -1623,18 +1403,23 @@ function renderMosqueControls(view, placeType, isFamily) {
   const row = document.createElement("div");
   row.className = "istanbul-control-row";
   const options = placeType === "small_mosque" ? ["red", "green"] : ["yellow", "blue"];
+  const availableColors = options.filter(c => view.mosques?.[mosqueKey]?.[c] && viewer?.goods?.[c] > 0 && !viewer?.mosque_tiles?.[c]);
+  if (isFamily && !availableColors.includes(istanbulSelections.mosqueColor)) istanbulSelections.mosqueColor = availableColors[0] || null;
   let anyAvailable = false;
   options.forEach((color) => {
     const available = view.mosques && view.mosques[mosqueKey] ? view.mosques[mosqueKey][color] : true;
     const hasGood = viewer && viewer.goods ? viewer.goods[color] > 0 : false;
-    const disabled = !available || !hasGood;
+    const disabled = !available || !hasGood || Boolean(viewer?.mosque_tiles?.[color]);
     if (!disabled) anyAvailable = true;
-    const btn = buildButton(GOOD_LABELS[color], `istanbulMosque${color}Btn`, () => {
+    const btn = buildButton(`领取 ${GOOD_LABELS[color]} ${ISTANBUL_GOOD_NAMES[color]}板块`, `istanbulMosque${color}Btn`, () => {
       istanbulSelections.mosqueColor = color;
       if (!isFamily) {
         sendAction({ type: "location_action", color });
+      } else {
+        renderIstanbulGameState({ view });
       }
     }, "secondary", disabled);
+    btn.classList.toggle("active", isFamily && istanbulSelections.mosqueColor === color);
     row.appendChild(btn);
   });
   istanbulActionControls.appendChild(row);
@@ -1786,7 +1571,7 @@ function buildGoodSelect(selected, onChange, restrictBasic = false) {
   options.forEach((color) => {
     const option = document.createElement("option");
     option.value = color;
-    option.textContent = GOOD_LABELS[color];
+    option.textContent = `${GOOD_LABELS[color]} ${ISTANBUL_GOOD_NAMES[color]}`;
     select.appendChild(option);
   });
   select.value = selected;
@@ -1811,6 +1596,7 @@ function buildBonusSelect(view, onChange, selectedId) {
   }
   select.addEventListener("change", () => {
     onChange(select.value);
+    renderIstanbulGameState({ view: currentIstanbulView });
   });
   onChange(select.value);
   return select;
@@ -1870,6 +1656,8 @@ if (istanbulBoardOverlays) {
 if (istanbulGamePanel) {
   istanbulGamePanel.addEventListener("click", (event) => {
     if (
+      event.istanbulTipDismissed || istanbulExplainMode ||
+      event.target.closest("[data-istanbul-tip], details, label") ||
       event.target.closest("button") ||
       event.target.closest("input") ||
       event.target.closest("select") ||
@@ -1879,6 +1667,8 @@ if (istanbulGamePanel) {
     ) {
       return;
     }
+    if (!currentIstanbulView) return;
+    istanbulInspectedPos = null;
     istanbulSelections.path = [];
     istanbulSelections.bonusCardId = null;
     istanbulSelections.familyDestination = null;
@@ -1886,79 +1676,313 @@ if (istanbulGamePanel) {
   });
 }
 
-// Explain mode handling
-if (document) {
-  document.addEventListener("pointerdown", (e) => {
-    if (!istanbulExplainMode) return;
-    const mosqueRubies = e.target.closest(".istanbul-mosque-rubies");
-    if (mosqueRubies) {
-      const key = mosqueRubies.dataset.mosque;
-      showIstanbulMosqueRubyExplanation(key);
-      e.preventDefault();
-      e.stopPropagation();
-      exitIstanbulExplainMode();
-      return;
-    }
-    const tile = e.target.closest(".istanbul-tile");
-    if (tile) {
-      const placeId = Number(tile.dataset.placeId);
-      const pos = Number(tile.dataset.pos);
-      showIstanbulTileExplanation(placeId, pos);
-      e.preventDefault();
-      e.stopPropagation();
-      exitIstanbulExplainMode();
-      return;
-    }
-    const buttonId = findIstanbulButtonAtPoint(e.clientX, e.clientY);
-    if (buttonId) {
-      e.preventDefault();
-      e.stopPropagation();
-      showIstanbulButtonExplanation(buttonId);
-      exitIstanbulExplainMode();
-      return;
-    }
-    const button = e.target.closest("button");
-    if (button === istanbulExplainBtn || button === istanbulHelpBtn) return;
-    if (button === istanbulHelpModalCloseBtn || button === istanbulExplainModalCloseBtn) return;
-    if (button) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  }, true);
 
-  document.addEventListener("click", (e) => {
-    if (!istanbulExplainMode) return;
-    if (e.target.closest(".istanbul-tile")) {
-      e.preventDefault();
-      e.stopPropagation();
-      return;
-    }
-    const button = e.target.closest("button");
-    if (!button) return;
-    if (button === istanbulExplainBtn || button === istanbulHelpBtn) return;
-    if (button === istanbulHelpModalCloseBtn || button === istanbulExplainModalCloseBtn) return;
-    e.preventDefault();
-    e.stopPropagation();
-  }, true);
-
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      if (closeIstanbulOverlays()) {
-        e.preventDefault();
-        return;
-      }
-      if (istanbulExplainMode) {
-        exitIstanbulExplainMode();
-        return;
-      }
-      if (istanbulHelpModal && !istanbulHelpModal.classList.contains("hidden")) {
-        e.preventDefault();
-        closeIstanbulHelpModal();
-      }
-      if (istanbulExplainModal && !istanbulExplainModal.classList.contains("hidden")) {
-        e.preventDefault();
-        closeIstanbulExplainModal();
-      }
-    }
-  });
+function istanbulPlaceName(tile) {
+    return tile ? ISTANBUL_PLACES[tile.place_id]?.[0] || tile.name : "—";
 }
+
+function istanbulActionProblem(view, tile, family = false) {
+    const player = getViewer(view);
+    if (!player || !tile) return "";
+    const id = tile.place_id;
+    const fee = !family && view.phase === "movement" && id !== 7
+        ? 2 * (view.players || []).filter(p => p.player_id !== view.you && p.merchant_pos === tile.pos).length : 0;
+    const lira = player.lira - fee;
+    if (lira < 0) return `这里有其他商人，需要 ${fee} 里拉；余额不足会直接结束回合。`;
+    if (!family && view.phase === "movement" && id !== 7 && !player.assistants_in_stack && !player.assistants_on_board.includes(tile.pos)) return "没有可用助手：到达后会跳过地点行动。建议去喷泉召回助手。";
+    if (id === 1 && (lira < 7 || player.capacity >= 5)) return player.capacity >= 5 ? "货车已升到最高容量 5，无法继续升级。" : `升级需要 7 里拉，抵达后只有 ${lira} 里拉。`;
+    if (id === 14) {
+        const cost = view.gem_costs?.[view.gem_index || 0];
+        if (!Number.isInteger(cost)) return "这里的红宝石已售罄。";
+        if (lira < cost) return `本颗红宝石需要 ${cost} 里拉，抵达后还差 ${cost - lira} 里拉。`;
+    }
+    if (id === 13) {
+        const cost = view.sultan_costs?.[view.sultan_index || 0];
+        if (!cost) return "这里的红宝石已售罄。";
+        if (!canPaySultanCost(player.goods, cost)) return `货物不足，需要 ${formatSultanCost(cost)}。`;
+    }
+    if (id === 10 || id === 11) {
+        const demand = view[id === 10 ? "market_large" : "market_small"]?.current?.goods || {};
+        if (!GOODS.some(c => player.goods[c] > 0 && (demand[c] > 0 || (id === 11 && view.small_market_wild)))) return "没有符合市场需求的货物，先去仓库补货。";
+    }
+    if (id === 15 || id === 16) {
+        const colors = id === 15 ? ["red", "green"] : ["yellow", "blue"];
+        const pool = view.mosques?.[id === 15 ? "small" : "great"] || {};
+        if (!colors.some(c => pool[c] && player.goods[c] > 0 && !player.mosque_tiles[c])) return "没有可领取的板块：需要 1 件对应货物、板块仍可用且你尚未拥有。";
+    }
+    return "";
+}
+
+function istanbulPlaceInfo(view, tile) {
+    if (!tile) return "";
+    const parts = [`#${tile.place_id} ${istanbulPlaceName(tile)}（${tile.name}）。${ISTANBUL_PLACES[tile.place_id]?.[2] || ""}`];
+    if (tile.place_id === 14) parts.push(`当前价格：${view.gem_costs?.[view.gem_index || 0] ?? "售罄"} 里拉。`);
+    if (tile.place_id === 13) parts.push(`当前费用：${formatSultanCost(view.sultan_costs?.[view.sultan_index || 0]) || "售罄"}。`);
+    if (tile.place_id === 10 || tile.place_id === 11) {
+        const key = tile.place_id === 10 ? "market_large" : "market_small";
+        const demand = view[key]?.current?.goods || {};
+        const revenue = view.market_revenue?.[tile.place_id === 10 ? "large" : "small"] || {};
+        parts.push(`需求：${formatGoodsLine(demand)}。售出件数与收入：${Object.entries(revenue).map(([n,c]) => `${n} 件得 ${c} 里拉`).join("；")}。`);
+    }
+    if (tile.dice) parts.push(`骰点 ${tile.dice}：总督或走私者移动掷出此数时来到这里。`);
+    for (const player of view.players || []) {
+        const name = player.name || player.player_id;
+        if (player.merchant_pos === tile.pos) parts.push(`${name} 的商人在此${player.player_id === view.you ? "（你）" : "；其他商人抵达需付 2 里拉，喷泉除外"}。`);
+        if (player.assistants_on_board?.includes(tile.pos)) parts.push(`👥 ${name} 的助手在此，主人抵达可收回并执行地点行动。`);
+        if (player.family_pos === tile.pos) parts.push(`👪 ${name} 的家族成员在此；其他商人遇到可领取奖励并将其送回警察局。`);
+    }
+    if (view.npc?.governor === tile.pos) parts.push("🎩 总督：行动后可付 2 里拉或弃 1 张卡换取 1 张奖励卡，也可跳过。");
+    if (view.npc?.smuggler === tile.pos) parts.push("🕵️ 走私者：行动后可付 2 里拉或 1 件货物换取 1 件货物，也可跳过。");
+    return parts.join(" ");
+}
+
+function renderIstanbulGuide(view) {
+    const guide = document.getElementById("istanbulGuide");
+    if (!guide) return;
+    guide.replaceChildren();
+    const player = getViewer(view);
+    const ownTurn = selectionIsViewerTurn(view);
+    const pending = view.pending;
+    const stepIndex = view.phase === "movement" ? 0 : view.phase === "assistant" ? 1 : 2;
+    const steps = document.createElement("div");
+    steps.className = "istanbul-steps";
+    ["1 选择地点", "2 安排助手", "3 行动与相遇"].forEach((label, index) => {
+        const step = document.createElement("span");
+        step.textContent = label;
+        step.classList.toggle("active", ownTurn && index === stepIndex && !view.game_over);
+        step.dataset.istanbulTip = ["移动阶段：通常上下左右走 1–2 格。点目的地预览后确认。", "助手阶段：放下或收回自己的 1 名助手，获得地点行动资格。喷泉可免助手。", "行动与相遇：执行地点行动，完成待处理的选择后自动轮到下一位。"][index];
+        if (ownTurn && index === stepIndex) step.setAttribute("aria-current", "step");
+        steps.append(step);
+    });
+    const title = document.createElement("strong");
+    const hint = document.createElement("p");
+    if (view.game_over) {
+        title.textContent = `游戏结束 · ${(view.winner || []).map(id => formatPlayerName(view,id)).join("、")} 获胜`;
+        hint.textContent = "比较红宝石数量；平手依次比较里拉、货物总数与奖励卡数量。";
+    } else if (!ownTurn) {
+        title.textContent = `等待 ${formatPlayerName(view, view.current_player)} 行动`;
+        hint.textContent = player ? "趁现在规划下一站：补货 → 卖货 → 买红宝石。点地点或 ⓘ 查看效果。" : "你正在观战。点地点或 ⓘ 了解集市中的行动。";
+    } else if (pending) {
+        const prompts = {
+            reward: ["遇到家族成员：选择奖励", "奖励卡可改变行动；3 里拉可立即用于支付。完成选择后继续相遇。"],
+            governor: ["遇到总督：可选交易", "支付 2 里拉或弃 1 张奖励卡，换取 1 张新卡；也可 Skip。"],
+            smuggler: ["遇到走私者：可选交易", "先选想拿的货物与支付方式，再确认；也可 Skip。"],
+            dice: ["查看骰子结果", "Accept 接受结果。拥有绿色清真寺能力且钱足够时，可付 2 里拉调整。"],
+            caravan_discard: ["商队旅馆：抽二弃一", "已抽入 2 张奖励卡，请从全部手牌中选 1 张弃掉。"],
+        };
+        [title.textContent, hint.textContent] = prompts[pending.type] || ["完成当前选择", "按行动区提示继续。"];
+    } else if (view.phase === "movement") {
+        title.textContent = "你的回合 · 先选下一站";
+        const suggestions = [...istanbulReachableRoutes(view).keys()].map(pos => getTileByPos(view,pos)).filter(tile => tile && [2,3,4,5,9].includes(tile.place_id) && !istanbulActionProblem(view,tile));
+        hint.textContent = player && player.assistants_in_stack === 0 ? "随行助手用完了：去有自己助手的地点收回，或去喷泉召回队伍。" : suggestions.length ? `入门建议：${suggestions.slice(0,2).map(istanbulPlaceName).join("或")}可获取资源。高亮地点可达，确认前先看费用。` : "先补货，再在市场卖货，最后买红宝石。点高亮地点查看本次行动。";
+    } else if (view.phase === "assistant") {
+        title.textContent = `你的回合 · ${istanbulPlaceName(getTileByPos(view,player?.merchant_pos))}`;
+        hint.textContent = "放下或收回助手后才执行地点行动。以后回到留过助手的地点，就能把他带回队伍。";
+    } else {
+        title.textContent = "你的回合 · 执行地点行动";
+        hint.textContent = "在下方选择并确认。行动及相遇结束后自动换人；特殊奖励卡要在行动前使用。";
+    }
+    if (view.final_round?.active && !view.game_over) hint.textContent += ` 最后一轮：${formatPlayerName(view,view.final_round.triggered_by)} 已达目标。`;
+    guide.append(steps, title, hint);
+}
+
+function renderIstanbulDestination(view) {
+    const panel = document.getElementById("istanbulDestination");
+    if (!panel) return;
+    const player = getViewer(view);
+    const pos = istanbulSelections.familyDestination ?? istanbulSelections.path.at(-1) ?? (view.phase === "movement" || !selectionIsViewerTurn(view) ? istanbulInspectedPos : null) ?? player?.merchant_pos;
+    const tile = getTileByPos(view,pos);
+    panel.replaceChildren();
+    if (!tile) return;
+    const title = document.createElement("strong");
+    title.textContent = `#${tile.place_id} ${istanbulPlaceName(tile)}`;
+    const desc = document.createElement("p");
+    desc.textContent = ISTANBUL_PLACES[tile.place_id]?.[2] || "";
+    panel.append(title, desc);
+    if (tile.place_id === 14 || tile.place_id === 13) {
+        const price = document.createElement("p");
+        price.textContent = tile.place_id === 14 ? `当前价格：💰 ${view.gem_costs?.[view.gem_index || 0] ?? "售罄"}` : `当前费用：${formatSultanCost(view.sultan_costs?.[view.sultan_index || 0]) || "售罄"}`;
+        price.dataset.istanbulTip = "购买红宝石要支付当前价格；每购买一颗，下次价格会增加。";
+        panel.append(price);
+    }
+    const problem = istanbulActionProblem(view,tile,istanbulSelections.familyDestination !== null);
+    const fee = tile.place_id === 7 ? 0 : 2 * (view.players || []).filter(p => p.player_id !== view.you && p.merchant_pos === tile.pos).length;
+    if (problem || (view.phase === "movement" && fee > 0)) {
+        const note = document.createElement("p");
+        note.className = "istanbul-action-note";
+        note.textContent = problem || `抵达时先支付 ${fee} 里拉给其他商人，再执行地点行动。`;
+        panel.append(note);
+    }
+    if (view.phase === "movement" && pos !== player?.merchant_pos && !istanbulReachableRoutes(view).has(pos)) {
+        const note = document.createElement("p");
+        note.textContent = "本回合无法到达这里。选择高亮地点，或先使用改变移动的奖励卡。";
+        panel.append(note);
+    }
+}
+
+function istanbulExplainText(text) {
+    istanbulHints?.hide();
+    exitIstanbulExplainMode();
+    istanbulExplainContent.replaceChildren();
+    const body = document.createElement("p");
+    body.textContent = text;
+    istanbulExplainContent.append(body);
+    const glossary = [["里拉", "💰"], ["红宝石", "💎"], ["容量", "📦"], ["助手", "👥"], ["奖励卡", "🎴"], ["布料", "🔴"], ["香料", "🟢"], ["水果", "🟡"], ["珠宝", "🔵"]].filter(([name]) => text.includes(name));
+    if (glossary.length) {
+        const legend = document.createElement("p");
+        legend.className = "istanbul-explain-legend";
+        legend.textContent = glossary.map(([name, icon]) => `${name}（${icon}）`).join(" · ");
+        istanbulExplainContent.append(legend);
+    }
+    setModalVisible(istanbulExplainModal, true);
+}
+
+function istanbulControlExplanation(button, view) {
+    const id = button.id;
+    const tile = getTileByPos(view, getViewer(view)?.merchant_pos);
+    if (id === "istanbulMoveBtn") {
+        const dest = getTileByPos(view, istanbulSelections.path.at(-1) ?? getViewer(view)?.merchant_pos);
+        return `移动：通常上下左右走 1–2 格，只在终点执行行动。先选高亮目的地再确认。${istanbulActionProblem(view,dest)}`;
+    }
+    if (id === "istanbulActionBtn") return `${istanbulPlaceInfo(view,tile)} ${istanbulActionProblem(view,tile)}`;
+    const explanations = {
+        istanbulMoveBtn: "移动：按选定路线移动商人，只在终点执行行动。通常上下左右走 1–2 格；未选可用地点时无法确认。",
+        istanbulDropBtn: "放下助手：将 1 名随行助手留在这里，然后执行地点行动。需要有随行助手，且这里没有自己的助手。",
+        istanbulPickBtn: "收回助手：带走这里自己的助手，同时获得地点行动。这里没有自己的助手时不可选。",
+        istanbulSkipBtn: "喷泉：不放下或收回助手，直接进入喷泉召回行动。",
+        istanbulFamilySendBtn: "派出家族成员：执行所选目的地行动；无需移动商人或助手，不触发相遇。要先选可执行的目的地与所需选项。",
+        istanbulBonusPlayBtn: "打出所选奖励卡并执行其效果。移动卡只在移动前使用；双倍行动卡须在对应地点行动前使用。",
+        istanbulGovTakeBtn: "总督：用选定的 2 里拉或奖励卡换取 1 张奖励卡。费用不足时不能确认。",
+        istanbulSmugglerTakeBtn: "走私者：用选定的 2 里拉或 1 件货物换取所选的 1 件货物；手推车容量仍有效。",
+        istanbulRewardCardBtn: "领取 1 张奖励卡，然后将遇到的家族成员送回警察局。",
+        istanbulRewardLiraBtn: "领取 3 里拉，然后将遇到的家族成员送回警察局。",
+        istanbulDiceAcceptBtn: "接受这次骰子总和，继续结算。",
+        istanbulDiceRerollBtn: "需拥有绿色清真寺板块，支付 2 里拉重掷骰子。",
+        istanbulDicePlusBtn: "需拥有绿色清真寺板块，支付 2 里拉将骰子总和加 1。",
+        istanbulCaravanDiscardBtn: "弃掉下拉框选中的 1 张奖励卡，完成商队旅馆行动。",
+    };
+    if (explanations[id]) return explanations[id];
+    if (id?.includes("Skip")) return "跳过这次可选交易，不支付费用，继续回合。";
+    if (id?.startsWith("istanbulMosque")) return "清真寺板块：支付对应颜色的 1 件货物，获得尚未拥有且仍可领取的板块。家族行动中先选择，再 Send Family 确认。";
+    if (id?.startsWith("istanbulRedReturn")) return "红色清真寺能力：支付 2 里拉，将这个地点的 1 名自己的助手召回。";
+    return `${button.textContent.trim()}：${button.disabled ? "当前条件不足，查看行动区说明或调整选择。" : "选择或确认此操作。"}`;
+}
+
+function decorateIstanbulHints(view) {
+    if (!istanbulGamePanel) return;
+    const meaning = "💰 里拉是钱；💎 红宝石用于获胜；📦 是每色货物容量；👥 是助手；🎴 是奖励卡；🔴 布料、🟢 香料、🟡 水果、🔵 珠宝是货物。";
+    const add = (node, text) => { if (node) node.dataset.istanbulTip = text; };
+    istanbulGamePanel.querySelectorAll(".istanbul-stat").forEach(node => add(node, `${node.textContent.trim()}。${meaning}移动模式决定可走格数；当前行动者完成本回合后才轮到下一位。`));
+    istanbulGamePanel.querySelectorAll(".istanbul-player-row > div:not(.istanbul-player-name), .istanbul-market-card > div:not(.istanbul-market-title):not(.istanbul-mini-table), .istanbul-mosque-ability, .istanbul-mosque-rubies, .istanbul-post-row, .istanbul-mini-table span").forEach(node => add(node, `${node.textContent.trim()}。${meaning}市场表格表示出售件数对应的里拉收入；邮局高亮行表示当前可领取的资源。`));
+    istanbulGamePanel.querySelectorAll(".istanbul-mosque-tile").forEach(node => add(node, `${node.textContent} 清真寺板块：${node.classList.contains("owned") ? "你已拥有" : node.classList.contains("taken") ? "此项未拥有或已不可领取" : "目前可领取"}。红色可付费召回助手；绿色可付费调整骰子；黄色让家族被送回时得钱；蓝色增加助手。`));
+    istanbulGamePanel.querySelectorAll(".istanbul-good-stepper").forEach((row,i) => {
+        const color = GOODS[i];
+        add(row.querySelector("span"), `${ISTANBUL_GOOD_NAMES[color]}。${ISTANBUL_GOOD_HELP}此行数字为选择出售的件数。`);
+        const controls = row.querySelectorAll("button");
+        controls.forEach((button,index) => {
+            button.id = `istanbulMarket${color}${index ? "Plus" : "Minus"}`;
+            button.setAttribute("aria-label", `${index ? "增加" : "减少"}出售${ISTANBUL_GOOD_NAMES[color]}`);
+            button.dataset.istanbulExplain = `${index ? "增加" : "减少"}出售 1 件${ISTANBUL_GOOD_NAMES[color]}。不能超出持有数量、市场需求或总共 5 件的限制。`;
+        });
+    });
+    istanbulGamePanel.querySelectorAll("select").forEach((node,index) => {
+        node.setAttribute("aria-label", node.getAttribute("aria-label") || `行动选项 ${index+1}：${node.options[node.selectedIndex]?.textContent || "选择"}`);
+    });
+    istanbulGamePanel.querySelectorAll(".istanbul-btn, .istanbul-bonus-card").forEach(button => {
+        button.dataset.istanbulExplain ||= istanbulControlExplanation(button,view);
+        if (button.closest(".istanbul-action-choice")) return;
+        const wrap = document.createElement("span");
+        wrap.className = "istanbul-action-choice";
+        const info = document.createElement("button");
+        info.type = "button";
+        info.className = "istanbul-inline-info";
+        info.textContent = "ⓘ";
+        info.dataset.istanbulTip = button.dataset.istanbulExplain;
+        info.setAttribute("aria-label", `${button.textContent.trim()}：说明`);
+        button.before(wrap);
+        wrap.append(button,info);
+    });
+    const pending = view.pending;
+    const player = getViewer(view);
+    if (pending?.type === "governor") {
+        const take = document.getElementById("istanbulGovTakeBtn");
+        if (take) take.disabled = istanbulSelections.governorPayment === "lira" ? player.lira < 2 : !player.bonus_hand.some(c => c.uid === istanbulSelections.governorPayment);
+    }
+    if (pending?.type === "smuggler") {
+        const take = document.getElementById("istanbulSmugglerTakeBtn");
+        if (take) take.disabled = istanbulSelections.smugglerPayment === "lira" ? player.lira < 2 : !(player.goods[istanbulSelections.smugglerPayment] > 0);
+    }
+    istanbulHints?.refresh();
+}
+
+istanbulHints = window.createIstanbulHints?.({panel: istanbulGamePanel, isExplaining: () => istanbulExplainMode, onExplain: istanbulExplainText});
+
+// Explain isolates complete gestures, including the click following a disabled button's pointerdown.
+let istanbulExplainGesture = false;
+let istanbulExplainStart = null;
+window.addEventListener("pointerdown", event => {
+    istanbulExplainGesture = false;
+    if (!istanbulExplainMode || !istanbulGamePanel?.contains(event.target) || event.target.closest("[data-istanbul-tip]")) return;
+    istanbulExplainGesture = true;
+    const target = event.target.closest("[data-istanbul-explain]");
+    istanbulExplainStart = {x: event.clientX, y: event.clientY, text: target?.dataset.istanbulExplain};
+    event.preventDefault();
+    event.stopImmediatePropagation();
+}, true);
+window.addEventListener("pointerup", event => {
+    if (!istanbulExplainGesture) return;
+    const start = istanbulExplainStart;
+    if (start?.text && Math.hypot(event.clientX-start.x,event.clientY-start.y) < 10) istanbulExplainText(start.text);
+    event.preventDefault();
+    event.stopImmediatePropagation();
+
+}, true);
+window.addEventListener("pointercancel", () => { istanbulExplainGesture = false; istanbulExplainStart = null; }, true);
+window.addEventListener("click", event => {
+    if (istanbulExplainGesture) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        istanbulExplainGesture = false;
+        return;
+    }
+    if ((!istanbulExplainMode && !istanbulExplainGesture) || !istanbulGamePanel?.contains(event.target) || event.target.closest("[data-istanbul-tip]")) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (!istanbulExplainGesture) {
+        const text = event.target.closest("[data-istanbul-explain]")?.dataset.istanbulExplain;
+        if (text) istanbulExplainText(text);
+    }
+    istanbulExplainGesture = false;
+}, true);
+window.addEventListener("keydown", event => {
+    istanbulExplainGesture = false;
+    if (!istanbulGamePanel || istanbulGamePanel.classList.contains("hidden")) return;
+    if (event.key !== "Escape") {
+        if (istanbulExplainMode && istanbulGamePanel.contains(event.target) && [" ","Enter","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(event.key) && !event.target.closest("[data-istanbul-tip]")) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            if ([" ","Enter"].includes(event.key)) {
+                const text = event.target.closest("[data-istanbul-explain]")?.dataset.istanbulExplain;
+                if (text) istanbulExplainText(text);
+            }
+        }
+        return;
+    }
+    if (!istanbulHelpModal.classList.contains("hidden")) { closeIstanbulHelpModal(); return; }
+    if (!istanbulExplainModal.classList.contains("hidden")) { closeIstanbulExplainModal(); return; }
+    if (istanbulExplainMode) { exitIstanbulExplainMode(); return; }
+    if (closeIstanbulOverlays()) return;
+    if (!currentIstanbulView) return;
+    istanbulSelections.path = [];
+    istanbulSelections.familyDestination = null;
+    istanbulSelections.bonusCardId = null;
+    istanbulInspectedPos = null;
+    renderIstanbulGameState({view: currentIstanbulView});
+});
+for (const [modal, close] of [[istanbulHelpModal,closeIstanbulHelpModal],[istanbulExplainModal,closeIstanbulExplainModal]]) {
+    modal?.addEventListener("click", event => { if (event.target === modal) close(); });
+}
+
+
+Object.assign(window, { renderIstanbulGameState, clearIstanbulState, showIstanbulHeaderActions });
+})();

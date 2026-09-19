@@ -2,6 +2,7 @@ import copy
 import itertools
 import json
 import random
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -142,24 +143,6 @@ class GuandanBenchmarkTests(unittest.TestCase):
                 self.assertIsNone(error)
         self.assertEqual(actions[0], actions[1])
 
-    def test_frozen_worker_is_independent_of_live_policy_and_checks_hashes(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory) / "baseline"
-            bench.snapshot_policy(bench.REPO_ROOT, root)
-            source = root / "game/guandan.py"
-            # Install a distinct tiny policy before sealing a test fixture.
-            source.write_text(source.read_text() + '\nGuandanGame.bot_move = staticmethod(lambda state, bot_id: {"type": "pass"})\n')
-            with self.assertRaisesRegex(ValueError, "checksum"):
-                bench.source_identity(root)
-            manifest = root / "manifest.json"
-            manifest.unlink()
-            identity = bench.source_identity(root)
-            manifest.write_text(json.dumps(identity))
-            with bench.PolicyWorker(root, "heuristic", {}, "fixed", 10) as worker:
-                result = worker.choose(self.initial, self.initial["current_turn"], 77)
-            self.assertEqual(result["action"], {"type": "pass"})
-            self.assertNotEqual(bench.source_identity(bench.REPO_ROOT)["source_sha256"], identity["source_sha256"])
-
     def test_identical_seeded_policies_have_identical_mirrored_trajectories(self):
         actor = self.initial["current_turn"]
         view = bench.policy_observation(guandan, self.initial, actor, 4, "public")
@@ -208,6 +191,90 @@ class GuandanBenchmarkTests(unittest.TestCase):
             self.assertNotIn("summary", report)
             self.assertIn("exceeded", report["failure"]["error"])
             self.assertEqual(json.loads(output.read_text())["status"], "failed")
+
+
+class GitPolicySourceTests(unittest.TestCase):
+    """Small synthetic Git fixtures: never copy the real baseline source files."""
+
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.root = Path(self.directory.name)
+        (self.root / "game").mkdir()
+        (self.root / "game/guandan.py").write_text('''\
+from game import guandan_ai as _guandan_ai
+from game import memories
+DEFAULT_CONFIG = {"bot_think_time_ms": 40}
+class GuandanGame:
+    @staticmethod
+    def bot_move(state, player_id):
+        if state.get("request_missing"):
+            from game import worktree_only
+        return {"type": "pass", "fixture_version": _guandan_ai.VALUE + memories.VALUE}
+''')
+        (self.root / "game/guandan_ai.py").write_text('VALUE = "old-ai/"\n')
+        (self.root / "game/memories.py").write_text('VALUE = "old-memory"\n')
+        self.git("init", "-q")
+        self.commit()
+        self.revision = bench.resolve_revision(self.root, "HEAD")
+        self.identity = bench.source_identity(self.root, self.revision)
+        (self.root / "game/guandan_ai.py").write_text('VALUE = "new-ai/"\n')
+        (self.root / "game/memories.py").write_text('VALUE = "new-memory"\n')
+        (self.root / "game/worktree_only.py").write_text('VALUE = "leak"\n')
+        self.state = {"config": {}}
+
+    def git(self, *args):
+        return subprocess.run(["git", "-C", str(self.root), *args], capture_output=True,
+                              text=True, check=True).stdout.strip()
+
+    def commit(self):
+        self.git("add", "game")
+        self.git("-c", "user.name=Benchmark Test", "-c", "user.email=benchmark@example.invalid",
+                 "commit", "--no-gpg-sign", "-qm", "fixture")
+
+    def test_git_blob_workers_ignore_worktree_edits_without_checkout_or_copies(self):
+        before = {name: (self.root / name).read_bytes() for name in bench.RUNTIME_FILES}
+        status = self.git("status", "--porcelain")
+        with bench.PolicyWorker(self.root, "auto", {}, "fixed", 10, self.revision,
+                                self.identity) as frozen, \
+             bench.PolicyWorker(self.root, "auto", {}, "fixed", 10) as live:
+            self.assertEqual(frozen.choose(self.state, "p0", 1)["action"]["fixture_version"],
+                             "old-ai/old-memory")
+            self.assertEqual(live.choose(self.state, "p0", 1)["action"]["fixture_version"],
+                             "new-ai/new-memory")
+            self.assertEqual(frozen.identity, self.identity)
+            self.assertEqual(live.identity["kind"], "worktree")
+        self.assertEqual(self.git("rev-parse", "HEAD"), self.revision)
+        self.assertEqual(self.git("status", "--porcelain"), status)
+        self.assertEqual({name: (self.root / name).read_bytes() for name in bench.RUNTIME_FILES}, before)
+        self.assertFalse(list(self.root.rglob("__pycache__")))
+
+    def test_resolved_commit_stays_pinned_after_branch_moves(self):
+        self.commit()
+        self.assertNotEqual(bench.resolve_revision(self.root, "HEAD"), self.revision)
+        self.assertEqual(bench.source_identity(self.root, self.revision), self.identity)
+        with bench.PolicyWorker(self.root, "auto", {}, "fixed", 10, self.revision) as frozen:
+            self.assertEqual(frozen.choose(self.state, "p0", 1)["action"]["fixture_version"],
+                             "old-ai/old-memory")
+
+    def test_uncaptured_imports_never_fall_back_to_worktree(self):
+        for revision in (self.revision, None):
+            with self.subTest(revision=revision), \
+                 bench.PolicyWorker(self.root, "auto", {}, "fixed", 10, revision) as worker:
+                with self.assertRaisesRegex(RuntimeError, "policy dependency not captured: game.worktree_only"):
+                    worker.choose({**self.state, "request_missing": True}, "p0", 1)
+
+    def test_worker_rejects_source_change_before_game(self):
+        expected = bench.source_identity(self.root)
+        (self.root / "game/guandan_ai.py").write_text('VALUE = "changed-again/"\n')
+        with self.assertRaisesRegex(RuntimeError, "source changed before loading"):
+            bench.PolicyWorker(self.root, "auto", {}, "fixed", 10, expected_identity=expected)
+
+    def test_unresolved_or_invalid_refs_fail_explicitly(self):
+        with self.assertRaisesRegex(ValueError, "resolved full commit"):
+            bench.source_identity(self.root, "HEAD")
+        with self.assertRaises(ValueError):
+            bench.resolve_revision(self.root, "missing-branch")
 
 
 if __name__ == "__main__":

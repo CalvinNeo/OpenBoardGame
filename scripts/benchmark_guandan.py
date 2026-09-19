@@ -1,7 +1,7 @@
 """Paired, versioned Guandan policy evaluation; see designs/guandan_benchmark.md.
 
 Only the referee sees real hidden cards in public-information mode. Policies run
-in separate, fresh processes for each game, including frozen source snapshots.
+in separate, fresh processes for each game; Git versions load directly from blobs.
 This module and its worker protocol use only the Python standard library.
 """
 
@@ -10,19 +10,19 @@ import contextlib
 import copy
 import hashlib
 import importlib
+import importlib.abc
+import importlib.util
 import json
 import math
 import os
 import platform
 import random
 import selectors
-import shutil
 import statistics
 import subprocess
 import sys
 import tempfile
 import time
-import types
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence
@@ -31,7 +31,7 @@ from typing import Dict, List, Optional, Sequence
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RUNTIME_FILES = ("game/guandan.py", "game/guandan_ai.py", "game/memories.py")
 POLICIES = ("auto", "heuristic", "greedy", "random")
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 def derived_seed(seed: int, *parts: object) -> int:
@@ -44,51 +44,84 @@ def fingerprint(value: object) -> str:
     return hashlib.sha256(payload.encode()).hexdigest()
 
 
-def source_identity(root: Path) -> Dict:
-    root = root.resolve()
-    hashes = {name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in RUNTIME_FILES}
-    manifest = root / "manifest.json"
-    if manifest.exists():
-        frozen = json.loads(manifest.read_text())
-        if frozen.get("files") != hashes:
-            raise ValueError(f"snapshot checksum mismatch: {root}")
-        revision = frozen.get("revision")
-        dirty = frozen.get("dirty")
+def _git(root: Path, *args: str) -> bytes:
+    result = subprocess.run(["git", "-C", str(root), *args], capture_output=True, check=False)
+    if result.returncode:
+        raise ValueError(f"git {' '.join(args)}: {result.stderr.decode(errors='replace').strip()}")
+    return result.stdout
+
+
+def resolve_revision(root: Path, ref: str) -> str:
+    """Resolve a user ref once; every subsequent blob read uses this commit ID."""
+    return _git(root, "rev-parse", "--verify", "--end-of-options", f"{ref}^{{commit}}").decode().strip()
+
+
+def _runtime_sources(root: Path, revision: Optional[str] = None) -> Dict[str, bytes]:
+    if revision is not None and (len(revision) not in (40, 64) or
+                                 any(char not in "0123456789abcdef" for char in revision)):
+        raise ValueError("runtime revision must be a resolved full commit ID")
+    return {name: (_git(root, "cat-file", "blob", f"{revision}:{name}") if revision else
+                   (root / name).read_bytes()) for name in RUNTIME_FILES}
+
+
+def _source_identity(root: Path, sources: Dict[str, bytes], revision: Optional[str]) -> Dict:
+    hashes = {name: hashlib.sha256(data).hexdigest() for name, data in sources.items()}
+    dirty = False
+    if revision is None:
+        try:
+            revision = resolve_revision(root, "HEAD")
+            dirty = bool(_git(root, "status", "--porcelain", "--", *RUNTIME_FILES).strip())
+        except ValueError:
+            revision, dirty = None, None
+        kind = "worktree"
     else:
-        def git(*args: str) -> Optional[str]:
-            result = subprocess.run(
-                ["git", "-C", str(root), *args], capture_output=True, text=True, check=False,
-            )
-            return result.stdout.strip() if result.returncode == 0 else None
-
-        revision = git("rev-parse", "HEAD")
-        changes = git("status", "--porcelain", "--", *RUNTIME_FILES)
-        dirty = None if changes is None else bool(changes)
-    return {"root": str(root), "revision": revision, "dirty": dirty, "files": hashes,
-            "source_sha256": fingerprint(hashes), "frozen": manifest.exists()}
+        kind = "git_commit"
+    return {"root": str(root.resolve()), "revision": revision, "dirty": dirty, "files": hashes,
+            "source_sha256": fingerprint(hashes), "kind": kind, "frozen": kind == "git_commit"}
 
 
-def snapshot_policy(root: Path, output: Path) -> Dict:
-    identity = source_identity(root)
-    output.mkdir(parents=True, exist_ok=False)
-    (output / "game").mkdir()
-    for name in RUNTIME_FILES:
-        shutil.copyfile(root / name, output / name)
-    manifest = {"schema_version": SCHEMA_VERSION, **identity}
-    (output / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
-    # Also detect a source edit concurrent with snapshot creation.
-    source_identity(output)
-    return manifest
+def source_identity(root: Path, revision: Optional[str] = None) -> Dict:
+    return _source_identity(root, _runtime_sources(root, revision), revision)
 
 
-def _install_runtime(root: Path):
-    """Worker/CLI only: avoid importing the unrelated games in game/__init__.py."""
-    if "game" in sys.modules:
+class _RuntimeImporter(importlib.abc.MetaPathFinder, importlib.abc.Loader):
+    """Load only captured policy bytes, never worktree imports or stale pyc files."""
+
+    def __init__(self, sources: Dict[str, bytes], origin: str):
+        self.sources = {name[:-3].replace("/", "."): data for name, data in sources.items()}
+        self.origin = origin
+
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname == "game":
+            return importlib.util.spec_from_loader(fullname, self, is_package=True)
+        if fullname.startswith("game."):
+            if fullname not in self.sources:
+                raise ModuleNotFoundError(f"policy dependency not captured: {fullname}")
+            return importlib.util.spec_from_loader(fullname, self)
+        return None
+
+    def create_module(self, spec):
+        return None
+
+    def exec_module(self, module):
+        if module.__name__ == "game":
+            module.__path__ = []
+            return
+        module.__file__ = f"{self.origin}/{module.__name__.replace('.', '/')}.py"
+        exec(compile(self.sources[module.__name__], module.__file__, "exec"), module.__dict__)
+
+
+def _install_runtime(root: Path, revision: Optional[str] = None):
+    """Worker/CLI only: load a coherent, isolated runtime directly into memory."""
+    if any(name == "game" or name.startswith("game.") for name in sys.modules):
         raise RuntimeError("runtime must be installed in a fresh process")
-    package = types.ModuleType("game")
-    package.__path__ = [str(root / "game")]
-    sys.modules["game"] = package
-    return importlib.import_module("game.guandan")
+    sources = _runtime_sources(root, revision)
+    identity = _source_identity(root, sources, revision)
+    origin = f"git:{root.resolve()}@{revision}" if revision else str(root.resolve())
+    sys.meta_path.insert(0, _RuntimeImporter(sources, origin))
+    core = importlib.import_module("game.guandan")
+    core.__benchmark_identity__ = identity
+    return core
 
 
 class _SeededRandom:
@@ -226,10 +259,10 @@ def simple_action(core, state: Dict, player_id: str, mode: str, rng: random.Rand
     return {"type": "play", "card_ids": min(options, key=cost)}
 
 
-def _worker_main(root: Path) -> int:
-    core = _install_runtime(root)
+def _worker_main(root: Path, revision: Optional[str] = None) -> int:
+    core = _install_runtime(root, revision)
     ai = core._guandan_ai
-    print(json.dumps({"defaults": core.DEFAULT_CONFIG}), flush=True)
+    print(json.dumps({"defaults": core.DEFAULT_CONFIG, "source": core.__benchmark_identity__}), flush=True)
     for line in sys.stdin:
         try:
             request = json.loads(line)
@@ -258,18 +291,26 @@ def _worker_main(root: Path) -> int:
 
 
 class PolicyWorker:
-    def __init__(self, root: Path, mode: str, config: Dict, clock: str, timeout: float):
+    def __init__(self, root: Path, mode: str, config: Dict, clock: str, timeout: float,
+                 revision: Optional[str] = None, expected_identity: Optional[Dict] = None):
         self.mode, self.config, self.clock, self.timeout = mode, config, clock, timeout
         self.stderr = tempfile.TemporaryFile(mode="w+")
+        command = [sys.executable, str(Path(__file__).resolve()), "_worker", "--root", str(root)]
+        if revision:
+            command.extend(["--revision", revision])
         self.process = subprocess.Popen(
-            [sys.executable, str(Path(__file__).resolve()), "_worker", "--root", str(root)],
+            command,
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=self.stderr, text=True, bufsize=1,
             env={**os.environ, "PYTHONHASHSEED": "0"},
         )
         self.selector = selectors.DefaultSelector()
         self.selector.register(self.process.stdout, selectors.EVENT_READ)
         try:
-            self.defaults = self._read()["defaults"]
+            ready = self._read()
+            self.defaults, self.identity = ready["defaults"], ready["source"]
+            if expected_identity and any(self.identity[key] != expected_identity[key]
+                                         for key in ("files", "kind", "revision")):
+                raise RuntimeError(f"{mode} worker source changed before loading")
         except Exception:
             self.close()
             raise
@@ -473,11 +514,14 @@ def run_benchmark(core, args) -> Dict:
     if not levels or any(level < 2 or level > 14 for level in levels):
         raise ValueError("levels must be a comma-separated list in 2..14")
     roots = {"candidate": args.candidate_root.resolve(), "baseline": args.baseline_root.resolve()}
+    refs = {side: getattr(args, f"{side}_ref") for side in roots}
+    revisions = {side: resolve_revision(root, refs[side]) if refs[side] else None
+                 for side, root in roots.items()}
     modes = {"candidate": args.candidate, "baseline": args.baseline}
     configs = {side: {**_read_config(getattr(args, f"{side}_config")), "bot_think_time_ms": args.think_ms}
                for side in roots}
-    identities = {side: source_identity(root) for side, root in roots.items()}
-    referee_identity = source_identity(REPO_ROOT)
+    identities = {side: source_identity(root, revisions[side]) for side, root in roots.items()}
+    referee_identity = getattr(core, "__benchmark_identity__", None) or source_identity(REPO_ROOT)
     records, diagnostics = [], {side: Diagnostics() for side in roots}
     report = {"schema_version": SCHEMA_VERSION, "status": "running",
               "benchmark_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
@@ -486,7 +530,8 @@ def run_benchmark(core, args) -> Dict:
               "requested_pairs": args.pairs, "think_ms": args.think_ms,
               "max_actions": args.max_actions, "worker_timeout": args.worker_timeout,
               "referee": referee_identity, "policies": {
-                  side: {"mode": modes[side], "source": identities[side], "overrides": configs[side]}
+                  side: {"mode": modes[side], "requested_ref": refs[side],
+                         "source": identities[side], "overrides": configs[side]}
                   for side in roots}, "records": records}
     output = args.output.resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -520,6 +565,7 @@ def run_benchmark(core, args) -> Dict:
                     with contextlib.ExitStack() as workers_stack:
                         workers = {side: workers_stack.enter_context(PolicyWorker(
                             roots[side], modes[side], configs[side], args.clock, args.worker_timeout,
+                            revision=revisions[side], expected_identity=identities[side],
                         )) for side in roots}
                         for side, worker in workers.items():
                             unknown = configs[side].keys() - worker.defaults.keys()
@@ -539,7 +585,7 @@ def run_benchmark(core, args) -> Dict:
                               f"net={result['net_points']:+d} actions={result['actions']}", file=sys.stderr)
             # A policy source changed mid-run => do not publish a mixed-version score.
             for side, root in roots.items():
-                if source_identity(root)["files"] != identities[side]["files"]:
+                if source_identity(root, revisions[side])["files"] != identities[side]["files"]:
                     raise RuntimeError(f"{side} source changed during benchmark")
             if source_identity(REPO_ROOT)["files"] != referee_identity["files"]:
                 raise RuntimeError("referee source changed during benchmark")
@@ -562,14 +608,13 @@ def run_benchmark(core, args) -> Dict:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
-    snapshot = commands.add_parser("snapshot", help="freeze current policy source; output must not exist")
-    snapshot.add_argument("--root", type=Path, default=REPO_ROOT)
-    snapshot.add_argument("--output", type=Path, required=True)
     run = commands.add_parser("run", help="play each seeded deal twice, swapping policy teams")
     run.add_argument("--candidate", choices=POLICIES, default="auto")
     run.add_argument("--baseline", choices=POLICIES, default="heuristic")
-    run.add_argument("--candidate-root", type=Path, default=REPO_ROOT)
-    run.add_argument("--baseline-root", type=Path, default=REPO_ROOT)
+    run.add_argument("--candidate-root", type=Path, default=REPO_ROOT, help="candidate repository/worktree")
+    run.add_argument("--baseline-root", type=Path, default=REPO_ROOT, help="baseline repository/worktree")
+    run.add_argument("--candidate-ref", help="Git commit/ref; omit to use candidate worktree bytes")
+    run.add_argument("--baseline-ref", help="Git commit/ref; omit to use baseline worktree bytes")
     run.add_argument("--candidate-config", type=Path)
     run.add_argument("--baseline-config", type=Path)
     run.add_argument("--pairs", type=int, default=30)
@@ -585,6 +630,7 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--quiet", action="store_true")
     worker = commands.add_parser("_worker", help=argparse.SUPPRESS)
     worker.add_argument("--root", type=Path, required=True)
+    worker.add_argument("--revision", help=argparse.SUPPRESS)
     return parser
 
 
@@ -592,11 +638,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         if args.command == "_worker":
-            return _worker_main(args.root)
-        if args.command == "snapshot":
-            snapshot_policy(args.root, args.output)
-            print(f"Frozen policy: {args.output.resolve()}")
-            return 0
+            return _worker_main(args.root, args.revision)
         report = run_benchmark(_install_runtime(REPO_ROOT), args)
         if report["status"] == "failed":
             print(report["failure"]["error"], file=sys.stderr)

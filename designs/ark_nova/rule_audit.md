@@ -1,12 +1,10 @@
-# 《方舟动物园》基础版规则与卡牌效果审计
+# 2026-09-18
 
-审计日期：2026-09-18
+## 基础版规则与卡牌效果审计
 
-后续规则修复与验证：2026-09-19
+以下保留首次审计及后续回填的修复说明；各轮验证记录与最新遗留见 2026-09-19。
 
-2026-09-19 二次复查确认的 10 项遗留已全部修复，详见[二次复查报告及修复验证](rule_reaudit_2026-09-19.md)。Ark Nova 的 161 项测试通过；放归优先级、独特建筑顺序和催眠时机的早期结论以该报告为准。
-
-## 结论
+### 结论
 
 本轮不是只修复单张卡，而是重新以官方基础版规则资料为准，检查卡牌数据、效果结算、协会版块、休息、Map 0、前端选择与说明文字之间是否一致。
 
@@ -18,7 +16,7 @@
 | 大学的帽子与研究图标混淆 | 🎓 是声望，🔬 是研究；大学本身另用 🏫 表示。三块大学并不是同一奖励的多枚库存 | 改为三块共享协会版块：`🔬×2`、`🔬×1 + 🎓×2`、`🎓×1 + 手牌上限 5`；被领取后到下一次休息前不可再取 |
 | 121 海蚀洞效果标错 | 海蚀洞确实是爬行类放归项目；旧数据还把 `5/4/3` 点保育奖励误写成三个精确尺寸条件 | 现在按动物卡上印刷的标准围栏尺寸分为 `4-5 / 3 / 1-2` 三档，即使动物住在爬行馆等特殊场馆也不改变档位 |
 
-## 官方依据
+### 官方依据
 
 - [Ark Nova Rulebook](https://capstone-games.com/cdn/shop/files/Ark-Nova-Rulebook.pdf?v=15269496103518830006)
 - [Ark Nova Glossary](https://cdn.shopify.com/s/files/1/0947/3907/1278/files/Ark-Nova-Glossary.pdf?v=1754428544)
@@ -28,7 +26,7 @@
 
 审计时直接检查了官方 PDF 的正文和图标页，而不是仅依赖现有中文文案。社区牌库数据只用于逐字段交叉核对，不作为规则裁决来源。
 
-## 审计范围
+### 审计范围
 
 | 范围 | 数量或内容 |
 |---|---|
@@ -41,9 +39,9 @@
 | 公共系统 | 协会版块、大学、伙伴动物园、休息、展示区、声望轨、Map 0 奖励与升级 |
 | 前端 | 卡牌信息、合法目标列表、协会供应、项目选择及玩家可见状态 |
 
-## 已修正的规则偏差
+### 已修正的规则偏差
 
-### 图标、标签与触发
+#### 图标、标签与触发
 
 - 动物类别补齐为七类：鸟类、食草类、猛兽、灵长类、爬行类、熊类、萌宠类。
 - 一张卡会为自己的效果提供其右上角图标；左侧打出条件不提供图标。
@@ -53,7 +51,7 @@
 - 区分“获得一个此前没有的独特图标”和普通获得图标。
 - 动物及独特赞助商建筑上的临水、临岩要求也计入动物园图标统计。
 
-### 动物能力与入住
+#### 动物能力与入住
 
 - 525 豚鼠与 526 羊驼严格使用萌宠动物园；动作 schema 不再错误拒绝 525，前端也不再给出普通围栏目标。
 - 同一次 Animals 行动中打出多张萌宠动物时，每张自身的递增吸引力以它入场当时的萌宠图标数锁定，不再让第一张错误地看见后打出的牌。
@@ -64,14 +62,14 @@
 - 227 的传牌结束后，未被保留的剩余卡进入弃牌堆。
 - 放归带袋囊牌的动物时，一并弃掉该动物下方的袋囊牌。
 
-### 保护项目与放归
+#### 保护项目与放归
 
 - 113–122 的放归项目均按被放归动物的印刷标准围栏尺寸分档：4–5 格获得 5 保育，3 格获得 4 保育，1–2 格获得 3 保育。
 - 121 海蚀洞的类别保持为爬行类；纠正的是三个尺寸区间、奖励对应关系以及必须使用印刷标准尺寸的判定。
 - 放归后正确移除动物、扣除其印刷吸引力、腾空对应场馆，并处理相关附属卡。
 - 支持项目的重复支持、额外奖励和可选动物候选使用同一套规则校验。
 
-### 协会版块、大学与休息
+#### 协会版块、大学与休息
 
 - 大学供应改为协会版块上的三块唯一板块，而不是每种四枚库存。
 - 三块大学的奖励严格区分：两枚研究；一枚研究加两格声望；一格声望加手牌上限 5。
@@ -80,7 +78,7 @@
 - 在 Map 0 上取得第二个伙伴动物园或第二所大学时，正确进入一次行动卡升级选择。
 - 协会板块自身提供的图标会参与即时触发。
 
-### 展示区、声望与额外行动
+#### 展示区、声望与额外行动
 
 - 普通捕捉、赞助商磁铁等效果保留原文件夹位置，并在回合结束时补牌，不再因数组前移改变文件夹费用/声望范围。
 - `Snapping 2` 两次拿牌之间增加明确选择：玩家可以立刻补满展示区，也可以不补；第二张仍必须从当时的展示区拿取。
@@ -95,7 +93,7 @@
 - 毒液和缠绕按规则自动影响所有合格玩家，不再要求玩家手动点一个无意义的目标；催眠只列出吸引力榜首的合法目标。
 - 偷窃 2 分别计算吸引力榜首和保育榜首，允许两个目标相同，并在各自出现平局时提供组合选择；所有互动能力统一执行“对方至少 5 吸引力”和检疫实验室忽略该玩家计数的规则。
 
-### 赞助商、建筑与终局计分
+#### 赞助商、建筑与终局计分
 
 - 独特赞助商建筑没有合法位置时不能打出，不再先收取费用/奖励后留下无法放置的建筑。
 - 姿态的多个免费亭子改为逐个选择和放置；前端单次地图放置现在能被效果层正确接收，不会静默丢失。
@@ -103,14 +101,14 @@
 - 最终计分卡 009 使用全部七种动物类别，并比较右手边玩家，而不是漏掉熊类、萌宠类或比较错方向。
 - 终局“大型动物”类统计统一使用印刷标准围栏尺寸。
 
-### 公共版块、奖励选择与回合流程
+#### 公共版块、奖励选择与回合流程
 
 - Map 0 保育奖励现在在提交项目任务前明确选择并随任务发送，奖励会在协会任务顺序中的正确位置立即生效。
 - 2 人局捐赠区使用 `2 / 5 / 7 / 10` 四个可用格；旧存档会迁移到正确的七格公共布局，而不重复出现金额 2。
 - 休息由触发者开始按顺序结算收入；若终局条件在休息中首次达成，包括触发休息者在内的所有玩家各有最后一回合。
 - 保育奖励在“所有行动已升级、所有工人已启用”或免费围栏没有合法位置时，不再创建无选项的强制选择而卡死游戏。
 
-### 基础版与《海洋世界》替换卡混用
+#### 基础版与《海洋世界》替换卡混用
 
 官方《海洋世界》规则书明确列出了要替换的基础版卡牌。本项目的数据声明是“纯基础版、无扩展”，但六张终局计分卡误用了扩展替换版的计分门槛。已恢复为原始基础版：
 
@@ -125,14 +123,18 @@
 
 同一张官方替换清单里的 009、101、102、131 以及 207、208、225、226、227、250、261、262 也已逐张重查。项目中 009、101、102、131 仍使用基础版的判定和门槛；上述赞助商卡的基础版效果与官方术语表一致，其中 227 的剩余展示牌去向已在本轮改为弃牌堆。
 
-## 数据层交叉核对
+### 数据层交叉核对
 
 - 对 128 张动物卡逐张比较费用、吸引力、保育、声望、标准围栏尺寸、临水/临岩、标签与能力标识。
 - 对 64 张赞助商卡逐张比较行动强度、奖励和效果标识。
 - 发现的少数外部数据差异以官方卡面/规则为准保留本项目修正；例如 482 的临水及临岩要求不能因外部数据漏项而删除。
 - 生成文件来自 `scripts/arknova_card_reference.py` 和 `scripts/gen_arknova_cards_json.py`；不要直接手改生成后的 JSON。
 
-## 2026-09-19 后续核查与修复
+# 2026-09-19
+
+本日按工作先后记录后续修复、二次复查及修复、第三次复查、第四次回归复查。二次复查的 10 项问题当时均已提交修复；第四次复查根据设计团队澄清，更正其中催眠的执行时机结论。第三次的 7 项遗留仍可复现，第四次新增 6 项，当前共 **13 项未修复：2 项 P1、11 项 P2**。现有 161 项测试通过，但不能覆盖这些问题；部分催眠测试还在断言错误时机。放归优先级、独特建筑顺序以二次复查记录为准；催眠以第四次复查的更正为准。
+
+## 后续核查与修复
 
 上一轮列出的五项建模边界现已补齐状态模型和交互；后续核查发现的偏差也一并修正：
 
@@ -156,7 +158,7 @@
 
 前端通过 `choose_effect_order` 提供效果顺序选择，通过 `continue_action` 提供逐张继续出牌，通过 `choose_card_sources` 提供 Cards II 每张牌的来源选择。旧 API 的明确拿牌方案仍受支持。毒液整回合回滚需要回合开始时的快照；更新前已经停在回合中途的旧存档不具备该历史快照。
 
-## 验证记录
+### 验证记录
 
 2026-09-18 的上一轮审计执行了数据重建、静态解析和效果注册覆盖检查，未运行测试套件。2026-09-19 本次修复新增 32 项规则回归测试，Ark Nova 的 140 项测试全部通过：
 
@@ -168,3 +170,293 @@ python -m unittest tests.test_ark_nova_rule_regressions tests.test_ark_nova_game
 - 浏览器实际点击验证起始牌背、先结算毒液、日光浴卖牌后继续打第二张动物，以及连续迁移两只动物。
 - 390px 手机视口无横向溢出，场馆选项显示名称和地图坐标，浏览器无 JavaScript 错误。
 - 前端 JavaScript 语法检查和 Ark Nova 相关文件的 `git diff --check` 通过。
+
+## 二次规则复查
+
+检查对象为当前工作区实现（检查结束时 HEAD 为 `f65bef8`，包含已暂存的上一轮修改）。
+
+本轮确认的 10 项遗留当时均已提交修复，其中包括 2 项卡局问题。第 1–10 节保留修复前的复现和原因，修复结果及验证见本节的「修复结果」和「修复验证」。第四次复查进一步发现第 8 项将“提前确定催眠目标”误实现为“立即执行借用行动”，相关结论以后文更正为准。
+
+### 1. [P1] 果断选择获得 X 标记后，强制行动状态残留
+
+- 复现：打出 505 白头海雕，果断选择 `gain_x`，再选择 Cards 行动牌获得 X 标记。
+- 实际：轮到 p2 后，`forced_action` 仍是 p1 的 `gain_x`；p2 执行 Sponsors 收钱被拒绝，错误为 `must perform the granted extra action`。后续玩家的正常行动持续被锁住。
+- 原因：`_defer_turn_end` 用被移动的实体行动牌名称匹配 `forced_action.action`，无法匹配第六种行动 `gain_x`，所以没有清除它。
+- 位置：[game/ark_nova.py:2491](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova.py:2491)、[清理分支](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova.py:2524)。[官方 FAQ 第 3 页](https://www.feuerland-spiele.de/fileadmin/game/Arche_Nova/Arche_Nova_FAQ_V2_EN_A4_low.pdf)明确允许果断选择获得 X 标记。
+
+### 2. [P1] 可以接受无法执行的额外行动，随后无法退出
+
+- 复现：没有可用协会工人时打出 409 马来熊，接受“行动：协会”。
+- 实际：进入 `forced_action=association`；唯一合法行动名称是 Association，但执行声望任务报 `not enough available association workers`。此时没有待选项可以 Skip，Bot 也返回 `None`。
+- 原因：额外行动的接受选项未按实际可执行性过滤；接受后只允许指定行动，且没有结束这个可选效果的出口。
+- 位置：[额外行动选项](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova_effects.py:734)、[切换至强制行动](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova.py:2347)。同类风险包括果断选择无牌可打的 Animals 或 X 标记已经达到上限时选择 `gain_x`。
+
+### 3. [P2] 断言／优势取得的基础项目无法从手牌打出
+
+- 复现：把未使用的 109 爬行类基础项目加入手牌，拥有足够爬行类图标，以强度 5 的协会行动打出并支持它。
+- 实际：返回 `unknown zoo-deck conservation project`；`_add_project_to_board` 只接受 `deck_group=zoo_deck`，而能力取得的项目仍为 `base_setup`。
+- 位置：[game/ark_nova.py:3296](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova.py:3296)。[官方术语表第 2 页 Assertion](https://cdn.shopify.com/s/files/1/0947/3907/1278/files/Ark-Nova-Glossary.pdf?v=1754428544)允许通过协会行动把这类项目打到协会版块上方。修复时还需区分初始基础项目与后加项目，避免错误使用繁育计划的基础项目通配标记。
+
+### 4. [P2] 非洲专家提前移动行动牌
+
+- 复现：已有 214 非洲专家，Animals 位于槽位 5，打出 473 彩虹飞蜥；跳过日光浴后选择把 Sponsors 移到槽位 1。
+- 实际：非洲专家的选择出现时，Animals 仍在槽位 5；完成后 Animals 在 1、Sponsors 在 2。
+- 正确结果：先完成 Animals 并把它移到 1，再执行非洲专家；最终 Sponsors 应在 1、Animals 在 2。
+- 位置：[被动触发注册](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova_effects.py:1085)、[即时效果合并](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova.py:2776)。依据：[官方术语表第 5 页，214](https://cdn.shopify.com/s/files/1/0947/3907/1278/files/Ark-Nova-Glossary.pdf?v=1754428544)。
+
+### 5. [P2] 放归未优先移除特殊场馆标记
+
+- 复现：同时有已占用的 3 格普通围栏和含 2 枚标记的爬行馆，放归能使用爬行馆的 490 砂巨蜥。
+- 实际：系统同时提供普通围栏和爬行馆，可以翻空普通围栏并保留爬行馆的 2 枚标记。
+- 正确结果：特殊场馆中有足够对应标记时必须先移除标记；只有不能如此处理时才翻普通围栏。
+- 位置：[game/ark_nova.py:1259](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova.py:1259)。依据：[官方术语表第 1 页 Release into the Wild](https://cdn.shopify.com/s/files/1/0947/3907/1278/files/Ark-Nova-Glossary.pdf?v=1754428544)。上一轮“任选特殊或普通”的结论需更正，[现有测试](/Users/minimax/Desktop/OpenBoardGame/tests/test_ark_nova_rule_regressions.py:298)也需调整预期。
+
+### 6. [P2] 同一回合的额外行动开始前，展示区提前补牌
+
+- 复现：同次 Animals 打出 441 招商动物和 505 白头海雕；招商拿走展示区赞助商后，果断选择 Cards。
+- 实际：选择果断前展示区为 `[空, 419, 空, 415, 空, 420]`，额外 Cards 尚未执行就变成 `[419, 415, 420, 416, 217, 432]`。玩家可以提前取得本应回合结束才出现的新牌，文件夹位置也提前改变。
+- 原因：`finish_action` 先补展示区，再处理 `queued_extra_actions`。
+- 位置：[game/ark_nova.py:2428](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova.py:2428)。[官方规则第 9 页](https://capstone-games.com/cdn/shop/files/Ark-Nova-Rulebook.pdf?v=15269496103518830006)要求整个回合结束后才补展示区。
+
+### 7. [P2] 独特建筑被强制放在印刷奖励之前
+
+- 复现：声望 3 时打出 254 动物园学校，并开启效果排序。
+- 实际：第一个选项仍是放置建筑，随后立即拿牌；此时声望仍为 3，只能选展示区前两张。不能先拿牌面声望，再按声望 4 拿第三张。
+- 原因：`_play_sponsor_card` 直接执行 `unique_building`，它不再参与效果排序；建筑触发的学校拿牌又先于印刷奖励。
+- 位置：[game/ark_nova.py:2842](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova.py:2842)，霍加狓代打赞助商也有相同顺序限制。[官方术语表第 1 页 Order](https://cdn.shopify.com/s/files/1/0947/3907/1278/files/Ark-Nova-Glossary.pdf?v=1754428544)直接以动物园学校举例，允许先获得声望和保育，再放建筑并拿牌。上一轮为防止放置失败而强制提前放置，限制了合法顺序。
+
+### 8. [P2] 催眠仍不能在本动物印刷吸引力之前确定目标
+
+- 复现：自己吸引力 5，对手 6，打出 485 欧洲蝰蛇并开启效果排序。
+- 实际：先自动获得 2 吸引力成为榜首，催眠无目标，回合直接结束；没有先催眠对手的选项。
+- 原因：催眠在卡牌生成源中被固定标成 `after_action`，因此被排除在即时效果排序之外。
+- 位置：[scripts/arknova_card_reference.py:294](/Users/minimax/Desktop/OpenBoardGame/scripts/arknova_card_reference.py:294)、[game/ark_nova.py:2775](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova.py:2775)。当时依据[官方术语表第 2 页 Hypnosis](https://cdn.shopify.com/s/files/1/0947/3907/1278/files/Ark-Nova-Glossary.pdf?v=1754428544)关于吸引力前后顺序的表述进行修复；第四次复查核实设计团队对此文字的澄清：提前的是确定目标，实际借用行动仍须等当前行动结束。
+
+### 9. [P2] 达到 10 保育时弃掉的最终计分牌消失
+
+- 复现：两人局首次达到 10 保育，两人分别弃掉 006、011。
+- 实际：两张牌从玩家手中移除，但未进入最终计分牌堆；牌堆仍为 7 张，正确应为 9 张。这会缩小后续抵抗能力的抽牌池。
+- 位置：[game/ark_nova.py:4025](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova.py:4025)。[官方规则第 18 页](https://capstone-games.com/cdn/shop/files/Ark-Nova-Rulebook.pdf?v=15269496103518830006)要求把这些牌面朝下放到剩余最终计分牌堆底部。
+
+### 10. [P2] Cards II 不能逐张决定牌库／展示区来源
+
+- 复现：Cards II 强度 5，不预选展示牌就提交抽牌。
+- 实际：一次性抽完 4 张，下一步直接弃牌，无法在看到第一、二张之后再决定从展示区拿余下的牌。前端也要求提交前确定完整的 `market_card_ids`。
+- 位置：[game/ark_nova.py:2570](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova.py:2570)、[static/games/ark_nova.js:3192](/Users/minimax/Desktop/OpenBoardGame/static/games/ark_nova.js:3192)。[官方规则第 9 页示例](https://capstone-games.com/cdn/shop/files/Ark-Nova-Rulebook.pdf?v=15269496103518830006)展示了先拿展示牌、抽两张，再决定拿另一张展示牌的流程。
+
+### 复查阶段的验证范围（修复前）
+
+- 原有 Ark Nova 140 项单元与集成测试仍全部通过；这些通过结果不能排除上述遗漏。
+- 两人种子 67、四人种子 79 的 Bot 对局均推进至终局，分别检查约 205、289 次决策。Bot 会规避部分无合法后续行动的选择，因此普通对局未触发上述卡局并不能证明玩家界面安全。
+- 使用现有测试夹具构造 10 个定向场景，调用真实 `ArkNovaGame.apply_action` 与规则结算函数复现上述行为；Cards II 同时核对前端提交路径。
+- 临时复现脚本：`/tmp/ark_nova_reaudit.py`；输出：`/tmp/ark_nova_reaudit_results.jsonl`。执行方式：`PYTHONPATH=. python /tmp/ark_nova_reaudit.py`。
+- 未修改游戏实现、动作 schema 或正式测试断言。
+
+### 修复结果
+
+| 项目 | 修复后的行为 |
+|---|---|
+| 1. 果断获得 X | 按实际移动的行动牌完成获得 X，同时清理果断限制；旧存档中属于上一位玩家的残留限制也会清除 |
+| 2. 无法执行的可选额外行动 | 接受后、开始执行前可用 `skip_extra_action` 放弃，前端和 Bot 均支持；不移动牌、不消耗标记。指定行动仍不能替换为获得 X，倍增重复也不能跳过 |
+| 3. 未使用基础项目 | 能从手牌打出并支持，作为上方动态项目处理；公开视图和 Bot 都能识别。基础项目通配标记仅适用于最初位于下方的基础项目 |
+| 4. 非洲专家 | 动物、赞助商和协会版块触发的机灵，统一延后到行动牌移动之后；倍增行动也等整组重复完成 |
+| 5. 放归特殊场馆优先 | 对应特殊场馆有足够标记时必须移除标记，包含使用 0 格的动物；不足时才腾空普通围栏。新建场馆的迁入仍按迁入规则腾空普通围栏 |
+| 6. 展示区补牌 | 同一回合的额外行动期间保留空位与原文件夹位置；整个回合完成后才补牌。原有明确要求即时补牌的能力仍按其规则执行 |
+| 7. 独特建筑顺序 | 独特建筑参与即时效果排序，学校可先获得声望再建造拿牌，霍加狓代打同样支持。预先校验指定位置，并确保中途可选建造给尚未放置的独特建筑留下合法空间 |
+| 8. 催眠 | 当时实现为在印刷吸引力前后立即暂停动物卡，执行借用行动，再恢复剩余效果；第四次复查确认该执行时机不正确。应保留提前确定目标的能力，将实际借用行动推迟至原行动结束；生成源与相关测试也需更正 |
+| 9. 最终计分牌弃牌 | 达到 10 保育时弃掉的计分牌放回剩余计分牌堆底部，保留原牌堆顶部次序 |
+| 10. Cards II 来源选择 | 每拿一张牌后更新手牌，再决定下一张来自牌库或可达展示区；全部拿完才弃牌、移动行动牌。新界面使用 `choose_card_sources`，旧客户端显式提交的完整拿牌方案继续兼容 |
+
+### 修复验证
+
+- 新增 21 项定向回归，将放归及霍加狓旧断言修正为正式规则预期；Ark Nova 共 **161 项测试通过**。
+- 回归包含催眠前后排序、借用 Cards II 的嵌套选择、外层倍增恢复、旧果断状态恢复、0 格爬行动物放归及独特建筑最后合法空间保护。
+- 两人（种子 67）和四人（种子 79）Bot 对局均完成终局，无非法行动或卡局。
+- 浏览器实际操作完成 Cards II“展示区 → 牌库 → 牌库 → 展示区 → 弃牌”、跳过无工人的额外协会行动、催眠借用 Cards II 后恢复动物奖励；390px 手机宽度无横向溢出，控制台无 JavaScript 错误。
+- 重建卡牌 JSON 与目录；JavaScript 语法检查、相关文件差异空白检查通过。
+
+```sh
+python scripts/gen_arknova_cards_json.py
+python -m unittest tests.test_ark_nova_rule_regressions tests.test_ark_nova_game tests.test_ark_nova_effects tests.test_ark_nova_card_data tests.test_ark_nova_map0 tests.test_ark_nova_ai tests.test_ark_nova_integration
+```
+
+## 第三次规则复查
+
+检查版本：`68e62ab`。本轮在上一轮修复后的实现上，重点检查倍增、催眠、行动结束效果的嵌套，以及休息和奖励选择的边界。
+
+确认 **7 项遗留：1 项 P1 卡局、6 项 P2 规则偏差**。均已构造场景复现；本轮只记录审计结果，未修改游戏实现。
+
+### 1. [P1] 倍增的第二次行动无法执行时，对局没有出口
+
+- 前置：Animals I 位于槽位 5，有 1 枚倍增标记；手中只有 473 彩虹飞蜥，场上只有一个空的 1 格围栏。
+- 操作：提交 Animals，使用 1 枚倍增标记，打出 473；跳过日光浴。
+- 实际：第一轮出牌已经提交，手牌为空、围栏已占用；随后进入不可跳过的 `forced_action=animals`。合法行动列表只返回 `animals`，空出牌报 `Animals requires at least one card`，跳过报 `there is no optional extra action to skip`；Bot 返回 `None`。整局无法继续。
+- 原因：创建重复行动时没有处理不可执行的后续重复，也没有恢复到可操作状态的路径。
+- 位置：[重复行动状态](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova.py:2521)、[跳过限制](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova.py:2440)。
+- 规则及修复约束：[官方术语表第 3 页 Multiplier](https://cdn.shopify.com/s/files/1/0947/3907/1278/files/Ark-Nova-Glossary.pdf?v=1754428544)说明重复行动的结算；[官方 FAQ 第 3 页](https://www.feuerland-spiele.de/fileadmin/game/Arche_Nova/Arche_Nova_FAQ_V2_EN_A4_low.pdf)禁止把一次常规行动和一次获得 X 标记混用。因此，不能用“允许第二次改拿 X”掩盖卡局；需在接受倍增及其后续结算时处理无法完成的计划。
+
+### 2. [P2] 催眠借用 Build II 仍按自己的 Build I 检查地图限制
+
+- 前置：自己的 Build 未升级；对手槽位 3 的 Build 已升级。H3 是空的 II 标记格，并与现有建筑相邻。
+- 操作：485 欧洲蝰蛇先执行催眠，借用对手的 Build II，在 H3 建亭子。
+- 实际：借用面已正确记录为 II，仍返回 `Build II is required for a marked space`。同一场地若把自己的 Build 标为升级，位置校验就通过。
+- 正确结果：该次借用 Build II 应允许覆盖 II 标记格。
+- 原因：地图校验直接读取自己的 `action_cards.build.upgraded`，绕过借用行动的面；前端预览也重复了同样判断。
+- 位置：[后端](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova.py:902)、[前端](/Users/minimax/Desktop/OpenBoardGame/static/games/ark_nova.js:1766)。
+- 依据：[官方术语表第 2 页 Hypnosis 示例 1](https://cdn.shopify.com/s/files/1/0947/3907/1278/files/Ark-Nova-Glossary.pdf?v=1754428544)明确允许这种建造。第 3 页示例 4 要求查看自己的 Build，适用的是借用 Sponsors 放置独特建筑，不能推广到借用 Build 本身。
+
+### 3. [P2] 选择先执行额外行动，仍被强制先结算其余行动结束效果
+
+- 前置：已有 214 非洲专家，打出 453 白颈白眉猴；同时触发“机灵”和“行动：卡牌”，启用效果排序。
+- 操作：先选“行动：卡牌”并接受，再计划完成 Cards 后用“机灵”把 Sponsors 移到槽位 1。
+- 实际：接受 Cards 后，系统先弹出 `move_action_card`；此时 Cards 尚未开始。移动 Sponsors 后才启动额外 Cards。最终 Cards 在 1、Sponsors 在 2。
+- 正确结果：所选 Cards 应先完整执行，再让玩家处理剩余的“机灵”；按上述选择，Sponsors 应在 1、Cards 在 2。
+- 原因：`extra_action_requested` 只追加到 `queued_extra_actions`，而剩余效果队列继续执行。效果排序改变了“接受行动”的顺序，没有改变行动实际执行顺序。
+- 位置：[额外行动入队](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova.py:1770)、[队列优先执行](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova.py:2492)。
+- 依据：[官方术语表第 1 页 Order](https://cdn.shopify.com/s/files/1/0947/3907/1278/files/Ark-Nova-Glossary.pdf?v=1754428544)允许自行决定同时触发效果的执行顺序。
+
+### 4. [P2] 科学实验室收入在同一玩家收入尚未结束时补展示牌
+
+- 前置：声望 0，同时拥有 201 科学实验室和地图拿牌收入；选择先结算科学实验室。
+- 操作：科学实验室拿走文件夹 1 的 462。
+- 实际：展示区立即从 `[462, 424, 214, 509, 416, 217]` 变为 `[424, 214, 509, 416, 217, 432]`。随后该玩家的地图收入可以在声望 0 时拿走原本位于文件夹 2 的 424。
+- 正确结果：同一玩家收入期间保留空位；该玩家全部收入完成后才补牌。因此下一次地图拿牌应只能从牌库取得。
+- 原因：效果层把所有 `timing=income` 的展示区拿牌都标为即时补牌，绕过核心按玩家结算完收入后统一补牌的逻辑。
+- 位置：[game/ark_nova_effects.py:673](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova_effects.py:673)。
+- 依据：[官方规则第 18 页 Break 第 5 步](https://capstone-games.com/cdn/shop/files/Ark-Nova-Rulebook.pdf?v=15269496103518830006)规定每名玩家的收入结束后补展示区。
+
+### 5. [P2] 休息时尚未弃手牌，就提前公开新展示牌
+
+- 前置：玩家有 4 张手牌、上限为 3；Sponsors 推进休息条至末端。
+- 实际：仍停在 `discard_cards` 时，公开视图的展示区已经从 `[508, 418, 462, 424, 214, 509]` 更新为 `[462, 424, 214, 509, 416, 217]`。玩家可以看过新出现的 416、217 后再决定弃哪张手牌。
+- 正确结果：先完成全部玩家的手牌上限弃牌，再进入后续休息步骤和展示区补牌。
+- 原因：`_resolve_break` 仅排入弃牌选择，没有等选择完成就继续修改展示区并抽取新牌。
+- 位置：[弃牌排队](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova.py:2224)、[提前补牌](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova.py:2251)。
+- 依据：[官方规则第 18 页 Break](https://capstone-games.com/cdn/shop/files/Ark-Nova-Rulebook.pdf?v=15269496103518830006)要求按顺序执行第 1 步弃牌和第 4 步补展示区。
+
+### 6. [P2] 免费围栏奖励被强制执行，不能保留地图空间
+
+- 前置：已解锁 Map 0 的 `enclosure_2_income`，地图仍有合法的 2 格围栏位置。
+- 操作：休息收入出现免费围栏选择，尝试放弃本次放置。
+- 实际：待选项 `min=1`，提交空选择返回 `wrong number of selections`。玩家必须占用地图空间，不能为后续大围栏保留空间。
+- 正确结果：可以跳过本次免费围栏奖励，不影响以后休息再次取得该收入。
+- 原因：地图首次奖励、休息收入和保育奖励牌的免费围栏均使用强制选择；解析器也无跳过分支。
+- 位置：[地图奖励](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova.py:1451)、[休息收入](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova.py:1900)、[奖励牌](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova.py:3821)、[选择解析](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova.py:4238)。
+- 依据：[官方 Icon Overview 第 1 页，免费 2／3 格围栏图标](https://cdn.shopify.com/s/files/1/0947/3907/1278/files/Ark-Nova-Icon-Overview.pdf?v=1754428545)使用可选建造表述。本轮核对了此前下载的官方文本摘录。
+
+### 7. [P2] 声望无法增加时，仍能以空协会任务解锁捐赠
+
+- 前置：声望 9、Cards I、Association II 位于槽位 2，有 1 名可用工人。
+- 操作：提交声望任务并捐赠。
+- 实际：声望保持 9，系统仍消耗工人、移动协会牌，并允许花 2 钱取得 1 保育。
+- 正确结果：此时没有完成可产生效果的声望任务，不能靠该空任务获得捐赠资格。Cards II 且声望 15 的情况不同：声望可转换为吸引力，不能一概禁止。
+- 原因：声望任务无条件调用奖励函数；奖励在 9 处被截断为 0 后，仍按成功任务记录并继续捐赠。
+- 位置：[game/ark_nova.py:3677](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova.py:3677)。
+- 依据：[官方规则第 8、16 页](https://capstone-games.com/cdn/shop/files/Ark-Nova-Rulebook.pdf?v=15269496103518830006)分别禁止空行动，并要求捐赠前实际完成至少一个协会任务。
+
+### 暂未计入确认数量的边界
+
+**动物能力与普通抽牌在牌库耗尽时处理不一致。** 牌库只剩 1 张、弃牌堆有 3 张时，401 猎豹的“抽 3 张”实际只得到 1 张；普通 Cards 路径的 `_draw` 则会洗回弃牌堆。涉及 `_draw_cards`、`_reveal_from_deck`、科学实验室牌库选项及 WAZA 搜索等路径。
+
+本轮已复现代码差异，但未在所查官方基础版规则、术语表及 FAQ 中找到明确的牌库耗尽处理条款，所以不把“必须洗回弃牌堆”当成已确认的官方规则结论。后续统一此边界时需明确采用的规则。
+
+### 验证与范围
+
+- Ark Nova 现有 **161 项测试全部通过**；上述组合边界未被当前断言覆盖。
+- 三人 Bot 对局（种子 103）经过 273 次决策正常完成，未出现非法动作；常规对局结果不能排除上述定向场景的问题。
+- 使用现有夹具构造 8 个定向场景：7 个确认问题，加 1 个牌库耗尽观察项。动作和选择通过真实 `ArkNovaGame.apply_action` 执行；休息收入案例另调用实际核心休息结算函数。
+- 临时复现脚本：`/tmp/ark_nova_third_audit.py`；结果：`/tmp/ark_nova_third_audit_results.jsonl`。其中断言用于确认当前缺陷行为，不能作为修复后的正确预期。
+- 本轮不是重新逐字段校对全部卡牌；重点是上一轮修改涉及的连续结算、嵌套行动、休息信息公开及选择出口。
+- 未修改游戏代码、生成数据、前端或正式测试。
+
+```sh
+/usr/bin/python3 -m unittest tests.test_ark_nova_rule_regressions tests.test_ark_nova_game tests.test_ark_nova_effects tests.test_ark_nova_card_data tests.test_ark_nova_map0 tests.test_ark_nova_ai tests.test_ark_nova_integration
+PYTHONPATH=. /usr/bin/python3 /tmp/ark_nova_third_audit.py
+```
+
+## 第四次回归复查
+
+检查版本：`68e62ab`。在第三次已知 7 项之外，复查协会项目、赞助商组合、客户端行动校验、隐藏信息广播与实际长局。新增确认 **6 项：1 项 P1、5 项 P2**，均有定向复现。本轮未修复游戏实现。
+
+### 1. [P1] 牌库抽到的隐藏手牌随事件广播给所有对手
+
+- 操作：p1 使用强度 5 的 Cards I，从牌库抽牌并弃掉一张旧手牌；通过真实 `_emit_game_state` 生成发给 p2 的 Socket.IO 消息，以 mock 捕获发送内容。
+- 实际：p2 的公开视图正确隐藏 p1 手牌，但同一消息的 `ark_nova:cards.payload.drawn` 包含 `["416", "217", "432"]`；这三张牌仍全部在 p1 的隐藏手牌中。对手从收到的网络消息即可得知牌面，无须访问服务器状态。
+- 原因：Cards 事件包含私有牌号，房间广播把相同 `events` 原样附到每个玩家的消息，未按接收者过滤。逐张 Cards II 的最终事件及效果层 `cards_drawn` 也有同类牌号字段，修复时应统一检查。
+- 位置：[普通抽牌事件](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova.py:2766)、[逐张抽牌事件](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova.py:2670)、[效果抽牌事件](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova_effects.py:415)、[公共广播](/Users/minimax/Desktop/OpenBoardGame/app.py:472)。
+- 正确结果：本人可以收到抽到的牌号；对手只能得到应当公开的信息，例如抽牌数量和公开展示区取牌。依据：[官方规则第 5 页，个人设置 F](https://capstone-games.com/cdn/shop/files/Ark-Nova-Rulebook.pdf?v=15269496103518830006)要求手牌对其他玩家保密。
+
+### 2. [P2] 催眠把提前确定目标错误地实现为提前执行借用行动
+
+- 前置：p1 吸引力 24，有 485 欧洲蝰蛇和 222，2 枚 X 标记；p2 吸引力 30，Sponsors I 在槽位 3。
+- 操作：打出 485，选择先催眠，借用对手 Sponsors 并花 2 枚 X，打出要求吸引力不超过 25 的 222。
+- 实际：开始借用 Sponsors 时，吸引力仍为 24、自己的 Animals 仍在槽位 5；222 成功入场。随后才取得 485 的 2 吸引力，变为 26。
+- 正确结果：可以在取得动物吸引力前确定催眠目标，但必须完成当前 Animals 行动、领取奖励并移动行动牌后，才实际执行借用行动。该场景借用时已是 26 吸引力，不能打出 222。
+- 原因：`hypnosis_action` 选择完成后立即调用 `_suspend_for_extra_action`；生成源也把催眠执行标为 `immediate`。现有测试 `test_hypnosis_executes_a_borrowed_action_before_animal_rewards` 恰好断言错误顺序，因此测试通过不能证明规则正确。
+- 位置：[执行入口](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova.py:4059)、[能力生成源](/Users/minimax/Desktop/OpenBoardGame/scripts/arknova_card_reference.py:294)、[错误预期测试](/Users/minimax/Desktop/OpenBoardGame/tests/test_ark_nova_rule_regressions.py:733)。
+- 依据：[Bastian Winkelhaus 于 2022-03-18 的设计团队澄清](https://boardgamegeek.com/thread/2832987/hypnosis-timing)明确区分目标确定与实际执行，并以“最多 25 吸引力赞助商”说明这一限制；同时更正了术语表的歧义。本项更正二次复查第 8 项的修复方向，不能简单恢复为在行动结束后才判断目标。
+
+### 3. [P2] 项目奖励越过保育里程碑选择，导致后续声望丢失
+
+- 前置：保育 1、声望 9、Cards I；已有 473 和非洲伙伴动物园，手持 125 爬行繁育项目。
+- 操作：开启效果排序，支持 125 第 2 格，获得 1 保育和 2 声望；到达保育 2 时选择升级 Cards。
+- 实际：出现升级选择之前，2 声望就已被 Cards I 的 9 上限截断；完成升级后声望仍是 9。选择地图 `conservation_1_income` 也无法先处理地图奖励来解除限制。
+- 正确结果：可以先取得保育、完成升级 Cards，再领取声望至 11，并触发声望 11 的保育奖励。地图奖励也允许安排在项目奖励之前或之后。
+- 原因：`_support_project` 直接批量调用 `_apply_rewards`；保育里程碑只排入待选队列，函数继续发声望，最后才处理地图奖励。
+- 位置：[项目奖励顺序](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova.py:3597)、[里程碑入队](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova.py:533)。
+- 依据：[官方规则第 15 页](https://capstone-games.com/cdn/shop/files/Ark-Nova-Rulebook.pdf?v=15269496103518830006)允许选择地图奖励相对项目奖励的顺序；[官方术语表第 1 页 Order](https://cdn.shopify.com/s/files/1/0947/3907/1278/files/Ark-Nova-Glossary.pdf?v=1754428544)要求奖励即时结算，并允许选择同时奖励的顺序。
+
+### 4. [P2] 协会界面忽略行动中新增工人和金钱，阻止合法计划
+
+- 工人场景：Association II 槽位 5 加 1 枚 X，声望 6、1 名可用工人；计划先拿声望大学，再做声望任务。大学提供 2 声望，到 8 时解锁的新工人可供第二项任务使用。后端完整接受，最终两项任务各有一名工人；客户端却报 `Reputation needs 1 association worker; only 0 are available at that point.`
+- 金钱场景：现有金钱 0，Association II 支持 125 第 2 格，选择地图 12 钱奖励后捐赠 2 钱。后端接受，最终金钱 10；客户端却报 `This plan needs at least 💰2; you currently have 💰0.`
+- 原因：`arkNovaAssociationPlanIssue` 只模拟声望任务和第三伙伴带来的工人，漏掉大学及其他奖励；资金检查只比较行动开始前的余额。两种拒绝均用实际公开视图执行原始前端函数复现，与同一状态的真实后端行动结果对照。
+- 位置：[工人校验](/Users/minimax/Desktop/OpenBoardGame/static/games/ark_nova.js:2242)、[金钱校验](/Users/minimax/Desktop/OpenBoardGame/static/games/ark_nova.js:2265)。
+- 正确结果：允许使用前一任务已取得的奖励完成后续任务或捐赠。依据：[官方 FAQ 第 2 页 Other](https://www.feuerland-spiele.de/fileadmin/game/Arche_Nova/Arche_Nova_FAQ_V2_EN_A4_low.pdf)明确允许同一行动即时使用奖励，只有行动种类和强度在开始时锁定。
+
+### 5. [P2] 通配标记可以补足项目条件，界面却按没有标记禁用档位
+
+- 前置：473 提供 1 个爬行类图标，215 有 2 枚通配标记；109 基础项目第 3 格开放，需要 2 个爬行类图标。
+- 实际：公开项目返回 `eligible_slots=[]`，界面禁用该档并在加入计划时再次拦截。相同状态向真实 `apply_action` 提交 `wild_token_card_id="215"` 则成功支持项目，标记由 2 变 1。
+- 原因：项目公开资格计算调用 `_project_requirement_met` 时没有传入可用通配数量；前端只依据该静态资格列表，没有根据选择的通配标记更新。
+- 位置：[公开资格](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova.py:4488)、[档位禁用](/Users/minimax/Desktop/OpenBoardGame/static/games/ark_nova.js:2618)、[提交拦截](/Users/minimax/Desktop/OpenBoardGame/static/games/ark_nova.js:3162)。
+- 正确结果：在选择合法通配标记后，补足条件的档位应可以选择和提交。依据：[官方术语表第 5 页 215](https://cdn.shopify.com/s/files/1/0947/3907/1278/files/Ark-Nova-Glossary.pdf?v=1754428544)明确允许用一枚标记补足一个基础项目图标。
+
+### 6. [P2] 215 与 218 无法各用一枚通配标记支持同一项目
+
+- 前置：473 与非洲伙伴提供 2 个非洲图标，103 第 2 格要求 4 个；215、218 各有 2 枚可用标记。
+- 操作：尝试从两张赞助商各花一枚标记，补足缺少的 2 个图标。
+- 实际：后端只接收一个 `wild_token_card_id`，把通配数量固定为 1。单独传任一卡都不满足项目；单数字段传数组会报标记不可用，尝试复数字段则被忽略。五种输入均被拒绝且状态不变，底层需求函数传入 `wild_icons=2` 本身可以满足条件。
+- 正确结果：可以各用一枚，分别扣除并记录两张卡的使用；仍禁止从同一张卡为同一项目使用两枚。此项是后端表达能力缺失，与上一项单枚通配的界面拦截独立。
+- 位置：[单卡输入](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova.py:3537)、[固定通配数量](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova.py:3556)、[单卡扣除](/Users/minimax/Desktop/OpenBoardGame/game/ark_nova.py:3591)。
+- 依据：[Bastian Winkelhaus 于 2021-12-31 的设计团队答复](https://boardgamegeek.com/thread/2784782/breeding-cooperation-card-215-and-breeding-program)明确允许两张卡各使用一枚。
+
+### 验证与范围
+
+- Ark Nova 现有 **161 项测试全部通过**。催眠测试存在上述错误预期；其他新增边界缺少相应断言。
+- 重新运行第三次的定向复现，原有 **7 项遗留仍全部成立**；牌库耗尽观察项仍不计入确认数量。
+- 六局 Bot 对局全部正常终局，共 **1,724 次决策、52 次休息**；覆盖 178 次效果排序、26 次继续出牌、134 次 Cards II 来源选择，以及放归、迁移、额外行动、偷窃和袋囊。
+
+| 人数 | 种子 | 决策数 | 休息数 | 结果 |
+|---|---:|---:|---:|---|
+| 2 | 131 | 265 | 8 | 正常终局 |
+| 2 | 137 | 297 | 9 | 正常终局 |
+| 3 | 139 | 272 | 8 | 正常终局 |
+| 3 | 149 | 295 | 9 | 正常终局 |
+| 4 | 151 | 272 | 8 | 正常终局 |
+| 4 | 157 | 323 | 10 | 正常终局 |
+
+- 长局逐步检查动作成功、行动槽位 1–5 唯一、资源非负和轨道上限、展示区六槽、稳定结算边界的实体卡守恒，以及终局无待选/效果/强制行动残留。Bot 对局通过不能排除已构造的定向边界。
+- 定向复现临时文件：`/tmp/ark_nova_fourth_association_audit.py`、`/tmp/ark_nova_audit_hypnosis.py`、`/tmp/ark_nova_fourth_client_audit.py`、`/tmp/ark_nova_fourth_client_audit.js`；长局脚本及结果：`/tmp/ark_nova_fourth_smoke.py`、`/tmp/ark_nova_fourth_smoke_results.json`。这些文件不在仓库内，上述各节已保留复现步骤和实际结果。
+- 客户端计划校验在 Node VM 中运行仓库原始函数；广播检查 mock 了 `sio.emit`，执行实际公共消息构造逻辑。本轮未进行新的浏览器点击测试。
+- 本轮只更新本审计文件，未修改游戏实现、卡牌数据、前端或正式测试。
+
+```sh
+/usr/bin/python3 -m unittest tests.test_ark_nova_rule_regressions tests.test_ark_nova_game tests.test_ark_nova_effects tests.test_ark_nova_card_data tests.test_ark_nova_map0 tests.test_ark_nova_ai tests.test_ark_nova_integration
+PYTHONPATH=. /usr/bin/python3 /tmp/ark_nova_third_audit.py
+PYTHONPATH=. /usr/bin/python3 /tmp/ark_nova_fourth_association_audit.py
+PYTHONPATH=. /usr/bin/python3 /tmp/ark_nova_audit_hypnosis.py
+PYTHONPATH=. /usr/bin/python3 /tmp/ark_nova_fourth_client_audit.py
+/Users/minimax/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node /tmp/ark_nova_fourth_client_audit.js
+PYTHONPATH=. /usr/bin/python3 /tmp/ark_nova_fourth_smoke.py
+```

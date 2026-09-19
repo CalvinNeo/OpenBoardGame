@@ -7809,11 +7809,16 @@ def _fast_hand_decomposition_summary(hand: List[Dict], level_rank: int) -> Dict[
             add_group("straight", 5, 11.35)
 
     triple_ranks = [rank for rank, count in working.items() if count >= 3]
-    pair_ranks = [rank for rank, count in working.items() if count >= 2]
     for triple_rank in sorted(triple_ranks, key=lambda rank: _point_order_value(rank, level_rank), reverse=True):
-        pair_rank = next((rank for rank in pair_ranks if rank != triple_rank and working.get(rank, 0) >= 2), None)
-        if pair_rank is None:
+        # An earlier full house may have consumed two cards from this triple.
+        # Recheck the live count instead of spending the same physical cards
+        # twice. Prefer a complete pair to breaking another remaining triple.
+        if working.get(triple_rank, 0) < 3:
             continue
+        pairs = [rank for rank, count in working.items() if rank != triple_rank and count >= 2]
+        if not pairs:
+            continue
+        pair_rank = min(pairs, key=lambda rank: (working[rank], _point_order_value(rank, level_rank)))
         working[triple_rank] -= 3
         working[pair_rank] -= 2
         add_group("full_house", 5, 10.95)
@@ -8614,9 +8619,48 @@ def _hand_state_value_components(state: Dict, bot_id: str, hand: List[Dict]) -> 
     return components
 
 
+def _settled_round_value(state: Dict, bot_id: str) -> Optional[float]:
+    """Return exact team utility once the round's upgrade result is decided.
+
+    Finishing personally has no additional value after the team result is
+    known. Two teammates finishing first already settle a three-point win,
+    even while the engine is still playing out the remaining places.
+    """
+    order = state.get("finish_order") or []
+    if not order:
+        return None
+    winning_team = _team_of(state, order[0])
+    partner_rank = next(
+        (rank for rank, pid in enumerate(order[1:], 2) if _team_of(state, pid) == winning_team),
+        None,
+    )
+    if partner_rank is None:
+        if len(order) < 3:
+            return None
+        partner_rank = 4
+    points = {2: 3, 3: 2, 4: 1}[partner_rank]
+    magnitude = points * 100
+    # The engine upgrades the winning team before checking match victory.
+    # A settled double finish can therefore already imply the same +/-1000
+    # outcome, even though the remaining places have not been filled in yet.
+    if state.get("phase") == "playing":
+        level = state.get("teams", {}).get(winning_team, {}).get("level", 2)
+        partner_requirement_met = (
+            not state.get("config", {}).get("require_partner_not_last_for_a")
+            or partner_rank != 4
+        )
+        if level + points >= 14 and partner_requirement_met:
+            magnitude = 1000
+    # Keep decided outcomes outside ordinary nonterminal shape/tempo scores.
+    return float(magnitude if _team_of(state, bot_id) == winning_team else -magnitude)
+
+
 def _evaluate_state_for_bot(state: Dict, bot_id: str) -> float:
     if state.get("game_over"):
         return 1000.0 if state.get("winner_team") == _team_of(state, bot_id) else -1000.0
+    settled = _settled_round_value(state, bot_id)
+    if settled is not None:
+        return settled
     hand = state["players"][bot_id]["hand"]
     score = sum(_hand_state_value_components(state, bot_id, hand).values())
     finish_pressure = _opponent_finish_pressure_penalty(state, bot_id)
@@ -9228,7 +9272,11 @@ def _copy_root_eval_cache_for_search(state: Dict) -> Dict:
     if not isinstance(source, dict):
         return {}
     copied: Dict = {}
-    for name in ("lead_option_scores", "lead_cheap_scores", "legal_action_options"):
+    # Strategic lead scores depend on hidden hands (detailed) or on the full
+    # acting hand (cheap), neither of which is fully represented in their keys.
+    # A new particle or played action must recompute them. Reuse only caches
+    # whose keys identify every hand on which their values depend.
+    for name in ("legal_action_options",):
         values = source.get(name)
         if isinstance(values, dict):
             copied[name] = dict(values)
@@ -9734,6 +9782,7 @@ def _rollout_value(state: Dict, bot_id: str, depth: int) -> float:
         steps < depth
         and not state.get("game_over")
         and state.get("phase", "playing") == "playing"
+        and _settled_round_value(state, bot_id) is None
     ):
         _mcts_check_deadline()
         actor = _next_actor(state)
@@ -9760,7 +9809,11 @@ def _mcts_reply_tree_value(
     beta: float = 1e9,
 ) -> float:
     _mcts_check_deadline()
-    if state.get("game_over") or state.get("phase", "playing") != "playing":
+    if (
+        state.get("game_over")
+        or state.get("phase", "playing") != "playing"
+        or _settled_round_value(state, bot_id) is not None
+    ):
         return _mcts_leaf_value(state, bot_id)
     actor = _next_actor(state)
     if actor is None:
@@ -11504,7 +11557,12 @@ def _minimax_value(
 ) -> float:
     if deadline is not None and time.perf_counter() >= deadline:
         return _evaluate_state_for_bot(state, bot_id)
-    if depth <= 0 or state.get("game_over") or state.get("phase") != "playing":
+    if (
+        depth <= 0
+        or state.get("game_over")
+        or state.get("phase") != "playing"
+        or _settled_round_value(state, bot_id) is not None
+    ):
         return _evaluate_state_for_bot(state, bot_id)
     actor = _next_actor(state)
     if actor is None:
@@ -12070,7 +12128,10 @@ def _minimax_pick_action(
         root_scored = layer_scored
         best_action, best_value = max(layer_scored, key=lambda item: item[1])
         completed_depth = search_depth
-    if best_action and not state.get("current_trick"):
+    # Defensive shortcuts are an emergency fallback. Once a complete root
+    # comparison exists, its values already include the cost of a single lead;
+    # a rank-only rewrite must not replace a searched win with a searched loss.
+    if completed_depth is None and best_action and not state.get("current_trick"):
         next_pid = _next_active_after(state, bot_id)
         if next_pid and _team_of(state, next_pid) != _team_of(state, bot_id):
             next_hand = state["players"].get(next_pid, {}).get("hand", [])

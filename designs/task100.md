@@ -35,6 +35,7 @@
 - 三行资金市场保持清楚的行号和本金／利息／周期；右侧显示本人现金、近期到期压力和当前操作，下方紧凑显示各玩家行业及可展开的公开债务。手机改为单列，市场每行三张收缩适配，所有内容可换行，禁止横向溢出和重叠。
 - 点行业、资金牌、交易对象后确认；报价使用数值输入与快捷调整，不要求 JSON。空白／Esc 取消选择，不添加 Clear Selection。对话框可用 Esc、Close、遮罩关闭；输入与标签同行。游戏无关 UI 使用英文。
 - Help 包含完整规则、计分与实际牌表边界；Explain 捕获操作，所有普通按钮原功能都被阻止，仅可解释控件显示虚线及问号，disabled 按钮也支持坐标命中；解释一次自动退出或 Esc 退出。
+- 图标、颜色、资源、数值徽标均提供即时说明，包含名称、用途和单位。桌面悬停／键盘聚焦显示 tooltip，触摸轻点显示三秒 banner，再点重新计时；滑动不触发。卡牌和行动按钮旁独立的 ⓘ 始终可用，包括禁用状态。查看说明不提交操作、不取消选择；进入对话框、Explain 或切换游戏时清理浮层。
 - 本轮结算在桌面内展示并列出尚未确认玩家。游戏日志及交易记录限制高度、内部滚动；长名字和长数字保持容器内换行。
 
 ## 实施与验收
@@ -47,4 +48,24 @@
 
 ## 实施结果
 
-待实现及验证后补充。
+已完成方案并按以上流程实现，可在游戏列表搜索“庞氏骗局”创建 3–5 人房间，支持机器人。基础与进阶模式、首轮交易开关、全部规则阶段、秘密信息隔离、保存恢复和全员回顾已接入现有房间系统。
+
+### 文件
+
+- 引擎／数值与严格 Schema：`game/ponzi_scheme.py`、`game/ponzi_scheme_data.py`。
+- 独立前端：`static/games/ponzi_scheme.js`、`static/ponzi_scheme.css`；HTML、共享脚本仅做配置／面板接入。即时说明遵循实施期间更新的 `FRONTEND.md`。
+- 注册／隐私：游戏定义、导出、标签、开发顺序、`app.py` 的配置种子过滤和机器人动作脱敏。
+- 测试：`tests/test_ponzi_scheme.py`、`tests/test_ponzi_scheme_integration.py`。
+- 牌表出处及 MIT 许可：`designs/ponzi_scheme_card_data.md`。
+
+### 验证结果
+
+- `python3 -m unittest tests.test_ponzi_scheme tests.test_ponzi_scheme_integration tests.test_room_session tests.test_game_dev_order tests.test_game_names tests.test_game_tags tests.test_frontend_script_names`：**73 项通过**。其中规则测试 36 项、Socket.IO 接入测试 5 项，并包含基础／进阶、3／4／5 人共 18 局机器人完整对局。
+- 已运行 `python3 scripts/gen_dev_order.py`，当前共 79 个游戏，庞氏骗局序号 79。
+- 新脚本及接入脚本通过 Node 语法检查；`git diff --check` 通过。
+- 隔离 Chrome 会话完成真实 UI 创建、加入、配置、募资、秘密报价、反买、卖出、移除资金和全员确认流程；非参与者收到的消息不含价格或其他玩家现金。已修复验收发现的房间配置刷新遗漏。
+- **48 项浏览器检查通过，零脚本错误**。包括 Help 的 Esc 关闭、Explain 禁用按钮命中／自动退出、购买确认与取消、即时说明的鼠标／键盘／触摸、三秒消失、再次点击重新计时、滑动不误触、说明不改变选择或提交动作、离开游戏清理浮层。
+- 1440／768／375／320px 对募资、奢侈品、崩盘、回顾、最终结算和长名字／大金额数据逐项检查，没有横向页面或容器内部文字溢出；修复了极长玩家名挤压起始玩家标记的问题。崩盘与最终结算布局使用引擎生成的可控局面；真实多人流程验证到第二轮，完整结束流程由规则和机器人测试覆盖。
+- 浏览器验收脚本、结果和截图保留在 `tmp/task100/`，包括 `browser-qa-results.json`、`desktop-offer.png`、`desktop-review.png`、`layout-1440.png`、`layout-768.png`、`layout-375.png`、`layout-320.png`、`touch-banner.png`。临时规则书与资料仅用于查证，不作为游戏资产加载。
+
+牌表采用可追溯转录并核对规则示例和作者勘误；未逐张核验实体牌。机器人遵守信息可见范围，以近期付息压力和产业价值作启发式决策。

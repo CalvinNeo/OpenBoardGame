@@ -47,15 +47,26 @@ def _previous_player_id(turn_order: List[str], player_id: str) -> Optional[str]:
     return turn_order[(idx - 1) % len(turn_order)]
 
 
-def _valid_suspect_indexes(indexes: object) -> Optional[List[int]]:
-    if not isinstance(indexes, list) or len(indexes) != 2:
+def _inspection_mode(state: Dict) -> str:
+    # Saves created before this option used the standard two-card inspection.
+    return state.get("config", {}).get("inspection_mode", "both")
+
+
+def _peek_count(state: Dict) -> int:
+    if state.get("current_turn") == state.get("first_player"):
+        return 2
+    return 1 if _inspection_mode(state) == "choose_one" else 2
+
+
+def _valid_suspect_indexes(indexes: object, count: int) -> Optional[List[int]]:
+    if not isinstance(indexes, list) or len(indexes) != count:
         return None
     parsed: List[int] = []
     for value in indexes:
         if type(value) is not int or value < 0 or value > 2:
             return None
         parsed.append(value)
-    if len(set(parsed)) != 2:
+    if len(set(parsed)) != count:
         return None
     return parsed
 
@@ -239,6 +250,9 @@ class InAGroveGame:
 
     @staticmethod
     def init_game(config: Optional[Dict], players: List[Dict]) -> Dict:
+        inspection_mode = (config or {}).get("inspection_mode", "choose_one")
+        if inspection_mode not in ("choose_one", "both"):
+            raise ValueError("invalid inspection mode")
         ordered_players = _ordered_players(players)
         player_ids = [player["player_id"] for player in ordered_players]
         player_meta = {player["player_id"]: dict(player) for player in ordered_players}
@@ -257,6 +271,7 @@ class InAGroveGame:
         starting_values = {pid: starting_draw.pop().get("value") or 0 for pid in player_ids}
         first_player = max(player_ids, key=lambda pid: starting_values[pid])
         state = {
+            "config": {"inspection_mode": inspection_mode},
             "players": state_players,
             "player_meta": player_meta,
             "turn_order": player_ids,
@@ -332,9 +347,10 @@ class InAGroveGame:
         if action_type == "peek_suspects":
             if phase != "peek":
                 return [], "cannot peek now"
-            indexes = _valid_suspect_indexes(action.get("suspect_indexes"))
+            count = _peek_count(state)
+            indexes = _valid_suspect_indexes(action.get("suspect_indexes"), count)
             if indexes is None:
-                return [], "select exactly 2 suspects"
+                return [], f"select exactly {count} suspect(s)"
             blocked = state.get("blocked_suspect_index")
             if blocked is not None and blocked in indexes:
                 return [], "cannot inspect blocked suspect"
@@ -429,6 +445,8 @@ class InAGroveGame:
 
         return {
             "game_id": InAGroveGame.game_id,
+            "config": {"inspection_mode": _inspection_mode(state)},
+            "peek_count": _peek_count(state),
             "you": viewer_id,
             "phase": state["phase"],
             "round": state["round"],
@@ -462,10 +480,11 @@ class InAGroveGame:
         if "peek_suspects" in legal:
             blocked = state.get("blocked_suspect_index")
             choices = [index for index in range(3) if index != blocked]
-            if len(choices) < 2:
+            count = _peek_count(state)
+            if len(choices) < count:
                 return None
             random.shuffle(choices)
-            return {"type": "peek_suspects", "suspect_indexes": choices[:2]}
+            return {"type": "peek_suspects", "suspect_indexes": choices[:count]}
         if "place_bet" in legal:
             return {"type": "place_bet", "suspect_index": random.randint(0, 2)}
         return None
@@ -476,6 +495,9 @@ class InAGroveGame:
 
     @staticmethod
     def deserialize(payload: Dict) -> Dict:
+        if not isinstance(payload.get("config"), dict):
+            payload["config"] = {}
+        payload["config"].setdefault("inspection_mode", "both")
         if payload.get("phase") == "swap_or_bet":
             payload["phase"] = "bet"
         return payload

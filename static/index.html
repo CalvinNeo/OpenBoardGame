@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css?v=app_v97" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v98" />
   <link rel="stylesheet" href="/static/ark_nova.css?v=app_v21" />
   <link rel="stylesheet" href="/static/catan_starfarers.css?v=app_v4" />
   <link rel="stylesheet" href="/static/castles_of_burgundy.css?v=2" />
@@ -13,6 +13,8 @@
   <link rel="stylesheet" href="/static/take_time.css?v=1" />
   <link rel="stylesheet" href="/static/eternal_decks.css?v=1" />
   <link rel="stylesheet" href="/static/ponzi_scheme.css?v=1" />
+  <link rel="stylesheet" href="/static/istanbul.css?v=1" />
+  <link rel="stylesheet" href="/static/rebel_princess.css?v=2" />
 </head>
 <body>
   <section id="logPanel" class="log-panel hidden" aria-hidden="true">
@@ -520,20 +522,20 @@
     </div>
   </section>
 
-  <section id="istanbulHelpModal" class="modal hidden" aria-hidden="true">
+  <section id="istanbulHelpModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="istanbulHelpTitle">
     <div class="modal-content istanbul-help-modal">
       <div class="modal-header">
-        <h2>Istanbul - Game Rules</h2>
+        <h2 id="istanbulHelpTitle">Istanbul · How to Play</h2>
         <button id="istanbulHelpModalCloseBtn" type="button">Close</button>
       </div>
       <div class="modal-body istanbul-help-content" id="istanbulHelpContent"></div>
     </div>
   </section>
 
-  <section id="istanbulExplainModal" class="modal hidden" aria-hidden="true">
+  <section id="istanbulExplainModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="istanbulExplainTitle">
     <div class="modal-content istanbul-explain-modal">
       <div class="modal-header">
-        <h2>Button Explanation</h2>
+        <h2 id="istanbulExplainTitle">Explain</h2>
         <button id="istanbulExplainModalCloseBtn" type="button">Close</button>
       </div>
       <div class="modal-body">
@@ -1444,6 +1446,17 @@
                   <div id="catanStarfarersRoomSetupRow" class="hidden">Setup: <span id="catanStarfarersRoomSetup">-</span> · Language: <span id="catanStarfarersRoomLanguage">-</span></div>
                 </div>
                 <div class="game-configs" id="gameConfigSection">
+                  <div class="game-config-card hidden" id="inAGroveConfigBox" aria-hidden="true">
+                    <div class="game-config-title">In a Grove</div>
+                    <div class="row">
+                      <label for="inAGroveInspectionModeSelect">Later turns</label>
+                      <select id="inAGroveInspectionModeSelect" aria-describedby="inAGroveInspectionModeHint">
+                        <option value="choose_one" selected>Inspect 1 of 2</option>
+                        <option value="both">Inspect both</option>
+                      </select>
+                    </div>
+                    <div class="hint" id="inAGroveInspectionModeHint">First detective: inspect 2 of 3. Later detectives: choose 1 of the 2 unblocked suspects.</div>
+                  </div>
                   <div class="game-config-card hidden" id="drawGuessConfigBox" aria-hidden="true">
                     <div class="game-config-title">Draw &amp; Guess</div>
                     <div class="row hidden" id="drawGuessLanguageRow">
@@ -2508,65 +2521,72 @@
             <div id="gaiaProjectPanel" class="hidden gaia-panel"></div>
             <div id="istanbulPanel" class="hidden istanbul-panel">
               <div class="istanbul-top">
-                <div class="istanbul-stat">Phase: <span id="istanbulPhase">-</span></div>
-                <div class="istanbul-stat">Turn: <span id="istanbulTurn">-</span></div>
-                <div class="istanbul-stat">Movement: <span id="istanbulMoveMode">-</span></div>
-                <div class="istanbul-stat">Rubies💎 to Win: <span id="istanbulWinTarget">-</span></div>
+                <div class="istanbul-stat"><span class="istanbul-stat-label">Phase</span><span id="istanbulPhase">-</span></div>
+                <div class="istanbul-stat"><span class="istanbul-stat-label">Turn</span><span id="istanbulTurn">-</span></div>
+                <div class="istanbul-stat"><span class="istanbul-stat-label">Movement</span><span id="istanbulMoveMode">-</span></div>
+                <div class="istanbul-stat"><span class="istanbul-stat-label">Victory</span><span id="istanbulWinTarget">-</span></div>
               </div>
 
+              <section id="istanbulGuide" class="istanbul-guide" aria-label="Turn guide" aria-live="polite"></section>
+
+              <section class="istanbul-caravan" aria-labelledby="istanbulCaravanTitle">
+                <h3 id="istanbulCaravanTitle">你的商队</h3>
+                <div id="istanbulYou" class="istanbul-you"></div>
+              </section>
+
               <div class="istanbul-main">
-                <section class="istanbul-board-wrap">
+                <section class="istanbul-board-wrap" aria-labelledby="istanbulBoardTitle">
                   <div class="istanbul-board-header">
-                    <h3>Board</h3>
+                    <h3 id="istanbulBoardTitle">集市棋盘</h3>
                     <div id="istanbulTurnHint" class="istanbul-hint">-</div>
                   </div>
-                  <div class="istanbul-board-tools">
-                    <button id="istanbulMarketsToggle" class="istanbul-board-toggle" type="button" aria-expanded="false">Markets 🛒</button>
-                    <button id="istanbulMosquesToggle" class="istanbul-board-toggle" type="button" aria-expanded="false">Mosques 🕌</button>
-                    <button id="istanbulPostOfficeToggle" class="istanbul-board-toggle" type="button" aria-expanded="false">Post Office 📮</button>
-                  </div>
                   <div class="istanbul-board-stage">
-                    <div id="istanbulBoard" class="istanbul-board"></div>
-                    <div id="istanbulPathHint" class="istanbul-path-hint"></div>
-                    <div id="istanbulBoardOverlays" class="istanbul-overlay-layer hidden" aria-hidden="true">
-                      <div id="istanbulMarketsOverlay" class="istanbul-overlay-card hidden" data-istanbul-overlay="markets">
-                        <h3>Markets 🛒</h3>
-                        <div id="istanbulMarkets" class="istanbul-markets"></div>
-                      </div>
-                      <div id="istanbulMosquesOverlay" class="istanbul-overlay-card hidden" data-istanbul-overlay="mosques">
-                        <h3>Mosques 🕌</h3>
-                        <div id="istanbulMosques" class="istanbul-mosques"></div>
-                      </div>
-                      <div id="istanbulPostOfficeOverlay" class="istanbul-overlay-card hidden" data-istanbul-overlay="post">
-                        <h3>Post Office 📮</h3>
-                        <div id="istanbulPostOffice" class="istanbul-post-office"></div>
-                      </div>
-                    </div>
+                    <div id="istanbulBoard" class="istanbul-board" aria-label="Istanbul · 4 × 4 集市棋盘"></div>
+                    <div id="istanbulPathHint" class="istanbul-path-hint" aria-live="polite"></div>
                   </div>
                 </section>
 
                 <section class="istanbul-side">
-                  <div class="istanbul-card istanbul-action-card">
-                    <h3>Action Center</h3>
+                  <div class="istanbul-card istanbul-action-card" aria-labelledby="istanbulActionTitle">
+                    <h3 id="istanbulActionTitle">当前行动</h3>
+                    <div id="istanbulDestination" class="istanbul-destination"></div>
                     <div id="istanbulActionHint" class="istanbul-hint">-</div>
                     <div id="istanbulActionControls" class="istanbul-controls"></div>
                   </div>
-
-                  <div class="istanbul-card">
-                    <h3>Your Caravan 🐪</h3>
-                    <div id="istanbulYou" class="istanbul-you"></div>
-                  </div>
-
-                  <div class="istanbul-card">
-                    <h3>Bonus Cards 🎴</h3>
-                    <div id="istanbulBonusHand" class="istanbul-bonus-hand"></div>
-                  </div>
-
-                  <div class="istanbul-card">
-                    <h3>Players</h3>
-                    <div id="istanbulPlayers" class="istanbul-players"></div>
-                  </div>
                 </section>
+              </div>
+
+              <section class="istanbul-reference" aria-label="Place reference">
+                <div class="istanbul-board-tools">
+                  <button id="istanbulMarketsToggle" class="istanbul-board-toggle" type="button" aria-expanded="false" aria-controls="istanbulMarketsOverlay">Markets</button>
+                  <button id="istanbulMosquesToggle" class="istanbul-board-toggle" type="button" aria-expanded="false" aria-controls="istanbulMosquesOverlay">Mosques</button>
+                  <button id="istanbulPostOfficeToggle" class="istanbul-board-toggle" type="button" aria-expanded="false" aria-controls="istanbulPostOfficeOverlay">Post Office</button>
+                </div>
+                <div id="istanbulBoardOverlays" class="istanbul-overlay-layer hidden" aria-hidden="true">
+                  <div id="istanbulMarketsOverlay" class="istanbul-overlay-card hidden" data-istanbul-overlay="markets">
+                    <h3>市场需求与售价</h3>
+                    <div id="istanbulMarkets" class="istanbul-markets"></div>
+                  </div>
+                  <div id="istanbulMosquesOverlay" class="istanbul-overlay-card hidden" data-istanbul-overlay="mosques">
+                    <h3>清真寺能力</h3>
+                    <div id="istanbulMosques" class="istanbul-mosques"></div>
+                  </div>
+                  <div id="istanbulPostOfficeOverlay" class="istanbul-overlay-card hidden" data-istanbul-overlay="post">
+                    <h3>邮局奖励</h3>
+                    <div id="istanbulPostOffice" class="istanbul-post-office"></div>
+                  </div>
+                </div>
+              </section>
+
+              <div class="istanbul-extras">
+                <details class="istanbul-card istanbul-disclosure">
+                  <summary>Bonus Cards</summary>
+                  <div id="istanbulBonusHand" class="istanbul-bonus-hand"></div>
+                </details>
+                <details class="istanbul-card istanbul-disclosure">
+                  <summary>Players</summary>
+                  <div id="istanbulPlayers" class="istanbul-players"></div>
+                </details>
               </div>
             </div>
 
@@ -4066,86 +4086,61 @@
             </div>
 
             <div id="rebelPrincessPanel" class="hidden rebel-princess-panel">
-              <div class="rebel-topline">
-                <div>
-                  <div class="rebel-round-title" id="rebelRoundTitle">-</div>
-                  <div class="hint" id="rebelRoundSummary">-</div>
-                </div>
-                <div class="rebel-status-grid">
-                  <div>Phase: <span id="rebelPhase">-</span></div>
-                  <div>Round: <span id="rebelRound">-</span>/5</div>
-                  <div>Leader: <span id="rebelLeader">-</span></div>
-                  <div>Turn: <span id="rebelTurn">-</span></div>
-                </div>
+              <header class="rebel-header">
+                <div><span class="rebel-eyebrow">A royal game of dodging proposals</span><h2>Rebel Princess</h2></div>
+                <div class="rebel-header-actions"><button id="rebelHelpBtn" type="button">Help</button><button id="rebelExplainBtn" type="button" aria-pressed="false">Explain</button></div>
+              </header>
+              <div class="rebel-goal-strip">
+                <span data-rebel-tip="Proposals (💍) are penalty points. After 5 rounds, the lowest total wins; ties favor more zero-proposal rounds.">💍 Lowest score wins</span>
+                <span id="rebelPrinceValue"></span><span id="rebelFrogValue"></span>
               </div>
-
-              <div class="rebel-rule-strip">
-                <div>Lead: <span id="rebelLeadSuit">-</span></div>
-                <div>Required: <span id="rebelRequiredSuit">-</span></div>
-                <div>Princes: <span id="rebelPrinceStatus">-</span></div>
-                <div>Tricks: <span id="rebelTricks">-</span></div>
+              <div class="rebel-round-banner">
+                <span id="rebelRound" class="rebel-round-badge"></span>
+                <div><strong id="rebelRoundTitle"></strong><p id="rebelRoundSummary"></p></div>
               </div>
-
-              <div class="rebel-board">
-                <section>
-                  <h3>Current Trick</h3>
-                  <div id="rebelTrick" class="rebel-trick"></div>
-                </section>
-                <section>
-                  <h3>Players</h3>
-                  <div id="rebelPlayers" class="rebel-players"></div>
-                </section>
+              <div id="rebelGuide" class="rebel-guide" role="status" aria-live="polite" aria-atomic="true">
+                <span id="rebelPhase" class="rebel-eyebrow"></span><strong id="rebelGuideTitle"></strong><p id="rebelGuideText"></p>
               </div>
-
-              <section>
-                <h3>Your Princess</h3>
-                <div id="rebelPrincess" class="rebel-princess-card">-</div>
-              </section>
-
-              <section>
-                <h3>Your Hand</h3>
-                <div id="rebelHand" class="rebel-hand"></div>
-              </section>
-
-              <section>
-                <h3>Selection</h3>
-                <div class="rebel-selection-row">
-                  <div>Cards: <span id="rebelSelectedCards">-</span></div>
-                  <div>Suit: <span id="rebelSelectedSuit">-</span></div>
-                  <div>Target: <span id="rebelSelectedTarget">-</span></div>
+              <p id="rebelExplainNotice" class="rebel-explain-notice hidden">Select a highlighted item to learn about it. Press Esc to exit.</p>
+              <div class="rebel-layout">
+                <div class="rebel-play-area">
+                  <section id="rebelTableSection" class="rebel-section">
+                    <div class="rebel-section-heading"><h3>On the table</h3><span id="rebelTricks" class="rebel-badge"></span></div>
+                    <div class="rebel-rule-strip"><span id="rebelRequiredSuit"></span><span id="rebelPrinceStatus"></span></div>
+                    <div id="rebelTrick" class="rebel-trick"></div>
+                    <p id="rebelTrickHint" class="rebel-muted"></p>
+                  </section>
+                  <section id="rebelSummary" class="rebel-section hidden">
+                    <div class="rebel-section-heading"><h3 id="rebelSummaryTitle">Round results</h3><span class="rebel-badge" data-rebel-tip="Proposals (💍) are penalty points. A smaller total score is better.">💍 Lower is better</span></div>
+                    <div id="rebelSummaryBody"></div>
+                    <p id="rebelReadyStatus" class="rebel-muted"></p>
+                    <button id="rebelNextRoundBtn" type="button" class="rebel-primary">Next Round</button>
+                  </section>
+                  <section id="rebelHandSection" class="rebel-section rebel-hand-section">
+                    <div class="rebel-section-heading"><h3>Your hand</h3><span id="rebelHandCount" class="rebel-badge"></span></div>
+                    <p id="rebelHandHint" class="rebel-muted"></p>
+                    <div id="rebelHand" class="rebel-hand"></div>
+                    <div id="rebelActionPanel" class="rebel-action-panel">
+                      <div id="rebelSuitField" class="rebel-field hidden"><span id="rebelSuitLabel">Choose a suit</span><div id="rebelSuitButtons" class="rebel-button-row" role="group" aria-labelledby="rebelSuitLabel"></div></div>
+                      <label id="rebelTargetField" class="rebel-field hidden"><span>Choose a player</span><select id="rebelTargetSelect"></select></label>
+                      <label id="rebelTrickCardField" class="rebel-field hidden"><span id="rebelTrickCardLabel">Choose a card from the table</span><select id="rebelTrickCardSelect"></select></label>
+                      <div id="rebelDrawnCard" class="rebel-drawn-card hidden"></div>
+                      <label id="rebelSnowWhiteField" class="rebel-toggle hidden"><input id="rebelSnowWhiteToggle" type="checkbox" /><span>Snow White: make this card count as 0</span><span class="rebel-info" data-rebel-tip="Snow White: once per round, a card you play with rank 7 or lower can count as rank 0 for winning this trick. Its proposal value does not change." aria-label="About Snow White">ⓘ</span></label>
+                      <label id="rebelPeaField" class="rebel-toggle hidden"><input id="rebelPeaToggle" type="checkbox" /><span>Pea Princess: make later players play above 5</span><span class="rebel-info" data-rebel-tip="The Pea Princess: once per round, players still to play must use a rank above 5 if possible, while following the suit rule." aria-label="About the Pea Princess">ⓘ</span></label>
+                      <div id="rebelSelection" class="rebel-selection-row"><span id="rebelSelectedCards"></span><span class="rebel-info" id="rebelSelectionInfo" aria-label="About your selection">ⓘ</span></div>
+                      <div class="rebel-action-buttons"><button id="rebelSubmitBtn" class="rebel-primary" type="button">Select a card</button><button id="rebelPrincessBtn" type="button">Use Princess</button><button id="rebelSkipBtn" type="button">Skip</button></div>
+                    </div>
+                  </section>
                 </div>
-              </section>
-
-              <section>
-                <h3>Actions</h3>
-                <div class="rebel-action-panel">
-                  <div id="rebelSuitButtons" class="rebel-button-row"></div>
-                  <select id="rebelTargetSelect" aria-label="Target player"></select>
-                  <select id="rebelTrickCardSelect" aria-label="Trick card"></select>
-                  <label class="toggle-row rebel-toggle">
-                    <input id="rebelSnowWhiteToggle" type="checkbox" />
-                    <span>Use Snow White on played card</span>
-                  </label>
-                  <label class="toggle-row rebel-toggle">
-                    <input id="rebelPeaToggle" type="checkbox" />
-                    <span>Use Pea Princess with played card</span>
-                  </label>
-                  <button id="rebelSubmitBtn" type="button">Submit</button>
-                  <button id="rebelPrincessBtn" type="button">Use Princess</button>
-                  <button id="rebelSkipBtn" type="button">Skip</button>
-                  <button id="rebelNextRoundBtn" type="button">Next Round</button>
-                </div>
-              </section>
-
-              <section id="rebelSummary" class="round-notice hidden">
-                <h3>Round Summary</h3>
-                <div id="rebelSummaryBody" class="round-notice-body">-</div>
-              </section>
-
-              <section>
-                <h3>Game Log</h3>
-                <div id="rebelLog" class="rebel-log"></div>
-              </section>
+                <aside class="rebel-sidebar">
+                  <section class="rebel-section rebel-princess-section"><div class="rebel-section-heading"><h3>Your princess</h3><span id="rebelPowerStatus" class="rebel-badge"></span></div><div id="rebelPrincess" class="rebel-princess-card"></div></section>
+                  <section class="rebel-section"><div class="rebel-section-heading"><h3>Players</h3><span class="rebel-badge" data-rebel-tip="Total proposals (💍) from completed rounds. Points from the current round are added at the round results.">💍 Total score</span></div><div id="rebelPlayers" class="rebel-players"></div></section>
+                  <details class="rebel-section rebel-quick-guide"><summary>New here? Learn in 30 seconds</summary><ol><li><strong>Avoid proposals.</strong> Prince (🤴) usually adds 1; Frog (🐸 8) usually adds 5. Lowest total after 5 rounds wins.</li><li><strong>Pick, then confirm.</strong> Pass the requested cards first. On your turn, select a card and press Play Card.</li><li><strong>Follow suit.</strong> A trick is one set of cards played around the table. Match the required suit if you can. Normally, the highest card of the led suit takes all the cards.</li><li><strong>Check this round’s rule.</strong> It can change what wins or scores. Your princess adds a special ability once per round.</li></ol><button id="rebelQuickHelpBtn" type="button">Full rules &amp; example</button></details>
+                  <details class="rebel-section"><summary>Game log</summary><div id="rebelLog" class="rebel-log"></div></details>
+                </aside>
+              </div>
+              <dialog id="rebelHelpModal" class="rebel-dialog" aria-labelledby="rebelHelpTitle"><div class="rebel-dialog-heading"><h2 id="rebelHelpTitle">How to play</h2><button type="button" data-rebel-close>Close</button></div><div id="rebelHelpContent" class="rebel-help-content"></div></dialog>
+              <dialog id="rebelExplainModal" class="rebel-dialog" aria-labelledby="rebelExplainTitle"><div class="rebel-dialog-heading"><h2 id="rebelExplainTitle">Explain</h2><button type="button" data-rebel-close>Close</button></div><p id="rebelExplainContent"></p></dialog>
             </div>
 
             <div id="hanabiPanel" class="hidden">
@@ -4359,6 +4354,7 @@
                     <h4 id="inAGroveSceneTitle">The crime scene</h4><span>🎌 First: <strong id="inAGroveFirstPlayer">-</strong></span>
                   </div>
                   <div class="in-a-grove-scene-meta"><span>🚫 No peeking: <strong id="inAGroveBlocked">None</strong></span><span id="inAGroveSelectionCount">Choose 2 to inspect</span></div>
+                  <p id="inAGroveInspectionRule" class="in-a-grove-inspection-rule"></p>
                   <div id="inAGroveSuspects" class="in-a-grove-suspects" role="group" aria-label="Three suspects"></div>
                   <div class="in-a-grove-action-dock">
                     <p id="inAGroveActionHint" role="status" aria-live="polite">Waiting for the next move.</p>
@@ -7106,7 +7102,7 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js"></script>
-  <script src="/static/games/shared.js?v=app_v22"></script>
+  <script src="/static/games/shared.js?v=app_v23"></script>
   <script src="/static/games/blokus.js?v=app_v6"></script>
   <script src="/static/games/carcassonne.js?v=app_v6"></script>
   <script src="/static/games/azul.js?v=app_v4"></script>
@@ -7137,7 +7133,8 @@
   <script src="/static/games/isle_of_skye.js?v=app_v6"></script>
   <script src="/static/games/six_nimmt.js?v=app_v4"></script>
   <script src="/static/games/skull.js?v=app_v4"></script>
-  <script src="/static/games/rebel_princess.js?v=app_v1"></script>
+  <script src="/static/games/rebel_princess_hints.js?v=2"></script>
+  <script src="/static/games/rebel_princess.js?v=app_v2"></script>
   <script src="/static/games/guandan.js?v=app_v13"></script>
   <script src="/static/games/cabo.js?v=app_v8"></script>
   <script src="/static/games/flip7.js?v=app_v4"></script>
@@ -7147,7 +7144,7 @@
   <script src="/static/games/fang_niao.js?v=app_v4"></script>
   <script src="/static/games/perfect_mismatch.js?v=app_v4"></script>
   <script src="/static/games/coyote.js?v=app_v4"></script>
-  <script src="/static/games/in_a_grove.js?v=app_v4"></script>
+  <script src="/static/games/in_a_grove.js?v=app_v5"></script>
   <script src="/static/games/citadels.js?v=app_v6"></script>
   <script src="/static/games/tagiron.js?v=app_v5"></script>
   <script src="/static/games/davinci_code.js?v=app_v4"></script>
@@ -7158,7 +7155,8 @@
   <script src="/static/games/halli_galli.js?v=app_v4"></script>
   <script src="/static/games/texas_holdem.js?v=app_v4"></script>
   <script src="/static/games/yahtzee.js?v=app_v4"></script>
-  <script src="/static/games/istanbul.js?v=app_v4"></script>
+  <script src="/static/games/istanbul_hints.js?v=1"></script>
+  <script src="/static/games/istanbul.js?v=2"></script>
   <script src="/static/games/gold_rush.js?v=app_v4"></script>
   <script src="/static/games/age_of_war.js?v=app_v5"></script>
   <script src="/static/games/wandering_towers.js?v=app_v10"></script>
@@ -7202,6 +7200,6 @@
   <script src="/static/games/gaia_project.js?v=gaia_v4"></script>
   <script src="/static/games/castles_of_burgundy.js?v=2"></script>
   <script src="/static/app.js?v=app_v26"></script>
-  <script src="/static/room.js?v=app_v42"></script>
+  <script src="/static/room.js?v=app_v43"></script>
 </body>
 </html>

@@ -83,6 +83,8 @@ function emitRoomStart() {
     payload.config = getEternalDecksConfig();
   } else if (currentGameType === "ponzi_scheme") {
     payload.config = getPonziSchemeConfig();
+  } else if (currentGameType === "in_a_grove") {
+    payload.config = getInAGroveConfig();
   } else if (currentGameType === "bomb_busters") {
     const practicePreset = bombBustersPresetSelect
       ? bombBustersPresetSelect.value || "standard_practice"
@@ -378,6 +380,8 @@ function renderRoomState(state) {
   updateBombBustersConfigRow();
   if (typeof updateTakeTimeConfigRow === "function") updateTakeTimeConfigRow();
   if (typeof updateEternalDecksConfigRow === "function") updateEternalDecksConfigRow();
+  if (typeof updatePonziSchemeConfigRow === "function") updatePonziSchemeConfigRow();
+  if (typeof updateInAGroveConfigRow === "function") updateInAGroveConfigRow();
   updateCitadelsConfigRow();
   updateHanabiConfigRow();
   updateTexasHoldemConfigRow();

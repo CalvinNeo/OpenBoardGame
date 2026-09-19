@@ -185,7 +185,7 @@
             <div class="ponzi-scheme-players">${view.players.map(player => `<article class="ponzi-scheme-player ${player.player_id === view.current_turn ? "is-active" : ""} ${player.bankrupt ? "is-bankrupt" : ""}">
                 <div class="ponzi-scheme-player-heading"><h4>${esc(player.name)} ${player.player_id === view.you ? '<small>You</small>' : ""}</h4><span>${player.bankrupt ? "💥" : player.player_id === view.start_player ? "🖋️" : player.is_bot ? "🤖" : ""}</span></div>
                 <div class="ponzi-scheme-portfolio-value"><strong>${player.industry_points} <small>行业分</small></strong><span>${player.player_id === view.you ? `💵 ${player.cash}` : "🔒 Private"}</span></div>
-                <div class="ponzi-scheme-player-industries">${Object.entries(view.industry_defs).map(([key, spec]) => `<span class="ponzi-scheme-chip ponzi-scheme-${spec.color}" title="${spec.name}">${spec.icon} ${spec.name} <b>${player.industries[key]}</b></span>`).join("")}</div>
+                <div class="ponzi-scheme-player-industries">${Object.entries(view.industry_defs).map(([key, spec]) => `<span class="ponzi-scheme-chip ponzi-scheme-${spec.color}">${spec.icon} ${spec.name} <b>${player.industries[key]}</b></span>`).join("")}</div>
                 ${player.luxuries.length ? `<div class="ponzi-scheme-owned-luxuries">${player.luxuries.map(lid => `${view.luxury_defs[lid].icon} +${view.luxury_defs[lid].points}`).join(" · ")}</div>` : ""}
                 ${debtsHTML(player)}</article>`).join("")}</div></section>`;
     }
@@ -237,7 +237,7 @@
             if (control.dataset.card) text = describeCard(view.market.find(card => card.id === control.dataset.card));
             if (control.dataset.industry) {
                 const key = control.dataset.industry;
-                text = `${view.industry_defs[key].name}产业：当前持有 ${own().industries[key]} 个。${explanations.industry} ${explanations.fund}`;
+                text = `${view.industry_defs[key].name}产业：持有 ${own().industries[key]} 个，按 n(n+1)/2 计分。募资最多到三个，按取得后的数量选对应资金行；交易没有数量上限。${view.phase === "crash_discard" ? "崩盘须归还一个数量最多的行业，并列可自选。" : ""}`;
             }
             if (control.dataset.luxury) {
                 const spec = view.luxury_defs[control.dataset.luxury];
@@ -419,7 +419,7 @@
             <p><strong>⭐ 计分</strong>：每个行业 n 个 = n(n+1)/2 分：0／1／2／3／4／5／6 个对应 0／1／3／6／10／15／21 分。基础模式现金 0–29／30–55／56–77／78–95／96+ 对应 0／1／2／3／4 分。同分时最大本金资金牌较高者胜，再同则共享胜利。全员破产时无人获胜。</p>
             <p><strong>💎 进阶</strong>：发起交易的机会可改为购买一件奢侈品：💍30→1分、🚘56→2分、🛥️78→3分、🏙️96→4分。每件唯一，不能转卖；进阶现金不计分。</p>
             <p><strong>版本</strong>：四类行业各 15 个，72 张资金牌（9 起始、47 普通、16 熊）。默认采用作者补充的首轮跳过交易；房间可开启 First-round trading。牌表来自可追溯的 MIT 许可转录，并核对规则书示例与作者勘误。</p>
-            <p><strong>Controls</strong>：点选后 Confirm，点击空白或 Esc 取消；Close、Esc 或对话框外关闭弹窗。Explain 模式只展示说明，灰色按钮也可点，按 Esc 退出。</p>
+            <p><strong>Controls</strong>：点选后 Confirm，点击空白或 Esc 取消；Close、Esc 或对话框外关闭弹窗。悬停或聚焦徽标／ⓘ 查看即时说明，触摸轻点后显示三秒，再点重新计时。说明入口不会执行游戏操作。Explain 模式只展示说明，灰色按钮也可点，按 Esc 退出。</p>
             <p><a href="https://cdn.1j1ju.com/medias/0c/7f/67-ponzi-scheme-rulebook.pdf" target="_blank" rel="noopener noreferrer">Rulebook</a> · <a href="https://www.flyingv.cc/projects/4303/comments" target="_blank" rel="noopener noreferrer">Designer’s corrections</a></p>`, true);
     });
     explainButton.addEventListener("click", () => setExplain(!explaining));

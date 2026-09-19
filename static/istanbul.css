@@ -1,0 +1,844 @@
+/* Istanbul: keep the market's spatial layout intact at every screen size. */
+.istanbul-panel {
+  --bazaar-ink: #352b24;
+  --bazaar-surface: #fffcf6;
+  --bazaar-border: #e0d2be;
+  --bazaar-teal: #176b60;
+  --bazaar-terracotta: #a74c2d;
+  container-type: inline-size;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--bazaar-border);
+  border-radius: 18px;
+  background: linear-gradient(145deg, #fbefdb, #f8f4ec 55%, #f1e8d7);
+  color: var(--bazaar-ink);
+  font-family: "Work Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.istanbul-panel :where(section, div, span, button, select, input, details, p) {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.istanbul-panel h3 {
+  margin: 0;
+  color: #684329;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.istanbul-panel button,
+.istanbul-header-btn {
+  font-family: inherit;
+  touch-action: manipulation;
+}
+
+.istanbul-panel :where(button, select, input, summary, [tabindex]):focus-visible,
+.istanbul-header-btn:focus-visible {
+  outline: 3px solid #197caa;
+  outline-offset: 3px;
+}
+
+.istanbul-top {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 10px;
+}
+
+.istanbul-stat {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  align-items: baseline;
+  gap: 2px 8px;
+  padding: 6px 9px;
+  border: 1px solid var(--bazaar-border);
+  border-radius: 8px;
+  background: #fffaf2;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.istanbul-stat-label {
+  color: #7a6a57;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.istanbul-guide {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 10px;
+  padding: 11px 13px;
+  border: 1px solid #c9d9ce;
+  border-left: 4px solid var(--bazaar-teal);
+  border-radius: 11px;
+  background: #f4faf4;
+}
+
+.istanbul-guide:empty,
+.istanbul-destination:empty,
+.istanbul-path-hint:empty {
+  display: none;
+}
+
+.istanbul-guide strong {
+  color: #22584e;
+  font-size: 14px;
+}
+
+.istanbul-guide p,
+.istanbul-destination p {
+  margin: 0;
+  color: #625745;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.istanbul-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.istanbul-steps > span {
+  padding: 4px 6px;
+  border-radius: 5px;
+  background: #e6eee5;
+  color: #52684f;
+  text-align: center;
+}
+
+.istanbul-steps > .active {
+  background: #cfe5d3;
+  color: #235548;
+  box-shadow: inset 0 0 0 1px #9abda4;
+  font-weight: 700;
+}
+
+.istanbul-caravan {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px 12px;
+  padding: 0 2px 10px;
+}
+
+.istanbul-caravan h3 {
+  font-size: 12px;
+}
+
+.istanbul-you {
+  display: flex;
+  flex: 1 1 320px;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.istanbul-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 30px;
+  padding: 4px 7px;
+  border: 1px solid #dfd4c3;
+  border-radius: 7px;
+  background: #fffdf7;
+  color: #4d4838;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.istanbul-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 30%);
+  gap: 12px;
+  align-items: start;
+}
+
+.istanbul-board-wrap {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--bazaar-border);
+  border-radius: 13px;
+  background: var(--bazaar-surface);
+}
+
+.istanbul-board-header {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-bottom: 9px;
+}
+
+.istanbul-hint {
+  color: #76634f;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.istanbul-board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.istanbul-tile-shell {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #dfcfb5;
+  border-radius: 10px;
+  background: #f8efdf;
+  box-shadow: 0 2px 0 #e5d7c1;
+}
+
+.istanbul-tile-shell.reachable {
+  border-color: #80a695;
+  background: #f1f7ed;
+}
+
+.istanbul-tile-shell.current {
+  border: 2px solid var(--bazaar-teal);
+  background: #e5f1e8;
+}
+
+.istanbul-tile-shell.selected {
+  border: 2px solid #b35d31;
+  background: #fff0d5;
+  box-shadow: 0 0 0 2px #e8c9a5;
+}
+
+.istanbul-tile-shell.family-target {
+  border: 2px solid #407faa;
+  background: #eaf3f9;
+}
+
+.istanbul-tile {
+  position: static;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+  min-height: 102px;
+  margin: 0;
+  padding: 7px;
+  border: 0;
+  border-radius: 8px 8px 0 0;
+  background: transparent;
+  color: var(--bazaar-ink);
+  text-align: left;
+  box-shadow: none;
+  transform: none;
+  transition: background 120ms ease;
+}
+
+.istanbul-tile:hover,
+.istanbul-tile:disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.istanbul-tile:hover {
+  background: #ffffff60;
+}
+
+.istanbul-tile:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.istanbul-tile-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 4px;
+  color: #735d42;
+  font-size: 10px;
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1.35;
+}
+
+.istanbul-step-badge {
+  position: static;
+  display: inline-flex;
+  width: auto;
+  height: auto;
+  min-height: 16px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  line-height: 1.2;
+}
+
+.istanbul-tile-name {
+  color: #4b3928;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+  word-break: normal;
+}
+
+.istanbul-tile-desc {
+  color: #75664f;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.istanbul-token-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: auto;
+}
+
+.istanbul-token {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  min-width: 18px;
+  height: auto;
+  min-height: 18px;
+  padding: 1px 3px;
+  font-size: 10px;
+  line-height: 1.3;
+}
+
+.istanbul-token.npc {
+  clip-path: none;
+}
+
+.istanbul-tile-info {
+  display: block;
+  flex: 0 0 auto;
+  width: 100%;
+  min-height: 26px;
+  margin: 0;
+  padding: 2px 5px;
+  border: 0;
+  border-top: 1px solid #dbcdb566;
+  border-radius: 0 0 8px 8px;
+  background: #ffffff45;
+  color: #766046;
+  font-size: 13px;
+  line-height: 1.2;
+  text-align: center;
+  cursor: help;
+}
+
+.istanbul-tile-info:hover {
+  background: #e5eedd;
+  color: #23574a;
+}
+
+.istanbul-path-hint {
+  margin-top: 8px;
+  color: #72634d;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.istanbul-side {
+  width: auto;
+  min-width: 0;
+}
+
+.istanbul-card {
+  padding: 12px;
+  border: 1px solid var(--bazaar-border);
+  border-radius: 12px;
+  background: var(--bazaar-surface);
+}
+
+.istanbul-action-card {
+  border-top: 3px solid var(--bazaar-teal);
+}
+
+.istanbul-action-card h3 {
+  margin-bottom: 8px;
+  color: #225c51;
+  font-size: 14px;
+}
+
+.istanbul-destination {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 9px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid #e3d8c5;
+}
+
+.istanbul-destination strong {
+  color: #6c4629;
+  font-size: 14px;
+}
+
+.istanbul-action-card .istanbul-hint {
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.istanbul-action-card .istanbul-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.istanbul-controls > :not(button),
+.istanbul-controls > button:only-child {
+  grid-column: 1 / -1;
+}
+
+.istanbul-controls > .istanbul-action-choice {
+  grid-column: auto;
+}
+
+.istanbul-controls > .istanbul-action-choice:only-child {
+  grid-column: 1 / -1;
+}
+
+.istanbul-action-choice {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px;
+  gap: 4px;
+  align-items: stretch;
+}
+
+.istanbul-inline-info {
+  width: 28px;
+  min-height: 28px;
+  margin: 0;
+  padding: 3px;
+  border: 1px solid #d7cab4;
+  border-radius: 6px;
+  background: #fffaf0;
+  color: #72604a;
+  font-size: 14px;
+  line-height: 1.2;
+  cursor: help;
+}
+
+.istanbul-control-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.istanbul-control-row > button {
+  flex: 1 1 100px;
+}
+
+.istanbul-control-row > .istanbul-action-choice {
+  flex: 1 1 120px;
+}
+
+.istanbul-control-row > label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.istanbul-action-card .istanbul-btn,
+.istanbul-btn {
+  min-height: 42px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
+  white-space: normal;
+}
+
+.istanbul-btn.secondary {
+  border: 1px solid #e4cda7;
+  background: #f6e6c8;
+  color: #795229;
+}
+
+.istanbul-btn.ghost {
+  border: 1px solid #d5c6b0;
+  background: #fffaf0;
+  color: #785f42;
+}
+
+.istanbul-btn:disabled {
+  background: #e9e5dc;
+  color: #827969;
+}
+
+.istanbul-action-note {
+  padding: 7px 9px;
+  border: 1px solid #e7cd9e;
+  border-radius: 7px;
+  background: #fff6e0;
+  color: #805a29;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.istanbul-panel :where(input, select) {
+  min-height: 38px;
+  padding: 6px 8px;
+  border-color: #cec3b0;
+  background: #fffef8;
+  color: var(--bazaar-ink);
+  font-size: 14px;
+}
+
+.istanbul-panel input[type="number"] {
+  width: 90px;
+}
+
+.istanbul-panel input[type="checkbox"] {
+  width: 18px;
+  min-height: 18px;
+  height: 18px;
+  margin: 0;
+}
+
+.istanbul-good-stepper {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.istanbul-good-stepper > span:first-child {
+  flex: 1 1 70px;
+}
+
+.istanbul-good-btn {
+  width: 36px;
+  height: 36px;
+  padding: 4px;
+  border-color: #cdbfaa;
+  font-size: 18px;
+}
+
+.istanbul-reference {
+  margin-top: 10px;
+}
+
+.istanbul-board-tools {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+}
+
+.istanbul-board-toggle {
+  min-height: 36px;
+  padding: 6px 8px;
+  border-radius: 7px;
+  background: #fdf8ed;
+  color: #766045;
+  line-height: 1.4;
+}
+
+.istanbul-overlay-layer {
+  position: static;
+  display: block;
+  inset: auto;
+  z-index: auto;
+  margin-top: 8px;
+  padding: 0;
+}
+
+.istanbul-overlay-card {
+  width: 100%;
+  max-height: none;
+  padding: 11px;
+  overflow: visible;
+  box-shadow: none;
+}
+
+.istanbul-overlay-card > h3 {
+  margin-bottom: 8px;
+}
+
+.istanbul-markets,
+.istanbul-mosques {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.istanbul-mosque-header {
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.istanbul-mosque-ability {
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.istanbul-post-row {
+  grid-template-columns: 18px minmax(40px, 60px) minmax(0, 1fr);
+  font-size: 12px;
+}
+
+.istanbul-extras {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  align-items: start;
+  margin-top: 8px;
+}
+
+.istanbul-disclosure {
+  padding: 0;
+}
+
+.istanbul-disclosure > summary {
+  padding: 10px 12px;
+  color: #6d5236;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.istanbul-disclosure[open] > summary {
+  border-bottom: 1px solid #e7dac5;
+}
+
+.istanbul-disclosure > div {
+  max-height: 360px;
+  padding: 10px;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+
+.istanbul-bonus-card {
+  min-height: 44px;
+  padding: 9px;
+  line-height: 1.5;
+  white-space: normal;
+}
+
+.istanbul-player-row {
+  gap: 5px;
+  background: #faf2e3;
+  border-color: #e6d7ba;
+}
+
+.istanbul-header-btn {
+  min-height: 34px;
+  padding: 6px 11px;
+  border-radius: 7px;
+}
+
+.istanbul-help-modal,
+.istanbul-explain-modal {
+  width: min(720px, calc(100vw - 28px));
+  max-width: calc(100vw - 28px);
+  max-height: calc(100dvh - 28px);
+  padding: 0;
+  border: 1px solid #d8c9ae;
+  border-radius: 14px;
+  background: #fffcf5;
+  color: #3f352a;
+}
+
+:is(.istanbul-help-modal, .istanbul-explain-modal) :where(h2, h3, p, li, div) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+:is(.istanbul-help-modal, .istanbul-explain-modal) .modal-header {
+  align-items: start;
+  gap: 12px;
+}
+
+:is(.istanbul-help-modal, .istanbul-explain-modal) .modal-header h2 {
+  flex: 1 1 0;
+  color: #684329;
+  font-size: 18px;
+}
+
+:is(.istanbul-help-modal, .istanbul-explain-modal) .modal-header button {
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid #d7c9b3;
+  border-radius: 7px;
+  background: #fff8e9;
+  color: #684329;
+}
+
+:is(.istanbul-help-modal, .istanbul-explain-modal) .modal-body {
+  font-size: 14px;
+  line-height: 1.7;
+  overscroll-behavior-y: contain;
+}
+
+.istanbul-help-content h3 {
+  margin: 18px 0 5px;
+  color: #246a5d;
+  font-size: 15px;
+}
+
+.istanbul-help-content h3:first-child {
+  margin-top: 3px;
+}
+
+.istanbul-help-content :where(p, ul, ol) {
+  margin-top: 6px;
+  margin-bottom: 10px;
+}
+
+.istanbul-help-content :where(ul, ol) {
+  padding-left: 23px;
+}
+
+.istanbul-help-content details {
+  margin: 10px 0;
+  padding: 9px 11px;
+  border: 1px solid #e0d2ba;
+  border-radius: 8px;
+  background: #fff9ee;
+}
+
+.istanbul-help-content summary {
+  color: #684329;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@container (max-width: 720px) {
+  .istanbul-main {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 9px;
+  }
+
+  .istanbul-action-card {
+    padding: 11px;
+  }
+}
+
+@container (max-width: 420px) {
+  .istanbul-top {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  .istanbul-stat {
+    padding: 4px 7px;
+    font-size: 11px;
+  }
+
+  .istanbul-guide {
+    padding: 9px;
+  }
+
+  .istanbul-steps {
+    gap: 3px;
+    font-size: 10px;
+  }
+
+  .istanbul-steps > span {
+    padding: 4px 3px;
+  }
+
+  .istanbul-caravan {
+    gap: 5px;
+  }
+
+  .istanbul-you {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    flex-basis: 100%;
+    gap: 4px;
+  }
+
+  .istanbul-pill {
+    justify-content: center;
+    min-height: 29px;
+    padding: 4px 6px;
+    font-size: 11px;
+  }
+
+  .istanbul-board-wrap {
+    padding: 6px;
+  }
+
+  .istanbul-board-header {
+    margin-bottom: 6px;
+  }
+
+  .istanbul-board {
+    gap: 4px;
+  }
+
+  .istanbul-tile-shell {
+    border-radius: 7px;
+  }
+
+  .istanbul-tile {
+    min-height: 76px;
+    padding: 5px 4px;
+    gap: 4px;
+    border-radius: 6px 6px 0 0;
+  }
+
+  .istanbul-tile-name {
+    font-size: 12px;
+  }
+
+  .istanbul-tile-desc {
+    font-size: 10px;
+  }
+
+  .istanbul-tile-header {
+    font-size: 10px;
+  }
+
+  .istanbul-tile-info {
+    min-height: 26px;
+    border-radius: 0 0 6px 6px;
+  }
+
+  .istanbul-markets,
+  .istanbul-mosques,
+  .istanbul-extras {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .istanbul-board-toggle {
+    padding: 5px 4px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 600px) {
+  .istanbul-panel {
+    margin-inline: -7px;
+    padding: 8px;
+    border-radius: 12px;
+  }
+
+  .istanbul-panel :where(input, select) {
+    font-size: 16px;
+  }
+
+  .istanbul-help-modal,
+  .istanbul-explain-modal {
+    padding: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .istanbul-panel * {
+    transition: none;
+  }
+}

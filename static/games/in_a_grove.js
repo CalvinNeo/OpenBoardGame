@@ -3,6 +3,7 @@ let inAGroveExplainMode = false;
 let inAGroveSelectedPeekIndexes = [];
 let inAGroveSelectedTargetIndex = null;
 let inAGroveModalReturnFocus = null;
+let inAGroveConfigRoomId = null;
 
 const inAGroveUI = Object.fromEntries([
     "Panel", "HeaderActions", "HelpBtn", "ExplainBtn", "HelpModal", "HelpModalCloseBtn",
@@ -10,14 +11,16 @@ const inAGroveUI = Object.fromEntries([
     "Round", "Turn", "Status", "FirstPlayer", "Blocked", "Winner", "WinnerBanner",
     "YourTiles", "PublicAlibi", "PublicAlibiCard", "Victim", "Suspects", "Players",
     "RoundSummary", "RoundSummaryBody", "SummaryTitle", "PeekBtn", "BetBtn", "NextRoundBtn", "PlayAgainBtn", "ActionHint",
-    "SelectionCount", "ExplainNotice",
+    "SelectionCount", "ExplainNotice", "ConfigBox", "InspectionModeSelect", "InspectionModeHint", "InspectionRule",
 ].map((name) => [name, document.getElementById("inAGrove" + name)]));
 
 const IN_A_GROVE_HELP_HTML = [
     "<h3>🎯 The aim</h3><p>Finish with the fewest penalty chips. Each detective starts with 7 accusation chips.</p>",
     "<h3>🪪 Follow the evidence</h3><p>At 3–5 players, see your own tile and the tile passed from your right. With 2 players, see only your own tile and one public alibi; do not exchange tiles. The victim stays hidden.</p><p>Use numbers 2–8, plus one X at 4 players or two X tiles at 5 players.</p>",
     "<h3>🔎 Investigate, then accuse</h3><ul>",
-    "<li>Select two suspects and press <strong>Inspect 2</strong>. The previous detective's accusation blocks that suspect from inspection.</li>",
+    "<li>The first detective selects two of the three suspects and presses <strong>Inspect 2</strong>.</li>",
+    "<li>Later detectives cannot inspect the previous detective's accusation. With <strong>Inspect 1 of 2</strong> (the default room variant), choose one of the two unblocked suspects and press <strong>Inspect 1</strong>. With <strong>Inspect both</strong> (the standard rule), inspect both unblocked suspects.</li>",
+    "<li>After confirming an inspection, you must accuse. You cannot inspect another card this turn.</li>",
     "<li>The first detective marks the suspect they did not inspect. This <strong>unseen marker</strong> stays there; it does not block later detectives. Tiles are never swapped in the revised edition.</li>",
     "<li>Select any suspect and confirm your accusation. You can accuse the blocked suspect, a hidden suspect, or one with chips already on it.</li>",
     "<li>Each detective places one chip. New chips go on top. Click a selected card again, click empty space, or press Esc to cancel a selection.</li></ul>",
@@ -33,8 +36,8 @@ const IN_A_GROVE_HELP_HTML = [
 
 const IN_A_GROVE_BUTTON_EXPLANATIONS = {
     PeekBtn: {
-        name: "Inspect two suspects",
-        description: "Select two suspects, then confirm to see their identities privately.",
+        name: "Inspect suspects",
+        description: "Select the required number of suspects, then confirm to see their identities privately.",
         note: "A blocked suspect cannot be inspected. Choosing cards alone does not submit a move.",
     },
     BetBtn: {
@@ -62,6 +65,38 @@ function inAGroveElement(tag, className, text) {
 
 function inAGroveHasLegalAction(type) {
     return !!currentInAGroveView && (currentInAGroveView.legal_actions || []).includes(type);
+}
+
+function getInAGroveConfig() {
+    return { inspection_mode: inAGroveUI.InspectionModeSelect.value === "both" ? "both" : "choose_one" };
+}
+
+function updateInAGroveConfigHint() {
+    inAGroveUI.InspectionModeHint.textContent = "First detective: inspect 2 of 3. Later detectives: " +
+        (getInAGroveConfig().inspection_mode === "choose_one"
+            ? "choose 1 of the 2 unblocked suspects."
+            : "inspect both unblocked suspects.");
+}
+
+function updateInAGroveConfigRow() {
+    const visible = !!currentRoomState && currentGameType === "in_a_grove";
+    inAGroveUI.ConfigBox.classList.toggle("hidden", !visible);
+    inAGroveUI.ConfigBox.setAttribute("aria-hidden", String(!visible));
+    if (!visible) {
+        inAGroveConfigRoomId = null;
+        inAGroveUI.InspectionModeSelect.value = "choose_one";
+        return;
+    }
+    if (inAGroveConfigRoomId !== currentRoomState.room_id) {
+        inAGroveConfigRoomId = currentRoomState.room_id;
+        inAGroveUI.InspectionModeSelect.value = currentRoomState.game_config?.inspection_mode === "both" ? "both" : "choose_one";
+    }
+    inAGroveUI.InspectionModeSelect.disabled = !["lobby", "game_over"].includes(currentRoomState.status);
+    updateInAGroveConfigHint();
+}
+
+function inAGrovePeekCount() {
+    return currentInAGroveView?.peek_count === 1 ? 1 : 2;
 }
 
 function inAGroveIsRevealed(view) {
@@ -103,6 +138,7 @@ function clearInAGroveState() {
     inAGroveUI.PublicAlibiCard.classList.add("hidden");
     inAGroveUI.Status.classList.remove("is-your-turn");
     inAGroveUI.Victim.textContent = "Hidden";
+    inAGroveUI.InspectionRule.textContent = "";
     updateInAGroveActionButtons();
 }
 
@@ -195,7 +231,7 @@ function renderInAGroveSuspects(view) {
                 if (inAGroveSelectedPeekIndexes.includes(suspect.index)) {
                     inAGroveSelectedPeekIndexes = inAGroveSelectedPeekIndexes.filter((index) => index !== suspect.index);
                 } else {
-                    if (inAGroveSelectedPeekIndexes.length === 2) inAGroveSelectedPeekIndexes.shift();
+                    if (inAGroveSelectedPeekIndexes.length === inAGrovePeekCount()) inAGroveSelectedPeekIndexes.shift();
                     inAGroveSelectedPeekIndexes.push(suspect.index);
                 }
             } else {
@@ -273,8 +309,9 @@ function updateInAGroveActionButtons() {
     const phase = view?.phase;
     const target = inAGroveSelectedTargetIndex;
     const selected = Number.isInteger(target);
+    const peekCount = inAGrovePeekCount();
     const states = [
-        ["PeekBtn", phase === "peek", inAGroveHasLegalAction("peek_suspects") && inAGroveSelectedPeekIndexes.length === 2],
+        ["PeekBtn", phase === "peek", inAGroveHasLegalAction("peek_suspects") && inAGroveSelectedPeekIndexes.length === peekCount],
         ["BetBtn", phase === "bet", inAGroveHasLegalAction("place_bet") && selected],
         ["NextRoundBtn", phase === "round_end", inAGroveHasLegalAction("next_round")],
         ["PlayAgainBtn", !!view?.game_over, !!view?.game_over],
@@ -283,6 +320,7 @@ function updateInAGroveActionButtons() {
         inAGroveUI[key].classList.toggle("hidden", !visible);
         inAGroveUI[key].disabled = !enabled;
     });
+    inAGroveUI.PeekBtn.textContent = "🔎 Inspect " + peekCount;
     inAGroveUI.BetBtn.textContent = selected ? "🎯 Accuse suspect " + (target + 1) : "🎯 Accuse suspect";
     const ready = (view?.players || []).filter((player) => player.round_ready).length;
     const youReady = view?.players?.find((player) => player.player_id === view.you)?.round_ready;
@@ -299,10 +337,16 @@ function updateInAGroveActionButtons() {
     } else if (view && view.current_turn !== view.you) {
         hint = inAGrovePlayerName(view, view.current_turn) + " is investigating. Your alibis stay private.";
     } else if (phase === "peek") {
-        hint = inAGroveSelectedPeekIndexes.length === 2
-            ? "Two suspects selected. Confirm to inspect them privately."
-            : "Select two suspects to inspect. The blocked suspect cannot be viewed.";
-        count = inAGroveSelectedPeekIndexes.length + "/2 selected";
+        if (inAGroveSelectedPeekIndexes.length === peekCount) {
+            hint = peekCount === 1 ? "One suspect selected. Confirm to inspect only this card."
+                : "Two suspects selected. Confirm to inspect them privately.";
+        } else if (peekCount === 1) {
+            hint = "Choose 1 of the 2 unblocked suspects. You cannot inspect the other card after confirming.";
+        } else {
+            hint = Number.isInteger(view.blocked_suspect_index) ? "Select both unblocked suspects to inspect."
+                : "First detective: select 2 of the 3 suspects to inspect.";
+        }
+        count = inAGroveSelectedPeekIndexes.length + "/" + peekCount + " selected";
     } else if (phase === "bet") {
         hint = selected ? "Confirm your accusation on suspect " + (target + 1) + ". Click away to cancel."
             : "Select any suspect, then confirm your accusation. The top chip takes the risk.";
@@ -316,10 +360,16 @@ function updateInAGroveActionButtons() {
 function renderInAGroveGameState(data) {
     const view = data.view;
     const previousView = currentInAGroveView;
-    if (!previousView || ["you", "round", "phase", "current_turn"].some((key) => view[key] !== previousView[key])) {
+    if (!previousView || ["you", "round", "phase", "current_turn", "peek_count"].some((key) => view[key] !== previousView[key])) {
         clearInAGroveSelection();
     }
     currentInAGroveView = view;
+    const inspectionMode = view.config?.inspection_mode || "both";
+    inAGroveUI.InspectionModeSelect.value = inspectionMode;
+    updateInAGroveConfigHint();
+    inAGroveUI.InspectionRule.textContent = inspectionMode === "choose_one"
+        ? "Later turns: inspect 1 of 2 unblocked suspects."
+        : "Later turns: inspect both unblocked suspects.";
     if (currentGameType !== "in_a_grove") {
         currentGameType = "in_a_grove";
         setGamePanelVisibility("in_a_grove");
@@ -391,12 +441,21 @@ function closeInAGroveModal(key) {
 
 function showInAGroveExplanation(button) {
     let info = IN_A_GROVE_BUTTON_EXPLANATIONS[button.dataset.inAGroveExplain];
+    if (button === inAGroveUI.PeekBtn) {
+        info = {
+            ...info,
+            name: "Inspect " + inAGrovePeekCount() + " suspect(s)",
+            description: inAGrovePeekCount() === 1
+                ? "Choose one of the two unblocked suspects. Confirm to see only that identity, then proceed to your accusation. You cannot inspect again this turn."
+                : "Select two unblocked suspects, then confirm to see both identities privately.",
+        };
+    }
     if (button.dataset.inAGroveExplain === "suspect") {
         const index = Number(button.dataset.index);
         const suspect = currentInAGroveView?.suspects?.find((entry) => entry.index === index);
         info = {
             name: "Suspect " + (index + 1),
-            description: "Select two cards to inspect, or one card to accuse. Confirm with the action below the scene.",
+            description: "Select " + inAGrovePeekCount() + " unblocked card(s) to inspect, or any one card to accuse. Confirm with the action below the scene.",
             note: suspect?.blocked
                 ? "The previous detective accused this suspect, so you cannot inspect them this turn. You may still accuse them. The top chip's owner takes the whole stack if they are innocent."
                 : "Only inspected identities are visible to you before the reveal. First skipped marks the card the first detective did not see; it does not forbid inspecting that card later. The top chip is the newest accusation.",
@@ -417,7 +476,7 @@ Object.keys(IN_A_GROVE_BUTTON_EXPLANATIONS).forEach((key) => {
 });
 
 inAGroveUI.PeekBtn.addEventListener("click", () => {
-    if (!inAGroveHasLegalAction("peek_suspects") || inAGroveSelectedPeekIndexes.length !== 2) return;
+    if (!inAGroveHasLegalAction("peek_suspects") || inAGroveSelectedPeekIndexes.length !== inAGrovePeekCount()) return;
     sendAction({ type: "peek_suspects", suspect_indexes: [...inAGroveSelectedPeekIndexes] });
 });
 inAGroveUI.BetBtn.addEventListener("click", () => {
@@ -433,8 +492,12 @@ inAGroveUI.PlayAgainBtn.addEventListener("click", () => {
 inAGroveUI.HelpBtn.addEventListener("click", () => {
     exitInAGroveExplainMode();
     inAGroveUI.HelpContent.innerHTML = IN_A_GROVE_HELP_HTML;
+    const mode = currentInAGroveView?.config?.inspection_mode || getInAGroveConfig().inspection_mode;
+    inAGroveUI.HelpContent.prepend(inAGroveElement("p", "", "Current room: " +
+        (mode === "choose_one" ? "Inspect 1 of 2 — later detectives inspect one card." : "Inspect both — later detectives inspect two cards.")));
     showInAGroveModal("Help");
 });
+inAGroveUI.InspectionModeSelect.addEventListener("change", updateInAGroveConfigHint);
 inAGroveUI.ExplainBtn.addEventListener("click", toggleInAGroveExplainMode);
 
 ["Help", "Explain"].forEach((key) => {

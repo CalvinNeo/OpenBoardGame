@@ -1,0 +1,12 @@
+{
+  "bot_search_depth": 2,
+  "bot_mcts_sims": 24,
+  "bot_mcts_depth": 2,
+  "bot_mcts_tree_ply": 1,
+  "bot_mcts_reply_width": 2,
+  "bot_mcts_root_width": 3,
+  "bot_minimax_depth": 3,
+  "bot_minimax_width": 4,
+  "bot_minimax_particles": 2,
+  "bot_determinize_samples": 2
+}

@@ -1114,7 +1114,7 @@ IN_A_GROVE_ACTION_SCHEMA = {
                 "suspect_indexes": {
                     "type": "array",
                     "items": {"type": "integer", "minimum": 0, "maximum": 2},
-                    "minItems": 2,
+                    "minItems": 1,
                     "maxItems": 2,
                     "uniqueItems": True,
                 },
@@ -1142,6 +1142,9 @@ IN_A_GROVE_ACTION_SCHEMA = {
 
 IN_A_GROVE_CONFIG_SCHEMA = {
     "type": "object",
+    "properties": {
+        "inspection_mode": {"type": "string", "enum": ["choose_one", "both"], "default": "choose_one"},
+    },
     "additionalProperties": False,
 }
 

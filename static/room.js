@@ -1879,6 +1879,7 @@ function resetRoomState() {
   if (typeof updateTakeTimeConfigRow === "function") updateTakeTimeConfigRow();
   if (typeof updateEternalDecksConfigRow === "function") updateEternalDecksConfigRow();
   if (typeof updatePonziSchemeConfigRow === "function") updatePonziSchemeConfigRow();
+  if (typeof updateInAGroveConfigRow === "function") updateInAGroveConfigRow();
   updateHanabiConfigRow();
   updateTexasHoldemConfigRow();
   updateMismatchConfigRow();

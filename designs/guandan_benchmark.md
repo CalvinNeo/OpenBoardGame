@@ -2,6 +2,8 @@
 
 入口：`python3 scripts/benchmark_guandan.py`，只用 Python 标准库。改进分析见 [guandan_ai_review.md](guandan_ai_review.md)。
 
+以 `68e62ab` 为基线的本轮修改、旧测试变化理由和对战结果见 [优化记录](guandan_optimization_68e62ab.md)。
+
 ## 评测什么
 
 两名 candidate 组成一队，对战两名 baseline。同一副牌打两次：candidate 分别坐 A 队（0、2）和 B 队（1、3），牌、级牌、先手保持一致。每对牌局是一个统计样本。每对还交替实际运行 A/B 的顺序。
@@ -13,16 +15,15 @@
 
 这是独立单局的团队强度评测，不覆盖连续升级、下一局进贡还贡、混合人类搭档或跨对手池泛化。击败某个 baseline 只说明对该对手的优势。
 
-## 先冻结基线
+## 用 Git commit 固定基线
 
-```bash
-python3 scripts/benchmark_guandan.py snapshot \
-  --output .data/guandan_benchmark/baseline_v1
-```
+本轮基线：`68e62abe6b9213ea69d85df044c86732edffd5ad`。使用 `--baseline-ref` 指定 commit、tag 或分支；启动时将其解析成完整 commit ID，后续只读取这个不可变 ID，即使分支移动也不会切换版本。
 
-快照复制 `game/guandan.py`、`game/guandan_ai.py`、`game/memories.py` 并记录文件 SHA-256、git revision、这些文件是否有未提交改动。它冻结工作区的实际源码，包含未提交修改。输出目录必须不存在；快照被修改后校验会失败。
+实现使用只读 `git cat-file blob COMMIT:path`，把 `game/guandan.py`、`game/guandan_ai.py`、`game/memories.py` 的字节直接加载到独立进程内存。**不 checkout、不建 worktree、不复制历史源码文件**。报告记录请求的 ref、实际 commit ID 和全部源码 SHA-256；`snapshot` 复制命令已移除。
 
-基线和候选分别在独立 Python 进程加载自己的模块，每盘重启，避免模块引用、全局缓存和随机数串线。裁判始终使用当前仓库规则。快照适用于兼容的状态/动作协议；规则协议发生变化时应新建评测版本，而不是把非法动作当成策略退步。
+候选默认读取当前工作区（包括未提交修改）；`--candidate-ref` 可对称指定历史版本。因此，同一个仓库即可运行“工作区改进 vs 某 commit”或“commit vs commit”。基线和候选分别在独立 Python 进程加载自己的模块，每盘重启；模块只允许使用已捕获的 `game.*` 依赖，缺失依赖直接报错，不会回退到工作区或 `.pyc`。worker 启动时返回实际加载字节的 hash，与报告版本核对。
+
+裁判始终使用当前仓库规则，启动后其模块也来自捕获的内存字节。此机制适用于兼容的状态/动作协议；规则协议发生变化时应新建评测版本，而不是把非法动作当成策略退步。
 
 `auto` 对当前 `heuristic` 是搜索消融；`auto` 对**冻结版本的** `auto` 才是版本进步对比。`greedy` 和 `random` 是诊断对手：使用提示候选，不使用复杂动作评分；候选生成仍属于对应版本的源码，不是穷尽全部合法组合。两个诊断策略均优先一手出完。它们不是唯一验收标准。
 
@@ -36,24 +37,24 @@ python3 scripts/benchmark_guandan.py run \
   --pairs 3 --output .data/guandan_benchmark/selfcheck.json
 ```
 
-相同策略、同一配置、`fixed` 时，每对的轨迹 hash 应相同，总胜率应为 50%，净收益为 0。还应使用冻结快照重复这个自检。
+相同策略、同一配置、`fixed` 时，每对的轨迹 hash 应相同，总胜率应为 50%，净收益为 0。这是对称性自检，不是强度提升证据。可同时给两侧指定相同的 commit，验证 Git 加载路径。
 
 快速检查真实 AI 的完整运行链路（低预算，只作 smoke test）：
 
 ```bash
 python3 scripts/benchmark_guandan.py run \
   --candidate auto --baseline heuristic \
-  --baseline-root .data/guandan_benchmark/baseline_v1 \
+  --baseline-ref 68e62abe6b9213ea69d85df044c86732edffd5ad \
   --pairs 3 --clock wall --think-ms 100 --trace \
   --output .data/guandan_benchmark/smoke.json
 ```
 
-修改策略后，在实际产品预算下对冻结版本评测：
+修改策略后，对固定 commit 评测：
 
 ```bash
 python3 scripts/benchmark_guandan.py run \
   --candidate auto --baseline auto \
-  --baseline-root .data/guandan_benchmark/baseline_v1 \
+  --baseline-ref 68e62abe6b9213ea69d85df044c86732edffd5ad \
   --pairs 100 --seed 20260919 --levels 2,7,14 \
   --clock wall --think-ms 2000 \
   --output .data/guandan_benchmark/candidate_vs_v1.json
@@ -61,7 +62,22 @@ python3 scripts/benchmark_guandan.py run \
 
 正式验收可用 `--levels 2,3,4,5,6,7,8,9,10,11,12,13,14`，让牌局对数为级牌数量的倍数。100 对不是显著性的保证；所需样本取决于实际差距。当前 AI 每步可能消耗秒级时间，应先估算 smoke 的运行成本。
 
-支持 `--candidate-root` 指定另一个源码目录/快照。参数消融使用 `--candidate-config path.json` / `--baseline-config path.json`，内容是已有 `bot_*` 配置项；未知项报错。模式和共享时间预算由命令行指定，不允许在配置文件里悄悄改成不等预算。默认 `wall` + 2000ms，与当前默认思考预算一致；`bot_think_overrun_ratio` 等额外预算设置也会完整写入报告，改变时需作为实验变量说明。
+`--candidate-root` / `--baseline-root` 可指定另一个仓库，默认均为当前仓库；ref 相对于对应仓库解析。不传 ref 则使用对应工作区。
+
+参数消融使用 `--candidate-config path.json` / `--baseline-config path.json`，内容是已有 `bot_*` 配置项；未知项报错。模式和共享时间预算由命令行指定，不允许在配置文件里悄悄改成不等预算。默认 `wall` + 2000ms，与当前默认思考预算一致；`bot_think_overrun_ratio` 等额外预算设置也会完整写入报告，改变时需作为实验变量说明。需要可复现的固定计算量时使用 `--clock fixed`，并将相同的有限搜索预算配置同时传给两侧。例如：
+
+```bash
+python3 scripts/benchmark_guandan.py run \
+  --candidate auto --baseline auto \
+  --baseline-ref 68e62abe6b9213ea69d85df044c86732edffd5ad \
+  --candidate-config designs/guandan_benchmark_fixed_budget.json \
+  --baseline-config designs/guandan_benchmark_fixed_budget.json \
+  --pairs 100 --seed 20260919 --levels 2,7,14 \
+  --clock fixed --think-ms 2000 \
+  --output .data/guandan_benchmark/fixed_candidate_vs_baseline.json
+```
+
+这里的 [固定预算示例](guandan_benchmark_fixed_budget.json) 是有限宽度/深度的开发配置，不修改游戏默认参数；冻结时钟后真实单步耗时可能明显超过 `think-ms`。先用 1 对估算成本，再决定完整评测的计算量。
 
 ## 信息与复现边界
 
@@ -90,7 +106,7 @@ python3 scripts/benchmark_guandan.py run \
 - `result.games.jsonl`：每盘完成后立即写入的结果，含发牌和动作轨迹 hash。
 - `result.trace.jsonl`：使用 `--trace` 时写每步动作、观察 hash、耗时及原有 `bot_explain`。可沿候选评分找退步局面；该文件可能较大。
 
-输出不会覆盖已有文件。失败退出码为 1，正常完成为 0；`inconclusive` 是完成了实验但证据不足，不能当作“通过强度验收”。文件中的源码 hash 才是实际版本身份，git SHA 不足以标识未提交修改。运行中策略源码变化也会使报告失败。
+输出不会覆盖已有文件。失败退出码为 1，正常完成为 0；`inconclusive` 是完成了实验但证据不足，不能当作“通过强度验收”。文件中的源码 hash 才是实际版本身份，git SHA 不足以标识未提交修改。运行中工作区策略或裁判源码变化会使报告失败；Git 基线不受未提交修改或分支移动影响。
 
 置信区间以**一对交换对局**为重采样单位，满 30 对且有样本方差时使用 5,000 次 paired percentile bootstrap 的近似 95% 区间。统计采样也固定独立种子，不影响牌局随机流；保留同一对里的相关性，并利用实际方差衡量小幅改进。
 
@@ -114,4 +130,4 @@ Hoeffding 界较保守，但不依赖分布近似。例如，保守胜率区间�
 python3 -m unittest tests.test_guandan_benchmark
 ```
 
-测试覆盖所有 24 种名次排列的零和计分、成对统计、异常不计分、随机流隔离、源快照独立加载/篡改检测、公开信息不随真实暗牌置换改变、已知牌归属，以及相同策略交换队伍时的轨迹对称性。原有 `test_guandan_bot` / `test_guandan_reviewed_round` 等作为战术回归集继续保留，不能代替对战 benchmark。
+测试覆盖所有 24 种名次排列的零和计分、成对统计、异常不计分、随机流隔离、Git blob 独立加载/分支移动/禁止混入工作区依赖/源码变化检测、公开信息不随真实暗牌置换改变、已知牌归属，以及相同策略交换队伍时的轨迹对称性。Git 测试使用极小的合成仓库，不复制真实基线源码。原有 `test_guandan_bot` / `test_guandan_reviewed_round` 等作为战术回归集继续保留，不能代替对战 benchmark。
