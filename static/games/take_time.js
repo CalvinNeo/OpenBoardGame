@@ -157,7 +157,7 @@
       <p class="take-time-selection" aria-live="polite">${description}</p><div class="take-time-place-actions">
       ${button("🔒 Place face down", "down", "down", !canPlace, 'class="take-time-primary"')}
       ${button(`👁 Place face up · ${quota}`, "up", "up", !canPlace || quota <= 0)}</div>
-      <p class="take-time-hint">${available("place") ? "点击空白或按 Esc 取消选择。" : "等待轮到你出牌。"} ${pending ? "Sending…" : ""}</p>`;
+      <p class="take-time-hint">${available("place") ? "Click empty space or press Esc to cancel." : "Waiting for your turn."} ${pending ? "Sending…" : ""}</p>`;
   }
 
   function render() {
@@ -219,6 +219,11 @@
     openDialog(entry[0], entry[1]);
   }
 
+  function isExplainExempt(target) {
+    // The shared mobile header moves these buttons outside their original wrapper.
+    return help.contains(target) || explainButton.contains(target) || dialog.contains(target);
+  }
+
   function submit(action) {
     if (pending || !view || typeof sendAction !== "function") return;
     pending = true;
@@ -265,8 +270,9 @@
 
   // Coordinate hit-testing is necessary because disabled controls do not emit click.
   document.addEventListener("pointerdown", event => {
-    if (!explaining || panel.classList.contains("hidden")) return;
-    if (header.contains(event.target) || dialog.contains(event.target)) return;
+    if (!explaining) { suppressClick = false; return; }
+    if (panel.classList.contains("hidden")) return;
+    if (isExplainExempt(event.target)) return;
     const target = Array.from(panel.querySelectorAll("[data-tt-explain]")).find(element => {
       const rect = element.getBoundingClientRect();
       return rect.width > 0 && rect.height > 0 && event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom;
@@ -289,7 +295,7 @@
       return;
     }
     if (!explaining) return;
-    if (header.contains(event.target) || dialog.contains(event.target)) return;
+    if (isExplainExempt(event.target)) return;
     event.preventDefault();
     event.stopImmediatePropagation();
     if (panel.contains(event.target)) explainTarget(event.target.closest("[data-tt-explain]"));
@@ -343,7 +349,7 @@
     configBox.classList.toggle("hidden", !visible);
     configBox.setAttribute("aria-hidden", String(!visible));
   };
-  if (typeof socket !== "undefined") socket.on("error", () => {
+  if (typeof socket !== "undefined") socket.on("system:error", () => {
     if (pending) { pending = false; window.clearTimeout(pendingTimer); render(); }
   });
 })();

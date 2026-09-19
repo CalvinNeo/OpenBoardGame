@@ -331,8 +331,9 @@ def _start_round(state: Dict) -> None:
 def _advance_income(state: Dict) -> None:
     for pid in state['turn_order']:
         items = state['income_pending'][pid]
-        # Ordering matters only if both charging and gaining tokens are present.
-        if items and len({next(iter(s['gain'])) for s in items}) == 1:
+        # Brainstone placement can matter even when every source only charges.
+        brain_choice = state['players'][pid]['brain'] in (0, 1) and any('charge' in s['gain'] for s in items)
+        if items and not brain_choice and len({next(iter(s['gain'])) for s in items}) == 1:
             for item in items:
                 _gain(state, pid, item['gain'])
             items.clear()
@@ -488,7 +489,8 @@ def _upgrade_cost(state: Dict, pid: str, hex_id: str, building: str) -> Dict:
     require(hex_id in state['board'], 'Unknown structure.')
     h, p = state['board'][hex_id], state['players'][pid]
     old = h['buildings'].get(pid)
-    require(old is not None and len(h['buildings']) == 1, 'A cohabiting mine cannot be upgraded.')
+    require(old is not None, 'Choose one of your structures.')
+    require(not (p['faction'] == 'lantids' and len(h['buildings']) > 1), 'A cohabiting Lantids mine cannot be upgraded.')
     big_from_trade = ['academy_knowledge', 'academy_qic'] if p['faction'] == 'bescods' else ['institute']
     big_from_lab = ['institute'] if p['faction'] == 'bescods' else ['academy_knowledge', 'academy_qic']
     targets = {'mine': ['trading_station'], 'trading_station': ['lab', *big_from_trade], 'lab': big_from_lab}
@@ -645,6 +647,7 @@ def _conversion(state: Dict, pid: str, conversion: str) -> Tuple[Dict, Dict]:
 def _apply_free(state: Dict, pid: str, action: Dict) -> None:
     p, kind = state['players'][pid], action['type']
     if kind == 'power_preference':
+        require(p['brain'] is not None, 'No brainstone available.')
         p['brain_first'] = action['brain_first']
     elif kind == 'burn':
         count = action['count']
@@ -717,6 +720,7 @@ def _federate(state: Dict, pid: str, action: Dict) -> None:
     free = buildings | (existing if ivits else set())
     allowed = free | {key for key, h in board.items() if h['planet'] is None and all(b == 'station' for b in h['buildings'].values()) and key not in forbidden}
     clusters = connected_components(free, neighbors)
+    clusters.sort(key=lambda c: -sum(_power_value(state, pid, board[key]) for key in c if key in owned))
     strengths = [sum(_power_value(state, pid, board[key]) for key in cluster if key in owned) for cluster in clusters]
     # With no new satellites no cheaper route exists, avoiding a needless search.
     if new_satellites:
@@ -841,6 +845,10 @@ def _apply(state: Dict, pid: str, action: Dict) -> None:
             _start_round(state)
         return
     require(pid == _actor(state), 'It is not your turn.')
+    if kind == 'power_preference' and state['pending']:
+        # This selects how a forthcoming charge is resolved, not an extra action.
+        _apply_free(state, pid, action)
+        return
     if state['pending']:
         _resolve_pending(state, pid, action)
         _normalize_pending(state)
@@ -1019,11 +1027,16 @@ def action_options(state: Dict, pid: str) -> List[Dict]:
     if state['pending']:
         pending = state['pending'][0]
         kind = pending['kind']
+        if kind in ('tech', 'track') and p['brain'] in (0, 1):
+            add('power_preference', 'Brainstone first' if not p['brain_first'] else 'Regular tokens first', 'decision', brain_first=not p['brain_first'])
         if kind == 'leech':
             bonus = p['faction'] == 'taklons' and _pi(state, pid)
             for first in ([True, False] if bonus else [False]):
                 amount = min(pending['value'], _capacity(p) + (2 if first else 0), p['vp'] + 1)
-                add('leech', f'接受 {amount} ⚡ / {max(0, amount - 1)} ⭐' + (' · 先获得能量' if first else ' · 后获得能量' if bonus else ''), 'decision', accept=True, token_first=first)
+                label = f'接受 {amount} ⚡ / {max(0, amount - 1)} ⭐' + (' · 先获得能量' if first else ' · 后获得能量' if bonus else '')
+                for brain_first in ([True, False] if p['brain'] in (0, 1) else [p['brain_first']]):
+                    suffix = (' · 脑石优先' if brain_first else ' · 普通能量优先') if p['brain'] in (0, 1) else ''
+                    add('leech', label + suffix, 'decision', accept=True, token_first=first, brain_first=brain_first)
             add('leech', 'Decline', 'decision', accept=False)
         elif kind == 'tech':
             for o in _tech_options(state, pid):
@@ -1058,7 +1071,10 @@ def action_options(state: Dict, pid: str) -> List[Dict]:
             add('choose_booster', BOOSTERS[booster]['name'], 'booster', booster=booster)
     elif phase == 'income':
         for index, item in enumerate(state['income_pending'][pid]):
-            add('income', item['source'], 'income', index=index)
+            choices = [True, False] if 'charge' in item['gain'] and p['brain'] in (0, 1) else [p['brain_first']]
+            for brain_first in choices:
+                suffix = (' · 脑石优先' if brain_first else ' · 普通能量优先') if len(choices) > 1 else ''
+                add('income', item['source'] + suffix, 'income', index=index, brain_first=brain_first)
     elif phase == 'gaia':
         if p['faction'] == 'terrans':
             for key, cost in [('credits', 1), ('ore', 3), ('knowledge', 4), ('qic', 4)]:
@@ -1151,6 +1167,74 @@ def action_options(state: Dict, pid: str) -> List[Dict]:
             params = {'booster': booster} if booster else {}
             add('pass', '放弃本轮' + (' · ' + BOOSTERS[booster]['name'] if booster else ''), 'pass', **params)
     return options
+
+
+def _bot_federation(state: Dict, pid: str) -> Optional[Dict]:
+    """Try a few inexpensive connections; the normal exact validator decides legality."""
+    from game.gaia_project_federation import connected_components
+    p, board = state['players'][pid], state['board']
+    ivits = p['faction'] == 'ivits'
+    neighbors = _neighbors(state)
+    existing = {key for key, h in board.items() if pid in h['federations']}
+    forbidden = set() if ivits else existing | {n for key in existing for n in neighbors[key]}
+    owned = {h['id'] for h in _owned(state, pid)} - forbidden
+    free = owned | (existing if ivits else set())
+    previous = sum(f['source'] == 'board' for f in p['federations'])
+    threshold = 7 * (previous + 1) if ivits else (6 if p['faction'] == 'xenos' and _pi(state, pid) else 7)
+    strength = lambda nodes: sum(_power_value(state, pid, board[key]) for key in nodes if key in owned)
+    if strength(owned) < threshold:
+        return None
+    tokens = [t for t in ('ore', 'knowledge', 'qic', 'credits', 'tokens', 'points') if state['federation_supply'].get(t, 0)]
+    if not tokens:
+        return None
+    budget = p['qic'] if ivits else sum(p['power'])  # Preserve the brainstone.
+    budget = min(budget, 25 - sum(pid in h['satellites'] for h in board.values()))
+    allowed = free | {key for key, h in board.items() if key not in forbidden and h['planet'] is None
+                      and all(b == 'station' for b in h['buildings'].values())}
+    clusters = connected_components(free, neighbors)
+    clusters.sort(key=lambda group: (-strength(group), min(group)))
+    roots = [existing] if ivits and existing else clusters[:4]
+    for root in roots:
+        chosen = set(root)
+        while strength(chosen) < threshold:
+            distances = {key: 0 for key in chosen}
+            parent = {}
+            queue = [(0, key) for key in sorted(chosen)]
+            heapq.heapify(queue)
+            target = None
+            while queue:
+                cost, key = heapq.heappop(queue)
+                if distances[key] != cost:
+                    continue
+                if key in owned - chosen:
+                    target = key
+                    break
+                for neighbor in neighbors[key]:
+                    extra = int(neighbor not in free and neighbor not in chosen)
+                    if neighbor in allowed and cost + extra < distances.get(neighbor, budget + 1):
+                        distances[neighbor] = cost + extra
+                        parent[neighbor] = key
+                        heapq.heappush(queue, (cost + extra, neighbor))
+            if target is None:
+                break
+            while target not in chosen:
+                chosen.add(target)
+                target = parent[target]
+            # A route may touch more than one directly connected building group.
+            for group in clusters:
+                if group & chosen or any(n in chosen for key in group for n in neighbors[key]):
+                    chosen |= group
+            if len(chosen - free) > budget:
+                break
+        if strength(chosen) < threshold or len(chosen - free) > budget:
+            continue
+        action = dict(type='federation', hexes=sorted(chosen), token=tokens[0])
+        try:
+            _federate(copy.deepcopy(state), pid, action)
+        except RuleError:
+            continue
+        return action
+    return None
 
 
 def _validate_state(state: Dict) -> None:
@@ -1266,6 +1350,10 @@ class GaiaProjectGame:
         if not options:
             return None
         p = state['players'][bot_id]
+        if state['phase'] == 'action' and not state['pending'] and not state['main_done']:
+            federation = _bot_federation(state, bot_id)
+            if federation:
+                return federation
         # Deterministic legal play, deliberately separate from official solo Automa.
         def value(option: Dict) -> float:
             a, cost = option['action'], option['cost']

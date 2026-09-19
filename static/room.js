@@ -545,7 +545,9 @@ function filterGames(games, searchText, playerCount, selectedTagIds = []) {
       g.game_id.toLowerCase().includes(normalizedSearch) ||
       tagSearchText.includes(normalizedSearch);
     const matchesPlayers =
-      !playerCount || (g.min_players <= playerCount && playerCount <= g.max_players);
+      !playerCount || (Array.isArray(g.player_counts)
+        ? g.player_counts.includes(playerCount)
+        : (g.min_players <= playerCount && playerCount <= g.max_players));
     const matchesType =
       selectedTags.size === 0 || tags.some((tag) => selectedTags.has(tag.id));
     return matchesSearch && matchesPlayers && matchesType;
@@ -654,7 +656,7 @@ const GAME_WEIGHT = {
   flip7: 1.028056112224449,
   gold_rush: 1.1839080459770115,
   gizmos: 2.05,
-  gaia_project: null,
+  gaia_project: 4.40,
   halli_galli: 1.02,
   hanabi: 1.69,
   hot_streak: 1.23,
@@ -805,7 +807,7 @@ function renderGameList(games) {
     item.dataset.gameId = g.game_id;
     const weightLabel = formatGameWeight(g.game_id);
     const playerLabel =
-      g.min_players === g.max_players
+      Array.isArray(g.player_counts) ? `${g.player_counts.join(" or ")} players` : g.min_players === g.max_players
         ? `${g.min_players} ${g.min_players === 1 ? "player" : "players"}`
         : `${g.min_players}-${g.max_players} players`;
     const chineseName = typeof g.name_zh === "string" ? g.name_zh.trim() : "";
@@ -834,7 +836,7 @@ function renderGameList(games) {
     const playersEl = document.createElement("span");
     playersEl.className = "game-item-players";
     playersEl.textContent = `👥 ${
-      g.min_players === g.max_players ? g.min_players : `${g.min_players}-${g.max_players}`
+      Array.isArray(g.player_counts) ? g.player_counts.join(" / ") : g.min_players === g.max_players ? g.min_players : `${g.min_players}-${g.max_players}`
     }`;
     playersEl.setAttribute("aria-hidden", "true");
     metaEl.appendChild(weightEl);
@@ -1784,6 +1786,7 @@ function resetRoomState() {
     clearCatanStarfarersState();
   }
   if (typeof clearTakeTimeState === "function") clearTakeTimeState();
+  if (typeof clearEternalDecksState === "function") clearEternalDecksState();
   if (typeof clearBombBustersState === "function") {
     clearBombBustersState();
   }
@@ -1872,6 +1875,7 @@ function resetRoomState() {
   updateGoldRushConfigRow();
   updateBombBustersConfigRow();
   if (typeof updateTakeTimeConfigRow === "function") updateTakeTimeConfigRow();
+  if (typeof updateEternalDecksConfigRow === "function") updateEternalDecksConfigRow();
   updateHanabiConfigRow();
   updateTexasHoldemConfigRow();
   updateMismatchConfigRow();

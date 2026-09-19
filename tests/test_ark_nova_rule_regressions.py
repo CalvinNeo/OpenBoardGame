@@ -460,3 +460,78 @@ class ArkNovaRuleRegressions(unittest.TestCase):
         ]:
             with self.subTest(action=action['type']):
                 self.assertFalse(list(validator.iter_errors(action)))
+
+    def test_invalid_unique_building_is_rejected_before_sponsor_commits(self):
+        self.hand('252')
+        self.helper.set_slot(self.state, 'p1', 'sponsors', 5)
+        before = copy.deepcopy(self.state)
+        _, error = rules.ArkNovaGame.apply_action(self.state, 'p1', {
+            'type': 'sponsors', 'card_ids': ['252'], 'choose_effect_order': True,
+            'unique_building_placements': {'252': {'cells': ['A1']}},
+        })
+        self.assertIsNotNone(error)
+        self.assertEqual(self.state, before)
+
+    def test_later_association_step_cannot_deadlock_a_committed_choice(self):
+        self.helper.set_slot(self.state, 'p1', 'association', 5)
+        self.player['action_cards']['association']['upgraded'] = True
+        self.player['reputation'] = 3
+        self.player['available_workers'] = 1
+        self.act({'type': 'association', 'tasks': [{'task': 'reputation'}, {'task': 'partner_zoo', 'continent': 'europe'}]})
+        self.assertEqual(self.state['pending_choice']['type'], 'upgrade_action')
+        self.choose('cards')
+        self.assertEqual(self.state['pending_choice']['type'], 'finish_action_plan')
+        self.choose('finish')
+        self.assertEqual(self.player['reputation'], 5)
+        self.assertNotIn('europe', self.player['partner_zoos'])
+        self.assertEqual(self.state['current_player'], 'p2')
+
+    def test_copied_card_bonus_keeps_its_nested_draw_choice(self):
+        cell = next(cell for cell, data in rules.MAP_CELLS.items() if data.get('placement_bonus', {}).get('type') == 'card')
+        rules._queue_choice(self.state, {'choice_id': 'archaeologist-card', 'type': 'claim_placement_bonus',
+            'player_id': 'p1', 'options': [{'value': cell}], 'min': 1, 'max': 1})
+        self.choose(cell)
+        self.assertEqual(self.state['pending_choice']['type'], 'take_card')
+        before = len(self.player['hand'])
+        self.choose('deck')
+        self.assertEqual(len(self.player['hand']), before + 1)
+        self.assertNotIn(cell, self.player['map']['claimed_bonuses'])
+
+    def test_flock_still_works_when_a_host_has_no_bound_tile(self):
+        self.player['played_animals'] = ['441', '429']
+        self.player['animal_records'] = [{'card_id': card_id, 'enclosure_id': None} for card_id in ['441', '429']]
+        rules._recompute_tags(self.player)
+        self.hand('442')
+        self.player['money'] = 30
+        view = rules.ArkNovaGame.get_public_view(self.state, 'p1')
+        self.assertTrue(next(player for player in view['players'] if player['player_id'] == 'p1')['flock_available'])
+        self.animal_action([{'card_id': '442', 'enclosure_id': 'flock'}])
+        self.finish_choices()
+        self.assertIn('442', self.player['played_animals'])
+        self.assertEqual(self.player['animal_records'][-1]['capacity_used'], 0)
+        self.assertEqual(self.player['map']['buildings'], [])
+
+    def test_okapi_can_use_a_newly_drawn_sponsor_and_places_its_building_first(self):
+        self.hand('201')
+        self.player['money'] = 30
+        self.player['action_cards']['sponsors']['upgraded'] = True
+        self.player['played_sponsors'] = ['253']
+        self.player['active_effects']['253'] = {'modifier': 'okapi_sponsor_chain'}
+        self.player['card_tokens']['253'] = 2
+        self.state['deck'] = ['252']
+        self.state['choose_effect_order'] = True
+        rules._queue_okapi_trigger(self.state, 'p1', {'icons': [{'tag': 'herbivore', 'count': 2}]})
+        rules._resume_if_clear(self.state, [])
+        self.choose('201')
+        self.assertEqual(self.state['pending_choice']['type'], 'take_card')
+        self.choose('deck')
+        self.assertEqual(self.state['pending_choice']['type'], 'okapi_sponsor')
+        self.assertIn('252', [item['value'] for item in self.state['pending_choice']['options']])
+        self.choose('252')
+        self.assertEqual(self.state['pending_choice']['type'], 'place_unique_building')
+        unique = rules.SPONSOR_CARDS['252']['unique_building']
+        cells = rules._find_placement(self.state, 'p1', unique['id'], unique['footprint']['cell_count'], unique)
+        self.choose({'cells': cells})
+        self.finish_choices()
+        self.assertEqual(self.player['card_tokens']['253'], 0)
+        self.assertTrue(any(building.get('unique_card_id') == '252' for building in self.player['map']['buildings']))

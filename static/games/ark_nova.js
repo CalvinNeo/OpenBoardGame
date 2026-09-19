@@ -2163,7 +2163,7 @@
     let engineerCopyIndex = -1;
     if (repeated.length) {
       if (!engineer || repeated.length !== 1 || repeated[0][1].length !== 2) return "Build II requires different building types or enclosure sizes.";
-      const [type, indices] = repeated[0];
+      const [, indices] = repeated[0];
       const [first, second] = indices.map((index) => arkNovaUi.buildQueue[index]);
       if (["petting_zoo", "reptile_house", "large_bird_aviary"].includes(arkNovaBuildingType(first)) || arkNovaBuildingSize(first) !== arkNovaBuildingSize(second)) {
         return "Engineer only copies the same non-special building with the same size.";

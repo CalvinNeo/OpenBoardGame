@@ -79,6 +79,8 @@ function emitRoomStart() {
     payload.config = { mode };
   } else if (currentGameType === "take_time") {
     payload.config = getTakeTimeConfig();
+  } else if (currentGameType === "eternal_decks") {
+    payload.config = getEternalDecksConfig();
   } else if (currentGameType === "bomb_busters") {
     const practicePreset = bombBustersPresetSelect
       ? bombBustersPresetSelect.value || "standard_practice"
@@ -343,6 +345,7 @@ function renderRoomState(state) {
       clearNineUpperState();
     }
     if (typeof clearTakeTimeState === "function") clearTakeTimeState();
+    if (typeof clearEternalDecksState === "function") clearEternalDecksState();
     if (typeof clearBombBustersState === "function") {
       clearBombBustersState();
     }
@@ -372,6 +375,7 @@ function renderRoomState(state) {
   updateGoldRushConfigRow();
   updateBombBustersConfigRow();
   if (typeof updateTakeTimeConfigRow === "function") updateTakeTimeConfigRow();
+  if (typeof updateEternalDecksConfigRow === "function") updateEternalDecksConfigRow();
   updateCitadelsConfigRow();
   updateHanabiConfigRow();
   updateTexasHoldemConfigRow();

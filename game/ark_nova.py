@@ -1828,7 +1828,9 @@ def _run_core_effect(
                 return
         state.setdefault("effect_queue", [])[0:0] = refs
     elif operation == "okapi":
-        _queue_okapi_trigger(state, player_id, ZOO_CARDS[str(ref["card_id"])])
+        trigger_card = ({"icons": [{"tag": "herbivore", "count": ref["icon_count"]}]}
+                        if "icon_count" in ref else ZOO_CARDS[str(ref["card_id"])])
+        _queue_okapi_trigger(state, player_id, trigger_card)
     elif operation == "small_program":
         pending = _small_animal_program_choice(state, player_id)
         if pending:
@@ -1902,19 +1904,43 @@ def _run_core_effect(
                 "prompt": "Move an animal into the new special enclosure, or finish moving",
                 "options": options, "min": 0, "max": 1, "allow_skip": True, "_migration": copy.deepcopy(dict(ref)),
             })
-    elif operation == "build_step":
-        spec = ref["spec"]
-        cost = _building_size(spec) * int(ACTION_DEFS["build"]["common"]["money_per_hex"])
-        player = _player(state, player_id)
-        if int(player["money"]) < cost:
-            raise ValueError("not enough money")
-        player["money"] -= cost
-        _place_building(state, player_id, spec, events)
-    elif operation == "association_step":
-        _perform_association_task(state, player_id, ref["task"], str(ref["name"]), events)
-    elif operation == "donation":
-        _perform_donation(state, player_id, ref["amount"], events)
+    elif operation in {"build_step", "association_step", "donation"}:
+        if state.get("cancel_action_plan"):
+            return
+        trial = copy.deepcopy(state)
+        step_events: List[Dict[str, Any]] = []
+        try:
+            if operation == "build_step":
+                spec = ref["spec"]
+                cost = _building_size(spec) * int(ACTION_DEFS["build"]["common"]["money_per_hex"])
+                player = _player(trial, player_id)
+                if int(player["money"]) < cost:
+                    raise ValueError("not enough money")
+                player["money"] -= cost
+                _place_building(trial, player_id, spec, step_events)
+            elif operation == "association_step":
+                _perform_association_task(trial, player_id, ref["task"], str(ref["name"]), step_events)
+            else:
+                _perform_donation(trial, player_id, ref["amount"], step_events)
+        except (ValueError, KeyError, TypeError, IndexError) as exc:
+            if not state.get("completed_action_steps"):
+                raise
+            # Earlier steps may have committed through an interactive choice.
+            # An optional later task/build must never trap that completed action.
+            state["cancel_action_plan"] = True
+            _queue_choice(state, {
+                "choice_id": f"finish-plan-{player_id}", "type": "finish_action_plan", "player_id": player_id,
+                "prompt": "The remaining plan cannot be completed. Finish this action.",
+                "detail": str(exc), "options": [{"value": "finish", "label": "Finish action"}], "min": 1, "max": 1,
+            })
+            return
+        state.clear()
+        state.update(trial)
+        state["completed_action_steps"] = int(state.get("completed_action_steps", 0)) + 1
+        events.extend(step_events)
     elif operation == "finish_action":
+        state.pop("completed_action_steps", None)
+        state.pop("cancel_action_plan", None)
         _defer_turn_end(state, player_id, str(ref["action"]), int(ref["x_tokens"]), events, resume=False)
     elif operation == "placement_bonus":
         _apply_placement_bonus(state, player_id, str(ref["cell_id"]), events)
@@ -2024,6 +2050,13 @@ def _sponsor_effect_refs(
     for index, effect in enumerate(card.get("effects", [])):
         if timing is not None and effect.get("timing") != timing:
             continue
+        if timing == "passive" and metadata and metadata.get("trigger"):
+            from game.ark_nova_effects import SPONSOR_EFFECT_SPECS
+            spec = SPONSOR_EFFECT_SPECS.get(str(effect["id"]), {})
+            if spec.get("op") != "trigger" or spec.get("trigger") != metadata["trigger"]:
+                continue
+            if spec.get("terrain") and spec["terrain"] != metadata.get("terrain"):
+                continue
         if effect.get("kind") == "build_or_placement" and card.get("unique_building"):
             continue
         refs.append({
@@ -2753,6 +2786,7 @@ def _play_animal_card(
 
 def _sponsor_play_error(
     state: Mapping[str, Any], player_id: str, card_id: str, level: int, budget: int,
+    placement: Optional[Mapping[str, Any]] = None,
 ) -> Optional[str]:
     player = state["players"][player_id]
     card = SPONSOR_CARDS.get(card_id)
@@ -2770,6 +2804,16 @@ def _sponsor_play_error(
     if int(player["money"]) < int(card.get("play", {}).get("base_money_cost", 0)) + int(surcharge or 0):
         return "not enough money for sponsors"
     unique = card.get("unique_building")
+    if unique and placement:
+        if not isinstance(placement, Mapping):
+            return "invalid unique building placement"
+        error = _validate_building_placement(state, player_id, {
+            "building_type": unique["id"], "unique_card_id": card_id,
+            "cells": list(placement.get("cells", [])),
+            "building_id": placement.get("building_id", unique["id"]),
+        }, free=True, unique=unique)
+        if error:
+            return error
     if unique and _find_placement(state, player_id, str(unique["id"]),
                                   int(unique.get("footprint", {}).get("cell_count", 0)), unique) is None:
         return "unique building has no legal placement"
@@ -2780,7 +2824,8 @@ def _play_sponsor_card(
     state: MutableMapping[str, Any], player_id: str, card_id: str, sequence: Mapping[str, Any],
     events: List[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
-    error = _sponsor_play_error(state, player_id, card_id, int(sequence["level"]), int(sequence["budget"]))
+    placement = sequence.get("placements", {}).get(card_id)
+    error = _sponsor_play_error(state, player_id, card_id, int(sequence["level"]), int(sequence["budget"]), placement)
     if error:
         raise ValueError(error)
     player = _player(state, player_id)
@@ -2796,12 +2841,15 @@ def _play_sponsor_card(
     _update_derived_metrics(player)
     refs = _reward_effects(player_id, card.get("printed_rewards", {}), f"sponsor:{card_id}")
     if card.get("unique_building"):
-        refs.append({"type": "core", "operation": "unique_building", "player_id": player_id,
-                     "card_id": card_id, "placement": sequence.get("placements", {}).get(card_id),
-                     "label": "Place unique building"})
+        _run_core_effect(state, {"operation": "unique_building", "player_id": player_id,
+                                 "card_id": card_id, "placement": placement}, events)
     refs.extend(_sponsor_effect_refs(player_id, card, "immediate"))
     refs.extend(_sponsor_effect_refs(player_id, card, "setup_and_passive"))
-    refs.extend(_sponsor_effect_refs(player_id, card, "passive", {"register_only": True}))
+    for ref in _sponsor_effect_refs(player_id, card, "passive", {"register_only": True}):
+        result = _dispatch_effect(state, ref)
+        _consume_effect_events(state, result["events"], events)
+        if result["state_updates"]:
+            _deep_update(state, result["state_updates"])
     refs.extend(_all_passive_sponsor_refs(state, player_id, card))
     if int(_card_icons(card).get("herbivore", 0)) and (card_id == "253" or (
         _has_active_rule(player, "okapi_sponsor_chain") and int(player.get("card_tokens", {}).get("253", 0))
@@ -2844,7 +2892,8 @@ def _advance_card_sequence(state: MutableMapping[str, Any], events: List[Dict[st
         if action_id == "animals":
             error = _animal_play_error(state, player_id, play, int(sequence["level"]))
         else:
-            error = _sponsor_play_error(state, player_id, str(play), int(sequence["level"]), int(sequence["budget"]))
+            error = _sponsor_play_error(state, player_id, str(play), int(sequence["level"]), int(sequence["budget"]),
+                                        sequence.get("placements", {}).get(str(play)))
         if error:
             if not sequence["played"]:
                 raise ValueError(error)
@@ -3028,11 +3077,15 @@ def _play_okapi_sponsor(
     _update_derived_metrics(player)
     refs = _reward_effects(player_id, card.get("printed_rewards", {}), f"sponsor:{card_id}")
     if card.get("unique_building"):
-        refs.append({"type": "core", "operation": "unique_building", "player_id": player_id,
-                     "card_id": card_id, "label": "Place unique building"})
+        _run_core_effect(state, {"operation": "unique_building", "player_id": player_id,
+                                 "card_id": card_id}, events)
     refs.extend(_sponsor_effect_refs(player_id, card, "immediate"))
     refs.extend(_sponsor_effect_refs(player_id, card, "setup_and_passive"))
-    refs.extend(_sponsor_effect_refs(player_id, card, "passive", {"register_only": True}))
+    for ref in _sponsor_effect_refs(player_id, card, "passive", {"register_only": True}):
+        result = _dispatch_effect(state, ref)
+        _consume_effect_events(state, result["events"], events)
+        if result["state_updates"]:
+            _deep_update(state, result["state_updates"])
     refs.extend(_all_passive_sponsor_refs(state, player_id, card))
     if int(_card_icons(card).get("herbivore", 0)):
         refs.append({"type": "core", "operation": "okapi", "player_id": player_id,
@@ -3656,8 +3709,16 @@ def _resolve_choice(
         return "wrong number of selections"
     choice_type = str(pending.get("type", pending.get("kind", "")))
     player = _player(state, player_id)
+    suspended_effects = state.get("effect_queue", [])
+    suspended_choices = state.get("pending_queue", [])
+    state["effect_queue"] = []
+    state["pending_queue"] = []
 
-    if choice_type == "release_enclosure":
+    if choice_type == "finish_action_plan":
+        if _selected_choice_value(selected[0]) != "finish":
+            return "finish the remaining action plan"
+        state["pending_choice"] = None
+    elif choice_type == "release_enclosure":
         state["pending_choice"] = None
         _empty_animal_space(player, ANIMAL_CARDS[str(pending["card_id"])], str(_selected_choice_value(selected[0])))
         _update_derived_metrics(player)
@@ -3778,6 +3839,8 @@ def _resolve_choice(
             events.append(_event(
                 "optional_effect_skipped", player_id=player_id, source="hypnosis",
             ))
+            state["effect_queue"].extend(suspended_effects)
+            state["pending_queue"].extend(suspended_choices)
             _resume_if_clear(state, events)
             return None
         action_id = str(_selected_choice_value(selected[0]))
@@ -3835,9 +3898,9 @@ def _resolve_choice(
             if error:
                 return error
         if remaining > 0:
-            _queue_okapi_trigger(
-                state, player_id, {"icons": [{"tag": "herbivore", "count": remaining}]},
-            )
+            state.setdefault("effect_queue", []).append({
+                "type": "core", "operation": "okapi", "player_id": player_id, "icon_count": remaining,
+            })
     elif pending.get("_effect_ref"):
         payload = _effect_choice_payload(pending, selection)
         ref = copy.deepcopy(pending["_effect_ref"])
@@ -3934,7 +3997,6 @@ def _resolve_choice(
         ))
     elif choice_type == "take_card":
         value = str(selected[0])
-        took_display_card = False
         if value == "deck":
             card_id = _draw(state)
             if card_id:
@@ -3945,7 +4007,6 @@ def _resolve_choice(
                 return "display card is outside your reputation range"
             _remove_display_card(state, card_id)
             player["hand"].append(card_id)
-            took_display_card = True
         else:
             return "invalid card source"
         state["pending_choice"] = None
@@ -4016,6 +4077,8 @@ def _resolve_choice(
         _apply_placement_bonus(state, player_id, cell_id, events, allow_archaeologist=False, copy_bonus=True)
     else:
         return "unsupported pending choice"
+    state["effect_queue"].extend(suspended_effects)
+    state["pending_queue"].extend(suspended_choices)
     _resume_if_clear(state, events)
     return None
 

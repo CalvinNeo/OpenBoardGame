@@ -159,6 +159,14 @@ class GaiaProjectTests(unittest.TestCase):
         self.assertEqual(s['pending'][0]['kind'],'tech')
         self.reject(s,{'type':'convert','conversion':'ore_credits'})
 
+    def test_original_owner_can_upgrade_beside_lantids(self):
+        s = position(('lantids', 'xenos'))
+        self.act(s, {'type': 'build', 'hex': '2:0'})
+        s.update(current_turn='b', main_done=False, pending=[])
+        self.act(s, {'type': 'upgrade', 'hex': '2:0', 'building': 'trading_station'}, 'b')
+        self.assertEqual(s['board']['2:0']['buildings'], {'a': 'mine', 'b': 'trading_station'})
+        self.assertEqual(s['players']['b']['credits'], 27)
+
     def test_free_actions_before_and_after_but_only_one_main(self):
         s=position(); self.act(s,{'type':'convert','conversion':'power_ore'})
         self.assertFalse(s['main_done'])
@@ -184,6 +192,36 @@ class GaiaProjectTests(unittest.TestCase):
         self.assertEqual(s['players']['a']['power'],[3,0,0]);self.assertEqual(s['players']['a']['ore'],2)
         s=position(('itars','xenos'));self.act(s,{'type':'burn','count':2})
         self.assertEqual(s['players']['a']['gaia_power'],2)
+
+    def test_brainstone_income_and_leech_offer_both_charging_orders(self):
+        s = position(('taklons', 'xenos'))
+        s['players']['a'].update(power=[1, 4, 0], brain=0, booster='ore_knowledge')
+        s['players']['a']['research']['economy'] = 1
+        _start_round(s)
+        self.assertEqual(s['phase'], 'income')
+        choices = [o['action'] for o in action_options(s, 'a') if o['action']['type'] == 'income']
+        self.assertEqual({a['brain_first'] for a in choices}, {True, False})
+        self.act(s, next(a for a in choices if a['brain_first'] is False))
+        self.assertEqual(s['players']['a']['brain'], 0)
+        s.update(phase='action', current_turn='b', pending=[dict(kind='leech', player_id='a', value=3)])
+        choices = [o['action'] for o in action_options(s, 'a') if o['action'].get('accept')]
+        outcomes = []
+        for action in choices:
+            candidate = copy.deepcopy(s)
+            self.act(candidate, action)
+            outcomes.append(candidate['players']['a']['brain'])
+        self.assertEqual(set(outcomes), {1, 2})
+
+    def test_brainstone_preference_during_tech_does_not_bypass_pending(self):
+        s = position(('taklons', 'xenos'))
+        s['players']['a'].update(power=[0, 4, 0], brain=1)
+        s['players']['a']['research']['science'] = 2
+        s['pending'] = [dict(kind='track', player_id='a', tracks=['science'])]
+        self.act(s, {'type': 'power_preference', 'brain_first': False})
+        self.reject(s, {'type': 'convert', 'conversion': 'power_ore'})
+        self.act(s, {'type': 'choose_track', 'track': 'science'})
+        self.assertEqual(s['players']['a']['brain'], 1)
+        self.assertEqual(s['players']['a']['power'], [0, 1, 3])
 
     def test_leech_uses_recipient_structure_and_blocks_actor(self):
         s=position();s['board']['2:0']['buildings']['b']='institute'
@@ -379,6 +417,15 @@ class GaiaProjectTests(unittest.TestCase):
         s=self.federation_position();s['federation_supply']['points']=3
         self.act(s,{'type':'federation','hexes':['0:0','1:0','2:0'],'token':'points'})
         self.assertFalse(s['players']['a']['federations'][0]['green'])
+
+    def test_bot_connects_and_forms_an_available_federation(self):
+        s = self.federation_position()
+        before = copy.deepcopy(s)
+        action = Game.bot_move(s, 'a')
+        self.assertEqual(s, before)
+        self.assertEqual(action['type'], 'federation')
+        self.act(s, action)
+        self.assertEqual(len(s['players']['a']['federations']), 1)
 
     def test_bot_full_games_and_save_resume(self):
         for count in (2,3,4):

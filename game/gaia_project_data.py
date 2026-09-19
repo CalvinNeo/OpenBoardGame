@@ -99,7 +99,6 @@ ADVANCED = {
 }
 ROUND_TILES = {
     'mines_1': dict(name='建矿 +2', event='mine', vp=2),
-    'mines_2': dict(name='建矿 +2', event='mine', vp=2),
     'trading_3': dict(name='交易站 +3', event='trading', vp=3),
     'trading_4': dict(name='交易站 +4', event='trading', vp=4),
     'big_1': dict(name='大学／学院 +5', event='big', vp=5),
@@ -110,8 +109,6 @@ ROUND_TILES = {
     'research': dict(name='每科研一级 +2', event='research', vp=2),
     'federation': dict(name='联邦标记 +5', event='federation', vp=5),
 }
-# There are ten physical tiles: only one mine-scoring tile.
-ROUND_TILES.pop('mines_2')
 FINALS = {
     'federated': dict(name='联邦建筑', neutral=10),
     'buildings': dict(name='建筑总数', neutral=11),

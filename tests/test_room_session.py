@@ -63,6 +63,33 @@ class RoomSessionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(public_action, {"type": "dual_cut"})
         self.assertNotIn("own_wire_id", public_action)
 
+    async def test_take_time_bot_action_and_room_seed_are_private(self):
+        action = {"type": "place", "card_id": "private-card", "segment": 0, "face_up": False}
+        self.assertEqual(app._public_bot_action("take_time", action), {"type": "place"})
+        room_id = await self._create_room("sid-tt", "Alice", "take_time", {"seed": 123, "start_clock": "open_sky"})
+        room_states = [item["payload"] for item in app.sio.emits if item["event"] == "room:state"]
+        self.assertTrue(room_states)
+        self.assertNotIn("seed", room_states[-1]["game_config"])
+        self.assertEqual(room_states[-1]["game_config"]["start_clock"], "open_sky")
+        self.assertEqual(app.ROOMS[room_id].game_config["seed"], 123)
+
+    async def test_take_time_room_start_and_private_views(self):
+        room_id = await self._create_room("sid-tt-1", "Alice", "take_time")
+        await app.on_room_join("sid-tt-2", {"room_id": room_id, "name": "Bob"})
+        await app.on_room_ready("sid-tt-1", {"ready": True})
+        await app.on_room_ready("sid-tt-2", {"ready": True})
+        await app.on_room_start("sid-tt-1", {})
+        self.assertEqual(app.ROOMS[room_id].game_state["phase"], "discussion")
+        await app.on_game_action("sid-tt-1", {"action": {"type": "ready"}})
+        payloads = [item for item in app.sio.emits if item["event"] == "game:state"]
+        alice_view = next(item["payload"]["view"] for item in reversed(payloads) if item["to"] == "sid-tt-1")
+        bob_view = next(item["payload"]["view"] for item in reversed(payloads) if item["to"] == "sid-tt-2")
+        alice_id = app.SESSIONS["sid-tt-1"]["player_id"]
+        alice_hand = next(player["hand"] for player in alice_view["players"] if player["player_id"] == alice_id)
+        bob_sees = next(player["hand"] for player in bob_view["players"] if player["player_id"] == alice_id)
+        self.assertTrue(all(card["value"] is not None for card in alice_hand))
+        self.assertTrue(all(card["value"] is None for card in bob_sees))
+
     async def test_wriggle_roulette_bot_grab_is_sanitized(self):
         action = {"type": "grab", "count": 4, "cycle_no": 7}
 

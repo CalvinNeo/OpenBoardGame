@@ -7,10 +7,11 @@
   <link rel="stylesheet" href="/static/style.css?v=app_v97" />
   <link rel="stylesheet" href="/static/ark_nova.css?v=app_v21" />
   <link rel="stylesheet" href="/static/catan_starfarers.css?v=app_v4" />
-  <link rel="stylesheet" href="/static/castles_of_burgundy.css?v=1" />
+  <link rel="stylesheet" href="/static/castles_of_burgundy.css?v=2" />
   <link rel="stylesheet" href="/static/gaia_project.css?v=gaia_v1" />
   <link rel="stylesheet" href="/static/tucano.css?v=app_v2" />
   <link rel="stylesheet" href="/static/take_time.css?v=1" />
+  <link rel="stylesheet" href="/static/eternal_decks.css?v=1" />
 </head>
 <body>
   <section id="logPanel" class="log-panel hidden" aria-hidden="true">
@@ -1384,6 +1385,7 @@
                     <option value="hanabi">Hanabi</option>
                     <option value="the_gang">The Gang</option>
                     <option value="take_time">Take Time · 时序谜局</option>
+                    <option value="eternal_decks">Eternal Decks · 永恒牌</option>
                     <option value="draw_guess">Draw & Guess</option>
                     <option value="blitz_sketch">Blitz Sketch</option>
                     <option value="cyber_pictures">Cyber Pictures</option>
@@ -1635,6 +1637,11 @@
                       </select>
                     </div>
                     <p class="hint">1 official introductory clock + 11 original practice clocks.</p>
+                  </div>
+                  <div class="game-config-card hidden" id="eternalDecksConfigBox" aria-hidden="true">
+                    <div class="game-config-title">Eternal Decks · Stage A</div>
+                    <p class="hint">Prototype card data · 2 or 4 seats, including bots. Other stages and the 3-player jewel card are not available.</p>
+                    <label class="eternal-decks-config-toggle"><input type="checkbox" id="eternalDecksStrictDiscard" /> Strict discard (hide discarded cards)</label>
                   </div>
                   <div class="game-config-card hidden" id="hanabiConfigBox" aria-hidden="true">
                     <div class="game-config-title">Hanabi</div>
@@ -2107,6 +2114,10 @@
             <div class="panel-header-actions" id="takeTimeHeaderActions" style="display: none;">
               <button id="takeTimeHelpBtn" type="button">Help</button>
               <button id="takeTimeExplainBtn" type="button" aria-pressed="false">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="eternalDecksHeaderActions" style="display: none;">
+              <button id="eternalDecksHelpBtn" type="button">Help</button>
+              <button id="eternalDecksExplainBtn" type="button" aria-pressed="false">Explain</button>
             </div>
             <div class="panel-header-actions" id="bombBustersHeaderActions" style="display: none;">
               <button id="bombBustersHelpBtn" class="bomb-busters-header-btn" type="button">Help</button>
@@ -3356,6 +3367,7 @@
             </div>
 
             <div id="takeTimePanel" class="hidden"></div>
+            <div id="eternalDecksPanel" class="hidden"></div>
             <div id="bombBustersPanel" class="hidden bomb-busters-panel">
               <div class="bomb-busters-topbar">
                 <div class="bomb-busters-title-block">
@@ -7081,7 +7093,7 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js"></script>
-  <script src="/static/games/shared.js?v=app_v19"></script>
+  <script src="/static/games/shared.js?v=app_v21"></script>
   <script src="/static/games/blokus.js?v=app_v6"></script>
   <script src="/static/games/carcassonne.js?v=app_v6"></script>
   <script src="/static/games/azul.js?v=app_v4"></script>
@@ -7155,6 +7167,11 @@
     <div id="takeTimeDialogBody" class="take-time-dialog-body"></div>
   </dialog>
   <script src="/static/games/take_time.js?v=1"></script>
+  <dialog id="eternalDecksDialog" class="eternal-decks-dialog" aria-labelledby="eternalDecksDialogTitle">
+    <div class="eternal-decks-dialog-header"><h2 id="eternalDecksDialogTitle">Eternal Decks</h2><button id="eternalDecksDialogClose" type="button">Close</button></div>
+    <div id="eternalDecksDialogBody"></div>
+  </dialog>
+  <script src="/static/games/eternal_decks.js?v=1"></script>
   <script src="/static/games/bomb_busters.js?v=app_v2"></script>
   <script src="/static/games/felix.js?v=app_v1"></script>
   <script src="/static/games/tacta.js?v=app_v7"></script>
@@ -7164,9 +7181,9 @@
   <script src="/static/games/ra.js?v=app_v7"></script>
   <script src="/static/games/scout.js?v=app_v4"></script>
   <script src="/static/games/ark_nova.js?v=app_v22"></script>
-  <script src="/static/games/gaia_project.js?v=gaia_v1"></script>
-  <script src="/static/games/castles_of_burgundy.js?v=1"></script>
-  <script src="/static/app.js?v=app_v23"></script>
-  <script src="/static/room.js?v=app_v39"></script>
+  <script src="/static/games/gaia_project.js?v=gaia_v2"></script>
+  <script src="/static/games/castles_of_burgundy.js?v=2"></script>
+  <script src="/static/app.js?v=app_v25"></script>
+  <script src="/static/room.js?v=app_v41"></script>
 </body>
 </html>

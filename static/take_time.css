@@ -29,13 +29,13 @@
 .take-time-clock-rules > span { padding: 5px 9px; border-radius: 6px; background: #d2aa5d22; color: #f7d398; }
 .take-time-layout { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(260px, 1fr); gap: 20px; margin-top: 16px; align-items: start; }
 .take-time-layout > *, .take-time-sidebar > * { min-width: 0; }
-.take-time-clock { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(4, auto); gap: 7px; align-items: stretch; }
-.take-time-sector-0 { grid-area: 1 / 2; }
-.take-time-sector-1 { grid-area: 2 / 3; }
-.take-time-sector-2 { grid-area: 3 / 3; }
-.take-time-sector-3 { grid-area: 4 / 2; }
-.take-time-sector-4 { grid-area: 3 / 1; }
-.take-time-sector-5 { grid-area: 2 / 1; }
+.take-time-clock { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(6, minmax(48px, auto)); gap: 7px; align-items: stretch; }
+.take-time-sector-0 { grid-area: 1 / 2 / 3 / 3; }
+.take-time-sector-1 { grid-area: 2 / 3 / 4 / 4; }
+.take-time-sector-2 { grid-area: 4 / 3 / 6 / 4; }
+.take-time-sector-3 { grid-area: 5 / 2 / 7 / 3; }
+.take-time-sector-4 { grid-area: 4 / 1 / 6 / 2; }
+.take-time-sector-5 { grid-area: 2 / 1 / 4 / 2; }
 .take-time-shell .take-time-sector {
   display: flex; flex-direction: column; gap: 7px; text-align: left; color: var(--tt-ink);
   background: #22414b; border: 1px solid #54737a; padding: 10px;
@@ -56,7 +56,7 @@
 .take-time-mini.solar, .take-time-shell .take-time-card.solar { background: #f4e6c6; border-color: #e2bc78; color: #523d21; }
 .take-time-mini.lunar, .take-time-shell .take-time-card.lunar { background: #173341; border-color: #8baaba; color: #e1e8ef; }
 .take-time-count { font-size: 10px; color: var(--tt-muted); margin-top: auto; }
-.take-time-clock-center { grid-area: 2 / 2 / 4 / 3; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; text-align: center; padding: 4px; min-width: 0; }
+.take-time-clock-center { grid-area: 3 / 2 / 5 / 3; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; text-align: center; padding: 4px; min-width: 0; }
 .take-time-clock-center > strong { font-size: clamp(10px, 1.2vw, 14px); letter-spacing: .08em; color: #e5c68e; overflow-wrap: anywhere; }
 .take-time-clock-center > span { font-size: 12px; }
 .take-time-clock-center small { color: var(--tt-muted); font-size: 10px; line-height: 1.4; }

@@ -85,6 +85,8 @@ const wanderingTowersPanel = document.getElementById("wanderingTowersPanel");
 const skyePanel = document.getElementById("skyePanel");
 
 function setGamePanelVisibility(gameType) {
+  document.getElementById("eternalDecksPanel").classList.toggle("hidden", gameType !== "eternal_decks");
+  if (typeof showEternalDecksHeaderActions === "function") showEternalDecksHeaderActions(gameType === "eternal_decks");
   const showTakeTime = gameType === "take_time";
   takeTimePanel.classList.toggle("hidden", !showTakeTime);
   if (typeof showTakeTimeHeaderActions === "function") showTakeTimeHeaderActions(showTakeTime);
@@ -756,6 +758,10 @@ function renderGameState(data) {
   }
   if (gameType === "take_time") {
     renderTakeTimeGameState(data);
+    return;
+  }
+  if (gameType === "eternal_decks") {
+    renderEternalDecksGameState(data);
     return;
   }
   if (gameType === "felix") {

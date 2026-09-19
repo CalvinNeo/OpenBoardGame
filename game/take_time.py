@@ -344,6 +344,9 @@ class TakeTimeGame:
 def _bot_from_view(view: Dict) -> Optional[Dict]:
     actions = view["legal_actions"]
     if "ready" in actions:
+        # Leave the discussion plan editable until the humans choose to look.
+        if any(not player["is_bot"] and not player["ready"] for player in view["players"]):
+            return None
         return {"type": "ready"}
     if "next_round" in actions:
         return {"type": "next_round"}

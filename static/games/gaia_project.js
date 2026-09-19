@@ -65,7 +65,7 @@
     if (a.type === 'convert') return `${resources(o.cost)} → ${resources(o.gain)}`;
     if (a.type === 'income') return `${esc(o.label)} · ${resources(view.income_pending[a.index]?.gain)}`;
     if (a.type === 'power_action') return esc(mainLabels[a.action] || o.label) + (a.token_index !== undefined ? ` · ${resources(defs().federations[me().federations[a.token_index].token])}` : '');
-    if (a.type === 'special') return esc(mainLabels[a.action] || o.label);
+    if (a.type === 'special') return esc(mainLabels[a.action] || o.label) + (a.track ? ` · ${esc(defs().tracks[a.track])}` : '');
     if (a.type === 'build') return '⛏ 建造矿场' + ({normal: '', booster_range: ' · 推进器航程 +3', booster_terraform: ' · 推进器改造 1', terraform_1: ' · 公共改造 1', terraform_2: ' · 公共改造 2'}[a.source] || '');
     return esc(o.label);
   };
@@ -262,7 +262,11 @@
   panel?.addEventListener('click', event => {
     if (drag?.moved) return;
     const optionEl = event.target.closest('[data-gaia-option]');
-    if (optionEl) { selectedOption = Number(optionEl.dataset.gaiaOption); render(); return; }
+    if (optionEl) {
+      selectedOption = Number(optionEl.dataset.gaiaOption); render();
+      panel.querySelector('.gaia-confirm')?.scrollIntoView({block:'nearest', behavior:'smooth'});
+      return;
+    }
     const hexEl = event.target.closest('[data-gaia-hex]');
     if (hexEl) {
       const id = hexEl.dataset.gaiaHex;

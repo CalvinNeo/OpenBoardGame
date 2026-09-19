@@ -121,6 +121,10 @@
     const tile = findTile(ui.tile);
     const isShip = view.pending?.kind === "ship";
     let text = isShip ? "Choose a depot to collect its goods." : tile ? `${tile.emoji} ${tile.name}` : "Select a die, an action and a target.";
+    if (!tile && !isShip && view.pending) text = "Choose an immediate bonus action; no die is needed.";
+    if (!tile && !view.pending && self()?.used.every(Boolean)) {
+      text = options("buy").length ? "Both dice used. You may buy a tile, then End Turn." : "Both dice used. Choose End Turn.";
+    }
     if (ui.mode === "sell" && ui.goods) text = `${colours[ui.goods - 1]} Sell all type ${ui.goods} goods`;
     if (ui.mode === "place" && tile && ui.cell === null) text += " · choose a highlighted hex";
     const needDiscard = ["take", "buy"].includes(ui.mode) && tile && self()?.storage.length === 3;

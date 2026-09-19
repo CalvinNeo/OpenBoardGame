@@ -56,6 +56,8 @@ from game.scout import ScoutGame
 from game.six_nimmt import SixNimmtGame
 from game.the_gang import TheGangGame
 from game.take_time import TakeTimeGame
+from game.eternal_decks import EternalDecksGame
+from game.eternal_decks_data import ACTION_SCHEMA as ETERNAL_DECKS_ACTION_SCHEMA, CONFIG_SCHEMA as ETERNAL_DECKS_CONFIG_SCHEMA
 from game.take_time_data import ACTION_SCHEMA as TAKE_TIME_ACTION_SCHEMA, CONFIG_SCHEMA as TAKE_TIME_CONFIG_SCHEMA
 from game.things_in_rings import ThingsInRingsGame
 from game.yahtzee import YahtzeeGame
@@ -79,6 +81,22 @@ from game.turing_machine import TuringMachineGame
 from game.tucano import TucanoGame
 from game.witchs_brew import WitchsBrewGame
 from game.wriggle_roulette import WriggleRouletteGame
+
+register_game(
+    GameDefinition(
+        game_id=EternalDecksGame.game_id,
+        name="Eternal Decks",
+        name_zh="永恒牌",
+        min_players=EternalDecksGame.min_players,
+        max_players=EternalDecksGame.max_players,
+        turn_mode="turn",
+        action_schema=ETERNAL_DECKS_ACTION_SCHEMA,
+        config_schema=ETERNAL_DECKS_CONFIG_SCHEMA,
+        module=EternalDecksGame,
+        serialize=EternalDecksGame.serialize,
+        deserialize=EternalDecksGame.deserialize,
+    )
+)
 
 register_game(
     GameDefinition(
