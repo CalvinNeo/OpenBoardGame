@@ -20,6 +20,9 @@ class DummySio:
     async def leave_room(self, sid, room_id):
         self.left.append((sid, room_id))
 
+    def get_environ(self, sid):
+        return {}
+
 
 class RoomSessionTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
@@ -229,6 +232,65 @@ class RoomSessionTests(unittest.IsolatedAsyncioTestCase):
         room_state_events = [event for event in app.sio.emits if event["event"] == "room:state"]
         self.assertTrue(room_state_events)
         self.assertTrue(room_state_events[-1]["payload"]["players"][0]["ready"])
+
+    async def test_citadels_can_start_after_mobile_connection_is_replaced(self):
+        room_id = await self._create_room("mobile-old", "Alice", "citadels")
+        room = app.ROOMS[room_id]
+        player = room.players[0]
+        for _ in range(3):
+            await app.on_room_add_bot("mobile-old", {})
+        payload = {
+            "room_id": room_id,
+            "player_id": player.player_id,
+            "reconnect_token": player.reconnect_token,
+        }
+
+        # The old socket has not expired yet when a phone opens a new one.
+        await app.on_room_reconnect("mobile-new", payload)
+        await app.disconnect("mobile-old")
+
+        self.assertNotIn("mobile-old", app.SESSIONS)
+        self.assertIn(("mobile-old", room_id), app.sio.left)
+        self.assertTrue(player.connected)
+        self.assertEqual(player.socket_id, "mobile-new")
+        self.assertEqual(len(room.players), 4)
+        await app.on_room_remove_bot("mobile-new", {})
+        await app.on_room_add_bot("mobile-new", {})
+        await app.on_room_start("mobile-new", {})
+        self.assertEqual(room.status, "in_game")
+        self.assertEqual(len(room.game_state["players"]), 4)
+
+    async def test_reconnect_with_wrong_token_keeps_current_connection(self):
+        room_id = await self._create_room("mobile-old", "Alice", "citadels")
+        player = app.ROOMS[room_id].players[0]
+        await app.on_room_reconnect("untrusted", {
+            "room_id": room_id,
+            "player_id": player.player_id,
+            "reconnect_token": "wrong-token",
+        })
+        self.assertEqual(player.socket_id, "mobile-old")
+        self.assertIn("mobile-old", app.SESSIONS)
+        self.assertNotIn("untrusted", app.SESSIONS)
+
+    async def test_reconnect_same_socket_is_idempotent(self):
+        room_id = await self._create_room("mobile", "Alice", "citadels")
+        player = app.ROOMS[room_id].players[0]
+        await app.on_room_reconnect("mobile", {
+            "room_id": room_id,
+            "player_id": player.player_id,
+            "reconnect_token": player.reconnect_token,
+        })
+        self.assertEqual(len(app.ROOMS[room_id].players), 1)
+        self.assertEqual(app.SESSIONS["mobile"]["player_id"], player.player_id)
+        self.assertFalse(any(event["event"] == "system:error" for event in app.sio.emits))
+
+    async def test_room_snapshot_has_start_limits_without_fetching_game_list(self):
+        await self._create_room("mobile", "Alice", "citadels")
+        snapshot = next(event["payload"] for event in reversed(app.sio.emits)
+                        if event["event"] == "room:state")
+        self.assertEqual(snapshot["min_players"], 2)
+        self.assertEqual(snapshot["max_players"], 6)
+        self.assertFalse(snapshot["supports_memories"])
 
     async def test_forest_shuffle_creation_language_is_kept_when_game_starts(self):
         sid_owner = "sid-owner"

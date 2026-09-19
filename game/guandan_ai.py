@@ -5166,6 +5166,31 @@ def _public_pool_supports_same_type_reply(
     )
 
 
+def _joker_pair_reply_probability(
+    unknown_cards: Optional[List[Dict]], hand_count: int, threshold: int
+) -> float:
+    """Exact union probability for the two physical joker pairs."""
+    if unknown_cards is None or hand_count < 2:
+        return 0.0
+    total = len(unknown_cards)
+    counts = {kind: sum(card.get("joker") == kind for card in unknown_cards) for kind in ("small", "big")}
+    eligible = [counts[kind] for kind, value in (("small", 90), ("big", 100))
+                if value > threshold and counts[kind] >= 2]
+    probability = sum(_hypergeom_at_least(total, count, hand_count, 2) for count in eligible)
+    if len(eligible) == 2:
+        # A standard double deck contains exactly two jokers of each kind.
+        probability -= _hypergeom_at_least(total, 4, hand_count, 4)
+    return max(0.0, min(1.0, probability))
+
+
+def _reply_has_soft_history(state: Dict, opponent_id: str) -> bool:
+    return bool(
+        state.get("pass_limits", {}).get(opponent_id)
+        or _public_history_profile_for_target(state, opponent_id).get("confidence", 0.0) > 0.0
+        or _public_revealed_rank_caps_for_target(state, opponent_id)
+    )
+
+
 def _opponent_same_type_reply_probability(
     state: Dict,
     opponent_id: str,
@@ -5175,20 +5200,57 @@ def _opponent_same_type_reply_probability(
     wild_count: int,
     unknown_cards: Optional[List[Dict]] = None,
 ) -> float:
+    hand_count = len(state["players"].get(opponent_id, {}).get("hand", []))
+    if hand_count <= 0:
+        return 0.0
+    short_reply = None
+    if unknown_cards is not None:
+        short_reply = _short_hand_structured_reply_breakdown(state, opponent_id, combo, unknown_cards)
+    observed = short_reply["same_type"] if short_reply is not None else _analytic_same_type_reply_probability(
+        state, opponent_id, combo, unknown_total, rank_counts, wild_count, unknown_cards
+    )
+    if not _reply_has_soft_history(state, opponent_id):
+        return observed
+
+    prior = _analytic_same_type_reply_probability(
+        state, opponent_id, combo, unknown_total, rank_counts, wild_count, unknown_cards, use_history=False
+    )
+    # Public play/pass history is behavioral evidence, not a card constraint.
+    # Retain one quarter of the history-free prior instead of conditioning on
+    # inferred caps as though they were physical facts. These are calibration
+    # weights, not empirically fitted likelihoods.
+    probability = 0.75 * observed + 0.25 * prior
+    limit = state.get("pass_limits", {}).get(opponent_id, {}).get(combo.get("type"))
+    if limit is not None and _combo_numeric_value(combo) >= limit:
+        # A voluntary pass halves the odds; it neither excludes a reply nor
+        # weakens a physically certain one. Apply this update only here.
+        probability = probability / (2.0 - probability)
+    if unknown_cards is not None and not _public_pool_supports_same_type_reply(
+        unknown_cards, hand_count, state["level_rank"], combo
+    ):
+        return 0.0
+    return max(0.0, min(1.0, probability))
+
+
+def _analytic_same_type_reply_probability(
+    state: Dict,
+    opponent_id: str,
+    combo: Dict,
+    unknown_total: int,
+    rank_counts: Dict[int, int],
+    wild_count: int,
+    unknown_cards: Optional[List[Dict]] = None,
+    *,
+    use_history: bool = True,
+) -> float:
     combo_type = combo.get("type") or ""
     hand_count = len(state["players"].get(opponent_id, {}).get("hand", []))
     if hand_count <= 0:
         return 0.0
 
     level_rank = state["level_rank"]
-    revealed_caps = _public_revealed_rank_caps_for_target(state, opponent_id)
-    if state.get("pass_limits", {}).get(opponent_id):
-        if not _bot_estimate_opponent_can_beat(state, opponent_id, combo):
-            return 0.0
+    revealed_caps = _public_revealed_rank_caps_for_target(state, opponent_id) if use_history else {}
     if unknown_cards is not None:
-        short_reply = _short_hand_structured_reply_breakdown(state, opponent_id, combo, unknown_cards)
-        if short_reply is not None:
-            return short_reply["same_type"]
         if combo_type == "single":
             hits = sum(
                 _single_order_value(card, level_rank) > combo.get("rank_value", 0)
@@ -5234,7 +5296,9 @@ def _opponent_same_type_reply_probability(
             for rank in range(2, 15)
             if _point_order_value(rank, level_rank) > threshold
         ]
-        return min(1.0, _aggregate_event_probability(probs) + wild_relief)
+        joker_probability = _joker_pair_reply_probability(unknown_cards, hand_count, threshold)
+        natural_probability = min(1.0, _aggregate_event_probability(probs) + wild_relief) if probs else 0.0
+        return 1.0 - (1.0 - natural_probability) * (1.0 - joker_probability)
 
     if combo_type == "three":
         threshold = combo.get("rank_value", 0)
@@ -5252,6 +5316,7 @@ def _opponent_same_type_reply_probability(
             rank: rank_prob(rank, 2)
             for rank in range(2, 15)
         }
+        joker_pair_probability = _joker_pair_reply_probability(unknown_cards, hand_count, 0)
         for triple_rank in range(2, 15):
             if _point_order_value(triple_rank, level_rank) <= threshold:
                 continue
@@ -5261,6 +5326,7 @@ def _opponent_same_type_reply_probability(
             pair_prob = _aggregate_event_probability(
                 [prob for rank, prob in pair_probs.items() if rank != triple_rank]
             )
+            pair_prob = 1.0 - (1.0 - pair_prob) * (1.0 - joker_pair_probability)
             probs.append(triple_prob * pair_prob)
         return min(1.0, _aggregate_event_probability(probs) + wild_relief)
 
@@ -5300,6 +5366,35 @@ def _opponent_same_type_reply_probability(
     return 0.0
 
 
+def _public_pool_supports_bomb_reply(unknown_cards: List[Dict], hand_count: int, level_rank: int) -> bool:
+    """A cheap necessary material condition for any bomb against ordinary play."""
+    if min(hand_count, len(unknown_cards)) < 4:
+        return False
+    counts: Dict[int, int] = {}
+    suits: Dict[str, set] = {}
+    jokers = {"small": 0, "big": 0}
+    wild_count = 0
+    for card in unknown_cards:
+        if _is_joker(card):
+            jokers[card["joker"]] += 1
+        elif _is_wild(card, level_rank):
+            wild_count += 1
+        else:
+            rank = card["rank"]
+            counts[rank] = counts.get(rank, 0) + 1
+            suits.setdefault(card["suit"], set()).add(rank)
+    if jokers["small"] >= 2 and jokers["big"] >= 2:
+        return True
+    if any(count + wild_count >= 4 for count in counts.values()):
+        return True
+    if hand_count < 5:
+        return False
+    return any(
+        sum(rank not in ranks for rank in sequence) <= wild_count
+        for ranks in suits.values() for sequence, _high in _CORE.STRAIGHT_SEQUENCES
+    )
+
+
 def _opponent_bomb_reply_probability(
     state: Dict,
     opponent_id: str,
@@ -5309,29 +5404,137 @@ def _opponent_bomb_reply_probability(
     joker_counts: Dict[str, int],
     unknown_cards: Optional[List[Dict]] = None,
 ) -> float:
+    hand_count = len(state["players"].get(opponent_id, {}).get("hand", []))
+    if combo.get("type") in BOMB_TYPES or hand_count < 4:
+        return 0.0
+    short_reply = None
+    if unknown_cards is not None:
+        short_reply = _short_hand_structured_reply_breakdown(state, opponent_id, combo, unknown_cards)
+    observed = short_reply["bomb"] if short_reply is not None else _analytic_bomb_reply_probability(
+        state, opponent_id, combo, unknown_total, rank_counts, joker_counts, unknown_cards
+    )
+    if not _reply_has_soft_history(state, opponent_id):
+        return observed
+    prior = _analytic_bomb_reply_probability(
+        state, opponent_id, combo, unknown_total, rank_counts, joker_counts, unknown_cards, use_history=False
+    )
+    return max(0.0, min(1.0, 0.75 * observed + 0.25 * prior))
+
+
+def _additional_bomb_witness_probability(unknown_cards: List[Dict], hand_count: int, level_rank: int) -> float:
+    """Lower bound from one physical wild-bomb or straight-flush witness.
+
+    Every fixed k-card witness is included in a uniform H-card hand with the
+    same hypergeometric probability. Taking the maximum avoids counting
+    overlapping witnesses twice, without enumerating physical plays.
+    """
+    counts: Dict[int, int] = {}
+    suits: Dict[str, set] = {}
+    wild_count = 0
+    for card in unknown_cards:
+        if _is_joker(card):
+            continue
+        if _is_wild(card, level_rank):
+            wild_count += 1
+        else:
+            rank = card["rank"]
+            counts[rank] = counts.get(rank, 0) + 1
+            suits.setdefault(card["suit"], set()).add(rank)
+    probability = 0.0
+    if hand_count >= 4 and any(count < 4 <= count + wild_count for count in counts.values()):
+        probability = _hypergeom_at_least(len(unknown_cards), 4, hand_count, 4)
+    if hand_count >= 5 and any(
+        sum(rank not in ranks for rank in sequence) <= wild_count
+        for ranks in suits.values() for sequence, _high in _CORE.STRAIGHT_SEQUENCES
+    ):
+        probability = max(probability, _hypergeom_at_least(len(unknown_cards), 5, hand_count, 5))
+    return probability
+
+
+def _analytic_bomb_reply_probability(
+    state: Dict,
+    opponent_id: str,
+    combo: Dict,
+    unknown_total: int,
+    rank_counts: Dict[int, int],
+    joker_counts: Dict[str, int],
+    unknown_cards: Optional[List[Dict]] = None,
+    *,
+    use_history: bool = True,
+) -> float:
     if combo.get("type") in BOMB_TYPES:
         return 0.0
     hand_count = len(state["players"].get(opponent_id, {}).get("hand", []))
-    if hand_count <= 0:
+    if hand_count < 4:
         return 0.0
-    if unknown_cards is not None:
-        short_reply = _short_hand_structured_reply_breakdown(state, opponent_id, combo, unknown_cards)
-        if short_reply is not None:
-            return short_reply["bomb"]
 
-    revealed_caps = _public_revealed_rank_caps_for_target(state, opponent_id)
+    revealed_caps = _public_revealed_rank_caps_for_target(state, opponent_id) if use_history else {}
     bomb_probs = [
         _hypergeom_at_least(unknown_total, min(rank_counts.get(rank, 0), max(0, revealed_caps.get(rank, 8))), hand_count, 4)
         for rank in range(2, 15)
         if min(rank_counts.get(rank, 0), max(0, revealed_caps.get(rank, 8))) >= 4
     ]
     bomb_prob = _aggregate_event_probability(bomb_probs)
+    if unknown_cards is not None:
+        bomb_prob = max(bomb_prob, _additional_bomb_witness_probability(
+            unknown_cards, hand_count, state["level_rank"]
+        ))
     heavenly_prob = 0.0
-    if joker_counts.get("small", 0) > 0 and joker_counts.get("big", 0) > 0:
-        small = _hypergeom_hit_probability(unknown_total, joker_counts["small"], hand_count)
-        big = _hypergeom_hit_probability(unknown_total, joker_counts["big"], hand_count)
-        heavenly_prob = small * big
+    if joker_counts.get("small", 0) >= 2 and joker_counts.get("big", 0) >= 2:
+        heavenly_prob = _hypergeom_at_least(unknown_total, 4, hand_count, 4)
+    # Preserve the existing uncalibrated willingness discounts. The witness
+    # event is a lower bound on possession, not an exact total bomb probability.
     return min(1.0, bomb_prob * 0.35 + heavenly_prob * 0.2)
+
+
+def _public_reply_belief(state: Dict, observer_id: str, opponent_id: str, combo: Dict) -> Dict[str, float]:
+    """Estimate ordinary and bomb reply risks from one observer's public pool.
+
+    The support flags are conservative physical checks, separate from soft
+    historical evidence. Probabilities remain heuristic estimates; ``any``
+    uses the existing independence approximation to combine the two risks.
+    Owner locks are not conditioned on: the whole unknown pool is a superset
+    of the target's possible cards. No target card face is inspected.
+    """
+    target = state["players"].get(opponent_id, {})
+    hand_count = len(target.get("hand", []))
+    if target.get("finished") or hand_count <= 0:
+        return {"same_type": 0.0, "bomb": 0.0, "any": 0.0,
+                "same_type_possible": False, "bomb_possible": False}
+    level_rank = state["level_rank"]
+    unknown_cards = _lead_unknown_pool_cards(state, observer_id)
+    rank_counts: Dict[int, int] = {}
+    joker_counts = {"small": 0, "big": 0}
+    wild_count = 0
+    for card in unknown_cards:
+        if _is_joker(card):
+            joker_counts[card["joker"]] += 1
+        elif _is_wild(card, level_rank):
+            wild_count += 1
+        else:
+            rank = card["rank"]
+            rank_counts[rank] = rank_counts.get(rank, 0) + 1
+    unknown_total = len(unknown_cards)
+    same_type_possible = combo.get("type") not in BOMB_TYPES and _public_pool_supports_same_type_reply(
+        unknown_cards, hand_count, level_rank, combo
+    )
+    bomb_possible = _public_pool_supports_bomb_reply(unknown_cards, hand_count, level_rank)
+    same_type = _opponent_same_type_reply_probability(
+        state, opponent_id, combo, unknown_total, rank_counts, wild_count, unknown_cards
+    ) if same_type_possible else 0.0
+    if not bomb_possible:
+        bomb = 0.0
+    elif combo.get("type") in BOMB_TYPES:
+        bomb = _opponent_overbomb_reply_probability(
+            state, opponent_id, combo, unknown_total, rank_counts, joker_counts, unknown_cards
+        )
+    else:
+        bomb = _opponent_bomb_reply_probability(
+            state, opponent_id, combo, unknown_total, rank_counts, joker_counts, unknown_cards
+        )
+    return {"same_type": same_type, "bomb": bomb,
+            "any": 1.0 - (1.0 - same_type) * (1.0 - bomb),
+            "same_type_possible": same_type_possible, "bomb_possible": bomb_possible}
 
 
 def _opponent_overbomb_reply_probability(
@@ -7899,109 +8102,126 @@ def _decomposition_candidates(hand: List[Dict], level_rank: int) -> List[Tuple[L
     return kept[: (8 if len(hand) >= 16 else 10)]
 
 
-def _fast_hand_decomposition_summary(hand: List[Dict], level_rank: int) -> Dict[str, float]:
-    """Linear-time structural tail estimate used by the bounded detailed search."""
-    if not hand:
-        return _empty_hand_decomposition_summary()
-
-    info = _hand_info(hand, level_rank)
-    counts = {rank: len(cards) for rank, cards in info["normals_by_rank"].items()}
+def _fast_natural_hand_plan(
+    counts: Dict[int, int], level_rank: int, full_houses_first: bool
+) -> List[Tuple[str, Tuple[int, ...]]]:
+    """Build a cover whose rank requirements consume each natural card once."""
     working = dict(counts)
-    summary = _empty_hand_decomposition_summary()
-    plan_types: List[str] = []
+    plan: List[Tuple[str, Tuple[int, ...]]] = []
+    ranked = _ranks_sorted_by_strength(level_rank, ascending=False)
 
-    def add_group(combo_type: str, size: int, value: float, bomb: bool = False) -> None:
-        summary["score"] += value
-        summary["turns"] += 1.0
-        summary["group_turns"] += 1.0
-        summary["grouped_cards"] += float(size)
-        summary["top_combo_size"] = max(summary["top_combo_size"], float(size))
-        if bomb:
-            summary["bomb_turns"] += 1.0
-        if len(plan_types) < 6:
-            plan_types.append(combo_type)
+    def take(combo_type: str, ranks: Tuple[int, ...]) -> None:
+        for rank in ranks:
+            working[rank] -= 1
+        plan.append((combo_type, ranks))
 
-    # Natural bombs are stable enough to recognize without candidate expansion.
-    for rank in _ranks_sorted_by_strength(level_rank, ascending=False):
+    def take_full_houses() -> None:
+        for triple_rank in ranked:
+            if working.get(triple_rank, 0) < 3:
+                continue
+            pairs = [rank for rank, count in working.items() if rank != triple_rank and count >= 2]
+            if not pairs:
+                continue
+            # Prefer complete pairs, and recheck live counts: a triple may
+            # already have supplied another full house's pair.
+            pair_rank = min(pairs, key=lambda rank: (working[rank], _point_order_value(rank, level_rank)))
+            take("full_house", (triple_rank,) * 3 + (pair_rank,) * 2)
+
+    for rank in ranked:
         count = working.get(rank, 0)
-        if count < 4:
-            continue
-        add_group("bomb", count, 5.35 + count * 1.08 + _bomb_tier_for_size(count) * 0.38, bomb=True)
-        working[rank] = 0
+        if count >= 4:
+            take("bomb", (rank,) * count)
 
-    # Greedily extract high-card-saving compound shapes for the cheap tail only.
+    if full_houses_first:
+        take_full_houses()
     for start in range(13, 1, -1):
-        if start + 1 > 14:
-            continue
         while working.get(start, 0) >= 3 and working.get(start + 1, 0) >= 3:
-            working[start] -= 3
-            working[start + 1] -= 3
-            add_group("steel_plate", 6, 13.6)
+            take("steel_plate", (start,) * 3 + (start + 1,) * 3)
     for start in range(12, 1, -1):
         ranks = (start, start + 1, start + 2)
         while all(working.get(rank, 0) >= 2 for rank in ranks):
-            for rank in ranks:
-                working[rank] -= 2
-            add_group("three_pairs", 6, 13.1)
+            take("three_pairs", tuple(rank for rank in ranks for _ in range(2)))
     for seq, _high_value in reversed(_CORE.STRAIGHT_SEQUENCES):
         while all(working.get(rank, 0) >= 1 for rank in seq):
-            for rank in seq:
-                working[rank] -= 1
-            add_group("straight", 5, 11.35)
+            take("straight", tuple(seq))
+    if not full_houses_first:
+        take_full_houses()
+    for rank in ranked:
+        while working.get(rank, 0) >= 3:
+            take("three", (rank,) * 3)
+        if working.get(rank, 0) >= 2:
+            take("pair", (rank,) * 2)
+        while working.get(rank, 0) > 0:
+            take("single", (rank,))
+    return plan
 
-    triple_ranks = [rank for rank, count in working.items() if count >= 3]
-    for triple_rank in sorted(triple_ranks, key=lambda rank: _point_order_value(rank, level_rank), reverse=True):
-        # An earlier full house may have consumed two cards from this triple.
-        # Recheck the live count instead of spending the same physical cards
-        # twice. Prefer a complete pair to breaking another remaining triple.
-        if working.get(triple_rank, 0) < 3:
-            continue
-        pairs = [rank for rank, count in working.items() if rank != triple_rank and count >= 2]
-        if not pairs:
-            continue
-        pair_rank = min(pairs, key=lambda rank: (working[rank], _point_order_value(rank, level_rank)))
-        working[triple_rank] -= 3
-        working[pair_rank] -= 2
-        add_group("full_house", 5, 10.95)
 
-    for rank in _ranks_sorted_by_strength(level_rank, ascending=False):
-        count = working.get(rank, 0)
-        while count >= 3:
-            add_group("three", 3, 6.1)
-            count -= 3
-        if count >= 2:
-            add_group("pair", 2, 2.7)
-            count -= 2
-        working[rank] = count
+def _fast_hand_decomposition_summary(hand: List[Dict], level_rank: int) -> Dict[str, float]:
+    """Compare two cheap, disjoint covers rather than overlapping shape savings."""
+    if not hand:
+        return _empty_hand_decomposition_summary()
 
-    for rank, count in working.items():
-        if count <= 0:
-            continue
-        value = _point_order_value(rank, level_rank)
-        for _ in range(count):
-            summary["turns"] += 1.0
-            summary["singles"] += 1.0
-            summary["top_combo_size"] = max(summary["top_combo_size"], 1.0)
-            if value < LOW_SINGLE_VALUE_MAX:
-                summary["low_singles"] += 1.0
-                summary["score"] -= 2.0 + (LOW_SINGLE_VALUE_MAX - value) * 0.18
-            elif value >= CONTROL_SINGLE_VALUE_MIN:
-                summary["control_singles"] += 1.0
-                summary["score"] += 1.2
-            if len(plan_types) < 6:
-                plan_types.append("single")
+    values = {"steel_plate": 13.6, "three_pairs": 13.1, "straight": 11.35,
+              "full_house": 10.95, "three": 6.1, "pair": 2.7}
+    # Classifying one complete hand is cheap and also recognizes wild-card
+    # completions and joker bombs that natural-rank plans cannot represent.
+    whole_combo = _evaluate_combo(hand, level_rank, {}) if len(hand) <= 10 else None
+    if whole_combo and whole_combo["type"] != "single":
+        combo_type = whole_combo["type"]
+        summary = _empty_hand_decomposition_summary()
+        summary.update(turns=1.0, group_turns=1.0, grouped_cards=float(len(hand)),
+                       top_combo_size=float(len(hand)), plan_types=(combo_type,))
+        if combo_type in BOMB_TYPES:
+            summary["bomb_turns"] = 1.0
+            summary["score"] = 5.35 + len(hand) * 1.08 + _bomb_tier(whole_combo) * 0.38
+        else:
+            summary["score"] = values[combo_type]
+        summary["special_material_turns"] = float(
+            bool(whole_combo.get("uses_wild")) or any(_is_joker(card) for card in hand)
+        )
+        return summary
 
+    info = _hand_info(hand, level_rank)
+    counts = {rank: len(cards) for rank, cards in info["normals_by_rank"].items()}
     special_cards = len(info["wild_cards"]) + len(info["jokers_big"]) + len(info["jokers_small"])
-    if special_cards:
-        summary["turns"] += float(special_cards)
-        summary["singles"] += float(special_cards)
-        summary["control_singles"] += float(special_cards)
-        summary["special_material_turns"] += float(special_cards)
-        summary["score"] += float(special_cards) * 1.6
-        summary["top_combo_size"] = max(summary["top_combo_size"], 1.0)
-        plan_types.extend("single" for _ in range(min(special_cards, max(0, 6 - len(plan_types)))))
-    summary["plan_types"] = tuple(plan_types[:6])
-    return summary
+    summaries = []
+    for full_houses_first in (False, True):
+        plan = _fast_natural_hand_plan(counts, level_rank, full_houses_first)
+        summary = _empty_hand_decomposition_summary()
+        plan_types = []
+        for combo_type, ranks in plan:
+            size = len(ranks)
+            summary["turns"] += 1.0
+            summary["top_combo_size"] = max(summary["top_combo_size"], float(size))
+            plan_types.append(combo_type)
+            if combo_type == "single":
+                summary["singles"] += 1.0
+                value = _point_order_value(ranks[0], level_rank)
+                if value < LOW_SINGLE_VALUE_MAX:
+                    summary["low_singles"] += 1.0
+                    summary["score"] -= 2.0 + (LOW_SINGLE_VALUE_MAX - value) * 0.18
+                elif value >= CONTROL_SINGLE_VALUE_MIN:
+                    summary["control_singles"] += 1.0
+                    summary["score"] += 1.2
+                continue
+            summary["group_turns"] += 1.0
+            summary["grouped_cards"] += float(size)
+            if combo_type == "bomb":
+                summary["bomb_turns"] += 1.0
+                summary["score"] += 5.35 + size * 1.08 + _bomb_tier_for_size(size) * 0.38
+            else:
+                summary["score"] += values[combo_type]
+        if special_cards:
+            summary["turns"] += float(special_cards)
+            summary["singles"] += float(special_cards)
+            summary["control_singles"] += float(special_cards)
+            summary["special_material_turns"] += float(special_cards)
+            summary["score"] += float(special_cards) * 1.6
+            summary["top_combo_size"] = max(summary["top_combo_size"], 1.0)
+            plan_types.extend("single" for _ in range(special_cards))
+        summary["plan_types"] = tuple(plan_types[:6])
+        summaries.append(summary)
+    return min(summaries, key=lambda result: (result["turns"], result["low_singles"], -result["score"]))
 
 
 def _hand_decomposition_summary(hand: List[Dict], level_rank: int) -> Dict[str, float]:
@@ -8134,6 +8354,9 @@ def _hand_decomposition_summary(hand: List[Dict], level_rank: int) -> Dict[str, 
         return apply_step(current_hand, cards, combo, child)
 
     summary = _copy_hand_decomposition_summary(search(hand, 0))
+    fast_summary = _fast_hand_decomposition_summary(hand, level_rank)
+    if (fast_summary["turns"], fast_summary["low_singles"]) < (summary["turns"], summary["low_singles"]):
+        summary = fast_summary
     if not timed_out:
         if len(_HAND_DECOMP_CACHE) >= _HAND_DECOMP_CACHE_LIMIT:
             _HAND_DECOMP_CACHE.clear()
@@ -8568,18 +8791,15 @@ def _estimated_turns_to_finish(hand: List[Dict], level_rank: int) -> float:
         cached = _HAND_TURNS_CACHE.get(cache_key)
         if cached is not None:
             return cached
-    metrics = _hand_structure_metrics(hand, level_rank)
-    turns = float(len(hand))
-    turns -= metrics["turn_savings"]
-    turns -= metrics["shape_synergy"]
-    turns -= min(1.0, metrics["wild_count"] * 0.22 + metrics["joker_small"] * 0.18 + metrics["joker_big"] * 0.28)
-    turns += min(2.4, metrics["low_single_burden"] * 0.12)
-    turns -= min(1.2, metrics["grouped_control"] * 0.08)
-    decomp_turns = metrics["decomp_turns"]
-    if decomp_turns > 0:
-        decomp_turns += metrics["decomp_low_singles"] * 0.18
-        decomp_turns += metrics["decomp_special_turns"] * 0.08
-        turns = min(turns, decomp_turns)
+    decomposition = _hand_decomposition_summary(hand, level_rank)
+    turns = decomposition["turns"]
+    # Shape savings overlap (a triple can also be part of a steel plate or a
+    # full house). Only a disjoint cover supplies the number of future plays.
+    # Keep the existing extra burden for weak singles and special material;
+    # a hand already playable in one action needs no future-reentry correction.
+    if turns > 1.0:
+        turns += decomposition["low_singles"] * 0.18
+        turns += decomposition["special_material_turns"] * 0.08
     result = max(1.0, turns)
     if not bounded:
         if len(_HAND_TURNS_CACHE) >= _HAND_TURNS_CACHE_LIMIT:
@@ -12895,18 +13115,32 @@ def _compute_bot_score_components(
             components["opp_block"] = expected_blocks * 4.0 * block_scale
         if expected_beats > 0.001:
             components["opp_risk"] = -expected_beats * 3.0
+    elif not current_trick:
+        # Lead retention already values whether the whole opposing team can
+        # reply. Keep only the old default offset here, so ordinary leads do
+        # not move wholesale relative to bombs when removing duplicate credit.
+        components["opp_risk"] = -len(opp_ids) * 3.0
     else:
-        likely_blocks = 0
-        likely_beats = 0
+        expected_blocks = 0.0
+        expected_beats = 0.0
         for opp in opp_ids:
-            if _bot_estimate_opponent_can_beat(state, opp, combo):
-                likely_beats += 1
-            else:
-                likely_blocks += 1
-        if likely_blocks:
-            components["opp_block"] = likely_blocks * 4.0
-        if likely_beats:
-            components["opp_risk"] = -likely_beats * 3.0
+            belief = _public_reply_belief(state, bot_id, opp, combo)
+            # This generic term rewards proved same-type control. Estimated
+            # hold probabilities already enter the shape-specific lead and
+            # takeover terms; rewarding them again spends strong groups too
+            # readily. A voluntary pass is never proof of no legal reply.
+            # Even proved same-type control can still be broken by a bomb.
+            reply_probability = (
+                belief["bomb"]
+                if not belief["same_type_possible"]
+                else 1.0
+            )
+            expected_beats += reply_probability
+            expected_blocks += 1.0 - reply_probability
+        if expected_blocks > 0.001:
+            components["opp_block"] = expected_blocks * 4.0
+        if expected_beats > 0.001:
+            components["opp_risk"] = -expected_beats * 3.0
 
     if current_trick and teammate == current_trick.get("player_id"):
         overtrick_penalty = _teammate_overtrick_penalty(

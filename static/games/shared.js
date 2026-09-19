@@ -9,10 +9,7 @@ function attachSkipValidation(payload) {
 }
 
 function sendAction(action) {
-  if (!roomId) {
-    log("Not in a room");
-    return;
-  }
+  if (!ensureRoomConnection()) return;
   const payload = { room_id: roomId, action };
   attachSkipValidation(payload);
   recordActionLog(payload);
@@ -20,18 +17,11 @@ function sendAction(action) {
 }
 
 function emitSeatMove(direction) {
-  if (!roomId) {
-    log("Not in a room");
-    return;
-  }
-  socket.emit("room:move_seat", { room_id: roomId, direction });
+  sendRoomRequest("room:move_seat", { room_id: roomId, direction }, "Updating seat...");
 }
 
 function emitRoomStart() {
-  if (!roomId) {
-    log("Not in a room");
-    return;
-  }
+  if (!ensureRoomConnection()) return;
   const payload = { room_id: roomId };
   attachSkipValidation(payload);
   if (currentGameType === "draw_guess") {
@@ -210,7 +200,7 @@ function emitRoomStart() {
       ? getSubtextRoomConfig()
       : { word_column: 1 };
   }
-  socket.emit("room:start", payload);
+  sendRoomRequest("room:start", payload, "Starting game...");
 }
 
 function renderRoomState(state) {
@@ -424,29 +414,6 @@ function renderRoomState(state) {
   const orderedPlayers = Array.isArray(state.players)
     ? [...state.players].sort((a, b) => (a.seat ?? 0) - (b.seat ?? 0))
     : [];
-  const startBtn = document.getElementById("startBtn");
-  if (startBtn) {
-    let startDisabled = true;
-    let startTitle = "";
-    if (state.status === "lobby") {
-      const gameMeta = Array.isArray(cachedGameList)
-        ? cachedGameList.find((entry) => entry && entry.game_id === state.game_type)
-        : null;
-      const minPlayers = gameMeta && Number.isFinite(gameMeta.min_players) ? gameMeta.min_players : 1;
-      const enoughPlayers = orderedPlayers.length >= minPlayers;
-      const allReady = orderedPlayers.every((player) => player.is_bot || player.ready);
-      startDisabled = !(enoughPlayers && allReady);
-      if (!enoughPlayers) {
-        startTitle = `Need at least ${minPlayers} players`;
-      } else if (!allReady) {
-        startTitle = "All players must be ready";
-      }
-    } else {
-      startTitle = "Game already started";
-    }
-    startBtn.disabled = startDisabled;
-    startBtn.title = startTitle;
-  }
   orderedPlayers.forEach((p, idx) => {
     const row = document.createElement("div");
     row.className = "player-row";
@@ -491,6 +458,7 @@ function renderRoomState(state) {
     }
   }
   updateGameReconnectButton();
+  updateRoomActionButtons();
 }
 
 function findPlayerName(view, playerId) {

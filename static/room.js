@@ -16,6 +16,15 @@ let createRoomPending = false;
 let pendingReadyAfterJoin = false;
 let pendingReadyRoomId = null;
 let cachedGameList = null;
+let gameListRequest = null;
+let gameFilterRevision = 0;
+let roomSessionReady = false;
+let pendingRoomRequest = null;
+let roomFeedbackMessage = "";
+let roomFeedbackIsError = false;
+const ROOM_REQUEST_TIMEOUT = 15000;
+const roomStorageCache = new Map();
+const roomConnectionLog = [];
 let currentRoomList = [];
 let pendingSeatClaimRoomId = null;
 let pendingSeatClaimSourceId = null;
@@ -38,6 +47,9 @@ const joinRoomForm = document.getElementById("joinRoomForm");
 const roomIdInput = document.getElementById("roomIdInput");
 const joinRoomError = document.getElementById("joinRoomError");
 const connectionInfo = document.getElementById("connectionInfo");
+const roomActionStatus = document.getElementById("roomActionStatus");
+const createRoomStatus = document.getElementById("createRoomStatus");
+const gameListRetryBtn = document.getElementById("gameListRetryBtn");
 const roomListEl = document.getElementById("roomList");
 const refreshRoomsBtn = document.getElementById("refreshRoomsBtn");
 const cleanupEmptyRoomsBtn = document.getElementById("cleanupEmptyRoomsBtn");
@@ -78,6 +90,8 @@ const createRoomGameStep = document.getElementById("createRoomGameStep");
 const gameSearchInput = document.getElementById("gameSearchInput");
 const playerCountFilter = document.getElementById("playerCountFilter");
 const gameSortSelect = document.getElementById("gameSortSelect");
+const gameTypeFilterDetails = document.getElementById("gameTypeFilterDetails");
+const gameTypeFilterSummary = document.getElementById("gameTypeFilterSummary");
 const gameTypeFilters = document.getElementById("gameTypeFilters");
 const gameListCount = document.getElementById("gameListCount");
 const gameListEl = document.getElementById("gameList");
@@ -110,9 +124,30 @@ const ROOM_AUTH_KEY = "openboardgame:room_auth";
 const NAME_STORAGE_KEY = "openboardgame:name";
 const LAST_ROOM_ID_KEY = "openboardgame:last_room_id";
 
+// Private browsing or a storage quota must not interrupt a live room session.
+function readRoomStorage(key) {
+  try {
+    const value = localStorage.getItem(key);
+    if (value !== null) roomStorageCache.set(key, value);
+    return value ?? roomStorageCache.get(key) ?? null;
+  } catch {
+    return roomStorageCache.get(key) ?? null;
+  }
+}
+
+function writeRoomStorage(key, value) {
+  roomStorageCache.set(key, value);
+  try { localStorage.setItem(key, value); } catch {}
+}
+
+function removeRoomStorage(key) {
+  roomStorageCache.delete(key);
+  try { localStorage.removeItem(key); } catch {}
+}
+
 function loadStoredName() {
   try {
-    return localStorage.getItem(NAME_STORAGE_KEY) || "";
+    return readRoomStorage(NAME_STORAGE_KEY) || "";
   } catch {
     return "";
   }
@@ -126,13 +161,13 @@ function saveStoredName(name) {
   }
   playerName = nextName;
   updateRoomControlsName();
-  localStorage.setItem(NAME_STORAGE_KEY, nextName);
+  writeRoomStorage(NAME_STORAGE_KEY, nextName);
 }
 
 function clearStoredName() {
   playerName = "";
   updateRoomControlsName();
-  localStorage.removeItem(NAME_STORAGE_KEY);
+  removeRoomStorage(NAME_STORAGE_KEY);
 }
 
 function updateRoomControlsName() {
@@ -146,7 +181,7 @@ function updateRoomControlsName() {
 
 function loadRoomAuthMap() {
   try {
-    const raw = localStorage.getItem(ROOM_AUTH_KEY);
+    const raw = readRoomStorage(ROOM_AUTH_KEY);
     if (!raw) {
       return {};
     }
@@ -158,7 +193,7 @@ function loadRoomAuthMap() {
 }
 
 function saveRoomAuthMap(map) {
-  localStorage.setItem(ROOM_AUTH_KEY, JSON.stringify(map));
+  writeRoomStorage(ROOM_AUTH_KEY, JSON.stringify(map));
 }
 
 function setRoomAuth(roomId, auth) {
@@ -171,7 +206,7 @@ function setRoomAuth(roomId, auth) {
   if (auth.name) {
     saveStoredName(auth.name);
   }
-  localStorage.setItem(LAST_ROOM_ID_KEY, roomId);
+  writeRoomStorage(LAST_ROOM_ID_KEY, roomId);
   updateGameReconnectButton();
 }
 
@@ -189,8 +224,8 @@ function clearRoomAuth(roomId) {
 }
 
 function clearAllRoomAuth() {
-  localStorage.removeItem(ROOM_AUTH_KEY);
-  localStorage.removeItem(LAST_ROOM_ID_KEY);
+  removeRoomStorage(ROOM_AUTH_KEY);
+  removeRoomStorage(LAST_ROOM_ID_KEY);
   updateGameReconnectButton();
 }
 
@@ -199,7 +234,7 @@ function getQuickReconnectRoomId() {
     return roomId;
   }
   const authMap = loadRoomAuthMap();
-  const storedRoomId = localStorage.getItem(LAST_ROOM_ID_KEY);
+  const storedRoomId = readRoomStorage(LAST_ROOM_ID_KEY);
   if (storedRoomId && authMap[storedRoomId]) {
     return storedRoomId;
   }
@@ -213,7 +248,7 @@ function updateGameReconnectButton() {
   }
   const reconnectRoomId = getQuickReconnectRoomId();
   const auth = reconnectRoomId ? getRoomAuth(reconnectRoomId) : null;
-  const canReconnect = Boolean(auth && auth.player_id && auth.reconnect_token);
+  const canReconnect = Boolean(auth && auth.player_id && auth.reconnect_token && !pendingRoomRequest);
   gameReconnectBtn.disabled = !canReconnect;
   gameReconnectBtn.title = canReconnect
     ? `Reconnect to room ${reconnectRoomId}`
@@ -308,6 +343,12 @@ function buildGameStateSnapshot() {
 
   const snapshot = {
     meta,
+    connection: {
+      connected: socket.connected,
+      room_session_ready: roomSessionReady,
+      transport: socket.io.engine?.transport?.name || null,
+      events: [...roomConnectionLog],
+    },
     room_state: currentRoomState,
     game_state: lastGameStatePayload,
   };
@@ -343,10 +384,6 @@ async function copyTextToClipboard(text) {
 }
 
 async function copyGameStateSnapshot() {
-  if (!currentRoomState && !lastGameStatePayload) {
-    log("No game state available to copy.");
-    return;
-  }
   const snapshot = buildGameStateSnapshot();
   const text = JSON.stringify(snapshot);
   const ok = await copyTextToClipboard(text);
@@ -577,14 +614,27 @@ async function fetchGameList() {
   if (cachedGameList) {
     return cachedGameList;
   }
-  try {
-    const res = await fetch("/api/games");
-    cachedGameList = await res.json();
-    return cachedGameList;
-  } catch (err) {
-    console.error("Failed to fetch game list", err);
-    return [];
-  }
+  if (gameListRequest) return gameListRequest;
+  gameListRequest = (async () => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ROOM_REQUEST_TIMEOUT);
+    try {
+      const response = await fetch("/api/games", { signal: controller.signal });
+      if (!response.ok) throw new Error(`Game list request failed (${response.status})`);
+      const games = await response.json();
+      if (!Array.isArray(games) || !games.length || games.some((game) =>
+        !game || typeof game.game_id !== "string" || typeof game.name !== "string")) {
+        throw new Error("Invalid game list response");
+      }
+      cachedGameList = games;
+      updateRoomActionButtons();
+      return games;
+    } finally {
+      clearTimeout(timer);
+      gameListRequest = null;
+    }
+  })();
+  return gameListRequest;
 }
 
 function getGameTags(game) {
@@ -613,8 +663,9 @@ function filterGames(games, searchText, playerCount, selectedTagIds = []) {
       !playerCount || (Array.isArray(g.player_counts)
         ? g.player_counts.includes(playerCount)
         : (g.min_players <= playerCount && playerCount <= g.max_players));
-    const matchesType =
-      selectedTags.size === 0 || tags.some((tag) => selectedTags.has(tag.id));
+    const matchesType = [...selectedTags].every((tagId) =>
+      tags.some((tag) => tag.id === tagId)
+    );
     return matchesSearch && matchesPlayers && matchesType;
   });
 }
@@ -636,6 +687,11 @@ function collectGameTags(games) {
 }
 
 function syncGameTypeFilterButtons() {
+  if (gameTypeFilterSummary) {
+    gameTypeFilterSummary.textContent = selectedGameTagIds.size
+      ? `${selectedGameTagIds.size} selected · Match all`
+      : "Match all selected";
+  }
   if (!gameTypeFilters) {
     return;
   }
@@ -932,12 +988,11 @@ function createRoomForGame(gameId, config = null) {
     requirePlayerName(() => createRoomForGame(gameId, config));
     return;
   }
-  closeCreateRoomModal();
   const payload = { name, game_type: gameId };
   if (config && typeof config === "object") {
     payload.config = config;
   }
-  socket.emit("room:create", payload);
+  sendRoomRequest("room:create", payload, "Creating room...", false);
 }
 
 function showCreateRoomGameStep() {
@@ -1056,7 +1111,23 @@ function selectGameFromModal(gameId) {
 }
 
 async function applyGameFilters() {
-  const games = await fetchGameList();
+  const revision = ++gameFilterRevision;
+  gameListRetryBtn.classList.add("hidden");
+  if (!cachedGameList) {
+    gameListCount.textContent = "Loading games...";
+    gameListEl.classList.add("hidden");
+    gameListEmpty.classList.add("hidden");
+  }
+  let games;
+  try {
+    games = await fetchGameList();
+  } catch {
+    if (revision !== gameFilterRevision) return;
+    gameListCount.textContent = "Could not load games. Check your connection and retry.";
+    gameListRetryBtn.classList.remove("hidden");
+    return;
+  }
+  if (revision !== gameFilterRevision) return;
   if (gameTypeFilters && gameTypeFilters.dataset.ready !== "true") {
     renderGameTypeFilters(games);
   }
@@ -1073,6 +1144,7 @@ async function openCreateRoomModal() {
   if (!createRoomModal) {
     return;
   }
+  setRoomFeedback();
   if (gameSearchInput) {
     gameSearchInput.value = "";
   }
@@ -1083,10 +1155,14 @@ async function openCreateRoomModal() {
     gameSortSelect.value = "alpha";
   }
   selectedGameTagIds.clear();
+  if (gameTypeFilterDetails) {
+    gameTypeFilterDetails.open = false;
+  }
   if (gameTypeFilters) {
     gameTypeFilters.innerHTML = "";
     delete gameTypeFilters.dataset.ready;
   }
+  syncGameTypeFilterButtons();
   showCreateRoomGameStep();
   setModalVisible(createRoomModal, true);
   await applyGameFilters();
@@ -1107,18 +1183,58 @@ function closeSeatClaimModal() {
   setModalVisible(seatClaimModal, false);
 }
 
-function downloadSaveFile(sourceRoomId) {
+async function downloadSaveFile(sourceRoomId) {
   if (!sourceRoomId) {
     log("Missing source room id");
     return;
   }
-  const url = `/api/room/save?source_room_id=${encodeURIComponent(sourceRoomId)}`;
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "";
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
+  await downloadRoomFile(`/api/room/save?source_room_id=${encodeURIComponent(sourceRoomId)}`, "application/json");
+}
+
+async function downloadRoomFile(url, expectedType) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ROOM_REQUEST_TIMEOUT);
+  const status = document.getElementById("loadDownloadStatus");
+  status.textContent = "Preparing download...";
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.detail || `Request failed (${response.status})`);
+    }
+    const filename = parseDownloadFilename(response.headers.get("Content-Disposition"));
+    if (response.redirected || !filename || !response.headers.get("Content-Type")?.includes(expectedType)) {
+      throw new Error("The server did not return a download file. Please try again.");
+    }
+    const blob = await response.blob();
+    if (expectedType === "application/json") {
+      try {
+        const save = JSON.parse(await blob.text());
+        if (!save || typeof save !== "object") throw new Error("Invalid save");
+      } catch {
+        throw new Error("The server did not return a valid JSON save.");
+      }
+    }
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = filename;
+    // iOS may open a download instead; keep the live game in its original tab.
+    link.target = "_blank";
+    link.rel = "noopener";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+    status.textContent = "Download ready.";
+    setRoomFeedback("Download ready.");
+  } catch (error) {
+    const message = error.name === "AbortError" ? "Download timed out. Please try again." : `Download failed: ${error.message}`;
+    status.textContent = message;
+    setRoomFeedback(message, true);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function parseDownloadFilename(headerValue) {
@@ -1152,38 +1268,11 @@ async function downloadMemoriesFile(activeRoomId) {
       downloadMemoriesBtn.disabled = true;
       downloadMemoriesBtn.textContent = "Preparing...";
     }
-    const response = await fetch(url);
-    if (!response.ok) {
-      let message = "Download failed.";
-      try {
-        const data = await response.json();
-        message = data.detail || data.message || message;
-      } catch {
-        try {
-          const text = await response.text();
-          if (text) message = text;
-        } catch {}
-      }
-      log(message);
-      return;
-    }
-    const blob = await response.blob();
-    const filename =
-      parseDownloadFilename(response.headers.get("Content-Disposition")) || "memories.html";
-    const objectUrl = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = objectUrl;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(objectUrl);
-  } catch {
-    log("Download failed.");
+    await downloadRoomFile(url, "text/html");
   } finally {
     if (downloadMemoriesBtn) {
-      downloadMemoriesBtn.disabled = false;
       downloadMemoriesBtn.textContent = originalLabel || "Download Memories";
+      updateRoomActionButtons();
     }
   }
 }
@@ -1255,8 +1344,13 @@ function renderLoadList(saves) {
     const downloadButton = document.createElement("button");
     downloadButton.type = "button";
     downloadButton.textContent = "Download";
-    downloadButton.addEventListener("click", () => {
-      downloadSaveFile(save.source_room_id);
+    downloadButton.addEventListener("click", async () => {
+      downloadButton.disabled = true;
+      try {
+        await downloadSaveFile(save.source_room_id);
+      } finally {
+        downloadButton.disabled = false;
+      }
     });
     actions.appendChild(downloadButton);
 
@@ -1377,6 +1471,104 @@ function setConnectionInfo(message) {
   connectionInfo.textContent = message;
 }
 
+function setRoomFeedback(message = "", isError = false) {
+  roomFeedbackMessage = message;
+  roomFeedbackIsError = isError;
+  setConnectionInfo(message || (roomSessionReady && roomId ? `Connected to room ${roomId}.` : ""));
+  updateRoomActionButtons();
+  if (isError) {
+    log(message);
+    setRoomControlsCollapsed(false);
+  }
+}
+
+function getRoomStartReason() {
+  if (!currentRoomState) return "Create or join a room first.";
+  if (!socket.connected) return "Connection lost. Reconnecting...";
+  if (!roomSessionReady) return "Reconnect to the room before playing.";
+  if (currentRoomState.status !== "lobby") return "Game already started.";
+  const players = currentRoomState.players || [];
+  const gameMeta = cachedGameList?.find((game) => game.game_id === currentGameType);
+  const minPlayers = currentRoomState.min_players ?? gameMeta?.min_players;
+  const playerCounts = currentRoomState.player_counts ?? gameMeta?.player_counts;
+  if (!Number.isFinite(minPlayers)) return "Loading room details...";
+  if (players.length < minPlayers) return `Need at least ${minPlayers} players. Add a bot or invite a friend.`;
+  if (Array.isArray(playerCounts) && !playerCounts.includes(players.length)) {
+    return `This game needs ${playerCounts.join(" or ")} players.`;
+  }
+  if (players.some((player) => !player.is_bot && !player.ready)) return "All players must be ready.";
+  return "";
+}
+
+function updateRoomActionButtons() {
+  const busy = Boolean(pendingRoomRequest);
+  const available = socket.connected && roomSessionReady && Boolean(roomId) && !busy;
+  const inLobby = currentRoomState?.status === "lobby";
+  const players = currentRoomState?.players || [];
+  const gameMeta = cachedGameList?.find((game) => game.game_id === currentGameType);
+  const maxPlayers = currentRoomState?.max_players ?? gameMeta?.max_players;
+  const reason = getRoomStartReason();
+  const startBtn = document.getElementById("startBtn");
+  startBtn.disabled = !available || Boolean(reason);
+  startBtn.title = reason;
+  startBtn.textContent = pendingRoomRequest?.event === "room:start" ? "Starting..." : "Start Game";
+  document.getElementById("readyBtn").disabled = !available || !inLobby;
+  const addBotBtn = document.getElementById("addBotBtn");
+  addBotBtn.disabled = !available || !inLobby || !Number.isFinite(maxPlayers) || players.length >= maxPlayers;
+  addBotBtn.textContent = pendingRoomRequest?.event === "room:add_bot" ? "Adding..." : "Add Bot";
+  removeBotBtn.disabled = !available || !inLobby || !players.some((player) => player.is_bot);
+  leaveBtn.disabled = !roomId || busy;
+  reopenBtn.disabled = !available || !["in_game", "game_over"].includes(currentRoomState?.status);
+  autoSaveToggle.disabled = !available || Boolean(currentRoomState?.auto_save);
+  downloadMemoriesBtn.disabled = !available || !currentRoomState?.supports_memories || inLobby;
+  createBtn.disabled = busy;
+  createBtn.textContent = pendingRoomRequest?.event === "room:create" ? "Creating..." : "Create Room";
+  document.querySelectorAll("#createRoomModal .game-item, #forestShuffleEnglishBtn, #forestShuffleChineseBtn, [data-catan-starfarers-setup]")
+    .forEach((button) => { button.disabled = busy; });
+  roomActionStatus.textContent = roomFeedbackMessage || (inLobby ? reason || "Ready to start." : "");
+  roomActionStatus.classList.toggle("room-feedback-error", roomFeedbackIsError);
+  createRoomStatus.textContent = roomFeedbackMessage;
+  createRoomStatus.classList.toggle("room-feedback-error", roomFeedbackIsError);
+  updateGameReconnectButton();
+}
+
+function ensureRoomConnection(requiresRoom = true) {
+  if (!socket.connected) {
+    setRoomFeedback("Connection lost. Reconnecting... Please try again when connected.", true);
+    socket.connect();
+    return false;
+  }
+  if (requiresRoom && (!roomId || !roomSessionReady)) {
+    setRoomFeedback(roomId ? "Reconnect to the room before playing." : "Create or join a room first.", true);
+    return false;
+  }
+  return !pendingRoomRequest;
+}
+
+function finishRoomRequest() {
+  pendingRoomRequest = null;
+  updateRoomActionButtons();
+}
+
+function sendRoomRequest(event, payload, message, requiresRoom = true) {
+  if (!ensureRoomConnection(requiresRoom)) return false;
+  const request = { event, roomId: payload.room_id };
+  pendingRoomRequest = request;
+  setRoomFeedback(message);
+  // Do not buffer room mutations while offline or replay them after reconnect.
+  socket.timeout(ROOM_REQUEST_TIMEOUT).emit(event, payload, (error) => {
+    if (pendingRoomRequest !== request) return;
+    finishRoomRequest();
+    if (error) {
+      roomSessionReady = false;
+      setRoomFeedback("No response from the server. Reconnect to check the room before trying again.", true);
+    } else {
+      setRoomFeedback();
+    }
+  });
+  return true;
+}
+
 function getPlayerName() {
   return playerName;
 }
@@ -1456,7 +1648,7 @@ function emitRoomReopen(activeRoomId) {
     log("Not in a room");
     return;
   }
-  socket.emit("room:reopen", { room_id: activeRoomId });
+  sendRoomRequest("room:reopen", { room_id: activeRoomId }, "Reopening room...");
 }
 
 function requestRoomReopen(event) {
@@ -1638,7 +1830,7 @@ function attemptJoinRoom(rid, options = {}) {
   }
   markPendingSeatClaim(rid, null);
   pendingJoinRequest = { rid, options };
-  socket.emit("room:join", { name, room_id: rid });
+  sendRoomRequest("room:join", { name, room_id: rid }, "Joining room...", false);
 }
 
 function attemptReconnect(rid, auth) {
@@ -1646,11 +1838,15 @@ function attemptReconnect(rid, auth) {
     log("Reconnect info missing");
     return;
   }
-  socket.emit("room:reconnect", {
+  if (roomSessionReady && socket.connected && rid === roomId) {
+    setRoomFeedback("Connected to room.");
+    return;
+  }
+  sendRoomRequest("room:reconnect", {
     room_id: rid,
     player_id: auth.player_id,
     reconnect_token: auth.reconnect_token,
-  });
+  }, "Reconnecting to room...", false);
 }
 
 function startCreateRoomFlow() {
@@ -1665,7 +1861,7 @@ function startCreateRoomFlow() {
     return;
   }
   if (!gameSelect || !createGameRow) {
-    socket.emit("room:create", { name, game_type: "cabo" });
+    createRoomForGame("cabo");
     return;
   }
   createRoomPending = true;
@@ -1803,6 +1999,7 @@ function renderRoomList(rooms) {
 }
 
 function resetRoomState() {
+  roomSessionReady = false;
   closeReopenConfirmModal(false);
   roomId = null;
   currentRoomState = null;
@@ -2082,10 +2279,28 @@ function resetRoomState() {
   setCreateGameRowVisible(false);
   updateRoomControlsForStatus(null);
   updateGameReconnectButton();
+  updateRoomActionButtons();
 }
 
 socket.on("connect", () => {
+  recordRoomConnectionEvent("connected");
+  roomSessionReady = false;
+  finishRoomRequest();
   requestRoomList();
+  const rid = roomId || readRoomStorage(LAST_ROOM_ID_KEY);
+  const auth = rid ? getRoomAuth(rid) : null;
+  if (auth?.player_id && auth?.reconnect_token) {
+    attemptReconnect(rid, auth);
+  } else {
+    setRoomFeedback("Connected. Select a game to create a room.");
+  }
+});
+
+socket.on("connect_error", (error) => {
+  recordRoomConnectionEvent("connect_error", error.message);
+  roomSessionReady = false;
+  finishRoomRequest();
+  setRoomFeedback("Cannot connect to the server. Retrying...", true);
 });
 
 socket.on("system:info", (data) => {
@@ -2093,6 +2308,7 @@ socket.on("system:info", (data) => {
     playerId = data.player_id;
   }
   if (data.reconnect_token && data.room_id && data.player_id) {
+    roomSessionReady = true;
     pendingJoinRequest = null;
     const nameValue = data.name || getPlayerName();
     setRoomAuth(data.room_id, {
@@ -2100,14 +2316,27 @@ socket.on("system:info", (data) => {
       reconnect_token: data.reconnect_token,
       name: nameValue,
     });
+    closeCreateRoomModal();
+    finishRoomRequest();
+    setRoomFeedback();
+    // The room snapshot arrives before identity, so refresh the player's controls.
+    if (currentRoomState) renderRoomState(currentRoomState);
   }
-  if (data.message) {
+  if (data.message && data.message !== "connected") {
     setConnectionInfo(data.message);
     log(data.message);
   }
 });
 
 socket.on("system:error", (data) => {
+  const failedRequest = pendingRoomRequest;
+  finishRoomRequest();
+  if (failedRequest?.event === "room:reconnect" &&
+      ["room not found", "player not found", "invalid reconnect token"].includes(data.message)) {
+    clearRoomAuth(failedRequest.roomId);
+    removeRoomStorage(LAST_ROOM_ID_KEY);
+    resetRoomState();
+  }
   const joinRequest = pendingJoinRequest;
   pendingJoinRequest = null;
   if (joinRequest && ["name already in use", "player offline (use reconnect)"].includes(data.message)) {
@@ -2121,15 +2350,24 @@ socket.on("system:error", (data) => {
       );
     }
   }
-  setConnectionInfo(`Error: ${data.message}`);
-  log(`Error: ${data.message}`);
+  setRoomFeedback(`Error: ${data.message}`, true);
   if (currentGameType === "ark_nova" && typeof window.showArkNovaError === "function") {
     window.showArkNovaError(data.message);
   }
 });
 
+socket.on("room:session_replaced", () => {
+  roomSessionReady = false;
+  finishRoomRequest();
+  setRoomFeedback("This room is open in another connection. Use Reconnect to return here.", true);
+});
+
 socket.on("room:state", (state) => {
   renderRoomState(state);
+  if (pendingRoomRequest?.event === "room:start" && state.status === "in_game") {
+    finishRoomRequest();
+    setRoomFeedback();
+  }
 });
 
 socket.on("room:list", (data) => {
@@ -2331,10 +2569,26 @@ cleanupEmptyRoomsBtn.addEventListener("click", () => {
   socket.emit("room:cleanup_empty", {});
 });
 
-socket.on("disconnect", () => {
+socket.on("disconnect", (reason) => {
+  recordRoomConnectionEvent("disconnected", reason);
+  roomSessionReady = false;
+  finishRoomRequest();
   pendingJoinRequest = null;
   cleanupEmptyRoomsBtn.disabled = false;
+  setRoomFeedback("Connection lost. Reconnecting...");
 });
+
+function recordRoomConnectionEvent(event, reason = "") {
+  const entry = {
+    time: new Date().toISOString(), event, reason,
+    transport: socket.io.engine?.transport?.name || null,
+    visibility: document.visibilityState,
+    online: navigator.onLine,
+  };
+  roomConnectionLog.push(entry);
+  if (roomConnectionLog.length > 30) roomConnectionLog.shift();
+  log(`Connection: ${event}${reason ? ` (${reason})` : ""} · ${entry.visibility} · ${entry.transport || "connecting"}`);
+}
 
 if (refreshRoomsBtn) {
   refreshRoomsBtn.addEventListener("click", () => {
@@ -2519,7 +2773,7 @@ document.getElementById("readyBtn").addEventListener("click", () => {
       nextReady = !me.ready;
     }
   }
-  socket.emit("room:ready", { room_id: roomId, ready: nextReady });
+  sendRoomRequest("room:ready", { room_id: roomId, ready: nextReady }, "Updating ready status...");
 });
 
 document.getElementById("startBtn").addEventListener("click", () => {
@@ -2538,7 +2792,7 @@ if (downloadMemoriesBtn) {
 }
 
 document.getElementById("addBotBtn").addEventListener("click", () => {
-  socket.emit("room:add_bot", { room_id: roomId });
+  sendRoomRequest("room:add_bot", { room_id: roomId }, "Adding bot...");
 });
 
 if (autoSaveToggle) {
@@ -2548,7 +2802,7 @@ if (autoSaveToggle) {
       autoSaveToggle.checked = false;
       return;
     }
-    socket.emit("room:auto_save", { room_id: roomId, auto_save: autoSaveToggle.checked });
+    sendRoomRequest("room:auto_save", { room_id: roomId, auto_save: autoSaveToggle.checked }, "Updating auto save...");
   });
 }
 
@@ -2558,7 +2812,7 @@ if (removeBotBtn) {
       log("Not in a room");
       return;
     }
-    socket.emit("room:remove_bot", { room_id: roomId });
+    sendRoomRequest("room:remove_bot", { room_id: roomId }, "Removing bot...");
   });
 }
 
@@ -2568,8 +2822,10 @@ if (leaveBtn) {
       log("Not in a room");
       return;
     }
-    socket.emit("room:leave", { room_id: roomId });
+    if (socket.connected) socket.emit("room:leave", { room_id: roomId });
+    removeRoomStorage(LAST_ROOM_ID_KEY);
     resetRoomState();
+    setRoomFeedback("Left room.");
     closeSeatClaimModal();
     log("Left room");
   });
@@ -2592,6 +2848,11 @@ document.querySelectorAll(".collapse-btn").forEach((btn) => {
     }
   });
 });
+
+gameListRetryBtn.addEventListener("click", applyGameFilters);
+updateRoomActionButtons();
+// Start once at page load; filtering and opening the picker share this request.
+fetchGameList().catch(() => {});
 
 window.addEventListener("resize", syncRoomControlsExplainButton);
 

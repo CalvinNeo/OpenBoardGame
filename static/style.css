@@ -4732,6 +4732,22 @@ h1 {
   display: none;
 }
 
+.room-feedback {
+  min-width: 0;
+  margin: 8px 0;
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.room-feedback:empty {
+  display: none;
+}
+
+.room-feedback-error {
+  color: #b42318;
+}
+
 #roomControlsPanel .room-icon-btn {
   display: inline-flex;
   align-items: center;
@@ -6024,6 +6040,37 @@ input, select {
 .hint {
   font-size: 12px;
   color: #6b7280;
+}
+
+.room-players-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.room-players-header h4 {
+  min-width: 0;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.room-player-actions {
+  display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
+  gap: 6px;
+}
+
+.room-player-actions > button {
+  min-width: 0;
+  min-height: 28px;
+  padding: 3px 6px;
+  font-size: 12px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 #playersList, #gamePlayers, #log {
@@ -8321,6 +8368,27 @@ body.log-open {
   max-width: 640px;
 }
 
+.create-room-modal .modal-header {
+  flex: 0 0 auto;
+  gap: 12px;
+  padding: 6px 12px;
+}
+
+.create-room-modal .modal-header h2 {
+  min-width: 0;
+  font-size: 18px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.create-room-modal .modal-header button {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 5px 10px;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
 .create-room-modal .modal-body {
   display: flex;
   min-height: 0;
@@ -8443,9 +8511,9 @@ body.log-open {
 .create-room-controls {
   display: grid;
   grid-template-columns: minmax(180px, 1fr) 150px 170px;
-  gap: 10px;
+  gap: 8px;
   align-items: end;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .visually-hidden {
@@ -8488,30 +8556,60 @@ body.log-open {
 }
 
 .create-room-type-filter {
-  display: grid;
   grid-column: 1 / -1;
   min-width: 0;
-  gap: 6px;
 }
 
 .create-room-type-filter-heading {
   display: flex;
+  min-height: 28px;
   gap: 8px;
-  align-items: baseline;
+  align-items: center;
+  padding: 4px 2px;
+  border-radius: 6px;
   color: #4b5563;
   font-size: 12px;
+  line-height: 1.3;
+  list-style: none;
+  cursor: pointer;
+}
+
+.create-room-type-filter-heading::-webkit-details-marker {
+  display: none;
+}
+
+.create-room-type-filter-heading::before {
+  content: "›";
+  flex: 0 0 auto;
+  font-size: 18px;
   line-height: 1;
 }
 
+.create-room-type-filter[open] > .create-room-type-filter-heading::before {
+  transform: rotate(90deg);
+}
+
+.create-room-type-filter-heading:hover {
+  background: #f8fafc;
+}
+
+.create-room-type-filter-heading:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.16);
+  outline-offset: 1px;
+}
+
 .create-room-type-filter-heading .hint {
-  color: #94a3b8;
+  min-width: 0;
+  color: #64748b;
   font-size: 11px;
+  overflow-wrap: anywhere;
 }
 
 .game-type-filters {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  margin-top: 6px;
 }
 
 .game-type-filter-chip {
@@ -8590,13 +8688,14 @@ body.log-open {
 .create-room-filter-control select {
   width: 100%;
   min-width: 0;
-  min-height: 44px;
-  padding: 9px 11px;
+  min-height: 36px;
+  padding: 6px 10px;
   border: 1px solid #d1d5db;
   border-radius: 10px;
   background: #fff;
   color: #111827;
   font-size: 16px;
+  line-height: 1.25;
 }
 
 .game-search-control input {
@@ -8725,22 +8824,9 @@ body.log-open {
     border-radius: 18px;
   }
 
-  .create-room-modal .modal-header {
-    flex: 0 0 auto;
-    padding: 12px 14px;
-  }
-
-  .create-room-modal .modal-header h2 {
-    font-size: 22px;
-  }
-
-  .create-room-modal .modal-header button {
-    min-height: 44px;
-  }
-
   .create-room-modal .modal-body {
     flex: 1 1 auto;
-    padding: 12px;
+    padding: 8px 12px;
     overflow: hidden;
   }
 
@@ -8750,15 +8836,11 @@ body.log-open {
 
   .create-room-controls {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 9px;
+    gap: 8px;
   }
 
   .game-search-control {
     grid-column: 1 / -1;
-  }
-
-  .create-room-type-filter {
-    gap: 4px;
   }
 
   .game-type-filters {
@@ -12174,6 +12256,20 @@ button.splendor-card {
     line-height: 1.2;
   }
 
+  #roomControlsPanel.collapsed {
+    padding: 4px 10px;
+  }
+
+  #roomControlsPanel.collapsed > .panel-header {
+    min-height: 24px;
+    margin-bottom: 0;
+  }
+
+  #roomControlsPanel.collapsed .room-controls-heading {
+    font-size: 16px;
+    line-height: 1.25;
+  }
+
   #roomControlsPanel .room-controls-body {
     gap: 10px;
   }
@@ -12217,19 +12313,17 @@ button.splendor-card {
     font-size: 13px;
   }
 
-  #roomControlsPanel.compact.collapsed > .panel-header {
-    margin-bottom: 0;
-  }
-
   #mobileExplainSlot:not(:empty) {
     display: flex;
   }
 
   #roomControlsPanel #mobileExplainSlot > button {
-    width: auto;
-    min-height: 0;
+    width: 24px;
+    min-width: 24px;
+    height: 24px;
+    min-height: 24px;
     margin: 0;
-    padding: 2px 8px;
+    padding: 0;
     border: 1px solid #ddd;
     border-radius: 4px;
     background: transparent;
@@ -12249,8 +12343,45 @@ button.splendor-card {
   }
 
   .game-panel {
-    padding: 12px;
+    padding: 8px 12px;
     width: 100%;
+  }
+
+  .game-panel > .panel-header {
+    gap: 4px 8px;
+    margin-bottom: 6px;
+  }
+
+  .game-panel-title {
+    gap: 6px;
+  }
+
+  .game-panel-title h2 {
+    font-size: 18px;
+    line-height: 1.2;
+  }
+
+  .game-panel > .panel-header > .panel-header-actions {
+    flex-wrap: wrap;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  #gameReconnectBtn,
+  .game-panel > .panel-header > .panel-header-actions > button {
+    min-height: 28px;
+    padding: 3px 8px;
+    font-size: 12px;
+    line-height: 1.2;
+  }
+
+  .game-panel > .panel-header > .panel-header-actions > button[id$="HelpBtn"],
+  .game-panel > .panel-header > .panel-header-actions > button[id$="ExplainBtn"] {
+    width: 28px;
+    min-width: 28px;
+    height: 28px;
+    min-height: 28px;
+    padding: 0;
   }
 
   .panel-header {
@@ -12464,14 +12595,20 @@ button.splendor-card {
     flex-wrap: wrap;
   }
 
-  .room-actions {
+  #roomPanel .room-actions {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    margin-bottom: 6px;
   }
 
-  .room-actions #leaveBtn {
-    grid-column: 1 / -1;
+  #roomPanel .room-actions > button {
+    min-width: 0;
+    min-height: 28px;
+    padding: 3px 4px;
+    font-size: 12px;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
   }
 
   .log-panel {

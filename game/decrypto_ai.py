@@ -3,11 +3,13 @@ import logging
 import math
 import os
 import re
+import threading
 import time
+from array import array
 from dataclasses import dataclass
 from itertools import chain, permutations
 from pathlib import Path
-from typing import Callable, Dict, Iterable, List, Optional, Tuple
+from typing import Callable, Dict, Iterable, List, Optional, Sequence, Tuple
 
 try:
     import jieba
@@ -47,6 +49,7 @@ _DIRECTNESS_PERCENTILE_MAX = 0.9
 
 _WORD_MODEL: Optional["BaseVectorModel"] = None
 _MODEL_MODE: Optional[str] = None
+_MODEL_LOCK = threading.Lock()
 
 DEFAULT_BOT_STRATEGY_ID = "native"
 
@@ -175,7 +178,7 @@ def _cosine(vec_a: Dict[str, float], vec_b: Dict[str, float]) -> float:
     return dot / (norm_a * norm_b)
 
 
-def _cosine_dense(vec_a: List[float], vec_b: List[float]) -> float:
+def _cosine_dense(vec_a: Sequence[float], vec_b: Sequence[float]) -> float:
     if not vec_a or not vec_b:
         return 0.0
     dot = 0.0
@@ -190,7 +193,7 @@ def _cosine_dense(vec_a: List[float], vec_b: List[float]) -> float:
     return dot / (norm_a * norm_b)
 
 
-def _average_dense_vectors(vectors: List[List[float]]) -> Optional[List[float]]:
+def _average_dense_vectors(vectors: List[Sequence[float]]) -> Optional[List[float]]:
     if not vectors:
         return None
     length = len(vectors[0])
@@ -265,14 +268,14 @@ class BaseVectorModel:
 
 
 class WordVectorModel(BaseVectorModel):
-    def __init__(self, vectors: Dict[str, List[float]], fallback_vocabulary: Optional[List[str]] = None) -> None:
+    def __init__(self, vectors: Dict[str, Sequence[float]], fallback_vocabulary: Optional[List[str]] = None) -> None:
         self.vectors = dict(vectors)
         self.vocabulary = list(vectors.keys())
         self.fallback_vocabulary = list(fallback_vocabulary or [])
         self._norms: Dict[str, float] = {}
         for word, vec in vectors.items():
             self._norms[word] = math.sqrt(sum(val * val for val in vec))
-        self._vector_cache: Dict[str, Tuple[Optional[List[float]], float]] = {}
+        self._vector_cache: Dict[str, Tuple[Optional[Sequence[float]], float]] = {}
         self._top_cache: Dict[str, List[Tuple[float, str]]] = {}
         self._cjk_vocab = {word for word in self.vectors if _contains_cjk(word)}
         self._max_cjk_len = max((len(word) for word in self._cjk_vocab), default=1)
@@ -293,7 +296,7 @@ class WordVectorModel(BaseVectorModel):
             return _greedy_cjk_segment(cleaned, self._cjk_vocab, self._max_cjk_len)
         return _TOKEN_RE.findall(cleaned.casefold())
 
-    def _vector_with_norm(self, text: str) -> Tuple[Optional[List[float]], float]:
+    def _vector_with_norm(self, text: str) -> Tuple[Optional[Sequence[float]], float]:
         if not isinstance(text, str):
             return None, 0.0
         cleaned = text.strip()
@@ -318,7 +321,7 @@ class WordVectorModel(BaseVectorModel):
         self._vector_cache[cache_key] = (avg, norm)
         return avg, norm
 
-    def vector(self, text: str) -> Optional[List[float]]:
+    def vector(self, text: str) -> Optional[Sequence[float]]:
         vec, _ = self._vector_with_norm(text)
         return vec
 
@@ -356,10 +359,10 @@ class WordVectorModel(BaseVectorModel):
         self._top_cache[cache_key] = scores
         return scores[:top_n]
 
-    def average_vectors(self, vectors: List[List[float]]) -> Optional[List[float]]:
+    def average_vectors(self, vectors: List[Sequence[float]]) -> Optional[List[float]]:
         return _average_dense_vectors(vectors)
 
-    def cosine_vectors(self, vec_a: List[float], vec_b: List[float]) -> float:
+    def cosine_vectors(self, vec_a: Sequence[float], vec_b: Sequence[float]) -> float:
         return _cosine_dense(vec_a, vec_b)
 
     def zero_vector(self) -> Optional[List[float]]:
@@ -458,8 +461,8 @@ def _load_embeddings_text(
     path: Path,
     max_words: Optional[int],
     cjk_only: bool,
-) -> Dict[str, List[float]]:
-    vectors: Dict[str, List[float]] = {}
+) -> Dict[str, array]:
+    vectors: Dict[str, array] = {}
     dim: Optional[int] = None
     start = time.perf_counter()
     try:
@@ -480,7 +483,9 @@ def _load_embeddings_text(
                 if cjk_only and not _contains_cjk(word):
                     continue
                 try:
-                    vec = [float(val) for val in parts[1:]]
+                    # Packed doubles retain the same precision without creating
+                    # one Python float object per dimension (72M at 240k x 300).
+                    vec = array("d", (float(val) for val in parts[1:]))
                 except ValueError:
                     continue
                 if dim is None:
@@ -519,8 +524,8 @@ def _load_embeddings_json(
     path: Path,
     max_words: Optional[int],
     cjk_only: bool,
-) -> Dict[str, List[float]]:
-    vectors: Dict[str, List[float]] = {}
+) -> Dict[str, array]:
+    vectors: Dict[str, array] = {}
     dim: Optional[int] = None
     start = time.perf_counter()
 
@@ -534,7 +539,7 @@ def _load_embeddings_json(
         if not isinstance(vec, list) or not vec:
             return
         try:
-            cleaned = [float(val) for val in vec]
+            cleaned = array("d", (float(val) for val in vec))
         except (TypeError, ValueError):
             return
         if dim is None:
@@ -598,7 +603,7 @@ def _load_embeddings_json(
     return vectors
 
 
-def _load_embeddings() -> Optional[Dict[str, List[float]]]:
+def _load_embeddings() -> Optional[Dict[str, array]]:
     config = _load_embedding_config()
     path = config.get("path")
     if not isinstance(path, Path) or not path.exists():
@@ -700,6 +705,15 @@ def _load_vocabulary() -> List[str]:
 
 
 def _get_model() -> BaseVectorModel:
+    if _WORD_MODEL is not None:
+        return _WORD_MODEL
+    # Bot searches run in worker threads. Serialize only first initialization;
+    # multiple rooms must share a single copy of the embedding model.
+    with _MODEL_LOCK:
+        return _initialize_model()
+
+
+def _initialize_model() -> BaseVectorModel:
     global _WORD_MODEL
     global _MODEL_MODE
     if _WORD_MODEL is None:
@@ -744,10 +758,10 @@ def _get_model() -> BaseVectorModel:
     return _WORD_MODEL
 
 
-def get_model_mode() -> str:
-    if _WORD_MODEL is None:
+def get_model_mode(load: bool = True) -> str:
+    if load and _WORD_MODEL is None:
         _get_model()
-    return _MODEL_MODE or "fallback"
+    return _MODEL_MODE or "not_loaded"
 
 
 def _history_by_slot(history: List[Dict]) -> Dict[int, List[str]]:

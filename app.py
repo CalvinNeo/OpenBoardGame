@@ -14,6 +14,7 @@ from typing import Dict, List, Optional
 
 import socketio
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from jsonschema import Draft7Validator, ValidationError
@@ -30,6 +31,9 @@ from game.tags import serialize_game_tags
 logger = logging.getLogger("openboardgame")
 sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
 fastapi_app = FastAPI()
+# Compress the large shared client before it crosses a mobile connection.
+# Socket.IO wraps this app, so polling and WebSocket traffic are unaffected.
+fastapi_app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=5)
 DEV_ORDER_PATH = Path(__file__).resolve().parent / "game" / "dev_order.json"
 CYBER_PICTURES_DIR = ".cyber_pictures"
 GUANDAN_CHECKPOINT_DIR = Path(__file__).resolve().parent / "assets" / "guandan" / "checkpoints"
@@ -389,10 +393,18 @@ def _seat_list_payload(room: Room) -> List[Dict]:
 
 
 async def _emit_room_state(room: Room) -> None:
+    game_def = _get_game_definition(room.game_type)
     payload = {
         "room_id": room.room_id,
         "status": room.status,
         "game_type": room.game_type,
+        "min_players": game_def.min_players if game_def else 1,
+        "max_players": game_def.max_players if game_def else len(room.players),
+        "player_counts": getattr(game_def.module, "supported_player_counts", None) if game_def else None,
+        "supports_memories": bool(game_def and any(
+            callable(getattr(game_def.module, name, None))
+            for name in ("download_memories", "build_memories_html")
+        )),
         "game_config": {key: value for key, value in room.game_config.items()
                         if room.game_type not in ("take_time", "eternal_decks", "ponzi_scheme") or key != "seed"},
         "auto_save": room.auto_save,
@@ -848,6 +860,19 @@ def _validate_schema_payload(payload: Dict, schema: Dict, label: str) -> Optiona
 
 
 _RUNTIME_HOOKS_INSTALLED = False
+_EVENT_LOOP_MONITOR: Optional[asyncio.Task] = None
+
+
+async def _monitor_event_loop() -> None:
+    while True:
+        started = time.monotonic()
+        await asyncio.sleep(1)
+        lag = time.monotonic() - started - 1
+        if lag >= 2:
+            logger.warning(
+                "server event loop delayed %.2fs; rooms=%d active_bot_games=%s",
+                lag, len(ROOMS), sorted({room.game_type for room in ROOMS.values() if room.bot_running}),
+            )
 
 
 def _install_runtime_hooks() -> None:
@@ -952,12 +977,22 @@ def _get_client_address(environ: Optional[Dict]) -> Optional[str]:
 
 @fastapi_app.on_event("startup")
 async def _on_startup() -> None:
+    global _EVENT_LOOP_MONITOR
     _install_runtime_hooks()
+    _EVENT_LOOP_MONITOR = asyncio.create_task(_monitor_event_loop())
     logger.info("Server startup complete.")
 
 
 @fastapi_app.on_event("shutdown")
 async def _on_shutdown() -> None:
+    global _EVENT_LOOP_MONITOR
+    if _EVENT_LOOP_MONITOR:
+        _EVENT_LOOP_MONITOR.cancel()
+        try:
+            await _EVENT_LOOP_MONITOR
+        except asyncio.CancelledError:
+            pass
+        _EVENT_LOOP_MONITOR = None
     logger.info("Server shutdown complete.")
 
 
@@ -1178,7 +1213,7 @@ async def disconnect(sid):
     if not room:
         return
     player = _find_player(room, session.get("player_id"))
-    if not player:
+    if not player or player.socket_id != sid:
         return
     player.connected = False
     player.socket_id = None
@@ -1330,12 +1365,16 @@ async def on_room_reconnect(sid, data):
     if player.reconnect_token != reconnect_token:
         await _send_error(sid, "invalid reconnect token")
         return
-    if player.connected:
-        await _send_error(sid, "player already connected")
-        return
     existing = SESSIONS.get(sid)
     if existing and (existing.get("room_id") != room_id or existing.get("player_id") != player_id):
         await _leave_session(sid)
+    # A suspended mobile connection can outlive its replacement until heartbeat
+    # expiry. A valid reconnect token transfers the seat immediately.
+    previous_sid = player.socket_id
+    if previous_sid and previous_sid != sid:
+        SESSIONS.pop(previous_sid, None)
+        await sio.leave_room(previous_sid, room_id)
+        await sio.emit("room:session_replaced", {"room_id": room_id}, to=previous_sid)
     player.seat_claimed = True
     player.connected = True
     player.socket_id = sid

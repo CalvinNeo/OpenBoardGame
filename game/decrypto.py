@@ -10,7 +10,6 @@ from game.decrypto_ai import (
     DEFAULT_BOT_CLUE_DIRECTNESS,
     DEFAULT_BOT_STRATEGY_ID,
     get_model_mode,
-    is_all_zero_similarity,
     normalize_clue_directness,
     normalize_bot_strategy_id,
     pick_decrypt_guess,
@@ -392,7 +391,9 @@ def _apply_round_results(state: Dict) -> None:
         for team_id in TEAM_IDS
     }
     has_bots = any(meta.get("is_bot") for meta in state.get("player_meta", {}).values())
-    model_mode = get_model_mode() if has_bots else None
+    # Round resolution runs on the server event loop. Diagnostics must never
+    # load the embedding model or run tokenization/similarity calculations here.
+    model_mode = get_model_mode(load=False) if has_bots else None
     mode_label = "离线词向量" if model_mode == "embeddings" else "fallback"
     for team_id in TEAM_IDS:
         data = state["round_data"][team_id]
@@ -423,13 +424,10 @@ def _apply_round_results(state: Dict) -> None:
             if decrypt_by and not decrypt_correct:
                 meta = state.get("player_meta", {}).get(decrypt_by, {})
                 if meta.get("is_bot"):
-                    all_zero_note = ""
-                    if is_all_zero_similarity(clues, keywords):
-                        all_zero_note = " 提示=相似度全0"
                     print(
                         f"[decrypto bot] 猜错了 (模式={mode_label}) "
                         f"类型=解密 目标队伍={team_id} 机器人={decrypt_by} "
-                        f"关键词={keywords} 线索={clues} 密码={code} 猜测={decrypt_guess}{all_zero_note}",
+                        f"关键词={keywords} 线索={clues} 密码={code} 猜测={decrypt_guess}",
                         flush=True,
                     )
 

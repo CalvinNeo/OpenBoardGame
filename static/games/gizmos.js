@@ -1,969 +1,682 @@
-let currentGizmosView = null;
-let gizmosResearchOrder = [];
-let gizmosExplainMode = false;
+(() => {
+    "use strict";
 
-const gizmosPanel = document.getElementById("gizmosPanel");
-const gizmosPhaseLabel = document.getElementById("gizmosPhase");
-const gizmosTurnLabel = document.getElementById("gizmosTurn");
-const gizmosBagCountLabel = document.getElementById("gizmosBagCount");
-const gizmosFinalRoundLabel = document.getElementById("gizmosFinalRound");
-const gizmosWinnerLabel = document.getElementById("gizmosWinner");
-const gizmosPrompt = document.getElementById("gizmosPrompt");
-const gizmosEnergyRow = document.getElementById("gizmosEnergyRow");
-const gizmosDisplay = document.getElementById("gizmosDisplay");
-const gizmosYou = document.getElementById("gizmosYou");
-const gizmosResearchWrap = document.getElementById("gizmosResearchWrap");
-const gizmosResearchCards = document.getElementById("gizmosResearchCards");
-const gizmosResearchSkipBtn = document.getElementById("gizmosResearchSkipBtn");
-const gizmosActions = document.getElementById("gizmosActions");
-const gizmosPlayers = document.getElementById("gizmosPlayers");
+    const panel = document.getElementById("gizmosPanel");
+    const byId = name => document.getElementById(`gizmos${name}`);
+    const colors = ["red", "yellow", "blue", "black"];
+    const energy = {
+        red: ["🔴", "Heat", "热能"], yellow: ["🟡", "Electric", "电能"],
+        blue: ["🔵", "Atomic", "原子能"], black: ["⚫", "Battery", "电池能"],
+        generic: ["🌈", "Any", "任意颜色"],
+    };
+    const panels = { file: "🗂️ 归档", pick: "🫳 取能量", build: "🛠️ 建造", converter: "🔁 转换器", upgrade: "➕ 升级", generic: "✨ 特殊" };
+    const actionNames = { pick: "Pick · 取能量", file: "File · 归档", build: "Build · 建造", research: "Research · 研究" };
+    const actionTips = {
+        pick: "Pick（🫳 取能量）：从公共能量中拿 1 颗，放入自己的储能区。匹配的取能量装置可以触发。",
+        file: "File（🗂️ 归档）：把一张市场卡保留在自己的档案中，不支付建造费用。以后再用一个建造行动启动它。",
+        build: "Build（🛠️ 建造）：支付能量，启动市场或档案中的装置。绿色标记表示目前可以建造；费用和转换器会自动结算。",
+        research: "Research（🔍 研究）：选一个等级，查看至多等于研究力的卡。建造或归档其中 1 张，也可以全部放回。",
+    };
+    let view = null;
+    let roomKey = null;
+    let version = null;
+    let mode = "pick";
+    let marketSource = "display";
+    let level = 1;
+    let selection = null;
+    let pickedColor = null;
+    let researchOrder = [];
+    let pending = false;
+    let pendingTimer = null;
+    let explaining = false;
+    let suppressClick = false;
+    let suppressTimer = null;
+    let tooltipTarget = null;
+    let tooltipTimer = null;
+    let returnFocus = null;
+    let history = [];
+    let lastBotAction = "";
+    let cardCatalog = new Map();
+    const openPlayers = new Set();
+    const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+    const self = () => view?.players.find(player => player.player_id === view.you);
+    const playerName = id => view?.players.find(player => player.player_id === id)?.name || "Player";
+    const isTurn = () => !!view && view.current_turn === view.you && !view.game_over;
+    const can = action => !pending && !!view?.legal_actions.includes(action);
+    const activeCards = player => Object.values(player?.active || {}).flat();
+    const energyName = color => energy[color] ? `${energy[color][1]}（${energy[color][0]} ${energy[color][2]}）` : color;
+    const icons = list => (list || colors).map(color => energy[color]?.[0] || "").join(" / ");
+    const allCards = () => [...Object.values(view?.display || {}).flat().filter(Boolean), ...(self()?.archive || []), ...(view?.prompt?.research?.cards || [])];
+    const attributes = tip => `data-gizmos-tip="${esc(tip)}" data-gizmos-explain="${esc(tip)}"`;
+    const info = (label, tip, className = "") => `<button type="button" class="gizmos-info ${className}" data-ui="tip" ${attributes(tip)} aria-label="${esc(tip)}">${label}</button>`;
+    const control = (label, ui, { disabled = false, tip = "", extra = "", className = "", key = ui } = {}) =>
+        `<button type="button" class="gizmos-control ${className}" data-ui="${ui}" data-focus="${esc(key)}" ${tip ? attributes(tip) : ""} ${extra} ${disabled ? "disabled" : ""}>${label}</button>`;
 
-const gizmosHeaderActions = document.getElementById("gizmosHeaderActions");
-const gizmosHelpBtn = document.getElementById("gizmosHelpBtn");
-const gizmosExplainBtn = document.getElementById("gizmosExplainBtn");
-const gizmosHelpModal = document.getElementById("gizmosHelpModal");
-const gizmosHelpModalCloseBtn = document.getElementById("gizmosHelpModalCloseBtn");
-const gizmosHelpContent = document.getElementById("gizmosHelpContent");
-const gizmosExplainModal = document.getElementById("gizmosExplainModal");
-const gizmosExplainModalCloseBtn = document.getElementById("gizmosExplainModalCloseBtn");
-const gizmosExplainContent = document.getElementById("gizmosExplainContent");
+    const helpHTML = `
+        <h3>从第一回合开始</h3>
+        <ol><li>每回合先做 <strong>1 个基础行动</strong>：Pick（🫳 取能量）、File（🗂️ 归档）、Build（🛠️ 建造）或 Research（🔍 研究）。先点行动入口，再选能量／卡牌，最后确认。</li>
+        <li>没有能量时，可以先取能量；也可以归档一张想建的卡，触发初始装置，抽取随机能量。</li>
+        <li>例如：归档卡牌 → 初始装置触发 → 点击 Resolve → 抽 1 颗随机能量。联动结束后自动轮到下一位。</li></ol>
+        <h3>四个行动</h3>
+        <ul>${Object.values(actionTips).map(tip => `<li>${tip}</li>`).join("")}</ul>
+        <h3>能量与费用</h3>
+        <p>${colors.map(energyName).join("、")}。Any（🌈）表示任意颜色。Storage（📦）是储能上限；满了就不能再取能量。卡上的 Cost 是印刷费用；升级折扣和 Converter（🔁 转换器）在确认建造时自动结算。以卡上的「可建造」为准。</p>
+        <h3>连锁怎么结算</h3>
+        <p>触发后，主界面会列出本次可结算的装置。可以决定结算顺序；同一装置每回合最多使用一次。灰色效果当前无法执行，可在 Explain 中查看原因。额外取能量、归档、研究或免费建造不是新的基础行动。End chain 会放弃剩余可选效果。</p>
+        <p>「联动参考」只列出与所选行动相关的装置，未扣除本回合已经使用的装置；实际能触发哪些，以结算区为准。</p>
+        <h3>研究与归档</h3>
+        <p>Research（🔍 研究）先选等级，再保留 1 张：Build 建造需能支付费用；File 归档需有空位且未被装置禁用。Return all 可以全不留。用 Earlier / Later 调整放回顺序：第 1 张放到牌库最底部。研究选牌只对当前研究者可见。档案和储存的能量在此版本中公开。</p>
+        <h3>计分与结束</h3>
+        <p>Points（⭐）是卡牌分数与 VP tokens（🏅 分数标记）之和；Projected（🏁）还包括当前可见的终局奖励。有人拥有 16 个装置（含初始装置），或 4 个 Level 3（三级）装置，触发最后一轮。补完该轮后比较最终分数，结果会保留供查看。</p>
+        <h3>查看与操作</h3>
+        <p>卡面上方是费用与分数，中间依次是「什么时候触发 → 得到什么」。Your machine 显示已建装置；Table 展开后可看对手的公开装置和档案。🤖 表示 AI。Activity 保留最近的行动记录。</p>
+        <p>鼠标悬停图标可查看说明；手机点击图标或 ⓘ，浮动说明会在 3 秒后消失。再次点击其他说明会替换内容。点击空白或按 Esc 取消选择。Explain 模式下，点击灰色按钮也可查看说明，不会执行行动；Esc 退出。对话框同样支持 Esc。</p>
+        <p class="gizmos-note">此版本使用近似官方的卡池，并非官方卡牌的逐张复刻。</p>`;
 
-const GIZMOS_ENERGY_LABELS = {
-  red: "🔴 Heat",
-  yellow: "🟡 Electric",
-  blue: "🔵 Atomic",
-  black: "⚫ Battery",
-  generic: "🌈 Any",
-};
-
-const GIZMOS_PANEL_LABELS = {
-  file: "🗂️ File",
-  pick: "🫳 Pick",
-  build: "🛠️ Build",
-  converter: "🔁 Converter",
-  upgrade: "➕ Upgrade",
-  generic: "✨ Generic",
-};
-
-const GIZMOS_LOCATION_LABELS = {
-  display: "🪟 Display",
-  archive: "🗂️ Archive",
-  research: "🔍 Research",
-  active: "⚙️ Active Gizmo",
-  player: "👥 Player Summary",
-  lab: "🧪 Your Lab",
-};
-
-const GIZMOS_HELP_HTML = `
-  <h3>🎯 Goal</h3>
-  <p>Build the strongest machine (<strong>🛠️ Gizmo</strong>) chain. The game ends when someone builds a 4th Level 3 Gizmo or reaches 16 total Gizmos, then the round finishes and total points decide the winner.</p>
-
-  <h3>📋 Base Actions</h3>
-  <ul>
-    <li><strong>🗂️ File</strong>: take one <strong>🪟 display</strong> card into your <strong>🗂️ Archive</strong>.</li>
-    <li><strong>🫳 Pick</strong>: take one visible energy from the row (🔴 🟡 🔵 ⚫).</li>
-    <li><strong>🛠️ Build</strong>: build a Gizmo from <strong>🪟 display</strong> or <strong>🗂️ Archive</strong> by paying energy.</li>
-    <li><strong>🔍 Research</strong>: draw from one level deck, then <strong>🗂️ File</strong> or <strong>🛠️ Build</strong> one of those cards, or keep none.</li>
-  </ul>
-
-  <h3>⚡ Combos</h3>
-  <p>Built Gizmos trigger after matching actions (<strong>🗂️ File</strong> / <strong>🫳 Pick</strong> / <strong>🛠️ Build</strong> / <strong>🔍 Research</strong>, etc.). Resolve them in the order the game offers during the chain. This implementation auto-computes build payments and <strong>🔁 converter</strong> usage for you.</p>
-
-  <h3>📌 Important Notes</h3>
-  <ul>
-    <li><strong>🗂️ Archive</strong> and stored energy are public in this digital implementation.</li>
-    <li><strong>🔍 Research</strong> return order matters: leftmost card in the Research area will go deepest to the bottom.</li>
-    <li>This version prioritizes full gameplay flow. The card pool is a near-official implementation, not a scanned card-for-card reproduction.</li>
-  </ul>
-`;
-
-function gizmosTitleHasLeadingEmoji(title) {
-  const t = (title || "").trim();
-  if (!t) return false;
-  return /^(\p{Extended_Pictographic}|\uD83C[\uDF00-\uDFFF]|\uD83D[\uDC00-\uDDFF]|\uD83E[\uDD00-\uDDFF])/u.test(t);
-}
-
-function gizmosExplainTitleWithIcon(title) {
-  if (title == null || title === "") return "💡 Explanation";
-  if (typeof title !== "string") return String(title);
-  if (gizmosTitleHasLeadingEmoji(title)) return title;
-  const known = {
-    Explanation: "💡 Explanation",
-    "Your Lab": "🧪 Your Lab",
-    "File This Gizmo": "🗂️ File This Gizmo",
-    "Bonus File": "🗂️ Bonus File",
-    "Build This Gizmo": "🛠️ Build This Gizmo",
-    "Free Build This Gizmo": "🛠️ Free Build This Gizmo",
-    "Build From Archive": "🛠️ Build From Archive",
-    "Free Build From Archive": "🛠️ Free Build From Archive",
-    "Move Left": "⬅️ Move Left",
-    "Move Right": "➡️ Move Right",
-    "Build Researched Card": "🛠️ Build Researched Card",
-    "File Researched Card": "🗂️ File Researched Card",
-    "Resolve Triggered Gizmo": "⚡ Resolve Triggered Gizmo",
-    "End Chain": "🔗 End Chain",
-    "Pass Turn": "⏭️ Pass Turn",
-    "Skip Research Choice": "🔍 Skip Research Choice",
-  };
-  if (known[title]) return known[title];
-  if (/^Research Level \d$/.test(title)) return `🔍 ${title}`;
-  return title;
-}
-
-function gizmosCan(view, action) {
-  return Array.isArray(view && view.legal_actions) && view.legal_actions.includes(action);
-}
-
-function gizmosSelf(view) {
-  if (!view || !Array.isArray(view.players)) return null;
-  return view.players.find((player) => player.player_id === view.you) || null;
-}
-
-function gizmosFindPlayer(view, playerId) {
-  if (!view || !Array.isArray(view.players)) return null;
-  return view.players.find((player) => player.player_id === playerId) || null;
-}
-
-function clearGizmosState() {
-  currentGizmosView = null;
-  gizmosResearchOrder = [];
-  exitGizmosExplainMode();
-  if (gizmosPhaseLabel) gizmosPhaseLabel.textContent = "-";
-  if (gizmosTurnLabel) gizmosTurnLabel.textContent = "-";
-  if (gizmosBagCountLabel) gizmosBagCountLabel.textContent = "-";
-  if (gizmosFinalRoundLabel) gizmosFinalRoundLabel.textContent = "-";
-  if (gizmosWinnerLabel) gizmosWinnerLabel.textContent = "-";
-  if (gizmosPrompt) gizmosPrompt.textContent = "Waiting for state…";
-  if (gizmosEnergyRow) gizmosEnergyRow.innerHTML = "";
-  if (gizmosDisplay) gizmosDisplay.innerHTML = "";
-  if (gizmosYou) gizmosYou.innerHTML = "";
-  if (gizmosActions) gizmosActions.innerHTML = "";
-  if (gizmosPlayers) gizmosPlayers.innerHTML = "";
-  if (gizmosResearchCards) gizmosResearchCards.innerHTML = "";
-  if (gizmosResearchWrap) gizmosResearchWrap.classList.add("hidden");
-  if (gizmosHelpModal) setModalVisible(gizmosHelpModal, false);
-  if (gizmosExplainModal) setModalVisible(gizmosExplainModal, false);
-}
-
-function showGizmosHeaderActions(show) {
-  if (!gizmosHeaderActions) return;
-  gizmosHeaderActions.style.display = show ? "flex" : "none";
-  if (!show) {
-    exitGizmosExplainMode();
-    if (gizmosHelpModal) setModalVisible(gizmosHelpModal, false);
-    if (gizmosExplainModal) setModalVisible(gizmosExplainModal, false);
-  }
-}
-
-function openGizmosHelpModal() {
-  if (!gizmosHelpContent || !gizmosHelpModal) return;
-  gizmosHelpContent.innerHTML = GIZMOS_HELP_HTML;
-  setModalVisible(gizmosHelpModal, true);
-}
-
-function setGizmosExplanation(node, explanation) {
-  if (!node || !explanation) return node;
-  const details = Array.isArray(explanation.details) ? explanation.details : [];
-  node.dataset.gizmosExplain = "1";
-  node.dataset.gizmosExplainTitle = explanation.title || "";
-  node.dataset.gizmosExplainDescription = explanation.description || "";
-  node.dataset.gizmosExplainDetails = JSON.stringify(details);
-  return node;
-}
-
-function buildGizmosExplanationHtml(explanation) {
-  const details = Array.isArray(explanation && explanation.details) ? explanation.details : [];
-  const listHtml = details.length ? `<ul>${details.map((item) => `<li>${item}</li>`).join("")}</ul>` : "";
-  const description = explanation && explanation.description ? `<p>${explanation.description}</p>` : "";
-  const rawTitle = (explanation && explanation.title) || "Explanation";
-  const title = gizmosExplainTitleWithIcon(rawTitle);
-  return `
-    <h4>${title}</h4>
-    ${description}
-    ${listHtml}
-  `;
-}
-
-function showGizmosExplanation(explanation) {
-  if (!gizmosExplainContent || !gizmosExplainModal) return;
-  gizmosExplainContent.innerHTML = buildGizmosExplanationHtml(explanation);
-  setModalVisible(gizmosExplainModal, true);
-}
-
-function gizmosExplainableNodes() {
-  return Array.from(document.querySelectorAll("#gizmosPanel [data-gizmos-explain]"));
-}
-
-function updateGizmosExplainModeClasses(enabled) {
-  gizmosExplainableNodes().forEach((node) => {
-    node.classList.toggle("has-explanation", enabled);
-  });
-}
-
-function toggleGizmosExplainMode() {
-  gizmosExplainMode = !gizmosExplainMode;
-  document.body.classList.toggle("gizmos-explain-mode", gizmosExplainMode);
-  updateGizmosExplainModeClasses(gizmosExplainMode);
-  if (gizmosExplainBtn) {
-    gizmosExplainBtn.classList.toggle("active", gizmosExplainMode);
-  }
-}
-
-function exitGizmosExplainMode() {
-  if (!gizmosExplainMode) return;
-  gizmosExplainMode = false;
-  document.body.classList.remove("gizmos-explain-mode");
-  updateGizmosExplainModeClasses(false);
-  if (gizmosExplainBtn) {
-    gizmosExplainBtn.classList.remove("active");
-  }
-}
-
-function gizmosFindExplainTargetFromNode(node) {
-  if (!node || !node.closest) return null;
-  const target = node.closest("[data-gizmos-explain]");
-  if (!target || !(gizmosPanel && gizmosPanel.contains(target))) return null;
-  return target;
-}
-
-function gizmosFindButtonAtPoint(x, y) {
-  if (typeof document.elementsFromPoint !== "function") return null;
-  const elements = document.elementsFromPoint(x, y);
-  for (const element of elements) {
-    if (element instanceof HTMLButtonElement) return element;
-    if (element.closest) {
-      const button = element.closest("button");
-      if (button instanceof HTMLButtonElement) return button;
+    function effectText(effect, fallback = "") {
+        if (!effect) return fallback;
+        const n = Number(effect.amount || 1);
+        const source = energy[effect.source]?.[0] || "";
+        const labels = {
+            draw_random: `随机抽 ${n} 颗能量`, pick_energy: `取 ${n} 颗${effect.colors?.length < 4 ? ` ${icons(effect.colors)}` : "任意"}能量`,
+            gain_vp: `获得 ${n} 分`, perform_file: "额外归档 1 张卡", perform_research: "额外研究 1 次", free_build_level1: "免费建造 1 个一级装置",
+            upgrade_storage: `储能上限 +${n}`, upgrade_file: `档案上限 +${n}`, upgrade_research: `研究力 +${n}`,
+            upgrade_disable_file: "之后不能归档", upgrade_disable_research: "之后不能研究", discount_level2: `二级建造费用 −${n}`,
+            discount_archive: `从档案建造费用 −${n}`, discount_research: `研究建造费用 −${n}`, extra_score_storage: "终局按储存能量计分",
+            extra_score_tokens: "终局按分数标记计分", convert_specific_to_any: `${source} 可当任意颜色`, convert_any_to_any: "1 颗能量可改为任意颜色",
+            convert_specific_to_double: `1 颗 ${source} 抵 2 颗 ${source}`, convert_specific_up_to_two_to_any: `1–2 颗 ${source} 可改为任意颜色`,
+            convert_each_specific_to_double: `${icons(effect.sources)} 各可将 1 颗抵 2 颗`,
+        };
+        return labels[effect.kind] || fallback || effect.kind;
     }
-  }
-  return null;
-}
 
-function gizmosFindExplainTargetAtPoint(x, y) {
-  if (typeof document.elementsFromPoint !== "function") return null;
-  const elements = document.elementsFromPoint(x, y);
-  for (const element of elements) {
-    const target = gizmosFindExplainTargetFromNode(element);
-    if (target) return target;
-  }
-  return null;
-}
-
-function gizmosIgnoredExplainButton(button) {
-  return button === gizmosExplainBtn
-    || button === gizmosHelpBtn
-    || button === gizmosHelpModalCloseBtn
-    || button === gizmosExplainModalCloseBtn;
-}
-
-function gizmosExplanationFromNode(node) {
-  if (!node || !node.dataset) return null;
-  let details = [];
-  if (node.dataset.gizmosExplainDetails) {
-    try {
-      details = JSON.parse(node.dataset.gizmosExplainDetails);
-    } catch (_error) {
-      details = [];
+    function triggerText(card) {
+        const trigger = card.trigger;
+        if (!trigger) return card.panel === "converter" ? "支付建造费用时" : card.panel === "upgrade" ? "建造后持续生效" : "建造时 / 终局";
+        return ({ on_file: "归档后", on_pick: `取 ${icons(trigger.colors)} 后`, on_build: `建造 ${icons(trigger.colors)} 后`,
+            on_build_from_archive: "从档案建造后", on_build_level: `建造 ${trigger.level} 级后` })[trigger.kind] || "触发时";
     }
-  }
-  return {
-    title: node.dataset.gizmosExplainTitle || "Explanation",
-    description: node.dataset.gizmosExplainDescription || "",
-    details,
-  };
-}
 
-function gizmosCardExplanation(card, location) {
-  const locationLabel = GIZMOS_LOCATION_LABELS[location] || location;
-  const details = [
-    `Location: ${locationLabel}`,
-    `Panel: ${GIZMOS_PANEL_LABELS[card.panel] || card.panel}`,
-    `Energy: ${GIZMOS_ENERGY_LABELS[card.energy_type] || card.energy_icon || card.energy_type || "Unknown"}`,
-    `Cost: ${card.cost}`,
-    `VP: ${card.vp}`,
-  ];
-  if (location === "display") {
-    details.push("Use the buttons on the card to File it or Build it when legal.");
-  } else if (location === "archive") {
-    details.push("Archive cards are public in this digital version.");
-  } else if (location === "research") {
-    details.push("Cards you do not keep go back to the bottom of the deck in the chosen order.");
-  } else if (location === "active") {
-    details.push("Built Gizmos can trigger later in the same turn if their condition matches.");
-  }
-  const panelPrefix = card.panel_icon ? `${card.panel_icon} ` : "";
-  return {
-    title: `${panelPrefix}${card.title}`.trim(),
-    description: card.text,
-    details,
-  };
-}
+    function cardDescription(card) {
+        return `${panels[card.panel] || card.panel} · Level ${card.level}（等级）；Cost ${card.cost} ${energyName(card.energy_type)}；Points（⭐）${card.vp}。${triggerText(card)}：${effectText(card.effect, card.text)}`;
+    }
 
-function gizmosSyncResearchOrder(cards) {
-  const ids = Array.isArray(cards) ? cards.map((card) => card.id) : [];
-  if (ids.length === 0) {
-    gizmosResearchOrder = [];
-    return;
-  }
-  const current = gizmosResearchOrder.filter((cardId) => ids.includes(cardId));
-  ids.forEach((cardId) => {
-    if (!current.includes(cardId)) current.push(cardId);
-  });
-  gizmosResearchOrder = current;
-}
+    function fileReason() {
+        const you = self();
+        if (!you?.can_file) return "装置效果已禁用归档";
+        if ((you.archive || []).length >= you.file_limit) return `档案已满（${you.file_limit}/${you.file_limit}）`;
+        return "当前不能归档";
+    }
 
-function gizmosMoveResearchCard(cardId, delta) {
-  const index = gizmosResearchOrder.indexOf(cardId);
-  const nextIndex = index + delta;
-  if (index < 0 || nextIndex < 0 || nextIndex >= gizmosResearchOrder.length) return;
-  const next = [...gizmosResearchOrder];
-  const [card] = next.splice(index, 1);
-  next.splice(nextIndex, 0, card);
-  gizmosResearchOrder = next;
-  renderGizmosResearch(currentGizmosView);
-}
+    function unavailableReason(action) {
+        if (pending) return "正在等待行动确认";
+        if (view?.game_over) return "本局已结束";
+        if (!isTurn()) return `等待 ${playerName(view?.current_turn)} 行动`;
+        if (view.phase !== "action") return "先完成当前连锁 / 研究";
+        const you = self();
+        if (action === "pick") return (you?.storage.length >= you?.storage_limit) ? "储能已满，先建造腾出空间" : "公共能量暂时为空";
+        if (action === "file") return fileReason();
+        if (action === "build") return "能量 / 转换器不足，可先取能量";
+        if (action === "research") return you?.can_research ? "研究牌库已空" : "装置效果已禁用研究";
+        return "当前不可用";
+    }
 
-function gizmosResolveResearch(choice, cardId) {
-  if (!currentGizmosView || !currentGizmosView.prompt || !currentGizmosView.prompt.research) return;
-  const returnOrder = choice === "none" ? [...gizmosResearchOrder] : gizmosResearchOrder.filter((id) => id !== cardId);
-  const payload = {
-    type: "resolve_research",
-    choice,
-    return_order: returnOrder,
-  };
-  if (choice !== "none" && cardId) {
-    payload.card_id = cardId;
-  }
-  sendAction(payload);
-}
+    function actionAvailable(action) {
+        if (view?.phase !== "action") return false;
+        return action === "build" ? can("build_display") || can("build_archive") : can({ pick: "pick_energy", file: "file_display", research: "research" }[action]);
+    }
 
-function createGizmosButton(label, onClick, disabled = false, variant = "", explanation = null) {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.textContent = label;
-  button.className = variant ? `gizmos-btn ${variant}` : "gizmos-btn";
-  button.disabled = !!disabled;
-  setGizmosExplanation(button, explanation);
-  if (!disabled) {
-    button.addEventListener("click", onClick);
-  }
-  return button;
-}
+    function cardCanBuild(card, source) {
+        return card.buildable && (source === "research" ? can("resolve_research") : can(`build_${source}`));
+    }
 
-function createGizmosEnergyButton(view, color) {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = `gizmos-energy-chip color-${color}`;
-  button.textContent = GIZMOS_ENERGY_LABELS[color] || color;
+    function cardCanFile(source) {
+        if (source === "display") return can("file_display");
+        const you = self();
+        return source === "research" && can("resolve_research") && you?.can_file && you.archive.length < you.file_limit;
+    }
 
-  const prompt = view.prompt || {};
-  const canPick = gizmosCan(view, "pick_energy");
-  let enabled = false;
-  if (canPick && prompt.phase === "action") {
-    enabled = true;
-  } else if (canPick && prompt.phase === "bonus_action" && prompt.bonus_context && prompt.bonus_context.kind === "pick") {
-    const allowed = Array.isArray(prompt.bonus_context.allowed_colors) ? prompt.bonus_context.allowed_colors : [];
-    enabled = allowed.includes(color);
-  }
-  button.disabled = !enabled;
-  setGizmosExplanation(button, {
-    title: GIZMOS_ENERGY_LABELS[color] || color,
-    description: "Take this visible energy from the row. In Explain mode, this chip only shows what the action does and does not actually pick it.",
-    details: [
-      "Picking energy is one of the four base actions.",
-      enabled
-        ? "This color is currently legal to pick."
-        : "This color is not currently legal in the current phase or bonus restriction.",
-    ],
-  });
-  if (enabled) {
-    button.addEventListener("click", () => sendAction({ type: "pick_energy", color }));
-  }
-  return button;
-}
+    function relatedCards(kind, color, card, source) {
+        return activeCards(self()).filter(entry => {
+            const trigger = entry.trigger;
+            if (!trigger) return false;
+            if (kind === "file") return trigger.kind === "on_file";
+            if (kind === "pick") return trigger.kind === "on_pick" && (trigger.colors || []).includes(color);
+            if (kind !== "build") return false;
+            if (trigger.kind === "on_build_from_archive") return source === "archive";
+            if (trigger.kind === "on_build_level") return trigger.level === card?.level;
+            return trigger.kind === "on_build" && (card?.energy_type === "generic" || (trigger.colors || []).includes(card?.energy_type));
+        });
+    }
 
-function createGizmosCard(view, card, location) {
-  const cardEl = document.createElement("article");
-  cardEl.className = `gizmos-card level-${card.level}`;
-  setGizmosExplanation(cardEl, gizmosCardExplanation(card, location));
+    function relatedHTML(kind, color, card, source) {
+        const matches = relatedCards(kind, color, card, source);
+        if (!matches.length) return "";
+        const text = matches.slice(0, 2).map(item => effectText(item.effect, item.text)).join("；");
+        return `<p class="gizmos-related">⚡ 联动参考：${esc(text)}${matches.length > 2 ? `，另 ${matches.length - 2} 个` : ""}${info("ⓘ", "⚡ 联动参考：这些装置的触发条件匹配所选行动。每回合只能用一次；最终以结算区的可用效果为准。")}</p>`;
+    }
 
-  const top = document.createElement("div");
-  top.className = "gizmos-card-top";
-  top.innerHTML = `<span>${card.panel_icon} ${GIZMOS_PANEL_LABELS[card.panel] || card.panel}</span><span>${card.energy_icon} Cost ${card.cost}</span>`;
-  cardEl.appendChild(top);
+    function resourceHTML(player, compact = false) {
+        return colors.map(color => {
+            const count = player.storage.filter(item => item === color).length;
+            const [icon, name] = energy[color];
+            return info(`<span class="gizmos-orb color-${color}">${icon}</span><span>${compact ? "" : `<small>${name}</small>`}<strong>${count}</strong></span>`, `${energyName(color)}：${player.name} 储存 ${count} 颗，用于支付相应颜色的建造费用。`, "gizmos-resource");
+        }).join("");
+    }
 
-  const title = document.createElement("div");
-  title.className = "gizmos-card-title";
-  title.textContent = card.title;
-  cardEl.appendChild(title);
+    function renderHeader() {
+        const you = self();
+        if (!you) return;
+        byId("Standing").innerHTML = view.players.map(player => `<span class="gizmos-standing-player ${player.player_id === view.current_turn ? "is-current" : ""}"><span>${esc(player.name)}${player.is_bot ? " 🤖" : player.player_id === view.you ? " · You" : ""}</span><strong>${player.projected_score}<small> pts</small></strong></span>`).join("");
+        byId("Resources").innerHTML = `<span class="gizmos-resource-label">Your energy</span><div class="gizmos-resource-colors">${resourceHTML(you)}</div><div class="gizmos-capacities">
+            ${info(`📦 <strong>${you.storage.length}/${you.storage_limit}</strong>`, "Storage（📦 储能）：当前颗数 / 上限。储能满时不能再取能量。")}
+            ${info(`🗂️ <strong>${you.archive.length}/${you.file_limit}</strong>`, "Archive（🗂️ 档案）：已保留卡数 / 上限。档案满时不能归档，建造其中的卡可以腾出空位。")}
+            ${info(`🔍 <strong>${you.research_amount}</strong>`, "Research（🔍 研究力）：研究时最多查看的卡牌数量。")}
+            ${info(`⭐ <strong>${you.score_now}</strong>`, `Points（⭐ 分数）：卡牌分数和 VP tokens（🏅 分数标记）合计 ${you.score_now}；其中分数标记 ${you.vp_tokens_total}。含终局奖励的 Projected（🏁 预估总分）为 ${you.projected_score}。`)}
+            </div>`;
+    }
 
-  const meta = document.createElement("div");
-  meta.className = "gizmos-card-meta";
-  meta.innerHTML = `<span>LV ${card.level}</span><span>⭐ ${card.vp}</span>`;
-  cardEl.appendChild(meta);
-
-  const text = document.createElement("div");
-  text.className = "gizmos-card-text";
-  text.textContent = card.text;
-  cardEl.appendChild(text);
-
-  const controls = document.createElement("div");
-  controls.className = "gizmos-card-actions";
-
-  const prompt = view.prompt || {};
-  const canFile = gizmosCan(view, "file_display") && location === "display";
-  const canBuildDisplay = gizmosCan(view, "build_display") && location === "display";
-  const canBuildArchive = gizmosCan(view, "build_archive") && location === "archive";
-  const isFreeLevel1 = prompt.phase === "bonus_action" && prompt.bonus_context && prompt.bonus_context.kind === "build_free_level1";
-
-  if (canFile && prompt.phase === "action") {
-    controls.appendChild(createGizmosButton(
-      "🗂️ File",
-      () => sendAction({ type: "file_display", card_id: card.id }),
-      false,
-      "",
-      {
-        title: "File This Gizmo",
-        description: "Move this display card into your Archive. Filing usually uses your base action.",
-        details: [
-          "Archive cards remain public in this implementation.",
-          "After filing, matching File Gizmos may trigger.",
-        ],
-      }
-    ));
-  }
-  if (canFile && prompt.phase === "bonus_action" && prompt.bonus_context && prompt.bonus_context.kind === "file") {
-    controls.appendChild(createGizmosButton(
-      "🗂️ File",
-      () => sendAction({ type: "file_display", card_id: card.id }),
-      false,
-      "",
-      {
-        title: "Bonus File",
-        description: "Resolve a bonus File and move this display card into your Archive.",
-        details: [
-          "This File comes from a triggered effect rather than your normal base action.",
-        ],
-      }
-    ));
-  }
-  if (canBuildDisplay) {
-    controls.appendChild(
-      createGizmosButton(
-        isFreeLevel1 ? "🛠️ Free Build" : "🛠️ Build",
-        () => sendAction({ type: "build_display", card_id: card.id }),
-        !card.buildable,
-        "",
-        {
-          title: isFreeLevel1 ? "Free Build This Gizmo" : "Build This Gizmo",
-          description: "Build this display card into your lab. The server auto-pays with your stored energy and any legal unused converters.",
-          details: [
-            isFreeLevel1 ? "This build ignores energy cost, but only works for Level 1 Gizmos." : "If this button is disabled, your current energy and converters cannot pay the cost.",
-            "After building, matching Build Gizmos may trigger.",
-          ],
+    function renderGuide() {
+        const phase = view.phase;
+        const ctx = view.prompt?.bonus_context;
+        let title = "你的回合 · 选择一个行动";
+        let text = "先点下方行动，再选能量或卡牌。每回合只做一个基础行动。";
+        let step = 0;
+        if (view.game_over) {
+            title = `🏁 ${view.winner.map(playerName).join("、") || "本局"}${view.winner.length ? " 获胜" : "结束"}`;
+            text = "最终分数与装置保留在下方，可展开查看。";
+            step = 2;
+        } else if (pending) {
+            title = "正在确认你的行动…";
+            text = "收到结果后会自动显示下一步。";
+        } else if (!isTurn()) {
+            const actor = view.players.find(player => player.player_id === view.current_turn);
+            title = `${actor?.is_bot ? "🤖" : "⏳"} ${playerName(view.current_turn)} 的回合`;
+            text = phase === "action" ? "可以先查看市场与自己的装置，等对方完成行动。" : "对方正在完成连锁 / 研究，结束后自动继续。";
+            step = 2;
+        } else if (phase === "choose_effect") {
+            const effects = view.prompt.pending_effects || [];
+            title = `⚡ 连锁触发 · 还有 ${effects.length} 个效果`;
+            text = "点击 Resolve 结算一个效果，再跟随下一步提示；End chain 会跳过剩余效果。";
+            step = 1;
+        } else if (phase === "bonus_action") {
+            title = "⚡ 继续完成额外行动";
+            text = ({ pick: `再取 ${ctx?.remaining || 1} 颗能量：点亮起的颜色，再确认。`, file: "从市场选择一张卡归档；不消耗新的基础行动。", research: "在下面选择研究等级。", build_free_level1: "从市场或档案选一个一级装置，免费建造。" })[ctx?.kind] || "完成当前效果后继续结算。";
+            step = 1;
+        } else if (phase === "research") {
+            title = "🔍 研究结果 · 最多保留 1 张";
+            text = "选一张卡建造或归档，也可以全部放回。放回顺序从左到右，第一张最深。";
+            step = 1;
+        } else if (pickedColor) {
+            title = `准备取 ${energyName(pickedColor)}`;
+            text = "点击能量区的确认按钮；点空白可重新选择。";
+        } else if (selection) {
+            title = "卡牌已选中 · 在卡下确认";
+            text = "Build 支付能量并启动装置；File 只保留卡牌，之后再建造。";
+        } else if (mode === "research") {
+            title = "研究 · 先选择等级";
+            text = `将查看至多 ${self()?.research_amount || 0} 张卡；高等级通常需要更多建造能量。`;
+        } else if (mode === "file") {
+            title = "归档 · 选择想留到以后的卡";
+            text = "卡牌不会立即生效；归档后，可以继续结算匹配的归档装置。";
+        } else if (mode === "build") {
+            title = "建造 · 寻找绿色「可建造」标记";
+            text = "市场或档案都可以选；建造后，装置会加入右侧的机器。";
+        } else if (!self()?.storage.length) {
+            text = "先取能量为建造做准备，或归档一张卡，触发初始装置抽取能量。";
         }
-      )
-    );
-  }
-  if (canBuildArchive) {
-    controls.appendChild(
-      createGizmosButton(
-        isFreeLevel1 ? "🛠️ Free Build" : "🛠️ Build",
-        () => sendAction({ type: "build_archive", card_id: card.id }),
-        !card.buildable,
-        "",
-        {
-          title: isFreeLevel1 ? "Free Build From Archive" : "Build From Archive",
-          description: "Build this archived card into your lab. The server auto-pays with your stored energy and any legal unused converters.",
-          details: [
-            "Archive cards remain public in this implementation.",
-            isFreeLevel1 ? "This build ignores cost, but only for Level 1 Gizmos." : "If this button is disabled, you cannot currently pay for this archived card.",
-          ],
+        if (view.final_round?.active && !view.game_over) text += " 最后一轮进行中。";
+        byId("Prompt").innerHTML = `<strong>${esc(title)}</strong><p>${esc(text)}</p>`;
+        panel.dataset.phase = phase;
+        panel.classList.toggle("gizmos-waiting", !isTurn());
+        byId("Steps").innerHTML = ["选择行动", "结算连锁", "下一位"].map((label, i) => `<span class="${step === i ? "is-current" : ""}" ${step === i ? 'aria-current="step"' : ""}><b>${i + 1}</b>${label}</span>`).join("");
+        const summaries = { pick: "拿 1 颗公共能量", file: "保留 1 张市场卡", build: "支付能量启动装置", research: "看牌，最多保留 1 张" };
+        byId("Actions").innerHTML = Object.keys(actionNames).map(action => {
+            const available = actionAvailable(action);
+            const reason = available ? summaries[action] : unavailableReason(action);
+            return control(`<strong>${actionNames[action]}</strong><small>${esc(reason)}</small>`, "mode", {
+                disabled: !available, className: `gizmos-action-choice ${mode === action && phase === "action" ? "is-selected" : ""}`,
+                key: `mode:${action}`, extra: `data-mode="${action}" aria-pressed="${mode === action && phase === "action"}"`,
+                tip: `${actionTips[action]} ${available ? "" : reason}`,
+            });
+        }).join("");
+    }
+
+    function renderEnergy() {
+        const allowed = view.prompt?.bonus_context?.allowed_colors || colors;
+        byId("BagCount").textContent = `Bag · ${view.energy_bag_count}`;
+        byId("EnergyRow").innerHTML = colors.map(color => {
+            const count = view.energy_row.filter(item => item === color).length;
+            const enabled = can("pick_energy") && count > 0 && (view.phase !== "bonus_action" || allowed.includes(color));
+            const [icon, name] = energy[color];
+            return control(`<span class="gizmos-marble color-${color}">${icon}</span><span class="gizmos-energy-name">${name}</span><span class="gizmos-energy-count">×${count}</span>`, "energy", {
+                disabled: !enabled, className: `gizmos-energy-option ${pickedColor === color ? "is-selected" : ""}`, key: `energy:${color}`,
+                extra: `data-color="${color}" aria-pressed="${pickedColor === color}"`,
+                tip: `${energyName(color)}：公共区有 ${count} 颗。${enabled ? "点选后确认拿取 1 颗。" : count === 0 ? "当前没有此颜色。" : !allowed.includes(color) ? "这个额外行动不允许选此颜色。" : unavailableReason("pick")}`,
+            });
+        }).join("");
+        byId("PickPreview").hidden = !pickedColor;
+        byId("PickPreview").innerHTML = pickedColor ? `<div><strong>${esc(energyName(pickedColor))} → Your energy</strong>${relatedHTML("pick", pickedColor)}</div>${control("Pick · 确认取 1 颗", "confirm-pick", { disabled: !can("pick_energy"), className: "primary", tip: `确认拿取 1 颗 ${energyName(pickedColor)}。然后结算匹配的取能量装置。` })}` : "";
+    }
+
+    function cardHTML(card, source) {
+        const selected = selection?.id === card.id && selection?.source === source;
+        const buildable = cardCanBuild(card, source);
+        const fileable = cardCanFile(source);
+        const free = view.prompt?.bonus_context?.kind === "build_free_level1";
+        let state = buildable ? (free ? "免费建造" : "可建造") : !isTurn() ? "查看装置" : fileable ? "可先归档" : "暂不可建造";
+        const costTip = `Cost（费用）：印刷费用 ${card.cost} ${energyName(card.energy_type)}。实际费用会计算升级折扣和可用转换器，以「可建造」标记为准。`;
+        let choices = "";
+        if (selected) {
+            const reason = pending ? "等待行动确认" : !isTurn() ? "等待你的回合" : free && card.level !== 1 ? "此效果只能免费建造一级装置" : !card.buildable ? "当前能量 / 转换器不足" : "先完成当前效果";
+            const buildTip = buildable ? "Build（🛠️ 建造）：支付能量并启动装置；升级折扣和转换器会自动结算。" : reason;
+            choices = `<div class="gizmos-tile-decision"><div class="gizmos-decision-buttons">${control(free ? "Free Build · 免费建造" : "Build · 建造", "build", { disabled: !buildable, className: mode === "file" ? "" : "primary", key: `build:${source}:${card.id}`, extra: `data-card="${esc(card.id)}" data-source="${source}"`, tip: buildTip })}
+                ${source !== "archive" ? control("File · 归档", "file", { disabled: !fileable, className: mode === "file" ? "primary" : "", key: `file:${source}:${card.id}`, extra: `data-card="${esc(card.id)}" data-source="${source}"`, tip: fileable ? actionTips.file : !isTurn() ? "等待你的回合" : fileReason() }) : ""}</div>
+                ${!buildable ? `<p class="gizmos-decision-note">${esc(reason)}</p>` : ""}
+                ${relatedHTML(mode === "file" && fileable ? "file" : "build", null, card, source)}</div>`;
         }
-      )
-    );
-  }
-
-  if (controls.childNodes.length) {
-    cardEl.appendChild(controls);
-  }
-  return cardEl;
-}
-
-function renderGizmosEnergyRow(view) {
-  if (!gizmosEnergyRow) return;
-  gizmosEnergyRow.innerHTML = "";
-  const row = Array.isArray(view.energy_row) ? view.energy_row : [];
-  if (!row.length) {
-    gizmosEnergyRow.textContent = "-";
-    return;
-  }
-  row.forEach((color) => {
-    gizmosEnergyRow.appendChild(createGizmosEnergyButton(view, color));
-  });
-}
-
-function renderGizmosDisplay(view) {
-  if (!gizmosDisplay) return;
-  gizmosDisplay.innerHTML = "";
-  ["3", "2", "1"].forEach((levelKey) => {
-    const section = document.createElement("section");
-    section.className = "gizmos-level-section";
-    const title = document.createElement("h4");
-    title.textContent = `Level ${levelKey}`;
-    section.appendChild(title);
-    const grid = document.createElement("div");
-    grid.className = "gizmos-cards";
-    const cards = (view.display && view.display[levelKey]) || [];
-    let hasCard = false;
-    cards.forEach((card) => {
-      if (!card) return;
-      hasCard = true;
-      grid.appendChild(createGizmosCard(view, card, "display"));
-    });
-    if (!hasCard) {
-      const empty = document.createElement("div");
-      empty.className = "gizmos-empty";
-      empty.textContent = "Deck empty";
-      grid.appendChild(empty);
+        const order = source === "research" ? `<div class="gizmos-order-controls"><small>Return #${researchOrder.indexOf(card.id) + 1}</small>${control("Earlier", "order", { disabled: pending || researchOrder[0] === card.id, key: `earlier:${card.id}`, extra: `data-card="${esc(card.id)}" data-delta="-1"`, tip: "Earlier：向前调整放回顺序。第 1 张放在牌库最底部。" })}${control("Later", "order", { disabled: pending || researchOrder.at(-1) === card.id, key: `later:${card.id}`, extra: `data-card="${esc(card.id)}" data-delta="1"`, tip: "Later：向后调整放回顺序。在放回的卡中，越靠后的卡越靠近牌库顶部。" })}</div>` : "";
+        return `<article class="gizmos-tile level-${card.level} ${selected ? "is-selected" : ""} ${buildable ? "is-buildable" : ""}">
+            <div class="gizmos-tile-meta">${info(`${energy[card.energy_type]?.[0] || "🌈"} <strong>${card.cost}</strong>`, costTip)}${info(`⭐ <strong>${card.vp}</strong>`, `Points（⭐ 分数）：建造此装置获得 ${card.vp} 点卡牌分数。`)}${info("ⓘ", cardDescription(card), "gizmos-card-info")}</div>
+            <button type="button" class="gizmos-tile-select" data-ui="card" data-card="${esc(card.id)}" data-source="${source}" data-focus="card:${source}:${esc(card.id)}" data-gizmos-explain="${esc(cardDescription(card))}" aria-expanded="${selected}" aria-label="${esc(`Level ${card.level} · ${triggerText(card)}：${effectText(card.effect, card.text)} · ${state}`)}">
+                <span class="gizmos-tile-category">${panels[card.panel] || esc(card.panel)} <small>LEVEL ${card.level}</small></span>
+                <span class="gizmos-trigger">${esc(triggerText(card))}</span><strong class="gizmos-benefit">${esc(effectText(card.effect, card.text))}</strong>
+                <span class="gizmos-tile-state">${buildable ? "✓ " : ""}${state}<span>${selected ? "−" : "+"}</span></span>
+            </button>${choices}${order}</article>`;
     }
-    section.appendChild(grid);
-    gizmosDisplay.appendChild(section);
-  });
-}
 
-function renderGizmosYou(view) {
-  if (!gizmosYou) return;
-  gizmosYou.innerHTML = "";
-  const you = gizmosSelf(view);
-  if (!you) {
-    gizmosYou.textContent = "-";
-    return;
-  }
-  setGizmosExplanation(gizmosYou, {
-    title: "Your Lab",
-    description: "This panel summarizes your stored energy, archive, score, and all built Gizmos grouped by panel.",
-    details: [
-      "Archive and stored energy are public in this digital implementation.",
-      "Projected score includes printed VP, VP tokens, and currently visible end-game scoring effects.",
-    ],
-  });
-
-  const stats = document.createElement("div");
-  stats.className = "gizmos-player-stats";
-  stats.innerHTML = `
-    <div>Energy: <strong>${(you.storage || []).map((color) => GIZMOS_ENERGY_LABELS[color] || color).join(" ") || "-"}</strong></div>
-    <div>Storage: <strong>${(you.storage || []).length}/${you.storage_limit}</strong></div>
-    <div>Archive Limit: <strong>${you.file_limit}</strong></div>
-    <div>Research: <strong>${you.research_amount}</strong></div>
-    <div>VP Tokens: <strong>${you.vp_tokens_total}</strong></div>
-    <div>Score: <strong>${you.score_now}</strong> (Projected ${you.projected_score})</div>
-    <div>Archive: <strong>${(you.archive || []).length}</strong></div>
-  `;
-  gizmosYou.appendChild(stats);
-
-  const archiveTitle = document.createElement("h4");
-  archiveTitle.textContent = "Archive";
-  gizmosYou.appendChild(archiveTitle);
-  const archiveGrid = document.createElement("div");
-  archiveGrid.className = "gizmos-cards";
-  if ((you.archive || []).length) {
-    you.archive.forEach((card) => archiveGrid.appendChild(createGizmosCard(view, card, "archive")));
-  } else {
-    const empty = document.createElement("div");
-    empty.className = "gizmos-empty";
-    empty.textContent = "Archive is empty";
-    archiveGrid.appendChild(empty);
-  }
-  gizmosYou.appendChild(archiveGrid);
-
-  const activeTitle = document.createElement("h4");
-  activeTitle.textContent = "Active Gizmos";
-  gizmosYou.appendChild(activeTitle);
-  const activeWrap = document.createElement("div");
-  activeWrap.className = "gizmos-active-groups";
-  Object.entries(you.active || {}).forEach(([panel, cards]) => {
-    if (!Array.isArray(cards) || !cards.length) return;
-    const group = document.createElement("section");
-    group.className = "gizmos-active-group";
-    const heading = document.createElement("div");
-    heading.className = "gizmos-active-heading";
-    heading.textContent = GIZMOS_PANEL_LABELS[panel] || panel;
-    group.appendChild(heading);
-    const grid = document.createElement("div");
-    grid.className = "gizmos-cards compact";
-    cards.forEach((card) => grid.appendChild(createGizmosCard(view, card, "active")));
-    group.appendChild(grid);
-    activeWrap.appendChild(group);
-  });
-  gizmosYou.appendChild(activeWrap);
-}
-
-function renderGizmosResearch(view) {
-  if (!gizmosResearchWrap || !gizmosResearchCards) return;
-  const research = view && view.prompt ? view.prompt.research : null;
-  if (!research || !Array.isArray(research.cards) || !research.cards.length) {
-    gizmosResearchWrap.classList.add("hidden");
-    gizmosResearchCards.innerHTML = "";
-    gizmosResearchOrder = [];
-    return;
-  }
-
-  gizmosSyncResearchOrder(research.cards);
-  gizmosResearchWrap.classList.remove("hidden");
-  gizmosResearchCards.innerHTML = "";
-
-  gizmosResearchOrder.forEach((cardId) => {
-    const card = research.cards.find((entry) => entry.id === cardId);
-    if (!card) return;
-    const cardEl = createGizmosCard(view, card, "research");
-    const orderRow = document.createElement("div");
-    orderRow.className = "gizmos-card-actions";
-    orderRow.appendChild(createGizmosButton(
-      "◀",
-      () => gizmosMoveResearchCard(card.id, -1),
-      gizmosResearchOrder[0] === card.id,
-      "",
-      {
-        title: "Move Left",
-        description: "Move this researched card one step left in the return order.",
-        details: [
-          "The leftmost leftover card goes deepest to the bottom of the deck.",
-        ],
-      }
-    ));
-    orderRow.appendChild(createGizmosButton(
-      "▶",
-      () => gizmosMoveResearchCard(card.id, 1),
-      gizmosResearchOrder[gizmosResearchOrder.length - 1] === card.id,
-      "",
-      {
-        title: "Move Right",
-        description: "Move this researched card one step right in the return order.",
-        details: [
-          "The rightmost leftover card returns closest to the top among the returned cards.",
-        ],
-      }
-    ));
-    orderRow.appendChild(createGizmosButton(
-      "🛠️ Build",
-      () => gizmosResolveResearch("build", card.id),
-      !card.buildable,
-      "",
-      {
-        title: "Build Researched Card",
-        description: "Build this researched card now. The other researched cards return to the bottom in the current order.",
-        details: [
-          card.buildable ? "This researched card is currently payable." : "This researched card is not currently payable with your energy and converters.",
-        ],
-      }
-    ));
-    orderRow.appendChild(createGizmosButton(
-      "🗂️ File",
-      () => gizmosResolveResearch("file", card.id),
-      false,
-      "",
-      {
-        title: "File Researched Card",
-        description: "Archive this researched card. The other researched cards return to the bottom in the current order.",
-        details: [
-          "Filing from Research still counts as your choice for this Research action.",
-        ],
-      }
-    ));
-    cardEl.appendChild(orderRow);
-    gizmosResearchCards.appendChild(cardEl);
-  });
-}
-
-function renderGizmosPrompt(view) {
-  if (!gizmosPrompt) return;
-  const prompt = view.prompt || {};
-  const phase = prompt.phase || view.phase;
-  if (phase === "choose_effect" && Array.isArray(prompt.pending_effects)) {
-    const text = prompt.pending_effects.length
-      ? `Choose a triggered Gizmo to resolve.`
-      : "No triggered Gizmos remain.";
-    gizmosPrompt.textContent = text;
-    return;
-  }
-  if (phase === "bonus_action" && prompt.bonus_context) {
-    const ctx = prompt.bonus_context;
-    if (ctx.kind === "pick") {
-      gizmosPrompt.textContent = `Resolve bonus Pick (${ctx.remaining} left).`;
-      return;
+    function renderMarket() {
+        const archive = self()?.archive || [];
+        byId("MarketNav").innerHTML = `<div class="gizmos-source-tabs" role="group" aria-label="Card source">${["display", "archive"].map(source => control(source === "display" ? "Market" : `Archive · ${archive.length}`, "source", {
+            className: marketSource === source ? "is-selected" : "", key: `source:${source}`, extra: `data-source="${source}" aria-pressed="${marketSource === source}"`, tip: source === "display" ? "Market：所有玩家共享的公开装置卡。" : "Archive（🗂️ 档案）：你保留的卡，仍需支付费用建造才会生效。",
+        })).join("")}</div><div class="gizmos-level-tabs" role="group" aria-label="Market level" ${marketSource === "archive" ? "hidden" : ""}>${[1, 2, 3].map(n => control(`Level ${n}`, "level", {
+            className: level === n ? "is-selected" : "", key: `level:${n}`, extra: `data-level="${n}" aria-pressed="${level === n}"`, tip: `Level ${n}（${n} 级装置）：点击查看该等级的公开市场。`,
+        })).join("")}</div>`;
+        const cards = marketSource === "archive" ? archive : (view.display[String(level)] || []).filter(Boolean);
+        const available = cards.filter(card => cardCanBuild(card, marketSource)).length;
+        byId("MarketHint").textContent = marketSource === "archive" ? `你的档案 · ${archive.length}/${self()?.file_limit || 0} 张${available ? ` · ${available} 张可建造` : ""}` : `Level ${level} · ${cards.length} 张${available ? ` · ${available} 张可建造` : ""} · 点卡牌查看行动`;
+        byId("Display").innerHTML = cards.map(card => cardHTML(card, marketSource)).join("") || `<p class="gizmos-empty-state">${marketSource === "archive" ? "档案为空。使用 File 可以先保留一张市场卡。" : "这一等级的市场已空，可切换其他等级。"}</p>`;
     }
-    if (ctx.kind === "file") {
-      gizmosPrompt.textContent = "Resolve bonus File from the display.";
-      return;
+
+    function effectLabel(effect) {
+        const match = activeCards(self()).find(card => `${card.panel_icon} ${card.text}` === effect.label);
+        return match ? `${triggerText(match)} → ${effectText(match.effect, match.text)}` : effect.label;
     }
-    if (ctx.kind === "research") {
-      gizmosPrompt.textContent = "Resolve bonus Research. Choose a level below.";
-      return;
+
+    function effectReason(effect) {
+        const you = self();
+        if (["draw_random", "pick_energy"].includes(effect.kind)) return you.storage.length >= you.storage_limit ? "储能已满，暂时不能获得能量" : "当前没有符合条件的能量";
+        if (effect.kind === "perform_file") return fileReason();
+        if (effect.kind === "perform_research") return you.can_research ? "研究牌库已空" : "研究已被装置禁用";
+        if (effect.kind === "free_build_level1") return "当前没有可用的一级装置";
+        return "当前不满足效果条件，可先结算其他效果";
     }
-    if (ctx.kind === "build_free_level1") {
-      gizmosPrompt.textContent = "Resolve free Level 1 build.";
-      return;
-    }
-  }
-  if (phase === "research") {
-    gizmosPrompt.textContent = "Resolve your Research cards and set their bottom order.";
-    return;
-  }
-  gizmosPrompt.textContent = "Use the Energy Row, Display, or action buttons to take your turn.";
-}
 
-function renderGizmosActions(view) {
-  if (!gizmosActions) return;
-  gizmosActions.innerHTML = "";
-  const prompt = view.prompt || {};
-
-  if (prompt.phase === "choose_effect" && Array.isArray(prompt.pending_effects)) {
-    prompt.pending_effects.forEach((effect) => {
-      gizmosActions.appendChild(
-        createGizmosButton(
-          effect.label,
-          () => sendAction({ type: "resolve_effect", effect_id: effect.effect_id }),
-          !effect.resolvable,
-          "",
-          {
-            title: "Resolve Triggered Gizmo",
-            description: effect.label,
-            details: [
-              "Triggered effects resolve one at a time.",
-              effect.resolvable ? "This effect can currently be resolved." : "This effect is currently not resolvable.",
-            ],
-          }
-        )
-      );
-    });
-  }
-
-  if (gizmosCan(view, "pass_effects")) {
-    gizmosActions.appendChild(createGizmosButton(
-      "End Chain",
-      () => sendAction({ type: "pass_effects" }),
-      false,
-      "ghost",
-      {
-        title: "End Chain",
-        description: "Stop resolving optional triggered effects and continue the turn flow.",
-        details: [
-          "Use this when you do not want to resolve any more optional triggers.",
-        ],
-      }
-    ));
-  }
-
-  if (gizmosCan(view, "research") && (prompt.phase === "action" || (prompt.phase === "bonus_action" && prompt.bonus_context && prompt.bonus_context.kind === "research"))) {
-    [1, 2, 3].forEach((level) => {
-      gizmosActions.appendChild(createGizmosButton(
-        `🔍 Research L${level}`,
-        () => sendAction({ type: "research", level }),
-        false,
-        "",
-        {
-          title: `Research Level ${level}`,
-          description: `Draw up to your Research amount from the Level ${level} deck, then choose one to Build or File, or return them all.`,
-          details: [
-            "Cards you do not keep go to the bottom of the chosen deck.",
-          ],
+    function renderContext() {
+        const target = byId("Context");
+        const prompt = view.prompt || {};
+        let html = "";
+        if (isTurn() && view.phase === "choose_effect") {
+            html = `<h3>Resolve chain <span>连锁结算</span></h3><div class="gizmos-effect-list">${(prompt.pending_effects || []).map((effect, index) => `<div class="gizmos-effect-row"><span class="gizmos-effect-number">${index + 1}</span><div><strong>${esc(effectLabel(effect))}</strong><small>${effect.resolvable ? "现在可结算" : esc(effectReason(effect))}</small></div>${control("Resolve", "effect", { disabled: pending || !effect.resolvable, className: "primary", key: `effect:${effect.effect_id}`, extra: `data-effect="${effect.effect_id}"`, tip: `Resolve（⚡ 结算）：${effectLabel(effect)}。${effect.resolvable ? "点击执行这个效果，再按提示继续。" : effectReason(effect)}` })}</div>`).join("")}</div>
+                ${control("End chain · 跳过剩余效果", "end-chain", { disabled: !can("pass_effects"), className: "subtle", tip: "End chain：放弃本回合还没有结算的可选效果，然后继续游戏。" })}`;
+        } else if (isTurn() && view.phase === "research" && prompt.research) {
+            const cards = prompt.research.cards || [];
+            researchOrder = researchOrder.filter(id => cards.some(card => card.id === id));
+            cards.forEach(card => { if (!researchOrder.includes(card.id)) researchOrder.push(card.id); });
+            html = `<h3>Research · Level ${prompt.research.level}</h3><p class="gizmos-context-note">选择一张卡；其余按下方顺序放回。Return #1 最深。</p><div class="gizmos-research-grid">${researchOrder.map(id => cardHTML(cards.find(card => card.id === id), "research")).join("")}</div>${control("Return all · 全部放回", "return-all", { disabled: !can("resolve_research"), className: "subtle", tip: "Return all：不保留研究卡，全部按当前顺序放回牌库底部。" })}`;
+        } else if (can("research") && (mode === "research" || prompt.bonus_context?.kind === "research")) {
+            html = `<h3>Research <span>选择牌库等级</span></h3><p class="gizmos-context-note">查看至多 ${self().research_amount} 张卡，再决定建造、归档或全部放回。</p><div class="gizmos-research-levels">${[1, 2, 3].map(n => control(`Research · Level ${n}`, "research", { extra: `data-level="${n}"`, key: `research:${n}`, tip: `${actionTips.research} 此按钮查看 ${n} 级牌库。` })).join("")}</div>`;
+        } else if (can("pass_turn")) {
+            html = `<p>当前没有可执行的基础行动。</p>${control("Pass turn", "pass", { tip: "没有能执行的取能量、归档、建造或研究时，跳过本回合。" })}`;
         }
-      ));
+        target.hidden = !html;
+        target.innerHTML = html;
+    }
+
+    function machineHTML(player) {
+        return Object.entries(player.active || {}).filter(([, cards]) => cards.length).map(([group, cards]) => `<div class="gizmos-machine-group"><h4>${panels[group]} <span>${cards.length}</span></h4>${cards.map(card => `<button type="button" class="gizmos-machine-item" data-ui="tip" ${attributes(cardDescription(card))}><span>${esc(triggerText(card))}</span><strong>${esc(effectText(card.effect, card.text))}</strong></button>`).join("")}</div>`).join("");
+    }
+
+    function renderLab() {
+        const you = self();
+        if (!you) return;
+        byId("MachineCount").textContent = `${activeCards(you).length} gizmos`;
+        byId("You").innerHTML = machineHTML(you);
+        byId("Players").innerHTML = view.players.map(player => {
+            const count = activeCards(player).length;
+            return `<details class="gizmos-player-summary ${player.player_id === view.current_turn ? "is-current" : ""}" data-player="${esc(player.player_id)}" ${openPlayers.has(player.player_id) ? "open" : ""}><summary><span>${esc(player.name)}${player.is_bot ? " 🤖" : player.player_id === view.you ? " · You" : ""}</span><strong>${player.projected_score} <small>pts</small></strong></summary>
+                <div class="gizmos-player-detail"><div class="gizmos-player-energy">${resourceHTML(player, true)}</div>
+                <div class="gizmos-progress-pills">${info(`⚙️ ${count} / 16`, "Gizmos（⚙️ 装置）：包括初始装置。任一玩家达到 16 个装置，触发最后一轮。")}${info(`Ⅲ ${player.level3_count} / 4`, "Level 3（Ⅲ 三级装置）：任一玩家达到 4 个，触发最后一轮。")}${info(`🏁 ${player.projected_score}`, "Projected（🏁 预估总分）：当前分数加上此刻可见的终局奖励。")}</div>
+                <p class="gizmos-caption">Archive · ${player.archive.length}/${player.file_limit}</p>${player.archive.map(card => `<p class="gizmos-opponent-archive">${esc(cardDescription(card))}</p>`).join("") || '<p class="gizmos-caption">No archived cards</p>'}${player.player_id !== view.you ? machineHTML(player) : ""}</div></details>`;
+        }).join("");
+        byId("ActivityCount").textContent = String(history.length);
+        byId("Activity").innerHTML = history.length ? history.map(text => `<li>${esc(text)}</li>`).join("") : "<li>行动记录会显示在这里。</li>";
+        byId("Recent").hidden = !lastBotAction;
+        byId("Recent").textContent = lastBotAction ? `🤖 最近 AI 行动 · ${lastBotAction}` : "";
+    }
+
+    function updateExplain() {
+        panel.classList.toggle("gizmos-is-explaining", explaining);
+        panel.querySelectorAll("[data-gizmos-explain]").forEach(node => node.classList.toggle("has-explanation", explaining));
+        byId("ExplainBtn")?.classList.toggle("active", explaining);
+        byId("ExplainBtn")?.setAttribute("aria-pressed", String(explaining));
+    }
+
+    function render() {
+        if (!view) return;
+        const focus = panel.contains(document.activeElement) ? document.activeElement.dataset.focus : null;
+        hideTip();
+        renderHeader();
+        renderGuide();
+        renderEnergy();
+        renderContext();
+        renderMarket();
+        renderLab();
+        updateExplain();
+        if (focus) Array.from(panel.querySelectorAll("[data-focus]")).find(node => node.dataset.focus === focus)?.focus({ preventScroll: true });
+    }
+
+    function submit(action) {
+        if (pending || !can(action.type)) return;
+        hideTip();
+        pending = true;
+        selection = null;
+        pickedColor = null;
+        render();
+        clearTimeout(pendingTimer);
+        pendingTimer = setTimeout(() => {
+            pending = false;
+            render();
+        }, 7000);
+        sendAction(action);
+    }
+
+    function resolveResearch(choice, cardId) {
+        const payload = { type: "resolve_research", choice, return_order: researchOrder.filter(id => choice === "none" || id !== cardId) };
+        if (choice !== "none") payload.card_id = cardId;
+        submit(payload);
+    }
+
+    function recordEvents(data) {
+        for (const event of data.events || []) {
+            if (!event.type.startsWith("gizmos:")) continue;
+            const actor = view.players.find(player => player.player_id === event.player_id);
+            const card = cardCatalog.get(event.card_id);
+            const cardName = card ? effectText(card.effect, card.text) : "装置";
+            const labels = {
+                pick_energy: `取了 ${energyName(event.color)}`, pick: `取了 ${energyName(event.color)}`,
+                file_display: `归档：${cardName}`, build_display: `建造：${cardName}`, build_archive: `从档案建造：${cardName}`,
+                research: `研究 Level ${event.level}`, research_build: `研究后建造：${cardName}`, research_file: `研究后归档：${cardName}`, research_none: "放回全部研究卡",
+                resolve_effect: `结算：${cardName}`, pass_effects: "结束了连锁", bonus_pick: `额外取了 ${energyName(event.color)}`,
+                bonus_file: `额外归档：${cardName}`, bonus_research: `额外研究 Level ${event.level}`, bonus_build_display: `免费建造：${cardName}`,
+                bonus_build_archive: `从档案免费建造：${cardName}`, pass_turn: "跳过回合",
+            };
+            const label = labels[event.type.slice(7)];
+            if (!label) continue;
+            const text = `${actor?.name || "Player"} · ${label}`;
+            history.unshift(text);
+            if (actor?.is_bot) lastBotAction = text;
+        }
+        history = history.slice(0, 24);
+    }
+
+    function reset() {
+        hideTip();
+        clearTimeout(pendingTimer);
+        clearTimeout(suppressTimer);
+        view = null;
+        roomKey = null;
+        version = null;
+        mode = "pick";
+        marketSource = "display";
+        level = 1;
+        selection = null;
+        pickedColor = null;
+        researchOrder = [];
+        pending = false;
+        suppressClick = false;
+        history = [];
+        lastBotAction = "";
+        cardCatalog = new Map();
+        openPlayers.clear();
+        explaining = false;
+        updateExplain();
+        ["Standing", "Resources", "Actions", "Steps", "Display", "You", "Players", "MarketNav", "MarketHint", "EnergyRow", "Activity"].forEach(id => { byId(id).innerHTML = ""; });
+        ["Recent", "Context", "PickPreview"].forEach(id => { byId(id).hidden = true; });
+        byId("Prompt").textContent = "Waiting for game…";
+        ["HelpModal", "ExplainModal"].forEach(id => setModalVisible(byId(id), false));
+    }
+
+    window.clearGizmosState = reset;
+    window.showGizmosHeaderActions = show => {
+        byId("HeaderActions").style.display = show ? "flex" : "none";
+        if (!show) {
+            hideTip();
+            explaining = false;
+            updateExplain();
+            ["HelpModal", "ExplainModal"].forEach(id => setModalVisible(byId(id), false));
+        }
+    };
+    window.renderGizmosGameState = data => {
+        if (!data?.view) return;
+        if (roomKey !== data.room_id || (typeof data.state_version === "number" && typeof version === "number" && data.state_version < version)) reset();
+        const previous = view;
+        const changed = data.state_version == null || version !== data.state_version;
+        view = data.view;
+        roomKey = data.room_id;
+        if (changed) {
+            pending = false;
+            clearTimeout(pendingTimer);
+            if (!previous || previous.current_turn !== view.current_turn || previous.phase !== view.phase) {
+                selection = null;
+                pickedColor = null;
+                mode = "pick";
+            }
+            if (previous?.phase === "research" && view.phase !== "research") researchOrder = [];
+            if (isTurn() && view.phase === "bonus_action") {
+                const kind = view.prompt.bonus_context?.kind;
+                mode = kind === "build_free_level1" ? "build" : kind;
+                if (kind === "build_free_level1") level = 1;
+                if (kind === "file") marketSource = "display";
+            }
+        }
+        if (currentGameType !== "gizmos") {
+            currentGameType = "gizmos";
+            setGamePanelVisibility("gizmos");
+        }
+        for (const card of [...allCards(), ...view.players.flatMap(activeCards)]) cardCatalog.set(card.id, card);
+        if (changed) recordEvents(data);
+        if (selection && !allCards().some(card => card.id === selection.id)) selection = null;
+        if (pickedColor && (!view.energy_row.includes(pickedColor) || !can("pick_energy"))) pickedColor = null;
+        version = data.state_version;
+        render();
+        logGameEvents(data);
+    };
+
+    const tooltip = document.createElement("div");
+    tooltip.id = "gizmosTooltip";
+    tooltip.className = "gizmos-tooltip";
+    tooltip.setAttribute("role", "tooltip");
+    tooltip.hidden = true;
+    document.body.appendChild(tooltip);
+
+    function hideTip() {
+        clearTimeout(tooltipTimer);
+        if (tooltipTarget) tooltipTarget.removeAttribute("aria-describedby");
+        tooltipTarget = null;
+        tooltip.hidden = true;
+    }
+
+    function showTip(target, timed = false) {
+        if (!target?.dataset.gizmosTip || explaining || !panel.contains(target)) return;
+        hideTip();
+        tooltipTarget = target;
+        tooltip.textContent = target.dataset.gizmosTip;
+        tooltip.hidden = false;
+        target.setAttribute("aria-describedby", tooltip.id);
+        const viewport = window.visualViewport;
+        const width = viewport?.width || document.documentElement.clientWidth;
+        const height = viewport?.height || innerHeight;
+        const leftEdge = viewport?.offsetLeft || 0;
+        const topEdge = viewport?.offsetTop || 0;
+        tooltip.style.maxWidth = `${Math.max(120, Math.min(330, width - 24))}px`;
+        tooltip.style.maxHeight = `${Math.max(80, height - 24)}px`;
+        const rect = target.getBoundingClientRect();
+        const box = tooltip.getBoundingClientRect();
+        const left = Math.max(leftEdge + 12, Math.min(rect.left, leftEdge + width - box.width - 12));
+        const top = rect.bottom + box.height + 8 < topEdge + height - 12 ? rect.bottom + 8 : Math.max(topEdge + 12, rect.top - box.height - 8);
+        tooltip.style.left = `${left}px`;
+        tooltip.style.top = `${top}px`;
+        if (timed) tooltipTimer = setTimeout(hideTip, 3000);
+    }
+
+    function closeDialog(modal) {
+        if (modal.classList.contains("hidden")) return;
+        setModalVisible(modal, false);
+        const target = returnFocus?.isConnected ? returnFocus : byId("HelpBtn");
+        target?.focus({ preventScroll: true });
+    }
+
+    function openDialog(kind, text = "") {
+        hideTip();
+        returnFocus = document.activeElement;
+        explaining = false;
+        updateExplain();
+        byId(`${kind}Content`).innerHTML = kind === "Help" ? helpHTML : `<p>${esc(text)}</p>`;
+        setModalVisible(byId(`${kind}Modal`), true);
+        byId(`${kind}ModalCloseBtn`).focus();
+    }
+
+    function explainTarget(event) {
+        const direct = event.target.closest?.("button, summary, [data-gizmos-explain]");
+        if (direct?.dataset.gizmosExplain && panel.contains(direct)) return direct;
+        if (event.type !== "pointerdown") return null;
+        // Native disabled buttons may not be the event target. Inspect only
+        // visible explained controls at this pointer position.
+        return Array.from(panel.querySelectorAll("[data-gizmos-explain]")).reverse().find(node => {
+            if (!node.getClientRects().length) return false;
+            const rect = node.getBoundingClientRect();
+            return event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom;
+        });
+    }
+
+    function inspectClick(event) {
+        if (currentGameType !== "gizmos") return;
+        const ignored = [byId("HelpBtn"), byId("ExplainBtn"), byId("HelpModalCloseBtn"), byId("ExplainModalCloseBtn")];
+        const button = event.target.closest?.("button");
+        if (ignored.includes(button)) return;
+        if (event.type === "click" && suppressClick) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            suppressClick = false;
+            clearTimeout(suppressTimer);
+            return;
+        }
+        if (!explaining) return;
+        const target = explainTarget(event);
+        // Explain mode blocks every ordinary action, including controls outside
+        // this game and controls which have no explanation.
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (target) {
+            suppressClick = event.type === "pointerdown";
+            clearTimeout(suppressTimer);
+            suppressTimer = setTimeout(() => { suppressClick = false; }, 600);
+            openDialog("Explain", target.dataset.gizmosExplain);
+        }
+    }
+    document.addEventListener("pointerdown", inspectClick, true);
+    document.addEventListener("click", inspectClick, true);
+
+    panel.addEventListener("click", event => {
+        const button = event.target.closest("[data-ui]");
+        if (!button || button.disabled || explaining) return;
+        const action = button.dataset.ui;
+        if (action === "tip") { showTip(button, true); return; }
+        if (pending && !["source", "level", "card"].includes(action)) return;
+        hideTip();
+        const id = button.dataset.card;
+        const source = button.dataset.source;
+        if (action === "mode") {
+            mode = button.dataset.mode;
+            selection = null;
+            pickedColor = null;
+            if (mode === "file") marketSource = "display";
+            if (mode === "build" && !Object.values(view.display).flat().some(card => card?.buildable) && self().archive.some(card => card.buildable)) marketSource = "archive";
+        } else if (action === "source") { marketSource = source; selection = null; }
+        else if (action === "level") { level = Number(button.dataset.level); selection = null; }
+        else if (action === "energy") { pickedColor = pickedColor === button.dataset.color ? null : button.dataset.color; selection = null; mode = "pick"; }
+        else if (action === "card") {
+            selection = selection?.id === id && selection?.source === source ? null : { id, source };
+            pickedColor = null;
+        } else if (action === "confirm-pick") { if (pickedColor) submit({ type: "pick_energy", color: pickedColor }); return; }
+        else if (action === "build" || action === "file") {
+            const card = allCards().find(item => item.id === id);
+            if (!card || !(action === "build" ? cardCanBuild(card, source) : cardCanFile(source))) return;
+            if (source === "research") resolveResearch(action, id);
+            else submit({ type: action === "file" ? "file_display" : `build_${source}`, card_id: id });
+            return;
+        } else if (action === "research") { submit({ type: "research", level: Number(button.dataset.level) }); return; }
+        else if (action === "return-all") { resolveResearch("none"); return; }
+        else if (action === "effect") { submit({ type: "resolve_effect", effect_id: Number(button.dataset.effect) }); return; }
+        else if (action === "end-chain") { submit({ type: "pass_effects" }); return; }
+        else if (action === "pass") { submit({ type: "pass_turn" }); return; }
+        else if (action === "order") {
+            const i = researchOrder.indexOf(id);
+            const next = i + Number(button.dataset.delta);
+            if (i >= 0 && next >= 0 && next < researchOrder.length) [researchOrder[i], researchOrder[next]] = [researchOrder[next], researchOrder[i]];
+        }
+        render();
     });
-  }
 
-  if (gizmosCan(view, "pass_turn") && prompt.phase === "action") {
-    gizmosActions.appendChild(createGizmosButton(
-      "Pass Turn",
-      () => sendAction({ type: "pass_turn" }),
-      false,
-      "ghost",
-      {
-        title: "Pass Turn",
-        description: "Pass only when the server sees no legal base action left for you.",
-        details: [
-          "If you still have a legal Pick, File, Build, or Research, the server will reject this.",
-        ],
-      }
-    ));
-  }
-}
-
-function renderGizmosPlayers(view) {
-  if (!gizmosPlayers) return;
-  gizmosPlayers.innerHTML = "";
-  (view.players || []).forEach((player) => {
-    const card = document.createElement("section");
-    card.className = "gizmos-player-card";
-    setGizmosExplanation(card, {
-      title: `👤 ${player.name}`,
-      description: "Public summary of this player's machine, score, and archived cards.",
-      details: [
-        `Energy: ${(player.storage || []).map((color) => GIZMOS_ENERGY_LABELS[color] || color).join(" ") || "-"}`,
-        `Archive count: ${(player.archive || []).length}`,
-        `Level 3 Gizmos: ${player.level3_count}`,
-      ],
+    panel.addEventListener("toggle", event => {
+        const id = event.target.dataset.player;
+        if (!id || !event.target.isConnected) return;
+        if (event.target.open) openPlayers.add(id);
+        else openPlayers.delete(id);
+    }, true);
+    panel.addEventListener("pointerover", event => {
+        if (event.pointerType !== "mouse") return;
+        const target = event.target.closest("[data-gizmos-tip]");
+        if (target && target !== tooltipTarget) showTip(target);
     });
-    if (player.player_id === view.current_turn) card.classList.add("current");
-    if (player.player_id === view.you) card.classList.add("you");
-    const title = document.createElement("div");
-    title.className = "gizmos-player-name";
-    title.textContent = `${player.name}${player.player_id === view.you ? " · you" : ""}`;
-    card.appendChild(title);
-
-    const stats = document.createElement("div");
-    stats.className = "gizmos-player-stats";
-    stats.innerHTML = `
-      <div>Energy: <strong>${(player.storage || []).map((color) => GIZMOS_ENERGY_LABELS[color] || color).join(" ") || "-"}</strong></div>
-      <div>Score: <strong>${player.score_now}</strong> (Projected ${player.projected_score})</div>
-      <div>Archive: <strong>${(player.archive || []).length}</strong></div>
-      <div>Level 3: <strong>${player.level3_count}</strong></div>
-    `;
-    card.appendChild(stats);
-
-    const archive = document.createElement("div");
-    archive.className = "gizmos-player-archive-line";
-    archive.textContent = `Archive: ${(player.archive || []).map((card) => card.title).join(" | ") || "-"}`;
-    card.appendChild(archive);
-    gizmosPlayers.appendChild(card);
-  });
-}
-
-function renderGizmosGameState(data) {
-  const view = data.view;
-  currentGizmosView = view;
-  if (currentGameType !== "gizmos") {
-    currentGameType = "gizmos";
-    setGamePanelVisibility("gizmos");
-  }
-
-  if (gizmosPhaseLabel) gizmosPhaseLabel.textContent = view.phase || "-";
-  if (gizmosTurnLabel) gizmosTurnLabel.textContent = view.current_turn ? findPlayerName(view, view.current_turn) : "-";
-  if (gizmosBagCountLabel) gizmosBagCountLabel.textContent = `${view.energy_bag_count ?? "-"}`;
-  if (gizmosFinalRoundLabel) {
-    if (view.final_round && view.final_round.active) {
-      const triggerName = view.final_round.triggered_by ? findPlayerName(view, view.final_round.triggered_by) : "-";
-      gizmosFinalRoundLabel.textContent = `Yes (${triggerName})`;
-    } else {
-      gizmosFinalRoundLabel.textContent = "No";
-    }
-  }
-  if (gizmosWinnerLabel) {
-    gizmosWinnerLabel.textContent = Array.isArray(view.winner) && view.winner.length
-      ? view.winner.map((playerId) => findPlayerName(view, playerId)).join(", ")
-      : "-";
-  }
-
-  renderGizmosPrompt(view);
-  renderGizmosEnergyRow(view);
-  renderGizmosDisplay(view);
-  renderGizmosYou(view);
-  renderGizmosResearch(view);
-  renderGizmosActions(view);
-  renderGizmosPlayers(view);
-  updateGizmosExplainModeClasses(gizmosExplainMode);
-  logGameEvents(data);
-}
-
-if (gizmosResearchSkipBtn) {
-  setGizmosExplanation(gizmosResearchSkipBtn, {
-    title: "Skip Research Choice",
-    description: "Keep none of the researched cards. They all return to the bottom of the deck in the current left-to-right order.",
-    details: [
-      "Use the ◀ / ▶ buttons first if you want to change the return order.",
-    ],
-  });
-  gizmosResearchSkipBtn.addEventListener("click", () => gizmosResolveResearch("none"));
-}
-
-if (gizmosHelpBtn) {
-  gizmosHelpBtn.addEventListener("click", openGizmosHelpModal);
-}
-
-if (gizmosExplainBtn) {
-  gizmosExplainBtn.addEventListener("click", toggleGizmosExplainMode);
-}
-
-if (gizmosHelpModalCloseBtn) {
-  gizmosHelpModalCloseBtn.addEventListener("click", () => {
-    if (gizmosHelpModal) setModalVisible(gizmosHelpModal, false);
-  });
-}
-
-if (gizmosExplainModalCloseBtn) {
-  gizmosExplainModalCloseBtn.addEventListener("click", () => {
-    if (gizmosExplainModal) setModalVisible(gizmosExplainModal, false);
-  });
-}
-
-if (gizmosHelpModal) {
-  gizmosHelpModal.addEventListener("click", (event) => {
-    if (event.target === gizmosHelpModal) {
-      setModalVisible(gizmosHelpModal, false);
-    }
-  });
-}
-
-if (gizmosExplainModal) {
-  gizmosExplainModal.addEventListener("click", (event) => {
-    if (event.target === gizmosExplainModal) {
-      setModalVisible(gizmosExplainModal, false);
-    }
-  });
-}
-
-document.addEventListener("keydown", (event) => {
-  if (event.key !== "Escape") return;
-  if (gizmosExplainMode) {
-    exitGizmosExplainMode();
-    return;
-  }
-  if (gizmosHelpModal && !gizmosHelpModal.classList.contains("hidden")) {
-    setModalVisible(gizmosHelpModal, false);
-  }
-  if (gizmosExplainModal && !gizmosExplainModal.classList.contains("hidden")) {
-    setModalVisible(gizmosExplainModal, false);
-  }
-});
-
-document.addEventListener("pointerdown", (event) => {
-  if (!gizmosExplainMode || currentGameType !== "gizmos") return;
-
-  const button = gizmosFindButtonAtPoint(event.clientX, event.clientY);
-  if (button) {
-    if (gizmosIgnoredExplainButton(button)) return;
-    event.preventDefault();
-    event.stopPropagation();
-    const explanation = button.dataset && button.dataset.gizmosExplain ? gizmosExplanationFromNode(button) : null;
-    if (explanation) {
-      showGizmosExplanation(explanation);
-      exitGizmosExplainMode();
-    }
-    return;
-  }
-
-  const target = gizmosFindExplainTargetAtPoint(event.clientX, event.clientY);
-  if (!target) return;
-  event.preventDefault();
-  event.stopPropagation();
-  showGizmosExplanation(gizmosExplanationFromNode(target));
-  exitGizmosExplainMode();
-}, true);
-
-document.addEventListener("click", (event) => {
-  if (!gizmosExplainMode || currentGameType !== "gizmos") return;
-
-  const button = event.target.closest ? event.target.closest("button") : null;
-  if (button) {
-    if (gizmosIgnoredExplainButton(button)) return;
-    event.preventDefault();
-    event.stopPropagation();
-    return;
-  }
-
-  const target = gizmosFindExplainTargetFromNode(event.target);
-  if (!target) return;
-  event.preventDefault();
-  event.stopPropagation();
-}, true);
+    panel.addEventListener("pointerout", event => {
+        if (event.pointerType === "mouse" && tooltipTarget && !tooltipTarget.contains(event.relatedTarget)) hideTip();
+    });
+    panel.addEventListener("focusin", event => {
+        if (event.target.matches("[data-gizmos-tip]") && event.target.matches(":focus-visible")) showTip(event.target);
+    });
+    panel.addEventListener("focusout", hideTip);
+    document.addEventListener("scroll", hideTip, true);
+    window.addEventListener("resize", hideTip);
+    document.addEventListener("click", event => {
+        if (!view || currentGameType !== "gizmos" || explaining || suppressClick) return;
+        if (event.target.closest("button, input, select, textarea, summary, a, .modal, .gizmos-tile, .gizmos-context")) return;
+        hideTip();
+        if (selection || pickedColor) { selection = null; pickedColor = null; render(); }
+    });
+    byId("HelpBtn").addEventListener("click", () => openDialog("Help"));
+    byId("ExplainBtn").addEventListener("click", () => { hideTip(); explaining = !explaining; updateExplain(); });
+    ["Help", "Explain"].forEach(kind => {
+        const modal = byId(`${kind}Modal`);
+        byId(`${kind}ModalCloseBtn`).addEventListener("click", () => closeDialog(modal));
+        modal.addEventListener("click", event => { if (event.target === modal) closeDialog(modal); });
+    });
+    document.addEventListener("keydown", event => {
+        if (currentGameType !== "gizmos") return;
+        const modal = [byId("HelpModal"), byId("ExplainModal")].find(node => !node.classList.contains("hidden"));
+        if (modal && event.key === "Tab") {
+            const focusables = Array.from(modal.querySelectorAll("button:not(:disabled), a[href], [tabindex='0']")).filter(node => node.getClientRects().length);
+            const first = focusables[0];
+            const last = focusables.at(-1);
+            if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+            else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+        }
+        if (event.key !== "Escape") return;
+        hideTip();
+        if (modal) { event.preventDefault(); closeDialog(modal); return; }
+        if (explaining) { explaining = false; updateExplain(); return; }
+        if (selection || pickedColor) { selection = null; pickedColor = null; render(); }
+    });
+    byId("MachineDetails").open = window.matchMedia("(min-width: 900px)").matches;
+})();

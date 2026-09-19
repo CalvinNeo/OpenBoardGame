@@ -4,7 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css?v=app_v104" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v108" />
+  <link rel="preload" href="/api/games" as="fetch" crossorigin="anonymous" />
   <link rel="stylesheet" href="/static/ark_nova.css?v=app_v21" />
   <link rel="stylesheet" href="/static/catan_starfarers.css?v=app_v4" />
   <link rel="stylesheet" href="/static/castles_of_burgundy.css?v=2" />
@@ -12,6 +13,7 @@
   <link rel="stylesheet" href="/static/tucano.css?v=app_v2" />
   <link rel="stylesheet" href="/static/take_time.css?v=1" />
   <link rel="stylesheet" href="/static/eternal_decks.css?v=1" />
+  <link rel="stylesheet" href="/static/gizmos.css?v=1" />
   <link rel="stylesheet" href="/static/ponzi_scheme.css?v=1" />
   <link rel="stylesheet" href="/static/istanbul.css?v=2" />
   <link rel="stylesheet" href="/static/rebel_princess.css?v=4" />
@@ -49,6 +51,7 @@
         </div>
         <div id="loadList" class="modal-list"></div>
         <div id="loadEmpty" class="hint hidden">No saves found.</div>
+        <div id="loadDownloadStatus" class="room-feedback" role="status" aria-live="polite"></div>
       </div>
     </div>
   </section>
@@ -60,6 +63,7 @@
         <button id="createRoomModalCloseBtn" type="button">Close</button>
       </div>
       <div class="modal-body">
+        <div id="createRoomStatus" class="room-feedback" role="status" aria-live="polite"></div>
         <div id="createRoomGameStep" class="create-room-step">
           <div class="create-room-controls">
             <div class="game-search-control">
@@ -100,15 +104,16 @@
                 <option value="difficulty_desc">Weight Desc</option>
               </select>
             </div>
-            <div class="create-room-type-filter" role="group" aria-labelledby="gameTypeFilterLabel">
-              <div class="create-room-type-filter-heading">
+            <details id="gameTypeFilterDetails" class="create-room-type-filter">
+              <summary class="create-room-type-filter-heading">
                 <span id="gameTypeFilterLabel">Types</span>
-                <span class="hint">Match any selected</span>
-              </div>
-              <div id="gameTypeFilters" class="game-type-filters"></div>
-            </div>
+                <span id="gameTypeFilterSummary" class="hint">Match all selected</span>
+              </summary>
+              <div id="gameTypeFilters" class="game-type-filters" role="group" aria-labelledby="gameTypeFilterLabel"></div>
+            </details>
           </div>
-          <div id="gameListCount" class="hint game-list-count" role="status" aria-live="polite">Showing 0 games</div>
+          <div id="gameListCount" class="hint game-list-count" role="status" aria-live="polite">Loading games...</div>
+          <button id="gameListRetryBtn" class="hidden" type="button">Retry loading games</button>
           <div id="gameList" class="game-list"></div>
           <div id="gameListEmpty" class="hint game-list-empty hidden" role="status">🎲 No games match your filters.</div>
         </div>
@@ -1183,20 +1188,20 @@
     </div>
   </section>
 
-  <section id="gizmosHelpModal" class="modal hidden" aria-hidden="true">
+  <section id="gizmosHelpModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="gizmosHelpTitle">
     <div class="modal-content gizmos-help-modal">
       <div class="modal-header">
-        <h2>Gizmos - Game Rules</h2>
+        <h2 id="gizmosHelpTitle">Gizmos · Help</h2>
         <button id="gizmosHelpModalCloseBtn" type="button">Close</button>
       </div>
       <div class="modal-body" id="gizmosHelpContent"></div>
     </div>
   </section>
 
-  <section id="gizmosExplainModal" class="modal hidden" aria-hidden="true">
+  <section id="gizmosExplainModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="gizmosExplainTitle">
     <div class="modal-content gizmos-explain-modal">
       <div class="modal-header">
-        <h2>Explanation</h2>
+        <h2 id="gizmosExplainTitle">Explain</h2>
         <button id="gizmosExplainModalCloseBtn" type="button">Close</button>
       </div>
       <div class="modal-body">
@@ -1377,7 +1382,7 @@
               </div>
               <div class="panel-body">
                 <div class="row room-entry-actions">
-                  <button id="createBtn" type="button">Create Room</button>
+                  <button id="createBtn" type="button" disabled>Create Room</button>
                   <button id="joinBtn" type="button">Join Room</button>
                 </div>
                 <div class="row compact-row hidden" id="createGameRow" aria-hidden="true">
@@ -1957,14 +1962,20 @@
                   <input id="autoSaveToggle" type="checkbox" />
                   <span class="hint">Save after each game state change.</span>
                 </div>
+                <div id="roomActionStatus" class="room-feedback" role="status" aria-live="polite"></div>
                 <div class="row actions room-actions">
-                  <button id="readyBtn">Toggle Ready</button>
-                  <button id="startBtn">Start Game</button>
-                  <button id="reopenBtn" class="hidden" aria-hidden="true">Reopen</button>
-                  <button id="downloadMemoriesBtn">Download Memories</button>
-                  <button id="addBotBtn">Add Bot</button>
-                  <button id="removeBotBtn">Remove Bot</button>
-                  <button id="leaveBtn">Leave Room</button>
+                  <button id="readyBtn" type="button" disabled>Toggle Ready</button>
+                  <button id="startBtn" type="button" disabled>Start Game</button>
+                  <button id="reopenBtn" type="button" class="hidden" aria-hidden="true" disabled>Reopen</button>
+                  <button id="downloadMemoriesBtn" type="button" disabled>Download Memories</button>
+                  <button id="leaveBtn" type="button" disabled>Leave Room</button>
+                </div>
+                <div class="room-players-header">
+                  <h4>Players</h4>
+                  <div class="room-player-actions" role="group" aria-label="Bot controls">
+                    <button id="addBotBtn" type="button" disabled>Add Bot</button>
+                    <button id="removeBotBtn" type="button" disabled>Remove Bot</button>
+                  </div>
                 </div>
                 <div id="playersList"></div>
               </div>
@@ -6092,42 +6103,41 @@
               <div id="splendorPlayers"></div>
             </div>
 
-            <div id="gizmosPanel" class="hidden">
-              <div class="row">
-                <div>Phase: <span id="gizmosPhase">-</span></div>
-                <div>Current Turn: <span id="gizmosTurn">-</span></div>
-                <div>Bag: <span id="gizmosBagCount">-</span></div>
-                <div>Final Round: <span id="gizmosFinalRound">-</span></div>
-              </div>
-              <div class="row">
-                <div>Winner: <span id="gizmosWinner">-</span></div>
-              </div>
-
-              <div id="gizmosPrompt" class="gizmos-prompt">Waiting for state…</div>
-
-              <h3>Energy Row</h3>
-              <div id="gizmosEnergyRow" class="gizmos-energy-row"></div>
-
-              <h3>Display</h3>
-              <div id="gizmosDisplay" class="gizmos-display"></div>
-
-              <h3>Your Lab</h3>
-              <div id="gizmosYou" class="gizmos-player-card"></div>
-
-              <div id="gizmosResearchWrap" class="hidden">
-                <h3>Research</h3>
-                <div class="hint">Bottom order: leftmost card becomes the deepest card at the bottom of the deck.</div>
-                <div id="gizmosResearchCards" class="gizmos-cards"></div>
-                <div class="row actions">
-                  <button id="gizmosResearchSkipBtn" type="button">Skip Research Choice</button>
+            <div id="gizmosPanel" class="hidden gizmos-workshop">
+              <header class="gizmos-masthead">
+                <div><span class="gizmos-eyebrow">THE INVENTION WORKSHOP</span><h2>Gizmos <span>巧妙装置</span></h2></div>
+                <div id="gizmosStanding" class="gizmos-standing"></div>
+              </header>
+              <div id="gizmosResources" class="gizmos-resources" aria-label="Your resources"></div>
+              <section class="gizmos-guide" aria-label="Turn guide">
+                <div id="gizmosPrompt" role="status" aria-live="polite">Waiting for game…</div>
+                <div id="gizmosSteps" class="gizmos-steps" aria-label="Turn steps"></div>
+              </section>
+              <div id="gizmosActions" class="gizmos-action-choices" aria-label="Choose a base action"></div>
+              <div id="gizmosRecent" class="gizmos-recent" aria-live="polite" hidden></div>
+              <div class="gizmos-workbench">
+                <div class="gizmos-table-area">
+                  <section id="gizmosContext" class="gizmos-context" aria-label="Current action" hidden></section>
+                  <section class="gizmos-energy-section" aria-labelledby="gizmosEnergyTitle">
+                    <div class="gizmos-section-heading"><h3 id="gizmosEnergyTitle">Energy row <span>公共能量</span></h3><span id="gizmosBagCount" class="gizmos-caption"></span></div>
+                    <div id="gizmosEnergyRow" class="gizmos-energy-tray"></div>
+                    <div id="gizmosPickPreview" class="gizmos-pick-preview" hidden></div>
+                  </section>
+                  <section class="gizmos-market-section" aria-label="Gizmo market and archive">
+                    <div id="gizmosMarketNav" class="gizmos-market-nav"></div>
+                    <div id="gizmosMarketHint" class="gizmos-market-hint"></div>
+                    <div id="gizmosDisplay" class="gizmos-tile-grid"></div>
+                  </section>
                 </div>
+                <aside class="gizmos-lab-area" aria-label="Your machine and opponents">
+                  <details id="gizmosMachineDetails" class="gizmos-fold" open>
+                    <summary>Your machine <span id="gizmosMachineCount"></span></summary>
+                    <div id="gizmosYou" class="gizmos-machine-list"></div>
+                  </details>
+                  <section class="gizmos-opponents-section"><h3>Table <span>玩家进度</span></h3><div id="gizmosPlayers"></div></section>
+                  <details class="gizmos-fold"><summary>Activity <span id="gizmosActivityCount">0</span></summary><ol id="gizmosActivity" class="gizmos-activity"></ol></details>
+                </aside>
               </div>
-
-              <h3>Actions</h3>
-              <div id="gizmosActions" class="gizmos-actions"></div>
-
-              <h3>Players</h3>
-              <div id="gizmosPlayers" class="gizmos-player-list"></div>
             </div>
 
             <div id="burgundyPanel" class="hidden"></div>
@@ -7131,75 +7141,75 @@
 
   </div>
 
-  <script src="/static/vendor/socket.io.min.js"></script>
-  <script src="/static/games/shared.js?v=app_v23"></script>
-  <script src="/static/games/blokus.js?v=app_v6"></script>
-  <script src="/static/games/carcassonne.js?v=app_v6"></script>
-  <script src="/static/games/azul.js?v=app_v4"></script>
-  <script src="/static/games/draw_guess.js?v=app_v4"></script>
-  <script src="/static/games/cyber_pictures.js?v=app_v4"></script>
-  <script src="/static/games/blitz_sketch.js?v=app_v4"></script>
-  <script src="/static/games/fake_artist.js?v=app_v4"></script>
-  <script src="/static/games/things_in_rings.js?v=app_v5"></script>
-  <script src="/static/games/impression_flower.js?v=app_v4"></script>
-  <script src="/static/games/gizmos.js?v=app_v4"></script>
-  <script src="/static/games/century_spice_road.js?v=app_v7"></script>
-  <script src="/static/games/splendor.js?v=app_v4"></script>
-  <script src="/static/games/splendor_pokemon.js?v=app_v6"></script>
-  <script src="/static/games/project_l.js?v=app_v4"></script>
-  <script src="/static/games/decrypto.js?v=app_v4"></script>
-  <script src="/static/games/wavelength.js?v=app_v4"></script>
-  <script src="/static/games/dumb_questions.js?v=app_v1"></script>
-  <script src="/static/games/nine_upper.js?v=app_v2"></script>
-  <script src="/static/games/word_decode.js?v=app_v4"></script>
-  <script src="/static/games/trekking.js?v=app_v4"></script>
-  <script src="/static/games/aidixit.js?v=app_v4"></script>
-  <script src="/static/games/hanabi.js?v=app_v4"></script>
-  <script src="/static/games/gang.js?v=app_v4"></script>
-  <script src="/static/games/cat_in_box.js?v=app_v5"></script>
-  <script src="/static/games/point_salad.js?v=app_v4"></script>
-  <script src="/static/games/forest_shuffle.js?v=app_v6"></script>
-  <script src="/static/games/patchwork.js?v=app_v7"></script>
-  <script src="/static/games/isle_of_skye.js?v=app_v6"></script>
-  <script src="/static/games/six_nimmt.js?v=app_v4"></script>
-  <script src="/static/games/skull.js?v=app_v4"></script>
-  <script src="/static/games/rebel_princess_hints.js?v=2"></script>
-  <script src="/static/games/rebel_princess.js?v=app_v4"></script>
-  <script src="/static/games/guandan.js?v=app_v13"></script>
-  <script src="/static/games/cabo.js?v=app_v8"></script>
-  <script src="/static/games/flip7.js?v=app_v4"></script>
-  <script src="/static/games/hot_streak.js?v=app_v1"></script>
-  <script src="/static/games/acquire.js?v=app_v1"></script>
-  <script src="/static/games/abraca_what.js?v=app_v4"></script>
-  <script src="/static/games/fang_niao.js?v=app_v4"></script>
-  <script src="/static/games/perfect_mismatch.js?v=app_v4"></script>
-  <script src="/static/games/coyote.js?v=app_v4"></script>
-  <script src="/static/games/in_a_grove.js?v=app_v6"></script>
-  <script src="/static/games/citadels.js?v=app_v7"></script>
-  <script src="/static/games/tagiron.js?v=app_v5"></script>
-  <script src="/static/games/davinci_code.js?v=app_v4"></script>
-  <script src="/static/games/lost_code.js?v=app_v4"></script>
-  <script src="/static/games/criminal_dance.js?v=app_v4"></script>
-  <script src="/static/games/turing_machine.js?v=app_v6"></script>
-  <script src="/static/games/kronologic.js?v=app_v3"></script>
-  <script src="/static/games/halli_galli.js?v=app_v4"></script>
-  <script src="/static/games/texas_holdem.js?v=app_v4"></script>
-  <script src="/static/games/yahtzee.js?v=app_v4"></script>
-  <script src="/static/games/istanbul_hints.js?v=1"></script>
-  <script src="/static/games/istanbul.js?v=3"></script>
-  <script src="/static/games/gold_rush.js?v=app_v4"></script>
-  <script src="/static/games/age_of_war.js?v=app_v5"></script>
-  <script src="/static/games/wandering_towers.js?v=app_v10"></script>
-  <script src="/static/games/incan_gold.js?v=app_v4"></script>
-  <script src="/static/games/celestia.js?v=app_v2"></script>
-  <script src="/static/games/manila.js?v=app_v4"></script>
-  <script src="/static/games/kobayakawa.js?v=app_v4"></script>
-  <script src="/static/games/high_society.js?v=app_v1"></script>
-  <script src="/static/games/poison.js?v=app_v1"></script>
-  <script src="/static/games/bohnanza_dice.js?v=app_v8"></script>
-  <script src="/static/games/emerald_skulls.js?v=app_v2"></script>
-  <script src="/static/games/wriggle_roulette.js?v=app_v1"></script>
-  <script src="/static/games/catan_starfarers.js?v=app_v4"></script>
+  <script src="/static/vendor/socket.io.min.js" defer></script>
+  <script src="/static/games/shared.js?v=app_v24" defer></script>
+  <script src="/static/games/blokus.js?v=app_v6" defer></script>
+  <script src="/static/games/carcassonne.js?v=app_v6" defer></script>
+  <script src="/static/games/azul.js?v=app_v4" defer></script>
+  <script src="/static/games/draw_guess.js?v=app_v4" defer></script>
+  <script src="/static/games/cyber_pictures.js?v=app_v4" defer></script>
+  <script src="/static/games/blitz_sketch.js?v=app_v4" defer></script>
+  <script src="/static/games/fake_artist.js?v=app_v4" defer></script>
+  <script src="/static/games/things_in_rings.js?v=app_v5" defer></script>
+  <script src="/static/games/impression_flower.js?v=app_v4" defer></script>
+  <script src="/static/games/gizmos.js?v=app_v5" defer></script>
+  <script src="/static/games/century_spice_road.js?v=app_v7" defer></script>
+  <script src="/static/games/splendor.js?v=app_v4" defer></script>
+  <script src="/static/games/splendor_pokemon.js?v=app_v6" defer></script>
+  <script src="/static/games/project_l.js?v=app_v4" defer></script>
+  <script src="/static/games/decrypto.js?v=app_v4" defer></script>
+  <script src="/static/games/wavelength.js?v=app_v4" defer></script>
+  <script src="/static/games/dumb_questions.js?v=app_v1" defer></script>
+  <script src="/static/games/nine_upper.js?v=app_v2" defer></script>
+  <script src="/static/games/word_decode.js?v=app_v4" defer></script>
+  <script src="/static/games/trekking.js?v=app_v4" defer></script>
+  <script src="/static/games/aidixit.js?v=app_v4" defer></script>
+  <script src="/static/games/hanabi.js?v=app_v4" defer></script>
+  <script src="/static/games/gang.js?v=app_v4" defer></script>
+  <script src="/static/games/cat_in_box.js?v=app_v5" defer></script>
+  <script src="/static/games/point_salad.js?v=app_v4" defer></script>
+  <script src="/static/games/forest_shuffle.js?v=app_v6" defer></script>
+  <script src="/static/games/patchwork.js?v=app_v7" defer></script>
+  <script src="/static/games/isle_of_skye.js?v=app_v6" defer></script>
+  <script src="/static/games/six_nimmt.js?v=app_v4" defer></script>
+  <script src="/static/games/skull.js?v=app_v4" defer></script>
+  <script src="/static/games/rebel_princess_hints.js?v=2" defer></script>
+  <script src="/static/games/rebel_princess.js?v=app_v4" defer></script>
+  <script src="/static/games/guandan.js?v=app_v13" defer></script>
+  <script src="/static/games/cabo.js?v=app_v8" defer></script>
+  <script src="/static/games/flip7.js?v=app_v4" defer></script>
+  <script src="/static/games/hot_streak.js?v=app_v1" defer></script>
+  <script src="/static/games/acquire.js?v=app_v1" defer></script>
+  <script src="/static/games/abraca_what.js?v=app_v4" defer></script>
+  <script src="/static/games/fang_niao.js?v=app_v4" defer></script>
+  <script src="/static/games/perfect_mismatch.js?v=app_v4" defer></script>
+  <script src="/static/games/coyote.js?v=app_v4" defer></script>
+  <script src="/static/games/in_a_grove.js?v=app_v6" defer></script>
+  <script src="/static/games/citadels.js?v=app_v7" defer></script>
+  <script src="/static/games/tagiron.js?v=app_v5" defer></script>
+  <script src="/static/games/davinci_code.js?v=app_v4" defer></script>
+  <script src="/static/games/lost_code.js?v=app_v4" defer></script>
+  <script src="/static/games/criminal_dance.js?v=app_v4" defer></script>
+  <script src="/static/games/turing_machine.js?v=app_v6" defer></script>
+  <script src="/static/games/kronologic.js?v=app_v3" defer></script>
+  <script src="/static/games/halli_galli.js?v=app_v4" defer></script>
+  <script src="/static/games/texas_holdem.js?v=app_v4" defer></script>
+  <script src="/static/games/yahtzee.js?v=app_v4" defer></script>
+  <script src="/static/games/istanbul_hints.js?v=1" defer></script>
+  <script src="/static/games/istanbul.js?v=3" defer></script>
+  <script src="/static/games/gold_rush.js?v=app_v4" defer></script>
+  <script src="/static/games/age_of_war.js?v=app_v5" defer></script>
+  <script src="/static/games/wandering_towers.js?v=app_v10" defer></script>
+  <script src="/static/games/incan_gold.js?v=app_v4" defer></script>
+  <script src="/static/games/celestia.js?v=app_v2" defer></script>
+  <script src="/static/games/manila.js?v=app_v4" defer></script>
+  <script src="/static/games/kobayakawa.js?v=app_v4" defer></script>
+  <script src="/static/games/high_society.js?v=app_v1" defer></script>
+  <script src="/static/games/poison.js?v=app_v1" defer></script>
+  <script src="/static/games/bohnanza_dice.js?v=app_v8" defer></script>
+  <script src="/static/games/emerald_skulls.js?v=app_v2" defer></script>
+  <script src="/static/games/wriggle_roulette.js?v=app_v1" defer></script>
+  <script src="/static/games/catan_starfarers.js?v=app_v4" defer></script>
   <dialog id="takeTimeDialog" class="take-time-dialog" aria-labelledby="takeTimeDialogTitle">
     <div class="take-time-dialog-header">
       <h2 id="takeTimeDialogTitle">Take Time</h2>
@@ -7207,29 +7217,29 @@
     </div>
     <div id="takeTimeDialogBody" class="take-time-dialog-body"></div>
   </dialog>
-  <script src="/static/games/take_time.js?v=1"></script>
+  <script src="/static/games/take_time.js?v=1" defer></script>
   <dialog id="eternalDecksDialog" class="eternal-decks-dialog" aria-labelledby="eternalDecksDialogTitle">
     <div class="eternal-decks-dialog-header"><h2 id="eternalDecksDialogTitle">Eternal Decks</h2><button id="eternalDecksDialogClose" type="button">Close</button></div>
     <div id="eternalDecksDialogBody"></div>
   </dialog>
-  <script src="/static/games/eternal_decks.js?v=1"></script>
+  <script src="/static/games/eternal_decks.js?v=1" defer></script>
   <dialog id="ponziSchemeDialog" class="ponzi-scheme-dialog" aria-labelledby="ponziSchemeDialogTitle">
     <div class="ponzi-scheme-dialog-header"><h2 id="ponziSchemeDialogTitle">Ponzi Scheme</h2><button id="ponziSchemeDialogClose" type="button">Close</button></div>
     <div id="ponziSchemeDialogBody"></div>
   </dialog>
-  <script src="/static/games/ponzi_scheme.js?v=1"></script>
-  <script src="/static/games/bomb_busters.js?v=app_v2"></script>
-  <script src="/static/games/felix.js?v=app_v1"></script>
-  <script src="/static/games/tacta.js?v=app_v7"></script>
-  <script src="/static/games/subtext.js?v=app_v1"></script>
-  <script src="/static/games/tucano.js?v=app_v2"></script>
-  <script src="/static/games/witchs_brew.js?v=app_v1"></script>
-  <script src="/static/games/ra.js?v=app_v7"></script>
-  <script src="/static/games/scout.js?v=app_v4"></script>
-  <script src="/static/games/ark_nova.js?v=app_v23"></script>
-  <script src="/static/games/gaia_project.js?v=gaia_v4"></script>
-  <script src="/static/games/castles_of_burgundy.js?v=2"></script>
-  <script src="/static/app.js?v=app_v26"></script>
-  <script src="/static/room.js?v=app_v46"></script>
+  <script src="/static/games/ponzi_scheme.js?v=1" defer></script>
+  <script src="/static/games/bomb_busters.js?v=app_v2" defer></script>
+  <script src="/static/games/felix.js?v=app_v1" defer></script>
+  <script src="/static/games/tacta.js?v=app_v7" defer></script>
+  <script src="/static/games/subtext.js?v=app_v1" defer></script>
+  <script src="/static/games/tucano.js?v=app_v2" defer></script>
+  <script src="/static/games/witchs_brew.js?v=app_v1" defer></script>
+  <script src="/static/games/ra.js?v=app_v7" defer></script>
+  <script src="/static/games/scout.js?v=app_v4" defer></script>
+  <script src="/static/games/ark_nova.js?v=app_v23" defer></script>
+  <script src="/static/games/gaia_project.js?v=gaia_v4" defer></script>
+  <script src="/static/games/castles_of_burgundy.js?v=2" defer></script>
+  <script src="/static/app.js?v=app_v26" defer></script>
+  <script src="/static/room.js?v=app_v48" defer></script>
 </body>
 </html>
