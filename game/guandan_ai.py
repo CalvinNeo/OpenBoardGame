@@ -1,4 +1,5 @@
 import copy
+import itertools
 import math
 import random
 import threading
@@ -4982,6 +4983,28 @@ def _short_hand_structured_reply_breakdown(
     accepted_target = max(16, int(config.get("bot_short_hand_structured_samples", accepted_target)))
     max_attempts = max(accepted_target * 4, int(config.get("bot_short_hand_structured_max_attempts", max_attempts)))
     caps = _public_revealed_rank_caps_for_target(state, opponent_id)
+    history_profile = _public_history_profile_for_target(state, opponent_id)
+    cache_key = (
+        opponent_id,
+        hand_count,
+        bool(state["players"].get(opponent_id, {}).get("finished")),
+        level_rank,
+        tuple(combo.get(name) for name in ("type", "size", "tier", "rank_value", "high_value", "uses_wild")),
+        # Pool order affects both the seed and Random.sample; do not sort it.
+        tuple((card["id"], card.get("rank"), card.get("suit"), card.get("joker")) for card in unknown_cards),
+        tuple(sorted(caps.items())),
+        tuple(sorted(history_profile.items())),
+        state.get("pass_limits", {}).get(opponent_id, {}).get("single"),
+        bool(config.get("hard_bomb_beats_soft")),
+        accepted_target,
+        max_attempts,
+    )
+    cache = state.setdefault("_ai_eval_cache", {}).setdefault("short_hand_reply_breakdowns", {})
+    if cache_key in cache:
+        cached = cache[cache_key]
+        return None if cached is None else dict(cached)
+    if _deadline_expired():
+        return None
 
     def obey_caps(hand: List[Dict]) -> bool:
         if not caps:
@@ -5010,6 +5033,10 @@ def _short_hand_structured_reply_breakdown(
     overbomb_hits = 0
     attempts = 0
     while attempts < max_attempts and accepted < accepted_target:
+        if _deadline_expired():
+            # Callers already have an analytic fallback. A partial sample panel
+            # must neither replace it nor poison later calls with more time.
+            return None
         attempts += 1
         hand = rng.sample(unknown_cards, hand_count)
         if not _short_hand_has_structured_shape(hand, level_rank):
@@ -5027,13 +5054,18 @@ def _short_hand_structured_reply_breakdown(
             else:
                 bomb_hits += 1
 
-    if accepted <= 0:
+    if _deadline_expired():
         return None
-    return {
+    if accepted <= 0:
+        cache[cache_key] = None
+        return None
+    result = {
         "same_type": same_type_hits / accepted,
         "bomb": bomb_hits / accepted,
         "overbomb": overbomb_hits / accepted,
     }
+    cache[cache_key] = dict(result)
+    return result
 
 
 def _opponent_same_type_reply_probability(
@@ -8472,6 +8504,23 @@ def _predict_finish_order(
     return finished + remaining
 
 
+def _predicted_team_upgrade_value(state: Dict, bot_id: str, order: List[str]) -> float:
+    """Score a predicted order with the same zero-sum upgrade objective as play."""
+    if len(order) != 4:
+        return 0.0
+    winning_team = _team_of(state, order[0])
+    partner_rank = next(
+        (rank for rank, pid in enumerate(order[1:], 2) if _team_of(state, pid) == winning_team),
+        None,
+    )
+    if partner_rank is None:
+        return 0.0
+    # Preserve roughly the former heuristic scale, but do not reward a losing
+    # 2/3 finish or give the two teams different values for the same outcome.
+    points = 5 - partner_rank
+    return float(3 * points if _team_of(state, bot_id) == winning_team else -3 * points)
+
+
 def _team_finish_score(
     state: Dict,
     bot_id: str,
@@ -8488,24 +8537,7 @@ def _team_finish_score(
         else:
             turns[pid] = _estimated_turns_to_finish(state["players"][pid]["hand"], level_rank)
     predicted = _predict_finish_order(state, counts, turns)
-    team = _team_of(state, bot_id)
-    team_positions = [idx + 1 for idx, pid in enumerate(predicted) if _team_of(state, pid) == team]
-    if len(team_positions) < 2:
-        return 0.0
-    team_positions.sort()
-    if team_positions == [1, 2]:
-        return 8.0
-    if team_positions == [1, 3]:
-        return 5.0
-    if team_positions == [1, 4]:
-        return 2.0
-    if team_positions == [2, 3]:
-        return 1.0
-    if team_positions == [2, 4]:
-        return -2.0
-    if team_positions == [3, 4]:
-        return -6.0
-    return 0.0
+    return _predicted_team_upgrade_value(state, bot_id, predicted)
 
 
 def _team_finish_score_with_turn_override(
@@ -8524,24 +8556,7 @@ def _team_finish_score_with_turn_override(
         else:
             turns[pid] = _estimated_turns_to_finish(state["players"][pid]["hand"], level_rank)
     predicted = _predict_finish_order(state, counts, turns)
-    team = _team_of(state, bot_id)
-    team_positions = [idx + 1 for idx, pid in enumerate(predicted) if _team_of(state, pid) == team]
-    if len(team_positions) < 2:
-        return 0.0
-    team_positions.sort()
-    if team_positions == [1, 2]:
-        return 8.0
-    if team_positions == [1, 3]:
-        return 5.0
-    if team_positions == [1, 4]:
-        return 2.0
-    if team_positions == [2, 3]:
-        return 1.0
-    if team_positions == [2, 4]:
-        return -2.0
-    if team_positions == [3, 4]:
-        return -6.0
-    return 0.0
+    return _predicted_team_upgrade_value(state, bot_id, predicted)
 
 
 def _team_finish_visibility_weight(state: Dict, bot_id: str) -> float:
@@ -8655,6 +8670,24 @@ def _settled_round_value(state: Dict, bot_id: str) -> Optional[float]:
     return float(magnitude if _team_of(state, bot_id) == winning_team else -magnitude)
 
 
+def _possible_round_value_bounds(state: Dict, bot_id: str) -> Optional[Tuple[float, float]]:
+    """Bound the remaining team outcome using only already public finish places."""
+    order = list(state.get("finish_order") or [])
+    if not order:
+        return None
+    remaining = [pid for pid in state["turn_order"] if pid not in order]
+    projected = dict(state)
+    values = []
+    # A known first place leaves at most six orders. Reuse the exact settlement
+    # utility so match victory and the partner-last rule use the same scale.
+    for tail in itertools.permutations(remaining):
+        projected["finish_order"] = order + list(tail)
+        value = _settled_round_value(projected, bot_id)
+        if value is not None:
+            values.append(value)
+    return (min(values), max(values)) if values else None
+
+
 def _evaluate_state_for_bot(state: Dict, bot_id: str) -> float:
     if state.get("game_over"):
         return 1000.0 if state.get("winner_team") == _team_of(state, bot_id) else -1000.0
@@ -8707,6 +8740,15 @@ def _evaluate_state_for_bot(state: Dict, bot_id: str) -> float:
             score += min(3.0, control * 0.4)
         if current_trick and current_trick.get("player_id") == teammate:
             score += 1.5
+    bounds = _possible_round_value_bounds(state, bot_id)
+    if bounds is not None:
+        low, high = bounds
+        if low == high:
+            return low
+        # Once first place is known, shape/tempo only distinguish outcomes
+        # within that team's attainable upgrade range. In particular, delaying
+        # a certain loss cannot look better than securing its best possible loss.
+        return (low + high) / 2.0 + (high - low) / 2.0 * math.tanh(score / 100.0)
     return score
 
 
@@ -13952,12 +13994,14 @@ def _bot_select_play(
             depth,
             bounded=bounded_response,
         )
-        candidate_durations.append(time.perf_counter() - started_at)
-        if components.get("anytime_partial"):
+        finished_at = time.perf_counter()
+        candidate_durations.append(finished_at - started_at)
+        hard_deadline_reached = hard_deadline is not None and finished_at >= hard_deadline
+        if components.get("anytime_partial") or hard_deadline_reached:
             # A partial component vector is not on the same scale as a completed
-            # one. Retain the completed prefix (or the cheap incumbent below)
-            # instead of allowing an unfinished candidate to win accidentally.
-            if hard_deadline is not None and time.perf_counter() >= hard_deadline:
+            # one. Late sampling can also fall back without marking the vector
+            # partial, so publish only candidates finished within the budget.
+            if hard_deadline_reached:
                 stop_reason = "hard_deadline"
             else:
                 stop_reason = "partial_candidate"

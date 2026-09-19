@@ -33,6 +33,30 @@ class GuandanTeamValueTests(unittest.TestCase):
             self.assertEqual(values["p0"], -values["p1"])
             self.assertEqual(values[order[0]], points * 100)
 
+    def test_predicted_order_uses_zero_sum_upgrade_objective_for_both_evaluators(self):
+        for order in itertools.permutations(self.state["turn_order"]):
+            winning_team = self.state["player_teams"][order[0]]
+            partner_rank = next(rank for rank, pid in enumerate(order[1:], 2)
+                                if self.state["player_teams"][pid] == winning_team)
+            points = 5 - partner_rank
+            with self.subTest(order=order), mock.patch.object(
+                guandan_ai, "_predict_finish_order", return_value=list(order),
+            ), mock.patch.object(guandan_ai, "_estimated_turns_to_finish", return_value=3.0):
+                values = {}
+                for pid in self.state["turn_order"]:
+                    hand = self.state["players"][pid]["hand"]
+                    value = guandan._team_finish_score(self.state, pid, len(hand), bot_hand=hand)
+                    overridden = guandan_ai.call(
+                        guandan, "_team_finish_score_with_turn_override", self.state, pid, len(hand), 2.0,
+                    )
+                    sign = 1 if self.state["player_teams"][pid] == winning_team else -1
+                    self.assertEqual(value, sign * points * 3)
+                    self.assertEqual(overridden, value)
+                    values[pid] = value
+                self.assertEqual(values["p0"], values["p2"])
+                self.assertEqual(values["p1"], values["p3"])
+                self.assertEqual(values["p0"], -values["p1"])
+
     def test_double_finish_is_settled_before_round_end(self):
         state = self.state
         state["finish_order"] = ["p1", "p3"]

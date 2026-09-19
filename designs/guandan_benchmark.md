@@ -2,7 +2,9 @@
 
 入口：`python3 scripts/benchmark_guandan.py`，只用 Python 标准库。改进分析见 [guandan_ai_review.md](guandan_ai_review.md)。
 
-以 `68e62ab` 为基线的本轮修改、旧测试变化理由和对战结果见 [优化记录](guandan_optimization_68e62ab.md)。
+以 `68e62ab` 为基线的第一轮修改、旧测试变化理由和对战结果见 [优化记录](guandan_optimization_68e62ab.md)。
+
+继续优化后的增量比较以 `27c9cb2` 为直接基线，见 [第二轮记录](guandan_optimization_27c9cb2.md)；它与最初基线的比较分开报告。
 
 ## 评测什么
 

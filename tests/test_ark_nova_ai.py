@@ -8,6 +8,7 @@ from game.ark_nova import (
     ArkNovaGame,
     _find_placement,
     _place_building,
+    _start_extra_action,
 )
 
 
@@ -165,6 +166,34 @@ class ArkNovaAiTests(unittest.TestCase):
         _, error = ArkNovaGame.apply_action(state, "bot", action)
         self.assertIsNone(error)
         self.assertEqual(len(state["players"]["bot"]["map"]["buildings"]), before_count + 1)
+
+    def test_bot_finishes_each_card_source_choice_during_a_granted_cards_action(self) -> None:
+        state = self.make_state()
+        state["players"]["bot"]["action_cards"]["cards"]["upgraded"] = True
+        _start_extra_action(state, {
+            "player_id": "bot", "action": "cards", "strength": 4,
+            "move_after": True, "allow_x_alternative": True, "optional": True,
+        }, [])
+        _, error = ArkNovaGame.apply_action(state, "bot", {
+            "type": "cards", "choose_card_sources": True,
+        })
+        self.assertIsNone(error)
+        self.assertEqual(state["pending_choice"]["type"], "draw_card")
+        source_choices = 0
+        for _ in range(12):
+            pending = state.get("pending_choice")
+            if not pending:
+                break
+            source_choices += int(pending["type"] == "draw_card")
+            action = ArkNovaGame.bot_move(state, pending["player_id"])
+            self.assertIsNotNone(action)
+            self.assertEqual(action["type"], "resolve_choice")
+            _, error = ArkNovaGame.apply_action(state, pending["player_id"], action)
+            self.assertIsNone(error)
+        self.assertGreater(source_choices, 1)
+        self.assertIsNone(state.get("pending_choice"))
+        self.assertNotIn("forced_action", state)
+        self.assertEqual(state["current_player"], "other")
 
 
 if __name__ == "__main__":

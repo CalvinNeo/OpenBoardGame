@@ -1139,6 +1139,10 @@ def _forced_continuation_available(state: Mapping[str, Any]) -> bool:
     forced = state.get("forced_action")
     if not isinstance(forced, Mapping):
         return True
+    # A granted action can pause for several card/effect choices. It has
+    # already started; only a choice can be submitted until those finish.
+    if state.get("pending_choice"):
+        return True
     player_id = str(forced.get("player_id", ""))
     if player_id not in state.get("players", {}):
         return False

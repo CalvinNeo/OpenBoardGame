@@ -73,7 +73,7 @@ const ISTANBUL_HELP_TEXT = `
 <h3>看懂你的资源</h3>
 <p>💰 里拉是钱；💎 红宝石决定胜负；📦 手推车容量是<strong>每种颜色</strong>货物的上限；👥 是随行助手。🔴 布料、🟢 香料、🟡 水果、🔵 珠宝可以出售或支付。悬停、键盘聚焦或轻点资源徽标可直接查看说明。</p>
 <h3>地图上的人</h3>
-<p>姓名首字代表商人，👥 代表留在该地的助手，👪 代表家族成员。抵达有其他商人的地点，每人支付 2 里拉（喷泉免费）；钱不够则本回合直接结束。助手颜色与主人一致，ⓘ 可查看完整名单。</p>
+<p>姓名首字代表商人，👥 代表留在该地的助手，👪 代表家族成员。抵达有其他商人的地点，每人支付 2 里拉（喷泉免费）；钱不够则本回合直接结束。助手颜色与主人一致，Explain 后点地点可查看完整名单。</p>
 <p>行动后遇到别人的家族成员，可选 1 张奖励卡或 3 里拉，将其送回警察局；若对方有黄色清真寺板块，对方另获 2 里拉。遇到 🎩 总督可用 2 里拉或 1 张奖励卡换 1 张卡；遇到 🕵️ 走私者可用 2 里拉或 1 件货物换 1 件货物，也可 Skip。</p>
 <h3>其他获取宝石的方式</h3>
 <p>苏丹宫殿支付指定货物；宝石商支付里拉，价格会逐次上涨。先将手推车容量升到 5 的玩家获得 1 颗宝石。集齐同一座清真寺的两色板块，且该处仍有宝石时，获得 1 颗。</p>
@@ -485,7 +485,6 @@ function renderIstanbulBoard(view) {
     const desc = document.createElement("span");
     desc.className = "istanbul-tile-desc";
     desc.textContent = ISTANBUL_PLACES[tile.place_id]?.[1] || "";
-    let infoSuffix = "";
     const tokens = document.createElement("span");
     tokens.className = "istanbul-token-row";
     [...(view.players || [])].sort((a,b) => Number(b.player_id === view.you) - Number(a.player_id === view.you)).forEach(player => {
@@ -514,7 +513,7 @@ function renderIstanbulBoard(view) {
       count.className = "istanbul-token extra";
       count.textContent = `+${extra}`;
       tokens.append(count);
-      infoSuffix = `另有 ${extra} 个棋子，ⓘ 查看完整名单。`;
+      tileEl.dataset.istanbulExplain = `另有 ${extra} 个棋子。${tileEl.dataset.istanbulExplain}`;
     }
     tileEl.append(header, name, desc, tokens);
     tileEl.addEventListener("click", () => {
@@ -526,14 +525,7 @@ function renderIstanbulBoard(view) {
       }
       renderIstanbulGameState({ view });
     });
-    const info = document.createElement("button");
-    info.type = "button";
-    info.className = "istanbul-tile-info";
-    info.id = `istanbulTileInfo${tile.pos}`;
-    info.textContent = "ⓘ";
-    info.dataset.istanbulTip = `${infoSuffix}${istanbulPlaceInfo(view, tile)}`;
-    info.setAttribute("aria-label", `${istanbulPlaceName(tile)}：地点与棋子说明`);
-    shell.append(tileEl, info);
+    shell.append(tileEl);
     istanbulBoard.append(shell);
   });
 }
@@ -1063,7 +1055,7 @@ function renderMovementControls(view) {
   if (istanbulPathHint) {
     const viewer = getViewer(view);
     const path = [viewer?.merchant_pos, ...istanbulSelections.path].map(pos => istanbulPlaceName(getTileByPos(view, pos)));
-    istanbulPathHint.textContent = steps ? `路线：${path.join(" → ")}（${steps} 格）` : "棋盘按上下左右相邻；ⓘ 查看地点详情。";
+    istanbulPathHint.textContent = steps ? `路线：${path.join(" → ")}（${steps} 格）` : "棋盘按上下左右相邻；Explain 后点地点查看详情。";
   }
   const viewer = getViewer(view);
   const destination = dest || (mode === "stay" ? getTileByPos(view, viewer?.merchant_pos) : null);
@@ -1765,7 +1757,7 @@ function renderIstanbulGuide(view) {
         hint.textContent = "比较红宝石数量；平手依次比较里拉、货物总数与奖励卡数量。";
     } else if (!ownTurn) {
         title.textContent = `等待 ${formatPlayerName(view, view.current_player)} 行动`;
-        hint.textContent = player ? "趁现在规划下一站：补货 → 卖货 → 买红宝石。点地点或 ⓘ 查看效果。" : "你正在观战。点地点或 ⓘ 了解集市中的行动。";
+        hint.textContent = player ? "趁现在规划下一站：补货 → 卖货 → 买红宝石。Explain 后点地点查看效果。" : "你正在观战。Explain 后点地点了解集市中的行动。";
     } else if (pending) {
         const prompts = {
             reward: ["遇到家族成员：选择奖励", "奖励卡可改变行动；3 里拉可立即用于支付。完成选择后继续相遇。"],

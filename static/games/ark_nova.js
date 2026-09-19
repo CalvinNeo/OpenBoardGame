@@ -2780,7 +2780,7 @@
     if (view.forced_action && view.forced_action.hypnosis) {
       const forced = view.forced_action;
       const owner = arkNovaPlayers(view).find((player) => arkNovaPlayerId(player) === String(forced.action_card_owner));
-      container.insertAdjacentHTML("afterbegin", `<div class="arkn-plan-summary">Hypnosis: using ${arkNovaEscape(arkNovaPlayerName(owner || {}))}'s ${arkNovaEscape(ARK_NOVA_ACTIONS[forced.action]?.name || forced.action)}, side ${forced.action_level === 2 ? "II" : "I"}. Finish this action to continue resolving your animal.</div>`);
+      container.insertAdjacentHTML("afterbegin", `<div class="arkn-plan-summary">Hypnosis: using ${arkNovaEscape(arkNovaPlayerName(owner || {}))}'s ${arkNovaEscape(ARK_NOVA_ACTIONS[forced.action]?.name || forced.action)}, side ${forced.action_level === 2 ? "II" : "I"}. Your Animals action is complete; finish this borrowed action to continue the remaining effects.</div>`);
     }
   }
 

@@ -1698,7 +1698,9 @@
   background: #0d2119;
   color: var(--arkn-ink);
   max-width: 100%;
+  min-width: 0;
   padding: 6px 8px;
+  width: 100%;
 }
 
 #arkNovaPanel .arkn-segmented {
@@ -2012,7 +2014,8 @@
 #arkNovaPanel .arkn-animal-plan b { font-size: 0.68rem; }
 #arkNovaPanel .arkn-animal-plan small { color: var(--arkn-muted); font-size: 0.58rem; }
 
-#arkNovaPanel .arkn-check-row {
+#arkNovaPanel .arkn-check-row,
+#arkNovaPanel .arkn-form-grid .arkn-check-row {
   align-items: center;
   background: rgba(255, 255, 255, 0.045);
   border: 1px solid var(--arkn-line);

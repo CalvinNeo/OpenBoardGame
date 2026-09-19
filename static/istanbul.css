@@ -233,7 +233,7 @@
   margin: 0;
   padding: 7px;
   border: 0;
-  border-radius: 8px 8px 0 0;
+  border-radius: 8px;
   background: transparent;
   color: var(--bazaar-ink);
   text-align: left;
@@ -317,29 +317,6 @@
 
 .istanbul-token.npc {
   clip-path: none;
-}
-
-.istanbul-tile-info {
-  display: block;
-  flex: 0 0 auto;
-  width: 100%;
-  min-height: 26px;
-  margin: 0;
-  padding: 2px 5px;
-  border: 0;
-  border-top: 1px solid #dbcdb566;
-  border-radius: 0 0 8px 8px;
-  background: #ffffff45;
-  color: #766046;
-  font-size: 13px;
-  line-height: 1.2;
-  text-align: center;
-  cursor: help;
-}
-
-.istanbul-tile-info:hover {
-  background: #e5eedd;
-  color: #23574a;
 }
 
 .istanbul-path-hint {
@@ -788,7 +765,7 @@
     min-height: 76px;
     padding: 5px 4px;
     gap: 4px;
-    border-radius: 6px 6px 0 0;
+    border-radius: 6px;
   }
 
   .istanbul-tile-name {
@@ -801,11 +778,6 @@
 
   .istanbul-tile-header {
     font-size: 10px;
-  }
-
-  .istanbul-tile-info {
-    min-height: 26px;
-    border-radius: 0 0 6px 6px;
   }
 
   .istanbul-markets,
