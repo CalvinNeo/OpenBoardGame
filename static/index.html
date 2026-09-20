@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css?v=app_v109" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v110" />
   <link rel="preload" href="/api/games" as="fetch" crossorigin="anonymous" />
   <link rel="stylesheet" href="/static/ark_nova.css?v=app_v21" />
   <link rel="stylesheet" href="/static/catan_starfarers.css?v=app_v4" />
@@ -2411,11 +2411,6 @@
                 </section>
 
                 <aside class="hot-streak-side-column">
-                  <section class="hot-streak-card-panel">
-                    <h3>Side Bet</h3>
-                    <div id="hotStreakSideBet" class="hot-streak-side-bet">-</div>
-                  </section>
-
                   <section id="hotStreakPoolSection" class="hot-streak-card-panel" data-hot-streak-explain="pool">
                     <div class="hot-streak-section-heading">
                       <h3>Public Race Pool</h3>
@@ -2427,10 +2422,17 @@
 
                   <section id="hotStreakTicketSection" class="hot-streak-card-panel">
                     <div class="hot-streak-section-heading">
-                      <h3>Betting Tickets</h3>
+                      <h3>Betting</h3>
                       <span id="hotStreakDraftProgress" class="hot-streak-mini-status">-</span>
                     </div>
-                    <div id="hotStreakTickets" class="hot-streak-ticket-grid"></div>
+                    <div class="hot-streak-bet-context" data-hot-streak-explain="side">
+                      <span class="hot-streak-bet-context-label">Current Side Bet</span>
+                      <div id="hotStreakSideBet" class="hot-streak-side-bet">-</div>
+                    </div>
+                    <div id="hotStreakTicketChoices" class="hot-streak-ticket-choices">
+                      <p class="hot-streak-ticket-group-label">Betting Tickets</p>
+                      <div id="hotStreakTickets" class="hot-streak-ticket-grid"></div>
+                    </div>
                   </section>
 
                   <section id="hotStreakHandSection" class="hot-streak-card-panel">
@@ -7187,7 +7189,7 @@
   <script src="/static/games/guandan.js?v=app_v13" defer></script>
   <script src="/static/games/cabo.js?v=app_v8" defer></script>
   <script src="/static/games/flip7.js?v=app_v4" defer></script>
-  <script src="/static/games/hot_streak.js?v=app_v2" defer></script>
+  <script src="/static/games/hot_streak.js?v=app_v3" defer></script>
   <script src="/static/games/acquire.js?v=app_v1" defer></script>
   <script src="/static/games/abraca_what.js?v=app_v4" defer></script>
   <script src="/static/games/fang_niao.js?v=app_v4" defer></script>

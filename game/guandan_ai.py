@@ -13103,24 +13103,22 @@ def _compute_bot_score_components(
         # not move wholesale relative to bombs when removing duplicate credit.
         components["opp_risk"] = -len(opp_ids) * 3.0
     else:
-        expected_blocks = 0.0
         expected_beats = 0.0
+        unknown_cards = _lead_unknown_pool_cards(state, bot_id)
         for opp in opp_ids:
-            belief = _public_reply_belief(state, bot_id, opp, combo)
-            # This generic term rewards proved same-type control. Estimated
-            # hold probabilities already enter the shape-specific lead and
-            # takeover terms; rewarding them again spends strong groups too
-            # readily. A voluntary pass is never proof of no legal reply.
+            # Remove ordinary-reply risk only when the public pool proves it
+            # impossible; a voluntary pass is not such proof. Do not add a
+            # second control reward on top of the existing takeover terms.
             # Even proved same-type control can still be broken by a bomb.
-            reply_probability = (
-                belief["bomb"]
-                if not belief["same_type_possible"]
-                else 1.0
+            same_type_possible = _public_pool_supports_same_type_reply(
+                unknown_cards, len(state["players"][opp]["hand"]), level_rank, combo
             )
+            # Avoid sampling a six-card hand when this component would throw
+            # away the sampled probability and use the default risk anyway.
+            reply_probability = 1.0 if same_type_possible else _public_reply_belief(
+                state, bot_id, opp, combo
+            )["bomb"]
             expected_beats += reply_probability
-            expected_blocks += 1.0 - reply_probability
-        if expected_blocks > 0.001:
-            components["opp_block"] = expected_blocks * 4.0
         if expected_beats > 0.001:
             components["opp_risk"] = -expected_beats * 3.0
 

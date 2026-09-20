@@ -27,6 +27,7 @@
   const hotStreakPoolCount = document.getElementById("hotStreakPoolCount");
   const hotStreakPool = document.getElementById("hotStreakPool");
   const hotStreakTicketSection = document.getElementById("hotStreakTicketSection");
+  const hotStreakTicketChoices = document.getElementById("hotStreakTicketChoices");
   const hotStreakTickets = document.getElementById("hotStreakTickets");
   const hotStreakDraftProgress = document.getElementById("hotStreakDraftProgress");
   const hotStreakHandSection = document.getElementById("hotStreakHandSection");
@@ -60,6 +61,11 @@
   };
 
   const HOT_STREAK_EXPLANATIONS = {
+    side: {
+      name: "Current Side Bet",
+      description:
+        "YES and NO tickets predict this public race condition. The result stays pending until the condition happens or the race ends.",
+    },
     pool: {
       name: "Public Race Pool",
       description:
@@ -295,6 +301,9 @@
       const button = document.createElement("button");
       button.type = "button";
       button.className = "hot-streak-ticket";
+      if (stack.stack_id === "yes" || stack.stack_id === "no") {
+        button.classList.add("is-side-ticket", `is-${stack.stack_id}`);
+      }
       button.dataset.hotStreakExplain = "ticket";
       button.disabled = !canDraft || !stack.top;
       const heading = document.createElement("span");
@@ -790,7 +799,9 @@
         view.phase !== "betting" && view.phase !== "card_selection"
       );
     }
-    if (hotStreakTicketSection) hotStreakTicketSection.classList.toggle("hidden", view.phase !== "betting");
+    if (hotStreakTicketSection) hotStreakTicketSection.classList.remove("hidden");
+    if (hotStreakTicketChoices) hotStreakTicketChoices.classList.toggle("hidden", view.phase !== "betting");
+    if (hotStreakDraftProgress) hotStreakDraftProgress.classList.toggle("hidden", view.phase !== "betting");
     if (hotStreakHandSection) hotStreakHandSection.classList.toggle("hidden", view.phase !== "card_selection");
     hotStreakScheduleAdvance(view);
   }

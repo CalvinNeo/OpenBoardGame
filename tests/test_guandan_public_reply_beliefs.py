@@ -171,7 +171,8 @@ class GuandanPublicReplyBeliefTests(unittest.TestCase):
         self.assertGreater(belief["bomb"], 0.0)
         components = guandan._bot_score_components(state, "p0", [card["id"] for card in candidate], 1)
         self.assertLess(components.get("opp_risk", 0.0), 0.0)
-        self.assertGreater(components.get("opp_block", 0.0), 0.0)
+        self.assertGreater(components["opp_risk"], -6.0)
+        self.assertEqual(components.get("opp_block", 0.0), 0.0)
 
     def test_lead_does_not_reward_reply_control_twice(self):
         state, own = self._response_score_case()
@@ -190,7 +191,8 @@ class GuandanPublicReplyBeliefTests(unittest.TestCase):
             belief = guandan_ai.call(guandan, "_public_reply_belief", state, "p0", opponent, combo)
             self.assertTrue(belief["same_type_possible"])
             self.assertGreater(belief["same_type"], 0.0)
-        components = guandan._bot_score_components(state, "p0", [card["id"] for card in candidate], 1)
+        with mock.patch.object(guandan_ai, "_public_reply_belief", side_effect=AssertionError("unused reply sampling")):
+            components = guandan._bot_score_components(state, "p0", [card["id"] for card in candidate], 1)
         self.assertEqual(components.get("opp_block", 0.0), 0.0)
         self.assertEqual(components["opp_risk"], -6.0)
 

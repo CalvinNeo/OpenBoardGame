@@ -61,6 +61,15 @@ def submit_all_cards(state):
             raise AssertionError(error)
 
 
+def force_bot_draft_turn(state, bot_id=None, *, pick_number=1):
+    bot_id = bot_id or state["turn_order"][0]
+    state["draft_sequence"] = [bot_id]
+    state["draft_cursor"] = 0
+    state["draft_counts"] = {player_id: 0 for player_id in state["turn_order"]}
+    state["draft_counts"][bot_id] = pick_number - 1
+    return bot_id
+
+
 class HotStreakCatalogTests(unittest.TestCase):
     def test_catalog_card_counts(self):
         self.assertEqual(CATALOG["catalog_status"], "prototype")
@@ -228,6 +237,135 @@ class HotStreakActionTests(unittest.TestCase):
         )
         self.assertIsNone(error)
         self.assertTrue(state["players"][player_id]["bets"][0]["doubled"])
+
+
+class HotStreakBotTests(unittest.TestCase):
+    def test_bot_bets_on_the_strongest_public_racer(self):
+        state = make_state(3)
+        bot_id = force_bot_draft_turn(state)
+        state["base_race_card_ids"] = [
+            "blaze_start:1",
+            "blaze_move_3:1",
+            "blaze_move_2:1",
+            "blaze_star:1",
+            "blaze_swerve_3:1",
+            "comet_fall:1",
+            "comet_turn:1",
+            "comet_back_2:1",
+            "dash_fall:1",
+            "ripple_back_2:1",
+        ]
+
+        move = HotStreakGame.bot_move(state, bot_id)
+
+        self.assertEqual(move["stack_id"], "blaze")
+        self.assertEqual(move["mode"], "risky")
+
+    def test_bot_selects_a_card_that_supports_its_racer_bet(self):
+        state = make_state(3)
+        bot_id = state["turn_order"][0]
+        state["phase"] = "card_selection"
+        state["players"][bot_id]["hand"] = [
+            "blaze_move_3:1",
+            "blaze_fall:1",
+            "comet_move_3:1",
+        ]
+        state["players"][bot_id]["bets"] = [
+            {
+                "bet_id": "own-racer",
+                "category": "racer",
+                "target": "blaze",
+                "tier": 1,
+                "mode": "risky",
+                "payout": {"1": 15, "2": 5, "3": 2, "4": 0},
+                "doubled": False,
+            }
+        ]
+
+        move = HotStreakGame.bot_move(state, bot_id)
+
+        self.assertEqual(move["card_ids"], ["blaze_move_3:1"])
+
+    def test_bot_uses_its_side_bet_when_selecting_a_card(self):
+        for target, expected_card in (
+            ("yes", "blaze_fall:1"),
+            ("no", "all_recover_3:1"),
+        ):
+            with self.subTest(target=target):
+                state = make_state(3)
+                bot_id = state["turn_order"][0]
+                state["phase"] = "card_selection"
+                state["current_side_bet_id"] = "any_knockout"
+                state["players"][bot_id]["hand"] = [
+                    "blaze_fall:1",
+                    "all_recover_3:1",
+                    "blaze_move_3:1",
+                ]
+                state["players"][bot_id]["bets"] = [
+                    {
+                        "bet_id": "own-side",
+                        "category": "side",
+                        "target": target,
+                        "tier": 1,
+                        "mode": "risky",
+                        "payout": {"correct": 15, "incorrect": -5},
+                        "doubled": False,
+                    }
+                ]
+
+                move = HotStreakGame.bot_move(state, bot_id)
+
+                self.assertEqual(move["card_ids"], [expected_card])
+
+    def test_bot_does_not_read_other_hands_or_future_cards(self):
+        left = make_state(3)
+        bot_id = force_bot_draft_turn(left)
+        right = copy.deepcopy(left)
+        other_ids = [player_id for player_id in right["turn_order"] if player_id != bot_id]
+        right["players"][other_ids[0]]["hand"] = ["blaze_fall:1"]
+        right["players"][other_ids[1]]["hand"] = ["blaze_move_3:1"]
+        right["unused_card_ids"] = list(reversed(right["unused_card_ids"]))
+        right["draw_pile"] = ["comet_star:1", "dash_fall:1"]
+        right["burned_card_ids"] = ["ripple_move_3:1"]
+        right["rng_seed"] = "different-private-seed"
+        right["rng_counter"] = 999
+
+        self.assertEqual(
+            HotStreakGame.bot_move(left, bot_id),
+            HotStreakGame.bot_move(right, bot_id),
+        )
+
+    def test_bot_doubles_the_better_new_bet_in_race_three(self):
+        state = make_state(3)
+        bot_id = force_bot_draft_turn(state, pick_number=2)
+        state["race_number"] = 3
+        state["current_side_bet_id"] = "two_fallen"
+        state["base_race_card_ids"] = [
+            "blaze_start:1",
+            "blaze_move_3:1",
+            "blaze_move_2:1",
+            "blaze_star:1",
+            "blaze_swerve_3:1",
+            "dash_move_3:1",
+            "ripple_move_3:1",
+            "comet_move_3:1",
+        ]
+        state["players"][bot_id]["bets"] = [
+            {
+                "bet_id": "weak-old-bet",
+                "category": "side",
+                "target": "yes",
+                "tier": 1,
+                "mode": "risky",
+                "payout": {"correct": 15, "incorrect": -5},
+                "doubled": False,
+            }
+        ]
+
+        move = HotStreakGame.bot_move(state, bot_id)
+
+        self.assertEqual(move["stack_id"], "blaze")
+        self.assertEqual(move["double_bet_id"], "new")
 
 
 class HotStreakMovementTests(unittest.TestCase):

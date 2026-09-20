@@ -1,6 +1,8 @@
 import copy
 import hashlib
+import itertools
 import json
+import math
 import random
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -852,6 +854,326 @@ def _prepare_next_race(state: Dict) -> None:
     _prepare_betting(state)
 
 
+def _bot_clamp(value: float, minimum: float, maximum: float) -> float:
+    return max(minimum, min(maximum, value))
+
+
+def _bot_card_traits(card_id: str) -> Dict:
+    template = _card_template(card_id)
+    effects = template.get("effects", [])
+    move_total = sum(
+        int(effect.get("distance", 0))
+        for effect in effects
+        if effect.get("type") == "move"
+    )
+    effect_types = {effect.get("type") for effect in effects}
+    racer_value = float(move_total)
+    if "star" in effect_types:
+        racer_value += 3.0
+    if "recover" in effect_types:
+        racer_value += 0.8
+    if "fall" in effect_types:
+        racer_value -= 3.5
+    if "turn" in effect_types:
+        racer_value -= 1.4
+    if "swerve" in effect_types:
+        racer_value -= 0.35
+    return {
+        "target": template["target"],
+        "move_total": move_total,
+        "racer_value": racer_value,
+        "fall": "fall" in effect_types,
+        "recover": "recover" in effect_types,
+        "turn": "turn" in effect_types,
+        "swerve": "swerve" in effect_types,
+        "star": "star" in effect_types,
+    }
+
+
+def _bot_rank_probabilities(state: Dict, bot_id: str) -> Dict[str, Dict[int, float]]:
+    # Limit the estimate to information the bot could see at the table.
+    strengths = {racer_id: 0.0 for racer_id in RACER_IDS}
+    for card_id in state.get("base_race_card_ids", []):
+        traits = _bot_card_traits(card_id)
+        if traits["target"] in strengths:
+            strengths[traits["target"]] += traits["racer_value"]
+
+    required = 2 if len(state.get("turn_order", [])) == 2 else 1
+    own_hand = state.get("players", {}).get(bot_id, {}).get("hand", [])
+    for racer_id in RACER_IDS:
+        helpful = sorted(
+            (
+                _bot_card_traits(card_id)["racer_value"]
+                for card_id in own_hand
+                if _card_template(card_id)["target"] == racer_id
+            ),
+            reverse=True,
+        )
+        strengths[racer_id] += 0.45 * sum(value for value in helpful[:required] if value > 0)
+
+    peak = max(strengths.values())
+    weights = {
+        racer_id: math.exp((strength - peak) / 3.5)
+        for racer_id, strength in strengths.items()
+    }
+    probabilities = {
+        racer_id: {rank: 0.0 for rank in range(1, len(RACER_IDS) + 1)}
+        for racer_id in RACER_IDS
+    }
+    for order in itertools.permutations(RACER_IDS):
+        remaining = list(RACER_IDS)
+        chance = 1.0
+        for racer_id in order:
+            total_weight = sum(weights[item] for item in remaining)
+            chance *= weights[racer_id] / total_weight
+            remaining.remove(racer_id)
+        for rank, racer_id in enumerate(order, start=1):
+            probabilities[racer_id][rank] += chance
+    return probabilities
+
+
+def _bot_card_side_signal(card_id: str, side_bet: Dict) -> float:
+    traits = _bot_card_traits(card_id)
+    predicate = side_bet.get("predicate")
+    movement = float(traits["move_total"])
+    forward = max(0.0, movement) + (2.5 if traits["star"] else 0.0)
+    backward = max(0.0, -movement)
+
+    if predicate == "racer_bottom_two":
+        target = side_bet.get("racer_id")
+        if traits["target"] == target:
+            return -traits["racer_value"]
+        if traits["target"] in RACER_IDS:
+            return 0.18 * traits["racer_value"]
+        return 0.0
+    if predicate == "two_fallen":
+        return (
+            (2.4 if traits["fall"] else 0.0)
+            + (0.55 if traits["swerve"] else 0.0)
+            - (1.4 if traits["recover"] else 0.0)
+        )
+    if predicate == "two_at_finish":
+        multiplier = 0.55 if traits["target"] == "all" else 0.22
+        return multiplier * forward - 0.3 * backward
+    if predicate == "any_dq":
+        return (
+            (1.0 if traits["fall"] else 0.0)
+            + (1.1 if traits["swerve"] else 0.0)
+            + (0.7 if traits["turn"] else 0.0)
+            + 0.8 * backward
+        )
+    if predicate == "fallen_final_stretch":
+        return (1.25 if traits["fall"] else 0.0) + 0.28 * forward - (1.0 if traits["recover"] else 0.0)
+    if predicate == "empty_stretch_first":
+        if traits["target"] == "all":
+            return -0.3 * forward
+        return 0.4 * max(0.0, traits["racer_value"])
+    if predicate == "any_out_of_bounds":
+        return (1.5 if traits["swerve"] else 0.0) + (1.0 if traits["turn"] else 0.0) + 1.1 * backward
+    if predicate == "shared_space":
+        movement_signal = 0.22 * abs(movement) if traits["target"] != "all" else 0.0
+        return (1.2 if traits["swerve"] else 0.0) + movement_signal
+    if predicate == "any_knockout":
+        return (
+            (1.65 if traits["fall"] else 0.0)
+            + (0.75 if traits["swerve"] else 0.0)
+            + 0.12 * abs(movement)
+            - (0.7 if traits["recover"] else 0.0)
+        )
+    return 0.0
+
+
+def _bot_side_bet_probability(
+    state: Dict,
+    side_bet: Dict,
+    rank_probabilities: Dict[str, Dict[int, float]],
+) -> float:
+    predicate = side_bet.get("predicate")
+    if predicate == "racer_bottom_two":
+        ranks = rank_probabilities[side_bet["racer_id"]]
+        return ranks[3] + ranks[4]
+
+    priors = {
+        "two_fallen": 0.18,
+        "two_at_finish": 0.28,
+        "any_dq": 0.26,
+        "fallen_final_stretch": 0.16,
+        "empty_stretch_first": 0.24,
+        "any_out_of_bounds": 0.18,
+        "shared_space": 0.25,
+        "any_knockout": 0.17,
+    }
+    signal = sum(
+        _bot_card_side_signal(card_id, side_bet)
+        for card_id in state.get("base_race_card_ids", [])
+    )
+    if predicate == "empty_stretch_first":
+        win_chances = [rank_probabilities[racer_id][1] for racer_id in RACER_IDS]
+        signal += 5.0 * (max(win_chances) - min(win_chances))
+    return _bot_clamp(priors.get(predicate, 0.5) + 0.045 * signal, 0.06, 0.94)
+
+
+def _bot_bet_utility(
+    state: Dict,
+    bot_id: str,
+    bet: Dict,
+    rank_probabilities: Dict[str, Dict[int, float]],
+    side_yes_probability: float,
+) -> float:
+    payout = bet["payout"]
+    outcomes: List[Tuple[float, int]] = []
+    if bet["category"] == "racer":
+        outcomes = [
+            (rank_probabilities[bet["target"]][rank], int(payout[str(rank)]))
+            for rank in range(1, 5)
+        ]
+    else:
+        correct_probability = (
+            side_yes_probability if bet["target"] == "yes" else 1.0 - side_yes_probability
+        )
+        outcomes = [
+            (correct_probability, int(payout["correct"])),
+            (1.0 - correct_probability, int(payout["incorrect"])),
+        ]
+    expected_value = sum(probability * value for probability, value in outcomes)
+    expected_loss = sum(probability * abs(value) for probability, value in outcomes if value < 0)
+
+    money = int(state["players"][bot_id].get("money", 0))
+    leader_money = max(int(player.get("money", 0)) for player in state["players"].values())
+    risk_aversion = 0.48 if money <= 5 else 0.28 if money <= 10 else 0.12
+    if int(state.get("race_number", 1)) == 3 and money < leader_money:
+        risk_aversion *= 0.35
+    multiplier = 2.0 if bet.get("doubled") else 1.0
+    return multiplier * (expected_value - risk_aversion * expected_loss)
+
+
+def _bot_choose_ticket(state: Dict, bot_id: str) -> Optional[Dict]:
+    rank_probabilities = _bot_rank_probabilities(state, bot_id)
+    side_bet = _current_side_bet(state)
+    side_yes_probability = _bot_side_bet_probability(state, side_bet, rank_probabilities)
+    existing_bets = state["players"][bot_id].get("bets", [])
+    next_pick = int(state["draft_counts"].get(bot_id, 0)) + 1
+    double_required = int(state["race_number"]) == 3 and next_pick == 2
+    best: Optional[Dict] = None
+
+    for stack_id in RACER_IDS + ["yes", "no"]:
+        stack = state.get("ticket_stacks", {}).get(stack_id) or []
+        if not stack:
+            continue
+        tier = stack[0]
+        for mode in ("safe", "risky"):
+            candidate = {
+                "category": "side" if stack_id in {"yes", "no"} else "racer",
+                "target": stack_id,
+                "payout": tier[mode],
+                "mode": mode,
+            }
+            value = _bot_bet_utility(
+                state,
+                bot_id,
+                candidate,
+                rank_probabilities,
+                side_yes_probability,
+            )
+            if any(bet["target"] == stack_id for bet in existing_bets):
+                value -= 0.35
+
+            double_bet_id = None
+            decision_value = value
+            if double_required:
+                double_options = [
+                    (
+                        _bot_bet_utility(
+                            state,
+                            bot_id,
+                            bet,
+                            rank_probabilities,
+                            side_yes_probability,
+                        ),
+                        bet["bet_id"],
+                    )
+                    for bet in existing_bets
+                ]
+                double_options.append((value, "new"))
+                double_value, double_bet_id = max(double_options, key=lambda item: item[0])
+                decision_value += double_value
+
+            if best is None or decision_value > best["decision_value"] + 1e-9:
+                best = {
+                    "decision_value": decision_value,
+                    "stack_id": stack_id,
+                    "mode": mode,
+                    "double_bet_id": double_bet_id,
+                }
+    if best is None:
+        return None
+    action = {
+        "type": "draft_ticket",
+        "stack_id": best["stack_id"],
+        "mode": best["mode"],
+        "delay_ms": 450,
+    }
+    if double_required:
+        action["double_bet_id"] = best["double_bet_id"] or "new"
+    return action
+
+
+def _bot_bet_importance(bet: Dict) -> float:
+    payout = bet.get("payout", {})
+    scale = max((abs(int(value)) for value in payout.values()), default=10) / 10.0
+    return scale * (2.0 if bet.get("doubled") else 1.0)
+
+
+def _bot_card_selection_value(state: Dict, bot_id: str, card_id: str) -> float:
+    traits = _bot_card_traits(card_id)
+    target = traits["target"]
+    racer_value = traits["racer_value"]
+    side_bet = _current_side_bet(state)
+    side_signal = _bot_card_side_signal(card_id, side_bet)
+    value = 0.0
+
+    for bet in state["players"][bot_id].get("bets", []):
+        importance = _bot_bet_importance(bet)
+        if bet["category"] == "racer":
+            if target == bet["target"]:
+                value += importance * racer_value
+            elif target in RACER_IDS:
+                value -= 0.2 * importance * racer_value
+        else:
+            direction = 1.0 if bet["target"] == "yes" else -1.0
+            value += 1.45 * importance * direction * side_signal
+
+    # Ticket choices are public, so a small denial bonus is fair information.
+    for player_id in state.get("turn_order", []):
+        if player_id == bot_id:
+            continue
+        for bet in state["players"][player_id].get("bets", []):
+            importance = _bot_bet_importance(bet)
+            if bet["category"] == "racer" and target == bet["target"]:
+                value -= 0.12 * importance * racer_value
+            elif bet["category"] == "side":
+                direction = 1.0 if bet["target"] == "yes" else -1.0
+                value -= 0.08 * importance * direction * side_signal
+
+    value += 0.025 * max(0.0, racer_value)
+    return value
+
+
+def _bot_choose_race_cards(state: Dict, bot_id: str) -> List[str]:
+    required = 2 if len(state.get("turn_order", [])) == 2 else 1
+    hand = list(state["players"][bot_id].get("hand", []))
+    if len(hand) <= required:
+        return hand
+    best_cards: Optional[Tuple[str, ...]] = None
+    best_value: Optional[float] = None
+    for candidate in itertools.combinations(hand, required):
+        value = sum(_bot_card_selection_value(state, bot_id, card_id) for card_id in candidate)
+        if best_value is None or value > best_value + 1e-9:
+            best_cards = candidate
+            best_value = value
+    return list(best_cards or tuple(hand[:required]))
+
+
 class HotStreakGame:
     game_id = "hot_streak"
     min_players = 2
@@ -1181,26 +1503,13 @@ class HotStreakGame:
             return None
         phase = state.get("phase")
         if phase == "betting":
-            available = [
-                stack_id
-                for stack_id in RACER_IDS + ["yes", "no"]
-                if state.get("ticket_stacks", {}).get(stack_id)
-            ]
-            if not available:
-                return None
-            existing_targets = {bet["target"] for bet in state["players"][bot_id].get("bets", [])}
-            stack_id = next((item for item in available if item not in existing_targets), available[0])
-            mode = "risky" if int(state["players"][bot_id]["money"]) >= 10 else "safe"
-            action = {"type": "draft_ticket", "stack_id": stack_id, "mode": mode, "delay_ms": 350}
-            next_pick = int(state["draft_counts"].get(bot_id, 0)) + 1
-            if int(state["race_number"]) == 3 and next_pick == 2:
-                bets = state["players"][bot_id].get("bets", [])
-                action["double_bet_id"] = bets[0]["bet_id"] if bets else "new"
-            return action
+            return _bot_choose_ticket(state, bot_id)
         if phase == "card_selection":
-            required = 2 if len(state["turn_order"]) == 2 else 1
-            hand = state["players"][bot_id].get("hand", [])
-            return {"type": "submit_race_cards", "card_ids": hand[:required], "delay_ms": 350}
+            return {
+                "type": "submit_race_cards",
+                "card_ids": _bot_choose_race_cards(state, bot_id),
+                "delay_ms": 500,
+            }
         if phase in {"race_countdown", "racing"}:
             return {
                 "type": "advance_race",
