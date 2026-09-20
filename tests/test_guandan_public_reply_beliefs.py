@@ -141,7 +141,7 @@ class GuandanPublicReplyBeliefTests(unittest.TestCase):
             self.assertGreater(belief["bomb"], 0.0)
             self.assertGreater(belief["any"], 0.0)
 
-    def test_ordinary_score_keeps_bomb_risk_after_joker_pairs_are_publicly_excluded(self):
+    def _response_score_case(self):
         players = [{"player_id": f"p{index}", "seat": index, "name": f"P{index}"} for index in range(4)]
         state = guandan.GuandanGame.init_game({}, players)
         deck = guandan._full_deck()
@@ -160,6 +160,10 @@ class GuandanPublicReplyBeliefTests(unittest.TestCase):
                            "combo": guandan._evaluate_combo(lead, 2, {})},
             trick_plays={"p3": lead}, _ai_eval_cache={},
         )
+        return state, own
+
+    def test_ordinary_score_keeps_bomb_risk_after_joker_pairs_are_publicly_excluded(self):
+        state, own = self._response_score_case()
         candidate = own[:2]
         combo = guandan._evaluate_combo(candidate, 2, {})
         belief = guandan_ai.call(guandan, "_public_reply_belief", state, "p0", "p1", combo)
@@ -168,6 +172,27 @@ class GuandanPublicReplyBeliefTests(unittest.TestCase):
         components = guandan._bot_score_components(state, "p0", [card["id"] for card in candidate], 1)
         self.assertLess(components.get("opp_risk", 0.0), 0.0)
         self.assertGreater(components.get("opp_block", 0.0), 0.0)
+
+    def test_lead_does_not_reward_reply_control_twice(self):
+        state, own = self._response_score_case()
+        state["current_trick"] = None
+        with mock.patch.object(guandan_ai, "_public_reply_belief", side_effect=AssertionError("duplicate lead belief")):
+            components = guandan._bot_score_components(state, "p0", [card["id"] for card in own[:2]], 1)
+        self.assertEqual(components.get("opp_block", 0.0), 0.0)
+        self.assertEqual(components["opp_risk"], -6.0)
+
+    def test_response_does_not_turn_voluntary_pass_into_proved_control(self):
+        state, own = self._response_score_case()
+        state["pass_limits"] = {pid: {"pair": 3} for pid in ("p1", "p3")}
+        candidate = own[2:4]  # Pair 8; unseen kings can still form a higher pair.
+        combo = guandan._evaluate_combo(candidate, 2, {})
+        for opponent in ("p1", "p3"):
+            belief = guandan_ai.call(guandan, "_public_reply_belief", state, "p0", opponent, combo)
+            self.assertTrue(belief["same_type_possible"])
+            self.assertGreater(belief["same_type"], 0.0)
+        components = guandan._bot_score_components(state, "p0", [card["id"] for card in candidate], 1)
+        self.assertEqual(components.get("opp_block", 0.0), 0.0)
+        self.assertEqual(components["opp_risk"], -6.0)
 
     def test_rank_cap_does_not_eliminate_natural_bomb_risk(self):
         state, combo, _pool = self._case(

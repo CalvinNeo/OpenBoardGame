@@ -3021,6 +3021,63 @@ body.kronologic-explain-mode button.has-explanation {
   margin: 0;
 }
 
+.hot-streak-pool-hint {
+  margin: 4px 0 8px;
+  color: #78716c;
+  font-size: 0.7rem;
+}
+
+.hot-streak-pool {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  max-height: 248px;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 2px;
+  scrollbar-gutter: stable;
+}
+
+.hot-streak-pool-card {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 7px;
+  border: 1px solid #fed7aa;
+  border-radius: 9px;
+  background: linear-gradient(145deg, #fffaf0, #fff7ed);
+}
+
+.hot-streak-pool-card.is-everyone {
+  border-color: #86efac;
+  background: linear-gradient(145deg, #f0fdf4, #ecfdf5);
+}
+
+.hot-streak-pool-target,
+.hot-streak-pool-meta {
+  overflow: hidden;
+  color: #9a3412;
+  font-size: 0.66rem;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hot-streak-pool-card.is-everyone .hot-streak-pool-target {
+  color: #166534;
+}
+
+.hot-streak-pool-card strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.73rem;
+  line-height: 1.25;
+}
+
+.hot-streak-pool-meta {
+  color: #78716c;
+}
+
 .hot-streak-ticket-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3341,6 +3398,7 @@ body.kronologic-explain-mode button.has-explanation {
   }
 
   .hot-streak-ticket-grid,
+  .hot-streak-pool,
   .hot-streak-hand,
   .hot-streak-mode-actions {
     grid-template-columns: repeat(2, minmax(0, 1fr));

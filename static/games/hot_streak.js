@@ -23,6 +23,9 @@
   const hotStreakTrack = document.getElementById("hotStreakTrack");
   const hotStreakCurrentCard = document.getElementById("hotStreakCurrentCard");
   const hotStreakSideBet = document.getElementById("hotStreakSideBet");
+  const hotStreakPoolSection = document.getElementById("hotStreakPoolSection");
+  const hotStreakPoolCount = document.getElementById("hotStreakPoolCount");
+  const hotStreakPool = document.getElementById("hotStreakPool");
   const hotStreakTicketSection = document.getElementById("hotStreakTicketSection");
   const hotStreakTickets = document.getElementById("hotStreakTickets");
   const hotStreakDraftProgress = document.getElementById("hotStreakDraftProgress");
@@ -57,6 +60,11 @@
   };
 
   const HOT_STREAK_EXPLANATIONS = {
+    pool: {
+      name: "Public Race Pool",
+      description:
+        "These cards are already known before betting. Secret player additions are not shown here, so use this pool to judge which racers and effects are currently more likely.",
+    },
     ticket: {
       name: "Betting Ticket",
       description:
@@ -102,8 +110,8 @@
     <div class="rules-block hot-streak-rules">
       <p class="hot-streak-help-notice"><strong>Prototype-compatible data.</strong> This digital implementation uses original artwork and an unverified playable component set. Card distribution, track coordinates, ticket payouts, and side-bet wording have not been checked against a physical second printing.</p>
       <p><strong>Goal.</strong> Build the biggest fortune across three chaotic races. Every player starts with 💵 $10.</p>
-      <p><strong>Betting.</strong> Take two tickets in a snake draft (three each in a two-player game). Choose Safe or Risky immediately. Racer tickets pay by finishing place; YES and NO tickets predict the public side bet.</p>
-      <p><strong>Build the race.</strong> Each player secretly contributes one race card, or two cards in a two-player game. They join the public base cards to make an 18-card race deck.</p>
+      <p><strong>Betting.</strong> Review the Public Race Pool first, then take two tickets in a snake draft (three each in a two-player game). Choose Safe or Risky immediately. Racer tickets pay by finishing place; YES and NO tickets predict the public side bet.</p>
+      <p><strong>Build the race.</strong> The Public Race Pool shows every known base card, grouped by matching card face. Each player then secretly contributes one race card, or two cards in a two-player game, to make an 18-card race deck.</p>
       <p><strong>Race cards.</strong> Numbers move a racer in the direction it faces. ↩️ changes direction, 💫 knocks a racer down, recovery stands it up and faces it forward, and ⭐ moves it to the next star. A fallen racer only crawls one space.</p>
       <p><strong>Swerves and collisions.</strong> A swerve moves sideways relative to the racer's facing. A collision knocks a standing racer down; hitting a fallen racer knocks it out. Leaving the track also causes disqualification.</p>
       <p><strong>Everyone cards.</strong> Green-style all-racer cards resolve simultaneously, cause no collisions, and stop before the finish line.</p>
@@ -229,6 +237,54 @@
       result.textContent = "Pending";
     }
     hotStreakSideBet.append(prompt, result);
+  }
+
+  function hotStreakRenderPool(view) {
+    if (!hotStreakPool) return;
+    const cards = Array.isArray(view.base_race_cards) ? view.base_race_cards : [];
+    const groups = new Map();
+    cards.forEach((card) => {
+      const key = card.template_id || card.instance_id;
+      const existing = groups.get(key);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        groups.set(key, {card, count: 1});
+      }
+    });
+
+    hotStreakPool.innerHTML = "";
+    if (hotStreakPoolCount) {
+      hotStreakPoolCount.textContent = `${cards.length} card${cards.length === 1 ? "" : "s"}`;
+    }
+    if (!cards.length) {
+      const empty = document.createElement("p");
+      empty.className = "hint";
+      empty.textContent = "No public cards available.";
+      hotStreakPool.appendChild(empty);
+      return;
+    }
+
+    groups.forEach(({card, count}) => {
+      const item = document.createElement("article");
+      item.className = `hot-streak-pool-card${card.target === "all" ? " is-everyone" : ""}`;
+      item.setAttribute("role", "listitem");
+      item.title = `${card.target_name}: ${card.label}${count > 1 ? ` (${count} copies)` : ""}`;
+
+      const target = document.createElement("span");
+      target.className = "hot-streak-pool-target";
+      target.textContent = `${card.target_icon} ${card.target_name}`;
+      const label = document.createElement("strong");
+      label.textContent = card.label;
+      const meta = document.createElement("span");
+      meta.className = "hot-streak-pool-meta";
+      const details = [];
+      if (card.starting) details.push("Starter");
+      if (count > 1) details.push(`×${count}`);
+      meta.textContent = details.join(" · ") || "Public";
+      item.append(target, label, meta);
+      hotStreakPool.appendChild(item);
+    });
   }
 
   function hotStreakRenderTickets(view) {
@@ -720,6 +776,7 @@
     }
     hotStreakRenderPlayers(view);
     hotStreakRenderSideBet(view);
+    hotStreakRenderPool(view);
     hotStreakRenderTickets(view);
     hotStreakRenderHand(view);
     hotStreakRenderTrack(view);
@@ -727,6 +784,12 @@
     hotStreakRenderLog(view);
     hotStreakRenderResults(view);
     hotStreakUpdateActions(view);
+    if (hotStreakPoolSection) {
+      hotStreakPoolSection.classList.toggle(
+        "hidden",
+        view.phase !== "betting" && view.phase !== "card_selection"
+      );
+    }
     if (hotStreakTicketSection) hotStreakTicketSection.classList.toggle("hidden", view.phase !== "betting");
     if (hotStreakHandSection) hotStreakHandSection.classList.toggle("hidden", view.phase !== "card_selection");
     hotStreakScheduleAdvance(view);
@@ -742,7 +805,7 @@
     if (hotStreakFallbackTimer) window.clearTimeout(hotStreakFallbackTimer);
     hotStreakAdvanceTimer = null;
     hotStreakFallbackTimer = null;
-    [hotStreakPlayers, hotStreakTrack, hotStreakTickets, hotStreakHand, hotStreakLog, hotStreakResult].forEach((element) => {
+    [hotStreakPlayers, hotStreakTrack, hotStreakPool, hotStreakTickets, hotStreakHand, hotStreakLog, hotStreakResult].forEach((element) => {
       if (element) element.innerHTML = "";
     });
     if (hotStreakCurrentCard) hotStreakCurrentCard.textContent = "Waiting for the race…";

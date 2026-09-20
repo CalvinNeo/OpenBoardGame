@@ -8102,126 +8102,109 @@ def _decomposition_candidates(hand: List[Dict], level_rank: int) -> List[Tuple[L
     return kept[: (8 if len(hand) >= 16 else 10)]
 
 
-def _fast_natural_hand_plan(
-    counts: Dict[int, int], level_rank: int, full_houses_first: bool
-) -> List[Tuple[str, Tuple[int, ...]]]:
-    """Build a cover whose rank requirements consume each natural card once."""
-    working = dict(counts)
-    plan: List[Tuple[str, Tuple[int, ...]]] = []
-    ranked = _ranks_sorted_by_strength(level_rank, ascending=False)
-
-    def take(combo_type: str, ranks: Tuple[int, ...]) -> None:
-        for rank in ranks:
-            working[rank] -= 1
-        plan.append((combo_type, ranks))
-
-    def take_full_houses() -> None:
-        for triple_rank in ranked:
-            if working.get(triple_rank, 0) < 3:
-                continue
-            pairs = [rank for rank, count in working.items() if rank != triple_rank and count >= 2]
-            if not pairs:
-                continue
-            # Prefer complete pairs, and recheck live counts: a triple may
-            # already have supplied another full house's pair.
-            pair_rank = min(pairs, key=lambda rank: (working[rank], _point_order_value(rank, level_rank)))
-            take("full_house", (triple_rank,) * 3 + (pair_rank,) * 2)
-
-    for rank in ranked:
-        count = working.get(rank, 0)
-        if count >= 4:
-            take("bomb", (rank,) * count)
-
-    if full_houses_first:
-        take_full_houses()
-    for start in range(13, 1, -1):
-        while working.get(start, 0) >= 3 and working.get(start + 1, 0) >= 3:
-            take("steel_plate", (start,) * 3 + (start + 1,) * 3)
-    for start in range(12, 1, -1):
-        ranks = (start, start + 1, start + 2)
-        while all(working.get(rank, 0) >= 2 for rank in ranks):
-            take("three_pairs", tuple(rank for rank in ranks for _ in range(2)))
-    for seq, _high_value in reversed(_CORE.STRAIGHT_SEQUENCES):
-        while all(working.get(rank, 0) >= 1 for rank in seq):
-            take("straight", tuple(seq))
-    if not full_houses_first:
-        take_full_houses()
-    for rank in ranked:
-        while working.get(rank, 0) >= 3:
-            take("three", (rank,) * 3)
-        if working.get(rank, 0) >= 2:
-            take("pair", (rank,) * 2)
-        while working.get(rank, 0) > 0:
-            take("single", (rank,))
-    return plan
-
-
 def _fast_hand_decomposition_summary(hand: List[Dict], level_rank: int) -> Dict[str, float]:
-    """Compare two cheap, disjoint covers rather than overlapping shape savings."""
+    """Linear-time structural tail estimate used by the bounded detailed search."""
     if not hand:
         return _empty_hand_decomposition_summary()
 
-    values = {"steel_plate": 13.6, "three_pairs": 13.1, "straight": 11.35,
-              "full_house": 10.95, "three": 6.1, "pair": 2.7}
-    # Classifying one complete hand is cheap and also recognizes wild-card
-    # completions and joker bombs that natural-rank plans cannot represent.
-    whole_combo = _evaluate_combo(hand, level_rank, {}) if len(hand) <= 10 else None
-    if whole_combo and whole_combo["type"] != "single":
-        combo_type = whole_combo["type"]
-        summary = _empty_hand_decomposition_summary()
-        summary.update(turns=1.0, group_turns=1.0, grouped_cards=float(len(hand)),
-                       top_combo_size=float(len(hand)), plan_types=(combo_type,))
-        if combo_type in BOMB_TYPES:
-            summary["bomb_turns"] = 1.0
-            summary["score"] = 5.35 + len(hand) * 1.08 + _bomb_tier(whole_combo) * 0.38
-        else:
-            summary["score"] = values[combo_type]
-        summary["special_material_turns"] = float(
-            bool(whole_combo.get("uses_wild")) or any(_is_joker(card) for card in hand)
-        )
-        return summary
-
     info = _hand_info(hand, level_rank)
     counts = {rank: len(cards) for rank, cards in info["normals_by_rank"].items()}
-    special_cards = len(info["wild_cards"]) + len(info["jokers_big"]) + len(info["jokers_small"])
-    summaries = []
-    for full_houses_first in (False, True):
-        plan = _fast_natural_hand_plan(counts, level_rank, full_houses_first)
-        summary = _empty_hand_decomposition_summary()
-        plan_types = []
-        for combo_type, ranks in plan:
-            size = len(ranks)
-            summary["turns"] += 1.0
-            summary["top_combo_size"] = max(summary["top_combo_size"], float(size))
+    working = dict(counts)
+    summary = _empty_hand_decomposition_summary()
+    plan_types: List[str] = []
+
+    def add_group(combo_type: str, size: int, value: float, bomb: bool = False) -> None:
+        summary["score"] += value
+        summary["turns"] += 1.0
+        summary["group_turns"] += 1.0
+        summary["grouped_cards"] += float(size)
+        summary["top_combo_size"] = max(summary["top_combo_size"], float(size))
+        if bomb:
+            summary["bomb_turns"] += 1.0
+        if len(plan_types) < 6:
             plan_types.append(combo_type)
-            if combo_type == "single":
-                summary["singles"] += 1.0
-                value = _point_order_value(ranks[0], level_rank)
-                if value < LOW_SINGLE_VALUE_MAX:
-                    summary["low_singles"] += 1.0
-                    summary["score"] -= 2.0 + (LOW_SINGLE_VALUE_MAX - value) * 0.18
-                elif value >= CONTROL_SINGLE_VALUE_MIN:
-                    summary["control_singles"] += 1.0
-                    summary["score"] += 1.2
-                continue
-            summary["group_turns"] += 1.0
-            summary["grouped_cards"] += float(size)
-            if combo_type == "bomb":
-                summary["bomb_turns"] += 1.0
-                summary["score"] += 5.35 + size * 1.08 + _bomb_tier_for_size(size) * 0.38
-            else:
-                summary["score"] += values[combo_type]
-        if special_cards:
-            summary["turns"] += float(special_cards)
-            summary["singles"] += float(special_cards)
-            summary["control_singles"] += float(special_cards)
-            summary["special_material_turns"] += float(special_cards)
-            summary["score"] += float(special_cards) * 1.6
+
+    # Natural bombs are stable enough to recognize without candidate expansion.
+    for rank in _ranks_sorted_by_strength(level_rank, ascending=False):
+        count = working.get(rank, 0)
+        if count < 4:
+            continue
+        add_group("bomb", count, 5.35 + count * 1.08 + _bomb_tier_for_size(count) * 0.38, bomb=True)
+        working[rank] = 0
+
+    # Greedily extract high-card-saving compound shapes for the cheap tail only.
+    for start in range(13, 1, -1):
+        if start + 1 > 14:
+            continue
+        while working.get(start, 0) >= 3 and working.get(start + 1, 0) >= 3:
+            working[start] -= 3
+            working[start + 1] -= 3
+            add_group("steel_plate", 6, 13.6)
+    for start in range(12, 1, -1):
+        ranks = (start, start + 1, start + 2)
+        while all(working.get(rank, 0) >= 2 for rank in ranks):
+            for rank in ranks:
+                working[rank] -= 2
+            add_group("three_pairs", 6, 13.1)
+    for seq, _high_value in reversed(_CORE.STRAIGHT_SEQUENCES):
+        while all(working.get(rank, 0) >= 1 for rank in seq):
+            for rank in seq:
+                working[rank] -= 1
+            add_group("straight", 5, 11.35)
+
+    triple_ranks = [rank for rank, count in working.items() if count >= 3]
+    for triple_rank in sorted(triple_ranks, key=lambda rank: _point_order_value(rank, level_rank), reverse=True):
+        # An earlier full house may have consumed two cards from this triple.
+        # Recheck the live count instead of spending the same physical cards
+        # twice. Prefer a complete pair to breaking another remaining triple.
+        if working.get(triple_rank, 0) < 3:
+            continue
+        pairs = [rank for rank, count in working.items() if rank != triple_rank and count >= 2]
+        if not pairs:
+            continue
+        pair_rank = min(pairs, key=lambda rank: (working[rank], _point_order_value(rank, level_rank)))
+        working[triple_rank] -= 3
+        working[pair_rank] -= 2
+        add_group("full_house", 5, 10.95)
+
+    for rank in _ranks_sorted_by_strength(level_rank, ascending=False):
+        count = working.get(rank, 0)
+        while count >= 3:
+            add_group("three", 3, 6.1)
+            count -= 3
+        if count >= 2:
+            add_group("pair", 2, 2.7)
+            count -= 2
+        working[rank] = count
+
+    for rank, count in working.items():
+        if count <= 0:
+            continue
+        value = _point_order_value(rank, level_rank)
+        for _ in range(count):
+            summary["turns"] += 1.0
+            summary["singles"] += 1.0
             summary["top_combo_size"] = max(summary["top_combo_size"], 1.0)
-            plan_types.extend("single" for _ in range(special_cards))
-        summary["plan_types"] = tuple(plan_types[:6])
-        summaries.append(summary)
-    return min(summaries, key=lambda result: (result["turns"], result["low_singles"], -result["score"]))
+            if value < LOW_SINGLE_VALUE_MAX:
+                summary["low_singles"] += 1.0
+                summary["score"] -= 2.0 + (LOW_SINGLE_VALUE_MAX - value) * 0.18
+            elif value >= CONTROL_SINGLE_VALUE_MIN:
+                summary["control_singles"] += 1.0
+                summary["score"] += 1.2
+            if len(plan_types) < 6:
+                plan_types.append("single")
+
+    special_cards = len(info["wild_cards"]) + len(info["jokers_big"]) + len(info["jokers_small"])
+    if special_cards:
+        summary["turns"] += float(special_cards)
+        summary["singles"] += float(special_cards)
+        summary["control_singles"] += float(special_cards)
+        summary["special_material_turns"] += float(special_cards)
+        summary["score"] += float(special_cards) * 1.6
+        summary["top_combo_size"] = max(summary["top_combo_size"], 1.0)
+        plan_types.extend("single" for _ in range(min(special_cards, max(0, 6 - len(plan_types)))))
+    summary["plan_types"] = tuple(plan_types[:6])
+    return summary
 
 
 def _hand_decomposition_summary(hand: List[Dict], level_rank: int) -> Dict[str, float]:
@@ -8354,9 +8337,6 @@ def _hand_decomposition_summary(hand: List[Dict], level_rank: int) -> Dict[str, 
         return apply_step(current_hand, cards, combo, child)
 
     summary = _copy_hand_decomposition_summary(search(hand, 0))
-    fast_summary = _fast_hand_decomposition_summary(hand, level_rank)
-    if (fast_summary["turns"], fast_summary["low_singles"]) < (summary["turns"], summary["low_singles"]):
-        summary = fast_summary
     if not timed_out:
         if len(_HAND_DECOMP_CACHE) >= _HAND_DECOMP_CACHE_LIMIT:
             _HAND_DECOMP_CACHE.clear()
@@ -8791,22 +8771,24 @@ def _estimated_turns_to_finish(hand: List[Dict], level_rank: int) -> float:
         cached = _HAND_TURNS_CACHE.get(cache_key)
         if cached is not None:
             return cached
-    decomposition = _hand_decomposition_summary(hand, level_rank)
-    turns = decomposition["turns"]
-    # Shape savings overlap (a triple can also be part of a steel plate or a
-    # full house). Only a disjoint cover supplies the number of future plays.
-    # Keep the existing extra burden for weak singles and special material;
-    # a hand already playable in one action needs no future-reentry correction.
-    if turns > 1.0:
-        turns += decomposition["low_singles"] * 0.18
-        turns += decomposition["special_material_turns"] * 0.08
+    metrics = _hand_structure_metrics(hand, level_rank)
+    turns = float(len(hand))
+    turns -= metrics["turn_savings"]
+    turns -= metrics["shape_synergy"]
+    turns -= min(1.0, metrics["wild_count"] * 0.22 + metrics["joker_small"] * 0.18 + metrics["joker_big"] * 0.28)
+    turns += min(2.4, metrics["low_single_burden"] * 0.12)
+    turns -= min(1.2, metrics["grouped_control"] * 0.08)
+    decomp_turns = metrics["decomp_turns"]
+    if decomp_turns > 0:
+        decomp_turns += metrics["decomp_low_singles"] * 0.18
+        decomp_turns += metrics["decomp_special_turns"] * 0.08
+        turns = min(turns, decomp_turns)
     result = max(1.0, turns)
     if not bounded:
         if len(_HAND_TURNS_CACHE) >= _HAND_TURNS_CACHE_LIMIT:
             _HAND_TURNS_CACHE.clear()
         _HAND_TURNS_CACHE[cache_key] = result
     return result
-
 
 def _predict_finish_order(
     state: Dict,

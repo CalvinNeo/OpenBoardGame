@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css?v=app_v108" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v109" />
   <link rel="preload" href="/api/games" as="fetch" crossorigin="anonymous" />
   <link rel="stylesheet" href="/static/ark_nova.css?v=app_v21" />
   <link rel="stylesheet" href="/static/catan_starfarers.css?v=app_v4" />
@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="/static/tucano.css?v=app_v2" />
   <link rel="stylesheet" href="/static/take_time.css?v=1" />
   <link rel="stylesheet" href="/static/eternal_decks.css?v=1" />
-  <link rel="stylesheet" href="/static/gizmos.css?v=1" />
+  <link rel="stylesheet" href="/static/gizmos.css?v=2" />
   <link rel="stylesheet" href="/static/ponzi_scheme.css?v=1" />
   <link rel="stylesheet" href="/static/istanbul.css?v=2" />
   <link rel="stylesheet" href="/static/rebel_princess.css?v=4" />
@@ -2414,6 +2414,15 @@
                   <section class="hot-streak-card-panel">
                     <h3>Side Bet</h3>
                     <div id="hotStreakSideBet" class="hot-streak-side-bet">-</div>
+                  </section>
+
+                  <section id="hotStreakPoolSection" class="hot-streak-card-panel" data-hot-streak-explain="pool">
+                    <div class="hot-streak-section-heading">
+                      <h3>Public Race Pool</h3>
+                      <span id="hotStreakPoolCount" class="hot-streak-mini-status">0 cards</span>
+                    </div>
+                    <p class="hot-streak-pool-hint">Known cards before secret additions</p>
+                    <div id="hotStreakPool" class="hot-streak-pool" role="list" aria-label="Public race card pool"></div>
                   </section>
 
                   <section id="hotStreakTicketSection" class="hot-streak-card-panel">
@@ -7152,7 +7161,7 @@
   <script src="/static/games/fake_artist.js?v=app_v4" defer></script>
   <script src="/static/games/things_in_rings.js?v=app_v5" defer></script>
   <script src="/static/games/impression_flower.js?v=app_v4" defer></script>
-  <script src="/static/games/gizmos.js?v=app_v5" defer></script>
+  <script src="/static/games/gizmos.js?v=app_v6" defer></script>
   <script src="/static/games/century_spice_road.js?v=app_v7" defer></script>
   <script src="/static/games/splendor.js?v=app_v4" defer></script>
   <script src="/static/games/splendor_pokemon.js?v=app_v6" defer></script>
@@ -7178,7 +7187,7 @@
   <script src="/static/games/guandan.js?v=app_v13" defer></script>
   <script src="/static/games/cabo.js?v=app_v8" defer></script>
   <script src="/static/games/flip7.js?v=app_v4" defer></script>
-  <script src="/static/games/hot_streak.js?v=app_v1" defer></script>
+  <script src="/static/games/hot_streak.js?v=app_v2" defer></script>
   <script src="/static/games/acquire.js?v=app_v1" defer></script>
   <script src="/static/games/abraca_what.js?v=app_v4" defer></script>
   <script src="/static/games/fang_niao.js?v=app_v4" defer></script>
