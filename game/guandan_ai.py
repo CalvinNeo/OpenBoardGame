@@ -1610,6 +1610,25 @@ def _candidate_remaining_strength(features: Dict, level_rank: int) -> float:
     return float(cached)
 
 
+def _candidate_wild_opportunity_loss(features: Dict, level_rank: int) -> float:
+    """Price a spent wildcard's other uses without a decomposition or search."""
+    cached = features.get("wild_opportunity_loss")
+    if cached is None:
+        cached = 0.0
+        if (
+            features["remaining"]
+            and features["combo"]["type"] not in BOMB_TYPES
+            and any(_is_wild(card, level_rank) for card in features["play_cards"])
+        ):
+            cached = max(
+                0.0,
+                _wild_structure_potential(features["hand"], level_rank)
+                - _wild_structure_potential(features["remaining"], level_rank),
+            )
+        features["wild_opportunity_loss"] = cached
+    return float(cached)
+
+
 def _lead_shared_opening_commitment_penalty(
     state: Dict,
     player_id: str,
@@ -2155,6 +2174,7 @@ def _compute_lead_cheap_option_score(
     # action generator instead of being recomputed for every prescore.
     if combo.get("uses_wild"):
         score -= 6.5
+    score -= _candidate_wild_opportunity_loss(features, state["level_rank"])
     if any(_is_joker(card) for card in play_cards):
         score -= 2.0
 
@@ -4788,6 +4808,9 @@ def _lead_special_material_penalty(
         "three_pairs": 6.8,
         "steel_plate": 6.2,
     }.get(combo_type, 0.0)
+    penalty += _candidate_wild_opportunity_loss(
+        _candidate_features(state, player_id, cards, combo), state["level_rank"]
+    )
 
     natural_values = _lead_natural_type_values(state, player_id, cards)
     current_value = _combo_numeric_value(combo)
@@ -4901,6 +4924,12 @@ def _lead_same_type_reentry_bonus(
                 bonus *= 0.12
             elif _opening_safe_group_leads(state, player_id, cards):
                 bonus *= 0.5
+        if combo_type in ("single", "pair", "three", "full_house"):
+            # Rank-group replies can borrow from reserved bombs or triples.
+            # Earn their reentry credit after paying the same material costs
+            # used to score the prospective response on the residual hand.
+            bonus -= _group_fragment_penalty(remaining, option, level_rank, followup)
+            bonus -= _control_group_break_penalty(remaining, option, level_rank)
         best = max(best, bonus)
     return best
 
