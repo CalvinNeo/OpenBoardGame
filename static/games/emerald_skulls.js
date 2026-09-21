@@ -6,6 +6,11 @@
   let emeraldSkullsPendingTimer = null;
   let emeraldSkullsExplainMode = false;
   let emeraldSkullsLastAnnounced = 0;
+  let emeraldSkullsMobileContext = "";
+  let emeraldSkullsTipTimer = null;
+  let emeraldSkullsTipTarget = null;
+  let emeraldSkullsModalFocus = null;
+  let emeraldSkullsSuppressClick = false;
   const emeraldSkullsSelectedDice = new Set();
 
   const emeraldSkullsPanel = document.getElementById("emeraldSkullsPanel");
@@ -55,6 +60,11 @@
 
   const EMERALD_SKULLS_COSTS = { 3: 0, 4: 1, 5: 3, 6: 6, 7: 10 };
   const EMERALD_SKULLS_CAPACITY = { 1: 7, 2: 7, 3: 7, 4: 2, 5: 1 };
+  const EMERALD_SKULLS_LEVELS = { 1: "🦷 Lower jaw", 2: "🦷 Upper jaw", 3: "👃 Nose", 4: "👁️ Eyes", 5: "💎 Gem" };
+  const EMERALD_SKULLS_BET_ICONS = {
+    pick_bust: "👃💥", mad_nargash: "💀💎", grim_grin: "🦷", emerald_skull: "💚💀",
+    busted_fowl: "💥🐔", final_jewel: "💎", empty_hands: "🏃", empty_shiny: "✨",
+  };
   const EMERALD_SKULLS_PHASES = {
     buy_dice: "Buy Dice",
     await_roll: "Bets Open",
@@ -74,7 +84,7 @@
   const EMERALD_SKULLS_EXPLANATIONS = {
     players: {
       title: "Player Resources",
-      body: "⚙️ Gears are both points and the price of extra dice. 🟩 cubes buy rerolls. Gamblers have two 🎟️ bet markers on each tumbler's turn.",
+      body: "Gears (⚙️) are both points and the price of extra dice. Reroll cubes (🟩) buy rerolls. Gamblers have two bet markers (🎟️) on each tumbler's turn. Bot (🤖) identifies an AI player.",
     },
     board: {
       title: "The Skull Board",
@@ -82,39 +92,39 @@
     },
     level: {
       title: "Skull Level",
-      body: "Select one or more matching dice, then choose a highlighted level. A 💀 die is wild. Eyes hold at most two dice; the gem holds one.",
+      body: "Select one or more matching dice, then choose a highlighted level. A skull (💀) die is wild. Eyes (👁️) hold at most two dice; the gem (💎) holds one.",
     },
     dice: {
       title: "Dice in Hand",
-      body: "A roll must place one or more dice on exactly one level, unless the tumbler uses a reroll action. Unselected dice return to the hand.",
+      body: "Dice show ⚀ 1, ⚁ 2, ⚂ 3, ⚃ 4, ⚄ 5 or a wild skull (💀). Place one or more matching dice on exactly one level, or use a reroll. Unselected dice return to the hand.",
     },
     buy: {
       title: "Buy Dice",
       body: "Three dice are free. Four through seven dice cost 1, 3, 6, or 10 ⚙️. Paid gears return to the central pot.",
     },
     roll: {
-      title: "Roll Dice",
-      body: "Rolling closes the current betting window. The tumbler should allow a fair moment for gamblers to wager before rolling.",
+      title: "Roll Dice (🎲)",
+      body: "Roll Dice (🎲) closes the current betting window. The tumbler should allow a fair moment for gamblers to wager before rolling.",
     },
     reroll: {
       title: "Spend a Reroll Cube",
-      body: "Return one 🟩, add one unused die if possible, reopen betting, then reroll every die still in hand.",
+      body: "Spend one reroll cube (🟩), add one unused die if possible, reopen betting, then reroll every die still in hand.",
     },
     nose: {
       title: "Pick a Nose",
-      body: "Retrieve one ordinary 3 from the nose and reroll it with every die in hand. This can be done twice; a wild 💀 cannot be retrieved.",
+      body: "Pick a Nose (👃): retrieve one ordinary 3 from the nose and reroll it with every die in hand. This can be done twice; a wild skull (💀) cannot be retrieved.",
     },
     continue: {
       title: "Press Your Luck",
-      body: "Reopen betting and roll every remaining die. Your placement floor stays where it is, so later rolls become riskier.",
+      body: "Press Your Luck (🔥): reopen betting and roll every remaining die. Your placement floor stays where it is, so later rolls become riskier.",
     },
     chicken: {
       title: "Chicken Out",
-      body: "Stop safely and score the dice already placed. Wild 💀 dice do not score unless the turn reached the gem.",
+      body: "Chicken Out (🐔): stop safely and score the dice already placed. Wild skull (💀) dice do not score unless the turn reached the gem (💎).",
     },
     bust: {
       title: "Accept Bust",
-      body: "End the turn with no tumbler payout when the roll has no legal placement. This is offered when a reroll was available but you decline it.",
+      body: "Bust Out (💥): end the turn with no tumbler payout when the roll has no legal placement. This is offered when a reroll was available but you decline it.",
     },
     bets: {
       title: "Standard Bets",
@@ -151,6 +161,8 @@
       <p class="emerald-skulls-scope-note"><strong>Edition.</strong> This table implements the 2–6 player standard-bet game. Solitary opposition cards, advanced bets, and the 7–8 player expansion are not included.</p>
       <h3>Goal</h3>
       <p>Collect the most <strong>⚙️ gears</strong>. Players rotate as the <strong>tumbler</strong>; everyone else races to bet on the result. The game ends immediately when a payout empties the central gear pot.</p>
+      <h3>At a glance</h3>
+      <p><strong>Gears (⚙️)</strong> are your score and dice budget. <strong>Reroll cubes (🟩)</strong> rescue rolls. <strong>Bet markers (🎟️)</strong> lock wagers. Dice show <strong>⚀ 1 · ⚁ 2 · ⚂ 3 · ⚃ 4 · ⚄ 5</strong>; <strong>skull (💀)</strong> is wild. Hover over a symbol or tap it for a short tip. Tap empty space to deselect dice; press Esc to close a dialog or leave Explain.</p>
       <h3>Your turn as tumbler</h3>
       <ol>
         <li><strong>Buy Dice:</strong> take 3 for free, or pay 1 / 3 / 6 / 10 ⚙️ for 4 / 5 / 6 / 7 dice.</li>
@@ -159,7 +171,7 @@
         <li><strong>Check:</strong> a gem or an empty hand ends the turn. Otherwise Chicken Out safely or press your luck and roll again.</li>
       </ol>
       <h3>Placement</h3>
-      <p>Levels match faces 1–5; <strong>💀 is wild</strong>. Later placements must be on the current floor or higher. Teeth and nose have no practical limit, eyes hold 2 dice, and the gem holds 1.</p>
+      <p>Levels match faces 1–5; <strong>💀 is wild</strong>. Later placements must be on the current <strong>floor (↑)</strong> or higher. Teeth (🦷) and nose (👃) have no practical limit, eyes (👁️) hold 2 dice, and the gem (💎) holds 1.</p>
       <div class="emerald-skulls-rule-grid">
         <article><strong>💥 Bust Out</strong><span>No legal placement; tumbler earns nothing.</span></article>
         <article><strong>🐔 Chicken Out</strong><span>Stop with dice still in hand.</span></article>
@@ -191,19 +203,85 @@
         <li><strong>Emerald Skull:</strong> Double Out with 3 teeth, 1 nose, 2 eyes, and 1 gem — 30 ⚙️.</li>
       </ul>
       <h3>Bets and game end</h3>
+      <ul>
+        <li><strong>Pick n' Bust (👃💥):</strong> Bust Out after at least one Nose Pick.</li>
+        <li><strong>Mad Nargash (💀💎):</strong> reach the gem using only wild skull dice.</li>
+        <li><strong>Grim Grin (🦷):</strong> empty your hand onto the two jaw levels only.</li>
+        <li><strong>Emerald Skull (💚💀):</strong> Double Out with a Full Skull.</li>
+        <li><strong>Busted Fowl (💥🐔):</strong> Bust Out or Chicken Out.</li>
+        <li><strong>Final Jewel (💎):</strong> Gem Out, including Double Out.</li>
+        <li><strong>Empty Hands (🏃):</strong> Run Out, including Double Out.</li>
+        <li><strong>Empty n' Shiny (✨):</strong> Double Out.</li>
+      </ul>
       <p>Each gambler has two 🎟️ markers, and both may occupy the same outcome. Markers lock in place, and earlier markers receive the leftmost, larger payout. Double Out also satisfies Gem Out and Run Out bets. The tumbler is paid first, then cards 1–4, left side before right side. If the pot empties, payment stops and the richest player wins; ties use 🟩 cubes, then most recent tumbler.</p>
+      <h3>Playing with AI</h3>
+      <p>Add a Bot (🤖) in the room before starting. AI players buy dice, place dice, manage rerolls, choose payouts and bet using the public board. An AI tumbler allows 4.5 seconds before rolling while humans still have bet markers. Turns pause for every human to confirm Next Turn; bots confirm automatically.</p>
     </div>`;
 
   function emeraldSkullsSetModal(modal, visible, returnFocus = null) {
     if (!modal) return;
+    emeraldSkullsHideTip();
+    if (visible) {
+      emeraldSkullsModalFocus = document.activeElement;
+      emeraldSkullsSetExplainMode(false);
+    }
     modal.classList.toggle("hidden", !visible);
     modal.setAttribute("aria-hidden", visible ? "false" : "true");
     if (visible) {
       const close = modal.querySelector("button");
       if (close) window.setTimeout(() => close.focus(), 0);
-    } else if (returnFocus) {
-      returnFocus.focus();
+    } else if (returnFocus || emeraldSkullsModalFocus) {
+      const target = returnFocus || emeraldSkullsModalFocus;
+      if (target.isConnected) target.focus();
+      emeraldSkullsModalFocus = null;
     }
+  }
+
+  function emeraldSkullsSetTip(element, text) {
+    if (!element) return;
+    element.dataset.emeraldSkullsTip = text;
+    if (element.tagName !== "BUTTON" && !element.matches(".emerald-skulls-die, .emerald-skulls-bet-marker, .emerald-skulls-bet-vacancy")) element.tabIndex = 0;
+  }
+
+  function emeraldSkullsHideTip() {
+    if (emeraldSkullsTipTimer) window.clearTimeout(emeraldSkullsTipTimer);
+    emeraldSkullsTipTimer = null;
+    if (emeraldSkullsTipTarget) emeraldSkullsTipTarget.removeAttribute("aria-describedby");
+    emeraldSkullsTipTarget = null;
+    const tip = document.getElementById("emeraldSkullsTip");
+    if (tip) tip.classList.add("hidden");
+  }
+
+  function emeraldSkullsShowTip(target, autoHide = false) {
+    if (emeraldSkullsExplainMode || !target || !target.dataset.emeraldSkullsTip) return;
+    emeraldSkullsHideTip();
+    let tip = document.getElementById("emeraldSkullsTip");
+    if (!tip) {
+      tip = document.createElement("div");
+      tip.id = "emeraldSkullsTip";
+      tip.className = "emerald-skulls-tip";
+      tip.setAttribute("role", "tooltip");
+      document.body.appendChild(tip);
+    }
+    tip.textContent = target.dataset.emeraldSkullsTip;
+    tip.classList.remove("hidden");
+    emeraldSkullsTipTarget = target;
+    target.setAttribute("aria-describedby", tip.id);
+    const rect = target.getBoundingClientRect();
+    const box = tip.getBoundingClientRect();
+    tip.style.left = `${Math.max(12, Math.min(window.innerWidth - box.width - 12, rect.left + (rect.width - box.width) / 2))}px`;
+    const top = rect.bottom + 8 + box.height <= window.innerHeight - 12 ? rect.bottom + 8 : rect.top - box.height - 8;
+    tip.style.top = `${Math.max(12, Math.min(window.innerHeight - box.height - 12, top))}px`;
+    if (autoHide) emeraldSkullsTipTimer = window.setTimeout(emeraldSkullsHideTip, 3000);
+  }
+
+  function emeraldSkullsSetMobileTab(tab) {
+    if (!emeraldSkullsPanel) return;
+    emeraldSkullsPanel.dataset.mobileTab = tab;
+    emeraldSkullsPanel.querySelectorAll("[data-emerald-skulls-tab]").forEach((button) => {
+      button.setAttribute("aria-pressed", String(button.dataset.emeraldSkullsTab === tab));
+    });
+    emeraldSkullsHideTip();
   }
 
   function emeraldSkullsHasAction(actionType) {
@@ -240,7 +318,7 @@
 
   function emeraldSkullsFaceText(face) {
     if (face === "skull") return "💀";
-    return ({ 1: "Ⅰ", 2: "Ⅱ", 3: "Ⅲ", 4: "Ⅳ", 5: "Ⅴ" })[Number(face)] || "?";
+    return ({ 1: "⚀", 2: "⚁", 3: "⚂", 4: "⚃", 5: "⚄" })[Number(face)] || "?";
   }
 
   function emeraldSkullsResultText(result) {
@@ -255,8 +333,10 @@
     if (options.selected) element.classList.add("is-selected");
     if (options.ghost) element.classList.add("is-ghost");
     element.textContent = options.ghost ? "?" : emeraldSkullsFaceText(die.face);
-    element.title = options.ghost ? "Unrolled die" : die.face === "skull" ? "Wild skull" : `Face ${die.face}`;
-    element.setAttribute("aria-label", element.title);
+    const label = options.ghost ? "🎲 Unrolled die" : die.face === "skull" ? "💀 Wild skull · matches any level" : `${emeraldSkullsFaceText(die.face)} Face ${die.face} · ${EMERALD_SKULLS_LEVELS[die.face]}`;
+    emeraldSkullsSetTip(element, label);
+    element.setAttribute("aria-label", label);
+    if (options.button) element.setAttribute("aria-pressed", String(Boolean(options.selected)));
     element.dataset.emeraldSkullsExplain = "dice";
     if (options.button) element.disabled = !options.selectable || emeraldSkullsPending;
     return element;
@@ -293,6 +373,7 @@
     }
     emeraldSkullsRenderBoard(emeraldSkullsView);
     emeraldSkullsRenderDice(emeraldSkullsView);
+    emeraldSkullsRefreshExplainTargets();
   }
 
   function emeraldSkullsRenderBoard(view) {
@@ -314,17 +395,21 @@
       const canPlace = validLevels.has(level) && emeraldSkullsHasAction("place_dice") && !emeraldSkullsPending;
       levelButton.disabled = !canPlace;
       levelButton.classList.toggle("is-placeable", canPlace);
-      levelButton.classList.toggle("is-below-floor", level < Number(view.minimum_level || 1));
-      levelButton.dataset.emeraldSkullsExplainTitle = `Level ${level}`;
+      levelButton.classList.toggle("is-below-floor", !view.result && level < Number(view.minimum_level || 1));
+      levelButton.dataset.emeraldSkullsExplainTitle = `${EMERALD_SKULLS_LEVELS[level]} · Level ${level}`;
       levelButton.dataset.emeraldSkullsExplainBody = level === 5
-        ? "The gem holds one die and immediately ends the turn. Empty hand + gem is a Double Out."
+        ? "The gem (💎) holds one die and immediately ends the turn. Empty hand + gem is a Double Out (✨)."
         : level === 4
-          ? "The eyes hold at most two dice. Reaching this level makes future rolls dangerous."
+          ? "The eyes (👁️) hold at most two dice. Reaching this level makes future rolls dangerous."
           : level === 3
-            ? "Nose dice award 🟩 reroll cubes. An ordinary 3 may later be retrieved with Pick a Nose."
-            : "Teeth accept any number of matching dice. Their payout depends on how the turn ends.";
+            ? "Nose (👃) dice award reroll cubes (🟩). An ordinary 3 may later be retrieved with Pick a Nose (👃)."
+            : "Teeth (🦷) accept matching dice. Their payout in gears (⚙️) depends on how the turn ends.";
+      emeraldSkullsSetTip(levelButton, `${EMERALD_SKULLS_LEVELS[level]} · Level ${level}. ${levelButton.dataset.emeraldSkullsExplainBody}`);
     }
-    if (emeraldSkullsFloorLabel) emeraldSkullsFloorLabel.textContent = `Floor · ${view.minimum_level || 1}`;
+    if (emeraldSkullsFloorLabel) {
+      emeraldSkullsFloorLabel.textContent = `↑ ${view.minimum_level || 1}+`;
+      emeraldSkullsSetTip(emeraldSkullsFloorLabel, `Placement floor: level ${view.minimum_level || 1} or higher. Earlier levels are locked.`);
+    }
   }
 
   function emeraldSkullsRenderDice(view) {
@@ -353,7 +438,7 @@
     const reviewing = view.phase === "turn_result" || view.game_over;
     if (emeraldSkullsDiceCount) {
       emeraldSkullsDiceCount.textContent = reviewing
-        ? `${pool.length} unplaced · ${supply.length} supply`
+        ? `${pool.length + rolled.length} unplaced · ${supply.length} supply`
         : `${rolled.length + pool.length} in hand · ${supply.length} supply`;
     }
     if (emeraldSkullsRollHeading) {
@@ -394,12 +479,15 @@
       top.className = "emerald-skulls-player-top";
       const name = document.createElement("strong");
       name.textContent = player.name || player.player_id;
+      emeraldSkullsSetTip(name, name.textContent);
       const badge = document.createElement("span");
-      badge.textContent = player.player_id === view.active_player_id ? "Tumbler" : player.is_bot ? "Bot" : player.player_id === view.you ? "You" : "Gambler";
+      badge.textContent = `${player.is_bot ? "🤖 " : ""}${player.player_id === view.active_player_id ? "Tumbler" : player.is_bot ? "Bot" : player.player_id === view.you ? "You" : "Gambler"}`;
+      emeraldSkullsSetTip(badge, `${player.is_bot ? "Bot (🤖) · AI player. " : ""}${player.player_id === view.active_player_id ? "Tumbler: buys and rolls dice this turn." : "Gambler: bets on this turn's result."}`);
       top.append(name, badge);
       const resources = document.createElement("div");
       resources.className = "emerald-skulls-player-resources";
       resources.innerHTML = `<span>⚙️ <b>${Number(player.gears || 0)}</b></span><span>🟩 <b>${Number(player.reroll_cubes || 0)}</b></span><span>🎟️ <b>${Number(player.bet_markers_left || 0)}</b></span>`;
+      ["Gears (⚙️): score and dice budget", "Reroll cubes (🟩): spend one to reroll and add a supply die", "Bet markers (🎟️): two wagers per tumbler turn"].forEach((tip, index) => emeraldSkullsSetTip(resources.children[index], tip));
       const note = document.createElement("small");
       if (view.phase === "turn_result") note.textContent = player.ready ? "Ready ✓" : "Reviewing…";
       else if (view.game_over) note.textContent = player.rematch_ready ? "Rematch ready ✓" : "Final score";
@@ -414,7 +502,7 @@
     const marker = document.createElement("span");
     marker.className = "emerald-skulls-bet-marker";
     marker.style.setProperty("--emerald-player-hue", emeraldSkullsPlayerHue(view, bet.player_id));
-    marker.title = `${emeraldSkullsPlayerName(view, bet.player_id)} · ${payout} gears`;
+    emeraldSkullsSetTip(marker, `${emeraldSkullsPlayerName(view, bet.player_id)} · marker #${position} · ${payout} gears (⚙️) if this bet wins`);
     const initial = emeraldSkullsPlayerName(view, bet.player_id).trim().slice(0, 1).toUpperCase() || "?";
     const initialLabel = document.createElement("b");
     initialLabel.textContent = initial;
@@ -438,20 +526,23 @@
       card.className = "emerald-skulls-bet-card";
       const number = document.createElement("span");
       number.className = "emerald-skulls-card-number";
-      number.textContent = String(cardNumber);
+      number.textContent = `Card ${cardNumber}`;
+      emeraldSkullsSetTip(number, `Card ${cardNumber} · Bets pay in card order, left side first.`);
       card.appendChild(number);
       bets.sort((a, b) => (a.side === "left" ? -1 : 1) - (b.side === "left" ? -1 : 1)).forEach((bet) => {
         const button = document.createElement("button");
         button.type = "button";
         button.className = "emerald-skulls-bet";
         button.dataset.emeraldSkullsExplain = "bet";
-        button.dataset.emeraldSkullsExplainTitle = bet.name;
-        button.dataset.emeraldSkullsExplainBody = `${bet.description}. Earlier markers receive ${bet.payouts.join(" / ")} gears in order.`;
+        const label = `${EMERALD_SKULLS_BET_ICONS[bet.bet_id] || "🎟️"} ${bet.name}`;
+        button.dataset.emeraldSkullsExplainTitle = label;
+        button.dataset.emeraldSkullsExplainBody = `${label}: ${bet.description}. Earlier markers receive ${bet.payouts.join(" / ")} gears (⚙️) in order. Double Out (✨) also wins Gem Out (💎) and Run Out (🏃) bets.`;
+        emeraldSkullsSetTip(button, `${label} · ${bet.description}. ${bet.available ? "Tap to place one bet marker (🎟️)." : "Betting is closed or this stack is full."}`);
         if (bet.won === true) button.classList.add("is-winner");
         if (bet.won === false && view.result) button.classList.add("is-loser");
         button.disabled = !bet.available || !emeraldSkullsHasAction("place_bet") || emeraldSkullsPending;
         const heading = document.createElement("strong");
-        heading.textContent = bet.name;
+        heading.textContent = label;
         const description = document.createElement("span");
         description.className = "emerald-skulls-bet-description";
         description.textContent = bet.description;
@@ -464,6 +555,7 @@
             const vacancy = document.createElement("span");
             vacancy.className = "emerald-skulls-bet-vacancy";
             vacancy.textContent = `${payout}⚙️`;
+            emeraldSkullsSetTip(vacancy, `Marker #${index + 1} pays ${payout} gears (⚙️) if this bet wins.`);
             stack.appendChild(vacancy);
           }
         });
@@ -476,7 +568,10 @@
       emeraldSkullsBetCards.appendChild(card);
     });
     const me = emeraldSkullsPlayer(view, view.you);
-    if (emeraldSkullsMarkersLabel) emeraldSkullsMarkersLabel.textContent = `🎟️ ${me ? me.bet_markers_left : 0} left`;
+    if (emeraldSkullsMarkersLabel) {
+      emeraldSkullsMarkersLabel.textContent = view.you === view.active_player_id ? "🎟️ Gamblers only" : `🎟️ ${me ? me.bet_markers_left : 0} left`;
+      emeraldSkullsSetTip(emeraldSkullsMarkersLabel, "Bet markers (🎟️): each gambler has two per turn. The tumbler cannot bet.");
+    }
   }
 
   function emeraldSkullsRenderBuy(view) {
@@ -494,7 +589,8 @@
       if (count === 3) button.classList.add("is-primary");
       button.dataset.emeraldSkullsExplain = "buy";
       button.dataset.emeraldSkullsExplainTitle = `${count} Dice`;
-      button.dataset.emeraldSkullsExplainBody = cost ? `Pay ${cost} gears to begin this turn with ${count} dice.` : "Begin this turn with three dice for free.";
+      button.dataset.emeraldSkullsExplainBody = cost ? `Pay ${cost} gears (⚙️) to begin this turn with ${count} dice (🎲).` : "Begin this turn with three dice (🎲) for free.";
+      emeraldSkullsSetTip(button, button.dataset.emeraldSkullsExplainBody);
       button.innerHTML = `<strong>${count} 🎲</strong><span>${cost ? `${cost} ⚙️` : "Free"}</span>`;
       button.disabled = !emeraldSkullsHasAction("buy_dice") || !me || Number(me.gears || 0) < cost || emeraldSkullsPending;
       button.addEventListener("click", () => emeraldSkullsDispatch({ type: "buy_dice", count }));
@@ -542,6 +638,7 @@
       if (Number(option.gears || 0)) parts.push(`${option.gears} ⚙️`);
       if (Number(option.reroll_cubes || 0)) parts.push(`${option.reroll_cubes} 🟩`);
       reward.textContent = parts.join(" + ") || "No reward";
+      emeraldSkullsSetTip(button, `${option.label}: ${option.gears || 0} gears (⚙️), ${option.reroll_cubes || 0} reroll cubes (🟩). Choose one payout.`);
       button.append(title, reward);
       button.addEventListener("click", () => emeraldSkullsDispatch({ type: "choose_payout", option_id: option.option_id }));
       emeraldSkullsPayoutOptions.appendChild(button);
@@ -680,6 +777,11 @@
     const view = data && data.view;
     if (!view) return;
     emeraldSkullsView = view;
+    const mobileContext = `${view.game_index}:${view.turn_number}:${view.active_player_id}:${view.result ? "review" : "play"}`;
+    if (mobileContext !== emeraldSkullsMobileContext) {
+      emeraldSkullsMobileContext = mobileContext;
+      emeraldSkullsSetMobileTab(view.you === view.active_player_id || view.result ? "skull" : "bets");
+    }
     emeraldSkullsPending = false;
     if (emeraldSkullsPendingTimer) window.clearTimeout(emeraldSkullsPendingTimer);
     emeraldSkullsPendingTimer = null;
@@ -693,6 +795,7 @@
     }
     if (emeraldSkullsTurnLabel) emeraldSkullsTurnLabel.textContent = `${view.turn_number} · ${EMERALD_SKULLS_PHASES[view.phase] || view.phase}`;
     if (emeraldSkullsTumblerLabel) emeraldSkullsTumblerLabel.textContent = emeraldSkullsPlayerName(view, view.active_player_id);
+    emeraldSkullsSetTip(emeraldSkullsTumblerLabel, `${emeraldSkullsPlayerName(view, view.active_player_id)} · Tumbler: buys and rolls the dice this turn.`);
     if (emeraldSkullsPotLabel) emeraldSkullsPotLabel.textContent = String(Number(view.gear_supply || 0));
     emeraldSkullsRenderStatus(view);
     emeraldSkullsRenderPlayers(view);
@@ -701,6 +804,7 @@
   }
 
   function emeraldSkullsSetExplainMode(enabled) {
+    emeraldSkullsHideTip();
     emeraldSkullsExplainMode = Boolean(enabled);
     document.body.classList.toggle("emerald-skulls-explain-mode", emeraldSkullsExplainMode);
     if (emeraldSkullsExplainBtn) emeraldSkullsExplainBtn.setAttribute("aria-pressed", emeraldSkullsExplainMode ? "true" : "false");
@@ -744,6 +848,8 @@
     emeraldSkullsSelectedDice.clear();
     emeraldSkullsPending = false;
     emeraldSkullsLastAnnounced = 0;
+    emeraldSkullsMobileContext = "";
+    emeraldSkullsSuppressClick = false;
     if (emeraldSkullsPendingTimer) window.clearTimeout(emeraldSkullsPendingTimer);
     emeraldSkullsPendingTimer = null;
     emeraldSkullsSetExplainMode(false);
@@ -755,6 +861,7 @@
   function emeraldSkullsShowHeaderActions(show) {
     if (emeraldSkullsHeaderActions) emeraldSkullsHeaderActions.style.display = show ? "flex" : "none";
     if (!show) {
+      emeraldSkullsMobileContext = "";
       emeraldSkullsSelectedDice.clear();
       emeraldSkullsSetExplainMode(false);
       emeraldSkullsSetModal(emeraldSkullsHelpModal, false);
@@ -763,6 +870,36 @@
   }
 
   if (emeraldSkullsHelpContent) emeraldSkullsHelpContent.innerHTML = EMERALD_SKULLS_HELP_HTML;
+  if (emeraldSkullsPanel) {
+    emeraldSkullsPanel.querySelectorAll("[data-emerald-skulls-tab]").forEach((button) => {
+      button.addEventListener("click", () => emeraldSkullsSetMobileTab(button.dataset.emeraldSkullsTab));
+    });
+    emeraldSkullsPanel.querySelectorAll("button[data-emerald-skulls-explain]").forEach((button) => {
+      const explanation = EMERALD_SKULLS_EXPLANATIONS[button.dataset.emeraldSkullsExplain];
+      if (explanation) emeraldSkullsSetTip(button, explanation.body);
+    });
+    emeraldSkullsPanel.addEventListener("pointerover", (event) => {
+      if (event.pointerType !== "mouse") return;
+      const target = event.target.closest("[data-emerald-skulls-tip]");
+      if (target) emeraldSkullsShowTip(target);
+    });
+    emeraldSkullsPanel.addEventListener("pointerout", (event) => {
+      if (event.pointerType === "mouse" && !event.target.contains(event.relatedTarget)) emeraldSkullsHideTip();
+    });
+    emeraldSkullsPanel.addEventListener("pointerdown", (event) => {
+      if (event.pointerType === "mouse") return;
+      const target = event.target.closest("[data-emerald-skulls-tip]");
+      if (target) emeraldSkullsShowTip(target, true);
+      else emeraldSkullsHideTip();
+    });
+    emeraldSkullsPanel.addEventListener("focusin", (event) => {
+      // Touch-triggered focus must not cancel the three-second dismiss timer.
+      if (!emeraldSkullsTipTimer) emeraldSkullsShowTip(event.target.closest("[data-emerald-skulls-tip]"));
+    });
+    emeraldSkullsPanel.addEventListener("focusout", () => {
+      if (!emeraldSkullsTipTimer) emeraldSkullsHideTip();
+    });
+  }
   if (emeraldSkullsRollBtn) emeraldSkullsRollBtn.addEventListener("click", () => emeraldSkullsHasAction("roll") && emeraldSkullsDispatch({ type: "roll" }));
   if (emeraldSkullsRerollBtn) emeraldSkullsRerollBtn.addEventListener("click", () => emeraldSkullsHasAction("spend_reroll_cube") && emeraldSkullsDispatch({ type: "spend_reroll_cube" }));
   if (emeraldSkullsPickNoseBtn) {
@@ -803,13 +940,19 @@
   document.addEventListener(
     "click",
     (event) => {
+      if (emeraldSkullsSuppressClick) {
+        emeraldSkullsSuppressClick = false;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return;
+      }
       if (!emeraldSkullsExplainMode || typeof currentGameType === "undefined" || currentGameType !== "emerald_skulls") return;
       const button = event.target.closest("button");
       if ([emeraldSkullsHelpBtn, emeraldSkullsExplainBtn, emeraldSkullsHelpCloseBtn, emeraldSkullsExplainCloseBtn].includes(button)) return;
-      const target = event.target.closest("[data-emerald-skulls-explain]");
+      const target = button ? (button.matches("[data-emerald-skulls-explain]") ? button : null) : event.target.closest("[data-emerald-skulls-explain]");
       if (!button && (!target || !emeraldSkullsPanel || !emeraldSkullsPanel.contains(target))) return;
       event.preventDefault();
-      event.stopPropagation();
+      event.stopImmediatePropagation();
       if (target && target.dataset.emeraldSkullsExplain) {
         emeraldSkullsShowExplanation(target);
         emeraldSkullsSetExplainMode(false);
@@ -821,11 +964,13 @@
   document.addEventListener(
     "pointerdown",
     (event) => {
+      emeraldSkullsSuppressClick = false;
       if (!emeraldSkullsExplainMode || typeof currentGameType === "undefined" || currentGameType !== "emerald_skulls") return;
       const target = emeraldSkullsFindDisabledExplainTarget(event.clientX, event.clientY);
       if (!target) return;
       event.preventDefault();
-      event.stopPropagation();
+      event.stopImmediatePropagation();
+      emeraldSkullsSuppressClick = true;
       emeraldSkullsShowExplanation(target);
       emeraldSkullsSetExplainMode(false);
     },
@@ -847,7 +992,26 @@
   });
 
   document.addEventListener("keydown", (event) => {
+    emeraldSkullsSuppressClick = false;
+    const modal = [emeraldSkullsHelpModal, emeraldSkullsExplainModal].find((element) => element && !element.classList.contains("hidden"));
+    if (modal && event.key === "Tab") {
+      const controls = [...modal.querySelectorAll("button, a[href], [tabindex='0']")].filter((element) => !element.disabled);
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (event.shiftKey && (document.activeElement === first || !modal.contains(document.activeElement))) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && (document.activeElement === last || !modal.contains(document.activeElement))) {
+        event.preventDefault();
+        first?.focus();
+      }
+    }
     if (event.key !== "Escape") return;
+    emeraldSkullsHideTip();
+    if (modal) {
+      emeraldSkullsSetModal(modal, false, modal === emeraldSkullsHelpModal ? emeraldSkullsHelpBtn : emeraldSkullsExplainBtn);
+      return;
+    }
     if (emeraldSkullsExplainMode) emeraldSkullsSetExplainMode(false);
     if (emeraldSkullsSelectedDice.size) {
       emeraldSkullsSelectedDice.clear();
@@ -856,6 +1020,9 @@
     if (emeraldSkullsHelpModal && !emeraldSkullsHelpModal.classList.contains("hidden")) emeraldSkullsSetModal(emeraldSkullsHelpModal, false, emeraldSkullsHelpBtn);
     if (emeraldSkullsExplainModal && !emeraldSkullsExplainModal.classList.contains("hidden")) emeraldSkullsSetModal(emeraldSkullsExplainModal, false);
   });
+
+  window.addEventListener("resize", emeraldSkullsHideTip);
+  document.addEventListener("scroll", emeraldSkullsHideTip, true);
 
   window.clearEmeraldSkullsState = emeraldSkullsClearState;
   window.renderEmeraldSkullsGameState = emeraldSkullsRenderGameState;

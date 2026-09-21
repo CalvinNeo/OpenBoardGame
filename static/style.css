@@ -7126,13 +7126,33 @@ body.blokus-explain-mode button.has-explanation:hover {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .decrypto-pack-option {
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+  min-height: 28px;
   font-size: 12px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+/* Keep checkboxes compact when mobile .row inputs use the full width. */
+.decrypto-pack-option input[type="checkbox"] {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+}
+
+.decrypto-pack-option span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .cyber-tool-options {
@@ -36200,7 +36220,7 @@ body.nine-upper-explain-mode button.has-explanation {
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  overflow-x: clip;
+  overflow-wrap: anywhere;
   color: var(--emerald-ink);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   border: 1px solid rgba(68, 219, 158, 0.28);
@@ -36386,6 +36406,7 @@ body.nine-upper-explain-mode button.has-explanation {
 .emerald-skulls-player-top,
 .emerald-skulls-player-resources {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 7px;
@@ -36429,7 +36450,8 @@ body.nine-upper-explain-mode button.has-explanation {
 
 .emerald-skulls-workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(300px, 0.92fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
   gap: 12px;
   min-width: 0;
   padding: 14px 16px 0;
@@ -36455,6 +36477,10 @@ body.nine-upper-explain-mode button.has-explanation {
   background: #91edbd;
 }
 
+.emerald-skulls-section-heading > .emerald-skulls-floor {
+  color: #0b291f;
+}
+
 .emerald-skulls-board {
   display: flex;
   min-height: 290px;
@@ -36474,7 +36500,7 @@ body.nine-upper-explain-mode button.has-explanation {
 button.emerald-skulls-level {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(90px, 0.8fr) minmax(74px, 1fr) auto;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr);
   align-items: center;
   width: 100%;
   min-width: 0;
@@ -36490,9 +36516,9 @@ button.emerald-skulls-level {
   transition: border-color 150ms ease, background 150ms ease, transform 150ms ease, opacity 150ms ease;
 }
 
-button.emerald-skulls-level.is-gem { width: 51%; }
+button.emerald-skulls-level.is-gem { width: 72%; }
 button.emerald-skulls-level.is-eyes { width: 82%; }
-button.emerald-skulls-level.is-nose { width: 62%; }
+button.emerald-skulls-level.is-nose { width: 82%; }
 button.emerald-skulls-level.is-upper { width: 88%; }
 button.emerald-skulls-level.is-lower { width: 94%; }
 
@@ -36539,9 +36565,8 @@ button.emerald-skulls-level.is-placeable:hover {
 }
 
 .emerald-skulls-level-label > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
+  line-height: 1.25;
 }
 
 .emerald-skulls-level-dice,
@@ -36563,19 +36588,6 @@ button.emerald-skulls-level.is-placeable:hover {
   line-height: 1;
 }
 
-.emerald-skulls-place-callout {
-  visibility: hidden;
-  color: #aff4cf;
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.emerald-skulls-level.is-placeable .emerald-skulls-place-callout {
-  visibility: visible;
-}
-
 .emerald-skulls-die {
   display: inline-grid;
   flex: 0 0 auto;
@@ -36584,9 +36596,9 @@ button.emerald-skulls-level.is-placeable:hover {
   place-items: center;
   padding: 0;
   color: #0b2f23;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 15px;
-  font-weight: 900;
+  font-family: "Apple Symbols", "Segoe UI Symbol", sans-serif;
+  font-size: 28px;
+  font-weight: 400;
   line-height: 1;
   border: 2px solid #bff7da;
   border-radius: 9px;
@@ -36640,7 +36652,7 @@ button.emerald-skulls-die {
   min-height: 16px;
   margin: 7px 0 0;
   color: var(--emerald-muted);
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.4;
 }
 
@@ -36750,7 +36762,7 @@ button.emerald-skulls-buy-button {
 
 .emerald-skulls-bet-cards {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
 }
 
@@ -36766,31 +36778,24 @@ button.emerald-skulls-buy-button {
 }
 
 .emerald-skulls-card-number {
-  position: absolute;
-  top: 5px;
-  left: 50%;
-  z-index: 2;
-  display: grid;
-  width: 21px;
-  height: 21px;
-  place-items: center;
-  color: #39210c;
+  grid-column: 1 / -1;
+  padding: 3px 12px;
+  color: var(--emerald-copper);
   font-size: 10px;
   font-weight: 900;
-  border: 2px solid #0c2c22;
-  border-radius: 50%;
-  background: var(--emerald-copper);
-  transform: translateX(-50%);
+  line-height: 1.3;
+  border-bottom: 1px solid rgba(234, 164, 92, 0.16);
+  background: rgba(61, 38, 18, 0.35);
 }
 
 button.emerald-skulls-bet {
   display: flex;
   min-width: 0;
-  min-height: 126px;
+  min-height: 106px;
   flex-direction: column;
   align-items: stretch;
   gap: 5px;
-  padding: 28px 8px 8px;
+  padding: 9px 12px;
   color: #f4ebdf;
   text-align: left;
   border: 0;
@@ -36809,7 +36814,7 @@ button.emerald-skulls-bet:hover:not(:disabled) {
 
 button.emerald-skulls-bet:disabled {
   cursor: default;
-  opacity: 0.64;
+  opacity: 0.85;
 }
 
 button.emerald-skulls-bet.is-winner {
@@ -36825,23 +36830,24 @@ button.emerald-skulls-bet.is-loser {
 .emerald-skulls-bet strong {
   color: #ffddb5;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 12px;
-  line-height: 1.1;
+  font-size: 14px;
+  line-height: 1.25;
 }
 
 .emerald-skulls-bet-description {
   display: block;
-  min-height: 32px;
-  color: #cdbca7;
-  font-size: 9px;
+  min-height: 28px;
+  color: #dccbb6;
+  font-size: 11px;
   line-height: 1.28;
 }
 
 .emerald-skulls-marker-stack {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   min-width: 0;
+  flex-wrap: wrap;
   margin-top: auto;
 }
 
@@ -36859,7 +36865,7 @@ button.emerald-skulls-bet.is-loser {
 
 .emerald-skulls-bet-vacancy {
   color: #deb788;
-  font-size: 8px;
+  font-size: 11px;
   font-weight: 800;
   border: 1px dashed rgba(235, 174, 108, 0.36);
 }
@@ -36876,7 +36882,7 @@ button.emerald-skulls-bet.is-loser {
 }
 
 .emerald-skulls-bet-marker small {
-  font-size: 7px;
+  font-size: 10px;
   font-weight: 900;
   line-height: 1;
 }
@@ -37026,7 +37032,7 @@ button.emerald-skulls-bet.is-loser {
 }
 
 .emerald-skulls-log {
-  max-height: 180px;
+  max-height: 160px;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-color: rgba(91, 194, 145, 0.72) rgba(5, 24, 19, 0.8);
@@ -37060,12 +37066,103 @@ button.emerald-skulls-bet.is-loser {
 
 .emerald-skulls-modal-content {
   width: min(720px, calc(100vw - 28px));
+  max-width: 720px;
   max-height: min(84vh, 760px);
   overflow: hidden;
 }
 
 .emerald-skulls-help-content {
   overflow-y: auto;
+}
+
+.emerald-skulls-modal-content .modal-body {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+}
+
+.emerald-skulls-modal-content .modal-header {
+  gap: 12px;
+}
+
+.emerald-skulls-modal-content .modal-header h2 {
+  min-width: 0;
+  font-size: 18px;
+  overflow-wrap: anywhere;
+}
+
+.emerald-skulls-modal-content .modal-header button {
+  flex: 0 0 auto;
+}
+
+.emerald-skulls-tip {
+  position: fixed;
+  z-index: 1100;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: min(310px, calc(100vw - 24px));
+  padding: 9px 12px;
+  border: 1px solid #73cda6;
+  border-radius: 10px;
+  background: #effbf4;
+  color: #153e2e;
+  font: 13px/1.45 system-ui, sans-serif;
+  overflow-wrap: anywhere;
+  box-shadow: 0 5px 18px #0003;
+  pointer-events: none;
+}
+
+.emerald-skulls-panel :focus-visible {
+  outline: 2px solid #ffd270;
+  outline-offset: 2px;
+}
+
+.emerald-skulls-tabs {
+  display: none;
+}
+
+.emerald-skulls-log-card summary {
+  cursor: pointer;
+  margin-bottom: 0;
+  color: #c7ddd0;
+  font-size: 13px;
+}
+
+.emerald-skulls-log-card summary::before {
+  content: "▸";
+}
+
+.emerald-skulls-log-card[open] summary {
+  margin-bottom: 8px;
+}
+
+.emerald-skulls-log-card[open] summary::before {
+  content: "▾";
+}
+
+.emerald-skulls-player-resources > span {
+  white-space: nowrap;
+}
+
+.emerald-skulls-player-top strong {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.emerald-skulls-result-heading,
+.emerald-skulls-roll-heading {
+  flex-wrap: wrap;
+}
+
+.emerald-skulls-result-heading > div,
+.emerald-skulls-roll-heading > div,
+.emerald-skulls-brand > div {
+  min-width: 0;
+}
+
+.emerald-skulls-die.is-wild,
+.emerald-skulls-die.is-ghost {
+  font-size: 19px;
 }
 
 .emerald-skulls-rules {
@@ -37141,16 +37238,43 @@ body.emerald-skulls-explain-mode button[data-emerald-skulls-explain].has-explana
 }
 
 @media (max-width: 940px) {
+  .emerald-skulls-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin: 12px 12px 0;
+  }
+
+  .emerald-skulls-tabs button {
+    min-width: 0;
+    min-height: 42px;
+    padding: 8px;
+    border: 1px solid #32664f;
+    background: #0d2c24;
+    color: #dff8e9;
+    font-size: 13px;
+  }
+
+  .emerald-skulls-tabs button[aria-pressed="true"] {
+    border-color: #9be9c4;
+    background: #265e49;
+  }
+
+  .emerald-skulls-panel[data-mobile-tab="bets"] .emerald-skulls-table,
+  .emerald-skulls-panel[data-mobile-tab="skull"] .emerald-skulls-betting {
+    display: none;
+  }
+
   .emerald-skulls-workspace {
     grid-template-columns: minmax(0, 1fr);
   }
 
   .emerald-skulls-bet-cards {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
   }
 
   button.emerald-skulls-bet {
-    min-height: 132px;
+    min-height: 106px;
   }
 }
 
@@ -37191,7 +37315,7 @@ body.emerald-skulls-explain-mode button[data-emerald-skulls-explain].has-explana
   }
 
   .emerald-skulls-bet-cards {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .emerald-skulls-payout-choice {
@@ -37221,6 +37345,14 @@ body.emerald-skulls-explain-mode button[data-emerald-skulls-explain].has-explana
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .emerald-skulls-player {
+    padding: 8px;
+  }
+
+  .emerald-skulls-player small {
+    display: none;
+  }
+
   .emerald-skulls-board {
     min-height: 260px;
     padding-right: 4px;
@@ -37228,25 +37360,21 @@ body.emerald-skulls-explain-mode button[data-emerald-skulls-explain].has-explana
   }
 
   button.emerald-skulls-level {
-    grid-template-columns: minmax(76px, 0.82fr) minmax(38px, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     min-height: 42px;
     padding: 5px 7px;
   }
 
-  button.emerald-skulls-level.is-gem { width: 68%; }
+  button.emerald-skulls-level.is-gem { width: 82%; }
   button.emerald-skulls-level.is-eyes { width: 94%; }
-  button.emerald-skulls-level.is-nose { width: 78%; }
+  button.emerald-skulls-level.is-nose { width: 88%; }
   button.emerald-skulls-level.is-upper,
   button.emerald-skulls-level.is-lower { width: 100%; }
-
-  .emerald-skulls-place-callout {
-    display: none;
-  }
 
   .emerald-skulls-die {
     width: 32px;
     height: 32px;
-    font-size: 13px;
+    font-size: 25px;
   }
 
   .emerald-skulls-action-dock {
@@ -37263,9 +37391,9 @@ body.emerald-skulls-explain-mode button[data-emerald-skulls-explain].has-explana
   }
 
   button.emerald-skulls-bet {
-    min-height: 120px;
-    padding-right: 6px;
-    padding-left: 6px;
+    min-height: 108px;
+    padding-right: 10px;
+    padding-left: 10px;
   }
 
   .emerald-skulls-bet-description {
@@ -37296,17 +37424,20 @@ body.emerald-skulls-explain-mode button[data-emerald-skulls-explain].has-explana
     padding-left: 9px;
   }
 
-  .emerald-skulls-players,
+  .emerald-skulls-players {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .emerald-skulls-bet-cards {
     grid-template-columns: minmax(0, 1fr);
   }
 
   .emerald-skulls-buy-options {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
   .emerald-skulls-level-label > span {
-    font-size: 9px;
+    font-size: 11px;
   }
 
   button.emerald-skulls-bet {

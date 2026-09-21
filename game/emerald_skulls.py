@@ -896,75 +896,22 @@ class EmeraldSkullsGame:
 
     @staticmethod
     def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
+        from game.emerald_skulls_ai import choose_move
+
         legal = EmeraldSkullsGame.get_legal_actions(state, bot_id)
         if not legal:
             return None
-        if "place_bet" in legal:
-            available = _available_bet_ids(state, bot_id)
-            if not available:
-                return None
-            ranked = sorted(
-                available,
-                key=lambda bet_id: (
-                    -BET_BY_ID[bet_id]["payouts"][len(state["bet_stacks"][bet_id])],
-                    BET_BY_ID[bet_id]["card_number"],
-                    bet_id,
-                ),
-            )
-            return {"type": "place_bet", "bet_id": ranked[0], "delay_ms": 300}
-        if "buy_dice" in legal:
-            gears = int(state["players"][bot_id].get("gears", 0))
-            count = 5 if gears >= 3 else 4 if gears >= 1 else 3
-            return {"type": "buy_dice", "count": count, "delay_ms": 350}
         if "roll" in legal:
-            return {"type": "roll", "delay_ms": 700}
-        if state.get("phase") == "after_roll":
-            options = _placement_options(state)
-            if options:
-                board_counts = {
-                    level: sum(
-                        1
-                        for die in _board_dice(state)
-                        if int(die.get("level", 0)) == level
-                    )
-                    for level in options
-                }
-                level = min(
-                    options,
-                    key=lambda value: (
-                        -min(len(options[value]), LEVEL_CAPACITY[value] - board_counts[value]),
-                        value,
-                    ),
-                )
-                free = LEVEL_CAPACITY[level] - board_counts[level]
-                return {
-                    "type": "place_dice",
-                    "level": level,
-                    "die_ids": options[level][:free],
-                    "delay_ms": 450,
-                }
-            if "spend_reroll_cube" in legal:
-                return {"type": "spend_reroll_cube", "delay_ms": 350}
-            if "pick_nose" in legal:
-                target = next(
-                    die for die in state["dice"]
-                    if die.get("zone") == "board" and die.get("level") == 3 and die.get("face") == 3
-                )
-                return {"type": "pick_nose", "die_id": target["die_id"], "delay_ms": 350}
-            if "accept_bust" in legal:
-                return {"type": "accept_bust", "delay_ms": 300}
-        if "continue_roll" in legal:
-            pool_count = len(_dice_in_zone(state, "pool"))
-            if int(state.get("minimum_level", 1)) >= 4 and pool_count <= 1:
-                return {"type": "chicken_out", "delay_ms": 350}
-            return {"type": "continue_roll", "delay_ms": 350}
-        if "choose_payout" in legal:
-            best = max(
-                state.get("payout_options", []),
-                key=lambda option: (int(option.get("gears", 0)) + 2 * int(option.get("reroll_cubes", 0)), option["option_id"]),
-            )
-            return {"type": "choose_payout", "option_id": best["option_id"], "delay_ms": 350}
-        return None
+            # The room runner visits seats in order. Yield to willing bot
+            # gamblers so a tumbler in an earlier seat cannot skip their bets.
+            for player_id in state["turn_order"]:
+                if player_id == bot_id or not state["player_meta"][player_id].get("is_bot"):
+                    continue
+                if _available_bet_ids(state, player_id):
+                    view = EmeraldSkullsGame.get_public_view(state, player_id)
+                    if choose_move(view) is not None:
+                        return None
+        return choose_move(EmeraldSkullsGame.get_public_view(state, bot_id))
 
     @staticmethod
     def serialize(state: Dict) -> Dict:
