@@ -1664,6 +1664,365 @@ def _lead_shared_pair_run_break_penalty(
     return 0.0
 
 
+def _hand_route_key(combo: Dict) -> Tuple:
+    return (combo.get("type"), combo.get("size"), combo.get("tier", 0),
+            combo.get("rank_value", 0), combo.get("high_value", 0),
+            bool(combo.get("uses_wild")))
+
+
+def _hand_route_context(state: Dict, player_id: str) -> Tuple:
+    """Include own material and public facts, never opponents' card faces."""
+    return (
+        player_id, state["level_rank"], state.get("round_number"),
+        state.get("phase"), state.get("current_turn"),
+        tuple((c["id"], c.get("rank"), c.get("suit"), c.get("joker"))
+              for c in state["players"][player_id]["hand"]),
+        tuple((pid, len(state["players"][pid]["hand"]),
+               bool(state["players"][pid].get("finished")),
+               state["players"][pid].get("finish_rank"), _team_of(state, pid),
+               tuple(sorted(_public_revealed_rank_caps_for_target(state, pid).items())))
+              for pid in state.get("turn_order", [])),
+        tuple(sorted(state.get("seen_cards") or [])),
+        tuple(state.get("finish_order") or []),
+        bool(state.get("config", {}).get("hard_bomb_beats_soft")),
+    )
+
+
+def _current_hand_routes(state: Dict, player_id: str) -> Dict:
+    cache = state.get("_ai_eval_cache", {})
+    if (state.get("current_trick") or not cache.get("hand_routes")
+            or cache.get("hand_route_context") != _hand_route_context(state, player_id)):
+        return {}
+    return cache["hand_routes"]
+
+
+def _hand_route_reply_model(
+    state: Dict, player_id: str,
+) -> Tuple[Callable[[Dict], Tuple[float, ...]], float]:
+    """Build a shared reply model from public counts and unseen cards."""
+    unknown = _lead_unknown_pool_cards(state, player_id)
+    total, rank_counts, wild_count, joker_counts = _lead_unknown_pool_profile(state, player_id)
+    opponents = [pid for pid in state.get("turn_order", [])
+                 if not state["players"][pid].get("finished")
+                 and _team_of(state, pid) != _team_of(state, player_id)]
+    teammate = _teammate_of(state, player_id)
+    teammate_left = (len(state["players"][teammate]["hand"])
+                     if teammate and not state["players"][teammate].get("finished") else 0)
+    shortest = min((len(state["players"][pid]["hand"]) for pid in opponents), default=27)
+    loss_weight = 1.0 + max(0, 10 - shortest) * 0.12
+    profiles = {}
+
+    def profile(combo):
+        key = _hand_route_key(combo)
+        if key in profiles:
+            return profiles[key]
+        same_probs, bomb_probs, finish_probs, continuing_probs = [], [], [], []
+        is_bomb = combo["type"] in BOMB_TYPES
+        for pid in opponents:
+            same = 0.0 if is_bomb else _analytic_same_type_reply_probability(
+                state, pid, combo, total, rank_counts, wild_count,
+                unknown, use_history=False,
+            )
+            bomb = (_opponent_overbomb_reply_probability(
+                state, pid, combo, total, rank_counts, joker_counts,
+            ) if is_bomb else _analytic_bomb_reply_probability(
+                state, pid, combo, total, rank_counts, joker_counts,
+                unknown, use_history=False,
+            ))
+            same_probs.append(same)
+            bomb_probs.append(bomb)
+            if len(state["players"][pid]["hand"]) == combo["size"]:
+                finish_probs.append(same)
+            elif len(state["players"][pid]["hand"]) > combo["size"]:
+                continuing_probs.append(same)
+        same = _aggregate_event_probability(same_probs)
+        bomb = _aggregate_event_probability(bomb_probs)
+        finish = _aggregate_event_probability(finish_probs)
+        mate_finish = 0.0
+        if not is_bomb and teammate_left == combo["size"]:
+            mate_finish = _analytic_same_type_reply_probability(
+                state, teammate, combo, total, rank_counts, wild_count,
+                unknown, use_history=False,
+            )
+            # An enemy can finish before the teammate receives a turn.
+            mate_finish *= 1.0 - finish
+        result = (same, bomb, finish, mate_finish,
+                  _aggregate_event_probability(continuing_probs))
+        profiles[key] = result
+        return result
+
+    return profile, loss_weight
+
+
+def _hand_route_plan_costs(
+    combos: List[Dict], profile: Callable[[Dict], Tuple[float, ...]],
+    loss_weight: float, level: int, config: Dict,
+) -> Dict[Tuple, float]:
+    """Spend each group once while comparing lead and recovery orders."""
+    risks = [profile(combo) for combo in combos]
+    if len(combos) > 7:
+        # Long scattered tails get a coarse allocation cost; only compact
+        # covers participate in the final action-order reconciliation.
+        losses = [(1.0 - (1.0 - r[0]) * (1.0 - r[1])) * loss_weight
+                  + r[2] * 3.0 for r in risks]
+        return {
+            _hand_route_key(combo): max(0.0, sum(losses)
+                - max(losses[j] for j in range(len(combos)) if j != index))
+            for index, combo in enumerate(combos)
+        }
+    memo = {0: 0.0}
+    costs = {}
+
+    def route_cost(remaining, lead):
+        key = (remaining, lead)
+        if key in costs:
+            return costs[key]
+        tail = remaining ^ (1 << lead)
+        if not tail:
+            return 0.0
+        same, bomb, finish, mate_finish, continuing = risks[lead]
+        any_reply = 1.0 - (1.0 - same) * (1.0 - bomb)
+        future = best_tail(tail)
+        result = future + any_reply * loss_weight + finish * 3.0
+        # Match each possible response band to the cheapest higher
+        # same-type group. Equal-valued replies cannot be overcalled.
+        followups = sorted((i for i, combo in enumerate(combos)
+                            if tail & (1 << i)
+                            and combo["type"] == combos[lead]["type"]
+                            and _compare_combos(combos[lead], combo, level, config)),
+                           key=lambda i: _combo_numeric_value(combos[i]))
+        previous = continuing
+        unassigned = 1.0
+        covered_same = 0.0
+        for follow in followups:
+            threshold = dict(combos[follow])
+            value_key = "high_value" if "high_value" in threshold else "rank_value"
+            threshold[value_key] = threshold[value_key] - 0.5
+            upper = min(previous, profile(threshold)[4])
+            highest_band = max(0.0, previous - upper)
+            interval = (highest_band / (1.0 - upper)
+                        if upper < 1.0 - 1e-9 else 0.0)
+            cheapest_band = unassigned * interval
+            # Opponents often answer economically, but retain a
+            # conservative branch where they spend their top reply.
+            raw_band = 0.65 * cheapest_band + 0.35 * highest_band
+            covered_same += raw_band
+            unassigned *= 1.0 - interval
+            band = raw_band * (1.0 - bomb)
+            # A player going out cannot be caught by our next group.
+            band *= 1.0 - finish
+            if band > 0.00001:
+                result -= band * (loss_weight + future - best_tail(tail ^ (1 << follow)))
+            previous = upper
+        # A distinct bomb can cover an ordinary reply, spending
+        # that control instead of counting it again for the tail.
+        if combos[lead]["type"] not in BOMB_TYPES:
+            bombs = [i for i, combo in enumerate(combos)
+                     if tail & (1 << i) and combo["type"] in BOMB_TYPES]
+            if bombs:
+                cover = min(bombs, key=lambda i: (_bomb_tier(combos[i]), _combo_numeric_value(combos[i])))
+                uncovered = max(0.0, continuing - covered_same) * (1.0 - bomb) * (1.0 - finish)
+                cover_hold = 1.0 - risks[cover][1]
+                if uncovered * cover_hold > 0.00001:
+                    result -= uncovered * cover_hold * (
+                        loss_weight + future - best_tail(tail ^ (1 << cover)))
+        result -= mate_finish * min(1.2, loss_weight)
+        costs[key] = max(0.0, result)
+        return costs[key]
+
+    def best_tail(remaining):
+        if remaining in memo:
+            return memo[remaining]
+        choices = [i for i in range(len(combos)) if remaining & (1 << i)]
+        result = min(route_cost(remaining, i) for i in choices)
+        memo[remaining] = result
+        return result
+
+    whole = (1 << len(combos)) - 1
+    return {_hand_route_key(combo): route_cost(whole, index)
+            for index, combo in enumerate(combos)}
+
+
+def _prepare_hand_route_scores(
+    state: Dict, player_id: str, options: List[List[int]],
+    deadline: Optional[float] = None,
+) -> None:
+    """Compare complete physical covers and their public-information lead routes.
+
+    This is a bounded prior, not an exact deal solver. Enemy reply distributions
+    are public-pool estimates and remain fixed during a route. Each recovery
+    consumes its own group; overlapping runs and wildcard uses cannot be spent
+    twice. Only a fully scored panel is published to the action scorers.
+    """
+    if state.get("current_trick") or not options:
+        return
+    cache = state.setdefault("_ai_eval_cache", {})
+    hand = state["players"][player_id]["hand"]
+    if len(hand) < 2:
+        return
+    context = _hand_route_context(state, player_id)
+    signature = (context, tuple(_cards_key(cards) for cards in options))
+    if cache.get("hand_route_key") == signature:
+        return
+    cache.pop("hand_routes", None)
+    cache.pop("hand_route_key", None)
+    cache.pop("hand_route_context", None)
+    cache.pop("heuristic_scored_candidates", None)
+    if len(options) > 512:
+        cache["hand_route_status"] = {"complete": False, "reason": "option_limit"}
+        return
+    started = time.perf_counter()
+    available = _deadline_remaining(deadline)
+    if available is not None and available <= 0.02:
+        cache["hand_route_status"] = {"complete": False, "reason": "deadline"}
+        return
+    route_deadline = started + min(0.16, available * 0.12) if available is not None else None
+    level = state["level_rank"]
+    config = state.get("config", {})
+    hand_map = _map_hand_by_id(hand)
+    bits = {card["id"]: 1 << index for index, card in enumerate(hand)}
+    full_mask = (1 << len(hand)) - 1
+    entries = {}
+    for cards in options + [[card["id"]] for card in hand]:
+        combo = _evaluate_combo([hand_map[cid] for cid in cards], level, config)
+        if not combo:
+            continue
+        mask = sum(bits[cid] for cid in cards)
+        entries[mask] = (list(cards), combo)
+    single_masks = [1 << index for index in range(len(hand))]
+    grouped = [mask for mask in entries if len(entries[mask][0]) > 1]
+    # Diversify material allocation, including both natural and wild bombs.
+    # These greedy covers are witnesses, not a claimed minimum partition.
+    orders = []
+    for bomb_weight in (0.0, 1.4, 3.0):
+        orders.append(sorted(grouped, key=lambda mask: (
+            len(entries[mask][0]) - 1
+            + (bomb_weight * _bomb_tier(entries[mask][1])
+               if entries[mask][1]["type"] in BOMB_TYPES else 0.0)
+            - 0.2 * bool(entries[mask][1].get("uses_wild")),
+            -_combo_numeric_value(entries[mask][1]), -mask,
+        ), reverse=True))
+    candidate_plans = {}
+    for cards in options:
+        if route_deadline is not None and time.perf_counter() >= route_deadline:
+            cache["hand_route_status"] = {"complete": False, "reason": "deadline"}
+            return
+        first = sum(bits[cid] for cid in cards)
+        plans = set()
+        for order in orders:
+            remaining = full_mask ^ first
+            groups = [first]
+            for mask in order:
+                if mask & remaining == mask:
+                    groups.append(mask)
+                    remaining ^= mask
+            groups.extend(mask for mask in single_masks if mask & remaining)
+            plans.add(tuple(sorted(groups)))
+        candidate_plans[first] = plans
+    # A cover discovered while considering one lead is equally valid when any
+    # of its other groups leads. Do not compare asymmetric greedy remainders.
+    all_plans = set().union(*candidate_plans.values())
+    for plan in all_plans:
+        for mask in plan:
+            if mask in candidate_plans:
+                candidate_plans[mask].add(plan)
+
+    profile, loss_weight = _hand_route_reply_model(state, player_id)
+
+    panel = {}
+    plan_cache = {}
+    for first, plans in candidate_plans.items():
+        best = None
+        for plan in sorted(plans, key=lambda item: (len(item), item)):
+            if route_deadline is not None and time.perf_counter() >= route_deadline:
+                cache["hand_route_status"] = {"complete": False, "reason": "deadline"}
+                return
+            ordered = tuple(sorted(plan, key=lambda mask: _hand_route_key(entries[mask][1])))
+            plan_key = tuple(_hand_route_key(entries[mask][1]) for mask in ordered)
+            if plan_key not in plan_cache:
+                plan_cache[plan_key] = _hand_route_plan_costs(
+                    [entries[mask][1] for mask in ordered], profile, loss_weight, level, config,
+                )
+            losses = plan_cache[plan_key][_hand_route_key(entries[first][1])]
+            cost = len(plan) + 1.6 * losses
+            if best is None or cost < best[0]:
+                best = (cost, plan, losses)
+        panel[_cards_key(entries[first][0])] = {
+            "cards": entries[first][0],
+            "family": entries[first][1]["type"],
+            "cost": best[0], "turns": len(best[1]), "entry_risk": best[2],
+            "groups": [entries[mask][0] for mask in best[1]],
+        }
+    family_minimum = {}
+    for value in panel.values():
+        family = ("closeout" if value["turns"] == 2 else value["family"],
+                  tuple(sorted(_cards_key(group) for group in value["groups"])))
+        value["order_group"] = family
+        family_minimum[family] = min(family_minimum.get(family, float("inf")), value["cost"])
+    for value in panel.values():
+        family = value["order_group"]
+        value["score"] = -min(24.0, max(0.0, value["cost"] - family_minimum[family]) * 5.0)
+    if route_deadline is not None and time.perf_counter() >= route_deadline:
+        cache["hand_route_status"] = {"complete": False, "reason": "deadline"}
+        return
+    cache["hand_route_key"] = signature
+    cache["hand_route_context"] = context
+    cache["hand_routes"] = panel
+    cache["hand_route_status"] = {
+        "complete": True, "plans": len(plan_cache), "candidates": len(panel),
+        "elapsed_ms": (time.perf_counter() - started) * 1000.0,
+    }
+
+
+def _apply_hand_route_order(
+    state: Dict, bot_id: str,
+    scored: List[Tuple[Optional[List[int]], float, Dict[str, float]]],
+) -> None:
+    """Compare order within the same material allocation, after tactical scoring.
+
+    A witnessed cover is an upper bound, not an exact minimum: it must not
+    replace all stock estimates across unrelated action families. Preserve the
+    family's tactical score and use the common cover to reconcile its order.
+    Two-play closeouts can compare different shapes from the same cover.
+    """
+    if state.get("current_trick"):
+        return
+    panel = _current_hand_routes(state, bot_id)
+    groups = {}
+    for index, (cards, _score, components) in enumerate(scored):
+        route = panel.get(_cards_key(cards or []))
+        if (not route or route["turns"] > 7 or "anytime_quick_score" in components
+                or components.get("anytime_partial")):
+            continue
+        groups.setdefault(route["order_group"], []).append((index, route))
+    for group, entries in groups.items():
+        if len(entries) < 2:
+            continue
+        adjusted = {}
+        for index, route in entries:
+            _cards, score, components = scored[index]
+            value = (score - components.get("hand_route_order", 0.0)
+                     - components.get("anytime_incumbent", 0.0))
+            if group[0] != "closeout":
+                # These alternatives use the same number of plays and leave
+                # the same number of cards. Their residual turn proxies must
+                # not invent a different finish timetable for the same cover.
+                for name in ("team_finish", "turn_efficiency", "structure_credit"):
+                    value -= components.get(name, 0.0)
+            adjusted[index] = value + route["score"]
+        anchor = max(scored[index][1] for index, _route in entries)
+        shift = anchor - max(adjusted.values())
+        for index, _route in entries:
+            cards, old_score, components = scored[index]
+            score = adjusted[index] + shift
+            components = dict(components)
+            components["hand_route_order"] = (
+                score - old_score + components.get("hand_route_order", 0.0)
+            )
+            components["total"] = score
+            scored[index] = (cards, score, components)
+
+
 def _compute_lead_option_score(state: Dict, player_id: str, cards: List[int]) -> float:
     features = _candidate_features(state, player_id, cards)
     hand = features["hand"]
@@ -12228,6 +12587,72 @@ def _forced_endgame_control_relay_action(
     return candidates[0][1]
 
 
+def _deferred_teammate_bomb_pass(
+    state: Dict,
+    bot_id: str,
+    actions: List[Dict],
+) -> Optional[Dict]:
+    """Keep a bomb until a teammate's next lead actually needs covering.
+
+    With one opposing player left on one card, a teammate's multi-card lead is
+    already safe.  If this bot acts immediately after the teammate on the next
+    trick, bombing now is dominated by passing: the teammate may shed another
+    safe group or finish, while the bot can still bomb any later single before
+    the one-card opponent gets a turn.
+    """
+    current_trick = state.get("current_trick")
+    if not current_trick:
+        return None
+    pass_action = next(
+        (action for action in actions if action.get("type") == "pass"),
+        None,
+    )
+    if pass_action is None:
+        return None
+
+    teammate = _teammate_of(state, bot_id)
+    if (
+        not teammate
+        or state["players"].get(teammate, {}).get("finished")
+        or current_trick.get("player_id") != teammate
+    ):
+        return None
+    current_combo = current_trick.get("combo") or {}
+    if current_combo.get("type") == "single":
+        return None
+
+    finish_order = list(state.get("finish_order") or [])
+    if (
+        len(finish_order) != 1
+        or _team_of(state, finish_order[0]) == _team_of(state, bot_id)
+    ):
+        return None
+    active_opponents = [
+        pid
+        for pid in state.get("turn_order", [])
+        if _team_of(state, pid) != _team_of(state, bot_id)
+        and not state["players"][pid].get("finished")
+    ]
+    if (
+        len(active_opponents) != 1
+        or len(state["players"][active_opponents[0]].get("hand", [])) != 1
+        or _next_active_after(state, teammate) != bot_id
+    ):
+        return None
+
+    hand = state["players"].get(bot_id, {}).get("hand", [])
+    level_rank = state["level_rank"]
+    config = state.get("config", {})
+    if not hand or _can_play_all(hand, level_rank, config, current_combo):
+        return None
+
+    for candidate in _find_bomb_candidates(hand, level_rank, materialization_limit=3):
+        remaining = _remove_cards(hand, candidate.get("cards") or [])
+        if remaining and _can_play_all(remaining, level_rank, config, None):
+            return dict(pass_action)
+    return None
+
+
 def _minimax_pick_action(
     state: Dict,
     bot_id: str,
@@ -12296,6 +12721,22 @@ def _minimax_pick_action(
         if state.get("current_trick") and "pass" in legal:
             return {"type": "pass"}
         return dict(actions[0])
+    deferred_pass = _deferred_teammate_bomb_pass(
+        public_state or state,
+        bot_id,
+        actions,
+    )
+    if deferred_pass is not None:
+        _report_progress_scaled(
+            progress_callback,
+            "minimax",
+            progress_start,
+            progress_end,
+            1.0,
+            "Keeping the bomb behind a safe teammate lead",
+        )
+        store_status("teammate_control_defer", 1, len(actions))
+        return deferred_pass
     closeout = _public_endgame_closeout_action(public_state or state, bot_id, actions)
     if closeout is not None:
         closeout_action, hold_probability, runner_probability = closeout
@@ -14189,6 +14630,8 @@ def _bot_select_play(
         return [card["id"] for card in hand]
     options = _list_hint_options(state, bot_id)
     is_lead = not bool(current_trick)
+    if is_lead:
+        _prepare_hand_route_scores(state, bot_id, options, deadline)
     config = state.get("config", {})
     deep_limit = max(
         4,
@@ -14415,6 +14858,7 @@ def _bot_select_play(
         ),
         "candidate_ms": [round(duration * 1000.0, 3) for duration in candidate_durations],
     }
+    _apply_hand_route_order(state, bot_id, scored)
     _store_heuristic_scored_candidates(state, bot_id, depth, scored)
     scored.sort(key=lambda item: item[1], reverse=True)
     return scored[0][0]
@@ -14511,6 +14955,19 @@ def _build_bot_explain(
             remaining, key=lambda c: _single_order_value(c, state["level_rank"]), reverse=True
         )
         return [_card_label(card) for card in sorted_hand]
+
+    route_cache = state.get("_ai_eval_cache", {})
+    if route_cache.get("hand_route_status"):
+        method_meta = dict(method_meta or {})
+        method_meta["hand_route_status"] = dict(route_cache["hand_route_status"])
+        route = _current_hand_routes(state, bot_id).get(_cards_key(chosen_cards))
+        if route:
+            method_meta["hand_route"] = {
+                "groups": [label_cards(group) for group in route["groups"]],
+                "turns": route["turns"],
+                "entry_risk": round(route["entry_risk"], 4),
+                "cost": round(route["cost"], 4),
+            }
 
     if method == "nn" and method_scores:
         all_scores = method_scores[:]

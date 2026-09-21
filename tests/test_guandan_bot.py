@@ -9001,6 +9001,119 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         action = guandan._minimax_pick_action(state, "bot3", depth=5, width=8, deadline=0.0)
         self.assertEqual(action, {"type": "pass"})
 
+    def test_endgame_minimax_defers_bomb_behind_safe_teammate_three(self):
+        players = [
+            {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
+            {"player_id": "bot2", "name": "Bot 2", "seat": 1, "is_bot": True},
+            {"player_id": "z", "name": "z", "seat": 2, "is_bot": False},
+            {"player_id": "bot4", "name": "Bot 4", "seat": 3, "is_bot": True},
+        ]
+        state = guandan.GuandanGame.init_game({}, players)
+        state["phase"] = "playing"
+        state["dealer_team"] = "B"
+        state["level_rank"] = 2
+        state["current_turn"] = "bot4"
+        state["config"].update(
+            {
+                "bot_endgame_threshold": 999,
+                "bot_minimax_depth": 5,
+                "bot_minimax_width": 8,
+                "bot_minimax_particles": 3,
+                "bot_think_time_ms": 5000,
+            }
+        )
+
+        deck = guandan._full_deck()
+        state["players"]["bot4"]["hand"] = self._pick_labels(
+            deck,
+            ["♠️K", "♥️K", "♣️K", "♠️K", "♥️6"],
+        )
+        state["players"]["bot2"]["hand"] = self._pick_labels(
+            deck,
+            ["♥️J", "♣️J", "♣️10", "♣️8", "♦️7", "♦️7"],
+        )
+        state["players"]["calvin"]["hand"] = self._pick_labels(deck, ["♠️A"])
+        state["players"]["z"]["hand"] = []
+        state["players"]["z"]["finished"] = True
+        state["players"]["z"]["finish_rank"] = 1
+        state["finish_order"] = ["z"]
+
+        teammate_three = self._pick_labels(deck, ["♥️9", "♣️9", "♦️9"])
+        prior_three = self._pick_labels(deck, ["♠️8", "♦️8", "♣️8"])
+        state["current_trick"] = {
+            "player_id": "bot2",
+            "cards": [card["id"] for card in teammate_three],
+            "combo": guandan._evaluate_combo(
+                teammate_three,
+                state["level_rank"],
+                state.get("config", {}),
+            ),
+        }
+        state["trick_plays"] = {
+            "calvin": prior_three,
+            "bot2": teammate_three,
+        }
+        state["pass_count"] = 0
+        state["seen_cards"] = [
+            card["id"] for card in prior_three + teammate_three
+        ]
+        state["visible_card_id"] = None
+        state["known_card_owners"] = {}
+        state["round_memories"] = []
+        self._assert_consistent_card_zones(state)
+
+        real_random = random.Random
+        with mock.patch.object(
+            guandan.random,
+            "Random",
+            side_effect=lambda *args, **kwargs: real_random(0),
+        ):
+            action = guandan.GuandanGame.bot_move(state, "bot4")
+
+        self.assertEqual(action, {"type": "pass"})
+        explain = state["bot_explain"]["bot4"]
+        self.assertEqual(explain.get("method"), "minimax")
+        self.assertEqual(
+            explain.get("method_details", {}).get("minimax_stop_reason"),
+            "teammate_control_defer",
+        )
+
+        _, error = guandan.GuandanGame.apply_action(state, "bot4", action)
+        self.assertIsNone(error)
+        self.assertEqual(state.get("current_turn"), "calvin")
+        _, error = guandan.GuandanGame.apply_action(state, "calvin", {"type": "pass"})
+        self.assertIsNone(error)
+        self.assertEqual(state.get("current_turn"), "bot2")
+        self.assertIsNone(state.get("current_trick"))
+
+        risky_single = next(
+            card
+            for card in state["players"]["bot2"]["hand"]
+            if guandan._card_label(card) == "♣️10"
+        )
+        _, error = guandan.GuandanGame.apply_action(
+            state,
+            "bot2",
+            {"type": "play", "card_ids": [risky_single["id"]]},
+        )
+        self.assertIsNone(error)
+        with mock.patch.object(
+            guandan.random,
+            "Random",
+            side_effect=lambda *args, **kwargs: real_random(0),
+        ):
+            cover_action = guandan.GuandanGame.bot_move(state, "bot4")
+
+        self.assertEqual(cover_action.get("type"), "play")
+        bot4_hand = guandan._map_hand_by_id(state["players"]["bot4"]["hand"])
+        cover_cards = [bot4_hand[card_id] for card_id in cover_action.get("card_ids", [])]
+        cover_combo = guandan._evaluate_combo(
+            cover_cards,
+            state["level_rank"],
+            state.get("config", {}),
+        )
+        self.assertIn(cover_combo.get("type"), guandan.BOMB_TYPES)
+
     def test_minimax_keeps_grouped_lead_against_one_card_opponent(self):
         players = [
             {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
