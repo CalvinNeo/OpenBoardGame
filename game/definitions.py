@@ -82,6 +82,8 @@ from game.catan_starfarers import CatanStarfarersGame
 from game.skull import SkullGame
 from game.spirit_island import SpiritIslandGame
 from game.spirit_island import ACTION_SCHEMA as SPIRIT_ISLAND_ACTION_SCHEMA, CONFIG_SCHEMA as SPIRIT_ISLAND_CONFIG_SCHEMA
+from game.terra_nova import TerraNovaGame
+from game.terra_nova import ACTION_SCHEMA as TERRA_NOVA_ACTION_SCHEMA, CONFIG_SCHEMA as TERRA_NOVA_CONFIG_SCHEMA
 from game.subtext import SubtextGame
 from game.trekking_history import TrekkingHistoryGame
 from game.texas_holdem import TexasHoldemGame
@@ -94,6 +96,22 @@ from game.turing_machine import TuringMachineGame
 from game.tucano import TucanoGame
 from game.witchs_brew import WitchsBrewGame
 from game.wriggle_roulette import WriggleRouletteGame
+
+register_game(
+    GameDefinition(
+        game_id=TerraNovaGame.game_id,
+        name="Terra Nova",
+        name_zh="神秘小地",
+        min_players=TerraNovaGame.min_players,
+        max_players=TerraNovaGame.max_players,
+        turn_mode="turn",
+        action_schema=TERRA_NOVA_ACTION_SCHEMA,
+        config_schema=TERRA_NOVA_CONFIG_SCHEMA,
+        module=TerraNovaGame,
+        serialize=TerraNovaGame.serialize,
+        deserialize=TerraNovaGame.deserialize,
+    )
+)
 
 register_game(
     GameDefinition(

@@ -6,7 +6,7 @@
     color: var(--cryptid-ink);
     min-width: 0;
 }
-#cryptidPanel *, .cryptid-dialog *, .cryptid-tip { box-sizing: border-box; }
+#cryptidPanel *, .cryptid-dialog, .cryptid-dialog *, .cryptid-tip { box-sizing: border-box; }
 #cryptidPanel button, .cryptid-dialog button { white-space: normal; overflow-wrap: anywhere; min-width: 0; }
 #cryptidPanel button { border-radius: 9px; }
 .cryptid-config-label { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
@@ -28,6 +28,12 @@
 .cryptid-map-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; padding: 8px; border-bottom: 1px solid #d8ddcf; }
 .cryptid-map-tools > div { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
 .cryptid-map-tools button { padding: 6px 11px; min-height: 35px; font-size: 12px; }
+.cryptid-map-tools button[aria-expanded="true"] { background: #dce8d4; border-color: #35634e; }
+.cryptid-map-status { padding: 10px 12px; border-bottom: 1px solid #d8ddcf; background: #f8f7ee; overflow-wrap: anywhere; }
+.cryptid-map-status h3 { margin: 0; font-size: 13px; }
+.cryptid-map-status p { margin: 4px 0 0; }
+.cryptid-map-status .cryptid-actions { max-width: 280px; }
+.cryptid-map-viewport { position: relative; isolation: isolate; }
 .cryptid-zoom { font-variant-numeric: tabular-nums; font-size: 12px; width: 38px; }
 .cryptid-map { display: block; width: 100%; height: clamp(320px, 58vh, 580px); touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; }
 .cryptid-map.is-dragging { cursor: grabbing; }
@@ -54,9 +60,15 @@
 .cryptid-inline-label { display: flex; align-items: center; gap: 7px; font-size: 12px; }
 .cryptid-inline-label input[type="checkbox"] { width: 16px; height: 16px; margin: 0; flex: 0 0 auto; }
 .cryptid-muted { color: #63756c; font-size: 12px; line-height: 1.65; margin: 6px 0; }
-.cryptid-selection { padding: 9px; border-radius: 9px; background: #eff1e8; margin: 9px 0; }
-.cryptid-selection strong { font-size: 17px; }
-.cryptid-detail-list { display: flex; flex-wrap: wrap; gap: 5px 10px; font-size: 12px; line-height: 1.7; margin-top: 6px; }
+.cryptid-selection-overlay { position: absolute; inset: 0; z-index: 1; display: flex; align-items: center; justify-content: center; padding: 12px; background: #163c305c; }
+.cryptid-selection-card { display: flex; flex-direction: column; width: min(420px, 100%); min-width: 0; max-height: 100%; padding: 15px; border: 1px solid #c0cfb7; border-radius: 13px; background: #fffdf5f5; box-shadow: 0 8px 26px #19352d33; overflow-wrap: anywhere; outline: none; }
+.cryptid-selection-card h3 { flex: 0 0 auto; margin: 0 0 8px; font-size: 18px; }
+.cryptid-selection-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 3px; }
+.cryptid-selection-card > .cryptid-actions { flex: 0 0 auto; }
+.cryptid-selection-card .cryptid-mode-buttons { margin-top: 10px; }
+.cryptid-selection-card .cryptid-mode-buttons button { min-height: 38px; }
+.cryptid-detail-list { display: flex; flex-wrap: wrap; gap: 5px 10px; font-size: 12px; line-height: 1.7; }
+.cryptid-detail-list > span { min-width: 0; max-width: 100%; }
 .cryptid-mode-buttons, .cryptid-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
 .cryptid-mode-buttons button.is-active { background: #dce8d4; border-color: #35634e; color: #243d37; }
 .cryptid-actions { margin-top: 10px; }
@@ -79,7 +91,7 @@
 .cryptid-dialog-header button { flex: 0 0 auto; }
 .cryptid-dialog p, .cryptid-dialog li { font-size: 14px; line-height: 1.8; }
 .cryptid-dialog h3 { margin: 18px 0 7px; font-size: 16px; }
-.cryptid-dialog.is-notebook { margin: 0 0 0 auto; width: min(390px, calc(100vw - 14px)); max-height: 100dvh; height: 100dvh; border-radius: 16px 0 0 16px; }
+.cryptid-dialog.is-docked { margin: 0 0 0 auto; width: min(390px, calc(100vw - 14px)); max-height: 100dvh; height: 100dvh; border-radius: 16px 0 0 16px; }
 .cryptid-dialog textarea { width: 100%; min-height: 110px; resize: vertical; font: inherit; padding: 9px; border-radius: 8px; }
 .cryptid-note-clues { max-height: 43dvh; overflow-y: auto; margin: 10px 0; }
 .cryptid-note-clues label { display: flex; align-items: start; gap: 7px; font-size: 12px; line-height: 1.6; padding: 6px 2px; }
@@ -90,7 +102,6 @@
 @media (max-width: 820px) {
     .cryptid-layout { grid-template-columns: minmax(0, 1fr); }
     .cryptid-sidebar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .cryptid-sidebar .cryptid-action-box { grid-column: 1 / -1; grid-row: 1; }
 }
 @media (max-width: 480px) {
     .cryptid-shell { padding: 9px; border-radius: 12px; }
@@ -102,6 +113,9 @@
     .cryptid-sidebar { grid-template-columns: minmax(0, 1fr); }
     .cryptid-map-tools { padding: 6px; }
     .cryptid-map-tools button { padding: 6px 9px; }
+    .cryptid-map-tools .cryptid-dock-tools { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+    .cryptid-selection-overlay { padding: 10px; }
+    .cryptid-selection-card { padding: 11px; }
     .cryptid-box { padding: 11px; }
     .cryptid-dialog { padding: 16px; }
 }

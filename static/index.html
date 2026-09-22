@@ -16,9 +16,10 @@
   <link rel="stylesheet" href="/static/gizmos.css?v=2" />
   <link rel="stylesheet" href="/static/ponzi_scheme.css?v=1" />
   <link rel="stylesheet" href="/static/red_doors.css?v=3" />
-  <link rel="stylesheet" href="/static/cryptid.css?v=2" />
+  <link rel="stylesheet" href="/static/cryptid.css?v=3" />
   <link rel="stylesheet" href="/static/boomerang_australia.css?v=1" />
-  <link rel="stylesheet" href="/static/spirit_island.css?v=1" />
+  <link rel="stylesheet" href="/static/spirit_island.css?v=2" />
+  <link rel="stylesheet" href="/static/terra_nova.css?v=1" />
   <link rel="stylesheet" href="/static/istanbul.css?v=2" />
   <link rel="stylesheet" href="/static/rebel_princess.css?v=4" />
 </head>
@@ -1436,6 +1437,7 @@
                     <option value="cryptid">Cryptid · 诡影寻踪</option>
                     <option value="boomerang_australia">Boomerang: Australia · 世界巡游（澳洲）</option>
                     <option value="spirit_island">Spirit Island · 灵迹岛</option>
+                    <option value="terra_nova">Terra Nova · 神秘小地</option>
                     <option value="draw_guess">Draw & Guess</option>
                     <option value="blitz_sketch">Blitz Sketch</option>
                     <option value="cyber_pictures">Cyber Pictures</option>
@@ -2207,6 +2209,10 @@
             <div class="panel-header-actions" id="spiritIslandHeaderActions" style="display: none;">
               <button id="spiritIslandHelpBtn" type="button">Help</button>
               <button id="spiritIslandExplainBtn" type="button" aria-pressed="false">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="terraNovaHeaderActions" style="display: none;">
+              <button id="terraNovaHelpBtn" type="button">Help</button>
+              <button id="terraNovaExplainBtn" type="button" aria-pressed="false">Explain</button>
             </div>
             <div class="panel-header-actions" id="ponziSchemeHeaderActions" style="display: none;">
               <button id="ponziSchemeHelpBtn" type="button">Help</button>
@@ -3486,6 +3492,7 @@
             <div id="ponziSchemePanel" class="hidden"></div>
             <div id="redDoorsPanel" class="hidden"></div>
             <div id="cryptidPanel" class="hidden"></div>
+            <div id="terraNovaPanel" class="hidden"></div>
             <div id="boomerangAustraliaPanel" class="hidden"></div>
             <div id="spiritIslandPanel" class="hidden"></div>
             <div id="bombBustersPanel" class="hidden bomb-busters-panel">
@@ -7275,9 +7282,12 @@
     <div class="cryptid-dialog-header"><h2 id="cryptidDialogTitle">Cryptid</h2><button id="cryptidDialogClose" type="button">Close</button></div>
     <div id="cryptidDialogBody"></div>
   </dialog>
-  <script src="/static/games/cryptid.js?v=2" defer></script>
+  <script src="/static/games/cryptid.js?v=3" defer></script>
   <script src="/static/games/boomerang_australia.js?v=1" defer></script>
-  <script src="/static/games/spirit_island.js?v=1" defer></script>
+  <script src="/static/games/spirit_island_map.js?v=1" defer></script>
+  <script src="/static/games/spirit_island_navigation.js?v=1" defer></script>
+  <script src="/static/games/spirit_island.js?v=2" defer></script>
+  <script src="/static/games/terra_nova.js?v=1" defer></script>
   <script src="/static/games/bomb_busters.js?v=app_v2" defer></script>
   <script src="/static/games/felix.js?v=app_v1" defer></script>
   <script src="/static/games/tacta.js?v=app_v7" defer></script>
@@ -7289,7 +7299,7 @@
   <script src="/static/games/ark_nova.js?v=app_v23" defer></script>
   <script src="/static/games/gaia_project.js?v=gaia_v4" defer></script>
   <script src="/static/games/castles_of_burgundy.js?v=2" defer></script>
-  <script src="/static/app.js?v=app_v26" defer></script>
-  <script src="/static/room.js?v=app_v48" defer></script>
+  <script src="/static/app.js?v=app_v27" defer></script>
+  <script src="/static/room.js?v=app_v49" defer></script>
 </body>
 </html>

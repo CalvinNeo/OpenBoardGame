@@ -752,6 +752,7 @@ function renderGameTypeFilters(games) {
 }
 
 const GAME_WEIGHT = {
+  terra_nova: 2.87,
   boomerang_australia: 1.53,
   ponzi_scheme: 2.44,
   abraca_what: 1.64,
@@ -2051,6 +2052,7 @@ function resetRoomState() {
   if (typeof clearRedDoorsState === "function") clearRedDoorsState();
   if (typeof clearCryptidState === "function") clearCryptidState();
   if (typeof clearSpiritIslandState === "function") clearSpiritIslandState();
+  if (typeof clearTerraNovaState === "function") clearTerraNovaState();
   if (typeof clearBoomerangAustraliaState === "function") clearBoomerangAustraliaState();
   if (typeof clearBombBustersState === "function") {
     clearBombBustersState();

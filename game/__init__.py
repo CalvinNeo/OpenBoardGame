@@ -59,6 +59,7 @@ from game.splendor import SplendorGame
 from game.splendor_pokemon import PokemonSplendorGame
 from game.skull import SkullGame
 from game.spirit_island import SpiritIslandGame
+from game.terra_nova import TerraNovaGame
 from game.subtext import SubtextGame
 from game.the_gang import TheGangGame
 from game.texas_holdem import TexasHoldemGame
@@ -137,6 +138,7 @@ __all__ = [
     "PokemonSplendorGame",
     "SkullGame",
     "SpiritIslandGame",
+    "TerraNovaGame",
     "SubtextGame",
     "TheGangGame",
     "TexasHoldemGame",

@@ -13,14 +13,15 @@
     const W = 744, H = 674;
     const phaseNames = {initial_clues: "开局分享", turn: "探索", search_extra_disc: "补放圆片", compensate_cube: "补放方块", round_end: "本轮回顾", game_over: "探索结束"};
     const explanations = {
-        map: "点选六边形查看坐标、地形、动物与标记；拖动或缩放不会提交动作。熊(🐻)用虚线，美洲狮(🐾)用实线边界。结构物有独立的类型与颜色。",
+        map: "点选六边形后，地图蒙版内显示坐标、地形、动物与标记，并提供 Confirm／Cancel。拖动或缩放不会提交动作。熊(🐻)用虚线，美洲狮(🐾)用实线边界。结构物有独立的类型与颜色。",
         question: "询问(❓)：选择无排除(■)的格子和尚未回答该格的另一名玩家。可以询问不符合自己线索的位置。系统诚实给出可能(●)或排除(■)；得到排除后，你须另放一个方块。",
         search: "搜索(🔍)：只能搜索符合自己线索、无排除(■)的格子。先放可能(●)；若已有自己的圆片，先在别处补圆片。依席位核对，首个否定后停止并补方块；全部通过才获胜。",
         place: "排除(■)必须不符合你的线索，可能(●)必须符合。标记不能重复；有任何方块的格子都不能再互动。当前阶段只允许所需标记的合法新位置。",
-        confirm: "Confirm 提交当前选择。请先选合法格子；询问(❓)还需选一名尚未回答的对手。等待其他人、回顾未结束或发送中时不可提交。",
+        confirm: "Confirm 提交蒙版内的当前选择。请先选合法格子；询问(❓)还需选一名尚未回答的对手。等待其他人、回顾未结束或发送中时不可提交。",
+        cancel_selection: "Cancel 关闭选格蒙版，取消尚未提交的选择；点击蒙版周围空白或按 Esc 也可以。不会撤销已经提交的动作，补放圆片(●)／方块(■)的义务仍需完成。",
         next: "每圈结束暂停回顾。每人分别点击 Next Round，全员确认才继续。机器人只确认自己，断线真人不会自动跳过。",
         notes: "笔记(📝)仅你可见：手动标记候选／排除格，或勾掉你认为不成立的对手线索。Save 保存到个人笔记，Close／Esc 放弃未保存编辑。不会替你自动推理。",
-        clue: "My clue 只高亮符合你自己的秘密线索的格子。高亮不代表符合别人线索，也不排除已出现方块的位置。距离包括目标本身，within 2 表示 0、1、2 格。",
+        clue: "Your clue(🔒) 从右侧打开你的秘密线索，Close／Esc 收起。Highlight on map 只高亮符合你自己线索的格子，不代表符合别人线索，也不排除已出现方块的位置。距离包括目标本身，within 2 表示 0、1、2 格。",
         hint: "提示(💡)需要投票：三人全部同意；四或五人至少人数减一同意。每局最多公开一次未使用的线索类别；没有可用类别时，在投票通过后说明。开局未完成或已揭示时不可投票。",
         zoom: "使用 +／− 缩放，Fit 查看整张地图。地图区域内拖动平移，手机支持双指缩放；区域外正常滚动页面。",
         legend: "可能(●)只符合放置者的线索，排除(■)则让整格停止互动。玩家用颜色和座位编号区分；结构物的颜色与玩家归属无关。",
@@ -28,7 +29,7 @@
     let view = null, signature = null, selected = null, target = "", mode = "question";
     let pending = false, pendingTimer = null, explaining = false, suppressed = null;
     let zoom = 1, center = {x: W / 2, y: H / 2}, showClue = false;
-    let notesDraft = null, notebookPlayer = "", notebookCell = null, returnFocus = null;
+    let notesDraft = null, notebookPlayer = "", notebookCell = null, returnFocus = null, returnFocusAction = null;
     let narrowLayout = window.innerWidth < 600;
     const initialZoom = () => window.innerWidth < 360 ? 2.6 : window.innerWidth < 600 ? 2.2 : 1;
     const pointers = new Map();
@@ -74,7 +75,7 @@
     }
 
     function mapHTML() {
-        return `<svg class="cryptid-map" viewBox="0 0 ${W} ${H}" aria-label="Cryptid hex map" role="group">
+        return `<svg class="cryptid-map" viewBox="0 0 ${W} ${H}" aria-label="Cryptid hex map" role="group" ${selected ? "inert" : ""}>
             ${Array.from({length: 12}, (_, col) => `<text class="cryptid-cell-coord" x="${48 + col * 57}" y="8">${String.fromCharCode(65 + col)}</text>`).join("")}
             ${Array.from({length: 9}, (_, row) => `<text class="cryptid-cell-coord" x="6" y="${46 + row * Math.sqrt(3) * 38}">${row + 1}</text>`).join("")}
             ${view.board.map(cell => {
@@ -127,24 +128,34 @@
         return mode === "search" ? "选一个符合自己线索的格子进行搜索。" : "点选格子，再选择要询问的玩家。";
     }
 
-    function selectedHTML() {
+    function selectionHTML() {
         const cell = view.board.find(item => item.id === selected);
-        if (!cell) return `<p class="cryptid-muted">Select a space on the map.</p>`;
+        if (!cell) return "";
         const t = view.terrain_defs[cell.terrain];
         const details = cellDescription(cell).split("；").slice(1);
-        return `<div class="cryptid-selection"><strong>${cell.id}</strong> · ${t.name}(${t.icon})<div class="cryptid-detail-list">${details.map(part => `<span>${esc(part)}</span>`).join("") || "尚无公开标记"}</div></div>`;
+        const question = available("question");
+        const options = view.players.filter(p => p.player_id !== view.you);
+        const canConfirm = !view.game_over && view.phase !== "round_end";
+        let hint = stepText();
+        if (canConfirm && !pending && view.current_turn === view.you) {
+            if (view.markers[selected].cube) hint = "此格已有排除(■)，不能再进行操作。";
+            else if (view.phase === "turn" && mode === "search" && !view.search_cells.includes(selected)) hint = "此格不符合你的线索，不能搜索。";
+            else if (view.phase !== "turn" && !view.placement_cells.includes(selected)) hint = "此格不符合当前标记的放置条件。";
+        }
+        return `<div class="cryptid-selection-overlay"><section class="cryptid-selection-card" role="region" aria-labelledby="cryptidSelectionTitle" tabindex="-1">
+            <h3 id="cryptidSelectionTitle">${cell.id} · ${t.name}(${t.icon})</h3>
+            <div class="cryptid-selection-body"><div class="cryptid-detail-list">${details.map(part => `<span>${esc(part)}</span>`).join("") || "尚无公开标记"}</div>
+                ${view.phase === "turn" ? `<div class="cryptid-mode-buttons">${btn("❓ 询问", "question", "question", !question, `class="${mode === "question" ? "is-active" : ""}" aria-pressed="${mode === "question"}"`)}${btn("🔍 搜索", "search", "search", !available("search"), `class="${mode === "search" ? "is-active" : ""}" aria-pressed="${mode === "search"}"`)}</div>` : ""}
+                ${view.phase === "turn" && mode === "question" ? `<label class="cryptid-target-label" data-cryptid-explain="question"><span>Ask</span><select id="cryptidTarget" ${!question ? "disabled" : ""}><option value="">Select player</option>${options.map(p => `<option value="${esc(p.player_id)}" ${target === p.player_id ? "selected" : ""} ${view.markers[selected].cube || view.markers[selected].discs.includes(p.player_id) ? "disabled" : ""}>${p.seat + 1} · ${esc(p.name)}</option>`).join("")}</select></label>` : ""}
+                <p class="cryptid-muted" aria-live="polite">${esc(hint)}</p>
+            </div><div class="cryptid-actions">${canConfirm ? btn("Confirm", "confirm", "confirm", !actionCandidate(), 'class="cryptid-primary"') : ""}${btn("Cancel", "cancel_selection")}</div>
+        </section></div>`;
     }
 
     function actionHTML() {
         if (view.game_over) return "";
-        const question = available("question");
-        const options = view.players.filter(p => p.player_id !== view.you);
         const phaseExplanation = view.phase === "turn" ? mode : view.phase === "round_end" ? "next" : "place";
-        return `<section class="cryptid-box cryptid-action-box"><h3 data-cryptid-explain="${phaseExplanation}">${phaseNames[view.phase]}</h3><p class="cryptid-muted" aria-live="polite">${esc(stepText())}</p>
-            ${view.phase === "turn" ? `<div class="cryptid-mode-buttons">${btn("❓ 询问", "question", "question", !question, `class="${mode === "question" ? "is-active" : ""}" aria-pressed="${mode === "question"}"`)}${btn("🔍 搜索", "search", "search", !available("search"), `class="${mode === "search" ? "is-active" : ""}" aria-pressed="${mode === "search"}"`)}</div>` : ""}
-            ${selectedHTML()}
-            ${view.phase === "turn" && mode === "question" ? `<label class="cryptid-target-label"><span>Ask</span><select id="cryptidTarget" ${!question ? "disabled" : ""}><option value="">Select player</option>${options.map(p => `<option value="${esc(p.player_id)}" ${target === p.player_id ? "selected" : ""} ${selected && (view.markers[selected].cube || view.markers[selected].discs.includes(p.player_id)) ? "disabled" : ""}>${p.seat + 1} · ${esc(p.name)}</option>`).join("")}</select></label>` : ""}
-            ${view.phase !== "round_end" ? `<div class="cryptid-actions">${btn("Confirm", "confirm", "confirm", !actionCandidate(), 'class="cryptid-primary"')}</div>` : ""}
+        return `<section class="cryptid-map-status"><h3 data-cryptid-explain="${phaseExplanation}">${phaseNames[view.phase]}</h3><p class="cryptid-muted" aria-live="polite">${esc(stepText())}</p>
             ${view.phase === "round_end" ? `<div class="cryptid-actions">${btn(view.next_ready.includes(view.you) ? "Ready ✓" : "Next Round", "next", "next", !available("next_round"), 'class="cryptid-primary"')}</div><p class="cryptid-muted">Waiting: ${esc(view.players.filter(p => !view.next_ready.includes(p.player_id)).map(p => p.name).join(", ")) || "—"}</p>` : ""}
         </section>`;
     }
@@ -157,19 +168,39 @@
 
     function render() {
         if (!view) return;
+        const focused = document.activeElement.closest?.(".cryptid-selection-card") ? {id: document.activeElement.id, action: document.activeElement.dataset.cryptidAction} : null;
+        const scrollTop = panel.querySelector(".cryptid-selection-body")?.scrollTop || 0;
         resetGesture(); hideTip();
         panel.innerHTML = `<div class="cryptid-shell"><div class="cryptid-top"><div><div class="cryptid-eyebrow">A field guide to the unknown</div><h2>诡影寻踪 <span lang="en">Cryptid</span></h2></div><span class="cryptid-badge">${view.advanced ? "Advanced" : "Normal"} · ${view.round ? `Round ${view.round}` : "Setup"}</span></div>
             <div class="cryptid-players">${view.players.map(p => `<div class="cryptid-player ${p.player_id === view.current_turn ? "is-current" : ""}"><strong><span class="cryptid-dot" style="background:${color(p.player_id)}"></span>${p.seat + 1} · ${esc(p.name)}</strong><small>${p.player_id === view.you ? "You" : p.is_bot ? "Bot" : "Player"}${p.player_id === view.current_turn ? " · Acting" : view.next_ready.includes(p.player_id) ? " · Ready ✓" : ""}</small></div>`).join("")}</div>
-            <div class="cryptid-layout"><div class="cryptid-map-area"><div class="cryptid-map-frame"><div class="cryptid-map-tools"><div>${btn("−", "out", "zoom")}${btn("+", "in", "zoom")}${btn("Fit", "fit", "zoom")}<span class="cryptid-zoom">${Math.round(zoom * 100)}%</span></div><div>${btn("📝 Notes", "notes", "notes", !view.notes)}</div></div>${mapHTML()}</div>
+            <div class="cryptid-layout"><div class="cryptid-map-area"><div class="cryptid-map-frame"><div class="cryptid-map-tools"><div>${btn("−", "out", "zoom")}${btn("+", "in", "zoom")}${btn("Fit", "fit", "zoom")}<span class="cryptid-zoom">${Math.round(zoom * 100)}%</span></div><div class="cryptid-dock-tools">${btn("🔒 Your clue", "clue", "clue", !view.my_clue, 'aria-haspopup="dialog" aria-controls="cryptidDialog"')}${btn("📝 Notes", "notes", "notes", !view.notes, 'aria-haspopup="dialog" aria-controls="cryptidDialog"')}</div></div>${actionHTML()}<div class="cryptid-map-viewport">${mapHTML()}${selectionHTML()}</div></div>
                 <div class="cryptid-legend">${Object.values(view.terrain_defs).map(t => `<button type="button" data-cryptid-explain data-cryptid-tip="${esc(`${t.name}(${t.icon})：五种地形之一。`)}">${t.icon} ${t.name}</button>`).join("")}<button type="button" data-cryptid-explain="legend" data-cryptid-tip="${esc(explanations.legend)}">● / ■</button><button type="button" data-cryptid-explain data-cryptid-tip="熊(🐻)用虚线边界，美洲狮(🐾)用实线边界；领地叠加在地形上。">🐻 / 🐾</button><button type="button" data-cryptid-explain data-cryptid-tip="立石(🗿)与废弃小屋(🏚️)；色框表示结构物的白、绿、蓝、黑颜色，与玩家颜色无关。">🗿 / 🏚️</button></div>
                 ${view.phase === "round_end" ? `<section class="cryptid-box cryptid-review"><h3>Round review</h3><ul class="cryptid-history">${view.last_round.map(line => `<li>${esc(line)}</li>`).join("")}</ul></section>` : ""}
                 ${view.game_over ? `<section class="cryptid-box cryptid-review"><h3>🏆 ${esc(name(view.winner[0]))} · ${view.solution}</h3><div class="cryptid-results">${view.players.map(p => `<div class="cryptid-result"><strong>${esc(p.name)}</strong>：${esc(view.revealed_clues[p.player_id].description)}</div>`).join("")}</div></section>` : ""}
-            </div><div class="cryptid-sidebar">${view.my_clue ? `<section class="cryptid-box cryptid-clue" data-cryptid-explain="clue"><h3 data-cryptid-tip="秘密线索(🔒)：仅你可见，神秘生物所在格必须符合它。">🔒 Your clue</h3><p>${esc(view.my_clue.description)}</p><label class="cryptid-inline-label"><input id="cryptidShowClue" type="checkbox" ${showClue ? "checked" : ""}/><span>My clue</span></label></section>` : ""}${actionHTML()}${resultsHTML()}
+            </div><div class="cryptid-sidebar">${resultsHTML()}
                 ${!view.game_over || view.hint ? `<section class="cryptid-box" data-cryptid-explain="hint"><h3 data-cryptid-tip="提示(💡)：表决通过后公开一个额外线索类别，每局最多一次。">💡 Hint</h3>${view.hint ? `<p class="cryptid-muted">${esc(view.hint)}</p>` : `<p class="cryptid-muted">${Object.values(view.hint_votes).filter(Boolean).length} / ${view.players.length === 3 ? 3 : view.players.length - 1} votes</p><div class="cryptid-actions">${btn("Agree", "hint_yes", "hint", !available("vote_hint"))}${btn("Decline", "hint_no", "hint", !available("vote_hint"))}</div>`}</section>` : ""}
                 <details class="cryptid-box"><summary>Public log</summary><ul class="cryptid-history">${view.log.slice().reverse().map(line => `<li>${esc(line)}</li>`).join("")}</ul></details>
             </div></div><p class="cryptid-footer">${esc(view.map_source)} · ${view.catalog.length} clue types</p></div>`;
         panel.classList.toggle("is-explaining", explaining);
-        updateMap();
+        updateMap(); updateDockButtons();
+        const selectionBody = panel.querySelector(".cryptid-selection-body");
+        if (selectionBody) selectionBody.scrollTop = scrollTop;
+        if (focused) {
+            const control = focused.id ? document.getElementById(focused.id) : panel.querySelector(`.cryptid-selection-card [data-cryptid-action="${focused.action}"]`);
+            control?.focus({preventScroll: true});
+        }
+    }
+
+    function selectCell(cellId) {
+        selected = cellId; target = ""; render();
+        panel.querySelector(".cryptid-selection-card")?.focus({preventScroll: true});
+    }
+
+    function cancelSelection() {
+        const previous = selected;
+        selected = null; target = ""; render();
+        panel.querySelector(`[data-cell="${previous}"]`)?.focus({preventScroll: true});
+        hideTip();
     }
 
     function updateMap() {
@@ -196,15 +227,28 @@
     }
     function submit(action) {
         if (!action || !available(action.type)) return;
+        if (action.cell_id) { selected = null; target = ""; }
         pending = true; hideTip(); render(); sendAction(action);
         window.clearTimeout(pendingTimer);
         pendingTimer = window.setTimeout(() => { pending = false; render(); }, 6000);
     }
     function openDialog(title, html, kind = "reference") {
         hideTip(); returnFocus = document.activeElement;
+        returnFocusAction = returnFocus?.dataset.cryptidAction;
         dialogTitle.textContent = title; dialogBody.innerHTML = html;
         dialog.classList.toggle("is-notebook", kind === "notes"); dialog.dataset.kind = kind;
+        dialog.classList.toggle("is-docked", ["notes", "clue"].includes(kind));
         if (!dialog.open) dialog.showModal();
+        updateDockButtons();
+    }
+
+    function updateDockButtons() {
+        for (const kind of ["notes", "clue"]) panel.querySelector(`[data-cryptid-action="${kind}"]`)?.setAttribute("aria-expanded", String(dialog.open && dialog.dataset.kind === kind));
+    }
+
+    function openClue() {
+        if (!view.my_clue) return;
+        openDialog("🔒 Your clue", `<p class="cryptid-muted">Private</p><section class="cryptid-box cryptid-clue"><p>${esc(view.my_clue.description)}</p><label class="cryptid-inline-label"><input id="cryptidShowClue" type="checkbox" ${showClue ? "checked" : ""}/><span>Highlight on map</span></label></section>`, "clue");
     }
 
     function showHelp() {
@@ -217,7 +261,7 @@
             <details><summary>All clue types</summary><ul>${(view?.catalog || []).map(clue => `<li>${esc(clue.description)}</li>`).join("")}</ul></details>
             <h3>提示、笔记与回顾</h3><p>${explanations.hint}</p><p>${explanations.notes}</p><p>${explanations.next}</p>
             <h3>线上适配</h3><p>强制回答由服务器诚实计算。仅当所有合法新落点已耗尽时，免除对应的额外圆片／补偿方块，并公开记录。这是避免卡局的线上约定。地图地形依据官方辅助站转录，题目独立生成并验证唯一解；界面使用原创图形。普通模式六个结构物，进阶八个。没有双人规则或 Urban Legends 模式。</p>
-            <h3>地图操作</h3><p>${explanations.zoom}</p><p>点选后使用 Confirm 提交。空白或 Esc 取消未提交选择。Notes 从右侧打开；Save 保存私人笔记。图标可悬停查看说明，手机轻点显示三秒提示。</p>`);
+            <h3>地图操作</h3><p>${explanations.zoom}</p><p>点选格子后，地图出现半透明蒙版，在蒙版内选择行动与询问对象，再用 Confirm 提交。Cancel、蒙版周围空白或 Esc 取消未提交选择。${explanations.clue} Notes(📝) 也从右侧打开；Save 保存私人笔记。图标可悬停查看说明，手机轻点显示三秒提示。</p>`);
     }
 
     function notebookHTML() {
@@ -243,36 +287,38 @@
         const button = event.target.closest("[data-cryptid-action]");
         const cell = event.target.closest("[data-cell]");
         const tipTarget = event.target.closest("[data-cryptid-tip]");
-        if (Date.now() < blockClickUntil && event.target.closest(".cryptid-map")) { event.preventDefault(); return; }
+        if (event.detail !== 0 && Date.now() < blockClickUntil && event.target.closest(".cryptid-map")) { event.preventDefault(); return; }
         if (tipTarget && !cell) { showTip(tipTarget.dataset.cryptidTip, tipTarget, event.pointerType === "touch"); return; }
-        if (cell) { selected = cell.dataset.cell; target = ""; render(); if (event.pointerType === "touch") showTip(cellDescription(view.board.find(c => c.id === selected)), panel, true); return; }
+        if (cell) { selectCell(cell.dataset.cell); return; }
         if (!button) {
-            if (!event.target.closest("button,input,select,label,details,textarea,.cryptid-box,.cryptid-map-tools")) { selected = null; target = ""; render(); }
+            if (selected && !event.target.closest("button,input,select,label,details,textarea,.cryptid-box,.cryptid-map-tools,.cryptid-map-status,.cryptid-selection-card")) cancelSelection();
             return;
         }
         if (button.disabled) return;
         const action = button.dataset.cryptidAction;
         if (action === "question" || action === "search") { mode = action; render(); }
         else if (action === "confirm") submit(actionCandidate());
+        else if (action === "cancel_selection") cancelSelection();
         else if (action === "next") submit({type: "next_round"});
         else if (action === "hint_yes" || action === "hint_no") submit({type: "vote_hint", agree: action === "hint_yes"});
         else if (action === "in") setZoom(zoom * 1.25);
         else if (action === "out") setZoom(zoom / 1.25);
         else if (action === "fit") { center = {x: W / 2, y: H / 2}; setZoom(1); }
         else if (action === "notes") openNotebook();
+        else if (action === "clue") openClue();
         else if (action === "close") dialog.close();
         else if (action === "save_notes") { const notes = notesDraft; dialog.close(); submit({type: "update_notes", notes}); }
     }
     panel.addEventListener("click", activate); dialogBody.addEventListener("click", activate);
     panel.addEventListener("change", event => {
         if (event.target.id === "cryptidTarget") { target = event.target.value; render(); }
-        if (event.target.id === "cryptidShowClue") { showClue = event.target.checked; render(); }
     });
     dialogBody.addEventListener("input", event => {
         if (!notesDraft) return;
         if (event.target.id === "cryptidNoteText") notesDraft.text = event.target.value;
     });
     dialogBody.addEventListener("change", event => {
+        if (event.target.id === "cryptidShowClue") { showClue = event.target.checked; render(); }
         if (!notesDraft) return;
         if (event.target.id === "cryptidNotePlayer") { notebookPlayer = event.target.value; dialogBody.innerHTML = notebookHTML(); }
         if (event.target.id === "cryptidNoteCell" && notebookCell) { if (event.target.value) notesDraft.cells[notebookCell] = event.target.value; else delete notesDraft.cells[notebookCell]; }
@@ -289,7 +335,7 @@
     }
     panel.addEventListener("pointerdown", event => {
         const svg = event.target.closest(".cryptid-map");
-        if (!svg || explaining || event.button > 0) return;
+        if (!svg || selected || explaining || event.button > 0) return;
         svg.setPointerCapture(event.pointerId);
         pointers.set(event.pointerId, {x: event.clientX, y: event.clientY});
         const points = [...pointers.values()];
@@ -323,8 +369,9 @@
             gesture = {center: {...center}, zoom, start: points[0], distance: 0, moved: true};
         }
         if (tappedCell && hitCell === tappedCell) {
-            blockClickUntil = Date.now() + 700; selected = tappedCell; target = ""; render();
-            if (event.pointerType === "touch") showTip(cellDescription(view.board.find(c => c.id === selected)), panel, true);
+            blockClickUntil = Date.now() + 700;
+            suppressed = {x: event.clientX, y: event.clientY, until: Date.now() + 900};
+            selectCell(tappedCell);
         }
     }
     panel.addEventListener("pointerup", endPointer);
@@ -339,10 +386,12 @@
     });
 
     document.addEventListener("pointerdown", event => {
+        suppressed = null;
         if (!explaining || !view) return;
         if ([helpButton, explainButton, dialogClose].includes(event.target)) return;
         let element = event.target.closest("[data-cryptid-explain]");
         if (!element) element = [...panel.querySelectorAll("[data-cryptid-explain]")].find(item => {
+            if (item.closest("[inert]")) return false;
             const r = item.getBoundingClientRect(); return r.width && event.clientX >= r.left && event.clientX <= r.right && event.clientY >= r.top && event.clientY <= r.bottom;
         });
         event.preventDefault(); event.stopImmediatePropagation();
@@ -363,7 +412,7 @@
         if (event.key === "Escape") {
             hideTip(); resetGesture();
             if (explaining) { event.preventDefault(); setExplain(false); }
-            else if (!dialog.open) { selected = null; target = ""; render(); }
+            else if (!dialog.open && selected) cancelSelection();
         } else if (explaining && ["Enter", " "].includes(event.key) && event.target.matches("input,select,textarea")) {
             event.preventDefault(); event.stopImmediatePropagation();
             explainElement(event.target.closest("[data-cryptid-explain]"));
@@ -377,7 +426,12 @@
     explainButton.addEventListener("click", () => setExplain(!explaining));
     dialogClose.addEventListener("click", () => dialog.close());
     dialog.addEventListener("click", event => { if (event.target === dialog) { const r = dialog.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) dialog.close(); } });
-    dialog.addEventListener("close", () => { notesDraft = null; hideTip(); if (returnFocus?.isConnected) returnFocus.focus(); });
+    dialog.addEventListener("close", () => {
+        if (dialog.open) return;
+        notesDraft = null; hideTip(); updateDockButtons();
+        const focus = returnFocus?.isConnected ? returnFocus : panel.querySelector(`[data-cryptid-action="${returnFocusAction}"]`);
+        focus?.focus({preventScroll: true});
+    });
     window.addEventListener("resize", () => {
         hideTip(); resetGesture();
         const narrow = window.innerWidth < 600;
@@ -389,13 +443,14 @@
     function clearState() {
         view = null; signature = null; selected = null; target = ""; pending = false;
         setExplain(false); hideTip(); resetGesture(); window.clearTimeout(pendingTimer);
-        if (dialog.open) dialog.close(); panel.innerHTML = "";
+        if (dialog.open) dialog.close();
+        dialogBody.replaceChildren(); notesDraft = null; returnFocusAction = null; panel.innerHTML = "";
     }
     window.renderCryptidGameState = data => {
         if (!data?.view) return;
         const next = data.view;
         const sig = JSON.stringify([next.game_instance_id, next.phase, next.current_turn, next.round]);
-        if (view?.game_instance_id !== next.game_instance_id) { zoom = initialZoom(); center = {x: W / 2, y: H / 2}; showClue = false; if (dialog.open) dialog.close(); }
+        if (view?.game_instance_id !== next.game_instance_id) { zoom = initialZoom(); center = {x: W / 2, y: H / 2}; showClue = false; mode = "question"; if (dialog.open) dialog.close(); }
         if (signature !== sig) { selected = null; target = ""; resetGesture(); }
         signature = sig; view = next; pending = false; window.clearTimeout(pendingTimer); render();
     };

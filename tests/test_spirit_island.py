@@ -111,6 +111,16 @@ class SpiritIslandTests(unittest.TestCase):
                 self.assertEqual(_distance(state, target, source), 1)
             self.assertTrue(all(_distance(state, next(iter(state["lands"])), lid) < 99 for lid in state["lands"]))
 
+    def test_three_player_join_uses_d4_not_d7(self):
+        # Rulebook p.6: C's lower edge meets D's upper sand (D4).
+        # D7 is the other sand, beside B's edge and the initial town.
+        state = self.new_game(("river", "lightning", "earth"))
+        for source in ("C7", "C8"):
+            self.assertIn("D4", state["lands"][source]["adjacent"])
+            self.assertIn(source, state["lands"]["D4"]["adjacent"])
+            self.assertNotIn("D7", state["lands"][source]["adjacent"])
+            self.assertGreater(_distance(state, source, "D7"), 1)
+
     def test_invalid_config_player_counts_and_duplicate_players(self):
         for count in (0, 5):
             with self.assertRaises(ValueError):

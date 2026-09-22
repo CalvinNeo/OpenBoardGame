@@ -61,39 +61,32 @@
 .si-section-head { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; justify-content: space-between; margin-bottom: 10px; min-width: 0; }
 .si-section-head h3 { margin: 0; font-size: 14px; line-height: 1.4; }
 .si-section-head > span { font-size: 11px; }
-#spiritIslandPanel .si-info { display: grid; place-items: center; flex: 0 0 24px; width: 24px; height: 24px; padding: 0; background: transparent; color: #7a8e7f; border-color: transparent; font-size: 15px; }
 .si-icon { display: inline-block; max-width: 100%; cursor: help; }
-.si-map-section { min-width: 0; overflow: hidden; background: #244f58; border: 1px solid #315d61; border-radius: 14px; box-shadow: 0 4px 11px #214b4810; }
+.si-map-section { min-width: 0; overflow: hidden; background: #204d58; border: 1px solid #315d61; border-radius: 14px; box-shadow: 0 4px 11px #214b4810; }
 .si-map-section > .si-section-head { color: #eceddd; padding: 11px 13px 0; margin-bottom: 2px; }
-.si-board-tabs, .si-card-tabs { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; min-width: 0; }
-#spiritIslandPanel .si-board-tabs button { min-width: 29px; min-height: 27px; padding: 4px 7px; font-size: 11px; color: #cbded9; border-color: #5b7a7d; background: #315c61; }
-#spiritIslandPanel .si-board-tabs button.is-active { background: #ebe2bd; color: #365b50; border-color: #eee6c8; }
-#spiritIslandPanel .si-board-tabs .si-info { background: transparent; border: 0; }
-.si-map-boards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; padding: 4px 13px; background: radial-gradient(ellipse at 50% 50%, #416c6a, transparent 70%), repeating-radial-gradient(ellipse at 50% 70%, transparent 0 37px, #bcd9c805 38px 39px, transparent 40px 67px); }
-.si-map-boards.has-multiple { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 8px; }
-.si-island-board { min-width: 0; position: relative; width: 100%; max-width: 480px; margin: 0 auto; }
-.si-board-label { color: #b9cec7; font: 17px Georgia, serif; position: absolute; right: 2px; bottom: 0; pointer-events: none; }
-.si-board-label span { display: block; margin-top: 2px; font: 7px system-ui; letter-spacing: .13em; }
-.si-island { display: block; width: 100%; height: auto; user-select: none; -webkit-user-select: none; }
-.si-ocean-ripple { fill: none; stroke: #9abbb92e; stroke-width: 3; }
-.si-island-coast { fill: #6b8c74; stroke: #bcb992; stroke-width: 3; filter: drop-shadow(0 4px 3px #153f4b50); }
-.si-adjacency { stroke: #244c40; stroke-width: 2; stroke-dasharray: 4 3; opacity: .65; }
-.si-adjacency.is-adjacent { stroke: #fff6c0; stroke-width: 3; opacity: 1; }
+.si-card-tabs, .si-map-tools { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; min-width: 0; }
+#spiritIslandPanel .si-map-tools button { min-width: 30px; min-height: 30px; padding: 4px 8px; font-size: 11px; color: #e2eee5; border-color: #658784; background: #315c61; }
+#spiritIslandPanel .si-map-tools button:hover { background: #456e6a; border-color: #c3d2b9; }
+#spiritIslandPanel .si-map-tools button[data-si-action^="zoom"] { font-size: 20px; line-height: 1; }
+.si-map-viewport { height: clamp(360px, 49vw, 620px); width: 100%; overflow: hidden; position: relative; background: radial-gradient(ellipse at 45% 45%, #497875, #27565e 66%, #204b58); }
+.si-island { display: block; width: 100%; height: 100%; user-select: none; -webkit-user-select: none; touch-action: none; overscroll-behavior: contain; cursor: grab; }
+.si-island.is-dragging { cursor: grabbing; }
+.si-ocean-ripple { fill: none; stroke: #b2d4c9; stroke-width: 28; opacity: .15; stroke-linejoin: round; pointer-events: none; }
+.si-island-coast { fill: #dbd4a3; stroke: #ddd6ab; stroke-width: 8; stroke-linejoin: round; filter: drop-shadow(0 4px 5px #123d4866); pointer-events: none; }
 .si-land { cursor: pointer; outline: none; }
-.si-land-ground { stroke: #506c58; stroke-width: 1.5; transition: stroke .15s; filter: drop-shadow(0 2px 1px #28423a30); }
-.si-land.is-legal .si-land-ground { stroke: #f8d985; stroke-width: 3.5; }
-.si-land.is-adjacent .si-land-ground { stroke: #f4edc7; stroke-width: 2.5; }
-.si-land:hover .si-land-ground, .si-land:focus .si-land-ground, .si-land.is-selected .si-land-ground { stroke: #fffef0; stroke-width: 4; }
-.si-land.is-selected .si-land-ground { filter: drop-shadow(0 0 5px #fbf3b9aa); }
-.si-land text { pointer-events: none; font-family: system-ui, sans-serif; }
-.si-land-number { font-size: 12px; font-weight: 800; fill: #385947; }
-.si-land-terrain { font-size: 17px; text-anchor: middle; }
-.si-land-pieces { font-size: 12px; fill: #354b40; text-anchor: middle; font-weight: 600; letter-spacing: -.65px; }
-.si-land-natural { font-size: 12px; font-weight: 400; }
-.si-presence-number { font-size: 9px; text-anchor: middle; fill: #fffdf4; font-weight: 700; }
-.si-map-caption { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; min-width: 0; padding: 9px 13px; color: #bfd0c6; font-size: 10px; }
-.si-map-caption > span:last-child { margin-left: auto; }
-#spiritIslandPanel .si-map-caption button { padding: 3px 6px; font-size: 10px; color: #e6e6c7; background: #416461; border-color: #6f8980; }
+.si-land-ground { stroke: #557363; stroke-width: 1.3; stroke-linejoin: round; vector-effect: non-scaling-stroke; transition: filter .15s; }
+.si-land-texture { pointer-events: none; }
+.si-land.is-adjacent .si-land-ground { stroke: #e8ecd0; stroke-width: 2; }
+.si-land.is-legal .si-land-ground { stroke: #ffd56d; stroke-width: 3; }
+.si-land:hover .si-land-ground, .si-land:focus .si-land-ground, .si-land.is-selected .si-land-ground { stroke: #fffdea; stroke-width: 3; filter: brightness(1.12); }
+.si-land text { pointer-events: none; font-family: system-ui, sans-serif; paint-order: stroke fill; stroke: #f6f3daaa; stroke-width: 2.5; stroke-linejoin: round; }
+.si-land-label { pointer-events: none; }
+.si-land-number { font-size: 15px; font-weight: 800; fill: #2a4434; text-anchor: middle; }
+.si-land-terrain { font-size: 18px; text-anchor: middle; }
+.si-land-pieces { font-size: 15px; fill: #263c30; text-anchor: middle; font-weight: 700; letter-spacing: -.6px; }
+.si-land-natural { font-weight: 500; }
+.si-land .si-presence-number { font-size: 10px; text-anchor: middle; fill: #fffdf4; font-weight: 700; stroke: none; }
+.si-map-caption { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 5px 12px; min-width: 0; padding: 9px 13px; color: #c7d7ca; font-size: 10px; }
 .si-land-detail { padding: 11px 13px; min-height: 42px; background: #f4f0dd; font-size: 11px; color: #526855; border-top: 1px solid #4e7165; overflow-wrap: anywhere; }
 .si-land-detail .si-section-head { margin-bottom: 6px; }
 .si-detail-pieces { display: flex; flex-wrap: wrap; gap: 5px 9px; line-height: 1.9; }
@@ -192,9 +185,19 @@
     .si-overview { grid-template-columns: minmax(0, 1fr) minmax(0, .7fr); }
     .si-invader-line { grid-column: 1 / -1; }
     .si-layout { grid-template-columns: minmax(0, 1fr) minmax(235px, 270px); gap: 10px; }
-    .si-map-boards.has-multiple { grid-template-columns: minmax(0, 1fr); }
     .si-box { padding: 11px; }
     .si-phase-bar small { font-size: 9px; }
+}
+@media (min-width: 721px) and (max-width: 1100px) {
+    .si-layout { grid-template-columns: minmax(0, 1fr); }
+    .si-main { display: contents; }
+    .si-map-section, .si-spirit-choices { grid-row: 1; }
+    .si-sidebar { grid-row: 2; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 1fr); align-items: start; }
+    .si-spirit { grid-column: 1; grid-row: 1; }
+    .si-actions { grid-column: 2; grid-row: 1; }
+    .si-log { grid-column: 3; grid-row: 1; }
+    .si-hand { grid-row: 3; }
+    .si-map-viewport { height: 540px; }
 }
 @media (max-width: 720px) {
     .si-layout { grid-template-columns: minmax(0, 1fr); }
@@ -205,7 +208,6 @@
     .si-map-section, .si-spirit-choices { grid-row: 1; }
     .si-sidebar { grid-row: 2; }
     .si-hand { grid-row: 3; }
-    .si-island-board { max-width: 430px; }
     .si-option-list { max-height: 170px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .si-team { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .si-top h2 > span { font-size: 13px; }
@@ -238,9 +240,10 @@
     .si-phase-bar { padding: 3px 1px; gap: 0; margin: 10px 0; }
     .si-phase-bar small { font-size: 8px; }
     .si-phase-bar > span { padding: 5px 1px; font-size: 11px; }
-    .si-map-boards { padding: 5px 3px; }
     .si-map-section > .si-section-head { padding: 10px 10px 0; }
     .si-map-caption { padding: 8px 10px; font-size: 9px; }
+    .si-map-viewport { height: clamp(280px, calc((100vw - 48px) * var(--si-map-ratio, 1)), 420px); }
+    #spiritIslandPanel .si-map-tools button { min-height: 30px; padding: 4px 6px; }
     .si-land-detail { padding: 9px 10px; }
     .si-detail-pieces { gap: 4px; font-size: 10px; }
     .si-sidebar { grid-template-columns: minmax(0, 1fr); }

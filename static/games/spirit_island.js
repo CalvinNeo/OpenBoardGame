@@ -18,7 +18,7 @@
     const phaseSteps = [["growth", "🌱", "成长"], ["play", "🃏", "出牌"], ["fast", "⚡", "快速"], ["fear", "👁️", "恐惧"], ["ravage", "⚔️", "蹂躏"], ["build", "🏘️", "建造"], ["explore", "🚶", "探索"], ["slow", "🐢", "慢速"], ["round_end", "🌙", "回顾"]];
     const explanations = {
         spirit: "每位玩家选择一位不同的精灵。精灵的特殊规则、成长选项、能量与出牌轨道、起始法术和先天法术各不相同。选择后点击 Confirm，全员选定后进入成长阶段。",
-        map: "土地编号（如 A1）由岛板字母和土地数字组成。山地(⛰️)、丛林(🌳)、沙地(🏜️)、湿地(💧)决定入侵者行动。海岸(🌊)与海洋相邻。虚线显示相邻关系；以选中土地的 Adjacent 列表为准，画面距离不代表法术距离。点土地查看详情并筛选合法目标。",
+        map: "土地编号（如 A1）由岛板字母和土地数字组成。山地(⛰️)、丛林(🌳)、沙地(🏜️)、湿地(💧)决定入侵者行动。海岸(🌊)与海洋相邻。完整岛屿上的土地以边界分区，共边或接角的土地相邻。点土地查看单位及 Adjacent 列表；金色边界表示合法目标，白色表示当前选择。拖动平移，滚轮或双指缩放，Fit 恢复全岛。",
         presence: "存在／灵迹(●)表示你的精灵能触及这片土地；同一精灵在一块土地上有至少两个存在，构成圣地(◎)。颜色和座位编号区分各精灵。放置存在可解锁能量(⚡)或出牌(🃏)轨道。",
         invaders: "探索者(🚶)：生命和伤害各 1；村镇(🏘️)：各 2；城市(🏙️)：各 3。摧毁村镇产生 1 恐惧(👁️)，摧毁城市产生 2。移除与推动不会因此产生恐惧。",
         dahan: "达汉(🛖)各有 2 生命。蹂躏时，入侵者同时伤害土地和达汉；存活达汉各反击 2 伤害。达汉不会替土地吸收伤害。防御(🛡️)减少该土地的入侵者总伤害。",
@@ -42,9 +42,14 @@
     const dialogTitle = dialog.querySelector("h2"), dialogBody = dialog.querySelector(".si-dialog-body"), dialogClose = dialog.querySelector("[data-si-close]");
     const tip = document.createElement("div");
     tip.className = "spirit-island-tip"; tip.hidden = true; tip.setAttribute("role", "status"); document.body.append(tip);
-    let view = null, selectedLand = null, selectedCard = null, selectedOption = null, activeBoard = "home", cardTab = "hand", mobileTab = "island";
+    let view = null, selectedLand = null, selectedCard = null, selectedOption = null, cardTab = "hand", mobileTab = "island";
     let pending = false, pendingTimer = null, explaining = false, suppressed = null, tipTimer = null, returnFocus = null, lastSignature = "";
     let inputKind = "mouse", narrow = window.innerWidth < 720, spiritDetailsOpen = false;
+    const mapNavigation = new window.SpiritIslandNavigation({
+        isExplaining: () => explaining,
+        onChange: () => { hideTip(); },
+        onGestureEnd: () => { hideTip(); },
+    });
     const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
     const options = () => view?.action_options || [];
     const players = () => view?.players || [];
@@ -62,7 +67,6 @@
     const cardName = card => card?.name_zh || card?.name || card?.id || "法术";
     const icon = (label, explanation, extra = "") => `<span class="si-icon ${extra}" tabindex="0" data-si-tip="${esc(explanation)}">${label}</span>`;
     const button = (label, action, explain = "choice", disabled = false, extra = "") => `<button type="button" data-si-action="${action}" data-si-explain="${explain}" ${disabled ? "disabled" : ""} ${extra}>${label}</button>`;
-    const info = key => button("ⓘ", "info", key, false, `class="si-info" data-si-tip="${esc(explanations[key])}" aria-label="Info"`);
     const optionExplain = option => ({growth: "growth", play_card: "card", unplay_card: "card", use_power: "power", use_innate: "power", ready: "ready", pass: "power", next_round: "next"}[option?.action?.type] || "choice");
     const optionLand = option => option.land_id || option.land || option.action?.land_id || null;
     const optionCard = option => option.card_id || option.action?.card_id || null;
@@ -99,7 +103,7 @@
             <h3>一轮的顺序</h3><ol><li><b>成长(🌱)与出牌(🃏)：</b>${explanations.growth} 支付能量打出法术，各自 Ready。</li><li><b>快速法术(⚡)：</b>${explanations.power}</li><li><b>入侵者：</b>${explanations.invader_plan}</li><li><b>慢速法术(🐢)：</b>结算慢速法术与先天法术。</li><li><b>时间流逝(🌙)：</b>打出的法术进入弃牌，元素与临时效果消失，单位恢复生命；随后全员回顾。</li></ol>
             <h3>地图与单位</h3><p>${explanations.map}</p><p>${explanations.presence}</p><p>${explanations.invaders}</p><p>${explanations.dahan}</p><p>${explanations.blight}</p>
             <h3>范围、目标与元素</h3><p>${explanations.card} 距离从自己的存在或圣地(◎)按相邻土地计算，距离 0 指来源土地本身。聚集将相邻土地单位移入目标；推动将目标单位移到相邻土地。</p><p>${Object.entries(elements).map(([key, value]) => `${elementNames[key]}(${value})`).join("、")}是八种元素。只有满足先天法术阈值，才能使用对应效果；元素不会被消耗。</p>
-            <h3>入门模式</h3><p>提供四位低复杂度精灵，前七次学习力量使用各精灵固定成长序列，用尽后从次级或高级牌库抽四留一。支持基础版 74 张力量牌（16 张专属、36 张次级、22 张高级）及基础恐惧牌；取得高级力量须遗忘一张。采用固定示例岛板组合：单人 A，双人 A/C，三人 B/C/D，四人 A/B/C/D。没有对手、剧情、事件、扩展精灵或荒芜卡。原创示意地图以 Adjacent 列表和连线表达规则上的相邻关系。</p>
+            <h3>入门模式</h3><p>提供四位低复杂度精灵，前七次学习力量使用各精灵固定成长序列，用尽后从次级或高级牌库抽四留一。支持基础版 74 张力量牌（16 张专属、36 张次级、22 张高级）及基础恐惧牌；取得高级力量须遗忘一张。采用固定示例岛板组合：单人 A，双人 A/C，三人 B/C/D，四人 A/B/C/D。没有对手、剧情、事件、扩展精灵或荒芜卡。原创地图按这些组合连续拼接，土地边界表达相邻关系；点击土地可核对 Adjacent 列表。</p>
             <h3>操作与回顾</h3><p>${explanations.choice}</p><p>${explanations.confirm}</p><p>${explanations.next} 图标支持鼠标悬停说明，手机轻点后浮动提示会在 3 秒后消失。Help 与 Explain 可随时打开，Esc 关闭对话框或取消选择。</p>`);
     }
     function elementHTML(value) {
@@ -133,43 +137,52 @@
         for (const [id, count] of Object.entries(land.presence || {})) if (count) pieces.push(`${pname(id)} 存在(●) ${count}${land.sacred_sites?.includes(id) || count > 1 ? "／圣地(◎)" : ""}`);
         pieces.push(`Adjacent: ${(land.adjacent || []).join(" · ") || "—"}`); return pieces.join("；");
     }
-    function mapCoordinates(land) {
-        const positions = [[58, 74], [180, 60], [302, 74], [60, 178], [180, 164], [300, 178], [118, 274], [244, 274]];
-        return positions[(Number(land.number) - 1 + 8) % 8];
-    }
-    function boardHTML(board) {
-        const boardLands = lands().filter(land => land.board === board);
+    function mapLayout() { return window.SPIRIT_ISLAND_MAPS[boards().length]; }
+    function islandHTML(layout) {
         const legal = new Set(options().filter(option => !selectedCard || !optionCard(option) || optionCard(option) === selectedCard).map(optionLand).filter(Boolean));
         const selected = lands().find(land => land.id === selectedLand);
-        return `<div class="si-island-board"><div class="si-board-label">${esc(board)} <span>ISLAND</span></div><svg class="si-island" viewBox="0 0 362 334" role="group" aria-label="Island ${esc(board)}">
-            <path class="si-ocean-ripple" d="M18 45Q58 5 117 25Q197-9 274 21Q354 22 354 96Q377 158 344 217Q331 310 250 324Q169 344 103 314Q25 305 18 224Q-7 158 18 110Z"/>
-            <path class="si-island-coast" d="M29 53Q62 15 121 34Q196 6 265 31Q341 28 342 101Q365 158 332 214Q322 298 248 314Q168 328 107 304Q37 298 29 220Q5 158 29 113Z"/>
-            ${boardLands.flatMap(land => (land.adjacent || []).filter(id => land.id < id).map(id => { const other = boardLands.find(item => item.id === id); if (!other) return ""; const a = mapCoordinates(land), b = mapCoordinates(other); return `<line class="si-adjacency ${selectedLand && (land.id === selectedLand || id === selectedLand) ? "is-adjacent" : ""}" x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}"/>`; })).join("")}
-            ${boardLands.map(land => {
-                const [x, y] = mapCoordinates(land), t = terrain[land.terrain] || terrain.jungle;
+        const outline = layout.outline || Object.values(layout.lands).map(land => land.path).join(" ");
+        const ordered = [...lands()].sort((a, b) => Number(a.id === selectedLand) - Number(b.id === selectedLand));
+        return `<svg class="si-island" viewBox="${layout.viewBox.join(" ")}" role="group" aria-label="Complete island map" data-si-explain="map">
+            <defs>
+                ${Object.entries(terrain).map(([key, t]) => `<linearGradient id="si-terrain-${key}" x2=".7" y2="1"><stop stop-color="${t.color}"/><stop offset="1" stop-color="${t.shade}" stop-opacity=".78"/></linearGradient>`).join("")}
+                <pattern id="si-terrain-grain" width="28" height="28" patternUnits="userSpaceOnUse"><circle cx="5" cy="7" r=".9" fill="#fff" opacity=".2"/><circle cx="21" cy="20" r=".7" fill="#294d3b" opacity=".12"/></pattern>
+                ${ordered.map(land => `<clipPath id="si-clip-${land.id}"><path d="${layout.lands[land.id].path}"/></clipPath>`).join("")}
+            </defs>
+            <path class="si-ocean-ripple" d="${outline}"/>
+            <path class="si-island-coast" d="${outline}"/>
+            ${ordered.map(land => {
+                const geo = layout.lands[land.id], [x, y] = geo.center, t = terrain[land.terrain] || terrain.jungle;
                 const presence = Object.entries(land.presence || {}).filter(([, count]) => count > 0);
-                const isAdjacent = selected?.adjacent?.includes(land.id);
                 const troops = [["🚶", land.explorers], ["🏘️", land.towns], ["🏙️", land.cities]].filter(([, count]) => count);
-                return `<g transform="translate(${x},${y})" class="si-land ${selectedLand === land.id ? "is-selected" : ""} ${legal.has(land.id) ? "is-legal" : ""} ${isAdjacent ? "is-adjacent" : ""}" role="button" tabindex="0" data-si-land="${esc(land.id)}" data-si-explain="map" data-si-tip="${esc(landDescription(land))}" aria-label="${esc(landDescription(land))}" aria-pressed="${selectedLand === land.id}">
-                    <rect class="si-land-ground" x="-50" y="-43" width="100" height="89" rx="19" fill="${t.color}"/>
-                    <path d="M-47-17Q-20-32 7-13T47-20" fill="none" stroke="${t.shade}" opacity=".5" stroke-width="2"/>
-                    <text class="si-land-number" x="-38" y="-26">${esc(land.id)}</text><text class="si-land-terrain" x="31" y="-24">${t.icon}</text>
-                    <text class="si-land-pieces" y="-3">${troops.length ? troops.map(([emoji, count]) => `${emoji}${compactCount(count)}`).join(" ") : "·"}</text>
-                    <text class="si-land-pieces si-land-natural" y="16">${[["🛖", land.dahan], ["☠️", land.blight], ["🛡️", land.defend]].filter(([, count]) => count).map(([emoji, count]) => `${emoji}${compactCount(count)}`).join(" ") || "—"}</text>
-                    ${presence.map(([id, count], index) => { const px = (index - (presence.length - 1) / 2) * 20; return `<circle cx="${px}" cy="33" r="8" fill="${pcolor(id)}" stroke="${land.sacred_sites?.includes(id) || count > 1 ? "#fff7da" : "#263e38"}" stroke-width="${land.sacred_sites?.includes(id) || count > 1 ? 2.5 : 1}"/><text class="si-presence-number" x="${px}" y="36">${compactCount(count)}</text>`; }).join("")}
-                    ${land.coastal ? '<path d="M-9-28q4-4 8 0t8 0" stroke="#397b94" fill="none" stroke-width="2"/>' : ""}
+                const nature = [["🛖", land.dahan], ["☠️", land.blight], ["🛡️", land.defend]].filter(([, count]) => count);
+                return `<g class="si-land ${selectedLand === land.id ? "is-selected" : ""} ${legal.has(land.id) ? "is-legal" : ""} ${selected?.adjacent?.includes(land.id) ? "is-adjacent" : ""}" role="button" tabindex="0" data-si-land="${esc(land.id)}" data-si-explain="map" aria-label="${esc(landDescription(land))}" aria-pressed="${selectedLand === land.id}">
+                    <path class="si-land-ground" d="${geo.path}" fill="url(#si-terrain-${land.terrain})"/>
+                    <path class="si-land-texture" d="${geo.path}" fill="url(#si-terrain-grain)"/>
+                    <g clip-path="url(#si-clip-${land.id})"><g class="si-land-label" transform="translate(${x},${y}) scale(${geo.labelScale || 1})">
+                        <text class="si-land-number" x="-25" y="-23">${esc(land.id)}</text><text class="si-land-terrain" x="23" y="-23">${t.icon}</text>
+                        <text class="si-land-pieces" y="-2" ${troops.length === 3 ? 'textLength="92" lengthAdjust="spacingAndGlyphs"' : ""}>${troops.map(([emoji, count]) => `${emoji}${compactCount(count)}`).join(" ")}</text>
+                        <text class="si-land-pieces si-land-natural" y="18" ${nature.length === 3 ? 'textLength="92" lengthAdjust="spacingAndGlyphs"' : ""}>${nature.map(([emoji, count]) => `${emoji}${compactCount(count)}`).join(" ")}</text>
+                        ${presence.map(([id, count], index) => { const px = (index - (presence.length - 1) / 2) * 22; return `<circle cx="${px}" cy="36" r="9" fill="${pcolor(id)}" stroke="${land.sacred_sites?.includes(id) ? "#fff7da" : "#284b3e"}" stroke-width="${land.sacred_sites?.includes(id) ? 3 : 1}"/><text class="si-presence-number" x="${px}" y="39">${compactCount(count)}</text>`; }).join("")}
+                    </g></g>
                 </g>`;
-            }).join("")}</svg></div>`;
+            }).join("")}</svg>`;
     }
     function mapHTML() {
-        const boardList = boards();
-        if (!boardList.length) return '<div class="si-map-empty"><span>🏝️</span><p>精灵苏醒，守护岛屿。</p></div>';
-        const shown = activeBoard === "all" ? boardList : boardList.filter(board => String(board) === String(activeBoard));
-        const crossEdges = selectedLand ? (lands().find(land => land.id === selectedLand)?.adjacent || []).filter(id => lands().find(land => land.id === id)?.board !== lands().find(land => land.id === selectedLand)?.board) : [];
-        return `<section class="si-map-section"><div class="si-section-head"><h3>🏝️ 岛屿</h3><div class="si-board-tabs">${!narrow && boardList.length > 1 ? button("All", "board", "map", false, `data-board="all" class="${activeBoard === "all" ? "is-active" : ""}"`) : ""}${boardList.map(board => button(esc(board), "board", "map", false, `data-board="${esc(board)}" class="${String(activeBoard) === String(board) ? "is-active" : ""}"`)).join("")}${info("map")}</div></div>
-            <div class="si-map-boards ${shown.length > 1 ? "has-multiple" : ""}">${shown.map(boardHTML).join("")}</div>
-            <div class="si-map-caption">${icon("┄", "虚线表示相邻土地；点击土地可在 Adjacent 查看完整列表。")} Adjacent${crossEdges.length ? ` · 跨岛相邻：${crossEdges.map(id => button(esc(id), "land-link", "map", false, `data-land="${esc(id)}"`)).join("")}` : ""}<span>${icon("●", explanations.presence)} 存在 · ${icon("◎", explanations.presence)} 圣地</span></div>
+        const layout = mapLayout();
+        if (!layout) return '<div class="si-map-empty"><span>🏝️</span><p>精灵苏醒，守护岛屿。</p></div>';
+        return `<section class="si-map-section"><div class="si-section-head"><h3 data-si-explain="map">🏝️ 岛屿</h3><div class="si-map-tools">${button("−", "zoom-out", "map", false, 'aria-label="Zoom out"')}${button("+", "zoom-in", "map", false, 'aria-label="Zoom in"')}${button("Fit", "map-fit", "map")}${boards().length > 1 ? button("My board", "map-home", "map") : ""}</div></div>
+            <div class="si-map-viewport" style="--si-map-ratio:${layout.viewBox[3] / layout.viewBox[2]}">${islandHTML(layout)}</div>
+            <div class="si-map-caption"><span>Drag to pan · Pinch / scroll to zoom</span><span>${icon("●", explanations.presence)} 存在 · ${icon("◎", explanations.presence)} 圣地</span></div>
             ${landDetailHTML()}</section>`;
+    }
+    function focusBoard(board) {
+        const layout = mapLayout();
+        const regions = lands().filter(land => land.board === board).map(land => layout?.lands[land.id]).filter(Boolean);
+        if (!regions.length) return;
+        const points = regions.flatMap(region => region.bounds ? [[region.bounds[0], region.bounds[1]], [region.bounds[0] + region.bounds[2], region.bounds[1] + region.bounds[3]]] : [region.center.map(value => value - 90), region.center.map(value => value + 90)]);
+        const xs = points.map(p => p[0]), ys = points.map(p => p[1]);
+        mapNavigation.focus([Math.min(...xs) - 20, Math.min(...ys) - 20, Math.max(...xs) - Math.min(...xs) + 40, Math.max(...ys) - Math.min(...ys) + 40]);
     }
     function woundHTML(land) {
         const health = {explorer: 1, town: 2, city: 3, dahan: 2};
@@ -230,7 +243,7 @@
         const nextOption = options().find(option => option.action?.type === "next_round");
         let prompt = view.pending?.prompt || (view.current_turn && view.current_turn !== view.you ? `Waiting for ${pname(view.current_turn)}` : "选择一个可执行动作。");
         if (!options().length && !view.pending) prompt = over ? view.result?.reason || view.result || view.outcome || "守护之战已经结束。" : "Waiting for other spirits";
-        return `<section class="si-box si-actions"><div class="si-section-head"><h3>${roundEnd ? "🌙 本轮回顾" : over ? "🏝️ 游戏结果" : "Action"}</h3>${info(roundEnd ? "next" : "choice")}</div>
+        return `<section class="si-box si-actions" data-si-explain="choice"><div class="si-section-head"><h3>${roundEnd ? "🌙 本轮回顾" : over ? "🏝️ 游戏结果" : "Action"}</h3></div>
             <p class="si-action-prompt" role="status">${pending ? "Sending…" : esc(typeof prompt === "object" ? prompt.reason || prompt.message || "Game over" : prompt)}</p>
             ${card ? `<div class="si-selected-card"><strong>${esc(cardName(card))}</strong><p>${esc(card.text || card.description || "")}</p><small>${card.speed === "fast" ? "⚡ 快速" : "🐢 慢速"} · 能量 ${card.cost ?? 0} · ${esc(targetText(card))}</small>${Object.keys(card.threshold || {}).length ? thresholdHTML(card.threshold, "达到门槛时追加牌面效果") : ""}</div>` : ""}
             ${roundEnd ? `<p class="si-muted">${(view.ready_players || []).length} / ${players().length} ready</p>${button(nextOption ? "Next Round" : "✓ Ready", "next", "next", !nextOption || pending, 'class="si-primary si-next"')}<p class="si-muted">Waiting: ${players().filter(player => !(view.ready_players || []).includes(pid(player))).map(player => esc(player.name)).join(" · ") || "—"}</p>` : `<div class="si-option-list">${filtered.filter(({option}) => view.phase !== "choose_spirit" || !option.spirit_id).map(({option, index}) => button(`${optionLand(option) ? `<span class="si-option-land">${esc(optionLand(option))}</span>` : ""}<span>${esc(option.label || option.action?.type || "Choose")}</span>`, "option", optionExplain(option), pending, `data-option="${index}" class="si-option ${selectedOption === index ? "is-selected" : ""}" aria-pressed="${selectedOption === index}"`)).join("") || (!over && view.phase !== "choose_spirit" ? '<p class="si-muted">No available actions.</p>' : "")}</div>${!over ? `<div class="si-confirm-area">${currentOption ? `<p>${esc(currentOption.label)}</p>` : '<p class="si-muted">Select an option, then confirm.</p>'}${button(pending ? "Sending…" : "Confirm", "confirm", "confirm", !currentOption || pending, 'class="si-primary"')}</div>` : ""}`}
@@ -239,16 +252,15 @@
     function fearHTML() {
         const cards = view.fear?.revealed || [];
         if (!cards.length) return "";
-        return `<section class="si-box si-fear-revealed"><div class="si-section-head"><h3>👁️ 恐惧牌</h3>${info("fear")}</div>${cards.map(card => `<h4>${esc(card.name)}</h4><p>${esc(card["level" + view.fear.terror_level] || card.description || "")}</p>`).join("")}</section>`;
+        return `<section class="si-box si-fear-revealed" data-si-explain="fear"><div class="si-section-head"><h3>👁️ 恐惧牌</h3></div>${cards.map(card => `<h4>${esc(card.name)}</h4><p>${esc(card["level" + view.fear.terror_level] || card.description || "")}</p>`).join("")}</section>`;
     }
     function logHTML() {
         const log = (view.log || []).slice(-80).reverse();
-        return `<section class="si-box si-log"><div class="si-section-head"><h3>📜 Log</h3>${info("history")}</div><ol>${log.map(entry => `<li>${esc(typeof entry === "string" ? entry : entry.text || entry.message || "")}</li>`).join("") || '<li class="si-muted">精灵即将苏醒。</li>'}</ol></section>`;
+        return `<section class="si-box si-log" data-si-explain="history"><div class="si-section-head"><h3>📜 Log</h3></div><ol>${log.map(entry => `<li>${esc(typeof entry === "string" ? entry : entry.text || entry.message || "")}</li>`).join("") || '<li class="si-muted">精灵即将苏醒。</li>'}</ol></section>`;
     }
     function render() {
         if (!view) return;
-        const boardList = boards();
-        if ((narrow && activeBoard === "all") || (activeBoard !== "all" && !boardList.includes(activeBoard))) activeBoard = me()?.board || boardList[0] || "all";
+        mapNavigation.detach();
         const over = view.phase === "game_over" || view.game_over;
         panel.innerHTML = `<div class="si-shell"><div class="si-top"><div><span class="si-eyebrow">SPIRIT ISLAND · COOPERATIVE</span><h2>灵迹岛 <span>Spirit Island</span></h2></div><div class="si-round-badge"><span>ROUND ${view.round || 1}</span><strong>${esc(phaseNames[view.phase] || view.phase || "")}</strong></div></div>
             ${playersHTML()}${overviewHTML()}
@@ -257,17 +269,19 @@
             <div class="si-layout show-${mobileTab}">${view.phase !== "choose_spirit" ? `<div class="si-mobile-tabs">${button("🏝️ Island", "mobile-tab", "map", false, `data-tab="island" class="${mobileTab === "island" ? "is-active" : ""}"`)}${button(`🃏 Powers · ${me()?.hand?.length || 0} / ${me()?.played?.length || 0}`, "mobile-tab", "card", false, `data-tab="powers" class="${mobileTab === "powers" ? "is-active" : ""}"`)}</div>` : ""}<div class="si-main">${view.phase === "choose_spirit" ? spiritChoiceHTML() : mapHTML()}${handHTML()}</div><aside class="si-sidebar">${spiritHTML()}${actionHTML()}${fearHTML()}${logHTML()}</aside></div>
             <p class="si-footer">INTRODUCTORY GAME · ${players().length} SPIRIT${players().length === 1 ? "" : "S"} · 原创示意地图 · ${icon("🚶 🏘️ 🏙️", explanations.invaders)} ${icon("🛖", explanations.dahan)} ${icon("☠️", explanations.blight)}</p></div>`;
         panel.classList.toggle("is-explaining", explaining);
+        const map = panel.querySelector(".si-island");
+        if (map) mapNavigation.attach(map, mapLayout().viewBox);
     }
     function chooseLand(id) {
         const land = lands().find(item => item.id === id); if (!land) return;
         selectedLand = selectedLand === id ? null : id; selectedOption = null;
-        if (activeBoard !== "all" && selectedLand) activeBoard = land.board;
         const matching = options().map((option, index) => ({option, index})).filter(({option}) => optionLand(option) === selectedLand && (!selectedCard || !optionCard(option) || optionCard(option) === selectedCard));
         if (matching.length === 1) selectedOption = matching[0].index;
-        render(); if (inputKind === "touch") showTip(landDescription(land), panel, true);
+        render();
     }
     panel.addEventListener("click", event => {
         if (!view) return;
+        if (event.target.closest(".si-island") && mapNavigation.gestureClickSuppressed()) { event.preventDefault(); return; }
         const iconTarget = event.target.closest(".si-icon[data-si-tip]");
         if (iconTarget && inputKind === "touch") { showTip(iconTarget.dataset.siTip, iconTarget, true); return; }
         const landTarget = event.target.closest("[data-si-land]");
@@ -287,11 +301,13 @@
         else if (action === "card") { selectedCard = selectedCard === target.dataset.card ? null : target.dataset.card; selectedOption = null; selectedLand = null; const matching = options().map((option, index) => ({option, index})).filter(({option}) => optionCard(option) === selectedCard); if (matching.length === 1) selectedOption = matching[0].index; render(); }
         else if (action === "card-tab") { cardTab = target.dataset.tab; selectedCard = null; selectedOption = null; render(); }
         else if (action === "mobile-tab") { mobileTab = target.dataset.tab; render(); }
-        else if (action === "board") { activeBoard = target.dataset.board; render(); }
-        else if (action === "land-link") { const land = lands().find(item => item.id === target.dataset.land); if (land && activeBoard !== "all") activeBoard = land.board; chooseLand(target.dataset.land); }
-        else if (action === "info") { setExplain(false); openDialog("Explain", `<p>${esc(explanations[target.dataset.siExplain])}</p>`); }
+        else if (action === "zoom-in") mapNavigation.zoom(1.35);
+        else if (action === "zoom-out") mapNavigation.zoom(1 / 1.35);
+        else if (action === "map-fit") mapNavigation.fit();
+        else if (action === "map-home") focusBoard(me()?.board || boards()[0]);
+        else if (action === "land-link") chooseLand(target.dataset.land);
         const tipTarget = event.target.closest("[data-si-tip]");
-        if (inputKind === "touch" && tipTarget?.isConnected && action !== "info") showTip(tipTarget.dataset.siTip, tipTarget, true);
+        if (inputKind === "touch" && tipTarget?.isConnected) showTip(tipTarget.dataset.siTip, tipTarget, true);
     });
     panel.addEventListener("toggle", event => { if (event.target.matches("[data-si-details]")) spiritDetailsOpen = event.target.open; }, true);
     panel.addEventListener("keydown", event => {
@@ -319,7 +335,7 @@
         if (event.key === "Escape") { hideTip(); if (explaining) { event.preventDefault(); setExplain(false); render(); } else if (!dialog.open) { resetSelection(); render(); } }
         else if (explaining && ["Enter", " "].includes(event.key) && event.target.matches("input,select,textarea,summary")) { event.preventDefault(); event.stopImmediatePropagation(); }
     }, true);
-    panel.addEventListener("pointerover", event => { const target = event.target.closest("[data-si-tip]"); if (target && event.pointerType !== "touch" && !explaining) showTip(target.dataset.siTip, target); });
+    panel.addEventListener("pointerover", event => { const target = event.target.closest("[data-si-tip]"); if (target && event.pointerType !== "touch" && !explaining && !mapNavigation.isGesturing()) showTip(target.dataset.siTip, target); });
     panel.addEventListener("pointerout", event => { if (event.pointerType !== "touch") hideTip(); });
     panel.addEventListener("focusin", event => { const target = event.target.closest("[data-si-tip]"); if (target && !explaining && inputKind !== "touch") showTip(target.dataset.siTip, target); });
     panel.addEventListener("focusout", hideTip);
@@ -328,17 +344,18 @@
     dialogClose.addEventListener("click", () => dialog.close());
     dialog.addEventListener("close", () => { hideTip(); if (returnFocus?.isConnected) returnFocus.focus(); });
     dialog.addEventListener("click", event => { if (event.target === dialog) { const rect = dialog.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) dialog.close(); } });
-    window.addEventListener("resize", () => { hideTip(); const nextNarrow = window.innerWidth < 720; if (narrow !== nextNarrow) { narrow = nextNarrow; activeBoard = me()?.board || boards()[0] || "home"; render(); } });
+    window.addEventListener("resize", () => { hideTip(); const nextNarrow = window.innerWidth < 720; if (narrow !== nextNarrow) { narrow = nextNarrow; render(); } });
     function clearState() {
+        mapNavigation.detach();
         view = null; lastSignature = ""; resetSelection(); pending = false; setExplain(false); hideTip(); window.clearTimeout(pendingTimer);
-        if (dialog.open) dialog.close(); panel.innerHTML = ""; cardTab = "hand"; mobileTab = "island"; spiritDetailsOpen = false; activeBoard = "home";
+        if (dialog.open) dialog.close(); panel.innerHTML = ""; cardTab = "hand"; mobileTab = "island"; spiritDetailsOpen = false; mapNavigation.fit();
     }
     window.renderSpiritIslandGameState = data => {
         if (!data?.view) return;
         const next = data.view;
         const signature = JSON.stringify([next.game_instance_id, next.round, next.phase, next.pending, next.action_options]);
         if (signature !== lastSignature) resetSelection();
-        if (view?.game_instance_id !== next.game_instance_id) { cardTab = "hand"; activeBoard = next.players?.find(player => pid(player) === next.you)?.board || next.lands?.[0]?.board || "home"; if (dialog.open) dialog.close(); }
+        if (!view || (next.phase === "choose_spirit" && view.phase !== "choose_spirit")) { cardTab = "hand"; mapNavigation.fit(); if (dialog.open) dialog.close(); }
         if (view?.phase !== next.phase && ["fast", "slow"].includes(next.phase)) { cardTab = "played"; mobileTab = "powers"; }
         if (view?.phase !== next.phase && ["growth", "play"].includes(next.phase)) { cardTab = "hand"; mobileTab = next.phase === "play" ? "powers" : "island"; }
         if (next.pending && signature !== lastSignature) { if ((next.action_options || []).some(option => optionLand(option))) mobileTab = "island"; else if (next.choice_cards?.length) mobileTab = "powers"; }
