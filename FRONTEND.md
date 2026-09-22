@@ -46,3 +46,10 @@
 - 首页只引用公共脚本；新游戏的 JS、独立 CSS 和界面片段在 `static/game_assets.js` 的 `GAME_ASSETS` 中注册，不再直接加入首页的 script/link 列表。依赖脚本按顺序列在主脚本前。
 - 游戏主面板保留在 `static/index.html` 中作为空容器，具体内容与弹窗放入 `static/games/<game_id>.html` 的 template 片段；可参考 `cabo.html`。加载器先插入界面并加载样式，再执行游戏脚本。修改资源时更新清单中的版本号；修改清单或加载器时也更新首页对应版本号。
 - 游戏脚本可能在 DOMContentLoaded 之后才执行。初始化应检查 document.readyState；注册 Socket.IO 监听后应同步 currentRoomState，避免错过进入房间时的首个状态。公共代码访问游戏专属变量或函数前，要允许该游戏尚未加载。
+
+### 游戏样式
+
+- `static/style.css` 只保留公共界面、跨游戏共用规则和空的 `@media all, obg-game-… {}` 占位组。现有游戏拆出的规则放在 `static/games/<game_id>.css`，通过清单的 `styleFragments` URL 加载。不要把这些文件直接用 `<link>` 放到首页。
+- 占位组与游戏 CSS 中同名的 media 组一一对应，加载器将原始 CSS 插入原位置，保留通用规则、游戏规则和移动端覆盖的先后关系。修改现有游戏样式时，在它的对应 media 组内编辑；保留组名。需要新增组时，同时补上公共文件的空占位组。
+- 这些片段的资源 URL 应使用 `/static/…` 绝对路径。新游戏可以直接在 `styles` 中注册独立 CSS，无需采用占位组；独立 CSS 会在公共规则之后生效。
+- 修改 CSS URL 版本时，也更新首页的加载器版本；修改公共 CSS 时更新首页的 CSS 版本。可运行 `python -m unittest tests.test_frontend_style_assets` 检查占位与资源清单，使用 `tests/game_assets.browser.cjs` 验证按需加载、覆盖顺序和重试。

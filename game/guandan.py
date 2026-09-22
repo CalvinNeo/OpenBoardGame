@@ -1510,6 +1510,7 @@ _AI_EXPORTED_FUNCS = (
     "_should_use_mcts",
     "_clone_search_state",
     "_determinize_state",
+    "_retained_bomb_override_is_unsafe",
     "_should_accept_mcts_override",
     "_next_actor",
     "_rollout_policy_action",
@@ -2684,7 +2685,9 @@ class GuandanGame:
                             det.get("_ai_eval_cache", {}).get("minimax_anytime") or {}
                         )
                     _record_stage("minimax", minimax_started_at)
-                    if minimax_action is not None:
+                    if minimax_action is not None and not _retained_bomb_override_is_unsafe(
+                        state, bot_id, heuristic_action, minimax_action
+                    ):
                         decided = True
                         method = "minimax"
                         if minimax_action.get("type") == "play":

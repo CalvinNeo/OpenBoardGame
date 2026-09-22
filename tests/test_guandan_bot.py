@@ -1486,7 +1486,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertIn(tuple(sorted(["♥️5", "♦️5", "♣️5", "♠️5"])), filtered_labels)
         self.assertIn(tuple(sorted(["♣️7", "♠️7", "♠️7", "♥️7"])), filtered_labels)
 
-    def test_bot_does_not_pass_against_short_enemy_straight_when_natural_bomb_exists(self):
+    def test_bot_contests_three_card_enemy_straight_when_natural_bomb_exists(self):
         players = [
             {"player_id": "calvin", "name": "帅逼", "seat": 0, "is_bot": False},
             {"player_id": "bot2", "name": "Bot 2", "seat": 1, "is_bot": True},
@@ -1534,7 +1534,9 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         ]
         trick_cards = [pick_label(label) for label in ["♠️Q", "♦️K", "♥️A", "♥️2", "♣️J"]]
         state["players"]["bot4"]["hand"] = bot4_hand
-        for pid, count in (("calvin", 4), ("bot2", 16), ("bot3", 6)):
+        # Three cards cannot be a retained finishing bomb. Four-card opponents
+        # require the explicit continuation analysis in the retained-bomb tests.
+        for pid, count in (("calvin", 3), ("bot2", 16), ("bot3", 6)):
             state["players"][pid]["hand"] = deck[:count]
             del deck[:count]
         state["current_trick"] = {
@@ -7892,7 +7894,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         chosen_labels = sorted(guandan._card_label(hand_map[cid]) for cid in action.get("card_ids", []))
         self.assertEqual(chosen_labels, sorted(["♠️7", "♣️7", "♦️7", "♠️7"]))
 
-    def test_short_structured_history_prefers_wild_bomb_block_over_pass(self):
+    def test_short_structured_history_requires_tail_bomb_analysis(self):
         players = [
             {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
             {"player_id": "bot3", "name": "Bot 3", "seat": 1, "is_bot": True},
@@ -7999,38 +8001,22 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         no_history_state["round_memories"] = []
 
         self.assertGreater(
-            guandan._guandan_ai.call(guandan, "_short_enemy_defer_bomb_risk_penalty", state, "bot3"),
-            guandan._guandan_ai.call(guandan, "_short_enemy_defer_bomb_risk_penalty", no_history_state, "bot3"),
-        )
-
-        hand_map = guandan._map_hand_by_id(bot3_hand)
-        bomb_cards = [hand_map[cid] for cid in bomb_ids]
-        bomb_combo = guandan._evaluate_combo(bomb_cards, state["level_rank"], state.get("config", {}))
-        remaining = guandan._remove_cards(bot3_hand, bomb_ids)
-        self.assertGreater(
-            guandan._guandan_ai.call(
-                guandan, "_short_enemy_bomb_takeover_bonus", state, "bot3", bomb_ids, bomb_combo, remaining
-            ),
-            guandan._guandan_ai.call(
-                guandan, "_short_enemy_bomb_takeover_bonus",
-                no_history_state, "bot3", bomb_ids, bomb_combo, remaining
-            ),
+            guandan._guandan_ai.call(guandan, "_four_card_bomb_finish_profile", state, "bot3", "calvin")["bomb_probability"],
+            guandan._guandan_ai.call(guandan, "_four_card_bomb_finish_profile", no_history_state, "bot3", "calvin")["bomb_probability"],
         )
 
         pass_components = guandan._bot_score_components(state, "bot3", None, depth=4)
         bomb_components = guandan._bot_score_components(state, "bot3", bomb_ids, depth=4)
 
-        self.assertIn("pass_short_enemy_defer_risk", pass_components)
-        self.assertIn("bomb_short_enemy_block", bomb_components)
-        self.assertGreater(bomb_components["total"], pass_components["total"])
+        self.assertNotIn("pass_short_enemy_defer_risk", pass_components)
+        self.assertLess(bomb_components["retained_bomb_finish_risk"], 0.0)
+        self.assertGreater(pass_components["total"], bomb_components["total"])
 
         real_random = random.Random
         with mock.patch.object(guandan.random, "Random", side_effect=lambda *args, **kwargs: real_random(0)):
             action = guandan.GuandanGame.bot_move(state, "bot3")
 
-        self.assertEqual(action.get("type"), "play")
-        chosen_labels = sorted(guandan._card_label(hand_map[cid]) for cid in action.get("card_ids", []))
-        self.assertEqual(chosen_labels, sorted(["♣️4", "♥️4", "♠️4", "♥️2"]))
+        self.assertEqual(action.get("type"), "pass")
 
     def test_opponent_short_bomb_prefers_minimal_overbomb_to_block_lead(self):
         players = [

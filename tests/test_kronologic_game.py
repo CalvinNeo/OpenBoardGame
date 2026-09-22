@@ -162,7 +162,7 @@ class KronologicFrontendIntegrationTests(unittest.TestCase):
     def test_mobile_notebook_and_bound_clue_history_are_wired(self):
         markup = (ROOT / "static" / "games" / "kronologic.html").read_text(encoding="utf-8")
         script = (ROOT / "static" / "games" / "kronologic.js").read_text(encoding="utf-8")
-        styles = (ROOT / "static" / "style.css").read_text(encoding="utf-8")
+        styles = (ROOT / "static" / "games" / "kronologic.css").read_text(encoding="utf-8")
 
         self.assertIn('aria-controls="kronologicNotebookSection"', markup)
         self.assertIn('new Map(privateItems.map((clue) => [String(clue.clue_id), clue]))', script)
