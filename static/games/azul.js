@@ -9,18 +9,20 @@ const azulTurnLabel = document.getElementById("azulTurn");
 const azulBagLabel = document.getElementById("azulBagCount");
 const azulDiscardLabel = document.getElementById("azulDiscardCount");
 const azulWinnerLabel = document.getElementById("azulWinner");
+const azulWinnerStatus = document.getElementById("azulWinnerStatus");
+const azulGamePanelElement = document.getElementById("azulPanel");
 
 const azulSelectedSourceLabel = document.getElementById("azulSelectedSource");
 const azulSelectedColorLabel = document.getElementById("azulSelectedColor");
 const azulSelectedRowLabel = document.getElementById("azulSelectedRow");
 
-const azulFactoriesTop = document.getElementById("azulFactoriesTop");
-const azulFactoriesBottom = document.getElementById("azulFactoriesBottom");
+const azulFactories = document.getElementById("azulFactories");
 const azulCenter = document.getElementById("azulCenter");
 const azulYourBoard = document.getElementById("azulYourBoard");
 const azulPlayers = document.getElementById("azulPlayers");
+const azulPlayersDetails = document.getElementById("azulPlayersDetails");
+let azulPlayersDetailsInitialized = false;
 
-const azulClearSelectionBtn = document.getElementById("azulClearSelectionBtn");
 const azulFloorBtn = document.getElementById("azulFloorBtn");
 const azulTakeBtn = document.getElementById("azulTakeBtn");
 
@@ -35,11 +37,11 @@ const azulExplainModalCloseBtn = document.getElementById("azulExplainModalCloseB
 const azulExplainContent = document.getElementById("azulExplainContent");
 
 const AZUL_COLOR_LABELS = {
-  blue: "Blue",
-  yellow: "Yellow",
-  red: "Red",
-  black: "Black",
-  white: "White",
+  blue: "Blue (🟦)",
+  yellow: "Yellow (🟨)",
+  red: "Red (🟥)",
+  black: "Black (⬛)",
+  white: "White (🔹)",
 };
 
 const AZUL_WALL_PATTERN = [
@@ -58,10 +60,14 @@ const AZUL_HELP_TEXT = `
 
   <h3>Turn</h3>
   <ol>
-    <li>Take all tiles of one color from a factory or the center.</li>
-    <li>If you are the first to take from the center, you also take the First Player token (counts as -1).</li>
+    <li>Take all tiles of one color from a factory or the Center (🏛️). Center counts (×N) show how many tiles you take.</li>
+    <li>If you are the first to take from the center, you also take the First Player token (1st). It occupies a floor space and makes you start the next round. A star (★) marks its holder.</li>
     <li>Place the tiles into one pattern line (same color) or send all to the floor line. Extra tiles overflow to the floor.</li>
   </ol>
+
+  <h3>Controls &amp; tiles</h3>
+  <p>Select a color, choose a numbered pattern line, then press Take Tiles. Send to Floor takes your selected tiles directly to the floor. Tap empty space or press Esc to cancel your selection.</p>
+  <p>Tile colors: Blue (🟦), Yellow (🟨), Red (🟥), Black (⬛), and White (🔹, a turquoise diamond on white). Faded wall spaces are empty; solid spaces are filled. Player summaries show each line as row: filled/capacity; pts means points.</p>
 
   <h3>Scoring</h3>
   <ul>
@@ -75,17 +81,13 @@ const AZUL_HELP_TEXT = `
 `;
 
 const AZUL_BUTTON_EXPLANATIONS = {
-  azulClearSelectionBtn: {
-    name: "Clear Selection",
-    description: "Reset your chosen source, color, and target row.",
-  },
   azulFloorBtn: {
     name: "Send to Floor",
-    description: "Choose the floor line as the destination (all tiles go to penalties).",
+    description: "Take all tiles of the selected color from the chosen factory or Center (🏛️) directly to your floor line. This submits your turn immediately; floor spaces cost the points shown above them.",
   },
   azulTakeBtn: {
     name: "Take Tiles",
-    description: "Take the selected color from the chosen source and place it into the selected row.",
+    description: "Take all tiles of the selected color from the chosen factory or Center (🏛️) and place them into your selected pattern line or floor. Extra tiles overflow to the floor.",
   },
 };
 
@@ -194,6 +196,11 @@ function syncAzulSelection(view) {
     clearAzulSelection();
     return;
   }
+  if (!isAzulActionAvailable("take_tiles")) {
+    azulSelectedSource = null;
+    azulSelectedColor = null;
+    azulSelectedRow = null;
+  }
   if (azulSelectedSource) {
     if (azulSelectedSource.type === "factory") {
       const idx = azulSelectedSource.index;
@@ -205,7 +212,7 @@ function syncAzulSelection(view) {
         azulSelectedColor = null;
       }
     }
-    if (azulSelectedSource.type === "center") {
+    if (azulSelectedSource && azulSelectedSource.type === "center") {
       const center = Array.isArray(view.center) ? view.center : [];
       if (!center.length) {
         azulSelectedSource = null;
@@ -245,8 +252,24 @@ function updateAzulActionButtons() {
   const canTake = canSubmitAzulSelection(currentAzulView);
   azulTakeBtn.disabled = !canTake;
   if (azulFloorBtn) {
-    azulFloorBtn.disabled = !isAzulActionAvailable("take_tiles");
+    azulFloorBtn.disabled = !isAzulActionAvailable("take_tiles") || !azulSelectedSource || !azulSelectedColor;
   }
+}
+
+function setAzulTip(element, message) {
+  element.dataset.azulTip = message;
+  element.setAttribute("aria-label", message);
+}
+
+function selectAzulTiles(source, color) {
+  if (!isAzulActionAvailable("take_tiles")) return;
+  azulSelectedSource = source;
+  azulSelectedColor = color;
+  syncAzulSelection(currentAzulView);
+  updateAzulActionButtons();
+  renderAzulFactories(currentAzulView);
+  renderAzulCenter(currentAzulView);
+  renderAzulYourBoard(currentAzulView);
 }
 
 function makeAzulTile(color, sizeClass = "") {
@@ -263,16 +286,12 @@ function makeAzulTile(color, sizeClass = "") {
   return tile;
 }
 
-const AZUL_FACTORIES_TOP_LIMIT = 3;
-
 function renderAzulFactories(view) {
-  if (!azulFactoriesTop || !azulFactoriesBottom) {
+  if (!azulFactories) {
     return;
   }
-  azulFactoriesTop.innerHTML = "";
-  azulFactoriesBottom.innerHTML = "";
+  azulFactories.innerHTML = "";
   const factories = Array.isArray(view.factories) ? view.factories : [];
-  const topCount = Math.min(AZUL_FACTORIES_TOP_LIMIT, factories.length);
   factories.forEach((factory, idx) => {
     const wrapper = document.createElement("div");
     wrapper.className = "azul-factory";
@@ -301,20 +320,16 @@ function renderAzulFactories(view) {
         ) {
           tile.classList.add("selected");
         }
-        tile.addEventListener("click", () => {
-          azulSelectedSource = { type: "factory", index: idx };
-          azulSelectedColor = color;
-          updateAzulSelectionLabels();
-          updateAzulActionButtons();
-          renderAzulFactories(view);
-          renderAzulCenter(view);
-        });
+        const count = factory.filter((tileColor) => tileColor === color).length;
+        setAzulTip(tile, `${azulColorLabel(color)}: take all ${count} from Factory ${idx + 1}. Other colors move to the Center (🏛️).`);
+        tile.setAttribute("aria-pressed", String(tile.classList.contains("selected")));
+        tile.setAttribute("aria-disabled", String(!isAzulActionAvailable("take_tiles")));
+        tile.addEventListener("click", () => selectAzulTiles({ type: "factory", index: idx }, color));
         tiles.appendChild(tile);
       });
     }
     wrapper.appendChild(tiles);
-    const target = idx < topCount ? azulFactoriesTop : azulFactoriesBottom;
-    target.appendChild(wrapper);
+    azulFactories.appendChild(wrapper);
   });
 }
 
@@ -333,6 +348,8 @@ function renderAzulCenter(view) {
     const token = document.createElement("div");
     token.className = "azul-token";
     token.textContent = "1st";
+    token.tabIndex = 0;
+    setAzulTip(token, "First Player token (1st): taking from the Center (🏛️) puts this on your floor. You start the next round.");
     wrap.appendChild(token);
   }
   if (!centerTiles.length) {
@@ -341,19 +358,26 @@ function renderAzulCenter(view) {
     empty.textContent = "Empty";
     wrap.appendChild(empty);
   } else {
-    centerTiles.forEach((color) => {
-      const tile = makeAzulTile(color, "lg");
+    Object.keys(AZUL_COLOR_LABELS).forEach((color) => {
+      const count = centerTiles.filter((tileColor) => tileColor === color).length;
+      if (!count) return;
+      const tile = document.createElement("button");
+      tile.type = "button";
+      tile.className = "azul-center-choice";
+      const chip = document.createElement("span");
+      chip.className = `azul-tile ${color}`;
+      chip.setAttribute("aria-hidden", "true");
+      tile.appendChild(chip);
+      const quantity = document.createElement("span");
+      quantity.textContent = `×${count}`;
+      tile.appendChild(quantity);
       if (azulSelectedSource && azulSelectedSource.type === "center" && azulSelectedColor === color) {
         tile.classList.add("selected");
       }
-      tile.addEventListener("click", () => {
-        azulSelectedSource = { type: "center" };
-        azulSelectedColor = color;
-        updateAzulSelectionLabels();
-        updateAzulActionButtons();
-        renderAzulFactories(view);
-        renderAzulCenter(view);
-      });
+      setAzulTip(tile, `${azulColorLabel(color)} ×${count}: take all ${count} from the Center (🏛️).${view.center_token ? " Also take the First Player token (1st)." : ""}`);
+      tile.setAttribute("aria-pressed", String(tile.classList.contains("selected")));
+      tile.setAttribute("aria-disabled", String(!isAzulActionAvailable("take_tiles")));
+      tile.addEventListener("click", () => selectAzulTiles({ type: "center" }, color));
       wrap.appendChild(tile);
     });
   }
@@ -377,6 +401,8 @@ function buildAzulWallGrid(wall, compact) {
       if (wall && wall[row] && wall[row][col]) {
         cell.classList.add("filled");
       }
+      cell.tabIndex = 0;
+      setAzulTip(cell, `Wall row ${row + 1}, ${azulColorLabel(color)}: ${cell.classList.contains("filled") ? "filled" : "empty"}. A full matching pattern line places one tile here.`);
       grid.appendChild(cell);
     }
   }
@@ -384,7 +410,8 @@ function buildAzulWallGrid(wall, compact) {
 }
 
 function buildAzulPatternLine(line, rowIndex, interactive, canSelect = true) {
-  const lineWrap = document.createElement("div");
+  const lineWrap = document.createElement(interactive ? "button" : "div");
+  if (interactive) lineWrap.type = "button";
   lineWrap.className = "azul-pattern-line";
   const label = document.createElement("div");
   label.className = "azul-row-label";
@@ -395,12 +422,16 @@ function buildAzulPatternLine(line, rowIndex, interactive, canSelect = true) {
   const capacity = rowIndex + 1;
   const count = line ? line.count : 0;
   const color = line ? line.color : null;
+  setAzulTip(lineWrap, `Pattern line ${rowIndex + 1}: ${count}/${capacity} tiles${color ? `, ${azulColorLabel(color)}` : ""}.${canSelect ? " Choose this line for your tiles." : " This line cannot take your selected tiles."}`);
+  lineWrap.setAttribute("aria-pressed", String(azulSelectedRow === rowIndex));
+  lineWrap.setAttribute("aria-disabled", String(!canSelect));
   if (count >= capacity) {
     lineWrap.classList.add("full");
   }
   for (let i = 0; i < capacity; i += 1) {
     const slot = document.createElement("div");
     slot.className = "azul-pattern-slot";
+    if (i === 0) slot.style.gridColumnStart = String(6 - capacity);
     if (i < count && color) {
       slot.classList.add("filled", color);
     }
@@ -440,12 +471,16 @@ function renderAzulYourBoard(view) {
   }
   const board = document.createElement("div");
   board.className = "azul-board-grid";
+  const headings = document.createElement("div");
+  headings.className = "azul-board-headings";
+  headings.innerHTML = "<span>Pattern lines</span><span>Wall</span>";
+  board.appendChild(headings);
   const main = document.createElement("div");
   main.className = "azul-board-main";
   const patternCol = document.createElement("div");
   patternCol.className = "azul-pattern-column";
   you.pattern_lines.forEach((line, idx) => {
-    const canSelectRow = !azulSelectedColor || isAzulRowPlaceable(view, idx, azulSelectedColor);
+    const canSelectRow = isAzulActionAvailable("take_tiles") && (!azulSelectedColor || isAzulRowPlaceable(view, idx, azulSelectedColor));
     const lineWrap = buildAzulPatternLine(line, idx, true, canSelectRow);
     if (azulSelectedRow === idx) {
       lineWrap.classList.add("selected");
@@ -456,12 +491,17 @@ function renderAzulYourBoard(view) {
   const wallGrid = buildAzulWallGrid(you.wall, false);
   main.appendChild(wallGrid);
   board.appendChild(main);
-  const floorWrap = document.createElement("div");
+  const floorWrap = document.createElement("button");
+  floorWrap.type = "button";
   floorWrap.className = "azul-floor";
+  setAzulTip(floorWrap, "Floor: choose this destination, then Take Tiles. Each occupied space loses the points shown above it at round end.");
+  floorWrap.setAttribute("aria-pressed", String(azulSelectedRow === -1));
+  floorWrap.setAttribute("aria-disabled", String(!isAzulActionAvailable("take_tiles")));
   if (azulSelectedRow === -1) {
     floorWrap.classList.add("selected");
   }
   floorWrap.addEventListener("click", () => {
+    if (!isAzulActionAvailable("take_tiles")) return;
     azulSelectedRow = -1;
     updateAzulSelectionLabels();
     updateAzulActionButtons();
@@ -486,11 +526,13 @@ function renderAzulYourBoard(view) {
       const token = document.createElement("div");
       token.className = "azul-token small";
       token.textContent = "1st";
+      setAzulTip(token, "First Player token (1st): you start the next round. This floor space still costs its displayed penalty.");
       slot.appendChild(token);
     } else if (tile) {
       const chip = document.createElement("div");
       chip.className = "azul-tile sm";
       chip.classList.add(tile);
+      setAzulTip(chip, `${azulColorLabel(tile)} on the floor: ${penaltyValue} points at round end.`);
       slot.appendChild(chip);
     } else {
       slot.classList.add("empty");
@@ -523,6 +565,8 @@ function renderAzulPlayers(view) {
     header.className = "azul-player-name";
     const tokenMark = player.has_first_player_token ? " ★" : "";
     header.textContent = `${player.name} · ${player.score} pts${tokenMark}`;
+    header.tabIndex = 0;
+    setAzulTip(header, `${player.name}: ${player.score} points (pts).${player.has_first_player_token ? " Star (★): holds the First Player token (1st) and starts next round." : ""}`);
     card.appendChild(header);
 
     const patternSummary = document.createElement("div");
@@ -534,6 +578,8 @@ function renderAzulPlayers(view) {
         chip.classList.add(line.color);
       }
       chip.textContent = `${idx + 1}: ${line.count}/${line.capacity}`;
+      chip.tabIndex = 0;
+      setAzulTip(chip, `Pattern line ${idx + 1}: ${line.count} of ${line.capacity} spaces filled${line.color ? ` with ${azulColorLabel(line.color)}` : ""}.`);
       patternSummary.appendChild(chip);
     });
     card.appendChild(patternSummary);
@@ -555,6 +601,11 @@ function renderAzulGameState(data) {
     return;
   }
   currentAzulView = data.view;
+  hideAzulTip();
+  if (azulPlayersDetails && !azulPlayersDetailsInitialized) {
+    azulPlayersDetails.open = !window.matchMedia("(max-width: 720px)").matches;
+    azulPlayersDetailsInitialized = true;
+  }
   syncAzulSelection(currentAzulView);
 
   if (azulPhaseLabel) {
@@ -580,6 +631,9 @@ function renderAzulGameState(data) {
       azulWinnerLabel.textContent = "-";
     }
   }
+  if (azulWinnerStatus) {
+    azulWinnerStatus.classList.toggle("hidden", !currentAzulView.game_over);
+  }
 
   updateAzulSelectionLabels();
   renderAzulFactories(currentAzulView);
@@ -591,6 +645,8 @@ function renderAzulGameState(data) {
 
 function clearAzulState() {
   currentAzulView = null;
+  azulPlayersDetailsInitialized = false;
+  hideAzulTip();
   clearAzulSelection();
   if (azulPhaseLabel) azulPhaseLabel.textContent = "-";
   if (azulRoundLabel) azulRoundLabel.textContent = "-";
@@ -598,18 +654,12 @@ function clearAzulState() {
   if (azulBagLabel) azulBagLabel.textContent = "-";
   if (azulDiscardLabel) azulDiscardLabel.textContent = "-";
   if (azulWinnerLabel) azulWinnerLabel.textContent = "-";
-  if (azulFactoriesTop) azulFactoriesTop.innerHTML = "";
-  if (azulFactoriesBottom) azulFactoriesBottom.innerHTML = "";
+  if (azulWinnerStatus) azulWinnerStatus.classList.add("hidden");
+  if (azulFactories) azulFactories.innerHTML = "";
   if (azulCenter) azulCenter.innerHTML = "";
   if (azulYourBoard) azulYourBoard.innerHTML = "";
   if (azulPlayers) azulPlayers.innerHTML = "";
   updateAzulActionButtons();
-}
-
-if (azulClearSelectionBtn) {
-  azulClearSelectionBtn.addEventListener("click", () => {
-    clearAzulSelection();
-  });
 }
 
 if (azulFloorBtn) {
@@ -638,6 +688,7 @@ if (azulFloorBtn) {
 
 if (azulTakeBtn) {
   azulTakeBtn.addEventListener("click", () => {
+    if (!isAzulActionAvailable("take_tiles")) return;
     if (!azulSelectedSource || !azulSelectedColor || typeof azulSelectedRow !== "number") {
       log("Select a source, color, and target row first");
       return;
@@ -661,12 +712,80 @@ if (azulTakeBtn) {
 }
 
 let azulExplainMode = false;
+let azulExplainPointerHandled = false;
+let azulTipTimer = null;
+let azulTipTarget = null;
+
+function hideAzulTip() {
+  window.clearTimeout(azulTipTimer);
+  azulTipTimer = null;
+  if (azulTipTarget) azulTipTarget.removeAttribute("aria-describedby");
+  azulTipTarget = null;
+  const tip = document.getElementById("azulTip");
+  if (tip) tip.hidden = true;
+}
+
+function showAzulTip(target, timed = false) {
+  if (azulExplainMode || !target.dataset.azulTip) return;
+  hideAzulTip();
+  let tip = document.getElementById("azulTip");
+  if (!tip) {
+    tip = document.createElement("div");
+    tip.id = "azulTip";
+    tip.className = "azul-tip";
+    tip.setAttribute("role", "tooltip");
+    document.body.appendChild(tip);
+  }
+  tip.textContent = target.dataset.azulTip;
+  tip.hidden = false;
+  azulTipTarget = target;
+  target.setAttribute("aria-describedby", tip.id);
+  const rect = target.getBoundingClientRect();
+  const box = tip.getBoundingClientRect();
+  tip.style.left = `${Math.max(12, Math.min(window.innerWidth - box.width - 12, rect.left))}px`;
+  const top = rect.top - box.height - 8;
+  tip.style.top = `${Math.max(12, Math.min(window.innerHeight - box.height - 12, top >= 12 ? top : rect.bottom + 8))}px`;
+  if (timed) azulTipTimer = window.setTimeout(hideAzulTip, 3000);
+}
+
+if (azulGamePanelElement) {
+  azulGamePanelElement.addEventListener("pointerover", (event) => {
+    if (event.pointerType !== "mouse") return;
+    const target = event.target.closest("[data-azul-tip]");
+    if (target) showAzulTip(target);
+  });
+  azulGamePanelElement.addEventListener("pointerout", (event) => {
+    if (event.pointerType === "mouse" && azulTipTarget && !azulTipTarget.contains(event.relatedTarget)) hideAzulTip();
+  });
+  azulGamePanelElement.addEventListener("focusin", (event) => {
+    if (window.matchMedia("(hover: none)").matches) return;
+    const target = event.target.closest("[data-azul-tip]");
+    if (target) showAzulTip(target);
+  });
+  azulGamePanelElement.addEventListener("focusout", () => {
+    if (!window.matchMedia("(hover: none)").matches) hideAzulTip();
+  });
+  // Capture the tapped tile before selection redraws its factory or board.
+  azulGamePanelElement.addEventListener("click", (event) => {
+    if (azulExplainMode) return;
+    const target = event.target.closest("[data-azul-tip]");
+    if (target && (event.pointerType === "touch" || window.matchMedia("(hover: none)").matches)) showAzulTip(target, true);
+    if (!event.target.closest("button, [data-azul-tip], summary, a, input, select, textarea")) {
+      hideAzulTip();
+      clearAzulSelection();
+    }
+  }, true);
+}
+
+window.addEventListener("scroll", hideAzulTip, true);
+window.addEventListener("resize", hideAzulTip);
 
 function showAzulHeaderActions(show) {
   if (azulHeaderActions) {
     azulHeaderActions.style.display = show ? "flex" : "none";
   }
   if (!show) {
+    hideAzulTip();
     exitAzulExplainMode();
     closeAzulHelpModal();
     closeAzulExplainModal();
@@ -680,6 +799,7 @@ function showAzulHelpModal() {
   if (azulHelpContent) {
     azulHelpContent.innerHTML = AZUL_HELP_TEXT;
   }
+  hideAzulTip();
   setModalVisible(azulHelpModal, true);
 }
 
@@ -696,12 +816,17 @@ function updateAzulExplainModeClasses(enabled) {
       btn.classList.toggle("has-explanation", enabled);
     }
   });
+  if (azulGamePanelElement) {
+    azulGamePanelElement.querySelectorAll("[data-azul-tip]").forEach((element) => {
+      element.classList.toggle("has-explanation", enabled);
+    });
+  }
 }
 
 function findAzulButtonAtPoint(x, y) {
   for (const buttonId of Object.keys(AZUL_BUTTON_EXPLANATIONS)) {
     const btn = document.getElementById(buttonId);
-    if (!btn) continue;
+    if (!btn || !btn.getClientRects().length) continue;
     const rect = btn.getBoundingClientRect();
     if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
       return buttonId;
@@ -711,6 +836,7 @@ function findAzulButtonAtPoint(x, y) {
 }
 
 function toggleAzulExplainMode() {
+  hideAzulTip();
   azulExplainMode = !azulExplainMode;
   document.body.classList.toggle("azul-explain-mode", azulExplainMode);
   updateAzulExplainModeClasses(azulExplainMode);
@@ -733,15 +859,17 @@ function exitAzulExplainMode() {
 
 function showAzulButtonExplanation(buttonId) {
   const explanation = AZUL_BUTTON_EXPLANATIONS[buttonId];
-  if (!explanation || !azulExplainContent || !azulExplainModal) {
-    return;
-  }
-  const note = explanation.note ? `<div class=\"hint\">${explanation.note}</div>` : "";
-  azulExplainContent.innerHTML = `
-    <h4>${explanation.name}</h4>
-    <p>${explanation.description}</p>
-    ${note}
-  `;
+  if (explanation) showAzulExplanation(explanation.name, explanation.description);
+}
+
+function showAzulExplanation(name, description) {
+  if (!azulExplainContent || !azulExplainModal) return;
+  hideAzulTip();
+  const title = document.createElement("h4");
+  title.textContent = name;
+  const text = document.createElement("p");
+  text.textContent = description;
+  azulExplainContent.replaceChildren(title, text);
   setModalVisible(azulExplainModal, true);
 }
 
@@ -772,10 +900,12 @@ if (azulExplainModalCloseBtn) {
 }
 
 document.addEventListener("pointerdown", (e) => {
+  azulExplainPointerHandled = false;
   if (!azulExplainMode) return;
 
   const buttonId = findAzulButtonAtPoint(e.clientX, e.clientY);
   if (buttonId) {
+    azulExplainPointerHandled = true;
     e.preventDefault();
     e.stopPropagation();
     showAzulButtonExplanation(buttonId);
@@ -787,27 +917,65 @@ document.addEventListener("pointerdown", (e) => {
   if (button === azulExplainBtn || button === azulHelpBtn) return;
   if (button === azulHelpModalCloseBtn || button === azulExplainModalCloseBtn) return;
 
-  if (button) {
+  const target = e.target.closest("#azulPanel [data-azul-tip]");
+  if (target) {
+    azulExplainPointerHandled = true;
+    e.preventDefault();
+    e.stopPropagation();
+    showAzulExplanation("Tiles & Board", target.dataset.azulTip);
+    exitAzulExplainMode();
+    return;
+  }
+
+  if (button || e.target.closest("summary")) {
+    azulExplainPointerHandled = true;
     e.preventDefault();
     e.stopPropagation();
   }
 }, true);
 
 document.addEventListener("click", (e) => {
+  if (azulExplainPointerHandled) {
+    azulExplainPointerHandled = false;
+    e.preventDefault();
+    e.stopPropagation();
+    return;
+  }
   if (!azulExplainMode) return;
 
   const button = e.target.closest("button");
-  if (!button) return;
-
   if (button === azulExplainBtn || button === azulHelpBtn) return;
   if (button === azulHelpModalCloseBtn || button === azulExplainModalCloseBtn) return;
 
-  e.preventDefault();
-  e.stopPropagation();
+  const target = e.target.closest("#azulPanel [data-azul-tip]");
+  if (button || target || e.target.closest("summary")) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (button && AZUL_BUTTON_EXPLANATIONS[button.id]) {
+      showAzulButtonExplanation(button.id);
+      exitAzulExplainMode();
+    } else if (target) {
+      showAzulExplanation("Tiles & Board", target.dataset.azulTip);
+      exitAzulExplainMode();
+    }
+  }
 }, true);
 
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && azulExplainMode) {
-    exitAzulExplainMode();
-  }
+  if (e.key !== "Escape") return;
+  const modalOpen = (azulHelpModal && !azulHelpModal.classList.contains("hidden")) ||
+    (azulExplainModal && !azulExplainModal.classList.contains("hidden"));
+  const explaining = azulExplainMode;
+  exitAzulExplainMode();
+  closeAzulHelpModal();
+  closeAzulExplainModal();
+  hideAzulTip();
+  if (!modalOpen && !explaining && azulGamePanelElement && !azulGamePanelElement.classList.contains("hidden")) clearAzulSelection();
+});
+
+[azulHelpModal, azulExplainModal].forEach((modal) => {
+  if (!modal) return;
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) setModalVisible(modal, false);
+  });
 });

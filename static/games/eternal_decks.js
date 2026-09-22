@@ -24,6 +24,7 @@
   let explaining = false;
   let suppressClick = false;
   let suppressTimer = null;
+  let tipTimer = null;
   let returnFocus = null;
   const openDetails = new Set();
 
@@ -67,12 +68,15 @@
     const symbol = rare ? "✦" : ability ? view.eternals[card.source].icon : card.number;
     const footer = rare ? "RARE" : ability ? view.eternals[card.source].name : colors.map(color => icons[color]).join(" ");
     const content = `<span class="eternal-decks-card-value">${symbol}</span><span class="eternal-decks-card-color">${footer}</span>`;
-    const attrs = `class="eternal-decks-card eternal-decks-${colorClass}${selectedCards.includes(card.id) && hand ? " is-selected" : ""}" title="${esc(cardLabel(card))}" aria-label="${esc(cardLabel(card))}"`;
+    const attrs = `class="eternal-decks-card eternal-decks-${colorClass}${selectedCards.includes(card.id) && hand ? " is-selected" : ""}" title="${esc(cardLabel(card))}" data-ed-tip="${esc(cardLabel(card))}" aria-label="${esc(cardLabel(card))}"`;
     return hand ? `<button type="button" ${attrs} data-ed-action="card" data-ed-explain="card" data-card="${card.id}" aria-pressed="${selectedCards.includes(card.id)}">${content}</button>` : `<span ${attrs}>${content}</span>`;
   }
 
   function discsAt(position) {
-    return view.players.flatMap(player => player.discs.map((disc, index) => disc.position === position ? `<span title="${esc(player.name)} · ${index + 1}">${icons[player.color]}</span>` : "")).join("");
+    return view.players.flatMap(player => player.discs.map((disc, index) => {
+      const label = `${player.name} · Communication disc ${index + 1}`;
+      return disc.position === position ? `<span title="${esc(label)}" data-ed-tip="${esc(label)}" tabindex="0" aria-label="${esc(label)}">${icons[player.color]}</span>` : "";
+    })).join("");
   }
 
   function fieldHTML(row, index) {
@@ -83,14 +87,15 @@
     const reason = check?.reason || field.rule;
     const cells = Array.from({length: 7}, (_, slot) => {
       const sleeping = row.sleeping[slot - capacity];
-      const content = row.cards[slot] ? cardHTML(row.cards[slot]) : sleeping ? `<span class="eternal-decks-sleeper">💤<small>${sleeping}</small></span>` : `<span class="eternal-decks-empty">${slot + 1}</span>`;
+      const sleeperLabel = sleeping ? `${sleeping} · ${view.eternals[sleeping].name} is sleeping here.` : "";
+      const content = row.cards[slot] ? cardHTML(row.cards[slot]) : sleeping ? `<span class="eternal-decks-sleeper" title="${esc(sleeperLabel)}" data-ed-tip="${esc(sleeperLabel)}">💤<small>${sleeping}</small></span>` : `<span class="eternal-decks-empty">${slot + 1}</span>`;
       const next = slot === row.cards.length && slot < capacity && !row.closed;
       return button(`${content}<span class="eternal-decks-disc-markers">${discsAt(index * 7 + slot)}</span>`, "slot", "field", false,
         `class="eternal-decks-slot ${next ? "is-next" : ""}" data-row="${index}" data-position="${index * 7 + slot}" data-ed-description="${esc(reason)}" aria-label="Row ${index + 1}, slot ${slot + 1}"`);
     }).join("");
     return `<section class="eternal-decks-field ${selectedRow === index ? "is-selected" : ""} ${row.closed ? "is-closed" : ""}">
-      <div class="eternal-decks-field-heading"><h3>${field.icon} ${field.name}</h3><span>${row.closed ? "✓ Closed" : `Lap ${row.lap}/4 · ${row.cards.length}/${capacity}`}</span></div>
-      <div class="eternal-decks-seven">${cells}</div><div class="eternal-decks-field-footer"><span>${esc(field.rule)}</span><span>${["⛺", "❤️", "⭐"][index]} Lap 4</span></div>
+      <div class="eternal-decks-field-heading"><div class="eternal-decks-field-name"><h3>${field.icon} ${field.name}</h3><button type="button" class="eternal-decks-info" title="${esc(field.rule)}" data-ed-tip="${esc(field.rule)}" aria-label="Explain ${esc(field.name)}">ⓘ</button></div><span>${row.closed ? "✓ Closed" : `Lap ${row.lap}/4 · ${row.cards.length}/${capacity}`}</span></div>
+      <div class="eternal-decks-seven">${cells}</div><div class="eternal-decks-field-footer"><span class="eternal-decks-field-rule">${esc(field.rule)}</span><span>${["⛺", "❤️", "⭐"][index]} Lap 4</span></div>
       <div class="eternal-decks-sleeping">${row.sleeping.map(eid => button(`${view.eternals[eid].icon} ${view.eternals[eid].name}`, "eternal", "eternal", false, `data-eternal="${eid}"`)).join("")}</div></section>`;
   }
 
@@ -150,7 +155,7 @@
     } else if (view.phase === "playing") {
       const card = selectedCard();
       const canAct = view.current_turn === view.you;
-      controls = `<div class="eternal-decks-action-tabs">${[["play", "Field", "field"], ["river", "River", "river"], ["give", "Give ❤️", "give"], ["ability", "Use Ability", "ability"]].map(([id, label, key]) => button(label, "mode", key, !canAct || pending, `data-mode="${id}" aria-pressed="${mode === id}"`)).join("")}</div>`;
+      controls = `<div class="eternal-decks-action-tabs">${[["play", "Field", "field"], ["river", "River", "river"], ["give", "Give ❤️", "give"], ["ability", "Ability ✦", "ability"]].map(([id, label, key]) => button(label, "mode", key, !canAct || pending, `data-mode="${id}" aria-pressed="${mode === id}"`)).join("")}</div>`;
       if (mode === "give") controls += `<p>Choose a teammate</p><div class="eternal-decks-choice-grid">${view.players.filter(item => item.player_id !== view.you).map(item => button(`${icons[item.color]} ${esc(item.name)}`, "target", "give", !view.hearts, `data-target="${item.player_id}" aria-pressed="${selectedTarget === item.player_id}"`)).join("")}</div>`;
       else if (mode === "jewel") controls += `<p>💎 ${esc(view.recipes[selectedRecipe].name)} · ${selectedCards.length}/${view.recipes[selectedRecipe].count} selected</p><p class="eternal-decks-muted">点选手牌，再点复苏区中尚无宝石的角色。</p>`;
       else if (mode === "ability") {
@@ -173,20 +178,23 @@
   function render() {
     if (!view) return;
     const player = own();
+    const compact = window.matchMedia("(max-width: 760px)").matches;
+    const jewelsOpen = !compact || mode === "jewel" || openDetails.has("jewels");
+    const communicationOpen = !compact || selectedDisc !== null || openDetails.has("communication");
     const status = view.game_over ? (view.result.success ? "The stars are yours" : "The journey rests") : view.phase === "setup" ? "Prepare together" : view.phase === "round_end" ? "Review · Waiting for everyone" : view.phase === "discussion" ? "Ghost · Open discussion" : `${view.current_turn === view.you ? "Your turn" : name(view.current_turn) + "’s turn"}`;
-    panel.innerHTML = `<div class="eternal-decks-shell"><div class="eternal-decks-title"><div><span class="eternal-decks-eyebrow">THE ETERNAL WORLD</span><h2>永恒牌 <small>Eternal Decks</small></h2><span class="eternal-decks-subtitle">Stage A · First Encounter · Beginner</span></div><div class="eternal-decks-counters"><strong>⭐ ${view.stars.length}<small>/4</small></strong><span>❤️ ${view.hearts}/3</span></div></div>
+    panel.innerHTML = `<div class="eternal-decks-shell"><div class="eternal-decks-title"><div><span class="eternal-decks-eyebrow">THE ETERNAL WORLD</span><h2>永恒牌 <small>Eternal Decks</small></h2><span class="eternal-decks-subtitle">Stage A · First Encounter · Beginner</span></div><div class="eternal-decks-counters"><strong title="Team stars: ${view.stars.length} of 4" data-ed-tip="Collect any four stars to win together." tabindex="0">⭐ ${view.stars.length}<small>/4</small></strong><span title="Shared hearts: ${view.hearts} of 3" data-ed-tip="Shared hearts pay for giving a hidden card to a teammate." tabindex="0">❤️ ${view.hearts}/3</span></div></div>
       <div class="eternal-decks-status"><strong role="status">${esc(status)}</strong><span>Turn ${view.turn_count + 1}</span></div>
-      <p class="eternal-decks-notice">Prototype card data · 2 or 4 seats · 测试牌表，非正式完整复刻</p>
+      <p class="eternal-decks-notice" title="Prototype card list for 2 or 4 seats; not a complete retail reproduction." data-ed-tip="Prototype card list for 2 or 4 seats; not a complete retail reproduction." tabindex="0">Stage A · Beginner · Prototype</p>
       <div class="eternal-decks-layout"><div class="eternal-decks-table">${view.rows.map(fieldHTML).join("")}${riverHTML()}${revivalHTML()}</div>
       <aside class="eternal-decks-sidebar"><section class="eternal-decks-action-box">${actionHTML()}</section>
       ${view.phase === "round_end" || view.game_over ? reviewHTML() : ""}
-      <section class="eternal-decks-jewel-box"><div class="eternal-decks-field-heading"><h3>💎 宝石配方</h3><span>${Object.values(view.jewels).filter(Boolean).length}/8</span></div><div class="eternal-decks-jewels">${Object.entries(view.recipes).map(([id, recipe]) => button(`${view.jewels[id] ? "💎" : "✓"} ${recipe.name}`, "recipe", "jewel", !view.jewels[id] || !available("generate"), `data-recipe="${id}" aria-pressed="${selectedRecipe === id}"`)).join("")}</div></section>
-      ${player ? `<section class="eternal-decks-communication"><h3>Communication discs</h3><div class="eternal-decks-disc-controls">${player.discs.map((disc, i) => button(`${icons[player.color]} ${i + 1}`, "disc", "disc", !available("move_disc"), `data-disc="${i}" aria-pressed="${selectedDisc === i}"`)).join("")}${button("Return", "return-disc", "disc", selectedDisc === null || !available("move_disc"))}</div><p>${selectedDisc === null ? "Choose a disc, then a board space." : "Choose any field or river space."}</p></section>` : ""}</aside></div>
+      <details class="eternal-decks-jewel-box" data-ed-detail="jewels" ${jewelsOpen ? "open" : ""}><summary><strong>💎 宝石配方</strong><span>${Object.values(view.jewels).filter(Boolean).length}/8</span></summary><div class="eternal-decks-jewels">${Object.entries(view.recipes).map(([id, recipe]) => button(`${view.jewels[id] ? "💎" : "✓"} ${recipe.name}`, "recipe", "jewel", !view.jewels[id] || !available("generate"), `data-recipe="${id}" aria-pressed="${selectedRecipe === id}"`)).join("")}</div></details>
+      ${player ? `<details class="eternal-decks-communication" data-ed-detail="communication" ${communicationOpen ? "open" : ""}><summary><strong>🔴 Communication discs</strong><span>${player.discs.filter(disc => disc.position >= 0).length}/2 placed</span></summary><div class="eternal-decks-disc-controls">${player.discs.map((disc, i) => button(`${icons[player.color]} ${i + 1}`, "disc", "disc", !available("move_disc"), `data-disc="${i}" aria-pressed="${selectedDisc === i}"`)).join("")}${button("Return", "return-disc", "disc", selectedDisc === null || !available("move_disc"))}</div><p>${selectedDisc === null ? "Choose a disc, then a board space." : "Choose any field or river space."}</p></details>` : ""}</aside></div>
       <div class="eternal-decks-player-list">${playersHTML()}</div>
-      <p class="eternal-decks-table-talk">🤫 不透露普通手牌的数字、颜色或双色信息。可讨论 Rare、能力牌及公开局面。</p>
+      <div class="eternal-decks-table-talk" aria-label="Table-talk reminders"><button type="button" class="eternal-decks-rule-chip" title="Do not reveal the number, color, dual-color information, or missing cards from an ordinary hand." data-ed-tip="Do not reveal the number, color, dual-color information, or missing cards from an ordinary hand.">🤫 Hand privacy</button><button type="button" class="eternal-decks-rule-chip" title="Rare cards, ability cards, and all public board information may be discussed." data-ed-tip="Rare cards, ability cards, and all public board information may be discussed.">🌈 Public talk OK</button></div>
       <div class="eternal-decks-details-grid"><details data-ed-detail="stars" ${openDetails.has("stars") ? "open" : ""}><summary>⭐ Star objectives · ${view.stars.length}/4</summary><ul>${Object.entries(view.star_goals).map(([id, goal]) => `<li>${view.stars.includes(id) ? "✅" : "☆"} ${esc(goal)}</li>`).join("")}</ul><p>A 系能力牌：${view.stage_card_count}/3</p></details>
       <details data-ed-detail="discard" ${openDetails.has("discard") ? "open" : ""}><summary>Discard · ${view.discard_count}${view.strict_discard ? " · Hidden" : ""}</summary><div class="eternal-decks-discard">${view.discard.map(card => cardHTML(card)).join("")}</div></details>
-      <details data-ed-detail="log" ${openDetails.has("log") ? "open" : ""}><summary>Activity</summary><ol class="eternal-decks-log">${view.log.slice().reverse().map(item => `<li>${esc(item)}</li>`).join("")}</ol></details></div></div>`;
+      <details data-ed-detail="log" ${openDetails.has("log") ? "open" : ""}><summary>Activity</summary><ol class="eternal-decks-log">${view.log.slice().reverse().map(item => `<li>${esc(item)}</li>`).join("")}</ol></details></div><div class="eternal-decks-toast" role="status" aria-live="polite"></div></div>`;
     panel.classList.toggle("eternal-decks-explaining", explaining);
     panel.querySelectorAll("details").forEach(element => element.addEventListener("toggle", () => element.open ? openDetails.add(element.dataset.edDetail) : openDetails.delete(element.dataset.edDetail)));
   }
@@ -223,6 +231,15 @@
   function moveDisc(position) {
     const index = selectedDisc;
     submit({type: "move_disc", disc: index, position, seq: own().discs[index].seq + 1});
+  }
+
+  function showTip(text) {
+    const toast = panel.querySelector(".eternal-decks-toast");
+    if (!toast || !text) return;
+    window.clearTimeout(tipTimer);
+    toast.textContent = text;
+    toast.classList.add("is-visible");
+    tipTimer = window.setTimeout(() => toast.classList.remove("is-visible"), 3000);
   }
 
   panel.addEventListener("click", event => {
@@ -264,6 +281,12 @@
       case "return-disc": moveDisc(-1); return;
     }
     render();
+  });
+
+  panel.addEventListener("click", event => {
+    const target = event.target.closest("[data-ed-tip]");
+    if (!target || !window.matchMedia("(max-width: 760px), (hover: none), (pointer: coarse)").matches) return;
+    showTip(target.dataset.edTip);
   });
 
   helpButton.addEventListener("click", () => {
@@ -318,7 +341,7 @@
     if (panel.contains(event.target)) explainTarget(event.target.closest("[data-ed-explain]"));
   }, true);
   document.addEventListener("pointerdown", event => {
-    if (!view || explaining || !panel.contains(event.target) || event.target.closest("button, input, select, summary, a, dialog")) return;
+    if (!view || explaining || !panel.contains(event.target) || event.target.closest("button, input, select, summary, a, dialog, [data-ed-tip]")) return;
     resetSelection(); render();
   });
   document.addEventListener("keydown", event => {
@@ -329,7 +352,7 @@
   function clearState() {
     view = null; signature = null; pending = false;
     resetSelection(); setExplain(false); openDetails.clear();
-    window.clearTimeout(pendingTimer); window.clearTimeout(suppressTimer); suppressClick = false;
+    window.clearTimeout(pendingTimer); window.clearTimeout(suppressTimer); window.clearTimeout(tipTimer); suppressClick = false;
     if (dialog.open) dialog.close();
     panel.innerHTML = "";
   }

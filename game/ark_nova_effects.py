@@ -1404,7 +1404,17 @@ def execute_sponsor_effect(
             placement = choice.get("placement", choice)
             if not isinstance(placement, Mapping):
                 raise ValueError("free-building placement must be a mapping")
-            return _done(_event("free_build_requested", context.player_id, source=effect_id, building_type=str(spec["building"]), placement=dict(placement), normal_placement_rules=True))
+            building_type = str(spec["building"])
+            size = spec.get("size")
+            if building_type.startswith("standard_enclosure_"):
+                size = int(building_type.rsplit("_", 1)[1])
+                building_type = "standard_enclosure"
+            placement = {**dict(placement), "building_type": building_type}
+            if size is not None:
+                # The printed reward fixes the size; browser placements need
+                # only provide cells and cannot substitute another enclosure.
+                placement["size"] = int(size)
+            return _done(_event("free_build_requested", context.player_id, source=effect_id, building_type=building_type, placement=placement, normal_placement_rules=True))
         return _pending(context, effect_id, "place_free_building", "选择免费建筑放置位置", [{"id": str(spec["building"]), "building_type": str(spec["building"])}], 0, 1, True, {key: value for key, value in spec.items() if key != "op"})
     if op == "custom":
         return _custom_sponsor(effect_id, str(spec["rule"]), context, choice)

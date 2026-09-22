@@ -62,6 +62,7 @@ const BLOKUS_HELP_TEXT = `
   <h3>Controls</h3>
   <ul>
     <li>Select a piece, then tap or drag on the board to position it.</li>
+    <li>Tap empty space outside the board to deselect your piece.</li>
     <li>Use the arrow pad or keyboard arrow keys for one-cell adjustments.</li>
     <li>Use ↺ / ↻ or Q / E to rotate, ⇋ or F to flip, and Enter to place.</li>
     <li>The crosshair marks the selected piece's center of gravity, which stays as stable as the grid allows while transforming.</li>
@@ -152,6 +153,24 @@ function clearBlokusState() {
     blokusPlayers.innerHTML = "";
   }
   updateBlokusActionButton();
+}
+
+function clearBlokusSelection() {
+    blokusSelectedPieceId = null;
+    blokusSelectedOrigin = null;
+    blokusRotation = 0;
+    blokusFlip = false;
+    if (blokusSelectedPieceLabel) {
+        blokusSelectedPieceLabel.textContent = "-";
+    }
+    if (blokusOriginLabel) {
+        blokusOriginLabel.textContent = "-";
+    }
+    if (currentBlokusView) {
+        renderBlokusPieces(currentBlokusView);
+        renderBlokusBoard(currentBlokusView);
+    }
+    updateBlokusActionButton();
 }
 
 function normalizeBlokusCells(cells) {
@@ -679,6 +698,29 @@ function handleBlokusKeyboardControls(event) {
   event.preventDefault();
 }
 
+function handleBlokusBackgroundPointerDown(event) {
+    if (
+        typeof currentGameType === "undefined"
+        || currentGameType !== "blokus"
+        || !currentBlokusView
+        || !blokusSelectedPieceId
+        || blokusExplainMode
+        || blokusDragState
+        || (event.button !== undefined && event.button !== 0)
+        || event.isPrimary === false
+    ) {
+        return;
+    }
+    const target = event.target;
+    if (
+        !(target instanceof Element)
+        || target.closest("#blokusBoard, button, a, input, select, textarea, label, summary, [contenteditable], .modal, dialog")
+    ) {
+        return;
+    }
+    clearBlokusSelection();
+}
+
 function handleBlokusPointerDown(event) {
   if (!currentBlokusView || currentBlokusView.game_over || !blokusBoard || blokusExplainMode) {
     return;
@@ -1201,6 +1243,7 @@ if (blokusBoard) {
   blokusBoard.addEventListener("pointercancel", handleBlokusPointerUp);
 }
 
+document.addEventListener("pointerdown", handleBlokusBackgroundPointerDown);
 document.addEventListener("pointerup", handleBlokusPointerUp);
 document.addEventListener("pointercancel", handleBlokusPointerUp);
 document.addEventListener("keydown", handleBlokusKeyboardControls);

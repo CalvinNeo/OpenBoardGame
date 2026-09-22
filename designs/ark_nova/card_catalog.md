@@ -55,13 +55,13 @@
 | `digging` | 刨挖 / Digging | immediate | repeatable_choice | 依次选择最多N次：弃展示区1张并立刻补牌，或弃手牌1张后从牌库抽1张。 | — |
 | `sponsor_magnet` | 招商 / Sponsor Magnet | immediate | take_display_cards | 把展示区内全部赞助商牌加入手牌；忽略声望范围，回合结束时再补展示区。 | — |
 | `flock_animal` | 群集动物 / Flock Animal | during_placement | shared_enclosure | 可与已在园内、所需围栏尺寸至少为N的食草动物共享其已占用围栏；否则仍可正常占用围栏。 | 同一只食草动物可承载多只群集动物。 |
-| `venom` | 毒液 / Venom | immediate | opponent_action_debuff | 每名吸引力至少5且在你之前的玩家获得N枚毒液标记，依次放到其最低且未放毒液的行动牌上。 | 同一行动牌不能有两枚毒液。；使用中毒行动时移除其毒液；若回合结束仍未移除任何毒液，须支付2金币。；把中毒行动牌用于获得X标记的替代行动也会移除毒液（已持有5枚X而无法执行时除外）。；休息时移除全部毒液。 |
+| `venom` | 毒液 / Venom | immediate | opponent_action_debuff | 每名吸引力至少5且在你之前的玩家，在其槽位1至N的行动牌上各放1枚毒液标记。 | 指定行动牌已有毒液时丢弃新标记，不改放到其他牌。；使用中毒行动时移除其毒液；若回合结束仍未移除任何毒液，须支付2金币。；把中毒行动牌用于获得X标记的替代行动也会移除毒液（已持有5枚X而无法执行时除外）。；休息时移除全部毒液。 |
 | `dominance` | 支配 / Dominance | immediate | fetch_specific_base_project | 若指定动物类目的基础保育项目未在游戏中，将它加入手牌。 | — |
 | `pilfering_1` | 偷窃1 / Pilfering 1 | immediate | opponent_choice_loss | 吸引力最高且至少为5的目标选择：给你5金币，或让你随机拿其1张手牌。 | 并列目标由你选择；目标缺少一种资源时只能给另一种。 |
 | `pilfering_2` | 偷窃2 / Pilfering 2 | immediate | opponent_choice_loss_twice | 依次对吸引力最高的玩家和保育最高的玩家各结算一次偷窃；保育目标须至少有1保育。 | 若两次命中同一玩家，也要依次结算；该玩家第二次可以改选另一种损失。 |
 | `snapping_1` | 捕捉1 / Snapping 1 | immediate | take_display_card | 从展示区任选1张牌加入手牌，忽略声望范围；回合结束时补展示区。 | — |
 | `snapping_2` | 捕捉2 / Snapping 2 | immediate | take_display_card_twice | 依次从展示区任选1张牌两次；可选择在两次之间补牌。 | — |
-| `constriction` | 缠绕 / Constriction | immediate | opponent_action_debuff | 每名至少有5吸引力的玩家，每有一条计分轨领先你便获得1枚缠绕，放到其最高且未放缠绕的行动牌上；该牌本次强度-2。 | 结算顺序可放在本动物印刷吸引力之前或之后。；同一行动牌不能有两枚缠绕；双倍行动的每个子行动都减2。；缠绕牌到槽位1/2时可能变成-1/0，须用足够X标记升到至少1，或改做获得X标记的替代行动。；行动结算后移除该标记；休息时移除所有剩余标记。 |
+| `constriction` | 缠绕 / Constriction | immediate | opponent_action_debuff | 每名至少有5吸引力的玩家，若有一条计分轨领先你，在槽位5放1枚缠绕；若两条都领先，在槽位4和5各放1枚。带标记的行动强度-2。 | 结算顺序可放在本动物印刷吸引力之前或之后。；指定行动牌已有缠绕时丢弃新标记，不改放到其他牌；双倍行动的每个子行动都减2。；缠绕牌到槽位1/2时可能变成-1/0，须用足够X标记升到至少1，或改做获得X标记的替代行动。；行动结算后移除该标记；休息时移除所有剩余标记。 |
 | `hypnosis` | 催眠 / Hypnosis | immediate | borrow_opponent_action | 先确定吸引力最高且至少为5的目标玩家；当前行动全部结束并移动行动牌后，再选择该玩家槽位1、2或3的一张行动牌，按其升级面执行并将该牌移到槽位1。 | 可在本动物吸引力前后确定目标；借用行动必须在当前行动结束后执行。；可用自己的X标记；目标牌上的毒液/缠绕生效。；不能使用双倍标记。；独特建筑能否覆盖个人板的建造II格，仍看自己的建造牌是否升级。；若目标是自己则无效。 |
 | `scavenging` | 食腐 / Scavenging | immediate | draw_from_discard | 将弃牌堆面朝下洗匀，随机抽N张，保留1张并弃掉其余。 | — |
 | `posturing` | 姿态 / Posturing | immediate | free_build | 最多N次免费放置1个贩售亭或休憩亭，仍遵守通常放置规则。 | — |

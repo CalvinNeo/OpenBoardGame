@@ -73,6 +73,8 @@ function emitRoomStart() {
     payload.config = getEternalDecksConfig();
   } else if (currentGameType === "ponzi_scheme") {
     payload.config = getPonziSchemeConfig();
+  } else if (currentGameType === "cryptid") {
+    payload.config = getCryptidConfig();
   } else if (currentGameType === "in_a_grove") {
     payload.config = getInAGroveConfig();
   } else if (currentGameType === "bomb_busters") {
@@ -371,6 +373,7 @@ function renderRoomState(state) {
   if (typeof updateTakeTimeConfigRow === "function") updateTakeTimeConfigRow();
   if (typeof updateEternalDecksConfigRow === "function") updateEternalDecksConfigRow();
   if (typeof updatePonziSchemeConfigRow === "function") updatePonziSchemeConfigRow();
+  if (typeof updateCryptidConfigRow === "function") updateCryptidConfigRow();
   if (typeof updateInAGroveConfigRow === "function") updateInAGroveConfigRow();
   updateCitadelsConfigRow();
   updateHanabiConfigRow();

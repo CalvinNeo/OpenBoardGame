@@ -1,3 +1,4 @@
+import heapq
 import json
 import logging
 import math
@@ -36,6 +37,15 @@ _EMBEDDING_CJK_ONLY_KEYS = (
     "OPENBOARDGAME_DECRYPTO_EMBEDDINGS_CJK_ONLY",
     "DECRYPTO_EMBEDDINGS_CJK_ONLY",
 )
+_EMBEDDING_MAX_VECTOR_MB_KEYS = (
+    "OPENBOARDGAME_DECRYPTO_EMBEDDINGS_MAX_VECTOR_MB",
+    "DECRYPTO_EMBEDDINGS_MAX_VECTOR_MB",
+)
+# The web server shares this process with every game. Even packed doubles at
+# 240k x 300 need 550 MiB before dictionaries and search temporaries.
+_DEFAULT_EMBEDDING_MAX_WORDS = 20000
+_DEFAULT_EMBEDDING_MAX_VECTOR_MB = 64
+_MAX_TOP_CACHE_ENTRIES = 128
 
 _ALPHA = 1.0
 _BETA = 1.5
@@ -276,7 +286,9 @@ class WordVectorModel(BaseVectorModel):
         for word, vec in vectors.items():
             self._norms[word] = math.sqrt(sum(val * val for val in vec))
         self._vector_cache: Dict[str, Tuple[Optional[Sequence[float]], float]] = {}
-        self._top_cache: Dict[str, List[Tuple[float, str]]] = {}
+        self._top_cache: Dict[Tuple[str, int], List[Tuple[float, str]]] = {}
+        # Concurrent rooms share a model; do not let CPU-bound scans pile up.
+        self._search_lock = threading.Lock()
         self._cjk_vocab = {word for word in self.vectors if _contains_cjk(word)}
         self._max_cjk_len = max((len(word) for word in self._cjk_vocab), default=1)
         self._dim = len(next(iter(self.vectors.values()))) if self.vectors else 0
@@ -336,14 +348,31 @@ class WordVectorModel(BaseVectorModel):
         return dot / (norm_a * norm_b)
 
     def top_similar(self, target: str, top_n: int) -> List[Tuple[float, str]]:
-        cache_key = _normalize_text(target)
-        cached = self._top_cache.get(cache_key)
-        if cached is not None:
-            return cached[:top_n]
-        target_vec, target_norm = self._vector_with_norm(target)
-        if not target_vec or target_norm <= 0.0:
+        if top_n <= 0:
             return []
-        scores: List[Tuple[float, str]] = []
+        cache_key = (_normalize_text(target), top_n)
+        with self._search_lock:
+            cached = self._top_cache.get(cache_key)
+            if cached is not None:
+                return list(cached)
+            target_vec, target_norm = self._vector_with_norm(target)
+            if not target_vec or target_norm <= 0.0:
+                return []
+            # Keep only N scores, instead of allocating and sorting a tuple for
+            # every word on every search. Preserve score/lexical tie ordering.
+            scores = heapq.nsmallest(
+                top_n,
+                self._iter_similarities(target_vec, target_norm),
+                key=lambda item: (-item[0], item[1]),
+            )
+            if len(self._top_cache) >= _MAX_TOP_CACHE_ENTRIES:
+                del self._top_cache[next(iter(self._top_cache))]
+            self._top_cache[cache_key] = scores
+            return list(scores)
+
+    def _iter_similarities(
+        self, target_vec: Sequence[float], target_norm: float
+    ) -> Iterable[Tuple[float, str]]:
         for word, vec in self.vectors.items():
             norm = self._norms.get(word, 0.0)
             if norm <= 0.0:
@@ -352,12 +381,7 @@ class WordVectorModel(BaseVectorModel):
             for left, right in zip(target_vec, vec):
                 dot += left * right
             score = dot / (target_norm * norm)
-            scores.append((score, word))
-        scores.sort(key=lambda item: (-item[0], item[1]))
-        if top_n:
-            scores = scores[:top_n]
-        self._top_cache[cache_key] = scores
-        return scores[:top_n]
+            yield score, word
 
     def average_vectors(self, vectors: List[Sequence[float]]) -> Optional[List[float]]:
         return _average_dense_vectors(vectors)
@@ -411,7 +435,12 @@ def _assets_dir() -> Path:
 
 
 def _load_embedding_config() -> Dict[str, object]:
-    config: Dict[str, object] = {"path": None, "max_words": None, "cjk_only": True}
+    config: Dict[str, object] = {
+        "path": None,
+        "max_words": _DEFAULT_EMBEDDING_MAX_WORDS,
+        "max_vector_mb": _DEFAULT_EMBEDDING_MAX_VECTOR_MB,
+        "cjk_only": True,
+    }
     config_path = _assets_dir() / _EMBEDDING_CONFIG_FILENAME
     if config_path.exists():
         try:
@@ -421,7 +450,10 @@ def _load_embedding_config() -> Dict[str, object]:
                 raw_path = data.get("path")
                 if isinstance(raw_path, str) and raw_path.strip():
                     config["path"] = raw_path.strip()
-                config["max_words"] = _parse_int(data.get("max_words"))
+                config["max_words"] = _parse_int(data.get("max_words")) or _DEFAULT_EMBEDDING_MAX_WORDS
+                config["max_vector_mb"] = (
+                    _parse_int(data.get("max_vector_mb")) or _DEFAULT_EMBEDDING_MAX_VECTOR_MB
+                )
                 config["cjk_only"] = _parse_bool(data.get("cjk_only"), default=True)
         except Exception:
             logger.warning(
@@ -433,7 +465,10 @@ def _load_embedding_config() -> Dict[str, object]:
         config["path"] = env_path
     env_max_words = _get_env_value(_EMBEDDING_MAX_WORDS_KEYS)
     if env_max_words:
-        config["max_words"] = _parse_int(env_max_words)
+        config["max_words"] = _parse_int(env_max_words) or _DEFAULT_EMBEDDING_MAX_WORDS
+    env_max_vector_mb = _get_env_value(_EMBEDDING_MAX_VECTOR_MB_KEYS)
+    if env_max_vector_mb:
+        config["max_vector_mb"] = _parse_int(env_max_vector_mb) or _DEFAULT_EMBEDDING_MAX_VECTOR_MB
     env_cjk_only = _get_env_value(_EMBEDDING_CJK_ONLY_KEYS)
     if env_cjk_only:
         config["cjk_only"] = _parse_bool(env_cjk_only, default=True)
@@ -461,8 +496,11 @@ def _load_embeddings_text(
     path: Path,
     max_words: Optional[int],
     cjk_only: bool,
+    max_vector_bytes: int = _DEFAULT_EMBEDDING_MAX_VECTOR_MB * 1024 * 1024,
 ) -> Dict[str, array]:
     vectors: Dict[str, array] = {}
+    max_words = _parse_int(max_words) or _DEFAULT_EMBEDDING_MAX_WORDS
+    vector_bytes = 0
     dim: Optional[int] = None
     start = time.perf_counter()
     try:
@@ -494,7 +532,15 @@ def _load_embeddings_text(
                     continue
                 if word in vectors:
                     continue
+                size = len(vec) * vec.itemsize
+                if vector_bytes + size > max_vector_bytes:
+                    logger.warning(
+                        "Decrypto embedding vector budget reached (words=%d, bytes=%d, limit=%d)",
+                        len(vectors), vector_bytes, max_vector_bytes,
+                    )
+                    break
                 vectors[word] = vec
+                vector_bytes += size
                 if max_words and len(vectors) >= max_words:
                     break
     except Exception:
@@ -524,13 +570,17 @@ def _load_embeddings_json(
     path: Path,
     max_words: Optional[int],
     cjk_only: bool,
+    max_vector_bytes: int = _DEFAULT_EMBEDDING_MAX_VECTOR_MB * 1024 * 1024,
 ) -> Dict[str, array]:
     vectors: Dict[str, array] = {}
+    max_words = _parse_int(max_words) or _DEFAULT_EMBEDDING_MAX_WORDS
+    vector_bytes = 0
+    budget_exhausted = False
     dim: Optional[int] = None
     start = time.perf_counter()
 
     def _add_vector(word: str, vec: object) -> None:
-        nonlocal dim
+        nonlocal dim, vector_bytes, budget_exhausted
         if not isinstance(word, str) or not word.strip():
             return
         word = word.lstrip("\ufeff")
@@ -548,13 +598,22 @@ def _load_embeddings_json(
             return
         if word in vectors:
             return
+        size = len(cleaned) * cleaned.itemsize
+        if vector_bytes + size > max_vector_bytes:
+            budget_exhausted = True
+            logger.warning(
+                "Decrypto embedding vector budget reached (words=%d, bytes=%d, limit=%d)",
+                len(vectors), vector_bytes, max_vector_bytes,
+            )
+            return
         vectors[word] = cleaned
+        vector_bytes += size
 
     try:
         if path.suffix.lower() == ".jsonl":
             with path.open("r", encoding="utf-8", errors="ignore") as handle:
                 for line in handle:
-                    if max_words and len(vectors) >= max_words:
+                    if budget_exhausted or len(vectors) >= max_words:
                         break
                     try:
                         data = json.loads(line)
@@ -563,6 +622,14 @@ def _load_embeddings_json(
                     if isinstance(data, dict):
                         _add_vector(data.get("word"), data.get("vector"))
         else:
+            # json.load materializes every Python float before limits can be
+            # applied. Large models must use one of the streaming formats.
+            if path.stat().st_size > max_vector_bytes // 8:
+                logger.warning(
+                    "Decrypto JSON embeddings too large to load safely; use .vec or .jsonl (path=%s)",
+                    path,
+                )
+                return {}
             with path.open("r", encoding="utf-8") as handle:
                 data = json.load(handle)
             if isinstance(data, dict) and "vectors" in data and isinstance(data["vectors"], dict):
@@ -570,11 +637,11 @@ def _load_embeddings_json(
             if isinstance(data, dict):
                 for word, vec in data.items():
                     _add_vector(word, vec)
-                    if max_words and len(vectors) >= max_words:
+                    if budget_exhausted or len(vectors) >= max_words:
                         break
             elif isinstance(data, list):
                 for entry in data:
-                    if max_words and len(vectors) >= max_words:
+                    if budget_exhausted or len(vectors) >= max_words:
                         break
                     if isinstance(entry, dict):
                         _add_vector(entry.get("word"), entry.get("vector"))
@@ -609,18 +676,21 @@ def _load_embeddings() -> Optional[Dict[str, array]]:
     if not isinstance(path, Path) or not path.exists():
         logger.info("Decrypto embeddings not found (path=%s)", path)
         return None
-    max_words = _parse_int(config.get("max_words"))
+    max_words = _parse_int(config.get("max_words")) or _DEFAULT_EMBEDDING_MAX_WORDS
+    max_vector_mb = _parse_int(config.get("max_vector_mb")) or _DEFAULT_EMBEDDING_MAX_VECTOR_MB
+    max_vector_bytes = max_vector_mb * 1024 * 1024
     cjk_only = _parse_bool(config.get("cjk_only"), default=True)
     logger.info(
-        "Loading decrypto embeddings (path=%s, max_words=%s, cjk_only=%s)",
+        "Loading decrypto embeddings (path=%s, max_words=%s, max_vector_mb=%d, cjk_only=%s)",
         path,
         max_words,
+        max_vector_mb,
         cjk_only,
     )
     if path.suffix.lower() in (".json", ".jsonl"):
-        vectors = _load_embeddings_json(path, max_words, cjk_only)
+        vectors = _load_embeddings_json(path, max_words, cjk_only, max_vector_bytes)
     else:
-        vectors = _load_embeddings_text(path, max_words, cjk_only)
+        vectors = _load_embeddings_text(path, max_words, cjk_only, max_vector_bytes)
     if not vectors:
         logger.warning("Decrypto embeddings empty or failed to load (path=%s)", path)
         return None

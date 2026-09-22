@@ -9,6 +9,8 @@ from game.azul import AzulGame
 from game.bohnanza_dice import BohnanzaDiceGame
 from game.bomb_busters import BombBustersGame
 from game.cabo import CaboGame
+from game.cryptid import CryptidGame
+from game.cryptid_data import ACTION_SCHEMA as CRYPTID_ACTION_SCHEMA, CONFIG_SCHEMA as CRYPTID_CONFIG_SCHEMA
 from game.castles_of_burgundy import CastlesOfBurgundyGame
 from game.castles_of_burgundy_data import ACTION_SCHEMA as BURGUNDY_ACTION_SCHEMA, CONFIG_SCHEMA as BURGUNDY_CONFIG_SCHEMA
 from game.cat_in_box import CatInBoxGame
@@ -50,6 +52,8 @@ from game.perfect_mismatch import PerfectMismatchGame
 from game.point_salad import PointSaladGame
 from game.poison import PoisonGame
 from game.ponzi_scheme import PonziSchemeGame
+from game.red_doors import RedDoorsGame
+from game.red_doors_data import ACTION_SCHEMA as RED_DOORS_ACTION_SCHEMA, CONFIG_SCHEMA as RED_DOORS_CONFIG_SCHEMA
 from game.ponzi_scheme_data import ACTION_SCHEMA as PONZI_SCHEME_ACTION_SCHEMA, CONFIG_SCHEMA as PONZI_SCHEME_CONFIG_SCHEMA
 from game.project_l import ProjectLGame
 from game.ra import RaGame
@@ -83,6 +87,38 @@ from game.turing_machine import TuringMachineGame
 from game.tucano import TucanoGame
 from game.witchs_brew import WitchsBrewGame
 from game.wriggle_roulette import WriggleRouletteGame
+
+register_game(
+    GameDefinition(
+        game_id=RedDoorsGame.game_id,
+        name="Red Doors and the Murderer's Key",
+        name_zh="红色的门和杀人鬼的钥匙",
+        min_players=RedDoorsGame.min_players,
+        max_players=RedDoorsGame.max_players,
+        turn_mode="turn",
+        action_schema=RED_DOORS_ACTION_SCHEMA,
+        config_schema=RED_DOORS_CONFIG_SCHEMA,
+        module=RedDoorsGame,
+        serialize=RedDoorsGame.serialize,
+        deserialize=RedDoorsGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=CryptidGame.game_id,
+        name="Cryptid",
+        name_zh="诡影寻踪",
+        min_players=CryptidGame.min_players,
+        max_players=CryptidGame.max_players,
+        turn_mode="turn",
+        action_schema=CRYPTID_ACTION_SCHEMA,
+        config_schema=CRYPTID_CONFIG_SCHEMA,
+        module=CryptidGame,
+        serialize=CryptidGame.serialize,
+        deserialize=CryptidGame.deserialize,
+    )
+)
 
 register_game(
     GameDefinition(

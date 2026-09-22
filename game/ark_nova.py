@@ -76,7 +76,7 @@ MAX_APPEAL = 113
 MAX_CONSERVATION = 41
 MAX_REPUTATION = 15
 MAX_X_TOKENS = 5
-ARK_NOVA_SCHEMA_VERSION = 3
+ARK_NOVA_SCHEMA_VERSION = 4
 BUILDING_SIZES = {
     "kiosk": 1,
     "pavilion": 1,
@@ -117,10 +117,13 @@ BONUS_TOKEN_DEFS: Dict[str, Dict[str, Any]] = {
     "enclosure_3": {"label": "Build a free size-3 enclosure", "kind": "free_enclosure", "size": 3},
     "multiplier": {"label": "Gain an Action multiplier", "kind": "multiplier", "amount": 1},
     "x_tokens_3": {"label": "Gain 3 X-tokens", "kind": "x_token", "amount": 3},
-    "card_2": {"label": "Draw 2 cards", "kind": "card", "amount": 2},
-    "worker": {"label": "Activate an association worker", "kind": "worker", "amount": 1},
-    "appeal_5": {"label": "Gain 5 appeal", "kind": "appeal", "amount": 5},
-    "upgrade": {"label": "Upgrade an Action card", "kind": "upgrade"},
+    "card_3": {"label": "Take 3 cards within reputation range or from the deck", "kind": "card", "amount": 3},
+    "university": {"label": "Take an available university", "kind": "university"},
+    "partner_zoo": {"label": "Take an available partner zoo", "kind": "partner_zoo"},
+    "sponsor": {"label": "Play a hand Sponsor for money equal to its level", "kind": "sponsor"},
+}
+LEGACY_BONUS_TOKENS = {
+    "card_2": "card_3", "worker": "university", "appeal_5": "partner_zoo", "upgrade": "sponsor",
 }
 
 
@@ -234,6 +237,13 @@ def _migrate_state_in_place(state: MutableMapping[str, Any]) -> None:
         state["unused_base_projects"] = migrated_unused
     else:
         state["unused_base_projects"] = sorted(base_project_ids - used_base_projects)
+    # Replace unclaimed tiles from the old, incorrect pool. Already earned
+    # rewards and consumed tiles are left alone; no extra tiles are introduced.
+    for threshold, tokens in state.get("bonus_tokens", {}).items():
+        state["bonus_tokens"][threshold] = [LEGACY_BONUS_TOKENS.get(token, token) for token in tokens]
+    pending = state.get("pending_choice")
+    if pending:
+        _refresh_choice_options(state, pending)
     state["schema_version"] = ARK_NOVA_SCHEMA_VERSION
 
 
@@ -621,8 +631,45 @@ def _activate_next_choice(state: MutableMapping[str, Any]) -> None:
         return
     queue = state.setdefault("pending_queue", [])
     if queue:
-        state["pending_choice"] = queue.pop(0)
+        pending = queue.pop(0)
+        _refresh_choice_options(state, pending)
+        state["pending_choice"] = pending
         state["phase"] = "pending_choice"
+
+
+def _refresh_choice_options(state: Mapping[str, Any], pending: MutableMapping[str, Any]) -> None:
+    player_id = str(pending["player_id"])
+    if pending.get("type") == "pilfering":
+        # The first theft can exhaust the victim's money or last hand card.
+        pending["options"] = _pilfer_choice_options(state["players"][player_id])
+    elif pending.get("type") == "conservation_bonus":
+        pending["options"] = _conservation_bonus_options(state, player_id, str(pending["threshold"]))
+
+
+def _bonus_association_options(state: Mapping[str, Any], player_id: str, kind: str) -> List[Dict[str, Any]]:
+    player = state["players"][player_id]
+    supply = state.get("association_supply", {})
+    if kind == "partner_zoo":
+        limit = 4 if player["action_cards"]["association"].get("upgraded") else 2
+        if len(player["partner_zoos"]) >= limit:
+            return []
+        return [{"value": continent, "label": f"Partner zoo: {continent.title()}"}
+                for continent in supply.get("partner_zoos", []) if continent not in player["partner_zoos"]]
+    if len(player["universities"]) >= 3:
+        return []
+    return [{"value": university["id"], "label": university["name"]}
+            for university in UNIVERSITIES
+            if university["id"] in supply.get("universities", []) and university["id"] not in player["universities"]]
+
+
+def _conservation_bonus_options(state: Mapping[str, Any], player_id: str, threshold: str) -> List[Dict[str, Any]]:
+    options = [{"value": {"kind": "money", "amount": 5}, "label": "Gain 5 money"}]
+    for token_id in state.get("bonus_tokens", {}).get(threshold, []):
+        token = BONUS_TOKEN_DEFS[token_id]
+        if token["kind"] in {"partner_zoo", "university"} and not _bonus_association_options(state, player_id, token["kind"]):
+            continue
+        options.append({"value": {"kind": "token", "token_id": token_id}, "label": token["label"]})
+    return options
 
 
 def _choice_options(values: Iterable[Any], labels: Optional[Mapping[Any, str]] = None) -> List[Dict[str, Any]]:
@@ -650,25 +697,10 @@ def _queue_conservation_milestones(
         resolved.add(2)
     for threshold in (5, 8):
         if old_value < threshold <= new_value and threshold not in resolved:
-            token_options = [
-                {
-                    "value": {"kind": "token", "token_id": token_id},
-                    "label": BONUS_TOKEN_DEFS[token_id]["label"],
-                }
-                for token_id in state.get("bonus_tokens", {}).get(str(threshold), [])
-                if not (
-                    BONUS_TOKEN_DEFS[token_id]["kind"] == "worker"
-                    and int(player.get("association_workers_total", 1)) >= 4
-                )
-                and not (
-                    BONUS_TOKEN_DEFS[token_id]["kind"] == "upgrade"
-                    and all(player["action_cards"][action_id].get("upgraded") for action_id in ACTION_IDS)
-                )
-            ]
             _queue_choice(state, {
                 "choice_id": f"cp{threshold}-{player_id}", "type": "conservation_bonus", "player_id": player_id,
                 "threshold": threshold, "prompt": f"Choose the {threshold}-conservation reward",
-                "options": [{"value": {"kind": "money", "amount": 5}, "label": "Gain 5 money"}] + token_options,
+                "options": _conservation_bonus_options(state, player_id, str(threshold)),
                 "min": 1, "max": 1,
             })
             resolved.add(threshold)
@@ -1518,9 +1550,7 @@ def _add_action_token(player: MutableMapping[str, Any], token: str, count: int, 
     )
     affected: List[str] = []
     key = f"{token}_tokens"
-    for action_id in ordered:
-        if len(affected) >= count:
-            break
+    for action_id in ordered[:max(0, count)]:
         entry = player["action_cards"][action_id]
         if int(entry.get(key, 0)):
             continue
@@ -1571,20 +1601,24 @@ def _ranked_attack_targets(
     ]
 
 
+def _pilfer_choice_options(victim: Mapping[str, Any]) -> List[Dict[str, Any]]:
+    options: List[Dict[str, Any]] = []
+    if int(victim.get("money", 0)) >= 5 or not victim.get("hand"):
+        amount = min(5, int(victim.get("money", 0)))
+        options.append({"value": "money", "label": f"Give {amount} money"})
+    if victim.get("hand"):
+        options.append({"value": "card", "label": "Give a random hand card"})
+    return options
+
+
 def _queue_pilfer_choice(
     state: MutableMapping[str, Any], attacker_id: str, victim_id: str, criterion: str
 ) -> None:
-    victim = _player(state, victim_id)
-    options: List[Dict[str, Any]] = []
-    if int(victim.get("money", 0)) >= 5 or not victim.get("hand"):
-        options.append({"value": "money", "label": "Give 5 money"})
-    if victim.get("hand"):
-        options.append({"value": "card", "label": "Give a random hand card"})
     _queue_choice(state, {
         "choice_id": f"pilfer-{attacker_id}-{victim_id}-{criterion}-{len(state.get('pending_queue', []))}",
         "type": "pilfering", "player_id": victim_id, "attacker_id": attacker_id,
         "criterion": criterion, "prompt": "Choose what the pilfering player takes",
-        "options": options, "min": 1, "max": 1,
+        "options": [], "min": 1, "max": 1,
     })
 
 
@@ -2061,31 +2095,14 @@ def _enqueue_card_effects(
 
 
 def _animal_effect_refs(
-    state: Mapping[str, Any], player_id: str, card: Mapping[str, Any], action_strength: int,
+    player_id: str, card: Mapping[str, Any], action_strength: int,
 ) -> List[Dict[str, Any]]:
     refs = []
-    player = state["players"][player_id]
-    tags = player.get("tags", {})
     for ability in card.get("abilities", []):
         params = copy.deepcopy(ability.get("parameters", {}))
         ability_id = str(ability["ability"])
-        if ability_id == "pack":
-            params["metric_value"] = int(tags.get("predator", 0))
-        elif ability_id == "inventive_bear":
-            params["metric_value"] = sum(
-                int(other.get("tags", {}).get("bear", 0))
-                for other in state.get("players", {}).values()
-            )
-        elif ability_id == "inventive_primate":
-            params["metric_value"] = int(tags.get("primate", 0))
-        elif ability_id == "iconic_animal":
-            continent = str(params.get("continent", ""))
-            params["metric_value"] = sum(
-                int(other.get("tags", {}).get(continent, 0))
-                for other in state.get("players", {}).values()
-            )
-        elif ability_id == "petting_zoo_animal":
-            params["metric_value"] = int(tags.get("petting_zoo_animal", 0))
+        # Count icons when the chosen effect resolves. Earlier simultaneous
+        # effects may add icons; the next animal cannot be played until these end.
         refs.append({
             "type": "ability", "ability_id": ability_id, "player_id": player_id,
             "card_id": card["id"], "timing": ability.get("timing", "immediate"),
@@ -2972,7 +2989,7 @@ def _play_animal_card(
     chosen = _active_rules(player, "chosen_animal_size")
     if chosen and _animal_size_class(card) == chosen[-1].get("size"):
         refs.extend(_reward_effects(player_id, {"appeal": int(chosen[-1].get("appeal", 0))}, "waza_special_assignment"))
-    abilities = _animal_effect_refs(state, player_id, card, strength)
+    abilities = _animal_effect_refs(player_id, card, strength)
     refs.extend(ref for ref in abilities if ref.get("timing") != "after_action")
     refs.extend(_card_trigger_effects(state, player_id, card))
     if int(_card_icons(card).get("herbivore", 0)) and (card_id == "253" or (
@@ -3123,13 +3140,21 @@ def _advance_card_sequence(state: MutableMapping[str, Any], events: List[Dict[st
                 "options": options, "min": 0, "max": 1, "allow_skip": True,
             })
             return
+    if (action_id == "animals" and sequence["sizes"] and all(size == "small" for size in sequence["sizes"])
+            and not sequence.get("small_program_started")
+            and _has_active_rule(_player(state, player_id), "small_animal_action_chain")):
+        # WAZA extends this action, including each Multiplier repetition. Finish
+        # its animal and display choice before moving the card or after-effects.
+        sequence["interactive"] = False
+        sequence["small_program_started"] = True
+        state.setdefault("effect_queue", []).append({
+            "type": "core", "operation": "small_program", "player_id": player_id,
+            "label": "WAZA Small Animal Program",
+        })
+        return
     state.pop("card_sequence")
     _defer_turn_end(state, player_id, action_id, int(sequence["x_tokens"]), events, resume=False)
     after = list(sequence["after"])
-    if (action_id == "animals" and sequence["sizes"] and all(size == "small" for size in sequence["sizes"])
-            and _has_active_rule(_player(state, player_id), "small_animal_action_chain")):
-        after.append({"type": "core", "operation": "small_program", "player_id": player_id,
-                      "label": "WAZA Small Animal Program"})
     if state.get("multiplier_action"):
         state.setdefault("deferred_after_action_effects", []).extend(after)
     else:
@@ -3214,7 +3239,7 @@ def _queue_small_display_choice(state: MutableMapping[str, Any], player_id: str)
     })
 
 
-def _okapi_sponsor_options(state: Mapping[str, Any], player_id: str) -> List[str]:
+def _sponsor_for_money_options(state: Mapping[str, Any], player_id: str) -> List[str]:
     player = state["players"][player_id]
     options = []
     for card_id in player.get("hand", []):
@@ -3240,7 +3265,7 @@ def _queue_okapi_trigger(
     tokens = int(player.get("card_tokens", {}).get("253", 0))
     if not icon_count or not tokens or not _has_active_rule(player, "okapi_sponsor_chain"):
         return
-    sponsors = _okapi_sponsor_options(state, player_id)
+    sponsors = _sponsor_for_money_options(state, player_id)
     if not sponsors:
         return
     options = [{"value": "skip", "label": "Do not use an Okapi Stable token"}]
@@ -3257,12 +3282,12 @@ def _queue_okapi_trigger(
     })
 
 
-def _play_okapi_sponsor(
-    state: MutableMapping[str, Any], player_id: str, card_id: str, events: List[Dict[str, Any]]
+def _play_sponsor_for_money(
+    state: MutableMapping[str, Any], player_id: str, card_id: str, events: List[Dict[str, Any]], *, source: str,
 ) -> Optional[str]:
     player = _player(state, player_id)
-    if card_id not in _okapi_sponsor_options(state, player_id):
-        return "sponsor is not legal for Okapi Stable"
+    if card_id not in _sponsor_for_money_options(state, player_id):
+        return "sponsor is not legal for this reward"
     card = SPONSOR_CARDS[card_id]
     cost = int(card["play"]["strength_required"])
     player["money"] -= cost
@@ -3289,7 +3314,7 @@ def _play_okapi_sponsor(
     if int(_card_icons(card).get("herbivore", 0)):
         refs.append({"type": "core", "operation": "okapi", "player_id": player_id,
                      "card_id": card_id, "label": "Okapi Stable"})
-    events.append(_event("sponsor", player_id=player_id, card_id=card_id, source="okapi", cost=cost))
+    events.append(_event("sponsor", player_id=player_id, card_id=card_id, source=source, cost=cost))
     _enqueue_card_effects(state, [_effect_group(player_id, refs)], events)
     return None
 
@@ -3300,8 +3325,21 @@ def _play_program_animal(
     card = ANIMAL_CARDS.get(str(value.get("card_id", "")))
     if not card or str(card["id"]) not in _player(state, player_id)["hand"] or _animal_size_class(card) != "small":
         return "invalid WAZA small-animal choice"
-    refs, after = _play_animal_card(state, player_id, value, 1, 0, events)
-    _enqueue_card_effects(state, [_effect_group(player_id, refs), _effect_group(player_id, after)], events)
+    sequence = state.get("card_sequence")
+    if not sequence:
+        # A saved room may already have moved Animals and opened this choice
+        # under the old timing. Let it finish the earned bonus without replaying
+        # its completed action. New choices always keep their card sequence.
+        refs, after = _play_animal_card(state, player_id, value, 1, 0, events)
+        _enqueue_card_effects(state, [_effect_group(player_id, refs), _effect_group(player_id, after)], events)
+        return None
+    if sequence["player_id"] != player_id or not sequence.get("small_program_started"):
+        return "no Animals action to extend with WAZA"
+    refs, after = _play_animal_card(state, player_id, value, int(sequence["level"]), int(sequence["strength"]), events)
+    sequence["after"].extend(after)
+    sequence["played"] += 1
+    sequence["sizes"].append("small")
+    _enqueue_card_effects(state, [_effect_group(player_id, refs)], events)
     return None
 
 
@@ -3428,7 +3466,7 @@ def _queue_association_tile_icon_effects(
 
 
 def _take_partner_zoo(
-    state: MutableMapping[str, Any], player_id: str, continent: str, events: List[Dict[str, Any]]
+    state: MutableMapping[str, Any], player_id: str, continent: str, events: List[Dict[str, Any]], *, from_bonus: bool = False,
 ) -> Optional[str]:
     player = _player(state, player_id)
     if continent not in CONTINENTS:
@@ -3438,7 +3476,8 @@ def _take_partner_zoo(
     supply = state.setdefault("association_supply", {}).setdefault("partner_zoos", [])
     if continent not in supply:
         return "partner zoo is not on the Association board"
-    limit = 4 if _action_level(player, "association") == 2 else 2
+    own_upgrade = player["action_cards"]["association"].get("upgraded")
+    limit = 4 if own_upgrade and (from_bonus or _action_level(player, "association") == 2) else 2
     if len(player["partner_zoos"]) >= limit:
         return "Association II is required for more partner zoos"
     player["partner_zoos"].append(continent)
@@ -3915,20 +3954,14 @@ def _apply_bonus_token(
         player["money"] += amount
     elif kind == "reputation":
         _apply_rewards(state, player_id, {"reputation": amount}, events, f"bonus_token:{token_id}")
-    elif kind == "appeal":
-        _apply_rewards(state, player_id, {"appeal": amount}, events, f"bonus_token:{token_id}")
     elif kind == "x_token":
         _gain_x(player, amount)
     elif kind == "card":
-        for _ in range(amount):
-            card_id = _draw(state)
-            if card_id:
-                player["hand"].append(card_id)
-    elif kind == "worker":
-        if int(player["association_workers_total"]) >= 4:
-            return "all association workers are active"
-        player["association_workers_total"] += 1
-        player["available_workers"] += 1
+        # Generate each choice after the previous draw, preserving display gaps.
+        state.setdefault("effect_queue", []).extend({
+            "type": "core", "operation": "take_card", "player_id": player_id,
+            "source": f"bonus_token:{token_id}:{index}",
+        } for index in range(amount))
     elif kind == "free_enclosure":
         size = int(token.get("size", 3))
         if _find_placement(state, player_id, "standard_enclosure", size) is not None:
@@ -3943,15 +3976,25 @@ def _apply_bonus_token(
             "player_id": player_id, "prompt": "Place the multiplier on an Action card",
             "options": _choice_options(ACTION_IDS), "min": 1, "max": 1,
         })
-    elif kind == "upgrade":
-        available = [action_id for action_id in ACTION_IDS if not player["action_cards"][action_id].get("upgraded")]
-        if not available:
-            return "all Action cards are already upgraded"
+    elif kind in {"partner_zoo", "university"}:
+        options = _bonus_association_options(state, player_id, kind)
+        if not options:
+            return "no eligible Association tile is available"
         _queue_choice(state, {
-            "choice_id": f"bonus-upgrade-{player_id}", "type": "upgrade_action",
-            "player_id": player_id, "prompt": "Upgrade an Action card",
-            "options": _choice_options(available), "min": 1, "max": 1,
+            "choice_id": f"bonus-{kind}-{player_id}", "type": "bonus_association",
+            "player_id": player_id, "tile_kind": kind, "prompt": token["label"],
+            "options": options, "min": 1, "max": 1,
         })
+    elif kind == "sponsor":
+        sponsors = _sponsor_for_money_options(state, player_id)
+        if sponsors:
+            _queue_choice(state, {
+                "choice_id": f"bonus-sponsor-{player_id}", "type": "play_sponsor_for_money",
+                "player_id": player_id, "prompt": token["label"],
+                "options": [{"value": card_id, "label": f"{SPONSOR_CARDS[card_id]['name']['zh']} "
+                             f"({SPONSOR_CARDS[card_id]['play']['strength_required']} money)"} for card_id in sponsors],
+                "min": 0, "max": 1, "allow_skip": True,
+            })
     events.append(_event("bonus_token", player_id=player_id, token_id=token_id))
     return None
 
@@ -4207,13 +4250,31 @@ def _resolve_choice(
             if tokens <= 0:
                 return "no Okapi Stable token remains"
             player["card_tokens"]["253"] = tokens - 1
-            error = _play_okapi_sponsor(state, player_id, card_id, events)
+            error = _play_sponsor_for_money(state, player_id, card_id, events, source="okapi")
             if error:
                 return error
         if remaining > 0:
             state.setdefault("effect_queue", []).append({
                 "type": "core", "operation": "okapi", "player_id": player_id, "icon_count": remaining,
             })
+    elif choice_type == "bonus_association":
+        kind = str(pending["tile_kind"])
+        tile_id = str(_selected_choice_value(selected[0]))
+        if tile_id not in [option["value"] for option in _bonus_association_options(state, player_id, kind)]:
+            return "Association tile is no longer available for this bonus"
+        state["pending_choice"] = None
+        if kind == "partner_zoo":
+            error = _take_partner_zoo(state, player_id, tile_id, events, from_bonus=True)
+        else:
+            error = _take_university(state, player_id, tile_id, events)
+        if error:
+            return error
+    elif choice_type == "play_sponsor_for_money":
+        state["pending_choice"] = None
+        if selected:
+            error = _play_sponsor_for_money(state, player_id, str(_selected_choice_value(selected[0])), events, source="bonus_token:sponsor")
+            if error:
+                return error
     elif pending.get("_effect_ref"):
         payload = _effect_choice_payload(pending, selection)
         ref = copy.deepcopy(pending["_effect_ref"])
@@ -4284,7 +4345,7 @@ def _resolve_choice(
             return "invalid conservation bonus"
         kind = value.get("kind")
         if kind == "money":
-            player["money"] += int(value.get("amount", 5))
+            player["money"] += 5
         elif kind == "token":
             threshold = str(pending.get("threshold"))
             token_id = str(value.get("token_id", ""))

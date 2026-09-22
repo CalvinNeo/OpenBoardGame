@@ -85,7 +85,11 @@ const wanderingTowersPanel = document.getElementById("wanderingTowersPanel");
 const skyePanel = document.getElementById("skyePanel");
 
 function setGamePanelVisibility(gameType) {
+  document.getElementById("redDoorsPanel").classList.toggle("hidden", gameType !== "red_doors");
+  if (typeof showRedDoorsHeaderActions === "function") showRedDoorsHeaderActions(gameType === "red_doors");
   document.getElementById("ponziSchemePanel").classList.toggle("hidden", gameType !== "ponzi_scheme");
+  document.getElementById("cryptidPanel").classList.toggle("hidden", gameType !== "cryptid");
+  if (typeof showCryptidHeaderActions === "function") showCryptidHeaderActions(gameType === "cryptid");
   if (typeof showPonziSchemeHeaderActions === "function") showPonziSchemeHeaderActions(gameType === "ponzi_scheme");
   document.getElementById("eternalDecksPanel").classList.toggle("hidden", gameType !== "eternal_decks");
   if (typeof showEternalDecksHeaderActions === "function") showEternalDecksHeaderActions(gameType === "eternal_decks");
@@ -768,6 +772,14 @@ function renderGameState(data) {
   }
   if (gameType === "ponzi_scheme") {
     renderPonziSchemeGameState(data);
+    return;
+  }
+  if (gameType === "red_doors") {
+    renderRedDoorsGameState(data);
+    return;
+  }
+  if (gameType === "cryptid") {
+    renderCryptidGameState(data);
     return;
   }
   if (gameType === "felix") {

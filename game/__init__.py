@@ -11,6 +11,7 @@ from game.bomb_busters import BombBustersGame
 from game.carcassonne import CarcassonneGame
 from game.catan_starfarers import CatanStarfarersGame
 from game.cabo import CaboGame
+from game.cryptid import CryptidGame
 from game.celestia import CelestiaGame
 from game.cat_in_box import CatInBoxGame
 from game.citadels import CitadelsGame
@@ -46,6 +47,7 @@ from game.perfect_mismatch import PerfectMismatchGame
 from game.point_salad import PointSaladGame
 from game.poison import PoisonGame
 from game.ponzi_scheme import PonziSchemeGame
+from game.red_doors import RedDoorsGame
 from game.project_l import ProjectLGame
 from game.ra import RaGame
 from game.rebel_princess import RebelPrincessGame
@@ -73,6 +75,7 @@ from game.wandering_towers import WanderingTowersGame
 from game import definitions as _definitions
 
 __all__ = [
+    "RedDoorsGame",
     "AbracaWhatGame",
     "AcquireGame",
     "AgeOfWarGame",
@@ -86,6 +89,7 @@ __all__ = [
     "CarcassonneGame",
     "CatanStarfarersGame",
     "CaboGame",
+    "CryptidGame",
     "CelestiaGame",
     "CatInBoxGame",
     "CitadelsGame",

@@ -2047,6 +2047,8 @@ function resetRoomState() {
   if (typeof clearTakeTimeState === "function") clearTakeTimeState();
   if (typeof clearEternalDecksState === "function") clearEternalDecksState();
   if (typeof clearPonziSchemeState === "function") clearPonziSchemeState();
+  if (typeof clearRedDoorsState === "function") clearRedDoorsState();
+  if (typeof clearCryptidState === "function") clearCryptidState();
   if (typeof clearBombBustersState === "function") {
     clearBombBustersState();
   }
@@ -2137,6 +2139,7 @@ function resetRoomState() {
   if (typeof updateTakeTimeConfigRow === "function") updateTakeTimeConfigRow();
   if (typeof updateEternalDecksConfigRow === "function") updateEternalDecksConfigRow();
   if (typeof updatePonziSchemeConfigRow === "function") updatePonziSchemeConfigRow();
+  if (typeof updateCryptidConfigRow === "function") updateCryptidConfigRow();
   if (typeof updateInAGroveConfigRow === "function") updateInAGroveConfigRow();
   updateHanabiConfigRow();
   updateTexasHoldemConfigRow();

@@ -4,17 +4,19 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css?v=app_v112" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v114" />
   <link rel="preload" href="/api/games" as="fetch" crossorigin="anonymous" />
   <link rel="stylesheet" href="/static/ark_nova.css?v=app_v21" />
   <link rel="stylesheet" href="/static/catan_starfarers.css?v=app_v4" />
   <link rel="stylesheet" href="/static/castles_of_burgundy.css?v=2" />
   <link rel="stylesheet" href="/static/gaia_project.css?v=gaia_v3" />
   <link rel="stylesheet" href="/static/tucano.css?v=app_v2" />
-  <link rel="stylesheet" href="/static/take_time.css?v=1" />
+  <link rel="stylesheet" href="/static/take_time.css?v=2" />
   <link rel="stylesheet" href="/static/eternal_decks.css?v=1" />
   <link rel="stylesheet" href="/static/gizmos.css?v=2" />
   <link rel="stylesheet" href="/static/ponzi_scheme.css?v=1" />
+  <link rel="stylesheet" href="/static/red_doors.css?v=1" />
+  <link rel="stylesheet" href="/static/cryptid.css?v=1" />
   <link rel="stylesheet" href="/static/istanbul.css?v=2" />
   <link rel="stylesheet" href="/static/rebel_princess.css?v=4" />
 </head>
@@ -1428,6 +1430,8 @@
                     <option value="take_time">Take Time · 时序谜局</option>
                     <option value="eternal_decks">Eternal Decks · 永恒牌</option>
                     <option value="ponzi_scheme">Ponzi Scheme · 庞氏骗局</option>
+                    <option value="red_doors">Red Doors and the Murderer's Key · 红色的门和杀人鬼的钥匙</option>
+                    <option value="cryptid">Cryptid · 诡影寻踪</option>
                     <option value="draw_guess">Draw & Guess</option>
                     <option value="blitz_sketch">Blitz Sketch</option>
                     <option value="cyber_pictures">Cyber Pictures</option>
@@ -1691,6 +1695,10 @@
                     <div class="game-config-title">Eternal Decks · Stage A</div>
                     <p class="hint">Prototype card data · 2 or 4 seats, including bots. Other stages and the 3-player jewel card are not available.</p>
                     <label class="eternal-decks-config-toggle"><input type="checkbox" id="eternalDecksStrictDiscard" /> Strict discard (hide discarded cards)</label>
+                  </div>
+                  <div class="game-config-card hidden" id="cryptidConfigBox" aria-hidden="true">
+                    <div class="game-config-title">Cryptid · 诡影寻踪</div>
+                    <label class="cryptid-config-label" for="cryptidMode"><span>Mode</span><select id="cryptidMode"><option value="normal">Normal</option><option value="advanced">Advanced</option></select></label>
                   </div>
                   <div class="game-config-card hidden" id="ponziSchemeConfigBox" aria-hidden="true">
                     <div class="game-config-title">Ponzi Scheme · 庞氏骗局</div>
@@ -2180,9 +2188,17 @@
               <button id="eternalDecksHelpBtn" type="button">Help</button>
               <button id="eternalDecksExplainBtn" type="button" aria-pressed="false">Explain</button>
             </div>
+            <div class="panel-header-actions" id="cryptidHeaderActions" style="display: none;">
+              <button id="cryptidHelpBtn" type="button">Help</button>
+              <button id="cryptidExplainBtn" type="button" aria-pressed="false">Explain</button>
+            </div>
             <div class="panel-header-actions" id="ponziSchemeHeaderActions" style="display: none;">
               <button id="ponziSchemeHelpBtn" type="button">Help</button>
               <button id="ponziSchemeExplainBtn" type="button" aria-pressed="false">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="redDoorsHeaderActions" style="display: none;">
+              <button id="redDoorsHelpBtn" type="button">Help</button>
+              <button id="redDoorsExplainBtn" type="button" aria-pressed="false">Explain</button>
             </div>
             <div class="panel-header-actions" id="bombBustersHeaderActions" style="display: none;">
               <button id="bombBustersHelpBtn" class="bomb-busters-header-btn" type="button">Help</button>
@@ -3452,6 +3468,8 @@
             <div id="takeTimePanel" class="hidden"></div>
             <div id="eternalDecksPanel" class="hidden"></div>
             <div id="ponziSchemePanel" class="hidden"></div>
+            <div id="redDoorsPanel" class="hidden"></div>
+            <div id="cryptidPanel" class="hidden"></div>
             <div id="bombBustersPanel" class="hidden bomb-busters-panel">
               <div class="bomb-busters-topbar">
                 <div class="bomb-busters-title-block">
@@ -4224,7 +4242,7 @@
                 <button id="hanabiPlayBtn">Play</button>
                 <button id="hanabiDiscardBtn">Discard</button>
               </div>
-              <div class="row actions">
+              <div class="row actions mobile-field-grid">
                 <label for="hanabiTargetSelect">Clue Target</label>
                 <select id="hanabiTargetSelect"></select>
                 <label>Clue Type</label>
@@ -4547,7 +4565,7 @@
             </div>
 
             <div id="davinciCodePanel" class="hidden">
-              <div class="row">
+              <div class="row davinci-status-row">
                 <div>Phase: <span id="davinciCodePhase">-</span></div>
                 <div>Mode: <span id="davinciCodeMode">-</span></div>
                 <div>Current Turn: <span id="davinciCodeTurn">-</span></div>
@@ -4572,16 +4590,9 @@
                 </section>
 
                 <section class="davinci-section">
-                  <div class="davinci-section-title">Controls</div>
-                  <div id="davinciCodeGuessTarget" class="davinci-target-line">Select a hidden opponent tile.</div>
-                  <div class="davinci-guess-row">
-                    <select id="davinciCodeGuessColor">
-                      <option value="dark">⚫ Dark</option>
-                      <option value="light">⚪ Light</option>
-                    </select>
-                    <select id="davinciCodeGuessValue"></select>
-                    <button id="davinciCodeGuessBtn" type="button">Submit Guess</button>
-                  </div>
+                  <div class="davinci-section-title">Guess a Tile</div>
+                  <div id="davinciCodeGuessTarget" class="davinci-target-line" aria-live="polite">Select a hidden opponent tile.</div>
+                  <div id="davinciCodeGuessPalette" class="davinci-guess-palette" role="group" aria-label="Tile guesses" aria-describedby="davinciCodeGuessTarget"></div>
                   <div id="davinciCodePending" class="davinci-pending">-</div>
                   <div id="davinciCodeControls" class="davinci-option-list"></div>
                 </section>
@@ -6897,45 +6908,44 @@
             </div>
 
             <div id="azulPanel" class="hidden">
-              <div class="row">
-                <div>Phase: <span id="azulPhase">-</span></div>
+              <div class="azul-status">
                 <div>Round: <span id="azulRound">-</span></div>
-                <div>Current Turn: <span id="azulTurn">-</span></div>
+                <div class="azul-turn">Turn: <span id="azulTurn">-</span></div>
+                <div>Phase: <span id="azulPhase">-</span></div>
                 <div>Bag: <span id="azulBagCount">-</span></div>
                 <div>Discard: <span id="azulDiscardCount">-</span></div>
-                <div>Winner: <span id="azulWinner">-</span></div>
-              </div>
-              <div class="row">
-                <div>Selected Source: <span id="azulSelectedSource">-</span></div>
-                <div>Selected Color: <span id="azulSelectedColor">-</span></div>
-                <div>Target Row: <span id="azulSelectedRow">-</span></div>
-              </div>
-              <div class="row actions">
-                <button id="azulClearSelectionBtn" type="button">Clear Selection</button>
+                <div id="azulWinnerStatus" class="hidden">Winner: <span id="azulWinner">-</span></div>
               </div>
               <div class="azul-layout">
                 <div class="azul-table" id="azulTable">
-                  <div id="azulFactoriesTop" class="azul-factories-row"></div>
-                  <div class="azul-center-area" id="azulCenterArea">
+                  <div class="azul-market">
+                    <div class="azul-factories-block">
+                      <h3>Factories</h3>
+                      <div id="azulFactories" class="azul-factories"></div>
+                    </div>
                     <div class="azul-center-block">
-                      <h3>Center 🏛️</h3>
+                      <h3 data-azul-tip="Center (🏛️): take all tiles of one color. The first player to take here also takes the First Player token (1st)." tabindex="0">Center 🏛️</h3>
                       <div id="azulCenter" class="azul-center"></div>
                     </div>
-                    <div class="azul-board-block">
-                      <h3>Your Board</h3>
-                      <div id="azulYourBoard" class="azul-board"></div>
+                  </div>
+                  <div class="azul-board-block" id="azulBoardBlock">
+                    <h3>Your Board</h3>
+                    <div id="azulYourBoard" class="azul-board"></div>
+                    <div class="azul-selection" role="status" aria-live="polite">
+                      <div>Source: <strong id="azulSelectedSource">-</strong></div>
+                      <div>Color: <strong id="azulSelectedColor">-</strong></div>
+                      <div>To: <strong id="azulSelectedRow">-</strong></div>
                     </div>
                     <div class="azul-center-actions">
                       <button id="azulFloorBtn" type="button">Send to Floor</button>
                       <button id="azulTakeBtn" type="button">Take Tiles</button>
                     </div>
                   </div>
-                  <div id="azulFactoriesBottom" class="azul-factories-row"></div>
                 </div>
-                <div class="azul-side">
-                  <h3>Players</h3>
+                <details class="azul-side" id="azulPlayersDetails">
+                  <summary>Players</summary>
                   <div id="azulPlayers"></div>
-                </div>
+                </details>
               </div>
             </div>
 
@@ -7155,7 +7165,7 @@
   <script src="/static/games/shared.js?v=app_v24" defer></script>
   <script src="/static/games/blokus.js?v=app_v6" defer></script>
   <script src="/static/games/carcassonne.js?v=app_v6" defer></script>
-  <script src="/static/games/azul.js?v=app_v4" defer></script>
+  <script src="/static/games/azul.js?v=app_v5" defer></script>
   <script src="/static/games/draw_guess.js?v=app_v4" defer></script>
   <script src="/static/games/cyber_pictures.js?v=app_v4" defer></script>
   <script src="/static/games/blitz_sketch.js?v=app_v4" defer></script>
@@ -7227,7 +7237,7 @@
     </div>
     <div id="takeTimeDialogBody" class="take-time-dialog-body"></div>
   </dialog>
-  <script src="/static/games/take_time.js?v=1" defer></script>
+  <script src="/static/games/take_time.js?v=2" defer></script>
   <dialog id="eternalDecksDialog" class="eternal-decks-dialog" aria-labelledby="eternalDecksDialogTitle">
     <div class="eternal-decks-dialog-header"><h2 id="eternalDecksDialogTitle">Eternal Decks</h2><button id="eternalDecksDialogClose" type="button">Close</button></div>
     <div id="eternalDecksDialogBody"></div>
@@ -7238,6 +7248,16 @@
     <div id="ponziSchemeDialogBody"></div>
   </dialog>
   <script src="/static/games/ponzi_scheme.js?v=1" defer></script>
+  <dialog id="redDoorsDialog" class="red-doors-dialog" aria-labelledby="redDoorsDialogTitle">
+    <div class="red-doors-dialog-head"><h2 id="redDoorsDialogTitle">Red Doors</h2><button id="redDoorsDialogClose" type="button">Close</button></div>
+    <div id="redDoorsDialogBody"></div>
+  </dialog>
+  <script src="/static/games/red_doors.js?v=1" defer></script>
+  <dialog id="cryptidDialog" class="cryptid-dialog" aria-labelledby="cryptidDialogTitle">
+    <div class="cryptid-dialog-header"><h2 id="cryptidDialogTitle">Cryptid</h2><button id="cryptidDialogClose" type="button">Close</button></div>
+    <div id="cryptidDialogBody"></div>
+  </dialog>
+  <script src="/static/games/cryptid.js?v=1" defer></script>
   <script src="/static/games/bomb_busters.js?v=app_v2" defer></script>
   <script src="/static/games/felix.js?v=app_v1" defer></script>
   <script src="/static/games/tacta.js?v=app_v7" defer></script>
