@@ -8,6 +8,7 @@ from game.blokus import BlokusGame
 from game.blitz_sketch import BlitzSketchGame
 from game.bohnanza_dice import BohnanzaDiceGame
 from game.bomb_busters import BombBustersGame
+from game.boomerang_australia import BoomerangAustraliaGame
 from game.carcassonne import CarcassonneGame
 from game.catan_starfarers import CatanStarfarersGame
 from game.cabo import CaboGame
@@ -57,6 +58,7 @@ from game.six_nimmt import SixNimmtGame
 from game.splendor import SplendorGame
 from game.splendor_pokemon import PokemonSplendorGame
 from game.skull import SkullGame
+from game.spirit_island import SpiritIslandGame
 from game.subtext import SubtextGame
 from game.the_gang import TheGangGame
 from game.texas_holdem import TexasHoldemGame
@@ -86,6 +88,7 @@ __all__ = [
     "BlitzSketchGame",
     "BohnanzaDiceGame",
     "BombBustersGame",
+    "BoomerangAustraliaGame",
     "CarcassonneGame",
     "CatanStarfarersGame",
     "CaboGame",
@@ -133,6 +136,7 @@ __all__ = [
     "SplendorGame",
     "PokemonSplendorGame",
     "SkullGame",
+    "SpiritIslandGame",
     "SubtextGame",
     "TheGangGame",
     "TexasHoldemGame",

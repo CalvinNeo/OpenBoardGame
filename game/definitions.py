@@ -8,6 +8,11 @@ from game.gaia_project_data import ACTION_SCHEMA as GAIA_PROJECT_ACTION_SCHEMA, 
 from game.azul import AzulGame
 from game.bohnanza_dice import BohnanzaDiceGame
 from game.bomb_busters import BombBustersGame
+from game.boomerang_australia import (
+    BoomerangAustraliaGame,
+    ACTION_SCHEMA as BOOMERANG_AUSTRALIA_ACTION_SCHEMA,
+    CONFIG_SCHEMA as BOOMERANG_AUSTRALIA_CONFIG_SCHEMA,
+)
 from game.cabo import CaboGame
 from game.cryptid import CryptidGame
 from game.cryptid_data import ACTION_SCHEMA as CRYPTID_ACTION_SCHEMA, CONFIG_SCHEMA as CRYPTID_CONFIG_SCHEMA
@@ -75,6 +80,8 @@ from game.blitz_sketch import BlitzSketchGame
 from game.carcassonne import CarcassonneGame
 from game.catan_starfarers import CatanStarfarersGame
 from game.skull import SkullGame
+from game.spirit_island import SpiritIslandGame
+from game.spirit_island import ACTION_SCHEMA as SPIRIT_ISLAND_ACTION_SCHEMA, CONFIG_SCHEMA as SPIRIT_ISLAND_CONFIG_SCHEMA
 from game.subtext import SubtextGame
 from game.trekking_history import TrekkingHistoryGame
 from game.texas_holdem import TexasHoldemGame
@@ -87,6 +94,38 @@ from game.turing_machine import TuringMachineGame
 from game.tucano import TucanoGame
 from game.witchs_brew import WitchsBrewGame
 from game.wriggle_roulette import WriggleRouletteGame
+
+register_game(
+    GameDefinition(
+        game_id=BoomerangAustraliaGame.game_id,
+        name="Boomerang: Australia",
+        name_zh="世界巡游（澳洲）",
+        min_players=BoomerangAustraliaGame.min_players,
+        max_players=BoomerangAustraliaGame.max_players,
+        turn_mode="simultaneous",
+        action_schema=BOOMERANG_AUSTRALIA_ACTION_SCHEMA,
+        config_schema=BOOMERANG_AUSTRALIA_CONFIG_SCHEMA,
+        module=BoomerangAustraliaGame,
+        serialize=BoomerangAustraliaGame.serialize,
+        deserialize=BoomerangAustraliaGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=SpiritIslandGame.game_id,
+        name="Spirit Island",
+        name_zh="灵迹岛",
+        min_players=SpiritIslandGame.min_players,
+        max_players=SpiritIslandGame.max_players,
+        turn_mode="simultaneous",
+        action_schema=SPIRIT_ISLAND_ACTION_SCHEMA,
+        config_schema=SPIRIT_ISLAND_CONFIG_SCHEMA,
+        module=SpiritIslandGame,
+        serialize=SpiritIslandGame.serialize,
+        deserialize=SpiritIslandGame.deserialize,
+    )
+)
 
 register_game(
     GameDefinition(

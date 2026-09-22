@@ -14,6 +14,7 @@ from typing import Dict, Optional
 from urllib.request import Request, urlopen
 
 GAME_URLS = {
+    "boomerang_australia": "https://boardgamegeek.com/boardgame/296167/boomerang-australia",
     "gaia_project": "https://boardgamegeek.com/boardgame/220308/gaia-project",
     "castles_of_burgundy": "https://boardgamegeek.com/boardgame/84876/the-castles-of-burgundy",
     "abraca_what": "https://boardgamegeek.com/boardgame/163930/abracadawhat",

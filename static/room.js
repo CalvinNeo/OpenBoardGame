@@ -752,6 +752,7 @@ function renderGameTypeFilters(games) {
 }
 
 const GAME_WEIGHT = {
+  boomerang_australia: 1.53,
   ponzi_scheme: 2.44,
   abraca_what: 1.64,
   age_of_war: 1.15,
@@ -2049,6 +2050,8 @@ function resetRoomState() {
   if (typeof clearPonziSchemeState === "function") clearPonziSchemeState();
   if (typeof clearRedDoorsState === "function") clearRedDoorsState();
   if (typeof clearCryptidState === "function") clearCryptidState();
+  if (typeof clearSpiritIslandState === "function") clearSpiritIslandState();
+  if (typeof clearBoomerangAustraliaState === "function") clearBoomerangAustraliaState();
   if (typeof clearBombBustersState === "function") {
     clearBombBustersState();
   }
@@ -2140,6 +2143,7 @@ function resetRoomState() {
   if (typeof updateEternalDecksConfigRow === "function") updateEternalDecksConfigRow();
   if (typeof updatePonziSchemeConfigRow === "function") updatePonziSchemeConfigRow();
   if (typeof updateCryptidConfigRow === "function") updateCryptidConfigRow();
+  if (typeof updateBoomerangAustraliaConfigUI === "function") updateBoomerangAustraliaConfigUI();
   if (typeof updateInAGroveConfigRow === "function") updateInAGroveConfigRow();
   updateHanabiConfigRow();
   updateTexasHoldemConfigRow();

@@ -85,6 +85,10 @@ const wanderingTowersPanel = document.getElementById("wanderingTowersPanel");
 const skyePanel = document.getElementById("skyePanel");
 
 function setGamePanelVisibility(gameType) {
+  document.getElementById("boomerangAustraliaPanel").classList.toggle("hidden", gameType !== "boomerang_australia");
+  if (typeof showBoomerangAustraliaHeaderActions === "function") showBoomerangAustraliaHeaderActions(gameType === "boomerang_australia");
+  document.getElementById("spiritIslandPanel").classList.toggle("hidden", gameType !== "spirit_island");
+  if (typeof showSpiritIslandHeaderActions === "function") showSpiritIslandHeaderActions(gameType === "spirit_island");
   document.getElementById("redDoorsPanel").classList.toggle("hidden", gameType !== "red_doors");
   if (typeof showRedDoorsHeaderActions === "function") showRedDoorsHeaderActions(gameType === "red_doors");
   document.getElementById("ponziSchemePanel").classList.toggle("hidden", gameType !== "ponzi_scheme");
@@ -662,6 +666,10 @@ function logGameEvents(data) {
 
 function renderGameState(data) {
   const gameType = data.game_type || (currentRoomState && currentRoomState.game_type);
+  if (gameType === "spirit_island") {
+    renderSpiritIslandGameState(data);
+    return;
+  }
   if (gameType === "castles_of_burgundy") {
     renderBurgundyGameState(data);
     return;
@@ -780,6 +788,10 @@ function renderGameState(data) {
   }
   if (gameType === "cryptid") {
     renderCryptidGameState(data);
+    return;
+  }
+  if (gameType === "boomerang_australia") {
+    renderBoomerangAustraliaGameState(data);
     return;
   }
   if (gameType === "felix") {

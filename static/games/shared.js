@@ -75,6 +75,8 @@ function emitRoomStart() {
     payload.config = getPonziSchemeConfig();
   } else if (currentGameType === "cryptid") {
     payload.config = getCryptidConfig();
+  } else if (currentGameType === "boomerang_australia") {
+    payload.config = getBoomerangAustraliaConfig();
   } else if (currentGameType === "in_a_grove") {
     payload.config = getInAGroveConfig();
   } else if (currentGameType === "bomb_busters") {
@@ -374,6 +376,7 @@ function renderRoomState(state) {
   if (typeof updateEternalDecksConfigRow === "function") updateEternalDecksConfigRow();
   if (typeof updatePonziSchemeConfigRow === "function") updatePonziSchemeConfigRow();
   if (typeof updateCryptidConfigRow === "function") updateCryptidConfigRow();
+  if (typeof updateBoomerangAustraliaConfigUI === "function") updateBoomerangAustraliaConfigUI();
   if (typeof updateInAGroveConfigRow === "function") updateInAGroveConfigRow();
   updateCitadelsConfigRow();
   updateHanabiConfigRow();
