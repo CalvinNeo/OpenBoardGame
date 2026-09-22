@@ -60,6 +60,7 @@
 .cryptid-mode-buttons, .cryptid-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
 .cryptid-mode-buttons button.is-active { background: #dce8d4; border-color: #35634e; color: #243d37; }
 .cryptid-actions { margin-top: 10px; }
+.cryptid-actions > :only-child { grid-column: 1 / -1; }
 .cryptid-actions button { min-height: 42px; padding: 8px; }
 .cryptid-actions .cryptid-primary { color: white; background: #35634e; border-color: #35634e; }
 .cryptid-actions .cryptid-primary:disabled { opacity: .46; }

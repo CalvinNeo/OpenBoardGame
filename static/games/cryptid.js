@@ -42,7 +42,6 @@
     const color = pid => playerColors[view?.players.find(p => p.player_id === pid)?.seat ?? 0];
     const available = kind => !pending && !!view?.legal_actions.includes(kind);
     const btn = (text, action, explain = action, disabled = false, extra = "") => `<button type="button" data-cryptid-action="${action}" data-cryptid-explain="${explain}" ${disabled ? "disabled" : ""} ${extra}>${text}</button>`;
-    const info = key => `<button type="button" data-cryptid-tip="${esc(explanations[key])}" aria-label="Info" class="cryptid-info">ⓘ</button>`;
 
     function hideTip() { tip.hidden = true; window.clearTimeout(tipTimer); }
     function showTip(text, anchor, touch = false) {
@@ -140,12 +139,13 @@
         if (view.game_over) return "";
         const question = available("question");
         const options = view.players.filter(p => p.player_id !== view.you);
-        return `<section class="cryptid-box cryptid-action-box"><h3>${view.game_over ? "🏆 " : ""}${phaseNames[view.phase]}</h3><p class="cryptid-muted" aria-live="polite">${esc(stepText())}</p>
+        const phaseExplanation = view.phase === "turn" ? mode : view.phase === "round_end" ? "next" : "place";
+        return `<section class="cryptid-box cryptid-action-box"><h3 data-cryptid-explain="${phaseExplanation}">${phaseNames[view.phase]}</h3><p class="cryptid-muted" aria-live="polite">${esc(stepText())}</p>
             ${view.phase === "turn" ? `<div class="cryptid-mode-buttons">${btn("❓ 询问", "question", "question", !question, `class="${mode === "question" ? "is-active" : ""}" aria-pressed="${mode === "question"}"`)}${btn("🔍 搜索", "search", "search", !available("search"), `class="${mode === "search" ? "is-active" : ""}" aria-pressed="${mode === "search"}"`)}</div>` : ""}
             ${selectedHTML()}
             ${view.phase === "turn" && mode === "question" ? `<label class="cryptid-target-label"><span>Ask</span><select id="cryptidTarget" ${!question ? "disabled" : ""}><option value="">Select player</option>${options.map(p => `<option value="${esc(p.player_id)}" ${target === p.player_id ? "selected" : ""} ${selected && (view.markers[selected].cube || view.markers[selected].discs.includes(p.player_id)) ? "disabled" : ""}>${p.seat + 1} · ${esc(p.name)}</option>`).join("")}</select></label>` : ""}
-            ${!view.game_over && view.phase !== "round_end" ? `<div class="cryptid-actions">${btn("Confirm", "confirm", "confirm", !actionCandidate(), 'class="cryptid-primary"')}${info(view.phase === "turn" ? mode : "place")}</div>` : ""}
-            ${view.phase === "round_end" ? `<div class="cryptid-actions">${btn(view.next_ready.includes(view.you) ? "Ready ✓" : "Next Round", "next", "next", !available("next_round"), 'class="cryptid-primary"')}${info("next")}</div><p class="cryptid-muted">Waiting: ${esc(view.players.filter(p => !view.next_ready.includes(p.player_id)).map(p => p.name).join(", ")) || "—"}</p>` : ""}
+            ${view.phase !== "round_end" ? `<div class="cryptid-actions">${btn("Confirm", "confirm", "confirm", !actionCandidate(), 'class="cryptid-primary"')}</div>` : ""}
+            ${view.phase === "round_end" ? `<div class="cryptid-actions">${btn(view.next_ready.includes(view.you) ? "Ready ✓" : "Next Round", "next", "next", !available("next_round"), 'class="cryptid-primary"')}</div><p class="cryptid-muted">Waiting: ${esc(view.players.filter(p => !view.next_ready.includes(p.player_id)).map(p => p.name).join(", ")) || "—"}</p>` : ""}
         </section>`;
     }
 
@@ -161,11 +161,11 @@
         panel.innerHTML = `<div class="cryptid-shell"><div class="cryptid-top"><div><div class="cryptid-eyebrow">A field guide to the unknown</div><h2>诡影寻踪 <span lang="en">Cryptid</span></h2></div><span class="cryptid-badge">${view.advanced ? "Advanced" : "Normal"} · ${view.round ? `Round ${view.round}` : "Setup"}</span></div>
             <div class="cryptid-players">${view.players.map(p => `<div class="cryptid-player ${p.player_id === view.current_turn ? "is-current" : ""}"><strong><span class="cryptid-dot" style="background:${color(p.player_id)}"></span>${p.seat + 1} · ${esc(p.name)}</strong><small>${p.player_id === view.you ? "You" : p.is_bot ? "Bot" : "Player"}${p.player_id === view.current_turn ? " · Acting" : view.next_ready.includes(p.player_id) ? " · Ready ✓" : ""}</small></div>`).join("")}</div>
             <div class="cryptid-layout"><div class="cryptid-map-area"><div class="cryptid-map-frame"><div class="cryptid-map-tools"><div>${btn("−", "out", "zoom")}${btn("+", "in", "zoom")}${btn("Fit", "fit", "zoom")}<span class="cryptid-zoom">${Math.round(zoom * 100)}%</span></div><div>${btn("📝 Notes", "notes", "notes", !view.notes)}</div></div>${mapHTML()}</div>
-                <div class="cryptid-legend">${Object.values(view.terrain_defs).map(t => `<button type="button" data-cryptid-tip="${esc(`${t.name}(${t.icon})：五种地形之一。`)}">${t.icon} ${t.name}</button>`).join("")}<button type="button" data-cryptid-tip="${esc(explanations.legend)}">● / ■</button><button type="button" data-cryptid-tip="熊(🐻)用虚线边界，美洲狮(🐾)用实线边界；领地叠加在地形上。">🐻 / 🐾</button><button type="button" data-cryptid-tip="立石(🗿)与废弃小屋(🏚️)；色框表示结构物的白、绿、蓝、黑颜色，与玩家颜色无关。">🗿 / 🏚️</button></div>
+                <div class="cryptid-legend">${Object.values(view.terrain_defs).map(t => `<button type="button" data-cryptid-explain data-cryptid-tip="${esc(`${t.name}(${t.icon})：五种地形之一。`)}">${t.icon} ${t.name}</button>`).join("")}<button type="button" data-cryptid-explain="legend" data-cryptid-tip="${esc(explanations.legend)}">● / ■</button><button type="button" data-cryptid-explain data-cryptid-tip="熊(🐻)用虚线边界，美洲狮(🐾)用实线边界；领地叠加在地形上。">🐻 / 🐾</button><button type="button" data-cryptid-explain data-cryptid-tip="立石(🗿)与废弃小屋(🏚️)；色框表示结构物的白、绿、蓝、黑颜色，与玩家颜色无关。">🗿 / 🏚️</button></div>
                 ${view.phase === "round_end" ? `<section class="cryptid-box cryptid-review"><h3>Round review</h3><ul class="cryptid-history">${view.last_round.map(line => `<li>${esc(line)}</li>`).join("")}</ul></section>` : ""}
                 ${view.game_over ? `<section class="cryptid-box cryptid-review"><h3>🏆 ${esc(name(view.winner[0]))} · ${view.solution}</h3><div class="cryptid-results">${view.players.map(p => `<div class="cryptid-result"><strong>${esc(p.name)}</strong>：${esc(view.revealed_clues[p.player_id].description)}</div>`).join("")}</div></section>` : ""}
-            </div><div class="cryptid-sidebar">${view.my_clue ? `<section class="cryptid-box cryptid-clue"><h3>🔒 Your clue</h3><p>${esc(view.my_clue.description)}</p><label class="cryptid-inline-label"><input id="cryptidShowClue" type="checkbox" ${showClue ? "checked" : ""}/><span>My clue</span>${info("clue")}</label></section>` : ""}${actionHTML()}${resultsHTML()}
-                ${!view.game_over || view.hint ? `<section class="cryptid-box"><h3>💡 Hint ${info("hint")}</h3>${view.hint ? `<p class="cryptid-muted">${esc(view.hint)}</p>` : `<p class="cryptid-muted">${Object.values(view.hint_votes).filter(Boolean).length} / ${view.players.length === 3 ? 3 : view.players.length - 1} votes</p><div class="cryptid-actions">${btn("Agree", "hint_yes", "hint", !available("vote_hint"))}${btn("Decline", "hint_no", "hint", !available("vote_hint"))}</div>`}</section>` : ""}
+            </div><div class="cryptid-sidebar">${view.my_clue ? `<section class="cryptid-box cryptid-clue" data-cryptid-explain="clue"><h3 data-cryptid-tip="秘密线索(🔒)：仅你可见，神秘生物所在格必须符合它。">🔒 Your clue</h3><p>${esc(view.my_clue.description)}</p><label class="cryptid-inline-label"><input id="cryptidShowClue" type="checkbox" ${showClue ? "checked" : ""}/><span>My clue</span></label></section>` : ""}${actionHTML()}${resultsHTML()}
+                ${!view.game_over || view.hint ? `<section class="cryptid-box" data-cryptid-explain="hint"><h3 data-cryptid-tip="提示(💡)：表决通过后公开一个额外线索类别，每局最多一次。">💡 Hint</h3>${view.hint ? `<p class="cryptid-muted">${esc(view.hint)}</p>` : `<p class="cryptid-muted">${Object.values(view.hint_votes).filter(Boolean).length} / ${view.players.length === 3 ? 3 : view.players.length - 1} votes</p><div class="cryptid-actions">${btn("Agree", "hint_yes", "hint", !available("vote_hint"))}${btn("Decline", "hint_no", "hint", !available("vote_hint"))}</div>`}</section>` : ""}
                 <details class="cryptid-box"><summary>Public log</summary><ul class="cryptid-history">${view.log.slice().reverse().map(line => `<li>${esc(line)}</li>`).join("")}</ul></details>
             </div></div><p class="cryptid-footer">${esc(view.map_source)} · ${view.catalog.length} clue types</p></div>`;
         panel.classList.toggle("is-explaining", explaining);
@@ -188,6 +188,11 @@
     function setExplain(value) {
         explaining = value; panel.classList.toggle("is-explaining", value);
         explainButton.setAttribute("aria-pressed", String(value)); hideTip();
+    }
+    function explainElement(element) {
+        if (!element) return;
+        const text = explanations[element.dataset.cryptidExplain] || element.dataset.cryptidTip || explanations.map;
+        setExplain(false); openDialog("Explain", `<p>${esc(text)}</p>`);
     }
     function submit(action) {
         if (!action || !available(action.type)) return;
@@ -342,10 +347,7 @@
         });
         event.preventDefault(); event.stopImmediatePropagation();
         suppressed = {x: event.clientX, y: event.clientY, until: Date.now() + 900};
-        if (element) {
-            const text = explanations[element.dataset.cryptidExplain] || explanations.map;
-            setExplain(false); openDialog("Explain", `<p>${esc(text)}</p>`);
-        }
+        explainElement(element);
     }, true);
     document.addEventListener("click", event => {
         if (suppressed && Date.now() < suppressed.until && Math.abs(event.clientX - suppressed.x) < 5 && Math.abs(event.clientY - suppressed.y) < 5) {
@@ -354,7 +356,7 @@
         if (!explaining || !view || [helpButton, explainButton, dialogClose].includes(event.target)) return;
         event.preventDefault(); event.stopImmediatePropagation();
         const element = event.target.closest("[data-cryptid-explain]");
-        if (element) { setExplain(false); openDialog("Explain", `<p>${esc(explanations[element.dataset.cryptidExplain] || explanations.map)}</p>`); }
+        explainElement(element);
     }, true);
     document.addEventListener("keydown", event => {
         if (!view) return;
@@ -364,6 +366,7 @@
             else if (!dialog.open) { selected = null; target = ""; render(); }
         } else if (explaining && ["Enter", " "].includes(event.key) && event.target.matches("input,select,textarea")) {
             event.preventDefault(); event.stopImmediatePropagation();
+            explainElement(event.target.closest("[data-cryptid-explain]"));
         }
     }, true);
     panel.addEventListener("pointerover", event => { const el = event.target.closest("[data-cryptid-tip]"); if (el && event.pointerType !== "touch" && !explaining && !pointers.size) showTip(el.dataset.cryptidTip, el); });
