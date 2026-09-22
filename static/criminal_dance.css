@@ -1,0 +1,177 @@
+#criminalDancePanel {
+    width: 100%;
+    min-width: 0;
+    color: #35354c;
+    container-type: inline-size;
+    container-name: criminal-dance;
+}
+
+#criminalDancePanel .criminal-dance-surface {
+    --criminal-dance-ink: #35354c;
+    --criminal-dance-muted: #747180;
+    --criminal-dance-line: #e4ded7;
+    padding: clamp(12px, 2vw, 22px);
+    border: 1px solid #ddd5cb;
+    border-radius: 18px;
+    background: radial-gradient(ellipse at top right, #ece7f5, transparent 48%), #f7f3ed;
+    overflow-wrap: anywhere;
+}
+
+#criminalDancePanel .criminal-dance-banner,
+#criminalDancePanel .criminal-dance-section-heading,
+#criminalDancePanel .criminal-dance-round-meta,
+#criminalDancePanel .criminal-dance-action-fields,
+#criminalDancePanel .criminal-dance-action-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+#criminalDancePanel .criminal-dance-banner { justify-content: space-between; flex-wrap: wrap; margin-bottom: 15px; }
+#criminalDancePanel .criminal-dance-brand { min-width: 0; }
+#criminalDancePanel .criminal-dance-eyebrow { margin: 0 0 5px; color: var(--criminal-dance-muted); font-size: 12px; letter-spacing: .1em; }
+#criminalDancePanel h2 { margin: 0; color: #49415e; font-size: clamp(21px, 2.5vw, 29px); line-height: 1.4; }
+#criminalDancePanel .criminal-dance-status-chip { max-width: 100%; padding: 6px 10px; border: 1px solid #d7cee6; border-radius: 20px; background: #faf7ff; color: #615479; font-size: 12px; font-weight: 650; }
+#criminalDancePanel .criminal-dance-status { margin-bottom: 13px; padding: 11px 13px; border: 1px solid #ded8e9; border-left: 4px solid #8074b7; border-radius: 10px; background: #f2eef9; }
+#criminalDancePanel .criminal-dance-round-meta { flex-wrap: wrap; gap: 5px 16px; color: #716881; font-size: 12px; }
+#criminalDancePanel .criminal-dance-round-meta > span { min-width: 0; }
+#criminalDancePanel .criminal-dance-round-meta strong { margin-left: 5px; color: #4b4265; }
+#criminalDancePanel .criminal-dance-summary { margin-top: 6px; font-size: 13px; line-height: 1.6; }
+
+#criminalDancePanel .criminal-dance-layout,
+#criminalDancePanel .criminal-dance-records { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+#criminalDancePanel .criminal-dance-records { margin-top: 12px; }
+#criminalDancePanel .criminal-dance-section,
+#criminalDancePanel .criminal-dance-results { min-width: 0; padding: 13px; border: 1px solid var(--criminal-dance-line); border-radius: 12px; background: #fffdf9; }
+#criminalDancePanel .criminal-dance-section-heading { justify-content: space-between; margin-bottom: 11px; }
+#criminalDancePanel h3 { margin: 0; color: #574b66; font-size: 13px; line-height: 1.5; }
+#criminalDancePanel .criminal-dance-count { flex: 0 0 auto; min-width: 24px; max-width: 40%; padding: 2px 7px; border-radius: 7px; background: #f0eaf4; color: #6e6086; font-size: 12px; text-align: center; }
+
+#criminalDancePanel .criminal-dance-player-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+#criminalDancePanel .criminal-dance-player { min-width: 0; padding: 9px; border: 1px solid #e5e0da; border-radius: 8px; background: #f9f6f1; line-height: 1.45; }
+#criminalDancePanel .criminal-dance-player.is-current { border-color: #a29acb; background: #eeeaf8; box-shadow: inset 3px 0 #8174b4; }
+#criminalDancePanel .criminal-dance-player.is-you .criminal-dance-player-name { color: #65549b; }
+#criminalDancePanel .criminal-dance-player.is-winner { border-color: #d8bc75; background: #fff5d7; }
+#criminalDancePanel .criminal-dance-player-name { min-width: 0; font-size: 12px; font-weight: 650; }
+#criminalDancePanel .criminal-dance-player-name .criminal-dance-badge { margin-left: 5px; }
+#criminalDancePanel .criminal-dance-player-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 7px; margin-top: 6px; color: #7a7184; font-size: 12px; }
+#criminalDancePanel .criminal-dance-badge { display: inline-block; max-width: 100%; padding: 2px 5px; border: 1px solid #ddd5e8; border-radius: 5px; color: #665483; background: #f0eaf8; font-size: 12px; font-weight: 500; vertical-align: middle; }
+
+#criminalDancePanel .criminal-dance-hand { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; min-height: 40px; padding: 2px; border: 0; border-radius: 0; }
+#criminalDancePanel button { min-width: 0; max-width: 100%; min-height: 36px; padding: 7px 11px; border: 1px solid #d4ccdf; border-radius: 7px; color: #57496d; background: #f5f0fa; font-family: inherit; font-size: 12px; line-height: 1.5; white-space: normal; overflow-wrap: anywhere; }
+#criminalDancePanel .criminal-dance-card {
+    --criminal-dance-card-color: #6b6480;
+    --criminal-dance-card-fill: #ece8f1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 5px;
+    min-width: 0;
+    min-height: 164px;
+    padding: 10px 6px 8px;
+    border: 1px solid #dbd4cd;
+    border-top: 4px solid var(--criminal-dance-card-color);
+    border-radius: 9px;
+    color: var(--criminal-dance-card-color);
+    background: linear-gradient(150deg, #fffdf7, var(--criminal-dance-card-fill));
+    text-align: center;
+    cursor: pointer;
+    transition: box-shadow .15s ease, border-color .15s ease;
+}
+
+#criminalDancePanel .criminal-dance-card[data-tone="red"] { --criminal-dance-card-color: #a14f5c; --criminal-dance-card-fill: #f5e0e0; }
+#criminalDancePanel .criminal-dance-card[data-tone="blue"] { --criminal-dance-card-color: #4b709e; --criminal-dance-card-fill: #e0eafa; }
+#criminalDancePanel .criminal-dance-card[data-tone="amber"] { --criminal-dance-card-color: #967326; --criminal-dance-card-fill: #f6edd4; }
+#criminalDancePanel .criminal-dance-card[data-tone="violet"] { --criminal-dance-card-color: #795c9e; --criminal-dance-card-fill: #ece2f5; }
+#criminalDancePanel .criminal-dance-card[data-tone="green"] { --criminal-dance-card-color: #497d70; --criminal-dance-card-fill: #e1f0e7; }
+#criminalDancePanel .criminal-dance-card[data-tone="slate"] { --criminal-dance-card-color: #65717b; --criminal-dance-card-fill: #e7ebed; }
+#criminalDancePanel .criminal-dance-card:not([aria-disabled="true"]):hover { border-color: var(--criminal-dance-card-color); box-shadow: 0 3px 12px #49405c21; }
+#criminalDancePanel .criminal-dance-card.selected { border-color: #6e5ba6; box-shadow: 0 0 0 2px #7f6cb4; background: linear-gradient(145deg, #fffdf9, #e7dcf5); }
+#criminalDancePanel .criminal-dance-card[aria-disabled="true"] { cursor: default; opacity: .78; }
+#criminalDancePanel .criminal-dance-card-icon { display: block; font-size: 31px; line-height: 1.3; }
+#criminalDancePanel .criminal-dance-card-name { max-width: 100%; color: var(--criminal-dance-ink); font-size: 15px; font-weight: 700; line-height: 1.4; }
+#criminalDancePanel .criminal-dance-card-tag { max-width: 100%; font-size: 12px; }
+#criminalDancePanel .criminal-dance-card-state { max-width: 100%; margin-top: auto; padding-top: 5px; font-size: 12px; line-height: 1.4; }
+
+#criminalDancePanel .criminal-dance-controls { display: grid; gap: 9px; margin-top: 12px; padding-top: 11px; border-top: 1px solid #e8e1ea; }
+#criminalDancePanel .criminal-dance-controls:empty { display: none; }
+#criminalDancePanel .criminal-dance-action-title { min-width: 0; font-size: 12px; font-weight: 600; }
+#criminalDancePanel .criminal-dance-action-fields { flex-wrap: wrap; gap: 8px; }
+#criminalDancePanel .criminal-dance-field { display: flex; align-items: center; flex: 1 1 180px; gap: 7px; min-width: 0; color: #776884; font-size: 12px; }
+#criminalDancePanel .criminal-dance-field select { flex: 1 1 0; min-width: 0; max-width: 100%; min-height: 36px; padding: 6px 7px; border: 1px solid #dbd1e4; border-radius: 7px; background: #fffdfa; color: var(--criminal-dance-ink); font-family: inherit; font-size: 12px; text-overflow: ellipsis; }
+#criminalDancePanel .criminal-dance-action-row { flex-wrap: wrap; }
+#criminalDancePanel .criminal-dance-primary { border-color: #6c599c; background: #6c599c; color: #fff; font-weight: 600; }
+#criminalDancePanel .hint { min-width: 0; color: var(--criminal-dance-muted); font-size: 12px; line-height: 1.65; }
+#criminalDancePanel .criminal-dance-hand > .hint { grid-column: 1 / -1; padding: 14px 0; text-align: center; }
+
+#criminalDancePanel .criminal-dance-public-list,
+#criminalDancePanel .criminal-dance-private-list { display: grid; gap: 7px; max-height: 190px; padding-right: 3px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #c6bdd4 transparent; }
+#criminalDancePanel .criminal-dance-public,
+#criminalDancePanel .criminal-dance-private { min-width: 0; padding: 8px 9px; border: 1px solid #e7e1da; border-radius: 7px; background: #f8f5ef; font-size: 12px; line-height: 1.65; }
+#criminalDancePanel .criminal-dance-private { border-color: #e3dce9; background: #f5f0f8; }
+#criminalDancePanel .criminal-dance-entry-heading { color: #51465e; font-weight: 600; }
+#criminalDancePanel .criminal-dance-entry-result { margin-top: 3px; color: #786d81; }
+#criminalDancePanel .criminal-dance-results { margin-bottom: 12px; border-color: #dcc98e; background: #fff6dd; }
+#criminalDancePanel .criminal-dance-results h3 { margin-bottom: 8px; color: #806424; }
+#criminalDancePanel #criminalDanceResultSummary { font-size: 13px; line-height: 1.65; }
+#criminalDancePanel .criminal-dance-ready { margin-top: 8px; color: #897343; font-size: 12px; line-height: 1.6; }
+
+#criminalDancePanel [data-criminal-dance-tip] { cursor: help; }
+#criminalDancePanel :focus-visible,
+.criminal-dance-modal :focus-visible { outline: 2px solid #8272b3; outline-offset: 3px; }
+body.criminal-dance-explain-mode #criminalDancePanel [data-criminal-dance-explain-key].has-explanation { outline: 2px dashed #8875b4; outline-offset: 2px; cursor: help; }
+.criminal-dance-header-btn.active { background: #6c599c; border-color: #6c599c; color: #fff; }
+
+.criminal-dance-modal { padding: 14px; background: #27213985; }
+.criminal-dance-modal .criminal-dance-modal-content { width: 100%; min-width: 0; max-width: 640px; max-height: min(86vh, 760px); max-height: min(86dvh, 760px); border: 1px solid #d9ccde; border-radius: 14px; background: #fffaf3; color: #494154; overflow-wrap: anywhere; }
+.criminal-dance-modal .criminal-dance-modal-header { gap: 10px; min-width: 0; padding: 14px 16px; border-bottom-color: #e5dce8; }
+.criminal-dance-modal-header h3 { min-width: 0; margin: 0; font-size: 16px; line-height: 1.5; }
+.criminal-dance-modal-header button { flex: 0 0 auto; min-height: 36px; padding: 7px 12px; border: 1px solid #d8cfe3; border-radius: 7px; background: #eee7f6; color: #58466e; font-size: 12px; }
+.criminal-dance-modal .criminal-dance-modal-body { min-width: 0; padding: 14px 16px; overflow-y: auto; overscroll-behavior: contain; font-size: 13px; line-height: 1.8; }
+.criminal-dance-modal-body h3,
+.criminal-dance-modal-body h4 { margin: 14px 0 5px; color: #6b5588; font-size: 14px; }
+.criminal-dance-modal-body > :first-child { margin-top: 0; }
+.criminal-dance-modal-body p { margin: 7px 0; }
+.criminal-dance-modal-body ul,
+.criminal-dance-modal-body ol { padding-left: 21px; }
+.criminal-dance-tooltip { position: fixed; z-index: 10050; width: max-content; max-width: min(300px, calc(100vw - 20px)); max-height: calc(100dvh - 20px); padding: 9px 12px; border-radius: 8px; background: #42354f; color: #fffaf2; box-shadow: 0 6px 20px #25193230; font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; pointer-events: none; }
+
+#criminalDanceConfigBox .compact-row { display: flex; flex-direction: row; align-items: center; flex-wrap: nowrap; gap: 8px; min-width: 0; }
+#criminalDanceConfigBox .compact-row label { flex: 0 1 104px; min-width: 0; overflow-wrap: anywhere; }
+#criminalDanceConfigBox .compact-row select { flex: 1 1 0; min-width: 0; max-width: 100%; }
+#criminalDanceConfigBox .compact-row:has(input[type="checkbox"]) label { flex: 0 1 auto; }
+#criminalDanceConfigBox .compact-row input[type="checkbox"] { flex: 0 0 auto; width: 16px; height: 16px; min-width: 16px; min-height: 0; margin: 0; }
+
+@container criminal-dance (max-width: 760px) {
+    #criminalDancePanel .criminal-dance-layout,
+    #criminalDancePanel .criminal-dance-records { grid-template-columns: minmax(0, 1fr); }
+    #criminalDancePanel .criminal-dance-banner { margin-bottom: 12px; }
+    #criminalDancePanel .criminal-dance-section,
+    #criminalDancePanel .criminal-dance-results { padding: 11px; }
+    #criminalDancePanel .criminal-dance-public-list,
+    #criminalDancePanel .criminal-dance-private-list { max-height: 150px; }
+    #criminalDancePanel .criminal-dance-card { min-height: 150px; }
+}
+
+@container criminal-dance (max-width: 460px) {
+    #criminalDancePanel .criminal-dance-hand { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #criminalDancePanel .criminal-dance-card { min-height: 146px; padding: 9px 7px; }
+    #criminalDancePanel .criminal-dance-card-icon { font-size: 29px; }
+    #criminalDancePanel .criminal-dance-card-name { font-size: 15px; }
+    #criminalDancePanel .criminal-dance-status-chip { padding: 4px 8px; font-size: 12px; }
+    #criminalDancePanel .criminal-dance-player { padding: 8px; }
+    #criminalDancePanel .criminal-dance-field { flex-basis: 100%; }
+    #criminalDancePanel .criminal-dance-action-row { gap: 7px; }
+}
+
+@media (max-width: 460px) {
+    .criminal-dance-modal { padding: 10px; }
+    .criminal-dance-modal .criminal-dance-modal-header,
+    .criminal-dance-modal .criminal-dance-modal-body { padding: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #criminalDancePanel .criminal-dance-card { transition: none; }
+}

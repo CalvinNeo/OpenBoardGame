@@ -62,7 +62,7 @@
 | `snapping_1` | 捕捉1 / Snapping 1 | immediate | take_display_card | 从展示区任选1张牌加入手牌，忽略声望范围；回合结束时补展示区。 | — |
 | `snapping_2` | 捕捉2 / Snapping 2 | immediate | take_display_card_twice | 依次从展示区任选1张牌两次；可选择在两次之间补牌。 | — |
 | `constriction` | 缠绕 / Constriction | immediate | opponent_action_debuff | 每名至少有5吸引力的玩家，若有一条计分轨领先你，在槽位5放1枚缠绕；若两条都领先，在槽位4和5各放1枚。带标记的行动强度-2。 | 结算顺序可放在本动物印刷吸引力之前或之后。；指定行动牌已有缠绕时丢弃新标记，不改放到其他牌；双倍行动的每个子行动都减2。；缠绕牌到槽位1/2时可能变成-1/0，须用足够X标记升到至少1，或改做获得X标记的替代行动。；行动结算后移除该标记；休息时移除所有剩余标记。 |
-| `hypnosis` | 催眠 / Hypnosis | immediate | borrow_opponent_action | 先确定吸引力最高且至少为5的目标玩家；当前行动全部结束并移动行动牌后，再选择该玩家槽位1、2或3的一张行动牌，按其升级面执行并将该牌移到槽位1。 | 可在本动物吸引力前后确定目标；借用行动必须在当前行动结束后执行。；可用自己的X标记；目标牌上的毒液/缠绕生效。；不能使用双倍标记。；独特建筑能否覆盖个人板的建造II格，仍看自己的建造牌是否升级。；若目标是自己则无效。 |
+| `hypnosis` | 催眠 / Hypnosis | immediate | borrow_opponent_action | 先确定吸引力最高且至少为5的目标玩家；当前行动全部结束并移动行动牌后，再选择该玩家槽位1、2或3的一张行动牌，按该牌当前的I／II面执行并将该牌移到槽位1。 | 可在本动物吸引力前后确定目标；借用行动必须在当前行动结束后执行。；可用自己的X标记；目标牌上的毒液/缠绕生效。；不能使用双倍标记。；独特建筑能否覆盖个人板的建造II格，仍看自己的建造牌是否升级。；若目标是自己则无效。 |
 | `scavenging` | 食腐 / Scavenging | immediate | draw_from_discard | 将弃牌堆面朝下洗匀，随机抽N张，保留1张并弃掉其余。 | — |
 | `posturing` | 姿态 / Posturing | immediate | free_build | 最多N次免费放置1个贩售亭或休憩亭，仍遵守通常放置规则。 | — |
 | `perception_2` | 洞察力2 / Perception 2 | immediate | draw_and_keep | 从牌库抽2张，保留1张并弃1张。 | — |
@@ -156,7 +156,7 @@
 | 479 | 美洲短吻鳄<br>AMERICAN ALLIGATOR | 18 | standard:4 / reptile_house:2；water≥1 | 无 | reptile×1、americas×1 | appeal +7 | 捕捉1[immediate] |
 | 480 | 宽吻凯门鳄<br>BROAD-SNOUTED CAIMAN | 16 | standard:4 / reptile_house:2；water≥1 | 无 | reptile×1、americas×1 | appeal +6 | 捕捉1[immediate] |
 | 481 | 圣克鲁斯岛加拉帕戈斯象龟<br>GALAPAGOS GIANT TORTOISE | 30 | standard:3 / reptile_house:2 | americas≥2、animals II | reptile×1、americas×1 | appeal +8、conservation +2、reputation +1 | 日光浴[immediate] |
-| 482 | 亚马逊森蚺<br>ANACONDA | 13 | standard:2 / reptile_house:1；water≥1, rock≥1 | partner_zoo≥1 | reptile×1、americas×1 | appeal +6 | 缠绕[immediate] |
+| 482 | 亚马逊森蚺<br>ANACONDA | 13 | standard:2 / reptile_house:1；water≥1 | partner_zoo≥1 | reptile×1、americas×1 | appeal +6 | 缠绕[immediate] |
 | 483 | 红尾蚺<br>BOA CONSTRICTOR | 16 | standard:2 / reptile_house:1 | science≥2 | reptile×1、americas×1 | appeal +7 | 缠绕[immediate] |
 | 484 | 欧洲泽龟<br>EUROPEAN POND TURTLE | 9 | standard:1 / reptile_house:1；water≥1 | 无 | reptile×1、europe×1 | appeal +4 | — |
 | 485 | 极北蝰<br>COMMON EUROPEAN ADDER | 10 | standard:1 / reptile_house:0 | partner_zoo≥1 | reptile×1、europe×1 | appeal +2 | 催眠[immediate] |
@@ -361,7 +361,7 @@
 | 010 | `scoring_steps` | `[1,3,5,7]` | 使用原始基础版门槛；不采用《海洋世界》替换卡的1/3/5/6。 |
 | 011 | `scoring_steps` | `[2,4,6,8]` | 使用原始基础版门槛；不采用《海洋世界》替换卡的2/4/6/7。 |
 | 463 | `cost` | `11` | 社区元数据曾误记为14；卡面为11。 |
-| 482 | `placement` | `{"water":1,"rock":1}` | 补齐卡面左上角的临水、临岩要求。 |
+| 482 | `placement` | `{"water":1,"rock":0}` | 卡面仅要求临水1；右侧棕色的1表示爬行馆容量，不能误读为临岩要求。 |
 | 251 | `placement` | `{"water":1}` | 补齐北极熊展独特建筑的临水要求。 |
 | 256 | `printed_rewards.appeal` | `4` | 社区结构化数据漏记；卡面与官方词汇表均为4吸引力。 |
 | 261 | `printed_rewards` | `{"appeal":1,"conservation":1}` | 补齐打出时的印刷奖励。 |

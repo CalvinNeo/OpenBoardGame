@@ -181,6 +181,17 @@ def _push_private_note(state: Dict, player_id: str, text: str) -> None:
     state["players"][player_id]["private_log"].append(text)
 
 
+def _round_ready_players(state: Dict) -> List[str]:
+    if not state.get("game_over"):
+        return []
+    confirmed = set(state.get("round_ready_player_ids", []))
+    # The room stops running bots at round end, so bots never block the review.
+    return [
+        pid for pid in state["player_order"]
+        if pid in confirmed or state["player_meta"].get(pid, {}).get("is_bot")
+    ]
+
+
 def _begin_round(state: Dict, keep_scores: bool) -> None:
     player_ids = list(state["player_order"])
     hands = _deal_round_hands(state["config"], player_ids)
@@ -201,6 +212,7 @@ def _begin_round(state: Dict, keep_scores: bool) -> None:
     state["game_over"] = False
     state["match_over"] = False
     state["last_summary"] = ""
+    state["round_ready_player_ids"] = []
 
     first_player = None
     for pid in player_ids:
@@ -373,8 +385,10 @@ class CriminalDanceGame:
 
     @staticmethod
     def get_legal_actions(state: Dict, player_id: str) -> List[str]:
+        if player_id not in state["players"]:
+            return []
         if state.get("game_over"):
-            return ["play_again"]
+            return [] if player_id in _round_ready_players(state) else ["play_again"]
         if player_id != state.get("current_player_id"):
             return []
         if not state["players"].get(player_id, {}).get("hand"):
@@ -386,14 +400,25 @@ class CriminalDanceGame:
 
     @staticmethod
     def apply_action(state: Dict, player_id: str, action: Dict) -> Tuple[List[Dict], Optional[str]]:
+        if player_id not in state["players"]:
+            return [], "player not in game"
         action_type = action.get("type")
         if action_type == "play_again":
             if not state.get("game_over"):
                 return [], "round is still running"
+            ready_players = _round_ready_players(state)
+            if player_id in ready_players:
+                return [], "already ready for next round"
+            ready_players.append(player_id)
+            state["round_ready_player_ids"] = ready_players
+            events = [{"type": "criminal_dance:round_ready", "payload": {"player_id": player_id}}]
+            if any(pid not in ready_players for pid in state["player_order"]):
+                return events, None
             keep_scores = not bool(state.get("match_over"))
             state["round_number"] = 1 if not keep_scores else int(state["round_number"]) + 1
             _begin_round(state, keep_scores=keep_scores)
-            return [{"type": "criminal_dance:play_again", "payload": {"round_number": state["round_number"]}}], None
+            events.append({"type": "criminal_dance:play_again", "payload": {"round_number": state["round_number"]}})
+            return events, None
         if state.get("game_over"):
             return [], "round over"
         if player_id != state.get("current_player_id"):
@@ -528,6 +553,7 @@ class CriminalDanceGame:
 
     @staticmethod
     def get_public_view(state: Dict, viewer_id: str) -> Dict:
+        ready_players = _round_ready_players(state)
         players_view = []
         for pid in state["player_order"]:
             pdata = state["players"][pid]
@@ -543,6 +569,7 @@ class CriminalDanceGame:
                     "is_accomplice": bool(pdata["is_accomplice"]),
                     "private_log": list(pdata["private_log"]) if show_hand else [],
                     "you": pid == viewer_id,
+                    "round_ready": pid in ready_players,
                 }
             )
         return {
@@ -560,6 +587,10 @@ class CriminalDanceGame:
             "criminal_holder_player_id": _find_criminal_holder(state) if state.get("match_over") else None,
             "game_over": bool(state.get("game_over")),
             "match_over": bool(state.get("match_over")),
+            "round_ready_player_ids": ready_players,
+            "round_waiting_player_ids": [
+                pid for pid in state["player_order"] if state.get("game_over") and pid not in ready_players
+            ],
             "config": dict(state.get("config", {})),
             "legal_actions": CriminalDanceGame.get_legal_actions(state, viewer_id),
         }

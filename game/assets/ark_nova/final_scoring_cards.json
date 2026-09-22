@@ -187,14 +187,14 @@
           "reward": {
             "conservation": 1
           },
-          "rule_zh": "地图上的每个水域格都至少邻接一个已覆盖的可建造格。"
+          "rule_zh": "地图上每个未被覆盖的水域格都至少邻接一个建筑格；已覆盖的水域不参与此条件。"
         },
         {
           "id": "all_rock_spaces_connected",
           "reward": {
             "conservation": 1
           },
-          "rule_zh": "地图上的每个岩石格都至少邻接一个已覆盖的可建造格。"
+          "rule_zh": "地图上每个未被覆盖的岩石格都至少邻接一个建筑格；已覆盖的岩石不参与此条件。"
         },
         {
           "id": "all_buildable_border_spaces_covered",

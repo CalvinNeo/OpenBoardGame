@@ -1,0 +1,206 @@
+#lasVegasPanel {
+    --lv-ink: #edf4ef;
+    --lv-muted: #a2b5ba;
+    --lv-gold: #edca79;
+    --lv-mint: #86d9bd;
+    --lv-line: rgba(181, 212, 215, .18);
+    min-width: 0;
+    color: var(--lv-ink);
+}
+#lasVegasPanel *, .lv-dialog *, .lv-tooltip { box-sizing: border-box; }
+#lasVegasPanel [hidden], .lv-tooltip[hidden] { display: none !important; }
+.lv-surface, .lv-setup {
+    background: radial-gradient(ellipse at 80% 0%, rgba(44, 106, 114, .24), transparent 45%), #0c1b27;
+    border: 1px solid #2b444f;
+    border-radius: 19px;
+    padding: clamp(12px, 2vw, 24px);
+    min-width: 0;
+}
+.lv-surface h2, .lv-surface h3, .lv-setup h2, .lv-dialog h2, .lv-dialog h3 { margin: 0; color: inherit; }
+.lv-surface button, .lv-setup button, .lv-dialog button { margin: 0; min-width: 0; font-family: inherit; letter-spacing: normal; text-transform: none; box-shadow: none; }
+.lv-surface button:focus-visible, .lv-setup input:focus-visible, [data-lv-tip]:focus-visible { outline: 2px solid var(--lv-mint, #86d9bd); outline-offset: 3px; }
+.lv-surface button:disabled { cursor: default; }
+.lv-surface [data-lv-tip], .lv-surface strong, .lv-surface span, .lv-setup label { overflow-wrap: anywhere; }
+.lv-banner, .lv-section-heading, .lv-action-line, .lv-casino-heading, .lv-player-heading, .lv-dialog-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
+.lv-banner { padding-bottom: 17px; }
+.lv-banner > div:first-child { min-width: 0; }
+.lv-eyebrow { display: block; color: var(--lv-gold, #edca79); font-size: .65rem; font-weight: 700; letter-spacing: .12em; line-height: 1.5; }
+.lv-banner h2, .lv-setup h2 { margin-top: 5px; font-family: Georgia, "Times New Roman", serif; font-size: clamp(1.3rem, 2.6vw, 2rem); line-height: 1.3; }
+.lv-banner h2 small, .lv-setup h2 small { display: inline-block; color: var(--lv-gold); font-size: .64em; font-weight: 400; white-space: nowrap; }
+.lv-round-marker { flex-shrink: 0; text-align: right; }
+.lv-round-marker > span { display: flex; flex-direction: column; align-items: flex-end; }
+.lv-round-marker span span { color: var(--lv-muted); font-size: .62rem; letter-spacing: .14em; }
+.lv-round-marker b { color: var(--lv-gold); font-family: Georgia, serif; font-size: 1.65rem; line-height: 1.25; }
+.lv-round-marker small { font-size: .8rem; color: var(--lv-muted); font-weight: 400; }
+.lv-status { display: flex; justify-content: space-between; align-items: center; gap: 8px 14px; flex-wrap: wrap; padding: 10px 13px; margin-bottom: 16px; border: 1px solid rgba(134, 217, 189, .25); border-radius: 9px; background: #172e35; color: #e3f5ec; font-size: .78rem; line-height: 1.6; }
+.lv-status > span:last-child { color: var(--lv-mint); font-size: .7rem; }
+.lv-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(210px, .34fr); gap: 17px; align-items: start; }
+.lv-main, .lv-sidebar { display: grid; gap: 15px; min-width: 0; }
+.lv-box { min-width: 0; border: 1px solid var(--lv-line); border-radius: 12px; background: rgba(24, 44, 56, .68); padding: 13px; }
+.lv-section-heading { margin-bottom: 12px; }
+.lv-section-heading h3 { font-size: .88rem; font-weight: 600; line-height: 1.5; min-width: 0; }
+.lv-section-heading h3 small { display: inline-block; color: var(--lv-muted); font-size: .72rem; font-weight: 400; }
+.lv-section-heading > span { color: var(--lv-muted); font-size: .66rem; text-align: right; }
+.lv-board { min-width: 0; }
+.lv-board > .lv-section-heading { padding: 0 1px; }
+.lv-casinos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-items: stretch; }
+.lv-casino { min-width: 0; border: 1px solid #40545d; border-radius: 12px; background: linear-gradient(160deg, #243c48, #142732 65%); padding: 11px; transition: border-color .14s, box-shadow .14s; }
+.lv-casino:nth-child(2n) { background: linear-gradient(160deg, #283e40, #142732 65%); }
+.lv-casino.is-selected { border-color: var(--lv-gold); box-shadow: 0 0 0 2px rgba(237, 202, 121, .25); }
+.lv-casino-heading { align-items: center; gap: 7px; }
+.lv-casino-select { display: flex; align-items: center; gap: 7px; background: transparent !important; border: 0 !important; padding: 0 !important; color: var(--lv-ink) !important; opacity: 1 !important; text-align: left; }
+.lv-casino-select:enabled:hover { filter: brightness(1.18); }
+.lv-casino-select > span:last-child { display: flex; flex-direction: column; }
+.lv-casino-select small { font-size: .51rem; color: var(--lv-muted); letter-spacing: .08em; }
+.lv-casino-select b { color: var(--lv-gold); font-size: 1.1rem; font-family: Georgia, serif; }
+.lv-prize { font-size: clamp(.8rem, 1.4vw, 1.05rem); color: var(--lv-gold); text-align: right; min-width: 0; }
+.lv-color-0 { --lv-player: #ed8b85; }
+.lv-color-1 { --lv-player: #80bedf; }
+.lv-color-2 { --lv-player: #e4c06c; }
+.lv-color-3 { --lv-player: #9ad597; }
+.lv-color-4 { --lv-player: #c2a0e1; }
+.lv-color-neutral { --lv-player: #e7e7df; }
+.lv-die { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); flex: 0 0 auto; width: 35px; height: 35px; padding: 6px; gap: 2px; background: var(--lv-player, #e7e7df); border: 1px solid rgba(255,255,255,.25); border-radius: 7px; box-shadow: inset 0 -3px 0 rgba(10,23,31,.17), 0 2px 4px #091923; }
+.lv-die i { display: block; width: 100%; height: 100%; border-radius: 50%; }
+.lv-die .is-pip { background: #263342; }
+.lv-banknotes, .lv-wallet-notes { display: flex; flex-wrap: wrap; gap: 5px; min-width: 0; }
+.lv-banknotes { min-height: 40px; align-content: center; padding: 9px 0 8px; }
+.lv-banknotes > span, .lv-wallet-notes > span { display: inline-flex; min-width: 0; }
+.lv-banknote { display: inline-block; border: 1px solid #587467; background: #2b4843; color: #daf0c8; font-size: .66rem; line-height: 1.6; border-radius: 3px; padding: 1px 5px; white-space: nowrap; }
+.lv-casino-label { display: flex; justify-content: space-between; gap: 4px; padding: 6px 0; border-top: 1px solid var(--lv-line); color: var(--lv-muted); font-size: .57rem; line-height: 1.5; }
+.lv-casino-label > span { color: var(--lv-gold); }
+.lv-occupants { display: grid; gap: 4px; }
+.lv-occupant { display: grid; grid-template-columns: 7px minmax(0, 1fr) auto; grid-template-areas: "dot name count" ". payout payout"; gap: 1px 5px; align-items: center; padding: 4px 5px; border-radius: 5px; background: rgba(9, 24, 31, .32); font-size: .68rem; line-height: 1.4; }
+.lv-player-dot { display: block; width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: var(--lv-player); box-shadow: 0 0 0 2px rgba(255,255,255,.06); }
+.lv-occupant > .lv-player-dot { grid-area: dot; }
+.lv-occupant-name { grid-area: name; overflow-wrap: anywhere; }
+.lv-occupant > [data-lv-tip] { grid-area: count; }
+.lv-dice-count { font-size: .63rem; white-space: nowrap; }
+.lv-payout { grid-area: payout; color: var(--lv-mint); font-size: .61rem; }
+.lv-occupant.is-tied .lv-payout { color: #efaaa4; }
+.lv-occupant.is-tied .lv-occupant-name { color: #b3a5a5; }
+.lv-empty-casino { min-height: 32px; display: grid; place-items: center; color: #7e959f; font-size: .67rem; }
+.lv-returned { color: var(--lv-muted); font-size: .61rem; line-height: 1.5; border-top: 1px solid var(--lv-line); margin-top: 7px; padding-top: 6px; }
+.lv-controls { background: linear-gradient(115deg, #1c3940, #1b2b37); border-color: #3b635e; }
+.lv-roll-rest { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 4px 0 13px; }
+.lv-roll-rest > div { display: grid; min-width: 0; gap: 4px; }
+.lv-roll-rest strong { font-size: .85rem; }
+.lv-roll-rest span:not(.lv-die) { font-size: .72rem; color: var(--lv-muted); }
+.lv-roll-rest .lv-die { width: 42px; height: 42px; padding: 7px; }
+.lv-roll-tray { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 7px; padding: 0 0 13px; }
+.lv-roll-group { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 8px 3px !important; min-height: 83px; background: rgba(4, 19, 25, .35) !important; border: 1px solid #526469 !important; border-radius: 8px !important; color: var(--lv-ink) !important; }
+.lv-roll-group:disabled { opacity: .85; }
+.lv-roll-group.is-selected { background: rgba(237, 202, 121, .13) !important; border-color: var(--lv-gold) !important; box-shadow: 0 0 0 1px var(--lv-gold); }
+.lv-roll-group:enabled:hover { border-color: var(--lv-mint) !important; }
+.lv-roll-counts { display: flex; justify-content: center; flex-wrap: wrap; gap: 2px 6px; font-size: .64rem; line-height: 1.4; }
+.lv-neutral-count { color: #eee; }
+.lv-action-line { border-top: 1px solid var(--lv-line); padding-top: 10px; font-size: .77rem; color: var(--lv-muted); }
+.lv-action-line > span { min-width: 0; }
+.lv-primary { flex: 0 0 auto; background: var(--lv-gold) !important; border: 1px solid #f4d590 !important; color: #1c2c32 !important; border-radius: 7px !important; padding: 9px 15px !important; font-size: .77rem; line-height: 1.5; font-weight: 700; }
+.lv-primary:disabled { background: #31494e !important; border-color: #56665f !important; color: #a9b9b9 !important; opacity: .9; }
+.lv-players { display: grid; gap: 8px; }
+.lv-player { padding: 8px; background: #142831; border: 1px solid var(--lv-line); border-radius: 7px; min-width: 0; }
+.lv-player.is-current { border-color: var(--lv-mint); background: #24403f; }
+.lv-player-heading { gap: 6px; font-size: .76rem; align-items: flex-start; }
+.lv-player-heading > .lv-player-dot { margin-top: 5px; }
+.lv-player-heading > strong { flex: 1 1 0; min-width: 0; line-height: 1.5; }
+.lv-player-heading strong small { color: var(--lv-gold); font-weight: 400; font-size: .63rem; }
+.lv-player-status { flex: 0 0 auto; font-size: .58rem; color: var(--lv-muted); padding-top: 3px; }
+.lv-player-stats { display: flex; flex-wrap: wrap; gap: 5px 10px; margin-top: 7px; color: #c4d5d2; font-size: .67rem; }
+.lv-wallet-total { display: block; color: var(--lv-gold); font-size: 1.65rem; font-family: Georgia, serif; font-weight: 400; margin: 2px 0 10px; }
+.lv-wallet-notes { max-height: 117px; overflow: auto; padding: 3px 2px; }
+.lv-muted { color: var(--lv-muted); font-size: .73rem; }
+.lv-log { max-height: 180px; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; padding-right: 4px; }
+.lv-log p { display: flex; align-items: baseline; gap: 6px; margin: 0; padding: 7px 0; border-top: 1px solid var(--lv-line); font-size: .67rem; line-height: 1.65; overflow-wrap: anywhere; }
+.lv-log p:first-child { border-top: 0; padding-top: 0; }
+.lv-log small { color: var(--lv-gold); flex-shrink: 0; font-size: .57rem; }
+.lv-review { border-color: #8d8159; background: linear-gradient(125deg, #323e37, #1b3038); }
+.lv-earnings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.lv-earning { display: grid; grid-template-columns: 7px minmax(0, 1fr); gap: 2px 6px; align-items: center; background: rgba(4, 20, 26, .26); padding: 6px 8px; border-radius: 5px; font-size: .75rem; }
+.lv-earning > strong { grid-column: 2; color: var(--lv-gold); font-size: .81rem; }
+.lv-review-note { color: var(--lv-muted); margin: 10px 0; font-size: .71rem; line-height: 1.6; }
+.lv-final { text-align: center; border-color: #9e8957; background: radial-gradient(ellipse at 50% 0, #455049, #1a2e38 80%); }
+.lv-final h3 { font-size: 1.35rem; margin-top: 7px; overflow-wrap: anywhere; }
+.lv-final > p { font-size: .75rem; color: var(--lv-muted); margin: 7px 0 15px; }
+.lv-rankings { display: grid; gap: 6px; }
+.lv-rank-row { display: grid; grid-template-columns: 20px minmax(0, 1fr) minmax(65px, auto); align-items: center; gap: 8px; text-align: left; padding: 8px; border-radius: 6px; background: #1a2d35; font-size: .78rem; }
+.lv-rank-row.is-winner { background: #3d483b; color: #ffdfa0; }
+.lv-rank-row small { display: block; font-size: .64rem; color: var(--lv-muted); padding-top: 3px; }
+.lv-rank { color: var(--lv-gold); text-align: center; font-family: Georgia, serif; font-size: 1.1rem; }
+.lv-rank-row > strong { text-align: right; }
+.lv-setup { display: flex; align-items: center; flex-wrap: wrap; gap: 15px 24px; }
+.lv-setup > div { flex: 1 1 auto; }
+.lv-variant { display: inline-flex; align-items: center; gap: 8px; font-size: .9rem; cursor: pointer; }
+.lv-variant input { margin: 0; width: 17px; height: 17px; flex: 0 0 auto; accent-color: #86d9bd; }
+.lv-variant small { display: inline-block; color: var(--lv-muted); font-size: .7rem; }
+.lv-setup p { flex-basis: 100%; margin: 0; color: var(--lv-muted); font-size: .76rem; }
+.lv-explaining [data-lv-explain] { cursor: help !important; outline: 2px dashed #9ebeff !important; outline-offset: 2px; }
+.lv-tooltip { position: fixed; z-index: 12000; width: max-content; max-width: min(320px, calc(100vw - 16px)); max-height: calc(100dvh - 16px); overflow: auto; padding: 10px 12px; background: #eef4e8; color: #1e3439; border: 1px solid #c6d6c5; border-radius: 8px; font-size: .76rem; line-height: 1.65; box-shadow: 0 7px 25px #0006; pointer-events: none; overflow-wrap: anywhere; }
+.lv-dialog { width: min(650px, calc(100vw - 24px)); max-height: calc(100dvh - 32px); padding: 0; color: #edf4ef; background: #152b37; border: 1px solid #6b8078; border-radius: 13px; box-shadow: 0 18px 80px #0008; }
+.lv-dialog::backdrop { background: rgba(3, 13, 21, .76); }
+.lv-dialog-heading { padding: 16px 19px; border-bottom: 1px solid #3c5057; }
+.lv-dialog-heading h2 { min-width: 0; font-size: 1.05rem; overflow-wrap: anywhere; }
+.lv-dialog-heading button { flex-shrink: 0; border: 1px solid #647875; border-radius: 6px; background: #253f45; color: #f0f3e7; padding: 6px 12px; font-size: .77rem; }
+.lv-dialog-body { padding: 4px 19px 17px; font-size: .84rem; line-height: 1.9; overflow-wrap: anywhere; }
+.lv-dialog-body h3 { margin: 17px 0 3px; color: #edca79; font-size: .91rem; }
+.lv-dialog-body p { margin: 11px 0; }
+@media (min-width: 1300px) {
+    .lv-occupant { grid-template-columns: 7px minmax(0, 1fr) auto auto; grid-template-areas: "dot name count payout"; gap: 5px; }
+}
+@media (max-width: 1050px) {
+    .lv-layout { grid-template-columns: minmax(0, 1fr) minmax(185px, .42fr); gap: 12px; }
+    .lv-casinos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 720px) {
+    .lv-layout { grid-template-columns: minmax(0, 1fr); }
+    .lv-sidebar { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .lv-sidebar > .lv-box:first-child { grid-column: 1 / -1; }
+    .lv-players { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .lv-casinos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .lv-casino-heading { flex-wrap: wrap; }
+    .lv-prize { width: 100%; text-align: left; }
+    .lv-banner { padding-bottom: 12px; }
+    .lv-log { max-height: 145px; }
+}
+@media (max-width: 500px) {
+    .lv-surface { padding: 12px; border-radius: 13px; }
+    .lv-banner { gap: 7px; }
+    .lv-banner h2 small { display: block; margin-top: 3px; }
+    .lv-eyebrow { font-size: .55rem; letter-spacing: .07em; }
+    .lv-casinos { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .lv-casino { padding: 9px; }
+    .lv-casino-heading { flex-wrap: nowrap; }
+    .lv-casino-select { gap: 5px; }
+    .lv-casino-select > .lv-die { width: 28px; height: 28px; padding: 5px; gap: 1.5px; border-radius: 6px; }
+    .lv-casino-select small { font-size: .45rem; }
+    .lv-casino-select b { font-size: .92rem; }
+    .lv-prize { width: auto; font-size: .8rem; }
+    .lv-status { padding: 8px 10px; font-size: .73rem; }
+    .lv-box { padding: 11px; }
+    .lv-roll-tray { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+    .lv-roll-group { flex-direction: row; flex-wrap: wrap; gap: 5px; min-height: 64px; padding: 7px 3px !important; }
+    .lv-roll-group .lv-die { width: 30px; height: 30px; padding: 5px; }
+    .lv-roll-counts { flex-direction: column; font-size: .6rem; }
+    .lv-primary { padding: 8px 11px !important; font-size: .74rem; }
+    .lv-action-line { gap: 8px; font-size: .73rem; }
+    .lv-player-heading { flex-wrap: wrap; }
+    .lv-player-status { flex-basis: 100%; padding-left: 13px; padding-top: 0; }
+    .lv-player-stats { gap: 5px 7px; font-size: .64rem; }
+    .lv-sidebar { grid-template-columns: minmax(0, 1fr); }
+    .lv-wallet-total { font-size: 1.45rem; }
+    .lv-wallet-notes { max-height: 80px; }
+    .lv-setup { padding: 14px; }
+}
+@media (max-width: 350px) {
+    .lv-surface { padding: 9px; }
+    .lv-casino { padding: 7px; }
+    .lv-casino-heading { flex-wrap: wrap; }
+    .lv-prize { width: 100%; text-align: left; }
+    .lv-players { grid-template-columns: minmax(0, 1fr); }
+    .lv-player-heading { flex-wrap: nowrap; }
+    .lv-player-status { flex-basis: auto; padding-left: 0; }
+    .lv-section-heading { gap: 6px; }
+    .lv-section-heading > span { font-size: .6rem; }
+    .lv-banknote { font-size: .59rem; padding-inline: 3px; }
+    .lv-rank-row { gap: 5px; font-size: .7rem; }
+}

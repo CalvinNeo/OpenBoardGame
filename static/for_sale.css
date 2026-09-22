@@ -64,7 +64,7 @@
 .fs-finances > div { min-width: 0; padding: 9px 11px; border: 1px solid #e4e6d6; background: #f5f5ea; border-radius: 7px; }
 .fs-finances span { display: block; color: #768065; font-size: 10px; }
 .fs-finances strong { display: block; font: 700 24px/1.3 Georgia, serif; margin-top: 4px; color: #39573c; }
-.fs-hand { display: grid; grid-template-columns: repeat(auto-fit, minmax(68px, 1fr)); gap: 7px; }
+.fs-hand { display: grid; grid-template-columns: repeat(auto-fill, minmax(68px, 1fr)); gap: 7px; }
 #forSalePanel .fs-hand .fs-property { padding: 7px; min-height: 100px; }
 .fs-hand .fs-card-top b { font-size: 22px; }
 .fs-hand .fs-card-top small { display: none; }
@@ -73,6 +73,7 @@
 .fs-hand .fs-card-foot { font-size: 7px; padding-top: 3px; }
 #forSalePanel button.fs-property:disabled { opacity: .7; }
 #forSalePanel button.fs-property:not(:disabled):hover { border-color: #356246; box-shadow: 0 2px 8px #244d3e20; }
+#forSalePanel .fs-property.is-submitted { border-color: #a27a3e; box-shadow: inset 0 0 0 1px #a27a3e; }
 #forSalePanel .fs-property.is-selected { border-color: #245b3d; box-shadow: 0 0 0 2px #245b3d; background: #d4e7c7; }
 .fs-sale-confirm { flex-wrap: wrap; gap: 8px; padding-top: 12px; margin-top: 12px; border-top: 1px solid #dce1c9; font-size: 11px; }
 .fs-sale-confirm > span { min-width: 0; flex: 1 1 85px; }
@@ -157,10 +158,12 @@
     .fs-finances span { font-size: 9px; }
     .fs-players { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
     .fs-player { padding: 9px; }
-    .fs-check { padding: 8px; }
-    .fs-check strong { font-size: 27px; }
-    .fs-check-top { flex-wrap: wrap; gap: 2px; }
-    .fs-check-top small, .fs-check > small { font-size: 6px; }
+    .fs-market.fs-check-market { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .fs-check { padding: 7px 6px; text-align: center; }
+    .fs-check strong { font-size: clamp(20px, 6.5vw, 26px); line-height: 1.15; margin: 5px 0; white-space: nowrap; }
+    .fs-check-top { justify-content: center; font-size: 17px; line-height: 1.2; }
+    .fs-check-top small, .fs-check > small { display: none; }
+    .fs-check-line { width: 70%; margin: 4px auto 0; }
     .fs-result-row { gap: 7px; }
     .fs-dialog { padding: 16px; }
 }

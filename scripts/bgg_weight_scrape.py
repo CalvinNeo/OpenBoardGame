@@ -14,6 +14,7 @@ from typing import Dict, Optional
 from urllib.request import Request, urlopen
 
 GAME_URLS = {
+    "las_vegas": "https://boardgamegeek.com/boardgame/117959/las-vegas",
     "for_sale": "https://boardgamegeek.com/boardgame/172/for-sale",
     "love_letter": "https://boardgamegeek.com/boardgame/129622/love-letter",
     "spirit_island": "https://boardgamegeek.com/boardgame/162886/spirit-island",

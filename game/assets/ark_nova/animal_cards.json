@@ -5368,14 +5368,14 @@
         "timing": "immediate",
         "cascade": "borrow_opponent_action",
         "parameters": {},
-        "text_zh": "催眠：你可以从具有最高且至少为5 {Appeal} 玩家的 {Slot-1} 、 {Slot-2} 或 {Slot-3} 槽位中，立即执行1张行动卡牌 {ActionCard} 上的行动，然后继续结算本动物。可以在获得本动物的吸引力之前或之后执行。如果是你自己，则无效。"
+        "text_zh": "催眠：先确定具有最高且至少为5 {Appeal} 的目标玩家，可以在获得本动物的吸引力之前或之后确定。如果目标是你自己，则无效。当前行动全部结束并移动行动牌后，再从该玩家的 {Slot-1} 、 {Slot-2} 或 {Slot-3} 槽位中选择1张行动卡牌 {ActionCard} ，按该牌当前的I／II面执行行动，并将该牌移到 {Slot-1} 。"
       }
     ],
     "raw": {
       "habitat_zh": "尺寸2，标准围栏:爬虫馆(1)",
       "conditions_zh": "科研×2、动物行动II",
       "icons_zh": "爬行类、亚洲",
-      "effect_zh": "催眠：你可以从具有最高且至少为5 {Appeal} 玩家的 {Slot-1} 、 {Slot-2} 或 {Slot-3} 槽位中，立即执行1张行动卡牌 {ActionCard} 上的行动，然后继续结算本动物。可以在获得本动物的吸引力之前或之后执行。如果是你自己，则无效。"
+      "effect_zh": "催眠：先确定具有最高且至少为5 {Appeal} 的目标玩家，可以在获得本动物的吸引力之前或之后确定。如果目标是你自己，则无效。当前行动全部结束并移动行动牌后，再从该玩家的 {Slot-1} 、 {Slot-2} 或 {Slot-3} 槽位中选择1张行动卡牌 {ActionCard} ，按该牌当前的I／II面执行行动，并将该牌移到 {Slot-1} 。"
     },
     "source_line": 110
   },
@@ -5863,7 +5863,7 @@
     "placement": {
       "adjacent_to": {
         "water": 1,
-        "rock": 1
+        "rock": 0
       }
     },
     "icons": [
@@ -5893,7 +5893,7 @@
       }
     ],
     "raw": {
-      "habitat_zh": "尺寸2，标准围栏:爬虫馆(1)，水域相邻1，岩石相邻1",
+      "habitat_zh": "尺寸2，标准围栏:爬虫馆(1)，水域相邻1",
       "conditions_zh": "合作动物园",
       "icons_zh": "爬行类、美洲",
       "effect_zh": "缠绕：每位记录条领先你的玩家，其每有一条 ( {Appeal} 和 {ConservationPoint} )领先，获得1枚缠绕标记。"
@@ -6101,14 +6101,14 @@
         "timing": "immediate",
         "cascade": "borrow_opponent_action",
         "parameters": {},
-        "text_zh": "催眠：你可以从具有最高且至少为5 {Appeal} 玩家的 {Slot-1} 、 {Slot-2} 或 {Slot-3} 槽位中，立即执行1张行动卡牌 {ActionCard} 上的行动，然后继续结算本动物。可以在获得本动物的吸引力之前或之后执行。如果是你自己，则无效。"
+        "text_zh": "催眠：先确定具有最高且至少为5 {Appeal} 的目标玩家，可以在获得本动物的吸引力之前或之后确定。如果目标是你自己，则无效。当前行动全部结束并移动行动牌后，再从该玩家的 {Slot-1} 、 {Slot-2} 或 {Slot-3} 槽位中选择1张行动卡牌 {ActionCard} ，按该牌当前的I／II面执行行动，并将该牌移到 {Slot-1} 。"
       }
     ],
     "raw": {
       "habitat_zh": "尺寸1，标准围栏:爬虫馆(0)",
       "conditions_zh": "合作动物园",
       "icons_zh": "爬行类、欧洲",
-      "effect_zh": "催眠：你可以从具有最高且至少为5 {Appeal} 玩家的 {Slot-1} 、 {Slot-2} 或 {Slot-3} 槽位中，立即执行1张行动卡牌 {ActionCard} 上的行动，然后继续结算本动物。可以在获得本动物的吸引力之前或之后执行。如果是你自己，则无效。"
+      "effect_zh": "催眠：先确定具有最高且至少为5 {Appeal} 的目标玩家，可以在获得本动物的吸引力之前或之后确定。如果目标是你自己，则无效。当前行动全部结束并移动行动牌后，再从该玩家的 {Slot-1} 、 {Slot-2} 或 {Slot-3} 槽位中选择1张行动卡牌 {ActionCard} ，按该牌当前的I／II面执行行动，并将该牌移到 {Slot-1} 。"
     },
     "source_line": 120
   },

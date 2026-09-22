@@ -179,9 +179,12 @@ def _attack_candidates(
     top = max((int(players[player_id].get(track, 0)) for player_id in ranked), default=minimum - 1)
     if top < minimum:
         return []
+    # Pilfering may select its own zoo in a tie, making that theft have no
+    # effect. Hypnosis already represents declining its action with Skip.
     return [
         player_id for player_id in ranked
-        if player_id != context.player_id and int(players[player_id].get(track, 0)) == top
+        if (player_id != context.player_id or family == "pilfering")
+        and int(players[player_id].get(track, 0)) == top
     ]
 
 
@@ -984,7 +987,10 @@ def execute_ability(
             (criterion, _attack_candidates(context, attack, criterion, minimum=minimum))
             for criterion, minimum in criteria
         ]
-        candidates_by_criterion = [item for item in candidates_by_criterion if item[1]]
+        candidates_by_criterion = [
+            item for item in candidates_by_criterion
+            if any(player_id != context.player_id for player_id in item[1])
+        ]
         if not candidates_by_criterion:
             return _done(_event("effect_no_target", context.player_id, source=ref))
 
@@ -1175,6 +1181,19 @@ _sponsor("264-printed-1", "metric_reward", metric="connected_bonus_hex_count", r
 _sponsor("264-printed-2", "group_reward", metric="isolated_bonus_hex_count", group_size=2, reward={"conservation": 1})
 
 
+def _fixed_free_build_placement(
+    placement: Mapping[str, Any], building_type: str, size: Optional[int] = None,
+) -> Dict[str, Any]:
+    """Keep a card's printed building reward independent of client fields."""
+    if building_type.startswith("standard_enclosure_"):
+        size = int(building_type.rsplit("_", 1)[1])
+        building_type = "standard_enclosure"
+    result = {**dict(placement), "building_type": building_type}
+    if size is not None:
+        result["size"] = int(size)
+    return result
+
+
 def _execute_trigger(
     effect_id: str,
     spec: Mapping[str, Any],
@@ -1238,12 +1257,13 @@ def _execute_trigger(
             placement = choice.get("placement", choice)
             if not isinstance(placement, Mapping):
                 raise ValueError("free-building placement must be a mapping")
+            placement = _fixed_free_build_placement(placement, building)
             return _done(_event(
                 "free_build_requested",
                 context.player_id,
                 source=effect_id,
-                building_type=building,
-                placement=dict(placement),
+                building_type=placement["building_type"],
+                placement=placement,
                 normal_placement_rules=True,
             ))
         return _pending(context, effect_id, "place_free_building", "放置免费建筑", [{"id": building, "building_type": building}], 0, 1, True, {"normal_placement_rules": True})
@@ -1404,17 +1424,8 @@ def execute_sponsor_effect(
             placement = choice.get("placement", choice)
             if not isinstance(placement, Mapping):
                 raise ValueError("free-building placement must be a mapping")
-            building_type = str(spec["building"])
-            size = spec.get("size")
-            if building_type.startswith("standard_enclosure_"):
-                size = int(building_type.rsplit("_", 1)[1])
-                building_type = "standard_enclosure"
-            placement = {**dict(placement), "building_type": building_type}
-            if size is not None:
-                # The printed reward fixes the size; browser placements need
-                # only provide cells and cannot substitute another enclosure.
-                placement["size"] = int(size)
-            return _done(_event("free_build_requested", context.player_id, source=effect_id, building_type=building_type, placement=placement, normal_placement_rules=True))
+            placement = _fixed_free_build_placement(placement, str(spec["building"]), spec.get("size"))
+            return _done(_event("free_build_requested", context.player_id, source=effect_id, building_type=placement["building_type"], placement=placement, normal_placement_rules=True))
         return _pending(context, effect_id, "place_free_building", "选择免费建筑放置位置", [{"id": str(spec["building"]), "building_type": str(spec["building"])}], 0, 1, True, {key: value for key, value in spec.items() if key != "op"})
     if op == "custom":
         return _custom_sponsor(effect_id, str(spec["rule"]), context, choice)
@@ -1626,12 +1637,20 @@ def evaluate_conservation_project(
         raise ValueError(f"unknown conservation project: {card_id}")
     if player_id is not None and player_id != context.player_id:
         context = EffectContext(context.state, player_id, card_id, context.timing, context.action, context.target_player_id, dict(context.metadata))
+    player = _player(context)
+    already_supported = any(
+        str(item.get("project_id", item.get("card_id", ""))) == card_id
+        for item in _sequence(player, "supported_projects") if isinstance(item, Mapping)
+    )
+    from game.ark_nova import _has_active_rule
+    repeat_release = project["project_type"] == "release" and _has_active_rule(player, "release_project_bonus")
+    may_support = not already_supported or repeat_release
     occupied = _occupied_project_positions(context, card_id)
     slots = []
     for slot in project["support_slots"]:
         position = int(slot["position"])
         requirement = slot["requirement"]
-        if position in occupied:
+        if position in occupied or not may_support:
             eligible = False
             candidates: List[str] = []
             value = 0
@@ -1715,8 +1734,10 @@ def support_conservation_project(
         projects.append(str(card_id))
         for key, amount in project.get("new_project_bonus", {}).items():
             rewards[key] = int(rewards.get(key, 0)) + int(amount)
-    if project["project_type"] == "release" and "224" in _played_ids(context, key="played_sponsors"):
-        rewards["conservation"] = int(rewards.get("conservation", 0)) + 1
+    if project["project_type"] == "release":
+        from game.ark_nova import _active_rules
+        for rule in _active_rules(_player(context), "release_project_bonus"):
+            rewards["conservation"] = int(rewards.get("conservation", 0)) + int(rule.get("conservation", 0))
     reward_result = _grant(context, f"project:{card_id}", **rewards)
     events.extend(reward_result.events)
     supported = _player(context).setdefault("supported_projects", [])
@@ -1758,7 +1779,7 @@ def _map_condition(context: EffectContext, condition_id: str, player_id: Optiona
         return all(
             any(neighbor in covered for neighbor in cell.get("neighbors", []))
             for cell in MAP0["cells"]
-            if cell.get("terrain") == terrain
+            if cell.get("terrain") == terrain and cell["id"] not in covered
         )
     return False
 

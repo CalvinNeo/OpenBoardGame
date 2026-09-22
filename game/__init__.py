@@ -1,4 +1,6 @@
+from game.las_vegas import LasVegasGame
 from game.for_sale import ForSaleGame
+from game.cheaty_mages import CheatyMagesGame
 from game.acquire import AcquireGame
 from game.abraca_what import AbracaWhatGame
 from game.age_of_war import AgeOfWarGame
@@ -80,7 +82,9 @@ from game.wandering_towers import WanderingTowersGame
 from game import definitions as _definitions
 
 __all__ = [
+    "LasVegasGame",
     "ForSaleGame",
+    "CheatyMagesGame",
     "RedDoorsGame",
     "AbracaWhatGame",
     "AcquireGame",

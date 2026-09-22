@@ -1,5 +1,19 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
+  "cheaty_mages": {
+    "scripts": ["/static/games/cheaty_mages.js?v=2"],
+    "styles": ["/static/cheaty_mages.css?v=1"],
+    "markup": "/static/games/cheaty_mages.html?v=1",
+    "panel": "cheatyMagesPanel",
+    "header": "showCheatyMagesHeaderActions"
+  },
+  "las_vegas": {
+    "scripts": ["/static/games/las_vegas.js?v=2"],
+    "styles": ["/static/las_vegas.css?v=1"],
+    "markup": "/static/games/las_vegas.html?v=1",
+    "panel": "lasVegasPanel",
+    "header": "showLasVegasHeaderActions"
+  },
   "for_sale": {
     "scripts": ["/static/games/for_sale.js?v=1"],
     "styles": ["/static/for_sale.css?v=1"],
@@ -404,12 +418,12 @@ const GAME_ASSETS = {
   },
   "criminal_dance": {
     "scripts": [
-      "/static/games/criminal_dance.js?v=app_v4"
+      "/static/games/criminal_dance.js?v=app_v5"
     ],
-    "styles": [],
+    "styles": ["/static/criminal_dance.css?v=1"],
     "panel": "criminalDancePanel",
     "header": "showCriminalDanceHeaderActions",
-    "markup": "/static/games/criminal_dance.html?v=1"
+    "markup": "/static/games/criminal_dance.html?v=2"
   },
   "turing_machine": {
     "scripts": [
@@ -745,7 +759,7 @@ const GAME_ASSETS = {
   },
   "ark_nova": {
     "scripts": [
-      "/static/games/ark_nova.js?v=app_v23"
+      "/static/games/ark_nova.js?v=app_v24"
     ],
     "styles": [
       "/static/ark_nova.css?v=app_v21"

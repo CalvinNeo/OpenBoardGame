@@ -199,8 +199,16 @@ function renderGameState(data) {
     // room:state starts the load and replays the latest game:state once ready.
     return;
   }
+  if (gameType === "las_vegas") {
+    if (typeof renderLasVegasGameState === "function") renderLasVegasGameState(data);
+    return;
+  }
   if (gameType === "for_sale") {
     renderForSaleGameState(data);
+    return;
+  }
+  if (gameType === "cheaty_mages") {
+    if (typeof renderCheatyMagesGameState === "function") renderCheatyMagesGameState(data);
     return;
   }
   if (gameType === "love_letter") {

@@ -22,6 +22,7 @@
         sell: "点选一张自己的地产(🏠)，再点击 Confirm Sale 秘密提交。所有人提交后同时揭示，并按地产价值分配支票(💵)。提交后锁定，不能改选。已售出的地产移出手牌。",
         next: "Next Round 表示你已经看过本轮结算。所有席位各自确认后才会继续，包括买卖阶段切换和最后排名。机器人只确认自身，断线真人仍需重连确认。",
         player: "玩家栏显示本轮公开出价、是否退出／提交，以及持有地产(🏠)和支票(💵)的数量。其他人的现金、私有地产、支票及尚未揭示的售房选择在终局前保密。",
+        bot: "机器人(🤖)仅基于自己可见的信息决策，不读取其他人的私牌、秘密选择或未来牌库；轮末只会确认自己的席位。",
         held: "已押(🪙)是你本轮已投入的竞拍金额。加价只补差额；退出退回一半向下取整。最后留下者全部支付。",
         total: "总财富等于支票(💵)总额加剩余现金(🪙)。总财富最高者获胜；相同则现金多者胜，再相同则并列获胜。奖杯(🏆)表示胜者。",
         market: "每轮翻开与玩家人数相同的牌。先完成所有地产(🏠)竞拍，再进入支票(💵)售房阶段。买房时这里只保留尚未分配的地产；轮末查看完整成交结果。",
@@ -38,7 +39,12 @@
     const allowed = action => !pending && view?.legal_actions.includes(action);
     const info = (text, key, detail = "") => `<span tabindex="0" data-fs-tip="${esc(detail || explanations[key])}" data-fs-explain="${esc(key)}">${text}</span>`;
     const sum = values => values.reduce((total, value) => total + value, 0);
-    const detailFor = key => key?.startsWith("property-") ? `地产(🏠) ${key.slice(9)}。${explanations.property}` : explanations[key];
+    function detailFor(key) {
+        if (!key?.startsWith("property-")) return explanations[key];
+        const value = Number(key.slice(9));
+        const [icon, title] = tiers[Math.max(0, Math.min(5, Math.floor((value - 1) / 5)))];
+        return `地产(🏠) ${value} · ${title}(${icon})。${explanations.property}`;
+    }
 
     const dialog = document.createElement("dialog");
     dialog.id = "forSaleDialog";
@@ -105,8 +111,8 @@
         const [icon, title] = tiers[tier];
         const body = `<span class="fs-card-top"><b>${value}</b><small>PROPERTY</small></span><span class="fs-building" aria-hidden="true">${icon}</span><span class="fs-card-name">${title}</span><span class="fs-card-foot">${String(value).padStart(2, "0")} / 30</span>`;
         return selectable
-            ? `<button type="button" class="fs-property fs-tier-${tier} ${selected === value ? "is-selected" : ""}" data-fs-property="${value}" data-fs-explain="property-${value}" aria-label="地产 ${value}，${title}" aria-pressed="${selected === value}" ${!allowed("sell") ? "disabled" : ""}>${body}</button>`
-            : `<div class="fs-property fs-tier-${tier}" tabindex="0" data-fs-explain="property-${value}" data-fs-tip="${esc(`地产(🏠) ${value}：${title}。${explanations.property}`)}" aria-label="地产 ${value}，${title}">${body}</div>`;
+            ? `<button type="button" class="fs-property fs-tier-${tier} ${selected === value ? "is-selected" : view.your_selection === value ? "is-submitted" : ""}" data-fs-property="${value}" data-fs-explain="property-${value}" aria-label="地产 ${value}，${title}" aria-pressed="${selected === value}" ${!allowed("sell") ? "disabled" : ""}>${body}</button>`
+            : `<div class="fs-property fs-tier-${tier}" tabindex="0" data-fs-explain="property-${value}" data-fs-tip="${esc(`地产(🏠) ${value}：${title}(${icon})。${explanations.property}`)}" aria-label="地产 ${value}，${title}">${body}</div>`;
     }
 
     function renderMarket() {
@@ -136,7 +142,7 @@
         return `<section class="fs-box fs-portfolio"><div class="fs-section-heading"><h3>Your Portfolio</h3>${info("🔒 Private", "private")}</div>
             <div class="fs-finances"><div>${info("🪙 Cash", "cash")}<strong>${money(cash)}</strong></div><div>${info("🪙 Held", "held")}<strong>${money(view.your_bid)}</strong></div><div>${info("💵 Checks", "check")}<strong>${money(checks)}</strong></div></div>
             ${view.your_properties.length ? `<div class="fs-hand">${view.your_properties.slice().sort((a, b) => a - b).map(value => propertyCard(value, selling)).join("")}</div>` : '<p class="fs-muted">暂无地产 · 你的地产会收藏在这里。</p>'}
-            ${selling ? `<div class="fs-sale-confirm"><span>${view.your_selection !== null ? `🔒 地产 ${view.your_selection} 已提交` : selected !== null ? `已选择地产 ${selected}` : "选择一张地产出售"}</span><button type="button" class="fs-primary" data-fs-action="sell" data-fs-explain="sell" ${!allowed("sell") || selected === null ? "disabled" : ""}>${pending ? "Sending…" : view.your_selection !== null ? "Submitted" : "Confirm Sale"}</button></div>` : ""}
+            ${selling ? `<div class="fs-sale-confirm"><span>${view.your_selection !== null ? info(`🔒 地产 ${view.your_selection} 已提交`, "sell") : selected !== null ? `已选择地产 ${selected}` : "选择一张地产出售"}</span><button type="button" class="fs-primary" data-fs-action="sell" data-fs-explain="sell" ${!allowed("sell") || selected === null ? "disabled" : ""}>${pending ? "Sending…" : view.your_selection !== null ? "Submitted" : "Confirm Sale"}</button></div>` : ""}
             ${view.your_checks.length ? `<div class="fs-owned-checks">${view.your_checks.map(value => info(`💵 ${money(value)}`, "check")).join("")}</div>` : ""}</section>`;
     }
 
@@ -148,7 +154,7 @@
                 : view.phase === "round_end" ? (view.next_ready.includes(player.player_id) ? "Ready" : "Reviewing")
                 : view.stage === "sell" ? (player.submitted ? "Submitted" : "Choosing")
                 : player.passed ? "Passed" : current ? "Bidding" : "Waiting";
-            return `<article class="fs-player ${current ? "is-current" : ""} ${player.passed && view.stage === "buy" ? "is-passed" : ""}"><div class="fs-player-heading"><strong>${esc(player.name)}${own ? " <small>You</small>" : ""}</strong>${player.is_bot ? info("🤖", "player", "机器人(🤖)仅基于自己可见的信息决策。") : ""}</div><div class="fs-player-line"><span class="fs-player-status">${status}</span>${view.stage === "buy" && !view.game_over ? info(`🪙 ${money(player.bid)}`, "bid") : ""}</div><div class="fs-player-assets">${info(`🏠 ${player.property_count}`, "player", "持有地产(🏠)的数量；未售出的具体地产只对本人可见。")}${info(`💵 ${player.check_count}`, "player", "持有支票(💵)的张数；金额只对本人可见，终局公开合计。")}${player.cash !== null ? info(`🪙 ${money(player.cash)}`, "cash") : info("🔒 Private", "private")}</div></article>`;
+            return `<article class="fs-player ${current ? "is-current" : ""} ${player.passed && view.stage === "buy" ? "is-passed" : ""}"><div class="fs-player-heading"><strong>${esc(player.name)}${own ? " <small>You</small>" : ""}</strong>${player.is_bot ? info("🤖", "bot") : ""}</div><div class="fs-player-line"><span class="fs-player-status">${status}</span>${view.stage === "buy" && !view.game_over ? info(`🪙 ${money(player.bid)}`, "bid") : ""}</div><div class="fs-player-assets">${info(`🏠 ${player.property_count}`, "player", "持有地产(🏠)的数量；未售出的具体地产只对本人可见。")}${info(`💵 ${player.check_count}`, "player", "持有支票(💵)的张数；金额只对本人可见，终局公开合计。")}${player.cash !== null ? info(`🪙 ${money(player.cash)}`, "cash") : info("🔒 Private", "private")}</div></article>`;
         }).join("")}</div></section>`;
     }
 
@@ -171,6 +177,7 @@
     function statusText() {
         if (view.game_over) return "对局结束 · 查看最终排名";
         if (pending) return "Sending…";
+        if (!view.players.some(player => player.player_id === view.you)) return "Spectating · 观看本轮公开行动";
         if (view.phase === "round_end") return view.next_ready.includes(view.you) ? "已确认 · 等待其他玩家查看结果" : "本轮已结算 · 查看成交后点击 Next Round";
         if (view.stage === "buy") return view.current_turn === view.you ? "轮到你了 · 加价竞拍，或退出取得最低地产" : `等待 ${playerName(view.current_turn)} 竞拍`;
         return view.your_selection !== null ? "已秘密提交 · 等待所有玩家同时揭示" : "选择一张地产 · 争取最有价值的支票";

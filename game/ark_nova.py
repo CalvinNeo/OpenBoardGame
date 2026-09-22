@@ -644,13 +644,18 @@ def _refresh_choice_options(state: Mapping[str, Any], pending: MutableMapping[st
         pending["options"] = _pilfer_choice_options(state["players"][player_id])
     elif pending.get("type") == "conservation_bonus":
         pending["options"] = _conservation_bonus_options(state, player_id, str(pending["threshold"]))
+    elif pending.get("type") == "upgrade_action":
+        pending["options"] = _choice_options(
+            action_id for action_id in ACTION_IDS
+            if not state["players"][player_id]["action_cards"][action_id].get("upgraded")
+        )
 
 
 def _bonus_association_options(state: Mapping[str, Any], player_id: str, kind: str) -> List[Dict[str, Any]]:
     player = state["players"][player_id]
     supply = state.get("association_supply", {})
     if kind == "partner_zoo":
-        limit = 4 if player["action_cards"]["association"].get("upgraded") else 2
+        limit = 4 if _action_level(player, "association") == 2 else 2
         if len(player["partner_zoos"]) >= limit:
             return []
         return [{"value": continent, "label": f"Partner zoo: {continent.title()}"}
@@ -1690,12 +1695,15 @@ def _consume_attack_event(
             criteria.append(("conservation", 1))
         for criterion, minimum in criteria:
             ranked = _ranked_attack_targets(state, source_player_id, criterion, attack, minimum=minimum)
-            candidates = [player_id for player_id in ranked if player_id != source_player_id]
-            target_id = _selected_attack_target(candidates, assignments, criterion)
-            if not candidates:
+            if not ranked or ranked == [source_player_id]:
                 continue
+            # A tie may be resolved in favor of our own zoo; that particular
+            # theft then has no effect (Glossary, Pilfering).
+            target_id = _selected_attack_target(ranked, assignments, criterion)
             if target_id is None:
                 raise ValueError(f"choose a zoo tied for the highest {criterion} for Pilfering")
+            if target_id == source_player_id:
+                continue
             _queue_pilfer_choice(state, source_player_id, target_id, criterion)
 
 
@@ -1875,6 +1883,15 @@ def _run_core_effect(
             events.append(_event("income", player_id=player_id, amount=amount, source=ref["source"]))
         if ref["rewards"].get("x_tokens"):
             _gain_x(player, int(ref["rewards"]["x_tokens"]))
+    elif operation == "association_worker":
+        player = _player(state, player_id)
+        old_workers = int(player.get("association_workers_total", 1))
+        player["association_workers_total"] = min(4, old_workers + 1)
+        player["available_workers"] = int(player.get("available_workers", 0)) + (
+            int(player["association_workers_total"]) - old_workers
+        )
+        events.append(_event("association_tile_bonus", player_id=player_id,
+                             source=ref["source"], reward="worker"))
     elif operation == "project_map_reward":
         _resolve_project_map_reward(state, player_id, ref.get("reward_id"), events)
     elif operation == "hypnosis":
@@ -2200,6 +2217,11 @@ def _card_trigger_effects(
     state: MutableMapping[str, Any], player_id: str, card: Mapping[str, Any],
 ) -> List[Dict[str, Any]]:
     refs = _all_passive_sponsor_refs(state, player_id, card)
+    # Income bonuses can grant icons or play sponsors. During a break there is
+    # no action left to finish, so resolve those triggers with the income rather
+    # than leaving them attached to the next player's ordinary action.
+    if state.get("resolving_break"):
+        return refs
     state.setdefault("after_action_core_effects", []).extend(
         ref for ref in refs if ref.get("timing") == "after_action"
     )
@@ -3428,7 +3450,8 @@ def _association_worker_cost(player: Mapping[str, Any], task: str) -> int:
 
 
 def _queue_association_tile_upgrade(
-    state: MutableMapping[str, Any], player_id: str, source: str
+    state: MutableMapping[str, Any], player_id: str, source: str,
+    *, effects: Optional[List[Dict[str, Any]]] = None,
 ) -> None:
     """Grant the printed upgrade under the second tile space on Map 0."""
 
@@ -3439,16 +3462,22 @@ def _queue_association_tile_upgrade(
     ]
     if not available:
         return
-    _queue_choice(state, {
+    choice = {
         "choice_id": f"association-{source}-upgrade-{player_id}",
         "type": "upgrade_action", "player_id": player_id,
         "prompt": "Upgrade an Action card for your second Association tile",
         "options": _choice_options(available), "min": 1, "max": 1,
-    })
+    }
+    if effects is None:
+        _queue_choice(state, choice)
+    else:
+        effects.append({"type": "core", "operation": "choice", "player_id": player_id,
+                        "label": choice["prompt"], "choice": choice})
 
 
 def _queue_association_tile_icon_effects(
-    state: MutableMapping[str, Any], player_id: str, tile_id: str, icons: Mapping[str, int]
+    state: MutableMapping[str, Any], player_id: str, tile_id: str, icons: Mapping[str, int],
+    *, effects: Optional[List[Dict[str, Any]]] = None,
 ) -> None:
     """Broadcast icons gained from partner zoos and universities."""
 
@@ -3460,13 +3489,12 @@ def _queue_association_tile_icon_effects(
             for tag, count in icons.items() if int(count) > 0
         ],
     }
-    state.setdefault("effect_queue", []).extend(
-        _card_trigger_effects(state, player_id, trigger_tile)
-    )
+    target = state.setdefault("effect_queue", []) if effects is None else effects
+    target.extend(_card_trigger_effects(state, player_id, trigger_tile))
 
 
 def _take_partner_zoo(
-    state: MutableMapping[str, Any], player_id: str, continent: str, events: List[Dict[str, Any]], *, from_bonus: bool = False,
+    state: MutableMapping[str, Any], player_id: str, continent: str, events: List[Dict[str, Any]],
 ) -> Optional[str]:
     player = _player(state, player_id)
     if continent not in CONTINENTS:
@@ -3476,31 +3504,26 @@ def _take_partner_zoo(
     supply = state.setdefault("association_supply", {}).setdefault("partner_zoos", [])
     if continent not in supply:
         return "partner zoo is not on the Association board"
-    own_upgrade = player["action_cards"]["association"].get("upgraded")
-    limit = 4 if own_upgrade and (from_bonus or _action_level(player, "association") == 2) else 2
+    # Hypnosis uses the borrowed side for the entire action, including map
+    # restrictions on tiles gained through an immediate conservation bonus.
+    limit = 4 if _action_level(player, "association") == 2 else 2
     if len(player["partner_zoos"]) >= limit:
         return "Association II is required for more partner zoos"
     player["partner_zoos"].append(continent)
     supply.remove(continent)
     _recompute_tags(player)
-    _queue_association_tile_icon_effects(state, player_id, f"partner_zoo:{continent}", {continent: 1})
+    refs: List[Dict[str, Any]] = []
     if len(player["partner_zoos"]) == 2:
-        _queue_association_tile_upgrade(state, player_id, "partner-zoo")
+        _queue_association_tile_upgrade(state, player_id, "partner-zoo", effects=refs)
     elif len(player["partner_zoos"]) == 3:
-        old_workers = int(player.get("association_workers_total", 1))
-        player["association_workers_total"] = min(4, old_workers + 1)
-        player["available_workers"] = int(player.get("available_workers", 0)) + (
-            int(player["association_workers_total"]) - old_workers
-        )
-        events.append(_event(
-            "association_tile_bonus", player_id=player_id,
-            source="third_partner_zoo", reward="worker",
-        ))
+        refs.append({"type": "core", "operation": "association_worker", "player_id": player_id,
+                     "source": "third_partner_zoo", "label": "Activate an association worker"})
     elif len(player["partner_zoos"]) == 4:
-        _apply_rewards(
-            state, player_id, {"conservation": 3}, events,
-            "fourth_partner_zoo",
-        )
+        refs.extend(_reward_effects(player_id, {"conservation": 3}, "fourth_partner_zoo"))
+    _queue_association_tile_icon_effects(
+        state, player_id, f"partner_zoo:{continent}", {continent: 1}, effects=refs,
+    )
+    state.setdefault("effect_queue", []).append(_effect_group(player_id, refs))
     events.append(_event("partner_zoo", player_id=player_id, continent=continent))
     return None
 
@@ -3523,20 +3546,21 @@ def _take_university(
     supply.remove(university_id)
     if university.get("hand_limit"):
         player["hand_limit"] = max(int(player["hand_limit"]), int(university["hand_limit"]))
-    _apply_rewards(state, player_id, {"reputation": university.get("reputation", 0)}, events, university_id)
     _recompute_tags(player)
+    # The tile's reputation, map-space bonus, and icon effects occur together.
+    # In particular, upgrading Cards with the second university can precede
+    # gaining its reputation and open the track beyond reputation 9.
+    refs = _reward_effects(player_id, {"reputation": university.get("reputation", 0)}, university_id)
+    if len(player["universities"]) == 2:
+        _queue_association_tile_upgrade(state, player_id, "university", effects=refs)
+    elif len(player["universities"]) == 3:
+        refs.extend(_reward_effects(player_id, {"conservation": 2}, "third_university"))
     science_icons = int(university.get("science", 0))
     if science_icons:
         _queue_association_tile_icon_effects(
-            state, player_id, university_id, {"science": science_icons},
+            state, player_id, university_id, {"science": science_icons}, effects=refs,
         )
-    if len(player["universities"]) == 2:
-        _queue_association_tile_upgrade(state, player_id, "university")
-    elif len(player["universities"]) == 3:
-        _apply_rewards(
-            state, player_id, {"conservation": 2}, events,
-            "third_university",
-        )
+    state.setdefault("effect_queue", []).append(_effect_group(player_id, refs))
     events.append(_event("university", player_id=player_id, university_id=university_id))
     return None
 
@@ -4264,7 +4288,7 @@ def _resolve_choice(
             return "Association tile is no longer available for this bonus"
         state["pending_choice"] = None
         if kind == "partner_zoo":
-            error = _take_partner_zoo(state, player_id, tile_id, events, from_bonus=True)
+            error = _take_partner_zoo(state, player_id, tile_id, events)
         else:
             error = _take_university(state, player_id, tile_id, events)
         if error:

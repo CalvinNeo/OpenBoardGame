@@ -1,7 +1,6 @@
 """For Sale, using the Eagle-Gryphon base-game rules and private hands."""
 
 import copy
-import math
 import random
 from typing import Dict, List, Optional, Tuple
 
@@ -79,6 +78,7 @@ def _end_round(state: Dict, rows: List[Dict], winner: Optional[str] = None) -> N
     state.update(phase="round_end", current_turn=None, next_ready=[],
                  round_summary={"stage": state["stage"], "stage_round": state["stage_round"],
                                 "rows": rows, "winner": winner})
+    state.setdefault("history", []).append(copy.deepcopy(state["round_summary"]))
 
 
 def _advance_auction(state: Dict, actor: str) -> None:
@@ -181,7 +181,7 @@ class ForSaleGame:
             "rounds_per_stage": (30 - removed_count) // count,
             "property_deck": property_deck, "check_deck": check_deck,
             "removed_properties": removed_properties, "removed_checks": removed_checks,
-            "start_player": random.choice(ids), "log": [], "winner": [],
+            "start_player": random.choice(ids), "log": [], "history": [], "winner": [],
             "game_over": False, "final_results": [],
         }
         _start_round(state)
@@ -270,6 +270,8 @@ class ForSaleGame:
             "min_bid": state["high_bid"] + 1, "max_bid": own.get("cash", 0) + escrow,
             "legal_actions": ForSaleGame.get_legal_actions(state, viewer_id),
             "round_summary": state["round_summary"], "final_results": state["final_results"],
+            "history": state.get("history", []),
+            "auction_results": state["buy_results"] if state["phase"] == "buy" else [],
             "log": state["log"],
             "players": [{
                 "player_id": pid, "name": _name(state, pid),
@@ -301,24 +303,6 @@ class ForSaleGame:
 
 
 def _choose_bot_action(view: Dict) -> Optional[Dict]:
-    legal = view["legal_actions"]
-    if "next_round" in legal:
-        return {"type": "next_round", "round": view["round"]}
-    if "sell" in legal:
-        hand, checks = sorted(view["your_properties"]), sorted(view["market_checks"])
-        spread = checks[-1] - checks[0]
-        quality = (checks[-1] + spread) / 30 if spread else 0
-        choice = hand[round(quality * (len(hand) - 1))]
-        return {"type": "sell", "round": view["round"], "property": choice}
-    if "pass" not in legal:
-        return None
-    action = {"type": "pass", "round": view["round"], "turn": view["turn"]}
-    if "bid" in legal:
-        market = view["market_properties"]
-        remaining = view["rounds_per_stage"] - view["stage_round"] + 1
-        average_budget = view["max_bid"] / remaining
-        value = (0.55 + market[-1] / 30) * (0.5 + (market[-1] - market[0]) / 29)
-        budget = min(view["max_bid"], math.ceil(average_budget * value))
-        if view["min_bid"] <= budget:
-            action.update(type="bid", amount=view["min_bid"])
-    return action
+    from game.for_sale_ai import choose_action
+
+    return choose_action(view)

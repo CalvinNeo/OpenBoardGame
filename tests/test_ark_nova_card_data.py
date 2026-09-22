@@ -82,7 +82,7 @@ class ArkNovaCardDataTests(unittest.TestCase):
 
     def test_known_card_data_corrections(self) -> None:
         anaconda = self.animal_by_id["482"]
-        self.assertEqual(anaconda["placement"]["adjacent_to"], {"water": 1, "rock": 1})
+        self.assertEqual(anaconda["placement"]["adjacent_to"], {"water": 1, "rock": 0})
         self.assertEqual(self.animal_by_id["463"]["play"]["base_money_cost"], 11)
 
         polar_bear = self.sponsor_by_id["251"]

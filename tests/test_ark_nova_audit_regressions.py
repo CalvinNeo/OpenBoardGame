@@ -231,10 +231,22 @@ class ArkNovaAuditRegressions(unittest.TestCase):
         h.choose('cards')
         self.assertTrue(h.player['action_cards']['cards']['upgraded'])
 
-    def test_partner_bonus_cannot_bypass_map_limit_with_borrowed_association_ii(self):
+    def test_partner_bonus_uses_borrowed_association_ii_for_map_limit(self):
         h = self.h
         h.player['partner_zoos'] = ['africa', 'americas']
         h.player['_action_level_overrides'] = {'association': 2}
+        workers = h.player['available_workers']
+        self.claim_bonus('partner_zoo')
+        h.choose('asia')
+        self.assertEqual(len(h.player['partner_zoos']), 3)
+        self.assertEqual(h.player['available_workers'], workers + 1)
+        self.assertFalse(h.player['action_cards']['association']['upgraded'])
+
+    def test_partner_bonus_cannot_bypass_borrowed_association_i_with_own_upgrade(self):
+        h = self.h
+        h.player['partner_zoos'] = ['africa', 'americas']
+        h.player['action_cards']['association']['upgraded'] = True
+        h.player['_action_level_overrides'] = {'association': 1}
         self.offer_bonus('partner_zoo')
         self.assertEqual([o['value'] for o in h.state['pending_choice']['options']], [{'kind': 'money', 'amount': 5}])
         _, error = rules.ArkNovaGame.apply_action(h.state, 'p1', {
@@ -243,17 +255,6 @@ class ArkNovaAuditRegressions(unittest.TestCase):
         self.assertEqual(error, 'no eligible Association tile is available')
         self.assertEqual(h.state['bonus_tokens']['5'], ['partner_zoo'])
         h.choose({'kind': 'money', 'amount': 5})
-
-    def test_bonus_can_take_third_partner_with_own_upgrade_during_borrowed_association_i(self):
-        h = self.h
-        h.player['partner_zoos'] = ['africa', 'americas']
-        h.player['action_cards']['association']['upgraded'] = True
-        h.player['_action_level_overrides'] = {'association': 1}
-        workers = h.player['available_workers']
-        self.claim_bonus('partner_zoo')
-        h.choose('asia')
-        self.assertEqual(len(h.player['partner_zoos']), 3)
-        self.assertEqual(h.player['available_workers'], workers + 1)
 
     def test_empty_association_supply_leaves_the_five_money_option(self):
         h = self.h

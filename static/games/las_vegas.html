@@ -1,0 +1,13 @@
+<template data-game-target="lasVegasPanel" data-game-mode="contents">
+    <section id="lasVegasSetup" class="lv-setup" hidden>
+        <div><span class="lv-eyebrow">FOUR ROUNDS. SIX CASINOS.</span><h2>拉斯维加斯 <small>Las Vegas</small></h2></div>
+        <label class="lv-variant"><input id="lasVegasNeutralDice" type="checkbox"><span>⚪ 白骰变体 <small>2–4 players</small></span></label>
+        <p id="lasVegasSetupHint">每人 8 枚骰子 · 4 轮争夺赌场奖金</p>
+    </section>
+    <div id="lasVegasContent"></div>
+    <dialog id="lasVegasDialog" class="lv-dialog" aria-labelledby="lasVegasDialogTitle">
+        <div class="lv-dialog-heading"><h2 id="lasVegasDialogTitle">Help</h2><button id="lasVegasDialogClose" type="button">Close</button></div>
+        <div id="lasVegasDialogBody" class="lv-dialog-body"></div>
+    </dialog>
+    <div id="lasVegasTooltip" class="lv-tooltip" role="tooltip" hidden></div>
+</template>

@@ -208,6 +208,10 @@ function emitRoomStart() {
       ? getSubtextRoomConfig()
       : { word_column: 1 };
   }
+  if (currentGameType === "las_vegas") {
+    const neutralDice = document.getElementById("lasVegasNeutralDice");
+    payload.config = { neutral_dice: Boolean(neutralDice && neutralDice.checked) };
+  }
   sendRoomRequest("room:start", payload, "Starting game...");
 }
 

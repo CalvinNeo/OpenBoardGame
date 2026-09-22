@@ -118,6 +118,9 @@ const seatClaimList = document.getElementById("seatClaimList");
 const seatClaimEmpty = document.getElementById("seatClaimEmpty");
 const roomControlsPanel = document.getElementById("roomControlsPanel");
 const roomControlsToggleBtn = document.getElementById("roomControlsToggleBtn");
+const mobileCreateSlot = document.getElementById("mobileCreateSlot");
+const roomCreateButtonAnchor = document.createComment("Create Room button home");
+createBtn.before(roomCreateButtonAnchor);
 const mobileExplainSlot = document.getElementById("mobileExplainSlot");
 const gameReconnectBtn = document.getElementById("gameReconnectBtn");
 
@@ -753,6 +756,7 @@ function renderGameTypeFilters(games) {
 }
 
 const GAME_WEIGHT = {
+  las_vegas: 1.17,
   for_sale: 1.25,
   love_letter: 1.18,
   spirit_island: 4.08,
@@ -1702,6 +1706,11 @@ function updateRoomControlsDock() {
     return;
   }
   const isCollapsed = roomControlsPanel.classList.contains("collapsed");
+  if (roomControlsDockQuery.matches && isCollapsed) {
+    if (createBtn.parentNode !== mobileCreateSlot) mobileCreateSlot.appendChild(createBtn);
+  } else if (createBtn.parentNode === mobileCreateSlot) {
+    roomCreateButtonAnchor.after(createBtn);
+  }
   const shouldDock =
     roomControlsDockQuery.matches &&
     roomControlsPanel.classList.contains("compact") &&

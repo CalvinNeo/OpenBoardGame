@@ -1,4 +1,10 @@
+from game.las_vegas import LasVegasGame, ACTION_SCHEMA as LAS_VEGAS_ACTION_SCHEMA, CONFIG_SCHEMA as LAS_VEGAS_CONFIG_SCHEMA
 from game.for_sale import ForSaleGame, ACTION_SCHEMA as FOR_SALE_ACTION_SCHEMA, CONFIG_SCHEMA as FOR_SALE_CONFIG_SCHEMA
+from game.cheaty_mages import (
+    CheatyMagesGame,
+    ACTION_SCHEMA as CHEATY_MAGES_ACTION_SCHEMA,
+    CONFIG_SCHEMA as CHEATY_MAGES_CONFIG_SCHEMA,
+)
 from game.acquire import AcquireGame
 from game.abraca_what import AbracaWhatGame
 from game.ai_dixit import AiDixitGame
@@ -105,6 +111,22 @@ from game.wriggle_roulette import WriggleRouletteGame
 
 register_game(
     GameDefinition(
+        game_id=LasVegasGame.game_id,
+        name="Las Vegas",
+        name_zh="拉斯维加斯",
+        min_players=LasVegasGame.min_players,
+        max_players=LasVegasGame.max_players,
+        turn_mode="turn",
+        action_schema=LAS_VEGAS_ACTION_SCHEMA,
+        config_schema=LAS_VEGAS_CONFIG_SCHEMA,
+        module=LasVegasGame,
+        serialize=LasVegasGame.serialize,
+        deserialize=LasVegasGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
         game_id=ForSaleGame.game_id,
         name="For Sale",
         name_zh="地产达人",
@@ -116,6 +138,22 @@ register_game(
         module=ForSaleGame,
         serialize=ForSaleGame.serialize,
         deserialize=ForSaleGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=CheatyMagesGame.game_id,
+        name="Cheaty Mages!",
+        name_zh="诈赌巫师",
+        min_players=CheatyMagesGame.min_players,
+        max_players=CheatyMagesGame.max_players,
+        turn_mode="turn",
+        action_schema=CHEATY_MAGES_ACTION_SCHEMA,
+        config_schema=CHEATY_MAGES_CONFIG_SCHEMA,
+        module=CheatyMagesGame,
+        serialize=CheatyMagesGame.serialize,
+        deserialize=CheatyMagesGame.deserialize,
     )
 )
 

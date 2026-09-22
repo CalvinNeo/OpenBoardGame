@@ -12,8 +12,8 @@
     "play": {
       "action": "association",
       "association_task_strength": 5,
-      "may_support_from_hand": false,
-      "must_support_immediately_when_played": false,
+      "may_support_from_hand": true,
+      "must_support_immediately_when_played": true,
       "display_source": {
         "requires_action_level": 2,
         "within_reputation_range": true,
@@ -75,8 +75,8 @@
     "play": {
       "action": "association",
       "association_task_strength": 5,
-      "may_support_from_hand": false,
-      "must_support_immediately_when_played": false,
+      "may_support_from_hand": true,
+      "must_support_immediately_when_played": true,
       "display_source": {
         "requires_action_level": 2,
         "within_reputation_range": true,
@@ -138,8 +138,8 @@
     "play": {
       "action": "association",
       "association_task_strength": 5,
-      "may_support_from_hand": false,
-      "must_support_immediately_when_played": false,
+      "may_support_from_hand": true,
+      "must_support_immediately_when_played": true,
       "display_source": {
         "requires_action_level": 2,
         "within_reputation_range": true,
@@ -201,8 +201,8 @@
     "play": {
       "action": "association",
       "association_task_strength": 5,
-      "may_support_from_hand": false,
-      "must_support_immediately_when_played": false,
+      "may_support_from_hand": true,
+      "must_support_immediately_when_played": true,
       "display_source": {
         "requires_action_level": 2,
         "within_reputation_range": true,
@@ -264,8 +264,8 @@
     "play": {
       "action": "association",
       "association_task_strength": 5,
-      "may_support_from_hand": false,
-      "must_support_immediately_when_played": false,
+      "may_support_from_hand": true,
+      "must_support_immediately_when_played": true,
       "display_source": {
         "requires_action_level": 2,
         "within_reputation_range": true,
@@ -327,8 +327,8 @@
     "play": {
       "action": "association",
       "association_task_strength": 5,
-      "may_support_from_hand": false,
-      "must_support_immediately_when_played": false,
+      "may_support_from_hand": true,
+      "must_support_immediately_when_played": true,
       "display_source": {
         "requires_action_level": 2,
         "within_reputation_range": true,
@@ -390,8 +390,8 @@
     "play": {
       "action": "association",
       "association_task_strength": 5,
-      "may_support_from_hand": false,
-      "must_support_immediately_when_played": false,
+      "may_support_from_hand": true,
+      "must_support_immediately_when_played": true,
       "display_source": {
         "requires_action_level": 2,
         "within_reputation_range": true,
@@ -453,8 +453,8 @@
     "play": {
       "action": "association",
       "association_task_strength": 5,
-      "may_support_from_hand": false,
-      "must_support_immediately_when_played": false,
+      "may_support_from_hand": true,
+      "must_support_immediately_when_played": true,
       "display_source": {
         "requires_action_level": 2,
         "within_reputation_range": true,
@@ -516,8 +516,8 @@
     "play": {
       "action": "association",
       "association_task_strength": 5,
-      "may_support_from_hand": false,
-      "must_support_immediately_when_played": false,
+      "may_support_from_hand": true,
+      "must_support_immediately_when_played": true,
       "display_source": {
         "requires_action_level": 2,
         "within_reputation_range": true,
@@ -579,8 +579,8 @@
     "play": {
       "action": "association",
       "association_task_strength": 5,
-      "may_support_from_hand": false,
-      "must_support_immediately_when_played": false,
+      "may_support_from_hand": true,
+      "must_support_immediately_when_played": true,
       "display_source": {
         "requires_action_level": 2,
         "within_reputation_range": true,
@@ -642,8 +642,8 @@
     "play": {
       "action": "association",
       "association_task_strength": 5,
-      "may_support_from_hand": false,
-      "must_support_immediately_when_played": false,
+      "may_support_from_hand": true,
+      "must_support_immediately_when_played": true,
       "display_source": {
         "requires_action_level": 2,
         "within_reputation_range": true,
@@ -705,8 +705,8 @@
     "play": {
       "action": "association",
       "association_task_strength": 5,
-      "may_support_from_hand": false,
-      "must_support_immediately_when_played": false,
+      "may_support_from_hand": true,
+      "must_support_immediately_when_played": true,
       "display_source": {
         "requires_action_level": 2,
         "within_reputation_range": true,

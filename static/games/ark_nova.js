@@ -108,6 +108,7 @@
     reptile: ["🦎", "Reptile"],
     primate: ["🐒", "Primate"],
     bear: ["🐻", "Bear"],
+    petting_zoo_animal: ["🐐", "Petting zoo animal"],
     petting_zoo: ["🐐", "Petting zoo animal"],
     science: ["🔬", "Research"],
     research: ["🔬", "Research"],

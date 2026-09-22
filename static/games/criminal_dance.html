@@ -1,41 +1,78 @@
 <template data-game-target="criminalDancePanel" data-game-mode="contents">
-              <div class="row">
-                <div>Round: <span id="criminalDanceRound">-</span></div>
-                <div>Current Turn: <span id="criminalDanceTurn">-</span></div>
-              </div>
-              <div id="criminalDanceSummary" class="hint">-</div>
-
-              <h3>Players</h3>
-              <div id="criminalDancePlayers" class="criminal-dance-player-list"></div>
-
-              <h3>Your Hand</h3>
-              <div id="criminalDanceHand" class="criminal-dance-hand"></div>
-              <div id="criminalDanceCardDetail" class="hint">Select a card to view what it does.</div>
-
-              <h3>Controls</h3>
-              <div id="criminalDanceControls" class="criminal-dance-controls"></div>
-
-              <h3>Played Cards</h3>
-              <div id="criminalDancePlayed" class="criminal-dance-public-list"></div>
-
-              <h3>Private Notes</h3>
-              <div id="criminalDancePrivate" class="criminal-dance-private-list"></div>
-            </template>
-<template data-game-target="criminalDanceHelpModal" data-game-mode="replace"><div id="criminalDanceHelpModal" class="modal hidden" aria-hidden="true">
-              <div class="modal-content">
-                <div class="modal-header">
-                  <h3>Criminal Dance Help</h3>
-                  <button id="criminalDanceHelpModalCloseBtn" type="button">Close</button>
-                </div>
-                <div class="modal-body" id="criminalDanceHelpContent"></div>
-              </div>
-            </div></template>
-<template data-game-target="criminalDanceExplainModal" data-game-mode="replace"><div id="criminalDanceExplainModal" class="modal hidden" aria-hidden="true">
-              <div class="modal-content">
-                <div class="modal-header">
-                  <h3>Button Explanation</h3>
-                  <button id="criminalDanceExplainModalCloseBtn" type="button">Close</button>
-                </div>
-                <div class="modal-body" id="criminalDanceExplainContent"></div>
-              </div>
-            </div></template>
+  <div class="criminal-dance-surface">
+    <header class="criminal-dance-banner">
+      <div class="criminal-dance-brand">
+        <p class="criminal-dance-eyebrow">推理 · 传递 · 隐藏身份</p>
+        <h2 data-criminal-dance-tip="Criminal Dance (🕵️): the criminal card moves between players." tabindex="0">🕵️ 犯人在跳舞</h2>
+      </div>
+      <span id="criminalDanceStatus" class="criminal-dance-status-chip">Waiting</span>
+    </header>
+    <section class="criminal-dance-status" data-criminal-dance-explain-key="status" aria-label="Round status">
+      <div class="criminal-dance-round-meta">
+        <span>Round <strong id="criminalDanceRound">—</strong></span>
+        <span>Current Turn <strong id="criminalDanceTurn">—</strong></span>
+      </div>
+      <div id="criminalDanceSummary" class="criminal-dance-summary" aria-live="polite">Waiting for the game to start.</div>
+    </section>
+    <section id="criminalDanceResults" class="criminal-dance-results hidden" data-criminal-dance-explain-key="results" aria-labelledby="criminalDanceResultsTitle">
+      <h3 id="criminalDanceResultsTitle" data-criminal-dance-tip="Round Results (🏆): review the outcome before everyone confirms the next deal." tabindex="0">🏆 Round Results</h3>
+      <div id="criminalDanceResultSummary"></div>
+      <div id="criminalDanceReady" class="criminal-dance-ready" aria-live="polite"></div>
+    </section>
+    <div class="criminal-dance-layout">
+      <section id="criminalDanceHandSection" class="criminal-dance-section criminal-dance-hand-section" data-criminal-dance-explain-key="hand" aria-labelledby="criminalDanceHandTitle">
+        <div class="criminal-dance-section-heading">
+          <h3 id="criminalDanceHandTitle" data-criminal-dance-tip="Your Hand (🃏): only you can see these cards. Select one to take an action." tabindex="0">🃏 Your Hand</h3>
+          <span id="criminalDanceHandCount" class="criminal-dance-count" data-criminal-dance-tip="The number of cards in your hand." tabindex="0">0</span>
+        </div>
+        <div id="criminalDanceHand" class="criminal-dance-hand"></div>
+        <div id="criminalDanceControls" class="criminal-dance-controls"></div>
+      </section>
+      <section class="criminal-dance-section criminal-dance-players-section" data-criminal-dance-explain-key="players" aria-labelledby="criminalDancePlayersTitle">
+        <div class="criminal-dance-section-heading">
+          <h3 id="criminalDancePlayersTitle" data-criminal-dance-tip="Players (👥): hand counts and public status. The active player is highlighted." tabindex="0">👥 Players</h3>
+        </div>
+        <div id="criminalDancePlayers" class="criminal-dance-player-list"></div>
+      </section>
+    </div>
+    <div class="criminal-dance-records">
+      <section class="criminal-dance-section" data-criminal-dance-explain-key="played" aria-labelledby="criminalDancePlayedTitle">
+        <div class="criminal-dance-section-heading">
+          <h3 id="criminalDancePlayedTitle" data-criminal-dance-tip="Played Cards (🗂️): card plays and action results visible to everyone." tabindex="0">🗂️ Played Cards</h3>
+          <span id="criminalDancePlayedCount" class="criminal-dance-count" data-criminal-dance-tip="The number of public entries this round." tabindex="0">0</span>
+        </div>
+        <div id="criminalDancePlayed" class="criminal-dance-public-list" role="log" aria-label="Played cards"></div>
+      </section>
+      <section class="criminal-dance-section criminal-dance-notes-section" data-criminal-dance-explain-key="private" aria-labelledby="criminalDancePrivateTitle">
+        <div class="criminal-dance-section-heading">
+          <h3 id="criminalDancePrivateTitle" data-criminal-dance-tip="Private Notes (🔒): action results and secret information visible only to you." tabindex="0">🔒 Private Notes</h3>
+          <span id="criminalDancePrivateCount" class="criminal-dance-count" data-criminal-dance-tip="The number of entries in your private notes." tabindex="0">0</span>
+        </div>
+        <div id="criminalDancePrivate" class="criminal-dance-private-list" role="log" aria-label="Private notes"></div>
+      </section>
+    </div>
+  </div>
+  <div id="criminalDanceTooltip" class="criminal-dance-tooltip hidden" role="tooltip"></div>
+</template>
+<template data-game-target="criminalDanceHelpModal" data-game-mode="replace">
+  <div id="criminalDanceHelpModal" class="modal criminal-dance-modal hidden" role="dialog" aria-modal="true" aria-labelledby="criminalDanceHelpTitle" aria-hidden="true">
+    <div class="modal-content criminal-dance-modal-content">
+      <div class="modal-header criminal-dance-modal-header">
+        <h3 id="criminalDanceHelpTitle">Criminal Dance · Help</h3>
+        <button id="criminalDanceHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body criminal-dance-modal-body" id="criminalDanceHelpContent"></div>
+    </div>
+  </div>
+</template>
+<template data-game-target="criminalDanceExplainModal" data-game-mode="replace">
+  <div id="criminalDanceExplainModal" class="modal criminal-dance-modal hidden" role="dialog" aria-modal="true" aria-labelledby="criminalDanceExplainTitle" aria-hidden="true">
+    <div class="modal-content criminal-dance-modal-content">
+      <div class="modal-header criminal-dance-modal-header">
+        <h3 id="criminalDanceExplainTitle">Explain</h3>
+        <button id="criminalDanceExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body criminal-dance-modal-body" id="criminalDanceExplainContent"></div>
+    </div>
+  </div>
+</template>

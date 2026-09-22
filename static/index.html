@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenBoardGame</title>
-  <link rel="stylesheet" href="/static/style.css?v=app_v114" />
+  <link rel="stylesheet" href="/static/style.css?v=app_v115" />
   <link rel="preload" href="/api/games" as="fetch" crossorigin="anonymous" />
 </head>
 <body>
@@ -462,6 +462,7 @@
               <span class="room-controls-title-short">RC</span>
             </h2>
             <div class="panel-header-actions">
+              <div id="mobileCreateSlot" class="mobile-create-slot"></div>
               <div id="mobileExplainSlot" class="mobile-explain-slot"></div>
               <button class="collapse-btn" id="roomControlsToggleBtn" type="button" aria-expanded="true">Hide</button>
             </div>
@@ -528,7 +529,9 @@
                     <option value="boomerang_australia">Boomerang: Australia · 世界巡游（澳洲）</option>
                     <option value="spirit_island">Spirit Island · 灵迹岛</option>
                     <option value="terra_nova">Terra Nova · 神秘小地</option>
+                    <option value="las_vegas">Las Vegas · 拉斯维加斯</option>
                     <option value="for_sale">For Sale · 地产达人</option>
+                    <option value="cheaty_mages">Cheaty Mages! · 诈赌巫师</option>
                     <option value="draw_guess">Draw & Guess</option>
                     <option value="blitz_sketch">Blitz Sketch</option>
                     <option value="cyber_pictures">Cyber Pictures</option>
@@ -1222,8 +1225,8 @@
               <button id="lostCodeExplainBtn" class="lost-code-header-btn" type="button">Explain</button>
             </div>
             <div class="panel-header-actions" id="criminalDanceHeaderActions" style="display: none;">
-              <button id="criminalDanceHelpBtn" class="criminal-dance-header-btn" type="button">Help</button>
-              <button id="criminalDanceExplainBtn" class="criminal-dance-header-btn" type="button">Explain</button>
+              <button id="criminalDanceHelpBtn" class="criminal-dance-header-btn" type="button">📖 Help</button>
+              <button id="criminalDanceExplainBtn" class="criminal-dance-header-btn" type="button" aria-pressed="false">🔎 Explain</button>
             </div>
             <div class="panel-header-actions" id="turingMachineHeaderActions" style="display: none;">
               <button id="turingMachineHelpBtn" class="turing-machine-header-btn" type="button">Help</button>
@@ -1293,6 +1296,11 @@
               <button id="cryptidHelpBtn" type="button">Help</button>
               <button id="cryptidExplainBtn" type="button" aria-pressed="false">Explain</button>
             </div>
+            <div class="panel-header-actions" id="lasVegasHeaderActions" style="display: none;">
+              <button id="lasVegasHelpBtn" type="button">Help</button>
+              <button id="lasVegasExplainBtn" type="button" aria-pressed="false">Explain</button>
+            </div>
+            <div class="panel-header-actions" id="cheatyMagesHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="forSaleHeaderActions" style="display: none;">
               <button id="forSaleHelpBtn" type="button">Help</button>
               <button id="forSaleExplainBtn" type="button" aria-pressed="false">Explain</button>
@@ -1389,7 +1397,9 @@
             <div id="cryptidPanel" class="hidden"></div>
             <div id="terraNovaPanel" class="hidden"></div>
             <div id="boomerangAustraliaPanel" class="hidden"></div>
+            <div id="lasVegasPanel" class="hidden"></div>
             <div id="forSalePanel" class="hidden"></div>
+            <div id="cheatyMagesPanel" class="hidden"></div>
             <div id="loveLetterPanel" class="hidden"></div>
             <div id="spiritIslandPanel" class="hidden"></div>
             <div id="bombBustersPanel" class="hidden bomb-busters-panel"></div>
@@ -1571,14 +1581,14 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=1" defer></script>
-  <script src="/static/games/shared.js?v=app_v25" defer></script>
+  <script src="/static/game_assets.js?v=7" defer></script>
+  <script src="/static/games/shared.js?v=app_v26" defer></script>
   <template id="takeTimeDialog"></template>
   <template id="eternalDecksDialog"></template>
   <template id="ponziSchemeDialog"></template>
   <template id="redDoorsDialog"></template>
   <template id="cryptidDialog"></template>
-  <script src="/static/app.js?v=app_v29" defer></script>
-  <script src="/static/room.js?v=app_v50" defer></script>
+  <script src="/static/app.js?v=app_v31" defer></script>
+  <script src="/static/room.js?v=app_v52" defer></script>
 </body>
 </html>

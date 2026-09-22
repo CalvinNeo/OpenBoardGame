@@ -158,7 +158,9 @@ async def download_room_save(source_room_id: str):
         raise HTTPException(status_code=400, detail="invalid source_room_id")
     if (_has_live_boomerang_save(source_room_id)
             or _has_live_private_save(source_room_id, "love_letter")
-            or _has_live_private_save(source_room_id, "for_sale")):
+            or _has_live_private_save(source_room_id, "for_sale")
+            or _has_live_private_save(source_room_id, "cheaty_mages")
+            or _has_live_private_save(source_room_id, "las_vegas")):
         raise HTTPException(status_code=403, detail="This game is still active. Reconnect to the existing room.")
     latest_path = _get_latest_save_path(source_room_id)
     if not latest_path:
@@ -229,6 +231,7 @@ class Room:
     bot_detail: Optional[str] = None
     bot_progress_emit_scheduled: bool = False
     bot_progress_last_emit_ms: int = 0
+    source_room_ids: List[str] = field(default_factory=list)
 
 
 ROOMS: Dict[str, Room] = {}
@@ -273,8 +276,11 @@ def _has_live_private_save(source_room_id: str, game_type: str) -> bool:
         for room in ROOMS.values():
             if room.game_type != game_type:
                 continue
-            if room.room_id in related_ids or room.source_room_id in related_ids:
-                for related in (room.room_id, room.source_room_id):
+            room_ids = {room.room_id, *room.source_room_ids}
+            if room.source_room_id:
+                room_ids.add(room.source_room_id)
+            if room_ids & related_ids:
+                for related in room_ids:
                     if related and related not in related_ids:
                         related_ids.add(related)
                         changed = True
@@ -304,6 +310,9 @@ def _save_room_state(room: Room) -> None:
         os.makedirs(room_dir, exist_ok=True)
         payload = {
             "room_id": room.room_id,
+            "source_room_ids": list(dict.fromkeys(
+                room.source_room_ids + ([room.source_room_id] if room.source_room_id else [])
+            )),
             "game_type": room.game_type,
             "room_status": room.status,
             "state_version": room.state_version,
@@ -548,6 +557,8 @@ def _bot_status_payload(room: Room) -> Dict:
 
 
 def _public_bot_action(game_type: str, action: Dict) -> Dict:
+    if game_type == "cheaty_mages":
+        return {"type": action.get("type")}
     if game_type == "for_sale" and action.get("type") == "sell":
         return {"type": "sell"}
     if game_type == "red_doors":
@@ -1786,6 +1797,8 @@ async def on_room_load(sid, data):
         _has_live_boomerang_save(source_room_id)
         or _has_live_private_save(source_room_id, "love_letter")
         or _has_live_private_save(source_room_id, "for_sale")
+        or _has_live_private_save(source_room_id, "cheaty_mages")
+        or _has_live_private_save(source_room_id, "las_vegas")
     ):
         await sio.emit("room:load_result", {"ok": False, "message": "This game is still active. Reconnect to the existing room."}, to=sid)
         return
@@ -1843,6 +1856,13 @@ async def on_room_load(sid, data):
     except (TypeError, ValueError):
         state_version = 0
     saved_config = game_state.get("config")
+    saved_source_ids = payload.get("source_room_ids")
+    source_ids = saved_source_ids if isinstance(saved_source_ids, list) else []
+    # Preserve all ancestors when saves are restored across server restarts.
+    source_ids = [source_room_id, payload.get("room_id"), payload.get("source_room_id"), *source_ids]
+    source_ids = list(dict.fromkeys(
+        value for value in source_ids if isinstance(value, str) and _is_safe_room_id(value)
+    ))
     room = Room(
         room_id=room_id,
         game_type=game_type,
@@ -1853,6 +1873,7 @@ async def on_room_load(sid, data):
         game_state=game_state,
         auto_save=auto_save,
         source_room_id=payload.get("room_id", source_room_id),
+        source_room_ids=source_ids,
     )
     ROOMS[room_id] = room
     await sio.emit(

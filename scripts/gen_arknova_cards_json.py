@@ -539,8 +539,10 @@ def parse_conservation_projects(lines: list[tuple[int, str]]) -> list[dict[str, 
             "play": {
                 "action": "association",
                 "association_task_strength": 5,
-                "may_support_from_hand": project_type != "base",
-                "must_support_immediately_when_played": project_type != "base",
+                # Assertion/Dominance can put unused base projects in hand;
+                # playing one follows the same immediate-support rule.
+                "may_support_from_hand": True,
+                "must_support_immediately_when_played": True,
                 "display_source": {
                     "requires_action_level": 2,
                     "within_reputation_range": True,
