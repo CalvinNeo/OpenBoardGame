@@ -1,0 +1,1412 @@
+/* Loaded into the matching style.css groups by loadGameStyleFragments. */
+@media all, obg-game-manila-1 {
+
+.manila-panel {
+  --manila-ink: #0f172a;
+  --manila-muted: #475569;
+  --manila-wave: #eff6ff;
+  --manila-sand: #fef3c7;
+  --manila-teal: #0f766e;
+  --manila-ember: #f97316;
+  position: relative;
+  padding: 18px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #e0f2fe 0%, #fef9c3 45%, #fff1f2 100%);
+  border: 1px solid #cbd5f5;
+  box-shadow: 0 18px 32px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+  font-family: "Work Sans", "Segoe UI", sans-serif;
+  color: var(--manila-ink);
+}
+
+.manila-tooltip {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.92);
+  color: #f8fafc;
+  font-size: 12px;
+  font-weight: 600;
+  z-index: 3;
+  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.25);
+}
+
+.manila-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 10% 10%, rgba(14, 116, 144, 0.12), transparent 40%),
+    radial-gradient(circle at 80% 20%, rgba(249, 115, 22, 0.12), transparent 45%),
+    radial-gradient(circle at 30% 80%, rgba(59, 130, 246, 0.12), transparent 45%);
+  pointer-events: none;
+}
+
+.manila-hero,
+.manila-price-bar,
+.manila-columns {
+  position: relative;
+  z-index: 1;
+}
+
+.manila-title {
+  font-family: "Cinzel", "Times New Roman", serif;
+  font-size: 28px;
+  letter-spacing: 0.04em;
+}
+
+.manila-subtitle {
+  color: var(--manila-muted);
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.manila-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.manila-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.manila-chip {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--manila-ink);
+}
+
+.manila-price-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
+  color: #f8fafc;
+  margin-bottom: 16px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+.manila-auction-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  margin-bottom: 16px;
+  justify-content: space-between;
+}
+
+.manila-auction-title {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+  color: #0f172a;
+}
+
+.manila-auction-info {
+  font-size: 13px;
+  color: var(--manila-muted);
+}
+
+.manila-auction-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.manila-auction-bids {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--manila-ink);
+}
+
+.manila-auction-bidlist {
+  display: grid;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.manila-auction-bid-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.05);
+  font-size: 12px;
+  color: var(--manila-ink);
+}
+
+.manila-auction-bid-row.leader {
+  background: rgba(14, 116, 144, 0.18);
+  border: 1px solid rgba(14, 116, 144, 0.3);
+}
+
+.manila-auction-bid-row.passed {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
+.manila-price-title {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+}
+
+.manila-price-values {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.manila-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: 16px;
+}
+
+.manila-column {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.manila-scene {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.45) 100%);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+}
+
+.manila-map {
+  padding: 10px;
+  border-radius: 14px;
+  background: linear-gradient(160deg, #fde68a 0%, #fef3c7 45%, #ffe4e6 100%);
+  border: 1px solid rgba(180, 83, 9, 0.25);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+}
+
+.manila-pass-facility {
+  margin-top: 0;
+  padding: 6px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.06);
+  border: 1px dashed rgba(15, 23, 42, 0.25);
+  display: grid;
+  gap: 4px;
+}
+
+.manila-pass-facility.manila-zone {
+  box-shadow: none;
+}
+
+.manila-pass-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--manila-ink);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.manila-pass-hint {
+  font-size: 11px;
+  color: var(--manila-muted);
+}
+
+.manila-pass-facility button {
+  height: 30px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  background: #f8fafc;
+  font-weight: 600;
+}
+
+.manila-pledge-facility {
+  display: grid;
+  gap: 6px;
+}
+
+.manila-pledge-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.manila-pledge-row select {
+  height: 30px;
+}
+
+.manila-pledge-row button {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  background: #f8fafc;
+  font-weight: 600;
+}
+
+.manila-round-end {
+  margin: 10px 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(30, 64, 175, 0.25);
+  background: linear-gradient(160deg, rgba(224, 242, 254, 0.9), rgba(191, 219, 254, 0.75));
+  display: grid;
+  gap: 10px;
+}
+
+.manila-round-end-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.manila-round-end-title {
+  font-size: 14px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #1e3a8a;
+}
+
+.manila-round-end-hint {
+  font-size: 12px;
+  color: #1e40af;
+}
+
+.manila-round-end-players {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.manila-round-end-player {
+  padding: 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  display: grid;
+  gap: 4px;
+}
+
+.manila-round-end-player.ready {
+  border-color: rgba(16, 185, 129, 0.6);
+  box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.2);
+}
+
+.manila-round-end-player-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--manila-ink);
+}
+
+.manila-round-end-player-status {
+  font-size: 11px;
+  color: var(--manila-muted);
+}
+
+.manila-round-end-breakdown {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.manila-round-end-block {
+  padding: 6px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.04);
+  display: grid;
+  gap: 4px;
+}
+
+.manila-round-end-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--manila-ink);
+}
+
+.manila-round-end-list {
+  display: grid;
+  gap: 2px;
+}
+
+.manila-round-end-line {
+  font-size: 11px;
+  color: var(--manila-muted);
+}
+
+.manila-round-end-line.muted {
+  font-style: italic;
+}
+
+.manila-round-end-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.manila-round-end-status {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e3a8a;
+}
+
+.manila-round-end-actions button {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(30, 64, 175, 0.4);
+  background: #eff6ff;
+  font-weight: 700;
+}
+
+.manila-map-grid {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.manila-sea {
+  padding: 10px;
+  border-radius: 14px;
+  background: linear-gradient(160deg, #e0f2fe 0%, #bae6fd 45%, #cffafe 100%);
+  border: 1px solid rgba(14, 116, 144, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.manila-map-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.manila-zone {
+  padding: 8px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  box-shadow: 0 6px 12px rgba(15, 23, 42, 0.08);
+}
+
+.manila-zone-compact {
+  padding: 6px;
+}
+
+.manila-zone-compact .manila-zone-title {
+  font-size: 10px;
+  margin-bottom: 4px;
+}
+
+.manila-zone-compact .manila-zone-grid {
+  gap: 6px;
+}
+
+.manila-zone-compact .manila-slot {
+  padding: 6px;
+  gap: 3px;
+}
+
+.manila-zone-compact .manila-slot-label {
+  font-size: 11px;
+}
+
+.manila-zone-compact .manila-slot-meta {
+  font-size: 10px;
+}
+
+.manila-zone-compact .manila-slot-occupant {
+  font-size: 11px;
+}
+
+.manila-zone-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.manila-zone-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.manila-zone-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.manila-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px dashed rgba(15, 23, 42, 0.3);
+  background: rgba(255, 255, 255, 0.8);
+  text-align: left;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.manila-slot:hover:not(.disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.1);
+}
+
+.manila-slot.occupied {
+  border-style: solid;
+  border-color: rgba(16, 185, 129, 0.4);
+  background: rgba(209, 250, 229, 0.6);
+}
+
+.manila-slot-label {
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.manila-slot-meta {
+  font-size: 11px;
+  color: var(--manila-muted);
+}
+
+.manila-slot-occupant {
+  font-size: 12px;
+  color: var(--manila-ink);
+}
+
+.manila-boat-card {
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.manila-boat-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.15;
+  background: radial-gradient(circle at 80% 10%, rgba(15, 118, 110, 0.35), transparent 55%);
+  pointer-events: none;
+}
+
+.manila-boat-card.inactive {
+  opacity: 0.7;
+}
+
+.manila-boat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.manila-cargo-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid transparent;
+  background: rgba(15, 23, 42, 0.06);
+}
+
+.manila-boat-value {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--manila-ink);
+}
+
+.manila-track {
+  display: grid;
+  grid-template-columns: repeat(14, minmax(0, 1fr));
+  gap: 3px;
+  align-items: center;
+}
+
+.manila-track-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.12);
+  color: #0f172a;
+  font-size: 8px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.manila-track-dot.port {
+  background: #fb923c;
+  color: #7c2d12;
+}
+
+.manila-track-dot.active {
+  background: #0f766e;
+  color: #f8fafc;
+  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.25);
+}
+
+.manila-track-dot.inactive {
+  background: rgba(148, 163, 184, 0.35);
+  color: #64748b;
+}
+
+.manila-axis-vertical {
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  display: grid;
+  gap: 6px;
+}
+
+.manila-axis-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--manila-ink);
+}
+
+.manila-axis-header {
+  display: grid;
+  gap: 8px;
+}
+
+.manila-axis-row {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.manila-axis-row.port .manila-axis-tick-label {
+  color: #9a3412;
+}
+
+.manila-axis-row.pending .manila-axis-tick-label {
+  color: #0f766e;
+}
+
+.manila-axis-row.arrived .manila-axis-tick-label {
+  color: #0f766e;
+}
+
+.manila-axis-tick-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--manila-muted);
+  text-align: center;
+  padding-top: 6px;
+}
+
+.manila-axis-arrived {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.manila-axis-arrived-slot {
+  display: grid;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px dashed rgba(15, 118, 110, 0.35);
+  background: rgba(240, 253, 250, 0.7);
+}
+
+.manila-axis-arrived-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #0f766e;
+}
+
+.manila-axis-arrived-empty {
+  font-size: 12px;
+  color: var(--manila-muted);
+  padding: 6px;
+  text-align: center;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.04);
+}
+
+.manila-axis-markers {
+  min-height: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: stretch;
+  padding: 4px 6px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.05);
+}
+
+.manila-axis-boat {
+  padding: 8px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.manila-axis-boat.inactive {
+  opacity: 0.7;
+}
+
+.manila-axis-boat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.manila-axis-boat-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--manila-ink);
+}
+
+.manila-axis-boat-value {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--manila-ink);
+}
+
+.manila-axis-boat-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.05);
+}
+
+.manila-axis-boat-control-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #0f172a;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.manila-axis-boat-control-buttons {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.manila-axis-boat-control-note {
+  font-size: 11px;
+  font-weight: 600;
+  color: #0f766e;
+  width: 100%;
+}
+
+.manila-pilot-btn {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 23, 42, 0.2);
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.manila-pilot-btn.selected {
+  background: #0f766e;
+  border-color: #0f766e;
+  color: #f8fafc;
+}
+
+.manila-axis-seat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 6px;
+}
+
+.manila-dice-bar {
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  display: grid;
+  gap: 8px;
+}
+
+.manila-dice-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--manila-ink);
+}
+
+.manila-dice-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.manila-dice-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.06);
+  font-size: 12px;
+  color: var(--manila-ink);
+  font-weight: 600;
+}
+
+.manila-dice-chip .manila-dice-value {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.manila-axis-boat.manila-cargo-nutmeg {
+  border-left: 4px solid #b45309;
+}
+
+.manila-axis-boat.manila-cargo-silk {
+  border-left: 4px solid #ca8a04;
+}
+
+.manila-axis-boat.manila-cargo-ginseng {
+  border-left: 4px solid #15803d;
+}
+
+.manila-axis-boat.manila-cargo-jade {
+  border-left: 4px solid #2563eb;
+}
+
+.manila-axis-boat.manila-cargo-neutral {
+  border-left: 4px solid #64748b;
+}
+
+
+.manila-seat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 6px;
+}
+
+.manila-seat {
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  background: rgba(255, 255, 255, 0.8);
+  padding: 6px;
+  font-size: 11px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.manila-seat.inactive {
+  opacity: 0.6;
+}
+
+.manila-seat-title {
+  font-weight: 700;
+  font-size: 11px;
+}
+
+.manila-seat-meta {
+  font-size: 11px;
+  color: var(--manila-muted);
+}
+
+.manila-seat-occupant {
+  font-size: 11px;
+  color: var(--manila-ink);
+}
+
+.manila-boat-footer {
+  font-size: 11px;
+  color: var(--manila-muted);
+}
+
+.manila-action-hint {
+  font-size: 12px;
+  color: var(--manila-muted);
+}
+
+.manila-cargo-nutmeg {
+  --manila-cargo: #b45309;
+}
+
+.manila-cargo-silk {
+  --manila-cargo: #ca8a04;
+}
+
+.manila-cargo-ginseng {
+  --manila-cargo: #15803d;
+}
+
+.manila-cargo-jade {
+  --manila-cargo: #2563eb;
+}
+
+.manila-cargo-neutral {
+  --manila-cargo: #64748b;
+}
+
+.manila-boat-card.manila-cargo-nutmeg,
+.manila-boat-card.manila-cargo-silk,
+.manila-boat-card.manila-cargo-ginseng,
+.manila-boat-card.manila-cargo-jade,
+.manila-boat-card.manila-cargo-neutral {
+  border-left: 4px solid var(--manila-cargo);
+}
+
+.manila-cargo-chip.manila-cargo-nutmeg {
+  background: rgba(245, 158, 11, 0.18);
+  border-color: rgba(245, 158, 11, 0.6);
+  color: #92400e;
+}
+
+.manila-cargo-chip.manila-cargo-silk {
+  background: rgba(250, 204, 21, 0.18);
+  border-color: rgba(250, 204, 21, 0.6);
+  color: #a16207;
+}
+
+.manila-cargo-chip.manila-cargo-ginseng {
+  background: rgba(34, 197, 94, 0.18);
+  border-color: rgba(34, 197, 94, 0.6);
+  color: #166534;
+}
+
+.manila-cargo-chip.manila-cargo-jade {
+  background: rgba(59, 130, 246, 0.18);
+  border-color: rgba(59, 130, 246, 0.6);
+  color: #1d4ed8;
+}
+
+.manila-cargo-chip.manila-cargo-neutral {
+  background: rgba(148, 163, 184, 0.18);
+  border-color: rgba(148, 163, 184, 0.6);
+  color: #475569;
+}
+
+.manila-section-title {
+  margin: 0 0 6px;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0f172a;
+}
+
+.manila-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+
+.manila-card {
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
+}
+
+.manila-card-title {
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: #0f172a;
+}
+
+.manila-card-line {
+  font-size: 12px;
+  color: var(--manila-muted);
+}
+
+.manila-empty {
+  color: var(--manila-muted);
+  font-style: italic;
+}
+
+.manila-action-box {
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.08);
+  border: 1px dashed rgba(15, 23, 42, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.manila-cycle-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+}
+
+#manilaCycleToggleBtn,
+#manilaCycleCloseBtn {
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 23, 42, 0.2);
+  background: #f8fafc;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#manilaCycleToggleBtn:hover,
+#manilaCycleCloseBtn:hover {
+  background: #e0f2fe;
+}
+
+.manila-cycle-status {
+  font-size: 12px;
+  color: var(--manila-muted);
+}
+
+.manila-cycle-panel {
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.manila-cycle-modal {
+  max-width: 920px;
+}
+
+.manila-cycle-modal .modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.manila-cycle-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.manila-cycle-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.manila-cycle-title {
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.manila-cycle-subtitle {
+  font-size: 12px;
+  color: var(--manila-muted);
+}
+
+.manila-cycle-recap {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.06);
+  font-size: 12px;
+  color: var(--manila-ink);
+}
+
+.manila-cycle-recap span {
+  font-weight: 600;
+}
+
+.manila-cycle-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.manila-action-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+}
+
+.manila-pirate-facility {
+  padding: 6px;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.45);
+}
+
+.manila-pirate-facility .manila-action-title {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+
+.manila-pirate-facility .manila-action-row {
+  gap: 6px;
+}
+
+.manila-pirate-facility .manila-action-row select,
+.manila-pirate-facility .manila-action-row button {
+  height: 30px;
+}
+
+.manila-action-title {
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #0f172a;
+}
+
+.manila-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.manila-action-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.manila-action-grid button.selected {
+  background: #0f766e;
+  color: #f8fafc;
+}
+
+.manila-position-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+}
+
+.manila-position-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.manila-position-row input {
+  width: 80px;
+}
+
+.manila-placement-ships {
+  display: grid;
+  gap: 8px;
+}
+
+.manila-pilot-rows {
+  display: grid;
+  gap: 8px;
+}
+
+.manila-pilot-facility {
+  margin-top: 10px;
+}
+
+.manila-pilot-status {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.manila-pilot-status.active {
+  border-color: rgba(15, 118, 110, 0.45);
+  box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.12);
+}
+
+.manila-pilot-status-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.manila-pilot-status-title-wrap {
+  display: grid;
+  gap: 2px;
+}
+
+.manila-pilot-status-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.manila-pilot-status-owner,
+.manila-pilot-status-hint,
+.manila-pilot-draft-text {
+  font-size: 12px;
+  color: var(--manila-muted);
+}
+
+.manila-pilot-status-badge {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(15, 118, 110, 0.12);
+  color: #0f766e;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.manila-pilot-draft {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.manila-action-label {
+  min-width: 90px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.manila-action-row select,
+.manila-action-row button {
+  height: 36px;
+}
+
+.manila-buy-stock-btn,
+.manila-cargo-select-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.manila-buy-cost {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--manila-ink);
+}
+
+.manila-action-payload {
+  width: 100%;
+  min-height: 120px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.manila-legal {
+  font-size: 12px;
+  color: var(--manila-muted);
+}
+
+.manila-auction-self {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e3a8a;
+}
+
+.manila-action-group button:disabled,
+.manila-action-group select:disabled,
+.manila-action-group input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.manila-header-btn {
+  padding: 4px 10px;
+  font-size: 13px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #f8fafc;
+  cursor: pointer;
+}
+
+.manila-header-btn:hover {
+  background: #eef2ff;
+}
+
+.manila-header-btn.active {
+  background: #dbeafe;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+
+body.manila-explain-mode button.has-explanation {
+  outline: 2px dashed #3b82f6;
+  outline-offset: 2px;
+  cursor: help;
+}
+
+body.manila-explain-mode button.has-explanation:hover {
+  outline-color: #1d4ed8;
+  outline-style: solid;
+}
+
+.manila-help-modal {
+  max-width: 720px;
+}
+
+.manila-explain-modal {
+  max-width: 460px;
+}
+
+#manilaExplainModal {
+  z-index: 1100;
+}
+
+.manila-help-content {
+  max-height: 70vh;
+  overflow-y: auto;
+  line-height: 1.6;
+}
+
+.manila-help-content h3 {
+  margin: 16px 0 8px;
+  font-size: 16px;
+  color: #0f172a;
+}
+
+.manila-help-content h3:first-child {
+  margin-top: 0;
+}
+
+.manila-help-content ul,
+.manila-help-content ol {
+  padding-left: 18px;
+  margin: 6px 0;
+}
+
+.manila-help-content li {
+  margin: 4px 0;
+}
+
+#manilaExplainContent {
+  line-height: 1.6;
+}
+
+#manilaExplainContent h4 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: #0f172a;
+}
+
+#manilaExplainContent p {
+  margin: 6px 0;
+  color: #334155;
+}
+
+#manilaExplainContent .explain-cost {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+#manilaExplainContent .explain-cost.free {
+  background: #dcfce7;
+  color: #166534;
+}
+
+#manilaExplainContent .explain-cost.pay {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+#manilaExplainContent .explain-cost.gain {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+#manilaExplainContent .explain-cost.end {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+@media (max-width: 980px) {
+  .manila-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .manila-map-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .manila-seat-grid {
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  }
+}
+}

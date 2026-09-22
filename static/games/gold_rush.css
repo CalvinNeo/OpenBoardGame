@@ -1,0 +1,220 @@
+/* Loaded into the matching style.css groups by loadGameStyleFragments. */
+@media all, obg-game-gold_rush-1 {
+
+.gold-rush-mines {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.gold-rush-mine {
+  border: 3px solid var(--gold-rush-color, #d1d5db);
+  border-radius: 8px;
+  padding: 8px 10px;
+  min-width: 160px;
+  background: #f9fafb;
+  text-align: left;
+  position: relative;
+  box-shadow: var(--gold-rush-highlight-shadow, none);
+  color: #111827;
+}
+
+.gold-rush-mine:disabled {
+  background: #f3f4f6;
+}
+
+.gold-rush-mine.action-allowed {
+  background: #f9fafb;
+  border-color: var(--gold-rush-color, #d1d5db);
+  color: #111827;
+}
+
+.gold-rush-mine.selected {
+  background: var(--gold-rush-color, #f9fafb);
+  color: var(--gold-rush-color-contrast, #111827);
+}
+
+.gold-rush-mine.selected .gold-rush-mine-title,
+.gold-rush-mine.selected .gold-rush-mine-row,
+.gold-rush-mine.selected .gold-rush-highlight-icon {
+  color: var(--gold-rush-color-contrast, #111827);
+}
+
+.gold-rush-mine-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.gold-rush-mine-row {
+  font-size: 12px;
+  color: #374151;
+  margin-bottom: 2px;
+}
+
+.gold-rush-highlight-icon {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.gold-rush-highlight-safe {
+  --gold-rush-highlight-shadow: 0 0 0 2px #2e7d32;
+}
+
+.gold-rush-highlight-danger {
+  --gold-rush-highlight-shadow: 0 0 0 2px #c62828;
+}
+
+.gold-rush-highlight-contested {
+  --gold-rush-highlight-shadow: 0 0 0 2px #f9a825;
+}
+
+.gold-rush-highlight-neutral {
+  --gold-rush-highlight-shadow: 0 0 0 2px #90a4ae;
+}
+
+.gold-rush-card {
+  border: 2px solid var(--gold-rush-color, #d1d5db);
+  border-radius: 6px;
+  padding: 6px 10px;
+  background: var(--gold-rush-color-soft, #fff);
+  cursor: pointer;
+  color: #111827;
+}
+
+.gold-rush-card.selected {
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+}
+
+@media all, obg-game-gold_rush-2 {
+
+.gold-rush-player-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: #fafafa;
+  margin-bottom: 6px;
+}
+
+.gold-rush-player-name {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.gold-rush-player-meta {
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.gold-rush-score-line {
+  font-size: 12px;
+  color: #374151;
+  margin-bottom: 4px;
+}
+}
+
+@media all, obg-game-gold_rush-3 {
+
+/* Gold Rush Help/Explain */
+.gold-rush-header-btn {
+  padding: 4px 10px;
+  font-size: 13px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #f9fafb;
+  cursor: pointer;
+}
+
+.gold-rush-header-btn:hover {
+  background: #f3f4f6;
+}
+
+.gold-rush-header-btn.active {
+  background: #dbeafe;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+
+body.gold-rush-explain-mode button.has-explanation {
+  outline: 2px dashed #3b82f6;
+  outline-offset: 2px;
+  cursor: help;
+}
+
+body.gold-rush-explain-mode button.has-explanation:hover {
+  outline-color: #1d4ed8;
+  outline-style: solid;
+}
+
+.gold-rush-help-modal {
+  max-width: 720px;
+}
+
+.gold-rush-help-content {
+  max-height: 70vh;
+  overflow-y: auto;
+  line-height: 1.6;
+}
+
+.gold-rush-help-content h3 {
+  margin: 16px 0 8px;
+  font-size: 16px;
+  color: #111827;
+}
+
+.gold-rush-help-content h3:first-child {
+  margin-top: 0;
+}
+
+.gold-rush-help-content h4 {
+  margin: 12px 0 6px;
+  font-size: 14px;
+  color: #374151;
+}
+
+.gold-rush-help-content ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.gold-rush-help-content ol {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.gold-rush-help-content li {
+  margin-bottom: 4px;
+}
+
+.gold-rush-help-content p {
+  margin: 8px 0;
+}
+
+.gold-rush-explain-modal {
+  max-width: 520px;
+}
+
+#goldRushExplainContent {
+  line-height: 1.6;
+}
+
+#goldRushExplainContent h4 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: #111827;
+}
+
+#goldRushExplainContent p {
+  margin: 6px 0;
+  color: #374151;
+}
+
+#goldRushExplainContent .hint {
+  color: #6b7280;
+  font-size: 12px;
+}
+}

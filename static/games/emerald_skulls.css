@@ -1,0 +1,1250 @@
+/* Loaded into the matching style.css groups by loadGameStyleFragments. */
+@media all, obg-game-emerald_skulls-1 {
+
+/* Emerald Skulls --------------------------------------------------------- */
+
+.emerald-skulls-panel {
+  --emerald-ink: #eaf7ef;
+  --emerald-muted: #a8c5b3;
+  --emerald-green: #36d693;
+  --emerald-deep: #071f1a;
+  --emerald-surface: #0d2c24;
+  --emerald-surface-2: #12382e;
+  --emerald-copper: #e9a45c;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--emerald-ink);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  border: 1px solid rgba(68, 219, 158, 0.28);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(52, 214, 147, 0.16), transparent 30%),
+    linear-gradient(145deg, #061c17 0%, #0a251e 56%, #071914 100%);
+  box-shadow: 0 22px 55px rgba(2, 15, 12, 0.28);
+}
+
+.emerald-skulls-panel *,
+.emerald-skulls-panel *::before,
+.emerald-skulls-panel *::after {
+  box-sizing: border-box;
+}
+
+.emerald-skulls-panel h2,
+.emerald-skulls-panel h3,
+.emerald-skulls-panel p {
+  margin-top: 0;
+}
+
+.emerald-skulls-panel h2,
+.emerald-skulls-panel h3 {
+  color: #f4fff8;
+  letter-spacing: -0.025em;
+}
+
+.emerald-skulls-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-width: 0;
+  padding: 18px 20px 15px;
+  border-bottom: 1px solid rgba(167, 225, 194, 0.14);
+}
+
+.emerald-skulls-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.emerald-skulls-brand-icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  font-size: 27px;
+  border: 1px solid rgba(104, 241, 181, 0.38);
+  border-radius: 15px;
+  background: rgba(30, 107, 82, 0.56);
+  box-shadow: inset 0 0 18px rgba(71, 239, 170, 0.13);
+}
+
+.emerald-skulls-brand h2 {
+  margin: 1px 0 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(25px, 3vw, 36px);
+  line-height: 1;
+}
+
+.emerald-skulls-eyebrow {
+  display: block;
+  color: #76dfb3;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+
+.emerald-skulls-meta {
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-end;
+  gap: 7px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.emerald-skulls-meta > span {
+  display: flex;
+  min-width: 84px;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 10px;
+  color: var(--emerald-muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  border: 1px solid rgba(157, 218, 186, 0.15);
+  border-radius: 10px;
+  background: rgba(3, 19, 15, 0.38);
+}
+
+.emerald-skulls-meta strong {
+  overflow: hidden;
+  color: #f6fff9;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.emerald-skulls-status {
+  margin: 12px 16px 0;
+  padding: 10px 13px;
+  color: #dff8e9;
+  font-size: 13px;
+  line-height: 1.42;
+  border-left: 3px solid var(--emerald-green);
+  border-radius: 6px 11px 11px 6px;
+  background: rgba(33, 137, 101, 0.2);
+}
+
+.emerald-skulls-player-section,
+.emerald-skulls-table,
+.emerald-skulls-betting,
+.emerald-skulls-payout-choice,
+.emerald-skulls-result,
+.emerald-skulls-log-card {
+  min-width: 0;
+}
+
+.emerald-skulls-player-section {
+  padding: 14px 16px 0;
+}
+
+.emerald-skulls-section-heading,
+.emerald-skulls-roll-heading,
+.emerald-skulls-result-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  margin-bottom: 9px;
+}
+
+.emerald-skulls-section-heading h3,
+.emerald-skulls-roll-heading h3,
+.emerald-skulls-result-heading h3 {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.15;
+}
+
+.emerald-skulls-section-heading > span,
+.emerald-skulls-roll-heading > span {
+  color: var(--emerald-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.emerald-skulls-players {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(145px, 100%), 1fr));
+  gap: 8px;
+}
+
+.emerald-skulls-player {
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid hsla(var(--emerald-player-hue), 55%, 68%, 0.2);
+  border-radius: 11px;
+  background: hsla(var(--emerald-player-hue), 45%, 19%, 0.28);
+}
+
+.emerald-skulls-player.is-tumbler {
+  border-color: hsla(var(--emerald-player-hue), 75%, 66%, 0.75);
+  box-shadow: inset 3px 0 hsla(var(--emerald-player-hue), 78%, 62%, 0.85);
+}
+
+.emerald-skulls-player.is-you {
+  background: hsla(var(--emerald-player-hue), 55%, 23%, 0.38);
+}
+
+.emerald-skulls-player-top,
+.emerald-skulls-player-resources {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 7px;
+  min-width: 0;
+}
+
+.emerald-skulls-player-top strong {
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.emerald-skulls-player-top > span {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  color: hsla(var(--emerald-player-hue), 75%, 82%, 1);
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  border-radius: 999px;
+  background: hsla(var(--emerald-player-hue), 60%, 48%, 0.2);
+}
+
+.emerald-skulls-player-resources {
+  justify-content: flex-start;
+  margin-top: 7px;
+  color: #d9eee1;
+  font-size: 12px;
+}
+
+.emerald-skulls-player small {
+  display: block;
+  margin-top: 5px;
+  overflow: hidden;
+  color: var(--emerald-muted);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.emerald-skulls-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px 16px 0;
+}
+
+.emerald-skulls-table,
+.emerald-skulls-betting {
+  padding: 14px;
+  border: 1px solid rgba(157, 218, 186, 0.16);
+  border-radius: 15px;
+  background: rgba(5, 24, 19, 0.56);
+}
+
+.emerald-skulls-floor,
+.emerald-skulls-review-progress {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  color: #0b291f;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  border-radius: 999px;
+  background: #91edbd;
+}
+
+.emerald-skulls-section-heading > .emerald-skulls-floor {
+  color: #0b291f;
+}
+
+.emerald-skulls-board {
+  display: flex;
+  min-height: 290px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 13px 8px 18px;
+  border: 1px solid rgba(100, 211, 158, 0.16);
+  border-radius: 48% 48% 22% 22% / 24% 24% 12% 12%;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(44, 135, 98, 0.36), transparent 44%),
+    #071b16;
+  box-shadow: inset 0 0 35px rgba(0, 0, 0, 0.3);
+}
+
+button.emerald-skulls-level {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr);
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  min-height: 45px;
+  gap: 8px;
+  padding: 6px 9px;
+  color: var(--emerald-ink);
+  text-align: left;
+  border: 1px solid rgba(144, 224, 184, 0.16);
+  border-radius: 12px;
+  background: rgba(20, 61, 49, 0.72);
+  box-shadow: none;
+  transition: border-color 150ms ease, background 150ms ease, transform 150ms ease, opacity 150ms ease;
+}
+
+button.emerald-skulls-level.is-gem { width: 72%; }
+button.emerald-skulls-level.is-eyes { width: 82%; }
+button.emerald-skulls-level.is-nose { width: 82%; }
+button.emerald-skulls-level.is-upper { width: 88%; }
+button.emerald-skulls-level.is-lower { width: 94%; }
+
+button.emerald-skulls-level:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+button.emerald-skulls-level.is-below-floor {
+  opacity: 0.46;
+}
+
+button.emerald-skulls-level.is-placeable {
+  color: #f4fff8;
+  cursor: pointer;
+  border-color: rgba(76, 235, 166, 0.9);
+  background: rgba(35, 137, 101, 0.62);
+  box-shadow: 0 0 0 2px rgba(70, 225, 157, 0.12);
+}
+
+button.emerald-skulls-level.is-placeable:hover {
+  transform: translateY(-1px);
+  background: rgba(40, 157, 114, 0.68);
+}
+
+.emerald-skulls-level-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.emerald-skulls-level-label b {
+  display: grid;
+  flex: 0 0 auto;
+  width: 25px;
+  height: 25px;
+  place-items: center;
+  color: #06271d;
+  border-radius: 8px;
+  background: #94ebbc;
+}
+
+.emerald-skulls-level-label > span {
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.emerald-skulls-level-dice,
+.emerald-skulls-dice-tray {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.emerald-skulls-level-dice {
+  justify-content: center;
+}
+
+.emerald-skulls-empty-slot {
+  color: rgba(188, 229, 207, 0.26);
+  font-size: 25px;
+  line-height: 1;
+}
+
+.emerald-skulls-die {
+  display: inline-grid;
+  flex: 0 0 auto;
+  width: 35px;
+  height: 35px;
+  place-items: center;
+  padding: 0;
+  color: #0b2f23;
+  font-family: "Apple Symbols", "Segoe UI Symbol", sans-serif;
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1;
+  border: 2px solid #bff7da;
+  border-radius: 9px;
+  background: #4ed99c;
+  box-shadow: inset 0 -4px 0 rgba(0, 70, 43, 0.16), 0 3px 8px rgba(0, 0, 0, 0.2);
+}
+
+button.emerald-skulls-die {
+  cursor: pointer;
+}
+
+.emerald-skulls-die.is-wild {
+  color: #f7f4e7;
+  border-color: #edc078;
+  background: #1e2723;
+}
+
+.emerald-skulls-die.is-ghost {
+  color: rgba(228, 248, 237, 0.7);
+  border-style: dashed;
+  border-color: rgba(160, 220, 190, 0.35);
+  background: rgba(43, 80, 66, 0.38);
+  box-shadow: none;
+}
+
+.emerald-skulls-die.is-selected {
+  color: #1a1304;
+  border-color: #fff3b3;
+  background: #f3c967;
+  box-shadow: 0 0 0 3px rgba(255, 218, 116, 0.22), inset 0 -4px 0 rgba(117, 75, 0, 0.14);
+  transform: translateY(-2px);
+}
+
+.emerald-skulls-roll-zone {
+  margin-top: 10px;
+  padding: 11px;
+  border: 1px dashed rgba(135, 220, 177, 0.28);
+  border-radius: 12px;
+  background: rgba(13, 48, 38, 0.66);
+}
+
+.emerald-skulls-roll-heading {
+  margin-bottom: 8px;
+}
+
+.emerald-skulls-dice-tray {
+  min-height: 43px;
+}
+
+.emerald-skulls-selection-hint {
+  min-height: 16px;
+  margin: 7px 0 0;
+  color: var(--emerald-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.emerald-skulls-tray-empty {
+  color: var(--emerald-muted);
+  font-size: 12px;
+}
+
+.emerald-skulls-action-dock {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(122px, 1fr));
+  gap: 7px;
+  min-width: 0;
+  margin-top: 10px;
+  padding: 9px;
+  border: 1px solid rgba(151, 222, 187, 0.17);
+  border-radius: 12px;
+  background: rgba(4, 19, 15, 0.62);
+}
+
+.emerald-skulls-action-dock > div:first-child {
+  grid-column: 1 / -1;
+}
+
+.emerald-skulls-action-dock > div:first-child strong,
+.emerald-skulls-action-dock > div:first-child span {
+  display: block;
+}
+
+.emerald-skulls-action-dock > div:first-child span {
+  margin-top: 2px;
+  color: var(--emerald-muted);
+  font-size: 10px;
+}
+
+.emerald-skulls-action-dock button,
+.emerald-skulls-payout-button,
+.emerald-skulls-result-actions button,
+.emerald-skulls-header-btn {
+  min-height: 38px;
+  padding: 8px 10px;
+  color: #dbf5e6;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+  border: 1px solid rgba(150, 224, 187, 0.3);
+  border-radius: 9px;
+  background: #164b3b;
+  box-shadow: none;
+}
+
+.emerald-skulls-action-dock button:hover:not(:disabled),
+.emerald-skulls-payout-button:hover:not(:disabled),
+.emerald-skulls-result-actions button:hover:not(:disabled),
+.emerald-skulls-header-btn:hover:not(:disabled) {
+  border-color: #84e6b5;
+  background: #1b6049;
+}
+
+.emerald-skulls-action-dock button.is-primary,
+.emerald-skulls-result-actions button.is-primary,
+.emerald-skulls-buy-button.is-primary {
+  color: #07261c;
+  border-color: #a9f2cd;
+  background: #62dda4;
+}
+
+.emerald-skulls-action-dock button:disabled,
+.emerald-skulls-payout-button:disabled,
+.emerald-skulls-result-actions button:disabled,
+.emerald-skulls-buy-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.emerald-skulls-buy-options {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+button.emerald-skulls-buy-button {
+  display: flex;
+  min-width: 0;
+  min-height: 46px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 7px 4px;
+  color: #dff7e9;
+  border: 1px solid rgba(140, 221, 180, 0.3);
+  border-radius: 9px;
+  background: #123f32;
+  box-shadow: none;
+}
+
+.emerald-skulls-buy-button strong {
+  font-size: 12px;
+}
+
+.emerald-skulls-buy-button span {
+  color: inherit;
+  font-size: 9px;
+}
+
+.emerald-skulls-bet-cards {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.emerald-skulls-bet-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(234, 164, 92, 0.3);
+  border-radius: 12px;
+  background: rgba(61, 38, 18, 0.5);
+}
+
+.emerald-skulls-card-number {
+  grid-column: 1 / -1;
+  padding: 3px 12px;
+  color: var(--emerald-copper);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1.3;
+  border-bottom: 1px solid rgba(234, 164, 92, 0.16);
+  background: rgba(61, 38, 18, 0.35);
+}
+
+button.emerald-skulls-bet {
+  display: flex;
+  min-width: 0;
+  min-height: 106px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+  padding: 9px 12px;
+  color: #f4ebdf;
+  text-align: left;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+button.emerald-skulls-bet + button.emerald-skulls-bet {
+  border-left: 1px solid rgba(234, 164, 92, 0.24);
+}
+
+button.emerald-skulls-bet:hover:not(:disabled) {
+  background: rgba(226, 154, 79, 0.13);
+}
+
+button.emerald-skulls-bet:disabled {
+  cursor: default;
+  opacity: 0.85;
+}
+
+button.emerald-skulls-bet.is-winner {
+  opacity: 1;
+  background: rgba(49, 164, 111, 0.22);
+  box-shadow: inset 0 -3px #49d597;
+}
+
+button.emerald-skulls-bet.is-loser {
+  opacity: 0.42;
+}
+
+.emerald-skulls-bet strong {
+  color: #ffddb5;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.emerald-skulls-bet-description {
+  display: block;
+  min-height: 28px;
+  color: #dccbb6;
+  font-size: 11px;
+  line-height: 1.28;
+}
+
+.emerald-skulls-marker-stack {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  flex-wrap: wrap;
+  margin-top: auto;
+}
+
+.emerald-skulls-bet-marker,
+.emerald-skulls-bet-vacancy {
+  display: flex;
+  min-width: 0;
+  height: 31px;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+
+.emerald-skulls-bet-vacancy {
+  color: #deb788;
+  font-size: 11px;
+  font-weight: 800;
+  border: 1px dashed rgba(235, 174, 108, 0.36);
+}
+
+.emerald-skulls-bet-marker {
+  color: hsla(var(--emerald-player-hue), 72%, 14%, 1);
+  border: 1px solid hsla(var(--emerald-player-hue), 78%, 78%, 0.75);
+  background: hsla(var(--emerald-player-hue), 68%, 68%, 1);
+}
+
+.emerald-skulls-bet-marker b {
+  font-size: 11px;
+  line-height: 1;
+}
+
+.emerald-skulls-bet-marker small {
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.emerald-skulls-payout-choice,
+.emerald-skulls-result,
+.emerald-skulls-log-card {
+  margin: 12px 16px 0;
+  padding: 13px;
+  border: 1px solid rgba(158, 224, 190, 0.18);
+  border-radius: 14px;
+  background: rgba(6, 27, 21, 0.66);
+}
+
+.emerald-skulls-payout-choice {
+  display: grid;
+  grid-template-columns: minmax(170px, 0.45fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  border-color: rgba(241, 190, 106, 0.46);
+  background: rgba(72, 46, 20, 0.52);
+}
+
+.emerald-skulls-payout-choice h3 {
+  margin: 2px 0 3px;
+}
+
+.emerald-skulls-payout-choice p {
+  margin: 0;
+  color: #d8c3a8;
+  font-size: 10px;
+}
+
+.emerald-skulls-payout-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 7px;
+  min-width: 0;
+}
+
+.emerald-skulls-payout-button {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 3px;
+  text-align: left;
+}
+
+.emerald-skulls-payout-button span {
+  color: #aed8bf;
+  font-size: 10px;
+}
+
+.emerald-skulls-result {
+  border-color: rgba(83, 224, 161, 0.38);
+  background: rgba(24, 82, 62, 0.42);
+}
+
+.emerald-skulls-result-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 7px;
+  min-width: 0;
+}
+
+.emerald-skulls-result-item {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 9px;
+  border: 1px solid rgba(145, 221, 181, 0.16);
+  border-radius: 9px;
+  background: rgba(4, 26, 20, 0.47);
+}
+
+.emerald-skulls-result-item.is-tumbler {
+  border-color: rgba(95, 226, 166, 0.43);
+}
+
+.emerald-skulls-result-item strong,
+.emerald-skulls-result-item span {
+  overflow-wrap: anywhere;
+}
+
+.emerald-skulls-result-item strong {
+  font-size: 12px;
+}
+
+.emerald-skulls-result-item span {
+  color: var(--emerald-muted);
+  font-size: 10px;
+}
+
+.emerald-skulls-no-awards,
+.emerald-skulls-pot-empty {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 8px 9px;
+  color: var(--emerald-muted);
+  font-size: 11px;
+  border-radius: 8px;
+  background: rgba(2, 17, 13, 0.36);
+}
+
+.emerald-skulls-pot-empty {
+  color: #ffd5a4;
+}
+
+.emerald-skulls-ready-list,
+.emerald-skulls-result-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  margin-top: 9px;
+  flex-wrap: wrap;
+}
+
+.emerald-skulls-ready-badge {
+  padding: 4px 8px;
+  color: #9db9aa;
+  font-size: 9px;
+  font-weight: 800;
+  border: 1px solid rgba(159, 213, 185, 0.18);
+  border-radius: 999px;
+}
+
+.emerald-skulls-ready-badge.is-ready {
+  color: #102e22;
+  border-color: #80e6b4;
+  background: #80e6b4;
+}
+
+.emerald-skulls-result-actions {
+  justify-content: flex-end;
+}
+
+.emerald-skulls-result-actions button {
+  min-width: 130px;
+}
+
+.emerald-skulls-log-card {
+  margin-bottom: 16px;
+}
+
+.emerald-skulls-log {
+  max-height: 160px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: rgba(91, 194, 145, 0.72) rgba(5, 24, 19, 0.8);
+}
+
+.emerald-skulls-log-row {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 8px;
+  padding: 6px 3px;
+  border-top: 1px solid rgba(153, 216, 184, 0.1);
+}
+
+.emerald-skulls-log-row:first-child {
+  border-top: 0;
+}
+
+.emerald-skulls-log-row > span {
+  color: #65d69f;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.emerald-skulls-log-row p {
+  margin: 0;
+  color: #c7ddd0;
+  font-size: 10px;
+  line-height: 1.42;
+  overflow-wrap: anywhere;
+}
+
+.emerald-skulls-modal-content {
+  width: min(720px, calc(100vw - 28px));
+  max-width: 720px;
+  max-height: min(84vh, 760px);
+  overflow: hidden;
+}
+
+.emerald-skulls-help-content {
+  overflow-y: auto;
+}
+
+.emerald-skulls-modal-content .modal-body {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+}
+
+.emerald-skulls-modal-content .modal-header {
+  gap: 12px;
+}
+
+.emerald-skulls-modal-content .modal-header h2 {
+  min-width: 0;
+  font-size: 18px;
+  overflow-wrap: anywhere;
+}
+
+.emerald-skulls-modal-content .modal-header button {
+  flex: 0 0 auto;
+}
+
+.emerald-skulls-tip {
+  position: fixed;
+  z-index: 1100;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: min(310px, calc(100vw - 24px));
+  padding: 9px 12px;
+  border: 1px solid #73cda6;
+  border-radius: 10px;
+  background: #effbf4;
+  color: #153e2e;
+  font: 13px/1.45 system-ui, sans-serif;
+  overflow-wrap: anywhere;
+  box-shadow: 0 5px 18px #0003;
+  pointer-events: none;
+}
+
+.emerald-skulls-panel :focus-visible {
+  outline: 2px solid #ffd270;
+  outline-offset: 2px;
+}
+
+.emerald-skulls-tabs {
+  display: none;
+}
+
+.emerald-skulls-log-card summary {
+  cursor: pointer;
+  margin-bottom: 0;
+  color: #c7ddd0;
+  font-size: 13px;
+}
+
+.emerald-skulls-log-card summary::before {
+  content: "▸";
+}
+
+.emerald-skulls-log-card[open] summary {
+  margin-bottom: 8px;
+}
+
+.emerald-skulls-log-card[open] summary::before {
+  content: "▾";
+}
+
+.emerald-skulls-player-resources > span {
+  white-space: nowrap;
+}
+
+.emerald-skulls-player-top strong {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.emerald-skulls-result-heading,
+.emerald-skulls-roll-heading {
+  flex-wrap: wrap;
+}
+
+.emerald-skulls-result-heading > div,
+.emerald-skulls-roll-heading > div,
+.emerald-skulls-brand > div {
+  min-width: 0;
+}
+
+.emerald-skulls-die.is-wild,
+.emerald-skulls-die.is-ghost {
+  font-size: 19px;
+}
+
+.emerald-skulls-rules {
+  color: #283c33;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.emerald-skulls-rules h3 {
+  margin: 18px 0 6px;
+  color: #0c4935;
+}
+
+.emerald-skulls-rules p,
+.emerald-skulls-rules ol,
+.emerald-skulls-rules ul {
+  margin-bottom: 9px;
+}
+
+.emerald-skulls-rules table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.emerald-skulls-rules th,
+.emerald-skulls-rules td {
+  padding: 6px;
+  text-align: left;
+  border-bottom: 1px solid #d5e4dc;
+}
+
+.emerald-skulls-rule-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.emerald-skulls-rule-grid article {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid #d4e8de;
+  border-radius: 9px;
+  background: #f5faf7;
+}
+
+.emerald-skulls-rule-grid article:last-child {
+  grid-column: 1 / -1;
+}
+
+.emerald-skulls-rule-grid span {
+  color: #587066;
+  font-size: 11px;
+}
+
+.emerald-skulls-scope-note {
+  padding: 9px 11px;
+  border-left: 3px solid #299d6d;
+  border-radius: 6px;
+  background: #e8f6ee;
+}
+
+body.emerald-skulls-explain-mode [data-emerald-skulls-explain].has-explanation {
+  outline: 2px dashed #ffd270 !important;
+  outline-offset: 2px;
+  cursor: help !important;
+}
+
+body.emerald-skulls-explain-mode button[data-emerald-skulls-explain].has-explanation:disabled {
+  pointer-events: none;
+}
+
+@media (max-width: 940px) {
+  .emerald-skulls-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin: 12px 12px 0;
+  }
+
+  .emerald-skulls-tabs button {
+    min-width: 0;
+    min-height: 42px;
+    padding: 8px;
+    border: 1px solid #32664f;
+    background: #0d2c24;
+    color: #dff8e9;
+    font-size: 13px;
+  }
+
+  .emerald-skulls-tabs button[aria-pressed="true"] {
+    border-color: #9be9c4;
+    background: #265e49;
+  }
+
+  .emerald-skulls-panel[data-mobile-tab="bets"] .emerald-skulls-table,
+  .emerald-skulls-panel[data-mobile-tab="skull"] .emerald-skulls-betting {
+    display: none;
+  }
+
+  .emerald-skulls-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .emerald-skulls-bet-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  button.emerald-skulls-bet {
+    min-height: 106px;
+  }
+}
+
+@media (max-width: 720px) {
+  .emerald-skulls-topbar {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 14px;
+  }
+
+  .emerald-skulls-meta {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .emerald-skulls-meta > span {
+    min-width: 0;
+    flex: 1 1 90px;
+  }
+
+  .emerald-skulls-status,
+  .emerald-skulls-payout-choice,
+  .emerald-skulls-result,
+  .emerald-skulls-log-card {
+    margin-right: 12px;
+    margin-left: 12px;
+  }
+
+  .emerald-skulls-player-section,
+  .emerald-skulls-workspace {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .emerald-skulls-table,
+  .emerald-skulls-betting {
+    padding: 11px;
+  }
+
+  .emerald-skulls-bet-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .emerald-skulls-payout-choice {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 520px) {
+  .emerald-skulls-panel {
+    border-radius: 14px;
+  }
+
+  .emerald-skulls-brand-icon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .emerald-skulls-section-heading {
+    align-items: flex-start;
+  }
+
+  .emerald-skulls-section-heading > span {
+    max-width: 48%;
+  }
+
+  .emerald-skulls-players {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .emerald-skulls-player {
+    padding: 8px;
+  }
+
+  .emerald-skulls-player small {
+    display: none;
+  }
+
+  .emerald-skulls-board {
+    min-height: 260px;
+    padding-right: 4px;
+    padding-left: 4px;
+  }
+
+  button.emerald-skulls-level {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    min-height: 42px;
+    padding: 5px 7px;
+  }
+
+  button.emerald-skulls-level.is-gem { width: 82%; }
+  button.emerald-skulls-level.is-eyes { width: 94%; }
+  button.emerald-skulls-level.is-nose { width: 88%; }
+  button.emerald-skulls-level.is-upper,
+  button.emerald-skulls-level.is-lower { width: 100%; }
+
+  .emerald-skulls-die {
+    width: 32px;
+    height: 32px;
+    font-size: 25px;
+  }
+
+  .emerald-skulls-action-dock {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 7px;
+  }
+
+  .emerald-skulls-buy-options {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .emerald-skulls-bet-cards {
+    gap: 7px;
+  }
+
+  button.emerald-skulls-bet {
+    min-height: 108px;
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+
+  .emerald-skulls-bet-description {
+    min-height: 0;
+  }
+
+  .emerald-skulls-rule-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .emerald-skulls-rule-grid article:last-child {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 380px) {
+  .emerald-skulls-status,
+  .emerald-skulls-payout-choice,
+  .emerald-skulls-result,
+  .emerald-skulls-log-card {
+    margin-right: 9px;
+    margin-left: 9px;
+  }
+
+  .emerald-skulls-player-section,
+  .emerald-skulls-workspace {
+    padding-right: 9px;
+    padding-left: 9px;
+  }
+
+  .emerald-skulls-players {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .emerald-skulls-bet-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .emerald-skulls-buy-options {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .emerald-skulls-level-label > span {
+    font-size: 11px;
+  }
+
+  button.emerald-skulls-bet {
+    min-height: 108px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emerald-skulls-panel *,
+  .emerald-skulls-panel *::before,
+  .emerald-skulls-panel *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}
+}

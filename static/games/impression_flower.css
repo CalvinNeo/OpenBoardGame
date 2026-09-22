@@ -1,0 +1,285 @@
+/* Loaded into the matching style.css groups by loadGameStyleFragments. */
+@media all, obg-game-impression_flower-1 {
+
+.impression-canvas-wrapper {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+}
+
+#impressionCanvas {
+  border: 1px solid #ccc;
+  background: #fff;
+  border-radius: 4px;
+  cursor: crosshair;
+  max-width: 100%;
+  height: auto;
+  touch-action: none;
+}
+
+.impression-mask {
+  position: absolute;
+  border: 2px dashed #f59e0b;
+  background: rgba(245, 158, 11, 0.08);
+  border-radius: 4px;
+  transform-origin: center;
+  cursor: move;
+}
+
+.impression-rotate-controls {
+  position: absolute;
+  display: flex;
+  gap: 6px;
+  padding: 2px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.impression-rotate-controls.hidden {
+  display: none;
+}
+
+.impression-rotate-controls .impression-rotate-btn {
+  pointer-events: auto;
+}
+
+.impression-rotate-controls.dragging {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.impression-rotate-controls.dragging .impression-rotate-btn {
+  pointer-events: none;
+}
+
+.impression-controls {
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.impression-shapes,
+.impression-colors {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.impression-shape-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.impression-shape-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  border: 1px solid rgba(15, 23, 42, 0.2);
+}
+
+.impression-shape-btn[data-shape="circle"] .impression-shape-swatch {
+  border-radius: 999px;
+}
+
+.impression-shape-btn[data-shape="triangle"] .impression-shape-swatch {
+  border-radius: 0;
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+}
+
+.impression-shape-btn[data-shape="bar"] .impression-shape-swatch {
+  height: 6px;
+  border-radius: 3px;
+}
+
+.impression-rotate-btn {
+  padding: 2px 6px;
+  font-size: 12px;
+  line-height: 1;
+  min-width: 28px;
+}
+
+.impression-shape-btn.active {
+  background: #1f6feb;
+  border-color: #1f6feb;
+  color: #fff;
+}
+
+.impression-color-btn {
+  width: 32px;
+  height: 32px;
+  border: 2px solid #cbd5e1;
+  border-radius: 999px;
+  padding: 0;
+  cursor: pointer;
+}
+
+.impression-color-btn.active {
+  border-color: #111827;
+  box-shadow: 0 0 0 2px rgba(17, 24, 39, 0.15);
+}
+
+.impression-word-bank {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  border: 1px solid #eee;
+  background: #fafafa;
+  padding: 8px;
+  border-radius: 4px;
+  min-height: 44px;
+}
+
+.impression-word {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #e0f2fe;
+  border: 1px solid #bae6fd;
+  cursor: grab;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.impression-word.selected {
+  background: #bfdbfe;
+  border-color: #60a5fa;
+  color: #1e3a8a;
+}
+
+.impression-word.assigned {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #e5e7eb;
+  border-color: #e5e7eb;
+}
+
+.impression-drawings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 600px) {
+  .impression-drawings {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.impression-drawing {
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  border-radius: 6px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.impression-drawing-media {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.impression-drawing img {
+  max-width: 100%;
+  width: 100%;
+  display: block;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.impression-dropzone {
+  border: 1px dashed #cbd5e1;
+  border-radius: 6px;
+  padding: 6px;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: #6b7280;
+  background: #f8fafc;
+}
+
+.impression-dropzone.active {
+  border-color: #1f6feb;
+  color: #1f6feb;
+  background: #eff6ff;
+}
+
+
+.impression-assigned-word {
+  font-weight: 600;
+  color: #1f2937;
+  cursor: pointer;
+}
+
+#impressionReview {
+  margin-top: 12px;
+}
+
+#impressionReview h3 {
+  margin-top: 0;
+}
+
+.impression-review-card.correct {
+  border-color: #22c55e;
+  background: #f0fdf4;
+}
+
+.impression-review-card.incorrect {
+  border-color: #ef4444;
+  background: #fef2f2;
+}
+
+.impression-review-words {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  color: #374151;
+}
+
+.impression-review-words strong {
+  color: #111827;
+}
+
+.impression-review-votes {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.impression-review-vote-btn {
+  padding: 2px 6px;
+  font-size: 12px;
+}
+
+.impression-review-vote-btn.active {
+  background: #1f6feb;
+  border-color: #1f6feb;
+  color: #fff;
+}
+
+.impression-review-vote-count {
+  font-size: 12px;
+  color: #4b5563;
+}
+
+#impressionPlayers {
+  border: 1px solid #eee;
+  padding: 8px;
+  border-radius: 4px;
+  background: #fafafa;
+}
+}

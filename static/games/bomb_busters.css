@@ -1,0 +1,887 @@
+/* Loaded into the matching style.css groups by loadGameStyleFragments. */
+@media all, obg-game-bomb_busters-1 {
+
+.bomb-busters-panel {
+  --bomb-ink: #eef6ff;
+  --bomb-muted: #a9bad0;
+  --bomb-line: rgba(148, 180, 216, 0.22);
+  --bomb-surface: rgba(9, 24, 43, 0.88);
+  --bomb-raised: rgba(17, 39, 66, 0.94);
+  --bomb-blue: #60a5fa;
+  --bomb-yellow: #facc15;
+  --bomb-red: #fb7185;
+  --bomb-mint: #5eead4;
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  max-width: 100%;
+  min-width: 0;
+  gap: 14px;
+  padding: clamp(12px, 2vw, 20px);
+  overflow-x: clip;
+  color: var(--bomb-ink);
+  border: 1px solid rgba(96, 165, 250, 0.26);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 90% 0%, rgba(250, 204, 21, 0.13), transparent 30%),
+    radial-gradient(circle at 4% 60%, rgba(59, 130, 246, 0.17), transparent 31%),
+    linear-gradient(145deg, #06111f 0%, #0a2038 55%, #101a2a 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 18px 42px rgba(3, 12, 24, 0.22);
+}
+
+.bomb-busters-panel.hidden {
+  display: none;
+}
+
+.bomb-busters-panel::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  content: "";
+  opacity: 0.19;
+  pointer-events: none;
+  background-image:
+    linear-gradient(90deg, transparent 47%, rgba(125, 211, 252, 0.13) 48%, rgba(125, 211, 252, 0.13) 52%, transparent 53%),
+    radial-gradient(circle, rgba(255, 255, 255, 0.18) 1px, transparent 1.5px);
+  background-position: 0 0, 0 0;
+  background-size: 92px 92px, 23px 23px;
+}
+
+.bomb-busters-panel *,
+.bomb-busters-modal-content * {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.bomb-busters-panel h2,
+.bomb-busters-panel h3,
+.bomb-busters-panel h4,
+.bomb-busters-rules h3 {
+  margin: 0;
+}
+
+.bomb-busters-topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.bomb-busters-title-block h2 {
+  font-size: clamp(25px, 4vw, 36px);
+  letter-spacing: -0.045em;
+  line-height: 1.05;
+}
+
+.bomb-busters-eyebrow {
+  display: block;
+  margin-bottom: 4px;
+  color: #93c5fd;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.bomb-busters-subtitle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 6px;
+  margin-top: 7px;
+  color: var(--bomb-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.bomb-busters-turn-card {
+  display: grid;
+  flex: 0 1 240px;
+  gap: 4px;
+  padding: 9px 12px;
+  overflow: hidden;
+  border: 1px solid var(--bomb-line);
+  border-radius: 12px;
+  background: rgba(5, 18, 34, 0.75);
+  text-align: right;
+}
+
+.bomb-busters-turn-card span {
+  overflow: hidden;
+  color: var(--bomb-muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bomb-busters-turn-card strong {
+  overflow: hidden;
+  color: #fff;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bomb-busters-status {
+  padding: 11px 13px;
+  border: 1px solid rgba(94, 234, 212, 0.26);
+  border-left: 4px solid var(--bomb-mint);
+  border-radius: 11px;
+  background: rgba(15, 118, 110, 0.17);
+  color: #ccfbf1;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.bomb-busters-instruments {
+  display: grid;
+  grid-template-columns: minmax(230px, 0.8fr) minmax(0, 1.2fr);
+  gap: 10px;
+}
+
+.bomb-busters-detonator,
+.bomb-busters-markers,
+.bomb-busters-racks-section,
+.bomb-busters-validation-card,
+.bomb-busters-detector-card,
+.bomb-busters-activity-card,
+.bomb-busters-action-dock,
+.bomb-busters-result {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--bomb-line);
+  border-radius: 14px;
+  background: var(--bomb-surface);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.bomb-busters-detonator,
+.bomb-busters-markers {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.bomb-busters-detonator-heading,
+.bomb-busters-section-heading,
+.bomb-busters-player-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.bomb-busters-detonator-heading strong {
+  color: #fde68a;
+  font-size: 12px;
+}
+
+.bomb-busters-detonator > span,
+.bomb-busters-section-heading > span {
+  color: var(--bomb-muted);
+  font-size: 11px;
+  text-align: right;
+}
+
+.bomb-busters-detonator-track {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(30px, 1fr);
+  gap: 5px;
+}
+
+.bomb-busters-detonator-track span {
+  display: grid;
+  min-height: 24px;
+  place-items: center;
+  border-radius: 7px;
+  font-size: 11px;
+}
+
+.bomb-busters-detonator-track .is-safe {
+  color: #99f6e4;
+  border: 1px solid rgba(45, 212, 191, 0.45);
+  background: rgba(13, 148, 136, 0.25);
+}
+
+.bomb-busters-detonator-track .is-spent {
+  color: #fecdd3;
+  border: 1px solid rgba(251, 113, 133, 0.5);
+  background: rgba(190, 18, 60, 0.28);
+}
+
+.bomb-busters-marker-row {
+  display: grid;
+  grid-template-columns: minmax(76px, auto) minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+  color: var(--bomb-muted);
+  font-size: 12px;
+}
+
+.bomb-busters-marker-row strong {
+  color: var(--bomb-ink);
+  font-size: 11px;
+}
+
+.bomb-busters-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(230px, 0.31fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.bomb-busters-racks-section,
+.bomb-busters-side,
+.bomb-busters-racks {
+  display: grid;
+  min-width: 0;
+  gap: 10px;
+}
+
+.bomb-busters-player-card {
+  display: grid;
+  min-width: 0;
+  gap: 10px;
+  padding: 11px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 180, 216, 0.2);
+  border-radius: 12px;
+  background: rgba(13, 31, 53, 0.87);
+}
+
+.bomb-busters-player-card.is-self {
+  border-color: rgba(96, 165, 250, 0.62);
+  box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.12);
+}
+
+.bomb-busters-player-card.is-current {
+  border-color: rgba(94, 234, 212, 0.72);
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.25), rgba(13, 31, 53, 0.92));
+}
+
+.bomb-busters-player-card.is-responder {
+  border-color: rgba(250, 204, 21, 0.7);
+}
+
+.bomb-busters-player-heading > strong {
+  flex: 1 1 120px;
+  overflow: hidden;
+  font-size: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bomb-busters-badges {
+  display: flex;
+  flex: 2 1 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.bomb-busters-badges span,
+.bomb-busters-wire-count {
+  padding: 3px 7px;
+  border: 1px solid rgba(147, 197, 253, 0.2);
+  border-radius: 999px;
+  background: rgba(30, 64, 175, 0.14);
+  color: #bfdbfe;
+  font-size: 10px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.bomb-busters-wire-count {
+  color: var(--bomb-muted);
+  background: rgba(15, 23, 42, 0.5);
+}
+
+.bomb-busters-rack {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+
+.bomb-busters-rack h4 {
+  color: #c7d8ec;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.bomb-busters-rack-slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  min-width: 0;
+  gap: 6px;
+}
+
+.bomb-busters-wire-slot {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.bomb-busters-wire-button {
+  position: relative;
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  min-height: 92px;
+  align-content: center;
+  justify-items: center;
+  gap: 2px;
+  padding: 17px 5px 8px;
+  overflow: hidden;
+  color: #e5eef9;
+  border: 1px solid rgba(148, 180, 216, 0.3);
+  border-radius: 10px;
+  background: rgba(15, 32, 54, 0.94);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.bomb-busters-wire-button:disabled {
+  opacity: 0.72;
+  cursor: default;
+}
+
+.bomb-busters-wire-button:not(:disabled):hover,
+.bomb-busters-wire-button:not(:disabled):focus-visible {
+  z-index: 1;
+  border-color: #93c5fd;
+  transform: translateY(-2px);
+  box-shadow: 0 7px 16px rgba(2, 12, 27, 0.3);
+}
+
+.bomb-busters-slot-number {
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  color: #94a3b8;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.bomb-busters-wire-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.bomb-busters-wire-label {
+  overflow: hidden;
+  max-width: 100%;
+  font-size: 11px;
+  line-height: 1.15;
+  text-align: center;
+  text-overflow: ellipsis;
+}
+
+.bomb-busters-wire-detail {
+  overflow: hidden;
+  max-width: 100%;
+  color: #a9bad0;
+  font-size: 9px;
+  line-height: 1.15;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bomb-busters-wire-button.is-hidden-wire {
+  background:
+    repeating-linear-gradient(135deg, rgba(96, 165, 250, 0.07) 0 5px, transparent 5px 10px),
+    linear-gradient(160deg, #15243a, #0d1728);
+}
+
+.bomb-busters-wire-button.is-blue {
+  border-color: rgba(96, 165, 250, 0.55);
+  background: linear-gradient(155deg, rgba(37, 99, 235, 0.48), rgba(13, 32, 56, 0.95));
+}
+
+.bomb-busters-wire-button.is-yellow {
+  border-color: rgba(250, 204, 21, 0.58);
+  background:
+    repeating-linear-gradient(135deg, rgba(250, 204, 21, 0.08) 0 5px, transparent 5px 10px),
+    linear-gradient(155deg, rgba(161, 98, 7, 0.4), rgba(36, 31, 18, 0.95));
+}
+
+.bomb-busters-wire-button.is-red {
+  border-color: rgba(251, 113, 133, 0.62);
+  background:
+    repeating-linear-gradient(45deg, rgba(251, 113, 133, 0.1) 0 4px, transparent 4px 9px),
+    linear-gradient(155deg, rgba(159, 18, 57, 0.48), rgba(43, 18, 28, 0.96));
+}
+
+.bomb-busters-wire-button.is-cut,
+.bomb-busters-wire-button.is-secured {
+  filter: saturate(0.72);
+}
+
+.bomb-busters-wire-button.is-selected-own {
+  border-color: #5eead4;
+  outline: 2px solid rgba(94, 234, 212, 0.55);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 4px rgba(94, 234, 212, 0.12);
+}
+
+.bomb-busters-wire-button.is-selected-target {
+  border-color: #fde047;
+  outline: 2px solid rgba(253, 224, 71, 0.58);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 4px rgba(253, 224, 71, 0.1);
+}
+
+.bomb-busters-wire-button.is-selected-solo {
+  border-color: #c4b5fd;
+  outline: 2px solid rgba(196, 181, 253, 0.62);
+  outline-offset: 1px;
+}
+
+.bomb-busters-info-token {
+  width: 100%;
+  min-height: 25px;
+  padding: 3px 4px;
+  overflow: hidden;
+  border: 1px solid rgba(253, 230, 138, 0.48);
+  border-radius: 7px;
+  background: rgba(120, 53, 15, 0.35);
+  color: #fef3c7;
+  font-size: 9px;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bomb-busters-validation-card,
+.bomb-busters-detector-card,
+.bomb-busters-activity-card {
+  display: grid;
+  gap: 8px;
+}
+
+.bomb-busters-validation {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.bomb-busters-validation-cell {
+  min-height: 34px;
+  padding: 5px;
+  border: 1px solid rgba(96, 165, 250, 0.25);
+  border-radius: 7px;
+  background: rgba(30, 64, 175, 0.13);
+  color: #bfdbfe;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.bomb-busters-validation-cell:disabled {
+  opacity: 1;
+}
+
+.bomb-busters-validation-cell.is-complete {
+  border-color: rgba(94, 234, 212, 0.48);
+  background: rgba(13, 148, 136, 0.2);
+  color: #ccfbf1;
+}
+
+.bomb-busters-validation-cell.is-out {
+  border-color: rgba(100, 116, 139, 0.2);
+  background: rgba(30, 41, 59, 0.4);
+  color: #718096;
+}
+
+#bombBustersDetectorStatus {
+  color: #a7f3d0;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+#bombBustersDetectorStatus.is-used {
+  color: #94a3b8;
+}
+
+.bomb-busters-activity {
+  display: grid;
+  max-height: 180px;
+  gap: 5px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  color: var(--bomb-muted);
+  font-size: 11px;
+  line-height: 1.4;
+  scrollbar-width: thin;
+}
+
+.bomb-busters-activity-row {
+  padding: 6px 7px;
+  border-left: 2px solid rgba(96, 165, 250, 0.38);
+  background: rgba(15, 30, 51, 0.55);
+}
+
+.bomb-busters-wire-popover {
+  --bomb-busters-popover-arrow-left: 50%;
+  position: fixed;
+  z-index: 80;
+  display: none;
+  width: min(248px, calc(100vw - 16px));
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(94, 234, 212, 0.72);
+  border-radius: 12px;
+  background: linear-gradient(145deg, rgba(7, 28, 47, 0.98), rgba(10, 45, 61, 0.98));
+  box-shadow: 0 14px 34px rgba(2, 8, 23, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.bomb-busters-wire-popover::after {
+  position: absolute;
+  left: var(--bomb-busters-popover-arrow-left);
+  width: 12px;
+  height: 12px;
+  border-right: 1px solid rgba(94, 234, 212, 0.72);
+  border-bottom: 1px solid rgba(94, 234, 212, 0.72);
+  background: #0a2d3d;
+  content: "";
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.bomb-busters-wire-popover[data-placement="above"]::after {
+  bottom: -7px;
+}
+
+.bomb-busters-wire-popover[data-placement="below"]::after {
+  top: -7px;
+  transform: translateX(-50%) rotate(225deg);
+}
+
+.bomb-busters-wire-popover p {
+  margin: 0;
+  color: #dffcf8;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.bomb-busters-wire-popover-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.bomb-busters-wire-popover-actions button {
+  min-height: 42px;
+  padding: 7px 9px;
+  border: 1px solid rgba(148, 180, 216, 0.42);
+  border-radius: 8px;
+  background: rgba(30, 41, 59, 0.88);
+  color: #e5eef9;
+  font-size: 12px;
+  font-weight: 850;
+  touch-action: manipulation;
+}
+
+#bombBustersWirePopoverConfirmBtn {
+  border-color: rgba(94, 234, 212, 0.7);
+  background: linear-gradient(180deg, rgba(13, 148, 136, 0.94), rgba(15, 118, 110, 0.96));
+  color: #ecfeff;
+}
+
+#bombBustersWirePopoverConfirmBtn:disabled {
+  opacity: 0.42;
+}
+
+#bombBustersWirePopoverCancelBtn {
+  border-color: rgba(148, 163, 184, 0.38);
+  background: rgba(30, 41, 59, 0.92);
+}
+
+.bomb-busters-action-dock {
+  display: grid;
+  gap: 9px;
+  border-color: rgba(94, 234, 212, 0.28);
+  background: linear-gradient(135deg, rgba(12, 47, 66, 0.93), rgba(8, 25, 45, 0.94));
+}
+
+.bomb-busters-action-summary {
+  min-height: 40px;
+  padding: 9px 11px;
+  border: 1px solid rgba(147, 197, 253, 0.2);
+  border-radius: 9px;
+  background: rgba(6, 19, 36, 0.62);
+  color: #dbeafe;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.bomb-busters-solo-options,
+.bomb-busters-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  gap: 7px;
+}
+
+.bomb-busters-actions button,
+.bomb-busters-solo-option,
+.bomb-busters-result button,
+.bomb-busters-header-btn {
+  min-height: 38px;
+  border: 1px solid rgba(96, 165, 250, 0.44);
+  border-radius: 9px;
+  background: linear-gradient(180deg, rgba(37, 99, 235, 0.8), rgba(30, 64, 175, 0.83));
+  color: #eff6ff;
+  font-weight: 800;
+}
+
+.bomb-busters-actions button:hover:not(:disabled),
+.bomb-busters-solo-option:hover:not(:disabled),
+.bomb-busters-result button:hover:not(:disabled) {
+  border-color: #93c5fd;
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.93), rgba(30, 64, 175, 0.94));
+}
+
+.bomb-busters-actions button:disabled,
+.bomb-busters-solo-option:disabled,
+.bomb-busters-result button:disabled {
+  opacity: 0.47;
+}
+
+.bomb-busters-solo-option.is-selected {
+  border-color: #c4b5fd;
+  background: linear-gradient(180deg, rgba(124, 58, 237, 0.82), rgba(91, 33, 182, 0.86));
+}
+
+#bombBustersSecureRedBtn {
+  border-color: rgba(251, 113, 133, 0.5);
+  background: linear-gradient(180deg, rgba(190, 24, 93, 0.78), rgba(136, 19, 55, 0.85));
+}
+
+.bomb-busters-result {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, auto) auto;
+  gap: 14px;
+  align-items: center;
+}
+
+.bomb-busters-result.hidden,
+.bomb-busters-action-dock.hidden,
+.bomb-busters-actions .hidden {
+  display: none;
+}
+
+.bomb-busters-result.is-success {
+  border-color: rgba(94, 234, 212, 0.55);
+  background: linear-gradient(135deg, rgba(13, 148, 136, 0.24), rgba(8, 25, 45, 0.94));
+}
+
+.bomb-busters-result.is-failure {
+  border-color: rgba(251, 113, 133, 0.58);
+  background: linear-gradient(135deg, rgba(159, 18, 57, 0.3), rgba(33, 18, 32, 0.95));
+}
+
+.bomb-busters-result p {
+  margin: 7px 0 0;
+  color: var(--bomb-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.bomb-busters-ready-list {
+  display: grid;
+  gap: 3px;
+  color: var(--bomb-muted);
+  font-size: 10px;
+}
+
+.bomb-busters-ready-list strong {
+  margin-bottom: 2px;
+  color: var(--bomb-ink);
+  font-size: 12px;
+}
+
+.bomb-busters-modal-content {
+  width: min(780px, calc(100vw - 28px));
+  max-height: min(88vh, 850px);
+  overflow: hidden;
+}
+
+.bomb-busters-modal-content .modal-body {
+  max-height: calc(88vh - 78px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.bomb-busters-help-content {
+  line-height: 1.55;
+}
+
+.bomb-busters-rules {
+  display: grid;
+  gap: 10px;
+}
+
+.bomb-busters-rules p {
+  margin: 0;
+}
+
+.bomb-busters-practice-note {
+  padding: 10px 12px;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 9px;
+  background: rgba(59, 130, 246, 0.08);
+}
+
+body.bomb-busters-explain-mode [data-bomb-busters-explain].has-explanation {
+  cursor: help !important;
+  outline: 2px dashed #60a5fa !important;
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .bomb-busters-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .bomb-busters-side {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bomb-busters-activity-card {
+    grid-column: 1 / -1;
+  }
+
+  .bomb-busters-result {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .bomb-busters-ready-list {
+    grid-row: 2;
+  }
+}
+
+@media (max-width: 620px) {
+  .bomb-busters-wire-popover.is-open {
+    display: grid;
+  }
+
+  .bomb-busters-panel {
+    gap: 10px;
+    padding: 10px;
+    border-radius: 14px;
+  }
+
+  .bomb-busters-topbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 9px;
+  }
+
+  .bomb-busters-turn-card {
+    display: flex;
+    flex: none;
+    justify-content: space-between;
+    gap: 10px;
+    text-align: left;
+  }
+
+  .bomb-busters-instruments {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .bomb-busters-section-heading {
+    align-items: flex-start;
+  }
+
+  .bomb-busters-section-heading > span {
+    max-width: 45%;
+  }
+
+  .bomb-busters-player-heading {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .bomb-busters-player-heading > strong {
+    flex-basis: calc(100% - 88px);
+  }
+
+  .bomb-busters-badges {
+    order: 3;
+    flex-basis: 100%;
+    justify-content: flex-start;
+  }
+
+  .bomb-busters-rack-slots {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  .bomb-busters-wire-button {
+    min-height: 84px;
+    padding-inline: 3px;
+  }
+
+  .bomb-busters-wire-label {
+    font-size: 10px;
+  }
+
+  .bomb-busters-wire-detail {
+    font-size: 8px;
+  }
+
+  .bomb-busters-side {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .bomb-busters-activity-card {
+    grid-column: auto;
+  }
+
+  .bomb-busters-actions,
+  .bomb-busters-solo-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bomb-busters-actions button,
+  .bomb-busters-solo-option,
+  .bomb-busters-result button {
+    min-height: 44px;
+    padding: 7px 8px;
+    font-size: 11px;
+  }
+
+  .bomb-busters-result {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .bomb-busters-ready-list {
+    grid-row: auto;
+  }
+}
+
+@media (max-width: 350px) {
+  .bomb-busters-rack-slots {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .bomb-busters-wire-button {
+    min-height: 78px;
+  }
+
+  .bomb-busters-actions,
+  .bomb-busters-solo-options {
+    gap: 5px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bomb-busters-panel *,
+  .bomb-busters-panel *::before,
+  .bomb-busters-panel *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
+    animation: none !important;
+  }
+}
+}

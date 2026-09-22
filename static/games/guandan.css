@@ -1,0 +1,1188 @@
+/* Loaded into the matching style.css groups by loadGameStyleFragments. */
+@media all, obg-game-guandan-1 {
+
+.guandan-player {
+  padding: 2px 0;
+}
+}
+
+@media all, obg-game-guandan-2 {
+
+/* Guandan Help/Explain */
+#guandanPanel {
+  --guandan-open: #b7791f;
+  --guandan-you: #2563eb;
+  --guandan-teammate: #15803d;
+  --guandan-opponent: #c2412d;
+  --guandan-ink: #213029;
+  --guandan-muted: #66736c;
+  --guandan-line: #d9e1dc;
+  --guandan-surface: rgba(255, 255, 255, 0.86);
+  padding: 9px;
+  border: 1px solid #dce5df;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(44, 113, 82, 0.08), transparent 28%),
+    linear-gradient(150deg, #f7faf7 0%, #f2f6f3 100%);
+  color: var(--guandan-ink);
+  font-family: "Work Sans", Arial, sans-serif;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+#guandanPanel .guandan-status-bar {
+  display: grid;
+  grid-template-columns: 0.9fr 0.72fr 1.3fr 1fr 0.72fr;
+  gap: 5px;
+  margin-bottom: 7px;
+}
+
+#guandanPanel .guandan-status-item {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 7px;
+  border: 1px solid var(--guandan-line);
+  border-radius: 8px;
+  background: var(--guandan-surface);
+  box-shadow: 0 1px 2px rgba(31, 50, 40, 0.04);
+}
+
+#guandanPanel .guandan-status-item--turn {
+  border-color: #bed6c9;
+  background: #eef8f1;
+}
+
+#guandanPanel .guandan-status-item--level {
+  border-color: #e5d6a8;
+  background: #fffaf0;
+}
+
+#guandanPanel .guandan-status-icon {
+  display: inline-grid;
+  width: 21px;
+  height: 21px;
+  flex: 0 0 21px;
+  place-items: center;
+  border-radius: 6px;
+  background: #edf2ee;
+  font-size: 0.71rem;
+  line-height: 1;
+}
+
+#guandanPanel .guandan-status-item--turn .guandan-status-icon {
+  background: #dbeee2;
+}
+
+#guandanPanel .guandan-status-item--level .guandan-status-icon {
+  background: #f7ebc7;
+}
+
+#guandanPanel .guandan-status-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+}
+
+#guandanPanel .guandan-status-label {
+  overflow: hidden;
+  color: #78847e;
+  font-size: 0.5rem;
+  font-weight: 850;
+  letter-spacing: 0.07em;
+  line-height: 1;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+#guandanPanel .guandan-status-copy strong {
+  overflow: hidden;
+  color: #26362e;
+  font-size: 0.75rem;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#guandanPanel .guandan-beat-target {
+  --guandan-target-tone: var(--guandan-open);
+  position: relative;
+  display: grid;
+  grid-template-areas:
+    "head main"
+    "head hint";
+  grid-template-columns: minmax(108px, 0.21fr) minmax(0, 1fr);
+  column-gap: 9px;
+  overflow: hidden;
+  margin: 0 0 7px;
+  padding: 7px 9px 6px;
+  border: 1px solid color-mix(in srgb, var(--guandan-target-tone) 29%, white);
+  border-left: 3px solid var(--guandan-target-tone);
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 98% 4%, color-mix(in srgb, var(--guandan-target-tone) 10%, transparent), transparent 31%),
+    linear-gradient(135deg, #ffffff 0%, color-mix(in srgb, var(--guandan-target-tone) 4%, white) 100%);
+  box-shadow: 0 2px 7px rgba(28, 43, 35, 0.06);
+}
+
+#guandanPanel .guandan-beat-target.is-open {
+  --guandan-target-tone: var(--guandan-open);
+}
+
+#guandanPanel .guandan-beat-target.is-you {
+  --guandan-target-tone: var(--guandan-you);
+}
+
+#guandanPanel .guandan-beat-target.is-teammate {
+  --guandan-target-tone: var(--guandan-teammate);
+}
+
+#guandanPanel .guandan-beat-target.is-opponent {
+  --guandan-target-tone: var(--guandan-opponent);
+}
+
+#guandanPanel .guandan-beat-target-head {
+  grid-area: head;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  flex-direction: column;
+  gap: 5px;
+  padding-right: 8px;
+  border-right: 1px solid color-mix(in srgb, var(--guandan-target-tone) 15%, #e5e7eb);
+}
+
+#guandanPanel .guandan-beat-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--guandan-target-tone);
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.07em;
+  line-height: 1.1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+#guandanPanel .guandan-relation-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  border: 1px solid color-mix(in srgb, var(--guandan-target-tone) 28%, white);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--guandan-target-tone) 8%, white);
+  color: var(--guandan-target-tone);
+  font-size: 0.6rem;
+  font-weight: 850;
+  line-height: 1.15;
+}
+
+#guandanPanel .guandan-relation-badge::before {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  content: "";
+}
+
+#guandanPanel .guandan-beat-main {
+  grid-area: main;
+  display: grid;
+  grid-template-columns: minmax(150px, 0.72fr) minmax(0, 1.28fr);
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+#guandanPanel .guandan-beat-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+#guandanPanel .guandan-beat-title {
+  color: #172033;
+  font-size: clamp(0.82rem, 1.6vw, 1rem);
+  line-height: 1.12;
+}
+
+#guandanPanel .guandan-beat-owner {
+  margin-top: 2px;
+  color: #5b6474;
+  font-size: 0.64rem;
+  line-height: 1.25;
+}
+
+#guandanPanel .guandan-beat-cards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+  min-width: 0;
+}
+
+#guandanPanel .guandan-beat-card {
+  display: inline-grid;
+  place-items: center;
+  min-width: 34px;
+  min-height: 27px;
+  padding: 3px 5px;
+  border: 1px solid #d6ddd8;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #172033;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+#guandanPanel .guandan-beat-card.is-red {
+  color: #b42318;
+}
+
+#guandanPanel .guandan-beat-card.is-joker {
+  border-color: #c4b5fd;
+  color: #6d28d9;
+  background: #faf5ff;
+}
+
+#guandanPanel .guandan-beat-empty {
+  display: inline-flex;
+  align-items: center;
+  min-height: 25px;
+  padding: 3px 8px;
+  border: 1px dashed color-mix(in srgb, var(--guandan-target-tone) 36%, white);
+  border-radius: 6px;
+  color: var(--guandan-target-tone);
+  background: color-mix(in srgb, var(--guandan-target-tone) 4%, white);
+  font-size: 0.63rem;
+  font-weight: 700;
+}
+
+#guandanPanel .guandan-beat-hint {
+  grid-area: hint;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid color-mix(in srgb, var(--guandan-target-tone) 12%, #e5e7eb);
+  color: #465166;
+  font-size: 0.61rem;
+  line-height: 1.25;
+}
+
+@media (max-width: 640px) {
+  #guandanPanel {
+    padding: 7px;
+    border-radius: 11px;
+  }
+
+  #guandanPanel .guandan-status-bar {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  #guandanPanel .guandan-status-item {
+    gap: 4px;
+    padding: 4px 5px;
+  }
+
+  #guandanPanel .guandan-status-icon {
+    width: 18px;
+    height: 18px;
+    flex-basis: 18px;
+    font-size: 0.62rem;
+  }
+
+  #guandanPanel .guandan-status-copy strong {
+    font-size: 0.68rem;
+  }
+
+  #guandanPanel .guandan-beat-target {
+    grid-template-areas:
+      "head"
+      "main"
+      "hint";
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 5px;
+    padding: 6px 7px 5px;
+    border-radius: 8px;
+  }
+
+  #guandanPanel .guandan-beat-target-head {
+    align-items: center;
+    justify-content: space-between;
+    flex-direction: row;
+    padding: 0 0 4px;
+    border-right: 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--guandan-target-tone) 12%, #e5e7eb);
+  }
+
+  #guandanPanel .guandan-beat-main {
+    grid-template-columns: minmax(126px, 0.78fr) minmax(0, 1.22fr);
+    gap: 6px;
+  }
+
+  #guandanPanel .guandan-beat-owner {
+    display: none;
+  }
+
+  #guandanPanel .guandan-beat-cards {
+    justify-content: flex-end;
+    gap: 3px;
+  }
+
+  #guandanPanel .guandan-beat-card {
+    min-width: 28px;
+    min-height: 24px;
+    padding: 2px 3px;
+    font-size: 0.61rem;
+  }
+
+  #guandanPanel .guandan-beat-hint {
+    margin-top: 0;
+  }
+}
+
+.guandan-header-btn {
+  min-height: 29px;
+  padding: 4px 10px;
+  border: 1px solid #bfcfc5;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffffff, #edf3ef);
+  color: #30483b;
+  cursor: pointer;
+  font-family: "Work Sans", Arial, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+.guandan-header-btn:hover {
+  border-color: #7da08c;
+  background: #e8f2ec;
+}
+
+.guandan-header-btn.active {
+  border-color: #2f6f52;
+  background: #2f6f52;
+  color: #ffffff;
+}
+
+body.guandan-explain-mode button.has-explanation {
+  outline: 2px dashed #3b82f6;
+  outline-offset: 2px;
+  cursor: help;
+}
+
+body.guandan-explain-mode button.has-explanation:hover {
+  outline-color: #1d4ed8;
+  outline-style: solid;
+}
+
+.guandan-help-modal {
+  max-width: 700px;
+}
+
+.guandan-explain-modal {
+  max-width: 450px;
+}
+
+.guandan-bot-explain-modal {
+  max-width: 560px;
+}
+
+.guandan-help-content {
+  max-height: 70vh;
+  overflow-y: auto;
+  line-height: 1.6;
+}
+
+.guandan-help-content h3 {
+  margin: 16px 0 8px;
+  font-size: 16px;
+  color: #111827;
+}
+
+.guandan-help-content h3:first-child {
+  margin-top: 0;
+}
+
+.guandan-help-content ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.guandan-help-content li {
+  margin-bottom: 4px;
+}
+
+.guandan-help-content p {
+  margin: 8px 0;
+}
+
+#guandanExplainContent {
+  line-height: 1.6;
+}
+
+#guandanExplainContent h4 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: #111827;
+}
+
+#guandanExplainContent p {
+  margin: 6px 0;
+  color: #374151;
+}
+
+#guandanExplainContent .explain-cost {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+#guandanExplainContent .explain-cost.free {
+  background: #dcfce7;
+  color: #166534;
+}
+
+#guandanExplainContent .explain-cost.end {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+#guandanPanel .guandan-tribute-strip {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 6px;
+  padding: 5px 8px;
+  border: 1px solid #e4ddc7;
+  border-radius: 8px;
+  background: rgba(255, 251, 235, 0.74);
+  color: #5d5542;
+  font-size: 0.67rem;
+  line-height: 1.25;
+}
+
+#guandanPanel .guandan-tribute-label {
+  flex: 0 0 auto;
+  color: #8a6a22;
+  font-size: 0.57rem;
+  font-weight: 900;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+#guandanPanel #guandanTribute {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+#guandanPanel .guandan-section {
+  margin-bottom: 6px;
+  padding: 7px 8px;
+  border: 1px solid var(--guandan-line);
+  border-radius: 9px;
+  background: var(--guandan-surface);
+  box-shadow: 0 1px 3px rgba(31, 50, 40, 0.035);
+}
+
+#guandanPanel .guandan-section-title {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 0 5px;
+  color: #405148;
+  font-size: 0.67rem;
+  font-weight: 900;
+  letter-spacing: 0.055em;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+
+#guandanPanel .guandan-section-title > span {
+  font-size: 0.72rem;
+}
+
+#guandanPanel .guandan-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+  margin: 0 0 6px;
+}
+
+#guandanPanel .guandan-actions-grid button {
+  min-height: 30px;
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid #cbd6cf;
+  border-radius: 7px;
+  margin-right: 0;
+  background: linear-gradient(180deg, #ffffff, #edf2ef);
+  color: #34463c;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.69rem;
+  font-weight: 800;
+  line-height: 1.15;
+  transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+}
+
+#guandanPanel .guandan-actions-grid button:hover:not(:disabled),
+#guandanPanel .guandan-actions-grid button:focus-visible {
+  border-color: #779b88;
+  outline: none;
+  box-shadow: 0 2px 6px rgba(41, 83, 61, 0.13);
+  transform: translateY(-1px);
+}
+
+#guandanPanel #guandanPlayBtn:not(:disabled) {
+  border-color: #286347;
+  background: linear-gradient(180deg, #397d5d, #286347);
+  color: #ffffff;
+}
+
+#guandanPanel #guandanPassBtn:not(:disabled) {
+  border-color: #c8a497;
+  background: #fff7f4;
+  color: #8e4332;
+}
+
+#guandanPanel #guandanNextRoundBtn:not(:disabled),
+#guandanPanel #guandanPlayAgainBtn:not(:disabled) {
+  border-color: #bea85e;
+  background: #fff9df;
+  color: #705817;
+}
+
+@media (max-width: 640px) {
+  #guandanPanel .guandan-actions-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  #guandanPanel .guandan-actions-grid button {
+    min-height: 28px;
+    padding: 4px 5px;
+    font-size: 0.63rem;
+  }
+
+  #guandanPanel .guandan-hand-row button,
+  #guandanPanel .guandan-hand-row select {
+    min-height: 25px;
+    padding: 3px 5px;
+    font-size: 0.6rem;
+  }
+}
+
+#guandanPanel .guandan-hand-row {
+  display: flex;
+  width: 100%;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+#guandanPanel .guandan-hand-row button {
+  width: auto;
+}
+
+#guandanPanel .guandan-hand-row .guandan-section-title {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+#guandanPanel .guandan-hand-tools {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+#guandanPanel .guandan-inline-select {
+  width: auto;
+  min-height: 27px;
+  padding: 3px 7px;
+  border: 1px solid #c8d4cc;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #405148;
+  font-family: inherit;
+  font-size: 0.64rem;
+  font-weight: 700;
+}
+
+#guandanPanel .guandan-inline-btn {
+  width: auto;
+  min-height: 27px;
+  padding: 3px 7px;
+  border: 1px solid #c8d4cc;
+  border-radius: 6px;
+  background: #f5f8f6;
+  color: #405148;
+  font-family: inherit;
+  font-size: 0.64rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+#guandanPanel .guandan-inline-btn:hover:not(:disabled),
+#guandanPanel .guandan-inline-btn:focus-visible,
+#guandanPanel .guandan-inline-select:focus-visible {
+  border-color: #648d76;
+  outline: 2px solid rgba(47, 111, 82, 0.14);
+  outline-offset: 1px;
+}
+
+#guandanPanel .guandan-cascade-hand {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  align-items: flex-start;
+}
+
+#guandanPanel .guandan-cascade-col {
+  display: flex;
+  flex-direction: column;
+}
+
+#guandanPanel .guandan-cascade-select {
+  align-self: center;
+  min-width: 35px;
+  min-height: 21px;
+  padding: 2px 6px;
+  border: 1px solid #c7d4cc;
+  border-radius: 6px;
+  background: #edf4ef;
+  color: #476455;
+  cursor: pointer;
+  font-size: 0.58rem;
+  font-weight: 900;
+  line-height: 1;
+  transform: translateY(-2px);
+}
+
+#guandanPanel .guandan-cascade-select:hover:not(:disabled),
+#guandanPanel .guandan-cascade-select:focus-visible {
+  border-color: #648d76;
+  outline: none;
+  background: #dfede4;
+}
+
+#guandanPanel .guandan-cascade-col .slot {
+  margin-top: -8px;
+}
+
+#guandanPanel .guandan-cascade-col .slot:first-of-type {
+  margin-top: 0;
+}
+
+#guandanPanel .guandan-compact-hand {
+  position: relative;
+  display: block;
+  width: 100%;
+  --guandan-cascade-gap: 7px;
+  min-height: 1px;
+}
+
+#guandanPanel .guandan-compact-hand .guandan-cascade-col {
+  position: absolute;
+  display: flex;
+}
+
+#guandanPanel .guandan-trick-plays-table {
+  width: 100%;
+  overflow: hidden;
+  margin: 0;
+  border: 1px solid #dce3de;
+  border-spacing: 0;
+  border-radius: 7px;
+  background: #ffffff;
+  font-size: 0.64rem;
+}
+
+#guandanPanel .guandan-trick-plays-table th,
+#guandanPanel .guandan-trick-plays-table td {
+  padding: 3px 6px;
+  border: 0;
+  border-bottom: 1px solid #e8ede9;
+  text-align: left;
+  vertical-align: middle;
+}
+
+#guandanPanel .guandan-trick-plays-table th {
+  background: #edf2ee;
+  color: #647169;
+  font-size: 0.52rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+#guandanPanel .guandan-trick-plays-table th + th,
+#guandanPanel .guandan-trick-plays-table td + td {
+  border-left: 1px solid #edf1ee;
+}
+
+#guandanPanel .guandan-trick-plays-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+#guandanPanel .guandan-trick-player-row.is-you td:first-child {
+  box-shadow: inset 3px 0 var(--guandan-you);
+}
+
+#guandanPanel .guandan-trick-player-row.is-teammate td:first-child {
+  box-shadow: inset 3px 0 var(--guandan-teammate);
+}
+
+#guandanPanel .guandan-trick-player-row.is-opponent td:first-child {
+  box-shadow: inset 3px 0 var(--guandan-opponent);
+}
+
+#guandanPanel .guandan-trick-plays-table .guandan-current-turn-row td {
+  background: #edf8f0;
+  color: #254d37;
+  font-weight: 700;
+}
+
+#guandanPanel .guandan-trick-plays-table .is-finished td {
+  color: #89928d;
+}
+
+#guandanPanel .guandan-player-cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+#guandanPanel .guandan-player-name {
+  min-width: 0;
+}
+
+#guandanPanel .guandan-players-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+}
+
+#guandanPanel .guandan-player-card {
+  --guandan-player-tone: #7b8780;
+  position: relative;
+  min-width: 0;
+  padding: 6px 7px;
+  border: 1px solid #dce3de;
+  border-top: 2px solid var(--guandan-player-tone);
+  border-radius: 7px;
+  background: #ffffff;
+  color: #2c3b33;
+}
+
+#guandanPanel .guandan-player-card.is-you {
+  --guandan-player-tone: var(--guandan-you);
+}
+
+#guandanPanel .guandan-player-card.is-teammate {
+  --guandan-player-tone: var(--guandan-teammate);
+}
+
+#guandanPanel .guandan-player-card.is-opponent {
+  --guandan-player-tone: var(--guandan-opponent);
+}
+
+#guandanPanel .guandan-player-card.is-current {
+  border-color: color-mix(in srgb, var(--guandan-player-tone) 45%, white);
+  background: color-mix(in srgb, var(--guandan-player-tone) 5%, white);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--guandan-player-tone) 10%, transparent);
+}
+
+#guandanPanel .guandan-player-card.is-finished {
+  opacity: 0.72;
+}
+
+#guandanPanel .guandan-player-card-top {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+}
+
+#guandanPanel .guandan-player-card-name {
+  overflow: hidden;
+  font-size: 0.69rem;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#guandanPanel .guandan-player-tags {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 3px;
+}
+
+#guandanPanel .guandan-player-tag {
+  padding: 1px 4px;
+  border-radius: 999px;
+  background: #edf1ee;
+  color: #727e77;
+  font-size: 0.43rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  line-height: 1.3;
+}
+
+#guandanPanel .guandan-player-tag--turn {
+  background: color-mix(in srgb, var(--guandan-player-tone) 12%, white);
+  color: var(--guandan-player-tone);
+}
+
+#guandanPanel .guandan-player-card-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 3px 6px;
+  margin-top: 4px;
+  color: #6b7770;
+  font-size: 0.55rem;
+  line-height: 1.15;
+}
+
+#guandanPanel .guandan-team-chip {
+  color: var(--guandan-player-tone);
+  font-weight: 800;
+}
+
+#guandanPanel .guandan-card-count {
+  margin-left: auto;
+  color: #536159;
+  white-space: nowrap;
+}
+
+#guandanPanel .guandan-finish-chip {
+  flex-basis: 100%;
+  color: #8a6a22;
+  font-weight: 750;
+}
+
+#guandanPanel .guandan-bot-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 88px;
+  flex: 0 0 auto;
+}
+
+#guandanPanel .guandan-bot-progress-bar {
+  width: 56px;
+  height: 6px;
+  border-radius: 999px;
+  background: #dbe7f3;
+  overflow: hidden;
+  position: relative;
+}
+
+#guandanPanel .guandan-bot-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #60a5fa 0%, #2563eb 100%);
+  transition: width 120ms linear;
+}
+
+#guandanPanel .guandan-bot-progress-text {
+  font-size: 10px;
+  color: #475569;
+  font-variant-numeric: tabular-nums;
+}
+
+#guandanPanel .guandan-bot-explain-btn {
+  padding: 2px 5px;
+  border: 1px solid #cbd6cf;
+  border-radius: 5px;
+  background: #f6f9f7;
+  color: #3b5346;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.6rem;
+}
+
+#guandanPanel .guandan-bot-explain-btn:hover {
+  border-color: #779b88;
+  background: #e8f2ec;
+}
+
+#guandanBotExplainContent .guandan-bot-explain-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+#guandanBotExplainContent .guandan-bot-explain-table th,
+#guandanBotExplainContent .guandan-bot-explain-table td {
+  border: 1px solid #e5e7eb;
+  padding: 4px 6px;
+  text-align: left;
+  vertical-align: top;
+}
+
+#guandanBotExplainContent .guandan-bot-explain-components {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 11px;
+  color: #374151;
+}
+
+#guandanBotExplainContent .guandan-bot-timing-card {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  background: #f0fdf4;
+  color: #166534;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+#guandanBotExplainContent .guandan-bot-timing-card.is-warning {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+#guandanBotExplainContent .guandan-bot-timing-card.is-over-budget {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+#guandanBotExplainContent .guandan-bot-timing-stages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 4px;
+  color: inherit;
+}
+
+#guandanBotExplainContent .guandan-bot-timeout-warning {
+  margin: 6px 0;
+  padding: 8px 10px;
+  border-left: 3px solid #f59e0b;
+  border-radius: 4px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+#guandanBotExplainContent .guandan-bot-hand-row {
+  margin: 6px 0 4px;
+}
+
+#guandanBotExplainContent .guandan-bot-explain-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+#guandanBotExplainContent .guandan-bot-explain-copy,
+#guandanBotExplainContent .guandan-bot-hand-toggle {
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+#guandanBotExplainContent .guandan-bot-copy-status {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+#guandanBotExplainContent .guandan-bot-hand {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+#guandanBotExplainContent .guandan-bot-hand.hidden {
+  display: none;
+}
+
+#guandanBotExplainContent .guandan-bot-hand-card {
+  padding: 3px 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: rgba(0, 0, 0, 0.04);
+  font-size: 12px;
+}
+
+#guandanPanel .guandan-hand-section .hand {
+  margin-bottom: 0;
+}
+
+#guandanPanel .slot {
+  min-width: 35px;
+  padding: 4px 6px;
+  border: 1px solid #cfd7d2;
+  border-radius: 6px;
+  background: linear-gradient(150deg, #ffffff 0%, #f8faf8 100%);
+  color: #25342c;
+  box-shadow: 0 1px 2px rgba(29, 47, 38, 0.07);
+  font-size: 0.61rem;
+  font-weight: 800;
+  line-height: 1.1;
+  transition: border-color 100ms ease, box-shadow 100ms ease, transform 100ms ease;
+}
+
+#guandanPanel .slot.guandan-card-red {
+  color: #ad3328;
+}
+
+#guandanPanel .slot.guandan-card-joker {
+  border-color: #c9b9dd;
+  background: #fbf8ff;
+  color: #6d3a91;
+}
+
+#guandanPanel .slot.wild-card {
+  border-color: #daa84e;
+  background: #fff8df;
+  box-shadow: inset 0 0 0 1px rgba(218, 168, 78, 0.18);
+}
+
+#guandanPanel .slot:hover {
+  border-color: #71927f;
+  box-shadow: 0 2px 5px rgba(36, 77, 55, 0.14);
+  transform: translateY(-1px);
+}
+
+#guandanPanel .slot.selected {
+  border-color: #246b4b;
+  background: #dbefe2;
+  color: #174f36;
+  box-shadow: inset 0 0 0 1px #398363, 0 2px 5px rgba(36, 107, 75, 0.18);
+  transform: translateY(-2px);
+}
+
+@media (min-width: 641px) {
+  #guandanPanel .slot {
+    min-width: 42px;
+    padding: 6px 7px;
+    font-size: 0.72rem;
+  }
+
+  #guandanPanel .guandan-cascade-select {
+    min-width: 42px;
+    padding: 3px 7px;
+    font-size: 0.65rem;
+  }
+}
+
+#guandanPanel .guandan-pile {
+  display: flex;
+  min-height: 16px;
+  flex-direction: column;
+  gap: 4px;
+  color: #89948e;
+  font-size: 0.65rem;
+}
+
+#guandanPanel .guandan-pile-row {
+  display: flex;
+  gap: 5px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding: 2px 1px 3px;
+  -webkit-overflow-scrolling: touch;
+  align-items: center;
+}
+
+#guandanPanel .guandan-pile-row .slot {
+  flex: 0 0 auto;
+}
+
+#guandanPanel .guandan-pile-clear {
+  flex: 0 0 auto;
+  min-width: 27px;
+  min-height: 25px;
+  padding: 2px 5px;
+  border: 1px solid #d2d9d5;
+  border-radius: 6px;
+  background: #f4f7f5;
+  color: #516159;
+  font-size: 0.65rem;
+  line-height: 1.2;
+}
+
+#guandanPanel .guandan-pile-select {
+  flex: 0 0 auto;
+  min-width: 27px;
+  min-height: 25px;
+  padding: 2px 5px;
+  border: 1px solid #b9cec1;
+  border-radius: 6px;
+  background: #eaf3ed;
+  color: #315944;
+  font-size: 0.63rem;
+  font-weight: 850;
+  line-height: 1.2;
+}
+
+@media (max-width: 640px) {
+  #guandanPanel .guandan-section {
+    padding: 6px;
+    border-radius: 8px;
+  }
+
+  #guandanPanel .guandan-section-title {
+    font-size: 0.61rem;
+  }
+
+  #guandanPanel .guandan-hand-row {
+    gap: 5px;
+  }
+
+  #guandanPanel .guandan-hand-tools {
+    display: grid;
+    grid-template-columns: auto auto minmax(70px, 1fr);
+    gap: 3px;
+  }
+
+  #guandanPanel .guandan-inline-btn,
+  #guandanPanel .guandan-inline-select {
+    width: 100%;
+  }
+
+  #guandanPanel .guandan-players-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  #guandanPanel .guandan-player-card {
+    padding: 5px 6px;
+  }
+
+  #guandanPanel .guandan-trick-plays-table th,
+  #guandanPanel .guandan-trick-plays-table td {
+    padding: 3px 4px;
+  }
+}
+}

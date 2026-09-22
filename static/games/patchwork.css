@@ -1,0 +1,1182 @@
+/* Loaded into the matching style.css groups by loadGameStyleFragments. */
+@media all, obg-game-patchwork-1 {
+
+.patchwork-ring-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.patchwork-ring-legend-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.patchwork-market-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  color: #0f172a;
+}
+
+.patchwork-market-heading strong {
+  font-size: 14px;
+}
+
+.patchwork-market-heading span {
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.patchwork-market-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.patchwork-advance-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 6px 11px;
+  margin-left: auto;
+  border: 1px solid #1d4ed8;
+  border-radius: 999px;
+  color: #1e3a8a;
+  background: #eff6ff;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.patchwork-advance-btn:hover:not(:disabled),
+.patchwork-advance-btn:focus-visible {
+  background: #dbeafe;
+}
+
+.patchwork-advance-gain {
+  color: #92400e;
+  white-space: nowrap;
+}
+
+.patchwork-market-mobile {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  max-width: 100%;
+  padding: 4px 4px 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-padding-inline: 4px;
+  scroll-snap-type: x proximity;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.patchwork-order-badge {
+  border-radius: 999px;
+  padding: 4px 10px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.patchwork-order-badge.active {
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.18);
+}
+
+.patchwork-market-loop-note {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.patchwork-ring-top,
+.patchwork-ring-bottom {
+  display: none;
+}
+
+.patchwork-ring-bottom {
+  margin-top: 0;
+}
+
+.patchwork-ring-middle {
+  display: block;
+  min-width: 0;
+}
+
+.patchwork-ring-left,
+.patchwork-ring-right {
+  display: none;
+}
+
+.patchwork-ring-core {
+  min-width: 0;
+}
+
+.patchwork-market-side {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.patchwork-market-side.top,
+.patchwork-market-side.bottom {
+  flex: 1;
+  justify-content: center;
+  flex-wrap: nowrap;
+}
+
+.patchwork-market-side.left,
+.patchwork-market-side.right {
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.patchwork-layout {
+  display: grid;
+  grid-template-columns: minmax(380px, 1.04fr) minmax(380px, 1fr);
+  gap: 10px 14px;
+  align-items: start;
+}
+
+.patchwork-column {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.patchwork-support-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  align-items: start;
+  width: 100%;
+  margin-top: 2px;
+}
+
+#patchworkPanel h3 {
+  margin: 0 0 1px;
+  line-height: 1.2;
+  font-size: 16px;
+}
+
+#patchworkPanel > .row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 4px 12px;
+  margin-bottom: 6px;
+}
+
+#patchworkPanel > .row > div {
+  min-width: 0;
+  font-size: 13px;
+}
+
+.patchwork-center-column {
+  align-self: stretch;
+}
+
+.patchwork-info-column,
+.patchwork-center-column {
+  min-width: 0;
+}
+
+.patchwork-track-card,
+.patchwork-board-shell,
+.patchwork-preview,
+.patchwork-player-card {
+  border: 1px solid #d9e2ec;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fffdf6 0%, #f7f8fb 100%);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.patchwork-track-card {
+  padding: 10px;
+}
+
+.patchwork-board-stage {
+  position: relative;
+}
+
+.patchwork-board-art {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  background: #fffaf0;
+  border: 1px solid #eadfca;
+}
+
+.patchwork-track {
+  position: relative;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.patchwork-track-chip {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid rgba(15, 23, 42, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.15);
+  z-index: 2;
+}
+
+.patchwork-track-chip.seat-0,
+.patchwork-player-card.seat-0,
+.patchwork-order-badge.seat-0 {
+  background: linear-gradient(180deg, #fecaca 0%, #fca5a5 100%);
+}
+
+.patchwork-track-chip.seat-1,
+.patchwork-player-card.seat-1,
+.patchwork-order-badge.seat-1 {
+  background: linear-gradient(180deg, #bfdbfe 0%, #93c5fd 100%);
+}
+
+.patchwork-track-chip.active {
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.30), 0 8px 18px rgba(15, 23, 42, 0.15);
+}
+
+.patchwork-track-chip::after {
+  content: attr(data-pos);
+  position: absolute;
+  top: 31px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: 700;
+  color: #334155;
+  background: rgba(255, 255, 255, 0.86);
+  border-radius: 999px;
+  padding: 1px 5px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+}
+
+.patchwork-market-card {
+  width: 112px;
+  min-height: 142px;
+  border: 1px solid #d8dee9;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
+  position: relative;
+  overflow: hidden;
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+}
+
+.patchwork-market-card-hitarea {
+  display: grid;
+  grid-template-rows: 18px 64px auto;
+  align-content: start;
+  gap: 5px;
+  width: 100%;
+  min-height: 140px;
+  padding: 8px 6px 6px;
+  border: 0;
+  border-radius: inherit;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.patchwork-market-card-hitarea:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.patchwork-market-card-hitarea:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.38);
+  outline-offset: -3px;
+}
+
+.patchwork-market-card.selectable {
+  border-color: #f59e0b;
+}
+
+.patchwork-market-card.selected {
+  border-color: #0f766e;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.18);
+  background: linear-gradient(180deg, #f0fdfa 0%, #f8fafc 100%);
+}
+
+.patchwork-market-card.upcoming {
+  opacity: 0.78;
+}
+
+.patchwork-market-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  min-width: 0;
+}
+
+.patchwork-market-order {
+  flex: 0 0 auto;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.patchwork-market-image {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 64px;
+  border-radius: 8px;
+  background: #fff7ed;
+  border: 1px solid #fde7cf;
+  padding: 5px;
+}
+
+.patchwork-market-image .patchwork-preview-shape-cell {
+  border-radius: 3px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.patchwork-market-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 4px;
+  font-size: 9px;
+  color: #334155;
+}
+
+.patchwork-market-meta span {
+  white-space: nowrap;
+}
+
+.patchwork-market-label {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 10px;
+  line-height: 1.2;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.patchwork-board-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.patchwork-transform-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.patchwork-transform-actions[hidden] {
+  display: none;
+}
+
+.patchwork-transform-actions button {
+  min-height: 32px;
+  padding: 4px 9px;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  color: #334155;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.patchwork-transform-actions button:hover:not(:disabled),
+.patchwork-transform-actions button:focus-visible,
+.patchwork-transform-actions button.active {
+  border-color: #0f766e;
+  color: #115e59;
+  background: #ccfbf1;
+}
+
+.patchwork-board-shell {
+  padding: 10px;
+  display: flex;
+  justify-content: center;
+}
+
+.patchwork-board {
+  --patchwork-cell: 33px;
+  display: grid;
+  grid-template-columns: repeat(9, var(--patchwork-cell));
+  grid-template-rows: repeat(9, var(--patchwork-cell));
+  gap: 3px;
+  width: fit-content;
+  padding: 6px;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at top left, rgba(249, 168, 212, 0.32), transparent 35%),
+    radial-gradient(circle at bottom right, rgba(125, 211, 252, 0.26), transparent 42%),
+    #f8fafc;
+  border: 1px solid #dbeafe;
+}
+
+.patchwork-board.compact {
+  --patchwork-cell: 20px;
+  gap: 2px;
+  padding: 5px;
+}
+
+.patchwork-board-cell {
+  width: var(--patchwork-cell);
+  height: var(--patchwork-cell);
+  border-radius: 7px;
+  border: 1px solid #cbd5e1;
+  background: rgba(255, 255, 255, 0.92);
+  padding: 0;
+}
+
+.patchwork-board.interactive .patchwork-board-cell {
+  cursor: pointer;
+}
+
+.patchwork-board-cell.filled {
+  background: var(--patchwork-fill, #fcd34d);
+  border-color: var(--patchwork-stroke, #b45309);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+.patchwork-board-cell.preview {
+  background: rgba(13, 148, 136, 0.22);
+  border-color: #0f766e;
+}
+
+.patchwork-board-cell.preview.invalid {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: #dc2626;
+}
+
+.patchwork-board-cell.bonus-target:not(.filled) {
+  background: #fffbeb;
+  border-style: dashed;
+  border-color: #d97706;
+}
+
+.patchwork-placement-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 48px;
+  padding: 8px 9px 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.patchwork-placement-actions[hidden] {
+  display: none;
+}
+
+.patchwork-placement-actions.valid {
+  border-color: #6ee7b7;
+  background: #ecfdf5;
+}
+
+.patchwork-placement-actions.invalid {
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+.patchwork-placement-status {
+  min-width: 0;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.patchwork-placement-actions.valid .patchwork-placement-status {
+  color: #065f46;
+}
+
+.patchwork-placement-actions.invalid .patchwork-placement-status {
+  color: #991b1b;
+}
+
+.patchwork-confirm-buy {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 6px 11px;
+  border: 1px solid #047857;
+  border-radius: 9px;
+  color: #fff;
+  background: #059669;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.patchwork-confirm-buy:hover:not(:disabled),
+.patchwork-confirm-buy:focus-visible {
+  background: #047857;
+}
+
+.patchwork-confirm-buy:disabled {
+  border-color: #cbd5e1;
+  color: #94a3b8;
+  background: #e2e8f0;
+  cursor: not-allowed;
+}
+
+.patchwork-players {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.patchwork-player-card {
+  padding: 9px 10px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.patchwork-player-card.you {
+  border-color: #0f766e;
+}
+
+.patchwork-player-card.active {
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.22);
+}
+
+.patchwork-player-name,
+.patchwork-opponent-title,
+.patchwork-preview-title {
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 6px;
+}
+
+.patchwork-player-stats,
+.patchwork-preview-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  font-size: 13px;
+  color: #334155;
+}
+
+.patchwork-player-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.10);
+}
+
+.patchwork-preview {
+  padding: 10px;
+  min-height: 0;
+}
+
+.patchwork-preview-showcase {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 100%;
+}
+
+.patchwork-preview-note p {
+  margin: 0 0 10px;
+  color: #475569;
+}
+
+.patchwork-preview-image {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 126px;
+  border-radius: 12px;
+  background: #fff7ed;
+  border: 1px solid #fde7cf;
+  padding: 8px;
+  box-sizing: border-box;
+  margin-bottom: 8px;
+}
+
+.patchwork-income-pips {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  display: flex;
+  gap: 3px;
+  pointer-events: none;
+}
+
+.patchwork-income-pip {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #075985;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 36% 36%, #e0f2fe 0 18%, transparent 20%),
+    radial-gradient(circle at 66% 66%, #0c4a6e 0 13%, transparent 15%),
+    #38bdf8;
+  box-shadow: 0 2px 4px rgba(12, 74, 110, 0.22);
+}
+
+.patchwork-market-image .patchwork-income-pips {
+  top: 4px;
+  right: 4px;
+  gap: 2px;
+}
+
+.patchwork-market-image .patchwork-income-pip {
+  width: 10px;
+  height: 10px;
+  border-width: 1px;
+}
+
+.patchwork-preview-shape {
+  --patchwork-preview-cell: 28px;
+  position: relative;
+  width: calc(var(--patchwork-preview-cols, 1) * var(--patchwork-preview-cell));
+  height: calc(var(--patchwork-preview-rows, 1) * var(--patchwork-preview-cell));
+}
+
+.patchwork-preview-shape-cell {
+  position: absolute;
+  width: var(--patchwork-preview-cell);
+  height: var(--patchwork-preview-cell);
+  left: calc(var(--col) * var(--patchwork-preview-cell));
+  top: calc(var(--row) * var(--patchwork-preview-cell));
+  border-radius: 9px;
+  background: linear-gradient(180deg, var(--patchwork-preview-fill-top) 0%, var(--patchwork-preview-fill-bottom) 100%);
+  border: 1px solid var(--patchwork-preview-border);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.38),
+    0 7px 16px var(--patchwork-preview-glow);
+}
+
+.patchwork-mini-grid {
+  --patchwork-mini-cell: 20px;
+  position: relative;
+  width: calc(var(--patchwork-mini-cols, 1) * var(--patchwork-mini-cell));
+  height: calc(var(--patchwork-mini-rows, 1) * var(--patchwork-mini-cell));
+  margin-bottom: 10px;
+}
+
+.patchwork-mini-cell {
+  position: absolute;
+  width: var(--patchwork-mini-cell);
+  height: var(--patchwork-mini-cell);
+  left: calc(var(--col) * var(--patchwork-mini-cell));
+  top: calc(var(--row) * var(--patchwork-mini-cell));
+  border-radius: 6px;
+  background: linear-gradient(180deg, #2dd4bf 0%, #14b8a6 100%);
+  border: 1px solid #0f766e;
+}
+
+.patchwork-mini-grid.leather .patchwork-mini-cell {
+  background: linear-gradient(180deg, #d6a97b 0%, #b7794d 100%);
+  border-color: #7c4a2c;
+}
+
+.patchwork-header-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: transparent;
+  border: 1px solid #d6d3d1;
+  color: #7c2d12;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.patchwork-header-btn > span:first-child {
+  display: inline-grid;
+  width: 17px;
+  height: 17px;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.patchwork-header-btn:hover {
+  background: #fff7ed;
+}
+
+.patchwork-header-btn.active {
+  background: #ea580c;
+  color: #fff;
+  border-color: #ea580c;
+}
+
+body.patchwork-explain-mode [data-patchwork-explain].has-explanation {
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.24);
+  cursor: help;
+}
+
+.patchwork-help-modal,
+.patchwork-explain-modal {
+  max-width: 760px;
+}
+
+.patchwork-quilt-modal {
+  max-width: 560px;
+}
+
+.patchwork-quilt-meta {
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #475569;
+  font-weight: 600;
+}
+
+.patchwork-modal-board-shell {
+  justify-content: center;
+}
+
+.patchwork-help-content h3 {
+  margin: 0 0 10px;
+  color: #9a3412;
+}
+
+.patchwork-help-content h3:not(:first-child) {
+  margin-top: 16px;
+}
+
+.patchwork-help-content p,
+.patchwork-help-content li {
+  color: #334155;
+}
+
+.patchwork-help-content ul {
+  margin: 0 0 12px 20px;
+  padding: 0;
+}
+
+#patchworkExplainContent ul {
+  margin: 10px 0 0 20px;
+  padding: 0;
+  color: #334155;
+}
+
+#patchworkExplainContent li + li {
+  margin-top: 6px;
+}
+
+@media (max-width: 1520px) and (min-width: 1261px) {
+  .patchwork-layout {
+    grid-template-columns: minmax(330px, 1fr) minmax(330px, 0.98fr);
+    gap: 8px 10px;
+  }
+
+  .patchwork-support-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .patchwork-track-card,
+  .patchwork-board-shell,
+  .patchwork-preview,
+  .patchwork-player-card {
+    border-radius: 12px;
+  }
+
+  .patchwork-track-card,
+  .patchwork-board-shell,
+  .patchwork-preview {
+    padding: 8px;
+  }
+
+  .patchwork-market-card {
+    width: 106px;
+    min-height: 136px;
+  }
+
+  .patchwork-market-card-hitarea {
+    min-height: 134px;
+    padding: 7px 5px 5px;
+    gap: 4px;
+  }
+
+  .patchwork-market-image {
+    height: 58px;
+    padding: 3px;
+  }
+
+  .patchwork-market-meta,
+  .patchwork-market-label {
+    font-size: 9px;
+  }
+
+  .patchwork-board {
+    --patchwork-cell: 29px;
+    gap: 2px;
+    padding: 5px;
+  }
+
+  .patchwork-track-chip {
+    width: 24px;
+    height: 24px;
+    font-size: 11px;
+  }
+
+  .patchwork-track-chip::after {
+    top: 27px;
+    font-size: 9px;
+  }
+
+  .patchwork-preview-image {
+    min-height: 112px;
+  }
+
+  .patchwork-preview-shape {
+    --patchwork-preview-cell: 24px;
+  }
+
+  .patchwork-player-card {
+    padding: 8px 9px;
+  }
+}
+
+@media (max-width: 1380px) and (min-width: 1261px) {
+  .patchwork-layout {
+    grid-template-columns: minmax(300px, 1fr) minmax(300px, 0.96fr);
+  }
+
+  .patchwork-market-card {
+    width: 102px;
+  }
+
+  .patchwork-market-image {
+    height: 56px;
+  }
+
+  .patchwork-board {
+    --patchwork-cell: 27px;
+  }
+
+  .patchwork-preview-image {
+    min-height: 104px;
+  }
+}
+
+@media (max-width: 1260px) {
+  .patchwork-ring-bottom {
+    margin-top: 0;
+  }
+
+  .patchwork-layout {
+    grid-template-columns: repeat(2, minmax(280px, 1fr));
+  }
+
+  .patchwork-board {
+    --patchwork-cell: 30px;
+  }
+
+  .patchwork-support-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  #patchworkHeaderActions {
+    gap: 4px;
+  }
+
+  .patchwork-header-btn {
+    width: 32px;
+    min-height: 32px;
+    padding: 4px;
+  }
+
+  .patchwork-header-label {
+    display: none;
+  }
+
+  #patchworkPanel {
+    min-width: 0;
+  }
+
+  #patchworkPanel > .patchwork-status-row {
+    display: flex;
+    margin-bottom: 5px;
+  }
+
+  #patchworkPanel > .patchwork-status-row > div {
+    font-size: 12px;
+  }
+
+  .patchwork-status-primary {
+    padding: 4px 9px;
+    border: 1px solid #fed7aa;
+    border-radius: 999px;
+    color: #7c2d12;
+    background: #fff7ed;
+    font-weight: 700;
+  }
+
+  .patchwork-status-detail,
+  #patchworkPanel > .patchwork-end-status-row {
+    display: none;
+  }
+
+  #patchworkPanel .round-notice {
+    padding: 7px 9px;
+    margin-bottom: 7px;
+  }
+
+  .patchwork-ring-shell {
+    gap: 7px;
+  }
+
+  .patchwork-ring-legend-row {
+    order: 1;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .patchwork-market-heading {
+    min-width: 0;
+  }
+
+  .patchwork-market-heading strong {
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .patchwork-market-heading span {
+    font-size: 9px;
+  }
+
+  .patchwork-market-legend,
+  .patchwork-market-loop-note {
+    display: none;
+  }
+
+  .patchwork-advance-btn {
+    flex: 0 0 auto;
+    min-height: 34px;
+    padding: 5px 9px;
+    margin-left: auto;
+    font-size: 11px;
+  }
+
+  .patchwork-market-mobile {
+    display: flex;
+    order: 2;
+    gap: 7px;
+    width: 100%;
+    max-width: 100%;
+    padding: 3px 3px 7px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-padding-inline: 3px;
+    scroll-snap-type: x proximity;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .patchwork-market-mobile .patchwork-market-card {
+    scroll-snap-align: start;
+  }
+
+  .patchwork-ring-top,
+  .patchwork-ring-bottom,
+  .patchwork-ring-left,
+  .patchwork-ring-right {
+    display: none;
+  }
+
+  .patchwork-ring-middle {
+    display: block;
+    order: 3;
+  }
+
+  .patchwork-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .patchwork-center-column {
+    order: 1;
+    width: 100%;
+  }
+
+  .patchwork-support-row {
+    display: block;
+    order: 2;
+    width: 100%;
+  }
+
+  .patchwork-info-column {
+    order: 3;
+    align-items: center;
+  }
+
+  .patchwork-preview-column {
+    display: none;
+  }
+
+  .patchwork-board-heading {
+    min-height: 32px;
+  }
+
+  .patchwork-transform-actions button {
+    min-height: 32px;
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+
+  .patchwork-board {
+    --patchwork-cell: clamp(25px, 7.2vw, 30px);
+    gap: 2px;
+    padding: 4px;
+  }
+
+  .patchwork-board.compact {
+    --patchwork-cell: clamp(20px, 6vw, 25px);
+    gap: 2px;
+    padding: 4px;
+  }
+
+  .patchwork-board-cell {
+    border-radius: 5px;
+  }
+
+  .patchwork-market-card {
+    width: 104px;
+    min-height: 134px;
+  }
+
+  .patchwork-market-card-hitarea {
+    min-height: 132px;
+    padding: 6px 5px 5px;
+    gap: 3px;
+  }
+
+  .patchwork-market-image {
+    height: 56px;
+  }
+
+  .patchwork-market-meta,
+  .patchwork-market-label {
+    font-size: 9px;
+  }
+
+  .patchwork-placement-actions {
+    gap: 7px;
+    min-height: 44px;
+    padding: 7px 7px 7px 9px;
+  }
+
+  .patchwork-placement-status {
+    font-size: 11px;
+  }
+
+  .patchwork-confirm-buy {
+    min-height: 32px;
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+
+  .patchwork-track-card,
+  .patchwork-player-card,
+  .patchwork-board-shell {
+    border-radius: 11px;
+  }
+
+  .patchwork-board-shell {
+    padding: 6px;
+  }
+
+  .patchwork-info-column > h3 {
+    width: min(230px, 100%);
+  }
+
+  .patchwork-track-card {
+    width: min(230px, 100%);
+    padding: 6px;
+  }
+
+  .patchwork-track-chip {
+    width: 21px;
+    height: 21px;
+    font-size: 10px;
+  }
+
+  .patchwork-track-chip::after {
+    top: 22px;
+    font-size: 8px;
+  }
+
+  .patchwork-players {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .patchwork-player-card {
+    min-width: 0;
+    padding: 7px;
+  }
+
+  .patchwork-player-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 3px 5px;
+    font-size: 11px;
+  }
+
+  .patchwork-player-name {
+    overflow: hidden;
+    margin-bottom: 4px;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .patchwork-mini-grid {
+    --patchwork-mini-cell: 16px;
+    margin-bottom: 8px;
+  }
+
+  #patchworkSelectionHint {
+    min-height: 15px;
+    margin-top: -1px;
+    font-size: 11px;
+    line-height: 1.25;
+    text-align: center;
+  }
+}
+}

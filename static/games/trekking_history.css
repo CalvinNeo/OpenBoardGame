@@ -1,0 +1,473 @@
+/* Loaded into the matching style.css groups by loadGameStyleFragments. */
+@media all, obg-game-trekking_history-1 {
+
+.trekking-panel {
+  --trek-person: #b0473f;
+  --trek-event: #2f5578;
+  --trek-innovation: #b1874d;
+  --trek-progress: #3c6a3f;
+}
+
+.trekking-market {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+}
+
+@media (min-width: 901px) {
+  body.trekking-active .container {
+    max-width: 1680px;
+    margin-left: 96px;
+    margin-right: auto;
+  }
+
+  body.trekking-active .sidebar {
+    width: 320px;
+  }
+
+  body.trekking-active .trekking-market {
+    grid-template-columns: repeat(6, minmax(150px, 1fr));
+    gap: 6px;
+  }
+}
+
+.trekking-clock {
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.trekking-clock-grid {
+  display: grid;
+  grid-template-columns: repeat(13, minmax(0, 1fr));
+  gap: 6px;
+  min-width: 520px;
+}
+
+.trekking-clock-slot {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 68px;
+}
+
+.trekking-clock-slot-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #374151;
+  background: #f3f4f6;
+  padding: 2px 4px;
+  text-align: center;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.trekking-clock-cell {
+  min-height: 46px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: stretch;
+  padding: 4px;
+}
+
+.trekking-clock-name {
+  padding: 2px 4px;
+  border-radius: 6px;
+  background: #fff3c4;
+  color: #7c4a0b;
+  font-weight: 600;
+  font-size: 11px;
+  text-align: center;
+  border: 1px solid rgba(124, 74, 11, 0.2);
+}
+
+.trekking-clock-name.current {
+  background: #bfdbfe;
+  color: #1e3a8a;
+  border-color: rgba(30, 58, 138, 0.3);
+}
+
+.trekking-clock-name.self {
+  box-shadow: 0 0 0 1px rgba(14, 116, 144, 0.35) inset;
+}
+
+.trekking-card {
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  padding: 8px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.trekking-card.selected {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.trekking-card.empty {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.trekking-card-year {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.trekking-card-title {
+  font-size: 12px;
+  color: #374151;
+}
+
+.trekking-card-meta {
+  font-size: 12px;
+  color: #111827;
+}
+
+.trekking-card-slot {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.trekking-player {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px;
+  margin-bottom: 8px;
+  background: #fafafa;
+}
+
+.trekking-player.current {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.trekking-player.self {
+  box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.35);
+}
+
+.trekking-player-meta {
+  font-size: 12px;
+  color: #4b5563;
+  margin-top: 4px;
+}
+
+.trekking-player-scores {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.trekking-score-link {
+  font-size: 12px;
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.trekking-score-link:hover {
+  color: #1d4ed8;
+}
+
+.trekking-itinerary-name {
+  font-size: 12px;
+  color: #111827;
+  font-weight: 600;
+  margin-top: 6px;
+}
+
+.trekking-itinerary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 36px) 56px;
+  grid-auto-rows: 32px;
+  column-gap: 28px;
+  row-gap: 8px;
+  margin-top: 10px;
+  align-items: center;
+}
+
+.trekking-itinerary-header {
+  display: grid;
+  grid-template-columns: repeat(4, 36px) 56px;
+  column-gap: 28px;
+  row-gap: 8px;
+  margin-top: 8px;
+  align-items: center;
+}
+
+.trekking-itinerary-header-cell {
+  color: #111827;
+  text-align: center;
+  line-height: 1.2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.trekking-itinerary-header-icon {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.trekking-itinerary-header-text {
+  font-size: 11px;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.trekking-itinerary-header-cell[data-col="0"] {
+  color: var(--trek-person);
+}
+
+.trekking-itinerary-header-cell[data-col="1"] {
+  color: var(--trek-event);
+}
+
+.trekking-itinerary-header-cell[data-col="2"] {
+  color: var(--trek-innovation);
+}
+
+.trekking-itinerary-header-cell[data-col="3"] {
+  color: var(--trek-progress);
+}
+
+.trekking-itinerary-header-spacer {
+  height: 1px;
+}
+
+.trekking-cell {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid #c2a980;
+  background: #1b0f0a;
+  color: #fff;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.trekking-cell.none {
+  border: none;
+  background: transparent;
+}
+
+.trekking-cell.filled[data-col="0"] {
+  background: var(--trek-person);
+}
+
+.trekking-cell.filled[data-col="1"] {
+  background: var(--trek-event);
+}
+
+.trekking-cell.filled[data-col="2"] {
+  background: var(--trek-innovation);
+}
+
+.trekking-cell.filled[data-col="3"] {
+  background: var(--trek-progress);
+}
+
+.trekking-row-reward {
+  font-size: 12px;
+  color: #0f172a;
+  background: #d7f1f4;
+  border-radius: 999px;
+  padding: 4px 8px;
+  text-align: center;
+}
+
+.trekking-row-reward.empty {
+  background: transparent;
+  color: transparent;
+}
+
+.trekking-row-reward.claimed {
+  background: #a7f3d0;
+  color: #065f46;
+}
+
+.trekking-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: 16px;
+}
+
+.trekking-modal.hidden {
+  display: none;
+}
+
+.trekking-modal-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  width: min(360px, 92vw);
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.trekking-modal-title {
+  font-weight: 700;
+  font-size: 16px;
+  color: #111827;
+}
+
+.trekking-modal-subtitle {
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.trekking-modal-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.trekking-score-note {
+  font-size: 13px;
+  color: #111827;
+}
+
+.trekking-score-rules {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: #111827;
+  font-size: 13px;
+}
+
+.trekking-actions-row {
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+
+.trekking-actions-row button {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 36px;
+  padding: 0 8px;
+  font-size: 12px;
+  line-height: 1.1;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+}
+
+@media all, obg-game-trekking_history-2 {
+
+/* Trekking Through History Help/Explain */
+.trekking-header-btn {
+  padding: 4px 10px;
+  font-size: 13px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #f9fafb;
+  cursor: pointer;
+}
+
+.trekking-header-btn:hover {
+  background: #f3f4f6;
+}
+
+.trekking-header-btn.active {
+  background: #dbeafe;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+
+body.trekking-explain-mode button.has-explanation {
+  outline: 2px dashed #3b82f6;
+  outline-offset: 2px;
+  cursor: help;
+}
+
+body.trekking-explain-mode button.has-explanation:hover {
+  outline-color: #1d4ed8;
+  outline-style: solid;
+}
+
+.trekking-help-modal {
+  max-width: 720px;
+}
+
+.trekking-help-content {
+  max-height: 70vh;
+  overflow-y: auto;
+  line-height: 1.6;
+}
+
+.trekking-help-content h3 {
+  margin: 16px 0 8px;
+  font-size: 16px;
+  color: #111827;
+}
+
+.trekking-help-content h3:first-child {
+  margin-top: 0;
+}
+
+.trekking-help-content h4 {
+  margin: 12px 0 6px;
+  font-size: 14px;
+  color: #374151;
+}
+
+.trekking-help-content ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.trekking-help-content ol {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.trekking-help-content li {
+  margin-bottom: 4px;
+}
+
+.trekking-help-content p {
+  margin: 8px 0;
+}
+
+.trekking-explain-modal {
+  max-width: 520px;
+}
+
+#trekkingExplainContent {
+  line-height: 1.6;
+}
+
+#trekkingExplainContent h4 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: #111827;
+}
+
+#trekkingExplainContent p {
+  margin: 6px 0;
+  color: #374151;
+}
+
+#trekkingExplainContent .hint {
+  color: #6b7280;
+  font-size: 12px;
+}
+}

@@ -1,0 +1,30 @@
+/* Loaded into the matching style.css groups by loadGameStyleFragments. */
+@media all, obg-game-flip7-1 {
+
+.player-card.flip7-target-eligible {
+  background: #fff6cc;
+}
+
+.player-card.flip7-target-selectable {
+  cursor: pointer;
+}
+
+.player-card.flip7-target-selected {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25);
+}
+}
+
+@media all, obg-game-flip7-2 {
+
+.flip7-player-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+#flip7Panel .flip7-bottom-actions {
+  margin-top: 12px;
+}
+}

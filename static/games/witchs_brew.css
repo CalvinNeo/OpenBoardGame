@@ -1,0 +1,172 @@
+/* Loaded into the matching style.css groups by loadGameStyleFragments. */
+@media all, obg-game-witchs_brew-1 {
+
+.witchs-brew-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.witchs-brew-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.witchs-brew-header h2 {
+  margin: 0;
+}
+
+.witchs-brew-subtitle,
+.witchs-brew-player-meta,
+.witchs-brew-selection-label,
+.witchs-brew-action-form .hint {
+  color: #5e6570;
+  font-size: 13px;
+}
+
+.witchs-brew-header-actions,
+.witchs-brew-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.witchs-brew-status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.witchs-brew-status-grid > div {
+  border: 1px solid #d2d8df;
+  border-radius: 8px;
+  background: #fbfcfe;
+  padding: 8px 10px;
+}
+
+.witchs-brew-public,
+.witchs-brew-hand,
+.witchs-brew-players {
+  display: grid;
+  gap: 10px;
+}
+
+.witchs-brew-public {
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+}
+
+.witchs-brew-hand {
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+}
+
+.witchs-brew-players {
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+}
+
+.witchs-brew-public-card,
+.witchs-brew-role-card,
+.witchs-brew-player-card,
+.witchs-brew-action-form {
+  border: 1px solid #d2d8df;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #26313d;
+  padding: 10px;
+}
+
+.witchs-brew-public-card {
+  display: grid;
+  gap: 6px;
+  min-height: 86px;
+}
+
+.witchs-brew-public-card strong,
+.witchs-brew-action-title,
+.witchs-brew-player-header {
+  font-weight: 700;
+}
+
+.witchs-brew-public-card small,
+.witchs-brew-role-card small {
+  color: #5e6570;
+  font-size: 12px;
+}
+
+.witchs-brew-role-card {
+  display: grid;
+  grid-template-rows: auto auto 1fr 1fr;
+  gap: 5px;
+  min-height: 138px;
+  text-align: left;
+}
+
+.witchs-brew-role-card > span {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.witchs-brew-role-card.selected {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.16);
+}
+
+.witchs-brew-role-card:disabled {
+  cursor: default;
+}
+
+.witchs-brew-player-card.current {
+  border-color: #9333ea;
+  box-shadow: 0 0 0 2px rgba(147, 51, 234, 0.14);
+}
+
+.witchs-brew-player-card.self {
+  background: #f8fbff;
+}
+
+.witchs-brew-player-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.witchs-brew-action-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.witchs-brew-action-title {
+  width: 100%;
+}
+
+.witchs-brew-pay-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.witchs-brew-pay-grid label,
+.witchs-brew-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.witchs-brew-number {
+  width: 64px;
+}
+
+.witchs-brew-modal {
+  max-width: 760px;
+}
+
+body.witchs-brew-explain-mode .has-explanation {
+  cursor: help;
+  outline: 2px dashed #2563eb;
+  outline-offset: 2px;
+}
+}

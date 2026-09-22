@@ -1,0 +1,417 @@
+/* Loaded into the matching style.css groups by loadGameStyleFragments. */
+@media all, obg-game-forest_shuffle-1 {
+
+.forest-shuffle-header-btn {
+  padding: 4px 10px;
+  font-size: 13px;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #f3f7ed 0%, #e3ead8 100%);
+  color: #37543a;
+  cursor: pointer;
+}
+
+.forest-shuffle-header-btn:hover {
+  background: linear-gradient(180deg, #ecf4df 0%, #dce7cf 100%);
+}
+
+.forest-shuffle-header-btn.active {
+  border-color: #2f5f3b;
+  background: linear-gradient(180deg, #d8ebcc 0%, #c5deb7 100%);
+}
+
+.forest-shuffle-panel {
+  --forest-shell-bg: linear-gradient(180deg, #f6f3ea 0%, #ece5d4 100%);
+  --forest-card-bg: linear-gradient(180deg, #fffdf8 0%, #f1ebdc 100%);
+  --forest-border: #cbbd9f;
+  --forest-green: #365b36;
+  --forest-ink: #2f2415;
+}
+
+.forest-shuffle-status {
+  margin: 10px 0 14px;
+  padding: 12px 14px;
+  border: 1px solid #cdbf9d;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #f7f3e9 0%, #e7ddc9 100%);
+  color: var(--forest-ink);
+  font-weight: 600;
+}
+
+.forest-shuffle-notes {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.forest-shuffle-note {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #eef5e6;
+  border: 1px solid #c4d7b5;
+  color: #2c4b2e;
+  font-size: 13px;
+}
+
+.forest-shuffle-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.forest-shuffle-shell {
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--forest-border);
+  background: var(--forest-shell-bg);
+  box-shadow: 0 8px 24px rgba(41, 31, 13, 0.08);
+}
+
+.forest-shuffle-section-title {
+  margin-bottom: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--forest-green);
+}
+
+.forest-shuffle-draw-sources,
+.forest-shuffle-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+#forestShuffleClearing {
+  grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr));
+}
+
+.forest-shuffle-action-row {
+  margin-top: 10px;
+}
+
+.forest-shuffle-selection-summary {
+  min-height: 20px;
+  margin-top: 10px;
+  font-size: 13px;
+  color: #5a4a2d;
+}
+
+.forest-shuffle-draw-hint {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 7px 9px;
+  border-radius: 9px;
+  background: rgba(255, 253, 248, 0.72);
+  color: #695533;
+  font-size: 12px;
+}
+
+.forest-shuffle-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--forest-border);
+  background: var(--forest-card-bg);
+  color: var(--forest-ink);
+  box-shadow: 0 6px 16px rgba(55, 41, 17, 0.08);
+}
+
+.forest-shuffle-card.compact {
+  min-height: 100px;
+}
+
+.forest-shuffle-card.selected {
+  border-color: #2f7a48;
+  box-shadow: 0 0 0 2px rgba(47, 122, 72, 0.18), 0 8px 18px rgba(55, 41, 17, 0.08);
+}
+
+.forest-shuffle-card.selectable {
+  cursor: pointer;
+  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.forest-shuffle-card.selectable:hover {
+  border-color: #7aa86f;
+  box-shadow: 0 8px 20px rgba(55, 41, 17, 0.14);
+  transform: translateY(-1px);
+}
+
+.forest-shuffle-card.selectable:focus-visible {
+  outline: 3px solid rgba(47, 122, 72, 0.28);
+  outline-offset: 2px;
+}
+
+.forest-shuffle-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.forest-shuffle-card-title {
+  min-width: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.forest-shuffle-card-selection-badge {
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #dff2dd;
+  color: #245d38;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.forest-shuffle-card-meta,
+.forest-shuffle-half-title,
+.forest-shuffle-half-mini {
+  font-size: 12px;
+  color: #695533;
+}
+
+.forest-shuffle-half {
+  padding-top: 8px;
+  border-top: 1px dashed #d9ccb1;
+}
+
+.forest-shuffle-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.forest-shuffle-mini-btn,
+.forest-shuffle-source-card {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid #cbbd9f;
+  background: #fffdf8;
+  color: #3b2f1f;
+  cursor: pointer;
+}
+
+.forest-shuffle-mini-btn.selected,
+.forest-shuffle-source-card.selected {
+  border-color: #2f7a48;
+  background: #dff2dd;
+}
+
+.forest-shuffle-mini-btn:disabled,
+.forest-shuffle-source-card:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.forest-shuffle-symbol-row,
+.forest-shuffle-tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.forest-shuffle-symbol {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+}
+
+.forest-shuffle-symbol.tone-beech { background: #e0f0d6; }
+.forest-shuffle-symbol.tone-birch { background: #eef3d5; }
+.forest-shuffle-symbol.tone-fir { background: #d7ebe1; }
+.forest-shuffle-symbol.tone-chestnut { background: #efdccc; }
+.forest-shuffle-symbol.tone-linden { background: #e7f1d8; }
+.forest-shuffle-symbol.tone-oak { background: #dfe8cf; }
+.forest-shuffle-symbol.tone-silver { background: #dde8ef; }
+.forest-shuffle-symbol.tone-sycamore { background: #f0d9cf; }
+
+.forest-shuffle-tag-chip {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #efe7d4;
+  font-size: 12px;
+  color: #5b4a2d;
+}
+
+.forest-shuffle-player-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.forest-shuffle-player {
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--forest-border);
+  background: linear-gradient(180deg, #fffdfa 0%, #f2ecde 100%);
+}
+
+.forest-shuffle-player.you {
+  border-color: #7aa86f;
+}
+
+.forest-shuffle-player.active {
+  box-shadow: 0 0 0 2px rgba(74, 122, 56, 0.16);
+}
+
+.forest-shuffle-player-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+  margin-bottom: 10px;
+}
+
+.forest-shuffle-player-name {
+  font-weight: 700;
+  color: var(--forest-green);
+}
+
+.forest-shuffle-player-stats {
+  font-size: 13px;
+  color: #5d5038;
+}
+
+.forest-shuffle-tree-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.forest-shuffle-tree {
+  padding: 10px;
+  border-radius: 12px;
+  background: #f8f4e8;
+  border: 1px solid #d8ccb2;
+}
+
+.forest-shuffle-tree-label {
+  font-weight: 700;
+  color: #37543a;
+  margin-bottom: 8px;
+}
+
+.forest-shuffle-tree-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr 1fr;
+  grid-template-rows: auto auto auto;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.forest-shuffle-tree-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 76px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #d7ebd5 0%, #c5d8b9 100%);
+  font-size: 28px;
+}
+
+.forest-shuffle-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 74px;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px dashed #cbbd9f;
+  background: rgba(255, 255, 255, 0.66);
+  color: #4b3b24;
+  text-align: left;
+}
+
+.forest-shuffle-slot.selectable {
+  cursor: pointer;
+  border-style: solid;
+  border-color: #7aa86f;
+}
+
+.forest-shuffle-slot.selected {
+  background: #dff2dd;
+  border-color: #2f7a48;
+}
+
+.forest-shuffle-slot-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.forest-shuffle-slot-card,
+.forest-shuffle-slot-empty {
+  font-size: 12px;
+}
+
+.forest-shuffle-slot-card {
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: #f0eadf;
+}
+
+.forest-shuffle-breakdown {
+  margin-top: 10px;
+}
+
+.forest-shuffle-breakdown-row {
+  font-size: 12px;
+  color: #5a4a2d;
+  padding: 2px 0;
+}
+
+.forest-shuffle-help-modal {
+  max-width: 760px;
+}
+
+.forest-shuffle-explain-modal {
+  max-width: 520px;
+}
+
+.forest-shuffle-help-content {
+  max-height: 70vh;
+  overflow-y: auto;
+  line-height: 1.65;
+}
+
+.forest-shuffle-help-content h3 {
+  margin: 16px 0 8px;
+  color: #2f5f3b;
+}
+
+.forest-shuffle-help-content h3:first-child {
+  margin-top: 0;
+}
+
+.forest-shuffle-help-content p,
+.forest-shuffle-help-content li {
+  color: #423620;
+}
+
+body.forest-shuffle-explain-mode .has-explanation {
+  outline: 2px dashed #2f7a48;
+  outline-offset: 2px;
+  cursor: help;
+}
+
+body.forest-shuffle-explain-mode .has-explanation:hover {
+  outline-style: solid;
+}
+
+@media (max-width: 900px) {
+  .forest-shuffle-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .forest-shuffle-tree-list {
+    grid-template-columns: 1fr;
+  }
+}
+}

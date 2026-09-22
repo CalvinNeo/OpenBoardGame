@@ -1,0 +1,101 @@
+/* Loaded into the matching style.css groups by loadGameStyleFragments. */
+@media all, obg-game-cabo-1 {
+
+.cabo-hand-header {
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+.cabo-hand-header h3 {
+  margin: 0;
+}
+
+.cabo-hand-header #clearSelection {
+  margin-left: 0;
+}
+
+.cabo-discard {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cabo-discard-label {
+  font-weight: 600;
+  color: #444;
+}
+
+.cabo-discard-slot {
+  border-color: #1e3a8a;
+  box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.18);
+  background: #f8fafc;
+  color: #1e3a8a;
+  font: inherit;
+  appearance: none;
+}
+
+.cabo-discard-slot.action-allowed {
+  background: #e0e7ff;
+  border-color: #1e3a8a;
+  color: #1e3a8a;
+  box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.28);
+}
+
+.cabo-drawn-label {
+  font-weight: 600;
+  color: #444;
+}
+
+.cabo-drawn-slot {
+  border-color: #d4af37;
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.15);
+  background: #fffdf2;
+  cursor: default;
+}
+
+.cabo-choice-hint {
+  margin: 8px 0 12px;
+  padding: 9px 11px;
+  border: 1px solid #7c3aed;
+  border-radius: 6px;
+  background: #f5f3ff;
+  color: #4c1d95;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+#caboPanel .slot.cabo-choice-selectable {
+  border-color: #7c3aed;
+  background: #f5f3ff;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.16);
+}
+
+#caboPanel .slot.cabo-choice-selectable:hover {
+  background: #ede9fe;
+  transform: translateY(-1px);
+}
+
+#caboPanel .slot.cabo-choice-selectable.selected {
+  border-color: #6d28d9;
+  background: #ddd6fe;
+  box-shadow: 0 0 0 2px rgba(109, 40, 217, 0.28);
+}
+
+#caboPanel .player-slot.target-selectable {
+  border-color: #7c3aed;
+  background: #f5f3ff;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.16);
+}
+
+#caboPanel .player-slot.target-selectable:hover {
+  background: #ede9fe;
+  transform: translateY(-1px);
+}
+
+#caboPanel .player-slot.target-selected {
+  border-color: #6d28d9;
+  background: #ddd6fe;
+  box-shadow: 0 0 0 2px rgba(109, 40, 217, 0.28);
+}
+}

@@ -1,0 +1,130 @@
+/* Loaded into the matching style.css groups by loadGameStyleFragments. */
+@media all, obg-game-celestia-1 {
+
+.celestia-route {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+  gap: 10px;
+}
+
+.celestia-city {
+  border: 1px solid #d6c7b1;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fff7ed 0%, #fef3c7 100%);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.celestia-city.current {
+  border-color: #f97316;
+  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.18);
+}
+
+.celestia-city.next {
+  border-color: #0f766e;
+  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.14);
+}
+
+.celestia-city-name {
+  font-weight: 700;
+}
+
+.celestia-city-meta {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.celestia-dice,
+.celestia-card-grid,
+.celestia-players,
+.celestia-summary-rewards {
+  display: grid;
+  gap: 10px;
+}
+
+.celestia-dice {
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+}
+
+.celestia-card-grid {
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+.celestia-players {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.celestia-summary-rewards {
+  margin-top: 8px;
+}
+
+.celestia-die,
+.celestia-card,
+.celestia-player {
+  border: 1px solid #d6d3d1;
+  border-radius: 14px;
+  background: #ffffff;
+  padding: 10px 12px;
+}
+
+.celestia-die {
+  text-align: center;
+  font-weight: 700;
+}
+
+.celestia-die.selected,
+.celestia-card.selected,
+.celestia-player.selected {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18);
+}
+
+.celestia-card.power {
+  background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%);
+}
+
+.celestia-card.treasure {
+  background: linear-gradient(180deg, #fffbeb 0%, #fde68a 100%);
+}
+
+.celestia-card-title,
+.celestia-player-name {
+  font-weight: 700;
+}
+
+.celestia-card-meta,
+.celestia-player-meta,
+.celestia-selection {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.celestia-selection {
+  margin: 8px 0 2px;
+}
+
+.celestia-actions {
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.celestia-empty {
+  color: #6b7280;
+  padding: 8px 0;
+}
+
+body.celestia-explain-mode .has-explanation {
+  cursor: help;
+  outline: 2px dashed #2563eb;
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .celestia-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+}

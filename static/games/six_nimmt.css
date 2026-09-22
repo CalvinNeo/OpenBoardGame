@@ -1,0 +1,285 @@
+/* Loaded into the matching style.css groups by loadGameStyleFragments. */
+@media all, obg-game-six_nimmt-1 {
+
+.six-nimmt-rows {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.six-nimmt-row {
+  --six-nimmt-card-height: 64px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 8px;
+  background: #fff;
+}
+
+.six-nimmt-row.selectable {
+  cursor: pointer;
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+}
+
+.six-nimmt-row.selectable:hover {
+  background: #fff7ed;
+}
+
+.six-nimmt-row-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.six-nimmt-row-total {
+  color: #92400e;
+}
+
+.six-nimmt-row-cards {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  align-items: stretch;
+  min-height: var(--six-nimmt-card-height);
+  overflow-x: auto;
+}
+
+.six-nimmt-card {
+  width: 84px;
+  min-width: 84px;
+  flex: 0 0 84px;
+  height: var(--six-nimmt-card-height);
+  min-height: var(--six-nimmt-card-height);
+  padding: 6px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #f8fafc;
+  text-align: center;
+  font-weight: 600;
+}
+
+.six-nimmt-card[data-bulls="1"] {
+  background: #e0f2fe;
+}
+
+.six-nimmt-card[data-bulls="2"] {
+  background: #dcfce7;
+}
+
+.six-nimmt-card[data-bulls="3"] {
+  background: #ffedd5;
+}
+
+.six-nimmt-card[data-bulls="5"],
+.six-nimmt-card[data-bulls="7"] {
+  background: #ede9fe;
+}
+
+.six-nimmt-card:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.six-nimmt-card.selected {
+  border-color: #1f6feb;
+  background: #eaf2ff;
+}
+
+.six-nimmt-card-danger {
+  background: #fee2e2;
+  border-color: #fecaca;
+  color: #b91c1c;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.six-nimmt-card-slot {
+  background: #f8fafc;
+  border-style: dashed;
+  color: #cbd5f5;
+}
+
+.six-nimmt-card-value {
+  font-size: 16px;
+}
+
+.six-nimmt-card-bulls {
+  font-size: 13px;
+  line-height: 1.1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.six-nimmt-card-bulls-line {
+  display: block;
+  white-space: nowrap;
+}
+
+.six-nimmt-hand .six-nimmt-card {
+  cursor: pointer;
+}
+
+.six-nimmt-player-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+}
+
+.six-nimmt-reveal {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.six-nimmt-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.six-nimmt-summary-modal {
+  max-width: 600px;
+}
+
+.six-nimmt-summary-status {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.six-nimmt-summary-meta {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.six-nimmt-summary-item {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.six-nimmt-summary-header {
+  font-weight: 600;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.six-nimmt-summary-take {
+  font-size: 13px;
+  color: #b91c1c;
+}
+
+@media (max-width: 640px) {
+  #sixNimmtPanel > .row {
+    flex-direction: row;
+    align-items: center;
+    gap: 4px 12px;
+    margin-bottom: 4px;
+    font-size: 13px;
+  }
+
+  #sixNimmtPanel > h3 {
+    margin: 10px 0 5px;
+    font-size: 16px;
+  }
+
+  #sixNimmtPanel .six-nimmt-rows {
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+
+  #sixNimmtPanel .six-nimmt-row {
+    --six-nimmt-card-height: 42px;
+    display: grid;
+    grid-template-columns: clamp(38px, 12vw, 46px) minmax(0, 1fr);
+    align-items: stretch;
+    gap: 4px;
+    padding: 4px;
+    border-radius: 8px;
+  }
+
+  #sixNimmtPanel .six-nimmt-row-header {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 1px;
+    min-width: 0;
+    margin-bottom: 0;
+    font-size: 10px;
+    line-height: 1.1;
+  }
+
+  #sixNimmtPanel .six-nimmt-row-total {
+    white-space: nowrap;
+  }
+
+  #sixNimmtPanel .six-nimmt-row-cards {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 3px;
+    min-width: 0;
+    overflow-x: visible;
+  }
+
+  #sixNimmtPanel .six-nimmt-row-cards .six-nimmt-card {
+    width: 100%;
+    min-width: 0;
+    padding: 2px 1px;
+    border-radius: 5px;
+  }
+
+  #sixNimmtPanel .six-nimmt-row-cards .six-nimmt-card-value {
+    font-size: 13px;
+    line-height: 1.05;
+  }
+
+  #sixNimmtPanel .six-nimmt-row-cards .six-nimmt-card-bulls {
+    gap: 0;
+    font-size: 8px;
+    line-height: 1;
+  }
+
+  #sixNimmtPanel .six-nimmt-card-danger {
+    font-size: 14px;
+  }
+
+  #sixNimmtPanel .six-nimmt-hand {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+
+  #sixNimmtPanel .six-nimmt-hand .six-nimmt-card {
+    width: 100%;
+    min-width: 0;
+    height: 46px;
+    min-height: 46px;
+    padding: 3px 1px;
+  }
+
+  #sixNimmtPanel .six-nimmt-hand .six-nimmt-card-value {
+    font-size: 14px;
+    line-height: 1.05;
+  }
+
+  #sixNimmtPanel .six-nimmt-hand .six-nimmt-card-bulls {
+    gap: 0;
+    font-size: 10px;
+    line-height: 1;
+  }
+}
+}

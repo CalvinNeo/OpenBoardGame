@@ -1,0 +1,925 @@
+/* Loaded into the matching style.css groups by loadGameStyleFragments. */
+@media all, obg-game-citadels-1 {
+
+#citadelsPanel .panel-header {
+  margin-bottom: 8px;
+}
+
+#citadelsPanel {
+  --citadels-ink: #172033;
+  --citadels-muted: #64748b;
+  --citadels-gold: #b7791f;
+  --citadels-gold-soft: #fff7df;
+}
+
+#citadelsPanel > .row {
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+#citadelsPanel > .row > div {
+  border: 1px solid #e6eaf0;
+  border-radius: 999px;
+  background: #f8fafc;
+  padding: 4px 9px;
+  font-size: 12px;
+  color: #475569;
+}
+
+#citadelsPanel > .row span {
+  font-weight: 750;
+  color: var(--citadels-ink);
+}
+
+.citadels-round-summary {
+  margin: 14px 0 18px;
+  overflow: hidden;
+  border: 1px solid #ddbd72;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 96% 0%, rgba(245, 158, 11, 0.16), transparent 34%),
+    linear-gradient(145deg, #fffcf2 0%, #fff 56%, #f8fafc 100%);
+  box-shadow: 0 12px 28px rgba(92, 59, 12, 0.1);
+}
+
+.citadels-summary-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid rgba(183, 121, 31, 0.2);
+}
+
+.citadels-summary-heading {
+  min-width: 0;
+  flex: 1 1 240px;
+}
+
+.citadels-summary-title-row {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.citadels-summary-eyebrow {
+  margin-bottom: 3px;
+  color: #996515;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.citadels-summary-header h3 {
+  margin: 0;
+  color: var(--citadels-ink);
+  font-size: clamp(20px, 2.4vw, 28px);
+  line-height: 1.15;
+}
+
+.citadels-summary-header p {
+  max-width: 700px;
+  margin: 6px 0 0;
+  color: var(--citadels-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+#citadelsPanel .citadels-summary-pass-btn {
+  flex: 0 0 auto;
+  border-color: #936716;
+  background: linear-gradient(180deg, #c98d27, #a96f13);
+  padding: 5px 11px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1.2;
+  box-shadow: 0 3px 8px rgba(126, 78, 10, 0.18);
+}
+
+#citadelsPanel .citadels-summary-pass-btn:disabled {
+  border-color: #c7bdac;
+  background: #d8d2c8;
+  box-shadow: none;
+  color: #756f66;
+}
+
+.citadels-summary-status {
+  flex: 0 0 auto;
+  border: 1px solid #e1b75d;
+  border-radius: 999px;
+  background: #fff8e6;
+  padding: 7px 11px;
+  color: #7c5516;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.citadels-summary-status.final {
+  border-color: #65a67d;
+  background: #ecfdf3;
+  color: #116436;
+}
+
+.citadels-summary-highlights {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 8px;
+  padding: 12px 20px 4px;
+}
+
+.citadels-summary-highlight {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid #e8e3d7;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.82);
+  padding: 8px 10px;
+}
+
+.citadels-summary-highlight.wide {
+  grid-column: 1 / -1;
+}
+
+.citadels-summary-highlight-icon {
+  flex: 0 0 auto;
+  font-size: 20px;
+}
+
+.citadels-summary-highlight-label {
+  color: #8a6a2c;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.citadels-summary-highlight-value {
+  overflow-wrap: anywhere;
+  color: var(--citadels-ink);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.citadels-summary-players {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+  padding: 12px 20px 18px;
+}
+
+.citadels-summary-player {
+  min-width: 0;
+  border: 1px solid #dfe5ec;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.94);
+  padding: 11px;
+  box-shadow: 0 2px 7px rgba(15, 23, 42, 0.05);
+}
+
+.citadels-summary-player.self {
+  border-color: #57ae8a;
+  box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.14);
+}
+
+.citadels-summary-player.winner {
+  border-color: #d5a52d;
+  background: linear-gradient(145deg, #fff9de, #fff);
+}
+
+.citadels-summary-player-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.citadels-summary-player-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--citadels-ink);
+  font-size: 15px;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.citadels-summary-bot {
+  margin-left: 6px;
+  border-radius: 4px;
+  background: #e9eef5;
+  padding: 2px 4px;
+  color: #536174;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  vertical-align: 2px;
+}
+
+.citadels-summary-player-ready {
+  flex: 0 0 auto;
+  color: #8a6724;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.citadels-summary-player-ready.ready {
+  color: #157044;
+}
+
+.citadels-summary-role-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.citadels-summary-role {
+  border: 1px solid #d6dde7;
+  border-radius: 999px;
+  background: #f4f7fa;
+  padding: 4px 7px;
+  color: #405066;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.citadels-summary-role.acted {
+  border-color: #8bc7a9;
+  background: #effcf5;
+  color: #17623f;
+}
+
+.citadels-summary-role.assassinated {
+  border-color: #eba4a4;
+  background: #fff1f1;
+  color: #a22525;
+}
+
+.citadels-summary-role.robbed {
+  box-shadow: inset 0 0 0 1px #d5b45a;
+}
+
+.citadels-summary-player-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.citadels-summary-player-stats > span,
+.citadels-summary-score {
+  border-radius: 6px;
+  background: #f1f5f9;
+  padding: 3px 6px;
+  color: #536174;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.citadels-summary-score {
+  background: #fff2bd;
+  color: #76520c;
+  font-weight: 850;
+}
+
+.citadels-summary-action-heading {
+  margin-top: 10px;
+  color: #7b8798;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.citadels-summary-actions {
+  display: flex;
+  max-height: 155px;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 4px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.citadels-summary-action {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 5px;
+  align-items: start;
+  border-radius: 6px;
+  padding: 3px 4px;
+  color: #344256;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.citadels-summary-action:nth-child(odd) {
+  background: #f8fafc;
+}
+
+.citadels-summary-action.empty {
+  display: block;
+  color: #8a96a6;
+  font-style: italic;
+}
+
+.citadels-summary-action-icon {
+  text-align: center;
+}
+
+.citadels-summary-action strong {
+  color: #172033;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.citadels-summary-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid rgba(183, 121, 31, 0.2);
+  background: rgba(255, 249, 230, 0.66);
+  padding: 12px 20px;
+}
+
+.citadels-summary-ready-list {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 5px;
+  color: #6a511e;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.citadels-summary-ready-chip {
+  border: 1px solid #e6d6ab;
+  border-radius: 999px;
+  background: #fffaf0;
+  padding: 3px 7px;
+  color: #826a35;
+  font-size: 10px;
+}
+
+.citadels-summary-ready-chip.ready {
+  border-color: #9bcdb3;
+  background: #eefbf4;
+  color: #176c43;
+}
+
+#citadelsPanel .citadels-next-round-btn {
+  flex: 0 0 auto;
+  min-width: 132px;
+  border-color: #936716;
+  background: linear-gradient(180deg, #c98d27, #a96f13);
+  color: #fff;
+  font-weight: 800;
+  box-shadow: 0 4px 10px rgba(126, 78, 10, 0.2);
+}
+
+#citadelsPanel .citadels-next-round-btn:disabled {
+  border-color: #c7bdac;
+  background: #d8d2c8;
+  box-shadow: none;
+  color: #756f66;
+}
+
+.citadels-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.82fr) minmax(0, 1.35fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.citadels-column {
+  min-width: 0;
+}
+
+.citadels-role-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.citadels-role-pill {
+  border: 1px solid #d1d5db;
+  background: #f8fafc;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.citadels-role-pill.revealed {
+  background: #ecfdf5;
+  border-color: #10b981;
+  color: #065f46;
+}
+
+.citadels-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.citadels-action-section {
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.citadels-action-title {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.citadels-button-wrap,
+.citadels-inline-actions,
+.citadels-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.citadels-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.citadels-city-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: 5px;
+}
+
+.citadels-card {
+  border: 1px solid #dbe4ee;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.citadels-card-title {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.citadels-card-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.citadels-color-dot {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 10px;
+  border: 1px solid rgba(15, 23, 42, 0.2);
+  border-radius: 50%;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.55);
+}
+
+.citadels-color-dot-yellow {
+  background: #f59e0b;
+}
+
+.citadels-color-dot-blue {
+  background: #2563eb;
+}
+
+.citadels-color-dot-green {
+  background: #16a34a;
+}
+
+.citadels-color-dot-red {
+  background: #dc2626;
+}
+
+.citadels-color-dot-purple {
+  background: #7c3aed;
+}
+
+.citadels-color-dot-unknown {
+  background: #94a3b8;
+}
+
+.citadels-card-meta {
+  font-size: 13px;
+  color: #475569;
+}
+
+.citadels-card-text {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #64748b;
+}
+
+.citadels-city-card {
+  display: grid;
+  min-width: 0;
+  min-height: 42px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 5px;
+  align-items: center;
+  border-left-width: 4px;
+  border-radius: 7px;
+  padding: 5px 6px;
+  box-shadow: none;
+}
+
+.citadels-city-card .citadels-card-title {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.citadels-city-card .citadels-card-name {
+  white-space: nowrap;
+}
+
+.citadels-city-card .citadels-card-meta {
+  font-size: 10px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.citadels-city-card .citadels-card-actions {
+  grid-column: 1 / -1;
+}
+
+.citadels-city-card .citadels-card-actions button {
+  width: 100%;
+  padding: 3px 5px;
+  font-size: 10px;
+}
+
+.citadels-color-yellow {
+  border-left: 6px solid #f59e0b;
+}
+
+.citadels-color-blue {
+  border-left: 6px solid #2563eb;
+}
+
+.citadels-color-green {
+  border-left: 6px solid #16a34a;
+}
+
+.citadels-color-red {
+  border-left: 6px solid #dc2626;
+}
+
+.citadels-color-purple {
+  border-left: 6px solid #7c3aed;
+}
+
+.citadels-player-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 0;
+  padding: 7px;
+}
+
+.citadels-players {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+  gap: 6px;
+}
+
+.citadels-player-header {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  color: #0f172a;
+}
+
+.citadels-player-name {
+  flex: 0 0 auto;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.citadels-player-roles {
+  min-width: 0;
+  flex: 1 1 145px;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.citadels-player-meta {
+  font-size: 11px;
+  line-height: 1.35;
+  color: #475569;
+}
+
+.citadels-log-section {
+  margin-top: 18px;
+  border-top: 1px solid #e1e6ed;
+  padding-top: 12px;
+}
+
+.citadels-section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 7px;
+}
+
+.citadels-section-heading h3 {
+  margin: 0;
+}
+
+.citadels-section-heading span {
+  color: #8793a3;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.citadels-log {
+  display: flex;
+  max-height: 240px;
+  min-height: 58px;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px 6px 2px 2px;
+  scrollbar-color: #9ca8b7 #edf1f5;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+
+.citadels-log::-webkit-scrollbar {
+  width: 9px;
+}
+
+.citadels-log::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: #edf1f5;
+}
+
+.citadels-log::-webkit-scrollbar-thumb {
+  border: 2px solid #edf1f5;
+  border-radius: 999px;
+  background: #9ca8b7;
+}
+
+.citadels-log-entry {
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 6px 9px;
+  font-size: 12px;
+  color: #1f2937;
+}
+
+.citadels-help-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  line-height: 1.55;
+  color: #1f2937;
+}
+
+.citadels-explain-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.citadels-explain-item {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 10px;
+}
+
+.citadels-explain-title {
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: #0f172a;
+}
+
+.citadels-explain-body {
+  font-size: 13px;
+  color: #475569;
+}
+
+#citadelsPanel button.active {
+  background: #d97706;
+  border-color: #b45309;
+  color: #fff;
+}
+
+@media (max-width: 900px) {
+  .citadels-layout {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .citadels-card-grid {
+    grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  }
+
+  .citadels-summary-players {
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  #citadelsPanel > .row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+    align-items: stretch;
+  }
+
+  #citadelsPanel > .row > div {
+    min-width: 0;
+    padding: 3px 7px;
+    font-size: 10px;
+    overflow-wrap: anywhere;
+  }
+
+  .citadels-round-summary {
+    margin: 10px 0 14px;
+    border-radius: 12px;
+  }
+
+  .citadels-summary-header {
+    gap: 9px;
+    padding: 13px 12px 10px;
+  }
+
+  #citadelsPanel .citadels-summary-pass-btn {
+    padding: 5px 9px;
+    font-size: 10px;
+  }
+
+  .citadels-summary-header h3 {
+    font-size: 19px;
+  }
+
+  .citadels-summary-header p {
+    font-size: 11px;
+  }
+
+  .citadels-summary-status {
+    padding: 5px 7px;
+    font-size: 10px;
+  }
+
+  .citadels-summary-highlights {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+    padding: 9px 10px 3px;
+  }
+
+  .citadels-summary-highlight {
+    gap: 6px;
+    padding: 6px 7px;
+  }
+
+  .citadels-summary-highlight-icon {
+    font-size: 16px;
+  }
+
+  .citadels-summary-highlight-label {
+    font-size: 8px;
+  }
+
+  .citadels-summary-highlight-value {
+    font-size: 10px;
+  }
+
+  .citadels-summary-players {
+    grid-template-columns: 1fr;
+    gap: 7px;
+    padding: 9px 10px 12px;
+  }
+
+  .citadels-summary-player {
+    padding: 9px;
+  }
+
+  .citadels-summary-actions {
+    max-height: 128px;
+  }
+
+  .citadels-summary-footer {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  #citadelsPanel .citadels-next-round-btn {
+    width: 100%;
+  }
+
+  .citadels-role-list {
+    gap: 5px;
+  }
+
+  .citadels-role-pill {
+    padding: 4px 7px;
+    font-size: 11px;
+  }
+
+  .citadels-action-section {
+    padding: 8px;
+  }
+
+  .citadels-button-wrap > button {
+    min-width: 0;
+    flex: 1 1 calc(50% - 4px);
+    padding-inline: 7px;
+  }
+
+  .citadels-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .citadels-card {
+    padding: 8px;
+  }
+
+  .citadels-card-title {
+    font-size: 13px;
+  }
+
+  .citadels-card-meta {
+    font-size: 11px;
+  }
+
+  .citadels-card-text {
+    font-size: 10px;
+  }
+
+  .citadels-city-grid {
+    grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
+    gap: 4px;
+  }
+
+  .citadels-city-card {
+    min-height: 38px;
+    padding: 4px 5px;
+  }
+
+  .citadels-city-card .citadels-card-title {
+    font-size: 10px;
+  }
+
+  .citadels-player-card {
+    padding: 7px;
+  }
+
+  .citadels-log {
+    max-height: 190px;
+  }
+
+  .citadels-log-entry {
+    padding: 5px 7px;
+    font-size: 11px;
+  }
+}
+}

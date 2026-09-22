@@ -1,0 +1,376 @@
+/* Loaded into the matching style.css groups by loadGameStyleFragments. */
+@media all, obg-game-abraca_what-1 {
+
+.player-slot.abraca-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
+  min-width: 64px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border-color: #d1d5db;
+  background: #f8fafc;
+  color: #111827;
+}
+
+.player-slot.abraca-card.abraca-card-compact {
+  min-width: 54px;
+  padding: 4px 6px;
+}
+
+.player-slot.abraca-card.abraca-card-hidden {
+  background: #e5e7eb;
+  border-style: dashed;
+  color: #6b7280;
+}
+
+.player-slot.abraca-card[data-spell="0"] {
+  background: #fee2e2;
+  border-color: #fecaca;
+  color: #7f1d1d;
+}
+
+.player-slot.abraca-card[data-spell="1"] {
+  background: #e0e7ff;
+  border-color: #c7d2fe;
+  color: #3730a3;
+}
+
+.player-slot.abraca-card[data-spell="2"] {
+  background: #fce7f3;
+  border-color: #fbcfe8;
+  color: #9d174d;
+}
+
+.player-slot.abraca-card[data-spell="3"] {
+  background: #fef3c7;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+.player-slot.abraca-card[data-spell="4"] {
+  background: #fef9c3;
+  border-color: #fef08a;
+  color: #854d0e;
+}
+
+.player-slot.abraca-card[data-spell="5"] {
+  background: #cffafe;
+  border-color: #a5f3fc;
+  color: #0e7490;
+}
+
+.player-slot.abraca-card[data-spell="6"] {
+  background: #ffedd5;
+  border-color: #fed7aa;
+  color: #9a3412;
+}
+
+.player-slot.abraca-card[data-spell="7"] {
+  background: #dcfce7;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+#abracaSpellButtons button[data-spell] {
+  background: #f8fafc;
+  border-color: #d1d5db;
+  color: #111827;
+}
+
+#abracaSpellButtons button[data-spell="0"] {
+  background: #fee2e2;
+  border-color: #fecaca;
+  color: #7f1d1d;
+}
+
+#abracaSpellButtons button[data-spell="1"] {
+  background: #e0e7ff;
+  border-color: #c7d2fe;
+  color: #3730a3;
+}
+
+#abracaSpellButtons button[data-spell="2"] {
+  background: #fce7f3;
+  border-color: #fbcfe8;
+  color: #9d174d;
+}
+
+#abracaSpellButtons button[data-spell="3"] {
+  background: #fef3c7;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+#abracaSpellButtons button[data-spell="4"] {
+  background: #fef9c3;
+  border-color: #fef08a;
+  color: #854d0e;
+}
+
+#abracaSpellButtons button[data-spell="5"] {
+  background: #cffafe;
+  border-color: #a5f3fc;
+  color: #0e7490;
+}
+
+#abracaSpellButtons button[data-spell="6"] {
+  background: #ffedd5;
+  border-color: #fed7aa;
+  color: #9a3412;
+}
+
+#abracaSpellButtons button[data-spell="7"] {
+  background: #dcfce7;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+.abraca-card-number {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.abraca-card-name {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.abraca-card-compact .abraca-card-number {
+  font-size: 10px;
+}
+
+.abraca-card-compact .abraca-card-name {
+  font-size: 11px;
+}
+}
+
+@media all, obg-game-abraca_what-2 {
+
+.player-meta.abraca-secret-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.abraca-secret-label {
+  font-weight: 600;
+  color: #374151;
+}
+
+.abraca-secret-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+}
+
+@media all, obg-game-abraca_what-3 {
+
+.abraca-spell-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.abraca-spell-table th,
+.abraca-spell-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  text-align: left;
+  vertical-align: top;
+}
+
+.abraca-spell-table th {
+  background: #f8fafc;
+  color: #374151;
+  font-weight: 600;
+}
+
+.abraca-spell-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.abraca-spell-name {
+  font-weight: 600;
+  white-space: nowrap;
+  position: relative;
+  cursor: pointer;
+}
+
+.abraca-spell-count,
+.abraca-spell-total {
+  text-align: center;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.abraca-spell-bubble {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  transform: translateY(6px);
+  background: #111827;
+  color: #f9fafb;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 11px;
+  line-height: 1.3;
+  min-width: 200px;
+  max-width: 360px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16);
+  opacity: 0;
+  pointer-events: auto;
+  z-index: 5;
+  transition: opacity 0.15s ease-in-out;
+}
+
+.abraca-spell-bubble.show {
+  opacity: 1;
+}
+
+.abraca-spell-table tbody tr[data-spell="0"] td {
+  background: #fee2e2;
+  color: #7f1d1d;
+}
+
+.abraca-spell-table tbody tr[data-spell="1"] td {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.abraca-spell-table tbody tr[data-spell="2"] td {
+  background: #fce7f3;
+  color: #9d174d;
+}
+
+.abraca-spell-table tbody tr[data-spell="3"] td {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.abraca-spell-table tbody tr[data-spell="4"] td {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.abraca-spell-table tbody tr[data-spell="5"] td {
+  background: #cffafe;
+  color: #0e7490;
+}
+
+.abraca-spell-table tbody tr[data-spell="6"] td {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.abraca-spell-table tbody tr[data-spell="7"] td {
+  background: #dcfce7;
+  color: #166534;
+}
+}
+
+@media all, obg-game-abraca_what-4 {
+
+/* Abraca What Help/Explain */
+.abraca-header-btn {
+  padding: 4px 10px;
+  font-size: 13px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #f9fafb;
+  cursor: pointer;
+}
+
+.abraca-header-btn:hover {
+  background: #f3f4f6;
+}
+
+.abraca-header-btn.active {
+  background: #dbeafe;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+
+body.abraca-explain-mode button.has-explanation {
+  outline: 2px dashed #3b82f6;
+  outline-offset: 2px;
+  cursor: help;
+}
+
+body.abraca-explain-mode button.has-explanation:hover {
+  outline-color: #1d4ed8;
+  outline-style: solid;
+}
+
+.abraca-help-modal {
+  max-width: 720px;
+}
+
+.abraca-help-content {
+  max-height: 70vh;
+  overflow-y: auto;
+  line-height: 1.6;
+}
+
+.abraca-help-content h3 {
+  margin: 16px 0 8px;
+  font-size: 16px;
+  color: #111827;
+}
+
+.abraca-help-content h3:first-child {
+  margin-top: 0;
+}
+
+.abraca-help-content h4 {
+  margin: 12px 0 6px;
+  font-size: 14px;
+  color: #374151;
+}
+
+.abraca-help-content ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.abraca-help-content ol {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.abraca-help-content li {
+  margin-bottom: 4px;
+}
+
+.abraca-help-content p {
+  margin: 8px 0;
+}
+
+.abraca-explain-modal {
+  max-width: 520px;
+}
+
+#abracaExplainContent {
+  line-height: 1.6;
+}
+
+#abracaExplainContent h4 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: #111827;
+}
+
+#abracaExplainContent p {
+  margin: 6px 0;
+  color: #374151;
+}
+
+#abracaExplainContent .hint {
+  color: #6b7280;
+  font-size: 12px;
+}
+}

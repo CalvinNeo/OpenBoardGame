@@ -1,0 +1,536 @@
+/* Loaded into the matching style.css groups by loadGameStyleFragments. */
+@media all, obg-game-project_l-1 {
+
+.project-l-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(240px, 1.2fr) minmax(240px, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.project-l-market-section {
+  margin-bottom: 10px;
+}
+
+.project-l-market-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
+.project-l-market-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 8px;
+}
+
+.project-l-card {
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  border-radius: 6px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 86px;
+  cursor: pointer;
+  text-align: left;
+  touch-action: manipulation;
+}
+
+.project-l-card.selected {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px #2563eb;
+}
+
+.project-l-card.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.project-l-card-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.project-l-card-meta {
+  font-size: 11px;
+  color: #4b5563;
+}
+
+.project-l-reward-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.project-l-reward-label {
+  font-size: 11px;
+  color: #4b5563;
+}
+
+.project-l-reward-piece {
+  display: grid;
+  gap: 1px;
+}
+
+.project-l-reward-cell {
+  width: 100%;
+  height: 100%;
+  border-radius: 2px;
+  background: #111827;
+}
+
+.project-l-upgrade-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.project-l-upgrade-piece {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #ffffff;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.project-l-upgrade-piece.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.project-l-upgrade-piece-grid {
+  display: grid;
+  gap: 1px;
+}
+
+.project-l-upgrade-piece-cell {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--piece-color, #111827);
+}
+
+.project-l-card-image-wrap {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  position: relative;
+}
+
+.project-l-card-image {
+  image-rendering: pixelated;
+  display: block;
+}
+
+.project-l-card-image-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.85) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.85) 1px, transparent 1px);
+  background-size: var(--project-l-card-cell, 12px) var(--project-l-card-cell, 12px);
+  pointer-events: none;
+}
+
+.project-l-mini-grid {
+  display: grid;
+  gap: 1px;
+}
+
+.project-l-mini-cell {
+  width: 8px;
+  height: 8px;
+  background: transparent;
+  border-radius: 1px;
+  visibility: hidden;
+}
+
+.project-l-mini-cell.slot {
+  background: #9ca3af;
+  visibility: visible;
+}
+
+.project-l-puzzle-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.project-l-puzzle-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px;
+  background: #ffffff;
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+}
+
+.project-l-puzzle-card.selected {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px #2563eb;
+}
+
+.project-l-puzzle-grid {
+  --project-l-cell: 20px;
+  position: relative;
+  padding: 0;
+  border-radius: 6px;
+  justify-content: start;
+  justify-self: start;
+  align-self: start;
+}
+
+.project-l-puzzle-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+.project-l-puzzle-overlay {
+  position: absolute;
+  inset: 0;
+}
+
+.project-l-cell {
+  width: var(--project-l-cell);
+  height: var(--project-l-cell);
+  position: absolute;
+  left: calc(var(--col) * var(--project-l-cell));
+  top: calc(var(--row) * var(--project-l-cell));
+  background: transparent;
+  border-radius: 2px;
+  box-sizing: border-box;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.85);
+}
+
+.project-l-cell.off {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.project-l-cell.slot {
+  cursor: pointer;
+  padding: 0;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+}
+
+.project-l-cell.ghost {
+  opacity: 1;
+  outline: 2px dashed #0ea5e9;
+  outline-offset: -2px;
+}
+
+.project-l-cell.ghost.invalid {
+  outline-color: #ef4444;
+}
+
+.project-l-inventory {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.project-l-inventory-actions {
+  margin-top: 8px;
+}
+
+.project-l-rotate-actions {
+  margin-bottom: 8px;
+}
+
+.project-l-piece {
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  border-radius: 6px;
+  padding: 6px;
+  min-width: 72px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.project-l-piece.selected {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px #2563eb;
+}
+
+.project-l-piece-grid {
+  display: grid;
+  gap: 1px;
+}
+
+.project-l-piece-cell {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--piece-color, #111827);
+}
+
+.project-l-piece-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.project-l-piece-count {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.project-l-piece-remaining {
+  font-size: 10px;
+  color: #374151;
+}
+
+.project-l-completed {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.project-l-completed-chip {
+  background: #f3f4f6;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 11px;
+  color: #4b5563;
+}
+
+.project-l-master-queue {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.project-l-queue-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+  border: 1px dashed #d1d5db;
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 12px;
+  color: #374151;
+}
+
+.project-l-queue-item > div {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.project-l-queue-remove {
+  border: none;
+  background: transparent;
+  color: #ef4444;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .project-l-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .project-l-puzzle-grid {
+    --project-l-cell: 20px;
+  }
+
+  #projectLPanel .row {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+
+  #projectLPanel .row > div {
+    flex: 1 1 calc(50% - 6px);
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 4px 6px;
+    font-size: 12px;
+  }
+
+  #projectLPanel .row > div span {
+    font-weight: 600;
+    color: #111827;
+  }
+
+  #projectLPanel .row.actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  #projectLPanel .row.actions button {
+    width: 100%;
+    margin-right: 0;
+  }
+
+  #projectLPanel .project-l-market-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #projectLPanel .project-l-card {
+    min-height: 0;
+    padding: 6px;
+  }
+
+  #projectLPanel .project-l-inventory {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #projectLPanel .project-l-piece {
+    min-width: 0;
+  }
+
+  #projectLPanel .project-l-upgrade-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+}
+
+@media all, obg-game-project_l-2 {
+
+/* Project L Help/Explain */
+.project-l-header-btn {
+  padding: 4px 10px;
+  font-size: 13px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #f9fafb;
+  cursor: pointer;
+}
+
+.project-l-header-btn:hover {
+  background: #f3f4f6;
+}
+
+.project-l-header-btn.active {
+  background: #dbeafe;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+
+body.project-l-explain-mode button.has-explanation {
+  outline: 2px dashed #3b82f6;
+  outline-offset: 2px;
+  cursor: help;
+}
+
+body.project-l-explain-mode button.has-explanation:hover {
+  outline-color: #1d4ed8;
+  outline-style: solid;
+}
+
+.project-l-help-modal {
+  max-width: 700px;
+}
+
+.project-l-explain-modal {
+  max-width: 450px;
+}
+
+.project-l-help-content {
+  max-height: 70vh;
+  overflow-y: auto;
+  line-height: 1.6;
+}
+
+.project-l-help-content h3 {
+  margin: 16px 0 8px;
+  font-size: 16px;
+  color: #111827;
+}
+
+.project-l-help-content h3:first-child {
+  margin-top: 0;
+}
+
+.project-l-help-content h4 {
+  margin: 12px 0 6px;
+  font-size: 14px;
+  color: #374151;
+}
+
+.project-l-help-content ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.project-l-help-content li {
+  margin-bottom: 4px;
+}
+
+.project-l-help-content p {
+  margin: 8px 0;
+}
+
+#projectLExplainContent {
+  line-height: 1.6;
+}
+
+#projectLExplainContent h4 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: #111827;
+}
+
+#projectLExplainContent p {
+  margin: 6px 0;
+  color: #374151;
+}
+
+#projectLExplainContent .explain-cost {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+#projectLExplainContent .explain-cost.free {
+  background: #dcfce7;
+  color: #166534;
+}
+
+#projectLExplainContent .explain-cost.ap {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+#projectLExplainContent .explain-cost.penalty {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+#projectLExplainContent .explain-cost.end {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+}

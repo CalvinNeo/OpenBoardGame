@@ -1,0 +1,288 @@
+/* Loaded into the matching style.css groups by loadGameStyleFragments. */
+@media all, obg-game-decrypto-1 {
+
+#decryptoStatusBody:empty::before {
+  content: "-";
+}
+
+#decryptoTeams,
+#decryptoCurrentClues,
+#decryptoHistory {
+  border: 1px solid #eee;
+  padding: 8px;
+  border-radius: 4px;
+  background: #fafafa;
+}
+
+.decrypto-team {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 8px;
+  background: #fff;
+}
+
+.decrypto-team-header {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.decrypto-team-meta {
+  font-size: 13px;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
+.decrypto-keywords {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.decrypto-keyword {
+  background: #f3f4f6;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.decrypto-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.decrypto-history-table th,
+.decrypto-history-table td {
+  border: 1px solid #e5e7eb;
+  padding: 4px 6px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.decrypto-clues {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.decrypto-clue-row {
+  align-items: center;
+}
+
+.decrypto-clue-entry {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 160px;
+  min-width: 160px;
+}
+
+.decrypto-clue-entry input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+}
+
+.decrypto-clue-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.decrypto-clue-digit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: #e5e7eb;
+  color: #111827;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.decrypto-clue-word {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.decrypto-clue-missing {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.decrypto-clue-missing-word {
+  text-decoration: line-through;
+  font-weight: 600;
+  color: #9ca3af;
+}
+
+.decrypto-guess-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.decrypto-guess-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.decrypto-guess-clue {
+  flex: 1 1 220px;
+  font-weight: 600;
+}
+
+@media (max-width: 720px) {
+  .decrypto-clue-row {
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .decrypto-clue-entry {
+    flex: 1 1 100%;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(82px, auto) minmax(0, 1fr);
+    column-gap: 8px;
+    row-gap: 0;
+    align-items: center;
+  }
+
+  .decrypto-clue-entry input {
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+  }
+
+  .decrypto-clue-code {
+    min-width: 0;
+    gap: 4px;
+  }
+
+  .decrypto-clue-word {
+    line-height: 1.2;
+  }
+
+  #decryptoSubmitCluesBtn {
+    width: 100%;
+    margin-right: 0;
+  }
+}
+
+.decrypto-guess-select {
+  width: 72px;
+  flex: 0 0 auto;
+}
+}
+
+@media all, obg-game-decrypto-2 {
+
+/* Decrypto Help/Explain */
+.decrypto-header-btn {
+  padding: 4px 10px;
+  font-size: 13px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #f9fafb;
+  cursor: pointer;
+}
+
+.decrypto-header-btn:hover {
+  background: #f3f4f6;
+}
+
+.decrypto-header-btn.active {
+  background: #dbeafe;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+
+body.decrypto-explain-mode button.has-explanation {
+  outline: 2px dashed #3b82f6;
+  outline-offset: 2px;
+  cursor: help;
+}
+
+body.decrypto-explain-mode button.has-explanation:hover {
+  outline-color: #1d4ed8;
+  outline-style: solid;
+}
+
+.decrypto-help-modal {
+  max-width: 720px;
+}
+
+.decrypto-help-content {
+  max-height: 70vh;
+  overflow-y: auto;
+  line-height: 1.6;
+}
+
+.decrypto-help-content h3 {
+  margin: 16px 0 8px;
+  font-size: 16px;
+  color: #111827;
+}
+
+.decrypto-help-content h3:first-child {
+  margin-top: 0;
+}
+
+.decrypto-help-content h4 {
+  margin: 12px 0 6px;
+  font-size: 14px;
+  color: #374151;
+}
+
+.decrypto-help-content ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.decrypto-help-content ol {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.decrypto-help-content li {
+  margin-bottom: 4px;
+}
+
+.decrypto-help-content p {
+  margin: 8px 0;
+}
+
+.decrypto-explain-modal {
+  max-width: 520px;
+}
+
+#decryptoExplainContent {
+  line-height: 1.6;
+}
+
+#decryptoExplainContent h4 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: #111827;
+}
+
+#decryptoExplainContent p {
+  margin: 6px 0;
+  color: #374151;
+}
+
+#decryptoExplainContent .hint {
+  color: #6b7280;
+  font-size: 12px;
+}
+}

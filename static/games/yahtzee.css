@@ -1,0 +1,134 @@
+/* Loaded into the matching style.css groups by loadGameStyleFragments. */
+@media all, obg-game-yahtzee-1 {
+
+.yahtzee-dice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.yahtzee-dice-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.yahtzee-die {
+  width: 52px;
+  height: 52px;
+  border: 2px solid #d1d5db;
+  border-radius: 8px;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.yahtzee-die.locked {
+  border-color: #0f172a;
+  background: #f1f5f9;
+  box-shadow: inset 0 0 0 1px #0f172a;
+}
+
+.yahtzee-die.disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.yahtzee-die-value {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.yahtzee-die-lock {
+  display: none;
+  font-size: 9px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 999px;
+  background: #111827;
+  color: #ffffff;
+  letter-spacing: 0.08em;
+}
+
+.yahtzee-die.locked .yahtzee-die-lock {
+  display: inline-flex;
+}
+
+.yahtzee-scorecard {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #fafafa;
+  margin-bottom: 8px;
+}
+
+.yahtzee-scorecard-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.yahtzee-score-rows {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.yahtzee-score-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 6px 8px;
+  min-height: 52px;
+  background: #ffffff;
+  font-size: 12px;
+  gap: 4px;
+}
+
+.yahtzee-score-row.upper {
+  border-left: 4px solid #60a5fa;
+}
+
+.yahtzee-score-row.lower {
+  border-left: 4px solid #f59e0b;
+}
+
+.yahtzee-score-row.possible {
+  background: #ecfdf5;
+  border-color: #10b981;
+  cursor: pointer;
+}
+
+.yahtzee-score-row.possible:hover {
+  background: #d1fae5;
+}
+
+.yahtzee-score-row.filled {
+  background: #f3f4f6;
+}
+
+.yahtzee-score-value {
+  font-weight: 600;
+  min-width: 24px;
+  text-align: right;
+  align-self: flex-end;
+}
+
+.yahtzee-score-note {
+  font-size: 11px;
+  color: #6b7280;
+  margin-left: 6px;
+}
+}

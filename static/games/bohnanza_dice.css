@@ -1,0 +1,1534 @@
+/* Loaded into the matching style.css groups by loadGameStyleFragments. */
+@media all, obg-game-bohnanza_dice-1 {
+
+/* Bohnanza: Das Würfelspiel -------------------------------------------- */
+
+.bohnanza-dice-panel {
+  --bohnanza-dice-ink: #2f2a20;
+  --bohnanza-dice-muted: #716a5b;
+  --bohnanza-dice-paper: #fffdf5;
+  --bohnanza-dice-paper-deep: #f4ecd6;
+  --bohnanza-dice-line: rgba(78, 66, 39, 0.2);
+  --bohnanza-dice-green: #315c40;
+  --bohnanza-dice-green-bright: #6e9b58;
+  --bohnanza-dice-gold: #dcae45;
+  --bohnanza-dice-brown: #70452e;
+  box-sizing: border-box;
+  display: grid;
+  gap: 14px;
+  isolation: isolate;
+  max-width: 100%;
+  overflow: hidden;
+  padding: clamp(12px, 2vw, 20px);
+  position: relative;
+  color: var(--bohnanza-dice-ink);
+  border: 1px solid rgba(82, 67, 36, 0.25);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 94% 3%, rgba(220, 174, 69, 0.26), transparent 24%),
+    radial-gradient(circle at 5% 48%, rgba(67, 105, 60, 0.15), transparent 28%),
+    linear-gradient(145deg, #f7f0dc 0%, #eee3c5 54%, #e4d4af 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 18px 42px rgba(64, 46, 20, 0.14);
+}
+
+.bohnanza-dice-panel.hidden {
+  display: none;
+}
+
+.bohnanza-dice-panel::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  content: "";
+  opacity: 0.2;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(92deg, transparent 0 44px, rgba(92, 67, 31, 0.12) 45px 46px),
+    repeating-linear-gradient(2deg, transparent 0 18px, rgba(255, 255, 255, 0.5) 19px 20px);
+}
+
+.bohnanza-dice-panel *,
+.bohnanza-dice-modal-content * {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.bohnanza-dice-panel h2,
+.bohnanza-dice-panel h3,
+.bohnanza-dice-rules h3 {
+  margin: 0;
+}
+
+.bohnanza-dice-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.bohnanza-dice-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bohnanza-dice-brand h2 {
+  overflow-wrap: anywhere;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(23px, 3.4vw, 36px);
+  letter-spacing: -0.035em;
+  line-height: 1.04;
+}
+
+.bohnanza-dice-brand-mark {
+  display: block;
+  flex: 0 0 58px;
+  width: 58px;
+  height: 58px;
+  position: relative;
+  border: 1px solid rgba(47, 75, 42, 0.35);
+  border-radius: 18px 18px 24px 24px;
+  background:
+    linear-gradient(90deg, transparent 46%, rgba(255, 255, 255, 0.38) 47% 53%, transparent 54%),
+    linear-gradient(150deg, #618150, #294d38);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42), 0 5px 12px rgba(51, 63, 36, 0.22);
+}
+
+.bohnanza-dice-brand-mark::before {
+  position: absolute;
+  top: -6px;
+  left: 7px;
+  width: 44px;
+  height: 15px;
+  content: "";
+  border-radius: 70% 70% 20% 20%;
+  background: #8d5834;
+  transform: rotate(-3deg);
+}
+
+.bohnanza-dice-brand-mark i {
+  position: absolute;
+  bottom: 10px;
+  width: 13px;
+  height: 22px;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  border-radius: 55% 45% 55% 45%;
+  background: #dcae45;
+  transform: rotate(28deg);
+}
+
+.bohnanza-dice-brand-mark i:nth-child(1) {
+  left: 9px;
+  bottom: 13px;
+}
+
+.bohnanza-dice-brand-mark i:nth-child(2) {
+  left: 23px;
+  background: #d76850;
+}
+
+.bohnanza-dice-brand-mark i:nth-child(3) {
+  right: 7px;
+  bottom: 14px;
+  background: #6c9abf;
+}
+
+.bohnanza-dice-eyebrow {
+  display: block;
+  color: var(--bohnanza-dice-green);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.bohnanza-dice-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.bohnanza-dice-meta > span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  max-width: 190px;
+  min-height: 34px;
+  padding: 7px 10px;
+  color: var(--bohnanza-dice-muted);
+  border: 1px solid var(--bohnanza-dice-line);
+  border-radius: 999px;
+  background: rgba(255, 253, 245, 0.7);
+  box-shadow: inset 0 1px 0 #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.bohnanza-dice-meta strong {
+  overflow: hidden;
+  color: var(--bohnanza-dice-ink);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bohnanza-dice-status {
+  padding: 11px 13px;
+  color: #f8fff5;
+  border: 1px solid rgba(30, 63, 40, 0.28);
+  border-left: 5px solid var(--bohnanza-dice-gold);
+  border-radius: 11px;
+  background: linear-gradient(100deg, #294d38, #3e6647);
+  box-shadow: 0 5px 14px rgba(41, 77, 56, 0.16);
+  font-weight: 750;
+  line-height: 1.4;
+}
+
+.bohnanza-dice-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: 12px;
+}
+
+.bohnanza-dice-dice-card,
+.bohnanza-dice-field-card,
+.bohnanza-dice-player-section,
+.bohnanza-dice-activity-card {
+  display: grid;
+  gap: 11px;
+  padding: 13px;
+  overflow: hidden;
+  border: 1px solid var(--bohnanza-dice-line);
+  border-radius: 16px;
+  background: rgba(255, 253, 245, 0.84);
+  box-shadow: inset 0 1px 0 #fff, 0 7px 18px rgba(72, 52, 22, 0.07);
+}
+
+.bohnanza-dice-field-card {
+  background:
+    repeating-linear-gradient(100deg, rgba(73, 49, 24, 0.08) 0 2px, transparent 2px 25px),
+    linear-gradient(145deg, rgba(233, 218, 179, 0.96), rgba(247, 239, 215, 0.96));
+}
+
+.bohnanza-dice-section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.bohnanza-dice-section-heading > span:not(.bohnanza-dice-eyebrow) {
+  color: var(--bohnanza-dice-muted);
+  font-size: 11px;
+  font-weight: 750;
+  text-align: right;
+}
+
+.bohnanza-dice-repeat-badge {
+  padding: 5px 8px;
+  color: #1e4b2e !important;
+  border: 1px solid rgba(49, 92, 64, 0.32);
+  border-radius: 999px;
+  background: rgba(110, 155, 88, 0.14);
+}
+
+.bohnanza-dice-repeat-badge.is-used {
+  color: #817764 !important;
+  border-color: rgba(113, 106, 91, 0.25);
+  background: rgba(113, 106, 91, 0.1);
+}
+
+.bohnanza-dice-tray {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: clamp(5px, 1vw, 10px);
+  min-height: 88px;
+  padding: 10px;
+  border: 1px solid rgba(70, 56, 31, 0.2);
+  border-radius: 13px;
+  background: rgba(71, 52, 28, 0.08);
+}
+
+.bohnanza-dice-tray.is-field {
+  background: rgba(104, 69, 34, 0.12);
+}
+
+.bohnanza-dice-desktop-roll {
+  display: contents;
+}
+
+.bohnanza-dice-mobile-lane {
+  display: none;
+}
+
+button.bohnanza-dice-die {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 68px;
+  padding: 6px 3px;
+  position: relative;
+  color: var(--bohnanza-dice-ink);
+  border: 2px solid rgba(61, 51, 34, 0.22);
+  border-radius: 14px;
+  background: linear-gradient(145deg, #fff, #ddd8c9);
+  box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.75), inset -2px -2px 0 rgba(76, 64, 44, 0.15), 0 4px 8px rgba(65, 46, 23, 0.12);
+  transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+
+button.bohnanza-dice-die.is-dark {
+  border-color: rgba(26, 27, 23, 0.75);
+  background: linear-gradient(145deg, #52554b, #292c27);
+}
+
+button.bohnanza-dice-die:not(:disabled):hover {
+  border-color: var(--bohnanza-dice-gold);
+  transform: translateY(-2px);
+}
+
+button.bohnanza-dice-die.is-selected {
+  border-color: #e7b93e;
+  box-shadow: inset 0 0 0 2px #fff3bd, 0 0 0 3px rgba(220, 174, 69, 0.35), 0 7px 13px rgba(93, 66, 22, 0.2);
+  transform: translateY(-3px);
+}
+
+button.bohnanza-dice-die:disabled {
+  cursor: default;
+  opacity: 0.86;
+}
+
+.bohnanza-dice-die-template {
+  color: rgba(47, 42, 32, 0.58);
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+}
+
+.bohnanza-dice-die.is-dark .bohnanza-dice-die-template {
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.bohnanza-dice-empty-slot {
+  display: grid;
+  min-height: 68px;
+  place-items: center;
+  color: rgba(82, 63, 35, 0.25);
+  border: 2px dashed rgba(82, 63, 35, 0.2);
+  border-radius: 14px;
+  font-size: 26px;
+}
+
+.bohnanza-dice-empty-message {
+  display: grid;
+  grid-column: 1 / -1;
+  min-height: 66px;
+  place-items: center;
+  padding: 8px;
+  color: var(--bohnanza-dice-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.bohnanza-dice-bean {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 46px;
+  min-height: 37px;
+  padding: 4px 6px;
+  color: #fff;
+  border: 1px solid rgba(35, 30, 22, 0.28);
+  border-radius: 55% 45% 52% 48%;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.38), 0 2px 4px rgba(31, 26, 18, 0.16);
+  font-weight: 900;
+  line-height: 1;
+  transform: rotate(-4deg);
+}
+
+.bohnanza-dice-bean-emoji {
+  font-size: 18px;
+}
+
+.bohnanza-dice-bean-key {
+  font-size: 9px;
+  letter-spacing: 0.04em;
+}
+
+.bohnanza-dice-bean.is-compact {
+  gap: 1px;
+  min-width: 22px;
+  min-height: 20px;
+  padding: 2px 3px;
+  border-radius: 9px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transform: none;
+}
+
+.bohnanza-dice-bean.is-compact .bohnanza-dice-bean-emoji {
+  display: none;
+}
+
+.bohnanza-dice-bean.is-compact .bohnanza-dice-bean-key {
+  font-size: 8px;
+}
+
+.bohnanza-dice-bean.bean-garden,
+.bohnanza-dice-die.bean-garden .bohnanza-dice-bean {
+  background-color: #4f8a4d;
+  background-image: repeating-linear-gradient(90deg, transparent 0 5px, rgba(255, 255, 255, 0.18) 5px 7px);
+}
+
+.bohnanza-dice-bean.bean-red,
+.bohnanza-dice-die.bean-red .bohnanza-dice-bean {
+  background-color: #c65345;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.28) 1.2px, transparent 1.4px);
+  background-size: 7px 7px;
+}
+
+.bohnanza-dice-bean.bean-soy,
+.bohnanza-dice-die.bean-soy .bohnanza-dice-bean {
+  background-color: #76548c;
+  background-image: repeating-linear-gradient(135deg, transparent 0 5px, rgba(255, 255, 255, 0.2) 5px 7px);
+}
+
+.bohnanza-dice-bean.bean-green,
+.bohnanza-dice-die.bean-green .bohnanza-dice-bean {
+  background-color: #cf7a36;
+  background-image: repeating-radial-gradient(ellipse at 50% 100%, transparent 0 5px, rgba(255, 255, 255, 0.16) 6px 7px);
+}
+
+.bohnanza-dice-bean.bean-stink,
+.bohnanza-dice-die.bean-stink .bohnanza-dice-bean {
+  background-color: #826044;
+  background-image:
+    repeating-linear-gradient(45deg, transparent 0 6px, rgba(255, 255, 255, 0.14) 6px 7px),
+    repeating-linear-gradient(-45deg, transparent 0 6px, rgba(255, 255, 255, 0.1) 6px 7px);
+}
+
+.bohnanza-dice-bean.bean-blue,
+.bohnanza-dice-die.bean-blue .bohnanza-dice-bean {
+  background-color: #3f79a6;
+  background-image: radial-gradient(circle, transparent 0 3px, rgba(255, 255, 255, 0.2) 3px 4px, transparent 4px);
+  background-size: 12px 12px;
+}
+
+.bohnanza-dice-actions,
+.bohnanza-dice-harvest-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.bohnanza-dice-actions button,
+.bohnanza-dice-harvest-actions button,
+.bohnanza-dice-final button,
+.bohnanza-dice-header-btn {
+  min-height: 40px;
+  padding: 8px 10px;
+  color: #314334;
+  border: 1px solid rgba(49, 92, 64, 0.34);
+  border-radius: 9px;
+  background: linear-gradient(180deg, #fffef8, #ece5d2);
+  font-weight: 850;
+  line-height: 1.2;
+}
+
+.bohnanza-dice-actions button.is-primary,
+.bohnanza-dice-harvest-actions button.is-primary,
+.bohnanza-dice-final button:not(:disabled) {
+  color: #fff;
+  border-color: #315c40;
+  background: linear-gradient(180deg, #527b4f, #315c40);
+}
+
+.bohnanza-dice-actions button:disabled,
+.bohnanza-dice-harvest-actions button:disabled,
+.bohnanza-dice-final button:disabled {
+  cursor: default;
+  filter: grayscale(0.45);
+  opacity: 0.5;
+}
+
+.bohnanza-dice-field-note {
+  margin: 0;
+  color: var(--bohnanza-dice-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.bohnanza-dice-harvest-dock {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(250px, 0.7fr);
+  align-items: center;
+  gap: 16px;
+  padding: 14px;
+  color: #38270e;
+  border: 1px solid rgba(188, 133, 28, 0.45);
+  border-radius: 16px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.35), transparent),
+    linear-gradient(145deg, #f8d985, #e8b953);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65), 0 7px 17px rgba(117, 77, 13, 0.14);
+}
+
+.bohnanza-dice-harvest-dock.hidden {
+  display: none;
+}
+
+.bohnanza-dice-harvest-dock p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.bohnanza-dice-harvest-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.bohnanza-dice-players {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(480px, 100%), 1fr));
+  gap: 11px;
+}
+
+.bohnanza-dice-player {
+  display: grid;
+  gap: 6px;
+  padding: 11px;
+  overflow: hidden;
+  border: 1px solid rgba(79, 64, 36, 0.22);
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(255, 255, 251, 0.92), rgba(245, 236, 211, 0.86));
+}
+
+.bohnanza-dice-player.is-self {
+  border-color: rgba(62, 121, 166, 0.56);
+  box-shadow: inset 0 0 0 1px rgba(62, 121, 166, 0.13);
+}
+
+.bohnanza-dice-player.is-active {
+  border-top: 4px solid var(--bohnanza-dice-green-bright);
+}
+
+.bohnanza-dice-player.is-deciding {
+  box-shadow: inset 0 0 0 2px rgba(220, 174, 69, 0.48), 0 6px 16px rgba(102, 70, 17, 0.1);
+}
+
+.bohnanza-dice-player.is-winner {
+  background: linear-gradient(145deg, #fffbea, #f7dda0);
+}
+
+.bohnanza-dice-player-heading,
+.bohnanza-dice-player-footer,
+.bohnanza-dice-harvest-card > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+}
+
+.bohnanza-dice-player-heading > div:first-child {
+  overflow: hidden;
+}
+
+.bohnanza-dice-player-heading strong {
+  display: block;
+  overflow: hidden;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 17px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bohnanza-dice-player-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.bohnanza-dice-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 3px 6px;
+  color: #655f52;
+  border: 1px solid rgba(91, 80, 59, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.62);
+  font-size: 9px;
+  font-weight: 850;
+}
+
+.bohnanza-dice-badge.is-active {
+  color: #22482f;
+  background: rgba(110, 155, 88, 0.18);
+}
+
+.bohnanza-dice-badge.is-decision {
+  color: #69440c;
+  background: rgba(220, 174, 69, 0.25);
+}
+
+.bohnanza-dice-score {
+  display: grid;
+  flex: 0 0 48px;
+  width: 48px;
+  height: 42px;
+  place-content: center;
+  color: #573f12;
+  border: 1px solid rgba(167, 112, 14, 0.35);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 33% 28%, rgba(255, 255, 255, 0.75), transparent 15%),
+    linear-gradient(145deg, #f6d77a, #dcae45);
+  box-shadow: inset 0 0 0 3px rgba(255, 245, 188, 0.55), 0 3px 7px rgba(99, 65, 12, 0.14);
+  text-align: center;
+}
+
+.bohnanza-dice-score strong {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.bohnanza-dice-score span {
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.bohnanza-dice-card-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.bohnanza-dice-card-pair.is-cover-expanded {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.92fr);
+}
+
+.bohnanza-dice-harvest-card {
+  display: grid;
+  gap: 7px;
+  min-height: 276px;
+  padding: 9px;
+  overflow: hidden;
+  border: 1px solid rgba(91, 66, 36, 0.27);
+  border-radius: 10px 10px 17px 17px;
+  background:
+    linear-gradient(90deg, transparent 0 49%, rgba(101, 72, 35, 0.05) 50% 51%, transparent 52%),
+    #fffdf6;
+  box-shadow: 0 3px 8px rgba(79, 56, 24, 0.09);
+}
+
+.bohnanza-dice-harvest-card.is-cover {
+  color: #625c50;
+  border-style: dashed;
+  background:
+    repeating-linear-gradient(135deg, rgba(77, 92, 59, 0.035) 0 7px, transparent 7px 14px),
+    #f4efdf;
+}
+
+.bohnanza-dice-harvest-card.is-cover.is-collapsed {
+  gap: 0;
+  min-height: 0;
+  padding: 0;
+}
+
+.bohnanza-dice-harvest-card.is-cover.is-collapsed > header {
+  min-height: 40px;
+  padding: 5px 9px;
+}
+
+.bohnanza-dice-harvest-card > header {
+  color: var(--bohnanza-dice-green);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.bohnanza-dice-harvest-card > header span {
+  color: var(--bohnanza-dice-muted);
+  font-size: 9px;
+}
+
+button.bohnanza-dice-cover-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  width: 100%;
+  min-height: 28px;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+  border: 0;
+  border-radius: 6px;
+  outline-offset: 3px;
+  background: transparent;
+  box-shadow: none;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: left;
+  text-transform: inherit;
+}
+
+button.bohnanza-dice-cover-toggle:hover {
+  color: var(--bohnanza-dice-green);
+  background: rgba(49, 92, 64, 0.07);
+}
+
+.bohnanza-dice-cover-toggle-hint {
+  white-space: nowrap;
+  font-weight: 900;
+}
+
+.bohnanza-dice-orders[hidden] {
+  display: none;
+}
+
+.bohnanza-dice-card-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.bohnanza-dice-card-context {
+  padding: 2px 4px;
+  color: #fff;
+  border-radius: 4px;
+  background: #6d624f;
+  font-size: 7px;
+  font-weight: 950;
+  letter-spacing: 0.06em;
+}
+
+.bohnanza-dice-card-context.is-roll {
+  background: #3f6f91;
+}
+
+.bohnanza-dice-card-context.is-field {
+  background: #4f7b4e;
+}
+
+.bohnanza-dice-card-context.is-preview {
+  background: #81796b;
+}
+
+.bohnanza-dice-orders {
+  display: grid;
+  align-content: stretch;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bohnanza-dice-order-row {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) 43px;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  min-height: 43px;
+  padding: 4px;
+  border: 1px solid rgba(87, 68, 39, 0.11);
+  border-radius: 9px;
+  background: rgba(247, 239, 215, 0.65);
+}
+
+.bohnanza-dice-order-row.is-complete {
+  color: #254a31;
+  border: 3px solid #2f873e;
+  background: rgba(116, 196, 98, 0.36);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.72), 0 0 0 2px rgba(47, 135, 62, 0.22);
+}
+
+.bohnanza-dice-order-row.is-next {
+  border-color: rgba(220, 174, 69, 0.72);
+  box-shadow: inset 3px 0 0 var(--bohnanza-dice-gold);
+}
+
+.bohnanza-dice-order-row.is-locked {
+  background: rgba(244, 239, 226, 0.58);
+}
+
+.bohnanza-dice-order-row.is-preview {
+  background: rgba(237, 235, 222, 0.62);
+}
+
+.bohnanza-dice-order-level {
+  display: grid;
+  width: 29px;
+  min-height: 25px;
+  place-items: center;
+  color: #fff;
+  border-radius: 7px;
+  background: #6d624f;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+
+.bohnanza-dice-order-row.is-complete .bohnanza-dice-order-level {
+  background: #4f7b4e;
+}
+
+.bohnanza-dice-order-row.is-next .bohnanza-dice-order-level {
+  color: #412e0d;
+  background: #e6bd57;
+}
+
+.bohnanza-dice-order-visual {
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bohnanza-dice-order-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 3px;
+  max-width: 100%;
+  padding: 2px 3px;
+  border: 1px solid rgba(87, 68, 39, 0.2);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.bohnanza-dice-order-slot {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  max-width: 100%;
+  min-height: 22px;
+  padding: 1px;
+  border-radius: 6px;
+}
+
+.bohnanza-dice-order-slot.has-choice {
+  border: 1px dashed rgba(87, 68, 39, 0.36);
+  background: rgba(233, 222, 194, 0.42);
+}
+
+.bohnanza-dice-order-slot.is-any {
+  padding: 3px 5px;
+  color: #4e4639;
+  border: 1px dashed rgba(87, 68, 39, 0.36);
+  background: rgba(233, 222, 194, 0.42);
+  font-size: 7px;
+  font-weight: 950;
+  letter-spacing: 0.04em;
+}
+
+.bohnanza-dice-order-slot .bohnanza-dice-bean.is-compact {
+  min-width: 23px;
+  min-height: 20px;
+  padding: 2px;
+}
+
+.bohnanza-dice-order-slot .bohnanza-dice-bean.is-compact .bohnanza-dice-bean-emoji {
+  display: inline;
+  font-size: 9px;
+}
+
+.bohnanza-dice-order-slot .bohnanza-dice-bean.is-compact .bohnanza-dice-bean-key {
+  font-size: 7px;
+}
+
+.bohnanza-dice-order-slot .bohnanza-dice-bean.is-die-dark {
+  color: #fff;
+  border-color: #191b18;
+  background: linear-gradient(145deg, #555950, #292c27);
+}
+
+.bohnanza-dice-order-slot .bohnanza-dice-bean.is-die-light {
+  color: #403522;
+  border-color: #ad9872;
+  background: linear-gradient(145deg, #fffdf5, #ded5c1);
+}
+
+.bohnanza-dice-order-slot .bohnanza-dice-bean.is-die-both {
+  color: #fff;
+  border-color: #6b6558;
+  background: linear-gradient(90deg, #363a34 0 50%, #e8dfca 50% 100%);
+}
+
+.bohnanza-dice-order-slot .bohnanza-dice-bean.is-die-both .bohnanza-dice-bean-key {
+  padding: 1px 2px;
+  border-radius: 3px;
+  background: rgba(38, 35, 29, 0.58);
+}
+
+.bohnanza-dice-slot-or {
+  color: #5c513f;
+  font-size: 8px;
+  font-weight: 900;
+}
+
+.bohnanza-dice-order-plus {
+  flex: 0 0 auto;
+  color: #315c40;
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.bohnanza-dice-order-or {
+  justify-self: center;
+  padding: 0 5px;
+  color: var(--bohnanza-dice-brown);
+  border-radius: 999px;
+  background: rgba(220, 174, 69, 0.2);
+  font-size: 6px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+}
+
+.bohnanza-dice-order-meta {
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+  min-width: 0;
+}
+
+.bohnanza-dice-order-status {
+  padding: 2px 4px;
+  color: #6a6255;
+  border: 1px solid rgba(91, 80, 59, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  font-size: 6px;
+  font-weight: 950;
+  letter-spacing: 0.05em;
+}
+
+.bohnanza-dice-order-status.is-complete {
+  color: #fff;
+  border-color: #2d743d;
+  background: #438b4d;
+}
+
+.bohnanza-dice-order-status.is-next {
+  color: #5f3d08;
+  border-color: rgba(188, 133, 28, 0.34);
+  background: rgba(232, 185, 83, 0.28);
+}
+
+.bohnanza-dice-order-probability {
+  display: grid;
+  justify-items: end;
+  color: var(--bohnanza-dice-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.bohnanza-dice-order-probability strong {
+  font-size: 8px;
+  line-height: 1;
+}
+
+.bohnanza-dice-order-probability span {
+  margin-top: 2px;
+  font-size: 6px;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.bohnanza-dice-player-footer {
+  color: var(--bohnanza-dice-muted);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.bohnanza-dice-final {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(170px, auto) auto;
+  align-items: center;
+  gap: 13px;
+  padding: 15px;
+  color: #3f2e0c;
+  border: 1px solid rgba(173, 117, 14, 0.44);
+  border-radius: 16px;
+  background: linear-gradient(145deg, #fff6c9, #f0cf76);
+  box-shadow: inset 0 1px 0 #fffbed, 0 8px 19px rgba(107, 72, 12, 0.13);
+}
+
+.bohnanza-dice-final.hidden {
+  display: none;
+}
+
+.bohnanza-dice-final p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.bohnanza-dice-ready-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.bohnanza-dice-activity {
+  display: grid;
+  gap: 5px;
+  max-height: 178px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+}
+
+.bohnanza-dice-activity-row {
+  display: grid;
+  grid-template-columns: 33px minmax(0, 1fr);
+  gap: 7px;
+  padding: 6px 7px;
+  border-radius: 7px;
+  background: rgba(99, 75, 38, 0.06);
+}
+
+.bohnanza-dice-activity-row > span {
+  color: var(--bohnanza-dice-green);
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.bohnanza-dice-activity-row p {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--bohnanza-dice-muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.bohnanza-dice-header-btn {
+  min-width: 72px;
+}
+
+.bohnanza-dice-modal-content {
+  width: min(760px, calc(100vw - 28px));
+  max-height: min(86vh, 780px);
+}
+
+.bohnanza-dice-help-content {
+  overflow-y: auto;
+}
+
+.bohnanza-dice-rules {
+  display: grid;
+  gap: 10px;
+  color: #3e3a31;
+  line-height: 1.52;
+}
+
+.bohnanza-dice-rules p,
+.bohnanza-dice-rules ol {
+  margin: 0;
+}
+
+.bohnanza-dice-rules ol {
+  display: grid;
+  gap: 5px;
+  padding-left: 22px;
+}
+
+.bohnanza-dice-rules h3 {
+  margin-top: 6px;
+  color: #315c40;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.bohnanza-dice-practice-note {
+  padding: 10px 12px;
+  border: 1px solid rgba(49, 92, 64, 0.26);
+  border-radius: 10px;
+  background: rgba(110, 155, 88, 0.1);
+}
+
+.bohnanza-dice-rule-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.bohnanza-dice-rule-grid > div {
+  display: grid;
+  gap: 4px;
+  padding: 9px;
+  border: 1px solid rgba(81, 69, 44, 0.18);
+  border-radius: 9px;
+  background: #faf6e9;
+}
+
+.bohnanza-dice-rule-grid span {
+  color: #6d6556;
+  font-size: 12px;
+}
+
+body.bohnanza-dice-explain-mode [data-bohnanza-dice-explain].has-explanation {
+  cursor: help !important;
+  outline: 2px dashed #315c40 !important;
+  outline-offset: 3px;
+}
+
+body.bohnanza-dice-explain-mode button[data-bohnanza-dice-explain].has-explanation:disabled {
+  filter: none;
+  opacity: 1;
+}
+
+@media (max-width: 900px) {
+  .bohnanza-dice-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .bohnanza-dice-harvest-dock {
+    grid-template-columns: minmax(0, 1fr) minmax(230px, 0.8fr);
+  }
+
+  .bohnanza-dice-final {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .bohnanza-dice-ready-list {
+    grid-row: 2;
+  }
+}
+
+@media (max-width: 620px) {
+  .bohnanza-dice-panel {
+    gap: 10px;
+    padding: 10px;
+    border-radius: 15px;
+  }
+
+  .bohnanza-dice-topbar {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .bohnanza-dice-brand-mark {
+    flex-basis: 48px;
+    width: 48px;
+    height: 48px;
+  }
+
+  .bohnanza-dice-brand-mark::before {
+    left: 6px;
+    width: 36px;
+  }
+
+  .bohnanza-dice-brand-mark i {
+    width: 11px;
+    height: 19px;
+  }
+
+  .bohnanza-dice-brand-mark i:nth-child(1) {
+    left: 7px;
+  }
+
+  .bohnanza-dice-brand-mark i:nth-child(2) {
+    left: 19px;
+  }
+
+  .bohnanza-dice-brand h2 {
+    font-size: 22px;
+  }
+
+  .bohnanza-dice-meta {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .bohnanza-dice-meta > span {
+    flex: 1 1 auto;
+    justify-content: center;
+    padding-inline: 7px;
+  }
+
+  .bohnanza-dice-dice-card,
+  .bohnanza-dice-field-card,
+  .bohnanza-dice-player-section,
+  .bohnanza-dice-activity-card {
+    padding: 10px;
+  }
+
+  .bohnanza-dice-tray {
+    gap: 5px;
+    min-height: 74px;
+    padding: 7px;
+  }
+
+  button.bohnanza-dice-die,
+  .bohnanza-dice-empty-slot {
+    min-height: 57px;
+    border-radius: 10px;
+  }
+
+  .bohnanza-dice-bean {
+    min-width: 32px;
+    min-height: 31px;
+    padding: 3px;
+  }
+
+  .bohnanza-dice-bean-emoji {
+    font-size: 14px;
+  }
+
+  .bohnanza-dice-bean-key {
+    font-size: 7px;
+  }
+
+  .bohnanza-dice-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bohnanza-dice-actions button:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .bohnanza-dice-harvest-dock,
+  .bohnanza-dice-final {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .bohnanza-dice-ready-list {
+    grid-row: auto;
+  }
+
+  .bohnanza-dice-card-pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .bohnanza-dice-card-pair.is-cover-expanded {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .bohnanza-dice-harvest-card {
+    min-height: 0;
+  }
+
+  .bohnanza-dice-player-heading {
+    align-items: flex-start;
+  }
+
+  .bohnanza-dice-section-heading {
+    align-items: flex-start;
+  }
+
+  .bohnanza-dice-section-heading > span:not(.bohnanza-dice-eyebrow) {
+    max-width: 46%;
+  }
+
+  .bohnanza-dice-rule-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .bohnanza-dice-panel {
+    gap: 6px;
+    padding: 7px;
+    border-radius: 13px;
+  }
+
+  .bohnanza-dice-topbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .bohnanza-dice-brand {
+    gap: 0;
+  }
+
+  .bohnanza-dice-brand-mark,
+  .bohnanza-dice-brand .bohnanza-dice-eyebrow {
+    display: none;
+  }
+
+  .bohnanza-dice-brand h2 {
+    overflow: hidden;
+    font-size: 16px;
+    line-height: 1.1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .bohnanza-dice-meta {
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    gap: 3px;
+    width: auto;
+  }
+
+  .bohnanza-dice-meta > span {
+    flex: 0 1 auto;
+    min-height: 25px;
+    padding: 3px 5px;
+    font-size: 8px;
+  }
+
+  .bohnanza-dice-meta > span:first-child {
+    display: none;
+  }
+
+  .bohnanza-dice-status {
+    padding: 6px 8px;
+    border-left-width: 3px;
+    border-radius: 8px;
+    font-size: 11px;
+    line-height: 1.25;
+  }
+
+  .bohnanza-dice-workspace {
+    display: block;
+  }
+
+  .bohnanza-dice-field-card {
+    display: none;
+  }
+
+  .bohnanza-dice-dice-card,
+  .bohnanza-dice-player-section,
+  .bohnanza-dice-activity-card {
+    gap: 6px;
+    padding: 7px;
+    border-radius: 11px;
+  }
+
+  .bohnanza-dice-dice-card .bohnanza-dice-section-heading {
+    display: none;
+  }
+
+  .bohnanza-dice-section-heading {
+    align-items: center;
+    gap: 6px;
+  }
+
+  .bohnanza-dice-section-heading h3 {
+    font-size: 15px;
+  }
+
+  .bohnanza-dice-repeat-badge {
+    padding: 3px 6px;
+    font-size: 9px !important;
+  }
+
+  .bohnanza-dice-tray {
+    gap: 4px;
+    min-height: 60px;
+    padding: 4px;
+    border-radius: 9px;
+  }
+
+  #bohnanzaDiceCurrentDice {
+    display: block;
+  }
+
+  .bohnanza-dice-desktop-roll {
+    display: none;
+  }
+
+  .bohnanza-dice-mobile-lane {
+    display: flex;
+    align-items: stretch;
+    flex-wrap: nowrap;
+    gap: clamp(2px, 1.3vw, 5px);
+    width: 100%;
+  }
+
+  .bohnanza-dice-mobile-lane > .bohnanza-dice-die,
+  .bohnanza-dice-mobile-lane > .bohnanza-dice-empty-slot {
+    flex: 1 1 0;
+    width: 0;
+    min-width: 0;
+    min-height: clamp(46px, 14vw, 54px);
+  }
+
+  .bohnanza-dice-mobile-divider {
+    flex: 0 0 3px;
+    width: 3px;
+    margin: 0 1px;
+    border-radius: 999px;
+    background: #70452e;
+    box-shadow: 1px 0 0 rgba(255, 255, 255, 0.72);
+  }
+
+  button.bohnanza-dice-die.is-mobile-locked {
+    opacity: 1;
+    filter: saturate(0.68);
+    box-shadow: inset 0 0 0 2px rgba(47, 42, 32, 0.3), 0 2px 4px rgba(54, 39, 19, 0.12);
+  }
+
+  button.bohnanza-dice-die.is-mobile-locked::after {
+    display: grid;
+    width: 15px;
+    height: 15px;
+    place-items: center;
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    content: "\1F512";
+    border-radius: 50%;
+    background: rgba(255, 253, 245, 0.9);
+    font-size: 8px;
+    line-height: 1;
+  }
+
+  button.bohnanza-dice-die,
+  .bohnanza-dice-empty-slot {
+    min-height: 50px;
+    padding: 3px 1px;
+    border-radius: 9px;
+  }
+
+  .bohnanza-dice-empty-message {
+    min-height: 50px;
+    padding: 4px;
+    font-size: 10px;
+  }
+
+  .bohnanza-dice-die .bohnanza-dice-bean {
+    min-width: 29px;
+    min-height: 29px;
+    padding: 2px;
+  }
+
+  .bohnanza-dice-die .bohnanza-dice-bean-emoji {
+    font-size: 13px;
+  }
+
+  .bohnanza-dice-die .bohnanza-dice-bean-key {
+    font-size: 7px;
+  }
+
+  .bohnanza-dice-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .bohnanza-dice-actions button:first-child {
+    grid-column: auto;
+  }
+
+  .bohnanza-dice-actions button,
+  .bohnanza-dice-harvest-actions button {
+    min-height: 44px;
+    padding: 5px 3px;
+    font-size: 11px;
+  }
+
+  .bohnanza-dice-harvest-dock {
+    gap: 6px;
+    padding: 8px;
+    border-radius: 11px;
+  }
+
+  .bohnanza-dice-harvest-dock .bohnanza-dice-eyebrow {
+    display: none;
+  }
+
+  .bohnanza-dice-harvest-dock h3 {
+    font-size: 14px;
+  }
+
+  .bohnanza-dice-harvest-dock p {
+    margin-top: 2px;
+    font-size: 10px;
+    line-height: 1.25;
+  }
+
+  .bohnanza-dice-player {
+    gap: 3px;
+    padding: 8px;
+  }
+
+  .bohnanza-dice-player.is-self {
+    order: -2;
+  }
+
+  .bohnanza-dice-player.is-active:not(.is-self) {
+    order: -1;
+  }
+
+  .bohnanza-dice-player-badges {
+    gap: 3px;
+    margin-top: 1px;
+  }
+
+  .bohnanza-dice-badge {
+    min-height: 18px;
+    padding: 2px 5px;
+  }
+
+  .bohnanza-dice-score {
+    flex-basis: 40px;
+    width: 40px;
+    height: 36px;
+  }
+
+  .bohnanza-dice-score strong {
+    font-size: 14px;
+  }
+
+  .bohnanza-dice-score span {
+    font-size: 6px;
+  }
+}
+
+@media (max-width: 360px) {
+  .bohnanza-dice-panel {
+    padding: 8px;
+  }
+
+  .bohnanza-dice-brand-mark {
+    display: none;
+  }
+
+  .bohnanza-dice-tray {
+    padding: 5px;
+  }
+
+  button.bohnanza-dice-die,
+  .bohnanza-dice-empty-slot {
+    min-height: 52px;
+    padding-inline: 1px;
+  }
+
+  .bohnanza-dice-die-template {
+    display: none;
+  }
+
+  .bohnanza-dice-bean {
+    min-width: 27px;
+  }
+
+  .bohnanza-dice-harvest-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bohnanza-dice-panel *,
+  .bohnanza-dice-panel *::before,
+  .bohnanza-dice-panel *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+
+  button.bohnanza-dice-die.is-selected,
+  button.bohnanza-dice-die:not(:disabled):hover {
+    transform: none;
+  }
+}
+}

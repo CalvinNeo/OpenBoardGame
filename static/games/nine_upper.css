@@ -1,0 +1,961 @@
+/* Loaded into the matching style.css groups by loadGameStyleFragments. */
+@media all, obg-game-nine_upper-1 {
+
+/* 9UPPER / 瞎掰王 ------------------------------------------------------ */
+
+.nine-upper-panel {
+  --nine-upper-ink: #f8fafc;
+  --nine-upper-muted: #c4b5fd;
+  --nine-upper-line: rgba(196, 181, 253, 0.22);
+  --nine-upper-card: rgba(28, 22, 48, 0.88);
+  --nine-upper-card-raised: rgba(40, 30, 66, 0.94);
+  --nine-upper-violet: #a78bfa;
+  --nine-upper-pink: #f472b6;
+  --nine-upper-orange: #fb923c;
+  --nine-upper-green: #4ade80;
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  gap: 14px;
+  max-width: 100%;
+  padding: clamp(12px, 2vw, 20px);
+  overflow: hidden;
+  color: var(--nine-upper-ink);
+  border: 1px solid rgba(167, 139, 250, 0.28);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 88% 4%, rgba(244, 114, 182, 0.2), transparent 28%),
+    radial-gradient(circle at 8% 38%, rgba(251, 146, 60, 0.12), transparent 30%),
+    linear-gradient(145deg, #100d1e 0%, #1d1533 56%, #181127 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 18px 44px rgba(15, 8, 31, 0.26);
+}
+
+.nine-upper-panel.hidden {
+  display: none;
+}
+
+.nine-upper-panel::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  content: "";
+  opacity: 0.18;
+  pointer-events: none;
+  background-image:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.04) 12.5%, transparent 12.5%, transparent 50%, rgba(255, 255, 255, 0.04) 50%, rgba(255, 255, 255, 0.04) 62.5%, transparent 62.5%, transparent),
+    linear-gradient(45deg, rgba(167, 139, 250, 0.05) 12.5%, transparent 12.5%, transparent 50%, rgba(167, 139, 250, 0.05) 50%, rgba(167, 139, 250, 0.05) 62.5%, transparent 62.5%, transparent);
+  background-position: 0 0, 18px 18px;
+  background-size: 36px 36px;
+}
+
+.nine-upper-panel *,
+.nine-upper-modal * {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.nine-upper-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.nine-upper-hero h2 {
+  margin: 2px 0 0;
+  color: #fff;
+  font-size: clamp(28px, 5vw, 44px);
+  line-height: 1;
+  letter-spacing: -0.045em;
+}
+
+.nine-upper-hero h2 span {
+  color: #fdba74;
+  font-size: 0.58em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.nine-upper-hero p {
+  max-width: 620px;
+  margin: 8px 0 0;
+  color: #d8d1e9;
+  font-size: 13px;
+}
+
+.nine-upper-kicker {
+  color: #f9a8d4;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.2em;
+}
+
+.nine-upper-round-badge {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  color: #ddd6fe;
+  border: 1px solid rgba(196, 181, 253, 0.28);
+  border-radius: 999px;
+  background: rgba(17, 12, 31, 0.72);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.nine-upper-round-badge strong {
+  color: #fff;
+  font-size: 16px;
+}
+
+.nine-upper-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.nine-upper-summary-card {
+  display: grid;
+  gap: 3px;
+  min-height: 68px;
+  padding: 10px 12px;
+  border: 1px solid var(--nine-upper-line);
+  border-radius: 13px;
+  background: rgba(18, 13, 34, 0.72);
+}
+
+.nine-upper-summary-card span {
+  color: #a99fc1;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.nine-upper-summary-card strong {
+  overflow: hidden;
+  color: #fff;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nine-upper-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 66px;
+  padding: 11px 14px;
+  border: 1px solid rgba(167, 139, 250, 0.3);
+  border-left: 4px solid var(--nine-upper-violet);
+  border-radius: 14px;
+  background: rgba(76, 29, 149, 0.17);
+}
+
+.nine-upper-status.action {
+  border-left-color: var(--nine-upper-orange);
+  background: rgba(154, 52, 18, 0.17);
+}
+
+.nine-upper-status.reveal {
+  border-left-color: var(--nine-upper-pink);
+  background: rgba(157, 23, 77, 0.15);
+}
+
+.nine-upper-status.complete {
+  border-left-color: var(--nine-upper-green);
+  background: rgba(22, 101, 52, 0.15);
+}
+
+.nine-upper-status-icon {
+  display: grid;
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 22px;
+}
+
+.nine-upper-status strong {
+  display: block;
+  margin-bottom: 3px;
+  color: #fff;
+  font-size: 12px;
+}
+
+.nine-upper-status-body,
+#nineUpperStatusBody {
+  color: #d8d1e9;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.nine-upper-main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(220px, 0.72fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.nine-upper-column {
+  display: grid;
+  gap: 10px;
+}
+
+.nine-upper-role-card,
+.nine-upper-stage-card,
+.nine-upper-term-card {
+  overflow: hidden;
+  border: 1px solid var(--nine-upper-line);
+  border-radius: 16px;
+  background: var(--nine-upper-card);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.nine-upper-role-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+}
+
+.nine-upper-role-card.thinker {
+  border-color: rgba(251, 191, 36, 0.38);
+  background: linear-gradient(135deg, rgba(120, 53, 15, 0.28), var(--nine-upper-card));
+}
+
+.nine-upper-role-card.honest {
+  border-color: rgba(74, 222, 128, 0.38);
+  background: linear-gradient(135deg, rgba(20, 83, 45, 0.3), var(--nine-upper-card));
+}
+
+.nine-upper-role-card.bluffer {
+  border-color: rgba(244, 114, 182, 0.38);
+  background: linear-gradient(135deg, rgba(131, 24, 67, 0.3), var(--nine-upper-card));
+}
+
+.nine-upper-role-icon {
+  display: grid;
+  flex: 0 0 50px;
+  width: 50px;
+  height: 50px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.07);
+  font-size: 27px;
+}
+
+.nine-upper-role-card span {
+  display: block;
+  color: #afa5c6;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.nine-upper-role-card strong {
+  display: block;
+  margin-top: 2px;
+  color: #fff;
+  font-size: 16px;
+}
+
+.nine-upper-role-card p {
+  margin: 3px 0 0;
+  color: #d8d1e9;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.nine-upper-stage-card {
+  display: grid;
+  gap: 11px;
+  padding: 13px;
+}
+
+.nine-upper-stage-card.hidden,
+.nine-upper-term-card.hidden,
+.nine-upper-skip-row.hidden,
+.nine-upper-truth-box.hidden,
+.nine-upper-composer.hidden,
+.nine-upper-locked-statement.hidden,
+.nine-upper-next-row.hidden {
+  display: none;
+}
+
+.nine-upper-stage-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.nine-upper-stage-heading > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nine-upper-stage-heading > span {
+  color: #afa5c6;
+  font-size: 11px;
+  text-align: right;
+}
+
+.nine-upper-step-pill {
+  display: inline-grid;
+  min-width: 25px;
+  min-height: 25px;
+  padding: 0 5px;
+  place-items: center;
+  color: #241236;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #fdba74, #f9a8d4);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.nine-upper-difficulty-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+button.nine-upper-difficulty-btn {
+  display: grid;
+  gap: 4px;
+  min-height: 94px;
+  padding: 11px 8px;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.055);
+  text-align: left;
+}
+
+button.nine-upper-difficulty-btn.level-1 {
+  border-color: rgba(74, 222, 128, 0.32);
+}
+
+button.nine-upper-difficulty-btn.level-2 {
+  border-color: rgba(251, 146, 60, 0.38);
+}
+
+button.nine-upper-difficulty-btn.level-3 {
+  border-color: rgba(244, 114, 182, 0.4);
+}
+
+button.nine-upper-difficulty-btn:not(:disabled):hover {
+  background: rgba(167, 139, 250, 0.16);
+  transform: translateY(-1px);
+}
+
+.nine-upper-difficulty-btn strong,
+.nine-upper-difficulty-btn span,
+.nine-upper-difficulty-btn small {
+  display: block;
+}
+
+.nine-upper-difficulty-btn strong {
+  font-size: 14px;
+}
+
+.nine-upper-difficulty-btn span {
+  color: #fef3c7;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.nine-upper-difficulty-btn small {
+  color: #afa5c6;
+  font-size: 10px;
+  line-height: 1.25;
+}
+
+.nine-upper-term-card {
+  display: grid;
+  gap: 7px;
+  padding: clamp(14px, 3vw, 22px);
+  text-align: center;
+  background:
+    radial-gradient(circle at 50% 10%, rgba(167, 139, 250, 0.16), transparent 52%),
+    var(--nine-upper-card-raised);
+}
+
+.nine-upper-term-topline {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 7px;
+}
+
+.nine-upper-term-topline span {
+  padding: 5px 9px;
+  color: #ddd6fe;
+  border: 1px solid rgba(196, 181, 253, 0.2);
+  border-radius: 999px;
+  background: rgba(17, 12, 31, 0.45);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.nine-upper-term {
+  margin-top: 4px;
+  color: #fff;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: clamp(34px, 7vw, 58px);
+  font-weight: 850;
+  line-height: 1.05;
+  letter-spacing: 0.08em;
+  text-shadow: 0 4px 24px rgba(244, 114, 182, 0.24);
+}
+
+.nine-upper-pronunciation {
+  min-height: 18px;
+  color: #f9a8d4;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+}
+
+.nine-upper-skip-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 5px;
+  padding: 10px 11px;
+  border: 1px solid rgba(251, 146, 60, 0.28);
+  border-radius: 12px;
+  background: rgba(124, 45, 18, 0.16);
+  text-align: left;
+}
+
+.nine-upper-skip-copy {
+  min-width: 0;
+}
+
+.nine-upper-skip-copy strong,
+.nine-upper-skip-copy span {
+  display: block;
+}
+
+.nine-upper-skip-copy strong {
+  color: #ffedd5;
+  font-size: 12px;
+}
+
+.nine-upper-skip-copy span {
+  margin-top: 2px;
+  color: #cfc7df;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+button.nine-upper-skip-btn {
+  flex: 0 0 auto;
+  min-height: 36px;
+  max-width: 190px;
+  padding: 7px 11px;
+  color: #fff7ed;
+  border: 1px solid rgba(251, 146, 60, 0.48);
+  border-radius: 10px;
+  background: rgba(154, 52, 18, 0.42);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.25;
+  white-space: normal;
+}
+
+button.nine-upper-skip-btn:not(:disabled):hover {
+  border-color: #fb923c;
+  background: rgba(194, 65, 12, 0.58);
+  transform: translateY(-1px);
+}
+
+button.nine-upper-skip-btn:disabled {
+  color: #8e879d;
+  border-color: rgba(142, 135, 157, 0.24);
+  background: rgba(55, 48, 67, 0.72);
+}
+
+.nine-upper-truth-box {
+  display: grid;
+  gap: 5px;
+  margin-top: 7px;
+  padding: 11px 13px;
+  color: #dcfce7;
+  border: 1px solid rgba(74, 222, 128, 0.34);
+  border-radius: 12px;
+  background: rgba(20, 83, 45, 0.24);
+  text-align: left;
+}
+
+.nine-upper-truth-box span {
+  color: #86efac;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.nine-upper-truth-box strong {
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.nine-upper-stage-copy {
+  margin: 0;
+  color: #cfc7df;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.nine-upper-composer {
+  display: grid;
+  gap: 7px;
+}
+
+.nine-upper-composer textarea {
+  width: 100%;
+  min-height: 92px;
+  max-height: 180px;
+  padding: 10px 12px;
+  resize: vertical;
+  color: #f8fafc;
+  border: 1px solid rgba(196, 181, 253, 0.25);
+  border-radius: 11px;
+  outline: none;
+  background: rgba(10, 8, 20, 0.64);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.nine-upper-composer textarea:focus {
+  border-color: var(--nine-upper-violet);
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.12);
+}
+
+.nine-upper-composer-footer,
+.nine-upper-choice-row,
+.nine-upper-next-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.nine-upper-composer-footer span,
+.nine-upper-choice-row > span,
+.nine-upper-next-row > span {
+  color: #afa5c6;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+button.nine-upper-primary-btn {
+  min-height: 38px;
+  padding: 8px 14px;
+  color: #23132f;
+  border: 0;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #fdba74, #f9a8d4);
+  box-shadow: 0 6px 16px rgba(244, 114, 182, 0.16);
+  font-weight: 850;
+}
+
+button.nine-upper-primary-btn:not(:disabled):hover {
+  filter: brightness(1.07);
+  transform: translateY(-1px);
+}
+
+button.nine-upper-primary-btn:disabled {
+  color: #8e879d;
+  background: #373043;
+  box-shadow: none;
+}
+
+.nine-upper-locked-statement {
+  padding: 11px 12px;
+  color: #ddd6fe;
+  border: 1px dashed rgba(196, 181, 253, 0.28);
+  border-radius: 11px;
+  background: rgba(17, 12, 31, 0.48);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.nine-upper-statement-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 8px;
+}
+
+.nine-upper-statement-card {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  min-height: 116px;
+  padding: 11px 12px;
+  overflow: hidden;
+  color: #f8fafc;
+  border: 1px solid rgba(196, 181, 253, 0.2);
+  border-radius: 12px;
+  background: rgba(17, 12, 31, 0.56);
+  text-align: left;
+}
+
+button.nine-upper-statement-card:disabled {
+  opacity: 1;
+  color: #f8fafc;
+  cursor: default;
+}
+
+button.nine-upper-statement-card:not(:disabled):hover {
+  border-color: rgba(251, 146, 60, 0.5);
+  background: rgba(88, 51, 112, 0.5);
+}
+
+.nine-upper-statement-card.selected {
+  border-color: #fb923c;
+  background: rgba(154, 52, 18, 0.24);
+  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.22), 0 0 0 2px rgba(251, 146, 60, 0.08);
+}
+
+.nine-upper-statement-card.honest {
+  border-color: rgba(74, 222, 128, 0.52);
+  background: rgba(20, 83, 45, 0.24);
+}
+
+.nine-upper-statement-card.fooled {
+  border-color: rgba(244, 114, 182, 0.62);
+  background: rgba(131, 24, 67, 0.28);
+}
+
+.nine-upper-statement-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.nine-upper-statement-head strong {
+  overflow: hidden;
+  color: #fff;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nine-upper-statement-head span {
+  flex: 0 0 auto;
+  padding: 3px 6px;
+  color: #fef3c7;
+  border-radius: 999px;
+  background: rgba(251, 146, 60, 0.16);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.nine-upper-statement-card p {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #ddd6e8;
+  font-size: 12px;
+  line-height: 1.52;
+}
+
+.nine-upper-statement-card small {
+  align-self: end;
+  color: #f9a8d4;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.nine-upper-result-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 13px;
+  border: 1px solid rgba(74, 222, 128, 0.34);
+  border-radius: 12px;
+  background: rgba(20, 83, 45, 0.24);
+}
+
+.nine-upper-result-banner.fooled {
+  border-color: rgba(244, 114, 182, 0.4);
+  background: rgba(131, 24, 67, 0.24);
+}
+
+.nine-upper-result-banner > span {
+  font-size: 25px;
+}
+
+.nine-upper-result-banner strong,
+.nine-upper-result-banner span {
+  display: block;
+}
+
+.nine-upper-result-banner div span {
+  margin-top: 2px;
+  color: #cfc7df;
+  font-size: 11px;
+}
+
+.nine-upper-answer-reveal {
+  display: grid;
+  gap: 4px;
+  padding: 11px 12px;
+  border-left: 3px solid var(--nine-upper-violet);
+  border-radius: 0 10px 10px 0;
+  background: rgba(76, 29, 149, 0.15);
+}
+
+.nine-upper-answer-reveal span {
+  color: var(--nine-upper-muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.nine-upper-answer-reveal strong {
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.nine-upper-player-list {
+  display: grid;
+  gap: 6px;
+  max-height: 430px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.nine-upper-player-row {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+  border: 1px solid rgba(196, 181, 253, 0.14);
+  border-radius: 10px;
+  background: rgba(10, 8, 20, 0.36);
+}
+
+.nine-upper-player-row.self {
+  border-color: rgba(167, 139, 250, 0.4);
+}
+
+.nine-upper-player-row.thinker {
+  background: rgba(120, 53, 15, 0.2);
+}
+
+.nine-upper-player-row.winner {
+  border-color: rgba(250, 204, 21, 0.5);
+  background: rgba(113, 63, 18, 0.2);
+}
+
+.nine-upper-player-rank {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  color: #c4b5fd;
+  border-radius: 8px;
+  background: rgba(167, 139, 250, 0.12);
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.nine-upper-player-row div strong,
+.nine-upper-player-row div small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nine-upper-player-row div strong {
+  color: #fff;
+  font-size: 12px;
+}
+
+.nine-upper-player-row div small {
+  margin-top: 2px;
+  color: #9990aa;
+  font-size: 9px;
+}
+
+.nine-upper-player-score {
+  color: #fdba74;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.nine-upper-cheat-sheet {
+  gap: 5px;
+}
+
+.nine-upper-cheat-sheet p {
+  margin: 0;
+  color: #cfc7df;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.nine-upper-header-btn.active {
+  color: #21102e;
+  border-color: #f9a8d4;
+  background: #f9a8d4;
+}
+
+body.nine-upper-explain-mode button.has-explanation {
+  outline: 2px dashed #fb923c;
+  outline-offset: 3px;
+  cursor: help !important;
+}
+
+.nine-upper-modal {
+  width: min(680px, calc(100vw - 24px));
+  max-height: min(82vh, 720px);
+  overflow: hidden;
+}
+
+.nine-upper-modal .modal-body {
+  overflow-y: auto;
+}
+
+.nine-upper-help-content {
+  color: #d8d1e9;
+  line-height: 1.55;
+}
+
+.nine-upper-help-content h3 {
+  margin: 16px 0 6px;
+  color: #fff;
+}
+
+.nine-upper-help-content p,
+.nine-upper-help-content ol {
+  margin-top: 6px;
+}
+
+.nine-upper-help-content li + li {
+  margin-top: 7px;
+}
+
+@media (max-width: 860px) {
+  .nine-upper-main-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .nine-upper-player-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: 300px;
+  }
+}
+
+@media (max-width: 620px) {
+  .nine-upper-panel {
+    gap: 10px;
+    padding: 10px;
+    border-radius: 16px;
+  }
+
+  .nine-upper-hero {
+    align-items: center;
+  }
+
+  .nine-upper-hero p {
+    display: none;
+  }
+
+  .nine-upper-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .nine-upper-summary-card {
+    min-height: 56px;
+    padding: 8px 10px;
+  }
+
+  .nine-upper-stage-heading {
+    align-items: flex-start;
+  }
+
+  .nine-upper-stage-heading > span {
+    max-width: 48%;
+  }
+
+  .nine-upper-difficulty-grid {
+    gap: 6px;
+  }
+
+  button.nine-upper-difficulty-btn {
+    min-height: 88px;
+    padding: 9px 6px;
+  }
+
+  .nine-upper-difficulty-btn strong {
+    font-size: 12px;
+  }
+
+  .nine-upper-difficulty-btn small {
+    font-size: 9px;
+  }
+
+  .nine-upper-statement-grid,
+  .nine-upper-player-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .nine-upper-composer-footer,
+  .nine-upper-choice-row,
+  .nine-upper-next-row {
+    align-items: stretch;
+  }
+
+  button.nine-upper-primary-btn {
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 420px) {
+  .nine-upper-hero h2 {
+    font-size: 27px;
+  }
+
+  .nine-upper-round-badge {
+    padding: 6px 8px;
+  }
+
+  .nine-upper-status {
+    padding: 9px 10px;
+  }
+
+  .nine-upper-role-card {
+    padding: 10px;
+  }
+
+  .nine-upper-role-icon {
+    flex-basis: 42px;
+    width: 42px;
+    height: 42px;
+    font-size: 23px;
+  }
+
+  .nine-upper-difficulty-btn span {
+    font-size: 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nine-upper-panel *,
+  .nine-upper-panel *::before,
+  .nine-upper-panel *::after {
+    transition: none !important;
+  }
+}
+}

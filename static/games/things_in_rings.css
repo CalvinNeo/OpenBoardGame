@@ -1,0 +1,816 @@
+/* Loaded into the matching style.css groups by loadGameStyleFragments. */
+@media all, obg-game-things_in_rings-1 {
+
+.things-rings-ring-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.things-rings-rule-card {
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 250, 252, 0.94) 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+.things-rings-rule-card.word {
+  background: linear-gradient(180deg, rgba(254, 249, 195, 0.96) 0%, rgba(255, 251, 235, 0.98) 100%);
+  border-color: rgba(202, 138, 4, 0.24);
+}
+
+.things-rings-rule-card.attribute {
+  background: linear-gradient(180deg, rgba(224, 242, 254, 0.96) 0%, rgba(240, 249, 255, 0.98) 100%);
+  border-color: rgba(3, 105, 161, 0.24);
+}
+
+.things-rings-rule-card.context {
+  background: linear-gradient(180deg, rgba(252, 231, 243, 0.96) 0%, rgba(253, 242, 248, 0.98) 100%);
+  border-color: rgba(190, 24, 93, 0.24);
+}
+
+.things-rings-rule-top {
+  font-size: 12px;
+  font-weight: 700;
+  color: #7c2d12;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.things-rings-rule-body {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.things-rings-rule-mode {
+  font-size: 12px;
+  color: #475569;
+}
+
+.things-rings-hand {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.things-rings-card {
+  border: 1px solid #d8dee9;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #0f172a;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.things-rings-card:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: #f97316;
+  box-shadow: 0 6px 14px rgba(249, 115, 22, 0.12);
+}
+
+.things-rings-card.selected {
+  border-color: #ea580c;
+  background: #fff7ed;
+  box-shadow: 0 0 0 2px rgba(234, 88, 12, 0.18);
+}
+
+.things-rings-card:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.things-rings-board {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.things-rings-board-shell {
+  display: grid;
+  gap: 12px;
+}
+
+.things-rings-board-stage {
+  --things-rings-board-lift: -16px;
+  position: relative;
+  width: min(100%, 1020px);
+  margin: 0 auto;
+  border-radius: 32px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0) 34%),
+    linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75), 0 18px 42px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.things-rings-board-shell.ring-count-1 .things-rings-board-stage {
+  aspect-ratio: 1.18 / 1;
+}
+
+.things-rings-board-shell.ring-count-2 .things-rings-board-stage {
+  aspect-ratio: 1.35 / 1;
+}
+
+.things-rings-board-shell.ring-count-3 .things-rings-board-stage {
+  aspect-ratio: 1 / 0.9;
+}
+
+.things-rings-circle {
+  position: absolute;
+  left: var(--circle-left);
+  top: calc(var(--circle-top) + var(--things-rings-board-lift));
+  width: var(--circle-size);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 2px solid rgba(100, 116, 139, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+  z-index: 1;
+}
+
+.things-rings-circle.word {
+  background: rgba(253, 224, 71, 0.32);
+  border-color: rgba(202, 138, 4, 0.48);
+}
+
+.things-rings-circle.attribute {
+  background: rgba(125, 211, 252, 0.32);
+  border-color: rgba(3, 105, 161, 0.44);
+}
+
+.things-rings-circle.context {
+  background: rgba(244, 114, 182, 0.3);
+  border-color: rgba(190, 24, 93, 0.42);
+}
+
+.things-rings-circle.generic {
+  background: rgba(203, 213, 225, 0.24);
+  border-color: rgba(71, 85, 105, 0.34);
+}
+
+.things-rings-circle-label {
+  position: absolute;
+  left: var(--circle-label-left);
+  top: calc(var(--circle-label-top) + var(--things-rings-board-lift));
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+.things-rings-circle-label.word {
+  color: #92400e;
+}
+
+.things-rings-circle-label.attribute {
+  color: #0c4a6e;
+}
+
+.things-rings-circle-label.context {
+  color: #9d174d;
+}
+
+.things-rings-zone-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+}
+
+.things-rings-zone-map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  z-index: 4;
+}
+
+.things-rings-zone-shape {
+  fill: rgba(255, 255, 255, 0.06);
+  stroke: rgba(148, 163, 184, 0.16);
+  stroke-width: 1.5;
+  transition: fill 0.16s ease, stroke 0.16s ease, filter 0.16s ease;
+}
+
+.things-rings-zone-shape.clickable {
+  cursor: pointer;
+}
+
+.things-rings-zone-shape.clickable:hover,
+.things-rings-zone-shape.clickable:focus-visible {
+  fill: rgba(255, 255, 255, 0.14);
+  stroke: rgba(59, 130, 246, 0.42);
+  filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.14));
+  outline: none;
+}
+
+.things-rings-zone-shape.selected {
+  fill: rgba(239, 246, 255, 0.2);
+  stroke: rgba(37, 99, 235, 0.74);
+  stroke-width: 2.2;
+  filter: drop-shadow(0 0 12px rgba(37, 99, 235, 0.18));
+}
+
+.things-rings-zone-hitbox {
+  position: absolute;
+  left: var(--zone-x);
+  top: calc(var(--zone-y) + var(--things-rings-board-lift));
+  width: var(--zone-w);
+  height: var(--zone-h);
+  transform: translate(-50%, -50%);
+  border: none;
+  border-radius: 20px;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  z-index: 4;
+  cursor: default;
+}
+
+.things-rings-zone-hitbox.clickable {
+  cursor: pointer;
+}
+
+.things-rings-zone-hitbox.clickable:hover {
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.18);
+}
+
+.things-rings-zone-hitbox.selected {
+  background: rgba(239, 246, 255, 0.16);
+  box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.34);
+}
+
+.things-rings-zone-hitbox:focus-visible {
+  outline: 2px solid rgba(37, 99, 235, 0.55);
+  outline-offset: 2px;
+}
+
+.things-rings-zone-cloud {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+  z-index: 6;
+  width: max-content;
+  max-width: max(84px, var(--zone-cloud-max-width, var(--zone-w)));
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  pointer-events: none;
+}
+
+body.things-rings-explain-mode .things-rings-zone-cloud {
+  pointer-events: auto;
+}
+
+.things-rings-zone-cloud-footer,
+.things-rings-zone-cloud-footer * {
+  pointer-events: auto;
+}
+
+.things-rings-zone-cloud-cards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+
+.things-rings-zone-cloud-footer {
+  display: flex;
+  justify-content: center;
+}
+
+.things-rings-zone-cloud.pair {
+  width: min(158px, var(--zone-cloud-max-width, 158px));
+  max-width: var(--zone-cloud-max-width, 158px);
+}
+
+.things-rings-zone-cloud.pair .things-rings-zone-cloud-cards {
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  justify-content: center;
+  width: 100%;
+  gap: 4px 6px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.things-rings-zone-cloud.pair .things-rings-zone-card {
+  padding: 3px 7px;
+  font-size: 11px;
+  background: #ffffff;
+  border-color: #e5e7eb;
+  box-shadow: none;
+  text-shadow: none;
+}
+
+.things-rings-zone {
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(8px);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.09);
+  z-index: 1;
+}
+
+.things-rings-zone:not(.outside) {
+  position: absolute;
+  left: var(--zone-x);
+  top: var(--zone-y);
+  width: var(--zone-w);
+  transform: translate(-50%, -50%);
+}
+
+.things-rings-zone.clickable {
+  cursor: pointer;
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+
+.things-rings-zone.clickable:hover {
+  transform: translate(-50%, calc(-50% - 2px));
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 16px 28px rgba(37, 99, 235, 0.14);
+}
+
+.things-rings-zone.selected {
+  border-color: rgba(37, 99, 235, 0.72);
+  background: rgba(239, 246, 255, 0.94);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.16), 0 16px 28px rgba(37, 99, 235, 0.16);
+}
+
+.things-rings-zone.outside {
+  position: relative;
+  width: min(100%, 1020px);
+  margin: 0 auto;
+  min-height: 132px;
+  border-style: dashed;
+  background: rgba(248, 250, 252, 0.92);
+}
+
+.things-rings-zone.outside.clickable:hover {
+  transform: none;
+}
+
+.things-rings-outside-wrap {
+  width: min(100%, 1020px);
+  margin: 0 auto;
+}
+
+.things-rings-zone-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.things-rings-zone-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.25;
+}
+
+.things-rings-zone-count {
+  flex: none;
+  min-width: 24px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.08);
+  color: #334155;
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.things-rings-zone-subtitle {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.things-rings-zone-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-content: flex-start;
+  overflow: hidden;
+  max-height: 74px;
+}
+
+.things-rings-zone.outside .things-rings-zone-cards {
+  max-height: 96px;
+}
+
+.things-rings-zone-card {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  font-size: 12px;
+  color: #1f2937;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  position: relative;
+  z-index: 2;
+}
+
+.things-rings-zone-card.clue {
+  background: #fef3c7;
+  border-color: #fcd34d;
+  color: #92400e;
+}
+
+.things-rings-zone-card.pending {
+  background: #ede9fe;
+  border-style: dashed;
+  border-color: #8b5cf6;
+  color: #5b21b6;
+}
+
+.things-rings-zone-empty {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.things-rings-zone-footer {
+  margin-top: auto;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.things-rings-zone-more-btn {
+  border: 1px solid rgba(59, 130, 246, 0.24);
+  border-radius: 999px;
+  background: rgba(239, 246, 255, 0.95);
+  color: #1d4ed8;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
+}
+
+.things-rings-zone-more-btn:hover {
+  background: rgba(219, 234, 254, 0.98);
+}
+
+.things-rings-decision-card {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  color: #9a3412;
+  margin-bottom: 10px;
+}
+
+.things-rings-decision-card-name {
+  font-weight: 800;
+}
+
+.things-rings-decision-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.things-rings-decision-meta-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(253, 186, 116, 0.85);
+  color: #9a3412;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.things-rings-decision-meta-chip.subtle {
+  color: #7c2d12;
+  background: rgba(255, 247, 237, 0.92);
+}
+
+.things-rings-decision-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.things-rings-decision-row {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 10px 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.things-rings-decision-header {
+  font-size: 12px;
+  font-weight: 700;
+  color: #9a3412;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.things-rings-decision-rule {
+  font-size: 14px;
+  color: #111827;
+  font-weight: 600;
+}
+
+.things-rings-decision-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.things-rings-decision-btn {
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.things-rings-decision-btn.selected {
+  border-color: #ea580c;
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.things-rings-auto-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.things-rings-auto-chip.yes {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.things-rings-auto-chip.no {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.things-rings-header-btn {
+  padding: 4px 10px;
+  font-size: 13px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #f9fafb;
+  cursor: pointer;
+}
+
+.things-rings-header-btn:hover {
+  background: #f3f4f6;
+}
+
+.things-rings-header-btn.active {
+  background: #ffedd5;
+  border-color: #f97316;
+  color: #9a3412;
+}
+
+body.things-rings-explain-mode .has-explanation[data-things-rings-explain-key] {
+  outline: 2px dashed #f97316;
+  outline-offset: 2px;
+  cursor: help;
+}
+
+body.things-rings-explain-mode .has-explanation[data-things-rings-explain-key]:hover {
+  outline-color: #c2410c;
+  outline-style: solid;
+}
+
+.things-rings-help-modal {
+  max-width: 720px;
+}
+
+.things-rings-explain-modal {
+  max-width: 520px;
+}
+
+.things-rings-zone-modal {
+  max-width: 620px;
+}
+
+.things-rings-zone-modal-subtitle {
+  margin-bottom: 12px;
+  color: #475569;
+  font-size: 14px;
+}
+
+.things-rings-zone-modal-list {
+  display: grid;
+  gap: 8px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.things-rings-zone-modal-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.things-rings-zone-modal-item .things-rings-zone-card {
+  margin-right: auto;
+}
+
+.things-rings-zone-modal-badge {
+  flex: none;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.things-rings-zone-modal-badge.clue {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.things-rings-zone-modal-badge.pending {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.things-rings-help-content {
+  max-height: 70vh;
+  overflow-y: auto;
+  line-height: 1.6;
+}
+
+.things-rings-help-content h3 {
+  margin: 16px 0 8px;
+  font-size: 16px;
+  color: #111827;
+}
+
+#thingsInRingsExplainContent {
+  line-height: 1.6;
+}
+
+#thingsInRingsExplainContent h4 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: #111827;
+}
+
+#thingsInRingsExplainContent p {
+  margin: 6px 0;
+  color: #374151;
+}
+
+#thingsInRingsExplainContent .things-rings-explain-swatch-row {
+  margin-top: 10px;
+}
+
+#thingsInRingsExplainContent .things-rings-zone-card.explain-swatch {
+  max-width: none;
+}
+
+#thingsInRingsExplainContent .explain-cost {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 8px;
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+@media (max-width: 720px) {
+  .things-rings-ring-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .things-rings-board-stage {
+    --things-rings-board-lift: -8px;
+    width: 100%;
+    border-radius: 24px;
+  }
+
+  .things-rings-board-shell.ring-count-1 .things-rings-board-stage {
+    aspect-ratio: 1 / 1.08;
+  }
+
+  .things-rings-board-shell.ring-count-2 .things-rings-board-stage {
+    aspect-ratio: 1 / 0.96;
+  }
+
+  .things-rings-board-shell.ring-count-3 .things-rings-board-stage {
+    aspect-ratio: 1 / 0.9;
+  }
+
+  .things-rings-zone-hitbox {
+    border-radius: 16px;
+  }
+
+  .things-rings-zone-cloud {
+    max-width: max(84px, var(--zone-cloud-max-width, var(--zone-w)));
+  }
+
+  .things-rings-zone-cloud.pair {
+    width: auto;
+    max-width: max(84px, var(--zone-cloud-max-width, var(--zone-w)));
+  }
+
+  .things-rings-zone-title {
+    font-size: 12px;
+  }
+
+  .things-rings-zone-subtitle {
+    font-size: 11px;
+  }
+
+  .things-rings-zone-card {
+    font-size: 8px;
+    padding: 2px 5px;
+  }
+
+  .things-rings-zone-cloud.pair .things-rings-zone-card {
+    font-size: 8px;
+    padding: 2px 5px;
+  }
+
+  .things-rings-zone-more-btn {
+    font-size: 9px;
+    padding: 3px 6px;
+  }
+
+  .things-rings-circle-label {
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+
+  .things-rings-decision-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .things-rings-decision-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .things-rings-decision-card-meta {
+    display: grid;
+  }
+
+  .things-rings-card {
+    width: auto;
+  }
+}
+}

@@ -1,0 +1,368 @@
+/* Loaded into the matching style.css groups by loadGameStyleFragments. */
+@media all, obg-game-scout-1 {
+
+.scout-header-btn {
+  padding: 8px 14px;
+  border: 1px solid #f59e0b;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #fff7ed, #fde68a);
+  color: #9a3412;
+  font-weight: 700;
+}
+
+.scout-header-btn:hover {
+  background: linear-gradient(135deg, #fffbeb, #fcd34d);
+}
+
+.scout-header-btn.active {
+  background: linear-gradient(135deg, #dc2626, #f59e0b);
+  color: #fff7ed;
+  border-color: #dc2626;
+}
+
+body.scout-explain-mode [data-scout-explain].has-explanation {
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.45);
+  cursor: help;
+}
+
+.scout-help-modal,
+.scout-explain-modal {
+  max-width: 780px;
+}
+
+.scout-help-content h3 {
+  margin: 14px 0 8px;
+  color: #9a3412;
+}
+
+.scout-explain-content h4 {
+  margin: 0 0 10px;
+  color: #9a3412;
+}
+
+.scout-help-content p,
+.scout-help-content li,
+.scout-explain-content p,
+.scout-explain-content li {
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.scout-help-content ul,
+.scout-explain-content ul {
+  margin: 8px 0 0 20px;
+}
+
+.scout-explain-list strong {
+  color: #7f1d1d;
+}
+
+#scoutPanel {
+  --scout-red: #b91c1c;
+  --scout-red-dark: #7f1d1d;
+  --scout-gold: #f59e0b;
+  --scout-cream: #fff7ed;
+  --scout-sand: #fef3c7;
+  --scout-ink: #1f2937;
+}
+
+.scout-opening {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.scout-opening-card,
+.scout-active-set,
+.scout-hand-shell,
+.scout-preview-area,
+.scout-player-card {
+  border: 1px solid rgba(185, 28, 28, 0.16);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at top right, rgba(245, 158, 11, 0.18), transparent 32%),
+    linear-gradient(180deg, #fffdf8 0%, #fff7ed 100%);
+  box-shadow: 0 12px 30px rgba(127, 29, 29, 0.08);
+}
+
+.scout-opening-card {
+  padding: 14px;
+}
+
+.scout-opening-title,
+.scout-active-meta {
+  margin-bottom: 10px;
+  font-weight: 700;
+  color: var(--scout-red-dark);
+}
+
+.scout-opening-note,
+.scout-empty-state {
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #fff7ed, #fef3c7);
+  color: #7c2d12;
+}
+
+.scout-card-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.scout-card-row.compact {
+  gap: 8px;
+}
+
+.scout-card-row.insert-mode {
+  gap: 6px;
+}
+
+.scout-card {
+  position: relative;
+  width: 70px;
+  height: 98px;
+  border-radius: 14px;
+  border: 2px solid rgba(127, 29, 29, 0.12);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 247, 237, 0.98)),
+    linear-gradient(135deg, rgba(185, 28, 28, 0.08), rgba(245, 158, 11, 0.12));
+  color: var(--scout-ink);
+  box-shadow: 0 10px 18px rgba(127, 29, 29, 0.08);
+}
+
+.scout-card.clickable {
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+
+.scout-card.clickable:hover {
+  transform: translateY(-2px);
+  border-color: rgba(185, 28, 28, 0.38);
+  box-shadow: 0 14px 24px rgba(127, 29, 29, 0.14);
+}
+
+.scout-card.selected {
+  border-color: var(--scout-red);
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.2), 0 14px 26px rgba(127, 29, 29, 0.16);
+}
+
+.scout-card-face-selection {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  height: calc(50% - 5px);
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.16), rgba(245, 158, 11, 0.2));
+  box-shadow: inset 0 0 0 2px rgba(185, 28, 28, 0.28);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.scout-card-face-selection.top {
+  top: 4px;
+  border-radius: 10px 10px 8px 8px;
+}
+
+.scout-card-face-selection.bottom {
+  bottom: 4px;
+  border-radius: 8px 8px 10px 10px;
+}
+
+.scout-card-split-line {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 50%;
+  border-top: 1px dashed rgba(127, 29, 29, 0.28);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.scout-card.ghost {
+  border-style: dashed;
+  background:
+    linear-gradient(180deg, rgba(255, 249, 235, 0.95), rgba(254, 243, 199, 0.98)),
+    linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(185, 28, 28, 0.06));
+}
+
+.scout-card-current {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--scout-red-dark);
+  z-index: 1;
+}
+
+.scout-card-back {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  font-size: 17px;
+  font-weight: 700;
+  opacity: 0.8;
+  z-index: 1;
+}
+
+.scout-card-edge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  min-width: 22px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #dc2626, #f59e0b);
+  color: #fff7ed;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+  z-index: 2;
+}
+
+.scout-actions {
+  gap: 10px;
+  margin: 16px 0 12px;
+  flex-wrap: wrap;
+}
+
+.scout-actions button {
+  min-width: 152px;
+}
+
+.scout-hand-shell,
+.scout-preview-area,
+.scout-active-set {
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.scout-hand-board {
+  display: grid;
+  gap: 12px;
+}
+
+.scout-hand-board.preview {
+  margin-top: 12px;
+}
+
+.scout-gap-btn {
+  width: 24px;
+  min-width: 24px;
+  height: 44px;
+  padding: 0;
+  border: 1px dashed rgba(185, 28, 28, 0.26);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--scout-red-dark);
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+}
+
+.scout-gap-btn.selected {
+  border-style: solid;
+  background: linear-gradient(135deg, #dc2626, #f59e0b);
+  color: #fff7ed;
+}
+
+.scout-preview-meta,
+.scout-preview-selection {
+  color: #7c2d12;
+  font-weight: 600;
+}
+
+.scout-preview-selection {
+  margin-top: 12px;
+}
+
+.scout-summary-list,
+.scout-players {
+  display: grid;
+  gap: 10px;
+}
+
+.scout-summary-item {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.78);
+  color: #4b5563;
+}
+
+.scout-summary-item.winner {
+  background: linear-gradient(135deg, #fef3c7, #fed7aa);
+  color: #9a3412;
+  font-weight: 700;
+}
+
+.scout-player-card {
+  padding: 14px 16px;
+}
+
+.scout-player-card.current {
+  border-color: rgba(185, 28, 28, 0.34);
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.14), 0 16px 28px rgba(127, 29, 29, 0.12);
+}
+
+.scout-player-card.starter {
+  background:
+    radial-gradient(circle at top right, rgba(245, 158, 11, 0.28), transparent 36%),
+    linear-gradient(180deg, #fffdf8 0%, #fff7ed 100%);
+}
+
+.scout-player-stats {
+  margin-top: 8px;
+  color: #4b5563;
+  line-height: 1.45;
+}
+
+@media (max-width: 900px) {
+  .scout-opening {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .scout-card {
+    width: 60px;
+    height: 84px;
+  }
+
+  .scout-card-current {
+    top: 8px;
+    left: 10px;
+    font-size: 26px;
+  }
+
+  .scout-card-back {
+    font-size: 15px;
+  }
+
+  .scout-card-row.insert-mode {
+    gap: 4px;
+  }
+
+  .scout-gap-btn {
+    width: 20px;
+    min-width: 20px;
+    height: 36px;
+    font-size: 16px;
+  }
+
+  .scout-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .scout-actions button {
+    min-width: 0;
+  }
+}
+}

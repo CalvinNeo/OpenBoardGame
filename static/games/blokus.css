@@ -1,0 +1,489 @@
+/* Loaded into the matching style.css groups by loadGameStyleFragments. */
+@media all, obg-game-blokus-1 {
+
+.blokus-layout {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.blokus-layout > div {
+  flex: 0 0 auto;
+}
+
+.blokus-pieces-column {
+  margin-top: 48px;
+  position: relative;
+  z-index: 1;
+}
+
+.blokus-header-btn {
+  padding: 4px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.blokus-header-btn:hover {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.blokus-header-btn.active {
+  border-color: #2563eb;
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+body.blokus-explain-mode button.has-explanation {
+  outline: 2px dashed #2563eb;
+  outline-offset: 2px;
+  cursor: help;
+}
+
+body.blokus-explain-mode button.has-explanation:hover {
+  outline-color: #1d4ed8;
+  outline-style: solid;
+}
+
+.blokus-help-modal {
+  max-width: 700px;
+}
+
+.blokus-explain-modal {
+  max-width: 460px;
+}
+
+.blokus-help-content {
+  max-height: 70vh;
+  overflow-y: auto;
+  line-height: 1.6;
+}
+
+.blokus-help-content h3 {
+  margin: 16px 0 8px;
+  color: #111827;
+  font-size: 16px;
+}
+
+.blokus-help-content h3:first-child {
+  margin-top: 0;
+}
+
+.blokus-help-content p,
+.blokus-help-content ul {
+  margin: 8px 0;
+}
+
+.blokus-help-content ul {
+  padding-left: 20px;
+}
+
+#blokusExplainContent {
+  line-height: 1.6;
+}
+
+#blokusExplainContent h4 {
+  margin: 0 0 8px;
+  color: #111827;
+  font-size: 16px;
+}
+
+#blokusExplainContent p {
+  margin: 0;
+  color: #374151;
+}
+
+.blokus-pieces-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.blokus-pieces-header h3 {
+  margin: 0;
+}
+
+.blokus-board-wrapper {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  max-width: 100%;
+  vertical-align: top;
+}
+
+.blokus-board-stage {
+  position: relative;
+  align-self: flex-start;
+  max-width: 100%;
+}
+
+.blokus-board {
+  --blokus-cell: 18px;
+  --blokus-gap: 1px;
+  --blokus-pad: 6px;
+  display: grid;
+  grid-template-columns: repeat(20, var(--blokus-cell));
+  grid-auto-rows: var(--blokus-cell);
+  gap: var(--blokus-gap);
+  background: #d1d5db;
+  padding: var(--blokus-pad);
+  border-radius: 6px;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.blokus-board-controls {
+  display: grid;
+  flex: 0 0 132px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "transform"
+    "place"
+    "nudge"
+    "hint";
+  gap: 7px;
+  width: 132px;
+  padding: 9px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: linear-gradient(145deg, #ffffff, #f1f5f9);
+  box-shadow: 0 5px 14px rgba(15, 23, 42, 0.1);
+}
+
+.blokus-board-controls.hidden {
+  display: none;
+}
+
+.blokus-control-btn {
+  display: inline-flex;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 8px;
+  border: 1px solid #94a3b8;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 13px;
+  touch-action: manipulation;
+}
+
+.blokus-control-btn:hover:not(:disabled) {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.blokus-control-btn:active:not(:disabled) {
+  transform: translateY(1px);
+  background: #dbeafe;
+}
+
+.blokus-transform-controls {
+  grid-area: transform;
+  display: flex;
+  gap: 5px;
+  min-width: 0;
+}
+
+.blokus-control-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.blokus-control-text {
+  display: none;
+}
+
+.blokus-place-control {
+  grid-area: place;
+  min-height: 40px;
+  border-radius: 8px;
+  font-weight: 700;
+  touch-action: manipulation;
+}
+
+.blokus-nudge-section {
+  grid-area: nudge;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.blokus-control-label {
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.blokus-nudge-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 36px);
+  grid-template-rows: repeat(3, 36px);
+  gap: 3px;
+  align-items: center;
+  justify-items: center;
+}
+
+.blokus-nudge-btn {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.blokus-nudge-center {
+  grid-column: 2;
+  grid-row: 2;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 50%;
+  color: #64748b;
+  background: #e2e8f0;
+  font-size: 17px;
+}
+
+.blokus-nudge-up {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.blokus-nudge-left {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.blokus-nudge-right {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+.blokus-nudge-down {
+  grid-column: 2;
+  grid-row: 3;
+}
+
+.blokus-controls-hint {
+  grid-area: hint;
+  color: #64748b;
+  font-size: 10px;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.blokus-piece-pivot {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  border: 2px solid #0f172a;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.72);
+  z-index: 3;
+}
+
+.blokus-piece-pivot::before,
+.blokus-piece-pivot::after {
+  position: absolute;
+  content: "";
+  background: #0f172a;
+}
+
+.blokus-piece-pivot::before {
+  top: 4px;
+  left: -4px;
+  width: 18px;
+  height: 2px;
+}
+
+.blokus-piece-pivot::after {
+  top: -4px;
+  left: 4px;
+  width: 2px;
+  height: 18px;
+}
+
+.blokus-cell {
+  width: 100%;
+  height: 100%;
+  background: #f9fafb;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.blokus-board.dragging .blokus-cell {
+  cursor: grabbing;
+}
+
+.blokus-cell.ghost {
+  touch-action: none;
+  opacity: 0.35;
+  outline: 1px dashed #6b7280;
+  outline-offset: -2px;
+}
+
+.blokus-cell.selected {
+  outline: 2px solid #111827;
+  outline-offset: -1px;
+}
+
+.blokus-cell.blue {
+  background: #2563eb;
+}
+
+.blokus-cell.yellow {
+  background: #fbbf24;
+}
+
+.blokus-cell.red {
+  background: #dc2626;
+}
+
+.blokus-cell.green {
+  background: #16a34a;
+}
+
+.blokus-pieces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 320px;
+}
+
+.blokus-piece {
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  padding: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.blokus-piece.selected {
+  border-color: #1f6feb;
+  box-shadow: 0 0 0 2px rgba(31, 111, 235, 0.2);
+}
+
+.blokus-piece-label {
+  font-size: 11px;
+  color: #374151;
+}
+
+.blokus-piece-grid {
+  display: grid;
+  gap: 1px;
+}
+
+.blokus-piece-cell {
+  width: 10px;
+  height: 10px;
+  background: #6b7280;
+  border-radius: 2px;
+}
+
+@media (max-width: 900px) {
+  .blokus-layout {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .blokus-pieces-column {
+    margin-top: 0;
+  }
+
+  .blokus-layout > div {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .blokus-board-wrapper {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    margin: 0;
+  }
+
+  .blokus-board-stage {
+    width: 100%;
+  }
+
+  .blokus-board {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border: 1px solid #94a3b8;
+    background: #94a3b8;
+    --blokus-pad: 0px;
+    --blokus-gap: 1px;
+    --blokus-cell: calc((100% - (19 * var(--blokus-gap))) / 20);
+    overflow: hidden;
+  }
+
+  .blokus-pieces {
+    max-width: none;
+  }
+
+  .blokus-board-controls {
+    flex: 0 0 auto;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "transform nudge"
+      "place nudge"
+      "hint hint";
+    gap: 7px 10px;
+    width: 100%;
+    padding: 8px;
+  }
+
+  .blokus-cell {
+    background: #ffffff;
+    border-radius: 1px;
+  }
+}
+
+@media (max-width: 420px) {
+  .blokus-board-controls {
+    gap: 6px 8px;
+  }
+
+  .blokus-nudge-grid {
+    grid-template-columns: repeat(3, 40px);
+    grid-template-rows: repeat(3, 40px);
+  }
+
+  .blokus-nudge-btn {
+    width: 40px;
+    height: 40px;
+    min-height: 40px;
+  }
+
+  .blokus-controls-hint {
+    display: none;
+  }
+}
+}

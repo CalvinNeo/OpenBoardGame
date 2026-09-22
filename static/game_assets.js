@@ -1,22 +1,34 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
   "cheaty_mages": {
-    "scripts": ["/static/games/cheaty_mages.js?v=2"],
-    "styles": ["/static/cheaty_mages.css?v=1"],
+    "scripts": [
+      "/static/games/cheaty_mages.js?v=2"
+    ],
+    "styles": [
+      "/static/cheaty_mages.css?v=1"
+    ],
     "markup": "/static/games/cheaty_mages.html?v=1",
     "panel": "cheatyMagesPanel",
     "header": "showCheatyMagesHeaderActions"
   },
   "las_vegas": {
-    "scripts": ["/static/games/las_vegas.js?v=2"],
-    "styles": ["/static/las_vegas.css?v=1"],
+    "scripts": [
+      "/static/games/las_vegas.js?v=2"
+    ],
+    "styles": [
+      "/static/las_vegas.css?v=1"
+    ],
     "markup": "/static/games/las_vegas.html?v=1",
     "panel": "lasVegasPanel",
     "header": "showLasVegasHeaderActions"
   },
   "for_sale": {
-    "scripts": ["/static/games/for_sale.js?v=1"],
-    "styles": ["/static/for_sale.css?v=1"],
+    "scripts": [
+      "/static/games/for_sale.js?v=1"
+    ],
+    "styles": [
+      "/static/for_sale.css?v=1"
+    ],
     "panel": "forSalePanel",
     "header": "showForSaleHeaderActions"
   },
@@ -27,7 +39,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "blokusPanel",
     "header": "showBlokusHeaderActions",
-    "markup": "/static/games/blokus.html?v=1"
+    "markup": "/static/games/blokus.html?v=1",
+    "styleFragments": "/static/games/blokus.css?v=1"
   },
   "carcassonne": {
     "scripts": [
@@ -36,7 +49,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "carcassonnePanel",
     "header": "showCarcassonneHeaderActions",
-    "markup": "/static/games/carcassonne.html?v=1"
+    "markup": "/static/games/carcassonne.html?v=1",
+    "styleFragments": "/static/games/carcassonne.css?v=1"
   },
   "azul": {
     "scripts": [
@@ -45,7 +59,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "azulPanel",
     "header": "showAzulHeaderActions",
-    "markup": "/static/games/azul.html?v=1"
+    "markup": "/static/games/azul.html?v=1",
+    "styleFragments": "/static/games/azul.css?v=1"
   },
   "draw_guess": {
     "scripts": [
@@ -53,7 +68,8 @@ const GAME_ASSETS = {
     ],
     "styles": [],
     "panel": "drawGuessPanel",
-    "markup": "/static/games/draw_guess.html?v=1"
+    "markup": "/static/games/draw_guess.html?v=1",
+    "styleFragments": "/static/games/draw_guess.css?v=1"
   },
   "cyber_pictures": {
     "scripts": [
@@ -61,7 +77,8 @@ const GAME_ASSETS = {
     ],
     "styles": [],
     "panel": "cyberPicturesPanel",
-    "markup": "/static/games/cyber_pictures.html?v=1"
+    "markup": "/static/games/cyber_pictures.html?v=1",
+    "styleFragments": "/static/games/cyber_pictures.css?v=1"
   },
   "blitz_sketch": {
     "scripts": [
@@ -69,7 +86,8 @@ const GAME_ASSETS = {
     ],
     "styles": [],
     "panel": "blitzSketchPanel",
-    "markup": "/static/games/blitz_sketch.html?v=1"
+    "markup": "/static/games/blitz_sketch.html?v=1",
+    "styleFragments": "/static/games/blitz_sketch.css?v=1"
   },
   "fake_artist": {
     "scripts": [
@@ -78,7 +96,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "fakeArtistPanel",
     "header": "showFakeArtistHeaderActions",
-    "markup": "/static/games/fake_artist.html?v=1"
+    "markup": "/static/games/fake_artist.html?v=1",
+    "styleFragments": "/static/games/fake_artist.css?v=1"
   },
   "things_in_rings": {
     "scripts": [
@@ -87,7 +106,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "thingsInRingsPanel",
     "header": "showThingsInRingsHeaderActions",
-    "markup": "/static/games/things_in_rings.html?v=1"
+    "markup": "/static/games/things_in_rings.html?v=1",
+    "styleFragments": "/static/games/things_in_rings.css?v=1"
   },
   "impression_flower": {
     "scripts": [
@@ -95,7 +115,8 @@ const GAME_ASSETS = {
     ],
     "styles": [],
     "panel": "impressionFlowerPanel",
-    "markup": "/static/games/impression_flower.html?v=1"
+    "markup": "/static/games/impression_flower.html?v=1",
+    "styleFragments": "/static/games/impression_flower.css?v=1"
   },
   "gizmos": {
     "scripts": [
@@ -106,7 +127,8 @@ const GAME_ASSETS = {
     ],
     "panel": "gizmosPanel",
     "header": "showGizmosHeaderActions",
-    "markup": "/static/games/gizmos.html?v=1"
+    "markup": "/static/games/gizmos.html?v=1",
+    "styleFragments": "/static/games/gizmos.css?v=1"
   },
   "century_spice_road": {
     "scripts": [
@@ -115,7 +137,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "centurySpiceRoadPanel",
     "header": "showCenturyHeaderActions",
-    "markup": "/static/games/century_spice_road.html?v=1"
+    "markup": "/static/games/century_spice_road.html?v=1",
+    "styleFragments": "/static/games/century_spice_road.css?v=1"
   },
   "splendor": {
     "scripts": [
@@ -132,7 +155,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "pokemonSplendorPanel",
     "header": "showPokemonSplendorHeaderActions",
-    "markup": "/static/games/splendor_pokemon.html?v=1"
+    "markup": "/static/games/splendor_pokemon.html?v=1",
+    "styleFragments": "/static/games/splendor_pokemon.css?v=1"
   },
   "project_l": {
     "scripts": [
@@ -141,7 +165,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "projectLPanel",
     "header": "showProjectLHeaderActions",
-    "markup": "/static/games/project_l.html?v=1"
+    "markup": "/static/games/project_l.html?v=1",
+    "styleFragments": "/static/games/project_l.css?v=1"
   },
   "decrypto": {
     "scripts": [
@@ -150,7 +175,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "decryptoPanel",
     "header": "showDecryptoHeaderActions",
-    "markup": "/static/games/decrypto.html?v=1"
+    "markup": "/static/games/decrypto.html?v=1",
+    "styleFragments": "/static/games/decrypto.css?v=1"
   },
   "wavelength": {
     "scripts": [
@@ -159,7 +185,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "wavelengthPanel",
     "header": "showWavelengthHeaderActions",
-    "markup": "/static/games/wavelength.html?v=1"
+    "markup": "/static/games/wavelength.html?v=1",
+    "styleFragments": "/static/games/wavelength.css?v=1"
   },
   "dumb_questions": {
     "scripts": [
@@ -168,7 +195,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "dumbQuestionsPanel",
     "header": "showDumbQuestionsHeaderActions",
-    "markup": "/static/games/dumb_questions.html?v=1"
+    "markup": "/static/games/dumb_questions.html?v=1",
+    "styleFragments": "/static/games/dumb_questions.css?v=1"
   },
   "nine_upper": {
     "scripts": [
@@ -177,7 +205,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "nineUpperPanel",
     "header": "showNineUpperHeaderActions",
-    "markup": "/static/games/nine_upper.html?v=1"
+    "markup": "/static/games/nine_upper.html?v=1",
+    "styleFragments": "/static/games/nine_upper.css?v=1"
   },
   "word_decode": {
     "scripts": [
@@ -186,7 +215,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "wordDecodePanel",
     "header": "showWordDecodeHeaderActions",
-    "markup": "/static/games/word_decode.html?v=1"
+    "markup": "/static/games/word_decode.html?v=1",
+    "styleFragments": "/static/games/word_decode.css?v=1"
   },
   "trekking_history": {
     "scripts": [
@@ -195,7 +225,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "trekkingPanel",
     "header": "showTrekkingHeaderActions",
-    "markup": "/static/games/trekking_history.html?v=1"
+    "markup": "/static/games/trekking_history.html?v=1",
+    "styleFragments": "/static/games/trekking_history.css?v=1"
   },
   "aidixit": {
     "scripts": [
@@ -203,7 +234,8 @@ const GAME_ASSETS = {
     ],
     "styles": [],
     "panel": "aidixitPanel",
-    "markup": "/static/games/aidixit.html?v=1"
+    "markup": "/static/games/aidixit.html?v=1",
+    "styleFragments": "/static/games/aidixit.css?v=1"
   },
   "hanabi": {
     "scripts": [
@@ -211,7 +243,8 @@ const GAME_ASSETS = {
     ],
     "styles": [],
     "panel": "hanabiPanel",
-    "markup": "/static/games/hanabi.html?v=1"
+    "markup": "/static/games/hanabi.html?v=1",
+    "styleFragments": "/static/games/hanabi.css?v=1"
   },
   "the_gang": {
     "scripts": [
@@ -220,7 +253,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "theGangPanel",
     "header": "showGangHeaderActions",
-    "markup": "/static/games/the_gang.html?v=1"
+    "markup": "/static/games/the_gang.html?v=1",
+    "styleFragments": "/static/games/the_gang.css?v=1"
   },
   "cat_in_box": {
     "scripts": [
@@ -229,7 +263,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "catInBoxPanel",
     "header": "showCatInBoxHeaderActions",
-    "markup": "/static/games/cat_in_box.html?v=1"
+    "markup": "/static/games/cat_in_box.html?v=1",
+    "styleFragments": "/static/games/cat_in_box.css?v=1"
   },
   "point_salad": {
     "scripts": [
@@ -238,7 +273,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "pointSaladPanel",
     "header": "showPointSaladHeaderActions",
-    "markup": "/static/games/point_salad.html?v=1"
+    "markup": "/static/games/point_salad.html?v=1",
+    "styleFragments": "/static/games/point_salad.css?v=1"
   },
   "forest_shuffle": {
     "scripts": [
@@ -247,7 +283,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "forestShufflePanel",
     "header": "showForestShuffleHeaderActions",
-    "markup": "/static/games/forest_shuffle.html?v=1"
+    "markup": "/static/games/forest_shuffle.html?v=1",
+    "styleFragments": "/static/games/forest_shuffle.css?v=1"
   },
   "patchwork": {
     "scripts": [
@@ -256,7 +293,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "patchworkPanel",
     "header": "showPatchworkHeaderActions",
-    "markup": "/static/games/patchwork.html?v=1"
+    "markup": "/static/games/patchwork.html?v=1",
+    "styleFragments": "/static/games/patchwork.css?v=1"
   },
   "isle_of_skye": {
     "scripts": [
@@ -265,7 +303,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "skyePanel",
     "header": "showSkyeHeaderActions",
-    "markup": "/static/games/isle_of_skye.html?v=1"
+    "markup": "/static/games/isle_of_skye.html?v=1",
+    "styleFragments": "/static/games/isle_of_skye.css?v=1"
   },
   "six_nimmt": {
     "scripts": [
@@ -273,7 +312,8 @@ const GAME_ASSETS = {
     ],
     "styles": [],
     "panel": "sixNimmtPanel",
-    "markup": "/static/games/six_nimmt.html?v=1"
+    "markup": "/static/games/six_nimmt.html?v=1",
+    "styleFragments": "/static/games/six_nimmt.css?v=1"
   },
   "skull": {
     "scripts": [
@@ -292,7 +332,8 @@ const GAME_ASSETS = {
       "/static/rebel_princess.css?v=4"
     ],
     "panel": "rebelPrincessPanel",
-    "markup": "/static/games/rebel_princess.html?v=1"
+    "markup": "/static/games/rebel_princess.html?v=1",
+    "styleFragments": "/static/games/rebel_princess.css?v=1"
   },
   "guandan": {
     "scripts": [
@@ -301,7 +342,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "guandanPanel",
     "header": "showGuandanHeaderActions",
-    "markup": "/static/games/guandan.html?v=1"
+    "markup": "/static/games/guandan.html?v=1",
+    "styleFragments": "/static/games/guandan.css?v=1"
   },
   "cabo": {
     "scripts": [
@@ -309,7 +351,8 @@ const GAME_ASSETS = {
     ],
     "styles": [],
     "panel": "caboPanel",
-    "markup": "/static/games/cabo.html?v=1"
+    "markup": "/static/games/cabo.html?v=1",
+    "styleFragments": "/static/games/cabo.css?v=1"
   },
   "flip7": {
     "scripts": [
@@ -317,7 +360,8 @@ const GAME_ASSETS = {
     ],
     "styles": [],
     "panel": "flip7Panel",
-    "markup": "/static/games/flip7.html?v=1"
+    "markup": "/static/games/flip7.html?v=1",
+    "styleFragments": "/static/games/flip7.css?v=1"
   },
   "hot_streak": {
     "scripts": [
@@ -326,7 +370,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "hotStreakPanel",
     "header": "showHotStreakHeaderActions",
-    "markup": "/static/games/hot_streak.html?v=1"
+    "markup": "/static/games/hot_streak.html?v=1",
+    "styleFragments": "/static/games/hot_streak.css?v=1"
   },
   "acquire": {
     "scripts": [
@@ -335,7 +380,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "acquirePanel",
     "header": "showAcquireHeaderActions",
-    "markup": "/static/games/acquire.html?v=1"
+    "markup": "/static/games/acquire.html?v=1",
+    "styleFragments": "/static/games/acquire.css?v=1"
   },
   "abraca_what": {
     "scripts": [
@@ -344,7 +390,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "abracaPanel",
     "header": "showAbracaHeaderActions",
-    "markup": "/static/games/abraca_what.html?v=1"
+    "markup": "/static/games/abraca_what.html?v=1",
+    "styleFragments": "/static/games/abraca_what.css?v=1"
   },
   "fang_niao": {
     "scripts": [
@@ -353,7 +400,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "fangNiaoPanel",
     "header": "showFangNiaoHeaderActions",
-    "markup": "/static/games/fang_niao.html?v=1"
+    "markup": "/static/games/fang_niao.html?v=1",
+    "styleFragments": "/static/games/fang_niao.css?v=1"
   },
   "perfect_mismatch": {
     "scripts": [
@@ -361,7 +409,8 @@ const GAME_ASSETS = {
     ],
     "styles": [],
     "panel": "mismatchPanel",
-    "markup": "/static/games/perfect_mismatch.html?v=1"
+    "markup": "/static/games/perfect_mismatch.html?v=1",
+    "styleFragments": "/static/games/perfect_mismatch.css?v=1"
   },
   "coyote": {
     "scripts": [
@@ -369,7 +418,8 @@ const GAME_ASSETS = {
     ],
     "styles": [],
     "panel": "coyotePanel",
-    "markup": "/static/games/coyote.html?v=1"
+    "markup": "/static/games/coyote.html?v=1",
+    "styleFragments": "/static/games/coyote.css?v=1"
   },
   "in_a_grove": {
     "scripts": [
@@ -378,7 +428,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "inAGrovePanel",
     "header": "showInAGroveHeaderActions",
-    "markup": "/static/games/in_a_grove.html?v=1"
+    "markup": "/static/games/in_a_grove.html?v=1",
+    "styleFragments": "/static/games/in_a_grove.css?v=1"
   },
   "citadels": {
     "scripts": [
@@ -387,7 +438,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "citadelsPanel",
     "header": "showCitadelsHeaderActions",
-    "markup": "/static/games/citadels.html?v=1"
+    "markup": "/static/games/citadels.html?v=1",
+    "styleFragments": "/static/games/citadels.css?v=1"
   },
   "tagiron": {
     "scripts": [
@@ -396,7 +448,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "tagironPanel",
     "header": "showTagironHeaderActions",
-    "markup": "/static/games/tagiron.html?v=1"
+    "markup": "/static/games/tagiron.html?v=1",
+    "styleFragments": "/static/games/tagiron.css?v=1"
   },
   "davinci_code": {
     "scripts": [
@@ -405,7 +458,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "davinciCodePanel",
     "header": "showDaVinciCodeHeaderActions",
-    "markup": "/static/games/davinci_code.html?v=1"
+    "markup": "/static/games/davinci_code.html?v=1",
+    "styleFragments": "/static/games/davinci_code.css?v=1"
   },
   "lost_code": {
     "scripts": [
@@ -414,16 +468,20 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "lostCodePanel",
     "header": "showLostCodeHeaderActions",
-    "markup": "/static/games/lost_code.html?v=1"
+    "markup": "/static/games/lost_code.html?v=1",
+    "styleFragments": "/static/games/lost_code.css?v=1"
   },
   "criminal_dance": {
     "scripts": [
       "/static/games/criminal_dance.js?v=app_v5"
     ],
-    "styles": ["/static/criminal_dance.css?v=1"],
+    "styles": [
+      "/static/criminal_dance.css?v=1"
+    ],
     "panel": "criminalDancePanel",
     "header": "showCriminalDanceHeaderActions",
-    "markup": "/static/games/criminal_dance.html?v=2"
+    "markup": "/static/games/criminal_dance.html?v=2",
+    "styleFragments": "/static/games/criminal_dance.css?v=1"
   },
   "turing_machine": {
     "scripts": [
@@ -432,7 +490,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "turingMachinePanel",
     "header": "showTuringMachineHeaderActions",
-    "markup": "/static/games/turing_machine.html?v=1"
+    "markup": "/static/games/turing_machine.html?v=1",
+    "styleFragments": "/static/games/turing_machine.css?v=1"
   },
   "kronologic": {
     "scripts": [
@@ -441,7 +500,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "kronologicPanel",
     "header": "showKronologicHeaderActions",
-    "markup": "/static/games/kronologic.html?v=1"
+    "markup": "/static/games/kronologic.html?v=1",
+    "styleFragments": "/static/games/kronologic.css?v=1"
   },
   "halli_galli": {
     "scripts": [
@@ -449,7 +509,8 @@ const GAME_ASSETS = {
     ],
     "styles": [],
     "panel": "halliPanel",
-    "markup": "/static/games/halli_galli.html?v=1"
+    "markup": "/static/games/halli_galli.html?v=1",
+    "styleFragments": "/static/games/halli_galli.css?v=1"
   },
   "texas_holdem": {
     "scripts": [
@@ -457,7 +518,8 @@ const GAME_ASSETS = {
     ],
     "styles": [],
     "panel": "texasHoldemPanel",
-    "markup": "/static/games/texas_holdem.html?v=1"
+    "markup": "/static/games/texas_holdem.html?v=1",
+    "styleFragments": "/static/games/texas_holdem.css?v=1"
   },
   "yahtzee": {
     "scripts": [
@@ -465,7 +527,8 @@ const GAME_ASSETS = {
     ],
     "styles": [],
     "panel": "yahtzeePanel",
-    "markup": "/static/games/yahtzee.html?v=1"
+    "markup": "/static/games/yahtzee.html?v=1",
+    "styleFragments": "/static/games/yahtzee.css?v=1"
   },
   "istanbul": {
     "scripts": [
@@ -477,7 +540,8 @@ const GAME_ASSETS = {
     ],
     "panel": "istanbulPanel",
     "header": "showIstanbulHeaderActions",
-    "markup": "/static/games/istanbul.html?v=1"
+    "markup": "/static/games/istanbul.html?v=1",
+    "styleFragments": "/static/games/istanbul.css?v=1"
   },
   "gold_rush": {
     "scripts": [
@@ -486,7 +550,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "goldRushPanel",
     "header": "showGoldRushHeaderActions",
-    "markup": "/static/games/gold_rush.html?v=1"
+    "markup": "/static/games/gold_rush.html?v=1",
+    "styleFragments": "/static/games/gold_rush.css?v=1"
   },
   "age_of_war": {
     "scripts": [
@@ -495,7 +560,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "ageOfWarPanel",
     "header": "showAgeOfWarHeaderActions",
-    "markup": "/static/games/age_of_war.html?v=1"
+    "markup": "/static/games/age_of_war.html?v=1",
+    "styleFragments": "/static/games/age_of_war.css?v=1"
   },
   "wandering_towers": {
     "scripts": [
@@ -504,7 +570,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "wanderingTowersPanel",
     "header": "showWanderingTowersHeaderActions",
-    "markup": "/static/games/wandering_towers.html?v=1"
+    "markup": "/static/games/wandering_towers.html?v=1",
+    "styleFragments": "/static/games/wandering_towers.css?v=1"
   },
   "incan_gold": {
     "scripts": [
@@ -512,7 +579,8 @@ const GAME_ASSETS = {
     ],
     "styles": [],
     "panel": "incanGoldPanel",
-    "markup": "/static/games/incan_gold.html?v=1"
+    "markup": "/static/games/incan_gold.html?v=1",
+    "styleFragments": "/static/games/incan_gold.css?v=1"
   },
   "celestia": {
     "scripts": [
@@ -521,7 +589,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "celestiaPanel",
     "header": "showCelestiaHeaderActions",
-    "markup": "/static/games/celestia.html?v=1"
+    "markup": "/static/games/celestia.html?v=1",
+    "styleFragments": "/static/games/celestia.css?v=1"
   },
   "manila": {
     "scripts": [
@@ -530,7 +599,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "manilaPanel",
     "header": "showManilaHeaderActions",
-    "markup": "/static/games/manila.html?v=1"
+    "markup": "/static/games/manila.html?v=1",
+    "styleFragments": "/static/games/manila.css?v=1"
   },
   "kobayakawa": {
     "scripts": [
@@ -538,7 +608,8 @@ const GAME_ASSETS = {
     ],
     "styles": [],
     "panel": "kobayakawaPanel",
-    "markup": "/static/games/kobayakawa.html?v=1"
+    "markup": "/static/games/kobayakawa.html?v=1",
+    "styleFragments": "/static/games/kobayakawa.css?v=1"
   },
   "high_society": {
     "scripts": [
@@ -547,7 +618,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "highSocietyPanel",
     "header": "showHighSocietyHeaderActions",
-    "markup": "/static/games/high_society.html?v=1"
+    "markup": "/static/games/high_society.html?v=1",
+    "styleFragments": "/static/games/high_society.css?v=1"
   },
   "poison": {
     "scripts": [
@@ -556,7 +628,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "poisonPanel",
     "header": "showPoisonHeaderActions",
-    "markup": "/static/games/poison.html?v=1"
+    "markup": "/static/games/poison.html?v=1",
+    "styleFragments": "/static/games/poison.css?v=1"
   },
   "bohnanza_dice": {
     "scripts": [
@@ -565,7 +638,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "bohnanzaDicePanel",
     "header": "showBohnanzaDiceHeaderActions",
-    "markup": "/static/games/bohnanza_dice.html?v=1"
+    "markup": "/static/games/bohnanza_dice.html?v=1",
+    "styleFragments": "/static/games/bohnanza_dice.css?v=1"
   },
   "emerald_skulls": {
     "scripts": [
@@ -574,7 +648,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "emeraldSkullsPanel",
     "header": "showEmeraldSkullsHeaderActions",
-    "markup": "/static/games/emerald_skulls.html?v=1"
+    "markup": "/static/games/emerald_skulls.html?v=1",
+    "styleFragments": "/static/games/emerald_skulls.css?v=1"
   },
   "wriggle_roulette": {
     "scripts": [
@@ -583,7 +658,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "wriggleRoulettePanel",
     "header": "showWriggleRouletteHeaderActions",
-    "markup": "/static/games/wriggle_roulette.html?v=1"
+    "markup": "/static/games/wriggle_roulette.html?v=1",
+    "styleFragments": "/static/games/wriggle_roulette.css?v=1"
   },
   "catan_starfarers": {
     "scripts": [
@@ -690,7 +766,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "bombBustersPanel",
     "header": "showBombBustersHeaderActions",
-    "markup": "/static/games/bomb_busters.html?v=1"
+    "markup": "/static/games/bomb_busters.html?v=1",
+    "styleFragments": "/static/games/bomb_busters.css?v=1"
   },
   "felix": {
     "scripts": [
@@ -699,7 +776,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "felixPanel",
     "header": "showFelixHeaderActions",
-    "markup": "/static/games/felix.html?v=1"
+    "markup": "/static/games/felix.html?v=1",
+    "styleFragments": "/static/games/felix.css?v=1"
   },
   "tacta": {
     "scripts": [
@@ -708,7 +786,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "tactaPanel",
     "header": "showTactaHeaderActions",
-    "markup": "/static/games/tacta.html?v=1"
+    "markup": "/static/games/tacta.html?v=1",
+    "styleFragments": "/static/games/tacta.css?v=1"
   },
   "subtext": {
     "scripts": [
@@ -717,7 +796,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "subtextPanel",
     "header": "showSubtextHeaderActions",
-    "markup": "/static/games/subtext.html?v=1"
+    "markup": "/static/games/subtext.html?v=1",
+    "styleFragments": "/static/games/subtext.css?v=1"
   },
   "tucano": {
     "scripts": [
@@ -737,7 +817,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "witchsBrewPanel",
     "header": "showWitchsBrewHeaderActions",
-    "markup": "/static/games/witchs_brew.html?v=1"
+    "markup": "/static/games/witchs_brew.html?v=1",
+    "styleFragments": "/static/games/witchs_brew.css?v=1"
   },
   "ra": {
     "scripts": [
@@ -746,7 +827,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "raPanel",
     "header": "showRaHeaderActions",
-    "markup": "/static/games/ra.html?v=1"
+    "markup": "/static/games/ra.html?v=1",
+    "styleFragments": "/static/games/ra.css?v=1"
   },
   "scout": {
     "scripts": [
@@ -755,7 +837,8 @@ const GAME_ASSETS = {
     "styles": [],
     "panel": "scoutPanel",
     "header": "showScoutHeaderActions",
-    "markup": "/static/games/scout.html?v=1"
+    "markup": "/static/games/scout.html?v=1",
+    "styleFragments": "/static/games/scout.css?v=1"
   },
   "ark_nova": {
     "scripts": [
@@ -803,6 +886,129 @@ const gameAssetLoads = new Map();
 const loadedGameAssets = new Set();
 const gameAssetErrors = new Map();
 const gameResourceLoads = new Map();
+let gameStyleSlots = null;
+
+function getGameStyleSlots() {
+  if (gameStyleSlots) return gameStyleSlots;
+  const sheet = document.getElementById("coreStyles")?.sheet;
+  if (!sheet) throw new Error("Shared styles are not ready.");
+  const slots = new Map();
+  const visit = (rules) => {
+    for (const rule of rules) {
+      const marker = rule.media?.mediaText.match(/\bobg-game-[\w-]+\b/)?.[0];
+      if (marker) {
+        if (slots.has(marker)) throw new Error(`Duplicate game style group: ${marker}`);
+        slots.set(marker, rule);
+      } else if (rule.cssRules) {
+        visit(rule.cssRules);
+      }
+    }
+  };
+  visit(sheet.cssRules);
+  gameStyleSlots = slots;
+  return slots;
+}
+
+function parseGameStyleFragments(source) {
+  const fragments = [];
+  let index = 0;
+  while (index < source.length) {
+    if (/\s/.test(source[index])) {
+      index += 1;
+      continue;
+    }
+    if (source.startsWith("/*", index)) {
+      const end = source.indexOf("*/", index + 2);
+      if (end < 0) throw new Error("Unclosed game style comment.");
+      index = end + 2;
+      continue;
+    }
+    const header = source.slice(index).match(/^@media\s+all,\s*(obg-game-[\w-]+)\s*\{/);
+    if (!header) throw new Error("Invalid game style fragment.");
+    const start = index;
+    index += header[0].length;
+    let depth = 1;
+    let parentheses = 0;
+    let quote = null;
+    while (index < source.length && depth) {
+      const char = source[index];
+      if (char === "\\") {
+        index += 2;
+        continue;
+      }
+      if (quote) {
+        if (char === quote) quote = null;
+      } else if (char === '"' || char === "'") {
+        quote = char;
+      } else if (source.startsWith("/*", index)) {
+        const end = source.indexOf("*/", index + 2);
+        if (end < 0) throw new Error("Unclosed game style comment.");
+        index = end + 2;
+        continue;
+      } else if (char === "(") parentheses += 1;
+      else if (char === ")") parentheses -= 1;
+      else if (!parentheses && char === "{") depth += 1;
+      else if (!parentheses && char === "}") depth -= 1;
+      index += 1;
+    }
+    if (depth || quote || parentheses) throw new Error("Incomplete game style fragment.");
+    fragments.push({ marker: header[1], source: source.slice(start, index) });
+  }
+  return fragments;
+}
+
+function loadGameStyleFragments(gameType, url) {
+  if (gameResourceLoads.has(url)) return gameResourceLoads.get(url);
+  const request = (async () => {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 15000);
+    const parser = document.createElement("style");
+    parser.media = "not all";
+    const inserted = [];
+    try {
+      const response = await fetch(url, { signal: controller.signal });
+      if (!response.ok) throw new Error(`Could not load ${url}: ${response.status}`);
+      const source = await response.text();
+      const originals = parseGameStyleFragments(source);
+      parser.textContent = source;
+      document.head.appendChild(parser);
+      const slots = getGameStyleSlots();
+      const expected = new Set([...slots.keys()].filter((name) => name.startsWith(`obg-game-${gameType}-`)));
+      const fragments = Array.from(parser.sheet.cssRules);
+      // Validate the entire response before inserting anything, including HTML fallbacks.
+      if (!expected.size || fragments.length !== expected.size || originals.length !== fragments.length) {
+        throw new Error(`Invalid game styles: ${url}`);
+      }
+      const plans = fragments.map((fragment, index) => {
+        const marker = fragment.media?.mediaText.match(/\bobg-game-[\w-]+\b/)?.[0];
+        const slot = slots.get(marker);
+        if (originals[index].marker !== marker || !expected.delete(marker) || !slot || slot.cssRules.length || !fragment.cssRules.length) {
+          throw new Error(`Invalid game style group: ${url}`);
+        }
+        return { slot, source: originals[index].source };
+      });
+      for (const { slot, source } of plans) {
+        inserted.push(slot);
+        // Keep the raw declarations: CSSOM serialization can lose var() shorthand values.
+        // The extra always-true media group preserves both specificity and source order.
+        slot.insertRule(source, slot.cssRules.length);
+      }
+    } catch (error) {
+      for (const slot of inserted) {
+        while (slot.cssRules.length) slot.deleteRule(slot.cssRules.length - 1);
+      }
+      throw error;
+    } finally {
+      parser.remove();
+      window.clearTimeout(timeout);
+    }
+  })().catch((error) => {
+    gameResourceLoads.delete(url);
+    throw error;
+  });
+  gameResourceLoads.set(url, request);
+  return request;
+}
 
 function isGameAssetsLoaded(gameType) {
   return loadedGameAssets.has(gameType);
@@ -888,6 +1094,7 @@ function ensureGameAssets(gameType) {
     // DOM and styles must exist before legacy game scripts bind their controls.
     await Promise.all([
       ...(assets.markup ? [loadGameMarkup(assets.markup)] : []),
+      ...(assets.styleFragments ? [loadGameStyleFragments(gameType, assets.styleFragments)] : []),
       ...assets.styles.map((url) => loadGameResource(url, "style")),
     ]);
     // Keep each game's helpers ahead of its entry point, including on retries.
