@@ -14,6 +14,15 @@ from typing import Dict, Optional
 from urllib.request import Request, urlopen
 
 GAME_URLS = {
+    "love_letter": "https://boardgamegeek.com/boardgame/129622/love-letter",
+    "spirit_island": "https://boardgamegeek.com/boardgame/162886/spirit-island",
+    # The implemented rules are BLACK MAZE DEEP, not the 2019 original.
+    "red_doors": "https://boardgamegeek.com/boardgame/425634/black-maze-deep",
+    "cryptid": "https://boardgamegeek.com/boardgame/246784/cryptid",
+    "eternal_decks": "https://boardgamegeek.com/boardgame/424981/eternal-decks",
+    "take_time": "https://boardgamegeek.com/boardgame/440540/take-time",
+    "nine_upper": "https://boardgamegeek.com/boardgame/383053/9upper-xia-bai-wang",
+    "terra_nova": "https://boardgamegeek.com/boardgame/364186/terra-nova",
     "boomerang_australia": "https://boardgamegeek.com/boardgame/296167/boomerang-australia",
     "gaia_project": "https://boardgamegeek.com/boardgame/220308/gaia-project",
     "castles_of_burgundy": "https://boardgamegeek.com/boardgame/84876/the-castles-of-burgundy",

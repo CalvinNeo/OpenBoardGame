@@ -88,6 +88,7 @@ GAME_TAG_IDS: Dict[str, Tuple[str, ...]] = {
     "kobayakawa": ("filler", "push_your_luck", "bluffing"),
     "kronologic": ("puzzle",),
     "lost_code": ("puzzle", "push_your_luck"),
+    "love_letter": ("filler", "puzzle", "bluffing"),
     "manila": ("push_your_luck", "euro", "auction"),
     "nine_upper": ("filler", "bluffing", "creative"),
     "patchwork": ("euro", "abstract"),

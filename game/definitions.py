@@ -50,6 +50,11 @@ from game.istanbul import IstanbulGame
 from game.kobayakawa import KobayakawaGame
 from game.kronologic import KronologicGame
 from game.lost_code import LostCodeGame
+from game.love_letter import (
+    LoveLetterGame,
+    ACTION_SCHEMA as LOVE_LETTER_ACTION_SCHEMA,
+    CONFIG_SCHEMA as LOVE_LETTER_CONFIG_SCHEMA,
+)
 from game.manila import ManilaGame
 from game.nine_upper import NineUpperGame
 from game.patchwork import PatchworkGame
@@ -96,6 +101,22 @@ from game.turing_machine import TuringMachineGame
 from game.tucano import TucanoGame
 from game.witchs_brew import WitchsBrewGame
 from game.wriggle_roulette import WriggleRouletteGame
+
+register_game(
+    GameDefinition(
+        game_id=LoveLetterGame.game_id,
+        name="Love Letter",
+        name_zh="情书",
+        min_players=LoveLetterGame.min_players,
+        max_players=LoveLetterGame.max_players,
+        turn_mode="turn",
+        action_schema=LOVE_LETTER_ACTION_SCHEMA,
+        config_schema=LOVE_LETTER_CONFIG_SCHEMA,
+        module=LoveLetterGame,
+        serialize=LoveLetterGame.serialize,
+        deserialize=LoveLetterGame.deserialize,
+    )
+)
 
 register_game(
     GameDefinition(

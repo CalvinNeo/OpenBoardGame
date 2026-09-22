@@ -85,6 +85,8 @@ const wanderingTowersPanel = document.getElementById("wanderingTowersPanel");
 const skyePanel = document.getElementById("skyePanel");
 
 function setGamePanelVisibility(gameType) {
+  document.getElementById("loveLetterPanel").classList.toggle("hidden", gameType !== "love_letter");
+  if (typeof showLoveLetterHeaderActions === "function") showLoveLetterHeaderActions(gameType === "love_letter");
   document.getElementById("terraNovaPanel").classList.toggle("hidden", gameType !== "terra_nova");
   if (typeof showTerraNovaHeaderActions === "function") showTerraNovaHeaderActions(gameType === "terra_nova");
   document.getElementById("boomerangAustraliaPanel").classList.toggle("hidden", gameType !== "boomerang_australia");
@@ -668,6 +670,10 @@ function logGameEvents(data) {
 
 function renderGameState(data) {
   const gameType = data.game_type || (currentRoomState && currentRoomState.game_type);
+  if (gameType === "love_letter") {
+    renderLoveLetterGameState(data);
+    return;
+  }
   if (gameType === "terra_nova") {
     renderTerraNovaGameState(data);
     return;

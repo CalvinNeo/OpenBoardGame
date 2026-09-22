@@ -156,8 +156,8 @@ async def aidixit_card(deck: str, file: str):
 async def download_room_save(source_room_id: str):
     if not _is_safe_room_id(source_room_id):
         raise HTTPException(status_code=400, detail="invalid source_room_id")
-    if _has_live_boomerang_save(source_room_id):
-        raise HTTPException(status_code=403, detail="This journey is still active. Reconnect to the existing room.")
+    if _has_live_boomerang_save(source_room_id) or _has_live_private_save(source_room_id, "love_letter"):
+        raise HTTPException(status_code=403, detail="This game is still active. Reconnect to the existing room.")
     latest_path = _get_latest_save_path(source_room_id)
     if not latest_path:
         raise HTTPException(status_code=404, detail="save not found")
@@ -259,13 +259,17 @@ def _get_game_definition(game_type: str) -> Optional[GameDefinition]:
 
 
 def _has_live_boomerang_save(source_room_id: str) -> bool:
-    """Do not let a save export or clone bypass a live draft's private view."""
+    return _has_live_private_save(source_room_id, "boomerang_australia")
+
+
+def _has_live_private_save(source_room_id: str, game_type: str) -> bool:
+    """Do not let a save export or clone bypass an active game's private view."""
     related_ids = {source_room_id}
     changed = True
     while changed:
         changed = False
         for room in ROOMS.values():
-            if room.game_type != "boomerang_australia":
+            if room.game_type != game_type:
                 continue
             if room.room_id in related_ids or room.source_room_id in related_ids:
                 for related in (room.room_id, room.source_room_id):
@@ -273,7 +277,7 @@ def _has_live_boomerang_save(source_room_id: str) -> bool:
                         related_ids.add(related)
                         changed = True
     return any(
-        room.game_type == "boomerang_australia" and room.room_id in related_ids
+        room.game_type == game_type and room.room_id in related_ids
         and room.game_state and not room.game_state.get("game_over")
         for room in ROOMS.values()
     )
@@ -429,7 +433,7 @@ async def _emit_room_state(room: Room) -> None:
             for name in ("download_memories", "build_memories_html")
         )),
         "game_config": {key: value for key, value in room.game_config.items()
-                        if room.game_type not in ("take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia") or key != "seed"},
+                        if room.game_type not in ("take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova") or key != "seed"},
         "auto_save": room.auto_save,
         "source_room_id": room.source_room_id,
         "players": [
@@ -1774,8 +1778,10 @@ async def on_room_load(sid, data):
     if not source_room_id:
         await sio.emit("room:load_result", {"ok": False, "message": "source_room_id required"}, to=sid)
         return
-    if isinstance(source_room_id, str) and _has_live_boomerang_save(source_room_id):
-        await sio.emit("room:load_result", {"ok": False, "message": "This journey is still active. Reconnect to the existing room."}, to=sid)
+    if isinstance(source_room_id, str) and (
+        _has_live_boomerang_save(source_room_id) or _has_live_private_save(source_room_id, "love_letter")
+    ):
+        await sio.emit("room:load_result", {"ok": False, "message": "This game is still active. Reconnect to the existing room."}, to=sid)
         return
     auto_save = bool((data or {}).get("auto_save"))
     payload = _load_latest_save(source_room_id)

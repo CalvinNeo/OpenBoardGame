@@ -41,6 +41,7 @@ from game.istanbul import IstanbulGame
 from game.kobayakawa import KobayakawaGame
 from game.kronologic import KronologicGame
 from game.lost_code import LostCodeGame
+from game.love_letter import LoveLetterGame
 from game.manila import ManilaGame
 from game.nine_upper import NineUpperGame
 from game.patchwork import PatchworkGame
@@ -122,6 +123,7 @@ __all__ = [
     "KobayakawaGame",
     "KronologicGame",
     "LostCodeGame",
+    "LoveLetterGame",
     "ManilaGame",
     "NineUpperGame",
     "PatchworkGame",
