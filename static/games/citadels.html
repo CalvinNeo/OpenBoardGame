@@ -1,0 +1,87 @@
+<template data-game-target="citadelsHelpModal" data-game-mode="replace"><section id="citadelsHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content citadels-help-modal">
+      <div class="modal-header">
+        <h2>Citadels - Game Rules</h2>
+        <button id="citadelsHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body" id="citadelsHelpContent"></div>
+    </div>
+  </section></template>
+<template data-game-target="citadelsExplainModal" data-game-mode="replace"><section id="citadelsExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content citadels-explain-modal">
+      <div class="modal-header">
+        <h2>Citadels - Button Explanation</h2>
+        <button id="citadelsExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body" id="citadelsExplainContent"></div>
+    </div>
+  </section></template>
+<template data-game-target="citadelsPanel" data-game-mode="contents">
+              <div class="panel-header">
+                <h3>Citadels</h3>
+                <div id="citadelsHeaderActions" class="panel-header-actions">
+                  <button id="citadelsHelpBtn" type="button">Help</button>
+                  <button id="citadelsExplainBtn" type="button">Explain</button>
+                </div>
+              </div>
+              <div class="row">
+                <div>Phase: <span id="citadelsPhase">-</span></div>
+                <div>Round: <span id="citadelsRound">-</span></div>
+                <div>Mode: <span id="citadelsMode">-</span></div>
+                <div>Crown: <span id="citadelsCrownHolder">-</span></div>
+              </div>
+              <div class="row">
+                <div>Current Player: <span id="citadelsCurrentPlayer">-</span></div>
+                <div>Role: <span id="citadelsCurrentRole">-</span></div>
+                <div>Winning City Size: <span id="citadelsWinningCitySize">-</span></div>
+              </div>
+
+              <div id="citadelsBanner" class="round-notice">
+                <div class="round-notice-title">Status</div>
+                <div id="citadelsBannerBody" class="round-notice-body">-</div>
+              </div>
+
+              <section id="citadelsRoundSummary" class="citadels-round-summary hidden" aria-hidden="true">
+                <div class="citadels-summary-header">
+                  <div class="citadels-summary-heading">
+                    <div class="citadels-summary-eyebrow">Round Recap</div>
+                    <div class="citadels-summary-title-row">
+                      <h3 id="citadelsSummaryTitle">Round Complete</h3>
+                      <button id="citadelsSummaryPassBtn" class="citadels-summary-pass-btn" type="button">Pass</button>
+                    </div>
+                    <p id="citadelsSummarySubtitle">Every role is revealed. Review what happened before continuing.</p>
+                  </div>
+                  <div id="citadelsSummaryStatus" class="citadels-summary-status">0/0 Ready</div>
+                </div>
+                <div id="citadelsSummaryHighlights" class="citadels-summary-highlights"></div>
+                <div id="citadelsSummaryPlayers" class="citadels-summary-players"></div>
+                <div class="citadels-summary-footer">
+                  <div id="citadelsSummaryReadyList" class="citadels-summary-ready-list"></div>
+                  <button id="citadelsNextRoundBtn" class="citadels-next-round-btn" type="button">Next Round</button>
+                </div>
+              </section>
+
+              <div class="citadels-layout">
+                <div class="citadels-column">
+                  <h3>Your Roles</h3>
+                  <div id="citadelsYourRoles" class="citadels-role-list"></div>
+
+                  <div id="citadelsActions" class="citadels-actions" aria-label="Available actions"></div>
+
+                  <div id="citadelsHand" class="citadels-card-grid" aria-label="Your hand"></div>
+                </div>
+
+                <div class="citadels-column">
+                  <h3>Players</h3>
+                  <div id="citadelsPlayers" class="citadels-players"></div>
+                </div>
+              </div>
+
+              <section class="citadels-log-section">
+                <div class="citadels-section-heading">
+                  <h3>Recent Log</h3>
+                  <span>Newest first</span>
+                </div>
+                <div id="citadelsLog" class="citadels-log" tabindex="0" aria-label="Recent game log"></div>
+              </section>
+            </template>

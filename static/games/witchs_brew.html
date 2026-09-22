@@ -1,0 +1,58 @@
+<template data-game-target="witchsBrewPanel" data-game-mode="contents">
+              <div class="witchs-brew-header">
+                <div>
+                  <h2>Witch's Brew</h2>
+                  <div class="witchs-brew-subtitle">Choose roles, challenge claims, brew potions.</div>
+                </div>
+                <div class="witchs-brew-header-actions">
+                  <button id="witchsBrewHelpBtn" type="button">Help</button>
+                  <button id="witchsBrewExplainBtn" type="button">Explain</button>
+                </div>
+              </div>
+
+              <div class="witchs-brew-status-grid">
+                <div>Phase: <span id="witchsBrewPhase">-</span></div>
+                <div>Current: <span id="witchsBrewCurrent">-</span></div>
+                <div>Role: <span id="witchsBrewRole">-</span></div>
+                <div>Spell: <span id="witchsBrewSpell">-</span></div>
+                <div>Ravens: <span id="witchsBrewRavens">-</span></div>
+                <div>Winner: <span id="witchsBrewWinner">-</span></div>
+              </div>
+
+              <div id="witchsBrewNotice" class="round-notice hidden" aria-hidden="true">
+                <div id="witchsBrewNoticeTitle" class="round-notice-title">Round</div>
+                <div id="witchsBrewNoticeBody" class="round-notice-body">-</div>
+              </div>
+
+              <h3>Public Cards</h3>
+              <div id="witchsBrewPublicCards" class="witchs-brew-public"></div>
+
+              <h3>Your Roles</h3>
+              <div id="witchsBrewHand" class="witchs-brew-hand"></div>
+
+              <h3>Actions</h3>
+              <div id="witchsBrewActions" class="witchs-brew-actions"></div>
+
+              <h3>Players</h3>
+              <div id="witchsBrewPlayers" class="witchs-brew-players"></div>
+
+              <section id="witchsBrewHelpModal" class="modal hidden" aria-hidden="true">
+                <div class="modal-content witchs-brew-modal">
+                  <div class="modal-header">
+                    <h2>Witch's Brew Help</h2>
+                    <button id="witchsBrewHelpModalCloseBtn" type="button">Close</button>
+                  </div>
+                  <div id="witchsBrewHelpContent" class="modal-body"></div>
+                </div>
+              </section>
+
+              <section id="witchsBrewExplainModal" class="modal hidden" aria-hidden="true">
+                <div class="modal-content witchs-brew-modal">
+                  <div class="modal-header">
+                    <h2>Witch's Brew Explain</h2>
+                    <button id="witchsBrewExplainModalCloseBtn" type="button">Close</button>
+                  </div>
+                  <div id="witchsBrewExplainContent" class="modal-body"></div>
+                </div>
+              </section>
+            </template>

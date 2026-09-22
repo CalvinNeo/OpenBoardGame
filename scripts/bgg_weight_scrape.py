@@ -14,6 +14,7 @@ from typing import Dict, Optional
 from urllib.request import Request, urlopen
 
 GAME_URLS = {
+    "for_sale": "https://boardgamegeek.com/boardgame/172/for-sale",
     "love_letter": "https://boardgamegeek.com/boardgame/129622/love-letter",
     "spirit_island": "https://boardgamegeek.com/boardgame/162886/spirit-island",
     # The implemented rules are BLACK MAZE DEEP, not the 2019 original.
@@ -50,7 +51,7 @@ GAME_URLS = {
     "tacta": "https://boardgamegeek.com/boardgame/401636/tacta",
     "subtext": "https://boardgamegeek.com/boardgame/265684/subtext",
     "kronologic": "https://boardgamegeek.com/boardgame/402111/kronologic-paris-1920",
-    # word_decode is intentionally omitted: BGG has no entry for it as of 2026-09-12.
+    # word_decode is intentionally omitted: no BGG entry found as of 2026-09-22.
 }
 
 BGG_DYNAMIC_INFO_URL = "https://api.geekdo.com/api/dynamicinfo?objecttype=thing&objectid={object_id}"

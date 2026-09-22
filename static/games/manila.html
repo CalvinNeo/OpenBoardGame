@@ -1,0 +1,179 @@
+<template data-game-target="manilaHelpModal" data-game-mode="replace"><section id="manilaHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content manila-help-modal">
+      <div class="modal-header">
+        <h2>Manila - Game Rules</h2>
+        <button id="manilaHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body manila-help-content"></div>
+    </div>
+  </section></template>
+<template data-game-target="manilaExplainModal" data-game-mode="replace"><section id="manilaExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content manila-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="manilaExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="manilaExplainContent"></div>
+      </div>
+    </div>
+  </section></template>
+<template data-game-target="manilaCycleModal" data-game-mode="replace"><section id="manilaCycleModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content manila-cycle-modal">
+      <div class="modal-header">
+        <div>
+          <h2>Harbormaster Cycle</h2>
+          <div id="manilaCyclePhase" class="manila-cycle-subtitle">Phase: -</div>
+        </div>
+        <div class="manila-cycle-header-actions">
+          <button id="manilaCycleExplainBtn" class="manila-header-btn" type="button">Explain</button>
+          <button id="manilaCycleCloseBtn" type="button">Close</button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div id="manilaCycleRecap" class="manila-cycle-recap">No cycle data yet.</div>
+        <div class="manila-cycle-actions">
+          <div id="manilaAuctionGroup" class="manila-action-group hidden">
+            <div class="manila-action-title">Auction</div>
+            <div class="manila-action-row">
+              <input id="manilaBidInput" type="number" min="1" step="1" />
+              <button id="manilaBidBtn">Bid</button>
+              <button id="manilaPassBidBtn">Pass</button>
+            </div>
+            <div id="manilaAuctionBidList" class="manila-auction-bidlist"></div>
+          </div>
+
+          <div id="manilaBuyStockGroup" class="manila-action-group hidden">
+            <div class="manila-action-title">Buy Stock</div>
+            <div id="manilaBuyStockButtons" class="manila-action-grid"></div>
+            <div class="manila-action-row">
+              <button id="manilaSkipBuyBtn">Skip Buy</button>
+            </div>
+          </div>
+
+          <div id="manilaSelectCargoGroup" class="manila-action-group hidden">
+            <div class="manila-action-title">Select 3 Cargo</div>
+            <div id="manilaSelectCargoButtons" class="manila-action-grid"></div>
+            <div class="manila-action-row">
+              <button id="manilaConfirmCargoBtn">Confirm</button>
+              <button id="manilaResetCargoBtn">Reset</button>
+            </div>
+          </div>
+
+          <div id="manilaPositionsGroup" class="manila-action-group hidden">
+            <div class="manila-action-title">Set Positions (sum = 9)</div>
+            <div id="manilaPositionsWrap" class="manila-position-grid"></div>
+            <div class="manila-action-row">
+              <div>Sum: <span id="manilaPositionsSum">0</span></div>
+              <button id="manilaConfirmPositionsBtn">Confirm</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section></template>
+<template data-game-target="manilaPanel" data-game-mode="contents">
+              <div id="manilaTooltip" class="manila-tooltip hidden"></div>
+              <div class="manila-hero">
+                <div>
+                  <div class="manila-title">Manila</div>
+                  <div class="manila-subtitle">Harbor wagers, risky voyages, sudden fortunes.</div>
+                </div>
+                <div class="manila-status">
+                  <div class="manila-chip">
+                    Phase <span id="manilaPhase">-</span>
+                  </div>
+                  <div class="manila-chip">
+                    Round <span id="manilaRound">-</span>
+                  </div>
+                  <div class="manila-chip">
+                    Current <span id="manilaCurrent">-</span>
+                  </div>
+                  <div class="manila-chip">
+                    Harbormaster <span id="manilaHarbor">-</span>
+                  </div>
+                  <div class="manila-chip">
+                    Bid <span id="manilaHarborBid">-</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="manila-price-bar">
+                <div class="manila-price-title">Market Prices</div>
+                <div id="manilaPrices" class="manila-price-values">-</div>
+              </div>
+
+              <div class="manila-auction-bar">
+                <div class="manila-auction-title">Auction</div>
+                <div id="manilaAuctionInfo" class="manila-auction-info">-</div>
+                <div class="manila-auction-actions">
+                  <div id="manilaCycleStatus" class="manila-cycle-status">Cycle: -</div>
+                  <button id="manilaCycleToggleBtn" type="button">Open Harbormaster Panel</button>
+                </div>
+              </div>
+
+              <div id="manilaRoundEndPanel" class="manila-round-end hidden">
+                <div class="manila-round-end-header">
+                  <div class="manila-round-end-title">Round End</div>
+                  <div class="manila-round-end-hint">Review the harbor, then click Next Round.</div>
+                </div>
+                <div id="manilaRoundEndPlayers" class="manila-round-end-players"></div>
+                <div class="manila-round-end-actions">
+                  <div id="manilaRoundEndStatus" class="manila-round-end-status">0/0 Ready</div>
+                  <button id="manilaNextRoundBtn" type="button">Next Round</button>
+                </div>
+              </div>
+
+              <div class="manila-columns">
+                <div class="manila-column">
+                  <h3 class="manila-section-title">Harbor</h3>
+                  <div class="manila-scene">
+                    <div id="manilaBoats" class="manila-sea"></div>
+                    <div id="manilaDiceBar" class="manila-dice-bar hidden"></div>
+                  </div>
+                </div>
+
+                <div class="manila-column">
+                  <h3 class="manila-section-title">Facilities</h3>
+                  <div id="manilaBoard" class="manila-map"></div>
+                  <div id="manilaPledgeGroup" class="manila-zone manila-zone-compact manila-pledge-facility hidden">
+                    <div class="manila-zone-title">Pledge Stock</div>
+                    <div class="manila-pledge-row">
+                      <select id="manilaPledgeSelect"></select>
+                      <button id="manilaPledgeBtn">Pledge</button>
+                    </div>
+                  </div>
+                  <div id="manilaPassFacility" class="manila-zone manila-zone-compact manila-pass-facility hidden">
+                    <div class="manila-pass-title">Pass Placement</div>
+                    <div class="manila-pass-hint">Skip your placement turn.</div>
+                    <button id="manilaPassBtn" type="button">Pass</button>
+                  </div>
+                  <div id="manilaPilotGroup" class="manila-action-group manila-pilot-facility hidden">
+                    <div class="manila-action-title">Pilot</div>
+                    <div id="manilaPilotRows" class="manila-pilot-rows"></div>
+                  </div>
+
+                  <h3 class="manila-section-title">Players</h3>
+                  <div id="manilaPlayers" class="manila-grid"></div>
+
+                  <h3 class="manila-section-title">Actions</h3>
+                  <div class="manila-action-box">
+                    <div id="manilaPirateGroup" class="manila-action-group hidden">
+                      <div class="manila-action-title">Pirate (<span id="manilaPirateRole">-</span>)</div>
+                      <div class="manila-action-row">
+                        <select id="manilaPirateTargetSelect"></select>
+                        <select id="manilaPirateResultSelect">
+                          <option value="port">Resolve as Port</option>
+                          <option value="shipyard">Resolve as Shipyard</option>
+                        </select>
+                        <button id="manilaPirateBoardBtn">Board</button>
+                        <button id="manilaPiratePlunderBtn">Plunder</button>
+                        <button id="manilaPirateSkipBtn">Skip</button>
+                      </div>
+                    </div>
+
+                    <div class="manila-legal">Legal actions: <span id="manilaLegalActions">-</span></div>
+                  </div>
+                </div>
+              </div>
+            </template>

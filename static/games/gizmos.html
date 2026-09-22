@@ -1,0 +1,36 @@
+<template data-game-target="gizmosPanel" data-game-mode="contents">
+              <header class="gizmos-masthead">
+                <div><span class="gizmos-eyebrow">THE INVENTION WORKSHOP</span><h2>Gizmos <span>巧妙装置</span></h2></div>
+                <div id="gizmosStanding" class="gizmos-standing"></div>
+              </header>
+              <div id="gizmosResources" class="gizmos-resources" aria-label="Your resources"></div>
+              <section class="gizmos-guide" aria-label="Turn guide">
+                <div id="gizmosPrompt" role="status" aria-live="polite">Waiting for game…</div>
+                <div id="gizmosSteps" class="gizmos-steps" aria-label="Turn steps"></div>
+              </section>
+              <div id="gizmosActions" class="gizmos-action-choices" aria-label="Choose a base action"></div>
+              <div id="gizmosRecent" class="gizmos-recent" aria-live="polite" hidden></div>
+              <div class="gizmos-workbench">
+                <div class="gizmos-table-area">
+                  <section id="gizmosContext" class="gizmos-context" aria-label="Current action" hidden></section>
+                  <section class="gizmos-energy-section" aria-labelledby="gizmosEnergyTitle">
+                    <div class="gizmos-section-heading"><h3 id="gizmosEnergyTitle">Energy row <span>公共能量</span></h3><span id="gizmosBagCount" class="gizmos-caption"></span></div>
+                    <div id="gizmosEnergyRow" class="gizmos-energy-tray"></div>
+                    <div id="gizmosPickPreview" class="gizmos-pick-preview" hidden></div>
+                  </section>
+                  <section class="gizmos-market-section" aria-label="Gizmo market and archive">
+                    <div id="gizmosMarketNav" class="gizmos-market-nav"></div>
+                    <div id="gizmosMarketHint" class="gizmos-market-hint"></div>
+                    <div id="gizmosDisplay" class="gizmos-tile-grid"></div>
+                  </section>
+                </div>
+                <aside class="gizmos-lab-area" aria-label="Your machine and opponents">
+                  <details id="gizmosMachineDetails" class="gizmos-fold" open>
+                    <summary>Your machine <span id="gizmosMachineCount"></span></summary>
+                    <div id="gizmosYou" class="gizmos-machine-list"></div>
+                  </details>
+                  <section class="gizmos-opponents-section"><h3>Table <span>玩家进度</span></h3><div id="gizmosPlayers"></div></section>
+                  <details class="gizmos-fold"><summary>Activity <span id="gizmosActivityCount">0</span></summary><ol id="gizmosActivity" class="gizmos-activity"></ol></details>
+                </aside>
+              </div>
+            </template>

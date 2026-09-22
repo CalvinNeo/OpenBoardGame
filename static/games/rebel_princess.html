@@ -1,0 +1,56 @@
+<template data-game-target="rebelPrincessPanel" data-game-mode="contents">
+              <header class="rebel-header">
+                <div><h2>Rebel Princess</h2></div>
+                <div class="rebel-header-actions"><button id="rebelHelpBtn" type="button">Help</button><button id="rebelExplainBtn" type="button" aria-pressed="false">Explain</button></div>
+              </header>
+              <div class="rebel-goal-strip">
+                <span data-rebel-tip="Proposals (💍) are penalty points. After 5 rounds, the lowest total wins; ties favor more zero-proposal rounds.">💍 Proposals</span>
+                <span id="rebelPrinceValue"></span><span id="rebelFrogValue"></span>
+              </div>
+              <div class="rebel-round-banner">
+                <span id="rebelRound" class="rebel-round-badge"></span>
+                <div><strong id="rebelRoundTitle"></strong></div>
+              </div>
+              <div id="rebelGuide" class="rebel-guide" role="status" aria-live="polite" aria-atomic="true">
+                <span id="rebelPhase" class="rebel-eyebrow"></span><strong id="rebelGuideTitle"></strong>
+              </div>
+              <p id="rebelExplainNotice" class="rebel-explain-notice hidden">Explain mode</p>
+              <div class="rebel-layout">
+                <div class="rebel-play-area">
+                  <section id="rebelTableSection" class="rebel-section">
+                    <div class="rebel-section-heading"><h3>On the table</h3><span id="rebelTricks" class="rebel-badge"></span></div>
+                    <div class="rebel-rule-strip"><span id="rebelRequiredSuit"></span><span id="rebelPrinceStatus"></span></div>
+                    <div id="rebelTrick" class="rebel-trick"></div>
+                  </section>
+                  <section id="rebelSummary" class="rebel-section rebel-results hidden" tabindex="-1" aria-labelledby="rebelSummaryTitle">
+                    <div class="rebel-section-heading"><h3 id="rebelSummaryTitle">Round results</h3><span class="rebel-badge" data-rebel-tip="Proposals (💍) are penalty points. A smaller total score is better.">💍 Proposals</span></div>
+                    <p id="rebelSummaryOutcome" class="rebel-result-outcome hidden"></p>
+                    <div id="rebelSummaryPersonal" class="rebel-result-personal"></div>
+                    <h3 id="rebelStandingsTitle" class="rebel-standings-title">Overall standings</h3>
+                    <div id="rebelSummaryBody" role="table" aria-labelledby="rebelStandingsTitle"></div>
+                    <div class="rebel-result-footer"><p id="rebelReadyStatus" class="rebel-muted" role="status"></p><button id="rebelNextRoundBtn" type="button" class="rebel-primary">Next Round</button></div>
+                  </section>
+                  <section id="rebelHandSection" class="rebel-section rebel-hand-section">
+                    <div class="rebel-section-heading"><h3>Your hand</h3><span id="rebelHandCount" class="rebel-badge"></span></div>
+                    <div id="rebelHand" class="rebel-hand"></div>
+                    <div id="rebelActionPanel" class="rebel-action-panel">
+                      <div id="rebelSuitField" class="rebel-field hidden"><span id="rebelSuitLabel">Choose a suit</span><div id="rebelSuitButtons" class="rebel-button-row" role="group" aria-labelledby="rebelSuitLabel"></div></div>
+                      <label id="rebelTargetField" class="rebel-field hidden"><span>Choose a player</span><select id="rebelTargetSelect"></select></label>
+                      <label id="rebelTrickCardField" class="rebel-field hidden"><span id="rebelTrickCardLabel">Choose a card from the table</span><select id="rebelTrickCardSelect"></select></label>
+                      <div id="rebelDrawnCard" class="rebel-drawn-card hidden"></div>
+                      <label id="rebelSnowWhiteField" class="rebel-toggle hidden"><input id="rebelSnowWhiteToggle" type="checkbox" /><span>Use Snow White</span><span class="rebel-info" data-rebel-tip="Snow White: once per round, a card you play with rank 7 or lower can count as rank 0 for winning this trick. Its proposal value does not change." aria-label="About Snow White">ⓘ</span></label>
+                      <label id="rebelPeaField" class="rebel-toggle hidden"><input id="rebelPeaToggle" type="checkbox" /><span>Use Pea Princess</span><span class="rebel-info" data-rebel-tip="The Pea Princess: once per round, players still to play must use a rank above 5 if possible, while following the suit rule." aria-label="About the Pea Princess">ⓘ</span></label>
+                      <div id="rebelSelection" class="rebel-selection-row"><span id="rebelSelectedCards"></span><span class="rebel-info" id="rebelSelectionInfo" aria-label="About your selection">ⓘ</span></div>
+                      <div class="rebel-action-buttons"><button id="rebelSubmitBtn" class="rebel-primary" type="button">Select a card</button><button id="rebelPrincessBtn" type="button">Use Princess</button><button id="rebelSkipBtn" type="button">Skip</button></div>
+                    </div>
+                  </section>
+                </div>
+                <aside class="rebel-sidebar">
+                  <section class="rebel-section rebel-princess-section"><div class="rebel-section-heading"><h3>Your princess</h3><span id="rebelPowerStatus" class="rebel-badge"></span></div><div id="rebelPrincess" class="rebel-princess-card"></div></section>
+                  <section class="rebel-section rebel-players-section"><div class="rebel-section-heading"><h3>Players</h3><span class="rebel-badge" data-rebel-tip="Total proposals (💍) from completed rounds. Points from the current round are added at the round results.">💍 Total score</span></div><div id="rebelPlayers" class="rebel-players"></div></section>
+                  <details class="rebel-section"><summary>Game log</summary><div id="rebelLog" class="rebel-log"></div></details>
+                </aside>
+              </div>
+              <dialog id="rebelHelpModal" class="rebel-dialog" aria-labelledby="rebelHelpTitle"><div class="rebel-dialog-heading"><h2 id="rebelHelpTitle">How to play</h2><button type="button" data-rebel-close>Close</button></div><div id="rebelHelpContent" class="rebel-help-content"></div></dialog>
+              <dialog id="rebelExplainModal" class="rebel-dialog" aria-labelledby="rebelExplainTitle"><div class="rebel-dialog-heading"><h2 id="rebelExplainTitle">Explain</h2><button type="button" data-rebel-close>Close</button></div><p id="rebelExplainContent"></p></dialog>
+            </template>

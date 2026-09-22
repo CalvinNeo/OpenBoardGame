@@ -1,0 +1,54 @@
+<template data-game-target="fangNiaoHelpModal" data-game-mode="replace"><section id="fangNiaoHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content fang-niao-help-modal">
+      <div class="modal-header">
+        <h2>Square Bird - Game Rules</h2>
+        <button id="fangNiaoHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body fang-niao-help-content" id="fangNiaoHelpContent"></div>
+    </div>
+  </section></template>
+<template data-game-target="fangNiaoExplainModal" data-game-mode="replace"><section id="fangNiaoExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content fang-niao-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="fangNiaoExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="fangNiaoExplainContent"></div>
+      </div>
+    </div>
+  </section></template>
+<template data-game-target="fangNiaoPanel" data-game-mode="contents">
+              <div class="row">
+                <div>Phase: <span id="fangNiaoPhase">-</span></div>
+                <div>Current Turn: <span id="fangNiaoTurn">-</span></div>
+                <div>Deck: <span id="fangNiaoDeck">-</span></div>
+                <div>Discard: <span id="fangNiaoDiscard">-</span></div>
+                <div>Winner: <span id="fangNiaoWinner">-</span></div>
+              </div>
+              <div class="row">
+                <div>Last Action: <span id="fangNiaoLastAction">-</span></div>
+              </div>
+
+              <h3>Fence</h3>
+              <div id="fangNiaoRows" class="fang-niao-rows"></div>
+
+              <h3>Your Hand</h3>
+              <div id="fangNiaoHand" class="fang-niao-hand"></div>
+              <div class="row">
+                <div>Selected Bird: <span id="fangNiaoSelectedBird">-</span></div>
+                <div>Selected Row: <span id="fangNiaoSelectedRow">-</span></div>
+                <div>Selected Side: <span id="fangNiaoSelectedSide">-</span></div>
+                <button id="fangNiaoClearSelection" type="button">Clear</button>
+              </div>
+
+              <h3>Actions</h3>
+              <div class="row actions fang-niao-actions">
+                <button id="fangNiaoPlayBtn" type="button">Play Birds</button>
+                <button id="fangNiaoBankBtn" type="button">Bank</button>
+                <button id="fangNiaoEndBtn" type="button">End Turn</button>
+              </div>
+
+              <h3>Players</h3>
+              <div id="fangNiaoPlayers"></div>
+            </template>

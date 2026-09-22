@@ -1,0 +1,54 @@
+<template data-game-target="inAGrovePanel" data-game-mode="contents">
+              <div class="in-a-grove-topbar">
+                <div class="in-a-grove-brand">
+                  <span class="in-a-grove-brand-mark" aria-hidden="true">🎋</span>
+                  <div><h3>In a Grove</h3><p>A small scene. A tangled truth.</p></div>
+                </div>
+                <div class="in-a-grove-round-badge">Round <strong id="inAGroveRound">-</strong></div>
+              </div>
+              <div class="in-a-grove-status" id="inAGroveStatus" role="status" aria-live="polite">
+                <span id="inAGrovePhase" class="in-a-grove-phase">Waiting</span>
+                <strong id="inAGroveTurn">Waiting for players</strong>
+              </div>
+              <div id="inAGroveWinnerBanner" class="in-a-grove-winner hidden">🏆 <strong id="inAGroveWinner"></strong></div>
+              <div id="inAGroveExplainNotice" class="in-a-grove-explain-notice hidden" role="status">🔎 Select a highlighted control to learn about it. Press Esc to exit.</div>
+              <div class="in-a-grove-layout">
+                <section class="in-a-grove-evidence" aria-labelledby="inAGroveEvidenceTitle">
+                  <div class="in-a-grove-section-heading">
+                    <h4 id="inAGroveEvidenceTitle">🪪 Your alibis</h4><span>Known innocents · private</span>
+                  </div>
+                  <div class="in-a-grove-evidence-row">
+                    <div id="inAGroveYourTiles" class="in-a-grove-alibis"></div>
+                    <div id="inAGrovePublicAlibiCard" class="in-a-grove-public-card hidden"><span>🪪 Public alibi</span><strong id="inAGrovePublicAlibi">-</strong></div>
+                    <div class="in-a-grove-public-card"><span>🍂 Victim</span><strong id="inAGroveVictim">Hidden</strong></div>
+                  </div>
+                </section>
+                <section id="inAGroveTable" class="in-a-grove-table" aria-labelledby="inAGroveSceneTitle">
+                  <div class="in-a-grove-section-heading">
+                    <h4 id="inAGroveSceneTitle">The crime scene</h4><span>🎌 First: <strong id="inAGroveFirstPlayer">-</strong></span>
+                  </div>
+                  <div class="in-a-grove-scene-meta"><span>🚫 No peeking: <strong id="inAGroveBlocked">None</strong></span><span id="inAGroveSelectionCount">Choose 1 to inspect</span></div>
+                  <p id="inAGroveInspectionRule" class="in-a-grove-inspection-rule"></p>
+                  <div id="inAGroveSuspects" class="in-a-grove-suspects" role="group" aria-label="Three suspects"></div>
+                  <div class="in-a-grove-action-dock">
+                    <p id="inAGroveActionHint" role="status" aria-live="polite">Waiting for the next move.</p>
+                    <div class="in-a-grove-actions">
+                      <button id="inAGrovePeekBtn" type="button" disabled>🔎 Inspect 1</button>
+                      <button id="inAGroveBetBtn" type="button" class="hidden" disabled>🎯 Accuse suspect</button>
+                      <button id="inAGroveNextRoundBtn" type="button" class="hidden" disabled>Next Round →</button>
+                      <button id="inAGrovePlayAgainBtn" type="button" class="hidden" disabled>↻ Start New Game</button>
+                    </div>
+                  </div>
+                  <div class="in-a-grove-rule-strip"><span>🔺 Highest number is guilty</span><span>5 present? 🔻 Lowest instead</span><span>✕ Always innocent</span></div>
+                </section>
+                <section class="in-a-grove-scoreboard" aria-labelledby="inAGrovePlayersTitle">
+                  <div class="in-a-grove-section-heading"><h4 id="inAGrovePlayersTitle">Detectives</h4><span>Fewest penalties wins</span></div>
+                  <div id="inAGrovePlayers" class="in-a-grove-players"></div>
+                  <p class="in-a-grove-score-legend">🎯 Chips left · ⚠️ Penalties<br>5 penalties or 0 chips ends the game.</p>
+                </section>
+                <details id="inAGroveRoundSummary" class="in-a-grove-summary hidden">
+                  <summary id="inAGroveSummaryTitle">Round results</summary>
+                  <div id="inAGroveRoundSummaryBody" class="in-a-grove-summary-body" tabindex="0" aria-label="Round results"></div>
+                </details>
+              </div>
+            </template>

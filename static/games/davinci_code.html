@@ -1,0 +1,57 @@
+<template data-game-target="davinciCodePanel" data-game-mode="contents">
+              <div class="row davinci-status-row">
+                <div>Phase: <span id="davinciCodePhase">-</span></div>
+                <div>Mode: <span id="davinciCodeMode">-</span></div>
+                <div>Current Turn: <span id="davinciCodeTurn">-</span></div>
+                <div>Draw Pile: <span id="davinciCodeDeck">-</span></div>
+              </div>
+              <div class="row">
+                <div>Detail: <span id="davinciCodeDetail">-</span></div>
+              </div>
+              <div class="row">
+                <div>Winners: <span id="davinciCodeWinners">-</span></div>
+              </div>
+
+              <section id="davinciCodeSetup" class="davinci-section hidden" aria-hidden="true">
+                <div class="davinci-section-title">Setup</div>
+                <div id="davinciCodeSetupOptions" class="davinci-option-list"></div>
+              </section>
+
+              <div class="davinci-layout">
+                <section class="davinci-section davinci-table-section">
+                  <div class="davinci-section-title">Table</div>
+                  <div id="davinciCodeTable" class="davinci-player-grid"></div>
+                </section>
+
+                <section class="davinci-section">
+                  <div class="davinci-section-title">Guess a Tile</div>
+                  <div id="davinciCodeGuessTarget" class="davinci-target-line" aria-live="polite">Select a hidden opponent tile.</div>
+                  <div id="davinciCodeGuessPalette" class="davinci-guess-palette" role="group" aria-label="Tile guesses" aria-describedby="davinciCodeGuessTarget"></div>
+                  <div id="davinciCodePending" class="davinci-pending">-</div>
+                  <div id="davinciCodeControls" class="davinci-option-list"></div>
+                </section>
+
+                <section class="davinci-section">
+                  <div class="davinci-section-title">Public Log</div>
+                  <div id="davinciCodeLog" class="davinci-log"></div>
+                </section>
+              </div>
+            </template>
+<template data-game-target="davinciCodeHelpModal" data-game-mode="replace"><div id="davinciCodeHelpModal" class="modal davinci-help-modal hidden" aria-hidden="true">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h2>Da Vinci Code Help</h2>
+                  <button id="davinciCodeHelpModalCloseBtn" type="button">Close</button>
+                </div>
+                <div class="modal-body" id="davinciCodeHelpContent"></div>
+              </div>
+            </div></template>
+<template data-game-target="davinciCodeExplainModal" data-game-mode="replace"><div id="davinciCodeExplainModal" class="modal davinci-explain-modal hidden" aria-hidden="true">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h2>Da Vinci Code Explain</h2>
+                  <button id="davinciCodeExplainModalCloseBtn" type="button">Close</button>
+                </div>
+                <div class="modal-body" id="davinciCodeExplainContent"></div>
+              </div>
+            </div></template>

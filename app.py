@@ -156,7 +156,9 @@ async def aidixit_card(deck: str, file: str):
 async def download_room_save(source_room_id: str):
     if not _is_safe_room_id(source_room_id):
         raise HTTPException(status_code=400, detail="invalid source_room_id")
-    if _has_live_boomerang_save(source_room_id) or _has_live_private_save(source_room_id, "love_letter"):
+    if (_has_live_boomerang_save(source_room_id)
+            or _has_live_private_save(source_room_id, "love_letter")
+            or _has_live_private_save(source_room_id, "for_sale")):
         raise HTTPException(status_code=403, detail="This game is still active. Reconnect to the existing room.")
     latest_path = _get_latest_save_path(source_room_id)
     if not latest_path:
@@ -546,6 +548,8 @@ def _bot_status_payload(room: Room) -> Dict:
 
 
 def _public_bot_action(game_type: str, action: Dict) -> Dict:
+    if game_type == "for_sale" and action.get("type") == "sell":
+        return {"type": "sell"}
     if game_type == "red_doors":
         return {"type": "resolve"}
     if game_type in ("subtext", "bomb_busters", "kronologic", "nine_upper", "wriggle_roulette", "take_time", "eternal_decks", "ponzi_scheme", "ark_nova", "cryptid", "spirit_island", "boomerang_australia"):
@@ -1779,7 +1783,9 @@ async def on_room_load(sid, data):
         await sio.emit("room:load_result", {"ok": False, "message": "source_room_id required"}, to=sid)
         return
     if isinstance(source_room_id, str) and (
-        _has_live_boomerang_save(source_room_id) or _has_live_private_save(source_room_id, "love_letter")
+        _has_live_boomerang_save(source_room_id)
+        or _has_live_private_save(source_room_id, "love_letter")
+        or _has_live_private_save(source_room_id, "for_sale")
     ):
         await sio.emit("room:load_result", {"ok": False, "message": "This game is still active. Reconnect to the existing room."}, to=sid)
         return

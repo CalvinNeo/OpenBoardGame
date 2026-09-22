@@ -1,0 +1,62 @@
+<template data-game-target="gangHelpModal" data-game-mode="replace"><section id="gangHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content gang-help-modal">
+      <div class="modal-header">
+        <h2>The Gang - Game Rules</h2>
+        <button id="gangHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body gang-help-content" id="gangHelpContent"></div>
+    </div>
+  </section></template>
+<template data-game-target="gangExplainModal" data-game-mode="replace"><section id="gangExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content gang-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="gangExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="gangExplainContent"></div>
+      </div>
+    </div>
+  </section></template>
+<template data-game-target="theGangPanel" data-game-mode="contents">
+              <div class="row">
+                <div>Phase: <span id="gangPhase">-</span></div>
+                <div>Level: <span id="gangLevel">-</span></div>
+                <div>Lives: <span id="gangLives">-</span></div>
+                <div>Tokens: <span id="gangTokens">-</span></div>
+              </div>
+              <div class="row">
+                <div>Mode: <span id="gangMode">-</span></div>
+                <div>Mission: <span id="gangMission">-</span></div>
+                <div>Timer: <span id="gangTimer">-</span></div>
+                <div>Lock: <span id="gangLockTimer">-</span></div>
+              </div>
+
+              <h3>Community Cards</h3>
+              <div id="gangCommunity" class="gang-cards"></div>
+
+              <h3>Ranking Track</h3>
+              <div id="gangRanking" class="gang-ranking"></div>
+
+              <div class="row actions">
+                <button id="gangRevealBtn">Reveal Next</button>
+                <button id="gangReadyBtn">Ready</button>
+                <button id="gangMulliganBtn">Mulligan (-1 token)</button>
+              </div>
+              <div class="row actions">
+                <label for="gangSpyTargetSelect">Spy Target</label>
+                <select id="gangSpyTargetSelect"></select>
+                <button id="gangSpyBtn">Spy (-1 token)</button>
+                <button id="gangNextRoundBtn">Next Round</button>
+                <button id="gangPlayAgainBtn">Play Again</button>
+              </div>
+
+              <div id="gangRoundSummary" class="round-notice hidden">
+                <div id="gangRoundSummaryTitle" class="round-notice-title">Round Summary</div>
+                <div id="gangRoundSummaryBody" class="round-notice-body">-</div>
+                <div id="gangRoundSummaryList" class="gang-summary-list"></div>
+              </div>
+
+              <h3>Players</h3>
+              <div id="gangPlayers" class="gang-players"></div>
+            </template>

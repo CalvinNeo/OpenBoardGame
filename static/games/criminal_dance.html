@@ -1,0 +1,41 @@
+<template data-game-target="criminalDancePanel" data-game-mode="contents">
+              <div class="row">
+                <div>Round: <span id="criminalDanceRound">-</span></div>
+                <div>Current Turn: <span id="criminalDanceTurn">-</span></div>
+              </div>
+              <div id="criminalDanceSummary" class="hint">-</div>
+
+              <h3>Players</h3>
+              <div id="criminalDancePlayers" class="criminal-dance-player-list"></div>
+
+              <h3>Your Hand</h3>
+              <div id="criminalDanceHand" class="criminal-dance-hand"></div>
+              <div id="criminalDanceCardDetail" class="hint">Select a card to view what it does.</div>
+
+              <h3>Controls</h3>
+              <div id="criminalDanceControls" class="criminal-dance-controls"></div>
+
+              <h3>Played Cards</h3>
+              <div id="criminalDancePlayed" class="criminal-dance-public-list"></div>
+
+              <h3>Private Notes</h3>
+              <div id="criminalDancePrivate" class="criminal-dance-private-list"></div>
+            </template>
+<template data-game-target="criminalDanceHelpModal" data-game-mode="replace"><div id="criminalDanceHelpModal" class="modal hidden" aria-hidden="true">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h3>Criminal Dance Help</h3>
+                  <button id="criminalDanceHelpModalCloseBtn" type="button">Close</button>
+                </div>
+                <div class="modal-body" id="criminalDanceHelpContent"></div>
+              </div>
+            </div></template>
+<template data-game-target="criminalDanceExplainModal" data-game-mode="replace"><div id="criminalDanceExplainModal" class="modal hidden" aria-hidden="true">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h3>Button Explanation</h3>
+                  <button id="criminalDanceExplainModalCloseBtn" type="button">Close</button>
+                </div>
+                <div class="modal-body" id="criminalDanceExplainContent"></div>
+              </div>
+            </div></template>

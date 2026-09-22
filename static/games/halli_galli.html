@@ -1,0 +1,32 @@
+<template data-game-target="halliPanel" data-game-mode="contents">
+              <div class="row">
+                <div>Current Turn: <span id="halliTurn">-</span></div>
+                <div>Bell Ready: <span id="halliBell">-</span></div>
+                <div>Winner: <span id="halliWinner">-</span></div>
+              </div>
+              <div class="row hidden" aria-hidden="true">
+                <div>Flip Countdown: <span id="halliFlipCountdown">-</span></div>
+                <div>Ring Countdown: <span id="halliRingCountdown">-</span></div>
+              </div>
+              <div class="row">
+                <div>Last Ring Result: <span id="halliLastRing">-</span></div>
+                <div>Last Action: <span id="halliLastAction">-</span></div>
+              </div>
+
+              <div class="hidden" aria-hidden="true">
+                <h3>Actions</h3>
+                <div class="row actions">
+                  <button id="halliFlipBtn">Flip</button>
+                  <button id="halliRingBtn">Ring Bell</button>
+                </div>
+              </div>
+
+              <h3>Table</h3>
+              <div id="halliTable" class="halli-table">
+                <div id="halliPlayers" class="halli-players"></div>
+                <div id="halliBellCenter" class="halli-bell-center" role="button" tabindex="0" aria-label="Ring Bell">
+                  <div class="halli-bell-emoji" aria-hidden="true">🔔</div>
+                  <div id="halliBellCountdown" class="halli-bell-countdown hidden" aria-hidden="true">-</div>
+                </div>
+              </div>
+            </template>

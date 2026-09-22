@@ -1,0 +1,48 @@
+<template data-game-target="ageOfWarHelpModal" data-game-mode="replace"><section id="ageOfWarHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content age-of-war-help-modal">
+      <div class="modal-header">
+        <h2>Age of War - Game Rules</h2>
+        <button id="ageOfWarHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body age-of-war-help-content" id="ageOfWarHelpContent"></div>
+    </div>
+  </section></template>
+<template data-game-target="ageOfWarExplainModal" data-game-mode="replace"><section id="ageOfWarExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content age-of-war-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="ageOfWarExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="ageOfWarExplainContent"></div>
+      </div>
+    </div>
+  </section></template>
+<template data-game-target="ageOfWarPanel" data-game-mode="contents">
+              <div class="row">
+                <div>Phase: <span id="ageOfWarPhase">-</span></div>
+                <div>Current Turn: <span id="ageOfWarTurn">-</span></div>
+                <div>Target: <span id="ageOfWarTarget">-</span></div>
+              </div>
+              <div class="row">
+                <div>Dice Left: <span id="ageOfWarDiceLeft">-</span></div>
+                <div>Winner: <span id="ageOfWarWinner">-</span></div>
+              </div>
+
+              <h3>Dice</h3>
+              <div id="ageOfWarDice" class="age-of-war-dice"></div>
+              <div class="row actions age-of-war-actions">
+                <button id="ageOfWarRollBtn">Roll Dice</button>
+                <button id="ageOfWarDiscardBtn" type="button" disabled>Discard Selected Die</button>
+                <button id="ageOfWarPlayAgainBtn">Play Again</button>
+              </div>
+
+              <h3>Target Lines</h3>
+              <div id="ageOfWarTargetLines" class="age-of-war-lines"></div>
+
+              <h3>Central Castles</h3>
+              <div id="ageOfWarCentral" class="age-of-war-castles"></div>
+
+              <h3>Players</h3>
+              <div id="ageOfWarPlayers"></div>
+            </template>

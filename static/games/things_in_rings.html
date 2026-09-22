@@ -1,0 +1,87 @@
+<template data-game-target="thingsInRingsHelpModal" data-game-mode="replace"><section id="thingsInRingsHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content things-rings-help-modal">
+      <div class="modal-header">
+        <h2>Things in Rings - Game Rules</h2>
+        <button id="thingsInRingsHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body things-rings-help-content" id="thingsInRingsHelpContent"></div>
+    </div>
+  </section></template>
+<template data-game-target="thingsInRingsExplainModal" data-game-mode="replace"><section id="thingsInRingsExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content things-rings-explain-modal">
+      <div class="modal-header">
+        <h2>UI Explanation</h2>
+        <button id="thingsInRingsExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="thingsInRingsExplainContent"></div>
+      </div>
+    </div>
+  </section></template>
+<template data-game-target="thingsInRingsZoneModal" data-game-mode="replace"><section id="thingsInRingsZoneModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content things-rings-zone-modal">
+      <div class="modal-header">
+        <h2 id="thingsInRingsZoneModalTitle">Zone Contents</h2>
+        <button id="thingsInRingsZoneModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="thingsInRingsZoneModalSubtitle" class="things-rings-zone-modal-subtitle">-</div>
+        <div id="thingsInRingsZoneModalList" class="things-rings-zone-modal-list"></div>
+      </div>
+    </div>
+  </section></template>
+<template data-game-target="thingsInRingsPanel" data-game-mode="contents">
+              <div class="row">
+                <div>Phase: <span id="thingsInRingsPhase">-</span></div>
+                <div>Current Turn: <span id="thingsInRingsTurn">-</span></div>
+                <div>Knower: <span id="thingsInRingsKnower">-</span></div>
+                <div>Deck: <span id="thingsInRingsDeck">-</span></div>
+              </div>
+              <div class="row">
+                <div>Your Role: <span id="thingsInRingsRole">-</span></div>
+                <div>Clues Left: <span id="thingsInRingsCluesLeft">-</span></div>
+                <div>Winner: <span id="thingsInRingsWinner">-</span></div>
+              </div>
+
+              <div id="thingsInRingsStatus" class="decrypto-status waiting" role="status" aria-live="polite">
+                <div class="decrypto-status-title">Your Next Step</div>
+                <div id="thingsInRingsStatusBody" class="decrypto-status-body">-</div>
+              </div>
+
+              <h3>Rings</h3>
+              <div id="thingsInRingsRingSummary" class="things-rings-ring-summary"></div>
+
+              <div id="thingsInRingsPlayArea">
+                <h3>Your Hand</h3>
+                <div id="thingsInRingsHand" class="things-rings-hand"></div>
+                <div class="row actions">
+                  <button id="thingsInRingsPlaceBtn" type="button">Place Selected Card</button>
+                </div>
+              </div>
+
+              <div id="thingsInRingsKnowerArea" class="hidden">
+                <h3 id="thingsInRingsKnowerTitle">Knower Panel</h3>
+                <div id="thingsInRingsKnowerPrompt" class="hint"></div>
+                <div id="thingsInRingsKnowerCards" class="things-rings-hand"></div>
+                <div id="thingsInRingsDecisionCard" class="things-rings-decision-card hidden" aria-hidden="true"></div>
+                <div id="thingsInRingsDecisionRings" class="things-rings-decision-grid"></div>
+                <div class="row actions">
+                  <button id="thingsInRingsJudgeConfirmBtn" type="button">Confirm Placement</button>
+                </div>
+              </div>
+
+              <h3>Board</h3>
+              <div id="thingsInRingsBoard" class="things-rings-board"></div>
+
+              <div id="thingsInRingsLastResolution" class="round-notice hidden" aria-hidden="true">
+                <div class="round-notice-title">Last Placement</div>
+                <div id="thingsInRingsLastResolutionBody" class="round-notice-body">-</div>
+              </div>
+
+              <h3>Players</h3>
+              <div id="thingsInRingsPlayers"></div>
+
+              <div class="row actions">
+                <button id="thingsInRingsPlayAgainBtn" type="button">Play Again</button>
+              </div>
+            </template>

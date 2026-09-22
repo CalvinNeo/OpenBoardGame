@@ -16,25 +16,32 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class ArkNovaIntegrationTests(unittest.TestCase):
-    def test_frontend_assets_are_loaded_before_the_main_dispatcher(self) -> None:
+    def test_frontend_assets_are_declared_for_lazy_loading(self) -> None:
         index = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
-        ark_script = re.search(r'<script src="(/static/games/ark_nova\.js\?v=[^"]+)"', index)
+        loader = (ROOT / "static" / "game_assets.js").read_text(encoding="utf-8")
+        assets, _ = json.JSONDecoder().raw_decode(loader.split("const GAME_ASSETS = ", 1)[1])
+        loader_script = re.search(r'<script src="(/static/game_assets\.js\?v=[^"]+)"', index)
         app_script = re.search(r'<script src="(/static/app\.js\?v=[^"]+)"', index)
         room_script = re.search(r'<script src="(/static/room\.js\?v=[^"]+)"', index)
-        ark_style = re.search(r'<link rel="stylesheet" href="(/static/ark_nova\.css\?v=[^"]+)"', index)
 
-        self.assertIsNotNone(ark_script)
+        self.assertIn("/static/games/ark_nova.js", [url.split("?", 1)[0] for url in assets["ark_nova"]["scripts"]])
+        self.assertIn("/static/ark_nova.css", [url.split("?", 1)[0] for url in assets["ark_nova"]["styles"]])
+        self.assertEqual(assets["ark_nova"]["panel"], "arkNovaPanel")
+        self.assertNotIn('/static/games/ark_nova.js?', index)
+        self.assertNotIn('/static/ark_nova.css?', index)
+        self.assertIsNotNone(loader_script)
         self.assertIsNotNone(app_script)
         self.assertIsNotNone(room_script)
-        self.assertIsNotNone(ark_style)
-        self.assertLess(index.index(ark_script.group(0)), index.index(app_script.group(0)))
+        self.assertLess(index.index(loader_script.group(0)), index.index(app_script.group(0)))
         self.assertLess(index.index(app_script.group(0)), index.index(room_script.group(0)))
 
     def test_main_frontend_dispatches_and_toggles_ark_nova(self) -> None:
         app_script = (ROOT / "static" / "app.js").read_text(encoding="utf-8")
         self.assertIn('gameType === "ark_nova"', app_script)
         self.assertIn("renderArkNovaGameState(data)", app_script)
-        self.assertIn('arkNovaPanel.classList.toggle("hidden", !showArkNova)', app_script)
+        self.assertIn("Object.entries(GAME_ASSETS)", app_script)
+        self.assertIn("id === gameType && isGameAssetsLoaded(id)", app_script)
+        self.assertIn('document.getElementById(assets.panel)?.classList.toggle("hidden", !visible)', app_script)
 
     def test_ark_nova_script_exposes_renderer_and_uses_mounted_map_asset(self) -> None:
         script = (ROOT / "static" / "games" / "ark_nova.js").read_text(encoding="utf-8")

@@ -1,0 +1,108 @@
+<template data-game-target="bohnanzaDiceHelpModal" data-game-mode="replace"><section id="bohnanzaDiceHelpModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="bohnanzaDiceHelpModalTitle">
+    <div class="modal-content bohnanza-dice-modal-content">
+      <div class="modal-header">
+        <h2 id="bohnanzaDiceHelpModalTitle">Bohnanza: Das Würfelspiel - Game Rules</h2>
+        <button id="bohnanzaDiceHelpCloseBtn" type="button">Close</button>
+      </div>
+      <div id="bohnanzaDiceHelpContent" class="modal-body bohnanza-dice-help-content"></div>
+    </div>
+  </section></template>
+<template data-game-target="bohnanzaDiceExplainModal" data-game-mode="replace"><section id="bohnanzaDiceExplainModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="bohnanzaDiceExplainModalTitle">
+    <div class="modal-content bohnanza-dice-modal-content">
+      <div class="modal-header">
+        <h2 id="bohnanzaDiceExplainModalTitle">Control Explanation</h2>
+        <button id="bohnanzaDiceExplainCloseBtn" type="button">Close</button>
+      </div>
+      <div id="bohnanzaDiceExplainContent" class="modal-body"></div>
+    </div>
+  </section></template>
+<template data-game-target="bohnanzaDicePanel" data-game-mode="contents">
+              <header class="bohnanza-dice-topbar">
+                <div class="bohnanza-dice-brand">
+                  <span class="bohnanza-dice-brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+                  <div>
+                    <span class="bohnanza-dice-eyebrow">Five-die harvest · 2022 rules</span>
+                    <h2>Bohnanza: Das Würfelspiel</h2>
+                  </div>
+                </div>
+                <div class="bohnanza-dice-meta" aria-label="Game status">
+                  <span>Turn <strong id="bohnanzaDiceTurnLabel">-</strong></span>
+                  <span>Phase <strong id="bohnanzaDicePhaseLabel">-</strong></span>
+                  <span>Deck <strong id="bohnanzaDiceDeckLabel">-</strong></span>
+                </div>
+              </header>
+
+              <div id="bohnanzaDiceStatus" class="bohnanza-dice-status" role="status" aria-live="polite">Waiting for game state…</div>
+
+              <div class="bohnanza-dice-workspace">
+                <section class="bohnanza-dice-dice-card" aria-label="Turn dice" data-bohnanza-dice-explain="dice">
+                  <div class="bohnanza-dice-section-heading">
+                    <div>
+                      <span class="bohnanza-dice-eyebrow">Fresh result</span>
+                      <h3 id="bohnanzaDiceRollHeading">Current Roll</h3>
+                    </div>
+                    <span id="bohnanzaDiceRepeatBadge" class="bohnanza-dice-repeat-badge">Repeat ready</span>
+                  </div>
+                  <div id="bohnanzaDiceCurrentDice" class="bohnanza-dice-tray" aria-label="Turn dice tray"></div>
+                  <div class="bohnanza-dice-actions" aria-label="Dice actions">
+                    <button id="bohnanzaDiceRollBtn" type="button" data-bohnanza-dice-explain="roll">Roll Dice</button>
+                    <button id="bohnanzaDiceSaveBtn" class="is-primary" type="button" data-bohnanza-dice-explain="save">Save Selected</button>
+                    <button id="bohnanzaDiceRepeatBtn" type="button" data-bohnanza-dice-explain="repeat">Reroll Fresh Dice</button>
+                  </div>
+                </section>
+
+                <section class="bohnanza-dice-field-card" aria-labelledby="bohnanzaDiceFieldHeading" data-bohnanza-dice-explain="field">
+                  <div class="bohnanza-dice-section-heading">
+                    <div>
+                      <span class="bohnanza-dice-eyebrow">Locked this turn</span>
+                      <h3 id="bohnanzaDiceFieldHeading">Bean Field</h3>
+                    </div>
+                    <span id="bohnanzaDiceFieldCount">0 / 5</span>
+                  </div>
+                  <div id="bohnanzaDiceFieldDice" class="bohnanza-dice-tray is-field" aria-label="Saved bean field dice"></div>
+                  <p class="bohnanza-dice-field-note">Saved dice stay here. The active player checks orders only when all five arrive.</p>
+                </section>
+              </div>
+
+              <section id="bohnanzaDiceHarvestDock" class="bohnanza-dice-harvest-dock hidden" aria-labelledby="bohnanzaDiceHarvestHeading">
+                <div>
+                  <span class="bohnanza-dice-eyebrow">Decision checkpoint</span>
+                  <h3 id="bohnanzaDiceHarvestHeading">Harvest available</h3>
+                  <p id="bohnanzaDiceHarvestPrompt">Choose whether to collect coins or keep growing.</p>
+                </div>
+                <div class="bohnanza-dice-harvest-actions">
+                  <button id="bohnanzaDiceHarvestBtn" class="is-primary" type="button" data-bohnanza-dice-explain="harvest">Harvest</button>
+                  <button id="bohnanzaDiceKeepBtn" type="button" data-bohnanza-dice-explain="keep">Keep Growing</button>
+                </div>
+              </section>
+
+              <section class="bohnanza-dice-player-section" aria-labelledby="bohnanzaDicePlayersHeading">
+                <div class="bohnanza-dice-section-heading">
+                  <div>
+                    <h3 id="bohnanzaDicePlayersHeading">Fields &amp; Scores</h3>
+                  </div>
+                  <span>3 / 4 / 5 orders → 1 / 2 / 3 coins</span>
+                </div>
+                <div id="bohnanzaDicePlayers" class="bohnanza-dice-players"></div>
+              </section>
+
+              <section id="bohnanzaDiceFinal" class="bohnanza-dice-final hidden" aria-live="polite">
+                <div>
+                  <span class="bohnanza-dice-eyebrow">Final harvest complete</span>
+                  <h3 id="bohnanzaDiceFinalTitle">Game Over</h3>
+                  <p id="bohnanzaDiceFinalDetail"></p>
+                </div>
+                <div id="bohnanzaDiceReadyList" class="bohnanza-dice-ready-list"></div>
+                <button id="bohnanzaDicePlayAgainBtn" type="button" data-bohnanza-dice-explain="again">Play Again</button>
+              </section>
+
+              <section class="bohnanza-dice-activity-card" aria-labelledby="bohnanzaDiceActivityHeading" data-bohnanza-dice-explain="activity">
+                <div class="bohnanza-dice-section-heading">
+                  <h3 id="bohnanzaDiceActivityHeading">Harvest Log</h3>
+                  <span>Newest first</span>
+                </div>
+                <div id="bohnanzaDiceActivity" class="bohnanza-dice-activity" tabindex="0">No actions yet.</div>
+              </section>
+
+              <div id="bohnanzaDiceLiveRegion" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
+            </template>

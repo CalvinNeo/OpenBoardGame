@@ -298,7 +298,12 @@
             panel.innerHTML = "";
         }
     };
-    window.addEventListener("DOMContentLoaded", () => {
+    function connectEvents() {
         socket.on("system:error", () => { if (pending) { pending = false; clearTimeout(pendingTimer); render(); } });
-    }, {once: true});
+    }
+    if (document.readyState === "loading" || typeof socket === "undefined") {
+        window.addEventListener("DOMContentLoaded", connectEvents, {once: true});
+    } else {
+        connectEvents();
+    }
 })();

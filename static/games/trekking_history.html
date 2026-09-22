@@ -1,0 +1,76 @@
+<template data-game-target="trekkingHelpModal" data-game-mode="replace"><section id="trekkingHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content trekking-help-modal">
+      <div class="modal-header">
+        <h2>Trekking Through History - Game Rules</h2>
+        <button id="trekkingHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body trekking-help-content" id="trekkingHelpContent"></div>
+    </div>
+  </section></template>
+<template data-game-target="trekkingExplainModal" data-game-mode="replace"><section id="trekkingExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content trekking-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="trekkingExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="trekkingExplainContent"></div>
+      </div>
+    </div>
+  </section></template>
+<template data-game-target="trekkingPanel" data-game-mode="contents">
+              <div class="row">
+                <div>Day: <span id="trekkingDay">-</span></div>
+                <div>Current Turn: <span id="trekkingTurn">-</span></div>
+                <div>Winner: <span id="trekkingWinner">-</span></div>
+              </div>
+              <div class="row">
+                <div>Deck: <span id="trekkingDeckCount">-</span></div>
+                <div>Slot 1 Card (No Reward): <span id="trekkingDeckTop">-</span></div>
+              </div>
+
+              <h3>Clock</h3>
+              <div id="trekkingClock" class="trekking-clock"></div>
+
+              <h3>Market</h3>
+              <div id="trekkingMarket" class="trekking-market"></div>
+
+              <h3>Selection</h3>
+
+              <div class="row actions trekking-actions-row">
+                <button id="trekkingTakeCardBtn">Take Selected Card</button>
+                <button id="trekkingTakeAncestorBtn">Take Ancestor</button>
+              </div>
+              <div class="row actions trekking-actions-row trekking-actions-row-secondary">
+                <button id="trekkingTakeCardWithCrystalBtn">Take Selected Card With 💎</button>
+                <button id="trekkingTakeAncestorWithCrystalBtn">Take Ancestor With 💎</button>
+              </div>
+
+              <h3>Players</h3>
+              <div id="trekkingPlayers"></div>
+            </template>
+<template data-game-target="trekkingScoreModal" data-game-mode="replace"><div id="trekkingScoreModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true">
+              <div class="modal-content trekking-score-modal">
+                <div class="modal-header">
+                  <h2>得分规则</h2>
+                </div>
+                <div class="modal-body">
+                  <div class="trekking-score-note">当前 trek 得分按该 trek 的长度计算；所有 treks 的总得分为各 trek 得分相加。</div>
+                  <ul class="trekking-score-rules">
+                    <li>1 张: -3 分</li>
+                    <li>2 张: 0 分</li>
+                    <li>3 张: 2 分</li>
+                    <li>4 张: 4 分</li>
+                    <li>5 张: 7 分</li>
+                    <li>6 张: 10 分</li>
+                    <li>7 张: 14 分</li>
+                    <li>8 张: 18 分</li>
+                    <li>9 张: 24 分</li>
+                    <li>10+ 张: 30 分</li>
+                  </ul>
+                  <div class="row actions">
+                    <button id="trekkingScoreCloseBtn" type="button">Close</button>
+                  </div>
+                </div>
+              </div>
+            </div></template>

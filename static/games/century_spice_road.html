@@ -1,0 +1,48 @@
+<template data-game-target="centurySpiceRoadPanel" data-game-mode="contents">
+              <div class="century-header">
+                <div class="row">
+                  <div>Phase: <span id="centuryPhase">-</span></div>
+                  <div>Current Turn: <span id="centuryTurn">-</span></div>
+                  <div>Decks: <span id="centuryDecks">-</span></div>
+                  <div>Coins: <span id="centuryCoins">-</span></div>
+                </div>
+                <div class="century-header-actions" id="centuryHeaderActions">
+                  <button id="centuryHelpBtn" type="button">Help</button>
+                  <button id="centuryExplainBtn" type="button">Explain</button>
+                </div>
+              </div>
+
+              <div id="centuryPrompt" class="century-prompt">Waiting for state…</div>
+
+              <h3>Point Cards</h3>
+              <div id="centuryPointMarket" class="century-card-row"></div>
+
+              <h3>Merchant Cards</h3>
+              <div id="centuryMerchantMarket" class="century-card-row"></div>
+
+              <h3>Your Caravan</h3>
+              <div id="centuryYou" class="century-player-card"></div>
+
+              <div id="centuryActions" class="century-actions" role="region" aria-label="Selected action" aria-live="polite" hidden></div>
+
+              <h3>Players</h3>
+              <div id="centuryPlayers" class="century-player-list"></div>
+            </template>
+<template data-game-target="centuryHelpModal" data-game-mode="replace"><div id="centuryHelpModal" class="modal hidden" aria-hidden="true">
+              <div class="modal-content century-modal">
+                <div class="modal-header">
+                  <h3>Century: Spice Road Help</h3>
+                  <button id="centuryHelpModalCloseBtn" type="button">Close</button>
+                </div>
+                <div class="modal-body" id="centuryHelpContent"></div>
+              </div>
+            </div></template>
+<template data-game-target="centuryExplainModal" data-game-mode="replace"><div id="centuryExplainModal" class="modal hidden" aria-hidden="true">
+              <div class="modal-content century-modal">
+                <div class="modal-header">
+                  <h3>Century: Spice Road Explain</h3>
+                  <button id="centuryExplainModalCloseBtn" type="button">Close</button>
+                </div>
+                <div class="modal-body" id="centuryExplainContent"></div>
+              </div>
+            </div></template>

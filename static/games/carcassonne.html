@@ -1,0 +1,131 @@
+<template data-game-target="carcHelpModal" data-game-mode="replace"><section id="carcHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content carc-help-modal">
+      <div class="modal-header">
+        <h2>Carcassonne - Game Rules</h2>
+        <button id="carcHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body carc-help-content" id="carcHelpContent"></div>
+    </div>
+  </section></template>
+<template data-game-target="carcExplainModal" data-game-mode="replace"><section id="carcExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content carc-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="carcExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="carcExplainContent"></div>
+      </div>
+    </div>
+  </section></template>
+<template data-game-target="carcassonnePanel" data-game-mode="contents">
+              <div class="carc-game-shell">
+                <section class="carc-status-bar" aria-label="Game status">
+                  <div class="carc-status-item carc-status-turn">
+                    <span class="carc-status-icon" aria-hidden="true">♟</span>
+                    <span class="carc-status-copy">
+                      <span class="carc-status-label">Current turn</span>
+                      <strong id="carcTurn">-</strong>
+                    </span>
+                  </div>
+                  <div class="carc-status-item">
+                    <span class="carc-status-icon" aria-hidden="true">🧭</span>
+                    <span class="carc-status-copy">
+                      <span class="carc-status-label">Phase</span>
+                      <strong id="carcPhase">-</strong>
+                    </span>
+                  </div>
+                  <div class="carc-status-item">
+                    <span class="carc-status-icon" aria-hidden="true">🧩</span>
+                    <span class="carc-status-copy">
+                      <span class="carc-status-label">Tiles left</span>
+                      <strong id="carcRemaining">-</strong>
+                    </span>
+                  </div>
+                  <div id="carcWinnerStatus" class="carc-status-item carc-status-winner hidden">
+                    <span class="carc-status-icon" aria-hidden="true">🏆</span>
+                    <span class="carc-status-copy">
+                      <span class="carc-status-label">Winner</span>
+                      <strong id="carcWinner">-</strong>
+                    </span>
+                  </div>
+                </section>
+
+                <div class="carc-workspace">
+                  <section class="carc-surface-card carc-board-card">
+                    <div class="carc-card-header">
+                      <div>
+                        <span class="carc-card-kicker">Shared landscape</span>
+                        <h3>Board</h3>
+                      </div>
+                      <div class="carc-placement-key">
+                        <span aria-hidden="true">+</span>
+                        Legal tile space
+                      </div>
+                    </div>
+                    <div class="carc-board-scroll" tabindex="0" aria-label="Scrollable Carcassonne board">
+                      <div id="carcBoard" class="carc-board" role="grid" aria-label="Carcassonne landscape"></div>
+                    </div>
+                    <div id="carcBoardHint" class="carc-board-hint" aria-live="polite">
+                      Waiting for the game to begin.
+                    </div>
+                  </section>
+
+                  <section class="carc-surface-card carc-tile-card">
+                    <div class="carc-card-header carc-tile-heading">
+                      <div>
+                        <span class="carc-card-kicker">Your draw</span>
+                        <h3>Pending Tile</h3>
+                      </div>
+                      <span id="carcPendingLabel" class="carc-tile-label">-</span>
+                    </div>
+                    <div class="carc-tile-stage">
+                      <div id="carcPendingTile" class="carc-tile-preview" aria-live="polite"></div>
+                    </div>
+                    <div class="carc-rotate-actions" aria-label="Tile rotation controls">
+                      <button id="carcRotateLeftBtn" class="carc-action-btn carc-rotate-btn" type="button">
+                        <span aria-hidden="true">↺</span>
+                        <span>Rotate Left</span>
+                      </button>
+                      <div class="carc-rotation-readout" aria-live="polite">
+                        <span>Rotation</span>
+                        <strong id="carcRotationLabel">0°</strong>
+                      </div>
+                      <button id="carcRotateRightBtn" class="carc-action-btn carc-rotate-btn" type="button">
+                        <span>Rotate Right</span>
+                        <span aria-hidden="true">↻</span>
+                      </button>
+                    </div>
+                  </section>
+
+                  <section class="carc-surface-card carc-meeple-card">
+                    <div class="carc-card-header">
+                      <div>
+                        <span class="carc-card-kicker">Optional action</span>
+                        <h3>Meeple Placement</h3>
+                      </div>
+                      <span class="carc-meeple-symbol" aria-hidden="true">♟</span>
+                    </div>
+                    <div id="carcMeepleHint" class="carc-meeple-hint">Wait until a tile is placed.</div>
+                    <div id="carcMeepleSelection" class="carc-meeple-selection">No feature selected</div>
+                    <div id="carcMeepleOptions" class="carc-meeple-options" aria-label="Available features"></div>
+                    <div class="carc-meeple-actions">
+                      <button id="carcConfirmMeepleBtn" class="carc-action-btn carc-primary-btn" type="button">Confirm Meeple</button>
+                      <button id="carcSkipMeepleBtn" class="carc-action-btn" type="button">Skip Meeple</button>
+                      <button id="carcClearMeepleBtn" class="carc-action-btn carc-quiet-btn" type="button">Cancel</button>
+                    </div>
+                  </section>
+
+                  <section class="carc-surface-card carc-players-card">
+                    <div class="carc-card-header">
+                      <div>
+                        <span class="carc-card-kicker">Score track</span>
+                        <h3>Players</h3>
+                      </div>
+                      <span class="carc-player-count" id="carcPlayerCount">0</span>
+                    </div>
+                    <div id="carcPlayers" class="carc-players-list"></div>
+                  </section>
+                </div>
+              </div>
+            </template>

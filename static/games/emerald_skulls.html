@@ -1,0 +1,158 @@
+<template data-game-target="emeraldSkullsPanel" data-game-mode="contents">
+              <header class="emerald-skulls-topbar">
+                <div class="emerald-skulls-brand">
+                  <span class="emerald-skulls-brand-icon" aria-hidden="true">💀</span>
+                  <div>
+                    <span class="emerald-skulls-eyebrow">Kulbak dice table · Standard bets</span>
+                    <h2>Emerald Skulls</h2>
+                  </div>
+                </div>
+                <div class="emerald-skulls-meta" aria-label="Game status">
+                  <span>Turn <strong id="emeraldSkullsTurnLabel">-</strong></span>
+                  <span>Tumbler <strong id="emeraldSkullsTumblerLabel">-</strong></span>
+                  <span data-emerald-skulls-tip="Gear pot (⚙️): the game ends as soon as a payout empties it." tabindex="0">⚙️ Pot <strong id="emeraldSkullsPotLabel">-</strong></span>
+                </div>
+              </header>
+
+              <div id="emeraldSkullsStatus" class="emerald-skulls-status" role="status" aria-live="polite">Waiting for game state…</div>
+
+              <section class="emerald-skulls-player-section" aria-labelledby="emeraldSkullsPlayersHeading" data-emerald-skulls-explain="players">
+                <div class="emerald-skulls-section-heading">
+                  <h3 id="emeraldSkullsPlayersHeading">Players</h3>
+                  <span>⚙️ Gears · 🟩 Reroll cubes · 🎟️ Bets</span>
+                </div>
+                <div id="emeraldSkullsPlayers" class="emerald-skulls-players"></div>
+              </section>
+
+              <section id="emeraldSkullsPayoutChoice" class="emerald-skulls-payout-choice hidden" aria-labelledby="emeraldSkullsPayoutHeading">
+                <div>
+                  <span class="emerald-skulls-eyebrow">Jackpot unlocked</span>
+                  <h3 id="emeraldSkullsPayoutHeading">Choose one payout</h3>
+                  <p>Take the standard board payout or one achieved jackpot.</p>
+                </div>
+                <div id="emeraldSkullsPayoutOptions" class="emerald-skulls-payout-options"></div>
+              </section>
+
+              <section id="emeraldSkullsResult" class="emerald-skulls-result hidden" aria-live="polite" data-emerald-skulls-explain="result">
+                <div class="emerald-skulls-result-heading">
+                  <div>
+                    <span id="emeraldSkullsResultEyebrow" class="emerald-skulls-eyebrow">Turn review</span>
+                    <h3 id="emeraldSkullsResultTitle">Turn Result</h3>
+                  </div>
+                  <span id="emeraldSkullsReviewProgress" class="emerald-skulls-review-progress">0 / 0 ready</span>
+                </div>
+                <div id="emeraldSkullsResultBody" class="emerald-skulls-result-body"></div>
+                <div id="emeraldSkullsReadyList" class="emerald-skulls-ready-list"></div>
+                <div class="emerald-skulls-result-actions">
+                  <button id="emeraldSkullsNextBtn" class="is-primary" type="button" data-emerald-skulls-explain="next" disabled>Next Turn</button>
+                  <button id="emeraldSkullsPlayAgainBtn" class="is-primary hidden" type="button" data-emerald-skulls-explain="again" disabled>Play Again</button>
+                </div>
+              </section>
+
+              <nav class="emerald-skulls-tabs" aria-label="Table view">
+                <button type="button" data-emerald-skulls-tab="skull" data-emerald-skulls-explain="board" aria-controls="emeraldSkullsTable" aria-pressed="true">💀 Skull &amp; Dice</button>
+                <button type="button" data-emerald-skulls-tab="bets" data-emerald-skulls-explain="bets" aria-controls="emeraldSkullsBetting" aria-pressed="false">🎟️ Bets</button>
+              </nav>
+
+              <div class="emerald-skulls-workspace">
+                <section id="emeraldSkullsTable" class="emerald-skulls-table" aria-labelledby="emeraldSkullsBoardHeading" data-emerald-skulls-explain="board">
+                  <div class="emerald-skulls-section-heading">
+                    <div>
+                      <span class="emerald-skulls-eyebrow">Ascending placement</span>
+                      <h3 id="emeraldSkullsBoardHeading">The Skull</h3>
+                    </div>
+                    <span id="emeraldSkullsFloorLabel" class="emerald-skulls-floor">Floor · 1</span>
+                  </div>
+
+                  <div id="emeraldSkullsBoard" class="emerald-skulls-board" aria-label="Five skull levels">
+                    <button class="emerald-skulls-level is-gem" type="button" data-level="5" data-emerald-skulls-explain="level" disabled>
+                      <span class="emerald-skulls-level-label"><b>5</b><span>💎 Gem</span></span>
+                      <span id="emeraldSkullsLevel5" class="emerald-skulls-level-dice"></span>
+                    </button>
+                    <button class="emerald-skulls-level is-eyes" type="button" data-level="4" data-emerald-skulls-explain="level" disabled>
+                      <span class="emerald-skulls-level-label"><b>4</b><span>👁️ Eyes</span></span>
+                      <span id="emeraldSkullsLevel4" class="emerald-skulls-level-dice"></span>
+                    </button>
+                    <button class="emerald-skulls-level is-nose" type="button" data-level="3" data-emerald-skulls-explain="level" disabled>
+                      <span class="emerald-skulls-level-label"><b>3</b><span>👃 Nose</span></span>
+                      <span id="emeraldSkullsLevel3" class="emerald-skulls-level-dice"></span>
+                    </button>
+                    <button class="emerald-skulls-level is-upper" type="button" data-level="2" data-emerald-skulls-explain="level" disabled>
+                      <span class="emerald-skulls-level-label"><b>2</b><span>🦷 Upper jaw</span></span>
+                      <span id="emeraldSkullsLevel2" class="emerald-skulls-level-dice"></span>
+                    </button>
+                    <button class="emerald-skulls-level is-lower" type="button" data-level="1" data-emerald-skulls-explain="level" disabled>
+                      <span class="emerald-skulls-level-label"><b>1</b><span>🦷 Lower jaw</span></span>
+                      <span id="emeraldSkullsLevel1" class="emerald-skulls-level-dice"></span>
+                    </button>
+                  </div>
+
+                  <div class="emerald-skulls-roll-zone" data-emerald-skulls-explain="dice">
+                    <div class="emerald-skulls-roll-heading">
+                      <div>
+                        <span class="emerald-skulls-eyebrow">Dice in hand</span>
+                        <h3 id="emeraldSkullsRollHeading">Choose dice</h3>
+                      </div>
+                      <span id="emeraldSkullsDiceCount">0 dice</span>
+                    </div>
+                    <div id="emeraldSkullsDiceTray" class="emerald-skulls-dice-tray" aria-label="Current dice"></div>
+                    <p id="emeraldSkullsSelectionHint" class="emerald-skulls-selection-hint">Select matching dice, then choose a skull level.</p>
+                  </div>
+
+                  <div id="emeraldSkullsBuyDock" class="emerald-skulls-action-dock hidden" data-emerald-skulls-explain="buy">
+                    <div>
+                      <strong>Choose your dice pool</strong>
+                    </div>
+                    <div id="emeraldSkullsBuyOptions" class="emerald-skulls-buy-options"></div>
+                  </div>
+
+                  <div id="emeraldSkullsActionDock" class="emerald-skulls-action-dock">
+                    <button id="emeraldSkullsRollBtn" class="is-primary" type="button" data-emerald-skulls-explain="roll" disabled>🎲 Roll Dice</button>
+                    <button id="emeraldSkullsRerollBtn" type="button" data-emerald-skulls-explain="reroll" disabled>🟩 Spend Reroll</button>
+                    <button id="emeraldSkullsPickNoseBtn" type="button" data-emerald-skulls-explain="nose" disabled>👃 Pick a Nose</button>
+                    <button id="emeraldSkullsContinueBtn" class="is-primary" type="button" data-emerald-skulls-explain="continue" disabled>🔥 Press Your Luck</button>
+                    <button id="emeraldSkullsChickenBtn" type="button" data-emerald-skulls-explain="chicken" disabled>🐔 Chicken Out</button>
+                    <button id="emeraldSkullsBustBtn" type="button" data-emerald-skulls-explain="bust" disabled>💥 Accept Bust</button>
+                  </div>
+                </section>
+
+                <section id="emeraldSkullsBetting" class="emerald-skulls-betting" aria-labelledby="emeraldSkullsBetsHeading" data-emerald-skulls-explain="bets">
+                  <div class="emerald-skulls-section-heading">
+                    <div>
+                      <span class="emerald-skulls-eyebrow">First marker earns the most</span>
+                      <h3 id="emeraldSkullsBetsHeading">Standard Bets</h3>
+                    </div>
+                    <span id="emeraldSkullsMarkersLabel">🎟️ 0 left</span>
+                  </div>
+                  <div id="emeraldSkullsBetCards" class="emerald-skulls-bet-cards"></div>
+                </section>
+              </div>
+
+              <details class="emerald-skulls-log-card" data-emerald-skulls-explain="log">
+                <summary class="emerald-skulls-section-heading">
+                  <strong>Game Log</strong>
+                  <span>Newest first</span>
+                </summary>
+                <div id="emeraldSkullsLog" class="emerald-skulls-log" tabindex="0">No actions yet.</div>
+              </details>
+
+              <div id="emeraldSkullsLiveRegion" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
+            </template>
+<template data-game-target="emeraldSkullsHelpModal" data-game-mode="replace"><div id="emeraldSkullsHelpModal" class="modal hidden" aria-hidden="true">
+              <div class="modal-content emerald-skulls-modal-content" role="dialog" aria-modal="true" aria-labelledby="emeraldSkullsHelpModalTitle">
+                <div class="modal-header">
+                  <h2 id="emeraldSkullsHelpModalTitle">Emerald Skulls Help</h2>
+                  <button id="emeraldSkullsHelpCloseBtn" type="button">Close</button>
+                </div>
+                <div id="emeraldSkullsHelpContent" class="modal-body emerald-skulls-help-content"></div>
+              </div>
+            </div></template>
+<template data-game-target="emeraldSkullsExplainModal" data-game-mode="replace"><div id="emeraldSkullsExplainModal" class="modal hidden" aria-hidden="true">
+              <div class="modal-content emerald-skulls-modal-content" role="dialog" aria-modal="true" aria-labelledby="emeraldSkullsExplainModalTitle">
+                <div class="modal-header">
+                  <h2 id="emeraldSkullsExplainModalTitle">Emerald Skulls Explain</h2>
+                  <button id="emeraldSkullsExplainCloseBtn" type="button">Close</button>
+                </div>
+                <div id="emeraldSkullsExplainContent" class="modal-body"></div>
+              </div>
+            </div></template>

@@ -1,0 +1,61 @@
+<template data-game-target="azulHelpModal" data-game-mode="replace"><section id="azulHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content azul-help-modal">
+      <div class="modal-header">
+        <h2>Azul - Game Rules</h2>
+        <button id="azulHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body azul-help-content" id="azulHelpContent"></div>
+    </div>
+  </section></template>
+<template data-game-target="azulExplainModal" data-game-mode="replace"><section id="azulExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content azul-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="azulExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="azulExplainContent"></div>
+      </div>
+    </div>
+  </section></template>
+<template data-game-target="azulPanel" data-game-mode="contents">
+              <div class="azul-status">
+                <div>Round: <span id="azulRound">-</span></div>
+                <div class="azul-turn">Turn: <span id="azulTurn">-</span></div>
+                <div>Phase: <span id="azulPhase">-</span></div>
+                <div>Bag: <span id="azulBagCount">-</span></div>
+                <div>Discard: <span id="azulDiscardCount">-</span></div>
+                <div id="azulWinnerStatus" class="hidden">Winner: <span id="azulWinner">-</span></div>
+              </div>
+              <div class="azul-layout">
+                <div class="azul-table" id="azulTable">
+                  <div class="azul-market">
+                    <div class="azul-factories-block">
+                      <h3>Factories</h3>
+                      <div id="azulFactories" class="azul-factories"></div>
+                    </div>
+                    <div class="azul-center-block">
+                      <h3 data-azul-tip="Center (🏛️): take all tiles of one color. The first player to take here also takes the First Player token (1st)." tabindex="0">Center 🏛️</h3>
+                      <div id="azulCenter" class="azul-center"></div>
+                    </div>
+                  </div>
+                  <div class="azul-board-block" id="azulBoardBlock">
+                    <h3>Your Board</h3>
+                    <div id="azulYourBoard" class="azul-board"></div>
+                    <div class="azul-selection" role="status" aria-live="polite">
+                      <div>Source: <strong id="azulSelectedSource">-</strong></div>
+                      <div>Color: <strong id="azulSelectedColor">-</strong></div>
+                      <div>To: <strong id="azulSelectedRow">-</strong></div>
+                    </div>
+                    <div class="azul-center-actions">
+                      <button id="azulFloorBtn" type="button">Send to Floor</button>
+                      <button id="azulTakeBtn" type="button">Take Tiles</button>
+                    </div>
+                  </div>
+                </div>
+                <details class="azul-side" id="azulPlayersDetails">
+                  <summary>Players</summary>
+                  <div id="azulPlayers"></div>
+                </details>
+              </div>
+            </template>

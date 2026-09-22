@@ -22,6 +22,10 @@ function emitSeatMove(direction) {
 
 function emitRoomStart() {
   if (!ensureRoomConnection()) return;
+  if (typeof isGameAssetsLoaded === "function" && !isGameAssetsLoaded(currentGameType)) {
+    setRoomFeedback("Game files are still loading. Please wait or use Retry if loading failed.");
+    return;
+  }
   const payload = { room_id: roomId };
   attachSkipValidation(payload);
   if (currentGameType === "draw_guess") {
@@ -256,12 +260,12 @@ function renderRoomState(state) {
   }
   updateRoomControlsForStatus(state.status);
   if (previousGame !== currentGameType) {
-    clearSelection();
-    clearTargetSelection();
-    clearSkullSelection();
-    clearCaboState();
-    clearFlip7State();
-    clearYahtzeeState();
+    if (typeof clearSelection === "function") clearSelection();
+    if (typeof clearTargetSelection === "function") clearTargetSelection();
+    if (typeof clearSkullSelection === "function") clearSkullSelection();
+    if (typeof clearCaboState === "function") clearCaboState();
+    if (typeof clearFlip7State === "function") clearFlip7State();
+    if (typeof clearYahtzeeState === "function") clearYahtzeeState();
     if (typeof clearAcquireState === "function") {
       clearAcquireState();
     }
@@ -271,16 +275,16 @@ function renderRoomState(state) {
     if (typeof clearCriminalDanceState === "function") {
       clearCriminalDanceState();
     }
-    clearIstanbulState();
-    clearSkullState();
-    clearCatInBoxState();
-    clearGangState();
-    clearMismatchState();
+    if (typeof clearIstanbulState === "function") clearIstanbulState();
+    if (typeof clearSkullState === "function") clearSkullState();
+    if (typeof clearCatInBoxState === "function") clearCatInBoxState();
+    if (typeof clearGangState === "function") clearGangState();
+    if (typeof clearMismatchState === "function") clearMismatchState();
     if (typeof clearCitadelsState === "function") {
       clearCitadelsState();
     }
-    clearDecryptoState();
-    clearWordDecodeState();
+    if (typeof clearDecryptoState === "function") clearDecryptoState();
+    if (typeof clearWordDecodeState === "function") clearWordDecodeState();
     if (typeof clearWavelengthState === "function") {
       clearWavelengthState();
     }
@@ -296,34 +300,34 @@ function renderRoomState(state) {
     if (typeof clearKronologicState === "function") {
       clearKronologicState();
     }
-    clearDrawGuessState();
-    clearBlitzSketchState();
-    clearFakeArtistState();
+    if (typeof clearDrawGuessState === "function") clearDrawGuessState();
+    if (typeof clearBlitzSketchState === "function") clearBlitzSketchState();
+    if (typeof clearFakeArtistState === "function") clearFakeArtistState();
     if (typeof clearThingsInRingsState === "function") {
       clearThingsInRingsState();
     }
-    clearAidixitState();
-    clearImpressionFlowerState();
+    if (typeof clearAidixitState === "function") clearAidixitState();
+    if (typeof clearImpressionFlowerState === "function") clearImpressionFlowerState();
     if (typeof clearGizmosState === "function") {
       clearGizmosState();
     }
-    clearSplendorState();
-    clearPokemonSplendorState();
+    if (typeof clearSplendorState === "function") clearSplendorState();
+    if (typeof clearPokemonSplendorState === "function") clearPokemonSplendorState();
     if (typeof clearForestShuffleState === "function") {
       clearForestShuffleState();
     }
-    clearAbracaState();
-    clearBlokusState();
+    if (typeof clearAbracaState === "function") clearAbracaState();
+    if (typeof clearBlokusState === "function") clearBlokusState();
     if (typeof clearSkyeState === "function") {
       clearSkyeState();
     }
-    clearCarcassonneState();
-    clearAzulState();
-    clearHalliState();
-    clearGoldRushState();
-    clearIncanGoldState();
-    clearAgeOfWarState();
-    clearWanderingTowersState();
+    if (typeof clearCarcassonneState === "function") clearCarcassonneState();
+    if (typeof clearAzulState === "function") clearAzulState();
+    if (typeof clearHalliState === "function") clearHalliState();
+    if (typeof clearGoldRushState === "function") clearGoldRushState();
+    if (typeof clearIncanGoldState === "function") clearIncanGoldState();
+    if (typeof clearAgeOfWarState === "function") clearAgeOfWarState();
+    if (typeof clearWanderingTowersState === "function") clearWanderingTowersState();
     if (typeof clearRaState === "function") {
       clearRaState();
     }
@@ -353,23 +357,23 @@ function renderRoomState(state) {
     if (typeof clearCenturyState === "function") {
       clearCenturyState();
     }
-    clearHanabiState();
+    if (typeof clearHanabiState === "function") clearHanabiState();
     if (typeof clearRebelPrincessState === "function") {
       clearRebelPrincessState();
     }
-    clearTexasHoldemState();
-    clearSixNimmtState();
+    if (typeof clearTexasHoldemState === "function") clearTexasHoldemState();
+    if (typeof clearSixNimmtState === "function") clearSixNimmtState();
     if (typeof clearManilaState === "function") {
       clearManilaState();
     }
   }
   setGamePanelVisibility(currentGameType);
-  updateDrawGuessLanguageRow();
-  updateCyberPicturesConfigRow();
-  updateDecryptoPackRow();
-  updateDecryptoBotRow();
-  updateAidixitDeckRow();
-  updateHalliConfigRow();
+  if (typeof updateDrawGuessLanguageRow === "function") updateDrawGuessLanguageRow();
+  if (typeof updateCyberPicturesConfigRow === "function") updateCyberPicturesConfigRow();
+  if (typeof updateDecryptoPackRow === "function") updateDecryptoPackRow();
+  if (typeof updateDecryptoBotRow === "function") updateDecryptoBotRow();
+  if (typeof updateAidixitDeckRow === "function") updateAidixitDeckRow();
+  if (typeof updateHalliConfigRow === "function") updateHalliConfigRow();
   updateGoldRushConfigRow();
   updateBombBustersConfigRow();
   if (typeof updateTakeTimeConfigRow === "function") updateTakeTimeConfigRow();
@@ -379,16 +383,16 @@ function renderRoomState(state) {
   if (typeof updateBoomerangAustraliaConfigUI === "function") updateBoomerangAustraliaConfigUI();
   if (typeof updateInAGroveConfigRow === "function") updateInAGroveConfigRow();
   updateCitadelsConfigRow();
-  updateHanabiConfigRow();
+  if (typeof updateHanabiConfigRow === "function") updateHanabiConfigRow();
   updateTexasHoldemConfigRow();
   updateMismatchConfigRow();
-  updateGangConfigRow();
+  if (typeof updateGangConfigRow === "function") updateGangConfigRow();
   if (typeof updateWordDecodeConfigRow === "function") {
     updateWordDecodeConfigRow();
   }
-  updateImpressionConfigRow();
-  updateBlitzSketchConfigRow();
-  updateFakeArtistConfigRow();
+  if (typeof updateImpressionConfigRow === "function") updateImpressionConfigRow();
+  if (typeof updateBlitzSketchConfigRow === "function") updateBlitzSketchConfigRow();
+  if (typeof updateFakeArtistConfigRow === "function") updateFakeArtistConfigRow();
   updateThingsInRingsConfigRow();
   if (typeof updateTuringMachineConfigRow === "function") {
     updateTuringMachineConfigRow();
@@ -465,6 +469,19 @@ function renderRoomState(state) {
   }
   updateGameReconnectButton();
   updateRoomActionButtons();
+  const gameType = currentGameType;
+  if (gameType && typeof ensureGameAssets === "function" && !isGameAssetsLoaded(gameType)) {
+    ensureGameAssets(gameType).then(() => {
+      if (currentRoomState !== state || currentGameType !== gameType) return;
+      renderRoomState(state);
+      const gameState = lastGameStatePayload;
+      if (gameState && gameState.room_id === state.room_id && gameState.game_type === gameType) {
+        renderGameState(gameState);
+      }
+    }).catch(() => {
+      // The asset loader displays the failure and its retry action.
+    });
+  }
 }
 
 function findPlayerName(view, playerId) {

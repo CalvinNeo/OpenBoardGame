@@ -1,0 +1,75 @@
+<template data-game-target="poisonHelpModal" data-game-mode="replace"><section id="poisonHelpModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="poisonHelpModalTitle">
+    <div class="modal-content poison-modal-content">
+      <div class="modal-header">
+        <h2 id="poisonHelpModalTitle">Poison - Game Rules</h2>
+        <button id="poisonHelpCloseBtn" type="button">Close</button>
+      </div>
+      <div id="poisonHelpContent" class="modal-body poison-help-content"></div>
+    </div>
+  </section></template>
+<template data-game-target="poisonExplainModal" data-game-mode="replace"><section id="poisonExplainModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="poisonExplainModalTitle">
+    <div class="modal-content poison-modal-content poison-explain-modal-content">
+      <div class="modal-header">
+        <h2 id="poisonExplainModalTitle">Button Explanation</h2>
+        <button id="poisonExplainCloseBtn" type="button">Close</button>
+      </div>
+      <div id="poisonExplainContent" class="modal-body"></div>
+    </div>
+  </section></template>
+<template data-game-target="poisonPanel" data-game-mode="contents">
+              <div class="poison-topbar">
+                <div>
+                  <h2><span aria-hidden="true">☠️</span> Poison</h2>
+                  <div class="poison-subtitle">
+                    Round <span id="poisonRoundLabel">-</span>/<span id="poisonTotalRoundsLabel">-</span>
+                  </div>
+                </div>
+                <div class="poison-turn-meta">
+                  <span>Dealer <strong id="poisonDealerLabel">-</strong></span>
+                  <span>Turn <strong id="poisonTurnLabel">-</strong></span>
+                </div>
+              </div>
+
+              <div id="poisonStatus" class="poison-status" role="status" aria-live="polite">Waiting for game state…</div>
+
+              <section class="poison-player-section" aria-labelledby="poisonPlayersHeading">
+                <h3 id="poisonPlayersHeading">Players</h3>
+                <div id="poisonPlayers" class="poison-players"></div>
+              </section>
+
+              <section class="poison-board" aria-labelledby="poisonCauldronsHeading">
+                <div class="poison-section-heading">
+                  <h3 id="poisonCauldronsHeading">Cauldrons</h3>
+                  <span>Safe through 13</span>
+                </div>
+                <div id="poisonCauldrons" class="poison-cauldrons"></div>
+              </section>
+
+              <section class="poison-hand-section" aria-labelledby="poisonHandHeading">
+                <div class="poison-section-heading">
+                  <h3 id="poisonHandHeading">Your Hand</h3>
+                  <span id="poisonHandCount">0 cards</span>
+                </div>
+                <div id="poisonHand" class="poison-hand"></div>
+              </section>
+
+              <section id="poisonSummary" class="poison-summary hidden" aria-live="polite">
+                <div class="poison-summary-heading">
+                  <div>
+                    <span class="poison-eyebrow">Round review</span>
+                    <h3 id="poisonSummaryTitle">Round Summary</h3>
+                  </div>
+                  <div id="poisonSummaryStatus" class="poison-ready-status">-</div>
+                </div>
+                <div id="poisonSummaryPlayers" class="poison-summary-players"></div>
+                <div class="poison-summary-actions">
+                  <button id="poisonNextRoundBtn" type="button">Next Round</button>
+                  <button id="poisonPlayAgainBtn" class="hidden" type="button">Play Again</button>
+                </div>
+              </section>
+
+              <section class="poison-activity" aria-labelledby="poisonActivityHeading">
+                <h3 id="poisonActivityHeading">Latest Activity</h3>
+                <div id="poisonLog" class="poison-log" tabindex="0">No actions yet.</div>
+              </section>
+            </template>

@@ -1,0 +1,72 @@
+<template data-game-target="highSocietyHelpModal" data-game-mode="replace"><section id="highSocietyHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content high-society-help-modal">
+      <div class="modal-header">
+        <h2>High Society - Game Rules</h2>
+        <button id="highSocietyHelpCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body high-society-help-content"></div>
+    </div>
+  </section></template>
+<template data-game-target="highSocietyExplainModal" data-game-mode="replace"><section id="highSocietyExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="highSocietyExplainCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="highSocietyExplainContent"></div>
+      </div>
+    </div>
+  </section></template>
+<template data-game-target="highSocietyPanel" data-game-mode="contents">
+              <div class="high-society-topbar">
+                <div>
+                  <h2>High Society</h2>
+                  <div class="high-society-subtitle">
+                    Round <span id="highSocietyRound">-</span> · Phase <span id="highSocietyPhase">-</span>
+                  </div>
+                </div>
+                <div class="high-society-deck">
+                  Deck <span id="highSocietyDeckCount">-</span> · Timer <span id="highSocietyTimer">-</span>/4
+                </div>
+              </div>
+
+              <div id="highSocietyNotice" class="round-notice hidden">
+                <div id="highSocietyNoticeTitle" class="round-notice-title">Round Summary</div>
+                <div id="highSocietyNoticeBody" class="round-notice-body">-</div>
+                <div id="highSocietyFinalResults" class="high-society-final-results"></div>
+              </div>
+
+              <div class="high-society-table">
+                <section class="high-society-current">
+                  <h3>Current Auction</h3>
+                  <div id="highSocietyCurrentCard" class="high-society-status-card">-</div>
+                  <div class="high-society-auction-meta">
+                    <div>Current Turn: <span id="highSocietyTurn">-</span></div>
+                    <div>Start Player: <span id="highSocietyStart">-</span></div>
+                    <div>High Bid: <span id="highSocietyHighBid">-</span></div>
+                    <div>High Bidder: <span id="highSocietyHighBidder">-</span></div>
+                  </div>
+                </section>
+
+                <section class="high-society-actions">
+                  <h3>Your Money</h3>
+                  <div id="highSocietyHand" class="high-society-money-row"></div>
+                  <div class="high-society-selection">
+                    Selected: <span id="highSocietySelectedTotal">0</span>
+                  </div>
+                  <div class="row actions high-society-action-row">
+                    <button id="highSocietyBidBtn" type="button">Bid</button>
+                    <button id="highSocietyPassBtn" type="button">Pass</button>
+                    <button id="highSocietyNextBtn" type="button">Next Round</button>
+                  </div>
+                  <div id="highSocietyFauxPasBox" class="high-society-faux-pas hidden">
+                    <div class="hint">Choose one luxury card to discard.</div>
+                    <div id="highSocietyFauxPasChoices" class="high-society-card-list"></div>
+                  </div>
+                </section>
+              </div>
+
+              <h3>Players</h3>
+              <div id="highSocietyPlayers" class="high-society-players"></div>
+            </template>

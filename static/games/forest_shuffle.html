@@ -1,0 +1,59 @@
+<template data-game-target="forestShuffleHelpModal" data-game-mode="replace"><section id="forestShuffleHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content forest-shuffle-help-modal">
+      <div class="modal-header">
+        <h2 id="forestShuffleHelpTitle">Forest Shuffle - Game Rules</h2>
+        <button id="forestShuffleHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body forest-shuffle-help-content" id="forestShuffleHelpContent"></div>
+    </div>
+  </section></template>
+<template data-game-target="forestShuffleExplainModal" data-game-mode="replace"><section id="forestShuffleExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content forest-shuffle-explain-modal">
+      <div class="modal-header">
+        <h2 id="forestShuffleExplainTitle">Button Explanation</h2>
+        <button id="forestShuffleExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="forestShuffleExplainContent"></div>
+      </div>
+    </div>
+  </section></template>
+<template data-game-target="forestShufflePanel" data-game-mode="contents">
+              <div class="row">
+                <div><span id="forestShuffleCurrentTurnText">Current Turn</span>: <span id="forestShuffleTurn">-</span></div>
+                <div><span id="forestShuffleWinterText">Winter</span>: <span id="forestShuffleWinter">-</span></div>
+                <div><span id="forestShuffleDeckText">Deck</span>: <span id="forestShuffleDeck">-</span></div>
+                <div><span id="forestShuffleWinnerText">Winner</span>: <span id="forestShuffleWinner">-</span></div>
+              </div>
+              <div id="forestShuffleStatus" class="forest-shuffle-status" data-forest-shuffle-explain="status">-</div>
+              <div id="forestShuffleNotes" class="forest-shuffle-notes"></div>
+
+              <div class="forest-shuffle-layout">
+                <section class="forest-shuffle-shell" data-forest-shuffle-explain="action">
+                  <div id="forestShuffleActionTitle" class="forest-shuffle-section-title">Action Console</div>
+                  <div id="forestShuffleActionHint" class="hint">-</div>
+                  <div id="forestShuffleDrawSources" class="forest-shuffle-draw-sources"></div>
+                  <div class="row actions forest-shuffle-action-row">
+                    <button id="forestShuffleDrawBtn" type="button">Draw Selected</button>
+                    <button id="forestShuffleFinishPendingBtn" type="button">Finish Pending</button>
+                    <button id="forestShuffleResolveRaccoonBtn" type="button">Confirm Cave</button>
+                  </div>
+                  <div id="forestShuffleSelectionSummary" class="forest-shuffle-selection-summary">-</div>
+                  <div class="row actions forest-shuffle-action-row">
+                    <button id="forestShufflePlayBtn" type="button">Play Selected</button>
+                    <button id="forestShuffleSaplingBtn" type="button">Play As Sapling</button>
+                  </div>
+                </section>
+
+                <section class="forest-shuffle-shell" data-forest-shuffle-explain="clearing">
+                  <div id="forestShuffleClearingTitle" class="forest-shuffle-section-title">Clearing</div>
+                  <div id="forestShuffleClearing" class="forest-shuffle-card-grid"></div>
+                </section>
+              </div>
+
+              <h3 id="forestShuffleHandTitle">Your Hand</h3>
+              <div id="forestShuffleHand" class="forest-shuffle-card-grid" data-forest-shuffle-explain="hand"></div>
+
+              <h3 id="forestShufflePlayersTitle">Players</h3>
+              <div id="forestShufflePlayers" class="forest-shuffle-player-grid" data-forest-shuffle-explain="players"></div>
+            </template>

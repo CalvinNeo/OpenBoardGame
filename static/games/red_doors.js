@@ -298,7 +298,12 @@
     };
     window.showRedDoorsHeaderActions = visible => { header.style.display = visible ? "flex" : "none"; if (!visible) clearState(); };
     window.clearRedDoorsState = clearState;
-    window.addEventListener("DOMContentLoaded", () => {
+    function connectEvents() {
         socket.on("system:error", () => { if (pending) { pending = false; window.clearTimeout(pendingTimer); render(); } });
-    });
+    }
+    if (document.readyState === "loading" || typeof socket === "undefined") {
+        window.addEventListener("DOMContentLoaded", connectEvents, {once: true});
+    } else {
+        connectEvents();
+    }
 })();

@@ -1,0 +1,73 @@
+<template data-game-target="skyeHelpModal" data-game-mode="replace"><section id="skyeHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content skye-help-modal">
+      <div class="modal-header">
+        <h2>Isle of Skye - Game Rules</h2>
+        <button id="skyeHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body skye-help-content" id="skyeHelpContent"></div>
+    </div>
+  </section></template>
+<template data-game-target="skyeExplainModal" data-game-mode="replace"><section id="skyeExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content skye-explain-modal">
+      <div class="modal-header">
+        <h2>Game Element Explanation</h2>
+        <button id="skyeExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="skyeExplainContent"></div>
+      </div>
+    </div>
+  </section></template>
+<template data-game-target="skyePanel" data-game-mode="contents">
+              <div class="row">
+                <div>Round: <span id="skyeRound">-</span></div>
+                <div>Phase: <span id="skyePhase">-</span></div>
+                <div>Current Turn: <span id="skyeTurn">-</span></div>
+                <div>Start Player: <span id="skyeStartPlayer">-</span></div>
+                <div>Bag: <span id="skyeBagCount">-</span></div>
+                <div>Winner: <span id="skyeWinner">-</span></div>
+              </div>
+              <div id="skyeImplementationNote" class="hint"></div>
+              <div id="skyeSelectionHint" class="hint">Select a build tile, rotate it if needed, then click a highlighted empty cell on your territory.</div>
+              <div class="row actions skye-global-actions">
+                <button id="skyeSubmitPricingBtn" type="button" data-skye-explain="skyeSubmitPricingBtn">Submit Prices</button>
+                <button id="skyePassBuyBtn" type="button" data-skye-explain="skyePassBuyBtn">Pass Buy</button>
+                <button id="skyeRotateLeftBtn" type="button" data-skye-explain="skyeRotateLeftBtn">Rotate Left</button>
+                <button id="skyeRotateRightBtn" type="button" data-skye-explain="skyeRotateRightBtn">Rotate Right</button>
+                <button id="skyeReturnSelectedBtn" type="button" data-skye-explain="skyeReturnSelectedBtn">Return Selected</button>
+                <button id="skyeFinishBuildBtn" type="button" data-skye-explain="skyeFinishBuildBtn">Finish Build</button>
+                <button id="skyeReadyNextRoundBtn" type="button" class="hidden" data-skye-explain="skyeReadyNextRoundBtn">Next Round</button>
+              </div>
+
+              <div class="skye-layout">
+                <div class="skye-column skye-board-column">
+                  <h3 id="skyeBoardTitle">Your Territory 🏞️</h3>
+                  <div id="skyeBoard" class="skye-board" data-skye-explain="skyeBoard"></div>
+                </div>
+
+                <div class="skye-column skye-right-column">
+                  <div class="skye-phase-card skye-shared-action-card" id="skyePhaseCard" data-skye-explain="skyePhaseCard">
+                    <h3 id="skyePhaseTitle">Phase</h3>
+                    <div id="skyePhasePanel"></div>
+                    <div id="skyeBuildQueueSection" class="skye-build-queue-section hidden" data-skye-explain="skyeBuildQueue">
+                      <h3>Build Queue 🧱</h3>
+                      <div id="skyeBuildQueue" class="skye-tile-list"></div>
+                    </div>
+                  </div>
+                  <div class="skye-right-grid">
+                    <div class="skye-phase-card" data-skye-explain="skyeScoringTiles">
+                      <h3>Round Scoring 🎯</h3>
+                      <div id="skyeScoringTiles" class="skye-scoring-tiles"></div>
+                    </div>
+                    <div class="skye-phase-card" data-skye-explain="skyePlayers">
+                      <h3>Players 👥</h3>
+                      <div id="skyePlayers" class="skye-players"></div>
+                    </div>
+                    <div class="skye-phase-card">
+                      <h3>Latest Scoring 🧾</h3>
+                      <div id="skyeRoundRecap" class="skye-round-recap"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>

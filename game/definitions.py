@@ -1,3 +1,4 @@
+from game.for_sale import ForSaleGame, ACTION_SCHEMA as FOR_SALE_ACTION_SCHEMA, CONFIG_SCHEMA as FOR_SALE_CONFIG_SCHEMA
 from game.acquire import AcquireGame
 from game.abraca_what import AbracaWhatGame
 from game.ai_dixit import AiDixitGame
@@ -101,6 +102,22 @@ from game.turing_machine import TuringMachineGame
 from game.tucano import TucanoGame
 from game.witchs_brew import WitchsBrewGame
 from game.wriggle_roulette import WriggleRouletteGame
+
+register_game(
+    GameDefinition(
+        game_id=ForSaleGame.game_id,
+        name="For Sale",
+        name_zh="地产达人",
+        min_players=ForSaleGame.min_players,
+        max_players=ForSaleGame.max_players,
+        turn_mode="turn",
+        action_schema=FOR_SALE_ACTION_SCHEMA,
+        config_schema=FOR_SALE_CONFIG_SCHEMA,
+        module=ForSaleGame,
+        serialize=ForSaleGame.serialize,
+        deserialize=ForSaleGame.deserialize,
+    )
+)
 
 register_game(
     GameDefinition(

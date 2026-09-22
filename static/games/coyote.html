@@ -1,0 +1,43 @@
+<template data-game-target="coyotePanel" data-game-mode="contents">
+              <div class="row">
+                <div>Phase: <span id="coyotePhase">-</span></div>
+                <div>Round: <span id="coyoteRound">-</span></div>
+                <div>Current Turn: <span id="coyoteTurn">-</span></div>
+              </div>
+              <div id="coyoteRoundNotice" class="round-notice hidden">
+                <div id="coyoteRoundNoticeTitle" class="round-notice-title">Last Round</div>
+                <div id="coyoteRoundNoticeBody" class="round-notice-body">-</div>
+              </div>
+
+              <h3>Table</h3>
+              <div id="coyoteTable" class="coyote-table">
+                <div id="coyotePlayers" class="coyote-players"></div>
+                <div class="coyote-bid-center">
+                  <div class="coyote-bid-status" role="status" aria-live="polite">
+                    <div class="coyote-bid-line">
+                      <span class="coyote-bid-label">Last Bid:</span>
+                      <span id="coyoteBid" class="coyote-bid-highlight">-</span>
+                    </div>
+                    <div class="coyote-bid-line">
+                      <span class="coyote-bid-label">Bidder:</span>
+                      <span id="coyoteBidder" class="coyote-bidder-name">-</span>
+                    </div>
+                    <div class="coyote-bid-line coyote-winner-line">
+                      <span class="coyote-bid-label">Winner:</span>
+                      <span id="coyoteWinner">-</span>
+                    </div>
+                  </div>
+                  <div class="coyote-center-actions">
+                    <button id="coyoteBidMinusBtn">-</button>
+                    <input id="coyoteBidInput" type="number" min="1" step="1" placeholder="Bid" />
+                    <button id="coyoteBidPlusBtn">+</button>
+                    <button id="coyoteBidBtn">Bid</button>
+                    <button id="coyoteChallengeBtn">Challenge</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row actions coyote-actions">
+                <button id="coyoteResetBtn">Reset Game</button>
+              </div>
+            </template>

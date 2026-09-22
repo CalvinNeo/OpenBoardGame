@@ -462,10 +462,18 @@
         const visible = currentGameType === "cryptid" && currentRoomState?.status === "lobby";
         box.classList.toggle("hidden", !visible); box.setAttribute("aria-hidden", String(!visible));
     };
-    window.addEventListener("DOMContentLoaded", () => {
+    function connectEvents() {
         socket.on("system:error", () => { if (pending) { pending = false; window.clearTimeout(pendingTimer); render(); } });
-        socket.on("room:state", state => {
+        const syncRoomConfig = state => {
+            if (!state) return;
             if (state.game_type === "cryptid" && state.game_config && state.game_config.advanced !== undefined) document.getElementById("cryptidMode").value = state.game_config.advanced ? "advanced" : "normal";
-        });
-    }, {once: true});
+        };
+        socket.on("room:state", syncRoomConfig);
+        if (typeof currentRoomState !== "undefined") syncRoomConfig(currentRoomState);
+    }
+    if (document.readyState === "loading" || typeof socket === "undefined") {
+        window.addEventListener("DOMContentLoaded", connectEvents, {once: true});
+    } else {
+        connectEvents();
+    }
 })();

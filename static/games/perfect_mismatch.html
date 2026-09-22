@@ -1,0 +1,36 @@
+<template data-game-target="mismatchPanel" data-game-mode="contents">
+              <div class="row">
+                <div>Phase: <span id="mismatchPhase">-</span></div>
+                <div>Round: <span id="mismatchRound">-</span></div>
+                <div>Leader: <span id="mismatchLeader">-</span></div>
+                <div>Target: <span id="mismatchTarget">-</span></div>
+              </div>
+              <div class="row">
+                <div>Guessing: <span id="mismatchGuessing">-</span></div>
+                <div>Winner: <span id="mismatchWinner">-</span></div>
+              </div>
+
+              <h3>Words</h3>
+              <div id="mismatchWords" class="mismatch-words"></div>
+              <div class="row">
+                <div>Your Guess: <span id="mismatchYourGuess">-</span></div>
+              </div>
+
+              <h3>Sliders</h3>
+              <div id="mismatchSliders" class="mismatch-sliders"></div>
+
+              <div class="row actions">
+                <button id="mismatchRevealBtn">Reveal</button>
+                <button id="mismatchNextRoundBtn">Next Round</button>
+                <button id="mismatchPlayAgainBtn">Play Again</button>
+              </div>
+
+              <div id="mismatchRoundSummary" class="round-notice hidden">
+                <div class="round-notice-title">Round Summary</div>
+                <div id="mismatchRoundSummaryBody" class="round-notice-body">-</div>
+                <div id="mismatchRoundSummaryGuesses" class="mismatch-summary-list"></div>
+              </div>
+
+              <h3>Players</h3>
+              <div id="mismatchPlayers"></div>
+            </template>

@@ -1,0 +1,108 @@
+<template data-game-target="bombBustersHelpModal" data-game-mode="replace"><section id="bombBustersHelpModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="bombBustersHelpModalTitle">
+    <div class="modal-content bomb-busters-modal-content">
+      <div class="modal-header">
+        <h2 id="bombBustersHelpModalTitle">Bomb Busters - Game Rules</h2>
+        <button id="bombBustersHelpCloseBtn" type="button">Close</button>
+      </div>
+      <div id="bombBustersHelpContent" class="modal-body bomb-busters-help-content"></div>
+    </div>
+  </section></template>
+<template data-game-target="bombBustersExplainModal" data-game-mode="replace"><section id="bombBustersExplainModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="bombBustersExplainModalTitle">
+    <div class="modal-content bomb-busters-modal-content bomb-busters-explain-content">
+      <div class="modal-header">
+        <h2 id="bombBustersExplainModalTitle">Control Explanation</h2>
+        <button id="bombBustersExplainCloseBtn" type="button">Close</button>
+      </div>
+      <div id="bombBustersExplainContent" class="modal-body"></div>
+    </div>
+  </section></template>
+<template data-game-target="bombBustersPanel" data-game-mode="contents">
+              <div class="bomb-busters-topbar">
+                <div class="bomb-busters-title-block">
+                  <span class="bomb-busters-eyebrow">Core Practice · Original Practice</span>
+                  <h2><span aria-hidden="true">💣</span> Bomb Busters</h2>
+                  <div class="bomb-busters-subtitle">
+                    <span id="bombBustersPresetLabel">Standard Practice</span>
+                    <span>· Bomb <span id="bombBustersMissionLabel">1</span></span>
+                    <span>· Shared Equipment: Off</span>
+                  </div>
+                </div>
+                <div class="bomb-busters-turn-card">
+                  <span id="bombBustersCaptainLabel">🧭 Captain -</span>
+                  <strong id="bombBustersTurnLabel">Waiting…</strong>
+                </div>
+              </div>
+
+              <div id="bombBustersStatus" class="bomb-busters-status" role="status" aria-live="polite">Waiting for game state…</div>
+
+              <div class="bomb-busters-instruments">
+                <section id="bombBustersDetonator" class="bomb-busters-detonator" data-bomb-busters-explain="detonator" aria-label="Detonator status"></section>
+                <section class="bomb-busters-markers" aria-labelledby="bombBustersMarkersHeading">
+                  <h3 id="bombBustersMarkersHeading">Public Markers</h3>
+                  <div id="bombBustersMarkers"></div>
+                </section>
+              </div>
+
+              <div class="bomb-busters-layout">
+                <section class="bomb-busters-racks-section" aria-labelledby="bombBustersRacksHeading">
+                  <div class="bomb-busters-section-heading">
+                    <h3 id="bombBustersRacksHeading">Team Racks</h3>
+                    <span>Slots stay fixed after every cut.</span>
+                  </div>
+                  <div id="bombBustersRacks" class="bomb-busters-racks"></div>
+                </section>
+
+                <aside class="bomb-busters-side">
+                  <section class="bomb-busters-validation-card" data-bomb-busters-explain="validation">
+                    <h3>✅ Validation</h3>
+                    <div id="bombBustersValidation" class="bomb-busters-validation"></div>
+                  </section>
+                  <section class="bomb-busters-detector-card">
+                    <h3>🔎 Your Double Detector</h3>
+                    <div id="bombBustersDetectorStatus">Ready</div>
+                  </section>
+                  <section class="bomb-busters-activity-card" aria-labelledby="bombBustersActivityHeading">
+                    <h3 id="bombBustersActivityHeading">Team Activity</h3>
+                    <div id="bombBustersActivity" class="bomb-busters-activity" tabindex="0">No actions yet.</div>
+                  </section>
+                </aside>
+              </div>
+
+              <section id="bombBustersActionDock" class="bomb-busters-action-dock" aria-labelledby="bombBustersActionsHeading">
+                <div class="bomb-busters-section-heading">
+                  <h3 id="bombBustersActionsHeading">Your Action</h3>
+                  <span id="bombBustersActionMode">Duo Cut</span>
+                </div>
+                <div id="bombBustersActionSummary" class="bomb-busters-action-summary">Choose one of your BLUE or YELLOW wires.</div>
+                <div id="bombBustersSoloOptions" class="bomb-busters-solo-options"></div>
+                <div class="bomb-busters-actions">
+                  <button id="bombBustersShareClueBtn" type="button">Share Clue</button>
+                  <button id="bombBustersConfirmDuoBtn" type="button">Confirm Duo Cut</button>
+                  <button id="bombBustersDetectorBtn" type="button">Use Double Detector</button>
+                  <button id="bombBustersConfirmDetectorBtn" type="button">Confirm Detector Cut</button>
+                  <button id="bombBustersConfirmSoloBtn" type="button">Confirm Solo Cut</button>
+                  <button id="bombBustersResolveBtn" type="button">Confirm Choice</button>
+                  <button id="bombBustersSecureRedBtn" type="button">🛡️ Secure Red Wires</button>
+                </div>
+              </section>
+
+              <section id="bombBustersResult" class="bomb-busters-result hidden" aria-live="polite">
+                <div>
+                  <span class="bomb-busters-eyebrow">Mission review</span>
+                  <h3 id="bombBustersResultTitle">Mission Defused</h3>
+                  <p id="bombBustersResultDetail"></p>
+                </div>
+                <div id="bombBustersReadyList" class="bomb-busters-ready-list"></div>
+                <button id="bombBustersContinueBtn" type="button">Next Bomb</button>
+              </section>
+
+              <div id="bombBustersWirePopover" class="bomb-busters-wire-popover" role="dialog" aria-modal="false" aria-label="Confirm wire action" aria-hidden="true">
+                <p id="bombBustersWirePopoverText">Choose a wire.</p>
+                <div class="bomb-busters-wire-popover-actions">
+                  <button id="bombBustersWirePopoverConfirmBtn" type="button">Confirm</button>
+                  <button id="bombBustersWirePopoverCancelBtn" type="button">Cancel</button>
+                </div>
+              </div>
+
+              <div id="bombBustersLiveRegion" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
+            </template>

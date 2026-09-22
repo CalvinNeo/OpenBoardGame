@@ -1,0 +1,80 @@
+<template data-game-target="tactaHelpModal" data-game-mode="replace"><section id="tactaHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content tacta-help-modal">
+      <div class="modal-header">
+        <h2>TACTA - Game Rules</h2>
+        <button id="tactaHelpCloseBtn" type="button">Close</button>
+      </div>
+      <div id="tactaHelpContent" class="modal-body tacta-help-content"></div>
+    </div>
+  </section></template>
+<template data-game-target="tactaExplainModal" data-game-mode="replace"><section id="tactaExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="tactaExplainCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="tactaExplainContent"></div>
+      </div>
+    </div>
+  </section></template>
+<template data-game-target="tactaPanel" data-game-mode="contents">
+              <div class="tacta-topbar">
+                <div>
+                  <h2>TACTA</h2>
+                  <div class="tacta-subtitle">
+                    <span id="tactaModeLabel">Standard</span> · Round <span id="tactaRoundLabel">1</span>
+                    · <span id="tactaPhaseLabel">-</span> · Turn <span id="tactaTurnLabel">-</span>
+                  </div>
+                </div>
+                <div id="tactaHeaderActions" class="tacta-header-actions">
+                  <button id="tactaFitBtn" type="button">Fit Board</button>
+                  <button id="tactaHelpBtn" type="button">Help</button>
+                  <button id="tactaExplainBtn" type="button">Explain</button>
+                </div>
+              </div>
+
+              <div id="tactaNotice" class="round-notice hidden" aria-hidden="true">
+                <div id="tactaNoticeTitle" class="round-notice-title">Round Summary</div>
+                <div id="tactaNoticeBody" class="round-notice-body"></div>
+                <button id="tactaNextRoundBtn" type="button">Next Round</button>
+              </div>
+
+              <div id="tactaSabotageChoices" class="tacta-sabotage hidden" aria-hidden="true">
+                <strong>Choose one suit to pass left</strong>
+                <span>Your choice locks immediately and stays secret until everyone chooses.</span>
+                <div id="tactaSabotageButtons" class="tacta-sabotage-buttons"></div>
+              </div>
+
+              <div id="tactaPlayers" class="tacta-players"></div>
+
+              <section class="tacta-action-dock" aria-label="Placement controls">
+                <div class="tacta-hand-heading">
+                  <div>
+                    <strong>Your playable cards</strong>
+                    <span>Match identical edge outlines. Dot counts never need to match.</span>
+                  </div>
+                  <span id="tactaDeckCountLabel" class="tacta-deck-count" aria-live="polite">- cards remaining</span>
+                </div>
+                <div class="tacta-card-legend" aria-label="Card symbol guide">
+                  <span><b class="tacta-outline-mark" aria-hidden="true">△ □ ▭</b> edge outlines match</span>
+                  <span><b class="tacta-dot-mark" aria-hidden="true">●</b> dots are score only</span>
+                </div>
+                <div class="tacta-outer-cards">
+                  <button id="tactaTopCardBtn" class="tacta-outer-card" type="button">Top card</button>
+                  <button id="tactaBottomCardBtn" class="tacta-outer-card" type="button">Bottom card</button>
+                </div>
+                <div id="tactaPlacementStatus" class="tacta-placement-status">Choose an outer card.</div>
+                <div class="tacta-placement-controls">
+                  <button id="tactaPreviousBtn" type="button" aria-label="Previous placement">Previous</button>
+                  <button id="tactaNextBtn" type="button" aria-label="Next placement">Next</button>
+                  <button id="tactaFlipBtn" type="button">Flip</button>
+                  <button id="tactaPlaceBtn" type="button">Place Card</button>
+                  <button id="tactaCancelBtn" type="button">Cancel</button>
+                </div>
+              </section>
+
+              <div class="tacta-board-shell">
+                <svg id="tactaBoardSvg" class="tacta-board" role="img" aria-label="TACTA card layout"></svg>
+              </div>
+            </template>

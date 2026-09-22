@@ -1,0 +1,135 @@
+<template data-game-target="turingMachineHelpModal" data-game-mode="replace"><section id="turingMachineHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content turing-machine-help-modal">
+      <div class="modal-header">
+        <h2>Turing Machine - Game Rules</h2>
+        <button id="turingMachineHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body turing-machine-help-content" id="turingMachineHelpContent"></div>
+    </div>
+  </section></template>
+<template data-game-target="turingMachineExplainModal" data-game-mode="replace"><section id="turingMachineExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content turing-machine-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="turingMachineExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="turingMachineExplainContent"></div>
+      </div>
+    </div>
+  </section></template>
+<template data-game-target="turingMachinePanel" data-game-mode="contents">
+              <div class="row">
+                <div>Phase: <span id="turingMachinePhase">-</span></div>
+                <div>Round: <span id="turingMachineRound">-</span></div>
+                <div>Mode: <span id="turingMachineMode">-</span></div>
+                <div>Difficulty: <span id="turingMachineDifficulty">-</span></div>
+              </div>
+              <div class="row">
+                <div>Scenario: <span id="turingMachineScenario">-</span></div>
+                <div>Share Seed: <span id="turingMachineSeed">-</span></div>
+              </div>
+              <div class="row">
+                <div>Status: <span id="turingMachineStatus">-</span></div>
+              </div>
+              <div class="row">
+                <div>Blocking: <span id="turingMachineBlocking">-</span></div>
+                <div>Winners: <span id="turingMachineWinners">-</span></div>
+              </div>
+              <div class="row hidden" id="turingMachineSolutionRow" aria-hidden="true">
+                <div>Solution: <span id="turingMachineSolution">-</span></div>
+              </div>
+
+              <div class="tm-layout">
+                <section class="tm-section tm-machine-section">
+                  <div class="tm-section-title">Code Console</div>
+                  <div id="turingMachineCodeBuilder" class="tm-code-builder"></div>
+                  <div class="row">
+                    <div>Round Code: <span id="turingMachineCurrentProposal">-</span></div>
+                    <div>Checks Left: <span id="turingMachineTestsRemaining">-</span></div>
+                  </div>
+                  <div class="row actions tm-action-row">
+                    <button id="turingMachineUseCodeBtn" type="button">Use As Round Code</button>
+                    <button id="turingMachineGuessBtn" type="button">Submit Final Guess</button>
+                    <button id="turingMachineEndRoundBtn" type="button">Next Round</button>
+                    <button id="turingMachineGiveUpBtn" type="button">Give Up</button>
+                  </div>
+
+                  <div class="tm-section-title">This Round</div>
+                  <div id="turingMachineCurrentTests" class="tm-current-tests"></div>
+                </section>
+
+                <section class="tm-section">
+                  <div class="tm-section-title">Verifier Cards</div>
+                  <div id="turingMachineCriteria" class="tm-verifier-grid"></div>
+                </section>
+
+                <section class="tm-section tm-collapsible-panel" id="turingMachineClueHistoryPanel">
+                  <button
+                    id="turingMachineClueHistoryToggle"
+                    class="tm-section-title tm-section-toggle"
+                    type="button"
+                    aria-expanded="false"
+                    aria-controls="turingMachineClueHistoryContent"
+                  >
+                    <span>Your Verifier History</span>
+                    <span class="tm-section-toggle-icon" aria-hidden="true">⌄</span>
+                  </button>
+                  <div id="turingMachineClueHistoryContent" class="tm-collapsible-content hidden" aria-hidden="true">
+                    <div id="turingMachineClueHistory" class="tm-history-list"></div>
+                  </div>
+                </section>
+
+                <section class="tm-section tm-collapsible-panel" id="turingMachineNotesPanel">
+                  <button
+                    id="turingMachineNotesToggle"
+                    class="tm-section-title tm-section-toggle"
+                    type="button"
+                    aria-expanded="false"
+                    aria-controls="turingMachineNotesContent"
+                  >
+                    <span>Manual Notes</span>
+                    <span class="tm-section-toggle-icon" aria-hidden="true">⌄</span>
+                  </button>
+                  <div id="turingMachineNotesContent" class="tm-collapsible-content hidden" aria-hidden="true">
+                    <div id="turingMachineNotes" class="tm-notes-board"></div>
+                  </div>
+                </section>
+
+                <section class="tm-section">
+                  <div class="tm-section-title">Your Final Guesses</div>
+                  <div id="turingMachineGuessHistory" class="tm-history-list"></div>
+                </section>
+
+                <section class="tm-section">
+                  <div class="tm-section-title">Players</div>
+                  <div id="turingMachinePlayers" class="tm-player-grid"></div>
+                </section>
+
+                <section class="tm-section tm-collapsible-panel tm-deduction-panel hidden" id="turingMachineDeductionPanel" aria-hidden="true">
+                  <button
+                    id="turingMachineDeductionToggle"
+                    class="tm-section-title tm-section-toggle"
+                    type="button"
+                    aria-expanded="false"
+                    aria-controls="turingMachineDeductionContent"
+                  >
+                    <span>Auto Deduction</span>
+                    <span class="tm-section-toggle-meta">
+                      Candidate Codes: <strong id="turingMachineCandidateCount">-</strong>
+                      <span class="tm-section-toggle-icon" aria-hidden="true">⌄</span>
+                    </span>
+                  </button>
+                  <div id="turingMachineDeductionContent" class="tm-collapsible-content tm-deduction-content hidden" aria-hidden="true">
+                    <div id="turingMachineCandidateGrid" class="tm-candidate-grid"></div>
+                    <div id="turingMachineDigitStats" class="tm-stats-grid"></div>
+                    <div id="turingMachineVariantStats" class="tm-stats-grid"></div>
+                  </div>
+                </section>
+
+                <section class="tm-section">
+                  <div class="tm-section-title">Public Log</div>
+                  <div id="turingMachinePublicLog" class="tm-history-list"></div>
+                </section>
+              </div>
+            </template>

@@ -127,16 +127,27 @@ class KronologicCatalogTests(unittest.TestCase):
 
 
 class KronologicFrontendIntegrationTests(unittest.TestCase):
-    def test_frontend_assets_are_loaded_before_the_main_dispatcher(self):
+    def test_frontend_assets_are_declared_for_lazy_loading(self):
         index = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
-        game_script = index.index('/static/games/kronologic.js?v=')
+        loader = (ROOT / "static" / "game_assets.js").read_text(encoding="utf-8")
+        assets, _ = json.JSONDecoder().raw_decode(loader.split("const GAME_ASSETS = ", 1)[1])
+        markup_path = assets["kronologic"]["markup"].split("?", 1)[0]
+        markup = (ROOT / markup_path.lstrip("/")).read_text(encoding="utf-8")
+        loader_script = index.index('/static/game_assets.js?v=')
         app_script = index.index('/static/app.js?v=')
-        self.assertLess(game_script, app_script)
+        self.assertIn("/static/games/kronologic.js", [url.split("?", 1)[0] for url in assets["kronologic"]["scripts"]])
+        self.assertEqual(assets["kronologic"]["panel"], "kronologicPanel")
+        self.assertEqual(markup_path, "/static/games/kronologic.html")
+        self.assertNotIn('/static/games/kronologic.js?', index)
+        self.assertLess(loader_script, app_script)
         for element_id in (
             "kronologicPanel",
             "kronologicConfigBox",
             "kronologicLanguageSelect",
             "kronologicHeaderActions",
+        ):
+            self.assertEqual(index.count(f'id="{element_id}"'), 1)
+        for element_id in (
             "kronologicHelpModal",
             "kronologicExplainModal",
             "kronologicAccusationModal",
@@ -146,14 +157,14 @@ class KronologicFrontendIntegrationTests(unittest.TestCase):
             "kronologicNotebookCloseBtn",
             "kronologicClueHistory",
         ):
-            self.assertEqual(index.count(f'id="{element_id}"'), 1)
+            self.assertEqual(markup.count(f'id="{element_id}"'), 1)
 
     def test_mobile_notebook_and_bound_clue_history_are_wired(self):
-        index = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
+        markup = (ROOT / "static" / "games" / "kronologic.html").read_text(encoding="utf-8")
         script = (ROOT / "static" / "games" / "kronologic.js").read_text(encoding="utf-8")
         styles = (ROOT / "static" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn('aria-controls="kronologicNotebookSection"', index)
+        self.assertIn('aria-controls="kronologicNotebookSection"', markup)
         self.assertIn('new Map(privateItems.map((clue) => [String(clue.clue_id), clue]))', script)
         self.assertIn('kronologicSetNotebookOpen(false)', script)
         self.assertIn("#kronologicNotebookSection.kronologic-notebook.is-open", styles)

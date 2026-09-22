@@ -1,0 +1,162 @@
+<template data-game-target="kronologicHelpModal" data-game-mode="replace"><section id="kronologicHelpModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="kronologicHelpModalTitle">
+    <div class="modal-content kronologic-modal-content">
+      <div class="modal-header">
+        <h2 id="kronologicHelpModalTitle" data-kronologic-copy="help_title">时空神探：巴黎 1920 — 游戏规则</h2>
+        <button id="kronologicHelpCloseBtn" type="button" data-kronologic-copy="close">关闭</button>
+      </div>
+      <div id="kronologicHelpContent" class="modal-body kronologic-help-content"></div>
+    </div>
+  </section></template>
+<template data-game-target="kronologicExplainModal" data-game-mode="replace"><section id="kronologicExplainModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="kronologicExplainModalTitle">
+    <div class="modal-content kronologic-modal-content kronologic-explain-content">
+      <div class="modal-header">
+        <h2 id="kronologicExplainModalTitle" data-kronologic-copy="explain_title">操作说明</h2>
+        <button id="kronologicExplainCloseBtn" type="button" data-kronologic-copy="close">关闭</button>
+      </div>
+      <div id="kronologicExplainContent" class="modal-body"></div>
+    </div>
+  </section></template>
+<template data-game-target="kronologicAccusationModal" data-game-mode="replace"><section id="kronologicAccusationModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="kronologicAccusationTitle">
+    <div class="modal-content kronologic-modal-content kronologic-accusation-modal">
+      <div class="modal-header">
+        <h2 id="kronologicAccusationTitle">锁定你的推理</h2>
+        <button id="kronologicAccusationCloseBtn" type="button" data-kronologic-copy="close">关闭</button>
+      </div>
+      <div class="modal-body">
+        <p id="kronologicAccusationPrompt" class="kronologic-modal-prompt"></p>
+        <div class="kronologic-answer-grid">
+          <label for="kronologicAnswerCharacter" data-kronologic-copy="person">人物</label>
+          <select id="kronologicAnswerCharacter"></select>
+          <label for="kronologicAnswerLocation" data-kronologic-copy="place">地点</label>
+          <select id="kronologicAnswerLocation"></select>
+          <label for="kronologicAnswerTime" data-kronologic-copy="time">时段</label>
+          <select id="kronologicAnswerTime"></select>
+        </div>
+        <div id="kronologicAccusationWaiting" class="kronologic-waiting"></div>
+        <div class="row actions kronologic-modal-actions">
+          <button id="kronologicAccusationSubmitBtn" type="button" data-kronologic-explain="accusation-submit">提交并邀请其他人</button>
+          <button id="kronologicAccusationDeclineBtn" type="button" data-kronologic-copy="decline" data-kronologic-explain="accusation-decline">暂不作答</button>
+        </div>
+      </div>
+    </div>
+  </section></template>
+<template data-game-target="kronologicPanel" data-game-mode="contents">
+              <button
+                id="kronologicNotebookDockBtn"
+                class="kronologic-notebook-dock hidden"
+                type="button"
+                aria-controls="kronologicNotebookSection"
+                aria-expanded="false"
+              ><span aria-hidden="true">🗒️</span><span data-kronologic-copy="notebook_dock">笔记</span></button>
+              <div id="kronologicNotebookBackdrop" class="kronologic-notebook-backdrop hidden" aria-hidden="true"></div>
+              <div class="kronologic-game-shell">
+                <section class="kronologic-case-card">
+                  <div class="kronologic-case-heading">
+                    <div>
+                      <div id="kronologicContentNotice" class="kronologic-content-notice">原创案件包</div>
+                      <h2 id="kronologicCaseTitle">时空神探</h2>
+                      <p id="kronologicCaseStory"></p>
+                    </div>
+                    <div class="kronologic-case-meta">
+                      <span id="kronologicDifficulty" class="kronologic-badge">—</span>
+                      <span id="kronologicPhase" class="kronologic-badge">—</span>
+                      <span id="kronologicTurn" class="kronologic-badge">回合 —</span>
+                    </div>
+                  </div>
+                  <div id="kronologicStatus" class="kronologic-status" role="status" aria-live="polite">等待案件数据…</div>
+                </section>
+
+                <div class="kronologic-layout">
+                  <div class="kronologic-main-column">
+                    <section class="kronologic-section kronologic-map-section">
+                      <div class="kronologic-section-heading">
+                        <h3 data-kronologic-copy="map_title">场所地图</h3>
+                        <span data-kronologic-copy="map_hint">每个时段都必须移动到相连的房间。</span>
+                      </div>
+                      <div id="kronologicMap" class="kronologic-map" data-kronologic-explain="location"></div>
+                    </section>
+
+                    <section id="kronologicQueryCard" class="kronologic-section kronologic-query-card">
+                      <div class="kronologic-section-heading kronologic-query-heading">
+                        <h3 data-kronologic-copy="query_title">提出询问</h3>
+                        <span data-kronologic-copy="query_hint">先选地点，再选时段或人物。</span>
+                      </div>
+                      <div class="kronologic-query-tabs" role="tablist" aria-label="询问类型" data-kronologic-aria-label="query_type_aria">
+                        <button id="kronologicTimeModeBtn" type="button" data-kronologic-copy="time_mode" data-kronologic-explain="query-mode" aria-pressed="true">🕒 时段</button>
+                        <button id="kronologicCharacterModeBtn" type="button" data-kronologic-copy="person_mode" data-kronologic-explain="query-mode" aria-pressed="false">🎭 人物</button>
+                      </div>
+                      <div id="kronologicSelector" class="kronologic-selector"></div>
+                      <div id="kronologicQuerySummary" class="kronologic-query-summary">请选择一个房间和一个时段。</div>
+                      <div class="kronologic-action-grid">
+                        <button id="kronologicAskBtn" type="button" data-kronologic-copy="ask" data-kronologic-explain="ask">询问</button>
+                        <button id="kronologicAccuseBtn" type="button" data-kronologic-copy="accuse" data-kronologic-explain="accusation">发起指认</button>
+                      </div>
+                    </section>
+
+                    <section id="kronologicReviewCard" class="kronologic-section kronologic-review-card hidden" aria-hidden="true">
+                      <div class="kronologic-section-heading">
+                        <h3 data-kronologic-copy="review_title">线索整理</h3>
+                        <span data-kronologic-copy="review_hint">所有人都有时间更新笔记。</span>
+                      </div>
+                      <div id="kronologicReviewMessage" class="kronologic-review-message"></div>
+                      <div id="kronologicReviewWaiting" class="kronologic-waiting"></div>
+                      <button id="kronologicReadyBtn" type="button" data-kronologic-explain="ready">准备下一回合</button>
+                    </section>
+
+                    <section id="kronologicSolutionSection" class="kronologic-section hidden" aria-hidden="true">
+                      <div class="kronologic-section-heading">
+                        <h3 data-kronologic-copy="solution_title">案件还原</h3>
+                        <span id="kronologicSoloRating"></span>
+                      </div>
+                      <div id="kronologicSolution"></div>
+                      <button id="kronologicPlayAgainBtn" type="button" data-kronologic-copy="play_again" data-kronologic-explain="play-again">再玩一局</button>
+                    </section>
+                  </div>
+
+                  <div class="kronologic-side-column">
+                    <section class="kronologic-section kronologic-latest-clue" data-kronologic-explain="clue-history">
+                      <div class="kronologic-section-heading"><h3 data-kronologic-copy="latest_title">最新线索</h3></div>
+                      <div id="kronologicLatestShared" class="kronologic-clue kronologic-clue-shared">尚未询问。</div>
+                      <div id="kronologicLatestPrivate" class="kronologic-clue kronologic-clue-private">你的私密线索会显示在这里。</div>
+                    </section>
+
+                    <section id="kronologicNotebookSection" class="kronologic-section kronologic-notebook" data-kronologic-explain="notebook">
+                      <div class="kronologic-section-heading kronologic-notebook-heading">
+                        <h3 data-kronologic-copy="notebook_title">你的笔记本</h3>
+                        <span data-kronologic-copy="notebook_hint">点击人物可循环切换 · ○ ✕ ★。</span>
+                        <button id="kronologicNotebookCloseBtn" class="kronologic-notebook-close" type="button" data-kronologic-copy="notebook_hide">收起</button>
+                      </div>
+                      <div id="kronologicNotebookTimes" class="kronologic-time-tabs"></div>
+                      <div id="kronologicNotebook" class="kronologic-notebook-grid"></div>
+                      <details id="kronologicCountNotes" class="kronologic-count-notes">
+                        <summary data-kronologic-copy="count_notes_title">数量笔记</summary>
+                        <div class="kronologic-count-mode">
+                          <button id="kronologicCountTimeBtn" type="button" data-kronologic-copy="room_totals" data-kronologic-explain="count-notes">房间人数</button>
+                          <button id="kronologicCountCharacterBtn" type="button" data-kronologic-copy="person_visits" data-kronologic-explain="count-notes">人物到访</button>
+                        </div>
+                        <div id="kronologicCountCharacterPicker" class="kronologic-selector"></div>
+                        <div id="kronologicCountGrid" class="kronologic-count-grid"></div>
+                      </details>
+                    </section>
+
+                    <section class="kronologic-section kronologic-history-section" data-kronologic-explain="clue-history">
+                      <div class="kronologic-section-heading">
+                        <h3 data-kronologic-copy="clue_history_title">🧩 线索历史</h3>
+                        <span data-kronologic-copy="clue_history_hint">私密细节与对应公开线索成对显示。</span>
+                      </div>
+                      <div id="kronologicClueHistory" class="kronologic-history kronologic-bound-history"></div>
+                    </section>
+
+                    <section class="kronologic-section">
+                      <div class="kronologic-section-heading"><h3 data-kronologic-copy="players_title">调查员</h3></div>
+                      <div id="kronologicPlayers" class="kronologic-players"></div>
+                    </section>
+
+                    <section class="kronologic-section">
+                      <div class="kronologic-section-heading"><h3 data-kronologic-copy="public_log_title">公开日志</h3></div>
+                      <div id="kronologicLog" class="kronologic-history"></div>
+                    </section>
+                  </div>
+                </div>
+              </div>
+            </template>

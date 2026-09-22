@@ -1,0 +1,108 @@
+<template data-game-target="wanderingTowersHelpModal" data-game-mode="replace"><section id="wanderingTowersHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content wandering-towers-help-modal">
+      <div class="modal-header">
+        <h2>Wandering Towers - Game Rules</h2>
+        <button id="wanderingTowersHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body wandering-towers-help-content" id="wanderingTowersHelpContent"></div>
+    </div>
+  </section></template>
+<template data-game-target="wanderingTowersExplainModal" data-game-mode="replace"><section id="wanderingTowersExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content wandering-towers-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="wanderingTowersExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="wanderingTowersExplainContent"></div>
+      </div>
+    </div>
+  </section></template>
+<template data-game-target="wanderingTowersPanel" data-game-mode="contents">
+              <div class="wandering-status-strip" aria-label="Game status">
+                <div class="wandering-turn-status" title="Current turn">
+                  <span class="wandering-status-label">Turn</span>
+                  <strong id="wanderingTurn">-</strong>
+                </div>
+                <div class="wandering-status-stat" title="Cards played this turn">
+                  <span aria-hidden="true">🃏</span>
+                  <span class="wandering-status-label">Cards</span>
+                  <strong id="wanderingCards">-</strong>
+                </div>
+                <div class="wandering-status-stat" title="Cards left in deck">
+                  <span aria-hidden="true">📥</span>
+                  <span class="wandering-status-label">Deck</span>
+                  <strong id="wanderingDeck">-</strong>
+                </div>
+                <div class="wandering-status-stat" title="Discarded cards">
+                  <span aria-hidden="true">🗑️</span>
+                  <span class="wandering-status-label">Discard</span>
+                  <strong id="wanderingDiscard">-</strong>
+                </div>
+                <div id="wanderingPendingStatus" class="wandering-status-event hidden">
+                  <span class="wandering-status-label">Move</span>
+                  <strong id="wanderingPending">-</strong>
+                </div>
+                <div id="wanderingFinalRoundStatus" class="wandering-status-event hidden">
+                  <span aria-hidden="true">⏳</span>
+                  <span class="wandering-status-label">Final round</span>
+                  <strong id="wanderingFinalRound">-</strong>
+                </div>
+                <div id="wanderingWinnerStatus" class="wandering-status-event hidden">
+                  <span aria-hidden="true">🏆</span>
+                  <span class="wandering-status-label">Winner</span>
+                  <strong id="wanderingWinner">-</strong>
+                </div>
+                <div id="wanderingSoloStatus" class="wandering-status-event hidden">
+                  <span class="wandering-status-label">Solo</span>
+                  <strong><span id="wanderingSoloResult">-</span> · <span id="wanderingSoloScore">-</span></strong>
+                </div>
+              </div>
+
+              <section class="wandering-command-center" aria-label="Your turn controls">
+                <div class="wandering-hand-zone">
+                  <div class="wandering-section-heading">
+                    <span>Your hand</span>
+                    <small>Choose a movement card</small>
+                  </div>
+                  <div id="wanderingHand" class="wandering-hand"></div>
+                </div>
+
+                <div class="wandering-action-zone">
+                  <div id="wanderingSelection" class="wandering-selection" title="Tap to clear the selection">
+                    <span class="wandering-selection-mark" aria-hidden="true">◎</span>
+                    <span id="wanderingSelectionLabel">No selection</span>
+                  </div>
+                  <div id="wanderingActionHint" class="wandering-action-hint" role="status">Waiting for game state…</div>
+                  <div class="wandering-actions" aria-label="Actions">
+                    <button id="wanderingPlayCardBtn" type="button"><span aria-hidden="true">▶</span> Play card</button>
+                    <button id="wanderingDiscardBtn" type="button"><span aria-hidden="true">🗑️</span> Discard · Tower +1</button>
+                    <button id="wanderingRerollBtn" type="button"><span aria-hidden="true">🎲</span> Reroll</button>
+                    <button id="wanderingAcceptRollBtn" type="button"><span aria-hidden="true">✓</span> Keep roll</button>
+                    <button id="wanderingSpellWizardBtn" type="button"><span aria-hidden="true">🧙</span> Wizard +1 <small>2 🧪</small></button>
+                    <button id="wanderingSpellTowerBtn" type="button"><span aria-hidden="true">♜</span> Tower +2 <small>1 🧪</small></button>
+                  </div>
+                </div>
+              </section>
+
+              <div class="wandering-board-heading">
+                <div>
+                  <strong>Clockwise track</strong>
+                  <span class="wandering-track-direction" aria-hidden="true">↻</span>
+                </div>
+                <div class="wandering-board-key" aria-label="Board legend">
+                  <span><i class="wandering-key-wizard" aria-hidden="true"></i> Wizard</span>
+                  <span><i class="wandering-key-tower" aria-hidden="true"></i> Tower</span>
+                  <span><b aria-hidden="true">▥</b> Layers</span>
+                </div>
+              </div>
+              <div id="wanderingBoard" class="wandering-board" aria-label="Clockwise board track"></div>
+
+              <section class="wandering-player-zone" aria-label="Players">
+                <div class="wandering-section-heading">
+                  <span>Players</span>
+                  <small>🏰 wizards home · 🧪 full potions</small>
+                </div>
+                <div id="wanderingPlayers" class="wandering-players"></div>
+              </section>
+            </template>

@@ -1,0 +1,48 @@
+<template data-game-target="sixNimmtPanel" data-game-mode="contents">
+              <div class="row">
+                <div>Phase: <span id="sixNimmtPhase">-</span></div>
+                <div>Round: <span id="sixNimmtRound">-</span></div>
+                <div>Turn: <span id="sixNimmtTurn">-</span></div>
+              </div>
+              <div class="row">
+                <div>Timer: <span id="sixNimmtTimer">-</span></div>
+                <div>Waiting: <span id="sixNimmtWaiting">-</span></div>
+              </div>
+              <div class="row">
+                <div>Selected: <span id="sixNimmtSelected">-</span></div>
+                <div>Winners: <span id="sixNimmtWinners">-</span></div>
+              </div>
+
+              <div id="sixNimmtNotice" class="round-notice hidden">
+                <div class="round-notice-title">Action</div>
+                <div id="sixNimmtNoticeBody" class="round-notice-body">-</div>
+              </div>
+
+              <h3>Reveal Order</h3>
+              <div id="sixNimmtReveal" class="six-nimmt-reveal"></div>
+
+              <h3>Rows</h3>
+              <div id="sixNimmtRows" class="six-nimmt-rows"></div>
+
+              <h3>Your Hand</h3>
+              <div id="sixNimmtHand" class="hand six-nimmt-hand"></div>
+
+              <h3>Players</h3>
+              <div id="sixNimmtPlayers"></div>
+
+              <div id="sixNimmtSummaryModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true">
+                <div class="modal-content six-nimmt-summary-modal">
+                  <div class="modal-header">
+                    <h2>Turn Summary</h2>
+                    <div id="sixNimmtSummaryStatus" class="six-nimmt-summary-status">-</div>
+                  </div>
+                  <div class="modal-body">
+                    <div id="sixNimmtSummaryMeta" class="six-nimmt-summary-meta">-</div>
+                    <div id="sixNimmtSummaryList" class="six-nimmt-summary"></div>
+                    <div class="row actions">
+                      <button id="sixNimmtSummaryCloseBtn">Continue</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>

@@ -1,0 +1,66 @@
+<template data-game-target="tagironHelpModal" data-game-mode="replace"><section id="tagironHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content tagiron-help-modal">
+      <div class="modal-header">
+        <h2>Tagiron - Game Rules</h2>
+        <button id="tagironHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body tagiron-help-content" id="tagironHelpContent"></div>
+    </div>
+  </section></template>
+<template data-game-target="tagironExplainModal" data-game-mode="replace"><section id="tagironExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content tagiron-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="tagironExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="tagironExplainContent"></div>
+      </div>
+    </div>
+  </section></template>
+<template data-game-target="tagironPanel" data-game-mode="contents">
+              <div class="tagiron-status-grid" aria-label="Game status">
+                <div class="tagiron-status-item">
+                  <span class="tagiron-status-label">Phase</span>
+                  <span id="tagironPhase" class="tagiron-status-value">-</span>
+                </div>
+                <div class="tagiron-status-item">
+                  <span class="tagiron-status-label">Round</span>
+                  <span id="tagironRound" class="tagiron-status-value">-</span>
+                </div>
+                <div class="tagiron-status-item">
+                  <span class="tagiron-status-label">Turn</span>
+                  <span id="tagironTurn" class="tagiron-status-value">-</span>
+                </div>
+                <div class="tagiron-status-item">
+                  <span class="tagiron-status-label">Target</span>
+                  <span id="tagironGuessTarget" class="tagiron-status-value">-</span>
+                </div>
+                <div class="tagiron-status-item">
+                  <span class="tagiron-status-label">Center</span>
+                  <span id="tagironCentralCount" class="tagiron-status-value">-</span>
+                </div>
+                <div class="tagiron-status-item">
+                  <span class="tagiron-status-label">Winners</span>
+                  <span id="tagironWinners" class="tagiron-status-value">-</span>
+                </div>
+              </div>
+
+              <h3>Your Tiles</h3>
+              <div id="tagironYourTiles" class="tagiron-tiles"></div>
+
+              <h3>Question Pool</h3>
+              <div id="tagironQuestionPool" class="tagiron-question-pool"></div>
+
+              <h3>Guess</h3>
+              <div id="tagironGuessForm" class="tagiron-guess-form"></div>
+              <div class="row actions">
+                <button id="tagironGuessBtn">Submit Guess</button>
+              </div>
+
+              <h3>Log</h3>
+              <div id="tagironLog" class="tagiron-log"></div>
+
+              <h3>Players</h3>
+              <div id="tagironPlayers"></div>
+            </template>

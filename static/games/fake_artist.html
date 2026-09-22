@@ -1,0 +1,73 @@
+<template data-game-target="fakeArtistHelpModal" data-game-mode="replace"><section id="fakeArtistHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content fake-artist-help-modal">
+      <div class="modal-header">
+        <h2>A Fake Artist - Game Rules</h2>
+        <button id="fakeArtistHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body fake-artist-help-content" id="fakeArtistHelpContent"></div>
+    </div>
+  </section></template>
+<template data-game-target="fakeArtistExplainModal" data-game-mode="replace"><section id="fakeArtistExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content fake-artist-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="fakeArtistExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="fakeArtistExplainContent"></div>
+      </div>
+    </div>
+  </section></template>
+<template data-game-target="fakeArtistPanel" data-game-mode="contents">
+              <div class="row">
+                <div>Phase: <span id="fakeArtistPhase">-</span></div>
+                <div>Round: <span id="fakeArtistRound">-</span>/<span id="fakeArtistTotalRounds">-</span></div>
+                <div>Turn: <span id="fakeArtistTurn">-</span></div>
+                <div>Timer: <span id="fakeArtistTimer">-</span></div>
+              </div>
+              <div class="row">
+                <div>Role: <span id="fakeArtistRole">-</span></div>
+                <div>Category: <span id="fakeArtistCategory">-</span></div>
+                <div>Word: <span id="fakeArtistWord">-</span></div>
+              </div>
+
+              <div id="fakeArtistColorSelect" class="hidden">
+                <h3>Pick Color</h3>
+                <div id="fakeArtistColorPalette" class="fake-artist-color-grid"></div>
+                <div class="hint">Each color can only be used once.</div>
+              </div>
+
+              <div id="fakeArtistDrawArea">
+                <div class="row">
+                  <canvas id="fakeArtistCanvas" width="640" height="480"></canvas>
+                </div>
+                <div class="hint" id="fakeArtistDrawHint"></div>
+              </div>
+
+              <div id="fakeArtistVoteArea" class="hidden">
+                <h3>Vote</h3>
+                <div class="hint" id="fakeArtistVoteHint"></div>
+                <div id="fakeArtistVoteList" class="fake-artist-vote-list"></div>
+              </div>
+
+              <div id="fakeArtistLastGuessArea" class="hidden">
+                <h3>Final Guess</h3>
+                <div class="hint" id="fakeArtistLastGuessHint"></div>
+                <div class="row actions" id="fakeArtistLastGuessControls">
+                  <input id="fakeArtistLastGuessInput" class="fake-artist-guess-input" type="text" placeholder="Enter final guess" autocomplete="off" />
+                  <button id="fakeArtistLastGuessBtn" type="button">Submit Guess</button>
+                </div>
+              </div>
+
+              <div id="fakeArtistResult" class="hidden">
+                <h3>Result</h3>
+                <div id="fakeArtistResultText"></div>
+                <div id="fakeArtistVoteResult" class="fake-artist-vote-result"></div>
+                <div class="row actions">
+                  <button id="fakeArtistPlayAgainBtn">Play Again</button>
+                </div>
+              </div>
+
+              <h3>Players</h3>
+              <div id="fakeArtistPlayers"></div>
+            </template>

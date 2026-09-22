@@ -1,0 +1,124 @@
+<template data-game-target="subtextHelpModal" data-game-mode="replace"><section id="subtextHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content subtext-modal-content">
+      <div class="modal-header">
+        <h2>Subtext Help</h2>
+        <button id="subtextHelpCloseBtn" type="button">Close</button>
+      </div>
+      <div id="subtextHelpContent" class="modal-body subtext-help-content"></div>
+    </div>
+  </section></template>
+<template data-game-target="subtextExplainModal" data-game-mode="replace"><section id="subtextExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content subtext-modal-content">
+      <div class="modal-header">
+        <h2>Subtext Explain</h2>
+        <button id="subtextExplainCloseBtn" type="button">Close</button>
+      </div>
+      <div id="subtextExplainContent" class="modal-body"></div>
+    </div>
+  </section></template>
+<template data-game-target="subtextPanel" data-game-mode="contents">
+              <div class="subtext-hero">
+                <div>
+                  <div class="subtext-kicker">DRAW · CONNECT · DISCOVER</div>
+                  <h3>Subtext <span>画外之意</span></h3>
+                </div>
+                <div class="subtext-round-badge">Round <strong id="subtextRound">-</strong>/<span id="subtextTotalRounds">-</span></div>
+              </div>
+
+              <div class="subtext-summary-grid">
+                <div class="subtext-summary-card">
+                  <span>Phase</span>
+                  <strong id="subtextPhase">-</strong>
+                </div>
+                <div class="subtext-summary-card">
+                  <span>Dealer</span>
+                  <strong id="subtextDealer">-</strong>
+                </div>
+                <div class="subtext-summary-card">
+                  <span>Progress</span>
+                  <strong id="subtextProgress">-</strong>
+                </div>
+              </div>
+
+              <div id="subtextStatus" class="subtext-status" role="status" aria-live="polite">
+                <span class="subtext-status-icon">✏️</span>
+                <div>
+                  <strong>Your Next Step</strong>
+                  <div id="subtextStatusBody">Waiting for game state…</div>
+                </div>
+              </div>
+
+              <div id="subtextWordCard" class="subtext-word-card hidden">
+                <span>Your secret word</span>
+                <strong id="subtextYourWord">-</strong>
+                <small>Draw an indirect visual clue. Do not write letters or numbers.</small>
+              </div>
+
+              <section id="subtextDrawingArea" class="subtext-stage-card hidden">
+                <div class="subtext-stage-heading">
+                  <div>
+                    <span class="subtext-step-pill">1</span>
+                    <strong>Draw your clue</strong>
+                  </div>
+                  <span id="subtextDrawingCounter" class="subtext-progress-pill">0/0 ready</span>
+                </div>
+                <div class="subtext-canvas-shell">
+                  <canvas id="subtextCanvas" width="640" height="480" aria-label="Subtext drawing canvas"></canvas>
+                </div>
+                <div class="subtext-drawing-warning">🤫 No letters, numbers, or discussion about your word.</div>
+                <div class="row actions subtext-action-row">
+                  <button id="subtextUndoBtn" type="button">↶ Undo</button>
+                  <button id="subtextResetBtn" type="button">Reset Canvas</button>
+                  <button id="subtextSubmitDrawingBtn" class="subtext-primary-btn" type="button">Submit Drawing</button>
+                </div>
+              </section>
+
+              <section id="subtextGuessingArea" class="subtext-stage-card hidden">
+                <div class="subtext-stage-heading">
+                  <div>
+                    <span class="subtext-step-pill">2</span>
+                    <strong>Find the matching clue</strong>
+                  </div>
+                  <span id="subtextGuessCounter" class="subtext-progress-pill">0/0 voted</span>
+                </div>
+                <p class="subtext-stage-copy">Compare every anonymous drawing with the Dealer's drawing. Select one card, then lock your secret guess.</p>
+                <div class="subtext-dealer-drawing">
+                  <div class="subtext-drawing-label"><span>🎨 Dealer</span><strong id="subtextDealerDrawingName">-</strong></div>
+                  <canvas id="subtextDealerCanvas" width="640" height="480" aria-label="Dealer drawing"></canvas>
+                </div>
+                <div id="subtextCandidateGrid" class="subtext-candidate-grid" aria-label="Anonymous candidate drawings"></div>
+                <div class="row actions subtext-action-row subtext-guess-actions">
+                  <span id="subtextSelectedGuess" class="subtext-selection-label">No drawing selected</span>
+                  <button id="subtextSubmitGuessBtn" class="subtext-primary-btn" type="button">Submit Guess</button>
+                </div>
+                <div class="hint">Click the space around the cards or press Esc to cancel an unlocked selection.</div>
+              </section>
+
+              <section id="subtextResultArea" class="subtext-stage-card hidden">
+                <div id="subtextResultBanner" class="subtext-result-banner"></div>
+                <div id="subtextResultDrawings" class="subtext-result-grid"></div>
+                <div class="subtext-table-wrap">
+                  <table class="subtext-score-table">
+                    <thead>
+                      <tr><th>Player</th><th>Guess</th><th>Correct</th><th>Round</th><th>Total</th></tr>
+                    </thead>
+                    <tbody id="subtextResultTableBody"></tbody>
+                  </table>
+                </div>
+                <div id="subtextNextRoundRow" class="subtext-next-row">
+                  <span id="subtextReadyStatus">Ready 0/0</span>
+                  <button id="subtextNextRoundBtn" class="subtext-primary-btn" type="button">Next Round</button>
+                </div>
+                <div id="subtextGameOverActions" class="subtext-next-row hidden">
+                  <span id="subtextWinnerText">-</span>
+                  <button id="subtextPlayAgainBtn" class="subtext-primary-btn" type="button">Play Again</button>
+                </div>
+              </section>
+
+              <section class="subtext-stage-card subtext-scoreboard-card">
+                <div class="subtext-stage-heading">
+                  <strong>🏆 Scoreboard</strong>
+                </div>
+                <div id="subtextPlayers" class="subtext-player-grid"></div>
+              </section>
+            </template>

@@ -1,0 +1,83 @@
+<template data-game-target="catanStarfarersPanel" data-game-mode="contents">
+              <header class="catan-starfarers-topbar" data-catan-starfarers-explain="status">
+                <div class="catan-starfarers-brand">
+                  <span class="catan-starfarers-brand-mark" aria-hidden="true">🪐</span>
+                  <div>
+                    <span id="catanStarfarersBrandKicker" class="catan-starfarers-kicker">Frontier command · 2019 base game</span>
+                    <h2>CATAN: Starfarers <small lang="zh-CN">星际卡坦</small></h2>
+                  </div>
+                </div>
+                <div class="catan-starfarers-meta" aria-label="Turn status">
+                  <span><span id="catanStarfarersTurnLabel">Turn</span> <strong id="catanStarfarersTurn">-</strong></span>
+                  <span><span id="catanStarfarersPhaseLabel">Phase</span> <strong id="catanStarfarersPhase">-</strong></span>
+                  <span><span id="catanStarfarersSetupLabel">Setup</span> <strong id="catanStarfarersSetup">-</strong></span>
+                </div>
+              </header>
+
+              <div id="catanStarfarersStatus" class="catan-starfarers-status" role="status" aria-live="polite">Waiting for game state…</div>
+              <div id="catanStarfarersPlayers" class="catan-starfarers-players" data-catan-starfarers-explain="players"></div>
+
+              <div class="catan-starfarers-layout">
+                <section class="catan-starfarers-map-card" aria-labelledby="catanStarfarersMapHeading" data-catan-starfarers-explain="map">
+                  <div class="catan-starfarers-section-heading">
+                    <div>
+                      <span id="catanStarfarersMapKicker" class="catan-starfarers-kicker">Public frontier</span>
+                      <h3 id="catanStarfarersMapHeading">Star Map</h3>
+                    </div>
+                    <div id="catanStarfarersMothership" class="catan-starfarers-mothership" data-catan-starfarers-explain="mothership">No flight roll</div>
+                  </div>
+                  <div class="catan-starfarers-map-wrap">
+                    <svg id="catanStarfarersMap" class="catan-starfarers-map" viewBox="0 0 1000 650" role="img" aria-label="Interactive star map"></svg>
+                  </div>
+                  <div id="catanStarfarersMapHint" class="catan-starfarers-map-hint">Select one of your ships to plot its next edge.</div>
+                </section>
+
+                <aside class="catan-starfarers-console">
+                  <section class="catan-starfarers-hand-card" data-catan-starfarers-explain="resources">
+                    <div class="catan-starfarers-section-heading">
+                      <h3 id="catanStarfarersHoldHeading">Your Hold</h3>
+                      <span id="catanStarfarersReserveCount">Earth Reserve · -</span>
+                    </div>
+                    <div id="catanStarfarersHand" class="catan-starfarers-resource-strip"></div>
+                  </section>
+
+                  <section class="catan-starfarers-action-card" data-catan-starfarers-explain="actions">
+                    <div class="catan-starfarers-section-heading">
+                      <div>
+                        <span id="catanStarfarersActionKicker" class="catan-starfarers-kicker">Command console</span>
+                        <h3 id="catanStarfarersActionHeading">Waiting</h3>
+                      </div>
+                    </div>
+                    <p id="catanStarfarersActionHint" class="catan-starfarers-action-hint"></p>
+                    <div id="catanStarfarersActions" class="catan-starfarers-actions"></div>
+                  </section>
+
+                  <section class="catan-starfarers-log-card" data-catan-starfarers-explain="log">
+                    <div class="catan-starfarers-section-heading">
+                      <h3 id="catanStarfarersLogHeading">Flight Log</h3>
+                      <span id="catanStarfarersLogOrder">Newest first</span>
+                    </div>
+                    <div id="catanStarfarersLog" class="catan-starfarers-log" tabindex="0">No actions yet.</div>
+                  </section>
+                </aside>
+              </div>
+              <div id="catanStarfarersLiveRegion" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
+            </template>
+<template data-game-target="catanStarfarersHelpModal" data-game-mode="replace"><div id="catanStarfarersHelpModal" class="modal hidden" aria-hidden="true">
+              <div class="modal-content catan-starfarers-modal-content" role="dialog" aria-modal="true" aria-labelledby="catanStarfarersHelpModalTitle">
+                <div class="modal-header">
+                  <h2 id="catanStarfarersHelpModalTitle">CATAN: Starfarers Help</h2>
+                  <button id="catanStarfarersHelpCloseBtn" type="button">Close</button>
+                </div>
+                <div id="catanStarfarersHelpContent" class="modal-body catan-starfarers-help-content"></div>
+              </div>
+            </div></template>
+<template data-game-target="catanStarfarersExplainModal" data-game-mode="replace"><div id="catanStarfarersExplainModal" class="modal hidden" aria-hidden="true">
+              <div class="modal-content catan-starfarers-modal-content" role="dialog" aria-modal="true" aria-labelledby="catanStarfarersExplainModalTitle">
+                <div class="modal-header">
+                  <h2 id="catanStarfarersExplainModalTitle">CATAN: Starfarers Explain</h2>
+                  <button id="catanStarfarersExplainCloseBtn" type="button">Close</button>
+                </div>
+                <div id="catanStarfarersExplainContent" class="modal-body"></div>
+              </div>
+            </div></template>

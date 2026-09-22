@@ -1,0 +1,50 @@
+<template data-game-target="acquireHelpModal" data-game-mode="replace"><section id="acquireHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content acquire-help-modal">
+      <div class="modal-header">
+        <h2>Acquire - Game Rules</h2>
+        <button id="acquireHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body acquire-help-content" id="acquireHelpContent"></div>
+    </div>
+  </section></template>
+<template data-game-target="acquireExplainModal" data-game-mode="replace"><section id="acquireExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content acquire-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="acquireExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="acquireExplainContent"></div>
+      </div>
+    </div>
+  </section></template>
+<template data-game-target="acquirePanel" data-game-mode="contents">
+              <div class="row">
+                <div>Turn: <span id="acquireTurn">-</span></div>
+                <div>Stage: <span id="acquireStage">-</span></div>
+                <div>Last Tile: <span id="acquireLastTile">-</span></div>
+                <div>Winner: <span id="acquireWinner">-</span></div>
+              </div>
+              <div class="row actions">
+                <button id="acquireClearBuyBtn" type="button" data-acquire-explain="acquireClearBuyBtn">Clear Buys</button>
+                <button id="acquireSubmitBuyBtn" type="button" data-acquire-explain="acquireSubmitBuyBtn">Confirm Buys + End Turn</button>
+                <button id="acquireEndGameBtn" type="button" data-acquire-explain="acquireEndGameBtn">End + Score</button>
+              </div>
+              <div id="acquirePending" class="acquire-pending" data-acquire-explain="pending"></div>
+              <div class="acquire-layout">
+                <div class="acquire-main">
+                  <h3>Board</h3>
+                  <div id="acquireBoard" class="acquire-board" data-acquire-explain="board"></div>
+                  <h3>Your Hand</h3>
+                  <div id="acquireHand" class="acquire-hand" data-acquire-explain="hand"></div>
+                  <div id="acquireBuyQueue" class="hint" data-acquire-explain="buyQueue">Queued buys: -</div>
+                  <div id="acquireActions" class="acquire-actions" data-acquire-explain="actionArea"></div>
+                </div>
+                <div class="acquire-side">
+                  <h3>Chains</h3>
+                  <div id="acquireChains" class="acquire-chains" data-acquire-explain="chains"></div>
+                  <h3>Players</h3>
+                  <div id="acquirePlayers" class="acquire-players" data-acquire-explain="players"></div>
+                </div>
+              </div>
+            </template>

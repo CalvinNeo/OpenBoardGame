@@ -1,0 +1,45 @@
+<template data-game-target="lostCodePanel" data-game-mode="contents">
+              <div class="row">
+                <div>Phase: <span id="lostCodePhase">-</span></div>
+                <div>Round: <span id="lostCodeRound">-</span></div>
+                <div>Current Turn: <span id="lostCodeTurn">-</span></div>
+                <div>Mode: <span id="lostCodeModeLabel">-</span></div>
+              </div>
+              <div id="lostCodeHint" class="hint">-</div>
+
+              <h3>Dice 🎲</h3>
+              <div id="lostCodeDice" class="lost-code-chip-wrap"></div>
+
+              <h3>Controls</h3>
+              <div id="lostCodeControls" class="lost-code-controls"></div>
+
+              <h3>Players</h3>
+              <div id="lostCodePlayers" class="lost-code-player-list"></div>
+
+              <h3>Logs</h3>
+              <div id="lostCodeLogs" class="lost-code-log-grid"></div>
+
+              <h3>Shortcut Tokens</h3>
+              <div id="lostCodeTokenStatus" class="lost-code-token-list"></div>
+
+              <h3>Round Guesses</h3>
+              <div id="lostCodeGuesses" class="lost-code-guess-list"></div>
+            </template>
+<template data-game-target="lostCodeHelpModal" data-game-mode="replace"><div id="lostCodeHelpModal" class="modal hidden" aria-hidden="true">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h2>The Lost Code Help</h2>
+                  <button id="lostCodeHelpModalCloseBtn" type="button">Close</button>
+                </div>
+                <div class="modal-body" id="lostCodeHelpContent"></div>
+              </div>
+            </div></template>
+<template data-game-target="lostCodeExplainModal" data-game-mode="replace"><div id="lostCodeExplainModal" class="modal hidden" aria-hidden="true">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h2>The Lost Code Explain</h2>
+                  <button id="lostCodeExplainModalCloseBtn" type="button">Close</button>
+                </div>
+                <div class="modal-body" id="lostCodeExplainContent"></div>
+              </div>
+            </div></template>

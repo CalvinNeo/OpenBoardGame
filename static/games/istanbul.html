@@ -1,0 +1,90 @@
+<template data-game-target="istanbulHelpModal" data-game-mode="replace"><section id="istanbulHelpModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="istanbulHelpTitle">
+    <div class="modal-content istanbul-help-modal">
+      <div class="modal-header">
+        <h2 id="istanbulHelpTitle">Istanbul · How to Play</h2>
+        <button id="istanbulHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body istanbul-help-content" id="istanbulHelpContent"></div>
+    </div>
+  </section></template>
+<template data-game-target="istanbulExplainModal" data-game-mode="replace"><section id="istanbulExplainModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="istanbulExplainTitle">
+    <div class="modal-content istanbul-explain-modal">
+      <div class="modal-header">
+        <h2 id="istanbulExplainTitle">Explain</h2>
+        <button id="istanbulExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="istanbulExplainContent"></div>
+      </div>
+    </div>
+  </section></template>
+<template data-game-target="istanbulPanel" data-game-mode="contents">
+              <div class="istanbul-top">
+                <div class="istanbul-stat"><span class="istanbul-stat-label">Phase</span><span id="istanbulPhase">-</span></div>
+                <div class="istanbul-stat"><span class="istanbul-stat-label">Turn</span><span id="istanbulTurn">-</span></div>
+                <div class="istanbul-stat"><span class="istanbul-stat-label">Movement</span><span id="istanbulMoveMode">-</span></div>
+                <div class="istanbul-stat"><span class="istanbul-stat-label">Victory</span><span id="istanbulWinTarget">-</span></div>
+              </div>
+
+              <section id="istanbulGuide" class="istanbul-guide" aria-label="Turn guide" aria-live="polite"></section>
+
+              <section class="istanbul-caravan" aria-labelledby="istanbulCaravanTitle">
+                <h3 id="istanbulCaravanTitle">你的商队</h3>
+                <div id="istanbulYou" class="istanbul-you"></div>
+              </section>
+
+              <div class="istanbul-main">
+                <section class="istanbul-board-wrap" aria-labelledby="istanbulBoardTitle">
+                  <div class="istanbul-board-header">
+                    <h3 id="istanbulBoardTitle">集市棋盘</h3>
+                    <div id="istanbulTurnHint" class="istanbul-hint">-</div>
+                  </div>
+                  <div class="istanbul-board-stage">
+                    <div id="istanbulBoard" class="istanbul-board" aria-label="Istanbul · 4 × 4 集市棋盘"></div>
+                    <div id="istanbulPathHint" class="istanbul-path-hint" aria-live="polite"></div>
+                  </div>
+                </section>
+
+                <section class="istanbul-side">
+                  <div class="istanbul-card istanbul-action-card" aria-labelledby="istanbulActionTitle">
+                    <h3 id="istanbulActionTitle">当前行动</h3>
+                    <div id="istanbulDestination" class="istanbul-destination"></div>
+                    <div id="istanbulActionHint" class="istanbul-hint">-</div>
+                    <div id="istanbulActionControls" class="istanbul-controls"></div>
+                  </div>
+                </section>
+              </div>
+
+              <section class="istanbul-reference" aria-label="Place reference">
+                <div class="istanbul-board-tools">
+                  <button id="istanbulMarketsToggle" class="istanbul-board-toggle" type="button" aria-expanded="false" aria-controls="istanbulMarketsOverlay">Markets</button>
+                  <button id="istanbulMosquesToggle" class="istanbul-board-toggle" type="button" aria-expanded="false" aria-controls="istanbulMosquesOverlay">Mosques</button>
+                  <button id="istanbulPostOfficeToggle" class="istanbul-board-toggle" type="button" aria-expanded="false" aria-controls="istanbulPostOfficeOverlay">Post Office</button>
+                </div>
+                <div id="istanbulBoardOverlays" class="istanbul-overlay-layer hidden" aria-hidden="true">
+                  <div id="istanbulMarketsOverlay" class="istanbul-overlay-card hidden" data-istanbul-overlay="markets">
+                    <h3>市场需求与售价</h3>
+                    <div id="istanbulMarkets" class="istanbul-markets"></div>
+                  </div>
+                  <div id="istanbulMosquesOverlay" class="istanbul-overlay-card hidden" data-istanbul-overlay="mosques">
+                    <h3>清真寺能力</h3>
+                    <div id="istanbulMosques" class="istanbul-mosques"></div>
+                  </div>
+                  <div id="istanbulPostOfficeOverlay" class="istanbul-overlay-card hidden" data-istanbul-overlay="post">
+                    <h3>邮局奖励</h3>
+                    <div id="istanbulPostOffice" class="istanbul-post-office"></div>
+                  </div>
+                </div>
+              </section>
+
+              <div class="istanbul-extras">
+                <details class="istanbul-card istanbul-disclosure">
+                  <summary>Bonus Cards</summary>
+                  <div id="istanbulBonusHand" class="istanbul-bonus-hand"></div>
+                </details>
+                <details class="istanbul-card istanbul-disclosure">
+                  <summary>Players</summary>
+                  <div id="istanbulPlayers" class="istanbul-players"></div>
+                </details>
+              </div>
+            </template>

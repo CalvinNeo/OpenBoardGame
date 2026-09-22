@@ -1,0 +1,64 @@
+<template data-game-target="scoutHelpModal" data-game-mode="replace"><section id="scoutHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content scout-help-modal">
+      <div class="modal-header">
+        <h2>Scout - Rules</h2>
+        <button id="scoutHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body scout-help-content" id="scoutHelpContent"></div>
+    </div>
+  </section></template>
+<template data-game-target="scoutExplainModal" data-game-mode="replace"><section id="scoutExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content scout-explain-modal">
+      <div class="modal-header">
+        <h2>Scout - Explanation</h2>
+        <button id="scoutExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body scout-explain-content" id="scoutExplainContent"></div>
+    </div>
+  </section></template>
+<template data-game-target="scoutPanel" data-game-mode="contents">
+              <div class="row">
+                <div>Phase: <span id="scoutPhase">-</span></div>
+                <div>Round: <span id="scoutRound">-</span></div>
+                <div>Current Turn: <span id="scoutTurn">-</span></div>
+              </div>
+              <div class="row">
+                <div>Start Player: <span id="scoutStartPlayer">-</span></div>
+                <div>Active Owner: <span id="scoutActiveOwner">-</span></div>
+                <div>Winner: <span id="scoutWinner">-</span></div>
+              </div>
+              <div class="row">
+                <div>Variant: <span id="scoutVariant">-</span></div>
+                <div>Center Scout: <span id="scoutCenterTokens">-</span></div>
+                <div>Selection: <span id="scoutSelectionLabel">-</span></div>
+              </div>
+
+              <div id="scoutRoundNotice" class="round-notice hidden" aria-hidden="true">
+                <div id="scoutRoundNoticeTitle" class="round-notice-title">Last Round</div>
+                <div id="scoutRoundNoticeBody" class="round-notice-body">-</div>
+                <div id="scoutRoundNoticeList" class="scout-summary-list"></div>
+              </div>
+
+              <h3>Opening Choice 🎪</h3>
+              <div id="scoutOpening" class="scout-opening"></div>
+
+              <h3>Active Set 🎭</h3>
+              <div id="scoutActiveSet" class="scout-active-set" data-scout-explain="activeSet"></div>
+
+              <div class="row actions scout-actions">
+                <button id="scoutHintBtn" type="button" data-scout-explain="hintBtn">Hint</button>
+                <button id="scoutShowBtn" type="button" data-scout-explain="showBtn">Show Selected</button>
+                <button id="scoutScoutBtn" type="button" data-scout-explain="scoutBtn">Scout</button>
+                <button id="scoutScoutShowBtn" type="button" data-scout-explain="scoutShowBtn">Scout + Show</button>
+              </div>
+              <div id="scoutHint" class="hint">Pick your opening hand orientation, then start the show.</div>
+
+              <h3>Your Hand 🎴</h3>
+              <div id="scoutHand" class="scout-hand-shell" data-scout-explain="yourHand"></div>
+
+              <h3>After Scout Preview 🪄</h3>
+              <div id="scoutPreviewArea" class="scout-preview-area" data-scout-explain="previewHand"></div>
+
+              <h3>Players 👥</h3>
+              <div id="scoutPlayers" class="scout-players" data-scout-explain="players"></div>
+            </template>

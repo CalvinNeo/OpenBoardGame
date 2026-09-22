@@ -40,3 +40,9 @@
 # Interaction Requirments
 
 - 在“每一轮”结束后，例如揭开隐藏拍，展示最终结果，进行结算后，都需要暂停，让所有人可以去看一下当前的状态。所有玩家点击 Next Round 之后，游戏才会继续开始下一轮。
+
+## 按需加载
+
+- 首页只引用公共脚本；新游戏的 JS、独立 CSS 和界面片段在 `static/game_assets.js` 的 `GAME_ASSETS` 中注册，不再直接加入首页的 script/link 列表。依赖脚本按顺序列在主脚本前。
+- 游戏主面板保留在 `static/index.html` 中作为空容器，具体内容与弹窗放入 `static/games/<game_id>.html` 的 template 片段；可参考 `cabo.html`。加载器先插入界面并加载样式，再执行游戏脚本。修改资源时更新清单中的版本号；修改清单或加载器时也更新首页对应版本号。
+- 游戏脚本可能在 DOMContentLoaded 之后才执行。初始化应检查 document.readyState；注册 Socket.IO 监听后应同步 currentRoomState，避免错过进入房间时的首个状态。公共代码访问游戏专属变量或函数前，要允许该游戏尚未加载。

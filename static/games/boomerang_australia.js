@@ -427,15 +427,20 @@
         socket.on("system:error", () => {
             if (pending) { pending = false; pendingAction = null; window.clearTimeout(pendingTimer); render(); }
         });
-        socket.on("room:state", state => {
+        const syncRoomConfig = state => {
+            if (!state) return;
             const checkbox = document.getElementById("boomerangAustraliaDirectionVariant");
             if (state.game_type !== "boomerang_australia" || !checkbox) return;
             const nextConfigSignature = JSON.stringify([state.room_id, !!state.game_config?.direction_variant]);
             if (configSignature !== nextConfigSignature) checkbox.checked = !!state.game_config?.direction_variant;
             configSignature = nextConfigSignature;
-        });
+        };
+        socket.on("room:state", syncRoomConfig);
+        if (typeof currentRoomState !== "undefined") syncRoomConfig(currentRoomState);
     }
-    // Deferred game scripts run while readyState is already "interactive";
-    // room.js creates the shared socket later in the same deferred sequence.
-    window.addEventListener("DOMContentLoaded", connectEvents, {once: true});
+    if (document.readyState === "loading" || typeof socket === "undefined") {
+        window.addEventListener("DOMContentLoaded", connectEvents, {once: true});
+    } else {
+        connectEvents();
+    }
 })();

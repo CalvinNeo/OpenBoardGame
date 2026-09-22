@@ -18,6 +18,7 @@ let pendingReadyRoomId = null;
 let cachedGameList = null;
 let gameListRequest = null;
 let gameFilterRevision = 0;
+let pendingGameSetupSelection = null;
 let roomSessionReady = false;
 let pendingRoomRequest = null;
 let roomFeedbackMessage = "";
@@ -752,6 +753,13 @@ function renderGameTypeFilters(games) {
 }
 
 const GAME_WEIGHT = {
+  for_sale: 1.25,
+  love_letter: 1.18,
+  spirit_island: 4.08,
+  red_doors: null, // BLACK MAZE DEEP has no BGG weight votes as of 2026-09-22.
+  cryptid: 2.26,
+  eternal_decks: 2.83,
+  take_time: 1.77,
   terra_nova: 2.87,
   boomerang_australia: 1.53,
   ponzi_scheme: 2.44,
@@ -775,7 +783,7 @@ const GAME_WEIGHT = {
   decrypto: 1.82,
   draw_guess: 1.0698602794411178,
   dumb_questions: 1.00,
-  nine_upper: null,
+  nine_upper: 1.33,
   fang_niao: 1.3142857142857143,
   flip7: 1.028056112224449,
   gold_rush: 1.1839080459770115,
@@ -816,7 +824,7 @@ const GAME_WEIGHT = {
   lost_code: 2.38,
   criminal_dance: 1.16,
   wavelength: 1.11,
-  word_decode: null,
+  word_decode: null, // No BGG entry found as of 2026-09-22.
   guandan: 2.33,
   acquire: 2.49,
   ra: 2.31,
@@ -998,6 +1006,10 @@ function createRoomForGame(gameId, config = null) {
 }
 
 function showCreateRoomGameStep() {
+  if (pendingGameSetupSelection) {
+    pendingGameSetupSelection = null;
+    setRoomFeedback();
+  }
   if (createRoomModalTitle) {
     createRoomModalTitle.textContent = "Select Game";
   }
@@ -1100,12 +1112,28 @@ function showCatanStarfarersSetupStep() {
   if (first) first.focus();
 }
 
-function selectGameFromModal(gameId) {
+async function selectGameFromModal(gameId) {
+  pendingGameSetupSelection = null;
+  setRoomFeedback();
   if (gameId === "forest_shuffle" && forestShuffleLanguageStep) {
     showForestShuffleLanguageStep();
     return;
   }
   if (gameId === "catan_starfarers" && catanStarfarersSetupStep) {
+    const selection = {};
+    pendingGameSetupSelection = selection;
+    setRoomFeedback("Loading game setup...");
+    try {
+      await Promise.all(GAME_ASSETS.catan_starfarers.styles.map((url) => loadGameResource(url, "style")));
+    } catch {
+      if (pendingGameSetupSelection !== selection || createRoomModal.classList.contains("hidden")) return;
+      pendingGameSetupSelection = null;
+      setRoomFeedback("Could not load game setup. Check your connection and select CATAN: Starfarers to retry.", true);
+      return;
+    }
+    if (pendingGameSetupSelection !== selection || createRoomModal.classList.contains("hidden")) return;
+    pendingGameSetupSelection = null;
+    setRoomFeedback();
     showCatanStarfarersSetupStep();
     return;
   }
@@ -1489,6 +1517,9 @@ function getRoomStartReason() {
   if (!socket.connected) return "Connection lost. Reconnecting...";
   if (!roomSessionReady) return "Reconnect to the room before playing.";
   if (currentRoomState.status !== "lobby") return "Game already started.";
+  if (typeof isGameAssetsLoaded === "function" && !isGameAssetsLoaded(currentGameType)) {
+    return "Loading game files...";
+  }
   const players = currentRoomState.players || [];
   const gameMeta = cachedGameList?.find((game) => game.game_id === currentGameType);
   const minPlayers = currentRoomState.min_players ?? gameMeta?.min_players;
@@ -2029,8 +2060,8 @@ function resetRoomState() {
   if (typeof clearArkNovaState === "function") {
     clearArkNovaState();
   }
-  clearCaboState();
-  clearFlip7State();
+  if (typeof clearCaboState === "function") clearCaboState();
+  if (typeof clearFlip7State === "function") clearFlip7State();
   if (typeof clearHotStreakState === "function") {
     clearHotStreakState();
   }
@@ -2057,7 +2088,7 @@ function resetRoomState() {
   if (typeof clearBombBustersState === "function") {
     clearBombBustersState();
   }
-  clearYahtzeeState();
+  if (typeof clearYahtzeeState === "function") clearYahtzeeState();
   if (typeof clearAcquireState === "function") {
     clearAcquireState();
   }
@@ -2067,16 +2098,16 @@ function resetRoomState() {
   if (typeof clearCriminalDanceState === "function") {
     clearCriminalDanceState();
   }
-  clearIstanbulState();
+  if (typeof clearIstanbulState === "function") clearIstanbulState();
   if (typeof clearGaiaProjectState === "function") {
     clearGaiaProjectState();
   }
-  clearGoldRushState();
-  clearIncanGoldState();
+  if (typeof clearGoldRushState === "function") clearGoldRushState();
+  if (typeof clearIncanGoldState === "function") clearIncanGoldState();
   if (typeof clearCelestiaState === "function") {
     clearCelestiaState();
   }
-  clearKobayakawaState();
+  if (typeof clearKobayakawaState === "function") clearKobayakawaState();
   if (typeof clearTucanoState === "function") {
     clearTucanoState();
   }
@@ -2086,11 +2117,11 @@ function resetRoomState() {
   if (typeof clearCenturyState === "function") {
     clearCenturyState();
   }
-  clearSkullState();
-  clearCatInBoxState();
-  clearGangState();
-  clearMismatchState();
-  clearCoyoteState();
+  if (typeof clearSkullState === "function") clearSkullState();
+  if (typeof clearCatInBoxState === "function") clearCatInBoxState();
+  if (typeof clearGangState === "function") clearGangState();
+  if (typeof clearMismatchState === "function") clearMismatchState();
+  if (typeof clearCoyoteState === "function") clearCoyoteState();
   if (typeof clearInAGroveState === "function") {
     clearInAGroveState();
   }
@@ -2106,39 +2137,39 @@ function resetRoomState() {
   if (typeof clearSubtextState === "function") {
     clearSubtextState();
   }
-  clearTexasHoldemState();
-  clearSixNimmtState();
-  clearHalliState();
-  clearDecryptoState();
-    if (typeof clearWavelengthState === "function") {
-      clearWavelengthState();
-    }
-    if (typeof clearDumbQuestionsState === "function") {
-      clearDumbQuestionsState();
-    }
-    clearDrawGuessState();
-  clearBlitzSketchState();
-  clearCyberState();
-  clearAidixitState();
-  clearImpressionFlowerState();
-  clearSplendorState();
-  clearPointSaladState();
-  clearTrekkingState();
-  clearAbracaState();
-  clearBlokusState();
+  if (typeof clearTexasHoldemState === "function") clearTexasHoldemState();
+  if (typeof clearSixNimmtState === "function") clearSixNimmtState();
+  if (typeof clearHalliState === "function") clearHalliState();
+  if (typeof clearDecryptoState === "function") clearDecryptoState();
+  if (typeof clearWavelengthState === "function") {
+    clearWavelengthState();
+  }
+  if (typeof clearDumbQuestionsState === "function") {
+    clearDumbQuestionsState();
+  }
+  if (typeof clearDrawGuessState === "function") clearDrawGuessState();
+  if (typeof clearBlitzSketchState === "function") clearBlitzSketchState();
+  if (typeof clearCyberState === "function") clearCyberState();
+  if (typeof clearAidixitState === "function") clearAidixitState();
+  if (typeof clearImpressionFlowerState === "function") clearImpressionFlowerState();
+  if (typeof clearSplendorState === "function") clearSplendorState();
+  if (typeof clearPointSaladState === "function") clearPointSaladState();
+  if (typeof clearTrekkingState === "function") clearTrekkingState();
+  if (typeof clearAbracaState === "function") clearAbracaState();
+  if (typeof clearBlokusState === "function") clearBlokusState();
   if (typeof clearPatchworkState === "function") {
     clearPatchworkState();
   }
-  clearProjectLState();
-  clearCarcassonneState();
-  clearFangNiaoState();
+  if (typeof clearProjectLState === "function") clearProjectLState();
+  if (typeof clearCarcassonneState === "function") clearCarcassonneState();
+  if (typeof clearFangNiaoState === "function") clearFangNiaoState();
   setGamePanelVisibility(null);
-  updateDrawGuessLanguageRow();
-  updateCyberPicturesConfigRow();
-  updateDecryptoPackRow();
-  updateDecryptoBotRow();
-  updateAidixitDeckRow();
-  updateHalliConfigRow();
+  if (typeof updateDrawGuessLanguageRow === "function") updateDrawGuessLanguageRow();
+  if (typeof updateCyberPicturesConfigRow === "function") updateCyberPicturesConfigRow();
+  if (typeof updateDecryptoPackRow === "function") updateDecryptoPackRow();
+  if (typeof updateDecryptoBotRow === "function") updateDecryptoBotRow();
+  if (typeof updateAidixitDeckRow === "function") updateAidixitDeckRow();
+  if (typeof updateHalliConfigRow === "function") updateHalliConfigRow();
   updateGoldRushConfigRow();
   updateBombBustersConfigRow();
   if (typeof updateTakeTimeConfigRow === "function") updateTakeTimeConfigRow();
@@ -2147,15 +2178,15 @@ function resetRoomState() {
   if (typeof updateCryptidConfigRow === "function") updateCryptidConfigRow();
   if (typeof updateBoomerangAustraliaConfigUI === "function") updateBoomerangAustraliaConfigUI();
   if (typeof updateInAGroveConfigRow === "function") updateInAGroveConfigRow();
-  updateHanabiConfigRow();
+  if (typeof updateHanabiConfigRow === "function") updateHanabiConfigRow();
   updateTexasHoldemConfigRow();
   updateMismatchConfigRow();
-  updateGangConfigRow();
+  if (typeof updateGangConfigRow === "function") updateGangConfigRow();
   if (typeof updateWordDecodeConfigRow === "function") {
     updateWordDecodeConfigRow();
   }
-  updateImpressionConfigRow();
-  updateBlitzSketchConfigRow();
+  if (typeof updateImpressionConfigRow === "function") updateImpressionConfigRow();
+  if (typeof updateBlitzSketchConfigRow === "function") updateBlitzSketchConfigRow();
   if (typeof updateTuringMachineConfigRow === "function") {
     updateTuringMachineConfigRow();
   }
@@ -2179,31 +2210,31 @@ function resetRoomState() {
   }
   updateAutoSaveRow();
   updateReopenButton();
-  if (drawGuessLanguageSelect) {
+  if (typeof drawGuessLanguageSelect !== "undefined" && drawGuessLanguageSelect) {
     drawGuessLanguageSelect.value = "zh";
   }
-  if (drawGuessGuessMethodSelect) {
+  if (typeof drawGuessGuessMethodSelect !== "undefined" && drawGuessGuessMethodSelect) {
     drawGuessGuessMethodSelect.value = "normal";
   }
-  if (blitzSketchDrawTimeSelect) {
+  if (typeof blitzSketchDrawTimeSelect !== "undefined" && blitzSketchDrawTimeSelect) {
     blitzSketchDrawTimeSelect.value = "3";
   }
-  if (drawGuessAnswerLengthToggle) {
+  if (typeof drawGuessAnswerLengthToggle !== "undefined" && drawGuessAnswerLengthToggle) {
     drawGuessAnswerLengthToggle.checked = false;
   }
-  if (cyberPicturesDuplicateToggle) {
+  if (typeof cyberPicturesDuplicateToggle !== "undefined" && cyberPicturesDuplicateToggle) {
     cyberPicturesDuplicateToggle.checked = false;
   }
-  cyberPicturesDisabledTools = new Set();
-  if (decryptoBotSelect) {
+  if (typeof cyberPicturesDisabledTools !== "undefined") cyberPicturesDisabledTools = new Set();
+  if (typeof decryptoBotSelect !== "undefined" && decryptoBotSelect) {
     decryptoBotSelect.value = "native";
   }
-  decryptoBotStrategyId = "native";
-  if (decryptoBotClueSelect) {
+  if (typeof decryptoBotStrategyId !== "undefined") decryptoBotStrategyId = "native";
+  if (typeof decryptoBotClueSelect !== "undefined" && decryptoBotClueSelect) {
     decryptoBotClueSelect.value = "0.5";
   }
-  decryptoBotClueDirectness = 0.5;
-  if (halliDeckSelect) {
+  if (typeof decryptoBotClueDirectness !== "undefined") decryptoBotClueDirectness = 0.5;
+  if (typeof halliDeckSelect !== "undefined" && halliDeckSelect) {
     halliDeckSelect.value = "base";
   }
   if (goldRushModeSelect) {
@@ -2212,67 +2243,67 @@ function resetRoomState() {
   if (bombBustersPresetSelect) {
     bombBustersPresetSelect.value = "standard_practice";
   }
-  if (hanabiFinalRoundToggle) {
+  if (typeof hanabiFinalRoundToggle !== "undefined" && hanabiFinalRoundToggle) {
     hanabiFinalRoundToggle.checked = false;
   }
   if (mismatchSliderCount) {
     mismatchSliderCount.value = "3";
   }
-  if (gangModeSelect) {
+  if (typeof gangModeSelect !== "undefined" && gangModeSelect) {
     gangModeSelect.value = "normal";
   }
-  if (gangTimeSelect) {
+  if (typeof gangTimeSelect !== "undefined" && gangTimeSelect) {
     gangTimeSelect.value = "0";
   }
-  if (wordDecodeGuessTimeSelect) {
+  if (typeof wordDecodeGuessTimeSelect !== "undefined" && wordDecodeGuessTimeSelect) {
     wordDecodeGuessTimeSelect.value = "0";
   }
-  if (impressionVoteToggle) {
+  if (typeof impressionVoteToggle !== "undefined" && impressionVoteToggle) {
     impressionVoteToggle.checked = false;
   }
-  if (turingMachineModeSelect) {
+  if (typeof turingMachineModeSelect !== "undefined" && turingMachineModeSelect) {
     turingMachineModeSelect.value = "simple";
   }
-  if (turingMachineSourceSelect) {
+  if (typeof turingMachineSourceSelect !== "undefined" && turingMachineSourceSelect) {
     turingMachineSourceSelect.value = "random";
   }
-  if (turingMachineDifficultySelect) {
+  if (typeof turingMachineDifficultySelect !== "undefined" && turingMachineDifficultySelect) {
     turingMachineDifficultySelect.value = "standard";
   }
   if (typeof populateTuringMachinePresetSelect === "function") {
     populateTuringMachinePresetSelect();
   }
-  if (turingMachinePresetSelect) {
+  if (typeof turingMachinePresetSelect !== "undefined" && turingMachinePresetSelect) {
     turingMachinePresetSelect.value = "relay-standard-01";
   }
-  if (turingMachineSeedInput) {
+  if (typeof turingMachineSeedInput !== "undefined" && turingMachineSeedInput) {
     turingMachineSeedInput.value = "";
   }
-  if (lostCodeModeSelect) {
+  if (typeof lostCodeModeSelect !== "undefined" && lostCodeModeSelect) {
     lostCodeModeSelect.value = "standard";
   }
-  if (lostCodeShortcutToggle) {
+  if (typeof lostCodeShortcutToggle !== "undefined" && lostCodeShortcutToggle) {
     lostCodeShortcutToggle.checked = false;
   }
-  if (lostCodeCurseToggle) {
+  if (typeof lostCodeCurseToggle !== "undefined" && lostCodeCurseToggle) {
     lostCodeCurseToggle.checked = false;
   }
-  if (criminalDanceDetectiveRuleSelect) {
+  if (typeof criminalDanceDetectiveRuleSelect !== "undefined" && criminalDanceDetectiveRuleSelect) {
     criminalDanceDetectiveRuleSelect.value = "hand_leq_3";
   }
-  if (criminalDanceDogFailSelect) {
+  if (typeof criminalDanceDogFailSelect !== "undefined" && criminalDanceDogFailSelect) {
     criminalDanceDogFailSelect.value = "discard";
   }
-  if (criminalDanceBoyToggle) {
+  if (typeof criminalDanceBoyToggle !== "undefined" && criminalDanceBoyToggle) {
     criminalDanceBoyToggle.checked = true;
   }
-  if (criminalDanceChiefToggle) {
+  if (typeof criminalDanceChiefToggle !== "undefined" && criminalDanceChiefToggle) {
     criminalDanceChiefToggle.checked = false;
   }
-  if (criminalDanceScoringToggle) {
+  if (typeof criminalDanceScoringToggle !== "undefined" && criminalDanceScoringToggle) {
     criminalDanceScoringToggle.checked = true;
   }
-  if (criminalDanceBoyVisibilitySelect) {
+  if (typeof criminalDanceBoyVisibilitySelect !== "undefined" && criminalDanceBoyVisibilitySelect) {
     criminalDanceBoyVisibilitySelect.value = "boy_knows_criminal";
   }
   if (typeof resetGuandanRoomConfig === "function") {
@@ -2840,22 +2871,20 @@ if (leaveBtn) {
   });
 }
 
-document.querySelectorAll(".collapse-btn").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const panel = btn.closest(".panel");
-    if (!panel) {
-      return;
-    }
-    const collapsed = panel.classList.toggle("collapsed");
-    btn.textContent = collapsed ? "Show" : "Hide";
-    btn.setAttribute("aria-expanded", (!collapsed).toString());
-    if (panel.id === "roomControlsPanel") {
-      btn.setAttribute("aria-label", collapsed ? "Open Room Controls" : "Hide Room Controls");
-      btn.title = collapsed ? "Open Room Controls" : "Hide Room Controls";
-      roomControlsAutoCollapsed = false;
-      updateRoomControlsDock();
-    }
-  });
+// Game panels may be inserted after the room controls have initialized.
+document.addEventListener("click", (event) => {
+  const btn = event.target.closest?.(".collapse-btn");
+  const panel = btn?.closest(".panel");
+  if (!panel) return;
+  const collapsed = panel.classList.toggle("collapsed");
+  btn.textContent = collapsed ? "Show" : "Hide";
+  btn.setAttribute("aria-expanded", (!collapsed).toString());
+  if (panel.id === "roomControlsPanel") {
+    btn.setAttribute("aria-label", collapsed ? "Open Room Controls" : "Hide Room Controls");
+    btn.title = collapsed ? "Open Room Controls" : "Hide Room Controls";
+    roomControlsAutoCollapsed = false;
+    updateRoomControlsDock();
+  }
 });
 
 gameListRetryBtn.addEventListener("click", applyGameFilters);

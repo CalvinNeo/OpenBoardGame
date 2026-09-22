@@ -363,5 +363,12 @@
     };
     window.showSpiritIslandHeaderActions = visible => { header.style.display = visible ? "flex" : "none"; if (!visible) clearState(); };
     window.clearSpiritIslandState = clearState;
-    window.addEventListener("DOMContentLoaded", () => { if (typeof socket !== "undefined") socket.on("system:error", () => { if (pending) { pending = false; window.clearTimeout(pendingTimer); render(); } }); }, {once: true});
+    function connectEvents() {
+        if (typeof socket !== "undefined") socket.on("system:error", () => { if (pending) { pending = false; window.clearTimeout(pendingTimer); render(); } });
+    }
+    if (document.readyState === "loading" || typeof socket === "undefined") {
+        window.addEventListener("DOMContentLoaded", connectEvents, {once: true});
+    } else {
+        connectEvents();
+    }
 })();

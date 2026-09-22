@@ -1,0 +1,114 @@
+<template data-game-target="cyberPicturesPanel" data-game-mode="contents">
+              <div class="row">
+                <div>Phase: <span id="cyberPhase">-</span></div>
+                <div>Round: <span id="cyberRound">-</span>/<span id="cyberTotalRounds">-</span></div>
+                <div>Tool: <span id="cyberToolLabel">-</span></div>
+                <div>Target: <span id="cyberTargetLabel">-</span></div>
+              </div>
+              <div class="row">
+                <div>Submitted: <span id="cyberSubmitted">-</span></div>
+                <div>Guessed: <span id="cyberGuessed">-</span></div>
+              </div>
+
+              <h3>Matrix</h3>
+              <div id="cyberMatrix" class="cyber-matrix"></div>
+
+              <div id="cyberCraftArea">
+                <h3>Craft</h3>
+                <div id="cyberToolShoelaces" class="cyber-tool hidden">
+                  <div class="row">
+                    <canvas id="cyberShoelaceCanvas" width="360" height="360"></canvas>
+                  </div>
+                  <div class="row actions">
+                    <button id="cyberShoelaceUndoBtn">Undo Path</button>
+                    <button id="cyberShoelaceClearBtn">Clear</button>
+                  </div>
+                  <div class="hint">Draw up to 2 paths.</div>
+                </div>
+                <div id="cyberToolPixel" class="cyber-tool hidden">
+                  <div id="cyberPixelGrid" class="cyber-pixel-grid"></div>
+                  <div class="row cyber-pixel-palette" id="cyberPixelPalette"></div>
+                </div>
+                <div id="cyberToolIconSet" class="cyber-tool hidden">
+                  <div class="row cyber-icon-palette" id="cyberIconPalette"></div>
+                  <div id="cyberIconCanvas" class="cyber-stage"></div>
+                  <div class="row actions">
+                    <button id="cyberIconRemoveBtn">Remove Last</button>
+                    <button id="cyberIconClearBtn">Clear</button>
+                  </div>
+                  <div class="hint">Use 2-5 icons. Tap to rotate 90°.</div>
+                </div>
+                <div id="cyberToolLetters" class="cyber-tool hidden">
+                  <div class="row cyber-letter-palette" id="cyberLetterPalette"></div>
+                  <div id="cyberLetterCanvas" class="cyber-stage"></div>
+                  <div class="row">
+                    <label for="cyberLetterRotate">Rotation</label>
+                    <input id="cyberLetterRotate" type="range" min="0" max="360" value="0" />
+                    <span id="cyberLetterRotateValue">0°</span>
+                  </div>
+                  <div class="row actions">
+                    <button id="cyberLetterRotateBtn">Rotate Selected</button>
+                    <button id="cyberLetterRemoveBtn">Remove Selected</button>
+                    <button id="cyberLetterClearBtn">Clear</button>
+                  </div>
+                  <div class="hint">Rotate with the slider or tap to spin 90°; up to 10 letters.</div>
+                </div>
+                <div id="cyberToolShapes" class="cyber-tool hidden">
+                  <div class="row cyber-shape-palette" id="cyberShapePalette"></div>
+                  <div id="cyberShapeCanvas" class="cyber-stage"></div>
+                  <div class="row">
+                    <label for="cyberShapeRotate">Rotation</label>
+                    <input id="cyberShapeRotate" type="range" min="0" max="360" value="0" />
+                    <span id="cyberShapeRotateValue">0°</span>
+                  </div>
+                  <div class="row actions">
+                    <button id="cyberShapeRemoveBtn">Remove Selected</button>
+                    <button id="cyberShapeClearBtn">Clear</button>
+                  </div>
+                  <div class="hint">Drag hollow shapes; rotate freely.</div>
+                </div>
+                <div id="cyberToolThruster" class="cyber-tool hidden">
+                  <div class="row">
+                    <canvas id="cyberThrusterCanvas" width="360" height="360"></canvas>
+                  </div>
+                  <div class="row actions cyber-thruster-controls">
+                    <div id="cyberThrusterAttempts" class="hint"></div>
+                    <button id="cyberThrusterUndoBtn" class="cyber-thruster-undo">Undo</button>
+                  </div>
+                  <div class="row cyber-thruster-metrics">
+                    <div id="cyberThrusterAccel" class="hint">Acceleration (up +): +0.0 px/s^2</div>
+                    <div id="cyberThrusterVelocityLabel" class="hint">Velocity (up +): +0.0 px/s</div>
+                  </div>
+                  <div class="hint">Hold mouse/touch or space to thrust.</div>
+                </div>
+                <div id="cyberToolSynth" class="cyber-tool hidden">
+                  <div id="cyberSynthGrid" class="cyber-synth-grid"></div>
+                  <div class="hint">Adjust 10 sliders (integers) to set bar heights.</div>
+                </div>
+                <div class="row actions">
+                  <button id="cyberSubmitBtn">Submit Creation</button>
+                </div>
+                <div id="cyberSubmissionHint" class="hint"></div>
+              </div>
+
+              <div id="cyberGuessArea" class="hidden">
+                <h3>Guess</h3>
+                <div id="cyberWorks"></div>
+                <div class="row actions">
+                  <button id="cyberSubmitGuessBtn">Submit Guesses</button>
+                </div>
+              </div>
+
+              <div id="cyberScoreArea" class="hidden">
+                <h3>Round Results</h3>
+                <div id="cyberRoundScores" class="cyber-score-grid"></div>
+                <div id="cyberReveal" class="cyber-reveal-list"></div>
+                <div class="row actions">
+                  <button id="cyberNextRoundBtn">Next Round</button>
+                </div>
+                <div id="cyberGameOverNotice" class="hint hidden">Game over.</div>
+              </div>
+
+              <h3>Players</h3>
+              <div id="cyberPlayers"></div>
+            </template>

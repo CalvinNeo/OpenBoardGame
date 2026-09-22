@@ -1,3 +1,4 @@
+import json
 import re
 import unittest
 from pathlib import Path
@@ -374,10 +375,15 @@ class SubtextGameTests(unittest.TestCase):
         self.assertEqual(app._public_bot_action("subtext", guess_action), {"type": "submit_guess"})
         self.assertIs(app._public_bot_action("cabo", guess_action), guess_action)
 
-    def test_frontend_assets_are_wired_before_dispatch(self):
+    def test_frontend_assets_are_declared_for_lazy_loading(self):
         index = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
-        script_match = re.search(r'<script src="(/static/games/subtext\.js\?v=[^"]+)"', index)
+        loader = (ROOT / "static" / "game_assets.js").read_text(encoding="utf-8")
+        assets, _ = json.JSONDecoder().raw_decode(loader.split("const GAME_ASSETS = ", 1)[1])
+        script_match = re.search(r'<script src="(/static/game_assets\.js\?v=[^"]+)"', index)
         app_match = re.search(r'<script src="(/static/app\.js\?v=[^"]+)"', index)
+        self.assertIn("/static/games/subtext.js", [url.split("?", 1)[0] for url in assets["subtext"]["scripts"]])
+        self.assertEqual(assets["subtext"]["panel"], "subtextPanel")
+        self.assertNotIn('/static/games/subtext.js?', index)
         self.assertIsNotNone(script_match)
         self.assertIsNotNone(app_match)
         self.assertLess(index.index(script_match.group(0)), index.index(app_match.group(0)))

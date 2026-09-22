@@ -1,0 +1,67 @@
+<template data-game-target="impressionFlowerPanel" data-game-mode="contents">
+              <div class="row">
+                <div>Phase: <span id="impressionPhase">-</span></div>
+                <div>Round: <span id="impressionRound">-</span>/<span id="impressionRoundsPerGuesser">-</span></div>
+                <div>Guesser: <span id="impressionGuesser">-</span></div>
+              </div>
+              <div class="row">
+                <div>Your Role: <span id="impressionRole">-</span></div>
+                <div>Stamps Left: <span id="impressionStampsLeft">-</span></div>
+                <div>Your Score: <span id="impressionScore">-</span></div>
+              </div>
+
+              <div class="row hidden" id="impressionPromptRow">
+                <div>Prompt: <span id="impressionPrompt">-</span></div>
+              </div>
+
+              <div id="impressionDrawArea" class="hidden">
+                <div class="impression-canvas-wrapper">
+                  <canvas id="impressionCanvas" width="600" height="600"></canvas>
+                  <div id="impressionMask" class="impression-mask hidden"></div>
+                  <div id="impressionRotateControls" class="impression-rotate-controls hidden" aria-label="Rotation controls">
+                    <button id="impressionRotateLeftBtn" type="button" class="impression-rotate-btn" aria-label="Rotate left">◀</button>
+                    <button id="impressionRotateRightBtn" type="button" class="impression-rotate-btn" aria-label="Rotate right">▶</button>
+                  </div>
+                </div>
+                <div class="row impression-controls">
+                  <div id="impressionShapeButtons" class="impression-shapes"></div>
+                  <span class="hint impression-color-hint">Colors are tied to shapes.</span>
+                  <button id="impressionUndoBtn">Undo</button>
+                  <button id="impressionMaskBtn">Mask</button>
+                  <button id="impressionSubmitDrawBtn">Submit Drawing</button>
+                </div>
+                <div id="impressionMaskControls" class="row impression-mask-controls hidden">
+                  <label for="impressionMaskRotation">Mask Rotation</label>
+                  <input id="impressionMaskRotation" type="range" min="0" max="360" value="0" />
+                  <label for="impressionMaskScale">Mask Scale</label>
+                  <input id="impressionMaskScale" type="range" min="0.5" max="2" step="0.1" value="1" />
+                </div>
+              </div>
+
+              <div id="impressionGuessArea" class="hidden">
+                <h3>Word Bank</h3>
+                <div id="impressionWordBank" class="impression-word-bank"></div>
+                <h3>Drawings</h3>
+                <div id="impressionDrawings" class="impression-drawings"></div>
+                <div class="row actions">
+                  <button id="impressionSubmitMatchesBtn">Submit Matches</button>
+                </div>
+              </div>
+
+              <div id="impressionRoundEnd" class="round-notice hidden">
+                <div class="round-notice-title">Last Round</div>
+                <div id="impressionRoundResult" class="round-notice-body">-</div>
+                <div class="row actions">
+                  <button id="impressionContinueBtn">Continue</button>
+                  <button id="impressionEndBtn">End Game</button>
+                </div>
+              </div>
+
+              <div id="impressionReview" class="hidden">
+                <h3>Review</h3>
+                <div id="impressionReviewList" class="impression-drawings"></div>
+              </div>
+
+              <h3>Players</h3>
+              <div id="impressionPlayers"></div>
+            </template>

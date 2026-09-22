@@ -1,0 +1,136 @@
+<template data-game-target="guandanHelpModal" data-game-mode="replace"><section id="guandanHelpModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content guandan-help-modal">
+      <div class="modal-header">
+        <h2>Guandan - Game Rules</h2>
+        <button id="guandanHelpModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body guandan-help-content"></div>
+    </div>
+  </section></template>
+<template data-game-target="guandanExplainModal" data-game-mode="replace"><section id="guandanExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content guandan-explain-modal">
+      <div class="modal-header">
+        <h2>Button Explanation</h2>
+        <button id="guandanExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="guandanExplainContent"></div>
+      </div>
+    </div>
+  </section></template>
+<template data-game-target="guandanBotExplainModal" data-game-mode="replace"><section id="guandanBotExplainModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content guandan-bot-explain-modal">
+      <div class="modal-header">
+        <h2>Bot Play Explanation</h2>
+        <button id="guandanBotExplainModalCloseBtn" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="guandanBotExplainContent"></div>
+      </div>
+    </div>
+  </section></template>
+<template data-game-target="guandanPanel" data-game-mode="contents">
+              <div class="guandan-status-bar" aria-label="Round status">
+                <div class="guandan-status-item">
+                  <span class="guandan-status-icon" aria-hidden="true">♟️</span>
+                  <span class="guandan-status-copy">
+                    <span class="guandan-status-label">Phase</span>
+                    <strong id="guandanPhase">-</strong>
+                  </span>
+                </div>
+                <div class="guandan-status-item">
+                  <span class="guandan-status-icon" aria-hidden="true">🔄</span>
+                  <span class="guandan-status-copy">
+                    <span class="guandan-status-label">Round</span>
+                    <strong id="guandanRound">-</strong>
+                  </span>
+                </div>
+                <div class="guandan-status-item guandan-status-item--turn">
+                  <span class="guandan-status-icon" aria-hidden="true">▶️</span>
+                  <span class="guandan-status-copy">
+                    <span class="guandan-status-label">Current Turn</span>
+                    <strong id="guandanTurn">-</strong>
+                  </span>
+                </div>
+                <div class="guandan-status-item">
+                  <span class="guandan-status-icon" aria-hidden="true">🤝</span>
+                  <span class="guandan-status-copy">
+                    <span class="guandan-status-label">Dealer Team</span>
+                    <strong id="guandanDealer">-</strong>
+                  </span>
+                </div>
+                <div class="guandan-status-item guandan-status-item--level">
+                  <span class="guandan-status-icon" aria-hidden="true">⬆️</span>
+                  <span class="guandan-status-copy">
+                    <span class="guandan-status-label">Level</span>
+                    <strong id="guandanLevel">-</strong>
+                  </span>
+                </div>
+              </div>
+              <section
+                id="guandanBeatTarget"
+                class="guandan-beat-target is-open"
+                aria-label="Target to beat"
+                aria-live="polite"
+              >
+                <div class="guandan-beat-target-head">
+                  <span class="guandan-beat-eyebrow"><span aria-hidden="true">🎯</span> Target to Beat</span>
+                  <span id="guandanBeatRelation" class="guandan-relation-badge">Open trick</span>
+                </div>
+                <div class="guandan-beat-main">
+                  <div class="guandan-beat-copy">
+                    <strong id="guandanBeatTitle" class="guandan-beat-title">Lead any valid combo</strong>
+                    <span id="guandanBeatOwner" class="guandan-beat-owner">No cards are on the table.</span>
+                  </div>
+                  <div id="guandanBeatCards" class="guandan-beat-cards" aria-label="No target cards">
+                    <span class="guandan-beat-empty">Any combo</span>
+                  </div>
+                </div>
+                <div id="guandanBeatHint" class="guandan-beat-hint">The lead player can play any valid combo.</div>
+              </section>
+              <div class="guandan-tribute-strip">
+                <span class="guandan-tribute-label"><span aria-hidden="true">🎁</span> Tribute</span>
+                <span id="guandanTribute">-</span>
+              </div>
+
+              <section class="guandan-section guandan-trick-section">
+                <h3 class="guandan-section-title"><span aria-hidden="true">🃏</span> Trick Plays</h3>
+                <div id="guandanTrickPlays" class="guandan-trick-table">-</div>
+              </section>
+
+              <section class="guandan-section guandan-hand-section">
+                <div class="guandan-hand-row">
+                  <h3 class="guandan-section-title"><span aria-hidden="true">♠️</span> Your Hand</h3>
+                  <div class="guandan-hand-tools">
+                    <button id="guandanHintBtn" type="button" class="guandan-inline-btn">💡 Hint</button>
+                    <button id="guandanFindSfBtn" type="button" class="guandan-inline-btn">♦️ Find SF</button>
+                    <select id="guandanCascadeSelect" class="guandan-inline-select" aria-label="Hand layout">
+                      <option value="normal">Normal</option>
+                      <option value="cascade" selected>Cascade</option>
+                      <option value="compact">Compact</option>
+                    </select>
+                  </div>
+                </div>
+                <div id="guandanHand" class="hand"></div>
+              </section>
+
+              <section class="guandan-section guandan-pile-section">
+                <h3 class="guandan-section-title"><span aria-hidden="true">🗂️</span> Pile</h3>
+                <div id="guandanPile" class="guandan-pile"></div>
+              </section>
+
+              <div class="guandan-actions-grid" aria-label="Actions">
+                <button id="guandanPlayBtn">▶ Play</button>
+                <button id="guandanPassBtn">↷ Pass</button>
+                <button id="guandanPileBtn">≡ Pile</button>
+                <button id="guandanTributeBtn">🎁 Tribute</button>
+                <button id="guandanReturnBtn">↩ Return</button>
+                <button id="guandanNextRoundBtn">⏭ Next Round</button>
+                <button id="guandanPlayAgainBtn">🔄 Play Again</button>
+              </div>
+
+              <section class="guandan-section guandan-players-section">
+                <h3 class="guandan-section-title"><span aria-hidden="true">👥</span> Players</h3>
+                <div id="guandanPlayers" class="guandan-players-grid"></div>
+              </section>
+            </template>
