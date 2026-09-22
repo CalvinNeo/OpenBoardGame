@@ -25,8 +25,11 @@ def _name(state: Dict, pid: str) -> str:
 
 
 def _held(state: Dict, pid: Optional[str] = None) -> List[Dict]:
-    return [card for card in state["cards"].values()
-            if card["zone"] == "held" and (pid is None or card["owner"] == pid)]
+    # Internal deck insertion order groups cards by kind. Never let that ordering
+    # label a hidden key: use only the already-public door reference instead.
+    return sorted((card for card in state["cards"].values()
+                   if card["zone"] == "held" and (pid is None or card["owner"] == pid)),
+                  key=lambda card: card["ref"])
 
 
 def _board(state: Dict) -> List[Dict]:

@@ -381,6 +381,19 @@ class RedDoorsTests(unittest.TestCase):
         self.assertEqual(Game.bot_move(self.state, "p0"), Game.bot_move(other, "p0"))
         self.assertEqual(_bot_from_view(Game.get_public_view(self.state, "p0")), Game.bot_move(self.state, "p0"))
 
+    def test_inventory_and_inspection_order_cannot_reveal_internal_card_order(self):
+        self.give("silver_key", "p1")
+        self.give("killer_key", "p1")
+        self.give("silver_key", "p2")
+        for phase in ("choose_door", "choose_target"):
+            if phase == "choose_target":
+                self.open("inspect")
+                self.resolve()
+            alternative = copy.deepcopy(self.state)
+            alternative["cards"] = dict(reversed(list(alternative["cards"].items())))
+            self.assertEqual(Game.get_public_view(self.state, "p0"), Game.get_public_view(alternative, "p0"))
+            self.assertEqual(Game.bot_move(self.state, "p0"), Game.bot_move(alternative, "p0"))
+
     def test_bots_finish_sixty_seeded_games_without_artificial_turn_limit(self):
         endings = set()
         for count in (4, 5, 6):

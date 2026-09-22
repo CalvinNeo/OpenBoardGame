@@ -14,8 +14,9 @@
     tip.hidden = true;
     document.body.appendChild(tip);
     const descriptions = {
-        door: "暗门（🚪）：先点选，再 Open door。开门只让你本人看牌；之后必须处理牌面。明置牌不可作为普通开门目标。灰色表示当前无法选择。",
+        door: "暗门（🚪）：点选后，在门牌上的确认区点击 Confirm。开门只让你本人看牌；之后必须处理牌面。明置牌不可作为普通开门目标。灰色表示当前无法选择。",
         confirm: "Confirm：提交当前选择。选门只是本地选择，确认后才会私下看牌；点击空白或按 Esc 可取消尚未提交的选择。",
+        cancel: "Cancel：取消尚未提交的选择，不开门、不消耗回合。也可点击周围空白或按 Esc。已提交的开门不能撤销。",
         return: "暗置放回：把此牌放回原位置，公开日志只记录你声称是空房（🚪）。普通玩家须有牌面许可；已成为杀人鬼（🗝️）可以隐藏普通开门的效果。",
         use: "执行牌面：钥匙（🔑／🗝️）暗置持有，道具（🦺／🔫）公开持有，其余按牌面处理。首次取得杀人鬼钥匙必须成为杀人鬼，不能先取得身份再撤销拿牌。",
         escape: "尝试逃脱（🚪✨）：全桌必须持有三把钥匙。公开后，三把银钥匙（🔑）使所有普通人获胜；混入杀人鬼钥匙（🗝️）则所有杀人鬼获胜。两种结局都包括已死亡的同阵营玩家。",
@@ -39,7 +40,6 @@
     const label = kind => kind ? `${view.card_defs[kind].icon} ${view.card_defs[kind].name}` : "🔒 暗钥匙";
     const cardTip = kind => kind ? `${label(kind)}：${view.card_defs[kind].text}` : descriptions.door;
     const btn = (text, action, explanation, disabled = false, extra = "") => `<button type="button" data-rd-action="${action}" data-rd-explain="${explanation}" ${disabled ? "disabled" : ""} ${extra}>${text}</button>`;
-    const info = text => `<button type="button" class="rd-info" data-rd-tip="${esc(text)}" data-rd-explain="tip" aria-label="Info">ⓘ</button>`;
     const badge = (text, message) => `<button type="button" class="rd-tip-label" data-rd-tip="${esc(message)}" data-rd-explain="tip">${esc(text)}</button>`;
 
     function candidate() {
@@ -50,31 +50,31 @@
     }
 
     function boardHTML() {
-        return `<section class="rd-box"><div class="rd-section-head"><h3>迷宫 · ${view.doors.length} doors</h3><small>Layout ${view.board_epoch}</small></div><div class="rd-board">${view.doors.map(door => {
+        const selectingDoor = view.phase === "choose_door" && view.current_turn === view.you || view.phase === "choose_target" && view.private?.kind === "clue";
+        const selectedDoor = selectingDoor ? view.doors.find(door => door.door_id === selection) : null;
+        const confirmation = (door, className) => `<div class="rd-confirm-overlay ${className}" role="group" aria-label="Confirm door ${door.slot}"><strong>Door ${String(door.slot).padStart(2, "0")}</strong><div class="rd-actions">${btn(pending ? "Sending…" : "Confirm", "confirm", "confirm", !candidate(), 'class="rd-primary"')}${btn("Cancel", "cancel", "cancel", pending)}</div></div>`;
+        return `<section class="rd-box rd-maze"><div class="rd-section-head"><h3>迷宫 · ${view.doors.length} doors</h3><small>Layout ${view.board_epoch}</small></div><div class="rd-board-wrapper"><div class="rd-board">${view.doors.map(door => {
             const kind = door.kind || door.known_kind;
             const target = allowed("choose_target") && view.private.kind === "clue" && view.private.targets.some(t => t.target_id === door.door_id);
             const selectable = (allowed("open_door") && !door.faceup) || target;
             const message = `${door.kind ? "公开门牌" : door.known_kind ? "私人记忆（🔒）" : "暗门（🚪）"} · 门 ${door.slot}。${cardTip(kind)}`;
-            return `<div class="rd-door-cell">${btn(`<span class="rd-door-no">${String(door.slot).padStart(2, "0")}</span><span class="rd-door-icon">${kind ? view.card_defs[kind].icon : "🚪"}</span><span class="rd-door-state">${door.kind ? "Revealed" : "Closed"}</span>`, "select", target ? "target" : "door", !selectable,
-                `class="rd-door ${selection === door.door_id ? "is-selected" : ""} ${door.kind ? "is-public" : ""}" data-target="${esc(door.door_id)}" aria-label="Door ${door.slot}${kind ? ` · ${esc(label(kind))}` : ""}" aria-pressed="${selection === door.door_id}"`)}
-                <span class="rd-door-memory">${!door.kind && door.known_kind ? "🔒 Private" : door.kind ? "Public" : "Unknown"}</span>${info(message)}</div>`;
-        }).join("")}</div><p class="rd-hint">${view.private?.kind === "clue" && view.phase === "choose_target" ? "🔎 点选另一扇暗门，再 Confirm。" : "点选暗门，再 Open door。"}</p></section>`;
+            return `<div class="rd-door-cell">${btn(`<span class="rd-door-top"><span class="rd-door-no">${String(door.slot).padStart(2, "0")}</span>${!door.kind && door.known_kind ? '<span class="rd-door-mark" aria-label="Private memory">🔒</span>' : ""}</span><span class="rd-door-icon">${kind ? view.card_defs[kind].icon : "🚪"}</span>`, "select", target ? "target" : "door", !selectable,
+                `class="rd-door ${selection === door.door_id ? "is-selected" : ""} ${door.kind ? "is-public" : ""}" data-target="${esc(door.door_id)}" data-rd-description="${esc(message)}" aria-label="Door ${door.slot}${kind ? ` · ${esc(label(kind))}` : ""}" aria-pressed="${selection === door.door_id}"`)}${selectedDoor === door ? confirmation(door, "rd-door-confirm") : ""}</div>`;
+        }).join("")}</div>${selectedDoor ? confirmation(selectedDoor, "rd-board-confirm") : ""}</div><p class="rd-hint">${view.private?.kind === "clue" && view.phase === "choose_target" ? "🔎 点选另一扇暗门，在门牌上确认查看。" : view.current_turn === view.you && view.phase === "choose_door" ? "点选暗门，再原位 Confirm。" : "暗牌可开门 · 🔒 为私人记忆"}</p></section>`;
     }
 
     function actionHTML() {
+        if (view.phase === "choose_door") return "";
         let content = "";
         const privateCard = view.private;
-        if (allowed("open_door") || (pending && view.phase === "choose_door")) {
-            const door = view.doors.find(d => d.door_id === selection);
-            content = `<p class="rd-card-text">${door ? `已选择门 ${String(door.slot).padStart(2, "0")}` : "选择一扇暗门，私下查看里面的牌。"}</p><div class="rd-actions">${btn(pending ? "Sending…" : door ? `Open door ${String(door.slot).padStart(2, "0")}` : "Open door", "confirm", "confirm", !candidate(), 'class="rd-primary" id="redDoorsConfirm"')}</div>`;
-        } else if (privateCard && view.phase === "resolve_door") {
+        if (privateCard && view.phase === "resolve_door") {
             content = `<div class="rd-private-label">🔒 Private · Only you can see this</div><div class="rd-card-face"><span>${view.card_defs[privateCard.kind].icon}</span><h4>${esc(view.card_defs[privateCard.kind].name)}</h4></div><p class="rd-card-text">${esc(view.card_defs[privateCard.kind].text)}</p>
                 ${own().role === "killer" && privateCard.choices.includes("return") ? '<p class="rd-hint">🗝️ 你可以声称是空房，将门牌暗置放回。</p>' : ""}
                 <div class="rd-actions">${privateCard.choices.map(choice => btn(choice === "return" ? "Return face down" : choice === "escape" ? "Try escape" : ["silver_key", "killer_key", "vest", "gun"].includes(privateCard.kind) ? "Take card" : "Reveal & resolve", `resolve-${choice}`, choice, pending, choice !== "return" ? 'class="rd-primary"' : "")).join("")}</div>`;
         } else if (privateCard && view.phase === "choose_target") {
             content = `<p class="rd-card-text">${label(privateCard.kind)} · ${privateCard.kind === "clue" ? "点选另一扇暗门。" : privateCard.kind === "ammo" ? "选择射击目标。" : "选择其他玩家的一张暗钥匙。"}</p>
                 ${privateCard.kind === "clue" ? "" : `<div class="rd-actions">${privateCard.targets.map(t => btn(esc(t.label), "select", "target", pending, `data-target="${esc(t.target_id)}" class="${selection === t.target_id ? "is-selected" : ""}" aria-pressed="${selection === t.target_id}"`)).join("")}</div>`}
-                <div class="rd-actions">${btn(pending ? "Sending…" : "Confirm", "confirm", "confirm", !candidate(), 'class="rd-primary" id="redDoorsConfirm"')}</div>`;
+                ${privateCard.kind !== "clue" ? `<div class="rd-actions">${btn(pending ? "Sending…" : "Confirm", "confirm", "confirm", !candidate(), 'class="rd-primary"')}</div>` : ""}`;
         } else if (privateCard && view.phase === "private_result") {
             const result = privateCard.result;
             content = `<div class="rd-private-label">🔒 Private · 门 ${result.slot}</div><div class="rd-card-face"><span>${view.card_defs[result.kind].icon}</span><h4>${esc(view.card_defs[result.kind].name)}</h4></div><p class="rd-card-text">${esc(view.card_defs[result.kind].text)}</p><p class="rd-hint">🔎 本次只查看，不触发效果；门牌仍在原位置。</p><div class="rd-actions">${btn("Continue", "private", "private", pending, 'class="rd-primary"')}</div>`;
@@ -111,7 +111,7 @@
         hideTip();
         panel.innerHTML = `<div class="red-doors-shell ${explaining ? "rd-explaining" : ""}"><div class="rd-masthead"><div><p class="rd-eyebrow">RED DOORS · THE MURDERER'S KEY</p><h2>红色的门和杀人鬼的钥匙</h2><p class="rd-subtitle">Base rules · 16 cards · 4–6 players</p></div><div class="rd-round"><span>ROUND</span><b>${view.round}</b></div></div>
             <div class="rd-status" role="status"><span><strong>${phases[view.phase]}</strong> · ${esc(name(view.current_turn))}</span>${badge(`🔑 ${view.held_key_count} / 3 · 已持有钥匙`, "银钥匙（🔑）与杀人鬼钥匙（🗝️）在公开前统一计数。全桌持有三把即可尝试出口（🚪✨）；第四把出现会匿名回收全部钥匙并重洗场地。")}</div>
-            ${reviewHTML()}<div class="rd-layout">${boardHTML()}<aside class="rd-side">${actionHTML()}<section class="rd-box"><div class="rd-section-head"><h3>🔒 Private memory</h3>${info(descriptions.memory)}</div><p class="rd-card-text">${view.doors.filter(d => d.known_kind && !d.kind).length} 扇门留在你的记忆中</p><p class="rd-hint">带 🔒 的门牌信息仅你可见。迷宫重排后清空。</p>
+            ${reviewHTML()}<div class="rd-layout">${boardHTML()}<aside class="rd-side">${actionHTML()}<section class="rd-box"><div class="rd-section-head"><h3 data-rd-explain="memory">🔒 Private memory</h3></div><p class="rd-card-text">${view.doors.filter(d => d.known_kind && !d.kind).length} 扇门留在你的记忆中</p><p class="rd-hint">带 🔒 的门牌信息仅你可见。迷宫重排后清空。</p>
             ${Object.keys(view.removed).length ? `<div class="rd-inventory">${Object.entries(view.removed).map(([kind, count]) => badge(`${label(kind)} ×${count}`, `${label(kind)}：已移出本局。`)).join("")}</div>` : ""}</section>
             <section class="rd-box rd-history"><details ${historyOpen ? "open" : ""}><summary>Activity · ${view.log.length}</summary><ol class="rd-log">${view.log.slice().reverse().map(line => `<li>${esc(line)}</li>`).join("")}</ol></details></section></aside></div>${playersHTML()}<p class="rd-footer">门牌会记得你，直到下一次洗牌。 · Help contains rules & card reference.</p></div>`;
     }
@@ -165,7 +165,19 @@
         const control = event.target.closest("[data-rd-action]");
         if (!control || control.disabled || pending) return;
         const action = control.dataset.rdAction;
-        if (action === "select") { selection = selection === control.dataset.target ? null : control.dataset.target; render(); return; }
+        if (action === "select") {
+            const target = control.dataset.target;
+            selection = selection === target ? null : target;
+            render();
+            [...panel.querySelectorAll('[data-rd-action="confirm"]')].find(el => el.getClientRects().length)?.focus({preventScroll: true});
+            return;
+        }
+        if (action === "cancel") {
+            const previous = selection;
+            selection = null; render();
+            [...panel.querySelectorAll('[data-rd-action="select"]')].find(el => el.dataset.target === previous)?.focus({preventScroll: true});
+            return;
+        }
         if (action === "confirm") { submit(candidate()); return; }
         if (action.startsWith("resolve-")) submit({type: "resolve_door", choice: action.slice(8), effect_id: view.private.effect_id});
         if (action === "private") submit({type: "ack_private", effect_id: view.private.effect_id});
@@ -174,19 +186,25 @@
     });
     panel.addEventListener("toggle", event => { if (event.target.closest(".rd-history")) historyOpen = event.target.open; }, true);
     panel.addEventListener("pointerdown", event => {
-        if (!explaining && !pending && selection && !event.target.closest("button, summary, a, dialog")) { selection = null; render(); }
+        if (!explaining && !pending && selection && !event.target.closest("button, summary, a, dialog")) {
+            if (event.target.closest(".rd-confirm-overlay")) {
+                suppressedPointer = {x: event.clientX, y: event.clientY, time: Date.now()};
+                event.preventDefault(); event.stopPropagation();
+            }
+            selection = null; render();
+        }
     });
     help.addEventListener("click", () => {
         if (!view) return;
         setExplain(false);
         openDialog("Red Doors · Help", `<p><b>基础版 · 4–6 人 · 16 张牌</b>。所有人从普通人开始，无持有物；线上由首席先开门，之后按座位行动，跳过死亡者。本次只开放基础牌，尚未包含 2–3 人 NPC 与进阶 40 级。</p>
-            <p><b>① 开门（🚪）</b>：点选场上一张暗牌，再 Open door；牌面只给本人看。按牌面取得、公开、选择目标或暗置放回。已公开留场的牌不能普通开门；暗置放回的牌可以重访。口头讨论与欺骗允许，系统不会核实“空房”的声称。</p>
+            <p><b>① 开门（🚪）</b>：点选场上一张暗牌，在门牌上的确认区点击 Confirm；牌面只给本人看。按牌面取得、公开、选择目标或暗置放回。已公开留场的牌不能普通开门；暗置放回的牌可以重访。口头讨论与欺骗允许，系统不会核实“空房”的声称。</p>
             <p><b>② 身份（🗝️）</b>：首次取得杀人鬼钥匙必须拿取并成为杀人鬼。之后开门可以不执行效果而声称是空房。失去钥匙或死亡都保留身份；钥匙回场后可能产生第二个杀人鬼。线索偷看钥匙不会改变身份。</p>
             <p><b>③ 四把钥匙（🌀）</b>：全桌拿到第四把钥匙时，匿名回收所有钥匙，移除杀人鬼钥匙，把银钥匙放回场地一起重洗。不会透露原持有人；所有已存在的杀人鬼身份保留。</p>
             <p><b>④ 胜负（🏁）</b>：三把银钥匙从出口逃脱，所有普通人获胜；出口混入杀人鬼钥匙，所有杀人鬼获胜。这两种结局包含死亡的同阵营玩家。只有一个杀人鬼存活时，他单独获胜；多个杀人鬼存活时继续竞争。只剩普通人一人仍须寻找出口；全员死亡无人获胜。</p>
             <p><b>⑤ 线上回顾（⏸）</b>：陷阱、瓦斯、射击、看破与第四把钥匙处理后暂停，全员 Continue。本局终局停留在结果，所有席位（包括死亡者）分别 Next Round 后才重开。可选择 Finish 并全员确认结束；切换选项会清空确认。断线真人不会自动确认。</p>
             <p><b>牌表</b>：名称、图标和数量如下。牌面说明适用于普通玩家；杀人鬼普通开门可以选择暗置忽略。</p><ul>${Object.entries(view.card_defs).map(([kind, spec]) => `<li><b>${label(kind)} ×${spec.count}</b>：${esc(spec.text)}</li>`).join("")}</ul>
-            <p><b>Controls</b>：点选后确认；点击空白或 Esc 取消未提交的选择。Help 关闭不撤销已开的门。Explain 拦截操作，灰色按钮也可解释，解释一次后退出。ⓘ 或带图标徽标可悬停、键盘聚焦查看；手机轻点显示三秒，连续轻点更新计时。滚动不会触发提示。</p>
+            <p><b>Controls</b>：点选门牌后，原位显示 Confirm / Cancel；手机门牌空间不足时，确认区覆盖迷宫区域并显示所选门号。Confirm 才提交开门；Cancel、空白或 Esc 取消未提交的选择。Help 关闭不撤销已开的门。要了解门牌或操作，先点 Explain 再点对应位置；Explain 拦截操作，灰色按钮也可解释，解释一次后退出。没有游戏操作的身份／道具徽标可悬停、聚焦查看；手机轻点显示三秒，连续轻点更新计时，滚动不触发提示。</p>
             <p><a href="https://www.yellowsubmarine.co.jp/hobbybase/game/reddoor/card.htm" target="_blank" rel="noopener noreferrer">Publisher rules</a> · <a href="https://humaoz.wixsite.com/ozplanning/q-a-akaitobira" target="_blank" rel="noopener noreferrer">Designer FAQ</a></p>`, true);
     });
     explain.addEventListener("click", () => setExplain(!explaining));
@@ -197,13 +215,13 @@
         if (event.target === dialog && (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom)) dialog.close();
     });
     function explainTarget(target) {
-        const message = target?.dataset.rdTip || descriptions[target?.dataset.rdExplain];
+        const message = target?.dataset.rdTip || target?.dataset.rdDescription || descriptions[target?.dataset.rdExplain];
         if (message) { setExplain(false); openDialog("Explain", message); }
     }
     document.addEventListener("pointerdown", event => {
         if (!explaining || panel.classList.contains("hidden") || header.contains(event.target) || dialog.contains(event.target)) return;
         event.preventDefault(); event.stopImmediatePropagation();
-        const target = [...panel.querySelectorAll("[data-rd-explain]")].find(el => {
+        const target = [...panel.querySelectorAll("[data-rd-explain]")].reverse().find(el => {
             const r = el.getBoundingClientRect();
             return r.width && r.height && event.clientX >= r.left && event.clientX <= r.right && event.clientY >= r.top && event.clientY <= r.bottom;
         });
