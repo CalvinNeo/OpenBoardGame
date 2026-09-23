@@ -365,13 +365,13 @@ const GAME_ASSETS = {
   },
   "hot_streak": {
     "scripts": [
-      "/static/games/hot_streak.js?v=app_v3"
+      "/static/games/hot_streak.js?v=app_v5"
     ],
     "styles": [],
     "panel": "hotStreakPanel",
     "header": "showHotStreakHeaderActions",
-    "markup": "/static/games/hot_streak.html?v=1",
-    "styleFragments": "/static/games/hot_streak.css?v=1"
+    "markup": "/static/games/hot_streak.html?v=3",
+    "styleFragments": "/static/games/hot_streak.css?v=3"
   },
   "acquire": {
     "scripts": [

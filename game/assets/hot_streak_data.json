@@ -1,9 +1,9 @@
 {
-  "catalog_version": "prototype-compatible-v1",
+  "catalog_version": "prototype-compatible-v2",
   "catalog_status": "prototype",
   "unverified": [
     "card distribution and effects",
-    "track coordinates",
+    "remaining track coordinates and fold cutoffs",
     "ticket payouts",
     "side bet wording"
   ],
@@ -48,11 +48,12 @@
     "final_stretch_start": 10,
     "fold_cutoffs": [3, 6, 9, 12],
     "star_positions_by_lane": {
-      "0": [0, 4, 8, 12],
-      "1": [0, 3, 7, 11],
-      "2": [0, 5, 9, 12],
-      "3": [0, 4, 8, 11]
-    }
+      "0": [0, 7, 12, 13],
+      "1": [0, 7, 12, 13],
+      "2": [0, 7, 12, 13],
+      "3": [0, 7, 12, 13]
+    },
+    "star_layout_source": "Hot Streak second-printing rulebook setup diagram, page 15"
   },
   "ticket_stacks": {
     "blaze": [
@@ -108,9 +109,9 @@
     {"id": "blaze_move_2", "target": "blaze", "copies": 1, "label": "Blaze moves 2", "effects": [{"type": "move", "distance": 2}]},
     {"id": "blaze_back_2", "target": "blaze", "copies": 1, "label": "Blaze moves back 2", "effects": [{"type": "move", "distance": -2}]},
     {"id": "blaze_star", "target": "blaze", "copies": 1, "label": "Blaze races to the next star", "effects": [{"type": "star"}]},
-    {"id": "blaze_swerve_1", "target": "blaze", "copies": 1, "label": "Blaze moves 1 and swerves", "effects": [{"type": "move", "distance": 1}, {"type": "swerve"}]},
-    {"id": "blaze_swerve_2", "target": "blaze", "copies": 1, "label": "Blaze moves 2 and swerves", "effects": [{"type": "move", "distance": 2}, {"type": "swerve"}]},
-    {"id": "blaze_swerve_3", "target": "blaze", "copies": 1, "label": "Blaze moves 3 and swerves", "effects": [{"type": "move", "distance": 3}, {"type": "swerve"}]},
+    {"id": "blaze_swerve_1", "target": "blaze", "copies": 1, "label": "Blaze moves 1, then swerves right", "effects": [{"type": "move", "distance": 1}, {"type": "swerve"}]},
+    {"id": "blaze_swerve_2", "target": "blaze", "copies": 1, "label": "Blaze moves 2, then swerves right", "effects": [{"type": "move", "distance": 2}, {"type": "swerve"}]},
+    {"id": "blaze_swerve_3", "target": "blaze", "copies": 1, "label": "Blaze moves 3, then swerves right", "effects": [{"type": "move", "distance": 3}, {"type": "swerve"}]},
     {"id": "blaze_recover_1", "target": "blaze", "copies": 1, "label": "Blaze recovers and moves 1", "effects": [{"type": "recover"}, {"type": "move", "distance": 1}]},
 
     {"id": "dash_start", "target": "dash", "starting": true, "copies": 1, "label": "Dash recovers and moves 2", "effects": [{"type": "recover"}, {"type": "move", "distance": 2}]},
@@ -120,9 +121,9 @@
     {"id": "dash_move_2", "target": "dash", "copies": 1, "label": "Dash moves 2", "effects": [{"type": "move", "distance": 2}]},
     {"id": "dash_back_2", "target": "dash", "copies": 1, "label": "Dash moves back 2", "effects": [{"type": "move", "distance": -2}]},
     {"id": "dash_star", "target": "dash", "copies": 1, "label": "Dash races to the next star", "effects": [{"type": "star"}]},
-    {"id": "dash_swerve_1", "target": "dash", "copies": 1, "label": "Dash moves 1 and swerves", "effects": [{"type": "move", "distance": 1}, {"type": "swerve"}]},
-    {"id": "dash_swerve_2", "target": "dash", "copies": 1, "label": "Dash moves 2 and swerves", "effects": [{"type": "move", "distance": 2}, {"type": "swerve"}]},
-    {"id": "dash_swerve_3", "target": "dash", "copies": 1, "label": "Dash moves 3 and swerves", "effects": [{"type": "move", "distance": 3}, {"type": "swerve"}]},
+    {"id": "dash_swerve_1", "target": "dash", "copies": 1, "label": "Dash moves 1, then swerves right", "effects": [{"type": "move", "distance": 1}, {"type": "swerve"}]},
+    {"id": "dash_swerve_2", "target": "dash", "copies": 1, "label": "Dash moves 2, then swerves right", "effects": [{"type": "move", "distance": 2}, {"type": "swerve"}]},
+    {"id": "dash_swerve_3", "target": "dash", "copies": 1, "label": "Dash moves 3, then swerves right", "effects": [{"type": "move", "distance": 3}, {"type": "swerve"}]},
     {"id": "dash_recover_1", "target": "dash", "copies": 1, "label": "Dash recovers and moves 1", "effects": [{"type": "recover"}, {"type": "move", "distance": 1}]},
 
     {"id": "ripple_start", "target": "ripple", "starting": true, "copies": 1, "label": "Ripple recovers and moves 2", "effects": [{"type": "recover"}, {"type": "move", "distance": 2}]},
@@ -132,9 +133,9 @@
     {"id": "ripple_move_2", "target": "ripple", "copies": 1, "label": "Ripple moves 2", "effects": [{"type": "move", "distance": 2}]},
     {"id": "ripple_back_2", "target": "ripple", "copies": 1, "label": "Ripple moves back 2", "effects": [{"type": "move", "distance": -2}]},
     {"id": "ripple_star", "target": "ripple", "copies": 1, "label": "Ripple races to the next star", "effects": [{"type": "star"}]},
-    {"id": "ripple_swerve_1", "target": "ripple", "copies": 1, "label": "Ripple moves 1 and swerves", "effects": [{"type": "move", "distance": 1}, {"type": "swerve"}]},
-    {"id": "ripple_swerve_2", "target": "ripple", "copies": 1, "label": "Ripple moves 2 and swerves", "effects": [{"type": "move", "distance": 2}, {"type": "swerve"}]},
-    {"id": "ripple_swerve_3", "target": "ripple", "copies": 1, "label": "Ripple moves 3 and swerves", "effects": [{"type": "move", "distance": 3}, {"type": "swerve"}]},
+    {"id": "ripple_swerve_1", "target": "ripple", "copies": 1, "label": "Ripple moves 1, then swerves left", "effects": [{"type": "move", "distance": 1}, {"type": "swerve"}]},
+    {"id": "ripple_swerve_2", "target": "ripple", "copies": 1, "label": "Ripple moves 2, then swerves left", "effects": [{"type": "move", "distance": 2}, {"type": "swerve"}]},
+    {"id": "ripple_swerve_3", "target": "ripple", "copies": 1, "label": "Ripple moves 3, then swerves left", "effects": [{"type": "move", "distance": 3}, {"type": "swerve"}]},
     {"id": "ripple_recover_1", "target": "ripple", "copies": 1, "label": "Ripple recovers and moves 1", "effects": [{"type": "recover"}, {"type": "move", "distance": 1}]},
 
     {"id": "comet_start", "target": "comet", "starting": true, "copies": 1, "label": "Comet recovers and moves 2", "effects": [{"type": "recover"}, {"type": "move", "distance": 2}]},
@@ -144,9 +145,9 @@
     {"id": "comet_move_2", "target": "comet", "copies": 1, "label": "Comet moves 2", "effects": [{"type": "move", "distance": 2}]},
     {"id": "comet_back_2", "target": "comet", "copies": 1, "label": "Comet moves back 2", "effects": [{"type": "move", "distance": -2}]},
     {"id": "comet_star", "target": "comet", "copies": 1, "label": "Comet races to the next star", "effects": [{"type": "star"}]},
-    {"id": "comet_swerve_1", "target": "comet", "copies": 1, "label": "Comet moves 1 and swerves", "effects": [{"type": "move", "distance": 1}, {"type": "swerve"}]},
-    {"id": "comet_swerve_2", "target": "comet", "copies": 1, "label": "Comet moves 2 and swerves", "effects": [{"type": "move", "distance": 2}, {"type": "swerve"}]},
-    {"id": "comet_swerve_3", "target": "comet", "copies": 1, "label": "Comet moves 3 and swerves", "effects": [{"type": "move", "distance": 3}, {"type": "swerve"}]},
+    {"id": "comet_swerve_1", "target": "comet", "copies": 1, "label": "Comet moves 1, then swerves left", "effects": [{"type": "move", "distance": 1}, {"type": "swerve"}]},
+    {"id": "comet_swerve_2", "target": "comet", "copies": 1, "label": "Comet moves 2, then swerves left", "effects": [{"type": "move", "distance": 2}, {"type": "swerve"}]},
+    {"id": "comet_swerve_3", "target": "comet", "copies": 1, "label": "Comet moves 3, then swerves left", "effects": [{"type": "move", "distance": 3}, {"type": "swerve"}]},
     {"id": "comet_recover_1", "target": "comet", "copies": 1, "label": "Comet recovers and moves 1", "effects": [{"type": "recover"}, {"type": "move", "distance": 1}]},
 
     {"id": "all_recover_2", "target": "all", "copies": 1, "label": "Everyone recovers and moves 2", "effects": [{"type": "recover"}, {"type": "move", "distance": 2}]},

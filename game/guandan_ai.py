@@ -15530,10 +15530,42 @@ def _bot_select_play(
             reverse=True,
         )
     else:
-        # The candidate generator already retains representatives from different
-        # action families. From this point onward, spend time according to the
-        # position-aware quick score instead of a static card-type hierarchy.
         remaining_candidates.sort(key=quick_score, reverse=True)
+        # In a deep opening the cheap score favors shedding several cards and
+        # misses the control available to recover after an isolated low single.
+        # Compare that alternative before spending the minimum batch on similar
+        # compound plays. Use the same opening window as commitment scoring;
+        # shorter hands retain their tactical ordering. Natural straight material
+        # does not qualify, and the full scorer still decides which play wins.
+        deep_opening = len(hand) >= 18 and all(
+            len(state["players"][pid]["hand"]) >= 18
+            for pid in state.get("turn_order", [])
+            if not state["players"][pid].get("finished")
+        )
+        if deep_opening and incumbent and len(incumbent) > 1:
+            for index, cand in enumerate(remaining_candidates):
+                if not cand or len(cand) != 1:
+                    continue
+                features = _candidate_features(state, bot_id, cand)
+                if not features["play_cards"]:
+                    continue
+                card = features["play_cards"][0]
+                rank = card.get("rank")
+                counts = features["before_counts"]
+                if (
+                    _is_joker(card)
+                    or _is_wild(card, state["level_rank"])
+                    or counts.get(rank, 0) != 1
+                    or _single_order_value(card, state["level_rank"]) >= LOW_SINGLE_VALUE_MAX
+                ):
+                    continue
+                if any(
+                    rank in sequence and all(counts.get(point, 0) for point in sequence)
+                    for sequence, _high_value in _CORE.STRAIGHT_SEQUENCES
+                ):
+                    continue
+                ordered_candidates.append(remaining_candidates.pop(index))
+                break
     ordered_candidates.extend(remaining_candidates)
     target_key = (
         "bot_heuristic_min_lead_deep_candidates"

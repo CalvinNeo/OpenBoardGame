@@ -7,6 +7,7 @@ from game.hot_streak import (
     HotStreakGame,
     RACER_IDS,
     _assign_dq_group,
+    _card_view,
     _evaluate_final_side_bet,
     _evaluate_latched_side_bet,
     _finish_race,
@@ -79,6 +80,21 @@ class HotStreakCatalogTests(unittest.TestCase):
         self.assertEqual(len(starters), 4)
         self.assertEqual(len(CATALOG["side_bets"]), 12)
         self.assertEqual(set(CATALOG["ticket_stacks"]), set(RACER_IDS) | {"yes", "no"})
+
+    def test_star_rows_align_with_the_second_printing_track(self):
+        star_rows = CATALOG["track"]["star_positions_by_lane"]
+        self.assertEqual(
+            {tuple(star_rows[str(lane)]) for lane in range(4)},
+            {(0, 7, 12, 13)},
+        )
+
+    def test_swerve_cards_name_their_relative_direction(self):
+        expected = {"blaze": "right", "dash": "right", "ripple": "left", "comet": "left"}
+        for racer_id, direction in expected.items():
+            with self.subTest(racer_id=racer_id):
+                card = _card_view(f"{racer_id}_swerve_1:1")
+                self.assertEqual(card["swerve_direction"], direction)
+                self.assertIn(f"swerves {direction}", card["label"].lower())
 
     def test_all_player_counts_initialize_with_eighteen_card_plan(self):
         base_counts = {2: 14, 3: 15, 4: 14, 5: 13, 6: 12, 7: 11, 8: 10}
@@ -408,13 +424,20 @@ class HotStreakMovementTests(unittest.TestCase):
 
     def test_star_respects_facing_and_fallen_crawl(self):
         racer = self.state["racers"]["blaze"]
-        racer["position"] = 5
+        racer["position"] = 8
         racer["facing"] = "backward"
         _move_to_star(self.state, "blaze")
-        self.assertEqual(racer["position"], 4)
+        self.assertEqual(racer["position"], 7)
         racer.update({"position": 5, "fallen": True})
         _move_to_star(self.state, "blaze")
         self.assertEqual(racer["position"], 4)
+
+    def test_star_beyond_the_finish_line_finishes_a_racer(self):
+        racer = self.state["racers"]["blaze"]
+        racer["position"] = 12
+        _move_to_star(self.state, "blaze")
+        self.assertEqual(racer["status"], "finished")
+        self.assertEqual(racer["payout_rank"], 1)
 
     def test_second_fall_and_track_edges_disqualify(self):
         racer = self.state["racers"]["blaze"]
@@ -432,8 +455,12 @@ class HotStreakMovementTests(unittest.TestCase):
         blaze.update({"lane": 1, "facing": "backward"})
         _swerve_racer(self.state, "blaze")
         self.assertEqual(blaze["lane"], 0)
+        self.assertEqual(self.state["race_log"][-1]["direction"], "right")
+        self.assertEqual(self.state["race_log"][-1]["facing"], "backward")
         _swerve_racer(self.state, "blaze")
         self.assertEqual(blaze["dq_reason"], "side_out")
+        swerve_events = [entry for entry in self.state["race_log"] if entry["type"] == "swerve"]
+        self.assertTrue(swerve_events[-1]["out_of_bounds"])
 
     def test_recover_resets_facing_before_moving(self):
         racer = self.state["racers"]["blaze"]

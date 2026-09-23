@@ -46,14 +46,19 @@ def _validate_catalog() -> None:
     if fold_cutoffs != sorted(set(fold_cutoffs)) or any(value <= 0 or value >= finish for value in fold_cutoffs):
         raise ValueError("Hot Streak fold cutoffs are invalid")
     stars = TRACK.get("star_positions_by_lane") or {}
+    aligned_star_positions: Optional[List[int]] = None
     for lane in range(4):
         lane_stars = list(stars.get(str(lane)) or [])
         if (
             not lane_stars
             or lane_stars != sorted(set(lane_stars))
-            or any(not isinstance(value, int) or value < 0 or value >= finish for value in lane_stars)
+            or any(not isinstance(value, int) or value < 0 or value > finish for value in lane_stars)
         ):
             raise ValueError("Hot Streak star coordinates are invalid")
+        if aligned_star_positions is None:
+            aligned_star_positions = lane_stars
+        elif lane_stars != aligned_star_positions:
+            raise ValueError("Hot Streak star rows must align across every lane")
 
     template_ids = set()
     total_cards = 0
@@ -172,6 +177,7 @@ def _card_view(card_id: Optional[str]) -> Optional[Dict]:
         return None
     template = _card_template(card_id)
     target = template["target"]
+    has_swerve = any(effect.get("type") == "swerve" for effect in template["effects"])
     return {
         "instance_id": card_id,
         "template_id": template["id"],
@@ -179,6 +185,7 @@ def _card_view(card_id: Optional[str]) -> Optional[Dict]:
         "target_name": "Everyone" if target == "all" else RACERS[target]["name"],
         "target_icon": "🏁" if target == "all" else RACERS[target]["icon"],
         "label": template["label"],
+        "swerve_direction": RACERS[target]["swerve"] if has_swerve else None,
         "effects": copy.deepcopy(template["effects"]),
         "starting": bool(template.get("starting")),
     }
@@ -523,13 +530,20 @@ def _swerve_racer(state: Dict, racer_id: str) -> None:
         lane_delta *= -1
     old_lane = int(racer["lane"])
     next_lane = old_lane + lane_delta
+    event = {
+        "type": "swerve",
+        "racer_id": racer_id,
+        "direction": relative,
+        "facing": racer["facing"],
+        "from_lane": old_lane,
+        "to_lane": next_lane,
+        "out_of_bounds": next_lane < 0 or next_lane >= int(TRACK["lane_count"]),
+    }
+    state["race_log"].append(event)
     if next_lane < 0 or next_lane >= int(TRACK["lane_count"]):
         _assign_dq_group(state, [racer_id], "side_out")
         return
     racer["lane"] = next_lane
-    state["race_log"].append(
-        {"type": "swerve", "racer_id": racer_id, "from_lane": old_lane, "to_lane": next_lane}
-    )
     _resolve_collisions(state, racer_id)
 
 

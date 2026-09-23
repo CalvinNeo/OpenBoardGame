@@ -20,6 +20,7 @@
   const hotStreakTurnLabel = document.getElementById("hotStreakTurnLabel");
   const hotStreakDataNotice = document.getElementById("hotStreakDataNotice");
   const hotStreakPlayers = document.getElementById("hotStreakPlayers");
+  const hotStreakSwerveKey = document.getElementById("hotStreakSwerveKey");
   const hotStreakTrack = document.getElementById("hotStreakTrack");
   const hotStreakCurrentCard = document.getElementById("hotStreakCurrentCard");
   const hotStreakSideBet = document.getElementById("hotStreakSideBet");
@@ -61,6 +62,11 @@
   };
 
   const HOT_STREAK_EXPLANATIONS = {
+    swerve: {
+      name: "Swerve Direction",
+      description:
+        "The card's Left or Right is relative to the racer's current facing. If the racer has turned backward, the on-screen lane change is reversed. Blaze(🐻) and Dash(🌭) swerve Right; Ripple(🐟) and Comet(👑) swerve Left.",
+    },
     side: {
       name: "Current Side Bet",
       description:
@@ -114,12 +120,12 @@
 
   const HOT_STREAK_HELP_HTML = `
     <div class="rules-block hot-streak-rules">
-      <p class="hot-streak-help-notice"><strong>Prototype-compatible data.</strong> This digital implementation uses original artwork and an unverified playable component set. Card distribution, track coordinates, ticket payouts, and side-bet wording have not been checked against a physical second printing.</p>
+      <p class="hot-streak-help-notice"><strong>Source status.</strong> Star rows and Swerve directions match the official second-printing rulebook. This digital implementation uses original artwork; the remaining card distribution, fold cutoffs, ticket payouts, and side-bet wording are still prototype-compatible.</p>
       <p><strong>Goal.</strong> Build the biggest fortune across three chaotic races. Every player starts with 💵 $10.</p>
       <p><strong>Betting.</strong> Review the Public Race Pool first, then take two tickets in a snake draft (three each in a two-player game). Choose Safe or Risky immediately. Racer tickets pay by finishing place; YES and NO tickets predict the public side bet.</p>
       <p><strong>Build the race.</strong> The Public Race Pool shows every known base card, grouped by matching card face. Each player then secretly contributes one race card, or two cards in a two-player game, to make an 18-card race deck.</p>
-      <p><strong>Race cards.</strong> Numbers move a racer in the direction it faces. ↩️ changes direction, 💫 knocks a racer down, recovery stands it up and faces it forward, and ⭐ moves it to the next star. A fallen racer only crawls one space.</p>
-      <p><strong>Swerves and collisions.</strong> A swerve moves sideways relative to the racer's facing. A collision knocks a standing racer down; hitting a fallen racer knocks it out. Leaving the track also causes disqualification.</p>
+      <p><strong>Race cards.</strong> Numbers move a racer in the direction it faces. ↩️ changes direction, 💫 knocks a racer down, recovery stands it up and faces it forward, and ⭐ moves it to the next aligned star row. Every star row crosses all four lanes, including one row just beyond the finish. A fallen racer only crawls one space.</p>
+      <p><strong>Swerves and collisions.</strong> Left or Right is relative to the racer's current facing: Blaze(🐻) and Dash(🌭) swerve Right; Ripple(🐟) and Comet(👑) swerve Left. A backward-facing racer therefore changes lanes in the opposite on-screen direction. A collision knocks a standing racer down; hitting a fallen racer knocks it out. Leaving the track also causes disqualification.</p>
       <p><strong>Everyone cards.</strong> Green-style all-racer cards resolve simultaneously, cause no collisions, and stop before the finish line.</p>
       <p><strong>Deck exhaustion.</strong> If no result is reached after the deck runs out, the rear edge folds forward. Racers caught behind it are disqualified, then all 18 cards are shuffled and three are burned again.</p>
       <p><strong>Race three.</strong> When you take your second ticket, double one of those bets. A doubled Risky penalty is doubled too.</p>
@@ -475,6 +481,23 @@
     }
   }
 
+  function hotStreakRenderSwerveKey(view) {
+    if (!hotStreakSwerveKey) return;
+    hotStreakSwerveKey.innerHTML = "";
+    const label = document.createElement("strong");
+    label.textContent = "Swerve · relative to facing";
+    const chips = document.createElement("span");
+    chips.className = "hot-streak-swerve-chips";
+    (view.racers || []).forEach((racer) => {
+      const chip = document.createElement("span");
+      const direction = racer.swerve === "left" ? "Left" : "Right";
+      chip.textContent = `${racer.icon} ${direction}`;
+      chip.title = `${racer.name} swerves ${direction.toLowerCase()} relative to its current facing.`;
+      chips.appendChild(chip);
+    });
+    hotStreakSwerveKey.append(label, chips);
+  }
+
   function hotStreakRenderTrack(view) {
     if (!hotStreakTrack) return;
     hotStreakTrack.innerHTML = "";
@@ -491,17 +514,22 @@
     });
     for (let lane = 0; lane < laneCount; lane += 1) {
       const stars = new Set(((track.star_positions_by_lane || {})[String(lane)] || []).map(Number));
-      for (let position = 0; position < finish; position += 1) {
+      for (let position = 0; position <= finish; position += 1) {
         const cell = document.createElement("div");
         cell.className = "hot-streak-track-cell";
         cell.style.setProperty("--hot-streak-lane", lane);
         cell.style.setProperty("--hot-streak-position", position);
         cell.setAttribute("role", "gridcell");
-        cell.setAttribute("aria-label", `Lane ${lane + 1}, space ${position + 1}`);
+        const isStar = stars.has(position);
+        const spaceLabel = position === finish
+          ? `Lane ${lane + 1}, star beyond the finish line`
+          : `Lane ${lane + 1}, space ${position + 1}`;
+        cell.setAttribute("aria-label", `${spaceLabel}${isStar ? ", star" : ""}`);
         if (position < backEdge) cell.classList.add("folded");
-        if (position >= Number(track.final_stretch_start || 10)) cell.classList.add("final-stretch");
+        if (position >= Number(track.final_stretch_start || 10) && position < finish) cell.classList.add("final-stretch");
         if (position === finish - 1) cell.classList.add("finish-edge");
-        if (stars.has(position)) {
+        if (position === finish) cell.classList.add("post-finish");
+        if (isStar) {
           const star = document.createElement("span");
           star.className = "hot-streak-track-star";
           star.textContent = "⭐";
@@ -515,7 +543,7 @@
           if (racer.fallen) marker.classList.add("fallen");
           if (racer.facing === "backward") marker.classList.add("backward");
           marker.textContent = racer.icon;
-          marker.title = `${racer.name}${racer.fallen ? " · fallen" : ""}${racer.facing === "backward" ? " · facing backward" : ""}`;
+          marker.title = `${racer.name} · swerves ${racer.swerve} relative to facing${racer.fallen ? " · fallen" : ""}${racer.facing === "backward" ? " · facing backward" : ""}`;
           marker.setAttribute("aria-label", marker.title);
           cell.appendChild(marker);
         });
@@ -577,7 +605,9 @@
       case "turn":
         return `${racerName(entry.racer_id)} turns ${entry.facing === "backward" ? "backward" : "forward"}.`;
       case "swerve":
-        return `${racerName(entry.racer_id)} swerves to lane ${Number(entry.to_lane) + 1}.`;
+        return entry.out_of_bounds
+          ? `${racerName(entry.racer_id)} swerves ${entry.direction || "sideways"} off the track.`
+          : `${racerName(entry.racer_id)} swerves ${entry.direction || "sideways"} to lane ${Number(entry.to_lane) + 1}.`;
       case "knockdown":
         return `${racerName(entry.mover_id)} knocks ${racerName(entry.racer_id)} down 💥.`;
       case "dq":
@@ -788,6 +818,7 @@
     hotStreakRenderPool(view);
     hotStreakRenderTickets(view);
     hotStreakRenderHand(view);
+    hotStreakRenderSwerveKey(view);
     hotStreakRenderTrack(view);
     hotStreakRenderCurrentCard(view);
     hotStreakRenderLog(view);
@@ -816,7 +847,7 @@
     if (hotStreakFallbackTimer) window.clearTimeout(hotStreakFallbackTimer);
     hotStreakAdvanceTimer = null;
     hotStreakFallbackTimer = null;
-    [hotStreakPlayers, hotStreakTrack, hotStreakPool, hotStreakTickets, hotStreakHand, hotStreakLog, hotStreakResult].forEach((element) => {
+    [hotStreakPlayers, hotStreakSwerveKey, hotStreakTrack, hotStreakPool, hotStreakTickets, hotStreakHand, hotStreakLog, hotStreakResult].forEach((element) => {
       if (element) element.innerHTML = "";
     });
     if (hotStreakCurrentCard) hotStreakCurrentCard.textContent = "Waiting for the race…";
