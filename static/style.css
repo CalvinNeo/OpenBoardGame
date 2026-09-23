@@ -2288,6 +2288,10 @@ button.splendor-card {
     display: flex;
   }
 
+  #roomControlsPanel.collapsed #mobileCreateSlot:not(:empty) + #mobileExplainSlot:not(:empty) {
+    margin-inline-start: 14px;
+  }
+
   #mobileCreateSlot > button {
     width: auto;
     min-height: 24px;

@@ -1,4 +1,5 @@
 #eternalDecksPanel { min-width: 0; }
+#eternalDecksPanel.eternal-decks-has-dock { padding-bottom: var(--ed-dock-height, 90px); }
 .eternal-decks-shell { --ed-ink: #173c32; --ed-line: #cfdbcd; --ed-gold: #e2bd72; color: var(--ed-ink); background: #f3f3e9; border: 1px solid #cbd6c8; border-radius: 18px; padding: 22px; font-size: 14px; line-height: 1.5; }
 .eternal-decks-shell *, .eternal-decks-dialog * { box-sizing: border-box; min-width: 0; overflow-wrap: anywhere; }
 .eternal-decks-shell h2, .eternal-decks-shell h3, .eternal-decks-shell p { margin: 0; }
@@ -21,13 +22,11 @@
 .eternal-decks-notice { font-size: 11px; padding: 9px 1px 13px; color: #796746; }
 .eternal-decks-layout { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(260px, 1fr); gap: 16px; align-items: start; }
 .eternal-decks-table, .eternal-decks-sidebar { display: grid; gap: 12px; }
-.eternal-decks-field, .eternal-decks-river, .eternal-decks-revival, .eternal-decks-action-box, .eternal-decks-jewel-box, .eternal-decks-communication, .eternal-decks-review { padding: 12px; border: 1px solid var(--ed-line); border-radius: 12px; background: #fafbf4; }
+.eternal-decks-field, .eternal-decks-river, .eternal-decks-revival, .eternal-decks-action-box, .eternal-decks-review { padding: 12px; border: 1px solid var(--ed-line); border-radius: 12px; background: #fafbf4; }
 .eternal-decks-field { background: linear-gradient(110deg, #f9faf1, #eaf0e4); }
 .eternal-decks-field.is-closed { background: #e6e9df; }
 .eternal-decks-field-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 9px; }
 .eternal-decks-field-heading > span { font-size: 11px; text-align: right; }
-.eternal-decks-field-name { display: flex; align-items: center; gap: 5px; }
-.eternal-decks-shell button.eternal-decks-info { width: 24px; min-width: 24px; min-height: 24px; padding: 0; border: 0; background: transparent; color: #557065; font-size: 13px; }
 .eternal-decks-seven, .eternal-decks-five { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
 .eternal-decks-five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .eternal-decks-shell .eternal-decks-slot { display: flex; flex-direction: column; justify-content: center; align-items: stretch; gap: 2px; padding: 3px; min-height: 84px; border: 1px dashed #c4d0bd; background: #e1e8da; }
@@ -55,13 +54,14 @@
 .eternal-decks-yellow-blue, .eternal-decks-shell button.eternal-decks-yellow-blue { background: linear-gradient(90deg, #f3e3a6 50%, #c8ddef 50%); }
 .eternal-decks-rare, .eternal-decks-shell button.eternal-decks-rare { background: linear-gradient(135deg, #f3dfba, #dce8c5, #cedfef); }
 .eternal-decks-ability, .eternal-decks-shell button.eternal-decks-ability { background: #e5dac1; }
-.eternal-decks-hand { display: grid; grid-template-columns: repeat(auto-fit, minmax(48px, 1fr)); gap: 8px; margin: 12px 0 16px; }
+.eternal-decks-hand { display: grid; grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); gap: 8px; margin: 12px 0; padding: 3px; }
 .eternal-decks-hand .eternal-decks-card { min-height: 102px !important; }
 .eternal-decks-hand .eternal-decks-card-value { font-size: 33px; }
 .eternal-decks-hand .eternal-decks-card-color { font-size: 11px; }
-.eternal-decks-action-box > h3 > span { display: block; font-size: 11px; font-weight: 400; }
+.eternal-decks-hand .eternal-decks-card.is-unavailable { opacity: .5; border-style: dashed; }
+.eternal-decks-hand .eternal-decks-card.is-unavailable.is-selected { opacity: 1; }
 .eternal-decks-action-tabs, .eternal-decks-jewels, .eternal-decks-choice-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
-.eternal-decks-action-tabs { margin: 8px 0 12px; }
+.eternal-decks-action-tabs { margin-bottom: 10px; }
 .eternal-decks-choice-grid { margin: 10px 0; }
 .eternal-decks-shell .eternal-decks-primary { width: 100%; background: #285943; border-color: #285943; color: #fff9e8; margin-top: 12px; min-height: 40px; font-weight: 600; }
 .eternal-decks-shell .eternal-decks-primary:hover:not(:disabled) { background: #346b53; color: white; }
@@ -74,15 +74,29 @@
 .eternal-decks-shell .is-cursed { border-color: #d8b6a1; background: #fcf2e7; }
 .eternal-decks-shell .is-blessed { border-color: #abc9ad; background: #e7f1e1; }
 .eternal-decks-jewels button { font-size: 11px; }
-.eternal-decks-shell details.eternal-decks-jewel-box, .eternal-decks-shell details.eternal-decks-communication { padding: 12px; border: 1px solid var(--ed-line); border-radius: 12px; background: #fafbf4; }
-.eternal-decks-jewel-box > summary, .eternal-decks-communication > summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0; list-style: none; }
-.eternal-decks-jewel-box > summary::-webkit-details-marker, .eternal-decks-communication > summary::-webkit-details-marker { display: none; }
-.eternal-decks-jewel-box > summary::after, .eternal-decks-communication > summary::after { content: "▾"; flex: 0 0 auto; color: #647667; transition: transform .15s ease; }
-.eternal-decks-jewel-box[open] > summary::after, .eternal-decks-communication[open] > summary::after { transform: rotate(180deg); }
-.eternal-decks-jewel-box > summary > span, .eternal-decks-communication > summary > span { margin-left: auto; font-size: 11px; font-weight: 400; }
-.eternal-decks-jewel-box > .eternal-decks-jewels { margin-top: 9px; }
-.eternal-decks-disc-controls { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 8px; }
-.eternal-decks-communication p { color: #71806a; font-size: 11px; margin-top: 7px; }
+.eternal-decks-resources { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.eternal-decks-resources button { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 44px; background: #e9efdf; }
+.eternal-decks-resources button small { margin: 0; color: #687960; }
+.eternal-decks-dock { position: fixed; z-index: 180; left: 50%; bottom: 12px; width: min(560px, calc(100% - 32px)); max-height: calc(100dvh - 100px); padding: 0 12px 10px; border: 1px solid #9eaf9a; border-radius: 18px; background: #f8f9ef; box-shadow: 0 -6px 32px #173c3226, 0 4px 16px #173c3226; transform: translateX(-50%); }
+.eternal-decks-shell .eternal-decks-dock-toggle { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 16px 2px 4px; min-height: 56px; border: 0; border-radius: 10px; background: transparent; text-align: left; }
+.eternal-decks-shell .eternal-decks-dock-toggle:hover { background: transparent; }
+.eternal-decks-dock-grip { position: absolute; top: 6px; left: calc(50% - 18px); width: 36px; height: 4px; border-radius: 4px; background: #b3c2ac; }
+.eternal-decks-dock-label { display: flex; align-items: baseline; flex-wrap: wrap; gap: 3px 10px; }
+.eternal-decks-dock-label strong { font-size: 14px; }
+.eternal-decks-dock-label > span { color: #65765c; font-size: 11px; }
+.eternal-decks-dock-toggle-label { flex: 0 0 auto; font-size: 12px; color: #57704f; }
+.eternal-decks-dock.is-open .eternal-decks-dock-label { display: grid; }
+.eternal-decks-drawer-body { max-height: min(55dvh, 460px); overflow-y: auto; overscroll-behavior-y: contain; padding: 8px 3px 3px; scrollbar-width: thin; }
+.eternal-decks-drawer-body[hidden] { display: none; }
+.eternal-decks-drawer-body .eternal-decks-primary { margin-top: 4px; min-height: 44px; }
+.eternal-decks-drawer-body button { min-height: 42px; }
+.eternal-decks-drawer-subheading { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; }
+.eternal-decks-drawer-subheading button { font-size: 11px; min-height: 32px; }
+.eternal-decks-disc-list { display: grid; gap: 8px; margin-top: 10px; }
+.eternal-decks-disc-choice { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 9px; border: 1px solid var(--ed-line); border-radius: 10px; background: #edf1e4; }
+.eternal-decks-disc-choice small { display: block; font-size: 10px; color: #64755d; margin-top: 3px; }
+.eternal-decks-disc-choice > div { display: flex; gap: 5px; }
+.eternal-decks-disc-choice button { padding: 6px 8px; font-size: 12px; }
 .eternal-decks-review { background: #fff6de; border-color: #d8bc79; }
 .eternal-decks-review p { margin: 8px 0; font-size: 12px; }
 .eternal-decks-review > div { margin-top: 8px; font-size: 11px; }
@@ -113,7 +127,10 @@
 .eternal-decks-dialog-header button { flex: 0 0 auto; }
 .eternal-decks-dialog p { font-size: 14px; }
 .eternal-decks-dialog a { color: #326949; }
-.eternal-decks-toast { position: fixed; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 10000; width: max-content; max-width: calc(100vw - 24px); padding: 9px 12px; border: 1px solid #91a993; border-radius: 10px; background: #173c32; color: #fffdf1; box-shadow: 0 6px 22px #102b2260; font-size: 12px; line-height: 1.4; text-align: center; opacity: 0; pointer-events: none; transform: translate(-50%, 8px); transition: opacity .16s ease, transform .16s ease; }
+.eternal-decks-dialog .eternal-decks-mini-hand { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.eternal-decks-dialog .eternal-decks-card { min-height: 86px; cursor: help; }
+.eternal-decks-card[data-ed-tip]:focus-visible { outline: 2px solid #bc892e; outline-offset: 2px; }
+.eternal-decks-toast { position: fixed; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 10000; width: max-content; max-width: min(400px, calc(100vw - 24px)); box-sizing: border-box; overflow-wrap: anywhere; padding: 10px 13px; border: 1px solid #91a993; border-radius: 10px; background: #173c32; color: #fffdf1; box-shadow: 0 6px 22px #102b2260; font-size: 12px; line-height: 1.6; text-align: left; opacity: 0; pointer-events: none; transform: translate(-50%, 8px); transition: opacity .16s ease, transform .16s ease; }
 .eternal-decks-toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
 .eternal-decks-config-toggle { display: flex; align-items: center; gap: 7px; font-size: 13px; }
 .eternal-decks-config-toggle input { width: auto; flex: 0 0 auto; margin: 0; }
@@ -136,34 +153,35 @@
   .eternal-decks-table, .eternal-decks-sidebar { display: contents; }
   .eternal-decks-action-box { order: 1; }
   .eternal-decks-review { order: 2; }
-  .eternal-decks-field { order: 3; }
-  .eternal-decks-river { order: 4; }
-  .eternal-decks-revival { order: 5; }
-  .eternal-decks-jewel-box { order: 6; }
-  .eternal-decks-communication { order: 7; }
-  .eternal-decks-action-box, .eternal-decks-field, .eternal-decks-river, .eternal-decks-revival, .eternal-decks-jewel-box, .eternal-decks-communication, .eternal-decks-review { padding: 10px; }
+  .eternal-decks-resources { order: 3; }
+  .eternal-decks-field { order: 4; }
+  .eternal-decks-river { order: 5; }
+  .eternal-decks-revival { order: 6; }
+  .eternal-decks-action-box, .eternal-decks-field, .eternal-decks-river, .eternal-decks-revival, .eternal-decks-review { padding: 10px; }
   .eternal-decks-hand { grid-template-columns: repeat(auto-fit, minmax(62px, 1fr)); gap: 6px; margin: 8px 0 10px; }
   .eternal-decks-hand .eternal-decks-card { min-height: 82px !important; }
   .eternal-decks-hand .eternal-decks-card-value { font-size: 29px; }
-  .eternal-decks-action-tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; margin: 6px 0 8px; }
-  .eternal-decks-action-tabs button { min-height: 40px; padding: 5px 3px; font-size: 11px; }
+  .eternal-decks-action-tabs { gap: 6px; margin: 0 0 8px; }
+  .eternal-decks-action-tabs button { min-height: 42px; padding: 7px; font-size: 12px; }
   .eternal-decks-selection { min-height: 26px; padding: 4px 0; }
   .eternal-decks-shell .eternal-decks-primary { margin-top: 8px; }
   .eternal-decks-player-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .eternal-decks-details-grid { grid-template-columns: minmax(0, 1fr); gap: 4px; }
   .eternal-decks-field-footer { align-items: center; }
   .eternal-decks-dialog { width: calc(100vw - 16px); max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); padding: 14px; border-radius: 12px; }
+  .eternal-decks-dock { bottom: 0; width: 100%; border-bottom: 0; border-radius: 18px 18px 0 0; padding: 0 max(14px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); }
+  .eternal-decks-dock-toggle-label { font-size: 11px; }
+  .eternal-decks-drawer-body { max-height: min(54dvh, 440px); }
 }
 @media (max-width: 600px) {
-  .eternal-decks-seven { grid-template-columns: repeat(7, minmax(60px, 1fr)); gap: 5px; margin: 0 -2px; padding: 2px 2px 5px; overflow-x: auto; overscroll-behavior-inline: contain; scroll-snap-type: x proximity; scrollbar-width: thin; scrollbar-color: #a5b7a4 transparent; }
-  .eternal-decks-seven > .eternal-decks-slot { scroll-snap-align: start; }
-  .eternal-decks-shell .eternal-decks-slot { min-height: 70px; }
+  .eternal-decks-seven { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
+  .eternal-decks-shell .eternal-decks-slot { min-height: 62px; padding: 2px; }
+  .eternal-decks-slot .eternal-decks-card { min-height: 54px; padding: 3px 0; }
+  .eternal-decks-slot .eternal-decks-card-value { font-size: 21px; }
+  .eternal-decks-slot .eternal-decks-card-color { font-size: 9px; }
+  .eternal-decks-slot .eternal-decks-empty { min-height: 50px; }
   .eternal-decks-field-rule { display: none; }
   .eternal-decks-field-footer { justify-content: flex-end; margin-top: 5px; }
-}
-@media (max-width: 500px) {
-  .eternal-decks-five { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
-  .eternal-decks-field-footer::before { content: "Swipe ↔"; margin-right: auto; color: #6e806a; }
 }
 @media (max-width: 420px) {
   .eternal-decks-shell { padding: 8px; border-radius: 12px; font-size: 12px; }
@@ -173,12 +191,11 @@
   .eternal-decks-counters strong { font-size: 21px; }
   .eternal-decks-status { padding: 9px; font-size: 12px; }
   .eternal-decks-notice { font-size: 10px; }
-  .eternal-decks-action-box, .eternal-decks-field, .eternal-decks-river, .eternal-decks-revival, .eternal-decks-jewel-box, .eternal-decks-communication, .eternal-decks-review { padding: 8px; }
-  .eternal-decks-shell .eternal-decks-slot { padding: 2px; min-height: 68px; }
-  .eternal-decks-slot .eternal-decks-card { padding: 4px 1px; min-height: 58px; border-radius: 5px; }
+  .eternal-decks-action-box, .eternal-decks-field, .eternal-decks-river, .eternal-decks-revival, .eternal-decks-review { padding: 8px; }
+  .eternal-decks-slot .eternal-decks-card { border-radius: 5px; }
   .eternal-decks-slot .eternal-decks-card-value { font-size: 21px; }
   .eternal-decks-slot .eternal-decks-card-color { font-size: 9px; }
-  .eternal-decks-empty { min-height: 52px; font-size: 16px; }
+  .eternal-decks-empty { font-size: 16px; }
   .eternal-decks-sleeper { font-size: 17px; }
   .eternal-decks-eternals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .eternal-decks-jewels { grid-template-columns: repeat(2, minmax(0, 1fr)); }

@@ -41,6 +41,21 @@
 .fs-auction-line { flex-wrap: wrap; gap: 7px; margin-top: 13px; padding: 9px 0; border-top: 1px solid #e7e7d7; font-size: 11px; }
 .fs-auction-line > strong { font: 700 21px Georgia, serif; color: #94683d; }
 .fs-auction-line > span:last-child { margin-left: auto; text-align: right; max-width: 100%; color: #727c67; }
+.fs-auction-roster { margin: 3px 0 13px; }
+.fs-auction-roster-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; font-size: 11px; }
+.fs-auction-roster-heading > span { color: #68775c; white-space: nowrap; }
+.fs-bidders { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr)); gap: 7px; list-style: none; padding: 0; margin: 0; }
+.fs-bidder { min-width: 0; padding: 8px 9px; border: 1px solid #d1dcc5; border-radius: 7px; background: #f0f5e9; }
+.fs-bidder.is-current { border-color: #426d4e; background: #e2edd8; box-shadow: inset 3px 0 #426d4e; }
+.fs-bidder-name { display: block; font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+.fs-bidder-name small { color: #647755; font-size: 10px; font-weight: 400; }
+.fs-bidder-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 3px 8px; margin-top: 4px; font-size: 10px; line-height: 1.5; color: #68775c; }
+.fs-bidder-meta > span, .fs-bidder-meta > b { white-space: nowrap; }
+.fs-bidder-turn { color: #244d3e; }
+.fs-bidder-highest { color: #936037; }
+.fs-auction-passed { display: flex; align-items: baseline; gap: 7px; margin-top: 8px; font-size: 10px; line-height: 1.5; color: #7d7968; }
+.fs-auction-passed > b { flex-shrink: 0; font-weight: 500; }
+.fs-auction-passed > span { min-width: 0; overflow-wrap: anywhere; }
 .fs-bid-controls { display: grid; grid-template-columns: minmax(145px, 1fr) minmax(0, 1fr); align-items: end; gap: 12px; margin-top: 6px; }
 .fs-bid-amount { min-width: 0; }
 .fs-bid-amount label { display: block; margin-bottom: 6px; font-size: 10px; font-weight: 650; }
@@ -149,6 +164,7 @@
     .fs-building { font-size: 30px; margin: 2px 0; }
     .fs-card-name { font-size: 10px; }
     .fs-bid-controls { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+    .fs-bidders { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .fs-bid-amount { display: flex; align-items: center; gap: 10px; }
     .fs-bid-amount label { margin: 0; flex: 0 1 67px; }
     .fs-stepper { flex: 1 1 130px; min-width: 0; }

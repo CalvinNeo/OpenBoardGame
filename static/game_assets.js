@@ -24,10 +24,10 @@ const GAME_ASSETS = {
   },
   "for_sale": {
     "scripts": [
-      "/static/games/for_sale.js?v=1"
+      "/static/games/for_sale.js?v=2"
     ],
     "styles": [
-      "/static/for_sale.css?v=1"
+      "/static/for_sale.css?v=2"
     ],
     "panel": "forSalePanel",
     "header": "showForSaleHeaderActions"
@@ -685,14 +685,14 @@ const GAME_ASSETS = {
   },
   "eternal_decks": {
     "scripts": [
-      "/static/games/eternal_decks.js?v=1"
+      "/static/games/eternal_decks.js?v=2"
     ],
     "styles": [
-      "/static/eternal_decks.css?v=1"
+      "/static/eternal_decks.css?v=2"
     ],
     "panel": "eternalDecksPanel",
     "header": "showEternalDecksHeaderActions",
-    "markup": "/static/games/eternal_decks.html?v=1"
+    "markup": "/static/games/eternal_decks.html?v=2"
   },
   "ponzi_scheme": {
     "scripts": [

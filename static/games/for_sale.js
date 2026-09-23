@@ -18,6 +18,7 @@
         cash: "现金(🪙)是尚未押在本轮竞拍上的可用资金。3／4 人起始 18K，5／6 人起始 14K。其他人的现金在终局前保密，剩余现金会计入最终财富。K 表示千元。",
         bid: "Bid 按所选总价出价，必须高于当前最高出价。已经押出的金额不用重复支付，只补上差额。最高总价为你的剩余现金(🪙)加本轮已押金额。",
         amount: "选择本轮竞拍总价，单位为千元(K)，不是额外追加金额。−／＋每次调整 1K。总价必须大于当前最高出价，并且不超过你能支付的金额。",
+        auction: "Still Bidding 列出本轮仍在竞拍的玩家，包括尚未出价的玩家。You 是自己，To act 是当前行动者，Highest 是目前最高出价者；已押(🪙)是各人公开的竞拍总价。Passed 列出已经退出、取得地产且不会再参与本轮加价的玩家。",
         pass: "Pass 退出本轮并取得当前最低地产(🏠)。已押金额的一半向下取整退回，其余支付。例如押 5K，退 2K、付 3K；尚未出价就退出则免费拿地产。最后留下者支付全部出价。",
         sell: "点选一张自己的地产(🏠)，再点击 Confirm Sale 秘密提交。所有人提交后同时揭示，并按地产价值分配支票(💵)。提交后锁定，不能改选。已售出的地产移出手牌。",
         next: "Next Round 表示你已经看过本轮结算。所有席位各自确认后才会继续，包括买卖阶段切换和最后排名。机器人只确认自身，断线真人仍需重连确认。",
@@ -99,6 +100,7 @@
             <p>以低价买下地产(🏠)，再把它卖成支票(💵)。最终支票加现金(🪙)最多者获胜。本实现采用 Eagle-Gryphon 基础版，支持 3–6 人，不含顾问扩充。</p>
             <h3>准备</h3><p>地产为 1–30 各一张；支票为 0、2–15K 各两张，没有 1K 支票。3／4 人每人起始现金 18K，5／6 人为 14K。3 人局随机暗移除各 6 张地产和支票，4 人局各 2 张，5／6 人全部使用。两种牌分别洗混，首轮先手随机。K 表示千元。</p>
             <h3>第一阶段 · 买房</h3><p>每轮翻开人数张地产。从先手开始依座位轮流出价或退出。出价是本轮总价，必须超过当前最高价且不能超过自己的剩余现金与已押金额之和；之前押过的部分不再重复支付。</p>
+            <p>${explanations.auction}</p>
             <p>${explanations.pass} 最后留下的人取得本轮最高地产，并成为下一轮先手。所有地产分配完后进入售房。</p>
             <h3>第二阶段 · 售房</h3><p>每轮翻开人数张支票。每位玩家秘密选择一张自己的地产，提交后不能更改。所有人提交后同时揭示，最低地产取得最低支票，依此类推；相同金额的支票效果相同。用过的地产移出手牌，得到的支票保留到终局。</p>
             <h3>结算与胜利</h3><p>${explanations.next} 所有地产售完后展示最终排名。${explanations.total}</p>
@@ -121,7 +123,28 @@
         return `<section class="fs-box fs-market-box"><div class="fs-section-heading"><h3>${buying ? "Property Auction" : "The Check Market"}</h3>${info(buying ? `🏠 ${view.market_properties.length} available` : `💵 ${view.market_checks.length} checks`, "market")}</div>
             <div class="fs-market ${buying ? "" : "fs-check-market"}">${buying ? view.market_properties.map(value => propertyCard(value)).join("") : view.market_checks.map(value => `<div class="fs-check ${value === 0 ? "fs-zero-check" : ""}" tabindex="0" data-fs-explain="check" data-fs-tip="${esc(explanations.check)}"><span class="fs-check-top">💵 <small>BANK CHECK</small></span><strong>${money(value)}</strong><span class="fs-check-line"></span><small>PAY TO THE OWNER</small></div>`).join("")}</div>
             ${buying ? `<div class="fs-auction-line">${info("Current Bid", "bid")}<strong>${money(view.high_bid)}</strong><span>${esc(view.high_bidder ? playerName(view.high_bidder) : "No bids yet")}</span></div>` : `<div class="fs-auction-line">${info("🔒 Secret selection", "sell")}<span>Submitted <b>${view.players.filter(player => player.submitted).length} / ${view.players.length}</b></span></div>`}
-            ${buying ? renderBidControls() : ""}</section>`;
+            ${buying ? renderAuctionRoster() + renderBidControls() : ""}</section>`;
+    }
+
+    function renderAuctionRoster() {
+        if (view.phase !== "buy") return "";
+        const active = new Set(view.active_players);
+        const bidders = view.players.filter(player => active.has(player.player_id));
+        const passed = view.players.filter(player => !active.has(player.player_id));
+        return `<div class="fs-auction-roster" data-fs-explain="auction">
+            <div class="fs-auction-roster-heading"><strong>${info("Still Bidding", "auction")}</strong><span>${bidders.length} / ${view.players.length}</span></div>
+            <ul class="fs-bidders" aria-label="Still bidding">${bidders.map(player => {
+                const current = player.player_id === view.current_turn;
+                const highest = view.high_bid > 0 && player.player_id === view.high_bidder;
+                const own = player.player_id === view.you;
+                const detail = `${player.name}${own ? "（你）" : ""}：仍在竞拍，已押(🪙) ${money(player.bid)}。${current ? "当前轮到此玩家行动。" : ""}${highest ? "目前出价最高。" : ""}`;
+                return `<li class="fs-bidder ${current ? "is-current" : ""}" data-fs-bidder="${esc(player.player_id)}" tabindex="0" data-fs-tip="${esc(detail)}" data-fs-explain="auction">
+                    <strong class="fs-bidder-name">${esc(player.name)}${own ? ' <small>You</small>' : ""}</strong>
+                    <div class="fs-bidder-meta"><span>🪙 ${money(player.bid)}</span>${current ? '<b class="fs-bidder-turn">To act</b>' : ""}${highest ? '<b class="fs-bidder-highest">Highest</b>' : ""}</div>
+                </li>`;
+            }).join("")}</ul>
+            ${passed.length ? `<div class="fs-auction-passed"><b>Passed</b><span>${passed.map(player => `${esc(player.name)}${player.player_id === view.you ? " (You)" : ""}`).join(" · ")}</span></div>` : ""}
+        </div>`;
     }
 
     function renderBidControls() {

@@ -1537,6 +1537,11 @@ function getRoomStartReason() {
   return "";
 }
 
+function updateRoomCreateButtonLabel() {
+  const label = createBtn.parentNode === mobileCreateSlot ? "Create" : "Create Room";
+  createBtn.textContent = pendingRoomRequest?.event === "room:create" ? "Creating..." : label;
+}
+
 function updateRoomActionButtons() {
   const busy = Boolean(pendingRoomRequest);
   const available = socket.connected && roomSessionReady && Boolean(roomId) && !busy;
@@ -1559,7 +1564,7 @@ function updateRoomActionButtons() {
   autoSaveToggle.disabled = !available || Boolean(currentRoomState?.auto_save);
   downloadMemoriesBtn.disabled = !available || !currentRoomState?.supports_memories || inLobby;
   createBtn.disabled = busy;
-  createBtn.textContent = pendingRoomRequest?.event === "room:create" ? "Creating..." : "Create Room";
+  updateRoomCreateButtonLabel();
   document.querySelectorAll("#createRoomModal .game-item, #forestShuffleEnglishBtn, #forestShuffleChineseBtn, [data-catan-starfarers-setup]")
     .forEach((button) => { button.disabled = busy; });
   roomActionStatus.textContent = roomFeedbackMessage || (inLobby ? reason || "Ready to start." : "");
@@ -1711,6 +1716,7 @@ function updateRoomControlsDock() {
   } else if (createBtn.parentNode === mobileCreateSlot) {
     roomCreateButtonAnchor.after(createBtn);
   }
+  updateRoomCreateButtonLabel();
   const shouldDock =
     roomControlsDockQuery.matches &&
     roomControlsPanel.classList.contains("compact") &&
