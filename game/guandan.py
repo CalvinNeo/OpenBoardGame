@@ -68,6 +68,7 @@ DEFAULT_CONFIG = {
     "bot_lead_prescore_limit": 16,
     "bot_heuristic_deep_candidate_limit": 10,
     "bot_heuristic_bounded_hand_threshold": 24,
+    "bot_heuristic_bounded_time_ms": 350,
     "bot_heuristic_single_bounded_hand_threshold": 18,
     "bot_heuristic_compound_bounded_hand_threshold": 23,
     "bot_heuristic_runner_bounded_hand_threshold": 18,
@@ -2839,6 +2840,9 @@ class GuandanGame:
                         {
                             "heuristic_candidates_evaluated": heuristic_status.get("evaluated", 0),
                             "heuristic_candidates_target": heuristic_status.get("target", 0),
+                            "heuristic_scoring_mode": (
+                                "bounded" if heuristic_status["bounded_scoring"] else "full"
+                            ) if "bounded_scoring" in heuristic_status else None,
                             "heuristic_candidates_minimum": heuristic_status.get("minimum", 0),
                             "heuristic_candidates_total": heuristic_status.get("total", 0),
                             "heuristic_stop_reason": heuristic_status.get("stop_reason"),

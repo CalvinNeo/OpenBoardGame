@@ -30,7 +30,9 @@
   let returnFocus = null;
   const openDetails = new Set();
   const dockObserver = new ResizeObserver(entries => {
+    if (!entries[0].target.isConnected) return;
     panel.style.setProperty("--ed-dock-height", `${Math.ceil(entries[0].target.getBoundingClientRect().height) + 16}px`);
+    window.requestAnimationFrame(keepSpaceVisible);
   });
 
   const explain = {
@@ -114,8 +116,8 @@
     }).join("");
     return `<section class="eternal-decks-field ${selectedRow === index ? "is-selected" : ""} ${row.closed ? "is-closed" : ""}">
       <div class="eternal-decks-field-heading"><h3 data-ed-tip="${esc(field.rule)}" tabindex="0">${field.icon} ${field.name}</h3><span>${row.closed ? "✓ Closed" : `Lap ${row.lap}/4 · ${row.cards.length}/${capacity}`}</span></div>
-      <div class="eternal-decks-seven">${cells}</div><div class="eternal-decks-field-footer"><span class="eternal-decks-field-rule">${esc(field.rule)}</span><span>${["⛺", "❤️", "⭐"][index]} Lap 4</span></div>
-      <div class="eternal-decks-sleeping">${row.sleeping.map(eid => button(`${view.eternals[eid].icon} ${view.eternals[eid].name}`, "eternal", "eternal", false, `data-eternal="${eid}"`)).join("")}</div></section>`;
+      <div class="eternal-decks-seven">${cells}</div><p class="eternal-decks-field-rule">${esc(field.rule)}</p>
+      <div class="eternal-decks-field-footer"><div class="eternal-decks-sleeping">${row.sleeping.map(eid => button(`${view.eternals[eid].icon} ${view.eternals[eid].name}`, "eternal", "eternal", false, `data-eternal="${eid}"`)).join("")}</div><span data-ed-tip="${["⛺ 营地：第四圈完成后，把另一条未关闭的场地改成营地。", "❤️ 心：第四圈完成后，恢复全部三颗共享心。", "⭐ 星星：第四圈完成后，获得一颗星。"][index]}" tabindex="0">${["⛺", "❤️", "⭐"][index]} Lap 4</span></div></section>`;
   }
 
   function riverHTML() {
@@ -255,6 +257,7 @@
     if (!view) return;
     const player = own();
     const focused = panel.contains(document.activeElement) ? document.activeElement.dataset : null;
+    const focusInDock = Boolean(document.activeElement.closest(".eternal-decks-dock"));
     const drawerScroll = panel.querySelector(".eternal-decks-drawer-body")?.scrollTop || 0;
     dockObserver.disconnect();
     const status = view.game_over ? (view.result.success ? "The stars are yours" : "The journey rests") : view.phase === "setup" ? "Prepare together" : view.phase === "round_end" ? "Review · Waiting for everyone" : view.phase === "discussion" ? "Ghost · Open discussion" : `${view.current_turn === view.you ? "Your turn" : name(view.current_turn) + "’s turn"}`;
@@ -279,7 +282,8 @@
     if (drawerOpen) panel.querySelector(".eternal-decks-drawer-body").scrollTop = drawerScroll;
     if (focused?.edAction) {
       const keys = ["edAction", "card", "position", "mode", "target", "recipe", "option", "disc", "player", "eternal", "row"];
-      Array.from(panel.querySelectorAll("[data-ed-action]")).find(element => keys.every(key => element.dataset[key] === focused[key]))?.focus({preventScroll: true});
+      const replacement = Array.from(panel.querySelectorAll("[data-ed-action]")).find(element => keys.every(key => element.dataset[key] === focused[key]));
+      (replacement || (focusInDock ? panel.querySelector(".eternal-decks-dock-toggle") : null))?.focus({preventScroll: true});
     }
   }
 
@@ -350,14 +354,17 @@
     mode = canPlayAtPosition() ? (position >= 21 ? "river" : "play") : "disc";
     drawerOpen = true;
     render();
-    const space = panel.querySelector(`[data-position="${position}"]`);
     panel.querySelector(".eternal-decks-dock-toggle")?.focus({preventScroll: true});
-    window.requestAnimationFrame(() => {
-      if (!space?.isConnected) return;
-      const rect = space.getBoundingClientRect();
-      const dockTop = panel.querySelector(".eternal-decks-dock").getBoundingClientRect().top;
-      if (rect.bottom > dockTop - 16) window.scrollBy({top: rect.bottom - dockTop + 24, behavior: "smooth"});
-    });
+  }
+
+  function keepSpaceVisible() {
+    if (!drawerOpen || selectedPosition === null || dialog.open) return;
+    const space = panel.querySelector(`[data-position="${selectedPosition}"]`);
+    const dock = panel.querySelector(".eternal-decks-dock");
+    if (!space || !dock) return;
+    const rect = space.getBoundingClientRect();
+    const dockTop = dock.getBoundingClientRect().top;
+    if (rect.bottom > dockTop - 16) window.scrollBy({top: rect.bottom - dockTop + 24, behavior: "smooth"});
   }
 
   function selectOnlyAbilityOption() {

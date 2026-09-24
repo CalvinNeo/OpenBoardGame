@@ -3086,15 +3086,15 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
                                 )
 
         self.assertEqual(chosen, [22])
-        self.assertEqual(score.call_count, 3)
+        self.assertEqual(score.call_count, 5)
         meta = state["_ai_eval_cache"]["heuristic_anytime"]
-        self.assertEqual(meta["evaluated"], 3)
-        self.assertEqual(meta["target"], 3)
+        self.assertEqual(meta["evaluated"], 5)
+        self.assertEqual(meta["target"], 5)
         self.assertEqual(meta["minimum"], 3)
         self.assertEqual(meta["total"], 5)
         self.assertFalse(meta["interrupted"])
         self.assertFalse(meta["deadline_limited"])
-        self.assertEqual(meta["stop_reason"], "target_reached")
+        self.assertEqual(meta["stop_reason"], "candidates_exhausted")
 
     def test_bounded_response_scoring_does_not_require_many_candidates(self):
         state, _big = self._make_state()
@@ -3114,7 +3114,9 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             finalist_modes.append(guandan._guandan_ai._bounded_finalist_scoring())
             return {"total": -5.0 if cards is None else float(cards[0])}
 
-        with mock.patch("game.guandan_ai._can_play_all", return_value=False):
+        with mock.patch("game.guandan_ai._can_play_all", return_value=False), mock.patch(
+            "game.guandan_ai.time.perf_counter", return_value=100.0
+        ):
             with mock.patch("game.guandan_ai._list_hint_options", return_value=options):
                 with mock.patch(
                     "game.guandan_ai._rank_response_options",
@@ -3138,7 +3140,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
                                     state,
                                     "bot",
                                     depth=3,
-                                    deadline=10**12,
+                                    deadline=100.3,
                                 )
 
         self.assertEqual(ranking_modes, [True])
@@ -3178,8 +3180,8 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         meta = state["_ai_eval_cache"]["heuristic_anytime"]
         self.assertEqual(meta["evaluated"], 3)
         self.assertEqual(meta["minimum"], 3)
-        self.assertEqual(meta["stop_reason"], "target_reached")
-        self.assertFalse(meta["deadline_limited"])
+        self.assertEqual(meta["stop_reason"], "soft_deadline")
+        self.assertTrue(meta["deadline_limited"])
         self.assertTrue(meta["soft_deadline_reached"])
         self.assertFalse(meta["hard_deadline_reached"])
 
@@ -3282,7 +3284,9 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         def detailed_score(_state, _bot_id, cards, _depth):
             return {"total": -5.0 if cards is None else float(cards[0])}
 
-        with mock.patch("game.guandan_ai._can_play_all", return_value=False):
+        with mock.patch("game.guandan_ai._can_play_all", return_value=False), mock.patch(
+            "game.guandan_ai.time.perf_counter", return_value=100.0
+        ):
             with mock.patch("game.guandan_ai._list_hint_options", return_value=options):
                 with mock.patch(
                     "game.guandan_ai._rank_response_options",
@@ -3310,7 +3314,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
                                         state,
                                         "bot",
                                         depth=3,
-                                        deadline=10**12,
+                                        deadline=100.3,
                                     )
 
         self.assertEqual(score.call_count, 3)
@@ -3332,9 +3336,11 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         )
         self.assertEqual(played.get("joker"), "big")
         explain = state["bot_explain"]["bot"]
-        self.assertEqual(explain["method_details"].get("heuristic_candidates_evaluated"), 3)
-        self.assertEqual(explain["method_details"].get("heuristic_candidates_target"), 3)
-        self.assertLessEqual(explain["method_details"].get("heuristic_candidates_total"), 11)
+        self.assertGreaterEqual(explain["method_details"].get("heuristic_candidates_evaluated"), 3)
+        self.assertEqual(explain["method_details"].get("heuristic_candidates_target"),
+                         explain["method_details"].get("heuristic_candidates_total"))
+        self.assertEqual(explain["method_details"].get("heuristic_candidates_total"),
+                         len(guandan._list_hint_options(state, "bot")) + 1)
         self.assertEqual(explain["method_details"].get("mcts_stop_reason"), "fast_path")
         self.assertFalse(explain["timing"].get("hard_deadline_reached"))
         self.assertTrue(explain["top"])
@@ -3535,7 +3541,7 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
         self.assertEqual(action.get("type"), "play")
         self.assertNotEqual(self._combo_type(state, action.get("card_ids", [])), "bomb")
 
-    def test_mcts_low_single_response_prefers_clean_singleton_over_split_pair(self):
+    def test_auto_low_single_response_prefers_clean_singleton_over_split_pair(self):
         players = [
             {"player_id": "calvin", "name": "calvin", "seat": 0, "is_bot": False},
             {"player_id": "bot2", "name": "Bot 2", "seat": 1, "is_bot": True},
@@ -3609,7 +3615,9 @@ class GuandanBotBombAvoidanceTests(unittest.TestCase):
             0.0,
         )
         explain = state.get("bot_explain", {}).get("bot3", {})
-        self.assertEqual(explain.get("method"), "mcts")
+        # Full root scoring can now keep its own result after the MCTS check.
+        self.assertIn(explain.get("method"), {"heuristic", "mcts"})
+        self.assertIn("mcts_stop_reason", explain.get("method_details", {}))
         self.assertEqual(explain.get("chosen", {}).get("cards"), chosen_labels)
 
     def test_bot_move_skips_mcts_on_lead_position(self):

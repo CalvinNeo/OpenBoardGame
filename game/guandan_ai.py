@@ -38,6 +38,11 @@ _CORE = _CoreProxy()
 
 def call(core, name: str, *args, **kwargs):
     prev = _get_core()
+    previous_candidates = getattr(_CORE_LOCAL, "decomposition_candidates", None)
+    if prev is not core:
+        # Reuse exact physical subhands across greedy/global plans and finalists
+        # within this call tree. Do not leak synthetic search IDs to another turn.
+        _CORE_LOCAL.decomposition_candidates = {}
     had_deadline = hasattr(_CORE_LOCAL, "deadline")
     prev_deadline = getattr(_CORE_LOCAL, "deadline", None)
     requested_deadline = kwargs.get("deadline")
@@ -51,6 +56,11 @@ def call(core, name: str, *args, **kwargs):
         return globals()[name](*args, **kwargs)
     finally:
         _CORE_LOCAL.value = prev
+        if prev is not core:
+            if previous_candidates is None:
+                delattr(_CORE_LOCAL, "decomposition_candidates")
+            else:
+                _CORE_LOCAL.decomposition_candidates = previous_candidates
         if had_deadline:
             _CORE_LOCAL.deadline = prev_deadline
         elif hasattr(_CORE_LOCAL, "deadline"):
@@ -859,9 +869,17 @@ def _bomb_followup_upgrade_metrics(
     elif after.get("group_turns", 0.0) + 1.01 >= before.get("group_turns", 0.0):
         score += 0.45
 
+    # The residual decomposition already supplies a follow-up shape. Materialize
+    # that shape once instead of recursively scoring every possible lead just
+    # to award a 0.6–2.0 shape bonus. The old nested call also used the pre-bomb
+    # state/hand, so its residual scores did not describe this continuation.
     followup_ids = []
-    if remaining:
-        followup_ids = _choose_lead_play(remaining, level_rank, state.get("config", {}), state, player_id)
+    planned_types = after.get("plan_types") or ()
+    if remaining and planned_types:
+        followups = [entry for entry in _decomposition_candidates(remaining, level_rank)
+                     if entry[1].get("type") == planned_types[0]]
+        if followups:
+            followup_ids = max(followups, key=lambda entry: entry[2])[0]
     if followup_ids and len(followup_ids) < len(remaining):
         remaining_map = _map_hand_by_id(remaining)
         followup_cards = [remaining_map[cid] for cid in followup_ids if cid in remaining_map]
@@ -1890,7 +1908,8 @@ def _candidate_hand_strength(features: Dict, level_rank: int) -> float:
     cached = features.get(cache_key)
     if cached is None:
         cached = _hand_strength_score(features["hand"], level_rank)
-        features[cache_key] = cached
+        if not _deadline_expired():
+            features[cache_key] = cached
     return float(cached)
 
 
@@ -1899,7 +1918,8 @@ def _candidate_remaining_strength(features: Dict, level_rank: int) -> float:
     cached = features.get(cache_key)
     if cached is None:
         cached = _hand_strength_score(features["remaining"], level_rank)
-        features[cache_key] = cached
+        if not _deadline_expired():
+            features[cache_key] = cached
     return float(cached)
 
 
@@ -2070,19 +2090,41 @@ def _hand_route_plan_costs(
     combos: List[Dict], profile: Callable[[Dict], Tuple[float, ...]],
     loss_weight: float, level: int, config: Dict,
 ) -> Dict[Tuple, float]:
-    """Spend each group once while comparing lead and recovery orders."""
+    """Expose entry risk alone for callers comparing a fixed partition."""
+    return {key: value["entry_risk"] for key, value in _hand_route_plan_values(
+        combos, profile, loss_weight, level, config, tempo_weight=0.0,
+    ).items()}
+
+
+def _hand_route_plan_values(
+    combos: List[Dict], profile: Callable[[Dict], Tuple[float, ...]],
+    loss_weight: float, level: int, config: Dict, tempo_weight: float = 1.0,
+) -> Dict[Tuple, Dict[str, float]]:
+    """Price leads and lost entries, consuming each recovery group once.
+
+    A control played over an enemy reply sheds cards without needing another
+    lead. Charging every group as a fresh lead erased this benefit and made
+    cashing an unbeatable group look as useful as retaining it to carry a low
+    group. Keep expected leads and entry risk separate, but optimize their
+    combined cost so both numbers describe the same executable order.
+    """
     risks = [profile(combo) for combo in combos]
+
+    def value(leads, risk):
+        return {"lead_turns": max(0.0, leads), "entry_risk": max(0.0, risk),
+                "cost": tempo_weight * max(0.0, leads) + 1.6 * max(0.0, risk)}
+
     if len(combos) > 7:
         # Long scattered tails get a coarse allocation cost; only compact
         # covers participate in the final action-order reconciliation.
         losses = [(1.0 - (1.0 - r[0]) * (1.0 - r[1])) * loss_weight
                   + r[2] * 3.0 for r in risks]
         return {
-            _hand_route_key(combo): max(0.0, sum(losses)
+            _hand_route_key(combo): value(len(combos), sum(losses)
                 - max(losses[j] for j in range(len(combos)) if j != index))
             for index, combo in enumerate(combos)
         }
-    memo = {0: 0.0}
+    memo = {0: value(0.0, 0.0)}
     costs = {}
 
     def route_cost(remaining, lead):
@@ -2091,11 +2133,12 @@ def _hand_route_plan_costs(
             return costs[key]
         tail = remaining ^ (1 << lead)
         if not tail:
-            return 0.0
+            return value(1.0, 0.0)
         same, bomb, finish, mate_finish, continuing = risks[lead]
         any_reply = 1.0 - (1.0 - same) * (1.0 - bomb)
         future = best_tail(tail)
-        result = future + any_reply * loss_weight + finish * 3.0
+        risk = future["entry_risk"] + any_reply * loss_weight + finish * 3.0
+        leads = 1.0 + future["lead_turns"]
         # Match each possible response band to the cheapest higher
         # same-type group. Equal-valued replies cannot be overcalled.
         followups = sorted((i for i, combo in enumerate(combos)
@@ -2104,7 +2147,6 @@ def _hand_route_plan_costs(
                             and _compare_combos(combos[lead], combo, level, config)),
                            key=lambda i: _combo_numeric_value(combos[i]))
         previous = continuing
-        unassigned = 1.0
         covered_same = 0.0
         for follow in followups:
             threshold = dict(combos[follow])
@@ -2112,19 +2154,20 @@ def _hand_route_plan_costs(
             threshold[value_key] = threshold[value_key] - 0.5
             upper = min(previous, profile(threshold)[4])
             highest_band = max(0.0, previous - upper)
-            interval = (highest_band / (1.0 - upper)
-                        if upper < 1.0 - 1e-9 else 0.0)
-            cheapest_band = unassigned * interval
-            # Opponents often answer economically, but retain a
-            # conservative branch where they spend their top reply.
-            raw_band = 0.65 * cheapest_band + 0.35 * highest_band
+            # A cheap initial reply is not a secured recovery: another enemy
+            # can still overcall our control. Use the probability of the
+            # entire response band, without conditioning on the rare event
+            # that nobody has a higher card. The old normalization gave Q/A
+            # almost certain recovery credit even with live enemy jokers.
+            raw_band = highest_band
             covered_same += raw_band
-            unassigned *= 1.0 - interval
             band = raw_band * (1.0 - bomb)
             # A player going out cannot be caught by our next group.
             band *= 1.0 - finish
             if band > 0.00001:
-                result -= band * (loss_weight + future - best_tail(tail ^ (1 << follow)))
+                recovered = best_tail(tail ^ (1 << follow))
+                risk -= band * (loss_weight + future["entry_risk"] - recovered["entry_risk"])
+                leads -= band * (future["lead_turns"] - recovered["lead_turns"])
             previous = upper
         # A distinct bomb can cover an ordinary reply, spending
         # that control instead of counting it again for the tail.
@@ -2136,17 +2179,20 @@ def _hand_route_plan_costs(
                 uncovered = max(0.0, continuing - covered_same) * (1.0 - bomb) * (1.0 - finish)
                 cover_hold = 1.0 - risks[cover][1]
                 if uncovered * cover_hold > 0.00001:
-                    result -= uncovered * cover_hold * (
-                        loss_weight + future - best_tail(tail ^ (1 << cover)))
-        result -= mate_finish * min(1.2, loss_weight)
-        costs[key] = max(0.0, result)
+                    recovered = best_tail(tail ^ (1 << cover))
+                    band = uncovered * cover_hold
+                    risk -= band * (loss_weight + future["entry_risk"] - recovered["entry_risk"])
+                    leads -= band * (future["lead_turns"] - recovered["lead_turns"])
+        risk -= mate_finish * min(1.2, loss_weight)
+        costs[key] = value(leads, risk)
         return costs[key]
 
     def best_tail(remaining):
         if remaining in memo:
             return memo[remaining]
         choices = [i for i in range(len(combos)) if remaining & (1 << i)]
-        result = min(route_cost(remaining, i) for i in choices)
+        result = min((route_cost(remaining, i) for i in choices),
+                     key=lambda item: (item["cost"], item["entry_risk"]))
         memo[remaining] = result
         return result
 
@@ -2188,7 +2234,7 @@ def _prepare_hand_route_scores(
     if available is not None and available <= 0.02:
         cache["hand_route_status"] = {"complete": False, "reason": "deadline"}
         return
-    route_deadline = started + min(0.16, available * 0.12) if available is not None else None
+    route_deadline = started + min(0.24, available * 0.12) if available is not None else None
     level = state["level_rank"]
     config = state.get("config", {})
     hand_map = _map_hand_by_id(hand)
@@ -2214,6 +2260,15 @@ def _prepare_hand_route_scores(
             - 0.2 * bool(entries[mask][1].get("uses_wild")),
             -_combo_numeric_value(entries[mask][1]), -mask,
         ), reverse=True))
+    # A triple is also a pair plus a single. Keep a cover that can allocate
+    # those controls to different response lanes instead of always committing
+    # all three cards to the largest available compound. Bombs stay intact.
+    orders.append(sorted(grouped, key=lambda mask: (
+        entries[mask][1]["type"] in BOMB_TYPES,
+        entries[mask][1]["type"] == "pair",
+        not entries[mask][1].get("uses_wild"),
+        len(entries[mask][0]), -_combo_numeric_value(entries[mask][1]), -mask,
+    ), reverse=True))
     candidate_plans = {}
     for cards in options:
         if route_deadline is not None and time.perf_counter() >= route_deadline:
@@ -2252,19 +2307,33 @@ def _prepare_hand_route_scores(
             ordered = tuple(sorted(plan, key=lambda mask: _hand_route_key(entries[mask][1])))
             plan_key = tuple(_hand_route_key(entries[mask][1]) for mask in ordered)
             if plan_key not in plan_cache:
-                plan_cache[plan_key] = _hand_route_plan_costs(
+                plan_cache[plan_key] = _hand_route_plan_values(
                     [entries[mask][1] for mask in ordered], profile, loss_weight, level, config,
                 )
-            losses = plan_cache[plan_key][_hand_route_key(entries[first][1])]
-            cost = len(plan) + 1.6 * losses
+            route = plan_cache[plan_key][_hand_route_key(entries[first][1])]
+            cost = route["cost"]
             if best is None or cost < best[0]:
-                best = (cost, plan, losses)
+                best = (cost, plan, route)
         panel[_cards_key(entries[first][0])] = {
             "cards": entries[first][0],
             "family": entries[first][1]["type"],
-            "cost": best[0], "turns": len(best[1]), "entry_risk": best[2],
+            "cost": best[0], "turns": len(best[1]),
+            "entry_risk": best[2]["entry_risk"], "lead_turns": best[2]["lead_turns"],
             "groups": [entries[mask][0] for mask in best[1]],
         }
+    compact = min(value["turns"] for value in panel.values()) <= 7
+    for value in panel.values():
+        # Frozen public reply estimates cannot price every later change of
+        # lane. Among similarly executable routes, retain flexible controls
+        # until they have a job. This is a small option value, not a veto on
+        # leading high: one-combo finishes and two-play closeouts spend freely.
+        play_cards = [hand_map[cid] for cid in value["cards"]]
+        reserve = _control_card_score(play_cards, level)
+        reserve += sum(_is_wild(card, level) for card in play_cards)
+        value["control_commitment"] = (min(1.0, max(0, value["turns"] - 2) / 2.0)
+                                       * reserve * 0.3)
+        value["cost"] += value["control_commitment"]
+    minimum_cost = min(value["cost"] for value in panel.values())
     family_minimum = {}
     for value in panel.values():
         family = ("closeout" if value["turns"] == 2 else value["family"],
@@ -2272,25 +2341,85 @@ def _prepare_hand_route_scores(
         value["order_group"] = family
         family_minimum[family] = min(family_minimum.get(family, float("inf")), value["cost"])
     for value in panel.values():
-        family = value["order_group"]
-        value["score"] = -min(24.0, max(0.0, value["cost"] - family_minimum[family]) * 5.0)
+        value["compact_comparison"] = compact
+        value["route_score"] = -min(64.0, max(0.0, value["cost"] - minimum_cost) * 8.0) if compact else 0.0
+        value["score"] = -min(24.0, max(0.0, value["cost"] - family_minimum[value["order_group"]]) * 5.0)
     if route_deadline is not None and time.perf_counter() >= route_deadline:
         cache["hand_route_status"] = {"complete": False, "reason": "deadline"}
         return
     cache["hand_route_key"] = signature
     cache["hand_route_context"] = context
     cache["hand_routes"] = panel
+    cache.pop("lead_cheap_scores", None)
+    cache.pop("lead_option_scores", None)
     cache["hand_route_status"] = {
         "complete": True, "plans": len(plan_cache), "candidates": len(panel),
         "elapsed_ms": (time.perf_counter() - started) * 1000.0,
     }
 
 
+def _hand_route_lead_score(state: Dict, player_id: str, cards: List[int]) -> Optional[float]:
+    """Share the same route objective with quick selection and final scoring."""
+    route = _current_hand_routes(state, player_id).get(_cards_key(cards))
+    if not route or not route["compact_comparison"]:
+        return None
+    combo = _candidate_features(state, player_id, cards)["combo"]
+    # Equivalent routes should make more progress before another player can
+    # interrupt, without letting card count outweigh a lost recovery.
+    score = route["route_score"] + len(cards) * 0.01
+    # Route costs already price ordinary exchanges. Preserve the tactical
+    # evidence that an enemy can run out within the next two groups, and the
+    # public four-card bomb finish model; a static cover cannot simulate those
+    # changes of initiative or the opponent's future hand.
+    if any(not state["players"][pid].get("finished")
+           and _team_of(state, pid) != _team_of(state, player_id)
+           and len(state["players"][pid]["hand"]) <= 2 * len(cards)
+           for pid in state.get("turn_order", [])):
+        score -= _lead_enemy_lane_exposure(state, player_id, combo)
+    score -= _retained_bomb_takeover_profile(state, player_id, cards, combo)["penalty"]
+    return score
+
+
+def _hand_route_control_challenger(
+    state: Dict, player_id: str, incumbent: List[int], options: List[List[int]],
+) -> Optional[List[int]]:
+    """Find a whole-hand route that preserves control without worse tempo.
+
+    Compare different shapes and material allocations, including a triple
+    retained as a pair and a single. A coarse cover is only a witness, so it
+    cannot replace all tactical scoring: challenge an action only when it
+    spends more control without improving the executable route. Two-play
+    closeouts have zero commitment and remain free to cash their controls.
+    """
+    # After a finish, the remaining places determine team upgrade points.
+    # These personal routes do not model that race; retain the team/search
+    # decision instead of treating a shorter personal route as dominance.
+    if state.get("finish_order"):
+        return None
+    panel = _current_hand_routes(state, player_id)
+    current = panel.get(_cards_key(incumbent or []))
+    if not current or not current["compact_comparison"] or current["control_commitment"] <= 0.0:
+        return None
+    current_score = _hand_route_lead_score(state, player_id, incumbent)
+    candidates = []
+    for cards in options:
+        route = panel.get(_cards_key(cards or []))
+        if (not route or route["turns"] > 7
+                or route["control_commitment"] >= current["control_commitment"] - 1e-9
+                or route["lead_turns"] > current["lead_turns"] + 1e-9
+                or route["entry_risk"] > current["entry_risk"] + 1e-9):
+            continue
+        score = _hand_route_lead_score(state, player_id, cards)
+        if score is not None and score >= current_score - 1e-9:
+            candidates.append((score, cards))
+    return max(candidates, key=lambda item: item[0])[1] if candidates else None
+
+
 def _apply_hand_route_order(
     state: Dict, bot_id: str,
     scored: List[Tuple[Optional[List[int]], float, Dict[str, float]]],
 ) -> None:
-    """Compare order within the same material allocation, after tactical scoring.
+    """Reconcile action order and reject dominated control expenditure.
 
     A witnessed cover is an upper bound, not an exact minimum: it must not
     replace all stock estimates across unrelated action families. Preserve the
@@ -2310,18 +2439,20 @@ def _apply_hand_route_order(
     for group, entries in groups.items():
         if len(entries) < 2:
             continue
+        values = {index: _combo_numeric_value(_candidate_features(
+            state, bot_id, scored[index][0])["combo"]) for index, _route in entries}
+        lowest_value = min(values.values())
         adjusted = {}
         for index, route in entries:
-            _cards, score, components = scored[index]
-            value = (score - components.get("hand_route_order", 0.0)
-                     - components.get("anytime_incumbent", 0.0))
+            # For the same physical cover, compare its actual order. Adding
+            # independent hold/stock proxies again can reverse even this
+            # same-family comparison and spend the high group first.
+            adjusted[index] = _hand_route_lead_score(state, bot_id, scored[index][0])
             if group[0] != "closeout":
-                # These alternatives use the same number of plays and leave
-                # the same number of cards. Their residual turn proxies must
-                # not invent a different finish timetable for the same cover.
-                for name in ("team_finish", "turn_efficiency", "structure_credit"):
-                    value -= components.get(name, 0.0)
-            adjusted[index] = value + route["score"]
+                # The reply model is approximate. Tiny estimated hold gains
+                # should not cash a larger group when the complete routes are
+                # otherwise equivalent. Preserve the lower-first tie break.
+                adjusted[index] -= min(0.5, (values[index] - lowest_value) * 0.05)
         anchor = max(scored[index][1] for index, _route in entries)
         shift = anchor - max(adjusted.values())
         for index, _route in entries:
@@ -2333,6 +2464,33 @@ def _apply_hand_route_order(
             )
             components["total"] = score
             scored[index] = (cards, score, components)
+
+    # Local hold/shape rewards must not reverse a witnessed cross-shape
+    # improvement that keeps more control. Process lower commitments first so
+    # a control is never justified by another already dominated control lead.
+    indices = [index for index, (cards, _score, components) in enumerate(scored)
+               if cards and _cards_key(cards) in panel
+               and not components.get("anytime_partial")
+               and "anytime_quick_score" not in components]
+    indices.sort(key=lambda index: panel[_cards_key(scored[index][0])]["control_commitment"])
+    options = [scored[index][0] for index in indices]
+    by_cards = {_cards_key(scored[index][0]): index for index in indices}
+    for index in indices:
+        cards, score, components = scored[index]
+        challenger = _hand_route_control_challenger(state, bot_id, cards, options)
+        if challenger is None:
+            continue
+        alternative_score = scored[by_cards[_cards_key(challenger)]][1]
+        margin = max(0.5, _hand_route_lead_score(state, bot_id, challenger)
+                     - _hand_route_lead_score(state, bot_id, cards))
+        adjusted = min(score, alternative_score - margin)
+        if adjusted < score:
+            components = dict(components)
+            components["hand_route_control"] = (
+                components.get("hand_route_control", 0.0) + adjusted - score
+            )
+            components["total"] = adjusted
+            scored[index] = (cards, adjusted, components)
 
 
 def _compute_lead_option_score(state: Dict, player_id: str, cards: List[int]) -> float:
@@ -2354,10 +2512,8 @@ def _compute_lead_option_score(state: Dict, player_id: str, cards: List[int]) ->
 
     score -= structure_delta * 1.35
     score += remaining_strength * 0.16
-    score -= _lead_low_single_trap_penalty(hand, cards, state["level_rank"])
     score -= _lead_short_next_opponent_penalty(state, player_id, cards)
     score -= _lead_short_escape_window_penalty(state, player_id, cards, combo)
-    score -= _lead_structure_overreach_penalty(hand, cards, combo, state["level_rank"])
     score -= _lead_same_type_value_conservation_penalty(state, player_id, cards, combo)
     score -= _lead_special_material_penalty(state, player_id, cards, combo)
     score -= _lead_probe_deferral_penalty(state, player_id, cards, combo)
@@ -2378,7 +2534,6 @@ def _compute_lead_option_score(state: Dict, player_id: str, cards: List[int]) ->
     score -= _lead_opening_commitment_penalty(state, player_id, cards, combo)
 
     if combo["type"] == "single":
-        score -= _lead_single_break_penalty(hand, cards, state["level_rank"])
         escape_bonus = _lead_low_single_escape_bonus(hand, cards, state["level_rank"])
         escape_bonus *= _lead_low_single_escape_context_scale(state, player_id, cards, combo)
         score += escape_bonus
@@ -2425,7 +2580,7 @@ def _lead_option_score(state: Dict, player_id: str, cards: List[int]) -> float:
         if cached is not None:
             return float(cached)
     score = _compute_lead_option_score(state, player_id, cards)
-    if cache_key is not None:
+    if cache_key is not None and not _deadline_expired():
         eval_cache["lead_option_scores"][cache_key] = float(score)
     return score
 
@@ -2462,6 +2617,11 @@ def _compute_lead_cheap_option_score(
     score += features["shape_score"] * 1.25
     score -= features["fragment_penalty"] * 1.2
     score -= features["control_break"] * 1.0
+    # These own-hand guards are linear and need no reply sampling or search.
+    # Removing them from the cheap path saved little but changed the fallback
+    # policy and which structures ever reached detailed comparison.
+    score -= _lead_low_single_trap_penalty(hand, cards, state["level_rank"])
+    score -= _lead_structure_overreach_penalty(hand, cards, combo, state["level_rank"])
     # Ordinary material scoring is O(hand) and avoids decomposition or sampled
     # replies. The bounded four-card-tail check below is the sole route search;
     # physical-materialization quality is handled by the action generator.
@@ -2472,6 +2632,7 @@ def _compute_lead_cheap_option_score(
         score -= 2.0
 
     if combo["type"] == "single":
+        score -= _lead_single_break_penalty(hand, cards, state["level_rank"])
         card = play_cards[0]
         value = _single_order_value(card, state["level_rank"])
         score -= value * 0.12
@@ -9082,6 +9243,24 @@ def _decomposition_local_value(hand: List[Dict], cards: List[int], combo: Dict, 
 
 
 def _decomposition_candidates(hand: List[Dict], level_rank: int) -> List[Tuple[List[int], Dict, float]]:
+    cache = getattr(_CORE_LOCAL, "decomposition_candidates", None)
+    # IDs distinguish duplicate cards; faces distinguish reconstructed history
+    # and determinized hands that reuse an ID for a different physical card.
+    key = (level_rank, tuple(
+        (card["id"], card.get("rank"), card.get("suit"), card.get("joker"))
+        for card in hand
+    ))
+    if cache is not None and key in cache:
+        return copy.deepcopy(cache[key])
+    result = _compute_decomposition_candidates(hand, level_rank)
+    if cache is not None:
+        if len(cache) >= 4096:
+            cache.clear()
+        cache[key] = copy.deepcopy(result)
+    return result
+
+
+def _compute_decomposition_candidates(hand: List[Dict], level_rank: int) -> List[Tuple[List[int], Dict, float]]:
     config = {}
     options: List[List[int]] = []
     if hand and _can_play_all(hand, level_rank, config, None):
@@ -9394,7 +9573,7 @@ def _hand_decomposition_summary(hand: List[Dict], level_rank: int) -> Dict[str, 
         return apply_step(current_hand, cards, combo, child)
 
     summary = _copy_hand_decomposition_summary(search(hand, 0))
-    if not timed_out:
+    if not timed_out and not _deadline_expired():
         if len(_HAND_DECOMP_CACHE) >= _HAND_DECOMP_CACHE_LIMIT:
             _HAND_DECOMP_CACHE.clear()
         _HAND_DECOMP_CACHE[cache_key] = _copy_hand_decomposition_summary(summary)
@@ -9571,7 +9750,9 @@ def _global_hand_decomposition_summary(hand: List[Dict], level_rank: int) -> Dic
         )
     )
     summary = _copy_hand_decomposition_summary(searched if use_beam else baseline)
-    if not timed_out:
+    # Baseline comparison runs after the search and can itself hit the deadline.
+    # Its fast fallback must not be promoted to a complete global cache entry.
+    if not timed_out and not _deadline_expired():
         if len(_HAND_GLOBAL_DECOMP_CACHE) >= _HAND_GLOBAL_DECOMP_CACHE_LIMIT:
             _HAND_GLOBAL_DECOMP_CACHE.clear()
         _HAND_GLOBAL_DECOMP_CACHE[cache_key] = _copy_hand_decomposition_summary(summary)
@@ -9756,7 +9937,7 @@ def _hand_structure_metrics(hand: List[Dict], level_rank: int) -> Dict[str, floa
         "decomp_bomb_turns": float(decomp.get("bomb_turns", 0.0)),
         "decomp_special_turns": float(decomp.get("special_material_turns", 0.0)),
     }
-    if not bounded:
+    if not bounded and not _deadline_expired():
         if len(_HAND_STRUCTURE_CACHE) >= _HAND_STRUCTURE_CACHE_LIMIT:
             _HAND_STRUCTURE_CACHE.clear()
         _HAND_STRUCTURE_CACHE[cache_key] = _copy_hand_structure_metrics(metrics)
@@ -9812,7 +9993,7 @@ def _hand_strength_score(hand: List[Dict], level_rank: int) -> float:
     score += min(2.6, metrics["decomp_grouped_cards"] * 0.07)
     score += metrics["decomp_bomb_turns"] * 0.32
     score -= metrics["decomp_special_turns"] * 0.18
-    if not bounded:
+    if not bounded and not _deadline_expired():
         if len(_HAND_STRENGTH_CACHE) >= _HAND_STRENGTH_CACHE_LIMIT:
             _HAND_STRENGTH_CACHE.clear()
         _HAND_STRENGTH_CACHE[cache_key] = score
@@ -9841,7 +10022,7 @@ def _estimated_turns_to_finish(hand: List[Dict], level_rank: int) -> float:
         decomp_turns += metrics["decomp_special_turns"] * 0.08
         turns = min(turns, decomp_turns)
     result = max(1.0, turns)
-    if not bounded:
+    if not bounded and not _deadline_expired():
         if len(_HAND_TURNS_CACHE) >= _HAND_TURNS_CACHE_LIMIT:
             _HAND_TURNS_CACHE.clear()
         _HAND_TURNS_CACHE[cache_key] = result
@@ -11185,10 +11366,6 @@ def _rollout_policy_action(state: Dict, player_id: str) -> Optional[Dict]:
         options = _filter_overbomb_options(state, player_id, options)
         candidate_limit = max(2, int(state.get("config", {}).get("bot_rollout_candidate_limit", 6)))
         options = _shortlist_scoring_options(state, player_id, options, candidate_limit)
-        if current_trick and "pass" in legal:
-            leader = current_trick.get("player_id")
-            if leader == _teammate_of(state, player_id):
-                return {"type": "pass"}
         if options:
             scored_options = [
                 (_quick_candidate_score(state, player_id, cards), cards)
@@ -14877,7 +15054,13 @@ def _filter_overbomb_options(state: Dict, player_id: str, options: List[List[int
                     fragment_penalty < 6.0
                     and control_break < 4.5
                     and shape_score > -4.0
-                ):
+                ) or _natural_structure_takeover_profile(
+                    state, player_id, cards, combo,
+                ).get("qualified"):
+                    # Share the scorer's structural judgment. A natural run
+                    # can temporarily split pairs/triples while keeping every
+                    # bomb intact; coarse shape deltas must not erase that
+                    # alternative and make a spare bomb look necessary.
                     has_structurally_clean_non_bomb = True
     if not bombs:
         return ordinary
@@ -15437,6 +15620,13 @@ def _bot_select_play(
     teammate_finished = bool(
         teammate and state["players"].get(teammate, {}).get("finished")
     )
+    scoring_deadline = _current_deadline(deadline)
+    soft_deadline = state.get("_ai_eval_cache", {}).get("heuristic_soft_deadline")
+    if soft_deadline is not None:
+        scoring_deadline = (min(scoring_deadline, soft_deadline)
+                            if scoring_deadline is not None else soft_deadline)
+    remaining_budget = _deadline_remaining(scoring_deadline)
+    bounded_budget = max(0.0, float(config.get("bot_heuristic_bounded_time_ms", 350))) / 1000.0
     compound_response_types = {
         "pair",
         "three",
@@ -15449,7 +15639,7 @@ def _bot_select_play(
         "heavenly",
     }
     bounded_response = bool(
-        deadline is not None
+        remaining_budget is not None and remaining_budget <= bounded_budget
         and not is_lead
         and (
             len(hand) >= bounded_hand_threshold
@@ -15515,6 +15705,12 @@ def _bot_select_play(
         return quick_scores[key]
 
     incumbent = max(candidates, key=quick_score)
+    if is_lead:
+        control_challenger = _hand_route_control_challenger(state, bot_id, incumbent, options)
+        if control_challenger is not None:
+            # Compare the whole-hand alternative even when only the minimum
+            # finalist batch fits. It also supplies the expired-budget fallback.
+            incumbent = control_challenger
     ordered_candidates = [incumbent]
     remaining_candidates = [cand for cand in candidates if cand != incumbent]
     if current_trick:
@@ -15605,6 +15801,15 @@ def _bot_select_play(
             stop_reason = "hard_deadline_guard"
             deadline_limited = True
             break
+        if (hard_deadline is not None and len(scored) >= detailed_minimum
+                and candidate_durations
+                and hard_deadline - now < max(candidate_durations) * 1.5 + 0.02):
+            # Full decomposition has variable cost. Once the minimum play/pass
+            # comparison is complete, do not start another potentially long
+            # candidate when recent work cannot fit the remaining hard budget.
+            stop_reason = "candidate_time_guard"
+            deadline_limited = True
+            break
 
         started_at = now
         components = _bot_finalist_score_components(
@@ -15654,6 +15859,7 @@ def _bot_select_play(
             scored[scored_index] = (cand, score + 3.0, components)
             break
     eval_cache["heuristic_anytime"] = {
+        "bounded_scoring": bounded_response,
         "evaluated": detailed_evaluated,
         "total": len(ordered_candidates),
         "interrupted": detailed_evaluated < detailed_target,
@@ -15776,7 +15982,9 @@ def _build_bot_explain(
             method_meta["hand_route"] = {
                 "groups": [label_cards(group) for group in route["groups"]],
                 "turns": route["turns"],
+                "lead_turns": round(route["lead_turns"], 4),
                 "entry_risk": round(route["entry_risk"], 4),
+                "control_commitment": round(route["control_commitment"], 4),
                 "cost": round(route["cost"], 4),
             }
 

@@ -685,10 +685,10 @@ const GAME_ASSETS = {
   },
   "eternal_decks": {
     "scripts": [
-      "/static/games/eternal_decks.js?v=2"
+      "/static/games/eternal_decks.js?v=3"
     ],
     "styles": [
-      "/static/eternal_decks.css?v=2"
+      "/static/eternal_decks.css?v=3"
     ],
     "panel": "eternalDecksPanel",
     "header": "showEternalDecksHeaderActions",

@@ -48,6 +48,9 @@ class GuandanFinalistDeadlineTests(unittest.TestCase):
         with (
             mock.patch.object(guandan_ai.time, "perf_counter", side_effect=lambda: clock[0]),
             mock.patch.object(guandan, "_list_hint_options", return_value=options),
+            # This deadline test supplies its incumbent through quick_score.
+            # Route scheduling/fallback is exercised with real hands separately.
+            mock.patch.object(guandan_ai, "_prepare_hand_route_scores"),
             mock.patch.object(guandan_ai, "_rank_lead_options", side_effect=lambda _s, _p, cards, **_kw: cards),
             mock.patch.object(guandan_ai, "_filter_overbomb_options", side_effect=lambda _s, _p, cards: cards),
             mock.patch.object(guandan_ai, "_quick_candidate_score", side_effect=quick_score),
