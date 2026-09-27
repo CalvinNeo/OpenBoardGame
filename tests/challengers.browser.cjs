@@ -33,6 +33,18 @@ act(s,'p0','reveal'); views['game_over']=G.get_public_view(s,'p0')
 print(json.dumps(views))
 `], {encoding: 'utf8', maxBuffer: 8 * 1024 * 1024}));
 
+// Long lists exercise scrolling independently of deck-building strategy.
+const longCards = Object.values(fixtures.draft.catalog).filter(card => card.set !== 'robot').slice(0, 28)
+  .map((card, index) => ({...card, id: `scroll-${index}`}));
+fixtures.long_trim = {...structuredClone(fixtures.trim), deck: longCards};
+for (const kind of ['exhaust', 'extra_pick']) {
+  fixtures[`long_${kind}`] = {...structuredClone(fixtures.choice), deck: longCards,
+    choice: {...structuredClone(fixtures.choice.choice), kind, min: kind === 'exhaust' ? 0 : 2, max: 2, optional: true, cards: longCards}};
+}
+fixtures.long_card = structuredClone(fixtures.match);
+const detailedCard = {...fixtures.draft.catalog.hologram, id: 'detailed-card', total_power: 4};
+fixtures.long_card.matches[0].lanes.p1.field = [detailedCard];
+
 const control = (page, action) => page.locator(`#challengersPanel [data-ch-action="${action}"]`);
 async function setup(page) {
   await page.route('https://fonts.googleapis.com/**', route => route.abort());
@@ -64,6 +76,52 @@ async function bounds(page, label) {
     return {pageOverflow: document.documentElement.scrollWidth > innerWidth, bad};
   });
   assert.deepEqual(issues, {pageOverflow: false, bad: []}, label);
+}
+
+async function selectionScroll(page, key, touch = false) {
+  await render(page, key);
+  const before = await page.locator('.ch-market').evaluate(list => {
+    window.scrollTo(0, window.scrollY + list.getBoundingClientRect().top - 100);
+    list.scrollTop = (list.scrollHeight - list.clientHeight) / 2;
+    const box = list.getBoundingClientRect();
+    const cards = [...list.querySelectorAll('[data-ch-card]')].filter(card => {
+      const rect = card.getBoundingClientRect();
+      return rect.top >= box.top + 3 && rect.bottom <= Math.min(box.bottom - 3, innerHeight - 5);
+    }).slice(0, 2);
+    return {top: list.scrollTop, page: scrollY, cards: cards.map(card => ({id: card.dataset.chCard, top: card.getBoundingClientRect().top}))};
+  });
+  assert.ok(before.top > 50 && before.cards.length === 2, `${key}: scrollable list with two visible cards`);
+  const card = index => page.locator(`[data-ch-card="${before.cards[index].id}"]`);
+  const stable = async (label, focused) => {
+    const after = await page.locator('.ch-market').evaluate(list => ({top: list.scrollTop, page: scrollY, focus: document.activeElement?.dataset.chCard}));
+    assert.ok(Math.abs(after.top - before.top) < 2, `${label}: list stays at ${before.top}, got ${after.top}`);
+    assert.ok(Math.abs(after.page - before.page) < 2, `${label}: page stays at ${before.page}, got ${after.page}`);
+    assert.ok(Math.abs((await card(0).boundingBox()).y - before.cards[0].top) < 2, `${label}: card height/position is stable`);
+    if (!touch && focused) assert.equal(after.focus, focused, `${label}: keyboard focus stays on the card`);
+  };
+  await card(0)[touch ? 'tap' : 'click']();
+  await stable(`${key} select`, before.cards[0].id);
+  await card(1)[touch ? 'tap' : 'click']();
+  await stable(`${key} multi-select`, before.cards[1].id);
+  assert.equal(await page.locator('.ch-card[aria-pressed="true"]').count(), 2);
+  await page.evaluate(view => {
+    view.players[1].fans += 1;
+    renderGameState({room_id: 'challengers-layout', game_type: 'challengers', view});
+  }, fixtures[key]);
+  await stable(`${key} opponent update`, before.cards[1].id);
+  assert.equal(await page.locator('.ch-card[aria-pressed="true"]').count(), 2);
+  await card(0)[touch ? 'tap' : 'click']();
+  await stable(`${key} deselect`, before.cards[0].id);
+  assert.equal(await card(1).locator('.ch-selection-number').textContent(), '1');
+  if (!touch) {
+    await page.keyboard.press('Space');
+    await stable(`${key} Space`, before.cards[0].id);
+    await page.keyboard.press('Enter');
+    await stable(`${key} Enter`, before.cards[0].id);
+  }
+  await page.keyboard.press('Escape');
+  await stable(`${key} Escape`);
+  assert.equal(await page.locator('.ch-card[aria-pressed="true"]').count(), 0);
 }
 
 (async () => {
@@ -124,7 +182,12 @@ async function bounds(page, label) {
       await page.setViewportSize({width, height: 900});
       for (const key of Object.keys(fixtures)) { await render(page, key); await bounds(page, `${width}px ${key}`); }
     }
-    console.log('PASS 42 responsive layouts');
+    console.log(`PASS ${Object.keys(fixtures).length * 6} responsive layouts`);
+    for (const width of [393, 1440]) {
+      await page.setViewportSize({width, height: 900});
+      for (const key of ['long_trim', 'long_exhaust', 'long_extra_pick']) await selectionScroll(page, key);
+    }
+    console.log('PASS long multi-select lists retain scroll, focus, order and selection across updates');
     await page.setViewportSize({width: 1440, height: 1100});
     await render(page, 'draft');
     await page.screenshot({path: `${output}/desktop-draft.png`, fullPage: true});
@@ -161,6 +224,13 @@ async function bounds(page, label) {
     await mobile.evaluate(async () => { socket.disconnect(); await ensureGameAssets('challengers'); sendAction = action => challengersTestActions.push(action); });
     await render(mobile, 'match');
     await mobile.screenshot({path: `${output}/mobile-match.png`, fullPage: true});
+    const compact = await mobile.evaluate(() => ({
+      arena: document.querySelector('.ch-arena').getBoundingClientRect().height,
+      field: document.querySelector('.ch-field .ch-card').getBoundingClientRect().height,
+      controls: document.querySelector('.ch-combat-controls').getBoundingClientRect().height,
+    }));
+    assert.ok(compact.arena < 400 && compact.field < 100 && compact.controls < 80, JSON.stringify(compact));
+    console.log('PASS compact mobile arena:', JSON.stringify(compact));
     await mobile.locator('.ch-player-stats [data-ch-tip]').first().tap();
     await mobile.locator('#challengersTip').waitFor({state: 'visible'});
     await mobile.locator('#challengersTip').waitFor({state: 'hidden', timeout: 4000});
@@ -170,6 +240,7 @@ async function bounds(page, label) {
     await bounds(mobile, 'Mobile selection');
     await control(mobile, 'pick').tap();
     assert.equal(await mobile.evaluate(() => challengersTestActions[0].type), 'pick');
+    for (const key of ['long_trim', 'long_exhaust', 'long_extra_pick']) await selectionScroll(mobile, key, true);
     assert.deepEqual(errors, []);
     console.log('PASS touch controls, tooltip expiry, and zero browser errors');
   } finally { await browser.close(); }

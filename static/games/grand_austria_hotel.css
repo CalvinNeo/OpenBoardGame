@@ -110,9 +110,35 @@
 .gah-public { margin-top:12px; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; }
 .gah-goal { display:flex; flex-direction:column; gap:6px; font-size:12px; padding:8px; }
 .gah-goal-text { overflow-wrap:anywhere; }
-.gah-emperors { display:flex; gap:7px; margin-top:8px; flex-wrap:wrap; }
-.gah-emperors span { flex:1 1 180px; padding:7px 9px; border:1px solid #d8cdbb; border-radius:7px; background:#f8f1e2; font:12px/1.5 sans-serif; }
-.gah-emperors .gah-past { opacity:.55; }
+.gah-emperor-panel { margin-bottom:12px; }
+.gah-emperor-track { display:grid; grid-template-columns:repeat(14,minmax(0,1fr)); gap:4px; }
+.gah-emperor-cell { display:flex; flex-direction:column; align-items:center; gap:2px; min-height:66px; padding:4px 2px; border:1px solid #d2c7b5; border-top:3px solid #b7a889; border-radius:6px; background:#f2ede4; font:13px/1.4 sans-serif; }
+.gah-emperor-cell small { font-size:10px; color:#79623d; white-space:nowrap; }
+.gah-zone-penalty { background:#f8e9e6; border-top-color:#b5615b; }
+.gah-zone-neutral { background:#eeeae0; border-top-color:#a39b84; }
+.gah-zone-reward { background:#e8f0df; border-top-color:#759153; }
+.gah-emperor-tokens { display:flex; flex-wrap:wrap; justify-content:center; gap:2px; width:100%; margin-top:auto; min-height:18px; }
+.gah-emperor-token { display:inline-flex; align-items:center; justify-content:center; flex:0 0 18px; width:18px; height:18px; border:1px solid #fff8; border-radius:50%; color:white; font:700 11px/1 sans-serif; }
+.gah-seat-0 { background:#843e4e; }
+.gah-seat-1 { background:#356b91; }
+.gah-seat-2 { background:#8b691b; }
+.gah-seat-3 { background:#4a7245; }
+.gah-emperor-legend { display:flex; flex-wrap:wrap; align-items:center; gap:5px 14px; margin:7px 0 10px; }
+.gah-emperor-player { display:inline-flex; align-items:center; gap:5px; font:12px/1.4 sans-serif; overflow-wrap:anywhere; }
+.gah-emperor-event { font:12px/1.5 sans-serif; min-width:0; }
+.gah-emperor-event > strong { display:block; color:var(--gah-wine); margin-bottom:5px; }
+.gah-emperor-event-parts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
+.gah-emperor-event-parts > span { padding:6px 8px; border-radius:6px; overflow-wrap:anywhere; }
+.gah-emperor-reward { background:#e8f0df; color:#3e612c; }
+.gah-emperor-penalty { background:#f8e9e6; color:#833f36; }
+.gah-emperor-future { margin-top:8px; }
+.gah-emperor-future summary { cursor:pointer; font:11px/1.5 sans-serif; color:#796b5f; }
+.gah-emperor-event-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:8px; }
+.gah-emperor-report { margin-top:8px; padding:7px 8px; border-left:3px solid #a39b84; background:#f5f2eb; font:12px/1.6 sans-serif; overflow-wrap:anywhere; }
+.gah-emperor-report > strong { display:block; margin-top:3px; }
+.gah-outcome-reward { border-left-color:#759153; }
+.gah-outcome-penalty { border-left-color:#b5615b; }
+.gah-emperor-actual { margin-top:4px; }
 .gah-log { margin-top:12px; }
 .gah-log summary { cursor:pointer; font:12px sans-serif; }
 .gah-log ol { max-height:150px; overflow-y:auto; padding-left:22px; font:12px/1.8 sans-serif; }
@@ -176,7 +202,9 @@
   .gah-public { grid-template-columns:1fr; }
   .gah-goal { flex-direction:row; align-items:center; justify-content:space-between; }
   .gah-goal-text { flex:1; }
-  .gah-emperors span { flex-basis:100%; }
+  .gah-emperor-track { grid-template-columns:repeat(7,minmax(0,1fr)); }
+  .gah-emperor-legend { gap:5px 10px; }
+  .gah-emperor-event-parts, .gah-emperor-event-list { grid-template-columns:1fr; }
 }
 @media(prefers-reduced-motion:no-preference) {
   .gah-root button { transition:background .12s,border-color .12s; }

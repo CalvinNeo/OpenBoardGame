@@ -1,8 +1,8 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
   "challengers": {
-    "scripts": ["/static/games/challengers.js?v=3"],
-    "styles": ["/static/games/challengers.css?v=3"],
+    "scripts": ["/static/games/challengers.js?v=4"],
+    "styles": ["/static/games/challengers.css?v=4"],
     "markup": "/static/games/challengers.html?v=1",
     "panel": "challengersPanel",
     "header": "showChallengersHeaderActions"
@@ -717,8 +717,8 @@ const GAME_ASSETS = {
     "markup": "/static/games/eternal_decks.html?v=2"
   },
   "grand_austria_hotel": {
-    "scripts": ["/static/games/grand_austria_hotel.js?v=3"],
-    "styles": ["/static/games/grand_austria_hotel.css?v=3"],
+    "scripts": ["/static/games/grand_austria_hotel.js?v=4"],
+    "styles": ["/static/games/grand_austria_hotel.css?v=4"],
     "panel": "grandAustriaPanel",
     "header": "showGrandAustriaHeaderActions",
     "markup": "/static/games/grand_austria_hotel.html?v=2"

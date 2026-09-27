@@ -145,7 +145,7 @@ def _start_round(state: Dict) -> None:
     order = state["turn_order"]
     first = state["start_index"]
     order = order[first:] + order[:first]
-    state.update(phase="turn", slots=order + order[::-1], done=[], passed=[], next_ready=[],
+    state.update(phase="turn", slots=order + order[::-1], done=[], passed=[], next_ready=[], emperor_review=[],
                  round_scores={pid: state["players"][pid]["score"] for pid in order})
     for player in state["players"].values():
         player["used_staff"] = []
@@ -178,6 +178,7 @@ def _select_turn(state: Dict) -> None:
 def _end_round(state: Dict) -> None:
     state["phase"] = "emperor"
     state["current_turn"] = None
+    state["emperor_review"] = []
     if state["round"] in (3, 5, 7):
         index = (3, 5, 7).index(state["round"])
         tile = state["emperors"][index]
@@ -226,6 +227,15 @@ def _review(state: Dict) -> None:
                         "delta": player["score"] - state["round_scores"][pid], "emperor": player["emperor"]}
                        for pid, player in state["players"].items()]
     _log(state, f'第 {state["round"]} 轮结算完毕 · 等待全员 Next Round')
+
+
+def _emperor_totals(player: Dict) -> Dict:
+    """Public resource counts only; never store identities of private staff cards."""
+    return {"score": player["score"], "money": player["money"], "emperor": player["emperor"],
+            "kitchen": sum(player["kitchen"].values()),
+            "served": sum(sum(guest["served"].values()) for guest in player["cafe"]),
+            "hand": len(player["hand"]), "staff": len(player["staff"]),
+            "vacant": player["rooms"].count(1), "occupied": player["rooms"].count(2)}
 
 
 def _penalty(state: Dict, pid: str, code: str) -> None:
@@ -331,21 +341,36 @@ def _settle(state: Dict) -> None:
             _log(state, f'{_name(state, pid)} · {color} 房间组完成，奖励 {value}')
         elif kind == "emperor_scoring":
             state["pending"].pop(0)
+            before = _emperor_totals(player)
             points = EMPEROR_POINTS[player["emperor"]]
             player["score"] += points
             player["emperor"] = max(0, player["emperor"] - state["round"])
             tile = EMPERORS[pending["tile"]]
-            outcome = "中立"
+            outcome = "reward" if player["emperor"] >= 3 else "penalty" if player["emperor"] == 0 else "neutral"
+            reports = state.setdefault("emperor_review", [])
+            reports.append({"player_id": pid, "round": state["round"], "tile": pending["tile"],
+                            "position_before": before["emperor"], "position_after_retreat": player["emperor"],
+                            "track_points": points, "outcome": outcome, "resolved": False, "avoided": False,
+                            "before": before})
+            # Rewards and their nested choices are prepended before this result marker.
+            _queue(state, pid, [effect("emperor_result", index=len(reports) - 1)], True)
             if player["emperor"] >= 3:
-                outcome = "奖励"
                 if "42" in player["staff"]:
                     player["score"] += 5
                 _rewards(state, pid, tile["reward"], True)
             elif player["emperor"] == 0:
-                outcome = "惩罚"
                 _queue(state, pid, [effect("penalty", code=tile["penalty"])], True)
-            _log(state, f'{_name(state, pid)} · 皇帝 +{points} 分，退后到 {player["emperor"]}，{outcome}')
+            label = {"reward": "奖励", "penalty": "惩罚", "neutral": "中立"}[outcome]
+            _log(state, f'{_name(state, pid)} · 皇帝 +{points} 分，退后到 {player["emperor"]}，{label}')
             continue
+        elif kind == "emperor_result":
+            report = state["emperor_review"][pending["index"]]
+            before = report.pop("before")
+            changes = {key: value - before[key] for key, value in _emperor_totals(player).items()}
+            changes["score"] -= report["track_points"]
+            changes["emperor"] = player["emperor"] - report["position_after_retreat"]
+            report.update(resolved=True, final_position=player["emperor"],
+                          changes={key: value for key, value in changes.items() if value})
         elif kind == "penalty" and not ("26" in player["staff"] and player["money"]):
             state["pending"].pop(0)
             _penalty(state, pid, pending["code"])
@@ -591,6 +616,9 @@ def _apply_pending(state: Dict, pid: str, move: Dict) -> None:
         state["retired_staff"].append(move["staff"])
     elif kind == "avoid_penalty":
         player["money"] -= 1
+        for report in state.get("emperor_review", []):
+            if report["player_id"] == pid and not report["resolved"]:
+                report["avoided"] = True
     elif kind == "accept_penalty":
         _penalty(state, pid, pending["code"])
 
@@ -691,7 +719,7 @@ class GrandAustriaHotelGame:
                  "players": {}, "player_meta": {}, "market": guests[:5], "guest_deck": guests[5:],
                  "staff_deck": staff, "guest_discard": [], "retired_staff": [], "pending": [],
                  "dice": [0] * 6, "slots": [], "done": [], "passed": [], "turn": {},
-                 "next_ready": [], "rerolls": 0, "log": [], "review": [], "result": None, "game_over": False,
+                 "next_ready": [], "rerolls": 0, "log": [], "review": [], "emperor_review": [], "result": None, "game_over": False,
                  "objectives": [rng.choice([key for key, item in OBJECTIVES.items() if item["category"] == group]) for group in "ABC"],
                  "emperors": [rng.choice([key for key in EMPERORS if key.startswith(group)]) for group in "ABC"]}
         state["claims"] = {oid: [] for oid in state["objectives"]}
@@ -746,10 +774,13 @@ class GrandAustriaHotelGame:
                 "slots", "done", "passed", "turn", "rerolls")
         view = {key: copy.deepcopy(state[key]) for key in keys}
         view.update(you=viewer_id, players=players, pending=pending, moves=moves,
+                    emperor_review=[{key: copy.deepcopy(value) for key, value in row.items() if key != "before"}
+                                    for row in state.get("emperor_review", [])],
                     legal_actions=list(dict.fromkeys(move["type"] for move in moves)),
                     guest_deck_count=len(state["guest_deck"]), staff_deck_count=len(state["staff_deck"]),
                     catalog={"guests": copy.deepcopy(GUESTS), "staff": copy.deepcopy(STAFF), "rooms": copy.deepcopy(ROOMS),
-                             "objectives": copy.deepcopy(OBJECTIVES), "emperors": copy.deepcopy(EMPERORS)})
+                             "objectives": copy.deepcopy(OBJECTIVES), "emperors": copy.deepcopy(EMPERORS),
+                             "emperor_points": list(EMPEROR_POINTS)})
         return view
 
     @staticmethod

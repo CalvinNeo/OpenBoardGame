@@ -15,6 +15,7 @@
   let selected = [];
   let park = null;
   let signature = null;
+  let renderedContext = null;
   let roomSignature = null;
   let pending = false;
   let pendingRevision = null;
@@ -60,10 +61,9 @@
 
   function cardHTML(card, selectable = false) {
     const index = selected.indexOf(card.id);
-    const attrs = `class="ch-card${index >= 0 && selectable ? " is-selected" : ""}" style="--set-color:${view.set_info[card.set].color}" data-ch-explain="card" data-ch-description="${esc(cardText(card))}"`;
-    const details = `<span class="ch-card-top"><span class="ch-power">${card.total_power ?? card.power}</span><span class="ch-card-level">${view.set_info[card.set].icon} ${card.level}</span></span>
-      <span class="ch-card-portrait" aria-hidden="true">${card.icon}</span><strong>${esc(card.name_zh)}</strong><small>${esc(card.name)}</small><span class="ch-card-effect">${esc(card.description)}</span>
-      ${index >= 0 && selectable ? `<span class="ch-selection-number">${index + 1}</span>` : ""}`;
+    const attrs = `class="ch-card${index >= 0 && selectable ? " is-selected" : ""}" style="--set-color:${view.set_info[card.set].color}" data-ch-effect="${esc(card.effect)}" data-ch-explain="card" data-ch-description="${esc(cardText(card))}"`;
+    const details = `<span class="ch-card-top"><span class="ch-power">${card.total_power ?? card.power}</span><span class="ch-card-level">${view.set_info[card.set].icon} ${card.level}</span>${selectable ? `<span class="ch-selection-number">${index >= 0 ? index + 1 : ""}</span>` : ""}</span>
+      <span class="ch-card-portrait" aria-hidden="true">${card.icon}</span><strong>${esc(card.name_zh)}</strong><small>${esc(card.name)}</small><span class="ch-card-effect">${esc(card.description)}</span>`;
     return selectable ? `<button type="button" ${attrs} data-ch-card="${card.id}" aria-pressed="${index >= 0}" ${pending ? "disabled" : ""}>${details}</button>`
       : `<div ${attrs} ${tipAttrs(cardText(card))}>${details}</div>`;
   }
@@ -81,8 +81,8 @@
   function deckHTML() {
     const kept = view.deck.filter(c => !selected.includes(c.id) || view.stage !== "trim");
     return `<section class="ch-section"><div class="ch-section-head"><h3>🃏 我的牌组</h3><span class="ch-badge">${view.deck.length} cards</span></div>
-      <div class="ch-deck-stats"><span ${tipAttrs(explain.bench, "bench")}>🪑 ${groups(kept).length} 种 / 6 格</span><span ${tipAttrs("战力(⚔️)：保留牌组的基础战力总和，不计能力加成；单张持旗时仅使用那张牌的战力。")}>⚔️ ${kept.reduce((n, c) => n + c.power, 0)} 基础战力</span></div>
-      <div class="ch-deck-list">${groups(view.deck).sort((a, b) => a[0].set.localeCompare(b[0].set) || b[0].power - a[0].power).map(group => {
+      <div class="ch-deck-stats"><span data-ch-kept-kinds ${tipAttrs(explain.bench, "bench")}>🪑 ${groups(kept).length} 种 / 6 格</span><span data-ch-kept-power ${tipAttrs("战力(⚔️)：保留牌组的基础战力总和，不计能力加成；单张持旗时仅使用那张牌的战力。")}>⚔️ ${kept.reduce((n, c) => n + c.power, 0)} 基础战力</span></div>
+      <div class="ch-deck-list" data-ch-scroll="deck">${groups(view.deck).sort((a, b) => a[0].set.localeCompare(b[0].set) || b[0].power - a[0].power).map(group => {
         const c = group[0];
         return `<div class="ch-deck-row" style="--set-color:${view.set_info[c.set].color}" ${tipAttrs(`${cardText(c)} · ${group.length} 张`, "deck")}><span>${c.icon}</span><strong>${esc(c.name_zh)}</strong><small>${c.power} × ${group.length}</small></div>`;
       }).join("")}</div><div class="ch-theme-row">${view.sets.map(s => `<span class="ch-theme" ${tipAttrs(`${view.set_info[s].name}(${view.set_info[s].icon})：本局启用的卡牌系列`)}>${view.set_info[s].icon} ${view.set_info[s].name}</span>`).join("")}</div></section>`;
@@ -95,7 +95,7 @@
     const optional = choice.optional || choice.min === 0;
     return `<section class="ch-section"><div class="ch-section-head"><h3>${choice.source.icon} ${esc(choice.source.name_zh)}</h3><span class="ch-badge">${choice.min === choice.max ? choice.max : `${choice.min}–${choice.max}`} cards</span></div>
       <p class="ch-caption">${titles[choice.kind]}${choice.kind === "order" ? " · 先选的在最上面" : ""}</p>
-      <div class="ch-market">${choice.cards.map(c => cardHTML(c, true)).join("")}</div>
+      <div class="ch-market" data-ch-scroll="${esc(`choice:${choice.source.id}:${choice.kind}:${choice.cards.map(c => c.id).join(",")}`)}">${choice.cards.map(c => cardHTML(c, true)).join("")}</div>
       <div class="ch-actions">${button("Confirm", "resolve", "resolve", !valid || pending, 'class="ch-primary"')}${optional ? button("Skip", "skip", "resolve", pending) : ""}</div></section>`;
   }
 
@@ -105,11 +105,11 @@
       <div class="ch-actions">${Object.entries(view.level_options).map(([level, count]) => button(`${level} · Pick ${count}`, "level", "level", !legal("choose_level"), `class="ch-primary" data-level="${level}"`)).join("")}</div></section>`;
     const trim = view.stage === "trim";
     const cards = trim ? [...view.deck].sort((a, b) => a.set.localeCompare(b.set) || b.power - a.power || a.kind.localeCompare(b.kind)) : view.offer;
-    return `<section class="ch-section"><div class="ch-section-head"><h3>${trim ? "✂️ 调整牌组" : "🃏 招募队员"}</h3><span class="ch-badge">${trim ? `${selected.length} selected to remove` : `${view.level} · Pick ${view.picks_left}`}</span></div>
-      <div class="ch-market">${cards.map(c => cardHTML(c, true)).join("")}</div><div class="ch-actions">${trim
+    return `<section class="ch-section"><div class="ch-section-head"><h3>${trim ? "✂️ 调整牌组" : "🃏 招募队员"}</h3><span class="ch-badge" ${trim ? "data-ch-trim-count" : ""}>${trim ? `${selected.length} selected to remove` : `${view.level} · Pick ${view.picks_left}`}</span></div>
+      <div class="ch-market" data-ch-scroll="${esc(`${view.stage}:${cards.map(c => c.id).join(",")}`)}">${cards.map(c => cardHTML(c, true)).join("")}</div><div class="ch-actions">${trim
         ? button(selected.length ? `Remove ${selected.length} & Ready` : "Ready", "ready", "ready", !legal("ready"), 'class="ch-primary"')
         : button("Pick", "pick", "pick", selected.length !== 1 || !legal("pick"), 'class="ch-primary"') + button(view.redrawn ? "Redraw used" : "Redraw", "redraw", "redraw", !legal("redraw"))}</div>
-      ${trim ? `<p class="ch-caption">${cards.length === selected.length ? "Empty deck · You will lose this match." : "Select cards to remove, or keep your deck and press Ready."}</p>` : ""}</section>`;
+      ${trim ? `<p class="ch-caption" data-ch-trim-caption>${cards.length === selected.length ? "Empty deck · You will lose this match." : "Select cards to remove, or keep your deck and press Ready."}</p>` : ""}</section>`;
   }
 
   function benchHTML(lane) {
@@ -137,7 +137,7 @@
           <div class="ch-field">${field ? cardHTML(field) : '<div class="ch-empty">⚔️<br>Waiting for a card</div>'}${stack.length ? `<span class="ch-stack" ${tipAttrs(stack.map(c => `${c.icon} ${c.name_zh}`).join(" · "), "flag")}>🃏 +${stack.length} ${match.holder === pid ? "underneath" : "attacking"}</span>` : ""}</div>
           ${benchHTML(lane)}<div class="ch-lane-footer"><span ${tipAttrs("牌库(🃏)：下一张及牌序保密", "deck")}>🃏 ${lane.draw_count}</span><span ${tipAttrs(`疲劳区(💤)：${lane.exhaust.length ? lane.exhaust.map(c => c.name_zh).join("、") : "暂无卡牌"}。下轮收回。`, "deck")}>💤 ${lane.exhaust.length}</span></div></div>`;
       }).join("")}</div>
-      <details class="ch-logs" data-log="${match.id}" ${openLogs.has(String(match.id)) ? "open" : ""}><summary>Match log · ${match.log.length}</summary><div class="ch-log-lines">${[...match.log].reverse().map(line => `<div>${esc(line)}</div>`).join("") || "No cards played yet."}</div></details></section>`;
+      <details class="ch-logs" data-log="${match.id}" ${openLogs.has(String(match.id)) ? "open" : ""}><summary>Match log · ${match.log.length}</summary><div class="ch-log-lines" data-ch-scroll="log:${match.id}">${[...match.log].reverse().map(line => `<div>${esc(line)}</div>`).join("") || "No cards played yet."}</div></details></section>`;
   }
 
   function controlsHTML() {
@@ -157,11 +157,43 @@
       const waiting = match?.choosing || match?.turn;
       body = `<div class="ch-status">${view.stage === "spectating" ? "👀 Watching the final" : view.stage === "ready" ? "✓ Ready · Waiting for opponent" : view.stage === "finished" ? "✓ Match finished" : waiting ? `Waiting for ${esc(name(waiting))}` : "Waiting for players"}</div>`;
     }
-    return `<section class="ch-section"><div class="ch-section-head"><h3>${view.game_over ? "🏁 比赛结果" : view.phase === "round_end" ? "🏆 本轮结算" : "⚔️ 对战"}</h3></div>${body}</section>`;
+    return `<section class="ch-section${!view.game_over && view.phase !== "round_end" ? " ch-combat-controls" : ""}"><div class="ch-section-head"><h3>${view.game_over ? "🏁 比赛结果" : view.phase === "round_end" ? "🏆 本轮结算" : "⚔️ 对战"}</h3></div>${body}</section>`;
+  }
+
+  function updateSelection() {
+    // Keep the existing buttons, focus and scroll containers while choosing cards.
+    content.querySelectorAll("[data-ch-card]").forEach(card => {
+      const index = selected.indexOf(card.dataset.chCard);
+      card.classList.toggle("is-selected", index >= 0);
+      card.setAttribute("aria-pressed", String(index >= 0));
+      card.querySelector(".ch-selection-number").textContent = index >= 0 ? index + 1 : "";
+    });
+    const pick = content.querySelector('[data-ch-action="pick"]');
+    if (pick) pick.disabled = selected.length !== 1 || !legal("pick");
+    const confirm = content.querySelector('[data-ch-action="resolve"]');
+    if (confirm && view.choice) confirm.disabled = pending || selected.length < view.choice.min || selected.length > view.choice.max;
+    const ready = content.querySelector('[data-ch-action="ready"]');
+    if (ready) ready.textContent = selected.length ? `Remove ${selected.length} & Ready` : "Ready";
+    const count = content.querySelector("[data-ch-trim-count]");
+    if (count) count.textContent = `${selected.length} selected to remove`;
+    const caption = content.querySelector("[data-ch-trim-caption]");
+    if (caption) caption.textContent = view.deck.length === selected.length ? "Empty deck · You will lose this match." : "Select cards to remove, or keep your deck and press Ready.";
+    if (view.stage === "trim") {
+      const kept = view.deck.filter(c => !selected.includes(c.id));
+      const kinds = content.querySelector("[data-ch-kept-kinds]");
+      const power = content.querySelector("[data-ch-kept-power]");
+      if (kinds) kinds.textContent = `🪑 ${groups(kept).length} 种 / 6 格`;
+      if (power) power.textContent = `⚔️ ${kept.reduce((n, c) => n + c.power, 0)} 基础战力`;
+    }
   }
 
   function render() {
     if (!view) { content.replaceChildren(); return; }
+    const context = JSON.stringify([view.you, view.round, view.phase, view.stage, view.choice?.source.id, view.choice?.kind]);
+    const keepPosition = context === renderedContext;
+    const scrollPositions = new Map([...content.querySelectorAll("[data-ch-scroll]")].map(node => [node.dataset.chScroll, node.scrollTop]));
+    const focusedCard = content.contains(document.activeElement) ? document.activeElement.dataset.chCard : null;
+    const pagePosition = {left: window.scrollX, top: window.scrollY};
     const drafting = ["choose_level", "pick", "trim"].includes(view.stage) && !view.game_over && view.phase !== "round_end";
     const own = view.players.find(p => p.player_id === view.you);
     const subtitle = view.game_over ? "TOURNAMENT COMPLETE" : view.round === 8 ? "THE GRAND FINAL" : drafting ? "BUILD YOUR TEAM. CAPTURE THE FLAG." : "HOLD THE FLAG. TAKE THE TROPHY.";
@@ -169,6 +201,14 @@
       <div class="ch-track">${Array.from({length: 8}, (_, i) => `<span class="${i + 1 === view.round ? "is-current" : i + 1 < view.round ? "is-past" : ""}" ${tipAttrs(i < 7 ? `第 ${i + 1} 轮：${["A×2", "A×2", "A×2 / B×1", "A×2 / B×2", "B×2", "B×2 / C×1", "C×2"][i]}` : "决赛：不抽新牌，可以移除牌")}>${i < 7 ? i + 1 : "🏆"}</span>`).join("")}</div>
       ${scoreHTML()}<div class="ch-layout${drafting ? "" : " ch-match-layout"}">${drafting ? `<div>${draftHTML()}</div>${deckHTML()}` : `<div>${arenaHTML()}</div><div>${controlsHTML()}${own && view.deck.length && view.phase !== "round_end" && !view.game_over ? deckHTML() : ""}</div>`}</div>`;
     panel.classList.toggle("ch-explaining", explaining);
+    if (keepPosition) {
+      content.querySelectorAll("[data-ch-scroll]").forEach(node => {
+        if (scrollPositions.has(node.dataset.chScroll)) node.scrollTop = scrollPositions.get(node.dataset.chScroll);
+      });
+      if (focusedCard) [...content.querySelectorAll("[data-ch-card]")].find(node => node.dataset.chCard === focusedCard)?.focus({preventScroll: true});
+      window.scrollTo({...pagePosition, behavior: "instant"});
+    }
+    renderedContext = context;
   }
 
   function submit(action) {
@@ -234,7 +274,7 @@
         if (max === 1) selected = [id];
         else if (selected.length < max) selected.push(id);
       }
-      hideTip(); render(); return;
+      hideTip(); updateSelection(); return;
     }
     const control = event.target.closest("[data-ch-action]");
     if (control && !control.disabled) {
@@ -252,7 +292,7 @@
     }
     const target = event.target.closest("[data-ch-tip]");
     if (target) { showTip(target.dataset.chTip, target); return; }
-    if (!event.target.closest("button,input,select,label,summary,details")) { selected = []; hideTip(); render(); }
+    if (!event.target.closest("button,input,select,label,summary,details")) { selected = []; hideTip(); updateSelection(); }
   });
   content.addEventListener("toggle", event => {
     const id = event.target.dataset?.log;
@@ -305,7 +345,7 @@
     if (event.key === "Escape") {
       hideTip();
       if (explaining) { event.preventDefault(); setExplain(false); }
-      else if (!dialog.open && selected.length) { selected = []; render(); }
+      else if (!dialog.open && selected.length) { selected = []; updateSelection(); }
     } else if (explaining && ["Enter", " "].includes(event.key) && !exempt(event.target)) {
       event.preventDefault(); event.stopImmediatePropagation();
       const target = event.target.closest("[data-ch-explain]");
@@ -325,7 +365,7 @@
   document.addEventListener("scroll", hideTip, true);
 
   function clearState() {
-    view = null; selected = []; park = null; signature = null; pending = false; pendingRevision = null;
+    view = null; selected = []; park = null; signature = null; renderedContext = null; pending = false; pendingRevision = null;
     suppressed = null; openLogs.clear(); window.clearTimeout(pendingTimer);
     setExplain(false); hideTip(); content.replaceChildren();
     if (dialog.open) dialog.close();

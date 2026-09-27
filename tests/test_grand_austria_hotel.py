@@ -259,6 +259,57 @@ class GrandAustriaHotelTests(unittest.TestCase):
         a,b = state["players"]["0"],state["players"]["1"]
         self.assertEqual((a["emperor"],a["score"],a["money"]),(3,4,20))
         self.assertEqual((b["emperor"],b["score"],b["money"]),(0,-2,2))
+        reward, penalty = Game.get_public_view(state, "watcher")["emperor_review"]
+        self.assertEqual((reward["position_before"], reward["position_after_retreat"], reward["track_points"]), (6, 3, 4))
+        self.assertEqual(reward["changes"], {"money": 1})  # The 20-krone cap applies.
+        self.assertEqual(penalty["changes"], {"score": -5})  # Track points are separate.
+        self.assertEqual((reward["outcome"], penalty["outcome"]), ("reward", "penalty"))
+
+    def test_emperor_report_waits_for_choices_and_survives_reconnect(self):
+        state = playing()
+        state.update(round=3, emperors=["A3", "B1", "C1"])
+        state["players"]["0"]["hand"] = ["1", "4", "13"]
+        state["players"]["1"]["emperor"] = 4
+        _end_round(state)
+        self.assertFalse(state["emperor_review"][0]["resolved"])
+        act(state, "0", "return_staff", staff="1")
+        state = Game.deserialize(json.loads(json.dumps(Game.serialize(state))))
+        public = Game.get_public_view(state, "watcher")
+        self.assertNotIn("before", public["emperor_review"][0])
+        self.assertNotIn("changes", public["emperor_review"][0])
+        self.assertEqual(public["players"][0]["hand"], [])
+        act(state, "0", "return_staff", staff="4")
+        penalty, neutral = Game.get_public_view(state, "watcher")["emperor_review"]
+        self.assertTrue(penalty["resolved"])
+        self.assertEqual(penalty["changes"], {"hand": -2})
+        self.assertEqual((neutral["outcome"], neutral["track_points"], neutral["changes"]), ("neutral", 3, {}))
+        act(state, "0", "next_round")
+        act(state, "1", "next_round")
+        self.assertEqual(state["emperor_review"], [])
+
+    def test_emperor_report_distinguishes_avoided_penalty(self):
+        for decision, changes, avoided in (("avoid_penalty", {"money": -1}, True),
+                                          ("accept_penalty", {"money": -3}, False)):
+            with self.subTest(decision=decision):
+                state = playing()
+                state.update(round=3, emperors=["A1", "B1", "C1"])
+                state["players"]["0"]["staff"] = ["26"]
+                _end_round(state)
+                act(state, "0", decision)
+                report = state["emperor_review"][0]
+                self.assertTrue(report["resolved"])
+                self.assertEqual((report["changes"], report["avoided"]), (changes, avoided))
+
+    def test_emperor_report_excludes_final_scoring_and_accepts_old_saves(self):
+        state = playing()
+        del state["emperor_review"]  # Existing saves predate public emperor reports.
+        self.assertEqual(Game.get_public_view(state, "0")["emperor_review"], [])
+        state.update(round=7, emperors=["A1", "B1", "C1"])
+        state["players"]["0"]["emperor"] = 13
+        _end_round(state)
+        self.assertEqual(state["emperor_review"][0]["changes"], {"score": 8})
+        self.assertEqual(state["emperor_review"][1]["changes"], {"score": -8})
+        self.assertGreater(state["players"]["0"]["score"], 9 + 8)
 
     def test_all_emperor_tiles_both_paths(self):
         for tile in EMPERORS:
@@ -277,6 +328,8 @@ class GrandAustriaHotelTests(unittest.TestCase):
                     finish_pending(state)
                     self.assertEqual(state["phase"],"round_end")
                     self.assertTrue(all(p["money"]>=0 for p in state["players"].values()))
+                    self.assertTrue(all(row["resolved"] for row in state["emperor_review"]))
+                    self.assertEqual(len(state["emperor_review"]), 2)
 
     def test_conference_manager_and_highest_two_different_floors(self):
         state = playing()

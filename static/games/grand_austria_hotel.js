@@ -26,10 +26,10 @@
     serve:"送餐：新获得的餐点可免费分配给客人，余下收入厨房。已有厨房餐点每付 1 克朗(💰)最多送三份，可以分给不同客人；Chief Waiter 让厨房送餐免费。已送出的餐点不可移回。订单完成后仍需点选客人和空房才能入住。",
     staff:"员工(🧑‍🍳)：手牌秘密，雇用后公开。每轮一次(🔁)、立即一次(⚡)、永久生效(∞)、终局计分(🏁)四类时机在卡牌标签中标明。五点行动只雇用一人，折扣超过费用不返还克朗(💰)。每轮能力雇用当轮即可使用。",
     objective:"目标(🎯)：在自己的回合达成条件后可认领；前三位依次获得 15／10／5 分(⭐)，每人每张至多一次。皇帝结算期间不能认领。",
-    emperor:"皇帝(👑)：第 3／5／7 轮，先按皇帝轨位置得分(⭐)，再退 3／5／7 格。退后至少 3 格获得本次奖励；1–2 格无事；0 格受罚。实物惩罚必须优先足额支付，无法执行才扣分。到 13 格后，多出的进度每格得 1 分。",
+    emperor:"声望／皇帝轨(👑)：第 3／5／7 轮，先按轨道格下方的分数(⭐)得分，再退 3／5／7 格。退格后位置 ≥3 获奖励(🎁)，1–2 中立(➖)，0 受罚(⚠️)。轨道上的编号棋子对应玩家。营业时底色预示按当前位置退格后的结果，轮末则显示结算后区域。实物惩罚必须优先足额支付，无法执行才扣分；Conference Manager 可付 1 克朗(💰)免罚。到 13 格后，多出的进度每格得 1 分。轮末回顾分别显示轨道得分和奖惩的实际增减。",
     pass:"Pass：只有本回合还未进行任何操作时可选。保留未用回合，等其余人完成或通过后弃一骰并重投。无骰即结束本轮；不要把 Pass 当作 End Turn。",
     end:"End Turn：完成本次骰子主行动且处理完所有奖励后结束回合。结束前可继续入住、送餐、使用员工和认领目标。",
-    next:"Next Round：本轮所有结算已完成。每个席位都须确认后才进入下一轮，掉线玩家也需重新连接并确认；机器人自动确认。第七轮确认后结束游戏。",
+    next:"Next Round：本轮所有结算已完成，点击即确认已读，不再二次确认。每个席位都须确认后才进入下一轮，掉线玩家也需重新连接并确认；机器人自动确认。第七轮确认后结束游戏。",
     confirm:"提交蒙版中的当前选项。费用、数量、房间颜色及奖励均由服务器验证。点击空白、Cancel 或 Esc 可取消选择。",
     cancel:"Cancel 取消当前选择，不会执行任何游戏行动。也可点蒙版周围的空白或按 Esc。",
     reward:"完成当前奖励选择后才能继续回合。多个奖励可自行选择处理顺序。Skip 放弃当前可选奖励；抽三选一的剩余员工须按自己选择的次序放回牌库底。",
@@ -201,19 +201,60 @@
       if (["prepare","occupy","remove_room"].includes(p.kind)) body='<p class="gah-small">Select a highlighted room, then confirm on the overlay.</p>';
       else if (p.kind === "guest") body='<p class="gah-small">Select a guest from the queue, then Recruit.</p>';
       else if (p.kind !== "extra_die") {
-        body=`<div class="gah-options" data-gah-scroll="options">${view.moves.filter(m=>m.type!=="skip").map(m=>m.staff ? staffCardHTML(m.staff,own(),m) : btn(esc(moveText(m)),"move","reward",false,`data-index="${moveIndex(m)}" class="${same(m,selected)?"gah-selected":""}"`)).join("")}</div>`;
+        body=`<div class="gah-options" data-gah-scroll="options">${view.moves.filter(m=>m.type!=="skip").map(m=>m.staff ? staffCardHTML(m.staff,own(),m) : btn(esc(moveText(m)),m.type==="store_food"?"direct":"move","reward",false,`data-index="${moveIndex(m)}" class="${same(m,selected)?"gah-selected":""}"`)).join("")}</div>`;
       }
       const skip=moves("skip")[0];
-      if (skip) body+=`<div class="gah-command-row">${btn("Skip","move","reward",false,`data-index="${moveIndex(skip)}"`)}</div>`;
+      if (skip) body+=`<div class="gah-command-row">${btn("Skip","direct","reward",false,`data-index="${moveIndex(skip)}"`)}</div>`;
+      const emperor=(view.emperor_review || []).find(r=>r.player_id===view.you&&!r.resolved);
+      if (emperor) body=emperorReportHTML(emperor)+body;
     } else if (isActor && view.phase === "setup_guest") body='<p class="gah-small">Select one guest from the queue. No cost.</p>';
     else if (isActor && view.phase === "turn") {
       body=`<div class="gah-command-row">${["serve","end_turn","pass"].map(type=>{
         const m=moves(type)[0];
-        return btn({serve:"Kitchen → Serve",end_turn:"End Turn",pass:"Pass"}[type],"move",{serve:"serve",end_turn:"end",pass:"pass"}[type],!m,`data-index="${m?moveIndex(m):-1}"`);
-      }).join("")}${moves("use_staff").map(m=>btn(`🔁 ${esc(view.catalog.staff[m.staff].name)}`,"move","staff",false,`data-index="${moveIndex(m)}"`)).join("")}</div>`;
+        return btn({serve:"Kitchen → Serve",end_turn:"End Turn",pass:"Pass"}[type],"direct",{serve:"serve",end_turn:"end",pass:"pass"}[type],!m,`data-index="${m?moveIndex(m):-1}"`);
+      }).join("")}${moves("use_staff").map(m=>btn(`🔁 ${esc(view.catalog.staff[m.staff].name)}`,"direct","staff",false,`data-index="${moveIndex(m)}"`)).join("")}</div>`;
       if (selectedGuest && !selected) body+='<p class="gah-small">Select a highlighted vacant room to check in.</p>';
     }
     return `<div class="gah-command" aria-live="polite"><div class="gah-command-title">${esc(title)}</div>${selectionHost(body,"command")}</div>`;
+  }
+
+  function emperorEventHTML(index) {
+    const round=[3,5,7][index], tile=view.catalog.emperors[view.emperors[index]];
+    const [reward,penalty]=tile.text.split(" / ");
+    return `<div class="gah-emperor-event"><strong>第 ${round} 轮 · 退 ${round} 格</strong><div class="gah-emperor-event-parts">${passive(`🎁 ${esc(reward)}`,`奖励(🎁)：第 ${round} 轮退格后位置至少为 3 时获得。${reward}。`,"gah-emperor-reward")}${passive(`⚠️ ${esc(penalty)}`,`惩罚(⚠️)：第 ${round} 轮退格后在 0 格时执行。${penalty}。`,"gah-emperor-penalty")}</div></div>`;
+  }
+
+  function emperorHTML() {
+    const rounds=[3,5,7], reviewing=["round_end","game_over"].includes(view.phase);
+    const scoredNow=rounds.includes(view.round)&&(reviewing||view.phase==="emperor");
+    const index=scoredNow ? rounds.indexOf(view.round) : rounds.findIndex(r=>r>=view.round);
+    const eventRound=rounds[index], retreat=scoredNow?0:eventRound;
+    const settling=view.phase==="emperor";
+    const tokens=players=>players.map(pl=>{
+      const seat=view.players.indexOf(pl);
+      return `<b class="gah-emperor-token gah-seat-${seat}">${seat+1}</b>`;
+    }).join("");
+    const points=view.catalog.emperor_points || [0,1,2,3,3,4,4,5,6,6,7,7,8,9];
+    const cells=points.map((vp,position)=>{
+      const players=view.players.filter(pl=>pl.emperor===position), after=Math.max(0,position-retreat);
+      const outcome=after===0?"penalty":after<3?"neutral":"reward";
+      const label={penalty:"⚠️ 惩罚",neutral:"➖ 中立",reward:"🎁 奖励"}[outcome];
+      const tip=`声望(👑) ${position} 格，结算得分(⭐) ${vp}。${settling?"":scoredNow?`结算后区域：${label}。`:`按当前位置，第 ${eventRound} 轮退格后为 ${after}，${label}。`}${players.length?`此处玩家：${players.map(pl=>pl.name).join("、")}。`:""}`;
+      return `<div class="gah-emperor-cell ${settling?"":`gah-zone-${outcome}`}" tabindex="0" title="${esc(tip)}" data-gah-tip="${esc(tip)}" data-gah-explain="tip" data-position="${position}" aria-label="${esc(tip)}"><strong>${position}</strong><small>⭐${vp}</small><span class="gah-emperor-tokens">${tokens(players)}</span></div>`;
+    }).join("");
+    return `<section class="gah-box gah-emperor-panel"><div class="gah-heading"><h3>${passive("👑 声望轨道",explanations.emperor)}</h3><span class="gah-small">${settling?`第 ${view.round} 轮结算中`:scoredNow?`第 ${view.round} 轮结算后`:`下次结算：第 ${eventRound} 轮`}</span></div><div class="gah-emperor-track">${cells}</div>
+      <div class="gah-emperor-legend">${view.players.map(pl=>passive(`${tokens([pl])}<span>${esc(pl.name)} · ${pl.emperor}</span>`,`${pl.name}：声望(👑) ${pl.emperor}，轨道结算分(⭐) ${points[pl.emperor]}。`,"gah-emperor-player")).join("")}${passive(settling?"退格后：0 ⚠️ · 1–2 ➖ · ≥3 🎁":scoredNow?"底色：结算后区域":"底色：按当前位置预测奖惩",explanations.emperor,"gah-small")}</div>
+      ${emperorEventHTML(index)}<details class="gah-emperor-future" id="grandAustriaEmperorEvents"><summary>All emperor events · 3 / 5 / 7</summary><div class="gah-emperor-event-list">${rounds.map((_,i)=>i===index?"":emperorEventHTML(i)).join("")}</div></details></section>`;
+  }
+
+  function emperorReportHTML(report) {
+    if(!report)return "";
+    const names={score:"⭐ 分数",money:"💰 克朗",emperor:"👑 声望",kitchen:"🍽️ 厨房餐点",served:"🍽️ 已送餐点",hand:"🃏 手牌",staff:"🧑‍🍳 员工",vacant:"🔑 空房",occupied:"🧳 入住房"};
+    const labels={reward:"🎁 获得奖励",neutral:"➖ 中立",penalty:report.avoided?"🛡️ 已免罚":"⚠️ 皇室惩罚"};
+    const tile=view.catalog.emperors[report.tile], rule=report.outcome==="neutral"?"本次不触发奖励或惩罚":tile.text.split(" / ")[report.outcome==="reward"?0:1];
+    const changes=Object.entries(report.changes || {}).map(([key,n])=>`${names[key]} ${n>0?"+":"−"}${Math.abs(n)}`).join(" · ");
+    const actual=report.resolved ? (changes || "资源未变化") : "等待完成选择";
+    return `<div class="gah-emperor-report gah-outcome-${report.avoided?"neutral":report.outcome}" data-emperor-player="${esc(report.player_id)}"><div>${passive(`👑 ${report.position_before} → ${report.position_after_retreat} · ⭐ +${report.track_points}`,`第 ${report.round} 轮：先获得 ${report.track_points} 分(⭐)，再退 ${report.round} 格，从声望(👑) ${report.position_before} 到 ${report.position_after_retreat}。`)}</div><strong>${labels[report.outcome]}</strong><div class="gah-small">${esc(rule)}</div>${report.outcome!=="neutral"?`<div class="gah-emperor-actual">${report.resolved?"实际结算：":""}${esc(actual)}</div>`:""}</div>`;
   }
 
   function reviewHTML() {
@@ -221,10 +262,10 @@
     const result=view.result;
     const rows=result?.ranking || view.review;
     const m=moves("next_round")[0];
-    const content=`<div class="gah-heading"><h3>${result ? `🏆 ${result.winners.map(pid=>esc(name(pid))).join(" · ")}` : `第 ${view.round} 轮结算`}</h3>${view.phase!=="game_over" ? btn(view.next_ready.includes(view.you)?"Ready ✓":"Next Round","move","next",!m,`data-index="${m?moveIndex(m):-1}" class="gah-primary"`) : ""}</div>
-      <div class="gah-review-grid">${rows.map(r=>`<div class="gah-review-player"><strong>${esc(name(r.player_id))}</strong><div>⭐ ${r.score} ${result?"":`(${r.delta>=0?"+":""}${r.delta})`} ${view.next_ready.includes(r.player_id)?"✓":""}</div>${r.breakdown?`<dl>${Object.entries(r.breakdown).map(([k,v])=>`<dt>${{during_game:"对局得分",staff:"🧑‍🍳 员工",rooms:"🧳 楼层",resources:"💰 餐点与克朗",waiting_guests:"🛎️ 未入住客人"}[k]}</dt><dd>${v}</dd>`).join("")}</dl>`:""}</div>`).join("")}</div>
+    const content=`<div class="gah-heading"><h3>${result ? `🏆 ${result.winners.map(pid=>esc(name(pid))).join(" · ")}` : `第 ${view.round} 轮结算`}</h3>${view.phase!=="game_over" ? btn(view.next_ready.includes(view.you)?"Ready ✓":"Next Round","direct","next",!m||pendingSend,`data-index="${m?moveIndex(m):-1}" class="gah-primary"`) : ""}</div>
+      <div class="gah-review-grid">${rows.map(r=>`<div class="gah-review-player"><strong>${esc(name(r.player_id))}</strong><div>⭐ ${r.score} ${result?"":`(${r.delta>=0?"+":""}${r.delta})`} ${view.next_ready.includes(r.player_id)?"✓":""}</div>${emperorReportHTML((view.emperor_review || []).find(e=>e.player_id===r.player_id))}${r.breakdown?`<dl>${Object.entries(r.breakdown).map(([k,v])=>`<dt>${{during_game:"对局得分",staff:"🧑‍🍳 员工",rooms:"🧳 楼层",resources:"💰 餐点与克朗",waiting_guests:"🛎️ 未入住客人"}[k]}</dt><dd>${v}</dd>`).join("")}</dl>`:""}</div>`).join("")}</div>
       ${view.phase!=="game_over"?`<p class="gah-small">Ready ${view.next_ready.length} / ${view.players.length}</p>`:""}`;
-    return `<section class="gah-review">${selectionHost(content,"review")}</section>`;
+    return `<section class="gah-review">${content}</section>`;
   }
 
   function render() {
@@ -238,6 +279,7 @@
     const html=`<div class="gah-brand"><div><div class="gah-kicker">Vienna · A table for every story</div><h2>奥地利大饭店</h2></div><div class="gah-round"><strong>ROUND ${view.round} / 7</strong><br>${esc(phases[view.phase])}</div></div>
       <div class="gah-players">${view.players.map(pl=>btn(`<span class="gah-player-name"><strong>${esc(pl.name)}</strong><span>${pl.player_id===view.you?"You ":""}${pl.is_bot?"🤖":""}${pl.player_id===actor?" ⏳":""}</span></span>${statsHTML(pl)}`,"inspect","inspect",false,`class="gah-player ${pl.player_id===actor?"gah-active":""} ${p.player_id===pl.player_id?"gah-selected":""}" data-player="${esc(pl.player_id)}"`)).join("")}</div>
       ${reviewHTML()}
+      ${emperorHTML()}
       <div class="gah-shared"><section class="gah-box"><div class="gah-heading"><h3>🎲 行动骰</h3>${passive("数量 = 基础强度",explanations.dice,"gah-small")}</div>${selectionHost(`<div class="gah-dice">${view.dice.map((count,i)=>{
         const available=view.moves.some(m=>["dice","bonus_die"].includes(m.type)&&m.face===i+1);
         return btn(`<span class="gah-die-face">${diceFaces[i]}</span><span class="gah-die-icons">${["🥐🍰","🍷☕","🛏️","💰👑","🧑‍🍳","✨"][i]}</span><span class="gah-die-count">× ${count}</span>`,"die","dice",!available,`class="gah-die ${selectedFace===i+1?"gah-selected":""}" data-face="${i+1}" aria-label="Die ${i+1}, ${count} available"`);
@@ -250,8 +292,8 @@
       <details class="gah-staff" id="grandAustriaStaff"><summary>🧑‍🍳 In play · ${p.staff.length}${selectedOwn&&moves("use_staff").length?` · 🔁 ${moves("use_staff").length} available`:""}</summary>${staffHTML(p,false)}</details></section></div>
       <div class="gah-public">${view.objectives.map(oid=>{
         const m=moves("claim").find(x=>x.objective===oid), claimers=view.claims[oid];
-        return `<section class="gah-box">${selectionHost(`<div class="gah-goal"><div class="gah-goal-text">${passive(`🎯 ${esc(view.catalog.objectives[oid].text)}`,explanations.objective)}<div class="gah-small">${[15,10,5].map((score,i)=>`${claimers[i]?esc(name(claimers[i])):"—"} ${score}⭐`).join(" · ")}</div></div>${btn(claimers.includes(view.you)?"Claimed ✓":"Claim","move","objective",!m,`data-index="${m?moveIndex(m):-1}"`)}</div>`,`objective-${oid}`)}</section>`;
-      }).join("")}</div><div class="gah-emperors">${view.emperors.map((eid,i)=>passive(`👑 R${[3,5,7][i]} · ${esc(view.catalog.emperors[eid].text)}`,explanations.emperor,[3,5,7][i]<view.round?"gah-past":"")).join("")}</div>
+        return `<section class="gah-box"><div class="gah-goal"><div class="gah-goal-text">${passive(`🎯 ${esc(view.catalog.objectives[oid].text)}`,explanations.objective)}<div class="gah-small">${[15,10,5].map((score,i)=>`${claimers[i]?esc(name(claimers[i])):"—"} ${score}⭐`).join(" · ")}</div></div>${btn(claimers.includes(view.you)?"Claimed ✓":"Claim","direct","objective",!m||pendingSend,`data-index="${m?moveIndex(m):-1}"`)}</div></section>`;
+      }).join("")}</div>
       <details class="gah-log" id="grandAustriaLog"><summary>Activity log · ${view.log.length}</summary><ol>${view.log.slice().reverse().map(line=>`<li>${esc(line)}</li>`).join("")}</ol></details>`;
     root.innerHTML=html;
     root.classList.toggle("gah-explaining",explaining);
@@ -282,9 +324,9 @@
     tipTimer=setTimeout(hideTip,3000);
   }
   function hideTip(){tip.hidden=true;clearTimeout(tipTimer);}
-  function submit() {
-    if(!selected||pendingSend||!view.moves.some(m=>same(m,selected)))return;
-    const action=selected;pendingSend=true;resetSelection();render();sendAction(action);
+  function submit(action=selected) {
+    if(!action||pendingSend||!view.moves.some(m=>same(m,action)))return;
+    pendingSend=true;resetSelection();render();sendAction(action);
     clearTimeout(pendingTimer);pendingTimer=setTimeout(()=>{pendingSend=false;render();},7000);
   }
   root.addEventListener("click",event=>{
@@ -293,6 +335,11 @@
     if(button.disabled||explaining||pendingSend)return;
     const action=button.dataset.gahAction;
     if(action==="confirm"){submit();return;}
+    if(action==="direct"){
+      const move=view.moves[Number(button.dataset.index)];
+      if(move)submit(move);
+      return;
+    }
     if(action==="cancel"){resetSelection();render();return;}
     if(action==="inspect"){inspected=button.dataset.player;resetSelection();render();return;}
     selectionContext=button.closest("[data-gah-selection-host]")?.dataset.gahSelectionHost || "command";
@@ -353,7 +400,7 @@
       ["目标与皇帝",explanations.objective+" "+explanations.emperor+" 克朗(💰)上限 20，溢出丢弃。皇帝轨各位置的结算分依次为 0／1／2／3／3／4／4／5／6／6／7／7／8／9。"],
       ["通过与轮末",explanations.pass+" "+explanations.end+" "+explanations.next],
       ["终局", "第七轮皇帝事件后：已入住房按楼层得 1／2／3／4 分，计算终局员工，剩余每克朗及每份厨房餐点各得 1 分，每位未入住客人扣 5 分。最高分获胜，同分比剩余克朗与厨房餐点总数，再同分共同获胜。"],
-      ["版本与操作", "采用 2021 修订基础版和标准酒店，随机员工起手。无扩展、非对称酒店或员工轮抽。机器人只看公开信息和自己的员工手牌。点选卡牌、房间或骰子后，在原区域的半透明蒙版内确认行动；空白／Cancel／Esc 取消。Help(?) 打开规则；Explain(🔍) 后点选控件查看解释，禁用控件也可查看。"],
+      ["版本与操作", "采用 2021 修订基础版和标准酒店，随机员工起手。无扩展、非对称酒店或员工轮抽。机器人只看公开信息和自己的员工手牌。点选卡牌、房间或骰子后，在原区域的半透明蒙版内确认行动；空白／Cancel／Esc 取消。Next Round、Pass、End Turn、送餐、Skip、收入厨房、Claim 和工具栏的每轮员工按钮均点击直接执行。Help(?) 打开规则；Explain(🔍) 后点选控件查看解释，禁用控件也可查看。"],
     ];
     openDialog("Help · 奥地利大饭店",sections.map(([title,text])=>`<h3>${esc(title)}</h3><p>${esc(text)}</p>`).join(""),true);
   });

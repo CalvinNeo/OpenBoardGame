@@ -10,7 +10,7 @@ const out = path.resolve('build/grand-austria-hotel');
 fs.mkdirSync(out, {recursive:true});
 const fixtures = JSON.parse(execFileSync(process.env.PYTHON || 'python', ['-c', `
 import copy,json
-from tests.test_grand_austria_hotel import playing
+from tests.test_grand_austria_hotel import playing,act
 from game.grand_austria_hotel import GrandAustriaHotelGame as G,_end_round,_queue,_settle
 from game.grand_austria_hotel_data import effect,hire
 s=playing()
@@ -41,6 +41,39 @@ _queue(staff_hire,'0',[hire(3)])
 _settle(staff_hire)
 staff_hire['revision']=104
 views['staff_hire']=G.get_public_view(staff_hire,'0')
+end=copy.deepcopy(s)
+end['turn']['die']=True
+end['revision']=105
+views['end']=G.get_public_view(end,'0')
+staff_available=copy.deepcopy(s)
+staff_available['players']['0']['used_staff']=[]
+staff_available['revision']=106
+views['staff_available']=G.get_public_view(staff_available,'0')
+stored=copy.deepcopy(s)
+_queue(stored,'0',[effect('food',items={'wine':2,'coffee':1})])
+_settle(stored)
+stored['revision']=107
+views['stored']=G.get_public_view(stored,'0')
+final_review=copy.deepcopy(s)
+final_review.update(round=7,emperors=['A1','B1','C1'],revision=108)
+_end_round(final_review)
+views['final_review']=G.get_public_view(final_review,'0')
+emperor=playing(4)
+emperor.update(round=3,emperors=['A1','B1','C1'],revision=109)
+emperor['players']['0'].update(emperor=6,money=19)
+emperor['players']['1'].update(emperor=3,money=2)
+emperor['players']['2']['emperor']=4
+emperor['players']['3']['staff']=['26']
+_end_round(emperor)
+act(emperor,'3','avoid_penalty')
+views['emperor_review']=G.get_public_view(emperor,'0')
+four=playing(4)
+four['revision']=111
+views['four']=G.get_public_view(four,'0')
+penalty=playing()
+penalty.update(round=3,emperors=['A3','B1','C1'],revision=112)
+_end_round(penalty)
+views['penalty']=G.get_public_view(penalty,'0')
 print(json.dumps(views))
 `], {encoding:'utf8',env:{...process.env,PYTHONIOENCODING:'utf-8'}}));
 
@@ -84,6 +117,20 @@ print(json.dumps(views))
   }
   async function fixture(p,key) {
     await p.evaluate(v=>{window.showGrandAustriaHeaderActions(true);window.renderGrandAustriaGameState({view:v,room_id:'preview'});},fixtures[key]);
+  }
+  async function direct(p,key,type) {
+    await fixture(p,key);
+    await p.evaluate(()=>{window.gahBrowserSent=[];});
+    const index=fixtures[key].moves.findIndex(m=>m.type===type);
+    assert(index>=0,`${key} fixture has ${type}`);
+    const button=p.locator(`#grandAustriaRoot [data-gah-action="direct"][data-index="${index}"]`);
+    await button.click();
+    assert.deepEqual(await p.evaluate(()=>gahBrowserSent),[fixtures[key].moves[index]],`${type}: one click sends the exact legal move`);
+    assert.equal(await p.locator('.gah-selection-overlay').count(),0,`${type}: no second confirmation`);
+    assert.equal(await p.locator('#grandAustriaDialog').evaluate(e=>e.open),false);
+    // Rapid repeat clicks must not resubmit while waiting for the server.
+    await button.evaluateAll(elements=>elements.forEach(e=>{e.click();e.click();}));
+    assert.equal(await p.evaluate(()=>gahBrowserSent.length),1,`${type}: duplicate submission guarded`);
   }
   try {
     const a=await page(), b=await page();
@@ -199,6 +246,44 @@ print(json.dumps(views))
     await bounds(a,'round review');
     assert.equal(await a.locator('.gah-review-player').count(),2);
     await a.screenshot({path:path.join(out,'review.png'),fullPage:true});
+    for(const width of [1280,393]) {
+      await a.setViewportSize({width,height:980});
+      for(const [key,type] of [['turn','pass'],['end','end_turn'],['turn','serve'],['staff_available','use_staff'],['stored','store_food'],['staff_hire','skip'],['turn','claim'],['review','next_round'],['final_review','next_round']]) {
+        await direct(a,key,type);
+      }
+    }
+    await fixture(a,'review');
+    await a.evaluate(()=>{window.gahBrowserSent=[];});
+    await a.locator('#grandAustriaExplainBtn').click();
+    await a.getByRole('button',{name:'Next Round',exact:true}).click();
+    assert(await a.locator('#grandAustriaDialog').evaluate(e=>e.open));
+    assert.deepEqual(await a.evaluate(()=>gahBrowserSent),[],'Explain intercepts direct controls');
+    await a.keyboard.press('Escape');
+    for(const width of [1280,768,393,320]) {
+      await a.setViewportSize({width,height:980});
+      await fixture(a,'four');
+      assert.equal(await a.locator('.gah-emperor-cell').count(),14);
+      assert.equal(await a.locator('.gah-emperor-cell[data-position="0"] .gah-emperor-token').count(),4);
+      await bounds(a,`four emperor markers at ${width}px`);
+      await a.locator('#grandAustriaEmperorEvents summary').click();
+      assert.equal(await a.locator('.gah-emperor-event').count(),3);
+      await bounds(a,`all emperor events at ${width}px`);
+      await a.locator('#grandAustriaEmperorEvents summary').click();
+      await fixture(a,'emperor_review');
+      await bounds(a,`emperor review at ${width}px`);
+      const reward=await a.locator('[data-emperor-player="0"]').textContent();
+      const penalty=await a.locator('[data-emperor-player="1"]').textContent();
+      assert(reward.includes('6 → 3')&&reward.includes('⭐ +4')&&reward.includes('克朗 +1'),'actual capped reward and track score');
+      assert(penalty.includes('3 → 0')&&penalty.includes('皇室惩罚')&&penalty.includes('分数 −5'),'actual fallback penalty');
+      assert((await a.locator('[data-emperor-player="2"]').textContent()).includes('中立'));
+      assert((await a.locator('[data-emperor-player="3"]').textContent()).includes('已免罚'));
+      await a.screenshot({path:path.join(out,`emperor-review-${width}.png`),fullPage:true});
+    }
+    await fixture(a,'penalty');
+    assert((await a.locator('.gah-command').textContent()).includes('退回两张手牌'),'pending penalty shows its cause');
+    assert((await a.locator('.gah-command').textContent()).includes('等待完成选择'));
+    await bounds(a,'pending emperor choice');
+    await a.setViewportSize({width:1280,height:980});
     await fixture(a,'spectator');
     assert.equal(await a.locator('#grandAustriaRoot [data-gah-action="die"]:not(:disabled)').count(),0);
     const touchContext=await browser.newContext({viewport:{width:393,height:852},isMobile:true,hasTouch:true});
@@ -210,6 +295,9 @@ print(json.dumps(views))
     // The lobby parent may be hidden; use the existing panel inside a visible test container.
     await mobile.evaluate(()=>{document.body.append(document.getElementById('grandAustriaPanel'));document.body.append(document.getElementById('grandAustriaHeaderActions'));});
     await fixture(mobile,'turn');
+    const track=mobile.locator('.gah-emperor-cell[data-position="6"]');
+    await track.tap();
+    assert((await mobile.locator('#grandAustriaTip').textContent()).includes('声望(👑) 6 格'));
     const token=mobile.locator('.gah-resource [data-gah-tip]').first();
     await token.tap();
     assert(await mobile.locator('#grandAustriaTip').isVisible());
@@ -234,7 +322,7 @@ print(json.dumps(views))
     assert.equal(await mobile.locator('#grandAustriaExplainBtn').getAttribute('aria-pressed'),'false');
     await bounds(mobile,'touch layout');
     assert.deepEqual(errors,[]);
-    console.log('Grand Austria Hotel: real room setup, translucent contextual overlays, shared Help/Explain icons and mobile dock, disabled/card Explain, four staff timings, cancellation, exact hire submission, 4 viewport widths and touch tips passed.');
+    console.log('Grand Austria Hotel: room setup, contextual overlays, Help/Explain and mobile dock, four staff timings, direct controls and duplicate guard, emperor track and actual reward/penalty reports, 4 viewport widths and touch tips passed.');
   } finally {
     for(const p of pages){await p.evaluate(()=>{if(typeof socket!=='undefined')socket.emit('room:leave',{});}).catch(()=>{});}
     await browser.close();
