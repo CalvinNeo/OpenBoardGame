@@ -503,6 +503,7 @@
                     <option value="felix">Felix: The Cat in the Sack</option>
                     <option value="tacta">TACTA</option>
                     <option value="hive">Hive · 昆虫棋</option>
+                    <option value="dune_imperium">Dune: Imperium · 沙丘：帝国</option>
                     <option value="subtext">Subtext</option>
                     <option value="tucano">Tucano</option>
                     <option value="witchs_brew">Witch's Brew</option>
@@ -801,6 +802,7 @@
                     <div class="game-config-title">Cryptid · 诡影寻踪</div>
                     <label class="cryptid-config-label" for="cryptidMode"><span>Mode</span><select id="cryptidMode"><option value="normal">Normal</option><option value="advanced">Advanced</option></select></label>
                   </div>
+                  <div class="game-config-card hidden" id="challengersConfigBox" aria-hidden="true"></div>
                   <div class="game-config-card hidden" id="boomerangAustraliaConfigBox" aria-hidden="true">
                     <div class="game-config-title">Boomerang: Australia</div>
                     <label class="boomerang-australia-config-label" for="boomerangAustraliaDirectionVariant"><input id="boomerangAustraliaDirectionVariant" type="checkbox" /><span>Alternate draft direction</span></label>
@@ -1294,7 +1296,9 @@
               <button id="eternalDecksHelpBtn" type="button">Help</button>
               <button id="eternalDecksExplainBtn" type="button" aria-pressed="false">Explain</button>
             </div>
+            <div class="panel-header-actions" id="challengersHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="grandAustriaHeaderActions" style="display: none;"></div>
+            <div class="panel-header-actions" id="duneImperiumHeaderActions" style="display: none;"></div>
             <div class="panel-header-actions" id="cryptidHeaderActions" style="display: none;">
               <button id="cryptidHelpBtn" type="button">Help</button>
               <button id="cryptidExplainBtn" type="button" aria-pressed="false">Explain</button>
@@ -1396,10 +1400,12 @@
             <div id="takeTimePanel" class="hidden"></div>
             <div id="eternalDecksPanel" class="hidden"></div>
             <div id="grandAustriaPanel" class="hidden"></div>
+            <div id="duneImperiumPanel" class="hidden"></div>
             <div id="ponziSchemePanel" class="hidden"></div>
             <div id="redDoorsPanel" class="hidden"></div>
             <div id="cryptidPanel" class="hidden"></div>
             <div id="terraNovaPanel" class="hidden"></div>
+            <div id="challengersPanel" class="hidden"></div>
             <div id="boomerangAustraliaPanel" class="hidden"></div>
             <div id="lasVegasPanel" class="hidden"></div>
             <div id="forSalePanel" class="hidden"></div>
@@ -1586,16 +1592,18 @@
   </div>
 
   <script src="/static/vendor/socket.io.min.js" defer></script>
-  <script src="/static/game_assets.js?v=21" defer></script>
-  <script src="/static/games/shared.js?v=app_v27" defer></script>
+  <script src="/static/game_assets.js?v=24" defer></script>
+  <script src="/static/games/shared.js?v=app_v29" defer></script>
+  <template id="challengersDialog"></template>
   <template id="hiveDialog"></template>
   <template id="takeTimeDialog"></template>
   <template id="eternalDecksDialog"></template>
   <template id="grandAustriaDialog"></template>
+  <template id="duneImperiumDialog"></template>
   <template id="ponziSchemeDialog"></template>
   <template id="redDoorsDialog"></template>
   <template id="cryptidDialog"></template>
-  <script src="/static/app.js?v=app_v33" defer></script>
-  <script src="/static/room.js?v=app_v55" defer></script>
+  <script src="/static/app.js?v=app_v35" defer></script>
+  <script src="/static/room.js?v=app_v56" defer></script>
 </body>
 </html>

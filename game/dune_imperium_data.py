@@ -102,6 +102,16 @@ STARTER = ("convincing_argument", "dagger", "diplomacy", "dune", "reconnaissance
 RESERVE = ("arrakis_liaison", "foldspace", "spice_must_flow")
 MARKET = tuple(k for k in CARDS if k not in STARTER + RESERVE)
 
+# Two-player House Hagal cards: space, recruited troops, swords, copies.
+# The three Arrakeen 1P cards are excluded from the 31-card physical deck.
+HAGAL_CARDS = (
+    ("conspire", 2, 4, 2), ("wealth", 0, 3, 1), ("heighliner", 3, 6, 1),
+    ("foldspace", 0, 1, 2), ("selective_breeding", 0, 2, 2), ("secrets", 0, 1, 1),
+    ("hardy_warriors", 2, 5, 1), ("stillsuits", 0, 4, 2), ("rally_troops", 4, 3, 2),
+    ("hall_of_oratory", 1, 0, 2), ("carthag", 1, 0, 3), ("harvest", 0, 2, 5),
+    ("arrakeen", 1, 1, 3), ("reshuffle", 0, 0, 1),
+)
+
 
 def space(name: str, icon: str, cost: Dict = None, effects: List[Dict] = None,
           combat: bool = False, **extra) -> Dict:

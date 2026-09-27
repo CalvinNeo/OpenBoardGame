@@ -7,6 +7,7 @@ from unittest.mock import patch
 import app
 from fastapi import HTTPException
 from game.las_vegas import LasVegasGame as Game
+from game import las_vegas_royale as royale
 from tests.test_room_session import DummySio
 
 
@@ -198,6 +199,71 @@ class LasVegasIntegrationTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(app._has_live_private_save(room.room_id, "las_vegas"))
         with self.assertRaises(HTTPException):
             await app.download_room_save(room.room_id)
+
+    async def test_royale_start_and_three_rounds_through_room_actions(self):
+        room = await self.room(count=3, config={"edition": "royale"})
+        self.assertEqual(self.updates()[-1]["payload"]["view"]["edition"], "royale")
+        self.assertEqual(len(room.game_state["tiles"]), 3)
+        for number in range(1, 4):
+            await self.reach_round_end(room)
+            self.assertEqual(room.game_state["round"], number)
+            for index in range(2):
+                await app.on_game_action(f"s{index}", {"action": {"type": "next_round", "round": number}})
+                self.assertEqual(room.game_state["phase"], "round_end")
+            await app.on_game_action("s2", {"action": {"type": "next_round", "round": number}})
+        self.assertEqual(room.status, "game_over")
+        self.assertTrue(room.game_state["winner"])
+
+    async def test_royale_secret_bot_choice_broadcast_reconnect_and_cold_restore(self):
+        room = await self.room(config={"edition": "royale"})
+        actor, guesser = room.players
+        state = room.game_state
+        state["tiles"] = [royale._new_tile("lucky_punch", 1)]
+        state["queue"] = [{"kind": "advance", "actor": actor.player_id}]
+        royale._activate(state, 1, actor.player_id, [], [])
+        actor.is_bot = True
+        app.sio.emits.clear()
+        tasks = []
+        with patch.object(app.asyncio, "create_task", side_effect=tasks.append):
+            await app._maybe_run_bots(room)
+        self.assertEqual(len(tasks), 1)
+        await tasks[0]
+        self.assertEqual(state["pending"]["kind"], "lucky_guess")
+        self.assertEqual(state["current_turn"], guesser.player_id)
+        events = [e for item in self.updates() for e in item["payload"]["events"] if e["type"] == "bot:action"]
+        self.assertTrue(events)
+        for event in events:
+            self.assertEqual(event["payload"]["action"], {"type": "royale_choose"})
+        await app.disconnect(guesser.socket_id)
+        app.sio.emits.clear()
+        await app.on_room_reconnect("back", {"room_id": room.room_id, "player_id": guesser.player_id,
+                                           "reconnect_token": guesser.reconnect_token})
+        choice = next(item["payload"]["view"]["decision"] for item in self.updates() if item["to"] == "back")
+        self.assertEqual(len(choice["options"]), 3)
+        self.assertNotIn("secret", choice)
+        self.assertNotIn("context", choice)
+        actor.is_bot = False
+        room.auto_save = True
+        app._save_room_state(room)
+        app.ROOMS.clear()
+        app.sio.emits.clear()
+        await app.on_room_load("restore", {"source_room_id": room.room_id})
+        result = next(item["payload"] for item in app.sio.emits if item["event"] == "room:load_result")
+        restored = app.ROOMS[result["room_id"]]
+        self.assertEqual(restored.game_state, state)
+        pending = restored.game_state["pending"]
+        _, error = Game.apply_action(restored.game_state, guesser.player_id, {
+            "type": "royale_choose", "round": state["round"], "turn": state["turn"],
+            "decision": pending["id"], "option": "1",
+        })
+        self.assertIsNone(error)
+        self.assertIsNone(restored.game_state["pending"])
+
+    async def test_royale_secret_action_filter_preserves_other_games(self):
+        choice = {"type": "royale_choose", "decision": 4, "option": "3", "round": 1, "turn": 2}
+        self.assertEqual(app._public_bot_action("las_vegas", choice), {"type": "royale_choose"})
+        roll = {"type": "roll", "round": 1, "turn": 2}
+        self.assertEqual(app._public_bot_action("las_vegas", roll), roll)
 
 
 if __name__ == "__main__":

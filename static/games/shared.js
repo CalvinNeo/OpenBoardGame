@@ -71,6 +71,8 @@ function emitRoomStart() {
   } else if (currentGameType === "gold_rush") {
     const mode = goldRushModeSelect ? goldRushModeSelect.value || "hand" : "hand";
     payload.config = { mode };
+  } else if (currentGameType === "challengers" && typeof getChallengersConfig === "function") {
+    payload.config = getChallengersConfig();
   } else if (currentGameType === "take_time") {
     payload.config = getTakeTimeConfig();
   } else if (currentGameType === "eternal_decks") {

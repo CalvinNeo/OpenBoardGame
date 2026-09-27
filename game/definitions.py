@@ -6,6 +6,8 @@ from game.cheaty_mages import (
     CONFIG_SCHEMA as CHEATY_MAGES_CONFIG_SCHEMA,
 )
 from game.acquire import AcquireGame
+from game.challengers import ChallengersGame, ACTION_SCHEMA as CHALLENGERS_ACTION_SCHEMA, CONFIG_SCHEMA as CHALLENGERS_CONFIG_SCHEMA
+from game.dune_imperium import DuneImperiumGame, ACTION_SCHEMA as DUNE_IMPERIUM_ACTION_SCHEMA, CONFIG_SCHEMA as DUNE_IMPERIUM_CONFIG_SCHEMA
 from game.abraca_what import AbracaWhatGame
 from game.ai_dixit import AiDixitGame
 from game.age_of_war import AgeOfWarGame
@@ -111,6 +113,26 @@ from game.turing_machine import TuringMachineGame
 from game.tucano import TucanoGame
 from game.witchs_brew import WitchsBrewGame
 from game.wriggle_roulette import WriggleRouletteGame
+
+register_game(
+    GameDefinition(
+        game_id=ChallengersGame.game_id, name="Challengers!", name_zh="冠军挑战者",
+        min_players=1, max_players=8, turn_mode="simultaneous",
+        action_schema=CHALLENGERS_ACTION_SCHEMA, config_schema=CHALLENGERS_CONFIG_SCHEMA,
+        module=ChallengersGame, serialize=ChallengersGame.serialize,
+        deserialize=ChallengersGame.deserialize,
+    )
+)
+
+register_game(
+    GameDefinition(
+        game_id=DuneImperiumGame.game_id, name="Dune: Imperium", name_zh="沙丘：帝国",
+        min_players=2, max_players=4, turn_mode="turn",
+        action_schema=DUNE_IMPERIUM_ACTION_SCHEMA, config_schema=DUNE_IMPERIUM_CONFIG_SCHEMA,
+        module=DuneImperiumGame, serialize=DuneImperiumGame.serialize,
+        deserialize=DuneImperiumGame.deserialize,
+    )
+)
 
 register_game(
     GameDefinition(

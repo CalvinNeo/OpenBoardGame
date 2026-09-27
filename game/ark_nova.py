@@ -4628,11 +4628,20 @@ def _public_choice(pending: Optional[Mapping[str, Any]], viewer_id: str) -> Opti
             "choice_id": pending.get("choice_id"), "type": pending.get("type", pending.get("kind")),
             "player_id": pending.get("player_id"), "prompt": "Waiting for another player",
         }
-    return {
+    choice = {
         key: copy.deepcopy(value)
         for key, value in pending.items()
         if not str(key).startswith("_") and key not in {"effect_ref", "metadata"}
     }
+    for option in choice.get("options", []):
+        card_id = option.get("card_id")
+        if card_id is None or option.get("label") not in (None, "", str(card_id)):
+            continue
+        card = _full_card(str(card_id))
+        if card:
+            name = card.get("name", {})
+            option["label"] = name.get("zh") or name.get("en") or str(card_id)
+    return choice
 
 
 def _card_with_context(card_id: str, player: Optional[Mapping[str, Any]] = None) -> Dict[str, Any]:

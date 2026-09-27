@@ -73,7 +73,7 @@ def _reward(state: Dict, pid: str, amount: int, reason: str) -> None:
     if amount < 30000:
         chips = amount // CHIP_VALUE
         state["players"][pid]["chips"] += chips
-        _log(state, f"{_name(state, pid)} · {reason}：获得 {chips} 枚筹码 (🪙)。")
+        _log(state, f"{_name(state, pid)} · {reason}：获得 {chips} 枚筹码 (💰)。")
     else:
         state["players"][pid]["banknotes"].append(amount)
         _log(state, f"{_name(state, pid)} · {reason}：获得奖金 (💵 ${amount:,})。")
@@ -188,7 +188,7 @@ def _start_round(state: Dict) -> None:
     if any(tile["id"] == "handicap" for tile in state["tiles"]):
         for casino in state["casinos"]:
             casino["gray_dice"] = 1 if casino["face"] <= 3 else 2
-    _log(state, f"Royale 第 {state['round']} / 3 轮：1–3 号赌场启用新小游戏，每人获得 2 枚筹码 (🪙)。")
+    _log(state, f"Royale 第 {state['round']} / 3 轮：1–3 号赌场启用新小游戏，每人获得 2 枚筹码 (💰)。")
 
 
 def init_game(config: Dict, players: List[Dict]) -> Dict:
@@ -234,7 +234,7 @@ def _activate(state: Dict, face: int, actor: str, rolled: List[str], placed: Lis
     if kind == "lucky_punch":
         _ask(state, "lucky_hide", actor, face,
              [_option(str(n), f"藏 {n} 枚 · 猜错可得 {reward}", number=n)
-              for n, reward in ((1, "2🪙"), (2, "$30K"), (3, "$40K"))])
+              for n, reward in ((1, "2💰"), (2, "$30K"), (3, "$40K"))])
     elif kind == "jackpot":
         dice = [random.randint(1, 6), random.randint(1, 6)]
         tile["last_roll"] = dice
@@ -248,6 +248,7 @@ def _activate(state: Dict, face: int, actor: str, rolled: List[str], placed: Lis
         _log(state, f"Jackpot 🎲 {dice[0]} + {dice[1]}：{tile['last_result']}。")
     elif kind == "fifty_fifty":
         tile["track"] = 0
+        tile["last_result"] = ""
         tile["last_roll"] = [random.randint(1, 6), random.randint(1, 6)]
         _fifty_choice(state, actor, tile)
     elif kind == "high_five":
@@ -281,7 +282,7 @@ def _activate(state: Dict, face: int, actor: str, rolled: List[str], placed: Lis
                    for target in range(1, 7) if target != state["closed_casino"]]
         _ask(state, kind, actor, face, options)
     elif kind == "handicap":
-        labels = {"chip": "1🪙", "cash": "$30K", "move": "调整自己的骰子"}
+        labels = {"chip": "1💰", "cash": "$30K", "move": "调整自己的骰子"}
         options = [_option(f"{i}:{reward}", f"移除赌场 {i} 的 1⬜ → {labels[reward]}", source=i, reward=reward)
                    for i in range(1, 7) if state["casinos"][i - 1]["gray_dice"] and i != state["closed_casino"]
                    for reward, count in tile["spaces"].items() if count]
@@ -310,14 +311,14 @@ def _activate(state: Dict, face: int, actor: str, rolled: List[str], placed: Lis
         _ask(state, kind, actor, face, options)
     elif kind == "my_choice":
         tile["last_roll"] = [random.randint(1, 6), random.randint(1, 6)]
-        labels = {1: "+1🪙", 2: "+2🪙", 3: "+$30K", 4: "激活另一块小游戏板", 5: "调整自己的骰子", 6: "占据 $60K 奖励格"}
+        labels = {1: "+1💰", 2: "+2💰", 3: "+$30K", 4: "激活另一块小游戏板", 5: "调整自己的骰子", 6: "占据 $60K 奖励格"}
         _ask(state, kind, actor, face, [_option(str(n), f"🎲 {n} · {labels[n]}", number=n)
                                       for n in sorted(set(tile["last_roll"]))], rolled=rolled, placed=placed)
 
 
 def _fifty_choice(state: Dict, actor: str, tile: Dict) -> None:
     reward = (0, 10000, 30000, 40000, 60000)[tile["track"]]
-    options = [_option("stop", f"Collect · 领取 {'1🪙' if reward == 10000 else '$' + format(reward, ',')}")]
+    options = [_option("stop", f"Collect · 领取 {'1💰' if reward == 10000 else '$' + format(reward, ',')}")]
     if tile["track"] < 4:
         options += [_option("higher", "Higher · 下一次总点数更大"), _option("lower", "Lower · 下一次总点数更小")]
     _ask(state, "fifty_fifty", actor, tile["face"], options, total=sum(tile["last_roll"]), reward=reward)
@@ -341,6 +342,7 @@ def _resolve_choice(state: Dict, pending: Dict, option: Dict) -> None:
         if key == "stop":
             _reward(state, actor, context["reward"], "Fifty Fifty")
             tile["last_result"] = f"领取 ${context['reward']:,} 等值奖励"
+            tile["track"] = 0
         else:
             previous = context["total"]
             tile["last_roll"] = [random.randint(1, 6), random.randint(1, 6)]
@@ -352,6 +354,7 @@ def _resolve_choice(state: Dict, pending: Dict, option: Dict) -> None:
                 _fifty_choice(state, actor, tile)
             else:
                 tile["last_result"] = "猜错，奖励归零"
+                tile["track"] = 0
     elif kind == "no_entry" and key != "skip":
         state["closed_casino"] = option["face"]
         tile["track"] = (tile["track"] + 1) % 6
@@ -627,7 +630,7 @@ def apply_action(state: Dict, pid: str, action: Dict) -> Tuple[List[Dict], Optio
     elif kind == "royale_pass":
         if "place" in get_legal_actions(state, pid):
             state["players"][pid]["chips"] -= 1
-            _log(state, f"{_name(state, pid)} 支付 1🪙，跳过本次投放。")
+            _log(state, f"{_name(state, pid)} 支付 1💰，跳过本次投放。")
         else:
             _log(state, f"{_name(state, pid)} 只掷出被封锁的点数，本回合无法投放。")
         _advance(state, pid)
@@ -660,6 +663,7 @@ def get_public_view(state: Dict, viewer: str) -> Dict:
         "legal_actions": get_legal_actions(state, viewer), "roll": {"own": [d["face"] for d in roll], "neutral": []},
         "roll_pieces": roll, "casinos": [_casino(state, face) for face in range(1, 7)],
         "tiles": state["tiles"], "decision": decision, "closed_casino": state["closed_casino"],
+        "payouts_complete": bool(state["round_results"]),
         "tile_pieces": [d for d in state["pieces"] if d["location"] not in ("supply",) and not d["location"].startswith("casino:")],
         "round_summary": state["round_summary"], "final_results": state["final_results"], "log": state["log"],
         "your_banknotes": own["banknotes"] if own else [], "your_total": _total(state, viewer) if own else None,

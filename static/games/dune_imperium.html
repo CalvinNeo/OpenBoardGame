@@ -1,0 +1,14 @@
+<template data-game-target="duneImperiumHeaderActions" data-game-mode="contents">
+  <button type="button" id="duneImperiumHelp">Help</button>
+  <button type="button" id="duneImperiumExplain" aria-pressed="false">Explain</button>
+</template>
+<template data-game-target="duneImperiumPanel" data-game-mode="contents">
+  <div id="duneImperiumRoot" class="di-root"></div>
+  <div id="duneImperiumTip" class="di-tip" role="status" hidden></div>
+</template>
+<template data-game-target="duneImperiumDialog" data-game-mode="replace">
+  <dialog id="duneImperiumDialog" class="di-dialog" aria-labelledby="duneImperiumDialogTitle">
+    <div class="di-dialog-head"><h2 id="duneImperiumDialogTitle"></h2><button type="button" id="duneImperiumClose">Close</button></div>
+    <div id="duneImperiumDialogBody"></div>
+  </dialog>
+</template>

@@ -1,0 +1,30 @@
+<template data-game-target="challengersHeaderActions" data-game-mode="contents">
+  <button id="challengersHelpBtn" type="button">Help</button>
+  <button id="challengersExplainBtn" type="button" aria-pressed="false">Explain</button>
+</template>
+<template data-game-target="challengersPanel" data-game-mode="contents">
+  <div id="challengersContent" class="ch-shell"></div>
+  <div id="challengersTip" class="ch-tip" role="tooltip" hidden></div>
+</template>
+<template data-game-target="challengersConfigBox" data-game-mode="contents">
+  <div class="game-config-title">Challengers! · 冠军挑战者</div>
+  <div class="ch-config">
+    <label for="challengersExclude">Excluded set <select id="challengersExclude">
+      <option value="random">Random</option><option value="castle">🏰 城堡</option>
+      <option value="studio">🎬 电影片场</option><option value="funfair">🎡 游乐园</option>
+      <option value="haunted">👻 鬼屋</option><option value="space">🪐 外太空</option>
+      <option value="shipwreck">⚓ 沉船</option>
+    </select></label>
+    <label for="challengersRobotLevel">Robot level <select id="challengersRobotLevel">
+      <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+      <option value="4">4</option><option value="5">5</option>
+    </select></label>
+    <label for="challengersSoloSpecial"><input id="challengersSoloSpecial" type="checkbox"> Solo special challenge</label>
+  </div>
+</template>
+<template data-game-target="challengersDialog" data-game-mode="replace">
+  <dialog id="challengersDialog" class="ch-dialog" aria-labelledby="challengersDialogTitle">
+    <div class="ch-dialog-heading"><h2 id="challengersDialogTitle">Challengers!</h2><button id="challengersDialogClose" type="button">Close</button></div>
+    <div id="challengersDialogBody"></div>
+  </dialog>
+</template>

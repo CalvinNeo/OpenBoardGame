@@ -1,0 +1,140 @@
+#challengersPanel { --ch-ink: #203c32; --ch-green: #246449; --ch-line: #cddbd0; --ch-paper: #fffef8; color: var(--ch-ink); width: 100%; min-width: 0; }
+#challengersPanel *, .ch-dialog *, .ch-config * { box-sizing: border-box; }
+.ch-shell { display: grid; gap: 14px; min-width: 0; }
+.ch-shell h2, .ch-shell h3, .ch-shell p { margin: 0; }
+.ch-shell button, .ch-dialog button { font: inherit; white-space: normal; overflow-wrap: anywhere; }
+.ch-shell button { border-radius: 10px; border: 1px solid var(--ch-line); background: #fffef8; color: var(--ch-ink); padding: 9px 12px; cursor: pointer; min-width: 0; }
+.ch-shell button:hover:not(:disabled) { background: #eef4e7; border-color: #739a7e; }
+.ch-shell button:disabled { opacity: .48; cursor: default; }
+.ch-shell button:focus-visible, .ch-shell [tabindex]:focus-visible { outline: 3px solid #d39128; outline-offset: 3px; }
+.ch-hero { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 22px; border-radius: 17px; background: #204a38; color: #fffef1; position: relative; isolation: isolate; overflow: hidden; }
+.ch-hero::after { content: ""; position: absolute; inset: -80px -10px auto auto; width: 240px; height: 240px; border: 28px solid #ffffff09; border-radius: 50%; z-index: -1; }
+.ch-eyebrow { font-size: 11px; font-weight: 750; letter-spacing: .16em; text-transform: uppercase; color: #d4e4b3; }
+.ch-hero h2 { font-size: clamp(22px, 3vw, 32px); line-height: 1.25; margin: 4px 0; letter-spacing: .02em; }
+.ch-hero-sub { color: #d1e1d5; font-size: 13px; }
+.ch-round { text-align: right; flex-shrink: 0; }
+.ch-round strong { display: block; color: #ffe79b; font-size: 34px; line-height: 1.1; }
+.ch-round span { font-size: 12px; }
+.ch-track { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 5px; }
+.ch-track span { min-width: 0; text-align: center; background: #edf0e7; border-radius: 7px; padding: 5px 2px; font-size: 11px; font-weight: 700; color: #61746b; }
+.ch-track span.is-current { background: #eac870; color: #3a3c21; }
+.ch-track span.is-past { background: #d6e6d9; color: #325a43; }
+.ch-scoreboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 155px), 1fr)); gap: 8px; }
+.ch-player { border: 1px solid var(--ch-line); border-radius: 12px; padding: 9px 11px; min-width: 0; background: #f9faf5; }
+.ch-player.is-you { background: #edf4df; border-color: #98b778; }
+.ch-player.is-winner { background: #fff4ce; border-color: #cfac4a; }
+.ch-player-name { display: flex; align-items: start; justify-content: space-between; gap: 7px; }
+.ch-player-name strong { overflow-wrap: anywhere; font-size: 13px; min-width: 0; }
+.ch-player-name small { color: #547044; font-size: 10px; flex-shrink: 0; }
+.ch-player-stats { display: flex; gap: 9px; flex-wrap: wrap; font-size: 13px; margin-top: 7px; }
+.ch-player-stage { display: block; color: #617467; font-size: 11px; margin-top: 5px; }
+.ch-layout { display: grid; grid-template-columns: minmax(0, 2.15fr) minmax(260px, 1fr); gap: 14px; align-items: start; }
+.ch-layout > *, .ch-section, .ch-arena { min-width: 0; }
+.ch-section { background: var(--ch-paper); border: 1px solid var(--ch-line); border-radius: 15px; padding: 15px; }
+.ch-section-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 13px; }
+.ch-section-head h3 { font-size: 16px; }
+.ch-badge { font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 12px; color: #476250; background: #e9eee4; }
+.ch-market { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; align-items: stretch; }
+.ch-shell .ch-card { position: relative; display: flex; flex-direction: column; gap: 6px; text-align: left; border: 1px solid #d4d9d2; border-top: 5px solid var(--set-color); border-radius: 11px; padding: 10px; background: #fffefa; min-width: 0; color: #283d35; }
+.ch-card-top { display: flex; align-items: center; justify-content: space-between; gap: 5px; }
+.ch-power { display: inline-flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 850; color: var(--set-color); line-height: 1; }
+.ch-card-level { color: #718077; font-size: 11px; font-weight: 750; }
+.ch-card-portrait { background: color-mix(in srgb, var(--set-color) 10%, #fffefa); min-height: 64px; border-radius: 7px; display: grid; place-items: center; font-size: 37px; }
+.ch-card strong { font-size: 14px; line-height: 1.3; overflow-wrap: anywhere; }
+.ch-card small { font-size: 10px; line-height: 1.2; color: #728077; overflow-wrap: anywhere; }
+.ch-card-effect { line-height: 1.5; font-size: 12px; overflow-wrap: anywhere; flex: 1; }
+.ch-card.is-selected { box-shadow: 0 0 0 3px #d6a02c; background: #fff8df; }
+.ch-selection-number { position: absolute; top: 7px; right: 7px; min-width: 23px; height: 23px; display: grid; place-items: center; border-radius: 50%; color: white; background: #926a1d; font-size: 12px; font-weight: 800; }
+.ch-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 13px; }
+.ch-actions > button { flex: 1 1 100px; }
+.ch-shell .ch-primary { background: #296249; border-color: #296249; color: #fffef5; font-weight: 750; }
+.ch-shell .ch-primary:hover:not(:disabled) { background: #194c34; border-color: #194c34; }
+.ch-shell .ch-danger { background: #fff0e5; border-color: #dbba97; }
+.ch-caption { font-size: 12px; line-height: 1.5; color: #637467; margin-top: 9px !important; overflow-wrap: anywhere; }
+.ch-deck-list { display: grid; gap: 6px; max-height: 390px; overflow-y: auto; padding: 3px; scrollbar-width: thin; }
+.ch-deck-row { display: flex; gap: 9px; align-items: center; padding: 7px 8px; border: 1px solid #e0e5d9; border-left: 4px solid var(--set-color); border-radius: 7px; background: #fffefb; min-width: 0; }
+.ch-deck-row > strong { flex: 1; font-size: 13px; overflow-wrap: anywhere; }
+.ch-deck-row > small { color: #607062; font-size: 12px; flex-shrink: 0; }
+.ch-deck-stats { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 9px; font-size: 12px; color: #49684d; }
+.ch-theme-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
+.ch-theme { font-size: 11px; border: 1px solid #d7e0d0; padding: 4px 6px; border-radius: 7px; background: #f4f7ee; }
+.ch-tabs { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 10px; }
+.ch-tabs button { flex: 1 1 110px; font-size: 12px; padding: 7px; }
+.ch-tabs button[aria-pressed="true"] { background: #dcebdc; border-color: #91ad90; }
+.ch-arena { padding: 14px; background: #eaf0e3; border: 1px solid #cbd7c1; border-radius: 15px; }
+.ch-versus { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; position: relative; }
+.ch-lane { min-width: 0; border-radius: 10px; background: #f6f9f0; padding: 11px; border: 1px solid #d2dfca; }
+.ch-lane.is-holder { box-shadow: inset 0 0 0 2px #dbb448; background: #fffdf0; }
+.ch-lane-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 5px; font-size: 13px; margin-bottom: 9px; }
+.ch-lane-head strong { overflow-wrap: anywhere; }
+.ch-field { min-height: 170px; display: grid; align-content: start; gap: 6px; }
+.ch-field .ch-card { padding: 9px; }
+.ch-field .ch-card-portrait { min-height: 49px; font-size: 31px; }
+.ch-field .ch-card-effect { font-size: 11px; }
+.ch-field .ch-card small { display: none; }
+.ch-stack { font-size: 11px; text-align: center; color: #576c59; overflow-wrap: anywhere; }
+.ch-empty { display: grid; place-items: center; min-height: 160px; border: 1px dashed #b9c9ae; border-radius: 10px; color: #6e8366; text-align: center; padding: 10px; font-size: 13px; }
+.ch-bench-heading { font-size: 12px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px; margin: 12px 0 6px; }
+.ch-bench { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+.ch-bench-seat { min-height: 48px; min-width: 0; background: #eef1e6; border: 1px dashed #c3cfb8; border-radius: 7px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 4px 2px; color: #89987e; font-size: 12px; }
+.ch-bench-seat.is-occupied { border-style: solid; border-bottom: 3px solid var(--set-color); background: #fffef8; color: #374d3b; }
+.ch-bench-seat strong { font-size: 11px; overflow-wrap: anywhere; line-height: 1.35; }
+.ch-lane-footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 5px; margin-top: 9px; font-size: 12px; color: #536d51; }
+.ch-result { border-radius: 11px; padding: 12px 14px; background: #fff2cc; color: #665128; border: 1px solid #e2c47a; display: grid; gap: 5px; margin-bottom: 12px; overflow-wrap: anywhere; }
+.ch-result strong { font-size: 17px; }
+.ch-review { display: grid; gap: 7px; }
+.ch-review-row { padding: 9px; background: #f3f5eb; border-radius: 8px; line-height: 1.5; font-size: 13px; overflow-wrap: anywhere; }
+.ch-status { font-size: 14px; line-height: 1.6; padding: 17px 12px; border-radius: 10px; background: #edf2e7; text-align: center; overflow-wrap: anywhere; }
+.ch-logs { margin-top: 12px; font-size: 12px; }
+.ch-logs summary { cursor: pointer; font-weight: 650; }
+.ch-log-lines { max-height: 160px; overflow-y: auto; display: grid; gap: 4px; margin-top: 8px; color: #60715f; overflow-wrap: anywhere; }
+.ch-explaining [data-ch-explain] { outline: 2px dashed #3782b4 !important; outline-offset: 2px; cursor: help !important; }
+.ch-tip { position: fixed; z-index: 10050; max-width: min(290px, calc(100vw - 24px)); padding: 9px 12px; border-radius: 10px; color: #fff; background: #233d33; box-shadow: 0 7px 24px #0003; pointer-events: none; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.ch-dialog { color: #243d32; background: #fffef7; border: 1px solid #c5d2bd; border-radius: 17px; padding: 20px; width: min(860px, calc(100vw - 28px)); max-height: calc(100dvh - 40px); overflow: auto; }
+.ch-dialog::backdrop { background: #15312288; }
+.ch-dialog-heading { display: flex; justify-content: space-between; align-items: start; gap: 15px; margin-bottom: 14px; }
+.ch-dialog-heading h2 { margin: 0; font-size: 22px; }
+.ch-dialog-heading button { padding: 6px 12px; flex-shrink: 0; }
+.ch-dialog h3 { font-size: 16px; margin: 17px 0 7px; }
+.ch-dialog p, .ch-dialog li { font-size: 14px; line-height: 1.7; overflow-wrap: anywhere; }
+.ch-dialog table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ch-dialog td, .ch-dialog th { text-align: left; padding: 7px; border-bottom: 1px solid #dbe2d2; }
+.ch-catalog { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 8px; margin-top: 12px; }
+.ch-catalog article { padding: 10px; border: 1px solid #dce2d4; border-radius: 10px; border-left: 4px solid var(--set-color); }
+.ch-catalog p { font-size: 12px; margin: 4px 0 0; }
+.ch-config { display: flex; gap: 10px 20px; flex-wrap: wrap; }
+.ch-config label { display: flex; align-items: center; gap: 7px; font-size: 13px; }
+.ch-config select { width: auto; min-width: 50px; max-width: 100%; }
+@media (max-width: 1000px) {
+  .ch-layout { grid-template-columns: minmax(0, 1.75fr) minmax(225px, 1fr); gap: 10px; }
+  .ch-market { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 720px) {
+  .ch-layout { grid-template-columns: minmax(0, 1fr); }
+  .ch-hero { padding: 16px; gap: 10px; }
+  .ch-round strong { font-size: 29px; }
+  .ch-hero-sub { font-size: 11px; }
+  .ch-scoreboard { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .ch-player { padding: 8px 9px; }
+  .ch-player-stats { gap: 7px; margin-top: 5px; font-size: 12px; }
+  .ch-section { padding: 12px; }
+  .ch-market { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .ch-card-portrait { min-height: 52px; font-size: 31px; }
+  .ch-deck-list { max-height: 240px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ch-deck-row { gap: 5px; padding: 6px; }
+  .ch-deck-row > strong { font-size: 12px; }
+  .ch-arena { padding: 9px; }
+  .ch-versus { gap: 7px; }
+  .ch-lane { padding: 7px; }
+  .ch-bench { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ch-field .ch-card { padding: 7px; }
+  .ch-field .ch-card strong { font-size: 13px; }
+  .ch-field .ch-card-portrait { font-size: 27px; }
+  .ch-track span { font-size: 10px; }
+  .ch-dialog { padding: 15px; }
+  .ch-dialog-heading h2 { font-size: 19px; }
+  .ch-actions { margin-top: 10px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ch-card { transition: box-shadow .14s, background-color .14s; }
+}

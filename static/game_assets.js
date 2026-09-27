@@ -1,5 +1,19 @@
 // Game assets are fetched only when entering that game. Keep URLs versioned when assets change.
 const GAME_ASSETS = {
+  "challengers": {
+    "scripts": ["/static/games/challengers.js?v=1"],
+    "styles": ["/static/games/challengers.css?v=1"],
+    "markup": "/static/games/challengers.html?v=1",
+    "panel": "challengersPanel",
+    "header": "showChallengersHeaderActions"
+  },
+  "dune_imperium": {
+    "scripts": ["/static/games/dune_imperium.js?v=1"],
+    "styles": ["/static/games/dune_imperium.css?v=1"],
+    "markup": "/static/games/dune_imperium.html?v=1",
+    "panel": "duneImperiumPanel",
+    "header": "showDuneImperiumHeaderActions"
+  },
   "hive": {
     "scripts": ["/static/games/hive.js?v=3"],
     "styles": ["/static/games/hive.css?v=3"],
@@ -20,12 +34,12 @@ const GAME_ASSETS = {
   },
   "las_vegas": {
     "scripts": [
-      "/static/games/las_vegas.js?v=3"
+      "/static/games/las_vegas.js?v=4"
     ],
     "styles": [
-      "/static/las_vegas.css?v=2"
+      "/static/las_vegas.css?v=3"
     ],
-    "markup": "/static/games/las_vegas.html?v=1",
+    "markup": "/static/games/las_vegas.html?v=2",
     "panel": "lasVegasPanel",
     "header": "showLasVegasHeaderActions"
   },

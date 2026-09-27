@@ -157,6 +157,7 @@ async def download_room_save(source_room_id: str):
     if not _is_safe_room_id(source_room_id):
         raise HTTPException(status_code=400, detail="invalid source_room_id")
     if (_has_live_boomerang_save(source_room_id)
+            or _has_live_private_save(source_room_id, "challengers")
             or _has_live_private_save(source_room_id, "love_letter")
             or _has_live_private_save(source_room_id, "for_sale")
             or _has_live_private_save(source_room_id, "cheaty_mages")
@@ -444,7 +445,7 @@ async def _emit_room_state(room: Room) -> None:
             for name in ("download_memories", "build_memories_html")
         )),
         "game_config": {key: value for key, value in room.game_config.items()
-                        if room.game_type not in ("take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova", "grand_austria_hotel") or key != "seed"},
+                        if room.game_type not in ("take_time", "eternal_decks", "ponzi_scheme", "cryptid", "red_doors", "spirit_island", "boomerang_australia", "terra_nova", "grand_austria_hotel", "dune_imperium", "challengers") or key != "seed"},
         "auto_save": room.auto_save,
         "source_room_id": room.source_room_id,
         "players": [
@@ -565,7 +566,7 @@ def _public_bot_action(game_type: str, action: Dict) -> Dict:
         return {"type": "sell"}
     if game_type == "red_doors":
         return {"type": "resolve"}
-    if game_type in ("subtext", "bomb_busters", "kronologic", "nine_upper", "wriggle_roulette", "take_time", "eternal_decks", "ponzi_scheme", "ark_nova", "cryptid", "spirit_island", "boomerang_australia", "grand_austria_hotel"):
+    if game_type in ("subtext", "bomb_busters", "kronologic", "nine_upper", "wriggle_roulette", "take_time", "eternal_decks", "ponzi_scheme", "ark_nova", "cryptid", "spirit_island", "boomerang_australia", "grand_austria_hotel", "dune_imperium", "challengers"):
         return {"type": action.get("type")}
     if game_type == "catan_starfarers" and action.get("type") in {
         "discard_resources",
@@ -1797,6 +1798,7 @@ async def on_room_load(sid, data):
         return
     if isinstance(source_room_id, str) and (
         _has_live_boomerang_save(source_room_id)
+        or _has_live_private_save(source_room_id, "challengers")
         or _has_live_private_save(source_room_id, "love_letter")
         or _has_live_private_save(source_room_id, "for_sale")
         or _has_live_private_save(source_room_id, "cheaty_mages")
@@ -1817,7 +1819,7 @@ async def on_room_load(sid, data):
     if not isinstance(game_state, dict):
         await sio.emit("room:load_result", {"ok": False, "message": "invalid game_state"}, to=sid)
         return
-    if game_type == "boomerang_australia":
+    if game_type in ("boomerang_australia", "challengers"):
         try:
             game_state = _get_game_definition(game_type).deserialize(game_state)
         except (ValueError, TypeError, KeyError):

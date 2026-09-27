@@ -1508,14 +1508,14 @@ function setConnectionInfo(message) {
   connectionInfo.textContent = message;
 }
 
-function setRoomFeedback(message = "", isError = false) {
+function setRoomFeedback(message = "", isError = false, { revealControls = true } = {}) {
   roomFeedbackMessage = message;
   roomFeedbackIsError = isError;
   setConnectionInfo(message || (roomSessionReady && roomId ? `Connected to room ${roomId}.` : ""));
   updateRoomActionButtons();
   if (isError) {
     log(message);
-    setRoomControlsCollapsed(false);
+    if (revealControls) setRoomControlsCollapsed(false);
   }
 }
 
@@ -2409,8 +2409,11 @@ socket.on("system:error", (data) => {
       );
     }
   }
-  setRoomFeedback(`Error: ${data.message}`, true);
-  if (currentGameType === "ark_nova" && typeof window.showArkNovaError === "function") {
+  const showGameError = !failedRequest && roomSessionReady &&
+    currentRoomState?.status === "in_game" && currentGameType === "ark_nova" &&
+    typeof window.showArkNovaError === "function";
+  setRoomFeedback(`Error: ${data.message}`, true, { revealControls: !showGameError });
+  if (showGameError) {
     window.showArkNovaError(data.message);
   }
 });

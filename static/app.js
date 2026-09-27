@@ -199,8 +199,16 @@ function renderGameState(data) {
     // room:state starts the load and replays the latest game:state once ready.
     return;
   }
+  if (gameType === "challengers") {
+    if (typeof renderChallengersGameState === "function") renderChallengersGameState(data);
+    return;
+  }
   if (gameType === "las_vegas") {
     if (typeof renderLasVegasGameState === "function") renderLasVegasGameState(data);
+    return;
+  }
+  if (gameType === "dune_imperium") {
+    if (typeof renderDuneImperiumGameState === "function") renderDuneImperiumGameState(data);
     return;
   }
   if (gameType === "hive") {

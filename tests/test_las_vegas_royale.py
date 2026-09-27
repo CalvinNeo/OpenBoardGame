@@ -166,6 +166,7 @@ class RoyaleTests(unittest.TestCase):
         self.assertEqual([o["id"] for o in self.state["pending"]["options"]], ["stop"])
         self.choose("stop")
         self.assertEqual(royale._cash(self.state, "p0"), 60000)
+        self.assertEqual(royale._tile(self.state, 1)["track"], 0)
 
     def test_high_five_biggy_claim_is_permanent_and_paid_at_end(self):
         tile = self.tile("high_five")
@@ -288,7 +289,7 @@ class RoyaleTests(unittest.TestCase):
         self.choose("1:0")
         self.finish()
         self.assertEqual(royale._cash(self.state, "p2"), 60000)
-        self.assertFalse(any("Double Down" in e["text"] and "Player 1" in e["text"] for e in self.state["log"]))
+        self.assertEqual(royale._cash(self.state, "p1"), 0)
 
     def test_nice_dice_accepts_just_placed_even_if_old_die_matches(self):
         self.tile("nice_dice")
@@ -375,7 +376,6 @@ class RoyaleTests(unittest.TestCase):
         self.choose("2")
         view = Game.get_public_view(self.state, "p0")
         self.assertEqual(view["decision"]["options"][0]["label"], "盒 A · 1 块标记")
-        self.assertNotIn("groups", json.dumps(view)) if False else None
         self.assertNotIn("groups", view["decision"])
         self.assertNotIn("tokens", view["decision"])
         self.choose("0")

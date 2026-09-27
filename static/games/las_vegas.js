@@ -39,34 +39,35 @@
     const royaleExplanations = {
         casino: "每个赌场固定两张钞票(💵)，每轮按两张合计由低到高分配给赌场 1–6。向 1–3 号赌场正常投骰后，执行对应小游戏。每位有效参与者最多拿一张钞票。",
         dice: "每人每轮 7 小骰 + 1 大骰(🎲×2)。大骰掷出一个点数，放置时是一枚实体骰，但赌场及 Double Down 排名时计为两枚。酒吧容量和奖励格仍按一枚计算。",
-        roll: "Roll Dice 掷出全部剩余骰子，选择一个点数全部投放。掷出后也可支付 1 枚筹码(🪙)跳过本回合，保留骰子到下回合重新掷。",
+        roll: "Roll Dice 掷出全部剩余骰子，选择一个点数全部投放。掷出后也可支付 1 枚筹码(💰)跳过本回合，保留骰子到下回合重新掷。",
         place: "投放全部同点数骰子，再执行该赌场的小游戏。大骰在排名中计两枚。预览仅计算投放后赌场奖金，之后的小游戏可能再次改变盘面。",
         face: "选择一个本次掷出的、未被封锁的点数，再点击 Place Dice。该点数的大骰与小骰必须一起投放。",
         money: "Royale 使用 90 张 $30K–$100K 钞票。每个赌场每轮两张，小游戏奖金另由银行发放。私有总额包含现金及每枚 $10K 的剩余筹码；筹码不是钞票。",
         neutral: "2 人 Royale 每轮自动掷出一套中立骰(⚪)，包含 7 小骰及 1 大骰。它们与灰骰(⬜)属于两个不同的虚拟玩家，分别参与平手和排名，所得钞票回银行。",
         gray: "小游戏中的灰骰(⬜)合并为一个虚拟玩家，参与排名、平手和 Power Play 多数判定。它与 2 人局的中立骰(⚪)分开计算，奖金回银行。",
-        chips: "筹码(🪙)：每轮增加 2 枚，未花掉的保留。掷骰后支付 1 枚可以跳过本回合。终局每枚值 $10K。小游戏的 $10K／$20K 奖励以 1／2 枚筹码发放。",
-        private: "你的总资产(🔒)包括私有钞票(💵)和剩余筹码(🪙)，每枚筹码按 $10K 计。其他人的现金面额和总额在终局前保密；筹码数量公开。",
+        chips: "筹码(💰)：每轮增加 2 枚，未花掉的保留。掷骰后支付 1 枚可以跳过本回合。终局每枚值 $10K。小游戏的 $10K／$20K 奖励以 1／2 枚筹码发放。",
+        private: "你的总资产(🔒)包括私有钞票(💵)和剩余筹码(💰)，每枚筹码按 $10K 计。其他人的现金面额和总额在终局前保密；筹码数量公开。",
         next: "所有人点击 Next Round 后开始下一轮。Royale 共 3 轮，第 3 轮也需全员确认后展示最终排名。",
         total: "3 轮后钞票总额加剩余筹码（每枚 $10K）最高者胜；平手时比较钞票张数加筹码枚数，再平手则并列。",
         round: "Royale 共 3 轮，每轮重新获得 7 小骰、1 大骰及 2 筹码，1–3 号赌场重抽小游戏板。首轮随机先手；以后由最高号赌场的大钞获奖者先手，无人获奖则向低号查找。",
         closed: "⛔ 赌场封锁期间不能添加或取回骰子，包括小游戏效果。若本次只掷出被封锁的点数，线上版本允许免费跳过本回合。",
-        tile_lucky_punch: "激活后秘密藏 1／2／3 枚标记，左手边下一位玩家猜数量。猜错时，你分别获得 2🪙／$30K／$40K；猜中则无奖励。双方选择结束前秘密不会公开。",
+        payout: "预览显示当前赌场排名对应的奖金(💵)，每位有效参与者最多一张。大骰计两枚；中立骰(⚪)与灰骰(⬜)分别参加平手和排名。此预览不含小游戏奖励；小游戏可能再次改变盘面。已发放表示钞票已进入玩家账户。",
+        tile_lucky_punch: "激活后秘密藏 1／2／3 枚标记，左手边下一位玩家猜数量。猜错时，你分别获得 2💰／$30K／$40K；猜中则无奖励。双方选择结束前秘密不会公开。",
         tile_jackpot: "激活后掷两枚黑骰：对子或合计 7 点即赢得当前奖池，奖池重置 $30K；否则奖池增加 $10K，最高 $80K。",
         tile_prime_time: "轮末发钱前，本赌场的大钞获奖者掷两枚黑骰，可选择放置 0、1 或 2 枚到对应赌场，之后作为自己的骰子参与结算。可以拆分对子，不触发小游戏。",
-        tile_fifty_fifty: "先掷两枚黑骰，选择下一次总点数更大或更小。每猜中一次提高奖励：1🪙 → $30K → $40K → $60K。可随时领取当前奖励；猜错或总点数相同则本次奖励归零。",
+        tile_fifty_fifty: "先掷两枚黑骰，选择下一次总点数更大或更小。每猜中一次提高奖励：1💰 → $30K → $40K → $60K。可随时领取当前奖励；猜错或总点数相同则本次奖励归零。",
         tile_high_five: "激活时，第一个在本赌场达到至少 5 枚计数的玩家取得标记（大骰算 2）。标记不会被夺走，轮末领取 $100K。",
         tile_bad_luck: "轮末骰子计数最少的所有玩家（包括 0 枚，大骰算 2）各支付 $50K。先结算奖金，再交罚金；资产不足则付清全部，筹码也按 $10K 支付。",
-        tile_pay_day: "激活时，每个拥有自己骰子的赌场提供 $10K。小游戏板上的骰子不算。1／2 个赌场奖励 1／2🪙，3–6 个赌场奖励 $30K–$60K。",
+        tile_pay_day: "激活时，每个拥有自己骰子的赌场提供 $10K。小游戏板上的骰子不算。1／2 个赌场奖励 1／2💰，3–6 个赌场奖励 $30K–$60K。",
         tile_power_play: "激活时若你在本赌场独占骰子数量第一，则获得标记。持有者可在自己的回合掷骰前选择 Power Play，直接将一枚剩余骰子转到任意点数投放，并触发目标小游戏。失去独占多数时交回标记。",
-        tile_no_entry: "激活后可封锁除本赌场以外的一个赌场，禁止添加或移除骰子。每次移动封锁标记，奖励轨道前进一格：2🪙、空、$30K、空、1🪙、空，然后循环。可保持原封锁，但不前进也不领奖。",
+        tile_no_entry: "激活后可封锁除本赌场以外的一个赌场，禁止添加或移除骰子。每次移动封锁标记，奖励轨道前进一格：2💰、空、$30K、空、1💰、空，然后循环。可保持原封锁，但不前进也不领奖。",
         tile_knockout: "激活时取回酒吧里自己的全部骰子；其他每位玩家若酒吧中不足 2 枚，需从剩余骰子中选 1 枚放入酒吧。大骰占一个位置。酒吧的骰子不能参与轮末排名。",
         tile_block_it: "从尚未使用的 1、1、2、2、3 枚灰骰组中选一组，全部投到任意未封锁赌场。灰骰作为一个独立虚拟玩家参与排名及平手。",
-        tile_handicap: "开轮在赌场 1–3 各放 1 灰骰、4–6 各放 2 灰骰。激活时可移除一枚未封锁赌场的灰骰，选择一个空奖励：1🪙（2 格）、$30K（3 格）或调整自己骰子（4 格）。调整可将剩余骰子转点数投放或取回赌场骰子，不触发小游戏，也不能操作小游戏板上的骰子。",
-        tile_black_box: "轮末本赌场大钞获奖者的左手玩家，将 $60K、$20K、$20K、$0、$0、$0 六枚标记秘密分成两堆，每堆至少一枚。获奖者只看到数量，选一堆领取总额；$20K 以 2🪙 支付。",
+        tile_handicap: "开轮在赌场 1–3 各放 1 灰骰、4–6 各放 2 灰骰。激活时可移除一枚未封锁赌场的灰骰，选择一个空奖励：1💰（2 格）、$30K（3 格）或调整自己骰子（4 格）。调整可将剩余骰子转点数投放或取回赌场骰子，不触发小游戏，也不能操作小游戏板上的骰子。",
+        tile_black_box: "轮末本赌场大钞获奖者的左手玩家，将 $60K、$20K、$20K、$0、$0、$0 六枚标记秘密分成两堆，每堆至少一枚。获奖者只看到数量，选一堆领取总额；$20K 以 2💰 支付。",
         tile_double_down: "激活后可将本赌场任意数量的自己的骰子移至额外赌局（包括以前回合的骰子）。轮末独立排名，同数全部取消，前两名获 $60K／$30K，大骰算两枚。其他效果不能移动该板上的骰子。",
-        tile_nice_dice: "激活后可把一枚刚掷出且还未投放的骰子，或一枚刚投放到本赌场的骰子，放入同点数奖励格。原占位骰子移到同号赌场，不触发小游戏；若该赌场封锁则不能替换。轮末 1／2 点格奖 1／2🪙，3–6 点格奖 $30K–$60K，大骰只领一份。",
-        tile_my_choice: "激活后掷两枚黑骰并选一个结果：1 = 1🪙；2 = 2🪙；3 = $30K；4 = 激活另一小游戏；5 = 转一枚剩余骰子到任意赌场或取回一枚赌场骰子（不触发小游戏）；6 = 一枚剩余骰子占据 $60K 金色奖励格，原占位骰子还给主人。",
+        tile_nice_dice: "激活后可把一枚刚掷出且还未投放的骰子，或一枚刚投放到本赌场的骰子，放入同点数奖励格。原占位骰子移到同号赌场，不触发小游戏；若该赌场封锁则不能替换。轮末 1／2 点格奖 1／2💰，3–6 点格奖 $30K–$60K，大骰只领一份。",
+        tile_my_choice: "激活后掷两枚黑骰并选一个结果：1 = 1💰；2 = 2💰；3 = $30K；4 = 激活另一小游戏；5 = 转一枚剩余骰子到任意赌场或取回一枚赌场骰子（不触发小游戏）；6 = 一枚剩余骰子占据 $60K 金色奖励格，原占位骰子还给主人。",
     };
     const tileNames = {lucky_punch: "Lucky Punch · 猜拳", jackpot: "Jackpot · 累积大奖", prime_time: "Prime Time · 黄金时段", fifty_fifty: "Fifty Fifty · 猜大小", high_five: "High Five · 五骰大奖", bad_luck: "Bad Luck · 厄运", pay_day: "Pay Day · 发薪日", power_play: "Power Play · 强势行动", no_entry: "No Entry! · 禁止入内", knockout: "Knockout? · 出局酒吧", block_it: "Block It! · 灰骰阻挡", handicap: "Handicap · 移除障碍", black_box: "Black Box · 神秘盒", double_down: "Double Down · 另开赌局", nice_dice: "Nice Dice · 骰子奖励", my_choice: "My Choice · 我的选择"};
     const pipPositions = [[], [4], [0, 8], [0, 4, 8], [0, 2, 6, 8], [0, 2, 4, 6, 8], [0, 2, 3, 5, 6, 8]];
@@ -127,7 +128,7 @@
             openDialog("Help · Las Vegas Royale", `<p>豪华版支持 2–5 人，共 3 轮，每轮在 1、2、3 号赌场各启用一块随机小游戏板。8 块双面板共 16 种玩法，同一块板的两面不会同时出现。</p>
                 <h3>骰子、筹码和奖池</h3><p>${explanations.dice} ${explanations.chips}</p><p>${explanations.casino} 两张总额相同时，大钞面额较高的组合放到较高编号赌场。每回合 Roll Dice → 选择点数 → Place Dice。也可在掷出后使用 Pass。</p>
                 <h3>结算与胜利</h3><p>${classicExplanations.ties} ${explanations.neutral} ${explanations.total} ${explanations.next}</p>
-                <p>${explanations.round} 玩家颜色对应骰子，🎲×2 表示大骰，🪙 表示筹码，⬜ 表示灰骰。小游戏先完成当前选择，再继续下一位玩家；秘密选择仅对操作者可见。</p>
+                <p>${explanations.round} 玩家颜色对应骰子，🎲×2 表示大骰，💰 表示筹码，⬜ 表示灰骰。小游戏先完成当前选择，再继续下一位玩家；秘密选择仅对操作者可见。</p>
                 ${Object.entries(tileNames).map(([id, name]) => `<h3>${esc(name)}</h3><p>${esc(explanations[`tile_${id}`])}</p>`).join("")}
                 <h3>线上边界处理</h3><p>${explanations.closed} 银行奖金按面额记账，不受实体钞票数量限制；罚金找零保留为现金，不转换成可用于 Pass 的筹码。</p>
                 <h3>Controls</h3><p>Help 查看全部规则；Explain 后点选元素查看解释。悬停、聚焦或手机轻点信息可查看提示。确认后才提交选择；Esc 可取消未提交的赌场选择或关闭弹窗。</p>`);
@@ -160,7 +161,7 @@
     }
 
     function renderCasino(original) {
-        const settled = view.phase === "round_end" || view.game_over;
+        const settled = view.phase === "round_end" || view.game_over || view.payouts_complete;
         const snapshot = view.round_summary?.casinos.find(item => item.face === original.face);
         const casino = settled && snapshot ? snapshot : projectedCasino(original);
         const preview = selected === casino.face && allowed("place");
@@ -204,23 +205,23 @@
         const held = location => pieces.filter(d => d.location === location);
         const holder = location => held(location).map(d => `${esc(playerName(d.player_id))}${d.big ? " · 大骰" : ""}`).join(" / ") || "空位";
         if (tile.id === "jackpot") body = `<b>🎰 ${shortMoney(tile.jackpot)}</b>${diceRow}`;
-        if (tile.id === "fifty_fifty") body = `${diceRow}<div class="lv-track">${["$0", "1🪙", "$30K", "$40K", "$60K"].map((label, i) => `<span class="${tile.track === i ? "is-current" : ""}">${label}</span>`).join("")}</div>`;
+        if (tile.id === "fifty_fifty") body = `${diceRow}<div class="lv-track">${["$0", "1💰", "$30K", "$40K", "$60K"].map((label, i) => `<span class="${tile.track === i ? "is-current" : ""}">${label}</span>`).join("")}</div>`;
         if (["high_five", "power_play"].includes(tile.id)) body = `<strong>${tile.owner ? esc(playerName(tile.owner)) : "标记待领取"}</strong><span>${tile.id === "high_five" ? "轮末奖励 💵 $100K" : "⚡ 可指定一枚骰子投放"}</span>`;
-        if (tile.id === "no_entry") body = `<strong>${view.closed_casino ? `⛔ 赌场 ${view.closed_casino}` : "尚未封锁"}</strong><div class="lv-track">${["○", "2🪙", "○", "$30K", "○", "1🪙"].map((label, i) => `<span class="${tile.track === i ? "is-current" : ""}">${label}</span>`).join("")}</div>`;
+        if (tile.id === "no_entry") body = `<strong>${view.closed_casino ? `⛔ 赌场 ${view.closed_casino}` : "尚未封锁"}</strong><div class="lv-track">${["○", "2💰", "○", "$30K", "○", "1💰"].map((label, i) => `<span class="${tile.track === i ? "is-current" : ""}">${label}</span>`).join("")}</div>`;
         if (tile.id === "block_it") body = `<div class="lv-track">${tile.groups.map(n => `<span>${n ? `${n}⬜` : "✓"}</span>`).join("")}</div>`;
-        if (tile.id === "handicap") body = `<span>剩余奖励：${tile.spaces.chip} × 1🪙</span><span>${tile.spaces.cash} × $30K · ${tile.spaces.move} × 调整骰子</span>`;
+        if (tile.id === "handicap") body = `<span>剩余奖励：${tile.spaces.chip} × 1💰</span><span>${tile.spaces.cash} × $30K · ${tile.spaces.move} × 调整骰子</span>`;
         if (["double_down", "knockout"].includes(tile.id)) body = `<div class="lv-tile-players">${view.players.map(p => {
             const own = held(tile.id).filter(d => d.player_id === p.player_id);
             return `<span>${esc(p.name)} <b>${tile.id === "double_down" ? sum(own.map(d => d.big ? 2 : 1)) : own.length}🎲</b></span>`;
         }).join("")}</div><span>${tile.id === "double_down" ? "独立派奖 · $60K / $30K" : "最多 2 枚实体骰 / 人"}</span>`;
-        if (tile.id === "nice_dice") body = `<div class="lv-reward-slots">${[1, 2, 3, 4, 5, 6].map(n => `<div><b>🎲${n} · ${n < 3 ? `${n}🪙` : `$${n * 10}K`}</b><span>${holder(`nice:${n}`)}</span></div>`).join("")}</div>`;
+        if (tile.id === "nice_dice") body = `<div class="lv-reward-slots">${[1, 2, 3, 4, 5, 6].map(n => `<div><b>🎲${n} · ${n < 3 ? `${n}💰` : `$${n * 10}K`}</b><span>${holder(`nice:${n}`)}</span></div>`).join("")}</div>`;
         if (tile.id === "my_choice") body = `${diceRow}<div class="lv-golden-slot"><b>💵 $60K</b><span>${holder("golden")}</span></div>`;
         if (tile.id === "prime_time") body = `${diceRow}<span>轮末大钞得主 · 可加 0–2 骰</span>`;
         if (tile.id === "black_box") body = "<span>轮末大钞得主 · 二选一秘密奖励</span>";
         if (tile.id === "lucky_punch") body = "<span>✊ 1 / 2 / 3 · 猜错可得奖励</span>";
         if (tile.id === "bad_luck") body = "<span>骰子最少者 · 轮末罚 💸 $50K</span>";
         if (tile.id === "pay_day") body = "<span>每个有己方骰子的赌场 · $10K</span>";
-        return `<section class="lv-tile"><h4>${info(esc(tile.name), `tile_${tile.id}`)}</h4><div class="lv-tile-state">${body}${tile.last_result ? `<small>${esc(tile.last_result)}</small>` : ""}</div></section>`;
+        return `<section class="lv-tile"><h4>${info(esc(tile.name), `tile_${tile.id}`)}</h4><div class="lv-tile-state" tabindex="0" data-lv-explain="tile_${tile.id}" data-lv-tip="${esc(explanations[`tile_${tile.id}`])}">${body}${tile.last_result ? `<small>${esc(tile.last_result)}</small>` : ""}</div></section>`;
     }
 
     function renderDecision() {
@@ -232,7 +233,7 @@
             const count = choice.tokens.filter((_, i) => blackMask & (1 << i)).length;
             options = `<p class="lv-muted">选入盒 A，其余自动放入盒 B。两盒都至少一枚；对方只看到数量。</p><div class="lv-secret-tokens">${choice.tokens.map((value, i) => `<button type="button" class="lv-option ${blackMask & (1 << i) ? "is-selected" : ""}" data-lv-token="${i}" aria-pressed="${!!(blackMask & (1 << i))}">${shortMoney(value)}<small>盒 ${blackMask & (1 << i) ? "A" : "B"}</small></button>`).join("")}</div><div class="lv-action-line"><span>A: ${count} · B: ${6 - count}</span><button type="button" class="lv-primary" data-lv-option="${blackMask}" ${count < 1 || count > 5 ? "disabled" : ""}>Confirm Split</button></div>`;
         } else if (canChoose) {
-            options = `${choice.total !== null ? `<p class="lv-choice-label">当前总点数 <b>${choice.total}</b> · 可领取 ${choice.reward === 10000 ? "1🪙" : shortMoney(choice.reward)}</p>` : ""}<div class="lv-options">${choice.options.map(o => `<button type="button" class="lv-option" data-lv-option="${esc(o.id)}">${esc(o.label)}</button>`).join("")}</div>`;
+            options = `${choice.total !== null ? `<p class="lv-choice-label">当前总点数 <b>${choice.total}</b> · 可领取 ${choice.reward === 10000 ? "1💰" : shortMoney(choice.reward)}</p>` : ""}<div class="lv-options">${choice.options.map(o => `<button type="button" class="lv-option" data-lv-option="${esc(o.id)}" data-lv-explain="tile_${tile.id}">${esc(o.label)}</button>`).join("")}</div>`;
         }
         return `<section class="lv-box lv-controls"><div class="lv-section-heading"><h3>${titles[choice.kind] || "Choose an Action"}</h3>${info(`🎰 ${choice.face}`, `tile_${tile.id}`)}</div><div class="lv-decision-caption">${esc(tile.name)} · ${esc(playerName(choice.actor))}</div>${options}</section>`;
     }
@@ -251,7 +252,7 @@
                 return `<button type="button" class="lv-roll-group ${selected === face ? "is-selected" : ""}" data-lv-face="${face}" data-lv-explain="face" aria-label="点数 ${face}，${ownCount} 枚玩家骰子${big ? '，含一枚大骰' : ''}，${neutralCount} 枚白骰${closed ? '，已封锁' : ''}" aria-pressed="${selected === face}" ${!allowed("place") || closed ? "disabled" : ""}>${dice(face, playerColor(view.current_turn))}<span class="lv-roll-counts">${ownCount ? `<b>${ownCount}🎲</b>` : ""}${big ? '<b class="lv-big-badge">含大骰 ×2</b>' : ""}${neutralCount ? `<b class="lv-neutral-count">${neutralCount}⚪</b>` : ""}${closed ? "⛔" : ""}</span></button>`;
             }).join("")}</div>` : `<div class="lv-roll-rest">${dice(5, playerColor(view.current_turn))}<div><strong>${view.current_turn === view.you ? `${(own?.remaining || 0) + (own?.neutral_remaining || 0)} 枚骰子待掷` : "轮流投骰，争夺奖金"}</strong><span>${view.config.neutral_dice ? "彩色骰子与白骰一起掷出" : "每次掷出全部剩余骰子"}</span></div></div>`}
             <div class="lv-action-line"><span class="lv-choice-label">${selected !== null ? `已选 ${selected} 点 · 放置 ${rollCount(selected)} 枚` : hasRoll ? (allowed("place") ? "选择一个点数" : "等待玩家选择点数") : own ? "🎲 你的幸运回合" : "Spectating"}</span><button type="button" class="lv-primary" data-lv-action="${hasRoll ? "place" : "roll"}" data-lv-explain="${hasRoll ? "place" : "roll"}" ${hasRoll ? (!allowed("place") || selected === null ? "disabled" : "") : (!allowed("roll") ? "disabled" : "")}>${pending ? "Sending…" : hasRoll ? "Place Dice" : "Roll Dice"}</button></div>
-            ${allowed("royale_pass") ? `<div class="lv-secondary-action"><span>${info(`${own.chips}🪙`, "chips")}</span><button type="button" class="lv-option" data-lv-action="royale_pass" data-lv-explain="${allowed("place") ? "chips" : "closed"}">${allowed("place") ? "Pass · 支付 1🪙" : "Pass · 无法投放，免费跳过"}</button></div>` : ""}
+            ${allowed("royale_pass") ? `<div class="lv-secondary-action"><span>${info(`${own.chips}💰`, "chips")}</span><button type="button" class="lv-option" data-lv-action="royale_pass" data-lv-explain="${allowed("place") ? "chips" : "closed"}">${allowed("place") ? "Pass · 支付 1💰" : "Pass · 无法投放，免费跳过"}</button></div>` : ""}
             ${allowed("royale_power") ? '<div class="lv-secondary-action"><button type="button" class="lv-option" data-lv-action="royale_power" data-lv-explain="tile_power_play">Power Play · 指定一枚骰子</button></div>' : ""}
         </section>`;
     }
@@ -267,20 +268,20 @@
     function renderFinal() {
         if (!view.game_over) return "";
         const winners = view.final_results.filter(item => item.rank === 1);
-        return `<section class="lv-box lv-final"><span class="lv-eyebrow">THE NIGHT BELONGS TO</span><h3>${info("🏆", "total")} ${esc(winners.map(item => playerName(item.player_id)).join(" / "))}</h3><p>${winners.length > 1 ? "并列获胜" : "大赢家"} · ${view.total_rounds} 轮奖金全部结算</p><div class="lv-rankings">${view.final_results.map(row => `<div class="lv-rank-row ${row.rank === 1 ? "is-winner" : ""}"><b class="lv-rank">${row.rank}</b><span>${esc(playerName(row.player_id))}<small>${row.banknote_count} 张钞票${royale() ? ` · ${row.chips}🪙` : ""}</small></span><strong>${info(money(row.total), "total")}</strong></div>`).join("")}</div></section>`;
+        return `<section class="lv-box lv-final"><span class="lv-eyebrow">THE NIGHT BELONGS TO</span><h3>${info("🏆", "total")} ${esc(winners.map(item => playerName(item.player_id)).join(" / "))}</h3><p>${winners.length > 1 ? "并列获胜" : "大赢家"} · ${view.total_rounds} 轮奖金全部结算</p><div class="lv-rankings">${view.final_results.map(row => `<div class="lv-rank-row ${row.rank === 1 ? "is-winner" : ""}"><b class="lv-rank">${row.rank}</b><span>${esc(playerName(row.player_id))}<small>${row.banknote_count} 张钞票${royale() ? ` · ${row.chips}💰` : ""}</small></span><strong>${info(money(row.total), "total")}</strong></div>`).join("")}</div></section>`;
     }
 
     function renderPlayers() {
         return `<section class="lv-box"><div class="lv-section-heading"><h3>At the Table</h3>${info(`${view.players.length} players`, "player")}</div><div class="lv-players">${view.players.map(item => {
             const current = !view.game_over && ["roll", "place", "royale_choice"].includes(view.phase) && item.player_id === view.current_turn;
             const status = view.game_over ? "Final" : view.phase === "round_end" ? view.next_ready.includes(item.player_id) ? "Ready" : "Reviewing" : current ? "Playing" : item.remaining + item.neutral_remaining === 0 ? "Done" : "Waiting";
-            return `<article class="lv-player ${current ? "is-current" : ""}"><div class="lv-player-heading"><span class="lv-player-dot lv-color-${playerColor(item.player_id)}" aria-hidden="true"></span><strong>${esc(item.name)}${item.player_id === view.you ? " <small>You</small>" : ""}</strong>${item.is_bot ? info("🤖", "bot") : ""}<span class="lv-player-status">${status}</span></div><div class="lv-player-stats">${info(`${item.remaining}🎲${item.big_remaining ? " · 含大骰" : ""}`, "dice")}${view.config.neutral_dice ? info(`${item.neutral_remaining}⚪`, "neutral") : ""}${royale() ? info(`${item.chips}🪙`, "chips") : ""}${info(`💵 ${item.banknote_count} 张`, "money")}${item.total !== null ? info(money(item.total), item.player_id === view.you ? "private" : "total") : info("🔒", "private")}</div></article>`;
+            return `<article class="lv-player ${current ? "is-current" : ""}"><div class="lv-player-heading"><span class="lv-player-dot lv-color-${playerColor(item.player_id)}" aria-hidden="true"></span><strong>${esc(item.name)}${item.player_id === view.you ? " <small>You</small>" : ""}</strong>${item.is_bot ? info("🤖", "bot") : ""}<span class="lv-player-status">${status}</span></div><div class="lv-player-stats">${info(`${item.remaining}🎲${item.big_remaining ? " · 含大骰" : ""}`, "dice")}${view.config.neutral_dice ? info(`${item.neutral_remaining}⚪`, "neutral") : ""}${royale() ? info(`${item.chips}💰`, "chips") : ""}${info(`💵 ${item.banknote_count} 张`, "money")}${item.total !== null ? info(money(item.total), item.player_id === view.you ? "private" : "total") : info("🔒", "private")}</div></article>`;
         }).join("")}</div></section>`;
     }
 
     function renderWallet() {
         if (!player(view.you)) return "";
-        return `<section class="lv-box lv-wallet"><div class="lv-section-heading"><h3>Your Winnings</h3>${info("🔒 Private", "private")}</div><strong class="lv-wallet-total">${info(money(view.your_total), "private")}</strong>${royale() ? `<p class="lv-muted">现金 ${money(view.your_cash)} + ${player(view.you).chips}🪙</p>` : ""}<div class="lv-wallet-notes">${view.your_banknotes.length ? view.your_banknotes.slice().sort((a, b) => b - a).map(note => info(`<span class="lv-banknote">💵 ${shortMoney(note)}</span>`, "money")).join("") : '<span class="lv-muted">奖金将在这里积累</span>'}</div></section>`;
+        return `<section class="lv-box lv-wallet"><div class="lv-section-heading"><h3>Your Winnings</h3>${info("🔒 Private", "private")}</div><strong class="lv-wallet-total">${info(money(view.your_total), "private")}</strong>${royale() ? `<p class="lv-muted">现金 ${money(view.your_cash)} + ${player(view.you).chips}💰</p>` : ""}<div class="lv-wallet-notes">${view.your_banknotes.length ? view.your_banknotes.slice().sort((a, b) => b - a).map(note => info(`<span class="lv-banknote">💵 ${shortMoney(note)}</span>`, "money")).join("") : '<span class="lv-muted">奖金将在这里积累</span>'}</div></section>`;
     }
 
     function statusText() {
@@ -297,7 +298,7 @@
         const scroll = content.querySelector(".lv-log")?.scrollTop || 0;
         content.innerHTML = `<div class="lv-surface"><div class="lv-banner"><div><span class="lv-eyebrow">SIX CASINOS. ONE LUCKY NIGHT.</span><h2>拉斯维加斯 <small>Las Vegas${royale() ? " Royale" : ""}</small></h2></div><div class="lv-round-marker">${info(`<span>ROUND</span><b>${view.round}<small> / ${view.total_rounds}</small></b>`, "round")}</div></div>
             <div class="lv-status" role="status" aria-live="polite"><span>${esc(statusText())}</span>${info(royale() ? "✨ 豪华版 · 随机小游戏" : view.config.neutral_dice ? "⚪ 白骰变体" : "🎲 基础模式", royale() ? "edition" : view.config.neutral_dice ? "neutral" : "dice")}</div>
-            <div class="lv-layout"><div class="lv-main">${renderFinal()}${renderReview()}${renderControls()}<section class="lv-board"><div class="lv-section-heading"><h3>The Strip <small>六大赌场</small></h3>${info(view.phase === "round_end" || view.game_over ? "Final payouts" : "💵 Payout preview", "payout")}</div><div class="lv-casinos">${view.casinos.map(renderCasino).join("")}</div></section></div><aside class="lv-sidebar">${renderPlayers()}${renderWallet()}<section class="lv-box lv-log-box"><div class="lv-section-heading"><h3>Activity</h3>${info("Public log", "log")}</div><div class="lv-log">${view.log.slice().reverse().map(entry => `<p>${typeof entry === "string" ? esc(entry) : `${entry.round ? `<small>${info(`R${entry.round}`, "round", `R 表示 Round：这条记录发生在第 ${entry.round} 轮。整场共 4 轮。`)}</small>` : ""}<span>${esc(entry.text || entry.message || "")}</span>`}</p>`).join("") || '<p class="lv-muted">No activity yet.</p>'}</div></section></aside></div></div>`;
+            <div class="lv-layout"><div class="lv-main">${renderFinal()}${renderReview()}${renderControls()}<section class="lv-board"><div class="lv-section-heading"><h3>The Strip <small>六大赌场</small></h3>${info(view.phase === "round_end" || view.game_over || view.payouts_complete ? "Final payouts" : "💵 Payout preview", "payout")}</div><div class="lv-casinos">${view.casinos.map(renderCasino).join("")}</div></section></div><aside class="lv-sidebar">${renderPlayers()}${renderWallet()}<section class="lv-box lv-log-box"><div class="lv-section-heading"><h3>Activity</h3>${info("Public log", "log")}</div><div class="lv-log">${view.log.slice().reverse().map(entry => `<p>${typeof entry === "string" ? esc(entry) : `${entry.round ? `<small>${info(`R${entry.round}`, "round", `R 表示 Round：这条记录发生在第 ${entry.round} 轮。整场共 ${view.total_rounds} 轮。`)}</small>` : ""}<span>${esc(entry.text || entry.message || "")}</span>`}</p>`).join("") || '<p class="lv-muted">No activity yet.</p>'}</div></section></aside></div></div>`;
         content.querySelector(".lv-log").scrollTop = scroll;
     }
 
@@ -412,7 +413,7 @@
         neutralCheckbox.disabled = isRoyale || lobbyPlayers > 4;
         if (lobbyPlayers > 4) neutralCheckbox.checked = false;
         neutralCheckbox.dataset.lvExplain = "neutral";
-        document.getElementById("lasVegasSetupHint").textContent = isRoyale ? "3 轮 · 7 小骰 + 1 大骰 · 每轮 2🪙 · 赌场 1–3 随机小游戏" : lobbyPlayers > 4 ? "5 人使用基础模式 · 白骰变体限 2–4 人" : "每人 8 枚骰子 · 4 轮争夺赌场奖金";
+        document.getElementById("lasVegasSetupHint").textContent = isRoyale ? "3 轮 · 7 小骰 + 1 大骰 · 每轮 2💰 · 赌场 1–3 随机小游戏" : lobbyPlayers > 4 ? "5 人使用基础模式 · 白骰变体限 2–4 人" : "每人 8 枚骰子 · 4 轮争夺赌场奖金";
         syncExplanations();
     }
     editionSelect.addEventListener("change", syncSetup);
