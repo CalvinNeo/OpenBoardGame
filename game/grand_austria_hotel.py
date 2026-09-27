@@ -645,8 +645,11 @@ def _apply(state: Dict, pid: str, move: Dict) -> None:
         player["completed_guests"] += 1
         player["score"] += GUESTS[guest["id"]]["vp"]
         room_effects = _occupy_room(state, pid, move["room"])
-        _rewards(state, pid, GUESTS[guest["id"]]["effects"])
+        rewards = GUESTS[guest["id"]]["effects"]
+        _rewards(state, pid, [item for item in rewards if item["kind"] != "extra_die"])
         _queue(state, pid, [effect("guest_staff", guest=guest["id"])] + room_effects)
+        # E. Gizia's action happens after collecting all other check-in benefits.
+        _rewards(state, pid, [item for item in rewards if item["kind"] == "extra_die"])
         _log(state, f'{_name(state, pid)} · {GUESTS[guest["id"]]["name"]} 入住 {move["room"] // 5 + 1}{move["room"] % 5 + 1}，+{GUESTS[guest["id"]]["vp"]} 分')
     elif kind == "use_staff":
         player["used_staff"].append(move["staff"])

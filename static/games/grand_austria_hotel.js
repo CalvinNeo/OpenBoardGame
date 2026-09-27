@@ -308,7 +308,7 @@
   });
   document.getElementById("grandAustriaExplain").addEventListener("click",()=>setExplain(!explaining));
   document.getElementById("grandAustriaClose").addEventListener("click",()=>dialog.close());
-  dialog.addEventListener("close",()=>{hideTip();if(returnFocus?.isConnected)returnFocus.focus();});
+  dialog.addEventListener("close",()=>{suppressedUntil=0;hideTip();if(returnFocus?.isConnected)returnFocus.focus();});
   dialog.addEventListener("click",e=>{const r=dialog.getBoundingClientRect();if(e.target===dialog&&(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom))dialog.close();});
   const active=()=>!!view&&!panel.classList.contains("hidden");
   function explainTarget(target){if(!target)return;const text=explanations[target.dataset.gahExplain];if(text){setExplain(false);openDialog("Explain",text);}}

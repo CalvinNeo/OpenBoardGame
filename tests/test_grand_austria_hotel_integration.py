@@ -1,3 +1,4 @@
+import asyncio
 import copy
 import unittest
 from tempfile import TemporaryDirectory
@@ -56,6 +57,11 @@ class GrandAustriaHotelIntegrationTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_bot_uses_scheduler_and_action_broadcast_is_private(self):
         room = await self.room(bots=True)
+        async def wait_for_bot():
+            while room.bot_running:
+                await asyncio.sleep(0.01)
+
+        await asyncio.wait_for(wait_for_bot(), timeout=5)
         self.assertEqual(room.game_state["phase"], "setup_guest")
         self.assertEqual(room.game_state["current_turn"], room.players[0].player_id)
         self.assertEqual(len(room.game_state["players"][room.players[1].player_id]["cafe"]), 1)

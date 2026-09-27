@@ -18,7 +18,8 @@ BANKNOTES = tuple(
 )
 CONFIG_SCHEMA = {
     "type": "object",
-    "properties": {"neutral_dice": {"type": "boolean", "default": False}},
+    "properties": {"neutral_dice": {"type": "boolean", "default": False},
+                   "edition": {"type": "string", "enum": ["classic", "royale"], "default": "classic"}},
     "additionalProperties": False,
 }
 
@@ -36,6 +37,11 @@ ACTION_SCHEMA = {"oneOf": [
     _action_schema("place", {"turn": {"type": "integer", "minimum": 1},
                              "face": {"type": "integer", "minimum": 1, "maximum": 6}}),
     _action_schema("next_round", {}),
+    _action_schema("royale_pass", {"turn": {"type": "integer", "minimum": 1}}),
+    _action_schema("royale_power", {"turn": {"type": "integer", "minimum": 1}}),
+    _action_schema("royale_choose", {"turn": {"type": "integer", "minimum": 1},
+                                    "decision": {"type": "integer", "minimum": 1},
+                                    "option": {"type": "string", "minLength": 1, "maxLength": 160}}),
 ]}
 _CONFIG_VALIDATOR = Draft7Validator(CONFIG_SCHEMA)
 _ACTION_VALIDATOR = Draft7Validator(ACTION_SCHEMA)
@@ -190,6 +196,9 @@ class LasVegasGame:
         ids = [player["player_id"] for player in ordered]
         if len(set(ids)) != len(ids):
             raise ValueError("player IDs must be unique nonempty strings")
+        if config.get("edition") == "royale":
+            from game import las_vegas_royale
+            return las_vegas_royale.init_game(config, ordered)
         neutral = config.get("neutral_dice", False)
         if neutral and len(ids) == 5:
             raise ValueError("neutral dice require 2–4 players")
@@ -211,6 +220,9 @@ class LasVegasGame:
 
     @staticmethod
     def get_legal_actions(state: Dict, player_id: str) -> List[str]:
+        if state["config"].get("edition") == "royale":
+            from game import las_vegas_royale
+            return las_vegas_royale.get_legal_actions(state, player_id)
         if not isinstance(player_id, str) or player_id not in state["players"] or state["game_over"]:
             return []
         if state["phase"] == "round_end" and player_id not in state["next_ready"]:
@@ -226,8 +238,11 @@ class LasVegasGame:
     def apply_action(state: Dict, player_id: str, action: Dict) -> Tuple[List[Dict], Optional[str]]:
         if not isinstance(action, dict) or not _ACTION_VALIDATOR.is_valid(action):
             return [], "invalid action schema"
-        if any(type(action[key]) is not int for key in ("round", "turn", "face") if key in action):
+        if any(type(action[key]) is not int for key in ("round", "turn", "face", "decision") if key in action):
             return [], "action numbers must be integers"
+        if state["config"].get("edition") == "royale":
+            from game import las_vegas_royale
+            return las_vegas_royale.apply_action(state, player_id, action)
         if action["type"] not in LasVegasGame.get_legal_actions(state, player_id):
             return [], "action unavailable"
         if action["round"] != state["round"]:
@@ -268,6 +283,9 @@ class LasVegasGame:
 
     @staticmethod
     def get_public_view(state: Dict, viewer_id: str) -> Dict:
+        if state["config"].get("edition") == "royale":
+            from game import las_vegas_royale
+            return las_vegas_royale.get_public_view(state, viewer_id)
         own = state["players"].get(viewer_id, {})
         finished = state["game_over"]
         casinos = []
@@ -301,6 +319,9 @@ class LasVegasGame:
 
     @staticmethod
     def bot_move(state: Dict, bot_id: str) -> Optional[Dict]:
+        if state["config"].get("edition") == "royale":
+            from game import las_vegas_royale
+            return las_vegas_royale.choose_bot_action(LasVegasGame.get_public_view(state, bot_id))
         return _choose_bot_action(LasVegasGame.get_public_view(state, bot_id))
 
     @staticmethod

@@ -758,6 +758,7 @@ function renderGameTypeFilters(games) {
 const GAME_WEIGHT = {
   las_vegas: 1.17,
   for_sale: 1.25,
+  cheaty_mages: 1.61,
   love_letter: 1.18,
   spirit_island: 4.08,
   red_doors: null, // BLACK MAZE DEEP has no BGG weight votes as of 2026-09-22.
@@ -795,9 +796,11 @@ const GAME_WEIGHT = {
   gaia_project: 4.40,
   halli_galli: 1.02,
   hanabi: 1.69,
+  hive: 2.31,
   hot_streak: 1.23,
   incan_gold: 1.11,
   istanbul: 2.58,
+  grand_austria_hotel: 3.19,
   kobayakawa: 1.2,
   tucano: 1.09,
   perfect_mismatch: 1.0,

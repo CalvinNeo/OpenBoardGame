@@ -206,6 +206,21 @@ class GrandAustriaHotelTests(unittest.TestCase):
                 finish_pending(state)
                 self.assertEqual(state["players"]["0"]["completed_guests"], 1)
 
+    def test_gizia_collects_check_in_benefits_before_bonus_action(self):
+        state = playing()
+        state["dice"] = [0, 0, 0, 0, 0, 1]
+        player = state["players"]["0"]
+        player.update(money=0, staff=["8", "23"],
+                      cafe=[{"id": "97", "served": dict(GUESTS["97"]["order"])}])
+        act(state, "0", "check_in", guest="97", room=0)
+        self.assertEqual(state["players"]["0"]["money"], 1)
+        self.assertEqual(state["players"]["0"]["score"], 8)
+        self.assertEqual(state["pending"][0]["kind"], "extra_die")
+        act(state, "0", "bonus_die", face=6, action=4, split=1)
+        self.assertEqual(state["players"]["0"]["money"], 0)
+        self.assertEqual(state["players"]["0"]["emperor"], 1)
+        self.assertEqual(state["dice"], [0, 0, 0, 0, 0, 1])
+
     def test_pass_preserves_slots_rerolls_and_cannot_follow_an_action(self):
         state = playing()
         total = sum(state["dice"])

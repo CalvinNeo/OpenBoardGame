@@ -60,6 +60,8 @@
 .gah-hotel-title { text-align:center; font-size:13px; letter-spacing:.12em; text-transform:uppercase; color:#775d3d; margin-bottom:10px; overflow-wrap:anywhere; }
 .gah-floor { display:grid; grid-template-columns:24px repeat(5,minmax(0,1fr)); gap:5px; margin-bottom:5px; align-items:stretch; }
 .gah-floor-label { display:flex; flex-direction:column; justify-content:center; align-items:center; font:10px/1.5 sans-serif; color:#755d40; }
+.gah-floor-label > [data-gah-tip] { display:flex; flex-direction:column; align-items:center; }
+.gah-floor-label span span { white-space:nowrap; }
 .gah-root .gah-room { border:2px solid var(--gah-color); border-radius:10px 10px 4px 4px; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:4px 1px; background:var(--gah-tint); min-height:55px; gap:2px; }
 .gah-room.gah-unprepared { opacity:.58; background:transparent; border-style:dashed; }
 .gah-room.gah-occupied { background:var(--gah-color); color:white; }
@@ -129,10 +131,10 @@
   .gah-die-face { font-size:24px; }
   .gah-die-icons { font-size:15px; }
   .gah-die-count { font-size:10px; }
-  .gah-market { gap:4px; }
-  .gah-root .gah-market .gah-card { padding:5px 3px; gap:4px; }
+  .gah-market { grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
+  .gah-root .gah-market .gah-card { padding:6px; gap:4px; }
   .gah-card-top { font-size:10px; }
-  .gah-market .gah-card-name { font-size:10px; min-height:38px; }
+  .gah-market .gah-card-name { font-size:12px; min-height:30px; }
   .gah-market .gah-order { font-size:12px; gap:2px; }
   .gah-market .gah-card-reward { display:none; }
   .gah-command { padding:9px; }

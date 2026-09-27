@@ -63,6 +63,38 @@
 .lv-color-3 { --lv-player: #9ad597; }
 .lv-color-4 { --lv-player: #c2a0e1; }
 .lv-color-neutral { --lv-player: #e7e7df; }
+.lv-color-gray { --lv-player: #a7b1b9; }
+.lv-edition { display: grid; gap: 5px; min-width: 0; max-width: 100%; color: var(--lv-muted); font-size: .76rem; }
+.lv-edition select { width: 100%; max-width: 100%; background: #203941; border: 1px solid #6b8078; border-radius: 7px; color: #edf4ef; padding: 9px; }
+.lv-variant[hidden] { display: none; }
+.lv-casino.is-closed { border-color: #af8583; }
+.lv-closed { color: #f0afaa; font-size: .7rem; margin-bottom: 7px; }
+.lv-big-badge { color: var(--lv-gold); font-size: .58rem; }
+.lv-tile { border-top: 1px solid #867345; padding-top: 9px; margin-top: 10px; min-width: 0; }
+.lv-tile h4 { font-size: .74rem; color: var(--lv-gold); line-height: 1.65; margin: 0 0 6px; }
+.lv-tile-state { display: grid; gap: 7px; color: #d3e4dc; font-size: .66rem; line-height: 1.6; }
+.lv-tile-state > small { color: var(--lv-muted); font-size: .6rem; }
+.lv-extra-dice { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.lv-extra-dice .lv-die { width: 27px; height: 27px; padding: 4px; }
+.lv-track { display: flex; flex-wrap: wrap; gap: 4px; }
+.lv-track > span { border: 1px solid #526669; border-radius: 4px; padding: 3px 5px; font-size: .59rem; }
+.lv-track > .is-current { background: #61542e; border-color: var(--lv-gold); color: #fff0cb; }
+.lv-tile-players { display: grid; gap: 3px; }
+.lv-tile-players > span { display: flex; justify-content: space-between; gap: 5px; }
+.lv-tile-players b { white-space: nowrap; }
+.lv-reward-slots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+.lv-reward-slots > div, .lv-golden-slot { display: grid; gap: 3px; padding: 5px; border: 1px solid #566e68; border-radius: 5px; background: #1a3035; min-width: 0; }
+.lv-reward-slots b { font-size: .6rem; }
+.lv-golden-slot { border-color: #a18b57; }
+.lv-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; max-height: 320px; overflow: auto; padding: 3px; }
+.lv-option { min-width: 0; white-space: normal !important; overflow-wrap: anywhere; text-align: left; background: #254149 !important; border: 1px solid #658b85 !important; color: #e4f2e8 !important; border-radius: 7px !important; padding: 10px !important; font-size: .75rem; line-height: 1.6; }
+.lv-option:hover { border-color: var(--lv-gold) !important; }
+.lv-option.is-selected { background: #535036 !important; border-color: var(--lv-gold) !important; }
+.lv-secondary-action { display: flex; justify-content: flex-end; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 9px; font-size: .74rem; }
+.lv-decision-caption { color: var(--lv-gold); font-size: .73rem; margin: 0 0 10px; overflow-wrap: anywhere; }
+.lv-secret-tokens { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; padding-bottom: 10px; }
+.lv-secret-tokens .lv-option { text-align: center; }
+.lv-secret-tokens small { display: block; color: #c6d7d0; }
 .lv-die { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); flex: 0 0 auto; width: 35px; height: 35px; padding: 6px; gap: 2px; background: var(--lv-player, #e7e7df); border: 1px solid rgba(255,255,255,.25); border-radius: 7px; box-shadow: inset 0 -3px 0 rgba(10,23,31,.17), 0 2px 4px #091923; }
 .lv-die i { display: block; width: 100%; height: 100%; border-radius: 50%; }
 .lv-die .is-pip { background: #263342; }

@@ -557,6 +557,8 @@ def _bot_status_payload(room: Room) -> Dict:
 
 
 def _public_bot_action(game_type: str, action: Dict) -> Dict:
+    if game_type == "las_vegas" and action.get("type") == "royale_choose":
+        return {"type": "royale_choose"}
     if game_type == "cheaty_mages":
         return {"type": action.get("type")}
     if game_type == "for_sale" and action.get("type") == "sell":
