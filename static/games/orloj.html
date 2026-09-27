@@ -1,0 +1,14 @@
+<template data-game-target="orlojHeaderActions" data-game-mode="contents">
+  <button id="orlojHelpBtn" type="button" aria-haspopup="dialog" aria-controls="orlojDialog">Help</button>
+  <button id="orlojExplainBtn" type="button" aria-pressed="false" aria-controls="orlojDialog">Explain</button>
+</template>
+<template data-game-target="orlojPanel" data-game-mode="contents">
+  <div id="orlojRoot" class="or-root"></div>
+  <div id="orlojTip" class="or-tip" role="status" hidden></div>
+</template>
+<template data-game-target="orlojDialog" data-game-mode="replace">
+  <dialog id="orlojDialog" class="or-dialog" aria-labelledby="orlojDialogTitle">
+    <div class="or-dialog-head"><h2 id="orlojDialogTitle"></h2><button id="orlojClose" type="button">Close</button></div>
+    <div id="orlojDialogBody"></div>
+  </dialog>
+</template>
